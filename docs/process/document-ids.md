@@ -1,3 +1,14 @@
+---
+family: reference
+title: The document-id standard (NT-0019 §1, lifted verbatim)
+status: active                  # active → retired (§1.2a)
+created: 2026-09-01
+owner: maintainer                # amendments arrive as an RFC- + RL- pair (§1.6)
+tree: 89784da
+corrected_by: []
+relates: []                      # ids only
+---
+
 # Document IDs — one id per governed thing, one sequence, roles per family
 
 Lifted verbatim from [`NT-0019`](../notes/0019-one-id-per-document.md) §1.1 through §1.13,

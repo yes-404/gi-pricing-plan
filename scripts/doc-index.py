@@ -1009,7 +1009,26 @@ def main(argv: list[str] | None = None) -> int:
     index_path = args.root / "INDEX.md"
 
     if args.check:
-        current = index_path.read_text(encoding="utf-8") if index_path.is_file() else None
+        if not index_path.is_file():
+            if not corpus.records:
+                # Found while wiring `--check` into `.github/workflows/docs.yml` as a gate
+                # step (W37-4): pre-migration, `docs/INDEX.md` does not exist and nothing
+                # does — treating "absent" as "stale" unconditionally would red this step
+                # on every run until W37-6, for a file only the migration creates. Mirrors
+                # the default (write) action's own "cannot be run against the live corpus
+                # until W37-6" refusal below: zero records is the pre-migration state, not
+                # drift, so there is nothing to be stale against.
+                print(
+                    f"{index_path} does not exist and zero governed records were found "
+                    f"under {args.root} — nothing to check yet (pre-migration)"
+                )
+                return 0
+            print(
+                f"{index_path} does not exist, but {len(corpus.records)} governed "
+                "record(s) were found — run `python3 scripts/doc-index.py` to create it"
+            )
+            return 1
+        current = index_path.read_text(encoding="utf-8")
         if current != fresh:
             print(f"{index_path} is stale — run `python3 scripts/doc-index.py` to regenerate")
             return 1

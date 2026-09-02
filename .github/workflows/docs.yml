@@ -13,9 +13,9 @@ name: docs
 on:
   push:
     branches: [main]
-    paths: ['docs/**', 'scripts/audit-docs.py', 'CLAUDE.md', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
   pull_request:
-    paths: ['docs/**', 'scripts/audit-docs.py', 'CLAUDE.md', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -29,10 +29,15 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: {python-version: "3.12"}
-      # 25 checks: requirement IDs, cross-references, dependency direction, glossary
-      # single-sourcing, money discipline, JSON Schema validity and $ref resolution over
-      # docs/ (1-15), the working notes in docs/notes/ (16-20), every endpoint and
-      # pricing-core function a workflow journey cites (21, FR-OVR-17), every table row's
-      # cell count (22), every spec §10 mirror row's status (23), §5.3/§5.6 canonical-route
-      # agreement (24), and F-id citations against the findings register (25).
+      # See scripts/audit-docs.py's own module docstring for the numbered list this
+      # summary would otherwise duplicate and go stale against (NT-0003) — it now runs
+      # 1-29 plus NT-0019's id-standard checks 30-39 (docs/notes/0019-one-id-per-document.md
+      # §1.11), the latter path-scoped to `_ID_SCOPE_ROOTS` until the migration (W37-6)
+      # widens it to the whole corpus.
       - run: python3 scripts/audit-docs.py
+      # NT-0019 §1.7/§1.11: doc-id.py check fails on a duplicate id, a header/filename
+      # mismatch, or a docs/INDEX.md contiguity gap; doc-index.py --check fails when a
+      # fresh regeneration of docs/INDEX.md would differ from what is committed. Both are
+      # no-ops before the migration (no ids exist yet to check or index).
+      - run: python3 scripts/doc-id.py check
+      - run: python3 scripts/doc-index.py --check

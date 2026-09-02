@@ -9,6 +9,10 @@ Full field set, status vocabulary and role assignments:
 `docs/process/document-ids.md` §1.5, §1.2a, §1.6. `kind:` and `supersedes:` /
 `superseded_by:` do not apply to this family (a ledger is never superseded) and must not
 appear here. `plans:` is this family's own field — append-only, never used elsewhere.
+`prs:` is **not** a header field, despite §1.5's parenthetical naming it as a ledger
+extra: no template declares it, so it is not permitted (Ruling 70,
+`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`). A ledger's PR list lives in
+the `## PRs` body section below, which is what §1.9's PR-title lint reads.
 -->
 
 ---

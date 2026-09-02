@@ -474,6 +474,42 @@ def test_check_exits_1_on_a_one_row_stale_index(tmp_path: Path) -> None:
     assert check.returncode == 1
 
 
+def test_check_exits_0_against_an_empty_pre_migration_corpus(tmp_path: Path) -> None:
+    """Found while wiring `--check` into `.github/workflows/docs.yml` as a gate step
+    (W37-4, `docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`): before this fix,
+    `--check` treated a missing `docs/INDEX.md` as unconditionally stale, so running it
+    against today's real, pre-migration `docs/` — no `INDEX.md`, zero governed records —
+    exited 1. That would have red the docs workflow on every push until W37-6 migrates the
+    corpus, for a file only the migration creates; `python3 scripts/audit-docs.py exits 0
+    on the real tree` is this slice's own acceptance line, and a sibling gate step failing
+    unconditionally would defeat it regardless of `audit-docs.py` itself.
+
+    Broken-input pairing: `test_check_exits_1_on_a_one_row_stale_index` above proves
+    `--check` still reds when records exist and the index is one row behind; this proves
+    it does not also red when there is nothing to index yet — the two together pin the
+    exact boundary the fix draws (`not corpus.records`, not merely "file missing").
+    """
+    empty_root = tmp_path / "empty"
+    empty_root.mkdir()
+    result = _run("--root", str(empty_root), "--check")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "nothing to check yet (pre-migration)" in result.stdout, result.stdout
+    assert not (empty_root / "INDEX.md").exists()
+
+
+def test_check_exits_1_when_records_exist_but_index_was_never_generated(tmp_path: Path) -> None:
+    """The other half of the boundary: records exist (so there is something to be stale
+    against) but `INDEX.md` was never generated at all — must still fail, not be waved
+    through by the same "nothing to check yet" path the empty-corpus case above takes.
+    """
+    root = tmp_path / "corpus"
+    shutil.copytree(CORPUS, root)
+    assert not (root / "INDEX.md").exists()
+    result = _run("--root", str(root), "--check")
+    assert result.returncode == 1
+    assert "governed record(s) were found" in result.stdout, result.stdout
+
+
 def test_regenerating_twice_produces_byte_identical_output(tmp_path: Path) -> None:
     root = tmp_path / "corpus"
     shutil.copytree(CORPUS, root)

@@ -243,44 +243,61 @@ in the script** — durable and reproducible in any clone at any revision.
 standard — testable, tied to a real requirement — is not mechanised; that judgement stays
 the lead's read at the replan-vs-proceed gate (`.claude/roles/lead.md`).
 
-### The notes tombstone (check 30)
+### The notes tombstone — retired, moved to check 36 (2026-09-02)
 
-NT-0016 Slice 4 moved `.claude/notes/` to `docs/notes/` and left a `README.md`
-tombstone at the vacated path, per Ruling 57. Slice 4's own execution then found that
-a directory-level README does not make an *individual* old-path citation resolve:
-13 frozen plans under `docs/plans/` cite a note by its old path, C4 forbids editing a
-frozen plan to fix its own citation, and check 1 tests on-disk existence per link
-target — so 18 one-line redirect stubs were added, one per moved note, to keep those
-links resolving. That fixed check 1, but left the stubs at a location nothing else in
-this script reads: `NOTES` points at `docs/notes/`, and `docs.yml`'s path filter no
-longer names the old path at all. Ruling 61
-(`docs/plans/2026-09-01-ruling-61-notes-tombstone-stubs-watched.md`) kept the stubs
-and required this check, because an accepted-and-undetected gap is the exact shape
-`docs/audit/register.md`'s F58 names — a stated mechanism nothing runs.
+Checks 30-39 below are NT-0019's id-standard audit
+(`docs/notes/0019-one-id-per-document.md` §1.11). Slot **30** collided with the
+tombstone check this section used to describe: NT-0019 §5.5 resolves the collision by
+**replacing** the tombstone check rather than renumbering either one —
+`check_notes_tombstone` was renamed `check_redirects` and moved to slot **36**, whose
+job is now watching `docs/REDIRECTS.csv` instead of the `.claude/notes/` stub set this
+section used to describe in detail. The stub-watching mechanism (18 registered
+basenames, byte-exact template comparison, `tests/test_audit_docs_notes_tombstone.py`)
+is gone with it — read `git log -p -- scripts/audit-docs.py` at the commit before this
+one if the old mechanism's exact shape is ever needed again. The number 30 is not
+reused for two things (`CLAUDE.md` §5); see the section below for what occupies it now.
 
-**A frozen, closed registry, not a re-parse of the README's own mapping table** — the
-same design choice Ruling 59 made for the file-census provenance carve-out, and for
-the same reason: deriving the expected set from a file a stray edit could also touch
-would let one edit defeat both the content it changes and the check meant to catch the
-change. `OLD_NOTES_STUB_NAMES` in `scripts/audit-docs.py` is that registry — 18
-basenames, never derived from `docs/notes/README.md`'s table.
+### NT-0019's id-standard checks (30-39)
 
-Three things are checked: the old path exists as a directory; its `*.md` basenames
-equal exactly `{"README.md", *OLD_NOTES_STUB_NAMES}` — a stray file or a deleted stub
-both fail this, by name; and each registered stub's bytes equal a template rendered
-from its own filename, exactly — not a regex or a prefix match, the same byte-exact
-reasoning Ruling 59 already established for a template this short. `README.md` itself
-is not re-validated here — Ruling 57 already specifies its content, and this check's
-job is the 18 files that specification does not cover.
+The full ten-item list, and what each one catches, is `scripts/audit-docs.py`'s own
+module docstring — kept current there, per this skill's own rule, rather than restated
+here where it would go stale a second way. Four things worth knowing before reading
+that docstring:
 
-**Proven on deliberately broken input, both cases Ruling 61 §4 names**: a stray file
-added at the old path fails, naming the file, before its content is even read; an
-edited stub body (a sentence appended to an existing stub) fails, naming the file and
-the mismatch. Both reproduced as `tests/test_audit_docs_notes_tombstone.py`, alongside
-a positive-control test that the tombstone as built stays silent and `audit-docs.py`'s
-working-notes count is unaffected, since check 30 reads the old path and `check_notes`
-reads `docs/notes/`, two disjoint roots. That test derives the expected count from
-`docs/notes/` at run time rather than restating a literal — see 2026-09-02 below for why.
+- **Path-scoped, not corpus-wide, until the migration lands.** A single module-level
+  constant, `_ID_SCOPE_ROOTS`, bounds every one of the ten checks to
+  `docs/_templates/` and `docs/process/document-ids.md` — the only things the standard
+  has actually touched so far. Slice W37-6 (the migration) widens it to the whole
+  corpus in the same commit that migrates (D14: "enforcement red from the migration
+  PR" — no warn phase, no date switch). Before that, the checks would otherwise red on
+  every pre-migration id form the rest of the repository still uses.
+- **`docs/_templates/` is read as a policy *source*, never validated as a document.**
+  Check 30's per-family field policy (which fields are permitted/required) and check
+  37's per-family required sections are both *derived* from the templates' own content
+  (Ruling 70) rather than hand-transcribed from NT-0019 §1.5's prose, which the ruling
+  found diverges from the templates in both directions. `derive_field_policies()`
+  asserts its own coverage against a hardcoded manifest of all thirteen template
+  filenames — a template silently going missing, or losing its front-matter block,
+  fails loudly rather than reading as a smaller, equally-plausible-looking policy.
+- **Two checks are gated on an artifact that does not exist yet, on purpose.** Check
+  32 (citation resolution) needs `docs/INDEX.md`; check 36's legacy-form sweep needs
+  `docs/REDIRECTS.csv`. Both are post-migration invariants — before migration, a
+  legitimate citation to a not-yet-renumbered thing (`docs/process/document-ids.md`'s
+  own lift of NT-0019 cites `NT-0016`, `NT-0015`, `Ruling 64`, `docs/audit/` in its own
+  prose) is indistinguishable from a "survivor" by pattern alone. Both checks skip with
+  a note, not silently, when their artifact is absent.
+- **Four checks carry a specific ruling's mechanism**: check 30 (Ruling 70's
+  template-derived field policy), check 33 (Ruling 72's map-plan roll-up raise — it
+  calls `doc-index.py`'s own `derive_execution` and surfaces the `ValueError` its
+  precedence table's "no catch-all" last row produces, rather than re-implementing the
+  table), check 34 (DP-7's freeze predicate, `frozen_diff_is_permitted`, exported at
+  module level so a later migration-diff filter can call the identical function), and
+  check 36 (Ruling 67/DP-2's legacy-form pattern and exclusion list, `sweep_legacy_forms`
+  — one shared, explicit-parameter function, reused unscoped once the corpus migrates).
+
+Ten broken-input proofs (one per check) and every ruling-specific mechanism proof live
+in `tests/test_audit_docs_ids.py`, alongside the fixtures under
+`tests/fixtures/docs-ids/w37-4-checks/` and `tests/fixtures/docs-ids/w37-4-rollup-raise/`.
 
 ## The check the script does not do
 
@@ -362,6 +379,27 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-02 — Checks 30-39 added (NT-0019's id-standard audit, Slice W37-4,
+`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`), path-scoped to
+`_ID_SCOPE_ROOTS` until the migration (Slice W37-6) widens it. Slot 30 changed
+identity: `check_notes_tombstone` moved to slot 36 and became `check_redirects` (NT-0019
+§5.5); its old test file, `tests/test_audit_docs_notes_tombstone.py`, is deleted, per
+NT-0019 §5.7, and its "always name the old path" citation is folded into
+`tests/test_audit_docs_ids.py` (see `tests/test_notes_move_citations.py`'s
+`_CHECK_30_MECHANISM`, itself renamed in the same commit to reflect the move). Two
+defects found and fixed while building this: `citation_problems_in_file`'s padding
+check compared against `_docid.ID_RE`'s captured number group, which the regex's own
+`0*` already strips of its leading zero before the group ever sees it, so a padded
+citation could never be detected — fixed by comparing the *full match* against the
+canonical form instead. And `python3 scripts/doc-index.py --check` exited 1
+unconditionally when `docs/INDEX.md` did not exist, which would have red the two new
+`docs.yml` gate steps this slice wires in on every push until the migration lands —
+fixed to exit 0 when the corpus is also empty (pre-migration), 1 when records exist but
+the index does not (genuinely stale), proven by both cases in `tests/test_doc_index.py`.
+**Proven on deliberately broken input, one fixture per check**, plus the ruling-specific
+mechanisms named in the section above — see `tests/test_audit_docs_ids.py`'s own module
+docstring for the pairing.
 
 2026-09-02 — The check-30 section above, and the 2026-09-01 entry below, both said
 `audit-docs.py`'s positive-control test asserts the literal "18 working notes". That was

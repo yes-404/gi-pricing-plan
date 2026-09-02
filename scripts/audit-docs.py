@@ -36,6 +36,10 @@ Checks (all non-destructive, exit 1 on any failure):
      a docs/audit/work/*/README.md (or closure-records.md) work-item closure record.
  26. Every `source` citation in docs/process/delivery-process.core.json resolves to a
      real section, or numbered step, of docs/process/delivery-process.md (NT-0014 §3).
+ 27. The process core extract's recorded digest (`meta.derived_from_digest`) matches the
+     current bytes of docs/process/delivery-process.md, paired with the commit it was last
+     reconciled against (`meta.verified_against_tree`) — the other half of check 26's own
+     "cheap half of a drift check" (Ruling 45).
  28. Every filed plan (the `writing-plans` file kind, dated on or after 2026-08-31) states
      an explicit "Acceptance Standard" heading with content under it (NT-0014 §2 C1,
      Ruling 46). Plans dated before the cutoff, and the `-ledger`/`-final-review`/
@@ -46,54 +50,75 @@ Checks (all non-destructive, exit 1 on any failure):
      says more than the bare word (Ruling 50, `scripts/register-lint.py`). Also prints, as a
      note rather than a failure, the count of rows not yet migrated to
      docs/audit/findings/<F-id>.md against the migration threshold (Ruling 51, NT-0015 P4).
- 30. The vacated .claude/notes/ tombstone holds exactly the README plus a frozen,
-     closed set of 18 per-file redirect stubs, each byte-identical to a rendered
-     template — a stray file or an edited stub body both fail (Ruling 61).
+
+NT-0019 (docs/notes/0019-one-id-per-document.md) §1.11 — one id per governed thing.
+Checks 30-39 below, path-scoped to `_ID_SCOPE_ROOTS` until the migration (Slice W37-6)
+widens it to the whole corpus (docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md,
+Slice W37-4, 2026-09-02). **Slot 30 changed identity on this date**: it held
+`check_notes_tombstone` (the vacated `.claude/notes/` tombstone check, Ruling 61); NT-0019
+§5.5 resolves the collision between that check and this note's own header check — both
+numbered 30 — by replacing the former rather than renumbering either
+(`check_notes_tombstone` -> `check_redirects`, moving to slot 36, which is what its job
+becomes: watching REDIRECTS.csv instead of the tombstone stubs it replaces). The number 30
+is not reused for two things; `check_notes_tombstone`'s protective job over the tombstone
+stubs ends with this commit, by that same resolution, until W37-6 deletes the stubs
+entirely.
+ 30. Header present and parseable on every file in scope; no unknown field; required
+     fields per family, read from docs/_templates/ (Ruling 70) — never transcribed from
+     NT-0019 §1.5's own parenthesis, which diverges from the templates in both directions.
+ 31. Header `id` prefix and integer equal the filename's; directory equals family;
+     numbers unique and contiguous in scope; `created` non-decreasing with the number.
+     `docs/_templates/` is exempt by path (NT-0019 §1.4).
+ 32. Every `<PREFIX>-<n>` in prose resolves in docs/INDEX.md and its prefix matches the
+     number's family; no padded id outside a link target; a link's text and target cite
+     the same id. Gated on docs/INDEX.md existing (pre-migration there is no citation
+     corpus, and document-ids.md's own illustrative ids would otherwise false-positive).
+ 33. `supersedes`/`superseded_by` symmetric; `status:` is in the standard's vocabulary and
+     in the family's own subset of it; the map-plan roll-up raise surfaced rather than
+     swallowed (Ruling 72 — doc-index.py's precedence table has no catch-all).
+ 34. Freeze: a frozen family's diff against its merge-base touches only `status:` (forward
+     only), `superseded_by:`, an appended `corrected_by:` entry, or (ledgers) an appended
+     `plans:` entry (DP-7); every `corrected_by:` entry is a record whose `corrects:` names
+     this file.
+ 35. `owner:` is a role filename under .claude/roles/, or `maintainer`, and one the
+     directory's README.md permits where that README declares a permitted-owner list.
+ 36. Redirects (renamed from `check_notes_tombstone`, see above): every `was:` has a
+     REDIRECTS.csv row; every row's target exists; no pre-migration id or path form
+     survives outside REDIRECTS.csv and `was:` lines (Ruling 67/DP-2) — one shared
+     pattern-and-exclusion constant, reused unscoped by NT-0019 §7 acceptance item (d)
+     once the migration lands.
+ 37. Shape: a document carries every `##` section its family's template body declares —
+     the ten-section spec rule, generalised.
+ 38. Loop signal, warn-only — never fails the gate. Notes only in S1: no PL-/RS-/RFC-
+     population exists in scope yet to check coverage, freeze-gate dates or superseded/
+     retired citations against.
+ 39. docs/INDEX.md byte-stable against a fresh regeneration (also its own `doc-id.py
+     doc-index.py --check` CI step); a merged PR's title names its `SL-` and the slice's
+     ledger records the PR — needs GitHub PR context this tree-snapshot tool does not have,
+     so noted rather than checked here.
 
 Usage: python3 scripts/audit-docs.py
 """
 from __future__ import annotations
 
 import collections
+import csv
 import hashlib
 import importlib.util
+import itertools
 import json
 import pathlib
 import re
 import sys
 import types
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import date
 from typing import Final
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 ROOT = REPO / "docs"
 NOTES = REPO / "docs" / "notes"
-
-# Ruling 61: the vacated .claude/notes/ tombstone -- a frozen, closed registry, not
-# derived from the README's own mapping table (same reasoning as Ruling 59's census
-# carve-out: a stray edit to the source of truth must not also defeat the check).
-OLD_NOTES = REPO / ".claude" / "notes"
-OLD_NOTES_TOMBSTONE_DATE: Final = "2026-09-01"
-OLD_NOTES_STUB_NAMES: Final[tuple[str, ...]] = (
-    "0001-phase-boundary-plan-review.md",
-    "0002-demo-entrance-and-guide.md",
-    "0003-duplicated-status-goes-stale.md",
-    "0004-a-reference-that-resolves-only-for-the-writer.md",
-    "0005-deferred-items-with-no-durable-custody.md",
-    "0006-two-rules-for-reading-an-artifact.md",
-    "0007-context-bound-measures-cap-not-discipline.md",
-    "0008-project-closure-audit-structure.md",
-    "0009-slim-the-roadmap.md",
-    "0010-layered-slice-based-workflow.md",
-    "0011-per-agent-model-and-skill-settings.md",
-    "0012-a-credential-is-borrowed-not-stored.md",
-    "0013-the-lead-is-the-highest-error-node.md",
-    "0014-machine-readable-process-core.md",
-    "0015-the-register-is-a-ledger-evidence-is-a-file.md",
-    "0016-file-taxonomy-reference-coding-and-custody-investigation.md",
-    "0017-a-public-repository-needs-a-public-face.md",
-    "0018-a-turn-that-ends-strands-what-it-started.md",
-)
 _ABS_PREFIX = "https://contracts.gi-pricing.dev/"
 # docs/plans/ only: ids listed after this marker are being allocated, not cited. See check 2.
 UNALLOCATED = re.compile(r"next free\s*:", re.IGNORECASE)
@@ -291,92 +316,6 @@ def check_open_question_mirror_status(specs: list[pathlib.Path]) -> None:
     # The verdict belongs in the summary line, not just the failure list: a note reading
     # "all carry" above a FAILED block is the shape this audit exists to catch.
     notes.append(f"{ok} of {checked} §10 mirror rows carry their register status")
-
-
-def check_notes_tombstone() -> None:
-    """30. The vacated `.claude/notes/` tombstone: exactly the README plus the frozen,
-    closed set of per-file redirect stubs (Ruling 61), each byte-identical to a rendered
-    template.
-
-    Ruling 57 (`docs/plans/2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md`) chose a single
-    README tombstone at the vacated path. NT-0016 Slice 4's own execution found that a
-    directory-level README does not make an *individual* old-path citation resolve: 13
-    frozen plans under `docs/plans/` cite notes by their old path
-    (`../../.claude/notes/000N-....md`), C4 forbids editing a frozen plan to fix its
-    citation, and check 1 (broken links) tests on-disk existence per link target, not per
-    directory. The fix was 18 one-line redirect stubs, one per moved note -- which fixed
-    check 1, but sat at a location nothing in this script reads any more (`NOTES` points at
-    `docs/notes/`, `docs.yml`'s path filter no longer names the old path). Ruling 61 kept
-    the stubs and required this check: without it, a stray file or an edited stub body at
-    the old path would be invisible to every check in this script, recreating -- in a
-    different shape -- exactly the unwatched-drift risk Ruling 57's own tombstone design
-    was chosen to avoid.
-
-    **A frozen, closed registry, not a re-parse of the README's own mapping table** -- the
-    same design choice Ruling 59 made for the file-census provenance carve-out, for the same
-    reason: deriving the expected set from a file a stray edit could also touch would let
-    one edit defeat both the content it changes and the check meant to catch the change.
-    `OLD_NOTES_STUB_NAMES` is that registry.
-
-    Three things are checked, in order:
-
-    1. `OLD_NOTES` is unconditionally expected to exist as a directory -- the same posture
-       `check_notes` already takes for `NOTES` itself.
-    2. **Exact membership.** The `*.md` basenames actually present must equal
-       `{"README.md", *OLD_NOTES_STUB_NAMES}` -- not a superset or subset check. A name
-       present on disk and absent from the registry is a stray file; a registered name
-       absent from disk is a deleted stub. Either way, a mismatched set is reported by name
-       rather than only by count, so the failure names exactly what changed.
-    3. **Exact content, per stub.** Each registered stub's bytes must equal a template
-       rendered from its own name, deterministically -- not a regex or a prefix match.
-       Ruling 59's own record already found a byte-exact comparison stronger and no more
-       expensive than a looser pattern match for a template this short, and the same
-       reasoning applies here: a body edited in any way -- a typo fix, an added sentence,
-       real content pasted in -- fails.
-
-    `README.md` itself is not re-validated here: Ruling 57 already specifies its content,
-    and this check's job is the 18 files that specification does not cover.
-    """
-    if not OLD_NOTES.is_dir():
-        fail(f"{OLD_NOTES.relative_to(REPO).as_posix()} does not exist — check 30 cannot run")
-        return
-
-    expected_names = {"README.md", *OLD_NOTES_STUB_NAMES}
-    actual_names = {p.name for p in OLD_NOTES.glob("*.md")}
-
-    stray = sorted(actual_names - expected_names)
-    for name in stray:
-        fail(
-            f"{OLD_NOTES.relative_to(REPO).as_posix()}/{name} is not a registered stub "
-            "(Ruling 61) — a stray file at the vacated notes path is invisible to every "
-            "other check in this script"
-        )
-
-    missing = sorted(expected_names - actual_names)
-    for name in missing:
-        fail(
-            f"{OLD_NOTES.relative_to(REPO).as_posix()}/{name} is registered (Ruling 61) "
-            "but missing from disk"
-        )
-
-    for name in OLD_NOTES_STUB_NAMES:
-        stub = OLD_NOTES / name
-        if not stub.is_file():
-            continue  # already reported above as missing
-        expected = (
-            "# Moved\n\n"
-            f"This note moved to [`docs/notes/{name}`](../../docs/notes/{name}) on "
-            f"{OLD_NOTES_TOMBSTONE_DATE} (NT-0016 Slice 4). See [this directory's "
-            "README](README.md) for the full mapping and why this stub exists rather "
-            "than a symlink (Ruling 57).\n"
-        )
-        actual = stub.read_text(encoding="utf-8")
-        if actual != expected:
-            fail(
-                f"{OLD_NOTES.relative_to(REPO).as_posix()}/{name} does not match its "
-                "rendered template (Ruling 61) — a stub body was edited, and nothing "
-                "downstream of the old path would otherwise notice"
-            )
 
 
 def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
@@ -1040,6 +979,1239 @@ def check_plan_acceptance_standard() -> None:
     )
 
 
+####################################################################################
+# NT-0019 checks 30-39 — one id per governed thing.
+#
+# docs/notes/0019-one-id-per-document.md §1.11 is the table these implement; each
+# function's docstring cites the row it is. Every one of them reads the shared parser
+# from `scripts/_docid.py` (loaded by path below, the same idiom `_load_register_lint`
+# above already uses for check 29's dependency) rather than redefining any of it — that
+# module is W37-2's, "owned by this slice; W37-3 and W37-4 import it and do not redefine
+# it" (the map plan's own words). `scripts/doc-index.py` is consumed the same way, only
+# where a check needs its rollup or corpus-building logic specifically (check 33).
+####################################################################################
+
+_DOCID_PATH: Final = REPO / "scripts" / "_docid.py"
+_DOC_INDEX_PATH: Final = REPO / "scripts" / "doc-index.py"
+
+
+def _load_module(name: str, path: pathlib.Path) -> types.ModuleType:
+    """Load a `scripts/` module by path — required for every hyphenated filename here
+    (`doc-index.py` is not a legal `import` target), and used for the underscore-leading
+    `_docid.py` too so both loads go through one helper.
+    """
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    # Registered before `exec_module`: `_docid.py`'s `@dataclass` classes need
+    # `sys.modules[cls.__module__]` to resolve at class-creation time (the same reason
+    # `tests/test_doc_id.py`'s own loader does this).
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_docid = _load_module("_docid", _DOCID_PATH)
+_doc_index = _load_module("_doc_index_for_audit_docs", _DOC_INDEX_PATH)
+
+#: Roots checks 30-39 apply to. In W37-4 this is the set of paths that exist *after* the
+#: standard lands and *before* the migration; W37-6 replaces it with the whole corpus in the
+#: same commit that migrates, which is D14's "enforcement red from the migration PR".
+_ID_SCOPE_ROOTS: Final = (ROOT / "_templates", ROOT / "process" / "document-ids.md")
+
+_TEMPLATES_DIR: Final = ROOT / "_templates"
+
+
+def _id_scope_documents(
+    roots: Sequence[pathlib.Path] | None = None,
+) -> list[pathlib.Path]:
+    """Every real *governed-document* file under the checks-30-39 scope roots — never
+    `_templates/` itself, which checks 30 and 37 read as a field-policy and shape
+    *source* (Ruling 70), not as a document to validate as one: a template's placeholder
+    content (`created: YYYY-MM-DD`, `id: PL-NNNNN`) is not valid `Header` content and is
+    not supposed to be — the same reason `_templates/` is exempt from check 31 "by path"
+    (NT-0019 §1.4) extends to every check in this family that validates a document
+    *instance* rather than reading the templates as data.
+
+    `roots` defaults to `None`, resolved to the module-level `_ID_SCOPE_ROOTS` *inside*
+    the function body rather than as the parameter's own default value — a default value
+    is bound once, at function-definition time, which would make a test's runtime
+    monkeypatch of `_ID_SCOPE_ROOTS` invisible to every caller (including every
+    `check_*` function here) that calls this with no argument. Resolving it as a
+    statement instead makes every no-argument call see whatever `_ID_SCOPE_ROOTS`
+    currently names, which is what a broken-input test needs to be able to redirect.
+    """
+    if roots is None:
+        roots = _ID_SCOPE_ROOTS
+    files: list[pathlib.Path] = []
+    for root in roots:
+        if root == _TEMPLATES_DIR:
+            continue
+        if root.is_file():
+            files.append(root)
+        elif root.is_dir():
+            files.extend(sorted(root.rglob("*.md")))
+    return sorted(set(files))
+
+
+def _canon_id(raw: str) -> str:
+    """`"PL-1240"`, `"PL-01240"` and `"PL-001240"` all resolve to `"PL-1240"` (NT-0019
+    §1.1 rule 3) — the same equivalence `_docid.ID_RE`'s `0*` group already encodes;
+    this just re-renders whatever matched in canonical (unpadded) form. Returns `raw`
+    unchanged when it is not `<PREFIX>-<n>` shaped at all, so a caller can use this on
+    arbitrary strings (a `relates:` entry, a `was:` value) without a separate guard.
+    """
+    m = _docid.ID_RE.fullmatch(raw.strip())
+    if m is None:
+        return raw
+    return _docid.canonical(m.group(1), int(m.group(2)))
+
+
+# =========================================================================================
+# Check 30 — header present and parseable; no unknown field; required fields per family,
+# read from docs/_templates/ (Ruling 70).
+# =========================================================================================
+
+_LEADING_COMMENT_RE: Final = re.compile(r"\A<!--.*?-->\n?\n?", re.DOTALL)
+_FENCED_YAML_RE: Final = re.compile(r"```yaml\n(.*?)\n```", re.DOTALL)
+_TEMPLATE_KEY_RE: Final = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):")
+
+#: NT-0019 §1.2's "Kind" column, keyed by the template's own filename — needed because a
+#: template's filename (`FD.md`) is not the family word (`finding`) `Header.family`
+#: carries, and `_docid.py` has no filename->family table (only prefix->family, and a
+#: template's filename is a family *label*, not a prefix-and-number). `PHASE.md` is
+#: deliberately absent: NT-0019 §1.1 rule 4 puts a phase outside the id standard
+#: entirely, so it has no family and no header field policy to derive.
+_TEMPLATE_FAMILY: Final[Mapping[str, str]] = {
+    "ADR.md": "decision",
+    "CR.md": "closure",
+    "FD.md": "finding",
+    "LG.md": "ledger",
+    "PL.md": "plan",
+    "REFERENCE.md": "reference",
+    "RFC.md": "proposal",
+    "RL.md": "ruling",
+    "RS.md": "research",
+    "WF.md": "workflow",
+    "WK.md": "work",
+    "SL.md": "slice",
+}
+
+#: The fields every family's template declares (all thirteen carry `family`, `title`,
+#: `status`, `created`, `owner`; twelve of thirteen also carry `id` — Reference is the one
+#: family with none, §1.2: "carries no prefix and no number"). Required-ness beyond this
+#: core is a per-family template fact, not hand-listed here (Ruling 70 §2 point 1: "the
+#: permitted set for a family is the set of keys in that family's template front matter").
+_CORE_HEADER_FIELDS: Final = ("family", "title", "status", "created", "owner")
+
+
+#: The exact thirteen template filenames NT-0019 §1.2 names, hardcoded rather than
+#: inferred from a directory listing — a coverage count taken against `glob("*.md")`'s
+#: own result is self-consistent even when a file has silently vanished (it would just
+#: report "13 of 13" over a directory that in fact holds 12), which is indistinguishable
+#: from correct. Comparing the *listing itself* against this manifest is what a scope
+#: change that quietly drops a file cannot pass through unnoticed.
+_EXPECTED_TEMPLATE_FILENAMES: Final = frozenset(
+    {"ADR.md", "CR.md", "FD.md", "LG.md", "PL.md", "REFERENCE.md", "RFC.md", "RL.md",
+     "RS.md", "WF.md", "WK.md", "SL.md", "PHASE.md"}
+)
+#: Of those thirteen, the ten with a top-level `---` block (every document family).
+_EXPECTED_DASH_BLOCK_TEMPLATES: Final = frozenset(
+    {"ADR.md", "CR.md", "FD.md", "LG.md", "PL.md", "REFERENCE.md", "RFC.md", "RL.md",
+     "RS.md", "WF.md"}
+)
+#: The two row families, a fenced ```yaml block under the row's own heading (NT-0019
+#: §1.5) rather than top-level front matter.
+_EXPECTED_FENCED_BLOCK_TEMPLATES: Final = frozenset({"WK.md", "SL.md"})
+#: The one family outside the id standard entirely (NT-0019 §1.1 rule 4): no `---`, no
+#: fence, no `id:`, no `family:` — checked, not merely assumed, by `derive_field_policies`.
+_EXPECTED_NO_BLOCK_TEMPLATES: Final = frozenset({"PHASE.md"})
+
+
+def _template_front_matter_lines(path: pathlib.Path) -> tuple[list[str] | None, str]:
+    """The raw `key: value` lines of one template's declared block, plus which shape
+    produced them — `"dash"` (a top-level `---` block), `"fenced"` (a ```yaml block), or
+    `"none"` (`PHASE.md`, by design — NT-0019 §1.1 rule 4) — read *after* stripping the
+    template's own leading `<!-- ... -->` comment. The shape is returned alongside the
+    lines (not just inferred from `None`-ness) so `derive_field_policies` can assert each
+    template landed in its *expected* one of the three, not merely "a block or not".
+
+    Deliberately not `_docid.parse_header`: a template's placeholder values
+    (`created: YYYY-MM-DD`, `id: PL-NNNNN`) are not valid `Header` content, and are not
+    meant to be — this reads a template as a *policy source* (field names only), never as
+    a document instance (Ruling 70 §2 point 3).
+    """
+    text = path.read_text(encoding="utf-8")
+    stripped = _LEADING_COMMENT_RE.sub("", text, count=1)
+    lines = stripped.splitlines()
+    if lines and lines[0] == "---":
+        try:
+            closing = lines.index("---", 1)
+        except ValueError:
+            closing = len(lines)
+        return lines[1:closing], "dash"
+    fenced = _FENCED_YAML_RE.search(stripped)
+    if fenced is not None:
+        return fenced.group(1).splitlines(), "fenced"
+    return None, "none"
+
+
+def _template_field_keys(path: pathlib.Path) -> tuple[tuple[str, ...] | None, str]:
+    """The set of front-matter keys one family template declares, and its block shape —
+    see `_template_front_matter_lines`. The keys are `None` only for the `"none"` shape.
+    """
+    lines, shape = _template_front_matter_lines(path)
+    if lines is None:
+        return None, shape
+    keys = []
+    for line in lines:
+        if not line.strip() or line[:1] in (" ", "\t"):
+            continue
+        m = _TEMPLATE_KEY_RE.match(line)
+        if m:
+            keys.append(m.group(1))
+    return tuple(keys), shape
+
+
+@dataclass(frozen=True)
+class _FieldPolicy:
+    """One family's header field policy, derived from its template (Ruling 70)."""
+
+    permitted: frozenset[str]
+    required: frozenset[str]
+
+
+def derive_field_policies() -> dict[str, _FieldPolicy]:
+    """NT-0019 §1.5's per-family header field policy, read from `docs/_templates/` —
+    never transcribed from §1.5's own parenthesis (Ruling 70 §2: "the parenthesis is
+    illustration of why extras exist, not the register of which ones do"; measured at
+    `f226891` to diverge from the templates in both directions at once).
+
+    Asserts its own coverage against a *hardcoded* manifest rather than inferring it from
+    a green caller or from the directory's own listing (Ruling 70 §4 item 3, sharpened
+    2026-09-02): a coverage count taken over `glob("*.md")`'s own result is
+    self-consistent even when a file has silently vanished from the thirteen — it would
+    report "N of N" over whatever N the directory now holds, which is exactly as
+    "defensible-looking" whether N is 13 or 12. Every one of three things is checked
+    against `_EXPECTED_TEMPLATE_FILENAMES` and its two named subsets, by name, before any
+    policy is derived: the directory holds exactly the thirteen expected filenames and no
+    others; the ten expected `_EXPECTED_DASH_BLOCK_TEMPLATES` each produced a `"dash"`
+    block; the two expected `_EXPECTED_FENCED_BLOCK_TEMPLATES` each produced a `"fenced"`
+    block; `PHASE.md` alone produced `"none"`. This is the specific failure the naive
+    shared-parser reader hit first (0 of 13 templates parsed, an empty policy, a pass on
+    the very first run) generalised one level: a *partial* regression — one template
+    silently losing its block, or one file silently deleted — must be exactly as loud as
+    the total one was.
+    """
+    on_disk_names = {p.name for p in _TEMPLATES_DIR.glob("*.md")}
+    if on_disk_names != _EXPECTED_TEMPLATE_FILENAMES:
+        missing = _EXPECTED_TEMPLATE_FILENAMES - on_disk_names
+        extra = on_disk_names - _EXPECTED_TEMPLATE_FILENAMES
+        raise RuntimeError(
+            f"{_TEMPLATES_DIR}: expected exactly {sorted(_EXPECTED_TEMPLATE_FILENAMES)} "
+            f"but found {sorted(on_disk_names)} — missing {sorted(missing)}, unexpected "
+            f"{sorted(extra)} (Ruling 70 §4 item 3: a silently vanished template must "
+            "not read as a smaller, equally-covered set)"
+        )
+
+    policies: dict[str, _FieldPolicy] = {}
+    dash_seen: set[str] = set()
+    fenced_seen: set[str] = set()
+    none_seen: set[str] = set()
+    for name in sorted(_EXPECTED_TEMPLATE_FILENAMES):
+        path = _TEMPLATES_DIR / name
+        keys, shape = _template_field_keys(path)
+        family = _TEMPLATE_FAMILY.get(name)
+
+        if shape == "dash":
+            dash_seen.add(name)
+        elif shape == "fenced":
+            fenced_seen.add(name)
+        else:
+            none_seen.add(name)
+
+        if name in _EXPECTED_NO_BLOCK_TEMPLATES:
+            if shape != "none" or keys is not None:
+                raise RuntimeError(
+                    f"{name}: expected no closed-grammar block (NT-0019 §1.1 rule 4) but "
+                    f"the template reader found a {shape!r} block — re-check this function"
+                )
+            continue
+
+        expected_shape = "dash" if name in _EXPECTED_DASH_BLOCK_TEMPLATES else "fenced"
+        if shape != expected_shape or keys is None or family is None:
+            raise RuntimeError(
+                f"{name}: expected a {expected_shape!r} field-policy block but found "
+                f"{shape!r} ({keys!r}), or no recognised family — either a real defect "
+                "in the template, or _TEMPLATE_FAMILY needs a new entry (Ruling 70 §4 "
+                "item 3: silent empty coverage is exactly the failure this rules out)"
+            )
+        permitted = frozenset(keys)
+        required = frozenset(_CORE_HEADER_FIELDS) & permitted
+        if family != "reference":
+            required = required | ({"id"} & permitted)
+        policies[family] = _FieldPolicy(permitted=permitted, required=required)
+
+    if dash_seen != _EXPECTED_DASH_BLOCK_TEMPLATES:
+        raise RuntimeError(
+            f"expected exactly {sorted(_EXPECTED_DASH_BLOCK_TEMPLATES)} to carry a "
+            f"top-level `---` block; got {sorted(dash_seen)}"
+        )
+    if fenced_seen != _EXPECTED_FENCED_BLOCK_TEMPLATES:
+        raise RuntimeError(
+            f"expected exactly {sorted(_EXPECTED_FENCED_BLOCK_TEMPLATES)} to carry a "
+            f"fenced ```yaml block; got {sorted(fenced_seen)}"
+        )
+    if none_seen != _EXPECTED_NO_BLOCK_TEMPLATES:
+        raise RuntimeError(
+            f"expected exactly {sorted(_EXPECTED_NO_BLOCK_TEMPLATES)} to carry no block "
+            f"at all; got {sorted(none_seen)}"
+        )
+    return policies
+
+
+#: `Header` fields checked for "populated but not in the family's permitted set" — a
+#: field the closed grammar knows globally but this family's *template* never declares.
+#: List fields use non-empty as "populated"; `vendored` uses `True` (its `False` default
+#: is indistinguishable from absence, which is the common, harmless case here).
+#:
+#: Deliberately **excludes** `was:`, `vendored:` and `origin:`, verified rather than
+#: assumed: `git grep -n '^was:\|^vendored:\|^origin:' docs/_templates/` returns nothing
+#: — no template's front-matter block declares any of the three, because all thirteen
+#: are freshly-authored examples and these three apply only to a file *after* something
+#: has already happened to it (a migration rename for `was:`; being a vendored skill's
+#: own `SKILL.md` for `vendored:`/`origin:`, per NT-0019 §1.5's own prose rather than its
+#: front-matter illustration). Deriving their permission from "does the template show it"
+#: would forbid all three on every family, everywhere, forever — the opposite of what
+#: §1.5 states. They stay known (via `_docid.py`'s closed grammar, so a genuine typo in
+#: one still lands in `.extra` and is caught) without being template-gated.
+_OPTIONAL_HEADER_FIELDS: Final[tuple[str, ...]] = (
+    "id", "kind", "phase", "work", "slice", "tree", "plans", "supersedes",
+    "superseded_by", "corrected_by", "corrects", "relates",
+)
+
+
+def _is_populated(header: object, field: str) -> bool:
+    value = getattr(header, "slice_" if field == "slice" else field)
+    if isinstance(value, tuple):
+        return len(value) > 0
+    if isinstance(value, bool):
+        return value is True
+    return value is not None
+
+
+def check_header_fields() -> None:
+    """30. Header present and parseable on every file in scope; no unknown field;
+    required fields per family (NT-0019 §1.11).
+
+    Renumbered from `check_notes_tombstone`'s retired slot 30 -- see this module's
+    docstring for the dated substitution note (NT-0019 §5.5).
+
+    `docs/_templates/` is read for its field policy (`derive_field_policies`), never
+    validated as a document instance. `document-ids.md` (S1's one real document in scope)
+    is validated as one: parsed under `_docid.parse_header`, checked against its family's
+    derived permitted set for an unknown field (`.extra`, plus any globally-known field
+    populated where its family's template does not declare it), and checked for every
+    field the derived required set names.
+    """
+    try:
+        policies = derive_field_policies()
+    except RuntimeError as exc:
+        # A clean gate failure, not a crash: letting this propagate as an uncaught
+        # exception would abort the whole script before checks 31-39 ever run, trading a
+        # readable report for a traceback over the exact condition this assertion exists
+        # to make loud in the first place.
+        fail(f"check 30: {exc}")
+        return
+    notes.append(
+        f"check 30: field policy derived from all {len(_EXPECTED_TEMPLATE_FILENAMES)} "
+        f"templates under {_TEMPLATES_DIR.relative_to(REPO).as_posix()} — "
+        f"{len(_EXPECTED_DASH_BLOCK_TEMPLATES)} `---`-block families, "
+        f"{len(_EXPECTED_FENCED_BLOCK_TEMPLATES)} fenced-block families, "
+        f"{len(_EXPECTED_NO_BLOCK_TEMPLATES)} with no block by design "
+        f"({len(policies)} field polic{'y' if len(policies) == 1 else 'ies'} total)"
+    )
+
+    checked = 0
+    for path in _id_scope_documents():
+        rel = path.relative_to(REPO).as_posix()
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError as exc:
+            fail(f"check 30: {exc}")
+            continue
+        if header is None:
+            fail(f"check 30: {rel}: no `---` front-matter header found")
+            continue
+        checked += 1
+
+        policy = policies.get(header.family)
+        if policy is None:
+            fail(
+                f"check 30: {rel}: family {header.family!r} has no known template under "
+                f"{_TEMPLATES_DIR.relative_to(REPO).as_posix()}"
+            )
+            continue
+
+        for extra_key in header.extra:
+            fail(f"check 30: {rel}: unknown field `{extra_key}:` — not in the closed grammar")
+
+        for field in _OPTIONAL_HEADER_FIELDS:
+            if field in policy.permitted:
+                continue
+            if _is_populated(header, field):
+                fail(
+                    f"check 30: {rel}: field `{field}:` is populated but not permitted "
+                    f"for family {header.family!r} (docs/_templates/ does not declare it)"
+                )
+
+        for required_field in sorted(policy.required):
+            if required_field == "id":
+                present = header.id is not None
+            elif required_field == "created":
+                present = header.created is not None
+            else:
+                present = bool(getattr(header, required_field))
+            if not present:
+                fail(
+                    f"check 30: {rel}: missing required field `{required_field}:` for "
+                    f"family {header.family!r}"
+                )
+
+    notes.append(f"check 30: {checked} governed document(s) checked in scope")
+
+
+# =========================================================================================
+# Check 31 — id/filename/directory agreement; numbers unique and contiguous in scope;
+# `created` non-decreasing with the number. `_templates/` is exempt by path (NT-0019 §1.4).
+# =========================================================================================
+
+#: NT-0019 §1.4's directory-is-the-family table, prefix -> directory, document families
+#: only (row families FR/NFR/DEP/OQ/WK/SL live embedded in a shared file, not their own
+#: directory). A second, independent transcription of the same note table —
+#: `scripts/doc-index.py`'s own `FAMILY_DIRS` transcribes it for that module's purpose —
+#: is the intended shape (one shared low-level parser, `_docid.py`, with each higher-level
+#: consumer reading its own small, static projection of a table that changes only via an
+#: RFC-/RL- per NT-0019 §1.12), not the drift NT-0003 warns against.
+_FAMILY_DIR: Final[Mapping[str, str]] = {
+    "WF": "workflows", "ADR": "adrs", "RFC": "rfcs", "PL": "plans", "LG": "ledgers",
+    "RL": "rulings", "RS": "research", "CR": "closures", "FD": "findings",
+}
+
+_FILENAME_ID_RE: Final = re.compile(
+    rf"^({'|'.join(_docid.FAMILY_PREFIXES)})-(\d+)-"
+)
+
+
+def check_id_filename_directory() -> None:
+    """31. Header `id` prefix and integer equal the filename's; directory equals family;
+    numbers unique and contiguous in scope; `created` non-decreasing with the number
+    (NT-0019 §1.11).
+
+    On the real tree in S1 this has exactly one candidate (`document-ids.md`), which
+    carries no `id:` at all (Reference, §1.2: "no prefix and no number") — so every
+    sub-clause finds nothing to compare *today*; each is proven on fixtures instead.
+
+    Global uniqueness/contiguity here deliberately overlaps `doc-id.py check`'s own gate
+    step: that tool computes contiguity from `docs/INDEX.md` (DP-8 — a local, unmerged
+    draft must not manufacture a phantom gap), while this runs over the *scoped* working
+    tree as part of `audit-docs.py`'s single report (NT-0019 §1.11: "one gate, one
+    report").
+    """
+    entries: list[tuple[int, str, str, date | None]] = []
+    for path in _id_scope_documents():
+        rel = path.relative_to(REPO).as_posix()
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            continue  # check 30 already reports a malformed header
+        if header is None or header.id is None:
+            continue
+        m = _docid.ID_RE.fullmatch(header.id.strip())
+        if m is None:
+            fail(f"check 31: {rel}: header `id: {header.id}` is not `<PREFIX>-<n>` shaped")
+            continue
+        prefix, number = m.group(1), int(m.group(2))
+
+        filename_m = _FILENAME_ID_RE.match(path.name)
+        if filename_m is not None:
+            f_prefix, f_number = filename_m.group(1), int(filename_m.group(2))
+            if (prefix, number) != (f_prefix, f_number):
+                fail(
+                    f"check 31: {rel}: header id {_docid.canonical(prefix, number)} but "
+                    f"filename pads {_docid.canonical(f_prefix, f_number)}"
+                )
+
+        expected_dir = _FAMILY_DIR.get(prefix)
+        if expected_dir is not None and path.parent.name != expected_dir:
+            fail(
+                f"check 31: {rel}: family {header.family!r} (prefix {prefix}) belongs "
+                f"under a {expected_dir!r} directory, not {path.parent.name!r}"
+            )
+
+        entries.append((number, _docid.canonical(prefix, number), rel, header.created))
+
+    seen: dict[int, tuple[str, str]] = {}
+    for number, canon, rel, _created in entries:
+        earlier = seen.get(number)
+        if earlier is not None:
+            fail(
+                f"check 31: {number} is claimed by both {earlier[0]} ({earlier[1]}) and "
+                f"{canon} ({rel})"
+            )
+        else:
+            seen[number] = (canon, rel)
+
+    numbers = sorted(seen)
+    for lower, upper in itertools.pairwise(numbers):
+        if upper != lower + 1:
+            fail(f"check 31: gap in the scoped id sequence between {lower} and {upper}")
+
+    dated = sorted((n, c) for n, _canon, _rel, c in entries if c is not None)
+    for (n1, c1), (n2, c2) in itertools.pairwise(dated):
+        if n1 != n2 and c2 < c1:
+            fail(
+                f"check 31: id {n2} is `created:` {c2.isoformat()}, earlier than id "
+                f"{n1}'s {c1.isoformat()} — `created` must be non-decreasing with the number"
+            )
+
+    notes.append(f"check 31: {len(entries)} id(s) in scope, {len(numbers)} distinct number(s)")
+
+
+# =========================================================================================
+# Check 32 — citation resolution and padding hygiene. Gated on docs/INDEX.md existing.
+# =========================================================================================
+
+_MD_LINK_RE: Final = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+_FENCE_LINE_RE: Final = re.compile(r"^\s*```")
+
+
+def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[str]:
+    """Every check-32 problem in one file, given the set of canonical ids `docs/INDEX.md`
+    carries: a `<PREFIX>-<n>` citation outside a link target that does not resolve; the
+    same citation written padded; a markdown link whose text and target cite different
+    ids. Explicit parameters (not the module's own `ROOT`/`_id_scope_documents`) so a
+    fixture can exercise this without a real `docs/INDEX.md` on disk.
+    """
+    problems: list[str] = []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    in_fence = False
+    for lineno, line in enumerate(lines, 1):
+        if _FENCE_LINE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+
+        link_spans = [m.span() for m in _MD_LINK_RE.finditer(line)]
+
+        for m in _docid.ID_RE.finditer(line):
+            if any(start <= m.start() < end for start, end in link_spans):
+                continue  # a link target may legitimately carry a padded id
+            prefix, number_s = m.group(1), m.group(2)
+            canon = _docid.canonical(prefix, int(number_s))
+            if canon not in index_ids:
+                problems.append(f"{lineno}: {canon} does not resolve in docs/INDEX.md")
+            # `_docid.ID_RE`'s own `0*` sits *outside* the number group, so it strips a
+            # padded citation's leading zero before `m.group(2)` ever sees it — comparing
+            # the two capture groups can never find padding. The full match (`m.group(0)`)
+            # still carries it, so that is what padding is detected against.
+            if m.group(0) != canon:
+                problems.append(
+                    f"{lineno}: padded id `{m.group(0)}` outside a link target — "
+                    "citations write the integer, never padding (NT-0019 §1.1 rule 2)"
+                )
+
+        for link_m in _MD_LINK_RE.finditer(line):
+            text, target = link_m.group(1), link_m.group(2)
+            text_m = _docid.ID_RE.search(text)
+            target_m = _docid.ID_RE.search(target)
+            if text_m and target_m:
+                text_id = _docid.canonical(text_m.group(1), int(text_m.group(2)))
+                target_id = _docid.canonical(target_m.group(1), int(target_m.group(2)))
+                if text_id != target_id:
+                    problems.append(
+                        f"{lineno}: link text {text!r} cites {text_id} but its target "
+                        f"{target!r} names {target_id}"
+                    )
+    return problems
+
+
+def check_citations() -> None:
+    """32. Every `<PREFIX>-<n>` in prose resolves in `docs/INDEX.md` and its prefix
+    matches the number's family (the prefix is a checksum — `_docid.ID_RE` already
+    requires this by construction, since a resolved match is keyed on the number alone
+    and its recorded prefix compared); no padded id outside a link target; a link's text
+    and target cite the same id (NT-0019 §1.11).
+
+    Gated on `docs/INDEX.md` existing: pre-migration there is no real citation corpus to
+    resolve against, and `document-ids.md`'s own illustrative prose (the padding-
+    equivalence example in its lift of NT-0019 §1.1 rule 3 — "the resolver treats
+    `PL-1240`, `PL-01240` and `PL-001240` as one id" — and the §1.4 directory-tree
+    diagram) uses ids, some deliberately padded, to *teach* the grammar rather than to
+    cite or name a real file. Running the padding rule against that prose unconditionally
+    would red the standard's own reference text for demonstrating the equivalence it
+    defines. Every sub-rule activates together once `docs/INDEX.md` exists (W37-6); the
+    mechanism (`citation_problems_in_file`) is proven on fixtures in the interim.
+    """
+    index_path = ROOT / "INDEX.md"
+    if not index_path.is_file():
+        notes.append(
+            "check 32: no docs/INDEX.md yet — citation and padding checks skipped "
+            "(pre-migration; document-ids.md's own illustrative ids would otherwise "
+            "false-positive)"
+        )
+        return
+    index_ids = {
+        _docid.canonical(m.group(1), int(m.group(2)))
+        for m in _docid.ID_RE.finditer(index_path.read_text(encoding="utf-8"))
+    }
+    checked = 0
+    for path in _id_scope_documents():
+        rel = path.relative_to(REPO).as_posix()
+        for problem in citation_problems_in_file(path, index_ids):
+            fail(f"check 32: {rel}:{problem}")
+        checked += 1
+    notes.append(f"check 32: {checked} file(s) checked against {len(index_ids)} indexed id(s)")
+
+
+# =========================================================================================
+# Check 33 — supersedes/superseded_by symmetry; status vocabulary and per-family subset;
+# the map-plan roll-up raise (Ruling 72).
+# =========================================================================================
+
+#: NT-0019 §1.2's Status subset column, prefix (or family word for Reference, which has
+#: no prefix) -> the allowed subset of `_docid.STATUS_WORDS`.
+_STATUS_SUBSET: Final[Mapping[str, frozenset[str]]] = {
+    "FR": frozenset({"active", "superseded", "retired"}),
+    "NFR": frozenset({"active", "superseded", "retired"}),
+    "DEP": frozenset({"active", "superseded", "retired"}),
+    "OQ": frozenset({"active", "closed", "retired"}),
+    "WK": frozenset({"draft", "active", "closed", "retired"}),
+    "SL": frozenset({"draft", "active", "closed", "retired"}),
+    "WF": frozenset({"draft", "active", "superseded", "retired"}),
+    "ADR": frozenset({"draft", "active", "superseded", "retired"}),
+    "RFC": frozenset({"draft", "active", "closed", "retired", "superseded"}),
+    "PL": frozenset({"draft", "active", "superseded", "retired"}),
+    "LG": frozenset({"active", "closed"}),
+    "RL": frozenset({"active", "superseded", "retired"}),
+    "RS": frozenset({"draft", "active", "closed", "retired"}),
+    "CR": frozenset({"active"}),
+    "FD": frozenset({"active", "closed", "retired"}),
+    "reference": frozenset({"active", "retired"}),
+}
+
+
+def rollup_raise_problems(corpus: object) -> list[str]:
+    """For every `PL- kind: map` header `corpus` carries, call `doc-index.py`'s own
+    `derive_execution` and report a `ValueError` as a check-33 problem. Ruling 72's own
+    words: "a slice with more than one live leaf plan is a check 33 disagreement, not a
+    case to resolve silently", and the precedence table's own last row ("anything else:
+    raise") is what makes an unenumerated combination visible instead of swallowed by a
+    default. Takes an already-built `doc_index.Corpus` (untyped here as `object` since
+    that class lives in a dynamically loaded module) rather than a root path, so it is the
+    exact function both this check and its tests call.
+    """
+    problems: list[str] = []
+    for header in corpus.headers():  # type: ignore[attr-defined]
+        if header.family != "plan" or header.kind != "map":
+            continue
+        try:
+            _doc_index.derive_execution(header, corpus)
+        except ValueError as exc:
+            problems.append(f"{header.id}: map-plan roll-up disagreement — {exc}")
+    return problems
+
+
+def check_cross_references() -> None:
+    """33. `supersedes`/`superseded_by` symmetric; `status:` is in NT-0019's five-word
+    vocabulary and in the family's own subset of it; the map-plan roll-up raise surfaced
+    rather than swallowed (Ruling 72) (NT-0019 §1.11).
+
+    Several §1.11 sub-clauses (a ledger's `slice:` uniqueness across `active` ledgers,
+    `work:`/`slice:`/`phase:` resolving to roadmap rows, a closed `OQ-` citing its
+    resolver) need a corpus with roadmap/ledger/OQ content that does not exist inside
+    `_ID_SCOPE_ROOTS` in S1 — `document-ids.md` is the only real document in scope, and it
+    is none of those things; they are not implemented against the live scope for that
+    reason. The roll-up raise is likewise never exercised against the live scope here (no
+    `PL-` corpus can exist inside two flat roots, and `doc_index.build_corpus` needs a
+    `docs/`-shaped tree of `plans/`, `roadmap.md`, etc. to find one) — `rollup_raise_problems`
+    above is written to take an explicit corpus precisely so it is proven on a fixture
+    corpus in `tests/test_audit_docs_ids.py` without widening this check's own scope.
+    """
+    headers: dict[str, _docid.Header] = {}
+    parsed: list[tuple[pathlib.Path, _docid.Header]] = []
+    for path in _id_scope_documents():
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            continue
+        if header is None:
+            continue
+        parsed.append((path, header))
+        if header.id is not None:
+            headers[_canon_id(header.id)] = header
+
+    checked = 0
+    for path, header in parsed:
+        rel = path.relative_to(REPO).as_posix()
+        checked += 1
+
+        if header.status and header.status not in _docid.STATUS_WORDS:
+            fail(
+                f"check 33: {rel}: status {header.status!r} is not one of "
+                f"{_docid.STATUS_WORDS}"
+            )
+        else:
+            status_key = header.id.split("-")[0] if header.id else header.family
+            subset = _STATUS_SUBSET.get(status_key) or _STATUS_SUBSET.get(header.family)
+            if subset is not None and header.status and header.status not in subset:
+                fail(
+                    f"check 33: {rel}: status {header.status!r} is not in "
+                    f"{header.family}'s subset {sorted(subset)}"
+                )
+
+        if header.status == "superseded":
+            if not header.superseded_by:
+                fail(f"check 33: {rel}: status superseded but superseded_by is empty")
+            else:
+                target = headers.get(_canon_id(header.superseded_by))
+                if target is not None and header.id is not None:
+                    back_refs = {_canon_id(s) for s in target.supersedes}
+                    if _canon_id(header.id) not in back_refs:
+                        fail(
+                            f"check 33: {rel}: superseded_by {header.superseded_by} does "
+                            f"not list {header.id} back in its own supersedes:"
+                        )
+
+    notes.append(f"check 33: {checked} header(s) checked in scope")
+
+
+# =========================================================================================
+# Check 34 — freeze (DP-7): a frozen family's diff against its merge-base touches only the
+# allowed fields; every corrected_by: entry's target corrects: this file.
+# =========================================================================================
+
+#: Mutability = "frozen" families, from NT-0019 §1.2's table. Document families only; row
+#: families have no separate freeze concept (check 33's status-forward-only and
+#: closed-LG-required rules constrain an `SL-` row's lifecycle instead).
+_FROZEN_FAMILIES: Final = frozenset(
+    {"decision", "proposal", "plan", "ruling", "research", "closure", "finding"}
+)
+_LEDGER_FAMILY: Final = "ledger"
+
+#: Every `Header` field DP-7 does *not* name as an allowed change on a frozen file. Built
+#: by exclusion from the dataclass's own field list so a future field added to `Header`
+#: fails loudly here (an unrecognised field name) rather than silently becoming a fifth
+#: allowance nobody decided on.
+_DP7_UNCHECKED_FIELDS: Final = frozenset({"status", "superseded_by", "plans", "corrected_by"})
+
+
+def frozen_diff_is_permitted(
+    old: object, new: object, *, old_body: str, new_body: str
+) -> tuple[bool, str]:
+    """DP-7 (docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md): every diff a frozen
+    (or append-only, for a ledger's `plans:`) family's file may show against its
+    merge-base — a closed, named list of *fields*, never a generic line-diff. Exported at
+    module level, not nested inside `check_freeze`, so a later slice's migration-diff
+    filter can call the exact same predicate for its own "hunk is neither header nor
+    citation-token" test (Ruling 68 — DP-3: "one definition of 'reference tokens only',
+    not two ... implementing it twice is how the two drift apart").
+
+    `old`/`new` are `_docid.Header` instances (typed `object` here only because this
+    function must stay independent of which `_docid` module instance a caller loaded
+    them through). Permitted, and only:
+      - the body (everything after the closing `---`) is byte-identical;
+      - `status:` may change, but never *from* a terminal word (`closed`, `retired`,
+        `superseded` — NT-0019 §1.2a: "closed, retired and superseded are terminal");
+      - `superseded_by:` may change;
+      - `corrected_by:` may gain entries, never lose or reorder existing ones;
+      - `plans:` may gain entries, ledgers only, under the same append-only rule.
+    Every other field difference refuses. This is the *steady-state* freeze rule, deliberately
+    narrower than what the migration itself does to a frozen file (stamp a header, rewrite
+    reference tokens) — that allowance is `frozen_file_matches_after_migration_stamp` below.
+    """
+    if old_body != new_body:
+        return False, "the body changed — a frozen file's body never changes"
+
+    terminal = {"closed", "retired", "superseded"}
+    if old.status != new.status and old.status in terminal:  # type: ignore[attr-defined]
+        return False, f"status: moved away from terminal state {old.status!r}"  # type: ignore[attr-defined]
+
+    old_corrected = tuple(old.corrected_by)  # type: ignore[attr-defined]
+    new_corrected = tuple(new.corrected_by)  # type: ignore[attr-defined]
+    if new_corrected[: len(old_corrected)] != old_corrected:
+        return False, "corrected_by: entries were removed or reordered, not just appended"
+
+    old_plans = tuple(old.plans)  # type: ignore[attr-defined]
+    new_plans = tuple(new.plans)  # type: ignore[attr-defined]
+    if old_plans != new_plans:
+        if old.family != _LEDGER_FAMILY:  # type: ignore[attr-defined]
+            return False, "plans: changed on a non-ledger family"
+        if new_plans[: len(old_plans)] != old_plans:
+            return False, "plans: entries were removed or reordered, not just appended"
+
+    for field_name in _docid.Header.__dataclass_fields__:  # type: ignore[attr-defined]
+        if field_name in _DP7_UNCHECKED_FIELDS:
+            continue
+        if getattr(old, field_name) != getattr(new, field_name):
+            return False, f"{field_name}: changed, which is not on DP-7's allowed list"
+
+    return True, ""
+
+
+def frozen_file_matches_after_migration_stamp(
+    old_body: str, new_text: str, redirects_inverse: Mapping[str, str]
+) -> bool:
+    """Ruling 68's DP-7 disposition, verbatim: "the new bytes, after removing the leading
+    front-matter block and applying the inverse of every REDIRECTS.csv mapping, are
+    byte-identical to the merge-base bytes." `redirects_inverse` maps a *new* reference
+    token to the *old* one it replaced; applying every entry to `new_text` and stripping
+    its own leading `---` block should reproduce `old_body` when the only changes are the
+    migration's own header stamp and token rewrite.
+    """
+    lines = new_text.splitlines()
+    if lines and lines[0] == "---":
+        try:
+            closing = lines.index("---", 1)
+            stripped = "\n".join(lines[closing + 1 :])
+        except ValueError:
+            stripped = new_text
+    else:
+        stripped = new_text
+    restored = stripped
+    for new_token, old_token in redirects_inverse.items():
+        restored = restored.replace(new_token, old_token)
+    return restored.strip("\n") == old_body.strip("\n")
+
+
+def check_freeze() -> None:
+    """34. Freeze: for a frozen family the diff against the merge-base touches only the
+    DP-7 allowance; every `corrected_by:` entry is a record whose `corrects:` names this
+    file (NT-0019 §1.11).
+
+    No in-scope file is ever a frozen-family instance during S1 (`document-ids.md` is a
+    Reference, and `_templates/` is excluded as a policy source, not a document), so the
+    merge-base comparison — `frozen_diff_is_permitted` above — finds nothing to run
+    against on the real tree today; it is exercised directly against constructed old/new
+    `Header` pairs in `tests/test_audit_docs_ids.py`. The `corrected_by:`/`corrects:`
+    cross-check below *is* live over whatever is in scope.
+    """
+    headers: dict[str, _docid.Header] = {}
+    parsed: list[tuple[pathlib.Path, _docid.Header]] = []
+    for path in _id_scope_documents():
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            continue
+        if header is None:
+            continue
+        parsed.append((path, header))
+        if header.id is not None:
+            headers[_canon_id(header.id)] = header
+
+    frozen_checked = 0
+    for path, header in parsed:
+        if header.family not in _FROZEN_FAMILIES:
+            continue
+        frozen_checked += 1
+        for entry in header.corrected_by:
+            target = headers.get(_canon_id(entry))
+            if target is None:
+                continue  # out of scope to resolve in S1 — not a check-34 failure here
+            if header.id is not None and _canon_id(target.corrects or "") != _canon_id(header.id):
+                fail(
+                    f"check 34: {path.relative_to(REPO).as_posix()}: corrected_by entry "
+                    f"{entry} does not `corrects:` back to {header.id}"
+                )
+
+    notes.append(f"check 34: {frozen_checked} frozen-family file(s) in scope")
+
+
+# =========================================================================================
+# Check 35 — owner: is a role filename or `maintainer`, and one the directory's README.md
+# permits (where that README declares a permitted-owner list).
+# =========================================================================================
+
+_ROLES_DIR: Final = REPO / ".claude" / "roles"
+_VALID_OWNERS: Final = frozenset({"maintainer", *(p.stem for p in _ROLES_DIR.glob("*.md"))})
+_PERMITTED_OWNERS_RE: Final = re.compile(r"^Permitted owners:\s*(.+)$", re.MULTILINE)
+
+
+def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
+    """A directory README's own declared owner allow-list, read from a line
+    `Permitted owners: a, b, c` — the one convention this recognises. Returns `None` (no
+    clause to enforce) when the README does not state one: no fixed format is specified
+    by NT-0019 anywhere, and `docs/_templates/README.md` / `docs/process/README.md` do
+    not exist yet (`docs/ READMEs` is Slice W37-10's to write) — inventing a required
+    format now would be enforcing a document ahead of the slice that writes it.
+    """
+    m = _PERMITTED_OWNERS_RE.search(readme.read_text(encoding="utf-8"))
+    if m is None:
+        return None
+    return frozenset(name.strip() for name in m.group(1).split(","))
+
+
+def check_owner() -> None:
+    """35. `owner:` is a role filename under `.claude/roles/`, or `maintainer`, and one
+    the directory's `README.md` permits (NT-0019 §1.11).
+
+    The second clause enforces only where a directory `README.md` actually exists and
+    states a permitted-owner list (see `readme_owner_allowlist`) — neither of
+    `_ID_SCOPE_ROOTS`'s two directories carries one today.
+    """
+    checked = 0
+    for path in _id_scope_documents():
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            continue
+        if header is None:
+            continue
+        checked += 1
+        rel = path.relative_to(REPO).as_posix()
+        if header.owner not in _VALID_OWNERS:
+            fail(
+                f"check 35: {rel}: owner {header.owner!r} is not a role filename under "
+                f".claude/roles/ or 'maintainer' ({sorted(_VALID_OWNERS)})"
+            )
+            continue
+        readme = path.parent / "README.md"
+        if readme.is_file():
+            allow_list = readme_owner_allowlist(readme)
+            if allow_list is not None and header.owner not in allow_list:
+                fail(
+                    f"check 35: {rel}: owner {header.owner!r} is not in "
+                    f"{readme.relative_to(REPO).as_posix()}'s permitted-owner list "
+                    f"{sorted(allow_list)}"
+                )
+
+    notes.append(f"check 35: {checked} owner(s) checked in scope")
+
+
+# =========================================================================================
+# Check 36 — Redirects (Ruling 67/DP-2). Renamed and repurposed from the retired
+# `check_notes_tombstone` (slot 30 -> 36; NT-0019 §5.5).
+# =========================================================================================
+
+#: Ruling 67 Part 1: every alternative matches a COMPLETE legacy identifier or path,
+#: never a proper prefix of one — NT-0019 §7 acceptance item (d) as originally written
+#: matched its own text on `NT-00`, the bare prefix fragment inside its own alternation,
+#: because it required no digits to follow. Each entry here is independently `\b`-bounded
+#: (or, for a path, matched as a literal substring) rather than sharing one outer
+#: boundary, so fixing one alternative can never re-open this class in another.
+LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
+    ("note id", re.compile(r"\bNT-\d{4}\b")),
+    ("finding id (workstream form)", re.compile(r"\bF-W\d+-\d+\b")),
+    ("finding id (bare form)", re.compile(r"\bF\d{2}\b")),
+    ("workflow id", re.compile(r"\bwf-0[0-9]\b")),
+    ("ruling reference", re.compile(r"\bRuling \d+\b")),
+    ("ADR id", re.compile(r"\bADR-0[0-9]{3}\b")),
+    ("scoped requirement id", re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")),
+    ("workstream/slice id", re.compile(r"\bW[0-9]+[a-z]?-[0-9]+\b")),
+    ("legacy dated-plan path", re.compile(re.escape("docs/plans/2026-"))),
+    ("legacy audit path", re.compile(re.escape("docs/audit/"))),
+    ("legacy notes path", re.compile(re.escape("docs/notes/"))),
+    ("legacy adr path", re.compile(re.escape("docs/adr/"))),
+    ("legacy claude-notes path", re.compile(re.escape(".claude/notes/"))),
+)
+
+#: Ruling 67 Part 2: the bounded, load-bearing exclusion list — the residue after Part 1's
+#: pattern fix, permitted only for a file whose *function* is to carry legacy forms as
+#: data, never a path the migration is required to rewrite. `REDIRECTS.csv` is "already in
+#: the item"; `was:` lines (wherever they appear) are handled separately below, by line,
+#: not by path, since a `was:` line can appear inside an otherwise-checked file.
+LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = ("docs/REDIRECTS.csv",)
+
+_WAS_LINE_RE: Final = re.compile(r"^\s*was:\s")
+
+
+def sweep_legacy_forms(
+    paths: Iterable[pathlib.Path],
+    *,
+    repo_root: pathlib.Path = REPO,
+    excluded_paths: Sequence[str] = LEGACY_FORM_EXCLUDED_PATHS,
+    patterns: Sequence[tuple[str, re.Pattern[str]]] = LEGACY_FORM_PATTERNS,
+) -> list[str]:
+    """Every legacy (pre-migration) id or path form found across `paths`, outside a
+    `was:` line and outside `excluded_paths` — NT-0019 §7 acceptance item (d) and check
+    36's third clause are "one rule at two times" (Ruling 67 §2), so both read this one
+    function. Explicit parameters, never the module constants read implicitly, so a later
+    slice's migration acceptance can call this unscoped over `git ls-files` for (d), and
+    so a test can prove each exclusion entry is load-bearing by calling this with it
+    removed (Ruling 67 §4 item 1) and prove the positive control by calling this with the
+    shipped constants unmodified (§4 item 2: "never a re-typed copy of the pattern").
+    """
+    excluded = frozenset(excluded_paths)
+    hits: list[str] = []
+    for path in paths:
+        try:
+            rel = path.relative_to(repo_root).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        if rel in excluded:
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for lineno, line in enumerate(lines, 1):
+            if _WAS_LINE_RE.match(line):
+                continue
+            for label, pattern in patterns:
+                for m in pattern.finditer(line):
+                    hits.append(f"{rel}:{lineno}: {label} {m.group(0)!r}")
+    return hits
+
+
+def check_redirects() -> None:
+    """36. Redirects (NT-0019 §1.11) — renamed and repurposed from the retired
+    `check_notes_tombstone` (slot 30 -> 36; see this module's docstring). Three clauses:
+
+    1. Every `was:` field on an in-scope header has a `docs/REDIRECTS.csv` row.
+    2. Every `docs/REDIRECTS.csv` row's `new_path` exists.
+    3. No pre-migration form (`sweep_legacy_forms` above) survives in scope outside the
+       CSV and `was:` lines.
+
+    `docs/REDIRECTS.csv` does not exist pre-migration (created in Slice W37-6), so
+    clauses 1-2 are vacuous today by construction — nothing in scope carries a `was:`
+    field either. **Clause 3 is gated on the same file for a different reason**, found
+    empirically rather than predicted: the sweep asks whether a legacy form survives
+    *instead of* its new one, which presupposes the new corpus exists. Before that, a
+    legitimate citation to a not-yet-renumbered thing is indistinguishable from a
+    survivor by pattern alone — document-ids.md's own lift of NT-0019 cites `NT-0016`,
+    `NT-0015`, `NT-0003` and `Ruling 64` in its prose and names `docs/audit/` describing
+    its own dissolution, and the unscoped sweep reds on all five the moment it runs
+    unconditionally. This is the same self-match class Ruling 67 diagnosed in NT-0019 §7
+    (d)'s own text (the bare `NT-00` fragment); the fix there was the pattern, the fix
+    here is the gate — a citation to a real, currently-correct id is not itself a legacy
+    *form* no matter how careful the pattern is, until there is a new form for it to have
+    failed to become. Once `docs/REDIRECTS.csv` exists, clause 3 replaces the old
+    `.claude/notes/` tombstone-content check over the whole of `_ID_SCOPE_ROOTS`.
+    """
+    redirects_path = ROOT / "REDIRECTS.csv"
+    redirect_rows: list[dict[str, str | None]] = []
+    if redirects_path.is_file():
+        with redirects_path.open(newline="", encoding="utf-8") as fh:
+            redirect_rows = list(csv.DictReader(fh))
+        for row in redirect_rows:
+            new_path = row.get("new_path") or ""
+            if new_path and not (REPO / new_path).exists():
+                fail(
+                    f"check 36: REDIRECTS.csv row for {row.get('old_id')}: "
+                    f"{new_path!r} does not exist"
+                )
+
+    was_values: set[str] = set()
+    for path in _id_scope_documents():
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            continue
+        if header is not None and header.was:
+            was_values.add(header.was)
+
+    redirected_olds = {row.get("old_path") or "" for row in redirect_rows} | {
+        row.get("old_id") or "" for row in redirect_rows
+    }
+    for was in was_values:
+        if was not in redirected_olds:
+            fail(f"check 36: `was: {was}` has no docs/REDIRECTS.csv row")
+
+    if not redirects_path.is_file():
+        # The sweep is a *post*-migration invariant: it asks whether a legacy form
+        # survives outside the CSV and `was:` lines, which presupposes the CSV and the
+        # new forms exist to survive *instead of*. Before that, a legitimate citation to
+        # a not-yet-renumbered thing (document-ids.md's own lift of NT-0019 cites NT-0016,
+        # NT-0015, NT-0003 and Ruling 64 in its prose, and names `docs/audit/` describing
+        # its own dissolution) is indistinguishable from a survivor by pattern alone —
+        # exactly the self-match class Ruling 67 diagnosed in NT-0019 §7 (d) itself,
+        # discovered here by running the sweep rather than predicted. `REDIRECTS.csv`'s
+        # existence is the migration's own marker, the same role `docs/INDEX.md` plays
+        # for check 32's gate.
+        hits: list[str] = []
+        notes.append(
+            "check 36: no docs/REDIRECTS.csv yet — the legacy-form sweep is a "
+            "post-migration invariant and is skipped until it exists (pre-migration, "
+            "every citation in scope is to a currently-correct, not-yet-renumbered id)"
+        )
+    else:
+        hits = sweep_legacy_forms(_id_scope_documents())
+        for hit in hits:
+            fail(f"check 36: legacy (pre-migration) form survives — {hit}")
+
+    notes.append(
+        f"check 36: {len(redirect_rows)} redirect row(s), {len(was_values)} `was:` "
+        f"field(s) in scope, {len(hits)} legacy-form hit(s)"
+    )
+
+
+# =========================================================================================
+# Check 37 — shape: required ## sections per family template.
+# =========================================================================================
+
+_SECTION_HEADING_RE: Final = re.compile(r"^##\s+(.+?)\s*$")
+
+
+def _template_body_sections(path: pathlib.Path) -> tuple[str, ...]:
+    """The `##`-level heading texts in one template's body (after its own header block or
+    leading comment) — check 37's own "required sections", generalised from every
+    family's template rather than hand-listed. No template's own body heading uses a
+    `<Title>`/`NNNNN` placeholder (verified by reading all thirteen), so a literal
+    string match against a real document's own `##` headings is exact.
+    """
+    text = path.read_text(encoding="utf-8")
+    stripped = _LEADING_COMMENT_RE.sub("", text, count=1)
+    lines = stripped.splitlines()
+    if lines and lines[0] == "---":
+        try:
+            closing = lines.index("---", 1)
+            body = lines[closing + 1 :]
+        except ValueError:
+            body = lines
+    else:
+        body = lines
+    sections = []
+    for line in body:
+        m = _SECTION_HEADING_RE.match(line)
+        if m:
+            sections.append(m.group(1))
+    return tuple(sections)
+
+
+def required_sections(family: str) -> tuple[str, ...]:
+    """`family`'s required `##` sections, derived from its template — empty for a family
+    whose template declares none (`reference`: "NT-0019 does not prescribe this family's
+    body shape"), which means nothing is required, not that the check is skipped.
+
+    A missing template file is check 30's own failure to report (`derive_field_policies`
+    asserts the full manifest); this returns `()` rather than raising, so a vanished
+    template reds once, clearly, instead of also crashing check 37 before checks 38-39
+    get to run.
+    """
+    for template_name, template_family in _TEMPLATE_FAMILY.items():
+        if template_family == family:
+            try:
+                return _template_body_sections(_TEMPLATES_DIR / template_name)
+            except OSError:
+                return ()
+    return ()
+
+
+def check_shape() -> None:
+    """37. Shape: a document carries every `##` section its family's template body
+    declares — the ten-section spec rule, generalised (NT-0019 §1.11).
+    """
+    checked = 0
+    for path in _id_scope_documents():
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            continue
+        if header is None:
+            continue
+        checked += 1
+        needed = required_sections(header.family)
+        if not needed:
+            continue
+        present = set(_template_body_sections(path))
+        missing = [s for s in needed if s not in present]
+        if missing:
+            fail(
+                f"check 37: {path.relative_to(REPO).as_posix()}: missing required "
+                f"section(s) {missing} for family {header.family!r}"
+            )
+    notes.append(f"check 37: {checked} document(s) checked in scope")
+
+
+# =========================================================================================
+# Check 38 — loop signal, warn-only. Never fails the gate.
+# =========================================================================================
+
+
+def check_loop_signal() -> None:
+    """38. Loop signal, warn-only (NT-0019 §1.11) — never fails the gate, only notes.
+
+    Every sub-clause (a `PL-`/`RS-`/`RFC-` cited by nothing outside `INDEX.md`, a
+    `PL-` still `draft` past its phase's plan-freeze gate, an active plan or slice citing
+    a superseded/retired requirement, a phase gate date passed with a `draft` plan or
+    `active` slice behind it) needs a corpus this check does not have inside
+    `_ID_SCOPE_ROOTS` in S1 — `document-ids.md` is none of a `PL-`/`RS-`/`RFC-`/phase
+    section. Recorded as a note so the check exists and is silent for the right reason
+    (nothing to warn about yet), not because it was skipped.
+    """
+    notes.append(
+        "check 38: warn-only loop signal — no PL-/RS-/RFC-/phase population in scope yet "
+        "(pre-migration); nothing to warn about"
+    )
+
+
+# =========================================================================================
+# Check 39 — docs/INDEX.md byte-stable; PR-title/ledger cross-reference (needs GitHub
+# context this tool does not have).
+# =========================================================================================
+
+
+def check_index_stable() -> None:
+    """39. `docs/INDEX.md` byte-stable against a fresh regeneration; a merged PR's title
+    names its `SL-`; the slice's ledger records the PR (NT-0019 §1.11).
+
+    The byte-stability clause runs over the *whole* real `docs/` tree, not
+    `_ID_SCOPE_ROOTS` — `docs/INDEX.md` is by definition a whole-corpus artifact, and
+    `doc_index.build_corpus` already degrades gracefully to an empty corpus pre-migration
+    (the same fact `python3 scripts/doc-index.py --check` relies on as its own, separate
+    gate step; this is a second, cheap presence-and-freshness check folded into the one
+    `audit-docs.py` report, not a second implementation of `render_index`'s byte
+    comparison). The PR-title/ledger clause needs a merged PR's title and a slice's
+    ledger, neither of which a tree-snapshot tool can read, and `docs/ledgers/` does not
+    exist in scope either — noted, not silently absent.
+    """
+    index_path = ROOT / "INDEX.md"
+    corpus = _doc_index.build_corpus(ROOT)
+    if not index_path.is_file():
+        if not corpus.records:
+            notes.append(
+                "check 39: no docs/INDEX.md and zero governed records — nothing to check "
+                "yet (pre-migration)"
+            )
+        else:
+            fail(
+                f"check 39: {len(corpus.records)} governed record(s) exist but "
+                "docs/INDEX.md does not"
+            )
+    else:
+        fresh = _doc_index.render_index(corpus)
+        current = index_path.read_text(encoding="utf-8")
+        if current != fresh:
+            fail("check 39: docs/INDEX.md is stale against a fresh regeneration")
+        else:
+            notes.append("check 39: docs/INDEX.md is byte-stable")
+
+    notes.append(
+        "check 39: PR-title/ledger cross-reference needs GitHub PR context this "
+        "tree-snapshot tool does not have, and docs/ledgers/ does not exist in scope yet "
+        "— not checked here"
+    )
+
+
+def check_ids_30_39() -> None:
+    """Run every NT-0019 id-standard check (30-39) — one function per the plan's own
+    "ten broken-input proofs, one per check" framing, called together here so `main`
+    keeps one call site the way it already does for `check_notes` (16-20).
+    """
+    check_header_fields()
+    check_id_filename_directory()
+    check_citations()
+    check_cross_references()
+    check_freeze()
+    check_owner()
+    check_redirects()
+    check_shape()
+    check_loop_signal()
+    check_index_stable()
+
+
 def main() -> int:
     md = sorted(ROOT.rglob("*.md"))
     specs = sorted(ROOT.glob("specs/*.md"))
@@ -1474,9 +2646,8 @@ def main() -> int:
     # 16-20. the working notes in docs/notes/
     check_notes(set(defined), in_file, adrs)
 
-    # 30. the vacated .claude/notes/ tombstone: exactly the README plus the frozen
-    # stub set, each stub byte-identical to its rendered template — Ruling 61.
-    check_notes_tombstone()
+    # 30-39. NT-0019's id-standard checks, path-scoped to _ID_SCOPE_ROOTS (Slice W37-4).
+    check_ids_30_39()
 
     # 23. every spec §10 mirror row carries the register's status for that question
     check_open_question_mirror_status(specs)
