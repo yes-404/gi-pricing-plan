@@ -1268,8 +1268,111 @@ def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
     return drafts
 
 
+#: Ruling 86 (`docs/plans/2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md`,
+#: PR #598): `### Ruling A1`, `A2` and `A3` in `docs/plans/2026-08-30-nt-0012-0013-0014-
+#: adoption.md` are three `RL-` records. `_RULING_HEADING_RE` misses them on **two
+#: independent axes** — its `^##` cannot see a `###` heading and its `(\d+)` cannot see the
+#: `A1` token — and Ruling 86 §3 item 1 names that pair explicitly: *"A fix to either alone
+#: reds nothing and looks green."* This pattern is level-independent and letter-led, so
+#: neither axis is left half-fixed.
+#:
+#: **`[A-Za-z]+\d+`, not `\S+`.** Ruling 86 §2 reads the `A` as a delegation marker in
+#: front of a real number (*"marking authorship under delegation rather than absence of a
+#: number, evidenced by the numbered sequence running to 48 and 53 the same day"*), so the
+#: token this splits on is a letter prefix followed by a number, and nothing else. That
+#: matters in the other direction too: a `Ruling`-anchored heading in some third shape —
+#: say a bare `### Ruling B` — is deliberately **not** matched here, so
+#: `_check_multi_ruling_files_not_silently_unrecognised` names it as unaccounted instead of
+#: this function guessing at a record for it. A widened `\S+` would silently swallow it,
+#: which is the exact class of defect Ruling 83's census exists to prevent.
+#:
+#: **The token is the constraint; the punctuation after it is not.** `_RULING_HEADING_RE`
+#: makes its title trailer an optional `—`-introduced group, so a heading written with `--`
+#: instead of an em dash matches *nothing* there and falls out of the record set silently.
+#: Here everything after the token is captured and the separator stripped afterwards, so a
+#: record cannot stop being a record because someone typed a different dash — the same
+#: lesson Ruling 93 records for heading levels, applied to punctuation.
+_LETTERED_RULING_HEADING_RE: Final = re.compile(
+    r"^(#{1,6})[ \t]+Ruling[ \t]+([A-Za-z]+\d+)[ \t]*(.*)$", re.MULTILINE
+)
+
+
+def _discover_lettered_rulings(root: Path) -> list[_Draft]:
+    """Ruling 86's A-series: one `RL-` per letter-suffixed `Ruling <letter><n>` heading in
+    a dated `docs/plans/` file. `status: active`, `created:` the filename date, `was:` the
+    source file's path and `old_token:` the heading's own `Ruling A<n>` — every field as
+    Ruling 86 §2 fixes it, `owner:` from `_RULING_DEFAULT_OWNER` per Ruling 95.
+
+    **Why this is a sibling of `_discover_multi_ruling_files` rather than a widening of
+    it.** Widening `_RULING_HEADING_RE` on the two axes would also make
+    `_discover_plain_plans` skip the adoption file (it delegates any file that pattern
+    matches), and the whole file would migrate as three `RL-` records with no plan left
+    behind. Ruling 86 §3 item 5 forbids that outcome by requiring the opposite: *"The
+    residual `PL-` is checked for sense: after §3's subsections leave, its §3 heading has
+    nothing under it."* A residual `PL-` is only possible if the file stays a plain plan,
+    so the records are **extracted from** a document that survives, not **split out of** one
+    that does not. That is the one structural difference from
+    `_discover_multi_ruling_files`, and it is why no preamble folds into the first record
+    here: the preamble belongs to the surviving plan.
+
+    **The section close.** A record ends at the next heading of its own level or shallower
+    — `### Ruling A3` ends at `## 4. Acceptance …`, not at end of file. Unlike
+    `plan-reviews.md` (Ruling 88 §3 item 1, Ruling 93), where records are top-level
+    siblings and a level-derived close swallows the records after it, these records are
+    *nested inside* a section of a larger document that has real headings above and below
+    them. There is no "next record" to close A3, and the enclosing structure is the only
+    thing that says where §3 ends. The distinction is between using a heading level as an
+    identifier (which Ruling 93 rejects, and which this function does not do — the record
+    is identified by its `Ruling A<n>` token at any depth) and reading the document's own
+    nesting to find where a nested section stops.
+
+    **Not done here, and deliberately** — Ruling 86 §3 items 3 and 5, both of which are
+    about `migrate`'s *output* rather than about discovering the records: the range-form
+    citation (`Rulings A1` through `A3`, written with an en dash in the corpus) is not a
+    token substitution -- one citation becomes three ids -- and needs the executor's choice
+    between allocating them contiguously and emitting a range, or expanding the citation;
+    and the residual plan's now-empty §3 heading and its §4 table's own range citation are
+    a body edit to a document this function does not write. `_rewrite_citations`' own
+    `\\b`-anchored substitution leaves both untouched, so neither is silently half-done.
+    Both are named in W37-5c's report rather than improvised.
+    """
+    drafts: list[_Draft] = []
+    plans_dir = root / "docs" / "plans"
+    if not plans_dir.is_dir():
+        return drafts
+    for path in sorted(plans_dir.glob("*.md")):
+        m = _PLAN_FILENAME_RE.match(path.name)
+        if m is None:
+            continue  # a post-migration `PL-<n>-*.md` has no date prefix: second run finds none
+        text = path.read_text(encoding="utf-8")
+        headings = [
+            (hm.start(), len(hm.group(1))) for hm in _CENSUS_ANY_HEADING_RE.finditer(text)
+        ]
+        created = date.fromisoformat(m.group(1))
+        rel = path.relative_to(root).as_posix()
+        for i, heading in enumerate(_LETTERED_RULING_HEADING_RE.finditer(text)):
+            level = len(heading.group(1))
+            token = heading.group(2)
+            title = heading.group(3).lstrip(" \t—-").strip()
+            end = next(
+                (s for s, lv in headings if s > heading.start() and lv <= level), len(text)
+            )
+            drafts.append(
+                _Draft(
+                    materialize="document", prefix="RL", kind=None,
+                    title=title or f"Ruling {token}",
+                    status="active", created=created, owner=_RULING_DEFAULT_OWNER,
+                    tie_break=(rel, i),
+                    old_token=f"Ruling {token}", was=rel,
+                    body=text[heading.start() : end].rstrip("\n") + "\n",
+                )
+            )
+    return drafts
+
+
 def _discover_headed_split_file(
-    root: Path, rel_path: str, heading_re: re.Pattern[str], prefix: str, owner: str
+    root: Path, rel_path: str, heading_re: re.Pattern[str], prefix: str, owner: str,
+    *, foreign_records: Collection[int] = (),
 ) -> list[_Draft]:
     """`closure-records.md`/`plan-reviews.md`'s shared shape: one `###` heading per
     record, each ending in the date it closed/ran — matched only at the exact legacy path,
@@ -1280,17 +1383,31 @@ def _discover_headed_split_file(
     `_discover_multi_ruling_files` uses and for the identical reason: the concatenation
     of every split output must reproduce this file's body lines in order (Ruling 68
     class 4), so no line may belong to no output.
+
+    `foreign_records` is the set of character offsets in this same file at which *another*
+    discovery function produces a record — `_discover_proposal_containers`' `RFC-`
+    container in `plan-reviews.md` today. Each such offset does two things here, and both
+    are Ruling 88 §3 item 1's ("the section closes at the next *record* heading, never at
+    the next same-level heading"): it **ends** the preceding record's body, so the
+    container's lines belong to the container rather than folding into the review above
+    it, and it is **never emitted** as a record by this function even when `heading_re`
+    also matches there. The second half is Ruling 93 §2's added acceptance item read from
+    the other side — the container is claimed by the function that identifies it
+    positively, so a container heading that came to match `_REVIEW_HEADING_RE` (three
+    edits away, Ruling 93 §1(d)) still does not become a `CR- kind: review` here.
     """
     drafts: list[_Draft] = []
     path = root / rel_path
     if not path.is_file():
         return drafts
     text = path.read_text(encoding="utf-8")
-    headings = list(heading_re.finditer(text))
+    foreign = set(foreign_records)
+    headings = [m for m in heading_re.finditer(text) if m.start() not in foreign]
+    boundaries = sorted({*(m.start() for m in headings), *foreign, len(text)})
     for i, heading in enumerate(headings):
         title, created_str = heading.group(1).strip(), heading.group(2)
         start = heading.start() if i > 0 else 0
-        end = headings[i + 1].start() if i + 1 < len(headings) else len(text)
+        end = next(b for b in boundaries if b > heading.start())
         section_text = text[start:end].rstrip("\n") + "\n"
         drafts.append(
             _Draft(
@@ -1413,32 +1530,160 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
     return drafts
 
 
+_PLAN_REVIEWS_REL_PATH: Final = "docs/audit/plan-reviews.md"
+
+#: Ruling 88 (`docs/plans/2026-09-02-w37-container-family-and-line-citations-rulings.md`,
+#: PR #601): `docs/audit/plan-reviews.md`'s "Pending proposals" section is a record in its
+#: own right -- `RFC-`, `kind: process`, `status: closed`, `owner: maintainer` -- not
+#: preamble to the review that follows it. Ruling 89 §1 held that *stamping* it happens
+#: during W37-6; F82's sibling finding F80 is that no code built the draft at all, so
+#: `_check_plan_reviews_heading_census` correctly aborted `migrate` on it. This is that
+#: code.
+#:
+#: **The container is identified positively, never by `_REVIEW_HEADING_RE` failing to
+#: match it** — Ruling 93 §2's added acceptance item, in its own words: *"A negative test
+#: says 'this `###` is not a review', which is true today by three edits (§1(d)) and would
+#: silently reclassify the container into a `CR- kind: review` if any of them were ever
+#: made."* What is matched here is the section's own content: its name, and the
+#: `(drafted <date>)` trailer that carries the `created:` Ruling 88 §2 fixes at
+#: `2026-08-29`. The date is read from the heading rather than written in as a constant so
+#: the field is a property of the document, not of this line.
+#:
+#: **Level-independent by construction** (`#{1,6}`, not `###`). PR #609 demoted this exact
+#: heading from `##` to `###` and in doing so invalidated a heading-level fixture — the
+#: whole subject of Ruling 93. A pattern pinned to a level would have to be re-cut by the
+#: next such restructure and would read as correct until someone ran it; this one does not
+#: change under any demotion or promotion of the heading.
+#:
+#: **Punctuation-independent too, and that is Ruling 93's acceptance item rather than
+#: tidiness.** The item's fixture is *"the container's heading edited to match the review
+#: pattern, and the classifier must still produce an `RFC-`"* — the three edits Ruling 93
+#: §1(d) measured are adding a comma, removing the parenthesis and removing the word
+#: "drafted". A pattern that required the literal `(drafted <date>)` would stop claiming
+#: the heading under exactly that fixture and hand it to `_REVIEW_HEADING_RE`, which is the
+#: reclassification the item exists to forbid. So the section is claimed on its **name**,
+#: and the date is read from wherever in the heading it sits.
+#:
+#: A heading that names the container but carries no date at all is deliberately **not**
+#: claimed: `created:` would have to be invented, and Ruling 83's census naming it is
+#: better than this function guessing.
+#:
+#: Precedent for matching a distinctive title rather than a position or a level:
+#: `_CLOSURE_AUDIT_TITLE_PREFIXES` above, and for the identical stated reason.
+_PROPOSAL_CONTAINER_RE: Final = re.compile(r"^#{1,6}[ \t]+(Pending proposals\b.*)$", re.MULTILINE)
+
+#: The trailing date the heading carries, in either the corpus's own `(drafted <date>)`
+#: form or the `, <date>` form Ruling 93's acceptance fixture edits it into. Stripped from
+#: the record's `title:` so the same section produces the same title under both.
+_PROPOSAL_CONTAINER_DATE_RE: Final = re.compile(
+    r"[ \t]*[(,]?[ \t]*(?:drafted[ \t]+)?(\d{4}-\d{2}-\d{2})\)?[ \t]*$"
+)
+
+
+def _proposal_containers(text: str) -> list[tuple[re.Match[str], str, date]]:
+    """`(heading match, title, created)` for every "Pending proposals" container in `text`.
+    One definition, shared by the discovery function below, by `_discover_plan_reviews`'
+    boundary set and by both censuses over this file, so "which offsets are the
+    container's" is never computed twice and cannot drift (Ruling 67 §2).
+    """
+    out: list[tuple[re.Match[str], str, date]] = []
+    for m in _PROPOSAL_CONTAINER_RE.finditer(text):
+        dated = _PROPOSAL_CONTAINER_DATE_RE.search(m.group(1))
+        if dated is None:
+            continue  # no `created:` to read -- left for the census to name, not guessed
+        title = m.group(1)[: dated.start()].rstrip(" \t,—-")
+        out.append((m, title, date.fromisoformat(dated.group(1))))
+    return out
+
+
+def _proposal_container_starts(text: str) -> set[int]:
+    """The character offsets `_proposal_containers` claims in `text`."""
+    return {m.start() for m, _title, _created in _proposal_containers(text)}
+
+
+def _discover_proposal_containers(root: Path) -> list[_Draft]:
+    """Ruling 88's `RFC-` container in `docs/audit/plan-reviews.md`, one draft per
+    `_PROPOSAL_CONTAINER_RE` match.
+
+    The section **closes at the next record heading, never at the next same-level
+    heading** — Ruling 88 §3 item 1, which states the trap explicitly: *"The file has
+    exactly one level-2 heading, so 'from the `##` to the next `##`' yields 1155 to end of
+    file — swallowing Plan reviews 9, 10 and 11."* After PR #609's demotion the trap is
+    strictly worse, not better (Ruling 93 §2: with zero level-2 headings a *"to the next
+    `##`"* rule runs to end of file from **any** starting point), which is why the
+    boundary below is computed from the other discovery function's record offsets rather
+    than from any heading depth.
+
+    Ruling 88 §3 item 5: the three `####` candidates stay body inside this record — they
+    are inside the span this function slices, and no separate draft is minted for them.
+    """
+    path = root / _PLAN_REVIEWS_REL_PATH
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8")
+    container_starts = _proposal_container_starts(text)
+    record_starts = sorted(
+        {
+            *container_starts,
+            *(m.start() for m in _REVIEW_HEADING_RE.finditer(text)),
+            len(text),
+        }
+    )
+    drafts: list[_Draft] = []
+    for i, (m, title, created) in enumerate(_proposal_containers(text)):
+        end = next(b for b in record_starts if b > m.start())
+        drafts.append(
+            _Draft(
+                materialize="document", prefix="RFC", kind="process",
+                title=title, status="closed",
+                created=created, owner="maintainer",
+                tie_break=(_PLAN_REVIEWS_REL_PATH, i), old_token=None,
+                was=_PLAN_REVIEWS_REL_PATH,
+                body=text[m.start() : end].rstrip("\n") + "\n",
+            )
+        )
+    return drafts
+
+
 def _discover_plan_reviews(root: Path) -> list[_Draft]:
     """`docs/audit/plan-reviews.md`, via the shared `_discover_headed_split_file` --
-    unlike `_discover_closure_records` above, this file's headings carry no per-record
-    semantic variation that splitter cannot express (no phase/audit distinction, nothing
-    left mid-flight), so it still delegates rather than growing its own loop.
+    unlike `_discover_closure_records` above, this file's *review* headings carry no
+    per-record semantic variation that splitter cannot express (no phase/audit
+    distinction, nothing left mid-flight), so it still delegates rather than growing its
+    own loop. The one record in the file that is not a review is not squeezed into that
+    delegation either: `_discover_proposal_containers` above owns it, and this function
+    passes its offsets in as `foreign_records` so the two agree on where each section ends
+    and neither claims the other's heading.
 
-    Ruling 82: three of the file's `###` headings carry no date at all ("Candidate A",
+    Ruling 82: three of the file's headings carry no date at all ("Candidate A",
     "Candidate B", "Also carried, and not a new rule") and so never match
     `_REVIEW_HEADING_RE` regardless of the trailing-anchor fix below -- they are ruled
-    sub-content of a `##` container, not independent records, but the container's own
-    positive family and `kind:` is a separate, still open, planner derivation (Ruling
-    82 §3 item 3). Left unclassified, they fold into whichever matched heading precedes
-    them in the file (sections run heading-to-heading), the same way an unmatched
-    heading always has -- `_discover_headed_split_file` itself has no accounting step
-    that would notice a heading count short of the file's own `###` total, unlike
-    `_discover_closure_records`'s bespoke loop. That is no longer silent at the
-    `migrate` level, though: `_check_plan_reviews_heading_census` below independently
-    re-scans this same file and refuses rather than let the fold complete unremarked
-    (Ruling 83, row 1 of the W37-5b obligations list).
+    sub-content of the "Pending proposals" container, not independent records. Ruling 88
+    has since ruled that container's own family and `kind:` (`RFC-`, `kind: process`),
+    and PR #609 demoted the three from `###` to `####`; both are now handled -- the
+    container is a record of its own and the three sit inside its body, which is Ruling 88
+    §3 item 5's requirement in both directions ("none minted as a record, none dropped").
+
+    Before that, they folded into whichever matched heading preceded them in the file
+    (sections run heading-to-heading), the same way an unmatched heading always has --
+    `_discover_headed_split_file` itself has no accounting step that would notice a
+    heading count short of the file's own `###` total, unlike `_discover_closure_records`'s
+    bespoke loop. That was never silent at the `migrate` level:
+    `_check_plan_reviews_heading_census` below independently re-scans this same file and
+    refuses rather than let the fold complete unremarked (Ruling 83, row 1 of the W37-5b
+    obligations list) -- which is exactly how F80 was found.
     """
+    path = root / _PLAN_REVIEWS_REL_PATH
+    container_starts: set[int] = set()
+    if path.is_file():
+        container_starts = _proposal_container_starts(path.read_text(encoding="utf-8"))
     drafts = _discover_headed_split_file(
-        root, "docs/audit/plan-reviews.md", _REVIEW_HEADING_RE, "CR", "lead"
+        root, _PLAN_REVIEWS_REL_PATH, _REVIEW_HEADING_RE, "CR", "lead",
+        foreign_records=container_starts,
     )
     for d in drafts:
         d.kind = "review"
-    return drafts
+    return [*drafts, *_discover_proposal_containers(root)]
 
 
 _ANY_HEADING_RE: Final = re.compile(r"^(#{1,6})\s+(.*?)\s*$", re.MULTILINE)
@@ -1463,19 +1708,23 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
        already applies to every legacy split file) or any heading deeper than
        `_PLAN_REVIEWS_SPLIT_LEVEL` (`####`+ -- real content today, nested inside
        several individual reviews' own "Sources"/"Proposals, consolidated" subsections);
-    3. **a declared exception** -- none implemented for this file yet. Ruling 82 found
-       the three undated headings ("Candidate A", "Candidate B", "Also carried, and not
-       a new rule") and their `##` parent ("Pending proposals") sub-content, not
-       records. Ruling 88 has since ruled the container's family (`RFC-`,
-       `kind: process`, `status: closed`, `owner:` the maintainer) -- but a ruling is a
-       decision, not a code change: nothing in this module yet builds an `RFC-` draft
-       for it (that is separate follow-up work, not this function's), so it still has
-       no bucket-3 entry here and this function still has no authority to invent one.
+    3. **a declared exception** -- **still none, and that is now the finished state**
+       rather than a gap. Ruling 82 found the three undated headings ("Candidate A",
+       "Candidate B", "Also carried, and not a new rule") and their parent ("Pending
+       proposals") sub-content, not records. Ruling 88 then ruled the container's family
+       (`RFC-`, `kind: process`, `status: closed`, `owner:` the maintainer), and
+       `_discover_proposal_containers` now builds that draft -- so the container is a
+       **bucket 1** record here, matched through `_proposal_container_starts` rather
+       than through `_REVIEW_HEADING_RE`, and its three children are **bucket 2** body
+       below the split level. PR #609's demotion is what makes bucket 3 stay empty:
+       Ruling 93 §1(c) shows the census closing with nothing declared, and Ruling 83 §2
+       holds that a bucket-3 entry *"that could have been derived is a defect in the fix
+       rather than in the corpus"*.
 
     Anything left over is named, by line number and heading text -- never a bare count
-    (Ruling 83 §3 item 4) -- and `migrate` refuses. That is today's correct outcome for
-    this file, not a defect in this function: the leftover headings are exactly Ruling
-    82/88's `##` container and its three children, ruled but not yet implemented.
+    (Ruling 83 §3 item 4) -- and `migrate` refuses. Until `_discover_proposal_containers`
+    landed, the leftover was exactly Ruling 82/88's container: ruled but not implemented,
+    which is register finding F80 and which this function is how anyone found out.
 
     Additive alongside the existing `_check_legacy_file_not_silently_unrecognised` call
     for this same file, not a replacement of it (Ruling 83 §1(f)): that guard still
@@ -1488,6 +1737,7 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
         return
     text = path.read_text(encoding="utf-8")
     record_starts = {m.start() for m in _REVIEW_HEADING_RE.finditer(text)}
+    record_starts |= _proposal_container_starts(text)  # Ruling 88's `RFC-` (F80)
     headings = list(_ANY_HEADING_RE.finditer(text))
     unaccounted = [
         (text.count("\n", 0, m.start()) + 1, m.group(0).strip())
@@ -1500,9 +1750,11 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
         named = "; ".join(f"line {n} ({h!r})" for n, h in unaccounted)
         raise NotImplementedError(
             f"migrate: {path} carries heading(s) the census cannot classify as a "
-            f"record or as derived body: {named}. Ruling 88 ruled their disposition "
-            f"(RFC-, kind: process) but this module has no code yet that builds that "
-            f"draft -- implement that discovery before migrating this file."
+            f"record or as derived body: {named}. The two record matchers over this file "
+            f"are _REVIEW_HEADING_RE (a plan review) and _PROPOSAL_CONTAINER_RE (Ruling "
+            f"88's RFC- container); a heading that is neither, and is not below the split "
+            f"level, has no discovery code -- rule its disposition and implement it "
+            f"before migrating this file."
         )
 
 
@@ -1541,6 +1793,80 @@ def _discover_plain_plans(root: Path) -> list[_Draft]:
 
 _LEGACY_SPEC_BOLD_RE: Final = re.compile(r"\*\*(FR|NFR|DEP|OQ)-([A-Z]+)-(\d+)\*\*")
 
+# Ruling 83's independent, form-agnostic unit finder for a requirement id: a bold span
+# opening with one of the four prefixes and closing right after the id, with **no**
+# assumption about a module code or a number shape. Hoisted here from
+# `_check_requirements_not_silently_unrecognised` below (its only reader until F82) so it
+# sits beside the two patterns it has to be reconciled against.
+#
+# **Widened from `DEP`-only to all four prefixes**, which that guard's own docstring said
+# it could not be: broadening `FR`/`NFR`/`OQ` the module-optional way "would make this
+# guard fire on `migrate`'s own second-run output and break idempotency", since their
+# post-migration form is module-less. That is no longer true, because the guard now
+# classifies an already-canonical id into bucket 2 (`_SPEC_BOLD_RE`, checked positively).
+# With the collision resolved, keeping the finder narrow would only mean three prefixes'
+# malformed ids going unnamed. Measured at `ba31cd1`: the widened finder names nothing new
+# in the real corpus -- `**DEP-1a**` is the only bold id in `docs/specs/` that is neither
+# module-coded nor canonical.
+_CENSUS_BARE_ID_RE: Final = re.compile(
+    r"\*\*(FR|NFR|DEP|OQ)-([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)\*\*"
+)
+
+#: A legacy id's number: digit-led, optionally carrying an amendment suffix (`1a`). What
+#: makes a requirement id a requirement id is that it has a **number**; `_legacy_bare_dep_
+#: ids` uses this rather than a pattern fitted to the one such id in the corpus, so a
+#: module-less span with no number at all (`**DEP-abc**`) is *not* silently claimed as a
+#: record -- it is left for the census to name, which is what keeps that census able to
+#: fail at all.
+_LEGACY_NUMBER_RE: Final = re.compile(r"^\d+[A-Za-z0-9]*$")
+
+
+def _legacy_bare_dep_ids(text: str) -> list[re.Match[str]]:
+    """Every module-less bold `DEP-` id in `text` with a digit-led number that is
+    **neither** already in the canonical post-migration form `_SPEC_BOLD_RE` reads **nor**
+    in the module-coded legacy form `_LEGACY_SPEC_BOLD_RE` already claims. Register finding
+    F82's population, derived from the patterns either side of it rather than written out
+    as a third pattern fitted to the four ids that happen to be in the corpus today.
+
+    **`DEP` only, not all four prefixes** -- unlike the census finder above, which is
+    deliberately form-agnostic. NT-0019 §1.2 makes `DEP` a requirement family with living,
+    append-only ids, and §5.1's `.importlinter` row names the outcome outright
+    (*"`ADR-0001`/`ADR-0002`/`DEP-3` → `ADR-1`/`ADR-2`/`DEP-n`"*), so a module-less `DEP`
+    id is a legacy id to be migrated. No ruling says the same of a module-less
+    `**FR-12a**`, and inventing one here would be the silent widening F82 warns against;
+    the census names such a span instead.
+
+    **This is why three of F82's four are not here.** `docs/specs/00-overview.md` §7
+    defines `DEP-1`, `DEP-1a`, `DEP-2` and `DEP-3`. Three of them — `DEP-1`, `DEP-2`,
+    `DEP-3` — are *already* in the canonical form: `_SPEC_BOLD_RE` matches them, and
+    `compute_next` therefore already counts them as allocated ids. Measured at `ba31cd1`,
+    `compute_next(<repo root>) == 4`, and those three are the **only** ids any of NT-0019
+    §1.7's four sources can see in the whole tree — so the migration's own allocation
+    already starts immediately above them. Discovering them would mean allocating numbers
+    out of a range computed *from* the very ids being vacated, leaving 1-3 orphaned; it
+    would also make a second run re-migrate its own output, since a reallocated `**DEP-<n>**`
+    is indistinguishable from a legacy one. Treating an already-canonical id as
+    already-migrated is the same positively-checked idempotency reading
+    `_check_plain_plans_not_silently_unrecognised` and
+    `_check_flat_document_directory_not_silently_unrecognised` already apply via
+    `_docid.ID_RE`, and it is checked positively here for the same reason Ruling 83 gives:
+    never "the legacy pattern found nothing".
+
+    `**DEP-1a**` is the one that is genuinely un-migrated. `_SPEC_BOLD_RE`'s `(\\d+)` cannot
+    express the `1a` suffix, so `compute_next` has never seen it and it has no number in the
+    global sequence at all. It is discovered, allocated one, and rewritten like any other
+    legacy requirement id.
+    """
+    claimed = {m.start() for m in _SPEC_BOLD_RE.finditer(text)}
+    claimed |= {m.start() for m in _LEGACY_SPEC_BOLD_RE.finditer(text)}
+    return [
+        m
+        for m in _CENSUS_BARE_ID_RE.finditer(text)
+        if m.group(1) == "DEP"
+        and m.start() not in claimed
+        and _LEGACY_NUMBER_RE.match(m.group(2))
+    ]
+
 
 def _discover_requirements(root: Path) -> list[_Draft]:
     """Every legacy `**FR-<MODULE>-<n>**`-shaped bold id in `docs/specs/*.md` (NT-0019 §4
@@ -1564,15 +1890,32 @@ def _discover_requirements(root: Path) -> list[_Draft]:
     for path in sorted(specs_dir.glob("*.md")):
         text = path.read_text(encoding="utf-8")
         module_date = _module_first_commit_date(path, root)
-        for i, m in enumerate(_LEGACY_SPEC_BOLD_RE.finditer(text)):
-            prefix, module, number = m.group(1), m.group(2), m.group(3)
-            title = f"{prefix}-{module}-{number}"
+        # Clause order within the file is the tie-break, so the two matchers' output is
+        # merged by character offset rather than concatenated -- a module-less `DEP` id
+        # defined between two module-coded ones must number between them, not after them.
+        legacy = sorted(
+            [*_LEGACY_SPEC_BOLD_RE.finditer(text), *_legacy_bare_dep_ids(text)],
+            key=lambda match: match.start(),
+        )
+        for i, m in enumerate(legacy):
+            if m.re is _LEGACY_SPEC_BOLD_RE:
+                prefix = m.group(1)
+                title = f"{prefix}-{m.group(2)}-{m.group(3)}"
+            else:
+                # F82: module-less by design. `_CENSUS_BARE_ID_RE` group 1 is the prefix
+                # and group 2 the id body -- not group 1, which is the number in
+                # `_LEGACY_SPEC_BOLD_RE`'s numbering.
+                prefix = m.group(1)
+                title = f"{prefix}-{m.group(2)}"
             drafts.append(
                 _Draft(
                     materialize="requirement", prefix=prefix, kind=None, title=title,
                     status="active", created=module_date, owner="decision-maker",
                     tie_break=(path.relative_to(root).as_posix(), i),
-                    old_token=f"{prefix}-{module}-{number}",
+                    # The legacy id and the record's title are the same string in both
+                    # branches; built once above so a module-less `DEP` can never pick up
+                    # a stale module code from a previous iteration of this loop.
+                    old_token=title,
                     source_path=path, match_span=m.span(),
                 )
             )
@@ -2326,7 +2669,8 @@ def _is_body_heading(
 
 
 def _check_heading_split_not_silently_unrecognised(
-    locator_prefix: str, text: str, heading_re: re.Pattern[str], split_level: int, *, scope: str
+    locator_prefix: str, text: str, heading_re: re.Pattern[str], split_level: int, *, scope: str,
+    extra_record_starts: Collection[int] = (),
 ) -> None:
     """Ruling 83's census for one dedicated heading-split file (`_discover_headed_split_
     file`'s shape: the file's *entire* structure is either a record, that record's own
@@ -2337,9 +2681,17 @@ def _check_heading_split_not_silently_unrecognised(
     `heading_re` itself targets (3, for both `closure-records.md` and `plan-reviews.md`'s
     `###` shape) -- passed explicitly rather than inferred from the pattern text, since a
     record's own matched level is the one fact `_is_body_heading` must not get wrong.
+
+    `extra_record_starts` carries the offsets of records produced by a *different*
+    discovery function over the same file -- `_discover_proposal_containers`' `RFC-` in
+    `plan-reviews.md`. Ruling 83 §1(b) is why they are passed in rather than re-derived
+    here: a guard may not derive its denominator from the matcher it is checking, and it
+    equally may not decide on its own that a unit some other matcher claims is a record.
+    The offsets come from `_proposal_container_starts`, the same single definition the
+    discovery function itself uses.
     """
     headings = _heading_census_units(text, locator_prefix)
-    record_starts = {m.start() for m in heading_re.finditer(text)}
+    record_starts = {m.start() for m in heading_re.finditer(text)} | set(extra_record_starts)
     spans = _record_spans(record_starts, len(text))
     first_record_start = min(record_starts) if record_starts else None
     units = [unit for _start, unit in headings]
@@ -2352,7 +2704,8 @@ def _check_heading_split_not_silently_unrecognised(
 
 
 def _check_headed_split_file_not_silently_unrecognised(
-    root: Path, rel_path: str, heading_re: re.Pattern[str], split_level: int, description: str
+    root: Path, rel_path: str, heading_re: re.Pattern[str], split_level: int, description: str,
+    *, extra_record_starts: Callable[[str], Collection[int]] | None = None,
 ) -> None:
     """Task #30/#31 (Ruling 83's census), for `_discover_headed_split_file`'s shape
     (`plan-reviews.md` today; `closure-records.md` has its own discovery function and its
@@ -2361,6 +2714,12 @@ def _check_headed_split_file_not_silently_unrecognised(
     has nothing to reconcile. Runs *alongside*, not instead of, that existing "zero total"
     guard -- this one closes the arithmetic; that one still catches a file moved to an
     unexpected new location returning zero drafts outright.
+
+    `extra_record_starts` is a callable over the file's text rather than a ready-made set,
+    because this function is what opens the file: a caller cannot pass offsets without
+    having read the text to compute them. `plan-reviews.md` passes
+    `_proposal_container_starts` (F80); the default `None` leaves every other caller's
+    behaviour byte-identical.
     """
     path = root / rel_path
     if not path.is_file():
@@ -2369,7 +2728,8 @@ def _check_headed_split_file_not_silently_unrecognised(
     if not text.strip():
         return
     _check_heading_split_not_silently_unrecognised(
-        rel_path, text, heading_re, split_level, scope=f"{rel_path} ({description})"
+        rel_path, text, heading_re, split_level, scope=f"{rel_path} ({description})",
+        extra_record_starts=() if extra_record_starts is None else extra_record_starts(text),
     )
 
 
@@ -2442,20 +2802,21 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
       RE` matches, confirmed by running it) and no widening has landed. Once Ruling 87 is
       implemented, whichever function claims these files owns making them a `_reconcile_
       census` record; this guard does not anticipate that interface.
-    - **Ruling 86: `Ruling A1`/`A2`/`A3` become three `RL-` records**, via `_RULING_
-      HEADING_RE` widening on two axes (heading level and token shape, §3 item 1). That
-      widening has not landed, so they are correctly still named as unaccounted below --
-      this is `_reconcile_census` doing exactly its job (Ruling 83's own "the census
-      cannot be cleared while three units are unclassified" is now "while the ruled
-      widening is unimplemented", not a change to what this function does).
+    - **Ruling 86: `Ruling A1`/`A2`/`A3` become three `RL-` records**, via a widening on
+      two axes (heading level and token shape, §3 item 1). **That widening has now
+      landed**, as `_discover_lettered_rulings` rather than inside `_RULING_HEADING_RE` --
+      Ruling 86 §3 item 5 requires a residual `PL-` for the source document, which
+      widening `_RULING_HEADING_RE` would have destroyed (see that function's docstring).
+      The three are records here now, not unaccounted units, and register finding F81 --
+      raised because this guard aborted `migrate` on them -- is what that code discharges.
 
-    **The coupling this leaves, stated rather than anticipated:** the "record" bucket
-    below is keyed off `_RULING_HEADING_RE`'s own matches. If Ruling 86's widening lands
-    inside that same pattern, this guard needs no change. If it lands as a *different*
-    mechanism (a separate classification pass, per Ruling 87 §3 item 1's other option),
-    this guard's `record_starts` must be re-pointed to recognise that mechanism's output
-    too, or it will re-flag units a different, correct code path has already claimed. Not
-    fixed pre-emptively -- the interface does not exist yet to fix it against.
+    **The coupling this docstring anticipated, and how it resolved:** the "record" bucket
+    below was keyed off `_RULING_HEADING_RE`'s own matches, and this paragraph said that if
+    Ruling 86's widening landed as a *different* mechanism (Ruling 87 §3 item 1's other
+    option) then `record_starts` must be re-pointed at that mechanism's output too. It did,
+    and it is: the bucket is now the union of both matchers. Anything a third matcher
+    claims in future has to be added the same way, or this guard will re-flag units a
+    correct code path has already produced.
     """
     plans_dir = root / "docs" / "plans"
     if not plans_dir.is_dir():
@@ -2475,9 +2836,24 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
         ):
             continue  # one ruling, titling its own file -- settled, not a defect (above)
         rel = path.relative_to(root).as_posix()
-        record_starts = {m.start() for m in _RULING_HEADING_RE.finditer(text)}
+        split_starts = {m.start() for m in _RULING_HEADING_RE.finditer(text)}
+        # Ruling 86's A-series, produced by `_discover_lettered_rulings` (F81). This is the
+        # re-pointing this function's own docstring said would be needed if the widening
+        # landed as a separate mechanism rather than inside `_RULING_HEADING_RE`; it did,
+        # for the reason that function's docstring gives (the residual `PL-`), so the
+        # record bucket is keyed off both matchers rather than one.
+        record_starts = split_starts | {
+            m.start() for m in _LETTERED_RULING_HEADING_RE.finditer(text)
+        }
         spans = _record_spans(record_starts, len(text))
-        first_record_start = min(record_starts) if record_starts else None
+        # Bucket 2's "preamble" half comes from `_discover_multi_ruling_files` ALONE, so it
+        # is anchored on that function's own first record and not on the union above.
+        # `_discover_lettered_rulings` extracts sections from a document that survives as a
+        # `PL-`: text before its first record is that plan's body, not a preamble folded
+        # into anything, so a `Ruling`-anchored heading sitting there is genuinely
+        # unaccounted and must still be named. Anchoring on the union would have exempted
+        # it -- caught by a test, not by reading.
+        first_record_start = min(split_starts) if split_starts else None
         units = [
             _CensusUnit(
                 key=str(m.start()),
@@ -2503,7 +2879,10 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
         )
 
 
-_CENSUS_DEP_BARE_RE: Final = re.compile(r"\*\*DEP-([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)\*\*")
+# `_CENSUS_DEP_BARE_RE` and `_legacy_bare_dep_ids` now live beside `_LEGACY_SPEC_BOLD_RE`
+# above (F82): the census's independent unit-finder and the discovery function's own record
+# rule have to be reconciled against each other, so they are defined together rather than
+# one here and one 1000 lines up.
 
 
 def _check_requirements_not_silently_unrecognised(root: Path) -> None:
@@ -2516,22 +2895,34 @@ def _check_requirements_not_silently_unrecognised(root: Path) -> None:
     and invisible to every count built on that assumption, `docs/notes/0019-one-id-per-
     document.md`'s own acceptance-criteria greps included.
 
-    The census here is deliberately narrower than "every bold span starting with a
-    prefix": it drops only the module-code assumption (via `_CENSUS_DEP_BARE_RE`, `DEP`
-    only -- see below for why not the other three), keeping the one genuinely structural
-    signal a definition marker has and a reference does not -- the bold span closes right
-    after the id, nothing else inside it. That is why a dated-amendment sentence like
-    `**FR-OVR-20 says so twelve rows above this one**` (real corpus text) is never a
-    census candidate at all -- the bold span does not close after the id -- while
-    `**DEP-1a**` is.
+    The census drops the module-code assumption entirely (via `_CENSUS_BARE_ID_RE`),
+    keeping the one genuinely structural signal a definition marker has and a reference
+    does not -- the bold span closes right after the id, nothing else inside it. That is
+    why a dated-amendment sentence like `**FR-OVR-20 says so twelve rows above this one**`
+    (real corpus text) is never a census candidate at all -- the bold span does not close
+    after the id -- while `**DEP-1a**` is.
 
-    Scoped to `DEP` only, not all four prefixes: measured directly, broadening `FR`/`NFR`/
-    `OQ` the same module-optional way finds zero additional real units in this corpus, and
-    the post-migration form for those three is module-less (`**FR-<n>**`) -- broadening
-    them would make this guard fire on `migrate`'s own second-run output and break
-    idempotency. `DEP` carries no such collision: it is not recognised by `_discover_
-    requirements` at all today, so it has no post-migration, module-less form to collide
-    with yet.
+    **Three buckets, and each is checked positively** (Ruling 83 §2), so the arithmetic
+    closes rather than the guard going quiet:
+
+    1. **record** -- module-coded (`_LEGACY_SPEC_BOLD_RE`) or a module-less `DEP` id with a
+       number (`_legacy_bare_dep_ids`); both are what `_discover_requirements` produces a
+       draft for, computed by the same functions it uses.
+    2. **derived body** -- already in the canonical post-migration form `_SPEC_BOLD_RE`
+       reads. This is the idempotency reading `_check_plain_plans_not_silently_
+       unrecognised` already applies to a filename via `_docid.ID_RE`, and it is what
+       allowed this census to widen past `DEP`: this docstring used to say broadening
+       `FR`/`NFR`/`OQ` "would make this guard fire on `migrate`'s own second-run output and
+       break idempotency", which was true only while there was no bucket for an id that is
+       already migrated. There is one now.
+    3. **declared exception** -- none, and none needed.
+
+    **What still reds it**, which is the point of widening rather than claiming everything:
+    a bold span in any of the four prefixes that is neither module-coded, nor canonical,
+    nor a numbered `DEP` -- `**FR-12a**`, `**OQ-1a**`, `**DEP-abc**`. None exists in the
+    corpus today (measured at `ba31cd1`: `**DEP-1a**` was the only non-conforming bold id
+    in `docs/specs/`, and it is now a record), and any that appears is named rather than
+    guessed at.
     """
     specs_dir = root / "docs" / "specs"
     if not specs_dir.is_dir():
@@ -2540,15 +2931,26 @@ def _check_requirements_not_silently_unrecognised(root: Path) -> None:
         text = path.read_text(encoding="utf-8")
         rel = path.relative_to(root).as_posix()
         records = {str(m.start()) for m in _LEGACY_SPEC_BOLD_RE.finditer(text)}
+        # F82's bucket 1: a module-less `DEP` id `_discover_requirements` now produces a
+        # draft for, computed by the same function that discovery uses.
+        records |= {str(m.start()) for m in _legacy_bare_dep_ids(text)}
+        # F82's bucket 2: an id already in the canonical post-migration form
+        # `_SPEC_BOLD_RE` reads -- the positively-checked idempotency reading Ruling 83
+        # requires, never "the legacy pattern found nothing". See `_legacy_bare_dep_ids`
+        # for why `DEP-1`/`DEP-2`/`DEP-3` are in this bucket and `DEP-1a` is not.
+        already_canonical = {str(m.start()) for m in _SPEC_BOLD_RE.finditer(text)}
         units = []
         for m in itertools.chain(
-            _LEGACY_SPEC_BOLD_RE.finditer(text), _CENSUS_DEP_BARE_RE.finditer(text)
+            _LEGACY_SPEC_BOLD_RE.finditer(text), _CENSUS_BARE_ID_RE.finditer(text)
         ):
             line_no = text.count("\n", 0, m.start()) + 1
             units.append(
                 _CensusUnit(key=str(m.start()), locator=f"{rel}:{line_no}", text=m.group(0))
             )
-        _reconcile_census(scope=f"{rel} (requirement ids)", units=units, records=records)
+        _reconcile_census(
+            scope=f"{rel} (requirement ids)", units=units, records=records,
+            is_body=lambda unit, canonical=already_canonical: unit.key in canonical,
+        )
 
 
 def _check_plain_plans_not_silently_unrecognised(root: Path) -> None:
@@ -3101,6 +3503,12 @@ def migrate(root: Path) -> MigrateResult:
     )
     drafts += adr_drafts
     multi_ruling_drafts = _discover_multi_ruling_files(root)
+    # Ruling 86's A-series (F81): letter-suffixed ruling headings nested inside a plan that
+    # survives the extraction, so this runs alongside the whole-file splitter above rather
+    # than inside it -- see `_discover_lettered_rulings`' own docstring for why widening
+    # `_RULING_HEADING_RE` would have destroyed the residual `PL-` Ruling 86 §3 item 5
+    # requires. The census below reconciles both matchers' output against one census.
+    multi_ruling_drafts += _discover_lettered_rulings(root)
     _check_multi_ruling_files_not_silently_unrecognised(root)
     drafts += multi_ruling_drafts
     closure_drafts = _discover_closure_records(root)
@@ -3119,7 +3527,8 @@ def migrate(root: Path) -> MigrateResult:
     # the lead as a collision rather than silently reconciled -- see the PR body.
     _check_plan_reviews_heading_census(root)
     _check_headed_split_file_not_silently_unrecognised(
-        root, "docs/audit/plan-reviews.md", _REVIEW_HEADING_RE, 3, "plan reviews"
+        root, "docs/audit/plan-reviews.md", _REVIEW_HEADING_RE, 3, "plan reviews",
+        extra_record_starts=_proposal_container_starts,
     )
     drafts += review_drafts
     plain_plan_drafts = _discover_plain_plans(root)
