@@ -20,6 +20,15 @@ on:
       # and the python workflow did not run.
       - 'examples/**'
       - 'docs/contracts/**'
+      # docs/** because every one of tests/'s root test files reads content under
+      # docs/ — the working notes, the register, the roadmap or the spec suite — so a
+      # change confined to docs/ is exactly the change this suite exists to check, not
+      # an unrelated directory. Noticed 2026-09-01: PR #555 filed a new working note,
+      # growing docs/notes/ from 18 to 19 files and breaking two tests that assert on
+      # that count and on the note's own content (test_audit_docs_notes_tombstone.py,
+      # test_notes_move_citations.py) — on `main`, with CI green throughout, because
+      # docs.yml (which did trigger) runs only `audit-docs.py`, never `pytest`.
+      - 'docs/**'
       # tests/** for the third time this has bitten: the repository-invariant suite
       # lives here and `uv run pytest -q` runs it, so a change touching only this
       # directory was checked by nothing. Noticed when FR-PLAT-57's single-head guard
@@ -49,6 +58,15 @@ on:
       - 'scripts/**'
       - 'examples/**'
       - 'docs/contracts/**'
+      # docs/** because every one of tests/'s root test files reads content under
+      # docs/ — the working notes, the register, the roadmap or the spec suite — so a
+      # change confined to docs/ is exactly the change this suite exists to check, not
+      # an unrelated directory. Noticed 2026-09-01: PR #555 filed a new working note,
+      # growing docs/notes/ from 18 to 19 files and breaking two tests that assert on
+      # that count and on the note's own content (test_audit_docs_notes_tombstone.py,
+      # test_notes_move_citations.py) — on `main`, with CI green throughout, because
+      # docs.yml (which did trigger) runs only `audit-docs.py`, never `pytest`.
+      - 'docs/**'
       # tests/** for the third time this has bitten: the repository-invariant suite
       # lives here and `uv run pytest -q` runs it, so a change touching only this
       # directory was checked by nothing. Noticed when FR-PLAT-57's single-head guard
