@@ -481,3 +481,88 @@ the run by itself — both are checks meant to police it that currently cannot f
 exactly "blinds" rather than "stops," and exactly why both are in W37-5c's scope rather than
 already fixed. Status as of this note: scheduled, not yet built. See `docs/roadmap.md` and
 W37-5c's own filed plan for current state; this record does not track it further.
+
+## 13. Dispositions — 2026-09-02, the lead's. The four items this record left undecided
+
+**This section is the verdict half of `CLAUDE.md` §13** — *every requirement without evidence
+gets one of four verdicts; silence is not one of them.* The record above classified; it
+deliberately wrote no dispositions. The evidence behind each was gathered by this record's own
+author on request and is cited inline; **the verdicts are the main thread's and were not written
+by a subagent.**
+
+Nothing here edits the record above. Six of the seven classes were already disposed of by events
+rather than by argument, and are restated only so no reader has to re-derive them:
+
+| Class | Disposition | Where it went |
+|---|---|---|
+| VACUOUS AT BIRTH (2) | built | W37-5c items 4 and 5, landed `e2296ec` |
+| INVALIDATED (3) | rebuilt or a bounded trade | R88 by Ruling 93; R86 by `e2296ec`; R61 a documented trade, horizon W37-6 |
+| WITHDRAWN (2) | taxonomy | §11 above; superseded by live replacements |
+| NONE_FOUND (35) | grandfathered by date | the ruling-form flag-day at `aab6327`; the census `none` bucket reds for post-flag-day rulings only |
+
+### CANNOT_DETERMINE 1 of 2 — Ruling 29 versus register row F72: **no violation**
+
+**Determinable after all, and the answer is that the override applies.** Ruling 29's clause
+(`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md:233-237`) ends *"This ruling is overridden
+if a row is filed with 'unowned' or 'owner TBD' in that cell."* F72's Decision cell opens with the
+literal word `unowned`. The override is scoped to that cell and fires on the marker's presence.
+
+**The lead raised this as a live violation and was wrong**, having escalated before reading the
+rule's own scope sentence. Recorded because the correction is the useful part: a cited rule
+usually scopes itself, and that clause decides whether a violation is real.
+
+**What is open is a different, later rule.** Ruling 49 Text B — *"An unowned row must name the
+event that next confirms or assigns its owner"* — asks for an owner-assignment event; F72 names a
+discharge condition, which is not plainly the same thing. **19 of 82 rows carry the same
+`unowned` marker** and `check_unowned_decay` reports zero across all of them, because it enforces
+`_UNOWNED_MIN_LEN = 40`, a length proxy its own comment at `scripts/register-lint.py:103-104`
+says presumes rather than verifies. Being checked against `F64` and `F79` — two open findings
+already against this script, both the same shape of a check reporting zero because it cannot see
+— before anything new is filed.
+
+### CANNOT_DETERMINE 2 of 2 — Ruling 85 item 3: **not an acceptance item**
+
+**Ruling 85 §4 carries two acceptance items, not three.** Items 1 and 2 each carry a `Violation:`
+clause and hold regardless of any later choice. Item 3 carries none and says of itself that it is
+*"stated concretely because the maintainer will weigh it"* — a consequence disclosed under a
+reading the ruling declines to adopt. **It has no failing case by construction**, and a
+`Violation:` clause added to it would re-scope item 2's violation to a date range rather than
+instrument anything new.
+
+**The consequence worth more than the row.** The classifier counted it, so the classifier's
+predicate selects on **position under a §4 heading** rather than on the presence of a checkable
+property. One instance is not a rebuild; it is recorded here so the next reader knows the
+population is a ceiling rather than a measurement.
+
+### INDICATIVE, both members: **confirmed, and neither is a defect**
+
+**Ruling 21.** The ruling is *"no change"*, and its own text puts the unresolved question outside
+its role — *"a scope question, and `CLAUDE.md` §12 puts scope outside this role."* An item that
+establishes a standard for judging a future **auditor** is a real thing and is not a system check.
+Its one live hit, `CONTROL_FACTOR_IN_RATEABLE_PATH`, **already has custody and needs no new
+finding**: register row `FR-RATE-25` (`F-W9-3`) clause (5) records *"no `control`-intent factor
+in a rateable path (`02` FR-MODEL-3) — no implementation anywhere"* with a disposition attached.
+Verified at `7186dca`: the code is declared in `docs/specs/03-rating-engine.md:617` and
+`docs/workflows/wf-02-model-to-rating-version.md`, and is absent from
+`backend/src/app/errors.py`.
+
+**Ruling 51.** Its §2 says in its own words *"This ruling does not fix its value; it fixes its
+form."* An item asking for a count at two trees with the delta narrated, and stating no
+threshold, is exactly what a form-fixing ruling should produce.
+
+### The class-level disposition, which is the part that generalises
+
+**INDICATIVE is not a defect class. It is a shape.** Both members decline to set a threshold **in
+their own text**, deliberately and with reasons given. Booking either as a defect would
+miscategorise a deliberate act.
+
+**The defect is never the item; it is a downstream reader booking one as satisfied.** That is
+Ruling 94's *"a vacuously true acceptance item does not satisfy itself"* arriving by the opposite
+mechanism: **a vacuous item cannot fail, and an indicative item cannot pass.** Both are unusable
+as evidence, for symmetric reasons.
+
+**So: an INDICATIVE acceptance item discharges nothing, and no close, audit or plan review may
+cite one as evidence that a property holds.** Where such an item is the only acceptance evidence
+a ruling offers, the ruling's property is unverified and must be said to be unverified — which is
+`CLAUDE.md` §13's *a check that has never printed a failure has not been tested*, applied to a
+check that cannot print one in either direction.
