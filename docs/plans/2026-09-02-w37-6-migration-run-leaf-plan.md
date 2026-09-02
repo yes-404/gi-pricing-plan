@@ -916,6 +916,30 @@ a place the script will silently do the wrong thing unless the executor fixes th
 
 - [ ] Fix each of the three rules before the run, and record the fixed rule in the ledger.
 
+**Which half of this a check catches, and which it does not — measured, because the two need
+different handling.** `required_sections()` derives each family's `##` sections from its
+template: `PL.md` declares `## Goal`, `## Decision points`, `## Tasks`, `## Acceptance Standard`;
+`CR.md` declares `## Scope`, `## Evidence`, `## Verdict`.
+
+- **The ruling half is caught, loudly.** A ruling record misfiled as a `PL-` sits in
+  `docs/plans/` with `family: plan`, so check 31's directory-equals-family test is satisfied by
+  the wrong answer — but **check 37 fires**: `2026-09-01-ruling-60-…` and
+  `2026-09-01-ruling-61-…` carry `## Acceptance Standard` (check 28 required it) and **none** of
+  `## Goal`, `## Decision points` or `## Tasks`. Three sections missing, named per file. So the
+  misclassification is detectable; it is not silent.
+- **The `closure-records.md` half is not caught by anything.** Three of that file's 21 `###`
+  records are titled *"W5 — … (in progress, not closed)"* and one is *"Phase 1a — exit demo
+  accepted"*. Split per heading, each becomes a `CR-` — a **closure record for something that was
+  never closed**, and one for a phase rather than a work. Shape and header can both be correct;
+  **no check tests whether a closure record records a closure.** This is the one place in the
+  slice where a wrong result passes the whole gate, so the split rule must exclude them by
+  predicate before the run, and the exclusion must be recorded with its reason.
+- **A dropped section is caught**; a misattributed one is not. `plan-reviews.md`'s
+  `## Pending proposals` block (three `###` candidates, no §5.2 destination) would be either
+  dropped — caught by acceptance (g)'s class 4, *"the concatenation of the outputs reproduces the
+  input's body lines in order"* — or silently swallowed into the preceding `CR-`. Give it an
+  explicit destination rather than letting the splitter choose.
+
 ### 7.6 Task 6 — The remaining gate scripts
 
 Counts taken from the tree, never from §5.5's *"fourteen scripts"* (§5.3).
@@ -1133,7 +1157,11 @@ repository later. Each is verified against the shipped artifact at `39ee30c`, no
    headings are `#` not `##`; two of the 29 ruling-bearing files are not named `*ruling*`;
    `closure-records.md` has zero `##` headings and three of its 21 `###` records are marked *"in
    progress, not closed"*; `plan-reviews.md` has 14 `###` of which 11 are reviews, the rest
-   sitting under a `## Pending proposals` section with no destination in §5.2. §7.5.
+   sitting under a `## Pending proposals` section with no destination in §5.2. **§7.5 records
+    which half a check catches: the ruling misclassification reds check 37 (a ruling carries none
+    of `PL.md`'s `## Goal`, `## Decision points`, `## Tasks`), but a `CR-` minted from a record
+    the source marks *"in progress, not closed"* passes every check — no check tests whether a
+    closure record records a closure.**
 10. **Two files under `docs/audit/` have no destination row in NT-0019 §5.2** — the auditor's own
     sweep record (this plan's evidence base) and
     `work/nt-0010-0011-adoption/pilot-findings.md`. §5.2's rows cover 41 of the directory's 43
