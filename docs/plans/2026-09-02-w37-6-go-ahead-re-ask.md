@@ -967,6 +967,20 @@ or the document is not ready for §10**, `[SLOT-5]` is already filled, and `[SLO
 be — it is filled by the executor in the running session and never here (Acceptance Standard
 items 4 and 5).
 
+**The rule that decides *when* a slot may be filled is not "late"; it is what kind of fact the
+slot holds.** Three kinds, and naming them tells a reader which slots could have been filled
+earlier and why the others could not:
+
+| Kind | Fillable | Why | Here |
+|---|---|---|---|
+| **Historical** — a fact about a tree that has already passed | **Now** | No later tree can change what a past tree did | `[SLOT-5]` — 125 writes before the `KeyError`, at `c888b61` |
+| **Final-tree** — a property of the tree the ask is made from | **At that tree, once** | The maintainer's condition is a property of the day, not of this document | `[SLOT-0]`, `[SLOT-1]`, `[SLOT-2]`, `[SLOT-3]` |
+| **Running-session** — a property of the moment the migration branch is cut | **Never here** | Recording it turns a volatile live condition into a stale claim (§5.1) | `[SLOT-4]` |
+
+**So `[SLOT-5]` filling early is not an exception to the discipline; it is the discipline applied
+to a different kind of fact.** A run that crashed at `c888b61` crashed at `c888b61` whatever
+lands next.
+
 | Slot | What fills it | Why it is not filled now |
 |---|---|---|
 | `[SLOT-0]` | The tree this ask is made at | It is not final; see below |
@@ -1072,7 +1086,29 @@ is not derivable by script and is re-read.
 **Recorded here rather than smoothed, because each was believed and restated before it was
 checked, and one of them is this document's own brief.**
 
-### 8.1 W37-5c's two closing acts have both happened and neither record says so
+**How to read this section, and the self-corrections scattered outside it, because the obvious
+reading is the wrong one.** This document reports a withdrawn phrase (§2.4), a mis-located remedy
+(§2.2), a refuted illustration (§2.5), a citation chain in which the remedy carried the defect it
+was fixing (§8.1), and **three of its own answers that were right by luck** — the `[A-Z]+`
+character class that excluded a `tempfile` collision nobody had noticed (§2.6), a summary row
+stating a true fact for a reason that had stopped holding (§8.1), and
+`git branch -r --contains` returning the right verdict only because no stale tracking ref
+happened to exist (§8.1). **An accumulating list of self-caught errors reads as instability. It
+is the opposite.**
+
+**A coincidence is only findable by someone who re-derived the answer instead of confirming it.**
+A document that reports none has not looked; a document that reports three has. **The general
+form is worth stating once: a check that is right by luck is indistinguishable from a check that
+works, until the luck changes** — and all three here were about to change, by a broader
+predicate, a later edit, and a `git fetch --prune` respectively.
+
+**What that means for the go-ahead in §10.** These are not open defects the maintainer must
+weigh. Every one is closed in the text that reports it. **The reason they are in a
+maintainer-facing document at all is that the figures in §6 and §7 will be produced by the same
+process**, and the evidence that the process catches its own errors is the only warrant those
+figures have.
+
+### 8.1 W37-5c's two closing acts had both happened and neither record said so — discharged at `ac10d30`
 
 `CLAUDE.md` §13: *"A Slice … closes on a clean audit and the lead's merge."* Both occurred —
 the audit is [`W37-5c/README.md`](../audit/work/W37-5c/README.md), verdicts adopted by the lead
