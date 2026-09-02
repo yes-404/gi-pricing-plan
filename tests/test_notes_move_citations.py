@@ -1,7 +1,10 @@
 """NT-0016 Slice 4: after the notes move, the old notes root under `.claude` may be cited
 only by its own tombstone, by files frozen under `docs/plans/README.md`'s write-once rule,
 by check 30's own mechanism (Ruling 61 -- the check that *watches* the old path necessarily
-names it), and by provenance-locked historical artifacts generated before the move landed.
+names it), by provenance-locked historical artifacts generated before the move landed, and
+by a maintainer-accepted note that *specifies* the old path's eventual deletion rather than
+merely citing it (`_SPECIFICATIONS_OF_THE_OLD_PATH` below -- added 2026-09-02 for NT-0019,
+see that constant's own comment for what this narrow exemption stops catching).
 
 This is the slice's own TDD leaf, per
 `docs/plans/2026-08-31-nt-0016-investigation.md` §9 Step 1: the invariant the move must
@@ -55,11 +58,39 @@ _PRE_MOVE_SNAPSHOTS = {
     "docs/audit/file-taxonomy-draft.md",
 }
 
+# A maintainer-accepted note that *specifies* the old path rather than merely citing it.
+# NT-0019 (`docs/notes/0019-one-id-per-document.md`) names the old notes root under
+# `.claude` twice (deliberately not written as one contiguous string in this comment, for
+# the same self-referential reason the module docstring gives below): §4 step 4 is the
+# future migration instruction to delete that path's stubs, and §7(d)'s acceptance grep
+# must contain the literal pattern for it among the tokens a *later* migration tree is
+# checked to no longer contain. Both are the old path used as subject matter, not a stale
+# reference left over from this move -- the same distinction `_PRE_MOVE_SNAPSHOTS` draws
+# for a different reason. NT-0019 is a maintainer-accepted note
+# whose body is not edited to route around this test: its Raised field records it as
+# "written against `main` at `8f5d57d`" by the maintainer, and CLAUDE.md's write-once
+# reasoning for a frozen `docs/plans/` file (NT-0016 C4) applies here for the same cause --
+# rewriting a maintainer's own accepted words to satisfy a test would misrepresent what was
+# accepted. So, as with `_PRE_MOVE_SNAPSHOTS`, the file is named here instead of widening a
+# directory-shaped carve-out (a blanket `docs/notes/`-prefix exemption would stop this test
+# from ever catching a genuinely stale citation in any *other* note).
+#
+# What this stops catching: a *stray*, wrong citation of the old path added anywhere else in
+# NT-0019 -- by a future dated correction appended to it, say -- would no longer fail this
+# test either, since the exemption is by filename, not by line or by the two known-legitimate
+# occurrences. That risk is accepted narrowly for this one frozen file; it is not extended to
+# any other note, and a new note that names the old path for a similarly specifying reason
+# needs its own reviewed addition here, not a widening of this set's shape.
+_SPECIFICATIONS_OF_THE_OLD_PATH = {
+    "docs/notes/0019-one-id-per-document.md",
+}
+
 
 def test_no_living_file_cites_the_old_notes_path() -> None:
     """After the move, the old notes root under `.claude` may be named only by the
     tombstone README left there, by files frozen under `docs/plans/`, by check 30's own
-    watching mechanism, and by pre-move provenance-locked snapshots.
+    watching mechanism, by pre-move provenance-locked snapshots, and by a maintainer-accepted
+    note that specifies the path's eventual deletion (`_SPECIFICATIONS_OF_THE_OLD_PATH`).
 
     A frozen plan is never edited to agree with a later move (`docs/plans/README.md`'s
     write-once rule, NT-0016 C4) -- the tombstone this slice creates at the vacated path
@@ -74,7 +105,7 @@ def test_no_living_file_cites_the_old_notes_path() -> None:
     tracked = subprocess.run(
         ["git", "ls-files"], capture_output=True, text=True, cwd=ROOT, check=True
     ).stdout.split()
-    exempt = _CHECK_30_MECHANISM | _PRE_MOVE_SNAPSHOTS
+    exempt = _CHECK_30_MECHANISM | _PRE_MOVE_SNAPSHOTS | _SPECIFICATIONS_OF_THE_OLD_PATH
     offenders = [
         f
         for f in tracked

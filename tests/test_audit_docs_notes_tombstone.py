@@ -26,6 +26,7 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OLD_NOTES = ROOT / ".claude" / "notes"
+NOTES = ROOT / "docs" / "notes"
 
 
 def _run_audit() -> subprocess.CompletedProcess[str]:
@@ -35,10 +36,24 @@ def _run_audit() -> subprocess.CompletedProcess[str]:
 
 
 def test_the_unmodified_tombstone_passes() -> None:
-    """Positive control: the tombstone as built (README + 18 stubs) is silent."""
+    """Positive control: the tombstone as built (README + 18 stubs) is silent.
+
+    The 18 *stubs* at the old path (`OLD_NOTES_STUB_NAMES` in `audit-docs.py`) are a
+    frozen, closed registry that check 30 alone reads and never changes. The working-notes
+    *count* asserted below is a different, unrelated number -- `check_notes()` reads
+    `docs/notes/`, a disjoint root that keeps growing as notes are filed -- and this test
+    used to restate it as the literal "18 working notes", true only because both numbers
+    happened to coincide the day this test was written. That literal broke the very next
+    day, when NT-0019 (PR #555) became the corpus's 19th note: a hardcoded count in a
+    positive control breaks every time a note is legitimately added, which is the corpus
+    behaving correctly, not a regression. Deriving `expected` from `docs/notes/` at run
+    time -- the same directory, and the same "exclude README.md" rule, `check_notes()`
+    itself uses -- means a future note never has to remember to bump a number here.
+    """
     result = _run_audit()
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "18 working notes" in result.stdout, result.stdout
+    expected = len([p for p in NOTES.glob("*.md") if p.name != "README.md"])
+    assert f"{expected} working notes" in result.stdout, result.stdout
 
 
 def test_a_stray_file_at_the_old_path_fails() -> None:
