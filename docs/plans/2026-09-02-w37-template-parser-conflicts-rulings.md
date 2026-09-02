@@ -26,6 +26,15 @@ ownership table row reads *"Reference — `process/` | maintainer; amendments ar
 `RL-`"*. One residual textual divergence inside that maintainer-owned file is recorded under
 *Not ruled* below rather than edited here.
 
+**A third conflict was routed here after the two rulings were filed, and it is refuted rather
+than ruled** — `docs/_templates/LG.md`'s `slice:` field, reported as *required* and
+unsatisfiable. It is not required, and the section near the end of this record shows the
+derivation that settles it. **The same section corrects a claim in this record's own first
+draft**, which the third conflict's evidence falsified: `migrate` does not destroy
+`docs/roadmap.md` — it silently declines to migrate it. Both the refutation and the
+self-correction are filed here rather than in a new record, because a reader chasing the
+`slice:` question will arrive at this one.
+
 ## Authority
 
 - **Both are spec-versus-implementation conflicts**, which
@@ -308,9 +317,95 @@ Three things surfaced while verifying that are **not** this role's, listed so no
 
 | Item | Why not mine | Where it goes |
 |---|---|---|
-| **`_restructure_roadmap` replaces the entire roadmap.** `scripts/doc-id.py:1586-1588` writes `"# Roadmap (fixture)\n\n"` plus the generated rows over `docs/roadmap.md`. It has exactly one caller (`:1691`), on the real `migrate` path, not a fixture-only one. On the real tree this discards every phase narrative, workstream table, closure record and decision gate, and titles the result "(fixture)" | A code defect in merged W37-5, not a spec-versus-code conflict. I verified the call graph but not whether the loss is intended and repaired elsewhere in W37-6's supervised run | **The lead**, as a finding against W37-5, sibling to the closure-record defect already tracked. It is a W37-6 precondition either way. Not covered by W37-6's leaf plan — `grep -niE "fixture\)\|roadmap.*prose\|restructure_roadmap"` over it returns nothing |
+| **`migrate` does not restructure `docs/roadmap.md` at all, and cannot tell that from success.** See the correction immediately below — an earlier draft of this row claimed the opposite and was wrong | A code defect in merged W37-5, not a spec-versus-code conflict: NT-0019 §4 step 3 describes the *target* shape and names no source shape, and §5 (`:313`) classifies `roadmap.md` as **M + H** with the restructure on the M side. The spec is right; the script's legacy patterns are the defect | **The lead**, as a finding against W37-5, sibling to the closure-record defect already tracked (task #31 — the same species: a discovery function under-matching the real corpus). A W37-6 precondition |
 | **Whether check 30 ever reaches a `WK-`/`SL-` row block after W37-6 widens `_ID_SCOPE_ROOTS`.** Check 30 walks *files* and reads front matter; a row block is embedded mid-document, which `parse_header` cannot reach by `doc-index.py`'s own account. If it does not reach them, the derived row policy is enforced by nothing even post-migration, and Ruling 79's acceptance test is the only thing standing | A fact to establish by measurement, not a decision. I did not run it — it needs the post-migration corpus, which does not exist at `9367eac` | **W37-6's executor**, as a measurement before its acceptance items are signed off. If the answer is "no", it is a new finding, not a re-ruling |
 | **`exit_criteria` versus `exit criteria` inside `document-ids.md`.** §1.5 (`:134`) writes `exit_criteria`; §1.3's illustration (`:75`) writes `exit criteria`. The two sections of one maintainer-owned file disagree, and `PHASE.md` and `_PHASE_SECTION_FIELDS` both follow §1.3 | Ruling 80 settles what the *implementation* does, which is all that was routed here. Correcting the standard's text is an `RFC-` plus an `RL-` under §1.6, and `CLAUDE.md` §12 reserves the note itself to the maintainer | **The maintainer**, via the `RFC-` route, at whatever point §1 is next opened. Nothing is blocked meanwhile: no artifact reads `exit_criteria`, so the divergence is textual only |
+
+## Correction to this record's own first draft — the roadmap is not destroyed; it is silently not migrated
+
+**What the first draft of the row above said, and what was wrong with it.** It said
+`_restructure_roadmap` *"replaces the entire roadmap … On the real tree this discards every
+phase narrative, workstream table, closure record and decision gate."* **That is false, and
+the error was mine.** I traced the call graph — one caller, on the real `migrate` path — and
+stopped there, without checking the guard's condition against the real corpus. A task was
+opened on the strength of it before this correction landed.
+
+`scripts/doc-id.py:1688` guards that call with `if roadmap_drafts:`. `roadmap_drafts` comes
+from `_discover_roadmap`, which returns `[]` the moment `_ROADMAP_LEGACY_PHASE_RE` fails.
+Running the script's **own three patterns** — not an approximation of them — against the real
+`docs/roadmap.md` at `e471a42`:
+
+```
+_ROADMAP_LEGACY_PHASE_RE  -> 0 match(es)     ^## Phase <id> — <title>
+_ROADMAP_LEGACY_WORK_RE   -> 0 match(es)     ^### W<n> — <title> / status:
+_ROADMAP_LEGACY_SLICE_RE  -> 0 match(es)     ^- **W<n>-<m>** <title> — status:
+
+How works and slices are ACTUALLY written today:
+  work as a TABLE ROW  | **W37** |   : 30
+  slice as a TABLE ROW | **W37-1** | : 0
+  slice as a BULLET    - **W37-1**   : 0
+```
+
+**So `_restructure_roadmap` is never reached, and the roadmap is untouched.** The real defect
+is the inverse and is worse in a different way: **§4 step 3 is a silent no-op.** Thirty Works
+exist — as table rows — and `migrate` converts none of them, mints zero `WK-` and zero `SL-`
+rows, and reports success. It cannot detect this, because the module's own idempotency
+argument (`scripts/doc-id.py:788-793`) *defines* "discovery finds nothing" as "already
+migrated": **"nothing matched" and "already done" are the same observation to this script.**
+
+**Why the correction is filed rather than the row quietly rewritten.** A retraction gets the
+least review of anything in a record, and this one reverses a claim severe enough to have
+opened a task. Both statements are recorded so a reader can see which was believed and why the
+second is better evidenced — the same reason `CLAUDE.md` §0 refuses a silent reconciliation.
+
+## The third conflict, refuted — `slice:` is permitted, not required, and no ruling is minted
+
+Routed here after the two rulings above were filed: `docs/_templates/LG.md:28` declares
+`slice: SL-NNNNN` unconditionally, which — the report ran — makes it **required** under
+Ruling 70, while no `SL-` row exists to name, blocking the `slice:` field of all 16
+`-ledger.md` files.
+
+**The premise is false, and it fails at the first step.** Ruling 70 governs the **permitted**
+set — *"the permitted set for a family is the set of keys in that family's template front
+matter"*. Required-ness is a **separate mechanism** that Ruling 70 does not touch:
+`scripts/audit-docs.py:1251-1254` computes `required = frozenset(_CORE_HEADER_FIELDS) &
+permitted`, plus `{"id"}` for a non-reference family, and `_CORE_HEADER_FIELDS` is
+`("family", "title", "status", "created", "owner")`. Executing `derive_field_policies()`
+against the real templates:
+
+```
+ledger:
+   permitted = [corrected_by, created, family, id, owner, phase, plans,
+                relates, slice, status, title, tree, work]
+   required  = [created, family, id, owner, status, title]
+   -> 'slice' permitted? True   REQUIRED? False
+```
+
+**A ledger with no `slice:` passes check 30 today.** Independently, check 33's `slice:`
+sub-clause is not implemented either — `check_cross_references`'s own docstring
+(`scripts/audit-docs.py:1630-1636`) states that *"`work:`/`slice:`/`phase:` resolving to
+roadmap rows … are not implemented against the live scope"*. The blocker does not exist on
+either check.
+
+**The residual concern is answered by a field the template already permits.** The planner's
+reason for not taking its own recommendation was that §1.7 derives a plan's execution axis
+through slices, so a ledger without `slice:` goes invisible. But §1.7's own table routes the
+terminal row through *either* axis — *"a `CR-` cites the plan's `slice:`/`work:`"* — and
+`work:` is in the ledger's permitted set, as the derivation above shows. **`work:` is the
+available axis while no slice rows exist.** No template edit, and option (e) is unnecessary
+rather than rejected.
+
+**Why no ruling number is minted.** A ruling records a decision between live options. Here
+there is a refuted premise and, beneath it, a code defect — and the code defect is not a
+spec-versus-code conflict either: §4 step 3 names a *target* shape only, and §5 (`:313`) puts
+the restructure on the **M** side, so the specification says what it should and the script does
+not do it. Nothing is left to decide, so nothing is ruled; a permanent number is not spent on
+a question that dissolved. **`SL-` rows being absent is not a defect to fix in the standard**:
+§4 step 3 converts slices that exist in the roadmap, there are none in any shape, and the
+clause is therefore vacuous rather than unsatisfiable. Minting `SL-` rows out of the map plan's
+slice table would be *creating* governed rows rather than converting them — outside §4's "one
+scripted PR, once" over existing things, and a scope question for the maintainer if anyone
+wants it.
 
 ## Provenance
 
