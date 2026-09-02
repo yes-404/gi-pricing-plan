@@ -17,10 +17,12 @@ from __future__ import annotations
 import csv
 import importlib.util
 import pathlib
+import re
 import subprocess
 import sys
 import types
 from collections.abc import Sequence
+from typing import Any
 
 import pytest
 
@@ -403,14 +405,25 @@ def test_roadmap_restructure_is_readable_by_doc_index(
     corpus = doc_index.build_corpus(pristine_a / "docs")
     families = sorted(h.family for h in corpus.headers())
     assert families.count("work") == 1
-    assert families.count("slice") == 2
+    # No slice ever exists as a row or a bullet in the real corpus (Ruling 83 §1(g)), so
+    # the fixture carries none either — this replaces a `== 2` from the fixture's former,
+    # invented `- **<slice-key>**` bullet shape.
+    assert families.count("slice") == 0
     phases = doc_index.scan_phase_sections(pristine_a / "docs" / "roadmap.md")
     assert len(phases) == 1
     assert phases[0].phase == "P1a"
-    assert phases[0].works == ("WK-17",)
+    assert len(phases[0].works) == 1
+    assert phases[0].works[0].startswith("WK-")
 
 
-_UNRECOGNISED_ROADMAP_TEXT = (
+# Real-shaped (table-row) and, since the real-shape fix, *recognised* by
+# `_discover_roadmap` — W1 converts cleanly, W2 is struck (Ruling 83 §1(g) open question
+# 1). Kept under this name for the tests below that exercise
+# `_check_roadmap_not_silently_unrecognised` directly: that guard has no opinion on *why*
+# discovery found nothing for a given text, only on whether `docs/roadmap.md` already
+# carries a `WK-` row, so it is unaffected by whether the text is unrecognised or merely
+# ambiguous and is tested against this fixture regardless.
+_AMBIGUOUS_ROADMAP_TEXT = (
     "# Roadmap\n\n"
     "## 6. Phase 1 — split into 1a and 1b\n\n"
     "#### Phase 1a status\n\n"
@@ -418,6 +431,15 @@ _UNRECOGNISED_ROADMAP_TEXT = (
     "|---|---|---|\n"
     "| **W1** | Repo foundations | open |\n"
     "| ~~**W2**~~ ✔ | Platform core | closed |\n"
+)
+
+# Genuinely unrecognised: no `Phase <label>` heading and no `**W<n>**`-shaped leading
+# cell anywhere, so `_scan_roadmap_rows` finds nothing and `_discover_roadmap` returns
+# `([], None, None)` exactly as it does for a file `_ROADMAP_WORK_ROW_RE` cannot read at
+# all — the one case that still reaches `_check_roadmap_not_silently_unrecognised`
+# through `migrate` after the real-shape fix.
+_TRULY_UNRECOGNISED_ROADMAP_TEXT = (
+    "# Roadmap\n\nSome free-form prose with no phase heading and no work row at all.\n"
 )
 
 
@@ -437,7 +459,7 @@ def test_roadmap_guard_raises_on_a_non_empty_unrecognised_roadmap(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "roadmap.md").write_text(_UNRECOGNISED_ROADMAP_TEXT, encoding="utf-8")
+    (tmp_path / "docs" / "roadmap.md").write_text(_AMBIGUOUS_ROADMAP_TEXT, encoding="utf-8")
     with pytest.raises(NotImplementedError, match="unrecognised shape"):
         doc_id_cli._check_roadmap_not_silently_unrecognised(tmp_path)
 
@@ -465,7 +487,7 @@ def test_roadmap_guard_is_silent_once_a_wk_row_is_already_present(
     the legacy pattern fail to match" in disguise.
     """
     (tmp_path / "docs").mkdir()
-    text = _UNRECOGNISED_ROADMAP_TEXT + "\n### WK-1201 — Batch frame contract\n"
+    text = _AMBIGUOUS_ROADMAP_TEXT + "\n### WK-1201 — Batch frame contract\n"
     (tmp_path / "docs" / "roadmap.md").write_text(text, encoding="utf-8")
     doc_id_cli._check_roadmap_not_silently_unrecognised(tmp_path)
 
@@ -473,15 +495,39 @@ def test_roadmap_guard_is_silent_once_a_wk_row_is_already_present(
 def test_migrate_raises_via_the_roadmap_guard_on_a_real_shaped_tree(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
-    """End-to-end: overwrite the fixture's own (recognisable) roadmap with the
-    unrecognised-shaped text and confirm `migrate` itself raises through the guard, rather
-    than silently completing steps 1/2/4-7 and reporting success on step 3. Every other
-    fixture file is untouched, so this isolates the roadmap change from the rest of the
-    corpus this same file's other tests already prove correct.
+    """End-to-end: overwrite the fixture's own (recognisable) roadmap with text
+    `_scan_roadmap_rows` finds nothing in at all (no phase heading, no leading work-id
+    row) and confirm `migrate` itself raises through the guard, rather than silently
+    completing steps 1/2/4-7 and reporting success on step 3. Every other fixture file is
+    untouched, so this isolates the roadmap change from the rest of the corpus this same
+    file's other tests already prove correct.
     """
-    (pristine_a / "docs" / "roadmap.md").write_text(_UNRECOGNISED_ROADMAP_TEXT, encoding="utf-8")
+    (pristine_a / "docs" / "roadmap.md").write_text(
+        _TRULY_UNRECOGNISED_ROADMAP_TEXT, encoding="utf-8"
+    )
     with pytest.raises(NotImplementedError, match="unrecognised shape"):
         doc_id_cli.migrate(pristine_a)
+
+
+def test_migrate_raises_naming_every_blocked_id_on_an_ambiguous_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """The real-shape fix's own failure mode, end to end: a roadmap `_discover_roadmap`
+    now *recognises* (a real `Phase <label>` heading, real leading work-id rows) but
+    cannot convert, because one of the two ids it finds is struck (Ruling 83 §1(g) open
+    question 1). `migrate` must refuse — naming the blocked id and its line, never the
+    old guard's generic "unrecognised shape" — and must not partially restructure the
+    file (W1 is left unconverted alongside W2, not written on its own).
+    """
+    (pristine_a / "docs" / "roadmap.md").write_text(_AMBIGUOUS_ROADMAP_TEXT, encoding="utf-8")
+    with pytest.raises(NotImplementedError, match="W2") as excinfo:
+        doc_id_cli.migrate(pristine_a)
+    assert "unrecognised shape" not in str(excinfo.value)
+    assert "Open question 1" in str(excinfo.value)
+    # Never partially restructured: the file is exactly what this test wrote to it.
+    assert (pristine_a / "docs" / "roadmap.md").read_text(
+        encoding="utf-8"
+    ) == _AMBIGUOUS_ROADMAP_TEXT
 
 
 def test_roadmap_restructure_is_unaffected_by_the_guard(
@@ -605,9 +651,10 @@ def test_redirects_csv_records_every_old_id_and_path(
     with (pristine_a / "docs" / "REDIRECTS.csv").open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
     old_ids = {row["old_id"] for row in rows if row["old_id"]}
-    expected = {
-        "NT-0001", "ADR-0001", "Ruling 1", "Ruling 2", "F1", "F2", "W1", "W1-1", "W1-2",
-    }
+    # No slice ever exists as a row or a bullet in the real corpus (Ruling 83 §1(g)), so
+    # the fixture no longer carries "W1-1"/"W1-2" — it used to, under the fixture's
+    # former, invented `- **<slice-key>**` bullet shape.
+    expected = {"NT-0001", "ADR-0001", "Ruling 1", "Ruling 2", "F1", "F2", "W1"}
     assert expected <= old_ids
     # Every row that names an old_path also names a new_path (never a dangling redirect).
     assert all((not row["old_path"]) or row["new_path"] for row in rows)
@@ -665,3 +712,156 @@ def test_family_rank_tie_break_orders_work_before_finding(
     wk_number = int(next(n for n in numbered if n.startswith("WK-")).split("-")[1])
     fd_numbers = [int(n.split("-")[1]) for n in numbered if n.startswith("FD-")]
     assert wk_number < min(fd_numbers)
+
+
+# ---------------------------------------------------------------------------------------
+# W37-6 outstanding obligations rows 2 and 3 (task #32 and its register sibling): the
+# real `docs/roadmap.md` and `docs/audit/register.md`, not a fixture — "a control written
+# against a simplified fixture ... goes green because of what it misses." The corpus
+# grows and is edited, so these assert **properties** (every real row is accounted for by
+# an independent count; the two named open questions are each still non-empty today),
+# never a specific figure a future edit would silently falsify. `ROOT`, defined at the top
+# of this file, is this repository's own checkout — read-only below, never migrated.
+# ---------------------------------------------------------------------------------------
+
+
+def _naive_leading_work_ids(text: str) -> list[str]:
+    """An independent re-derivation of `_scan_roadmap_rows`' leading-cell id, by plain
+    string operations rather than `_ROADMAP_WORK_ROW_RE` — Ruling 83's own principle
+    ("a census counted with the pattern you split with closes trivially and proves
+    nothing") applied to this test: the denominator below must not be the thing under
+    test. Deliberately cruder than the production regex (no phase tracking, no status
+    text extraction) — it only has to agree on *which lines carry a work id*.
+    """
+    ids = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cell = line[1:].split("|", 1)[0].strip()
+        cell = cell.removeprefix("~~").strip()
+        if not cell.startswith("**W"):
+            continue
+        close = cell.find("**", 2)
+        if close == -1:
+            continue
+        token = cell[2:close]
+        if re.fullmatch(r"W\d+[a-z]?", token):
+            ids.append(token)
+    return ids
+
+
+def test_roadmap_census_matches_an_independently_derived_row_count_on_the_real_tree(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The positive control the real corpus already supplies (W37-6 outstanding
+    obligations row 2): before this fix, `_discover_roadmap` found nothing at all against
+    `docs/roadmap.md` (all three legacy patterns matched zero times — Ruling 80's
+    Correction section). After it, `_scan_roadmap_rows` must find *every* leading work-id
+    row a wholly independent re-derivation also finds — a property that holds regardless
+    of how many rows the file carries on the day this runs, unlike a hard-coded count.
+    """
+    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    occurrences = doc_id_cli._scan_roadmap_rows(text)
+    assert sorted(o.work_id for o in occurrences) == sorted(_naive_leading_work_ids(text))
+    # Non-vacuous: the real file has real content to classify today.
+    assert len(occurrences) > 1
+
+
+def test_roadmap_census_partitions_every_id_and_the_real_tree_still_has_all_three_questions(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 83 §1(g)'s census property, run against the real tree, mirroring
+    `_discover_roadmap`'s own partition: every distinct work id falls into exactly one of
+    convertible / blocked by open question 1 (a single *live* row that is struck) /
+    blocked by open question 2 (more than one live row) / blocked by open question 3 (no
+    live row — every occurrence sits under the self-described archival heading) — never
+    zero, never more than one. Also confirms today's corpus still exercises all three
+    without pinning *how many* ids sit in any bucket, since a future edit to
+    `docs/roadmap.md` may change that count without resolving any of the three.
+    """
+    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    occurrences = doc_id_cli._scan_roadmap_rows(text)
+    by_id: dict[str, list[Any]] = {}
+    for occ in occurrences:
+        by_id.setdefault(occ.work_id, []).append(occ)
+
+    convertible, blocked_q1, blocked_q2, blocked_archival = [], [], [], []
+    for work_id, occs in by_id.items():
+        live = [o for o in occs if not o.archived]
+        if not live:
+            blocked_archival.append(work_id)
+        elif len(live) > 1:
+            blocked_q2.append(work_id)
+        elif live[0].struck:
+            blocked_q1.append(work_id)
+        else:
+            convertible.append(work_id)
+
+    # The census property: every id in exactly one bucket, the four summing to the total.
+    buckets = [convertible, blocked_q1, blocked_q2, blocked_archival]
+    assert sum(len(b) for b in buckets) == len(by_id)
+    seen: set[str] = set()
+    for bucket in buckets:
+        assert seen.isdisjoint(bucket)
+        seen.update(bucket)
+
+    # Today's corpus is not yet clean of any of the three — the reason `migrate` still
+    # refuses end to end, and the reason a widened regex could not have discharged this
+    # row by itself.
+    assert blocked_q1, "expected at least one single-live-row, struck id (open question 1)"
+    assert blocked_q2, "expected at least one multi-live-row id (open question 2)"
+    assert blocked_archival, "expected at least one archival-only id (open question 3)"
+
+
+def test_discover_roadmap_raises_naming_all_three_open_questions_on_the_real_tree(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`_discover_roadmap` against the real, unmodified `docs/roadmap.md` — read-only,
+    nothing here writes to `ROOT`. Before this fix: `([], None, None)`, silently, because
+    all three legacy patterns matched zero times. After it: a loud, specific refusal
+    naming all three open questions, never the old generic guard message.
+    """
+    with pytest.raises(NotImplementedError) as excinfo:
+        doc_id_cli._discover_roadmap(ROOT)
+    message = str(excinfo.value)
+    assert "unrecognised shape" not in message
+    assert "Open question 1" in message
+    assert "Open question 2" in message
+    assert "Open question 3" in message
+
+
+# ---------------------------------------------------------------------------------------
+# The register's own declared row grammar (`scripts/register-lint.py` `parse_register`)
+# is itself the independent denominator here — authored for a different check (check 29),
+# never for this test — so "every row `parse_register` returns is one `_discover_register`
+# also recognises" is a genuine cross-check, not the pattern-under-test counting itself.
+# ---------------------------------------------------------------------------------------
+
+
+def test_register_discovery_matches_every_row_register_lint_itself_declares(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The positive control the real corpus already supplies (W37-6 outstanding
+    obligations row 3): before this fix, `_discover_register` matched none of the real
+    register's data rows (`_REGISTER_FINDING_RE.fullmatch` required a bare `F<n>`; every
+    real cell is compound). After it, every data row `register-lint.py`'s own
+    `parse_register` returns must be recognised — a property immune to the register
+    growing a 74th row tomorrow, unlike a hard-coded "73".
+    """
+    register_lint = doc_id_cli._load_register_lint()
+    path = ROOT / "docs" / "audit" / "register.md"
+    rows, problems = register_lint.parse_register(path)
+    assert not problems  # no structurally malformed row on the real tree today
+    assert len(rows) > 1  # non-vacuous
+
+    unmatched = [
+        row.finding_id for row in rows
+        if not doc_id_cli._REGISTER_FINDING_RE.search(row.fields[0])
+    ]
+    assert not unmatched, f"finding-id cell(s) with no recognised id: {unmatched}"
+
+    drafts = doc_id_cli._discover_register(ROOT)
+    assert len(drafts) == len(rows)
+    old_tokens = [d.old_token for d in drafts]
+    assert len(set(old_tokens)) == len(old_tokens)  # every id discovered exactly once

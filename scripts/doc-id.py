@@ -836,6 +836,22 @@ def _load_audit_docs(repo_root: Path = REPO_ROOT) -> types.ModuleType:
     return _load_module("_audit_docs_for_migrate", repo_root / "scripts" / "audit-docs.py")
 
 
+def _load_register_lint(repo_root: Path = REPO_ROOT) -> types.ModuleType:
+    """`scripts/register-lint.py`, loaded by path, for `parse_register` — the register's
+    own declared row grammar (its module docstring: the header row found by *position*,
+    the `|`-led line immediately before the separator, never by column-name text; a data
+    row splits on unescaped `|` into exactly 5 fields; every `|`-led line accounted for,
+    `assert classified == seen`). W37-6 outstanding obligations row 34: this technique
+    already exists for the register and "was never applied to migrate's discovery
+    functions ... reuse it rather than inventing a second form" — so `_discover_register`
+    below imports it exactly as `_load_doc_index`/`_load_audit_docs` import their own
+    sibling scripts, rather than a second, driftable copy of the header-position and
+    5-field rules. Always loaded from *this* repository's own `scripts/`, never from a
+    `--repo-root` fixture target, for the identical reason `_load_doc_index` gives.
+    """
+    return _load_module("_register_lint_for_migrate", repo_root / "scripts" / "register-lint.py")
+
+
 # ---------------------------------------------------------------------------------------
 # Templates: the single source for what a stamped header contains, per family — read from
 # *this* repository's `docs/_templates/`, never the migration target's (Ruling 70's
@@ -1364,91 +1380,295 @@ def _module_first_commit_date(path: Path, root: Path) -> date:
     return date.fromisoformat(lines[-1][:10])
 
 
-_ROADMAP_LEGACY_PHASE_RE: Final = re.compile(
-    r"^##\s+Phase\s+(\S+)\s+—\s+(.+)$", re.MULTILINE
+# ---------------------------------------------------------------------------------------
+# Task #32 (W37-6 outstanding obligations row 2): the shape below (`##`/`###`
+# `Phase <id> — <title>` heading, `### <work-key> — <title>` + a `status:` line,
+# `- **<slice-key>**` bullets) was this module's own guess at "the legacy roadmap shape".
+# Ruling 79/80's Correction section proved it wrong by running the three patterns against
+# the real `docs/roadmap.md`: all three matched zero times, `_restructure_roadmap` was
+# therefore never reached, and `migrate` reported success on a roadmap it never touched.
+#
+# The real shape, verified directly against `docs/roadmap.md` and recorded at Ruling 83
+# §1(g): a Work is a markdown table row whose leading cell is `**W<n>[<letter>]**` —
+# wrapped in `~~...~~` with a trailing `✔` once closed, undecorated otherwise, with
+# **neither form reliable as a status oracle** (Ruling 83 §1(g): `W5` is undecorated with
+# its own Status cell reading "closed"; `W7` is struck three rows below it in the same
+# table) — gathered under a `## <n>. Phase <label> — <title>` or `### Phase <label> —
+# <title>` heading. Several such tables exist per phase (a "Workstreams" table, a
+# "status" table, at least one carrying only the phase's own historical scope), so a work
+# id can head more than one leading row: measured at `59bba94`, 56 leading rows carry only
+# 41 distinct ids. No slice ever exists as a row or a bullet, in any shape, anywhere in
+# the corpus (Ruling 80's Correction section; confirmed again by Ruling 83 §1(g)), so this
+# rewrite discovers work rows only.
+# ---------------------------------------------------------------------------------------
+
+_ROADMAP_WORK_ROW_RE: Final = re.compile(
+    r"^\|\s*(~~)?\*\*(W\d+[a-z]?)\*\*(~~)?\s*(?:✔)?\s*\|(.*)$"
 )
-_ROADMAP_LEGACY_WORK_RE: Final = re.compile(
-    r"^###\s+(W\d+[a-z]?)\s+—\s+(.+)$\nstatus:\s*(\w+)$", re.MULTILINE
+_ROADMAP_PHASE_LABEL_RE: Final = re.compile(r"^#{2,4}\s+(?:\d+\.\s+)?Phase\s+(\S+)\b")
+_ROADMAP_PHASE_TITLE_RE: Final = re.compile(
+    r"^#{2,4}\s+(?:\d+\.\s+)?Phase\s+(\S+)\s+—\s+(.+?)\s*$", re.MULTILINE
 )
-_ROADMAP_LEGACY_SLICE_RE: Final = re.compile(
-    r"^-\s+\*\*(W\d+[a-z]?-\d+)\*\*\s+(.+?)\s+—\s+status:\s*(\w+)\s*$", re.MULTILINE
-)
+# `docs/roadmap.md`'s own words for its pre-1a/1b-split table — explicitly superseded
+# prose ("Goal ... now superseded by the split above"), not a live work definition. A row
+# under it is real (it counts in the census below) but is never converted: not because
+# either open question above resolves it, but because the document already says, in its
+# own words, that the section is not current. Named as its own third bucket rather than
+# folded into "duplicate row" or "closed" — routed to the decision-maker rather than
+# decided here, because *how far* an archival heading's scope extends is itself
+# undetermined: this heading's own sibling sub-headings ("Workstreams", "Requirement
+# coverage", "Top risks") are not nested under it by heading level, yet clearly continue
+# its narrative, so the boundary used below (up to the next *shallower* heading) is one
+# defensible reading and not the only one.
+_ROADMAP_ARCHIVE_HEADING_RE: Final = re.compile(r"^(#+)\s+Original scope, for reference\s*$")
+
+
+@dataclass(frozen=True)
+class _RoadmapRowOccurrence:
+    """One real leading work-id row, exactly as `_ROADMAP_WORK_ROW_RE` found it — the
+    unit `_discover_roadmap`'s census below classifies, never the id alone (an id heads
+    anywhere from one to three of these on the real tree, Ruling 83 §1(g))."""
+
+    work_id: str
+    line_no: int  # 1-based, so a human can find it without re-running the regex
+    struck: bool
+    title: str  # the row's own second cell, trimmed — never merged across occurrences
+    phase_label: str | None  # the nearest `Phase <label>` heading above it, or None
+    archived: bool  # under "Original scope, for reference" — see the constant's comment
+
+
+def _scan_roadmap_rows(text: str) -> list[_RoadmapRowOccurrence]:
+    """Every real leading work-id row in `text`, in document order — the census
+    `_discover_roadmap` needs before it can decide anything (Ruling 83): **the unit is the
+    row**, found by a pattern that does not encode which rows the caller wants, not a
+    per-id count that a duplicate would already have folded away.
+    """
+    occurrences: list[_RoadmapRowOccurrence] = []
+    phase_label: str | None = None
+    archived = False
+    archive_heading_level = 0
+    for i, line in enumerate(text.splitlines()):
+        heading_match = re.match(r"^(#+)\s", line)
+        if heading_match:
+            level = len(heading_match.group(1))
+            if archived and level < archive_heading_level:
+                archived = False
+            label_match = _ROADMAP_PHASE_LABEL_RE.match(line)
+            if label_match:
+                phase_label = label_match.group(1)
+            if _ROADMAP_ARCHIVE_HEADING_RE.match(line):
+                archived = True
+                archive_heading_level = level
+        row_match = _ROADMAP_WORK_ROW_RE.match(line)
+        if row_match is None:
+            continue
+        struck = bool(row_match.group(1) and row_match.group(3))
+        title = row_match.group(4).split("|", 1)[0].strip()
+        occurrences.append(
+            _RoadmapRowOccurrence(
+                work_id=row_match.group(2), line_no=i + 1, struck=struck,
+                title=title, phase_label=phase_label, archived=archived,
+            )
+        )
+    return occurrences
+
+
+def _work_id_sort_key(work_id: str) -> tuple[int, str]:
+    m = re.match(r"W(\d+)([a-z]?)", work_id)
+    assert m is not None
+    return int(m.group(1)), m.group(2)
+
+
+def _roadmap_ambiguity_message(
+    total_rows: int, total_ids: int, convertible: int,
+    blocked_q1: list[tuple[str, int]], blocked_q2: list[tuple[str, list[int]]],
+    blocked_archival: list[tuple[str, list[int]]],
+) -> str:
+    """The three decisions this script refuses to make silently, named by work id and
+    line number rather than by count — two are Ruling 83 §1(g)'s (`migrate` refuses to
+    guess and this is what a human needs to decide either without re-running anything);
+    the third is this rewrite's own finding, routed the same way rather than resolved.
+    """
+    parts = [
+        f"migrate: docs/roadmap.md's real shape is now recognised ({total_rows} leading "
+        f"work-id rows across {total_ids} distinct ids), but {len(blocked_q1)} + "
+        f"{len(blocked_q2)} + {len(blocked_archival)} of them cannot be converted "
+        "without a decision this script refuses to make silently (CLAUDE.md §10; "
+        "task #32)."
+    ]
+    if blocked_q1:
+        named = "; ".join(f"{wid} (line {ln})" for wid, ln in sorted(blocked_q1))
+        parts.append(
+            "Open question 1 (Ruling 83 §1(g)): does a work already recorded as closed "
+            f"become a WK- row at all, or not convert? {len(blocked_q1)} id(s), each "
+            f"with exactly one row, are struck through / carry a closed status: {named}."
+        )
+    if blocked_q2:
+        named = "; ".join(
+            f"{wid} (lines {', '.join(str(n) for n in lns)})" for wid, lns in sorted(blocked_q2)
+        )
+        parts.append(
+            "Open question 2 (Ruling 83 §1(g)): which of a work's several rows becomes "
+            f"*the* row? {len(blocked_q2)} id(s) head more than one leading row: {named}."
+        )
+    if blocked_archival:
+        named = "; ".join(
+            f"{wid} (line{'s' if len(lns) > 1 else ''} {', '.join(str(n) for n in lns)})"
+            for wid, lns in sorted(blocked_archival)
+        )
+        parts.append(
+            "Open question 3 (found by this rewrite, not yet ruled): does a row under "
+            "the self-described archival heading 'Original scope, for reference' count "
+            f"as a work occurrence at all? {len(blocked_archival)} id(s) exist only "
+            f"there: {named}."
+        )
+    parts.append(
+        f"The remaining {convertible} id(s) are withheld too: migrate never partially "
+        "restructures docs/roadmap.md, since a file with some works converted and others "
+        "still in legacy prose is a fourth, worse shape nothing downstream reads."
+    )
+    return " ".join(parts)
 
 
 def _discover_roadmap(root: Path) -> tuple[list[_Draft], str | None, str | None]:
-    """The legacy roadmap shape this corpus defines (module docstring above): a `##
-    Phase <id> — <title>` heading, `### <work-key> — <title>` + `status:` for each work,
-    and `- **<slice-key>** <title> — status: <status>` bullets under it (NT-0019 §4 step
-    3). Returns `(drafts, phase_id, phase_title)` — `phase_id`/`phase_title` are `None`
-    when no legacy phase section is found (a second run: the file is already restructured
-    into the `## P<n> — ...` fenced form, which this regex does not match).
+    """The real `docs/roadmap.md` shape (module note above, Ruling 83 §1(g)): every
+    leading work-id row across the whole file, classified by a census over the **row**,
+    never by a per-id count a duplicate has already folded away. `by_id` therefore holds
+    one entry per distinct id, mapping to every row that heads it, and an id converts only
+    when its *live* (non-archived) rows number exactly one and that row is not struck
+    through — the only case with nothing left to choose between.
+
+    Everything else falls into one of three named, still-open questions, none of them
+    this script's to guess at (`CLAUDE.md` §10): a struck, single-live-row id (Ruling 83
+    §1(g) open question 1 — "does a closed work convert at all, or not"); a multi-live-row
+    id (open question 2 — "which of a work's several rows becomes *the* row"); or an id
+    with no live row at all, existing only under the self-described archival heading
+    "Original scope, for reference" (open question 3, found while building this rewrite:
+    an id in this state is not "duplicate" — it may have exactly one row overall — and is
+    not "closed" either; it is withheld because the document itself calls the section
+    superseded, not because either of the other two questions resolves it). When any
+    group is non-empty `migrate` refuses outright — including for the ids that *are*
+    unambiguous, since this function never partially restructures the file — and names
+    every blocked id with every line it occurs on, so all three decisions can be made
+    from the raised message alone.
+
+    Returns `(drafts, phase_id, phase_title)`, unchanged in shape from before this fix.
+    `_restructure_roadmap` still assumes every draft shares one phase — a separate,
+    already-flagged limitation (its own docstring) this function does not correct; on the
+    real tree this is moot today, since the corpus never reaches that call with the three
+    open questions above unresolved.
     """
     roadmap_path = root / "docs" / "roadmap.md"
     if not roadmap_path.is_file():
         return [], None, None
     text = roadmap_path.read_text(encoding="utf-8")
-    phase_match = _ROADMAP_LEGACY_PHASE_RE.search(text)
-    if phase_match is None:
+    occurrences = _scan_roadmap_rows(text)
+    if not occurrences:
         return [], None, None
-    phase_id_raw, phase_title = phase_match.group(1), phase_match.group(2)
-    phase_id = f"P{phase_id_raw}"
-    created = _module_first_commit_date(roadmap_path, root)
-    drafts: list[_Draft] = []
-    order = 0
-    for work_match in _ROADMAP_LEGACY_WORK_RE.finditer(text):
-        work_key, work_title, work_status = work_match.groups()
-        drafts.append(
-            _Draft(
-                materialize="roadmap_row", prefix="WK", kind=None, title=work_title,
-                status=work_status, created=created, owner="maintainer",
-                tie_break=("docs/roadmap.md", order), old_token=work_key, phase=phase_id,
+
+    by_id: dict[str, list[_RoadmapRowOccurrence]] = {}
+    for occ in occurrences:
+        by_id.setdefault(occ.work_id, []).append(occ)
+
+    convertible: list[_RoadmapRowOccurrence] = []
+    blocked_q1: list[tuple[str, int]] = []
+    blocked_q2: list[tuple[str, list[int]]] = []
+    blocked_archival: list[tuple[str, list[int]]] = []
+    for work_id, occs in by_id.items():
+        live = [o for o in occs if not o.archived]
+        if not live:
+            blocked_archival.append((work_id, [o.line_no for o in occs]))
+            continue
+        if len(live) > 1:
+            blocked_q2.append((work_id, [o.line_no for o in live]))
+            continue
+        (only,) = live
+        if only.struck:
+            blocked_q1.append((work_id, only.line_no))
+            continue
+        convertible.append(only)
+
+    if blocked_q1 or blocked_q2 or blocked_archival:
+        raise NotImplementedError(
+            _roadmap_ambiguity_message(
+                len(occurrences), len(by_id), len(convertible),
+                blocked_q1, blocked_q2, blocked_archival,
             )
         )
-        order += 1
-        work_end = work_match.end()
-        next_work = _ROADMAP_LEGACY_WORK_RE.search(text, work_end)
-        section_end = next_work.start() if next_work else len(text)
-        for slice_match in _ROADMAP_LEGACY_SLICE_RE.finditer(text, work_end, section_end):
-            slice_key, slice_title, slice_status = slice_match.groups()
-            drafts.append(
-                _Draft(
-                    materialize="roadmap_row", prefix="SL", kind=None, title=slice_title,
-                    status=slice_status, created=created, owner="planner",
-                    tie_break=("docs/roadmap.md", order), old_token=slice_key,
-                    phase=phase_id, work_token=work_key,
-                )
+
+    phase_labels = {occ.phase_label for occ in convertible}
+    if len(phase_labels) != 1 or None in phase_labels:
+        # `_restructure_roadmap`'s own, separate limitation: one phase per call. Not
+        # reachable on the real tree today (it always hits the raise above first); left
+        # loud rather than silent so a future, cleaner fixture cannot report success by
+        # accident either.
+        return [], None, None
+    (phase_label,) = phase_labels
+    phase_id = f"P{phase_label}"
+    phase_titles = {m.group(1): m.group(2) for m in _ROADMAP_PHASE_TITLE_RE.finditer(text)}
+    phase_title = phase_titles.get(phase_label)
+    if phase_title is None:
+        return [], None, None
+
+    created = _module_first_commit_date(roadmap_path, root)
+    drafts: list[_Draft] = []
+    for order, occ in enumerate(sorted(convertible, key=lambda o: _work_id_sort_key(o.work_id))):
+        drafts.append(
+            _Draft(
+                materialize="roadmap_row", prefix="WK", kind=None, title=occ.title,
+                status="active", created=created, owner="maintainer",
+                tie_break=("docs/roadmap.md", order), old_token=occ.work_id, phase=phase_id,
             )
-            order += 1
+        )
     return drafts, phase_id, phase_title
 
 
-_REGISTER_FINDING_RE: Final = re.compile(r"\bF(\d+)\b")
+# Task #32's sibling defect (W37-6 outstanding obligations row 3): `\bF(\d+)\b` under
+# `.fullmatch` demands the *whole* Finding-id cell be a bare `F<n>` — true of no real row.
+# Every one of the register's 73 data rows is compound, `<description> (<id>)`, and the
+# parenthesised id itself takes one of two forms verified against every real cell: a bare
+# `F<n>` (`F6` .. `F76`), or a workstream-scoped id, `F-W<n>[<letter>]` followed by one or
+# more `-<n>` groups (`F-W9-1` .. `F-W10-2-2`) — never the whole-cell form the old pattern
+# required. Anchored on the trailing parenthesis (`\)\s*$`) rather than the whole cell, so
+# a cell whose description text happens to contain an unrelated `F<n>`-shaped substring
+# earlier on cannot be mistaken for the id.
+_REGISTER_FINDING_RE: Final = re.compile(r"\((F(?:\d+|-W\d+[a-z]?(?:-\d+)+))\)\s*$")
 
 
 def _discover_register(root: Path) -> list[_Draft]:
-    """Bare `F<n>` Finding-id cells in the legacy `docs/audit/register.md` (NT-0019 §5.2:
-    "Finding-id cells → `FD-n` with `was:`"). Matched only at the legacy path — a second
-    run (moved to `docs/findings/register.md`) finds nothing there.
+    """The register's declared row grammar (module note above; `scripts/register-lint.py`
+    `parse_register`, reused rather than reimplemented — W37-6 outstanding obligations row
+    34): a data row is a `|`-led line inside the one table, the header found by
+    *position* (immediately before the `|---|...` separator, never by column-name text —
+    the F64 defect `parse_register`'s own comment records), split on unescaped `|` into
+    exactly 5 fields (Finding id, Concerns, Work item, Phase, Decision). Every candidate
+    `|`-led line is accounted for by `parse_register` itself (`assert classified ==
+    seen`), so a row missing its leading `|` or splitting into the wrong field count is
+    loud there rather than silently absent here.
+
+    Matched only at the legacy path (NT-0019 §5.2: "Finding-id cells → `FD-n` with
+    `was:`") — a second run (moved to `docs/findings/register.md`) finds nothing there.
     """
     drafts: list[_Draft] = []
     path = root / "docs" / "audit" / "register.md"
     if not path.is_file():
         return drafts
-    text = path.read_text(encoding="utf-8")
+    register_lint = _load_register_lint()
+    rows, _problems = register_lint.parse_register(path)
     created = _module_first_commit_date(path, root)
     order = 0
-    for line in text.splitlines():
-        if not line.startswith("|"):
-            continue
-        cell = line.split("|")[1].strip()
-        m = _REGISTER_FINDING_RE.fullmatch(cell)
+    for row in rows:
+        cell = row.fields[0]
+        m = _REGISTER_FINDING_RE.search(cell)
         if m is None:
             continue
+        token = m.group(1)
+        title = cell[: m.start()].strip() or f"Finding {token}"
         drafts.append(
             _Draft(
-                materialize="register_row", prefix="FD", kind=None, title=f"Finding {m.group(1)}",
+                materialize="register_row", prefix="FD", kind=None, title=title,
                 status="active", created=created, owner="auditor",
-                tie_break=("docs/audit/register.md", order), old_token=f"F{m.group(1)}",
+                tie_break=("docs/audit/register.md", order), old_token=token,
                 source_path=path,
             )
         )
