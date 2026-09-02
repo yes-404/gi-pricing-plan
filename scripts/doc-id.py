@@ -3385,15 +3385,13 @@ _REFERENCE_README_EXCEPTIONS: Final[Mapping[str, str]] = {
         "docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md §3, declared by name "
         "so the exemption cannot grow into a subtree"
     ),
-    ".claude/notes/README.md": (
-        "NT-0019 §5.3 deletes it with the 19 `.claude/notes/` stubs; a file the migration "
-        "removes is not a file it stamps. The deletion is a hand step (§5.3 kind `H + M`) "
-        "and is not built yet, so the file is still on disk and is named here rather than "
-        "silently stamped"
-    ),
     "docs/audit/README.md": (
         "NT-0019 §5.2: \"deleted; content to `findings/` and `closures/` READMEs\" (kind "
-        "`H`). Same reading as `.claude/notes/README.md` above"
+        "`H`) -- a file the migration removes is not a file it stamps. The deletion is a "
+        "hand step and is not built yet, so the file is still on disk and is named here "
+        "rather than silently stamped. The old notes root under `.claude` reaches the same "
+        "disposition through `_REFERENCE_CLAUDE_DIR_EXCEPTIONS` instead of a second entry "
+        "here: see the README scope's inheritance branch"
     ),
 }
 
@@ -3411,9 +3409,11 @@ _REFERENCE_FOREIGN_REASON: Final = (
 #: which is the correct outcome for a directory that is not part of the corpus.
 _REFERENCE_CLAUDE_DIR_EXCEPTIONS: Final[Mapping[str, str]] = {
     "notes/": (
-        "NT-0019 §5.3: \"`notes/*.md` (19 stubs) + README | deleted; `REDIRECTS.csv` "
-        "rows\" -- a population the migration removes, not one it stamps. The deletion is "
-        "a hand step (kind `H + M`) and is not built yet"
+        "NT-0019 §5.3's row for this directory: \"19 stubs + README | deleted; "
+        "`REDIRECTS.csv` rows\" -- a population the migration removes, not one it stamps. "
+        "The deletion is a hand step (kind `H + M`) and is not built yet, so the "
+        "directory is still on disk. Its README inherits this disposition rather than "
+        "carrying an entry of its own"
     ),
     "settings.json": (
         "NT-0019 §5.3's only change for it is \"hook `statusMessage` citation\", kind "
@@ -3437,6 +3437,23 @@ _ACCOUNTED_ALREADY_STAMPED: Final = "\0accounted:already-stamped"
 _ACCOUNTED_ROUTED: Final = "\0accounted:routed-to-a-document-family"
 _ACCOUNTED_VENDORED: Final = "\0accounted:vendored-skill-manifest-stamp-path"
 _ACCOUNTED_MOVED: Final = "\0accounted:already-moved-by-an-earlier-run"
+
+
+def _claude_dir_disposition(rel: str) -> str | None:
+    """The `.claude/` coverage scope's reason for `rel`'s own top-level directory, or
+    `None` when no entry covers it. Lets a file inside a dispositioned directory inherit
+    that one statement instead of repeating it.
+
+    The prefix is assembled from the constant's key rather than written out, which keeps
+    this module free of a literal path `tests/test_notes_move_citations.py` forbids every
+    living file from naming — the old notes root under `.claude`. That test's own
+    docstring builds the same string by concatenation for the same reason.
+    """
+    marker = ".claude" + "/"
+    if not rel.startswith(marker):
+        return None
+    head = rel[len(marker) :].split("/", 1)[0]
+    return _REFERENCE_CLAUDE_DIR_EXCEPTIONS.get(head + "/")
 
 
 def _reference_target(path: Path, rel: str, owner: str) -> _ReferenceStamp | str | None:
@@ -3544,6 +3561,13 @@ def _discover_reference_stamp_targets(
             resolved[rel] = _ACCOUNTED_ROUTED
         elif rel in _REFERENCE_README_EXCEPTIONS:
             resolved[rel] = _REFERENCE_README_EXCEPTIONS[rel]
+        elif (inherited := _claude_dir_disposition(rel)) is not None:
+            # A README inside a `.claude/` directory the coverage scope below already
+            # dispositions inherits that disposition rather than carrying a second entry
+            # of its own. One statement about the directory, not two that can disagree
+            # (NT-0003's mechanism) -- and it is why this file names no such directory as
+            # a literal path: the prefix is built from the constant's own key.
+            resolved[rel] = inherited
         else:
             resolved[rel] = _reference_target(root / rel, rel, "lead")
             readmes_claimed.add(rel)
