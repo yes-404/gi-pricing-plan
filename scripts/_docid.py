@@ -17,7 +17,7 @@ standard does not use.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -346,3 +346,139 @@ def is_vendored(path: Path, repo_root: Path) -> bool:
         if parent == current:
             return False
         current = parent
+
+
+# ---------------------------------------------------------------------------------------
+# Template readers — Rulings 79 and 80
+# (`docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md`). Both rulings settle
+# the same way: a family's own template under `docs/_templates/` is the licensing
+# instrument (Ruling 70 §2 item 1), never a hand-written constant in a reader. Kept here,
+# not in `scripts/doc-index.py`, so `scripts/doc-id.py` (the row/phase *writer*,
+# `migrate`) and `scripts/doc-index.py` (the *reader*) derive from one definition apiece
+# and cannot silently disagree — both already import this module and neither imports the
+# other (Ruling 79 §3 item 2: "the reader must not become a third transcription").
+# ---------------------------------------------------------------------------------------
+
+#: The two row families (NT-0019 §1.5): a `WK-`/`SL-` row's header is a fenced ```yaml
+#: block under the row's own heading, never the file's own front matter. Keyed by family
+#: word, the convention `scripts/audit-docs.py`'s `_TEMPLATE_FAMILY` already uses for a
+#: template's filename.
+ROW_TEMPLATE_FILES: Final[Mapping[str, str]] = {"work": "WK.md", "slice": "SL.md"}
+
+_TEMPLATE_LEADING_COMMENT_RE: Final = re.compile(r"\A<!--.*?-->\n?\n?", re.DOTALL)
+_TEMPLATE_FENCED_YAML_RE: Final = re.compile(r"```yaml\n(.*?)\n```", re.DOTALL)
+_TEMPLATE_KEY_RE: Final = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):")
+
+
+def row_template_fields(templates_dir: Path, family: str) -> frozenset[str]:
+    """The permitted field set for a `WK-`/`SL-` row, derived from that family's own
+    template's fenced ```yaml block (Ruling 79 §3 item 1) — Ruling 70 §2 item 1's "the
+    permitted set for a family is the set of keys in that family's template front matter",
+    applied to a row's fenced block, which is what a `WK-`/`SL-` row carries in place of a
+    document's own top-level front matter (NT-0019 §1.5).
+
+    Raises `ValueError` naming `family` for anything not a row family — a document
+    family's field policy is `scripts/audit-docs.py`'s `derive_field_policies` to compute,
+    never this function's; and for `templates_dir` when the named template is missing or
+    carries no fenced block at all, rather than deriving a silently smaller policy from
+    whatever happened to be found (the same "silent empty coverage must be impossible"
+    property `derive_field_policies` already enforces for the other twelve templates,
+    Ruling 70 §4 item 3).
+    """
+    try:
+        filename = ROW_TEMPLATE_FILES[family]
+    except KeyError:
+        raise ValueError(
+            f"{family!r} is not a row family ({sorted(ROW_TEMPLATE_FILES)})"
+        ) from None
+    path = templates_dir / filename
+    text = path.read_text(encoding="utf-8")
+    stripped = _TEMPLATE_LEADING_COMMENT_RE.sub("", text, count=1)
+    match = _TEMPLATE_FENCED_YAML_RE.search(stripped)
+    if match is None:
+        raise ValueError(f"{path}: no fenced ```yaml block found")
+    fields: set[str] = set()
+    for line in match.group(1).splitlines():
+        if not line.strip() or line[:1] in (" ", "\t"):
+            continue
+        key_match = _TEMPLATE_KEY_RE.match(line)
+        if key_match:
+            fields.add(key_match.group(1))
+    if not fields:
+        raise ValueError(f"{path}: fenced ```yaml block carries no 'key:' field")
+    return frozenset(fields)
+
+
+def scan_plain_field_block(lines: Sequence[str], start: int) -> dict[str, str]:
+    """The plain `key: value` lines directly beneath a heading at `lines[start - 1]` —
+    NT-0019's phase-section grammar (§1.1 rule 4, §1.3; `docs/_templates/PHASE.md`'s own
+    words: "not built from the closed header field set of §1.5"), the one block form
+    §1.5's closed, fenced grammar does not govern (Ruling 80 §2).
+
+    A bounded scan of `lines[start:]`, stopping at the next heading (any line starting
+    with `#`) or a blank line, whichever comes first (Ruling 80 §3 item 1: "stopping at
+    the next heading or the first line that is not key: value" — a blank line is such a
+    line). A non-blank *indented* line is read as a continuation of the field above it —
+    the same signal NT-0019 §1.5's own closed grammar treats as "not a new key" (there, by
+    raising; this grammar has no hard-error concept, so it is tolerated instead) — and is
+    skipped without stopping the scan; a non-blank, non-indented line with no `:` does
+    stop it. Deliberately **not** `_parse_front_matter_body`'s indented-line rule reused
+    verbatim: that grammar rejects a continuation outright, because §1.5 requires knowing
+    a document is malformed; this one only needs to know where the field block ends, and
+    `docs/_templates/PHASE.md`'s own `exit criteria:` placeholder wraps onto an indented
+    second line in the committed template (a pre-existing defect independent of both
+    rulings, reported alongside them rather than fixed here — see the PR description).
+
+    Used identically by `scripts/doc-index.py`'s `scan_phase_sections` (a real roadmap's
+    phase section) and this module's own `phase_template_fields` (`PHASE.md`'s own body)
+    so the two cannot silently disagree about where a phase section's field block ends.
+
+    Unbounded by design in the *other* direction that matters: `lines` is whatever the
+    caller already sliced to `start` onward — this function itself never looks past a
+    heading or a blank line, which is the fix for `scripts/doc-index.py`'s former `rest =
+    "\n".join(lines[idx + 1:])` (Ruling 80 §3 item 2: "must not survive the fix in any
+    form").
+    """
+    raw: dict[str, str] = {}
+    for line in lines[start:]:
+        if not line.strip():
+            break
+        if line.strip().startswith("#"):
+            break
+        if line[:1] in (" ", "\t"):
+            continue
+        key, sep, value = line.partition(":")
+        if not sep:
+            break
+        raw[key.strip()] = value.split("#", 1)[0].strip()
+    return raw
+
+
+def phase_template_fields(templates_dir: Path) -> frozenset[str]:
+    """The field names NT-0019's phase section declares, read from `docs/_templates/
+    PHASE.md`'s own body — never transcribed (Ruling 80 §3 item 3): matches today
+    (`("status", "opened", "target", "gates", "exit criteria", "works")`), so this is
+    hardening, not repair.
+
+    Raises `ValueError` naming `templates_dir` when `PHASE.md` carries no `##` heading, or
+    the heading has no plain field directly beneath it — "silent empty coverage must be
+    impossible" (Ruling 70 §4 item 3), applied here to the one template
+    `scripts/audit-docs.py`'s `derive_field_policies` deliberately excludes (a phase has
+    no family).
+    """
+    path = templates_dir / "PHASE.md"
+    text = path.read_text(encoding="utf-8")
+    stripped = _TEMPLATE_LEADING_COMMENT_RE.sub("", text, count=1)
+    lines = stripped.splitlines()
+    heading_idx = next(
+        (i for i, line in enumerate(lines) if line.strip().startswith("##")), None
+    )
+    if heading_idx is None:
+        raise ValueError(f"{path}: no '##' phase heading found")
+    fields = scan_plain_field_block(lines, heading_idx + 1)
+    if not fields:
+        raise ValueError(
+            f"{path}: no plain 'key: value' field found directly beneath the phase "
+            "heading"
+        )
+    return frozenset(fields)

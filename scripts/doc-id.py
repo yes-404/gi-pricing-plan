@@ -1588,17 +1588,23 @@ def _remove_if_empty(path: Path) -> None:
         path.rmdir()
 
 
+# Plain `key: value` lines directly beneath the heading, no fence and no blank line
+# before the first field — `docs/_templates/PHASE.md`'s own form, matching NT-0019 §1.3's
+# unfenced illustration and `document-ids.md` §1.3 byte-for-byte apart from heading depth.
+# Ruling 80 (`docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md`) settled
+# this the other way from how it was first built here: `scripts/doc-index.py`'s
+# `scan_phase_sections` used to require a fence too, so the two agreed with each other
+# while disagreeing with the standard, `PHASE.md` and `audit-docs.py` check 30's
+# `_EXPECTED_NO_BLOCK_TEMPLATES` all at once. Both sides are fixed together in the same
+# commit that fixes this constant.
 _PHASE_TEMPLATE: Final = (
     "## {phase} — {title}\n"
-    "\n"
-    "```yaml\n"
     "status: active\n"
     "opened: {opened}\n"
     "target: ~\n"
     "gates: ~\n"
     "exit criteria: ~\n"
     "works: {works}\n"
-    "```\n"
 )
 
 
@@ -1681,30 +1687,32 @@ def _restructure_roadmap(
     root: Path, roadmap_drafts: list[_Draft], phase_id: str, phase_title: str
 ) -> None:
     """NT-0019 §4 step 3: the legacy `## Phase <id> — <title>` / `### <work-key>` /
-    `- **<slice-key>**` shape becomes a `## P<n> — <title>` milestone section with a fenced
-    field block, each `WK-`/`SL-` a heading carrying its own fenced row block (§1.5) — the
-    exact shape `scripts/doc-index.py`'s `scan_phase_sections`/`scan_roadmap_rows` read at
-    the time this was written (verified by reading that module directly, not inferred from
-    NT-0019 §1.3's own plain, unfenced illustration).
+    `- **<slice-key>**` shape becomes a `## P<n> — <title>` milestone section carrying
+    plain fields directly beneath its own heading, each `WK-`/`SL-` a heading carrying its
+    own fenced row block (§1.5). Both shapes now match `scripts/doc-index.py`'s
+    `scan_phase_sections`/`scan_roadmap_rows` (Rulings 79 and 80,
+    `docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md`) *and* NT-0019 §1.3's
+    own unfenced phase illustration — this function used to emit a fenced phase heading
+    that satisfied the former (a merged parser its own author hadn't checked against the
+    spec) while contradicting the latter and `docs/_templates/PHASE.md`; both rulings
+    settled that in the spec's favour, and `_PHASE_TEMPLATE` above changed with it.
 
-    **Ruling 80 has since settled that discrepancy the other way**: the spec's unfenced
-    illustration is right, `scan_phase_sections`'s fence requirement is the defect, and
-    `PHASE.md` — enforced unfenced by `audit-docs.py`'s `_EXPECTED_NO_BLOCK_TEMPLATES`
-    already — settles the real form. So the fenced phase heading this function emits is a
-    known, ruled latent bug (not corrected here): it only runs on discovery finding a
-    legacy phase section (the fixture's), the real roadmap's transform stays deferred
-    (task #32) until `doc-index.py`'s parsers are fixed to match the ruling, and rewriting
-    this function's *output shape* now would mean rebuilding it twice.
-
-    The row block's field set (`id, family, title, status, created, owner, phase, [work]`)
-    is narrower than NT-0019 §1.5's full closed set by construction, not as a workaround:
-    it happens to satisfy `doc-index.py`'s current `_ROW_FIELDS` (Ruling 79: wrong in both
-    directions — rejects `tree:`/`corrected_by:`/`relates:`, wrongly admits `kind:`/
-    `slice:` on a `WK-` row), but that is this function never needing those fields for a
-    freshly-converted row, not a deliberate accommodation of the wrong parser. Widening it
-    once real `WK-`/`SL-` rows need `tree:`/`corrected_by:`/`relates:` will need the parser
-    fix first, same as the fence.
+    The row block's field set is validated against `_docid.row_template_fields` rather
+    than hardcoded — Ruling 79 §3 item 4: "`doc-id.py migrate`'s row emission is derived
+    from the same template" as the reader, so the two cannot silently disagree. It still
+    emits only `id, family, title, status, created, owner, phase, [work]` — the fields a
+    `_Draft` discovered from a legacy roadmap actually has a value for — and *not*
+    `tree:`/`corrected_by:`/`relates:`, which the templates also permit but for which a
+    freshly-converted row has no natural value to invent (no real "commit this was written
+    against" for content that predates this conversion, and nothing yet to correct or
+    relate to); the reader accepts a row that carries a subset of its family's permitted
+    fields, so this omission does not reintroduce Ruling 79's defect, only defers filling
+    those three fields to whoever next hand-edits the row. `docs/_templates/PHASE.md`
+    itself carries a pre-existing, independent defect (its `exit criteria:` placeholder
+    wraps onto an indented second physical line in the committed template) reported
+    alongside these rulings rather than fixed here — see the PR description.
     """
+    templates_dir = root / "docs" / "_templates"
     work_ids = sorted(
         {d.old_token for d in roadmap_drafts if d.prefix == "WK"},
         key=lambda tok: next(
@@ -1726,15 +1734,24 @@ def _restructure_roadmap(
         canon = _docid.canonical(d.prefix, d.number)
         family = "work" if d.prefix == "WK" else "slice"
         heading_level = "###" if d.prefix == "WK" else "####"
-        block = [f"id: {canon}", f"family: {family}", f"title: {d.title}",
-                  f"status: {d.status}", f"created: {d.created.isoformat()}",
-                  f"owner: {d.owner}", f"phase: {d.phase}"]
+        fields = {
+            "id": canon, "family": family, "title": d.title, "status": d.status,
+            "created": d.created.isoformat(), "owner": d.owner, "phase": d.phase,
+        }
         if d.prefix == "SL" and d.work_token is not None:
-            work_canon = _docid.canonical(
+            fields["work"] = _docid.canonical(
                 "WK", next(x.number for x in roadmap_drafts if x.old_token == d.work_token)
             )
-            block.append(f"work: {work_canon}")
-        block_text = "\n".join(block)
+        permitted = _docid.row_template_fields(templates_dir, family)
+        unknown = sorted(set(fields) - permitted)
+        if unknown:
+            raise ValueError(
+                f"_restructure_roadmap: would emit field(s) {unknown} for a {family} row "
+                f"({canon}) not declared by docs/_templates/"
+                f"{_docid.ROW_TEMPLATE_FILES[family]} — the writer must not disagree with "
+                "the template (Ruling 79 §3 item 4)"
+            )
+        block_text = "\n".join(f"{k}: {v}" for k, v in fields.items())
         lines.append(f"\n{heading_level} {canon} — {d.title}\n\n```yaml\n{block_text}\n```\n")
     (root / "docs" / "roadmap.md").write_text(
         "# Roadmap (fixture)\n\n" + "".join(lines), encoding="utf-8"

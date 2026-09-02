@@ -74,9 +74,11 @@ import argparse
 import importlib.util
 import re
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from typing import Final
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -112,7 +114,12 @@ FAMILY_DIRS: dict[str, str] = {
 }
 
 _ROW_HEADING_FIELDS = ("id", "family", "title", "status", "phase", "work")
-_PHASE_SECTION_FIELDS = ("status", "opened", "target", "gates", "exit criteria", "works")
+
+#: `docs/_templates/` is a fixed governance artifact of the real repository tree — never
+#: the fixture corpus a caller may point `--root` at (`build_corpus(root)` below takes a
+#: fixture root for testing; the field *policy* a row or phase section is checked against
+#: does not vary with that). Ruling 79 §3 item 1 / Ruling 80 §3 item 3.
+_TEMPLATES_DIR: Final = REPO / "docs" / "_templates"
 
 
 # ---------------------------------------------------------------------------------------
@@ -260,22 +267,58 @@ def _fenced_yaml_blocks(text: str) -> list[tuple[int, int, list[str]]]:
     return blocks
 
 
-# The scalar fields a `WK-`/`SL-` row actually carries — a strict subset of §1.5's full
-# closed field set (no `plans:`, no `supersedes:`, … — those are document-family-only in
-# practice for these two row families). Kept local to this module rather than imported
-# from `scripts/_docid.py`, which exposes no shared row-block parser (verified against
-# W37-2's actual implementation).
-_ROW_FIELDS = frozenset(
-    {"id", "family", "kind", "title", "status", "created", "owner", "phase", "work", "slice"}
-)
+# The row-field policy used to be a hand-written frozenset here (`_ROW_FIELDS`) — a
+# transcription Ruling 70 already forbids, and Ruling 79 found it wrong in both directions
+# at once: too strict (rejected `tree:`/`corrected_by:`/`relates:`, which `WK.md`/`SL.md`
+# both declare) and too permissive (admitted `kind:`/`slice:`, which `WK.md`'s own comment
+# forbids by name). Deleted, not extended (Ruling 79 §3 item 1) — the permitted set is now
+# derived per family from `docs/_templates/WK.md`/`SL.md` via `_docid.row_template_fields`,
+# the one function `scripts/doc-id.py`'s row *writer* (`migrate`) also calls, so the two
+# cannot silently disagree (Ruling 79 §3 items 2 and 4).
 
 
-def _parse_row_block(content: list[str], path: Path, base_lineno: int) -> dict[str, str]:
+def _row_list_value(path: Path, key: str, raw_value: str) -> tuple[str, ...]:
+    """A `[a, b]` row-block list value — `corrected_by:`/`relates:` (NT-0019 §1.5). The
+    same flat `[a, b]` grammar `scripts/_docid.py`'s front-matter parser applies to a
+    document's own `plans:`/`supersedes:`/etc., re-implemented locally rather than
+    imported: that module's published surface is `Header`, `HeaderError`, `parse_header`,
+    `canonical`, `padded`, `family_of`, `is_vendored` and the constants — its list parser
+    is not part of that surface, the same reason `_parse_row_block`'s `key: value`
+    splitting below is local too.
+    """
+    stripped = raw_value.strip()
+    if not (stripped.startswith("[") and stripped.endswith("]")):
+        raise HeaderError(
+            f"{path}: row field {key!r} is not a well-formed `[a, b]` list: {raw_value!r}"
+        )
+    inner = stripped[1:-1].strip()
+    if not inner:
+        return ()
+    return tuple(item.strip() for item in inner.split(","))
+
+
+def _parse_row_block(
+    content: list[str],
+    path: Path,
+    base_lineno: int,
+    row_field_policy: Mapping[str, frozenset[str]],
+) -> dict[str, str]:
     """A minimal, local `key: value` parser for one `WK-`/`SL-` fenced row block. Not
     shared with `scripts/_docid.py`: that module's published surface is `Header`,
     `HeaderError`, `parse_header`, `canonical`, `padded`, `family_of`, `is_vendored` and the
     constants — nothing else is contracted, so this slice does not depend on its internals.
+
+    `row_field_policy` maps family word -> permitted field set (`_docid.row_template_fields`
+    per family, computed once by the caller — Ruling 79 §3 item 1). A row's own `family:`
+    value decides which policy applies, and that value is itself one of the keys being
+    parsed, so validation is a second pass over an already-collected raw dict rather than
+    a check inline in the first: every `key: value` line is read first (checking only
+    shape and duplicates), then, once `family` is known, every key collected is checked
+    against that family's permitted set. A block whose `family:` is not a recognised row
+    family is returned unchecked — `scan_roadmap_rows`'s own family filter already
+    discards it, and only a `work`/`slice` block is this parser's business to validate.
     """
+    entries: list[tuple[int, str]] = []
     raw: dict[str, str] = {}
     for offset, line in enumerate(content):
         if not line.strip():
@@ -285,15 +328,20 @@ def _parse_row_block(content: list[str], path: Path, base_lineno: int) -> dict[s
         if not sep:
             raise HeaderError(f"{path}:{lineno}: not a 'key: value' line: {line!r}")
         key = key.strip()
-        if key not in _ROW_FIELDS:
-            raise HeaderError(f"{path}:{lineno}: unknown row field {key!r}")
         if key in raw:
             raise HeaderError(f"{path}:{lineno}: duplicate row field {key!r}")
         raw[key] = value.split("#", 1)[0].strip()
+        entries.append((lineno, key))
+
+    permitted = row_field_policy.get(raw.get("family", ""))
+    if permitted is not None:
+        for lineno, key in entries:
+            if key not in permitted:
+                raise HeaderError(f"{path}:{lineno}: unknown row field {key!r}")
     return raw
 
 
-def _row_header_from_raw(raw: dict[str, str]) -> Header:
+def _row_header_from_raw(raw: dict[str, str], path: Path) -> Header:
     created_raw = raw.get("created")
     return Header(
         id=raw.get("id"),
@@ -306,13 +354,13 @@ def _row_header_from_raw(raw: dict[str, str]) -> Header:
         phase=raw.get("phase"),
         work=raw.get("work"),
         slice_=raw.get("slice"),
-        tree=None,
+        tree=raw.get("tree"),
         plans=(),
         supersedes=(),
         superseded_by=None,
-        corrected_by=(),
+        corrected_by=_row_list_value(path, "corrected_by", raw.get("corrected_by", "[]")),
         corrects=None,
-        relates=(),
+        relates=_row_list_value(path, "relates", raw.get("relates", "[]")),
         was=None,
         vendored=False,
         origin=None,
@@ -329,14 +377,18 @@ def scan_roadmap_rows(path: Path) -> list[Record]:
     if not path.is_file():
         return []
     text = path.read_text(encoding="utf-8")
+    row_field_policy = {
+        family: _docid.row_template_fields(_TEMPLATES_DIR, family)
+        for family in _docid.ROW_TEMPLATE_FILES
+    }
     out = []
     for heading_level, base_lineno, content in _fenced_yaml_blocks(text):
         if heading_level < 3:
             continue  # a `##` phase-section block, not a `###`+ row block
-        raw = _parse_row_block(content, path, base_lineno)
+        raw = _parse_row_block(content, path, base_lineno, row_field_policy)
         if "id" not in raw or raw.get("family") not in ("work", "slice"):
             continue
-        header = _row_header_from_raw(raw)
+        header = _row_header_from_raw(raw, path)
         out.append(Record(header=header, path=path, body="\n".join(content)))
     return out
 
@@ -350,35 +402,40 @@ class PhaseSection:
     fields: dict[str, str]
 
 
+_PHASE_HEADING_RE = re.compile(r"^##\s+(P\d+[a-z]?)\s+—\s+(.+)$")
+
+
 def scan_phase_sections(path: Path) -> list[PhaseSection]:
+    """`## P<n> — <title>` sections (NT-0019 §1.1 rule 4, §1.3): plain `key: value` lines
+    directly beneath the heading, never a fenced block (Ruling 80,
+    `docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md` — `docs/_templates/
+    PHASE.md`'s own form, and `scripts/audit-docs.py`'s `_EXPECTED_NO_BLOCK_TEMPLATES`
+    already enforces the same by path).
+
+    `_docid.scan_plain_field_block` bounds the read to the lines between this heading and
+    the next heading or the first non-`key: value` line, whichever comes first — never a
+    lookahead to the rest of the file. That is the fix for the former `rest =
+    "\n".join(lines[idx + 1:])`, which let a phase section with no fields of its own
+    silently borrow whichever fenced block happened to sit somewhere below it (Ruling 80
+    §3 item 2). A heading with nothing recognisable directly beneath it therefore
+    contributes no `PhaseSection` at all — "must produce no phase, or a loud failure —
+    never a phase built from a later block" (Ruling 80 §4 item 2) — rather than one built
+    from whatever came after.
+    """
     if not path.is_file():
         return []
-    text = path.read_text(encoding="utf-8")
-    lines = text.splitlines()
+    lines = path.read_text(encoding="utf-8").splitlines()
+    phase_fields = _docid.phase_template_fields(_TEMPLATES_DIR)
     sections = []
-    heading_re = re.compile(r"^##\s+(P\d+[a-z]?)\s+—\s+(.+)$")
     for idx, line in enumerate(lines):
-        m = heading_re.match(line.strip())
+        m = _PHASE_HEADING_RE.match(line.strip())
         if not m:
             continue
         phase_id, title = m.group(1), m.group(2)
-        # The next fenced block belongs to this heading.
-        rest = "\n".join(lines[idx + 1 :])
-        blocks = _fenced_yaml_blocks(rest)
-        if not blocks:
-            continue
-        _heading_level, _base_lineno, content = blocks[0]
-        raw: dict[str, str] = {}
-        for cline in content:
-            if not cline.strip():
-                continue
-            key, sep, value = cline.partition(":")
-            if not sep:
-                continue
-            key = key.strip()
-            if key not in _PHASE_SECTION_FIELDS:
-                continue
-            raw[key] = value.split("#", 1)[0].strip()
+        found = _docid.scan_plain_field_block(lines, idx + 1)
+        raw = {key: value for key, value in found.items() if key in phase_fields}
+        if not raw:
+            continue  # nothing directly beneath this heading — no phase, not a guess
         works_raw = raw.get("works", "")
         works = tuple(w.strip() for w in works_raw.split(",") if w.strip())
         sections.append(
