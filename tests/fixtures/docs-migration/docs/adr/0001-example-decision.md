@@ -7,10 +7,12 @@
 
 ## Context
 
-A worked example of the legacy ADR bullet header that `doc-id.py migrate` converts to front
-matter, in order, per NT-0019 §4 step 5: the bullet block is removed, a YAML front-matter
-block is added in its place, and everything from the first `##` heading onward is kept
-byte-for-byte (aside from citation-token rewrites).
+A worked example of the legacy ADR bullet header that the migration script converts to
+front matter: the bullet block is removed, a YAML front-matter block is added in its
+place, and everything from the first `##` heading onward is kept byte-for-byte (aside
+from citation-token rewrites). This decision follows on from the note discussed in
+`NT-0001`, a second worked example of a citation elsewhere getting rewritten once its
+own target is renumbered.
 
 ## Decision
 

@@ -645,6 +645,65 @@ def test_check_36_exclusion_entries_are_load_bearing(
     assert any("NT-0016" in hit for hit in not_excluded), not_excluded
 
 
+# W37-5's seven `tests/fixtures/docs-migration/` entries, added to the shipped
+# `LEGACY_FORM_EXCLUDED_PATHS` alongside the pre-existing `docs/REDIRECTS.csv` one tested
+# above. Listed here rather than read back off `audit.LEGACY_FORM_EXCLUDED_PATHS` so a
+# stray removal from the shipped tuple fails this test loudly (a missing path 404s the
+# `is_file()` assert) instead of silently shrinking the parametrize set to green.
+_W37_5_FIXTURE_EXCLUSIONS: tuple[str, ...] = (
+    "tests/fixtures/docs-migration/docs/adr/0001-example-decision.md",
+    "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
+    "tests/fixtures/docs-migration/docs/plans/2026-08-12-example-rulings.md",
+    "tests/fixtures/docs-migration/docs/roadmap.md",
+    "tests/fixtures/docs-migration/docs/specs/00-overview.md",
+    "tests/fixtures/docs-migration/.claude/skills/vendored-example-skill/SKILL.md",
+    "tests/fixtures/docs-migration/.claude/skills/vendored-example-skill/references/extra.md",
+)
+
+
+@pytest.mark.parametrize("entry", _W37_5_FIXTURE_EXCLUSIONS)
+def test_check_36_w37_5_fixture_exclusions_are_load_bearing(
+    audit: types.ModuleType, entry: str
+) -> None:
+    """Ruling 67 §4 item 1, applied to the seven `tests/fixtures/docs-migration/` entries
+    W37-5 added to the shipped `LEGACY_FORM_EXCLUDED_PATHS` (contrast
+    `test_check_36_exclusion_entries_are_load_bearing` above, which proves the same
+    property for the one pre-existing entry, `docs/REDIRECTS.csv`).
+
+    Each is excluded only because the fixture corpus's own *discovery-defining* legacy
+    shape — the thing that makes it recognisable to `migrate` as that shape at all, not
+    incidental prose — is itself a legacy form: an ADR's own `ADR-0001` title, a note's
+    own `NT-0001` title, a multi-ruling file's own `## Ruling N` headings, the roadmap
+    fixture's own `W1-1`/`W1-2` row keys, the spec fixture's own `**FR-EX-1**`-shaped bold
+    ids, and the vendored pair's shared `FR-EX-1` citation (proving NT-0019 §1.5's
+    vendored carve-out needs the same token on both sides of the manifest boundary).
+    These are real, permanently un-migrated test fixtures under git, not `tmp_path`
+    synthetic input — unlike a governed document, a fixture's citations are never
+    rewritten, so its exclusion never shrinks (Ruling 67 §2's residue class names this
+    exact case: "the fixtures ... of the migration").
+
+    This sweeps the real (unfiltered) `docs-migration` file straight off disk against the
+    shipped constant with and without the one entry under test, proving each is load
+    bearing on its own: with the real constant, the file contributes no hit; with that
+    single entry removed (every other exclusion, `docs/REDIRECTS.csv` included, stays in
+    force), the sweep must return at least one hit, and every hit returned must come from
+    this exact file and no other — the sweep is scoped to `[path]` alone, so there is
+    nowhere else a hit could come from.
+    """
+    path = ROOT / entry
+    assert path.is_file(), path  # the entry must still name a real, tracked fixture file
+
+    excluded_with_entry = audit.sweep_legacy_forms([path], repo_root=ROOT)
+    assert excluded_with_entry == [], excluded_with_entry
+
+    reduced = tuple(p for p in audit.LEGACY_FORM_EXCLUDED_PATHS if p != entry)
+    assert len(reduced) == len(audit.LEGACY_FORM_EXCLUDED_PATHS) - 1, entry
+
+    hits_without_entry = audit.sweep_legacy_forms([path], repo_root=ROOT, excluded_paths=reduced)
+    assert hits_without_entry != [], entry
+    assert all(hit.startswith(entry + ":") for hit in hits_without_entry), hits_without_entry
+
+
 def test_check_36_was_lines_are_excluded_wherever_they_appear(
     audit: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:

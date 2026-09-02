@@ -1,11 +1,11 @@
 # Roadmap (fixture)
 
-A worked example of the legacy roadmap shape `doc-id.py migrate` restructures into
-milestone sections with `WK-`/`SL-` fenced rows (NT-0019 §4 step 3). This fixture's own
-grammar (`## Phase <id> — <title>`, `### <work-key> — <title>` + `status:`, and
+A worked example of the legacy roadmap shape the migration script restructures into
+milestone sections with fenced work/slice rows. This fixture's own grammar
+(`## Phase <id> — <title>`, `### <work-key> — <title>` + `status:`, and
 `- **<slice-key>** <title> — status: <status>`) is this corpus's own reasonable, minimal
-reading of "phase sections and work rows" — NT-0019 does not pin the legacy shape, only the
-post-migration one (§1.3).
+reading of "phase sections and work rows" — the migration spec does not pin the legacy
+shape, only the post-migration one.
 
 ## Phase 1a — Example workbench
 

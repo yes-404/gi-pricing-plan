@@ -1,8 +1,8 @@
 # 00 — Overview (fixture)
 
-A worked example of a spec fragment carrying bold requirement ids, the shape
-`doc-id.py migrate` renumbers in place (NT-0019 §4 step 1: requirement ids join the global
-sequence in spec module order, then clause order, using the module's first-commit date).
+A worked example of a spec fragment carrying bold requirement ids, the shape the
+migration script renumbers in place: requirement ids join the global sequence in spec
+module order, then clause order, using the module's first-commit date.
 
 ## 3. Functional requirements
 
