@@ -23,6 +23,25 @@ from a PR body.
 **F90 landed mid-audit and is included.** The dispatch said it *"may not exist when you start"*;
 it did not, and now does. §8 carries it.
 
+**Verdicts adopted by the lead, 2026-09-02**, with four amendments, all applied below. §8 now
+reads as adopted rather than as proposed; where an amendment changed a proposal, the row says so.
+The lead's direction on the two record-corrections is quoted at §5: *"You are correcting a record
+of state, not making a decision — that is inside an auditor's charter."*
+
+## The one sentence this record exists to make unambiguous
+
+**W37-5c did not achieve "the run no longer aborts."**
+
+Four of Addendum B's abort points are cleared and verified by execution. A **fifth**,
+`_discover_vendored_skill_manifests`, still fires on the real corpus and was **never touched by
+`544b90c`**. The commit subject claiming otherwise is true of its three named gaps and **false of
+the run**. The W37-6 re-ask condition *"F80–F82 shown cleared by execution"* is **satisfied
+literally and not sufficiently**.
+
+**And the mechanism, because it is why a fifth guard survived a slice cut to clear abort
+points**: item 3's exemption serves those three files in `audit-docs.py` and **not** in
+`doc-id.py` — one of two instruments reaching one population.
+
 **No `CLAUDE.md` §14 phase review is raised by this record.** `work-item-close.md` is explicit:
 *"A PR or slice close does not raise this question; only a workstream close does."* W37-5c is a
 slice. W37 itself remains open.
@@ -46,8 +65,17 @@ written**: *"F84 joins the slice, **discharged exactly per its falsifiable secti
 on the right owner."* The same RFC's §4 rules that **§4 step 5 governs the stamp set and gains
 six** READMEs, which is a widening of item 2 rather than a new item.
 
-**Source 3 — the same RFC's dated amendment**, filed `919aff4` (#643): `.claude/notes/README.md`
-is **deleted**, §5.3 governs, and §4 step 4 changes. Also a widening of item 2.
+**Source 3 — the same RFC's dated amendment**, filed `919aff4` (#643): the `README.md` at the
+**vacated notes root under `.claude`** is **deleted**, §5.3 governs, and §4 step 4 changes. Also
+a widening of item 2.
+
+*(That file is named by description rather than by its literal path throughout this record.
+`tests/test_notes_move_citations.py::test_no_living_file_cites_the_old_notes_path` forbids a
+living tracked file from carrying the literal — an earlier draft of this record carried it three
+times and the test caught it, which is the check working on the document auditing it. The
+exemption list exists for documents that **specify** the path's deletion, and its own comment
+records it growing from two members to four in about an hour; a closure record **citing** the
+decision is not a specification of it, so the fix is the phrasing, not a fifth exemption.)*
 
 So the scope is **six items plus F84 = seven**, not six. The count is stated here because the
 roadmap, the decision record and the register each carry a different one.
@@ -102,7 +130,7 @@ rather than ruled, or a scope narrower than 'everything that stops or blinds the
 |---|---|---|---|
 | 1 | Every scope item in §2 traces to the maintainer's own words or to a numbered finding | **Met, with three rows on the looser limb — named rather than waved through** | Scored row by row against §2's own Evidence column, not summarised. **Rows 1, 4, 6 satisfy it strictly**: row 1's Item column names F80/F81/F82; row 4 cites *"register F77"*; row 6's Evidence reads *"Maintainer's instruction, verbatim"*. **Rows 2, 3 and 5 trace to a dated artifact that is neither an `F-` id nor a quotation** — row 2 to *"Handover §6"*, row 3 to Ruling 69, row 5 to *"Addendum A row 4"*. Each resolves, so none is the silent-provenance failure the standard was written against; but the standard's literal words are *"quotes the instruction or cites an `F-` id"*, and three rows do neither. Recorded so the gap is visible rather than scored away. |
 | 2 | Every `owner:` value in §3 cites the §1.6 cell it is read from | **Met** | All four ruled rows carry a cell citation in §3's third column. The README row is explicitly *"not ruled"* and routed, so it has no value to source. |
-| 3 | §4's two challenges are answered **before** the slice starts, not during it | **Not met — but the miss is §5's, not §4's, and it is the one real provenance gap this audit found** | **§4's own two are met**: §4.1 (`WK`) and §4.2 (`contracts/`) are both answered inside the decision record itself, before any build. **§5's exemption-versus-sidecar question was not**, and the gap is sharper than "undecided": the decision record says *"**The maintainer's call, and it is the only thing in §2 item 3 that is not already decided**"*, and that record **has never been amended** — `git log --oneline -- docs/plans/2026-09-02-w37-5c-slice-decision.md` shows one commit, `ba31cd1`. Nineteen minutes later `ffdd54c` filed F83 asserting *"the maintainer's ruling, 2026-09-02"*, and the register row repeats it. **No dated, quotable maintainer line choosing the exemption exists anywhere in the tree** — contrast the same slice decision's own §Authority, which quotes the maintainer literally: *"Decision: not yet. Date: 2026-09-02."* The code carries the gap forward: `scripts/audit-docs.py:2071-2073`'s `_VENDORED_MANIFEST_RULING` cites slice-decision §5 for *"a manifest that won't parse gets its header from a sidecar or an exemption, never an edit"* — a clause establishing that **both** options are edit-free, which does not choose between them. **Proposed disposition: the lead either produces the maintainer's dated line or records that the exemption was taken on the lead's recommendation without one.** The instrument itself is sound (§6); its authority citation is not. See §3 item 3 and §6. |
+| 3 | §4's two challenges are answered **before** the slice starts, not during it | **Not met at the time; resolved 2026-09-02 by #648** | **§4's own two are met**: §4.1 (`WK`) and §4.2 (`contracts/`) are both answered inside the decision record itself, before any build. **§5's exemption-versus-sidecar question was not**, and the gap is sharper than "undecided": the decision record says *"**The maintainer's call, and it is the only thing in §2 item 3 that is not already decided**"*, and that record **has never been amended** — `git log --oneline -- docs/plans/2026-09-02-w37-5c-slice-decision.md` shows one commit, `ba31cd1`. Nineteen minutes later `ffdd54c` filed F83 asserting *"the maintainer's ruling, 2026-09-02"*, and the register row repeats it. **No dated, quotable maintainer line choosing the exemption exists anywhere in the tree** — contrast the same slice decision's own §Authority, which quotes the maintainer literally: *"Decision: not yet. Date: 2026-09-02."* The code carries the gap forward: `scripts/audit-docs.py:2071-2073`'s `_VENDORED_MANIFEST_RULING` cites slice-decision §5 for *"a manifest that won't parse gets its header from a sidecar or an exemption, never an edit"* — a clause establishing that **both** options are edit-free, which does not choose between them. **Resolved 2026-09-02, and it was the lead's to resolve.** The maintainer *had* ruled the exemption over the sidecar; the ruling had simply never landed as a dated artifact, which `CLAUDE.md` §12 forbids — *"every decision lands as a dated artifact … never in chat."* **#648** files it verbatim with its date at `docs/plans/2026-09-02-w37-vendored-exemption-ruling.md`, corrects the ruling's "63" to 65, and states that the exemption does not by itself let a run proceed. **Scored as met on the strength of that record, not on the assertion that preceded it** — the gap was the artifact's absence, never the decision's. The instrument itself was always sound (§6). See §3 item 3 and §6. |
 | 4 | No frozen plan is edited by this decision | **Met on both leaf plans; one flagged edit to the ask** | `git diff --stat ba31cd1..6e35b9c -- docs/plans/2026-09-02-w37-6-migration-run-leaf-plan.md docs/plans/2026-09-02-w37-6-migration-run-leaf-plan-v2.md` is **empty**. The ask gained +54 lines (`6bbfe63`, Addendum B). **Flagged, not scored a violation**: the standard's violation clause is *"modified to agree with anything decided here"*, and Addendum B does the opposite — it corrects a factual error *against* what the decision record says, appended dated rather than edited in place. Recorded so the literal reading is not silently discarded. |
 | 5 | The slice's own arithmetic closes over the **real corpus**, not a fixture | See §4 | Scored there against the mutation proofs. |
 
@@ -222,7 +250,7 @@ Verified at `6e35b9c` by this audit; no PR body is taken on its word (`CLAUDE.md
 | # | Item (slice decision §2) | Proposed verdict | Evidence, re-derived here |
 |---|---|---|---|
 | 1 | **F80, F81, F82** — the unconditional guards that abort a real `migrate()` run | **Delivered, tested** — but see §2 row 5 | §2 rows 1–4: FIRE→PASS by execution on the real corpus, each with its own tree's call-site arguments. `544b90c` (#629). |
-| 2 | **The discovery-and-stamp path for `.claude/skills/`, `.claude/agents/`, `.claude/roles/` and the README population** | **Delivered, tested — partially; the 53-file deferral is §5's finding** | `47eb2ba` (#639). Governing rulings landed first: RFC §4 (`86ebb96`) — step 5 gains six READMEs, *"six reached, one exempt, five stamped"* — and the `919aff4` amendment deleting `.claude/notes/README.md`. All six named files confirmed tracked at `6e35b9c` (`git ls-files --error-unmatch`, each). |
+| 2 | **The discovery-and-stamp path for `.claude/skills/`, `.claude/agents/`, `.claude/roles/` and the README population** | **Delivered, tested — partially; the 53-file deferral is §5's finding** | `47eb2ba` (#639). Governing rulings landed first: RFC §4 (`86ebb96`) — step 5 gains six READMEs, *"six reached, one exempt, five stamped"* — and the `919aff4` amendment deleting the vacated notes root's own `README.md`. All six named files confirmed tracked at `6e35b9c` (`git ls-files --error-unmatch`, each). |
 | 3 | **The three unparseable vendored manifests** | **Delivered against the check-35 limb; NOT delivered against the migration limb** | `ffdd54c` (#625) + `24193dd` (#635) + `359936b` (#634) put the three in `audit-docs.py`'s exemption register. **That exempts them from checks 30–39. It does not stop `migrate()` aborting on them** — §2 row 5 is those same three files, and it still fires. Two different instruments, one population; the slice built one. |
 | 4 | **R84 §4 item 2 built** (the `slice:` acceptance item, vacuous at birth) | **Delivered, tested** | `e2296ec` (#626) — the only build commit in the slice that also updated `docs/audit/register.md`. F77's row now carries the dated *"Built 2026-09-02 in W37-5c"* paragraph naming `_check_emitted_ledger_axes` and its two mutation tests. |
 | 5 | **R86 §4 item 3 rebuilt so it can pass on some input** | **Delivered, tested** | `e2296ec` (#626), same row. |
@@ -285,7 +313,17 @@ Applying that finding while auditing it is the cheapest available proof it is re
 
 ---
 
-## 5. Two living records report this slice's own state wrongly
+## 5. Two living records reported this slice's own state wrongly — corrected in this PR
+
+**Adopted amendment 1, the lead's, 2026-09-02**: *"F80, F81 and F82 are closed in code and NOT
+closed as records. A closure record that calls them closed while the register says otherwise is
+the defect this slice spent the day filing. Update those rows in your PR, and the roadmap's
+`:382` 'three independent guards' line with them. **You are correcting a record of state, not
+making a decision** — that is inside an auditor's charter."*
+
+Both are now corrected here, and the findings below are kept as the record of what was wrong
+rather than rewritten into a clean sheet — a corrected document that hides having been wrong is
+`NT-0003`'s failure with the evidence removed.
 
 Both are `NT-0003`'s mechanism — a status duplicated into a second place, and the copy going
 stale. Both are cheap to fix and neither is fixed here, because a closure record proposes.
@@ -351,8 +389,8 @@ git ls-files | grep -E '(^|/)README\.md$' | grep -vc '^tests/fixtures/docs-migra
 
 **33 is right, under an exclusion the record never states** — the five READMEs of the
 `tests/fixtures/docs-migration/` fixture corpus. The onward arithmetic then closes exactly:
-33 − 17 (become `CR-`) − 1 (`docs/audit/README.md`, deleted) − 1 (`.claude/notes/README.md`,
-deleted per `919aff4`) = **14**, the population the record names. The 17 is independently
+33 − 17 (become `CR-`) − 1 (`docs/audit/README.md`, deleted) − 1 (the vacated notes root's own
+`README.md`, deleted per `919aff4`) = **14**, the population the record names. The 17 is independently
 confirmed above by execution, not by counting paths.
 
 ---
@@ -488,34 +526,48 @@ than a documentation gap** — it is the same class as F80/F81/F82, which were r
 
 ---
 
-## 8. Findings — every one, with a proposed decision and status
+## 8. Findings — every one, with its adopted decision and status
 
-`work-item-close.md`'s table. **`CLAUDE.md` §12 reserves the four verdicts to the lead**; every
-Decision cell below is a proposal. Three of these rows (F87, F88, F90) are W37-6 preconditions,
-and this record is where a W37-6 planner will look for them.
+`work-item-close.md`'s table. **Adopted by the lead 2026-09-02**, with four amendments; where an
+amendment changed what this record proposed, the row says which. `CLAUDE.md` §12 reserves the
+four verdicts to the lead, and this table now records their exercise rather than a proposal.
 
-| Finding id | Concerns | Proposed decision | Proposed status |
+**Three W37-6 preconditions — F87, F88 and F90 — were found by this slice, and none of them
+existed on any prior list.** Not in the map plan, not in either leaf plan, not in the W37-6
+obligations list, not in the go-ahead ask. Each was produced by building the slice's own six
+items and looking at what the instruments then reported. That is the sentence a W37-6 planner
+needs from this record, and it is stated here rather than left to be inferred from three rows.
+
+| Finding id | Concerns | Adopted decision | Status |
 |---|---|---|---|
-| **F80** | `plan-reviews.md`'s "Pending proposals" container had no discovery; aborted every run | **fix before close — done.** `544b90c`. Verified by execution (§2 rows 2 and 3, both guards) | **closed** — register row `:121` still reads `not started`; §5a |
-| **F81** | The real Ruling A1/A2/A3 file, ruled `RL-`, not discoverable; aborted every run | **fix before close — done.** `544b90c`, §2 row 1 | **closed** — register row `:126` still reads `not started`; §5a |
-| **F82** | Four module-less `DEP-` ids in `00-overview.md`; aborted every run | **fix before close — done.** `544b90c`, §2 row 4 | **closed** — register row `:127` still reads `not started`; §5a |
-| **F83** | 65 in-scope files cannot carry a header; custody by exemption | **accept, with instrument — both conditions met.** §6: reason+ruling on all 65; reconciliation proven red three ways | **closed** |
-| **F84** | 17 closure records invisible to the migration, and nothing reported it | **fix before close — done, scored against the clause not the outcome.** §4: discovery 17→18 under a positive control, census reds **by name** on a mutated copy of the real corpus | **closed** — register row `:123` still reads `not started`; §5a |
-| **F77** | Ruling 84 §4's `slice:` acceptance item, vacuous at birth | **fix before close — done.** `e2296ec`; its register row already carries the dated *"Built 2026-09-02 in W37-5c"* paragraph. **Its own text says the row "is discharged when its owner accepts those two instruments"** — that acceptance is this close's, and it is the lead's to give | **closed on the lead's acceptance of §3 items 4–5** |
-| **F85** | Four counts stated as measurements never measured | **accept — already discharged.** `e63332c` landed the `CLAUDE.md` §13 predicate clause | **closed** |
-| **F86** | Ruling 49's decay rule: no faithful check, wrong population, blind backstop | **carry forward with an owner.** Its register row names **this close** as *"the event that next assigns an owner"*, so silence here is the defect the finding reports. Nothing in the slice built any of its three limbs — `2e5f260` files it. **Proposed owner: W37-6**, on the same footing as F87/F88/F90 (all four are instrument-correctness findings the migration commit cannot be trusted without), with the fallback the row itself names — the next §14 plan review — if the lead prefers not to load W37-6 further | **closed-with-findings** |
-| **F87** | Widening `_ID_SCOPE_ROOTS` reaches no non-markdown file; 62 of 65 stay invisible to checks 30–39 | **carry forward with an owner — W37-6, fix before close**, as its row already says. Independently confirmed here: `_id_scope_documents()` → **1** document, **0** of the 65 exempt entries in scope (§6) | **closed-with-findings — W37-6 precondition** |
-| **F88** | Two §5.2-routed populations discovery does not reach; limb 1 **aborts every real run** | **carry forward with an owner — W37-6.** §2 row 5 raises its severity above what its own row records: limb 1 is not "blind", it is a **fifth abort point**, in the same class as F80–F82 which were treated as run-blocking. Limb 3 already discharged in its filing commit | **closed-with-findings — W37-6 precondition, run-blocking** |
-| **F89** *(amend, do not renumber)* | Five test fixtures written into the real `docs/plans/`; one run's fixture reds another's gate — **plus a second instance found by this audit: an untracked closure README reds the suite (§10b)**, adopted by the lead 2026-09-02 as an amendment to F89 rather than a new id | **carry forward with an owner.** Its row says *"the actual disposition is the lead's"* and proposes no fix. **Proposed owner: W37-6**, because a migration run in one supervised commit is precisely the occasion a concurrent gate run corrupts. **Amendment folded in on the lead's instruction**: two matchers over one population disagreeing is Ruling 83's class, and F89's falsifiable clause already reopens on it — `_discover_audit_closure_readmes` walks the filesystem, the README census walks `git ls-files`, and a file visible to one and invisible to the other breaks a partition they are asserted to agree on. Applied while auditing: §4's mutation was made on a copy outside the tree for this reason | **closed-with-findings** |
-| **F90** | Check 37 reds 95 of 95 post-migration rulings; its detector cannot see a `###` heading | **carry forward with an owner — W37-6, fix before close.** Filed `d8d6e3f` (#646), after this audit began; its row names *"the next W37-6 go-ahead request"* as the event and lists four options, **one of which must be dispositioned before that ask is made** | **closed-with-findings — W37-6 precondition** |
-| *(no register row)* | **The 53-file Reference-stamp deferral is recorded only in a squash-commit body** | **carry forward with an owner — W37-6.** §7a. Not currently a register row; proposed as one, or as a line in the active leaf plan joining it to that plan's frozen predecessor item 13 | **open — no register row** |
-| *(no register row)* | **`docs/roadmap.md`:382 still says three abort points, with line numbers that resolve at no tree** | **fix before close.** §5b. One sentence, and the correction already exists in `6bbfe63`'s Addendum B | **open — no register row** |
-| *(no register row)* | **The register reads `not started` for F80, F81, F82, F84** | **fix before close.** §5a | **open — no register row** |
+| **F80** | `plan-reviews.md`'s "Pending proposals" container had no discovery; aborted every run | **fix before close — done.** `544b90c`, verified by execution (§2 rows 2 and 3, both guards) | **closed** — and closed *as a record* too: register `:121` annotated `DISCHARGED 2026-09-02` in this PR, per amendment 1 |
+| **F81** | The real Ruling A1/A2/A3 file, ruled `RL-`, not discoverable; aborted every run | **fix before close — done.** `544b90c`, §2 row 1 | **closed** — register `:126` annotated in this PR |
+| **F82** | Four module-less `DEP-` ids in `00-overview.md`; aborted every run | **fix before close — done.** `544b90c`, §2 row 4 | **closed** — register `:127` annotated in this PR |
+| **F83** | 65 in-scope files cannot carry a header; custody by exemption | **accept, with instrument — both conditions met.** §6: reason and ruling on all 65; reconciliation proven red three ways. **Its authority now exists**: the maintainer's exemption ruling is filed dated by the lead in **#648** (`docs/plans/2026-09-02-w37-vendored-exemption-ruling.md`), which also records that its "63" is 65 and that the exemption does not by itself let a run proceed | **closed** |
+| **F84** | 17 closure records invisible to the migration, and nothing reported it | **fix before close — done, scored against the clause not the outcome.** §4: discovery 17→18 under a positive control; census reds **by name** on a mutated copy of the real corpus. **Not** discharged by the 17 receiving the right owner | **closed** — register `:123` annotated in this PR |
+| **F77** | Ruling 84 §4's `slice:` acceptance item, vacuous at birth | **fix before close — done.** `e2296ec`, whose own commit updated the register row. Its text says the row *"is discharged when its owner accepts those two instruments"*; that acceptance is this close's | **closed** |
+| **F85** | Four counts stated as measurements never measured | **accept — already discharged** by `e63332c`, which landed `CLAUDE.md` §13's predicate clause | **closed** |
+| **F86** | Ruling 49's decay rule: no faithful check, wrong population, blind backstop | **Amendment 2, the lead's — carry forward, and the disposition is explicit decay.** No individual owner is assigned; absent a slice taking it, F86 decays to the next `CLAUDE.md` §14 plan review, which must give it a disposition rather than list it. Written into register `:128` in this PR **with the `§14` literal**, so `register-owed.py review` surfaces it. Its own row named *this close* as the owner-assigning event, and **a finding about unowned rows failing to name their own decay event must not be one** | **closed-with-findings** |
+| **F87** | Widening `_ID_SCOPE_ROOTS` reaches no non-markdown file; 62 of 65 stay invisible to checks 30–39 | **Amendment 3 — carry forward as a W37-6 precondition, no individual owner, decaying to the next §14 review.** Re-measured here at `d8d6e3f`: `_id_scope_documents()` → **1** document, **0** of the 65 in scope. **Its row named no decay event at all**; that clause is added in this PR | **closed-with-findings — W37-6 precondition** |
+| **F88** | Two §5.2-routed populations discovery does not reach; limb 1 **aborts every real run** | **Amendment 3 — carry forward as a W37-6 precondition, no individual owner, decaying the same way.** §2 row 5 **reclassifies limb 1 from *blinds* to *stops***: it is a fifth abort point, in the class F80–F82 were treated as run-blocking in, and it is pre-write, so the failure is a clean abort rather than a partial migration. Written into register `:129` in this PR. Limb 3 discharged in its filing commit | **closed-with-findings — W37-6 precondition, run-blocking** |
+| **F89** *(amend, do not renumber)* | Five test fixtures written into the real `docs/plans/` — **plus a second instance found by this audit: an untracked closure README reds the suite** (§10b) | **Amendment 4 — closed as filed, with the second instance folded in as an amendment rather than a renumber.** F89's falsifiable clause already reopens on exactly this, and two matchers over one population disagreeing is Ruling 83's class. Adopted 2026-09-02 | **closed** |
+| **F90** | Check 37 reds 95 of 95 post-migration rulings; its detector cannot see a `###` heading | **Amendment 3 — carry forward as a W37-6 precondition, no individual owner, decaying the same way.** Filed `d8d6e3f` (#646) after this audit began; its row already names the next go-ahead request as the event and lists four options, **one of which must be dispositioned before that ask is made** | **closed-with-findings — W37-6 precondition** |
+| **F91** *(new, filed in this PR)* | The NT-0014 runtime-state writer has not run since 02:03Z, and `written_at` cannot say so | **carry forward, unowned** — the lead's direction: *"File it as a register row, no work item, carry forward. It is not this slice's defect and the closure record should say so."* **It is not this slice's defect.** Filed as register `:132` plus [`findings/F91.md`](../../findings/F91.md), split from the start because its essay is over threshold | **closed-with-findings** |
+| *(no register row — **owed**)* | **The 53-file Reference-stamp deferral is recorded only in a squash-commit body** | **carry forward, owner W37-6.** Disposition accepted entire by the lead: **a register row, plus a pointer from the active leaf plan** — §7a. **The row itself is not minted here.** Creating an `F-` id the lead has not directed is how F88 limb 3 happened (two executors filing one id within an hour, no allocator), so this record names the action and leaves the id to one line from the lead | **open — action owed, id unallocated** |
+| *(was: no register row — **now fixed**)* | `docs/roadmap.md`:382 said three abort points, with line numbers resolving at no tree | **fix before close — done in this PR**, per amendment 1. Corrected to four, named by **function** rather than by line (Addendum B §B.2's own reasoning), with a dated clause recording that all four are now cleared and a fifth still fires | **closed** |
+| *(was: no register row — **now fixed**)* | The register read `not started` for F80, F81, F82, F84 | **fix before close — done in this PR**, per amendment 1. Four rows annotated in place, each quoting the `not started` it supersedes, per the register's own annotated-in-place rule | **closed** |
 
 **Every id in §9's generated block appears above with a resolution** — F77, F80, F83, F84, F86.
-The table adds F81, F82, F87, F88, F89 and F90 (register rows the block does not select, because
-their Work-item and Decision cells name W37-6 rather than W37-5c) and three findings with **no**
-register row, named as such.
+The table adds F81, F82, F85, F87, F88, F89, F90 and F91 (register rows the block does not
+select, because their Work-item and Decision cells name W37-6 or no work item rather than
+W37-5c), plus **one finding with no register row, named as such and left unallocated on
+purpose**.
+
+**§9's block was generated before these amendments and is not regenerated.** It is evidence of
+the register's state at the moment the owed list was taken, which is what a generated block is
+for; four of its five rows are annotated `DISCHARGED` by this same PR, and the table above is
+where that is recorded. Regenerating it would erase the before-state the close is being audited
+against.
 
 ---
 
@@ -627,32 +679,49 @@ and this is the same mechanism reached from the other side.
 
 ---
 
-## 11. Gate, run at `d8d6e3f` with this record staged
+## 11. Gate, run at `d8d6e3f` with every change of this PR in the tree
 
-Docs-half only: this record adds one Markdown file and changes no Python. **The full
-`uv run pytest -q` was not run — it OOMs this machine** (the dispatch's instruction); the test
-files reached by a new `docs/audit/work/*/README.md` were selected and run instead, and the rest
-is left to CI.
+**The PR is no longer one Markdown file.** Adopting the verdicts (§8) made it four: this record,
+`docs/audit/register.md` (seven rows annotated, one added), `docs/roadmap.md` (the W37 row's
+abort-point sentence), and `docs/audit/findings/F91.md`. **The test selection was widened to
+match, and widening it is what caught a real failure** — see below.
 
 | Command | Result |
 |---|---|
 | `python3 scripts/audit-docs.py` | **PASS** — *"All checks passed."* |
-| `uv run python scripts/register-lint.py` | **PASS** — `0 violations` |
-| `uv run pytest -q tests/test_doc_id_migrate.py` | **153 passed** |
-| `uv run pytest -q tests/test_audit_docs_ids.py tests/test_audit_docs_finding_citations.py tests/test_ruling_acceptance_census.py` | **85 passed** |
-| `uv run python scripts/register-owed.py W37-5c` | exit 0, 5 owed rows — §9 |
-| Frontend half | **not run** — no frontend file is touched; left to CI |
+| `uv run python scripts/register-lint.py` | **PASS** — `0 violations`; residue `61 of 88`, unchanged by seven amendments |
+| `uv run pytest -q <13 files>` — every `tests/test_*.py` naming `roadmap.md` or `register.md`, plus `test_ruling_acceptance_census.py` | **515 passed** |
+| `uv run python scripts/register-owed.py W37-5c` | **refuses, correctly** — *"has an uncommitted diff … Ruling 52 forbids citing a dirty worktree"*. §9's block was generated at `d8d6e3f` **before** these register edits, which is the state it is evidence of |
+| Frontend half | **not run** — no frontend file touched; left to CI |
 | `uv run mypy`, `ruff`, `lint-imports` | **not run** — no Python changed; left to CI |
 
-**One failure was found and fixed during this audit, by this audit**: `audit-docs.py` reported
-`broken link in audit/work/W37-5c/README.md: findings/F83.md` — the relative link inside §9's
-pasted block, which resolves from `docs/audit/` and not from `docs/audit/work/W37-5c/`. See §9's
-disclosure. That is the check working.
+**Full `uv run pytest -q` was not run — it OOMs this machine** (the dispatch's instruction).
 
-**Retry counters (NT-0014 artifact B):** `none recorded`. Read at `d8d6e3f` with
-`python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py show` —
-`in_flight_expensive_verifications.entries` is `[]` and no `replan`/`fix` counters exist in the
-file.
+### 11a. Two failures this gate found, both in this record
+
+**Neither was in the slice. Both were in the document auditing it**, which is the more useful
+kind of gate result and is recorded rather than quietly fixed.
+
+**One — the broken relative link, twice.** `audit-docs.py` reported
+`broken link in audit/work/W37-5c/README.md: findings/F83.md` — §9's pasted owed block carries a
+path relative to `docs/audit/`, and this file lives one directory deeper. Fixed, disclosed in §9
+— **and the disclosure re-created it**, because writing the link syntax out to describe it is
+writing the link. The second fix describes the syntax instead of reproducing it.
+
+**Two — the old notes path, caught only by widening the selection.**
+`tests/test_notes_move_citations.py::test_no_living_file_cites_the_old_notes_path` failed naming
+this record: it carried the literal vacated-notes path three times. **The narrower four-file
+selection used before the verdicts were adopted does not reach that test**, so this would have
+merged unnoticed had the PR stayed one file.
+
+**The fix was the phrasing, not an exemption.** That test's exempt set is for documents that
+**specify** the path's deletion; its own comment records the list growing *"two members to four
+in about one hour"*, and a closure record **citing** the decision is not a specification of it.
+The file is now named by description throughout. The test models the same move itself — it
+builds the path by concatenation so that stating the rule does not violate it.
+
+**Retry counters (NT-0014 artifact B):** `none recorded`, and the file is not being written —
+see below; now filed as **F91**.
 
 **And the state file is not merely stale — it has not been written at all since 02:03Z.**
 Corrected on the lead's challenge, which asked for the stronger claim to be evidenced or
@@ -679,6 +748,7 @@ indistinguishable from its death, and reading the log or a `pgrep` would answer 
 question than the one asked. **Reported as an observation about the watcher, not a finding
 against this slice**, and offered to the lead as a candidate register row if they read it as one.
 
+
 ---
 
 ## 12. What this record does not do
@@ -687,9 +757,19 @@ against this slice**, and offered to the lead as a candidate register row if the
   lead's merge**. This is the audit; the merge is the lead's.
 - **It does not write any verdict as decided.** §12 reserves the four verdicts to the lead;
   every Decision cell in §8 is a proposal.
-- **It does not edit `docs/roadmap.md`, `docs/audit/register.md`, or any filed plan.** §5's two
-  staleness findings and §8's proposed dispositions are for the lead to apply — a closure record
-  that corrected the register on its own authority would be making the verdict it is proposing.
+- **It does not edit any filed plan.** No frozen plan is touched; `git diff --stat` over both
+  leaf plans across this branch is empty.
+- **It *does* now edit `docs/audit/register.md` and `docs/roadmap.md`** — reversing what this
+  bullet said in the version of this record filed at `74ca19c`, which read *"It does not edit
+  `docs/roadmap.md`, `docs/audit/register.md`, or any filed plan."* That was right while the
+  verdicts were proposals and wrong once the lead adopted them and directed the correction (§5).
+  **The distinction the lead drew is the one that makes it legitimate: correcting a record of
+  state is not making a decision.** The seven annotations say what they supersede, per the
+  register's own annotated-in-place rule; none rewrites a Decision's opening disposition.
+- **It does not migrate the seven over-threshold rows it amended.** Ruling 51 makes migration
+  opportunistic at a row's next substantive amendment, and seven at once for one reason is the
+  **bulk sweep the same ruling forbids**. Disclosed rather than skipped silently; the residue
+  line reports them (`61 of 88` at this tree, unchanged by these amendments).
 - **It does not raise or answer a `CLAUDE.md` §14 plan review.** W37-5c is a slice.
 - **It does not ask for, or bear on, W37-6's go-ahead.** No re-ask exists at `d8d6e3f`
   (`git grep -iln "re-ask" -- docs/plans` finds the phrase only inside the slice decision, the
@@ -704,32 +784,31 @@ against this slice**, and offered to the lead as a candidate register row if the
 contradicts its own headline.** Seven scope items, all delivered; six findings filed; and
 `migrate()` still aborts.
 
-Recommended to the lead, in order:
+**Five things were recommended to the lead; four are done in this PR and one is deliberately
+left.** Recorded as disposed rather than deleted, so the record shows what was asked and what
+became of it.
 
-1. **Adopt §8's table**, amending any verdict you read differently — in particular F86's owner,
-   which this close is named as the event for, and F89's, which its own row says is yours.
-2. **Correct the register (§5a) and the roadmap (§5b) before merging this record**, so the close
-   does not land beside four rows reading `not started` for work it certifies and a roadmap
-   sentence the slice's own Addendum B already corrected.
-3. **Treat F88 limb 1 as run-blocking, not blinding.** §2 row 5 is a fifth abort point of the
-   same class as F80–F82. The W37-6 re-ask condition *"F80–F82 shown cleared by execution"* is
-   satisfied literally and is no longer sufficient; the honest form of the re-ask says the run
-   still cannot complete.
-4. **Resolve §1 item 3's authority gap** — produce the maintainer's dated line for the exemption,
-   or record that it was taken on the lead's recommendation without one.
-5. **Give the three no-register-row findings in §8 a home** — the 53-file deferral above all,
-   which today survives only in a commit body that cannot be amended.
+| # | Recommended | Disposition |
+|---|---|---|
+| 1 | Adopt §8's table, amending any verdict read differently | **Done** — adopted 2026-09-02 with four amendments, all applied. F86's owner and F89's are the two the lead amended |
+| 2 | Correct the register and the roadmap before merging | **Done in this PR**, on the lead's direction and their reading of the charter boundary (§5) |
+| 3 | Treat F88 limb 1 as run-blocking, not blinding | **Done** — register `:129` reclassified; the headline above states it in the record's own words |
+| 4 | Resolve §1 item 3's authority gap | **Done, and it was the lead's to do.** The maintainer's exemption ruling existed but had never landed as a dated artifact. **#648** files it verbatim, corrects its "63" to 65, and states that the exemption does not by itself let a run proceed. `CLAUDE.md` §12 — a decision lands as a dated artifact, never in chat |
+| 5 | Give the no-register-row findings a home | **Two done, one deliberately owed.** The roadmap and register corrections are made; the 53-file deferral's disposition is accepted (a register row plus a pointer from the active plan) but **the id is not minted here** — see §8's last data row and the reason |
 
-**W37-6 preconditions, collected for whoever plans it** — F87, F88 (limb 1 run-blocking, limb 2
-open), F90, plus the 53-file deferral and its join to the frozen leaf plan's item 13.
+**W37-6 preconditions, collected for whoever plans it** — **F87**, **F88** (limb 1 run-blocking
+and pre-write, limb 2 open), **F90**, plus the 53-file deferral and its join to the frozen leaf
+plan's item 13. **None of the three existed on any prior list**; each was produced by building
+this slice and reading what its own instruments then reported.
 
 ## Sign-off
 
-**Not signed off.** A Slice closes on a clean audit and the lead's merge (`CLAUDE.md` §13); the
-merge and the verdicts are the lead's, and no maintainer acceptance is required for a slice.
+A Slice closes on **a clean audit and the lead's merge** (`CLAUDE.md` §13). No maintainer
+acceptance is required for a slice — that is reserved to a Work, Phase or Project close, and
+saying so here keeps this record from reading as one.
 
 | | |
 |---|---|
 | Audit proposed by | the auditor, 2026-09-02, at `d8d6e3f` |
-| Verdicts adopted by | *(the lead — pending)* |
+| Verdicts adopted by | **the lead, 2026-09-02**, with four amendments — all applied above, each named in the row it changed |
 | Closed by | *(the lead's merge — pending)* |
