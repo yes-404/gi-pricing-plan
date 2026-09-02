@@ -10,8 +10,13 @@ governance data instead of API shapes):
    `parse_header`, plus the row families (`FR`/`NFR`/`DEP`/`OQ` bold ids in spec-style
    tables, `WK`/`SL` fenced blocks under roadmap headings) that `parse_header` cannot reach
    because it parses one whole file's leading front matter, never a record embedded
-   mid-document. Same field grammar throughout (`_docid._parse_...` helpers), never a
-   second one, per this slice's own instruction: "adds no second parser."
+   mid-document. A row block's own grammar is deliberately *local* to this module
+   (`_parse_row_block` below) rather than reaching into `scripts/_docid.py`'s private
+   helpers: only `Header`, `HeaderError`, `parse_header`, `canonical`, `padded`,
+   `family_of`, `is_vendored` and the constants are that module's published surface
+   (this slice's own instruction: "adds no second parser" is about not re-implementing
+   *file-level* front-matter parsing a second, divergent way — `parse_header` still owns
+   that; a row block is a different, smaller grammar `parse_header` cannot reach at all).
 
 2. **The `execution` column** (NT-0019 §1.7) — *derived, never stored*. A `PL-` file's own
    `status:`/`kind:` only ever says `draft | active | superseded | retired`; whether it was
@@ -64,6 +69,7 @@ import importlib.util
 import re
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -76,6 +82,7 @@ sys.modules[_spec.name] = _docid  # dataclasses needs the module in sys.modules
 _spec.loader.exec_module(_docid)
 
 Header = _docid.Header
+HeaderError = _docid.HeaderError
 parse_header = _docid.parse_header
 ID_RE = _docid.ID_RE
 canonical = _docid.canonical
@@ -247,6 +254,66 @@ def _fenced_yaml_blocks(text: str) -> list[tuple[int, int, list[str]]]:
     return blocks
 
 
+# The scalar fields a `WK-`/`SL-` row actually carries — a strict subset of §1.5's full
+# closed field set (no `plans:`, no `supersedes:`, … — those are document-family-only in
+# practice for these two row families). Kept local to this module rather than imported
+# from `scripts/_docid.py`, which exposes no shared row-block parser (verified against
+# W37-2's actual implementation).
+_ROW_FIELDS = frozenset(
+    {"id", "family", "kind", "title", "status", "created", "owner", "phase", "work", "slice"}
+)
+
+
+def _parse_row_block(content: list[str], path: Path, base_lineno: int) -> dict[str, str]:
+    """A minimal, local `key: value` parser for one `WK-`/`SL-` fenced row block. Not
+    shared with `scripts/_docid.py`: that module's published surface is `Header`,
+    `HeaderError`, `parse_header`, `canonical`, `padded`, `family_of`, `is_vendored` and the
+    constants — nothing else is contracted, so this slice does not depend on its internals.
+    """
+    raw: dict[str, str] = {}
+    for offset, line in enumerate(content):
+        if not line.strip():
+            continue
+        lineno = base_lineno + offset
+        key, sep, value = line.partition(":")
+        if not sep:
+            raise HeaderError(f"{path}:{lineno}: not a 'key: value' line: {line!r}")
+        key = key.strip()
+        if key not in _ROW_FIELDS:
+            raise HeaderError(f"{path}:{lineno}: unknown row field {key!r}")
+        if key in raw:
+            raise HeaderError(f"{path}:{lineno}: duplicate row field {key!r}")
+        raw[key] = value.split("#", 1)[0].strip()
+    return raw
+
+
+def _row_header_from_raw(raw: dict[str, str]) -> Header:
+    created_raw = raw.get("created")
+    return Header(
+        id=raw.get("id"),
+        family=raw.get("family", ""),
+        kind=raw.get("kind"),
+        title=raw.get("title", ""),
+        status=raw.get("status", ""),
+        created=date.fromisoformat(created_raw) if created_raw else None,
+        owner=raw.get("owner", ""),
+        phase=raw.get("phase"),
+        work=raw.get("work"),
+        slice_=raw.get("slice"),
+        tree=None,
+        plans=(),
+        supersedes=(),
+        superseded_by=None,
+        corrected_by=(),
+        corrects=None,
+        relates=(),
+        was=None,
+        vendored=False,
+        origin=None,
+        extra={},
+    )
+
+
 def scan_roadmap_rows(path: Path) -> list[Record]:
     """`WK-`/`SL-` rows: each is a heading followed by its own fenced field block (§1.5:
     "as a fenced block under the row's heading"). Phase sections (`## P<n> — ...`) are
@@ -260,10 +327,10 @@ def scan_roadmap_rows(path: Path) -> list[Record]:
     for heading_level, base_lineno, content in _fenced_yaml_blocks(text):
         if heading_level < 3:
             continue  # a `##` phase-section block, not a `###`+ row block
-        raw = _docid.parse_front_matter_block(content, path, base_lineno)
+        raw = _parse_row_block(content, path, base_lineno)
         if "id" not in raw or raw.get("family") not in ("work", "slice"):
             continue
-        header = _docid._build_header(raw, path, base_lineno)
+        header = _row_header_from_raw(raw)
         out.append(Record(header=header, path=path, body="\n".join(content)))
     return out
 
@@ -305,7 +372,7 @@ def scan_phase_sections(path: Path) -> list[PhaseSection]:
             key = key.strip()
             if key not in _PHASE_SECTION_FIELDS:
                 continue
-            raw[key] = _docid._strip_comment(value).strip()
+            raw[key] = value.split("#", 1)[0].strip()
         works_raw = raw.get("works", "")
         works = tuple(w.strip() for w in works_raw.split(",") if w.strip())
         sections.append(
