@@ -3197,7 +3197,7 @@ _AUDIT_CLOSURE_CENSUS_EXCEPTIONS: Final[Mapping[str, Mapping[str, str]]] = {
             "P1b`\"), not to a closure record. `_discover_register` reads only the "
             "top-level `docs/audit/register.md`, so nothing discovers this file today -- "
             "named here so that gap is listed rather than folded into a `CR-`. **Filed as "
-            "`F88` limb 2**, 2026-09-02; this entry is its disposition, not its record"
+            "`F89` limb 2**, 2026-09-02; this entry is its disposition, not its record"
         ),
     },
 }
