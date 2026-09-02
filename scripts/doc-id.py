@@ -1542,15 +1542,108 @@ _PHASE_TEMPLATE: Final = (
 )
 
 
+def _check_roadmap_not_silently_unrecognised(root: Path) -> None:
+    """Task #32: `_discover_roadmap` returning nothing is ambiguous by construction —
+    every `_discover_*` function's idempotency argument (module docstring above) reads
+    "found nothing" as "already migrated", which is only true when something already
+    moved or changed shape. `docs/roadmap.md` never moves and is rewritten in place, so
+    that reading does not hold for it: a roadmap that still has works described in a shape
+    `_discover_roadmap`'s legacy patterns do not recognise looks identical, to this
+    script, to a roadmap with nothing left to convert.
+
+    The one thing that *is* checkable without deciding anything about what the real shape
+    is or how to convert it: post-migration, `docs/roadmap.md` carries `WK-` row headings
+    `scan_roadmap_row_ids` (`_ROADMAP_ROW_RE`, line ~265) can see. So a roadmap file that
+    exists, is non-blank, and has neither a legacy phase section (`_discover_roadmap`
+    returned nothing) nor any `WK-` row already in it (nothing to show step 3 already ran)
+    is not "nothing to do" — it is a shape this script does not recognise, and `migrate`
+    must say so rather than silently report success. Called only from `migrate`'s
+    `roadmap_drafts` branch, so it never runs, and never raises, when discovery succeeded.
+
+    Deliberately does not try to tell "no works exist in the roadmap at all" apart from
+    "works exist but not in a shape this script matches" — doing that from inside this
+    check would mean guessing at the real shape, which is exactly what task #32 says not
+    to do here. A roadmap that is genuinely work-free tripping this is an accepted,
+    fail-safe false positive: a human confirms and moves on, rather than `migrate`
+    silently reporting a conversion that never happened.
+    """
+    roadmap_path = root / "docs" / "roadmap.md"
+    if not roadmap_path.is_file():
+        return
+    if not roadmap_path.read_text(encoding="utf-8").strip():
+        return
+    if any(prefix == "WK" for prefix, _ in scan_roadmap_row_ids(root)):
+        return  # already migrated: WK- rows are step 3's own output, already present
+    raise NotImplementedError(
+        "migrate: docs/roadmap.md exists and is non-blank, but _discover_roadmap found no "
+        "legacy '## Phase <id> — <title>' section, and docs/roadmap.md carries no WK- row "
+        "either. That is not 'nothing to convert' -- it is an unrecognised shape (task "
+        "#32): NT-0019 §4 step 3 requires each existing slice to become an SL- row and "
+        "each existing work a WK- row, and the real roadmap's works do not match the "
+        "legacy shape this script's patterns were built against. Resolving what the real "
+        "shape is and how to convert it is open (task #32); migrate refuses to guess and "
+        "silently report success instead."
+    )
+
+
+def _check_legacy_file_not_silently_unrecognised(
+    path: Path, drafts: list[_Draft], description: str
+) -> None:
+    """The same class of defect `_check_roadmap_not_silently_unrecognised` guards against,
+    for the three legacy files (`closure-records.md`, `plan-reviews.md`, `register.md`)
+    whose own `_discover_*` docstrings already state the property that makes this check
+    *simpler* than the roadmap's: each is "matched only at the exact legacy path", i.e.
+    migrated by moving away from `path` entirely, never rewritten in place. So unlike the
+    roadmap, there is no second signal to check for "already migrated" — `path` no longer
+    existing already *is* that signal, and is handled by the first `return` below. A
+    `path` that still exists and is non-blank therefore has no valid "already migrated"
+    reading at all: zero discovered records from it is unrecognised shape, full stop
+    (confirmed live for `register.md`: `_discover_register` requires a table cell to
+    `fullmatch` bare `F<n>`, and the real file's cells are compound, e.g. `FR-DATA-57
+    (F6)`) — the third instance of the pattern `_check_roadmap_not_silently_unrecognised`'s
+    docstring names.
+    """
+    if not path.is_file():
+        return  # moved away already: correctly read as "already migrated"
+    if not path.read_text(encoding="utf-8").strip():
+        return  # genuinely nothing in it
+    if drafts:
+        return  # discovery found something; nothing ambiguous to flag
+    raise NotImplementedError(
+        f"migrate: {path} exists and is non-blank, but no {description} were recognised "
+        f"in it. That is not 'nothing to convert' -- this script's legacy pattern does not "
+        f"match this file's real shape. Resolving the real shape is open; migrate refuses "
+        f"to guess and silently report success instead."
+    )
+
+
 def _restructure_roadmap(
     root: Path, roadmap_drafts: list[_Draft], phase_id: str, phase_title: str
 ) -> None:
     """NT-0019 §4 step 3: the legacy `## Phase <id> — <title>` / `### <work-key>` /
     `- **<slice-key>**` shape becomes a `## P<n> — <title>` milestone section with a fenced
     field block, each `WK-`/`SL-` a heading carrying its own fenced row block (§1.5) — the
-    exact shape `scripts/doc-index.py`'s `scan_phase_sections`/`scan_roadmap_rows` read
-    (verified by reading that module directly, not inferred from NT-0019 §1.3's own plain,
-    unfenced illustration — see this PR's description for the discrepancy between the two).
+    exact shape `scripts/doc-index.py`'s `scan_phase_sections`/`scan_roadmap_rows` read at
+    the time this was written (verified by reading that module directly, not inferred from
+    NT-0019 §1.3's own plain, unfenced illustration).
+
+    **Ruling 80 has since settled that discrepancy the other way**: the spec's unfenced
+    illustration is right, `scan_phase_sections`'s fence requirement is the defect, and
+    `PHASE.md` — enforced unfenced by `audit-docs.py`'s `_EXPECTED_NO_BLOCK_TEMPLATES`
+    already — settles the real form. So the fenced phase heading this function emits is a
+    known, ruled latent bug (not corrected here): it only runs on discovery finding a
+    legacy phase section (the fixture's), the real roadmap's transform stays deferred
+    (task #32) until `doc-index.py`'s parsers are fixed to match the ruling, and rewriting
+    this function's *output shape* now would mean rebuilding it twice.
+
+    The row block's field set (`id, family, title, status, created, owner, phase, [work]`)
+    is narrower than NT-0019 §1.5's full closed set by construction, not as a workaround:
+    it happens to satisfy `doc-index.py`'s current `_ROW_FIELDS` (Ruling 79: wrong in both
+    directions — rejects `tree:`/`corrected_by:`/`relates:`, wrongly admits `kind:`/
+    `slice:` on a `WK-` row), but that is this function never needing those fields for a
+    freshly-converted row, not a deliberate accommodation of the wrong parser. Widening it
+    once real `WK-`/`SL-` rows need `tree:`/`corrected_by:`/`relates:` will need the parser
+    fix first, same as the fence.
     """
     work_ids = sorted(
         {d.old_token for d in roadmap_drafts if d.prefix == "WK"},
@@ -1672,13 +1765,31 @@ def migrate(root: Path) -> MigrateResult:
     drafts += _discover_notes(root)
     drafts += _discover_adrs(root)
     drafts += _discover_multi_ruling_files(root)
-    drafts += _discover_closure_records(root)
-    drafts += _discover_plan_reviews(root)
+    closure_drafts = _discover_closure_records(root)
+    _check_legacy_file_not_silently_unrecognised(
+        root / "docs" / "audit" / "closure-records.md", closure_drafts, "closure records"
+    )
+    drafts += closure_drafts
+    review_drafts = _discover_plan_reviews(root)
+    _check_legacy_file_not_silently_unrecognised(
+        root / "docs" / "audit" / "plan-reviews.md", review_drafts, "plan reviews"
+    )
+    drafts += review_drafts
     drafts += _discover_plain_plans(root)
     requirement_drafts = _discover_requirements(root)
     roadmap_drafts, phase_id, phase_title = _discover_roadmap(root)
     register_drafts = _discover_register(root)
+    _check_legacy_file_not_silently_unrecognised(
+        root / "docs" / "audit" / "register.md", register_drafts, "register finding rows"
+    )
     drafts += requirement_drafts + roadmap_drafts + register_drafts
+    # Hoisted here to run alongside every other discovery, before any write below: a
+    # malformed vendored manifest's HeaderError must abort migrate cleanly, not after
+    # Phase C's document/roadmap/register writes have already landed on disk (task #34).
+    # `_is_vendored_skill_manifest`'s LICENSE-based detection is still wrong (Ruling 69,
+    # reassigned to W37-6 by Ruling 76) -- this hoist fixes only when the crash happens,
+    # not whether it should have fired at all.
+    vendored_skill_manifests = _discover_vendored_skill_manifests(root)
 
     start = compute_next(root)
     _assign_numbers(drafts, start)
@@ -1689,6 +1800,8 @@ def migrate(root: Path) -> MigrateResult:
         if phase_id is None or phase_title is None:
             raise AssertionError("roadmap drafts found but no phase id/title discovered")
         _restructure_roadmap(root, roadmap_drafts, phase_id, phase_title)
+    else:
+        _check_roadmap_not_silently_unrecognised(root)
 
     register_moved_to: str | None = None
     if register_drafts:
@@ -1734,7 +1847,7 @@ def migrate(root: Path) -> MigrateResult:
     rewritten = _rewrite_citations(root, token_map)
 
     skipped_vendored: list[str] = []
-    for skill_md in _discover_vendored_skill_manifests(root):
+    for skill_md in vendored_skill_manifests:
         header = _stamp_header(
             "REFERENCE", None, kind=None, title=skill_md.parent.name, status="active",
             created=date.today(), owner="maintainer", was=None,
