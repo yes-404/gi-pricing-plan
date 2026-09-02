@@ -37,7 +37,7 @@ import sys
 import tempfile
 import types
 import zipfile
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -1787,6 +1787,348 @@ _PHASE_TEMPLATE: Final = (
 )
 
 
+# ---------------------------------------------------------------------------------------
+# Ruling 83 -- the independent census. A `_discover_*` function's own denominator is its
+# own matcher, so "found nothing" and "found everything" look identical to it (`#585`'s
+# fix for `_discover_closure_records` is exhaustive over its OWN matches and still cannot
+# see a match the matcher never made -- Ruling 83 §1(b)). Every guard below instead counts
+# with a pattern that does not encode the splitter's own expectations, classifies each
+# independently-found unit into exactly one of three buckets -- record, derived body, or a
+# declared exception carrying a reason -- and refuses by NAMING the units left over, never
+# by comparing two counts (a count can agree by coincidence; a named unit cannot).
+# Generalises `_check_roadmap_not_silently_unrecognised`'s own principle (a post-migration
+# marker, not the legacy matcher, decides "nothing to do") from a yes/no into an
+# arithmetic that closes, and reuses `register-lint.py`'s `classified == seen` accounting
+# discipline: walk every independently-found candidate exactly once, into exactly one
+# bucket, so a bug in the reconciliation itself is a loud, immediate error rather than a
+# silent skip.
+# ---------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _CensusUnit:
+    """One candidate unit an independent, splitter-pattern-agnostic count found -- a
+    heading line, a bold requirement marker, or a file. `key` is the identity a caller
+    checks against a record set or an exception mapping; `locator` and `text` are what a
+    refusal message prints, kept separate from `key` so the message never has to be parsed
+    back into an identity.
+    """
+
+    key: str
+    locator: str
+    text: str
+
+
+def _reconcile_census(
+    *,
+    scope: str,
+    units: Sequence[_CensusUnit],
+    records: Collection[str],
+    is_body: Callable[[_CensusUnit], bool] = lambda _unit: False,
+    exceptions: Mapping[str, str] | None = None,
+) -> None:
+    """Ruling 83 §2: classify every independently-counted unit into record / derived body
+    / declared exception, and refuse -- naming the unaccounted units, never a count (§3
+    item 4) -- when any unit is none of the three. `exceptions` must carry a non-empty
+    reason for every key present: an entry with a blank reason is refused outright rather
+    than silently read as "still a valid exception" (§4's second mutation).
+    """
+    exceptions = exceptions or {}
+    blank = sorted(key for key, reason in exceptions.items() if not reason.strip())
+    if blank:
+        raise ValueError(
+            f"{scope}: declared exception(s) with no reason: {blank} -- a bucket-3 entry "
+            "must carry a reason string (Ruling 83 §3 item 3); one with none is a defect "
+            "in the fix, not a legitimate exception"
+        )
+    unaccounted = [
+        unit
+        for unit in units
+        if unit.key not in records and unit.key not in exceptions and not is_body(unit)
+    ]
+    if not unaccounted:
+        return
+    named = "\n".join(f"  - {u.locator}: {u.text}" for u in unaccounted)
+    raise NotImplementedError(
+        f"migrate: {scope} -- {len(unaccounted)} unit(s) an independent census found are "
+        "neither a produced record, a derived body line, nor a declared exception "
+        f"(Ruling 83):\n{named}\nmigrate refuses to guess and silently report success "
+        "instead."
+    )
+
+
+# Named distinctly from #602's own module-level `_ANY_HEADING_RE` (used by
+# `_check_plan_reviews_heading_census` above) to avoid a silent duplicate-definition
+# collision -- the two landed independently and are not byte-identical.
+_CENSUS_ANY_HEADING_RE: Final = re.compile(r"^(#{1,6})[ \t]+(\S.*?)\s*$", re.MULTILINE)
+
+
+def _heading_census_units(text: str, locator_prefix: str) -> list[tuple[int, _CensusUnit]]:
+    """Every markdown heading in `text`, matched only on `^#{1,6}` -- a level-independent
+    pattern that encodes no one splitter's expectations (Ruling 83 §2's own words: "for a
+    heading-split file, every heading at any level"). Returns `(start_offset, unit)` pairs
+    in document order.
+    """
+    out: list[tuple[int, _CensusUnit]] = []
+    for m in _CENSUS_ANY_HEADING_RE.finditer(text):
+        line_no = text.count("\n", 0, m.start()) + 1
+        unit = _CensusUnit(
+            key=str(m.start()), locator=f"{locator_prefix}:{line_no}", text=m.group(0).strip()
+        )
+        out.append((m.start(), unit))
+    return out
+
+
+def _record_spans(record_starts: Collection[int], text_len: int) -> list[tuple[int, int]]:
+    """`[start, end)` for every record, the same "up to the next one, or EOF" shape every
+    `_discover_*` heading-splitter already uses to slice a record's own body.
+    """
+    ordered = sorted(record_starts)
+    return [
+        (start, ordered[i + 1] if i + 1 < len(ordered) else text_len)
+        for i, start in enumerate(ordered)
+    ]
+
+
+def _is_within_or_before_a_record(start: int, spans: Sequence[tuple[int, int]]) -> bool:
+    """Bucket 2 for a heading-split file: nested inside an established record's own body
+    (below the split level, or a record's own internal sub-heading), or preamble before
+    the first record -- both fold into a record's body by construction, per every
+    `_discover_*` heading-splitter's own docstring ("preamble ... is prepended to the
+    first split record's body").
+    """
+    if any(span_start <= start < span_end for span_start, span_end in spans):
+        return True
+    return bool(spans) and start < min(span_start for span_start, _ in spans)
+
+
+def _check_heading_split_not_silently_unrecognised(
+    locator_prefix: str, text: str, heading_re: re.Pattern[str], *, scope: str
+) -> None:
+    """Ruling 83's census for one dedicated heading-split file (`_discover_headed_split_
+    file`'s shape: the file's *entire* structure is either a record, that record's own
+    nested content, or the file's leading preamble -- nothing else is going on in it, so
+    the fully generic `^#{1,6}` census from `_heading_census_units` is safe here without
+    the word-anchoring `_check_multi_ruling_files_not_silently_unrecognised` needs for a
+    directory of otherwise-unrelated documents).
+    """
+    headings = _heading_census_units(text, locator_prefix)
+    record_starts = {m.start() for m in heading_re.finditer(text)}
+    spans = _record_spans(record_starts, len(text))
+    units = [unit for _start, unit in headings]
+    _reconcile_census(
+        scope=scope,
+        units=units,
+        records={str(s) for s in record_starts},
+        is_body=lambda u: _is_within_or_before_a_record(int(u.key), spans),
+    )
+
+
+def _check_headed_split_file_not_silently_unrecognised(
+    root: Path, rel_path: str, heading_re: re.Pattern[str], description: str
+) -> None:
+    """Task #30/#31 (Ruling 83's census), for `_discover_headed_split_file`'s shape
+    (`plan-reviews.md` today; `closure-records.md` has its own discovery function and its
+    own disposition logic -- Ruling 84 territory, not this one). Mirrors `_check_legacy_
+    file_not_silently_unrecognised`'s early returns: a moved-away or genuinely blank file
+    has nothing to reconcile. Runs *alongside*, not instead of, that existing "zero total"
+    guard -- this one closes the arithmetic; that one still catches a file moved to an
+    unexpected new location returning zero drafts outright.
+    """
+    path = root / rel_path
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    if not text.strip():
+        return
+    _check_heading_split_not_silently_unrecognised(
+        rel_path, text, heading_re, scope=f"{rel_path} ({description})"
+    )
+
+
+_CENSUS_ANY_RULING_HEADING_RE: Final = re.compile(
+    r"^#{1,6}[ \t]+Ruling[ \t]+\S.*$", re.MULTILINE
+)
+
+
+def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
+    """Task #31 (Ruling 83's census) for `_discover_multi_ruling_files`.
+    `_RULING_HEADING_RE` assumes every ruling heading is written `## Ruling <digits>`; the
+    real corpus carries some that are not (Ruling 83 §1(c)): a handful of files title
+    themselves `# Ruling <n>` at h1 depth, and one file carries `### Ruling A1`/`A2`/`A3`
+    sub-headings, whose letter suffixes `_RULING_HEADING_RE`'s `(\\d+)` cannot match.
+
+    The independent unit-finder is anchored on the literal word "Ruling" (any heading
+    level, any suffix) rather than the fully generic `^#{1,6}`
+    `_check_heading_split_not_silently_unrecognised` uses for a *dedicated* single-purpose
+    file: unlike `plan-reviews.md`, `docs/plans/` holds many files with their own,
+    unrelated section structure (`## 1. The maintainer's instructions`, ...), which a fully
+    generic heading census would wrongly sweep in as unaccounted.
+
+    A file whose *only* such heading is also the file's own first heading is a single-
+    ruling document -- Ruling 83's "Not ruled" section states as settled fact that "one
+    ruling per file" means the multi-ruling splitter should not be reading it at all, and
+    this is that fact checked structurally (derived, not a maintained list of filenames)
+    rather than asserted. Everything else that says "Ruling" and is not one of `_RULING_
+    HEADING_RE`'s own matches -- `Ruling A1`/`A2`/`A3` included -- is named as unaccounted:
+    their disposition is a family/id-form question routed to the planner (Ruling 83 "Not
+    ruled"), and this census correctly cannot clear while they are unclassified.
+    """
+    plans_dir = root / "docs" / "plans"
+    if not plans_dir.is_dir():
+        return
+    for path in sorted(plans_dir.glob("*.md")):
+        if _PLAN_FILENAME_RE.match(path.name) is None:
+            continue
+        text = path.read_text(encoding="utf-8")
+        loose = list(_CENSUS_ANY_RULING_HEADING_RE.finditer(text))
+        if not loose:
+            continue  # not remotely ruling-shaped -- `_discover_plain_plans`'s concern
+        first_heading = _CENSUS_ANY_HEADING_RE.search(text)
+        if (
+            len(loose) == 1
+            and first_heading is not None
+            and first_heading.start() == loose[0].start()
+        ):
+            continue  # one ruling, titling its own file -- settled, not a defect (above)
+        rel = path.relative_to(root).as_posix()
+        record_starts = {m.start() for m in _RULING_HEADING_RE.finditer(text)}
+        spans = _record_spans(record_starts, len(text))
+        units = [
+            _CensusUnit(
+                key=str(m.start()),
+                locator=f"{rel}:{text.count(chr(10), 0, m.start()) + 1}",
+                text=m.group(0).strip(),
+            )
+            for m in loose
+        ]
+        _reconcile_census(
+            scope=f"{rel} (multi-ruling headings)",
+            units=units,
+            records={str(s) for s in record_starts},
+            is_body=lambda u, spans=spans: _is_within_or_before_a_record(int(u.key), spans),
+        )
+
+
+_CENSUS_DEP_BARE_RE: Final = re.compile(r"\*\*DEP-([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)\*\*")
+
+
+def _check_requirements_not_silently_unrecognised(root: Path) -> None:
+    """Task #30 (Ruling 83's census) for `_discover_requirements`, the only discovery
+    function that shipped with no guard at all. `_LEGACY_SPEC_BOLD_RE` assumes every
+    legacy requirement id carries a module code between the prefix and the number
+    (`**FR-DATA-12**`); `docs/specs/00-overview.md`'s `DEP-1`, `DEP-1a`, `DEP-2`, `DEP-3`
+    are real, module-spec-defined dependency rules that never carry one -- confirmed
+    empirically (zero `DEP` occurrences anywhere in `docs/specs/*.md` carry a module code),
+    and invisible to every count built on that assumption, `docs/notes/0019-one-id-per-
+    document.md`'s own acceptance-criteria greps included.
+
+    The census here is deliberately narrower than "every bold span starting with a
+    prefix": it drops only the module-code assumption (via `_CENSUS_DEP_BARE_RE`, `DEP`
+    only -- see below for why not the other three), keeping the one genuinely structural
+    signal a definition marker has and a reference does not -- the bold span closes right
+    after the id, nothing else inside it. That is why a dated-amendment sentence like
+    `**FR-OVR-20 says so twelve rows above this one**` (real corpus text) is never a
+    census candidate at all -- the bold span does not close after the id -- while
+    `**DEP-1a**` is.
+
+    Scoped to `DEP` only, not all four prefixes: measured directly, broadening `FR`/`NFR`/
+    `OQ` the same module-optional way finds zero additional real units in this corpus, and
+    the post-migration form for those three is module-less (`**FR-<n>**`) -- broadening
+    them would make this guard fire on `migrate`'s own second-run output and break
+    idempotency. `DEP` carries no such collision: it is not recognised by `_discover_
+    requirements` at all today, so it has no post-migration, module-less form to collide
+    with yet.
+    """
+    specs_dir = root / "docs" / "specs"
+    if not specs_dir.is_dir():
+        return
+    for path in sorted(specs_dir.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        rel = path.relative_to(root).as_posix()
+        records = {str(m.start()) for m in _LEGACY_SPEC_BOLD_RE.finditer(text)}
+        units = []
+        for m in itertools.chain(
+            _LEGACY_SPEC_BOLD_RE.finditer(text), _CENSUS_DEP_BARE_RE.finditer(text)
+        ):
+            line_no = text.count("\n", 0, m.start()) + 1
+            units.append(
+                _CensusUnit(key=str(m.start()), locator=f"{rel}:{line_no}", text=m.group(0))
+            )
+        _reconcile_census(scope=f"{rel} (requirement ids)", units=units, records=records)
+
+
+def _check_plain_plans_not_silently_unrecognised(root: Path) -> None:
+    """Task #31 (Ruling 83's census) for `_discover_plain_plans`'s file-population shape:
+    every file directly under `docs/plans/` -- not gated by `_PLAN_FILENAME_RE`'s own
+    dated-filename assumption -- must become a plain-plan record, be derived as a multi-
+    ruling file (`_discover_multi_ruling_files`'s own concern, computed the same way that
+    function itself decides it), already carry a canonical post-migration filename (an
+    idempotency/second-run reading, checked positively via `_docid.ID_RE` rather than "the
+    legacy pattern found nothing" -- the fixture-corpus assumption Ruling 83 rejects), or
+    be a declared exception. `docs/plans/README.md` is the one file this corpus carries
+    that is none of the first three.
+    """
+    plans_dir = root / "docs" / "plans"
+    if not plans_dir.is_dir():
+        return
+    units = []
+    records: set[str] = set()
+    for path in sorted(p for p in plans_dir.iterdir() if p.is_file()):
+        key = path.name
+        units.append(_CensusUnit(key=key, locator=f"docs/plans/{key}", text=key))
+        if _PLAN_FILENAME_RE.match(path.name) is None:
+            continue
+        text = path.read_text(encoding="utf-8")
+        if _RULING_HEADING_RE.search(text):
+            continue  # derived: a multi-ruling file, a different function's own record
+        records.add(key)
+
+    def is_already_canonical(unit: _CensusUnit) -> bool:
+        return _docid.ID_RE.match(unit.key) is not None
+
+    _reconcile_census(
+        scope="docs/plans/ (plain plans)",
+        units=units,
+        records=records,
+        is_body=is_already_canonical,
+        exceptions={"README.md": "the directory's own README, not a dated record"},
+    )
+
+
+def _check_flat_document_directory_not_silently_unrecognised(
+    root: Path, rel_dir: str, title_re: re.Pattern[str], description: str,
+    exceptions: Mapping[str, str],
+) -> None:
+    """Task #31 (Ruling 83's census) for `_discover_notes`/`_discover_adrs`'s shared
+    skip-path: "found nothing" there is read as "already migrated" purely because the
+    legacy title regex found no match -- the exact fixture-corpus assumption Ruling 83
+    rejects for `_discover_closure_records`, applied here to a directory instead of a
+    heading. Every file directly under `rel_dir` must carry the legacy title, already be
+    in a canonical post-migration filename shape (checked positively, the same idempotency
+    reading `_check_plain_plans_not_silently_unrecognised` uses), or be a declared
+    exception -- `<rel_dir>/README.md` in both `docs/notes/` and `docs/adr/` today.
+    """
+    directory = root / rel_dir
+    if not directory.is_dir():
+        return
+    units = []
+    records: set[str] = set()
+    for path in sorted(p for p in directory.iterdir() if p.is_file()):
+        key = path.name
+        units.append(_CensusUnit(key=key, locator=f"{rel_dir}/{key}", text=key))
+        if path.suffix == ".md" and title_re.search(path.read_text(encoding="utf-8")):
+            records.add(key)
+
+    def is_already_canonical(unit: _CensusUnit) -> bool:
+        return _docid.ID_RE.match(unit.key) is not None
+
+    _reconcile_census(
+        scope=f"{rel_dir}/ ({description})",
+        units=units, records=records, is_body=is_already_canonical, exceptions=exceptions,
+    )
+
+
 def _check_roadmap_not_silently_unrecognised(root: Path) -> None:
     """Task #32: `_discover_roadmap` returning nothing is ambiguous by construction —
     every `_discover_*` function's idempotency argument (module docstring above) reads
@@ -2018,9 +2360,21 @@ def migrate(root: Path) -> MigrateResult:
     warnings: list[str] = []
 
     drafts: list[_Draft] = []
-    drafts += _discover_notes(root)
-    drafts += _discover_adrs(root)
-    drafts += _discover_multi_ruling_files(root)
+    notes_drafts = _discover_notes(root)
+    _check_flat_document_directory_not_silently_unrecognised(
+        root, "docs/notes", _NOTE_TITLE_RE, "notes",
+        {"README.md": "the directory's own README, not a governed note"},
+    )
+    drafts += notes_drafts
+    adr_drafts = _discover_adrs(root)
+    _check_flat_document_directory_not_silently_unrecognised(
+        root, "docs/adr", _ADR_TITLE_RE, "ADRs",
+        {"README.md": "the directory's own README, not a governed ADR"},
+    )
+    drafts += adr_drafts
+    multi_ruling_drafts = _discover_multi_ruling_files(root)
+    _check_multi_ruling_files_not_silently_unrecognised(root)
+    drafts += multi_ruling_drafts
     closure_drafts = _discover_closure_records(root)
     _check_legacy_file_not_silently_unrecognised(
         root / "docs" / "audit" / "closure-records.md", closure_drafts, "closure records"
@@ -2030,10 +2384,20 @@ def migrate(root: Path) -> MigrateResult:
     _check_legacy_file_not_silently_unrecognised(
         root / "docs" / "audit" / "plan-reviews.md", review_drafts, "plan reviews"
     )
+    # Both guards kept, deliberately: #602's own bespoke, file-specific census
+    # (_check_plan_reviews_heading_census) and this slice's shared, reusable mechanism
+    # cover the same file with overlapping but independently-derived logic. Reported to
+    # the lead as a collision rather than silently reconciled -- see the PR body.
     _check_plan_reviews_heading_census(root)
+    _check_headed_split_file_not_silently_unrecognised(
+        root, "docs/audit/plan-reviews.md", _REVIEW_HEADING_RE, "plan reviews"
+    )
     drafts += review_drafts
-    drafts += _discover_plain_plans(root)
+    plain_plan_drafts = _discover_plain_plans(root)
+    _check_plain_plans_not_silently_unrecognised(root)
+    drafts += plain_plan_drafts
     requirement_drafts = _discover_requirements(root)
+    _check_requirements_not_silently_unrecognised(root)
     roadmap_drafts, phase_id, phase_title = _discover_roadmap(root)
     register_drafts = _discover_register(root)
     _check_legacy_file_not_silently_unrecognised(
