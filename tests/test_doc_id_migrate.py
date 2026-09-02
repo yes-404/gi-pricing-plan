@@ -818,14 +818,24 @@ def test_roadmap_restructure_is_readable_by_doc_index(
     corpus = doc_index.build_corpus(pristine_a / "docs")
     families = sorted(h.family for h in corpus.headers())
     assert families.count("work") == 1
-    assert families.count("slice") == 2
+    # No slice ever exists as a row or a bullet in the real corpus (Ruling 83 §1(g)), so
+    # the fixture carries none either — this replaces a `== 2` from the fixture's former,
+    # invented `- **<slice-key>**` bullet shape.
+    assert families.count("slice") == 0
     phases = doc_index.scan_phase_sections(pristine_a / "docs" / "roadmap.md")
     assert len(phases) == 1
     assert phases[0].phase == "P1a"
-    assert phases[0].works == ("WK-17",)
+    assert len(phases[0].works) == 1
+    assert phases[0].works[0].startswith("WK-")
 
 
-_UNRECOGNISED_ROADMAP_TEXT = (
+# Fed only to `_check_roadmap_not_silently_unrecognised` directly below, never through
+# `migrate` — under the real-shape fix both ids in this text now convert cleanly (`W1`
+# active, `W2` closed per Ruling 90), so it is no longer "unrecognised" in the discovery
+# sense. Kept for the guard-isolation tests, which do not call `_discover_roadmap` at all
+# and so do not care whether the text is convertible — only whether `docs/roadmap.md`
+# carries a `WK-` row is what that guard itself asks.
+_GUARD_TEST_ROADMAP_TEXT = (
     "# Roadmap\n\n"
     "## 6. Phase 1 — split into 1a and 1b\n\n"
     "#### Phase 1a status\n\n"
@@ -833,6 +843,15 @@ _UNRECOGNISED_ROADMAP_TEXT = (
     "|---|---|---|\n"
     "| **W1** | Repo foundations | open |\n"
     "| ~~**W2**~~ ✔ | Platform core | closed |\n"
+)
+
+# Genuinely unrecognised: no `Phase <label>` heading and no `**W<n>**`-shaped leading
+# cell anywhere, so `_scan_roadmap_rows` finds nothing and `_discover_roadmap` returns
+# `([], {}, [])` exactly as it does for a file `_ROADMAP_WORK_ROW_RE` cannot read at all
+# — the one case that still reaches `_check_roadmap_not_silently_unrecognised` through
+# `migrate` now that every recognised id converts (Rulings 90-92).
+_TRULY_UNRECOGNISED_ROADMAP_TEXT = (
+    "# Roadmap\n\nSome free-form prose with no phase heading and no work row at all.\n"
 )
 
 
@@ -852,7 +871,7 @@ def test_roadmap_guard_raises_on_a_non_empty_unrecognised_roadmap(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "roadmap.md").write_text(_UNRECOGNISED_ROADMAP_TEXT, encoding="utf-8")
+    (tmp_path / "docs" / "roadmap.md").write_text(_GUARD_TEST_ROADMAP_TEXT, encoding="utf-8")
     with pytest.raises(NotImplementedError, match="unrecognised shape"):
         doc_id_cli._check_roadmap_not_silently_unrecognised(tmp_path)
 
@@ -874,13 +893,13 @@ def test_roadmap_guard_is_silent_on_a_blank_roadmap(
 def test_roadmap_guard_is_silent_once_a_wk_row_is_already_present(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """The same unrecognised-shaped prose as the raising test above, but with one `WK-`
-    row heading already present — the signal `migrate`'s own step 3 leaves behind, so this
+    """The same guard-test prose as the raising test above, but with one `WK-` row
+    heading already present — the signal `migrate`'s own step 3 leaves behind, so this
     reads as "already migrated", not "unrecognised". Proves the guard is not just "does
     the legacy pattern fail to match" in disguise.
     """
     (tmp_path / "docs").mkdir()
-    text = _UNRECOGNISED_ROADMAP_TEXT + "\n### WK-1201 — Batch frame contract\n"
+    text = _GUARD_TEST_ROADMAP_TEXT + "\n### WK-1201 — Batch frame contract\n"
     (tmp_path / "docs" / "roadmap.md").write_text(text, encoding="utf-8")
     doc_id_cli._check_roadmap_not_silently_unrecognised(tmp_path)
 
@@ -888,13 +907,16 @@ def test_roadmap_guard_is_silent_once_a_wk_row_is_already_present(
 def test_migrate_raises_via_the_roadmap_guard_on_a_real_shaped_tree(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
-    """End-to-end: overwrite the fixture's own (recognisable) roadmap with the
-    unrecognised-shaped text and confirm `migrate` itself raises through the guard, rather
-    than silently completing steps 1/2/4-7 and reporting success on step 3. Every other
-    fixture file is untouched, so this isolates the roadmap change from the rest of the
-    corpus this same file's other tests already prove correct.
+    """End-to-end: overwrite the fixture's own (recognisable) roadmap with text
+    `_scan_roadmap_rows` finds nothing in at all (no phase heading, no leading work-id
+    row) and confirm `migrate` itself raises through the guard, rather than silently
+    completing steps 1/2/4-7 and reporting success on step 3. Every other fixture file is
+    untouched, so this isolates the roadmap change from the rest of the corpus this same
+    file's other tests already prove correct.
     """
-    (pristine_a / "docs" / "roadmap.md").write_text(_UNRECOGNISED_ROADMAP_TEXT, encoding="utf-8")
+    (pristine_a / "docs" / "roadmap.md").write_text(
+        _TRULY_UNRECOGNISED_ROADMAP_TEXT, encoding="utf-8"
+    )
     with pytest.raises(NotImplementedError, match="unrecognised shape"):
         doc_id_cli.migrate(pristine_a)
 
@@ -911,6 +933,168 @@ def test_roadmap_restructure_is_unaffected_by_the_guard(
     assert result is not None
     restructured = (pristine_a / "docs" / "roadmap.md").read_text(encoding="utf-8")
     assert "WK-" in restructured
+
+
+# ---------------------------------------------------------------------------------------
+# Rulings 90-92 (`docs/plans/2026-09-02-w37-roadmap-transform-rulings.md`): all 41 real
+# work ids convert. Ruling 90 (a closed work converts, `status: closed`, from the Status
+# cell, never the decoration), Ruling 91 (a multi-row work's rows merge into one, its
+# body preserving every source row's text labelled by table, and its rows' status cells
+# must agree or `migrate` refuses) and Ruling 92 (`W6` converts, `status: retired`, body
+# naming `W6a`/`W6b`) each get a fixture-level test below; the real-corpus tests further
+# down prove the same properties against `docs/roadmap.md` itself.
+# ---------------------------------------------------------------------------------------
+
+
+def test_a_closed_single_row_work_converts_with_status_closed(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 90: a work recorded as closed converts, `status: closed`, read from the
+    Status cell's own bolded word — never inferred from the `~~...~~`/`✔` decoration
+    alone (this fixture omits the checkmark on purpose, to prove the cell text, not the
+    strikethrough, is what is read).
+    """
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "_templates").mkdir()
+    for name in ("WK.md", "SL.md"):
+        (tmp_path / "docs" / "_templates" / name).write_text(
+            (ROOT / "docs" / "_templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    (tmp_path / "docs" / "roadmap.md").write_text(
+        "# Roadmap\n\n"
+        "## 1. Phase 1a — Example workbench\n\n"
+        "| WS | Scope | Status |\n"
+        "|---|---|---|\n"
+        "| ~~**W1**~~ | Example workstream | **Closed 2026-08-14** |\n",
+        encoding="utf-8",
+    )
+    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(tmp_path)
+    assert len(drafts) == 1
+    assert drafts[0].status == "closed"
+    doc_id_cli._restructure_roadmap(tmp_path, drafts, phase_titles, occurrences)
+    restructured = (tmp_path / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    assert "status: closed" in restructured
+
+
+_MULTI_ROW_MERGE_ROADMAP_TEXT = (
+    "# Roadmap\n\n"
+    "## 1. Phase 1a — Example workbench\n\n"
+    "| WS | Scope | Status |\n"
+    "|---|---|---|\n"
+    "| **W1** | Example workstream, plan-table wording | **Closed 2026-08-14** — the "
+    "pointer fragment |\n"
+    "\n"
+    "### Workstreams\n\n"
+    "| # | Workstream | Notes |\n"
+    "|---|---|---|\n"
+    "| ~~**W1**~~ ✔ | Example workstream, status-table wording | **Closed 2026-08-14** "
+    "— the delivery-breakdown fragment |\n"
+    "\n"
+    "### Original scope\n\n"
+    "| # | Workstream | Notes |\n"
+    "|---|---|---|\n"
+    "| ~~**W1**~~ ✔ | Example workstream, historical wording | **Closed 2026-08-14** — "
+    "the scope-figure fragment |\n"
+)
+
+
+def test_a_multi_row_work_merges_into_one_row_with_every_fragment_in_the_body(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 91 obligation 2, `W5`'s own shape reproduced at fixture scale: three source
+    rows for one id, agreeing on status, each carrying a distinct fragment of prose. The
+    violation Ruling 91 acceptance names directly: *"a merge that keeps one cell and
+    drops the rest"* — so this asserts all three fragments are present, not that the body
+    is merely non-empty, which a merge keeping only the richest cell would also satisfy.
+    """
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "_templates").mkdir()
+    for name in ("WK.md", "SL.md"):
+        (tmp_path / "docs" / "_templates" / name).write_text(
+            (ROOT / "docs" / "_templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    (tmp_path / "docs" / "roadmap.md").write_text(
+        _MULTI_ROW_MERGE_ROADMAP_TEXT, encoding="utf-8"
+    )
+    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(tmp_path)
+    assert len(drafts) == 1  # 41 ids in, 41 WK- rows out -- one work, one row, merged
+    assert drafts[0].old_token == "W1"
+    assert drafts[0].status == "closed"
+    for fragment in ("pointer fragment", "delivery-breakdown fragment", "scope-figure fragment"):
+        assert fragment in drafts[0].body, f"missing {fragment!r} in merged body"
+    doc_id_cli._restructure_roadmap(tmp_path, drafts, phase_titles, occurrences)
+    restructured = (tmp_path / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    assert restructured.count("### WK-") == 1  # never several rows for one id
+    for fragment in ("pointer fragment", "delivery-breakdown fragment", "scope-figure fragment"):
+        assert fragment in restructured
+
+
+def test_a_status_conflict_across_a_works_rows_refuses_naming_the_work(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 91 obligation 1 and its own acceptance item: *"a fixture in which one
+    work's two rows carry different status words must make migrate refuse, naming the
+    work"* — never pick the first, the last, or the richest row.
+    """
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "roadmap.md").write_text(
+        "# Roadmap\n\n"
+        "## 1. Phase 1a — Example workbench\n\n"
+        "| WS | Scope | Status |\n"
+        "|---|---|---|\n"
+        "| **W1** | Example workstream | **Active** |\n"
+        "\n"
+        "### Workstreams\n\n"
+        "| # | Workstream | Notes |\n"
+        "|---|---|---|\n"
+        "| ~~**W1**~~ ✔ | Example workstream | **Closed 2026-08-14** |\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match="W1") as excinfo:
+        doc_id_cli._discover_roadmap(tmp_path)
+    assert "disagree on status" in str(excinfo.value)
+
+
+def test_a_table_emptied_by_conversion_is_removed_and_a_mixed_table_keeps_its_other_rows(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 91 obligation 3: a source table is not silently deleted, but nor is an
+    emptied one left as a header-only husk once every data row it had was a work row —
+    the removal itself is the diff hunk that accounts for it. A table mixing work rows
+    with others (an "Exit demo"-shaped non-work row here) keeps the others.
+    """
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "_templates").mkdir()
+    for name in ("WK.md", "SL.md"):
+        (tmp_path / "docs" / "_templates" / name).write_text(
+            (ROOT / "docs" / "_templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    (tmp_path / "docs" / "roadmap.md").write_text(
+        "# Roadmap\n\n"
+        "## 1. Phase 1a — Example workbench\n\n"
+        "| WS | Scope | Status |\n"
+        "|---|---|---|\n"
+        "| **W1** | Example workstream | active |\n"
+        "\n"
+        "A fully-work-row table sits directly above; a mixed one follows.\n"
+        "\n"
+        "#### Phase 1a status\n\n"
+        "| WS | Scope | Status |\n"
+        "|---|---|---|\n"
+        "| **W1** | Example workstream | active |\n"
+        "| ~~**Exit demo**~~ ✔ | Not a work row | ✔ **accepted 2026-08-15** |\n",
+        encoding="utf-8",
+    )
+    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(tmp_path)
+    doc_id_cli._restructure_roadmap(tmp_path, drafts, phase_titles, occurrences)
+    restructured = (tmp_path / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    # The fully-work-row table (the first one) is gone -- header included.
+    assert "| WS | Scope | Status |" not in restructured or restructured.count(
+        "| WS | Scope | Status |"
+    ) == 1
+    # The mixed table's non-work row survives, and its own header is still present.
+    assert "Exit demo" in restructured
+    assert "#### Phase 1a status" in restructured
 
 
 # ---------------------------------------------------------------------------------------
@@ -1030,9 +1214,10 @@ def test_redirects_csv_records_every_old_id_and_path(
     with (pristine_a / "docs" / "REDIRECTS.csv").open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
     old_ids = {row["old_id"] for row in rows if row["old_id"]}
-    expected = {
-        "NT-0001", "ADR-0001", "Ruling 1", "Ruling 2", "F1", "F2", "W1", "W1-1", "W1-2",
-    }
+    # No slice ever exists as a row or a bullet in the real corpus (Ruling 83 §1(g)), so
+    # the fixture no longer carries "W1-1"/"W1-2" — it used to, under the fixture's
+    # former, invented `- **<slice-key>**` bullet shape.
+    expected = {"NT-0001", "ADR-0001", "Ruling 1", "Ruling 2", "F1", "F2", "W1"}
     assert expected <= old_ids
     # Every row that names an old_path also names a new_path (never a dangling redirect).
     assert all((not row["old_path"]) or row["new_path"] for row in rows)
@@ -1811,3 +1996,218 @@ def test_migrate_raises_via_the_flat_document_directory_guard(
     )
     with pytest.raises(NotImplementedError, match=re.escape(mystery_filename)):
         doc_id_cli.migrate(pristine_a)
+
+
+# ---------------------------------------------------------------------------------------
+# W37-6 outstanding obligations rows 2 and 3 (task #32 and its register sibling), against
+# the real `docs/roadmap.md` and `docs/audit/register.md` — not a fixture. "A control
+# written against a simplified fixture ... goes green because of what it misses." The
+# corpus grows and is edited, so these assert **properties** (every real row is
+# accounted for by an independent count; the real narrative survives the restructure),
+# never a specific figure a future edit would silently falsify. `ROOT`, defined at the
+# top of this file, is this repository's own checkout; every test below copies what it
+# needs into `tmp_path` first and never writes to `ROOT` itself.
+# ---------------------------------------------------------------------------------------
+
+
+def _naive_leading_work_ids(text: str) -> list[str]:
+    """An independent re-derivation of `_scan_roadmap_rows`' leading-cell id, by plain
+    string operations rather than `_ROADMAP_WORK_ROW_RE` — Ruling 83's own principle
+    ("a census counted with the pattern you split with closes trivially and proves
+    nothing") applied to this test: the denominator below must not be the thing under
+    test. Deliberately cruder than the production regex (no phase tracking, no status
+    text extraction) — it only has to agree on *which lines carry a work id*.
+    """
+    ids = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cell = line[1:].split("|", 1)[0].strip()
+        cell = cell.removeprefix("~~").strip()
+        if not cell.startswith("**W"):
+            continue
+        close = cell.find("**", 2)
+        if close == -1:
+            continue
+        token = cell[2:close]
+        if re.fullmatch(r"W\d+[a-z]?", token):
+            ids.append(token)
+    return ids
+
+
+def test_roadmap_census_matches_an_independently_derived_row_count_on_the_real_tree(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The positive control the real corpus already supplies (W37-6 outstanding
+    obligations row 2): before this fix, `_discover_roadmap` found nothing at all against
+    `docs/roadmap.md` (all three legacy patterns matched zero times — Ruling 80's
+    Correction section). After it, `_scan_roadmap_rows` must find *every* leading work-id
+    row a wholly independent re-derivation also finds — a property that holds regardless
+    of how many rows the file carries on the day this runs, unlike a hard-coded count.
+    """
+    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    occurrences = doc_id_cli._scan_roadmap_rows(text)
+    assert sorted(o.work_id for o in occurrences) == sorted(_naive_leading_work_ids(text))
+    assert len(occurrences) > 1  # non-vacuous
+
+
+def test_discover_roadmap_converts_every_real_id_with_none_left_over(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Rulings 90-92: every distinct id the census finds becomes exactly one `WK-` draft
+    — the property Ruling 90 acceptance states directly ("41 work ids in, 41 WK- rows
+    out... a conversion that silently drops a partition" is the violation) — asserted
+    against the independently-derived id set above, never a hard-coded "41", so a future
+    edit to `docs/roadmap.md` cannot make this test stale by adding or closing a work.
+    """
+    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    expected_ids = set(_naive_leading_work_ids(text))
+    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(ROOT)
+    assert {d.old_token for d in drafts} == expected_ids
+    assert len(drafts) == len(expected_ids)  # no id produced twice
+    assert set(phase_titles) >= {d.phase[1:] for d in drafts if d.phase}
+    assert occurrences  # the full census is returned too, for the restructure below
+
+
+def _copy_roadmap_and_templates(dest: pathlib.Path) -> None:
+    dest_docs = dest / "docs"
+    dest_docs.mkdir(parents=True, exist_ok=True)
+    (dest_docs / "roadmap.md").write_text(
+        (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    templates_dir = dest_docs / "_templates"
+    templates_dir.mkdir()
+    for name in ("WK.md", "SL.md"):
+        (templates_dir / name).write_text(
+            (ROOT / "docs" / "_templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+
+
+def test_restructure_roadmap_preserves_the_narrative_on_the_real_tree(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The check the lead asked for by name: not only that the real tree's works convert,
+    but that the 700-odd lines of narrative, decision gates and sizing this function used
+    to overwrite wholesale still exist afterwards. A test that only checked the converted
+    rows would pass just as well against the old full-file-stub `_restructure_roadmap` —
+    that is the exact defect this rewrite exists to remove (`_restructure_roadmap`'s own
+    docstring: "the moment discovery recognises the real shape, the old body destroys the
+    other ~700 lines of this file... the first time migrate runs against the real tree").
+
+    Anchored on `## 10. Decision gates` onward, because nothing above that heading is
+    itself a target of this transform's surgery (`_restructure_roadmap` only ever edits a
+    `Phase <label> — <title>` heading and a leading work-id row's own table) — so this
+    span must survive **byte for byte**, not merely "contain some familiar words".
+    """
+    _copy_roadmap_and_templates(tmp_path)
+    original = (tmp_path / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    tail_marker = "## 10. Decision gates"
+    assert tail_marker in original
+    original_tail = original[original.index(tail_marker) :]
+
+    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(tmp_path)
+    for i, d in enumerate(drafts):
+        d.number = 9000 + i
+    doc_id_cli._restructure_roadmap(tmp_path, drafts, phase_titles, occurrences)
+    restructured = (tmp_path / "docs" / "roadmap.md").read_text(encoding="utf-8")
+
+    assert tail_marker in restructured
+    assert restructured[restructured.index(tail_marker) :] == original_tail
+    # Every other numbered top-level section this file's own module docstring never
+    # touches is still present too.
+    for heading in (
+        "## 1. How to read this", "## 2. Where the project is",
+        "## 3. Before Phase 1 — the on-ramp", "## 4. Build order, and why it is not negotiable",
+        "## 11. Sizing", '## 12. What "done" looks like, per phase',
+    ):
+        assert heading in restructured, f"{heading!r} did not survive the restructure"
+
+
+def test_restructure_roadmap_is_readable_by_doc_index_on_the_real_tree(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Round-trip validation against the real corpus, the same property
+    `test_roadmap_restructure_is_readable_by_doc_index` proves on the fixture: the output
+    is not just well-formed prose, `doc-index.py`'s own parser must read back exactly the
+    work population `_discover_roadmap` computed — a property, so a future edit changing
+    which ids exist does not make this assertion stale the way a hard-coded count would.
+    """
+    _copy_roadmap_and_templates(tmp_path)
+    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(tmp_path)
+    for i, d in enumerate(drafts):
+        d.number = 9000 + i
+    doc_id_cli._restructure_roadmap(tmp_path, drafts, phase_titles, occurrences)
+
+    doc_index = doc_id_cli._load_doc_index()
+    corpus = doc_index.build_corpus(tmp_path / "docs")
+    families = [h.family for h in corpus.headers()]
+    assert families.count("work") == len(drafts)
+
+    phases = doc_index.scan_phase_sections(tmp_path / "docs" / "roadmap.md")
+    phases_by_id = {p.phase: p for p in phases}
+    assert set(phases_by_id) == {d.phase for d in drafts if d.phase}
+    for phase_id, works in collections.Counter(d.phase for d in drafts).items():
+        assert len(phases_by_id[phase_id].works) == works
+
+
+def test_w6_retires_naming_its_successors_on_the_real_tree(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 92's acceptance items directly: `W6`'s migrated row is `status: retired`
+    (never dropped — it is a live dependency target, `W7`'s `Depends on` cell names it)
+    and its body names `W6a` and `W6b` as the works its scope was re-cut into.
+    """
+    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(ROOT)
+    w6 = next(d for d in drafts if d.old_token == "W6")
+    assert w6.status == "retired"
+    assert "W6a" in w6.body
+    assert "W6b" in w6.body
+
+
+def test_w5s_three_source_rows_all_survive_the_merge_on_the_real_tree(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 91's own worked example, on the real tree rather than a reproduction of it:
+    `W5` heads three rows — a status-table pointer, a delivery breakdown, and a
+    scope-at-close figure — and the ruling's violation is a merge that keeps one and
+    drops the rest. Each fragment quoted here is frozen, dated, already-closed-workstream
+    prose that does not change as the roadmap grows elsewhere.
+    """
+    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(ROOT)
+    w5 = next(d for d in drafts if d.old_token == "W5")
+    assert w5.status == "closed"
+    for fragment in (
+        "see [`docs/audit/closure-records.md`](audit/closure-records.md)",
+        "110 built · 10 declared-and-refused-by-name · 16 unevidenced",
+        "136 in scope at close, of which 110 built",
+    ):
+        assert fragment in w5.body, f"missing {fragment!r} in W5's merged body"
+
+
+def test_register_discovery_matches_every_row_register_lint_itself_declares(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The positive control the real corpus already supplies (W37-6 outstanding
+    obligations row 3): before this fix, `_discover_register` matched none of the real
+    register's data rows (`_REGISTER_FINDING_RE.fullmatch` required a bare `F<n>`; every
+    real cell is compound). After it, every data row `register-lint.py`'s own
+    `parse_register` returns must be recognised — a property immune to the register
+    growing a 74th row tomorrow, unlike a hard-coded "73".
+    """
+    register_lint = doc_id_cli._load_register_lint()
+    path = ROOT / "docs" / "audit" / "register.md"
+    rows, problems = register_lint.parse_register(path)
+    assert not problems  # no structurally malformed row on the real tree today
+    assert len(rows) > 1  # non-vacuous
+
+    unmatched = [
+        row.finding_id for row in rows
+        if not doc_id_cli._REGISTER_FINDING_RE.search(row.fields[0])
+    ]
+    assert not unmatched, f"finding-id cell(s) with no recognised id: {unmatched}"
+
+    drafts = doc_id_cli._discover_register(ROOT)
+    assert len(drafts) == len(rows)
+    old_tokens = [d.old_token for d in drafts]
+    assert len(set(old_tokens)) == len(old_tokens)  # every id discovered exactly once

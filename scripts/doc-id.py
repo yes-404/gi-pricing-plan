@@ -838,6 +838,22 @@ def _load_audit_docs(repo_root: Path = REPO_ROOT) -> types.ModuleType:
     return _load_module("_audit_docs_for_migrate", repo_root / "scripts" / "audit-docs.py")
 
 
+def _load_register_lint(repo_root: Path = REPO_ROOT) -> types.ModuleType:
+    """`scripts/register-lint.py`, loaded by path, for `parse_register` — the register's
+    own declared row grammar (its module docstring: the header row found by *position*,
+    the `|`-led line immediately before the separator, never by column-name text; a data
+    row splits on unescaped `|` into exactly 5 fields; every `|`-led line accounted for,
+    `assert classified == seen`). W37-6 outstanding obligations row 34: this technique
+    already exists for the register and "was never applied to migrate's discovery
+    functions ... reuse it rather than inventing a second form" — so `_discover_register`
+    below imports it exactly as `_load_doc_index`/`_load_audit_docs` import their own
+    sibling scripts, rather than a second, driftable copy of the header-position and
+    5-field rules. Always loaded from *this* repository's own `scripts/`, never from a
+    `--repo-root` fixture target, for the identical reason `_load_doc_index` gives.
+    """
+    return _load_module("_register_lint_for_migrate", repo_root / "scripts" / "register-lint.py")
+
+
 # ---------------------------------------------------------------------------------------
 # Templates: the single source for what a stamped header contains, per family — read from
 # *this* repository's `docs/_templates/`, never the migration target's (Ruling 70's
@@ -1590,91 +1606,392 @@ def _module_first_commit_date(path: Path, root: Path) -> date:
     return date.fromisoformat(lines[-1][:10])
 
 
-_ROADMAP_LEGACY_PHASE_RE: Final = re.compile(
-    r"^##\s+Phase\s+(\S+)\s+—\s+(.+)$", re.MULTILINE
+
+# ---------------------------------------------------------------------------------------
+# Task #32 (W37-6 outstanding obligations row 2), what the transform produces ruled at
+# Rulings 90-92 (`docs/plans/2026-09-02-w37-roadmap-transform-rulings.md`): the shape
+# below (`##`/`###` `Phase <id> — <title>` heading, `### <work-key> — <title>` + a
+# `status:` line, `- **<slice-key>**` bullets) was this module's own guess at "the legacy
+# roadmap shape". Ruling 79/80's Correction section proved it wrong by running the three
+# patterns against the real `docs/roadmap.md`: all three matched zero times,
+# `_restructure_roadmap` was therefore never reached, and `migrate` reported success on a
+# roadmap it never touched.
+#
+# The real shape, verified directly against `docs/roadmap.md`: a Work is a markdown table
+# row whose leading cell is `**W<n>[<letter>]**` — wrapped in `~~...~~` with a trailing
+# `✔` once closed, undecorated otherwise, with **neither form reliable as a status
+# oracle** (Ruling 83 §1(g): `W5` is undecorated with its own Status cell reading
+# "closed"; `W7` is struck three rows below it in the same table; Ruling 90: "`status:`
+# comes from the Status cell, never from the decoration") — gathered under a
+# `## <n>. Phase <label> — <title>` or `### Phase <label> — <title>` heading. Several
+# such tables exist per phase, so a work id can head more than one leading row (56
+# leading rows, 41 distinct ids, measured at `59bba94`) — **Ruling 91: these merge into
+# one `WK-` row, they do not become several.** No slice ever exists as a row or a bullet,
+# in any shape, anywhere in the corpus (Ruling 80's Correction section), so this rewrite
+# discovers work rows only.
+#
+# **All 41 ids convert (Rulings 90-92) — nothing is withheld.** A closed work converts
+# with `status: closed` (Ruling 90); a multi-row work's rows merge into one, its body
+# carrying every source row's own text labelled by the table it came from (Ruling 91);
+# `W6` — whose only row sits under `### Workstreams`, a *sibling* of the self-described
+# archival heading `### Original scope, for reference`, not a child of it (Ruling 92
+# corrected this rewrite's own first premise on that point) — converts with
+# `status: retired`, its body naming `W6a`/`W6b` as the works its scope was re-cut into.
+# The one thing `migrate` still refuses on is Ruling 91 obligation 1: if a work's several
+# rows disagree on status, that is a data defect in the roadmap and a human's to resolve,
+# never a silent pick of the first, the last, or the richest cell.
+# ---------------------------------------------------------------------------------------
+
+_ROADMAP_WORK_ROW_RE: Final = re.compile(
+    r"^\|\s*(~~)?\*\*(W\d+[a-z]?)\*\*(~~)?\s*(?:✔)?\s*\|(.*)$"
 )
-_ROADMAP_LEGACY_WORK_RE: Final = re.compile(
-    r"^###\s+(W\d+[a-z]?)\s+—\s+(.+)$\nstatus:\s*(\w+)$", re.MULTILINE
+_ROADMAP_PHASE_LABEL_RE: Final = re.compile(r"^#{2,4}\s+(?:\d+\.\s+)?Phase\s+(\S+)\b")
+_ROADMAP_PHASE_TITLE_RE: Final = re.compile(
+    r"^#{2,4}\s+(?:\d+\.\s+)?Phase\s+(\S+)\s+—\s+(.+?)\s*$", re.MULTILINE
 )
-_ROADMAP_LEGACY_SLICE_RE: Final = re.compile(
-    r"^-\s+\*\*(W\d+[a-z]?-\d+)\*\*\s+(.+?)\s+—\s+status:\s*(\w+)\s*$", re.MULTILINE
+_ROADMAP_ANY_HEADING_RE: Final = re.compile(r"^(#+)\s+(.+?)\s*$")
+
+# Ruling 90: the status word lives in the row's own prose, never in the `~~...~~`/`✔`
+# decoration. §1.2's `WK` subset is `draft → active → closed | retired`; a row's remaining
+# cells are searched for one of the four case-insensitively, and separately for a nearby
+# `YYYY-MM-DD` date, because the real cells are free prose ("✔ **closed 2026-08-14**",
+# "**Closed 2026-08-22** — 110 built ...") rather than a fixed field.
+#
+# Anchored on a *bolded* occurrence of the word (`\*\*\s*` immediately before it), not a
+# bare one — found live, at `W7`'s third row (line 337, "the original scope" table):
+# "The data half closed early as W7a" contains the bare word "closed" describing a
+# *different* work's history in passing prose, not this row's own status. Every genuine
+# status declaration in the real corpus is bolded (`**Closed ...**`, `✔ **closed ...**`);
+# no bare, unbolded occurrence of any of the four words is a real declaration anywhere in
+# `docs/roadmap.md` today, verified by running this pattern and its bare-word predecessor
+# side by side over the whole file.
+_ROADMAP_STATUS_WORD_RE: Final = re.compile(
+    r"\*\*\s*(closed|active|draft|retired)\b", re.IGNORECASE
 )
+_ROADMAP_STATUS_DATE_RE: Final = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
+
+# Ruling 92: `W6`'s scope was re-cut into `W6a` and `W6b`, both closed, both with their
+# own rows; `W6` itself never completed *under that name*, so `closed` ("completed its
+# purpose") is false of it and `retired` ("ended without completing ... the reason is in
+# the body") is the available word — `superseded` is exact and not in the `WK` subset
+# (surfaced for the maintainer's `RFC-` route in the ruling, not fixed here). A named,
+# declared exception (Ruling 83's bucket 3 shape: "acceptable only for what cannot be
+# derived, and only with a reason per entry") rather than a general rule, because the
+# derivation is specific to this one id — a dependency reference in another row (`W7`'s
+# `Depends on` cell names `W6`), not anything mechanically visible in `W6`'s own row.
+_ROADMAP_RETIRED_WORK_IDS: Final[Mapping[str, str]] = {
+    "W6": (
+        "Retired rather than closed (Ruling 92): this work's own row carries no closed "
+        "signal, and its scope was re-cut into WK-successors before it completed under "
+        "this name — see the successors named below."
+    ),
+}
+# Which id(s) each retired id's scope was re-cut into, for the body note above — derived
+# from the roadmap's own dependency reference (`W7`'s `Depends on` cell names `W4, W5,
+# W6`) and prose ("The pre-split frontend work... re-cut into W6a and W6b"), not
+# mechanically derivable from `W6`'s own row.
+_ROADMAP_RETIRED_SUCCESSORS: Final[Mapping[str, tuple[str, ...]]] = {"W6": ("W6a", "W6b")}
+
+# Ruling 92 found that `docs/roadmap.md`'s heading nesting is unreliable — `### Original
+# scope, for reference` (317) and its sibling `### Workstreams` (327, which actually
+# carries `W6`'s row at 336) are both children of the single unnumbered `## Historical
+# record` (269), and this rewrite's simple "last `Phase <label>` heading wins" tracker
+# has no way to tell that the whole span from 269 to the next `##` is pre-split content
+# describing what *became* phase 1a and 1b, not phase-1b content itself. Measured live:
+# the tracker attributes every row in that span to "1b" (the last real phase heading
+# before it, `### Phase 1b — Modelling Workbench` at 273) — right for `W7` (whose real,
+# non-span occurrences are also 1b) and wrong for `W1`-`W4` (whose real occurrences are
+# all 1a), producing a false "spans two phases" refusal for exactly the ids this heading
+# span was never meant to relabel. A occurrence inside this span is marked uncertain
+# rather than excluded — Ruling 92's point was that the *row still counts*, only its
+# *phase attribution by proximity* does not — and the merge below prefers a work's
+# non-uncertain occurrences when any exist, falling back to the uncertain one only when
+# it is all a work has (`W6`'s own case).
+_ROADMAP_HISTORICAL_RECORD_HEADING_RE: Final = re.compile(r"^##\s+Historical record\s*$")
 
 
-def _discover_roadmap(root: Path) -> tuple[list[_Draft], str | None, str | None]:
-    """The legacy roadmap shape this corpus defines (module docstring above): a `##
-    Phase <id> — <title>` heading, `### <work-key> — <title>` + `status:` for each work,
-    and `- **<slice-key>** <title> — status: <status>` bullets under it (NT-0019 §4 step
-    3). Returns `(drafts, phase_id, phase_title)` — `phase_id`/`phase_title` are `None`
-    when no legacy phase section is found (a second run: the file is already restructured
-    into the `## P<n> — ...` fenced form, which this regex does not match).
+@dataclass(frozen=True)
+class _RoadmapRowOccurrence:
+    """One real leading work-id row, exactly as `_ROADMAP_WORK_ROW_RE` found it — the
+    unit `_discover_roadmap`'s census below classifies, never the id alone (an id heads
+    anywhere from one to three of these on the real tree, Ruling 83 §1(g))."""
+
+    work_id: str
+    line_no: int  # 1-based, so a human can find it without re-running the regex
+    struck: bool
+    title: str  # the row's own second cell, trimmed — this occurrence's own title only
+    rest: str  # every cell after the id, verbatim — Ruling 91's "every row's Notes"
+    phase_label: str | None  # the nearest `Phase <label>` heading above it, or None
+    section_heading: str | None  # nearest heading of any level, for labelling the body
+    phase_uncertain: bool  # inside "## Historical record" — see the constant's comment
+
+
+def _scan_roadmap_rows(text: str) -> list[_RoadmapRowOccurrence]:
+    """Every real leading work-id row in `text`, in document order — the census
+    `_discover_roadmap` needs before it can decide anything (Ruling 83): **the unit is the
+    row**, found by a pattern that does not encode which rows the caller wants, not a
+    per-id count that a duplicate would already have folded away.
+    """
+    occurrences: list[_RoadmapRowOccurrence] = []
+    phase_label: str | None = None
+    section_heading: str | None = None
+    phase_uncertain = False
+    historical_record_level = 0
+    for i, line in enumerate(text.splitlines()):
+        heading_match = _ROADMAP_ANY_HEADING_RE.match(line)
+        if heading_match:
+            level = len(heading_match.group(1))
+            if phase_uncertain and level <= historical_record_level:
+                phase_uncertain = False
+            section_heading = heading_match.group(2)
+            label_match = _ROADMAP_PHASE_LABEL_RE.match(line)
+            if label_match:
+                phase_label = label_match.group(1)
+            if _ROADMAP_HISTORICAL_RECORD_HEADING_RE.match(line):
+                phase_uncertain = True
+                historical_record_level = level
+        row_match = _ROADMAP_WORK_ROW_RE.match(line)
+        if row_match is None:
+            continue
+        struck = bool(row_match.group(1) and row_match.group(3))
+        rest = row_match.group(4).strip().strip("|").strip()
+        title = row_match.group(4).split("|", 1)[0].strip()
+        occurrences.append(
+            _RoadmapRowOccurrence(
+                work_id=row_match.group(2), line_no=i + 1, struck=struck,
+                title=title, rest=rest, phase_label=phase_label,
+                section_heading=section_heading, phase_uncertain=phase_uncertain,
+            )
+        )
+    return occurrences
+
+
+def _row_status_signal(rest: str) -> tuple[str, str | None] | None:
+    """`(status word, date)` read from a row's own remaining cells, or `None` when the
+    row states no explicit status at all (an open work's row typically does not, e.g.
+    `W8`'s "Must complete before W9. If S1 fails, this phase is re-planned"). The word is
+    lower-cased to the `WK` vocabulary's own spelling; the date is `None` when the row
+    carries a status word but no nearby date (also real: `W6b`'s dependency column reads
+    "OQ-PLAT-6 ✔" — a decided-question checkmark unrelated to this row's own status).
+    """
+    word_match = _ROADMAP_STATUS_WORD_RE.search(rest)
+    if word_match is None:
+        return None
+    date_match = _ROADMAP_STATUS_DATE_RE.search(rest)
+    return (word_match.group(1).lower(), date_match.group(1) if date_match else None)
+
+
+def _work_id_sort_key(work_id: str) -> tuple[int, str]:
+    m = re.match(r"W(\d+)([a-z]?)", work_id)
+    assert m is not None
+    return int(m.group(1)), m.group(2)
+
+
+@dataclass
+class _MergedWork:
+    work_id: str
+    phase_label: str | None
+    title: str
+    status: str
+    body: str
+    line_nos: list[int]  # every source occurrence's line, for the surgical rewrite
+
+
+def _merge_roadmap_work(work_id: str, occurrences: list[_RoadmapRowOccurrence]) -> _MergedWork:
+    """Ruling 91: one `WK-` row per work id, its several source rows merged rather than
+    turned into several rows and none chosen over the others. Obligation 1 (status cells
+    must agree, or refuse), obligation 2 (every source row's Notes survive the merge,
+    labelled by the table each came from) and Ruling 92's `W6` exception all live here.
+    """
+    ordered = sorted(occurrences, key=lambda o: o.line_no)
+    # A work's *certain* occurrences settle its phase whenever any exist -- the "## 6.
+    # Historical record" span mislabels some ids by proximity alone (the constant's own
+    # comment: `W1`-`W4`'s occurrence there is tagged "1b", the last real phase heading
+    # before it, though their real occurrences are all "1a"). Falling back to the
+    # uncertain occurrences only when a work has *no* certain one at all is `W6`'s exact
+    # case: its single occurrence sits inside that span, and Ruling 92 does not name a
+    # phase for it, so this rewrite reports the one fact the tracker actually has (the
+    # nearest preceding real phase heading, "1b") rather than inventing a rule for it.
+    certain = [o for o in ordered if not o.phase_uncertain]
+    candidates = certain or ordered
+    phase_labels = {o.phase_label for o in candidates}
+    phase_label = next(iter(phase_labels)) if len(phase_labels) == 1 else None
+    # A genuine cross-phase split among a work's *certain* occurrences is not something
+    # Ruling 91's routing table anticipated a rule for ("if any work was executed across
+    # two phases the rule needs a tie-break, and I did not measure whether one exists") --
+    # measured here as absent among every work's certain occurrences on the real tree
+    # today; `phase_label` is `None` above if it is ever not, and `_discover_roadmap`
+    # refuses on it explicitly below rather than picking either phase silently.
+
+    body_fragments = [
+        f"From “{o.section_heading}” (line {o.line_no}): {o.rest}" for o in ordered
+    ]
+
+    if work_id in _ROADMAP_RETIRED_WORK_IDS:
+        successors = ", ".join(_ROADMAP_RETIRED_SUCCESSORS[work_id])
+        body_fragments.append(f"{_ROADMAP_RETIRED_WORK_IDS[work_id]} Successors: {successors}.")
+        return _MergedWork(
+            work_id=work_id, phase_label=phase_label, title=ordered[-1].title,
+            status="retired", body="\n\n".join(body_fragments),
+            line_nos=[o.line_no for o in ordered],
+        )
+
+    signals = [_row_status_signal(o.rest) for o in ordered]
+    known_signals = {s for s in signals if s is not None}
+    if len(known_signals) > 1:
+        detail = "; ".join(
+            f"line {o.line_no}: {s!r}" for o, s in zip(ordered, signals, strict=True)
+        )
+        raise NotImplementedError(
+            f"migrate: {work_id}'s {len(ordered)} rows disagree on status (Ruling 91 "
+            f"obligation 1) -- {detail}. migrate does not pick the first, the last, or "
+            "the richest row; this is a data defect in docs/roadmap.md for a human to "
+            "resolve, naming the work rather than a count."
+        )
+    if known_signals:
+        status = next(iter(known_signals))[0]
+    else:
+        # No occurrence states an explicit status word at all (real: `W32`, single row,
+        # struck, 6000+ characters of prose and none of the four words) -- Ruling 90's
+        # "never the decoration" rule is about the cell overriding decoration when they
+        # *disagree*; with no cell text to consult, decoration is the only fact left, so
+        # it is used here rather than defaulting every silent row to "active" regardless
+        # of what it looks like. Still checked for internal agreement, not trusted blind:
+        # a work whose several undeclared rows are struck inconsistently is the same
+        # species of data defect as a declared disagreement.
+        struck_states = {o.struck for o in ordered}
+        if len(struck_states) > 1:
+            detail = "; ".join(f"line {o.line_no}: struck={o.struck}" for o in ordered)
+            raise NotImplementedError(
+                f"migrate: {work_id}'s {len(ordered)} rows state no status word at all "
+                f"and disagree on strikethrough decoration -- {detail}. Neither the cells "
+                "nor the decoration settle this work's status; migrate refuses rather "
+                "than picking one."
+            )
+        status = "closed" if next(iter(struck_states)) else "active"
+    # `ordered[-1]` (document order, so typically the most-recently-written table's own
+    # phrasing) rather than the first -- an arbitrary but deterministic and *disclosed*
+    # choice for the merged row's title; every occurrence's own title text still survives
+    # verbatim inside `rest`, which is folded into the body fragment above.
+    return _MergedWork(
+        work_id=work_id, phase_label=phase_label, title=ordered[-1].title,
+        status=status, body="\n\n".join(body_fragments), line_nos=[o.line_no for o in ordered],
+    )
+
+
+def _discover_roadmap(
+    root: Path,
+) -> tuple[list[_Draft], dict[str, str], list[_RoadmapRowOccurrence]]:
+    """The real `docs/roadmap.md` shape (module note above, Rulings 90-92): every leading
+    work-id row across the whole file, grouped by id and merged into one `_Draft` per id
+    (Ruling 91) — never a per-id count a duplicate would already have folded away.
+
+    Returns `(drafts, phase_titles, occurrences)`. `phase_titles` maps every phase label
+    actually used by a draft to that phase's own title text (a `## <n>. Phase <label> —
+    <title>` or `### Phase <label> — <title>` heading), because Ruling 91 puts each work
+    "under the milestone of the phase the work was executed in" and the real corpus has
+    several such milestones, not the one this function used to assume. `occurrences` is
+    the full census (every real leading row, before merging) — `_restructure_roadmap`
+    needs the original line numbers to remove exactly the rows that were merged away,
+    never anything else in the document.
+
+    The one thing this still refuses on: a work whose several rows disagree on status
+    (Ruling 91 obligation 1), or a work whose occurrences span more than one phase
+    section (measured absent on the real tree today; a genuine tie-break this function
+    does not invent one for). Everything else converts.
     """
     roadmap_path = root / "docs" / "roadmap.md"
     if not roadmap_path.is_file():
-        return [], None, None
+        return [], {}, []
     text = roadmap_path.read_text(encoding="utf-8")
-    phase_match = _ROADMAP_LEGACY_PHASE_RE.search(text)
-    if phase_match is None:
-        return [], None, None
-    phase_id_raw, phase_title = phase_match.group(1), phase_match.group(2)
-    phase_id = f"P{phase_id_raw}"
+    occurrences = _scan_roadmap_rows(text)
+    if not occurrences:
+        return [], {}, []
+
+    by_id: dict[str, list[_RoadmapRowOccurrence]] = {}
+    for occ in occurrences:
+        by_id.setdefault(occ.work_id, []).append(occ)
+
+    merged = [_merge_roadmap_work(work_id, occs) for work_id, occs in by_id.items()]
+
+    unresolved_phase = [m.work_id for m in merged if m.phase_label is None]
+    if unresolved_phase:
+        raise NotImplementedError(
+            "migrate: work(s) "
+            f"{', '.join(sorted(unresolved_phase, key=_work_id_sort_key))} have leading "
+            "rows in more than one phase section, with no rule to pick which milestone "
+            "the merged WK- row belongs under (Ruling 91's routing table left this "
+            "unmeasured beyond today's real tree, where it does not occur) -- migrate "
+            "refuses rather than choosing a phase silently."
+        )
+
+    phase_titles = {
+        m.group(1): m.group(2) for m in _ROADMAP_PHASE_TITLE_RE.finditer(text)
+    }
     created = _module_first_commit_date(roadmap_path, root)
     drafts: list[_Draft] = []
-    order = 0
-    for work_match in _ROADMAP_LEGACY_WORK_RE.finditer(text):
-        work_key, work_title, work_status = work_match.groups()
+    for order, work in enumerate(sorted(merged, key=lambda m: _work_id_sort_key(m.work_id))):
+        assert work.phase_label is not None  # narrowed by the check above
         drafts.append(
             _Draft(
-                materialize="roadmap_row", prefix="WK", kind=None, title=work_title,
-                status=work_status, created=created, owner="maintainer",
-                tie_break=("docs/roadmap.md", order), old_token=work_key, phase=phase_id,
+                materialize="roadmap_row", prefix="WK", kind=None, title=work.title,
+                status=work.status, created=created, owner="maintainer",
+                tie_break=("docs/roadmap.md", order), old_token=work.work_id,
+                phase=f"P{work.phase_label}", body=work.body,
             )
         )
-        order += 1
-        work_end = work_match.end()
-        next_work = _ROADMAP_LEGACY_WORK_RE.search(text, work_end)
-        section_end = next_work.start() if next_work else len(text)
-        for slice_match in _ROADMAP_LEGACY_SLICE_RE.finditer(text, work_end, section_end):
-            slice_key, slice_title, slice_status = slice_match.groups()
-            drafts.append(
-                _Draft(
-                    materialize="roadmap_row", prefix="SL", kind=None, title=slice_title,
-                    status=slice_status, created=created, owner="planner",
-                    tie_break=("docs/roadmap.md", order), old_token=slice_key,
-                    phase=phase_id, work_token=work_key,
-                )
-            )
-            order += 1
-    return drafts, phase_id, phase_title
+    return drafts, phase_titles, occurrences
 
 
-_REGISTER_FINDING_RE: Final = re.compile(r"\bF(\d+)\b")
+# ---------------------------------------------------------------------------------------
+# Task #32's sibling defect (W37-6 outstanding obligations row 3): `\bF(\d+)\b` under
+# `.fullmatch` demands the *whole* Finding-id cell be a bare `F<n>` — true of no real row.
+# Every one of the register's 73 data rows is compound, `<description> (<id>)`, and the
+# parenthesised id itself takes one of two forms verified against every real cell: a bare
+# `F<n>` (`F6` .. `F76`), or a workstream-scoped id, `F-W<n>[<letter>]` followed by one or
+# more `-<n>` groups (`F-W9-1` .. `F-W10-2-2`) — never the whole-cell form the old pattern
+# required. Anchored on the trailing parenthesis (`\)\s*$`) rather than the whole cell, so
+# a cell whose description text happens to contain an unrelated `F<n>`-shaped substring
+# earlier on cannot be mistaken for the id.
+# ---------------------------------------------------------------------------------------
+
+_REGISTER_FINDING_RE: Final = re.compile(r"\((F(?:\d+|-W\d+[a-z]?(?:-\d+)+))\)\s*$")
 
 
 def _discover_register(root: Path) -> list[_Draft]:
-    """Bare `F<n>` Finding-id cells in the legacy `docs/audit/register.md` (NT-0019 §5.2:
-    "Finding-id cells → `FD-n` with `was:`"). Matched only at the legacy path — a second
-    run (moved to `docs/findings/register.md`) finds nothing there.
+    """The register's declared row grammar (module note above; `scripts/register-lint.py`
+    `parse_register`, reused rather than reimplemented — W37-6 outstanding obligations row
+    34): a data row is a `|`-led line inside the one table, the header found by
+    *position* (immediately before the `|---|...` separator, never by column-name text —
+    the F64 defect `parse_register`'s own comment records), split on unescaped `|` into
+    exactly 5 fields (Finding id, Concerns, Work item, Phase, Decision). Every candidate
+    `|`-led line is accounted for by `parse_register` itself (`assert classified ==
+    seen`), so a row missing its leading `|` or splitting into the wrong field count is
+    loud there rather than silently absent here.
+
+    Matched only at the legacy path (NT-0019 §5.2: "Finding-id cells → `FD-n` with
+    `was:`") — a second run (moved to `docs/findings/register.md`) finds nothing there.
     """
     drafts: list[_Draft] = []
     path = root / "docs" / "audit" / "register.md"
     if not path.is_file():
         return drafts
-    text = path.read_text(encoding="utf-8")
+    register_lint = _load_register_lint()
+    rows, _problems = register_lint.parse_register(path)
     created = _module_first_commit_date(path, root)
     order = 0
-    for line in text.splitlines():
-        if not line.startswith("|"):
-            continue
-        cell = line.split("|")[1].strip()
-        m = _REGISTER_FINDING_RE.fullmatch(cell)
+    for row in rows:
+        cell = row.fields[0]
+        m = _REGISTER_FINDING_RE.search(cell)
         if m is None:
             continue
+        token = m.group(1)
+        title = cell[: m.start()].strip() or f"Finding {token}"
         drafts.append(
             _Draft(
-                materialize="register_row", prefix="FD", kind=None, title=f"Finding {m.group(1)}",
+                materialize="register_row", prefix="FD", kind=None, title=title,
                 status="active", created=created, owner="auditor",
-                tie_break=("docs/audit/register.md", order), old_token=f"F{m.group(1)}",
+                tie_break=("docs/audit/register.md", order), old_token=token,
                 source_path=path,
             )
         )
@@ -2395,79 +2712,179 @@ def _check_legacy_file_not_silently_unrecognised(
     )
 
 
+def _find_table_blocks(lines: list[str]) -> list[tuple[int, int]]:
+    """Every maximal run of contiguous `|`-led lines in `lines` — a candidate markdown
+    table, header and separator included, `(start, end)` with `end` exclusive.
+    """
+    blocks: list[tuple[int, int]] = []
+    i, n = 0, len(lines)
+    while i < n:
+        if lines[i].startswith("|"):
+            start = i
+            while i < n and lines[i].startswith("|"):
+                i += 1
+            blocks.append((start, i))
+        else:
+            i += 1
+    return blocks
+
+
+def _roadmap_row_block(templates_dir: Path, d: _Draft, all_drafts: list[_Draft]) -> str:
+    """One `WK-`/`SL-` fenced row block, keyed off `d.prefix` rather than assuming `WK`
+    — restored from the pre-Ruling-90 version of `_restructure_roadmap`, which handled
+    both row families this way. `_discover_roadmap` above only ever produces `WK` drafts
+    today (Ruling 80/83: no slice exists in the real corpus in any shape), but this
+    function's own contract — and Ruling 81's round-trip test, which feeds it a hand-built
+    `SL` draft directly — is not limited to that one caller.
+    """
+    canon = _docid.canonical(d.prefix, d.number)
+    family = "work" if d.prefix == "WK" else "slice"
+    heading_level = "###" if d.prefix == "WK" else "####"
+    fields = {
+        "id": canon, "family": family, "title": d.title, "status": d.status,
+        "created": d.created.isoformat(), "owner": d.owner, "phase": d.phase,
+    }
+    if d.prefix == "SL" and d.work_token is not None:
+        fields["work"] = _docid.canonical(
+            "WK", next(x.number for x in all_drafts if x.old_token == d.work_token)
+        )
+    permitted = _docid.row_template_fields(templates_dir, family)
+    unknown = sorted(set(fields) - permitted)
+    if unknown:
+        raise ValueError(
+            f"_restructure_roadmap: would emit field(s) {unknown} for a {family} row "
+            f"({canon}) not declared by docs/_templates/{_docid.ROW_TEMPLATE_FILES[family]} "
+            "— the writer must not disagree with the template (Ruling 79 §3 item 4)"
+        )
+    field_text = "\n".join(f"{k}: {v}" for k, v in fields.items())
+    body = d.body.strip()
+    return f"\n{heading_level} {canon} — {d.title}\n\n```yaml\n{field_text}\n```\n\n{body}\n"
+
+
 def _restructure_roadmap(
-    root: Path, roadmap_drafts: list[_Draft], phase_id: str, phase_title: str
+    root: Path,
+    roadmap_drafts: list[_Draft],
+    phase_titles: Mapping[str, str],
+    occurrences: list[_RoadmapRowOccurrence],
 ) -> None:
-    """NT-0019 §4 step 3: the legacy `## Phase <id> — <title>` / `### <work-key>` /
-    `- **<slice-key>**` shape becomes a `## P<n> — <title>` milestone section carrying
-    plain fields directly beneath its own heading, each `WK-`/`SL-` a heading carrying its
-    own fenced row block (§1.5). Both shapes now match `scripts/doc-index.py`'s
-    `scan_phase_sections`/`scan_roadmap_rows` (Rulings 79 and 80,
-    `docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md`) *and* NT-0019 §1.3's
-    own unfenced phase illustration — this function used to emit a fenced phase heading
-    that satisfied the former (a merged parser its own author hadn't checked against the
-    spec) while contradicting the latter and `docs/_templates/PHASE.md`; both rulings
-    settled that in the spec's favour, and `_PHASE_TEMPLATE` above changed with it.
+    """NT-0019 §4 step 3, as Rulings 90-92 settled what it produces: a **surgical, in-place
+    edit** of `docs/roadmap.md`, never the full-file overwrite this function used to be.
+
+    That distinction is not cosmetic. Every previous version of this function replaced the
+    entire file with a stub built only from `roadmap_drafts` — safe only because
+    `_discover_roadmap` had been returning zero drafts since W37-5 shipped (all three of
+    its legacy patterns matched the real file zero times), so this call was never reached.
+    The moment discovery recognises the real shape, the old body destroys the other ~700
+    lines of this file — decision gates, sizing, every phase's narrative — the first time
+    `migrate` runs against the real tree. Fixing discovery and leaving this function alone
+    would have turned a silent no-op into a silent, irreversible loss inside the one commit
+    that cannot be re-run (NT-0019 §4: "one scripted PR, once"). This rewrite is therefore
+    the other half of task #32, not a follow-on: removing exactly the leading work-id row
+    lines Ruling 91 merges away, inserting the new `WK-` blocks, and leaving every other
+    line — headings, prose, the other ten `##` sections — byte-identical.
+
+    A table left with no data rows once its work rows are gone is removed in full (header,
+    separator, and — where a heading's only content was that table — the heading too),
+    never left as a header-only husk; the removal itself is the diff hunk that accounts for
+    it (Ruling 91 obligation 3). A table that mixes work rows with others (the "status"
+    tables' Exit demo / Exit gate / phase-label rows) keeps everything but the converted
+    rows. Whether to keep, fold or replace a source table is this function's call (Ruling
+    91's routing table: "an editorial choice ... not a standard question"); folding narrow
+    line ranges in place, rather than rebuilding sections from scratch, is the version of
+    that choice least likely to lose something nobody asked it to touch.
+
+    Each phase's own `## <n>. Phase <label> — <title>` / `### Phase <label> — <title>`
+    heading becomes its `## P<label> — <title>` milestone form with a plain fields block
+    (Ruling 80), and every work assigned to that phase is inserted as a `### WK-NNNNN`
+    block immediately after it — `_discover_roadmap` already refused if any work's
+    occurrences disagreed on which phase it belongs to, so every phase named in
+    `phase_titles` here has exactly one declaring heading.
 
     The row block's field set is validated against `_docid.row_template_fields` rather
-    than hardcoded — Ruling 79 §3 item 4: "`doc-id.py migrate`'s row emission is derived
-    from the same template" as the reader, so the two cannot silently disagree. It still
-    emits only `id, family, title, status, created, owner, phase, [work]` — the fields a
-    `_Draft` discovered from a legacy roadmap actually has a value for — and *not*
-    `tree:`/`corrected_by:`/`relates:`, which the templates also permit but for which a
-    freshly-converted row has no natural value to invent (no real "commit this was written
-    against" for content that predates this conversion, and nothing yet to correct or
-    relate to); the reader accepts a row that carries a subset of its family's permitted
-    fields, so this omission does not reintroduce Ruling 79's defect, only defers filling
-    those three fields to whoever next hand-edits the row. `docs/_templates/PHASE.md`
-    itself carries a pre-existing, independent defect (its `exit criteria:` placeholder
-    wraps onto an indented second physical line in the committed template) reported
-    alongside these rulings rather than fixed here — see the PR description.
+    than hardcoded (Ruling 79 §3 item 4), the same reasoning the previous version of this
+    docstring already gave and which still holds: only `id, family, title, status,
+    created, owner, phase` are emitted, a `_Draft`'s natural fields, and not
+    `tree:`/`corrected_by:`/`relates:`, which the template also permits but for which a
+    freshly-converted row has no value to invent.
     """
     templates_dir = root / "docs" / "_templates"
-    work_ids = sorted(
-        {d.old_token for d in roadmap_drafts if d.prefix == "WK"},
-        key=lambda tok: next(
-            d.number for d in roadmap_drafts if d.prefix == "WK" and d.old_token == tok
-        ),
-    )
-    works_canon = [
-        _docid.canonical("WK", next(d.number for d in roadmap_drafts if d.old_token == wid))
-        for wid in work_ids
-    ]
-    lines = [
-        _PHASE_TEMPLATE.format(
-            phase=phase_id, title=phase_title,
-            opened=min(d.created for d in roadmap_drafts).isoformat(),
-            works=", ".join(works_canon),
-        ).rstrip("\n")
-    ]
-    for d in sorted(roadmap_drafts, key=_sort_key):
-        canon = _docid.canonical(d.prefix, d.number)
-        family = "work" if d.prefix == "WK" else "slice"
-        heading_level = "###" if d.prefix == "WK" else "####"
-        fields = {
-            "id": canon, "family": family, "title": d.title, "status": d.status,
-            "created": d.created.isoformat(), "owner": d.owner, "phase": d.phase,
-        }
-        if d.prefix == "SL" and d.work_token is not None:
-            fields["work"] = _docid.canonical(
-                "WK", next(x.number for x in roadmap_drafts if x.old_token == d.work_token)
+    roadmap_path = root / "docs" / "roadmap.md"
+    text = roadmap_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    removed: set[int] = {occ.line_no - 1 for occ in occurrences}
+    for start, end in _find_table_blocks(lines):
+        if end - start <= 2:
+            continue
+        if all(i in removed for i in range(start + 2, end)):
+            removed.update((start, start + 1))
+            j = start - 1
+            while j >= 0 and lines[j].strip() == "":
+                j -= 1
+            if j >= 0 and j not in removed and _ROADMAP_ANY_HEADING_RE.match(lines[j]):
+                removed.add(j)
+
+    drafts_by_phase: dict[str, list[_Draft]] = {}
+    for d in roadmap_drafts:
+        assert d.phase is not None  # every roadmap_row draft carries one (see caller)
+        drafts_by_phase.setdefault(d.phase, []).append(d)
+
+    phase_heading_idx: dict[str, int] = {}
+    for i, line in enumerate(lines):
+        m = _ROADMAP_PHASE_TITLE_RE.match(line)
+        if m is None:
+            continue
+        label = f"P{m.group(1)}"
+        if label in drafts_by_phase and label not in phase_heading_idx:
+            phase_heading_idx[label] = i
+
+    missing = set(drafts_by_phase) - set(phase_heading_idx)
+    if missing:
+        raise AssertionError(
+            f"_restructure_roadmap: no declaring 'Phase <label> — <title>' heading found "
+            f"for {sorted(missing)}, which _discover_roadmap assigned work(s) to"
+        )
+
+    inserted: dict[int, str] = {}
+    for phase, idx in phase_heading_idx.items():
+        phase_drafts = drafts_by_phase[phase]
+        works = sorted(
+            (d for d in phase_drafts if d.prefix == "WK"),
+            key=lambda d: _work_id_sort_key(d.old_token or ""),
+        )
+        title = phase_titles.get(phase[1:])
+        if title is None:
+            raise AssertionError(f"_restructure_roadmap: no title recorded for phase {phase!r}")
+        works_canon = [_docid.canonical("WK", d.number) for d in works]
+        block = [
+            _PHASE_TEMPLATE.format(
+                phase=phase, title=title,
+                opened=min(d.created for d in phase_drafts).isoformat(),
+                works=", ".join(works_canon),
+            ).rstrip("\n")
+        ]
+        for work in works:
+            block.append(_roadmap_row_block(templates_dir, work, roadmap_drafts))
+            slices = sorted(
+                (d for d in phase_drafts if d.prefix == "SL" and d.work_token == work.old_token),
+                key=lambda d: d.tie_break,
             )
-        permitted = _docid.row_template_fields(templates_dir, family)
-        unknown = sorted(set(fields) - permitted)
-        if unknown:
-            raise ValueError(
-                f"_restructure_roadmap: would emit field(s) {unknown} for a {family} row "
-                f"({canon}) not declared by docs/_templates/"
-                f"{_docid.ROW_TEMPLATE_FILES[family]} — the writer must not disagree with "
-                "the template (Ruling 79 §3 item 4)"
-            )
-        block_text = "\n".join(f"{k}: {v}" for k, v in fields.items())
-        lines.append(f"\n{heading_level} {canon} — {d.title}\n\n```yaml\n{block_text}\n```\n")
-    (root / "docs" / "roadmap.md").write_text(
-        "# Roadmap (fixture)\n\n" + "".join(lines), encoding="utf-8"
-    )
+            for sl in slices:
+                block.append(_roadmap_row_block(templates_dir, sl, roadmap_drafts))
+        inserted[idx] = "\n".join(block)
+
+    out: list[str] = []
+    for i, line in enumerate(lines):
+        if i in inserted:
+            out.append(inserted[i])
+            continue
+        if i in removed:
+            continue
+        out.append(line)
+    new_text = "\n".join(out)
+    if not new_text.endswith("\n"):
+        new_text += "\n"
+    roadmap_path.write_text(new_text, encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------------------
@@ -2590,7 +3007,7 @@ def migrate(root: Path) -> MigrateResult:
     drafts += plain_plan_drafts
     requirement_drafts = _discover_requirements(root)
     _check_requirements_not_silently_unrecognised(root)
-    roadmap_drafts, phase_id, phase_title = _discover_roadmap(root)
+    roadmap_drafts, phase_titles, roadmap_occurrences = _discover_roadmap(root)
     register_drafts = _discover_register(root)
     _check_legacy_file_not_silently_unrecognised(
         root / "docs" / "audit" / "register.md", register_drafts, "register finding rows"
@@ -2611,9 +3028,7 @@ def migrate(root: Path) -> MigrateResult:
     files_written, files_deleted = _write_document_drafts(root, drafts, roadmap_drafts)
 
     if roadmap_drafts:
-        if phase_id is None or phase_title is None:
-            raise AssertionError("roadmap drafts found but no phase id/title discovered")
-        _restructure_roadmap(root, roadmap_drafts, phase_id, phase_title)
+        _restructure_roadmap(root, roadmap_drafts, phase_titles, roadmap_occurrences)
     else:
         _check_roadmap_not_silently_unrecognised(root)
 
