@@ -3309,35 +3309,29 @@ class _ReferenceStamp:
     title: str
 
 
-#: The `owner:` value for each Reference scope, and the §1 cell it is read from. Every
-#: value here is quoted from a cell, never inferred from what a role ought to own — the
-#: constraint the gap-2 RFC was written to enforce, and which the maintainer scoped on
-#: 2026-09-02: *"'Cite the cell' means §1 — a §1.6 cell or a §1 sentence naming a role.
-#: §5.2 is the impact map and grants nothing."*
-_REFERENCE_OWNER_CELLS: Final[Mapping[str, str]] = {
-    "charters": 'NT-0019 §1.6 "Reference — charters": maintainer',
-    "agents": 'NT-0019 §1.6 "Reference — agents": lead',
-    "skills": (
-        'NT-0019 §1.6 "Reference — skills" (approves/retires cells), ruled to one '
-        "standing value `lead` by the maintainer 2026-09-02 "
-        "(docs/plans/2026-09-02-w37-5c-slice-decision.md §3)"
-    ),
-    "readme": (
-        "the README row ruled 2026-09-02 "
-        "(docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md §1): a README routed "
-        "nowhere is Reference — README, `lead`; uniform over all fourteen per that "
-        "record's Corrections section"
-    ),
-}
-
-#: Directly-walked Reference scopes: `(rel_dir, owner, cell key)`. `.claude/skills/` is
-#: not here — its stamp target is a glob (`*/SKILL.md`), not a directory's contents, and
-#: it is handled separately below for that reason. Every `README.md` under any of these
-#: is claimed by the README scope instead, per the cell-extent rule the same RFC states in
-#: §2: *"A cell governs what its text names; an index is the README row's."*
-_REFERENCE_DIR_SCOPES: Final[tuple[tuple[str, str, str], ...]] = (
-    (".claude/roles", "maintainer", "charters"),
-    (".claude/agents", "lead", "agents"),
+#: Directly-walked Reference scopes, `(rel_dir, owner)`, **each owner quoted from the §1
+#: cell it is read from, beside the value rather than in a table of its own** — a second
+#: place stating the same thing is what goes stale (`NT-0003`):
+#:
+#:   * `.claude/roles/` → `maintainer`, §1.6 *"Reference — charters | maintainer; 'a role
+#:     file that proves insufficient' → `FD-` → maintainer amends"*.
+#:   * `.claude/agents/` → `lead`, §1.6 *"Reference — agents | lead"*.
+#:
+#: Two values the maintainer's 2026-09-02 scoping admits — *"'Cite the cell' means §1 — a
+#: §1.6 cell or a §1 sentence naming a role. §5.2 is the impact map and grants nothing"* —
+#: so neither is derived from what a role ought to own.
+#:
+#: `.claude/skills/*/SKILL.md` is not here: its stamp target is a glob, not a directory's
+#: contents, and it is handled separately below. Its owner is `lead` too, one standing
+#: value, read from §1.6 *"Reference — skills"*' approves/retires cells and ruled by the
+#: maintainer at `docs/plans/2026-09-02-w37-5c-slice-decision.md` §3.
+#:
+#: Every `README.md` under any of these is claimed by the README scope instead — the
+#: cell-extent rule, `…-w37-rfc-readme-row-and-stamp-set.md` §2: *"A cell governs what its
+#: text names; an index is the README row's."*
+_REFERENCE_DIR_SCOPES: Final[tuple[tuple[str, str], ...]] = (
+    (".claude/roles", "maintainer"),
+    (".claude/agents", "lead"),
 )
 
 #: Every `README.md` inside the migration's own fixture corpus. `migrate` consumes that
@@ -3574,7 +3568,7 @@ def _discover_reference_stamp_targets(
     classify(units, "every tracked README.md (the README row)", resolved)
 
     # --- `.claude/roles/` and `.claude/agents/`: every file under them.
-    for rel_dir, owner, _cell in _REFERENCE_DIR_SCOPES:
+    for rel_dir, owner in _REFERENCE_DIR_SCOPES:
         directory = root / rel_dir
         if not directory.is_dir():
             continue
