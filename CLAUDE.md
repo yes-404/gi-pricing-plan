@@ -47,7 +47,10 @@ there** ([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)). Three en
 carry a rule: **`uv.lock` is committed** — a lockfile, not an environment; **`docs/contracts/`
 is generated and never hand-edited**; **a filed plan under `docs/plans/` is frozen at its
 date**. **It is a polyglot monorepo and neither language is the "main" one** — the root
-`pyproject.toml` configures Python tooling only, and CI is three path-filtered workflows.
+`pyproject.toml` configures Python tooling only, and **CI is three path-filtered component
+workflows and one unfiltered `history-policy` workflow; the fourth checks commit messages,
+not files, so path filtering would let it pass by not running** (amended 2026-09-02 by the
+maintainer, with F49's CI enforcement).
 
 **One contract joins backend and frontend, and it flows one way.** ADR-0002's
 `model-schema`, the single source of truth, generates `docs/contracts/` — JSON Schema +
