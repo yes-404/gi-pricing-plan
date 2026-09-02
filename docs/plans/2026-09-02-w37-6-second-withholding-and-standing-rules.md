@@ -107,6 +107,39 @@ them, and these five close it."*
 rule 1. Then the F90 slice. Then the re-ask, under rule 3.** Report when `[SLOT-3]` reads
 `completes`, not before.
 
+### Superseded 2026-09-02 by the maintainer, before this record merged
+
+**The sequence above is replaced; the rest of this record stands.** Appended rather than rewritten,
+per rule 5 and `CLAUDE.md` §0 — the text above is what this withholding ordered when it was
+written, and a reader needs to see which sequence was in force when.
+
+**Three items, in parallel, not two-then-one:**
+
+- **(a)** the `KeyError: 'RS'` discharge, family-summed write trace, proven on the real corpus;
+- **(b)** the F90 slice — a depth-agnostic `check_shape` with its own broken-input proof;
+- **(c)** one shared population function both scripts import, with an equality test over the real
+  corpus.
+
+**(b) is independent of (c)** — `check_shape` touches none of the discovery code — so the F90 slice
+no longer waits behind the extraction. **The full `_discover_*` extraction is a W37-11 item, not a
+precondition**; rule 2's scope is narrowed to the one shared function and its test.
+
+Then **one snapshot `migrate()` on `main`**, which is what fills `[SLOT-3]`; then a **new re-ask
+under 300 lines superseding the old one by id**, `SLOT`s 0–3 at a quiet tree and §10 blank.
+
+**(a) was already discharged when this superseding sequence was issued**, and the record says so
+rather than leaving a dispatch aimed at a fixed defect: `"RS": "research"`, `"RS": "RS.md"` and
+`_check_every_document_draft_is_placeable` are all present on `origin/main`, landed by `22d0361`
+(#649), an ancestor of `32fc63c`. Measured at `32fc63c` on a disposable snapshot, before (b) and
+(c) landed: `migrate()` **reaches the end of its body** — 1,396 write events, 290 document drafts
+(`PL` 119 · `RL` 95 · `CR` 38 · `RFC` 20 · `LG` 10 · `ADR` 6 · **`RS` 2**), 1,088 reported, 202
+deleted, 0 warnings. So `[SLOT-3]` is a **re-measurement** at the final tree rather than a
+discovery, which is the thing this early run was ordered to establish.
+
+**A stopping rule comes into force with this sequence**: findings raised after the re-ask's tree go
+to W37-6's **closure record**, not to a further precondition slice. That is what stops the sequence
+this record is the second instance of.
+
 ## 6. What this record does not do
 
 It does not authorise the run; §10 of the re-ask remains empty and the maintainer's. It does not
