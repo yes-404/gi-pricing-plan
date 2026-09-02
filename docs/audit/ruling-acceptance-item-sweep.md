@@ -51,6 +51,15 @@ impossible," against Rulings 55-58, which have an override clause and nothing el
 this sweep's own rows (Rulings 55-58, and independently 52/53) were first mis-admitted on the
 looser reading and corrected after a second, dedicated read of their source files.
 
+**A last note on this section's own drafting.** `python3 scripts/audit-docs.py` caught two
+defects in this record's own first draft, before it was ever committed: two relative links to
+Rulings 93 and 94 missing the `../plans/` prefix required from `docs/audit/`, and an unescaped
+literal `|` inside a regex shown in the Scope row's table cell — which had silently shifted
+that row's own column count — fixed per `docs/plans/README.md`'s documented `\|`-in-a-table-
+cell convention (visible in the Scope row above, as filed). Both are exactly the class of
+defect the check exists to catch, caught on the document that documents the check. Recorded
+because it is evidence that the gate ran on this artifact, not because it is remarkable.
+
 ## 2. The classifier — `scripts/ruling-acceptance-item-census.py`
 
 Implements the enumeration half of this sweep as a re-runnable script, carrying Ruling 83's
