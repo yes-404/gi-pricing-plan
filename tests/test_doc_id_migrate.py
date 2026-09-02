@@ -522,13 +522,26 @@ def test_plan_reviews_heading_census_raises_naming_unclassified_headings_by_line
     the file's own title), and nothing has declared them an exception -- so the census
     must refuse, naming both the container and its child by line number, rather than
     let `_discover_plan_reviews`'s ten (of what should read as more) pass as complete.
+
+    The container heading fails TWO independent axes at once, the same shape the
+    planner's row-6 derivation found for `Ruling A1`/`A2`/`A3` (PR #595): wrong heading
+    level (`##`, not the `###` `_REVIEW_HEADING_RE` requires) AND no comma-then-date at
+    all (`"drafted 2026-08-29"`, a parenthetical-style date introduction, not
+    `_REVIEW_HEADING_RE`'s `,\\s*(\\d{4}-\\d{2}-\\d{2})`) -- confirmed by direct regex
+    check against this exact string, not asserted. A positive control failing only one
+    axis would go green under a fix that widened just that axis while leaving the
+    census with nothing to catch; this one does not have that escape, and it is not a
+    contrived case -- the real `## Pending proposals ... (drafted 2026-08-29)` heading
+    in `docs/audit/plan-reviews.md` has the identical two-axis shape (verified directly
+    against the real file), so this synthetic heading is not a simplified stand-in for
+    it either.
     """
     audit_dir = tmp_path / "docs" / "audit"
     audit_dir.mkdir(parents=True)
     (audit_dir / "plan-reviews.md").write_text(
         "# Plan reviews\n\n"  # line 1: the file's own title -- derived body
         "### Plan review 1 — at W6a's close, 2026-08-15\n\nBody one.\n\n"  # line 3
-        "## Pending proposals — drafted 2026-08-29\n\n"  # line 7: unclassified
+        "## Pending proposals — drafted 2026-08-29\n\n"  # line 7: unclassified, 2-axis
         "### Candidate A — a proposal\n\nProposal body.\n\n"  # line 9: unclassified
         "### Plan review 9 — at W11's close, 2026-08-30\n\nBody nine.\n",  # line 13
         encoding="utf-8",
