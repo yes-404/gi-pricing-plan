@@ -152,6 +152,29 @@ pre-write calls** — not just the five named above — found **no sixth abort p
 only one of them that fails today. That matters because the four were derived from Addendum B's
 table, and a table is a list someone wrote; the replay is the check that the list is complete.
 
+**The fifth aborts *before any write*, so a run stops rather than half-migrating.** Asked
+directly, and answered by measurement rather than by reading the comment that claims it:
+
+```
+migrate()                          scripts/doc-id.py:4164
+  … 24 pre-write calls …
+  _discover_vendored_skill_manifests(root)                :4239   ← row 5
+  _write_document_drafts(root, drafts, roadmap_drafts)    :4254   ← the first write
+```
+
+No write operation appears in `migrate()`'s own body between `:4164` and `:4254`, and **none of
+the 24 functions it calls in that span contains one** — searched for `write_text`, `.unlink(`,
+`.mkdir(`, `.rename(`, `shutil.`, `.touch(` and `open(…, "w")`. **Positive control on that
+predicate**, because a search that has never matched proves nothing: the same pattern against
+`_write_document_drafts` (`:2554`), a known writer, returns **3** hits. So the predicate fires
+when there is something to find, and finds nothing in the pre-write span.
+
+The code says the same thing about its own intent — the hoist comment at `:4241-4244`: *"the
+census must refuse on the **pre-migration** tree, not after `_write_document_drafts` has already
+landed files on disk"* — and names task #34, the incident where a call **was** out of place and
+`migrate()` crashed mid-write. **That failure mode is fixed; this one is a clean abort.** The
+irreversible commit is not at risk from row 5. What is at risk is the run completing at all.
+
 **How the two verifications differ, since agreement between them is only worth what their
 independence is worth.** This audit loaded `scripts/doc-id.py` under `uv run python` (3.12.13)
 against the live worktree, with the "before" side from `git show 544b90c^:`. The replay used
@@ -434,6 +457,28 @@ the deferral nor its cause.
 than leaving it to be re-derived from a commit body — one line naming the 53, the frozen plan's
 item 13, and `47eb2ba`.
 
+**Which document should hold it — a proposal, asked for and given as one.** Read against the
+standard, three candidates and one answer:
+
+- **The frozen leaf plan is out** — `CLAUDE.md` §2: *"a filed plan under `docs/plans/` is frozen
+  at its date."* Its item 13 is correct at its own pin and is not edited.
+- **The roadmap is the wrong altitude.** Its W37 row states scope and status, and `NT-0003` is
+  the standing argument against putting a second copy of a detail there.
+- **The register is where it belongs** — `NT-0005`, quoted by F83's own row: *"a deferred item
+  with no owner is not deferred, it is lost."* That is exactly this item's shape: work
+  deliberately not done, with a named reason, needing custody until someone does it. It also
+  makes the deferral reachable by the one tool that generates owed lists —
+  `register-owed.py W37-6` — which is how a W37-6 planner would find it without knowing to look.
+- **And the active leaf plan should carry a pointer, not a copy** — one line under W37-6's own
+  task list citing the new register row, so the plan a planner actually reads names the
+  precondition without duplicating the figure that would then go stale.
+
+**So: a register row, plus a citation from the active plan.** The precedent is already in this
+tree and is F87's: it was filed as a finding *because*, in its own words, the fact *"lived only
+in a passing test … invisible to whoever plans W37-6, who is the person who needs it."* The 53
+live in a commit body and a runtime print, which is the same invisibility by a different route.
+**The lead's call, not this record's** — this states the reading and its authority.
+
 ### 7b. Item 3's second limb, restated as an owed item
 
 Named again here because §6 buries it in a passing check: the three unparseable vendored
@@ -523,18 +568,33 @@ against the live tree or a copy of it; none against `tmp_path` fixture data.
 
 ### 10a. Where the criterion is weakest, named rather than smoothed
 
-**`dc1666f`'s freeze test pins a hand-verified literal, not a measurement.** The census script
-carries two hand-built sets — `_NAMED_EXCEPTIONS = frozenset({"44"})` and
-`_PROSE_ONLY_RULINGS`, ten members — and
-`tests/test_ruling_acceptance_census.py::test_named_exceptions_and_prose_only_rulings_are_frozen_at_the_flag_day`
-**retypes the same two literals and asserts equality**, rather than re-deriving either from disk.
-The script says so itself: *"a **hand-verified list, not a derived one**, and it is the one place
-this module's own promise … does not hold: a future ruling using this same loose, marker-free
-style would land silently in `none` below, not in a bucket whose count visibly moved."*
+**Corrected on challenge, 2026-09-02, before this record was adopted. An earlier draft of this
+section said `dc1666f`'s freeze test "pins a hand-verified literal, not a measurement" and called
+it the criterion's weak point. That was wrong, and the challenge that corrected it is the lead's:
+a freeze test that derived its expected value from the symbol it guards would be vacuous, so
+retyping the literal is the mechanism working, not failing.** The superseded sentence is named
+rather than deleted. What follows is the finding as it should have been stated.
 
-**Disclosed by its author, in the artifact, before this audit looked** — which is the behaviour
-`CLAUDE.md` §13 asks for, and the reason this is recorded as a limit rather than a defect. The
-trade-off (not mutating real git history to manufacture a bad commit) is sound.
+`tests/test_ruling_acceptance_census.py::test_named_exceptions_and_prose_only_rulings_are_frozen_at_the_flag_day`
+asserts `frozenset({"44"}) == census._NAMED_EXCEPTIONS` and the same for
+`_PROSE_ONLY_RULINGS`'s ten members. **Retyped on purpose**: the point of a freeze is to make
+growth a deliberate two-place edit, and its docstring says so — *"growth after the flag-day is a
+violation per the maintainer's ruling, not a maintenance action."* **No finding here.**
+
+**The real gap is one level up, in the census rather than the test: the two sets are hand-built
+and nothing re-derives their membership from disk.** The script states it itself, which is why
+this is a disclosed limit rather than a defect: *"a **hand-verified list, not a derived one**,
+and it is the one place this module's own promise … does not hold: a future ruling using this
+same loose, marker-free style would land silently in `none` below, not in a bucket whose count
+visibly moved."* The freeze catches a set that **changes**; nothing catches a corpus that grows
+**into** the shape the set describes. The trade-off that produced it — not mutating real git
+history to manufacture a bad commit — is sound.
+
+**One residual, small and stated rather than pressed.** The freeze's growth-catching is proven
+*"by hand (see module docstring)"*, not by an automated positive control. That is a real proof
+and a weaker form of one than `CLAUDE.md` §13's *"proven on deliberately broken input"* asks for,
+and it is the only place in the slice where the proof is an author's account rather than a
+runnable artifact.
 
 **And the census is not wired to anything.** `git grep -n "ruling-acceptance-item-census" --
 '*.yml' '*.yaml' scripts/audit-docs.py` returns nothing at `d8d6e3f`. Its
