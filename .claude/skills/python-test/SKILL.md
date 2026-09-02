@@ -116,6 +116,58 @@ PlatformError(...)` mentions is in the registry — `tests/test_repository_invar
 Same class of blindness as W1's invisible enforcement: a check nothing exercises is
 indistinguishable from a check that passes.
 
+## A discovery call in a test is a claim about scope wearing setup's clothes
+
+**Ask the robustness question of what the test *selects*, not only of what it *asserts*.** A test
+can be **half-defensive** — assertions written to survive a change, selectors that do not — and
+the fragile half is the harder one to see, because a discovery call reads as setup rather than as
+a claim.
+
+**The live case, 2026-09-02.** An instrument for a governed record was deliberately written over
+`was:` and body content *rather than over the document's family*, so it would survive a pending
+change to which family the file belongs to. That reasoning was correct and it covered the
+assertions. The **selector** — the `_discover_*` call choosing which drafts to assert over — was
+still family-bound, and so was the mutation proof. Its author had reviewed the test twice without
+seeing it, and said afterwards why: *"'does the assertion survive a family change' and 'does the
+selector survive a family change' are the same question, and I only asked it of the half that
+looked like a claim."*
+
+**The repository makes this sharper than it is elsewhere**, because two discovery functions
+**partition** on one regex — `_discover_plain_plans` skips any file `_RULING_HEADING_RE` matches.
+So widening that regex does not merely *add* drafts from the second function; it **removes** them
+from the first. A file crosses. **Any test that selects by family breaks on the crossing, in
+either merge order.**
+
+**The fix is the same move, one level up: select by *source* and take the union across every
+function that could claim it.** One draft from the first today, three from the second afterwards,
+no change needed either way. That is also *stronger* rather than merely tolerant: the union is
+where the split-output invariant and the attribution property meet, so the test now fires at the
+moment the property could actually be lost.
+
+## Simulate the pending change; do not reason about it
+
+**When another branch will alter something your test depends on, apply that alteration to the
+shipped source and run the real tests.** It costs minutes and it converts a risk into a table.
+
+Same case: widening the regex in the working copy and re-running produced —
+
+```
+_discover_plain_plans   drafts for the file:  1  →  0
+_discover_multi_ruling_files drafts:          0  →  3
+the two tests, as pushed:                  pass  →  BOTH FAIL
+the two tests, as rewritten:               pass  →  both pass
+```
+
+**Reasoning had said "this might break".** The simulation said *it certainly breaks, both halves,
+and here is the one other test in the file that also reds* — a **bounded blast radius**, which is
+a claim reasoning cannot support. It found a second failure its author had not predicted, and it
+let the other executor meet a known item rather than a surprise red.
+
+**Do this whenever a sibling branch touches a constant, a regex or a dispatch table your test
+reads through.** The check is cheap, the alternative is a red build in someone else's PR, and a
+tripwire whose trigger is scheduled inside the same slice is not a guard — it is a red build with
+a docstring.
+
 ## Pin the case where a choice actually bites
 
 Prefer an assertion that fails if the behaviour changes over one that merely documents it:
@@ -715,6 +767,14 @@ does not return freed arenas to the OS — a peak-RSS reading taken after an ear
 the same process is that earlier phase's high-water mark, not this one's.
 
 ## Verified
+
+2026-09-02 — two sections added on test robustness across a sibling branch's change, from a live
+case in W37-5c. An instrument's **assertions** were deliberately written to survive a pending
+family change; its **selector** and its mutation proof were not, and would have gone red when the
+other executor's branch merged — in either order. Found not by re-reading (its author had reviewed
+it twice) but by **simulating** the pending change against the shipped source, which also bounded
+the blast radius to one further test. Both rules are stated as procedure rather than as the
+incident. Tree `aab6327`.
 
 2026-08-30 — W11 correction batch (PR #438). The concurrent-run section's own guard was
 inert: it prescribed `pgrep -af 'pytest'`, which matches its own wrapper and so can never
