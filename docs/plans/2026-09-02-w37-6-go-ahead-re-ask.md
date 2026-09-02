@@ -95,7 +95,7 @@ instruction that **the re-ask names the gap**.
 
 | # | Condition | State | Where |
 |---|---|---|---|
-| 0 | **W37-5c is closed** | **Both acts done; neither record says so** — see §8.1. The audit is clean and the lead's merge landed (`c888b61`, PR #647). The closure record's own Sign-off row still reads *"(the lead's merge — pending)"*, and `docs/roadmap.md` carries no `W37-5c CLOSED` line where it carries one for W37-5b | [`W37-5c/README.md`](../audit/work/W37-5c/README.md) |
+| 0 | **W37-5c is closed** | **Discharged at `ac10d30`.** Both acts had happened — a clean audit, and the lead's merge of #647 as `c888b61` — and for a while **neither of the two records that carry a close said so**. #651 files both: the closure record's Sign-off, and a `W37-5c CLOSED` clause in `docs/roadmap.md`'s W37 row on W37-5b's precedent form. Check rather than trust this cell: `grep -c "W37-5c CLOSED" docs/roadmap.md` → **1** at `ac10d30`, **0** at `c888b61`. **Why the gap existed is §8.1**, and it is the more useful half | [`W37-5c/README.md`](../audit/work/W37-5c/README.md) |
 | 1 | **§3 and §4 re-derived at that tree** | **`[SLOT-1]`** — deliberately not yet run. §6 states why it runs once, late, and carries the slot register | §6 |
 | 2 | **The addendum merged and re-run** | **Merged** — Addenda A and B are on `main` inside the superseded ask (`c888b61`). **Re-run: `[SLOT-2]`** | §7 |
 | 3 | **F80–F82 shown cleared by execution** | **Satisfied literally and not sufficiently.** All three gaps, across four guards, are FIRE→PASS on the real corpus. A **fifth** abort point survives and was never touched by the commit that cleared them | **§2** |
@@ -972,6 +972,15 @@ from one that has since been filled**, so: the two measurements above are true *
 and the way to check them today is to re-run `grep -c "W37-5c CLOSED" docs/roadmap.md` rather
 than to trust this paragraph. Non-zero means #651 landed and this subsection is **discharged
 rather than wrong**.
+
+**One more instance of the same shape, in this document, one round later.** §8.1 was written to
+de-rot — *true at `c888b61`, re-run the grep, non-zero means discharged* — and it worked: the grep
+returns **1** at `ac10d30`. **But §1's condition-0 row asserted the absence flatly, with no tree**,
+and stayed false-by-omission until this revision. **The retraction reached the section and not the
+summary table**, which is exactly what §9.1's withdrawn phrase did two rounds earlier and what
+`NT-0003` describes for a duplicated status line. **A document that states a fact twice has two
+places to update and will update one.** Recorded because it is the third instance in this file and
+the first two were caught by someone else.
 
 **Why the gap existed is the part worth keeping, and it is the same mechanism as §8.2's.** The
 fix's own commit body records it. **Cited at `2eda76a`, #651's head, which carries the passage
