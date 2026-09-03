@@ -43,6 +43,21 @@ of the file.
   quoted cell; where a reading had no cell, a competing reading with one existed, so it is
   priced out rather than halted on (§4).
 
+## Ruling 98 — a document whose entire content is a maintainer decision migrates as `RL-`, `owner: maintainer`, no `kind:` field
+
+**Structural note, added after filing.** This heading exists so `scripts/doc-id.py`'s
+`_discover_multi_ruling_files` (`_RULING_HEADING_RE`, matching `^## Ruling \d+`) discovers
+this record as one `RL-` draft rather than falling through to `_discover_plain_plans`'s
+`PL- kind: leaf, owner: planner` catch-all — the exact misattribution this ruling's own §2.1
+exists to prevent, which its own file was silently exposed to before this line existed.
+Verified directly, not assumed: `_discover_multi_ruling_files` run against a copy of this file
+with the heading present returns one `RL-` draft, `owner: decision-maker` (Ruling 95's default
+— correct here, since this record is the decision-maker's own ruling, not a maintainer-
+authored one under §2.1's `owner: maintainer` carve-out), covering the whole file; without the
+heading it returns none, and `_discover_plain_plans` claims the file instead. Everything above
+and below this line is one ruling; the heading marks where the splitter's own preamble-folding
+rule needs an anchor, not a second document.
+
 ## 1. The set, verified structurally, not by filename keyword
 
 The delegating instruction named four documents and warned that neither its list nor a
