@@ -125,17 +125,26 @@ W37-6's.
 
 ## 4. What is still red on the migrated tree, and whose it is
 
-After this change, `migrate --verify --ref <this branch>` reports **(h2) PASS** and **(h3)
-PASS**, and **(h1) still FAIL: exit 1, FAILED (12144)**. The residue is not (h)'s:
+After this change, `migrate --verify` reports **(h2) PASS** and **(h3) PASS**, and **(h1)
+still FAIL**. The failure *count* goes **up**, from `FAILED (552)` to `FAILED (12160)` — that
+is the point: 11 608 defects that a parser reading a path or an id form the migrated tree does
+not have could not report. The residue is not (h)'s:
+
+**Taxonomy at `987c154`** (this record's own first commit; the record adds citations of its
+own, so the total moves with it — the predicate is
+`sed -n '/^FAILED/,$p' <log> | grep '^  - ' | sed -E 's/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' | sort | uniq -c`):
 
 | Class | Count | Owner |
 |---|---|---|
-| check 32 — a cited id does not resolve in `docs/INDEX.md` | ~7 100 | the migration's citation rewriting — rows (d) and (g) |
-| check 36 — a pre-migration form survives outside `REDIRECTS.csv` | ~2 500 | same |
-| check 1 — broken relative link (a moved file's link not rewritten) | ~390 | same |
-| check 30/35 — unstamped or headerless files now in scope | ~120 | W37-10 (§5.1, §5.3, §5.4 content rows) |
-| check 29 — merged phase-register rows failing RL-193's grammar | 11 | W37-10 (§5.2 register merge) |
-| check 27 — process-core digest not re-pinned | 1 | the migration script |
+| check 32 — a cited id does not resolve in `docs/INDEX.md`, or is padded in prose | 8 711 | the migration's citation rewriting — rows (d) and (g) |
+| check 36 — a pre-migration form survives outside `REDIRECTS.csv` | 2 884 | same |
+| check 1 — broken relative link (a moved file's link not rewritten) | 391 | same |
+| check 35 — an unstamped file now in the enforced scope | 79 | W37-10 (§5.1, §5.3, §5.4 content rows) |
+| check 30 — no front-matter header on a file now in scope | 77 | same |
+| check 29 — merged phase-register rows failing RL-193's Decision-cell grammar | 11 | W37-10 (§5.2's register merge) |
+| check 31 — id/filename disagreement | 2 | the migration |
+| check 2 / check 5 — `FR-1187`, `ADR-1/2/3` cited illustratively in `document-ids.md` | 4 | a documents-defining-an-id-form case; W37-10 |
+| check 27 — process-core digest not re-pinned after the migration rewrote its source | 1 | the migration script |
 
 **Every one of these was invisible before this change**, because the parser that would have
 reported it was reading a path or a form the migrated tree does not have.
