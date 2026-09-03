@@ -161,6 +161,10 @@ and `doc-id.py` would sit at the top of any self-documentation exemption list, w
 would have survived. **It is not a live behaviour defect**: the code is correct, and a
 document-keyed exemption is what would have kept it invisible.
 
+**Filed as [`F100`](../audit/findings/F100.md)**, with the register row carrying the same
+disposition: the fix is to the docstring and never to the guard, because admitting `FD` at
+`:5900` would make the sentence true by reversing a maintainer's ruling.
+
 ### 1.4 What this reading makes the row, stated before the rationale can be accused of following it
 
 **§7(e) FAILS as currently measured, and this ruling does not rescue it.**
@@ -271,6 +275,19 @@ ids — an apparent defect. It was not: `13 (0 open)` is the *"Before Phase 4"* 
 hardcoded line number instead of the row being counted. **The Deferred cell reads `32 (0 open)`
 and was correct.** The recount that found 32 independently is what the cell already said, so it
 becomes `33 (1 open)` by recount and not by increment.
+
+**Why it is not a findings-register row, recorded so the next reader does not "fix" it by moving
+it.** Filing it in `docs/audit/register.md` was proposed and is refused on two grounds, both read
+directly. **The register's columns are `Finding id`, `Concerns`, `Work item`, `Phase`,
+`Decision`** — there is no cell for options, trade-offs or a recommendation, and `CLAUDE.md` §10
+requires all three of an open design choice; filing it there means deleting the part §10
+mandates. **And its `Decision` vocabulary is dispositions of an established defect** — `fix
+before close`, `accept`, `carry forward`, `split verdict` — none of which can express *"here are
+three designs, I recommend the third."* Its own header says what it is for: *"One row per **open
+finding** … Each row names the work item that carried it, the phase, and the decision."* **F68,
+F96, F100 and F71 are all defects established by measurement, each with a right answer. This has
+none yet**, which is exactly why it was recorded open rather than ruled — and the discriminator
+between the two files is that, not the subject matter.
 
 **One thing left unplaced, deliberately.** `OQ-OVR-17` sits on **no** `docs/roadmap.md` §10 gate
 row — the omission `.claude/skills/spec-change` warns about (*"A new `OQ-` also goes into
@@ -547,9 +564,11 @@ Under Ruling 102 §7's rule, applied to this role's own figures:
 - **(f)'s `127 → 127` across the migration is relayed.** This session's own runs are `104` at
   `8f5d57d` and `129` at `e97b97a`, plus the file-by-file diff of §2.3.
 
-  **A reader will meet `104`, `127` and `129` in this record and must not try to reconcile them.
-  They are one command at three trees**, and the command is the same throughout
-  (`git grep -c 'VR-DST-1' <ref> | awk -F: '{s+=$NF} END {print s}'`):
+  **In one line: `git grep -c 'VR-DST-1' <ref> | awk -F: '{s+=$NF} END {print s}'` gives 104 at
+  `8f5d57d`, 127 at `0de529e` and 129 at `e97b97a` — one command, three trees, and that drift
+  *is* §2.3's argument, not a discrepancy to reconcile.** Stated here before the table because a
+  reader who meets two of the three numbers stops to reconcile them and never reaches the
+  explanation.
 
   | tree | sum | who ran it |
   |---|---|---|
