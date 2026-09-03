@@ -6418,6 +6418,10 @@ def _cmd_migrate_verify(args: argparse.Namespace) -> int:
         print(f"doc-id.py migrate --verify: {exc}", file=sys.stderr)
         return 2
     print(_docverify.render(result))
+    # 0 green · 1 the standing red, unchanged · 2 refused to run · 3 the verdict set moved.
+    # Exit 3 is what makes a NEW failure distinguishable from the red Ruling 102 §1 requires
+    # until the migration lands: exit 1 is true of every run in that period and so says
+    # nothing about the change under review (F102).
     return result.exit_code
 
 
