@@ -68,8 +68,8 @@ jobs:
       # one this step fails on, because it is the only exit code that says something
       # about *this* change rather than about the standing backlog.
       - run: |
-          python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref HEAD
-          code=$?
+          code=0
+          python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref HEAD || code=$?
           if [ "$code" -eq 1 ]; then
             echo "::notice::--verify exited 1 (standing red, verdict set unchanged) — Ruling 104 §1 reads this as a pass"
             exit 0
