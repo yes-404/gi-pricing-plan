@@ -80,8 +80,15 @@ UNDETERMINED: Final = "UNDETERMINED"
 #: measure it in a snapshot; the reason and the owner are printed. §13 admits no silence, so
 #: this is a verdict rather than an omission.
 NOT_MEASURED: Final = "NOT MEASURED"
+#: Fatal, and deliberately NOT the same word as FAIL. The migrated tree carries **more** of
+#: what the row forbids than the un-migrated control does, which is not a bigger version of
+#: "did not reach zero": it means the migration is *creating* the thing the row forbids, and
+#: no amount of citation rewriting reaches it. Raised by the auditor against (d4)
+#: `wf-0[0-9]` (control 267 -> migrated 327), whose floor is a legacy id baked into a
+#: filename the migration generates.
+REGRESSION: Final = "REGRESSION"
 
-FATAL_VERDICTS: Final = frozenset({FAIL, UNDETERMINED, NOT_MEASURED})
+FATAL_VERDICTS: Final = frozenset({FAIL, UNDETERMINED, NOT_MEASURED, REGRESSION})
 
 OWNER_W37_6: Final = "W37-6"
 OWNER_W37_10: Final = "W37-10"
@@ -439,6 +446,13 @@ class Row:
     control: str
     verdict: str
     note: str = ""
+    #: Evidence printed beside the row, each `(label, predicate, figure)`, never gating.
+    #: A companion answers the question the row's own predicate cannot: *what does this
+    #: token turn INTO when the rewrite goes wrong, and is that form counted anywhere?*
+    #: Directed by the lead after finding A1. Promotion of a companion to a gating row is
+    #: the maintainer's under Ruling 102 §1 and is made by naming its label in
+    #: `GATING_COMPANIONS` — a configuration change, never a rewrite.
+    companions: tuple[tuple[str, str, str], ...] = ()
 
     @property
     def fatal(self) -> bool:
@@ -547,6 +561,28 @@ def row_b(docid: Any, snap: Snapshot) -> Row:
 
 
 def _run_script(tree: Path, script: str, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run **the snapshot's own copy** of `script`, never the invoking checkout's.
+
+    DO NOT "simplify" this to call the checkout's script against `--root <snapshot>`. The
+    migration rewrites `doc-index.py`, `doc-id.py` and `audit-docs.py` themselves, and §7's
+    preamble scopes every row to "at the migration PR's merge tree" — the scripts are part
+    of that tree. Measured by the auditor, same command, same snapshot, opposite verdicts:
+
+        <snap>/scripts/doc-index.py --check   -> "INDEX.md is stale"      exit 1
+        <checkout>/scripts/doc-index.py …     -> "OK (byte-stable)"       exit 0
+
+    The cause is a citation rewritten inside `doc-index.py`'s own banner *string literal*
+    (`see NT-0019 §1.4` -> `see RFC-216 §1.4`) with the index never regenerated, so the
+    generator and its artifact disagree by exactly the token rewritten in one and not the
+    other. Running the checkout's copy makes row (c) pass forever over a broken corpus —
+    the defect would be invisible to the instrument built to detect it.
+    """
+    resolved = (tree / "scripts" / script).resolve()
+    if not resolved.is_relative_to(tree.resolve()):
+        raise WorkingCheckoutRefusedError(
+            f"{resolved} is not under the snapshot root {tree} — a row must never be "
+            "computed with the invoking checkout's copy of a script the migration rewrites"
+        )
     env = dict(os.environ)
     env["PYTHONPATH"] = str(tree / "scripts")
     return subprocess.run(
@@ -557,6 +593,14 @@ def _run_script(tree: Path, script: str, *args: str) -> subprocess.CompletedProc
         check=False,
         env=env,
     )
+
+
+#: Row (c)'s pass is this string, not `returncode == 0`. Measured by the auditor: three
+#: different states share exit 0 — a genuine byte-stable index, an un-migrated tree, and a
+#: fully migrated tree checked with `--root` off by one directory, the last of which prints
+#: the reassuring pre-migration line over an untouched corpus.
+_BYTE_STABLE: Final = "OK (byte-stable)"
+_NOTHING_TO_CHECK: Final = "nothing to check yet"
 
 
 def _last_line(proc: subprocess.CompletedProcess[str]) -> str:
@@ -578,13 +622,25 @@ def row_c(snap: Snapshot) -> Row:
             "empty population — docs/INDEX.md carries no id line, so a byte-stable check "
             "over it proves nothing",
         )
+    elif _BYTE_STABLE in (mig.stdout + mig.stderr):
+        verdict, note = PASS, ""
     else:
-        verdict, note = (PASS, "") if mig.returncode == 0 else (FAIL, "")
+        verdict, note = FAIL, (
+            "no `OK (byte-stable)` line"
+            + (" — and the run reported the pre-migration no-op, which is the state a "
+               "mis-rooted call also reports" if _NOTHING_TO_CHECK in (mig.stdout + mig.stderr)
+               else "")
+        )
     return Row(
         key="c",
         title="doc-index.py --check byte-stable",
         owner=OWNER_W37_6,
-        predicate="python3 scripts/doc-index.py --check   (run with cwd = the tree)",
+        predicate=(
+            "python3 <snapshot>/scripts/doc-index.py --check (cwd = the tree, the tree's "
+            f"OWN copy — see `_docverify._run_script`); PASS asserts the literal "
+            f"{_BYTE_STABLE!r} in the output, NOT the exit code: exit 0 is returned by the "
+            "pass, by an un-migrated tree, and by a mis-rooted call alike"
+        ),
         denominator=f"{records} id-bearing line(s) in docs/INDEX.md",
         migrated=f"exit {mig.returncode}: {_last_line(mig)}",
         control=f"exit {ctl.returncode}: {_last_line(ctl)}",
@@ -635,21 +691,133 @@ D_ALTERNATIVES: Final = (
 D_DISCLOSED: Final = frozenset({r"\bF[0-9]{2}\b"})
 
 
+#: What each §7(d) alternative turns INTO when the rewrite goes wrong. Directed by the lead
+#: after auditor finding A1, whose evidence is the reason this table exists rather than a
+#: comment: `F-W11-1-3` -> `F-WK-952-1-3`, because the rewrite matched the work key `W11`
+#: *inside* the finding id. `F-WK` has a letter where `F-W[0-9]` wants a digit, so the
+#: mangled form matches no §7(d) alternative at all — **and the alternative therefore reads
+#: zero partly BECAUSE the corruption moved the tokens out of its own predicate's reach.**
+#: A row satisfiable by corruption is what neither a control nor a denominator alone
+#: catches.
+#:
+#: An alternative with no entry here prints `no companion predicate declared`, by name and
+#: unconditionally. The gap is the point: the general question — *for every alternative,
+#: what does a wrong rewrite turn this token into, and is that form counted anywhere?* — is
+#: answered for three of thirteen today, and a silent absence would read as "asked and
+#: found nothing".
+D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
+    "F-W[0-9]": ((
+        "mangled: work key rewritten inside the finding id",
+        r"\bF-WK-[0-9]",
+    ),),
+    "(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+": ((
+        "mangled: rewrite matched inside a compound citation",
+        r"\b(FR|NFR|OQ|DEP)-[0-9]+/[0-9]+",
+    ),),
+    # The migration derives new filenames from titles, lower-casing the slug, so a legacy
+    # id inside a title survives as a *filename* the alternative cannot see: `NT-00` is
+    # written upper-case and slugs are not. Auditor: 26 of 384 new-form filenames carry
+    # `nt-00`, 2 carry `wf-0[0-9]`.
+    "NT-00": (("mangled: legacy id lower-cased into a generated filename slug", r"nt-00"),),
+    "wf-0[0-9]": ((
+        "mangled: legacy id baked into a generated filename slug",
+        r"/[^/\s]*wf-0[0-9]",
+    ),),
+}
+
+#: Companion labels promoted to gating. **Empty, and changing it is the maintainer's under
+#: Ruling 102 §1** — the row set is not the instrument's to widen. Naming a label here makes
+#: a non-zero companion figure fail its row; that is the whole promotion mechanism, and it
+#: is a configuration change rather than a rewrite, as the lead directed.
+GATING_COMPANIONS: Final[frozenset[str]] = frozenset()
+
+
+def _companions_for(alt: str, mig: Corpus, ctl: Corpus) -> tuple[list[tuple[str, str, str]], int]:
+    r"""Every companion figure for one alternative, plus the count that would gate it.
+
+    Two kinds, and both are needed because they distinguish two inertness classes that look
+    identical in a results table:
+
+    * **mangled** — `D_COMPANIONS`, above: the row reads zero because the corruption moved
+      the token out of the predicate's reach (auditor A1's `F-W[0-9]`).
+    * **unanchored** — the same alternative without §7(d)'s leading `\b`. `\b` needs a word
+      character on one side, so `\b\.claude/notes/` can only match where a word character
+      immediately precedes the dot; measured over the corpus, its *only* match is the `n` of
+      a `\n` escape inside a Python string literal. The anchored figure is 1 and the
+      unanchored one is 88: the predicate cannot fire in any context it exists to police.
+      A genuinely clean alternative reads 0 against 0. Ruling 102 §1's own test — "a row
+      that cannot be expressed as a predicate the script computes is a row that was never
+      enforceable" — applied to a row that computes but cannot fail.
+    """
+    out: list[tuple[str, str, str]] = []
+    gating = 0
+    for label, pattern_src in D_COMPANIONS.get(alt, ()):
+        pattern = re.compile(pattern_src)
+        m_lines, m_files = mig.scan(pattern)
+        c_lines, _ = ctl.scan(pattern)
+        out.append((
+            label,
+            pattern_src,
+            f"migrated {m_lines} line(s) / {m_files} file(s); control {c_lines}",
+        ))
+        if label in GATING_COMPANIONS:
+            gating += m_lines
+    if alt not in D_COMPANIONS:
+        out.append((
+            "mangled",
+            "(none)",
+            "no companion predicate declared — this alternative has not been asked what a "
+            "wrong rewrite turns it into",
+        ))
+    unanchored = re.compile("(" + alt + ")")
+    u_mig, _ = mig.scan(unanchored)
+    u_ctl, _ = ctl.scan(unanchored)
+    out.append((
+        "unanchored (inertness probe)",
+        "(" + alt + ")   — the same alternative without §7(d)'s leading `\\b`",
+        f"migrated {u_mig}; control {u_ctl}",
+    ))
+    return out, gating
+
+
 def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
     rows: list[Row] = []
     for i, alt in enumerate(D_ALTERNATIVES, start=1):
         pattern = re.compile(r"\b(" + alt + ")")
         m_lines, m_files = mig.scan(pattern)
         c_lines, c_files = ctl.scan(pattern)
+        companions, gating = _companions_for(alt, mig, ctl)
         if alt in D_DISCLOSED:
             verdict = DISCLOSE
             note = ("excluded from the zero requirement, count disclosed "
                     "(§8.5; Ruling 102 §4)")
+        elif m_lines > c_lines:
+            # Not a worse FAIL — a different finding. See `REGRESSION`.
+            verdict = REGRESSION
+            note = (
+                f"the migrated tree carries MORE than the un-migrated control "
+                f"({c_lines} -> {m_lines}): the migration is creating what this row "
+                "forbids, so no citation rewrite reaches zero"
+            )
         else:
             verdict, note = _verdict_on_zero(m_lines, mig.n_lines, control=c_lines)
+        if m_lines == c_lines and m_lines > 0:
+            # The auditor's two-column signature, and a better detector than reasoning
+            # about `\b`: an alternative the migration does not move has no discriminating
+            # power, whatever its absolute figure looks like.
+            note = (note + "; " if note else "") + (
+                "INERT: control equals migrated, so this predicate distinguishes nothing "
+                "— read its unanchored companion below"
+            )
+        if gating:
+            verdict = FAIL
+            note = (note + "; " if note else "") + (
+                f"a companion promoted through GATING_COMPANIONS is non-zero ({gating})"
+            )
         rows.append(
             Row(
                 key=f"d{i}",
+                companions=tuple(companions),
                 title=f"§7(d) alternative {alt!r} returns nothing",
                 owner=OWNER_W37_6,
                 predicate=(
@@ -945,11 +1113,23 @@ _VACUITY_PROBES: Final = (
 #: pnpm store) that a `git archive` snapshot does not have. They are NOT MEASURED here with
 #: the owner named rather than silently dropped — §13 admits no silence, and handover §2.3
 #: is the precedent: "not measured, owner the executor's PR CI".
+#: `audit-docs.py` saying a check has nothing to scan. Distinct from a failing check and
+#: from an empty-population pass: the check did not run at all, and the exit-code summary
+#: has no way to say so.
+_ABSENT_CHECK_RE: Final = re.compile(r"cannot run|cannot scan it")
+
 _UNMEASURED_GATE_HALVES: Final = (
     "pytest tests/", "lint-imports", "backend suite", "pricing-core suite",
     "model-schema suite", "frontend suite (pnpm lint/type-check/test/build)",
     "docs/contracts/ drift (generate-contracts.py --check)",
 )
+
+
+#: The over-exemption probe's two thresholds, named so a reader can see what "large" and
+#: "almost entirely" mean rather than inferring them from a magic number. The floor exists
+#: because 1-of-1 and 0-of-1 are the pre-H-row state and are not evidence of anything.
+_EXEMPTION_FLOOR: Final = 20
+_EXEMPTION_RATE_CAP: Final = 0.5
 
 
 def _probe_summary(out: str) -> dict[str, int | None]:
@@ -967,6 +1147,8 @@ def rows_h(snap: Snapshot) -> list[Row]:
     ctl_out = ctl_audit.stdout + ctl_audit.stderr
     failures = re.search(r"FAILED \((\d+)\)", mig_out)
     ctl_failures = re.search(r"FAILED \((\d+)\)", ctl_out)
+    mig_absent = len(_ABSENT_CHECK_RE.findall(mig_out))
+    ctl_absent = len(_ABSENT_CHECK_RE.findall(ctl_out))
 
     h1 = Row(
         key="h1",
@@ -975,10 +1157,20 @@ def rows_h(snap: Snapshot) -> list[Row]:
         predicate="python3 scripts/audit-docs.py   (run with cwd = the tree)",
         denominator=f"{len(mig_out.splitlines())} output line(s)",
         migrated=f"exit {mig_audit.returncode}"
-        + (f", FAILED ({failures.group(1)})" if failures else ""),
+        + (f", FAILED ({failures.group(1)})" if failures else "")
+        + f", {mig_absent} check(s) did not execute",
         control=f"exit {ctl_audit.returncode}"
-        + (f", FAILED ({ctl_failures.group(1)})" if ctl_failures else ""),
+        + (f", FAILED ({ctl_failures.group(1)})" if ctl_failures else "")
+        + f", {ctl_absent} check(s) did not execute",
         verdict=PASS if mig_audit.returncode == 0 else FAIL,
+        note=(
+            f"{mig_absent} check(s) report they CANNOT RUN on the migrated tree "
+            f"(control {ctl_absent}) — `docs/notes/` is dissolved by the migration, so "
+            "checks 16-20 and 25 have nothing to scan. Non-execution is a third state "
+            "beside pass and fail, and a failure count scores it as a small number of "
+            "failures rather than as a hole in coverage."
+            if mig_absent else ""
+        ),
     )
 
     mig_probes = _probe_summary(mig_out)
@@ -988,6 +1180,16 @@ def rows_h(snap: Snapshot) -> list[Row]:
         for label in mig_probes
         if (ctl_probes[label] or 0) > 0 and (mig_probes[label] or 0) == 0
     ]
+    # A second vacuity shape, and the zero-denominator rule cannot see it: a LARGE
+    # population almost entirely exempted. Raised by the auditor as the hazard that only
+    # appears once the H rows land — check 37 then exempts ~353 of ~424 documents as
+    # verbatim-migrated on the strength of a `was:` field that is correct 3 times in ~393.
+    # Before the H rows it exempts 0 of 1 and is harmless, which is exactly why a probe
+    # keyed on zero denominators would never have raised it.
+    in_scope = mig_probes["check 37 documents in scope"] or 0
+    exempt = mig_probes["check 37 `was:` exemptions"] or 0
+    rate = (exempt / in_scope) if in_scope else 0.0
+    over_exempt = in_scope >= _EXEMPTION_FLOOR and rate >= _EXEMPTION_RATE_CAP
     h2 = Row(
         key="h2",
         title="audit-docs.py's passing lines are not green over an empty population",
@@ -1000,8 +1202,21 @@ def rows_h(snap: Snapshot) -> list[Row]:
         denominator=f"{len(_VACUITY_PROBES)} probe(s)",
         migrated="; ".join(f"{k}={v}" for k, v in mig_probes.items()),
         control="; ".join(f"{k}={v}" for k, v in ctl_probes.items()),
-        verdict=PASS if not vacuous else FAIL,
-        note="" if not vacuous else "vacuous on: " + ", ".join(vacuous),
+        verdict=PASS if not (vacuous or over_exempt) else FAIL,
+        note="; ".join(
+            part
+            for part in (
+                ("vacuous on: " + ", ".join(vacuous)) if vacuous else "",
+                (
+                    f"OVER-EXEMPT: check 37 exempts {exempt} of {in_scope} document(s) "
+                    f"({rate:.0%}) on the `was:` field, which is a large population almost "
+                    "entirely excused rather than an empty one — the zero-denominator rule "
+                    "cannot see this shape"
+                ) if over_exempt else "",
+                f"check 37 exemption rate {exempt}/{in_scope}" if in_scope else "",
+            )
+            if part
+        ),
     )
 
     mig_req = _run_script(snap.migrated, "req-coverage.py")
@@ -1194,6 +1409,25 @@ def verify(
         # narrower-population-behind-a-wider-name failure Ruling 102 §1 exists to stop, and
         # it is recorded here rather than fixed silently.
         _git(snap.migrated, "add", "-A")
+        # Assert it, rather than assume the `add` did what it says. The auditor measured
+        # this in the inflating direction (audit-docs.py: 549 failures before the refresh,
+        # 548 after) and a stale index is silent: every row that reads `git ls-files`
+        # simply measures the wrong population and reports a well-formed number.
+        # Deliberately NOT `git status --porcelain`: after `git add -A` that still lists
+        # every *staged* path, which is the whole migration. The property being asserted is
+        # "the index describes the working tree", which is exactly: nothing untracked, and
+        # nothing modified relative to the index.
+        untracked = _git(
+            snap.migrated, "ls-files", "--others", "--exclude-standard"
+        ).stdout.split()
+        unstaged = _git(snap.migrated, "diff", "--name-only").stdout.split()
+        if untracked or unstaged:
+            raise WorkingCheckoutRefusedError(
+                "the snapshot's git index still disagrees with its working tree after "
+                f"`git add -A` ({len(untracked)} untracked, {len(unstaged)} unstaged) — "
+                "every row reading `git ls-files` would measure the pre-migration "
+                "population"
+            )
         rows = compute_rows(docid, snap)
         return VerifyResult(snapshot=snap, rows=tuple(rows))
     finally:
@@ -1228,6 +1462,10 @@ def render(result: VerifyResult) -> str:
         out.append(f"    denominator  {row.denominator}")
         out.append(f"    migrated     {row.migrated}")
         out.append(f"    control      {row.control}")
+        for label, predicate, figure in row.companions:
+            out.append(f"    companion    {label}")
+            out.append(f"      predicate  {predicate}")
+            out.append(f"      figure     {figure}")
         if row.note:
             out.append(f"    note         {row.note}")
         out.append("")
