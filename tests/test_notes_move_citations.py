@@ -136,8 +136,18 @@ _SPECIFICATIONS_OF_THE_OLD_PATH = {
     # builds its own search term, would hide the literal and defeat the constant's reason
     # for existing; the reviewed exemption is the mechanism this comment block already
     # prescribes for exactly this case ("each needs its own reviewed line added here, not
-    # a widened pattern"). It is a specification of the path, not a citation of it: when
-    # the migration lands, this row goes to zero and the exemption can go with it.
+    # a widened pattern"). It is a specification of the path, not a citation of it.
+    #
+    # THIS EXEMPTION IS PERMANENT, and the sentence that first stood here -- "when the
+    # migration lands, this row goes to zero and the exemption can go with it" -- was
+    # wrong on both halves. `D_FULL_PATTERN` must carry §7(d)'s sentence verbatim for as
+    # long as that sentence names these alternatives, and the file's remaining old-path
+    # citations are ordinary ones the migration rewrites. Recording a permanent exemption
+    # as temporary invites the cleanup this comment block already warns against: a later
+    # reader deletes a still-needed entry, or -- more likely, since a row citing the old
+    # root will still be non-zero -- "fixes" the constant by concatenation, which is the
+    # one thing that must not happen to it. Corrected 2026-09-03, raised by the auditor
+    # and the lead independently.
     "scripts/_docverify.py",
 }
 

@@ -403,18 +403,219 @@ def test_vacuity_probes_read_the_lines_audit_docs_actually_prints(
 # =========================================================================================
 
 
-def test_row_e_is_undetermined_and_prints_both_readings(
+def _index(ids: str) -> str:
+    """A minimal `docs/INDEX.md` carrying `ids` — conjunct 3's authority."""
+    return f"# Index\n\n{ids}\n"
+
+
+def test_row_e_conjunct_3_excuses_a_token_that_resolves_to_nothing(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 102 §2 row 5. A row with two readings is red, and *both* numbers are on the
-    table — the instrument does not pick the more convenient one."""
-    migrated = {"docs/a.md": "see PL-01240 and docs/plans/PL-01240-slug.md\n"}
-    snap = _snapshot(dv, tmp_path / "e", migrated, migrated)
-    row = dv.row_e(dv.load_corpus(snap.migrated), dv.load_corpus(snap.control))
-    assert row.verdict == dv.UNDETERMINED
-    assert row.fatal
-    assert "reading 1 = 2" in row.migrated  # both occurrences
-    assert "reading 2 = 1" in row.migrated  # only the one outside path context
+    """Ruling 103 conjunct 3: a padded token that resolves to nothing is a **specimen of
+    the form**, not a citation. Red-then-green on one corpus: the same line is a violation
+    when `docs/INDEX.md` carries the id and a specimen when it does not."""
+    doc = {"docs/a.md": "the rule is stated for PL-09998 in prose\n"}
+    with_id = dict(doc, **{"docs/INDEX.md": _index("PL-9998 something")})
+    without = dict(doc, **{"docs/INDEX.md": _index("PL-9997 something else")})
+    snap = _snapshot(dv, tmp_path / "e3a", with_id, with_id)
+    assert dv.row_e(dv.load_corpus(snap.migrated), dv.load_corpus(snap.control),
+                    snap).verdict == dv.FAIL
+    snap2 = _snapshot(dv, tmp_path / "e3b", without, without)
+    assert dv.row_e(dv.load_corpus(snap2.migrated), dv.load_corpus(snap2.control),
+                    snap2).verdict == dv.PASS
+
+
+def test_row_e_conjunct_3_fails_loudly_when_the_index_resolves_nothing(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """An empty index would excuse **every** token as a specimen — a green over an authority
+    that carries nothing (NT-0007). It must fail rather than pass."""
+    doc = {"docs/a.md": "PL-09998 in prose\n", "docs/INDEX.md": "# Index\n"}
+    snap = _snapshot(dv, tmp_path / "e3c", doc, doc)
+    row = dv.row_e(dv.load_corpus(snap.migrated), dv.load_corpus(snap.control), snap)
+    assert row.verdict == dv.FAIL
+    assert "no authority" in row.note
+
+
+def test_row_e_conjunct_0_excludes_a_fenced_block(dv: Any, tmp_path: pathlib.Path) -> None:
+    """Ruled by the decision-maker: without a fence rule, a record documenting a padding
+    defect must corrupt its own evidence to pass the lint. Red-then-green on the same token
+    — a violation in prose, evidence inside a fence."""
+    idx = _index("PL-9998")
+    prose = {"docs/a.md": "PL-09998 in prose\n", "docs/INDEX.md": idx}
+    fenced = {"docs/a.md": "```\nPL-09998 quoted as evidence\n```\n", "docs/INDEX.md": idx}
+    s1 = _snapshot(dv, tmp_path / "e0a", prose, prose)
+    assert dv.row_e(dv.load_corpus(s1.migrated), dv.load_corpus(s1.control),
+                    s1).verdict == dv.FAIL
+    s2 = _snapshot(dv, tmp_path / "e0b", fenced, fenced)
+    assert dv.row_e(dv.load_corpus(s2.migrated), dv.load_corpus(s2.control),
+                    s2).verdict == dv.PASS
+
+
+def test_row_e_conjunct_2_strips_markdown_emphasis_before_the_path_test(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 103 defect 3, as its own broken-input proof. A padded id inside a path, with
+    bold markers splitting the token, is still a path — and before the stripping step the
+    path test never saw one. The emphasised form must be excused; only the bare prose token
+    is a violation."""
+    # `RL-09999` rather than a real id, and this is not cosmetic: the first draft reused a
+    # padded id that really resolves, and because this file is INSIDE the corpus row (e)
+    # scans, the deliberately
+    # violating fixture below became a genuine violation of the real corpus — the instrument
+    # counting its own test, the same class as the (d11) floor task 17 removed. The number
+    # is above every allocated id, so conjunct 3 excuses it there while this test supplies
+    # its own `docs/INDEX.md` and still discriminates. Verified at the migrated tree:
+    # `grep -c 'RL-9999\b' docs/INDEX.md` -> 0, highest allocated 1128.
+    idx = _index("RL-9999")
+    emphasised = {
+        "docs/a.md": "see `docs/rulings/**RL-09999**-q5-file.md` for it\n",
+        "docs/INDEX.md": idx,
+    }
+    s = _snapshot(dv, tmp_path / "e2a", emphasised, emphasised)
+    assert dv.row_e(dv.load_corpus(s.migrated), dv.load_corpus(s.control),
+                    s).verdict == dv.PASS
+    bare = {"docs/a.md": "the pair was relayed as RL-09999\n", "docs/INDEX.md": idx}
+    s2 = _snapshot(dv, tmp_path / "e2b", bare, bare)
+    assert dv.row_e(dv.load_corpus(s2.migrated), dv.load_corpus(s2.control),
+                    s2).verdict == dv.FAIL
+
+
+def test_row_e_conjunct_1_reads_pad_width_from_the_symbol(dv: Any) -> None:
+    """Ruling 103 defect 1, and the reason `CLAUDE.md` §13 forbids a pasted constant: on
+    one corpus `-0\\d{4}` and `-0[0-9]{3,4}` differed by **355 occurrences**, which is
+    F85's shape inside an acceptance predicate."""
+    assert str(_docid_pad_width(dv) - 1) in dv._PADDED_ID_RE.pattern
+    assert dv._PADDED_ID_RE.search("PL-09998")
+    # One digit short and one digit long must BOTH miss — the width is exact, not a floor.
+    assert not dv._PADDED_ID_RE.search(" PL-0999 ")
+    assert not dv._PADDED_ID_RE.search(" PL-099980 ")
+
+
+def _docid_pad_width(dv: Any) -> int:
+    """`_docid.PAD_WIDTH`, reached through the module under test rather than imported.
+
+    `scripts/_docid.py` is loaded by path (its directory is on `sys.path` at runtime but is
+    not a package mypy can resolve), so a direct `import _docid` here type-checks as a
+    missing module. Going through `_docverify`'s own reference keeps one source for the
+    width, which is the point of the conjunct being by symbol at all.
+    """
+    return int(_load_by_path("_docid_for_width", ROOT / "scripts" / "_docid.py").PAD_WIDTH)
+
+
+def test_row_f_conjunct_2_discloses_a_split_source_instead_of_failing_on_it(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 103's amendment. A split source's 3 occurrences leave one file and arrive in
+    two; `REDIRECTS.csv` is one-to-one and names only one of them, so a naive per-file
+    comparison reports three disagreements. They **close** — the residual is zero — so the
+    conjunct passes with them disclosed."""
+    control = {"docs/src.md": "VR-DST-1 a\nVR-DST-1 b\nVR-DST-1 c\n"}
+    migrated = {
+        "docs/one.md": "VR-DST-1 a\nVR-DST-1 b\n",
+        "docs/two.md": "VR-DST-1 c\n",
+        "docs/REDIRECTS.csv": "old_id,new_id,old_path,new_path\n"
+                              "X,Y,docs/src.md,docs/one.md\n",
+    }
+    snap = _snapshot(dv, tmp_path / "f2", migrated, control)
+    row = dv.row_f(dv.load_corpus(snap.migrated), dv.load_corpus(snap.control), None, snap)
+    assert row.verdict == dv.PASS
+    assert "disclosed split-source" in row.note
+    assert "NAMED LIMITATION" in row.note
+
+
+def test_row_f_fails_when_an_identifier_leaves_without_arriving(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The residual is what makes conjunct 2 a test rather than a disclosure: a genuine
+    loss does not close."""
+    control = {"docs/src.md": "VR-DST-1 a\nVR-DST-1 b\nVR-DST-1 c\n"}
+    migrated = {"docs/one.md": "VR-DST-1 a\n",
+                "docs/REDIRECTS.csv": "old_id,new_id,old_path,new_path\n"
+                                      "X,Y,docs/src.md,docs/one.md\n"}
+    snap = _snapshot(dv, tmp_path / "f3", migrated, control)
+    row = dv.row_f(dv.load_corpus(snap.migrated), dv.load_corpus(snap.control), None, snap)
+    assert row.verdict == dv.FAIL
+    assert "conjunct 1" in row.note  # the total moved, which conjunct 1 catches first
+
+
+def test_row_f_conjunct_1_alone_would_have_passed_the_real_corpus(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Why the strengthening earned its keep: totals equal, files moved. Conjunct 1 sees
+    nothing; conjunct 2 is what looks."""
+    control = {"docs/src.md": "VR-DST-1 a\nVR-DST-1 b\n"}
+    migrated = {"docs/one.md": "VR-DST-1 a\n", "docs/two.md": "VR-DST-1 b\n"}
+    snap = _snapshot(dv, tmp_path / "f1", migrated, control)
+    mig, ctl = dv.load_corpus(snap.migrated), dv.load_corpus(snap.control)
+    assert dv._per_file(mig, dv._VR_DST_RE) != dv._per_file(ctl, dv._VR_DST_RE)
+    assert sum(dv._per_file(mig, dv._VR_DST_RE).values()) == sum(
+        dv._per_file(ctl, dv._VR_DST_RE).values()
+    )
+
+
+# =========================================================================================
+# Task 17 — the decomposition is derived from the acceptance sentence, not retyped
+# =========================================================================================
+
+
+def test_the_alternatives_are_derived_and_reproduce_the_hand_written_list(
+    dv: Any,
+) -> None:
+    """The list this replaced was hand-typed, and one of its entries was the very string
+    row (d11) forbids — so the instrument counted its own source. Derivation removes the
+    literal; this pins that it removed nothing else."""
+    expected = (
+        "NT-00", "F-W[0-9]", r"\bF[0-9]{2}\b", "wf-0[0-9]", "Ruling [0-9]+",
+        "ADR-0[0-9]{3}", "(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+", "W[0-9]+[a-z]?-[0-9]+",
+        # built by concatenation: this file is inside the corpus row (d) scans
+        "docs/" + "plans/2026-", "docs/" + "audit/", "docs/" + "notes/", "docs/" + "adr/",
+        r"\." + "claude/notes/",
+    )
+    assert expected == dv.D_ALTERNATIVES
+
+
+def test_only_a_trailing_group_is_distributed(dv: Any) -> None:
+    """The rule that makes the decomposition derivable rather than a matter of taste. A
+    suffix group's leaves are separate things to count; a prefix group is one shape."""
+    assert dv._expand_trailing_alternation("docs/(a/|b/)") == ["docs/a/", "docs/b/"]
+    assert dv._expand_trailing_alternation("(FR|NFR)-[A-Z]+-[0-9]+") == [
+        "(FR|NFR)-[A-Z]+-[0-9]+"
+    ]
+
+
+def test_the_splitter_respects_groups_classes_and_escapes(dv: Any) -> None:
+    assert dv._split_top_level("a|b") == ["a", "b"]
+    assert dv._split_top_level("(a|b)|c") == ["(a|b)", "c"]
+    assert dv._split_top_level(r"[a|b]|c") == [r"[a|b]", "c"]
+    assert dv._split_top_level(r"a\|b|c") == [r"a\|b", "c"]
+
+
+@pytest.mark.parametrize("broken", ["a|(b", "a|b)", "a|[bc"])
+def test_a_splitting_bug_raises_rather_than_returning_a_wrong_list(
+    dv: Any, broken: str
+) -> None:
+    """The honest objection to deriving is that a splitting bug would be a **silent** wrong
+    predicate, which is worse than the one-line floor it removes. It cannot be silent."""
+    with pytest.raises(dv.PatternDecompositionError):
+        dv._split_top_level(broken)
+
+
+def test_the_derived_set_is_checked_against_its_source_over_the_real_corpus(
+    dv: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The runtime guard, red-then-green. Every line the acceptance sentence matches must be
+    matched by some derived alternative and vice versa; drop one and it raises."""
+    doc = {"docs/a.md": "cites ADR-0004 and NT-0019\n"}
+    corpus = dv.load_corpus(_snapshot(dv, tmp_path / "dec", doc, doc).migrated)
+    assert dv.assert_decomposition_matches_source(corpus) == 1
+    monkeypatch.setattr(
+        dv, "D_ALTERNATIVES", tuple(a for a in dv.D_ALTERNATIVES if a != "ADR-0[0-9]{3}")
+    )
+    doc2 = {"docs/a.md": "cites ADR-0004 only\n"}
+    corpus2 = dv.load_corpus(_snapshot(dv, tmp_path / "dec2", doc2, doc2).migrated)
+    with pytest.raises(dv.PatternDecompositionError):
+        dv.assert_decomposition_matches_source(corpus2)
 
 
 def test_padded_id_in_path_context_is_distinguished_from_prose(
@@ -422,20 +623,20 @@ def test_padded_id_in_path_context_is_distinguished_from_prose(
 ) -> None:
     """The path-context rule on the markdown-link form.
 
-    `[PL-01240-slug](docs/plans/PL-01240-slug.md)` carries the id twice. The **target** is
+    `[PL-09998-slug](docs/plans/PL-09998-slug.md)` carries the id twice. The **target** is
     unambiguously a path and is excluded. The **link text** is a bare slug with no `/` and
     no extension, so the enclosing-token rule counts it — the larger, conservative reading.
     That residual judgement is exactly why row (e) is `UNDETERMINED` rather than scored:
     Ruling 102 §2 row 5 gives the choice to the decision-maker, and an instrument that
     quietly picked the smaller number would be making it.
     """
-    line = "[PL-01240-slug](docs/plans/PL-01240-slug.md) and bare PL-01240 in a sentence"
+    line = "[PL-09998-slug](docs/plans/PL-09998-slug.md) and bare PL-09998 in a sentence"
     hits = list(dv._PADDED_ID_RE.finditer(line))
     assert len(hits) == 3
     prose = [h for h in hits if not dv._in_path_context(line, h.start(), h.end())]
     # the link *target* is path context; the link text and the bare id are not
     assert len(prose) == 2
-    assert line[prose[-1].start():prose[-1].end()] == "PL-01240"
+    assert line[prose[-1].start():prose[-1].end()] == "PL-09998"
 
 
 # =========================================================================================

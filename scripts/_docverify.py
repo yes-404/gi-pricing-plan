@@ -662,27 +662,143 @@ D_FULL_PATTERN: Final = (
     r"docs/(plans/2026-|audit/|notes/|adr/)|\.claude/notes/)"
 )
 
+class PatternDecompositionError(RuntimeError):
+    """`D_FULL_PATTERN` could not be split into its alternatives. Loud, never silent.
+
+    A splitting bug that yielded a *wrong* list would be a silent wrong predicate, which is
+    worse than any floor it removes — so every failure mode here raises, and
+    `assert_decomposition_matches_source` re-checks the result against the source pattern
+    over the real corpus at every run.
+    """
+
+
+def _split_top_level(body: str) -> list[str]:
+    """Split a regex alternation body on `|` at nesting depth 0.
+
+    Respects `(...)` groups, `[...]` character classes (where `|` and `)` are literal) and
+    backslash escapes. Raises rather than guessing on unbalanced input.
+    """
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    in_class = False
+    i = 0
+    while i < len(body):
+        ch = body[i]
+        if ch == "\\":
+            current.append(body[i : i + 2])
+            i += 2
+            continue
+        if in_class:
+            if ch == "]":
+                in_class = False
+        elif ch == "[":
+            in_class = True
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth < 0:
+                raise PatternDecompositionError(f"unbalanced `)` at offset {i} in {body!r}")
+        elif ch == "|" and depth == 0:
+            parts.append("".join(current))
+            current = []
+            i += 1
+            continue
+        current.append(ch)
+        i += 1
+    if depth != 0 or in_class:
+        raise PatternDecompositionError(f"unterminated group or class in {body!r}")
+    parts.append("".join(current))
+    return parts
+
+
+#: A trailing group whose whole content is an alternation, e.g. the `(plans/2026-|audit/|
+#: notes/|adr/)` of `docs/(plans/2026-|audit/|notes/|adr/)`.
+_TRAILING_GROUP_RE: Final = re.compile(r"^(?P<prefix>[^()]*)\((?P<body>.*)\)$")
+
+
+def _expand_trailing_alternation(alternative: str) -> list[str]:
+    """Distribute a **suffix** group's alternation over its prefix; otherwise pass through.
+
+    The suffix rule is the whole rule, and it is what makes the decomposition derivable
+    rather than a matter of taste. `docs/(plans/2026-|audit/|notes/|adr/)` ends in its
+    group, so its four leaves are four distinct things to count and the aggregate would
+    hide three. `(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+` does **not** end in its group — the group
+    is a prefix of one requirement-citation shape — so it stays one alternative, which is
+    also how the acceptance record's own per-alternative table reads it.
+    """
+    m = _TRAILING_GROUP_RE.match(alternative)
+    if m is None:
+        return [alternative]
+    leaves = _split_top_level(m.group("body"))
+    if len(leaves) < 2:
+        return [alternative]
+    return [m.group("prefix") + leaf for leaf in leaves]
+
+
+def _decompose(full_pattern: str) -> tuple[str, ...]:
+    """§7(d)'s alternatives, **derived from the acceptance sentence, never retyped.**
+
+    Task 17. The hand-written list this replaces spelled the old notes directory out as a
+    bare prefix, which put a permanent floor of one line under row (d11) — the instrument
+    counted its own source, and a bare directory with no filename after it is not a
+    citation, so the migration's rewriter leaves it exactly where it is. Note what that
+    floor did **not** come from: §7(d)'s sentence writes the path alternatives *factored*,
+    `docs/(plans/2026-|audit/|notes/|adr/)`, and contains no such substring, so
+    `D_FULL_PATTERN` never tripped the row. Only the retyped decomposition did, which is
+    why this is settled in code rather than by amending the standard.
+
+    Deriving also strengthens the property `D_FULL_PATTERN`'s comment exists for: a reader
+    no longer has to check the decomposition against its source by eye, because it cannot
+    disagree with it.
+    """
+    outer = re.match(r"^\\b\((?P<body>.*)\)$", full_pattern)
+    if outer is None:
+        raise PatternDecompositionError(
+            f"{full_pattern!r} is not the expected `\\b(...)` shape"
+        )
+    leaves: list[str] = []
+    for alternative in _split_top_level(outer.group("body")):
+        leaves.extend(_expand_trailing_alternation(alternative))
+    if not leaves:
+        raise PatternDecompositionError("decomposition produced no alternatives")
+    return tuple(leaves)
+
+
 #: One row per alternative, not an aggregate — the ruled reading (Ruling 102 §2 row 3,
-#: "(d) Per alternative"). Each entry is the alternative exactly as it appears inside
-#: `D_FULL_PATTERN`; the compiled predicate is `\b(<alternative>)`, which is how the full
-#: regex behaves when that branch matches, so a row's number and the full pattern's cannot
-#: disagree. `docs/(plans/2026-|audit/|notes/|adr/)` is expanded into its four leaves
-#: because the acceptance question is per alternative and one aggregate would hide three.
-D_ALTERNATIVES: Final = (
-    "NT-00",
-    "F-W[0-9]",
-    r"\bF[0-9]{2}\b",
-    "wf-0[0-9]",
-    "Ruling [0-9]+",
-    "ADR-0[0-9]{3}",
-    "(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+",
-    "W[0-9]+[a-z]?-[0-9]+",
-    "docs/plans/2026-",
-    "docs/audit/",
-    "docs/notes/",
-    "docs/adr/",
-    r"\.claude/notes/",
-)
+#: "(d) Per alternative"). **Derived from `D_FULL_PATTERN`, not retyped** (task 17), so a
+#: row's predicate and the acceptance sentence cannot disagree and the instrument does not
+#: write into the corpus the very strings it counts.
+D_ALTERNATIVES: Final = _decompose(D_FULL_PATTERN)
+
+
+def assert_decomposition_matches_source(corpus: Corpus) -> int:
+    """Every line the source pattern matches is matched by some derived alternative, and
+    vice versa. Returns the number of lines both agree on.
+
+    This is the answer to the honest objection against deriving: a splitting bug would be a
+    silent wrong predicate. It cannot be silent if the derived set is checked against the
+    source over the same corpus the rows are computed on, every run. A bug that drops,
+    merges or corrupts an alternative changes the match set and raises here.
+    """
+    full = re.compile(D_FULL_PATTERN)
+    leaves = [re.compile(r"\b(" + alt + ")") for alt in D_ALTERNATIVES]
+    agreed = 0
+    for rel in corpus.files:
+        skip = corpus.was_lines[rel]
+        for i, line in enumerate(corpus.lines[rel]):
+            if i in skip:
+                continue
+            by_source = full.search(line) is not None
+            by_leaves = any(leaf.search(line) for leaf in leaves)
+            if by_source != by_leaves:
+                raise PatternDecompositionError(
+                    f"{rel}:{i + 1}: D_FULL_PATTERN says {by_source} and the derived "
+                    f"alternatives say {by_leaves} — the decomposition is not its source's"
+                )
+            agreed += int(by_source)
+    return agreed
 
 #: Excluded from §7(d)'s zero requirement **with its count disclosed** — §8.5, re-affirmed
 #: by Ruling 102 §4 ("`\bF[0-9]{2}\b` remains excluded with its count disclosed; this ruling
@@ -839,21 +955,30 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
 
 
 # ---------------------------------------------------------------------------------------
-# (e) no padded id in prose — two readings, neither ruled
+# (e) no padded id in prose — Ruling 103's four conjuncts
 # ---------------------------------------------------------------------------------------
 
-#: A padded id: a family prefix, a hyphen, and a zero-led digit run of `_docid.PAD_WIDTH`
-#: (the canonical form is unpadded in prose — `PL-1240` — and padded only in a filename).
-#: Built from `_docid.FAMILY_PREFIXES` so it cannot drift from the id grammar.
+#: **Conjunct 1**, and the `PAD_WIDTH` is read from the symbol, never written as a literal.
+#: Ruling 103 defect 1: the same corpus gave 2032 under `-0\d{4}` and 2387 under
+#: `-0[0-9]{3,4}` — **355 occurrences from the digit count alone**, F85's exact shape inside
+#: an acceptance predicate. `CLAUDE.md` §13's "the shipped constant by symbol, never pasted"
+#: is what stops it recurring.
 _PADDED_ID_RE: Final = re.compile(
     r"\b(" + "|".join(_docid.FAMILY_PREFIXES) + r")-0\d{" + str(_docid.PAD_WIDTH - 1) + r"}\b"
 )
-#: Reading 2 needs "in path context" defined, and defining it by a lookbehind on the
-#: character before the id was the first attempt and was wrong: it missed
-#: `[PL-01240-slug](docs/plans/PL-01240-slug.md)`, where the *first* occurrence is preceded
-#: by `[`. Defined instead on the whole token the occurrence sits in — the run of
-#: characters bounded by whitespace or by markdown/inline-code punctuation — which is the
-#: unit a reader would call "a path" or "a word".
+
+#: **Conjunct 2's** stripping step. Ruling 103 defect 3: two of the three survivors were
+#: paths — `docs/rulings/**RL-00993**-q5-….md` — whose **bold markers split the token**, so
+#: the path test never saw a path. A predicate bug, not a ruling question.
+_MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
+
+#: **Conjunct 0's** fence tracking. Ruled by the decision-maker: without it, a record
+#: documenting a padding defect must corrupt its own evidence to pass the lint, which is
+#: the check-19 distortion arriving by a new route. Fencing preserves evidence byte-exact
+#: and keys no exemption to any document — a padded id **outside** a fence is a violation in
+#: every document, the ruling's own included.
+_FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
+
 _TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}<>\"',;]")
 
 
@@ -861,7 +986,9 @@ def _in_path_context(line: str, start: int, end: int) -> bool:
     """True when the occurrence at `line[start:end]` sits inside a path-shaped token.
 
     Path-shaped means the enclosing token contains a `/` or ends in a file extension. A
-    padded id inside a filename is not "in prose"; a padded id in a sentence is.
+    padded id inside a filename is not "in prose"; a padded id in a sentence is. Defined on
+    the whole enclosing token rather than by a lookbehind on one character, which was the
+    first attempt and missed `[PL-01240-slug](docs/plans/PL-01240-slug.md)`.
     """
     left = start
     while left > 0 and not _TOKEN_BOUNDARY_RE.match(line[left - 1]):
@@ -873,88 +1000,222 @@ def _in_path_context(line: str, start: int, end: int) -> bool:
     return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", token))
 
 
-def _padded_counts(corpus: Corpus) -> tuple[int, int]:
-    """(reading 1: every padded id, reading 2: those not in path context)."""
-    literal = 0
-    prose = 0
+def _unpadded(token: str) -> str:
+    """`PL-01240` -> `PL-1240`. Conjunct 3 resolves the *unpadded* form in `docs/INDEX.md`,
+    because that is the form the index carries and the form a citation is supposed to use.
+    """
+    m = re.fullmatch(r"([A-Z]+)-0*([0-9]+)", token)
+    return f"{m.group(1)}-{int(m.group(2))}" if m else token
+
+
+def index_ids(tree: Path) -> frozenset[str]:
+    """Every governed id `docs/INDEX.md` carries, unpadded — **conjunct 3's** authority.
+
+    A token that resolves to nothing is a *specimen of the form*, not a citation, and the
+    decision-maker ruled it out of the violation population on exactly that ground.
+    """
+    text = read_text(tree / "docs" / "INDEX.md") or ""
+    return frozenset(
+        f"{m.group(1)}-{int(m.group(2))}"
+        for m in re.finditer(r"\b([A-Z]+)-0*([0-9]+)\b", text)
+        if m.group(1) in _docid.FAMILY_PREFIXES
+    )
+
+
+@dataclass(frozen=True)
+class PaddedHit:
+    rel: str
+    line_no: int
+    token: str
+    line: str
+
+
+def padded_hits(corpus: Corpus, resolvable: frozenset[str]) -> tuple[
+    int, list[PaddedHit], list[PaddedHit], list[PaddedHit]
+]:
+    """(conjunct 1 total, after conjunct 0, after conjunct 2, after conjunct 3).
+
+    Each stage is returned so the row can print where the population fell away, rather than
+    a single number whose filtering nobody can see.
+    """
+    total = 0
+    after_corpus: list[PaddedHit] = []
     for rel in corpus.files:
-        for line in corpus.lines[rel]:
-            for h in _PADDED_ID_RE.finditer(line):
-                literal += 1
-                if not _in_path_context(line, h.start(), h.end()):
-                    prose += 1
-    return literal, prose
+        in_fence = False
+        skip = corpus.was_lines[rel]
+        for i, line in enumerate(corpus.lines[rel]):
+            if _FENCE_RE.match(line):
+                in_fence = not in_fence
+                continue
+            hits = list(_PADDED_ID_RE.finditer(line))
+            total += len(hits)
+            if in_fence or i in skip:
+                continue
+            for h in hits:
+                after_corpus.append(PaddedHit(rel, i + 1, h.group(0), line.strip()))
+    after_path: list[PaddedHit] = []
+    for hit in after_corpus:
+        # Conjunct 2 is tested on the line with markdown emphasis stripped, so a bold
+        # marker inside a path cannot hide the path from the path test.
+        cleaned = _MD_EMPHASIS_RE.sub("", hit.line)
+        prose = True
+        for m in _PADDED_ID_RE.finditer(cleaned):
+            if m.group(0) == hit.token and _in_path_context(cleaned, m.start(), m.end()):
+                prose = False
+                break
+        if prose:
+            after_path.append(hit)
+    after_index = [h for h in after_path if _unpadded(h.token) in resolvable]
+    return total, after_corpus, after_path, after_index
 
 
-def row_e(mig: Corpus, ctl: Corpus) -> Row:
-    m_lit, m_prose = _padded_counts(mig)
-    c_lit, c_prose = _padded_counts(ctl)
+def row_e(mig: Corpus, ctl: Corpus, snap: Snapshot) -> Row:
+    resolvable = index_ids(snap.migrated)
+    ctl_resolvable = index_ids(snap.control)
+    m_total, m_corpus, m_path, m_index = padded_hits(mig, resolvable)
+    c_total, _c_corpus, _c_path, c_index = padded_hits(ctl, ctl_resolvable)
+    if mig.n_lines == 0:
+        verdict, note = FAIL, "empty population"
+    elif not resolvable:
+        verdict, note = (
+            FAIL,
+            "conjunct 3 has no authority — docs/INDEX.md resolves no governed id, so "
+            "every token would be excused as a specimen (NT-0007)",
+        )
+    elif m_index:
+        verdict = FAIL
+        note = "violations: " + "; ".join(
+            f"{h.rel}:{h.line_no} [{h.token}]" for h in m_index[:6]
+        ) + ("" if len(m_index) <= 6 else f" (+{len(m_index) - 6} more)")
+    else:
+        verdict, note = PASS, ""
     return Row(
         key="e",
-        title="no padded id in prose",
+        title="no padded id in prose (Ruling 103's four conjuncts)",
         owner=OWNER_W37_6,
         predicate=(
-            f"reading 1 (literal): {_PADDED_ID_RE.pattern!r}; "
-            "reading 2 (excluding path context): the same, minus occurrences whose "
-            "enclosing token contains `/` or ends in a file extension "
-            "(`_docverify._in_path_context`). Both over the same corpus as (d)."
+            "conjunct 0 — (d)'s corpus, minus REDIRECTS.csv, minus front-matter `was:` "
+            f"field lines, minus fenced code blocks ({_FENCE_RE.pattern!r}); "
+            f"conjunct 1 — {_PADDED_ID_RE.pattern!r}, whose digit count is "
+            "`_docid.PAD_WIDTH` **by symbol**, never a literal; "
+            f"conjunct 2 — not path-shaped (`_docverify._in_path_context`) after stripping "
+            f"markdown emphasis ({_MD_EMPHASIS_RE.pattern!r}); "
+            "conjunct 3 — the token's UNPADDED form resolves in the generated "
+            "docs/INDEX.md (`_docverify.index_ids`)"
         ),
-        denominator=f"{mig.n_lines} line(s) in {mig.n_files} file(s)",
-        migrated=f"reading 1 = {m_lit}; reading 2 = {m_prose}",
-        control=f"reading 1 = {c_lit}; reading 2 = {c_prose}",
-        verdict=UNDETERMINED,
-        note=(
-            "two readings, neither ruled. Ruling 102 §2 row 5: '(e)/(f) each gets one "
-            "reading, ruled by the decision-maker citing §7's sentence — not two'. Red "
-            "until that ruling lands; it is not the instrument's to pick."
+        denominator=(
+            f"{m_total} padded token(s) by conjunct 1; {len(m_corpus)} survive conjunct 0; "
+            f"{len(m_path)} survive conjunct 2; {len(resolvable)} governed id(s) in "
+            "docs/INDEX.md give conjunct 3 its authority"
         ),
+        migrated=f"{len(m_index)} violation(s) in {len({h.rel for h in m_index})} file(s)",
+        control=(
+            f"{c_total} padded token(s) by conjunct 1; {len(c_index)} violation(s) "
+            "un-migrated"
+            + (
+                " — but conjunct 3 has NO AUTHORITY on the un-migrated tree "
+                "(docs/INDEX.md is generated by the migration and carries no id yet), so "
+                "this zero is structural and CANNOT corroborate a green"
+                if not ctl_resolvable
+                else ""
+            )
+        ),
+        verdict=verdict,
+        note=note,
     )
 
 
 # ---------------------------------------------------------------------------------------
-# (f) VR-DST-1 unchanged — two readings, neither ruled
+# (f) VR-DST-1 unchanged — Ruling 103's two conjuncts
 # ---------------------------------------------------------------------------------------
 
 #: §7(f) verbatim: "`git grep -c 'VR-DST-1'` is unchanged from `8f5d57d` — no product
-#: identifier moved". `git grep -c` counts matching *lines* per file; the figure below is
-#: the total across files, and the file count is printed beside it so a reader can tell
-#: which of the two a comparison was made on.
+#: identifier moved". Ruling 103 rules the comparison is a before/after pair on the SAME
+#: archive, not a comparison to `8f5d57d`; the baseline tree is still measured and printed,
+#: because §7's own sentence names that sha and a reader will look for it.
 _VR_DST_RE: Final = re.compile(r"VR-DST-1\b")
 
 
+def _per_file(corpus: Corpus, pattern: re.Pattern[str]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for rel in corpus.files:
+        n = sum(1 for line in corpus.lines[rel] if pattern.search(line))
+        if n:
+            out[rel] = n
+    return out
+
+
 def row_f(mig: Corpus, ctl: Corpus, baseline: Corpus | None, snap: Snapshot) -> Row:
-    m_lines, m_files = mig.scan(_VR_DST_RE, skip_was=False)
-    c_lines, c_files = ctl.scan(_VR_DST_RE, skip_was=False)
+    m_per = _per_file(mig, _VR_DST_RE)
+    c_per = _per_file(ctl, _VR_DST_RE)
+    m_lines, c_lines = sum(m_per.values()), sum(c_per.values())
+
+    redirect = _redirect_map(snap.migrated)
+    mapped = {redirect.get(k, k): v for k, v in c_per.items()}
+    disagreements = [
+        (path, mapped.get(path, 0), m_per.get(path, 0))
+        for path in sorted(set(mapped) | set(m_per))
+        if mapped.get(path, 0) != m_per.get(path, 0)
+    ]
+    residual = sum(after - before for _p, before, after in disagreements)
+
+    if mig.n_files == 0:
+        verdict, note = FAIL, "empty population"
+    elif c_lines == 0:
+        verdict, note = FAIL, "control carries no product identifier — the predicate is dead"
+    elif m_lines != c_lines:
+        verdict, note = FAIL, f"conjunct 1: total moved {c_lines} -> {m_lines}"
+    elif residual != 0:
+        verdict = FAIL
+        note = (
+            f"conjunct 2: {len(disagreements)} per-file disagreement(s) that do NOT close "
+            f"(residual {residual:+d}) — an identifier left one file without arriving in "
+            "another"
+        )
+    elif disagreements:
+        verdict = PASS
+        note = (
+            f"conjunct 2 passes with {len(disagreements)} disclosed split-source "
+            "disagreement(s), summing to zero: "
+            + "; ".join(f"{b}->{a} {p}" for p, b, a in disagreements[:4])
+            + ". Ruling 103 rules conjunct 2 sums over ALL targets a source routes to, from "
+            "§3.3's routing table. That table is not an artifact in the tree, so this is a "
+            "table-free approximation: it treats a set of disagreements that nets to zero "
+            "as one split source's content arriving in several files. NAMED LIMITATION — it "
+            "would not catch a genuine move that happens to net to zero across two files. "
+            "Replace with the routing table when §3.3 ships one."
+        )
+    else:
+        verdict, note = PASS, ""
+
     if baseline is None:
-        b_desc = f"{BASELINE_REF} not resolvable in this clone — reading 1 NOT MEASURED"
-        b_lines = None
+        b_desc = f"{BASELINE_REF} not resolvable in this clone"
     else:
         b_lines, b_files = baseline.scan(_VR_DST_RE, skip_was=False)
         b_desc = f"{b_lines} line(s) / {b_files} file(s) at {BASELINE_REF}"
-    if mig.n_files == 0:
-        verdict, note = FAIL, "empty population"
-    else:
-        verdict = UNDETERMINED
-        note = (
-            "two readings, neither ruled. Reading 1 is §7(f)'s literal sentence — "
-            f"unchanged from {BASELINE_REF}. Reading 2 is 'unchanged across the migration "
-            "itself' — control vs migrated from the same archive, which is what 'no "
-            "product identifier moved' tests. Ruling 102 §2 row 5 assigns the choice to "
-            "the decision-maker, citing §7's sentence."
-        )
     return Row(
         key="f",
-        title="git grep -c 'VR-DST-1' unchanged",
+        title="git grep -c 'VR-DST-1' unchanged (Ruling 103's two conjuncts)",
         owner=OWNER_W37_6,
         predicate=(
-            f"{_VR_DST_RE.pattern!r} over the same corpus as (d), `was:` lines included "
-            "(a product identifier is not a citation); reading 1 compares against "
-            f"{BASELINE_REF}, reading 2 against the un-migrated control of the same archive"
+            f"{_VR_DST_RE.pattern!r} over (d)'s corpus, `was:` lines INCLUDED (a product "
+            "identifier is not a citation); conjunct 1 — the summed total is equal before "
+            "and after the migration on the same archive; conjunct 2 — per-file counts are "
+            "equal, each pre-migration path mapped through the run's own docs/REDIRECTS.csv "
+            "(`_docverify._redirect_map`), summing over a split source's targets"
         ),
-        denominator=f"{mig.n_lines} line(s) in {mig.n_files} file(s)",
-        migrated=f"{m_lines} line(s) / {m_files} file(s) at {snap.ref_sha[:7]} migrated",
-        control=f"reading 2 control: {c_lines} line(s) / {c_files} file(s); "
-                f"reading 1 baseline: {b_desc}",
+        denominator=(
+            f"{len(c_per)} file(s) carry the identifier before, {len(m_per)} after; "
+            f"{len(redirect)} redirect row(s) available to map them"
+        ),
+        migrated=(
+            f"conjunct 1: {m_lines} line(s) / {len(m_per)} file(s); "
+            f"conjunct 2: {len(disagreements)} disagreement(s), residual {residual:+d}"
+        ),
+        control=(
+            f"conjunct 1: {c_lines} line(s) / {len(c_per)} file(s); "
+            f"§7's named baseline: {b_desc}"
+        ),
         verdict=verdict,
         note=note,
     )
@@ -1165,7 +1426,8 @@ def rows_h(snap: Snapshot) -> list[Row]:
         verdict=PASS if mig_audit.returncode == 0 else FAIL,
         note=(
             f"{mig_absent} check(s) report they CANNOT RUN on the migrated tree "
-            f"(control {ctl_absent}) — `docs/notes/` is dissolved by the migration, so "
+            f"(control {ctl_absent}) — the old notes directory is dissolved by the "
+            "migration, so "
             "checks 16-20 and 25 have nothing to scan. Non-execution is a third state "
             "beside pass and fail, and a failure count scores it as a small number of "
             "failures rather than as a hole in coverage."
@@ -1283,18 +1545,32 @@ _H_ROW_RE: Final = re.compile(r"^\|.*\|\s*H(\s*\+\s*[A-Z])?\s*\|\s*$")
 _NT0019_PATH: Final = "docs/notes/0019-one-id-per-document.md"
 
 
+def _redirect_map(tree: Path) -> Mapping[str, str]:
+    """`old_path -> new_path` from the run's own generated `docs/REDIRECTS.csv`.
+
+    One definition, two consumers (row (f)'s conjunct 2 and `_follow_redirect`), because two
+    parsers of one artifact is how they drift apart. **It is one-to-one**, which is exactly
+    what Ruling 103 found conjunct 2's first wording could not express: a split source's
+    content goes to several files and this map names one of them.
+    """
+    redirects = tree / "docs" / "REDIRECTS.csv"
+    if not redirects.is_file():
+        return {}
+    with redirects.open(encoding="utf-8", newline="") as fh:
+        return {
+            row["old_path"]: row["new_path"]
+            for row in csv.DictReader(fh)
+            if row.get("old_path") and row.get("new_path")
+        }
+
+
 def _follow_redirect(tree: Path, old_path: str) -> Path:
     """`old_path` in `tree`, or wherever `docs/REDIRECTS.csv` says the migration put it."""
     literal = tree / old_path
     if literal.is_file():
         return literal
-    redirects = tree / "docs" / "REDIRECTS.csv"
-    if redirects.is_file():
-        with redirects.open(encoding="utf-8", newline="") as fh:
-            for row in csv.DictReader(fh):
-                if row.get("old_path") == old_path and row.get("new_path"):
-                    return tree / row["new_path"]
-    return literal
+    new_path = _redirect_map(tree).get(old_path)
+    return tree / new_path if new_path else literal
 
 
 def _count_h_rows(tree: Path) -> int:
@@ -1364,10 +1640,16 @@ def compute_rows(docid: Any, snap: Snapshot) -> list[Row]:
     """Every §7 (a)-(i) row, over a snapshot whose `migrated/` has already been migrated."""
     mig = load_corpus(snap.migrated)
     ctl = load_corpus(snap.control)
+    # Before any (d) row is computed: the derived decomposition must agree with the
+    # acceptance sentence it was derived from, line for line, over this very corpus. This
+    # is what makes deriving safer than retyping rather than merely tidier — a splitting
+    # bug cannot be silent.
+    assert_decomposition_matches_source(mig)
+    assert_decomposition_matches_source(ctl)
     baseline = load_corpus(snap.baseline) if snap.baseline is not None else None
     rows: list[Row] = [row_a(docid, snap), row_b(docid, snap), row_c(snap)]
     rows.extend(rows_d(mig, ctl))
-    rows.append(row_e(mig, ctl))
+    rows.append(row_e(mig, ctl, snap))
     rows.append(row_f(mig, ctl, baseline, snap))
     rows.append(row_g(snap, mig, ctl))
     rows.extend(rows_h(snap))
