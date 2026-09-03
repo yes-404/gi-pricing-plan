@@ -126,6 +126,19 @@ _SPECIFICATIONS_OF_THE_OLD_PATH = {
     "docs/audit/nt-0019-verification-and-impact-sweep.md",
     "docs/audit/findings/F71.md",
     "docs/audit/register.md",
+    # Reviewed in 2026-09-03, and the first member of this set that is code rather than a
+    # document. `scripts/_docverify.py` is Ruling 102 §1's instrument, and its
+    # `D_FULL_PATTERN` is NT-0019 §7(d)'s grep **verbatim** — a constant whose whole
+    # purpose is that a reader can check the per-alternative decomposition against the
+    # acceptance sentence it came from. One of those thirteen alternatives is the old
+    # notes path, and the script's job is to *count occurrences of it* and fail while any
+    # remain. Building that one alternative by concatenation, the way this test file
+    # builds its own search term, would hide the literal and defeat the constant's reason
+    # for existing; the reviewed exemption is the mechanism this comment block already
+    # prescribes for exactly this case ("each needs its own reviewed line added here, not
+    # a widened pattern"). It is a specification of the path, not a citation of it: when
+    # the migration lands, this row goes to zero and the exemption can go with it.
+    "scripts/_docverify.py",
 }
 
 

@@ -6350,7 +6350,12 @@ def _cmd_widen(args: argparse.Namespace) -> int:
 
 
 def _cmd_migrate(args: argparse.Namespace) -> int:
-    if args.verify is not _VERIFY_OFF:
+    # `getattr`, not `args.verify`: `migrate`'s public entry point is also called with
+    # a hand-built `argparse.Namespace` by the tests that predate `--verify`
+    # (`tests/test_doc_id_migrate.py`), and a bare attribute access turns adding a flag
+    # into an unrelated test failure. Absent means off, which is the pre-existing
+    # behaviour every such caller expects.
+    if getattr(args, "verify", _VERIFY_OFF) is not _VERIFY_OFF:
         return _cmd_migrate_verify(args)
     result = migrate(args.repo_root)
     for path in result.files_written:
