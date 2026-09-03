@@ -6044,6 +6044,15 @@ def migrate(root: Path) -> MigrateResult:
     # that is not (which of several targets does a *citation* of the old path mean), and
     # its list-valued shape is what makes the ambiguity visible instead of silent.
     path_move_groups: dict[str, list[tuple[_Draft | None, str]]] = {}
+    # Legacy **id** token -> every (canonical id, source) claiming it. Collected rather
+    # than written straight into `token_map`, because the same silent-overwrite shape the
+    # path half of this map had exists here too: measured on the real corpus at `6195ca0`,
+    # `OQ-OVR-11` is claimed by two different open questions. An id claimed twice is
+    # resolved by nothing on the citing line, so it is held out of the rewrite entirely —
+    # the treatment `FD` already gets above, and for the identical reason. Not fatal: this
+    # is outside the split-*path* ruling this function's `_SplitSource` fork implements,
+    # and a warning that names both claimants is what carries it to whoever rules on it.
+    id_claims: dict[str, list[tuple[str, str]]] = {}
     redirect_rows: list[dict[str, str]] = []
     assigned: list[tuple[str, str]] = []
     for d in drafts:
@@ -6065,7 +6074,7 @@ def migrate(root: Path) -> MigrateResult:
         # a live prose rewrite), so W37-11's resolver has the data; only the prose sweep is
         # held back.
         if d.old_token is not None and d.prefix != "FD":
-            _add_tokens(token_map, token_origins, {d.old_token: canon}, d.was or canon)
+            id_claims.setdefault(d.old_token, []).append((canon, d.was or canon))
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
@@ -6177,6 +6186,17 @@ def migrate(root: Path) -> MigrateResult:
     )
     files_written = [*files_written, *readme_written]
     files_deleted = [*files_deleted, *readme_deleted]
+
+    for old_token, claims in id_claims.items():
+        canons = {canon for canon, _ in claims}
+        if len(canons) > 1:
+            warnings.append(
+                f"legacy id {old_token!r} is claimed by {len(canons)} records "
+                f"({', '.join(sorted(canons))}) -- held out of the citation rewrite, "
+                "since no citation of it names which one it meant"
+            )
+            continue
+        _add_tokens(token_map, token_origins, {old_token: claims[0][0]}, claims[0][1])
 
     # The split/single fork, and the only place a path token enters the flat map. A source
     # with one destination is unchanged from #672; a source with several never enters it,
