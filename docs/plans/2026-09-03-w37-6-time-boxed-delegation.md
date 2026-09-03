@@ -206,6 +206,93 @@ unsatisfiable by mechanical check, which is the property §2 says the gate was d
 requires a judgement call to excuse one branch is no longer mechanical, and every future
 reader has to be told the exception.*
 
+## 7. Second renewal and three amendments — dated append, 2026-09-03
+
+**Appended 2026-09-03 by the lead, on the maintainer's instruction, after the first renewed
+window halted on its second gate failure.** Appended rather than written into §6 for the
+reason §6 gives: a record rewritten in place destroys the evidence of what was believed when
+it was signed.
+
+### 7.1 The first renewal halted correctly, and nothing was lost
+
+The window of §6 opened `2026-09-03T08:43:13Z`. It **halted before its `16:43:13Z` expiry**,
+on the delegation's own rule — *"one fail → fix, back to Step 3; second fail → halt
+protocol"*. The record is
+[`2026-09-03-w37-6-renewed-window-handover.md`](2026-09-03-w37-6-renewed-window-handover.md),
+merged as PR #673.
+
+**All six gate conditions were met** and NT-0019 §7(a)'s bar was met — `none` = 0. **The run
+was stopped by a defect the six conditions do not name**: 36 live markdown links, in 5
+surviving files, resolving to paths the migration deletes, because §5.2's README regeneration
+is unimplemented. Ten PRs merged; `main` green; **no migration was attempted against any real
+checkout at any point.**
+
+**The maintainer's assessment, and the reason the rule stands unchanged:** *"That rule
+produced a clean handover instead of a broken commit; it stays."*
+
+### 7.2 The second renewal
+
+**The delegation is renewed on the same terms for eight hours from the merge of the handover
+pull request** — PR #673, merged `2026-09-03T12:30:39Z`, merge commit
+`2ae31f7b192a1d7d859ec5b7be6c18b20da1e504`.
+
+**So this window expires `2026-09-03T20:30:39Z`**, and §2's *"quiet with three hours left"*
+rule puts the **go/no-go for starting the run at `17:30:39Z`**. Two gates on two different
+acts: one bounds when the run may **start**, the other when anything may **finish**.
+
+**§1–§5 are renewed unchanged and are not restated here** — a restatement is how one of two
+copies goes stale ([`NT-0003`](../notes/0003-duplicated-status-goes-stale.md)). **Read them
+above.** The three amendments below are additions, not replacements.
+
+**Nothing in §7 is in force until this append is merged**, on the header's own standard.
+
+### 7.3 Amendment 1 — gate condition 7
+
+**A seventh condition joins §2's table. The gate is now seven, and it is still all-or-none.**
+
+| # | Condition |
+|---|---|
+| 7 | **The auditor's general dangling-link scanner returns zero on the post-migration snapshot** — every `](…)` in every surviving file, resolved **relative to its citing file**, checked against the full deleted set |
+
+**This was a finding and is now a condition.** It is what stopped the first renewed window,
+and it stopped it *after* all six existing conditions had passed — which is the whole
+argument for promoting it. A gate that its own failure mode walks through is not yet a gate.
+
+**The scanner already exists**, built by the auditor of that window and preserved at
+`~/gi-pricing-plan.local/scratch/w37-6-auditor2/`. **It is not to be rewritten**: a
+reconstructed predicate is a different check wearing the same name.
+
+### 7.4 Amendment 2 — relayed verification does not count toward a gate
+
+**Every gate figure is produced by the agent that measures it, running the command in its own
+worktree, with the command in the record.**
+
+**An agent's number about its own work is a claim. The auditor's re-run is the evidence.**
+
+**The maintainer's own grounds, verbatim: *"The `grep -c` = 0 that was 20 is why."*** In the
+first renewed window an executor reported `grep -c '](' ` returning **0** for five files whose
+true counts are **20, 6, 8, 6, 5**. The lead accepted that claim and recorded the defect class
+as closed. The auditor refuted it by running the command itself, and that single refusal is
+why a migration carrying 36 broken citations did not ship.
+
+**This binds the lead as much as any agent.** A figure relayed through the lead has been
+through fewer checks than its provenance suggests, not more.
+
+### 7.5 Amendment 3 — a ruling names its implementation
+
+**A ruling PR names its implementing PR, or carries `implementation: owed` in the register
+row.**
+
+**Grounds: §8 of the handover — six decided-but-unimplemented items in a single window.** A
+merged ruling changes no behaviour until code implements it, and **nothing in the repository
+flags the gap**. Three of the six were caught and fixed only because someone happened to run
+the code; one was deferred by ruling; two survived to the halt.
+
+**This is the smallest change that makes the gap visible**, which is why it is a field on a
+row rather than a new check.
+
+**It applies from this window. The backfill is W37-11's**, not a precondition of the run.
+
 ## Acceptance Standard
 
 **This record is accepted when it is merged**, because the maintainer conditioned the whole
@@ -236,3 +323,15 @@ deleted without that tag confirmed present on the remote first.*
 
 *Violation (§6): this header's §1-§5 restated inside §6 rather than pointed at, so that the
 two copies can disagree.*
+
+*Violation (§7): the migration run with gate condition 7 unverified, or verified by any
+instrument other than the scanner preserved from the window that raised it.*
+
+*Violation (§7): a gate figure recorded from an agent's report of its own work rather than
+from the auditor's independent re-run.*
+
+*Violation (§7): a ruling merged with neither an implementing PR named nor
+`implementation: owed` on its register row.*
+
+*Violation (§7): the run started after `2026-09-03T17:30:39Z`, or anything finished after
+`2026-09-03T20:30:39Z`.*
