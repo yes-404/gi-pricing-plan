@@ -52,7 +52,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -1622,6 +1622,104 @@ def row_i(snap: Snapshot) -> Row:
 # ---------------------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------------------
+# The recorded verdict set — so a NEW failure is distinguishable from the standing red
+# ---------------------------------------------------------------------------------------
+
+#: **Every row's verdict as recorded at the tree this constant was last reviewed at.**
+#:
+#: The problem this solves is a property of the wiring, not of anyone's habits. While §7 is
+#: red by design (Ruling 102 §1), the `docs` job's pass/fail bit **carries no information
+#: about the change under review**: it is red before a regression and red after it. One of
+#: CI's three signals is switched off, and the duration is "until the migration lands".
+#:
+#: It has already cost once (F102). An audit record added under `docs/audit/` with an
+#: ordinary descriptive name landed in `none` and took row (a) — **the only passing row** —
+#: from `none=0` to `none=1`. `audit-docs.py`, `register-lint.py` and the full local gate
+#: were all green. The regression was visible only inside the failing step's row list, and
+#: was caught only because that reader happened to be holding a baseline of their own.
+#:
+#: **Both directions are enforced, and that is what stops the baseline going stale.**
+#: A committed baseline nobody updates is `NT-0003`; a baseline regenerated automatically
+#: records whatever is currently broken and can never fail. Neither is right. So:
+#:
+#: * a row **newly failing** is a REGRESSION — the case F102 is about;
+#: * a row **newly passing** is PROGRESS, and is *also* a set change, because a row fixed
+#:   and left in this table would mask its own later regression. It is reported as progress
+#:   with the edit it requires, never as an anomaly.
+#:
+#: **This table is edited by hand, in the same commit as the change that moves a row.** That
+#: is the point: the edit is the reviewable record of a row moving, and it cannot be
+#: produced by re-running the instrument.
+EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
+    "a": PASS,          # one family per file, zero `none` — the only row that passes today
+    "b": FAIL,          # 77 noncontiguous ids                     — Ruling 102 §2 row 4
+    "c": FAIL,          # docs/INDEX.md stale against its own renderer
+    "d1": FAIL,         # NT-00
+    "d2": PASS,         # F-W[0-9] — green, and its mangled companion says why
+    "d3": DISCLOSE,     # \bF[0-9]{2}\b — excluded from the zero requirement (§8.5)
+    "d4": REGRESSION,   # wf-0[0-9] — the migration CREATES this one
+    "d5": FAIL,         # Ruling [0-9]+                            — Ruling 102 §4
+    "d6": FAIL,         # ADR-0[0-9]{3}
+    "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
+    "d8": FAIL,         # W[0-9]+[a-z]?-[0-9]+
+    "d9": FAIL,         # docs/plans/2026-
+    "d10": FAIL,        # docs/audit/
+    "d11": FAIL,        # the old notes directory
+    "d12": FAIL,        # docs/adr/
+    "d13": FAIL,        # the old .claude notes root — INERT, see its unanchored companion
+    "e": FAIL,          # 2 padded ids in prose                    — Ruling 103
+    "f": PASS,          # VR-DST-1 unchanged, both conjuncts       — Ruling 103
+    "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
+    "h1": FAIL,         # audit-docs.py exits 1 on the migrated tree
+    "h2": FAIL,         # four vacuous passes
+    "h3": FAIL,         # req-coverage.py finds 0 requirements
+    "h4": NOT_MEASURED,  # the gate halves needing a toolchain
+    "i": NOT_MEASURED,  # W37-10's, and no row->commit artifact exists
+}
+
+REGRESSED: Final = "REGRESSION (newly failing)"
+PROGRESSED: Final = "PROGRESS (newly passing)"
+RECLASSIFIED: Final = "RECLASSIFIED"
+ROW_ADDED: Final = "ROW ADDED"
+ROW_REMOVED: Final = "ROW REMOVED"
+
+
+@dataclass(frozen=True)
+class SetChange:
+    key: str
+    expected: str
+    actual: str
+    direction: str
+
+
+def diff_verdicts(rows: Sequence[Row]) -> tuple[SetChange, ...]:
+    """Every difference between this run's verdicts and `EXPECTED_VERDICTS`."""
+    actual = {row.key: row.verdict for row in rows}
+    changes: list[SetChange] = []
+    for key in sorted(set(actual) | set(EXPECTED_VERDICTS), key=_row_sort_key):
+        want = EXPECTED_VERDICTS.get(key)
+        got = actual.get(key)
+        if want == got:
+            continue
+        if want is None:
+            changes.append(SetChange(key, "(not recorded)", got or "", ROW_ADDED))
+        elif got is None:
+            changes.append(SetChange(key, want, "(not computed)", ROW_REMOVED))
+        elif got == PASS:
+            changes.append(SetChange(key, want, got, PROGRESSED))
+        elif want == PASS:
+            changes.append(SetChange(key, want, got, REGRESSED))
+        else:
+            changes.append(SetChange(key, want, got, RECLASSIFIED))
+    return tuple(changes)
+
+
+def _row_sort_key(key: str) -> tuple[str, int]:
+    m = re.match(r"^([a-z]+)([0-9]*)$", key)
+    return (m.group(1), int(m.group(2) or 0)) if m else (key, 0)
+
+
 @dataclass(frozen=True)
 class VerifyResult:
     snapshot: Snapshot
@@ -1632,7 +1730,21 @@ class VerifyResult:
         return tuple(r for r in self.rows if r.fatal)
 
     @property
+    def set_changes(self) -> tuple[SetChange, ...]:
+        return diff_verdicts(self.rows)
+
+    @property
     def exit_code(self) -> int:
+        """0 green · 1 the standing red, unchanged · 3 the verdict set moved.
+
+        Exit **3** is the whole point of the row. `1` says "§7 is not satisfied yet", which
+        is true of every run until the migration lands and therefore says nothing about the
+        change under review. `3` says "this change moved a row", which is the sentence a
+        reviewer actually needs and which no reader currently has to hold a baseline to
+        reach. (Exit 2 is a refusal to run at all — a misconfiguration, not a corpus state.)
+        """
+        if self.set_changes:
+            return 3
         return 1 if self.failed else 0
 
 
@@ -1737,6 +1849,10 @@ def render(result: VerifyResult) -> str:
     else:
         out.append(f"  baseline tree  absent — {BASELINE_REF} does not resolve in this clone")
     out.append("")
+    # The set-change block is printed FIRST and again LAST. A CI log is read from the end,
+    # and a long table is skimmed from the top; a reader should not have to reach either.
+    out.extend(_set_change_block(result))
+    out.append("")
     for row in result.rows:
         out.append(f"[{row.verdict:<12}] ({row.key}) {row.title}")
         out.append(f"    owner        {row.owner}")
@@ -1765,4 +1881,43 @@ def render(result: VerifyResult) -> str:
         )
     else:
         out.append("PASS: every row green")
+    out.extend(_set_change_block(result))
     return "\n".join(out)
+
+
+def _set_change_block(result: VerifyResult) -> list[str]:
+    """The one line a reviewer needs, and the reason exit 3 exists.
+
+    Without it the `docs` job's bit is red before a regression and red after it, and the
+    only way to tell them apart is to hold a baseline of your own — which is how F102 was
+    caught and how it would otherwise have been missed.
+    """
+    changes = result.set_changes
+    n_fail = sum(1 for r in result.rows if r.fatal)
+    n_expected = sum(1 for v in EXPECTED_VERDICTS.values() if v in FATAL_VERDICTS)
+    if not changes:
+        return [
+            f"UNCHANGED: {n_fail} fatal row(s), matching the recorded set of {n_expected} "
+            f"in `_docverify.EXPECTED_VERDICTS` — the standing red, and this change moved "
+            "no row."
+        ]
+    out = [
+        f"SET CHANGE ({len(changes)}): {n_fail} fatal row(s) against a recorded "
+        f"{n_expected}. This change MOVED A ROW; the standing red is not the whole story."
+    ]
+    for change in changes:
+        out.append(
+            f"  {change.direction}: ({change.key}) {change.expected} -> {change.actual}"
+        )
+    if any(c.direction == REGRESSED for c in changes):
+        out.append(
+            "  A regression: a row that was passing is not any more. This is F102's case "
+            "and it is what exit 3 exists to make visible without a baseline."
+        )
+    if any(c.direction in (PROGRESSED, RECLASSIFIED, ROW_ADDED, ROW_REMOVED) for c in changes):
+        out.append(
+            "  Progress or a reclassification is ALSO a set change, deliberately: a row "
+            "left stale in `EXPECTED_VERDICTS` would mask its own later regression. Update "
+            "that table in the same commit as the change that moved the row."
+        )
+    return out

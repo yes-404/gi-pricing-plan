@@ -889,3 +889,116 @@ def test_over_exemption_is_a_vacuity_the_zero_denominator_rule_cannot_see(
         "  check 37: 1 document(s) checked in scope, 0 exempt as verbatim-migrated\n"
     )
     assert (pre["check 37 documents in scope"] or 0) < dv._EXEMPTION_FLOOR
+
+
+# =========================================================================================
+# The recorded verdict set — a new failure distinguishable from the standing red (F102)
+# =========================================================================================
+
+
+def _row(dv: Any, key: str, verdict: str) -> Any:
+    return dv.Row(
+        key=key, title="t", owner="W37-6", predicate="p", denominator="d",
+        migrated="m", control="c", verdict=verdict,
+    )
+
+
+def _result(dv: Any, verdicts: dict[str, str]) -> Any:
+    snap = dv.Snapshot(
+        workdir=pathlib.Path("/nonexistent"), ref="t", ref_sha="0" * 40,
+        migrated=pathlib.Path("/nonexistent"), control=pathlib.Path("/nonexistent"),
+        baseline=None, baseline_ref=None,
+    )
+    return dv.VerifyResult(
+        snapshot=snap, rows=tuple(_row(dv, k, v) for k, v in verdicts.items())
+    )
+
+
+def test_the_standing_red_is_not_a_set_change(dv: Any) -> None:
+    """The base case that makes the signal worth anything: every run until the migration
+    lands is red, and a red that moved nothing must say so."""
+    result = _result(dv, dict(dv.EXPECTED_VERDICTS))
+    assert result.set_changes == ()
+    assert result.exit_code == 1
+    assert "UNCHANGED" in dv.render(result)
+
+
+def test_f102s_own_regression_is_detected_without_a_baseline(dv: Any) -> None:
+    """F102, as its broken-input proof. An audit record added under `docs/audit/` with an
+    ordinary descriptive name took row (a) from `none=0` to `none=1` — **the only passing
+    row** — while `audit-docs.py`, `register-lint.py` and the whole local gate stayed green.
+    Exit 1 was true before it and after it."""
+    moved = dict(dv.EXPECTED_VERDICTS, a=dv.FAIL)
+    result = _result(dv, moved)
+    changes = result.set_changes
+    assert [(c.key, c.direction) for c in changes] == [("a", dv.REGRESSED)]
+    assert result.exit_code == 3, "a moved row must not share exit 1 with the standing red"
+    out = dv.render(result)
+    assert "SET CHANGE" in out
+    assert "REGRESSION (newly failing): (a) PASS -> FAIL" in out
+
+
+def test_progress_is_a_set_change_too_and_says_what_to_edit(dv: Any) -> None:
+    """Deliberately, and this is the half that stops the baseline going stale. A row fixed
+    and left in the table would mask its own later regression, so progress is reported —
+    with the edit it requires — rather than passed over."""
+    moved = dict(dv.EXPECTED_VERDICTS, b=dv.PASS)
+    result = _result(dv, moved)
+    assert [(c.key, c.direction) for c in result.set_changes] == [("b", dv.PROGRESSED)]
+    assert result.exit_code == 3
+    out = dv.render(result)
+    assert "PROGRESS (newly passing): (b) FAIL -> PASS" in out
+    assert "same commit as the change that moved the row" in out
+
+
+def test_a_reclassification_between_two_fatal_verdicts_is_a_set_change(dv: Any) -> None:
+    """(d4) going FAIL -> REGRESSION is a finding, not noise: the migration began creating
+    what the row forbids. A fatal-to-fatal move must not be invisible."""
+    moved = dict(dv.EXPECTED_VERDICTS, d5=dv.REGRESSION)
+    result = _result(dv, moved)
+    assert [(c.key, c.direction) for c in result.set_changes] == [("d5", dv.RECLASSIFIED)]
+    assert result.exit_code == 3
+
+
+def test_a_row_added_or_dropped_is_a_set_change(dv: Any) -> None:
+    """A row added without a table entry, or a row that silently stopped being computed.
+    The second is the more dangerous: a dropped row reduces the failure count, which reads
+    like progress."""
+    added = _result(dv, dict(dv.EXPECTED_VERDICTS, z9=dv.FAIL))
+    assert [(c.key, c.direction) for c in added.set_changes] == [("z9", dv.ROW_ADDED)]
+    dropped_verdicts = dict(dv.EXPECTED_VERDICTS)
+    del dropped_verdicts["g"]
+    dropped = _result(dv, dropped_verdicts)
+    assert [(c.key, c.direction) for c in dropped.set_changes] == [("g", dv.ROW_REMOVED)]
+    assert dropped.exit_code == 3
+
+
+def test_all_green_exits_zero_and_is_not_a_set_change_once_recorded(dv: Any) -> None:
+    """The end state. When every row is green AND the table says so, the instrument exits
+    0 — the condition Ruling 102 §1's go-ahead is defined as."""
+    green = {k: dv.PASS for k in dv.EXPECTED_VERDICTS}
+    monkey = dv.EXPECTED_VERDICTS
+    try:
+        dv.EXPECTED_VERDICTS = green
+        assert _result(dv, green).exit_code == 0
+    finally:
+        dv.EXPECTED_VERDICTS = monkey
+
+
+def test_the_recorded_set_covers_every_row_the_instrument_computes(dv: Any) -> None:
+    """A structural guard on the table itself: every key it records must be a key some row
+    function produces, and the row keys are stable by construction."""
+    expected_keys = set(dv.EXPECTED_VERDICTS)
+    known = {"a", "b", "c", "e", "f", "g", "h1", "h2", "h3", "h4", "i"} | {
+        f"d{i}" for i in range(1, len(dv.D_ALTERNATIVES) + 1)
+    }
+    assert expected_keys == known
+
+
+def test_the_set_change_block_is_printed_at_both_ends(dv: Any) -> None:
+    """A CI log is read from the end and a long table is skimmed from the top; a reader
+    should not have to reach either."""
+    out = dv.render(_result(dv, dict(dv.EXPECTED_VERDICTS, a=dv.FAIL))).splitlines()
+    heads = [i for i, line in enumerate(out) if line.startswith("SET CHANGE")]
+    assert len(heads) == 2
+    assert heads[0] < len(out) // 2 < heads[1]
