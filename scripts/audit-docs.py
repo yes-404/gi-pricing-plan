@@ -2507,6 +2507,47 @@ def check_redirects() -> None:
 
 _SECTION_HEADING_RE: Final = re.compile(r"^##\s+(.+?)\s*$")
 
+# Rulings 96 and 97 (`docs/plans/2026-09-03-w37-6-d1-d2-rulings.md`) — the detector is
+# **asymmetric** and the required set **excludes placeholder headings**.
+#
+# Template side: `##` exactly, as before. Document side: any depth, with a leading `N. `
+# / `N.N. ` ordinal stripped, because every real ruling numbers its subsections
+# (`### 4. Acceptance — …`) and a depth-agnostic *literal* match still finds nothing
+# (`docs/audit/findings/F90.md` §B).
+#
+# The asymmetry is not a convenience. Making the **template** side depth-agnostic too
+# would newly require `SL-NNNNN — <Title>` and `WK-NNNNN — <Title>` — the only body
+# headings `docs/_templates/SL.md` and `WK.md` declare, both `###` and both pure
+# placeholder. That is a requirement no document can satisfy, latent today only because
+# the corpus holds zero `slice`/`work` documents. `_PLACEHOLDER_RE` closes the same trap
+# from the other side: a template heading whose text is not a constant cannot be a
+# required literal.
+_ORDINAL_PREFIX_RE: Final = re.compile(r"^\d+(?:\.\d+)*\.\s+")
+_ANY_DEPTH_HEADING_RE: Final = re.compile(r"^#{1,6}\s+(.+?)\s*$")
+_PLACEHOLDER_RE: Final = re.compile(r"<[^<>]+>|N{4,}")
+
+
+def _document_body_sections(path: pathlib.Path) -> set[str]:
+    """Every heading text in a *document*, at any depth, with a leading ordinal stripped.
+
+    The document side of check 37's asymmetric match. Unlike `_template_body_sections`
+    this reads instances, not sources, so it deliberately does not strip a leading
+    comment block: a governed document has front matter, not a template comment.
+    """
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    if lines and lines[0] == "---":
+        try:
+            lines = lines[lines.index("---", 1) + 1 :]
+        except ValueError:
+            pass
+    out: set[str] = set()
+    for line in lines:
+        m = _ANY_DEPTH_HEADING_RE.match(line)
+        if m:
+            out.add(_ORDINAL_PREFIX_RE.sub("", m.group(1)))
+    return out
+
 
 def _template_body_sections(path: pathlib.Path) -> tuple[str, ...]:
     """The `##`-level heading texts in one template's body (after its own header block or
@@ -2547,9 +2588,16 @@ def required_sections(family: str) -> tuple[str, ...]:
     for template_name, template_family in _TEMPLATE_FAMILY.items():
         if template_family == family:
             try:
-                return _template_body_sections(_TEMPLATES_DIR / template_name)
+                declared = _template_body_sections(_TEMPLATES_DIR / template_name)
             except OSError:
                 return ()
+            # Ruling 97: a heading whose text is not a constant cannot be a required literal.
+            # `## Verified first, at <tree>` in `RL.md` names a real section of the
+            # ruling shape, but its text carries the tree and so differs between documents
+            # (measured at `15ed00d`: 40 occurrences over 94 ruling blocks, 18 distinct
+            # texts). It stays in the template, as the shape an author
+            # copies; it is not something check 37 can match.
+            return tuple(s for s in declared if not _PLACEHOLDER_RE.search(s))
     return ()
 
 
@@ -2558,6 +2606,7 @@ def check_shape() -> None:
     declares — the ten-section spec rule, generalised (NT-0019 §1.11).
     """
     checked = 0
+    exempt = 0
     for path in _id_scope_documents():
         try:
             header = _docid.parse_header(path)
@@ -2566,17 +2615,30 @@ def check_shape() -> None:
         if header is None:
             continue
         checked += 1
+        if header.was is not None:
+            # Ruling 96: check 37 governs documents **authored from a template**. A body the
+            # migration carried over verbatim from a pre-standard file predates the shape
+            # it would be judged against, and `was:` is how the migration says so — NT-0019
+            # §1.5's closed field set, `docs/notes/0019-one-id-per-document.md:125`,
+            # `was: 2026-08-18-profile-contract.md   # migration only`. It is set only on
+            # the migration's own write paths and is declared in **no** template, so a
+            # later author cannot inherit the exemption by copying one.
+            exempt += 1
+            continue
         needed = required_sections(header.family)
         if not needed:
             continue
-        present = set(_template_body_sections(path))
+        present = _document_body_sections(path)
         missing = [s for s in needed if s not in present]
         if missing:
             fail(
                 f"check 37: {path.relative_to(REPO).as_posix()}: missing required "
                 f"section(s) {missing} for family {header.family!r}"
             )
-    notes.append(f"check 37: {checked} document(s) checked in scope")
+    notes.append(
+        f"check 37: {checked} document(s) checked in scope, {exempt} exempt as "
+        f"verbatim-migrated (`was:`), {checked - exempt} shape-checked"
+    )
 
 
 # =========================================================================================
