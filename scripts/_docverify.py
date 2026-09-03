@@ -653,11 +653,31 @@ def row_c(snap: Snapshot) -> Row:
 # (d) the id/path grep, one row per alternative
 # ---------------------------------------------------------------------------------------
 
-#: §7(d)'s pattern **verbatim**, as the acceptance sentence writes it
-#: (`docs/notes/0019-one-id-per-document.md` §7, line 426). Kept whole so a reader can check
-#: the per-alternative decomposition below against its source rather than trusting it.
+#: §7(d)'s pattern, as the acceptance sentence writes it
+#: (`docs/notes/0019-one-id-per-document.md` §7, line 426) — **with one amendment already
+#: ruled but not yet carried here**. `ADR-0[0-9]{3}` carries an added trailing `\b`. Without
+#: it, the alternative has no anchor on either side of its digit run, so it matches as a
+#: strict PREFIX of any correctly-migrated five-digit id (`_docid.PAD_WIDTH`):
+#: `ADR-0[0-9]{3}` reads the first three of `ADR-00004`'s four post-hyphen digits and calls
+#: it a hit — the same token-boundary class Ruling 102 §2 row (g) named for the migration
+#: rewriter, but here inside the verify instrument's own predicate. **Ruling 67 §2 Part 1
+#: already rules this exact requirement for (d)**: *"every alternative in (d) must match a
+#: COMPLETE legacy identifier or path, never a proper prefix of one"* — found there against
+#: `NT-00` self-matching its own defining sentence, generalised by the ruling to every
+#: alternative, not only that one. `scripts/audit-docs.py`'s `LEGACY_FORM_PATTERNS` (check
+#: 36, the same ruling) already carries `re.compile(r"\bADR-0[0-9]{3}\b")` — fully anchored;
+#: `\bF[0-9]{2}\b` here carries the identical device for the same reason. This constant had
+#: simply not caught up. **Ruling 67 §2 also requires (d) and check 36 to read ONE shared
+#: constant** ("Two definitions of 'a legacy form' will drift, which is `NT-0003`") — this
+#: module keeps its own independent `D_FULL_PATTERN` rather than importing
+#: `audit-docs.LEGACY_FORM_PATTERNS`, which is a standing violation of that requirement
+#: broader than this one alternative and NOT fixed here (a consolidation, not a boundary
+#: fix, and out of this change's scope); flagged to the lead as a MAINTAINER-track finding.
+#: Found by a peer executor this session, folded into the Ruling 105 follow-up
+#: (`scripts/_docverify.py`) since it is the same file. Kept whole otherwise so a reader can
+#: check the per-alternative decomposition below against its source rather than trusting it.
 D_FULL_PATTERN: Final = (
-    r"\b(NT-00|F-W[0-9]|\bF[0-9]{2}\b|wf-0[0-9]|Ruling [0-9]+|ADR-0[0-9]{3}|"
+    r"\b(NT-00|F-W[0-9]|\bF[0-9]{2}\b|wf-0[0-9]|Ruling [0-9]+|ADR-0[0-9]{3}\b|"
     r"(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+|W[0-9]+[a-z]?-[0-9]+|"
     r"docs/(plans/2026-|audit/|notes/|adr/)|\.claude/notes/)"
 )
@@ -802,9 +822,19 @@ def assert_decomposition_matches_source(corpus: Corpus) -> int:
 
 #: Excluded from §7(d)'s zero requirement **with its count disclosed** — §8.5, re-affirmed
 #: by Ruling 102 §4 ("`\bF[0-9]{2}\b` remains excluded with its count disclosed; this ruling
-#: reaches `Ruling [0-9]+` only"). Disclosed, never silent: the row still prints its figure,
-#: denominator and control.
-D_DISCLOSED: Final = frozenset({r"\bF[0-9]{2}\b"})
+#: reaches `Ruling [0-9]+` only") and, for `F-W[0-9]`, by Ruling 105 §A: the same alias
+#: class as `F<nn>` with a work prefix — its target is a register row, not a document with
+#: an id yet, resolved by W37-11's alias resolver rather than this instrument. Disclosed,
+#: never silent: the row still prints its figure, denominator and control.
+D_DISCLOSED: Final = frozenset({r"\bF[0-9]{2}\b", "F-W[0-9]"})
+
+#: Which ruling reads each disclosed alternative, printed in its row's own note so a reader
+#: does not have to guess which citation covers which alternative.
+D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
+    r"\bF[0-9]{2}\b": "§8.5; Ruling 102 §4",
+    "F-W[0-9]": "§7(d); Ruling 105 §A — the same alias class as `F[0-9]{2}`, resolved by "
+                "W37-11's alias resolver",
+}
 
 
 #: What each §7(d) alternative turns INTO when the rewrite goes wrong. Directed by the lead
@@ -905,8 +935,10 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
         companions, gating = _companions_for(alt, mig, ctl)
         if alt in D_DISCLOSED:
             verdict = DISCLOSE
-            note = ("excluded from the zero requirement, count disclosed "
-                    "(§8.5; Ruling 102 §4)")
+            note = (
+                "excluded from the zero requirement, count disclosed "
+                f"({D_DISCLOSED_CITATION.get(alt, 'ruling pending')})"
+            )
         elif m_lines > c_lines:
             # Not a worse FAIL — a different finding. See `REGRESSION`.
             verdict = REGRESSION
@@ -1379,6 +1411,50 @@ _VACUITY_PROBES: Final = (
 #: has no way to say so.
 _ABSENT_CHECK_RE: Final = re.compile(r"cannot run|cannot scan it")
 
+#: Ruling 105 §B's own methodology, ported from the shell one-liner
+#: `docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md:139` used to derive the taxonomy
+#: the ruling reads: `sed -n '/^FAILED/,$p' <log> | grep '^  - ' | sed -E
+#: 's/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' | sort | uniq -c`. Everything
+#: from the `FAILED (`n`):` line onward, one `  - <msg>` per failure.
+_FAILED_BLOCK_RE: Final = re.compile(r"^FAILED \(\d+\):$", re.MULTILINE)
+_FAILURE_LINE_RE: Final = re.compile(r"^  - (.*)$", re.MULTILINE)
+_CHECK_PREFIX_RE: Final = re.compile(r"^check (\d+):")
+_BROKEN_LINK_RE: Final = re.compile(r"^broken link in ")
+
+#: Checks 29, 30 and 35 are (h1)'s W37-10 residue — Ruling 105 §B: disclosed by count,
+#: owner-labelled, never fatal. Every other class, including a failure this predicate
+#: cannot attribute to a check number at all (`"unclassified"`, never dropped — §13 admits
+#: no silence), must be zero for (h1) to pass.
+_H1_DISCLOSED_CHECKS: Final = frozenset({"29", "30", "35"})
+
+
+def _classify_failures(out: str) -> dict[str, int]:
+    """One bucket per `check N`, plus `"unclassified"` for a failure message this predicate
+    cannot attribute to a check number — counted, never dropped."""
+    counter: dict[str, int] = {}
+    block = _FAILED_BLOCK_RE.search(out)
+    tail = out[block.start():] if block else ""
+    for msg in _FAILURE_LINE_RE.findall(tail):
+        m = _CHECK_PREFIX_RE.match(msg)
+        cls = m.group(1) if m else ("1" if _BROKEN_LINK_RE.match(msg) else "unclassified")
+        counter[cls] = counter.get(cls, 0) + 1
+    return counter
+
+
+def _h1_verdict(other_total: int) -> str:
+    """Ruling 105 §B: (h1) passes iff every class outside checks 29/30/35 is zero."""
+    return PASS if other_total == 0 else FAIL
+
+
+def _h2_verdict(vacuous: Sequence[str], over_exempt: bool) -> str:
+    """Ruling 105 D3: the zero-denominator probes stay fatal; OVER-EXEMPT alone discloses."""
+    if vacuous:
+        return FAIL
+    if over_exempt:
+        return DISCLOSE
+    return PASS
+
+
 _UNMEASURED_GATE_HALVES: Final = (
     "pytest tests/", "lint-imports", "backend suite", "pricing-core suite",
     "model-schema suite", "frontend suite (pnpm lint/type-check/test/build)",
@@ -1411,27 +1487,52 @@ def rows_h(snap: Snapshot) -> list[Row]:
     mig_absent = len(_ABSENT_CHECK_RE.findall(mig_out))
     ctl_absent = len(_ABSENT_CHECK_RE.findall(ctl_out))
 
+    mig_classes = _classify_failures(mig_out)
+    h1_disclosed = {k: mig_classes.get(k, 0) for k in sorted(_H1_DISCLOSED_CHECKS, key=int)}
+    h1_other = sum(v for k, v in mig_classes.items() if k not in _H1_DISCLOSED_CHECKS)
+    h1_disclosed_text = "; ".join(
+        f"check {k}={v} (owner: {OWNER_W37_10})" for k, v in h1_disclosed.items()
+    )
     h1 = Row(
         key="h1",
-        title="audit-docs.py green on the migrated tree",
+        title="audit-docs.py green on the migrated tree, per failure class (Ruling 105 §B)",
         owner=OWNER_W37_6,
-        predicate="python3 scripts/audit-docs.py   (run with cwd = the tree)",
-        denominator=f"{len(mig_out.splitlines())} output line(s)",
+        predicate=(
+            "python3 scripts/audit-docs.py   (run with cwd = the tree); failures classified "
+            "by `_docverify._classify_failures` — Ruling 105 §B's own methodology, ported "
+            "from `docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md:139`'s `sed -n "
+            "'/^FAILED/,$p' <log> | grep '^  - ' | sed -E 's/^(check [0-9]+):.*/\\1/; "
+            "s/^broken link in .*/check 1/' | sort | uniq -c`"
+        ),
+        denominator=(
+            f"{len(mig_out.splitlines())} output line(s); "
+            f"{sum(mig_classes.values())} failure(s) total, {len(mig_classes)} class(es)"
+        ),
         migrated=f"exit {mig_audit.returncode}"
         + (f", FAILED ({failures.group(1)})" if failures else "")
-        + f", {mig_absent} check(s) did not execute",
+        + f", {mig_absent} check(s) did not execute; {h1_disclosed_text}; "
+        f"{h1_other} failure(s) outside checks 29/30/35",
         control=f"exit {ctl_audit.returncode}"
         + (f", FAILED ({ctl_failures.group(1)})" if ctl_failures else "")
         + f", {ctl_absent} check(s) did not execute",
-        verdict=PASS if mig_audit.returncode == 0 else FAIL,
-        note=(
-            f"{mig_absent} check(s) report they CANNOT RUN on the migrated tree "
-            f"(control {ctl_absent}) — the old notes directory is dissolved by the "
-            "migration, so "
-            "checks 16-20 and 25 have nothing to scan. Non-execution is a third state "
-            "beside pass and fail, and a failure count scores it as a small number of "
-            "failures rather than as a hole in coverage."
-            if mig_absent else ""
+        verdict=_h1_verdict(h1_other),
+        note="; ".join(
+            part
+            for part in (
+                f"checks 29, 30 and 35 are W37-10's residue (Ruling 105 §B), disclosed by "
+                f"count and never fatal: {h1_disclosed_text}. Every other class — including "
+                "checks 32, 36, 1, 31, 27 and any class not named here — must be zero to "
+                "pass",
+                (
+                    f"{mig_absent} check(s) report they CANNOT RUN on the migrated tree "
+                    f"(control {ctl_absent}) — the old notes directory is dissolved by the "
+                    "migration, so checks 16-20 and 25 have nothing to scan. Non-execution "
+                    "is a third state beside pass and fail, and a failure count scores it "
+                    "as a small number of failures rather than as a hole in coverage."
+                    if mig_absent else ""
+                ),
+            )
+            if part
         ),
     )
 
@@ -1452,6 +1553,7 @@ def rows_h(snap: Snapshot) -> list[Row]:
     exempt = mig_probes["check 37 `was:` exemptions"] or 0
     rate = (exempt / in_scope) if in_scope else 0.0
     over_exempt = in_scope >= _EXEMPTION_FLOOR and rate >= _EXEMPTION_RATE_CAP
+    check37_reds = mig_classes.get("37", 0)
     h2 = Row(
         key="h2",
         title="audit-docs.py's passing lines are not green over an empty population",
@@ -1464,16 +1566,20 @@ def rows_h(snap: Snapshot) -> list[Row]:
         denominator=f"{len(_VACUITY_PROBES)} probe(s)",
         migrated="; ".join(f"{k}={v}" for k, v in mig_probes.items()),
         control="; ".join(f"{k}={v}" for k, v in ctl_probes.items()),
-        verdict=PASS if not (vacuous or over_exempt) else FAIL,
+        verdict=_h2_verdict(vacuous, over_exempt),
         note="; ".join(
             part
             for part in (
                 ("vacuous on: " + ", ".join(vacuous)) if vacuous else "",
                 (
-                    f"OVER-EXEMPT: check 37 exempts {exempt} of {in_scope} document(s) "
-                    f"({rate:.0%}) on the `was:` field, which is a large population almost "
-                    "entirely excused rather than an empty one — the zero-denominator rule "
-                    "cannot see this shape"
+                    "OVER-EXEMPT (Ruling 105 D3, disclosed not failed): Ruling 97 §4's four "
+                    f"figures — {check37_reds} red · {in_scope} examined · {exempt} exempt "
+                    f"by `was:` ({rate:.0%}) · the broken-input control (Ruling 97 §3 proof "
+                    "2, evidence that the exemption is what holds the population out rather "
+                    "than a detector that stopped working) — a large population almost "
+                    "entirely excused rather than an empty one; the zero-denominator rule "
+                    "cannot see this shape. Ruling 96's ruled outcome, accepted with its "
+                    "disclosure at delegation §6.3"
                 ) if over_exempt else "",
                 f"check 37 exemption rate {exempt}/{in_scope}" if in_scope else "",
             )
@@ -1516,14 +1622,18 @@ def rows_h(snap: Snapshot) -> list[Row]:
             + ", ".join(_UNMEASURED_GATE_HALVES)
         ),
         denominator=f"{len(_UNMEASURED_GATE_HALVES)} gate half/halves",
-        migrated="not run",
+        migrated="not run in-snapshot — see the migration PR's own CI (Ruling 105 D2)",
         control="not run",
-        verdict=NOT_MEASURED,
+        verdict=DISCLOSE,
         note=(
-            "a `git archive` snapshot has no uv venv and no pnpm store, so these cannot "
-            "run in-snapshot. Recorded as a verdict, not an omission (§13 admits no "
-            "silence); handover §2.3 is the precedent. CLAUDE.md §11: a Python-only "
-            "'gate' has been green here while the frontend was red."
+            "measured by the migration PR's own CI on its exact head — all four workflows "
+            "green — plus the executor's local run of CLAUDE.md §11's two halves, both "
+            "recorded in W37-6's ledger with the head SHA (Ruling 105 D2). Never `NOT "
+            "MEASURED` in the snapshot: a `git archive` snapshot has no uv venv and no pnpm "
+            "store, so these cannot run in-snapshot at all, and that absence is disclosed "
+            "rather than reported as an unmeasured verdict. handover §2.3 is the precedent "
+            "for naming the owner rather than dropping it silently (§13). CLAUDE.md §11: a "
+            "Python-only 'gate' has been green here while the frontend was red."
         ),
     )
     return [h1, h2, h3, h4]
@@ -1603,16 +1713,17 @@ def row_i(snap: Snapshot) -> Row:
         denominator=f"{h_rows} H row(s) in §5",
         migrated="0 closed by a named commit — no row→commit mapping artifact exists",
         control="n/a — the row is about commits, not tree content",
-        verdict=NOT_MEASURED if h_rows else FAIL,
+        verdict=DISCLOSE if h_rows else FAIL,
         note=("" if h_rows else
               "empty population — no H row was found in §5, so this row's own predicate "
               "measured nothing (NT-0007). ") + (
-            "OWNERSHIP TENSION, reported not resolved. Ruling 102 §1 requires the "
+            "OWNERSHIP TENSION, ruled by Ruling 105 D1. Ruling 102 §1 requires the "
             "instrument to compute all NINE rows (a)-(i); Ruling 102 §3 rules that (i) is "
             "W37-10's, not W37-6's ('Eight rows, not nine'). Both are obeyed: the row is "
-            "computed as §1 says and its owner is printed as §3 says, so this instrument "
-            "is red on a row W37-6 cannot fix. Whether (i) should set the exit code is "
-            "the maintainer's (CLAUDE.md §12)."
+            "computed as §1 says and its owner is printed as §3 says. Ruling 105 D1 rules "
+            "(i) non-fatal — it does not set the exit code — so this instrument is not red "
+            "on a row W37-6 cannot fix; `FATAL_VERDICTS` keeps `NOT MEASURED` fatal for "
+            "every other row that uses it."
         ),
     )
 
@@ -1693,15 +1804,18 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "b": FAIL,          # 77 noncontiguous ids                     — Ruling 102 §2 row 4
     "c": FAIL,          # docs/INDEX.md stale against its own renderer
     "d1": FAIL,         # NT-00
-    "d2": REGRESSION,   # F-W[0-9] — never PASS (2026-09-03 correction, task 23); the
-                         # migration's per-document `title:` front matter + generated
-                         # INDEX.md rows duplicate a citation quoted inside a title
-                         # (F-W11-1-5, control 10 -> migrated 13); live defect, unowned
+    "d2": DISCLOSE,     # F-W[0-9] — Ruling 105 §A: the same alias class as `F[0-9]{2}`,
+                         # excluded from the zero requirement with its count disclosed
+                         # regardless of the migrated/control comparison (2026-09-03, task 14)
     "d3": DISCLOSE,     # \bF[0-9]{2}\b — excluded from the zero requirement (§8.5)
     "d4": FAIL,         # wf-0[0-9] — improved (262 < control 272), not the migration's own
                          # regression any more; still non-zero (2026-09-03, task 23)
     "d5": FAIL,         # Ruling [0-9]+                            — Ruling 102 §4
-    "d6": FAIL,         # ADR-0[0-9]{3}
+    "d6": FAIL,         # ADR-0[0-9]{3}\b — trailing `\b` added (2026-09-03, task 14, Ruling
+                         # 67 §2 Part 1's already-ruled "complete identifier" requirement,
+                         # not carried here until now): the bare pattern matched as a
+                         # substring of any correctly-migrated five-digit id; genuine
+                         # un-migrated 4-digit citations remain, so the row still fails
     "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
     "d8": REGRESSION,   # W[0-9]+[a-z]?-[0-9]+ — the migration CREATES this one (2026-09-03,
                          # task 22): +144 lines/30 files, same title/INDEX-duplication
@@ -1714,12 +1828,16 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "e": FAIL,          # 2 padded ids in prose                    — Ruling 103
     "f": PASS,          # VR-DST-1 unchanged, both conjuncts       — Ruling 103
     "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
-    "h1": FAIL,         # audit-docs.py exits 1 on the migrated tree
-    "h2": FAIL,         # four vacuous passes
+    "h1": FAIL,         # audit-docs.py: checks 29/30/35 disclosed (owner W37-10, Ruling 105
+                         # §B), but other classes (32, 36, 1, 31, 27, ...) are still non-zero
+    "h2": DISCLOSE,     # zero-denominator probes now clear; only OVER-EXEMPT fires, which
+                         # Ruling 105 D3 disclosed rather than failed (2026-09-03, task 14)
     "h3": PASS,         # req-coverage.py: 533 requirements on both trees, exit 0 on the
                          # migrated tree (was 0/empty-population FAIL; 2026-09-03, task 23)
-    "h4": NOT_MEASURED,  # the gate halves needing a toolchain
-    "i": NOT_MEASURED,  # W37-10's, and no row->commit artifact exists
+    "h4": DISCLOSE,     # Ruling 105 D2: measured at the migration PR's own CI, never
+                         # `NOT MEASURED` in the snapshot (2026-09-03, task 14)
+    "i": DISCLOSE,      # Ruling 105 D1: W37-10's, non-fatal, does not set the exit code
+                         # (2026-09-03, task 14)
 }
 
 REGRESSED: Final = "REGRESSION (newly failing)"
