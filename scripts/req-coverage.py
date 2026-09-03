@@ -19,6 +19,13 @@ import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
+#: A requirement id defined in a spec, in either form: `**FR-MODEL-45**` before the RFC-216
+#: id migration, `**FR-1187**` after it (NT-0019 D2). Both are accepted here rather than
+#: selected by tree, because this script's other input -- `@pytest.mark.req("...")` markers
+#: across ~1 988 sites -- is rewritten by the same migration commit and a marker in the old
+#: form on a migrated tree must still be reported as unknown, not silently unparsed.
+_REQ_DEFINED = re.compile(r"\*\*((?:FR|NFR)-(?:[A-Z]+-)?\d+)\*\*")
+
 
 def _test_roots() -> list[pathlib.Path]:
     """The directories pytest collects from, read from pyproject rather than hardcoded.
@@ -42,7 +49,7 @@ def main() -> int:
     specified: set[str] = set()
     for spec in sorted((ROOT / "docs" / "specs").glob("*.md")):
         body = spec.read_text(encoding="utf-8")
-        specified |= set(re.findall(r"\*\*((?:FR|NFR)-[A-Z]+-\d+)\*\*", body))
+        specified |= set(_REQ_DEFINED.findall(body))
 
     claimed: dict[str, list[str]] = {}
     for root in _test_roots():
@@ -53,6 +60,17 @@ def main() -> int:
 
     unknown = sorted(set(claimed) - specified)
     print(f"  requirements specified : {len(specified)}")
+    if not specified:
+        # Zero specified requirements is never a real tree state: `docs/specs/` is eight
+        # files of numbered clauses. It means this script's id pattern stopped matching the
+        # corpus -- which is what happened at the RFC-216 migration, where the module-scoped
+        # pattern above met `**FR-1187**` and matched nothing. Say so; do not divide by it.
+        print(
+            "\n  FAIL: no requirement ids parsed from docs/specs/ -- the id pattern does "
+            "not match this tree's requirement form, so every coverage figure below would "
+            "be measured against an empty denominator"
+        )
+        return 1
     print(f"  requirements marked    : {len(claimed)}  ({len(claimed) / len(specified):.1%})")
     for rid in sorted(claimed):
         print(f"      {rid:16s} {len(claimed[rid])} test file(s)")

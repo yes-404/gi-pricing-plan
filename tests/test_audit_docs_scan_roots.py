@@ -44,15 +44,18 @@ def test_a_missing_notes_root_fails_the_audit() -> None:
     removed in `finally`.
     """
     source = SCRIPT.read_text(encoding="utf-8")
-    assert 'NOTES = REPO / "docs" / "notes"' in source, (
+    # `NOTES` became a two-candidate lookup at W37-6 (`docs/notes/` pre-migration,
+    # `docs/rfcs/` after it), so the constant is no longer a single literal path. The canary
+    # moves with it: what this test needs is the *definition line*, whatever it now names,
+    # and it still refuses to run if that line has changed shape again.
+    definition = "NOTES = _first_dir("
+    assert definition in source, (
         "the NOTES constant has moved -- re-derive this test before trusting it"
     )
+    line = next(ln for ln in source.splitlines() if ln.startswith(definition))
     patched = SCRIPT.parent / "_scratch_audit_docs_scan_roots.py"
     patched.write_text(
-        source.replace(
-            'NOTES = REPO / "docs" / "notes"',
-            'NOTES = REPO / "docs" / "notes-that-do-not-exist"',
-        ),
+        source.replace(line, 'NOTES = ROOT / "notes-that-do-not-exist"'),
         encoding="utf-8",
     )
     try:
