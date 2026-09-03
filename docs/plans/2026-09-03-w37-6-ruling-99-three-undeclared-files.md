@@ -21,6 +21,17 @@ a specific file takes, because no general rule reaches it.
 - Halt condition (delegation record, line 33) — checked per file in §2; **not triggered for
   any of the three**, on the evidence below.
 
+## Ruling 99 — three `docs/audit/` files no NT-0019 clause maps get destinations, not a halt
+
+**Structural note, added after filing**: this heading exists so `scripts/doc-id.py`'s
+`_discover_multi_ruling_files` (`_RULING_HEADING_RE`, matching `^## Ruling \d+`) discovers
+this record as one `RL-` draft rather than falling through to `_discover_plain_plans`'s
+`PL- kind: leaf, owner: planner` catch-all — verified directly, not assumed: the shipped
+regex matches zero times against this file without this heading and once with it, reproduced
+by running the actual pattern rather than reading it. Everything above and below this line is
+one ruling; the heading marks where the splitter's own preamble-folding rule needs an anchor,
+not a second document.
+
 ## 1. Verified first, at `735c828`
 
 **(a) Why these are undeclared rather than missed — the load-bearing distinction.** NT-0019
