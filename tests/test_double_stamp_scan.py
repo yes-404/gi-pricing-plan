@@ -179,9 +179,11 @@ def test_changed_since_sees_an_untracked_created_file(
     """
     repo = tmp_path / "repo"
     repo.mkdir()
-    run = lambda *a: subprocess.run(  # noqa: E731
-        a, cwd=repo, check=True, capture_output=True, text=True
-    )
+    def run(*args: str) -> None:
+        """Typed rather than a lambda: `mypy --strict` covers `tests/`, and a bare
+        `lambda *a:` is an untyped function whose every call it rejects."""
+        subprocess.run(args, cwd=repo, check=True, capture_output=True, text=True)
+
     run("git", "init", "--initial-branch=main", "-q")
     run("git", "config", "user.email", "t@example.com")
     run("git", "config", "user.name", "T")
