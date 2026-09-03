@@ -4700,3 +4700,352 @@ def test_repointing_follows_both_a_moved_target_and_a_moved_citer(
     assert "[0001](RFC-00007-example.md)" in moved
     assert "[`../adrs/`](../adrs/)" in moved
     assert "[see](../roadmap.md)" in moved  # citer moved sideways: same depth, same path
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 100 (`docs/plans/2026-09-03-w37-6-ruling-100-split-source-citations.md`) and the
+# maintainer's Ruling 101 extension of it: a citation into a split source is rewritten to a
+# target only when the citation determines that target; anything else goes to the family
+# index section; `was:` is provenance and is not swept; and a link into an index section
+# that lists no choice is loud rather than silent.
+# ---------------------------------------------------------------------------------------
+
+
+def _split_fixture(doc_id_cli: types.ModuleType) -> Any:
+    """One `_SplitSource` over a two-target split, built the way `migrate` builds one --
+    through `_build_split_sources`, not by hand -- so a test cannot pass against a shape
+    the production path never produces.
+    """
+    drafts = [
+        doc_id_cli._Draft(
+            materialize="document", prefix="RL", kind=None, title="the first ruling",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-two-rulings.md", 0),
+            old_token="Ruling 200", was="docs/plans/2026-09-01-two-rulings.md",
+            body="## Ruling 200 — the first\n\nBody one.\n",
+            source_line_span=(1, 10),
+        ),
+        doc_id_cli._Draft(
+            materialize="document", prefix="RL", kind=None, title="the second ruling",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-two-rulings.md", 1),
+            old_token="Ruling 201", was="docs/plans/2026-09-01-two-rulings.md",
+            body="## Ruling 201 — the second\n\nBody two.\n",
+            source_line_span=(11, 20),
+        ),
+    ]
+    drafts[0].number, drafts[1].number = 300, 301
+    drafts[0].body_line_offset = drafts[1].body_line_offset = 5
+    sources = doc_id_cli._build_split_sources(
+        "docs/plans/2026-09-01-two-rulings.md",
+        [
+            (drafts[0], "docs/rulings/RL-00300-the-first-ruling.md"),
+            (drafts[1], "docs/rulings/RL-00301-the-second-ruling.md"),
+        ],
+    )
+    return next(
+        s for s in sources if s.token == "docs/plans/2026-09-01-two-rulings.md"
+    )
+
+
+def test_a_was_header_naming_a_split_source_survives_the_rewrite_byte_identical(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 101 clause 2's broken-input proof.
+
+    The input is deliberately broken in the exact way §1.4 measured: a stamped document
+    whose `was:` names a source this run splits, so a sweep that treated `was:` as a
+    citation would rewrite it -- and, the source being split, would rewrite it to one
+    arbitrary sibling, destroying the only field that records where the file came from.
+
+    **The header must come out byte-identical.** The same path is repeated in the body as a
+    positive control: a test that only showed the header unchanged would pass identically
+    if the sweep had not run at all, which proves nothing (`positive control must run the
+    gate's own pattern`). The body copy must change; the header copy must not.
+    """
+    split = _split_fixture(doc_id_cli)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    doc = tmp_path / "docs" / "rulings" / "RL-00300-the-first-ruling.md"
+    doc.parent.mkdir(parents=True)
+    header = (
+        "---\n"
+        "id: RL-300\n"
+        "family: ruling\n"
+        "title: the first ruling\n"
+        "was: docs/plans/2026-09-01-two-rulings.md\n"
+        "---\n"
+    )
+    body = "Body citing docs/plans/2026-09-01-two-rulings.md in prose.\n"
+    doc.write_text(header + body, encoding="utf-8")
+
+    doc_id_cli._rewrite_citations(tmp_path, {}, [split])
+
+    after = doc.read_text(encoding="utf-8")
+    assert after.startswith(header), (
+        "the `was:` header was rewritten: Ruling 101 clause 2 requires it byte-identical"
+    )
+    # Positive control: the sweep really did run over this file, on this exact token.
+    assert "docs/plans/2026-09-01-two-rulings.md" not in after[len(header):], (
+        "the body copy was not rewritten — the sweep did not fire, so the header's "
+        "survival proves nothing"
+    )
+
+
+def test_a_citation_determining_nothing_goes_to_the_family_index_section(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 100 §3.2's broken input -- a citation with two candidate targets and no
+    determining evidence -- under Ruling 101 clause 1's disposition of it.
+
+    It must not land on either target (that is the 171-links-that-lie defect), and it must
+    not be left to dangle either: it resolves to the family index section, which lists both.
+    """
+    split = _split_fixture(doc_id_cli)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citer = tmp_path / "notes.md"
+    citer.write_text(
+        "See docs/plans/2026-09-01-two-rulings.md for the background.\n", encoding="utf-8"
+    )
+
+    _changed, index_resolved, unrewritten = doc_id_cli._rewrite_citations(
+        tmp_path, {}, [split]
+    )
+
+    after = citer.read_text(encoding="utf-8")
+    assert "docs/rulings/INDEX.md#2026-09-01-two-rulingsmd" in after
+    grounds = "an undetermined citation was rewritten to one of the targets - Ruling 100 §3.3"
+    assert "RL-00300" not in after, grounds
+    assert "RL-00301" not in after, grounds
+    assert len(index_resolved) == 1
+    assert unrewritten == [], "bucket (iv) is 0 unrewritten by construction"
+    assert index_resolved[0].candidates == (
+        "docs/rulings/RL-00300-the-first-ruling.md",
+        "docs/rulings/RL-00301-the-second-ruling.md",
+    )
+
+
+def test_a_citation_naming_its_target_by_id_still_reaches_that_target(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The other half of the same rule, and the reason Ruling 100 rejected reading C:
+    where the citation *does* determine the target, the evidence is used, not discarded
+    onto the index alongside the genuinely ambiguous ones."""
+    split = _split_fixture(doc_id_cli)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citer = tmp_path / "notes.md"
+    citer.write_text(
+        "Ruling 201 (docs/plans/2026-09-01-two-rulings.md) settled it.\n", encoding="utf-8"
+    )
+
+    _changed, index_resolved, _unrewritten = doc_id_cli._rewrite_citations(
+        tmp_path, {}, [split]
+    )
+
+    assert "docs/rulings/RL-00301-the-second-ruling.md" in citer.read_text(encoding="utf-8")
+    assert index_resolved == []
+
+
+def test_the_index_section_check_reddens_on_a_section_that_lists_no_choice(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 101 clause 3, proven red before it is proven green.
+
+    *"A link to an empty index section is the new silent failure; make it loud first."*
+    Three deliberately broken inputs -- no index file, no section with that anchor, and a
+    section listing one document instead of two -- each of which the auditor's dangling-link
+    scanner passes on, because `docs/rulings/INDEX.md` is a real file and that scanner
+    checks paths, not fragments.
+    """
+    cite = doc_id_cli._UnresolvedCitation(
+        citing_file="docs/roadmap.md", line=42,
+        old_rel="docs/plans/2026-09-01-two-rulings.md",
+        text="see docs/plans/2026-09-01-two-rulings.md", candidates=("a.md", "b.md"),
+        resolved_to="docs/rulings/INDEX.md#2026-09-01-two-rulingsmd",
+        index_rel="docs/rulings/INDEX.md", index_anchor="2026-09-01-two-rulingsmd",
+    )
+    index = tmp_path / "docs" / "rulings" / "INDEX.md"
+    index.parent.mkdir(parents=True)
+
+    # RED 1 — the index file is not there at all.
+    faults = doc_id_cli._split_index_violations(tmp_path, [cite])
+    assert len(faults) == 1
+    assert "docs/roadmap.md:42" in faults[0]
+    assert "2026-09-01-two-rulingsmd" in faults[0]
+    assert "does not exist" in faults[0]
+
+    # RED 2 — the file exists, but carries no section with that anchor.
+    index.write_text("# docs/rulings — split-source index\n\n## something-else\n", "utf-8")
+    faults = doc_id_cli._split_index_violations(tmp_path, [cite])
+    assert len(faults) == 1
+    assert "no section with that anchor" in faults[0]
+    assert "docs/roadmap.md:42" in faults[0]
+
+    # RED 3 — the section is there and lists one document, so it offers no choice.
+    one_row = (
+        "# docs/rulings — split-source index\n\n"
+        "## 2026-09-01-two-rulings.md\n\n"
+        "| Document | Title | `was:` |\n|---|---|---|\n"
+        "| [`RL-300`](RL-00300-the-first-ruling.md) | one | `x` |\n"
+    )
+    index.write_text(one_row, encoding="utf-8")
+    faults = doc_id_cli._split_index_violations(tmp_path, [cite])
+    assert len(faults) == 1
+    assert "lists 1 document(s)" in faults[0]
+
+    # GREEN — two rows under the anchor the citation names.
+    index.write_text(
+        one_row + "| [`RL-301`](RL-00301-the-second-ruling.md) | two | `x` |\n",
+        encoding="utf-8",
+    )
+    assert doc_id_cli._split_index_violations(tmp_path, [cite]) == []
+
+
+def test_migrate_writes_a_family_index_whose_sections_list_every_target(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """End-to-end: the run writes the index, every bucket-(iv) citation resolves into it,
+    and the clause-3 check finds nothing -- which is only meaningful because the test above
+    proves that check can fail."""
+    result = doc_id_cli.migrate(pristine_a)
+
+    assert result.unresolved_split_citations == (), (
+        "bucket (iv) must be 0 unrewritten by construction"
+    )
+    assert result.split_index_violations == ()
+    indexes = [f for f in result.files_written if f.endswith("/INDEX.md")]
+    assert indexes, "a corpus with a split source must produce a family index"
+    for rel in indexes:
+        text = (pristine_a / rel).read_text(encoding="utf-8")
+        assert text.startswith("---\n"), "the index carries a governed header (check 35)"
+        assert "## " in text, "an index with no section indexes nothing"
+
+
+def test_cmd_migrate_prints_both_split_citation_counts_including_the_zero(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, capsys: Any
+) -> None:
+    """The two counts are the gate figures -- bucket (iv), and the 0 unrewritten that
+    "0 by construction" is a claim about. Printed unconditionally, in the shape every other
+    population in this command already uses (Ruling 94)."""
+    doc_id_cli._cmd_migrate(argparse.Namespace(repo_root=pristine_a))
+    err = capsys.readouterr().err
+    assert "0 citation(s) of a split source left unrewritten" in err
+    assert "resolved to their family index section (Ruling 101 clause 1)" in err
+    assert "0 citation(s) resolved to a family index section that is missing" in err
+
+
+def test_a_bare_basename_link_is_rewritten_only_inside_its_own_directory(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The fourth citing form, and the scope that makes it safe.
+
+    A sibling writes `[the slice map](2026-08-22-w6b-slice-map.md)` — a bare basename, the
+    one form none of `_path_rewrite_tokens`' three cover, and the whole of the residual
+    dangling-link population this branch measured (167 links in 70 files, unchanged by the
+    split-source fix, so a class of its own).
+
+    **The broken input is the same token written from somewhere else.** A bare basename is
+    the most collision-prone token this migration could substitute; the only thing standing
+    between it and a tree-wide false match is the directory scope. So the test asserts both
+    halves: rewritten inside `docs/plans/`, left alone one directory away. A test that
+    proved only the rewrite would pass identically with the scope removed.
+    """
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citing_dir, old, new = doc_id_cli._bare_basename_rewrite(
+        "docs/plans/2026-08-22-w6b-slice-map.md",
+        "docs/plans/PL-00761-w6b-and-w32-the-slice-map.md",
+    )
+    assert (citing_dir, old, new) == (
+        "docs/plans",
+        "2026-08-22-w6b-slice-map.md",
+        "PL-00761-w6b-and-w32-the-slice-map.md",
+    )
+
+    sibling = tmp_path / "docs" / "plans" / "PL-00760-other.md"
+    sibling.parent.mkdir(parents=True)
+    sibling.write_text("See [the map](2026-08-22-w6b-slice-map.md).\n", encoding="utf-8")
+    elsewhere = tmp_path / "docs" / "specs" / "02-modelling.md"
+    elsewhere.parent.mkdir(parents=True)
+    elsewhere.write_text("See [the map](2026-08-22-w6b-slice-map.md).\n", encoding="utf-8")
+
+    doc_id_cli._rewrite_citations(tmp_path, {}, (), {citing_dir: {old: new}}, {})
+
+    assert "PL-00761-w6b-and-w32-the-slice-map.md" in sibling.read_text(encoding="utf-8")
+    assert elsewhere.read_text(encoding="utf-8") == (
+        "See [the map](2026-08-22-w6b-slice-map.md).\n"
+    ), "a bare basename was substituted outside the directory in which it named that file"
+
+
+def test_a_bare_basename_leaving_its_directory_becomes_a_relative_path(
+    doc_id_cli: types.ModuleType
+) -> None:
+    """The case a same-directory-only reading of the rule leaves dangling, and the reason
+    the replacement is computed with `posixpath.relpath` rather than assumed to be a
+    sibling: 29 of the 167 links cited a `docs/plans/` file this run moves to
+    `docs/rulings/`, and a bare replacement would resolve to `docs/plans/RL-….md`.
+    """
+    assert doc_id_cli._bare_basename_rewrite(
+        "docs/plans/2026-08-29-w11-slice-parallelism-ruling.md",
+        "docs/rulings/RL-00940-slice-parallelism.md",
+    ) == (
+        "docs/plans",
+        "2026-08-29-w11-slice-parallelism-ruling.md",
+        "../rulings/RL-00940-slice-parallelism.md",
+    )
+    # No directory to scope to, so no bare form at all — never a tree-wide bare token.
+    assert doc_id_cli._bare_basename_rewrite("CLAUDE.md", "docs/CLAUDE.md") is None
+
+
+def test_a_bare_basename_citation_of_a_split_source_reaches_the_split_resolver(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A split source needs the fourth form too, and it must go through the same three
+    determinants rather than the flat map — otherwise the bare form reintroduces exactly
+    the defect Ruling 100 was written about, one directory down."""
+    split = _split_fixture(doc_id_cli)
+    drafts_and_paths = [
+        (
+            doc_id_cli._Draft(
+                materialize="document", prefix="RL", kind=None, title=f"ruling {i}",
+                status="active", created=date(2026, 9, 1), owner="decision-maker",
+                tie_break=("docs/plans/2026-09-01-two-rulings.md", i),
+                old_token=f"Ruling {200 + i}",
+                was="docs/plans/2026-09-01-two-rulings.md",
+                body=f"## Ruling {200 + i}\n", source_line_span=(1 + i * 10, 10 + i * 10),
+            ),
+            f"docs/rulings/RL-0030{i}-ruling-{i}.md",
+        )
+        for i in (0, 1)
+    ]
+    for i, (draft, _) in enumerate(drafts_and_paths):
+        draft.number = 300 + i
+    bare = doc_id_cli._build_bare_split_source(
+        "docs/plans/2026-09-01-two-rulings.md", drafts_and_paths
+    )
+    assert bare is not None
+    citing_dir, source = bare
+    assert citing_dir == "docs/plans"
+    assert source.token == "2026-09-01-two-rulings.md"
+    assert source.index_token == "../rulings/INDEX.md#2026-09-01-two-rulingsmd", (
+        "both targets land in docs/rulings, so that is the family index — and the fallback "
+        "is written relative to the CITING directory, not as a repo-relative path"
+    )
+
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citer = tmp_path / "docs" / "plans" / "PL-00999-citer.md"
+    citer.parent.mkdir(parents=True)
+    citer.write_text(
+        "Undetermined: [both](2026-09-01-two-rulings.md).\n"
+        "Determined: Ruling 201 in [that one](2026-09-01-two-rulings.md).\n",
+        encoding="utf-8",
+    )
+
+    _changed, index_resolved, unrewritten = doc_id_cli._rewrite_citations(
+        tmp_path, {}, (), {}, {citing_dir: [source]}
+    )
+
+    after = citer.read_text(encoding="utf-8")
+    assert "../rulings/INDEX.md#2026-09-01-two-rulingsmd" in after
+    assert "../rulings/RL-00301-ruling-1.md" in after
+    assert len(index_resolved) == 1, "only the undetermined citation goes to the index"
+    assert unrewritten == []
+    assert split.token == "docs/plans/2026-09-01-two-rulings.md"  # the other form, untouched

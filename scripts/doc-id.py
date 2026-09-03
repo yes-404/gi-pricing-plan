@@ -515,6 +515,16 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
       `"reference"` too, never that directory's own family bucket — Reference is what NT-
       0019 §1.2 names for it, not a second definition of what "workflow"/"finding"/etc.
       contains.
+    - **Every `INDEX.md` anywhere in the tree**, on the same clause and for the same
+      reason as the `README.md` widening above it. Ruling 101 clause 1 puts a generated
+      split-source index inside a family directory (`docs/rulings/INDEX.md`, ...), and
+      without this it would be counted as a *member* of the family it indexes -- one
+      spurious `"ruling"`/`"closure"`/`"plan"` per index file. An index of a family is
+      Reference, exactly as that family's README is; NT-0019 §1.2's Reference row already
+      names `INDEX.md` (as the top-level one), and nesting does not change what it is.
+      This does **not** move the `"none"` count: an `INDEX.md` under a family directory
+      already matched `_CLASSIFY_FAMILY_BY_DIR`, so the widening corrects which bucket it
+      lands in, never whether it lands in one.
     """
     top_level_reference_files = frozenset(
         {
@@ -532,7 +542,7 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
         parts = Path(rel).parts  # ("docs", ...) always, since the pathspec was "docs"
         if len(parts) < 2:
             continue  # defensive: git ls-files -- "docs" cannot itself return "docs"
-        if parts[-1] == "README.md":
+        if parts[-1] in ("README.md", "INDEX.md"):
             family = "reference"
         elif len(parts) == 2:
             family = "reference" if parts[1] in top_level_reference_files else "none"
@@ -3865,7 +3875,10 @@ def _check_plain_plans_not_silently_unrecognised(root: Path) -> None:
         is_body=is_body,
         exceptions={
             "README.md": "the directory's own README, not a dated record",
-            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+            "INDEX.md": (
+                "the family's generated split-source index (Ruling 101 clause 1), "
+                "not a governed record"
+            ),
         },
     )
 
@@ -4805,7 +4818,54 @@ def _path_rewrite_tokens(old_rel: str, new_rel: str) -> dict[str, str]:
     audit_prefix, findings_prefix = "docs/audit/", "docs/findings/"
     if old_rel.startswith(audit_prefix) and new_rel.startswith(findings_prefix):
         tokens[old_rel[len(audit_prefix) :]] = new_rel[len(findings_prefix) :]
+    # A **fourth** form: the bare basename, which is what a sibling writes when the citing
+    # file and the cited file share a directory -- `docs/plans/PL-00761-...md` linking to
+    # `[the slice map](2026-08-22-w6b-slice-map.md)`. Measured on the real corpus at the
+    # tree this branch was built on: **167 dangling links in 70 surviving files**, every
+    # one of them a `docs/plans/` file citing a sibling `docs/plans/YYYY-MM-DD-*.md` that
+    # this run renames to `PL-<n>-*.md`. The count was **identical before and after the
+    # split-source fix**, which is what identifies it as a class of its own rather than a
+    # residue of that defect -- Ruling 100's three forms never covered it, because all
+    # three carry a directory and this one carries none.
+    #
+    # It is **not** emitted here, because unlike the three forms above it is not safe to
+    # apply tree-wide: a bare `2026-08-22-w6b-slice-map.md` only means this file when the
+    # citing file sits in the directory the cited file sat in, and its correct replacement
+    # depends on that same directory. `_bare_basename_rewrite` below returns it keyed by
+    # that directory, and `_rewrite_citations` applies it only to files inside it.
     return tokens
+
+
+def _bare_basename_rewrite(old_rel: str, new_rel: str) -> tuple[str, str, str] | None:
+    """`(citing_dir, bare_token, replacement)` for a moved file's **bare-basename** citing
+    form, or `None` where there is none.
+
+    A file cited by a sibling is written as a bare filename -- `docs/plans/PL-00761-….md`
+    linking to `[the slice map](2026-08-22-w6b-slice-map.md)`. None of
+    `_path_rewrite_tokens`' three forms covers it, because all three carry a directory and
+    this one carries none. Measured on the real corpus at the tree this branch was built
+    on: **167 dangling links in 70 surviving files**, every one of them a `docs/plans/`
+    file citing a sibling `docs/plans/YYYY-MM-DD-*.md` this run renames -- and the count
+    was **identical before and after the split-source fix**, which is what identifies it as
+    a class of its own rather than a residue of that defect.
+
+    **The `citing_dir` scope is what makes the token safe, and it is not optional.** A bare
+    basename is the most collision-prone token this migration could substitute: applied
+    tree-wide, `README.md` or `register.md` would match every mention anywhere. Scoped to
+    the one directory in which that basename resolved to this file, it cannot match a
+    different file's name -- two files never share a basename inside one directory -- and
+    the replacement is a link that still resolves from that directory, computed with
+    `posixpath.relpath` rather than assumed to be a sibling: a move *out* of the directory
+    is rewritten to `../rulings/RL-….md`, which is what the citing file needs, and is
+    exactly the case the same-directory-only reading of this rule left dangling.
+    """
+    old_dir, _, old_base = old_rel.rpartition("/")
+    if not old_dir:
+        return None
+    replacement = posixpath.relpath(new_rel, old_dir)
+    if replacement == old_base:
+        return None
+    return (old_dir, old_base, replacement)
 
 
 class TokenMapCollisionError(RuntimeError):
@@ -5051,6 +5111,17 @@ def _build_split_sources(
             )
     sources: list[_SplitSource] = []
     for tok, ts in by_token.items():
+        # A citing form only some of the targets can be written in is not a form this
+        # source can be resolved in at all. The bare-basename form is the case that makes
+        # this real: it exists only for a target that stayed in the source's own directory,
+        # so a source splitting across directories has it for some targets and not others,
+        # and a `_SplitSource` built from that subset would silently offer a *narrowed*
+        # candidate list -- a citation determining "exactly one target" out of a list the
+        # other targets were quietly dropped from. That is the mis-resolution Ruling 100
+        # was written about, arriving by a different door. Such a form is skipped, and its
+        # citations are left for the dangling-link scanner to list by name.
+        if len(ts) != len(targets):
+            continue
         index_token = index_forms.get(tok)
         if index_token is None:
             # A citing form the targets have but the index does not. Structurally this is
@@ -5071,6 +5142,57 @@ def _build_split_sources(
             )
         )
     return sources
+
+
+def _build_bare_split_source(
+    old_rel: str, targets: Sequence[tuple[_Draft, str]]
+) -> tuple[str, _SplitSource] | None:
+    """`(citing_dir, source)` for a split source's **bare-basename** citing form, or `None`
+    where it has none.
+
+    The `_build_split_sources` counterpart of `_bare_basename_rewrite`, and needed for the
+    same measured reason: after the directory-carrying forms were fixed, the residue of the
+    dangling-link scan was **29 links, all of them a `docs/plans/` file citing a sibling
+    that this run splits** -- so a split source needs the bare form as much as a
+    single-target move does. Every target and the family-index fallback are mapped through
+    `posixpath.relpath` from the citing directory, so all three of Ruling 100's
+    determinants and Ruling 101's fallback answer in the form the citing file can use.
+    """
+    old_dir, _, old_base = old_rel.rpartition("/")
+    if not old_dir:
+        return None
+    index_rel = _split_index_rel(
+        _split_index_family(old_rel, [new_rel for _, new_rel in targets])
+    )
+    anchor = _split_index_anchor(old_rel)
+    split_targets: list[_SplitTarget] = []
+    for draft, new_rel in targets:
+        ids = [t for t in (draft.old_token, _docid.canonical(draft.prefix, draft.number))
+               if t]
+        split_targets.append(
+            _SplitTarget(
+                new_rel=new_rel,
+                new_token=posixpath.relpath(new_rel, old_dir),
+                ids=tuple(ids),
+                anchors=frozenset(
+                    _anchor_slug(m.group(1))
+                    for m in _ANCHOR_HEADING_RE.finditer(draft.body)
+                ),
+                line_span=draft.source_line_span,
+                body_line_offset=draft.body_line_offset,
+                canonical_id=_docid.canonical(draft.prefix, draft.number),
+                title=draft.title,
+            )
+        )
+    index_token = posixpath.relpath(index_rel, old_dir)
+    return (
+        old_dir,
+        _SplitSource(
+            old_rel=old_rel, token=old_base, targets=tuple(split_targets),
+            index_token=f"{index_token}#{anchor}",
+            index_rel=index_rel, index_anchor=anchor,
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -5127,7 +5249,9 @@ def _was_field_spans(text: str) -> list[tuple[int, int]]:
 
 
 def _rewrite_citations(
-    root: Path, token_map: Mapping[str, str], split_sources: Sequence[_SplitSource] = ()
+    root: Path, token_map: Mapping[str, str], split_sources: Sequence[_SplitSource] = (),
+    dir_token_map: Mapping[str, Mapping[str, str]] = types.MappingProxyType({}),
+    dir_split_sources: Mapping[str, Sequence[_SplitSource]] = types.MappingProxyType({}),
 ) -> tuple[list[str], list[_UnresolvedCitation], list[_UnresolvedCitation]]:
     """Sweep every tree file, rewriting each citation token to its destination.
 
@@ -5142,10 +5266,10 @@ def _rewrite_citations(
     changed: list[str] = []
     index_resolved: list[_UnresolvedCitation] = []
     unrewritten: list[_UnresolvedCitation] = []
-    by_token: dict[str, _SplitSource] = {s.token: s for s in split_sources}
+    tree_by_token: dict[str, _SplitSource] = {s.token: s for s in split_sources}
     # One ordering over both kinds, longest first for the reason the flat map already
     # needed it: a shorter token's word boundary must not consume part of a longer one.
-    ordered = sorted({*token_map, *by_token}, key=len, reverse=True)
+    tree_ordered = sorted({*token_map, *tree_by_token}, key=len, reverse=True)
     for path in _iter_tree_files(root):
         if _is_vendored_exempt(path, root):
             continue
@@ -5157,15 +5281,37 @@ def _rewrite_citations(
             continue
         original = text
         rel = path.relative_to(root).as_posix()
+        # The directory-scoped half: a bare-basename token means *this* file only for a
+        # citer inside the directory the cited file sat in, so it joins the token set for
+        # exactly those citers and for nobody else (`_bare_basename_rewrite`). Merged per
+        # file rather than tree-wide, and re-sorted with the rest, because the
+        # longest-token-first ordering has to hold across both halves or a bare basename
+        # can eat the tail of a longer path token.
+        citing_dir = posixpath.dirname(rel)
+        local_map = dir_token_map.get(citing_dir)
+        local_splits = dir_split_sources.get(citing_dir)
+        if local_map or local_splits:
+            active_map: Mapping[str, str] = {**token_map, **(local_map or {})}
+            by_token = {
+                **tree_by_token, **{s.token: s for s in (local_splits or ())}
+            }
+            ordered = sorted({*active_map, *by_token}, key=len, reverse=True)
+        else:
+            active_map, by_token, ordered = token_map, tree_by_token, tree_ordered
 
-        def sweep(segment: str, line_offset: int, rel: str = rel) -> str:
+        def sweep(
+            segment: str, line_offset: int, rel: str = rel,
+            active_map: Mapping[str, str] = active_map,
+            by_token: Mapping[str, _SplitSource] = by_token,
+            ordered: Sequence[str] = ordered,
+        ) -> str:
             for tok in ordered:
                 if tok not in segment:
                     continue
                 split = by_token.get(tok)
                 if split is None:
                     segment = re.compile(rf"\b{re.escape(tok)}\b").sub(
-                        lambda m, v=token_map[tok]: v, segment  # type: ignore[misc]
+                        lambda m, v=active_map[tok]: v, segment  # type: ignore[misc]
                     )
                     continue
 
@@ -6192,7 +6338,10 @@ def migrate(root: Path) -> MigrateResult:
         root, "docs/notes", _NOTE_TITLE_RE, "notes",
         {
             "README.md": "the directory's own README, not a governed note",
-            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+            "INDEX.md": (
+                "the family's generated split-source index (Ruling 101 clause 1), "
+                "not a governed record"
+            ),
         },
     )
     drafts += notes_drafts
@@ -6201,7 +6350,10 @@ def migrate(root: Path) -> MigrateResult:
         root, "docs/adr", _ADR_TITLE_RE, "ADRs",
         {
             "README.md": "the directory's own README, not a governed ADR",
-            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+            "INDEX.md": (
+                "the family's generated split-source index (Ruling 101 clause 1), "
+                "not a governed record"
+            ),
         },
     )
     drafts += adr_drafts
@@ -6258,7 +6410,10 @@ def migrate(root: Path) -> MigrateResult:
         root, "docs/audit/findings", None, "finding essays",
         {
             "README.md": "the family's own index, not a governed finding essay",
-            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+            "INDEX.md": (
+                "the family's generated split-source index (Ruling 101 clause 1), "
+                "not a governed record"
+            ),
         },
         records={Path(d.was).name for d in finding_drafts if d.was is not None},
     )
@@ -6290,7 +6445,10 @@ def migrate(root: Path) -> MigrateResult:
         root, "docs/workflows", None, "workflows",
         {
             "README.md": "the family's own index, not a governed workflow document",
-            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+            "INDEX.md": (
+                "the family's generated split-source index (Ruling 101 clause 1), "
+                "not a governed record"
+            ),
         },
         records={Path(d.was).name for d in workflow_drafts if d.was is not None},
     )
@@ -6587,6 +6745,13 @@ def migrate(root: Path) -> MigrateResult:
     # because a flat `old_path -> new_path` entry can only hold one of them and the
     # overwrite is silent (`TokenMapCollisionError`'s docstring has the measurement).
     split_sources: list[_SplitSource] = []
+    # The bare-basename half of both maps, keyed by the directory the cited file sat in.
+    # Kept separate from the tree-wide maps above because a bare basename is only this
+    # file's name *inside that directory* -- `_bare_basename_rewrite`'s docstring has the
+    # measurement (167 dangling links) and the reason the scope is not optional.
+    dir_token_map: dict[str, dict[str, str]] = {}
+    dir_token_origins: dict[str, dict[str, str]] = {}
+    dir_split_sources: dict[str, list[_SplitSource]] = {}
     for old_rel, moves in path_move_groups.items():
         destinations = {new_rel for _, new_rel in moves}
         if len(destinations) == 1:
@@ -6594,6 +6759,14 @@ def migrate(root: Path) -> MigrateResult:
                 token_map, token_origins,
                 _path_rewrite_tokens(old_rel, moves[0][1]), old_rel,
             )
+            bare = _bare_basename_rewrite(old_rel, moves[0][1])
+            if bare is not None:
+                citing_dir, tok, replacement = bare
+                _add_tokens(
+                    dir_token_map.setdefault(citing_dir, {}),
+                    dir_token_origins.setdefault(citing_dir, {}),
+                    {tok: replacement}, old_rel,
+                )
             continue
         if any(draft is None for draft, _ in moves):
             # A split whose targets are not all document drafts carries no bodies, spans
@@ -6605,12 +6778,15 @@ def migrate(root: Path) -> MigrateResult:
                 f"{old_rel} splits into {sorted(destinations)} through a move that "
                 "carries no draft — no per-citation evidence exists for it"
             )
-        split_sources.extend(
-            _build_split_sources(old_rel, [(d, n) for d, n in moves if d is not None])
-        )
+        with_drafts = [(d, n) for d, n in moves if d is not None]
+        split_sources.extend(_build_split_sources(old_rel, with_drafts))
+        bare_split = _build_bare_split_source(old_rel, with_drafts)
+        if bare_split is not None:
+            citing_dir, source = bare_split
+            dir_split_sources.setdefault(citing_dir, []).append(source)
 
     rewritten, index_resolved, unrewritten_citations = _rewrite_citations(
-        root, token_map, split_sources
+        root, token_map, split_sources, dir_token_map, dir_split_sources
     )
 
     # Alongside the vendored-manifest stamp below, and after the citation rewrite for the
