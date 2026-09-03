@@ -518,3 +518,173 @@ def test_end_to_end_is_red_on_this_tree_and_names_its_rows(
     assert "predicate" in out
     assert "denominator" in out
     assert "control" in out
+
+
+# =========================================================================================
+# Companion predicates, REGRESSION and INERT — a row satisfiable by corruption
+# =========================================================================================
+
+
+def test_a_row_can_read_zero_because_corruption_moved_the_token_out_of_reach(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Auditor finding A1, as a corpus. `F-W[0-9]` reads **0** on the migrated tree while
+    the mangled form `F-WK-…` reads non-zero, and `F-WK` has a letter where the alternative
+    wants a digit — so the row is green *because* the corpus is damaged.
+
+    The row still scores PASS, which is correct: promoting a companion to a gating row is
+    the maintainer's under Ruling 102 §1. What the instrument owes is that the evidence is
+    **printed beside the number**, and that is what this asserts.
+    """
+    migrated = {"docs/a.md": "the finding F-WK-952-1-3 is cited here\n"}
+    control = {"docs/a.md": "the finding F-W11-1-3 is cited here\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "a1", migrated, control))["d2"]
+    assert row.verdict == dv.PASS
+    assert row.migrated.startswith("0 line")
+    labels = {c[0]: c for c in row.companions}
+    mangled = next(c for k, c in labels.items() if k.startswith("mangled"))
+    assert mangled[1] == r"\bF-WK-[0-9]"
+    assert "migrated 1 line(s)" in mangled[2]
+    assert "control 0" in mangled[2]
+
+
+def test_a_companion_is_promoted_to_gating_by_configuration_not_a_rewrite(
+    dv: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The lead's directive: built so a companion can be promoted by configuration.
+
+    Red-then-green on the same corpus: the row passes with `GATING_COMPANIONS` empty and
+    fails with one label named in it, and nothing else changes.
+    """
+    migrated = {"docs/a.md": "the finding F-WK-952-1-3 is cited here\n"}
+    control = {"docs/a.md": "the finding F-W11-1-3 is cited here\n"}
+    snap = _snapshot(dv, tmp_path / "promote", migrated, control)
+    assert _d_rows(dv, snap)["d2"].verdict == dv.PASS
+    label = "mangled: work key rewritten inside the finding id"
+    monkeypatch.setattr(dv, "GATING_COMPANIONS", frozenset({label}))
+    promoted = _d_rows(dv, snap)["d2"]
+    assert promoted.verdict == dv.FAIL
+    assert "GATING_COMPANIONS" in promoted.note
+
+
+def test_an_alternative_with_no_companion_says_so_by_name(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A silent absence would read as "asked and found nothing"."""
+    snap = _snapshot(dv, tmp_path / "nocomp", _CLEAN, {"docs/a.md": "ADR-0004\n"})
+    row = _d_rows(dv, snap)["d6"]  # ADR-0[0-9]{3}, no companion declared
+    assert any(c[2].startswith("no companion predicate declared") for c in row.companions)
+
+
+def test_the_unanchored_companion_distinguishes_an_inert_predicate(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """§7(d)'s thirteenth alternative is inert: its leading `\\b` needs a word character
+    before the dot, so it cannot fire in any context it exists to police. Anchored 0,
+    unanchored 2 — a genuinely clean alternative reads 0 against 0, and the pair is what
+    tells them apart. (The path is not spelled anywhere in this file; see below.)"""
+    # Built by concatenation for the reason `tests/test_notes_move_citations.py` builds its
+    # own search term that way: this file is inside the corpus that test scans, and a
+    # literal here would make it an offender. `scripts/_docverify.py` gets a reviewed
+    # exemption instead, because there the literal IS the artifact — `D_FULL_PATTERN` is
+    # §7(d)'s grep verbatim and hiding a branch of it would defeat the constant's purpose.
+    # A test fixture has no such claim, so it takes the cheap route.
+    old_root = "." + "claude" + "/" + "notes"
+    doc = f"see `{old_root}/README.md` and {old_root}/x.md\n"
+    snap = _snapshot(dv, tmp_path / "inert", {"docs/a.md": doc}, {"docs/a.md": doc})
+    row = _d_rows(dv, snap)["d13"]
+    anchored = re.compile(r"\b(" + dv.D_ALTERNATIVES[12] + ")")
+    assert not anchored.search(doc), "the anchored alternative cannot match either occurrence"
+    unanchored = next(c for c in row.companions if c[0].startswith("unanchored"))
+    assert "migrated 1" in unanchored[2]  # one *line* carries both occurrences
+
+
+def test_an_alternative_that_gets_worse_is_a_regression_not_a_fail(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """(d4) `wf-0[0-9]`, 267 -> 327. The migration CREATES what the row forbids, so no
+    citation rewrite reaches zero. That is not a bigger version of "did not reach zero"."""
+    migrated = {"docs/a.md": "wf-01 here\n", "docs/b.md": "wf-02 there\n"}
+    control = {"docs/a.md": "wf-01 here\n", "docs/b.md": "nothing\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "reg", migrated, control))["d4"]
+    assert row.verdict == dv.REGRESSION
+    assert row.fatal
+    assert "1 -> 2" in row.note
+
+
+def test_an_alternative_the_migration_does_not_move_is_marked_inert(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The auditor's two-column signature: control == migrated means no discriminating
+    power, whatever the absolute figure looks like."""
+    same = {"docs/a.md": "NT-0019 is cited\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "inert2", same, same))["d1"]
+    assert "INERT" in row.note
+
+
+# =========================================================================================
+# Row (c) — the string, not the exit code
+# =========================================================================================
+
+
+def test_row_c_asserts_the_byte_stable_string_because_three_states_share_exit_0(
+    dv: Any,
+) -> None:
+    """Measured by the auditor: exit 0 is returned by a genuine pass, by an un-migrated
+    tree, and by a fully migrated tree checked with `--root` off by one directory — the
+    last of which prints the reassuring pre-migration line over an untouched corpus."""
+    assert dv._BYTE_STABLE == "OK (byte-stable)"
+    assert dv._NOTHING_TO_CHECK == "nothing to check yet"
+
+
+def test_run_script_refuses_a_script_outside_the_snapshot(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The tree's-own-copy rule, enforced rather than commented. Using the checkout's
+    `doc-index.py` turns row (c) from a fail into a pass, which would make the defect
+    invisible to the instrument built to detect it."""
+    tree = tmp_path / "snap"
+    (tree / "scripts").mkdir(parents=True)
+    with pytest.raises(dv.WorkingCheckoutRefusedError):
+        dv._run_script(tree, "../../../etc/doc-index.py")
+
+
+# =========================================================================================
+# (h) — non-executing checks, and the over-exemption shape
+# =========================================================================================
+
+
+def test_a_check_that_cannot_run_is_counted_separately_from_one_that_failed(
+    dv: Any,
+) -> None:
+    """Non-execution is a third state beside pass and fail, and a failure count scores it
+    as a small number of failures rather than as a hole in coverage."""
+    out = (
+        "  docs/notes does not exist — checks 16-20 cannot run\n"
+        "  docs/notes does not exist — check 25 cannot scan it\n"
+        "  check 3: fine\n"
+    )
+    assert len(dv._ABSENT_CHECK_RE.findall(out)) == 2
+    assert len(dv._ABSENT_CHECK_RE.findall("  check 3: fine\n")) == 0
+
+
+def test_over_exemption_is_a_vacuity_the_zero_denominator_rule_cannot_see(
+    dv: Any,
+) -> None:
+    """The auditor's post-H-rows hazard: check 37 exempting ~353 of ~424 documents on a
+    `was:` field that is right 3 times in ~393. A large population almost entirely
+    excused, not an empty one — the denominators are all non-zero."""
+    assert dv._EXEMPTION_FLOOR == 20
+    assert dv._EXEMPTION_RATE_CAP == 0.5
+    over = dv._probe_summary(
+        "  check 37: 424 document(s) checked in scope, 353 exempt as verbatim-migrated\n"
+    )
+    assert over["check 37 documents in scope"] == 424
+    assert over["check 37 `was:` exemptions"] == 353
+    # Non-zero denominators throughout: the zero-denominator rule is silent here.
+    assert over["check 37 documents in scope"] != 0
+    # The pre-H-row state must NOT trip it — 0 of 1 is not evidence of anything.
+    pre = dv._probe_summary(
+        "  check 37: 1 document(s) checked in scope, 0 exempt as verbatim-migrated\n"
+    )
+    assert (pre["check 37 documents in scope"] or 0) < dv._EXEMPTION_FLOOR
