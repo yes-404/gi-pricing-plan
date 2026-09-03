@@ -31,6 +31,7 @@ import argparse
 import csv
 import importlib.util
 import itertools
+import posixpath
 import re
 import subprocess
 import sys
@@ -4931,6 +4932,486 @@ def _check_emitted_ledger_axes(root: Path) -> _LedgerAxes:
 
 
 # ---------------------------------------------------------------------------------------
+# NT-0019 §5.2's README regeneration.
+#
+# Five `README.md` files are index files whose rows link to their siblings by a **bare
+# relative path** (`(0001-phase-boundary-plan-review.md)`) rather than by a recognised id
+# token. `_rewrite_citations` maps id tokens and repo-relative path strings; neither form
+# appears in these rows, so the whole class was invisible to it. At `2ae31f7` the auditor's
+# general dangling-link scanner -- every `](...)` in every surviving file, resolved
+# relative to its citing file, checked against the full deleted set -- found **36** live
+# links in these five files resolving to paths the migration deletes. That is what stopped
+# the W37-6 run (`docs/plans/2026-09-03-w37-6-renewed-window-handover.md` §6).
+#
+# §5.2 already says what happens to each of the five, and the rows are the specification
+# this section implements -- not an invention of this code:
+#
+#   * `adr/000n-*.md (6) + README`  -> "`adrs/ADR-<nnnnn>-*.md`; ... README **generated**"
+#   * `notes/00nn-*.md (18) + README` -> "`rfcs/RFC-0nnnn-*.md`; ... **README rewritten**,
+#     index table dropped for `INDEX.md`"
+#   * `workflows/wf-0n-*.md (5) + README` -> "`WF-0nnnn-*.md`, stamped; **README table
+#     generated**"
+#   * `plans/2026-*.md (125) + README` -> "README: **naming and four-kinds table ->
+#     pointer**; the nine writing conventions **kept verbatim**"
+#   * `audit/README.md` -> "**deleted**; content to `findings/` and `closures/` READMEs"
+#
+# and the row above them all -- "`INDEX.md`, `REDIRECTS.csv`, `_templates/`,
+# `process/document-ids.md`, `closures/README.md`, `findings/README.md`,
+# `rulings/README.md`, `ledgers/README.md` | **new**" -- is why four family READMEs are
+# written rather than the two the `docs/audit/README.md` row names on its own.
+#
+# The two moves are §1.4's, not this section's: `docs/adr/` and `docs/notes/` are not in
+# §1.4's tree at all (`adrs/` and `rfcs/` are), and "`docs/audit/` dissolves into
+# `findings/`, `closures/`, `research/` and `process/`" is the same paragraph's last
+# sentence. A README left behind is also what keeps each of those three legacy directories
+# non-empty, so `_remove_if_empty` cannot dissolve them -- the layout rule and the dangling
+# links have one cause between them.
+#
+# **The link repointing is mechanical, never hand-typed.** `_repoint_relative_links` below
+# resolves each target against the citing file's own directory and looks the result up in
+# the run's own old->new move map, the same map `REDIRECTS.csv` and `_path_rewrite_tokens`
+# are built from. Hand-editing 36 targets would produce a fix that is correct for this
+# corpus and silently wrong for the next one; keyed on the move map, a target this run did
+# not move is left exactly as it was, and one it did move cannot be missed.
+# ---------------------------------------------------------------------------------------
+
+#: The three READMEs §5.2 does not leave where it found them. Registered here rather than
+#: inside `_regenerate_family_readmes` because `migrate` needs them **before**
+#: `_rewrite_citations`: a third document citing `docs/audit/README.md` by path is exactly
+#: as stale as one citing any other moved file, and the redirect row is owed for the same
+#: reason every id-less move already gets one (NT-0019 §4 step 1).
+#:
+#: `docs/audit/README.md` maps to `docs/findings/README.md` because that is where the
+#: larger half of its content goes -- the register, the finding essays and the conventions.
+#: The closure half lands in `docs/closures/README.md`, which no redirect can also name;
+#: `REDIRECTS.csv` carries one destination per old path, and a split's second destination
+#: is recorded by the surviving README's own prose, which points at its sibling.
+_README_FAMILY_MOVES: Final[Mapping[str, str]] = {
+    "docs/adr/README.md": "docs/adrs/README.md",
+    "docs/notes/README.md": "docs/rfcs/README.md",
+    "docs/audit/README.md": "docs/findings/README.md",
+}
+
+#: Directory-shaped link targets (`[../adr/](../adr/)`) resolve to a directory, never to a
+#: file, so they are absent from a move map built out of file moves and would survive a
+#: repoint untouched -- pointing at a directory this migration removes. The two legacy
+#: document directories §1.4 replaces are named here so a link written at the directory
+#: rather than at a file inside it moves with everything else. `docs/audit/` is deliberately
+#: absent: it dissolves into four directories rather than becoming one, so there is no
+#: single destination to repoint such a link to, and a dangling directory link there is
+#: reported by the scanner rather than silently sent somewhere plausible.
+_README_LEGACY_DIR_MOVES: Final[Mapping[str, str]] = {
+    "docs/adr": "docs/adrs",
+    "docs/notes": "docs/rfcs",
+}
+
+#: A markdown inline link's target. Deliberately stops at whitespace so a `](path "title")`
+#: form yields the path alone, matching how the auditor's scanner reads the same construct
+#: (`target = m.group(1).split(" ", 1)[0]`) -- one reading of the syntax, so a link this
+#: rewrites and a link that check counts cannot be two different populations.
+_MD_LINK_TARGET_RE: Final = re.compile(r"\]\((?P<target>[^)\s]+)\)")
+
+
+def _repoint_relative_links(
+    text: str, old_rel: str, new_rel: str, moves: Mapping[str, str]
+) -> str:
+    """`text`'s relative markdown link targets, each resolved against `old_rel`'s directory,
+    looked up in `moves` (repo-relative old -> repo-relative new) and re-expressed relative
+    to `new_rel`'s directory.
+
+    Two independent things are fixed by one pass, and both are needed even when only one of
+    them applies to a given link: the **target** may have moved, and the **citing file** may
+    have moved, which changes what a relative path from it means. A link to a file neither
+    this run nor its citer moved comes back byte-identical, so this is safe to run over a
+    whole document rather than over a hand-picked list of lines.
+
+    Absolute paths, URLs, bare anchors and `mailto:` are left alone. So is any target that
+    resolves above the repository root: it names something outside the tree this migration
+    is allowed to reason about.
+    """
+    old_dir = posixpath.dirname(old_rel)
+    new_dir = posixpath.dirname(new_rel) or "."
+
+    def _one(match: re.Match[str]) -> str:
+        target = match.group("target")
+        if target.startswith(("http://", "https://", "#", "mailto:", "/")):
+            return match.group(0)
+        base, sep, anchor = target.partition("#")
+        if not base:
+            return match.group(0)
+        trailing = "/" if base.endswith("/") else ""
+        resolved = posixpath.normpath(posixpath.join(old_dir, base))
+        if resolved.startswith(".."):
+            return match.group(0)
+        moved = moves.get(resolved, resolved)
+        rebased = posixpath.relpath(moved, new_dir)
+        return f"]({rebased}{trailing}{sep}{anchor})"
+
+    return _MD_LINK_TARGET_RE.sub(_one, text)
+
+
+def _split_front_matter(text: str) -> tuple[str, str]:
+    """`(header, body)` -- the leading `---`-delimited block including its closing fence and
+    the newline after it, and everything after. `("", text)` when there is no such block.
+
+    `_strip_front_matter` above answers the same question and throws the header away; this
+    keeps it, because a README this section rewrites was already stamped by
+    `_stamp_reference_targets` earlier in the same run and its header is that stamp. Re-
+    deriving one here would overwrite a `created:` read from the file's own first commit
+    with today's date.
+    """
+    stripped = _strip_front_matter(text)
+    if stripped == text:
+        return "", text
+    return text[: len(text) - len(stripped)], stripped
+
+
+def _readme_title(header: str, fallback: str) -> str:
+    match = re.search(r"^title:\s*(.+)$", header, re.MULTILINE)
+    return match.group(1).strip() if match else fallback
+
+
+def _render_adrs_readme_table(drafts: Sequence[_Draft]) -> str:
+    """§5.2's "README generated" for the ADR index: one row per `ADR-` draft this run
+    assigned, written from the draft's own id, filename, title and mapped status.
+
+    Generated rather than repointed, unlike the other three tables, because the old rows'
+    link **text** is a bare padded legacy number (`[0001](...)`) and not an `ADR-0001`
+    token, so `_rewrite_citations` never touched it: repointing alone would leave a table
+    whose targets are new and whose visible ids are the retired four-digit ones. §1's
+    citation rule is explicit that link text is in scope -- "**No exception**: prose,
+    headings, commit messages, PR titles, branch names, code comments, docstrings, test
+    markers, link text".
+    """
+    rows = [
+        "| ADR | Title | Status |",
+        "|---|---|---|",
+    ]
+    for d in sorted(
+        (d for d in drafts if d.materialize == "document" and d.prefix == "ADR"),
+        key=lambda d: d.number,
+    ):
+        assert d.new_path is not None  # written by `_write_document_drafts` before this
+        rows.append(
+            f"| [{_docid.canonical(d.prefix, d.number)}]({d.new_path.name}) "
+            f"| {d.title} | {d.status} |"
+        )
+    return "\n".join(rows)
+
+
+_ADRS_README_BODY: Final = """# Architecture Decision Records
+
+One decision per file, named `ADR-{pad}-<slug>.md` — the padded id leads the filename, and the
+id itself is permanent: never renumbered, never reused
+([`../process/document-ids.md`](../process/document-ids.md)).
+
+**Status values** are the front matter's `status:` field: `draft` → `active` →
+(`superseded` | `retired`). An `active` ADR is immutable; to change a decision, write a new
+ADR that supersedes it and edit only the old one's `status:` and `superseded_by:`.
+
+**Write an ADR when** a choice constrains more than one module, is expensive to reverse, or
+has already been made and needs recording. Otherwise use
+[`../open-questions.md`](../open-questions.md).
+
+**This table is generated.** [`../INDEX.md`](../INDEX.md) is the complete index across every
+family and is the one that cannot go stale; this table is a convenience view of one family,
+rewritten by `scripts/doc-id.py` rather than maintained by hand.
+
+{table}
+"""
+
+
+_RFCS_README_INDEX_POINTER: Final = """## Index
+
+**There is no index table here.** [`../INDEX.md`](../INDEX.md) is generated from the
+documents themselves — one row per id, every family — so it cannot disagree with the
+directory the way a hand-maintained list does. `ls docs/rfcs/` is the other reading, and
+the padded id leading each filename is what makes it sort.
+"""
+
+
+_PLANS_README_POINTER: Final = """## Naming, and the kinds of plan
+
+The filename form, the `kind:` a plan carries, and the status vocabulary are all
+[`../process/document-ids.md`](../process/document-ids.md)'s — stated once, there, rather
+than restated here where the copy is what goes stale
+([`NT-0003`](../rfcs/README.md) is the mechanism). A ledger is its own family in
+[`../ledgers/`](../ledgers/) and a ruling its own in [`../rulings/`](../rulings/); neither
+is a suffix on a plan's name any more.
+
+**[`../INDEX.md`](../INDEX.md) is the index.** There is deliberately no hand-maintained list
+of contents in this file.
+"""
+
+
+#: `## Index` through to the next `##` heading — the notes README's hand-maintained table
+#: of all 19 notes, which is the whole of that file's dangling-link population and which
+#: §5.2's `notes` row drops: "README rewritten, index table dropped for `INDEX.md`".
+#: Anchored on the heading text rather than on a line range, and level-independent
+#: (`#{1,6}`) for the reason Ruling 93 gives: a heading demoted or promoted by an unrelated
+#: edit must not silently take a section out of a matcher's reach.
+_RFCS_INDEX_SECTION_RE: Final = re.compile(
+    r"^#{1,6}\s+Index\s*$.*?(?=^#{1,6}\s)", re.MULTILINE | re.DOTALL
+)
+
+#: The notes README's check 7, which asserts the index table this migration removes. Left
+#: as a numbered item rather than deleted so the seven-check list keeps its numbering --
+#: renumbering a list every other document cites by number is the same defect §5 forbids for
+#: requirement ids, one register down.
+_RFCS_CHECK_SEVEN_RE: Final = re.compile(
+    r"^7\. ⚙ \*\*The index above matches the files\.\*\*.*?(?=\n\n)", re.MULTILINE | re.DOTALL
+)
+
+_RFCS_CHECK_SEVEN_REPLACEMENT: Final = (
+    "7. ⚙ **The generated index matches the files.** `../INDEX.md` is built from the "
+    "documents\n   themselves by `scripts/doc-index.py`, so the agreement check 18 used to "
+    "make by hand —\n   every note listed, every listed row backed by a file — is now a "
+    "property of how the\n   index is produced. What stays yours is the same half check 18 "
+    "never covered: whether a\n   row's **status** is true of the repository."
+)
+
+#: `## The four kinds of file` through to (not including) `## Writing one so it passes the
+#: audit` — the four-kinds table and the `## Naming` section that sits between them, which
+#: are exactly the two things §5.2's `plans` row replaces with a pointer. The same row's
+#: other half — "the nine writing conventions kept verbatim" — is everything after the stop
+#: anchor, which this pattern does not reach.
+_PLANS_NAMING_SECTION_RE: Final = re.compile(
+    r"^#{1,6}\s+The four kinds of file\s*$.*?(?=^#{1,6}\s+Writing one so it passes the audit\s*$)",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def _rewrite_rfcs_readme_body(body: str) -> str:
+    """§5.2's `notes` row: "README rewritten, index table dropped for `INDEX.md`".
+
+    The prose is kept and the two things the migration falsifies are replaced -- the index
+    table, and the check that asserts it. Kept rather than re-authored because the standard
+    the file states (what a record must contain, what it must not, the verdict vocabulary,
+    the failure it exists to prevent) is about the family, not about the layout, and none of
+    it stops being true when the directory is renamed. Every path and link in it is repointed
+    mechanically by `_repoint_relative_links` before this runs.
+    """
+    body = _RFCS_INDEX_SECTION_RE.sub(_RFCS_README_INDEX_POINTER + "\n", body)
+    body = _RFCS_CHECK_SEVEN_RE.sub(_RFCS_CHECK_SEVEN_REPLACEMENT, body)
+    # The one command in the file that names the old directory and the old numbering
+    # scheme. `doc-id.py next` is the standard's own answer (§1.7), and it reads the whole
+    # tree rather than one directory, which is the point of a single shared sequence.
+    return re.sub(
+        r"```bash\n# Next number\..*?\n```",
+        "```bash\n# Next number. One sequence, shared by every family.\n"
+        "python3 scripts/doc-id.py next\n```",
+        body,
+        flags=re.DOTALL,
+    )
+
+
+def _rewrite_plans_readme_body(body: str) -> str:
+    """§5.2's `plans` row: "README: naming and four-kinds table -> pointer; the nine writing
+    conventions kept verbatim".
+
+    The conventions are everything from "Writing one so it passes the audit" onward and this
+    function does not touch a byte of them. Their **link targets** are repointed by
+    `_repoint_relative_links` before this runs, which the file's own text already declares
+    to be the one permitted edit: *"a change that preserves the claim exactly while fixing
+    how it is addressed -- the relative links repointed when these files moved out of
+    `.planning/`"*. That is the same edit, one move later.
+    """
+    return _PLANS_NAMING_SECTION_RE.sub(_PLANS_README_POINTER + "\n", body)
+
+
+_FINDINGS_README_BODY: Final = """# docs/findings — the register, and the evidence behind each row
+
+**The register is a ledger; the evidence is a file.** [`register.md`](register.md) is the
+global list of findings carried across work items and phases: one row per finding, with its
+status, its decision and its owner. An `FD-` document beside it is the evidence essay for a
+row too long to carry inline — the row stays the index, the essay is where its Concerns
+prose lives.
+
+Per-phase views are **generated**, never files: `python3 scripts/doc-index.py --phase <p>`.
+There is no second copy of the register to disagree with the first one.
+
+The closure records this directory used to sit beside now live in
+[`../closures/`](../closures/README.md), and the checklists a close writes against in
+[`../process/checklists/`](../process/checklists/). `close-workstream` and `phase-review`
+stay the binding procedures; nothing here restates their audit steps.
+
+## Conventions
+
+- **Every row has a verdict.** A finding with no status is not a finding that is fine; it is
+  one nobody has read. `scripts/register-lint.py` enforces the grammar.
+- **Evidence is write-once.** A record that changes after the fact must say it changed, with
+  the correction dated.
+- **ISO dates.** All dates are ISO 8601, for example `2026-08-27`.
+- **Secrets redaction.** No secrets, credentials, or dataset contents
+  (`.claude/skills/secret-hygiene`).
+"""
+
+
+_CLOSURES_README_BODY: Final = """# docs/closures — how each close was audited
+
+One `CR-` record per close, `kind:` naming which layer it closed: `work` for a work item,
+`phase` for a phase, `review` for a §14 plan review. Each says what was audited, against
+what scope, and what the verdict was — the record of what was believed and decided at that
+date. Nothing here changes status afterwards.
+
+This directory is one of the four — [`../process/`](../process/),
+[`../findings/`](../findings/README.md), [`../research/`](../research/) and this one — that
+the old `docs/audit/` dissolved into. The forward-looking plan is
+[`../roadmap.md`](../roadmap.md); these are the archive.
+
+The checklists a close writes against are in
+[`../process/checklists/`](../process/checklists/), and the findings a close carries forward
+are rows in [`../findings/register.md`](../findings/register.md).
+
+## Conventions
+
+- **A close is named by an existing id** — a `WK-` work item, a phase, a PR number. No new id
+  family is minted here; the id comes from `docs/process/document-ids.md` §1.2.
+- **Checklist versioning.** A checklist is versioned; a record names the checklist version it
+  was written against.
+- **Evidence is write-once**, and a correction after the fact is dated and says so.
+- **A tag at phase close.** The phase record is tagged at the phase's close.
+- **ISO dates**, and no secrets, credentials or dataset contents.
+"""
+
+
+_RULINGS_README_BODY: Final = """# docs/rulings — one decision per file
+
+An `RL-` record is a decision taken while work was in flight: what was ruled, on what
+question, with the reasoning that produced it and the date it was made. One ruling per file,
+the padded id leading the filename.
+
+**A ruling is not an ADR.** An ADR records an architectural choice that constrains more than
+one module and is expensive to reverse ([`../adrs/`](../adrs/README.md)); a ruling settles a
+question a slice ran into — scope, a signature, which of two readings of a requirement is the
+operative one. A ruling that turns out to constrain the architecture becomes an ADR, and says
+so.
+
+**The reasoning travels with the decision.** A ruling recorded without the reason it was taken
+is an instruction to reverse it the first time someone re-derives the obvious answer the
+ruling rejected. Write the rejected reading down.
+
+[`../INDEX.md`](../INDEX.md) is the index.
+"""
+
+
+_LEDGERS_README_BODY: Final = """# docs/ledgers — what execution actually did
+
+An `LG-` record is the execution ledger for one plan: task by task, what was done, what was
+found, and what changed from the plan. Its `work:` names the work item it belongs to and,
+where the ledger is slice-scoped, its `slice:` names the slice.
+
+**A ledger is the counterpart to a plan, not a summary of it.** The plan
+([`../plans/`](../plans/README.md)) says what was intended; the ledger says what happened,
+including the parts that diverged. Neither is edited to agree with the other — that is the
+same rule `CLAUDE.md` §0 applies to a spec and its code, and for the same reason.
+
+[`../INDEX.md`](../INDEX.md) is the index.
+"""
+
+
+def _rewrite_findings_readme_body(_body: str) -> str:
+    """§5.2's `audit/README.md` row: "deleted; content to `findings/` and `closures/`
+    READMEs".
+
+    The old body is not carried: it is a directory map of a directory that no longer exists,
+    written around a two-role split (`the archive` / `the record layer`) that §1.4 replaces
+    with four separate family directories. Its content is redistributed instead -- the
+    register, the finding essays and the conventions here; the closure records, the plan
+    reviews and the close conventions in `_CLOSURES_README_BODY`; the checklists and
+    `retrofit-impossible.md` are moved bodily to `docs/process/` by `_write_reference_moves`
+    and are pointed at from both.
+    """
+    return _FINDINGS_README_BODY
+
+
+def _regenerate_family_readmes(
+    root: Path, drafts: Sequence[_Draft], moves: Mapping[str, str]
+) -> tuple[list[str], list[str]]:
+    """NT-0019 §5.2's README work. Returns `(files_written, files_deleted)`, repo-relative
+    posix paths, the shape every other writer in `migrate` returns.
+
+    Runs **after** `_stamp_reference_targets`, deliberately: four of the five READMEs are in
+    §4 step 5's Reference stamp set, and their headers are that pass's to write. Reading the
+    stamped header back and carrying it onto the rewritten body keeps `created:` (the file's
+    own first-commit date) rather than replacing it with today's, and keeps one writer for
+    each field instead of two that can disagree.
+
+    Idempotent by the same construction every `_discover_*` uses: each step is gated on its
+    source file still being at its old path, which a completed run has already moved.
+    """
+    written: list[str] = []
+    deleted: list[str] = []
+    all_moves = {**moves, **_README_LEGACY_DIR_MOVES}
+
+    def carry(old_rel: str, new_rel: str, transform: Callable[[str], str]) -> None:
+        """Rewrite one README's body and land it at `new_rel`, deleting `old_rel` when the
+        two differ. `transform` runs on the body **after** the link repoint, so a section a
+        row replaces wholesale is not first repointed and then thrown away."""
+        old_path = root / old_rel
+        if not old_path.is_file():
+            return
+        header, body = _split_front_matter(old_path.read_text(encoding="utf-8"))
+        body = transform(_repoint_relative_links(body, old_rel, new_rel, all_moves))
+        new_path = root / new_rel
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        new_path.write_text(header + body, encoding="utf-8")
+        written.append(new_rel)
+        if new_rel != old_rel:
+            old_path.unlink()
+            deleted.append(old_rel)
+
+    def fresh(rel: str, title: str, body: str) -> None:
+        """One of §5.2's four `new` family READMEs. Stamped here rather than by
+        `_stamp_reference_targets`, which discovered its population from `git ls-files` on
+        the pre-migration tree and so cannot see a file this run creates."""
+        path = root / rel
+        if path.is_file():
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        header = _stamp_header(
+            "REFERENCE", None, kind=None, title=title, status="active",
+            created=date.today(), owner="lead", was=None,
+        )
+        path.write_text(header + "\n" + body, encoding="utf-8")
+        written.append(rel)
+
+    # --- `adr/` + README -> `adrs/`, README generated.
+    carry(
+        "docs/adr/README.md",
+        _README_FAMILY_MOVES["docs/adr/README.md"],
+        lambda _body: _ADRS_README_BODY.format(
+            pad="n" * _docid.PAD_WIDTH, table=_render_adrs_readme_table(drafts),
+        ),
+    )
+
+    # --- `notes/` + README -> `rfcs/`, README rewritten, index table dropped for INDEX.md.
+    carry(
+        "docs/notes/README.md",
+        _README_FAMILY_MOVES["docs/notes/README.md"],
+        _rewrite_rfcs_readme_body,
+    )
+
+    # --- `workflows/README.md`: table generated (the row targets; the `wf-0N` link text is
+    # already an id token and `_rewrite_citations` rewrote it in the same run).
+    carry("docs/workflows/README.md", "docs/workflows/README.md", lambda body: body)
+
+    # --- `plans/README.md`: naming and four-kinds table -> pointer, nine conventions kept.
+    carry("docs/plans/README.md", "docs/plans/README.md", _rewrite_plans_readme_body)
+
+    # --- `audit/README.md` deleted, content to the `findings/` and `closures/` READMEs.
+    carry(
+        "docs/audit/README.md",
+        _README_FAMILY_MOVES["docs/audit/README.md"],
+        _rewrite_findings_readme_body,
+    )
+    fresh("docs/closures/README.md", "closures", _CLOSURES_README_BODY)
+    fresh("docs/rulings/README.md", "rulings", _RULINGS_README_BODY)
+    fresh("docs/ledgers/README.md", "ledgers", _LEDGERS_README_BODY)
+    return written, deleted
+
+
+# ---------------------------------------------------------------------------------------
 # `migrate` itself.
 # ---------------------------------------------------------------------------------------
 
@@ -5148,6 +5629,12 @@ def migrate(root: Path) -> MigrateResult:
         _remove_if_empty(root / legacy_dir)
 
     token_map: dict[str, str] = {}
+    # Every file this run relocates, repo-relative old -> repo-relative new. `token_map`
+    # answers "what does this path look like when it is written out in prose"; this answers
+    # "where did this file go", which is the question `_repoint_relative_links` asks of a
+    # link target it has already resolved. Built from the same statements, in the same
+    # places, so a move recorded in one and not the other cannot happen quietly.
+    path_moves: dict[str, str] = {}
     redirect_rows: list[dict[str, str]] = []
     assigned: list[tuple[str, str]] = []
     for d in drafts:
@@ -5195,6 +5682,7 @@ def migrate(root: Path) -> MigrateResult:
         # citing prose, `register_row`'s own id-less move included.
         if old_path and new_path and old_path != new_path:
             token_map.update(_path_rewrite_tokens(old_path, new_path))
+            path_moves[old_path] = new_path
     # `register_moved_to` can be set with *no* `register_row` draft in `drafts` at all --
     # every row the file had may have had an essay and so been excluded from the numbering
     # list (`_discover_findings`'s `document` drafts claim the number instead). The loop
@@ -5226,12 +5714,14 @@ def migrate(root: Path) -> MigrateResult:
             {"old_id": "", "new_id": "", "old_path": move.old_rel, "new_path": move.new_rel}
         )
         token_map.update(_path_rewrite_tokens(move.old_rel, move.new_rel))
+        path_moves[move.old_rel] = move.new_rel
     for old_rel, new_rel in _RESEARCH_UNSTAMPABLE_MOVE.items():
         if (root / new_rel).is_file():
             redirect_rows.append(
                 {"old_id": "", "new_id": "", "old_path": old_rel, "new_path": new_rel}
             )
             token_map.update(_path_rewrite_tokens(old_rel, new_rel))
+            path_moves[old_rel] = new_rel
     # `_merge_phase1b_register`'s own deletion: no `_Draft`, no id, and (unlike
     # `register_moved_to` above) the file it deletes is not the one any draft's `was`
     # names -- it edits `docs/audit/register.md` in place and deletes a *different* file.
@@ -5247,12 +5737,44 @@ def migrate(root: Path) -> MigrateResult:
             }
         )
         token_map.update(_path_rewrite_tokens(phase1b_register_deleted, phase1b_new_path))
+        path_moves[phase1b_register_deleted] = phase1b_new_path
+    if register_moved_to is not None:
+        path_moves["docs/audit/register.md"] = register_moved_to
+
+    # NT-0019 §5.2's three relocated READMEs, registered here rather than inside
+    # `_regenerate_family_readmes` below because the rewrite and the redirect row are owed
+    # *before* the citation sweep runs: a third document citing `docs/audit/README.md` by
+    # path is exactly as stale as one citing any other moved file (§4 step 1). The files
+    # themselves are moved after `_stamp_reference_targets`, so each carries the header that
+    # pass wrote rather than one re-derived here.
+    for old_rel, new_rel in _README_FAMILY_MOVES.items():
+        if not (root / old_rel).is_file():
+            continue
+        redirect_rows.append(
+            {"old_id": "", "new_id": "", "old_path": old_rel, "new_path": new_rel}
+        )
+        token_map.update(_path_rewrite_tokens(old_rel, new_rel))
+        path_moves[old_rel] = new_rel
 
     rewritten = _rewrite_citations(root, token_map)
 
     # Alongside the vendored-manifest stamp below, and after the citation rewrite for the
     # same reason it is: a header this run writes carries no legacy token to rewrite.
     files_written = [*files_written, *_stamp_reference_targets(root, reference_targets)]
+
+    # NT-0019 §5.2's README regeneration, last of the document writes and after the stamp
+    # pass on purpose: four of the five READMEs it rewrites are in §4 step 5's Reference
+    # stamp set, and carrying the header that pass just wrote is what keeps `created:` the
+    # file's own first-commit date instead of today's.
+    readme_written, readme_deleted = _regenerate_family_readmes(root, drafts, path_moves)
+    files_written = [*files_written, *readme_written]
+    files_deleted = [*files_deleted, *readme_deleted]
+    # Re-run after the READMEs move: each of the three legacy directories was left holding
+    # exactly one file -- its own README -- which is what stopped the prune above from
+    # dissolving it. §1.4: "`docs/audit/` dissolves into `findings/`, `closures/`,
+    # `research/` and `process/`", and `docs/adr/`/`docs/notes/` are not in that tree at all.
+    for legacy_dir in ("docs/notes", "docs/adr", "docs/audit"):
+        _remove_if_empty(root / legacy_dir)
 
     skipped_vendored: list[str] = []
     # `to_stamp` only -- a manifest already carrying front matter this migration did not
