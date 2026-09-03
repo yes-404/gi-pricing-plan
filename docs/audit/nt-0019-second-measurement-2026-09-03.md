@@ -637,3 +637,85 @@ because its alternative is written `NT-00` and the slug is lower-case.
 further filenames carry a legacy id that today's predicate happens not to match. Whether slugs
 are in scope for the id standard is the maintainer's; the measurable claim is that the row cannot
 reach zero while the filename stands.
+
+## 13. Finding A5 — §7(d)'s `docs/notes/` row cannot reach zero once the instrument that measures it is merged
+
+Verified at `549cb75`, the instrument's current tip. The run is stable across `7fc8e5a` →
+`549cb75` — same `1 DISCLOSE, 17 FAIL, 2 NOT MEASURED, 2 PASS, 2 UNDETERMINED` over 24 rows,
+exit 1, and (d11) and (d13) unchanged at 118/46 and 1/1. Both regressions the fix commit names
+are fixed and neither changed a figure.
+
+### 13.1 The instrument's own source is a member of the population it measures
+
+`scripts/_docverify.py` is tracked, and the instrument excludes nothing but `REDIRECTS.csv` by
+basename (`_D_EXCLUDED_BASENAME`, `load_corpus`'s only filter). There is no self-exclusion.
+
+```bash
+grep -nE '\b(docs/notes/)' scripts/_docverify.py | wc -l      # 5
+```
+
+Its `D_FULL_PATTERN` is NT-0019 §7(d)'s grep **kept verbatim, deliberately** — the comment at
+`:601` says so, and that is the right call: a decomposition a reader cannot check against the
+acceptance sentence is worth less than one they can. But one of the thirteen alternatives **is**
+`docs/notes/`, so the constant contains the string the row forbids.
+
+**The measurements above were taken on snapshots of `0de529e`, which predates `_docverify.py`.**
+Once the instrument merges, a snapshot of `main` contains it, and **(d11) gains 5 and can no
+longer reach zero.** The instrument would then be permanently red on a row it is red on because
+it exists.
+
+This is the artefact class handover §2.1 already had to subtract for once — *"two of the three
+artefacts were the scanner matching its own description"* — returning as a floor rather than as
+three lines to net out.
+
+### 13.2 It is not only the instrument, and the floor is already there
+
+At the migrated snapshot of `0de529e`, before `_docverify.py` exists:
+
+| alternative | matching lines | of which under `scripts/` or `tests/` |
+|---|---|---|
+| (d11) `docs/notes/` | 118 | **22** (21 in the id tooling itself) |
+| (d9) `docs/plans/2026-` | 66 | **24** |
+| (d10) `docs/audit/` | 291 | **79** |
+
+`scripts/doc-id.py` alone carries 18 `docs/notes/` occurrences, `scripts/audit-docs.py` 15,
+`tests/test_doc_id_migrate.py` 5. **Some of these are citations the migration should rewrite;
+others are pattern literals that must survive verbatim, and the row's predicate cannot tell the
+two apart** — which is §6.1's lesson at a different level: the alternative matches a string, and
+a string in a regex constant is indistinguishable from a string in a sentence.
+
+### 13.3 The exemption added at `549cb75` is right, and its stated exit condition is wrong
+
+The commit adds `"scripts/_docverify.py"` to `_SPECIFICATIONS_OF_THE_OLD_PATH` in
+`tests/test_notes_move_citations.py`. **The mechanism is correct and I have no objection to it**:
+it adds one reviewed named member rather than widening a pattern, which is exactly what that
+set's own comment prescribes, and it avoids the trap of building the alternative by
+concatenation. `_NT0019_PATH` is handled correctly too — followed through `docs/REDIRECTS.csv`
+rather than guessed, with the reason documented.
+
+Two observations, neither a defect in the fix:
+
+**The exemption is file-granular and covers more than its justification names.** The commit
+justifies it on `D_FULL_PATTERN`. The file has **five** `docs/notes/` occurrences: the pattern
+constant at `:626`, and four that are ordinary path citations — a docstring citing NT-0007 at
+`:31`, the citation of NT-0019 §7 at `:601`, `_NT0019_PATH` at `:1068`, and a message string at
+`:1109`. Those four ride along on an exemption argued for the fifth.
+
+**The stated exit condition cannot happen.** The comment ends *"when the migration lands, this
+row goes to zero and the exemption can go with it."* It cannot: `D_FULL_PATTERN` must keep
+`docs/notes/` verbatim for as long as §7(d)'s sentence contains it, so the exemption is
+**permanent, not temporary**. Recording it as temporary invites a later cleanup either to delete
+a still-needed exemption, or — worse and more likely, since the row will still be red — to "fix"
+the constant by concatenation, **which is the precise thing the same comment block warns
+against**.
+
+### 13.4 What this is and is not
+
+Not a defect in any executor's work. It is a property of the row set: **§7(d)'s alternatives are
+string searches over a corpus that contains the code implementing the search.** A4 found a floor
+made of filenames; this is a floor made of the instrument's own source. Both are cases where the
+row cannot reach zero and no amount of citation rewriting changes that.
+
+Whether the answer is a self-exclusion, a scoped corpus, or an accepted disclosed count the way
+`\bF[0-9]{2}\b` already has one, is the maintainer's. **The measurable claim: (d11) is 118 at a
+tree without the instrument, and 123 at a tree with it, over the same corpus.**
