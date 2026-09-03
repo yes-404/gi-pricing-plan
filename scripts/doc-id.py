@@ -1037,6 +1037,18 @@ class _Draft:
     phase: str | None = None
     work_token: str | None = None  # this draft's own family+number, for an SL's `work:`
     number: int = 0  # filled in during assignment (phase B)
+    # Ruling 89's re-derivation, and the maintainer's extension of it to the path-only
+    # case: the 1-based, inclusive line range this draft's body occupied **in its source
+    # file**, and the number of lines the written file puts in front of that body (its
+    # stamped header). Together they map a source line number onto the destination
+    # record's own numbering, which is what lets a `path:1994` citation into a split file
+    # be re-derived rather than repointed blind. Set only where a source can produce more
+    # than one draft — the splitters and `_discover_plain_plans` (whose whole-file draft
+    # can coexist with `_discover_lettered_rulings`' nested ones). `None` means "this
+    # draft cannot say where it came from", and a split source with any such target
+    # refuses line resolution outright rather than guessing.
+    source_line_span: tuple[int, int] | None = None
+    body_line_offset: int = 0
     # requirement/register-row fields:
     source_path: Path | None = None
     match_span: tuple[int, int] | None = None  # char offsets of the old token, for in-place rewrite
@@ -1069,6 +1081,11 @@ class MigrateResult:
     # ("every exempt entry cites its reason") applied to a deferral rather than to an
     # exemption — these are waiting on W37-6's Task 1, not permanently out.
     deferred_reference_stamps: tuple[tuple[str, str], ...] = ()
+    # Bucket (iv): every citation of a split source that named no single target and was
+    # therefore **not** rewritten. Carried out by name — citing file, line, source path
+    # and the competing destinations — because the ruling's disposition is per citation,
+    # and a count is not something a reader can disposition.
+    unresolved_split_citations: tuple[_UnresolvedCitation, ...] = ()
 
 
 # ---------------------------------------------------------------------------------------
@@ -1079,6 +1096,21 @@ class MigrateResult:
 _FAMILY_RANK: Final[Mapping[str, int]] = {
     prefix: rank for rank, prefix in enumerate(_docid.FAMILY_PREFIXES)
 }
+
+
+def _line_span(text: str, start: int, end: int) -> tuple[int, int]:
+    """The 1-based, inclusive line range `text[start:end]` occupies in `text`.
+
+    `end` is the *exclusive* character offset the splitters already compute (the next
+    record's heading start, or `len(text)`), and it almost always sits at the beginning of
+    a line — the first line of the *next* record. The last line of this record is
+    therefore the line containing `end - 1`, which is what this returns; a zero-length
+    slice degenerates to `(line, line - 1)`, an empty range, rather than silently claiming
+    the next record's first line.
+    """
+    first = text.count("\n", 0, start) + 1
+    last = text.count("\n", 0, max(start, end - 1)) + 1 if end > start else first - 1
+    return (first, last)
 
 _NOTE_TITLE_RE: Final = re.compile(r"^#\s+NT-(\d{4})\s+—\s+(.+)$", re.MULTILINE)
 _NOTE_RAISED_RE: Final = re.compile(
@@ -1314,6 +1346,7 @@ def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
                     status="active", created=created, owner=owner,
                     tie_break=(rel, i),
                     old_token=f"Ruling {number_word}", was=rel, body=section_text,
+                    source_line_span=_line_span(text, start, end),
                 )
             )
     return drafts
@@ -1416,6 +1449,7 @@ def _discover_lettered_rulings(root: Path) -> list[_Draft]:
                     tie_break=(rel, i),
                     old_token=f"Ruling {token}", was=rel,
                     body=text[heading.start() : end].rstrip("\n") + "\n",
+                    source_line_span=_line_span(text, heading.start(), end),
                 )
             )
     return drafts
@@ -1465,7 +1499,7 @@ def _discover_headed_split_file(
                 materialize="document", prefix=prefix, kind="work",
                 title=title, status="active", created=date.fromisoformat(created_str),
                 owner=owner, tie_break=(rel_path, i), old_token=None, was=rel_path,
-                body=section_text,
+                body=section_text, source_line_span=_line_span(text, start, end),
             )
         )
     return drafts
@@ -1575,7 +1609,7 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
                 created=date.fromisoformat(date_str), owner=owner,
                 tie_break=("docs/audit/closure-records.md", i), old_token=None,
                 was="docs/audit/closure-records.md", body=section_text,
-                work_token=work_token,
+                work_token=work_token, source_line_span=_line_span(text, start, end),
             )
         )
     return drafts
@@ -1794,6 +1828,7 @@ def _discover_proposal_containers(root: Path) -> list[_Draft]:
                 tie_break=(_PLAN_REVIEWS_REL_PATH, i), old_token=None,
                 was=_PLAN_REVIEWS_REL_PATH,
                 body=text[m.start() : end].rstrip("\n") + "\n",
+                source_line_span=_line_span(text, m.start(), end),
             )
         )
     return drafts
@@ -2039,6 +2074,7 @@ def _discover_plain_plans(root: Path) -> list[_Draft]:
                 tie_break=(path.relative_to(root).as_posix(), 0),
                 old_token=None, was=path.relative_to(root).as_posix(),
                 body=text.rstrip("\n") + "\n",
+                source_line_span=_line_span(text, 0, len(text)),
             )
         )
     return drafts
@@ -3409,6 +3445,11 @@ def _write_document_drafts(
             created=d.created, owner=d.owner, was=d.was,
             phase=phase_value, work=work_value,
         )
+        # Recorded from the bytes actually written, not from a second construction of the
+        # same header: this is the offset a re-derived line-number citation is added to
+        # (`_SplitSource.resolve`), and a header rebuilt for the arithmetic could differ
+        # from the one on disk without anything noticing.
+        d.body_line_offset = (header + "\n").count("\n")
         new_path.write_text(header + "\n" + d.body, encoding="utf-8")
         written.append(new_path.relative_to(root).as_posix())
         if d.was is not None:
@@ -4860,10 +4901,198 @@ def _path_rewrite_tokens(old_rel: str, new_rel: str) -> dict[str, str]:
     return tokens
 
 
-def _rewrite_citations(root: Path, token_map: Mapping[str, str]) -> list[str]:
+class TokenMapCollision(RuntimeError):
+    """Two moves claim the same citation token with different destinations.
+
+    #672 built `token_map` as a flat `dict[old_path, new_path]` and filled it with
+    `dict.update`, which is silent about a key it overwrites. Twenty-seven source paths in
+    the real corpus split into 2-21 targets each, so the *last* draft off the discovery
+    list won every one of them and every citation of those paths was repointed to an
+    arbitrary sibling — a link that resolves and lies, which gate condition 7's
+    dangling-link net cannot see precisely because it resolves. This is the loud version:
+    a split source never reaches the flat map at all (it goes to `_SplitSource`, which
+    resolves per citation or declines), and any *other* duplicate key raises here rather
+    than being absorbed.
+    """
+
+
+def _add_tokens(
+    token_map: dict[str, str], origins: dict[str, str], tokens: Mapping[str, str],
+    source: str,
+) -> None:
+    """`token_map.update`, except that a key already claimed by a different source is a
+    raise naming both claimants rather than a silent overwrite.
+    """
+    for tok, new in tokens.items():
+        prior = origins.get(tok)
+        if prior is not None:
+            raise TokenMapCollision(
+                f"citation token {tok!r} is claimed twice: {prior} -> "
+                f"{token_map[tok]!r} and {source} -> {new!r}"
+            )
+        token_map[tok] = new
+        origins[tok] = source
+
+
+_ANCHOR_HEADING_RE: Final = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
+
+
+def _anchor_slug(heading_text: str) -> str:
+    """A markdown heading's `#anchor` form, GitHub's rule: lowercase, punctuation dropped,
+    runs of whitespace to single hyphens. Used only to test whether an anchor a citation
+    *already carries* names exactly one of a split source's targets — never to mint one —
+    so a dialect difference costs a resolution (bucket iv, left alone), never a wrong one.
+    """
+    text = heading_text.strip().lower()
+    text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
+    return re.sub(r"\s+", "-", text).strip("-")
+
+
+@dataclass(frozen=True)
+class _SplitTarget:
+    """One destination a split source's citations might mean."""
+
+    new_rel: str
+    new_token: str  # the destination form of the *citing* token form this target answers
+    ids: tuple[str, ...]  # every id form that names this record — old token and canonical
+    anchors: frozenset[str]
+    line_span: tuple[int, int] | None  # 1-based inclusive, in the SOURCE file
+    body_line_offset: int  # lines the destination file puts before this body
+
+
+@dataclass(frozen=True)
+class _SplitSource:
+    """A source path this migration splits into more than one destination, and the only
+    three ways a citation of it is allowed to be rewritten.
+
+    Authority: Ruling 89 (`docs/plans/2026-09-02-w37-container-family-and-line-citations-
+    rulings.md` §3) — *"a rewrite that changes only the path is forbidden"* — as the
+    maintainer extended it from the line-offset case it was written for to the path-only
+    case. A citation is rewritten **only when the citation itself determines which target
+    it means**, by (i) an id adjacent to the path, (ii) an `#anchor` matching exactly one
+    target's heading, or (iii) a line number falling inside exactly one target's span in
+    the source file — Ruling 89's re-derivation, done here rather than by hand. Anything
+    else is left exactly as it is: it dangles, gate condition 7 lists it, and it is
+    dispositioned by name. **Detection is not repair, and a citation that is wrong while
+    resolving is worse than one that fails loudly.**
+    """
+
+    old_rel: str
+    token: str  # the citing form (repo-relative, `docs/`-relative, ...) this covers
+    targets: tuple[_SplitTarget, ...]
+
+    @property
+    def pattern(self) -> re.Pattern[str]:
+        return re.compile(
+            rf"\b{re.escape(self.token)}\b"
+            r"(?:#(?P<anchor>[A-Za-z0-9_-]+))?"
+            r"(?::(?P<l1>\d+)(?:-(?P<l2>\d+))?)?"
+        )
+
+    def _by_id(self, line: str) -> set[int]:
+        return {
+            i for i, t in enumerate(self.targets)
+            if any(re.search(rf"\b{re.escape(tok)}\b", line) for tok in t.ids)
+        }
+
+    def _by_anchor(self, anchor: str | None) -> set[int]:
+        if anchor is None:
+            return set()
+        return {i for i, t in enumerate(self.targets) if anchor.lower() in t.anchors}
+
+    def _by_line(self, lines: list[int]) -> set[int]:
+        if not lines or any(t.line_span is None for t in self.targets):
+            return set()
+        found: set[int] = set()
+        for i, t in enumerate(self.targets):
+            span = t.line_span
+            assert span is not None  # guarded above
+            if all(span[0] <= n <= span[1] for n in lines):
+                found.add(i)
+        return found
+
+    def resolve(self, match: re.Match[str], line: str) -> str | None:
+        """The replacement text for one occurrence, or `None` for "leave it alone".
+
+        Each of the three mechanisms votes for a set of targets; a mechanism that names
+        exactly one target is *determining*. The rewrite happens when the determining
+        mechanisms agree on one target and no other — two mechanisms disagreeing is
+        exactly the case with no answer, and gets the same treatment as no evidence at
+        all.
+        """
+        anchor = match.group("anchor")
+        raw_lines = [match.group("l1"), match.group("l2")]
+        nums = [int(n) for n in raw_lines if n is not None]
+        determined: set[int] = set()
+        for voters in (self._by_id(line), self._by_anchor(anchor), self._by_line(nums)):
+            if len(voters) == 1:
+                determined |= voters
+        if len(determined) != 1:
+            return None
+        target = self.targets[next(iter(determined))]
+        out = target.new_token
+        if anchor is not None:
+            out += f"#{anchor}"
+        if nums:
+            span = target.line_span
+            if span is None:  # unreachable: `_by_line` returns nothing without spans
+                return None
+            derived = [target.body_line_offset + (n - span[0] + 1) for n in nums]
+            out += ":" + "-".join(str(n) for n in derived)
+        return out
+
+
+def _build_split_sources(
+    old_rel: str, targets: Sequence[tuple[_Draft, str]]
+) -> list[_SplitSource]:
+    """One `_SplitSource` per *citing form* of `old_rel` (`_path_rewrite_tokens` emits up
+    to three), each carrying the same target list mapped into that form.
+    """
+    by_token: dict[str, list[_SplitTarget]] = {}
+    for draft, new_rel in targets:
+        forms = _path_rewrite_tokens(old_rel, new_rel)
+        ids = [t for t in (draft.old_token, _docid.canonical(draft.prefix, draft.number))
+               if t]
+        anchors = frozenset(
+            _anchor_slug(m.group(1)) for m in _ANCHOR_HEADING_RE.finditer(draft.body)
+        )
+        for tok, new_tok in forms.items():
+            by_token.setdefault(tok, []).append(
+                _SplitTarget(
+                    new_rel=new_rel, new_token=new_tok, ids=tuple(ids), anchors=anchors,
+                    line_span=draft.source_line_span,
+                    body_line_offset=draft.body_line_offset,
+                )
+            )
+    return [
+        _SplitSource(old_rel=old_rel, token=tok, targets=tuple(ts))
+        for tok, ts in by_token.items()
+    ]
+
+
+@dataclass(frozen=True)
+class _UnresolvedCitation:
+    """One citation of a split source that named no single target — bucket (iv). Carried
+    out of the run by name, never counted: "27 sources are ambiguous" is not something a
+    reader can disposition, and a disposition by name is what the ruling asks for.
+    """
+
+    citing_file: str
+    line: int
+    old_rel: str
+    text: str
+    candidates: tuple[str, ...]
+
+
+def _rewrite_citations(
+    root: Path, token_map: Mapping[str, str], split_sources: Sequence[_SplitSource] = ()
+) -> tuple[list[str], list[_UnresolvedCitation]]:
     changed: list[str] = []
-    ordered_tokens = sorted(token_map, key=len, reverse=True)
-    patterns = [(tok, re.compile(rf"\b{re.escape(tok)}\b")) for tok in ordered_tokens]
+    unresolved: list[_UnresolvedCitation] = []
+    by_token: dict[str, _SplitSource] = {s.token: s for s in split_sources}
+    # One ordering over both kinds, longest first for the reason the flat map already
+    # needed it: a shorter token's word boundary must not consume part of a longer one.
+    ordered = sorted({*token_map, *by_token}, key=len, reverse=True)
     for path in _iter_tree_files(root):
         if _is_vendored_exempt(path, root):
             continue
@@ -4874,13 +5103,40 @@ def _rewrite_citations(root: Path, token_map: Mapping[str, str]) -> list[str]:
         except UnicodeDecodeError:
             continue
         original = text
-        for tok, pattern in patterns:
-            if tok in text:
-                text = pattern.sub(token_map[tok], text)
+        rel = path.relative_to(root).as_posix()
+        for tok in ordered:
+            if tok not in text:
+                continue
+            split = by_token.get(tok)
+            if split is None:
+                text = re.compile(rf"\b{re.escape(tok)}\b").sub(
+                    lambda m, v=token_map[tok]: v, text  # type: ignore[misc]
+                )
+                continue
+
+            def repl(m: re.Match[str], src: _SplitSource = split, rel: str = rel) -> str:
+                line_start = m.string.rfind("\n", 0, m.start()) + 1
+                line_end = m.string.find("\n", m.end())
+                line = m.string[line_start : line_end if line_end != -1 else None]
+                out = src.resolve(m, line)
+                if out is not None:
+                    return out
+                unresolved.append(
+                    _UnresolvedCitation(
+                        citing_file=rel,
+                        line=m.string.count("\n", 0, m.start()) + 1,
+                        old_rel=src.old_rel,
+                        text=line.strip(),
+                        candidates=tuple(t.new_rel for t in src.targets),
+                    )
+                )
+                return m.group(0)
+
+            text = split.pattern.sub(repl, text)
         if text != original:
             path.write_text(text, encoding="utf-8")
-            changed.append(path.relative_to(root).as_posix())
-    return changed
+            changed.append(rel)
+    return changed, unresolved
 
 
 # ---------------------------------------------------------------------------------------
@@ -5886,6 +6142,16 @@ def migrate(root: Path) -> MigrateResult:
     # link target it has already resolved. Built from the same statements, in the same
     # places, so a move recorded in one and not the other cannot happen quietly.
     path_moves: dict[str, str] = {}
+    # Which move claimed each token, so `_add_tokens` can name both claimants when two
+    # collide rather than letting the second silently win (`TokenMapCollision`).
+    token_origins: dict[str, str] = {}
+    # The same moves as `path_moves`, but **grouped by source and keeping every
+    # destination** rather than letting the last one win. `path_moves` answers a question
+    # that is still well-posed for a split source (a relative link out of a moved file is
+    # repointed from wherever that file's own body ended up); this answers the question
+    # that is not (which of several targets does a *citation* of the old path mean), and
+    # its list-valued shape is what makes the ambiguity visible instead of silent.
+    path_move_groups: dict[str, list[tuple[_Draft | None, str]]] = {}
     redirect_rows: list[dict[str, str]] = []
     assigned: list[tuple[str, str]] = []
     for d in drafts:
@@ -5907,7 +6173,7 @@ def migrate(root: Path) -> MigrateResult:
         # a live prose rewrite), so W37-11's resolver has the data; only the prose sweep is
         # held back.
         if d.old_token is not None and d.prefix != "FD":
-            token_map[d.old_token] = canon
+            _add_tokens(token_map, token_origins, {d.old_token: canon}, d.was or canon)
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
@@ -5932,8 +6198,8 @@ def migrate(root: Path) -> MigrateResult:
         # Every relocated document -- essays included -- gets its path rewritten in
         # citing prose, `register_row`'s own id-less move included.
         if old_path and new_path and old_path != new_path:
-            token_map.update(_path_rewrite_tokens(old_path, new_path))
             path_moves[old_path] = new_path
+            path_move_groups.setdefault(old_path, []).append((d, new_path))
     # `register_moved_to` can be set with *no* `register_row` draft in `drafts` at all --
     # every row the file had may have had an essay and so been excluded from the numbering
     # list (`_discover_findings`'s `document` drafts claim the number instead). The loop
@@ -5964,15 +6230,15 @@ def migrate(root: Path) -> MigrateResult:
         redirect_rows.append(
             {"old_id": "", "new_id": "", "old_path": move.old_rel, "new_path": move.new_rel}
         )
-        token_map.update(_path_rewrite_tokens(move.old_rel, move.new_rel))
         path_moves[move.old_rel] = move.new_rel
+        path_move_groups.setdefault(move.old_rel, []).append((None, move.new_rel))
     for old_rel, new_rel in _RESEARCH_UNSTAMPABLE_MOVE.items():
         if (root / new_rel).is_file():
             redirect_rows.append(
                 {"old_id": "", "new_id": "", "old_path": old_rel, "new_path": new_rel}
             )
-            token_map.update(_path_rewrite_tokens(old_rel, new_rel))
             path_moves[old_rel] = new_rel
+            path_move_groups.setdefault(old_rel, []).append((None, new_rel))
     # `_merge_phase1b_register`'s own deletion: no `_Draft`, no id, and (unlike
     # `register_moved_to` above) the file it deletes is not the one any draft's `was`
     # names -- it edits `docs/audit/register.md` in place and deletes a *different* file.
@@ -5987,8 +6253,10 @@ def migrate(root: Path) -> MigrateResult:
                 "old_path": phase1b_register_deleted, "new_path": phase1b_new_path,
             }
         )
-        token_map.update(_path_rewrite_tokens(phase1b_register_deleted, phase1b_new_path))
         path_moves[phase1b_register_deleted] = phase1b_new_path
+        path_move_groups.setdefault(phase1b_register_deleted, []).append(
+            (None, phase1b_new_path)
+        )
     if register_moved_to is not None:
         path_moves["docs/audit/register.md"] = register_moved_to
 
@@ -6004,8 +6272,8 @@ def migrate(root: Path) -> MigrateResult:
         redirect_rows.append(
             {"old_id": "", "new_id": "", "old_path": old_rel, "new_path": new_rel}
         )
-        token_map.update(_path_rewrite_tokens(old_rel, new_rel))
         path_moves[old_rel] = new_rel
+        path_move_groups.setdefault(old_rel, []).append((None, new_rel))
 
     # NT-0019 §5.2's README regeneration -- bodies, here, **before** the citation sweep.
     # A relocated README has to leave its old path before `_rewrite_citations` runs, or the
@@ -6018,7 +6286,34 @@ def migrate(root: Path) -> MigrateResult:
     files_written = [*files_written, *readme_written]
     files_deleted = [*files_deleted, *readme_deleted]
 
-    rewritten = _rewrite_citations(root, token_map)
+    # The split/single fork, and the only place a path token enters the flat map. A source
+    # with one destination is unchanged from #672; a source with several never enters it,
+    # because a flat `old_path -> new_path` entry can only hold one of them and the
+    # overwrite is silent (`TokenMapCollision`'s docstring has the measurement).
+    split_sources: list[_SplitSource] = []
+    for old_rel, moves in path_move_groups.items():
+        destinations = {new_rel for _, new_rel in moves}
+        if len(destinations) == 1:
+            _add_tokens(
+                token_map, token_origins,
+                _path_rewrite_tokens(old_rel, moves[0][1]), old_rel,
+            )
+            continue
+        if any(draft is None for draft, _ in moves):
+            # A split whose targets are not all document drafts carries no bodies, spans
+            # or ids to resolve *with*, so there is nothing to resolve against and every
+            # citation of it would be bucket (iv) anyway. Raised rather than silently
+            # left, because it is a shape this migration has never produced and the
+            # resolver would be quietly inert on it.
+            raise TokenMapCollision(
+                f"{old_rel} splits into {sorted(destinations)} through a move that "
+                "carries no draft — no per-citation evidence exists for it"
+            )
+        split_sources.extend(
+            _build_split_sources(old_rel, [(d, n) for d, n in moves if d is not None])
+        )
+
+    rewritten, unresolved_citations = _rewrite_citations(root, token_map, split_sources)
 
     # Alongside the vendored-manifest stamp below, and after the citation rewrite for the
     # same reason it is: a header this run writes carries no legacy token to rewrite.
@@ -6092,6 +6387,7 @@ def migrate(root: Path) -> MigrateResult:
             for unit in census.units
             if unit.key in census.excepted
         ),
+        unresolved_split_citations=tuple(unresolved_citations),
     )
 
 
@@ -6385,6 +6681,21 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     )
     for where, reason in result.deferred_reference_stamps:
         print(f"  {where} -- {reason}", file=sys.stderr)
+    # Bucket (iv), unconditionally and by name — including the zero, for the same reason
+    # the two counts above are printed when they are zero: a population nothing reports is
+    # a population nothing can disposition, and these are exactly the citations the ruling
+    # requires be dispositioned by name before a run.
+    print(
+        f"doc-id.py migrate: {len(result.unresolved_split_citations)} citation(s) of a "
+        "split source left unrewritten (no single target determined by the citation):",
+        file=sys.stderr,
+    )
+    for cite in result.unresolved_split_citations:
+        print(
+            f"  {cite.citing_file}:{cite.line} cites {cite.old_rel} -- candidates: "
+            f"{', '.join(cite.candidates)}",
+            file=sys.stderr,
+        )
     print(f"doc-id.py migrate: {len(result.assigned)} id(s) assigned")
     return 0
 
