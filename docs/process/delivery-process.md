@@ -236,6 +236,40 @@ See `.claude/skills/writing-plans/SKILL.md` and `docs/plans/README.md` — those
 conventions are stronger than anything this document would add, per NT-0010 §11's own
 words. Not restated here; one source, not two.
 
+## 11a. Adding a document under `docs/` — run `--verify` before opening the PR
+
+**Any change that adds a file under `docs/` runs
+`python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD` before its PR is opened**, and
+the author reads row **(a)** of the output. Added 2026-09-03, from finding
+[`F102`](../audit/findings/F102.md).
+
+**Why this cannot be left to the ordinary gate.** NT-0019's family classification is **name-based
+and exists only on the far side of the migration**. A document whose filename matches no family
+rule is perfectly well-formed today — `audit-docs.py`, `register-lint.py` and the full local gate
+all pass on it — and becomes an unclassified file, `none`, only once `migrate()` runs. **§7(a)'s
+requirement is zero `none`, so one ordinarily-named new document silently fails the acceptance
+row that is otherwise passing**, and nothing available to the author before the migration reports
+it.
+
+**Measured instance.** An audit record added under `docs/audit/` as
+`nt-0019-second-measurement-2026-09-03.md` took row (a) from `none=0` to `none=1`. Every local
+check was green; the only signal was `--verify`, in CI, on a snapshot. It was resolved by
+**precedent rather than invention** — the migrated snapshot's own `docs/REDIRECTS.csv` shows every
+sibling audit measurement record routing to `docs/research/` (`nt-0019-verification-and-impact-
+sweep.md` → `RS-01000`, `file-census.md` → `RS-00998`, `ruling-acceptance-item-sweep.md` →
+`RS-01001`), so the new record moved there and (a) returned to `none=0`.
+
+**The rule generalises past this one row.** Three distinct defects in a single day shared one
+shape: a figure measured on the wrong side of the migration, a claim about a string checked
+against the wrong tree, and a document that is only invalid on the other side of the transform.
+**`--verify` is the only instrument that sees any of them**, which is Ruling 102 §1's argument
+reaching a case its author did not have in mind. **The remedy is running the instrument, not
+being careful.**
+
+**Until the migration lands**, `--verify` is red by design on every PR (Ruling 102 §1), so the
+author reads **row (a) specifically** rather than the exit code, and compares it against `main`'s
+own output rather than against zero.
+
 ## 12. Audit record obligations
 
 See `.claude/skills/close-workstream/SKILL.md`, `.claude/skills/phase-review/SKILL.md`,

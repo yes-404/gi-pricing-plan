@@ -3,8 +3,8 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:c3f341eb44878df200c3d60e2d1813a8d4c60c7e4a3e2f930aaf007fad26b17f",
-    "verified_against_tree": "4ef0ac940b2a00748f31c76cecd4d979657bb690",
+    "derived_from_digest": "sha256:4d47dc1fe582ba56bb92ac4f0eedcc1b76c06bb5a8bcb3a6cd4cbcaeaa79c7f8",
+    "verified_against_tree": "ac8225611da37759b402629c729d9b50e9675c61",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (NT-0014 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
     "spec_adopted": "2026-08-29"
@@ -43,7 +43,7 @@
         "merge"
       ],
       "definition": ".claude/roles/lead.md",
-      "source": "\u00a73, \u00a75.4, \u00a75.7"
+      "source": "§3, §5.4, §5.7"
     },
     "planner": {
       "authority": [
@@ -54,7 +54,7 @@
         "acceptance_standard"
       ],
       "definition": ".claude/roles/planner.md",
-      "source": "\u00a73"
+      "source": "§3"
     },
     "decision_maker": {
       "authority": [
@@ -65,7 +65,7 @@
         "audit_verdicts"
       ],
       "definition": ".claude/roles/decision-maker.md",
-      "source": "\u00a73, \u00a75.7"
+      "source": "§3, §5.7"
     },
     "auditor": {
       "authority": [
@@ -77,7 +77,7 @@
         "report_only"
       ],
       "definition": ".claude/roles/auditor.md",
-      "source": "\u00a73"
+      "source": "§3"
     },
     "executor": {
       "authority": [
@@ -90,7 +90,7 @@
         "never_self_merges"
       ],
       "definition": ".claude/roles/executor.md",
-      "source": "\u00a73, \u00a76.7"
+      "source": "§3, §6.7"
     },
     "watcher": {
       "type": "support_mechanical",
@@ -103,7 +103,7 @@
         "runtime-state.json"
       ],
       "definition": ".claude/roles/watcher.md",
-      "source": "\u00a73, \u00a713"
+      "source": "§3, §13"
     },
     "reporter": {
       "type": "support_mechanical_first",
@@ -112,7 +112,7 @@
         "never_polls_agents"
       ],
       "definition": ".claude/roles/reporter.md",
-      "source": "\u00a73, \u00a713"
+      "source": "§3, §13"
     }
   },
   "hierarchy": {
@@ -123,7 +123,7 @@
       "slice"
     ],
     "children_execution": "strictly_sequential",
-    "source": "\u00a74, \u00a78"
+    "source": "§4, §8"
   },
   "layers": {
     "project": {
@@ -133,7 +133,7 @@
       "escalate_parent_available": false,
       "human_checkpoint_at_close": true,
       "retry_cap": 1,
-      "source": "\u00a72, \u00a75, \u00a77"
+      "source": "§2, §5, §7"
     },
     "phase": {
       "parent": "project",
@@ -142,7 +142,7 @@
       "escalate_parent_available": true,
       "human_checkpoint_at_close": true,
       "retry_cap": 1,
-      "source": "\u00a72, \u00a75, \u00a77"
+      "source": "§2, §5, §7"
     },
     "work": {
       "parent": "phase",
@@ -151,7 +151,7 @@
       "escalate_parent_available": true,
       "human_checkpoint_at_close": true,
       "retry_cap": 1,
-      "source": "\u00a72, \u00a75, \u00a77"
+      "source": "§2, §5, §7"
     },
     "slice": {
       "parent": "work",
@@ -164,7 +164,7 @@
       "close_condition": "clean_audit_and_lead_merge",
       "retry_cap": 2,
       "retry_cap_status": "not_settled_ceiling",
-      "source": "\u00a72, \u00a74, \u00a76, \u00a77"
+      "source": "§2, §4, §6, §7"
     }
   },
   "flows": {
@@ -174,7 +174,7 @@
         "phase",
         "work"
       ],
-      "source": "\u00a75",
+      "source": "§5",
       "steps": [
         {
           "id": "enter",
@@ -265,7 +265,7 @@
       "applies_to": [
         "slice"
       ],
-      "source": "\u00a76",
+      "source": "§6",
       "steps": [
         {
           "id": "slice_plan",
@@ -365,7 +365,7 @@
       ],
       "enforcement_hook": "scripts/hooks/retry_cap_hook.py (NT-0014 script C2)",
       "revisit_when": "one_workstreams_worth_of_data_exists",
-      "source": "\u00a77"
+      "source": "§7"
     },
     "parallelism": {
       "rule": "no_two_children_of_same_layer_concurrently",
@@ -380,7 +380,7 @@
         "on_start": "announce_and_record_in_runtime_state",
         "prefer_existing_check": "ci_is_authoritative_full_gate_for_pushed_branches"
       },
-      "source": "\u00a78"
+      "source": "§8"
     },
     "human_checkpoints": {
       "at_close_of": [
@@ -392,7 +392,7 @@
         "slice"
       ],
       "decider": "maintainer",
-      "source": "\u00a72"
+      "source": "§2"
     },
     "message_discipline": {
       "max_words": 50,
@@ -407,7 +407,19 @@
         "totals",
         "tree_or_sha"
       ],
-      "source": "\u00a715"
+      "source": "§15"
+    },
+    "docs_family_classification": {
+      "spec_section": "11a",
+      "rule": "any_change_adding_a_file_under_docs_runs_migrate_verify_before_its_pr_is_opened",
+      "command": "python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD",
+      "read": "row_(a)_specifically_compared_against_mains_own_output_not_against_zero",
+      "why_the_ordinary_gate_cannot_see_it": "nt_0019_family_classification_is_name_based_and_exists_only_after_the_migration; an_unclassifiable_document_passes_audit_docs_register_lint_and_the_full_local_gate",
+      "failure_mode": "one_ordinarily_named_new_document_takes_row_(a)_from_none_0_to_none_1",
+      "near_miss": "verify_is_red_by_design_on_every_pr_so_a_reader_checking_the_job_rather_than_the_row_walks_past_a_real_new_failure",
+      "resolution_rule": "route_by_precedent_read_out_of_the_migrated_snapshots_own_REDIRECTS_csv_never_by_choosing_a_home",
+      "finding": "F102",
+      "added": "2026-09-03"
     }
   },
   "monitoring": {
@@ -431,7 +443,7 @@
       ],
       "queued": "everything_else_to_next_lead_touchpoint"
     },
-    "source": "\u00a713"
+    "source": "§13"
   },
   "artifacts": {
     "findings_register": "docs/audit/register.md",
@@ -442,7 +454,7 @@
     "agent_settings": "docs/process/agent-settings.md",
     "roles_dir": ".claude/roles/",
     "runtime_state_location": "handover_ops_area_outside_repo",
-    "source": "\u00a79, \u00a710, \u00a713"
+    "source": "§9, §10, §13"
   },
   "hooks": {
     "C2_retry_cap": {
@@ -451,18 +463,18 @@
       "enforces": "guards.retry_caps",
       "status": "built",
       "adoption_slice": "NT-0014 adoption slice G",
-      "note": "record() enforces the cap on its own; the PreToolUse wiring pre-empts a breaching Bash call before it runs. Neither stops a direct hand-edit of the runtime state file or a session with hooks disabled -- no CI-equivalent backstop exists behind C2 (Ruling 40 \u00a74).",
-      "source": "\u00a77"
+      "note": "record() enforces the cap on its own; the PreToolUse wiring pre-empts a breaching Bash call before it runs. Neither stops a direct hand-edit of the runtime state file or a session with hooks disabled -- no CI-equivalent backstop exists behind C2 (Ruling 40 §4).",
+      "source": "§7"
     },
     "C3_verify_gate": {
       "status": "dissolved",
       "reason": "no_hook_backstop_survives_ci_being_the_stronger_check_ruling_40",
-      "source": "\u00a76.4"
+      "source": "§6.4"
     }
   },
   "runtime_state_schema": {
     "description": "Shape of the runtime state file (NT-0014 artifact B). `position` and `in_flight_expensive_verifications` are written by the watcher (.claude/skills/watcher-runtime-state); `retry_counters` and `pending_human_checkpoint` are written by the retry-cap hook (scripts/hooks/retry_cap_hook.py, NT-0014 script C2, adoption slice G) at the moment a fix/replan decision is recorded. Ruling 47 (docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md) rejected the note's original design -- a state file compared against artifact history -- because a dead or unwired writer and a genuinely idle process both read zero, so a mismatch never fires. Each block is re-derived (watcher) or live-updated at the moment of the event (hook) rather than compared against a second tally; a block whose content is unchanged this cycle is left untouched, timestamp included, which is what makes a no-op watcher cycle byte-identical (Ruling 47(d)'s acceptance test).",
-    "source": "\u00a78, \u00a710, \u00a713",
+    "source": "§8, §10, §13",
     "example": {
       "schema": "gi-pricing-plan-runtime-state",
       "schema_version": 1,
@@ -472,11 +484,11 @@
         "written_at": "2026-08-30T14:00:00Z",
         "phase": {
           "value": "2",
-          "read_from": "docs/roadmap.md \u00a77"
+          "read_from": "docs/roadmap.md §7"
         },
         "work": {
           "value": "W11",
-          "read_from": "docs/roadmap.md \u00a77"
+          "read_from": "docs/roadmap.md §7"
         },
         "slice": {
           "value": "W11-S3",
