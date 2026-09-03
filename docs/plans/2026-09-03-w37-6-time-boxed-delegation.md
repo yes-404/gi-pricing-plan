@@ -92,6 +92,120 @@ Step 3's commit is the step, not the writing.
 the maintainer reads the tree on return. **One line in the handover per hour elapsed**:
 tree, PRs merged, what changed hands.
 
+## 6. Renewal and two rulings — dated append, 2026-09-03
+
+**Appended 2026-09-03 by the lead, on the maintainer's instruction, after the window of the
+header had expired and its halt protocol had run.** Appended rather than written into the
+header, because a record rewritten in place destroys the evidence of what was believed when
+it was signed — the same reason `2026-09-02-w37-6-second-withholding-and-standing-rules.md`
+§5 was amended by dated append rather than rewritten (PR #654). **The header's window and
+its expiry stand exactly as written; they are history, not a mistake to correct.**
+
+### 6.1 The first window expired, and that is recorded
+
+The window of the header opened `2026-09-03T00:07:32Z` and expired `2026-09-03T08:07:32Z`.
+**It expired.** §4's halt protocol fired on its elapsed-time trigger and
+[`2026-09-03-w37-6-window-handover.md`](2026-09-03-w37-6-window-handover.md) is its step 3,
+merged to `main` as PR #663.
+
+**Every reservation the header delegated returned to the maintainer at that moment** — the
+header says so itself: *"every reservation below returns to the maintainer when the window
+closes"* (§ preamble, `docs/plans/2026-09-03-w37-6-time-boxed-delegation.md:15`). The
+decision-maker spawned into the renewed window verified this against the tree and **declined
+to file under a §1 authority that had lapsed**, before being told the renewal existed. That
+refusal was correct and is recorded here because it is the behaviour the header's violation
+clauses exist to produce.
+
+### 6.2 The renewal
+
+**The maintainer renews this delegation on the same terms for eight hours from the merge of
+the handover pull request** — PR #663, merged `2026-09-03T08:43:13Z`, merge commit
+`178541a8201be765dd262c895c61658b0d2b0581`.
+
+**So the renewed window expires `2026-09-03T16:43:13Z`.**
+
+The anchor is a merge timestamp read from `gh pr view 663 --json mergedAt,mergeCommit`, not a
+clock read at the moment of writing and not one carried from an earlier command. That
+matters here for the reason the header's own timestamp note gives: a stamp fetched once and
+pasted later is how `eta.md` drifted 4h31m while its body was rewritten
+([`NT-0004`](../notes/0004-a-reference-that-resolves-only-for-the-writer.md)).
+
+**Same terms means same terms.** §1's two conditions on every ruling, §2's six-condition
+mechanical gate, §3's reserved list, §4's halt protocol and §5's reporting are renewed
+unchanged and are not restated here — a restatement is how one of two copies goes stale
+([`NT-0003`](../notes/0003-duplicated-status-goes-stale.md)). **Read §1–§5 above; they are
+the terms.**
+
+**Nothing in §6 is in force until this append is merged**, on the header's own acceptance
+standard: *"nothing below is in force until that PR is merged."* Actions taken under the
+renewal before that merge are the header's first violation clause, unchanged.
+
+### 6.3 Ruling — gate condition 2 is accepted as met, with its disclosure
+
+**The maintainer's judgement on the one question the handover left open** (§8 of
+[`2026-09-03-w37-6-window-handover.md`](2026-09-03-w37-6-window-handover.md)): whether
+condition 2, satisfied over an enforced population of 0, is satisfied in the sense the gate
+intended.
+
+**It is accepted as met.** The arithmetic is Ruling 96's own consequence, and the
+broken-input control proves the check fires on the first document to enter scope.
+
+**The disclosure travels with it, and the four figures are not quotable apart.** Ruling 97 §4
+binds them together:
+
+> **0 red · 531 examined · 292 exempt by `was:` · and the broken-input proof.**
+
+**The enforced population is 0.** Every document carrying a non-empty required set is exempt
+by `was:`, because a verbatim-migrated body is out of check 37's scope and the whole migrated
+corpus is carried-over bodies. **That is the ruled outcome, not a defect** — but the ruling
+that makes condition 2 satisfiable is the same ruling that empties the population condition 2
+measures over, and a reader meeting `0` without that sentence draws the opposite conclusion
+from the one the evidence supports.
+
+**The evidence is the control, not the zero.** A `was:`-marked body with no sections passes;
+an unmarked ruling missing its `Acceptance — the violation that must become detectable`
+section reds, and goes green when the section is restored. `CLAUDE.md` §13 — *"a check that
+has never printed a failure has not been tested"* — is why that control is load-bearing here
+and why the zero alone is not.
+
+**The option not taken, priced:** requiring a non-empty enforced population before the
+go-ahead. *It reverses Ruling 96 in effect, since the exemption is what empties the
+population; the run would then need the 284 → 0 remedy that F90's four options were measured
+unable to deliver — option 4 measured at 95 → 95, making nothing pass, over a population of
+284 documents across six families, not 95 across one.*
+
+### 6.4 Ruling — a tagged evidence ref does not count as an open branch
+
+**Gate condition 5 reads *"no open branches at the tree"*. A ref under `refs/tags/` is not an
+open branch and does not count against it.**
+
+The reasoning is the distinction the condition was drawn on: an open branch is **work in
+flight** — something a reader must ask the state of. An annotated tag is **a citation target
+that cannot move**. Condition 5 exists so the migration lands on a tree with nothing
+outstanding against it, and a frozen evidence ref is the opposite of something outstanding.
+
+Applied, in this window:
+
+- `docs/w37-6-go-ahead-reask` carried #650's superseded document, preserved because
+  [`2026-09-03-w37-6-go-ahead-re-ask.md`](2026-09-03-w37-6-go-ahead-re-ask.md) (PR #659)
+  **cites it by path and records that it lives there unmerged.** Deleting the branch alone
+  would turn a citation that resolves into one that does not — the exact defect removed from
+  F87's register row earlier in the first window.
+- It is therefore **tagged `evidence/w37-6-reask-v1`**, an annotated tag dereferencing to
+  `fcd7068eaf9db2a55fe1a5d9a5993df6efa8cb1b`, the branch tip. Verified **on the remote**, not
+  locally, with `git ls-remote --tags origin`. The tag was pushed and confirmed present
+  **before** the branch was deleted, so no interval existed in which the objects were
+  unreferenced.
+- **The branch is then deleted, and condition 5 is met.** #659's citation is updated in the
+  same change set that deletes the branch, so `main` never carries a dangling reference.
+
+**The option not taken, priced:** leaving the branch open and recording condition 5 as unmet
+by one, deliberately — the first window's choice. *It leaves the gate permanently
+unsatisfiable by mechanical check, which is the property §2 says the gate was designed for:
+"each condition is checked by running something, not by judging it." A condition that always
+requires a judgement call to excuse one branch is no longer mechanical, and every future
+reader has to be told the exception.*
+
 ## Acceptance Standard
 
 **This record is accepted when it is merged**, because the maintainer conditioned the whole
@@ -110,3 +224,15 @@ argument rather than by execution — condition 6 above all.*
 *Violation: the window's expiry passing without the halt protocol running to step 4.*
 
 *Violation: a handover written and not committed to `main`.*
+
+*Violation (§6): any action taken under the renewal before §6 is merged, or after
+`2026-09-03T16:43:13Z`.*
+
+*Violation (§6): gate condition 2 quoted as `0 red` without the enforced-population-0
+disclosure and its broken-input control — the four figures of §6.3 are not quotable apart.*
+
+*Violation (§6): `evidence/w37-6-reask-v1` deleted, or the branch `docs/w37-6-go-ahead-reask`
+deleted without that tag confirmed present on the remote first.*
+
+*Violation (§6): this header's §1-§5 restated inside §6 rather than pointed at, so that the
+two copies can disagree.*
