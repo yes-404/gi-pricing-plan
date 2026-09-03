@@ -62,5 +62,16 @@ jobs:
       # The snapshot goes in RUNNER_TEMP, outside the checkout: the instrument refuses a
       # target inside any git work tree, which is the guard that keeps `migrate()` off a
       # real checkout. Exit 2 means "refused to run" (a misconfiguration); exit 1 means
-      # "ran, and a row is red".
-      - run: python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref HEAD
+      # "ran, and a row is red" — the standing state Ruling 102 §1 keeps `main` in until
+      # every row is green, not a fact this step exists to carry (Ruling 104 §1, decision
+      # 1). Exit 3 means the verdict set moved since the last recorded run — that is the
+      # one this step fails on, because it is the only exit code that says something
+      # about *this* change rather than about the standing backlog.
+      - run: |
+          code=0
+          python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref HEAD || code=$?
+          if [ "$code" -eq 1 ]; then
+            echo "::notice::--verify exited 1 (standing red, verdict set unchanged) — Ruling 104 §1 reads this as a pass"
+            exit 0
+          fi
+          exit "$code"
