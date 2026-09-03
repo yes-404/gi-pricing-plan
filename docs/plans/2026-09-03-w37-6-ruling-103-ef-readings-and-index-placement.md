@@ -602,6 +602,44 @@ from the constant, and require `migrate` to raise, naming it.
 function's replacement takes the source path and the routing constant; if it can still see the
 target list it can still sort it.
 
+**The fixture, specified to the point where implementing it needs no judgement.** Assigned to
+this role by the lead and **declined as outside its charter** (§5.4); the specification is
+delivered here instead, which is the part that is this role's.
+
+**Fixture A — route and sort order disagree, and the route must win.**
+
+| | |
+|---|---|
+| source | one synthetic file under the fixture corpus, cross-family by construction |
+| its targets | at least one in `docs/plans/` and at least one in `docs/rulings/` |
+| sort order says | `plans` — `sorted({"plans", "rulings"})[0]` |
+| its routing-table entry says | `rulings` |
+| **assert** | the index rel is **`docs/rulings/INDEX.md`**, and the anchor is `#<old-basename>` |
+
+**Red-then-green is the acceptance, and both halves must be exercised:** the assertion **fails**
+against `_split_index_family`'s current body (`sorted({rel.split("/")[1] for rel in new_rels})[0]`,
+which returns `plans`) and **passes** against the routed implementation. **A fixture that passes
+under both is not this fixture** — that is §3.4's whole point, and it is the failure the three
+real sources would produce, since all three coincide.
+
+**Fixture B — a cross-family source with no routing entry must raise.** Same shape, no
+routing-table entry, and `migrate` **raises**, naming the source and its target families. **Not
+"falls back", not "warns"** — §3.3 clause 2 exists because silence is the failure mode being
+removed, and a fallback of any kind restores it.
+
+**Two constraints on how A is built, because the obvious construction defeats it.** The target
+families must be **`{plans, rulings}` or another pair whose sorted-first element is not the
+routed one** — a pair like `{closures, ledgers}` routed to `closures` reproduces the coincidence
+and tests nothing. And the routing entry must come from **the same constant the production path
+reads**, not a parameter the test passes in: a test that injects a route through a seam
+production does not use proves the seam, not the rule.
+
+**Sibling regression, cheap and worth having:** the three real sources keep their current
+placements — `closure-records.md` and `plan-reviews.md` to `docs/closures/INDEX.md`,
+`2026-08-30-nt-0012-0013-0014-adoption.md` to `docs/plans/INDEX.md`. **That test proves nothing
+on its own** (§3.4) and is a guard against a routing table typo, not evidence for the rule. It
+must not be presented as the acceptance test.
+
 ---
 
 ## 4. Row verdicts, and what this record does not establish
@@ -832,3 +870,38 @@ violations.**
 
 **Not adopted, and named so it is not assumed:** the §6 fixture whose route and sort order
 disagree (§3.5) is unassigned. It is not `executor-verify`'s unless the lead assigns it.
+
+
+---
+
+## 5.4 One assignment declined, and why it is a finding rather than a refusal
+
+**The lead assigned §3.5's fixture to this role. It is declined as outside this role's charter,
+and the substance is delivered above instead.**
+
+`.claude/roles/decision-maker.md` states the boundary twice and sources it to an incident:
+**"Never: closes work or phases, implements, or rules audit verdicts"**, and **"No write access
+to any code worktree"** — the second recorded because a decision-maker session wrote three times
+into an executor's worktree during W10, the third write discarding uncommitted tracked files.
+Its `Tools` line is narrower still: *"Read; write to ruling records, the open-questions log, and
+`docs/specs/`."* **A test file is none of those.**
+
+**The lead's reasoning for the assignment is sound and is not what is being declined.** *"You
+ruled it, so you should build the thing that escapes the trap you identified"* is a good argument
+about competence and context. **It is an argument for changing the charter, not for acting
+outside it** — and `CLAUDE.md` §15 says exactly what to do with it: *"A role file that proves
+insufficient is a finding against the file: fix the file, do not paste a brief back in."* A brief
+that widens a role dies with the session; the charter is what the next session reads.
+
+**So this is raised as a finding against `.claude/roles/decision-maker.md`, for the maintainer**,
+who owns amendments to what a charter requires (`CLAUDE.md` §12). Two readings are available and
+this record does not pick between them: either the charter is right and a ruling's acceptance
+test is always an executor's to build from a specification like §3.5's, or the charter is too
+narrow and should permit this role to write **tests** — never production code — for rules it
+ruled. **The second has a real argument behind it**: the §3.4 trap was found by whoever held the
+routing rule in mind, and a specification handed across a role boundary is one more place the
+predicate can be narrowed in transit, which is F85's failure mode and this ruling's own subject.
+
+**What is not available is doing it and mentioning it afterwards.** The boundary this charter
+draws was written because it was crossed, and a role that crosses its own charter when the
+reasoning seems good is not a bounded role.
