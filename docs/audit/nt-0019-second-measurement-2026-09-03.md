@@ -638,7 +638,7 @@ further filenames carry a legacy id that today's predicate happens not to match.
 are in scope for the id standard is the maintainer's; the measurable claim is that the row cannot
 reach zero while the filename stands.
 
-## 13. Finding A5 — §7(d)'s `docs/notes/` row cannot reach zero once the instrument that measures it is merged
+## 13. Finding A5 (magnitude CORRECTED in §14) — §7(d)'s `docs/notes/` row cannot reach zero once the instrument that measures it is merged
 
 Verified at `549cb75`, the instrument's current tip. The run is stable across `7fc8e5a` →
 `549cb75` — same `1 DISCLOSE, 17 FAIL, 2 NOT MEASURED, 2 PASS, 2 UNDETERMINED` over 24 rows,
@@ -719,3 +719,89 @@ row cannot reach zero and no amount of citation rewriting changes that.
 Whether the answer is a self-exclusion, a scoped corpus, or an accepted disclosed count the way
 `\bF[0-9]{2}\b` already has one, is the maintainer's. **The measurable claim: (d11) is 118 at a
 tree without the instrument, and 123 at a tree with it, over the same corpus.**
+
+## 14. A5's magnitude CORRECTED — the floor is 1 line, not 5; the finding stands, my number did not
+
+**Filed 2026-09-03, correcting §13 of commit `c3771bd`. §13's conclusion survives; its figure was
+wrong by a factor of five and its "same corpus" claim was wrong outright.** The lead has already
+escalated A5 to the maintainer carrying the retracted figure, and this section exists so the
+corrected one is in the durable record rather than only in a message.
+
+### 14.1 The prediction, and the test that was possible only after the merge
+
+§13 predicted: once the instrument merges, a snapshot of `main` contains `_docverify.py` and
+**(d11) gains 5**, on the strength of
+
+```bash
+grep -cE '\b(docs/notes/)' scripts/_docverify.py    # 5, at 549cb75
+```
+
+The instrument merged as `4b9117a` (#689), which made the prediction testable against a real
+tree rather than a projection. Snapshot of `4b9117a`, migrated, `git add -A`:
+
+```bash
+git grep -nE '\b(docs/notes/)' -- $FILES | grep -v 'was:' | grep '_docverify'
+  → scripts/_docverify.py:626:    "docs/notes/",
+```
+
+**One line, not five.** (d11) at migrated `4b9117a` is **122**, and exactly **1** of those is the
+instrument's own source.
+
+### 14.2 Why — and it is the error I have been auditing other people for
+
+The other four occurrences are **genuine path citations**, so the migration rewrites them, which
+is what it is supposed to do. Post-migration the same file reads:
+
+| line | pre-migration | post-migration |
+|---|---|---|
+| `:31` | `docs/notes/0007-context-bound-…` | `docs/rfcs/RFC-00089-zero-calls-above-200k-…` |
+| `:601` | `docs/notes/0019-one-id-per-document.md` | `docs/rfcs/RFC-00216-one-id-per-governed-thing-…` |
+| `:1068` | `_NT0019_PATH = "docs/notes/0019-…"` | `= "docs/rfcs/RFC-00216-…"` |
+| `:1109` | `docs/notes/0019-…` in a message string | `docs/rfcs/RFC-00216-…` |
+| **`:626`** | `"docs/notes/",` — the alternative literal | **unchanged** |
+
+Only `:626` survives, and it survives because it is **not a citation**: a bare directory prefix
+with no filename after it, which the rewriter correctly leaves alone.
+
+**The error is exactly the class this record was written to catch.** I ran the predicate against
+the **un-migrated** `_docverify.py` and asserted the result for the **migrated** population. The
+whole record's method is that a figure carries its tree, and I took a count at one tree and
+published it as a count at another. §1 even names the hazard — *"no row below is an independent
+check of the migration itself, only of what the migration produced"* — and I then measured
+something the migration had not yet touched.
+
+**And the "same corpus" clause was wrong on its own terms.** §13 closed with *"(d11) is 118 at a
+tree without the instrument and 123 at a tree with it, over the same corpus."* 118 is `0de529e`;
+the instrument merged at `4b9117a`, 6 commits and 6 further ids later (`1119` against `1125`
+assigned). **They are not the same corpus and the sentence asserting they were is withdrawn.**
+
+### 14.3 The corrected claim
+
+**The finding stands and is unchanged in kind:** the instrument is a member of the population it
+measures, there is no self-exclusion, and **§7(d)'s `docs/notes/` alternative cannot reach zero
+while `_docverify.py` ships `D_FULL_PATTERN` verbatim.** A row with a floor of 1 is as unclearable
+as a row with a floor of 5.
+
+**What changes is every number attached to it:**
+
+- the instrument's contribution to (d11) is **1**, not 5;
+- (d11) at migrated `4b9117a` is **122**, measured, not projected;
+- there is no measured before/after pair, because no tree exists both with and without the
+  instrument at the same corpus, and I should not have implied one.
+
+**§13.2's table is unaffected** — 22 of (d11)'s 118 under `scripts/` or `tests/`, 24 of (d9)'s 66,
+79 of (d10)'s 291 — because those were measured on the migrated tree to begin with.
+
+### 14.4 One thing the test found that §13 did not predict
+
+`_NT0019_PATH` is rewritten by the migration from the old path to
+`docs/rfcs/RFC-00216-one-id-per-governed-thing-…`. Post-migration `_follow_redirect` finds it
+literally, so nothing breaks — but the constant's own comment explains that it is the
+**pre-migration** path precisely so that `docs/REDIRECTS.csv` can be followed, *"guessing the new
+name instead is how a row silently measures an empty file."*
+
+**Once the migration lands on `main`, that redirect path becomes dead code**: the literal
+resolves directly, and the safety net the comment describes is never exercised again. It is not a
+defect today and the rewrite produced the correct new name. It is worth knowing that the
+mechanism designed to survive the migration is disarmed **by** the migration, so a later wrong
+value in that constant would fail silently rather than be caught by the redirect lookup.
