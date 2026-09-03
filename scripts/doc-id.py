@@ -2463,7 +2463,7 @@ def _phase1b_row_description(concerns: str) -> str:
     return concerns[: min(positions)].strip()
 
 
-def _merge_phase1b_register(root: Path) -> None:
+def _merge_phase1b_register(root: Path) -> str | None:
     """Merges `docs/audit/phases/1b/register.md`'s 11 rows into `docs/audit/register.md`'s
     own table, as `_PHASE_1B_MERGE_IDS` states, then deletes the phase register -- run
     *before* `_discover_register`/`_discover_findings` read `docs/audit/register.md`, so
@@ -2472,6 +2472,13 @@ def _merge_phase1b_register(root: Path) -> None:
     every other register row does). A no-op, idempotent, once the phase file no longer
     exists -- the second-run reading every other legacy-path `_discover_*` gives its own
     source file.
+
+    Returns the deleted file's repo-relative posix path when it deletes one, `None`
+    otherwise (already-migrated) -- the caller uses this to record the deletion in
+    `MigrateResult.files_deleted`, add a `REDIRECTS.csv` row, and add the old path as a
+    citation-rewrite token, none of which this function does itself (it edits
+    `docs/audit/register.md` in place, which is not one of `migrate()`'s usual write
+    points, so nothing else would otherwise learn a deletion happened here).
 
     Each new row's Work-item cell is the source row's own third field when the row splits
     into 4 fields (`Finding id | Concerns | Work item | Decision`), or `—` — the main
@@ -2491,7 +2498,7 @@ def _merge_phase1b_register(root: Path) -> None:
     """
     phase1b_path = root / "docs" / "audit" / "phases" / "1b" / "register.md"
     if not phase1b_path.is_file():
-        return
+        return None
     register_lint = _load_register_lint()
     by_id: dict[str, list[str]] = {}
     for line in phase1b_path.read_text(encoding="utf-8").splitlines():
@@ -2526,8 +2533,10 @@ def _merge_phase1b_register(root: Path) -> None:
     last_table_line = max(i for i, ln in enumerate(lines) if ln.startswith("|"))
     lines[last_table_line + 1 : last_table_line + 1] = new_lines
     register_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    deleted_rel = phase1b_path.relative_to(root).as_posix()
     phase1b_path.unlink()
     _remove_if_empty(phase1b_path.parent)
+    return deleted_rel
 
 
 def _discover_register(root: Path, *, exclude: Collection[str] = ()) -> list[_Draft]:
@@ -4697,6 +4706,27 @@ def _restructure_roadmap(
 # ---------------------------------------------------------------------------------------
 
 
+def _path_rewrite_tokens(old_rel: str, new_rel: str) -> dict[str, str]:
+    """Every citing-prose form of a moved path this migration is proven to need, mapped
+    old -> new -- found live, not assumed: the auditor caught `docs/roadmap.md` citing
+    a merged-away path as `[docs/audit/phases/1b/register.md](audit/phases/1b/
+    register.md)` -- the **link text** is the repo-relative form (`docs/...`), the
+    **link target** is the `docs/`-relative form (no leading `docs/`), because
+    `roadmap.md` lives one level inside `docs/` and a same-tree relative link omits the
+    shared prefix. Both forms are added (the second only when `old_rel` starts with
+    `docs/`, since a path outside `docs/` has no such shorter form to strip); each is a
+    literal substring match via `_rewrite_citations`, so a form neither of these two
+    covers (a deeper relative path, `../...`, from a file two or more directories below
+    `docs/`) is not rewritten by this pair and would need adding if the corpus is ever
+    found to use it -- not assumed absent, just not yet proven present.
+    """
+    tokens = {old_rel: new_rel}
+    prefix = "docs/"
+    if old_rel.startswith(prefix) and new_rel.startswith(prefix):
+        tokens[old_rel[len(prefix) :]] = new_rel[len(prefix) :]
+    return tokens
+
+
 def _rewrite_citations(root: Path, token_map: Mapping[str, str]) -> list[str]:
     changed: list[str] = []
     ordered_tokens = sorted(token_map, key=len, reverse=True)
@@ -4955,7 +4985,7 @@ def migrate(root: Path) -> MigrateResult:
     # `docs/audit/register.md` from disk: the 11 merged rows need to already be ordinary
     # register content by the time either function sees the file, not a separate source
     # this discovery layer would otherwise need to know about.
-    _merge_phase1b_register(root)
+    phase1b_register_deleted = _merge_phase1b_register(root)
     finding_drafts = _discover_findings(root)
     _check_flat_document_directory_not_silently_unrecognised(
         root, "docs/audit/findings", None, "finding essays",
@@ -5043,6 +5073,13 @@ def migrate(root: Path) -> MigrateResult:
     unstampable_written, unstampable_deleted = _move_unstampable_research_files(root)
     files_written = [*files_written, *unstampable_written]
     files_deleted = [*files_deleted, *unstampable_deleted]
+    # `_merge_phase1b_register` deletes `docs/audit/phases/1b/register.md` by editing
+    # `docs/audit/register.md` in place, well before this point -- neither a `_Draft` nor
+    # one of the write helpers above, so nothing else records that deletion. Recorded
+    # here, once, from the path the merge itself returned -- never re-derived by checking
+    # whether the path still exists, which is one call already made and answered.
+    if phase1b_register_deleted is not None:
+        files_deleted = [*files_deleted, phase1b_register_deleted]
 
     if roadmap_drafts:
         _restructure_roadmap(root, roadmap_drafts, phase_titles, roadmap_occurrences)
@@ -5132,6 +5169,14 @@ def migrate(root: Path) -> MigrateResult:
                 "new_path": new_path,
             }
         )
+        # A **path** citation (a markdown link's target, or its own repo-relative text)
+        # is a different thing from an **id** citation, and the `FD` id-token exclusion
+        # above does not apply to it: a path is unique per file, so unlike a bare `F<n>`
+        # id it carries none of the cross-era ambiguity that exclusion exists to avoid.
+        # Every relocated document -- essays included -- gets its path rewritten in
+        # citing prose, `register_row`'s own id-less move included.
+        if old_path and new_path and old_path != new_path:
+            token_map.update(_path_rewrite_tokens(old_path, new_path))
     # `register_moved_to` can be set with *no* `register_row` draft in `drafts` at all --
     # every row the file had may have had an essay and so been excluded from the numbering
     # list (`_discover_findings`'s `document` drafts claim the number instead). The loop
@@ -5151,16 +5196,39 @@ def migrate(root: Path) -> MigrateResult:
     # neither claims a number (§1.2: Reference has none; the CSV is deliberately exempt) --
     # but NT-0019 §4 step 1's "`REDIRECTS.csv` keeps every old id and path" still applies
     # to the *path* half even where there is no id half, the same reading the register's
-    # own unconditional row above already gives its id-less move.
+    # own unconditional row above already gives its id-less move. Each also gets its path
+    # added to `token_map`, the same treatment every `document` draft above already gets
+    # (`_path_rewrite_tokens`) -- a citing document does not know or care that these four
+    # files carry no id; a stale link to any of them is exactly as broken as one to a
+    # numbered document, and the auditor's finding (found on `docs/audit/phases/1b/
+    # register.md`, below) is the same mechanism gap for every id-less move, not only
+    # that one.
     for move in reference_moves:
         redirect_rows.append(
             {"old_id": "", "new_id": "", "old_path": move.old_rel, "new_path": move.new_rel}
         )
+        token_map.update(_path_rewrite_tokens(move.old_rel, move.new_rel))
     for old_rel, new_rel in _RESEARCH_UNSTAMPABLE_MOVE.items():
         if (root / new_rel).is_file():
             redirect_rows.append(
                 {"old_id": "", "new_id": "", "old_path": old_rel, "new_path": new_rel}
             )
+            token_map.update(_path_rewrite_tokens(old_rel, new_rel))
+    # `_merge_phase1b_register`'s own deletion: no `_Draft`, no id, and (unlike
+    # `register_moved_to` above) the file it deletes is not the one any draft's `was`
+    # names -- it edits `docs/audit/register.md` in place and deletes a *different* file.
+    # Recorded here for the identical reason the reference moves are: a citation to it
+    # (`docs/roadmap.md`'s own link, the auditor's find) is exactly as stale as any other
+    # unrewritten move, and REDIRECTS.csv owes it a row regardless of carrying no id.
+    if phase1b_register_deleted is not None:
+        phase1b_new_path = register_moved_to or "docs/findings/register.md"
+        redirect_rows.append(
+            {
+                "old_id": "", "new_id": "",
+                "old_path": phase1b_register_deleted, "new_path": phase1b_new_path,
+            }
+        )
+        token_map.update(_path_rewrite_tokens(phase1b_register_deleted, phase1b_new_path))
 
     rewritten = _rewrite_citations(root, token_map)
 
