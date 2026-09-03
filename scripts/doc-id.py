@@ -1998,25 +1998,22 @@ def _discover_plain_plans(root: Path) -> list[_Draft]:
             continue  # a multi-ruling file — the other discovery function's
         created_str, slug = m.group(1), m.group(2)
         created = date.fromisoformat(created_str)
-        kind = _plan_kind_for_slug(slug)
+        kind: str | None = _plan_kind_for_slug(slug)
         title = _plan_title(text) or slug
-        rel = path.relative_to(root).as_posix()
-        if _is_maintainer_decision_plan(title, text):  # Ruling 98 §2.1
-            drafts.append(
-                _Draft(
-                    materialize="document", prefix="RL", kind=None, title=title,
-                    status="active", created=created, owner="maintainer",
-                    tie_break=(rel, 0), old_token=None, was=rel,
-                    body=text.rstrip("\n") + "\n",
-                )
-            )
-            continue
+        prefix, owner = "PL", _PLAN_KIND_OWNER[kind]
+        # Ruling 98 §2.1, ahead of the suffix fallback and deliberately *not* a second
+        # `_Draft` construction: the `was:`/body carriers below are the anchors two
+        # mutation proofs edit (`_WAS_DROPPED`/`_BODY_DROPPED` in
+        # `tests/test_doc_id_migrate.py`, which assert each literal occurs exactly once),
+        # and a copied constructor would leave one writer unmutated and green.
+        if _is_maintainer_decision_plan(title, text):
+            prefix, kind, owner = "RL", None, "maintainer"
         drafts.append(
             _Draft(
-                materialize="document", prefix="PL", kind=kind, title=title,
-                status="active", created=created, owner=_PLAN_KIND_OWNER[kind],
-                tie_break=(rel, 0),
-                old_token=None, was=rel,
+                materialize="document", prefix=prefix, kind=kind, title=title,
+                status="active", created=created, owner=owner,
+                tie_break=(path.relative_to(root).as_posix(), 0),
+                old_token=None, was=path.relative_to(root).as_posix(),
                 body=text.rstrip("\n") + "\n",
             )
         )
