@@ -45,6 +45,7 @@ than argued about. The tension is reported, not resolved, by this module.
 from __future__ import annotations
 
 import csv
+import difflib
 import json
 import os
 import re
@@ -52,7 +53,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -1237,82 +1238,118 @@ MANGLED_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[0-9]+/[0-9]+")
 #: denominator, so "391 mangled" is read against "423 at risk" rather than against nothing.
 COMPOUND_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+/[0-9]+")
 
-#: Tokens a hunk is *allowed* to change: every §7(d) alternative (the pre-migration forms)
-#: and `_docid.ID_RE` (the post-migration form). A changed line whose residue after masking
-#: all of these is unchanged is a citation-token rewrite; anything else is what §7(g) asks
-#: for.
-_TOKEN_MASK_RE: Final = re.compile(
-    # The third alternative is the `YYYY-MM-DD-` prefix every migrated plan filename
-    # drops, which is a rename the migration is entitled to make.
-    "|".join([_docid.ID_RE.pattern, D_FULL_PATTERN, r"\d{4}-\d{2}-\d{2}"])
+#: The line-level mask filter that stood in for (g) before Ruling 68 defined the six
+#: classes has been **removed**, not left beside its replacement: `_TOKEN_MASK_RE`,
+#: `_HEADER_KEYS`, `_is_header_line`, `_mask` and `_diff_hunks` implemented exactly one of
+#: the six (class 2, a reference token substituted from the step-6 allow-list) and scored
+#: every other permitted class `unexplained`. Keeping a superseded predicate next to the
+#: one that supersedes it is NT-0003's duplicated-status defect in code form — the copy is
+#: what a later reader calls. Ruling 68 §3: "one definition of 'reference tokens only',
+#: not two ... implementing it twice is how the two drift apart."
+
+
+#: Ruling 68's classes that are permitted by **path**, with no content predicate — the
+#: two the ruling names (the `roadmap.md` restructure, a generated artifact regenerated in
+#: full) plus the unratified seventh (`doc-id._MIGRATION_DIFF_FAMILY_READMES`, flagged as
+#: "the seventh kind of hunk a clean run now produces" and not yet ruled on).
+#:
+#: The keys are spelled here rather than imported from `doc-id.py` because `doc-id.py`
+#: imports *this* module: taking them by symbol would be a circular import. They are
+#: asserted against `doc-id._RULING_68_CLASSES` at run time by
+#: `tests/test_docverify_row_g.py`, so a key renamed on one side fails loudly rather than
+#: silently emptying this list (`CLAUDE.md` §13 — a pasted constant is refused because the
+#: copy is what goes stale; where a copy is unavoidable, the check that it still matches
+#: is what makes it safe).
+_RULING_68_PATH_CLASS_KEYS: Final = (
+    ("5-roadmap-restructure", "the `roadmap.md` restructure of §4 step 3"),
+    ("6-generated-artifact", "a generated artifact regenerated in full (§4 step 7)"),
+    ("7-family-readme-UNRATIFIED", "a regenerated per-family README — not ruled on"),
 )
 
-#: A front-matter header line: the `---` fences and any line whose key is one NT-0019 §1.5
-#: declares. Taken from `_docid._KNOWN_KEYS` by symbol, never re-listed.
-_HEADER_KEYS: Final = frozenset(_docid._KNOWN_KEYS)
 
+def _path_excluded_changed_lines(
+    snap: Snapshot, classification: Any
+) -> tuple[int, int]:
+    """(changed lines, files) inside the classes that are permitted by *path* alone.
 
-def _is_header_line(line: str) -> bool:
-    if line.strip() == "---":
-        return True
-    m = _KEY_VALUE_RE.match(line)
-    return m is not None and m.group(1) in _HEADER_KEYS
+    Ruling 68's classes 5 and 6 — the `roadmap.md` restructure and a generated artifact
+    regenerated in full — permit the artifact to be rewritten wholesale, so there is no
+    content predicate left to apply to them; the unratified class 7 (per-family READMEs)
+    is the same shape. That is the filter's blind spot, and this is its size.
 
-
-def _mask(line: str) -> str:
-    return _TOKEN_MASK_RE.sub("<TOK>", line)
-
-
-def _diff_hunks(tree: Path) -> Iterator[tuple[list[str], list[str]]]:
-    """(removed lines, added lines) per hunk of the migration diff, rename-aware."""
-    proc = _git(
-        tree, "-c", "core.quotepath=false", "diff", "-M", "-C", "-U0",
-        "--no-color", "--text", "HEAD",
-    )
-    removed: list[str] = []
-    added: list[str] = []
-    started = False
-    for line in proc.stdout.splitlines():
-        if line.startswith("@@"):
-            if started:
-                yield removed, added
-            removed, added, started = [], [], True
-        elif not started:
-            # Everything before the first `@@` is `diff --git`/`index`/`---`/`+++`
-            # preamble. Skipping it by position rather than by prefix matters: a *removed*
-            # line whose own text begins `---` (a markdown rule, a front-matter fence) is
-            # indistinguishable from the preamble's by prefix alone.
-            continue
-        elif line.startswith("-"):
-            removed.append(line[1:])
-        elif line.startswith("+"):
-            added.append(line[1:])
-        elif line.startswith("diff --git"):
-            if started:
-                yield removed, added
-            removed, added, started = [], [], False
-    if started:
-        yield removed, added
-
-
-def row_g(snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
+    Measured rather than asserted, and reported rather than folded into the pass: a class
+    that permits anything explains every line inside it, so counting those lines is the
+    only way a reader can tell whether (g)'s green rests on six predicates or on three
+    predicates and three path lists. It is deliberately **not** a second content check —
+    Ruling 68 §3 forbids that — it is the denominator of the exclusion.
+    """
+    excluded: set[str] = set()
+    for key, _text in _RULING_68_PATH_CLASS_KEYS:
+        excluded.update(classification.per_class.get(key, ()))
     changed = 0
-    unexplained = 0
-    for removed, added in _diff_hunks(snap.migrated):
-        body_removed = [ln for ln in removed if not _is_header_line(ln)]
-        body_added = [ln for ln in added if not _is_header_line(ln)]
-        changed += len(body_removed) + len(body_added)
-        if sorted(_mask(ln) for ln in body_removed) == sorted(_mask(ln) for ln in body_added):
+    files = 0
+    for rel in sorted(excluded):
+        old = snap.control / rel
+        new = snap.migrated / rel
+        old_lines = old.read_text(encoding="utf-8", errors="replace").splitlines() \
+            if old.is_file() else []
+        new_lines = new.read_text(encoding="utf-8", errors="replace").splitlines() \
+            if new.is_file() else []
+        if old_lines == new_lines:
             continue
-        unexplained += len(body_removed) + len(body_added)
+        matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines, autojunk=False)
+        delta = sum(
+            (i2 - i1) + (j2 - j1)
+            for tag, i1, i2, j1, j2 in matcher.get_opcodes()
+            if tag != "equal"
+        )
+        if delta:
+            changed += delta
+            files += 1
+    return changed, files
+
+
+def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
+    """§7 (g), as Ruling 68 defines it: the migration diff filtered to hunks in the
+    **six-class closed enumeration**, empty.
+
+    Three sub-predicates, each printed:
+
+    - **g1** — the mangled-citation scan Ruling 102 §2 row 1 names as (g)'s broken-input
+      proof, read against its own at-risk denominator and an un-migrated control.
+    - **g2** — Ruling 68's filter itself, `doc-id.py`'s `classify_migration_diff`, which
+      assigns every file the migration touched to one named class or to
+      `CLASSIFIED_BY_NONE`. Ruling 68 §2: *"A hunk the filter cannot classify fails; it is
+      never passed through."* The residue bucket therefore sets the verdict, and its
+      members are named in the note.
+    - **g3** — the size of g2's own blind spot: the lines changed inside classes 5, 6 and
+      the unratified 7, which are permitted by path with no content predicate. Disclosed,
+      not fatal, because the ruling does permit those artifacts to be regenerated in full;
+      printed because a green (g) that rests partly on "anything goes in these paths" is
+      a different fact from a green (g) that rests on six content predicates, and §13's
+      "a reference carries its scope and its measurement" makes the difference the
+      reader's to see rather than the writer's to summarise.
+
+    The filter is **not** reimplemented here. `classify_migration_diff` is the one
+    definition, and it in turn calls `audit-docs.py`'s own DP-7 predicate — Ruling 68 §3,
+    *"implementing it twice is how the two drift apart"*.
+    """
+    classification = docid.classify_migration_diff(snap.control, snap.migrated)
+    residue = classification.per_class.get(docid.CLASSIFIED_BY_NONE, ())
 
     m_mangled, m_mangled_files = mig.scan(MANGLED_CITATION_RE, skip_was=False)
     c_mangled, _ = ctl.scan(MANGLED_CITATION_RE, skip_was=False)
     at_risk, at_risk_files = ctl.scan(COMPOUND_CITATION_RE, skip_was=False)
+    excluded_lines, excluded_files = _path_excluded_changed_lines(snap, classification)
 
-    if changed == 0:
+    per_class = ", ".join(
+        f"{key}={len(classification.per_class.get(key, ()))}"
+        for key, _text in docid._RULING_68_CLASSES
+    )
+
+    if classification.population == 0:
         verdict = FAIL
-        note = ("empty population — the migration changed no line, so the filter "
+        note = ("empty population — the migration classified no file, so the filter "
                 "proves nothing")
     elif at_risk == 0:
         verdict, note = (
@@ -1320,10 +1357,17 @@ def row_g(snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "the compound-citation population at risk is 0, so the mangled-citation "
             "sub-predicate cannot distinguish a clean migration from a dead pattern",
         )
-    elif m_mangled or unexplained:
-        verdict, note = FAIL, ""
+    elif m_mangled or residue:
+        named = "; ".join(classification.violations[:5])
+        more = (
+            f" (+{len(classification.violations) - 5} more)"
+            if len(classification.violations) > 5
+            else ""
+        )
+        verdict, note = FAIL, (named + more if named else "")
     else:
         verdict, note = PASS, ""
+
     return Row(
         key="g",
         title="migration diff filtered to hunks that are neither header nor "
@@ -1333,22 +1377,33 @@ def row_g(snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "g1 (Ruling 102 §2 row 1's named broken-input proof): "
             f"{MANGLED_CITATION_RE.pattern!r} — a citation with a *numeric* module segment "
             "and a trailing `/n` is a rewrite that matched inside a longer identifier. "
-            "g2: `git -C <migrated> diff -M -C -U0 HEAD`, per hunk, dropping front-matter "
-            "header lines (`_docverify._is_header_line`) and hunks whose removed and added "
-            "lines are equal after masking every id token "
-            "(`_docverify._TOKEN_MASK_RE` = `_docid.ID_RE` | `_docverify.D_FULL_PATTERN` | "
-            "`\\d{4}-\\d{2}-\\d{2}`)"
+            "g2 (Ruling 68 §2's closed enumeration, by symbol, never restated here): "
+            "`doc-id.classify_migration_diff(control, migrated)`, bucketing every touched "
+            "file into `doc-id._RULING_68_CLASSES` or `doc-id.CLASSIFIED_BY_NONE`; classes "
+            "1-3 share `audit-docs.frozen_file_matches_after_migration_stamp` (check 34's "
+            "DP-7 predicate, Ruling 68 §3 — not a second one), class 4 requires the "
+            "concatenation of a split's outputs to reproduce the source's non-blank body "
+            "lines *in order*, classes 5-7 are permitted by path. "
+            "g3: lines changed inside those path-permitted classes "
+            "(`_docverify._RULING_68_PATH_CLASS_KEYS`), which no content predicate reads"
         ),
         denominator=(
-            f"{changed} non-header changed line(s) in the migration diff; "
+            f"{classification.population} file(s) classified "
+            f"({classification.unchanged} unchanged, not a hunk); "
             f"{at_risk} compound citation(s) at risk in {at_risk_files} file(s)"
         ),
-        migrated=f"g1 mangled = {m_mangled} in {m_mangled_files} file(s); "
-                 f"g2 unexplained = {unexplained}",
+        migrated=(
+            f"g1 mangled = {m_mangled} in {m_mangled_files} file(s); "
+            f"g2 {per_class}, {docid.CLASSIFIED_BY_NONE}={len(residue)}; "
+            f"g3 {excluded_lines} line(s) changed in {excluded_files} "
+            "path-permitted file(s), content-unchecked"
+        ),
         control=f"g1 mangled = {c_mangled} (un-migrated)",
         verdict=verdict,
         note=note,
     )
+
+
 
 
 # ---------------------------------------------------------------------------------------
@@ -1763,7 +1818,7 @@ def compute_rows(docid: Any, snap: Snapshot) -> list[Row]:
     rows.extend(rows_d(mig, ctl))
     rows.append(row_e(mig, ctl, snap))
     rows.append(row_f(mig, ctl, baseline, snap))
-    rows.append(row_g(snap, mig, ctl))
+    rows.append(row_g(docid, snap, mig, ctl))
     rows.extend(rows_h(snap))
     rows.append(row_i(snap))
     return rows
