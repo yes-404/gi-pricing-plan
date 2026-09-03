@@ -293,6 +293,95 @@ row rather than a new check.
 
 **It applies from this window. The backfill is W37-11's**, not a precondition of the run.
 
+## 8. Halt overridden, window extended — dated append, 2026-09-03
+
+**Appended 2026-09-03 by the lead, on the maintainer's instruction: *"Halt overridden and the
+window extended — file both as a dated append to #674."*** Appended rather than written into
+§7 for the reason §6 and §7 both give: a record rewritten in place destroys the evidence of
+what was believed when it was signed.
+
+### 8.1 The override, and the maintainer's grounds
+
+§7's window halted on the delegation's own second-failure rule. **The maintainer has
+overridden that halt**, and the grounds are not that the rule was wrong — §7.1 records the
+maintainer's assessment that it *"stays"* — but that **the second failure was not a second
+failure of the kind the rule counts:**
+
+> *"The second fail was a fix that could not complete under Ruling 100 §2.4 as drafted; the
+> index-entry rule replaces §2.4, so the fail count resets to one fix, once."*
+
+The fix could not complete because §2.4 left the undetermined case — a whole-file citation
+into a split source that determines no target, bucket (iv) — with nowhere to go. **A rule
+that admits no completing action is not a fix that failed; it is a rule that could not be
+satisfied.** Ruling 101, filed as §2.5 of the Ruling 100 record, replaces §2.4 by routing
+that case to the split's index entry, and **bucket (iv) is 0 by construction** thereafter.
+
+**So the fail count is one fix, once.** §7's rule is unamended and applies to the next
+failure from a clean count.
+
+### 8.2 The extension, and a discrepancy this append does not paper over
+
+**The window's expiry moves to `2026-09-03T23:00:00Z`** — the maintainer's words: *"the hour
+lost to the outage, not more."* The outage was an API-capacity event that killed roughly
+thirteen agents, including every remaining agent of the §7 window, with no work committed
+from any of them.
+
+**The maintainer's instruction states the move as *"from 21:52Z to 23:00Z."* §7.2 of this
+record, as merged at `6195ca0`, states the expiry as `2026-09-03T20:30:39Z`** — eight hours
+from PR #673's merge at `12:30:39Z` — and §7's own final violation clause names
+`20:30:39Z` and a `17:30:39Z` go/no-go. **These two figures disagree, and this append records
+that rather than silently adopting either.** The prior figure is not re-derived here and is
+not corrected in place; **`23:00:00Z` governs from this append forward**, on the maintainer's
+authority, which is the only authority that sets the window at all.
+
+**Consequently:**
+
+| | |
+|---|---|
+| Expiry — nothing may **finish** after | **`2026-09-03T23:00:00Z`** |
+| Go/no-go — the run may not **start** after | **`2026-09-03T20:00:00Z`** |
+
+The go/no-go follows §2's *"quiet with three hours left"* rule applied to the new expiry.
+**They are two gates on two different acts**, as §7.2 says: one bounds when the run may
+start, the other when anything may finish. **§7's violation clause naming `17:30:39Z` and
+`20:30:39Z` is superseded by this table** and by nothing else in §7.
+
+### 8.3 The extension's own fail rule
+
+> *"One fail on the index fix → fix once; a second → halt protocol and commit the handover
+> before anything else. An outage during a halt with no handover is the state you're in now;
+> don't repeat it."*
+
+**This tightens §4's ordering rather than replacing it.** §4 already requires the handover
+written and committed; the extension makes the commit **the first act of the halt, not its
+last** — before merging or closing green PRs, before stashing, before any tidying.
+
+**The grounds are the state this window was found in.** §7's window halted, and the outage
+struck before its handover was committed. The record survived only because it had already
+been merged as PR #673 in an earlier act; had the halt been one step earlier, the window's
+whole evidential record would have died with the agents that held it. **Durability is a
+three-way split** — uncommitted work dies, detached-HEAD work dies, branch-committed work
+survives — and a halt protocol whose handover is written but uncommitted is the first of
+those three wearing the appearance of the third.
+
+### 8.4 Five agents, already ruled
+
+**Five agents, not nine**, is the maintainer's change from §7's terms, ruled before this
+append and restated here only because it is a term of the window: *"3.2× oversubscribed is
+why fixes were slow enough to trip the clock."* The composition is the maintainer's:
+**one executor on the resolver, one decision-maker, one auditor, one planner, and no
+reporter.**
+
+**§1–§5 are renewed unchanged and §6 and §7 stand as filed.** Neither is restated here — a
+restatement is how one of two copies goes stale
+([`NT-0003`](../notes/0003-duplicated-status-goes-stale.md)). **Read them above.**
+
+**The three amendments of §7.3–§7.5 are in force unchanged**: gate condition 7 and its
+un-rewritten instrument, relayed verification not counting toward a gate, and a ruling naming
+its implementation.
+
+**Nothing in §8 is in force until this append is merged**, on the header's own standard.
+
 ## Acceptance Standard
 
 **This record is accepted when it is merged**, because the maintainer conditioned the whole
@@ -335,3 +424,14 @@ from the auditor's independent re-run.*
 
 *Violation (§7): the run started after `2026-09-03T17:30:39Z`, or anything finished after
 `2026-09-03T20:30:39Z`.*
+
+*Violation (§8): the run started after `2026-09-03T20:00:00Z`, or anything finished after
+`2026-09-03T23:00:00Z` — §7's `17:30:39Z`/`20:30:39Z` clause is superseded by §8.2's table.*
+
+*Violation (§8): a second failure on the index fix, and any act of the halt protocol
+performed before the handover is committed to a branch.*
+
+*Violation (§8): the fail count treated as still standing at two, or §7's second-failure rule
+treated as amended rather than reset.*
+
+*Violation (§8): more than five agents live at once, or a reporter spawned.*
