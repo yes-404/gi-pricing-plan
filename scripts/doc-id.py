@@ -6359,6 +6359,21 @@ def classify_migration_diff(
             )
             continue
 
+        # `REDIRECTS.csv` says this file moved, so the old path must be gone. If
+        # something still occupies it, that content is in none of the six classes: the
+        # move is already accounted for by its target, and whatever is left behind has no
+        # provenance at all. Found by writing class 3's own broken-input proof — before
+        # this check, a file moved away and then re-created at its old path with wholly
+        # different content produced *zero* violations, because the second loop's
+        # "already handled by the old_files loop above" shortcut assumed `new_rel in
+        # old_files` meant "untouched, same path", which is not true of a move source.
+        if old_rel in new_files:
+            _fail(
+                old_rel,
+                f"{old_rel}: REDIRECTS.csv moves this file to {targets}, but the old "
+                "path still exists in the migrated tree",
+            )
+
         if len(targets) == 1:
             new_rel = targets[0]
             new_text = new_files.get(new_rel)

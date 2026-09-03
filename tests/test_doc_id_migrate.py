@@ -309,9 +309,16 @@ def test_acceptance_item_g_frozen_branch_shares_check_34s_predicate(
     # functions' bodies rather than asserted here as an untestable claim about source text.
     import inspect
 
-    source = inspect.getsource(doc_id_cli.migration_diff_violations)
+    source = inspect.getsource(doc_id_cli.classify_migration_diff)
     assert "_load_audit_docs()" in source
-    assert "frozen_file_matches_after_migration_stamp" in source
+    assert "frozen_file_matches_after_migration_stamp" in inspect.getsource(
+        doc_id_cli._classify_content
+    )
+    # And the flat-list view is that same walk, not a second one — otherwise the identity
+    # proven above would hold for a function nobody's violations came from.
+    assert "classify_migration_diff" in inspect.getsource(
+        doc_id_cli.migration_diff_violations
+    )
 
 
 # ---------------------------------------------------------------------------------------
@@ -4908,3 +4915,281 @@ def test_repointing_follows_both_a_moved_target_and_a_moved_citer(
     assert "[0001](RFC-00007-example.md)" in moved
     assert "[`../adrs/`](../adrs/)" in moved
     assert "[see](../roadmap.md)" in moved  # citer moved sideways: same depth, same path
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 68's six classes, one broken-input proof each.
+#
+# Ruling 68 §4 names three acceptance items and they are proven above. Those three are not
+# six: they establish that *some* corruption is caught, not that each class is a predicate
+# rather than a pass-through. A class with no failing case is not a check
+# (`CLAUDE.md` §13 — "a check that has never printed a failure has not been tested"), so
+# each class below gets input that **looks like** that class and is not.
+#
+# Classes 5, 6 and the unratified 7 are permitted by *path*: the ruling lets those
+# artifacts be regenerated in full, so no content predicate survives and no broken input
+# can fail them. That is characterised here rather than left unsaid — the test asserts the
+# pass-through so the blind spot is visible in the suite, and `row_g`'s g3 figure reports
+# its size at run time.
+# ---------------------------------------------------------------------------------------
+
+
+def _migrated_pair(tmp_path: pathlib.Path, doc_id_cli: types.ModuleType) -> tuple[
+    pathlib.Path, pathlib.Path
+]:
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+    return old_root, new_root
+
+
+#: The class-1 population in the fixture corpus: the two families whose legacy prose or
+#: bullet header `migrate` removes and replaces with a front-matter block. Re-derived in
+#: the tests from `_discover_notes`/`_discover_adrs` rather than pasted, so a fixture
+#: change moves the tests with it.
+_NOTE_TARGET = "docs/rfcs/RFC-00001-example-finding-needs-a-follow-up-fix.md"
+_ADR_TARGET = "docs/adrs/ADR-00002-example-fixtures-stay-dependency-free.md"
+
+
+def test_class_1_fails_when_the_block_is_added_but_the_legacy_header_stays(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 68 class 1 is a **conjunction**: "a front-matter block added, *together
+    with* the legacy prose or bullet header it replaces being removed". This is the first
+    of its two failing directions — the block is there, the legacy header was not removed.
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    target = new_root / _NOTE_TARGET
+    text = target.read_text(encoding="utf-8")
+    body_start = text.index("---", 3) + 4
+    # Put a legacy-header-shaped line back into the body, below the new front matter.
+    legacy = "\n**Status:** open | **Raised:** 2026-08-13\n"
+    resurrected = text[:body_start] + legacy + text[body_start:]
+    target.write_text(resurrected, encoding="utf-8")
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert any("0001-example-note" in v for v in violations), violations
+
+
+def test_class_1_fails_when_the_legacy_header_goes_but_no_block_is_added(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The second direction, and the one the predicate used to miss.
+
+    Stripping a leading `---` block is a **no-op** on a file that has none, so a file whose
+    legacy header was removed and which was then never stamped strips to exactly the body
+    the source's header-removal produced, and the body-equality test passes it. Only half
+    of class 1's conjunction was ever being checked; `_has_front_matter` is the other half.
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    target = new_root / _ADR_TARGET
+    text = target.read_text(encoding="utf-8")
+    assert text.startswith("---\n")
+    target.write_text(doc_id_cli._strip_front_matter(text), encoding="utf-8")
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert any("0001-example-decision" in v for v in violations), violations
+    assert any("class 1 permits the pair" in v for v in violations), violations
+
+
+def test_class_2_fails_on_a_token_that_is_not_on_the_step_6_allow_list(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 68 class 2 permits "a reference token substituted inside a line, **from the
+    step-6 allow-list**". A substitution the allow-list does not name is not class 2 — it
+    is an edit. `REDIRECTS.csv` is that allow-list, and inverting it cannot restore a token
+    it never mapped.
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    target = new_root / "docs" / "specs" / "00-overview.md"
+    text = target.read_text(encoding="utf-8")
+    # A *post-migration* id, mutated to one `REDIRECTS.csv` never mapped: inverting the
+    # allow-list restores every token it names and leaves this one standing.
+    mutated = text.replace("FR-13", "FR-9999", 1)
+    assert mutated != text, "fixture no longer carries the token this proof substitutes"
+    target.write_text(mutated, encoding="utf-8")
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert any("00-overview" in v for v in violations), violations
+
+
+def test_class_3_fails_when_a_move_also_changes_content(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 68 class 3 is "a file moved or renamed ... **with no content change**". A
+    move is not a licence to edit in transit, and the move is the branch most likely to be
+    read as one, because the path difference is by itself expected and explained.
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    target = next(iter((new_root / "docs" / "workflows").glob("*example-journey*.md")))
+    text = target.read_text(encoding="utf-8")
+    # A *body* word. "example" would have matched inside the front matter first, which
+    # the content predicate strips before comparing — a mutation there proves nothing.
+    mutated = text.replace("no real journey is described", "no real MUTATION is here", 1)
+    assert mutated != text
+    target.write_text(mutated, encoding="utf-8")
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert violations != [], "a move that also edited content was passed through"
+    assert any("journey" in v for v in violations), violations
+
+
+def test_class_3_fails_when_the_moved_away_old_path_still_exists(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The second failing direction for class 3, and a defect this proof found.
+
+    `REDIRECTS.csv` says the file moved, so the old path must be gone. Before the check
+    this test pins, a file moved away and then re-created at its old path with wholly
+    different content produced **zero** violations: the move was accounted for by its
+    target, and the second loop's "already handled by the old_files loop above" shortcut
+    skipped the old path because `new_rel in old_files` was read as "untouched, same
+    path" — true of a file that never moved, false of a move source. Content in none of
+    the six classes was passed through silently, which is exactly what Ruling 68 §2
+    forbids: "a hunk the filter cannot classify fails; it is never passed through".
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    resurrected = new_root / "docs" / "workflows" / "wf-01-example-journey.md"
+    assert not resurrected.exists(), "fixture no longer moves this file"
+    resurrected.write_text("CONTENT WITH NO PROVENANCE AT ALL\n", encoding="utf-8")
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert any("the old path still exists" in v for v in violations), violations
+
+
+def test_class_4_fails_when_the_split_outputs_are_out_of_order(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 68 class 4 is "a split, where the concatenation of the outputs reproduces the
+    input's body lines **in order**". Order is the load-bearing word and the reason this is
+    the class most easily implemented too loosely: a multiset or set comparison accepts a
+    split that reproduces every line of the source in the wrong sequence, which is
+    corruption wearing a split's shape.
+
+    The broken input is exactly that — the two outputs' bodies are exchanged, so every
+    source line still appears exactly once across the targets and only the sequence is
+    wrong. A filter that compared contents without order would call this clean.
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    a = new_root / "docs" / "rulings" / "RL-00003-example-decision-a.md"
+    b = new_root / "docs" / "rulings" / "RL-00004-example-decision-b.md"
+    assert a.is_file(), "split fixture moved; re-derive the targets"
+    assert b.is_file(), "split fixture moved; re-derive the targets"
+    text_a, text_b = a.read_text(encoding="utf-8"), b.read_text(encoding="utf-8")
+    body_a = doc_id_cli._strip_front_matter(text_a)
+    body_b = doc_id_cli._strip_front_matter(text_b)
+    assert body_a.strip()
+    assert body_b.strip()
+    assert body_a != body_b
+
+    def _reheaded(original: str, body: str) -> str:
+        head = original[: original.index("---", 3) + 4]
+        return head + body
+
+    # Bodies exchanged: the concatenation still contains every source line exactly once.
+    a.write_text(_reheaded(text_a, body_b), encoding="utf-8")
+    b.write_text(_reheaded(text_b, body_a), encoding="utf-8")
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert any("do not reproduce this file's body lines in order" in v for v in violations), (
+        violations
+    )
+    assert any("2026-08-12-example-rulings" in v for v in violations), violations
+
+
+def test_class_4_fails_when_a_split_target_is_missing(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The other way class 4 breaks: `REDIRECTS.csv` promises two outputs and one of them
+    was never written. The surviving half still concatenates to a prefix of the source, so
+    a check that only asked "is what I found in order?" would pass it.
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    (new_root / "docs" / "closures" / "CR-00011-example-phase-closes.md").unlink()
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert any("CR-00011" in v for v in violations), violations
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "docs/roadmap.md",            # class 5
+        "docs/INDEX.md",              # class 6
+        "docs/adrs/README.md",        # class 7, unratified
+    ],
+)
+def test_path_permitted_classes_are_pass_through_and_this_is_the_known_gap(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, rel: str
+) -> None:
+    """Classes 5, 6 and the unratified 7 have **no failing case**, and this test exists to
+    say so out loud rather than to leave three classes with no proof and let a reader
+    assume they have one.
+
+    Ruling 68 permits these artifacts to be "regenerated in full", which is a permission,
+    not a predicate — and `CLAUDE.md` §13's memory note is exact about it: a permission has
+    no failing case, so that half of a requirement is untestable until something narrower
+    is ruled. Arbitrary content in these paths is therefore accepted, and `row_g`'s g3
+    figure reports how many lines that permission is currently covering.
+
+    Two gaps sit inside this pass-through and are the maintainer's, not this test's:
+      - class 6's bare "INDEX.md" does not say whether it means the top-level file or every
+        file of that name; and
+      - the per-family READMEs (class 7) are in none of Ruling 68's six at all.
+    Neither is closed here by choosing a reading.
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    target = new_root / rel
+    # Asserted, never skipped: a characterisation test that quietly skips is a class with
+    # neither a proof nor a record that it has none.
+    assert target.is_file(), f"{rel} is not produced by this fixture corpus"
+    target.write_text("ARBITRARY CONTENT, ACCEPTED BY A PATH CLASS\n", encoding="utf-8")
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert not any(rel.rsplit("/", 1)[-1] in v for v in violations), (
+        f"{rel} now has a content predicate — this test is the record that it did not, "
+        f"and should be replaced by a real broken-input proof: {violations}"
+    )
+
+
+def test_the_per_class_breakdown_sums_to_the_population_it_is_a_breakdown_of(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A breakdown computed apart from its total drifts from it silently. Here they are
+    two views of one walk, and this pins that: every classified file is in exactly one
+    bucket, the residue bucket is exactly the violation list, and no class is missing from
+    the mapping (a zero must be a printed zero, not an absent key).
+    """
+    old_root, new_root = _migrated_pair(tmp_path, doc_id_cli)
+    c = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert set(c.per_class) == {k for k, _ in doc_id_cli._RULING_68_CLASSES} | {
+        doc_id_cli.CLASSIFIED_BY_NONE
+    }
+    assert c.population == sum(len(v) for v in c.per_class.values())
+    assert len(c.per_class[doc_id_cli.CLASSIFIED_BY_NONE]) == len(c.violations)
+
+    everything = [rel for v in c.per_class.values() for rel in v]
+    assert len(everything) == len(set(everything)), "a file landed in two classes"
+    # Not vacuously true: the clean fixture run must actually populate the enumeration.
+    assert c.population > 0
+    assert c.violations == ()
+
+
+def test_docverify_path_class_keys_agree_with_doc_ids_enumeration(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`_docverify._RULING_68_PATH_CLASS_KEYS` spells its keys rather than importing them,
+    because `doc-id.py` imports `_docverify` and taking them by symbol would be a circular
+    import. A spelled copy is only safe while something checks it still matches — otherwise
+    a renamed key silently empties g3's population and the row reports 0 content-unchecked
+    lines because it looked in the wrong buckets, not because there are none.
+    """
+    import _docverify
+
+    known = {k for k, _ in doc_id_cli._RULING_68_CLASSES}
+    spelled = {k for k, _ in _docverify._RULING_68_PATH_CLASS_KEYS}
+    assert spelled <= known, spelled - known
+    assert spelled == {
+        "5-roadmap-restructure", "6-generated-artifact", "7-family-readme-UNRATIFIED"
+    }
