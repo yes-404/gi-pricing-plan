@@ -1314,7 +1314,7 @@ def _id_scope_documents(
     return sorted(f for f in set(files) if not f.is_relative_to(_TEMPLATES_DIR))
 
 
-def _safe_header(path: pathlib.Path) -> "object | None":
+def _safe_header(path: pathlib.Path) -> object | None:
     """`_docid.parse_header`, returning `None` instead of raising.
 
     For the **warn-only** check 38 only: an unparseable header is check 30's failure to
