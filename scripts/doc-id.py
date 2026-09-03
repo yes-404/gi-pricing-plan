@@ -1903,11 +1903,87 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
         )
 
 
+#: Ruling 98 §2.1 (`docs/plans/2026-09-03-w37-6-ruling-98-prose-migration.md`): a document
+#: filed under `docs/plans/` **whose entire content is a decision the maintainer made and
+#: dated**, carrying no `## Ruling N` heading, migrates as `RL-`, `owner: maintainer`, with
+#: **no `kind:` field** (`docs/_templates/RL.md:8` forbids the field on this family). The
+#: cells the ruling reads from are NT-0019 §1.13 (`docs/notes/0019-one-id-per-document.md:
+#: 238`, *"maintainer decisions and phase pre-decisions → `RL-` with `owner: maintainer`"*)
+#: and §1.6's `RL` row (`:149`, *"the maintainer may author one on scope or process"*).
+#:
+#: **Attribution is read from the document's own title, not its filename and not its
+#: prose body.** Ruling 98 §1 reconciles two sweeps and settles the population by reading
+#: each file's *own attribution*; the title is where every member of that population states
+#: it, and it is the one region of a plan-shaped document that cannot also be quoting or
+#: citing somebody else's decision. Measured over all 167 `docs/plans/2026-*.md` files at
+#: `2ae31f7` with
+#:
+#:     for f in docs/plans/*.md; do grep -m1 '^# ' "$f"; done | grep -c "maintainer's"
+#:
+#: this matches exactly eight files: Ruling 98's own seven, plus Ruling 98's own record —
+#: which carries a `## Ruling 98` heading and so never reaches this function at all. Prose-
+#: body matching was measured and rejected: `by the maintainer` in the first six lines also
+#: catches the three SDD ledgers' provenance line (*"Decision gate answered by the
+#: maintainer before execution"*), and `the maintainer's` anywhere in the preamble also
+#: catches `2026-09-02-w37-5c-slice-decision.md`, `2026-09-02-w37-rfc-readme-row-and-stamp-
+#: set.md` and `2026-08-30-nt-0012-0013-0014-adoption.md` — every one of which Ruling 98 §1
+#: rules **out** of the population, on its own stated authorship.
+#:
+#: **Limit, stated rather than hidden** (Ruling 98 §1, *"Limits carried forward, not
+#: dropped"*): a maintainer decision filed under a title that does not name the maintainer
+#: would not be caught here. That is the same limit both of the ruling's own sweeps carry,
+#: and it is why this is a predicate over content rather than a list of seven filenames
+#: (acceptance item 5) — a *new* document titled this way is routed with no code change.
+_MAINTAINER_DECISION_TITLE_RE: Final = re.compile(
+    r"the maintainer(?:'|’)s\b|reserved to the maintainer\b", re.IGNORECASE
+)
+
+#: Ruling 98 §2.2: the exclusion of `docs/plans/2026-09-03-w37-6-maintainer-decisions.md`
+#: is **a state of one tree, not a property of the file** — *"the predicate in §2.1 tests
+#: content at the tree in question, never a title and never a past reading of that
+#: content"*. That file is a planner-assembled batch of `> **Decision:**` / `> **Date:**`
+#: blocks reserved to the maintainer; while any block is still blank it is awaiting a
+#: decision rather than recording one, so it keeps the shipped `PL- kind: leaf, owner:
+#: planner` default. The moment the maintainer fills them in, the document *is* what §2.1
+#: describes and this predicate routes it to `RL-`/`maintainer` with no code change —
+#: which is the second direction of acceptance item 4, the one a frozen reading of
+#: `e56d038` would have got wrong.
+_UNFILLED_DECISION_BLOCK_RE: Final = re.compile(r"^>\s*\*\*Decision:\*\*[ \t]*$", re.MULTILINE)
+
+
+def _is_maintainer_decision_plan(title: str, text: str) -> bool:
+    """Ruling 98 §2.1's predicate, evaluated **at the tree `migrate` runs on** (the ruling
+    states this once, in §1's introduction, and repeats it in §2.2 and §3): does this
+    plan-shaped document's own content make it a decision the maintainer made and dated?
+
+    Two clauses, both required, and each one is why a specific member of Ruling 98 §1's
+    reconciliation table lands where it does:
+
+    1. **The document's title attributes the decision to the maintainer** — see
+       `_MAINTAINER_DECISION_TITLE_RE` for what that matches and what it deliberately does
+       not. This is what excludes the two handovers (Ruling 98 §1's second independent
+       route to the same answer; `_plan_kind_for_slug`'s `-handover` suffix is the first,
+       and it still fires below because this clause is false for them).
+    2. **The document is not still awaiting that decision** — no `> **Decision:**` block
+       is left blank. See `_UNFILLED_DECISION_BLOCK_RE`.
+    """
+    if not _MAINTAINER_DECISION_TITLE_RE.search(title):
+        return False
+    return not _UNFILLED_DECISION_BLOCK_RE.search(text)
+
+
 def _discover_plain_plans(root: Path) -> list[_Draft]:
     """Every remaining `YYYY-MM-DD-*.md` file directly under `docs/plans/` that is *not*
     a multi-ruling file (those are `_discover_multi_ruling_files`'s) — `kind:` from its
     filename suffix (NT-0019 §5.2). Matched on the date-prefixed legacy filename only, so
     an already-migrated `PL-<n>-*.md` (no date prefix) is invisible to a second run.
+
+    **Ruling 98 §2.1 sits ahead of that suffix fallback**, not inside it: a file whose own
+    content is the maintainer's dated decision leaves here as `RL-`, `owner: maintainer`,
+    no `kind:`. Until this branch existed, the suffix table was unconditional and every one
+    of those documents was stamped `owner: planner` — the misattribution Ruling 98 §2.1(b)
+    names as *"the status quo the ruling overrides"*, measured at `2ae31f7` as seven of
+    seven. `_is_maintainer_decision_plan` carries the predicate and its limits.
     """
     drafts: list[_Draft] = []
     plans_dir = root / "docs" / "plans"
@@ -1924,12 +2000,23 @@ def _discover_plain_plans(root: Path) -> list[_Draft]:
         created = date.fromisoformat(created_str)
         kind = _plan_kind_for_slug(slug)
         title = _plan_title(text) or slug
+        rel = path.relative_to(root).as_posix()
+        if _is_maintainer_decision_plan(title, text):  # Ruling 98 §2.1
+            drafts.append(
+                _Draft(
+                    materialize="document", prefix="RL", kind=None, title=title,
+                    status="active", created=created, owner="maintainer",
+                    tie_break=(rel, 0), old_token=None, was=rel,
+                    body=text.rstrip("\n") + "\n",
+                )
+            )
+            continue
         drafts.append(
             _Draft(
                 materialize="document", prefix="PL", kind=kind, title=title,
                 status="active", created=created, owner=_PLAN_KIND_OWNER[kind],
-                tie_break=(path.relative_to(root).as_posix(), 0),
-                old_token=None, was=path.relative_to(root).as_posix(),
+                tie_break=(rel, 0),
+                old_token=None, was=rel,
                 body=text.rstrip("\n") + "\n",
             )
         )
