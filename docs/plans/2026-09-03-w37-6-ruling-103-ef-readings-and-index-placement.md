@@ -226,6 +226,23 @@ on the migration's merge tree they are gone by (d) or (d) has failed. Conjunct 3
 work; neither is weakened.** An (e) implementation that also counted the legacy forms would
 report (d)'s failure as (e)'s and hide the boundary between them.
 
+**A second boundary, against §7(g), and it is conjunct 3's own blind spot — named here rather
+than left for someone to find.** Conjunct 3 clears any token that does not resolve through
+`docs/INDEX.md`. **A token corrupted by the token-boundary defect does not resolve**, so (e)
+clears it. That is correct division of labour and not a gap in (e): a mangled id is §7(g)'s row,
+where `NFR-RATE-13/14 → NFR-775/14` is already the named broken-input proof, and (e) has nothing
+to say about a token that is no longer an id at all.
+
+**But it means (e) cannot be read as a proxy for id health, and a green (e) row over a corrupted
+tree is exactly what conjunct 3 would produce.** The same shape has already been measured on the
+neighbouring row: row (d)'s `F-W[0-9]` alternative read **0 and now reads 216** after
+`executor-g`'s fix (**relayed** — the auditor's verification at `aedc1b9`; not run by this
+session), and **the 0 was a false pass manufactured by the corruption itself**, because the
+tokens had been mangled into `F-WK-*`, which that pattern cannot match. A row that reads clean
+*because* its input is broken is the failure mode all three of these rows share. **§7(g) must be
+green before (e)'s number means anything**, which is also the order Ruling 102 §2 puts them in —
+(g) first, (e) fifth — and this is the reason for that order rather than a coincidence of it.
+
 ### 1.5 Two limits of the predicate, disclosed rather than discovered later
 
 - **Padding detection is by leading zero, and that is exact only while every allocated number is
