@@ -100,9 +100,14 @@ file is a violation if and only if all three hold:
 
 | # | conjunct | what it is for |
 |---|---|---|
-| 1 | `digits` is padded — it carries a leading zero | the form rule 2 forbids and rule 3 requires in filenames |
-| 2 | the occurrence is **not** part of a filesystem path token — it does not contain `/`, and it is not the leading component of a filename ending `.md` | rule 3's mandatory padding, and every link *target* |
+| 0 | the occurrence is in `(d)`'s corpus — **`REDIRECTS.csv` and `was:` lines excluded**, per §7(d)'s own exclusion, and **not inside a fenced code block** | (e) and (d) must not disagree about what the corpus is; a fence is how a record exhibits a defective form without committing it |
+| 1 | `digits` is padded — a leading zero, and **exactly `_docid.PAD_WIDTH` digits**, read from the symbol and never written as a literal | the form rule 2 forbids and rule 3 requires in filenames |
+| 2 | the occurrence is **not** part of a filesystem path token, tested **after stripping markdown emphasis** — it does not contain `/`, and is not the leading component of a filename ending `.md` | rule 3's mandatory padding, and every link *target* |
 | 3 | the unpadded id is listed in `docs/INDEX.md` | rule 2's subject: a **citation** names something |
+
+**Conjuncts 0 and the two qualifiers in 1 and 2 were added on 2026-09-03 after measurement, and
+§5 records what each was worth.** They are not refinements of taste: one of them moves the
+population by 355 occurrences and another accounts for two of the six survivors.
 
 **Conjunct 3 is the ruling.** Conjuncts 1 and 2 are the measurement everybody has already run —
 they are what both existing measurements ran (**relayed**, and they disagree — 36 and 77 after a
@@ -359,6 +364,11 @@ directory* — the blocklist §1.3 refuses.
 
 *Violation: §7(e) recorded as passing on a measurement that applied conjuncts 1 and 2 only.*
 
+*Violation: the (e) row and `audit-docs.py` check 32's padding branch computing the same rule
+without the instrument comparing them.* **Two implementations of one rule that are never compared
+are two rules** — `executor-verify`'s point, adopted here: `--verify` computes both and requires
+agreement, rather than sharing a predicate by intention.
+
 *Violation: `audit-docs.py` check 32's padding branch (`scripts/audit-docs.py:1560-1563`) still
 firing unconditionally once `docs/INDEX.md` exists.* Two predicates for one rule is how the two
 readings arose; the (e) row in `--verify` and check 32's padding branch **compute the same thing
@@ -404,7 +414,13 @@ carries a second conjunct that makes "moved" testable:**
 | # | conjunct | what it establishes |
 |---|---|---|
 | 1 | the **total** `git grep -c 'VR-DST-1'` sum is equal before and after the migration on the snapshot | the sentence's own instrument |
-| 2 | the **per-file** count is equal before and after, with each pre-migration path mapped through the migration's own `REDIRECTS.csv` | the sentence's own stated property |
+| 2 | the **per-source** count is equal before and after — each pre-migration path mapped to **all** the paths its content went to, summed, with a split source's target set taken from §3.3's routing table and not from `REDIRECTS.csv` alone | the sentence's own stated property |
+
+**Amended 2026-09-03 after measurement (§5.2).** This conjunct was first stated as a *per-file*
+comparison through `REDIRECTS.csv`. **That is wrong and would have shipped three false positives
+on this corpus**: `REDIRECTS.csv` as generated is **one-to-one**, and a split source's content
+goes to several files, so the mapping cannot express the answer even though the arithmetic
+closes.
 
 **Conjunct 2 is this role's strengthening and is declared as such.** Conjunct 1 alone cannot
 fail on a move: deleting one occurrence and creating another elsewhere leaves the total
@@ -446,6 +462,7 @@ which were written into §7 and §1.1 before any of this was counted.
 ### 2.4 What this reading makes the row
 
 **§7(f) PASSES on conjunct 1 and is UNMEASURED on conjunct 2 — so the row is not yet green.**
+**Superseded by §5.2, 2026-09-03: both conjuncts are now measured and the row is green**, once conjunct 2 is stated so it can express a one-to-many split. Kept as written because the sequence — strengthened, then measured, then the strengthening found a defect in its own wording — is the part worth reading.
 
 Conjunct 1 was measured at `127 → 127` across the migration (**relayed**; §4.2). Conjunct 2 has
 never been run. The row goes green when both do, on the same snapshot, in the instrument.
@@ -593,8 +610,8 @@ target list it can still sort it.
 
 | row | reading | verdict as currently measured |
 |---|---|---|
-| **(e)** | a padded id outside a path that resolves through `docs/INDEX.md` to a real governed thing | **FAIL** — non-empty under conjuncts 1–2, never measured under conjunct 3 |
-| **(f)** | count equal across the migration on the snapshot, per-file through `REDIRECTS.csv` | **NOT GREEN** — conjunct 1 passes, conjunct 2 unmeasured |
+| **(e)** | a padded id in (d)'s corpus, outside a fence and outside a path, `PAD_WIDTH` digits, resolving through `docs/INDEX.md` | **FAIL** (§5.1) — population **1** after conjuncts 0–3, down from a disputed 36-or-77 |
+| **(f)** | count equal across the migration on the snapshot, per-source over all a split's targets | **PASS** (§5.2) — 129 → 129, and the one apparent per-file disagreement sums 5+2+1=8 across a split source |
 | **§6** | route from §5.2, declared per source, raise when absent | **UNIMPLEMENTED** — the sorted-first placement stands, and coincides |
 
 **Neither (e) nor (f) is recorded here with two readings.** Each has one, and each is stated as a
@@ -701,3 +718,117 @@ enforceable."*
 **Owed and not decided here:** §1.5's specimen-collision resolution, which is a
 `docs/process/document-ids.md` edit; and any widening of §7(f) beyond `VR-DST-1` to §1.1 rule 4's
 full product-identifier class, which is a §7 amendment and the maintainer's.
+
+---
+
+## 5. Amended on measurement, 2026-09-03 — what the snapshot changed
+
+**Both rows have now been measured under the ruled predicates**, by `executor-verify` on the
+snapshot pair built by `doc-id.py migrate --verify /tmp/verify-final --ref HEAD` at `e97b97a`
+(PR **#689**, branch `w37-6-verify-instrument`), `migrated/` and `control/` being byte-identical
+extractions of one archive with `migrate()` run on the first only. **These figures are
+`executor-verify`'s, not this session's** — this role does not run `migrate` — but they are
+*measurements under this ruling's own predicates* rather than relayed counts, and they are
+reported here with the predicate each was taken with.
+
+**§4.2's relayed marks stand for the handover's `2021`/`36` and the auditor's `2042`/`77`.
+Nothing below reconciles to either, and no attempt was made to.**
+
+### 5.1 §7(e) — three defects in the predicate as first ruled, and the row's real population
+
+| step | occurrences |
+|---|---|
+| (a) padded-form tokens, `-0[0-9]{3,4}` | **2387** |
+| (a′) the same with `-0\d{4}` — exactly `PAD_WIDTH` | **2032** |
+| (b) minus path/filename context | **37**, in 14 files |
+| (c) of (b), resolving in the generated `docs/INDEX.md` (561 distinct ids) | **6**, in 2 files |
+
+**Defect 1 — the digit count was unpinned, and it is worth 355 occurrences.** `{3,4}` and
+`\d{4}` differ by **355** on the same tree. That is F85's shape inside this ruling's own
+predicate: two counts over one corpus differing only by the pattern. **Conjunct 1 now names
+`_docid.PAD_WIDTH` by symbol** rather than a literal digit count, per `CLAUDE.md` §13's rule that
+a shipped constant is cited by symbol and never pasted.
+
+**Defect 2 — conjunct 2 was defeated by markdown emphasis, and this accounts for 2 of the 6.**
+Two of (c)'s survivors are `docs/rulings/**RL-00993**-q5-….md` — **a path**, in which the bold
+markers split the token so the path test failed to see it. The occurrence is inside a filename and
+conjunct 2 was written to clear exactly that. **Conjunct 2 now strips markdown emphasis before
+testing path context**, and those two are the broken-input proof for it.
+
+**Defect 3 — (e) and (d) disagreed about the corpus, and this accounts for 3 of the 6.** Three
+survivors are `old_id` column values in `docs/REDIRECTS.csv`. **§7(d) excludes `REDIRECTS.csv`
+and `was:` lines by name**, so an (e) that counts them makes the two rows measure different
+corpora and reports the redirect map's own job as a violation. **Conjunct 0 adopts (d)'s
+exclusion**, and adds fenced code blocks, which `audit-docs.py` check 32 **already skips**
+(`_FENCE_LINE_RE`, `:1541-1545`).
+
+**Why the fence clause matters, and why it is not a document-keyed exemption.** The one remaining
+survivor is a line correcting a relayed pair, *"The pair was relayed as `RL-196` / `RL-00199`"* —
+a padded id quoted **as the defective form being corrected**. Without a fence rule, a record that
+documents a padding defect must corrupt its own evidence to pass the lint, which is the check-19
+distortion (§1.3) arriving by a new route. **The fence is the remedy and it already exists**: a
+record exhibiting a defective form fences it, the evidence survives byte-exact, and no exemption
+is keyed to any document. **A padded id outside a fence is still a violation in every document,
+including this one.**
+
+**Verdict: §7(e) FAILS, and the failure is now one line rather than a disputed population.**
+After conjuncts 0–3 the population is **1** — the quoted-correction line above, which the fence
+rule disposes of by a body edit to that record. **The row goes green when that edit lands, not
+before**, and §1.4's FAIL stands as recorded rather than being retroactively softened.
+
+**The (b)-not-(c) remainder is 31 occurrences in 14 files** — `tests/test_template_headers.py` 9,
+`tests/test_doc_id.py` 4, `tests/test_doc_id_migrate.py` 4, `scripts/audit-docs.py` 2, the rest
+fixtures. **Every one is a specimen and conjunct 3 clears every one.** That is the ruling doing
+the work it was written to do, measured rather than asserted.
+
+### 5.2 §7(f) — conjunct 2 is implementable, and stating it against `REDIRECTS.csv` was wrong
+
+**Conjunct 1: `129 → 129`, equal.** The file count is **not** equal — 35 → 37 — which conjunct 1
+cannot see, and which is precisely the case conjunct 2 exists for.
+
+**Conjunct 2, run as first ruled, reported 3 disagreements — and all three are one artefact of my
+own wording, not a moved identifier:**
+
+```
+8 → 5   docs/ledgers/LG-00030-w5-wf-01-driven-end-to-end.md
+0 → 2   docs/closures/CR-00019-w6a-frontend-data-workbench-closed.md
+0 → 1   docs/closures/CR-00119-w6b-the-frontend-of-phase-1b-closed.md
+```
+
+**The control file is `docs/audit/closure-records.md` — §3.2's split source 1.** It held all 8;
+its content went to three files; **5 + 2 + 1 = 8 and the sum closes exactly.** `REDIRECTS.csv`
+maps it one-to-one to a single target, so **the mapping cannot express a split even though the
+property holds.** Conjunct 2 is therefore amended to sum over **all** the targets a source routes
+to, taking the target set from §3.3's routing table — the same table §6 already requires for a
+different reason, which is a second use for it and an argument for building it once.
+
+**Verdict: §7(f) PASSES on both conjuncts**, once conjunct 2 is stated so it can express a
+one-to-many split. §2.4 recorded it as *"conjunct 1 passes, conjunct 2 unmeasured — not green"*;
+it is now measured and green. **The reading in §2.2 is unchanged** — measured across the
+migration, not against `8f5d57d` — and nothing in this result touches it.
+
+**And the strengthening earned its keep.** Conjunct 1 alone would have passed silently at
+`129 → 129` while the file count moved by two. Conjunct 2 is what noticed, and what it noticed
+was a defect in **`REDIRECTS.csv`'s expressiveness**, not in the migration's handling of product
+identifiers. A conjunct that cannot fail would have found neither.
+
+**Corroboration from a third direction, recorded not resolved:** all three of those files carry
+`was: docs/ledgers/LG-00030-….md`, **including `LG-00030` itself, which names its own
+post-migration path.** That is Ruling 102 §5's `was:` defect appearing independently in this
+measurement, and it is that row's to fix.
+
+### 5.3 What this ruling now owes, and to whom
+
+**To `executor-verify`, so row (e) and row (f) become scored rather than `UNDETERMINED`:** the
+conjuncts as §1.2 and §2.2 now state them, including conjunct 0's corpus and the `PAD_WIDTH`
+symbol. **Row (e)'s two printed readings collapse to one on this ruling's authority**, which is
+what Ruling 102 §2 row 5 asked for.
+
+**Adopted from `executor-verify`, and it is a better idea than the one it improves:** the
+instrument should compute **both** the (e) row and `audit-docs.py` check 32's padding branch and
+**require them to agree**, rather than merely sharing a predicate by intention. Two implementations
+of one rule that are never compared are two rules. **That cross-check is added to §1.8's
+violations.**
+
+**Not adopted, and named so it is not assumed:** the §6 fixture whose route and sort order
+disagree (§3.5) is unassigned. It is not `executor-verify`'s unless the lead assigns it.
