@@ -325,6 +325,37 @@ names them — and **has exactly one caller, the five-README path at `:5518`.**
   ruling and has not had it.** `_MIGRATION_DIFF_FAMILY_INDEXES` was added explicitly rather
   than silently extending Ruling 68's six-class enumeration.
 
+### 10.1 Halt completion — every worktree, clean or pushed (appended 2026-09-03, 17:06 BST)
+
+**The halt protocol's worktree clause discharged, one line each.** Every worktree was
+`git status` clean **and** on a branch whose tip is on the remote, before removal — the
+condition is both, not either, because a clean worktree on an unpushed branch is the
+durability failure this halt was ordered to avoid.
+
+| worktree | branch | tip | state at removal |
+|---|---|---|---|
+| *(shared checkout)* | `main` | `e5e20d6` | clean; not removed |
+| `wt-ho` | `docs/w37-6-second-fail-handover` | `3d29170` | clean, pushed — **this record** |
+| `wt-r102` | `docs/w37-6-ruling-102-verify-instrument` | `cb3ad85` | clean, pushed, **deliberately unmerged** |
+| `w37-6-exec` | `w37-6-split-source-resolver` | **`61f4a97`** | clean, pushed — **the resolver work** |
+| `w37-6-auditor3` | `audit-r98-rebase` | `5f32970` | clean; **no remote and none needed** — its content is `0de529e`, merged as #679 |
+| `w37-planner` | `worktree-w37-planner` | `8c0793a` | clean, pushed; PR #678 closed unmerged, superseded by a direct recommendation |
+| `agent-a225faa49dba12dea` | `w37-split-source-citations` | `2868b71` | clean, pushed — the dead predecessor's WIP, superseded by `w37-6-split-source-resolver` |
+| `agent-a5894b03d1bda7b8d` | `w37-6-ruling-98-impl` | `33df3c4` | clean, pushed; superseded by #679's merge |
+
+**One live violation was found and fixed rather than reported.** `w37-6-split-source-resolver`
+existed **only** in a worktree — three commits and two modified files, no remote ref. The lead
+pushed the committed tip from the shared checkout, which touches nothing in another agent's
+working tree, and **did not commit the two modified files on the executor's behalf**: acting
+inside another member's worktree has previously discarded that member's tracked edits. The
+executor committed and pushed them itself as `61f4a97`.
+
+**What that branch carries, and why the next session reads it before anything else** — the
+executor's own measurements, at its own tree: the split-source resolver with both new checks
+proven red-then-green, **dangling links 167 → 0**, **bucket (iv) 0 unresolved** with 356
+citations routed to index entries, **`was:` 354 of 354 correct** against 351-of-354 on `main`,
+and **§7(a) `none` = 0**. It is the first thing the next session builds on.
+
 ## 11. Open, with an owner or a named absence — §13 admits no silence
 
 | item | state |
