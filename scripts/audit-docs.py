@@ -2537,10 +2537,9 @@ def _document_body_sections(path: pathlib.Path) -> set[str]:
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
     if lines and lines[0] == "---":
-        try:
-            lines = lines[lines.index("---", 1) + 1 :]
-        except ValueError:
-            pass
+        closing = next((i for i, line in enumerate(lines[1:], 1) if line == "---"), None)
+        if closing is not None:
+            lines = lines[closing + 1 :]
     out: set[str] = set()
     for line in lines:
         m = _ANY_DEPTH_HEADING_RE.match(line)
