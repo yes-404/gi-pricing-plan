@@ -1072,11 +1072,23 @@ class MigrateResult:
     # ("every exempt entry cites its reason") applied to a deferral rather than to an
     # exemption — these are waiting on W37-6's Task 1, not permanently out.
     deferred_reference_stamps: tuple[tuple[str, str], ...] = ()
-    # Bucket (iv): every citation of a split source that named no single target and was
-    # therefore **not** rewritten. Carried out by name — citing file, line, source path
-    # and the competing destinations — because the ruling's disposition is per citation,
-    # and a count is not something a reader can disposition.
+    # Bucket (iv): every citation of a split source that named no single target. Carried
+    # out by name — citing file, line, source path and the competing destinations —
+    # because the ruling's disposition is per citation, and a count is not something a
+    # reader can disposition. Under Ruling 101 clause 1 each of these **is** rewritten, to
+    # its family index's section for the source; the population is still carried by name
+    # because the reader who follows one of those links is the person who has to choose.
+    index_resolved_split_citations: tuple[_UnresolvedCitation, ...] = ()
+    # The citations of a split source left exactly as they were. **0 by construction**
+    # (Ruling 101 clause 1: the family-index fallback is always available), and reported
+    # anyway, because "0 by construction" is a claim about the code and this is the
+    # measurement of it — the two have come apart here before.
     unresolved_split_citations: tuple[_UnresolvedCitation, ...] = ()
+    # Ruling 101 clause 3: every `INDEX.md#<anchor>` a citation was resolved to whose
+    # section does not exist or lists fewer than two documents, named with the citing file
+    # and the anchor. A link to an empty index section resolves at the file level, so the
+    # dangling-link scanner cannot see it; this is the check that can.
+    split_index_violations: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------------------
@@ -3851,7 +3863,10 @@ def _check_plain_plans_not_silently_unrecognised(root: Path) -> None:
         units=units,
         records=records,
         is_body=is_body,
-        exceptions={"README.md": "the directory's own README, not a dated record"},
+        exceptions={
+            "README.md": "the directory's own README, not a dated record",
+            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+        },
     )
 
 
@@ -4793,7 +4808,7 @@ def _path_rewrite_tokens(old_rel: str, new_rel: str) -> dict[str, str]:
     return tokens
 
 
-class TokenMapCollision(RuntimeError):
+class TokenMapCollisionError(RuntimeError):
     """Two moves claim the same citation token with different destinations.
 
     #672 built `token_map` as a flat `dict[old_path, new_path]` and filled it with
@@ -4818,7 +4833,7 @@ def _add_tokens(
     for tok, new in tokens.items():
         prior = origins.get(tok)
         if prior is not None:
-            raise TokenMapCollision(
+            raise TokenMapCollisionError(
                 f"citation token {tok!r} is claimed twice: {prior} -> "
                 f"{token_map[tok]!r} and {source} -> {new!r}"
             )
@@ -4850,6 +4865,8 @@ class _SplitTarget:
     anchors: frozenset[str]
     line_span: tuple[int, int] | None  # 1-based inclusive, in the SOURCE file
     body_line_offset: int  # lines the destination file puts before this body
+    canonical_id: str  # the destination's own `id:`, for the index row
+    title: str  # the destination's own `title:`, for the index row
 
 
 @dataclass(frozen=True)
@@ -4872,6 +4889,18 @@ class _SplitSource:
     old_rel: str
     token: str  # the citing form (repo-relative, `docs/`-relative, ...) this covers
     targets: tuple[_SplitTarget, ...]
+    # Ruling 101 clause 1, the maintainer's extension of Ruling 100 (§2.5): a citation that
+    # determines nothing resolves to **the family index's section for this source** —
+    # `docs/<family>/INDEX.md#<old-basename>`, in this token's own citing form. That is not
+    # a fourth determinant and not a canonical-target choice (§3.3 forbids both): the
+    # section lists *every* target with its `was:` provenance, so the link is the
+    # `REDIRECTS.csv` row made navigable, and a reader lands on the whole ambiguity rather
+    # than on one arm of it chosen for them. Because it is always available, **bucket (iv)
+    # is 0 by construction** — there is no citation of a split source this class cannot
+    # answer.
+    index_token: str
+    index_rel: str  # the same target, repo-relative, for the clause-3 check to open
+    index_anchor: str
 
     @property
     def pattern(self) -> re.Pattern[str]:
@@ -4934,12 +4963,74 @@ class _SplitSource:
         return out
 
 
+#: The per-family split-source index Ruling 101 clause 1 introduces. One file per document
+#: family directory, generated by `_write_split_source_indexes` **after** the citation
+#: sweep, for the same reason `_stamp_reference_targets` runs after it: the section bodies
+#: quote each target's `was:` provenance, which is by definition a pre-migration path, and
+#: a sweep that saw it would rewrite the very provenance the section exists to carry.
+_SPLIT_INDEX_BASENAME: Final = "INDEX.md"
+
+
+def _split_index_rel(family_dir: str) -> str:
+    return f"docs/{family_dir}/{_SPLIT_INDEX_BASENAME}"
+
+
+def _split_index_anchor(old_rel: str) -> str:
+    """The `#anchor` a citation of `old_rel` resolves to inside its family index.
+
+    Ruling 101 clause 1 names it *"`#<old-basename>`"*. It is derived here from the same
+    string `_write_split_source_indexes` renders as the section's heading, and through the
+    same `_anchor_slug`, so the anchor and the heading cannot disagree — the failure mode
+    the clause-3 check exists to catch, made structurally impossible on the writing side as
+    well as detectable on the reading side.
+    """
+    return _anchor_slug(_split_index_heading(old_rel))
+
+
+def _split_index_heading(old_rel: str) -> str:
+    return old_rel.rsplit("/", 1)[-1]
+
+
+def _split_index_family(old_rel: str, new_rels: Sequence[str]) -> str:
+    """The family directory whose `INDEX.md` carries `old_rel`'s section.
+
+    **Ruling 101 clause 1 says `docs/<family>/INDEX.md` and reads as though a split source
+    had one family. It does not.** Measured on the fixture corpus, three sources split
+    *across* families: `_discover_plain_plans` emits a whole-file `PL-` draft for a plan and
+    `_discover_lettered_rulings` emits an `RL-` draft for each `## Ruling N` heading inside
+    that same plan, so `docs/plans/2026-08-30-adoption.md` becomes one `PL-` and two `RL-`.
+    Flagged to the lead as a premise of the clause that does not hold, rather than worked
+    around silently.
+
+    **The rule below is a placement rule, not a target choice, and the distinction is the
+    whole reason it is allowed to be arbitrary.** The section lists every target from every
+    family whatever directory the file sits in, so a reader who follows the link sees the
+    same complete ambiguity either way; nothing about which document the citation *meant*
+    is decided here. Ruling 100 §3.3's prohibition is on picking a destination *record* for
+    a citation, and this picks none. What the rule must be is **deterministic and stable** —
+    the same source must land at the same anchor on every run, or the link the sweep wrote
+    last time stops resolving — and sorting supplies exactly that with no data of its own.
+    """
+    outside = sorted(rel for rel in new_rels if not rel.startswith("docs/"))
+    if outside:
+        raise TokenMapCollisionError(
+            f"{old_rel} splits to {outside} outside docs/ — Ruling 101's index section "
+            "has no family directory to live in"
+        )
+    return sorted({rel.split("/")[1] for rel in new_rels})[0]
+
+
 def _build_split_sources(
     old_rel: str, targets: Sequence[tuple[_Draft, str]]
 ) -> list[_SplitSource]:
     """One `_SplitSource` per *citing form* of `old_rel` (`_path_rewrite_tokens` emits up
     to three), each carrying the same target list mapped into that form.
     """
+    index_rel = _split_index_rel(
+        _split_index_family(old_rel, [new_rel for _, new_rel in targets])
+    )
+    index_forms = _path_rewrite_tokens(old_rel, index_rel)
+    anchor = _split_index_anchor(old_rel)
     by_token: dict[str, list[_SplitTarget]] = {}
     for draft, new_rel in targets:
         forms = _path_rewrite_tokens(old_rel, new_rel)
@@ -4954,12 +5045,32 @@ def _build_split_sources(
                     new_rel=new_rel, new_token=new_tok, ids=tuple(ids), anchors=anchors,
                     line_span=draft.source_line_span,
                     body_line_offset=draft.body_line_offset,
+                    canonical_id=_docid.canonical(draft.prefix, draft.number),
+                    title=draft.title,
                 )
             )
-    return [
-        _SplitSource(old_rel=old_rel, token=tok, targets=tuple(ts))
-        for tok, ts in by_token.items()
-    ]
+    sources: list[_SplitSource] = []
+    for tok, ts in by_token.items():
+        index_token = index_forms.get(tok)
+        if index_token is None:
+            # A citing form the targets have but the index does not. Structurally this is
+            # `_path_rewrite_tokens`' third form, which is emitted only for a
+            # `docs/audit/` -> `docs/findings/` pair; an index in any other family has no
+            # equivalent. Raised rather than silently dropped, because the alternative is a
+            # citation in that form falling out of bucket (iv)'s "0 by construction" with
+            # nothing saying so.
+            raise TokenMapCollisionError(
+                f"{old_rel} is cited as {tok!r}, a form its family index {index_rel!r} "
+                "has no equivalent of — Ruling 101's fallback cannot be written in it"
+            )
+        sources.append(
+            _SplitSource(
+                old_rel=old_rel, token=tok, targets=tuple(ts),
+                index_token=f"{index_token}#{anchor}",
+                index_rel=index_rel, index_anchor=anchor,
+            )
+        )
+    return sources
 
 
 @dataclass(frozen=True)
@@ -4967,6 +5078,12 @@ class _UnresolvedCitation:
     """One citation of a split source that named no single target — bucket (iv). Carried
     out of the run by name, never counted: "27 sources are ambiguous" is not something a
     reader can disposition, and a disposition by name is what the ruling asks for.
+
+    Under Ruling 101 clause 1 every one of these is **rewritten to the family index's
+    section** rather than left to dangle (`resolved_to`), so the population this carries is
+    "the citations that determined nothing", not "the citations nothing was done about".
+    The distinction matters to the two counts `_cmd_migrate` prints: this list is bucket
+    (iv), and the count of citations left *unrewritten* is separately reported and is 0.
     """
 
     citing_file: str
@@ -4974,13 +5091,57 @@ class _UnresolvedCitation:
     old_rel: str
     text: str
     candidates: tuple[str, ...]
+    resolved_to: str  # the citing form actually written into the file
+    index_rel: str  # the same target repo-relative, so the clause-3 check can open it
+    index_anchor: str
+
+
+_FRONT_MATTER_WAS_LINE_RE: Final = re.compile(r"^was:.*$", re.MULTILINE)
+
+
+def _was_field_spans(text: str) -> list[tuple[int, int]]:
+    """The character spans `_rewrite_citations` must leave byte-identical: every `was:`
+    line inside a leading front-matter block.
+
+    Ruling 101 clause 2: *"`was:` is provenance, not a citation. It is written from
+    `REDIRECTS.csv` and is excluded from `_rewrite_citations`."* Ruling 100 §1.4 measured
+    what its inclusion costs — every migrated document carrying a non-null `was:` ends up
+    naming a path that never existed pre-migration, and for a split source it names an
+    arbitrary sibling's new path, so `was:` cannot recover the origin it exists to record.
+
+    Scoped to the **leading front matter**, not to every `was:`-shaped line and not to the
+    whole header. A `was:` in a body is prose and is swept like any other prose; the
+    header's other fields (`supersedes:`, `relates:`, ...) carry *ids*, which are citations
+    and must keep being rewritten — widening this to the whole block would silently stop
+    that, which is a regression wearing the ruling's clothes.
+    """
+    if not text.startswith("---\n"):
+        return []
+    close = text.find("\n---\n", len("---"))
+    if close == -1:
+        return []
+    return [
+        (m.start(), m.end())
+        for m in _FRONT_MATTER_WAS_LINE_RE.finditer(text, 0, close + len("\n---\n"))
+    ]
 
 
 def _rewrite_citations(
     root: Path, token_map: Mapping[str, str], split_sources: Sequence[_SplitSource] = ()
-) -> tuple[list[str], list[_UnresolvedCitation]]:
+) -> tuple[list[str], list[_UnresolvedCitation], list[_UnresolvedCitation]]:
+    """Sweep every tree file, rewriting each citation token to its destination.
+
+    Returns `(changed_files, index_resolved, unrewritten)`. `index_resolved` is Ruling
+    100's bucket (iv) — the citations of a split source that determined no single target
+    and were therefore sent to the family index section (Ruling 101 clause 1) — and
+    `unrewritten` is the citations left exactly as they were, which is **0 by
+    construction**: every `_SplitSource` carries an `index_token`, so the "leave it alone"
+    branch has no way to fire. It is still returned, and still printed, because a
+    population reported only when non-empty is a population nothing can audit.
+    """
     changed: list[str] = []
-    unresolved: list[_UnresolvedCitation] = []
+    index_resolved: list[_UnresolvedCitation] = []
+    unrewritten: list[_UnresolvedCitation] = []
     by_token: dict[str, _SplitSource] = {s.token: s for s in split_sources}
     # One ordering over both kinds, longest first for the reason the flat map already
     # needed it: a shorter token's word boundary must not consume part of a longer one.
@@ -4996,39 +5157,63 @@ def _rewrite_citations(
             continue
         original = text
         rel = path.relative_to(root).as_posix()
-        for tok in ordered:
-            if tok not in text:
-                continue
-            split = by_token.get(tok)
-            if split is None:
-                text = re.compile(rf"\b{re.escape(tok)}\b").sub(
-                    lambda m, v=token_map[tok]: v, text  # type: ignore[misc]
-                )
-                continue
 
-            def repl(m: re.Match[str], src: _SplitSource = split, rel: str = rel) -> str:
-                line_start = m.string.rfind("\n", 0, m.start()) + 1
-                line_end = m.string.find("\n", m.end())
-                line = m.string[line_start : line_end if line_end != -1 else None]
-                out = src.resolve(m, line)
-                if out is not None:
-                    return out
-                unresolved.append(
-                    _UnresolvedCitation(
+        def sweep(segment: str, line_offset: int, rel: str = rel) -> str:
+            for tok in ordered:
+                if tok not in segment:
+                    continue
+                split = by_token.get(tok)
+                if split is None:
+                    segment = re.compile(rf"\b{re.escape(tok)}\b").sub(
+                        lambda m, v=token_map[tok]: v, segment  # type: ignore[misc]
+                    )
+                    continue
+
+                def repl(m: re.Match[str], src: _SplitSource = split) -> str:
+                    line_start = m.string.rfind("\n", 0, m.start()) + 1
+                    line_end = m.string.find("\n", m.end())
+                    line = m.string[line_start : line_end if line_end != -1 else None]
+                    out = src.resolve(m, line)
+                    if out is not None:
+                        return out
+                    record = _UnresolvedCitation(
                         citing_file=rel,
-                        line=m.string.count("\n", 0, m.start()) + 1,
+                        line=line_offset + m.string.count("\n", 0, m.start()) + 1,
                         old_rel=src.old_rel,
                         text=line.strip(),
                         candidates=tuple(t.new_rel for t in src.targets),
+                        resolved_to=src.index_token,
+                        index_rel=src.index_rel,
+                        index_anchor=src.index_anchor,
                     )
-                )
-                return m.group(0)
+                    if not src.index_token:  # unreachable: `_build_split_sources` raises
+                        unrewritten.append(record)
+                        return m.group(0)
+                    index_resolved.append(record)
+                    return src.index_token
 
-            text = split.pattern.sub(repl, text)
+                segment = split.pattern.sub(repl, segment)
+            return segment
+
+        # The sweep runs over the segments **between** the protected `was:` lines rather
+        # than over the whole text, so a protected line is not "rewritten and put back" —
+        # it is never passed to a substitution at all. Protected spans are whole lines and
+        # no citation token contains a newline, so no match can straddle a boundary and be
+        # lost by the partition. `line_offset` keeps a bucket-(iv) record's reported line
+        # number in the file's own numbering rather than the segment's.
+        pieces: list[str] = []
+        cursor = 0
+        for start, end in _was_field_spans(text):
+            pieces.append(sweep(text[cursor:start], text.count("\n", 0, cursor)))
+            pieces.append(text[start:end])
+            cursor = end
+        pieces.append(sweep(text[cursor:], text.count("\n", 0, cursor)))
+        text = "".join(pieces)
+
         if text != original:
             path.write_text(text, encoding="utf-8")
             changed.append(rel)
-    return changed, unresolved
+    return changed, index_resolved, unrewritten
 
 
 # ---------------------------------------------------------------------------------------
@@ -5304,6 +5489,23 @@ _MIGRATION_DIFF_FAMILY_READMES: Final[frozenset[str]] = frozenset(
     | set(_README_FAMILY_MOVES.values())
     | set(_README_IN_PLACE)
     | {f"docs/{_DOCUMENT_FAMILY_DIR[p]}/README.md" for p in _README_NEW_FAMILY_PREFIXES}
+)
+
+#: Ruling 101 clause 1's per-family split-source index, on both sides of the migration, for
+#: the identical reason `_MIGRATION_DIFF_FAMILY_READMES` above exists: Ruling 68's class 6
+#: -- "a generated artifact (`INDEX.md`, `REDIRECTS.csv`) -- unconditionally permitted;
+#: excluded from comparison entirely" -- names `INDEX.md` by basename, and this is that
+#: artifact one directory down. Derived from `_DOCUMENT_FAMILY_DIR`, never a written-out
+#: list of the nine directory names, for the reason that map's own comment gives: a family
+#: renamed there must not leave a stale path behind here. It covers every family, not only
+#: the families a given run happens to write an index for -- an exclusion set is a
+#: statement about which paths are permitted, not about which ones appeared.
+#:
+#: **Flagged rather than made silently**, the same way the README constant above was: this
+#: is a further extension of Ruling 68's six-class enumeration, and the lead is told so in
+#: the PR rather than finding it in a diff.
+_MIGRATION_DIFF_FAMILY_INDEXES: Final[frozenset[str]] = frozenset(
+    _split_index_rel(family_dir) for family_dir in _DOCUMENT_FAMILY_DIR.values()
 )
 
 #: A markdown inline link's target. Deliberately stops at whitespace so a `](path "title")`
@@ -5801,6 +6003,176 @@ def _stamp_regenerated_readmes(root: Path, origins: Mapping[str, str]) -> list[s
     return written
 
 
+_SPLIT_INDEX_PREAMBLE: Final = """**This file is generated by `scripts/doc-id.py migrate`.
+Do not hand-edit it.**
+
+Each section below names one pre-migration file the NT-0019 migration split into more than
+one document, and lists every document it became beside the `was:` provenance each of those
+documents carries. A citation of the old path that did **not** say which of them it meant
+resolves here rather than to any one of them (Ruling 101 clause 1): this is the
+[`../REDIRECTS.csv`](../REDIRECTS.csv) row made navigable, not a target chosen on the
+reader's behalf. Ruling 100 §3.3 forbids choosing one, and Ruling 89 forbids the path-only
+rewrite that choosing one would be.
+
+A citation that *did* determine its target -- by an adjacent id, by an `#anchor` matching
+exactly one target's heading, or by a line number falling inside exactly one target's span
+in the source file -- was rewritten to that target and never reaches this file.
+"""
+
+
+@dataclass(frozen=True)
+class _SplitIndexSection:
+    """One split source's section in its family's `INDEX.md`."""
+
+    old_rel: str
+    family_dir: str
+    rows: tuple[tuple[str, str, str], ...]  # (canonical id, destination rel, title)
+
+
+def _split_index_sections(split_sources: Sequence[_SplitSource]) -> list[_SplitIndexSection]:
+    """One section per split **source**, deduplicated across the up-to-three
+    `_SplitSource`s a single source produces (one per citing token form, all carrying the
+    same target list).
+    """
+    by_source: dict[str, _SplitIndexSection] = {}
+    for src in split_sources:
+        if src.old_rel in by_source:
+            continue
+        by_source[src.old_rel] = _SplitIndexSection(
+            old_rel=src.old_rel,
+            family_dir=src.index_rel.split("/")[1],
+            rows=tuple(
+                sorted((t.canonical_id, t.new_rel, t.title) for t in src.targets)
+            ),
+        )
+    return sorted(by_source.values(), key=lambda s: (s.family_dir, s.old_rel))
+
+
+def _md_cell(text: str) -> str:
+    """A table cell's text with the one character that would end it escaped. A `|` inside
+    a document title otherwise silently adds a column, which `audit-docs.py`'s row-width
+    check reads as a malformed table rather than as an escaped title.
+    """
+    return text.replace("|", r"\|")
+
+
+def _write_split_source_indexes(
+    root: Path, split_sources: Sequence[_SplitSource]
+) -> list[str]:
+    """Ruling 101 clause 1's family index: `docs/<family>/INDEX.md`, one section per split
+    source, each listing every target with its `was:` provenance.
+
+    Written **after** `_rewrite_citations`, for the same reason `_stamp_reference_targets`
+    and `_stamp_regenerated_readmes` are: every row quotes a `was:` value, which is by
+    definition a pre-migration path, and a sweep that saw it would rewrite the very
+    provenance the section exists to carry.
+
+    Only families that actually receive a split target get a file. A family index with no
+    sections would carry nothing, and an index section is required to list two or more
+    documents -- an empty one is exactly the silent failure `_split_index_violations`
+    exists to make loud, so none is written by construction either.
+    """
+    written: list[str] = []
+    by_family: dict[str, list[_SplitIndexSection]] = {}
+    for section in _split_index_sections(split_sources):
+        by_family.setdefault(section.family_dir, []).append(section)
+    for family_dir, sections in sorted(by_family.items()):
+        lines = [
+            f"# docs/{family_dir} — split-source index",
+            "",
+            _SPLIT_INDEX_PREAMBLE.rstrip("\n"),
+            "",
+        ]
+        for section in sections:
+            lines += [
+                f"## {_split_index_heading(section.old_rel)}",
+                "",
+                f"`{section.old_rel}` became {len(section.rows)} documents.",
+                "",
+                "| Document | Title | `was:` |",
+                "|---|---|---|",
+            ]
+            for canon, new_rel, title in section.rows:
+                name = new_rel.rsplit("/", 1)[-1]
+                lines.append(
+                    f"| [`{canon}`]({name}) | {_md_cell(title)} | "
+                    f"`{section.old_rel}` |"
+                )
+            lines.append("")
+        body = "\n".join(lines)
+        header = _stamp_header(
+            "REFERENCE", None, kind=None,
+            title=f"docs/{family_dir} — split-source index",
+            status="active", created=date.today(), owner="lead", was=None,
+        )
+        rel = _split_index_rel(family_dir)
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(header + "\n" + body, encoding="utf-8")
+        written.append(rel)
+    return written
+
+
+def _split_index_violations(
+    root: Path, index_resolved: Sequence[_UnresolvedCitation]
+) -> list[str]:
+    """Ruling 101 clause 3: **every `INDEX.md#<anchor>` a citation resolves to exists, and
+    its section lists two or more documents.**
+
+    *"A link to an empty index section is the new silent failure; make it loud first."* The
+    failure this catches resolves at the file level -- `docs/rulings/INDEX.md` is a real
+    file -- so the auditor's dangling-link scanner, which checks the path and not the
+    fragment, passes on it. That is the same shape as the defect Ruling 100 was written
+    about: a citation that resolves and tells the reader nothing.
+
+    Each violation names **the citing file and line** and **the anchor**, because the
+    disposition is per citation. Checked per distinct target, reported per citation.
+    """
+    violations: list[str] = []
+    cache: dict[str, str | None] = {}
+    for cite in sorted(
+        index_resolved, key=lambda c: (c.citing_file, c.line, c.index_anchor)
+    ):
+        key = f"{cite.index_rel}#{cite.index_anchor}"
+        if key not in cache:
+            cache[key] = _split_index_section_fault(
+                root, cite.index_rel, cite.index_anchor
+            )
+        fault = cache[key]
+        if fault is not None:
+            violations.append(f"{cite.citing_file}:{cite.line} resolves to {key}: {fault}")
+    return violations
+
+
+_SPLIT_INDEX_ROW_RE: Final = re.compile(r"^\|\s*\[`[^`]+`\]\([^)]+\)\s*\|")
+
+
+def _split_index_section_fault(root: Path, index_rel: str, anchor: str) -> str | None:
+    """`None` when `index_rel` exists and its `anchor` section lists two or more
+    documents; otherwise the reason, phrased as what is wrong rather than as a code.
+    """
+    path = root / index_rel
+    if not path.is_file():
+        return "the index file does not exist"
+    text = path.read_text(encoding="utf-8")
+    headings = list(_ANCHOR_HEADING_RE.finditer(text))
+    for i, heading in enumerate(headings):
+        if _anchor_slug(heading.group(1)) != anchor:
+            continue
+        end = headings[i + 1].start() if i + 1 < len(headings) else len(text)
+        rows = [
+            line for line in text[heading.end() : end].splitlines()
+            if _SPLIT_INDEX_ROW_RE.match(line)
+        ]
+        if len(rows) < 2:
+            return (
+                f"its section lists {len(rows)} document(s); a split source has two or "
+                "more, so this section is empty of the choice the citation needs"
+            )
+        return None
+    return "the index file has no section with that anchor"
+
+
 # ---------------------------------------------------------------------------------------
 # `migrate` itself.
 # ---------------------------------------------------------------------------------------
@@ -5818,13 +6190,19 @@ def migrate(root: Path) -> MigrateResult:
     notes_drafts = _discover_notes(root)
     _check_flat_document_directory_not_silently_unrecognised(
         root, "docs/notes", _NOTE_TITLE_RE, "notes",
-        {"README.md": "the directory's own README, not a governed note"},
+        {
+            "README.md": "the directory's own README, not a governed note",
+            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+        },
     )
     drafts += notes_drafts
     adr_drafts = _discover_adrs(root)
     _check_flat_document_directory_not_silently_unrecognised(
         root, "docs/adr", _ADR_TITLE_RE, "ADRs",
-        {"README.md": "the directory's own README, not a governed ADR"},
+        {
+            "README.md": "the directory's own README, not a governed ADR",
+            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+        },
     )
     drafts += adr_drafts
     multi_ruling_drafts = _discover_multi_ruling_files(root)
@@ -5878,7 +6256,10 @@ def migrate(root: Path) -> MigrateResult:
     finding_drafts = _discover_findings(root)
     _check_flat_document_directory_not_silently_unrecognised(
         root, "docs/audit/findings", None, "finding essays",
-        {"README.md": "the family's own index, not a governed finding essay"},
+        {
+            "README.md": "the family's own index, not a governed finding essay",
+            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+        },
         records={Path(d.was).name for d in finding_drafts if d.was is not None},
     )
     drafts += finding_drafts
@@ -5907,7 +6288,10 @@ def migrate(root: Path) -> MigrateResult:
     workflow_drafts = _discover_workflows(root)
     _check_flat_document_directory_not_silently_unrecognised(
         root, "docs/workflows", None, "workflows",
-        {"README.md": "the family's own index, not a governed workflow document"},
+        {
+            "README.md": "the family's own index, not a governed workflow document",
+            "INDEX.md": "the family's generated split-source index (Ruling 101 clause 1), not a governed record",
+        },
         records={Path(d.was).name for d in workflow_drafts if d.was is not None},
     )
     drafts += workflow_drafts
@@ -6035,7 +6419,7 @@ def migrate(root: Path) -> MigrateResult:
     # places, so a move recorded in one and not the other cannot happen quietly.
     path_moves: dict[str, str] = {}
     # Which move claimed each token, so `_add_tokens` can name both claimants when two
-    # collide rather than letting the second silently win (`TokenMapCollision`).
+    # collide rather than letting the second silently win (`TokenMapCollisionError`).
     token_origins: dict[str, str] = {}
     # The same moves as `path_moves`, but **grouped by source and keeping every
     # destination** rather than letting the last one win. `path_moves` answers a question
@@ -6201,7 +6585,7 @@ def migrate(root: Path) -> MigrateResult:
     # The split/single fork, and the only place a path token enters the flat map. A source
     # with one destination is unchanged from #672; a source with several never enters it,
     # because a flat `old_path -> new_path` entry can only hold one of them and the
-    # overwrite is silent (`TokenMapCollision`'s docstring has the measurement).
+    # overwrite is silent (`TokenMapCollisionError`'s docstring has the measurement).
     split_sources: list[_SplitSource] = []
     for old_rel, moves in path_move_groups.items():
         destinations = {new_rel for _, new_rel in moves}
@@ -6217,7 +6601,7 @@ def migrate(root: Path) -> MigrateResult:
             # citation of it would be bucket (iv) anyway. Raised rather than silently
             # left, because it is a shape this migration has never produced and the
             # resolver would be quietly inert on it.
-            raise TokenMapCollision(
+            raise TokenMapCollisionError(
                 f"{old_rel} splits into {sorted(destinations)} through a move that "
                 "carries no draft — no per-citation evidence exists for it"
             )
@@ -6225,7 +6609,9 @@ def migrate(root: Path) -> MigrateResult:
             _build_split_sources(old_rel, [(d, n) for d, n in moves if d is not None])
         )
 
-    rewritten, unresolved_citations = _rewrite_citations(root, token_map, split_sources)
+    rewritten, index_resolved, unrewritten_citations = _rewrite_citations(
+        root, token_map, split_sources
+    )
 
     # Alongside the vendored-manifest stamp below, and after the citation rewrite for the
     # same reason it is: a header this run writes carries no legacy token to rewrite.
@@ -6235,6 +6621,13 @@ def migrate(root: Path) -> MigrateResult:
     # `was:` written before the sweep would be rewritten into the new path, destroying the
     # one field that records where the file came from.
     files_written = [*files_written, *_stamp_regenerated_readmes(root, readme_origins)]
+    # Ruling 101 clause 1's family index, and clause 3's check that the sections the
+    # rewrite pointed at are actually there and actually list a choice. Written after the
+    # sweep for the third instance of the same reason: every row quotes a `was:` value,
+    # which is a pre-migration path the sweep would rewrite. Checked immediately after
+    # writing rather than at the end, so the check reads the bytes this run just wrote.
+    files_written = [*files_written, *_write_split_source_indexes(root, split_sources)]
+    index_faults = _split_index_violations(root, index_resolved)
 
     skipped_vendored: list[str] = []
     # `to_stamp` only -- a manifest already carrying front matter this migration did not
@@ -6299,7 +6692,9 @@ def migrate(root: Path) -> MigrateResult:
             for unit in census.units
             if unit.key in census.excepted
         ),
-        unresolved_split_citations=tuple(unresolved_citations),
+        index_resolved_split_citations=tuple(index_resolved),
+        unresolved_split_citations=tuple(unrewritten_citations),
+        split_index_violations=tuple(index_faults),
     )
 
 
@@ -6405,6 +6800,7 @@ def migration_diff_violations(old_root: Path, new_root: Path) -> list[str]:
             old_rel in _MIGRATION_DIFF_ROADMAP
             or old_rel in _MIGRATION_DIFF_GENERATED
             or old_rel in _MIGRATION_DIFF_FAMILY_READMES
+            or old_rel in _MIGRATION_DIFF_FAMILY_INDEXES
         ):
             continue
         if old_text is None:
@@ -6487,6 +6883,7 @@ def migration_diff_violations(old_root: Path, new_root: Path) -> list[str]:
             new_rel in _MIGRATION_DIFF_ROADMAP
             or new_rel in _MIGRATION_DIFF_GENERATED
             or new_rel in _MIGRATION_DIFF_FAMILY_READMES
+            or new_rel in _MIGRATION_DIFF_FAMILY_INDEXES
         ):
             continue
         if new_rel in old_files:
@@ -6601,6 +6998,32 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
             f"{', '.join(cite.candidates)}",
             file=sys.stderr,
         )
+    # Ruling 101 clause 1's population: bucket (iv), rewritten to the family index rather
+    # than left to dangle. Printed with the count first and then by name, because the
+    # count is the gate figure ("bucket (iv) = N, unrewritten = 0") and the names are what
+    # a reader disposes of.
+    print(
+        f"doc-id.py migrate: {len(result.index_resolved_split_citations)} citation(s) of "
+        "a split source determined no single target and were resolved to their family "
+        "index section (Ruling 101 clause 1):",
+        file=sys.stderr,
+    )
+    for cite in result.index_resolved_split_citations:
+        print(
+            f"  {cite.citing_file}:{cite.line} cites {cite.old_rel} -> "
+            f"{cite.resolved_to} -- candidates: {', '.join(cite.candidates)}",
+            file=sys.stderr,
+        )
+    # Ruling 101 clause 3, unconditionally including the zero: a link into an index
+    # section that does not exist or lists no choice resolves at the file level, so
+    # nothing else in this run or in the gate can see it.
+    print(
+        f"doc-id.py migrate: {len(result.split_index_violations)} citation(s) resolved to "
+        "a family index section that is missing or lists fewer than two documents:",
+        file=sys.stderr,
+    )
+    for violation in result.split_index_violations:
+        print(f"  {violation}", file=sys.stderr)
     print(f"doc-id.py migrate: {len(result.assigned)} id(s) assigned")
     return 0
 

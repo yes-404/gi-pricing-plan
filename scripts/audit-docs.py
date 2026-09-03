@@ -924,7 +924,14 @@ def check_plan_acceptance_standard() -> None:
     checked = 0
     for f in sorted(plans_dir.glob("*.md")):
         name = f.name
-        if name == "README.md":
+        # `INDEX.md` joins `README.md` here: both are generated, neither is a filed plan.
+        # Ruling 101 clause 1 puts a split-source index in the family directory of the
+        # split's targets, and a plan that splits into a `PL-` plus nested `RL-` rulings
+        # sorts to `plans` — so `docs/plans/INDEX.md` is a shape a clean migration now
+        # produces. Without this line check 28 fails it for carrying no `YYYY-MM-DD-`
+        # prefix, which is a rule about *filed plans* and was never meant to reach a
+        # generated artifact.
+        if name in ("README.md", "INDEX.md"):
             continue
         if name.endswith(_PLAN_KIND_EXCLUDED_SUFFIXES):
             continue
