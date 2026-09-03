@@ -695,7 +695,7 @@ looking.
 ## Verified
 
 2026-09-03 — §3 gains two measurement traps, both from W37-6's NT-0019 §7 second measurement
-(`docs/audit/nt-0019-second-measurement-2026-09-03.md` §14 and §15, and F101). Added because the
+(`docs/research/nt-0019-second-measurement-2026-09-03.md` §14 and §15, and F101). Added because the
 first was made independently by two people on the same finding within an hour, which makes it a
 property of how the finding was stated rather than of who read it. Tree: `4b9117a`.
 
