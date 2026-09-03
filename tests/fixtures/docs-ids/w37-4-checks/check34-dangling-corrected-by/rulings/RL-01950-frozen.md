@@ -18,15 +18,15 @@ relates: []
 `corrected_by: [RL-1951]`, but `corrector.md` (`RL-1951`) does not `corrects:` back to
 `RL-1950` — it corrects something else instead.
 
-## Question
+## Verified first, at `fixture`
 
 Fixture body.
 
-## Ruling
+## Ruled
 
 Fixture body.
 
-## Rationale
+## What it obliges
 
 Fixture body.
 

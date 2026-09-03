@@ -38,19 +38,27 @@ relates: []                     # ids only — the decision point, plan or findi
 
 # RL-NNNNN — <Title>
 
-## Question
+## Verified first, at <tree>
 
-<The decision point or conflict as it was put, quoting the options if it came from a
-plan's `Decision points` table.>
+<What was read and run before ruling, at a named tree — the cells this ruling reads
+from, quoted with their file and line, and the measurement behind any figure. The
+decision point or conflict as it was put belongs here too, quoting the options if it
+came from a plan's `Decision points` table.
 
-## Ruling
+This heading's text is not a constant — it carries the tree — so check 37 cannot match
+it and does not require it (`required_sections` drops any heading holding a `<…>`
+placeholder). It is required of you, not of the checker: leave it in.>
+
+## Ruled
 
 <The decision, stated so "planner and executor apply it at every site" (§1.6) without
-re-deriving it — what changes, and where.>
+re-deriving it — what changes, and where. Why this option over the others that were on
+the table, and what the option not taken would have cost.>
 
-## Rationale
+## What it obliges
 
-<Why this option over the others that were on the table.>
+<What now has to happen, and by whom — and what this ruling deliberately does *not*
+strike or decide.>
 
 ## Acceptance — the violation that must become detectable
 

@@ -18,15 +18,15 @@ relates: []
 `corrects: RL-1999`, not `RL-1950` — so `RL-1950`'s `corrected_by: [RL-1951]` claim is
 dangling: check 34 must catch that the two records do not agree with each other.
 
-## Question
+## Verified first, at `fixture`
 
 Fixture body.
 
-## Ruling
+## Ruled
 
 Fixture body.
 
-## Rationale
+## What it obliges
 
 Fixture body.
 
