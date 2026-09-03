@@ -1651,18 +1651,61 @@ def row_i(snap: Snapshot) -> Row:
 #: **This table is edited by hand, in the same commit as the change that moves a row.** That
 #: is the point: the edit is the reviewable record of a row moving, and it cannot be
 #: produced by re-running the instrument.
+#:
+#: **2026-09-03 correction, at `3dbee20` (task 23; re-verified independently rather than
+#: transcribed from any relay).** Four rows moved:
+#:
+#: * **(d2) `PASS` was never true.** `git log -S'EXPECTED_VERDICTS' -- scripts/_docverify.py`
+#:   returns exactly one commit (`f6c9ff2`, #698) — the table has no history before its own
+#:   birth, so "went stale" was never available as an explanation; `\bF-W[0-9]` never read
+#:   near zero at any commit checked (`4b9117a`=214, `f6c9ff2`=217, `f52ee66`=217,
+#:   `3dbee20`=217, always far short of the 505518-line denominator). The comment it
+#:   carried — "green, and its mangled companion says why" — was a belief written into the
+#:   slot a measurement belongs in, F99's own shape. **The live defect underneath is real
+#:   and separate from the wrong entry**: diffed by exact token
+#:   (`F-W11-1-5`: control 10, migrated 13), all three excess occurrences trace to one
+#:   mechanism — a migrated document's front-matter `title:` field and its family
+#:   `INDEX.md` row both echo the document's title verbatim, and a title that happens to
+#:   quote a legacy citation (here, a ruling's own title naming the finding it corrects)
+#:   duplicates that citation into two new permanent locations neither protected by the
+#:   `was:`-line exclusion nor rewritten by `_rewrite_citations`. Confirmed at
+#:   `docs/rulings/RL-00167-...md` (front matter `title:` line 4, body heading — carried
+#:   over from the control's `## Ruling 13 —...`) and `docs/INDEX.md`/`docs/rulings/
+#:   INDEX.md` (generated fresh, no control-tree counterpart at all). Not filed as a
+#:   register finding by this change — reported to the lead for ownership (task 22 is the
+#:   analogous, larger-scale instance on row (d8), and may be the same fix).
+#: * **(d4) `REGRESSION` -> `FAIL`.** Still red, but no longer worse than the control:
+#:   migrated 262 vs. control 272 (companion "mangled...filename slug" 18 vs. 50) — a real
+#:   reduction, plausibly #693/#696's citation-rewrite and H-row work, not full closure.
+#: * **(d8) `FAIL` -> `REGRESSION`, a NEW, unfixed defect** (task 22, unowned as of this
+#:   commit): migrated 2788 vs. control 2644 (+144 lines / 30 files). Spot-checked against
+#:   the same mechanism as (d2) at far larger scale — `docs/INDEX.md` alone carries 118
+#:   `W[0-9]+[a-z]?-[0-9]+` matches with no control-tree counterpart, because every
+#:   migrated document's slice/workstream-scoped title is echoed into the generated index.
+#:   Recorded here as the true current state; the underlying defect is task 22's to fix,
+#:   not silently accepted as fine.
+#: * **(h3) `FAIL` -> `PASS`, genuine progress.** `req-coverage.py` now exits 0 with 533
+#:   requirements on *both* trees (previously 0 on the migrated tree) — real, not vacuous
+#:   (`ctl_count` and `mig_count` both non-zero, `_verdict_on_zero`'s dead-probe branches
+#:   both avoided).
 EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "a": PASS,          # one family per file, zero `none` — the only row that passes today
     "b": FAIL,          # 77 noncontiguous ids                     — Ruling 102 §2 row 4
     "c": FAIL,          # docs/INDEX.md stale against its own renderer
     "d1": FAIL,         # NT-00
-    "d2": PASS,         # F-W[0-9] — green, and its mangled companion says why
+    "d2": REGRESSION,   # F-W[0-9] — never PASS (2026-09-03 correction, task 23); the
+                         # migration's per-document `title:` front matter + generated
+                         # INDEX.md rows duplicate a citation quoted inside a title
+                         # (F-W11-1-5, control 10 -> migrated 13); live defect, unowned
     "d3": DISCLOSE,     # \bF[0-9]{2}\b — excluded from the zero requirement (§8.5)
-    "d4": REGRESSION,   # wf-0[0-9] — the migration CREATES this one
+    "d4": FAIL,         # wf-0[0-9] — improved (262 < control 272), not the migration's own
+                         # regression any more; still non-zero (2026-09-03, task 23)
     "d5": FAIL,         # Ruling [0-9]+                            — Ruling 102 §4
     "d6": FAIL,         # ADR-0[0-9]{3}
     "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
-    "d8": FAIL,         # W[0-9]+[a-z]?-[0-9]+
+    "d8": REGRESSION,   # W[0-9]+[a-z]?-[0-9]+ — the migration CREATES this one (2026-09-03,
+                         # task 22): +144 lines/30 files, same title/INDEX-duplication
+                         # mechanism as (d2) at larger scale; live defect, unowned
     "d9": FAIL,         # docs/plans/2026-
     "d10": FAIL,        # docs/audit/
     "d11": FAIL,        # the old notes directory
@@ -1673,7 +1716,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
     "h1": FAIL,         # audit-docs.py exits 1 on the migrated tree
     "h2": FAIL,         # four vacuous passes
-    "h3": FAIL,         # req-coverage.py finds 0 requirements
+    "h3": PASS,         # req-coverage.py: 533 requirements on both trees, exit 0 on the
+                         # migrated tree (was 0/empty-population FAIL; 2026-09-03, task 23)
     "h4": NOT_MEASURED,  # the gate halves needing a toolchain
     "i": NOT_MEASURED,  # W37-10's, and no row->commit artifact exists
 }
