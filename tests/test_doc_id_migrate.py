@@ -1752,8 +1752,14 @@ def test_plain_plans_real_corpus_owner_always_matches_its_own_kind(
     """Property over the whole real corpus, not a count (the corpus grows): every emitted
     `PL-` draft's `owner` is exactly `_PLAN_KIND_OWNER[kind]` — proves the derivation is
     wired for every plan discovered today, not merely for the fixture's four kinds.
+
+    **Scoped to the `PL-` drafts by `prefix`, not by assuming the function emits only
+    those.** Since Ruling 98 this function also emits `RL-` drafts (`kind: None`,
+    `owner: maintainer`), for which `_PLAN_KIND_OWNER` has no row and must not — the
+    family carries no `kind:` at all (`docs/_templates/RL.md:8`). The `RL-` half has its
+    own property test below; this one keeps saying exactly what its own docstring says.
     """
-    drafts = doc_id_cli._discover_plain_plans(ROOT)
+    drafts = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "PL"]
     assert drafts, "fixture assumption: at least one plain plan exists in the real corpus"
     mismatched = [
         (d.was, d.kind, d.owner)
@@ -1761,6 +1767,208 @@ def test_plain_plans_real_corpus_owner_always_matches_its_own_kind(
         if d.owner != doc_id_cli._PLAN_KIND_OWNER[d.kind]
     ]
     assert mismatched == []
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 98 (`docs/plans/2026-09-03-w37-6-ruling-98-prose-migration.md`) §2.1: a document
+# under `docs/plans/` whose entire content is a decision the maintainer made and dated, and
+# which carries no `## Ruling N` heading, migrates as `RL-`, `owner: maintainer`, with no
+# `kind:` field. Until PR #676 the suffix table below claimed all of them unconditionally
+# and every one was stamped `owner: planner` — §2.1(b)'s "status quo the ruling overrides".
+#
+# The tests below are written against Ruling 98's own seven acceptance items: the seven
+# named documents (1), the absent `kind:` (2), the two handovers untouched (3), the
+# conditional exclusion evaluated in **both** directions (4), a predicate rather than a
+# filename list (5), and the delegation record staying one document (6).
+# ---------------------------------------------------------------------------------------
+
+#: Ruling 98 §1's reconciled population, as read at `2ae31f7` by
+#: `_discover_plain_plans` itself. **A reading, not the rule** (§1's own words): a new
+#: maintainer-decision record filed under a title that names the maintainer joins it with
+#: no code change, which is what acceptance item 5 requires. If this list reds because the
+#: corpus grew, extend the list — never loosen the predicate to make the count come back.
+_RULING_98_MAINTAINER_DECISIONS = (
+    "docs/plans/2026-08-30-nt-0017-maintainer-decisions.md",
+    "docs/plans/2026-08-30-w11-reopen-direction.md",
+    "docs/plans/2026-09-01-maintainer-delegation-and-nt-0019-precedence.md",
+    "docs/plans/2026-09-02-w37-6-go-ahead-withheld.md",
+    "docs/plans/2026-09-02-w37-6-second-withholding-and-standing-rules.md",
+    "docs/plans/2026-09-02-w37-vendored-exemption-ruling.md",
+    "docs/plans/2026-09-03-w37-6-time-boxed-delegation.md",
+)
+
+#: Ruling 98 §2.2's conditionally-excluded file, and §1's two handovers (excluded by two
+#: independent routes — NT-0019 §1.13's own prose and `_PLAN_SUFFIX_KIND`).
+_RULING_98_CONDITIONAL_EXCLUSION = "docs/plans/2026-09-03-w37-6-maintainer-decisions.md"
+_RULING_98_HANDOVERS = (
+    "docs/plans/2026-08-20-w5-worker-handover.md",
+    "docs/plans/2026-09-03-w37-6-window-handover.md",
+)
+
+
+def test_ruling_98_the_seven_are_exactly_the_rl_drafts_plain_plans_emits(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Acceptance items 1 and 6, over the real corpus at `2ae31f7`.
+
+    Item 6's half — *"the delegation record stamped anything other than one `RL-`
+    document"* — is carried by the `== 1` on that file's drafts: `### 6.3`/`### 6.4` are
+    third-level headings the `## Ruling N` splitter cannot reach, so the whole record
+    leaves this function as a single draft, which is what §2.3 rules.
+    """
+    rl = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "RL"]
+    assert sorted(d.was for d in rl) == sorted(_RULING_98_MAINTAINER_DECISIONS)
+    assert len([d for d in rl if d.was == _RULING_98_MAINTAINER_DECISIONS[6]]) == 1
+
+
+def test_ruling_98_every_such_draft_is_owner_maintainer_and_carries_no_kind(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Acceptance items 1 and 2, as a property over whatever the predicate selects rather
+    than over the seven — so a later member cannot arrive with a `kind:` unnoticed.
+    `docs/_templates/RL.md:8`: *"`kind:` and `plans:` do not apply to this family and must
+    not appear here."*
+    """
+    rl = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "RL"]
+    assert rl, "fixture assumption: the predicate selects at least one real document"
+    assert [(d.was, d.owner, d.kind) for d in rl if d.owner != "maintainer" or d.kind] == []
+
+
+def test_ruling_98_the_two_handovers_are_not_reclassified(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Acceptance item 3. Both routes to the answer are asserted, because Ruling 98 §1
+    records both precisely so a reader who checks one knows the other agrees: the suffix
+    table still produces `kind: handover`/`owner: executor`, and the content predicate is
+    independently false for each file's own title.
+    """
+    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(ROOT)}
+    for rel in _RULING_98_HANDOVERS:
+        assert rel in by_was, f"fixture assumption: {rel} still exists"
+        draft = by_was[rel]
+        assert (draft.prefix, draft.kind, draft.owner) == ("PL", "handover", "executor")
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert not doc_id_cli._is_maintainer_decision_plan(
+            doc_id_cli._plan_title(text) or "", text
+        )
+
+
+def test_ruling_98_conditional_exclusion_holds_while_the_decision_lines_are_blank(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Acceptance item 4, first direction: `…-w37-6-maintainer-decisions.md` keeps the
+    shipped `PL- kind: leaf, owner: planner` default while its `> **Decision:**` blocks
+    are unfilled — *"a planner-assembled batch awaiting the maintainer, which is exactly
+    what a `PL-` `leaf` is for"* (§2.2).
+
+    The blankness is re-read from the file here rather than taken from Ruling 98's reading
+    at `e56d038`: if the maintainer has since filled a line in, this assertion is the
+    thing that says so, instead of a stale expectation quietly passing.
+    """
+    text = (ROOT / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
+    assert doc_id_cli._UNFILLED_DECISION_BLOCK_RE.search(text), (
+        "this file's Decision: lines are no longer blank at this tree -- Ruling 98 "
+        "§2.2 then routes it to RL-/owner: maintainer, and this expectation, not the "
+        "predicate, is what has to change"
+    )
+    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(ROOT)}
+    draft = by_was[_RULING_98_CONDITIONAL_EXCLUSION]
+    assert (draft.prefix, draft.kind, draft.owner) == ("PL", "leaf", "planner")
+
+
+def test_ruling_98_the_exclusion_lifts_the_moment_the_maintainer_fills_a_decision_in(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Acceptance item 4, **second** direction — the one a reading frozen at `e56d038`
+    gets wrong: *"stamped `owner: planner` after a dated correction has filled them in, on
+    the strength of `e56d038`'s reading rather than a fresh check."*
+
+    Built from the real file's own text, with only the two blanks filled, so the input is
+    the document the maintainer would actually be editing rather than a fixture shaped to
+    pass.
+    """
+    plans = tmp_path / "docs" / "plans"
+    plans.mkdir(parents=True)
+    source = (ROOT / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
+    filled = re.sub(
+        r"^> \*\*Decision:\*\*[ \t]*$", "> **Decision:** (a), as asked.", source, flags=re.M
+    )
+    assert filled != source, "no blank Decision: block to fill -- see the test above"
+    name = pathlib.Path(_RULING_98_CONDITIONAL_EXCLUSION).name
+    (plans / name).write_text(filled, encoding="utf-8")
+
+    (before,) = doc_id_cli._discover_plain_plans(tmp_path)
+    assert (before.prefix, before.kind, before.owner) == ("RL", None, "maintainer")
+
+    # Control, on the same tree and the same file: unfilled, it is a `PL-` leaf again.
+    (plans / name).write_text(source, encoding="utf-8")
+    (after,) = doc_id_cli._discover_plain_plans(tmp_path)
+    assert (after.prefix, after.kind, after.owner) == ("PL", "leaf", "planner")
+
+
+def test_ruling_98_is_a_predicate_over_content_not_a_list_of_seven_filenames(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Acceptance item 5: *"this predicate applied by hardcoding seven filenames and
+    nothing else, silently missing ... any later maintainer-decision document at the real
+    migration tree."*
+
+    Two documents that exist nowhere in the corpus, differing only in whose decision each
+    title says it records — the negative is the control, since a predicate that returned
+    `RL-` for everything would satisfy the positive alone.
+    """
+    plans = tmp_path / "docs" / "plans"
+    plans.mkdir(parents=True)
+    (plans / "2027-01-04-a-decision-filed-long-after-ruling-98.md").write_text(
+        "# W99 — the maintainer's decision on something not yet imagined, 2027-01-04\n"
+        "\n**Decided by:** the maintainer, 2027-01-04.\n",
+        encoding="utf-8",
+    )
+    (plans / "2027-01-04-a-plan-filed-long-after-ruling-98.md").write_text(
+        "# W99 — the planner's implementation plan for the same thing\n\nBody.\n",
+        encoding="utf-8",
+    )
+    by_name = {pathlib.Path(d.was).name: d for d in doc_id_cli._discover_plain_plans(tmp_path)}
+    new_decision = by_name["2027-01-04-a-decision-filed-long-after-ruling-98.md"]
+    new_plan = by_name["2027-01-04-a-plan-filed-long-after-ruling-98.md"]
+    assert (new_decision.prefix, new_decision.kind, new_decision.owner) == (
+        "RL", None, "maintainer",
+    )
+    assert (new_plan.prefix, new_plan.kind, new_plan.owner) == ("PL", "leaf", "planner")
+
+
+#: The one-occurrence anchor the broken-input proof below edits: the whole of Ruling 98's
+#: departure from the suffix fallback, replaced by a no-op assignment so the branch still
+#: runs and still decides nothing. Mutating the *predicate* instead would not do: a
+#: predicate forced to `False` proves the call site reads it, not that the call site would
+#: otherwise have produced the wrong family and owner, which is the defect itself.
+_RULING_98_BRANCH = 'prefix, kind, owner = "RL", None, "maintainer"'
+_RULING_98_BRANCH_DISARMED = "prefix, kind, owner = prefix, kind, owner"
+
+
+def test_ruling_98_instrument_reds_when_the_branch_is_removed(
+    tmp_path: pathlib.Path,
+) -> None:
+    """CLAUDE.md §13: *"enforcement is proven on deliberately broken input. A check that
+    has never printed a failure has not been tested."*
+
+    With Ruling 98's branch disarmed in the shipped source, the real corpus produces
+    exactly the misassignment §2.1(b) names — all seven back to `PL- kind: leaf,
+    owner: planner` — and every assertion above that names a family or an owner is shown
+    to be load-bearing rather than incidentally true.
+    """
+    mutated = _module_with_source_mutations(
+        tmp_path, ((_RULING_98_BRANCH, _RULING_98_BRANCH_DISARMED),), name="ruling98"
+    )
+    by_was = {d.was: d for d in mutated._discover_plain_plans(ROOT)}
+    regressed = [
+        (rel, by_was[rel].prefix, by_was[rel].kind, by_was[rel].owner)
+        for rel in _RULING_98_MAINTAINER_DECISIONS
+    ]
+    assert regressed == [
+        (rel, "PL", "leaf", "planner") for rel in _RULING_98_MAINTAINER_DECISIONS
+    ]
+    assert not [d for d in mutated._discover_plain_plans(ROOT) if d.prefix == "RL"]
 
 
 # ---------------------------------------------------------------------------------------
