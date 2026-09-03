@@ -41,7 +41,7 @@ from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, S
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import _docid
 
@@ -497,16 +497,43 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
     only those five plus `README.md` at the top level still reported four spurious
     `"none"` files, which is exactly the false failure this slice's own acceptance item
     (a) would otherwise have produced.
+
+    Widened again W37-6, two census defects NT-0019 §1.2's own Reference row names and
+    this function did not implement:
+
+    - **`docs/contracts/`** — the row's second named path (*"`process/`, `contracts/`,
+      every `README.md` anywhere in the tree, ..."*) — was absent from the `subdir`
+      branch below, so every file under it fell to `_CLASSIFY_FAMILY_BY_DIR.get(subdir,
+      "none")` and counted `"none"`: 61 files at the tree this docstring was last verified
+      against (`git ls-files docs/contracts | wc -l`). Mapped to `"reference"` alongside
+      `process/`, the identical reading the row already gives both paths.
+    - **Every `README.md` anywhere in the tree**, not the five whitelisted top-level
+      names — the row's third clause, unqualified by location. Checked *before* the
+      `len(parts) == 2` / `subdir` branches below, so a `README.md` nested under a family
+      directory (`docs/workflows/README.md`, `docs/findings/README.md`, ...) is
+      `"reference"` too, never that directory's own family bucket — Reference is what NT-
+      0019 §1.2 names for it, not a second definition of what "workflow"/"finding"/etc.
+      contains.
     """
     top_level_reference_files = frozenset(
-        {"README.md", "INDEX.md", "REDIRECTS.csv", "roadmap.md", "open-questions.md"}
+        {
+            "README.md", "INDEX.md", "REDIRECTS.csv", "roadmap.md", "open-questions.md",
+            # `skills-map.md` — NT-0019 §5.2 `:315`: *"`skills-map.md` | citations rewrite
+            # | `M`"* — it is swept for citation rewrites in place, never moved into a
+            # family directory, the same "stays at its own top-level path" shape the five
+            # names above already have. A W37-6 census widening, not a §1.2 family: this
+            # file names no document family at all.
+            "skills-map.md",
+        }
     )
     counts: dict[str, int] = {}
     for rel in git_ls_files(repo_root, "docs"):
         parts = Path(rel).parts  # ("docs", ...) always, since the pathspec was "docs"
         if len(parts) < 2:
             continue  # defensive: git ls-files -- "docs" cannot itself return "docs"
-        if len(parts) == 2:
+        if parts[-1] == "README.md":
+            family = "reference"
+        elif len(parts) == 2:
             family = "reference" if parts[1] in top_level_reference_files else "none"
         else:
             subdir = parts[1]
@@ -514,7 +541,7 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
                 family = "template"
             elif subdir == "specs":
                 family = "requirement"
-            elif subdir == "process":
+            elif subdir in ("process", "contracts"):
                 family = "reference"
             else:
                 family = _CLASSIFY_FAMILY_BY_DIR.get(subdir, "none")
@@ -869,7 +896,7 @@ def _load_register_lint(repo_root: Path = REPO_ROOT) -> types.ModuleType:
 #: `_check_every_document_draft_is_placeable` treats it as the only one.
 _MIGRATE_TEMPLATE_FILENAME: Final[Mapping[str, str]] = {
     "ADR": "ADR.md", "RFC": "RFC.md", "PL": "PL.md", "RL": "RL.md", "CR": "CR.md",
-    "REFERENCE": "REFERENCE.md", "LG": "LG.md", "RS": "RS.md",
+    "REFERENCE": "REFERENCE.md", "LG": "LG.md", "RS": "RS.md", "FD": "FD.md", "WF": "WF.md",
 }
 
 _LEADING_COMMENT_RE: Final = re.compile(r"\A<!--.*?-->\n?\n?", re.DOTALL)
@@ -2409,8 +2436,101 @@ def _discover_roadmap(
 
 _REGISTER_FINDING_RE: Final = re.compile(r"\((F(?:\d+|-W\d+[a-z]?(?:-\d+)+))\)\s*$")
 
+#: `docs/audit/phases/1b/register.md`'s 11 findings, `(short-form Finding-id, description
+#: source)` -- NT-0019 §5.2's register row ("the phase register's rows merge in with
+#: `phase: P1b`") and the maintainer's 2026-09-03 ruling that folds all 11 in, F12
+#: included, and deletes the file (NT-0019 §1.4 line 100's dissolution, and `:95`'s "per-
+#: phase views are generated, never files"). Every id's description below is a *mechanical
+#: prefix* of that row's own Concerns cell -- truncated at the first of `(`, `—` or `;`,
+#: whole text kept verbatim when none of those appear -- never composed prose, so it can
+#: be checked against the source rather than trusted. Held out of the 14-id overlap with
+#: `docs/audit/register.md` (F6-F9, F13-F22): those already exist there with their own
+#: Phase value (some `1b`, some carried forward to `2`/`2/3/4`) and are untouched.
+_PHASE_1B_MERGE_IDS: Final[tuple[str, ...]] = (
+    "F1", "F2", "F3", "F4", "F5", "F10", "F11", "F12", "F23", "F24", "F25",
+)
 
-def _discover_register(root: Path) -> list[_Draft]:
+
+def _phase1b_row_description(concerns: str) -> str:
+    """The mechanical truncation rule stated in `_PHASE_1B_MERGE_IDS`'s own comment: the
+    text up to (not including) the first `(`, `—` or `;`, stripped -- or the whole
+    (stripped) text when none of the three appears. A prefix of existing text, never a
+    composed one.
+    """
+    positions = [p for p in (concerns.find("("), concerns.find("—"), concerns.find(";")) if p != -1]
+    if not positions:
+        return concerns.strip()
+    return concerns[: min(positions)].strip()
+
+
+def _merge_phase1b_register(root: Path) -> None:
+    """Merges `docs/audit/phases/1b/register.md`'s 11 rows into `docs/audit/register.md`'s
+    own table, as `_PHASE_1B_MERGE_IDS` states, then deletes the phase register -- run
+    *before* `_discover_register`/`_discover_findings` read `docs/audit/register.md`, so
+    the merged rows are ordinary register content by the time either function sees them
+    (no separate materialize kind; they get real `FD-` numbers through the identical path
+    every other register row does). A no-op, idempotent, once the phase file no longer
+    exists -- the second-run reading every other legacy-path `_discover_*` gives its own
+    source file.
+
+    Each new row's Work-item cell is the source row's own third field when the row splits
+    into 4 fields (`Finding id | Concerns | Work item | Decision`), or `—` — the main
+    register's own existing notation for "no work item", used on roughly 15 rows there
+    already — when the source row splits into only 3 (F23, F24, F25 carry no Work-item
+    cell at all in the phase file; a structural drift in that table, not a formatting
+    choice, filed as its own finding rather than silently patched over).
+
+    Parses with `register_lint._split_row` directly, never `parse_register`:
+    `parse_register` enforces exactly 5 fields (the *main* register's own grammar) and
+    would classify every one of this file's 4-field rows — and both of its 3-field ones —
+    as a structural problem, returning zero real `Row`s for a file this function's whole
+    job is to read. `_split_row` is the shared primitive both grammars are built from
+    (unescaped-`|` splitting, escaped pipes restored after), so reusing it rather than
+    reimplementing it keeps the two readings from silently drifting apart the way Ruling
+    67 §2 already warns a second copy of "a legacy form" will.
+    """
+    phase1b_path = root / "docs" / "audit" / "phases" / "1b" / "register.md"
+    if not phase1b_path.is_file():
+        return
+    register_lint = _load_register_lint()
+    by_id: dict[str, list[str]] = {}
+    for line in phase1b_path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        fields = register_lint._split_row(line)
+        if fields and fields[0] in _PHASE_1B_MERGE_IDS:
+            by_id[fields[0]] = fields
+    new_lines: list[str] = []
+    for token in _PHASE_1B_MERGE_IDS:
+        fields = by_id.get(token)
+        if fields is None:
+            continue
+        if len(fields) == 4:
+            _, concerns, work_item, decision = fields
+        elif len(fields) == 3:
+            _, concerns, decision = fields
+            work_item = "—"
+        else:
+            raise ValueError(
+                f"docs/audit/phases/1b/register.md: {token}'s row splits into "
+                f"{len(fields)} fields, neither 3 nor 4 -- refusing to guess which are "
+                "Concerns/Work item/Decision"
+            )
+        description = _phase1b_row_description(concerns)
+        cell = f"{description} ({token})" if description else f"({token})"
+        new_lines.append(f"| {cell} | {concerns} | {work_item} | 1b | {decision} |")
+
+    register_path = root / "docs" / "audit" / "register.md"
+    text = register_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    last_table_line = max(i for i, ln in enumerate(lines) if ln.startswith("|"))
+    lines[last_table_line + 1 : last_table_line + 1] = new_lines
+    register_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    phase1b_path.unlink()
+    _remove_if_empty(phase1b_path.parent)
+
+
+def _discover_register(root: Path, *, exclude: Collection[str] = ()) -> list[_Draft]:
     """The register's declared row grammar (module note above; `scripts/register-lint.py`
     `parse_register`, reused rather than reimplemented — W37-6 outstanding obligations row
     34): a data row is a `|`-led line inside the one table, the header found by
@@ -2423,6 +2543,23 @@ def _discover_register(root: Path) -> list[_Draft]:
 
     Matched only at the legacy path (NT-0019 §5.2: "Finding-id cells → `FD-n` with
     `was:`") — a second run (moved to `docs/findings/register.md`) finds nothing there.
+
+    `exclude` names the bare `F<n>` tokens `_discover_findings` already turned into a
+    `materialize="document"` draft (one per `docs/audit/findings/F*.md` essay) — this
+    function must skip exactly those, or the same finding gets two numbers: one from its
+    essay's own `document` draft, one from this function's `register_row` draft, both fed
+    into `_assign_numbers` independently (Phase B has no notion that two drafts might name
+    the same finding). NT-0019's own illustrative row (§3: `F27` + its essay →
+    `docs/findings/FD-0nnnn-rating-shapes.md`, register row `was: F27`) is one number
+    shared by both places, never two — a finding *without* an essay is untouched by this
+    exclusion and still gets its number here, exactly as before this parameter existed.
+
+    `migrate()` itself does **not** pass `exclude` here — it calls this function
+    unfiltered so `_check_legacy_file_not_silently_unrecognised`'s shape census sees every
+    row the parser actually found (a corpus where every finding has an essay must not read
+    as "register.md's shape went unrecognised"), then filters the *result* externally
+    before assigning numbers. This parameter stays for a direct caller (a test proving the
+    double-assignment fix in isolation) that wants the filtering done in one call.
     """
     drafts: list[_Draft] = []
     path = root / "docs" / "audit" / "register.md"
@@ -2438,6 +2575,8 @@ def _discover_register(root: Path) -> list[_Draft]:
         if m is None:
             continue
         token = m.group(1)
+        if token in exclude:
+            continue
         title = cell[: m.start()].strip() or f"Finding {token}"
         drafts.append(
             _Draft(
@@ -2449,6 +2588,419 @@ def _discover_register(root: Path) -> list[_Draft]:
         )
         order += 1
     return drafts
+
+
+_FINDING_TITLE_RE: Final = re.compile(r"^#\s+(F\d+)\s+—\s+(.+)$", re.MULTILINE)
+_FINDING_FILENAME_RE: Final = re.compile(r"^(F\d+)\.md$")
+
+#: Ruling 99 §2, File 3: a finding essay that lives outside `docs/audit/findings/` and
+#: carries no `F<n>.md` filename at all, because it is the essay half of an
+#: **already-open** register finding rather than a new one — "not a new finding, no new
+#: id" (§3). `token -> its essay's path`, so it shares that finding's own number through
+#: the identical `_discover_register` exclusion every `F*.md` essay goes through, never a
+#: number of its own.
+_FINDING_EXTRA_ESSAY_LOCATIONS: Final[Mapping[str, str]] = {
+    "F28": "docs/audit/work/nt-0010-0011-adoption/pilot-findings.md",
+}
+
+
+def _discover_findings(root: Path) -> list[_Draft]:
+    """`docs/audit/findings/F<n>.md`: one essay per finding (NT-0019 §5.2's own routing,
+    `docs/notes/0019-one-id-per-document.md:323`: *"`audit/findings/F*.md` (5) + README |
+    `findings/FD-0nnnn-*.md`; README rewritten"*). `docs/audit/findings/README.md` is the
+    family's own index, not a governed finding, and is excluded by the filename match
+    below exactly as `docs/adr/README.md` is excluded from `_discover_adrs`.
+
+    **Owner is `auditor` unconditionally** — NT-0019 §1.6's `FD` row: *"auditor (register
+    row + essay)"* names no other creator, matching `_discover_register`'s own `owner=
+    "auditor"` for the row half of the same family.
+
+    **`status:`** comes from the matching register row's Decision cell — NT-0019 §5.2's
+    `audit/register.md` row: *"each row gains `status:` (`active`, or `closed` where a
+    **Resolved** annotation exists)"*. A finding's essay carries no `decision:` field of
+    its own (`docs/_templates/FD.md`'s own header comment: that field is the register
+    row's, "never this frozen essay's" — Ruling 70) — only `status:`, from the identical
+    predicate `scripts/register-lint.py`'s own check 2 uses to decide whether a Decision
+    cell already carries a resolution marker (`_opens_with_status` — the cell's own
+    opening is a disposition-vocabulary word; or `_STATUS_MARKER` — an in-cell "**Resolved
+    <date>**" / "Fixed —" annotation like F32's or F-W10-1-1's). A finding with no
+    matching register row (should not occur in a well-formed corpus, but the essay
+    directory and the register table are two independently-read files) defaults to
+    `active` rather than raising — the same "no data source, so omitted/defaulted rather
+    than guessed" reading `_stamp_header`'s own docstring gives every other unresolved
+    optional field.
+
+    **`was:`** is the bare `F<n>` token (NT-0019 line 269's illustrative row: *"`F27` +
+    `docs/audit/findings/F27.md`" → "`docs/findings/FD-0nnnn-rating-shapes.md`, register
+    row `was: F27`"* — not the path, not `F27.md`), so it doubles as the citation-rewrite
+    key `migrate()`'s Phase D pass already keys every other family's `was:`/`old_token` on.
+
+    **Title** comes from the essay's own `# F<n> — <title>` heading (`_FINDING_TITLE_RE`),
+    the same heading-derived reading `_discover_adrs` gives `# ADR-<n> — <title>` and
+    `_discover_notes` gives `# NT-<nnnn> — <title>`.
+
+    **Date source:** git first-commit date (`_module_first_commit_date`) — an essay carries
+    no per-file date field of its own, the same fallback `_discover_register` already uses
+    for the register file itself (NT-0019 §4 step 1: "git first-commit date otherwise").
+
+    The essay's own H1 still names the legacy `F<n>` token in its body text; that line is
+    rewritten by the same global Phase D citation pass every other document's body goes
+    through (`token_map["F84"] = "FD-00084"` reaches the file `_write_document_drafts`
+    already wrote, exactly as it reaches every other citing file in the tree) — no
+    per-family body rewrite is added here, deliberately, per Ruling 67 §2's "one shared
+    constant" reasoning `_discover_register`'s own docstring already cites.
+    """
+    findings_dir = root / "docs" / "audit" / "findings"
+    register_lint = _load_register_lint()
+    register_rows: dict[str, Any] = {}  # `register_lint.Row`, a dynamically-loaded type
+    register_path = root / "docs" / "audit" / "register.md"
+    if register_path.is_file():
+        rows, _problems = register_lint.parse_register(register_path)
+        for row in rows:
+            m = _REGISTER_FINDING_RE.search(row.fields[0])
+            if m is not None:
+                register_rows[m.group(1)] = row
+
+    def status_for(token: str) -> str:
+        row = register_rows.get(token)
+        if row is None:
+            return "active"
+        decision = row.fields[4]
+        if register_lint._opens_with_status(decision) or register_lint._STATUS_MARKER.search(
+            decision
+        ):
+            return "closed"
+        return "active"
+
+    drafts: list[_Draft] = []
+    order = 0
+    if findings_dir.is_dir():
+        for path in sorted(findings_dir.glob("*.md")):
+            filename_match = _FINDING_FILENAME_RE.match(path.name)
+            if filename_match is None:
+                continue  # README.md and anything else not a bare `F<n>.md` essay
+            token = filename_match.group(1)
+            text = path.read_text(encoding="utf-8")
+            title_match = _FINDING_TITLE_RE.search(text)
+            title = title_match.group(2).strip() if title_match is not None else token
+            created = _module_first_commit_date(path, root)
+            drafts.append(
+                _Draft(
+                    materialize="document", prefix="FD", kind=None, title=title,
+                    status=status_for(token), created=created, owner="auditor",
+                    tie_break=(path.relative_to(root).as_posix(), order), old_token=token,
+                    was=path.relative_to(root).as_posix(), body=text,
+                )
+            )
+            order += 1
+    # Ruling 99 (`docs/plans/2026-09-03-w37-6-ruling-99-three-undeclared-files.md`) §2,
+    # File 3: `pilot-findings.md` is not itself an `F<n>.md`-shaped essay -- it lives at a
+    # different path entirely and carries no `# F<n> — <title>` heading -- but is the
+    # essay half of an *already-open* register finding, F28, which `docs/audit/
+    # register.md:70` cites it by name as the disposition trail for. "Not a new finding,
+    # no new id" (§3): it must produce a draft that shares F28's own number, not mint one
+    # of its own, so it goes through the identical exclusion path every `F*.md` essay
+    # does -- `_discover_register`'s caller filters `register_drafts` by every `old_token`
+    # this function returns, F28 included.
+    for token, rel in _FINDING_EXTRA_ESSAY_LOCATIONS.items():
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        row = register_rows.get(token)
+        if row is not None:
+            title = row.fields[0][: row.fields[0].rfind("(")].strip()
+        else:
+            title_match = _GENERIC_H1_RE.search(text)
+            title = title_match.group(1) if title_match is not None else token
+        created = _module_first_commit_date(path, root)
+        drafts.append(
+            _Draft(
+                materialize="document", prefix="FD", kind=None, title=title,
+                status=status_for(token), created=created, owner="auditor",
+                tie_break=(path.relative_to(root).as_posix(), order), old_token=token,
+                was=path.relative_to(root).as_posix(), body=text,
+            )
+        )
+        order += 1
+    return drafts
+
+
+_WORKFLOW_TITLE_RE: Final = re.compile(r"^#\s+(WF-\d+)\s+—\s+(.+)$", re.MULTILINE)
+
+
+def _discover_workflows(root: Path) -> list[_Draft]:
+    """`docs/workflows/wf-0N-*.md`: NT-0019 §5.2's own routing
+    (`docs/notes/0019-one-id-per-document.md:322`: *"`workflows/wf-0n-*.md` (5) + README |
+    `WF-0nnnn-*.md`, stamped; README table generated"*). Matched on the file's own legacy
+    heading `# WF-0N — <title>` (`_WORKFLOW_TITLE_RE`) — the same heading-derived
+    `old_token` reading `_discover_adrs` gives `# ADR-<n> — <title>`, invisible to a second
+    run once the file has moved to `docs/workflows/WF-<n>-*.md` with no such heading.
+    `docs/workflows/README.md` carries no such heading and is excluded by the match
+    failing, exactly as `docs/adr/README.md` is excluded from `_discover_adrs`.
+
+    **Owner is `decision-maker`** — `docs/_templates/WF.md`'s own header comment ("owner:
+    decision-maker # creates via spec-change") and NT-0019 §1.6's `WF` row ("decision-maker,
+    via `spec-change`"; executor only *delivers* the journey's steps, never creates the
+    document).
+
+    **Status is `active`** — every workflow under `docs/workflows/` today is a live,
+    in-force cross-module journey, cited throughout `docs/specs/` and `CLAUDE.md` §4, not a
+    draft awaiting acceptance; unlike an ADR's legacy bullet header there is no in-file
+    status field to read instead, so this is a disclosed reading rather than a value
+    NT-0019 states outright — the same disclosed-mapping reading `classify_docs_files`'s
+    own docstring gives its `docs/specs/*.md` → `"requirement"` mapping.
+
+    **Date source:** git first-commit date (`_module_first_commit_date`) — a workflow
+    carries no per-file date field of its own, the same fallback `_discover_register` and
+    `_discover_findings` both use.
+    """
+    drafts: list[_Draft] = []
+    workflows_dir = root / "docs" / "workflows"
+    if not workflows_dir.is_dir():
+        return drafts
+    for path in sorted(workflows_dir.glob("*.md")):
+        if _docid.ID_RE.match(path.name):
+            # Already migrated: its filename is the canonical padded form
+            # (`WF-00024-*.md`). The file's *body* still carries a `# WF-<n> — <title>`
+            # heading that matches `_WORKFLOW_TITLE_RE` regardless of width -- the new
+            # padded number is still `WF-\d+` -- so the regex alone cannot tell a second
+            # run apart from the first; the filename can, the same idempotency reading
+            # `_check_flat_document_directory_not_silently_unrecognised`'s own
+            # `is_already_canonical` gives every other family's second-run check.
+            continue
+        text = path.read_text(encoding="utf-8")
+        title_match = _WORKFLOW_TITLE_RE.search(text)
+        if title_match is None:
+            continue  # README.md and anything else not a legacy `# WF-0N — <title>` file
+        old_token, title = title_match.group(1), title_match.group(2)
+        created = _module_first_commit_date(path, root)
+        drafts.append(
+            _Draft(
+                materialize="document", prefix="WF", kind=None, title=title,
+                status="active", created=created, owner="decision-maker",
+                tie_break=(path.relative_to(root).as_posix(), 0),
+                old_token=old_token, was=path.relative_to(root).as_posix(), body=text,
+            )
+        )
+    return drafts
+
+
+_GENERIC_H1_RE: Final = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
+
+
+#: Every standalone `docs/audit/` file NT-0019 or a later ruling routes into
+#: `research/RS-...` by explicit path, `rel -> (kind, owner)`:
+#:
+#: - `file-census.md`/`file-taxonomy-draft.md` — `docs/notes/0019-one-id-per-document.md
+#:   :328` ("`audit/file-census*.{md,csv}`, `audit/file-taxonomy-draft.md` | →
+#:   `research/RS-…`"), `:238` ("census and taxonomy draft → `RS- kind: measurement`/
+#:   `audit`"). `kind: measurement` for both is a **reading**, not a citation: NT-0019
+#:   gives a disjunction and neither file reads as a formal audit with scope, evidence and
+#:   verdicts (§1.6's own `RS` `audit` row) — both are raw counts and a draft
+#:   classification exercise, which is what `measurement` names in §1.2's table. Owner
+#:   `executor` — D13 (§3): "research → executor, except `RS- kind: audit` → auditor".
+#: - `nt-0019-verification-and-impact-sweep.md`/`ruling-acceptance-item-sweep.md` — Ruling
+#:   99 (`docs/plans/2026-09-03-w37-6-ruling-99-three-undeclared-files.md`) §2: neither file
+#:   existed at NT-0019's own `8f5d57d` base tree (§1.13: "every governance file **at
+#:   `8f5d57d`**"), so NT-0019 cannot have named them — both are dispatched audit records
+#:   with method, evidence and verdicts, matching `RS`'s unit and `kind: audit`'s
+#:   vocabulary directly (§1(e)); owner `auditor`, per the same `RS` `audit` row (D13).
+#:
+#: Matched by explicit path, not a directory sweep: unlike findings or workflows, there is
+#: no shared shape to glob on (a bare `F<n>.md` filename, a `# WF-0N —` heading) — named
+#: legacy files, the same reading `_REFERENCE_MOVE_TARGETS` below gives its four.
+_RESEARCH_ESSAY_TARGETS: Final[Mapping[str, tuple[str, str]]] = {
+    "docs/audit/file-census.md": ("measurement", "executor"),
+    "docs/audit/file-taxonomy-draft.md": ("measurement", "executor"),
+    "docs/audit/nt-0019-verification-and-impact-sweep.md": ("audit", "auditor"),
+    "docs/audit/ruling-acceptance-item-sweep.md": ("audit", "auditor"),
+}
+
+
+def _discover_research_essays(root: Path) -> list[_Draft]:
+    """`_RESEARCH_ESSAY_TARGETS`'s files, each still at its old path — idempotent by
+    construction: once moved, the path this function reads no longer exists.
+    """
+    drafts: list[_Draft] = []
+    for order, (rel, (kind, owner)) in enumerate(_RESEARCH_ESSAY_TARGETS.items()):
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        title_match = _GENERIC_H1_RE.search(text)
+        title = title_match.group(1) if title_match is not None else path.stem
+        created = _module_first_commit_date(path, root)
+        drafts.append(
+            _Draft(
+                materialize="document", prefix="RS", kind=kind, title=title,
+                status="active", created=created, owner=owner,
+                tie_break=(rel, order), old_token=None, was=rel, body=text,
+            )
+        )
+    return drafts
+
+
+#: NT-0019 §5.2 :328 routes this file into `research/RS-...` alongside its two markdown
+#: siblings above, but it cannot carry the family's YAML front matter -- F83's own
+#: corrected population (`docs/audit/register.md`, F83 row, "Corrected 2026-09-02") names
+#: this exact file as one of the two non-`.md` files added to the "cannot physically
+#: carry front matter" exempt set: a prepended `---` block makes row 1 stop being the
+#: CSV's own header, breaking `scripts/file-census.py` and any other CSV reader.
+#: `classify_docs_files` buckets by directory, not by header, so the move alone satisfies
+#: NT-0019 §7(a); no header follows it, and no `id:` is minted for it either (it never
+#: numbers into the sequence — a document family membership without an id would itself be
+#: a new, undeclared shape).
+_RESEARCH_UNSTAMPABLE_MOVE: Final[Mapping[str, str]] = {
+    "docs/audit/file-census-5ef559d.csv": "docs/research/file-census-5ef559d.csv",
+}
+
+
+def _move_unstampable_research_files(root: Path) -> tuple[list[str], list[str]]:
+    """Moves `_RESEARCH_UNSTAMPABLE_MOVE`'s file(s) byte-for-byte -- `read_bytes`/
+    `write_bytes`, never `read_text`/`write_text`, so this cannot silently normalise line
+    endings or re-encode anything in a file whose whole reason for this special path is
+    that its bytes must stay exactly parseable as CSV. Returns `(written, deleted)` repo-
+    relative posix paths, the same shape `_write_document_drafts` returns.
+    """
+    written: list[str] = []
+    deleted: list[str] = []
+    for old_rel, new_rel in _RESEARCH_UNSTAMPABLE_MOVE.items():
+        old_path = root / old_rel
+        if not old_path.is_file():
+            continue
+        new_path = root / new_rel
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        new_path.write_bytes(old_path.read_bytes())
+        old_path.unlink()
+        written.append(new_rel)
+        deleted.append(old_rel)
+    return written, deleted
+
+
+def _discover_named_phase_records(root: Path) -> list[_Draft]:
+    """The two standalone `docs/audit/` files NT-0019 names individually as `CR- kind:
+    phase` records (`docs/notes/0019-one-id-per-document.md:238`: *"exit-demo UAT and
+    `phase-0-status.md` → `CR- kind: phase`"*; `:314` and `:324` for their own §5.2 rows).
+    Neither is a per-directory README (`_discover_audit_closure_readmes`'s shape) or a
+    heading inside a shared file (`_discover_closure_records`'s shape) -- each is its own
+    whole file with its own H1, so matched by explicit path exactly as
+    `_discover_research_essays` matches its two.
+
+    **Owner `auditor`** — §1.6's `CR` row: "auditor (`work`, `phase`); lead (`review`)".
+    **Status `active`** — §1.2's own table: closure mutability is write-once, `active` is
+    the family's only value, ever.
+
+    **`phase:`** is read, not derived: `exit-demo-uat.md`'s own H1 names "Phase 1b"
+    (`P1b`); `phase-0-status.md`'s own H1 names "Phase 0" (`P0`). Neither is guessed from
+    a roadmap lookup the way `_write_document_drafts`'s `LG-` `work:` resolution is,
+    because both files say their own phase directly.
+    """
+    targets: tuple[tuple[str, str], ...] = (
+        ("docs/audit/exit-demo-uat.md", "P1b"),
+        ("docs/phase-0-status.md", "P0"),
+    )
+    drafts: list[_Draft] = []
+    for order, (rel, phase) in enumerate(targets):
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        title_match = _GENERIC_H1_RE.search(text)
+        title = title_match.group(1) if title_match is not None else path.stem
+        created = _module_first_commit_date(path, root)
+        drafts.append(
+            _Draft(
+                materialize="document", prefix="CR", kind="phase", title=title,
+                status="active", created=created, owner="auditor",
+                tie_break=(rel, order), old_token=None, was=rel, body=text, phase=phase,
+            )
+        )
+    return drafts
+
+
+#: NT-0019 §5.2's own routing for these four `docs/audit/` files -- Reference family
+#: (§1.2's Reference row already names `process/`), moved bodily into `docs/process/`
+#: rather than stamped in place, because their *directory* is what §1.2 routes: `:326`
+#: ("`audit/checklists/*.md` | → `process/checklists/`") and `:327` ("`audit/retrofit-
+#: impossible.md`, `audit/security-posture.md` | → `process/`"). Deliberately does not
+#: author the checklist "gains" sentences `:326` also names -- new procedural prose is an
+#: authored content obligation, not a migration act (the maintainer's 2026-09-03 ruling:
+#: "the move alone discharges the thing the gate measures"); filed as a finding instead,
+#: not invented here. Grepped for existing text first (`new record has an id`, `no family
+#: outside`, `freeze-gate`) -- the only tree-wide hit is the map plan restating the same
+#: instruction, not any authored text to carry over.
+_REFERENCE_MOVE_TARGETS: Final[Mapping[str, str]] = {
+    "docs/audit/checklists/phase-close.md": "docs/process/checklists/phase-close.md",
+    "docs/audit/checklists/work-item-close.md": "docs/process/checklists/work-item-close.md",
+    "docs/audit/retrofit-impossible.md": "docs/process/retrofit-impossible.md",
+    "docs/audit/security-posture.md": "docs/process/security-posture.md",
+}
+
+
+@dataclass(frozen=True)
+class _ReferenceMove:
+    """One Reference-family file NT-0019 §5.2 routes to a **new** path under
+    `docs/process/` -- the one exception to `_ReferenceStamp`'s "no move" rule (§1.2's
+    Reference row still applies: no id, no number -- only the location changes).
+    """
+
+    old_path: Path
+    new_path: Path
+    old_rel: str
+    new_rel: str
+    owner: str
+    title: str
+
+
+def _discover_reference_moves(root: Path) -> list[_ReferenceMove]:
+    """`_REFERENCE_MOVE_TARGETS`'s four files, each still at its old path -- idempotent by
+    construction, the same reading `_discover_research_essays` gives its own explicit-path
+    targets: once moved, the old path is simply absent on a second run.
+
+    Title is the file's own H1; owner `maintainer` — §1.6's Reference row for `process/`:
+    "maintainer; amendments arrive as `RFC-` + `RL-`".
+    """
+    moves: list[_ReferenceMove] = []
+    for old_rel, new_rel in _REFERENCE_MOVE_TARGETS.items():
+        old_path = root / old_rel
+        if not old_path.is_file():
+            continue
+        text = old_path.read_text(encoding="utf-8")
+        title_match = _GENERIC_H1_RE.search(text)
+        title = title_match.group(1) if title_match is not None else old_path.stem
+        moves.append(
+            _ReferenceMove(
+                old_path=old_path, new_path=root / new_rel, old_rel=old_rel,
+                new_rel=new_rel, owner="maintainer", title=title,
+            )
+        )
+    return moves
+
+
+def _write_reference_moves(
+    root: Path, moves: Sequence[_ReferenceMove]
+) -> tuple[list[str], list[str]]:
+    """Stamps each move's Reference header at its **new** path and deletes the old one --
+    same `_stamp_header("REFERENCE", ...)` substitution `_stamp_reference_targets` uses
+    for the in-place case, `was=` set here (that function always passes `was=None`,
+    because nothing it stamps has moved).
+    """
+    written: list[str] = []
+    deleted: list[str] = []
+    for move in moves:
+        move.new_path.parent.mkdir(parents=True, exist_ok=True)
+        header = _stamp_header(
+            "REFERENCE", None, kind=None, title=move.title, status="active",
+            created=_module_first_commit_date(move.old_path, root), owner=move.owner,
+            was=move.old_rel,
+        )
+        body = move.old_path.read_text(encoding="utf-8")
+        move.new_path.write_text(header + "\n" + body, encoding="utf-8")
+        written.append(move.new_rel)
+        move.old_path.unlink()
+        deleted.append(move.old_rel)
+    return written, deleted
 
 
 def _is_vendored_skill_manifest(path: Path) -> bool:
@@ -2625,9 +3177,21 @@ def _assign_numbers(drafts: list[_Draft], start: int) -> None:
 #: `_write_document_drafts` raised `KeyError: 'RS'` **after** writing 125 of 290 documents:
 #: a partial migration rather than a clean abort. `_check_every_document_draft_is_placeable`
 #: below is what stops the next family doing the same.
+#:
+#: **`FD` and `WF` added W37-6** — NT-0019 §1.2's own table declares nine Document rows;
+#: before this change this mapping implemented seven (`ADR RFC PL RL CR LG RS`), the same
+#: `KeyError` shape the comment above already names, just never yet hit because nothing
+#: called a `_discover_findings`/`_discover_workflows` that emitted a `materialize=
+#: "document"` draft for either prefix. `_check_every_document_draft_is_placeable` proves
+#: this on deliberately broken input (`test_every_emittable_document_prefix_has_a_family_
+#: dir_and_a_template`, `test_fd_document_draft_is_refused_before_the_family_dir_fix`):
+#: findings land in `docs/findings/` (`FD.md`'s own template — the essay half of a
+#: register row plus a frozen essay, NT-0019 §1.2's Finding row), workflows in
+#: `docs/workflows/` (already home to the un-stamped `wf-0N-*.md` files — NT-0019 §1.2's
+#: Workflow row).
 _DOCUMENT_FAMILY_DIR: Final[Mapping[str, str]] = {
     "ADR": "adrs", "RFC": "rfcs", "PL": "plans", "RL": "rulings", "CR": "closures",
-    "LG": "ledgers", "RS": "research",
+    "LG": "ledgers", "RS": "research", "FD": "findings", "WF": "workflows",
 }
 
 
@@ -3492,6 +4056,10 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     "tests/fixtures/docs-migration/docs/README.md",
     "tests/fixtures/docs-migration/docs/audit/phases/1a/README.md",
     "tests/fixtures/docs-migration/docs/audit/work/W1/README.md",
+    # W37-6's own `_discover_workflows` fixture (docs/workflows/wf-01-example-journey.md
+    # needs a sibling `README.md` to prove that file, not this one, is what excludes a
+    # directory's own index from discovery).
+    "tests/fixtures/docs-migration/docs/workflows/README.md",
 )
 
 _REFERENCE_FIXTURE_CORPUS_REASON: Final = (
@@ -4382,11 +4950,53 @@ def migrate(root: Path) -> MigrateResult:
     requirement_drafts = _discover_requirements(root)
     _check_requirements_not_silently_unrecognised(root)
     roadmap_drafts, phase_titles, roadmap_occurrences = _discover_roadmap(root)
-    register_drafts = _discover_register(root)
-    _check_legacy_file_not_silently_unrecognised(
-        root / "docs" / "audit" / "register.md", register_drafts, "register finding rows"
+    # Merges the phase-1b register into the main one and deletes the phase file -- must
+    # run before `_discover_findings`/`_discover_register` below, both of which read
+    # `docs/audit/register.md` from disk: the 11 merged rows need to already be ordinary
+    # register content by the time either function sees the file, not a separate source
+    # this discovery layer would otherwise need to know about.
+    _merge_phase1b_register(root)
+    finding_drafts = _discover_findings(root)
+    _check_flat_document_directory_not_silently_unrecognised(
+        root, "docs/audit/findings", None, "finding essays",
+        {"README.md": "the family's own index, not a governed finding essay"},
+        records={Path(d.was).name for d in finding_drafts if d.was is not None},
     )
+    drafts += finding_drafts
+    # The census below must run against `_discover_register`'s *unfiltered* output: it is
+    # asking "did this file's shape get recognised at all", and every row this migration
+    # excludes (because its finding has an essay, and therefore already has a `document`
+    # draft above) is still a row the parser recognised, not a row the shape check missed.
+    # Filtering before this call would make a corpus where *every* register row has an
+    # essay look identical to `register.md` carrying no recognisable rows at all -- the
+    # exact "found nothing" ambiguity `_check_legacy_file_not_silently_unrecognised`'s own
+    # docstring exists to resolve, reintroduced by this slice if the check ran on the
+    # already-excluded list.
+    register_drafts_unfiltered = _discover_register(root)
+    _check_legacy_file_not_silently_unrecognised(
+        root / "docs" / "audit" / "register.md", register_drafts_unfiltered,
+        "register finding rows",
+    )
+    # Excludes every token `finding_drafts` already claims: a finding with an essay gets
+    # exactly one number, from its `document` draft above, never a second one from this
+    # function's `register_row` draft (see `_discover_register`'s own `exclude` docstring).
+    finding_tokens = {d.old_token for d in finding_drafts if d.old_token is not None}
+    register_drafts = [
+        d for d in register_drafts_unfiltered if d.old_token not in finding_tokens
+    ]
     drafts += requirement_drafts + roadmap_drafts + register_drafts
+    workflow_drafts = _discover_workflows(root)
+    _check_flat_document_directory_not_silently_unrecognised(
+        root, "docs/workflows", None, "workflows",
+        {"README.md": "the family's own index, not a governed workflow document"},
+        records={Path(d.was).name for d in workflow_drafts if d.was is not None},
+    )
+    drafts += workflow_drafts
+    research_essay_drafts = _discover_research_essays(root)
+    drafts += research_essay_drafts
+    named_phase_record_drafts = _discover_named_phase_records(root)
+    drafts += named_phase_record_drafts
+    reference_moves = _discover_reference_moves(root)
     # Hoisted here to run alongside every other discovery, before any write below (task
     # #34). The hoist was won when this call could still abort the run: a malformed
     # vendored manifest's `HeaderError` had to stop `migrate` cleanly rather than after
@@ -4419,13 +5029,36 @@ def migrate(root: Path) -> MigrateResult:
 
     files_written, files_deleted = _write_document_drafts(root, drafts, roadmap_drafts)
 
+    # Reference-family moves (checklists, `retrofit-impossible.md`, `security-posture.md`)
+    # and the unstampable-CSV move both physically relocate a file, the same shape
+    # `_write_document_drafts` above just finished, so they run alongside it -- before
+    # `_rewrite_citations` below, so each new location's body is swept for legacy
+    # citations exactly as every document draft's body already is, rather than being
+    # written post-sweep and left with whatever tokens it carried at its old path.
+    reference_moves_written, reference_moves_deleted = _write_reference_moves(
+        root, reference_moves
+    )
+    files_written = [*files_written, *reference_moves_written]
+    files_deleted = [*files_deleted, *reference_moves_deleted]
+    unstampable_written, unstampable_deleted = _move_unstampable_research_files(root)
+    files_written = [*files_written, *unstampable_written]
+    files_deleted = [*files_deleted, *unstampable_deleted]
+
     if roadmap_drafts:
         _restructure_roadmap(root, roadmap_drafts, phase_titles, roadmap_occurrences)
     else:
         _check_roadmap_not_silently_unrecognised(root)
 
     register_moved_to: str | None = None
-    if register_drafts:
+    # Gated on the *unfiltered* discovery result, not `register_drafts` (which can be
+    # empty even though the file was fully recognised -- every one of its rows may have
+    # an essay and so be excluded from the numbering list above). Gating on the filtered
+    # list would leave `docs/audit/register.md` in place whenever every row happens to
+    # have an essay, which both stops `docs/audit/` dissolving and makes a second run
+    # re-discover the same rows as if the first run had never happened -- the identical
+    # "found nothing" ambiguity the census fix above exists to resolve, one layer further
+    # down, in the write rather than the check.
+    if register_drafts_unfiltered:
         old_register = root / "docs" / "audit" / "register.md"
         new_register = root / "docs" / "findings" / "register.md"
         if old_register.is_file():
@@ -4449,6 +5082,13 @@ def migrate(root: Path) -> MigrateResult:
             for child in sorted(p for p in parent.iterdir() if p.is_dir()):
                 _remove_if_empty(child)
         _remove_if_empty(parent)
+    # `_discover_findings` moves every `docs/audit/findings/F<n>.md` essay away and
+    # deliberately leaves `README.md` (not a governed finding) in place if present -- but
+    # when a corpus's `findings/` holds only essays, as this migration's own fixture and a
+    # freshly-seeded real corpus both can, the directory empties out exactly like
+    # `docs/audit/work/<work>/` does above and needs the identical bottom-up prune, or it
+    # blocks `docs/audit/` from dissolving the same way an emptied `work/<work>/` would.
+    _remove_if_empty(root / "docs" / "audit" / "findings")
     for legacy_dir in ("docs/notes", "docs/adr", "docs/audit"):
         _remove_if_empty(root / legacy_dir)
 
@@ -4458,7 +5098,22 @@ def migrate(root: Path) -> MigrateResult:
     for d in drafts:
         canon = _docid.canonical(d.prefix, d.number)
         assigned.append((d.old_token or "", canon))
-        if d.old_token is not None:
+        # `FD` is deliberately excluded from the citation-rewrite map -- the maintainer's
+        # ruling (2026-09-03, W37-6): "The essays get ids and paths now; `F<n>` stays a
+        # resolver alias to W37-11." Every other family still rewrites its old citation
+        # form in place (an `ADR-<n>`, a `Ruling <n>`, an `NT-<nnnn>` all still get swept
+        # by `_rewrite_citations` below); only the bare `F<n>` form is held back, because
+        # W37-6's own ambiguity sweep (see the finding filed alongside this PR) found the
+        # low end of the `F<n>` range reused across independent, undated audit eras
+        # (Track A's own F1-F15, the W5 ledger's own F1-F12, phase-1b's F1-F25) for
+        # genuinely different findings sharing one bare token -- `F12` alone names three.
+        # A blanket `\bF12\b` substitution across the whole tree would silently rewrite
+        # all three to whichever one this run's F12 happens to be. `assigned`/
+        # `redirect_rows` still record the mapping (REDIRECTS.csv's job: NT-0019 §4 step 1,
+        # "`was:` and `REDIRECTS.csv` keep every old id and path" -- a durable record, not
+        # a live prose rewrite), so W37-11's resolver has the data; only the prose sweep is
+        # held back.
+        if d.old_token is not None and d.prefix != "FD":
             token_map[d.old_token] = canon
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
@@ -4477,6 +5132,35 @@ def migrate(root: Path) -> MigrateResult:
                 "new_path": new_path,
             }
         )
+    # `register_moved_to` can be set with *no* `register_row` draft in `drafts` at all --
+    # every row the file had may have had an essay and so been excluded from the numbering
+    # list (`_discover_findings`'s `document` drafts claim the number instead). The loop
+    # above only ever emits a `docs/audit/register.md` redirect row from a
+    # `materialize == "register_row"` draft, so that case would otherwise vanish from
+    # REDIRECTS.csv with no row recording it moved -- `migration_diff_violations`' own
+    # accounting exists to catch exactly this ("vanished with no REDIRECTS.csv row
+    # accounting for it"). Added once, unconditionally, whenever the move happened.
+    if register_moved_to is not None:
+        redirect_rows.append(
+            {
+                "old_id": "", "new_id": "",
+                "old_path": "docs/audit/register.md", "new_path": register_moved_to,
+            }
+        )
+    # Reference moves and the unstampable-CSV move carry no `_Draft` and so no `id:` --
+    # neither claims a number (§1.2: Reference has none; the CSV is deliberately exempt) --
+    # but NT-0019 §4 step 1's "`REDIRECTS.csv` keeps every old id and path" still applies
+    # to the *path* half even where there is no id half, the same reading the register's
+    # own unconditional row above already gives its id-less move.
+    for move in reference_moves:
+        redirect_rows.append(
+            {"old_id": "", "new_id": "", "old_path": move.old_rel, "new_path": move.new_rel}
+        )
+    for old_rel, new_rel in _RESEARCH_UNSTAMPABLE_MOVE.items():
+        if (root / new_rel).is_file():
+            redirect_rows.append(
+                {"old_id": "", "new_id": "", "old_path": old_rel, "new_path": new_rel}
+            )
 
     rewritten = _rewrite_citations(root, token_map)
 
