@@ -240,6 +240,13 @@ different, non-constant amount. The wrong ranges landed on a neighbouring decisi
 same document and read as plausible — which is the whole difficulty: a mis-derived range
 usually resolves to real prose, not to an error.
 
+**Weigh this trap lower than the rest of the section.** It was observed twice in one
+afternoon, but it **did not reproduce in a five-agent control** asked to check or derive a
+citation into a merged ruling with no guidance: three of those five failed, and all three
+failures were the wrong-tree trap below, not this one. So this is a real observation of two
+incidents, not a demonstrated tendency — treat it as a named hazard to recognise, and spend
+the scepticism budget on the wrong-tree section, which is where the control actually failed.
+
 **Word-agreement cannot verify a locator.** Both re-checks above "confirmed" the citation
 because the quoted text matched — but the text being matched had been *copied from the claim*,
 so it would have agreed wherever the reader looked. **A check whose evidence comes from the
