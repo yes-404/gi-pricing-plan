@@ -20,6 +20,7 @@ import collections
 import csv
 import importlib.util
 import pathlib
+import posixpath
 import re
 import subprocess
 import sys
@@ -3735,7 +3736,14 @@ def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
     That is why the total is asserted as an **identity** — every tracked `README.md` is
     routed, declared, or stamped — rather than as a literal that a fixture can falsify.
     """
-    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
+    # Built exactly as `migrate` builds it, not as a narrower set this test invents:
+    # F84's 17, plus NT-0019 §5.2's three relocated family READMEs, which leave the stamp
+    # population the same way and for the same reason (§5.2 routes the file somewhere, and
+    # the writer that moves it owns its header). Passing a different `routed` here would
+    # measure a configuration nothing runs.
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)} | set(
+        doc_id_cli._README_FAMILY_MOVES
+    )
     targets, censuses = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
     readme_census = next(c for c in censuses if c.scope.startswith("every tracked"))
 
@@ -3763,8 +3771,15 @@ def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
     # excepted, not gained, so it does not appear in `gained` at all; it is why `tracked`
     # (asserted as an identity above) grew without `gained`'s own five changing.
     assert len(gained) + 1 == 6  # six reached
-    assert len(stamped) - len(gained) == 8  # already inside step 5's roots
-    assert len(stamped) + 1 == 14, "the RFC's population 14 = 13 stamped + the exempt fixture"
+    # Two fewer inside step 5's roots than the RFC's own arithmetic (8, and a stamped total
+    # of 13): NT-0019 §5.2's README regeneration relocates `docs/adr/README.md` and
+    # `docs/notes/README.md`, so both leave bucket 1 for bucket 2 the way F84's 17 already
+    # do -- the writer that moves a file owns its header, and stamping one here would write
+    # a header onto a path this same run then deletes. `docs/audit/README.md` was already
+    # outside bucket 1; it left as a *declared exception* and now leaves by the same routing
+    # mechanism instead, which is why the stamped total moves by two and not by three.
+    assert len(stamped) - len(gained) == 6  # already inside step 5's roots
+    assert len(stamped) + 1 == 12, "the RFC's 14, less the two READMEs §5.2 relocates"
 
 
 def test_reference_declared_exceptions_all_carry_a_reason_and_name_a_real_file(
@@ -4527,3 +4542,161 @@ def test_no_path_is_both_stamped_and_deleted_by_the_same_run(
     assert result.files_written, "nothing written — the intersection would be empty for free"
     assert result.files_deleted, "nothing deleted — likewise"
     assert set(result.files_written) & set(result.files_deleted) == set()
+
+
+# ---------------------------------------------------------------------------------------
+# NT-0019 §5.2's README regeneration, and the general dangling-link property it exists to
+# hold.
+#
+# The class this section covers reached the W37-6 gate live: 36 markdown links in five
+# surviving `README.md` files resolved to paths `migrate` deletes
+# (`docs/plans/2026-09-03-w37-6-renewed-window-handover.md` §6). They were invisible to
+# `_rewrite_citations` because an index row links to its sibling by a **bare relative
+# path** — `(0001-phase-boundary-plan-review.md)` — which is neither an id token nor the
+# repo-relative path form `_path_rewrite_tokens` builds.
+#
+# The test below is the **general** property, not a check for those five files: every
+# surviving file, every link, resolved against its own citing directory. A test written
+# against the five would go green on the next index this migration learns to move.
+# ---------------------------------------------------------------------------------------
+
+_MD_LINK = re.compile(r"\]\(([^)\s]+)\)")
+
+
+def _dangling_links(root: pathlib.Path, deleted: Sequence[str]) -> list[str]:
+    """Every `](...)` in a **surviving** file under `root` that resolves, relative to its
+    own citing file, to a path this run deleted.
+
+    The predicate the auditor's independent scanner uses, stated here so the repository's
+    own suite holds it too: resolution is relative to the citing file (never to the
+    repository root), `REDIRECTS.csv` is excluded because recording old paths is its whole
+    job, and a `was:` line is excluded for the same reason. A citing file that is itself
+    deleted is out of scope — it and its link vanish together, and no reader can reach it.
+    """
+    deleted_set = set(deleted)
+    out: list[str] = []
+    for path in sorted(root.rglob("*.md")):
+        rel = path.relative_to(root).as_posix()
+        if ".git" in path.parts or rel in deleted_set:
+            continue
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if "was:" in line:
+                continue
+            for match in _MD_LINK.finditer(line):
+                target = match.group(1).split("#", 1)[0]
+                if not target or target.startswith(("http://", "https://", "mailto:", "/")):
+                    continue
+                resolved = posixpath.normpath(posixpath.join(posixpath.dirname(rel), target))
+                if resolved in deleted_set:
+                    out.append(f"{rel}:{lineno} -> {resolved}")
+    return out
+
+
+def test_no_surviving_file_links_to_a_path_the_migration_deleted(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    result = doc_id_cli.migrate(pristine_a)
+    assert result.files_deleted, "nothing deleted — the property would hold vacuously"
+    assert _dangling_links(pristine_a, result.files_deleted) == []
+
+
+def test_the_dangling_link_check_reddens_when_the_regeneration_is_removed(
+    doc_id_cli: types.ModuleType,
+    pristine_a: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Broken input, in the mutate-the-writer shape Ruling 70 item 2 established: with
+    `_regenerate_family_readmes` reduced to a no-op, the five §5.2 READMEs survive at their
+    old paths carrying their old index tables, and the check above must name them.
+
+    A check that has never printed a failure has not been tested — and this one in
+    particular had a false negative in its history: the executor who last worked this class
+    reported `grep -c '](' ` returning **0** for the five files, where the true counts are
+    20, 6, 8, 6 and 5.
+    """
+    monkeypatch.setattr(
+        doc_id_cli,
+        "_regenerate_family_readmes",
+        lambda root, drafts, moves: ([], [], {}),
+    )
+    result = doc_id_cli.migrate(pristine_a)
+    dangling = _dangling_links(pristine_a, result.files_deleted)
+    assert dangling, "the mutation must be visible, or this check proves nothing"
+    citers = {entry.split(":", 1)[0] for entry in dangling}
+    assert "docs/adr/README.md" in citers, dangling
+
+
+def test_every_section_5_2_readme_row_lands_where_its_row_says(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """§5.2's five README rows and the `new` row's four family READMEs, asserted as the
+    rows state them rather than as a count: `adr/` and `notes/` are not in §1.4's tree, so
+    their READMEs move to `adrs/` and `rfcs/`; `audit/README.md` is "deleted; content to
+    `findings/` and `closures/` READMEs"; `workflows/` and `plans/` keep theirs.
+    """
+    doc_id_cli.migrate(pristine_a)
+    for old_rel, new_rel in doc_id_cli._README_FAMILY_MOVES.items():
+        assert not (pristine_a / old_rel).exists(), old_rel
+        assert (pristine_a / new_rel).is_file(), new_rel
+    for rel in doc_id_cli._README_IN_PLACE:
+        assert (pristine_a / rel).is_file(), rel
+    for prefix in doc_id_cli._README_NEW_FAMILY_PREFIXES:
+        rel = f"docs/{doc_id_cli._DOCUMENT_FAMILY_DIR[prefix]}/README.md"
+        assert (pristine_a / rel).is_file(), rel
+    # §1.4: `docs/adr/` and `docs/notes/` are absent from the tree, and `docs/audit/`
+    # "dissolves". A README left behind is what kept each of them non-empty.
+    for legacy in ("docs/adr", "docs/notes", "docs/audit"):
+        assert not (pristine_a / legacy).exists(), legacy
+
+
+def test_every_regenerated_readme_carries_exactly_one_reference_header(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """Two writers can reach these paths — `_stamp_reference_targets` for the two that stay
+    put, `_stamp_regenerated_readmes` for the relocated and the new — and the failure mode
+    when a routing decision is wrong is a *second* `---` block prepended to a file that
+    already had one, which `_docid.parse_header` cannot read.
+    """
+    doc_id_cli.migrate(pristine_a)
+    for rel in sorted(doc_id_cli._MIGRATION_DIFF_FAMILY_READMES):
+        path = pristine_a / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        assert doc_id_cli._front_matter_state(text) == "stamped", rel
+        body = doc_id_cli._strip_front_matter(text)
+        assert doc_id_cli._front_matter_state(body) == "none", f"{rel}: two header blocks"
+
+
+def test_repointing_leaves_an_unmoved_target_byte_identical(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The repoint runs over a whole document, so a link to a file neither this run nor its
+    citer moved must come back unchanged — otherwise the pass is a formatter, and every
+    README it touches would show a diff no §5.2 row asked for."""
+    body = (
+        "See [`../specs/00-overview.md`](../specs/00-overview.md), "
+        "[the roadmap](../roadmap.md), [an anchor](#section), "
+        "[an external](https://example.com/a.md).\n"
+    )
+    assert (
+        doc_id_cli._repoint_relative_links(body, "docs/plans/README.md", "docs/plans/README.md", {})
+        == body
+    )
+
+
+def test_repointing_follows_both_a_moved_target_and_a_moved_citer(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The two halves are independent and both are needed: the target may have moved, and
+    the citing file's own move changes what a relative path from it means. A label that
+    repeats its target moves with it; a label that says something else is prose."""
+    moved = doc_id_cli._repoint_relative_links(
+        "[0001](0001-example.md) and [`../adr/`](../adr/) and [see](../roadmap.md)\n",
+        "docs/notes/README.md",
+        "docs/rfcs/README.md",
+        {"docs/notes/0001-example.md": "docs/rfcs/RFC-00007-example.md", "docs/adr": "docs/adrs"},
+    )
+    assert "[0001](RFC-00007-example.md)" in moved
+    assert "[`../adrs/`](../adrs/)" in moved
+    assert "[see](../roadmap.md)" in moved  # citer moved sideways: same depth, same path

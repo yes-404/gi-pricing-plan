@@ -4064,6 +4064,14 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     "tests/fixtures/docs-migration/.claude/agents/README.md",
     "tests/fixtures/docs-migration/.claude/skills/README.md",
     "tests/fixtures/docs-migration/docs/README.md",
+    # The four §5.2 regeneration sources. Added by W37-6's README-regeneration slice: the
+    # corpus previously carried only `docs/workflows/README.md` of the five §5.2 rows
+    # name, so four of the five branches in `_regenerate_family_readmes` had no fixture to
+    # run against at all -- which is the state that let 36 dangling links reach the gate.
+    "tests/fixtures/docs-migration/docs/adr/README.md",
+    "tests/fixtures/docs-migration/docs/audit/README.md",
+    "tests/fixtures/docs-migration/docs/notes/README.md",
+    "tests/fixtures/docs-migration/docs/plans/README.md",
     "tests/fixtures/docs-migration/docs/audit/phases/1a/README.md",
     "tests/fixtures/docs-migration/docs/audit/work/W1/README.md",
     # W37-6's own `_discover_workflows` fixture (docs/workflows/wf-01-example-journey.md
@@ -4089,15 +4097,13 @@ _REFERENCE_README_EXCEPTIONS: Final[Mapping[str, str]] = {
         "docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md §3, declared by name "
         "so the exemption cannot grow into a subtree"
     ),
-    "docs/audit/README.md": (
-        "NT-0019 §5.2: \"deleted; content to `findings/` and `closures/` READMEs\" (kind "
-        "`H`) -- a file the migration removes is not a file it stamps. The deletion is a "
-        "hand step and is not built yet, so the file is still on disk and is named here "
-        "rather than silently stamped. The old notes root under `.claude` reaches the same "
-        "disposition through `_REFERENCE_CLAUDE_DIR_EXCEPTIONS` instead of a second entry "
-        "here: see the README scope's inheritance branch"
-    ),
 }
+# `docs/audit/README.md` used to be declared here, with the reason "the deletion is a hand
+# step and is not built yet, so the file is still on disk". It is built now
+# (`_regenerate_family_readmes`), so the file leaves this population the way the other two
+# relocated READMEs do -- through `routed`, **by construction** rather than through a
+# maintained entry, which is the same bargain F84's 17 already strike. A dead exception
+# left in place is a statement that goes on reading true after it stopped being the reason.
 
 _REFERENCE_FOREIGN_REASON: Final = (
     "in scope for §4 step 5 and NOT stamped by W37-5c: the file already carries the "
@@ -5005,11 +5011,56 @@ _README_LEGACY_DIR_MOVES: Final[Mapping[str, str]] = {
     "docs/notes": "docs/rfcs",
 }
 
+#: The two §5.2 rows whose README stays where it is -- `workflows` ("README table
+#: generated") and `plans` ("naming and four-kinds table -> pointer").
+_README_IN_PLACE: Final[tuple[str, ...]] = (
+    "docs/workflows/README.md", "docs/plans/README.md",
+)
+
+#: The families §5.2's `new` row asks for a README that has no predecessor to carry over:
+#: "`closures/README.md`, `findings/README.md`, `rulings/README.md`, `ledgers/README.md`".
+#: `findings/` is absent because it is `docs/audit/README.md`'s destination in
+#: `_README_FAMILY_MOVES` above and is written by carrying that file, not created empty.
+#: Named by **family prefix** rather than by path so the directory stays
+#: `_DOCUMENT_FAMILY_DIR`'s to state -- a family renamed there cannot leave a README
+#: behind in a directory nothing else writes to.
+_README_NEW_FAMILY_PREFIXES: Final[tuple[str, ...]] = ("CR", "RL", "LG")
+
+#: Every path §5.2's README rows write, on both sides of the migration. Ruling 68's class 6
+#: -- "a generated artifact (`INDEX.md`, `REDIRECTS.csv`) -- unconditionally permitted;
+#: excluded from comparison entirely" -- applied to the files §5.2 itself calls generated:
+#: the `adr` row says "README **generated**", `workflows` "README table **generated**",
+#: `notes` "**README rewritten**", `plans` "naming and four-kinds table -> pointer", and
+#: `audit/README.md` "**deleted**; content to `findings/` and `closures/` READMEs". A
+#: regenerated index cannot satisfy `frozen_file_matches_after_migration_stamp`, which asks
+#: whether a body survived stripping and token-inversion unchanged -- the whole point of
+#: these five rows is that the body does not survive, because the list it carries is a list
+#: of files that moved.
+#:
+#: Kept as its own constant rather than folded into `_MIGRATION_DIFF_GENERATED`, so that
+#: the reason above is stated separately from `INDEX.md`'s and either can be revisited
+#: without the other. **Flagged to the lead as an extension of Ruling 68's enumeration
+#: rather than made silently**: the ruling's six classes were written before any code
+#: generated a family README, and this is the seventh kind of hunk a clean run now
+#: produces.
+_MIGRATION_DIFF_FAMILY_READMES: Final[frozenset[str]] = frozenset(
+    set(_README_FAMILY_MOVES)
+    | set(_README_FAMILY_MOVES.values())
+    | set(_README_IN_PLACE)
+    | {f"docs/{_DOCUMENT_FAMILY_DIR[p]}/README.md" for p in _README_NEW_FAMILY_PREFIXES}
+)
+
 #: A markdown inline link's target. Deliberately stops at whitespace so a `](path "title")`
 #: form yields the path alone, matching how the auditor's scanner reads the same construct
 #: (`target = m.group(1).split(" ", 1)[0]`) -- one reading of the syntax, so a link this
 #: rewrites and a link that check counts cannot be two different populations.
-_MD_LINK_TARGET_RE: Final = re.compile(r"\]\((?P<target>[^)\s]+)\)")
+#: A markdown inline link, with the text ahead of it kept so the two can be compared. The
+#: corpus writes `[`../adr/`](../adr/)` and `[docs/notes/README.md](../../docs/notes/
+#: README.md)` -- the first repeats its own target as its label, and repointing the target
+#: while leaving the label is how a link comes to display one path and go to another.
+_MD_LINK_TARGET_RE: Final = re.compile(
+    r"\[(?P<text>[^\[\]]*)\]\((?P<target>[^)\s]+)\)"
+)
 
 
 def _repoint_relative_links(
@@ -5033,7 +5084,7 @@ def _repoint_relative_links(
     new_dir = posixpath.dirname(new_rel) or "."
 
     def _one(match: re.Match[str]) -> str:
-        target = match.group("target")
+        text_label, target = match.group("text"), match.group("target")
         if target.startswith(("http://", "https://", "#", "mailto:", "/")):
             return match.group(0)
         base, sep, anchor = target.partition("#")
@@ -5044,8 +5095,15 @@ def _repoint_relative_links(
         if resolved.startswith(".."):
             return match.group(0)
         moved = moves.get(resolved, resolved)
-        rebased = posixpath.relpath(moved, new_dir)
-        return f"]({rebased}{trailing}{sep}{anchor})"
+        rebased = posixpath.relpath(moved, new_dir) + trailing
+        # A label that repeated the old target repeats the new one; a label that said
+        # anything else is the author's prose and is not touched. Both bare and
+        # backticked, because the corpus writes it both ways.
+        for wrapper in ("{}", "`{}`"):
+            if text_label == wrapper.format(target):
+                text_label = wrapper.format(rebased + sep + anchor)
+                break
+        return f"[{text_label}]({rebased}{sep}{anchor})"
 
     return _MD_LINK_TARGET_RE.sub(_one, text)
 
@@ -5055,15 +5113,25 @@ def _split_front_matter(text: str) -> tuple[str, str]:
     the newline after it, and everything after. `("", text)` when there is no such block.
 
     `_strip_front_matter` above answers the same question and throws the header away; this
-    keeps it, because a README this section rewrites was already stamped by
-    `_stamp_reference_targets` earlier in the same run and its header is that stamp. Re-
-    deriving one here would overwrite a `created:` read from the file's own first commit
-    with today's date.
+    keeps it, because a second `migrate` run over its own output finds a README already
+    carrying the header the first run stamped, and that header must not become part of the
+    body and be stamped over.
+
+    Split on the line, never by subtracting `_strip_front_matter`'s length from the whole:
+    that function joins with `"\n"` and so drops a trailing newline the input had, which
+    puts the boundary one character late and hands back a header carrying the body's first
+    blank line **and** a body that still starts with it. The duplicate accumulates one blank
+    line per run -- caught by `test_migrate_is_idempotent_on_its_own_output`, which is
+    exactly the shape of defect a length-arithmetic split produces: correct on the first
+    run, wrong only on the second.
     """
-    stripped = _strip_front_matter(text)
-    if stripped == text:
+    lines = text.splitlines(keepends=True)
+    if not lines or lines[0].rstrip("\n") != "---":
         return "", text
-    return text[: len(text) - len(stripped)], stripped
+    for index, line in enumerate(lines[1:], start=1):
+        if line.rstrip("\n") == "---":
+            return "".join(lines[: index + 1]), "".join(lines[index + 1 :])
+    return "", text  # an unterminated block -- `_strip_front_matter`'s own reading
 
 
 def _readme_title(header: str, fallback: str) -> str:
@@ -5134,10 +5202,9 @@ _PLANS_README_POINTER: Final = """## Naming, and the kinds of plan
 
 The filename form, the `kind:` a plan carries, and the status vocabulary are all
 [`../process/document-ids.md`](../process/document-ids.md)'s — stated once, there, rather
-than restated here where the copy is what goes stale
-([`NT-0003`](../rfcs/README.md) is the mechanism). A ledger is its own family in
-[`../ledgers/`](../ledgers/) and a ruling its own in [`../rulings/`](../rulings/); neither
-is a suffix on a plan's name any more.
+than restated here — a restated rule is how one of the two statements goes stale. A ledger
+is its own family in [`../ledgers/`](../ledgers/) and a ruling its own in
+[`../rulings/`](../rulings/); neither is a suffix on a plan's name any more.
 
 **[`../INDEX.md`](../INDEX.md) is the index.** There is deliberately no hand-maintained list
 of contents in this file.
@@ -5327,21 +5394,30 @@ def _rewrite_findings_readme_body(_body: str) -> str:
 
 def _regenerate_family_readmes(
     root: Path, drafts: Sequence[_Draft], moves: Mapping[str, str]
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[str], list[str], dict[str, str]]:
     """NT-0019 §5.2's README work. Returns `(files_written, files_deleted)`, repo-relative
     posix paths, the shape every other writer in `migrate` returns.
 
-    Runs **after** `_stamp_reference_targets`, deliberately: four of the five READMEs are in
-    §4 step 5's Reference stamp set, and their headers are that pass's to write. Reading the
-    stamped header back and carrying it onto the rewritten body keeps `created:` (the file's
-    own first-commit date) rather than replacing it with today's, and keeps one writer for
-    each field instead of two that can disagree.
+    **Bodies only.** The header for every path this writes is `_stamp_regenerated_readmes`'
+    job, after the citation sweep and the §4 step 5 stamp pass, and the split is what keeps
+    two separate invariants:
+
+    * A relocated README must be **deleted before `_rewrite_citations` runs**, or the sweep
+      writes to a path this same run then removes and the run reports one path as both
+      written and deleted (`test_no_path_is_both_stamped_and_deleted_by_the_same_run`). That
+      is why this runs where it does -- early, in the write phase, not after the stamp pass.
+    * A `was:` value is an **old** path and a header is written post-sweep for exactly that
+      reason: written here, `_rewrite_citations` would rewrite `was: docs/adr/README.md`
+      into the new path and destroy the one field that records where the file came from.
 
     Idempotent by the same construction every `_discover_*` uses: each step is gated on its
     source file still being at its old path, which a completed run has already moved.
     """
     written: list[str] = []
     deleted: list[str] = []
+    #: new path -> the path its content came from, for `_stamp_regenerated_readmes`' `was:`
+    #: and `created:`. A README written in place maps to itself.
+    origins: dict[str, str] = {}
     all_moves = {**moves, **_README_LEGACY_DIR_MOVES}
 
     def carry(old_rel: str, new_rel: str, transform: Callable[[str], str]) -> None:
@@ -5351,8 +5427,12 @@ def _regenerate_family_readmes(
         old_path = root / old_rel
         if not old_path.is_file():
             return
+        # `_split_front_matter` rather than a bare read: an in-place README is a §4 step 5
+        # stamp target and a *second* `migrate` run finds it already carrying its header,
+        # which must not become part of the body and be stamped over.
         header, body = _split_front_matter(old_path.read_text(encoding="utf-8"))
         body = transform(_repoint_relative_links(body, old_rel, new_rel, all_moves))
+        origins[new_rel] = old_rel
         new_path = root / new_rel
         new_path.parent.mkdir(parents=True, exist_ok=True)
         new_path.write_text(header + body, encoding="utf-8")
@@ -5361,19 +5441,16 @@ def _regenerate_family_readmes(
             old_path.unlink()
             deleted.append(old_rel)
 
-    def fresh(rel: str, title: str, body: str) -> None:
-        """One of §5.2's four `new` family READMEs. Stamped here rather than by
-        `_stamp_reference_targets`, which discovered its population from `git ls-files` on
-        the pre-migration tree and so cannot see a file this run creates."""
+    def fresh(rel: str, body: str) -> None:
+        """One of §5.2's `new` family READMEs -- a file with no predecessor to carry over.
+        Its header is `_stamp_regenerated_readmes`' too: `_stamp_reference_targets`
+        discovered its population from the tracked, pre-migration tree and structurally
+        cannot see a path this run creates."""
         path = root / rel
         if path.is_file():
             return
         path.parent.mkdir(parents=True, exist_ok=True)
-        header = _stamp_header(
-            "REFERENCE", None, kind=None, title=title, status="active",
-            created=date.today(), owner="lead", was=None,
-        )
-        path.write_text(header + "\n" + body, encoding="utf-8")
+        path.write_text(body, encoding="utf-8")
         written.append(rel)
 
     # --- `adr/` + README -> `adrs/`, README generated.
@@ -5394,10 +5471,11 @@ def _regenerate_family_readmes(
 
     # --- `workflows/README.md`: table generated (the row targets; the `wf-0N` link text is
     # already an id token and `_rewrite_citations` rewrote it in the same run).
-    carry("docs/workflows/README.md", "docs/workflows/README.md", lambda body: body)
+    in_place_workflows, in_place_plans = _README_IN_PLACE
+    carry(in_place_workflows, in_place_workflows, lambda body: body)
 
     # --- `plans/README.md`: naming and four-kinds table -> pointer, nine conventions kept.
-    carry("docs/plans/README.md", "docs/plans/README.md", _rewrite_plans_readme_body)
+    carry(in_place_plans, in_place_plans, _rewrite_plans_readme_body)
 
     # --- `audit/README.md` deleted, content to the `findings/` and `closures/` READMEs.
     carry(
@@ -5405,10 +5483,66 @@ def _regenerate_family_readmes(
         _README_FAMILY_MOVES["docs/audit/README.md"],
         _rewrite_findings_readme_body,
     )
-    fresh("docs/closures/README.md", "closures", _CLOSURES_README_BODY)
-    fresh("docs/rulings/README.md", "rulings", _RULINGS_README_BODY)
-    fresh("docs/ledgers/README.md", "ledgers", _LEDGERS_README_BODY)
-    return written, deleted
+    for prefix, body in (
+        ("CR", _CLOSURES_README_BODY),
+        ("RL", _RULINGS_README_BODY),
+        ("LG", _LEDGERS_README_BODY),
+    ):
+        fresh(f"docs/{_DOCUMENT_FAMILY_DIR[prefix]}/README.md", body)
+
+    # §1.4: the three legacy directories held exactly one file each -- their own README --
+    # which is what stopped `migrate`'s earlier prune from dissolving them. `docs/adr/` and
+    # `docs/notes/` are not in §1.4's tree at all, and "`docs/audit/` dissolves into
+    # `findings/`, `closures/`, `research/` and `process/`" is the same paragraph's last
+    # sentence.
+    for legacy_dir in _README_LEGACY_DIR_MOVES:
+        _remove_if_empty(root / legacy_dir)
+    _remove_if_empty(root / "docs" / "audit")
+    return written, deleted, origins
+
+
+def _stamp_regenerated_readmes(root: Path, origins: Mapping[str, str]) -> list[str]:
+    """The Reference header for every README `_regenerate_family_readmes` wrote that does
+    not already carry one, prepended after the citation sweep and after
+    `_stamp_reference_targets`.
+
+    Two populations reach here and neither is reachable by the §4 step 5 stamp pass:
+
+    * a **relocated** README, which that pass was told is `routed` so that it does not
+      stamp a path this run deletes; and
+    * a **new** family README, which did not exist when that pass read `git ls-files`.
+
+    An **in-place** README is neither -- `docs/workflows/README.md` and
+    `docs/plans/README.md` are still at the path the stamp pass claimed, so they arrive here
+    already carrying their header and are left alone. `created:` is read from the origin
+    file's own first commit where there is one, the same source `_stamp_reference_targets`
+    reads, so a carried README's date does not silently become the migration's date.
+    """
+    written: list[str] = []
+    for rel in sorted(_MIGRATION_DIFF_FAMILY_READMES):
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if _front_matter_state(text) != "none":
+            continue
+        origin_rel = origins.get(rel)
+        heading = _REFERENCE_H1_RE.search(text)
+        header = _stamp_header(
+            "REFERENCE", None, kind=None,
+            title=heading.group(1) if heading else posixpath.basename(posixpath.dirname(rel)),
+            status="active",
+            created=(
+                _module_first_commit_date(root / origin_rel, root)
+                if origin_rel is not None and origin_rel != rel
+                else date.today()
+            ),
+            owner="lead",
+            was=origin_rel if origin_rel is not None and origin_rel != rel else None,
+        )
+        path.write_text(header + "\n" + text, encoding="utf-8")
+        written.append(rel)
+    return written
 
 
 # ---------------------------------------------------------------------------------------
@@ -5544,7 +5678,16 @@ def migrate(root: Path) -> MigrateResult:
     # is F84's 17, so a README the migration turns into a `CR-` leaves the README
     # population by construction rather than by a maintained exception list.
     reference_targets, reference_censuses = _discover_reference_stamp_targets(
-        root, routed={d.was for d in audit_closure_drafts if d.was is not None}
+        root,
+        # F84's 17, plus §5.2's three relocated family READMEs. Both leave the stamp
+        # population for the same reason and by the same mechanism: §5.2 routes the file
+        # somewhere, and the writer that moves it owns its header. Stamping one here would
+        # write a header onto a path this same run then deletes, which
+        # `test_no_path_is_both_stamped_and_deleted_by_the_same_run` forbids.
+        routed=(
+            {d.was for d in audit_closure_drafts if d.was is not None}
+            | set(_README_FAMILY_MOVES)
+        ),
     )
     _check_reference_stamp_set_not_silently_unrecognised(reference_censuses)
     # Last of the pre-write checks and the only one that reads `drafts` rather than the
@@ -5756,25 +5899,27 @@ def migrate(root: Path) -> MigrateResult:
         token_map.update(_path_rewrite_tokens(old_rel, new_rel))
         path_moves[old_rel] = new_rel
 
+    # NT-0019 §5.2's README regeneration -- bodies, here, **before** the citation sweep.
+    # A relocated README has to leave its old path before `_rewrite_citations` runs, or the
+    # sweep writes to a file this same run then deletes and `migrate` reports one path as
+    # both written and deleted. Its body is swept at its new location like every other
+    # relocated document's; its header comes after the sweep, below.
+    readme_written, readme_deleted, readme_origins = _regenerate_family_readmes(
+        root, drafts, path_moves
+    )
+    files_written = [*files_written, *readme_written]
+    files_deleted = [*files_deleted, *readme_deleted]
+
     rewritten = _rewrite_citations(root, token_map)
 
     # Alongside the vendored-manifest stamp below, and after the citation rewrite for the
     # same reason it is: a header this run writes carries no legacy token to rewrite.
     files_written = [*files_written, *_stamp_reference_targets(root, reference_targets)]
-
-    # NT-0019 §5.2's README regeneration, last of the document writes and after the stamp
-    # pass on purpose: four of the five READMEs it rewrites are in §4 step 5's Reference
-    # stamp set, and carrying the header that pass just wrote is what keeps `created:` the
-    # file's own first-commit date instead of today's.
-    readme_written, readme_deleted = _regenerate_family_readmes(root, drafts, path_moves)
-    files_written = [*files_written, *readme_written]
-    files_deleted = [*files_deleted, *readme_deleted]
-    # Re-run after the READMEs move: each of the three legacy directories was left holding
-    # exactly one file -- its own README -- which is what stopped the prune above from
-    # dissolving it. §1.4: "`docs/audit/` dissolves into `findings/`, `closures/`,
-    # `research/` and `process/`", and `docs/adr/`/`docs/notes/` are not in that tree at all.
-    for legacy_dir in ("docs/notes", "docs/adr", "docs/audit"):
-        _remove_if_empty(root / legacy_dir)
+    # The same reason, for the two README populations that pass structurally cannot reach:
+    # one it was told is `routed`, one that did not exist when it read the tracked tree. A
+    # `was:` written before the sweep would be rewritten into the new path, destroying the
+    # one field that records where the file came from.
+    files_written = [*files_written, *_stamp_regenerated_readmes(root, readme_origins)]
 
     skipped_vendored: list[str] = []
     # `to_stamp` only -- a manifest already carrying front matter this migration did not
@@ -5940,7 +6085,11 @@ def migration_diff_violations(old_root: Path, new_root: Path) -> list[str]:
         return [ln for ln in text.splitlines() if ln.strip()]
 
     for old_rel, old_text in old_files.items():
-        if old_rel in _MIGRATION_DIFF_ROADMAP or old_rel in _MIGRATION_DIFF_GENERATED:
+        if (
+            old_rel in _MIGRATION_DIFF_ROADMAP
+            or old_rel in _MIGRATION_DIFF_GENERATED
+            or old_rel in _MIGRATION_DIFF_FAMILY_READMES
+        ):
             continue
         if old_text is None:
             violations.append(f"{old_rel}: not UTF-8 text — this filter cannot classify it")
@@ -6018,7 +6167,11 @@ def migration_diff_violations(old_root: Path, new_root: Path) -> list[str]:
     for new_rel, _new_text in new_files.items():
         if new_rel in consumed_new:
             continue
-        if new_rel in _MIGRATION_DIFF_ROADMAP or new_rel in _MIGRATION_DIFF_GENERATED:
+        if (
+            new_rel in _MIGRATION_DIFF_ROADMAP
+            or new_rel in _MIGRATION_DIFF_GENERATED
+            or new_rel in _MIGRATION_DIFF_FAMILY_READMES
+        ):
             continue
         if new_rel in old_files:
             continue  # untouched, same path — already handled by the old_files loop above
