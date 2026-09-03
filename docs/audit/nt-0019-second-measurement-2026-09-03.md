@@ -496,7 +496,7 @@ field is broken under every reading; which population the acceptance test wants 
 about the test, not a disagreement about the corpus**, and it should be ruled rather than
 reconciled.
 
-## 10. Delivery verification, as at this record's date
+## 10. Delivery verification, as at this record's first filing — SUPERSEDED by §12
 
 | branch | state | verified |
 |---|---|---|
@@ -511,3 +511,129 @@ maintainer's under Ruling 102 §1; the four verdicts and the merge are the lead'
 unreproducible figures of §4, §6 and §7 are recorded as unreproducible rather than corrected,
 because a second measurer who cannot see the first measurer's predicate is not entitled to
 declare the first wrong — only to decline to adopt it.
+
+## 12. Delivery verification, 2026-09-03 — all three executors, and two findings from the instrument's own control column
+
+Superseding §10's "no commits yet" for all three branches. `origin/main` = `74c53ef`.
+
+| branch | tree verified | result |
+|---|---|---|
+| `w37-6-token-boundary` | `aedc1b9` | **fix verified correct** — §12.1 |
+| `w37-6-verify-instrument` | `7fc8e5a` | **runs, and corroborates §5 independently** — §12.2 |
+| `w37-6-h-rows` | `ca09554` | **rows verified non-vacuous** — §12.3 |
+
+### 12.1 executor-g `aedc1b9` — both mangle classes fixed, and row (d) 0 → 216 is the fix working
+
+Migrated snapshot of `0de529e` built with that branch's `doc-id.py`, `git add -A` applied:
+
+| predicate | before (`3cfffbf`) | after (`aedc1b9`) |
+|---|---|---|
+| `git grep -nE '\b(FR\|NFR\|OQ\|DEP)-[0-9]+/[0-9]+' -- $FILES` | 391 | **0** |
+| `git grep -nE 'F-WK-[0-9]' -- $FILES` | 216 | **0** |
+| `git grep -nE '\b(F-W[0-9])' -- $FILES \| grep -v 'was:'` | 0 | **216** |
+
+`backend/src/app/main.py:80` now reads `# (WK-952 Task 1.4, F-W11-1-3 — ... since W9-2 ...` — the
+standalone work key rewritten, the same characters inside the finding id left alone. That is
+§3.1's prefix case, fixed.
+
+Tests: the broken-input proof was 5 failed / 3 passed at `3cfffbf` and is **8 passed** here.
+`tests/test_doc_id_migrate.py` **196 passed**; `test_doc_id.py`, `test_audit_docs_ids.py`,
+`test_doc_index.py` **248 passed**. Red before green across two commits, both run here.
+
+**The reading warning.** `F-W[0-9]` goes 0 → 216 across the fix. That is **§3 discharging**, not a
+regression: the 0 was the false pass the corruption produced, and the tokens are now intact so
+the alternative can see them. The corpus did not get worse; the predicate got honest. Anyone
+diffing row (d) across these two commits will read it the other way round unless told.
+
+**What it leaves open, and not executor-g's:** 216 legacy `F-W*` citations now sit intact, and
+§7(d) requires that alternative to reach zero. Something must decide whether they map to `FD-`
+ids, are exempted, or are deferred.
+
+### 12.2 executor-verify `7fc8e5a` — and it reached §5's conclusion before being told
+
+`python3 scripts/doc-id.py migrate --verify --ref 0de529e` runs to completion and prints 24 rows
+with a predicate, a denominator, a migrated column **and a control column** each:
+`1 DISCLOSE, 17 FAIL, 2 NOT MEASURED, 2 PASS, 2 UNDETERMINED`.
+
+**It applies §7(d)'s leading `\b` correctly** — `re.compile(r'\b(' + alt + ')')` — which is the
+predicate §6 retracted to.
+
+**It reports (c) as FAIL**, by a different route from §5's: *"predicate: `python3
+scripts/doc-index.py --check` (run with cwd = the tree)"*. **Committed 17:47:41Z; §5 was
+committed 17:53:09Z and messaged after that**, so this was not taken from me. Together with
+`audit-docs.py` check 39, **row (c)'s failure now has three arrivals by two mechanisms**. The
+caveat stands that "cwd = the tree" and "the snapshot's own copy" are the same insight reached
+twice, not two independent checks of the corpus; the third arrival, check 39, is independent of
+both.
+
+**Two figures where the instrument agrees with this record against the handover**: (h1) is
+**548**, and (d1) `NT-00` under the field reading is **36**. Both are the figures §4 and §6
+record, and both are one away from the handover's. **This does not settle either.** The
+instrument and this record share a formulation — `git archive` the ref, `git init`, migrate,
+measure — so they can fail the same way, and the handover describes the same method. What has
+changed is that the handover is now the single outlier on both, not that it is wrong.
+
+### 12.3 executor-h `ca09554` — the vacuity is gone, and it exposes what was hidden
+
+Verified the §5.3 way: snapshot taken **from `w37-6-h-rows`** so the migrated tree carries the H
+rows, then run with the tree's own `audit-docs.py`.
+
+| summary line | un-migrated control | migrated, before the H rows | migrated, with them |
+|---|---|---|---|
+| requirements defined across 8 specs | 533 | 0 | **533** |
+| open questions, all mirrored | 118 | 0 | **118** |
+| journey citations | 31 endpoints, 8 functions | 0, 0 | **31, 8** |
+| §10 mirror rows carrying register status | 118 of 118 | 0 of 0 | **118 of 118** |
+| check 37 documents in scope | 1 | 1 | **424** |
+| checks 16–20 and 25 | run | `cannot run` | **run** |
+
+Un-migrated `main` stays green (exit 0, same 533/118/31/118), so nothing regressed.
+
+**Row (h)'s failure count goes 548 → 11085**, and that is the H rows working. Decomposed:
+**7739 check 32**, **2782 check 36**, 78 check 35, 77 check 30, 11 check 29, 2 check 31, and ~396
+others. Before the H rows the same two checks fired 22 and 1 times. **The 548 that this record,
+the handover and the instrument all measured was itself a vacuous number** — row (h) was being
+scored against a gate that could not see the tree.
+
+**A consequence nobody has named, and it is the largest live one.** Check 37 now exempts **353 of
+424** documents as verbatim-migrated on the strength of their `was:` field. §9 measures that
+field as correct **3 times** in ~393. Before the H rows the broken field exempted 0 of 1 and was
+harmless; with them it exempts **83% of check 37's population**. Ruling 102 §5's re-keying is no
+longer a tidiness item — it is what stands between the gate and a mass false exemption.
+
+### 12.4 Two findings from the instrument's own control column
+
+The control column makes a distinction visible that no single tree can show, and two rows in the
+instrument's own output carry findings it does not flag.
+
+**(a) `\.claude/notes/` reads 1 on the migrated tree and 1 on the control.** Every other
+alternative drops sharply — `F-W[0-9]` 213 → 0, `(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+` 14967 → 72,
+`W[0-9]+[a-z]?-[0-9]+` 2512 → 1. **An alternative whose control equals its migrated value has no
+discriminating power**, and this is §6.1's inertness showing up as a two-column signature rather
+than as a regex argument. Reproduced here independently: control 1, migrated 1.
+
+**(b) `wf-0[0-9]` is the only alternative that gets WORSE**: control **267**, migrated **327**.
+Confirmed independently at both trees. The migration *adds* 60 lines matching a §7(d) alternative
+it is supposed to drive to zero.
+
+**The cause is structural and no citation fix reaches it.** The token `wf-01-driven-end-to-end`
+goes from absent to **120 occurrences**. It is not a citation — it is part of a **filename the
+migration itself generated**: `docs/ledgers/LG-00030-w5-wf-01-driven-end-to-end.md`, whose slug
+is derived from the document's title, and whose title contained a legacy id. That file is cited
+from **49 files**, and every citation of it re-introduces `wf-01`.
+
+It is not the only one:
+
+```bash
+git ls-files | grep -E '/(PL|RL|FD|RS|RFC|CR|LG|WF|SL|WK|AD)-[0-9]{5}-' | grep -oE '[^/]+$'
+```
+
+384 new-form filenames, of which **26 carry `nt-00` in the slug** and **2 carry `wf-0[0-9]`** —
+for example `CR-01013-audit-record-nt-0010-0011-adoption-claude-md-15-step-5.md` and
+`FD-01048-nt-0019-1-5-requires-the-vendored-manifest-...`. The `nt-00` ones escape §7(d) only
+because its alternative is written `NT-00` and the slug is lower-case.
+
+**So §7(d)'s `wf-0[0-9]` row has a floor above zero that no citation rewrite can reach**, and 26
+further filenames carry a legacy id that today's predicate happens not to match. Whether slugs
+are in scope for the id standard is the maintainer's; the measurable claim is that the row cannot
+reach zero while the filename stands.
