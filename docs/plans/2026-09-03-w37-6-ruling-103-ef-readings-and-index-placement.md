@@ -142,12 +142,24 @@ keys on whether the token **names anything**, which no document can claim on its
 specimen). Neither clearance mentions the document. **And conjunct 3 red-flags a real defect that
 every document-keyed list would have hidden**: `scripts/doc-id.py:2757` writes, in a docstring,
 `token_map["F84"] = "FD-00084"`. **That is padded, it is a docstring — rule 2 names docstrings —
-and `FD-84` is a real governed thing.** It is also factually wrong about the code it describes:
-`token_map`'s values come from `_docid.canonical` (`scripts/doc-id.py:5883,5901`), whose own
-docstring says *"The citation form — NT-0019 §1.1 rule 2: unpadded, always"* and which returns
-`f"{prefix}-{n}"` (`scripts/_docid.py:104-108`). **The migration writes `FD-84`; only the
-docstring says `FD-00084`.** `doc-id.py` would sit at the top of any self-documentation
-exemption list, and the defect would have survived there.
+and `FD-84` is a real governed thing.**
+
+**What that line describes is worse than a padded value, and the correction is recorded here
+because the first reading of it was wrong.** `token_map` has two kinds of writer: an **id**
+branch, `token_map[d.old_token] = canon` with `canon = _docid.canonical(...)`, unpadded always
+(`scripts/doc-id.py:5883,5901`; `scripts/_docid.py:104-108`); and a **path** branch,
+`token_map.update(_path_rewrite_tokens(old, new))` (`:5926,5958,5965,5981,5998`), whose values
+are full paths. `FD-00084` is neither. And the id branch is guarded — `scripts/doc-id.py:5900`
+reads `if d.old_token is not None and d.prefix != "FD":`, so **`token_map["F84"]` is never set at
+all**, on the maintainer's ruling quoted in the comment above it: *"The essays get ids and paths
+now; `F<n>` stays a resolver alias to W37-11."* **The docstring asserts an assignment the same
+file's code explicitly refuses to make**, and both lines entered the tree in one commit
+(`git log -S` on each string → `2f0467e`, #671, and nothing else). Contradictory from birth.
+
+**So the exemplar is a padded id in a docstring that is also wrong about its own function** —
+and `doc-id.py` would sit at the top of any self-documentation exemption list, where both defects
+would have survived. **It is not a live behaviour defect**: the code is correct, and a
+document-keyed exemption is what would have kept it invisible.
 
 ### 1.4 What this reading makes the row, stated before the rationale can be accused of following it
 
@@ -437,8 +449,17 @@ sources.** `_split_index_family` returns `sorted({rel.split("/")[1] for rel in n
 **So a test that asserts the three current placements passes under the sort-order rule and under
 the routed rule alike, and proves nothing.** This is why Ruling 102 §6 says the executor's
 sorted-first placement *"was the right conservative call"* — it was right, and it was right by
-coincidence, and a coincidence is not a rule. The acceptance test below is written so the
-coincidence cannot supply the pass.
+coincidence, and a coincidence is not a rule.
+
+**Name the shape, not just this instance: this is a positive control that passes because of what
+it cannot distinguish.** A control built from the population the rule already fits reports the
+rule's *fit*, never its *content* — the same failure as a gate proved with a pattern other than
+the one it fires on, or with a case easy enough that any pattern would pass. The three real
+sources are exactly such a population: **every one of them is a case on which the old rule and the
+new rule agree**, so they can only ever return green. **A rule change whose entire evidence is
+that the output did not change has not been tested at all.** The acceptance test in §3.5 is
+therefore built from a case where the two rules **disagree**, and it is the only kind of case that
+can carry the pass.
 
 ### 3.5 Acceptance — the violation that must become detectable
 
@@ -494,18 +515,40 @@ Under Ruling 102 §7's rule, applied to this role's own figures:
   exists. **The relayed pair carries neither its command nor its filter**, so under `CLAUDE.md`
   §13's predicate clause it is not reproducible as written by anyone — which is itself the reason
   §1.2 states the row as a predicate rather than arguing about the number.
-- **(f)'s `127 → 127` across the migration is relayed.** This session's own runs: `104` at
-  `8f5d57d`, `129` at `e97b97a`, and the file-by-file diff of §2.3. **`127` is the figure at
-  `0de529e`, not at any tree this record is written against** — the drift from 127 to 129 across
-  four ordinary commits is §2.3's point, not a discrepancy.
+- **(f)'s `127 → 127` across the migration is relayed.** This session's own runs are `104` at
+  `8f5d57d` and `129` at `e97b97a`, plus the file-by-file diff of §2.3.
+
+  **A reader will meet `104`, `127` and `129` in this record and must not try to reconcile them.
+  They are one command at three trees**, and the command is the same throughout
+  (`git grep -c 'VR-DST-1' <ref> | awk -F: '{s+=$NF} END {print s}'`):
+
+  | tree | sum | who ran it |
+  |---|---|---|
+  | `8f5d57d` | 104 | this session |
+  | `0de529e` | 127 | the auditor (**relayed**) |
+  | `e97b97a` | 129 | this session |
+
+  **There is no discrepancy here; there is a monotone drift, and the drift is §2.3's whole
+  argument.** Four ordinary commits separate `0de529e` from `e97b97a` and the figure moved by two.
+  A row whose comparand moves whenever anyone writes a document about the migration is not
+  measuring the migration — which is why §2.2 reads it as a before/after on the snapshot instead.
 - **The §3.2 table is this session's own**, from its own instrumentation of `doc-id.py`'s
   `_discover_*` functions at `e97b97a`. Nothing in it is relayed.
-- **`doc-id.py migrate --verify` does not exist at `e97b97a`.** `migrate` takes `--repo-root` and
-  nothing else; there are four subcommands (`next`, `check`, `widen`, `migrate`) and no dry-run
-  mode. **There is therefore no read-only way to obtain a migrated snapshot**, which is why (e)'s
-  post-migration population cannot be independently measured by anyone who is not running the
-  migration — and is a further reason Ruling 102 §1's instrument has to exist before (e) can be
-  called either way.
+- **`doc-id.py migrate --verify` does not exist at `e97b97a`, and that is why the two figures
+  above are still relayed rather than reproduced.** At `e97b97a` `migrate` takes `--repo-root`
+  and nothing else; there are four subcommands (`next`, `check`, `widen`, `migrate`) and no
+  dry-run mode, so **there was no read-only way to obtain a migrated snapshot** and (e)'s
+  post-migration population could not be measured by anyone not running the migration.
+
+  **This has changed since, and the record says so rather than reading as though it had not.**
+  `executor-verify` is building the instrument on branch `w37-6-verify-instrument` as
+  `migrate --verify <dir> --ref HEAD --keep` (**relayed** — the lead's confirmation of the
+  process; not run by this session, which does not run `migrate`). **The two relayed figures are
+  therefore reproducible now and should stop being relayed**: this session has asked
+  `executor-verify` for conjunct 1 and 2 on its snapshot for (f), and for the (e) population
+  classified per-file by conjunct 3, **with an explicit instruction not to fit the result to
+  `2021`.** Until those come back the marks stand. **A figure neither party has run does not
+  become this record's by being quoted in it.**
 - **No padded-in-prose predicate exists in the shipped tooling.** Every id regex is
   padding-agnostic by design (`scripts/_docid.py:43`, `ID_RE`, `-0*(\d+)`), because it is a
   *resolver*. **§7(e) has had no implementing code at any point**, which is the plainest possible
