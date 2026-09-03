@@ -382,6 +382,120 @@ its implementation.
 
 **Nothing in §8 is in force until this append is merged**, on the header's own standard.
 
+### 8.5 The §7 scope ruling — (a)–(i) are W37-6's, as gate conditions 8–16
+
+**Ruled 2026-09-03 by the maintainer, recorded by the lead.** It resolves a scope question the
+lead had been running to the wrong answer, and the lead's error is stated first because the
+measurements taken under it were scoped by it.
+
+**The lead had been asserting — to the maintainer, to the auditor and in this window's own
+reporting — that "§7(a) is the absolute bar; (b)–(k) hold at W37-11's close."** That was
+wrong, and it was wrong against two documents either of which refutes it:
+
+- **NT-0019 §7's own preamble**: *"**At the migration PR's merge tree:** (a) … (k)"*
+  ([`docs/notes/0019-one-id-per-document.md`](../notes/0019-one-id-per-document.md) §7).
+- **The map plan**, which gives Slice W37-11 the scope *"acceptance items **(j)** and **(k)**,
+  and the closure record"*, and has that record carry *"the **§7 (a)-(h) evidence from W37-6's
+  ledger**"*
+  ([`2026-09-01-nt-0019-id-standard-map-plan.md`](2026-09-01-nt-0019-id-standard-map-plan.md),
+  Slice W37-11 block).
+
+**The consequence the error had already produced:** the lead instructed the auditor that
+§7(b)'s measured **77** failures were *"evidence only, not a stop condition this window."*
+**That instruction was wrong and is withdrawn.**
+
+#### The ruling
+
+**§7 (a)–(i) are W37-6's, measured at the merge tree.** They join §2's table as **conditions
+8–16 — nine rows, one per item — and are not folded into the existing seven.** Each carries
+its own tree and its own predicate, as every row must
+([`NT-0004`](../notes/0004-a-reference-that-resolves-only-for-the-writer.md)).
+
+**§7 (j) and (k) are W37-11's**, on the maintainer's grounds: *"they cannot hold before S3
+exists."* Item (j) requires one new item per family born through its skill, and (k) the
+`--phase P1b` report — neither has a corpus to be true of until S3's conventions land.
+
+**"Merge tree" means the merge tree.** The maintainer's words: *"(a)–(i) at the snapshot the
+ask signs, not at a freeze commit before the resolver PR."* A gate row measured at a tree the
+run will not be performed against is not evidence about the run.
+
+#### §7(d) is amended, and this is where the acceptance can see it
+
+**§7(d) is a single `git grep -E` with many alternatives** whose stated requirement is that it
+*"returns nothing"*. **As amended:**
+
+- **Each alternative is measured separately, one count each.** A single aggregate zero over a
+  multi-alternative pattern cannot say which alternative is silent because the corpus is clean
+  and which because the pattern never matched — the failure register finding **F85** names, in
+  the clause of `CLAUDE.md` §13 that a count carries *"the predicate it counted with"*.
+- **The `\bF[0-9]{2}\b` alternative is excluded from the zero requirement, with its count
+  disclosed** as **W37-11's owed citation-form item**. This is the deferral the maintainer had
+  already ruled — *"the essays get ids and paths now; `F<n>` stays a resolver alias to
+  W37-11"* — now **stated where the acceptance can see it** rather than living only in the
+  ruling that made it. A deferral the acceptance standard cannot see is indistinguishable, at
+  the gate, from an unmet requirement.
+- **Every other alternative must return nothing.** No further exclusion is granted here.
+- **`was:` is excluded as a field, not as a substring.** §7(d)'s own text says *"excluding
+  `REDIRECTS.csv` and `was:` lines"*. A substring test over the whole line drops body prose
+  that merely contains `was:` — measured, and it hid one genuine dangling link in a **table
+  row** in condition 7's own scanner. The discriminating test is `^was:` inside the leading
+  front-matter block.
+
+**If the `Ruling [0-9]+` alternative comes back large, that is a second deferral decision and
+it is the maintainer's.** The maintainer's instruction is explicit about what to bring:
+***"I want its count, not a recommendation, before I make it."*** So the count is reported
+bare, and no option list accompanies it.
+
+**§7(f)'s baseline is re-derived from the tree at `8f5d57d`**, not from any prior note —
+including the auditor's own, which carried a `VR-DST-1` figure it later retracted.
+
+#### Condition 7's blind spots — ruled on the class, not the list
+
+Three blind spots were measured in condition 7's scanner. **The maintainer declined to rule on
+them item by item and ruled the class instead:**
+
+> *"Name each in the gate record with what it admits. One that admits a link that resolves and
+> lies becomes a check before the gate — that's the halt defect, and the gate exists to see
+> it. One that admits only a dangling link is already caught by condition 7 and is disclosed.
+> If any of the three is the first kind and can't be a check by 21:00, that's a fail, and the
+> count says what to do next."*
+
+**So the test is what a blind spot admits, not how it was implemented.** The gate record names
+each against that test. **A blind spot admitting a link that resolves and lies is the halt
+defect itself** — the thing Ruling 89 called *"worse than one that fails loudly"* — and a gate
+that cannot see it is not a gate. **A blind spot admitting only a dangling link is caught by
+condition 7 once its population is right, and is disclosed rather than remedied.**
+
+**And the failure mode is specified in advance**: if a first-kind blind spot cannot be a check
+by `20:00:00Z`, **that is a fail** under §8.3's rule — one fix, once — and the count decides
+what follows.
+
+#### A pre-registered prediction, recorded before its measurement exists
+
+**The maintainer's instruction:** *"The pre-registered 119/107 prediction: record it before the
+measurement lands, whichever way it goes; a prediction written after the number is not a
+cross-check."*
+
+**The prediction.** At `4528ac0`, the auditor measured the post-migration family table as **465
+documents total**, with **plan 126** and **ruling 100**, reconciled against
+`git ls-files docs/ | wc -l` = 465. **Before** PR #679 merged, it predicted that Ruling 98's
+implementation — which moves seven maintainer-prose documents from the `plan` family to the
+`ruling` family — would give **plan 119** and **ruling 107** at the post-merge tree.
+
+**#679 merged as `0de529e`. This subsection is filed before that measurement is taken.**
+
+**What each outcome means, also stated in advance, so neither can be read favourably after the
+fact:**
+
+- **plan 119 / ruling 107** — corroboration of the family classification, from a prediction
+  that could have failed. Seven documents moved, the total unchanged at 465.
+- **anything else** — **the more informative result**, and it is not to be reconciled away. It
+  would mean the seven the ruling names, the seven `_discover_plain_plans` emits, and the seven
+  the family census counts are not the same seven — which no test in #679 could have caught,
+  because all of them read the same constant.
+
+**A total other than 465 is a third outcome and a distinct defect**: #679 changes which family
+a document belongs to, never how many documents exist.
 ## Acceptance Standard
 
 **This record is accepted when it is merged**, because the maintainer conditioned the whole
@@ -435,3 +549,19 @@ performed before the handover is committed to a branch.*
 treated as amended rather than reset.*
 
 *Violation (§8): more than five agents live at once, or a reporter spawned.*
+
+*Violation (§8.5): a gate row for §7 (a)-(i) measured at any tree other than the snapshot the
+ask signs, or the nine folded into fewer than nine rows.*
+
+*Violation (§8.5): §7(d) reported as one aggregate figure rather than one count per
+alternative; or the `\bF[0-9]{2}\b` count omitted rather than disclosed; or any alternative
+beyond that one excluded from the zero requirement without a dated ruling here.*
+
+*Violation (§8.5): a `Ruling [0-9]+` count delivered to the maintainer with a recommendation
+attached, or an option list in place of the bare count.*
+
+*Violation (§8.5): a condition-7 blind spot that admits a link which resolves and lies, left
+as a disclosure rather than made a check before the gate.*
+
+*Violation (§8.5): the 119/107 prediction's outcome reconciled to the prediction, or a total
+other than 465 treated as anything but a distinct defect.*
