@@ -1436,12 +1436,36 @@ def test_redirects_csv_records_every_old_id_and_path(
 def test_register_finding_ids_are_renumbered_and_file_moves(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
-    doc_id_cli.migrate(pristine_a)
+    """The register file itself always moves (`docs/audit/register.md` ->
+    `docs/findings/register.md`), independent of whether any row's own `F<n>` token gets
+    rewritten -- W37-6's own ambiguity sweep found the low end of the `F<n>` range reused
+    across independent audit eras for different findings (three distinct things all cite
+    `F12`, for instance), so the maintainer ruled the citation-form rewrite deferred to
+    W37-11: prose keeps saying `F<n>`, only the essay itself gets an `FD-` id and path.
+    This fixture's three rows (F1, F2, F3) all have essays under
+    `docs/audit/findings/`, so none is left as a bare `register_row` draft — the file
+    still moves (proven below) with its own compound cells untouched.
+    """
+    result = doc_id_cli.migrate(pristine_a)
     assert not (pristine_a / "docs" / "audit" / "register.md").exists()
     register = (pristine_a / "docs" / "findings" / "register.md").read_text(encoding="utf-8")
-    assert "| F1 " not in register
-    assert "| F2 " not in register
-    assert "FD-" in register
+    # The register's own citations are untouched -- the deferral in effect.
+    assert "(F1)" in register
+    assert "(F2)" in register
+    assert "FD-" not in register
+    # But every essay this fixture provides got its own `FD-` id and path.
+    findings_dir = pristine_a / "docs" / "findings"
+    fd_files = sorted(p.name for p in findings_dir.glob("FD-*.md"))
+    assert len(fd_files) == 3, fd_files
+    assert all(name.startswith("FD-") for name in fd_files)
+    assert not (pristine_a / "docs" / "audit" / "findings").exists()
+    # The register's move is recorded in REDIRECTS.csv even though no `register_row`
+    # draft claims it (every row here is essay-covered and excluded from that list).
+    assert any(
+        row["old_path"] == "docs/audit/register.md"
+        and row["new_path"] == "docs/findings/register.md"
+        for row in result.redirect_rows
+    )
 
 
 def test_no_legacy_directory_survives_once_emptied(
@@ -3733,6 +3757,11 @@ def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
         "examples/fremtpl2/README.md",
         "packages/README.md",
     ], "RFC §4's six gained, minus the one it exempts, is these five"
+    # W37-6's own `_discover_workflows` fixture (`tests/fixtures/docs-migration/docs/
+    # workflows/README.md`) is a second, later-added exempt fixture README, declared in
+    # `_REFERENCE_FIXTURE_CORPUS_READMES` alongside the RFC's original five — it is
+    # excepted, not gained, so it does not appear in `gained` at all; it is why `tracked`
+    # (asserted as an identity above) grew without `gained`'s own five changing.
     assert len(gained) + 1 == 6  # six reached
     assert len(stamped) - len(gained) == 8  # already inside step 5's roots
     assert len(stamped) + 1 == 14, "the RFC's population 14 = 13 stamped + the exempt fixture"
@@ -3989,8 +4018,19 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
         if claimed & in_scope:
             claimants[name] = len(claimed & in_scope)
 
-    assert set(claimants) == {"_discover_audit_closure_readmes"}, claimants
+    # Ruling 99 (`docs/plans/2026-09-03-w37-6-ruling-99-three-undeclared-files.md`) §2
+    # deliberately routes exactly one file under these two directories --
+    # `docs/audit/work/nt-0010-0011-adoption/pilot-findings.md` -- to `_discover_findings`
+    # instead: it is not a closure record (it carries no `README.md` filename and no
+    # `Work-item record —`/`Phase record —` heading), it is the essay half of an
+    # already-open register finding (F28), which `_FINDING_EXTRA_ESSAY_LOCATIONS` names
+    # explicitly rather than leaving `_discover_audit_closure_readmes` to guess at a shape
+    # it does not match. A second, disjoint claimant inside the same two directories is
+    # the ruled outcome here, not the "second writer" collision this test otherwise exists
+    # to catch -- so it is named, not folded into the single-claimant assertion.
+    assert set(claimants) == {"_discover_audit_closure_readmes", "_discover_findings"}, claimants
     assert claimants["_discover_audit_closure_readmes"] >= 17
+    assert claimants["_discover_findings"] == 1
     assert raised == [], (
         "no `_discover_*` may raise on the real corpus: one that does aborts every real "
         f"`migrate()` run before its first write, which is F88 limb 1's defect: {raised}"
@@ -4337,6 +4377,7 @@ def test_every_emittable_document_prefix_has_a_family_dir_and_a_template(
             "_discover_headed_split_file",          # a parameterised helper, not a writer
             "_discover_reference_stamp_targets",    # stamps in place, produces no _Draft
             "_discover_vendored_skill_manifests",   # returns a scan, not drafts
+            "_discover_reference_moves",            # returns `_ReferenceMove`, not `_Draft`
         ):
             continue
         produced = getattr(doc_id_cli, name)(ROOT)
