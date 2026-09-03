@@ -1915,13 +1915,28 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
 #: prose body.** Ruling 98 §1 reconciles two sweeps and settles the population by reading
 #: each file's *own attribution*; the title is where every member of that population states
 #: it, and it is the one region of a plan-shaped document that cannot also be quoting or
-#: citing somebody else's decision. Measured over all 167 `docs/plans/2026-*.md` files at
-#: `2ae31f7` with
+#: citing somebody else's decision.
 #:
-#:     for f in docs/plans/*.md; do grep -m1 '^# ' "$f"; done | grep -c "maintainer's"
+#: **The predicate is `_MAINTAINER_DECISION_TITLE_RE` below, by symbol, and no paraphrase of
+#: it belongs here** (`CLAUDE.md` §13: a count carries "the pattern or command verbatim and
+#: runnable, or the shipped constant by symbol at that tree, never pasted"). Applied to the
+#: first `^# ` line of each of the **168** `docs/plans/*.md` files at `198ea5d`, it matches
+#: **nine**: Ruling 98's own seven, plus Ruling 98's own record — which carries a
+#: `## Ruling 98` heading and so never reaches this function at all — plus
+#: `2026-09-03-w37-6-maintainer-decisions.md`, which the blank-`Decision` clause of
+#: `_is_maintainer_decision_plan` excludes.
 #:
-#: this matches exactly eight files: Ruling 98's own seven, plus Ruling 98's own record —
-#: which carries a `## Ruling 98` heading and so never reaches this function at all. Prose-
+#: **This comment previously stated the predicate as
+#: `grep -m1 '^# ' | grep -c "maintainer's"` and the count as eight, and both were wrong in
+#: the same way.** That grep drops three properties the shipped regex has — the
+#: `reserved to the maintainer` alternative, `re.IGNORECASE`, and the typographic
+#: apostrophe — so it cannot match `2026-09-03-w37-6-maintainer-decisions.md`, whose title
+#: reads "Reserved to the maintainer". Two predicates over the same corpus at the same tree
+#: differing by one unit is precisely the failure `CLAUDE.md` §13's predicate clause was
+#: added to stop (register finding F85); it is recorded here rather than quietly corrected,
+#: because a stated predicate that is not the shipped predicate is the defect, not the count.
+#:
+#: Prose-
 #: body matching was measured and rejected: `by the maintainer` in the first six lines also
 #: catches the three SDD ledgers' provenance line (*"Decision gate answered by the
 #: maintainer before execution"*), and `the maintainer's` anywhere in the preamble also
@@ -1935,7 +1950,7 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
 #: and it is why this is a predicate over content rather than a list of seven filenames
 #: (acceptance item 5) — a *new* document titled this way is routed with no code change.
 _MAINTAINER_DECISION_TITLE_RE: Final = re.compile(
-    r"the maintainer(?:'|’)s\b|reserved to the maintainer\b", re.IGNORECASE
+    r"the maintainer(?:'|\u2019)s\b|reserved to the maintainer\b", re.IGNORECASE
 )
 
 #: Ruling 98 §2.2: the exclusion of `docs/plans/2026-09-03-w37-6-maintainer-decisions.md`
