@@ -139,6 +139,30 @@ _SPECIFICATIONS_OF_THE_OLD_PATH = {
     # a widened pattern"). It is a specification of the path, not a citation of it: when
     # the migration lands, this row goes to zero and the exemption can go with it.
     "scripts/_docverify.py",
+    # Reviewed in 2026-09-03 by the auditor, against its own two documents -- members six
+    # and seven, and the second reviewed pair of the same day. Both are records of the
+    # NT-0019 §7 second measurement, and neither can state its finding without naming the
+    # old path: the finding is that §7(d)'s alternative for that path is **inert**, because
+    # the pattern's leading `\b` cannot fire before a `.` and so matches only where a word
+    # character precedes the dot -- which no real citation does. Demonstrating it requires
+    # quoting the alternative, the §7(d) pattern containing it, and a census of the
+    # character preceding each occurrence in the corpus. Ten occurrences in the record and
+    # one in F101's class table; every one a specification, none a citation to follow.
+    #
+    # **Disclosure, applying to this entry the caveat the auditor raised against
+    # `_docverify.py`'s**: the exemption is by filename, so a *later* edit to either file
+    # citing the old path for an ordinary reason would ride along unflagged. Accepted for
+    # the same reason it was accepted there -- a per-occurrence exemption in a document
+    # whose subject is those occurrences would be worse -- and written down rather than
+    # left implicit, because an auditor adding itself to a reviewed list owes the
+    # disclosure it asks of others. Members two to seven in about a day is the rate F71's
+    # essay asks a future reader to watch; recorded here, not judged here.
+    #
+    # This comment deliberately does not contain the path literal. The first draft did, and
+    # made this test flag its own source -- the self-referential trap the block above names
+    # and the reason `old_path` is built by concatenation.
+    "docs/research/nt-0019-second-measurement-2026-09-03.md",
+    "docs/audit/findings/F101.md",
 }
 
 
