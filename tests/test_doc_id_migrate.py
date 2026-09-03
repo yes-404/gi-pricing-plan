@@ -4613,6 +4613,17 @@ def test_the_dangling_link_check_reddens_when_the_regeneration_is_removed(
     particular had a false negative in its history: the executor who last worked this class
     reported `grep -c '](' ` returning **0** for the five files, where the true counts are
     20, 6, 8, 6 and 5.
+
+    **The named citer was `docs/adr/README.md` and is now derived from
+    `_MIGRATION_DIFF_FAMILY_READMES` instead.** The bare-basename citing form (W37-6,
+    Ruling 100's implementing PR) legitimately repairs that file: its index table cites
+    sibling ADRs by bare filename, those ADRs move within their own directory to
+    `docs/adrs/`, and the rewrite now sends the link to `../adrs/ADR-…md` — which resolves,
+    from the old path the mutation leaves the README at. So the exemplar stopped dangling
+    because it stopped being broken, not because the probe stopped working. Re-derived
+    from the rule the assertion is *for* — the surviving §5.2 READMEs must be named — the
+    probe still fires, and it now cannot go stale the next time one member of that set is
+    repaired ahead of the others.
     """
     monkeypatch.setattr(
         doc_id_cli,
@@ -4623,7 +4634,7 @@ def test_the_dangling_link_check_reddens_when_the_regeneration_is_removed(
     dangling = _dangling_links(pristine_a, result.files_deleted)
     assert dangling, "the mutation must be visible, or this check proves nothing"
     citers = {entry.split(":", 1)[0] for entry in dangling}
-    assert "docs/adr/README.md" in citers, dangling
+    assert citers & doc_id_cli._MIGRATION_DIFF_FAMILY_READMES, dangling
 
 
 def test_every_section_5_2_readme_row_lands_where_its_row_says(
