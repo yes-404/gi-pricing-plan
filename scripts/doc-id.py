@@ -4715,15 +4715,33 @@ def _path_rewrite_tokens(old_rel: str, new_rel: str) -> dict[str, str]:
     `roadmap.md` lives one level inside `docs/` and a same-tree relative link omits the
     shared prefix. Both forms are added (the second only when `old_rel` starts with
     `docs/`, since a path outside `docs/` has no such shorter form to strip); each is a
-    literal substring match via `_rewrite_citations`, so a form neither of these two
+    literal substring match via `_rewrite_citations`, so a form neither of these three
     covers (a deeper relative path, `../...`, from a file two or more directories below
-    `docs/`) is not rewritten by this pair and would need adding if the corpus is ever
+    `docs/`) is not rewritten by this set and would need adding if the corpus is ever
     found to use it -- not assumed absent, just not yet proven present.
+
+    A **third** form: `docs/audit/register.md`'s own F28 row cites `pilot-findings.md` as
+    `[work/nt-0010-0011-adoption/pilot-findings.md](work/nt-0010-0011-adoption/pilot-
+    findings.md)` -- a link relative to `docs/audit/`, the shared parent every file that
+    used to live under it once assumed, because the citing file (`register.md`) and the
+    cited file (`pilot-findings.md`) were both there. Post-migration the citing content
+    moves wholesale into `docs/findings/register.md`, and every `docs/findings/`-bound
+    essay this migration produces (every `FD-` document, `pilot-findings.md`'s own
+    Ruling-99 destination included) is a sibling of that file, not a `docs/audit/`
+    subpath any more -- so the correct replacement is relative to `docs/findings/`, the
+    one directory this migration's `docs/audit/`-relative citers are actually proven to
+    still share with their target. Added only when `old_rel` starts with `docs/audit/`
+    and `new_rel` starts with `docs/findings/`, the two conditions the F28 case actually
+    satisfies -- not a general "strip any shared prefix" rule, which would silently
+    manufacture a resolvable-looking token for a pair that shares no real directory.
     """
     tokens = {old_rel: new_rel}
     prefix = "docs/"
     if old_rel.startswith(prefix) and new_rel.startswith(prefix):
         tokens[old_rel[len(prefix) :]] = new_rel[len(prefix) :]
+    audit_prefix, findings_prefix = "docs/audit/", "docs/findings/"
+    if old_rel.startswith(audit_prefix) and new_rel.startswith(findings_prefix):
+        tokens[old_rel[len(audit_prefix) :]] = new_rel[len(findings_prefix) :]
     return tokens
 
 
