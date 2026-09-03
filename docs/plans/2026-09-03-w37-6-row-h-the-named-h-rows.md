@@ -169,11 +169,17 @@ naming Ruling 102 §3 assigns and does not attempt.
 
 **Its falsifiable claim, in one line:** run
 `python3 scripts/doc-id.py migrate --verify --ref <the merge tree>` and rows **(h2)** and
-**(h3)** read **PASS**, with `(h2)`'s migrated denominators non-zero on all six probes —
-`requirements defined=533; open questions=118; journey endpoint citations=31; §10 mirror
-rows=118; check 37 documents in scope=428; check 37 was: exemptions=360`. Run it at
-`4b9117a` and `(h2)` reads **FAIL** and `(h3)` reads **FAIL**. If either verdict is the same
-at both trees, this record is wrong.
+**(h3)** read **PASS**, with `(h2)`'s migrated denominators non-zero on all **six** probes.
+Measured on the branch at `2365126`: `requirements defined=533; open questions=118; journey
+endpoint citations=31; §10 mirror rows=118; check 37 documents in scope=428; check 37 was:
+exemptions=360` — the first four are the corpus and are stable; the last two move with the
+document count and are quoted for shape, not as constants.
+
+Run the same command at `4b9117a` and `(h2)` reads **FAIL** — *"vacuous on: requirements
+defined, open questions, journey endpoint citations, §10 mirror rows"*, all four migrated
+denominators `0` against a non-zero control — and `(h3)` reads **FAIL**, *"empty population —
+0 requirements on the migrated tree"*. **If either verdict is the same at both trees, this
+record is wrong.**
 
 **Implementation:** this PR. **Not discharged here:** §7(i) — every §5 H row closed by a named
 commit — which Ruling 102 §3 assigns to W37-10.
