@@ -245,9 +245,38 @@ is recorded rather than ruled.** The options, with the trade-off that decides be
 | A reserved number band that `doc-id.py next` never allocates, so specimens resolve to nothing forever | a standard change, and a band is a magic constant that has to be remembered |
 | A reviewed per-file exemption in `_SPECIFICATIONS_OF_THE_OLD_PATH`'s ratified shape, for the resolution branch only | the blocklist §1.3 argues against, though here scoped to one branch and one list |
 
-**It belongs in `docs/open-questions.md` against W37-6, and it must not be folded into §7(e).**
-An (e) row that also carried this would be reporting a resolution-branch defect as a padding
-failure — the same conflation §1.4 keeps out between (d) and (e).
+**Filed as `OQ-OVR-18`** in `docs/open-questions.md`, mirrored into `docs/specs/00-overview.md`
+§10 and placed on `docs/roadmap.md` §10's Deferred gate row, in the commit that adds this
+paragraph. Recommendation **(c)** — the reviewed per-file exemption, scoped to the resolution
+branch alone. **It must not be folded into §7(e):** an (e) row that also carried this would be
+reporting a resolution-branch defect as a padding failure, the same conflation §1.4 keeps out
+between (d) and (e).
+
+**Recorded because a wrong step was taken here and the record should carry it.** This role first
+argued the question did *not* belong in `docs/open-questions.md`, on the ground that all eight of
+that file's sections are scoped to a product spec module and this question has none. **That
+ground was false.** `OQ-OVR-17` (`docs/open-questions.md:46`, mirrored at
+`docs/specs/00-overview.md:554`) is a question purely about `audit-docs.py` checks 14 and 21,
+filed under `OVR`; `OQ-OVR-9` was the same shape and was closed into an `audit-docs.py` check
+plus `FR-OVR-19`. **The file already carries audit-tooling questions, and the premise was
+produced by not reading it.** The findings register was the proposed alternative and is
+structurally incapable of holding this: its columns are `Finding id`, `Concerns`, `Work item`,
+`Phase`, `Decision`, with no cell for options or a recommendation, and `register-lint.py`'s
+vocabulary is dispositions of an established defect rather than a choice among designs. **F68,
+F96 and F71 are all defects established by measurement with a right answer; this is not one.**
+
+**A second wrong step, caught by an assertion rather than by care.** The Deferred gate row's
+count cell was reported to the lead as reading `13 (0 open)` against a row naming 32 distinct
+ids — an apparent defect. It was not: `13 (0 open)` is the *"Before Phase 4"* row, read off a
+hardcoded line number instead of the row being counted. **The Deferred cell reads `32 (0 open)`
+and was correct.** The recount that found 32 independently is what the cell already said, so it
+becomes `33 (1 open)` by recount and not by increment.
+
+**One thing left unplaced, deliberately.** `OQ-OVR-17` sits on **no** `docs/roadmap.md` §10 gate
+row — the omission `.claude/skills/spec-change` warns about (*"A new `OQ-` also goes into
+`docs/roadmap.md` §10's decision-gate table, in the same commit"*) and which `audit-docs.py` does
+not check. It is raised with the lead rather than fixed here: placing another raiser's question
+on a gate is a planning act, not a correction.
 
 ### 1.8 Acceptance — the violation that must become detectable
 
