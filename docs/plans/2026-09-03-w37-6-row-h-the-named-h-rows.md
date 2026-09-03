@@ -18,7 +18,7 @@ Two trees, one corpus:
 
 | Tree | What it is |
 |---|---|
-| **control** | `4b9117a` un-migrated — `origin/main` as it stands, or this branch |
+| **control** | the un-migrated tree — `origin/main` as it stands, or this branch. Baseline figures below are at `4b9117a`; post-change figures at this branch rebased onto `2cb4808` |
 | **migrated** | the same tree, `git archive`d into a temporary directory, `git init`ed, and `python3 scripts/doc-id.py migrate --repo-root .` run in it. **Never a real checkout.** |
 
 Both figures for every row come from `python3 scripts/doc-id.py migrate --verify --ref <ref>`
@@ -126,12 +126,16 @@ W37-6's.
 ## 4. What is still red on the migrated tree, and whose it is
 
 After this change, `migrate --verify` reports **(h2) PASS** and **(h3) PASS**, and **(h1)
-still FAIL**. The failure *count* goes **up**, from `FAILED (552)` to `FAILED (12160)` — that
-is the point: 11 608 defects that a parser reading a path or an id form the migrated tree does
-not have could not report. The residue is not (h)'s:
+still FAIL**. The failure *count* goes **up**: `FAILED (552)` at `4b9117a`, `FAILED (12271)`
+on this branch rebased onto `2cb4808` — that is the point. Roughly 11 700 defects that a
+parser reading a path or an id form the migrated tree does not have could not report. The
+residue is not (h)'s.
 
-**Taxonomy at `987c154`** (this record's own first commit; the record adds citations of its
-own, so the total moves with it — the predicate is
+**The total moves with the tree** — every document added to `docs/` adds citations to check
+and `main` gains several a day — so the taxonomy below is pinned to one tree and totals
+**12 160** there, not to the branch tip.
+
+**Taxonomy at `987c154`** (this record's own first commit; the predicate is
 `sed -n '/^FAILED/,$p' <log> | grep '^  - ' | sed -E 's/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' | sort | uniq -c`):
 
 | Class | Count | Owner |
@@ -162,6 +166,30 @@ are **left in scope and left failing** rather than excluded by a rule nobody has
 is a stamp-set predicate question for W37-2's `_docid`, and inventing an exclusion is what
 this whole row exists to stop.
 
+## 6. The one thing that keeps `(h2)` red, and why it is not this row's
+
+`(h2)` carries **two** clauses. The zero-denominator one — the carve-out's own words — is
+cleared by this change on all six probes. A second clause, **OVER-EXEMPT**, was added to the
+instrument after this work started (`2cb4808`) and fires here:
+
+> *"OVER-EXEMPT: check 37 exempts 363 of 431 document(s) (84%) on the `was:` field, which is a
+> large population almost entirely excused rather than an empty one — the zero-denominator
+> rule cannot see this shape"*
+
+**Widening the checks-30-39 scope is what makes that visible**, and the visibility is the
+point: before this change check 37's population was `1`, so an 84% exemption rate had nothing
+to be a rate *of*. But the exemption itself is not a parser defect. `check_shape` already keys
+on the **parsed** `header.was` field, not on a substring — so Ruling 102 §5's *"the exemption
+currently keys on a substring test"* does not describe this site. What is wrong is upstream:
+Ruling 102 §5 measured that of 393 stamped documents carrying `was:`, **3** carry correct
+provenance — 261 name the file's own new path and 129 name a path that never existed. **The
+migration is writing the field wrongly**, and Ruling 96's verbatim-migration exemption is then
+honoured over a field that does not mean what it says.
+
+**Owner: not W37-6's row (h).** It is the migration's `was:` write path plus Ruling 102 §5's
+re-measurement of condition 2. Raised here, deliberately not fixed here: fixing another row's
+ruled defect inside this PR is the silent scope-widening the boundary in §3 exists to prevent.
+
 ## Acceptance Standard
 
 This record is accepted when its PR merges. It binds nothing on its own; it discharges the
@@ -169,10 +197,11 @@ naming Ruling 102 §3 assigns and does not attempt.
 
 **Its falsifiable claim, in one line:** run
 `python3 scripts/doc-id.py migrate --verify --ref <the merge tree>` and rows **(h2)** and
-**(h3)** read **PASS**, with `(h2)`'s migrated denominators non-zero on all **six** probes.
-Measured on the branch at `2365126`: `requirements defined=533; open questions=118; journey
-endpoint citations=31; §10 mirror rows=118; check 37 documents in scope=428; check 37 was:
-exemptions=360` — the first four are the corpus and are stable; the last two move with the
+**(h3)** reads **PASS**, and `(h2)`'s migrated denominators are non-zero on all **six**
+probes — `(h2)`'s own verdict stays FAIL on its second, OVER-EXEMPT clause, which §6 shows is
+not this row's. Measured on the branch at `c7302aa`, rebased onto `2cb4808`: `requirements defined=533; open questions=119; journey
+endpoint citations=31; §10 mirror rows=119; check 37 documents in scope=431; check 37 was:
+exemptions=363` — the first four are the corpus and are stable; the last two move with the
 document count and are quoted for shape, not as constants.
 
 Run the same command at `4b9117a` and `(h2)` reads **FAIL** — *"vacuous on: requirements
