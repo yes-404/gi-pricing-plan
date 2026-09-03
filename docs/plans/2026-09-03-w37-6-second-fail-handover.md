@@ -199,7 +199,7 @@ which population the acceptance test wants is a question about the test.
 |---|---|---|
 | 1st | `none` = 110 — `docs/audit/` not dissolved | a corpus failing §7(a) |
 | 2nd | **36** dangling links, after all six conditions passed | broken citations in a one-way commit |
-| 3rd (this) | **376** broken links · **391** mangled citations · `was:` 3/393 · `audit-docs` exit 1 | **documents that say the wrong thing** |
+| 3rd (this) | **377** broken links · **391** mangled citations · `was:` 3/393 · `audit-docs` exit 1 | **documents that say the wrong thing** |
 
 **Each defect was invisible to the gate as it stood, and each was found by widening a
 predicate rather than by running the gate again.** Condition 7 alone has been redefined once
@@ -211,6 +211,64 @@ someone measuring **a different thing from what the check measured** — full-sc
 indexed population, "broken" instead of "resolves to a deleted path", `^was:` as a field
 instead of `was:` as a substring, per-alternative instead of aggregate. **A check's name is
 not its predicate, and only the predicate is enforced.**
+
+### 2.1 The link figure reconciled — 377, and neither 376 nor 379
+
+**Relayed** (the auditor's measurement, not the lead's own run — see §12's rule):
+
+```
+379  post-migration docs/-citing broken links, as first counted
+        = 158 (deleted target) + 221 (never existed)
+ -3  non-link artefacts: `](work:`, `](...)`, `](…)` -- inside backticks, not links
++1   a REAL broken link the `was:` SUBSTRING skip was hiding
+----
+377  condition 7's figure under its new definition
+```
+
+**Measured directly rather than derived**, both sides at `0de529e` with the tightened
+predicate:
+
+```
+UN-MIGRATED CONTROL: 1568 targets examined,  70 broken,   0 citing from docs/
+MIGRATED:            1551 targets examined, 453 broken, 377 citing from docs/ (142 files)
+```
+
+**The control's `docs/`-citing figure is 0, so all 377 are introduced** — no subtraction, and
+the total-versus-introduced ambiguity that produced the 376/379 confusion cannot recur in this
+form. The 70 pre-existing are all `.claude/skills/**` prose and docstrings, none under `docs/`.
+
+**Two of the three artefacts were the scanner matching its own description** — gate condition
+7's own text, and the handover describing the instrument. The third is a Python type signature
+in a table cell. **The tightening — a link target inside an inline code span is not a link —
+cannot drop a real link**, because a real link with a backticked label has an even backtick
+count before the `](`. Proven by enumeration: 11 items dropped, every one a placeholder or
+signature inside backticks, 8 of them in Python docstrings outside `docs/` which is why
+neither the lead nor the auditor had seen them.
+
+**The lead's own contribution to this figure was an error.** The lead published a table reading
+`376 = 158 + 221`, which sums to **379**; the maintainer caught it. The lead's subsequent
+hypothesis — that the gap was the 3 artefacts — was right about the 3 and **missed the +1**.
+
+### 2.2 Which condition-7 blind spots survive the redefinition
+
+**Relayed.** Two retired, two survive — and **neither survivor is a condition 7 defect any
+more**:
+
+| blind spot | state |
+|---|---|
+| **1 — scope** (`git ls-files` read before `git add -A`) | **RETIRED.** A defect of the old instrument's population |
+| **4 — deleted ≠ broken** | **RETIRED, absorbed into the definition.** The 221 are inside the 377 by construction |
+| **2 — `was:` substring not field** | **SURVIVES, but in §7(d)'s predicate, not condition 7's.** Under the redefinition there is no `was:` skip at all. In §7(d) it changes three alternatives |
+| **3 — semantic** (Ruling 101 §101.3) | **SURVIVES**, as the maintainer classified it. A link resolving to the wrong index section still resolves |
+
+### 2.3 §7(h)'s frontend half — NOT MEASURED, owner named
+
+**§13 admits no silence, so this is a verdict rather than an omission: not measured, owner the
+executor's PR CI.** The Python half is green — **relayed**: 3010 passed, 2 skipped, 1 xfailed,
+plus six static checks. The frontend half (`pnpm install`/`lint`/`type-check`/`test`/`build`)
+on a **migrated** tree could not be landed with margin, and `CLAUDE.md` §11 records that a
+Python-only "gate" has been green here while the frontend was red. **It is not recorded as a
+pass.**
 
 ## 8. What is merged and in force
 
