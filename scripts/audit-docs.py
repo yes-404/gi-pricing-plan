@@ -111,6 +111,7 @@ from __future__ import annotations
 
 import collections
 import csv
+import functools
 import hashlib
 import importlib.util
 import itertools
@@ -1812,6 +1813,22 @@ def frozen_diff_is_permitted(
     return True, ""
 
 
+@functools.lru_cache(maxsize=8)
+def _inverse_token_pattern(tokens: tuple[str, ...]) -> re.Pattern[str]:
+    """One alternation over every new token, longest first, matching whole identifiers only.
+
+    Longest-first is the ordering the caller's own docstring already required, and putting
+    it inside a single alternation keeps it while making the substitution one pass instead
+    of one per token: this predicate runs over every file in the tree against a real
+    `REDIRECTS.csv` of ~1 100 entries, and a per-token `re.sub` is roughly two orders of
+    magnitude slower than the `str.replace` loop it replaces (measured: the whole-corpus
+    §7 (g) run did not finish in 20 minutes, against ~30 s for one pass). Cached because
+    the token set is the same for every file of a run.
+    """
+    alternation = "|".join(re.escape(tok) for tok in tokens)
+    return re.compile(rf"\b(?:{alternation})\b(?![-/][0-9])")
+
+
 def frozen_file_matches_after_migration_stamp(
     old_body: str, new_text: str, redirects_inverse: Mapping[str, str]
 ) -> bool:
@@ -1858,13 +1875,10 @@ def frozen_file_matches_after_migration_stamp(
             stripped = new_text
     else:
         stripped = new_text
-    restored = stripped
-    for new_token in sorted(redirects_inverse, key=len, reverse=True):
-        restored = re.sub(
-            rf"\b{re.escape(new_token)}\b(?![-/][0-9])",
-            lambda _m, v=redirects_inverse[new_token]: v,  # type: ignore[misc]
-            restored,
-        )
+    if not redirects_inverse:
+        return stripped.strip("\n") == old_body.strip("\n")
+    pattern = _inverse_token_pattern(tuple(sorted(redirects_inverse, key=len, reverse=True)))
+    restored = pattern.sub(lambda m: redirects_inverse[m.group(0)], stripped)
     return restored.strip("\n") == old_body.strip("\n")
 
 
