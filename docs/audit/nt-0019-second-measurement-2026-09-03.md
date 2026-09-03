@@ -41,18 +41,25 @@ Mine: the snapshot pair described above, same tree.
 |---|---|---|---|
 | (a) one family per file, zero `none` | PASS — 465, `plan 119 / ruling 107`, no `none` | PASS — 465, `plan 119 / ruling 107`, no `none` row | yes, exactly |
 | (b) `doc-id.py check` | FAIL — 77, all `noncontiguous`; dup 0; `id != filename` 0 | FAIL — 77 `noncontiguous`, 0 duplicate, 0 filename mismatch, exit 1 | yes, exactly |
-| (c) `doc-index.py --check` byte-stable | PASS — `OK (byte-stable)`, exit 0 | PASS — `OK (byte-stable)`, exit 0 | yes, but see §5 |
+| (c) `doc-index.py --check` byte-stable | PASS — `OK (byte-stable)`, exit 0 | **FAIL** — `is stale`, exit 1, when run with **the migrated tree's own** `doc-index.py`; `audit-docs.py` check 39 independently agrees | **no — see §5** |
 | (d) the id/path grep returns nothing | FAIL — 12 of 13 alternatives non-zero | FAIL — 12 of 13 non-zero; **12 of 13 figures reproduce exactly** once §7(d)'s leading `\b` is applied, `NT-00` apart | yes, after the retraction in §6 |
 | (e) no padded id in prose | FAIL/ambiguous — 2021 literal, 36 excluding path context | FAIL — 2042 occurrences, 77 on a path-context filter of my own | direction yes, neither figure reproducible — §7 |
 | (f) `VR-DST-1` unchanged | FAIL literal / PASS on intent — 104 → 127; 127 → 127 across the migration | 104 at `8f5d57d`; 127 control; 127 migrated | yes, exactly |
 | (g) diff hunks neither header nor citation-token | FAIL — ≤ 1187 lines; 391 mangled citations, control 0 | 391 reproduced exactly; **plus 216 mangled finding ids, control 0** — §3 | 391 yes; the row is wider than reported |
-| (h) full gate green | FAIL — `audit-docs.py` exit 1, 547 failures | FAIL — exit 1, **548** failures, denominators collapse as reported | direction yes, count off by one — §4 |
+| (h) full gate green | FAIL — `audit-docs.py` exit 1, 547 failures; 110 check 28, 23 check 32 | FAIL — exit 1, **548**; **109** check 28, **22** check 32, remainder **+3** | direction yes; **not an off-by-one** — §4.1 |
 | (i) every §5 H row closed by a named commit | scope correction, not measured | not measured — out of scope, and see §8 | yes |
 
-**Seven of nine agree**, after §6's retraction moved (d) into the agreeing column. The two that
-do not are (e), where neither side publishes its filter, and (h), which differs by one failure
-and is unexplained. **Row (d) disagreed only because the auditor mis-transcribed §7(d)'s
-predicate; the handover was right — see §6.**
+**Six of nine agree.** §6's retraction moved (d) into the agreeing column; §5 then moved (c) out
+of it, and in the opposite direction from any other disagreement here — **(c) is the only row
+where my measurement makes the corpus look worse rather than the same.** The three that do not
+agree are:
+
+- **(c)** — recorded by the handover as one of only two passes. It fails at the merge tree. §5.
+- **(e)** — neither side publishes its filter. §7.
+- **(h)** — 548 against 547, and the decomposition disagrees by more than the total does. §4.1.
+
+**Row (d) disagreed only because the auditor mis-transcribed §7(d)'s predicate; the handover was
+right — see §6.**
 
 ## 3. The finding: the token-boundary defect also mangles finding ids, and §7(d) goes green because of it
 
@@ -181,18 +188,131 @@ verbatim-migrated`, and the string `292` does not occur anywhere in that log. Th
 what `audit-docs.py` prints on this tree. I do not know what predicate produced it and am not
 reconciling to it.
 
-## 5. Row (c) passes, and the same command passes on an un-migrated tree
 
-`python3 scripts/doc-index.py --root <snapshot>/docs --check` prints `OK (byte-stable)` and
-exits 0 on the migrated snapshot, reproducing the handover. On the **control** it prints
-`INDEX.md does not exist and zero governed records were found ... nothing to check yet
-(pre-migration)` and **also exits 0**. Passing the repository root instead of `<root>/docs`
-produces the same reassuring line and the same exit 0 on a fully migrated tree.
+### 4.1 The 548-against-547 gap is not an off-by-one — the decomposition disagrees by more
 
-So exit 0 is returned by the pass, by an un-migrated tree, and by a mis-rooted invocation.
-**Row (c) as stated is satisfied by an exit code that three different states share.** An
-instrument computing (c) must assert the `OK (byte-stable)` line and treat the
-`nothing to check yet` line as a failure, or the row is vacuous whenever the root is wrong.
+The first filing called this "count off by one". That framing was wrong, and it was wrong in the
+direction that makes a disagreement look benign. The handover names two sub-populations of its
+547, so the total can be decomposed rather than compared whole. Mine, at `0de529e` migrated,
+each figure taken with **two independent predicates that agree**:
+
+| population | predicate A | predicate B | mine | handover |
+|---|---|---|---|---|
+| check 28 | `grep -c 'check 28'` | `grep -c 'kind-suffixes'` | **109** | 110 |
+| check 32 | `grep -c 'check 32'` | (same population by message shape) | **22** | 23 |
+| broken links | `grep -c 'broken link'` | — | **390** | — |
+| everything else | the complement | — | **27** | — |
+| **total** | | | **548** | 547 |
+
+`109 + 22 + 390 + 27 = 548`, so **the parts sum to the whole** on my side.
+
+Against the handover: check 28 is **one lower**, check 32 is **one lower**, and the remainder is
+**three higher** — 417 against 414. **Three offsetting differences that net to +1.** A total
+differing by one is what you see; three sub-populations differing in two directions is what is
+there. Comparing only the totals would have reported a near-agreement over a decomposition that
+does not agree at all.
+
+**Still unexplained and still not reconciled.** Unlike §6's `NT-00` residual, this one has no
+one-document signature — a single extra or missing document cannot move three populations in two
+directions.
+
+### 4.2 More of the gate is inert than the handover recorded
+
+Handover §4 records the empty-population **summary lines**. Two failure lines in the same run say
+something stronger — six checks do not execute at all:
+
+```
+  - docs/notes does not exist — checks 16-20 cannot run
+  - docs/notes does not exist — check 25 cannot scan it
+```
+
+`docs/notes/` is a directory the migration dissolves, and five checks plus one more are keyed to
+its existence. They are not passing over an empty population; they are **not running**. A row (h)
+that is read as "how many failures" counts these as 2, when what they report is 6 checks' worth
+of coverage absent from every other number in the run.
+
+## 5. Row (c) is a FAIL, not a PASS — the pass came from running a script that is not in the tree under test
+
+**This section replaces its first filing (`3b2b501`), which recorded (c) as reproducing the
+handover's PASS with a vacuity caveat. The caveat stands and is kept below as §5.2, but the
+verdict is wrong: at the migration tree, row (c) fails.**
+
+### 5.1 The same command, the same tree, two verdicts
+
+```
+snapshot's own copy:   python3 scripts/doc-index.py --root <snap>/docs --check
+                       -> "<snap>/docs/INDEX.md is stale — run ... to regenerate"     exit 1
+main's copy:           python3 <checkout>/scripts/doc-index.py --root <snap>/docs --check
+                       -> "<snap>/docs/INDEX.md: OK (byte-stable)"                    exit 0
+```
+
+Both run twice, both reproducible, on the migrated snapshot of `0de529e`. **The verdict depends
+on which copy of `doc-index.py` runs the check, not on the corpus.**
+
+**A third measurement breaks the tie, and it is already in the run.** `audit-docs.py` executed
+inside the snapshot loads the snapshot's `doc-index.py` by path and reaches the same conclusion:
+
+```
+check 39: docs/INDEX.md is stale against a fresh regeneration (479 governed record(s))
+```
+
+It is one of the 548 failures of §4. **Two of the three measurements say stale. The only one
+that says pass is the one using a script from outside the tree under test.**
+
+### 5.2 The cause: a citation rewrite inside a string literal that is part of generated output
+
+Rendering `docs/INDEX.md` with each copy against the same corpus — both produce **479 records**
+and differ by exactly one line:
+
+| | line 3 of the rendered index |
+|---|---|
+| committed `docs/INDEX.md` | ``Generated by `scripts/doc-index.py`. Do not hand-edit — see NT-0019 §1.4.`` |
+| rendered by **main's** `doc-index.py` | identical — **byte-identical to the committed file** |
+| rendered by the **migrated tree's** `doc-index.py` | ``... see **RFC-216** §1.4.`` |
+
+The migration generated `docs/INDEX.md` with the pre-migration renderer, which emits `NT-0019`,
+and then rewrote the citation `NT-0019` to `RFC-216` inside `scripts/doc-index.py`'s own banner
+string — **without regenerating the index**. Generator and generated artifact now disagree by
+exactly the token the migration rewrote in one and not the other.
+
+**NT-0019 §5.7 predicted this class in one clause** — *"Every touched file is compiled and its
+suite run (§7 (h)): a rewrite inside an asserted string is the reason."* The clause anticipated
+a rewrite inside a string a **test** asserts. This is a rewrite inside a string the **product
+output** contains, which is the same mechanism one step further out, and it defeats the
+acceptance row rather than a test.
+
+### 5.3 Why the pass was recorded, and the rule it argues for
+
+Nothing was done wrong procedurally: pointing a checkout's script at a snapshot is the obvious
+way to measure a snapshot, and it is what I did first. But NT-0019 §7's own preamble scopes the
+whole row set — *"At the migration PR's merge tree"* — and a script is part of that tree.
+`scripts/doc-index.py` is rewritten by the migration, so the merge tree's generator is not the
+one in any auditor's checkout.
+
+**The generalisable rule, offered rather than proposed:** an acceptance row that runs a program
+must run **the tree's own copy** of that program. Where it does not, the row silently tests a
+different artifact than the one being accepted, and the failure mode is a green.
+
+**This bears directly on the instrument.** `doc-id.py migrate --verify <snapshot>` runs from the
+checkout that invokes it. If it computes (c) — or any row that shells out — with its own
+`doc-index.py` rather than the snapshot's, **row (c) passes forever and this defect is
+undetectable by the thing built to detect it.**
+
+### 5.4 The vacuity caveat from the first filing, unchanged and still true
+
+`doc-index.py --check` exits 0 on the pass, on an **un-migrated control** (`INDEX.md does not
+exist and zero governed records were found ... nothing to check yet (pre-migration)`), and on a
+**mis-rooted call** — passing the repository root instead of `<root>/docs` produces the same
+reassuring line and the same exit 0 on a fully migrated tree. Three different states, one exit
+code. An instrument computing (c) must assert the `OK (byte-stable)` line and treat
+`nothing to check yet` as a failure.
+
+### 5.5 Bounded: rows (a) and (b) do not flip
+
+Checked rather than assumed, since `scripts/doc-id.py` is also rewritten by the migration. Run
+with the **snapshot's own** copy: (a) `total 465`, no `none` row; (b) exit 1, 77 `noncontiguous`,
+0 duplicate. Identical to the figures obtained with the checkout's copy. **Only (c) changes
+verdict.**
 
 ## 6. Row (d) — RETRACTED AND REPLACED 2026-09-03: the handover's figures are right and mine were wrong
 
