@@ -103,9 +103,10 @@ file is a violation if and only if all three hold:
 | 3 | the unpadded id is listed in `docs/INDEX.md` | rule 2's subject: a **citation** names something |
 
 **Conjunct 3 is the ruling.** Conjuncts 1 and 2 are the measurement everybody has already run —
-they are the "2021 literal, 36 excluding path context" (**relayed**; see §4.2) — and they are
-what leaves 36 undecided. Conjunct 3 decides them, because a token that resolves to nothing is a
-**specimen of the form**, not a citation of a document, and rule 2 says nothing about specimens.
+they are what both existing measurements ran (**relayed**, and they disagree — 36 and 77 after a
+path filter each party wrote itself; §1.4 and §4.2) — and they are what leaves that population
+undecided. Conjunct 3 decides it, because a token that resolves to nothing is a **specimen of the
+form**, not a citation of a document, and rule 2 says nothing about specimens.
 
 ### 1.3 Why this is not a carve-out for the defining document, and why that matters
 
@@ -169,11 +170,12 @@ disposition: the fix is to the docstring and never to the guard, because admitti
 
 **§7(e) FAILS as currently measured, and this ruling does not rescue it.**
 
-Conjuncts 1 and 2 alone leave **36** occurrences (**relayed** — the auditor's figure at
-`0de529e` on a migrated snapshot; this session could not reproduce it, see §4.2). Conjunct 3 has
-never been applied to them. The reported characterisation is *"mostly the standard documenting
-itself"* — and **"mostly" is a concession that the remainder is not**. A row whose population is
-non-empty under every predicate anyone has run, and unmeasured under the ruled one, is a **FAIL**
+Conjuncts 1 and 2 alone leave **36 occurrences on one party's filter and 77 on another's** (both
+**relayed**; §4.2, and the table below is what that disagreement shows). Conjunct 3 has never
+been applied to either population. The reported characterisation is *"mostly the standard
+documenting itself"* — and **"mostly" is a concession that the remainder is not**. A row whose
+population is non-empty under every predicate anyone has run, and unmeasured under the ruled
+one, is a **FAIL**
 until the executor measures it under the full predicate and it comes back zero. This session's
 own measurement on the unmigrated tree already produces one conjunct-3 violation it can name —
 `scripts/doc-id.py:2757` (§1.3) — so the row is not merely unmeasured; it is known non-empty.
@@ -181,6 +183,35 @@ own measurement on the unmigrated tree already produces one conjunct-3 violation
 **The ruling is the same either way.** Had conjunct 3 been shown to empty the 36, this reading
 would be unchanged: it is derived from rule 2's subject and rule 3's resolver sentence, both of
 which were written before any of this was measured.
+
+**Independent evidence that the row had to become a predicate, and it is the strongest available
+because neither party produced it for that purpose.** Two measurements of (e) now exist, taken by
+different parties (both figures **relayed** — the handover's and the auditor's; this session ran
+neither):
+
+| party | broad | after a path filter |
+|---|---|---|
+| the handover | 2021 | **36** |
+| the auditor | 2042 | **77** |
+
+**The broad figures agree to within 1%. The narrow figures differ by a factor of two, and the
+row's size moves by a factor of 26 between the broad and narrow readings of the same corpus.**
+
+**Read what that isolates.** Broad agreement means the two parties saw substantially the same
+corpus and the same padded-token population; the disagreement is therefore located almost
+entirely in **the filter**, which is the one thing neither published. This is F85's finding
+recurring exactly — two counts at the same tree over the same corpus differing only by the
+pattern, **both satisfying `CLAUDE.md` §13 as it stood** — and it is why §13's predicate clause
+was added on 2026-09-02. **A row whose size moves 26-fold on an unstated filter is not a
+measurement anybody can check**, and the disagreement is not resolvable by preferring one
+number: it is resolvable only by fixing the predicate, which is what §1.2 does.
+
+**The verdict is unmoved by this and that is the point.** (e) fails at 36 and it fails at 77;
+nothing about which number is right changes the row's colour. **What moves by a factor of two is
+the work list** — how many occurrences someone has to go and fix — and a work list is exactly the
+thing Ruling 102 §2 turns these rows into. So the argument for one ruled reading is not
+tidiness; it is that the two parties were pricing the same work at 36 and at 77 with no way to
+tell which, and neither was wrong under the row as written.
 
 **One boundary against §7(d), because measuring (e) without it produces a false alarm.** At
 `e97b97a` the padded-form population is dominated by the legacy four-digit `ADR-0nnn` form — of
@@ -552,7 +583,10 @@ been recorded as deferred and then re-encountered as new.**
 
 Under Ruling 102 §7's rule, applied to this role's own figures:
 
-- **(e)'s `2021` and `36` are relayed** — the auditor's, at `0de529e`, on a migrated snapshot.
+- **(e)'s figures are relayed from two parties and they disagree** — the handover's `2021`/`36`
+  at `0de529e` on a migrated snapshot, and the auditor's `2042`/`77` on a path filter of its own.
+  **§1.4 reads that disagreement rather than picking between the numbers**; neither is adopted
+  here, and this session ran neither.
   **Neither was reproduced, and no attempt was made to make this session's numbers agree with
   them.** On the unmigrated tree at `e97b97a` the population is **575 occurrences over 553 lines**
   raw, falling to **480 occurrences over 463 lines** under a path filter. **That is a different
