@@ -17,7 +17,7 @@ forbids both, as Ruling 103 §5.4 already records.
 
 | # | question | answer |
 |---|---|---|
-| 2 | are the six classes enumerated verbatim anywhere? | **Yes** — `docs/plans/2026-09-02-w37-migration-preconditions-rulings.md:256-262`. The absence claim is **false**, and §2 gives the predicate that finds them |
+| 2 | are the six classes enumerated verbatim anywhere? | **Yes** — `docs/plans/2026-09-02-w37-migration-preconditions-rulings.md:255-266`. The absence claim is **false**, and §2 gives the predicate that finds them |
 | 1 | is the enumeration the same requirement as §7(g)'s sentence, or a widening? | **A widening, and Ruling 68 says so in terms** — it *refutes* the bare sentence as undefined before replacing it. `row_g` implements the narrower one, so **row (g) is red by construction.** The deputy's conclusion holds |
 | 3 | do the classes admit §5.2's designed content generation? | **Mostly, and not entirely.** Classes 3-6 admit the moves, splits, roadmap restructure and four named artifacts. **They do not admit regenerated per-family `README.md` files**, and whether class 6's bare `INDEX.md` means the top-level one or every one **cannot be decided from its text** |
 
@@ -26,8 +26,8 @@ forbids both, as Ruling 103 §5.4 already records.
 ## 1. Question 2 first, because it was asked second and answers cheapest
 
 **The six classes are enumerated verbatim**, in Ruling 68 §2, at
-`docs/plans/2026-09-02-w37-migration-preconditions-rulings.md`, **lines 256-262**, read at
-`a92d4e8`:
+`docs/plans/2026-09-02-w37-migration-preconditions-rulings.md`, **the introducing sentence at
+`:255-256` and the six items at `:258-266`**, read at `a92d4e8`:
 
 > *"§4's steps 1-7 are the closed list of what `migrate` is permitted to do, and the filter is
 > that list — a hunk is permitted only where it is:*
@@ -41,6 +41,17 @@ forbids both, as Ruling 103 §5.4 already records.
 > 5. *the `roadmap.md` restructure of §4 step 3;*
 > 6. *a generated artifact regenerated in full — `INDEX.md`, `REDIRECTS.csv`, `docs/contracts/`,
 >    the core-JSON digest (§4 step 7)."*
+
+> **Citation corrected 2026-09-03, before this record merged, and the correction is its own
+> small instance of §1.1.** This record first cited the enumeration as **`:256-262`** — a range
+> that **opens on the introducing sentence and closes inside item 4**, so a reader following it
+> would meet four of the six classes and no statement that there were six. The deputy first cited
+> `:258-265`, short by item 6's continuation line, and corrected itself to `:258-266`. **Three
+> parties produced three ranges for one list**, none of them wrong about *what* the list says and
+> two of them wrong about *where it ends*. Re-derived here by numbering the lines directly rather
+> than by trusting any of the three: the intro is `:255-256`, item 1 opens at `:258`, and item 6
+> closes at `:266`. **A range is a predicate too, and a wrapped list item is where it silently
+> stops being one.**
 
 **The predicate that finds them**, so this is reproducible rather than a lucky read:
 
