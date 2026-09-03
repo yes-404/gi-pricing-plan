@@ -42,15 +42,17 @@ Mine: the snapshot pair described above, same tree.
 | (a) one family per file, zero `none` | PASS — 465, `plan 119 / ruling 107`, no `none` | PASS — 465, `plan 119 / ruling 107`, no `none` row | yes, exactly |
 | (b) `doc-id.py check` | FAIL — 77, all `noncontiguous`; dup 0; `id != filename` 0 | FAIL — 77 `noncontiguous`, 0 duplicate, 0 filename mismatch, exit 1 | yes, exactly |
 | (c) `doc-index.py --check` byte-stable | PASS — `OK (byte-stable)`, exit 0 | PASS — `OK (byte-stable)`, exit 0 | yes, but see §5 |
-| (d) the id/path grep returns nothing | FAIL — 12 of 13 alternatives non-zero | FAIL — 12 of 13 non-zero, and **four figures I cannot reproduce** | direction yes, figures no — §6 |
+| (d) the id/path grep returns nothing | FAIL — 12 of 13 alternatives non-zero | FAIL — 12 of 13 non-zero; **12 of 13 figures reproduce exactly** once §7(d)'s leading `\b` is applied, `NT-00` apart | yes, after the retraction in §6 |
 | (e) no padded id in prose | FAIL/ambiguous — 2021 literal, 36 excluding path context | FAIL — 2042 occurrences, 77 on a path-context filter of my own | direction yes, neither figure reproducible — §7 |
 | (f) `VR-DST-1` unchanged | FAIL literal / PASS on intent — 104 → 127; 127 → 127 across the migration | 104 at `8f5d57d`; 127 control; 127 migrated | yes, exactly |
 | (g) diff hunks neither header nor citation-token | FAIL — ≤ 1187 lines; 391 mangled citations, control 0 | 391 reproduced exactly; **plus 216 mangled finding ids, control 0** — §3 | 391 yes; the row is wider than reported |
 | (h) full gate green | FAIL — `audit-docs.py` exit 1, 547 failures | FAIL — exit 1, **548** failures, denominators collapse as reported | direction yes, count off by one — §4 |
 | (i) every §5 H row closed by a named commit | scope correction, not measured | not measured — out of scope, and see §8 | yes |
 
-**Six of nine agree.** The three that do not are (d), (e) and (h), and in every case the
-disagreement is about a predicate that is not written down rather than about the corpus.
+**Seven of nine agree**, after §6's retraction moved (d) into the agreeing column. The two that
+do not are (e), where neither side publishes its filter, and (h), which differs by one failure
+and is unexplained. **Row (d) disagreed only because the auditor mis-transcribed §7(d)'s
+predicate; the handover was right — see §6.**
 
 ## 3. The finding: the token-boundary defect also mangles finding ids, and §7(d) goes green because of it
 
@@ -192,52 +194,115 @@ So exit 0 is returned by the pass, by an un-migrated tree, and by a mis-rooted i
 instrument computing (c) must assert the `OK (byte-stable)` line and treat the
 `nothing to check yet` line as a failure, or the row is vacuous whenever the root is wrong.
 
-## 6. Row (d): four alternatives I cannot reproduce, and why I am not reconciling
+## 6. Row (d) — RETRACTED AND REPLACED 2026-09-03: the handover's figures are right and mine were wrong
 
-All thirteen alternatives, migrated snapshot at `0de529e`, `git add -A` applied, `was:` lines
-dropped as a substring, `REDIRECTS.csv` excluded:
+**This section as first filed (commit `3b2b501`) said that four of the handover's thirteen
+§7(d) figures were unreproducible, that the difference could not be traced because no command
+was published, and that this was a finding about the record of the same shape as F85. All three
+claims are withdrawn.** The difference is traceable, it is mine, and the predicate was published
+— it is NT-0019 §7(d)'s own regex, which I mis-transcribed. What follows replaces the retracted
+text; nothing in §3 (the mangled finding ids) depends on it, and §3 is re-verified below.
+
+**The error.** §7(d) is **one** regular expression:
+
+```
+\b(NT-00|F-W[0-9]|\bF[0-9]{2}\b|wf-0[0-9]|Ruling [0-9]+|ADR-0[0-9]{3}|(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+|W[0-9]+[a-z]?-[0-9]+|docs/(plans/2026-|audit/|notes/|adr/)|\.claude/notes/)
+```
+
+**Every alternative inherits the leading `\b`.** Measuring "one row per alternative" means
+running `\b(<alternative>)`, not `<alternative>` on its own. I ran each alternative standalone
+and dropped the anchor, so every figure I reported was an over-count. Re-run with the anchor
+restored, on the same snapshot at `0de529e`:
 
 ```bash
 FILES=$(git ls-files | grep -v REDIRECTS.csv)
-git grep -nE '<alternative>' -- $FILES | grep -v 'was:' | wc -l
+git grep -nE "\b(<alternative>)" -- $FILES | grep -v 'was:' | wc -l
 ```
 
-| alternative | handover (substring) | mine | control (un-migrated) |
+| alternative | handover | mine, as first filed | mine, with the inherited `\b` |
 |---|---|---|---|
-| `NT-00` | 32 | **35** | 1465 |
-| `F-W[0-9]` | 0 | 0 | 214 |
-| `\bF[0-9]{2}\b` | 1330 | 1330 | — |
-| `wf-0[0-9]` | 327 | **328** | 268 |
-| `Ruling [0-9]+` | 74 | **77** | 2840 |
-| `ADR-0[0-9]{3}` | 37 | **38** | 440 |
-| `(FR\|NFR\|OQ\|DEP)-[A-Z]+-[0-9]+` | 72 | **92** | 14982 |
-| `W[0-9]+[a-z]?-[0-9]+` | 1 | **4** | 2531 |
-| `docs/plans/2026-` | 66 | 66 | 654 |
-| `docs/audit/` | 291 | 291 | 913 |
-| `docs/notes/` | 118 | 118 | 269 |
-| `docs/adr/` | 34 | 34 | 63 |
-| `\.claude/notes/` | 1 | **88** | 181 |
+| `NT-00` | 32 | 35 | 33 |
+| `F-W[0-9]` | 0 | 0 | **0** |
+| `\bF[0-9]{2}\b` | 1330 | 1330 | **1330** |
+| `wf-0[0-9]` | 327 | 328 | **327** |
+| `Ruling [0-9]+` | 74 | 77 | **74** |
+| `ADR-0[0-9]{3}` | 37 | 38 | **37** |
+| `(FR\|NFR\|OQ\|DEP)-[A-Z]+-[0-9]+` | 72 | 92 | **72** |
+| `W[0-9]+[a-z]?-[0-9]+` | 1 | 4 | **1** |
+| `docs/plans/2026-` | 66 | 66 | **66** |
+| `docs/audit/` | 291 | 291 | **291** |
+| `docs/notes/` | 118 | 118 | **118** |
+| `docs/adr/` | 34 | 34 | **34** |
+| `\.claude/notes/` | 1 | 88 | **1** |
 
-Five agree exactly. Four differ by one to three, which four commits of drift cannot explain
-because this is the handover's own tree. **One differs by 87.**
+**Twelve of thirteen reproduce the handover exactly**, including both figures I had singled out.
+`NT-00` remains one line apart — 33 against 32, and against the handover's field reading of 35 —
+and I have not explained that one. It is recorded as unexplained, not as a defect on either side.
 
-**`\.claude/notes/` is the one that matters.** My 88 are real residual path citations, read and
-confirmed by hand — `.claude/notes/README.md:13`, `.claude/skills/docs-audit/SKILL.md:253`,
-`docs/plans/PL-00103-...:304`, and 79 of the 88 sit under `docs/`. Most are bare directory
-mentions rather than citations of a file, which is what a predicate written as a bare directory
-prefix matches. To reach 1 a measurement must have required a filename after the directory. That
-is a narrower predicate than the alternative NT-0019 §7 actually writes, and it is narrower in
-the direction that hides work.
+**A second error, corrected here rather than left standing.** The retracted text read "Five agree
+exactly. Four differ by one to three ... One differs by 87." The true tally of the first filing
+was **six agreeing and seven differing**. The "four" was wrong when written, and it propagated
+out of this record into two messages and into a directive from the lead before it was caught. It
+is exactly the class of defect this record exists to find, produced by the auditor.
 
-**The handover publishes no command for this table.** It states thirteen alternatives and two
-readings but not the invocation, so the difference cannot be traced to a pathspec, an exclusion
-list or a regex body. Under `CLAUDE.md` §13 as amended 2026-09-02, a count carries the predicate
-it counted with; **the §7(d) table does not, and four of its thirteen figures are consequently
-unreproducible by a second measurer.** That is offered as a finding about the record, not about
-the corpus, and it is the same shape as F85.
+### 6.1 What survives, and it is a finding about §7(d) rather than about the handover
 
-I am **not** reconciling my figures to the handover's. Mine are stated with the command above
-and re-run at both `0de529e` and `e97b97a`.
+The 88 strings are still in the tree. What changes is whose predicate they escape.
+
+```bash
+git grep -hoE '.{1}\.claude/notes/' -- $FILES | cut -c1 | sort | uniq -c
+```
+
+returns 76 preceded by a backtick, 8 by a space, 2 by a double quote, 1 by `/`, 1 by `\`, and
+**1 by the letter `n`**. `\b` asserts a word boundary, and `.` is not a word character, so
+`\b\.claude/notes/` can only match where a **word character immediately precedes the dot**. A
+path citation in prose is always preceded by a backtick, a space or a quote. **The alternative
+therefore cannot fire in any of the contexts it exists to police.**
+
+Its single match is an accident:
+
+```
+tests/test_audit_docs_ids.py:604:   "docs/findings/register.md\n.claude/notes/0001-x.md\n",
+```
+
+— the `n` of a `\n` escape inside a Python string literal.
+
+**So `\.claude/notes/` is inert by construction, and 87 of the 88 real residual citations sit
+outside §7(d)'s reach.** Those 88 are read and confirmed by hand — `.claude/notes/README.md:13`,
+`.claude/skills/docs-audit/SKILL.md:253`, `docs/plans/PL-00103-...:304` — and 79 of them are
+under `docs/`.
+
+This is the same class as §3 and it is the third instance in this record: **the check's name
+says no `.claude/notes/` path citations remain; its predicate says no such citation preceded by
+a word character remains.** Unlike §3 the cause is not corruption — the alternative was never
+able to fail. A row that cannot fail is a row that was never enforceable, which is Ruling 102
+§1's own test, and it reached three windows of hand-run gates without firing once.
+
+**Whether §7(d) should be amended is the maintainer's**, and the wording is not proposed here.
+The measurable claim offered to that decision is: with the alternative as written, 1; with the
+leading `\b` not applied to this alternative, 88; the corpus is the same corpus.
+
+### 6.2 What this retraction does not disturb
+
+**§3 stands, re-verified after the correction.** `F-W[0-9]` is 0 under both readings, because
+`\bF-W[0-9]` still matches `F-W11-1-3` — `F` is a word character preceded by a space or a
+backtick, so the anchor fires — and still fails to match `F-WK-952-1-3`, because `K` is not a
+digit. Checked directly:
+
+```bash
+echo 'see F-W11-1-3'    | grep -cE '\b(F-W[0-9])'   # 1
+echo 'see F-WK-952-1-3' | grep -cE '\b(F-W[0-9])'   # 0
+```
+
+The 216 mangled finding ids, the 214-line positive control, and the conclusion that §7(d)'s
+`F-W[0-9]` row reads zero **because** the corruption moved the tokens out of its reach are all
+unaffected by this section's error.
+
+**One hypothesis tested and refuted, recorded so it is not retried.** Before finding the anchor
+I tested whether the stale-index effect of §4 explained the differences. It does not, and it
+fails in the opposite direction: measured on a migrated snapshot **without** `git add -A`, the
+thirteen alternatives read 10, 0, 372, 183, 22, 13, 52, 4, 41, 104, 43, 16, 9 — one agreement
+out of thirteen and every non-trivial figure far below the handover's, not above.
 
 ## 7. Row (e): the two readings are 2042 and 77, and the gap is the whole question
 
