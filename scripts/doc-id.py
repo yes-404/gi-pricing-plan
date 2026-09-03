@@ -23,6 +23,14 @@ Usage:
     python3 scripts/doc-id.py check [--classify]
     python3 scripts/doc-id.py widen --to WIDTH
     python3 scripts/doc-id.py migrate [--repo-root PATH]
+    python3 scripts/doc-id.py migrate --verify [SNAPSHOT] [--ref REF]
+
+`migrate --verify` is Ruling 102 §1's instrument
+(`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`): it runs the migration on a
+disposable snapshot — never a real checkout — computes all nine NT-0019 §7 (a)-(i)
+acceptance rows with the predicate each counted with, and exits 1 on any fail. The rows
+themselves live in `scripts/_docverify.py`; this file only owns the CLI seam, so that the
+predicates stay in one module rather than being re-derived beside the code they measure.
 """
 
 from __future__ import annotations
@@ -45,6 +53,7 @@ from pathlib import Path
 from typing import Any, Final
 
 import _docid
+import _docverify
 
 REPO_ROOT: Final = Path(__file__).resolve().parent.parent
 
@@ -6341,6 +6350,8 @@ def _cmd_widen(args: argparse.Namespace) -> int:
 
 
 def _cmd_migrate(args: argparse.Namespace) -> int:
+    if args.verify is not _VERIFY_OFF:
+        return _cmd_migrate_verify(args)
     result = migrate(args.repo_root)
     for path in result.files_written:
         print(f"wrote {path}")
@@ -6371,6 +6382,38 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
         print(f"  {where} -- {reason}", file=sys.stderr)
     print(f"doc-id.py migrate: {len(result.assigned)} id(s) assigned")
     return 0
+
+
+# Sentinel distinguishing "`--verify` absent" from "`--verify` given with no path", which
+# argparse's `nargs="?"` cannot do with `default=None` alone: the second form means "build
+# the snapshot in a temporary directory and delete it", a legitimate and in fact the default
+# way to run the instrument.
+_VERIFY_OFF: Final = object()
+
+
+def _cmd_migrate_verify(args: argparse.Namespace) -> int:
+    """Ruling 102 §1's instrument. Never touches `--repo-root`'s working tree."""
+    workdir = None if args.verify is None else Path(args.verify)
+    try:
+        result = _docverify.verify(
+            sys.modules[__name__],
+            repo_root=args.repo_root,
+            ref=args.ref,
+            workdir=workdir,
+            keep=args.keep,
+            with_baseline=not args.no_baseline,
+        )
+    except _docverify.WorkingCheckoutRefusedError as exc:
+        print(f"doc-id.py migrate --verify: refused: {exc}", file=sys.stderr)
+        # A distinct code from a failing row: "I would not run" and "I ran and it is red"
+        # are different answers, and a CI step that cannot tell them apart reports a
+        # misconfiguration as a corpus defect.
+        return 2
+    except GitArchiveError as exc:
+        print(f"doc-id.py migrate --verify: {exc}", file=sys.stderr)
+        return 2
+    print(_docverify.render(result))
+    return result.exit_code
 
 
 def _add_repo_root_argument(subparser: argparse.ArgumentParser) -> None:
@@ -6417,6 +6460,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         "migrate",
         help="Run NT-0019 §4's migration (assign, split, restructure, move, stamp, "
         "rewrite citations, regenerate) against --repo-root.",
+    )
+    migrate_parser.add_argument(
+        "--verify",
+        nargs="?",
+        const=None,
+        default=_VERIFY_OFF,
+        metavar="SNAPSHOT",
+        help="Ruling 102 §1: run the migration on a disposable snapshot built from --ref, "
+        "compute all nine NT-0019 §7 (a)-(i) rows with their predicates, exit 1 on any "
+        "fail. SNAPSHOT is a new or empty directory outside any git work tree; omit it to "
+        "use a temporary directory. Refuses a real checkout (exit 2).",
+    )
+    migrate_parser.add_argument(
+        "--ref",
+        default="HEAD",
+        help="--verify only: the ref to snapshot (default: HEAD).",
+    )
+    migrate_parser.add_argument(
+        "--keep",
+        action="store_true",
+        help="--verify only: keep the temporary snapshot instead of deleting it.",
+    )
+    migrate_parser.add_argument(
+        "--no-baseline",
+        action="store_true",
+        help=f"--verify only: skip the {_docverify.BASELINE_REF} baseline tree §7(f)'s "
+        "first reading needs.",
     )
     _add_repo_root_argument(migrate_parser)
     migrate_parser.set_defaults(func=_cmd_migrate)

@@ -13,9 +13,9 @@ name: docs
 on:
   push:
     branches: [main]
-    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'scripts/_docverify.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
   pull_request:
-    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'scripts/_docverify.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,6 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        # `fetch-depth: 0` is what `doc-id.py migrate --verify` needs: it builds its
+        # snapshot with `git archive <ref>` and, for NT-0019 §7(f)'s first reading, also
+        # archives `8f5d57d` — a commit a shallow clone does not have. A shallow clone
+        # would not error; §7(f) would silently lose one of its two readings.
+        with: {fetch-depth: 0}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: {python-version: "3.12"}
       # See scripts/audit-docs.py's own module docstring for the numbered list this
@@ -41,3 +46,21 @@ jobs:
       # no-ops before the migration (no ids exist yet to check or index).
       - run: python3 scripts/doc-id.py check
       - run: python3 scripts/doc-index.py --check
+      # Ruling 102 §1 (docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md): the
+      # NT-0019 §7 acceptance standard is an instrument, not a hand-maintained table. It
+      # "runs in CI on every PR touching `doc-id.py` or `audit-docs.py`, and is red on
+      # `main` until green" — so this step is EXPECTED TO FAIL until the six failing rows
+      # of Ruling 102 §2 are fixed, in that ruling's order. **Do not weaken a predicate to
+      # get a green** (Ruling 102 §1: "A row that cannot be expressed as a predicate the
+      # script computes is a row that was never enforceable").
+      #
+      # It is wired into this workflow rather than a new one because this workflow's
+      # `paths:` filter is already a superset of the ruling's two files, and a fourth
+      # component workflow would put CLAUDE.md §2's own description of CI out of date —
+      # an amendment that is the maintainer's, not this step's (CLAUDE.md §12).
+      #
+      # The snapshot goes in RUNNER_TEMP, outside the checkout: the instrument refuses a
+      # target inside any git work tree, which is the guard that keeps `migrate()` off a
+      # real checkout. Exit 2 means "refused to run" (a misconfiguration); exit 1 means
+      # "ran, and a row is red".
+      - run: python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref HEAD
