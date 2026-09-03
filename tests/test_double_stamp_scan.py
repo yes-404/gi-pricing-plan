@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import subprocess
 import sys
 import types
 
@@ -159,6 +160,46 @@ def test_changed_since_intersection_excludes_a_file_the_run_never_wrote(
     (tmp_path / "doubled.md").write_text(DOUBLE_STAMPED, encoding="utf-8")
     assert scan.scan_tree(tmp_path, limit_to={"doubled.md"})["second_block"] == ["doubled.md"]
     assert scan.scan_tree(tmp_path, limit_to=set())["second_block"] == []
+
+
+def test_changed_since_sees_an_untracked_created_file(
+    scan: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The regression that shipped: `--changed-since` must see files git is not tracking.
+
+    `git diff --name-only <ref>` reports **tracked files only**. The migration's stamp
+    writers create new drafts, which are untracked until someone commits them — so the
+    original filter was blind to precisely the population a double-stamp would appear in.
+    Measured on one tree with one injected defect: whole-tree gave `second_block 1` and
+    exit 1, `--changed-since main` gave `second_block 0` and **exit 0**. A filter that
+    returns a clean signature on a tree carrying the defect is worse than no filter.
+
+    Built as a real git repository in `tmp_path` rather than mocked, because the defect was
+    in what `git diff` reports and a mock would have been written to the same wrong belief.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    run = lambda *a: subprocess.run(  # noqa: E731
+        a, cwd=repo, check=True, capture_output=True, text=True
+    )
+    run("git", "init", "--initial-branch=main", "-q")
+    run("git", "config", "user.email", "t@example.com")
+    run("git", "config", "user.name", "T")
+    (repo / "tracked.md").write_text(SINGLE_STAMPED, encoding="utf-8")
+    run("git", "add", "-A")
+    run("git", "commit", "-qm", "base")
+
+    # The created draft: untracked, and double-stamped — exactly the shape the migration
+    # produces and the shape the old filter could not see.
+    (repo / "created.md").write_text(DOUBLE_STAMPED, encoding="utf-8")
+
+    changed = scan._changed_since(repo, "HEAD")
+    assert "created.md" in changed, (
+        "an untracked created file is invisible to `git diff --name-only`, which is the "
+        "defect this test exists to prevent"
+    )
+    assert scan.scan_tree(repo, changed)["second_block"] == ["created.md"]
+    assert scan.main([str(repo), "--changed-since", "HEAD"]) == 1
 
 
 def test_leading_block_reads_only_the_first_block(scan: types.ModuleType) -> None:

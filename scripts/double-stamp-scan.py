@@ -35,6 +35,15 @@ summed: they answer different questions and a combined figure would hide which.
   `docs/adrs/ADR-00007-*.md` has them at line indices 0 and 12 (its header) and 52 and 77,
   each blank-line-surrounded. **Useful only as a superset to sample, never as a count.**
 
+**`--changed-since` was broken when this shipped, and the fix is worth reading before you
+trust the flag.** It used `git diff --name-only` alone, which reports **tracked files only**,
+so on a migrated tree the created drafts — the very files the stamp writers prepend to — were
+invisible to it. With an injected double-stamp on one tree: whole-tree `second_block 1`,
+exit 1; `--changed-since main` `second_block 0`, **exit 0**. It now also reads
+`git status --porcelain --untracked-files=all`. **Prefer the whole-tree run regardless**: a
+zero over the whole tree is the stronger statement, and it cannot be undercut by a scoping
+bug in the filter.
+
 `--changed-since <ref>` intersects every net with the files that actually changed, because
 a file the run never wrote cannot have been double-stamped by the run. Without it the nets
 range over the whole tree, which is the stronger statement when `second_block` is zero.
@@ -45,7 +54,13 @@ completion with `scripts/doc-id.py` at `854b2a5` (PR #649):
 
     second_block          0        <- the signature; the only one that must be 0
     harness_below         0        (1 over the whole tree: writing-skills, false positive)
-    gt2_delims          218 of the written set, 221 whole-tree; all thematic breaks
+    gt2_delims          221 whole-tree; all thematic breaks
+                        (an earlier line here read "218 of the written set, 221 whole-tree".
+                        The 218 came from intersecting with a written set computed by a
+                        separate write trace, NOT from `--changed-since`, which on an
+                        uncommitted migrated tree yields 3. Two different notions of
+                        "written set" were being named by one phrase; the whole-tree figure
+                        is the one this script can actually reproduce.)
     vendored manifests    0 of 28 leading blocks changed
                           2 of 28 changed in the body only -- citation rewrites, which
                           NT-0019 §1.5 requires: only files *beneath* a vendored skill's
@@ -182,16 +197,43 @@ def vendored_leading_blocks(root: Path, baseline: str) -> tuple[list[str], list[
 
 
 def _changed_since(root: Path, ref: str) -> set[str]:
-    out = subprocess.run(
+    """Every path that differs from `ref`, **including files git is not tracking**.
+
+    The first version of this used `git diff --name-only <ref>` alone, and that was wrong in
+    the one way that matters here: **`git diff` reports tracked files only.** On a migrated
+    tree the newly created drafts are untracked, so they were invisible — and the created
+    drafts are precisely where the stamp writers prepend, which is exactly where a
+    double-stamp would be. Measured on the same tree with the same injected defect:
+    whole-tree gave `second_block 1` and exit 1, while `--changed-since main` gave
+    `second_block 0` and **exit 0**. The flag returned a clean signature on a tree carrying
+    the defect, which is worse than having no flag.
+
+    `git status --porcelain --untracked-files=all` is used instead because it reports both.
+    The `??` entries are the ones `git diff` could not see.
+    """
+    diff = subprocess.run(
         ["git", "diff", "--name-only", ref],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=False,
+        cwd=root, capture_output=True, text=True, check=False,
     )
-    if out.returncode != 0:
+    if diff.returncode != 0:
         raise SystemExit(f"--changed-since {ref}: git diff failed in {root}")
-    return {line for line in out.stdout.splitlines() if line}
+    changed = {line for line in diff.stdout.splitlines() if line}
+
+    status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    if status.returncode != 0:
+        raise SystemExit(f"--changed-since {ref}: git status failed in {root}")
+    for line in status.stdout.splitlines():
+        if len(line) > 3:
+            # Porcelain v1: two status columns, a space, then the path. A rename is
+            # `R  old -> new`; the new path is the one on disk to scan.
+            path = line[3:]
+            if " -> " in path:
+                path = path.split(" -> ", 1)[1]
+            changed.add(path.strip('"'))
+    return changed
 
 
 def main(argv: list[str] | None = None) -> int:
