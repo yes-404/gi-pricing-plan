@@ -1049,6 +1049,20 @@ def _id_scope_documents(
     `check_*` function here) that calls this with no argument. Resolving it as a
     statement instead makes every no-argument call see whatever `_ID_SCOPE_ROOTS`
     currently names, which is what a broken-input test needs to be able to redirect.
+
+    A **directory** root is expanded by `_docid.stamp_set_files`, the filesystem face of
+    NT-0019 §4 step 5's stamp-set predicate — not by a markdown glob. That is `F87`: this
+    function used to expand a directory with `rglob("*.md")`, so widening the roots
+    reached no non-markdown file at all and 62 of the 65 files on the F83 exemption
+    register stayed invisible to checks 30-39 however wide the roots were drawn. The glob
+    was the gate, not the roots. Sharing the predicate with `nt0019_stamp_set` — one
+    definition in `_docid`, not two spellings here — is what keeps the enforced scope and
+    the reconciled corpus from drifting apart again, and
+    `test_the_two_stamp_set_consumers_read_one_definition` holds them to it.
+
+    A **file** root is still appended verbatim, whatever its extension: a caller naming a
+    single path is naming a document, and there is no directory whose rule could narrow
+    it.
     """
     if roots is None:
         roots = _ID_SCOPE_ROOTS
@@ -1059,7 +1073,7 @@ def _id_scope_documents(
         if root.is_file():
             files.append(root)
         elif root.is_dir():
-            files.extend(sorted(root.rglob("*.md")))
+            files.extend(_docid.stamp_set_files(root, REPO))
     return sorted(set(files))
 
 
@@ -1341,9 +1355,24 @@ def check_header_fields() -> None:
         f"({len(policies)} field polic{'y' if len(policies) == 1 else 'ies'} total)"
     )
 
+    # F83's exemption register, consulted here because the scope selector now reaches the
+    # files it exists for. `_id_scope_documents` expands a directory root through NT-0019
+    # §4 step 5's stamp-set predicate rather than a markdown glob (`F87`), so a widened
+    # scope brings in the 59 `.json`, the `.yaml` and the two other non-markdown artifacts
+    # the register accounts for — every one of which would otherwise red this check with
+    # "no `---` front-matter header found", which is true and is not a defect: a YAML
+    # front-matter block prepended to JSON produces a file that no longer parses as JSON.
+    # The register is the ruled answer to "why not", and `_check_unstampable_register`
+    # holds it to set equality with the files that genuinely cannot be stamped, so this
+    # skip cannot be widened by adding a row without that reconciliation failing.
+    exempt = {entry.path for entry in UNSTAMPABLE_EXEMPTIONS}
     checked = 0
+    exempted = 0
     for path in _id_scope_documents():
         rel = path.relative_to(REPO).as_posix()
+        if rel in exempt:
+            exempted += 1
+            continue
         try:
             header = _docid.parse_header(path)
         except _docid.HeaderError as exc:
@@ -1387,7 +1416,10 @@ def check_header_fields() -> None:
                     f"family {header.family!r}"
                 )
 
-    notes.append(f"check 30: {checked} governed document(s) checked in scope")
+    notes.append(
+        f"check 30: {checked} governed document(s) checked in scope, "
+        f"{exempted} skipped as registered unstampable (F83)"
+    )
 
 
 # =========================================================================================
@@ -1925,15 +1957,21 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 # `test_check_35_owner_clause_is_a_no_op_for_every_registered_file` pins the claim
 # against the real register rather than leaving it as a reading of the code.
 #
-# NOTE FOR W37-6: when `_ID_SCOPE_ROOTS` widens to the whole corpus, **check 30 must
-# consult `UNSTAMPABLE_EXEMPTIONS`** or it will fail on all 65 of these. That wiring is
-# deliberately not done here: it would weaken check 30 for files that are not yet in its
-# scope, and building it now is building ahead of the slice that widens the scope.
-# `UNSTAMPABLE_EXEMPTIONS` is public for exactly that consumer. **Widening the roots is
-# not by itself enough**: `_id_scope_documents` walks a directory root with
-# `rglob("*.md")`, so a scope widened to `docs/` reaches 3 of the 65 and none of the 62
-# non-markdown files — that glob, not the roots, is what excludes them
-# (`test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`).
+# **Both halves of the W37-6 wiring this note used to defer are now done, and this is the
+# record of what changed.** It read: check 30 must consult `UNSTAMPABLE_EXEMPTIONS` when
+# the scope widens, and *"widening the roots is not by itself enough"* — a scope widened
+# to `docs/` reached 3 of the 65 and none of the 62 non-markdown files, because
+# `_id_scope_documents` expanded a directory root with `rglob("*.md")`. That was `F87`.
+#
+# `_id_scope_documents` now expands a directory root through `_docid.stamp_set_files`,
+# the filesystem face of the same NT-0019 §4 step 5 predicate `nt0019_stamp_set` reads —
+# one definition, two consumers, held to each other by
+# `test_the_two_stamp_set_consumers_read_one_definition`. So a widened scope reaches all
+# 65, and check 30 consults the register (see its own body) rather than redding on every
+# one of them. **Neither change moves the enforced scope on its own**: `_ID_SCOPE_ROOTS`
+# is still S1's two paths, so both are inert until the roots widen — which is the point,
+# a mechanism proven before the irreversible commit rather than inside it
+# (`test_the_widened_scope_selector_reaches_every_registered_file`).
 # -----------------------------------------------------------------------------------------
 
 #: `scripts/file-census.py`'s `git_ls_files`. The corpus is `git ls-files`, never a
@@ -2119,22 +2157,8 @@ def nt0019_stamp_set(tracked: Sequence[str] | None = None) -> list[str]:
     """
     if tracked is None:
         tracked = list(_file_census.git_ls_files(REPO))
-    out: list[str] = []
-    for rel in tracked:
-        parts = rel.split("/")
-        is_skill_manifest = (
-            len(parts) == 4
-            and parts[0] == ".claude"
-            and parts[1] == "skills"
-            and parts[3] == "SKILL.md"
-        )
-        if (
-            rel.startswith(("docs/", ".claude/roles/", ".claude/agents/"))
-            or is_skill_manifest
-            or parts[-1] == "README.md"
-        ):
-            out.append(rel)
-    return sorted(set(out))
+    stamp_set: list[str] = _docid.nt0019_stamp_set(tracked)
+    return stamp_set
 
 
 def unstampable_reason(rel: str) -> str | None:
@@ -2172,15 +2196,16 @@ def _check_scope_unstamped_are_registered() -> int:
     this clause is the one that will red from inside W37-6's commit if that commit widens
     the scope without stamping or registering something.
 
-    **A caution for whoever widens `_ID_SCOPE_ROOTS`, measured rather than assumed.**
-    `_id_scope_documents` walks a directory root with `rglob("*.md")`, so widening the
-    roots alone brings in *no* non-markdown file: pointed at `docs/`, it returns 285 paths
-    and not one of the 62 non-`.md` files under `docs/` that `UNSTAMPABLE_EXEMPTIONS`
-    exists for. Checks 30-39 therefore cannot see them however the roots are widened, and
-    this clause cannot either — which is why the register is reconciled against the stamp
-    set by `_check_unstampable_register`, where those 62 *are* reachable, rather than
-    here. `test_widening_the_scope_roots_alone_reaches_no_non_markdown_file` pins the
-    measurement so the next reader gets the fact instead of the assumption.
+    **This clause and `_check_unstampable_register` now range over one population, and
+    that is a change (`F87`).** `_id_scope_documents` used to expand a directory root with
+    `rglob("*.md")`, so widening the roots brought in *no* non-markdown file: pointed at
+    `docs/` it reached none of the 62 non-`.md` files `UNSTAMPABLE_EXEMPTIONS` mostly
+    consists of, and this clause could not see them however the roots were drawn. It now
+    expands through `_docid.stamp_set_files`, the same NT-0019 §4 step 5 predicate
+    `nt0019_stamp_set` reads, so a fully widened scope reaches all 65 and this clause is
+    live over them. The two instruments remain distinct — this one asks *"is it
+    stamped?"* over the enforced scope, `_check_unstampable_register` asks *"can it be?"*
+    over the whole stamp set — and they coincide only once the roots widen.
 
     Returns the number of unstamped in-scope files it found, for the caller's note.
     """

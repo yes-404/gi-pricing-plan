@@ -3629,6 +3629,28 @@ class _ReferenceScopeCensus:
     excepted: dict[str, str]  # bucket 3 — every entry carries its reason
 
 
+def nt0019_stamp_set(root: Path) -> list[str]:
+    """Every tracked path at `root` that NT-0019 §4 step 5 stamps — this module's name for
+    the population `migrate`'s Reference stamp scopes and its document discoveries have to
+    cover between them.
+
+    A thin call on purpose. The rule is stated once, in `_docid.in_stamp_set`, and both
+    scripts that need it read it from there: `scripts/audit-docs.py`'s own
+    `nt0019_stamp_set` (the corpus the F83 exemption register is reconciled against, and —
+    through `_docid.stamp_set_files` — the population checks 30-39 enforce over) and this
+    one. Naming it here rather than leaving it implicit in three scope loops is what makes
+    the two consumers comparable: `test_the_two_stamp_set_consumers_read_one_definition`
+    asserts set equality between them over the real corpus, which is a test that can only
+    exist if both sides have a name.
+
+    `git ls-files`, never a working-tree walk — the same reason `git_ls_files` is used for
+    the README scope below: a walk sweeps in `.venv/`, `graphify-out/` and anything else
+    untracked, and would quietly inflate every count taken from it.
+    """
+    stamp_set: list[str] = _docid.nt0019_stamp_set(git_ls_files(root, "."))
+    return stamp_set
+
+
 def _discover_reference_stamp_targets(
     root: Path, routed: Collection[str] = ()
 ) -> tuple[list[_ReferenceStamp], list[_ReferenceScopeCensus]]:
@@ -3681,7 +3703,7 @@ def _discover_reference_stamp_targets(
     units: list[_CensusUnit] = []
     resolved: dict[str, object] = {}
     for rel in git_ls_files(root, "."):
-        if Path(rel).name != "README.md":
+        if Path(rel).name != _docid.STAMP_SET_ANYWHERE:
             continue
         units.append(_CensusUnit(key=rel, locator=rel, text=rel))
         readmes_seen.add(rel)
@@ -3719,7 +3741,12 @@ def _discover_reference_stamp_targets(
         if not directory.is_dir():
             continue
         units, resolved = [], {}
-        for path in sorted(p for p in directory.rglob("*") if p.is_file()):
+        # `_docid.stamp_set_files`, not a bare walk: the population this scope stamps is
+        # NT-0019 §4 step 5's, and `scripts/audit-docs.py` enforces over the same
+        # predicate. One definition with two consumers, held to each other over the real
+        # corpus by `test_the_two_stamp_set_consumers_read_one_definition` -- the two used
+        # to state the rule separately and had already drifted (`F87`).
+        for path in _docid.stamp_set_files(directory, root):
             rel = path.relative_to(root).as_posix()
             key = path.relative_to(directory).as_posix()
             if rel in readmes_seen:
