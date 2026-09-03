@@ -5268,3 +5268,168 @@ def test_a_bare_basename_citation_of_a_split_source_reaches_the_split_resolver(
     assert len(index_resolved) == 1, "only the undetermined citation goes to the index"
     assert unrewritten == []
     assert split.token == "docs/plans/2026-09-01-two-rulings.md"  # the other form, untouched
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 102 §2 row (g) — the token-boundary defect
+# (`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`, "On (g)"):
+#
+#   "A rewrite may not match inside a longer identifier. `NFR-RATE-13/14` is the
+#    broken-input proof."
+#
+# `_rewrite_citations` substituted on `\b<tok>\b` alone. A word boundary sits between a
+# token's trailing digit and a following `/` or `-`, so a compound citation — one
+# identifier expression naming several requirements in shorthand — had its head rewritten
+# and its tail orphaned: `NFR-RATE-13/14` came out as `NFR-775/14`, one real requirement
+# and one meaningless fragment. Measured on the migrated tree at `0de529e`: 391
+# occurrences, against 0 on the un-migrated control.
+#
+# The corpus's real continuation shapes were enumerated before the pattern was written
+# (`git grep -ohE '\b(FR|NFR|OQ|DEP|VR)-[A-Z]+-[0-9]+(/[0-9]+)+'` at `e97b97a`, plus the
+# same sweep for the `NT-`, `ADR-`, `Ruling ` and `W<n>-<n>` families), and they are wider
+# than the two-part example: slash compounds run to twelve parts
+# (`NFR-MODEL-1/2/3/4/5/7/8/9/10/11/12`), hyphen ranges exist (`FR-RATE-46-49`,
+# `Rulings 90-92`), and a slice id is itself a longer identifier built by appending
+# `-<digit>` to a shorter live token (`W9-3-2` contains `W9-3`). A fix keyed to the
+# two-part slash form would have left every one of those still mangled.
+#
+# What the fixed rule does with a continued expression is **nothing** — it leaves the whole
+# expression byte-identical — and that is forced, not chosen. §7 (g)'s own predicate
+# (`frozen_file_matches_after_migration_stamp`) accepts a migrated file when inverting
+# REDIRECTS.csv over it reproduces the merge-base bytes. That inverse is per-token, so no
+# expansion of a compound into new ids can round-trip through it: `NFR-775/776` inverts to
+# `NFR-RATE-13/NFR-RATE-14`, which is not the merge-base text. Leaving the expression
+# alone is the only outcome (g) admits. The legacy ids that therefore survive in compound
+# form are §7 (d)'s population, ruled separately (Ruling 102 §2 row 3).
+# ---------------------------------------------------------------------------------------
+
+
+def _rewrite_one_file(
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    token_map: dict[str, str],
+    text: str,
+) -> str:
+    """Run the real `_rewrite_citations` over a one-file tree and return the result."""
+    target = tmp_path / "docs" / "sample.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    doc_id_cli._rewrite_citations(tmp_path, token_map)
+    return target.read_text(encoding="utf-8")
+
+
+#: The map fragment the real migration produced for the citation Ruling 102 names.
+_NFR_RATE_MAP = {"NFR-RATE-13": "NFR-775", "NFR-RATE-14": "NFR-776"}
+
+
+def test_ruling_102_g_the_named_broken_input_nfr_rate_13_14(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 102 §2's named broken-input proof, in the sentence it was found in
+    (`.claude/roles/lead.md`). Red before the boundary rule: the head was rewritten and
+    `/14` orphaned.
+    """
+    before = "close the hand-compiled owed list **lost NFR-RATE-13/14** (F41)\n"
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(_NFR_RATE_MAP), before)
+    assert "NFR-775/14" not in after, (
+        "the head was rewritten inside a longer identifier and the tail orphaned — "
+        "Ruling 102 §2's exact defect"
+    )
+    assert after == before, (
+        "a continued identifier expression is left whole; §7 (g)'s inverse is per-token, "
+        "so no expansion of it can round-trip to the merge-base bytes"
+    )
+
+
+def test_ruling_102_g_a_whole_token_still_rewrites(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The positive control the boundary rule must not break: the same token, not
+    continued, still migrates. Without this a rule that never substitutes anything would
+    pass the proof above."""
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, dict(_NFR_RATE_MAP), "plain NFR-RATE-13 alone\n"
+    )
+    assert after == "plain NFR-775 alone\n"
+
+
+def test_ruling_102_g_a_word_suffix_is_not_a_continuation(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`OQ-GOV-7-shaped` is the whole id used adjectivally, not a range: the hyphen is
+    followed by a letter, so the id ends where it ends and must still be rewritten. This
+    is the case a blunt "never match before a hyphen" rule would silently stop migrating —
+    2 occurrences on `main` at `e97b97a` (`OQ-GOV-7-shaped`, `OQ-OVR-9-shaped`), plus
+    `FR-MODEL-24-tagged`.
+    """
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, {"OQ-GOV-7": "OQ-500"}, "an OQ-GOV-7-shaped hole\n"
+    )
+    assert after == "an OQ-500-shaped hole\n"
+
+
+@pytest.mark.parametrize(
+    ("text", "token_map"),
+    [
+        pytest.param(
+            "FR-RATE-56/57/58/59 together\n",
+            {"FR-RATE-56": "FR-720", "FR-RATE-57": "FR-721"},
+            id="four-part-slash-compound",
+        ),
+        pytest.param(
+            "NFR-MODEL-1/2/3/4/5/7/8/9/10/11/12 in one breath\n",
+            {"NFR-MODEL-1": "NFR-700", "NFR-MODEL-2": "NFR-701"},
+            id="twelve-part-slash-compound",
+        ),
+        pytest.param(
+            "adopted NT-0010/0011 together\n",
+            {"NT-0010": "RFC-00042", "NT-0011": "RFC-00043"},
+            id="note-family-slash-compound",
+        ),
+        pytest.param(
+            "see ADR-0001/0002\n",
+            {"ADR-0001": "ADR-00001", "ADR-0002": "ADR-00002"},
+            id="adr-family-slash-compound",
+        ),
+        pytest.param(
+            "see FR-RATE-46-49 for the range\n",
+            {"FR-RATE-46": "FR-712", "FR-RATE-49": "FR-715"},
+            id="hyphen-range",
+        ),
+        pytest.param(
+            "Ruling 86/87 cover it\n",
+            {"Ruling 86": "RL-00086", "Ruling 87": "RL-00087"},
+            id="ruling-family-slash-compound",
+        ),
+        pytest.param(
+            "task W9-3-2 is closed\n",
+            {"W9-3": "SL-00123"},
+            id="slice-id-inside-a-longer-task-id",
+        ),
+    ],
+)
+def test_ruling_102_g_every_continuation_shape_in_the_corpus_is_left_whole(
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    text: str,
+    token_map: dict[str, str],
+) -> None:
+    """One case per continuation shape the corpus actually holds, enumerated from it
+    rather than inferred from Ruling 102's examples. Every one of these was mangled by
+    `\\b<tok>\\b` alone; `W9-3-2` is the shape that shows the rule is about identifiers
+    and not about compound citations — there the longer identifier is a *slice task*, and
+    the token that used to eat its head is a live slice id."""
+    assert _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text) == text
+
+
+def test_ruling_102_g_a_longer_identifier_that_is_itself_a_token_still_rewrites(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The boundary rule blocks only the *shorter* token. When the longer identifier is
+    itself in the map, longest-first ordering reaches it and it migrates whole — so the
+    rule loses no coverage it had, it only stops the fragment."""
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, {"W9-3": "SL-00123", "W9-3-2": "TK-00456"},
+        "task W9-3-2 in slice W9-3\n",
+    )
+    assert after == "task TK-00456 in slice SL-00123\n"
