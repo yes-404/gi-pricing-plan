@@ -438,6 +438,69 @@ code; both were wrong together, and no amount of comparing them would have said 
 Check generated output against the **requirement** — open the spec clause and read the
 document — not only against the thing it was generated from.
 
+### A count over a corpus a transform will change must be taken on the side the claim is about
+
+Two people made the same mistake on the same finding within an hour of each other on 2026-09-03,
+so this is a shape problem rather than a reader problem.
+
+The claim was *"once this script merges, the acceptance row that counts occurrences of a string
+cannot reach zero, because the script's own source contains that string."* The evidence offered
+was:
+
+```bash
+grep -cE '\b(docs/notes/)' scripts/_docverify.py     # 5
+```
+
+**That count is over the un-migrated file. The claim is about the migrated corpus.** The
+migration rewrites four of the five occurrences — they are ordinary path citations and rewriting
+them is what the migration is *for* — so the real contribution is **1**, not 5. The auditor
+published 5; the lead then "verified by structure rather than by a migration run" and reproduced
+the same 5. Neither check was wrong about the file it read. Both were about the wrong file.
+
+**The rule.** When a transform (a migration, a codegen step, a formatter) stands between two
+trees, a count is evidence for a claim only if it was taken **on the same side of the transform
+as the claim**. `CLAUDE.md` §13 already requires a count to carry its tree; this is the case where
+carrying the tree is not enough, because *both* trees are real and the wrong one gives a
+well-formed answer.
+
+**Make it structural, not a matter of care.** State the side in the sentence that carries the
+number, so a reader can see the mismatch without re-deriving anything:
+
+```
+# invites the error — "the file" is ambiguous between two trees
+the script's source contains the string 5 times, so the row cannot reach zero
+
+# forces the check — the tree is inside the claim
+at a MIGRATED snapshot of <sha>, `git grep … -- $FILES | grep -c '_docverify'` is 1
+```
+
+**And beware a before/after pair that cannot exist.** The same finding claimed *"118 at a tree
+without the instrument and 123 at a tree with it, over the same corpus"* — but the instrument
+merged six commits after the tree that produced 118. **A false controlled comparison is more
+persuasive than a wrong count**, because it looks like the thing that would settle the question.
+If you cannot name one corpus that exists in both states, you do not have a before/after.
+
+### A regex's meaning is not its text, and a string search only sees the text
+
+The second half of the same finding asserted that a literal *had* to stay in the code because
+"the acceptance sentence contains it". It does not. The sentence writes the alternatives
+**factored**:
+
+```
+docs/(plans/2026-|audit/|notes/|adr/)
+```
+
+which **matches** everything `docs/notes/` matches while **containing** no such substring. The
+verbatim constant therefore did not trip the row at all; only a hand-retyped decomposition of it
+did. The consequence was not academic: three remedies were being priced at standard level for
+something a code change removed.
+
+**When a claim is about a string appearing in a file, `grep` for that string in that file.** Do
+not reason from what the pattern *means*. The counter-example that should have prompted the
+check was in the same constant: `\bF[0-9]{2}\b` appears identically in both the factored form and
+the decomposition, so it genuinely is unavoidable — the two alternatives were not alike, and the
+generalisation came from the one that happened to be open.
+
 ### A "verified against tree" field set at authoring time cites a tree that never held the change
 
 `docs/process/delivery-process.core.json`'s `meta.verified_against_tree` exists so a future
@@ -630,6 +693,11 @@ looking.
 ```
 
 ## Verified
+
+2026-09-03 — §3 gains two measurement traps, both from W37-6's NT-0019 §7 second measurement
+(`docs/audit/nt-0019-second-measurement-2026-09-03.md` §14 and §15, and F101). Added because the
+first was made independently by two people on the same finding within an hour, which makes it a
+property of how the finding was stated rather than of who read it. Tree: `4b9117a`.
 
 2026-08-31 — §5b added, NT-0015 P5 (Ruling 52, `docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`):
 `scripts/register-owed.py` exists and its tests pass (`tests/test_register_owed.py`). Not
