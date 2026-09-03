@@ -21,9 +21,11 @@ named, this ruling has changed no behaviour.**
 
 - **Ruling 102 §2 assigns the (e) and (f) readings to this role by name**, and its acceptance
   section makes the alternative a violation: *"(e) or (f) recorded with two readings after the
-  decision-maker's ruling, or ruled by the lead rather than the decision-maker."* Read at
-  `origin/docs/w37-6-ruling-102-rebased:docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`,
-  which is the record's only location — **it is not on `main` as at `e97b97a`**.
+  decision-maker's ruling, or ruled by the lead rather than the decision-maker."* Now at
+  `docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md` on `main`, merged as **#684**
+  (`4988dca`). **When this record was drafted it was on no merged ref** and was read at
+  `origin/docs/w37-6-ruling-102-rebased`; the branch citation is replaced rather than re-dated,
+  because a reader following it after that branch is deleted would find nothing.
 - **Ruling 102 §6 is the maintainer's and is not reopened here.** Its rule is quoted verbatim in
   §3 below and implemented, not re-decided. `CLAUDE.md` §12 puts the merge and the four verdicts
   with the lead; this record is a proposal in that one respect and in no other.
@@ -470,14 +472,15 @@ including a hard-coded `8f5d57d`.
 §6's own worked example, `closure-records.md`, is one of the two the brief's description does not
 cover.
 
-Derived by instrumenting `scripts/doc-id.py`'s discovery functions directly at `e97b97a`,
-grouping every emitted draft by its `was:` source and reporting the set of prefixes per source
-(the probe is not committed; it imports each `_discover_*` and tallies `(was, prefix)`):
+Derived by instrumenting `scripts/doc-id.py`'s discovery functions directly, grouping every
+emitted draft by its `was:` source and reporting the set of prefixes per source (the probe is not
+committed; it imports each `_discover_*` and tallies `(was, prefix)`). **Re-derived at this
+branch's rebased tip over `main` at `74c53ef`**, not carried forward from the first run:
 
 | # | source | prefixes emitted | discovery functions | §5.2's route | routed INDEX |
 |---|---|---|---|---|---|
 | 1 | `docs/audit/closure-records.md` | `CR`×9, `LG`×10, `RS`×2 | `_discover_closure_records` | *"split into `CR-` files (`work`, `review`); preambles → `closures/README.md`"* | `docs/closures/INDEX.md` |
-| 2 | `docs/audit/plan-reviews.md` | `CR`×11, `RFC`×2 | `_discover_plan_reviews`, which returns `_discover_proposal_containers`' drafts alongside its own | *"split into `CR-` files (`work`, `review`)"* — same §5.2 row | `docs/closures/INDEX.md` |
+| 2 | `docs/audit/plan-reviews.md` | `CR`×12, `RFC`×2 | `_discover_plan_reviews`, which returns `_discover_proposal_containers`' drafts alongside its own | *"split into `CR-` files (`work`, `review`)"* — same §5.2 row | `docs/closures/INDEX.md` |
 | 3 | `docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` | `PL`×1, `RL`×3 | `_discover_plain_plans` **and** `_discover_lettered_rulings` | the `plans/2026-*.md` row: *"the rest → `plans/`"* | `docs/plans/INDEX.md` |
 
 **Only source 3 is the pattern the brief described**, and even there the mechanism is
@@ -488,6 +491,14 @@ in the shipped code:** `_split_index_family`'s docstring on `origin/w37-6-split-
 says *"`_discover_lettered_rulings` emits an `RL-` draft for each `## Ruling N` heading"* and
 *"becomes one `PL-` and two `RL-`"*. It is three `RL-`. Correcting that docstring is part of
 implementing this ruling.
+
+**The per-source counts are tree-dependent; the routing is not.** `plan-reviews.md` read
+`CR`×11 when this record was first drafted at `e97b97a` and reads `CR`×12 here, because
+**#687** (`74c53ef`, *"Plan review 12"*) added one `###` review heading to that file between the
+two runs. **Nothing about the routing moved, and nothing could**: §5.2 routes the *source*, so a
+source gains and loses targets without ever changing which index carries its section. That is the
+property §3.3's rule is chosen for, and it is why the table's counts are given with the tree they
+were taken at rather than as constants.
 
 **Sources 1 and 2 route to the same index**, because §5.2 gives them one row between them. That
 is the routing table's answer and it is accepted as such: two anchors, one index file.
