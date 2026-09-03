@@ -567,7 +567,11 @@ def test_the_alternatives_are_derived_and_reproduce_the_hand_written_list(
     literal; this pins that it removed nothing else."""
     expected = (
         "NT-00", "F-W[0-9]", r"\bF[0-9]{2}\b", "wf-0[0-9]", "Ruling [0-9]+",
-        "ADR-0[0-9]{3}", "(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+", "W[0-9]+[a-z]?-[0-9]+",
+        # trailing `\b` added, disclosed deviation from the spec sentence's literal text —
+        # the token-boundary fix folded into this ruling's follow-up (same file, peer
+        # executor's finding): without it the alternative matches as a prefix of any
+        # correctly-migrated five-digit id.
+        r"ADR-0[0-9]{3}\b", "(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+", "W[0-9]+[a-z]?-[0-9]+",
         # built by concatenation: this file is inside the corpus row (d) scans
         "docs/" + "plans/2026-", "docs/" + "audit/", "docs/" + "notes/", "docs/" + "adr/",
         r"\." + "claude/notes/",
@@ -610,7 +614,7 @@ def test_the_derived_set_is_checked_against_its_source_over_the_real_corpus(
     corpus = dv.load_corpus(_snapshot(dv, tmp_path / "dec", doc, doc).migrated)
     assert dv.assert_decomposition_matches_source(corpus) == 1
     monkeypatch.setattr(
-        dv, "D_ALTERNATIVES", tuple(a for a in dv.D_ALTERNATIVES if a != "ADR-0[0-9]{3}")
+        dv, "D_ALTERNATIVES", tuple(a for a in dv.D_ALTERNATIVES if a != r"ADR-0[0-9]{3}\b")
     )
     doc2 = {"docs/a.md": "cites ADR-0004 only\n"}
     corpus2 = dv.load_corpus(_snapshot(dv, tmp_path / "dec2", doc2, doc2).migrated)
@@ -652,6 +656,28 @@ def test_row_i_names_w37_10_as_its_owner(dv: Any, tmp_path: pathlib.Path) -> Non
     assert row.key == "i"
     assert row.owner == dv.OWNER_W37_10
     assert "OWNERSHIP TENSION" in row.note
+
+
+def test_row_i_verdict_is_disclose_not_fatal_when_h_rows_exist(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 105 D1: `(i)` is W37-10's and does not set the exit code. Before this ruling
+    the non-empty-population branch scored `NOT MEASURED` (fatal); it now scores `DISCLOSE`
+    (non-fatal). Red-then-green against the row above: an empty population still fails
+    (NT-0007), a real one now discloses rather than blocking the exit code."""
+    body = "## 5. Impact\n| `x` | y | H |\n"
+    tree = tmp_path / "t"
+    (tree / "docs" / "notes").mkdir(parents=True)
+    (tree / dv._NT0019_PATH).write_text(body, encoding="utf-8")
+    snap = dv.Snapshot(
+        workdir=tmp_path, ref="test", ref_sha="0" * 40,
+        migrated=tree, control=tree, baseline=None, baseline_ref=None,
+    )
+    row = dv.row_i(snap)
+    assert row.verdict == dv.DISCLOSE
+    assert row.fatal is False
+    assert row.owner == dv.OWNER_W37_10
+    assert "Ruling 105 D1" in row.note
 
 
 def test_h_row_predicate_counts_the_notes_section_5_tables(dv: Any) -> None:
@@ -731,16 +757,19 @@ def test_a_row_can_read_zero_because_corruption_moved_the_token_out_of_reach(
 ) -> None:
     """Auditor finding A1, as a corpus. `F-W[0-9]` reads **0** on the migrated tree while
     the mangled form `F-WK-…` reads non-zero, and `F-WK` has a letter where the alternative
-    wants a digit — so the row is green *because* the corpus is damaged.
+    wants a digit — so the row would be green *because* the corpus is damaged, were it not
+    disclosed rather than scored.
 
-    The row still scores PASS, which is correct: promoting a companion to a gating row is
-    the maintainer's under Ruling 102 §1. What the instrument owes is that the evidence is
-    **printed beside the number**, and that is what this asserts.
+    The row scores DISCLOSE (Ruling 105 §A — `F-W[0-9]` joins `\\bF[0-9]{2}\\b` as excluded
+    from the zero requirement with its count disclosed, never PASS): promoting a companion
+    to a gating row is still the maintainer's under Ruling 102 §1. What the instrument owes
+    is that the evidence is **printed beside the number**, and that is what this asserts.
     """
     migrated = {"docs/a.md": "the finding F-WK-952-1-3 is cited here\n"}
     control = {"docs/a.md": "the finding F-W11-1-3 is cited here\n"}
     row = _d_rows(dv, _snapshot(dv, tmp_path / "a1", migrated, control))["d2"]
-    assert row.verdict == dv.PASS
+    assert row.verdict == dv.DISCLOSE
+    assert row.fatal is False
     assert row.migrated.startswith("0 line")
     labels = {c[0]: c for c in row.companions}
     mangled = next(c for k, c in labels.items() if k.startswith("mangled"))
@@ -754,13 +783,14 @@ def test_a_companion_is_promoted_to_gating_by_configuration_not_a_rewrite(
 ) -> None:
     """The lead's directive: built so a companion can be promoted by configuration.
 
-    Red-then-green on the same corpus: the row passes with `GATING_COMPANIONS` empty and
-    fails with one label named in it, and nothing else changes.
+    Red-then-green on the same corpus: the row discloses (Ruling 105 §A) with
+    `GATING_COMPANIONS` empty and fails with one label named in it, and nothing else
+    changes — `GATING_COMPANIONS` overrides even a disclosed verdict.
     """
     migrated = {"docs/a.md": "the finding F-WK-952-1-3 is cited here\n"}
     control = {"docs/a.md": "the finding F-W11-1-3 is cited here\n"}
     snap = _snapshot(dv, tmp_path / "promote", migrated, control)
-    assert _d_rows(dv, snap)["d2"].verdict == dv.PASS
+    assert _d_rows(dv, snap)["d2"].verdict == dv.DISCLOSE
     label = "mangled: work key rewritten inside the finding id"
     monkeypatch.setattr(dv, "GATING_COMPANIONS", frozenset({label}))
     promoted = _d_rows(dv, snap)["d2"]
@@ -773,8 +803,33 @@ def test_an_alternative_with_no_companion_says_so_by_name(
 ) -> None:
     """A silent absence would read as "asked and found nothing"."""
     snap = _snapshot(dv, tmp_path / "nocomp", _CLEAN, {"docs/a.md": "ADR-0004\n"})
-    row = _d_rows(dv, snap)["d6"]  # ADR-0[0-9]{3}, no companion declared
+    row = _d_rows(dv, snap)["d6"]  # ADR-0[0-9]{3}\b, no companion declared
     assert any(c[2].startswith("no companion predicate declared") for c in row.companions)
+
+
+def test_d6_anchor_does_not_trip_on_a_correctly_migrated_five_digit_id(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The peer executor's finding, folded into this ruling's follow-up (same file).
+
+    `ADR-0[0-9]{3}` with no trailing anchor reads the first three of a five-digit padded
+    id's four post-hyphen digits as a hit — `ADR-00004` (`_docid.PAD_WIDTH` = 5) contains
+    `ADR-0000`. The trailing `\\b` this fix adds is the same device `\\bF[0-9]{2}\\b` already
+    uses for its own boundary. Red-then-green on two distinct inputs: a genuinely
+    un-migrated 4-digit legacy citation must still trip the row; a correctly-migrated
+    5-digit citation must not.
+    """
+    migrated_ok = {"docs/a.md": "see ADR-00004 for the decision\n"}
+    row_ok = _d_rows(dv, _snapshot(dv, tmp_path / "d6ok", migrated_ok, _CLEAN))["d6"]
+    assert row_ok.migrated.startswith("0 line"), (
+        "a correctly-migrated five-digit id must not be read as a legacy citation"
+    )
+
+    migrated_bad = {"docs/a.md": "see ADR-0004 for the decision\n"}
+    row_bad = _d_rows(dv, _snapshot(dv, tmp_path / "d6bad", migrated_bad, _CLEAN))["d6"]
+    assert not row_bad.migrated.startswith("0 line"), (
+        "a genuinely un-migrated 4-digit legacy citation must still trip the row"
+    )
 
 
 def test_the_unanchored_companion_distinguishes_an_inert_predicate(
@@ -867,6 +922,63 @@ def test_a_check_that_cannot_run_is_counted_separately_from_one_that_failed(
     )
     assert len(dv._ABSENT_CHECK_RE.findall(out)) == 2
     assert len(dv._ABSENT_CHECK_RE.findall("  check 3: fine\n")) == 0
+
+
+# =========================================================================================
+# (h1) — the per-class breakdown, Ruling 105 §B
+# =========================================================================================
+
+
+_FAILED_BLOCK = (
+    "  check 29: register grammar — 0 violation(s)\n"
+    "\n"
+    "FAILED (5):\n"
+    "  - check 32: docs/a.md: PL-09998 does not resolve in docs/INDEX.md\n"
+    "  - check 32: docs/b.md: PL-09999 does not resolve in docs/INDEX.md\n"
+    "  - check 29: docs/audit/register.md: bad Decision cell\n"
+    "  - check 30: docs/c.md: no front-matter header\n"
+    "  - broken link in docs/d.md: docs/gone.md\n"
+)
+
+
+def test_classify_failures_reads_only_the_failed_block_by_check_number(dv: Any) -> None:
+    """Ruling 105 §B's own methodology (`docs/plans/…row-h-the-named-h-rows.md:139`), ported
+    to Python: a note line mentioning `check 29:` before `FAILED (`n`):` must not be counted
+    — only the `  - ` failure lines after it — and `broken link in …` classifies as check 1,
+    the one shape with no `check N:` prefix."""
+    classes = dv._classify_failures(_FAILED_BLOCK)
+    assert classes == {"32": 2, "29": 1, "30": 1, "1": 1}
+    assert sum(classes.values()) == 5  # not 6 — the pre-FAILED note line is excluded
+
+
+def test_classify_failures_counts_an_unattributable_message_rather_than_dropping_it(
+    dv: Any,
+) -> None:
+    """§13 admits no silence: a failure message this predicate cannot map to a check number
+    is still counted, under `"unclassified"`, never dropped from the total."""
+    out = "FAILED (1):\n  - docs/a.md: header block is missing the **Sequencing** field\n"
+    classes = dv._classify_failures(out)
+    assert classes == {"unclassified": 1}
+
+
+def test_classify_failures_is_empty_when_the_tree_is_clean(dv: Any) -> None:
+    assert dv._classify_failures("All checks passed.\n") == {}
+
+
+def test_h1_verdict_passes_only_when_every_other_class_is_zero(dv: Any) -> None:
+    """Ruling 105 §B: checks 29/30/35 are excluded from the zero requirement, but every
+    other class — 32, 36, 1, 31, 27, and anything not named — must be zero to pass."""
+    assert dv._h1_verdict(0) == dv.PASS
+    assert dv._h1_verdict(1) == dv.FAIL
+
+
+def test_h2_verdict_over_exempt_discloses_but_vacuous_stays_fatal(dv: Any) -> None:
+    """Ruling 105 D3: the zero-denominator probes (`vacuous`) stay fatal even when
+    OVER-EXEMPT also fires; OVER-EXEMPT alone is disclosed, not failed."""
+    assert dv._h2_verdict([], False) == dv.PASS
+    assert dv._h2_verdict([], True) == dv.DISCLOSE
+    assert dv._h2_verdict(["requirements defined"], False) == dv.FAIL
+    assert dv._h2_verdict(["requirements defined"], True) == dv.FAIL
 
 
 def test_over_exemption_is_a_vacuity_the_zero_denominator_rule_cannot_see(
