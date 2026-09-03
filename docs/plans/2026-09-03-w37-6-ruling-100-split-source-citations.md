@@ -305,6 +305,29 @@ and its own source. **This ruling records the number and does not make the call*
 "small" that falls on is the lead's, and the record exists so the call is made against a
 measured bucket rather than an impression of one.
 
+### 2.5 Superseded by Ruling 101 — the undetermined case resolves to the split's index entry
+
+**§2.4 is superseded, dated 2026-09-03, by Ruling 101, stated at its own heading below.**
+§2.4's text is left standing as filed rather than rewritten, because what it decided is the
+evidence of what was believed when this record was signed.
+
+**What changed, in one line:** §2.4 made bucket (iv)'s **size** decide the window; Ruling 101
+makes bucket (iv) **empty by construction**, so there is no size left to decide anything.
+**Read Ruling 101 below for the rule, its two obligations and its new check** — it is not
+restated here, because a restated rule is how one of two copies goes stale
+([`NT-0003`](../notes/0003-duplicated-status-goes-stale.md)).
+
+**Two clauses above are amended with it, and naming them is the point of this subsection.** An
+amendment that names only the clause it was aimed at strands that clause's list-mates:
+
+- **§2.1's residue clause — *"Anything else is not rewritten. It dangles."* — no longer holds.**
+  The undetermined case now resolves, to the index entry. §2.1's **three determinants (i), (ii)
+  and (iii) stand entirely unchanged**, and so does its reasoning for them.
+- **§2.2's second bullet — *"none means the citation is left alone to dangle"* — no longer
+  holds** for the same reason. **The per-citation resolver and the collision guard stand
+  unchanged**, including the guard raising as a hard error and naming the competing targets.
+
+**§2.3 is untouched.** Single-target relocations stay exactly as #672 built them.
 ## 3. What it obliges, before the fix merges
 
 ### 3.1 The census, bucketed, at one tree, with its predicate
@@ -356,6 +379,133 @@ is an obligation rather than a nicety — the buckets *are* the boundary between
 `:199-202`, which refuses it; C: the same passage's clause (b), which shows the evidence it
 would discard), and in both cases the cell points away from the reading.
 
+## Ruling 101 — a whole-file citation into a split source resolves to the split's index entry, not to any target
+
+<!-- Structural note: this heading exists for the reason the Ruling 100 heading above gives —
+     `_discover_multi_ruling_files` (`_RULING_HEADING_RE`, `^##\s+Ruling\s+(\d+)`) must discover
+     this record's second ruling as its own `RL-` draft rather than letting it fall through to
+     `_discover_plain_plans`'s `PL- kind: leaf, owner: planner` catch-all — the defect F96
+     (`docs/audit/findings/F96.md`) was filed for. It is placed AFTER §4 deliberately: the
+     splitter cuts spans at each `## Ruling N` heading, so a heading placed before §1 would
+     carry §1-§4 -- Ruling 100's own evidence and reasoning -- into Ruling 101's document. -->
+
+**Filed** 2026-09-03 by the maintainer, recorded by the lead. **Ruling number derivation**, at
+`198ea5d`, the tree at which this was written:
+
+```
+git grep -hoE 'Ruling [0-9]+' -- docs/ .claude/ scripts/ | grep -oE '[0-9]+' \
+  | sort -n | uniq | tail -1        → 100
+git grep -n 'Ruling 101' -- docs/ .claude/ scripts/    → no match, exit 1
+```
+
+**101 is the next free number**, derived rather than assumed. (`git grep -h` drops filenames and
+is used here only to compute a maximum, never to cite.)
+
+**It supersedes §2.4 and amends §2.1 and §2.2 as §2.5 records.** Ruling 100's three
+determinants, its per-citation resolver, its collision guard and its single-target carve-out all
+stand.
+
+### 101.1 The rule
+
+**A whole-file citation into a split source — one that determines no target under Ruling 100's
+(i), (ii) or (iii) — resolves to `docs/<family>/INDEX.md#<old-basename>`.** That section lists
+**every** target of the split, each with its `was:` provenance.
+
+**The maintainer's own grounds, verbatim:**
+
+> *"Not choosing a target — it is the REDIRECTS row made navigable."*
+
+**So bucket (iv) is 0 by construction**, and §2.4's "small or large decides the window" has
+nothing left to weigh.
+
+**Why this is not the canonical-target choice §3.3 forbids, and the distinction is the whole
+ruling.** §3.3 refuses *"first heading wins", "the largest destination"*, and a hand-picked
+per-source default; §4's option **B** is priced and rejected on the maintainer's grounds that
+*"it invents what Ruling 89 refused."* Every one of those names **one** target and thereby
+asserts that the citation meant that one. **The index entry names none of them.** It resolves to
+a page that says, in full, *"the file you cited became these N documents"* — which is exactly
+what `REDIRECTS.csv` already records and exactly what a reader following a citation needs. The
+test §4 applies to B is whether a later reader can tell a determined target from a defaulted
+one; the index entry passes it, because it never claims a target at all.
+
+**And why it is not option C's waste.** §4 rejects the pure dangle because *"deriving nothing
+when the citation names its target is discarding evidence the corpus already holds."* Ruling 101
+discards nothing: (i), (ii) and (iii) still rewrite to the determined target, and only the
+genuinely undetermined citation goes to the index. **It is B's navigability without B's
+invention, on top of what §4 already said this record was** — and it removes the residue Ruling
+89 was willing to tolerate rather than merely detecting it.
+
+### 101.2 `was:` is provenance, not a citation
+
+> *"`was:` is provenance, not a citation. It is written from `REDIRECTS.csv` and is excluded
+> from `_rewrite_citations` — the rewriter touches bodies, never headers."*
+
+**`_rewrite_citations` must not touch a `was:` header field.** The rewriter's jurisdiction is
+document **bodies**; a header `was:` is the record of where a document came from, and rewriting
+it destroys the one field that makes the index section above possible. A `was:` repointed to a
+post-migration path is a provenance record that no longer records any provenance.
+
+**This is a live defect, not a hypothetical.** `was:` is currently corrupted across the migrated
+corpus — **the figure relayed to this record is 349 documents, and under Amendment 2 that is a
+claim, not evidence: the executor re-measures it and the auditor re-runs it.**
+
+**Obligation — the broken-input proof, and its shape is specified because a looser one proves
+nothing.** A document whose header `was:` names a split source is put through the rewrite, and
+the header is **byte-identical** afterwards. Not "still parses", not "still resolves", not
+`git status` clean: byte-identical. A proof that exercises only a `was:` naming a
+**single-target** source would pass against the unfixed code and is therefore not the proof.
+
+### 101.3 The new check — an empty index section is the new silent failure
+
+**Alongside gate condition 7:** every `INDEX.md#<anchor>` that a citation resolves to **exists**,
+and its section **lists ≥ 2 documents**.
+
+> *"A link to an empty index section is the new silent failure; make it loud first."*
+
+**The `≥ 2` is not a stylistic floor; it is what makes the check able to fail.** An anchor that
+exists but lists nothing, or lists one document, means one of two things: the split it claims to
+describe did not happen, or the index was generated from something other than the redirect rows.
+Both resolve. Both are wrong. **Condition 7 cannot see either**, for the same reason it could
+not see the 171 of §1.3: condition 7 tests resolvability, and both failures resolve. **That is
+the second time in this window a defect has walked through condition 7 by construction**, and it
+is why this check is stated as a condition rather than left to review.
+
+**"Make it loud first" is an ordering, and it is binding.** The check is proven **red** — on an
+emptied section and on a missing anchor, with the failure naming the citing file and the anchor
+— **before** it is proven green. `CLAUDE.md` §13: *"a check that has never printed a failure has
+not been tested."*
+
+### 101.4 What this obliges before the fix merges
+
+- **Bucket (iv) measured at 0**, at one named tree, with the predicate verbatim — and the
+  reclassification's **before and after counts with their sum unchanged**, so a citation cannot
+  be quietly dropped from the population on its way between buckets. §2.4's measurement of
+  bucket (iv) — **114 occurrences across 40 files at `07f1e41`** — is the baseline that must go
+  to 0, and it is cited here with its tree because a bare "0" proves nothing without the number
+  it came from.
+- **The `was:` broken-input proof of §101.2**, byte-identical, on a split source.
+- **The index check of §101.3**, red before green, on both failure shapes.
+- **The gate still holds**: `migrate()` completes returning a `MigrateResult` rather than
+  raising, **NT-0019 §7(a)'s `none` row = 0**, and condition 7's scanner — **unmodified** — at
+  zero.
+
+**Anything not measured at the frozen tree is not evidence for this ruling**, and under
+Amendment 2 (delegation §7.4) a figure reported by the agent that produced the work is a claim
+until the auditor re-runs it.
+
+### 101.5 Left open, deliberately
+
+**The anchor's exact slug form is not fixed here.** `<old-basename>` is the citing path's
+basename, but whether the `.md` extension is carried, and how a basename containing characters
+GitHub's anchor slugging alters is normalised, is **not decided by this ruling** — it is a
+property of the index generator, and it must be **written down where that generator lives, with
+its own test**, rather than inferred from one worked example. Two citations that differ only in
+their basename's punctuation must not resolve to two different anchors by accident.
+
+**This is recorded as open rather than picked** (`CLAUDE.md` §10), and it is the executor's to
+raise as an open question if the implementation forces a choice. **What is fixed is the form
+`docs/<family>/INDEX.md#<old-basename>` and that the section lists every target with its
+`was:`.**
 ## Acceptance Standard
 
 The violation this record must make detectable: **a path-only citation into a source the
