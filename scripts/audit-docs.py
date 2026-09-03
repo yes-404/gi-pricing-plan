@@ -111,6 +111,7 @@ from __future__ import annotations
 
 import collections
 import csv
+import functools
 import hashlib
 import importlib.util
 import itertools
@@ -1083,7 +1084,14 @@ def check_plan_acceptance_standard() -> None:
     post_migration = migrated_tree()
     for f in sorted(plans_dir.glob("*.md")):
         name = f.name
-        if name == "README.md":
+        # `INDEX.md` joins `README.md` here: both are generated, neither is a filed plan.
+        # Ruling 101 clause 1 puts a split-source index in the family directory of the
+        # split's targets, and a plan that splits into a `PL-` plus nested `RL-` rulings
+        # sorts to `plans` — so `docs/plans/INDEX.md` is a shape a clean migration now
+        # produces. Without this line check 28 fails it for carrying no `YYYY-MM-DD-`
+        # prefix, which is a rule about *filed plans* and was never meant to reach a
+        # generated artifact.
+        if name in ("README.md", "INDEX.md"):
             continue
 
         if post_migration:
@@ -2056,6 +2064,22 @@ def frozen_diff_is_permitted(
     return True, ""
 
 
+@functools.lru_cache(maxsize=8)
+def _inverse_token_pattern(tokens: tuple[str, ...]) -> re.Pattern[str]:
+    """One alternation over every new token, longest first, matching whole identifiers only.
+
+    Longest-first is the ordering the caller's own docstring already required, and putting
+    it inside a single alternation keeps it while making the substitution one pass instead
+    of one per token: this predicate runs over every file in the tree against a real
+    `REDIRECTS.csv` of ~1 100 entries, and a per-token `re.sub` is roughly two orders of
+    magnitude slower than the `str.replace` loop it replaces (measured: the whole-corpus
+    §7 (g) run did not finish in 20 minutes, against ~30 s for one pass). Cached because
+    the token set is the same for every file of a run.
+    """
+    alternation = "|".join(re.escape(tok) for tok in tokens)
+    return re.compile(rf"\b(?:{alternation})\b(?![-/][0-9])")
+
+
 def frozen_file_matches_after_migration_stamp(
     old_body: str, new_text: str, redirects_inverse: Mapping[str, str]
 ) -> bool:
@@ -2077,6 +2101,21 @@ def frozen_file_matches_after_migration_stamp(
     thus absent from the text, before a token it could contain as a prefix is ever tried —
     the identical ordering `scripts/doc-id.py`'s own citation-rewrite pass uses for the
     forward direction, for the identical reason.
+
+    **Whole identifiers only, in this direction too** — Ruling 102 §2 row (g)
+    (`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`). A plain substring
+    inverse has no notion of where an identifier ends, so it *repaired* the very defect
+    §7 (g) exists to find: given the mangled `NFR-775/14` it substituted `NFR-775` and
+    produced `NFR-RATE-13/14`, the merge-base bytes exactly, and the file passed. That is
+    the trap the ruling names — the mangled citations "must not be treated as a
+    citation-token class and thereby excused from §7 (g)'s 'neither header nor
+    citation-token' requirement" — and it was literal: §7 (g)'s figure could have been
+    computed on the migrated tree and still read empty. The inverse now applies the same
+    rule `_whole_token_re` applies forward, so a token substituted inside a longer
+    identifier fails to invert and its file is reported. `\b` alone would not do it: it
+    matches between `775` and `/`. The `-`/`/`-followed-by-a-digit form is what the corpus
+    holds; a separator followed by a letter (`OQ-500-shaped`) is not a continuation and
+    still inverts.
     """
     lines = new_text.splitlines()
     if lines and lines[0] == "---":
@@ -2087,9 +2126,10 @@ def frozen_file_matches_after_migration_stamp(
             stripped = new_text
     else:
         stripped = new_text
-    restored = stripped
-    for new_token in sorted(redirects_inverse, key=len, reverse=True):
-        restored = restored.replace(new_token, redirects_inverse[new_token])
+    if not redirects_inverse:
+        return stripped.strip("\n") == old_body.strip("\n")
+    pattern = _inverse_token_pattern(tuple(sorted(redirects_inverse, key=len, reverse=True)))
+    restored = pattern.sub(lambda m: redirects_inverse[m.group(0)], stripped)
     return restored.strip("\n") == old_body.strip("\n")
 
 

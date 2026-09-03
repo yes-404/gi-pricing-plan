@@ -1620,3 +1620,64 @@ def test_check_35_owner_clause_is_a_no_op_for_every_registered_file(
         except audit._docid.HeaderError:
             continue  # check_owner's own `except ... : continue`
         assert header is None, entry.path  # check_owner's own `if header is None`
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 102 §2 row (g), the other half — the check must be able to *see* the defect.
+#
+# Ruling 102's acceptance names as a violation "the (g) fix accepted without
+# `NFR-RATE-13/14` exercised as a broken-input proof", and its work-list entry names a
+# trap: the mangled citations "must not be treated as a citation-token class and thereby
+# excused from §7 (g)'s 'neither header nor citation-token' requirement."
+#
+# That excusing was literal, not hypothetical. This predicate inverted REDIRECTS.csv with
+# `str.replace`, a substring operation with no notion of where an identifier ends. Given
+# the mangled `NFR-775/14`, it replaced `NFR-775` and produced `NFR-RATE-13/14` — the
+# merge-base bytes exactly — so §7 (g) reported the corruption as a clean citation-token
+# rewrite. §7 (g)'s figure could have been computed on the migrated tree and still read
+# empty. The inverse now applies the same whole-identifier rule the forward rewrite does,
+# so a token that was substituted inside a longer identifier fails to invert and the file
+# is reported.
+# ---------------------------------------------------------------------------------------
+
+
+def test_check_34_migration_stamp_allowance_reds_on_ruling_102s_mangled_citation(
+    audit: types.ModuleType,
+) -> None:
+    """Ruling 102 §2's named broken input, at the predicate that was excusing it."""
+    old_body = "close the hand-compiled owed list **lost NFR-RATE-13/14** (F41)\n"
+    new_text = (
+        "---\nid: RL-9\n---\n"
+        "close the hand-compiled owed list **lost NFR-775/14** (F41)\n"
+    )
+    assert not audit.frozen_file_matches_after_migration_stamp(
+        old_body, new_text, redirects_inverse={"NFR-775": "NFR-RATE-13"}
+    ), (
+        "a substring inverse un-mangles `NFR-775/14` back to the merge-base bytes and "
+        "reports the corruption as a clean citation-token rewrite"
+    )
+
+
+def test_check_34_migration_stamp_allowance_reds_on_a_mangled_hyphen_range(
+    audit: types.ModuleType,
+) -> None:
+    """The same laundering, on the continuation shape Ruling 102's examples do not name.
+    `FR-RATE-46-49` is a range; the head alone was rewritten, leaving `FR-712-49`."""
+    old_body = "see FR-RATE-46-49 for the range\n"
+    new_text = "---\nid: RL-9\n---\nsee FR-712-49 for the range\n"
+    assert not audit.frozen_file_matches_after_migration_stamp(
+        old_body, new_text, redirects_inverse={"FR-712": "FR-RATE-46"}
+    )
+
+
+def test_check_34_migration_stamp_allowance_still_inverts_an_adjectival_suffix(
+    audit: types.ModuleType,
+) -> None:
+    """The positive control for the inverse's own boundary rule: `OQ-500-shaped` is the
+    whole new id plus an English suffix, and must still invert. A rule that refused every
+    hyphen would turn this correct migration into a false (g) violation."""
+    old_body = "an OQ-GOV-7-shaped hole\n"
+    new_text = "---\nid: RL-9\n---\nan OQ-500-shaped hole\n"
+    assert audit.frozen_file_matches_after_migration_stamp(
+        old_body, new_text, redirects_inverse={"OQ-500": "OQ-GOV-7"}
+    )

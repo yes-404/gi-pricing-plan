@@ -4821,6 +4821,17 @@ def test_the_dangling_link_check_reddens_when_the_regeneration_is_removed(
     particular had a false negative in its history: the executor who last worked this class
     reported `grep -c '](' ` returning **0** for the five files, where the true counts are
     20, 6, 8, 6 and 5.
+
+    **The named citer was `docs/adr/README.md` and is now derived from
+    `_MIGRATION_DIFF_FAMILY_READMES` instead.** The bare-basename citing form (W37-6,
+    Ruling 100's implementing PR) legitimately repairs that file: its index table cites
+    sibling ADRs by bare filename, those ADRs move within their own directory to
+    `docs/adrs/`, and the rewrite now sends the link to `../adrs/ADR-…md` — which resolves,
+    from the old path the mutation leaves the README at. So the exemplar stopped dangling
+    because it stopped being broken, not because the probe stopped working. Re-derived
+    from the rule the assertion is *for* — the surviving §5.2 READMEs must be named — the
+    probe still fires, and it now cannot go stale the next time one member of that set is
+    repaired ahead of the others.
     """
     monkeypatch.setattr(
         doc_id_cli,
@@ -4831,7 +4842,7 @@ def test_the_dangling_link_check_reddens_when_the_regeneration_is_removed(
     dangling = _dangling_links(pristine_a, result.files_deleted)
     assert dangling, "the mutation must be visible, or this check proves nothing"
     citers = {entry.split(":", 1)[0] for entry in dangling}
-    assert "docs/adr/README.md" in citers, dangling
+    assert citers & doc_id_cli._MIGRATION_DIFF_FAMILY_READMES, dangling
 
 
 def test_every_section_5_2_readme_row_lands_where_its_row_says(
@@ -4908,3 +4919,517 @@ def test_repointing_follows_both_a_moved_target_and_a_moved_citer(
     assert "[0001](RFC-00007-example.md)" in moved
     assert "[`../adrs/`](../adrs/)" in moved
     assert "[see](../roadmap.md)" in moved  # citer moved sideways: same depth, same path
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 100 (`docs/plans/2026-09-03-w37-6-ruling-100-split-source-citations.md`) and the
+# maintainer's Ruling 101 extension of it: a citation into a split source is rewritten to a
+# target only when the citation determines that target; anything else goes to the family
+# index section; `was:` is provenance and is not swept; and a link into an index section
+# that lists no choice is loud rather than silent.
+# ---------------------------------------------------------------------------------------
+
+
+def _split_fixture(doc_id_cli: types.ModuleType) -> Any:
+    """One `_SplitSource` over a two-target split, built the way `migrate` builds one --
+    through `_build_split_sources`, not by hand -- so a test cannot pass against a shape
+    the production path never produces.
+    """
+    drafts = [
+        doc_id_cli._Draft(
+            materialize="document", prefix="RL", kind=None, title="the first ruling",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-two-rulings.md", 0),
+            old_token="Ruling 200", was="docs/plans/2026-09-01-two-rulings.md",
+            body="## Ruling 200 — the first\n\nBody one.\n",
+            source_line_span=(1, 10),
+        ),
+        doc_id_cli._Draft(
+            materialize="document", prefix="RL", kind=None, title="the second ruling",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-two-rulings.md", 1),
+            old_token="Ruling 201", was="docs/plans/2026-09-01-two-rulings.md",
+            body="## Ruling 201 — the second\n\nBody two.\n",
+            source_line_span=(11, 20),
+        ),
+    ]
+    drafts[0].number, drafts[1].number = 300, 301
+    drafts[0].body_line_offset = drafts[1].body_line_offset = 5
+    sources = doc_id_cli._build_split_sources(
+        "docs/plans/2026-09-01-two-rulings.md",
+        [
+            (drafts[0], "docs/rulings/RL-00300-the-first-ruling.md"),
+            (drafts[1], "docs/rulings/RL-00301-the-second-ruling.md"),
+        ],
+    )
+    return next(
+        s for s in sources if s.token == "docs/plans/2026-09-01-two-rulings.md"
+    )
+
+
+def test_a_was_header_naming_a_split_source_survives_the_rewrite_byte_identical(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 101 clause 2's broken-input proof.
+
+    The input is deliberately broken in the exact way §1.4 measured: a stamped document
+    whose `was:` names a source this run splits, so a sweep that treated `was:` as a
+    citation would rewrite it -- and, the source being split, would rewrite it to one
+    arbitrary sibling, destroying the only field that records where the file came from.
+
+    **The header must come out byte-identical.** The same path is repeated in the body as a
+    positive control: a test that only showed the header unchanged would pass identically
+    if the sweep had not run at all, which proves nothing (`positive control must run the
+    gate's own pattern`). The body copy must change; the header copy must not.
+    """
+    split = _split_fixture(doc_id_cli)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    doc = tmp_path / "docs" / "rulings" / "RL-00300-the-first-ruling.md"
+    doc.parent.mkdir(parents=True)
+    header = (
+        "---\n"
+        "id: RL-300\n"
+        "family: ruling\n"
+        "title: the first ruling\n"
+        "was: docs/plans/2026-09-01-two-rulings.md\n"
+        "---\n"
+    )
+    body = "Body citing docs/plans/2026-09-01-two-rulings.md in prose.\n"
+    doc.write_text(header + body, encoding="utf-8")
+
+    doc_id_cli._rewrite_citations(tmp_path, {}, [split])
+
+    after = doc.read_text(encoding="utf-8")
+    assert after.startswith(header), (
+        "the `was:` header was rewritten: Ruling 101 clause 2 requires it byte-identical"
+    )
+    # Positive control: the sweep really did run over this file, on this exact token.
+    assert "docs/plans/2026-09-01-two-rulings.md" not in after[len(header):], (
+        "the body copy was not rewritten — the sweep did not fire, so the header's "
+        "survival proves nothing"
+    )
+
+
+def test_a_citation_determining_nothing_goes_to_the_family_index_section(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 100 §3.2's broken input -- a citation with two candidate targets and no
+    determining evidence -- under Ruling 101 clause 1's disposition of it.
+
+    It must not land on either target (that is the 171-links-that-lie defect), and it must
+    not be left to dangle either: it resolves to the family index section, which lists both.
+    """
+    split = _split_fixture(doc_id_cli)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citer = tmp_path / "notes.md"
+    citer.write_text(
+        "See docs/plans/2026-09-01-two-rulings.md for the background.\n", encoding="utf-8"
+    )
+
+    _changed, index_resolved, unrewritten = doc_id_cli._rewrite_citations(
+        tmp_path, {}, [split]
+    )
+
+    after = citer.read_text(encoding="utf-8")
+    assert "docs/rulings/INDEX.md#2026-09-01-two-rulingsmd" in after
+    grounds = "an undetermined citation was rewritten to one of the targets - Ruling 100 §3.3"
+    assert "RL-00300" not in after, grounds
+    assert "RL-00301" not in after, grounds
+    assert len(index_resolved) == 1
+    assert unrewritten == [], "bucket (iv) is 0 unrewritten by construction"
+    assert index_resolved[0].candidates == (
+        "docs/rulings/RL-00300-the-first-ruling.md",
+        "docs/rulings/RL-00301-the-second-ruling.md",
+    )
+
+
+def test_a_citation_naming_its_target_by_id_still_reaches_that_target(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The other half of the same rule, and the reason Ruling 100 rejected reading C:
+    where the citation *does* determine the target, the evidence is used, not discarded
+    onto the index alongside the genuinely ambiguous ones."""
+    split = _split_fixture(doc_id_cli)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citer = tmp_path / "notes.md"
+    citer.write_text(
+        "Ruling 201 (docs/plans/2026-09-01-two-rulings.md) settled it.\n", encoding="utf-8"
+    )
+
+    _changed, index_resolved, _unrewritten = doc_id_cli._rewrite_citations(
+        tmp_path, {}, [split]
+    )
+
+    assert "docs/rulings/RL-00301-the-second-ruling.md" in citer.read_text(encoding="utf-8")
+    assert index_resolved == []
+
+
+def test_the_index_section_check_reddens_on_a_section_that_lists_no_choice(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 101 clause 3, proven red before it is proven green.
+
+    *"A link to an empty index section is the new silent failure; make it loud first."*
+    Three deliberately broken inputs -- no index file, no section with that anchor, and a
+    section listing one document instead of two -- each of which the auditor's dangling-link
+    scanner passes on, because `docs/rulings/INDEX.md` is a real file and that scanner
+    checks paths, not fragments.
+    """
+    cite = doc_id_cli._UnresolvedCitation(
+        citing_file="docs/roadmap.md", line=42,
+        old_rel="docs/plans/2026-09-01-two-rulings.md",
+        text="see docs/plans/2026-09-01-two-rulings.md", candidates=("a.md", "b.md"),
+        resolved_to="docs/rulings/INDEX.md#2026-09-01-two-rulingsmd",
+        index_rel="docs/rulings/INDEX.md", index_anchor="2026-09-01-two-rulingsmd",
+    )
+    index = tmp_path / "docs" / "rulings" / "INDEX.md"
+    index.parent.mkdir(parents=True)
+
+    # RED 1 — the index file is not there at all.
+    faults = doc_id_cli._split_index_violations(tmp_path, [cite])
+    assert len(faults) == 1
+    assert "docs/roadmap.md:42" in faults[0]
+    assert "2026-09-01-two-rulingsmd" in faults[0]
+    assert "does not exist" in faults[0]
+
+    # RED 2 — the file exists, but carries no section with that anchor.
+    index.write_text("# docs/rulings — split-source index\n\n## something-else\n", "utf-8")
+    faults = doc_id_cli._split_index_violations(tmp_path, [cite])
+    assert len(faults) == 1
+    assert "no section with that anchor" in faults[0]
+    assert "docs/roadmap.md:42" in faults[0]
+
+    # RED 3 — the section is there and lists one document, so it offers no choice.
+    one_row = (
+        "# docs/rulings — split-source index\n\n"
+        "## 2026-09-01-two-rulings.md\n\n"
+        "| Document | Title | `was:` |\n|---|---|---|\n"
+        "| [`RL-300`](RL-00300-the-first-ruling.md) | one | `x` |\n"
+    )
+    index.write_text(one_row, encoding="utf-8")
+    faults = doc_id_cli._split_index_violations(tmp_path, [cite])
+    assert len(faults) == 1
+    assert "lists 1 document(s)" in faults[0]
+
+    # GREEN — two rows under the anchor the citation names.
+    index.write_text(
+        one_row + "| [`RL-301`](RL-00301-the-second-ruling.md) | two | `x` |\n",
+        encoding="utf-8",
+    )
+    assert doc_id_cli._split_index_violations(tmp_path, [cite]) == []
+
+
+def test_migrate_writes_a_family_index_whose_sections_list_every_target(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """End-to-end: the run writes the index, every bucket-(iv) citation resolves into it,
+    and the clause-3 check finds nothing -- which is only meaningful because the test above
+    proves that check can fail."""
+    result = doc_id_cli.migrate(pristine_a)
+
+    assert result.unresolved_split_citations == (), (
+        "bucket (iv) must be 0 unrewritten by construction"
+    )
+    assert result.split_index_violations == ()
+    indexes = [f for f in result.files_written if f.endswith("/INDEX.md")]
+    assert indexes, "a corpus with a split source must produce a family index"
+    for rel in indexes:
+        text = (pristine_a / rel).read_text(encoding="utf-8")
+        assert text.startswith("---\n"), "the index carries a governed header (check 35)"
+        assert "## " in text, "an index with no section indexes nothing"
+
+
+def test_cmd_migrate_prints_both_split_citation_counts_including_the_zero(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, capsys: Any
+) -> None:
+    """The two counts are the gate figures -- bucket (iv), and the 0 unrewritten that
+    "0 by construction" is a claim about. Printed unconditionally, in the shape every other
+    population in this command already uses (Ruling 94)."""
+    doc_id_cli._cmd_migrate(argparse.Namespace(repo_root=pristine_a))
+    err = capsys.readouterr().err
+    assert "0 citation(s) of a split source left unrewritten" in err
+    assert "resolved to their family index section (Ruling 101 clause 1)" in err
+    assert "0 citation(s) resolved to a family index section that is missing" in err
+
+
+def test_a_bare_basename_link_is_rewritten_only_inside_its_own_directory(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The fourth citing form, and the scope that makes it safe.
+
+    A sibling writes `[the slice map](2026-08-22-w6b-slice-map.md)` — a bare basename, the
+    one form none of `_path_rewrite_tokens`' three cover, and the whole of the residual
+    dangling-link population this branch measured (167 links in 70 files, unchanged by the
+    split-source fix, so a class of its own).
+
+    **The broken input is the same token written from somewhere else.** A bare basename is
+    the most collision-prone token this migration could substitute; the only thing standing
+    between it and a tree-wide false match is the directory scope. So the test asserts both
+    halves: rewritten inside `docs/plans/`, left alone one directory away. A test that
+    proved only the rewrite would pass identically with the scope removed.
+    """
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citing_dir, old, new = doc_id_cli._bare_basename_rewrite(
+        "docs/plans/2026-08-22-w6b-slice-map.md",
+        "docs/plans/PL-00761-w6b-and-w32-the-slice-map.md",
+    )
+    assert (citing_dir, old, new) == (
+        "docs/plans",
+        "2026-08-22-w6b-slice-map.md",
+        "PL-00761-w6b-and-w32-the-slice-map.md",
+    )
+
+    sibling = tmp_path / "docs" / "plans" / "PL-00760-other.md"
+    sibling.parent.mkdir(parents=True)
+    sibling.write_text("See [the map](2026-08-22-w6b-slice-map.md).\n", encoding="utf-8")
+    elsewhere = tmp_path / "docs" / "specs" / "02-modelling.md"
+    elsewhere.parent.mkdir(parents=True)
+    elsewhere.write_text("See [the map](2026-08-22-w6b-slice-map.md).\n", encoding="utf-8")
+
+    doc_id_cli._rewrite_citations(tmp_path, {}, (), {citing_dir: {old: new}}, {})
+
+    assert "PL-00761-w6b-and-w32-the-slice-map.md" in sibling.read_text(encoding="utf-8")
+    assert elsewhere.read_text(encoding="utf-8") == (
+        "See [the map](2026-08-22-w6b-slice-map.md).\n"
+    ), "a bare basename was substituted outside the directory in which it named that file"
+
+
+def test_a_bare_basename_leaving_its_directory_becomes_a_relative_path(
+    doc_id_cli: types.ModuleType
+) -> None:
+    """The case a same-directory-only reading of the rule leaves dangling, and the reason
+    the replacement is computed with `posixpath.relpath` rather than assumed to be a
+    sibling: 29 of the 167 links cited a `docs/plans/` file this run moves to
+    `docs/rulings/`, and a bare replacement would resolve to `docs/plans/RL-….md`.
+    """
+    assert doc_id_cli._bare_basename_rewrite(
+        "docs/plans/2026-08-29-w11-slice-parallelism-ruling.md",
+        "docs/rulings/RL-00940-slice-parallelism.md",
+    ) == (
+        "docs/plans",
+        "2026-08-29-w11-slice-parallelism-ruling.md",
+        "../rulings/RL-00940-slice-parallelism.md",
+    )
+    # No directory to scope to, so no bare form at all — never a tree-wide bare token.
+    assert doc_id_cli._bare_basename_rewrite("CLAUDE.md", "docs/CLAUDE.md") is None
+
+
+def test_a_bare_basename_citation_of_a_split_source_reaches_the_split_resolver(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A split source needs the fourth form too, and it must go through the same three
+    determinants rather than the flat map — otherwise the bare form reintroduces exactly
+    the defect Ruling 100 was written about, one directory down."""
+    split = _split_fixture(doc_id_cli)
+    drafts_and_paths = [
+        (
+            doc_id_cli._Draft(
+                materialize="document", prefix="RL", kind=None, title=f"ruling {i}",
+                status="active", created=date(2026, 9, 1), owner="decision-maker",
+                tie_break=("docs/plans/2026-09-01-two-rulings.md", i),
+                old_token=f"Ruling {200 + i}",
+                was="docs/plans/2026-09-01-two-rulings.md",
+                body=f"## Ruling {200 + i}\n", source_line_span=(1 + i * 10, 10 + i * 10),
+            ),
+            f"docs/rulings/RL-0030{i}-ruling-{i}.md",
+        )
+        for i in (0, 1)
+    ]
+    for i, (draft, _) in enumerate(drafts_and_paths):
+        draft.number = 300 + i
+    bare = doc_id_cli._build_bare_split_source(
+        "docs/plans/2026-09-01-two-rulings.md", drafts_and_paths
+    )
+    assert bare is not None
+    citing_dir, source = bare
+    assert citing_dir == "docs/plans"
+    assert source.token == "2026-09-01-two-rulings.md"
+    assert source.index_token == "../rulings/INDEX.md#2026-09-01-two-rulingsmd", (
+        "both targets land in docs/rulings, so that is the family index — and the fallback "
+        "is written relative to the CITING directory, not as a repo-relative path"
+    )
+
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citer = tmp_path / "docs" / "plans" / "PL-00999-citer.md"
+    citer.parent.mkdir(parents=True)
+    citer.write_text(
+        "Undetermined: [both](2026-09-01-two-rulings.md).\n"
+        "Determined: Ruling 201 in [that one](2026-09-01-two-rulings.md).\n",
+        encoding="utf-8",
+    )
+
+    _changed, index_resolved, unrewritten = doc_id_cli._rewrite_citations(
+        tmp_path, {}, (), {}, {citing_dir: [source]}
+    )
+
+    after = citer.read_text(encoding="utf-8")
+    assert "../rulings/INDEX.md#2026-09-01-two-rulingsmd" in after
+    assert "../rulings/RL-00301-ruling-1.md" in after
+    assert len(index_resolved) == 1, "only the undetermined citation goes to the index"
+    assert unrewritten == []
+    assert split.token == "docs/plans/2026-09-01-two-rulings.md"  # the other form, untouched
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 102 §2 row (g) — the token-boundary defect
+# (`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`, "On (g)"):
+#
+#   "A rewrite may not match inside a longer identifier. `NFR-RATE-13/14` is the
+#    broken-input proof."
+#
+# `_rewrite_citations` substituted on `\b<tok>\b` alone. A word boundary sits between a
+# token's trailing digit and a following `/` or `-`, so a compound citation — one
+# identifier expression naming several requirements in shorthand — had its head rewritten
+# and its tail orphaned: `NFR-RATE-13/14` came out as `NFR-775/14`, one real requirement
+# and one meaningless fragment. Measured on the migrated tree at `0de529e`: 391
+# occurrences, against 0 on the un-migrated control.
+#
+# The corpus's real continuation shapes were enumerated before the pattern was written
+# (`git grep -ohE '\b(FR|NFR|OQ|DEP|VR)-[A-Z]+-[0-9]+(/[0-9]+)+'` at `e97b97a`, plus the
+# same sweep for the `NT-`, `ADR-`, `Ruling ` and `W<n>-<n>` families), and they are wider
+# than the two-part example: slash compounds run to twelve parts
+# (`NFR-MODEL-1/2/3/4/5/7/8/9/10/11/12`), hyphen ranges exist (`FR-RATE-46-49`,
+# `Rulings 90-92`), and a slice id is itself a longer identifier built by appending
+# `-<digit>` to a shorter live token (`W9-3-2` contains `W9-3`). A fix keyed to the
+# two-part slash form would have left every one of those still mangled.
+#
+# What the fixed rule does with a continued expression is **nothing** — it leaves the whole
+# expression byte-identical — and that is forced, not chosen. §7 (g)'s own predicate
+# (`frozen_file_matches_after_migration_stamp`) accepts a migrated file when inverting
+# REDIRECTS.csv over it reproduces the merge-base bytes. That inverse is per-token, so no
+# expansion of a compound into new ids can round-trip through it: `NFR-775/776` inverts to
+# `NFR-RATE-13/NFR-RATE-14`, which is not the merge-base text. Leaving the expression
+# alone is the only outcome (g) admits. The legacy ids that therefore survive in compound
+# form are §7 (d)'s population, ruled separately (Ruling 102 §2 row 3).
+# ---------------------------------------------------------------------------------------
+
+
+def _rewrite_one_file(
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    token_map: dict[str, str],
+    text: str,
+) -> str:
+    """Run the real `_rewrite_citations` over a one-file tree and return the result."""
+    target = tmp_path / "docs" / "sample.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    doc_id_cli._rewrite_citations(tmp_path, token_map)
+    return target.read_text(encoding="utf-8")
+
+
+#: The map fragment the real migration produced for the citation Ruling 102 names.
+_NFR_RATE_MAP = {"NFR-RATE-13": "NFR-775", "NFR-RATE-14": "NFR-776"}
+
+
+def test_ruling_102_g_the_named_broken_input_nfr_rate_13_14(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 102 §2's named broken-input proof, in the sentence it was found in
+    (`.claude/roles/lead.md`). Red before the boundary rule: the head was rewritten and
+    `/14` orphaned.
+    """
+    before = "close the hand-compiled owed list **lost NFR-RATE-13/14** (F41)\n"
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(_NFR_RATE_MAP), before)
+    assert "NFR-775/14" not in after, (
+        "the head was rewritten inside a longer identifier and the tail orphaned — "
+        "Ruling 102 §2's exact defect"
+    )
+    assert after == before, (
+        "a continued identifier expression is left whole; §7 (g)'s inverse is per-token, "
+        "so no expansion of it can round-trip to the merge-base bytes"
+    )
+
+
+def test_ruling_102_g_a_whole_token_still_rewrites(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The positive control the boundary rule must not break: the same token, not
+    continued, still migrates. Without this a rule that never substitutes anything would
+    pass the proof above."""
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, dict(_NFR_RATE_MAP), "plain NFR-RATE-13 alone\n"
+    )
+    assert after == "plain NFR-775 alone\n"
+
+
+def test_ruling_102_g_a_word_suffix_is_not_a_continuation(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`OQ-GOV-7-shaped` is the whole id used adjectivally, not a range: the hyphen is
+    followed by a letter, so the id ends where it ends and must still be rewritten. This
+    is the case a blunt "never match before a hyphen" rule would silently stop migrating —
+    2 occurrences on `main` at `e97b97a` (`OQ-GOV-7-shaped`, `OQ-OVR-9-shaped`), plus
+    `FR-MODEL-24-tagged`.
+    """
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, {"OQ-GOV-7": "OQ-500"}, "an OQ-GOV-7-shaped hole\n"
+    )
+    assert after == "an OQ-500-shaped hole\n"
+
+
+@pytest.mark.parametrize(
+    ("text", "token_map"),
+    [
+        pytest.param(
+            "FR-RATE-56/57/58/59 together\n",
+            {"FR-RATE-56": "FR-720", "FR-RATE-57": "FR-721"},
+            id="four-part-slash-compound",
+        ),
+        pytest.param(
+            "NFR-MODEL-1/2/3/4/5/7/8/9/10/11/12 in one breath\n",
+            {"NFR-MODEL-1": "NFR-700", "NFR-MODEL-2": "NFR-701"},
+            id="twelve-part-slash-compound",
+        ),
+        pytest.param(
+            "adopted NT-0010/0011 together\n",
+            {"NT-0010": "RFC-00042", "NT-0011": "RFC-00043"},
+            id="note-family-slash-compound",
+        ),
+        pytest.param(
+            "see ADR-0001/0002\n",
+            {"ADR-0001": "ADR-00001", "ADR-0002": "ADR-00002"},
+            id="adr-family-slash-compound",
+        ),
+        pytest.param(
+            "see FR-RATE-46-49 for the range\n",
+            {"FR-RATE-46": "FR-712", "FR-RATE-49": "FR-715"},
+            id="hyphen-range",
+        ),
+        pytest.param(
+            "Ruling 86/87 cover it\n",
+            {"Ruling 86": "RL-00086", "Ruling 87": "RL-00087"},
+            id="ruling-family-slash-compound",
+        ),
+        pytest.param(
+            "task W9-3-2 is closed\n",
+            {"W9-3": "SL-00123"},
+            id="slice-id-inside-a-longer-task-id",
+        ),
+    ],
+)
+def test_ruling_102_g_every_continuation_shape_in_the_corpus_is_left_whole(
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    text: str,
+    token_map: dict[str, str],
+) -> None:
+    """One case per continuation shape the corpus actually holds, enumerated from it
+    rather than inferred from Ruling 102's examples. Every one of these was mangled by
+    `\\b<tok>\\b` alone; `W9-3-2` is the shape that shows the rule is about identifiers
+    and not about compound citations — there the longer identifier is a *slice task*, and
+    the token that used to eat its head is a live slice id."""
+    assert _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text) == text
+
+
+def test_ruling_102_g_a_longer_identifier_that_is_itself_a_token_still_rewrites(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The boundary rule blocks only the *shorter* token. When the longer identifier is
+    itself in the map, longest-first ordering reaches it and it migrates whole — so the
+    rule loses no coverage it had, it only stops the fragment."""
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, {"W9-3": "SL-00123", "W9-3-2": "TK-00456"},
+        "task W9-3-2 in slice W9-3\n",
+    )
+    assert after == "task TK-00456 in slice SL-00123\n"
