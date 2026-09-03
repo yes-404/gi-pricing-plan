@@ -37,12 +37,31 @@ the whole of it.
 
 ## Naming
 
-`YYYY-MM-DD-<slug>.md`, dated when the file was started.
+**Before the `NT-0019` id migration:** `YYYY-MM-DD-<slug>.md`, dated when the file was
+started, with the four kind-suffixes above.
 
-**`ls docs/plans/` is the index.** There is deliberately no hand-maintained list of contents
-in this file: the date prefix already sorts the directory chronologically, and a list that
-nothing enforces goes stale — the lesson `CLAUDE.md` §0 records about counts and §9 records
-about restating the roadmap.
+**From the migration commit onward:** `PL-<nnnnn>-<slug>.md` — the padded document id leads
+the filename (`NT-0019` §1.4), and the two things the old name encoded move into the front
+matter, where a parser reads a *field* instead of a substring:
+
+| What the filename used to carry | Where it lives after the migration |
+|---|---|
+| the filing date, as a `YYYY-MM-DD-` prefix | `created:` |
+| the kind, as one of four suffixes | `kind:` — `map` · `leaf` · `review` · `handover` |
+
+`-ledger` has no successor here: a ledger became its own `LG-` family under `docs/ledgers/`
+and is not a plan.
+
+**Check 28 reads whichever of the two is on disk** and reports which regime it used. Both
+halves matter: run against the migrated tree with the filename parser, it emitted 110
+"carries no `YYYY-MM-DD-` date prefix" failures *and* reported `0 plan(s) checked for an
+acceptance standard` — wrong in both directions at once, over the same 114 files it should
+have been checking.
+
+**`ls docs/plans/` is the index** before the migration; `docs/INDEX.md` is after it. There is
+deliberately no hand-maintained list of contents in this file: a list that nothing enforces
+goes stale — the lesson `CLAUDE.md` §0 records about counts and §9 records about restating
+the roadmap.
 
 ## Writing one so it passes the audit
 
