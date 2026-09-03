@@ -1833,6 +1833,21 @@ def frozen_file_matches_after_migration_stamp(
     thus absent from the text, before a token it could contain as a prefix is ever tried —
     the identical ordering `scripts/doc-id.py`'s own citation-rewrite pass uses for the
     forward direction, for the identical reason.
+
+    **Whole identifiers only, in this direction too** — Ruling 102 §2 row (g)
+    (`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`). A plain substring
+    inverse has no notion of where an identifier ends, so it *repaired* the very defect
+    §7 (g) exists to find: given the mangled `NFR-775/14` it substituted `NFR-775` and
+    produced `NFR-RATE-13/14`, the merge-base bytes exactly, and the file passed. That is
+    the trap the ruling names — the mangled citations "must not be treated as a
+    citation-token class and thereby excused from §7 (g)'s 'neither header nor
+    citation-token' requirement" — and it was literal: §7 (g)'s figure could have been
+    computed on the migrated tree and still read empty. The inverse now applies the same
+    rule `_whole_token_re` applies forward, so a token substituted inside a longer
+    identifier fails to invert and its file is reported. `\b` alone would not do it: it
+    matches between `775` and `/`. The `-`/`/`-followed-by-a-digit form is what the corpus
+    holds; a separator followed by a letter (`OQ-500-shaped`) is not a continuation and
+    still inverts.
     """
     lines = new_text.splitlines()
     if lines and lines[0] == "---":
@@ -1845,7 +1860,11 @@ def frozen_file_matches_after_migration_stamp(
         stripped = new_text
     restored = stripped
     for new_token in sorted(redirects_inverse, key=len, reverse=True):
-        restored = restored.replace(new_token, redirects_inverse[new_token])
+        restored = re.sub(
+            rf"\b{re.escape(new_token)}\b(?![-/][0-9])",
+            lambda _m, v=redirects_inverse[new_token]: v,  # type: ignore[misc]
+            restored,
+        )
     return restored.strip("\n") == old_body.strip("\n")
 
 

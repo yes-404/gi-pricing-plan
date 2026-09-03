@@ -5356,6 +5356,43 @@ def _was_field_spans(text: str) -> list[tuple[int, int]]:
     ]
 
 
+#: Ruling 102 §2 row (g) (`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`,
+#: "On (g)"), the maintainer's own diagnosis: *"A rewrite may not match inside a longer
+#: identifier."* A word boundary is not that rule. `\b` sits between a token's trailing
+#: digit and a following `/` or `-`, so `\bNFR-RATE-13\b` matches inside `NFR-RATE-13/14`
+#: — one identifier expression naming two requirements in shorthand — and rewriting there
+#: leaves `NFR-775/14`: one real requirement and one meaningless fragment. Measured on the
+#: migrated tree at `0de529e`: 391 such fragments, against 0 on the un-migrated control.
+#:
+#: The continuation this refuses is a separator **followed by a digit**, because that is
+#: what the corpus at `e97b97a` actually holds. Enumerated, not inferred from the ruling's
+#: two-part example: slash compounds run to twelve parts
+#: (`NFR-MODEL-1/2/3/4/5/7/8/9/10/11/12`); hyphen ranges exist (`FR-RATE-46-49`,
+#: `FR-PLAT-18-20`); the `NT-`, `ADR-` and `Ruling ` families carry the same slash form
+#: (`NT-0010/0011`, `ADR-0001/0002`, `Ruling 86/87`); and 113 occurrences of the
+#: `W<n>-<n>-<n>` slice-task form contain a live slice id as their literal prefix, which
+#: is the case that shows the rule is about identifiers rather than about citation
+#: shorthand.
+#:
+#: A separator followed by a **letter** is not a continuation and must still rewrite:
+#: `OQ-GOV-7-shaped` is the whole id used adjectivally, and a blunt "never match before a
+#: hyphen" rule would silently stop migrating it. The leading side deliberately carries no
+#: guard beyond `\b`: `token_map` also holds repo-relative **path** tokens, and a path
+#: legitimately appears preceded by `/` inside a longer path.
+#:
+#: What happens to a continued expression is **nothing** — it is left byte-identical — and
+#: that is forced rather than chosen. §7 (g)'s own predicate
+#: (`audit-docs.py:frozen_file_matches_after_migration_stamp`) accepts a migrated file when
+#: inverting `REDIRECTS.csv` over it reproduces the merge-base bytes, and that inverse is
+#: per-token: no expansion of a compound into new ids can round-trip through it
+#: (`NFR-775/776` inverts to `NFR-RATE-13/NFR-RATE-14`, not to `NFR-RATE-13/14`). The
+#: legacy ids that therefore survive inside a compound are §7 (d)'s population, ruled
+#: separately (Ruling 102 §2 row 3), not this row's to invent an answer for.
+def _whole_token_re(tok: str) -> re.Pattern[str]:
+    """`tok` as a whole identifier: word-bounded, and not continued by `-`/`/` plus a digit."""
+    return re.compile(rf"\b{re.escape(tok)}\b(?![-/][0-9])")
+
+
 def _rewrite_citations(
     root: Path, token_map: Mapping[str, str], split_sources: Sequence[_SplitSource] = (),
     dir_token_map: Mapping[str, Mapping[str, str]] = types.MappingProxyType({}),
@@ -5418,7 +5455,7 @@ def _rewrite_citations(
                     continue
                 split = by_token.get(tok)
                 if split is None:
-                    segment = re.compile(rf"\b{re.escape(tok)}\b").sub(
+                    segment = _whole_token_re(tok).sub(
                         lambda m, v=active_map[tok]: v, segment  # type: ignore[misc]
                     )
                     continue
