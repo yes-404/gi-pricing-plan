@@ -648,7 +648,7 @@ must not be presented as the acceptance test.
 
 | row | reading | verdict as currently measured |
 |---|---|---|
-| **(e)** | a padded id in (d)'s corpus, outside a fence and outside a path, `PAD_WIDTH` digits, resolving through `docs/INDEX.md` | **FAIL** (§5.1) — population **1** after conjuncts 0–3, down from a disputed 36-or-77 |
+| **(e)** | a padded id in (d)'s corpus, outside a fence and outside a path, `PAD_WIDTH` digits, resolving through `docs/INDEX.md` | **FAIL** (§5.1) — population **2** as wired and measured, down from a disputed 36-or-77 |
 | **(f)** | count equal across the migration on the snapshot, per-source over all a split's targets | **PASS** (§5.2) — 129 → 129, and the one apparent per-file disagreement sums 5+2+1=8 across a split source |
 | **§6** | route from §5.2, declared per source, raise when absent | **UNIMPLEMENTED** — the sorted-first placement stands, and coincides |
 
@@ -787,11 +787,22 @@ predicate: two counts over one corpus differing only by the pattern. **Conjunct 
 `_docid.PAD_WIDTH` by symbol** rather than a literal digit count, per `CLAUDE.md` §13's rule that
 a shipped constant is cited by symbol and never pasted.
 
-**Defect 2 — conjunct 2 was defeated by markdown emphasis, and this accounts for 2 of the 6.**
-Two of (c)'s survivors are `docs/rulings/**RL-00993**-q5-….md` — **a path**, in which the bold
+**Defect 2 — conjunct 2 was defeated by markdown emphasis, and this accounts for 1 of the 6.**
+One of (c)'s survivors is `docs/rulings/**RL-00993**-q5-….md` — **a path**, in which the bold
 markers split the token so the path test failed to see it. The occurrence is inside a filename and
 conjunct 2 was written to clear exactly that. **Conjunct 2 now strips markdown emphasis before
-testing path context**, and those two are the broken-input proof for it.
+testing path context**, and it is the broken-input proof for it. **`executor-verify` confirms the
+fix works on the wired row: that occurrence was a violation before the emphasis-stripping step and
+is not one after.**
+
+> **Corrected 2026-09-03, and the error is worth more than the correction.** This paragraph first
+> said **two** of the survivors were paths, and §5.1 concluded the population was **1**. **It is
+> 2.** Read at `origin/main` in the pre-migration source
+> (`docs/plans/2026-09-03-w37-6-ruling-100-split-source-citations.md`), only `:91` is a path;
+> `:94` and `:101` are both **prose**. **This role inferred "two paths" because two of the three
+> hits carried the token `RL-00993`, and never read the two lines separately** — a grep hit taken
+> as a reading, in a record whose subject is that a predicate must be read rather than assumed.
+> Found by `executor-verify` running the wired row, not by review.
 
 **Defect 3 — (e) and (d) disagreed about the corpus, and this accounts for 3 of the 6.** Three
 survivors are `old_id` column values in `docs/REDIRECTS.csv`. **§7(d) excludes `REDIRECTS.csv`
@@ -809,10 +820,36 @@ record exhibiting a defective form fences it, the evidence survives byte-exact, 
 is keyed to any document. **A padded id outside a fence is still a violation in every document,
 including this one.**
 
-**Verdict: §7(e) FAILS, and the failure is now one line rather than a disputed population.**
-After conjuncts 0–3 the population is **1** — the quoted-correction line above, which the fence
-rule disposes of by a body edit to that record. **The row goes green when that edit lands, not
-before**, and §1.4's FAIL stands as recorded rather than being retroactively softened.
+**Verdict: §7(e) FAILS, and the failure is two lines rather than a disputed population.**
+After conjuncts 0–3 the population is **2**, both in the same record and both the same shape — a
+padded id in backticks in prose, exhibiting an observed defective value:
+
+```
+:94   The pair was relayed as `RL-196` / `RL-00199`.
+:101  The observed pair is `RL-990` / `RL-00993`.
+```
+
+**Both are violations and neither is excused. No new class is created for them**, because the
+fence rule of §5.1 already disposes of both: each *exhibits* a value whose defect is that it was
+written padded, so **unpadding it would destroy the observation** and fencing preserves it
+byte-exact. **The fix is a two-line body edit to that record.** The row goes green when it lands,
+not before, and §1.4's FAIL stands as recorded rather than being retroactively softened.
+
+**`executor-verify` asked whether `:101` belongs to a class this ruling means to excuse. It does
+not.** It is indistinguishable from `:94` on every axis the predicate reads and on the one it does
+not — both sit in a document *about* padded-versus-unpadded forms, which is precisely the
+defining-document plea §1.3 refuses. **A class invented to hold them would be a document-keyed
+exemption wearing a different name.**
+
+**And one disclosure that changes what a future green would mean, adopted from `executor-verify`
+and printed in the row itself:** **(e)'s control is structurally zero.** `docs/INDEX.md` is
+generated *by* the migration, so conjunct 3 has no authority on the un-migrated tree and a zero
+there is a property of the method, not evidence about the corpus. **Every other row's control is a
+real control; (e)'s is not, and conjunct 3 is the reason.** That is a consequence of this ruling
+rather than a defect in it, and it belongs where a reader meets the number — which is why the row
+prints it rather than this record merely recording it. It is `NT-0007`'s rule exactly: **a
+boundary metric that reads zero by construction reports where the boundary sits, never how clean
+the corpus is.**
 
 **The (b)-not-(c) remainder is 31 occurrences in 14 files** — `tests/test_template_headers.py` 9,
 `tests/test_doc_id.py` 4, `tests/test_doc_id_migrate.py` 4, `scripts/audit-docs.py` 2, the rest
@@ -905,3 +942,42 @@ predicate can be narrowed in transit, which is F85's failure mode and this rulin
 **What is not available is doing it and mentioning it afterwards.** The boundary this charter
 draws was written because it was crossed, and a role that crosses its own charter when the
 reasoning seems good is not a bounded role.
+
+### 5.5 Wired, and one more thing the instrument found that review did not
+
+**Ruling 103's four (e) conjuncts and two (f) conjuncts are implemented** by `executor-verify` in
+PR **#695** (branch `w37-6-ruling-103-rows`, head `405adb6`, on `main` at `ac82256`). Both rows
+are scored rather than `UNDETERMINED`, which is what Ruling 102 §2 row 5 asked for.
+
+**(f) passes and prints the evidence for its own strengthening.** `141 → 141` lines **while the
+file count moves 37 → 39** — conjunct 1 passing silently is now visible in the row's output rather
+than argued for in a record.
+
+**Conjunct 2 ships as a named approximation, and the ruling is not weakened to match it.**
+§3.3's routing table is not yet an artifact in the tree, so the implementation computes per-file
+counts through the one-to-one `REDIRECTS.csv` and treats a disagreement set whose residual is zero
+as one source's content arriving in several files. **Its printed limitation: it would not catch a
+genuine move that happens to net to zero across two files. The ruled version — summing over the
+routing table's target set — does.** The approximation is replaced when §3.3's table ships, and
+**the ruling stands as written in the meantime**: a predicate is not amended to match what could be
+built on the day. Tests exist for both halves — a split that closes passes with the disclosure, a
+genuine loss fails.
+
+**The cross-check of §1.8 is deferred with a reason that is itself the instrument working.**
+`--verify`'s (e) row and `audit-docs.py` check 32 cannot be compared until the H rows land,
+because check 32 finds **0 requirements** on the migrated tree today. **Two zeros compared would
+read as agreement.** Shipping it now would have produced exactly the vacuous check this whole
+instrument exists to prevent, and it was flagged rather than shipped.
+
+**The finding neither of us anticipated, and it is conjunct 3 doing its job on its author.**
+**(e)'s own test fixtures used real padded ids, so the deliberately-violating fixture was a genuine
+violation of the real corpus** — the instrument counting its own tests. **Found by running the
+instrument, not by reviewing it.** Fixed by moving every fixture id above the allocated range
+(`RL-09999`, `PL-09998`; highest allocated 1128 at the migrated tree), so **conjunct 3 excuses them
+in the corpus while each test still supplies its own index and still discriminates.**
+
+**That is the specimen-versus-citation distinction arriving from a direction §1.2 did not
+imagine: a specimen of the form written by the checker itself.** It is also the cleanest
+available evidence that conjunct 3 is a property test and not a blocklist — **a document-keyed
+exemption would have had to name the test files, and would then have been unable to see a real
+violation written into one of them.**
