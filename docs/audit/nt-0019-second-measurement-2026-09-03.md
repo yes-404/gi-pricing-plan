@@ -236,8 +236,22 @@ git grep -nE "\b(<alternative>)" -- $FILES | grep -v 'was:' | wc -l
 | `\.claude/notes/` | 1 | 88 | **1** |
 
 **Twelve of thirteen reproduce the handover exactly**, including both figures I had singled out.
-`NT-00` remains one line apart — 33 against 32, and against the handover's field reading of 35 —
-and I have not explained that one. It is recorded as unexplained, not as a defect on either side.
+
+`NT-00` remains one line apart, and it is worth stating precisely rather than as "unexplained",
+because the offset has a signature. Under **both** `was:` readings my figure is exactly one
+larger: substring 33 against 32, and field 36 against 35. The same `+1` appears in §9's two
+`was:` populations — 394 against 393, and 355 against 354. **Four measurements, four different
+predicates, the same offset of one.**
+
+That pattern is what a **one-document population difference** looks like, not what a predicate
+difference looks like — a predicate difference would move each figure by a different amount, as
+the anchor error above did. Against it: row (a)'s family census is **465 on both sides**, so the
+governed-record population is identical, and I could not find the document. `.claude/notes/README.md`
+was the obvious candidate and is not it — it carries no `was:` field at all.
+
+**Recorded as an unresolved one-document offset**, most consistent with a file included in one
+side's filter and excluded from the other's, and **not** as a defect on either side. It changes
+no verdict: every affected row fails on both readings.
 
 **A second error, corrected here rather than left standing.** The retracted text read "Five agree
 exactly. Four differ by one to three ... One differs by 87." The true tally of the first filing
