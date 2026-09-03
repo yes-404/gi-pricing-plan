@@ -638,7 +638,7 @@ further filenames carry a legacy id that today's predicate happens not to match.
 are in scope for the id standard is the maintainer's; the measurable claim is that the row cannot
 reach zero while the filename stands.
 
-## 13. Finding A5 (magnitude CORRECTED in §14) — §7(d)'s `docs/notes/` row cannot reach zero once the instrument that measures it is merged
+## 13. Finding A5 (magnitude corrected in §14; CAUSE corrected in §15) — §7(d)'s `docs/notes/` row cannot reach zero once the instrument that measures it is merged
 
 Verified at `549cb75`, the instrument's current tip. The run is stable across `7fc8e5a` →
 `549cb75` — same `1 DISCLOSE, 17 FAIL, 2 NOT MEASURED, 2 PASS, 2 UNDETERMINED` over 24 rows,
@@ -720,7 +720,7 @@ Whether the answer is a self-exclusion, a scoped corpus, or an accepted disclose
 `\bF[0-9]{2}\b` already has one, is the maintainer's. **The measurable claim: (d11) is 118 at a
 tree without the instrument, and 123 at a tree with it, over the same corpus.**
 
-## 14. A5's magnitude CORRECTED — the floor is 1 line, not 5; the finding stands, my number did not
+## 14. A5's magnitude corrected — the floor is 1 line, not 5 (its CAUSE is corrected in §15)
 
 **Filed 2026-09-03, correcting §13 of commit `c3771bd`. §13's conclusion survives; its figure was
 wrong by a factor of five and its "same corpus" claim was wrong outright.** The lead has already
@@ -805,3 +805,87 @@ resolves directly, and the safety net the comment describes is never exercised a
 defect today and the rewrite produced the correct new name. It is worth knowing that the
 mechanism designed to survive the migration is disarmed **by** the migration, so a later wrong
 value in that constant would fail silently rather than be caught by the redirect lookup.
+
+## 15. A5, third and final statement — the floor is not the price of keeping §7(d) verbatim
+
+**§14 corrected §13's magnitude. This corrects the *cause*, which both §13 and §14 stated wrongly,
+and it changes what the remedy has to be.** The lead's escalation into task 8 carries the
+retracted figures and the wrong cause; this section is the version a decision should be made on.
+
+### 15.1 The decision line, measured
+
+At a **migrated snapshot of `4b9117a`** — `main` with the instrument merged — with
+`FILES=$(git ls-files | grep -v REDIRECTS.csv)` after `git add -A`:
+
+```bash
+git grep -nE '\b(docs/notes/)' -- $FILES | grep -v 'was:' | wc -l                 # 122
+git grep -nE '\b(docs/notes/)' -- $FILES | grep -v 'was:' | grep -c '_docverify'  # 1
+```
+
+**(d11) = 122 with the instrument, 121 without it. That is the decision line, and it is 121
+against 122** — not 118 against 123, which compares two different refs and uses a pre-migration
+count for a post-migration population. Both earlier statements of it are withdrawn.
+
+### 15.2 The cause: the decomposition, not the verbatim pattern
+
+`D_FULL_PATTERN` is §7(d)'s regex kept verbatim, and **it does not trip the row**:
+
+```bash
+sed -n '606p' scripts/_docverify.py | grep -cE '\b(docs/notes/)'   # 0
+sed -n '626p' scripts/_docverify.py | grep -cE '\b(docs/notes/)'   # 1
+```
+
+The reason is in §7(d)'s own text. The acceptance sentence writes the path alternatives
+**factored**:
+
+```
+docs/(plans/2026-|audit/|notes/|adr/)
+```
+
+There is no substring `docs/notes/` anywhere in it. The literal `"docs/notes/"` exists in
+`_docverify.py` only at `:626`, in `D_ALTERNATIVES` — the **hand-written decomposition** that
+Ruling 102 §2 row 3 requires ("(d) Per alternative"), which expands the factored group into
+thirteen separate strings.
+
+**So the claim that the literal "must be kept for as long as §7(d)'s sentence contains it" is
+false: §7(d)'s sentence does not contain it.** §13.3 said so, §14 repeated it, and the lead's
+escalation states it as the reason the row is unclearable. It is wrong, and it is the load-bearing
+premise of the remedy.
+
+### 15.3 What that does to the remedy space
+
+The three options on the table — self-exclusion, a scoped corpus, an accepted disclosed count —
+were all priced against "the floor is unavoidable because verbatim-ness requires it". **It is
+avoidable, and cheaply.**
+
+Deriving the thirteen alternatives *from* `D_FULL_PATTERN` by parsing, instead of retyping them,
+removes the only offending literal and **strengthens the property the author wanted**: the
+decomposition would then be provably the source's own, rather than a hand copy a reader must
+check by eye. The comment at `:601` says the constant is kept whole so a reader can *"check the
+per-alternative decomposition below against its source rather than trusting it"* — a derived
+decomposition needs no such check.
+
+**I am not proposing that as the fix.** Whether the alternatives are derived or written out is
+`executor-verify`'s to judge — a hand-written list has real advantages, and parsing a regex to
+split it is not free of its own risks. The point for the maintainer is narrower and it is a
+correction of fact: **the floor is a consequence of an implementation choice, not of the
+acceptance sentence**, so a standard-level remedy (scoping the corpus, disclosing a count,
+amending §7(d)) is being considered for something a code-level change removes.
+
+### 15.4 Two errors of mine in one finding, and what they have in common
+
+- **§13:** ran the predicate against the un-migrated source, published the result for the migrated
+  population. Magnitude wrong 5×.
+- **§13.3 and §14:** asserted the literal is required by §7(d)'s sentence **without reading the
+  sentence for that substring**. Cause wrong.
+
+Both are the same failure: I checked a proposition against the artifact I had open rather than the
+artifact the proposition was about. The first mixed two trees; the second mixed a regex's
+*meaning* with its *text* — `docs/(…|notes/|…)` matches what `docs/notes/` matches, so I treated
+the two as interchangeable, and for a *string search over source code* they are not. **That is
+this record's own recurring subject arriving in its own findings twice.**
+
+`\bF[0-9]{2}\b` is the counter-example that should have prompted the check: it appears in
+`D_FULL_PATTERN` **and** in `D_ALTERNATIVES` as the same literal, so it genuinely is unavoidable
+in a way `docs/notes/` is not. The two alternatives are not alike, and I generalised from the one
+I had in front of me.
