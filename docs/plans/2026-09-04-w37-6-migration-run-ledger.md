@@ -1213,7 +1213,7 @@ transcribed from any relay.
 | d11 | FAIL | the old notes directory, un-migrated | unowned | — |
 | d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
 | d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
-| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`) but **mangled companion up** (457→472, +15) — a real regression signal `#733` may have introduced | multiple (partial) | #720, #723, #727, #729 merged; executor-30-2 resumed to find the +15 source before d4/d5 |
+| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`); the +15 mangled-companion rise **investigated and resolved as a false alarm** (see 2026-09-04 dated section below) — not a real corpus regression, no fix required beyond an optional self-documenting comment | multiple (partial) | #720, #723, #727, #729 merged; executor-30-2's +15 investigation closed, resuming d4/d5 |
 | h1 | FAIL | `audit-docs.py` non-disclosed classes (32, 36, 1, 31, 27, …) still non-zero | unowned | — |
 
 **Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
@@ -1561,3 +1561,36 @@ session, not a lost worktree.
 **PR #732 merged** at `e3739e1` — confirmed CLEAN against the exact head SHA's own
 workflow runs this time (per the earlier #724 lesson), not a stale rollup. Continuing on
 `docs-w37-6-ledger-cont7`.
+
+## 2026-09-04 — row (g)'s +15 "regression" resolved: test-fixture literals, not corpus mangling
+
+`executor-30-2`'s investigation (task #42), verified with the real tool, not a hand-rolled
+scan: their first pass used their own regex script and produced numbers that did not match
+CI, so they discarded it and redid the check properly. Checked out `e6384d7` (#733's direct
+parent, confirmed via `git log -1 6c92d55^`) and `6c92d55` into two disposable snapshots,
+ran the actual `python3 scripts/doc-id.py migrate --verify --repo-root <snapshot> --keep`
+from each — the real CI mechanism. Both reproduced CI's own numbers exactly: before
+migrated=457/control=25, after migrated=472/control=38.
+
+**The key fact: `control` (raw, un-migrated content, zero rewriting) also rose, +13.**
+`git diff e6384d7 6c92d55 --stat` confirms the only changed files across the whole tree are
+executor-30-2's own 4 files — so control's entire rise can only be driven by their literal
+text. It is: their new tests deliberately embed illustrative mangled-shape strings as
+broken-input proof material (`FR-680..4`, `FR-680..703`, `FR-700/701`, `WK-944C`,
+`NFR-775/14` — e.g. `test_task30_a_half_rewritten_range_is_named_mangled` asserts against
+`FR-680..4` literally). These are Python string literals in test/comment content the
+citation sweep never touches, and they inflate a whole-tree scan identically on both sides.
+
+Since control's whole +13 is accounted for by those 4 files and nothing else in the tree
+differs, at most +2 of migrated's +15 is unexplained — and even that residual could not be
+pinned to any real-corpus file: diffing the two kept migrated snapshots directly, excluding
+executor-30-2's own 4 files, shows every other file's mangled count flat or **lower** after
+the fix (`docs/roadmap.md` 51→18, a `WF-00991` doc 22→12, and more), consistent with the
+already-observed residue drop (classified-by-none 311→190).
+
+**Verdict: no real-corpus regression in row (g).** The rise is the whole-tree scan picking
+up executor-30-2's own test-fixture literals; the real corpus's mangled population
+improved. Accepted as well-evidenced per CLAUDE.md §13 (real-tool verification, isolated
+diff scope, both directions checked). Executor-30-2 asked to add a one-line acknowledgment
+comment near those literals (their own suggestion, cheap, self-documents the
+corpus-vs-fixture distinction for a future whole-tree scan) and proceed to d4/d5.
