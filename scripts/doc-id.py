@@ -5586,8 +5586,20 @@ def _was_field_spans(text: str) -> list[tuple[int, int]]:
 #: legacy ids that therefore survive inside a compound are §7 (d)'s population, ruled
 #: separately (Ruling 102 §2 row 3), not this row's to invent an answer for.
 def _whole_token_re(tok: str) -> re.Pattern[str]:
-    """`tok` as a whole identifier: word-bounded, and not continued by `-`/`/` plus a digit."""
-    return re.compile(rf"\b{re.escape(tok)}\b(?![-/][0-9])")
+    """`tok` as a whole identifier: word-bounded, and not continued by `-`/`/` plus a digit.
+
+    The leading anchor is `(?<!\\w)`, not `\\b` — row (d13)'s own citation-form
+    discovery (W37-6, 2026-09-04): a path token rooted under the old notes directory
+    beneath `.claude` (`<that dir>/NNNN-*.md`) *starts* with a non-word character (`.`),
+    and `\\b` requires a \\w/\\W *transition* either side, so it never fires when the
+    character immediately before the token is ALSO non-word — a backtick, exactly what
+    every real markdown citation of a path writes. `(?<!\\w)` is a strict
+    generalisation: it demands only "no word character immediately before", which for a
+    token that itself starts with a word character (`docs/...`, every id family) behaves
+    identically to `\\b`'s own start-anchor, and additionally covers the
+    non-word-starting case `\\b` silently missed.
+    """
+    return re.compile(rf"(?<!\w){re.escape(tok)}\b(?![-/][0-9])")
 
 
 #: A compound-continuation token, base plus its whole chain: `\btok` then zero or more
@@ -5618,9 +5630,12 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 #: the choice atomic: whichever alternative's own anchors are satisfied wins the position
 #: outright, with no second pass free to reinterpret what the first already matched.
 def _compound_token_re(tok: str) -> re.Pattern[str]:
+    # Leading `(?<!\w)`, not `\b` -- `_whole_token_re`'s own docstring has the reasoning
+    # (row (d13)'s path tokens start with `.`, a non-word character, and a preceding
+    # backtick is non-word too, so `\b` never fires there at all).
     escaped = re.escape(tok)
     return re.compile(
-        rf"\b{escaped}(?:\.\.(?P<range_end>[0-9]+)\b|\b(?P<continuation>(?:[-/]\d+)*))"
+        rf"(?<!\w){escaped}(?:\.\.(?P<range_end>[0-9]+)\b|\b(?P<continuation>(?:[-/]\d+)*))"
     )
 
 
@@ -5769,6 +5784,132 @@ def _expand_range(
     return replacement
 
 
+# ---------------------------------------------------------------------------------------
+# W37-6 rows (d9)-(d12), the deputy's ruling: a legacy path citation whose token spans a
+# markdown soft line-wrap. The ordinary sweep above cannot see it -- `_compound_token_re`
+# matches a token as one contiguous literal string, and a wrapped occurrence is not one --
+# and it must NOT simply be rejoined onto one line before substitution: the maintainer's
+# hard acceptance condition is that the rewrite "preserve the line break exactly where it
+# stands", because DP-7's inverse (`audit_docs.frozen_file_matches_after_migration_stamp`)
+# is a dumb, generic string substitution over `docs/REDIRECTS.csv`'s `old_id`/`new_id`
+# pairs -- collapsing the wrap changes bytes the inverse has no entry to reproduce, and
+# every frozen file the collapse touches then fails DP-7 for a reason that has nothing to
+# do with whether the citation itself now resolves.
+#
+# The fix each wrapped occurrence needs is therefore its OWN `(old_id, new_id)` pair, the
+# literal wrapped old text mapped to a correspondingly wrapped new text -- the identical
+# "one more citation-form row" pattern `compound_redirects`/`dir_link_redirects`/
+# `split_path_redirects` already use above, just with the wrap markup embedded in both
+# strings instead of a compound separator or a directory scope. DP-7's own inverse needs
+# no change at all to consume it: `redirects_inverse` is built generically off every row's
+# `old_id`/`new_id`, wrap and all.
+# ---------------------------------------------------------------------------------------
+
+#: The five `docs/`- and `.claude/`-rooted legacy path forms `_docid.LEGACY_FORM_PATTERNS`
+#: names, reused rather than retyped (Ruling 67 §2's one shared constant) as a cheap
+#: per-file gate: a file naming none of them cannot contain a wrapped citation of a moved
+#: path either, so the per-token regex below only runs on the minority of files that could
+#: plausibly need it.
+_LEGACY_PATH_PREFIX_RES: Final = tuple(
+    pattern for name, pattern in _docid.LEGACY_FORM_PATTERNS if "path" in name
+)
+
+
+def _wrapped_path_patterns(
+    old_new_pairs: Iterable[tuple[str, str]],
+) -> tuple[tuple[str, str, re.Pattern[str]], ...]:
+    """One `(old_tok, new_tok, pattern)` per `/`-shaped pair in `token_map` -- flat,
+    single-destination moves only (a split source resolves its target from the citing
+    line's own content, which a wrap can span, so it is out of this fix's scope; a
+    wrapped citation of a split source is left exactly as it is, same as today).
+
+    `pattern` matches `old_tok` with an optional wrap tolerated after every `-` or `/` it
+    contains -- prose auto-wrap at a fixed line width, not a rule about where a path is
+    "allowed" to break: it lands after a hyphen inside the filename in one corpus example
+    (`docs/plans/2026-08-29-w11-3-batch-\\nscoring.md`) and after the directory separator,
+    before the filename has even started, in another (`` `docs/audit/\\n  plan-
+    reviews.md` `` -- `.claude/roles/planner.md`) -- the two characters a line-width
+    wrapper treats as break-opportunities inside an otherwise unbroken code span. The
+    continuation's own leading whitespace is absorbed, and so is a single `#`
+    comment-continuation marker plus its own trailing space where one is present -- a
+    Python source comment wraps as `# ` on every line, and a bare `[ \\t]*` alone stops at
+    that `#`, never reaching the token's own continuation.
+    """
+    wrap = r"(?:\n[ \t]*(?:#[ \t]*)?)?"
+    out: list[tuple[str, str, re.Pattern[str]]] = []
+    for old_tok, new_tok in old_new_pairs:
+        if "/" not in old_tok:
+            continue
+        pattern = re.compile(
+            "".join(re.escape(ch) + wrap if ch in "-/" else re.escape(ch) for ch in old_tok)
+        )
+        out.append((old_tok, new_tok, pattern))
+    return tuple(out)
+
+
+#: The wrap markup alone, matched starting exactly at the `\n` a wrapped occurrence's own
+#: match already located -- `_rewrite_wrapped_path_citations` uses this to slice the
+#: matched text into "old-token characters before the wrap" and "the wrap itself", rather
+#: than re-deriving the split from `_wrapped_path_patterns`' own per-character pattern
+#: (which would need one named group per hyphen/slash to report which one fired).
+_WRAP_MARKUP_RE: Final = re.compile(r"\n[ \t]*(?:#[ \t]*)?")
+
+
+def _rewrite_wrapped_path_citations(
+    text: str,
+    patterns: Sequence[tuple[str, str, re.Pattern[str]]],
+    wrap_redirects: list[tuple[str, str]],
+) -> str:
+    r"""Rewrite every wrapped path citation `patterns` covers, preserving the line break
+    exactly where it stands rather than collapsing it -- the maintainer's hard acceptance
+    condition (W37-6 channel, 2026-09-04), so `frozen_file_matches_after_migration_stamp`
+    (DP-7) keeps passing on every frozen file this fix touches.
+
+    For a matched span with no `\n` in it (the token was contiguous after all -- `old_tok
+    in text` already short-circuits the common case, but a second, still-contiguous
+    occurrence of the same token elsewhere in the file reaches this pattern too), the
+    match is simply `new_tok`, same as the ordinary sweep would produce.
+
+    For a genuinely wrapped span, the match is split at the `\n` into a *prefix* (the
+    literal `old_tok` characters matched before it, always a byte-exact prefix of
+    `old_tok` since nothing before the wrap can have been rewritten) and the wrap markup
+    itself (`_WRAP_MARKUP_RE`, starting exactly at that `\n`). `new_tok` is split into the
+    same two pieces **by character count**, `prefix`'s own length clamped to `new_tok`'s
+    -- "the line break exactly where it stands", read as "at the analogous offset into the
+    replacement", not as a claim that the split lands on any meaningful boundary in the
+    new name. The wrap markup itself is carried over byte-for-byte, comment marker and
+    indentation included.
+
+    Every substituted span becomes its own `(old_id, new_id)` pair in `wrap_redirects` --
+    the wrapped old text mapped to the wrapped new text, appended in place for the caller
+    to fold into `REDIRECTS.csv` exactly like `derived_redirects`/`dir_redirects` already
+    are. A repeat occurrence (the identical wrap shape found again, in this file or
+    another) produces the identical pair a second time; the caller dedupes before writing.
+    """
+    if not any(p.search(text) for p in _LEGACY_PATH_PREFIX_RES):
+        return text
+    for old_tok, new_tok, pattern in patterns:
+        if old_tok in text:
+            continue  # already contiguous -- the ordinary sweep already reaches it
+
+        def repl(m: re.Match[str], new_tok: str = new_tok) -> str:
+            matched = m.group(0)
+            nl_idx = matched.find("\n")
+            if nl_idx == -1:
+                return new_tok
+            markup_match = _WRAP_MARKUP_RE.match(matched, nl_idx)
+            assert markup_match is not None  # the pattern's own wrap group produced this
+            markup = markup_match.group(0)
+            split = min(nl_idx, len(new_tok))
+            replacement = new_tok[:split] + markup + new_tok[split:]
+            if replacement != matched:
+                wrap_redirects.append((matched, replacement))
+            return replacement
+
+        text = pattern.sub(repl, text)
+    return text
+
+
 def _rewrite_citations(
     root: Path, token_map: Mapping[str, str], split_sources: Sequence[_SplitSource] = (),
     dir_token_map: Mapping[str, Mapping[str, str]] = types.MappingProxyType({}),
@@ -5776,6 +5917,7 @@ def _rewrite_citations(
     derived_redirects: list[tuple[str, str]] | None = None,
     dir_redirects: list[tuple[str, str, str]] | None = None,
     split_redirects: list[tuple[str, str]] | None = None,
+    wrap_redirects: list[tuple[str, str]] | None = None,
 ) -> tuple[list[str], list[_UnresolvedCitation], list[_UnresolvedCitation]]:
     """Sweep every tree file, rewriting each citation token to its destination.
 
@@ -5827,6 +5969,12 @@ def _rewrite_citations(
     the fallback for one `_SplitSource` gets the identical `index_token`, a property of
     the source itself rather than of the one occurrence, so there is no per-occurrence
     ambiguity for the collision-safe inverse to even need to arbitrate.
+
+    `wrap_redirects`, when given, is appended to in place with one `(old, new)` pair per
+    *wrapped* path citation this run rewrote (rows (d9)-(d12)'s word-wrap fix) — the wrap
+    markup embedded in both strings, never the plain unwrapped token, because DP-7's
+    inverse is a generic string substitution with no wrap-awareness of its own:
+    `_rewrite_wrapped_path_citations`' own docstring has the full reasoning.
     """
     changed: list[str] = []
     index_resolved: list[_UnresolvedCitation] = []
@@ -5840,10 +5988,17 @@ def _rewrite_citations(
     split_derived: list[tuple[str, str]] = (
         split_redirects if split_redirects is not None else []
     )
+    wrap_derived: list[tuple[str, str]] = (
+        wrap_redirects if wrap_redirects is not None else []
+    )
     tree_by_token: dict[str, _SplitSource] = {s.token: s for s in split_sources}
     # One ordering over both kinds, longest first for the reason the flat map already
     # needed it: a shorter token's word boundary must not consume part of a longer one.
     tree_ordered = sorted({*token_map, *tree_by_token}, key=len, reverse=True)
+    # Precompiled once, reused for every file below — `_wrapped_path_patterns`' own
+    # docstring has why a per-file rebuild is not needed. Flat `token_map` pairs only
+    # (never `tree_by_token`'s split sources — the same docstring has why).
+    wrap_patterns = _wrapped_path_patterns(token_map.items())
     for path in _iter_tree_files(root):
         if _is_vendored_exempt(path, root):
             continue
@@ -5854,6 +6009,11 @@ def _rewrite_citations(
         except UnicodeDecodeError:
             continue
         original = text
+        # A wrapped path citation is rewritten *before* the ordinary sweep below, in one
+        # step that preserves the wrap rather than collapsing it — the ordinary sweep's
+        # plain contiguous match cannot see a wrapped occurrence at all, so nothing here
+        # double-processes anything the sweep would otherwise have reached.
+        text = _rewrite_wrapped_path_citations(text, wrap_patterns, wrap_derived)
         rel = path.relative_to(root).as_posix()
         # The directory-scoped half: a bare-basename token means *this* file only for a
         # citer inside the directory the cited file sat in, so it joins the token set for
@@ -7218,6 +7378,17 @@ def migrate(root: Path) -> MigrateResult:
     """
     warnings: list[str] = []
 
+    # W37-6 rows (d11)/(d12): captured *before* anything below writes or deletes a single
+    # byte, so a later idempotency check ("did this run's REDIRECTS.csv row correspond to
+    # something this run actually witnessed") reads the tree's real start-of-run state --
+    # not whatever `_regenerate_family_readmes`' own `_remove_if_empty` leaves the
+    # directory as by the time that row is appended, several steps later. Read once here,
+    # this is what makes a second run over an already-migrated tree correctly add no new
+    # row rather than either silently re-adding a duplicate or wrongly skipping the first.
+    legacy_dir_existed = {
+        old_dir: (root / old_dir).is_dir() for old_dir in _README_LEGACY_DIR_MOVES
+    }
+
     drafts: list[_Draft] = []
     notes_drafts = _discover_notes(root)
     _check_flat_document_directory_not_silently_unrecognised(
@@ -7681,6 +7852,20 @@ def migrate(root: Path) -> MigrateResult:
         path_moves[old_rel] = new_rel
         path_move_groups.setdefault(old_rel, []).append((None, new_rel))
 
+    # W37-6 row (d13), NT-0019 §5 step 4 (the old notes root beneath `.claude`'s own
+    # tombstone stubs): NOT implemented in this PR. A working discovery+citation-rewrite
+    # mechanism was built and proven (repoints a citing frozen plan's own reference
+    # correctly, DP-7-clean -- that root's own README table has the
+    # composition-through-`docs/notes/` reasoning), but retiring the stubs themselves
+    # does not fit any of Ruling 68's six
+    # permitted classes for row (g) — the stub's own body ("This note moved to ...") is
+    # discarded outright and its target already held unrelated, independent content
+    # before this run touched anything, so `classify_migration_diff` reports the
+    # deletion "vanished, unaccounted" regardless of whether the citation rewrite itself
+    # is correct. Left for the deputy: either row (g) gains a seventh class for this
+    # shape, or the deletion routes through some other accounting. Reported rather than
+    # shipped partially: d13 stays at its current figure this PR, d9-d12 do not.
+
     # NT-0019 §5.2's README regeneration -- bodies, here, **before** the citation sweep.
     # A relocated README has to leave its old path before `_rewrite_citations` runs, or the
     # sweep writes to a file this same run then deletes and `migrate` reports one path as
@@ -7798,10 +7983,66 @@ def migrate(root: Path) -> MigrateResult:
     # exists, per draft, above); `(g)`'s inverse needs no wiring change to consume it,
     # the same "generic on old_id/new_id" property `compound_redirects` already has.
     split_path_redirects: list[tuple[str, str]] = []
+    # W37-6 rows (d11)/(d12), the deputy's directory-token ruling: a directory-shaped
+    # legacy path has exactly one successor for `docs/adr` and `docs/notes`
+    # (`_README_LEGACY_DIR_MOVES`'s own docstring -- `docs/audit` is deliberately absent,
+    # it dissolves into four), the same pair `_regenerate_family_readmes` already feeds
+    # `_repoint_relative_links` for a README's own relative link. Fed into the tree-wide
+    # `token_map` here too -- reused, never retyped -- so a plain-prose mention of the
+    # directory in ANY file, not only a README's relative link, is repointed by the
+    # identical substring mechanism every other token already uses.
+    #
+    # **Trailing slash on both sides, `docs/adr/` -> `docs/adrs/`, not the bare
+    # `_README_LEGACY_DIR_MOVES` pair.** Found live: `docs/adr` is a literal *prefix* of
+    # `docs/adrs`, so the bare form's forward sweep correctly leaves an already-correct
+    # `docs/adrs/ADR-<nnnnn>-<slug>.md` untouched (`\b`/`(?<!\w)` refuses to match
+    # mid-word), but DP-7's inverse (`frozen_file_matches_after_migration_stamp`) has no
+    # such refusal -- it is a blanket `str.replace`-shaped substitution with no memory of
+    # which occurrence this run actually produced, so it "reverts" *every* `docs/adrs` in
+    # the file, including ones that were already there before this run touched anything
+    # (`docs/_templates/ADR.md`'s own two mentions of its target directory, real in both
+    # the fixture and the real corpus -- `classified-by-none`, row (g), with this bug).
+    # The slash-terminated form cannot match inside `docs/adrs` at all (`docs/adr/`
+    # needs a `/` immediately after `r`; `docs/adrs` has `s` there), so it never creates
+    # this ambiguity, and it loses no coverage: `_docid.LEGACY_FORM_PATTERNS`' own "legacy
+    # adr path"/"legacy notes path" alternatives are `docs/adr/` and `docs/notes/`,
+    # trailing slash already, so this is the exact form the row counts, not a
+    # narrower one.
+    _add_tokens(
+        token_map, token_origins,
+        {f"{k}/": f"{v}/" for k, v in _README_LEGACY_DIR_MOVES.items()},
+        "_README_LEGACY_DIR_MOVES",
+    )
+    # The token feeds the sweep unconditionally (a hand-added stale mention deserves
+    # fixing on any run, not only the one that found the directory still there), but the
+    # REDIRECTS.csv row is gated on `legacy_dir_existed` (captured at the top of this
+    # function, before anything writes or deletes): `_write_redirects` accumulates rather
+    # than regenerates (`existing + rows`, never deduplicated), so an unconditional
+    # append here re-added the identical row on every subsequent run and broke
+    # idempotency (`test_migrate_is_idempotent_on_its_own_output`, found live). A
+    # start-of-run snapshot, not a re-check here, because `_regenerate_family_readmes`
+    # (called below) empties and removes the directory in this same run -- checking now
+    # would wrongly read "already gone" on the very run that is doing the emptying.
+    for old_dir, new_dir in _README_LEGACY_DIR_MOVES.items():
+        if not legacy_dir_existed[old_dir]:
+            continue
+        redirect_rows.append(
+            {
+                "old_id": f"{old_dir}/", "new_id": f"{new_dir}/",
+                "old_path": "", "new_path": "",
+            }
+        )
+    # W37-6 rows (d9)-(d12)'s word-wrap fix out-parameter: one `(old, new)` pair per
+    # wrapped path citation this run rewrote, the wrap markup embedded in both strings
+    # (`_rewrite_wrapped_path_citations`'s own docstring has the DP-7 reasoning for why
+    # the pair must carry it rather than the plain unwrapped token). Deduped through the
+    # identical collision-safe helper `split_path_redirects` already uses below: an exact
+    # repeat (the same wrap shape found again) survives, a genuine collision is dropped.
+    wrap_path_redirects: list[tuple[str, str]] = []
     rewritten, index_resolved, unrewritten_citations = _rewrite_citations(
         root, token_map, split_sources, dir_token_map, dir_split_sources,
         derived_redirects=compound_redirects, dir_redirects=dir_link_redirects,
-        split_redirects=split_path_redirects,
+        split_redirects=split_path_redirects, wrap_redirects=wrap_path_redirects,
     )
     for old_compound, new_compound in compound_redirects:
         redirect_rows.append(
@@ -7823,6 +8064,15 @@ def migrate(root: Path) -> MigrateResult:
         redirect_rows.append(
             {
                 "old_id": old_split_citation, "new_id": new_split_citation,
+                "old_path": "", "new_path": "",
+            }
+        )
+    for old_wrap_citation, new_wrap_citation in _drop_contested_split_redirects(
+        wrap_path_redirects
+    ):
+        redirect_rows.append(
+            {
+                "old_id": old_wrap_citation, "new_id": new_wrap_citation,
                 "old_path": "", "new_path": "",
             }
         )
