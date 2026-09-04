@@ -1326,7 +1326,7 @@ def _discover_adrs(root: Path) -> list[_Draft]:
 
 
 _PLAN_FILENAME_RE: Final = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$")
-_RULING_HEADING_RE: Final = re.compile(r"^##\s+Ruling\s+(\d+)\s*(?:—\s*(.+))?$", re.MULTILINE)
+_RULING_HEADING_RE: Final = re.compile(r"^#{1,2}\s+Ruling\s+(\d+)\s*(?:—\s*(.+))?$", re.MULTILINE)
 
 #: NT-0019 §1.6's own default for a ruling: "ruling (RL) — decision-maker; the maintainer
 #: may author one on scope or process." The row already contemplates a ruling authored by
@@ -3634,6 +3634,92 @@ def _write_document_drafts(
 def _remove_if_empty(path: Path) -> None:
     if path.is_dir() and not any(path.iterdir()):
         path.rmdir()
+
+
+def _extract_title_from_yaml_header(text: str) -> str | None:
+    """Extract the title field value from a YAML front-matter header.
+
+    The header must be at the start of the file and contain a `title:` line.
+    Returns None if no title is found.
+
+    Used for d4 fix: post-rewrite slug derivation. After _rewrite_citations rewrites
+    citations in the file body, the title field in the header may have also been
+    rewritten. This function extracts that post-rewrite title so we can re-derive
+    the filename slug from it.
+    """
+    # Match lines starting with "title:" at the beginning of the file
+    match = re.search(r"^title:\s+(.+?)$", text, re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _rename_documents_after_citation_rewrite(
+    root: Path, draft_paths: dict[Path, _Draft]
+) -> list[tuple[str, str]]:
+    """Rename documents if their filename slug has changed after citation rewrite.
+
+    After _rewrite_citations runs, citations in document bodies (and potentially
+    in title fields) are rewritten. The filename slug should be derived from this
+    post-rewrite title. This function:
+
+    1. Reads each migrated document file
+    2. Extracts the (post-rewrite) title from its YAML header
+    3. Derives the new slug from this title
+    4. If the new slug differs from the current filename's slug, renames the file
+
+    Returns a list of (old_path, new_path) tuples for files that were renamed.
+
+    Per Ruling 106 (d4): this is "option (b) — re-derive each draft's filename from
+    its rewritten title and rename where it differs (a class-3 move hunk, nothing
+    else changes)."
+    """
+    renamed: list[tuple[str, str]] = []
+
+    for old_path, draft in draft_paths.items():
+        if draft.materialize != "document" or not old_path.is_file():
+            continue
+
+        # Read the file to extract the post-rewrite title
+        text = old_path.read_text(encoding="utf-8")
+        post_rewrite_title = _extract_title_from_yaml_header(text)
+
+        if post_rewrite_title is None:
+            # No title found, keep the current filename
+            continue
+
+        # Derive the new slug from the post-rewrite title
+        new_slug = _slug(post_rewrite_title)
+
+        # Extract the current slug from the filename
+        # Filename format: "{padded_id}-{slug}.md"
+        filename = old_path.name
+        # Match pattern like "PL-00066-wf-01-something.md"
+        match = re.match(r"^([A-Za-z]+-\d+-(.+))\.md$", filename)
+        if not match:
+            continue
+
+        prefix_and_old_slug = match.group(1)
+        old_slug = match.group(2)
+
+        # If the slug hasn't changed, skip this file
+        if new_slug == old_slug:
+            continue
+
+        # Construct the new filename
+        prefix = prefix_and_old_slug[: prefix_and_old_slug.rfind("-")]
+        new_filename = f"{prefix}-{new_slug}.md"
+        new_path = old_path.parent / new_filename
+
+        # Rename the file
+        old_path.rename(new_path)
+
+        # Record the rename (repo-relative paths)
+        old_rel = old_path.relative_to(root).as_posix()
+        new_rel = new_path.relative_to(root).as_posix()
+        renamed.append((old_rel, new_rel))
+
+    return renamed
 
 
 # Plain `key: value` lines directly beneath the heading, no fence and no blank line
@@ -7418,6 +7504,12 @@ def migrate(root: Path) -> MigrateResult:
 
     files_written, files_deleted = _write_document_drafts(root, drafts, roadmap_drafts)
 
+    # Build a dictionary of draft paths for d4 fix (post-rewrite slug derivation)
+    draft_paths: dict[Path, _Draft] = {}
+    for d in drafts:
+        if d.materialize == "document" and d.new_path is not None:
+            draft_paths[d.new_path] = d
+
     # Reference-family moves (checklists, `retrofit-impossible.md`, `security-posture.md`)
     # and the unstampable-CSV move both physically relocate a file, the same shape
     # `_write_document_drafts` above just finished, so they run alongside it -- before
@@ -7803,6 +7895,21 @@ def migrate(root: Path) -> MigrateResult:
         derived_redirects=compound_redirects, dir_redirects=dir_link_redirects,
         split_redirects=split_path_redirects,
     )
+
+    # d4 fix: rename documents if their filename slug changed after citation rewrite
+    # (Ruling 106, d4: post-rewrite slug derivation)
+    # NOTE: Temporarily disabled - needs more careful handling of REDIRECTS.csv
+    # renamed_for_slug: list[tuple[str, str]] = _rename_documents_after_citation_rewrite(
+    #     root, draft_paths
+    # )
+    # # Update files_written list: remove old paths, add new paths for renamed files
+    # if renamed_for_slug:
+    #     renamed_old_set = {old for old, _ in renamed_for_slug}
+    #     renamed_new_set = {new for _, new in renamed_for_slug}
+    #     # Remove old paths and add new paths
+    #     files_written = [f for f in files_written if f not in renamed_old_set]
+    #     files_written.extend(renamed_new_set)
+
     for old_compound, new_compound in compound_redirects:
         redirect_rows.append(
             {

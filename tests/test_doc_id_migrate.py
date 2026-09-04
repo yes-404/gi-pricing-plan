@@ -2407,40 +2407,31 @@ def test_ruling_87_standalone_files_are_untouched_by_this_amendment(
     doc_id_cli: types.ModuleType,
 ) -> None:
     """Ruling 95 §4 item 3's re-derived instrument (see the module comment above this
-    constant). `owner="planner"` asserted below is *known wrong* for these three --
-    Ruling 87 §3 item 2 ruled `decision-maker` for them, and Ruling 86 item 2's second
-    clause (still standing after Ruling 95, untouched by this PR) is exactly this
-    hardcode. Asserting it here pins today's behaviour so a future change to it is a
-    deliberate act of implementing Ruling 87, not an incidental side effect discovered
-    after the fact -- this test documents the hardcode, it does not bless it.
+    constant). After d5 fix (Ruling 106): `_RULING_HEADING_RE` now matches H1 ruling
+    headings, so these three files are discovered as ruling documents by
+    `_discover_multi_ruling_files`, not as plain plans by `_discover_plain_plans`.
 
-    Only `_discover_multi_ruling_files` is checked as "no other discovery function
-    claims these": every other `_discover_*` in this module reads a different real
-    location entirely (`docs/adr/`, `docs/findings/register.md`, `docs/roadmap.md`,
-    `docs/specs/*.md`, `.claude/skills/`, ...), never `docs/plans/*.md` ruling-shaped
-    content, so `_discover_multi_ruling_files` -- the one other function this module
-    ever routes a ruling-shaped file through -- is the one collision this amendment
-    could plausibly have introduced.
-
-    Deliberately not `_ruling_file_owner`: post-Ruling-95 that function is
-    content-independent, so pointing it at these three files' real text would return
-    "decision-maker" for any input whatsoever, discriminating nothing -- a test that
-    cannot fail is worse than no test, since it would read as coverage this PR does not
-    have. It would also test a function Ruling 87 item 1 never committed to using for
-    this set: which discovery function eventually claims these files is still open.
+    This is the expected behavior after widening the pattern to accept both H1 and H2
+    ruling headings. The d5 fix changes the discovery: files with `# Ruling N` headings
+    are now correctly discovered as ruling records (RL- documents).
     """
-    drafts = doc_id_cli._discover_plain_plans(ROOT)
-    by_was = {d.was: d for d in drafts}
-    for source in _RULING_87_STANDALONE_SOURCES:
-        assert source in by_was, f"fixture assumption: {source} still exists as a plain plan"
-        assert by_was[source].owner == "planner", by_was[source]
+    plain_plans = doc_id_cli._discover_plain_plans(ROOT)
+    plain_by_was = {d.was: d for d in plain_plans}
 
+    # After d5 fix: these files should NOT be discovered as plain plans anymore
+    # because they have H1 ruling headings, which are now recognized by _RULING_HEADING_RE
+    for source in _RULING_87_STANDALONE_SOURCES:
+        assert source not in plain_by_was, (
+            f"d5 fix: {source} should now be discovered as a ruling document, not a plain plan"
+        )
+
+    # After d5 fix: these files should be discovered as ruling documents
     multi_ruling_was = {d.was for d in doc_id_cli._discover_multi_ruling_files(ROOT)}
-    assert not multi_ruling_was & set(_RULING_87_STANDALONE_SOURCES), (
-        "these three are h1-titled ruling records (Ruling 87 §1) _RULING_HEADING_RE does "
-        "not match today; if this now fires, Ruling 86/87's heading-widening has landed "
-        "and this test needs updating to Ruling 87's terms, not silencing"
-    )
+    for source in _RULING_87_STANDALONE_SOURCES:
+        assert source in multi_ruling_was, (
+            f"d5 fix: {source} should now be discovered as a ruling document "
+            "because it has an H1 `# Ruling N` heading"
+        )
 
 
 # ---------------------------------------------------------------------------------------
