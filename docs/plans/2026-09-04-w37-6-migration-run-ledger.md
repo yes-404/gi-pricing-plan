@@ -195,6 +195,8 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #733 | fix(scripts): W37-6 unit-record inverse — ranges/compounds/relative-links, cause3/3a/4/6, (d5)/(d8) creation rule | `6c92d55` | Not independently re-run — `ci-watcher-733` confirmed python/docs/history-policy all green, CLEAN. Full gate/verify twice (once surfacing and fixing a real crash bug in the author's own diff before reaching a gate). The single largest PR of the day; discharges (d4)/(d5)/(d8) from the checkpoint-1 table. |
 | #732 | docs(plans): ledger — #730/#733 merges, worktree incident, checkpoint-1 real figures | `e3739e1` | UNCHANGED: **13** fatal row(s), matching the recorded set of 13 — run `33888477735` on `docs-w37-6-ledger-cont7`'s `f2885ed` (**correction, deputy 2026-09-04 18:2xZ**: the lead's own entry here previously said 14, a remembered figure from before #725 re-recorded (e), not this run's own printed line — NT-0004 pasted-constant defect, fixed). This ledger's own continued history, no `docs/**` migration-scope path or predicate code touched. CLEAN, confirmed via the exact head SHA's own workflow runs (not a stale rollup) before merging. |
 | #734 | docs(plans): ledger — #732 merge, durability follow-up, row (g) class-3c correction | `61ec8bc` | Not independently re-run; this branch's own commits carry three `--verify` reruns already cited above (14→13 count correction, class-3c reclassification). `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`29a3974`) before merging — confirmed live, not from a stale rollup. |
+| #735 | fix(scripts): exec-h1 — three h1 findings: index link-depth, cross-family bare basenames, check-27 digest reconciliation | `5b6c903` | Real predicate-code change (not docs-only). `history-policy`/`docs`/`python` all `success` on the exact head SHA (`5c1caeb`), confirmed via a backgrounded `gh run watch` per-run-id, not `mergeStateStatus` alone. |
+| #736 | docs(plans): ledger continuation (d4/d5 correction, h1 real figure, pgrep self-match wait-loop fix) | `2a9ed29` | Own commits carry the local `--verify` UNCHANGED: 13 confirmation and the pgrep-fix positive control (run live, not just described). `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`0937628`), confirmed live via backgrounded watch. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1215,7 +1217,7 @@ transcribed from any relay.
 | d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
 | d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
 | g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`); the +15 mangled-companion rise is **class 3c** (deputy ruling, 18:3xZ) — the instrument's own test modules exhibiting the shapes they detect, same class as (d)'s ruling — **discharged by exec-ids' `_docid.sweep_exclusion_reason` tuple landing, not by explanation**; **predicted drop: 21** (`tests/test_doc_id_migrate.py` 11 + `tests/test_doc_id_verify.py` 10, exact `MANGLED_CITATION_RE`-pattern grep, every occurrence line-numbered), awaiting the measured drop once the tuple lands | multiple (partial) | #720, #723, #727, #729 merged; exec-ids' tuple pending (`fba9bfb`, now on `origin/w37-6-citation-inverse-ids`) |
-| h1 | FAIL | `audit-docs.py` non-disclosed classes still non-zero. **Fresh figure, local `--verify --ref origin/main` on tree `5b6c903` (post-#735 merge, correctly flock-wrapped this time — my first attempt used `.` as the target and was refused per Ruling 102 §1, a real checkout, not a disposable snapshot)**: exit 1, 8368 failure(s) total, 8 class(es); checks 29/30/35 are W37-10-owned residue (11+78+79=168, disclosed by count, never fatal); **8200 failure(s) outside those** — every other class, including any not individually named, must be zero. | exec-h1 (partial — #735 landed 3 fixes incl. check 27; classifier-gap follow-up in progress, task #43) | #735 merged `5b6c903`; follow-up PR pending |
+| h1 | FAIL | `audit-docs.py` non-disclosed classes still non-zero. **Full class breakdown, tree `5b6c903` (post-#735), classified via `sed -n '/^FAILED/,$p' <log> \| grep '^  - ' \| sed -E 's/^  - //; s/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' \| sort \| uniq -c`, sum reconciles exactly to 8368**: check 36=5657 (legacy pre-migration form survives), check 32=2286, check 1=250 (broken links), check 35=79 (disclosed, W37-10), check 30=78 (disclosed, W37-10), check 29=11 (disclosed, W37-10), plus 7 singleton failures (check-27 digest mismatch ×1, no-Acceptance-Standard-heading ×1, check 31 ×1, an undefined-FR reference ×1, undefined ADR-1/2/3 references ×3). **8200 outside the 168 disclosed (29/30/35)** — check 36 and check 32 dominate. **Ruled (deputy, 2026-09-04 20:1xZ)**: check 36 and (d) are "one rule at two times" (Ruling 67 §2, same `_docid.LEGACY_FORM_PATTERNS`) but currently disagree — check 36 has no fence exclusion, no disclosed class, no test-module tuple, so it fails on everything (d) has already disclosed. Fix: check 36 adopts (d)'s exclusions/disclosed classes via the same shared predicates; acceptance is check 36's fatal count reconciling exactly with the sum of (d)'s fatal rows on one snapshot. **Check 32's kinds** (python categorization against the same log, sum=2286 exact): padded id outside a link target (RFC-216 §1.1 rule 2)=2043; id does not resolve in `docs/INDEX.md`=240; link-text/target id mismatch=3. No fix dispatched — kinds are tabled per the ruling, most expected to be class-1's disclosed population wearing a different message. **Check 1**=250 broken links, the link subset of d9-d13 — discharged by exec-paths' landing, remeasured then. | exec-h1 (check 36 queued after task #43, task #46; the seven singletons, task #47); exec-paths (check 1, via d9-d13) | #735 merged `5b6c903`; follow-ups pending |
 
 **Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
 exists against them as of this entry. Three (d4, d5, d8) are executor-30-2's scope, PR not
@@ -1657,3 +1659,58 @@ Both reopened as tasks #44/#45, real fixes dispatched to executor-30-2 (already 
 diagnosing engineer on both). Lesson applied going forward: an unverified citation from an
 executor does not get relayed as settled fact — check it against the tree first, same
 standard as any other reference (CLAUDE.md §13).
+
+## 2026-09-04 — pgrep self-match wait-loop bug: 63 zombie shells found, killed, fixed
+
+`.claude/skills/dev-commands/SKILL.md` and `.claude/roles/executor.md` both taught `until !
+pgrep -f '<pattern>'` as the wait-loop form. The pattern is always a literal substring of
+the wait shell's own argv, however specific it is made, so the loop can never observe its
+own target's exit. Six agents (executor-30-2, verify105, triage-other, triage-docs, rowe2,
+alloc) hit this over the session.
+
+**First census undercounted.** The lead's own search used a narrow literal
+("doc-id.py migrate --verify") and found only its own 3 processes at every check — not a
+namespace-isolation problem (tested: `pid:[4026531836]`, 507 processes visible, ruled out),
+just a predicate too narrow to see loops waiting on other targets (pytest, `run_gate.sh`,
+`verify_new_causes.py`, and more). The deputy's broader `"until ! pgrep -f"` predicate found
+**63 shells**, oldest 5h36m, 0% CPU. Listed once, then `pkill -f 'until ! pgrep -f'`;
+re-checked — 0 survivors (the check command's own self-match aside). One new zombie
+(triage-code, spawned 69s after the sweep, since the fix was still only on a branch) killed
+separately.
+
+**Fix**: primary form is the foreground `flock` wrapper (already blocks and returns, no
+loop needed); `while kill -0 "$pid"` where a PID is available; a bracketed pattern
+(`pgrep -f '[c]haracter...'`) where only a pattern is available. Proved on deliberately
+broken input: `pgrep -af 'X'` matched its own invocation; `pgrep -af '[X]'` did not — same
+binary, only the bracket changed. Both files corrected, `Verified` dates refreshed,
+landed `74c031b` (bundled into this ledger PR chain).
+
+**Every live executor messaged the three-line rule directly** (15 teammates) since they
+were spawned before the fix reached `main` — `#736` merging is what makes a *new* spawn
+read it automatically; the message is what reaches an *already-running* one. All 15
+acknowledged, most confirmed no stray loops of their own; a handful had already switched to
+`kill -0`/backgrounded-task patterns independently.
+
+## 2026-09-04 — PR #739: closed, then the closure's own reasoning corrected
+
+verify105 opened PR #739 (`w37-6-d8-task-key-disclosed`, one commit `c07218d`, base
+`a2c0afa`): task keys join d8's disclosed component per the deputy's Ruling #26 (NT-0019
+§1.2 has no family below a slice, so a task key has no target by design — the same ground
+as a slice key). The lead closed it without merging, on a deputy entry that (wrongly)
+called this "the scoped exemption already refused" and misattributed the PR to
+executor-30-2.
+
+**The deputy corrected itself the same cycle.** Ruling #26 stands and is correct; #739
+implements it correctly and is verify105's. The two rulings reconcile rather than
+conflict: #26 is about *class* (a task key is disclosed by design), executor-30-2's
+finding is about *count* (91% of the raw 123 task-key matches are `F-W…` finding ids
+caught by the missing left bound, not real task keys). Neither invalidates the other.
+
+**Sequencing, ruled**: one PR, executor-30-2's, fresh branch from `2a9ed29`, that carries
+#739's component-split diff **verbatim** (credited to verify105 in the body) plus the
+left-bound regex fix plus the residual dispositions. #739 stays closed — superseded by
+inclusion, not refused. A correction comment posted on #739 itself; verify105 and
+executor-30-2 both messaged directly with the corrected framing and instruction.
+
+**Standing rule, new**: every PR any team member opens is named in the lead's next report
+to the deputy with its base sha and what it implements, whether dispatched or not.
