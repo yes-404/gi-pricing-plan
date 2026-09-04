@@ -217,6 +217,8 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #738 | docs(plans): ledger — #735/#736 merges, pgrep incident, h1 full breakdown, #739 close+correction | `ece7952` | Own commits carry: the 63-zombie-shell incident narrative, h1's 8-class breakdown (sum reconciled to 8368), and the #739 close-then-corrected-reasoning narrative. `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`13b2690`), confirmed live via backgrounded watch. |
 | #741 | fix(scripts): every audit-docs.py check's fail() message carries its own check-N: prefix | `124d6bb` | Real predicate-code change (not docs-only) — task #43. `history-policy`/`docs`/`python` all `success` on the exact head SHA (`3bc7216`), confirmed live via backgrounded watch. Zero `unclassified` on h1's migrated-tree breakdown after this landed. |
 | #742 | docs(plans): ledger — #738 merge, checkpoint-1 refresh, h1 breakdown/singleton naming | `4b57a40` | Own commits refresh d1/d6/d7/d9-d13/g rows to real current state, add the Acceptance Standard heading, name h1's singletons by check number. `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`fc8a95c`), confirmed live via backgrounded watch. |
+| #743 | docs(plans): ledger — #742 merge, header-drift incident, roster cleanup | `4062810` | Own commits carry the two-mode header-drift incident narrative and the ten-teammate roster cleanup. `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`f383235`); `docs`/`python` each hit one transient GitHub API 504 mid-watch (re-verified directly via `gh run view`, both genuinely `success` — not trusted from the ambiguous wrapper exit code). |
+| #737 | fix(scripts): W37-6 exec-ids — row (d) citation misses and specification dispositions (d1/d6/d7) | `e95ab26` | `docs`/`history-policy` `success` on exact head `1f233eb`; `python` `success` confirmed via direct `gh run view` after its own watch hit a transient 504. Merged during the maintainer's shutdown-order sequence — not independently re-verified against a fresh `--verify` run post-merge before the halt; that's the handover's first listed action. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1757,3 +1759,51 @@ belongs to a different session entirely (`--parent-session-id c8680303-...`) and
 correctly left untouched — a shared-machine false positive the census predicate does not
 distinguish on its own; confirmed by reading the process's own parent-session argument
 before acting.
+
+## 2026-09-04 — MAINTAINER ORDER: all work halts by 20:00 BST
+
+**Authority**: the maintainer, 2026-09-04 18:05 BST, verbatim (relayed by the deputy):
+*"instruct the team to schedule stop works no later than 20:00 BST, halt process and
+turnoff the VM."*
+
+**Step 1 — shutdown scheduled, corrected after a near-miss.** `sudo shutdown -h 20:00`
+initially scheduled for 20:00 **UTC** (= 21:00 BST) — the box's system clock is UTC and
+`shutdown` takes local time, the exact same drift trap as today's `date` header incidents,
+now on the highest-stakes command of the session. Caught before it mattered: cancelled
+(`shutdown -c`), rescheduled `sudo shutdown -h 19:00` (= 20:00 BST), confirmed both via
+`shutdown --show` and independently via `/run/systemd/shutdown/scheduled`'s
+`USEC=1788548400000000` → `2026-09-04 19:00Z`.
+
+**A shared-machine finding, resolved.** A process belonging to a different session
+(`--agent-id logfig@session-c8680303`) was found on this same VM — flagged before
+proceeding. Resolved: it was the deputy's own read-only log-extraction subagent, already
+stopped. The maintainer's order covers the deputy's own session too, which runs on this VM
+and ends with it — confirmed already known to the maintainer when the order was relayed.
+
+**In progress**: step 2 (every live branch pushed and confirmed by 19:00 BST) — urgent
+push instructions sent to exec-h1, exec-ids, exec-paths, executor-30-2, triage-code.
+
+## 2026-09-04 — halt sequence completed, handover written
+
+Step 2 done: all five live executors' branches confirmed durable via `git ls-remote`
+(exec-h1 and exec-ids self-pushed; the remaining three — executor-30-2's two worktrees and
+triage-code's two — had uncommitted work at the deadline, committed and pushed by the
+lead directly per the order's own fallback instruction, each transparently marked as an
+unreviewed emergency `wip:` commit). Step 3: #737 merged (`e95ab26`, confirmed green on
+its exact head); #740 stays open (`CONFLICTING` against main at its pushed head,
+no CI run exists at that exact head, its `d13` `EXPECTED_VERDICTS` entry is the
+pre-tombstone-rows false-green figure) — does not merge tonight, per the order's own
+"stays open with its branch pushed" clause.
+
+Step 4: the handover is written —
+`~/gi-pricing-plan.local/handover/HANDOVER-2026-09-04.md` — carrying `main`'s sha, the
+full checkpoint-1 table with owner/state/next-action per row, both open PRs with their
+exact state, the two owed reconciliations (d7's 5-line gap, g1's 4-line gap), the
+unopened work (executor-30-2's d4/d5/d8 fix, `wt-d8fix-wip` @ `15406db`), exec-h1's
+three queued items (check-31's superseding fix, check-32's three dispositions, check-36's
+alignment), the live roster with each member's next action, and the process/infrastructure
+lessons from today (pgrep fix, header-drift commands, the `gh run watch` transient-504
+trap, the batched-ledger-PR convention).
+
+Remaining: steps 5 (halt every process) and 6 (final entry, stop own watches) by
+19:50/19:55 BST.
