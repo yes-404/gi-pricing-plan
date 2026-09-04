@@ -343,6 +343,12 @@ and not one machine. Every session on this box is told to export the same
 one database. When the first finishes, its teardown truncates every table out from under the
 second, mid-run.
 
+**Fixed 2026-09-04 at the dispatch level, not by serialising**: every executor worktree now
+creates and exports its own `gipricing_<worktree>` database
+([`dev-commands`](../dev-commands/SKILL.md)'s gate block), so concurrent suites truncate
+only their own tables. A DB-exclusive lock (below the per-worktree DSN in that skill) is the
+fallback for a branch whose migrations cannot run against a fresh copy, not the default.
+
 **It presents as a flaky, unrelated regression, and the shape is distinctive.** Measured
 2026-08-24 across three overlapping runs from two sessions:
 
@@ -767,6 +773,16 @@ does not return freed arenas to the OS — a peak-RSS reading taken after an ear
 the same process is that earlier phase's high-water mark, not this one's.
 
 ## Verified
+
+2026-09-04 — "mutually destructive" gained a pointer to the per-worktree-database fix now
+in `dev-commands`, W37-6, per the deputy's ruling (relayed via `to-lead.md`). Confirmed
+directly before writing it, not merely relayed: the `gipricing` role is superuser with
+`rolcreatedb` (`SELECT rolsuper, rolcreatedb FROM pg_roles WHERE rolname='gipricing'` via
+`asyncpg`, this session) and only the one shared `gipricing` database existed at the time —
+the per-worktree fix costs nothing to create. Full two-worktrees-in-parallel proof (both
+suites passing where the single-DSN case reproduces the symptom table above) delegated to a
+one-shot verification agent rather than run inline, since it requires two genuinely
+concurrent full suites (~13+ minutes each) — see that agent's report for the result.
 
 2026-09-02 — two sections added on test robustness across a sibling branch's change, from a live
 case in W37-5c. An instrument's **assertions** were deliberately written to survive a pending
