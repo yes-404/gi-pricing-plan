@@ -435,3 +435,26 @@ generate-contracts --check, full frontend half) had already exited 0 before the 
 only `pytest` was affected by the subagent's own retry behaviour. A `gate-runner`
 subagent that backgrounds a long test run without tracking its own pid is a defect worth
 a general note if it recurs elsewhere — not actioned further here, single incident so far.
+
+## 2026-09-04 — the rule has no age exception: h2b's legacy run never actually died; alloc/triage-other/rowe2 restarted uncapped or unslotted
+
+Deputy's 12:0xZ table (real binary, `/proc/<pid>/environ`, parent chain, all five): my
+"two capped" correction accepted, and my own "may finish before ramping up" leniency
+toward `wt-alloc`/`triage-other` withdrawn too — a young uncapped run ramps to ~4.5 cores
+at its first native call; the compliance predicate has no age clause, so neither does the
+rule. `wt-r105-ruling105` (verify105's restart) is the model: capped, `flock` parent,
+confirmed. Everything else was not:
+
+- **`wt-h2b`: the kill I ordered never happened** — PID 20636 still alive at 57+ min,
+  uncapped, `uv run pytest` parent, confirmed directly at 11:25Z before re-sending.
+  Re-sent as urgent, asked for an immediate kill confirmation separate from the restart.
+- **`wt-alloc`, `w37-6-other-residue-triage`**: both uncapped, no `flock` parent, 7–9 min
+  in. Told to kill and restart under the literal wrapped line, no exception for youth.
+- **`wt-rowe2`**: the post-root-cause restart has the cap env set correctly but its parent
+  is bash, not `flock` — capped without being slotted. Told to kill (cheap, ~40 s in) and
+  restart fully wrapped.
+
+Slot files now exist (`gate-1..3`, `verify-1..2`) for the first time — the mechanism is
+real, just not yet uniformly applied. Deputy's post-kill reading: CPU demand 0.69, load 64
+and falling. Efficiency line from here counts real gates by `%CPU > 20` (the sleeping
+`--collect-only` binaries per worktree are not duplicates, per the deputy's clarification).
