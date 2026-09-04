@@ -1615,7 +1615,7 @@ _PYCACHE_RE: Final = re.compile(r"__pycache__/|\.pyc$")
 #: cause7 (resumed row-(g) count, after #720/#723/#729/#730/#733 landed — classified-by-
 #: none dropped from ~320 to 190, `other` from ~5-6 to 4): a **relative** markdown link
 #: (`../notes/...`, `../rfcs/...`, `../audit/register.md`) to a document that moved,
-#: outside a `.claude/notes/` tombstone (cause2b's narrower, path-decided case) and
+#: outside a `_NOTES_TOMBSTONE_DIR` tombstone (cause2b's narrower, path-decided case) and
 #: outside the literal `docs/`-rooted or bare-basename forms `_LEGACY_PATH_RES` above
 #: matches — a relative link never contains the literal substring `docs/notes/` etc., so
 #: cause3 cannot see it either. #733 fixed the *forward*-sweep and inverse for several

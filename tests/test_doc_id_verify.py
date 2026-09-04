@@ -907,7 +907,7 @@ def test_residue_cause6_pycache_build_artifact(dv: Any) -> None:
 def test_residue_cause7_relative_link_citation(dv: Any) -> None:
     """cause7 (resumed row-(g) count, after #720/#723/#729/#730/#733 landed): a
     *relative* markdown link (`../notes/...`, `../rfcs/...`) to a document that moved —
-    outside a `.claude/notes/` tombstone (cause2b's narrower, path-decided case) and
+    outside a `_NOTES_TOMBSTONE_DIR` tombstone (cause2b's narrower, path-decided case) and
     outside the literal `docs/`-rooted substring cause3's `_LEGACY_PATH_RES` matches,
     since a relative link never spells the target's absolute root out. Broken-input proof
     against the actual lines read in `docs/plans/2026-09-01-maintainer-delegation-and-
