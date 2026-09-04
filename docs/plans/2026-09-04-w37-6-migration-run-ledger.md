@@ -206,6 +206,11 @@ merge brings the live count to eight, and it is not repeated — the next infras
 waits for a free slot like any other. Efficiency line reads `9/8 (one-time overrun, this
 entry)` until the count drops.
 
+**Resolved 11:05Z:** PR #718 merged (`a9a733c`); `ruling106-impl` confirmed a clean
+`git status --porcelain --branch` in its worktree, made no further edits or pushes, and
+stood down. Live count back to **8/8**. No dispatch had happened in the interim, per the
+disposition above.
+
 ## 2026-09-04 — the fourth F49 trailer, root-caused: the commit-msg guard was worktree-local, never shared
 
 `07ea929` (PR #718) carried a `claude.ai/code/session` trailer despite the git-hygiene
