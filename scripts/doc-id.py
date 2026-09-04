@@ -866,8 +866,10 @@ def compute_next_at_ref(ref: str, *, repo_root: Path = REPO_ROOT) -> NextResult:
 # (running `migrate` again on already-migrated output is a no-op, zero diff). Idempotency
 # falls out of each discovery function's own shape: every `_discover_*` function below
 # looks for a *legacy* shape only (a bullet-list ADR header, a `YYYY-MM-DD-` plan filename,
-# a bare `F<n>` finding cell, a bold `**FR-EX-1**`-style spec id with an alphabetic module
-# segment) — once a file is migrated it no longer has that shape (it moved, or its tokens
+# a bare `F<n>` finding cell, a bold `**FR-XXX-N**`-style spec id with an alphabetic module
+# segment — respelled schematically, 2026-09-04, Ruling 103 §5.1's fence clause extended to
+# row (d): the literal worked example is itself a §7(d) alternative match) — once a file is
+# migrated it no longer has that shape (it moved, or its tokens
 # changed to the numeric-only post-migration form), so a second run's discovery passes find
 # nothing there and touch nothing. The one file that does *not* move or change shape
 # detectably by absence is a vendored skill's own `SKILL.md` (NT-0019 §1.5): it is stamped
@@ -5678,10 +5680,23 @@ def _expand_compound(
         # not reachable by any corpus token today: leave it whole rather than guess.
         return m.group(0)
     prefix = tok[: prefix_match.start()]
+    base_width = len(tok) - len(prefix)
     parts = _CONTINUATION_PART_RE.findall(continuation)
     mapped_siblings: list[tuple[str, str]] = []
     for sep, digits in parts:
         sibling_mapped = active_map.get(prefix + digits)
+        if sibling_mapped is None and len(digits) < base_width:
+            # A citation can shorten a zero-padded family's continuation the same way it
+            # already shortens everything else (`NT-0014-15` for `NT-0014` and `NT-0015`,
+            # real corpus prose -- W37-6 exec-ids, `docs/plans/PL-00233-...md:483` -- rather
+            # than the fully-padded `NT-0010/0011` this function was first proven against).
+            # The sibling's own `token_map` key is still padded to the base token's own
+            # width, so a lookup on the continuation's bare, shorter digits misses even
+            # though the sibling IS mapped. Retried once, zero-padded to match -- never
+            # tried first, so an un-padded family whose continuation already equals the
+            # sibling's own key (`NFR-RATE-13/14`, `base_width` 2, continuation `"14"`
+            # already length 2) never reaches this branch at all.
+            sibling_mapped = active_map.get(prefix + digits.zfill(base_width))
         if sibling_mapped is None:
             return m.group(0)  # one unmapped component -- the whole compound stays whole
         mapped_siblings.append((sep, sibling_mapped))

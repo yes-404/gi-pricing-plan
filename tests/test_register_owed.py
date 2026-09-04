@@ -71,24 +71,34 @@ def test_finds_a_row_owned_only_via_the_decision_column_not_work_item(
     tmp_path: pathlib.Path,
 ) -> None:
     """The F41/F-W9-1 shape, reproduced with synthetic ids: the Work item column names the
-    workstream that *filed* the row (`W9-3`), and the Decision column names the actual
-    *owner* of the carried work (`the W11 scoring workstream`) — a search restricted to the
-    Work item column would miss this row exactly as F41's hand-compiled list did for the
-    real NFR-RATE-13/14 row.
+    slice that *filed* the row (`SL-99991`), and the Decision column names the actual
+    *owner* of the carried work (`the WK-99990 scoring workstream`) — a search restricted
+    to the Work item column would miss this row exactly as F41's hand-compiled list did
+    for the real NFR-RATE-13/14 row.
+
+    Synthetic ids respelled to NT-0019's post-migration shapes (2026-09-04, W37-6
+    exec-ids, class-1 fix per the deputy's ruling): `register-owed.py`'s own matching
+    (`_word_boundary`/`select_matches`, this module) is form-agnostic — a generic
+    word-boundary string search over whatever the Work item and Decision columns hold,
+    with no legacy-shape regex anywhere in the script (confirmed by reading it: the only
+    two compiled patterns are `_PHASE_ID` and `_word_boundary`'s own generic wrapper, both
+    shape-independent) — so nothing in the *script* needed migrating; only these synthetic
+    placeholder ids did, because a legacy-shaped example left standing here reads as this
+    test's SUBJECT still speaking the pre-migration vocabulary, which it never did.
     """
     content = _HEADER + _row(
-        "NFR-EXAMPLE-1 (F999991)", "W9-3", "2",
-        "carry forward with an owner — the W11 scoring workstream; W8's measurements "
-        "recorded",
+        "NFR-991 (FD-99991)", "SL-99991", "2",
+        "carry forward with an owner — the WK-99990 scoring workstream; WK-99989's "
+        "measurements recorded",
     )
     rows = _parse(tmp_path, content)
-    matches = register_owed.select_matches(rows, "W11")
-    assert [m.row.finding_id for m in matches] == ["NFR-EXAMPLE-1 (F999991)"]
+    matches = register_owed.select_matches(rows, "WK-99990")
+    assert [m.row.finding_id for m in matches] == ["NFR-991 (FD-99991)"]
 
     # And a Work-item-only search (the mistake this script exists not to repeat) would have
     # missed it — proven directly, not asserted.
-    work_item_only = register_owed._word_boundary("W11").search(rows[0].fields[2])
-    assert work_item_only is None, "the Work item column alone must not name W11"
+    work_item_only = register_owed._word_boundary("WK-99990").search(rows[0].fields[2])
+    assert work_item_only is None, "the Work item column alone must not name WK-99990"
 
 
 def test_word_boundary_does_not_false_positive_on_a_longer_token(

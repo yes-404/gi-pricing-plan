@@ -136,6 +136,46 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
     ),
 )
 
+# W37-6 exec-ids (2026-09-04, per the deputy's ruling relayed via team-lead): the
+# instrument's own test modules carry a legacy-form id as literal fixture data — proving a
+# check catches (or correctly does not catch) a form needs the form written down somewhere,
+# and these three modules are where NT-0019's own id grammar and its rewrite/verification
+# mechanism are exercised against it. Counting that fixture data as the real repository's
+# residue would be the instrument grading its own tests, the same reasoning
+# `FIXTURE_CORPUS_ROOTS` above already gives the two on-disk fixture directories — this is
+# the equivalent class for a literal Python string inside a test function rather than a
+# checked-in fixture file. Declared per-file with its own reason (§7(d)'s own instruction
+# against a structural rule that would silently widen, echoed at task 30's `register-owed.py`
+# correction below): **`tests/test_register_owed.py` does NOT belong here.** Its subject,
+# `register-owed.py`, is a file NT-0019 §4 itself migrates
+# (`docs/notes/0019-one-id-per-document.md:381`), so its fixtures are stale test data that
+# migrates WITH the script rather than exempted test infrastructure — fixed in the same
+# commit as this exclusion (its scoped-requirement-id and workstream/slice-id placeholders
+# respelled to their post-migration shapes), not deferred here as a citation this comment
+# would then repeat, matching row (d)'s own corpus a second time from inside its own fix.
+TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
+    (
+        "tests/test_doc_id_verify.py",
+        "NT-0019 §7(d)'s own row (d)/(e)/(g) verification instrument's tests — exercises "
+        "`_docid.LEGACY_FORM_PATTERNS` and the padded-id/fence conjuncts against literal "
+        "legacy-form and deliberately-fake ids by construction",
+    ),
+    (
+        "tests/test_audit_docs_ids.py",
+        "audit-docs.py's own NT-0019 id-standard checks (30-39) tests — exercises the "
+        "checks' parsing against literal legacy-form and deliberately-fake ids by "
+        "construction, the same reasoning `LEGACY_FORM_EXCLUDED_PATHS` (audit-docs.py) "
+        "gives its own on-disk fixture files",
+    ),
+    (
+        "tests/test_doc_id_migrate.py",
+        "doc-id.py's migrate()/_rewrite_citations() own tests — exercises token "
+        "discovery, compound expansion and the citation sweep against literal legacy-form "
+        "ids by construction; the deterministic/idempotent proofs both require pre- and "
+        "post-migration forms to sit side by side in the same file",
+    ),
+)
+
 
 def sweep_exclusion_reason(rel_posix: str) -> str | None:
     """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the NT-0019
@@ -144,8 +184,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     excluded. One predicate, read by both consumers, so they can never disagree about what
     is excluded (Ruling 67 §2's "one shared constant").
 
-    Three declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
-    fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), and a Python bytecode-cache artifact
+    Four declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
+    fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), one of the instrument's own named test
+    modules (`TEST_MODULE_EXCLUSIONS`), and a Python bytecode-cache artifact
     (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing `scripts/`
     modules while it runs, never migration input and never real residue.
     """
@@ -154,6 +195,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
             return reason
     for root, reason in FIXTURE_CORPUS_ROOTS:
         if rel_posix == root.rstrip("/") or rel_posix.startswith(root):
+            return reason
+    for name, reason in TEST_MODULE_EXCLUSIONS:
+        if rel_posix == name:
             return reason
     if "__pycache__" in rel_posix.split("/"):
         return (

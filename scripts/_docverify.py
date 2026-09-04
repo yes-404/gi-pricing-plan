@@ -379,6 +379,36 @@ def was_field_line_numbers(text: str) -> frozenset[int]:
     )
 
 
+def fenced_line_numbers(text: str) -> frozenset[int]:
+    """0-based line numbers inside a fenced code block, the fence-marker lines themselves
+    included — Ruling 103 §5.1's fence clause, extended to row (d)'s corpus (2026-09-04,
+    W37-6 exec-ids): a legacy-form id kept byte-exact inside a fenced illustrative exhibit
+    is not a citation the migration is required to rewrite, the identical reading row (e)'s
+    own conjunct 0 already gives a padded id inside a fence (`padded_hits`, this module).
+
+    Reuses `_FENCE_RE` — the same predicate row (e) uses, defined below this function but
+    resolved at call time, not a second implementation of the same rule (Ruling 103 §1.8:
+    "two implementations of one rule that are never compared are two rules").
+
+    A fence-marker line is itself excluded (the toggle fires and the line is added before
+    anything can match against it, mirroring row (e)'s own toggle loop exactly), and every
+    line the toggle leaves "inside" is excluded up to the matching close. An unclosed fence
+    (a malformed document) leaves every remaining line excluded rather than raising — the
+    same "prefer silence over losing evidence" reading `was_field_line_numbers` gives an
+    unclosed front-matter block above.
+    """
+    out: set[int] = set()
+    in_fence = False
+    for i, line in enumerate(text.splitlines()):
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            out.add(i)
+            continue
+        if in_fence:
+            out.add(i)
+    return frozenset(out)
+
+
 @dataclass(frozen=True)
 class Corpus:
     """Every text file in a tree, already split into lines, with the `was:` lines marked.
@@ -392,6 +422,7 @@ class Corpus:
     files: tuple[str, ...]
     lines: Mapping[str, tuple[str, ...]]
     was_lines: Mapping[str, frozenset[int]]
+    fenced_lines: Mapping[str, frozenset[int]]
 
     @property
     def n_files(self) -> int:
@@ -402,13 +433,15 @@ class Corpus:
         return sum(len(v) for v in self.lines.values())
 
     def scan(
-        self, pattern: re.Pattern[str], *, skip_was: bool = True
+        self, pattern: re.Pattern[str], *, skip_was: bool = True, skip_fenced: bool = False
     ) -> tuple[int, int]:
         """(matching lines, matching files) for `pattern` over this corpus."""
         n_lines = 0
         n_files = 0
         for rel in self.files:
             skip = self.was_lines[rel] if skip_was else frozenset()
+            if skip_fenced:
+                skip = skip | self.fenced_lines[rel]
             hits = sum(
                 1
                 for i, line in enumerate(self.lines[rel])
@@ -424,6 +457,7 @@ def load_corpus(tree: Path, *, exclude_basename: str | None = _D_EXCLUDED_BASENA
     files: list[str] = []
     lines: dict[str, tuple[str, ...]] = {}
     was: dict[str, frozenset[int]] = {}
+    fenced: dict[str, frozenset[int]] = {}
     for rel in tracked_files(tree):
         if exclude_basename is not None and rel.rsplit("/", 1)[-1] == exclude_basename:
             continue
@@ -433,7 +467,10 @@ def load_corpus(tree: Path, *, exclude_basename: str | None = _D_EXCLUDED_BASENA
         files.append(rel)
         lines[rel] = tuple(text.splitlines())
         was[rel] = was_field_line_numbers(text)
-    return Corpus(tree=tree, files=tuple(files), lines=lines, was_lines=was)
+        fenced[rel] = fenced_line_numbers(text)
+    return Corpus(
+        tree=tree, files=tuple(files), lines=lines, was_lines=was, fenced_lines=fenced
+    )
 
 
 # ---------------------------------------------------------------------------------------
@@ -789,8 +826,8 @@ def _companions_for(
     gating = 0
     for c_label, pattern_src in D_COMPANIONS.get(label, ()):
         c_pattern = re.compile(pattern_src)
-        m_lines, m_files = mig.scan(c_pattern)
-        c_lines, _ = ctl.scan(c_pattern)
+        m_lines, m_files = mig.scan(c_pattern, skip_fenced=True)
+        c_lines, _ = ctl.scan(c_pattern, skip_fenced=True)
         out.append((
             c_label,
             pattern_src,
@@ -807,8 +844,8 @@ def _companions_for(
         ))
     unanchored_src = _unanchor(pattern.pattern)
     unanchored = re.compile(unanchored_src)
-    u_mig, _ = mig.scan(unanchored)
-    u_ctl, _ = ctl.scan(unanchored)
+    u_mig, _ = mig.scan(unanchored, skip_fenced=True)
+    u_ctl, _ = ctl.scan(unanchored, skip_fenced=True)
     out.append((
         "unanchored (inertness probe)",
         f"{unanchored_src!r} — the same alternative with Ruling 67 Part 1's own `\\b` "
@@ -948,11 +985,170 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
     return DISCLOSE, note
 
 
+# ---------------------------------------------------------------------------------------
+# (d7)'s never-allocated closed class — the deputy's mechanical predicate, 2026-09-04,
+# W37-6 exec-ids (relayed via team-lead). §7(d)'s "scoped requirement id" alternative
+# still reads non-zero after the citation-rewrite and specification-class fixes, but not
+# every remaining hit is a `token_map` miss: a "Next free: `<id>`"/"Highest ids in use:
+# <id>" marker in a dated plan or ruling can name a legacy scoped id that was **never
+# allocated** under that name at all — a citation to nothing, not a citation the sweep
+# forgot. `RL-00144` names the mechanism directly: "A frozen document's next-free marker
+# ages the moment anyone else allocates."
+#
+# The class is decided by a predicate the instrument runs, never by the citing
+# sentence's own wording ("`OQ-RATE-8` stays free" is a historical fact, not evidence by
+# itself — it is CONSISTENT with never-allocated, but one sample proves nothing about
+# the other sixteen tokens this row also carries, which is why every hit is checked
+# mechanically below rather than trusted from its citing ruling). A token is
+# never-allocated only when ALL FOUR of: zero bold definitions in `docs/specs/*.md`
+# (`_discover_requirements`'s own source), zero definition row in `open-questions.md`,
+# `roadmap.md` or `docs/audit/register.md` (every other source `_discover_*` reads for a
+# requirement or open-question id), and no `old_id` row for it in the migrated tree's
+# `docs/REDIRECTS.csv` (confirms the migration itself never allocated it). Any ONE of
+# those failing means something actually defines or migrated the id, and the citing line
+# is a real `token_map` miss (FAIL) — a token can never be excused into this class merely
+# because its citing sentence *sounds* like "never taken".
+#
+# Terminal, not owed a future fix: NT-0019 allocates bare integers per family (D1/D2), so
+# a legacy scoped name that was never allocated can never be allocated *later* either —
+# there is no future state in which `token_map["OQ-RATE-8"]` becomes non-empty. Owner:
+# "none — closed class". The citing sentence itself is a correct historical statement
+# about an id that does not exist and stays exactly as written — Ruling 103 §5.1's fence
+# is for an exhibit of a defective FORM, and this is not one.
+_D7_LABEL: Final = "scoped requirement id"
+
+#: `next free\s*:` — the identical device `scripts/audit-docs.py`'s own `UNALLOCATED`
+#: marker check uses (`re.compile(r"next free\s*:", re.IGNORECASE)`) to tell an
+#: allocation note from a citation. A token on the marker's own line, after the marker,
+#: is not "defined" by that line; every other line naming the token is.
+_NEXT_FREE_MARKER_RE: Final = re.compile(r"next free\s*:", re.IGNORECASE)
+
+#: The other three sources `_discover_*` reads for a requirement or open-question id,
+#: beyond `docs/specs/*.md`'s own bold form (`_scoped_id_bold_defined` below) — read from
+#: the control tree, since a migrated tree's specs are already renumbered flat and carry
+#: no scoped-form definition to find.
+_D7_OTHER_DEFINITION_SOURCES: Final = (
+    "docs/open-questions.md", "docs/roadmap.md", "docs/audit/register.md",
+)
+
+
+def _scoped_id_bold_defined(token: str, ctl: Corpus) -> bool:
+    """True if `token` is bold-defined (`**token**`) anywhere in the control tree's
+    `docs/specs/*.md` — `_discover_requirements`'s own source, read the identical way
+    (a plain substring test; `_LEGACY_SPEC_BOLD_RE` matches nothing this substring test
+    would miss, since every one of its matches contains `**<token>**` literally)."""
+    needle = f"**{token}**"
+    return any(
+        needle in line
+        for rel in ctl.files
+        if rel.startswith("docs/specs/") and rel.endswith(".md")
+        for line in ctl.lines[rel]
+    )
+
+
+def _scoped_id_defined_elsewhere(token: str, ctl: Corpus) -> bool:
+    """True if `token` has a genuine definition row in `open-questions.md`, `roadmap.md`
+    or `docs/audit/register.md` — a `next free:`-marker MENTION on the same line, before
+    the token, is not a definition (the identical reading `audit-docs.py`'s own
+    `UNALLOCATED` check gives it); everything else that names the token counts."""
+    for rel in _D7_OTHER_DEFINITION_SOURCES:
+        for line in ctl.lines.get(rel, ()):
+            at = line.find(token)
+            if at == -1:
+                continue
+            if not _NEXT_FREE_MARKER_RE.search(line[:at]):
+                return True
+    return False
+
+
+def _scoped_id_has_redirect(token: str, mig: Corpus) -> bool:
+    """True if `token` has an `old_id` row in the migrated tree's `docs/REDIRECTS.csv` —
+    read directly from disk, since `REDIRECTS.csv` is `_D_EXCLUDED_BASENAME` and never
+    part of `Corpus.lines`."""
+    text = read_text(mig.tree / "docs" / "REDIRECTS.csv")
+    if text is None:
+        return False
+    prefix = f"{token},"
+    return any(line.startswith(prefix) for line in text.splitlines())
+
+
+def _scoped_id_is_never_allocated(token: str, mig: Corpus, ctl: Corpus) -> bool:
+    """The deputy's mechanical predicate, applied to one token. `not any(...)` rather
+    than three separate early-returns so every one of the three checks always runs and
+    a caller can tell, from this function's own body, that no check was short-circuited
+    away — the same shape as the broken-input proof this predicate is required to pass
+    in both directions."""
+    return not (
+        _scoped_id_bold_defined(token, ctl)
+        or _scoped_id_defined_elsewhere(token, ctl)
+        or _scoped_id_has_redirect(token, mig)
+    )
+
+
+def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
+    """(d7)'s non-zero population, split by the never-allocated predicate. Reads the
+    identical migrated-tree population `rows_d`'s own `mig.scan(pattern, skip_fenced=
+    True)` counts (`was:` and fenced lines excluded the same way), so this function's own
+    line count matches the row's reported `migrated` figure exactly.
+
+    Every token on every still-matching line is checked; ONE real hit (a token that is
+    not never-allocated) fails the whole row, named — this is deliberately not a
+    line-by-line partial disclosure, because a row mixing a real miss with disclosed
+    residue would read as clean at a glance while still hiding the real miss.
+    """
+    d7_pattern = re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")
+    real_hits: list[str] = []
+    disclosed_lines = 0
+    disclosed_files: set[str] = set()
+    for rel in mig.files:
+        skip = mig.was_lines[rel] | mig.fenced_lines[rel]
+        line_disclosed = False
+        for i, line in enumerate(mig.lines[rel]):
+            if i in skip:
+                continue
+            tokens = d7_pattern.findall(line)
+            if not tokens:
+                continue
+            for token in tokens:
+                if _scoped_id_is_never_allocated(token, mig, ctl):
+                    line_disclosed = True
+                else:
+                    real_hits.append(f"{token} ({rel}:{i + 1})")
+        if line_disclosed:
+            disclosed_files.add(rel)
+            disclosed_lines += sum(
+                1
+                for i, line in enumerate(mig.lines[rel])
+                if i not in skip and d7_pattern.search(line)
+            )
+    if real_hits:
+        shown = "; ".join(real_hits[:10])
+        more = f" (+{len(real_hits) - 10} more)" if len(real_hits) > 10 else ""
+        return FAIL, (
+            f"{len(real_hits)} hit(s) name a token with a real definition or an "
+            f"existing `docs/REDIRECTS.csv` row — a genuine `token_map` miss, not the "
+            f"never-allocated class: {shown}{more}"
+        )
+    return DISCLOSE, (
+        f"every one of {disclosed_lines} line(s) / {len(disclosed_files)} file(s) "
+        "names only a legacy scoped-form id with zero definition rows in every source "
+        "`_discover_*` reads (`docs/specs/*.md`, `docs/open-questions.md`, "
+        "`docs/roadmap.md`, `docs/audit/register.md`) and no `old_id` row in "
+        "`docs/REDIRECTS.csv` — the closed never-allocated class (deputy's mechanical "
+        "predicate, 2026-09-04, W37-6 exec-ids). Terminal: NT-0019 allocates bare "
+        "integers per family, so a legacy scoped name that was never allocated can "
+        "never be allocated later either. Owner: none — closed class. The citing "
+        "sentence stays exactly as written; Ruling 103 §5.1's fence is for a "
+        "defective-form exhibit, not a correct historical statement about an id that "
+        "does not exist."
+    )
+
+
 def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
     rows: list[Row] = []
     for i, (label, pattern) in enumerate(D_ALTERNATIVES, start=1):
-        m_lines, m_files = mig.scan(pattern)
-        c_lines, c_files = ctl.scan(pattern)
+        m_lines, m_files = mig.scan(pattern, skip_fenced=True)
+        c_lines, c_files = ctl.scan(pattern, skip_fenced=True)
         companions, gating = _companions_for(label, pattern, mig, ctl)
         if label == _D8_LABEL:
             verdict, note = _d8_verdict(mig, ctl, m_lines, c_lines)
@@ -976,6 +1172,10 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
                     "excluded from the zero requirement, count disclosed "
                     f"({D_DISCLOSED_CITATION.get(label, 'ruling pending')})"
                 )
+                if creation_note:
+                    note += "; " + creation_note
+            elif label == _D7_LABEL and m_lines > 0:
+                verdict, note = _d7_disclosed_or_fail(mig, ctl)
                 if creation_note:
                     note += "; " + creation_note
             else:
@@ -1005,7 +1205,11 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
                     f"{pattern.pattern!r} over every line of `git ls-files --cached "
                     "--others --exclude-standard`, minus REDIRECTS.csv, minus "
                     "front-matter `was:` **field** lines "
-                    "(`_docverify.was_field_line_numbers`); taken verbatim, by index, "
+                    "(`_docverify.was_field_line_numbers`), minus lines inside a fenced "
+                    "code block (`_docverify.fenced_line_numbers` — Ruling 103 §5.1's "
+                    "fence clause, extended to row (d)'s corpus 2026-09-04, W37-6 "
+                    "exec-ids: an illustrative exhibit kept byte-exact inside a fence is "
+                    "not a citation); taken verbatim, by index, "
                     "from `_docid.LEGACY_FORM_PATTERNS` — Ruling 67 §2's one shared "
                     "constant, the same tuple `audit-docs.py` check 36 reads, anchored "
                     "per Ruling 67 §2 Part 1 (a `\\b`-bounded complete identifier, or a "
@@ -2249,7 +2453,13 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # SET CHANGE (PROGRESSED) on the next `--verify` run regardless.
     "c": PASS,          # docs/INDEX.md byte-stable against its own renderer — same
                          # unrelated prior-PR progress, re-recorded for the same reason
-    "d1": FAIL,         # NT-00
+    "d1": PASS,         # NT-\d{4} — FIXED (2026-09-04, W37-6 exec-ids): `_expand_compound`'s
+                         # padding bug for a zero-padded family's shortened compound
+                         # continuation (`NT-0014-15`, real citation, `docs/plans/...w37-6-
+                         # the-migration-run-the-go-ahead-ask...md`) was the row's only
+                         # citation-class miss; the four specification-class matches
+                         # (a deliberately-broken-input example, three test fixtures) were
+                         # fenced or excluded via the new `tests/`-module class. 0/0.
     "d2": DISCLOSE,     # F-W[0-9] — Ruling 105 §A: the same alias class as `F[0-9]{2}`,
                          # excluded from the zero requirement with its count disclosed
                          # regardless of the migrated/control comparison (2026-09-03, task 14).
@@ -2283,12 +2493,30 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # existing, now-measured defect (a `Ruling <n>` ambiguity/
                          # migration gap, row (d)'s file, previously closed at task 7) — not
                          # fixed here, out of row (b)'s own scope.
-    "d6": FAIL,         # ADR-0[0-9]{3}\b — trailing `\b` added (2026-09-03, task 14, Ruling
-                         # 67 §2 Part 1's already-ruled "complete identifier" requirement,
-                         # not carried here until now): the bare pattern matched as a
-                         # substring of any correctly-migrated five-digit id; genuine
-                         # un-migrated 4-digit citations remain, so the row still fails
-    "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
+    "d6": PASS,         # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
+                         # original matches, plus one more surfaced by `origin/main` drift
+                         # (`docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md`, a
+                         # row-h plan landed after this row's original 74-line snapshot),
+                         # were specification-class — deliberately-fake, schematic
+                         # `ADR-0NNN`-shaped parsing-width worked examples and test
+                         # fixtures (respelled here too, self-referentially, so this very
+                         # comment does not itself trip the row it describes — the same
+                         # class this table's own history above already warns about),
+                         # never a real citation. Fenced or respelled; zero citation-class
+                         # misses. 0/0.
+    "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+ — the 39 "Next free"/"Highest ids
+                         # in use" lines this row carried are now the never-allocated
+                         # closed class (deputy's mechanical predicate, 2026-09-04, W37-6
+                         # exec-ids, this same commit): disclosed, excluded from the zero
+                         # requirement, owner "none — closed class". The row still FAILs
+                         # on two hits neither owned by W37-6 exec-ids: `FR-RATE-41` in
+                         # the generated `docs/rulings/INDEX.md` (a compound-title-sweep
+                         # bug in `_write_split_source_indexes`'s `_sweep_title`, owned by
+                         # exec-h1 per team-lead 2026-09-04) and `FR-PLAT-4` in `scripts/
+                         # doc-id.py`'s own `_expand_range` docstring (a real, bold-defined
+                         # id used as an illustrative worked example rather than a fake
+                         # one — row-g's/#733's code, surfaced by `origin/main` drift,
+                         # flagged rather than fixed here, out of this row's own scope).
     "d8": FAIL,         # workstream/slice id — RECLASSIFIED REGRESSION -> FAIL (2026-09-04
                          # ruling, `to-lead.md:1017`, task #30): the prior REGRESSION verdict
                          # was a raw-line-count artifact. #721's `_compound_token_re`
