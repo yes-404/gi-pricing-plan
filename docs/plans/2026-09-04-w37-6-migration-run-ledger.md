@@ -229,3 +229,45 @@ setup. Verified: `wt-alloc`, `wt-ruling106`, and the three new `(g)` triage work
 shared hooks dir with no override; the five worktrees with an existing per-worktree hook
 were left as they are (already correctly guarded, redundant with the new shared one but
 not conflicting).
+
+## 2026-09-04 — the box is 3x oversubscribed: a concurrency budget, not a lower executor cap
+
+**Reading (mine, 11:08Z, confirming the deputy's 11:1xZ read):** `uptime` — **load average
+55.32 / 49.12 / 43.15 on 16 cores** (~3.5x oversubscribed on the 1-minute figure). The
+deputy's own reading at 11:1xZ: 48.1/47.0/42.1, 25 `pytest` processes and 13
+`migrate --verify` runs live at once; RAM 41 GB free, tmpfs 27 GB free, `/` 5.7 GB free —
+memory and disk are fine, CPU is the bottleneck. My 12:0x entry (relaying verify105's
+status) had read this as restart-recovery load; the deputy corrected it: it is eight
+executors each running a full gate plus a `--verify` snapshot at once, spending the
+capacity the eight-executor cap (Ruling 105 D7) was given on contention rather than on
+work — every gate now takes three to four times its CI duration.
+
+**Ruled — a concurrency budget, enforced by a lock, in every dispatch from now
+(authority: the maintainer's "watch the efficiency" instruction of 2026-09-04, relayed by
+the deputy):**
+1. At most **4** full local gates at once, at most **2** `migrate --verify` runs at once —
+   `flock` on numbered slot files under `/tmp/slots/` (`mkdir -p /tmp/slots`, tmpfs, resets
+   on restart by design): `for i in 1 2 3 4; do flock -n /tmp/slots/gate-$i -c '<cmd>' &&
+   break; done`, blocking fallback `flock -w 3600 /tmp/slots/gate-1 -c '<cmd>'`; the same
+   pattern with two `verify-$i` slots.
+2. Iterate on targeted tests (`pytest <file> -k <symbol>`) while working; the full
+   `CLAUDE.md` §11 gate runs **once**, before push; `--verify` runs **once** per push, not
+   per edit.
+3. `ci-watcher` stays the CI half; local runs only prove readiness before push.
+4. The executor cap stays **eight** (Ruling 105 D7 unchanged) — this budget shapes *when*
+   they compute, not how many exist.
+
+**Action taken 11:08–11:1xZ:** `/tmp/slots/` created; all eight live executors (h2b, alloc,
+executor-30-2, rowe2, verify105, triage-docs, triage-code, triage-other) messaged directly
+with the four rules and the exact `flock` commands, told to let any in-flight full
+gate/`--verify` run finish rather than kill it, and to apply the budget from their next run
+onward. verify105 specifically flagged: its stuck full-pytest wait (reported 11:01Z, ~16%
+through under the same contention) is this cause, not restart recovery — told to keep
+waiting on the current run but wrap any future rerun in a gate slot.
+
+From here, every efficiency line in this ledger and in `to-deputy.md` carries a fourth
+number: **load average / core count** alongside the executor count.
+
+*Violations this closes off going forward: a dispatch brief without the slot lock; a full
+gate run per edit; a `--verify` per edit; a load figure reported without the core count
+beside it.*
