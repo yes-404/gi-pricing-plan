@@ -713,3 +713,21 @@ review, and one rebase point on the critical path. Split:
 - **verify105's (d8) addendum**: the `.pyc` item moved out, stays a focused small change.
 
 Both executor-30-2 and verify105 messaged with the corrected scope.
+
+## 2026-09-04 — verify105's rebase preserved #721's real (d8) REGRESSION finding correctly; pycache-scope collision caught before push
+
+Rebasing onto `origin/main` (now `a2c0afa`) surfaced a genuine conflict on
+`EXPECTED_VERDICTS["d8"]`: #721 un-masked the same `_compound_token_re` boundary bug at
+larger scale for the W-family and re-recorded (d8) as REGRESSION (2513 migrated, above the
+2358 control). verify105 kept #721's REGRESSION content unedited rather than overwriting it
+with its own prior DISCLOSE value — the correct call; a silent overwrite would have reverted
+a real finding and false-triggered the SET CHANGE detector on the next `--verify`. Its
+task-key/slice-key disclosure logic sits in `_d8_verdict`'s non-creation branch, which
+#721's REGRESSION pre-empts — correct but dormant until the W-family fix lands and migrated
+drops below control. Tests exercise `_d8_verdict` directly against fixtures, unaffected by
+which state the live corpus is in — 6/6 green post-rebase.
+
+**Caught before it shipped**: verify105's branch still carried the `.pyc` corpus fix, which
+moved to `exec-excl`'s separate PR earlier this entry-set — a scope-split correction that
+crossed in flight with its gate run. Flagged immediately; told to drop it before pushing to
+avoid two PRs independently fixing the same corpus-building code.
