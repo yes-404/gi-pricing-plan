@@ -2096,10 +2096,17 @@ def _inverse_token_pattern(tokens: tuple[str, ...]) -> re.Pattern[str]:
     return re.compile(rf"\b(?:{alternation})\b(?![-/][0-9])")
 
 
-def _this_runs_stamp_id(text: str, allocated_ids: Collection[str]) -> str | None:
+def _this_runs_stamp_id(
+    text: str,
+    allocated_ids: Collection[str],
+    *,
+    rel: str | None = None,
+    reference_stamp_paths: Collection[str] = frozenset(),
+) -> str | None:
     """`text`'s leading `---`-delimited block's `id:`, but only when that block is a
     header *this run's own migration* wrote — else `None`, meaning "not this run's
-    stamp, do not strip it."
+    stamp, do not strip it." Returns `""` (not `None`) for a confirmed Reference-family
+    stamp, which by design carries no `id:` line at all — see below.
 
     Ruling 105 §2 ("DP-7 must strip only the header this run wrote"): a bare `---`
     opener is not enough, because most of `.claude/skills/**` and `.claude/agents/`
@@ -2112,6 +2119,20 @@ def _this_runs_stamp_id(text: str, allocated_ids: Collection[str]) -> str | None
     virtually every one of them without a second check. `allocated_ids` is the actual
     filter: this run's own `REDIRECTS.csv` `new_id` column, so a header this run did not
     itself just write is left alone even when it happens to parse.
+
+    **`allocated_ids` alone is not sufficient — the Reference family has no `id:` at
+    all** (NT-0019 §1.2, `doc-id.py`'s `_stamp_header("REFERENCE", None, ...)`), so its
+    stamp can never appear in `allocated_ids` regardless of whether this run wrote it.
+    Found live: `.claude/roles/example-role.md` — headerless before this run,
+    Reference-stamped by it (`_stamp_reference_targets`, NT-0019 §4 step 5) — read as
+    "not this run's stamp" under the `allocated_ids`-only check, so its citation rewrite
+    could never reproduce the merge-base bytes and it fell through to
+    `classified-by-none` for a rewrite that was entirely correct. `reference_stamp_paths`
+    is the caller's set of paths this run's own migration Reference-stamps (`doc-id.py`'s
+    `_discover_reference_stamp_targets`, run over the pre-migration tree) — the same
+    per-family membership test `allocated_ids` already is for every id-bearing family,
+    read from the one place a headerless stamp's provenance can still be checked: which
+    paths this run's own stamp writer actually targets, not what its header contains.
     """
     lines = text.splitlines()
     if not lines or lines[0] != "---":
@@ -2120,9 +2141,13 @@ def _this_runs_stamp_id(text: str, allocated_ids: Collection[str]) -> str | None
         header = _docid.parse_header_text(text)
     except _docid.HeaderError:
         return None  # not NT-0019-shaped at all -- e.g. the 3 vendored SKILL.md blocks
-    if header is None or header.id is None or header.id not in allocated_ids:
+    if header is None:
         return None
-    return header.id
+    if header.id is not None:
+        return header.id if header.id in allocated_ids else None
+    if rel is not None and rel in reference_stamp_paths:
+        return ""  # confirmed: a Reference-family stamp, which carries no id by design
+    return None
 
 
 def frozen_file_matches_after_migration_stamp(
@@ -2131,6 +2156,9 @@ def frozen_file_matches_after_migration_stamp(
     redirects_inverse: Mapping[str, str],
     *,
     allocated_ids: Collection[str] = frozenset(),
+    old_rel: str | None = None,
+    new_rel: str | None = None,
+    reference_stamp_paths: Collection[str] = frozenset(),
 ) -> bool:
     """Ruling 68's DP-7 disposition, verbatim: "the new bytes, after removing the leading
     front-matter block and applying the inverse of every REDIRECTS.csv mapping, are
@@ -2156,6 +2184,14 @@ def frozen_file_matches_after_migration_stamp(
     citation-token rewrite in a `.claude/skills/**` or `.claude/agents/` file then failed
     this predicate for reasons unrelated to whether the rewrite itself was correct
     (Ruling 105 §2, up to 237 of row (g)'s ~504 `classified-by-none` files).
+
+    **`old_rel`/`new_rel`/`reference_stamp_paths`: the Reference family carries no
+    `id:` at all**, so `allocated_ids` alone cannot confirm a Reference stamp is this
+    run's own (`.claude/roles/example-role.md`, headerless before this run and
+    Reference-stamped by it — `_this_runs_stamp_id`'s own docstring has the found-live
+    case). All three default to `None`/empty, the same conservative no-op default
+    `allocated_ids` already uses: a caller that does not pass them gets exactly the
+    id-only behaviour, never a silent new strip.
 
     Longest `new_token` first (found by W37-5, applying this function against a real
     multi-id redirects map rather than the single-entry maps this module's own tests use):
@@ -2185,15 +2221,17 @@ def frozen_file_matches_after_migration_stamp(
     still inverts.
     """
 
-    def _strip_this_runs_stamp(text: str) -> str:
-        if _this_runs_stamp_id(text, allocated_ids) is None:
+    def _strip_this_runs_stamp(text: str, rel: str | None) -> str:
+        if _this_runs_stamp_id(
+            text, allocated_ids, rel=rel, reference_stamp_paths=reference_stamp_paths
+        ) is None:
             return text
         lines = text.splitlines()
         closing = lines.index("---", 1)  # present: _this_runs_stamp_id already found it
         return "\n".join(lines[closing + 1 :])
 
-    stripped = _strip_this_runs_stamp(new_text)
-    old_stripped = _strip_this_runs_stamp(old_body)
+    stripped = _strip_this_runs_stamp(new_text, new_rel)
+    old_stripped = _strip_this_runs_stamp(old_body, old_rel)
     if not redirects_inverse:
         return stripped.strip("\n") == old_stripped.strip("\n")
     pattern = _inverse_token_pattern(tuple(sorted(redirects_inverse, key=len, reverse=True)))

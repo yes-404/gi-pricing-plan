@@ -807,6 +807,91 @@ def test_ruling_105_dp7_foreign_front_matter_hand_edit_is_still_classified_by_no
 
 
 # ---------------------------------------------------------------------------------------
+# Follow-up to Ruling 105 §2 above: the Reference family (`.claude/roles/`,
+# `.claude/agents/`, a plain `.claude/skills/*/SKILL.md`, and a vendored skill's own
+# manifest) carries no `id:` line at all (NT-0019 §1.2) -- `allocated_ids`, the fix
+# above, is built from `REDIRECTS.csv`'s `new_id` column and so can never confirm one of
+# *these* stamps as this run's own, regardless of whether it is. Found live on the real
+# fixture corpus once the foreign-front-matter fix above was in place:
+# `.claude/roles/example-role.md` (headerless before this run, Reference-stamped by it)
+# and `.claude/skills/vendored-example-skill/SKILL.md` (headerless before this run,
+# vendored-stamped by it) both fell to `classified-by-none` the identical way the
+# foreign-front-matter files did, for the identical reason one level further down: an
+# id-based membership test cannot express "this run wrote a header that has no id."
+# Fixed by widening the confirmation to path membership in this run's own recorded
+# stamp-target sets (`_discover_reference_stamp_targets` and
+# `_discover_vendored_skill_manifests(...).to_stamp`, both re-derived from `old_root`)
+# whenever a header carries no `id:` at all.
+# ---------------------------------------------------------------------------------------
+
+
+def test_ruling_105_dp7_reference_stamp_clean_rewrite_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`.claude/roles/example-role.md` carries no front matter before this run and no
+    `id:` after it (Reference family, NT-0019 §1.2) -- only its `NT-0001` citation
+    changes. Must classify class 2, not `classified-by-none`.
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = ".claude/roles/example-role.md"
+    assert rel in classification.per_class["2-reference-token"], classification.summary()
+    assert rel not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_ruling_105_dp7_vendored_manifest_clean_rewrite_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The same gap, one population over: a vendored skill's own manifest is stamped the
+    identical headerless way but by a *second*, disjoint writer
+    (`_discover_reference_stamp_targets` itself excludes every vendored manifest via
+    `_ACCOUNTED_VENDORED`, since a different loop in `migrate` stamps it). Only its
+    `FR-EX-1` citation changes; must classify class 2.
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = ".claude/skills/vendored-example-skill/SKILL.md"
+    assert rel in classification.per_class["2-reference-token"], classification.summary()
+    assert rel not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_ruling_105_dp7_reference_stamp_hand_edit_is_still_classified_by_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The negative broken-input proof for the same gap: path membership in this run's
+    own stamp-target set must not become a blanket pass for that path. A genuine hand
+    edit to `.claude/roles/example-role.md`'s body, beyond the citation rewrite, must
+    still be refused.
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+
+    rel = ".claude/roles/example-role.md"
+    target = new_root / rel
+    text = target.read_text(encoding="utf-8")
+    mutated = text + "\nA hand-typed sentence no generator wrote.\n"
+    assert mutated != text
+    target.write_text(mutated, encoding="utf-8")
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert rel in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel not in classification.per_class["2-reference-token"]
+    assert any(rel in v for v in classification.violations), classification.violations
+
+
+# ---------------------------------------------------------------------------------------
 # Task 4 item 4 — the class-4 link-repoint fix (W37-6 channel `:407-413`): an id-less
 # move's own `old_path`/`new_path` REDIRECTS.csv row records that the file moved, but
 # `_path_rewrite_tokens` also adds tree-wide citation forms to the sweep that had no

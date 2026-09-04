@@ -7813,6 +7813,32 @@ def classify_migration_diff(
     # `name:`/`description:` keys land in `.extra` with no error) but its `id` is never
     # one of these, so it is correctly left unstripped by both sides of the comparison.
     allocated_ids = frozenset(row["new_id"] for row in rows if row.get("new_id"))
+    # The Reference family (`.claude/roles/`, `.claude/agents/`, `.claude/skills/*/
+    # SKILL.md`, every `README.md`) carries no `id:` line at all (NT-0019 §1.2), so
+    # `allocated_ids` can never confirm one of *its* stamps as this run's own -- found
+    # live on `.claude/roles/example-role.md`, headerless before this run and
+    # Reference-stamped by it, whose citation rewrite then had no path to reproduce the
+    # merge-base bytes. `_discover_reference_stamp_targets` is the same function
+    # `migrate` itself calls to decide what to stamp, run here over `old_root` (the
+    # pre-migration tree this diff is against) rather than `new_root`, since a target's
+    # own front-matter state is what routes it and `new_root`'s copy already carries the
+    # stamp. `routed=()` (the default): the resulting set can only be a harmless
+    # superset of the real one for this predicate's purposes -- any file it wrongly adds
+    # gets a real id-bearing header instead of a headerless one, so the id branch above
+    # matches it first and this fallback is never reached for it.
+    # A vendored skill's own manifest is stamped the identical headerless way (`migrate`'s
+    # `vendored_scan.to_stamp` loop, `_stamp_header("REFERENCE", None, ...)` plus
+    # `vendored`/`origin`), but it is a *second*, disjoint population --
+    # `_discover_reference_stamp_targets` itself excludes every vendored manifest
+    # (`_ACCOUNTED_VENDORED`) because a second writer, not this one, stamps it. Found
+    # live on `.claude/skills/<vendored>/SKILL.md`: the same "no id" gap, one population
+    # over from the one the comment above names.
+    reference_stamp_paths = frozenset(
+        target.rel for target in _discover_reference_stamp_targets(old_root)[0]
+    ) | frozenset(
+        path.relative_to(old_root).as_posix()
+        for path in _discover_vendored_skill_manifests(old_root).to_stamp
+    )
 
     def _collision_safe_inverse(pairs: Iterable[tuple[str, str]]) -> dict[str, str]:
         """`{new: old}`, refusing a `new` key two different `old` values both claim.
@@ -7957,7 +7983,8 @@ def classify_migration_diff(
             buckets["3-move" if moved else "1-front-matter-stamp"].append(old_rel)
             return
         if audit_docs.frozen_file_matches_after_migration_stamp(
-            compare_against, new_text, _inverse_for(new_rel), allocated_ids=allocated_ids
+            compare_against, new_text, _inverse_for(new_rel), allocated_ids=allocated_ids,
+            old_rel=old_rel, new_rel=new_rel, reference_stamp_paths=reference_stamp_paths,
         ):
             buckets["3-move" if moved else "2-reference-token"].append(old_rel)
             return
