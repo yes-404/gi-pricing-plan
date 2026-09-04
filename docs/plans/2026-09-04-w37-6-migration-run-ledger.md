@@ -144,3 +144,4 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 
 | PR | Title | Merge commit | `--verify` verdict set |
 |---|---|---|---|
+| #701 | docs(skills): git-hygiene — a line number derived from a slice or a filtered stream | `ad51906` | UNCHANGED: 14 (docs-only skill change, no `docs/` or migration-script path touched — does not affect the predicate) |
