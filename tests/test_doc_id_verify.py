@@ -619,6 +619,46 @@ def test_row_e_conjunct_2_strips_markdown_emphasis_before_the_path_test(
                     s2).verdict == dv.FAIL
 
 
+def test_row_e_conjunct_2_strips_a_trailing_line_locator_before_the_path_test(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A fourth predicate defect row (e)'s own measurement found, alongside Ruling 103's
+    three: this corpus's own same-directory citation convention — `filename.md:123` or
+    `filename.md:401-404`, no leading `docs/plans/` because both files share a directory —
+    is a filename token per rule 3's own wording ("the leading component of a filename
+    ending `.md`"), but the trailing `:<line>` defeated the bare `\\.[A-Za-z0-9]{2,4}$`
+    extension test, which requires the token to *end* at the extension. Found on three real
+    citations at `e97b97a` (`PL-92`, `PL-134`, `PL-142` each citing a sibling plan's old
+    filename by `:<line>` — unpadded here, a citation rather than a specimen, per rule 2).
+    Red-then-green on the identical padded id: bare in prose is
+    still a violation; the same id leading a `filename.md:<line>` token, single line or a
+    range, is a path."""
+    idx = _index("PL-9998")
+    bare = {
+        "docs/a.md": "the pair was relayed as PL-09998 in the review\n",
+        "docs/INDEX.md": idx,
+    }
+    s1 = _snapshot(dv, tmp_path / "e2c", bare, bare)
+    assert dv.row_e(dv.load_corpus(s1.migrated), dv.load_corpus(s1.control),
+                    s1).verdict == dv.FAIL
+
+    single_line = {
+        "docs/a.md": "see `PL-09998-slug.md:430` for the source\n",
+        "docs/INDEX.md": idx,
+    }
+    s2 = _snapshot(dv, tmp_path / "e2d", single_line, single_line)
+    assert dv.row_e(dv.load_corpus(s2.migrated), dv.load_corpus(s2.control),
+                    s2).verdict == dv.PASS
+
+    line_range = {
+        "docs/a.md": "see `PL-09998-slug.md:401-404` for the source\n",
+        "docs/INDEX.md": idx,
+    }
+    s3 = _snapshot(dv, tmp_path / "e2e", line_range, line_range)
+    assert dv.row_e(dv.load_corpus(s3.migrated), dv.load_corpus(s3.control),
+                    s3).verdict == dv.PASS
+
+
 def test_row_e_conjunct_1_reads_pad_width_from_the_symbol(dv: Any) -> None:
     """Ruling 103 defect 1, and the reason `CLAUDE.md` §13 forbids a pasted constant: on
     one corpus `-0\\d{4}` and `-0[0-9]{3,4}` differed by **355 occurrences**, which is
@@ -951,19 +991,24 @@ def test_d6_anchor_does_not_trip_on_a_correctly_migrated_five_digit_id(
     """The peer executor's finding, folded into this ruling's follow-up (same file).
 
     `ADR-0[0-9]{3}` with no trailing anchor reads the first three of a five-digit padded
-    id's four post-hyphen digits as a hit — `ADR-00004` (`_docid.PAD_WIDTH` = 5) contains
-    `ADR-0000`. The trailing `\\b` this fix adds is the same device `\\bF[0-9]{2}\\b` already
+    id's four post-hyphen digits as a hit — `ADR-00999` (`_docid.PAD_WIDTH` = 5) contains
+    `ADR-0099`. The trailing `\\b` this fix adds is the same device `\\bF[0-9]{2}\\b` already
     uses for its own boundary. Red-then-green on two distinct inputs: a genuinely
     un-migrated 4-digit legacy citation must still trip the row; a correctly-migrated
     5-digit citation must not.
+
+    `ADR-999` rather than a real ADR, deliberately: highest allocated is `ADR-10`, and this
+    file is inside the corpus row (e) scans, so a real number here would make this fixture a
+    genuine `NT-0019` §7(e) violation — the same self-counting shape `RL-09999`/`PL-09998`
+    above already guard against.
     """
-    migrated_ok = {"docs/a.md": "see ADR-00004 for the decision\n"}
+    migrated_ok = {"docs/a.md": "see ADR-00999 for the decision\n"}
     row_ok = _d_rows(dv, _snapshot(dv, tmp_path / "d6ok", migrated_ok, _CLEAN))["d6"]
     assert row_ok.migrated.startswith("0 line"), (
         "a correctly-migrated five-digit id must not be read as a legacy citation"
     )
 
-    migrated_bad = {"docs/a.md": "see ADR-0004 for the decision\n"}
+    migrated_bad = {"docs/a.md": "see ADR-0999 for the decision\n"}
     row_bad = _d_rows(dv, _snapshot(dv, tmp_path / "d6bad", migrated_bad, _CLEAN))["d6"]
     assert not row_bad.migrated.startswith("0 line"), (
         "a genuinely un-migrated 4-digit legacy citation must still trip the row"
