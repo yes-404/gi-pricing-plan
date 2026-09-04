@@ -1187,6 +1187,33 @@ convenient, not blocking anything.
 and resolve by keeping both sides' additions. **#723** reads `UNKNOWN`, rebase in flight,
 nothing to do until it settles.
 
-**Next: the checkpoint-1 table** — the 13 fatal rows on `0af63b4`, each with verdict, owner
-and discharging PR (or "unowned"). The deputy's next entry carries it; the ledger records
-it from there and each later entry moves rows off it.
+**Correction**: the deputy's item 3 asked the lead to build this table, not send it —
+misread on my part. Built now, from `scripts/_docverify.py`'s `EXPECTED_VERDICTS` at
+`0af63b4` directly (`FATAL_VERDICTS = {FAIL, UNDETERMINED, NOT_MEASURED, REGRESSION}`,
+DISCLOSE/PASS excluded) cross-referenced against this ledger's own dispatch record — not
+transcribed from any relay.
+
+## Checkpoint-1 table — 13 fatal rows on `0af63b4`
+
+| row | verdict | cause (one clause) | owner | PR |
+|---|---|---|---|---|
+| d1 | FAIL | `NT-00`-prefixed citation form, un-migrated | unowned | — |
+| d4 | FAIL | `wf-0[0-9]` case-form, improved not closed (262 < control 272) | executor-30-2 | pending (#30, not yet opened) |
+| d5 | FAIL | `Ruling [0-9]+` un-migrated population, un-masked by row (b)'s boundary fix | executor-30-2 | pending (#30 — scoped as the disclosed-absent-values case) |
+| d6 | FAIL | `ADR-0[0-9]{3}` genuine un-migrated 4-digit citations remain | unowned | — |
+| d7 | FAIL | `(FR\|NFR\|OQ\|DEP)-[A-Z]+-[0-9]+` un-migrated | unowned | — |
+| d8 | REGRESSION | workstream/slice `W<n>-<n>` boundary bug at scale, un-masked by row (b) | executor-30-2 | pending (#30 — creation rule fixed to distinct-value per today's ruling) |
+| d9 | FAIL | `docs/plans/2026-`-prefixed citation form, un-migrated | unowned | — |
+| d10 | FAIL | `docs/audit/`-prefixed citation form, un-migrated | unowned | — |
+| d11 | FAIL | the old notes directory, un-migrated | unowned | — |
+| d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
+| d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
+| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — `classified-by-none` residue | multiple (partial) | #720, #727, #729 merged; #723 in flight; still FAIL overall (326 unclassified per exec-dp7's last read) |
+| h1 | FAIL | `audit-docs.py` non-disclosed classes (32, 36, 1, 31, 27, …) still non-zero | unowned | — |
+
+**Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
+exists against them as of this entry. Three (d4, d5, d8) are executor-30-2's scope, PR not
+yet opened. One (g) is partially discharged across four PRs (three merged, one in flight)
+but still fails overall. **Checkpoint 1 cannot be reported met until every row above either
+clears or is explicitly ruled DISCLOSE/out-of-scope** — this table is the tracker from
+here; each later entry moves rows off it by name.
