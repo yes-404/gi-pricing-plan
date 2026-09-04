@@ -187,7 +187,9 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #725 | fix(scripts): row (e) padded-id-in-prose — real read+write side-by-side bugs, both fixed | `85a352f` | Not independently re-run — CI green (`ci-watcher-725b`, post-rebase head), CLEAN. `--verify`: row (e)/(f) PASS, verdict set unchanged against the 13-row standing red. |
 | #727 | fix(scripts): name three more (g) residue shapes — the third `other`-triage scope | `046576c` | Not independently re-run. **Correction (deputy, 15:0xZ):** `046576c`'s own `main` CI run was `completed/cancelled` — the per-branch concurrency group cancelled it when `1129df0` (#724) landed four seconds later. #727 has no completed run of its own on `main`; the evidence for this commit is `1129df0`'s green run (`gh run list --commit 1129df0`: history-policy/docs/python all `success`), which covers both commits since #724's push carried #727's content forward. `--verify` re-run post-rebase, pre-merge: UNCHANGED: 14, matching the recorded set. |
 | #729 | fix(scripts): NT-0019 declared exclusions + announced-slot concurrency enforcement | `18afd90` | Not independently re-run — `ci-watcher-729` confirmed python/docs/history-policy all green, CLEAN, 10m14s runtime. `--verify`: exit 1, matching the 13-row standing red exactly, this branch moved no row. The structural fix for the concurrency-compliance failure class that cost h2b its dispatch today. |
+| #723 | fix(scripts): name the code-tree residue by cause — hypothesis 1 killed, four new causes found | `56c0e81` | Not independently re-run — `ci-watcher-723b` confirmed python/docs/history-policy all green (post-rebase head `00935dd`), CLEAN. Row (g)'s code-tree leg of the three-way triage. |
 | #724 | docs(plans): ledger — #721/#722 merges, h2b root-cause, DB-exclusivity proof | `1129df0` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). |
+| #728 | docs(plans): ledger — #724/#725/#727 merges | `0af63b4` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). `ci-watcher-728` confirmed docs/python/history-policy all green, CLEAN. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1154,3 +1156,104 @@ confirmed reaching the spawned pytest process. `--verify` under the corrected wr
 queue wait with edits during that wait, but the tree held still start-to-finish for the
 LAST (cited) gate run — `python-test`'s own "tree held still" discipline, applied and
 disclosed rather than glossed over. `ci-watcher-729` dispatched; merges on its report.
+
+## 2026-09-04 — #729 merged (18afd90); PR #730 (exec-dp7) found, DIRTY, rebase requested
+
+#729 merged; the structural concurrency fix is live on `main`. Found PR #730
+(`w37-6-dp7-frontmatter`, exec-dp7's DP-7 gap fix + REDIRECTS.csv determinism) — DIRTY,
+main moved again since its branch point. `ci-watcher-730` dispatched, rebase requested.
+Continuing on `docs-w37-6-ledger-cont5` (PR #731) since the merged ledger branch is gone.
+
+## 2026-09-04 — #729 fully verified and accepted: main is now UNCHANGED at 13 fatal rows, one fewer
+
+Deputy's independent verification of #729 against its own ruling — the single namespace
+(`git grep -ohE '/tmp/slots/[a-z-]+'` on `main` names no third lock), the announced-slot
+export at the right point in the wrapper, `conftest.py`'s unannounced-only acquisition,
+`setdefault` capping, `conftest_db.py`'s refusal (not substitution) — all confirmed by line
+number against the merged code, both proofs exist as named tests. **The docs run on `main`
+prints `UNCHANGED: 13 fatal row(s), matching the recorded set of 13` — one fewer than this
+morning's 14.**
+
+**One design refinement, a follow-up not a blocker**: `_is_bare_full_run` currently exempts
+any run carrying an explicit path from the slot budget, but `uv run pytest -q backend
+tests` — a full gate typed with `testpaths` entries as arguments — is still a full run that
+should count as bare. Ruled: an explicit path argument that is itself a `pyproject.toml`
+`testpaths` entry counts as bare; a narrower path, a node id, `-k`, `-m` stay exempt. One
+predicate change, one test each way — dispatched to exec-excl as a follow-up when
+convenient, not blocking anything.
+
+**#730's rebase is a real content conflict**, not a stale-diff fast-forward: both #729 and
+#730 added tests to `tests/test_doc_id_migrate.py` in the same area
+(`git merge-tree --write-tree` confirms `CONFLICT (content)`). exec-dp7 told to expect this
+and resolve by keeping both sides' additions. **#723** reads `UNKNOWN`, rebase in flight,
+nothing to do until it settles.
+
+**Correction**: the deputy's item 3 asked the lead to build this table, not send it —
+misread on my part. Built now, from `scripts/_docverify.py`'s `EXPECTED_VERDICTS` at
+`0af63b4` directly (`FATAL_VERDICTS = {FAIL, UNDETERMINED, NOT_MEASURED, REGRESSION}`,
+DISCLOSE/PASS excluded) cross-referenced against this ledger's own dispatch record — not
+transcribed from any relay.
+
+## Checkpoint-1 table — 13 fatal rows on `0af63b4`
+
+| row | verdict | cause (one clause) | owner | PR |
+|---|---|---|---|---|
+| d1 | FAIL | `NT-00`-prefixed citation form, un-migrated | unowned | — |
+| d4 | FAIL | `wf-0[0-9]` case-form, improved not closed (262 < control 272) | executor-30-2 | pending (#30, not yet opened) |
+| d5 | FAIL | `Ruling [0-9]+` un-migrated population, un-masked by row (b)'s boundary fix | executor-30-2 | pending (#30 — scoped as the disclosed-absent-values case) |
+| d6 | FAIL | `ADR-0[0-9]{3}` genuine un-migrated 4-digit citations remain | unowned | — |
+| d7 | FAIL | `(FR\|NFR\|OQ\|DEP)-[A-Z]+-[0-9]+` un-migrated | unowned | — |
+| d8 | REGRESSION | workstream/slice `W<n>-<n>` boundary bug at scale, un-masked by row (b) | executor-30-2 | pending (#30 — creation rule fixed to distinct-value per today's ruling) |
+| d9 | FAIL | `docs/plans/2026-`-prefixed citation form, un-migrated | unowned | — |
+| d10 | FAIL | `docs/audit/`-prefixed citation form, un-migrated | unowned | — |
+| d11 | FAIL | the old notes directory, un-migrated | unowned | — |
+| d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
+| d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
+| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — `classified-by-none` residue | multiple (partial) | #720, #727, #729 merged; #723 in flight; still FAIL overall (326 unclassified per exec-dp7's last read) |
+| h1 | FAIL | `audit-docs.py` non-disclosed classes (32, 36, 1, 31, 27, …) still non-zero | unowned | — |
+
+**Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
+exists against them as of this entry. Three (d4, d5, d8) are executor-30-2's scope, PR not
+yet opened. One (g) is partially discharged across four PRs (three merged, one in flight)
+but still fails overall. **Checkpoint 1 cannot be reported met until every row above either
+clears or is explicitly ruled DISCLOSE/out-of-scope** — this table is the tracker from
+here; each later entry moves rows off it by name.
+
+## 2026-09-04 — the nine unowned rows dispatched: three executors, cut by mechanism
+
+Deputy ruled the actual figures (`docs` run on `0af63b4`) before cutting: 895 lines total
+across the nine rows, five path rows (d9-d13) 821 of them (92%), three id rows (d1/d6/d7)
+74, h1 separate. Three executors, not nine — one mechanism per group:
+
+- **`exec-paths`** (d9, d10, d11, d12, d13) — legacy path citations repointed via the
+  unit-record inverse's path columns, the mechanism #30 already builds. Stacked on
+  `w37-6-citation-inverse-unit` (#30 not yet merged when dispatched); rebases onto `main`
+  once #30 lands. Acceptance: all five rows zero on fresh `--verify`, fixture proof per
+  form, one unmoved-path citation left untouched and listed. d13's `INERT` note is the
+  instrument's, not licence to skip — 90 real lines.
+- **`exec-ids`** (d1, d6, d7) — 74 lines in ≤35 files. First deliverable is investigation,
+  not code: the 74 lines by directory and by kind (citation vs. specification, NT-0004's
+  vocabulary), reported back before any fix. **Does not decide its own exclusion** — the
+  table comes to the lead, who relays to the deputy for the specification-class ruling;
+  `exec-ids` then fixes only the citation class.
+- **`exec-h1`** (h1) — checks 32 (downstream of A/B, not yet), 36/1/31/27 (now): each
+  classified as check-side bug (not migration-aware) or genuine migration defect (filed
+  with owner) before any fix. 29/30/35 stay disclosed (Ruling 105 §B), untouched.
+
+All three dispatched with the canonical gate line, per-worktree database step, and a
+required proof-of-reading line. Landing order when they collide: #30, then `exec-paths`
+(stacked), then `exec-ids`; `exec-h1` independent. Count: `executor-30-2`, `exec-dp7`,
+`exec-paths`, `exec-ids`, `exec-h1` — five live (triage-code stood down, not counted),
+well within the eight-executor cap.
+
+## 2026-09-04 — row (g) lost its owner when triage-code stood down too early; resumed
+
+Deputy caught it: the original (g)-triage dispatch named `triage-code` owner of "#723 and
+(g)'s residue," two halves — I tracked only the #723 half as done and stood the whole
+executor down once that merged. Row (g) is still FAIL overall (326 unclassified hunks at
+`exec-dp7`'s last read, minus whatever #723's causes actually accounted for), and it went
+from owned to unowned silently. **Resumed `triage-code`** (never `TaskStop`'d, just told to
+stand down — resumes from its own context via `SendMessage`) with the residue-count task:
+get a fresh unclassified count on current `main`, name any remaining recognizable causes
+the same way #720/#723 did, or report precisely what doesn't fit an existing class. Six of
+eight executors now, still inside the cap.
