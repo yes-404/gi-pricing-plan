@@ -1,4 +1,22 @@
-# Ruling 106 — the Slack routine: a 100-word cap, a BST clock time in the ETA, and a refresh on every `origin/main` move (2026-09-04)
+# W37-6 — Ruling 106: the Slack routine (2026-09-04)
+
+## Ruling 106 — a 100-word cap, a BST clock time in the ETA, and a refresh on every `origin/main` move
+
+<!-- Structural note: this heading exists so `_discover_multi_ruling_files`
+     (`_RULING_HEADING_RE`, `^##\s+Ruling\s+(\d+)`) discovers this record as an `RL-` draft
+     rather than falling through to `_discover_plain_plans`'s `PL- kind: leaf, owner: planner`
+     catch-all — the defect F96 (`docs/audit/findings/F96.md`) was filed for. -->
+
+**Ruling number derivation, run by the lead in its own checkout at `origin/main` = `ad51906`:**
+
+```
+git grep -ohE '^## Ruling [0-9]+' origin/main -- docs/ | grep -oE '[0-9]+' | sort -n | tail -1
+  → 105
+git grep -c 'Ruling 106' $(git branch -r | grep -v HEAD) -- docs/ .claude/ scripts/
+  → only this record's own branch
+```
+
+**106 is the next free number**, derived rather than assumed.
 
 ## Authority
 
