@@ -1378,21 +1378,84 @@ _LEGACY_PATH_RES: Final = tuple(
 #: that triggers the bug, without needing the migrated tree to confirm it fired.
 _WORK_ADJACENT_UPPER_RE: Final = re.compile(r"\bW[0-9]+[A-Z]")
 
+# ---------------------------------------------------------------------------------------
+# W37-6 `other` triage, third scope (`docs/`, the code tree and this remainder — the
+# #715 ruling `:6xx`): everything not under `docs/`, `tests/`, `backend/`, `frontend/`,
+# `scripts/`, `packages/`. Two shapes below were found sampling every member of that
+# remainder (14 files, small enough to read whole rather than sample ten) — reported here
+# by the same convention as `_SLASH_COMPOUND_RE` above: named and counted, not fixed, not
+# assigned an owner by this executor. A third candidate (an id token and its `docs/plans/`
+# or `docs/notes/` path rewritten together, e.g. `` [`NT-0003`](docs/notes/0003-....md) ``)
+# was found on the same 4 files but turned out to be the sibling `docs/`-triage executor's
+# cause3 read one level more generally (a legacy path citation, id present or not) — see
+# `_LEGACY_PATH_RES` above, which already matches every one of those 4 lines. Naming it
+# again here would be NT-0003's duplicated-status defect in cause-table form, so it is not
+# kept as a separate label; cause3 is checked first below and claims them. None of the two
+# surviving shapes changes what row (g) fails on.
+# ---------------------------------------------------------------------------------------
+
+#: A front-matter block stamped into a file that carried **no** leading `---` block
+#: before migration (`old_lines[0] != "---"`) and did not move (`rel` exists in both
+#: trees at the same path — otherwise `old_lines` above is `None` already). Distinct from
+#: cause 1: cause 1 is an *existing* foreign block DP-7 strips before comparing; this is a
+#: *new* block DP-7 adds with nothing on the old side to strip. Per the #706 read folded
+#: into Ruling 68's class-6 keying ("class 1 = 0 ... nearly every document moves, so
+#: classes 1 and 2 live inside the 48 moves"), a stamp *paired with a move* is absorbed
+#: into class 3; a stamp on a file that stays in place has no class to land in and falls
+#: through to `classified-by-none`. Verified on all 8 members: `.claude/roles/*.md`,
+#: `.claude/skills/README.md`, `README.md`, `deploy/README.md` — each diff's only change is
+#: a `+---\n+family: ...\n+...\n+---\n+\n` block inserted before the untouched first
+#: heading line, confirmed against `git diff --no-index`-equivalent output on the kept
+#: `--verify` snapshot, never assumed from the file list alone. Checked early, alongside
+#: cause 1, since (like cause 1) it explains the *entire* diff for these members regardless
+#: of what an unrelated citation elsewhere in the same body might also match.
+_FRONTMATTER_BLOCK_RE: Final = re.compile(r"^family:\s")
+
+#: A `W<n>[a-z]?-<m>` slice-key token (`W6b-10`) whose Work component is mapped
+#: (`W6b`->`WK-947b`) but whose `-<m>` suffix is retained verbatim rather than itself
+#: rewritten through a map entry — the "no family exists for a task key" gap the deputy's
+#: own unmapped-tokens ruling already named (`W<n>-<m>`: "mapped where a map plan or
+#: roadmap slice row minted an `SL-`; unmapped ones listed"). Not new: this executor is
+#: reporting that the same already-named gap also surfaces as (g) `classified-by-none`
+#: residue, not only as an unmapped-token count. Verified on `examples/fremtpl2/seed.py`
+#: (`W6b-10`, `W6b-11`); `.github/workflows/docs.yml` carries the identical shape
+#: (`W37-6`) but is claimed by cause3 first (it also carries a legacy `docs/plans/` and
+#: `docs/notes/` path citation), so this check runs last — the more specific, owned causes
+#: above it get first refusal on any file carrying more than one shape.
+_WORK_SLICE_KEY_RE: Final = re.compile(r"\bW\d+[a-z]?-\d+\b")
+
 #: One residue member's cause label, checked in this fixed order (a member matching more
 #: than one shape is reported under the first — `_NOTES_STUB_RE` before content-based
 #: checks, since a stub's path alone is conclusive and its content is the same shape every
-#: time; frontmatter before the citation-shaped checks, since a wrong strip explains the
-#: whole-file mismatch regardless of what citations the body also carries; cause4's
-#: adjacent-uppercase corruption before the broader citation-shaped causes, since it is a
-#: forward-migration defect rather than an inverse gap and deserves its own bucket even
-#: when the same file also carries a legacy path citation).
-def _residue_cause(rel: str, old_lines: Sequence[str] | None) -> str:
+#: time; frontmatter before the citation-shaped checks, since a wrong strip or a wrongly
+#: added block explains the whole-file mismatch regardless of what citations the body also
+#: carries; cause4's adjacent-uppercase corruption before the broader citation-shaped
+#: causes, since it is a forward-migration defect rather than an inverse gap and deserves
+#: its own bucket even when the same file also carries a legacy path citation;
+#: `unmapped-work-slice-key` last of all, since it is the most generic shape and must not
+#: steal a file that a more specific, owned cause above it already explains).
+#:
+#: `new_lines` (the post-migration content at the same path) is optional and used only by
+#: the new-frontmatter-stamp check below — every other check reads `old_lines` alone, as
+#: it did before that check was added.
+def _residue_cause(
+    rel: str,
+    old_lines: Sequence[str] | None,
+    new_lines: Sequence[str] | None = None,
+) -> str:
     if _NOTES_STUB_RE.match(rel):
         return "cause2b-notes-stub-relative-link"
     if old_lines is None:
         return "other"
     if old_lines and old_lines[0] == "---" and rel.startswith(_FOREIGN_FRONTMATTER_DIRS):
         return "cause1-foreign-frontmatter"
+    if (
+        (not old_lines or old_lines[0] != "---")
+        and new_lines
+        and new_lines[0] == "---"
+        and any(_FRONTMATTER_BLOCK_RE.match(line) for line in new_lines[1:12])
+    ):
+        return "new-frontmatter-stamp-no-move (unassigned — reported, not investigated)"
     for line in old_lines:
         if _WORK_ADJACENT_UPPER_RE.search(line):
             return "cause4-compound-token-adjacent-uppercase"
@@ -1405,17 +1468,22 @@ def _residue_cause(rel: str, old_lines: Sequence[str] | None) -> str:
     for line in old_lines:
         if any(pattern.search(line) for pattern in _LEGACY_PATH_RES):
             return "cause3-legacy-path-citation"
+    for line in old_lines:
+        if _WORK_SLICE_KEY_RE.search(line):
+            return "unmapped-work-slice-key (named elsewhere, reported here by shape)"
     return "other"
 
 
-def _residue_cause_table(residue: Sequence[str], ctl: Corpus) -> str:
+def _residue_cause_table(residue: Sequence[str], ctl: Corpus, mig: Corpus) -> str:
     """Ruling 102 §3's "name them", applied to the residue as a population: one line per
-    cause, its count, and up to three example paths — computed on `ctl` (the same
-    un-migrated corpus every other row shares), never a second tree read.
+    cause, its count, and up to three example paths — computed on `ctl` and `mig` (the
+    same un-migrated and migrated corpora every other row already shares), never a second
+    tree read. `mig` is read only by the new-frontmatter-stamp check
+    (`_residue_cause`'s `new_lines` argument); every other check still reads `ctl` alone.
     """
     by_cause: dict[str, list[str]] = {}
     for rel in residue:
-        cause = _residue_cause(rel, ctl.lines.get(rel))
+        cause = _residue_cause(rel, ctl.lines.get(rel), mig.lines.get(rel))
         by_cause.setdefault(cause, []).append(rel)
     parts = []
     for cause in sorted(by_cause, key=lambda c: -len(by_cause[c])):
@@ -1481,7 +1549,7 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
         # violation) — the cause table leads the note, the full per-file listing (already
         # a complete enumeration, not a sample) follows it.
         named = "; ".join(classification.violations)
-        note = _residue_cause_table(residue, ctl) + " || " + named
+        note = _residue_cause_table(residue, ctl, mig) + " || " + named
         verdict = FAIL
     else:
         verdict, note = PASS, ""
