@@ -7851,10 +7851,18 @@ def migrate(root: Path) -> MigrateResult:
 
     redirects_written = _write_redirects(root, redirect_rows)
     index_written = _regenerate_index_for_migrate(root)
-    process_core_written = _reconcile_process_core_digest(root)
     # #25's ruling: a padded citation of a real governed thing is normalised like any
     # other citation, once `docs/INDEX.md` exists to give conjunct 3 its authority.
     files_written = [*files_written, *_normalize_padded_citations(root)]
+    # Last of every step that can still touch `delivery-process.md`'s bytes -- the same
+    # sweep-order defect Task 4 item 1 found in `_write_split_source_indexes` (a title
+    # column built before a later sweep, read unswept), found here a second time by
+    # actually running `--verify` rather than assumed from the call order looking right:
+    # placed immediately after `_regenerate_index_for_migrate` first, this reconciled a
+    # digest that `_normalize_padded_citations` then invalidated by unpadding a citation
+    # inside the very file just reconciled (`RL-00159` -> `RL-159`, live in
+    # `delivery-process.md` itself), so every migrated tree still reappeared at check 27.
+    process_core_written = _reconcile_process_core_digest(root)
 
     # Last, because it reads what was written rather than what was planned, and the
     # roadmap it resolves against is only final after `_restructure_roadmap` above.

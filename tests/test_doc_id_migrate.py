@@ -7225,3 +7225,54 @@ def test_reconcile_process_core_digest_is_idempotent(
 
     assert second == [], "nothing left to reconcile the second time"
     assert after == before
+
+
+def test_reconcile_process_core_digest_must_run_after_padded_citation_normalisation(
+    tmp_path: pathlib.Path, doc_id_cli: types.ModuleType
+) -> None:
+    """The sweep-order defect, found the same way Task 4 item 1 found its own
+    (`_write_split_source_indexes`'s title column, written before a later sweep read
+    it): reconciling right after `migrate()`'s index regeneration and *before*
+    `_normalize_padded_citations` reconciles against bytes a later step still rewrites.
+    Live proof: `delivery-process.md` itself carries a padded citation
+    (`docs/rulings/RL-00159-…`) that `--verify` on the real corpus unpads during this
+    same run, and the first placement of the call (immediately after
+    `_regenerate_index_for_migrate`, before the normalisation step) left check 27 red on
+    every migrated tree despite the reconciliation having just run.
+
+    Reproduced directly: `_normalize_padded_citations` is the sweep this function's
+    result must survive, run first here exactly as `migrate()`'s corrected order does.
+    """
+    spec_body = "see ADR-00005 for the decision\n"
+    _seed_process_pair(
+        tmp_path, spec_body, "sha256:" + "0" * 64, "0000000000000000000000000000000000"
+    )
+    (tmp_path / "docs" / "INDEX.md").write_text("# Index\n\nADR-5\n", encoding="utf-8")
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=tmp_path)
+    _run_git(["config", "user.email", "test@example.com"], cwd=tmp_path)
+    _run_git(["config", "user.name", "Test"], cwd=tmp_path)
+    _run_git(["add", "-A"], cwd=tmp_path)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=tmp_path)
+
+    # The correct order: the sweep that can still rewrite `delivery-process.md` first.
+    doc_id_cli._normalize_padded_citations(tmp_path)
+    spec_path = tmp_path / "docs" / "process" / "delivery-process.md"
+    swept_body = spec_path.read_text(encoding="utf-8")
+    assert swept_body == "see ADR-5 for the decision\n", (
+        "fixture assumption: the padded citation was unpadded by the sweep"
+    )
+
+    doc_id_cli._reconcile_process_core_digest(tmp_path)
+
+    core = json.loads(
+        (tmp_path / "docs" / "process" / "delivery-process.core.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    expected = "sha256:" + hashlib.sha256(swept_body.encode("utf-8")).hexdigest()
+    assert core["meta"]["derived_from_digest"] == expected, (
+        "reconciled against the post-sweep bytes; the wrong order (reconcile before "
+        "normalise) reconciles against bytes the normalisation step immediately "
+        "invalidates again — check 27 red on every migrated tree despite having 'just' "
+        "run the reconciliation"
+    )
