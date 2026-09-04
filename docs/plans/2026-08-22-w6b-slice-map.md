@@ -34,10 +34,18 @@ and a database trigger is a row nothing can be said to have closed"* — and the
 accepted on 2026-08-15, deferring the id: *"The non-frontend half splits out when Phase 1b is
 planned; W6b keeps the views and the browser. The id is assigned at that point, not here."*
 
-**Assigned 2026-08-22: `W32`.** W1–W31 are all allocated. A suffix (`W6c`) would put the
+**Assigned 2026-08-22: `W32`.** W1–W31 are all allocated. A suffix (fenced below — never a
+real historical id, only illustrating the rejected alternative) would put the
 non-frontend work back inside the W6 frontend family, which is the confusion the split existed
 to end. A distinct number says "not frontend", and `W30` is the precedent for a workstream
 discovered later and numbered outside its phase's block.
+
+```
+W6c
+```
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged (row (d8), task #30) — the
+rejected-alternative suffix above, never a real historical id, was tripping the bare
+work-key check.*
 
 | Workstream | Holds |
 |---|---|

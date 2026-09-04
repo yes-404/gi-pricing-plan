@@ -351,6 +351,7 @@ NFR-MODEL-7) and added FR-PLAT-67 evidenced.
        git show origin/main:docs/roadmap.md |
          grep -nE '^#+ W32[a-z]?([ —].*)?: closed [0-9]{4}-[0-9]{2}-[0-9]{2}'
      Both empty at c024f3e and at 6cb9297; Part 2 fires on this heading, as intended.
+```
      WHY [a-z]? RATHER THAN \b, and why the reason matters. `W32a` is how a split
      remainder would be named - split-then-letter is exactly how W32 came out of W6b -
      and \b MISSES `### W32a - split remainder: closed ...`, a false NEGATIVE on the
@@ -378,6 +379,10 @@ NFR-MODEL-7) and added FR-PLAT-67 evidenced.
      A future reader trimming the separator to `.*` as over-engineering would believe
      [a-z]? still keeps slices out. It does not, and the gate would then report the
      workstream closed when a slice closed - releasing the whole W6b chain.
+```
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged (row (d8), task #30) — the
+illustrative `W32a` form above, never a real historical id, was tripping the bare
+work-key check.*
      WHY IT IS SHAPED THIS WAY. Hash depth is not stable in this file and cannot be keyed on:
      W5's slice records are ### while W32's are ####, so depth varies by WORKSTREAM, not by
      kind of record. And a keyword filter is worse than useless - `grep -i closed` over W5
