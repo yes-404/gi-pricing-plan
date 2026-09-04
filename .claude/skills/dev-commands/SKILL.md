@@ -359,20 +359,43 @@ does not notify an agent that has already ended its turn, so the agent stops "wa
 the completion notification" and waits forever. Seen 2026-08-30, W11 Task 3A — the executor
 had a green gate and a finished commit and sat idle on a run that was healthy the whole time.
 
-**So a subagent running the full suite polls in the foreground**, keeping its turn open:
+**The primary form has no wait loop at all.** The gate/verify slot wrapper above
+(`flock -n /tmp/slots/gate-N -c "..."` / `flock -w 7200 /tmp/slots/gate-1 -c "..."`) is
+itself a foreground blocking call — it returns when the wrapped command exits, keeping the
+agent's turn open with nothing to poll. Reach for a wait loop only when there is no such
+foreground call to make: waiting on a process someone else started, or one launched via
+`run_in_background` that cannot be re-issued in the foreground.
+
+**Corrected 2026-09-04, after this exact loop stalled fifteen shells across six agents in
+one session** — the loop this section prescribed matches its own command line every time,
+because the pattern is a literal substring of the `until ! pgrep -f '<pattern>'` shell's
+own argv, however specific `<pattern>` is made. `bin/pytest -q` does not save it: the
+wrapper shell's command line still contains the string `bin/pytest -q` verbatim, inside
+the quotes. **Any `pgrep -f PATTERN` run from inside a shell whose own command line
+contains `PATTERN` matches that shell.** Fixed two ways, in order of preference:
+
+- **Where a PID is available** (the command was launched by this same agent),
+  `while kill -0 "$pid" 2>/dev/null; do sleep 20; done` — `kill -0` tests a specific PID,
+  never a text pattern, so it cannot self-match.
+- **Where only a pattern is available** (waiting on someone else's process), bracket one
+  character of the pattern so the wait shell's own argv no longer contains the literal
+  substring `pgrep` is searching for: `pgrep -f '[b]in/pytest -q'` — the search string
+  `[b]in/pytest -q` does not appear anywhere in a shell whose own command line spells it
+  `[b]in/pytest -q` (the brackets break the substring match against themselves, while
+  still matching the target process, whose argv has a plain `b`, not `[b]`).
+
+**Positive control — a check that has never been shown to fail has not been tested (§13):**
 
 ```bash
-until ! pgrep -f 'bin/pytest -q' >/dev/null; do sleep 20; done
+# The old, wrong form: self-matches, never exits.
+( until ! pgrep -f 'bin/pytest -q' >/dev/null; do sleep 1; done ) &
+sleep 2; pgrep -af 'bin/pytest -q'   # shows the wait shell itself in the match list
+# → confirms the old form can never observe "no longer running"
+
+# The fixed form: does not self-match, exits when the target process ends.
+( until ! pgrep -f '[b]in/pytest -q' >/dev/null; do sleep 1; done ) &
+sleep 2; pgrep -af '[b]in/pytest -q'  # empty — the wait shell is absent from its own match
 ```
-
-Two ways that loop lies, both of which have happened here:
-
-- **It never exits** if the pattern also matches the wrapper shell running the loop —
-  `pgrep -f 'pytest'` matches its own command line. Match `bin/pytest`, and verify with one
-  `pgrep -af` before trusting it. Same family as the `--jq` exit-code trap above: *can this
-  check ever come back negative?*
-- **It exits instantly** when the run has already finished — which is indistinguishable from
-  never having started. Confirm against the output before concluding anything.
 
 **Corrected 2026-08-30, after this section failed to prevent two further stalls.** It
 originally scoped the rule to `pytest` and phrased it as "poll". Both were wrong:
@@ -543,6 +566,21 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-09-04 (fourth entry, same day) — the wait-loop section's `pgrep -f 'bin/pytest -q'`
+example rewritten after it stalled fifteen shells across six agents (executor-30-2 ×7,
+verify105 ×3, triage-other ×2, triage-docs, rowe2, alloc), each running `until ! pgrep -f
+'<pattern>'` — a pattern that is always a literal substring of the wait shell's own
+argv, however specific it is made, so the loop never observes its own target's exit.
+Replaced with: the foreground `flock` wrapper as the primary form (no loop, since it
+already blocks and returns); `while kill -0 "$pid"` where a PID is available; a bracketed
+pattern (`pgrep -f '[b]in/pytest -q'`) where only a pattern is available. **Proved on
+deliberately broken input, not merely reasoned through**: `pgrep -af 'gipselfmatchtarget'`
+(unbracketed) matched its own invocation's argv; `pgrep -af '[g]ipselfmatchtarget'`
+(bracketed) did not — same binary, same shell, the only variable was the bracket. Confirms
+the section's own positive control is real, not aspirational. `.claude/roles/executor.md`
+corrected the same way in the same session (finding against the file, `CLAUDE.md` §15) —
+that file cited this section as the pattern to follow, so both had to move together.
 
 2026-09-04 (third entry, same day) — per-worktree test database added to the gate block,
 per the deputy's ruling (relayed via `to-lead.md`), fixing the shared-DB truncation-race

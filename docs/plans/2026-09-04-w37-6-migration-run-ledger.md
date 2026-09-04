@@ -194,6 +194,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #730 | fix(scripts): DP-7 frontmatter gap (Reference/vendored stamps) + REDIRECTS.csv determinism | `e6384d7` | Not independently re-run — CI green (ruff/mypy/import-linter/pytest, specification audit, no-session-links), CLEAN. Rebased once onto a genuine content conflict with #729's own test additions, resolved additively from each side's clean history. Full gate: 3199 passed, tree held still. |
 | #733 | fix(scripts): W37-6 unit-record inverse — ranges/compounds/relative-links, cause3/3a/4/6, (d5)/(d8) creation rule | `6c92d55` | Not independently re-run — `ci-watcher-733` confirmed python/docs/history-policy all green, CLEAN. Full gate/verify twice (once surfacing and fixing a real crash bug in the author's own diff before reaching a gate). The single largest PR of the day; discharges (d4)/(d5)/(d8) from the checkpoint-1 table. |
 | #732 | docs(plans): ledger — #730/#733 merges, worktree incident, checkpoint-1 real figures | `e3739e1` | UNCHANGED: **13** fatal row(s), matching the recorded set of 13 — run `33888477735` on `docs-w37-6-ledger-cont7`'s `f2885ed` (**correction, deputy 2026-09-04 18:2xZ**: the lead's own entry here previously said 14, a remembered figure from before #725 re-recorded (e), not this run's own printed line — NT-0004 pasted-constant defect, fixed). This ledger's own continued history, no `docs/**` migration-scope path or predicate code touched. CLEAN, confirmed via the exact head SHA's own workflow runs (not a stale rollup) before merging. |
+| #734 | docs(plans): ledger — #732 merge, durability follow-up, row (g) class-3c correction | `61ec8bc` | Not independently re-run; this branch's own commits carry three `--verify` reruns already cited above (14→13 count correction, class-3c reclassification). `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`29a3974`) before merging — confirmed live, not from a stale rollup. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1203,8 +1204,8 @@ transcribed from any relay.
 | row | verdict | cause (one clause) | owner | PR |
 |---|---|---|---|---|
 | d1 | FAIL | `NT-00`-prefixed citation form, un-migrated | unowned | — |
-| d4 | FAIL | `wf-0[0-9]` case-form — 269/103 files → **2/1 file** on the fresh `--verify` (run 33884621869, `6c92d55`) | executor-30-2 | one file from zero, resumed to close it |
-| d5 | FAIL | `Ruling [0-9]+` un-migrated population — **unmoved**, 76/20 → 77/20; three values' counts grew, value set unchanged (same pattern as d8's earlier gap) | executor-30-2 | resumed — name the generator |
+| d4 | FAIL | `wf-0[0-9]` case-form — the last 2 lines (`docs/closures/INDEX.md:50,52`), both link-target filenames of correctly-migrated ledger docs (`LG-00028`, `LG-00030`) whose content is fully migrated — the filename slug alone still carries `wf-01`. **Correction (deputy, 2026-09-04): the lead's prior "task #15/A4, maintainer-reserved" citation was never verified and does not exist in the tree** (`git grep -nE 'finding A4' origin/main -- docs/` → nothing) — withdrawn. **Ruled blocking, in scope**: NT-0019 makes id==filename permanent (check 31), so a legacy-form filename here is the migration writing a legacy id into a place it can never later correct — an accepted exception is refused. Root cause stands: `_write_document_drafts` (`scripts/doc-id.py:3568`, slug at `:3597`) runs at `:7404`, before `_rewrite_citations` at `:7786` — the slug is cut from the pre-rewrite title. Fix ruled: derive the slug from the title as it reads *after* the rewrite (apply the allocation/move mapping to `d.title` before `_slug()`, or re-derive and rename each draft's filename after the sweep). Acceptance: d4 at 0, check 31 green, DP-7 untouched, broken-input proof (fixture title carrying `wf-01` → filename that does not). | executor-30-2 | reopened — real fix dispatched (task #44) |
+| d5 | FAIL | `Ruling [0-9]+` un-migrated population — still **FAIL at 77 lines / 20 files** on `6c92d55`. **Correction (deputy, 2026-09-04): "fully reconciled, closed" was wrong** — that described only the growth arithmetic (Ruling 59 +4, Ruling 60 +2, Ruling 61 +2, exact match), not the row, which stays non-zero. The named mechanism ("H1-only ruling files never split, by design") is not a design — it is **F96 live** (`docs/audit/findings/F96.md`): `_RULING_HEADING_RE` (`doc-id.py:1327`) is H2-only, and Rulings 59/60/61 are H1-only (confirmed: one H1 each, zero H2, via direct grep), so they never enter `token_map`/REDIRECTS.csv and their citations never rewrite. Fix ruled (F96's second option): accept `^#{1,2}\s+Ruling\s+(\d+)` as the ruling heading when it's a file's first heading, so these three become `RL-` records; **and** F96's check reds any ruling-shaped file with no `Ruling N` heading at either depth. No frozen file hand-edited. Broken-input proof both ways required. | executor-30-2 | reopened — real fix dispatched (task #45) |
 | d6 | FAIL | `ADR-0[0-9]{3}` genuine un-migrated 4-digit citations remain | unowned | — |
 | d7 | FAIL | `(FR\|NFR\|OQ\|DEP)-[A-Z]+-[0-9]+` un-migrated | unowned | — |
 | d8 | FAIL | workstream/slice `W<n>-<n>` — re-recorded REGRESSION→FAIL by #733's distinct-value rule; still fatal: **123 task keys in 40 files + 14 bare work-key remainders in 6 files** (both ruled fatal, `to-lead.md:455`(i)); slice-key population is the disclosed part | executor-30-2 | not fully closed, work continues |
@@ -1213,8 +1214,8 @@ transcribed from any relay.
 | d11 | FAIL | the old notes directory, un-migrated | unowned | — |
 | d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
 | d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
-| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`); the +15 mangled-companion rise is **class 3c** (deputy ruling, 18:3xZ) — the instrument's own test modules exhibiting the shapes they detect, same class as (d)'s ruling — **discharged by exec-ids' `_docid.sweep_exclusion_reason` tuple landing, not by explanation**; the predicted per-file fixture-line drop is stated below, awaiting the measured drop once the tuple lands | multiple (partial) | #720, #723, #727, #729 merged; exec-ids' tuple pending (`fba9bfb`, now on `origin/w37-6-citation-inverse-ids`) |
-| h1 | FAIL | `audit-docs.py` non-disclosed classes (32, 36, 1, 31, 27, …) still non-zero | unowned | — |
+| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`); the +15 mangled-companion rise is **class 3c** (deputy ruling, 18:3xZ) — the instrument's own test modules exhibiting the shapes they detect, same class as (d)'s ruling — **discharged by exec-ids' `_docid.sweep_exclusion_reason` tuple landing, not by explanation**; **predicted drop: 21** (`tests/test_doc_id_migrate.py` 11 + `tests/test_doc_id_verify.py` 10, exact `MANGLED_CITATION_RE`-pattern grep, every occurrence line-numbered), awaiting the measured drop once the tuple lands | multiple (partial) | #720, #723, #727, #729 merged; exec-ids' tuple pending (`fba9bfb`, now on `origin/w37-6-citation-inverse-ids`) |
+| h1 | FAIL | `audit-docs.py` non-disclosed classes still non-zero. **Fresh figure, local `--verify --ref origin/main` on tree `5b6c903` (post-#735 merge, correctly flock-wrapped this time — my first attempt used `.` as the target and was refused per Ruling 102 §1, a real checkout, not a disposable snapshot)**: exit 1, 8368 failure(s) total, 8 class(es); checks 29/30/35 are W37-10-owned residue (11+78+79=168, disclosed by count, never fatal); **8200 failure(s) outside those** — every other class, including any not individually named, must be zero. | exec-h1 (partial — #735 landed 3 fixes incl. check 27; classifier-gap follow-up in progress, task #43) | #735 merged `5b6c903`; follow-up PR pending |
 
 **Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
 exists against them as of this entry. Three (d4, d5, d8) are executor-30-2's scope, PR not
@@ -1594,3 +1595,65 @@ improved. Accepted as well-evidenced per CLAUDE.md §13 (real-tool verification,
 diff scope, both directions checked). Executor-30-2 asked to add a one-line acknowledgment
 comment near those literals (their own suggestion, cheap, self-documents the
 corpus-vs-fixture distinction for a future whole-tree scan) and proceed to d4/d5.
+
+## 2026-09-04 — d4/d5 reconciled, g1's predicted drop stated (21)
+
+executor-30-2 delivered all three items in one pass, via a fresh `migrate --verify --ref
+e3739e1 --keep` (current `origin/main` tip at the time) — real tool, kept snapshot.
+
+**d4 — root-caused to a known finding, not a new defect.** Down to its last 2 lines
+(`docs/closures/INDEX.md:50,52`), both link-target filenames of correctly-migrated ledger
+documents whose content is fully correct — only the filename slug still carries `wf-01`.
+Root cause: `_write_document_drafts` (`scripts/doc-id.py:7310`) computes the filename slug
+from the pre-rewrite title, before `_rewrite_citations`'s token-map sweep (`:7692`) runs.
+This is task #15 / auditor finding A4 ("the migration writes legacy ids into permanent new
+filenames"), already reserved to the maintainer — isolated to its final 2 occurrences, not
+something executor-30-2 should fix unilaterally. Relayed to the deputy as a checkpoint-1
+scope question: accepted 2-occurrence exception, or blocking on A4's fix.
+
+**d5 — fully reconciled, exact arithmetic match.** The 3319/265 stable population is a
+separate, genuine un-migrated-citation issue; the growth (Ruling 59 +4, Ruling 60 +2,
+Ruling 61 +2) is fully explained: all three are single-H1 historical files never split
+into their own RL-numbered record (confirmed via `RL-00261`'s own census — 0 `##`
+sub-headings), so they never enter `token_map`/REDIRECTS.csv and stay un-rewritten by
+design; the growth on top is the same title-stamp-echo mechanism already accepted for
+d2/d8 (front-matter `title:` + `docs/INDEX.md`'s own echo), verified by direct
+control-vs-migrated diff. Arithmetic matches all three deltas exactly. No fix required —
+closed.
+
+**g1's predicted drop — 21.** Grepped both #733 test files with the actual
+`MANGLED_CITATION_RE` pattern (not an approximation): `tests/test_doc_id_migrate.py` 11
+occurrences, `tests/test_doc_id_verify.py` 10, every line numbered. This sits next to row
+(g) above, to be checked against the measured drop once exec-ids' `TEST_MODULE_EXCLUSIONS`
+tuple merges.
+
+executor-30-2 directed to add `_docverify.py`'s `EXPECTED_VERDICTS` comment update for
+d4/d5 (matching the d8 pattern) next, then move to d8's own fatal remainder (123 task keys
+in 40 files + 14 bare work-key remainders in 6 files).
+
+## 2026-09-04 — correction: d4 and d5 reopened, both prematurely closed
+
+The deputy overturned both of the lead's prior d4/d5 closures in the same entry.
+
+**d4.** The lead's "task #15 / auditor finding A4, maintainer-reserved" citation, relayed
+from executor-30-2 without independent verification, does not exist anywhere in the tree
+(`git grep -nE 'finding A4' origin/main -- docs/` → nothing) — withdrawn. An "accepted
+2-occurrence exception" is refused on the merits regardless: NT-0019 makes id==filename
+permanent (check 31), so a legacy-form filename here is not a disclosure, it is the
+migration writing a legacy id into the one place it can never later be corrected. Ruled
+blocking, in scope, fix path given (derive the slug from the post-rewrite title). Real
+cause diagnosis (the `_write_document_drafts`/`_rewrite_citations` ordering gap) stands —
+only the "not a new defect, nothing to build" conclusion was wrong.
+
+**d5.** "Fully reconciled, closed" described only the growth arithmetic; the row itself
+stayed FAIL at 77/20 throughout — closing it was wrong independent of the cause analysis.
+The named mechanism ("by design") is F96 live: a ruling-shaped file with no `## Ruling N`
+heading migrates silently as `PL-` rather than `RL-`, which is exactly what F96 exists to
+catch, not a design decision. Fix ruled: extend `_RULING_HEADING_RE` to accept an H1-depth
+first heading, and extend F96's own check to red any ruling-shaped file missing the
+heading at either depth.
+
+Both reopened as tasks #44/#45, real fixes dispatched to executor-30-2 (already the
+diagnosing engineer on both). Lesson applied going forward: an unverified citation from an
+executor does not get relayed as settled fact — check it against the tree first, same
+standard as any other reference (CLAUDE.md §13).
