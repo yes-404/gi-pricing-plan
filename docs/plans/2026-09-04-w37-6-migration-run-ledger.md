@@ -9,6 +9,23 @@ land in. This is that file. Pre-migration naming (`docs/plans/README.md`); it be
 Held by the lead until the run's own executor exists (NT-0019 §1.6); executors append per
 task and per PR from here forward.
 
+## Acceptance Standard
+
+This ledger's own tracked work is "done" per Ruling 105's staged structure:
+
+1. **Checkpoint 1** (this document's current phase): `python3 scripts/doc-id.py migrate
+   --verify` exits 0 on a quiet `origin/main` — every one of `_docverify.EXPECTED_VERDICTS`'s
+   fatal rows reads PASS or a ruled DISCLOSE class, verified by a fresh run on the exact
+   `origin/main` tip cited in the report, not a stale figure.
+2. **Checkpoint 2**: the supervised migration run itself completes (Ruling 105 D7's 8-hour
+   window from go-ahead), with its own `--verify` green on the migrated tree.
+3. **Checkpoint 3**: the slice closes per `.claude/skills/close-workstream`'s checklist —
+   every requirement evidenced or verdicted, NFRs measured not asserted, the maintainer's
+   dated acceptance line recorded.
+
+Nothing from a later checkpoint starts before the earlier one is reported and ruled met
+(the deputy's standing instruction, this file's own governing constraint throughout).
+
 ## Go-ahead conditions, as they stand at 2026-09-04
 
 1. `python3 scripts/doc-id.py migrate --verify` exits 0 at a quiet tree (no open PR touching
