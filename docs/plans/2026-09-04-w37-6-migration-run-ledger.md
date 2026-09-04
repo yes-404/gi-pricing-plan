@@ -834,3 +834,40 @@ actual cause — this is systemic non-compliance, not one-off carelessness, and 
 as the class it is (this is why the conftest-level enforcement dispatched to `exec-excl`
 matters: it makes this specific failure mode structurally impossible rather than relying on
 a fifth correction landing correctly).
+
+## 2026-09-04 — the per-worktree-database fix is empirically proven, both directions
+
+`db-proof`'s full run, both steps, cleaned up after: **negative control** (shared DSN,
+confirmed unset via `/proc/<pid>/environ` on both live PIDs) — an asymmetric concurrent
+pair (51 tests / 109 tests) reproduced the exact documented symptom:
+`test_read_permission_does_not_confer_cancel` failed `403 == 200` at the ~66% mark of the
+longer run, exactly when the shorter run's session-scoped teardown fired at 33s — neither
+run touched any code. **Proof** (separate DSNs, `gipricing_proof1`/`gipricing_proof2`,
+confirmed live via `/proc/<pid>/environ`): the identical two test sets, same concurrency,
+both passed clean (51/51, 109/109) with zero failures — including the exact test and the
+exact point that failed under the shared DSN. Cleanup verified before dropping (both proof
+DBs still showed exactly one `alembic_version` row, no truncation had leaked) and both
+scratch worktrees removed. **The fix works, proven, not merely argued.**
+
+## 2026-09-04 — exec-excl caught three real defects in the conftest-enforcement instructions before writing any code
+
+Before implementing the scope dispatched two entries ago, `exec-excl` verified three claims
+empirically rather than guessing, since a mistake would affect every executor's gate:
+
+1. `tests/conftest.py` never loads for `backend/tests`/`packages/*/tests` — `pyproject.toml`
+   `testpaths` lists them as siblings, not children. Verified directly (a probe print fired
+   for one tree, never the other). Corrected to a new root-level `conftest.py`.
+2. **Reusing `/tmp/slots/gate-{1,2,3}` for pytest's own internal `flock` would deadlock every
+   correctly-wrapped gate run** — the outer wrapper shell holds the lock via its own open
+   file description; a `flock()` inside the exec'd pytest child opens a fresh file
+   description on the same file and blocks waiting for a lock its own ancestor holds and
+   never releases until the child exits. Verified as correct Linux `flock` semantics before
+   approving. Corrected to a separate namespace (`/tmp/slots/pytest-gate-{1,2,3}`).
+3. `GIP_TEST_DATABASE_URL`/`DEFAULT_TEST_DSN` live in `backend/tests/conftest_db.py`, not
+   `_docverify.py` as the dispatch said (a mis-statement on my part — `_docverify.py` is the
+   doc-migration snapshot verifier, unrelated to the Postgres test database). Confirmed by
+   direct grep. Corrected to `conftest_db.py`.
+
+All three approved after independent verification, not rubber-stamped. Original exclusions
+work (lockfiles/fixtures/pycache) already committed (`11256c8`), tests green, gate queued
+behind other executors' slots.
