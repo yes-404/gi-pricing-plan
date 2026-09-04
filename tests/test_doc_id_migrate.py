@@ -297,21 +297,96 @@ def test_acceptance_item_g_frozen_branch_shares_check_34s_predicate(
 ) -> None:
     """Ruling 68 §4 item 3: "Mutate check 34's DP-7 allowance. Violation: (g)'s
     frozen-family branch does not change with it." Proven by identity, not behaviour: the
-    predicate `migration_diff_violations` calls is the *exact same function object*
-    `scripts/audit-docs.py`'s own `check_freeze` uses, loaded from the one file, so any
-    edit to it is felt by both call sites with no second definition to fall out of sync
-    (the module-load idiom itself is the load-bearing part of this proof).
+    predicate `classify_migration_diff` (which `migration_diff_violations` wraps) calls is
+    the *exact same function object* `scripts/audit-docs.py`'s own `check_freeze` uses,
+    loaded from the one file, so any edit to it is felt by both call sites with no second
+    definition to fall out of sync (the module-load idiom itself is the load-bearing part
+    of this proof).
     """
     audit_docs = doc_id_cli._load_audit_docs()
     assert audit_docs.frozen_file_matches_after_migration_stamp is not None
-    # `migration_diff_violations` loads the identical path via the identical `_load_module`
+    # `classify_migration_diff` loads the identical path via the identical `_load_module`
     # helper `check_freeze`'s own module uses internally — verified by reading both
     # functions' bodies rather than asserted here as an untestable claim about source text.
     import inspect
 
-    source = inspect.getsource(doc_id_cli.migration_diff_violations)
+    source = inspect.getsource(doc_id_cli.classify_migration_diff)
     assert "_load_audit_docs()" in source
     assert "frozen_file_matches_after_migration_stamp" in source
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 104 §2/§3: class 6 is a *property* — "the whole file equals the generator's
+# output" — never a path or filename. Its own acceptance standard names the broken-input
+# proof verbatim: "a regenerated README with one hand-edited line inserted must fail (g),
+# naming the file — a partial edit is never class 6. The same file regenerated whole must
+# pass." Both halves are proven here, on the real fixture corpus's real generated READMEs
+# and INDEX.md files, never on a hand-typed stand-in for what the generator produces.
+# ---------------------------------------------------------------------------------------
+
+
+def test_class6_regenerated_readmes_and_indexes_pass_whole(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 104 §2's positive half: a family README or `INDEX.md` regenerated in full —
+    untouched by any hand edit — is class 6, named by symbol rather than by inference from
+    an empty violation list (which `test_acceptance_item_g_clean_migration_has_no_violations`
+    already proves; this asserts *which* class explains each of them).
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+    class6 = set(classification.per_class["6-generated-artifact"])
+    for expected in (
+        "docs/INDEX.md",
+        "docs/REDIRECTS.csv",
+        "docs/rfcs/README.md",  # carried: docs/notes/README.md -> docs/rfcs/README.md
+        "docs/adrs/README.md",  # carried: docs/adr/README.md -> docs/adrs/README.md
+        "docs/findings/README.md",  # carried: docs/audit/README.md -> docs/findings/README.md
+        "docs/workflows/README.md",  # in-place, table regenerated
+        "docs/plans/README.md",  # in-place, naming section replaced with a pointer
+        "docs/rulings/README.md",  # fresh, no predecessor
+        "docs/closures/README.md",  # fresh, no predecessor
+        "docs/ledgers/README.md",  # fresh, no predecessor
+        "docs/rulings/INDEX.md",  # Ruling 104 §3: "every INDEX.md the migration generates"
+        "docs/closures/INDEX.md",
+    ):
+        assert expected in class6, (expected, classification.summary())
+    assert classification.violations == ()
+
+
+def test_class6_a_hand_edited_readme_fails_and_names_the_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 104 §2's broken-input proof, verbatim: "a regenerated README with one
+    hand-edited line inserted must fail (g), naming the file — a partial edit is never
+    class 6." The hand edit lands *after* `migrate()` has already regenerated the file in
+    full, on the real generated `docs/rfcs/README.md` — never a synthetic stand-in for what
+    the generator would have written.
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+
+    target = new_root / "docs" / "rfcs" / "README.md"
+    text = target.read_text(encoding="utf-8")
+    hand_edited = text + "\nA hand-typed sentence no generator wrote.\n"
+    assert hand_edited != text
+    target.write_text(hand_edited, encoding="utf-8")
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+    assert "docs/rfcs/README.md" not in classification.per_class["6-generated-artifact"]
+    # Bucketed by the same `old_rel` key every moved file uses (class 1/2/3 alike);
+    # `docs/notes/README.md` is what `docs/rfcs/README.md` carries from.
+    assert "docs/notes/README.md" in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+    assert any("docs/rfcs/README.md" in v for v in classification.violations), (
+        classification.violations
+    )
+    # Every other class-6 member this run also regenerated is untouched by the one file's
+    # hand edit — a partial edit fails only the file it touched, not the whole class.
+    assert "docs/INDEX.md" in classification.per_class["6-generated-artifact"]
 
 
 # ---------------------------------------------------------------------------------------
