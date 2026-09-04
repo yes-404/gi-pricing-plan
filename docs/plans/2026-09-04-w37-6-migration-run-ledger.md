@@ -821,3 +821,16 @@ Full gate green both halves, 3135 passed/0 errors — the earlier `test_score.py
 not reproduce this run.
 
 `ci-watcher-726` dispatched; merges on its report.
+
+## 2026-09-04 — executor-30-2's fourth non-compliant gate: `GIP_TEST_DATABASE_URL` set to the shared database, not its own
+
+Checked its restarted gate (PID 575452) directly: `GIP_TEST_DATABASE_URL` was set this
+time, but to the shared `.../gipricing`, not a per-worktree `gipricing_<worktree>` — plus
+still no thread-cap vars, still no `flock` parent. Killed again (`pkill -P` on the parent,
+confirmed dead). Sent an unusually literal follow-up: two separate copy-paste blocks with
+an explicit ask to echo `$WT` and confirm the gate block ran as one shell invocation, to
+try to isolate whether something about how the command is being composed or split is the
+actual cause — this is systemic non-compliance, not one-off carelessness, and worth naming
+as the class it is (this is why the conftest-level enforcement dispatched to `exec-excl`
+matters: it makes this specific failure mode structurally impossible rather than relying on
+a fifth correction landing correctly).
