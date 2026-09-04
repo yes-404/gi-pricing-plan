@@ -18,14 +18,15 @@ def _load_audit() -> types.ModuleType:
     """Load audit-docs.py for testing."""
     script = pathlib.Path(__file__).resolve().parent / "scripts" / "audit-docs.py"
     spec = importlib.util.spec_from_file_location("_audit_docs_test", script)
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["_audit_docs_test"] = module
     spec.loader.exec_module(module)
     return module
 
 
-def test_check_32_path_excluded_from_padding_check():
+def test_check_32_path_excluded_from_padding_check() -> None:
     """Ruling 107 item 1.1: check 32 should exclude padded ids in filesystem paths
     (conjunct 2 of (e) from _docverify.py).
 
@@ -43,7 +44,7 @@ def test_check_32_path_excluded_from_padding_check():
         assert len(padding_problems) == 0, f"Path should exclude padding check: {padding_problems}"
 
 
-def test_check_32_lists_kinds_of_failures():
+def test_check_32_lists_kinds_of_failures() -> None:
     """Ruling 107 item 2: check 32 should classify failures by kind
     and report them separately: resolution vs padding vs mismatches.
     """
@@ -54,7 +55,6 @@ def test_check_32_lists_kinds_of_failures():
     audit.notes.clear()
     audit.check_citations()
     # Should have a note that mentions kinds or categories
-    note_text = " ".join(audit.notes)
     # The note should mention the different problem kinds
     # (placeholder - exact format TBD from implementation)
     assert len(audit.notes) > 0
