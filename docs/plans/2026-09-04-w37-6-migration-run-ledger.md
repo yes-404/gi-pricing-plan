@@ -1690,3 +1690,27 @@ were spawned before the fix reached `main` — `#736` merging is what makes a *n
 read it automatically; the message is what reaches an *already-running* one. All 15
 acknowledged, most confirmed no stray loops of their own; a handful had already switched to
 `kill -0`/backgrounded-task patterns independently.
+
+## 2026-09-04 — PR #739: closed, then the closure's own reasoning corrected
+
+verify105 opened PR #739 (`w37-6-d8-task-key-disclosed`, one commit `c07218d`, base
+`a2c0afa`): task keys join d8's disclosed component per the deputy's Ruling #26 (NT-0019
+§1.2 has no family below a slice, so a task key has no target by design — the same ground
+as a slice key). The lead closed it without merging, on a deputy entry that (wrongly)
+called this "the scoped exemption already refused" and misattributed the PR to
+executor-30-2.
+
+**The deputy corrected itself the same cycle.** Ruling #26 stands and is correct; #739
+implements it correctly and is verify105's. The two rulings reconcile rather than
+conflict: #26 is about *class* (a task key is disclosed by design), executor-30-2's
+finding is about *count* (91% of the raw 123 task-key matches are `F-W…` finding ids
+caught by the missing left bound, not real task keys). Neither invalidates the other.
+
+**Sequencing, ruled**: one PR, executor-30-2's, fresh branch from `2a9ed29`, that carries
+#739's component-split diff **verbatim** (credited to verify105 in the body) plus the
+left-bound regex fix plus the residual dispositions. #739 stays closed — superseded by
+inclusion, not refused. A correction comment posted on #739 itself; verify105 and
+executor-30-2 both messaged directly with the corrected framing and instruction.
+
+**Standing rule, new**: every PR any team member opens is named in the lead's next report
+to the deputy with its base sha and what it implements, whether dispatched or not.
