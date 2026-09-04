@@ -120,9 +120,17 @@ worktree's own, predating the restart window). The shared checkout also carried 
 uncommitted `scripts/_docverify.py` diff at the first lock's mtime — an abandoned,
 pre-`#713` attempt at the same `_TOKEN_BOUNDARY_RE`/`_TRAILING_LOCATOR_RE` fix the
 `salvage/row-e-padded-id-prose-v2` branch already carries more completely and more
-currently. Not discarded: `git stash push -u` (stash message names the supersession) before
-cleaning the checkout back to match `origin/main`, in case anything in it is not already on
-that branch — not yet diffed; noted here so it is not lost track of.
+currently. Not discarded: `git stash push -u` before cleaning the working tree, in case anything in
+it is not already on `salvage/row-e-padded-id-prose-v2` — not yet diffed; noted here so it
+is not lost track of.
+
+**Correction, 2026-09-04 10:3xZ, per the deputy's read:** "cleaned to match `origin/main`"
+overstated it — the shared checkout's working tree is clean, but its local `main` (`HEAD` =
+`3dbee20`) is 13 commits behind `origin/main` (`54d610e`); nobody advanced it, and no role
+works in the shared checkout so this is harmless, but the line should say what happened, not
+what it resembles. The stash above is `stash@{0}` (message: "wip(restart): salvaged stale
+shared-checkout diff..."); `git stash list` in that checkout holds **7** entries total — the
+other six predate this session and are not this stash.
 
 **Salvage, the two dirty worktrees the deputy named plus one already-committed one:**
 `wt-alloc` (`scripts/doc-id.py`, the (b) allocation work) and
