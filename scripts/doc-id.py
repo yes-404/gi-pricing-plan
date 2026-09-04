@@ -2254,11 +2254,32 @@ def _discover_requirements(root: Path) -> list[_Draft]:
     module-level date; ordering *within* the file is the tie-break (`i`, this loop's own
     enumeration order — spec module order is the outer loop's `sorted(specs_dir.glob(...))`
     over filenames).
+
+    **One draft per distinct legacy id, never one per occurrence.** `_LEGACY_SPEC_BOLD_RE`
+    is a bare `finditer` with no anchor to a row's own leading cell, so it matches every
+    bold-formatted mention of the shape, definition or not — an `OQ` id in particular is
+    routinely *cited* in bold from another requirement's own body prose (`FR-MODEL-88`
+    reads *"...raised as **OQ-MODEL-23** with options..."*) as well as *defined* in its
+    owning spec's §10 mirror row (`~~**OQ-MODEL-23**~~ ✔ | ...`). Before this guard, both
+    matches became independent drafts sharing one `old_token` and got assigned two
+    *different* new numbers — `docs/REDIRECTS.csv` then carried two `old_id="OQ-MODEL-23"`
+    rows (`-> OQ-1060` and `-> OQ-1066` in one measured run), and the tree-wide citation
+    sweep, keyed on `old_token` alone, had to choose between them (or leave the token
+    ambiguous and un-rewritten, depending on which mangling era measured it — see
+    `_compound_token_re`'s own docstring for the id-fabrication defect this sat beside).
+    `_write_redirects` refuses a genuine second row for the same `old_id` outright now
+    (belt-and-suspenders); this is the root fix, so the second draft is never produced at
+    all. `_seen` is keyed on the id text alone, checked in the loop's own file-then-position
+    order, so whichever occurrence is textually first wins the slot — which one wins does
+    not change what the tree-wide sweep rewrites, since every occurrence of that id text,
+    definition or citation, gets the same one new number regardless of which draft claimed
+    it.
     """
     drafts: list[_Draft] = []
     specs_dir = root / "docs" / "specs"
     if not specs_dir.is_dir():
         return drafts
+    seen: set[str] = set()
     for path in sorted(specs_dir.glob("*.md")):
         text = path.read_text(encoding="utf-8")
         module_date = _module_first_commit_date(path, root)
@@ -2279,6 +2300,9 @@ def _discover_requirements(root: Path) -> list[_Draft]:
                 # `_LEGACY_SPEC_BOLD_RE`'s numbering.
                 prefix = m.group(1)
                 title = f"{prefix}-{m.group(2)}"
+            if title in seen:
+                continue
+            seen.add(title)
             drafts.append(
                 _Draft(
                     materialize="requirement", prefix=prefix, kind=None, title=title,
@@ -5748,6 +5772,45 @@ def _rewrite_citations(
 # ---------------------------------------------------------------------------------------
 
 
+def _check_redirect_rows_agree_on_every_old_id(rows: Iterable[dict[str, str]]) -> None:
+    """Refuse rather than silently write a `docs/REDIRECTS.csv` where one `old_id` would
+    resolve to two different `new_id`s.
+
+    Keyed on `(old_id, citing_dir)`, never `old_id` alone: a `citing_dir`-scoped row (task
+    4 item 4's bare-basename relative-link form — see `_REDIRECTS_FIELDS`'s own comment)
+    is only correct *from that one citing directory*, so the identical `old_id` text
+    legitimately repeats, once per citing directory, each a genuinely different row. An
+    `old_id` of `""` (every id-less move's row) is exempt for the same reason every other
+    check here already treats it specially: it names no id at all, and two such rows differ
+    only by path, which this check does not read.
+
+    An *exact* repeat — the same `(old_id, citing_dir)` mapped to the same `new_id` twice
+    (a compound citation, say `NFR-RATE-13/14`, cited more than once and expanded
+    identically each time) is harmless and allowed; only a **conflict** — the same key
+    claimed for two *different* destinations — is refused. This is what closes the write
+    boundary for the defect `_discover_requirements`'s own dedup guard fixes at the source
+    (its docstring has the mechanism): a second, independent discovery of the same legacy
+    id producing a second, different allocation must not reach the file at all, even if a
+    future discovery path reintroduces the bug this guard did not anticipate.
+    """
+    seen: dict[tuple[str, str], str] = {}
+    for row in rows:
+        old_id = row.get("old_id", "")
+        if not old_id:
+            continue
+        key = (old_id, row.get("citing_dir", ""))
+        new_id = row.get("new_id", "")
+        prior = seen.get(key)
+        if prior is not None and prior != new_id:
+            raise ValueError(
+                f"REDIRECTS.csv: old id {old_id!r} is already recorded -> {prior!r}; "
+                f"refusing to also record it -> {new_id!r} -- one legacy id must resolve "
+                "to exactly one new id (a second, independent discovery of the same "
+                "legacy id is the defect, not a second valid row)"
+            )
+        seen[key] = new_id
+
+
 def _write_redirects(root: Path, rows: list[dict[str, str]]) -> list[str]:
     if not rows:
         return []
@@ -5757,6 +5820,7 @@ def _write_redirects(root: Path, rows: list[dict[str, str]]) -> list[str]:
     if redirects_path.is_file():
         with redirects_path.open(newline="", encoding="utf-8") as fh:
             existing = list(csv.DictReader(fh))
+    _check_redirect_rows_agree_on_every_old_id([*existing, *rows])
     with redirects_path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=_REDIRECTS_FIELDS)
         writer.writeheader()

@@ -2492,6 +2492,163 @@ def test_requirements_discovery_leaves_an_already_canonical_dep_id_alone(
     assert doc_id_cli._discover_requirements(tmp_path) == []
 
 
+# -----------------------------------------------------------------------------------------
+# The OQ double-allocation defect: `_LEGACY_SPEC_BOLD_RE` matches every bold occurrence of
+# a legacy id, definition or citation, so the real corpus's own convention of citing an
+# `OQ` id in bold from another requirement's body prose (`FR-MODEL-88`: "...raised as
+# **OQ-MODEL-23** with options...") produced a SECOND, independent draft alongside the
+# id's real definition (its owning spec's own `~~**OQ-MODEL-23**~~ ✔` §10 mirror row) --
+# two drafts sharing one `old_token`, two different new numbers, two conflicting
+# `docs/REDIRECTS.csv` rows for the same `old_id` (measured against the real corpus:
+# `OQ-MODEL-23 -> OQ-1060` and `OQ-MODEL-23 -> OQ-1066`), and a citation sweep that had to
+# pick between them. Dispatched after PR #723's triage named it (out of that PR's own
+# scope), assigned as a follow-up after #707 and never dispatched until now.
+# -----------------------------------------------------------------------------------------
+
+
+def test_requirements_discovery_dedupes_a_legacy_id_cited_and_defined_in_one_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The real-corpus shape, reproduced directly: one legacy id, bold-cited from another
+    requirement's own body prose, then genuinely defined later in the same spec's §10
+    mirror table. Before the discovery-side dedup guard this produced two drafts sharing
+    one `old_token` -- exactly the shape that (via `id_claims`'s multi-claim guard, or
+    worse, via `_compound_token_re`'s own boundary bug before that was fixed) either left
+    the id permanently un-rewritten or fabricated a third, unallocated number. It must now
+    produce exactly one.
+    """
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "02-modelling.md").write_text(
+        "**FR-MODEL-88** Four arms are refused; scheduling them is raised as "
+        "**OQ-MODEL-23** with options and a recommendation rather than decided here.\n\n"
+        "| ~~**OQ-MODEL-23**~~ ✔ | Which of the three, if any? | **DECIDED**: none. |\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_requirements(tmp_path)
+    oq_drafts = [d for d in drafts if d.old_token == "OQ-MODEL-23"]
+    assert len(oq_drafts) == 1, (
+        f"expected exactly one draft for the cited-and-defined OQ-MODEL-23, got "
+        f"{len(oq_drafts)} -- the citation in FR-MODEL-88's body must not mint a second, "
+        "independent allocation alongside the id's real §10 definition"
+    )
+
+
+def test_requirements_discovery_dedupes_a_legacy_id_across_two_spec_files(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The same defect, cross-file: nothing in the dedup guard is scoped to one file, so a
+    legacy id cited in bold from one spec and defined in another still collapses to one
+    draft.
+    """
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "01-data-management.md").write_text(
+        "**FR-DATA-9** See **OQ-DATA-11** for the pending selector question.\n",
+        encoding="utf-8",
+    )
+    (specs_dir / "02-modelling.md").write_text(
+        "| ~~**OQ-DATA-11**~~ ✔ | The pending question. | **DECIDED**: route query. |\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_requirements(tmp_path)
+    oq_drafts = [d for d in drafts if d.old_token == "OQ-DATA-11"]
+    assert len(oq_drafts) == 1
+
+
+def test_requirements_discovery_keeps_two_genuinely_different_ids(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The positive control the dedup guard must not break: two *different* legacy ids,
+    each cited once, still both get a draft."""
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "02-modelling.md").write_text(
+        "**OQ-MODEL-23** first question. **OQ-MODEL-24** second, different question.\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_requirements(tmp_path)
+    assert sorted(d.old_token for d in drafts) == ["OQ-MODEL-23", "OQ-MODEL-24"]
+
+
+def _redirect_row(
+    old_id: str = "", new_id: str = "", old_path: str = "", new_path: str = "",
+    citing_dir: str = "",
+) -> dict[str, str]:
+    return {
+        "old_id": old_id, "new_id": new_id, "old_path": old_path, "new_path": new_path,
+        "citing_dir": citing_dir,
+    }
+
+
+def test_write_redirects_refuses_a_genuine_old_id_conflict(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The write-boundary guard, belt-and-suspenders alongside the discovery-side dedup
+    above: two rows claiming the same `old_id` for two *different* `new_id`s must be
+    refused outright, even if some future discovery path reintroduces the bug the
+    discovery-side guard fixes at the source. This is the broken-input proof `_write_
+    redirects` itself is a writer that refuses a duplicate `old_id`, per the dispatch's own
+    requirement.
+    """
+    rows = [
+        _redirect_row(old_id="OQ-MODEL-23", new_id="OQ-1060"),
+        _redirect_row(old_id="OQ-MODEL-23", new_id="OQ-1066"),
+    ]
+    with pytest.raises(ValueError, match="OQ-MODEL-23"):
+        doc_id_cli._write_redirects(tmp_path, rows)
+    assert not (tmp_path / "docs" / "REDIRECTS.csv").exists(), (
+        "a refused write must not partially land -- the file is refused before opening for "
+        "write, not truncated mid-write"
+    )
+
+
+def test_write_redirects_allows_an_exact_repeat_of_the_same_mapping(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The positive control: the same `old_id` mapped to the same `new_id` twice (a
+    compound citation expanded identically on two separate mentions, say) is not a
+    conflict and must be allowed."""
+    rows = [
+        _redirect_row(old_id="NFR-RATE-13", new_id="NFR-775"),
+        _redirect_row(old_id="NFR-RATE-13", new_id="NFR-775"),
+    ]
+    doc_id_cli._write_redirects(tmp_path, rows)
+    assert (tmp_path / "docs" / "REDIRECTS.csv").is_file()
+
+
+def test_write_redirects_allows_the_same_old_id_text_scoped_to_different_citing_dirs(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A `citing_dir`-scoped row's `old_id` is relative-link *text*, correct only from that
+    one citing directory (`_REDIRECTS_FIELDS`'s own comment) -- the identical text
+    legitimately repeats once per citing directory and must not be refused as a
+    conflict."""
+    rows = [
+        _redirect_row(
+            old_id="../audit/register.md", new_id="../findings/register.md",
+            citing_dir="docs/rulings",
+        ),
+        _redirect_row(
+            old_id="../audit/register.md", new_id="../../findings/register.md",
+            citing_dir="docs/rulings/deep",
+        ),
+    ]
+    doc_id_cli._write_redirects(tmp_path, rows)  # must not raise
+
+
+def test_write_redirects_allows_multiple_id_less_move_rows(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """An id-less move's row carries `old_id=""` -- the guard must not treat repeated empty
+    strings as a conflict, since they name no id at all."""
+    rows = [
+        _redirect_row(old_path="docs/a.md", new_path="docs/b.md"),
+        _redirect_row(old_path="docs/c.md", new_path="docs/d.md"),
+    ]
+    doc_id_cli._write_redirects(tmp_path, rows)  # must not raise
+
+
 def test_requirements_guard_is_silent_when_every_id_is_recognised(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
