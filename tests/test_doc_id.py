@@ -1558,7 +1558,9 @@ def test_sweep_exclusion_reason_gives_every_class_its_own_named_reason(
         "tests/fixtures/docs-migration/docs/README.md"
     )
     pycache_reason = docid.sweep_exclusion_reason("scripts/__pycache__/x.pyc")
-    assert lockfile_reason and fixture_reason and pycache_reason
+    assert lockfile_reason
+    assert fixture_reason
+    assert pycache_reason
     assert len({lockfile_reason, fixture_reason, pycache_reason}) == 3
 
 

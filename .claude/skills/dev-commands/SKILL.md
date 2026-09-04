@@ -76,14 +76,27 @@ GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipric
 ```bash
 mkdir -p /tmp/slots
 WT=$(basename "$PWD")
-gate_cmd='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"' uv run ruff check . && uv run mypy && uv run lint-imports && POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"' uv run pytest -q'
+gate_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"' uv run ruff check . && uv run mypy && uv run lint-imports && POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"' uv run pytest -q'
 got=0
-for i in 1 2 3; do flock -n /tmp/slots/gate-$i -c "$gate_cmd" && { got=1; break; }; done
-[ "$got" = "0" ] && flock -w 7200 /tmp/slots/gate-1 -c "$gate_cmd"
+for i in 1 2 3; do flock -n /tmp/slots/gate-$i -c "export GIP_GATE_SLOT=/tmp/slots/gate-$i; $gate_body" && { got=1; break; }; done
+[ "$got" = "0" ] && flock -w 7200 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1; $gate_body"
 python3 scripts/audit-docs.py                # structural checks over docs/ and docs/notes/ — not thread-heavy, no slot needed
 uv run python scripts/req-coverage.py        # requirement traceability
 uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
 ```
+
+**`GIP_GATE_SLOT` is the announcement, not a second lock.** The repository-root
+`conftest.py` (W37-6) enforces the same budget for a *bare* `uv run pytest -q` — thread
+caps by `os.environ.setdefault` and a `flock` on the identical `/tmp/slots/gate-{1,2,3}`
+files this wrapper uses — because the wrapped form above was typed wrong three times in
+one day and a bare invocation should still be safe. `export GIP_GATE_SLOT=/tmp/slots/gate-$i`
+before the `&&`-chain is what stops that conftest hook from taking a *second* lock on a
+file its own ancestor process (this `flock`) already holds: `pytest_configure` checks the
+variable first and does nothing when it is set, trusting the wrapper. Without the
+announcement, a correctly-wrapped run and the conftest's own enforcement would each try to
+lock the same file from unrelated open file descriptions — the child's `flock()` blocking
+forever on a lock its own parent holds and never releases until the child exits. Never
+compose the gate command without this export; it is not optional decoration.
 
 **Why every worktree needs its own database.** `backend/tests/conftest_db.py`'s
 session-scoped teardown `TRUNCATE`s the whole test database at every `pytest` session's
@@ -116,11 +129,16 @@ process slots were widened to parallelise, so it is the exception.
 Same shape for `migrate --verify`, two slots instead of three:
 
 ```bash
-verify_cmd='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
+verify_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
 got=0
-for i in 1 2; do flock -n /tmp/slots/verify-$i -c "$verify_cmd" && { got=1; break; }; done
-[ "$got" = "0" ] && flock -w 7200 /tmp/slots/verify-1 -c "$verify_cmd"
+for i in 1 2; do flock -n /tmp/slots/verify-$i -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-$i; $verify_body" && { got=1; break; }; done
+[ "$got" = "0" ] && flock -w 7200 /tmp/slots/verify-1 -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-1; $verify_body"
 ```
+
+Same announcement shape as `GIP_GATE_SLOT` above: `scripts/_docverify.py`'s `verify()`
+checks `GIP_VERIFY_SLOT` first and skips its own `/tmp/slots/verify-{1,2}` lock when the
+wrapper has already announced one, so a correctly-wrapped `migrate --verify` run never
+double-locks against itself.
 
 Iterate with targeted tests (`pytest <file> -k <symbol>`) while working, uncapped and
 unslotted — the slot budget is for the full gate and full `--verify` only, run once each,
