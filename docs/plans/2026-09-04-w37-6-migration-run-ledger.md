@@ -1155,3 +1155,10 @@ confirmed reaching the spawned pytest process. `--verify` under the corrected wr
 queue wait with edits during that wait, but the tree held still start-to-finish for the
 LAST (cited) gate run — `python-test`'s own "tree held still" discipline, applied and
 disclosed rather than glossed over. `ci-watcher-729` dispatched; merges on its report.
+
+## 2026-09-04 — #729 merged (18afd90); PR #730 (exec-dp7) found, DIRTY, rebase requested
+
+#729 merged; the structural concurrency fix is live on `main`. Found PR #730
+(`w37-6-dp7-frontmatter`, exec-dp7's DP-7 gap fix + REDIRECTS.csv determinism) — DIRTY,
+main moved again since its branch point. `ci-watcher-730` dispatched, rebase requested.
+Continuing on `docs-w37-6-ledger-cont5` (PR #731) since the merged ledger branch is gone.
