@@ -18,9 +18,12 @@ from the next, but whether six days of runs leave 766 MB behind. They did, measu
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
+import functools
 import os
 import warnings
 from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -32,11 +35,105 @@ from app.db.session import Database
 from app.platform.blobs import BlobStore
 from model_schema import ActorKind, Principal, new_uuid7
 
+#: The one database every worktree's compose stack provisions by default
+#: (`deploy/docker-compose.yml`'s `POSTGRES_DB`) and CI always points
+#: `GIP_TEST_DATABASE_URL` at explicitly (`.github/workflows/python.yml`) -- CI has
+#: exactly one Postgres instance per run, so there is no second worktree to collide with
+#: and the per-worktree derivation below never runs there. Kept as a named constant for
+#: what the refusal message below is refusing to silently substitute, not as a fallback
+#: `test_database_url()` reaches for on its own any more.
 DEFAULT_TEST_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
 
 
+def _worktree_database_name() -> str:
+    """`gipricing_<worktree>` -- the same name `dev-commands`'s gate block derives via
+    `WT=$(basename "$PWD")`, computed here from this file's own path
+    (`backend/tests/conftest_db.py`'s great-grandparent is the checkout root) rather than
+    `os.getcwd()`, which a test runner invoked from a different working directory would
+    get wrong silently.
+    """
+    return f"gipricing_{Path(__file__).resolve().parents[2].name}"
+
+
+def _worktree_database_exists(name: str) -> bool:
+    """Whether database `name` exists on the local Postgres instance.
+
+    `True` when Postgres itself is unreachable -- a developer with no compose stack up is
+    not this check's problem; `database()`'s own skip below already covers that case with
+    its own message, and this function must not turn an absent stack into a misleading
+    "create your database" refusal. `False` only when Postgres answers and the specific
+    database is absent, which is the one case this function exists to catch.
+
+    Always runs the check on a fresh event loop in a dedicated thread, never
+    `asyncio.run()` directly on the calling thread: `test_database_url()` is called from
+    both sync and async fixtures (`database()` below is one), and calling
+    `asyncio.run()` from inside a running event loop -- pytest-asyncio's, mid-test --
+    raises `RuntimeError: asyncio.run() cannot be called from a running event loop`
+    rather than performing the check.
+    """
+    import asyncpg
+
+    async def _check() -> bool:
+        try:
+            conn = await asyncpg.connect(
+                host="localhost", port=5432, user="gipricing", password="gipricing",
+                database="postgres", timeout=5,
+            )
+        except OSError:
+            return True
+        try:
+            row = await conn.fetchrow("SELECT 1 FROM pg_database WHERE datname = $1", name)
+            return row is not None
+        finally:
+            await conn.close()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, _check()).result()
+
+
+@functools.lru_cache(maxsize=1)
+def _per_worktree_test_database_url() -> str:
+    """`test_database_url()`'s answer when `GIP_TEST_DATABASE_URL` is unset -- the
+    per-worktree database, refused loudly rather than silently substituted with the
+    shared `gipricing` database.
+
+    Before W37-6, an unset `GIP_TEST_DATABASE_URL` fell back to `DEFAULT_TEST_DSN` (the
+    ONE shared `gipricing` database) whenever that database was reachable at all -- which
+    it always is, since it is the compose stack's own default. Every gate that skipped
+    the per-worktree-database step in `dev-commands`'s gate block therefore ran silently
+    against the shared database with no error, and a concurrent worktree's own
+    session-scoped teardown (`_empty_the_database_after_the_session` below) truncates it
+    out from under this run mid-test (`.claude/skills/python-test/SKILL.md`'s "mutually
+    destructive" section) -- exactly the failure the per-worktree-database step exists to
+    prevent, made invisible by a fallback that was supposed to be a convenience.
+
+    Cached after the first successful derivation (never after a refusal: `lru_cache`
+    does not memoize a raised exception) -- the existence check is a real network round
+    trip and every fixture in this module calls `test_database_url()`.
+    """
+    name = _worktree_database_name()
+    if not _worktree_database_exists(name):
+        raise RuntimeError(
+            f"GIP_TEST_DATABASE_URL is not set, and the per-worktree test database "
+            f"{name!r} does not exist yet. Refused rather than silently falling back to "
+            f"the shared 'gipricing' database: a concurrent worktree's own "
+            f"session-scoped teardown truncates that database out from under this run "
+            f"(.claude/skills/python-test/SKILL.md's \"mutually destructive\" section). "
+            f"Create this worktree's own database once, before its first gate run "
+            f"(.claude/skills/dev-commands/SKILL.md's gate block): "
+            f"`PGPASSWORD=gipricing createdb -h localhost -U gipricing -T gipricing "
+            f"{name}`, then `GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@"
+            f"localhost:5432/{name} uv run alembic upgrade head` -- or set "
+            f"GIP_TEST_DATABASE_URL explicitly to override this check."
+        )
+    return f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
+
+
 def test_database_url() -> str:
-    return os.environ.get("GIP_TEST_DATABASE_URL", DEFAULT_TEST_DSN)
+    override = os.environ.get("GIP_TEST_DATABASE_URL")
+    if override:
+        return override
+    return _per_worktree_test_database_url()
 
 
 def test_blob_bucket() -> str:

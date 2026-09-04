@@ -76,6 +76,98 @@ LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
     ("legacy claude-notes path", re.compile(re.escape(".claude/notes/"))),
 )
 
+# Ruling 67 Part 2's class: a lockfile carries dependency-resolution DATA a package
+# manager generated, never a citation into this standard — a hash inside one can
+# coincidentally contain a substring that reads like a corrupted legacy-id fragment (the
+# `W5E...` hash in `frontend/pnpm-lock.yaml` is the case that surfaced this), and neither
+# the migration sweep nor the (d)/(e)/(g) verification corpus has any business reading it
+# as prose to rewrite or to count as residue. Declared, one entry per file with its own
+# reason — the same treatment `_docverify.py`'s `_D_EXCLUDED_BASENAME` already gives
+# `REDIRECTS.csv` — and placed here, beside `LEGACY_FORM_PATTERNS`, so `doc-id.py`'s sweep
+# (`_iter_tree_files`) and `_docverify.py`'s corpus (`tracked_files`) read the identical
+# tuple through `sweep_exclusion_reason` below rather than two independently maintained
+# copies that can diverge (Ruling 67 §2 / `CLAUDE.md` §2: "a shape defined twice will
+# diverge").
+LOCKFILE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
+    ("uv.lock", "Ruling 67 Part 2 — generated dependency-resolution data, never a citation"),
+    (
+        "pnpm-lock.yaml",
+        "Ruling 67 Part 2 — generated dependency-resolution data, never a citation",
+    ),
+    (
+        "frontend/pnpm-lock.yaml",
+        "Ruling 67 Part 2 — generated dependency-resolution data, never a citation",
+    ),
+)
+
+# `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3 ruled `tests/fixtures/`
+# exempt from the id-**stamp census** "by path, each file a declared exception" — a
+# per-file list there because that census's own arithmetic (F83 condition 2) needs the
+# exempt set enumerated one file at a time so a mismatch stays detectable, and a path
+# prefix would silently swallow every future file beneath it.
+#
+# The migration sweep and the (d)/(e)/(g) verification corpus answer a different question
+# — not "which files are exempt from a header stamp" but "which entire subtrees are
+# fixture data that must never be read as a real document at all". Both roots below hold
+# corpora **built** to carry legacy-form and deliberately malformed ids so `doc-id.py`'s
+# own parsing, checks and `migrate()` have something to be tested against
+# (`tests/fixtures/docs-ids/` — W37-3/W37-4; `tests/fixtures/docs-migration/` — W37-5).
+# Counting their content as the real repository's residue, or rewriting it in place, would
+# be the instrument grading its own fixtures. So the same DECLARED-not-implicit principle
+# from the 2026-09-02 ruling is satisfied at root granularity here — two named roots, each
+# with its own reason — rather than re-deriving a per-file enumeration that would grow
+# every time a fixture file is added and buys nothing: unlike the stamp census, nothing
+# here needs to prove its exempt set exactly equals some other measured set.
+#
+# `migrate(root)` still works when `root` **is** one of these directories (W37-5's own
+# test harness calls it that way): the exclusion matches a path *relative to the tree
+# being walked*, so a fixture root only ever excludes itself as a subtree of some larger
+# walk (the real repository), never of itself.
+FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
+    (
+        "tests/fixtures/docs-ids/",
+        "W37-3/W37-4 id-grammar and check fixtures — deliberately carries legacy-form "
+        "and malformed ids to exercise doc-id.py's own parsing and checks",
+    ),
+    (
+        "tests/fixtures/docs-migration/",
+        "W37-5's migrate() fixture corpus — the tree migrate() is tested AGAINST, not "
+        "real repository content",
+    ),
+)
+
+
+def sweep_exclusion_reason(rel_posix: str) -> str | None:
+    """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the NT-0019
+    migration sweep (`doc-id.py`'s `_iter_tree_files`) and from the (d)/(e)/(g)
+    verification corpus (`_docverify.py`'s `tracked_files`) — or `None` when it is not
+    excluded. One predicate, read by both consumers, so they can never disagree about what
+    is excluded (Ruling 67 §2's "one shared constant").
+
+    Three declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
+    fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), and a Python bytecode-cache artifact
+    (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing `scripts/`
+    modules while it runs, never migration input and never real residue.
+    """
+    for name, reason in LOCKFILE_EXCLUSIONS:
+        if rel_posix == name:
+            return reason
+    for root, reason in FIXTURE_CORPUS_ROOTS:
+        if rel_posix == root.rstrip("/") or rel_posix.startswith(root):
+            return reason
+    if "__pycache__" in rel_posix.split("/"):
+        return (
+            "a __pycache__ bytecode-cache directory created by importing this tooling's "
+            "own modules — the instrument's own exhaust, never migration input or residue"
+        )
+    if rel_posix.endswith(".pyc"):
+        return (
+            "a compiled Python bytecode-cache file — the instrument's own exhaust, never "
+            "migration input or residue"
+        )
+    return None
+
+
 # NT-0019 §1.2's "Kind" column, lowercased, keyed by prefix. What never changes on
 # extension (§1.12): a new family adds a row here via an RFC-/RL-, this table is not
 # reopened for any other reason.

@@ -45,6 +45,7 @@ than argued about. The tension is reported, not resolved, by this module.
 from __future__ import annotations
 
 import csv
+import fcntl
 import json
 import os
 import re
@@ -55,7 +56,7 @@ import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final
+from typing import IO, Any, Final
 
 import _docid
 
@@ -317,8 +318,19 @@ _D_EXCLUDED_BASENAME: Final = "REDIRECTS.csv"
 
 
 def tracked_files(tree: Path) -> list[str]:
+    """`_LS_FILES_ARGS`'s population, minus every `_docid.sweep_exclusion_reason` hit —
+    a lockfile, a `tests/fixtures/docs-ids/`/`tests/fixtures/docs-migration/` fixture, or
+    a `__pycache__`/`.pyc` bytecode-cache artifact. `--exclude-standard` already keeps a
+    *tracked-then-.gitignore'd* `.pyc` out of this list on its own, but the exclusion is
+    applied here too regardless — belt and braces, and the one place every corpus
+    consumer (`load_corpus`, and everything built on it: rows (a)/(b)/(d)/(e)/(g)/(h)/(i))
+    shares rather than each re-deriving.
+    """
     out = _git(tree, *_LS_FILES_ARGS).stdout.splitlines()
-    return sorted({rel for rel in out if rel})
+    return sorted(
+        rel for rel in {r for r in out if r}
+        if _docid.sweep_exclusion_reason(rel) is None
+    )
 
 
 def read_text(path: Path) -> str | None:
@@ -586,6 +598,14 @@ def _run_script(tree: Path, script: str, *args: str) -> subprocess.CompletedProc
         )
     env = dict(os.environ)
     env["PYTHONPATH"] = str(tree / "scripts")
+    # This subprocess's own imports (`doc-index.py` loading `_docid.py`, `doc-id.py`, …)
+    # would otherwise cache `.pyc` files into `tree`'s `scripts/__pycache__/` — a second
+    # writer of the same exhaust `doc-id.py`'s `_load_module` guards against in-process.
+    # `--exclude-standard` already keeps a *tracked* `.pyc` out of `tracked_files()`'s
+    # `git ls-files` population regardless, but a non-git-aware whole-tree walk
+    # (`_iter_tree_files`, read via `sweep_exclusion_reason` there too) is not the only
+    # consumer, so both layers stay covered rather than relying on one to save the other.
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run(
         [sys.executable, str(tree / "scripts" / script), *args],
         cwd=tree,
@@ -2244,6 +2264,68 @@ def compute_rows(
     return rows
 
 
+#: `dev-commands`'s own `verify_body` wrapper uses these two files
+#: (`/tmp/slots/verify-{1,2}`) — deliberately the same namespace `_acquire_verify_slot`
+#: locks, for the identical reason `conftest.py`'s gate-slot section gives: a separate
+#: namespace would let a wrapped run and an unwrapped one both hold a slot at once,
+#: doubling the effective budget instead of enforcing it.
+_VERIFY_SLOT_DIR: Any = Path("/tmp/slots")
+_VERIFY_SLOT_COUNT = 2
+_VERIFY_SLOT_PREFIX = "verify-"
+#: Set by the wrapper immediately after its own `flock` succeeds (before the `&&`-chain
+#: runs) — its presence means a slot is already held on this process's behalf.
+_VERIFY_ANNOUNCEMENT_VAR = "GIP_VERIFY_SLOT"
+
+
+def _acquire_verify_slot() -> IO[Any] | None:
+    """Take a `/tmp/slots/verify-{1,2}` lock for this process, unless the wrapper already
+    announced one via `GIP_VERIFY_SLOT` — in which case this returns `None` and `verify()`
+    does nothing further, trusting the wrapper's own `flock` rather than acquiring a
+    second lock on the same file from inside the child process it already holds it in
+    (which would deadlock: a fresh `open()` here is unrelated to the parent's held lock,
+    and blocks forever waiting for a lock its own ancestor never releases until this
+    process exits — the identical reasoning `conftest.py`'s module docstring gives for
+    `GIP_GATE_SLOT`).
+
+    Returns the open file handle when this process took the lock itself, so
+    `_release_verify_slot` can tell "I hold this, release it" apart from "the wrapper
+    holds it, leave it alone".
+    """
+    if os.environ.get(_VERIFY_ANNOUNCEMENT_VAR):
+        return None
+    _VERIFY_SLOT_DIR.mkdir(parents=True, exist_ok=True)
+    for i in range(1, _VERIFY_SLOT_COUNT + 1):
+        path = _VERIFY_SLOT_DIR / f"{_VERIFY_SLOT_PREFIX}{i}"
+        handle = open(path, "w")  # noqa: SIM115 -- held for verify()'s whole body
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            handle.close()
+            continue
+        print(f"[migrate --verify] verify slot {path} acquired, proceeding", file=sys.stderr)
+        return handle
+    path = _VERIFY_SLOT_DIR / f"{_VERIFY_SLOT_PREFIX}1"
+    print(
+        f"\n[migrate --verify] both {_VERIFY_SLOT_COUNT} verify slots are busy — waiting "
+        f"for {path} to free (.claude/skills/dev-commands/SKILL.md's gate concurrency "
+        "budget)",
+        file=sys.stderr,
+    )
+    handle = open(path, "w")  # noqa: SIM115
+    fcntl.flock(handle.fileno(), fcntl.LOCK_EX)  # blocks until a holder releases
+    print(
+        f"[migrate --verify] verify slot {path} acquired after waiting, proceeding",
+        file=sys.stderr,
+    )
+    return handle
+
+
+def _release_verify_slot(handle: IO[Any] | None) -> None:
+    if handle is not None:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+
 def verify(
     docid: Any,
     *,
@@ -2254,13 +2336,44 @@ def verify(
     with_baseline: bool = True,
 ) -> VerifyResult:
     """Build a snapshot, migrate it, and compute every row. Never touches `repo_root`."""
+    # The refusal check runs BEFORE the slot lock, deliberately: `_cmd_migrate_verify`'s
+    # own contract is "'I would not run' and 'I ran and it is red' must not share an exit
+    # code" (`tests/test_doc_id_verify.py::test_cli_refusal_exits_2_not_1`), and a refusal
+    # is meant to be instant regardless of how busy the machine's verify slots are. Only
+    # `workdir` explicitly given is checked here; the `workdir is None` branch's own
+    # disposability is trivial (a fresh `TemporaryDirectory` is always disposable) and
+    # stays inside `_verify_body`, which builds it.
+    if workdir is not None:
+        assert_workdir_disposable(workdir.expanduser().resolve())
+    slot_handle = _acquire_verify_slot()
+    try:
+        return _verify_body(
+            docid, repo_root=repo_root, ref=ref, workdir=workdir, keep=keep,
+            with_baseline=with_baseline,
+        )
+    finally:
+        _release_verify_slot(slot_handle)
+
+
+def _verify_body(
+    docid: Any,
+    *,
+    repo_root: Path,
+    ref: str,
+    workdir: Path | None,
+    keep: bool,
+    with_baseline: bool,
+) -> VerifyResult:
+    """`verify()`'s own work, unchanged except that the `workdir`-given disposability
+    check now runs in `verify()` itself (before the slot lock) — factored out so that
+    lock wraps everything else without this function needing to know it exists.
+    """
     tmp: tempfile.TemporaryDirectory[str] | None = None
     if workdir is None:
         tmp = tempfile.TemporaryDirectory(prefix="doc-id-verify-")
         target = Path(tmp.name)
     else:
         target = workdir.expanduser().resolve()
-        assert_workdir_disposable(target)
     try:
         snap = build_snapshot(
             docid, repo_root=repo_root, ref=ref, workdir=target,

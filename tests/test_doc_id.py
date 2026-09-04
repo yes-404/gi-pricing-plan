@@ -1467,3 +1467,156 @@ def test_main_widen_requires_the_to_flag(doc_id_cli: types.ModuleType) -> None:
 def test_main_requires_a_subcommand(doc_id_cli: types.ModuleType) -> None:
     with pytest.raises(SystemExit):
         doc_id_cli.main([])
+
+
+# ---------------------------------------------------------------------------------------
+# `_docid.sweep_exclusion_reason` — the declared exclusion list W37-6 adds beside
+# `LEGACY_FORM_PATTERNS`: three lockfiles (Ruling 67 Part 2), the two fixture-corpus roots
+# (extending the 2026-09-02 RFC §3 declared-exception mechanism —
+# `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3 — from the id-stamp
+# census to the migration sweep and the (d)/(e)/(g) verification corpus), and the
+# instrument's own bytecode-cache exhaust. One shared predicate `doc-id.py`'s
+# `_iter_tree_files` and `_docverify.py`'s `tracked_files` both read, so the two consumers
+# can never disagree about what is excluded (Ruling 67 §2's "one shared constant").
+# ---------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "rel", ["uv.lock", "pnpm-lock.yaml", "frontend/pnpm-lock.yaml"]
+)
+def test_sweep_exclusion_reason_excludes_every_declared_lockfile(
+    docid: types.ModuleType, rel: str
+) -> None:
+    assert docid.sweep_exclusion_reason(rel) is not None
+
+
+def test_sweep_exclusion_reason_leaves_a_lock_shaped_name_alone(
+    docid: types.ModuleType,
+) -> None:
+    """The negative control the positive proof above needs: a name that merely *contains*
+    "lock", or a lockfile at a path other than the three declared ones, must not be swept
+    up by an accidental substring match — only the exact declared paths are excluded.
+    """
+    assert docid.sweep_exclusion_reason("docs/plans/2026-09-01-deadlock-notes.md") is None
+    assert docid.sweep_exclusion_reason("backend/uv.lock") is None  # not the repo root's
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md",
+        "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
+        "tests/fixtures/docs-migration",
+    ],
+)
+def test_sweep_exclusion_reason_excludes_both_declared_fixture_corpus_roots(
+    docid: types.ModuleType, rel: str
+) -> None:
+    assert docid.sweep_exclusion_reason(rel) is not None
+
+
+def test_sweep_exclusion_reason_leaves_a_similarly_named_directory_alone(
+    docid: types.ModuleType,
+) -> None:
+    """Proves a root match, not a bare substring test: a path that merely *starts with*
+    the string "tests/fixtures" without being under either declared root is not excluded.
+    """
+    assert docid.sweep_exclusion_reason("tests/fixtures/other-tool/README.md") is None
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "scripts/__pycache__/doc-index.cpython-312.pyc",
+        "scripts/__pycache__/_docid.cpython-312.pyc",
+        "packages/model-schema/tests/__pycache__/conftest.cpython-312.pyc",
+        "scripts/foo.pyc",
+    ],
+)
+def test_sweep_exclusion_reason_excludes_pycache_and_pyc_artifacts(
+    docid: types.ModuleType, rel: str
+) -> None:
+    assert docid.sweep_exclusion_reason(rel) is not None
+
+
+def test_sweep_exclusion_reason_leaves_a_real_python_source_file_alone(
+    docid: types.ModuleType,
+) -> None:
+    assert docid.sweep_exclusion_reason("scripts/doc-id.py") is None
+    assert docid.sweep_exclusion_reason("backend/src/app/main.py") is None
+
+
+def test_sweep_exclusion_reason_gives_every_class_its_own_named_reason(
+    docid: types.ModuleType,
+) -> None:
+    """"a DECLARED entry (a list with a reason per entry)" — the dispatch's own wording.
+    Each class's reason string is non-empty and distinguishable from the other two, so a
+    reader can tell *why* a given path was excluded, not merely that it was.
+    """
+    lockfile_reason = docid.sweep_exclusion_reason("uv.lock")
+    fixture_reason = docid.sweep_exclusion_reason(
+        "tests/fixtures/docs-migration/docs/README.md"
+    )
+    pycache_reason = docid.sweep_exclusion_reason("scripts/__pycache__/x.pyc")
+    assert lockfile_reason
+    assert fixture_reason
+    assert pycache_reason
+    assert len({lockfile_reason, fixture_reason, pycache_reason}) == 3
+
+
+def test_load_module_does_not_write_bytecode_and_restores_global_state(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`_load_module` is what `migrate()` uses to load a snapshot's own `scripts/*.py` by
+    path (`_load_doc_index`/`_load_audit_docs`/`_load_register_lint`) — exec'ing a module
+    this way writes a `.pyc` into its `__pycache__/` by default, which a non-git-aware
+    whole-tree walk over the snapshot (`_iter_tree_files`) would then read back as new
+    migration output. Proven directly at this helper, not only through the full `migrate()`
+    proof in `tests/test_doc_id_migrate.py`. `sys.dont_write_bytecode` must also come back
+    exactly as it was: the setting is process-global, so a concurrent import elsewhere must
+    not have its own caching behaviour silently changed by this one call.
+    """
+    before = sys.dont_write_bytecode
+    target = tmp_path / "probe_module.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+
+    loaded = doc_id_cli._load_module("probe_module_under_test", target)
+
+    assert loaded.VALUE == 1  # the load itself still succeeded
+    assert not (tmp_path / "__pycache__").exists()
+    assert sys.dont_write_bytecode == before
+
+
+def test_iter_tree_files_applies_the_shared_exclusion_and_still_yields_real_files(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`doc-id.py`'s own migration-sweep walk, `_iter_tree_files` — the population
+    `migrate()`'s citation rewrite, vendored-skip loop and Ruling 68 row (g) classifier
+    (`_read_tree_text`) all iterate. Proof at the walk itself, not only at the shared
+    predicate it calls: a wiring mistake (calling the predicate on the wrong string, or
+    not at all) would pass the predicate-only tests above and still leak here.
+    """
+    root = tmp_path / "tree"
+    excluded = [
+        "uv.lock",
+        "pnpm-lock.yaml",
+        "frontend/pnpm-lock.yaml",
+        "tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md",
+        "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
+        "scripts/__pycache__/doc-index.cpython-312.pyc",
+    ]
+    included = ["docs/notes/0002-real.md", "scripts/doc-id.py", "README.md"]
+    for rel in [*excluded, *included]:
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("NT-0001 lives here\n", encoding="utf-8")
+    (root / ".git").mkdir()
+    (root / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+
+    seen = {p.relative_to(root).as_posix() for p in doc_id_cli._iter_tree_files(root)}
+
+    for rel in excluded:
+        assert rel not in seen, f"{rel} should have been excluded from the sweep"
+    for rel in included:
+        assert rel in seen, f"{rel} should still be part of the sweep"
+    assert ".git/HEAD" not in seen
