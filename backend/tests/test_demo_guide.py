@@ -73,7 +73,7 @@ def _fixture_repo(root: Path, *, routes: tuple[str, ...] = ("/data",)) -> Path:
         "\n### Something else\n\n"
         "| WS | Scope | Status |\n"
         "|---|---|---|\n"
-        "| **W99** | Not a status table | should not appear |\n",
+        "| **ZZ99** | Not a status table | should not appear |\n",
         encoding="utf-8",
     )
     return root

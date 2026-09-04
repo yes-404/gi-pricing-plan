@@ -104,13 +104,19 @@ def test_finds_a_row_owned_only_via_the_decision_column_not_work_item(
 def test_word_boundary_does_not_false_positive_on_a_longer_token(
     tmp_path: pathlib.Path,
 ) -> None:
-    """`W1` must not match `W11`, `W10`, or `W110` — a naive substring search would."""
+    """`WK-1` must not match `WK-11`, `WK-10`, or `WK-110` — a naive substring search
+    would. Post-migration `WK-` shape (2026-09-04, row (d8), task #30) rather than the
+    bare pre-migration `W<n>` this fixture used before: the boundary property under test
+    is identical either way, and the bare shape was itself tripping row (d8)'s bare
+    work-key check on this file's own fixture data.
+    """
     content = _HEADER + _row(
-        "X (F999992)", "W11", "2", "carry forward with an owner — W110's own cleanup slice",
+        "X (F999992)", "WK-11", "2",
+        "carry forward with an owner — WK-110's own cleanup slice",
     )
     rows = _parse(tmp_path, content)
-    assert register_owed.select_matches(rows, "W1") == []
-    assert len(register_owed.select_matches(rows, "W11")) == 1
+    assert register_owed.select_matches(rows, "WK-1") == []
+    assert len(register_owed.select_matches(rows, "WK-11")) == 1
 
 
 # --- Omits a resolved row -------------------------------------------------------------------

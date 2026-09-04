@@ -380,9 +380,7 @@ NFR-MODEL-7) and added FR-PLAT-67 evidenced.
      [a-z]? still keeps slices out. It does not, and the gate would then report the
      workstream closed when a slice closed - releasing the whole W6b chain.
 ```
-*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged (row (d8), task #30) — the
-illustrative `W32a` form above, never a real historical id, was tripping the bare
-work-key check.*
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged.*
      WHY IT IS SHAPED THIS WAY. Hash depth is not stable in this file and cannot be keyed on:
      W5's slice records are ### while W32's are ####, so depth varies by WORKSTREAM, not by
      kind of record. And a keyword filter is worse than useless - `grep -i closed` over W5
