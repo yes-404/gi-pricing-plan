@@ -1813,11 +1813,31 @@ _ABSENT_CHECK_RE: Final = re.compile(r"cannot run|cannot scan it")
 #: `docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md:139` used to derive the taxonomy
 #: the ruling reads: `sed -n '/^FAILED/,$p' <log> | grep '^  - ' | sed -E
 #: 's/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' | sort | uniq -c`. Everything
-#: from the `FAILED (`n`):` line onward, one `  - <msg>` per failure.
+#: from the `FAILED (`n`):` line onward, one `  - <msg>` per failure. `_classify_failures`
+#: below carries one substitution beyond the two the one-liner states — check 27's
+#: `"process core "`-prefixed messages, found silently falling into `"unclassified"`
+#: during exec-h1's own checkpoint; see `_PROCESS_CORE_DIGEST_RE`.
 _FAILED_BLOCK_RE: Final = re.compile(r"^FAILED \(\d+\):$", re.MULTILINE)
 _FAILURE_LINE_RE: Final = re.compile(r"^  - (.*)$", re.MULTILINE)
 _CHECK_PREFIX_RE: Final = re.compile(r"^check (\d+):")
 _BROKEN_LINK_RE: Final = re.compile(r"^broken link in ")
+
+#: `check_process_core_digest`'s four `fail()` calls (`scripts/audit-docs.py`, check 27)
+#: are the only other check in the checks-1-through-39 range whose messages do not start
+#: `check N:` the way the shell one-liner's own rule assumes — the same shape the
+#: ruling's own second rule (`_BROKEN_LINK_RE` below) already carves out for check 1.
+#: Found live: exec-h1's classification of `h1` counted `36`, `32`, `1`, `31`, `27` as its
+#: four checks, but the ported one-liner's own `_classify_failures` bucketed every check
+#: 27 failure as `"unclassified"` instead — every message this check ever raises begins
+#: `"process core "` (verified against all four `fail()` call sites), a stable, unique
+#: prefix none of the other 38 checks' messages share. A third substitution rule, added
+#: to this predicate rather than to `check_process_core_digest` itself: renumbering the
+#: other 38 checks' *own* messages onto the same `check N:` convention check 27 lacks
+#: would be the more uniform fix, but is a far larger, unaudited change than one
+#: mis-bucketed class warrants — `check_plan_acceptance_standard` (28) and the six inline
+#: checks `main()` numbers by comment only (1-3, 5-8) share the identical gap and are
+#: left as found, `"unclassified"`, exactly as before this fix.
+_PROCESS_CORE_DIGEST_RE: Final = re.compile(r"^process core ")
 
 #: Checks 29, 30 and 35 are (h1)'s W37-10 residue — Ruling 105 §B: disclosed by count,
 #: owner-labelled, never fatal. Every other class, including a failure this predicate
@@ -1834,7 +1854,14 @@ def _classify_failures(out: str) -> dict[str, int]:
     tail = out[block.start():] if block else ""
     for msg in _FAILURE_LINE_RE.findall(tail):
         m = _CHECK_PREFIX_RE.match(msg)
-        cls = m.group(1) if m else ("1" if _BROKEN_LINK_RE.match(msg) else "unclassified")
+        if m:
+            cls = m.group(1)
+        elif _BROKEN_LINK_RE.match(msg):
+            cls = "1"
+        elif _PROCESS_CORE_DIGEST_RE.match(msg):
+            cls = "27"
+        else:
+            cls = "unclassified"
         counter[cls] = counter.get(cls, 0) + 1
     return counter
 

@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import importlib.util
 import itertools
 import posixpath
@@ -6157,6 +6158,68 @@ def _regenerate_index_for_migrate(root: Path) -> list[str]:
     return ["docs/INDEX.md"]
 
 
+#: `audit-docs.py` check 27 (Ruling 45): the two `meta` fields the digest check reads.
+#: Line-targeted, not `json.loads`/`json.dumps` round-tripped -- re-serialising the whole
+#: file would reformat every other key (indent width, key order) into an unrelated diff a
+#: reviewer did not ask for, the same reason `_sweep_title` substitutes inside a string
+#: rather than rebuilding the artifact that carries it.
+_PROCESS_SPEC_REL: Final = "docs/process/delivery-process.md"
+_PROCESS_CORE_REL: Final = "docs/process/delivery-process.core.json"
+_PROCESS_CORE_DIGEST_LINE_RE: Final = re.compile(
+    r'^(\s*"derived_from_digest":\s*")[^"]*(",?\s*)$', re.MULTILINE
+)
+_PROCESS_CORE_TREE_LINE_RE: Final = re.compile(
+    r'^(\s*"verified_against_tree":\s*")[^"]*(",?\s*)$', re.MULTILINE
+)
+
+
+def _reconcile_process_core_digest(root: Path) -> list[str]:
+    """Check 27 (Ruling 45): `docs/process/delivery-process.core.json`'s
+    `meta.derived_from_digest` records a `sha256:` digest of `docs/process/
+    delivery-process.md`'s exact bytes, paired with the commit last reconciled
+    (`meta.verified_against_tree`), and reds whenever the two disagree.
+
+    The corpus-wide citation sweep (`_rewrite_citations`, already run by the time this is
+    called) rewrites the spec's own legacy-form citations exactly like any other file's --
+    which is exactly the class of edit the digest exists to catch, so a migrated tree
+    reds check 27 by construction on a change no human reviewed as *this file's* content
+    edit (it is the identical mechanical token sweep every other file in the diff
+    received, and the migration PR's own review is the "forced re-read" Ruling 45 asks
+    for). `migrate()` reconciling its own edit in the same commit is the fix, not a
+    standing red nothing discharges.
+
+    A no-op wherever the pair does not both exist (true of every unit-test fixture --
+    neither file is part of any fixture corpus) or `root` carries no resolvable git
+    `HEAD` (a bare fixture with no `.git` at all): `verified_against_tree` needs a real
+    commit to mean anything -- "read `git diff <this>..HEAD`" is the field's whole
+    purpose -- and there is nothing safe to write in its place.
+    """
+    spec_path = root / _PROCESS_SPEC_REL
+    core_path = root / _PROCESS_CORE_REL
+    if not spec_path.is_file() or not core_path.is_file():
+        return []
+    text = core_path.read_text(encoding="utf-8")
+    if not (
+        _PROCESS_CORE_DIGEST_LINE_RE.search(text)
+        and _PROCESS_CORE_TREE_LINE_RE.search(text)
+    ):
+        return []
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    tree = proc.stdout.strip()
+    digest = "sha256:" + hashlib.sha256(spec_path.read_bytes()).hexdigest()
+    new_text = _PROCESS_CORE_DIGEST_LINE_RE.sub(rf"\g<1>{digest}\g<2>", text)
+    new_text = _PROCESS_CORE_TREE_LINE_RE.sub(rf"\g<1>{tree}\g<2>", new_text)
+    if new_text == text:
+        return []
+    core_path.write_text(new_text, encoding="utf-8")
+    return [_PROCESS_CORE_REL]
+
+
 # ---------------------------------------------------------------------------------------
 # Ruling 84 §4's second acceptance item, as Ruling 94 substituted it
 # (`docs/plans/2026-09-02-w37-vacuous-acceptance-item-ruling.md` §2 — register finding
@@ -7041,9 +7104,15 @@ def _write_split_source_indexes(
                 "|---|---|---|",
             ]
             for canon, new_rel, title in section.rows:
-                name = new_rel.rsplit("/", 1)[-1]
+                # `_split_index_family`'s own docstring: a split source's targets are not
+                # guaranteed to share one family directory ("three sources split *across*
+                # families"), so a target can land in a directory other than this index's
+                # own (`docs/{family_dir}`). A bare basename resolves only when it does not
+                # — `os.path.relpath` is the general case and degrades to the same bare
+                # basename whenever it does, so the common case is unchanged.
+                link = posixpath.relpath(new_rel, start=f"docs/{family_dir}")
                 lines.append(
-                    f"| [`{canon}`]({name}) | {_md_cell(title)} | "
+                    f"| [`{canon}`]({link}) | {_md_cell(title)} | "
                     f"`{section.old_rel}` |"
                 )
             lines.append("")
@@ -7782,6 +7851,7 @@ def migrate(root: Path) -> MigrateResult:
 
     redirects_written = _write_redirects(root, redirect_rows)
     index_written = _regenerate_index_for_migrate(root)
+    process_core_written = _reconcile_process_core_digest(root)
     # #25's ruling: a padded citation of a real governed thing is normalised like any
     # other citation, once `docs/INDEX.md` exists to give conjunct 3 its authority.
     files_written = [*files_written, *_normalize_padded_citations(root)]
@@ -7831,6 +7901,7 @@ def migrate(root: Path) -> MigrateResult:
         split_index_violations=tuple(index_faults),
         generated_paths=tuple(dict.fromkeys([
             *readme_written, *split_index_paths, *redirects_written, *index_written,
+            *process_core_written,
         ])),
     )
 

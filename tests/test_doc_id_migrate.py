@@ -18,7 +18,9 @@ import argparse
 import ast
 import collections
 import csv
+import hashlib
 import importlib.util
+import json
 import pathlib
 import posixpath
 import re
@@ -6193,6 +6195,78 @@ def test_the_split_index_preamble_is_swept_for_the_rulings_it_names_by_legacy_fo
     assert "Ruling 101" not in text
 
 
+def test_a_cross_family_split_target_is_linked_by_relative_path_not_bare_basename(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`_split_index_family`'s own docstring: a split source's targets are not
+    guaranteed to share one family directory ("three sources split *across*
+    families"). The family index lives at `docs/<family_dir>/INDEX.md` for the
+    alphabetically-first family among the targets — but a row for a target that
+    lands in a *different* family directory must not link it by bare basename,
+    which resolves only when the index and the target share a directory.
+
+    `ledgers` sorts before `rulings`, so this split's index lands under
+    `docs/ledgers/INDEX.md`; the `RL-` target is the cross-family one under test.
+
+    Red before the fix (`new_rel.rsplit("/", 1)[-1]`): the row links a bare
+    `RL-…md` filename inside `docs/ledgers/INDEX.md`, which resolves to a
+    nonexistent `docs/ledgers/RL-…md` — check 1's own broken-link scan, found live
+    on the real corpus (`docs/closures/INDEX.md` linking `LG-…`/`RS-…`/`RFC-…`
+    targets by bare basename). Green after: the row links `../rulings/RL-…md`.
+    """
+    drafts = [
+        doc_id_cli._Draft(
+            materialize="document", prefix="LG", kind=None, title="the ledger half",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-cross-family.md", 0),
+            old_token="Ruling 500", was="docs/plans/2026-09-01-cross-family.md",
+            body="## Ruling 500 — the ledger half\n\nBody one.\n",
+            source_line_span=(1, 10),
+        ),
+        doc_id_cli._Draft(
+            materialize="document", prefix="RL", kind=None, title="the ruling half",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-cross-family.md", 1),
+            old_token="Ruling 501", was="docs/plans/2026-09-01-cross-family.md",
+            body="## Ruling 501 — the second\n\nBody two.\n",
+            source_line_span=(11, 20),
+        ),
+    ]
+    drafts[0].number, drafts[1].number = 500, 501
+    drafts[0].body_line_offset = drafts[1].body_line_offset = 5
+    sources = doc_id_cli._build_split_sources(
+        "docs/plans/2026-09-01-cross-family.md",
+        [
+            (drafts[0], "docs/ledgers/LG-00500-the-ledger-half.md"),
+            (drafts[1], "docs/rulings/RL-00501-the-ruling-half.md"),
+        ],
+    )
+    split = next(s for s in sources if s.token == "docs/plans/2026-09-01-cross-family.md")
+
+    doc_id_cli._write_split_source_indexes(tmp_path, [split], {})
+
+    family = doc_id_cli._split_index_family(
+        split.old_rel, [t.new_rel for t in split.targets]
+    )
+    assert family == "ledgers", "fixture assumption: 'ledgers' sorts before 'rulings'"
+    text = (tmp_path / "docs" / family / "INDEX.md").read_text(encoding="utf-8")
+
+    assert "](../rulings/RL-00501-the-ruling-half.md)" in text, (
+        "the cross-family target must be linked by a correct relative path from "
+        f"docs/{family}/, not by bare basename"
+    )
+    assert "](RL-00501-the-ruling-half.md)" not in text, (
+        "a bare-basename link resolves only when the target shares the index's own "
+        "directory, which docs/rulings/ does not share with docs/ledgers/"
+    )
+    # Positive control: the same-family target is unaffected — a bare basename is
+    # correct there, so the fix must not widen into always emitting "../<dir>/...".
+    assert "](LG-00500-the-ledger-half.md)" in text, (
+        "the same-family target's link changed too — the fix must be a no-op when the "
+        "target already shares the index's own directory"
+    )
+
+
 def test_a_bare_basename_link_is_rewritten_only_inside_its_own_directory(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -7016,3 +7090,138 @@ def test_normalize_padded_citations_unpads_a_bare_occurrence_sharing_a_line_with
     assert after == (
         "see `docs/ledgers/LG-00030-x.md`, including `LG-30` itself, for the record\n"
     )
+
+
+# ---------------------------------------------------------------------------------------
+# `_reconcile_process_core_digest` — check 27 (Ruling 45), found live: the corpus-wide
+# citation sweep rewrites `docs/process/delivery-process.md`'s own legacy-form citations
+# exactly like any other file's, and nothing reconciled `delivery-process.core.json`'s
+# `meta.derived_from_digest`/`meta.verified_against_tree` against the new bytes -- every
+# migrated tree reds check 27 by construction, on an edit the migration PR's own review
+# already covers as unremarkable mechanical token substitution.
+# ---------------------------------------------------------------------------------------
+
+
+def _seed_process_pair(root: pathlib.Path, spec_body: str, digest: str, tree: str) -> None:
+    process_dir = root / "docs" / "process"
+    process_dir.mkdir(parents=True, exist_ok=True)
+    (process_dir / "delivery-process.md").write_text(spec_body, encoding="utf-8")
+    core = (
+        "{\n"
+        '  "meta": {\n'
+        '    "id": "delivery-process-core",\n'
+        f'    "derived_from_digest": "{digest}",\n'
+        f'    "verified_against_tree": "{tree}",\n'
+        '    "authoritative": false\n'
+        "  },\n"
+        '  "vocabularies": {}\n'
+        "}\n"
+    )
+    (process_dir / "delivery-process.core.json").write_text(core, encoding="utf-8")
+
+
+def test_reconcile_process_core_digest_is_a_no_op_when_neither_file_exists(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Every fixture corpus this suite runs `migrate()` against lacks both files (neither
+    `tests/fixtures/docs-migration/` nor `tests/fixtures/docs-ids/w37-3-corpus/` carries
+    `docs/process/`), which is exactly what keeps this function invisible to every other
+    `migrate()` test — asserted directly here rather than left to inference."""
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=tmp_path)
+    assert doc_id_cli._reconcile_process_core_digest(tmp_path) == []
+
+
+def test_reconcile_process_core_digest_is_a_no_op_with_no_resolvable_git_head(
+    tmp_path: pathlib.Path, doc_id_cli: types.ModuleType
+) -> None:
+    """`verified_against_tree` needs a real commit to mean anything -- "read `git diff
+    <this>..HEAD`" is the field's whole purpose. A bare directory (no `.git`, or a `.git`
+    with no commit yet) has nothing safe to write there, so the reconciliation must skip
+    it rather than write a tree value that resolves to nothing.
+    """
+    _seed_process_pair(
+        tmp_path, "old body\n", "sha256:" + "0" * 64, "0000000000000000000000000000000000"
+    )
+    assert doc_id_cli._reconcile_process_core_digest(tmp_path) == []
+    core_text = (tmp_path / "docs" / "process" / "delivery-process.core.json").read_text(
+        encoding="utf-8"
+    )
+    assert "sha256:" + "0" * 64 in core_text, "no git HEAD: the stale digest must survive"
+
+
+def test_reconcile_process_core_digest_updates_both_fields_after_a_spec_edit(
+    tmp_path: pathlib.Path, doc_id_cli: types.ModuleType
+) -> None:
+    """The live defect, reproduced directly: a `derived_from_digest` that no longer
+    matches `delivery-process.md`'s current bytes (the shape the citation sweep leaves
+    behind) must be rewritten to the new bytes' digest, paired with the tree
+    `migrate()` is actually running against — resolvable git `HEAD`, since `root`'s
+    `.git` is real for both a genuine checkout and a `--verify` snapshot alike
+    (`doc-id.py migrate --verify`'s own `git archive` + `git init` + commit).
+
+    Red before the fix: check 27's own predicate, run directly against the seeded pair --
+    `derived_from_digest` stale, so the check reds. Green after: the two fields this
+    function writes make the identical predicate pass.
+    """
+    new_body = "the reconciled body, post-sweep\n"
+    _seed_process_pair(
+        tmp_path, new_body, "sha256:" + "0" * 64, "0000000000000000000000000000000000"
+    )
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=tmp_path)
+    _run_git(["config", "user.email", "test@example.com"], cwd=tmp_path)
+    _run_git(["config", "user.name", "Test"], cwd=tmp_path)
+    _run_git(["add", "-A"], cwd=tmp_path)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=tmp_path)
+    head = subprocess.run(
+        ["git", "-C", str(tmp_path), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+    # Red: check 27's own predicate, before the fix runs.
+    expected_digest = "sha256:" + hashlib.sha256(new_body.encode("utf-8")).hexdigest()
+    core_path = tmp_path / "docs" / "process" / "delivery-process.core.json"
+    core = json.loads(core_path.read_text(encoding="utf-8"))
+    assert core["meta"]["derived_from_digest"] != expected_digest, (
+        "fixture assumption: the seeded digest is stale before reconciliation"
+    )
+
+    written = doc_id_cli._reconcile_process_core_digest(tmp_path)
+
+    assert written == ["docs/process/delivery-process.core.json"]
+    core = json.loads(core_path.read_text(encoding="utf-8"))
+    assert core["meta"]["derived_from_digest"] == expected_digest
+    assert core["meta"]["verified_against_tree"] == head
+    # Positive control: every other field is untouched -- the fix targets exactly the
+    # two lines the check reads, never a full re-serialisation (`_PROCESS_CORE_*_RE`'s
+    # own reasoning: reformatting the whole file is an unrelated diff nobody asked for).
+    assert core["meta"]["id"] == "delivery-process-core"
+    assert core["meta"]["authoritative"] is False
+
+
+def test_reconcile_process_core_digest_is_idempotent(
+    tmp_path: pathlib.Path, doc_id_cli: types.ModuleType
+) -> None:
+    """A second call against an already-reconciled pair reports nothing further written
+    and changes nothing -- `migrate()`'s own idempotency property
+    (`test_migrate_produces_byte_identical_output_on_a_second_run`), extended to this
+    step specifically rather than assumed from the suite around it.
+    """
+    new_body = "already reconciled\n"
+    _seed_process_pair(
+        tmp_path, new_body, "sha256:" + "0" * 64, "0000000000000000000000000000000000"
+    )
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=tmp_path)
+    _run_git(["config", "user.email", "test@example.com"], cwd=tmp_path)
+    _run_git(["config", "user.name", "Test"], cwd=tmp_path)
+    _run_git(["add", "-A"], cwd=tmp_path)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=tmp_path)
+
+    first = doc_id_cli._reconcile_process_core_digest(tmp_path)
+    assert first == ["docs/process/delivery-process.core.json"]
+    before = (tmp_path / "docs" / "process" / "delivery-process.core.json").read_bytes()
+
+    second = doc_id_cli._reconcile_process_core_digest(tmp_path)
+    after = (tmp_path / "docs" / "process" / "delivery-process.core.json").read_bytes()
+
+    assert second == [], "nothing left to reconcile the second time"
+    assert after == before

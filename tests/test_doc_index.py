@@ -83,6 +83,79 @@ def test_every_header_has_a_unique_id() -> None:
     assert len(ids) == len(set(ids)), "duplicate id in the fixture corpus"
 
 
+# --- relative links embedded in a copied cell: rebased for INDEX.md's own depth --------
+
+
+def test_rebase_relative_links_is_a_no_op_when_source_and_dest_are_the_same_dir() -> None:
+    """`open-questions.md` and `INDEX.md` are both direct `docs/` children, so a link
+    copied from one into the other needs no rewrite — the identity case."""
+    text = "See [the plan](2026-01-01-x.md) and [an anchor](#foo)."
+    same = Path("docs")
+    assert doc_index._rebase_relative_links(text, same, same) == text
+
+
+def test_rebase_relative_links_climbs_one_level_for_a_specs_sourced_cell() -> None:
+    """The live defect (check 1, 20 hits): a link written correctly in `docs/specs/x.md`
+    (one level below `docs/`) reproduced verbatim in `docs/INDEX.md` (`docs/` itself)
+    silently loses a directory level."""
+    text = "See [research](../research/track-a-findings.md) F5."
+    rebased = doc_index._rebase_relative_links(
+        text, Path("docs/specs"), Path("docs")
+    )
+    assert rebased == "See [research](research/track-a-findings.md) F5."
+
+
+def test_rebase_relative_links_preserves_a_fragment_and_skips_absolute_and_anchor_forms() -> (
+    None
+):
+    text = (
+        "[frag](../research/x.md#section) and [ext](https://example.com/y.md) "
+        "and [anchor only](#z)"
+    )
+    rebased = doc_index._rebase_relative_links(text, Path("docs/specs"), Path("docs"))
+    assert "[frag](research/x.md#section)" in rebased
+    assert "[ext](https://example.com/y.md)" in rebased, "an absolute URL must not be touched"
+    assert "[anchor only](#z)" in rebased, "a pure intra-document anchor must not be touched"
+
+
+def test_scan_bold_id_rows_rebases_a_link_embedded_in_a_requirement_cell(
+    tmp_path: Path,
+) -> None:
+    """End-to-end: a requirement row's own description cell carries a relative link
+    written for its source file's depth (`docs/specs/`); `docs/INDEX.md`'s copy of that
+    same cell must still resolve, one directory level shallower.
+
+    Red before the fix: `render_index`'s row for FR-1460 carries the link string
+    unchanged (`../research/track-a-findings.md`), which resolves outside `docs/`
+    entirely from `docs/INDEX.md`'s own location — check 1's own broken-link scan on the
+    real migrated corpus, 20 hits, all in `docs/INDEX.md`.
+    """
+    root = tmp_path / "corpus"
+    shutil.copytree(CORPUS, root)
+    spec = root / "specs" / "00-overview.md"
+    text = spec.read_text(encoding="utf-8")
+    before = "| **FR-1460** | Fixture requirement A | active |"
+    after = (
+        "| **FR-1460** | Fixture requirement A, see "
+        "[research](../research/track-a-findings.md) | active |"
+    )
+    assert before in text
+    spec.write_text(text.replace(before, after), encoding="utf-8")
+    (root / "research").mkdir(exist_ok=True)
+    (root / "research" / "track-a-findings.md").write_text("# findings\n", encoding="utf-8")
+
+    corpus = _build(root)
+    index_text = doc_index.render_index(corpus)
+
+    assert "](research/track-a-findings.md)" in index_text, (
+        "the rebased link (correct from docs/INDEX.md's own location) is missing"
+    )
+    assert "](../research/track-a-findings.md)" not in index_text, (
+        "the un-rebased link (correct only from docs/specs/, one level too many '../' "
+        "from docs/INDEX.md) must not survive into the rendered index"
+    )
+
+
 # --- the execution column: NT-0019 §1.7's seven cases, derived not stored ---------------
 
 
