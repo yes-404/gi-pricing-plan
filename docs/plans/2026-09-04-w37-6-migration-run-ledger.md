@@ -180,6 +180,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #716 | docs(plans): open W37-6's migration run ledger | `e38ca12` | UNCHANGED: 14 (this ledger's own history above is its full run — every entry, salvage, and correction landed as commits on this PR before it merged; no predicate code touched) |
 | #718 | fix(reporter-cycle): Ruling 106 — 100-word cap, BST-clock ETA, main-move refresh | `a9a733c` | UNCHANGED: 14 (`.claude/**` skill/role/script content only — `reporter.py`, `test_reporter.py`, `reporter.md`, `SKILL.md`, the ruling record — no `docs/**` migration-scope path or predicate code touched). Fourth F49 trailer on this branch (`07ea929`) was amended and force-pushed before merge, root cause fixed the same day (shared vs. per-worktree commit-msg hook, see the F49 entry below); duplicate branch `w37-6-ruling106-work` deleted from origin after merge. |
 | #720 | fix(scripts): (g) other-residue triage, docs/ leg — cause3/cause4 named | `dea2c79` | Diagnosis-only (`_residue_cause`/`_residue_cause_table` gains two named causes, no predicate changed) — not independently re-run at merge, `ci-watcher-720` confirmed python/docs/history-policy all green and mergeStateStatus CLEAN. cause3 (57% of tree-wide `other`) and cause4 (genuine forward-migration corruption) both dispositioned to executor-30-2's #30 PR; REDIRECTS.csv determinism owed to h2b as a follow-up (task #24). |
+| #719 | docs(plans): ledger — #716/#718/#720 merges, thread-cap ruling, kills, salvage disposition | `0375cda` | UNCHANGED: 14 (this ledger's own continued history — every entry above from the merge of #716 forward is this PR's own commits — plus one `dev-commands` SKILL.md edit, no `docs/**` migration-scope path or predicate code touched). Its own CI was repeatedly cancelled by the lead's own rapid push cadence (`ci-watcher-719` flagged it); merged once pushes paused and it settled CLEAN. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -503,3 +504,31 @@ the queued restart instruction on its next turn.
 
 Not restarted by the lead — that is the owning agent's own next action once its queue
 unblocks, per the same ruling.
+
+## 2026-09-04 — rowe2's second flock-less restart traced to an incomplete instruction, not agent error
+
+Deputy's 12:3xZ read: `wt-alloc` and `w37-6-other-residue-triage` both correctly
+`flock`-parented and capped; `wt-rowe2` capped but parent `bash` again, 37 s old — the same
+shape as the run already killed once. Verdict: an agent producing the same non-compliant
+restart twice is following its brief, not malfunctioning. Root cause found: my message to
+rowe2 wrapped only `uv run pytest -q` in isolation, not the full chained gate command
+(`ruff && mypy && lint-imports && pytest`) its `gate-runner` subagent actually issues as one
+shell call — the partial line didn't compose into that shape. Fixed: sent rowe2 the
+complete canonical block from `.claude/skills/dev-commands/SKILL.md` verbatim (all four
+gate steps under one `flock`, thread-capped), asked it to echo back the exact command
+string executed for verification rather than a paraphrase.
+
+**Efficiency line** (real gates by `%CPU > 20`, per the deputy's predicate): three —
+`wt-alloc` (compliant), `w37-6-other-residue-triage`/triage-other (compliant), `wt-rowe2`
+(non-compliant, fix just sent). **Between gates:** `h2b` (no real pytest process; message
+landed after the kill, no restart observed yet — likely still on ruff/mypy/lint-imports
+before reaching pytest, or hasn't started); `verify105` (no real pytest process — its capped
+restart was last seen at 76%/~11min, likely finished; no report received yet);
+`executor-30-2`, `triage-code` (no real pytest process at any point this session so far —
+still on their non-gate work, no report yet). Load 6.68/5.53/15.57, CPU demand
+(78.2+92.0+131)/1600 ≈ 0.19 — consistent with the deputy's under-used reading.
+
+**PR #719 (this ledger PR) merged** at `0375cda` once its own CI settled — the lead's rapid
+push cadence had been cancelling its runs (`ci-watcher-719`'s finding); merged clean once
+pushes paused. Continuing on a fresh branch (`docs-w37-6-ledger-cont2`) since the merged
+branch is gone.
