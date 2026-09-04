@@ -102,6 +102,41 @@ that ruling's own record; and `NotImplementedError` as the exception class for t
 reads as a code gap when it is actually a corpus condition being reported correctly — a
 rename candidate, not a fix.
 
+## 2026-09-04 — post-restart function check: disk, salvage, CI
+
+The machine restarted between 09:22Z and 09:45Z; all five executors died along with the
+previous lead session and its watch on this channel. Re-armed a fresh `Monitor` on
+`to-lead.md` and worked the deputy's post-restart checklist (`to-lead.md` `:637-652`).
+
+**Disk**, re-measured at 10:2xZ: `/` 6.7 GB free (77% used) — up from the 4.2 GB/86% at the
+last cleanup reading, condition 2 still met. `/tmp` (tmpfs) came back empty after the
+restart — 32 GB size, effectively 0 used, condition 3 comfortably met.
+
+**Git hygiene after the hard stop.** Two stale `index.lock` files found and removed, both
+confirmed unheld (`pgrep -fa git` showed no holder before removal in either case):
+`~/gi-pricing-plan/.git/index.lock` (mtime 2026-09-03 22:00Z, in the *shared checkout*) and
+`~/gi-pricing-plan/.git/worktrees/lead-ruling105/index.lock` (mtime 2026-09-04 09:40Z, this
+worktree's own, predating the restart window). The shared checkout also carried an
+uncommitted `scripts/_docverify.py` diff at the first lock's mtime — an abandoned,
+pre-`#713` attempt at the same `_TOKEN_BOUNDARY_RE`/`_TRAILING_LOCATOR_RE` fix the
+`salvage/row-e-padded-id-prose-v2` branch already carries more completely and more
+currently. Not discarded: `git stash push -u` (stash message names the supersession) before
+cleaning the checkout back to match `origin/main`, in case anything in it is not already on
+that branch — not yet diffed; noted here so it is not lost track of.
+
+**Salvage, the two dirty worktrees the deputy named plus one already-committed one:**
+`wt-alloc` (`scripts/doc-id.py`, the (b) allocation work) and
+`~/gi-pricing-plan/.claude/worktrees/wt-r105-ruling105` (`scripts/_docverify.py`,
+`tests/test_doc_id_verify.py`, the task-key `(d8)` addendum) each committed as-is with
+subject `wip(restart): salvaged at <time>` and pushed to their existing branches
+(`w37-6-row-b-alloc-fix` `264f6e9`, `w37-6-d8-task-key-disclosed` `21c2566`). `wt-h2b` had
+one already-committed, unpushed commit (`2b4c13d`, the DP-7 fix) — pushed to
+`w37-6-dp7-frontmatter`. `wt-w376-unit` and `wt-rowe2` were clean, unchanged.
+
+**Tooling / CI:** `gh auth status` and `uv sync --all-packages` verification, and
+`gh run list --branch main` for `origin/main`'s CI state, are the next two checks before
+dispatch — recorded in the entry after this one once run.
+
 ## Merged PRs, from here forward
 
 <One entry per PR merged in W37-6 scope from 2026-09-04 08:56Z onward, each with its number,
