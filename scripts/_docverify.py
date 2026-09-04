@@ -1612,6 +1612,43 @@ _FIXTURE_CORPUS_DIRS: Final = ("tests/fixtures/docs-ids/", "tests/fixtures/docs-
 #: alone, before the `old_lines is None -> "other"` fallback would otherwise catch it.
 _PYCACHE_RE: Final = re.compile(r"__pycache__/|\.pyc$")
 
+#: cause7 (resumed row-(g) count, after #720/#723/#729/#730/#733 landed — classified-by-
+#: none dropped from ~320 to 190, `other` from ~5-6 to 4): a **relative** markdown link
+#: (`../notes/...`, `../rfcs/...`, `../audit/register.md`) to a document that moved,
+#: outside a `.claude/notes/` tombstone (cause2b's narrower, path-decided case) and
+#: outside the literal `docs/`-rooted or bare-basename forms `_LEGACY_PATH_RES` above
+#: matches — a relative link never contains the literal substring `docs/notes/` etc., so
+#: cause3 cannot see it either. #733 fixed the *forward*-sweep and inverse for several
+#: relative-link and path-citation shapes (its own commit title names them) but not this
+#: one: verified by direct reproduction against `docs/plans/2026-09-01-maintainer-
+#: delegation-and-nt-0019-precedence.md`, still failing post-#733 with exactly the two
+#: mismatches found pre-#733 — ``[`NT-0019`](../rfcs/RFC-00216-....md)`` should read
+#: ``../notes/0019-one-id-per-document.md``, and ``[Register](../audit/phases/1b/
+#: register.md)`` should read ``../audit/register.md``. `docs/plans/2026-08-30-w11-4b-
+#: trace-environment-ruling.md` matches the identical shape. The forward sweep resolves
+#: these correctly in the migrated text; DP-7's inverse cannot, because
+#: `redirects_inverse` is built only from `REDIRECTS.csv`'s `old_id`/`new_id` columns,
+#: never from a citation's own literal relative-path string.
+_RELATIVE_LINK_RE: Final = re.compile(r"\]\(\.\.(?:/\.\.)*/[\w./-]+\.md(?:#[\w-]+)?\)")
+
+#: cause9 (this executor's, one file: `backend/tests/test_wf01_journey.py`, the sole
+#: code-tree member of the resumed `other` count): a **lowercase** `wf-0[0-9]` workflow-id
+#: citation (`"""wf-01 — dataset to approved Model...`) whose inverse comes back
+#: **uppercase** (`WF-01`) — a case-normalisation loss, not a missing token. #733's own
+#: commit message names a `wf-0`/`WF-0` case-form fix (34 lowercase, 13 uppercase
+#: occurrences handled) as part of that PR; this file's citation is not among the ones it
+#: closed — verified by direct reproduction against `frozen_file_matches_after_migration_
+#: stamp`, the only mismatch in the file is this one line's case. Reported as a residual
+#: gap in #733's own mechanism, not investigated further here (whose case-form table
+#: missed this occurrence is #733's own file to read, not this row's).
+#:
+#: The trailing negative lookahead excludes a filename-slug continuation
+#: (`wf-01-dataset-to-model.md`) — a bare path citation already reported by cause3/other
+#: elsewhere (`test_residue_cause3_legacy_path_citation`'s own `docs/README.md` case) and
+#: never itself a case-loss, since a slug is copied verbatim, not case-normalised through
+#: a token map.
+_LOWERCASE_WF_RE: Final = re.compile(r"\bwf-0[0-9]\b(?!-[a-z])")
+
 #: One residue member's cause label, checked in this fixed order (a member matching more
 #: than one shape is reported under the first — `_NOTES_STUB_RE` and the two path-only
 #: code-tree causes (5, 6) before any content is read, since a path alone is conclusive
@@ -1620,8 +1657,9 @@ _PYCACHE_RE: Final = re.compile(r"__pycache__/|\.pyc$")
 #: body also carries; cause4's adjacent-uppercase corruption before the broader
 #: citation-shaped causes, since it is a forward-migration defect rather than an inverse
 #: gap and deserves its own bucket even when the same file also carries a legacy path
-#: citation; `unmapped-work-slice-key` last of all, since it is the most generic shape and
-#: must not steal a file that a more specific, owned cause above it already explains).
+#: citation; `unmapped-work-slice-key`, cause7 and cause9 last of all, since each is a
+#: generic or narrow residual shape and must not steal a file that a more specific, owned
+#: cause above it already explains).
 #:
 #: `new_lines` (the post-migration content at the same path) is optional and used only by
 #: the new-frontmatter-stamp check below — every other check reads `old_lines` alone, as
@@ -1663,6 +1701,12 @@ def _residue_cause(
     for line in old_lines:
         if _WORK_SLICE_KEY_RE.search(line):
             return "unmapped-work-slice-key (named elsewhere, reported here by shape)"
+    for line in old_lines:
+        if _RELATIVE_LINK_RE.search(line):
+            return "cause7-relative-link-citation"
+    for line in old_lines:
+        if _LOWERCASE_WF_RE.search(line):
+            return "cause9-lowercase-wf-id-case-loss"
     return "other"
 
 

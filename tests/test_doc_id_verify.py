@@ -904,6 +904,52 @@ def test_residue_cause6_pycache_build_artifact(dv: Any) -> None:
     assert dv._residue_cause("scripts/doc-id.py", None) == "other"
 
 
+def test_residue_cause7_relative_link_citation(dv: Any) -> None:
+    """cause7 (resumed row-(g) count, after #720/#723/#729/#730/#733 landed): a
+    *relative* markdown link (`../notes/...`, `../rfcs/...`) to a document that moved —
+    outside a `.claude/notes/` tombstone (cause2b's narrower, path-decided case) and
+    outside the literal `docs/`-rooted substring cause3's `_LEGACY_PATH_RES` matches,
+    since a relative link never spells the target's absolute root out. Broken-input proof
+    against the actual lines read in `docs/plans/2026-09-01-maintainer-delegation-and-
+    nt-0019-precedence.md`, confirmed still failing post-#733 by direct reproduction
+    against `frozen_file_matches_after_migration_stamp` (both citations are this file's
+    only two mismatches). Negative control: a line with no relative-link syntax at all
+    must not fire this or any other cause.
+    """
+    assert dv._residue_cause(
+        "docs/plans/x.md",
+        ("[`NT-0019`](../rfcs/RFC-00216-one-id-per-governed-thing.md) is not a proposal.",),
+    ) == "cause7-relative-link-citation"
+    assert dv._residue_cause(
+        "docs/plans/x.md",
+        ("[Register](../audit/phases/1b/register.md) row F58.",),
+    ) == "cause7-relative-link-citation"
+    assert dv._residue_cause(
+        "docs/plans/x.md", ("Cites `02` in prose, no link at all.",)
+    ) == "other"  # no relative-link shape present, so no cause claims it
+
+
+def test_residue_cause9_lowercase_wf_id_case_loss(dv: Any) -> None:
+    """cause9 (this executor's, resumed row-(g) count): a *lowercase* `wf-0[0-9]`
+    workflow-id citation whose inverse comes back uppercase (`WF-01`) — a
+    case-normalisation loss #733's own `wf-0`/`WF-0` case-form fix did not close for
+    every occurrence. Broken-input proof against the actual line read in
+    `backend/tests/test_wf01_journey.py` (its module docstring's own opening line, citing
+    `wf-01`), confirmed by direct reproduction against
+    `frozen_file_matches_after_migration_stamp` to be this file's only mismatch.
+    Negative control: an already-uppercase `WF-01` in old_lines must not fire this
+    cause — the defect is specifically the lowercase form losing its case, not the
+    presence of a `WF-`/`wf-` token at all.
+    """
+    assert dv._residue_cause(
+        "backend/tests/test_wf01_journey.py",
+        ('"""wf-01 — dataset to approved Model, driven end to end (FR-OVR-17(ii)).',),
+    ) == "cause9-lowercase-wf-id-case-loss"
+    assert dv._residue_cause(
+        "backend/tests/x.py", ('"""WF-01 already uppercase.',)
+    ) == "other"
+
+
 def test_row_g_empty_classified_population_fails(dv: Any, tmp_path: pathlib.Path) -> None:
     """NT-0007: a green over an empty population is a fail, not a pass — g2's population
     is the file count `classify_migration_diff` classified, not the corpus size."""
