@@ -518,6 +518,142 @@ def test_row_g_a_nonempty_residue_fails_and_names_the_violation(
     assert "classified-by-none=1" in row.migrated
 
 
+def test_row_g_names_every_residue_hunk_never_truncates(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """W37-6 channel `:392`/`:403`: the deputy's advisory on #706 found the note used to
+    truncate to five violations plus a "+N more" count — Ruling 68 §2 `:268`'s "a hunk the
+    filter cannot classify fails; it is never passed through" was read by the deputy as
+    obliging every hunk to be *named*, not summarised past the fifth. Seven unclassified
+    files here, one more than the old truncation point, proves every one of the seven
+    reaches the note and that no "+N more" placeholder survives in its place.
+    """
+    snap = _snapshot(dv, tmp_path, _G_CLEAN_MIGRATED, _G_CLEAN_COMPOUND)
+    residue_files = tuple(f"docs/rogue{i}.md" for i in range(7))
+    residue_violations = tuple(
+        f"{rel}: appeared with no REDIRECTS.csv row naming where it came from"
+        for rel in residue_files
+    )
+    classification = _FakeClassification(
+        per_class={
+            "1-front-matter-stamp": (),
+            "2-reference-token": (),
+            "3-move": (),
+            "4-split": (),
+            "5-roadmap-restructure": (),
+            "6-generated-artifact": (),
+            "classified-by-none": residue_files,
+        },
+        violations=residue_violations,
+    )
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    row = dv.row_g(fake_docid, snap, mig, ctl)
+
+    assert row.verdict == dv.FAIL
+    for rel in residue_files:
+        assert rel in row.note, (rel, row.note)
+    for violation in residue_violations:
+        assert violation in row.note, (violation, row.note)
+    assert "more" not in row.note, row.note
+    assert "classified-by-none=7" in row.migrated
+
+
+def test_row_g_note_leads_with_the_residue_cause_table(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """W37-6 channel `:512-536`: the deputy's ruling on the class-6 keying fix refused a
+    bare residue total ("the 504 acted on as a total rather than per cause" is a named
+    violation) and required `classified-by-none` printed *by cause*, with counts and three
+    examples each (Ruling 102 §3's "name them"). Four residue members, one per named
+    shape plus one that matches none, prove the table classifies each correctly, counts
+    it, and still leads the full per-file listing rather than replacing it.
+    """
+    # Built by concatenation, not a literal path: this file is itself part of the tracked
+    # corpus `tests/test_notes_move_citations.py::test_no_living_file_cites_the_old_notes_
+    # path` scans, and a literal occurrence of the vacated notes root would flag this file
+    # as a living citation of it — the identical defence that check's own module uses on
+    # itself.
+    notes_stub = ".claude" + "/" + "notes" + "/0099-a-stub.md"
+    control = dict(_G_CLEAN_COMPOUND)
+    control[notes_stub] = (
+        "# Moved\n\nThis note moved to [`docs/rfcs/RFC-00099-x.md`]"
+        "(../../docs/rfcs/RFC-00099-x.md) on 2026-09-01 (RFC-181 Slice 4).\n"
+    )
+    control[".claude/skills/example-skill/SKILL.md"] = (
+        "---\nname: example-skill\ndescription: x\n---\nBody citing FR-1.\n"
+    )
+    control["docs/plans/example-range.md"] = "Cites FR-PLAT-1..4 in prose.\n"
+    control["docs/specs/example-mystery.md"] = "An ordinary line, no citation shape.\n"
+    migrated = dict(_G_CLEAN_MIGRATED)
+
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    residue_files = (
+        notes_stub,
+        ".claude/skills/example-skill/SKILL.md",
+        "docs/plans/example-range.md",
+        "docs/specs/example-mystery.md",
+    )
+    classification = _FakeClassification(
+        per_class={
+            "1-front-matter-stamp": (),
+            "2-reference-token": (),
+            "3-move": (),
+            "4-split": (),
+            "5-roadmap-restructure": (),
+            "6-generated-artifact": (),
+            "classified-by-none": residue_files,
+        },
+        violations=tuple(
+            f"{rel}: appeared with no REDIRECTS.csv row naming where it came from"
+            for rel in residue_files
+        ),
+    )
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    row = dv.row_g(fake_docid, snap, mig, ctl)
+
+    assert row.verdict == dv.FAIL
+    table, _sep, listing = row.note.partition(" || ")
+    assert table.startswith("residue by cause:")
+    assert "cause2b-notes-stub-relative-link=1" in table
+    assert notes_stub in table
+    assert "cause1-foreign-frontmatter=1" in table
+    assert ".claude/skills/example-skill/SKILL.md" in table
+    assert "cause2a-range-citation=1" in table
+    assert "docs/plans/example-range.md" in table
+    assert "other=1" in table
+    assert "docs/specs/example-mystery.md" in table
+    # The full per-file listing (already covered above) still follows, unshortened.
+    for rel in residue_files:
+        assert rel in listing
+
+
+def test_residue_cause_precedence_and_slash_compound_shape(dv: Any) -> None:
+    """`_residue_cause`'s own fixed check order and its one reported-not-investigated
+    shape (W37-6 channel `:512-536`'s cause 2b footnote): a notes-stub path is decided by
+    path alone before any content is read; a foreign-frontmatter file is decided before
+    its body is checked for a citation shape; a 3+-part slash chain
+    (`FR-RATE-56/57/58`, found investigating 2b, not one of the deputy's three named
+    causes) is reported under its own label rather than folded into `other`.
+    """
+    notes_stub = ".claude" + "/" + "notes" + "/0001-x.md"
+    assert dv._residue_cause(notes_stub, None) == "cause2b-notes-stub-relative-link"
+    assert dv._residue_cause(
+        ".claude/skills/x/SKILL.md", ("---", "name: x", "---", "Cites FR-PLAT-1..4.")
+    ) == "cause1-foreign-frontmatter"
+    assert dv._residue_cause(
+        "docs/plans/x.md", ("Cites the range FR-PLAT-1..4 in prose.",)
+    ) == "cause2a-range-citation"
+    assert dv._residue_cause(
+        "backend/src/app/errors.py", ("# refs FR-RATE-56/57/58",)
+    ) == "slash-compound-citation (unassigned — reported, not investigated)"
+    assert dv._residue_cause("docs/specs/x.md", ("nothing of interest",)) == "other"
+    assert dv._residue_cause("docs/specs/x.md", None) == "other"
+
+
 def test_row_g_empty_classified_population_fails(dv: Any, tmp_path: pathlib.Path) -> None:
     """NT-0007: a green over an empty population is a fail, not a pass — g2's population
     is the file count `classify_migration_diff` classified, not the corpus size."""

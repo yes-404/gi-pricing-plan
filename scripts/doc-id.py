@@ -1161,10 +1161,13 @@ class MigrateResult:
     # re-derive) — `docs/INDEX.md`, `docs/REDIRECTS.csv`, every family README
     # `_regenerate_family_readmes` wrote, and every split-source index. Read by (f)'s
     # exclusion (`_docverify.row_f`) so a product identifier merely echoed into a
-    # generated artifact is not counted as having moved. **Not** the class-6 diff
-    # classifier's own gate — `classify_migration_diff`/`_try_class6` still key on
-    # second-run reproducibility (Ruling 104 §2's property, unchanged here); consolidating
-    # that classifier onto this same list is separate, later work, owned elsewhere.
+    # generated artifact is not counted as having moved, AND (W37-6 channel `:394-417`)
+    # by `classify_migration_diff`'s `_try_class6`, which used to key class 6 on second-run
+    # reproducibility alone — every deterministic write is reproducible, including a
+    # deterministic defect — and now requires membership in this same recorded set first,
+    # keeping the second-run content equality only as a second condition within it. One
+    # recorded set, read by both consumers, rather than each re-deriving its own
+    # (`docs/notes/0003-duplicated-status-goes-stale.md` — the copy is what goes stale).
     generated_paths: tuple[str, ...] = ()
 
 
@@ -7399,8 +7402,13 @@ _RULING_68_CLASSES: Final[tuple[tuple[str, str], ...]] = (
      "never partially edited. `INDEX.md` (every one the migration generates — Ruling 104 "
      "§3), `REDIRECTS.csv`, `docs/contracts/`, the core-JSON digest and the §5.2 "
      "generated READMEs are its EXAMPLES and MEMBERS, not the whole of it. Tested by the "
-     "property, not by path (`classify_migration_diff`'s `_try_class6`, against "
-     "`_run_second_migration`'s independent output)"),
+     "property, not by path — but the property is *the generator*, not mere "
+     "reproducibility (W37-6 channel `:394-417`, correcting the earlier content-equality-"
+     "only reading, whose broken input was a deterministic wrong rewrite passing as "
+     "generated for having no way to be told apart from one): `classify_migration_diff`'s "
+     "`_try_class6` requires membership in `_run_second_migration`'s own "
+     "`MigrateResult.generated_paths` first, and only then the independent second "
+     "run's content equality"),
 )
 
 #: The bucket for a hunk in none of the above. Ruling 68 §2: "A hunk the filter cannot
@@ -7469,10 +7477,11 @@ def _read_redirect_rows(new_root: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(fh))
 
 
-def _run_second_migration(old_root: Path) -> Path:
+def _run_second_migration(old_root: Path) -> tuple[Path, MigrateResult]:
     """A second, independent `migrate()` run against a fresh copy of `old_root`, in a
     throwaway directory — class 6's oracle for "would the migration have produced this
-    file, in full?"
+    file, in full?", and (W37-6 channel `:394-417`) the source of the run's own recorded
+    generated-output set that decides whether class 6 even applies to a given path.
 
     Ruling 104 §2's class 6 is a **property**: "a file whose entire content is the output
     of one of the migration's generators". `migrate()` is the only generator this module
@@ -7485,12 +7494,20 @@ def _run_second_migration(old_root: Path) -> Path:
     or partially edited — fails the property exactly as Ruling 104's own broken-input proof
     requires.
 
+    The same invariant that makes the second run's *content* a faithful oracle also makes
+    its `MigrateResult.generated_paths` a faithful stand-in for the population's own
+    recorded set: both runs start from the same `old_root`, so the two sets are the same
+    set, not merely two runs that happen to agree. Returning it here — rather than a second
+    call to `migrate` on `new_root`'s own history, which no longer exists once a caller has
+    only the post-migration tree — is what lets `_try_class6` key on the generator that
+    wrote a path instead of on whether the path's content happens to be reproducible.
+
     The caller owns the returned directory and must remove it.
     """
     tmp = Path(tempfile.mkdtemp(prefix="doc-id-class6-"))
     shutil.copytree(old_root, tmp, dirs_exist_ok=True)
-    migrate(tmp)
-    return tmp
+    result = migrate(tmp)
+    return tmp, result
 
 
 def classify_migration_diff(
@@ -7526,8 +7543,13 @@ def classify_migration_diff(
     §5.2 rows mixing script output and hand edits in the same file) or Ruling 104 forbids
     for class 6.
 
-    Class 6 is tried, for anything that does not fit 1-5, against `_run_second_migration`'s
-    independent regeneration — content, never path.
+    Class 6 is tried, for anything that does not fit 1-5, in two conditions: first,
+    membership in `_run_second_migration`'s own recorded generated-output set (the
+    generator, per Ruling 104 §2 — never a path pattern); only for a member is content
+    then checked against that same independent regeneration. A file outside the set fails
+    class 6 regardless of content equality — the W37-6 channel `:394-417` fix, since
+    content equality alone cannot tell a generated artifact from a deterministic defect
+    the migration reproduces identically on both runs.
     """
     audit_docs = _load_audit_docs()
     rows = _read_redirect_rows(new_root)
@@ -7610,13 +7632,17 @@ def classify_migration_diff(
     # Class 6's oracle is expensive (a full second `migrate()` run) and most files never
     # need it, so it is built at most once, on first use, and torn down when this call
     # returns — never left for a caller to leak.
-    second_run_root: list[Path] = []
+    second_run: list[tuple[Path, MigrateResult]] = []
+
+    def _second_run() -> tuple[Path, MigrateResult]:
+        if not second_run:
+            second_run.append(_run_second_migration(old_root))
+        return second_run[0]
 
     def _second_run_text(rel: str) -> str | None:
-        if not second_run_root:
-            second_run_root.append(_run_second_migration(old_root))
+        root2, _result = _second_run()
         try:
-            return (second_run_root[0] / rel).read_text(encoding="utf-8")
+            return (root2 / rel).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             return None
 
@@ -7625,9 +7651,24 @@ def classify_migration_diff(
         violations.append(message)
 
     def _try_class6(rel: str) -> bool:
-        """True (and bucketed) iff `rel`'s content in `new_root` equals what an
-        independent second `migrate()` run over `old_root` produces at that same path —
-        Ruling 104 §2's property, checked without regard to what `rel` is."""
+        """True (and bucketed) iff `rel` is a member of the run's own recorded
+        generated-output set (Ruling 104 §2's property is *"the output of one of the
+        migration's generators"* — the generator, never whether the content happens to be
+        reproducible) **and** its content in `new_root` equals what an independent second
+        `migrate()` run over `old_root` produces at that same path.
+
+        W37-6 channel `:394-417`: keying on content equality alone made a deterministic
+        defect indistinguishable from a generated artifact — every deterministic write is
+        reproducible, including a wrong one, so a body line the migration corrupts the same
+        way twice used to pass class 6 for having no other content difference to explain
+        it. The membership test is the first, cheap condition; the second run's content
+        equality — kept exactly as it was — narrows it further, catching a generated file a
+        caller hand-edited after the fact (`test_class6_a_hand_edited_readme_fails_and_
+        names_the_file`, unchanged by this fix).
+        """
+        _root2, result = _second_run()
+        if rel not in result.generated_paths:
+            return False
         actual = new_files.get(rel)
         if actual is None:
             return False
@@ -7764,8 +7805,8 @@ def classify_migration_diff(
                 f"{new_rel}: appeared with no REDIRECTS.csv row naming where it came from",
             )
     finally:
-        if second_run_root:
-            shutil.rmtree(second_run_root[0], ignore_errors=True)
+        if second_run:
+            shutil.rmtree(second_run[0][0], ignore_errors=True)
 
     return MigrationDiffClassification(
         per_class={k: tuple(v) for k, v in buckets.items()},
