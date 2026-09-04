@@ -493,6 +493,24 @@ def test_check_34_migration_stamp_allowance_rejects_a_real_content_change(
     )
 
 
+def test_check_34_inverse_does_not_corrupt_a_hyphen_preceded_fragment(
+    audit: types.ModuleType,
+) -> None:
+    """The deputy's ruling (W37-6, 2026-09-04), the exact case executor-30-2 measured on
+    row (d8): a plain `\\b` treats `-` as a boundary transition, so inverting a genuinely
+    migrated bare `W37-6` also corrupted an *untouched*, unrelated compound citing it
+    (`F-W37-6`, a finding id) into `F-OLD-W37-6` -- a false DP-7 violation on a clean
+    migration, not a missed one. `_docid.TOKEN_LEFT_BOUND` refuses to invert starting
+    right after a hyphen, so the compound survives untouched and the standalone token
+    still inverts correctly.
+    """
+    old_body = "See F-W37-6 and OLD-W37-6 for context.\n"
+    new_text = "---\nid: RL-9\n---\nSee F-W37-6 and W37-6 for context.\n"
+    assert audit.frozen_file_matches_after_migration_stamp(
+        old_body, new_text, redirects_inverse={"W37-6": "OLD-W37-6"}, allocated_ids={"RL-9"}
+    )
+
+
 def test_check_34_migration_stamp_allowance_is_order_independent_under_prefix_collision(
     audit: types.ModuleType,
 ) -> None:

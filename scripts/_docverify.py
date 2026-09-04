@@ -744,6 +744,16 @@ D_ALTERNATIVES: Final = _docid.LEGACY_FORM_PATTERNS
 #: never silent: the row still prints its figure, denominator and control.
 D_DISCLOSED: Final = frozenset({"finding id (bare form)", "finding id (workstream form)"})
 
+#: The five §7(d) alternatives that cite a *path* rather than an id (`_docid.
+#: LEGACY_FORM_PATTERNS`' own `"...path"` suffix) — rows (d9)-(d13). Handled by
+#: `_path_alternative_verdict` below rather than folded into `D_DISCLOSED`: unlike an
+#: alias class, a path alternative's disclosure is per-*match*, never per-alternative
+#: whole — the same alternative can count both a real, unrewritten file citation
+#: (fatal) and a bare directory mention with no successor (disclosed) in the same run.
+D_PATH_LABELS: Final = frozenset(
+    name for name, _ in _docid.LEGACY_FORM_PATTERNS if "path" in name
+)
+
 #: Which ruling reads each disclosed alternative, printed in its row's own note so a reader
 #: does not have to guess which citation covers which alternative.
 D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
@@ -1144,6 +1154,53 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
     )
 
 
+def _path_alternative_verdict(
+    mig: Corpus, pattern: re.Pattern[str],
+) -> tuple[int, int, int, int]:
+    """The deputy's ruling (W37-6 channel, 2026-09-04): Ruling 105 §A's disclosed-alias
+    pattern applied to a §7(d) *path* alternative. A match immediately naming a real
+    moved file — present in this run's own `docs/REDIRECTS.csv` `old_path` column — is
+    fatal: the citation-inverse mechanism owns exactly that shape (a known `(old_path,
+    new_path)` pair) and should have repointed it. A match naming no such file has no
+    pair to repoint to at all — a bare directory mention with no single successor
+    (`docs/audit/`, which dissolves into four: `_README_LEGACY_DIR_MOVES`'s own
+    docstring) or a dated prefix with nothing identifiable after it (`docs/plans/2026-`
+    alone). Rewriting the sentence around either would be a meaning edit
+    `docs/plans/README.md`'s write-once rule forbids inside a frozen file, so this row
+    discloses the count rather than demanding zero of it — owner W37-11's citation-form
+    item, the same shape (d2)/(d8) already use.
+
+    Wrap-tolerant by the same window `doc-id.py`'s `_rejoin_wrapped_path_citations`
+    reads (this line concatenated with the next): a real file's own citation surviving
+    as a still-wrapped, still-unrewritten token must stay fatal, not quietly reclassify
+    as "no path present" merely because the forward sweep's own wrap fix missed this one
+    shape.
+
+    Returns `(fatal_lines, fatal_files, disclosed_lines, disclosed_files)`.
+    """
+    real_paths = frozenset(_redirect_map(mig.tree))
+    fatal_lines = fatal_files = disclosed_lines = disclosed_files = 0
+    for rel in mig.files:
+        skip = mig.was_lines[rel]
+        lines = mig.lines[rel]
+        file_fatal = file_disclosed = 0
+        for i, line in enumerate(lines):
+            if i in skip or not pattern.search(line):
+                continue
+            window = line + (lines[i + 1] if i + 1 < len(lines) else "")
+            if any(p in window for p in real_paths):
+                file_fatal += 1
+            else:
+                file_disclosed += 1
+        fatal_lines += file_fatal
+        disclosed_lines += file_disclosed
+        if file_fatal:
+            fatal_files += 1
+        if file_disclosed:
+            disclosed_files += 1
+    return fatal_lines, fatal_files, disclosed_lines, disclosed_files
+
+
 def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
     rows: list[Row] = []
     for i, (label, pattern) in enumerate(D_ALTERNATIVES, start=1):
@@ -1178,6 +1235,46 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
                 verdict, note = _d7_disclosed_or_fail(mig, ctl)
                 if creation_note:
                     note += "; " + creation_note
+            elif label in D_PATH_LABELS:
+                # The deputy's ruling (W37-6 channel, 2026-09-04): a path alternative's
+                # disclosure is per-match, not per-alternative — `_path_alternative_verdict`
+                # has the full reasoning. A fatal hit (a real file's own citation, still
+                # unrewritten) always wins over a disclosed one in the same run: the row
+                # stays red until every genuinely repointable citation is repointed, no
+                # matter how many disclosed, no-successor mentions sit alongside it.
+                fatal_lines, fatal_files, disc_lines, disc_files = (
+                    _path_alternative_verdict(mig, pattern)
+                )
+                if fatal_lines:
+                    verdict = FAIL
+                    note = (
+                        f"{fatal_lines} line(s) / {fatal_files} file(s) still name a "
+                        "real moved file present in this run's own docs/REDIRECTS.csv "
+                        "old_path column — the citation-inverse mechanism should have "
+                        "repointed these and did not"
+                    )
+                    if disc_lines:
+                        note += (
+                            f"; {disc_lines} line(s) / {disc_files} file(s) additionally "
+                            "disclosed (Ruling 105 §A's pattern, owner W37-11's "
+                            "citation-form item) — no real file behind the match, "
+                            "excluded from the zero requirement"
+                        )
+                elif disc_lines:
+                    verdict = DISCLOSE
+                    note = (
+                        f"{disc_lines} line(s) / {disc_files} file(s) name no real "
+                        "moved file (docs/REDIRECTS.csv has no old_path entry behind "
+                        "the match) — a bare directory mention with no single successor "
+                        "(e.g. docs/audit/, which dissolves into four), or a dated "
+                        "prefix with nothing identifiable after it; excluded from the "
+                        "zero requirement, owner W37-11's citation-form item (Ruling "
+                        "105 §A's pattern)"
+                    )
+                else:
+                    verdict, note = PASS, ""
+                if creation_note:
+                    note = (note + "; " if note else "") + creation_note
             else:
                 verdict, note = _verdict_on_zero(m_lines, mig.n_lines, control=c_lines)
                 if creation_note:
@@ -2013,31 +2110,15 @@ _VACUITY_PROBES: Final = (
 #: has no way to say so.
 _ABSENT_CHECK_RE: Final = re.compile(r"cannot run|cannot scan it")
 
-#: Ruling 105 §B's own methodology, originally ported from the shell one-liner
+#: Ruling 105 §B's own methodology, ported from the shell one-liner
 #: `docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md:139` used to derive the taxonomy
 #: the ruling reads: `sed -n '/^FAILED/,$p' <log> | grep '^  - ' | sed -E
 #: 's/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' | sort | uniq -c`. Everything
 #: from the `FAILED (`n`):` line onward, one `  - <msg>` per failure.
-#:
-#: The one-liner's own second rule (`s/^broken link in .*/check 1/`) and a same-shaped
-#: rule this module briefly carried for check 27 (added, then removed, in the same PR —
-#: see the deputy's ruling below) both existed for one reason: those two checks' own
-#: `fail()` messages did not start `check N:` the way every other numbered check's does.
-#: Fixed at the source instead of carried as a growing set of classifier-side special
-#: cases (the deputy's ruling on exec-h1's finding: "a failure the classifier cannot
-#: attribute is a count without a predicate ... special-casing each check as it is
-#: noticed is how the bucket refills") — every `fail()` call site in
-#: `scripts/audit-docs.py`'s checks 1-39 now begins its message with `check N: ` (checks
-#: 30-39 already did; this PR added it to checks 1-28), so `_CHECK_PREFIX_RE` alone
-#: classifies all of them and neither special case is reachable any more. One exception,
-#: deliberately not resolved into a per-check prefix: `check_notes`'s top-of-function
-#: guard (`docs/notes does not exist`) covers five check numbers (16-20) at once and
-#: this predicate's `(\d+)` group cannot hold five values — `_ABSENT_CHECK_RE` above
-#: already reports that exact message as a non-execution marker, a state distinct from a
-#: classified failure, so leaving it unprefixed is not a second gap of the same kind.
 _FAILED_BLOCK_RE: Final = re.compile(r"^FAILED \(\d+\):$", re.MULTILINE)
 _FAILURE_LINE_RE: Final = re.compile(r"^  - (.*)$", re.MULTILINE)
 _CHECK_PREFIX_RE: Final = re.compile(r"^check (\d+):")
+_BROKEN_LINK_RE: Final = re.compile(r"^broken link in ")
 
 #: Checks 29, 30 and 35 are (h1)'s W37-10 residue — Ruling 105 §B: disclosed by count,
 #: owner-labelled, never fatal. Every other class, including a failure this predicate
@@ -2054,7 +2135,7 @@ def _classify_failures(out: str) -> dict[str, int]:
     tail = out[block.start():] if block else ""
     for msg in _FAILURE_LINE_RE.findall(tail):
         m = _CHECK_PREFIX_RE.match(msg)
-        cls = m.group(1) if m else "unclassified"
+        cls = m.group(1) if m else ("1" if _BROKEN_LINK_RE.match(msg) else "unclassified")
         counter[cls] = counter.get(cls, 0) + 1
     return counter
 
@@ -2538,11 +2619,49 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # instead of the verdict absorbing them. What remains FAIL is the
                          # genuine, now-correctly-measured un-migrated `W<n>-<n>` population
                          # row (b)'s entry already named — real, not this PR's to fix.
-    "d9": FAIL,         # docs/plans/2026-
-    "d10": FAIL,        # docs/audit/
-    "d11": FAIL,        # the old notes directory
-    "d12": FAIL,        # docs/adr/
-    "d13": FAIL,        # the old .claude notes root — INERT, see its unanchored companion
+    # W37-6, 2026-09-04 (the word-wrap/directory-token/disclosed-class fixes): d9/d10
+    # stay FAIL — real, unrewritten file citations remain for both (docs/plans/2026- has
+    # no single successor at all; docs/audit/ dissolves into four, `_README_LEGACY_DIR_
+    # MOVES`'s own docstring). d11/d12 also stay FAIL, but the fatal population dropped
+    # sharply once real file citations were repointed (word-wrap fix) and the directory
+    # itself got a tree-wide token (docs/adr -> docs/adrs, docs/notes -> docs/rfcs): a
+    # small residual of real, still-unrewritten file citations remains fatal on each
+    # (word-wrapped shapes this PR's flat-token-only fix does not cover, e.g. a
+    # split-source citation), disclosed lines make up the rest. d13 moves FAIL ->
+    # DISCLOSE: a citation-rewrite mechanism for the old notes root beneath `.claude`'s
+    # own stubs was built and proven correct but is NOT shipped this PR — retiring the
+    # stubs themselves does not fit any of Ruling 68's six permitted classes for row (g)
+    # (see the comment in `doc-id.migrate` at "NT-0019 §5 step 4"), so d13's population
+    # is unchanged from before this PR. It is now classified against the fatal/disclosed
+    # split like every other path row, and no real `docs/REDIRECTS.csv` `old_path` entry
+    # exists for that root's citation today, so the whole population reads disclosed,
+    # none of it fatal — a change in classification, not in what the tree contains.
+    #
+    # UPDATE, W37-6, 2026-09-04 (the deputy's second ruling, correction #2): the
+    # citation-rewrite mechanism for the old notes root beneath `.claude` is now fully
+    # shipped, not deferred — `doc-id.migrate` calls the retirement function and its
+    # numbered stubs, and the directory's own README once every stub resolves, are
+    # actually deleted and their citers repointed, wired into `classify_migration_diff`
+    # as a class-6 deletion (`_try_class6_deletion`, keyed on the stub's own body shape
+    # plus a `docs/REDIRECTS.csv` `old_id` row naming it — never on path or filename
+    # alone, per the deputy's own broken-input-proof requirement). This is a real
+    # reduction, not a reclassification: re-measured against control, the migrated
+    # population for this alternative drops from 188 line(s)/38 file(s) (control) to 93
+    # line(s)/31 file(s) (migrated) — citations this mechanism actually repointed no
+    # longer match the pattern at all. The remaining 93 stay wholly disclosed (0 fatal):
+    # `_path_alternative_verdict`'s fatal check is generic across every `old_path` row in
+    # `docs/REDIRECTS.csv`, and this retirement deliberately never emits one (only
+    # `old_id`/`new_id` citation-form rows — an `old_path`/`new_path` row would route the
+    # DP-7 content-comparison classes 1-3, which cannot pass for a stub whose content is
+    # discarded, not carried forward), so no citation of this root's own files was ever
+    # going to read fatal by this row's own predicate regardless of whether the mechanism
+    # ran — the 188->93 drop is the actual evidence the rewrite happened, not the DISCLOSE
+    # verdict by itself.
+    "d9": FAIL,         # docs/plans/2026- — real file citations remain unrewritten
+    "d10": FAIL,        # docs/audit/ — real file citations remain unrewritten
+    "d11": FAIL,        # docs/notes/ — small fatal residual after the wrap/dir-token fix
+    "d12": FAIL,        # docs/adr/ — small fatal residual after the wrap/dir-token fix
+    "d13": DISCLOSE,    # the old .claude notes root — wholly disclosed, 0 fatal
     "e": PASS,          # 0 padded ids in prose — #25's ruling: the migration normalises a
                          # padded citation to unpadded (`_normalize_padded_citations`), and
                          # the two exhibits are fenced by hand under Ruling 103 §5.1
