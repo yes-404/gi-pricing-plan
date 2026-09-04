@@ -45,12 +45,42 @@ has been green here while the frontend was red.** Run both.
 
 ### Python (`.github/workflows/python.yml`) and docs (`docs.yml`)
 
+**A gate or a `migrate --verify` run, launched with no thread cap, costs ~4.5 CPU cores by
+itself on this machine — cap every native runtime before running either.** Measured
+2026-09-04 (W37-6, multiple executors saturating a 16-core box at once, load average
+59–60): inside one gate's `pytest` process (`/proc/<pid>/task/*/comm`), 98 threads are the
+suite's own Python thread pools (expected, left alone), but **16 `tokio-rt-worker` + 16
+`async-executor-`** (Rust runtimes — Polars/DuckDB — each sized to `nproc` by default) plus
+jemalloc and further Polars threads pushed one process to 152 threads / 400–470% CPU, with
+**no thread-cap variable set in its environment** (`/proc/<pid>/environ` carried none of
+`OMP_*`, `POLARS_MAX_THREADS`, `RAYON_NUM_THREADS`, `TOKIO_WORKER_THREADS`) — every native
+runtime the process loads assumed it owned the box alone.
+
 ```bash
+export POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 \
+       OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
 python3 scripts/audit-docs.py                # structural checks over docs/ and docs/notes/
 uv run python scripts/req-coverage.py        # requirement traceability
 uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
 ```
+
+**Concurrency budget on a shared box (multiple executors/worktrees at once):** at most 3
+full gates and 2 `migrate --verify` runs system-wide at a time, via `flock` slots
+(`/tmp/slots/`, tmpfs — resets on restart by design):
+
+```bash
+mkdir -p /tmp/slots
+for i in 1 2 3; do flock -n /tmp/slots/gate-$i -c '<full gate command, thread-capped above>' && break; done
+# blocking fallback if all three are busy: flock -w 3600 /tmp/slots/gate-1 -c '<cmd>'
+for i in 1 2; do flock -n /tmp/slots/verify-$i -c '<verify command, thread-capped above>' && break; done
+```
+
+Iterate with targeted tests (`pytest <file> -k <symbol>`) while working; run the full gate
+once, before push, and `migrate --verify` once per push — not per edit. Re-measured after
+one cycle with the cap applied: if capped gates hold at ≤2 cores each, the slot count can
+rise to 4 (record the new figure in whatever ledger governs the run before changing this
+number); if not, it stays at 3.
 
 Use `generate-contracts.py --check` rather than the plain regenerate when auditing: the
 plain form *writes* the drift away instead of reporting it.
@@ -431,6 +461,19 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-09-04 — thread-cap env line and the `/tmp/slots` concurrency budget added to the gate
+section, W37-6, per the deputy's ruling (relayed via `to-lead.md`). Measured directly on
+this machine before writing it: a single uncapped `pytest` gate process carried 152 threads
+(`ps -o nlwp`) — 98 the suite's own Python pools, 16 `tokio-rt-worker` + 16
+`async-executor-` (Polars/DuckDB, sized to `nproc`) plus jemalloc/Polars threads — and
+`/proc/<pid>/environ` had no `OMP_*`/`POLARS_MAX_THREADS`/`RAYON_NUM_THREADS`/
+`TOKIO_WORKER_THREADS` set, at 400–470% CPU. A prior instruction in the same incident to
+kill "duplicate" `pytest` sessions was itself found to be a self-match on `pgrep -f pytest`
+matching its own `until … pgrep -f pytest … sleep` wait-loop wrappers (a bare grep counts
+its own probe) — corrected before acting; the real count was one `pytest` binary per
+worktree throughout, confirmed with `ps -eo pid,args | grep '[/]\.venv/bin/pytest'` (the
+real binary path, never a bare string match).
 
 2026-08-31 — `register-owed.py` added to the closure-audit section, NT-0015 P5 (Ruling 52).
 Deliberately not added to `CLAUDE.md` §11's gate command list: it is on-demand, the same
