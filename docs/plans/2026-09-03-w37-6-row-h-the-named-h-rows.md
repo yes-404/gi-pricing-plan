@@ -65,10 +65,18 @@ Two further defects were found **by** fixing the above, and are in the same row 
 same parser owns them:
 
 - **`ADR-(\d{4})` (lines 2863/2865, and 418 inside `check_notes`)** reads the *first four*
-  digits of a five-digit padded filename, so `ADR-00005` parsed as a citation of `ADR-0000`
-  and check 5 failed with *"ADR-0000 referenced but no file exists"* — a real-looking failure
-  manufactured entirely by the width of the pattern. Comparing **integers** is width-agnostic
-  in both directions.
+  digits of a five-digit padded filename, so a real five-digit citation was parsed as a
+  citation of the schematic four-digit form below and check 5 failed with a *"referenced
+  but no file exists"* error naming it — a real-looking failure manufactured entirely by
+  the width of the pattern. Comparing **integers** is width-agnostic in both directions.
+  The two forms, verbatim:
+
+  ```
+  ADR-00005 (real, five digits) parsed as a citation of ADR-0000 (schematic, four digits)
+  ```
+
+  *Fenced 2026-09-04 under Ruling 103 §5.1's fence clause, extended to row (d): value
+  unchanged.*
 - **check 14's workflow-coverage** derived the module from `rid.split("-")[1]`, which
   post-migration is the *number*: coverage was reported per requirement — `356 100%, 357 0%,
   358 0%` — in ~450 buckets of one, with the 10% floor firing on individual requirements.

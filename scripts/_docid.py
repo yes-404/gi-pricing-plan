@@ -146,11 +146,13 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
 # the equivalent class for a literal Python string inside a test function rather than a
 # checked-in fixture file. Declared per-file with its own reason (§7(d)'s own instruction
 # against a structural rule that would silently widen, echoed at task 30's `register-owed.py`
-# correction below): **`tests/test_register_owed.py` does NOT belong here** despite carrying
-# legacy literals of its own (`NFR-RATE-13/14`, `NFR-EXAMPLE-1 (F999991)`, `W9-3`) — its
-# subject is `register-owed.py`, a file NT-0019 §4 itself migrates
-# (`docs/notes/0019-one-id-per-document.md:382`), so its fixtures are stale test data that
-# should migrate WITH the script, not exempted test infrastructure.
+# correction below): **`tests/test_register_owed.py` does NOT belong here.** Its subject,
+# `register-owed.py`, is a file NT-0019 §4 itself migrates
+# (`docs/notes/0019-one-id-per-document.md:381`), so its fixtures are stale test data that
+# migrates WITH the script rather than exempted test infrastructure — fixed in the same
+# commit as this exclusion (its scoped-requirement-id and workstream/slice-id placeholders
+# respelled to their post-migration shapes), not deferred here as a citation this comment
+# would then repeat, matching row (d)'s own corpus a second time from inside its own fix.
 TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
     (
         "tests/test_doc_id_verify.py",
