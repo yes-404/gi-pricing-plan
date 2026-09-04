@@ -184,6 +184,10 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #721 | fix(scripts): row (b) — `_compound_token_re`'s missing `\b` fabricated ids and masked (d5)/(d8) | `a2c0afa` | Not independently re-run at merge — CI is the merge gate per this session's own scoping (isolated per-run infra), `ci-watcher-721` confirmed python/docs/history-policy all green, mergeStateStatus CLEAN. `EXPECTED_VERDICTS` re-recorded (b) FAIL→PASS, (d5) PASS→FAIL, (d8) FAIL→REGRESSION — the ratchet working, not a defect. Two local, pre-existing `backend/tests/test_score.py` failures reported by the author (out of branch scope by diff-stat) were not independently confirmed against this exact CI run (`ci-watcher-721` could not reach per-test log detail, token-scope limited) — flagged, not blocking, since CI's overall `success` conclusion is the standing merge criterion. |
 | #722 | docs(plans): ledger — #721 merged, #723's ruling, #30 split, DB-exclusivity fix | `205ebc9` | UNCHANGED: 14 (this ledger's own continued history plus the `dev-commands`/`python-test` per-worktree-database SKILL.md edits — no `docs/**` migration-scope path or predicate code touched). `ci-watcher-722` confirmed docs/python/history-policy all green, CLEAN. |
 | #726 | fix(scripts): OQ double-allocation — dedup discovery, refuse conflicting REDIRECTS.csv rows | `8c8c177` | Not independently re-run — CI is the merge gate, `ci-watcher-726` confirmed python/docs/history-policy all green, CLEAN. `--verify`: (b)/(c) both PASS, verdict set fully UNCHANGED. |
+| #725 | fix(scripts): row (e) padded-id-in-prose — real read+write side-by-side bugs, both fixed | `85a352f` | Not independently re-run — CI green (`ci-watcher-725b`, post-rebase head), CLEAN. `--verify`: row (e)/(f) PASS, verdict set unchanged against the 13-row standing red. |
+| #727 | fix(scripts): name three more (g) residue shapes — the third `other`-triage scope | `046576c` | Not independently re-run. **Correction (deputy, 15:0xZ):** `046576c`'s own `main` CI run was `completed/cancelled` — the per-branch concurrency group cancelled it when `1129df0` (#724) landed four seconds later. #727 has no completed run of its own on `main`; the evidence for this commit is `1129df0`'s green run (`gh run list --commit 1129df0`: history-policy/docs/python all `success`), which covers both commits since #724's push carried #727's content forward. `--verify` re-run post-rebase, pre-merge: UNCHANGED: 14, matching the recorded set. |
+| #729 | fix(scripts): NT-0019 declared exclusions + announced-slot concurrency enforcement | `18afd90` | Not independently re-run — `ci-watcher-729` confirmed python/docs/history-policy all green, CLEAN, 10m14s runtime. `--verify`: exit 1, matching the 13-row standing red exactly, this branch moved no row. The structural fix for the concurrency-compliance failure class that cost h2b its dispatch today. |
+| #724 | docs(plans): ledger — #721/#722 merges, h2b root-cause, DB-exclusivity proof | `1129df0` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -982,3 +986,171 @@ comment's story:**
 Both resolutions relayed to executor-30-2. #30's remaining scope: unit-record inverse,
 cause3(a)/cause6, cause4's `MANGLED_CITATION_RE` extension, the one-line stale-comment fix,
 and (d5)/(d8) unmapped-whole-identifier routing.
+
+## 2026-09-04 — (d8) ruled: distinct-value creation, not raw count; h2b's sixth gate — stopped for real this time
+
+**(d) alternatives, one creation rule, ruled from executor-30-2's measurement**: creation is
+a distinct value present in the migrated tree and absent from the control, on the
+alternative's own pattern — any such value is REGRESSION regardless of disclosed-class
+status (the mangling/fabrication test, stated on the quantity that measures it). Occurrence
+growth with an identical value set is not creation — printed as a per-value disclosure line
+(`value control→migrated`), never folded into the verdict. `_d8_verdict`'s first branch
+becomes the value-set comparison; the count delta moves to the note. The duplicating
+generator is still owed a named cause in the ledger — investigation, not a fix, in the same
+PR: which split preamble/title/regenerated index writes the extra occurrences, and whether
+that's class 6 (legitimate verbatim quotation) or a partial-edit (g) defect. Relayed to
+executor-30-2 in full.
+
+**h2b's sixth bare gate** (PID 695814, 174 threads, no cap, no slot, 8 min old) — running
+after the stop instruction had already been read. Killed, confirmed clean from the process
+table. Given six violations across explicit stop instructions each time, a message alone
+cannot guarantee compliance — **stopped the agent process itself** (`TaskStop`) rather than
+rely on a seventh instruction landing. Confirmed, in order: (i) nothing of h2b's runs — `ps
+-eo pid,comm,args | awk '$2=="pytest"' | grep wt-h2b` empty; (ii) h2b receives no further
+dispatch — its process is stopped, not merely instructed; (iii) the fresh executor is
+**`exec-dp7`**, dispatched from `w37-6-dp7-frontmatter` (`2b4c13d`) with the canonical gate
+line and the no-local-gate instruction, already in flight.
+
+## 2026-09-04 — h2b's stop confirmed by the deputy's own read; exec-dp7's proof-of-reading owed
+
+Deputy's own table: zero `comm=pytest` under `wt-h2b`, zero `--agent-id h2b@` processes,
+load 4.0 — the first fully quiet box today. Gap named: the stop entry required a
+proof-of-reading line accompany the reassignment dispatch, and exec-dp7's dispatch went out
+without one landing in the ledger. Not a re-dispatch — asked exec-dp7 directly to confirm
+it has read `dev-commands` and `python-test` in full (both changed multiple times today)
+plus its current progress; its reply will carry the line this entry owes.
+
+## 2026-09-04 — self-caught: #724 was merged before its own PR-branch CI finished
+
+`ci-watcher-724`'s final report showed the `python` workflow still `in_progress` at the
+moment of merge (13:05:40Z) — checked directly: `gh run list --branch
+docs-w37-6-ledger-cont3 --workflow python.yml` confirms the last real run, on the actual
+head `d72a8ba`, started at 13:05:30Z and was still `in_progress`, not `success`, when I
+merged. My earlier `gh pr view 724 --json mergeStateStatus,statusCheckRollup` read
+`CLEAN`/`set()` — an empty check-rollup rather than a confirmed-passing one — and I read
+that as "nothing blocking" instead of "no data, don't trust this." **A process gap on my
+part**: I should have confirmed the exact head SHA's own CI via `gh run list`, the way
+`ci-watcher` agents are instructed to, rather than trusting `mergeStateStatus` alone when
+the rollup is empty.
+
+**No bad content actually landed**: the squash-merge itself triggers a fresh CI run against
+the new `main` HEAD (`1129df0`), and that run — `gh run list --commit 1129df0` — is
+`history-policy`/`docs`/`python` all `success`, confirmed directly. The merged content is
+verified safe after the fact; the gap was procedural (merging before the pre-merge signal
+was actually confirmed), not a defect that reached `main`. Recorded so the pattern is named
+rather than repeated: an empty `statusCheckRollup` is not evidence of green, only evidence
+of no data — read it as unconfirmed, same as the ci-watcher role's own standing rule.
+
+## 2026-09-04 — executor-30-2 caught a crash bug in its own diff before it reached a gate
+
+Confirmed OQ-DATA-11 independently (matches: one `REDIRECTS.csv` row, no conflict) and
+fixed the stale `_docverify.py` comment in place with a note rather than a silent delete.
+Rebasing onto #726 surfaced a real defect: the first version of cause3's path-citation
+extension called `_path_citation_redirect_rows` unconditionally per-draft, including for
+drafts belonging to a source that legitimately **splits** into several targets — fine
+before #726, but #726's new write-time guard ("one legacy id resolves to exactly one new
+id") would have refused the write and **crashed `migrate()` outright** on the first real
+multi-ruling split file (`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`, splitting
+into `RL-190`/`RL-191`). Caught via a cheap direct `migrate()` call, not the full
+`--verify`, before it reached a gate or a push. Fixed two ways: the per-draft extension
+moved to the branch already provably 1:1 (`len(destinations) == 1`); the split-source
+recording (a genuinely different mechanism — the same citation text legitimately resolving
+differently by context) now runs through a new `_drop_contested_split_redirects` helper,
+same collision-safe-drop philosophy as the read-side inverse — a genuine ambiguity is
+named and excluded, not crashed on. Two new unit tests. 427 targeted tests green. Told to
+build (d8) in the same PR rather than split to a follow-up, given how much is already
+consolidated here.
+
+## 2026-09-04 — executor-30-2's full scope complete, (d5)/(d8) implemented per the ruling, generator named
+
+`_scan_values`/`_value_set_creation` (new) compare distinct matched values rather than raw
+line counts — wired into `rows_d`'s generic branch (every alternative, not just d8) and
+`_d8_verdict`. A genuinely new value still regresses unconditionally, checked before any
+disclosure; an occurrence-count increase on an unchanged value set is now a disclosure
+line, never folded into the verdict. Two pre-existing tests whose fixtures accidentally
+introduced real new values had their fixtures corrected (their intent was the mechanism,
+not creation); three new tests added. 431 targeted tests green.
+
+**Generator named** (item 3 discharged): `docs/INDEX.md` (19 occurrences) and
+`docs/rulings/INDEX.md` (2, doesn't exist pre-migration) — both regenerated-from-scratch
+artifacts — account for the growth. Sampled lines confirm each ruling's own **title**
+quoted verbatim into its index row, several of which happen to mention `W37-6` in prose.
+**Class 6 exactly, the ruling's own first hypothesis — legitimate, no fix needed.**
+Cross-checked one real multi-ruling split file directly (control vs. its child, both count
+7, no inflation) to rule out split-duplication before landing on the index explanation.
+
+executor-30-2's full scope is now done and tested: unit-record inverse, cause3/3a/4/6, the
+stale-comment fix, the split-redirect crash bug it found and fixed mid-rebase, and (d5)/(d8).
+Running its one compliant gate + verify before opening the PR.
+
+## 2026-09-04 — exec-dp7's proof-of-reading, owed since h2b's reassignment: confirmed, plus a real gap found in h2b's original fix
+
+**Proof-of-reading, verbatim**: "I read both `.claude/skills/dev-commands/SKILL.md` and
+`.claude/skills/python-test/SKILL.md` in full before touching anything — the wrapped
+flock+thread-cap gate/verify commands below are copied verbatim, not composed, and I
+created a per-worktree test database (`gipricing_wt-h2b`) before the first gate run." This
+discharges the gap the deputy named at the h2b-stop entry.
+
+**h2b's original DP-7 commit was real and well-reasoned, but incomplete, not wrong**:
+`_this_runs_stamp_id` only recognized "this run's own stamp" via an `id:` field in
+`REDIRECTS.csv`'s `new_id` column — but the Reference family (`.claude/roles/`,
+`.claude/agents/`, plain `.claude/skills/*/SKILL.md`, every `README.md`) and a vendored
+skill manifest are stamped by `migrate` with **no `id:` line at all**, by design (NT-0019
+§1.2). Two real regressions surfaced (`test_acceptance_item_g_clean_migration_has_no_violations`,
+`test_class6_regenerated_readmes_and_indexes_pass_whole`), pre-existing on h2b's own commit
+(verified by isolating the change, not caused by the rebase). Fixed: `_this_runs_stamp_id`
+now also confirms via path membership in the caller's own recorded stamp-target set
+(`_discover_reference_stamp_targets` + `_discover_vendored_skill_manifests(...).to_stamp`)
+when a header carries no id — proven positive and negative (a hand-edit still fails), 5
+new/extended tests.
+
+**Second task also done**: `docs/REDIRECTS.csv` row order now sorted by `old_id` then
+`old_path` (full-row tie-break) in `_write_redirects` — proven by feeding the same rows in
+different orders and diffing bytes identical.
+
+Rebased twice onto moving `main`, both clean, no conflicts. Two commits landed. 510
+targeted tests green, 1 skip, ruff clean. Running the one compliant gate + verify now.
+
+## 2026-09-04 — three gates checked, two fully compliant, one on the shared database
+
+Deputy's process-table read of all three live gates: `exec-dp7` (`wt-h2b`) and `exec-excl`
+(`wt-exclusions`) both capped, `flock`, on their own per-worktree databases. `triage-code`'s
+#723-rebase gate is capped and `flock`-held but has **no `GIP_TEST_DATABASE_URL`** — running
+against the shared default database. No collision at this instant, but it's the one gate
+the teardown race can still reach; a spurious status-code failure there is the first
+suspect, not the code. Told triage-code to create its own database before its next run.
+exec-dp7's proof-of-reading line independently checked by the deputy — "copied verbatim"
+against the one real occurrence of the wrapped line in `dev-commands`, none in
+`python-test` — consistent with what it claimed. The gap is closed.
+
+## 2026-09-04 — PR #729: the structural concurrency fix, plus the pycache mechanism's real root cause
+
+`exec-excl`'s PR covers both the declared exclusions and the full conftest-level
+enforcement (root `conftest.py` thread-cap `setdefault` + `GIP_GATE_SLOT`-announced
+`/tmp/slots/gate-{1,2,3}` lock skipped for `--collect-only`/targeted runs; `_docverify.py`'s
+`verify()` the same for `GIP_VERIFY_SLOT`/`verify-{1,2}`; `backend/tests/conftest_db.py`'s
+per-worktree-DB refusal with a remediation message; `dev-commands` gains the
+`GIP_GATE_SLOT`/`GIP_VERIFY_SLOT` export lines) — the structural fix for the entire class of
+violation that cost h2b its dispatch today.
+
+**Found the pycache defect's real mechanism, not just its symptom**: `migrate()`'s
+`_load_module` (both the `doc-id.py` and `audit-docs.py` copies) was writing bytecode into
+the snapshot's own `scripts/__pycache__/` while running in-process, which
+`_iter_tree_files`'s non-git-aware walk then read back as new migration output — a planted
+`.pyc` genuinely registered as unclassifiable row-(g) residue before the fix. Fixed at the
+source (bytecode caching suppressed for `_load_module`'s own loads) plus defensively (the
+shared exclusion predicate, `PYTHONDONTWRITEBYTECODE=1` on `_docverify.py`'s subprocess).
+Also reproduced the lockfile risk for real: this corpus's own `NT-0001 -> RFC-1`
+re-citation was getting written into a lockfile comment before the fix.
+
+**All three live proofs demonstrated on this machine's real `/tmp/slots/`**: a wrapped run
+announces and the hook takes no second lock (`/proc/<pid>/environ` checked); with all three
+real gate slots genuinely busy, a bare probe prints "waiting for /tmp/slots/gate-1" and
+actually blocks; the DB refusal fires with the `createdb`/`alembic` remediation message.
+
+Gate green both halves (3192 passed/3 skipped/1 xfailed/0 failed; pnpm 602 passed), `GIP_GATE_SLOT`
+confirmed reaching the spawned pytest process. `--verify` under the corrected wrapper: exit
+1, matching the 13-row standing red exactly, this branch moved no row. Disclosed a >1-hour
+queue wait with edits during that wait, but the tree held still start-to-finish for the
+LAST (cited) gate run — `python-test`'s own "tree held still" discipline, applied and
+disclosed rather than glossed over. `ci-watcher-729` dispatched; merges on its report.
