@@ -654,194 +654,44 @@ def row_c(snap: Snapshot) -> Row:
 # (d) the id/path grep, one row per alternative
 # ---------------------------------------------------------------------------------------
 
-#: §7(d)'s pattern, as the acceptance sentence writes it
-#: (`docs/notes/0019-one-id-per-document.md` §7, line 426) — **with one amendment already
-#: ruled but not yet carried here**. `ADR-0[0-9]{3}` carries an added trailing `\b`. Without
-#: it, the alternative has no anchor on either side of its digit run, so it matches as a
-#: strict PREFIX of any correctly-migrated five-digit id (`_docid.PAD_WIDTH`):
-#: `ADR-0[0-9]{3}` reads the first three of `ADR-00999`'s four post-hyphen digits and calls
-#: it a hit — the same token-boundary class Ruling 102 §2 row (g) named for the migration
-#: rewriter, but here inside the verify instrument's own predicate. **`ADR-999` rather
-#: than a real ADR**, deliberately, and not cosmetic: highest allocated is `ADR-10`
-#: (`grep -oP '^\| ADR-\K[0-9]+' docs/INDEX.md | sort -n | tail -1` on the migrated
-#: tree), so a real number here would itself be a row (e) violation — the instrument
-#: commenting on its own input and tripping the row it describes, the same shape §5.5
-#: found in this row's own test fixtures (`RL-09999`/`PL-09998` in
-#: `tests/test_doc_id_verify.py`, above the allocated range for the same reason).
-#: **Ruling 67 §2 Part 1
-#: already rules this exact requirement for (d)**: *"every alternative in (d) must match a
-#: COMPLETE legacy identifier or path, never a proper prefix of one"* — found there against
-#: `NT-00` self-matching its own defining sentence, generalised by the ruling to every
-#: alternative, not only that one. `scripts/audit-docs.py`'s `LEGACY_FORM_PATTERNS` (check
-#: 36, the same ruling) already carries `re.compile(r"\bADR-0[0-9]{3}\b")` — fully anchored;
-#: `\bF[0-9]{2}\b` here carries the identical device for the same reason. This constant had
-#: simply not caught up. **Ruling 67 §2 also requires (d) and check 36 to read ONE shared
-#: constant** ("Two definitions of 'a legacy form' will drift, which is `NT-0003`") — this
-#: module keeps its own independent `D_FULL_PATTERN` rather than importing
-#: `audit-docs.LEGACY_FORM_PATTERNS`, which is a standing violation of that requirement
-#: broader than this one alternative and NOT fixed here (a consolidation, not a boundary
-#: fix, and out of this change's scope); flagged to the lead as a MAINTAINER-track finding.
-#: Found by a peer executor this session, folded into the Ruling 105 follow-up
-#: (`scripts/_docverify.py`) since it is the same file. Kept whole otherwise so a reader can
-#: check the per-alternative decomposition below against its source rather than trusting it.
-D_FULL_PATTERN: Final = (
-    r"\b(NT-00|F-W[0-9]|\bF[0-9]{2}\b|wf-0[0-9]|Ruling [0-9]+|ADR-0[0-9]{3}\b|"
-    r"(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+|W[0-9]+[a-z]?-[0-9]+|"
-    r"docs/(plans/2026-|audit/|notes/|adr/)|\.claude/notes/)"
-)
-
-class PatternDecompositionError(RuntimeError):
-    """`D_FULL_PATTERN` could not be split into its alternatives. Loud, never silent.
-
-    A splitting bug that yielded a *wrong* list would be a silent wrong predicate, which is
-    worse than any floor it removes — so every failure mode here raises, and
-    `assert_decomposition_matches_source` re-checks the result against the source pattern
-    over the real corpus at every run.
-    """
-
-
-def _split_top_level(body: str) -> list[str]:
-    """Split a regex alternation body on `|` at nesting depth 0.
-
-    Respects `(...)` groups, `[...]` character classes (where `|` and `)` are literal) and
-    backslash escapes. Raises rather than guessing on unbalanced input.
-    """
-    parts: list[str] = []
-    current: list[str] = []
-    depth = 0
-    in_class = False
-    i = 0
-    while i < len(body):
-        ch = body[i]
-        if ch == "\\":
-            current.append(body[i : i + 2])
-            i += 2
-            continue
-        if in_class:
-            if ch == "]":
-                in_class = False
-        elif ch == "[":
-            in_class = True
-        elif ch == "(":
-            depth += 1
-        elif ch == ")":
-            depth -= 1
-            if depth < 0:
-                raise PatternDecompositionError(f"unbalanced `)` at offset {i} in {body!r}")
-        elif ch == "|" and depth == 0:
-            parts.append("".join(current))
-            current = []
-            i += 1
-            continue
-        current.append(ch)
-        i += 1
-    if depth != 0 or in_class:
-        raise PatternDecompositionError(f"unterminated group or class in {body!r}")
-    parts.append("".join(current))
-    return parts
-
-
-#: A trailing group whose whole content is an alternation, e.g. the `(plans/2026-|audit/|
-#: notes/|adr/)` of `docs/(plans/2026-|audit/|notes/|adr/)`.
-_TRAILING_GROUP_RE: Final = re.compile(r"^(?P<prefix>[^()]*)\((?P<body>.*)\)$")
-
-
-def _expand_trailing_alternation(alternative: str) -> list[str]:
-    """Distribute a **suffix** group's alternation over its prefix; otherwise pass through.
-
-    The suffix rule is the whole rule, and it is what makes the decomposition derivable
-    rather than a matter of taste. `docs/(plans/2026-|audit/|notes/|adr/)` ends in its
-    group, so its four leaves are four distinct things to count and the aggregate would
-    hide three. `(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+` does **not** end in its group — the group
-    is a prefix of one requirement-citation shape — so it stays one alternative, which is
-    also how the acceptance record's own per-alternative table reads it.
-    """
-    m = _TRAILING_GROUP_RE.match(alternative)
-    if m is None:
-        return [alternative]
-    leaves = _split_top_level(m.group("body"))
-    if len(leaves) < 2:
-        return [alternative]
-    return [m.group("prefix") + leaf for leaf in leaves]
-
-
-def _decompose(full_pattern: str) -> tuple[str, ...]:
-    """§7(d)'s alternatives, **derived from the acceptance sentence, never retyped.**
-
-    Task 17. The hand-written list this replaces spelled the old notes directory out as a
-    bare prefix, which put a permanent floor of one line under row (d11) — the instrument
-    counted its own source, and a bare directory with no filename after it is not a
-    citation, so the migration's rewriter leaves it exactly where it is. Note what that
-    floor did **not** come from: §7(d)'s sentence writes the path alternatives *factored*,
-    `docs/(plans/2026-|audit/|notes/|adr/)`, and contains no such substring, so
-    `D_FULL_PATTERN` never tripped the row. Only the retyped decomposition did, which is
-    why this is settled in code rather than by amending the standard.
-
-    Deriving also strengthens the property `D_FULL_PATTERN`'s comment exists for: a reader
-    no longer has to check the decomposition against its source by eye, because it cannot
-    disagree with it.
-    """
-    outer = re.match(r"^\\b\((?P<body>.*)\)$", full_pattern)
-    if outer is None:
-        raise PatternDecompositionError(
-            f"{full_pattern!r} is not the expected `\\b(...)` shape"
-        )
-    leaves: list[str] = []
-    for alternative in _split_top_level(outer.group("body")):
-        leaves.extend(_expand_trailing_alternation(alternative))
-    if not leaves:
-        raise PatternDecompositionError("decomposition produced no alternatives")
-    return tuple(leaves)
-
-
-#: One row per alternative, not an aggregate — the ruled reading (Ruling 102 §2 row 3,
-#: "(d) Per alternative"). **Derived from `D_FULL_PATTERN`, not retyped** (task 17), so a
-#: row's predicate and the acceptance sentence cannot disagree and the instrument does not
-#: write into the corpus the very strings it counts.
-D_ALTERNATIVES: Final = _decompose(D_FULL_PATTERN)
-
-
-def assert_decomposition_matches_source(corpus: Corpus) -> int:
-    """Every line the source pattern matches is matched by some derived alternative, and
-    vice versa. Returns the number of lines both agree on.
-
-    This is the answer to the honest objection against deriving: a splitting bug would be a
-    silent wrong predicate. It cannot be silent if the derived set is checked against the
-    source over the same corpus the rows are computed on, every run. A bug that drops,
-    merges or corrupts an alternative changes the match set and raises here.
-    """
-    full = re.compile(D_FULL_PATTERN)
-    leaves = [re.compile(r"\b(" + alt + ")") for alt in D_ALTERNATIVES]
-    agreed = 0
-    for rel in corpus.files:
-        skip = corpus.was_lines[rel]
-        for i, line in enumerate(corpus.lines[rel]):
-            if i in skip:
-                continue
-            by_source = full.search(line) is not None
-            by_leaves = any(leaf.search(line) for leaf in leaves)
-            if by_source != by_leaves:
-                raise PatternDecompositionError(
-                    f"{rel}:{i + 1}: D_FULL_PATTERN says {by_source} and the derived "
-                    f"alternatives say {by_leaves} — the decomposition is not its source's"
-                )
-            agreed += int(by_source)
-    return agreed
+#: §7(d)'s alternatives, one row per alternative (Ruling 102 §2 row 3, "(d) Per
+#: alternative") — **read from `_docid.LEGACY_FORM_PATTERNS`, never retyped** (task 17,
+#: Ruling 67 §2's "one shared constant"). `audit-docs.py`'s check 36 reads the identical
+#: tuple; the two were, until this task, two independently-maintained copies that had
+#: already diverged (this module's old `F-W[0-9]` matched a bare `F-W<n>` with no second
+#: segment, a proper PREFIX of the real shape `F-W<n>-<n>`, and its `NT-00` matched the
+#: bare prefix fragment Ruling 67 §2 Part 1 was ruled against by name). The tuple **is**
+#: the decomposition — there is no separate combined-pattern string to parse and no
+#: self-check against one, because there is nothing left for a splitting bug to get wrong.
+#: Every entry is already anchored per Ruling 67 §2 Part 1: a `\b`-bounded COMPLETE legacy
+#: identifier on both sides, or (for a path) a bare literal substring with no anchor at all
+#: — a path has no "complete form" the way an id token does, so `\b` would only ever add
+#: back the artificial restriction row (d13) used to read as INERT under.
+#:
+#: This deletes `D_FULL_PATTERN`, `PatternDecompositionError`, `_split_top_level`,
+#: `_expand_trailing_alternation`, `_decompose` and `assert_decomposition_matches_source`
+#: outright — including the self-referential "ADR-999, not a real ADR, because a real
+#: number here would itself trip row (e)" concern a parallel PR (#712) fixed in the old
+#: comment: there is no comment here quoting a padded-id-shaped example any more for row
+#: (e) to trip on, so the concern the other fix addressed does not recur.
+D_ALTERNATIVES: Final = _docid.LEGACY_FORM_PATTERNS
 
 #: Excluded from §7(d)'s zero requirement **with its count disclosed** — §8.5, re-affirmed
 #: by Ruling 102 §4 ("`\bF[0-9]{2}\b` remains excluded with its count disclosed; this ruling
-#: reaches `Ruling [0-9]+` only") and, for `F-W[0-9]`, by Ruling 105 §A: the same alias
-#: class as `F<nn>` with a work prefix — its target is a register row, not a document with
-#: an id yet, resolved by W37-11's alias resolver rather than this instrument. Disclosed,
+#: reaches `Ruling [0-9]+` only") and, for the workstream finding-id form, by Ruling 105 §A:
+#: the same alias class as `F<nn>` with a work prefix — its target is a register row, not a
+#: document with an id yet, resolved by W37-11's alias resolver rather than this instrument.
+#: Keyed by `_docid.LEGACY_FORM_PATTERNS`' own label, not by pattern text, so a Ruling 67
+#: Part 1 anchoring fix to the pattern can never silently un-key a disclosure. Disclosed,
 #: never silent: the row still prints its figure, denominator and control.
-D_DISCLOSED: Final = frozenset({r"\bF[0-9]{2}\b", "F-W[0-9]"})
+D_DISCLOSED: Final = frozenset({"finding id (bare form)", "finding id (workstream form)"})
 
 #: Which ruling reads each disclosed alternative, printed in its row's own note so a reader
 #: does not have to guess which citation covers which alternative.
 D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
-    r"\bF[0-9]{2}\b": "§8.5; Ruling 102 §4",
-    "F-W[0-9]": "§7(d); Ruling 105 §A — the same alias class as `F[0-9]{2}`, resolved by "
-                "W37-11's alias resolver",
+    "finding id (bare form)": "§8.5; Ruling 102 §4",
+    "finding id (workstream form)": "§7(d); Ruling 105 §A — the same alias class as the "
+                                     "bare finding id, resolved by W37-11's alias resolver",
 }
 
 
@@ -859,12 +709,15 @@ D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
 #: what does a wrong rewrite turn this token into, and is that form counted anywhere?* — is
 #: answered for three of thirteen today, and a silent absence would read as "asked and
 #: found nothing".
+#: Keyed by `_docid.LEGACY_FORM_PATTERNS`' own label (task 17) — a pattern-text key would
+#: silently un-key itself the next time Ruling 67 §2 Part 1 changes an anchoring, as it
+#: already had for `NT-00` -> `\bNT-\d{4}\b` and `F-W[0-9]` -> `\bF-W\d+-\d+\b` here.
 D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
-    "F-W[0-9]": ((
+    "finding id (workstream form)": ((
         "mangled: work key rewritten inside the finding id",
         r"\bF-WK-[0-9]",
     ),),
-    "(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+": ((
+    "scoped requirement id": ((
         "mangled: rewrite matched inside a compound citation",
         r"\b(FR|NFR|OQ|DEP)-[0-9]+/[0-9]+",
     ),),
@@ -872,8 +725,8 @@ D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
     # id inside a title survives as a *filename* the alternative cannot see: `NT-00` is
     # written upper-case and slugs are not. Auditor: 26 of 384 new-form filenames carry
     # `nt-00`, 2 carry `wf-0[0-9]`.
-    "NT-00": (("mangled: legacy id lower-cased into a generated filename slug", r"nt-00"),),
-    "wf-0[0-9]": ((
+    "note id": (("mangled: legacy id lower-cased into a generated filename slug", r"nt-00"),),
+    "workflow id": ((
         "mangled: legacy id baked into a generated filename slug",
         r"/[^/\s]*wf-0[0-9]",
     ),),
@@ -886,66 +739,137 @@ D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
 GATING_COMPANIONS: Final[frozenset[str]] = frozenset()
 
 
-def _companions_for(alt: str, mig: Corpus, ctl: Corpus) -> tuple[list[tuple[str, str, str]], int]:
+#: A leading/trailing `\b` stripped from a Ruling-67-Part-1-anchored pattern's own source
+#: text — a path-literal entry carries neither (task 17: a path has no "complete form" a
+#: `\b` would express, so stripping is a no-op for those, and their "unanchored" companion
+#: below reads identically to the anchored figure rather than manufacturing a fake gap).
+def _unanchor(pattern_src: str) -> str:
+    return pattern_src.removeprefix(r"\b").removesuffix(r"\b")
+
+
+def _companions_for(
+    label: str, pattern: re.Pattern[str], mig: Corpus, ctl: Corpus
+) -> tuple[list[tuple[str, str, str]], int]:
     r"""Every companion figure for one alternative, plus the count that would gate it.
 
     Two kinds, and both are needed because they distinguish two inertness classes that look
     identical in a results table:
 
     * **mangled** — `D_COMPANIONS`, above: the row reads zero because the corruption moved
-      the token out of the predicate's reach (auditor A1's `F-W[0-9]`).
-    * **unanchored** — the same alternative without §7(d)'s leading `\b`. `\b` needs a word
-      character on one side, so `\b\.claude/notes/` can only match where a word character
-      immediately precedes the dot; measured over the corpus, its *only* match is the `n` of
-      a `\n` escape inside a Python string literal. The anchored figure is 1 and the
-      unanchored one is 88: the predicate cannot fire in any context it exists to police.
-      A genuinely clean alternative reads 0 against 0. Ruling 102 §1's own test — "a row
-      that cannot be expressed as a predicate the script computes is a row that was never
-      enforceable" — applied to a row that computes but cannot fail.
+      the token out of the predicate's reach (auditor A1's workstream finding id).
+    * **unanchored** — the same alternative with its own Ruling 67 Part 1 `\b`-anchoring
+      stripped. A genuinely clean alternative reads the same figure either way; one that
+      only reads zero because the anchor keeps it from firing at all reads a different,
+      larger figure unanchored — Ruling 102 §1's own test, "a row that cannot be expressed
+      as a predicate the script computes is a row that was never enforceable", applied to a
+      row that computes but cannot fail.
     """
     out: list[tuple[str, str, str]] = []
     gating = 0
-    for label, pattern_src in D_COMPANIONS.get(alt, ()):
-        pattern = re.compile(pattern_src)
-        m_lines, m_files = mig.scan(pattern)
-        c_lines, _ = ctl.scan(pattern)
+    for c_label, pattern_src in D_COMPANIONS.get(label, ()):
+        c_pattern = re.compile(pattern_src)
+        m_lines, m_files = mig.scan(c_pattern)
+        c_lines, _ = ctl.scan(c_pattern)
         out.append((
-            label,
+            c_label,
             pattern_src,
             f"migrated {m_lines} line(s) / {m_files} file(s); control {c_lines}",
         ))
-        if label in GATING_COMPANIONS:
+        if c_label in GATING_COMPANIONS:
             gating += m_lines
-    if alt not in D_COMPANIONS:
+    if label not in D_COMPANIONS:
         out.append((
             "mangled",
             "(none)",
             "no companion predicate declared — this alternative has not been asked what a "
             "wrong rewrite turns it into",
         ))
-    unanchored = re.compile("(" + alt + ")")
+    unanchored_src = _unanchor(pattern.pattern)
+    unanchored = re.compile(unanchored_src)
     u_mig, _ = mig.scan(unanchored)
     u_ctl, _ = ctl.scan(unanchored)
     out.append((
         "unanchored (inertness probe)",
-        "(" + alt + ")   — the same alternative without §7(d)'s leading `\\b`",
+        f"{unanchored_src!r} — the same alternative with Ruling 67 Part 1's own `\\b` "
+        "anchoring stripped",
         f"migrated {u_mig}; control {u_ctl}",
     ))
     return out, gating
 
 
+#: Ruling 105 §A's third alias class (2026-09-04, `to-lead.md:459-465`): a slice key
+#: `W<n>[a-z]?-<m>` names a historical execution unit no `SL-` id was ever minted for and
+#: never will be — NT-0019 §5.2 asks for zero of the ~864 historical rows, and the
+#: resolver that renders one (`W11-1` -> "WK-952, slice 1") is W37-11's citation-form
+#: item, the same shape as the `F-W`/bare-`F` alias classes already in `D_DISCLOSED`. Kept
+#: as a separate branch rather than folded into `D_DISCLOSED`, because two things on the
+#: SAME row stay fatal regardless of the disclosure — a task key (three segments,
+#: `W<n>-<m>-<k>`; NT-0019 names no live citation of this shape, expected 0 outside
+#: fixtures) and a bare work-key remainder (`W<n>[a-z]?` with no slice number at all —
+#: every Work mints a `WK-`, so an unmapped one is a real `token_map` defect) — and
+#: "creation" (migrated > control on the whole alternative) stays REGRESSION even when the
+#: disclosed branch would otherwise apply, which needs checking BEFORE the disclosure, not
+#: after, unlike `D_DISCLOSED`'s other members.
+_D8_LABEL: Final = "workstream/slice id"
+_D8_TASK_KEY_RE: Final = re.compile(r"\bW[0-9]+[a-z]?-[0-9]+-[0-9]+\b")
+_D8_WORK_KEY_BARE_RE: Final = re.compile(r"\bW[0-9]+[a-z]?\b(?!-[0-9])")
+#: A genuine two-segment slice key — the negative lookahead is what stops this from also
+#: matching the first two segments of a longer task key (`W11-1` inside `W11-1-2`).
+_D8_SLICE_KEY_RE: Final = re.compile(r"\bW[0-9]+[a-z]?-[0-9]+\b(?!-[0-9])")
+
+
+def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[str, str]:
+    """(d8)'s three-way split. `m_lines`/`c_lines` are the whole alternative's own figures
+    (`\\bW[0-9]+[a-z]?-[0-9]+\\b`) — creation is checked first, against those, and stays
+    REGRESSION regardless of what the slice/task/bare breakdown below would say.
+    """
+    if m_lines > c_lines:
+        return REGRESSION, (
+            f"the migrated tree carries MORE than the un-migrated control "
+            f"({c_lines} -> {m_lines}): the migration is creating what this row forbids, "
+            "so no citation rewrite reaches zero — creation stays REGRESSION even for a "
+            "disclosed class (Ruling 105 §A's third alias class)"
+        )
+    m_task, task_files = mig.scan(_D8_TASK_KEY_RE)
+    m_bare, bare_files = mig.scan(_D8_WORK_KEY_BARE_RE)
+    if m_task or m_bare:
+        parts = []
+        if m_task:
+            parts.append(
+                f"{m_task} task key(s) in {task_files} file(s) "
+                f"(`{_D8_TASK_KEY_RE.pattern}`, expected 0 outside fixtures)"
+            )
+        if m_bare:
+            parts.append(
+                f"{m_bare} bare work-key remainder(s) in {bare_files} file(s) "
+                f"(`{_D8_WORK_KEY_BARE_RE.pattern}` — a token_map defect, not this alias "
+                "class)"
+            )
+        return FAIL, "; ".join(parts)
+    m_slice, slice_files = mig.scan(_D8_SLICE_KEY_RE)
+    c_slice, _ = ctl.scan(_D8_SLICE_KEY_RE)
+    return DISCLOSE, (
+        "slice-key population disclosed, excluded from the zero requirement (Ruling 105 "
+        f"§A's third alias class, `to-lead.md` 2026-09-04): {m_slice} line(s) / "
+        f"{slice_files} file(s) (`{_D8_SLICE_KEY_RE.pattern}`), control {c_slice} line(s); "
+        "owner W37-11's citation-form item — the resolver that renders one (e.g. "
+        "'W11-1' -> 'WK-952, slice 1')"
+    )
+
+
 def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
     rows: list[Row] = []
-    for i, alt in enumerate(D_ALTERNATIVES, start=1):
-        pattern = re.compile(r"\b(" + alt + ")")
+    for i, (label, pattern) in enumerate(D_ALTERNATIVES, start=1):
         m_lines, m_files = mig.scan(pattern)
         c_lines, c_files = ctl.scan(pattern)
-        companions, gating = _companions_for(alt, mig, ctl)
-        if alt in D_DISCLOSED:
+        companions, gating = _companions_for(label, pattern, mig, ctl)
+        if label == _D8_LABEL:
+            verdict, note = _d8_verdict(mig, ctl, m_lines, c_lines)
+        elif label in D_DISCLOSED:
             verdict = DISCLOSE
             note = (
                 "excluded from the zero requirement, count disclosed "
-                f"({D_DISCLOSED_CITATION.get(alt, 'ruling pending')})"
+                f"({D_DISCLOSED_CITATION.get(label, 'ruling pending')})"
             )
         elif m_lines > c_lines:
             # Not a worse FAIL — a different finding. See `REGRESSION`.
@@ -974,15 +898,17 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
             Row(
                 key=f"d{i}",
                 companions=tuple(companions),
-                title=f"§7(d) alternative {alt!r} returns nothing",
+                title=f"§7(d) alternative {label!r} ({pattern.pattern!r}) returns nothing",
                 owner=OWNER_W37_6,
                 predicate=(
-                    f"re.compile(r'\\b(' + {alt!r} + ')') over every line of "
-                    "`git ls-files --cached --others --exclude-standard`, minus "
-                    "REDIRECTS.csv, minus front-matter `was:` **field** lines "
-                    "(`_docverify.was_field_line_numbers`); alternative taken verbatim "
-                    "from `_docverify.D_ALTERNATIVES`, checkable against "
-                    "`_docverify.D_FULL_PATTERN`"
+                    f"{pattern.pattern!r} over every line of `git ls-files --cached "
+                    "--others --exclude-standard`, minus REDIRECTS.csv, minus "
+                    "front-matter `was:` **field** lines "
+                    "(`_docverify.was_field_line_numbers`); taken verbatim, by index, "
+                    "from `_docid.LEGACY_FORM_PATTERNS` — Ruling 67 §2's one shared "
+                    "constant, the same tuple `audit-docs.py` check 36 reads, anchored "
+                    "per Ruling 67 §2 Part 1 (a `\\b`-bounded complete identifier, or a "
+                    "bare literal path substring)"
                 ),
                 denominator=f"{mig.n_lines} line(s) in {mig.n_files} file(s)",
                 migrated=f"{m_lines} line(s) / {m_files} file(s)",
@@ -1196,8 +1122,26 @@ def _per_file(corpus: Corpus, pattern: re.Pattern[str]) -> dict[str, int]:
     return out
 
 
-def row_f(mig: Corpus, ctl: Corpus, baseline: Corpus | None, snap: Snapshot) -> Row:
-    m_per = _per_file(mig, _VR_DST_RE)
+def row_f(
+    mig: Corpus,
+    ctl: Corpus,
+    baseline: Corpus | None,
+    snap: Snapshot,
+    generated_paths: Sequence[str] = (),
+) -> Row:
+    # Ruling 105 D3 / #18 §1: excludes every file the migration generated in full, keyed
+    # on the run's own generated-output list (`MigrateResult.generated_paths` —
+    # `docs/INDEX.md`, `docs/REDIRECTS.csv`, the family READMEs, the split-source indexes),
+    # never on the literal path `docs/INDEX.md`. Ruling 104 §2: class 6 is the property
+    # (a file whose entire content is the output of one of the migration's generators, by
+    # reproducibility — not by whether it happens to carry forward original prose), not the
+    # list; `_MIGRATION_DIFF_FAMILY_READMES` is ratified as a member, in-place READMEs
+    # included. Excluded from `m_per` once, before either conjunct runs, so conjunct 2's
+    # own mechanism (per file through the routing table) is unchanged — only its input is.
+    generated = frozenset(generated_paths)
+    m_per_all = _per_file(mig, _VR_DST_RE)
+    excluded = {k: v for k, v in m_per_all.items() if k in generated}
+    m_per = {k: v for k, v in m_per_all.items() if k not in generated}
     c_per = _per_file(ctl, _VR_DST_RE)
     m_lines, c_lines = sum(m_per.values()), sum(c_per.values())
 
@@ -1239,6 +1183,19 @@ def row_f(mig: Corpus, ctl: Corpus, baseline: Corpus | None, snap: Snapshot) -> 
     else:
         verdict, note = PASS, ""
 
+    if excluded:
+        note = "; ".join(
+            part for part in (
+                note,
+                "GENERATED, excluded (Ruling 105 D3/#18, Ruling 104 §2's class-6 "
+                f"property): {sum(excluded.values())} occurrence(s) in "
+                f"{len(excluded)} generated file(s) — "
+                + ", ".join(f"{p}={n}" for p, n in sorted(excluded.items())[:6])
+                + (f" (+{len(excluded) - 6} more)" if len(excluded) > 6 else ""),
+            )
+            if part
+        )
+
     if baseline is None:
         b_desc = f"{BASELINE_REF} not resolvable in this clone"
     else:
@@ -1253,10 +1210,12 @@ def row_f(mig: Corpus, ctl: Corpus, baseline: Corpus | None, snap: Snapshot) -> 
             "identifier is not a citation); conjunct 1 — the summed total is equal before "
             "and after the migration on the same archive; conjunct 2 — per-file counts are "
             "equal, each pre-migration path mapped through the run's own docs/REDIRECTS.csv "
-            "(`_docverify._redirect_map`), summing over a split source's targets"
+            "(`_docverify._redirect_map`), summing over a split source's targets; every "
+            "path in `MigrateResult.generated_paths` is excluded first (Ruling 105 D3/#18)"
         ),
         denominator=(
-            f"{len(c_per)} file(s) carry the identifier before, {len(m_per)} after; "
+            f"{len(c_per)} file(s) carry the identifier before, {len(m_per)} after "
+            f"({len(excluded)} generated file(s) excluded); "
             f"{len(redirect)} redirect row(s) available to map them"
         ),
         migrated=(
@@ -1805,32 +1764,61 @@ def row_i(snap: Snapshot) -> Row:
 #:   both avoided).
 EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "a": PASS,          # one family per file, zero `none` — the only row that passes today
-    "b": FAIL,          # 77 noncontiguous ids                     — Ruling 102 §2 row 4
-    "c": FAIL,          # docs/INDEX.md stale against its own renderer
+    "b": FAIL,          # noncontiguous=4 — REGRESSED again after #711 (task 4's
+                         # sweep-order/compound-citation/redirects PR), between this row's
+                         # first re-recording as PASS (earlier in this same PR's own
+                         # history, when based on #707/#708) and this final re-record
+                         # against #711 (2026-09-04, task 17); unrelated to this PR's own
+                         # diff — flagged to the lead as a genuine new defect, not fixed
+                         # here (out of scope, id-allocation is not this row's file)
+    "c": PASS,          # docs/INDEX.md byte-stable against its own renderer — same
+                         # unrelated prior-PR progress, re-recorded for the same reason
     "d1": FAIL,         # NT-00
     "d2": DISCLOSE,     # F-W[0-9] — Ruling 105 §A: the same alias class as `F[0-9]{2}`,
                          # excluded from the zero requirement with its count disclosed
-                         # regardless of the migrated/control comparison (2026-09-03, task 14)
+                         # regardless of the migrated/control comparison (2026-09-03, task 14).
+                         # History, corrected (2026-09-04, task 17): PASS at `ac82256`/
+                         # `a92d4e8` was NOT "never true" (a prior version of this comment
+                         # said so, citing 214/217/217/217 — those are the CONTROL figure,
+                         # unchanged on every commit, not the migrated one). It was real and
+                         # manufactured: the migrated figure was 0 before #693 because the
+                         # tokens had been mangled into `F-WK-*` (companion 221), and 220
+                         # after #693 exposed them. A wrong recorded reason is an
+                         # instruction to the next reader to reverse a decision that was
+                         # actually right.
     "d3": DISCLOSE,     # \bF[0-9]{2}\b — excluded from the zero requirement (§8.5)
     "d4": FAIL,         # wf-0[0-9] — improved (262 < control 272), not the migration's own
                          # regression any more; still non-zero (2026-09-03, task 23)
-    "d5": FAIL,         # Ruling [0-9]+                            — Ruling 102 §4
+    "d5": PASS,         # Ruling [0-9]+ — genuine progress from #711 (task 4), unrelated
+                         # to this PR's own diff; re-recorded 2026-09-04, task 17
     "d6": FAIL,         # ADR-0[0-9]{3}\b — trailing `\b` added (2026-09-03, task 14, Ruling
                          # 67 §2 Part 1's already-ruled "complete identifier" requirement,
                          # not carried here until now): the bare pattern matched as a
                          # substring of any correctly-migrated five-digit id; genuine
                          # un-migrated 4-digit citations remain, so the row still fails
     "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
-    "d8": REGRESSION,   # W[0-9]+[a-z]?-[0-9]+ — the migration CREATES this one (2026-09-03,
-                         # task 22): +144 lines/30 files, same title/INDEX-duplication
-                         # mechanism as (d2) at larger scale; live defect, unowned
+    "d8": FAIL,         # workstream/slice id — #711 (task 4)'s sweep-order fix removed the
+                         # title/INDEX-duplication "creation" bug (2026-09-03, task 22);
+                         # migrated (299) is now BELOW control (2353), so Ruling 105 §A's
+                         # third alias class (2026-09-04, task 17) applies: FAIL is real
+                         # task-key population (30 in 11 files, `\bW[0-9]+[a-z]?-[0-9]+-
+                         # [0-9]+\b`) — NOT the slice-key alias class, which discloses
+                         # cleanly once the task keys are separately resolved; the ruling's
+                         # own text expected 0 task keys outside fixtures, this measured
+                         # 30, disclosed here rather than silently assumed
     "d9": FAIL,         # docs/plans/2026-
     "d10": FAIL,        # docs/audit/
     "d11": FAIL,        # the old notes directory
     "d12": FAIL,        # docs/adr/
     "d13": FAIL,        # the old .claude notes root — INERT, see its unanchored companion
     "e": FAIL,          # 2 padded ids in prose                    — Ruling 103
-    "f": PASS,          # VR-DST-1 unchanged, both conjuncts       — Ruling 103
+    "f": PASS,          # VR-DST-1 unchanged, both conjuncts — Ruling 103. Regressed on
+                         # `main` (#707, 43d8698) when `docs/INDEX.md` started quoting
+                         # requirement bodies mentioning VR-DST-1 with no pre-migration
+                         # counterpart; disclosed rather than fixed there. Fixed here
+                         # (2026-09-04, task 17/#20): (f) excludes every path in
+                         # `MigrateResult.generated_paths` (Ruling 105 D3/#18 §1), keyed on
+                         # the run's own generated-output list, never the literal path.
     "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
     "h1": FAIL,         # audit-docs.py: checks 29/30/35 disclosed (owner W37-10, Ruling 105
                          # §B), but other classes (32, 36, 1, 31, 27, ...) are still non-zero
@@ -1914,21 +1902,21 @@ class VerifyResult:
         return 1 if self.failed else 0
 
 
-def compute_rows(docid: Any, snap: Snapshot) -> list[Row]:
-    """Every §7 (a)-(i) row, over a snapshot whose `migrated/` has already been migrated."""
+def compute_rows(
+    docid: Any, snap: Snapshot, generated_paths: Sequence[str] = ()
+) -> list[Row]:
+    """Every §7 (a)-(i) row, over a snapshot whose `migrated/` has already been migrated.
+
+    `generated_paths` is `MigrateResult.generated_paths` from the same `migrate()` call
+    that produced this snapshot's `migrated/` tree — (f)'s exclusion (Ruling 105 D3/#18).
+    """
     mig = load_corpus(snap.migrated)
     ctl = load_corpus(snap.control)
-    # Before any (d) row is computed: the derived decomposition must agree with the
-    # acceptance sentence it was derived from, line for line, over this very corpus. This
-    # is what makes deriving safer than retyping rather than merely tidier — a splitting
-    # bug cannot be silent.
-    assert_decomposition_matches_source(mig)
-    assert_decomposition_matches_source(ctl)
     baseline = load_corpus(snap.baseline) if snap.baseline is not None else None
     rows: list[Row] = [row_a(docid, snap), row_b(docid, snap), row_c(snap)]
     rows.extend(rows_d(mig, ctl))
     rows.append(row_e(mig, ctl, snap))
-    rows.append(row_f(mig, ctl, baseline, snap))
+    rows.append(row_f(mig, ctl, baseline, snap, generated_paths))
     rows.append(row_g(docid, snap, mig, ctl))
     rows.extend(rows_h(snap))
     rows.append(row_i(snap))
@@ -1958,7 +1946,7 @@ def verify(
             with_baseline=with_baseline,
         )
         assert_tree_is_snapshot(snap.migrated)
-        docid.migrate(snap.migrated)
+        mig_result = docid.migrate(snap.migrated)
         # Stage the migration's whole output before anything measures the tree. Four of
         # the rows read the tree through `git ls-files` (`doc-id.py:classify_docs_files`,
         # `doc-index.py`, and this module's own population), and `migrate()` leaves the
@@ -1988,7 +1976,7 @@ def verify(
                 "every row reading `git ls-files` would measure the pre-migration "
                 "population"
             )
-        rows = compute_rows(docid, snap)
+        rows = compute_rows(docid, snap, mig_result.generated_paths)
         return VerifyResult(snapshot=snap, rows=tuple(rows))
     finally:
         if tmp is not None and not keep:

@@ -30,7 +30,7 @@ import pathlib
 import re
 import subprocess
 import sys
-from typing import Any
+from typing import Any, Final
 
 import pytest
 
@@ -310,17 +310,59 @@ def test_disclosed_alternative_does_not_set_the_exit_code_but_still_reports(
     assert rows["d3"].migrated.startswith("1 line")  # one *line*, three occurrences
 
 
-def test_every_d_alternative_is_a_branch_of_the_full_pattern(dv: Any) -> None:
-    """The decomposition cannot drift from §7(d)'s own sentence.
-
-    Every alternative must appear verbatim inside `D_FULL_PATTERN`, and there must be one
-    row per leaf — thirteen, matching the handover's per-alternative table.
-    """
-    for alt in dv.D_ALTERNATIVES:
-        if alt.startswith("docs/"):
-            continue  # the four leaves of `docs/(plans/2026-|audit/|notes/|adr/)`
-        assert alt in dv.D_FULL_PATTERN, alt
+def test_d_alternatives_equals_the_shared_constant_not_a_private_copy(dv: Any) -> None:
+    """Task 17, Ruling 67 §2: "(d) and check 36 are one rule at two times, so they read
+    ONE." `D_ALTERNATIVES` reads `_docid.LEGACY_FORM_PATTERNS` — the identical tuple
+    `audit-docs.py`'s check 36 reads, never a value retyped independently. Compared by
+    `==`, not `is`: each fixture here loads `_docid.py` fresh under its own module name
+    (`tests/test_doc_id_verify.py`'s own `_load_by_path` idiom, one instance per name), so
+    even the correctly-consolidated tuples are two separate Python objects with equal
+    content — `is` would fail for a reason that has nothing to do with the property this
+    test exists to prove. A private, independently-retyped copy, even one with identical
+    content today, silently diverges the next time either file edits its own — which is
+    exactly what happened here before task 17 (this module's old `F-W[0-9]`/`NT-00` were
+    already narrower than check 36's own forms; `==` catches that the moment it recurs,
+    just as reliably as `is` would if the two really did share one object)."""
+    docid = _load_by_path("_docid_for_shared_constant", ROOT / "scripts" / "_docid.py")
+    assert dv.D_ALTERNATIVES == docid.LEGACY_FORM_PATTERNS
     assert len(dv.D_ALTERNATIVES) == 13
+    audit_docs = _load_by_path(
+        "_audit_docs_for_shared_constant", ROOT / "scripts" / "audit-docs.py"
+    )
+    assert audit_docs.LEGACY_FORM_PATTERNS == docid.LEGACY_FORM_PATTERNS
+
+
+#: Ruling 67 §2 Part 1: "every alternative in (d) must match a COMPLETE legacy identifier
+#: or path, never a proper prefix of one." Each entry's own bare-prefix broken form — the
+#: text the alternative would still match if its Part 1 anchoring were dropped — paired
+#: with a complete form it must match, so the anchoring each carries is proven rather than
+#: assumed. Four labels are absent, each for a distinct, checked reason:
+#: the five path entries carry no `\b` at all (a path has no "complete form" the way an id
+#: token does); "ADR id" and "workstream/slice id" both use `[0-9]+`/`{3}`-shaped digit
+#: runs whose bug is over-matching a PREFIX OF A LONGER token (fixed-width `{3}` for ADR;
+#: greedy `[0-9]+` already consumes a whole longer run for workstream, so its own trailing
+#: `\b` is not load-bearing the same way), never a bare-prefix self-match — "ADR id" has
+#: its own dedicated proof,
+#: `test_d6_anchor_does_not_trip_on_a_correctly_migrated_five_digit_id`.
+_PART_1_SELF_MATCH_CASES: Final = (
+    ("note id", "the NT-00 alternative", "NT-0019"),
+    ("finding id (workstream form)", "see F-W11 here", "F-W11-1-3"),
+    ("workflow id", "wf-01x", "wf-01"),
+    ("ruling reference", "Ruling 6x", "Ruling 67"),
+    ("scoped requirement id", "FR-RATE-1x", "FR-RATE-13"),
+)
+
+
+@pytest.mark.parametrize(("label", "broken", "complete"), _PART_1_SELF_MATCH_CASES)
+def test_part_1_anchoring_rejects_the_bare_prefix_each_label_names(
+    dv: Any, label: str, broken: str, complete: str
+) -> None:
+    """Ruling 67 §2 Part 1's own broken-input proof, per alternative: the anchored pattern
+    must NOT fire on a bare prefix of its own shape — the defect the original `NT-00` had,
+    self-matching NT-0019 §7's own defining sentence."""
+    pattern = dict(dv.D_ALTERNATIVES)[label]
+    assert not pattern.search(broken), f"{label}: {broken!r} must not match"
+    assert pattern.search(complete), f"{label}: {complete!r} must match"
 
 
 # =========================================================================================
@@ -732,72 +774,118 @@ def test_row_f_conjunct_1_alone_would_have_passed_the_real_corpus(
     )
 
 
+def test_row_f_excludes_generated_paths_by_the_runs_own_list_not_a_literal_path(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 105 D3 / #18 §1's own broken-input proof: *"move one VR-DST-1 from a governed
+    body into another governed body → red; add a generated file quoting one → still
+    green."* `generated_paths` is the run's own list (`MigrateResult.generated_paths`),
+    never a hard-coded `docs/INDEX.md` check — a file at any path in that list is excluded,
+    one NOT in it is not, however INDEX.md-shaped its name looks."""
+    control = {"docs/src.md": "VR-DST-1 a\n"}
+    # Red: a real move, no generated file involved — conjunct 1 must still catch a loss.
+    moved_only = {"docs/dest.md": "VR-DST-1 a\n"}
+    snap_red = _snapshot(dv, tmp_path / "f4red", moved_only, control)
+    row_red = dv.row_f(
+        dv.load_corpus(snap_red.migrated), dv.load_corpus(snap_red.control), None,
+        snap_red, ("docs/dest.md",),
+    )
+    assert row_red.verdict == dv.FAIL, (
+        "excluding the ONLY carrier of a real move must not manufacture a false green"
+    )
+
+    # Green: the identifier stays exactly where it was AND a generated file (arbitrarily
+    # named, not "docs/INDEX.md") echoes it — the echo must not count as a new occurrence.
+    with_generated_echo = {
+        "docs/src.md": "VR-DST-1 a\n",
+        "docs/some-other-generated.md": "VR-DST-1 a\n",
+    }
+    snap_green = _snapshot(dv, tmp_path / "f4green", with_generated_echo, control)
+    row_green = dv.row_f(
+        dv.load_corpus(snap_green.migrated), dv.load_corpus(snap_green.control), None,
+        snap_green, ("docs/some-other-generated.md",),
+    )
+    assert row_green.verdict == dv.PASS
+    assert "GENERATED, excluded" in row_green.note
+    assert "docs/some-other-generated.md=1" in row_green.note
+
+    # The default (no generated_paths passed) excludes nothing — existing callers unaffected.
+    row_default = dv.row_f(
+        dv.load_corpus(snap_green.migrated), dv.load_corpus(snap_green.control), None,
+        snap_green,
+    )
+    assert row_default.verdict == dv.FAIL
+    assert "GENERATED, excluded" not in row_default.note
+
+
 # =========================================================================================
-# Task 17 — the decomposition is derived from the acceptance sentence, not retyped
+# Task 17 — (d) reads `_docid.LEGACY_FORM_PATTERNS`, the one constant Ruling 67 §2 shares
+# with `audit-docs.py` check 36, never a private decomposition of a retyped sentence.
 # =========================================================================================
 
 
-def test_the_alternatives_are_derived_and_reproduce_the_hand_written_list(
+def test_the_shared_constant_reproduces_the_hand_written_label_and_pattern_list(
     dv: Any,
 ) -> None:
-    """The list this replaced was hand-typed, and one of its entries was the very string
-    row (d11) forbids — so the instrument counted its own source. Derivation removes the
-    literal; this pins that it removed nothing else."""
-    expected = (
-        "NT-00", "F-W[0-9]", r"\bF[0-9]{2}\b", "wf-0[0-9]", "Ruling [0-9]+",
-        # trailing `\b` added, disclosed deviation from the spec sentence's literal text —
-        # the token-boundary fix folded into this ruling's follow-up (same file, peer
-        # executor's finding): without it the alternative matches as a prefix of any
-        # correctly-migrated five-digit id.
-        r"ADR-0[0-9]{3}\b", "(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+", "W[0-9]+[a-z]?-[0-9]+",
-        # built by concatenation: this file is inside the corpus row (d) scans
-        "docs/" + "plans/2026-", "docs/" + "audit/", "docs/" + "notes/", "docs/" + "adr/",
-        r"\." + "claude/notes/",
+    """Pins the thirteen `(label, pattern)` entries `_docid.LEGACY_FORM_PATTERNS` carries,
+    so a change to the shared constant is visible here rather than only in whichever row
+    or check happens to move. Every id-shaped entry's own Part 1 anchoring is asserted
+    separately, by behaviour, in the `test_part_1_anchoring_rejects_the_bare_prefix_...`
+    tests below."""
+    expected_labels = (
+        "note id", "finding id (workstream form)", "finding id (bare form)", "workflow id",
+        "ruling reference", "ADR id", "scoped requirement id", "workstream/slice id",
+        "legacy dated-plan path", "legacy audit path", "legacy notes path", "legacy adr path",
+        "legacy claude-notes path",
     )
-    assert expected == dv.D_ALTERNATIVES
+    assert tuple(label for label, _pattern in dv.D_ALTERNATIVES) == expected_labels
+    assert len(dv.D_ALTERNATIVES) == 13
 
 
-def test_only_a_trailing_group_is_distributed(dv: Any) -> None:
-    """The rule that makes the decomposition derivable rather than a matter of taste. A
-    suffix group's leaves are separate things to count; a prefix group is one shape."""
-    assert dv._expand_trailing_alternation("docs/(a/|b/)") == ["docs/a/", "docs/b/"]
-    assert dv._expand_trailing_alternation("(FR|NFR)-[A-Z]+-[0-9]+") == [
-        "(FR|NFR)-[A-Z]+-[0-9]+"
-    ]
-
-
-def test_the_splitter_respects_groups_classes_and_escapes(dv: Any) -> None:
-    assert dv._split_top_level("a|b") == ["a", "b"]
-    assert dv._split_top_level("(a|b)|c") == ["(a|b)", "c"]
-    assert dv._split_top_level(r"[a|b]|c") == [r"[a|b]", "c"]
-    assert dv._split_top_level(r"a\|b|c") == [r"a\|b", "c"]
-
-
-@pytest.mark.parametrize("broken", ["a|(b", "a|b)", "a|[bc"])
-def test_a_splitting_bug_raises_rather_than_returning_a_wrong_list(
-    dv: Any, broken: str
-) -> None:
-    """The honest objection to deriving is that a splitting bug would be a **silent** wrong
-    predicate, which is worse than the one-line floor it removes. It cannot be silent."""
-    with pytest.raises(dv.PatternDecompositionError):
-        dv._split_top_level(broken)
-
-
-def test_the_derived_set_is_checked_against_its_source_over_the_real_corpus(
+def test_a_mutated_constant_moves_both_docverify_and_check_36_the_same_way(
     dv: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The runtime guard, red-then-green. Every line the acceptance sentence matches must be
-    matched by some derived alternative and vice versa; drop one and it raises."""
-    doc = {"docs/a.md": "cites ADR-0004 and NT-0019\n"}
-    corpus = dv.load_corpus(_snapshot(dv, tmp_path / "dec", doc, doc).migrated)
-    assert dv.assert_decomposition_matches_source(corpus) == 1
-    monkeypatch.setattr(
-        dv, "D_ALTERNATIVES", tuple(a for a in dv.D_ALTERNATIVES if a != r"ADR-0[0-9]{3}\b")
+    """Ruling 67 §2's own broken-input proof: *"change one alternative in the constant and
+    both check 36 and the (d) rows move together; leave either reading a private copy and
+    the test fails."* Fed the identical mutated tuple — the one shared constant's whole
+    point is that a real edit to `_docid.py`'s source reaches both readers at their next
+    import, which this proves by construction: the same mutation applied to what each
+    reader is handed produces the same before/after shift in each."""
+    audit_docs = _load_by_path(
+        "_audit_docs_for_mutation_proof", ROOT / "scripts" / "audit-docs.py"
     )
-    doc2 = {"docs/a.md": "cites ADR-0004 only\n"}
-    corpus2 = dv.load_corpus(_snapshot(dv, tmp_path / "dec2", doc2, doc2).migrated)
-    with pytest.raises(dv.PatternDecompositionError):
-        dv.assert_decomposition_matches_source(corpus2)
+    original = dv.D_ALTERNATIVES
+    assert original == audit_docs.LEGACY_FORM_PATTERNS
+    mutated = tuple(
+        (label, re.compile(r"\bXX-MUTATED-\d+\b")) if label == "ADR id" else (label, pattern)
+        for label, pattern in original
+    )
+
+    doc = "cites ADR-0004 in prose\n"
+    snap = _snapshot(dv, tmp_path / "mut", {"docs/a.md": doc}, {"docs/a.md": doc})
+    mig, ctl = dv.load_corpus(snap.migrated), dv.load_corpus(snap.control)
+
+    before_rows = {r.key: r for r in dv.rows_d(mig, ctl)}
+    adr_key_before = next(k for k, r in before_rows.items() if "ADR id" in r.title)
+    assert not before_rows[adr_key_before].migrated.startswith("0 line")
+
+    fixture_path = tmp_path / "a.md"
+    fixture_path.write_text(doc, encoding="utf-8")
+    before_sweep = audit_docs.sweep_legacy_forms([fixture_path], repo_root=tmp_path)
+    assert any("ADR id" in hit for hit in before_sweep)
+
+    monkeypatch.setattr(dv, "D_ALTERNATIVES", mutated)
+    after_rows = {r.key: r for r in dv.rows_d(mig, ctl)}
+    assert after_rows[adr_key_before].migrated.startswith("0 line"), (
+        "the mutated pattern must no longer match ADR-0004"
+    )
+
+    after_sweep = audit_docs.sweep_legacy_forms(
+        [fixture_path], repo_root=tmp_path, patterns=mutated
+    )
+    assert not any("ADR id" in hit for hit in after_sweep), (
+        "check 36, fed the identical mutation, must move the same way"
+    )
 
 
 def test_padded_id_in_path_context_is_distinguished_from_prose(
@@ -1015,27 +1103,37 @@ def test_d6_anchor_does_not_trip_on_a_correctly_migrated_five_digit_id(
     )
 
 
-def test_the_unanchored_companion_distinguishes_an_inert_predicate(
+def test_unanchor_is_a_no_op_for_a_bare_path_literal_the_old_inert_case_is_fixed(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    """§7(d)'s thirteenth alternative is inert: its leading `\\b` needs a word character
-    before the dot, so it cannot fire in any context it exists to police. Anchored 0,
-    unanchored 2 — a genuinely clean alternative reads 0 against 0, and the pair is what
-    tells them apart. (The path is not spelled anywhere in this file; see below.)"""
+    """The path entries carry no `\\b` at all under the shared constant (task 17) — a path
+    has no "complete form" the way an id token does, so Ruling 67 §2 Part 1 anchors it as a
+    bare literal substring, never `\\b`-wrapped. This is a genuine fix, not cosmetic: the
+    OLD alternative (this row's own outer `\\b(...)` wrapper) needed a word character
+    immediately before the dot to fire at all, so a backtick-quoted path with a dot right
+    after the opening backtick — not a word character — never matched and the row read
+    INERT (0 anchored, 88 unanchored) on real content. The new bare-literal form matches
+    this exact input directly. (The path is not spelled anywhere in this file; see below.)"""
     # Built by concatenation for the reason `tests/test_notes_move_citations.py` builds its
     # own search term that way: this file is inside the corpus that test scans, and a
-    # literal here would make it an offender. `scripts/_docverify.py` gets a reviewed
-    # exemption instead, because there the literal IS the artifact — `D_FULL_PATTERN` is
-    # §7(d)'s grep verbatim and hiding a branch of it would defeat the constant's purpose.
-    # A test fixture has no such claim, so it takes the cheap route.
+    # literal here would make it an offender.
     old_root = "." + "claude" + "/" + "notes"
     doc = f"see `{old_root}/README.md` and {old_root}/x.md\n"
     snap = _snapshot(dv, tmp_path / "inert", {"docs/a.md": doc}, {"docs/a.md": doc})
     row = _d_rows(dv, snap)["d13"]
-    anchored = re.compile(r"\b(" + dv.D_ALTERNATIVES[12] + ")")
-    assert not anchored.search(doc), "the anchored alternative cannot match either occurrence"
+    assert "legacy claude-notes path" in row.title
+    assert row.migrated.startswith("1 line"), (
+        "the bare-literal form must match this backtick-preceded occurrence directly, "
+        "unlike the old outer-`\\b`-wrapped alternative"
+    )
     unanchored = next(c for c in row.companions if c[0].startswith("unanchored"))
-    assert "migrated 1" in unanchored[2]  # one *line* carries both occurrences
+    # No `\b` to strip for a path literal: `_unanchor` is a no-op, so anchored and
+    # unanchored read the identical figure — the INERT signature (control == migrated with
+    # a nonzero unanchored gap) no longer applies to this alternative.
+    assert "migrated 1" in unanchored[2]
+    assert dv._unanchor(dict(dv.D_ALTERNATIVES)["legacy claude-notes path"].pattern) == (
+        dict(dv.D_ALTERNATIVES)["legacy claude-notes path"].pattern
+    )
 
 
 def test_an_alternative_that_gets_worse_is_a_regression_not_a_fail(
@@ -1049,6 +1147,77 @@ def test_an_alternative_that_gets_worse_is_a_regression_not_a_fail(
     assert row.verdict == dv.REGRESSION
     assert row.fatal
     assert "1 -> 2" in row.note
+
+
+# =========================================================================================
+# (d8) — Ruling 105 §A's third alias class: slice keys disclosed, task keys and the bare
+# work-key remainder stay fatal, creation stays REGRESSION regardless of the disclosure
+# =========================================================================================
+
+
+def test_d8_slice_key_alone_is_disclosed(dv: Any, tmp_path: pathlib.Path) -> None:
+    """A plain two-segment slice key, no task key and no bare work-key remainder in
+    sight: the whole row discloses rather than fails."""
+    migrated = {"docs/a.md": "see W11-1 for the plan\n"}
+    control = {"docs/a.md": "see W11-1 for the plan\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8slice", migrated, control))["d8"]
+    assert row.verdict == dv.DISCLOSE
+    assert row.fatal is False
+    assert "slice-key population disclosed" in row.note
+    assert "owner W37-11" in row.note
+
+
+def test_d8_task_key_stays_fatal_even_though_slice_keys_are_disclosed(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A three-segment task key on the same row as a clean slice key: the task key alone
+    must fail the row — NT-0019 names no live citation of that shape."""
+    migrated = {"docs/a.md": "see W11-1 and also W11-1-2\n"}
+    control = {"docs/a.md": "see W11-1 and also W11-1-2\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8task", migrated, control))["d8"]
+    assert row.verdict == dv.FAIL
+    assert row.fatal
+    assert "task key(s)" in row.note
+    assert "expected 0 outside fixtures" in row.note
+
+
+def test_d8_bare_work_key_remainder_stays_fatal(dv: Any, tmp_path: pathlib.Path) -> None:
+    """A bare `W<n>` with no slice number at all is a `token_map` defect, not the alias
+    class — it must fail the row even with no task key present."""
+    migrated = {"docs/a.md": "see W11-1 and the bare W12 citation\n"}
+    control = {"docs/a.md": "see W11-1 and the bare W12 citation\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8bare", migrated, control))["d8"]
+    assert row.verdict == dv.FAIL
+    assert row.fatal
+    assert "bare work-key remainder(s)" in row.note
+    assert "token_map defect" in row.note
+
+
+def test_d8_creation_stays_regression_even_though_the_class_is_disclosed(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 105 §A: "creation... stays REGRESSION even for a disclosed class, because a
+    disclosed count that grows is the mangling class, not the alias class." A slice key
+    the migration CREATES (migrated > control on the whole alternative) must not just
+    disclose quietly — it must still fail as REGRESSION, checked before the disclosure."""
+    migrated = {"docs/a.md": "W11-1 here\n", "docs/b.md": "W11-2 there\n"}
+    control = {"docs/a.md": "W11-1 here\n", "docs/b.md": "nothing\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8creation", migrated, control))["d8"]
+    assert row.verdict == dv.REGRESSION
+    assert row.fatal
+    assert "creation stays REGRESSION" in row.note
+
+
+def test_d8_slice_key_regex_does_not_double_count_a_task_key_as_a_slice_key(
+    dv: Any,
+) -> None:
+    """The negative lookahead's whole job: `W11-1` must not also register as a slice key
+    when it is really the first two segments of `W11-1-2`."""
+    assert dv._D8_SLICE_KEY_RE.search("see W11-1-2 here") is None
+    assert dv._D8_SLICE_KEY_RE.search("see W11-1 here")
+    assert dv._D8_TASK_KEY_RE.search("see W11-1-2 here")
+    assert dv._D8_WORK_KEY_BARE_RE.search("see W11-1 here") is None
+    assert dv._D8_WORK_KEY_BARE_RE.search("see W11 alone here")
 
 
 def test_an_alternative_the_migration_does_not_move_is_marked_inert(
@@ -1236,22 +1405,41 @@ def test_f102s_own_regression_is_detected_without_a_baseline(dv: Any) -> None:
 def test_progress_is_a_set_change_too_and_says_what_to_edit(dv: Any) -> None:
     """Deliberately, and this is the half that stops the baseline going stale. A row fixed
     and left in the table would mask its own later regression, so progress is reported —
-    with the edit it requires — rather than passed over."""
-    moved = dict(dv.EXPECTED_VERDICTS, b=dv.PASS)
+    with the edit it requires — rather than passed over.
+
+    "e" rather than "b"/"c": task 17 (2026-09-04) re-recorded (b) and (c) as PASS on
+    `main` (unrelated prior-PR progress), so those two no longer have a FAIL state this
+    test's `dict(..., key=PASS)` override could actually move *from* — the override would
+    be a no-op against the real recorded table, which is exactly the false-pass this test
+    exists to guard against elsewhere. "e" (padded id in prose) stays FAIL.
+    """
+    assert dv.EXPECTED_VERDICTS["e"] == dv.FAIL, (
+        "this test's premise: the row it moves must start FAIL in the real table"
+    )
+    moved = dict(dv.EXPECTED_VERDICTS, e=dv.PASS)
     result = _result(dv, moved)
-    assert [(c.key, c.direction) for c in result.set_changes] == [("b", dv.PROGRESSED)]
+    assert [(c.key, c.direction) for c in result.set_changes] == [("e", dv.PROGRESSED)]
     assert result.exit_code == 3
     out = dv.render(result)
-    assert "PROGRESS (newly passing): (b) FAIL -> PASS" in out
+    assert "PROGRESS (newly passing): (e) FAIL -> PASS" in out
     assert "same commit as the change that moved the row" in out
 
 
 def test_a_reclassification_between_two_fatal_verdicts_is_a_set_change(dv: Any) -> None:
     """(d4) going FAIL -> REGRESSION is a finding, not noise: the migration began creating
-    what the row forbids. A fatal-to-fatal move must not be invisible."""
-    moved = dict(dv.EXPECTED_VERDICTS, d5=dv.REGRESSION)
+    what the row forbids. A fatal-to-fatal move must not be invisible.
+
+    "d1" rather than "d5": task 17 (2026-09-04) re-recorded (d5) as PASS on `main`
+    (#711's unrelated progress), so a FAIL -> REGRESSION override there would actually be
+    a PASS -> REGRESSION move (REGRESSED, not RECLASSIFIED) against the real table. "d1"
+    (note id) stays FAIL — a genuine fatal-to-fatal example.
+    """
+    assert dv.EXPECTED_VERDICTS["d1"] == dv.FAIL, (
+        "this test's premise: the row it moves must start FAIL (fatal) in the real table"
+    )
+    moved = dict(dv.EXPECTED_VERDICTS, d1=dv.REGRESSION)
     result = _result(dv, moved)
-    assert [(c.key, c.direction) for c in result.set_changes] == [("d5", dv.RECLASSIFIED)]
+    assert [(c.key, c.direction) for c in result.set_changes] == [("d1", dv.RECLASSIFIED)]
     assert result.exit_code == 3
 
 

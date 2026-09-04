@@ -2645,26 +2645,14 @@ def check_owner() -> None:
 # `check_notes_tombstone` (slot 30 -> 36; NT-0019 §5.5).
 # =========================================================================================
 
-#: Ruling 67 Part 1: every alternative matches a COMPLETE legacy identifier or path,
-#: never a proper prefix of one — NT-0019 §7 acceptance item (d) as originally written
-#: matched its own text on `NT-00`, the bare prefix fragment inside its own alternation,
-#: because it required no digits to follow. Each entry here is independently `\b`-bounded
-#: (or, for a path, matched as a literal substring) rather than sharing one outer
-#: boundary, so fixing one alternative can never re-open this class in another.
+#: Ruling 67 §2: NT-0019 §7 acceptance item (d) and this check are "one rule at two
+#: times", so both read this **one** shared pattern-and-exclusion constant, defined once
+#: in `scripts/_docid.py` (stdlib, already imported by both scripts) rather than kept here
+#: as a private copy — `_docverify.py`'s `D_ALTERNATIVES` reads the identical tuple.
+#: Ruling 67 §2 Part 1's anchoring (every entry a COMPLETE legacy identifier or path,
+#: never a proper prefix) is documented at the definition, not repeated here.
 LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
-    ("note id", re.compile(r"\bNT-\d{4}\b")),
-    ("finding id (workstream form)", re.compile(r"\bF-W\d+-\d+\b")),
-    ("finding id (bare form)", re.compile(r"\bF\d{2}\b")),
-    ("workflow id", re.compile(r"\bwf-0[0-9]\b")),
-    ("ruling reference", re.compile(r"\bRuling \d+\b")),
-    ("ADR id", re.compile(r"\bADR-0[0-9]{3}\b")),
-    ("scoped requirement id", re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")),
-    ("workstream/slice id", re.compile(r"\bW[0-9]+[a-z]?-[0-9]+\b")),
-    ("legacy dated-plan path", re.compile(re.escape("docs/plans/2026-"))),
-    ("legacy audit path", re.compile(re.escape("docs/audit/"))),
-    ("legacy notes path", re.compile(re.escape("docs/notes/"))),
-    ("legacy adr path", re.compile(re.escape("docs/adr/"))),
-    ("legacy claude-notes path", re.compile(re.escape(".claude/notes/"))),
+    _docid.LEGACY_FORM_PATTERNS
 )
 
 #: Ruling 67 Part 2: the bounded, load-bearing exclusion list — the residue after Part 1's

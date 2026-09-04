@@ -138,17 +138,25 @@ _SPECIFICATIONS_OF_THE_OLD_PATH = {
     # prescribes for exactly this case ("each needs its own reviewed line added here, not
     # a widened pattern"). It is a specification of the path, not a citation of it.
     #
-    # THIS EXEMPTION IS PERMANENT, and the sentence that first stood here -- "when the
-    # migration lands, this row goes to zero and the exemption can go with it" -- was
-    # wrong on both halves. `D_FULL_PATTERN` must carry §7(d)'s sentence verbatim for as
-    # long as that sentence names these alternatives, and the file's remaining old-path
-    # citations are ordinary ones the migration rewrites. Recording a permanent exemption
-    # as temporary invites the cleanup this comment block already warns against: a later
-    # reader deletes a still-needed entry, or -- more likely, since a row citing the old
-    # root will still be non-zero -- "fixes" the constant by concatenation, which is the
-    # one thing that must not happen to it. Corrected 2026-09-03, raised by the auditor
-    # and the lead independently.
-    "scripts/_docverify.py",
+    # Moved 2026-09-04 (task 17, Ruling 67 §2's "one shared constant"): the literal that
+    # earned `scripts/_docverify.py` its entry here was `D_FULL_PATTERN`, §7(d)'s sentence
+    # verbatim, one of whose thirteen alternatives is the old notes path. `D_FULL_PATTERN`
+    # is now **deleted** -- `_docverify.py`'s `D_ALTERNATIVES` reads the same
+    # `_docid.LEGACY_FORM_PATTERNS` tuple `audit-docs.py` check 36 already read, so the
+    # literal (the "legacy claude-notes path" entry's own `re.escape(...)` argument, not
+    # spelled out again here for the same self-referential reason this test builds its own
+    # search term by concatenation) now lives in `scripts/_docid.py` alone. `_docverify.py`
+    # was removed from this set and verified clean (a grep for the old path over that one
+    # file, run outside this comment) before this edit landed, rather than left as a stale
+    # permanent entry beside a new one --
+    # the earlier "THIS EXEMPTION IS PERMANENT" note was about the file's *content* never
+    # going away while the sentence it quoted stood, not about the *filename* being
+    # immovable; the content moved, so the entry moves with it. The reasoning otherwise
+    # carries over unchanged: this is the shared constant's whole purpose (a reader checks
+    # the tuple against NT-0019 §7(d)'s own sentence rather than trusting it), building the
+    # old-path alternative by concatenation would hide the literal and defeat that purpose,
+    # and this is a specification of the path, not a citation of it.
+    "scripts/_docid.py",
 }
 
 
