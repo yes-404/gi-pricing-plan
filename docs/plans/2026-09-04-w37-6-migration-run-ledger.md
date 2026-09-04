@@ -1408,12 +1408,19 @@ rewriting, a generator-ordering bug) — generated files are explicitly NOT exem
 |---|---|---|---|
 | 3a — Markdown/frozen-prose exhibit | `.claude/skills/docs-audit/SKILL.md`, `docs/plans/PL-00282-…md`, `docs/plans/PL-00066-…md` (borderline, ruled in) | 5 | Fenced, Ruling 103 §5.1's note verbatim, same as (e)'s exhibits |
 | 3b — Python comments in `scripts/` | `scripts/audit-docs.py` (×2 sites), `scripts/doc-id.py` | 4 | Respelled to a non-matching schematic form or the new form — zero exclusions |
-| 3c — Test literals in `tests/` | `test_doc_id_verify.py`, `test_audit_docs_ids.py`, `test_doc_id_migrate.py`, `test_register_owed.py` | 23 | New 4th declared class in `_docid.sweep_exclusion_reason` — named-tuple exclusion, disclosed by file+count; no test outside the tuple qualifies |
+| 3c — Test literals in `tests/` | `test_doc_id_verify.py`, `test_audit_docs_ids.py`, `test_doc_id_migrate.py` | 21 | New 4th declared class in `_docid.sweep_exclusion_reason` — named-tuple exclusion, **three files, not four**; disclosed by file+count; no test outside the tuple qualifies |
 
-(5+4+23 = 32, reconciled against `exec-ids`'s own per-file breakdown, sent in full to the
-deputy and available on request — not pasted here at 74-line granularity to keep this
-entry legible; the disposition class is what a reader needs, the per-line detail lives in
-`exec-ids`'s own PR body once opened.)
+(5+4+21 = 30 above; +2 for the two `test_register_owed.py` lines this table originally
+double-counted into 3c, reconciled against `exec-ids`'s own per-file breakdown, sent in
+full to the deputy and available on request.)
+
+**Correction (deputy, 16:4xZ)**: `test_register_owed.py` is not one of "the instrument's
+own test modules" — its subject, `scripts/register-owed.py`, is itself an NT-0019 `:382`
+migration target ("paths, `FD-` parser, `WK-`/`SL-` in the Work-item column, docstrings |
+H + M"). Its legacy literals are fixtures of a parser that changes form under the
+migration — stale test data to migrate WITH the script, not lines to exclude. **The class-
+3c tuple names three files, not four.** Its lines move to a **fourth class-1 fix**: nobody
+else owns `register-owed.py`'s row, so this is W37-6's and `exec-ids` takes it. Relayed.
 
 **Refused**: a document-keyed exemption for skills generally (already refused for row (e),
 same corpus); legacy strings built at runtime in tests to dodge the scanner; leaving the 32
