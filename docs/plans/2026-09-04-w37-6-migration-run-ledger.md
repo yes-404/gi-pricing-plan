@@ -1121,3 +1121,35 @@ suspect, not the code. Told triage-code to create its own database before its ne
 exec-dp7's proof-of-reading line independently checked by the deputy — "copied verbatim"
 against the one real occurrence of the wrapped line in `dev-commands`, none in
 `python-test` — consistent with what it claimed. The gap is closed.
+
+## 2026-09-04 — PR #729: the structural concurrency fix, plus the pycache mechanism's real root cause
+
+`exec-excl`'s PR covers both the declared exclusions and the full conftest-level
+enforcement (root `conftest.py` thread-cap `setdefault` + `GIP_GATE_SLOT`-announced
+`/tmp/slots/gate-{1,2,3}` lock skipped for `--collect-only`/targeted runs; `_docverify.py`'s
+`verify()` the same for `GIP_VERIFY_SLOT`/`verify-{1,2}`; `backend/tests/conftest_db.py`'s
+per-worktree-DB refusal with a remediation message; `dev-commands` gains the
+`GIP_GATE_SLOT`/`GIP_VERIFY_SLOT` export lines) — the structural fix for the entire class of
+violation that cost h2b its dispatch today.
+
+**Found the pycache defect's real mechanism, not just its symptom**: `migrate()`'s
+`_load_module` (both the `doc-id.py` and `audit-docs.py` copies) was writing bytecode into
+the snapshot's own `scripts/__pycache__/` while running in-process, which
+`_iter_tree_files`'s non-git-aware walk then read back as new migration output — a planted
+`.pyc` genuinely registered as unclassifiable row-(g) residue before the fix. Fixed at the
+source (bytecode caching suppressed for `_load_module`'s own loads) plus defensively (the
+shared exclusion predicate, `PYTHONDONTWRITEBYTECODE=1` on `_docverify.py`'s subprocess).
+Also reproduced the lockfile risk for real: this corpus's own `NT-0001 -> RFC-1`
+re-citation was getting written into a lockfile comment before the fix.
+
+**All three live proofs demonstrated on this machine's real `/tmp/slots/`**: a wrapped run
+announces and the hook takes no second lock (`/proc/<pid>/environ` checked); with all three
+real gate slots genuinely busy, a bare probe prints "waiting for /tmp/slots/gate-1" and
+actually blocks; the DB refusal fires with the `createdb`/`alembic` remediation message.
+
+Gate green both halves (3192 passed/3 skipped/1 xfailed/0 failed; pnpm 602 passed), `GIP_GATE_SLOT`
+confirmed reaching the spawned pytest process. `--verify` under the corrected wrapper: exit
+1, matching the 13-row standing red exactly, this branch moved no row. Disclosed a >1-hour
+queue wait with edits during that wait, but the tree held still start-to-finish for the
+LAST (cited) gate run — `python-test`'s own "tree held still" discipline, applied and
+disclosed rather than glossed over. `ci-watcher-729` dispatched; merges on its report.
