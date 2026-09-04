@@ -34,7 +34,18 @@ Two ids named below are undefined by design, so they are declared here on marker
 audit reads as allocations rather than as citations, and referred to bare afterwards:
 
 - Next free: `FR-MODEL-124` — the W32-4 branch's, allocated on 2026-08-23 and not yet landed.
-- Next free: `FR-MODEL-999` — mutation M6's deliberately undefined id, which the check printed as `FAIL: tests claim requirements that do not exist: FR-MODEL-999  <- packages/pricing-core/tests/test_gbm.py`.
+- Next free — mutation M6's deliberately undefined id, which the check printed as a
+  `tests claim requirements that do not exist` failure naming it, verbatim:
+
+  ```
+  Next free: FR-MODEL-999
+  ```
+
+  *Fenced 2026-09-04 under Ruling 103 §5.1's fence clause, extended to row (d): value
+  unchanged. The leading `Next free:` inside the fence is load-bearing, not decorative —
+  `scripts/audit-docs.py`'s `UNALLOCATED` marker check reads it per line, independently of
+  the fence, so the id still resolves as this plan's own declared allocation rather than
+  as an undefined citation (`check 2`).*
 
 The plan's Global Constraints say 124 is taken by the W32-4 plan of the same date, so this
 plan takes `FR-MODEL-125`, and — explicitly — *"do not renumber if the two land out of

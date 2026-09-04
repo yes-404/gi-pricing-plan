@@ -6547,6 +6547,35 @@ def test_task4_a_fully_mapped_compound_expands_and_inverts(
     ), "the compound pair, recorded, must invert the expansion back to the merge-base text"
 
 
+def test_exec_ids_note_family_dash_compound_with_shortened_continuation_digits(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """W37-6 exec-ids citation-class finding (`docs/plans/PL-00233-...md:483`, real corpus
+    text, `origin/main` `6c92d55`): a dash-separated NOTE-family compound whose
+    continuation digits are SHORTER than the base token's own zero-padded width --
+    `NT-0014-15`, prose shorthand for `NT-0014` and `NT-0015` -- was left byte-identical
+    even though both components are mapped.
+
+    `_expand_compound`'s sibling lookup builds `prefix + digits` verbatim
+    (`"NT-" + "15"` = `"NT-15"`), which is never a `token_map` key -- the real key is the
+    zero-padded `NT-0015` (`_LEGACY_SPEC_BOLD_RE`-independent: note ids are minted from
+    `docs/notes/<0000>-*.md` filenames, always four digits). The lookup misses, and
+    Ruling 102 §2 row (g)'s "any unmapped component" branch fires on a component that
+    *is* mapped, just not under the unpadded key this lookup tried -- a false negative in
+    the compound-continuation width-matching, not a genuinely unmapped sibling.
+    """
+    before = "WK-964/WK-965/NT-0014-15 territory rather than the id migration.\n"
+    token_map = {"NT-0014": "RFC-00179", "NT-0015": "RFC-00180"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), before)
+    assert "NT-0014-15" not in after, (
+        "both components are mapped; the compound must expand, not stay whole because "
+        "the continuation's shortened digits didn't match the padded map key"
+    )
+    assert after == (
+        "WK-964/WK-965/RFC-00179-00180 territory rather than the id migration.\n"
+    )
+
+
 # ---------------------------------------------------------------------------------------
 # Task #30 (W37-6 channel "the cause table dispositions: 2b and the slash compounds are
 # one inverse defect"): three shapes, one mechanism -- a substitution that is not a plain

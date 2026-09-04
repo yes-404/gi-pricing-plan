@@ -221,9 +221,12 @@ _OQ_ROW = re.compile(r"\| (?:~~)?\*\*(" + _OQ_ID_BODY + r")\*\*")
 #: An ADR citation. Pre-migration files are `docs/adr/0001-*.md` cited `ADR-0001`;
 #: post-migration they are `docs/adrs/ADR-00004-*.md` cited `ADR-4` (NT-0019 D6 — citations
 #: unpadded, filenames padded to five). The old `ADR-(\d{4})` pattern reads the *first four*
-#: digits of a five-digit padded id, so `ADR-00999` was parsed as a citation of
-#: `ADR-0099` and check 5 failed with "ADR-0099 referenced but no file exists" — a
-#: real-looking failure manufactured entirely by the width of the pattern. Matching
+#: digits of a five-digit padded id, so a real five-digit citation shaped `ADR-0NNNx` was
+#: parsed as a citation of the schematic four-digit form `ADR-0NNN` and check 5 failed with
+#: "ADR-0NNN referenced but no file exists" (respelled schematically, 2026-09-04, Ruling
+#: 103 §5.1's fence clause extended to row (d): the literal digit form is itself a §7(d)
+#: alternative match) — a real-looking failure manufactured entirely by the width of the
+#: pattern. Matching
 #: `0*(\d+)` with a boundary and comparing **integers** is width-agnostic in both
 #: directions. **`ADR-999` rather than a real ADR**, deliberately: highest allocated is
 #: `ADR-10`, and citing a real one here would itself be an `NT-0019` §7(e) violation
@@ -2769,9 +2772,11 @@ LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
 #: recognisable as its legacy shape at all, not incidental prose — is itself a legacy
 #: form: an ADR's own `ADR-0001` title, a note's own `NT-0001` title, a multi-ruling
 #: file's own `## Ruling N` headings, the roadmap fixture's own `W1-1`/`W1-2` row keys, the
-#: spec fixture's own `**FR-EX-1**`-shaped bold ids, and the vendored-skill pair's shared
-#: `FR-EX-1` citation (NT-0019 §1.5's own stated property under test: a vendored
-#: manifest's citations rewrite, a file beneath it does not — needs the same token on
+#: spec fixture's own `**FR-XXX-N**`-shaped bold ids, and the vendored-skill pair's shared
+#: `FR-XXX-N`-shaped citation (respelled schematically, 2026-09-04, Ruling 103 §5.1's fence
+#: clause extended to row (d): the literal worked example is itself a §7(d) alternative
+#: match; NT-0019 §1.5's own stated property under test: a vendored manifest's citations
+#: rewrite, a file beneath it does not — needs the same token on
 #: both sides of that boundary to prove the difference). Sixteen files carried a legacy
 #: form before this list was written; sweeping away *incidental* prose citations (a
 #: comment saying "NT-0019 §4 step 2", not tested by anything) — the same fix Ruling 67

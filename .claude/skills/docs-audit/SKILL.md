@@ -771,10 +771,21 @@ removed: §0's own rule is that counts which change do not belong in it.
 2026-08-15 — Extended with checks 16–20 over `docs/notes/`. **All five were proven
 against deliberately broken input**, twelve breakages in total, each producing exactly one
 targeted failure and the suite passing again on revert: a removed `**Owner**` row, a status
-of `pending`, a heading renumbered to `NT-0009` under filename `0001`, a duplicated number,
-an index status disagreeing with its file, a note missing from the index, an index row with
-no file, a dangling relative link, `FR-PLAT-999`, `ADR-9999`, `NT-0042`, and a requirement
-id written in the bold defining form.
+of `pending`, a heading renumbered to the wrong number under filename `0001`, a duplicated
+number, an index status disagreeing with its file, a note missing from the index, an index
+row with no file, a dangling relative link, three deliberately-invalid ids, and a
+requirement id written in the bold defining form. The wrong renumbering and the three
+invalid ids, verbatim:
+
+```
+NT-0009 (wrong — the heading's real filename is 0001)
+FR-PLAT-999
+ADR-9999
+NT-0042
+```
+
+*Fenced 2026-09-04 under Ruling 103 §5.1's fence clause, extended to row (d): value
+unchanged.*
 
 Note ids are `NT-NNNN` — the short-prefix form the suite uses for `FR-`/`OQ-`/`DEP-`, at
 ADR's four-digit width, with the filename carrying exactly the digits the id does.

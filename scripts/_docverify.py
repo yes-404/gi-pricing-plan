@@ -379,6 +379,36 @@ def was_field_line_numbers(text: str) -> frozenset[int]:
     )
 
 
+def fenced_line_numbers(text: str) -> frozenset[int]:
+    """0-based line numbers inside a fenced code block, the fence-marker lines themselves
+    included — Ruling 103 §5.1's fence clause, extended to row (d)'s corpus (2026-09-04,
+    W37-6 exec-ids): a legacy-form id kept byte-exact inside a fenced illustrative exhibit
+    is not a citation the migration is required to rewrite, the identical reading row (e)'s
+    own conjunct 0 already gives a padded id inside a fence (`padded_hits`, this module).
+
+    Reuses `_FENCE_RE` — the same predicate row (e) uses, defined below this function but
+    resolved at call time, not a second implementation of the same rule (Ruling 103 §1.8:
+    "two implementations of one rule that are never compared are two rules").
+
+    A fence-marker line is itself excluded (the toggle fires and the line is added before
+    anything can match against it, mirroring row (e)'s own toggle loop exactly), and every
+    line the toggle leaves "inside" is excluded up to the matching close. An unclosed fence
+    (a malformed document) leaves every remaining line excluded rather than raising — the
+    same "prefer silence over losing evidence" reading `was_field_line_numbers` gives an
+    unclosed front-matter block above.
+    """
+    out: set[int] = set()
+    in_fence = False
+    for i, line in enumerate(text.splitlines()):
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            out.add(i)
+            continue
+        if in_fence:
+            out.add(i)
+    return frozenset(out)
+
+
 @dataclass(frozen=True)
 class Corpus:
     """Every text file in a tree, already split into lines, with the `was:` lines marked.
@@ -392,6 +422,7 @@ class Corpus:
     files: tuple[str, ...]
     lines: Mapping[str, tuple[str, ...]]
     was_lines: Mapping[str, frozenset[int]]
+    fenced_lines: Mapping[str, frozenset[int]]
 
     @property
     def n_files(self) -> int:
@@ -402,13 +433,15 @@ class Corpus:
         return sum(len(v) for v in self.lines.values())
 
     def scan(
-        self, pattern: re.Pattern[str], *, skip_was: bool = True
+        self, pattern: re.Pattern[str], *, skip_was: bool = True, skip_fenced: bool = False
     ) -> tuple[int, int]:
         """(matching lines, matching files) for `pattern` over this corpus."""
         n_lines = 0
         n_files = 0
         for rel in self.files:
             skip = self.was_lines[rel] if skip_was else frozenset()
+            if skip_fenced:
+                skip = skip | self.fenced_lines[rel]
             hits = sum(
                 1
                 for i, line in enumerate(self.lines[rel])
@@ -424,6 +457,7 @@ def load_corpus(tree: Path, *, exclude_basename: str | None = _D_EXCLUDED_BASENA
     files: list[str] = []
     lines: dict[str, tuple[str, ...]] = {}
     was: dict[str, frozenset[int]] = {}
+    fenced: dict[str, frozenset[int]] = {}
     for rel in tracked_files(tree):
         if exclude_basename is not None and rel.rsplit("/", 1)[-1] == exclude_basename:
             continue
@@ -433,7 +467,10 @@ def load_corpus(tree: Path, *, exclude_basename: str | None = _D_EXCLUDED_BASENA
         files.append(rel)
         lines[rel] = tuple(text.splitlines())
         was[rel] = was_field_line_numbers(text)
-    return Corpus(tree=tree, files=tuple(files), lines=lines, was_lines=was)
+        fenced[rel] = fenced_line_numbers(text)
+    return Corpus(
+        tree=tree, files=tuple(files), lines=lines, was_lines=was, fenced_lines=fenced
+    )
 
 
 # ---------------------------------------------------------------------------------------
@@ -789,8 +826,8 @@ def _companions_for(
     gating = 0
     for c_label, pattern_src in D_COMPANIONS.get(label, ()):
         c_pattern = re.compile(pattern_src)
-        m_lines, m_files = mig.scan(c_pattern)
-        c_lines, _ = ctl.scan(c_pattern)
+        m_lines, m_files = mig.scan(c_pattern, skip_fenced=True)
+        c_lines, _ = ctl.scan(c_pattern, skip_fenced=True)
         out.append((
             c_label,
             pattern_src,
@@ -807,8 +844,8 @@ def _companions_for(
         ))
     unanchored_src = _unanchor(pattern.pattern)
     unanchored = re.compile(unanchored_src)
-    u_mig, _ = mig.scan(unanchored)
-    u_ctl, _ = ctl.scan(unanchored)
+    u_mig, _ = mig.scan(unanchored, skip_fenced=True)
+    u_ctl, _ = ctl.scan(unanchored, skip_fenced=True)
     out.append((
         "unanchored (inertness probe)",
         f"{unanchored_src!r} — the same alternative with Ruling 67 Part 1's own `\\b` "
@@ -951,8 +988,8 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
 def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
     rows: list[Row] = []
     for i, (label, pattern) in enumerate(D_ALTERNATIVES, start=1):
-        m_lines, m_files = mig.scan(pattern)
-        c_lines, c_files = ctl.scan(pattern)
+        m_lines, m_files = mig.scan(pattern, skip_fenced=True)
+        c_lines, c_files = ctl.scan(pattern, skip_fenced=True)
         companions, gating = _companions_for(label, pattern, mig, ctl)
         if label == _D8_LABEL:
             verdict, note = _d8_verdict(mig, ctl, m_lines, c_lines)
@@ -1005,7 +1042,11 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
                     f"{pattern.pattern!r} over every line of `git ls-files --cached "
                     "--others --exclude-standard`, minus REDIRECTS.csv, minus "
                     "front-matter `was:` **field** lines "
-                    "(`_docverify.was_field_line_numbers`); taken verbatim, by index, "
+                    "(`_docverify.was_field_line_numbers`), minus lines inside a fenced "
+                    "code block (`_docverify.fenced_line_numbers` — Ruling 103 §5.1's "
+                    "fence clause, extended to row (d)'s corpus 2026-09-04, W37-6 "
+                    "exec-ids: an illustrative exhibit kept byte-exact inside a fence is "
+                    "not a citation); taken verbatim, by index, "
                     "from `_docid.LEGACY_FORM_PATTERNS` — Ruling 67 §2's one shared "
                     "constant, the same tuple `audit-docs.py` check 36 reads, anchored "
                     "per Ruling 67 §2 Part 1 (a `\\b`-bounded complete identifier, or a "

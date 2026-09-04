@@ -1537,6 +1537,35 @@ def test_d6_anchor_does_not_trip_on_a_correctly_migrated_five_digit_id(
     )
 
 
+def test_fenced_legacy_form_excluded_from_row_d_but_an_unfenced_sibling_still_counts(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """W37-6 exec-ids specification-class disposition (Ruling 103 §5.1's fence clause,
+    extended to row (d)'s corpus, 2026-09-04): an id-shaped exhibit kept byte-exact inside
+    a fenced code block documents the FORM a legacy id takes, not a citation of a specific
+    document, and must not count toward row (d)'s zero requirement — the identical reading
+    row (e)'s own conjunct 0 already gives a padded id inside a fence.
+
+    Two assertions, deliberately in one test, because the pair is the claim: the fenced
+    occurrence is excluded, but an unfenced sibling on an adjacent line of the *same* file
+    still counts — proving the exclusion is genuinely fence-scoped and not a document-keyed
+    exemption (already refused for row (e), the same corpus, per the deputy's ruling).
+    """
+    migrated = {
+        "docs/a.md": (
+            "Illustrative examples the check was proven against:\n\n"
+            "```\n"
+            "NT-0042\n"
+            "```\n\n"
+            "and a genuine un-migrated citation on the next line: NT-0043\n"
+        ),
+    }
+    d1 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, _CLEAN))["d1"]
+    assert d1.migrated.startswith("1 line"), (
+        "the fenced NT-0042 must be excluded; only the unfenced NT-0043 counts"
+    )
+
+
 def test_unanchor_is_a_no_op_for_a_bare_path_literal_the_old_inert_case_is_fixed(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
