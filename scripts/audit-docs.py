@@ -1737,7 +1737,7 @@ def check_id_filename_directory() -> None:
     carries no `id:` at all (Reference, §1.2: "no prefix and no number") — so every
     sub-clause finds nothing to compare *today*; each is proven on fixtures instead.
 
-    Contiguity (Ruling 107) reads the full allocation via docs/INDEX.md (same as row (b)
+    Contiguity (Ruling 108) reads the full allocation via docs/INDEX.md (same as row (b)
     in `doc-id.py check`) rather than per-file, to avoid false gaps between document
     families in the scoped walk. Other clauses remain per-file, run over the scoped
     working tree as part of `audit-docs.py`'s single report (NT-0019 §1.11: "one gate,
@@ -1787,16 +1787,17 @@ def check_id_filename_directory() -> None:
         else:
             seen[number] = (canon, rel)
 
-    # Contiguity check: read full allocation from docs/INDEX.md (Ruling 107)
-    index_path = ROOT / "INDEX.md"
-    if index_path.is_file():
-        # When docs/INDEX.md exists, read contiguity from it (same as doc-id.py check row (b))
+    # Contiguity check: read full allocation from docs/INDEX.md (Ruling 108)
+    # When INDEX.md exists, read contiguity from it (same as doc-id.py check row (b));
+    # pre-migration, check contiguity within the scoped set only (Ruling 108).
+    if migrated_tree():
+        # Read full allocation from INDEX.md to avoid false gaps between document families
         index_numbers = sorted({int(m.group(2)) for m in _docid.ID_RE.finditer(
-            index_path.read_text(encoding="utf-8"))})
+            (ROOT / "INDEX.md").read_text(encoding="utf-8"))})
         for lower, upper in itertools.pairwise(index_numbers):
             if upper != lower + 1:
                 fail(f"check 31: gap in the full allocation between {lower} and {upper}")
-        scoped_count = len(numbers)
+        scoped_count = len(seen)
     else:
         # Pre-migration: check contiguity within the scoped set only
         numbers = sorted(seen)
