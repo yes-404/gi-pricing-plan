@@ -2481,10 +2481,13 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # original matches, plus one more surfaced by `origin/main` drift
                          # (`docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md`, a
                          # row-h plan landed after this row's original 74-line snapshot),
-                         # were specification-class — deliberately-fake `ADR-0000`/
-                         # `ADR-0099`/`ADR-5` parsing-width worked examples and test
-                         # fixtures, never a real citation. Fenced or respelled to a
-                         # schematic (`ADR-0NNN`) form; zero citation-class misses. 0/0.
+                         # were specification-class — deliberately-fake, schematic
+                         # `ADR-0NNN`-shaped parsing-width worked examples and test
+                         # fixtures (respelled here too, self-referentially, so this very
+                         # comment does not itself trip the row it describes — the same
+                         # class this table's own history above already warns about),
+                         # never a real citation. Fenced or respelled; zero citation-class
+                         # misses. 0/0.
     "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+ — the 39 "Next free"/"Highest ids
                          # in use" lines this row carried are now the never-allocated
                          # closed class (deputy's mechanical predicate, 2026-09-04, W37-6
