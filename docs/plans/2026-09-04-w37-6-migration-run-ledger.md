@@ -1018,3 +1018,24 @@ proof-of-reading line accompany the reassignment dispatch, and exec-dp7's dispat
 without one landing in the ledger. Not a re-dispatch — asked exec-dp7 directly to confirm
 it has read `dev-commands` and `python-test` in full (both changed multiple times today)
 plus its current progress; its reply will carry the line this entry owes.
+
+## 2026-09-04 — self-caught: #724 was merged before its own PR-branch CI finished
+
+`ci-watcher-724`'s final report showed the `python` workflow still `in_progress` at the
+moment of merge (13:05:40Z) — checked directly: `gh run list --branch
+docs-w37-6-ledger-cont3 --workflow python.yml` confirms the last real run, on the actual
+head `d72a8ba`, started at 13:05:30Z and was still `in_progress`, not `success`, when I
+merged. My earlier `gh pr view 724 --json mergeStateStatus,statusCheckRollup` read
+`CLEAN`/`set()` — an empty check-rollup rather than a confirmed-passing one — and I read
+that as "nothing blocking" instead of "no data, don't trust this." **A process gap on my
+part**: I should have confirmed the exact head SHA's own CI via `gh run list`, the way
+`ci-watcher` agents are instructed to, rather than trusting `mergeStateStatus` alone when
+the rollup is empty.
+
+**No bad content actually landed**: the squash-merge itself triggers a fresh CI run against
+the new `main` HEAD (`1129df0`), and that run — `gh run list --commit 1129df0` — is
+`history-policy`/`docs`/`python` all `success`, confirmed directly. The merged content is
+verified safe after the fact; the gap was procedural (merging before the pre-merge signal
+was actually confirmed), not a defect that reached `main`. Recorded so the pattern is named
+rather than repeated: an empty `statusCheckRollup` is not evidence of green, only evidence
+of no data — read it as unconfirmed, same as the ci-watcher role's own standing rule.
