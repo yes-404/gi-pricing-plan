@@ -62,12 +62,35 @@ Two worktrees carried uncommitted diffs at cleanup time; neither was discarded b
   Committed and pushed as `salvage/row-e-padded-id-prose-v2` (`876548b`) rather than
   discarded. `wt-rowe`'s worktree was kept (not in the removal list).
 
-  **Disposition owed from `rowe2`, per symbol, before `wt-rowe` is removed**: `rowe2` reads
-  `salvage/row-e-padded-id-prose-v2` against its own #712 and current branch, and either
-  folds what is genuinely missing (with the proof it lacks) into its open row-(e) work, or
-  records here why not, one line per symbol (`PaddedHit`/`seq`, `_TOKEN_BOUNDARY_RE`,
-  `_TRAILING_LOCATOR_RE`, `_in_path_context`, and the conjunct-2/3 fixes). `wt-rowe` is
-  removed only after that disposition lands here.
+  **Disposition, delivered by `rowe2` 2026-09-04, committed `005bb69` on
+  `w37-6-row-e-doc-id-migration`:**
+
+  - **`PaddedHit`/`seq` field — FOLDED IN, real bug.** `padded_hits`' conjunct-2 loop
+    re-located a hit in the cleaned line by *text* match; two same-text occurrences on one
+    line (a filename exhibit plus a later bare citation — `document-ids.md`'s own rule-3
+    sentence has this shape) collapsed onto whichever the loop found first, wrongly
+    excusing a bare violation sitting next to a path-shaped one. Fix: added `seq` (this
+    hit's ordinal among same-line matches), re-locate by position instead of text. Red-then-
+    green: `test_padded_hits_seq_disambiguates_two_occurrences_on_one_line`.
+  - **`_TOKEN_BOUNDARY_RE` — FOLDED IN, real bug.** `<`/`>` were hard boundaries, so the
+    token walk stopped at an angle-bracket slug placeholder's opening `<` before reaching
+    `.md` — a real filename citation (`PL-01240-<slug>.md`, NT-0019 §1.1 rule 3's own
+    shape) misread as prose. Fix: removed `<`/`>` from the boundary set. Red-then-green:
+    `test_in_path_context_widens_past_an_angle_bracket_slug_placeholder`.
+  - **`_TRAILING_LOCATOR_RE` — no action, already covered.** This branch independently
+    fixed the same defect pre-#712 (`ddea0b7`, folded into #712's squash) as
+    `_TRAILING_LINE_LOCATOR_RE` — functionally equivalent (strips a trailing `:N`/`:N-M`
+    before the extension test, vs. salvage's approach of folding the locator into the
+    extension regex itself). Already on `main`.
+  - **`_in_path_context` + the bundled conjunct-2/3 fixes** — the two folded-in items above
+    are this row's conjunct-2/3 fixes; nothing further found.
+
+  **Why neither latent bug showed in today's `--verify` runs**: the one on-disk example
+  with this shape
+  (`docs/plans/2026-09-03-w37-6-ruling-103-ef-readings-and-index-placement.md`'s
+  `PL-01240-<slug>.md`) survives via conjunct 3 regardless — `PL-1240` names no real plan —
+  so both bugs are real but currently unexercised by this corpus. Full reasoning in the
+  `005bb69` commit message. `wt-rowe` can now be removed; this disposition is complete.
 
 ## `(h4)`'s measurement point — Ruling 105 D2
 
@@ -154,6 +177,9 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 |---|---|---|---|
 | #701 | docs(skills): git-hygiene — a line number derived from a slice or a filtered stream | `ad51906` | UNCHANGED: 14 (docs-only skill change, no `docs/` or migration-script path touched — does not affect the predicate) |
 | #717 | docs(plans): Ruling 105 D7 — eight executors on the upgraded VM, disk-conditioned | `88ecfd0` | UNCHANGED: 14 (a dated append to a ruling record's prose, no predicate code touched) |
+| #716 | docs(plans): open W37-6's migration run ledger | `e38ca12` | UNCHANGED: 14 (this ledger's own history above is its full run — every entry, salvage, and correction landed as commits on this PR before it merged; no predicate code touched) |
+| #718 | fix(reporter-cycle): Ruling 106 — 100-word cap, BST-clock ETA, main-move refresh | `a9a733c` | UNCHANGED: 14 (`.claude/**` skill/role/script content only — `reporter.py`, `test_reporter.py`, `reporter.md`, `SKILL.md`, the ruling record — no `docs/**` migration-scope path or predicate code touched). Fourth F49 trailer on this branch (`07ea929`) was amended and force-pushed before merge, root cause fixed the same day (shared vs. per-worktree commit-msg hook, see the F49 entry below); duplicate branch `w37-6-ruling106-work` deleted from origin after merge. |
+| #720 | fix(scripts): (g) other-residue triage, docs/ leg — cause3/cause4 named | `dea2c79` | Diagnosis-only (`_residue_cause`/`_residue_cause_table` gains two named causes, no predicate changed) — not independently re-run at merge, `ci-watcher-720` confirmed python/docs/history-policy all green and mergeStateStatus CLEAN. cause3 (57% of tree-wide `other`) and cause4 (genuine forward-migration corruption) both dispositioned to executor-30-2's #30 PR; REDIRECTS.csv determinism owed to h2b as a follow-up (task #24). |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -204,6 +230,11 @@ merge brings the live count to eight, and it is not repeated — the next infras
 waits for a free slot like any other. Efficiency line reads `9/8 (one-time overrun, this
 entry)` until the count drops.
 
+**Resolved 11:05Z:** PR #718 merged (`a9a733c`); `ruling106-impl` confirmed a clean
+`git status --porcelain --branch` in its worktree, made no further edits or pushes, and
+stood down. Live count back to **8/8**. No dispatch had happened in the interim, per the
+disposition above.
+
 ## 2026-09-04 — the fourth F49 trailer, root-caused: the commit-msg guard was worktree-local, never shared
 
 `07ea929` (PR #718) carried a `claude.ai/code/session` trailer despite the git-hygiene
@@ -222,3 +253,253 @@ setup. Verified: `wt-alloc`, `wt-ruling106`, and the three new `(g)` triage work
 shared hooks dir with no override; the five worktrees with an existing per-worktree hook
 were left as they are (already correctly guarded, redundant with the new shared one but
 not conflicting).
+
+## 2026-09-04 — the box is 3x oversubscribed: a concurrency budget, not a lower executor cap
+
+**Reading (mine, 11:08Z, confirming the deputy's 11:1xZ read):** `uptime` — **load average
+55.32 / 49.12 / 43.15 on 16 cores** (~3.5x oversubscribed on the 1-minute figure). The
+deputy's own reading at 11:1xZ: 48.1/47.0/42.1, 25 `pytest` processes and 13
+`migrate --verify` runs live at once; RAM 41 GB free, tmpfs 27 GB free, `/` 5.7 GB free —
+memory and disk are fine, CPU is the bottleneck. My 12:0x entry (relaying verify105's
+status) had read this as restart-recovery load; the deputy corrected it: it is eight
+executors each running a full gate plus a `--verify` snapshot at once, spending the
+capacity the eight-executor cap (Ruling 105 D7) was given on contention rather than on
+work — every gate now takes three to four times its CI duration.
+
+**Ruled — a concurrency budget, enforced by a lock, in every dispatch from now
+(authority: the maintainer's "watch the efficiency" instruction of 2026-09-04, relayed by
+the deputy):**
+1. At most **4** full local gates at once, at most **2** `migrate --verify` runs at once —
+   `flock` on numbered slot files under `/tmp/slots/` (`mkdir -p /tmp/slots`, tmpfs, resets
+   on restart by design): `for i in 1 2 3 4; do flock -n /tmp/slots/gate-$i -c '<cmd>' &&
+   break; done`, blocking fallback `flock -w 3600 /tmp/slots/gate-1 -c '<cmd>'`; the same
+   pattern with two `verify-$i` slots.
+2. Iterate on targeted tests (`pytest <file> -k <symbol>`) while working; the full
+   `CLAUDE.md` §11 gate runs **once**, before push; `--verify` runs **once** per push, not
+   per edit.
+3. `ci-watcher` stays the CI half; local runs only prove readiness before push.
+4. The executor cap stays **eight** (Ruling 105 D7 unchanged) — this budget shapes *when*
+   they compute, not how many exist.
+
+**Action taken 11:08–11:1xZ:** `/tmp/slots/` created; all eight live executors (h2b, alloc,
+executor-30-2, rowe2, verify105, triage-docs, triage-code, triage-other) messaged directly
+with the four rules and the exact `flock` commands, told to let any in-flight full
+gate/`--verify` run finish rather than kill it, and to apply the budget from their next run
+onward. verify105 specifically flagged: its stuck full-pytest wait (reported 11:01Z, ~16%
+through under the same contention) is this cause, not restart recovery — told to keep
+waiting on the current run but wrap any future rerun in a gate slot.
+
+From here, every efficiency line in this ledger and in `to-deputy.md` carries a fourth
+number: **load average / core count** alongside the executor count.
+
+*Violations this closes off going forward: a dispatch brief without the slot lock; a full
+gate run per edit; a `--verify` per edit; a load figure reported without the core count
+beside it.*
+
+## 2026-09-04 — correction: no duplicate `pytest` sessions found; the real driver is per-process thread fan-out
+
+The deputy's 11:2xZ instruction to kill "duplicate" `pytest` sessions (citing 7 in
+`wt-rowe2`, 32 total) was checked before acting, per this doc's own §13 rule ("verify the
+claim, not just the citation"): `ps -eo pid,args | grep '/\.venv/bin/pytest'` (the real
+binary path, not a bare string match) found **four** real pytest processes, **one per
+worktree, no duplicates anywhere** — `wt-h2b`, `wt-r105-ruling105` (verify105), `wt-rowe2`,
+`w37-6-other-residue-triage`. A bare `pgrep -fa pytest` returns 29 hits; 19 are
+`until/while … pgrep -f pytest … sleep` wait-loop wrappers (0% CPU) whose own argv contains
+the string "pytest" — a self-match on the probe, not a second real session. No `pkill` was
+run: rule 1 had nothing to act on.
+
+The real driver: each of the four real processes carries **~150 threads** (`ps -o nlwp`)
+and 400–470% CPU — one run's own thread-pool fan-out, not parallel launches. Four such
+runs alone approach 16–19 CPU-cores' worth on this 16-core box even with zero duplicates
+and full compliance with "one session per executor." Flagged to the deputy as an open
+choice rather than decided here: lower the gate-slot cap (4→2) or cap the test run's own
+thread pool (source not located — would need a targeted grep/executor, not done as part of
+this read). Recommended letting the four in-flight runs finish (34–42 min in already; no
+duplicate to kill so the earlier "let it finish" instruction still applies cleanly) and
+ruling the slot cap down for future dispatches.
+
+## 2026-09-04 — (g) `other`-residue triage, docs/ leg (PR #720): cause3 is the dominant cause tree-wide
+
+`triage-docs` sampled 10 of the docs/-tree's 205 `other`-residue files against the real
+`redirects_inverse` map (not pattern-matched from the raw diff) and named two new causes in
+`_residue_cause`/`_residue_cause_table` (`scripts/_docverify.py`), diagnosis-only, no
+predicate changed:
+
+- **`cause3-legacy-path-citation`** (6/10 sampled) — a prose citation to another doc by its
+  pre-migration relative path; the forward sweep resolves it, DP-7's inverse can't (built
+  only from `REDIRECTS.csv` id columns, never a path string). **Whole-tree re-measurement:
+  202 of the prior 355 `other` residue (57%) reclassify under this cause alone** — the
+  dominant cause tree-wide, not just in docs/.
+- **`cause4-compound-token-adjacent-uppercase`** (1/10) — a genuine forward-migration
+  corruption bug, not a citation-diagnosis artifact: `doc-id.py`'s `_compound_token_re` has
+  no trailing `\b` (unlike `_whole_token_re`), so a bare `W<n>` token prefix-matches inside
+  an unrelated identifier (`"W3C/..."` → `"WK-944C/..."`). Invisible to g1's own
+  `MANGLED_CITATION_RE` (scoped to FR/NFR/OQ/DEP only). 10 files whole-tree.
+
+Two findings reported in prose only (docs/README.md's bare-basename citation shape; an
+un-allocated placeholder id in the psi-selector pair) — correctly not turned into detectors
+per this row's no-second-tree-read rule.
+
+**Bonus finding outside triage-docs's own scope, flagged not fixed:** `docs/REDIRECTS.csv`
+is correctly in `MigrateResult.generated_paths`, but two independent `migrate()` runs from
+the same input produce different row *order* for its compound-citation section — fails
+class-6's content-equality check despite being a legitimate generated artifact. The
+module's documented byte-identical-across-independent-runs guarantee does not hold for this
+one file. Not actioned here — belongs to whichever executor next touches class-6 or
+`REDIRECTS.csv` generation.
+
+Gate: ruff/mypy/lint-imports/audit-docs.py clean, 285 passed/1 skipped, two new
+broken-input tests (cause3, cause4, negative control on `W6a`). `ci-watcher-720` dispatched;
+merges on its green report.
+
+## 2026-09-04 — concurrency budget, final form: thread-cap env vars, gate slots 3 / verify slots 2
+
+Deputy's own re-read confirmed the prior entry's correction (no duplicate sessions; that
+rule is withdrawn) and, checking by real binary the same way, measured the actual driver
+precisely: inside one gate's `pytest` process — 98 threads the suite's own Python pools
+(expected), **16 `tokio-rt-worker` + 16 `async-executor-`** (Polars/DuckDB, sized to
+`nproc`) plus jemalloc/Polars threads, **no thread-cap variable set** in the process
+environment (`OMP_*`/`POLARS_MAX_THREADS`/`RAYON_NUM_THREADS`/`TOKIO_WORKER_THREADS` all
+absent) — every native runtime assumed it owned the box.
+
+**Ruled and actioned 11:1xZ:**
+1. `POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4
+   OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4` exported before every gate and `--verify` run.
+   Written into `.claude/skills/dev-commands/SKILL.md` (this session, commit `5d39fb7` on
+   this branch) with the measurement as its reason, `Verified` date refreshed.
+2. Gate slots **3** (was 4), verify slots **2** (unchanged) — `/tmp/slots/gate-{1,2,3}`,
+   `/tmp/slots/verify-{1,2}`.
+3. All 8 live executors re-messaged with both changes; the three in-flight uncapped gates
+   (h2b, verify105, rowe2) told to finish rather than restart (sunk cost — 37–45 min in).
+4. Efficiency line now carries **real `pytest` binaries running**, counted by
+   `ps -eo pid,args | grep '[/]\.venv/bin/pytest'` (never a bare string match) — at 11:16Z:
+   **4** (`wt-h2b`, `wt-r105-ruling105`, `wt-rowe2`, `wt-alloc` — the last a `--collect-only`,
+   near-zero cost), **load 62.65/58.28/50.16 on 16 cores**, still climbing (the three
+   uncapped gates have not yet finished). Re-measure once they exit and the cap is live for
+   whatever runs next.
+
+## 2026-09-04 — PR #720's findings ruled: cause3/cause4/placeholder-id all fold into #30; REDIRECTS.csv determinism owed to h2b as a follow-up
+
+Deputy ruled #720 mergeable on its watcher's report (diagnosis-only, no predicate moved).
+Its four findings dispositioned, each with a verified locator:
+
+- **cause3** (202/355 `other`, 57%) — `doc-id.py:692`'s `_REDIRECTS_FIELDS` already carries
+  `old_path`/`new_path`/`citing_dir`; no new mechanism needed. Folded into executor-30-2's
+  existing #30 unit-record-inverse PR: read the path columns directly for every path-shaped
+  substitution, plus the `citing_dir`-scoped bare-basename form (absorbs docs/README.md's
+  bare non-rooted citation finding too — no separate class). Proof owed: one real
+  `docs/notes/…` prose citation inverting to merge-base bytes.
+- **cause4** (`W3C/OpenTelemetry` → `WK-944C/OpenTelemetry`, 10 files) — `doc-id.py:5484`'s
+  `_compound_token_re` has no trailing boundary, unlike `_whole_token_re` (`:5393`); Ruling
+  102 §2(g)'s own rule, simply unapplied to the second regex. Folded into #30: add
+  `\b(?![-/][0-9])`, extend `MANGLED_CITATION_RE` for the `WK-\d+[A-Za-z]` shape. Proof
+  owed: `W3C/OpenTelemetry` fixed, `W6a` (real lowercase slice suffix) untouched.
+- **Placeholder id** (`OQ-DATA-11` → `OQ-8471`, no `REDIRECTS.csv` row) — Ruling 100(iv): an
+  unresolved-target citation is listed, not rewritten. Folded into #30: `token_map` excludes
+  keys whose target was never discovered; such tokens join the unmapped-token table
+  (`:310`). Proof owed: an undefined `OQ-XXX-n` fixture comes out unchanged and listed.
+- **`REDIRECTS.csv` row-order non-determinism** — separate defect, **owner: h2b
+  (executor-h2), after its current #29 (DP-7) PR merges**, same file family. Fix: sort rows
+  by `old_id` then `old_path` before writing. Proof owed: two independent `migrate()` runs
+  byte-identical.
+
+Both executors messaged with their scope at 11:1xZ. `ci-watcher-720` still watching (python
+workflow in progress at last check); merge on its report, unchanged from the prior entry.
+
+## 2026-09-04 — the slot mechanism was prose, not a real wrapper: killed and restarted the three legacy gates
+
+Deputy's 11:5xZ read: load 94/74/58 on 16 cores; every real `pytest` binary's parent was
+`uv run pytest -q`, never `flock` — `/tmp/slots/` had no files. My earlier messages to
+executors described the mechanism in prose; nobody actually ran the wrapped line. Ruled:
+the wrapped command is the only gate command from now (dispatch briefs carry it verbatim,
+executors do not compose it), and the three uncapped legacy gates (`wt-h2b`,
+`wt-r105-ruling105`, `wt-rowe2`) are killed and restarted under it now — the one case where
+"let it finish" is withdrawn, since 44–52 minutes at ~4.5 cores each will not finish before
+a capped restart does.
+
+**Actioned 11:22Z:** all three messaged with `pkill -P <their real pytest's parent pid>` and
+the exact wrapped command (copy-verbatim, not composed):
+```
+gate_cmd='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 uv run pytest -q'
+got=0
+for i in 1 2 3; do flock -n /tmp/slots/gate-$i -c "$gate_cmd" && { got=1; break; }; done
+[ "$got" = "0" ] && flock -w 7200 /tmp/slots/gate-1 -c "$gate_cmd"
+```
+
+**Found while checking: rowe2 had TWO real pytest binaries running concurrently**
+(PID 47248, 45+ min old; PID 195340, 67s old, parent chain `timeout 2400 uv run pytest -q`)
+— a genuine duplicate this time, not a self-match on wrapper argv (checked by real binary
+path both times, per the earlier-established predicate). Told to kill both and explain the
+cause in its reply.
+
+**Correction flagged to the deputy, not actioned unilaterally:** the two runs read as
+"capped" (`w37-6-other-residue-triage` 240% CPU, `wt-alloc` 178%) have **no thread-cap env
+vars set either** (`/proc/<pid>/environ`, checked directly) — their lower CPU reading is
+more likely because they are earlier in the run (5 and 4.6 minutes in respectively) than
+because a cap is active. Not killed: the deputy's kill instruction scoped to the three
+named gates specifically; this is reported for a ruling, not acted on alone.
+
+CPU-demand figure (sum of `%CPU` over the six real gates ÷ 1600, i.e. ÷16 cores × 100):
+(432+397+370+251+210+186)/1600 ≈ **1.15** — mildly oversubscribed by actual CPU-seconds,
+much less dramatic than the load-average figure (82) suggests; load average also counts
+runnable/blocked threads from the ~150-thread pools, not CPU demand alone, matching the
+deputy's own point.
+
+**Root cause of the `wt-rowe2` duplicate, from rowe2 itself:** not a second manual launch —
+its own `gate-runner` subagent lost track of its backgrounded `pytest` run and reissued the
+command, three times total across the incident (10:36 uncapped original; ~11:20 a second
+`timeout 2400 …`; ~11:24 a third `timeout 3600 … -x -q`, started after the stop instruction
+had been sent but before it reached the subagent's next tool round). All three killed and
+confirmed gone. Now exactly one `pytest` running, flock-guarded (`gate-{1,2,3}`,
+`-w 7200` fallback) and thread-capped, verified against `/proc/<pid>/environ` directly
+(not merely the wrapper shell's exported values) — the process itself carries all six
+vars. The rest of that gate (ruff/mypy/lint-imports/audit-docs/req-coverage/
+generate-contracts --check, full frontend half) had already exited 0 before the stop;
+only `pytest` was affected by the subagent's own retry behaviour. A `gate-runner`
+subagent that backgrounds a long test run without tracking its own pid is a defect worth
+a general note if it recurs elsewhere — not actioned further here, single incident so far.
+
+## 2026-09-04 — the rule has no age exception: h2b's legacy run never actually died; alloc/triage-other/rowe2 restarted uncapped or unslotted
+
+Deputy's 12:0xZ table (real binary, `/proc/<pid>/environ`, parent chain, all five): my
+"two capped" correction accepted, and my own "may finish before ramping up" leniency
+toward `wt-alloc`/`triage-other` withdrawn too — a young uncapped run ramps to ~4.5 cores
+at its first native call; the compliance predicate has no age clause, so neither does the
+rule. `wt-r105-ruling105` (verify105's restart) is the model: capped, `flock` parent,
+confirmed. Everything else was not:
+
+- **`wt-h2b`: the kill I ordered never happened** — PID 20636 still alive at 57+ min,
+  uncapped, `uv run pytest` parent, confirmed directly at 11:25Z before re-sending.
+  Re-sent as urgent, asked for an immediate kill confirmation separate from the restart.
+- **`wt-alloc`, `w37-6-other-residue-triage`**: both uncapped, no `flock` parent, 7–9 min
+  in. Told to kill and restart under the literal wrapped line, no exception for youth.
+- **`wt-rowe2`**: the post-root-cause restart has the cap env set correctly but its parent
+  is bash, not `flock` — capped without being slotted. Told to kill (cheap, ~40 s in) and
+  restart fully wrapped.
+
+Slot files now exist (`gate-1..3`, `verify-1..2`) for the first time — the mechanism is
+real, just not yet uniformly applied. Deputy's post-kill reading: CPU demand 0.69, load 64
+and falling. Efficiency line from here counts real gates by `%CPU > 20` (the sleeping
+`--collect-only` binaries per worktree are not duplicates, per the deputy's clarification).
+
+## 2026-09-04 — the lead killed two runaway process trees directly, on the deputy's explicit ruling
+
+`wt-h2b`'s legacy gate (PID 20636) was still alive at 59 min after three messages to its
+owner. Deputy diagnosed why: h2b's own agent was blocked inside the 60-minute foreground
+`uv run pytest` call itself — it cannot read its message queue until that call returns, so
+a fourth message would have changed nothing. Ruled: the lead kills the process tree
+directly (dispatch operations on a worktree the lead dispatched, not executor work per
+`lead.md`'s "never implements") so the agent's foreground call returns and it can act on
+the queued restart instruction on its next turn.
+
+**Actioned, verified both directions:**
+- `pkill -P 20622` (the `uv run pytest -q` parent of PID 20636); confirmed
+  `[ -d /proc/20636 ]` false, `[ -d /proc/20622 ]` false, and
+  `ps -eo pid,args | grep '[/]wt-h2b/.venv/bin/pytest'` empty.
+- `wt-rowe2`'s restart was still flock-less (cap env correctly set, parent `bash` not
+  `flock`, 239 s old) at the same check — per the deputy's "same for rowe2 if not fixed by
+  your next entry," killed the same way: `pkill -P 207976`; confirmed `/proc/207979` and
+  `/proc/207976` both gone, no `wt-rowe2` pytest binary remains.
+
+Not restarted by the lead — that is the owning agent's own next action once its queue
+unblocks, per the same ruling.
