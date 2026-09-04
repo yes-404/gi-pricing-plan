@@ -885,3 +885,12 @@ double-locks, a bare run is budgeted, the total stays three either way. Relayed 
 `exec-excl`, who also owns adding the export lines to the wrapper in the same PR (the
 announcement has to exist before the suite can check for it). db-proof's DB-exclusivity
 proof is unaffected by this correction — that task is closed.
+
+## 2026-09-04 — PR #727 found (the third/"rest" leg of the (g) triage), also DIRTY
+
+Found directly (no notification reached this session when it opened) — `triage-other`'s
+third (g)-triage PR: every `classified-by-none` file not under docs/, tests/, backend/,
+frontend/, scripts/, packages/. Measured against row (g)'s own predicate
+(`doc-id.classify_migration_diff`) at a fresh `--verify --keep` snapshot, not assumed.
+DIRTY like #723/#725 — main moving fast through this checkpoint is now a recurring pattern
+across all three (g)-triage legs. `ci-watcher-727` dispatched; rebase requested.
