@@ -2091,7 +2091,7 @@ def frozen_diff_is_permitted(
 
 @functools.lru_cache(maxsize=8)
 def _inverse_token_pattern(tokens: tuple[str, ...]) -> re.Pattern[str]:
-    """One alternation over every new token, longest first, matching whole identifiers only.
+    r"""One alternation over every new token, longest first, matching whole identifiers only.
 
     Longest-first is the ordering the caller's own docstring already required, and putting
     it inside a single alternation keeps it while making the substitution one pass instead
@@ -2100,9 +2100,16 @@ def _inverse_token_pattern(tokens: tuple[str, ...]) -> re.Pattern[str]:
     magnitude slower than the `str.replace` loop it replaces (measured: the whole-corpus
     §7 (g) run did not finish in 20 minutes, against ~30 s for one pass). Cached because
     the token set is the same for every file of a run.
+
+    The left-hand anchor is `_docid.TOKEN_LEFT_BOUND`, not `\b` -- the deputy's ruling,
+    W37-6, 2026-09-04: a plain `\b` inverts a workstream/slice id (`W37-6`) found
+    *inside* a longer identifier that merely ends the same way (`F-W37-6`), because `-`
+    is itself \W and this grammar uses it as an internal field separator, not a genuine
+    word boundary. `doc-id.py`'s `_whole_token_re` carries the full reasoning and proof;
+    this is the identical constant on the inverse side of the same mechanism.
     """
     alternation = "|".join(re.escape(tok) for tok in tokens)
-    return re.compile(rf"\b(?:{alternation})\b(?![-/][0-9])")
+    return re.compile(rf"{_docid.TOKEN_LEFT_BOUND}(?:{alternation})\b(?![-/][0-9])")
 
 
 def _this_runs_stamp_id(

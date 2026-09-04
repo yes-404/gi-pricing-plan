@@ -159,6 +159,26 @@ _SPECIFICATIONS_OF_THE_OLD_PATH = {
     "scripts/_docid.py",
 }
 
+# The deputy's ruling (W37-6 channel, 2026-09-04): fixture *data*, not a document about the
+# move -- the two files `_retire_claude_notes_stubs`'s own tests (`tests/test_doc_id_
+# migrate.py`) read as the pre-migration tree, standing in for the real corpus's tombstone
+# stubs and their directory README so that mechanism's tests do not have to run against
+# this repository's own real `.claude` + `/notes` root. Naming the old path is the entire
+# reason either file exists; a fixture built by concatenation to dodge *this* test would no
+# longer be readable content for the migration engine under test to act on -- but the two
+# path *entries* below are this test's own literal, and so built by concatenation for the
+# same self-referential reason `old_path` above is: this file is itself part of the tracked
+# corpus this test scans. The same distinction `_PRE_MOVE_SNAPSHOTS` above draws for a real
+# pre-move artifact, not a stray leftover citation. Two members, reviewed individually per
+# this file's own rule ("each needs its own reviewed line added here, not a widened
+# pattern") rather than a `tests/fixtures/` prefix carve-out, which would silently exempt
+# every future fixture regardless of whether it has a legitimate reason to name the path.
+_D13_FIXTURE_DIR = "tests/fixtures/docs-migration/" + ".claude" + "/notes"
+_D13_RETIREMENT_FIXTURE_DATA = {
+    f"{_D13_FIXTURE_DIR}/README.md",
+    f"{_D13_FIXTURE_DIR}/0001-example-fixture-note.md",
+}
+
 
 def test_no_living_file_cites_the_old_notes_path() -> None:
     """After the move, the old notes root under `.claude` may be named only by the
@@ -179,7 +199,12 @@ def test_no_living_file_cites_the_old_notes_path() -> None:
     tracked = subprocess.run(
         ["git", "ls-files"], capture_output=True, text=True, cwd=ROOT, check=True
     ).stdout.split()
-    exempt = _CHECK_30_MECHANISM | _PRE_MOVE_SNAPSHOTS | _SPECIFICATIONS_OF_THE_OLD_PATH
+    exempt = (
+        _CHECK_30_MECHANISM
+        | _PRE_MOVE_SNAPSHOTS
+        | _SPECIFICATIONS_OF_THE_OLD_PATH
+        | _D13_RETIREMENT_FIXTURE_DATA
+    )
     offenders = [
         f
         for f in tracked
