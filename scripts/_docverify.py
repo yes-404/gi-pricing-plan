@@ -803,13 +803,18 @@ def _companions_for(
 #: resolver that renders one (`W11-1` -> "WK-952, slice 1") is W37-11's citation-form
 #: item, the same shape as the `F-W`/bare-`F` alias classes already in `D_DISCLOSED`. Kept
 #: as a separate branch rather than folded into `D_DISCLOSED`, because two things on the
-#: SAME row stay fatal regardless of the disclosure — a task key (three segments,
-#: `W<n>-<m>-<k>`; NT-0019 names no live citation of this shape, expected 0 outside
-#: fixtures) and a bare work-key remainder (`W<n>[a-z]?` with no slice number at all —
-#: every Work mints a `WK-`, so an unmapped one is a real `token_map` defect) — and
-#: "creation" (migrated > control on the whole alternative) stays REGRESSION even when the
-#: disclosed branch would otherwise apply, which needs checking BEFORE the disclosure, not
-#: after, unlike `D_DISCLOSED`'s other members.
+#: SAME row stay fatal regardless of the disclosure — a bare work-key remainder
+#: (`W<n>[a-z]?` with no slice number at all — every Work mints a `WK-`, so an unmapped one
+#: is a real `token_map` defect) and "creation" (migrated > control on the whole
+#: alternative) — which needs checking BEFORE the disclosure, not after, unlike
+#: `D_DISCLOSED`'s other members.
+#:
+#: **Task keys (`W<n>-<m>-<k>`) join the disclosed component (#26, 2026-09-04,
+#: `to-lead.md:498-510`), printed as their own count line.** First ruled fatal on the
+#: report that the population was fixtures only; the real measurement found 30 live
+#: citations. The class does not change with the count: NT-0019 §1.2 has `WK` and `SL` and
+#: nothing below a slice, so a task key has no target by the standard's own design — the
+#: same ground as a slice key, not the mangling/token_map class a bare work key is.
 _D8_LABEL: Final = "workstream/slice id"
 _D8_TASK_KEY_RE: Final = re.compile(r"\bW[0-9]+[a-z]?-[0-9]+-[0-9]+\b")
 _D8_WORK_KEY_BARE_RE: Final = re.compile(r"\bW[0-9]+[a-z]?\b(?!-[0-9])")
@@ -819,7 +824,7 @@ _D8_SLICE_KEY_RE: Final = re.compile(r"\bW[0-9]+[a-z]?-[0-9]+\b(?!-[0-9])")
 
 
 def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[str, str]:
-    """(d8)'s three-way split. `m_lines`/`c_lines` are the whole alternative's own figures
+    """(d8)'s split. `m_lines`/`c_lines` are the whole alternative's own figures
     (`\\bW[0-9]+[a-z]?-[0-9]+\\b`) — creation is checked first, against those, and stays
     REGRESSION regardless of what the slice/task/bare breakdown below would say.
     """
@@ -830,30 +835,26 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
             "so no citation rewrite reaches zero — creation stays REGRESSION even for a "
             "disclosed class (Ruling 105 §A's third alias class)"
         )
-    m_task, task_files = mig.scan(_D8_TASK_KEY_RE)
     m_bare, bare_files = mig.scan(_D8_WORK_KEY_BARE_RE)
-    if m_task or m_bare:
-        parts = []
-        if m_task:
-            parts.append(
-                f"{m_task} task key(s) in {task_files} file(s) "
-                f"(`{_D8_TASK_KEY_RE.pattern}`, expected 0 outside fixtures)"
-            )
-        if m_bare:
-            parts.append(
-                f"{m_bare} bare work-key remainder(s) in {bare_files} file(s) "
-                f"(`{_D8_WORK_KEY_BARE_RE.pattern}` — a token_map defect, not this alias "
-                "class)"
-            )
-        return FAIL, "; ".join(parts)
+    if m_bare:
+        return FAIL, (
+            f"{m_bare} bare work-key remainder(s) in {bare_files} file(s) "
+            f"(`{_D8_WORK_KEY_BARE_RE.pattern}` — a token_map defect, not this alias class)"
+        )
     m_slice, slice_files = mig.scan(_D8_SLICE_KEY_RE)
     c_slice, _ = ctl.scan(_D8_SLICE_KEY_RE)
+    m_task, task_files = mig.scan(_D8_TASK_KEY_RE)
+    c_task, _ = ctl.scan(_D8_TASK_KEY_RE)
     return DISCLOSE, (
-        "slice-key population disclosed, excluded from the zero requirement (Ruling 105 "
-        f"§A's third alias class, `to-lead.md` 2026-09-04): {m_slice} line(s) / "
-        f"{slice_files} file(s) (`{_D8_SLICE_KEY_RE.pattern}`), control {c_slice} line(s); "
-        "owner W37-11's citation-form item — the resolver that renders one (e.g. "
-        "'W11-1' -> 'WK-952, slice 1')"
+        "slice-key and task-key population disclosed, excluded from the zero requirement "
+        "(Ruling 105 §A's third alias class; task keys joined by #26, 2026-09-04 — no "
+        "family exists below a slice per NT-0019 §1.2, so a task key has no target by "
+        f"design, same ground as a slice key): slice-key {m_slice} line(s) / "
+        f"{slice_files} file(s) (`{_D8_SLICE_KEY_RE.pattern}`, control {c_slice}); "
+        f"task-key {m_task} line(s) / {task_files} file(s) "
+        f"(`{_D8_TASK_KEY_RE.pattern}`, control {c_task}); owner W37-11's citation-form "
+        "item — the resolver that renders one (e.g. 'W11-1' -> 'WK-952, slice 1'; "
+        "'W11-1-2' -> 'WK-952, slice 1, task 2')"
     )
 
 
@@ -2014,8 +2015,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # un-migrated 4-digit citations remain, so the row still fails
     "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
     "d8": REGRESSION,   # workstream/slice id — REGRESSED WORSE (2026-09-04, W37-6 row (b)
-                         # fresh executor): migrated 2513 now ABOVE control 2358 (was 299,
-                         # below control). Not this PR's own new defect but the same
+                         # fresh executor, #721): migrated 2513 now ABOVE control 2358 (was
+                         # 299, below control). Not this PR's own new defect but the same
                          # `_compound_token_re` boundary bug fixed for row (b) (see that
                          # function's docstring, `scripts/doc-id.py`), at far larger scale:
                          # a shorter mapped work/module token with no `-`/`/` separator
@@ -2035,6 +2036,20 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # defect (row (d)'s file, previously closed at task 7 with a
                          # smaller, correct-at-the-time figure) — not fixed here, out of
                          # row (b)'s own scope.
+                         #
+                         # `_d8_verdict`'s creation check runs before the slice/task
+                         # disclosure this same commit adds (#26, 2026-09-04), so #721's
+                         # REGRESSION pre-empts it and the disclosure branch stays dormant
+                         # code for now — nothing here papers over that. Once #721's
+                         # boundary bug is fixed for the W-family and migrated drops back
+                         # below control, the row falls through to DISCLOSE and reports
+                         # slice-key/task-key counts on their own line, task keys included
+                         # per that ruling rather than fatal (NT-0019 §1.2 names no family
+                         # below a slice, so a task key has no target by design, same
+                         # ground as a slice key) — verified directly against a fixture in
+                         # `test_d8_task_key_joins_the_disclosed_component_with_its_own_count`
+                         # (`tests/test_doc_id_verify.py`), which does not depend on which
+                         # of REGRESSION/DISCLOSE the live corpus happens to read today.
     "d9": FAIL,         # docs/plans/2026-
     "d10": FAIL,        # docs/audit/
     "d11": FAIL,        # the old notes directory

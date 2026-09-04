@@ -1355,22 +1355,40 @@ def test_d8_slice_key_alone_is_disclosed(dv: Any, tmp_path: pathlib.Path) -> Non
     row = _d_rows(dv, _snapshot(dv, tmp_path / "d8slice", migrated, control))["d8"]
     assert row.verdict == dv.DISCLOSE
     assert row.fatal is False
-    assert "slice-key population disclosed" in row.note
+    assert "slice-key and task-key population disclosed" in row.note
+    assert "task-key 0 line(s)" in row.note
     assert "owner W37-11" in row.note
 
 
-def test_d8_task_key_stays_fatal_even_though_slice_keys_are_disclosed(
+def test_d8_task_key_joins_the_disclosed_component_with_its_own_count(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    """A three-segment task key on the same row as a clean slice key: the task key alone
-    must fail the row — NT-0019 names no live citation of that shape."""
+    """#26 (2026-09-04, `to-lead.md:498-510`): task keys join slice keys in the disclosed
+    component, printed as their own count line — first ruled fatal on the report that the
+    population was fixtures only, re-ruled once the real measurement found 30 live
+    citations. No family exists below a slice (NT-0019 §1.2 has `WK` and `SL` and nothing
+    under a slice), so a task key has no target by the standard's own design — the same
+    ground as a slice key, not the token_map/mangling class a bare work key is."""
     migrated = {"docs/a.md": "see W11-1 and also W11-1-2\n"}
     control = {"docs/a.md": "see W11-1 and also W11-1-2\n"}
     row = _d_rows(dv, _snapshot(dv, tmp_path / "d8task", migrated, control))["d8"]
-    assert row.verdict == dv.FAIL
-    assert row.fatal
-    assert "task key(s)" in row.note
-    assert "expected 0 outside fixtures" in row.note
+    assert row.verdict == dv.DISCLOSE
+    assert row.fatal is False
+    assert "slice-key and task-key population disclosed" in row.note
+    assert "task-key 1 line(s)" in row.note
+    assert "owner W37-11" in row.note
+
+
+def test_d8_task_key_alone_with_no_slice_key_still_discloses(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A task key with no accompanying slice key on the same row must still disclose, not
+    fail — the disclosed component does not require a slice key to also be present."""
+    migrated = {"docs/a.md": "see W11-1-2 only\n"}
+    control = {"docs/a.md": "see W11-1-2 only\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8taskonly", migrated, control))["d8"]
+    assert row.verdict == dv.DISCLOSE
+    assert row.fatal is False
 
 
 def test_d8_bare_work_key_remainder_stays_fatal(dv: Any, tmp_path: pathlib.Path) -> None:
