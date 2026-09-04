@@ -476,7 +476,7 @@ def test_check_34_migration_stamp_allowance_reproduces_the_merge_base(
     old_body = "This note cites NT-0016 for background.\n"
     new_text = "---\nid: RFC-164\nfamily: proposal\n---\nThis note cites RFC-88 for background.\n"
     assert audit.frozen_file_matches_after_migration_stamp(
-        old_body, new_text, redirects_inverse={"RFC-88": "NT-0016"}
+        old_body, new_text, redirects_inverse={"RFC-88": "NT-0016"}, allocated_ids={"RFC-164"}
     )
 
 
@@ -489,7 +489,7 @@ def test_check_34_migration_stamp_allowance_rejects_a_real_content_change(
         "This note cites RFC-88 for background, and one extra sentence.\n"
     )
     assert not audit.frozen_file_matches_after_migration_stamp(
-        old_body, new_text, redirects_inverse={"RFC-88": "NT-0016"}
+        old_body, new_text, redirects_inverse={"RFC-88": "NT-0016"}, allocated_ids={"RFC-164"}
     )
 
 
@@ -511,8 +511,12 @@ def test_check_34_migration_stamp_allowance_is_order_independent_under_prefix_co
     new_text = "---\nid: RL-9\n---\nSee PL-1 and PL-12 for context.\n"
     order_a = {"PL-1": "2026-01-01-alpha", "PL-12": "2026-06-01-zulu"}
     order_b = {"PL-12": "2026-06-01-zulu", "PL-1": "2026-01-01-alpha"}
-    assert audit.frozen_file_matches_after_migration_stamp(old_body, new_text, order_a)
-    assert audit.frozen_file_matches_after_migration_stamp(old_body, new_text, order_b)
+    assert audit.frozen_file_matches_after_migration_stamp(
+        old_body, new_text, order_a, allocated_ids={"RL-9"}
+    )
+    assert audit.frozen_file_matches_after_migration_stamp(
+        old_body, new_text, order_b, allocated_ids={"RL-9"}
+    )
 
 
 def test_check_34_reds_alone_on_a_dangling_corrected_by_entry(
@@ -1651,7 +1655,10 @@ def test_check_34_migration_stamp_allowance_reds_on_ruling_102s_mangled_citation
         "close the hand-compiled owed list **lost NFR-775/14** (F41)\n"
     )
     assert not audit.frozen_file_matches_after_migration_stamp(
-        old_body, new_text, redirects_inverse={"NFR-775": "NFR-RATE-13"}
+        old_body,
+        new_text,
+        redirects_inverse={"NFR-775": "NFR-RATE-13"},
+        allocated_ids={"RL-9"},
     ), (
         "a substring inverse un-mangles `NFR-775/14` back to the merge-base bytes and "
         "reports the corruption as a clean citation-token rewrite"
@@ -1666,7 +1673,7 @@ def test_check_34_migration_stamp_allowance_reds_on_a_mangled_hyphen_range(
     old_body = "see FR-RATE-46-49 for the range\n"
     new_text = "---\nid: RL-9\n---\nsee FR-712-49 for the range\n"
     assert not audit.frozen_file_matches_after_migration_stamp(
-        old_body, new_text, redirects_inverse={"FR-712": "FR-RATE-46"}
+        old_body, new_text, redirects_inverse={"FR-712": "FR-RATE-46"}, allocated_ids={"RL-9"}
     )
 
 
@@ -1679,5 +1686,5 @@ def test_check_34_migration_stamp_allowance_still_inverts_an_adjectival_suffix(
     old_body = "an OQ-GOV-7-shaped hole\n"
     new_text = "---\nid: RL-9\n---\nan OQ-500-shaped hole\n"
     assert audit.frozen_file_matches_after_migration_stamp(
-        old_body, new_text, redirects_inverse={"OQ-500": "OQ-GOV-7"}
+        old_body, new_text, redirects_inverse={"OQ-500": "OQ-GOV-7"}, allocated_ids={"RL-9"}
     )

@@ -694,6 +694,204 @@ def test_a_stray_pycache_already_on_disk_is_excluded_from_the_migration_diff(
 
 
 # ---------------------------------------------------------------------------------------
+# Ruling 105 §2 — DP-7 must strip a leading `---` block only when it is a header this
+# run's own migration wrote, never any leading block that merely happens to open with
+# `---`. `.claude/skills/**` and `.claude/agents/` carry their own, unrelated front
+# matter (`name:`/`description:`) the migration deliberately defers rather than
+# stamping — before the fix, `frozen_file_matches_after_migration_stamp` stripped that
+# foreign header from the migrated side unconditionally while the merge-base side kept
+# it, so a clean citation-token rewrite inside one of those files could never reproduce
+# the header-carrying merge-base text and fell through to `classified-by-none` for a
+# rewrite that was entirely correct — named as the largest single cause of row (g)'s
+# `classified-by-none` population.
+# ---------------------------------------------------------------------------------------
+
+_FOREIGN_FRONT_MATTER_SKILL = (
+    "---\n"
+    "name: demo-skill\n"
+    "description: A demo skill that cites FR-OVR-7 in its body.\n"
+    "---\n"
+    "# Demo skill\n"
+    "\n"
+    "See FR-OVR-7 for the rule.\n"
+)
+
+_FOREIGN_FRONT_MATTER_REDIRECTS = (
+    "old_id,new_id,old_path,new_path,citing_dir\n"
+    "FR-OVR-7,FR-680,,,\n"
+)
+
+
+def _init_git(root: pathlib.Path) -> None:
+    """`root` must be a real git repository before `classify_migration_diff` runs over
+    it, even for a fixture whose own file classifies without ever reaching class 6: a
+    `new_root`-only `docs/REDIRECTS.csv` (this run's own, absent pre-migration by
+    construction) is itself a *new* path with no `old_files` entry, so the classifier's
+    own second loop tries class 6 on it regardless of what the fixture under test needs —
+    `_try_class6`'s fallback runs a second `migrate()` over a copy of `old_root`, and that
+    shells out to `git ls-files`, matching `test_a_contested_inverse_key_is_dropped_not_
+    misresolved` above.
+    """
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=root)
+    _run_git(["config", "user.name", "Test"], cwd=root)
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=root)
+
+
+def test_ruling_105_dp7_foreign_front_matter_clean_rewrite_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 105 §2's positive broken-input proof: a `.claude/skills/**`-shaped file,
+    carrying its own foreign front matter untouched by the migration, whose body gets one
+    correct citation-token rewrite (`FR-OVR-7` -> `FR-680`) must classify as class 2 — not
+    `classified-by-none`, which is what the unconditional strip produced before this fix.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    skill_rel = pathlib.Path(".claude") / "skills" / "demo-skill" / "SKILL.md"
+    (old_root / skill_rel.parent).mkdir(parents=True)
+    (new_root / skill_rel.parent).mkdir(parents=True)
+    (old_root / skill_rel).write_text(_FOREIGN_FRONT_MATTER_SKILL, encoding="utf-8")
+    (new_root / skill_rel).write_text(
+        _FOREIGN_FRONT_MATTER_SKILL.replace(
+            "See FR-OVR-7 for the rule.\n", "See FR-680 for the rule.\n"
+        ),
+        encoding="utf-8",
+    )
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(_FOREIGN_FRONT_MATTER_REDIRECTS, encoding="utf-8")
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = skill_rel.as_posix()
+    assert rel in classification.per_class["2-reference-token"], classification.summary()
+    assert rel not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_ruling_105_dp7_foreign_front_matter_hand_edit_is_still_classified_by_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 105 §2's negative broken-input proof, named in the ruling itself: "the same
+    fixture with a foreign front-matter block *and* a hand-edit somewhere else must still
+    be named as failing" — the frontmatter fix must not accidentally make a genuinely
+    broken rewrite pass. Same skill file and citation rewrite as the positive proof above,
+    plus one hand-typed sentence no rewrite pass produced.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    skill_rel = pathlib.Path(".claude") / "skills" / "demo-skill" / "SKILL.md"
+    (old_root / skill_rel.parent).mkdir(parents=True)
+    (new_root / skill_rel.parent).mkdir(parents=True)
+    (old_root / skill_rel).write_text(_FOREIGN_FRONT_MATTER_SKILL, encoding="utf-8")
+    hand_edited = _FOREIGN_FRONT_MATTER_SKILL.replace(
+        "See FR-OVR-7 for the rule.\n",
+        "See FR-680 for the rule.\n\nA hand-typed sentence no generator wrote.\n",
+    )
+    (new_root / skill_rel).write_text(hand_edited, encoding="utf-8")
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(_FOREIGN_FRONT_MATTER_REDIRECTS, encoding="utf-8")
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = skill_rel.as_posix()
+    assert rel in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel not in classification.per_class["2-reference-token"]
+    assert any(rel in v for v in classification.violations), classification.violations
+
+
+# ---------------------------------------------------------------------------------------
+# Follow-up to Ruling 105 §2 above: the Reference family (`.claude/roles/`,
+# `.claude/agents/`, a plain `.claude/skills/*/SKILL.md`, and a vendored skill's own
+# manifest) carries no `id:` line at all (NT-0019 §1.2) -- `allocated_ids`, the fix
+# above, is built from `REDIRECTS.csv`'s `new_id` column and so can never confirm one of
+# *these* stamps as this run's own, regardless of whether it is. Found live on the real
+# fixture corpus once the foreign-front-matter fix above was in place:
+# `.claude/roles/example-role.md` (headerless before this run, Reference-stamped by it)
+# and `.claude/skills/vendored-example-skill/SKILL.md` (headerless before this run,
+# vendored-stamped by it) both fell to `classified-by-none` the identical way the
+# foreign-front-matter files did, for the identical reason one level further down: an
+# id-based membership test cannot express "this run wrote a header that has no id."
+# Fixed by widening the confirmation to path membership in this run's own recorded
+# stamp-target sets (`_discover_reference_stamp_targets` and
+# `_discover_vendored_skill_manifests(...).to_stamp`, both re-derived from `old_root`)
+# whenever a header carries no `id:` at all.
+# ---------------------------------------------------------------------------------------
+
+
+def test_ruling_105_dp7_reference_stamp_clean_rewrite_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`.claude/roles/example-role.md` carries no front matter before this run and no
+    `id:` after it (Reference family, NT-0019 §1.2) -- only its `NT-0001` citation
+    changes. Must classify class 2, not `classified-by-none`.
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = ".claude/roles/example-role.md"
+    assert rel in classification.per_class["2-reference-token"], classification.summary()
+    assert rel not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_ruling_105_dp7_vendored_manifest_clean_rewrite_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The same gap, one population over: a vendored skill's own manifest is stamped the
+    identical headerless way but by a *second*, disjoint writer
+    (`_discover_reference_stamp_targets` itself excludes every vendored manifest via
+    `_ACCOUNTED_VENDORED`, since a different loop in `migrate` stamps it). Only its
+    `FR-EX-1` citation changes; must classify class 2.
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = ".claude/skills/vendored-example-skill/SKILL.md"
+    assert rel in classification.per_class["2-reference-token"], classification.summary()
+    assert rel not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_ruling_105_dp7_reference_stamp_hand_edit_is_still_classified_by_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The negative broken-input proof for the same gap: path membership in this run's
+    own stamp-target set must not become a blanket pass for that path. A genuine hand
+    edit to `.claude/roles/example-role.md`'s body, beyond the citation rewrite, must
+    still be refused.
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+
+    rel = ".claude/roles/example-role.md"
+    target = new_root / rel
+    text = target.read_text(encoding="utf-8")
+    mutated = text + "\nA hand-typed sentence no generator wrote.\n"
+    assert mutated != text
+    target.write_text(mutated, encoding="utf-8")
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert rel in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel not in classification.per_class["2-reference-token"]
+    assert any(rel in v for v in classification.violations), classification.violations
+
+
+# ---------------------------------------------------------------------------------------
 # Task 4 item 4 — the class-4 link-repoint fix (W37-6 channel `:407-413`): an id-less
 # move's own `old_path`/`new_path` REDIRECTS.csv row records that the file moved, but
 # `_path_rewrite_tokens` also adds tree-wide citation forms to the sweep that had no
@@ -2831,6 +3029,74 @@ def test_write_redirects_allows_multiple_id_less_move_rows(
         _redirect_row(old_path="docs/c.md", new_path="docs/d.md"),
     ]
     doc_id_cli._write_redirects(tmp_path, rows)  # must not raise
+
+
+# ---------------------------------------------------------------------------------------
+# Dispatched follow-up: `docs/REDIRECTS.csv`'s row order was non-deterministic across
+# independent `migrate()` runs -- the same rows, discovered in a different internal order
+# (nothing upstream of `_write_redirects` promises a stable order; a per-process hash seed
+# is enough to reorder any `set`-backed collection feeding it), so byte-for-byte comparison
+# of two independent runs' output could fail on order alone even though the *content* was
+# identical. Fixed by sorting every row by `old_id` then `old_path` (with the remaining
+# `_REDIRECTS_FIELDS` columns as a tie-break, for a genuine total order) before writing.
+# ---------------------------------------------------------------------------------------
+
+
+def test_write_redirects_sorts_by_old_id_then_old_path(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The written file's row order does not depend on the order `rows` arrived in --
+    two calls with the same rows, shuffled differently, produce byte-identical output."""
+    rows_order_1 = [
+        _redirect_row(old_id="OQ-MODEL-9", new_id="OQ-1080", old_path="docs/z.md"),
+        _redirect_row(old_id="FR-DATA-2", new_id="FR-500", old_path="docs/a.md"),
+        _redirect_row(old_id="FR-DATA-2", new_id="FR-500", old_path="docs/m.md"),
+        _redirect_row(old_path="docs/c.md", new_path="docs/d.md"),
+    ]
+    rows_order_2 = list(reversed(rows_order_1))
+    assert rows_order_1 != rows_order_2  # the shuffle is real, not a vacuous no-op
+
+    doc_id_cli._write_redirects(tmp_path / "run1", rows_order_1)
+    doc_id_cli._write_redirects(tmp_path / "run2", rows_order_2)
+
+    bytes_1 = (tmp_path / "run1" / "docs" / "REDIRECTS.csv").read_bytes()
+    bytes_2 = (tmp_path / "run2" / "docs" / "REDIRECTS.csv").read_bytes()
+    assert bytes_1 == bytes_2
+
+    with (tmp_path / "run1" / "docs" / "REDIRECTS.csv").open(
+        newline="", encoding="utf-8"
+    ) as fh:
+        written = list(csv.DictReader(fh))
+    # `old_id=""` (the id-less move row) sorts first; the two `FR-DATA-2` rows -- an
+    # identical `old_id` claiming two different `old_path`s, both legitimate per
+    # `_check_redirect_rows_agree_on_every_old_id`'s own citing-dir-scoped case -- land in
+    # `old_path` order right after it; `OQ-MODEL-9` last.
+    assert [(r["old_id"], r["old_path"]) for r in written] == [
+        ("", "docs/c.md"),
+        ("FR-DATA-2", "docs/a.md"),
+        ("FR-DATA-2", "docs/m.md"),
+        ("OQ-MODEL-9", "docs/z.md"),
+    ]
+
+
+def test_write_redirects_sort_is_stable_across_an_existing_file_and_new_rows(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`_write_redirects` is append-only across runs -- a second call adds to a file a
+    first call already wrote. The merged, sorted output must not depend on which rows
+    were "existing" and which were freshly "appended"."""
+    first_a = [_redirect_row(old_id="RL-9", new_id="RL-900", old_path="docs/p.md")]
+    second_a = [_redirect_row(old_id="ADR-1", new_id="ADR-800", old_path="docs/q.md")]
+    doc_id_cli._write_redirects(tmp_path / "run1", first_a)
+    doc_id_cli._write_redirects(tmp_path / "run1", second_a)
+
+    # Same two rows, written to a fresh file in one call together (a different discovery
+    # order upstream, collapsed to one batch rather than two increments).
+    doc_id_cli._write_redirects(tmp_path / "run2", [*second_a, *first_a])
+
+    bytes_1 = (tmp_path / "run1" / "docs" / "REDIRECTS.csv").read_bytes()
+    bytes_2 = (tmp_path / "run2" / "docs" / "REDIRECTS.csv").read_bytes()
+    assert bytes_1 == bytes_2
 
 
 def test_requirements_guard_is_silent_when_every_id_is_recognised(

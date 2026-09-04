@@ -387,17 +387,33 @@ def parse_header(path: Path) -> Header | None:
     (`audit-docs.py` check 30), not this generic parser's to enforce.
     """
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
+        text = path.read_text(encoding="utf-8")
     except OSError:
         return None
+    return parse_header_text(text, path=path)
+
+
+def parse_header_text(text: str, *, path: Path | None = None) -> Header | None:
+    """`parse_header` for a string already in memory, rather than a file on disk —
+    factored out of `parse_header` so a caller comparing two in-memory texts (Ruling
+    105's DP-7 fix, `audit-docs.py`'s `frozen_file_matches_after_migration_stamp`) can
+    reuse the identical parsing and error rules without writing either string to a
+    temporary file first. `path` is used only to name the source in a raised
+    `HeaderError`'s message; omit it when there is no file behind `text` — the message
+    then names a placeholder rather than a real path.
+    """
+    lines = text.splitlines()
     if not lines or lines[0] != "---":
         return None
+    error_path = path if path is not None else Path("<in-memory text>")
     try:
         closing = lines.index("---", 1)
     except ValueError:
-        raise HeaderError(f"{path}:1: front-matter block has no closing `---`") from None
+        raise HeaderError(
+            f"{error_path}:1: front-matter block has no closing `---`"
+        ) from None
 
-    body = _parse_front_matter_body(lines[1:closing], path=path, first_line_no=2)
+    body = _parse_front_matter_body(lines[1:closing], path=error_path, first_line_no=2)
 
     extra: dict[str, str] = {
         key: "" if value is None else str(value)

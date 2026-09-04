@@ -5948,6 +5948,32 @@ def _check_redirect_rows_agree_on_every_old_id(rows: Iterable[dict[str, str]]) -
         seen[key] = new_id
 
 
+def _redirect_row_sort_key(row: dict[str, str]) -> tuple[str, str, str, str, str]:
+    """Sort key for one `REDIRECTS.csv` row: `old_id` then `old_path`, per the
+    dispatched follow-up ("row-order is non-deterministic across independent
+    `migrate()` runs -- same rows, different order -- it should be sorted by `old_id`
+    then `old_path` before writing").
+
+    The two named fields alone are not a total order: two rows can legitimately share
+    both (`_check_redirect_rows_agree_on_every_old_id`'s own docstring names the
+    `citing_dir`-scoped case, and an exact-repeat compound-citation row is a second,
+    identical duplicate of the two-key prefix). Without a full tie-break, two
+    independent runs that discover such a pair in different internal order would sort
+    each pair's own order back in as a stable-sort artifact, which is exactly the
+    non-determinism this sort exists to remove. Appending the remaining
+    `_REDIRECTS_FIELDS` columns (`new_id`, `new_path`, `citing_dir`) makes the key a
+    total order over the full row, so the two named fields still decide first while
+    every row still lands at one fixed position regardless of discovery order.
+    """
+    return (
+        row.get("old_id", ""),
+        row.get("old_path", ""),
+        row.get("new_id", ""),
+        row.get("new_path", ""),
+        row.get("citing_dir", ""),
+    )
+
+
 def _write_redirects(root: Path, rows: list[dict[str, str]]) -> list[str]:
     if not rows:
         return []
@@ -5958,12 +5984,11 @@ def _write_redirects(root: Path, rows: list[dict[str, str]]) -> list[str]:
         with redirects_path.open(newline="", encoding="utf-8") as fh:
             existing = list(csv.DictReader(fh))
     _check_redirect_rows_agree_on_every_old_id([*existing, *rows])
+    all_rows = sorted([*existing, *rows], key=_redirect_row_sort_key)
     with redirects_path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=_REDIRECTS_FIELDS)
         writer.writeheader()
-        for row in existing:
-            writer.writerow(row)
-        for row in rows:
+        for row in all_rows:
             writer.writerow(row)
     return ["docs/REDIRECTS.csv"]
 
@@ -7782,6 +7807,38 @@ def classify_migration_diff(
     """
     audit_docs = _load_audit_docs()
     rows = _read_redirect_rows(new_root)
+    # Ruling 105 §2: every id this run itself allocated, so the shared DP-7 predicate can
+    # tell "a header this run wrote" from "any leading block that happens to parse" --
+    # `.claude/skills/**` and `.claude/agents/` foreign front matter mostly parses (its
+    # `name:`/`description:` keys land in `.extra` with no error) but its `id` is never
+    # one of these, so it is correctly left unstripped by both sides of the comparison.
+    allocated_ids = frozenset(row["new_id"] for row in rows if row.get("new_id"))
+    # The Reference family (`.claude/roles/`, `.claude/agents/`, `.claude/skills/*/
+    # SKILL.md`, every `README.md`) carries no `id:` line at all (NT-0019 §1.2), so
+    # `allocated_ids` can never confirm one of *its* stamps as this run's own -- found
+    # live on `.claude/roles/example-role.md`, headerless before this run and
+    # Reference-stamped by it, whose citation rewrite then had no path to reproduce the
+    # merge-base bytes. `_discover_reference_stamp_targets` is the same function
+    # `migrate` itself calls to decide what to stamp, run here over `old_root` (the
+    # pre-migration tree this diff is against) rather than `new_root`, since a target's
+    # own front-matter state is what routes it and `new_root`'s copy already carries the
+    # stamp. `routed=()` (the default): the resulting set can only be a harmless
+    # superset of the real one for this predicate's purposes -- any file it wrongly adds
+    # gets a real id-bearing header instead of a headerless one, so the id branch above
+    # matches it first and this fallback is never reached for it.
+    # A vendored skill's own manifest is stamped the identical headerless way (`migrate`'s
+    # `vendored_scan.to_stamp` loop, `_stamp_header("REFERENCE", None, ...)` plus
+    # `vendored`/`origin`), but it is a *second*, disjoint population --
+    # `_discover_reference_stamp_targets` itself excludes every vendored manifest
+    # (`_ACCOUNTED_VENDORED`) because a second writer, not this one, stamps it. Found
+    # live on `.claude/skills/<vendored>/SKILL.md`: the same "no id" gap, one population
+    # over from the one the comment above names.
+    reference_stamp_paths = frozenset(
+        target.rel for target in _discover_reference_stamp_targets(old_root)[0]
+    ) | frozenset(
+        path.relative_to(old_root).as_posix()
+        for path in _discover_vendored_skill_manifests(old_root).to_stamp
+    )
 
     def _collision_safe_inverse(pairs: Iterable[tuple[str, str]]) -> dict[str, str]:
         """`{new: old}`, refusing a `new` key two different `old` values both claim.
@@ -7926,7 +7983,8 @@ def classify_migration_diff(
             buckets["3-move" if moved else "1-front-matter-stamp"].append(old_rel)
             return
         if audit_docs.frozen_file_matches_after_migration_stamp(
-            compare_against, new_text, _inverse_for(new_rel)
+            compare_against, new_text, _inverse_for(new_rel), allocated_ids=allocated_ids,
+            old_rel=old_rel, new_rel=new_rel, reference_stamp_paths=reference_stamp_paths,
         ):
             buckets["3-move" if moved else "2-reference-token"].append(old_rel)
             return
