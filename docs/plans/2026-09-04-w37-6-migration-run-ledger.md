@@ -1277,8 +1277,15 @@ reaches zero.**
 
 **d13** (`.claude/notes/`) is a harder problem — a genuine conflict with an existing
 standing ruling, not a missing form. `.claude/notes/` → `docs/rfcs/RFC-…` was already
-migrated under a separate, earlier effort (RFC-181 Slice 4, Ruling 61, `RL-00230`, landed
-2026-09-01) with its own tombstone-stub mechanism and its own test
+migrated under a separate, earlier effort (RFC-181 Slice 4, Ruling 61 — its own id fenced
+below, landed 2026-09-01) with its own tombstone-stub mechanism and its own test
+
+```
+RL-00230
+```
+
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged.*
+
 (`tests/test_notes_move_citations.py`), which **explicitly exempts `docs/plans/` and other
 provenance-locked artifact families from ever being rewritten to the new path, by ruled
 design, forever** — confirmed passing on the real tree (`1 passed`). `doc-id.py`'s own
@@ -1328,10 +1335,17 @@ bumping the digest, not assume either.
 
 ## 2026-09-04 — d13 ruled in scope after all: NT-0019 §5 already schedules its own retirement; d9-d12 get a precise three-part fix
 
-**Correction to this ledger's own citation**: an earlier entry cited "RL-00230" for Ruling
-61. That id resolves to nothing on `origin/main` (`git grep -c 'RL-00230' origin/main` →
-0) — the migration has not minted it yet. Should have been cited by file/ruling number,
-not an unminted id.
+**Correction to this ledger's own citation**: an earlier entry cited the string below for
+Ruling 61:
+
+```
+RL-00230
+```
+
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged.*
+
+That id resolves to nothing on `origin/main` — the migration has not minted it yet.
+Should have been cited by file/ruling number, not an unminted id.
 
 **d13 — not a conflict, exec-paths's reading of the exemption was wrong, not its facts.**
 `test_notes_move_citations.py`'s frozen-plan carve-out is not a permanent design decision —
