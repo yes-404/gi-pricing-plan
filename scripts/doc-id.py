@@ -1110,6 +1110,15 @@ class _Draft:
     # requirement/register-row fields:
     source_path: Path | None = None
     match_span: tuple[int, int] | None = None  # char offsets of the old token, for in-place rewrite
+    # Task 4's wf-0n ruling (team-lead, 2026-09-04, citing the deputy): a legacy workflow
+    # is cited two ways in the real corpus -- the filename's own lowercase form (`wf-01`,
+    # `old_token`'s primary key, since that is the identifier itself under §7(d)'s own
+    # `wf-0[0-9]` alternative) and the in-file heading's uppercase form (`WF-01`). Both
+    # must resolve to the same new id or the uppercase form -- what nearly every real
+    # citation of a workflow actually uses -- goes unswept forever (case-sensitive
+    # substitution never bridges the two). `extra_old_tokens` carries every alias beyond
+    # `old_token` that a citation of this draft may use; empty for every other family.
+    extra_old_tokens: tuple[str, ...] = ()
 
 
 @dataclass
@@ -2951,6 +2960,11 @@ def _discover_findings(root: Path) -> list[_Draft]:
 
 
 _WORKFLOW_TITLE_RE: Final = re.compile(r"^#\s+(WF-\d+)\s+—\s+(.+)$", re.MULTILINE)
+#: The filename's own legacy form -- `wf-01-dataset-to-model.md` -> `wf-01`. Task 4's
+#: wf-0n ruling: this, not the heading's uppercase form, is `old_token`'s primary key,
+#: because it is the identifier itself under §7(d)'s own `wf-0[0-9]` alternative and it is
+#: what nearly every real citation in the corpus actually writes.
+_WORKFLOW_FILENAME_RE: Final = re.compile(r"^(wf-\d+)-")
 
 
 def _discover_workflows(root: Path) -> list[_Draft]:
@@ -2997,7 +3011,17 @@ def _discover_workflows(root: Path) -> list[_Draft]:
         title_match = _WORKFLOW_TITLE_RE.search(text)
         if title_match is None:
             continue  # README.md and anything else not a legacy `# WF-0N — <title>` file
-        old_token, title = title_match.group(1), title_match.group(2)
+        heading_token, title = title_match.group(1), title_match.group(2)
+        filename_match = _WORKFLOW_FILENAME_RE.match(path.name)
+        # Task 4's wf-0n ruling: the filename's lowercase form is the primary key; the
+        # heading's uppercase form rides along as an alias to the same target. A filename
+        # that does not match the expected shape (not proven to occur in the real corpus,
+        # but not assumed impossible either) falls back to the heading form alone, exactly
+        # what this function did before the ruling -- never silently drops the draft.
+        if filename_match is not None:
+            old_token, extra_old_tokens = filename_match.group(1), (heading_token,)
+        else:
+            old_token, extra_old_tokens = heading_token, ()
         created = _module_first_commit_date(path, root)
         drafts.append(
             _Draft(
@@ -3005,6 +3029,7 @@ def _discover_workflows(root: Path) -> list[_Draft]:
                 status="active", created=created, owner="decision-maker",
                 tie_break=(path.relative_to(root).as_posix(), 0),
                 old_token=old_token, was=path.relative_to(root).as_posix(), body=text,
+                extra_old_tokens=extra_old_tokens,
             )
         )
     return drafts
@@ -5465,10 +5490,21 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 
 
 #: A compound-continuation token, base plus its whole chain: `\btok` then zero or more
-#: `[-/]\d+` groups, captured as one string. Group 1 is empty for a plain, uncontinued
-#: token — the common case, handled the same as `_whole_token_re` always did.
+#: `[-/]\d+` groups, captured as one string, **word-bounded after the chain**. Group 1 is
+#: empty for a plain, uncontinued token — the common case, handled the same as
+#: `_whole_token_re` always did.
+#:
+#: Task 4's wf-0n regression, found by its own broken-input proof: the trailing `\b`
+#: `_whole_token_re` always carried was dropped when this replaced it for compound
+#: support, and `wf-01` immediately followed by a bare digit with **no** `-`/`/`
+#: separator (`wf-010`) has no continuation group to consume that digit, so a version of
+#: this pattern with no closing `\b` matched `wf-01` anyway and left `0` orphaned —
+#: `_whole_token_re`'s exact original defect, reintroduced by the rewrite meant to fix a
+#: different one. The trailing `\b` must sit after the whole captured group, not after
+#: the bare token, or a real continuation chain (`NFR-RATE-13/14`) would need its own
+#: separate boundary check the group already makes redundant.
 def _compound_token_re(tok: str) -> re.Pattern[str]:
-    return re.compile(rf"\b{re.escape(tok)}((?:[-/]\d+)*)")
+    return re.compile(rf"\b{re.escape(tok)}((?:[-/]\d+)*)\b")
 
 
 _CONTINUATION_PART_RE: Final = re.compile(r"([-/])(\d+)")
@@ -7033,6 +7069,14 @@ def migrate(root: Path) -> MigrateResult:
         # held back.
         if d.old_token is not None and d.prefix != "FD":
             id_claims.setdefault(d.old_token, []).append((canon, d.was or canon))
+        # Task 4's wf-0n ruling: every alias beyond the primary key (today, only a
+        # workflow's heading-derived `WF-0n` form alongside its filename-derived
+        # `wf-0n` primary) claims the same canonical id through the same `id_claims`
+        # machinery -- so a genuinely contested alias is caught by the identical
+        # multi-claimant guard `old_token` itself already gets, not a silent second path.
+        for extra in d.extra_old_tokens:
+            if d.prefix != "FD":
+                id_claims.setdefault(extra, []).append((canon, d.was or canon))
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
@@ -7050,6 +7094,23 @@ def migrate(root: Path) -> MigrateResult:
                 "new_path": new_path,
             }
         )
+        # Task 4's wf-0n ruling, the inverse half: an alias's citation form is only
+        # guaranteed correct *inside the draft's own new directory* -- a workflow's own
+        # body still carries its own heading's uppercase `WF-0n` form (rewritten in
+        # place, same file), while every other citer in the tree wrote the lowercase
+        # `wf-0n` filename form the primary `old_id` row above already covers globally.
+        # Recorded `citing_dir`-scoped (never as a second global row for the same
+        # `new_id`, which `_collision_safe_inverse` would then have to drop as contested)
+        # so the workflow's own file inverts on its own heading and nothing else does.
+        if d.extra_old_tokens and d.new_path is not None:
+            extra_citing_dir = posixpath.dirname(new_path)
+            for extra in d.extra_old_tokens:
+                redirect_rows.append(
+                    {
+                        "old_id": extra, "new_id": canon,
+                        "old_path": "", "new_path": "", "citing_dir": extra_citing_dir,
+                    }
+                )
         # A **path** citation (a markdown link's target, or its own repo-relative text)
         # is a different thing from an **id** citation, and the `FD` id-token exclusion
         # above does not apply to it: a path is unique per file, so unlike a bare `F<n>`

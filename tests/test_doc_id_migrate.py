@@ -544,9 +544,64 @@ def test_vendored_skill_manifest_with_no_license_is_still_stamped(
 def test_a_citation_with_no_corresponding_record_is_left_unrewritten(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
+    """Task 4's wf-0n ruling changes what this fixture proves: the corpus's `wf-01`
+    citation *does* have a corresponding record now (the fixture's own `docs/workflows/
+    wf-01-example-journey.md`) — before the ruling, only the heading's uppercase `WF-01`
+    form was keyed, so the note's lowercase citation was the "no corresponding record"
+    case this test was named for. It is now the positive proof that the ruling's fix
+    reaches real prose, not a synthetic unit case; the genuinely-unresolvable case moved
+    to `test_a_prose_wf0n_and_a_heading_wf0n_both_resolve_a_longer_number_does_not` below.
+    """
     doc_id_cli.migrate(pristine_a)
     note = next((pristine_a / "docs" / "rfcs").glob("RFC-*.md")).read_text(encoding="utf-8")
-    assert "wf-01" in note  # this corpus carries no workflow fixture to resolve it against
+    assert "wf-01" not in note, "the lowercase filename form must now resolve, not survive"
+    assert "WF-18" in note, (
+        "the fixture's own workflow draft (docs/workflows/wf-01-example-journey.md) "
+        "resolves to WF-18 under this fixture's numbering; the citation must reach it"
+    )
+
+
+def test_a_prose_wf0n_and_a_heading_wf0n_both_resolve_a_longer_number_does_not(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Task 4's wf-0n ruling, the team-lead's own required broken-input proof, verbatim:
+    "a prose wf-01 and a heading WF-01 both map; wf-010 does not."
+
+    `_discover_workflows` keys `old_token` on the filename's lowercase form (the
+    identifier §7(d)'s own `wf-0[0-9]` alternative names) and carries the heading's
+    uppercase form as an alias to the same target — both must resolve. `wf-010` is a
+    different token entirely (row (g)'s own token-boundary rule: `\\bwf-01\\b` must not
+    match inside a longer identifier), so it must survive untouched even though `wf-01`
+    is a real, mapped token and a naive substring sweep would eat its prefix.
+    """
+    workflows_dir = tmp_path / "docs" / "workflows"
+    workflows_dir.mkdir(parents=True)
+    (workflows_dir / "wf-01-a-journey.md").write_text(
+        "# WF-01 — A journey\n\nBody.\n", encoding="utf-8"
+    )
+    drafts = doc_id_cli._discover_workflows(tmp_path)
+    assert len(drafts) == 1
+    draft = drafts[0]
+    assert draft.old_token == "wf-01", "the filename's lowercase form is the primary key"
+    assert draft.extra_old_tokens == ("WF-01",), (
+        "the heading's uppercase form is carried as the one alias"
+    )
+
+    docs_dir = tmp_path / "docs" / "sample_prose"
+    docs_dir.mkdir(parents=True)
+    prose = docs_dir / "note.md"
+    prose.write_text(
+        "See wf-01 for the journey. The heading form WF-01 is the same thing. "
+        "But wf-010 is a different, longer token and must survive.\n",
+        encoding="utf-8",
+    )
+    token_map = {"wf-01": "WF-00018", "WF-01": "WF-00018"}
+    doc_id_cli._rewrite_citations(tmp_path, token_map)
+
+    after = prose.read_text(encoding="utf-8")
+    assert "WF-00018" in after.split(".")[0], "the lowercase prose citation must resolve"
+    assert "WF-00018" in after.split(".")[1], "the uppercase heading-form citation must resolve"
+    assert "wf-010" in after, "a longer token sharing the prefix must not be eaten"
 
 
 def test_adr_bullet_header_becomes_front_matter_and_body_is_preserved(
