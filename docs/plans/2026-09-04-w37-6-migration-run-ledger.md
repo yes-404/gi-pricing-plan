@@ -190,6 +190,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #723 | fix(scripts): name the code-tree residue by cause — hypothesis 1 killed, four new causes found | `56c0e81` | Not independently re-run — `ci-watcher-723b` confirmed python/docs/history-policy all green (post-rebase head `00935dd`), CLEAN. Row (g)'s code-tree leg of the three-way triage. |
 | #724 | docs(plans): ledger — #721/#722 merges, h2b root-cause, DB-exclusivity proof | `1129df0` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). |
 | #728 | docs(plans): ledger — #724/#725/#727 merges | `0af63b4` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). `ci-watcher-728` confirmed docs/python/history-policy all green, CLEAN. |
+| #731 | docs(plans): ledger — #728/#729 merges | `c462fb6` | UNCHANGED: 14 (this ledger's own continued history). `ci-watcher-731` confirmed docs/python/history-policy all green after settling past three cancelled batches (the lead's own push cadence), CLEAN. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
