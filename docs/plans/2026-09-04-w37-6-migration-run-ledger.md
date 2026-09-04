@@ -421,3 +421,17 @@ CPU-demand figure (sum of `%CPU` over the six real gates ÷ 1600, i.e. ÷16 core
 much less dramatic than the load-average figure (82) suggests; load average also counts
 runnable/blocked threads from the ~150-thread pools, not CPU demand alone, matching the
 deputy's own point.
+
+**Root cause of the `wt-rowe2` duplicate, from rowe2 itself:** not a second manual launch —
+its own `gate-runner` subagent lost track of its backgrounded `pytest` run and reissued the
+command, three times total across the incident (10:36 uncapped original; ~11:20 a second
+`timeout 2400 …`; ~11:24 a third `timeout 3600 … -x -q`, started after the stop instruction
+had been sent but before it reached the subagent's next tool round). All three killed and
+confirmed gone. Now exactly one `pytest` running, flock-guarded (`gate-{1,2,3}`,
+`-w 7200` fallback) and thread-capped, verified against `/proc/<pid>/environ` directly
+(not merely the wrapper shell's exported values) — the process itself carries all six
+vars. The rest of that gate (ruff/mypy/lint-imports/audit-docs/req-coverage/
+generate-contracts --check, full frontend half) had already exited 0 before the stop;
+only `pytest` was affected by the subagent's own retry behaviour. A `gate-runner`
+subagent that backgrounds a long test run without tracking its own pid is a defect worth
+a general note if it recurs elsewhere — not actioned further here, single incident so far.
