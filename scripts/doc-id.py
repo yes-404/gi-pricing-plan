@@ -5477,8 +5477,33 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 #: A compound-continuation token, base plus its whole chain: `\btok` then zero or more
 #: `[-/]\d+` groups, captured as one string. Group 1 is empty for a plain, uncontinued
 #: token — the common case, handled the same as `_whole_token_re` always did.
+#:
+#: **`\b` between `tok` and the continuation group — row (b)'s W37-6 regression, #711.**
+#: Without it this pattern is `\btok` with no trailing boundary at all, so it matches `tok`
+#: as a bare PREFIX of a longer, unrelated identifier that merely starts with the same
+#: digits: a mapped `OQ-OVR-1` (-> `OQ-831`) matches inside the un-mapped, ambiguous
+#: `OQ-OVR-11` (two claimants, correctly held out of `token_map` by the guard below) —
+#: `\bOQ-OVR-1` has no trailing `\b` to refuse the immediately-following `1`, since a
+#: digit followed by a digit is never a word-boundary transition for `\b` to test at all.
+#: `_expand_compound` then sees an empty continuation (no `[-/]` follows), returns the
+#: mapped value unchanged, and `.sub()` leaves the un-matched trailing `1` in place:
+#: `OQ-OVR-11` -> `OQ-831` + `1` = `OQ-8311`, a fabricated id nothing allocated, planted
+#: into every mirror of that open question (`docs/open-questions.md`, its owning spec's
+#: §10 row) and from there into `docs/INDEX.md`'s own id column
+#: (`doc-index.py`'s `_BOLD_ID_ROW` has no way to know the id is fabricated), producing the
+#: four `noncontiguous` gaps `find_noncontiguous_gaps` reports between the real discoverable
+#: range and this and five siblings of the same shape (`OQ-OVR-12`+`OQ-OVR-1`->`OQ-8312`,
+#: `OQ-MODEL-10`/`OQ-MODEL-11`+`OQ-MODEL-1`->`OQ-8610`/`OQ-8611`,
+#: `OQ-MODEL-23`/`OQ-MODEL-24`+`OQ-MODEL-2`->`OQ-8623`/`OQ-8624`). A trailing `\b` closes
+#: it exactly as `_whole_token_re` already required for the plain case: between `tok`'s own
+#: last digit and a following `-`/`/` (both non-word) `\b` is satisfied, so a genuine
+#: compound continuation (`NFR-RATE-13/14`, `W1-1`'s own refusal) is unaffected; between
+#: that same digit and another digit (both `\w`) `\b` fails, so the match is refused rather
+#: than truncated. Isolated and reproduced against `971677e` (the commit row (b) was last
+#: recorded `PASS` at) with only #711's `doc-id.py` diff applied: `noncontiguous=4`,
+#: identical to `HEAD`; the same tree with this one-character fix applied: `noncontiguous=0`.
 def _compound_token_re(tok: str) -> re.Pattern[str]:
-    return re.compile(rf"\b{re.escape(tok)}((?:[-/]\d+)*)")
+    return re.compile(rf"\b{re.escape(tok)}\b((?:[-/]\d+)*)")
 
 
 _CONTINUATION_PART_RE: Final = re.compile(r"([-/])(\d+)")
@@ -6921,30 +6946,6 @@ def migrate(root: Path) -> MigrateResult:
     _discoverable_drafts = [d for d in drafts if not _never_discoverable(d)]
     _exempt_drafts = [d for d in drafts if _never_discoverable(d)]
 
-    import os as _os_dbg
-    if _os_dbg.environ.get("ROWB_DEBUG"):
-        import collections as _collections
-        print("DEBUG total drafts:", len(drafts))
-        print("DEBUG discoverable:", len(_discoverable_drafts))
-        print("DEBUG exempt:", len(_exempt_drafts))
-        _exempt_by_reason = _collections.Counter()
-        for d in _exempt_drafts:
-            if d.materialize == "register_row":
-                _exempt_by_reason["register_row"] += 1
-            else:
-                _exempt_by_reason["dup_old_token"] += 1
-        print("DEBUG exempt by reason:", dict(_exempt_by_reason))
-        _by_materialize = _collections.Counter(d.materialize for d in drafts)
-        print("DEBUG drafts by materialize kind:", dict(_by_materialize))
-        _dup_tokens = {tok: cnt for tok, cnt in _old_token_counts.items() if cnt > 1}
-        print("DEBUG number of distinct old_token values with count>1:", len(_dup_tokens))
-        print("DEBUG sample dup tokens:", list(_dup_tokens.items())[:30])
-        _dup_by_materialize = _collections.Counter()
-        for d in drafts:
-            if d.old_token is not None and _old_token_counts[d.old_token] > 1:
-                _dup_by_materialize[d.materialize] += 1
-        print("DEBUG dup-old-token drafts by materialize kind:", dict(_dup_by_materialize))
-
     start = compute_next(root)
     _assign_numbers(_discoverable_drafts, start)
     _assign_numbers(_exempt_drafts, start + len(_discoverable_drafts))
@@ -7200,12 +7201,8 @@ def migrate(root: Path) -> MigrateResult:
     files_written = [*files_written, *readme_written]
     files_deleted = [*files_deleted, *readme_deleted]
 
-    import os as _os_dbg2
-    _ROWB_DEBUG2 = _os_dbg2.environ.get("ROWB_DEBUG")
     for old_token, claims in id_claims.items():
         canons = {canon for canon, _ in claims}
-        if _ROWB_DEBUG2 and "OVR-11" in old_token:
-            print("DEBUG2 id_claims entry:", repr(old_token), claims, "canons:", canons)
         if len(canons) > 1:
             warnings.append(
                 f"legacy id {old_token!r} is claimed by {len(canons)} records "
@@ -7214,9 +7211,6 @@ def migrate(root: Path) -> MigrateResult:
             )
             continue
         _add_tokens(token_map, token_origins, {old_token: claims[0][0]}, claims[0][1])
-    if _ROWB_DEBUG2:
-        print("DEBUG2 OQ-OVR-11 in token_map:", "OQ-OVR-11" in token_map, token_map.get("OQ-OVR-11"))
-        print("DEBUG2 OQ-OVR-1 in token_map:", "OQ-OVR-1" in token_map, token_map.get("OQ-OVR-1"))
 
     # The split/single fork, and the only place a path token enters the flat map. A source
     # with one destination is unchanged from #672; a source with several never enters it,

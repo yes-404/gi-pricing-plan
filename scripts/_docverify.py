@@ -1764,13 +1764,38 @@ def row_i(snap: Snapshot) -> Row:
 #:   both avoided).
 EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "a": PASS,          # one family per file, zero `none` — the only row that passes today
-    "b": FAIL,          # noncontiguous=4 — REGRESSED again after #711 (task 4's
-                         # sweep-order/compound-citation/redirects PR), between this row's
-                         # first re-recording as PASS (earlier in this same PR's own
-                         # history, when based on #707/#708) and this final re-record
-                         # against #711 (2026-09-04, task 17); unrelated to this PR's own
-                         # diff — flagged to the lead as a genuine new defect, not fixed
-                         # here (out of scope, id-allocation is not this row's file)
+    "b": PASS,          # noncontiguous=0 — FIXED (2026-09-04, W37-6 row (b) fresh
+                         # executor). #711 item 3's `_compound_token_re` (compound-citation
+                         # expansion) dropped the trailing `\b` `_whole_token_re` already
+                         # had between the base token and its optional continuation group,
+                         # so a shorter mapped legacy id (`OQ-OVR-1`) matched as a bare
+                         # prefix of a longer, unrelated, unmapped one that merely starts
+                         # with the same digits (`OQ-OVR-11`, itself correctly excluded
+                         # from `token_map` by the multi-claim guard) — `_expand_compound`
+                         # then returned the mapped value alone and left the unmatched
+                         # trailing digit orphaned onto it: `OQ-OVR-11` -> `OQ-831` + `1` =
+                         # `OQ-8311`, a fabricated id nothing allocated, planted into every
+                         # mirror of that open question and from there into
+                         # `docs/INDEX.md`'s own id column. Six siblings of the same shape
+                         # (`OQ-OVR-12`, `OQ-DATA-11`, `OQ-MODEL-10/11/23/24`, against their
+                         # own shorter mapped prefixes) did the same; `OQ-GOV-8` has no
+                         # shorter same-prefix sibling to collide with and was never
+                         # affected. Fixed by giving `_compound_token_re` the same trailing
+                         # `\b` `_whole_token_re` already had
+                         # (`scripts/doc-id.py::_compound_token_re`); a genuine `-`/`/`
+                         # continuation (`NFR-RATE-13/14`, `W1-1`'s own refusal) is
+                         # unaffected, since digit -> `-`/`/` is a real `\b` transition
+                         # while digit -> digit is not. Isolated and reproduced against
+                         # `971677e` (this row's last recorded `PASS`) with only #711's
+                         # `doc-id.py` diff applied before touching anything else:
+                         # `noncontiguous=4`, identical to `HEAD`; the same tree with this
+                         # one-line fix: `noncontiguous=0`. This entry is edited in the same
+                         # commit as the fix per this table's own rule above ("edited by
+                         # hand, in the same commit as the change that moves a row") —
+                         # noted because the dispatching ruling said this table needed no
+                         # change; verified against the code's own instruction instead,
+                         # since leaving `FAIL` here after a genuine `PASS` would produce a
+                         # SET CHANGE (PROGRESSED) on the next `--verify` run regardless.
     "c": PASS,          # docs/INDEX.md byte-stable against its own renderer — same
                          # unrelated prior-PR progress, re-recorded for the same reason
     "d1": FAIL,         # NT-00

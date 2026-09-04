@@ -5777,3 +5777,57 @@ def test_task4_a_mapped_work_key_followed_by_a_dash_digit_is_a_slice_key_not_a_c
         "W1-1 is a slice key, not W1 continued by a compound sibling — it must be left "
         "whole even though W1 alone is mapped"
     )
+
+
+def test_row_b_a_mapped_token_must_not_swallow_a_longer_unmapped_identifiers_prefix(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """W37-6 row (b)'s #711 regression, isolated and reproduced against `971677e` (the
+    commit row (b) was last recorded `PASS` at) with only #711's `doc-id.py` diff applied:
+    `noncontiguous=4`, identical to `HEAD`.
+
+    `_compound_token_re`, added by #711 item 3 for compound-citation expansion, dropped the
+    trailing `\\b` `_whole_token_re` already had between the base token and its optional
+    continuation group. `\\btok` alone has no boundary to refuse a base token's own trailing
+    digit run continuing straight into more digits with no `-`/`/` separator at all — a
+    digit followed by another digit is never a `\\b` transition — so a *shorter*, mapped
+    legacy id (`OQ-OVR-1` here) matches as a bare PREFIX of a *longer*, unrelated,
+    unmapped one that merely starts with the same digits (`OQ-OVR-11`: two claimants,
+    correctly excluded from `token_map` by the ambiguity guard, exactly the shape the real
+    corpus's `docs/open-questions.md` carries). `_expand_compound` sees no continuation
+    (nothing after the match starts with `-`/`/`) and returns the mapped value alone;
+    `.sub()` leaves the unmatched trailing `1` exactly where it was:
+    `OQ-OVR-11` -> `OQ-831` + `1` = `OQ-8311`, a fabricated id nothing allocated. Planted
+    into every mirror of the open question this run over the real corpus, it became a real
+    `docs/INDEX.md` row and manufactured the four `noncontiguous` gaps between the true
+    discoverable range and six siblings of the same shape (`OQ-OVR-12`, `OQ-DATA-11`,
+    `OQ-MODEL-10`, `OQ-MODEL-11`, `OQ-MODEL-23`, `OQ-MODEL-24`, against their own shorter
+    mapped prefixes `OQ-OVR-1`/`OQ-DATA-1`/`OQ-MODEL-1`/`OQ-MODEL-2`) — never for `OQ-GOV-8`,
+    which has no shorter same-prefix sibling in the corpus to collide with, and stays
+    correctly un-rewritten.
+
+    Broken-input proof, both directions: this must be unchanged with the fix in place, and
+    re-introducing #711's `_compound_token_re` exactly as it shipped (no trailing `\\b`)
+    must turn it into `cites OQ-8311 elsewhere\\n` — a fabricated, un-allocated id.
+    """
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, {"OQ-OVR-1": "OQ-831"}, "cites OQ-OVR-11 elsewhere\n"
+    )
+    assert after == "cites OQ-OVR-11 elsewhere\n", (
+        "OQ-OVR-11 is a longer, unrelated, unmapped identifier that merely starts with "
+        "OQ-OVR-1's own digits — it must be left whole, never truncated to the mapped "
+        "prefix with its own trailing digit orphaned onto it (OQ-8311)"
+    )
+
+
+def test_row_b_a_mapped_token_still_rewrites_a_genuine_compound_after_the_boundary_fix(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The positive control the row (b) boundary fix must not break: a real `-`/`/`
+    continuation is still a boundary `\\b` accepts (digit -> non-word is a real
+    transition), so a genuine compound citation still expands exactly as #711 item 3
+    intended."""
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, dict(_NFR_RATE_MAP), "close NFR-RATE-13/14 now\n"
+    )
+    assert after == "close NFR-775/776 now\n"
