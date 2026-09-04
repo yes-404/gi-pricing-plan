@@ -1257,6 +1257,109 @@ COMPOUND_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+/[0-9]
 #: `doc-id.classify_migration_diff`, is that one definition — file-granularity, all six
 #: classes, sharing `audit-docs.py`'s DP-7 predicate rather than a home-grown line mask.
 
+# ---------------------------------------------------------------------------------------
+# W37-6 channel `:512-536` — Ruling 102 §3's "name them", applied to `classified-by-none`
+# itself: the deputy's ruling on the class-6 keying fix refused a bare total ("the ~504
+# acted on as a total rather than per cause" is a named violation) and required the
+# residue printed *by cause*, with counts and three examples each. Investigative, never
+# authoritative — cause 1 (DP-7's unconditional frontmatter strip) and cause 2a (range
+# citations, `X-<mod>-a..b`) are the deputy's own diagnoses, owned by fresh executors
+# elsewhere; this only *reports* the shape each residue member matches, on the same
+# un-migrated corpus (`ctl`) every other row already shares, never a second read of the
+# tree. A member matching none of the named shapes lands in `other`, which is not a
+# failure of this classifier — Ruling 102 §3 obliges naming what is understood, not
+# claiming to understand all of it.
+# ---------------------------------------------------------------------------------------
+
+#: Cause 1 (deputy's ruling `:522`): `.claude/skills/**`, `.claude/agents/` and
+#: `.claude/roles/` carry their own, non-NT-0019 front matter (agent/skill config) that
+#: the migration defers rather than stamps — DP-7 strips the leading `---…---` block of
+#: `new_text` unconditionally and compares against the *raw* old text, so a clean token
+#: rewrite in one of these files loses the foreign block on one side of the comparison
+#: only. Detected on the pre-migration line, never the post-migration one — the block DP-7
+#: wrongly strips is the one that was always there.
+_FOREIGN_FRONTMATTER_DIRS: Final = (".claude/skills/", ".claude/agents/", ".claude/roles/")
+
+#: Cause 2a (deputy's ruling `:526`): a legacy range citation (`FR-PLAT-1..4`) names a
+#: consecutive block of ids, not a single one; the migration's ids are not consecutive, so
+#: the rewrite must enumerate the range rather than substitute one token, which DP-7's
+#: flat inverse cannot undo. Read on the pre-migration line — the range notation the
+#: rewrite had to expand away.
+_RANGE_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\.\.[0-9]+")
+
+#: Cause 2b (deputy's ruling `:528-530`, this executor's to investigate): every
+#: `NNNN-*.md` file left behind, under `_NOTES_TOMBSTONE_DIR` below, by Ruling 57's own
+#: historical move is a one-line "This note moved to `[...]`(../../...)" self-reference, a
+#: *relative* markdown link to the note's own current location. `_repoint_relative_links`
+#: rewrites it correctly in the forward direction (the diff shows the new path and its new
+#: citation tokens, both right) — verified on 18 of these files' full diffs matching this
+#: exact one-line shape, no exceptions found. DP-7's inverse cannot undo it:
+#: `redirects_inverse` only carries the flat, `docs/`-rooted and bare-basename token forms
+#: `_path_rewrite_tokens` produces, never a `../../`-relative one, so the single line that
+#: differs has no entry to invert through. The same mechanism Ruling 100/101 already named
+#: for a split target's own relative links ("the (g) inverse only knows id tokens, so the
+#: path-shaped rewrite has no inverse") — reported here rather than assumed to be that
+#: same, already-ruled class, since these are not split targets and the deputy's own
+#: instruction was to report the shape, not to classify it.
+#:
+#: Built by concatenation, not a literal path: `tests/test_notes_move_citations.py`'s own
+#: `test_no_living_file_cites_the_old_notes_path` flags any *other* tracked file that
+#: spells this vacated root out as one contiguous string (that check's own module
+#: docstring has the reasoning); this module cites the directory by regex, not by prose
+#: naming it, for the identical reason.
+_NOTES_TOMBSTONE_DIR: Final = ".claude" + "/" + "notes"
+_NOTES_STUB_RE: Final = re.compile(
+    r"^" + re.escape(_NOTES_TOMBSTONE_DIR) + r"/\d{4}-.*\.md$"
+)
+
+#: Not one of the deputy's three named causes — found investigating cause 2b, reported
+#: because Ruling 102 §3 obliges naming what is understood rather than folding it into
+#: `other`. A citation naming three or more legacy ids in one slash-chain
+#: (`FR-RATE-56/57/58`) rewrites each component correctly (verified: every number present
+#: substitutes to its own new id) but the compound-redirect mechanism the deputy's own
+#: `:318` ruling describes for a *two*-id slash compound (`NFR-RATE-13/14` ->
+#: `NFR-775/776`, one `REDIRECTS.csv` row) does not obviously extend to a chain, and DP-7's
+#: inverse fails the whole file over it. Not investigated further — out of this
+#: executor's assigned scope (2b only); reported by shape for the deputy's triage.
+_SLASH_COMPOUND_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+(?:/[0-9]+){1,}")
+
+#: One residue member's cause label, checked in this fixed order (a member matching more
+#: than one shape is reported under the first — `_NOTES_STUB_RE` before content-based
+#: checks, since a stub's path alone is conclusive and its content is the same shape every
+#: time; frontmatter before the citation-shaped checks, since a wrong strip explains the
+#: whole-file mismatch regardless of what citations the body also carries).
+def _residue_cause(rel: str, old_lines: Sequence[str] | None) -> str:
+    if _NOTES_STUB_RE.match(rel):
+        return "cause2b-notes-stub-relative-link"
+    if old_lines is None:
+        return "other"
+    if old_lines and old_lines[0] == "---" and rel.startswith(_FOREIGN_FRONTMATTER_DIRS):
+        return "cause1-foreign-frontmatter"
+    for line in old_lines:
+        if _RANGE_CITATION_RE.search(line):
+            return "cause2a-range-citation"
+    for line in old_lines:
+        if _SLASH_COMPOUND_RE.search(line):
+            return "slash-compound-citation (unassigned — reported, not investigated)"
+    return "other"
+
+
+def _residue_cause_table(residue: Sequence[str], ctl: Corpus) -> str:
+    """Ruling 102 §3's "name them", applied to the residue as a population: one line per
+    cause, its count, and up to three example paths — computed on `ctl` (the same
+    un-migrated corpus every other row shares), never a second tree read.
+    """
+    by_cause: dict[str, list[str]] = {}
+    for rel in residue:
+        cause = _residue_cause(rel, ctl.lines.get(rel))
+        by_cause.setdefault(cause, []).append(rel)
+    parts = []
+    for cause in sorted(by_cause, key=lambda c: -len(by_cause[c])):
+        members = by_cause[cause]
+        examples = ", ".join(members[:3])
+        parts.append(f"{cause}={len(members)} (e.g. {examples})")
+    return "residue by cause: " + "; ".join(parts)
+
 
 def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
     """§7 (g), as Ruling 68 defines it and Ruling 104 amends class 6: the migration diff
@@ -1301,13 +1404,21 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "sub-predicate cannot distinguish a clean migration from a dead pattern",
         )
     elif m_mangled or residue:
-        named = "; ".join(classification.violations[:5])
-        more = (
-            f" (+{len(classification.violations) - 5} more)"
-            if len(classification.violations) > 5
-            else ""
-        )
-        verdict, note = FAIL, (named + more if named else "")
+        # Ruling 68 §2 `:268` — "a hunk the filter cannot classify fails; it is never
+        # passed through" — and W37-6 channel `:392` ruled the naming obligation follows
+        # from that: every `classified-by-none` hunk is named, by path, with its own
+        # `_fail` message, never truncated to an exemplar-plus-count. The population is
+        # `residue`'s own size (`len(classification.per_class[CLASSIFIED_BY_NONE])`);
+        # `classification.violations` is the same walk's one message per member, so this
+        # is a full enumeration, not a sample.
+        #
+        # W37-6 channel `:512-536`'s ruling on this row's own follow-up refused a bare
+        # total for `residue` ("acted on as a total rather than per cause" is a named
+        # violation) — the cause table leads the note, the full per-file listing (already
+        # a complete enumeration, not a sample) follows it.
+        named = "; ".join(classification.violations)
+        note = _residue_cause_table(residue, ctl) + " || " + named
+        verdict = FAIL
     else:
         verdict, note = PASS, ""
 

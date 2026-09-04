@@ -389,6 +389,126 @@ def test_class6_a_hand_edited_readme_fails_and_names_the_file(
     assert "docs/INDEX.md" in classification.per_class["6-generated-artifact"]
 
 
+def _migrate_module_with_source_mutation(
+    tmp_path: pathlib.Path, old: str, new: str, *, name: str
+) -> types.ModuleType:
+    """Like `_module_with_source_mutations`, but for a mutation exercised through a
+    *full* `migrate()` run rather than one narrow discovery function.
+
+    `migrate()` loads several sibling scripts (`register-lint.py`, `audit-docs.py`,
+    `doc-index.py`, `_docid.py`) from its own `REPO_ROOT` — the scratch tree the mutated
+    module is rooted at, per `Path(__file__).resolve().parent.parent` — which
+    `_module_with_source_mutations`' narrower copy (`docs/_templates` only, sufficient for
+    the discovery-only mutations every other caller exercises) does not carry. This copies
+    the whole real `scripts/` tree first, then overwrites `doc-id.py` with the mutated
+    source, so a full `migrate()` run has every sibling script it loads.
+    """
+    import shutil
+
+    source = DOC_ID_SCRIPT_PATH.read_text(encoding="utf-8")
+    assert source.count(old) == 1, (
+        f"the line this mutation edits occurs {source.count(old)} time(s) in "
+        f"{DOC_ID_SCRIPT_PATH.name}, not once -- re-derive the mutation from the rule "
+        "it proves rather than loosening the match"
+    )
+    source = source.replace(old, new, 1)
+    root = tmp_path / name
+    shutil.copytree(ROOT / "scripts", root / "scripts")
+    shutil.copytree(ROOT / "docs" / "_templates", root / "docs" / "_templates")
+    (root / "scripts" / "doc-id.py").write_text(source, encoding="utf-8")
+    return _load_by_path(
+        f"_doc_id_mutation_{name}", root / "scripts" / "doc-id.py", missing_module_name="doc_id"
+    )
+
+
+# ---------------------------------------------------------------------------------------
+# W37-6 channel `:394-417`: `_try_class6` used to key class 6 on reproducibility alone —
+# content equality between this run's own output and an independent second `migrate()`
+# run — and every *deterministic* write is reproducible, including a deterministic
+# defect. The fix requires membership in the run's own recorded generated-output set
+# (`MigrateResult.generated_paths`) first; content equality is kept only as a
+# second condition, applied within that set. Proven here on a test double that makes the
+# citation sweep's own write deterministically wrong, never on a hand-typed stand-in for
+# what the sweep does.
+# ---------------------------------------------------------------------------------------
+
+#: The one-occurrence anchor this proof mutates: `_rewrite_citations`' own write of a
+#: changed file's body. Appending a fixed, wrong line here — rather than corrupting the
+#: comparison the classifier makes — is what keeps the corruption in the *migration*,
+#: the shape Ruling 94's mutate-the-producer precedent (`_STAMP_SKIP_WITH_SLICE` above)
+#: already established for this file's broken-input proofs.
+_CITATION_SWEEP_WRITE = (
+    '            path.write_text(text, encoding="utf-8")\n'
+    "            changed.append(rel)"
+)
+_CITATION_SWEEP_WRITE_CORRUPTED = (
+    "            path.write_text(\n"
+    '                text + "\\nCORRUPTED-BY-TEST-DOUBLE\\n", encoding="utf-8"\n'
+    "            )\n"
+    "            changed.append(rel)"
+)
+
+
+def test_class6_keys_on_the_generated_set_not_reproducibility(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """W37-6 channel `:402`'s broken-input proof, verbatim: "a fixture whose body the
+    migration deterministically corrupts (add one wrong rewrite in a test double) must
+    land in `classified-by-none`, not class 6."
+
+    The mutated citation sweep appends the identical wrong line to every file it rewrites,
+    on *both* the primary run and `_try_class6`'s own independent second run — so the
+    corrupted body is byte-for-byte reproducible, exactly like a genuine generated
+    artifact. `docs/specs/00-overview.md` is an ordinary spec the real fixture corpus's
+    citation sweep rewrites (asserted below, so this proof fails loudly rather than
+    silently testing nothing if that ever stops being true) and is never a member of the
+    generated-output set — no README, `INDEX.md`, split index or `REDIRECTS.csv` writer
+    touches it. Reproducibility alone therefore used to explain it as class 6; the fix
+    must refuse it on set membership before content equality is ever consulted.
+    """
+    mutated = _migrate_module_with_source_mutation(
+        tmp_path,
+        _CITATION_SWEEP_WRITE,
+        _CITATION_SWEEP_WRITE_CORRUPTED,
+        name="rowg-class6-corruption",
+    )
+    mutated._docid._VENDORED_SKILLS = mutated._docid._VENDORED_SKILLS | {
+        "vendored-example-skill"
+    }
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+
+    result = mutated.migrate(new_root)
+
+    target = "docs/specs/00-overview.md"
+    assert target in result.files_written, (
+        "fixture assumption: the real corpus's citation sweep must actually rewrite this "
+        "file, or the corruption below never reaches it and this proof tests nothing"
+    )
+    assert target not in result.generated_paths, (
+        "fixture assumption: an ordinary spec file must not be in the run's own recorded "
+        "generated-output set, or this proof tests nothing"
+    )
+    corrupted_body = (new_root / target).read_text(encoding="utf-8")
+    assert "CORRUPTED-BY-TEST-DOUBLE" in corrupted_body, (
+        "fixture assumption: the mutation must actually have touched this file's body"
+    )
+
+    classification = mutated.classify_migration_diff(old_root, new_root)
+
+    assert target not in classification.per_class["6-generated-artifact"], (
+        "a deterministically-corrupted ordinary file must not pass as a generated "
+        "artifact merely because an independent second run reproduces the same wrong "
+        "content — Ruling 104 §2's property is the generator, not reproducibility"
+    )
+    assert target in classification.per_class[mutated.CLASSIFIED_BY_NONE]
+    assert any(target in v for v in classification.violations), classification.violations
+    # The positive case is unaffected: a real class-6 member this same corrupted run
+    # regenerated whole (never touched by the citation sweep this mutation edits, since
+    # `docs/INDEX.md` is written after the sweep runs) still passes.
+    assert "docs/INDEX.md" in classification.per_class["6-generated-artifact"]
+
+
 # ---------------------------------------------------------------------------------------
 # Task 4 item 4 — the class-4 link-repoint fix (W37-6 channel `:407-413`): an id-less
 # move's own `old_path`/`new_path` REDIRECTS.csv row records that the file moved, but
