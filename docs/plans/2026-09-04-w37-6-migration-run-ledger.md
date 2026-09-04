@@ -871,3 +871,17 @@ empirically rather than guessing, since a mistake would affect every executor's 
 All three approved after independent verification, not rubber-stamped. Original exclusions
 work (lockfiles/fixtures/pycache) already committed (`11256c8`), tests green, gate queued
 behind other executors' slots.
+
+## 2026-09-04 — correction to point 2: one lock namespace, announced, not separate
+
+Deputy caught a real problem in what I'd approved: a *separate* lock namespace for the
+in-suite `flock` (my earlier fix for exec-excl's deadlock finding) would let three wrapped
+gates and three unwrapped ones run at once — six, not three — since each namespace counts
+its own independently, defeating the budget. **Ruled: one namespace, announced.** The
+`dev-commands` wrapper exports `GIP_GATE_SLOT=/tmp/slots/gate-N` (`GIP_VERIFY_SLOT=…` for
+verify) at the moment it takes the lock, before execing the command; the conftest/verify
+enforcement acquires from the same set only if that variable is unset — a wrapped run never
+double-locks, a bare run is budgeted, the total stays three either way. Relayed to
+`exec-excl`, who also owns adding the export lines to the wrapper in the same PR (the
+announcement has to exist before the suite can check for it). db-proof's DB-exclusivity
+proof is unaffected by this correction — that task is closed.
