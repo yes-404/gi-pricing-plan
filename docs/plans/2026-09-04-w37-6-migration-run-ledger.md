@@ -216,6 +216,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #736 | docs(plans): ledger continuation (d4/d5 correction, h1 real figure, pgrep self-match wait-loop fix) | `2a9ed29` | Own commits carry the local `--verify` UNCHANGED: 13 confirmation and the pgrep-fix positive control (run live, not just described). `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`0937628`), confirmed live via backgrounded watch. |
 | #738 | docs(plans): ledger — #735/#736 merges, pgrep incident, h1 full breakdown, #739 close+correction | `ece7952` | Own commits carry: the 63-zombie-shell incident narrative, h1's 8-class breakdown (sum reconciled to 8368), and the #739 close-then-corrected-reasoning narrative. `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`13b2690`), confirmed live via backgrounded watch. |
 | #741 | fix(scripts): every audit-docs.py check's fail() message carries its own check-N: prefix | `124d6bb` | Real predicate-code change (not docs-only) — task #43. `history-policy`/`docs`/`python` all `success` on the exact head SHA (`3bc7216`), confirmed live via backgrounded watch. Zero `unclassified` on h1's migrated-tree breakdown after this landed. |
+| #742 | docs(plans): ledger — #738 merge, checkpoint-1 refresh, h1 breakdown/singleton naming | `4b57a40` | Own commits refresh d1/d6/d7/d9-d13/g rows to real current state, add the Acceptance Standard heading, name h1's singletons by check number. `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`fc8a95c`), confirmed live via backgrounded watch. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1733,3 +1734,26 @@ executor-30-2 both messaged directly with the corrected framing and instruction.
 
 **Standing rule, new**: every PR any team member opens is named in the lead's next report
 to the deputy with its base sha and what it implements, whether dispatched or not.
+
+## 2026-09-04 — header-drift incident and roster cleanup
+
+**Header drift.** The lead's own dated `to-deputy.md` headers drifted an hour, in two
+separate ways caught on the same afternoon: first, a manual BST estimate that ran an hour
+fast (six headers, "PR #740 opened" through "#741 merged", corrected to their real values
+from file mtimes); then `date '+%H:%M BST'` itself — a bare format string that prints raw
+UTC with the literal letters "BST" appended, never converting timezone — used for the
+"corrected" headers and the one after, running an hour *slow* this time (three more
+headers, plus the lead's own correction entry, fixed the same way). The working command is
+`TZ=Europe/London date '+%H:%M %Z'`, read in the same command that writes the header, no
+exceptions — used for every entry from this point.
+
+**Roster cleanup.** "Released" for `alloc` was a `SendMessage` only, never a `TaskStop` —
+the deputy's `ps` check caught the process still resident. Census
+(`ps -eo pid,args | grep -oE -- '--agent-id [A-Za-z0-9-]+'`) found ten teammates resident on
+closed subjects: `alloc`, `ci-watcher-734`, `db-proof`, `exec-dp7`, `exec-excl`, `rowe2`,
+`ruling106-impl`, `triage-docs`, `triage-other` (all PRs merged, subjects closed) and
+`verify105` (subject superseded, no pending dispatch) — all stopped. One entry, `logfig`,
+belongs to a different session entirely (`--parent-session-id c8680303-...`) and was
+correctly left untouched — a shared-machine false positive the census predicate does not
+distinguish on its own; confirmed by reading the process's own parent-session argument
+before acting.
