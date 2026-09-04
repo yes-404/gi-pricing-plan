@@ -2663,54 +2663,50 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # id used as an illustrative worked example rather than a fake
                          # one — row-g's/#733's code, surfaced by `origin/main` drift,
                          # flagged rather than fixed here, out of this row's own scope).
-    "d8": DISCLOSE,     # workstream/slice id — RECLASSIFIED FAIL -> DISCLOSE (2026-09-04
-                         # ruling, task #30, carrying PR #739/verify105's task-key-joins-
-                         # disclosure diff plus the left-bound fix and residual dispositions
-                         # this same PR adds). The prior FAIL verdict had two fatal
-                         # components, and both were measured wrong:
+    "d8": DISCLOSE,     # workstream/slice id — re-recorded FAIL -> DISCLOSE, 2026-09-04.
+                         # Both fatal components now measure zero on a real
+                         # `migrate()`-mutated tree; `_d8_verdict` falls through to its own
+                         # DISCLOSE branch (Ruling 105 §A's third alias class), printing the
+                         # slice-key and task-key counts on their own line.
                          #
-                         # **Task keys** (`\bW[0-9]+[a-z]?-[0-9]+-[0-9]+\b`, now anchored on
-                         # the shared `_docid.TOKEN_LEFT_BOUND` rather than a private copy):
-                         # most of the raw population under the OLD wide guard was the tail
-                         # of an already-classified, different id family —
-                         # `F-W<n>-<m>-<k>` (`_FINDING_ID`, `audit-docs.py`) — matching from
-                         # its second character, since a bare `\b` is satisfied between a
-                         # hyphen and the next token (Ruling 67 §2 Part 1's rule, from the
-                         # left edge — and #740's landed narrowing of that same guard, which
-                         # this row reads by name rather than a second copy). Ruling #26
-                         # (2026-09-04, carried from #739) also moves the class itself:
-                         # NT-0019 §1.2 has `WK` and `SL` and nothing below
-                         # a slice, so a genuine task key has no target by design — the same
-                         # ground as a slice key, not the mangling/token_map class a bare
-                         # work key is — and now joins the disclosed component rather than
-                         # staying fatal.
+                         # **Task keys** are a disclosed component, not a fatal one — Ruling
+                         # #26 (`to-lead.md:498-510`), reaffirmed against my own later
+                         # entries by the correction at `to-lead.md:1298-1306`: "no family
+                         # exists for a task (NT-0019 §1.2 has `WK` and `SL`, nothing below a
+                         # slice), so a task key has no target by the standard's design — the
+                         # same ground as slice keys". That correction's violation line reads
+                         # "task keys treated as fatal anywhere after this". Their raw count
+                         # also fell once the patterns took `_docid.TOKEN_LEFT_BOUND` — the
+                         # standard's own narrowed left-bound guard (#740, Ruling 67 §2),
+                         # shared with row (d)'s `LEGACY_FORM_PATTERNS` rather than a private
+                         # copy — since most were the tail of a different, already-classified
+                         # id family (the finding form `F-W<n>-<m>-<k>`, `audit-docs.py`'s
+                         # `_FINDING_ID`) matched from its second character, a bare `\b` being
+                         # satisfied between a hyphen and the next token. Re-measured under
+                         # the narrowed guard (2026-09-05, task-key figure verified against a
+                         # real `migrate()`-mutated tree, not carried over from the earlier
+                         # wide-guard count): see the ledger entry for this row's exact
+                         # before/after numbers.
                          #
-                         # **Bare work-key remainders** (`\bW[0-9]+[a-z]?\b(?!-[0-9])`, same shared
-                         # `_docid.TOKEN_LEFT_BOUND`): measured directly, every real occurrence was
-                         # one of two non-defect classes — an illustrative naming-system
-                         # example (`W32a`/`W6c`, never a real historical id, now fenced
-                         # under Ruling 103 §5.1 in `.claude/skills/close-workstream/
-                         # SKILL.md`, `docs/audit/closure-records.md` and `docs/plans/2026-
-                         # 08-22-w6b-slice-map.md`) or this instrument's own test fixture
-                         # data (class 3c, `_docid.TEST_MODULE_EXCLUSIONS` — added in this
-                         # PR since it was not yet on `main`; `tests/test_register_owed.py`
-                         # and `backend/tests/test_demo_guide.py` are NOT eligible for that
-                         # tuple, per exec-ids' own reasoning that a fixture testing generic
-                         # matching logic is respelled instead, not exempted — done here for
-                         # both). Zero real `token_map` defects found; the prior comment's
-                         # "every Work mints a `WK-`, so an unmapped one is a real
-                         # `token_map` defect" is corrected to a narrower, measured claim
-                         # above the `_D8_*` patterns — a bare key CAN still be a real
-                         # defect, it is not NECESSARILY one, which is why the alternative
-                         # stays fatal on any *remaining* occurrence rather than trying to
-                         # tell the two apart at measurement time.
+                         # **The bare work-key remainder** is still fatal on any occurrence
+                         # (a `token_map` defect, not this alias class) and now reads zero.
+                         # The last one was this file's own prior version of this comment,
+                         # which spelled two illustrative keys as literals and so matched
+                         # itself — `scripts/_docverify.py` is not in
+                         # `_docid.TEST_MODULE_EXCLUSIONS` and has no markdown fence to hide
+                         # behind. Dispositioned 3b per `to-lead.md:1243` ("respelled to a
+                         # schematic that cannot match"): illustrative keys are written
+                         # `W<n>` / `W<n><x>` here and must stay schematic. The real-corpus
+                         # exhibits of that shape are fenced under Ruling 103 §5.1 in
+                         # `.claude/skills/close-workstream/SKILL.md`,
+                         # `docs/audit/closure-records.md` and the w6b slice-map plan; the
+                         # instrument's own fixtures are class 3c.
                          #
-                         # With both fatal components at zero, `_d8_verdict` falls through
-                         # to its own DISCLOSE branch (Ruling 105 §A's third alias class),
-                         # printing slice-key and task-key counts on their own line —
-                         # verified directly against a real `migrate()`-mutated tree, not
-                         # asserted: `RECLASSIFIED: (d8) FAIL -> DISCLOSE`, the only row this
-                         # PR's own `--verify` run moved.
+                         # A bare key CAN still be a real defect and is not NECESSARILY one —
+                         # which is why the alternative stays fatal on any remaining
+                         # occurrence rather than trying to tell the two apart at measurement
+                         # time. The earlier comment's "every Work mints a `WK-`, so an
+                         # unmapped one is necessarily a real defect" was false on the tree.
     "d9": FAIL,         # docs/plans/2026- — real file citations remain unrewritten
     "d10": FAIL,        # docs/audit/ — real file citations remain unrewritten
     "d11": FAIL,        # docs/notes/ — small fatal residual after the wrap/dir-token fix

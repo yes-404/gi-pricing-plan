@@ -1674,8 +1674,9 @@ def test_an_alternative_with_a_larger_occurrence_count_but_the_same_values_is_no
 
 
 # =========================================================================================
-# (d8) — Ruling 105 §A's third alias class: slice keys disclosed, task keys and the bare
-# work-key remainder stay fatal, creation stays REGRESSION regardless of the disclosure
+# (d8) — Ruling 105 §A's third alias class: slice keys AND task keys disclosed (task keys
+# joined by Ruling #26, `to-lead.md:498-510`, reaffirmed at `to-lead.md:1298-1306`), only
+# the bare work-key remainder stays fatal, creation stays REGRESSION despite the disclosure
 # =========================================================================================
 
 
@@ -1687,22 +1688,35 @@ def test_d8_slice_key_alone_is_disclosed(dv: Any, tmp_path: pathlib.Path) -> Non
     row = _d_rows(dv, _snapshot(dv, tmp_path / "d8slice", migrated, control))["d8"]
     assert row.verdict == dv.DISCLOSE
     assert row.fatal is False
-    assert "slice-key population disclosed" in row.note
+    assert "slice-key and task-key population disclosed" in row.note
     assert "owner W37-11" in row.note
 
 
-def test_d8_task_key_stays_fatal_even_though_slice_keys_are_disclosed(
+def test_d8_task_key_is_disclosed_alongside_the_slice_key(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    """A three-segment task key on the same row as a clean slice key: the task key alone
-    must fail the row — NT-0019 names no live citation of that shape."""
+    """A three-segment task key on the same row as a clean slice key: it joins the
+    DISCLOSED component and is counted on its own line, rather than failing the row.
+
+    Ruling #26 (`to-lead.md:498-510`), reaffirmed against the decision-maker's own two
+    later entries by the correction at `to-lead.md:1298-1306`: *"no family exists for a
+    task (NT-0019 §1.2 has `WK` and `SL`, nothing below a slice), so a task key has no
+    target by the standard's design — the same ground as slice keys."* That correction
+    also states the fatal set positively — *"The fatal component of d8 is therefore the
+    bare work-key remainder only ... plus creation"* — and its violation line reads
+    *"task keys treated as fatal anywhere after this"*.
+
+    This test previously asserted the opposite (`..._task_key_stays_fatal_...`), written
+    against the superseded 19:xxZ instruction; the counts, not just the verdict, are
+    asserted here so the disclosure cannot silently degrade into an unreported skip."""
     migrated = {"docs/a.md": "see W11-1 and also W11-1-2\n"}
     control = {"docs/a.md": "see W11-1 and also W11-1-2\n"}
     row = _d_rows(dv, _snapshot(dv, tmp_path / "d8task", migrated, control))["d8"]
-    assert row.verdict == dv.FAIL
-    assert row.fatal
-    assert "task key(s)" in row.note
-    assert "expected 0 outside fixtures" in row.note
+    assert row.verdict == dv.DISCLOSE
+    assert row.fatal is False
+    assert "slice-key and task-key population disclosed" in row.note
+    assert "task-key 1 line(s) / 1 file(s)" in row.note
+    assert "slice-key 1 line(s) / 1 file(s)" in row.note
 
 
 def test_d8_bare_work_key_remainder_stays_fatal(dv: Any, tmp_path: pathlib.Path) -> None:
