@@ -990,24 +990,24 @@ def test_d6_anchor_does_not_trip_on_a_correctly_migrated_five_digit_id(
     """The peer executor's finding, folded into this ruling's follow-up (same file).
 
     `ADR-0[0-9]{3}` with no trailing anchor reads the first three of a five-digit padded
-    id's four post-hyphen digits as a hit — `ADR-00008` (`_docid.PAD_WIDTH` = 5) contains
-    `ADR-0000`. The trailing `\\b` this fix adds is the same device `\\bF[0-9]{2}\\b` already
+    id's four post-hyphen digits as a hit — `ADR-00999` (`_docid.PAD_WIDTH` = 5) contains
+    `ADR-0099`. The trailing `\\b` this fix adds is the same device `\\bF[0-9]{2}\\b` already
     uses for its own boundary. Red-then-green on two distinct inputs: a genuinely
     un-migrated 4-digit legacy citation must still trip the row; a correctly-migrated
     5-digit citation must not.
 
-    `ADR-8` rather than a real ADR, deliberately: only `ADR-1`..`6` are allocated, and this
+    `ADR-999` rather than a real ADR, deliberately: highest allocated is `ADR-10`, and this
     file is inside the corpus row (e) scans, so a real number here would make this fixture a
     genuine `NT-0019` §7(e) violation — the same self-counting shape `RL-09999`/`PL-09998`
     above already guard against.
     """
-    migrated_ok = {"docs/a.md": "see ADR-00008 for the decision\n"}
+    migrated_ok = {"docs/a.md": "see ADR-00999 for the decision\n"}
     row_ok = _d_rows(dv, _snapshot(dv, tmp_path / "d6ok", migrated_ok, _CLEAN))["d6"]
     assert row_ok.migrated.startswith("0 line"), (
         "a correctly-migrated five-digit id must not be read as a legacy citation"
     )
 
-    migrated_bad = {"docs/a.md": "see ADR-0008 for the decision\n"}
+    migrated_bad = {"docs/a.md": "see ADR-0999 for the decision\n"}
     row_bad = _d_rows(dv, _snapshot(dv, tmp_path / "d6bad", migrated_bad, _CLEAN))["d6"]
     assert not row_bad.migrated.startswith("0 line"), (
         "a genuinely un-migrated 4-digit legacy citation must still trip the row"

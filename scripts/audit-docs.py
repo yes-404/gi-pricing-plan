@@ -221,15 +221,14 @@ _OQ_ROW = re.compile(r"\| (?:~~)?\*\*(" + _OQ_ID_BODY + r")\*\*")
 #: An ADR citation. Pre-migration files are `docs/adr/0001-*.md` cited `ADR-0001`;
 #: post-migration they are `docs/adrs/ADR-00004-*.md` cited `ADR-4` (NT-0019 D6 — citations
 #: unpadded, filenames padded to five). The old `ADR-(\d{4})` pattern reads the *first four*
-#: digits of a five-digit padded id, so `ADR-00007` was parsed as a citation of `ADR-0000`
-#: and check 5 failed with "ADR-0000 referenced but no file exists" — a real-looking failure
-#: manufactured entirely by the width of the pattern. Matching `0*(\d+)` with a boundary and
-#: comparing **integers** is width-agnostic in both directions. **`ADR-7` rather than a real
-#: ADR**, deliberately: only `ADR-1`…`6` are allocated, and citing a real one here would
-#: itself be an `NT-0019` §7(e) violation (Ruling 103's four conjuncts) — this comment
-#: commenting on its own input. Any unallocated id preserves the illustration exactly, since
-#: every one-digit id pads to `0000<n>` and the mis-read prefix is the same four leading
-#: zeros regardless of `<n>`.
+#: digits of a five-digit padded id, so `ADR-00999` was parsed as a citation of
+#: `ADR-0099` and check 5 failed with "ADR-0099 referenced but no file exists" — a
+#: real-looking failure manufactured entirely by the width of the pattern. Matching
+#: `0*(\d+)` with a boundary and comparing **integers** is width-agnostic in both
+#: directions. **`ADR-999` rather than a real ADR**, deliberately: highest allocated is
+#: `ADR-10`, and citing a real one here would itself be an `NT-0019` §7(e) violation
+#: (Ruling 103's four conjuncts) — this comment commenting on its own input, the same
+#: shape §5.5 already fixed in this row's own test fixtures (`RL-09999`/`PL-09998`).
 #: The `[1-9]` first digit is not cosmetic: with `0*(\d+)` the pattern matches the literal
 #: text `ADR-0[0-9]{3}` — NT-0019 §7(d)'s own grep pattern, written in prose — as a
 #: citation of "ADR-0", and check 5 then fails on a document that cites no ADR at all.

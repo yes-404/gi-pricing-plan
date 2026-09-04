@@ -659,16 +659,15 @@ def row_c(snap: Snapshot) -> Row:
 #: ruled but not yet carried here**. `ADR-0[0-9]{3}` carries an added trailing `\b`. Without
 #: it, the alternative has no anchor on either side of its digit run, so it matches as a
 #: strict PREFIX of any correctly-migrated five-digit id (`_docid.PAD_WIDTH`):
-#: `ADR-0[0-9]{3}` reads the first three of `ADR-00008`'s four post-hyphen digits and calls
+#: `ADR-0[0-9]{3}` reads the first three of `ADR-00999`'s four post-hyphen digits and calls
 #: it a hit — the same token-boundary class Ruling 102 §2 row (g) named for the migration
-#: rewriter, but here inside the verify instrument's own predicate. **`ADR-8` rather than a
-#: real ADR**, deliberately, and not cosmetic: only `ADR-1`…`6` are allocated, so a real
-#: number here would itself be a row (e) violation — the instrument commenting on its
-#: own input and tripping the row it describes, the same shape §5.5 found in this row's own
-#: test fixtures (`RL-09999`/`PL-09998` in `tests/test_doc_id_verify.py`, above the
-#: allocated range for the same reason). Any id past the allocated range preserves the
-#: illustration exactly, because every one-digit id pads to `0000<n>` and the mis-read
-#: prefix is the same four leading zeros regardless of `<n>`.
+#: rewriter, but here inside the verify instrument's own predicate. **`ADR-999` rather
+#: than a real ADR**, deliberately, and not cosmetic: highest allocated is `ADR-10`
+#: (`grep -oP '^\| ADR-\K[0-9]+' docs/INDEX.md | sort -n | tail -1` on the migrated
+#: tree), so a real number here would itself be a row (e) violation — the instrument
+#: commenting on its own input and tripping the row it describes, the same shape §5.5
+#: found in this row's own test fixtures (`RL-09999`/`PL-09998` in
+#: `tests/test_doc_id_verify.py`, above the allocated range for the same reason).
 #: **Ruling 67 §2 Part 1
 #: already rules this exact requirement for (d)**: *"every alternative in (d) must match a
 #: COMPLETE legacy identifier or path, never a proper prefix of one"* — found there against
