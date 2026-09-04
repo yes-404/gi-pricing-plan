@@ -327,3 +327,29 @@ one file. Not actioned here — belongs to whichever executor next touches class
 Gate: ruff/mypy/lint-imports/audit-docs.py clean, 285 passed/1 skipped, two new
 broken-input tests (cause3, cause4, negative control on `W6a`). `ci-watcher-720` dispatched;
 merges on its green report.
+
+## 2026-09-04 — concurrency budget, final form: thread-cap env vars, gate slots 3 / verify slots 2
+
+Deputy's own re-read confirmed the prior entry's correction (no duplicate sessions; that
+rule is withdrawn) and, checking by real binary the same way, measured the actual driver
+precisely: inside one gate's `pytest` process — 98 threads the suite's own Python pools
+(expected), **16 `tokio-rt-worker` + 16 `async-executor-`** (Polars/DuckDB, sized to
+`nproc`) plus jemalloc/Polars threads, **no thread-cap variable set** in the process
+environment (`OMP_*`/`POLARS_MAX_THREADS`/`RAYON_NUM_THREADS`/`TOKIO_WORKER_THREADS` all
+absent) — every native runtime assumed it owned the box.
+
+**Ruled and actioned 11:1xZ:**
+1. `POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4
+   OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4` exported before every gate and `--verify` run.
+   Written into `.claude/skills/dev-commands/SKILL.md` (this session, commit `5d39fb7` on
+   this branch) with the measurement as its reason, `Verified` date refreshed.
+2. Gate slots **3** (was 4), verify slots **2** (unchanged) — `/tmp/slots/gate-{1,2,3}`,
+   `/tmp/slots/verify-{1,2}`.
+3. All 8 live executors re-messaged with both changes; the three in-flight uncapped gates
+   (h2b, verify105, rowe2) told to finish rather than restart (sunk cost — 37–45 min in).
+4. Efficiency line now carries **real `pytest` binaries running**, counted by
+   `ps -eo pid,args | grep '[/]\.venv/bin/pytest'` (never a bare string match) — at 11:16Z:
+   **4** (`wt-h2b`, `wt-r105-ruling105`, `wt-rowe2`, `wt-alloc` — the last a `--collect-only`,
+   near-zero cost), **load 62.65/58.28/50.16 on 16 cores**, still climbing (the three
+   uncapped gates have not yet finished). Re-measure once they exit and the cap is live for
+   whatever runs next.
