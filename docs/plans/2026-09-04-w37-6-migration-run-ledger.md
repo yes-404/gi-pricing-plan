@@ -743,3 +743,10 @@ files in this branch's diff, all 5 pass 5/5 in isolation). Two real bugs beyond 
 disposition found and fixed along the way (`_TOKEN_BOUNDARY_RE`'s `<`/`>` handling, the
 same-line duplicate-padded-token bug on both read and write sides — the write-side instance
 already recorded above). `ci-watcher-725` dispatched; merges on its report.
+
+**#725 is also DIRTY** (merge conflict, main moved past its branch point) — the docs-workflow
+failure `ci-watcher-725` saw is on an older commit (`aee2783`), not the actual current HEAD
+(`45d4bdd`); no CI has run against the real final commit yet, the conflict blocked it.
+Rebase requested. Same DIRTY pattern now hit two open PRs (#723, #725) in a row — expected
+given how fast `main` is moving through this checkpoint; every open PR from before a recent
+merge batch needs a rebase before its CI can run.
