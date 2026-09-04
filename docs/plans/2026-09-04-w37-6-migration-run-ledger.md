@@ -153,6 +153,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | PR | Title | Merge commit | `--verify` verdict set |
 |---|---|---|---|
 | #701 | docs(skills): git-hygiene — a line number derived from a slice or a filtered stream | `ad51906` | UNCHANGED: 14 (docs-only skill change, no `docs/` or migration-script path touched — does not affect the predicate) |
+| #717 | docs(plans): Ruling 105 D7 — eight executors on the upgraded VM, disk-conditioned | `88ecfd0` | UNCHANGED: 14 (a dated append to a ruling record's prose, no predicate code touched) |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
