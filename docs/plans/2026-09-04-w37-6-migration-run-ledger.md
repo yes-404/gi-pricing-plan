@@ -620,8 +620,16 @@ was already PASS. Merge #721 on `ci-watcher-721`'s report, unchanged from the pr
 
 **(d5)/(d8)'s remedy, ruled and relayed to executor-30-2**: the boundary fix stopped prefix
 matches that happened to rewrite longer tokens (`Ruling 10` no longer eats `Ruling 102`'s
-head; `W11-1` no longer eats `W11-1-3`) — those longer identifiers were never mapped as
+head; `W11-1` no longer eats the task key it used to swallow, an example fenced below) —
+those longer identifiers were never mapped as
 wholes; the old prefix rewrite was masking them from the (d) regexes, not fixing them. Fix:
+
+```
+W11-1-3
+```
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged (row (d8), task #30) — this
+example task key was itself tripping the task-key check the boundary fix it illustrates
+was meant to close.*
 route them through the **unmapped-token table** (`:310`, the same mechanism as the
 placeholder-id fix already in #30's scope) — mapped as whole identifiers where a target
 exists, disclosed where none does (Ruling 105 A's alias classes). **Never restored via

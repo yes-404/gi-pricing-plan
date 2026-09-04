@@ -45,6 +45,25 @@ ID_RE: Final = re.compile(r"\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)
 # NT-0019 §1.1 rule 3: "Filenames pad the integer to the standard's width, currently five."
 PAD_WIDTH: Final = 5
 
+# Ruling 67 §2 Part 1's rule, from the other end (2026-09-04, row (d8), task #30): a `\b`
+# at a pattern's own LEFT edge is satisfied between a hyphen (or any other non-word
+# character) and the next token, so a bare `\bW...`-shaped pattern can start matching from
+# *inside* a longer, unrelated identifier rather than at a real boundary — measured
+# directly: `F-W37-6-12` (a real, `_FINDING_ID`-shaped finding id `audit-docs.py` itself
+# defines and rewrites) matches `_D8_TASK_KEY_RE`/`_D8_WORK_KEY_BARE_RE` from its second
+# character, `\b` being satisfied between `-` and `W`, inflating row (d8)'s task-key/
+# bare-key counts with a different, already-classified id family's own citations rather
+# than free-standing ones. Part 1 already states the fix for the right edge ("every entry
+# matches a COMPLETE legacy identifier... never a proper prefix of one"); this is the same
+# rule applied to the left: refuse an identifier character OR a hyphen immediately before
+# the match, not merely a `\b`. **One shared constant**, per Ruling 67 §2's own standing
+# instruction ("one rule at two times... never a private copy each script maintains
+# independently") — every token regex in `doc-id.py` or `_docverify.py` that starts on a
+# bare letter/digit and needs this guarantee reads this one definition, rather than each
+# writing its own and risking a silently-diverging version (one that allows `_`, or
+# forgets the hyphen).
+LEFT_BOUND: Final = r"(?<![A-Za-z0-9_-])"
+
 # NT-0019 §7 acceptance item (d)'s pattern, and `audit-docs.py` check 36's third clause —
 # "one rule at two times" (Ruling 67 §2): both must read this **one** shared constant,
 # never a private copy each script maintains independently. Ruling 67 §2 Part 1: every
