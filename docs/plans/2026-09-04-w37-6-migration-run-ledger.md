@@ -182,6 +182,8 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #720 | fix(scripts): (g) other-residue triage, docs/ leg — cause3/cause4 named | `dea2c79` | Diagnosis-only (`_residue_cause`/`_residue_cause_table` gains two named causes, no predicate changed) — not independently re-run at merge, `ci-watcher-720` confirmed python/docs/history-policy all green and mergeStateStatus CLEAN. cause3 (57% of tree-wide `other`) and cause4 (genuine forward-migration corruption) both dispositioned to executor-30-2's #30 PR; REDIRECTS.csv determinism owed to h2b as a follow-up (task #24). |
 | #719 | docs(plans): ledger — #716/#718/#720 merges, thread-cap ruling, kills, salvage disposition | `0375cda` | UNCHANGED: 14 (this ledger's own continued history — every entry above from the merge of #716 forward is this PR's own commits — plus one `dev-commands` SKILL.md edit, no `docs/**` migration-scope path or predicate code touched). Its own CI was repeatedly cancelled by the lead's own rapid push cadence (`ci-watcher-719` flagged it); merged once pushes paused and it settled CLEAN. |
 | #721 | fix(scripts): row (b) — `_compound_token_re`'s missing `\b` fabricated ids and masked (d5)/(d8) | `a2c0afa` | Not independently re-run at merge — CI is the merge gate per this session's own scoping (isolated per-run infra), `ci-watcher-721` confirmed python/docs/history-policy all green, mergeStateStatus CLEAN. `EXPECTED_VERDICTS` re-recorded (b) FAIL→PASS, (d5) PASS→FAIL, (d8) FAIL→REGRESSION — the ratchet working, not a defect. Two local, pre-existing `backend/tests/test_score.py` failures reported by the author (out of branch scope by diff-stat) were not independently confirmed against this exact CI run (`ci-watcher-721` could not reach per-test log detail, token-scope limited) — flagged, not blocking, since CI's overall `success` conclusion is the standing merge criterion. |
+| #722 | docs(plans): ledger — #721 merged, #723's ruling, #30 split, DB-exclusivity fix | `205ebc9` | UNCHANGED: 14 (this ledger's own continued history plus the `dev-commands`/`python-test` per-worktree-database SKILL.md edits — no `docs/**` migration-scope path or predicate code touched). `ci-watcher-722` confirmed docs/python/history-policy all green, CLEAN. |
+| #726 | fix(scripts): OQ double-allocation — dedup discovery, refuse conflicting REDIRECTS.csv rows | `8c8c177` | Not independently re-run — CI is the merge gate, `ci-watcher-726` confirmed python/docs/history-policy all green, CLEAN. `--verify`: (b)/(c) both PASS, verdict set fully UNCHANGED. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -712,3 +714,271 @@ review, and one rebase point on the critical path. Split:
 - **verify105's (d8) addendum**: the `.pyc` item moved out, stays a focused small change.
 
 Both executor-30-2 and verify105 messaged with the corrected scope.
+
+## 2026-09-04 — verify105's rebase preserved #721's real (d8) REGRESSION finding correctly; pycache-scope collision caught before push
+
+Rebasing onto `origin/main` (now `a2c0afa`) surfaced a genuine conflict on
+`EXPECTED_VERDICTS["d8"]`: #721 un-masked the same `_compound_token_re` boundary bug at
+larger scale for the W-family and re-recorded (d8) as REGRESSION (2513 migrated, above the
+2358 control). verify105 kept #721's REGRESSION content unedited rather than overwriting it
+with its own prior DISCLOSE value — the correct call; a silent overwrite would have reverted
+a real finding and false-triggered the SET CHANGE detector on the next `--verify`. Its
+task-key/slice-key disclosure logic sits in `_d8_verdict`'s non-creation branch, which
+#721's REGRESSION pre-empts — correct but dormant until the W-family fix lands and migrated
+drops below control. Tests exercise `_d8_verdict` directly against fixtures, unaffected by
+which state the live corpus is in — 6/6 green post-rebase.
+
+**Caught before it shipped**: verify105's branch still carried the `.pyc` corpus fix, which
+moved to `exec-excl`'s separate PR earlier this entry-set — a scope-split correction that
+crossed in flight with its gate run. Flagged immediately; told to drop it before pushing to
+avoid two PRs independently fixing the same corpus-building code.
+
+## 2026-09-04 — row (e) PR opened (#725)
+
+`rowe2` opened PR #725 (`w37-6-row-e-doc-id-migration`, HEAD `45d4bdd`). `--verify`: row (e)
+and (f) PASS, UNCHANGED against the recorded 13-row standing red. Gate: Python half clean
+(ruff/mypy/lint-imports/audit-docs/req-coverage/generate-contracts --check); frontend half
+unchanged since an earlier clean run; `pytest -q` 3121 passed/5 failed/3 skipped/1 xfailed —
+all 5 failures in `backend/tests/` matching the shared-DB contention shape (zero backend/
+files in this branch's diff, all 5 pass 5/5 in isolation). Two real bugs beyond the salvage
+disposition found and fixed along the way (`_TOKEN_BOUNDARY_RE`'s `<`/`>` handling, the
+same-line duplicate-padded-token bug on both read and write sides — the write-side instance
+already recorded above). `ci-watcher-725` dispatched; merges on its report.
+
+**#725 is also DIRTY** (merge conflict, main moved past its branch point) — the docs-workflow
+failure `ci-watcher-725` saw is on an older commit (`aee2783`), not the actual current HEAD
+(`45d4bdd`); no CI has run against the real final commit yet, the conflict blocked it.
+Rebase requested. Same DIRTY pattern now hit two open PRs (#723, #725) in a row — expected
+given how fast `main` is moving through this checkpoint; every open PR from before a recent
+merge batch needs a rebase before its CI can run.
+
+## 2026-09-04 — load back to 57: h2b and executor-30-2 running fully non-compliant gates a third time
+
+Routine check at 13:3xZ found six real gates (`ps -eo pid,args | grep '[/]\.venv/bin/pytest'`):
+`/tmp/verify-wt1`/`verify-wt2` (`db-proof`'s scratch setup), `wt-h2b`, `wt-oq-dup-alloc`
+(alloc's new task), `wt-w376-unit` (executor-30-2), `wt-rowe2`. Load 57.23/50.86/41.06 on
+16 cores. Checked env and ppid chain on all four non-`db-proof` worktrees:
+`wt-oq-dup-alloc` and `wt-rowe2` both correctly capped; `wt-h2b` and `wt-w376-unit` neither
+capped nor `flock`-parented nor on a per-worktree database — bare `uv run pytest -q`,
+identical shape to the very first violation this session. Sent both the exact current
+canonical two-block command (per-worktree DB setup, then the flock+thread-cap gate) with an
+explicit ask for the literal string they're actually running, since this is the third time
+the mechanism hasn't landed for h2b specifically and the cause is still unclear.
+
+## 2026-09-04 — prose stopped being enough: killed h2b/executor-30/db-proof, enforcement moves into `conftest.py`
+
+Deputy's fuller table (13:3xZ): `wt-h2b` 397% CPU, no cap, no slot; `wt-w376-unit`
+(executor-30-2) ×2, 258%+21%, same; `/tmp/verify-wt1`/`verify-wt2` (`db-proof`) both on the
+**default** database — neither had `GIP_TEST_DATABASE_URL` set, so the pair can only be the
+negative control, not the isolation proof it was meant to produce. Load 59.5/55/44, CPU
+demand 0.95, `/` 4.9 GB free and falling.
+
+**Killed on sight, directly by the lead** (dispatch operations, per the standing exception):
+`pkill -P` on h2b's and executor-30-2's `uv run pytest` parents, both confirmed dead;
+`db-proof`'s two processes killed the same way. `wt-w376-unit`'s gate had already exited by
+the time I checked (no process found) — the deputy's ×2 reading may have caught it near its
+own end.
+
+**Root fix, dispatched to `exec-excl` (deputy's assignment, same executor as the
+exclusions PR):** the wrapped-line convention fails because it depends on an executor
+typing it correctly, and that has now failed three separate times. Moving enforcement into
+`tests/conftest.py` and `_docverify.verify` themselves: `os.environ.setdefault` for the six
+thread-cap vars (an explicit override still wins, the default is capped), `pytest_configure`
+acquires a gate slot via blocking `fcntl.flock` on `/tmp/slots/gate-{1,2,3}` (verify path:
+`verify-{1,2}`), and when `GIP_TEST_DATABASE_URL` is unset the conftest derives
+`gipricing_<worktree>` and **refuses to run with a clear error** if that database doesn't
+exist — never silently falling back to the shared one. A bare `uv run pytest` is then
+budgeted and capped regardless of what the executor typed. Proof required: two bare
+sessions started together show the second waiting for a slot; a spawned process shows 4
+threads for the relevant native runtimes, not ~150; a missing per-worktree DB produces a
+clear refusal, not a silent shared-DB run.
+
+`db-proof` told to redo with real, distinct DSNs and report the actual environ lines used —
+its prior report is not usable as isolation evidence per the deputy's finding.
+
+## 2026-09-04 — OQ double-allocation fixed (PR #726), and the dispatch brief's own framing was wrong
+
+`alloc` corrected the dispatch before fixing it: `_discover_requirements` only globs
+`docs/specs/*.md`, `open-questions.md` is never a discovery source — the "defined twice"
+framing was wrong. Real mechanism: `_LEGACY_SPEC_BOLD_RE` is a bare `finditer` with no
+anchor to a row's own leading cell, so it matches every bold occurrence of the shape —
+citation as well as definition. A real OQ id cited in bold from another requirement's own
+prose (`FR-MODEL-88` citing `**OQ-MODEL-23**`) becomes an independent draft alongside its
+owning spec's §10 mirror row, each getting a different new number.
+
+**Also caught**: PR #723's snapshot numbers (`OQ-1058`/`-1064`) predate #721 and were
+themselves shaped by the fabrication bug row (b) fixed — re-verified against current HEAD,
+post-#721, the double allocation is real and independent (`OQ-1060`/`-1066` this time).
+
+**Fix, two layers**: (1) root cause — `_discover_requirements` dedupes by old_token
+globally across the `docs/specs/` walk, first occurrence kept (position-independent since
+the rewrite is keyed on text); (2) belt-and-suspenders — `_write_redirects` refuses outright
+if any old_id resolves to two different new_ids (keyed on `(old_id, citing_dir)` so
+legitimate per-directory bare-basename repeats aren't caught). Verified: `OQ-MODEL-23`/`-24`
+each get exactly one row now, rewriting consistently including the two code-tree citations
+#723 flagged as stuck. Zero old_id conflicts corpus-wide. `--verify`: (b)/(c) both PASS,
+verdict set fully UNCHANGED — this fix doesn't disturb the standing-red set, unlike #721's.
+Full gate green both halves, 3135 passed/0 errors — the earlier `test_score.py` failures did
+not reproduce this run.
+
+`ci-watcher-726` dispatched; merges on its report.
+
+## 2026-09-04 — executor-30-2's fourth non-compliant gate: `GIP_TEST_DATABASE_URL` set to the shared database, not its own
+
+Checked its restarted gate (PID 575452) directly: `GIP_TEST_DATABASE_URL` was set this
+time, but to the shared `.../gipricing`, not a per-worktree `gipricing_<worktree>` — plus
+still no thread-cap vars, still no `flock` parent. Killed again (`pkill -P` on the parent,
+confirmed dead). Sent an unusually literal follow-up: two separate copy-paste blocks with
+an explicit ask to echo `$WT` and confirm the gate block ran as one shell invocation, to
+try to isolate whether something about how the command is being composed or split is the
+actual cause — this is systemic non-compliance, not one-off carelessness, and worth naming
+as the class it is (this is why the conftest-level enforcement dispatched to `exec-excl`
+matters: it makes this specific failure mode structurally impossible rather than relying on
+a fifth correction landing correctly).
+
+## 2026-09-04 — the per-worktree-database fix is empirically proven, both directions
+
+`db-proof`'s full run, both steps, cleaned up after: **negative control** (shared DSN,
+confirmed unset via `/proc/<pid>/environ` on both live PIDs) — an asymmetric concurrent
+pair (51 tests / 109 tests) reproduced the exact documented symptom:
+`test_read_permission_does_not_confer_cancel` failed `403 == 200` at the ~66% mark of the
+longer run, exactly when the shorter run's session-scoped teardown fired at 33s — neither
+run touched any code. **Proof** (separate DSNs, `gipricing_proof1`/`gipricing_proof2`,
+confirmed live via `/proc/<pid>/environ`): the identical two test sets, same concurrency,
+both passed clean (51/51, 109/109) with zero failures — including the exact test and the
+exact point that failed under the shared DSN. Cleanup verified before dropping (both proof
+DBs still showed exactly one `alembic_version` row, no truncation had leaked) and both
+scratch worktrees removed. **The fix works, proven, not merely argued.**
+
+## 2026-09-04 — exec-excl caught three real defects in the conftest-enforcement instructions before writing any code
+
+Before implementing the scope dispatched two entries ago, `exec-excl` verified three claims
+empirically rather than guessing, since a mistake would affect every executor's gate:
+
+1. `tests/conftest.py` never loads for `backend/tests`/`packages/*/tests` — `pyproject.toml`
+   `testpaths` lists them as siblings, not children. Verified directly (a probe print fired
+   for one tree, never the other). Corrected to a new root-level `conftest.py`.
+2. **Reusing `/tmp/slots/gate-{1,2,3}` for pytest's own internal `flock` would deadlock every
+   correctly-wrapped gate run** — the outer wrapper shell holds the lock via its own open
+   file description; a `flock()` inside the exec'd pytest child opens a fresh file
+   description on the same file and blocks waiting for a lock its own ancestor holds and
+   never releases until the child exits. Verified as correct Linux `flock` semantics before
+   approving. Corrected to a separate namespace (`/tmp/slots/pytest-gate-{1,2,3}`).
+3. `GIP_TEST_DATABASE_URL`/`DEFAULT_TEST_DSN` live in `backend/tests/conftest_db.py`, not
+   `_docverify.py` as the dispatch said (a mis-statement on my part — `_docverify.py` is the
+   doc-migration snapshot verifier, unrelated to the Postgres test database). Confirmed by
+   direct grep. Corrected to `conftest_db.py`.
+
+All three approved after independent verification, not rubber-stamped. Original exclusions
+work (lockfiles/fixtures/pycache) already committed (`11256c8`), tests green, gate queued
+behind other executors' slots.
+
+## 2026-09-04 — correction to point 2: one lock namespace, announced, not separate
+
+Deputy caught a real problem in what I'd approved: a *separate* lock namespace for the
+in-suite `flock` (my earlier fix for exec-excl's deadlock finding) would let three wrapped
+gates and three unwrapped ones run at once — six, not three — since each namespace counts
+its own independently, defeating the budget. **Ruled: one namespace, announced.** The
+`dev-commands` wrapper exports `GIP_GATE_SLOT=/tmp/slots/gate-N` (`GIP_VERIFY_SLOT=…` for
+verify) at the moment it takes the lock, before execing the command; the conftest/verify
+enforcement acquires from the same set only if that variable is unset — a wrapped run never
+double-locks, a bare run is budgeted, the total stays three either way. Relayed to
+`exec-excl`, who also owns adding the export lines to the wrapper in the same PR (the
+announcement has to exist before the suite can check for it). db-proof's DB-exclusivity
+proof is unaffected by this correction — that task is closed.
+
+## 2026-09-04 — PR #727 found (the third/"rest" leg of the (g) triage), also DIRTY
+
+Found directly (no notification reached this session when it opened) — `triage-other`'s
+third (g)-triage PR: every `classified-by-none` file not under docs/, tests/, backend/,
+frontend/, scripts/, packages/. Measured against row (g)'s own predicate
+(`doc-id.classify_migration_diff`) at a fresh `--verify --keep` snapshot, not assumed.
+DIRTY like #723/#725 — main moving fast through this checkpoint is now a recurring pattern
+across all three (g)-triage legs. `ci-watcher-727` dispatched; rebase requested.
+
+## 2026-09-04 — #725 and #727 both rebased cleanly, self-resolved
+
+`rowe2`'s #725: rebased to `e951cba`, `mergeStateStatus` CLEAN. One purely-additive conflict
+in `tests/test_doc_id_migrate.py` (two new test sections landing at the same insertion
+point) — kept both, no logic changes. Full re-verification post-rebase: gate green both
+halves, `--verify` row (e)/(f) still PASS, verdict set unchanged (the (d5) label reads
+REGRESSION only because `EXPECTED_VERDICTS["d5"]` now records FAIL per #721, not a new
+move), 5 pytest failures still the same shared-DB-contention signature, confirmed via
+`git diff --stat` and isolated reruns. Force-pushed with `--force-with-lease`, confirmed via
+`gh pr view` rather than the push exit code. CI restarted fresh on the new head (still
+in-flight); `ci-watcher-725b` dispatched to replace the stale pre-rebase watch.
+
+`triage-other`'s #727: rebased onto `205ebc9`, resolved a conflict against #720's cause3
+addition — its own `id-path-compound-citation` finding turned out to be the same underlying
+shape cause3 already covers more generally; dropped the duplicate label rather than keep a
+redundant class, kept its two genuinely distinct findings (new-frontmatter-stamp-no-move,
+unmapped-work-slice-key). Targeted tests (83), ruff, mypy clean. Pushed (`4afe5f8`);
+re-running `--verify` before considering it settled.
+
+## 2026-09-04 — root cause of h2b's repeated non-compliance: two-hour self-matching wait-loop trap, not carelessness
+
+Deputy found what actually explains four straight non-compliant gates: ten idle wrapper
+shells, eight on `until ! pgrep -f 'wt-h2b/.venv/bin/pytest -q'`, two on the equivalent for
+`wt-rowe2`, spaced ~600s apart, ages 53min→2h15min. The pattern is in the loop's own
+argv, so `pgrep -f` always matches itself and the loop never resolves — h2b's Bash calls
+have been timing out every ~10 minutes and it re-issues the identical broken wait, eight
+times, never learning whether its gate finished, crashed, or was killed. **A stalled
+executor that reads as busy.**
+
+By the time I checked, the ten shells were gone (expired on their own), but h2b's third
+non-compliant gate (PID 584454, 677% CPU, 13min, no cap, no `flock`) was still alive —
+killed directly. Told h2b the wait-loop pattern itself was the defect (bracket a character
+or wait on the literal PID, never a bare name match) and, per the deputy's own point 2, to
+stop running local gates entirely until exec-excl's conftest enforcement merges — push and
+let `ci-watcher` read CI, which is what actually gates a merge here regardless. Flagged the
+same trap to rowe2 as a precaution (two of its own earlier waits had the same shape, though
+its work has clearly progressed past it).
+
+**Deputy's counting-predicate correction, for the record**: a real pytest binary has
+`comm == pytest`; a wrapper shell has `comm == bash` and merely mentions the path in its
+argv — `ps -eo pid,comm,pcpu,etimes,args | awk '$2=="pytest"'` is the census that can't be
+fooled by a wrapper. The earlier "ten pytest sessions" reading was the wrapper count,
+withdrawn by the deputy before it reached this ledger.
+
+## 2026-09-04 — h2b's fourth bare gate, ~28s after the instruction to run none; last warning before reassignment
+
+Killed PID 668780 (`wt-h2b`, `uv → bash → init`, no `flock`, 984% CPU at 28s of age) —
+started within a minute of being told to run no local gates at all. Confirmed clean from
+the process table 30 seconds later, per the deputy's instruction ("confirm compliance from
+the process table, never from its acknowledgement"), and again at this entry — none
+running. Sent h2b the deputy's own threshold explicitly: a fifth bare gate and it is
+stopped, its remaining work (#29 DP-7, the `REDIRECTS.csv` sort follow-up) reassigned to a
+fresh executor with the canonical line in its brief. Asked `exec-excl` for an ETA on the
+conftest enforcement PR — the deputy wants that figure; not yet reported back.
+
+## 2026-09-04 — h2b's fifth bare gate: the threshold is reached, stopped, work reassigned; both of executor-30-2's flagged doubts resolved
+
+Killed PID 680976 (`wt-h2b`) — the fifth bare gate against explicit instructions. Per the
+deputy's ruling, h2b is stopped: no further dispatch, session released only once its
+subject closes, not its task. Told it directly and without ambiguity. Its work
+(`w37-6-dp7-frontmatter`, commit `2b4c13d`, clean and pushed) reassigned to a fresh
+executor, **`exec-dp7`**, dispatched with the branch as its starting point, the canonical
+gate line verbatim, and an explicit "no local gate until conftest enforcement merges —
+push and let `ci-watcher` decide" instruction. It also owns the `REDIRECTS.csv` row-order
+determinism fix (task #24).
+
+**executor-30-2's two flagged doubts, both resolved with a direct measurement, not a
+comment's story:**
+
+- **OQ-DATA-11**: ran `doc-id.py migrate --verify --keep` against a fresh `origin/main`
+  (`85a352f`, post-#726) snapshot myself and read the actual output. `docs/REDIRECTS.csv`
+  now carries `OQ-DATA-11,OQ-849,docs/specs/01-data-management.md,...` — a real row, no
+  double-allocation, rewritten consistently everywhere including its own struck-through row
+  in `open-questions.md`. **#726's dedup fix already fully resolves this case as a side
+  effect.** The original "placeholder id, no REDIRECTS.csv row" diagnosis is stale.
+  `scripts/_docverify.py:1338-1340`'s comment (which named it an "un-allocated placeholder"
+  minting `OQ-8471`) is now doubly wrong — both the characterization and the number — and
+  is being corrected as a one-line addition to executor-30-2's PR, since it's already
+  touching that file. Item dropped from #30's scope entirely; no mechanism built.
+- **"Ruling 2c"**: confirmed false positive by two independent checks now (the earlier
+  verification agent, and the deputy's own `git grep -nE '\bRuling [0-9]+[a-z]\b'`, one hit
+  — the ledger's own row). Dropped from #30's scope, no citation exists to fix.
+
+Both resolutions relayed to executor-30-2. #30's remaining scope: unit-record inverse,
+cause3(a)/cause6, cause4's `MANGLED_CITATION_RE` extension, the one-line stale-comment fix,
+and (d5)/(d8) unmapped-whole-identifier routing.
