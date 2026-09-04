@@ -74,7 +74,7 @@ import argparse
 import importlib.util
 import re
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -450,19 +450,48 @@ def scan_phase_sections(path: Path) -> list[PhaseSection]:
     return sections
 
 
+# `~{0,2}` on both sides of the bold marker: a *decided* open question in
+# `docs/open-questions.md` is struck through in place rather than removed
+# (`~~**OQ-OVR-7**~~ ✔ | ...`), which is still a governed row and still owns its id — a
+# leading `~~` before `**` is not a shape this pattern may refuse to see. `[^|]*` between
+# the closing marker and the next cell boundary absorbs a trailing `~~`/`✔` the same way.
 _BOLD_ID_ROW = re.compile(
-    r"^\|\s*\*\*(FR|NFR|DEP|OQ)-(\d+)\*\*\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|"
+    r"^\|\s*~{0,2}\*\*(FR|NFR|DEP|OQ)-(\d+)\*\*~{0,2}[^|]*\|(.*)$"
 )
+
+# A module-less `DEP-<n>` dependency rule (`doc-id.py`'s `_legacy_bare_dep_ids` — "F82:
+# module-less by design") is not a table row at all: `00-overview.md`'s dependency list is
+# a bullet, `- **DEP-1a** — <description>`, never `| **DEP-1a** | ... |`. One `Record` per
+# bullet, the same reason a table row gets one: it is a governed id definition regardless
+# of which markdown block carries it, and NT-0019 §7(b) contiguity needs every one of them
+# to reach `docs/INDEX.md`, not only the ones a table-row pattern happens to see.
+_BULLET_ID_ROW = re.compile(r"^-\s*\*\*(FR|NFR|DEP|OQ)-(\d+)\*\*\s*[—-]?\s*(.*)$")
+
+# An unescaped `|` — the same "split on unescaped `|`" grammar
+# `scripts/register-lint.py`'s `parse_register` already uses for the register's row shape
+# (`_discover_register`'s own docstring cites it), applied here to the remainder of a
+# bold-id row so a literal `\|` inside a cell's prose (money-discipline requirements carry
+# several, e.g. "float \| None") is not read as a column boundary.
+_UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
 
 
 def scan_bold_id_rows(path: Path) -> list[Record]:
     """`FR-`/`NFR-`/`DEP-`/`OQ-` rows: a bold id in the spec's own table, never a fenced
     header (§1.6: "Requirement rows keep the spec's bold-id convention; their fields are
-    the spec table's columns"). This reads a 4-column `| **PREFIX-n** | title | status |`
-    shape — the shape this slice's own fixture corpus uses — because NT-0019 does not pin
-    one before the migration restructures the real spec tables (W37-6); full fidelity
-    against the live corpus is that slice's to prove, not this one's (this slice's own
-    scope note).
+    the spec table's columns").
+
+    **Column count is not pinned and not assumed.** The live corpus's spec tables
+    (`docs/specs/*.md`) are two-column — `| **FR-283** | <description> |`, no separate
+    title/status cells — while `open-questions.md` and this slice's own fixture corpus use
+    more. The row's id is always captured from the leading cell; everything after it is
+    split on an *unescaped* `|` (`_UNESCAPED_PIPE`) into as many cells as the row actually
+    has, and the first two (if present) become `title`/`status`. A prior version of this
+    function required a fixed 4-column shape and only matched a real two-column row by
+    accident, when its description happened to contain a stray, un-escaped literal `|` —
+    every row without one (the overwhelming majority) silently produced no `Record` at all,
+    which is `doc-id.py check`'s NT-0019 §7(b) noncontiguous-id failure: a requirement
+    correctly renumbered in its spec file by `migrate()`'s citation rewrite never reached
+    `docs/INDEX.md`, because this scan never saw it as a row.
     """
     if not path.is_file():
         return []
@@ -470,9 +499,21 @@ def scan_bold_id_rows(path: Path) -> list[Record]:
     out = []
     for line in text.splitlines():
         m = _BOLD_ID_ROW.match(line)
-        if not m:
-            continue
-        prefix, n, title, status = m.groups()
+        if m is not None:
+            prefix, n, rest = m.groups()
+            rest = rest.strip()
+            if rest.endswith("|"):
+                rest = rest[:-1].strip()
+            cells = [c.strip() for c in _UNESCAPED_PIPE.split(rest)] if rest else []
+            title = cells[0] if cells else ""
+            status = cells[1] if len(cells) > 1 else ""
+        else:
+            m = _BULLET_ID_ROW.match(line)
+            if m is None:
+                continue
+            prefix, n, rest = m.groups()
+            title = rest.strip()
+            status = ""
         header = Header(
             id=canonical(prefix, int(n)),
             family=family_of(prefix),
@@ -509,6 +550,27 @@ def build_corpus(root: Path) -> Corpus:
     for spec_path in sorted((root / "specs").glob("*.md")) if (root / "specs").is_dir() else []:
         records.extend(scan_bold_id_rows(spec_path))
     return Corpus(records)
+
+
+def _pre_migration_records(records: Sequence[Record]) -> list[Record]:
+    """`records`, minus a `- **DEP-<n>**` dependency-rule bullet already in canonical
+    bare-numeric form (`scan_bold_id_rows`'s bullet branch, W37-6).
+
+    Three of the four bullets `00-overview.md` §7 declares — `DEP-1`, `DEP-2`, `DEP-3` —
+    pre-date any migration and are already canonical: `doc-id.py`'s `_legacy_bare_dep_ids`
+    docstring, "already in the canonical form ... `compute_next` therefore already counts
+    them as allocated ids". `main()`'s "nothing to index yet (pre-migration)" reading, and
+    the write path's identical refusal below it, both mean *no migration draft has run
+    yet* — a bullet no migration ever touches is not evidence against that, so it is
+    excluded here rather than counted as the "corpus is no longer empty" signal both paths
+    use. The fourth bullet, `DEP-1a`, is still module-coded until it *is* migrated, and by
+    then `docs/INDEX.md` already exists (the same run creates both) — so this function
+    never has to tell it apart from the three that pre-date any migration.
+    """
+    return [
+        r for r in records
+        if not (r.header.family == "requirement" and (r.header.id or "").startswith("DEP-"))
+    ]
 
 
 # ---------------------------------------------------------------------------------------
@@ -1067,21 +1129,24 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.check:
         if not index_path.is_file():
-            if not corpus.records:
+            _pre_records = _pre_migration_records(corpus.records)
+            if not _pre_records:
                 # Found while wiring `--check` into `.github/workflows/docs.yml` as a gate
                 # step (W37-4): pre-migration, `docs/INDEX.md` does not exist and nothing
                 # does — treating "absent" as "stale" unconditionally would red this step
                 # on every run until W37-6, for a file only the migration creates. Mirrors
                 # the default (write) action's own "cannot be run against the live corpus
                 # until W37-6" refusal below: zero records is the pre-migration state, not
-                # drift, so there is nothing to be stale against.
+                # drift, so there is nothing to be stale against. `_pre_migration_records`
+                # (not `corpus.records`) is what "zero" means here — see its own docstring
+                # for the three pre-existing `DEP-` bullets this would otherwise trip on.
                 print(
                     f"{index_path} does not exist and zero governed records were found "
                     f"under {args.root} — nothing to check yet (pre-migration)"
                 )
                 return 0
             print(
-                f"{index_path} does not exist, but {len(corpus.records)} governed "
+                f"{index_path} does not exist, but {len(_pre_records)} governed "
                 "record(s) were found — run `python3 scripts/doc-index.py` to create it"
             )
             return 1
@@ -1092,7 +1157,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{index_path}: OK (byte-stable)")
         return 0
 
-    if not corpus.records:
+    if not _pre_migration_records(corpus.records):
         # Caught empirically while building this slice: run with no `--root` against
         # today's pre-migration `docs/` and every file fails `parse_header`'s "no front
         # matter" test harmlessly, `build_corpus` returns zero records, and the write path
