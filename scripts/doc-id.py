@@ -6921,6 +6921,30 @@ def migrate(root: Path) -> MigrateResult:
     _discoverable_drafts = [d for d in drafts if not _never_discoverable(d)]
     _exempt_drafts = [d for d in drafts if _never_discoverable(d)]
 
+    import os as _os_dbg
+    if _os_dbg.environ.get("ROWB_DEBUG"):
+        import collections as _collections
+        print("DEBUG total drafts:", len(drafts))
+        print("DEBUG discoverable:", len(_discoverable_drafts))
+        print("DEBUG exempt:", len(_exempt_drafts))
+        _exempt_by_reason = _collections.Counter()
+        for d in _exempt_drafts:
+            if d.materialize == "register_row":
+                _exempt_by_reason["register_row"] += 1
+            else:
+                _exempt_by_reason["dup_old_token"] += 1
+        print("DEBUG exempt by reason:", dict(_exempt_by_reason))
+        _by_materialize = _collections.Counter(d.materialize for d in drafts)
+        print("DEBUG drafts by materialize kind:", dict(_by_materialize))
+        _dup_tokens = {tok: cnt for tok, cnt in _old_token_counts.items() if cnt > 1}
+        print("DEBUG number of distinct old_token values with count>1:", len(_dup_tokens))
+        print("DEBUG sample dup tokens:", list(_dup_tokens.items())[:30])
+        _dup_by_materialize = _collections.Counter()
+        for d in drafts:
+            if d.old_token is not None and _old_token_counts[d.old_token] > 1:
+                _dup_by_materialize[d.materialize] += 1
+        print("DEBUG dup-old-token drafts by materialize kind:", dict(_dup_by_materialize))
+
     start = compute_next(root)
     _assign_numbers(_discoverable_drafts, start)
     _assign_numbers(_exempt_drafts, start + len(_discoverable_drafts))
@@ -7176,8 +7200,12 @@ def migrate(root: Path) -> MigrateResult:
     files_written = [*files_written, *readme_written]
     files_deleted = [*files_deleted, *readme_deleted]
 
+    import os as _os_dbg2
+    _ROWB_DEBUG2 = _os_dbg2.environ.get("ROWB_DEBUG")
     for old_token, claims in id_claims.items():
         canons = {canon for canon, _ in claims}
+        if _ROWB_DEBUG2 and "OVR-11" in old_token:
+            print("DEBUG2 id_claims entry:", repr(old_token), claims, "canons:", canons)
         if len(canons) > 1:
             warnings.append(
                 f"legacy id {old_token!r} is claimed by {len(canons)} records "
@@ -7186,6 +7214,9 @@ def migrate(root: Path) -> MigrateResult:
             )
             continue
         _add_tokens(token_map, token_origins, {old_token: claims[0][0]}, claims[0][1])
+    if _ROWB_DEBUG2:
+        print("DEBUG2 OQ-OVR-11 in token_map:", "OQ-OVR-11" in token_map, token_map.get("OQ-OVR-11"))
+        print("DEBUG2 OQ-OVR-1 in token_map:", "OQ-OVR-1" in token_map, token_map.get("OQ-OVR-1"))
 
     # The split/single fork, and the only place a path token enters the flat map. A source
     # with one destination is unchanged from #672; a source with several never enters it,
