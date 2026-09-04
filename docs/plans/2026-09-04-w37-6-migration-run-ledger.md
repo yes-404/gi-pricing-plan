@@ -1039,3 +1039,23 @@ verified safe after the fact; the gap was procedural (merging before the pre-mer
 was actually confirmed), not a defect that reached `main`. Recorded so the pattern is named
 rather than repeated: an empty `statusCheckRollup` is not evidence of green, only evidence
 of no data — read it as unconfirmed, same as the ci-watcher role's own standing rule.
+
+## 2026-09-04 — executor-30-2 caught a crash bug in its own diff before it reached a gate
+
+Confirmed OQ-DATA-11 independently (matches: one `REDIRECTS.csv` row, no conflict) and
+fixed the stale `_docverify.py` comment in place with a note rather than a silent delete.
+Rebasing onto #726 surfaced a real defect: the first version of cause3's path-citation
+extension called `_path_citation_redirect_rows` unconditionally per-draft, including for
+drafts belonging to a source that legitimately **splits** into several targets — fine
+before #726, but #726's new write-time guard ("one legacy id resolves to exactly one new
+id") would have refused the write and **crashed `migrate()` outright** on the first real
+multi-ruling split file (`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`, splitting
+into `RL-190`/`RL-191`). Caught via a cheap direct `migrate()` call, not the full
+`--verify`, before it reached a gate or a push. Fixed two ways: the per-draft extension
+moved to the branch already provably 1:1 (`len(destinations) == 1`); the split-source
+recording (a genuinely different mechanism — the same citation text legitimately resolving
+differently by context) now runs through a new `_drop_contested_split_redirects` helper,
+same collision-safe-drop philosophy as the read-side inverse — a genuine ambiguity is
+named and excluded, not crashed on. Two new unit tests. 427 targeted tests green. Told to
+build (d8) in the same PR rather than split to a follow-up, given how much is already
+consolidated here.
