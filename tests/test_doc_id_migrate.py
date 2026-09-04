@@ -390,6 +390,99 @@ def test_class6_a_hand_edited_readme_fails_and_names_the_file(
 
 
 # ---------------------------------------------------------------------------------------
+# Task 4 item 4 — the class-4 link-repoint fix (W37-6 channel `:407-413`): an id-less
+# move's own `old_path`/`new_path` REDIRECTS.csv row records that the file moved, but
+# `_path_rewrite_tokens` also adds tree-wide citation forms to the sweep that had no
+# matching `old_id`/`new_id` row to invert them by. Found live against the real corpus
+# (`docs/audit/register.md` -> `docs/findings/register.md`), not invented.
+# ---------------------------------------------------------------------------------------
+
+
+def test_path_citation_redirect_rows_covers_every_real_form_and_skips_the_no_op(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The broken-input proof for the missing rows themselves: an id-less move
+    (`docs/audit/register.md` -> `docs/findings/register.md`, the real corpus shape) must
+    get an `old_id`/`new_id` row for every real citation form `_path_rewrite_tokens`
+    produces, and none for the no-op basename form (`register.md` -> `register.md`, since
+    the basename did not change) — a row for a no-op form would let a real `register.md`
+    citation elsewhere in the tree "invert" to itself, hiding a genuine mismatch instead of
+    reporting it.
+    """
+    rows = doc_id_cli._path_citation_redirect_rows(
+        "docs/audit/register.md", "docs/findings/register.md"
+    )
+    pairs = {(r["old_id"], r["new_id"]) for r in rows}
+    assert ("docs/audit/register.md", "docs/findings/register.md") in pairs
+    assert ("audit/register.md", "findings/register.md") in pairs
+    assert not any(old == "register.md" for old, _new in pairs), (
+        "the no-op basename form must not get a row: " + repr(pairs)
+    )
+    for row in rows:
+        assert row["old_path"] == "", (
+            "a citation-form row is not a moved file — old_path/new_path must stay blank"
+        )
+        assert row["new_path"] == "", (
+            "a citation-form row is not a moved file — old_path/new_path must stay blank"
+        )
+
+
+def test_a_contested_inverse_key_is_dropped_not_misresolved(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Live regression, found building item 4 against the real corpus: two different
+    id-less moves (`docs/audit/register.md`'s own move, and the phase-1b register's merge
+    into it) both produce a docs-stripped citation form whose *new* half is the same
+    string (`findings/register.md`) from two *different* old strings. A flat `{new: old}`
+    dict comprehension silently keeps whichever row iterates last -- exactly the
+    `dict.update` failure `TokenMapCollisionError`'s own docstring names for the forward
+    direction, recurring in the inverse. There is no per-citation evidence to say which
+    old form a given occurrence actually was, so the contested key must be dropped, not
+    guessed: the citing file is correctly reported `classified-by-none`, never silently
+    inverted to the wrong source.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    (old_root / "docs" / "rulings").mkdir(parents=True)
+    (new_root / "docs" / "rulings").mkdir(parents=True)
+    old_text = "Body citing `../audit/register.md` for the finding.\n"
+    old_path = old_root / "docs" / "rulings" / "RL-00900-a-ruling.md"
+    old_path.write_text(old_text, encoding="utf-8")
+    new_path = new_root / "docs" / "rulings" / "RL-00900-a-ruling.md"
+    # The forward sweep already rewrote the citation (this is what the real corpus's
+    # migrated tree looks like) -- the header/body split matters only for the front
+    # matter, so a bare body is enough here.
+    new_path.write_text(
+        "Body citing `../findings/register.md` for the finding.\n", encoding="utf-8"
+    )
+    # `_try_class6`'s fallback runs a second `migrate()` over a git copy of `old_root`,
+    # so `old_root` must be a real repository for this check to reach the assertion at
+    # all rather than fail on `git ls-files` first.
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(
+        "old_id,new_id,old_path,new_path,citing_dir\n"
+        "audit/register.md,findings/register.md,,,\n"
+        "audit/phases/1b/register.md,findings/register.md,,,\n",
+        encoding="utf-8",
+    )
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert "docs/rulings/RL-00900-a-ruling.md" in classification.per_class[
+        doc_id_cli.CLASSIFIED_BY_NONE
+    ], (
+        "a contested inverse key must not silently resolve — the file must be reported, "
+        "not classified as an inverting move"
+    )
+
+
+# ---------------------------------------------------------------------------------------
 # Spot checks on individual §4 steps — narrower than the whole-corpus properties above,
 # so a future regression in one step is diagnosed without re-reading a tree diff.
 # ---------------------------------------------------------------------------------------
@@ -5227,6 +5320,97 @@ def test_cmd_migrate_prints_both_split_citation_counts_including_the_zero(
     assert "0 citation(s) resolved to a family index section that is missing" in err
 
 
+def test_a_mapped_token_in_a_split_target_title_appears_mapped_in_the_family_index(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Task 4's sweep-order broken-input proof: a draft whose title carries a mapped
+    token must appear mapped in the generated `docs/<family>/INDEX.md`.
+
+    `_write_split_source_indexes` runs *after* `_rewrite_citations` (deliberately, so a
+    row's `` `was:` `` provenance cell is never swept), but that also means its own
+    `title` column -- built from each target's in-memory `_Draft.title`, never re-read
+    from the swept file on disk -- reaches the page unswept. Red before the fix: a title
+    of `"Ruling 86 — the first ruling"` with `Ruling 86` mapped to `RL-00386` in
+    `token_map` must not still read `Ruling 86` in the written index; green after: the
+    title column reads the mapped form and the `` `was:` `` column is untouched (the
+    positive control that the row (g) reasoning for the ordering is not broken by this
+    fix).
+    """
+    drafts = [
+        doc_id_cli._Draft(
+            materialize="document", prefix="RL", kind=None,
+            title="Ruling 86 — the first ruling",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-two-rulings.md", 0),
+            old_token="Ruling 86", was="docs/plans/2026-09-01-two-rulings.md",
+            body="## Ruling 86 — the first\n\nBody one.\n",
+            source_line_span=(1, 10),
+        ),
+        doc_id_cli._Draft(
+            materialize="document", prefix="RL", kind=None, title="the second ruling",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-two-rulings.md", 1),
+            old_token="Ruling 87", was="docs/plans/2026-09-01-two-rulings.md",
+            body="## Ruling 87 — the second\n\nBody two.\n",
+            source_line_span=(11, 20),
+        ),
+    ]
+    drafts[0].number, drafts[1].number = 386, 387
+    drafts[0].body_line_offset = drafts[1].body_line_offset = 5
+    sources = doc_id_cli._build_split_sources(
+        "docs/plans/2026-09-01-two-rulings.md",
+        [
+            (drafts[0], "docs/rulings/RL-00386-the-first-ruling.md"),
+            (drafts[1], "docs/rulings/RL-00387-the-second-ruling.md"),
+        ],
+    )
+    token_map = {"Ruling 86": "RL-00386", "Ruling 87": "RL-00387"}
+
+    doc_id_cli._write_split_source_indexes(tmp_path, sources, token_map)
+
+    index = tmp_path / "docs" / "rulings" / "INDEX.md"
+    text = index.read_text(encoding="utf-8")
+    assert "RL-00386" in text, "the mapped token must appear mapped in the title column"
+    assert "Ruling 86 —" not in text, (
+        "the title column still carries the unswept legacy token — the sweep-order "
+        "defect Task 4 item 1 exists to fix"
+    )
+    # Positive control: the `was:` provenance column is a pre-migration path and must
+    # stay byte-identical, same reasoning as Ruling 101 clause 2 — this fix must not
+    # widen into re-sweeping the whole generated file.
+    assert "docs/plans/2026-09-01-two-rulings.md" in text, (
+        "the `was:` column must still carry the old path — a full re-sweep of this file "
+        "would destroy it, which is why the fix targets the title column only"
+    )
+
+
+def test_the_split_index_preamble_is_swept_for_the_rulings_it_names_by_legacy_form(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The same sweep-order defect, found a second time in the same function:
+    `_SPLIT_INDEX_PREAMBLE` is a source-level string constant naming `Ruling 89`,
+    `Ruling 100` and `Ruling 101` by their own legacy form, rendered into every generated
+    `docs/<family>/INDEX.md` after the sweep already ran. Confirmed live against the real
+    corpus: all 6 of row (d5)'s remaining hits at this task's own tree were exactly these
+    three names, in the three family index files this preamble is written into.
+    """
+    split = _split_fixture(doc_id_cli)
+    token_map = {"Ruling 89": "RL-00089", "Ruling 100": "RL-00100", "Ruling 101": "RL-00101"}
+
+    doc_id_cli._write_split_source_indexes(tmp_path, [split], token_map)
+
+    text = (tmp_path / "docs" / "rulings" / "INDEX.md").read_text(encoding="utf-8")
+    assert "RL-00089" in text, (
+        "the preamble's own citations of the governing rulings must be swept, not left "
+        "in legacy form forever in every generated index"
+    )
+    assert "RL-00100" in text
+    assert "RL-00101" in text
+    assert "Ruling 89" not in text
+    assert "Ruling 100" not in text
+    assert "Ruling 101" not in text
+
+
 def test_a_bare_basename_link_is_rewritten_only_inside_its_own_directory(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -5384,12 +5568,15 @@ def _rewrite_one_file(
     tmp_path: pathlib.Path,
     token_map: dict[str, str],
     text: str,
+    derived_redirects: list[tuple[str, str]] | None = None,
 ) -> str:
     """Run the real `_rewrite_citations` over a one-file tree and return the result."""
     target = tmp_path / "docs" / "sample.md"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8")
-    doc_id_cli._rewrite_citations(tmp_path, token_map)
+    doc_id_cli._rewrite_citations(
+        tmp_path, token_map, derived_redirects=derived_redirects
+    )
     return target.read_text(encoding="utf-8")
 
 
@@ -5403,16 +5590,26 @@ def test_ruling_102_g_the_named_broken_input_nfr_rate_13_14(
     """Ruling 102 §2's named broken-input proof, in the sentence it was found in
     (`.claude/roles/lead.md`). Red before the boundary rule: the head was rewritten and
     `/14` orphaned.
+
+    Task 4 item 3 (W37-6 channel `:318-330`) reverses row (g)'s own "left whole" reading
+    for exactly this shape once both halves are mapped, as `_NFR_RATE_MAP` here always
+    was: the compound is now expanded, component by component, never the head alone with
+    the tail carried. The mangled-fragment defect this test is named for — a rewrite that
+    stops halfway and leaves a meaningless number behind — is still the thing being
+    checked; it is now refuted by full, correct expansion rather than by non-substitution.
     """
     before = "close the hand-compiled owed list **lost NFR-RATE-13/14** (F41)\n"
     after = _rewrite_one_file(doc_id_cli, tmp_path, dict(_NFR_RATE_MAP), before)
     assert "NFR-775/14" not in after, (
         "the head was rewritten inside a longer identifier and the tail orphaned — "
-        "Ruling 102 §2's exact defect"
+        "Ruling 102 §2's exact defect must not recur even though the whole compound now "
+        "expands"
     )
-    assert after == before, (
-        "a continued identifier expression is left whole; §7 (g)'s inverse is per-token, "
-        "so no expansion of it can round-trip to the merge-base bytes"
+    assert "NFR-775/776" in after, (
+        "both components are mapped, so task 4 item 3 requires the whole compound to "
+        "expand, never stay whole and never mangle — and to keep the citation's own "
+        "shorthand (the maintainer's own worked example), not repeat the prefix on the "
+        "second number"
     )
 
 
@@ -5449,32 +5646,12 @@ def test_ruling_102_g_a_word_suffix_is_not_a_continuation(
         pytest.param(
             "FR-RATE-56/57/58/59 together\n",
             {"FR-RATE-56": "FR-720", "FR-RATE-57": "FR-721"},
-            id="four-part-slash-compound",
+            id="four-part-slash-compound-two-of-four-mapped",
         ),
         pytest.param(
             "NFR-MODEL-1/2/3/4/5/7/8/9/10/11/12 in one breath\n",
             {"NFR-MODEL-1": "NFR-700", "NFR-MODEL-2": "NFR-701"},
-            id="twelve-part-slash-compound",
-        ),
-        pytest.param(
-            "adopted NT-0010/0011 together\n",
-            {"NT-0010": "RFC-00042", "NT-0011": "RFC-00043"},
-            id="note-family-slash-compound",
-        ),
-        pytest.param(
-            "see ADR-0001/0002\n",
-            {"ADR-0001": "ADR-00001", "ADR-0002": "ADR-00002"},
-            id="adr-family-slash-compound",
-        ),
-        pytest.param(
-            "see FR-RATE-46-49 for the range\n",
-            {"FR-RATE-46": "FR-712", "FR-RATE-49": "FR-715"},
-            id="hyphen-range",
-        ),
-        pytest.param(
-            "Ruling 86/87 cover it\n",
-            {"Ruling 86": "RL-00086", "Ruling 87": "RL-00087"},
-            id="ruling-family-slash-compound",
+            id="twelve-part-slash-compound-two-of-twelve-mapped",
         ),
         pytest.param(
             "task W9-3-2 is closed\n",
@@ -5483,18 +5660,87 @@ def test_ruling_102_g_a_word_suffix_is_not_a_continuation(
         ),
     ],
 )
-def test_ruling_102_g_every_continuation_shape_in_the_corpus_is_left_whole(
+def test_ruling_102_g_a_compound_with_an_unmapped_component_stays_whole(
     doc_id_cli: types.ModuleType,
     tmp_path: pathlib.Path,
     text: str,
     token_map: dict[str, str],
 ) -> None:
-    """One case per continuation shape the corpus actually holds, enumerated from it
-    rather than inferred from Ruling 102's examples. Every one of these was mangled by
-    `\\b<tok>\\b` alone; `W9-3-2` is the shape that shows the rule is about identifiers
-    and not about compound citations — there the longer identifier is a *slice task*, and
-    the token that used to eat its head is a live slice id."""
+    """Task 4 item 3's first broken-input proof: a compound with one unmapped component
+    must come out untouched, in full — never half-expanded, and never the base alone with
+    the tail carried (Ruling 102 §2 row (g)'s original defect, still refused).
+
+    `W9-3-2` is the shape that shows the rule is about identifiers and not about citation
+    shorthand — there the longer identifier is a *slice task*, and the token that used to
+    eat its head is a live slice id whose own sibling (`W9-2`) is not itself mapped.
+    """
     assert _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text) == text
+
+
+@pytest.mark.parametrize(
+    ("text", "token_map", "expanded"),
+    [
+        pytest.param(
+            "adopted NT-0010/0011 together\n",
+            {"NT-0010": "RFC-00042", "NT-0011": "RFC-00043"},
+            "adopted RFC-00042/00043 together\n",
+            id="note-family-slash-compound",
+        ),
+        pytest.param(
+            "see ADR-0001/0002\n",
+            {"ADR-0001": "ADR-00001", "ADR-0002": "ADR-00002"},
+            "see ADR-00001/00002\n",
+            id="adr-family-slash-compound",
+        ),
+        pytest.param(
+            "see FR-RATE-46-49 for the range\n",
+            {"FR-RATE-46": "FR-712", "FR-RATE-49": "FR-715"},
+            "see FR-712-715 for the range\n",
+            id="hyphen-range",
+        ),
+        pytest.param(
+            "Ruling 86/87 cover it\n",
+            {"Ruling 86": "RL-00086", "Ruling 87": "RL-00087"},
+            "RL-00086/00087 cover it\n",
+            id="ruling-family-slash-compound",
+        ),
+    ],
+)
+def test_task4_a_fully_mapped_compound_expands_and_inverts(
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    text: str,
+    token_map: dict[str, str],
+    expanded: str,
+) -> None:
+    """Task 4 item 3's second broken-input proof: a fully mapped compound comes out fully
+    expanded, and the expansion round-trips through `(g)`'s own inverse.
+
+    The round-trip is the point, not a formality: `redirects_inverse` in
+    `audit_docs.frozen_file_matches_after_migration_stamp` is built as a flat
+    `{new_id: old_id}` dict off every `REDIRECTS.csv` row (`scripts/doc-id.py`,
+    `classify_migration_diff`) with no notion of what a row's tokens mean, so recording the
+    compound pair through `derived_redirects` the same way a single-token move is recorded
+    is what makes this invert at all — an expansion with no recorded pair would revert to
+    `NFR-RATE-13/NFR-RATE-14`, not the merge-base bytes, exactly the failure Ruling 102 §2
+    row (g) was written to catch.
+    """
+    derived: list[tuple[str, str]] = []
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, dict(token_map), text, derived_redirects=derived
+    )
+    assert after == expanded
+    assert len(derived) == 1, "exactly one compound was expanded"
+    # The pair recorded is the exact compound span rewritten, old -> new.
+    old_compound, new_compound = derived[0]
+    assert new_compound in expanded
+    assert old_compound in text
+
+    audit_docs = doc_id_cli._load_audit_docs()
+    redirects_inverse = {new_compound: old_compound}
+    assert audit_docs.frozen_file_matches_after_migration_stamp(
+        text, after, redirects_inverse
+    ), "the compound pair, recorded, must invert the expansion back to the merge-base text"
 
 
 def test_ruling_102_g_a_longer_identifier_that_is_itself_a_token_still_rewrites(
@@ -5508,3 +5754,26 @@ def test_ruling_102_g_a_longer_identifier_that_is_itself_a_token_still_rewrites(
         "task W9-3-2 in slice W9-3\n",
     )
     assert after == "task TK-00456 in slice SL-00123\n"
+
+
+def test_task4_a_mapped_work_key_followed_by_a_dash_digit_is_a_slice_key_not_a_compound(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Live regression, found against the fixture corpus while building task 4 item 3:
+    `W1` mapped and immediately followed by `-1` is not the two-part compound
+    `W1` and a sibling `W1` again — reconstructing a sibling by stripping `W1`'s own
+    trailing digit run gives `W` + `1`, i.e. `W1` itself, an infinite-regress shaped bug —
+    it is `W1-1`, a different, longer identifier one level down the hierarchy (a *slice*
+    key, not a second *work* key). Compound expansion must never fire for a `W`-family
+    token: task 4's ruling named `NFR`, `NT`, `ADR` and `Ruling` as the compound-shorthand
+    families, never `W`/`WK`/`SL`, and `W1-1` citing `docs/plans/2026-08-12-example-
+    rulings.md`'s own fixture content is exactly what broke
+    `test_acceptance_item_g_clean_migration_has_no_violations` before this guard existed.
+    """
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, {"W1": "WK-00900"}, "cites W1-1 for a slice\n"
+    )
+    assert after == "cites W1-1 for a slice\n", (
+        "W1-1 is a slice key, not W1 continued by a compound sibling — it must be left "
+        "whole even though W1 alone is mapped"
+    )
