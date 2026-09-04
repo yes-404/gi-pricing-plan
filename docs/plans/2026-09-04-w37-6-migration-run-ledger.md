@@ -69,7 +69,7 @@ Two worktrees carried uncommitted diffs at cleanup time; neither was discarded b
   `_TRAILING_LOCATOR_RE`, `_in_path_context`, and the conjunct-2/3 fixes). `wt-rowe` is
   removed only after that disposition lands here.
 
-## Ruling 105 D2 — `(h4)`'s measurement point
+## `(h4)`'s measurement point — Ruling 105 D2
 
 `(h4)` cannot be measured from the pre-flight snapshot (no venv or pnpm store there). It is
 measured by the migration PR's own CI on its exact head — all four workflows green — plus the
