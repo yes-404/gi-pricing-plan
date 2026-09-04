@@ -1218,3 +1218,30 @@ yet opened. One (g) is partially discharged across four PRs (three merged, one i
 but still fails overall. **Checkpoint 1 cannot be reported met until every row above either
 clears or is explicitly ruled DISCLOSE/out-of-scope** — this table is the tracker from
 here; each later entry moves rows off it by name.
+
+## 2026-09-04 — the nine unowned rows dispatched: three executors, cut by mechanism
+
+Deputy ruled the actual figures (`docs` run on `0af63b4`) before cutting: 895 lines total
+across the nine rows, five path rows (d9-d13) 821 of them (92%), three id rows (d1/d6/d7)
+74, h1 separate. Three executors, not nine — one mechanism per group:
+
+- **`exec-paths`** (d9, d10, d11, d12, d13) — legacy path citations repointed via the
+  unit-record inverse's path columns, the mechanism #30 already builds. Stacked on
+  `w37-6-citation-inverse-unit` (#30 not yet merged when dispatched); rebases onto `main`
+  once #30 lands. Acceptance: all five rows zero on fresh `--verify`, fixture proof per
+  form, one unmoved-path citation left untouched and listed. d13's `INERT` note is the
+  instrument's, not licence to skip — 90 real lines.
+- **`exec-ids`** (d1, d6, d7) — 74 lines in ≤35 files. First deliverable is investigation,
+  not code: the 74 lines by directory and by kind (citation vs. specification, NT-0004's
+  vocabulary), reported back before any fix. **Does not decide its own exclusion** — the
+  table comes to the lead, who relays to the deputy for the specification-class ruling;
+  `exec-ids` then fixes only the citation class.
+- **`exec-h1`** (h1) — checks 32 (downstream of A/B, not yet), 36/1/31/27 (now): each
+  classified as check-side bug (not migration-aware) or genuine migration defect (filed
+  with owner) before any fix. 29/30/35 stay disclosed (Ruling 105 §B), untouched.
+
+All three dispatched with the canonical gate line, per-worktree database step, and a
+required proof-of-reading line. Landing order when they collide: #30, then `exec-paths`
+(stacked), then `exec-ids`; `exec-h1` independent. Count: `executor-30-2`, `exec-dp7`,
+`exec-paths`, `exec-ids`, `exec-h1` — five live (triage-code stood down, not counted),
+well within the eight-executor cap.
