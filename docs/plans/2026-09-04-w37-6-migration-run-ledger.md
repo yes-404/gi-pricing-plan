@@ -153,3 +153,39 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | PR | Title | Merge commit | `--verify` verdict set |
 |---|---|---|---|
 | #701 | docs(skills): git-hygiene — a line number derived from a slice or a filtered stream | `ad51906` | UNCHANGED: 14 (docs-only skill change, no `docs/` or migration-script path touched — does not affect the predicate) |
+
+## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
+
+The post-restart catch-up (a forked agent, running `scripts/hooks/retry_cap_hook.py record
+--layer slice --id W37-6`) hit a real breach: `slice:W37-6:fix` reached
+`delivery-process.core.json`'s cap of 2 (PR #707, PR #711) and a third attempt (PR #715)
+refused with a `pending_human_checkpoint`. Not routed around — the fork stopped and
+reported it.
+
+**Resolution, per the deputy's ruling** (`to-lead.md`, "the retry-cap breach is real,
+historical, and was resolved by the maintainer's Ruling 102"): the checkpoint is cleared —
+`python3 scripts/hooks/retry_cap_hook.py clear-checkpoint` (the tool has **no `--evidence`
+flag on this subcommand**, unlike `record`; the deputy's instruction assumed one — the
+evidence trail lives here instead, per the ruling's own item 3). Evidence for the clear: the
+maintainer's Ruling 102 (`4988dca`, 2026-09-03) already re-planned the slice — from a hand
+gate + fixed window to the `--verify` instrument + a work list — which is §7's own
+`redirect: same_layer_map_plan_or_implement_at_slice`, performed before the hook existed to
+see it. PRs #707 and #711 are Implement tasks of that re-planned work list (Ruling 102 §2),
+not gate retries; the hook has no `implement` kind, so recording them as `fix` misclassified
+a work list as a retry loop. **The two recorded events stay in the state file as history,
+annotated here as misclassified — retained, not counted forward.** No further `fix` is
+recorded for the pre-run work list; a `slice:W37-6:fix` is recorded only when the run's own
+window gate fails after the run starts (Ruling 105 D7: a second in-window failure is a halt
+— the cap and the halt rule are one rule).
+
+**§7's actual data, for the §14 phase review** (the cap's own metadata:
+`status: instrumented_defaults_not_permanent_governance`,
+`revisit_when: one_workstreams_worth_of_data_exists` — W37-6 may be exactly that data
+point): three gate re-runs across five pre-run windows on 2026-09-03 (`none=110`, then 36
+dangling links, then 391 mangled citations / `audit-docs` 547 failures); one halt with
+handover committed first; one replan (Ruling 102, `4988dca`); work-list PRs merged since:
+#706, #707, #711, #712, #713, #714, #715, #701, plus this ledger's own #716 (count current
+at this ledger entry's time; more will land before the review). **The cap value is not
+changed here** — whether 2 is the right number for a re-planned slice's own work list, as
+distinct from repeated retries at one gate, is the §14 review's question with this data in
+front of it, not a call made in passing here.
