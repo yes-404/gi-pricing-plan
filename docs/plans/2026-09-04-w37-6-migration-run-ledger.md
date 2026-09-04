@@ -271,3 +271,25 @@ number: **load average / core count** alongside the executor count.
 *Violations this closes off going forward: a dispatch brief without the slot lock; a full
 gate run per edit; a `--verify` per edit; a load figure reported without the core count
 beside it.*
+
+## 2026-09-04 — correction: no duplicate `pytest` sessions found; the real driver is per-process thread fan-out
+
+The deputy's 11:2xZ instruction to kill "duplicate" `pytest` sessions (citing 7 in
+`wt-rowe2`, 32 total) was checked before acting, per this doc's own §13 rule ("verify the
+claim, not just the citation"): `ps -eo pid,args | grep '/\.venv/bin/pytest'` (the real
+binary path, not a bare string match) found **four** real pytest processes, **one per
+worktree, no duplicates anywhere** — `wt-h2b`, `wt-r105-ruling105` (verify105), `wt-rowe2`,
+`w37-6-other-residue-triage`. A bare `pgrep -fa pytest` returns 29 hits; 19 are
+`until/while … pgrep -f pytest … sleep` wait-loop wrappers (0% CPU) whose own argv contains
+the string "pytest" — a self-match on the probe, not a second real session. No `pkill` was
+run: rule 1 had nothing to act on.
+
+The real driver: each of the four real processes carries **~150 threads** (`ps -o nlwp`)
+and 400–470% CPU — one run's own thread-pool fan-out, not parallel launches. Four such
+runs alone approach 16–19 CPU-cores' worth on this 16-core box even with zero duplicates
+and full compliance with "one session per executor." Flagged to the deputy as an open
+choice rather than decided here: lower the gate-slot cap (4→2) or cap the test run's own
+thread pool (source not located — would need a targeted grep/executor, not done as part of
+this read). Recommended letting the four in-flight runs finish (34–42 min in already; no
+duplicate to kill so the earlier "let it finish" instruction still applies cleanly) and
+ruling the slot cap down for future dispatches.
