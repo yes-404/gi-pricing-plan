@@ -1294,3 +1294,34 @@ reduces but does not zero those rows) and hold d13 entirely. **Escalated to the 
 not decided here**: whether d13's zero-requirement needs amending against RL-230's
 exemption, and whether d9-d12's residual directory-prose population is W37-6's scope at
 all or a separate documentation-sweep item.
+
+## 2026-09-04 — exec-h1's classification: three checks already owned, two small new findings, one classifier bug in the instrument itself
+
+Read the ledger's own checkpoint-1 dispatch entry, then cross-checked its own independent
+findings against it rather than transcribing — good discipline. All four checks are the
+check correctly reporting real migration defects, none check-side bugs:
+
+- **Check 36** (5856 hits) — exactly row (d)'s known sub-checks, already owned by
+  `exec-ids`/`exec-paths`/`executor-30-2`. Not duplicated.
+- **Check 1** (270 hits) — ~237 already `executor-30-2`'s cause3 (PR #30). **33 hits are a
+  new, previously unnamed defect**: `docs/INDEX.md` and `docs/closures/INDEX.md` copy a
+  cited document's own relative link verbatim without adjusting for the index file's own
+  directory depth — a link correct one level down from where it was written resolves wrong
+  once copied into a shallower generated file.
+- **Check 31** (1 hit) — id-sequence gap 296→991, matches the known allocate-after-
+  exemptions defect, owned by `alloc` (row b). Not duplicated.
+- **Check 27** — a self-correction: exec-h1's own first automated pass read this as zero,
+  wrongly — it's actually 1 failure. **Root cause traced to a real bug in the instrument's
+  own classifier**: `_docverify.py`'s `_classify_failures`/`_CHECK_PREFIX_RE` expects a
+  `check N:` message prefix, but `check_process_core_digest`'s `fail()` carries none, so
+  the failure silently buckets as unclassified rather than "27" on every run. The
+  underlying defect: the migration's token-rewrite touched `delivery-process.md`'s bytes
+  without reconciling `delivery-process.core.json`'s digest pointer (a deliberate manual
+  step per Ruling 45, not something `migrate()` should auto-fix).
+
+Authorized both new findings (link-depth bug, digest reconciliation) plus the classifier
+fix, all in the same PR — no collision with other in-flight work (`doc-index.py`'s
+generation logic and the digest field are untouched by anyone else right now). Told to
+confirm the root cause by reading `doc-index.py`'s source before fixing, and to diff
+`delivery-process.md` pre/post-migration to confirm the change is token-form-only before
+bumping the digest, not assume either.
