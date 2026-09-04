@@ -672,3 +672,25 @@ on the exact corpus shape, targeted suite (490 tests) green, ruff/mypy clean.
 a sloppy rerun** — noted for the record so it doesn't read as contention noise against the
 new DB-exclusivity concern above. One more full gate + `--verify`, both under the
 flock/thread-cap pattern, before the PR opens.
+
+## 2026-09-04 — PR #723 (code-tree triage, full 504-file reclassification) ruled; residue named end to end
+
+`triage-code` reclassified the whole code-tree residue, not a sample — hypothesis 1 (a
+missing marker/docstring form) killed by measurement, every single-token substitution
+inverting byte-for-byte. `ci-watcher-723` dispatched; merges on its report.
+
+| Finding | Disposition | Owner |
+|---|---|---|
+| cause3(a) Work/slice/task keys, 85 files (62% of code-tree `other`) — `W6b-11`→`WK-947b-11`, bare map has no compound | classified-table ruling (`:455-470`): slice/task keys are the disclosed alias class, never rewritten — bare `W6b`→`WK-949`, compound `W6b-11` left whole and listed | executor-30-2, #30 |
+| cause3(b) `W3C`/lockfile hashes | already fixed by #721's `\b` boundary (`a2c0afa`) — proof is a fresh-snapshot check that the hash and `W3C` are untouched | executor-30-2 confirms only |
+| Lockfiles in the sweep's corpus (`uv.lock`, `pnpm-lock.yaml`, `frontend/pnpm-lock.yaml`) | new scope defect: a lockfile carries data, never a citation (Ruling 67 Part 2's class) — excluded from the sweep and (d) rows by declared entry, alongside `REDIRECTS.csv` | executor-30-2, same PR |
+| cause4 fixture corpora, 36 files (`tests/fixtures/docs-ids/**`, `docs-migration/**`) | 2026-09-02 ruling (fixtures exempt by path) extends from the stamp to the sweep — skip the declared roots | executor-30-2, same PR |
+| cause5 `scripts/__pycache__/*.pyc`, 4 files | the instrument measuring its own exhaust (`.pyc` created by running `doc-id.py` inside the snapshot) — excluded from the corpus, or `PYTHONDONTWRITEBYTECODE=1` on snapshot invocations | verify105, folds into (d8) |
+| cause6 `docs/…` path citations in code, 9 files, incl. a pathlib `ROOT / "docs" / "audit" / "register.md"` join | contiguous forms use the existing path-record inverse; the pathlib-split form listed unmapped, one file not a class | executor-30-2, same PR |
+| `Ruling 2c` prose → `RL-153c` (lettered rulings) | a unit-record entry, same mechanism | executor-30-2, same PR |
+| `OQ-MODEL-23`/`-24` → `OQ-8623`/`-8624`, `REDIRECTS.csv` holding two rows for `OQ-MODEL-23` | **forward defect, #18 §2's already-ruled fix, never dispatched until now**: the index/allocator read an OQ from the owning spec's §10 only, `open-questions.md` is the mirror (`:368-386`); one draft per OQ, one `REDIRECTS.csv` row per old id (writer refuses a duplicate — that refusal is the proof), rewrite reads the same map the CSV records | **alloc**, new PR, dispatched fresh (its row (b) PR already merged, released) |
+
+**Checkpoint 1 consequence**: with #720 and #723 the residue is named end to end — cause3
+legacy paths (57% docs), keys (62% code), fixtures, pycache, lockfiles, paths-in-code, the
+OQ double-allocation. Every finding has an owner. The third triage (`rest`) reports against
+the same table when it lands.
