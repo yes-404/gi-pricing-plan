@@ -306,3 +306,56 @@ work on this same machine independently corroborated the same day), and the scop
 above exercised every line this change touches; a prior full attempt on this machine the
 same day was abandoned as stalled by another session for the same load-contention reason
 `.claude/skills/dev-commands` already documents.
+
+**2026-09-04 — Ruling 106: a 100-word cap on the whole routine post, a mandatory BST clock
+time in the ETA headline, and a stale-ETA marker when `origin/main` has moved without a
+refresh** (`docs/plans/2026-09-04-ruling-106-slack-routine-word-cap-bst-eta-and-head-refresh.md`).
+Three rules, implemented in `reporter.py`, each with its own broken-input proof named
+verbatim in the ruling's own "Acceptance" section:
+
+1. **The 100-word cap.** `format_routine_post` now builds the ETA-headline lines and the
+   PR/merged-commit lines separately; when their combined word count exceeds
+   `MAX_ROUTINE_POST_WORDS` (100), `_truncate_to_word_cap` drops words from the *non-headline*
+   lines only — the headline (and its staleness annotation) is never touched — and appends
+   `(+N words cut)`, where `N` is the exact count of words actually dropped. Proof:
+   `test_over_140_word_body_is_truncated_to_the_cap_with_headline_intact` builds a body
+   independently measured (before truncation) at well over 140 words, then asserts the
+   rendered post is `<= 100` words, carries the `(+N words cut)` marker, and still contains
+   the ETA line byte-for-byte.
+2. **The BST-clock-time requirement.** `get_eta` now rejects any headline with no
+   `HH:MM BST` (optionally `HH:MM BST YYYY-MM-DD`) token, returning the fixed
+   `ETA_MALFORMED_MESSAGE` ("ETA headline malformed — no clock time") in its place, with
+   `stale=None` — the Updated-stamp staleness annotation does not apply to a line that is
+   not actually the lead's ETA text. Proof:
+   `test_headline_with_no_clock_time_is_rejected_not_posted_as_given` writes a headline
+   reading "Should land in about 2 hours, no rush." and asserts the bare-duration text
+   never reaches `get_eta`'s return value or the rendered post — only the malformed message
+   does. The nine pre-existing `_write_eta`-based tests were updated to embed a valid clock
+   token (`ETA 14:30 BST`) in their fixture headline, so they keep exercising the
+   `**Updated:**`-staleness logic under test rather than tripping this new, orthogonal
+   check as a side effect.
+3. **The `main:`-refresh staleness marker.** `eta.md` now carries a `**main:**` field
+   beside `**Updated:**` (the sha the lead last derived the ETA against). New
+   `get_eta_main_sha` parses it; new `check_main_staleness` compares it — prefix-aware, so
+   a short local sha matching a full remote sha is not a false positive — against the
+   live `origin/main` tip (`main()` already computes this via `get_remote_main_sha`'s
+   `git ls-remote`, never the cached local ref the rest of this file's history warns
+   against). On a mismatch, `main()` overrides `eta_headline` with the stale-ETA line
+   ("ETA stale — main moved to `<sha>` at HH:MM BST, ETA not yet re-derived") before
+   calling `format_routine_post`, replacing the carried-forward headline rather than
+   appending to it. Proof:
+   `test_stale_eta_after_unrefreshed_main_move_carries_the_stale_marker` reads a fixture
+   `eta.md` whose `main:` field is `ad51906`, advances a fixture `origin/main` sha to
+   `fa53484…` with no accompanying `eta.md` update, and asserts the rendered post carries
+   the stale line (with the new short sha and "not yet re-derived") and that the
+   carried-forward headline text is absent from it. A companion negative-control test,
+   `test_matching_main_sha_is_not_stale_and_carried_headline_posts_unchanged`, proves a
+   refreshed `main:` field (full match, and a short-sha prefix match) produces no marker.
+
+Four new tests total (one per rule plus the negative control) plus the nine `_write_eta`
+fixture updates — 34 tests in the two files, all pass via
+`uv run python -m pytest .claude/skills/reporter-cycle/scripts/tests/`. `uv run ruff check
+.` and `uv run mypy` (bare invocation — `.claude/skills/reporter-cycle/scripts` is in its
+configured `files` list) both pass repo-wide against a freshly `uv sync --all-packages`'d
+worktree; `uv run lint-imports` passes (215 files, 1510 dependencies, 3 contracts kept, 0
+broken) — unaffected by this change but re-run per the two-halves-of-the-gate rule.

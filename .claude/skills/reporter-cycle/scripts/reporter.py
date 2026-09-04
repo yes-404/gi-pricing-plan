@@ -31,6 +31,26 @@ LONDON = ZoneInfo("Europe/London")
 
 DEFAULT_CHANNEL = "C0BSYRQ6NGM"  # #claude-code-update
 
+# Ruling 106 (2026-09-04), rule 1: a routine post is at most this many words, counted over
+# the whole rendered body. The ETA headline (and its staleness annotation) is exempt from
+# truncation — see `_truncate_to_word_cap`.
+MAX_ROUTINE_POST_WORDS = 100
+
+# "(+42 words cut)" is always exactly 3 whitespace-separated tokens regardless of how many
+# digits the count has — reserved out of the truncation budget so the marker itself never
+# pushes the final post back over the cap.
+_TRUNCATION_MARKER_WORD_COST = 3
+
+# Ruling 106 (2026-09-04), rule 2: the ETA headline must name a clock time in BST — a bare
+# duration ("~2 hours", "soon") is rejected. Optionally followed by a `YYYY-MM-DD` date.
+_BST_CLOCK_TIME_PATTERN = re.compile(r"\b\d{1,2}:\d{2}\s*BST\b(?:\s+\d{4}-\d{2}-\d{2})?")
+
+# Sentinel messages `get_eta`/`check_main_staleness` return in place of the lead's actual
+# headline text. `_is_eta_override_message` uses these to suppress the normal staleness
+# annotation, which does not apply to a line that is not actually the ETA.
+ETA_MALFORMED_MESSAGE = "ETA headline malformed — no clock time"
+_ETA_STALE_MAIN_PREFIX = "ETA stale — main moved to `"
+
 
 def _handover_dir() -> Path:
     """Return the current session's handover directory, or exit loudly if unset.
@@ -203,6 +223,12 @@ def get_eta(eta_file: Path, now: datetime) -> tuple[str | None, bool | None]:
     stamp parses and is compared against `now`; it is `None` when a headline was found but
     the stamp was not, so the caller can say staleness is unknown instead of guessing.
 
+    Ruling 106 (2026-09-04), rule 2: a headline naming no `HH:MM BST` clock time (optionally
+    followed by `YYYY-MM-DD`) is never returned as given — a bare duration ("~2 hours",
+    "soon") is rejected in favour of the fixed `ETA_MALFORMED_MESSAGE`, with `stale=None`
+    (the staleness annotation describes the lead's actual ETA text, which this is not).
+    This check runs before the `**Updated:**` staleness check below and short-circuits it.
+
     The stamp accepts two forms: a bare UTC `Z` suffix, or the GB-local form the lead's own
     `eta.md` header documents ("All times are GB local (BST, UTC+1)") and actually writes —
     `BST` or `GMT`. The GB-local forms are resolved via `zoneinfo.ZoneInfo("Europe/London")`
@@ -228,11 +254,54 @@ def get_eta(eta_file: Path, now: datetime) -> tuple[str | None, bool | None]:
         return None, None
     headline = headline_match.group(1).strip()
 
+    if not _BST_CLOCK_TIME_PATTERN.search(headline):
+        return ETA_MALFORMED_MESSAGE, None
+
     updated = _parse_updated_stamp(text)
     if updated is None:
         return headline, None
 
     return headline, (now - updated) > timedelta(hours=2)
+
+
+def get_eta_main_sha(eta_file: Path) -> str | None:
+    """Read eta.md's `**main:**` field: the `origin/main` sha the lead derived the current
+    ETA against (Ruling 106, 2026-09-04, rule 3). Beside `**Updated:**`, e.g.
+    ``**main:** `ad51906` `` — the backticks are optional, a bare short or full sha also
+    parses. `None` covers a missing file, an unreadable one, or a file with no `main:`
+    field — the same "unknown, never guessed" contract as `get_eta_updated`.
+    """
+    try:
+        text = eta_file.read_text()
+    except OSError:
+        return None
+    match = re.search(r"^\*\*main:\*\*\s*`?([0-9a-f]{4,40})`?", text, re.MULTILINE)
+    if not match:
+        return None
+    return match.group(1)
+
+
+def check_main_staleness(
+    eta_main_sha: str | None, remote_sha: str | None, now: datetime
+) -> str | None:
+    """Return the stale-ETA line when eta.md's recorded `main:` sha disagrees with the live
+    `origin/main` tip, or `None` when they agree or either side is unknown (never guessed).
+
+    Ruling 106 (2026-09-04), rule 3: the ETA is refreshed on every move of `origin/main`'s
+    HEAD, and that refresh is the lead's own work, not the reporter's. This is the backstop
+    that makes a missed refresh visible to a reader — not the mechanism itself. The
+    comparison is prefix-based, since `eta_main_sha` is typically the 7-char short sha the
+    lead writes by hand while `remote_sha` (from `get_remote_main_sha`, `git ls-remote`) is
+    the full 40-char sha; a short sha that is a genuine prefix of the current tip is not
+    misreported as stale.
+    """
+    if eta_main_sha is None or remote_sha is None:
+        return None
+    if remote_sha.startswith(eta_main_sha) or eta_main_sha.startswith(remote_sha):
+        return None
+    clock = now.astimezone(LONDON).strftime("%H:%M")
+    sha = _short_sha(remote_sha)
+    return f"{_ETA_STALE_MAIN_PREFIX}{sha}` at {clock} BST, ETA not yet re-derived"
 
 
 def get_remote_main_sha(repo_dir: Path) -> str | None:
@@ -386,6 +455,95 @@ def _format_pr_line(pr: dict[str, object]) -> str:
     return f"#{number} {title} — {state}{note}"
 
 
+def _word_count(text: str) -> int:
+    return len(text.split())
+
+
+def _is_eta_override_message(headline: str) -> bool:
+    """True for a sentinel line (`get_eta`'s malformed message, or `check_main_staleness`'s
+    stale-main line) standing in for the lead's actual headline text — those carry their
+    own complete meaning, so the normal Updated-stamp staleness annotation below them would
+    only confuse a reader.
+    """
+    return headline == ETA_MALFORMED_MESSAGE or headline.startswith(_ETA_STALE_MAIN_PREFIX)
+
+
+def _build_eta_lines(eta_headline: str | None, eta_stale: bool | None) -> list[str]:
+    if eta_headline is None:
+        return ["*ETA:* eta.md missing or unparseable — nothing to report"]
+
+    lines = [f"*ETA:* {eta_headline}"]
+    if _is_eta_override_message(eta_headline):
+        return lines
+    if eta_stale is None:
+        lines.append("_(Updated stamp missing or unparseable — staleness unknown)_")
+    elif eta_stale:
+        lines.append("_(STALE — Updated stamp is more than 2h old)_")
+    return lines
+
+
+def _build_pr_lines(pr_count: int, prs: list[dict[str, object]]) -> list[str]:
+    if pr_count > 0:
+        return [f"*OPEN PRs ({pr_count}):*", *(f"  • {_format_pr_line(pr)}" for pr in prs)]
+    return ["*OPEN PRs:* none"]
+
+
+def _build_merged_lines(
+    merged_status: str, merged_subjects: list[str], remote_sha: str | None
+) -> list[str]:
+    if merged_status == "unknown":
+        return ["*MERGED SINCE LAST POST:* could not reach origin (git ls-remote failed)"]
+    if merged_status == "baseline":
+        return [
+            f"*MERGED SINCE LAST POST:* baseline set at `{_short_sha(remote_sha)}` — "
+            "nothing to compare against yet"
+        ]
+    if merged_status == "unchanged":
+        sha = _short_sha(remote_sha)
+        return [f"*MERGED SINCE LAST POST:* none (main unchanged at `{sha}`)"]
+    if merged_subjects:
+        return ["*MERGED SINCE LAST POST:*", *(f"  • {s}" for s in merged_subjects)]
+    return [
+        f"*MERGED SINCE LAST POST:* main moved to `{_short_sha(remote_sha)}` but the "
+        "commit log could not be read"
+    ]
+
+
+def _truncate_to_word_cap(headline_lines: list[str], body_lines: list[str]) -> str:
+    """Truncate `body_lines` (the PR and merged-commit sections) to fit the whole post
+    under `MAX_ROUTINE_POST_WORDS`, appending `(+N words cut)`.
+
+    Ruling 106 (2026-09-04), rule 1: the ETA headline (`headline_lines`) is never
+    truncated — a half-cut ETA is worse than a full one with less context around it — so
+    only the non-headline sections are candidates for the cut. `words_cut` counts every
+    word actually dropped from the original body, computed as a difference so it stays
+    correct regardless of how the cut point falls inside a line.
+    """
+    headline_text = "\n".join(headline_lines)
+    headline_words = _word_count(headline_text)
+    body_words_total = _word_count("\n".join(body_lines))
+
+    budget = max(MAX_ROUTINE_POST_WORDS - headline_words - _TRUNCATION_MARKER_WORD_COST, 0)
+
+    kept_lines: list[str] = []
+    words_kept = 0
+    for line in body_lines:
+        words = line.split()
+        if words_kept + len(words) <= budget:
+            kept_lines.append(line)
+            words_kept += len(words)
+            continue
+        remaining = budget - words_kept
+        if remaining > 0:
+            kept_lines.append(" ".join(words[:remaining]))
+            words_kept += remaining
+        break
+
+    words_cut = body_words_total - words_kept
+    kept_lines.append(f"(+{words_cut} words cut)")
+    return "\n".join([*headline_lines, *kept_lines])
+
+
 def format_routine_post(
     eta_headline: str | None,
     eta_stale: bool | None,
@@ -403,44 +561,23 @@ def format_routine_post(
     `merged_status` is one of `"unknown"` (the remote could not be reached), `"baseline"`
     (no prior post to diff against), `"unchanged"`, or `"changed"` — see `main`, which
     derives it from `get_remote_main_sha` and `get_last_reported_sha`.
+
+    Ruling 106 (2026-09-04), rule 1: the whole rendered body is capped at
+    `MAX_ROUTINE_POST_WORDS` words. Over the cap, the non-headline sections (PR list,
+    merged-commit list) are truncated first — the ETA headline never is — and a
+    `(+N words cut)` marker is appended. See `_truncate_to_word_cap`.
     """
-    lines = []
+    headline_lines = _build_eta_lines(eta_headline, eta_stale)
+    body_lines = [
+        *_build_pr_lines(pr_count, prs),
+        *_build_merged_lines(merged_status, merged_subjects, remote_sha),
+    ]
 
-    if eta_headline is None:
-        lines.append("*ETA:* eta.md missing or unparseable — nothing to report")
-    else:
-        lines.append(f"*ETA:* {eta_headline}")
-        if eta_stale is None:
-            lines.append("_(Updated stamp missing or unparseable — staleness unknown)_")
-        elif eta_stale:
-            lines.append("_(STALE — Updated stamp is more than 2h old)_")
+    full_text = "\n".join([*headline_lines, *body_lines])
+    if _word_count(full_text) <= MAX_ROUTINE_POST_WORDS:
+        return full_text
 
-    if pr_count > 0:
-        lines.append(f"*OPEN PRs ({pr_count}):*")
-        lines.extend(f"  • {_format_pr_line(pr)}" for pr in prs)
-    else:
-        lines.append("*OPEN PRs:* none")
-
-    if merged_status == "unknown":
-        lines.append("*MERGED SINCE LAST POST:* could not reach origin (git ls-remote failed)")
-    elif merged_status == "baseline":
-        lines.append(
-            f"*MERGED SINCE LAST POST:* baseline set at `{_short_sha(remote_sha)}` — "
-            "nothing to compare against yet"
-        )
-    elif merged_status == "unchanged":
-        sha = _short_sha(remote_sha)
-        lines.append(f"*MERGED SINCE LAST POST:* none (main unchanged at `{sha}`)")
-    elif merged_subjects:
-        lines.append("*MERGED SINCE LAST POST:*")
-        lines.extend(f"  • {subject}" for subject in merged_subjects)
-    else:
-        lines.append(
-            f"*MERGED SINCE LAST POST:* main moved to `{_short_sha(remote_sha)}` but the "
-            "commit log could not be read"
-        )
-
-    return "\n".join(lines)
+    return _truncate_to_word_cap(headline_lines, body_lines)
 
 
 def main() -> int:
@@ -459,7 +596,8 @@ def main() -> int:
         return 0
 
     repo_dir = _repo_dir()
-    eta_headline, eta_stale = get_eta(handover_dir / "eta.md", now)
+    eta_file = handover_dir / "eta.md"
+    eta_headline, eta_stale = get_eta(eta_file, now)
     pr_count, prs = get_prs(repo_dir)
 
     last_sha = get_last_reported_sha(handover_dir)
@@ -474,6 +612,15 @@ def main() -> int:
     else:
         merged_status = "changed"
         merged_subjects = get_merged_subjects(repo_dir, last_sha, remote_sha)
+
+    # Ruling 106 (2026-09-04), rule 3: if eta.md's own `main:` field has fallen behind
+    # `origin/main`'s live tip, the carried-forward headline is replaced with a stale-ETA
+    # line rather than posted as if it were still current. The lead's own obligation is to
+    # re-derive eta.md on every merge; this is only the backstop that makes a missed
+    # refresh visible to a reader.
+    stale_main_line = check_main_staleness(get_eta_main_sha(eta_file), remote_sha, now)
+    if stale_main_line is not None:
+        eta_headline, eta_stale = stale_main_line, None
 
     text = format_routine_post(
         eta_headline, eta_stale, pr_count, prs, merged_status, merged_subjects, remote_sha

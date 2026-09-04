@@ -29,6 +29,15 @@ The same liveness rule as `watcher.md`: a Monitor id is a handle, not a process.
 **What goes in:** (1) ETA headline from `eta.md`, verbatim; (2) open PRs with CI state from
 `gh pr list`; (3) commits merged to main since the last post, from `git ls-remote` and `git log`.
 
+*Ruling 106 (2026-09-04) constrains item (1)'s shape and the whole post's length — the
+100-word cap, the mandatory BST clock time, and the `main:`-refresh staleness marker —
+see `docs/plans/2026-09-04-ruling-106-slack-routine-word-cap-bst-eta-and-head-refresh.md`
+and `.claude/skills/reporter-cycle/SKILL.md`'s `Verified` entry for the same date.*
+
+**Maintainer instruction, 2026-09-04:** "request the lead to rule for slack routine in long
+term: message limited to 100 words, ETA should include BST clock time estimation, update
+ETA when git head changes."
+
 **What does NOT go in:** status characterization, phase judgment, rule application, or
 workstream inference. Examples of violations: "Peak-hours pause window…" (rule application —
 the lead puts rule applicability into eta.md), "W11 close audit in progress" (inference from
