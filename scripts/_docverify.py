@@ -2040,7 +2040,10 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "d11": FAIL,        # the old notes directory
     "d12": FAIL,        # docs/adr/
     "d13": FAIL,        # the old .claude notes root — INERT, see its unanchored companion
-    "e": FAIL,          # 2 padded ids in prose                    — Ruling 103
+    "e": PASS,          # 0 padded ids in prose — #25's ruling: the migration normalises a
+                         # padded citation to unpadded (`_normalize_padded_citations`), and
+                         # the two exhibits are fenced by hand under Ruling 103 §5.1
+                         # (2026-09-04, task 7)
     "f": PASS,          # VR-DST-1 unchanged, both conjuncts — Ruling 103. Regressed on
                          # `main` (#707, 43d8698) when `docs/INDEX.md` started quoting
                          # requirement bodies mentioning VR-DST-1 with no pre-migration
