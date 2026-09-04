@@ -710,6 +710,59 @@ def test_residue_cause4_compound_token_adjacent_uppercase(dv: Any) -> None:
     ) != "cause4-compound-token-adjacent-uppercase"
 
 
+def test_residue_cause_third_scope_shapes(dv: Any) -> None:
+    """W37-6's third `other`-triage scope (everything not under `docs/`, `tests/`,
+    `backend/`, `frontend/`, `scripts/`, `packages/`): two shapes found sampling that
+    remainder whole (14 members) rather than by ten-sample, each reported by the same
+    convention as the slash-compound shape above — named, counted, not fixed. Each
+    assertion pairs a positive with the narrowest broken input that must NOT trigger it,
+    so the check is falsifiable rather than merely illustrative.
+
+    A third candidate this executor found on the same scope (an id token and its
+    `docs/plans/` or `docs/notes/` path rewritten together, e.g. a markdown link) turned
+    out to be cause3 — `test_residue_cause3_legacy_path_citation` above — read one level
+    more generally by the sibling `docs/`-triage executor; the assertion just below proves
+    that convergence rather than re-introducing a second label for it.
+    """
+    # The "id+path compound" candidate resolves to cause3, not a new label: cause3's
+    # `_LEGACY_PATH_RES` matches on the bare path alone, so it claims this line before any
+    # id-plus-path check would get a chance to.
+    assert dv._residue_cause(
+        "CLAUDE.md",
+        ("See [`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md).",),
+    ) == "cause3-legacy-path-citation"
+
+    # new-frontmatter-stamp-no-move: no leading `---` before migration, a full block
+    # (starting `family:`) stamped in after, at the same path (no move). A file that
+    # already had `---` (cause 1's territory) must not match even with new_lines matching
+    # the block shape; a file with new_lines absent (no migrated read available) must fall
+    # through rather than raise.
+    assert dv._residue_cause(
+        ".claude/roles/executor.md",
+        ("# executor", "", "- some body line"),
+        ("---", "family: reference", "title: executor", "status: active", "---", "", "# executor"),
+    ) == "new-frontmatter-stamp-no-move (unassigned — reported, not investigated)"
+    assert dv._residue_cause(
+        ".claude/skills/x/SKILL.md",
+        ("---", "name: x", "---", "Body."),
+        ("---", "family: reference", "---", "Body."),
+    ) == "cause1-foreign-frontmatter"  # existing block: cause 1 owns this, not the new check
+    assert dv._residue_cause(
+        ".claude/roles/executor.md", ("# executor", "- some body line"), None
+    ) == "other"  # no migrated read available: falls through, does not raise
+
+    # unmapped-work-slice-key: a `W<n>[a-z]?-<m>` slice key on the pre-migration line —
+    # the deputy's own unmapped-tokens ruling already names this shape (`W<n>-<m>`); this
+    # only reports that it also surfaces as (g) residue. A plain requirement id must not
+    # match it.
+    assert dv._residue_cause(
+        "examples/fremtpl2/seed.py", ("# no identity (W6b-10) and no workspace (W6b-11)",)
+    ) == "unmapped-work-slice-key (named elsewhere, reported here by shape)"
+    assert dv._residue_cause(
+        "docs/specs/x.md", ("Cites FR-PLAT-37 in prose.",)
+    ) == "other"
+
+
 def test_row_g_empty_classified_population_fails(dv: Any, tmp_path: pathlib.Path) -> None:
     """NT-0007: a green over an empty population is a fail, not a pass — g2's population
     is the file count `classify_migration_diff` classified, not the corpus size."""
