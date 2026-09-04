@@ -2203,44 +2203,54 @@ _RULING_87_STANDALONE_SOURCES = (
 )
 
 
-def test_ruling_87_standalone_files_are_untouched_by_this_amendment(
+def test_ruling_87_standalone_files_are_now_discovered_as_rulings(
     doc_id_cli: types.ModuleType,
 ) -> None:
-    """Ruling 95 §4 item 3's re-derived instrument (see the module comment above this
-    constant). `owner="planner"` asserted below is *known wrong* for these three --
-    Ruling 87 §3 item 2 ruled `decision-maker` for them, and Ruling 86 item 2's second
-    clause (still standing after Ruling 95, untouched by this PR) is exactly this
-    hardcode. Asserting it here pins today's behaviour so a future change to it is a
-    deliberate act of implementing Ruling 87, not an incidental side effect discovered
-    after the fact -- this test documents the hardcode, it does not bless it.
+    """F96 / Ruling 87, implemented 2026-09-04 (task #30) -- this is the update this
+    test's own prior docstring asked for, not a silencing: "if this now fires, Ruling
+    86/87's heading-widening has landed and this test needs updating to Ruling 87's
+    terms." It has: `_single_h1_ruling_heading` (`scripts/doc-id.py`) now claims a file
+    whose own first heading, joined across any hard wrap, reads `# Ruling <n> — ...`, and
+    `_discover_multi_ruling_files` mints one `RL-` draft from it -- the mechanism Ruling
+    87 §1 left open ("a widened ruling splitter, or a prior classification pass")
+    resolved as the former.
 
-    Only `_discover_multi_ruling_files` is checked as "no other discovery function
-    claims these": every other `_discover_*` in this module reads a different real
-    location entirely (`docs/adr/`, `docs/findings/register.md`, `docs/roadmap.md`,
-    `docs/specs/*.md`, `.claude/skills/`, ...), never `docs/plans/*.md` ruling-shaped
-    content, so `_discover_multi_ruling_files` -- the one other function this module
-    ever routes a ruling-shaped file through -- is the one collision this amendment
-    could plausibly have introduced.
+    `owner == "decision-maker"` is no longer a documented hardcode pinned against its own
+    wrongness (the prior version of this test's own words) -- it is now the correct,
+    intended value for a real ruling record (`_RULING_DEFAULT_OWNER`, Ruling 95), and
+    these three real files are exactly the measured population W37-6 row (d5) named:
+    `Ruling 59`, `60` and `61`, none of the three previously in `token_map` at all
+    (confirmed: zero `docs/REDIRECTS.csv` rows for any of the three before this fix).
 
-    Deliberately not `_ruling_file_owner`: post-Ruling-95 that function is
-    content-independent, so pointing it at these three files' real text would return
-    "decision-maker" for any input whatsoever, discriminating nothing -- a test that
-    cannot fail is worse than no test, since it would read as coverage this PR does not
-    have. It would also test a function Ruling 87 item 1 never committed to using for
-    this set: which discovery function eventually claims these files is still open.
+    `_discover_plain_plans` must no longer claim any of them (the other direction of the
+    same defect: claiming a file twice), and the census must not flag them either, now
+    for the correct reason -- properly accounted for, not specially exempted.
     """
-    drafts = doc_id_cli._discover_plain_plans(ROOT)
-    by_was = {d.was: d for d in drafts}
-    for source in _RULING_87_STANDALONE_SOURCES:
-        assert source in by_was, f"fixture assumption: {source} still exists as a plain plan"
-        assert by_was[source].owner == "planner", by_was[source]
-
-    multi_ruling_was = {d.was for d in doc_id_cli._discover_multi_ruling_files(ROOT)}
-    assert not multi_ruling_was & set(_RULING_87_STANDALONE_SOURCES), (
-        "these three are h1-titled ruling records (Ruling 87 §1) _RULING_HEADING_RE does "
-        "not match today; if this now fires, Ruling 86/87's heading-widening has landed "
-        "and this test needs updating to Ruling 87's terms, not silencing"
+    plain_was = {d.was for d in doc_id_cli._discover_plain_plans(ROOT)}
+    assert not plain_was & set(_RULING_87_STANDALONE_SOURCES), (
+        "a file this fix claims as a ruling must not also be claimed as a plain plan -- "
+        f"double-claimed: {plain_was & set(_RULING_87_STANDALONE_SOURCES)}"
     )
+
+    multi = doc_id_cli._discover_multi_ruling_files(ROOT)
+    by_was = {d.was: d for d in multi}
+    old_tokens = {"Ruling 59", "Ruling 60", "Ruling 61"}
+    found_tokens = {d.old_token for d in multi if d.was in _RULING_87_STANDALONE_SOURCES}
+    assert found_tokens == old_tokens, (
+        f"fixture assumption: the three h1-titled ruling files still carry exactly "
+        f"{old_tokens} -- found {found_tokens}"
+    )
+    for source in _RULING_87_STANDALONE_SOURCES:
+        assert source in by_was, f"{source} must be a multi-ruling (now: single-h1) draft"
+        draft = by_was[source]
+        assert draft.prefix == "RL", draft
+        assert draft.owner == "decision-maker", draft
+        assert draft.title, "an h1 ruling's title must not be empty"
+        # Broken-input proof this fix exists for: the title must not be truncated at the
+        # first physical line's own hard wrap -- every one of the three real titles wraps.
+        assert "\n" not in draft.title
+
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(ROOT)  # must not raise
 
 
 # ---------------------------------------------------------------------------------------
@@ -2968,9 +2978,10 @@ def test_real_corpus_dep_ids_split_into_discovered_and_already_canonical(
 # -----------------------------------------------------------------------------------------
 # Row 31: `_discover_multi_ruling_files` assumes every ruling heading is `## Ruling
 # <digits>`. Both of Ruling 83 §1(c)'s own worked form variations are reproduced: an h1
-# single-ruling file (must NOT be flagged -- Ruling 87 confirms it is not this function's
-# job) and `Ruling A1`/`A2`-shaped letter-suffixed headings (MUST be named -- Ruling 83
-# §4's own "mutation the widening approach cannot survive").
+# single-ruling file (F96 / Ruling 87, implemented 2026-09-04, task #30: now discovered as
+# its own `RL-` draft, and the census must not flag it -- properly accounted for, not
+# specially exempted) and `Ruling A1`/`A2`-shaped letter-suffixed headings (MUST be named
+# -- Ruling 83 §4's own "mutation the widening approach cannot survive").
 # -----------------------------------------------------------------------------------------
 
 
@@ -2989,21 +3000,146 @@ def test_multi_ruling_guard_is_silent_on_a_clean_multi_ruling_file(
     doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)
 
 
-def test_multi_ruling_guard_exempts_a_solitary_h1_ruling_file(
+def test_multi_ruling_guard_accounts_for_a_solitary_h1_ruling_file(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """One ruling per file, titling the file itself, at `#` depth -- Ruling 83's own worked
-    form variation invisible to `_RULING_HEADING_RE` (h1, not h2), and the settled non-
-    defect case (Ruling 87): `_discover_multi_ruling_files` is correctly not this file's
-    mechanism, so the census must not flag it either.
+    form variation, invisible to `_RULING_HEADING_RE` alone (h1, not h2) but claimed by
+    `_discover_multi_ruling_files` since F96 / Ruling 87 (2026-09-04, task #30). The census
+    must not flag it -- now because it is properly accounted for (`record_starts` includes
+    the h1 heading's own position), not because this shape is specially exempted; renamed
+    from `..._exempts_..._file` to say so, since that is no longer what happens.
+
+    Em-dash after the number, not `--`: `_RULING_HEADING_RE` (the pre-existing h2 pattern,
+    unchanged here) has the identical requirement, and the real corpus's own h1 rulings
+    (`Ruling 59`/`60`/`61`) all use it -- an old double-hyphen fixture here tested only
+    the prior "must not be discovered at all" behaviour, where the dash style never
+    mattered; it does now that the title has to be extracted from it.
     """
     plans_dir = tmp_path / "docs" / "plans"
     plans_dir.mkdir(parents=True)
     (plans_dir / "2026-09-01-solo-ruling.md").write_text(
-        "# Ruling 59 -- a single ruling, filed alone\n\nBody of the ruling.\n",
+        "# Ruling 59 — a single ruling, filed alone\n\nBody of the ruling.\n",
         encoding="utf-8",
     )
-    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)
+    drafts = doc_id_cli._discover_multi_ruling_files(tmp_path)
+    assert len(drafts) == 1, drafts
+    assert drafts[0].old_token == "Ruling 59"
+    assert drafts[0].prefix == "RL"
+    plain = doc_id_cli._discover_plain_plans(tmp_path)
+    assert plain == [], "an h1 ruling file must not also be claimed as a plain plan"
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)  # must not raise
+
+
+def test_task30_an_h1_ruling_with_no_h2_discovers_and_its_citations_rewrite(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The exact broken-input proof this fix was ruled against: "a fixture `# Ruling 999
+    — x` with no H2 discovers as `RL-` and its citations rewrite." Two halves, both real
+    execution over real functions -- discovery (`_discover_multi_ruling_files`) and the
+    citation sweep (`_rewrite_citations`), never asserted against each other's absence.
+
+    The token_map entry mirrors exactly what `migrate()`'s own number-assignment phase
+    would produce from this draft's `old_token` -- not re-derived here, since that
+    mechanism is generic over every `_Draft` regardless of which discovery function
+    produced it, and is already covered by the many existing H2 multi-ruling citation-
+    rewrite tests in this module.
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2027-01-04-a-solo-ruling.md").write_text(
+        "# Ruling 999 — x\n\nBody of the ruling.\n", encoding="utf-8"
+    )
+    drafts = doc_id_cli._discover_multi_ruling_files(tmp_path)
+    assert len(drafts) == 1, drafts
+    assert drafts[0].prefix == "RL"
+    assert drafts[0].old_token == "Ruling 999"
+    assert drafts[0].title == "x"
+
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, {"Ruling 999": "RL-00999"}, "see Ruling 999 for details\n",
+    )
+    assert after == "see RL-00999 for details\n"
+
+
+def test_task30_f96_a_ruling_named_file_with_no_ruling_heading_reds_the_check(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The other half of the same ruled fix: "a fixture titled '…ruling…' with no `Ruling
+    N` heading at either depth reds the check" -- F96's own residual population, the class
+    `_single_h1_ruling_heading` cannot discover because there is no `Ruling N` heading
+    anywhere to discover, at h1 or h2. Shaped after the real, still-open instance
+    (`docs/plans/2026-09-02-w37-vendored-exemption-ruling.md`, `_F96_KNOWN_UNFIXED`): a
+    filename ending `-ruling.md`, self-titled a ruling in its own H1 prose, headings named
+    for the ruling's *parts* ("## The ruling, verbatim") rather than anchored on the word
+    "Ruling" followed by a number.
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2027-01-04-a-vacuous-exemption-ruling.md").write_text(
+        "# The vacuous exemption — the maintainer's ruling, 2027-01-04\n\n"
+        "## The ruling, verbatim\n\nProse.\n\n## What it settles\n\nProse.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match=r"F96") as exc_info:
+        doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)
+    assert "2027-01-04-a-vacuous-exemption-ruling.md" in str(exc_info.value)
+
+
+def test_task30_f96_check_does_not_misfire_on_a_plural_rulings_file_with_own_numbering(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The false-positive risk a looser "filename contains 'ruling'" test would have had,
+    measured against the real corpus before choosing `-ruling.md` (singular, exact
+    suffix) instead: two real `-rulings.md` (plural) files use their own internal
+    numbering (`## DP1 — …`, `### Ruling A1`-style) rather than `## Ruling N`, and would
+    have false-positived under a substring test. This fixture reproduces that shape.
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2027-01-04-decision-point-rulings.md").write_text(
+        "# Decision point rulings\n\n## DP1 — a decision\n\nProse.\n\n"
+        "## DP2 — another decision\n\nProse.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)  # must not raise
+
+
+def test_task30_f96_check_does_not_misfire_on_a_derivation_that_merely_discusses_rulings(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The second false-positive risk: a file whose filename merely CONTAINS "ruling" as
+    a substring, without ending in `-ruling.md`, and whose content explicitly says it is
+    a derivation rather than a ruling -- the real corpus's own `2026-09-02-w37-ruling-a-
+    series-family-derivation.md` is shaped exactly like this.
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2027-01-04-a-family-derivation.md").write_text(
+        "# The Ruling A1-A3 series: a derivation for ruling\n\n"
+        "> this is a derivation, not a plan and not a ruling.\n\n"
+        "## Acceptance Standard\n\nProse.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)  # must not raise
+
+
+def test_task30_f96_real_corpus_passes_with_the_one_declared_exception(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The census over the real `docs/plans/` corpus must still pass today, because the
+    one real, still-open F96 instance is a declared exception (`_F96_KNOWN_UNFIXED`), not
+    silently reclassified or rewritten -- `docs/plans/2026-09-02-w37-vendored-exemption-
+    ruling.md` is a frozen, filed maintainer decision this task has no standing to edit.
+    Every one of the other 14 real `-ruling.md` files already carries a heading the
+    check's own predicate finds, so this is not a corpus-wide free pass -- removing the
+    declared entry without also fixing the file must re-red this same test.
+    """
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(ROOT)  # must not raise
+    assert (
+        "docs/plans/2026-09-02-w37-vendored-exemption-ruling.md"
+        in doc_id_cli._F96_KNOWN_UNFIXED
+    ), "fixture assumption: the declared exception still names the real, unfixed file"
 
 
 _A_SERIES_FIXTURE = (

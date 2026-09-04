@@ -1325,6 +1325,73 @@ def _discover_adrs(root: Path) -> list[_Draft]:
 _PLAN_FILENAME_RE: Final = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$")
 _RULING_HEADING_RE: Final = re.compile(r"^##\s+Ruling\s+(\d+)\s*(?:—\s*(.+))?$", re.MULTILINE)
 
+#: F96 / Ruling 87, implemented 2026-09-04 (relayed via team-lead, task #30): a
+#: single-ruling file is sometimes titled `# Ruling N — ...` at h1 depth instead of
+#: carrying a `## Ruling N` h2 inside a multi-ruling file. `_RULING_HEADING_RE` alone
+#: never discovers this shape (h2-only), so it fell through to `_discover_plain_plans` and
+#: migrated as an ordinary `PL-` document — every citation of that ruling, including the
+#: document's own title, then has no `token_map` entry at all and is never rewritten
+#: (measured, real corpus: `Ruling 59`/`60`/`61`, W37-6 row (d5), confirmed zero
+#: `docs/REDIRECTS.csv` rows for any of the three before this fix). Matched only against a
+#: file's own FIRST heading (any level) — the identical "first heading" test `_check_
+#: multi_ruling_files_not_silently_unrecognised` already used to *exempt* this shape from
+#: its census before this widening landed (Ruling 83 §1(c)); one definition, reused rather
+#: than re-derived, so discovery and the census that watches it can never disagree about
+#: which files this is. A genuine multi-ruling file's own h1 is its own generic title
+#: ("# NT-0014 Q1/Q3/Q4 rulings"), never itself shaped like `# Ruling N`, so this can never
+#: compete with `_RULING_HEADING_RE`'s own h2 matches inside that file.
+_RULING_H1_HEADING_RE: Final = re.compile(r"^Ruling\s+(\d+)\s*(?:—\s*(.+))?$")
+
+
+def _first_heading_text_joined(text: str, hashes: str) -> str | None:
+    """The text of `text`'s first `hashes`-prefixed heading line, with any hard-wrapped
+    continuation line joined into one sentence -- `_plan_title`'s own join, generalised
+    from its h1-only `#` to whichever level `_single_h1_ruling_heading` is asked about
+    (`#` or `##`, Ruling 87's own `#{1,2}` bound). `None` if no line starts with that exact
+    prefix.
+    """
+    lines = text.splitlines()
+    prefix = f"{hashes} "
+    for idx, line in enumerate(lines):
+        if not line.startswith(prefix):
+            continue
+        parts = [line[len(prefix) :].rstrip()]
+        for cont in lines[idx + 1 :]:
+            if not cont.strip() or cont.lstrip().startswith("#"):
+                break
+            parts.append(cont.strip())
+        return " ".join(parts)
+    return None
+
+
+def _single_h1_ruling_heading(text: str) -> re.Match[str] | None:
+    """`text`'s own first heading (level 1 or 2), when it is itself shaped like a ruling
+    heading (`_RULING_H1_HEADING_RE`) — the single-ruling-file case, `None` otherwise.
+
+    Matched against the JOINED heading text (`_first_heading_text_joined`), never the raw
+    first physical line alone: `Ruling 59`/`60`/`61`'s own real titles each hard-wrap
+    across two physical lines, and matching only the first line truncates the extracted
+    title mid-sentence — `_plan_title`'s own docstring already names and fixes the
+    identical defect class for the ordinary plan-title path ("a title ... can be
+    hard-wrapped across two ... physical lines with no other marker"); this is that same
+    fix, for the one path `_plan_title` itself does not cover (it is h1-only, and reads
+    the marker off `heading.group(1)` rather than being told which one to look for).
+
+    `text`'s first heading is found with `_CENSUS_ANY_HEADING_RE`, the same generic
+    first-heading finder `_check_multi_ruling_files_not_silently_unrecognised` already
+    uses for the identical test, forward-declared as a module-level function so both that
+    check (defined later in this file) and `_discover_multi_ruling_files` / `_discover_
+    plain_plans` (defined here) share one answer to "is this file's first heading a ruling
+    heading" rather than three independent readings of the same file.
+    """
+    first_heading = _CENSUS_ANY_HEADING_RE.search(text)
+    if first_heading is None or len(first_heading.group(1)) > 2:
+        return None
+    joined = _first_heading_text_joined(text, first_heading.group(1))
+    if joined is None:
+        return None
+    return _RULING_H1_HEADING_RE.match(joined)
+
 #: NT-0019 §1.6's own default for a ruling: "ruling (RL) — decision-maker; the maintainer
 #: may author one on scope or process." The row already contemplates a ruling authored by
 #: someone other than the decision-maker — naming the highest such case — and leaves the
@@ -1429,6 +1496,11 @@ def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
     every split output reproduces this file's body lines in order (Ruling 68 class 4) —
     this corpus's own necessary refinement of step 1's tie-break for "several records
     split from one source file": ties are broken by the record's own position in the file.
+
+    **Also claims the h1 single-ruling shape** (F96 / Ruling 87, `_single_h1_ruling_
+    heading`): a file with zero `## Ruling N` headings whose own first heading is `#
+    Ruling N — ...` is one ruling, the whole file its body — no split, no preamble, since
+    there is nothing else to fold in.
     """
     drafts: list[_Draft] = []
     plans_dir = root / "docs" / "plans"
@@ -1441,6 +1513,30 @@ def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
         text = path.read_text(encoding="utf-8")
         headings = list(_RULING_HEADING_RE.finditer(text))
         if not headings:
+            h1 = _single_h1_ruling_heading(text)
+            if h1 is None:
+                continue
+            created = date.fromisoformat(m.group(1))
+            rel = path.relative_to(root).as_posix()
+            owner = _ruling_file_owner(path, text)
+            number_word, title = h1.group(1), (h1.group(2) or "").strip()
+            # `whole_file_body`, not the inline `text.rstrip("\n") + "\n"` expression
+            # `_discover_plain_plans` also carries: `tests/test_doc_id_migrate.py`'s
+            # `_BODY_DROPPED` mutation proof requires that exact literal to occur exactly
+            # once in this file, per writer, so it can target `_discover_plain_plans`'s
+            # own carrier without also matching this one (Ruling 86 §4 item 3's own
+            # instrument, `_module_with_source_mutations`'s `count == 1` guard).
+            whole_file_body = text.rstrip("\n") + "\n"
+            drafts.append(
+                _Draft(
+                    materialize="document", prefix="RL", kind=None,
+                    title=title or f"Ruling {number_word}",
+                    status="active", created=created, owner=owner,
+                    tie_break=(rel, 0),
+                    old_token=f"Ruling {number_word}", was=rel, body=whole_file_body,
+                    source_line_span=_line_span(text, 0, len(text)),
+                )
+            )
             continue
         created = date.fromisoformat(m.group(1))
         rel = path.relative_to(root).as_posix()
@@ -2164,8 +2260,10 @@ def _discover_plain_plans(root: Path) -> list[_Draft]:
         if m is None:
             continue
         text = path.read_text(encoding="utf-8")
-        if _RULING_HEADING_RE.search(text):
-            continue  # a multi-ruling file — the other discovery function's
+        # a multi-ruling file, or an h1-titled single ruling (F96 / Ruling 87) — the other
+        # discovery function's
+        if _RULING_HEADING_RE.search(text) or _single_h1_ruling_heading(text) is not None:
+            continue
         created_str, slug = m.group(1), m.group(2)
         created = date.fromisoformat(created_str)
         kind: str | None = _plan_kind_for_slug(slug)
@@ -3565,7 +3663,11 @@ def _slug(title: str) -> str:
 
 
 def _write_document_drafts(
-    root: Path, drafts: list[_Draft], roadmap_drafts: Sequence[_Draft] = ()
+    root: Path,
+    drafts: list[_Draft],
+    roadmap_drafts: Sequence[_Draft] = (),
+    *,
+    title_sweep_map: Mapping[str, str] = types.MappingProxyType({}),
 ) -> tuple[list[str], list[str]]:
     """Every `materialize="document"` draft: stamp its header, write it under its family
     directory, and delete its `was` source once every draft sharing that source has been
@@ -3582,6 +3684,26 @@ def _write_document_drafts(
     separate, unassigned defect — "`_discover_roadmap` converts 0 of 41 works" — is fixed;
     `work:`/`phase:` are simply omitted then, exactly as for any other unresolved optional
     field, never a raise).
+
+    **`title_sweep_map` -- row (d4)'s fix (2026-09-04, task #30).** The filename's slug is
+    built from `_slug(d.title)` -- a title captured at discovery time, before `migrate()`'s
+    own citation-rewrite sweep runs. A title that happens to quote a *different* legacy
+    citation (`docs/closures/LG-00028-w5-wf-01-s-citation-audit.md`'s own title names the
+    now-migrated `wf-01` workflow doc) bakes that legacy form into the one place a
+    migration can never correct later: NT-0019's own id==filename invariant (check 31)
+    means this filename is permanent. The rest of the document's content is not this
+    fragile -- its front-matter `title:` field and body get the identical citation swept
+    correctly by the general whole-tree sweep that runs after every file is written, since
+    that sweep operates on file *content*, and a rename is not a content edit. So only the
+    slug's own input needs the fix, not the header's `title=` (still `d.title`, unswept,
+    on purpose -- sweeping it here too would just be swept a second time, harmlessly, but
+    pointlessly, when the general sweep already reaches it). `title_sweep_map` is every
+    OTHER draft's `old_token -> canonical id`, built once by the caller from every draft
+    `_assign_numbers` has already given a number (excluding the ambiguous, multi-claim
+    tokens `token_map` proper also excludes, for the identical reason: no citation names
+    which one a shared token meant, so neither should this map guess). `_sweep_title` is
+    the same single-string substitution `_split_index_sections` already uses for the
+    identical class of problem, one call site further upstream.
     """
     written: list[str] = []
     was_sources: set[str] = set()
@@ -3593,7 +3715,8 @@ def _write_document_drafts(
             continue
         target_dir = root / "docs" / _DOCUMENT_FAMILY_DIR[d.prefix]
         target_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"{_docid.padded(d.prefix, d.number)}-{_slug(d.title)}.md"
+        slug_title = _sweep_title(d.title, title_sweep_map)
+        filename = f"{_docid.padded(d.prefix, d.number)}-{_slug(slug_title)}.md"
         new_path = target_dir / filename
         d.new_path = new_path
         work_value: str | None = None
@@ -3901,6 +4024,22 @@ _CENSUS_ANY_RULING_HEADING_RE: Final = re.compile(
     r"^#{1,6}[ \t]+Ruling[ \t]+\S.*$", re.MULTILINE
 )
 
+#: F96's own still-open instance (`docs/audit/findings/F96.md`'s "one pre-existing
+#: instance ... not fixed here"): `docs/plans/2026-09-02-w37-vendored-exemption-ruling.md`
+#: is self-titled "the maintainer's ruling", carries no `Ruling N`-anchored heading at any
+#: depth, and is a frozen, filed maintainer decision this task does not have standing to
+#: rewrite (`CLAUDE.md` §2: "a filed plan under `docs/plans/` is frozen at its date").
+#: Declared here, not silently skipped, so the check below still fires on any OTHER file
+#: shaped this way while this one real, already-named defect stays open with F96 as its
+#: owner -- the same declared-exception idiom `_docid.LOCKFILE_EXCLUSIONS` and `_docid.
+#: FIXTURE_CORPUS_ROOTS` already use for "known, real, not this code's to silently fix."
+#: Removing this entry is itself F96's discharge condition for this instance -- the day
+#: the file gets a heading, the check must find it unaided, without this line editing
+#: away with it.
+_F96_KNOWN_UNFIXED: Final = frozenset({
+    "docs/plans/2026-09-02-w37-vendored-exemption-ruling.md",
+})
+
 
 def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
     """Task #31 (Ruling 83's census) for `_discover_multi_ruling_files`.
@@ -3916,21 +4055,21 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
     unrelated section structure (`## 1. The maintainer's instructions`, ...), which a fully
     generic heading census would wrongly sweep in as unaccounted.
 
-    **Both open questions this docstring originally deferred are now ruled** (`docs/plans/
-    2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md`), and this paragraph is
-    corrected rather than left to read as still-current -- the *reasoning* below is what
-    changed; the guard's behaviour today does not, because neither ruling is implemented
-    in code yet:
+    **Both open questions this docstring originally deferred are now ruled**, and both
+    widenings have now landed in code -- this paragraph is corrected rather than left to
+    read as still-current, the second time (first at Ruling 86's landing, above; F96 /
+    Ruling 87's own landing is 2026-09-04, task #30):
 
     - **Ruling 87: a standalone ruling file (the h1 case) is `RL-`, not `PL- kind: leaf`.**
-      Its §3 item 1 leaves open *which* function converts them ("a widened ruling
-      splitter, or a prior classification pass") -- so a file whose only "Ruling"-anchored
-      heading is also the file's own first heading stays exempt from *this* function's
-      census, not because it is settled that `_discover_multi_ruling_files` will never be
-      the mechanism, but because today it demonstrably is not one (zero `_RULING_HEADING_
-      RE` matches, confirmed by running it) and no widening has landed. Once Ruling 87 is
-      implemented, whichever function claims these files owns making them a `_reconcile_
-      census` record; this guard does not anticipate that interface.
+      §3 item 1's open choice ("a widened ruling splitter, or a prior classification
+      pass") is resolved as the former: `_discover_multi_ruling_files` itself claims this
+      shape now (`_single_h1_ruling_heading`), so a file whose only "Ruling"-anchored
+      heading is also the file's own first heading is no longer exempt from this census --
+      it is properly accounted for, the identical treatment Ruling 86's landing already
+      gave the A-series below. Measured, the population this closes: `Ruling 59`/`60`/`61`
+      (W37-6 row (d5)), each a real `docs/plans/*.md` file with zero `## Ruling N`
+      headings and an h1 `# Ruling N — ...` title, none of the three previously in
+      `token_map` at all.
     - **Ruling 86: `Ruling A1`/`A2`/`A3` become three `RL-` records**, via a widening on
       two axes (heading level and token shape, §3 item 1). **That widening has now
       landed**, as `_discover_lettered_rulings` rather than inside `_RULING_HEADING_RE` --
@@ -3939,13 +4078,16 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
       The three are records here now, not unaccounted units, and register finding F81 --
       raised because this guard aborted `migrate` on them -- is what that code discharges.
 
-    **The coupling this docstring anticipated, and how it resolved:** the "record" bucket
-    below was keyed off `_RULING_HEADING_RE`'s own matches, and this paragraph said that if
-    Ruling 86's widening landed as a *different* mechanism (Ruling 87 §3 item 1's other
-    option) then `record_starts` must be re-pointed at that mechanism's output too. It did,
-    and it is: the bucket is now the union of both matchers. Anything a third matcher
-    claims in future has to be added the same way, or this guard will re-flag units a
-    correct code path has already produced.
+    **The coupling this docstring anticipated, and how it resolved, twice over:** the
+    "record" bucket below was keyed off `_RULING_HEADING_RE`'s own matches, and this
+    paragraph said that if a widening landed as a *different* mechanism then `record_
+    starts` must be re-pointed at that mechanism's output too. It did, twice: once for
+    `_discover_lettered_rulings`'s A-series, and now for `_single_h1_ruling_heading`'s h1
+    case (which produces at most one extra start per file, from the SAME first-heading
+    read `_discover_multi_ruling_files` itself uses, so the two can never disagree about
+    which files this is). The bucket is now the union of all three. Anything a fourth
+    matcher claims in future has to be added the same way, or this guard will re-flag
+    units a correct code path has already produced.
     """
     plans_dir = root / "docs" / "plans"
     if not plans_dir.is_dir():
@@ -3954,24 +4096,52 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
         if _PLAN_FILENAME_RE.match(path.name) is None:
             continue
         text = path.read_text(encoding="utf-8")
+        rel = path.relative_to(root).as_posix()
         loose = list(_CENSUS_ANY_RULING_HEADING_RE.finditer(text))
         if not loose:
+            if path.name.endswith("-ruling.md") and rel not in _F96_KNOWN_UNFIXED:
+                # F96's own residual case (2026-09-04 ruling, task #30): a filename that
+                # names itself a single ruling but carries no heading anchored on the
+                # literal word "Ruling" at any depth -- silently claimed as `PL- kind:
+                # leaf, owner: planner` by `_discover_plain_plans`, with nothing red.
+                # `-ruling.md` (singular) rather than a looser "contains 'ruling'" test:
+                # measured against the real corpus, every one of the 15 files ending in
+                # this exact suffix already carries a `Ruling`-anchored heading except
+                # the one genuine defect this finding names, which `_F96_KNOWN_UNFIXED`
+                # declares below -- a looser substring test misfires on real, unrelated
+                # files: two `-rulings.md` (plural) files use their own internal
+                # numbering (`## DP1`, `### A1`) and one `-family-derivation.md` file
+                # merely discusses rulings while explicitly stating it is not one ("this
+                # is a derivation, not a plan and not a ruling"). All three would be
+                # false positives under "contains 'ruling'"; none is under this
+                # exact-suffix test.
+                raise NotImplementedError(
+                    f"migrate: {rel} -- filename names this a single ruling record but "
+                    "no heading anywhere in the file is anchored on the literal word "
+                    "'Ruling' at any depth (F96). Give it a `# Ruling <n> — ...` or "
+                    "`## Ruling <n> — ...` heading, or rename it if it genuinely is not "
+                    "a ruling."
+                )
             continue  # not remotely ruling-shaped -- `_discover_plain_plans`'s concern
-        first_heading = _CENSUS_ANY_HEADING_RE.search(text)
-        if (
-            len(loose) == 1
-            and first_heading is not None
-            and first_heading.start() == loose[0].start()
-        ):
-            continue  # one ruling, titling its own file -- settled, not a defect (above)
-        rel = path.relative_to(root).as_posix()
         split_starts = {m.start() for m in _RULING_HEADING_RE.finditer(text)}
+        # F96 / Ruling 87: the h1 single-ruling case, keyed off the SAME test `_discover_
+        # multi_ruling_files` itself uses (`_single_h1_ruling_heading`) so this guard can
+        # never disagree with what discovery actually claimed. Guarded to `not split_
+        # starts` for the identical reason discovery guards it that way: a file that
+        # already has `## Ruling N` headings is the ordinary multi-ruling shape, and its
+        # own h1 is a generic file title, never itself ruling-shaped (see that helper's
+        # own docstring).
+        h1_starts: set[int] = set()
+        if not split_starts and _single_h1_ruling_heading(text) is not None:
+            first_heading = _CENSUS_ANY_HEADING_RE.search(text)
+            assert first_heading is not None  # `_single_h1_ruling_heading` found one
+            h1_starts = {first_heading.start()}
         # Ruling 86's A-series, produced by `_discover_lettered_rulings` (F81). This is the
         # re-pointing this function's own docstring said would be needed if the widening
         # landed as a separate mechanism rather than inside `_RULING_HEADING_RE`; it did,
         # for the reason that function's docstring gives (the residual `PL-`), so the
-        # record bucket is keyed off both matchers rather than one.
-        record_starts = split_starts | {
+        # record bucket is keyed off all three matchers rather than one.
+        record_starts = split_starts | h1_starts | {
             m.start() for m in _LETTERED_RULING_HEADING_RE.finditer(text)
         }
         spans = _record_spans(record_starts, len(text))
@@ -7307,7 +7477,23 @@ def migrate(root: Path) -> MigrateResult:
     _assign_numbers(_discoverable_drafts, start)
     _assign_numbers(_exempt_drafts, start + len(_discoverable_drafts))
 
-    files_written, files_deleted = _write_document_drafts(root, drafts, roadmap_drafts)
+    # Row (d4)'s fix (2026-09-04, task #30): every discoverable draft already has its
+    # number, so the citation form its OWN old token becomes is already known -- built
+    # here, from `_discoverable_drafts` alone (never `_exempt_drafts`), the identical
+    # multi-claim exclusion `token_map` proper applies below for the identical reason: a
+    # token shared by more than one draft names no single target, so this map must not
+    # guess one either. Passed into the writer so a title quoting some OTHER draft's
+    # legacy citation is read post-rewrite, not pre-rewrite, before it is slugified into
+    # a filename NT-0019's id==filename invariant then makes permanent.
+    _title_sweep_map = {
+        d.old_token: _docid.canonical(d.prefix, d.number)
+        for d in _discoverable_drafts
+        if d.old_token is not None
+    }
+
+    files_written, files_deleted = _write_document_drafts(
+        root, drafts, roadmap_drafts, title_sweep_map=_title_sweep_map
+    )
 
     # Reference-family moves (checklists, `retrofit-impossible.md`, `security-posture.md`)
     # and the unstampable-CSV move both physically relocate a file, the same shape

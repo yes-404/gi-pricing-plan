@@ -2247,26 +2247,61 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # instruction to the next reader to reverse a decision that was
                          # actually right.
     "d3": DISCLOSE,     # \bF[0-9]{2}\b — excluded from the zero requirement (§8.5)
-    "d4": FAIL,         # wf-0[0-9] — improved (262 < control 272), not the migration's own
-                         # regression any more; still non-zero (2026-09-03, task 23)
-    "d5": FAIL,         # Ruling [0-9]+ — REGRESSED (2026-09-04, W37-6 row (b) fresh
-                         # executor): migrated 75 (was near-zero). Not this PR's own new
-                         # defect but an existing one this PR's row (b) fix un-masked: the
-                         # same `_compound_token_re` boundary bug fixed for row (b) (see
-                         # `_compound_token_re`'s docstring, `scripts/doc-id.py`) also
-                         # mangled the space-separated `Ruling <n>` family the identical
-                         # way — a shorter mapped `Ruling <n>` swallowing a longer,
-                         # unrelated `Ruling <nm>` as a bare prefix (`Ruling 5` + `9` ->
-                         # a mangled `Ruling 59`, e.g.) — which is what let this row's grep
-                         # for the *un-migrated* literal `Ruling <n>` form read as near-zero:
-                         # the citations were still there, just corrupted into a shape the
-                         # pattern no longer matched, not actually rewritten. Fixing the
-                         # boundary correctly leaves every genuinely ambiguous `Ruling <n>`
-                         # un-rewritten instead of garbling it, so the true (larger)
-                         # un-migrated population is now visible. Flagged to the lead as an
-                         # existing, now-measured defect (a `Ruling <n>` ambiguity/
-                         # migration gap, row (d)'s file, previously closed at task 7) — not
-                         # fixed here, out of row (b)'s own scope.
+    "d4": PASS,         # wf-0[0-9] — FIXED (2026-09-04, task #30; deputy ruling: an
+                         # "accepted 2-occurrence exception" was refused, since NT-0019
+                         # makes id==filename permanent (check 31) — a legacy-form filename
+                         # is a citation the migration can never correct later). Prior state
+                         # (re-verified against `migrate --verify --ref e3739e1 --keep`, the
+                         # real tool): migrated 2 line(s) / 1 file — `docs/closures/INDEX.md`
+                         # lines 50/52, both link *targets* naming `LG-00028-w5-wf-01-...md` /
+                         # `LG-00030-w5-wf-01-...md`. Root cause: `_write_document_drafts`
+                         # (`scripts/doc-id.py`) computed `filename = f"...-{_slug(d.title)}
+                         # .md"` from `d.title` *before* `_rewrite_citations` ran, so a title
+                         # quoting a different draft's own legacy citation (here, the now-
+                         # migrated `wf-01` workflow doc) baked the pre-rewrite form into a
+                         # permanent filename, while the document's own content was correctly
+                         # swept afterward (content, unlike a filename, is reachable by the
+                         # general sweep). Fix: `_write_document_drafts` now takes a
+                         # `title_sweep_map` (every discoverable draft's `old_token ->
+                         # canonical id`, built once numbers are assigned, excluding the
+                         # ambiguous multi-claim tokens `token_map` proper also excludes) and
+                         # sweeps `d.title` through it (`_sweep_title`, already used for the
+                         # identical class on the INDEX display column, task 4 item 1) before
+                         # `_slug()`, never touching the stamped header's own `title=` (still
+                         # unswept on purpose — the general sweep already reaches that).
+                         # Re-verified directly (`_docverify.rows_d` against a real
+                         # migrate()-mutated tree, not inferred): PASS, migrated 0. Both
+                         # ledger filenames now read `wf-991` where they read `wf-01` before.
+    "d5": PASS,         # Ruling [0-9]+ — FIXED (2026-09-04, task #30 / F96, Ruling 87). Row
+                         # (b)'s un-masking left a real, previously-invisible population:
+                         # `Ruling 59`/`60`/`61` are each a single `# Ruling N` h1 in their
+                         # own historical file (confirmed: 0 `## Ruling N` h2 sub-headings),
+                         # a shape `_discover_multi_ruling_files` never claimed
+                         # (`_RULING_HEADING_RE` was h2-only) — so none of the three ever
+                         # entered `token_map`/`REDIRECTS.csv` (confirmed: zero rows for any
+                         # of the three before this fix), and every citation of them,
+                         # including each document's own title, stayed un-rewritten.
+                         # `docs/rulings/RL-00261` had already recorded this as "a fact, not
+                         # a decision" pending the widening. Fix: `_single_h1_ruling_heading`
+                         # (`scripts/doc-id.py`) — a file's own first heading (h1 or h2,
+                         # joined across any hard wrap the same way `_plan_title` already
+                         # joins an ordinary plan title, since all three real titles wrap) is
+                         # now claimed by `_discover_multi_ruling_files` when it is itself
+                         # shaped `Ruling <n> — ...`; `_check_multi_ruling_files_not_
+                         # silently_unrecognised`'s census accounts for it (`record_starts`
+                         # includes the h1 heading's position) rather than specially
+                         # exempting it as before. F96's own residual case — a `*-ruling.md`
+                         # file with NO `Ruling N` heading at any depth — now reds the same
+                         # census (`_F96_KNOWN_UNFIXED` declares the one still-open real
+                         # instance, a frozen maintainer decision this task has no standing
+                         # to edit). Re-verified directly (`_docverify.rows_d` against a real
+                         # migrate()-mutated tree): PASS with the two known self-referential
+                         # test files (`tests/test_doc_id_migrate.py`/`test_doc_id_verify.py`,
+                         # already named in `TEST_MODULE_EXCLUSIONS`, task #33) excluded from
+                         # the scan; REGRESSION *without* that exclusion, entirely from this
+                         # task's own broken-input proof literal ("Ruling 999", the deputy's
+                         # own named acceptance fixture) — the identical class already ruled
+                         # for row (g)'s mangled-companion count, not a real corpus defect.
     "d6": FAIL,         # ADR-0[0-9]{3}\b — trailing `\b` added (2026-09-03, task 14, Ruling
                          # 67 §2 Part 1's already-ruled "complete identifier" requirement,
                          # not carried here until now): the bare pattern matched as a
