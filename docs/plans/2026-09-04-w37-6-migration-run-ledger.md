@@ -1245,3 +1245,15 @@ required proof-of-reading line. Landing order when they collide: #30, then `exec
 (stacked), then `exec-ids`; `exec-h1` independent. Count: `executor-30-2`, `exec-dp7`,
 `exec-paths`, `exec-ids`, `exec-h1` — five live (triage-code stood down, not counted),
 well within the eight-executor cap.
+
+## 2026-09-04 — row (g) lost its owner when triage-code stood down too early; resumed
+
+Deputy caught it: the original (g)-triage dispatch named `triage-code` owner of "#723 and
+(g)'s residue," two halves — I tracked only the #723 half as done and stood the whole
+executor down once that merged. Row (g) is still FAIL overall (326 unclassified hunks at
+`exec-dp7`'s last read, minus whatever #723's causes actually accounted for), and it went
+from owned to unowned silently. **Resumed `triage-code`** (never `TaskStop`'d, just told to
+stand down — resumes from its own context via `SendMessage`) with the residue-count task:
+get a fresh unclassified count on current `main`, name any remaining recognizable causes
+the same way #720/#723 did, or report precisely what doesn't fit an existing class. Six of
+eight executors now, still inside the cap.
