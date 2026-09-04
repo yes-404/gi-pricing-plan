@@ -1441,3 +1441,39 @@ own measurement) rather than guess: either the two figures are on different pred
 (files vs. occurrences, lines vs. occurrences) and the paragraph must say which, or 29
 occurrences have an unnamed source and that's a real finding still owed. Not a blocker on
 anything else in flight; this is a precision correction to the record, not new code.
+
+## 2026-09-04 — shared-worktree incident: two executors' dispatch briefs never said "create your own worktree"; resolved without loss
+
+`exec-ids` caught it first: working directory checked out on `docs-w37-6-ledger-cont6` (the
+lead's own tracking branch), `git status` showing 57 real lines in `scripts/doc-index.py`
+it never touched. Root cause: **the lead's own dispatch briefs for `exec-ids` and `exec-h1`
+never included worktree-creation instructions**, unlike every other executor dispatched
+today — both defaulted to operating in `.claude/worktrees/lead-ruling105`, the lead's own
+worktree, live while the lead was committing ledger entries to it throughout.
+
+**Resolved without loss.** `exec-ids` stopped before committing anything and saved its own
+diff, which turned out to also have captured `exec-h1`'s hunk (a full-file diff, not
+hunk-scoped). `exec-h1` had independently already saved its own, correctly-scoped patch
+before this was even reported. The lead extracted a clean, hunk-separated patch for each
+executor (`scripts/doc-id.py` carried one hunk from each: `exec-ids`'s docstring respelling
+at `:865`, `exec-h1`'s `_write_split_source_indexes` link fix at `:6863`) and verified both
+apply cleanly against fresh `origin/main` (`6c92d55`) before telling either executor
+anything was safe. Both told to create dedicated worktrees now and apply their own clean
+patch there; the shared worktree is cleaned back to matching `origin/main` once both
+confirm.
+
+## 2026-09-04 — exec-ids' major finding: 17 scoped tokens across ~39 lines were never allocated, not un-rewritten
+
+Before fixing anything, `exec-ids` checked every distinct scoped token in its remaining
+citation lines against `docs/specs/*.md` (the only source `_discover_requirements` reads)
+on the control tree. **17 tokens have zero occurrences anywhere** — `token_map` has
+nothing to rewrite them to because nothing ever defined them. Stronger than absence alone:
+the citing rulings themselves (`RL-00144`, `RL-00145`, `RL-00176`, `RL-00178`) say, in the
+exact flagged lines, the token was "deliberately not taken" / "stays free" / "is not
+taken" — these are "next free" markers that moved between successive plans as earlier
+candidates were superseded, never allocated under that name. `exec-ids` correctly refused
+to fabricate a mapping — the same "fabricated id nothing allocated" class row (b)'s
+`OQ-8311` already named as a defect. Escalated to the deputy: confirm nothing else defines
+these tokens, or rule a new disclosed class for never-allocated next-free markers. Not
+decided here. `exec-ids` proceeding on its two unambiguous fixes (`NT-0014-15`'s
+padding-normalization gap) and the specification dispositions while this rules.
