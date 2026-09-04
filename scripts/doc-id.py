@@ -5480,8 +5480,33 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 #: A compound-continuation token, base plus its whole chain: `\btok` then zero or more
 #: `[-/]\d+` groups, captured as one string. Group 1 is empty for a plain, uncontinued
 #: token — the common case, handled the same as `_whole_token_re` always did.
+#:
+#: **`\b` between `tok` and the continuation group — row (b)'s W37-6 regression, #711.**
+#: Without it this pattern is `\btok` with no trailing boundary at all, so it matches `tok`
+#: as a bare PREFIX of a longer, unrelated identifier that merely starts with the same
+#: digits: a mapped `OQ-OVR-1` (-> `OQ-831`) matches inside the un-mapped, ambiguous
+#: `OQ-OVR-11` (two claimants, correctly held out of `token_map` by the guard below) —
+#: `\bOQ-OVR-1` has no trailing `\b` to refuse the immediately-following `1`, since a
+#: digit followed by a digit is never a word-boundary transition for `\b` to test at all.
+#: `_expand_compound` then sees an empty continuation (no `[-/]` follows), returns the
+#: mapped value unchanged, and `.sub()` leaves the un-matched trailing `1` in place:
+#: `OQ-OVR-11` -> `OQ-831` + `1` = `OQ-8311`, a fabricated id nothing allocated, planted
+#: into every mirror of that open question (`docs/open-questions.md`, its owning spec's
+#: §10 row) and from there into `docs/INDEX.md`'s own id column
+#: (`doc-index.py`'s `_BOLD_ID_ROW` has no way to know the id is fabricated), producing the
+#: four `noncontiguous` gaps `find_noncontiguous_gaps` reports between the real discoverable
+#: range and this and five siblings of the same shape (`OQ-OVR-12`+`OQ-OVR-1`->`OQ-8312`,
+#: `OQ-MODEL-10`/`OQ-MODEL-11`+`OQ-MODEL-1`->`OQ-8610`/`OQ-8611`,
+#: `OQ-MODEL-23`/`OQ-MODEL-24`+`OQ-MODEL-2`->`OQ-8623`/`OQ-8624`). A trailing `\b` closes
+#: it exactly as `_whole_token_re` already required for the plain case: between `tok`'s own
+#: last digit and a following `-`/`/` (both non-word) `\b` is satisfied, so a genuine
+#: compound continuation (`NFR-RATE-13/14`, `W1-1`'s own refusal) is unaffected; between
+#: that same digit and another digit (both `\w`) `\b` fails, so the match is refused rather
+#: than truncated. Isolated and reproduced against `971677e` (the commit row (b) was last
+#: recorded `PASS` at) with only #711's `doc-id.py` diff applied: `noncontiguous=4`,
+#: identical to `HEAD`; the same tree with this one-character fix applied: `noncontiguous=0`.
 def _compound_token_re(tok: str) -> re.Pattern[str]:
-    return re.compile(rf"\b{re.escape(tok)}((?:[-/]\d+)*)")
+    return re.compile(rf"\b{re.escape(tok)}\b((?:[-/]\d+)*)")
 
 
 _CONTINUATION_PART_RE: Final = re.compile(r"([-/])(\d+)")

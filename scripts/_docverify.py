@@ -1939,13 +1939,38 @@ def row_i(snap: Snapshot) -> Row:
 #:   both avoided).
 EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "a": PASS,          # one family per file, zero `none` — the only row that passes today
-    "b": FAIL,          # noncontiguous=4 — REGRESSED again after #711 (task 4's
-                         # sweep-order/compound-citation/redirects PR), between this row's
-                         # first re-recording as PASS (earlier in this same PR's own
-                         # history, when based on #707/#708) and this final re-record
-                         # against #711 (2026-09-04, task 17); unrelated to this PR's own
-                         # diff — flagged to the lead as a genuine new defect, not fixed
-                         # here (out of scope, id-allocation is not this row's file)
+    "b": PASS,          # noncontiguous=0 — FIXED (2026-09-04, W37-6 row (b) fresh
+                         # executor). #711 item 3's `_compound_token_re` (compound-citation
+                         # expansion) dropped the trailing `\b` `_whole_token_re` already
+                         # had between the base token and its optional continuation group,
+                         # so a shorter mapped legacy id (`OQ-OVR-1`) matched as a bare
+                         # prefix of a longer, unrelated, unmapped one that merely starts
+                         # with the same digits (`OQ-OVR-11`, itself correctly excluded
+                         # from `token_map` by the multi-claim guard) — `_expand_compound`
+                         # then returned the mapped value alone and left the unmatched
+                         # trailing digit orphaned onto it: `OQ-OVR-11` -> `OQ-831` + `1` =
+                         # `OQ-8311`, a fabricated id nothing allocated, planted into every
+                         # mirror of that open question and from there into
+                         # `docs/INDEX.md`'s own id column. Six siblings of the same shape
+                         # (`OQ-OVR-12`, `OQ-DATA-11`, `OQ-MODEL-10/11/23/24`, against their
+                         # own shorter mapped prefixes) did the same; `OQ-GOV-8` has no
+                         # shorter same-prefix sibling to collide with and was never
+                         # affected. Fixed by giving `_compound_token_re` the same trailing
+                         # `\b` `_whole_token_re` already had
+                         # (`scripts/doc-id.py::_compound_token_re`); a genuine `-`/`/`
+                         # continuation (`NFR-RATE-13/14`, `W1-1`'s own refusal) is
+                         # unaffected, since digit -> `-`/`/` is a real `\b` transition
+                         # while digit -> digit is not. Isolated and reproduced against
+                         # `971677e` (this row's last recorded `PASS`) with only #711's
+                         # `doc-id.py` diff applied before touching anything else:
+                         # `noncontiguous=4`, identical to `HEAD`; the same tree with this
+                         # one-line fix: `noncontiguous=0`. This entry is edited in the same
+                         # commit as the fix per this table's own rule above ("edited by
+                         # hand, in the same commit as the change that moves a row") —
+                         # noted because the dispatching ruling said this table needed no
+                         # change; verified against the code's own instruction instead,
+                         # since leaving `FAIL` here after a genuine `PASS` would produce a
+                         # SET CHANGE (PROGRESSED) on the next `--verify` run regardless.
     "c": PASS,          # docs/INDEX.md byte-stable against its own renderer — same
                          # unrelated prior-PR progress, re-recorded for the same reason
     "d1": FAIL,         # NT-00
@@ -1964,23 +1989,52 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "d3": DISCLOSE,     # \bF[0-9]{2}\b — excluded from the zero requirement (§8.5)
     "d4": FAIL,         # wf-0[0-9] — improved (262 < control 272), not the migration's own
                          # regression any more; still non-zero (2026-09-03, task 23)
-    "d5": PASS,         # Ruling [0-9]+ — genuine progress from #711 (task 4), unrelated
-                         # to this PR's own diff; re-recorded 2026-09-04, task 17
+    "d5": FAIL,         # Ruling [0-9]+ — REGRESSED (2026-09-04, W37-6 row (b) fresh
+                         # executor): migrated 75 (was near-zero). Not this PR's own new
+                         # defect but an existing one this PR's row (b) fix un-masked: the
+                         # same `_compound_token_re` boundary bug fixed for row (b) (see
+                         # `_compound_token_re`'s docstring, `scripts/doc-id.py`) also
+                         # mangled the space-separated `Ruling <n>` family the identical
+                         # way — a shorter mapped `Ruling <n>` swallowing a longer,
+                         # unrelated `Ruling <nm>` as a bare prefix (`Ruling 5` + `9` ->
+                         # a mangled `Ruling 59`, e.g.) — which is what let this row's grep
+                         # for the *un-migrated* literal `Ruling <n>` form read as near-zero:
+                         # the citations were still there, just corrupted into a shape the
+                         # pattern no longer matched, not actually rewritten. Fixing the
+                         # boundary correctly leaves every genuinely ambiguous `Ruling <n>`
+                         # un-rewritten instead of garbling it, so the true (larger)
+                         # un-migrated population is now visible. Flagged to the lead as an
+                         # existing, now-measured defect (a `Ruling <n>` ambiguity/
+                         # migration gap, row (d)'s file, previously closed at task 7) — not
+                         # fixed here, out of row (b)'s own scope.
     "d6": FAIL,         # ADR-0[0-9]{3}\b — trailing `\b` added (2026-09-03, task 14, Ruling
                          # 67 §2 Part 1's already-ruled "complete identifier" requirement,
                          # not carried here until now): the bare pattern matched as a
                          # substring of any correctly-migrated five-digit id; genuine
                          # un-migrated 4-digit citations remain, so the row still fails
     "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
-    "d8": FAIL,         # workstream/slice id — #711 (task 4)'s sweep-order fix removed the
-                         # title/INDEX-duplication "creation" bug (2026-09-03, task 22);
-                         # migrated (299) is now BELOW control (2353), so Ruling 105 §A's
-                         # third alias class (2026-09-04, task 17) applies: FAIL is real
-                         # task-key population (30 in 11 files, `\bW[0-9]+[a-z]?-[0-9]+-
-                         # [0-9]+\b`) — NOT the slice-key alias class, which discloses
-                         # cleanly once the task keys are separately resolved; the ruling's
-                         # own text expected 0 task keys outside fixtures, this measured
-                         # 30, disclosed here rather than silently assumed
+    "d8": REGRESSION,   # workstream/slice id — REGRESSED WORSE (2026-09-04, W37-6 row (b)
+                         # fresh executor): migrated 2513 now ABOVE control 2358 (was 299,
+                         # below control). Not this PR's own new defect but the same
+                         # `_compound_token_re` boundary bug fixed for row (b) (see that
+                         # function's docstring, `scripts/doc-id.py`), at far larger scale:
+                         # a shorter mapped work/module token with no `-`/`/` separator
+                         # before a longer W-key's own digits (`W3` mapped, immediately
+                         # followed by more digits with nothing between them, e.g.) mangled
+                         # the W-key the identical way an `OQ-` prefix did — hiding it from
+                         # this row's raw grep for the *un-migrated* `W<n>-<n>` literal form
+                         # by corrupting it into a shape the pattern no longer matches, not
+                         # by actually rewriting it. `_expand_compound`'s own explicit
+                         # W-family refusal (`_WORK_FAMILY_TOKEN_RE`) only ever guarded the
+                         # separator-continuation shape (`W32-2` after a mapped `W32`); it
+                         # never reached the no-separator prefix shape this bug used, so
+                         # fixing the boundary correctly leaves every genuinely un-migrated
+                         # `W<n>-<n>` form visible instead of mangling it, and the true
+                         # (much larger) un-migrated population is what this row now
+                         # measures. Flagged to the lead as an existing, now-measured
+                         # defect (row (d)'s file, previously closed at task 7 with a
+                         # smaller, correct-at-the-time figure) — not fixed here, out of
+                         # row (b)'s own scope.
     "d9": FAIL,         # docs/plans/2026-
     "d10": FAIL,        # docs/audit/
     "d11": FAIL,        # the old notes directory
