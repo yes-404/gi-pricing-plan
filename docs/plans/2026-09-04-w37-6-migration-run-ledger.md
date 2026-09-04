@@ -193,6 +193,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #731 | docs(plans): ledger — #728/#729 merges | `c462fb6` | UNCHANGED: 14 (this ledger's own continued history). `ci-watcher-731` confirmed docs/python/history-policy all green after settling past three cancelled batches (the lead's own push cadence), CLEAN. |
 | #730 | fix(scripts): DP-7 frontmatter gap (Reference/vendored stamps) + REDIRECTS.csv determinism | `e6384d7` | Not independently re-run — CI green (ruff/mypy/import-linter/pytest, specification audit, no-session-links), CLEAN. Rebased once onto a genuine content conflict with #729's own test additions, resolved additively from each side's clean history. Full gate: 3199 passed, tree held still. |
 | #733 | fix(scripts): W37-6 unit-record inverse — ranges/compounds/relative-links, cause3/3a/4/6, (d5)/(d8) creation rule | `6c92d55` | Not independently re-run — `ci-watcher-733` confirmed python/docs/history-policy all green, CLEAN. Full gate/verify twice (once surfacing and fixing a real crash bug in the author's own diff before reaching a gate). The single largest PR of the day; discharges (d4)/(d5)/(d8) from the checkpoint-1 table. |
+| #732 | docs(plans): ledger — #730/#733 merges, worktree incident, checkpoint-1 real figures | `e3739e1` | UNCHANGED: **13** fatal row(s), matching the recorded set of 13 — run `33888477735` on `docs-w37-6-ledger-cont7`'s `f2885ed` (**correction, deputy 2026-09-04 18:2xZ**: the lead's own entry here previously said 14, a remembered figure from before #725 re-recorded (e), not this run's own printed line — NT-0004 pasted-constant defect, fixed). This ledger's own continued history, no `docs/**` migration-scope path or predicate code touched. CLEAN, confirmed via the exact head SHA's own workflow runs (not a stale rollup) before merging. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1212,7 +1213,7 @@ transcribed from any relay.
 | d11 | FAIL | the old notes directory, un-migrated | unowned | — |
 | d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
 | d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
-| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`) but **mangled companion up** (457→472, +15) — a real regression signal `#733` may have introduced | multiple (partial) | #720, #723, #727, #729 merged; executor-30-2 resumed to find the +15 source before d4/d5 |
+| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`); the +15 mangled-companion rise is **class 3c** (deputy ruling, 18:3xZ) — the instrument's own test modules exhibiting the shapes they detect, same class as (d)'s ruling — **discharged by exec-ids' `_docid.sweep_exclusion_reason` tuple landing, not by explanation**; the predicted per-file fixture-line drop is stated below, awaiting the measured drop once the tuple lands | multiple (partial) | #720, #723, #727, #729 merged; exec-ids' tuple pending (`fba9bfb`, now on `origin/w37-6-citation-inverse-ids`) |
 | h1 | FAIL | `audit-docs.py` non-disclosed classes (32, 36, 1, 31, 27, …) still non-zero | unowned | — |
 
 **Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
@@ -1548,3 +1549,48 @@ stray reset — the exact shape that already cost this project one salvage. Both
 told to commit (`wip:` prefix fine, squashed at PR time) and push now, before continuing
 their in-progress work. Incident closure is not final until both commit shas exist to
 cite, not merely a clean `git status`.
+
+## 2026-09-04 — durability, half done: exec-ids committed but not pushed; exec-h1 still uncommitted; #732 merged
+
+`exec-ids`: 2 commits ahead (`fba9bfb`) but the branch never reached `origin` — told to
+push in one command. `exec-h1`: still 6 dirty files, 0 ahead, 13+ minutes into its gate —
+told to commit and push the moment the gate returns, before even reading the result. A
+local-only commit is the middle case of the three-way durability split: survives a
+session, not a lost worktree.
+
+**PR #732 merged** at `e3739e1` — confirmed CLEAN against the exact head SHA's own
+workflow runs this time (per the earlier #724 lesson), not a stale rollup. Continuing on
+`docs-w37-6-ledger-cont7`.
+
+## 2026-09-04 — row (g)'s +15 "regression" resolved: test-fixture literals, not corpus mangling
+
+`executor-30-2`'s investigation (task #42), verified with the real tool, not a hand-rolled
+scan: their first pass used their own regex script and produced numbers that did not match
+CI, so they discarded it and redid the check properly. Checked out `e6384d7` (#733's direct
+parent, confirmed via `git log -1 6c92d55^`) and `6c92d55` into two disposable snapshots,
+ran the actual `python3 scripts/doc-id.py migrate --verify --repo-root <snapshot> --keep`
+from each — the real CI mechanism. Both reproduced CI's own numbers exactly: before
+migrated=457/control=25, after migrated=472/control=38.
+
+**The key fact: `control` (raw, un-migrated content, zero rewriting) also rose, +13.**
+`git diff e6384d7 6c92d55 --stat` confirms the only changed files across the whole tree are
+executor-30-2's own 4 files — so control's entire rise can only be driven by their literal
+text. It is: their new tests deliberately embed illustrative mangled-shape strings as
+broken-input proof material (`FR-680..4`, `FR-680..703`, `FR-700/701`, `WK-944C`,
+`NFR-775/14` — e.g. `test_task30_a_half_rewritten_range_is_named_mangled` asserts against
+`FR-680..4` literally). These are Python string literals in test/comment content the
+citation sweep never touches, and they inflate a whole-tree scan identically on both sides.
+
+Since control's whole +13 is accounted for by those 4 files and nothing else in the tree
+differs, at most +2 of migrated's +15 is unexplained — and even that residual could not be
+pinned to any real-corpus file: diffing the two kept migrated snapshots directly, excluding
+executor-30-2's own 4 files, shows every other file's mangled count flat or **lower** after
+the fix (`docs/roadmap.md` 51→18, a `WF-00991` doc 22→12, and more), consistent with the
+already-observed residue drop (classified-by-none 311→190).
+
+**Verdict: no real-corpus regression in row (g).** The rise is the whole-tree scan picking
+up executor-30-2's own test-fixture literals; the real corpus's mangled population
+improved. Accepted as well-evidenced per CLAUDE.md §13 (real-tool verification, isolated
+diff scope, both directions checked). Executor-30-2 asked to add a one-line acknowledgment
+comment near those literals (their own suggestion, cheap, self-documents the
+corpus-vs-fixture distinction for a future whole-tree scan) and proceed to d4/d5.
