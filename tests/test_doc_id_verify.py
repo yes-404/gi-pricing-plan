@@ -1101,6 +1101,54 @@ def test_padded_id_in_path_context_is_distinguished_from_prose(
     assert line[prose[-1].start():prose[-1].end()] == "PL-09998"
 
 
+def test_in_path_context_widens_past_an_angle_bracket_slug_placeholder(dv: Any) -> None:
+    """A real corpus shape: NT-0019 §1.1 rule 3's own illustrative filename (and every
+    `docs/_templates/*.md` copy-target line) writes the slug segment as an angle-bracket
+    placeholder — `PL-01240-<slug>.md` — rather than a real word.
+
+    `_TOKEN_BOUNDARY_RE` used to include `<` and `>`, so the right-side token walk
+    stopped at the placeholder's opening `<` — one character short of ever reaching
+    `.md` — and read the enclosing token as `PL-01240-`, which has no `/` and does not
+    end in an extension: a real filename citation misclassified as prose. Removing `<`/`>`
+    from the boundary class widens the walk past the placeholder to the actual extension.
+    """
+    line = "Filenames pad the integer: `PL-01240-<slug>.md`. Padding exists so `ls` sorts."
+    hit = next(dv._PADDED_ID_RE.finditer(line))
+    assert dv._in_path_context(line, hit.start(), hit.end())
+
+
+def test_padded_hits_seq_disambiguates_two_occurrences_on_one_line(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Two occurrences of the same padded id on one line, one path-shaped and one bare —
+    `document-ids.md`'s own rule-3 sentence does exactly this: a filename exhibit
+    (`PL-01245-widget.md`) followed later on the same line by the bare equivalence-list
+    id (`PL-01245`).
+
+    Conjunct 2's classification loop used to re-locate a match in the cleaned line by
+    *text* (`m.group(0) == hit.token`) and take the first same-text match's path-context
+    verdict for every hit sharing that text — so the bare occurrence inherited the
+    filename occurrence's TRUE verdict and was wrongly excused: a false negative that
+    suppresses a real violation. `PaddedHit.seq` (this hit's own ordinal among same-line
+    matches) fixes it by re-locating each hit by its own position instead.
+    """
+    line = "See `PL-01245-widget.md` and also bare PL-01245 in the same sentence.\n"
+    tree = _mkrepo(tmp_path / "t", {
+        "docs/a.md": line,
+        "docs/INDEX.md": "PL-1245\n",
+    })
+    corpus = dv.load_corpus(tree)
+    resolvable = dv.index_ids(tree)
+    assert "PL-1245" in resolvable
+    _total, _after_corpus, after_path, after_index = dv.padded_hits(corpus, resolvable)
+    # both occurrences survive conjunct 0 (neither fenced nor a `was:` line); only the
+    # BARE one should survive conjunct 2 (not path-shaped)
+    assert len(after_path) == 1
+    assert after_path[0].line.rstrip().endswith("PL-01245 in the same sentence.")
+    # and it resolves, so conjunct 3 must count it as a real violation
+    assert len(after_index) == 1
+
+
 # =========================================================================================
 # (i) — the ownership tension is visible in the row, not argued about elsewhere
 # =========================================================================================
