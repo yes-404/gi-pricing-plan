@@ -383,14 +383,36 @@ def test_was_field_line_numbers_ignores_a_was_key_outside_front_matter(
 def test_disclosed_alternative_does_not_set_the_exit_code_but_still_reports(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    """`\\bF[0-9]{2}\\b` is excluded from the zero requirement **with its count disclosed**."""
+    """`\\bF[0-9]{2}\\b` is excluded from the zero requirement **with its count disclosed**.
+
+    Control carries the same three values as migrated (never fewer) so this stays a pure
+    disclosure proof: the 2026-09-04 ruling (`to-lead.md:1017`) makes a genuinely *new*
+    value REGRESSION even for a disclosed class, and that is a different test
+    (`test_disclosed_alternative_still_regresses_on_a_new_value` below).
+    """
     migrated = {"docs/a.md": "F41 and F85 and F96\n"}
-    control = {"docs/a.md": "F41\n"}
+    control = {"docs/a.md": "F41 and F85 and F96, again\n"}
     snap = _snapshot(dv, tmp_path / "disc", migrated, control)
     rows = _d_rows(dv, snap)
     assert rows["d3"].verdict == dv.DISCLOSE
     assert rows["d3"].fatal is False
     assert rows["d3"].migrated.startswith("1 line")  # one *line*, three occurrences
+
+
+def test_disclosed_alternative_still_regresses_on_a_new_value(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The 2026-09-04 ruling (`to-lead.md:1017`), clause 1, applied to a `D_DISCLOSED`
+    member other than (d8): "any such value is REGRESSION, disclosed class or not."
+    `F96` in the migrated tree with no `F96` anywhere in control is a genuinely new bare
+    finding-id value — fatal, even though the bare-`F` alias class is otherwise exempt
+    from the zero requirement."""
+    migrated = {"docs/a.md": "F41 and F96\n"}
+    control = {"docs/a.md": "F41\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "disc-new", migrated, control))["d3"]
+    assert row.verdict == dv.REGRESSION
+    assert row.fatal
+    assert "F96" in row.note
 
 
 def test_d_alternatives_equals_the_shared_constant_not_a_private_copy(dv: Any) -> None:
@@ -1552,13 +1574,30 @@ def test_an_alternative_that_gets_worse_is_a_regression_not_a_fail(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
     """(d4) `wf-0[0-9]`, 267 -> 327. The migration CREATES what the row forbids, so no
-    citation rewrite reaches zero. That is not a bigger version of "did not reach zero"."""
+    citation rewrite reaches zero. That is not a bigger version of "did not reach zero" —
+    and, per the 2026-09-04 ruling (`to-lead.md:1017`), it is specifically a *new value*
+    (`wf-02`, absent from control), not merely a larger occurrence count."""
     migrated = {"docs/a.md": "wf-01 here\n", "docs/b.md": "wf-02 there\n"}
     control = {"docs/a.md": "wf-01 here\n", "docs/b.md": "nothing\n"}
     row = _d_rows(dv, _snapshot(dv, tmp_path / "reg", migrated, control))["d4"]
     assert row.verdict == dv.REGRESSION
     assert row.fatal
-    assert "1 -> 2" in row.note
+    assert "wf-02" in row.note
+
+
+def test_an_alternative_with_a_larger_occurrence_count_but_the_same_values_is_not_a_regression(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The 2026-09-04 ruling itself (`to-lead.md:1017`), stated from the measurement that
+    provoked it: `W37-6` 685->725 and `W32-7` 68->78 on the real corpus, value set
+    identical both times — not creation, a disclosure line. Reproduced narrowly: `wf-01`
+    cited twice in the migrated tree, once in control, with no other value anywhere.
+    (d4) must not regress on the count alone."""
+    migrated = {"docs/a.md": "wf-01 here\n", "docs/b.md": "wf-01 there too\n"}
+    control = {"docs/a.md": "wf-01 here\n", "docs/b.md": "nothing\n"}
+    row = _d_rows(dv, _snapshot(dv, tmp_path / "growth", migrated, control))["d4"]
+    assert row.verdict != dv.REGRESSION
+    assert "wf-01 1->2" in row.note, row.note
 
 
 # =========================================================================================

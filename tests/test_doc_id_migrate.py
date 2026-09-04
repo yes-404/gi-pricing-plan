@@ -6220,6 +6220,28 @@ def test_ruling_102_g_a_compound_with_an_unmapped_component_stays_whole(
             "RL-00086/00087 cover it\n",
             id="ruling-family-slash-compound",
         ),
+        pytest.param(
+            # Task #30's own diagnosis (W37-6 channel "the cause table dispositions"):
+            # every existing round-trip proof above stopped at two parts, and the
+            # deputy's own comment in `_docverify.py` flagged that a *chain* "does not
+            # obviously extend" from the two-id worked example -- measured false, but
+            # never proven true by a test until this one. A real corpus citation
+            # (`backend/src/app/api/score.py`), three components, none contiguous in
+            # their new ids.
+            "see FR-RATE-56/57/58 together\n",
+            {"FR-RATE-56": "FR-700", "FR-RATE-57": "FR-701", "FR-RATE-58": "FR-702"},
+            "see FR-700/701/702 together\n",
+            id="three-part-slash-compound",
+        ),
+        pytest.param(
+            "see FR-RATE-56/57/58/59 together\n",
+            {
+                "FR-RATE-56": "FR-700", "FR-RATE-57": "FR-701",
+                "FR-RATE-58": "FR-800", "FR-RATE-59": "FR-900",
+            },
+            "see FR-700/701/800/900 together\n",
+            id="four-part-slash-compound-fully-mapped",
+        ),
     ],
 )
 def test_task4_a_fully_mapped_compound_expands_and_inverts(
@@ -6257,6 +6279,290 @@ def test_task4_a_fully_mapped_compound_expands_and_inverts(
     assert audit_docs.frozen_file_matches_after_migration_stamp(
         text, after, redirects_inverse
     ), "the compound pair, recorded, must invert the expansion back to the merge-base text"
+
+
+# ---------------------------------------------------------------------------------------
+# Task #30 (W37-6 channel "the cause table dispositions: 2b and the slash compounds are
+# one inverse defect"): three shapes, one mechanism -- a substitution that is not a plain
+# token (a range's enumeration, a split-source's resolved citation, an id-bearing move's
+# path-shaped citing form) must be **recorded** as a reversible unit, or `(g)`'s inverse
+# has nothing to consume and the file is `classified-by-none` even though the forward
+# sweep rewrote it correctly.
+# ---------------------------------------------------------------------------------------
+
+
+def test_task30_a_range_citation_enumerates_and_inverts(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The maintainer's own worked example (W37-6 channel `:526`): `FR-PLAT-1..4` names
+    the *set* `FR-PLAT-1, FR-PLAT-2, FR-PLAT-3, FR-PLAT-4`, and the new ids are not
+    consecutive, so the rewrite enumerates every mapped id in full rather than emit a new
+    range. Real corpus shape: `FR-MODEL-58..61` (`packages/model-schema/.../perils.py`).
+    """
+    text = "see FR-PLAT-1..4 for the scope\n"
+    token_map = {
+        "FR-PLAT-1": "FR-680", "FR-PLAT-2": "FR-681",
+        "FR-PLAT-3": "FR-702", "FR-PLAT-4": "FR-703",
+    }
+    derived: list[tuple[str, str]] = []
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, dict(token_map), text, derived_redirects=derived
+    )
+    assert after == "see FR-680, FR-681, FR-702, FR-703 for the scope\n"
+    assert len(derived) == 1, "exactly one range was expanded"
+    old_range, new_range = derived[0]
+    assert old_range == "FR-PLAT-1..4"
+    assert new_range in after
+
+    audit_docs = doc_id_cli._load_audit_docs()
+    redirects_inverse = {new_range: old_range}
+    assert audit_docs.frozen_file_matches_after_migration_stamp(
+        text, after, redirects_inverse
+    ), "the range pair, recorded, must invert the enumeration back to the merge-base text"
+
+    # A hand edit elsewhere in the same file is not the range's substitution and must not
+    # be silently absorbed by it -- the inverse restores the range and nothing else, so a
+    # file with an unrelated edit beside a correctly-inverting range still fails whole,
+    # named rather than passed.
+    hand_edited = after.replace("for the scope", "for the wider scope")
+    assert not audit_docs.frozen_file_matches_after_migration_stamp(
+        text, hand_edited, redirects_inverse
+    ), "an unrelated hand edit beside the range must stay named, not silently pass"
+
+
+def test_task30_a_range_with_an_unmapped_member_stays_whole(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Task #30's first broken-input proof, mirroring the compound rule's own: a range
+    with one unmapped member comes out untouched, in full -- never enumerated up to the
+    gap and never the base token alone with `..end` orphaned (the exact mangling
+    `MANGLED_CITATION_RE`'s `..` alternative now names)."""
+    text = "see FR-PLAT-1..4 for the scope\n"
+    token_map = {"FR-PLAT-1": "FR-680", "FR-PLAT-2": "FR-681", "FR-PLAT-4": "FR-703"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == text, (
+        "FR-PLAT-3 is unmapped, so the whole range must stay whole -- never half-"
+        "enumerated and never FR-680..4 (the head alone, tail orphaned)"
+    )
+
+
+def test_task30_a_half_rewritten_range_is_named_mangled(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`MANGLED_CITATION_RE`'s `..` alternative (task #30, W37-6 channel `:526`): the
+    shape a defective rewrite would have produced -- a *numeric* new id with the old
+    range's tail orphaned -- is exactly as meaningless as the slash form Ruling 102 §2
+    named, and the pattern must catch it without also catching a correctly-enumerated,
+    comma-separated result."""
+    docverify = doc_id_cli._docverify
+    assert docverify.MANGLED_CITATION_RE.search("see FR-680..4 for the scope")
+    assert not docverify.MANGLED_CITATION_RE.search(
+        "see FR-680, FR-681, FR-702, FR-703 for the scope"
+    )
+
+
+def test_task30_cause4_w_family_adjacent_uppercase_is_named_mangled(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """#720's cause4 (W37-6 channel `:845`): the real corruption `_compound_token_re`'s
+    missing boundary produced before #721 fixed it — `W3C/OpenTelemetry…` came out
+    `WK-944C/OpenTelemetry…`, a fabricated identifier `MANGLED_CITATION_RE`'s
+    `(FR|NFR|OQ|DEP)` alternative could never see. Positive: the real corruption case.
+    Negative control: `W6a`/`WK-949a` is a genuine lowercase slice suffix
+    (`_WORK_FAMILY_TOKEN_RE`'s own `[a-z]?`) and must not be named as mangled."""
+    docverify = doc_id_cli._docverify
+    assert docverify.MANGLED_CITATION_RE.search("see WK-944C/OpenTelemetry trace id")
+    assert not docverify.MANGLED_CITATION_RE.search("see WK-949a for the slice")
+
+
+def test_task30_cause3a_a_work_slice_compound_stays_whole_never_prefix_rewritten(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """#723's cause3(a) (W37-6 channel `:935`): `W6b-11` -> `WK-947b-11` because the map
+    has the bare `W6b`, not the compound -- the classified-table ruling (`:455-470`) says
+    a slice/task key is the disclosed alias class and is **not rewritten**: a bare `W6b`
+    maps to its own `WK-`, a compound `W6b-11` is left whole, never prefix-rewritten onto
+    a fabricated `WK-<n><letter>-<n>`. `_WORK_FAMILY_TOKEN_RE`'s exclusion inside
+    `_expand_compound` is what already gives this (task 4's own `W1-1` guard, extended by
+    #721's boundary fix); this is the compound-key proof for that exclusion the ruling
+    asks for by name."""
+    text = "task W6b-11 is closed; W6b alone is not\n"
+    after = _rewrite_one_file(doc_id_cli, tmp_path, {"W6b": "WK-949"}, text)
+    assert after == "task W6b-11 is closed; WK-949 alone is not\n", (
+        "the compound W6b-11 must stay whole -- never prefix-rewritten to WK-949-11 or "
+        "any other fabricated longer id -- while the bare W6b token still maps"
+    )
+
+
+def test_task30_an_id_bearing_moves_path_citation_inverts_through_a_relative_link(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Cause 2b's own measured shape (the tombstone stub at the old notes root under
+    `.claude`, `0001-*.md`'s own body): a document
+    that itself has an id and moves is still, separately, **cited by its path** — a stub
+    that deliberately spells out `` `docs/notes/0001-....md` `` inside a `../../`-relative
+    link so the pointer stays readable without doc-id knowledge. `_path_citation_redirect_
+    rows` used to be called only for id-*less* moves (register.md, a reference move); an
+    id-bearing move's path-shaped citing form got the `old_path`/`new_path` columns (which
+    record that the *file* moved) but no `old_id`/`new_id` row of its own (which is what
+    `(g)`'s inverse actually reads) — so this exact citation shape inverted to nothing.
+    """
+    old_rel = "docs/notes/0001-phase-boundary-plan-review.md"
+    new_rel = "docs/rfcs/RFC-00011-plan-review-at-each-phase-boundary.md"
+    text = (
+        "# Moved\n\n"
+        "This note moved to [`docs/notes/0001-phase-boundary-plan-review.md`]"
+        "(../../docs/notes/0001-phase-boundary-plan-review.md) on 2026-09-01.\n"
+    )
+    token_map = {old_rel: new_rel}  # the plain full-path form `_path_rewrite_tokens` adds
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == (
+        "# Moved\n\n"
+        "This note moved to [`docs/rfcs/RFC-00011-plan-review-at-each-phase-boundary.md`]"
+        "(../../docs/rfcs/RFC-00011-plan-review-at-each-phase-boundary.md) on 2026-09-01.\n"
+    ), "the ../../-relative link's own suffix is a recognised path token and rewrites"
+
+    rows = doc_id_cli._path_citation_redirect_rows(old_rel, new_rel)
+    redirects_inverse = {
+        row["new_id"]: row["old_id"] for row in rows if row["old_id"] and row["new_id"]
+    }
+    assert new_rel in redirects_inverse
+    assert redirects_inverse[new_rel] == old_rel
+
+    audit_docs = doc_id_cli._load_audit_docs()
+    assert audit_docs.frozen_file_matches_after_migration_stamp(
+        text, after, redirects_inverse
+    ), (
+        "the id-bearing move's own path-citation row must invert the ../../-relative "
+        "link back to the merge-base text"
+    )
+
+    hand_edited = after + "\nAn unrelated line added by hand.\n"
+    assert not audit_docs.frozen_file_matches_after_migration_stamp(
+        text, hand_edited, redirects_inverse
+    ), "an unrelated hand edit beside the repointed link must stay named, not silently pass"
+
+
+def test_task30_a_split_source_citation_resolved_to_one_target_inverts(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The mislabeled half of the deputy's own "slash-compound-citation (unassigned)"
+    residue bucket (task #30's own triage): `docs/audit/register.md`'s citation in
+    `.claude/roles/lead.md` resolves, via `_SplitSource`'s id determinant, to one of
+    several split destinations — a decision `_rewrite_citations`'s `repl` closure used to
+    make and then discard. `split_redirects` records it the same way `derived_redirects`
+    already records a compound.
+    """
+    split = _split_fixture(doc_id_cli)
+    text = "See Ruling 200 in docs/plans/2026-09-01-two-rulings.md for the rationale.\n"
+    target = tmp_path / "docs" / "sample.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    split_derived: list[tuple[str, str]] = []
+    doc_id_cli._rewrite_citations(
+        tmp_path, {}, split_sources=[split], split_redirects=split_derived
+    )
+    after = target.read_text(encoding="utf-8")
+    assert after != text, "the id-determined citation must resolve to a concrete target"
+    assert len(split_derived) == 1, "exactly one split-source citation was resolved"
+    old_citation, new_citation = split_derived[0]
+    assert old_citation == "docs/plans/2026-09-01-two-rulings.md"
+    assert new_citation in after
+
+    audit_docs = doc_id_cli._load_audit_docs()
+    redirects_inverse = {new_citation: old_citation}
+    assert audit_docs.frozen_file_matches_after_migration_stamp(
+        text, after, redirects_inverse
+    ), "the resolved split-source pair, recorded, must invert back to the merge-base text"
+
+    hand_edited = after.replace("for the rationale", "for the full rationale")
+    assert not audit_docs.frozen_file_matches_after_migration_stamp(
+        text, hand_edited, redirects_inverse
+    ), "an unrelated hand edit beside the resolved citation must stay named, not pass"
+
+
+def test_task30_a_split_source_citation_sent_to_the_family_index_inverts(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The larger half of the same residue, found in the same triage: a citation with no
+    id, anchor or line span beside it determines nothing, so Ruling 101 clause 1 sends it
+    to the family index's own section for this source (`src.index_token`) — and that
+    substitution went unrecorded too, even though every occurrence that lands here shares
+    the identical `index_token` (a property of the split source itself, not of the one
+    occurrence), so there is no per-occurrence ambiguity to protect against. Measured live:
+    `backend/src/app/platform/settings.py` citing `docs/plans/2026-08-29-w11-slices-3-4-
+    rulings.md` with no adjacent id.
+    """
+    split = _split_fixture(doc_id_cli)
+    text = "See docs/plans/2026-09-01-two-rulings.md for the rationale.\n"
+    target = tmp_path / "docs" / "sample.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    split_derived: list[tuple[str, str]] = []
+    doc_id_cli._rewrite_citations(
+        tmp_path, {}, split_sources=[split], split_redirects=split_derived
+    )
+    after = target.read_text(encoding="utf-8")
+    assert after == f"See {split.index_token} for the rationale.\n"
+    assert len(split_derived) == 1, "exactly one index-fallback citation was recorded"
+    old_citation, new_citation = split_derived[0]
+    assert old_citation == "docs/plans/2026-09-01-two-rulings.md"
+    assert new_citation == split.index_token
+
+    audit_docs = doc_id_cli._load_audit_docs()
+    redirects_inverse = {new_citation: old_citation}
+    assert audit_docs.frozen_file_matches_after_migration_stamp(
+        text, after, redirects_inverse
+    ), "the index-fallback pair, recorded, must invert back to the merge-base text"
+
+    hand_edited = after.replace("for the rationale", "for the full rationale")
+    assert not audit_docs.frozen_file_matches_after_migration_stamp(
+        text, hand_edited, redirects_inverse
+    ), "an unrelated hand edit beside the index-fallback citation must stay named, not pass"
+
+
+def test_task30_a_genuinely_contested_split_redirect_is_dropped_not_crashed(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Found live against a real multi-ruling file
+    (`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`, splitting into `RL-00190`/
+    `RL-00191`/…): two citations of the identical old text, each correctly determining a
+    *different* sibling via its own id determinant, produced two `split_path_redirects`
+    entries for the same `old` -- and passing that straight to `_write_redirects` crashed
+    the whole migration under #726's own write-time guard ("one legacy id must resolve to
+    exactly one new id"), which cannot tell a genuinely ambiguous per-occurrence
+    resolution apart from the allocation bug it exists to catch. `migrate()` must never
+    raise over this shape; the contested pair is dropped, not one arm silently kept.
+
+    A second, disjoint `old` proves the drop is scoped to the contested key alone: a
+    citation with no conflict must still produce its row.
+    """
+    dropped = doc_id_cli._drop_contested_split_redirects(
+        [
+            ("docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md", "RL-00190-q3.md"),
+            ("docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md", "RL-00191-q4.md"),
+            ("docs/plans/2026-09-01-two-rulings.md", "RL-00300-the-first-ruling.md"),
+        ]
+    )
+    assert dropped == [
+        ("docs/plans/2026-09-01-two-rulings.md", "RL-00300-the-first-ruling.md")
+    ], "the contested old drops entirely; the disjoint, unambiguous old survives"
+
+
+def test_task30_an_exact_repeated_split_redirect_is_not_a_conflict(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The same `old` mapped to the same `new` more than once (two occurrences of one
+    split source's citation, both resolving to the identical sibling) is not a conflict --
+    `_write_redirects`'s own guard allows an exact repeat, and the drop must not be
+    stricter than the guard it exists to keep from firing."""
+    kept = doc_id_cli._drop_contested_split_redirects(
+        [
+            ("docs/plans/2026-09-01-two-rulings.md", "RL-00300-the-first-ruling.md"),
+            ("docs/plans/2026-09-01-two-rulings.md", "RL-00300-the-first-ruling.md"),
+        ]
+    )
+    assert kept == [("docs/plans/2026-09-01-two-rulings.md", "RL-00300-the-first-ruling.md")]
 
 
 def test_ruling_102_g_a_longer_identifier_that_is_itself_a_token_still_rewrites(

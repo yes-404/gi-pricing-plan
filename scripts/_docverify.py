@@ -53,6 +53,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -838,17 +839,84 @@ _D8_WORK_KEY_BARE_RE: Final = re.compile(r"\bW[0-9]+[a-z]?\b(?!-[0-9])")
 _D8_SLICE_KEY_RE: Final = re.compile(r"\bW[0-9]+[a-z]?-[0-9]+\b(?!-[0-9])")
 
 
-def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[str, str]:
-    """(d8)'s three-way split. `m_lines`/`c_lines` are the whole alternative's own figures
-    (`\\bW[0-9]+[a-z]?-[0-9]+\\b`) — creation is checked first, against those, and stays
-    REGRESSION regardless of what the slice/task/bare breakdown below would say.
+def _scan_values(corpus: Corpus, pattern: re.Pattern[str]) -> Counter[str]:
+    """Every match of `pattern`, as its own literal text, counted across the whole corpus
+    — the identical file/line/`was:`-skip semantics `Corpus.scan` already uses, but
+    returning the matched substrings themselves rather than a bare `(lines, files)`
+    tally, so a caller can tell a genuinely new value from a larger count of an old one
+    (the 2026-09-04 ruling this function exists for, `to-lead.md:1017`)."""
+    counts: Counter[str] = Counter()
+    for rel in corpus.files:
+        skip = corpus.was_lines[rel]
+        for i, line in enumerate(corpus.lines[rel]):
+            if i in skip:
+                continue
+            for m in pattern.finditer(line):
+                counts[m.group(0)] += 1
+    return counts
+
+
+def _value_set_creation(
+    mig: Corpus, ctl: Corpus, pattern: re.Pattern[str]
+) -> tuple[bool, str]:
+    """Ruling (2026-09-04, `to-lead.md:1017`, amending clause (ii) of the 2026-09-04
+    `:455` entry): creation is **a distinct value present in the migrated tree and absent
+    from the control**, never a larger raw line count for an already-present value — a
+    line count cannot tell mangling/fabrication apart from a generator echoing
+    already-disclosed legacy text more than once. Measured, the finding this rule was
+    written from: `W37-6` 685->725, `W32-7` 68->78, the value **set** identical both
+    times — zero new values, on every alternative this was checked against.
+
+    Returns `(created, note)`. `created` is True iff at least one value `pattern` matches
+    in `mig` does not appear anywhere in `ctl` — fatal regardless of any alias-class
+    disclosure the alternative's own rules would otherwise apply (clause (i), checked
+    before any disclosure, exactly as `_d8_verdict`'s creation check already ran first).
+    `note`, non-empty only when `created` is False, lists every value whose *occurrence
+    count* grew with the value set otherwise unchanged — clause (ii)'s disclosure line,
+    printed, never folded into the verdict. The growth is still owed a cause in the
+    ledger by name (clause 3: which generator duplicates it, and whether that is a
+    legitimate class-6 echo or a partial-edit (g) defect) — a separate investigation,
+    not decided by this function.
     """
-    if m_lines > c_lines:
+    m_counts = _scan_values(mig, pattern)
+    c_counts = _scan_values(ctl, pattern)
+    new_values = sorted(set(m_counts) - set(c_counts))
+    if new_values:
+        shown = ", ".join(new_values[:5])
+        more = f" (+{len(new_values) - 5} more)" if len(new_values) > 5 else ""
+        return True, (
+            f"{len(new_values)} new value(s) in the migrated tree, absent from control: "
+            f"{shown}{more}"
+        )
+    grown = sorted(
+        (value, c_counts.get(value, 0), count)
+        for value, count in m_counts.items()
+        if count > c_counts.get(value, 0)
+    )
+    if not grown:
+        return False, ""
+    shown_grown = ", ".join(f"{value} {c}->{m}" for value, c, m in grown[:10])
+    more_grown = f" (+{len(grown) - 10} more)" if len(grown) > 10 else ""
+    return False, (
+        f"occurrence count grew for {len(grown)} already-present value(s), value set "
+        f"unchanged — not creation (2026-09-04 ruling, `to-lead.md:1017`): "
+        f"{shown_grown}{more_grown}"
+    )
+
+
+def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[str, str]:
+    """(d8)'s three-way split. Creation is checked first — a *value-set* comparison
+    (2026-09-04 ruling, `to-lead.md:1017`, amending the `:455` entry's clause (ii)) — and
+    stays REGRESSION regardless of what the slice/task/bare breakdown below would say. An
+    occurrence-count increase with the value set unchanged is not creation; it is
+    disclosed alongside the slice-key population's own note.
+    """
+    created, creation_note = _value_set_creation(mig, ctl, _D8_SLICE_KEY_RE)
+    if created:
         return REGRESSION, (
-            f"the migrated tree carries MORE than the un-migrated control "
-            f"({c_lines} -> {m_lines}): the migration is creating what this row forbids, "
-            "so no citation rewrite reaches zero — creation stays REGRESSION even for a "
-            "disclosed class (Ruling 105 §A's third alias class)"
+            "the migration introduces a slice-key value the control never had: "
+            f"{creation_note} — creation stays REGRESSION even for a disclosed class "
+            "(Ruling 105 §A's third alias class)"
         )
     m_task, task_files = mig.scan(_D8_TASK_KEY_RE)
     m_bare, bare_files = mig.scan(_D8_WORK_KEY_BARE_RE)
@@ -868,13 +936,16 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
         return FAIL, "; ".join(parts)
     m_slice, slice_files = mig.scan(_D8_SLICE_KEY_RE)
     c_slice, _ = ctl.scan(_D8_SLICE_KEY_RE)
-    return DISCLOSE, (
+    note = (
         "slice-key population disclosed, excluded from the zero requirement (Ruling 105 "
         f"§A's third alias class, `to-lead.md` 2026-09-04): {m_slice} line(s) / "
         f"{slice_files} file(s) (`{_D8_SLICE_KEY_RE.pattern}`), control {c_slice} line(s); "
         "owner W37-11's citation-form item — the resolver that renders one (e.g. "
         "'W11-1' -> 'WK-952, slice 1')"
     )
+    if creation_note:
+        note += "; " + creation_note
+    return DISCLOSE, note
 
 
 def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
@@ -885,22 +956,32 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
         companions, gating = _companions_for(label, pattern, mig, ctl)
         if label == _D8_LABEL:
             verdict, note = _d8_verdict(mig, ctl, m_lines, c_lines)
-        elif label in D_DISCLOSED:
-            verdict = DISCLOSE
-            note = (
-                "excluded from the zero requirement, count disclosed "
-                f"({D_DISCLOSED_CITATION.get(label, 'ruling pending')})"
-            )
-        elif m_lines > c_lines:
-            # Not a worse FAIL — a different finding. See `REGRESSION`.
-            verdict = REGRESSION
-            note = (
-                f"the migrated tree carries MORE than the un-migrated control "
-                f"({c_lines} -> {m_lines}): the migration is creating what this row "
-                "forbids, so no citation rewrite reaches zero"
-            )
         else:
-            verdict, note = _verdict_on_zero(m_lines, mig.n_lines, control=c_lines)
+            # 2026-09-04 ruling (`to-lead.md:1017`): creation is a *distinct value*
+            # present in the migrated tree and absent from control, checked before any
+            # alternative's own disclosure — one rule across the whole row, `_d8_verdict`
+            # included, not (d8) alone. An occurrence-count increase with the value set
+            # unchanged is not creation; it is a disclosure line appended to whatever
+            # verdict the alternative would otherwise get, never folded into it.
+            created, creation_note = _value_set_creation(mig, ctl, pattern)
+            if created:
+                verdict = REGRESSION
+                note = (
+                    "the migration introduces a value this alternative's own pattern "
+                    f"never matched in the control: {creation_note}"
+                )
+            elif label in D_DISCLOSED:
+                verdict = DISCLOSE
+                note = (
+                    "excluded from the zero requirement, count disclosed "
+                    f"({D_DISCLOSED_CITATION.get(label, 'ruling pending')})"
+                )
+                if creation_note:
+                    note += "; " + creation_note
+            else:
+                verdict, note = _verdict_on_zero(m_lines, mig.n_lines, control=c_lines)
+                if creation_note:
+                    note = (note + "; " if note else "") + creation_note
         if m_lines == c_lines and m_lines > 0:
             # The auditor's two-column signature, and a better detector than reasoning
             # about `\b`: an alternative the migration does not move has no discriminating
@@ -1282,7 +1363,27 @@ def row_f(
 #: identifier turns it into `NFR-775/14` — one real requirement and one meaningless
 #: fragment. The post-migration form has a *numeric* module segment, which is what
 #: distinguishes a mangled citation from a legitimate compound one.
-MANGLED_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[0-9]+/[0-9]+")
+#:
+#: Task #30's range ruling (W37-6 channel `:526`) adds the `..` alternative: a range
+#: citation's base token rewritten alone, with its `..end` tail orphaned, produces the
+#: identical shape one level up — a *numeric* module segment followed by `..` and a bare
+#: number (`FR-680..4`) is exactly as meaningless as `NFR-775/14`, and for the same
+#: reason: a rewrite matched inside a longer citation and stopped. Both alternatives share
+#: the one leading clause (`\b(FR|NFR|OQ|DEP)-[0-9]+`) rather than repeating it, so the two
+#: shapes cannot drift apart on what counts as "a numeric module segment".
+#:
+#: #720's cause4 (W37-6 channel `:845`) adds the `WK-\d+[A-Za-z]` alternative: the same
+#: `_compound_token_re` boundary defect #721 fixed also let a mapped `W<n>` token match as
+#: a bare prefix of a longer run of word characters with no separator at all —
+#: `"W3C/OpenTelemetry…"` came out `"WK-944C/OpenTelemetry…"`, a fabricated identifier no
+#: `FR|NFR|OQ|DEP` alternative could ever see (`W`/`WK` was never in its family list). A
+#: real lowercase slice suffix (`W6a`, `WK-949a`) is not this shape — the corpus's own
+#: convention for a genuine continuation is lowercase, per `_WORK_FAMILY_TOKEN_RE`'s own
+#: `[a-z]?` — so the alternative is anchored to an *uppercase* letter, which a real slice
+#: id never produces and a corruption like `W3C` always does.
+MANGLED_CITATION_RE: Final = re.compile(
+    r"\b(?:(?:FR|NFR|OQ|DEP)-[0-9]+(?:/[0-9]+|\.\.[0-9]+)|WK-[0-9]+[A-Z])"
+)
 
 #: The pre-migration compound form: the population at risk. Printed as this row's
 #: denominator, so "391 mangled" is read against "423 at risk" rather than against nothing.
@@ -1373,16 +1474,23 @@ _SLASH_COMPOUND_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+(?:/[0-9
 # `redirects_inverse` map `classify_migration_diff` builds, never assumed from the diff
 # alone. **Both named hypotheses are KILLED for `docs/`**: none of the ten sampled files is
 # a Ruling 68 class-4 split or a generated README/INDEX collision. Two new, unrelated
-# causes accounted for eight of the ten; the other two (a bare-basename/non-`docs/`-rooted
+# causes accounted for eight of the ten; the other one (a bare-basename/non-`docs/`-rooted
 # relative citation, e.g. `docs/README.md`'s `workflows/wf-01-...md` and
-# `phase-0-status.md`; and one *un-allocated placeholder id* cited in a plan's own prose —
-# `docs/plans/2026-08-19-psi-comparison-selector[-ledger].md` both cite `OQ-DATA-11` as an
-# id the plan instructs a *future* reader to raise, never itself a `REDIRECTS.csv` row, so
-# `redirects_inverse` has no entry for its new form `OQ-8471`) are reported here in prose,
-# not as a regex: the first has no single stable prefix to key on (unlike the five
-# `docs/`-rooted forms `_docid.LEGACY_FORM_PATTERNS` already names), and the second needs
-# `REDIRECTS.csv` itself (built in `new_root`, not `ctl`) to tell a placeholder from a real
-# citation — outside what this row's "no second tree read" rule allows a cheap classifier.
+# `phase-0-status.md`) is reported here in prose, not as a regex, because it has no single
+# stable prefix to key on (unlike the five `docs/`-rooted forms
+# `_docid.LEGACY_FORM_PATTERNS` already names).
+#
+# **Corrected, task #30:** this comment used to also report a second finding — `OQ-DATA-11`
+# (cited in `docs/plans/2026-08-19-psi-comparison-selector[-ledger].md`'s own historical
+# narrative) as an *"un-allocated placeholder id"* that the run supposedly rewrote to
+# `OQ-8471` with no `REDIRECTS.csv` row for `redirects_inverse` to consume. That was false:
+# `OQ-DATA-11` is a real, decided open question (`docs/open-questions.md:63`,
+# `~~**OQ-DATA-11**~~ ✔`), and #726 (the same-shaped `_discover_requirements` dedup fix,
+# "one draft per legacy OQ id") already gives it exactly one `REDIRECTS.csv` row and a
+# consistent rewrite everywhere it is cited, plan narrative included — measured directly
+# against a real `migrate()` run: `OQ-DATA-11,OQ-849,docs/specs/01-data-management.md,
+# docs/specs/01-data-management.md,`, one row, no conflict. Left here as a record that the
+# claim was checked and refuted, not silently dropped.
 # ---------------------------------------------------------------------------------------
 
 #: cause3 (this executor's `docs/` sample, six of ten files): a prose citation to
@@ -2165,28 +2273,27 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # substring of any correctly-migrated five-digit id; genuine
                          # un-migrated 4-digit citations remain, so the row still fails
     "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
-    "d8": REGRESSION,   # workstream/slice id — REGRESSED WORSE (2026-09-04, W37-6 row (b)
-                         # fresh executor): migrated 2513 now ABOVE control 2358 (was 299,
-                         # below control). Not this PR's own new defect but the same
-                         # `_compound_token_re` boundary bug fixed for row (b) (see that
-                         # function's docstring, `scripts/doc-id.py`), at far larger scale:
-                         # a shorter mapped work/module token with no `-`/`/` separator
-                         # before a longer W-key's own digits (`W3` mapped, immediately
-                         # followed by more digits with nothing between them, e.g.) mangled
-                         # the W-key the identical way an `OQ-` prefix did — hiding it from
-                         # this row's raw grep for the *un-migrated* `W<n>-<n>` literal form
-                         # by corrupting it into a shape the pattern no longer matches, not
-                         # by actually rewriting it. `_expand_compound`'s own explicit
-                         # W-family refusal (`_WORK_FAMILY_TOKEN_RE`) only ever guarded the
-                         # separator-continuation shape (`W32-2` after a mapped `W32`); it
-                         # never reached the no-separator prefix shape this bug used, so
-                         # fixing the boundary correctly leaves every genuinely un-migrated
-                         # `W<n>-<n>` form visible instead of mangling it, and the true
-                         # (much larger) un-migrated population is what this row now
-                         # measures. Flagged to the lead as an existing, now-measured
-                         # defect (row (d)'s file, previously closed at task 7 with a
-                         # smaller, correct-at-the-time figure) — not fixed here, out of
-                         # row (b)'s own scope.
+    "d8": FAIL,         # workstream/slice id — RECLASSIFIED REGRESSION -> FAIL (2026-09-04
+                         # ruling, `to-lead.md:1017`, task #30): the prior REGRESSION verdict
+                         # was a raw-line-count artifact. #721's `_compound_token_re`
+                         # boundary fix (see `d8`'s own history above `_D8_...` constants,
+                         # and row `b`'s entry) correctly stopped mangling W-keys, which
+                         # made the true un-migrated population visible — but the resulting
+                         # occurrence-count growth (`W37-6` 685->725, `W32-7` 68->78,
+                         # measured directly) has an IDENTICAL value set before and after:
+                         # zero new distinct slice-key values, only more occurrences of
+                         # already-present ones (traced to `docs/INDEX.md` and
+                         # `docs/rulings/INDEX.md`, both regenerated-from-scratch artifacts
+                         # quoting each ruling's own title verbatim in its index row — a
+                         # legitimate class-6 echo, not a partial-edit defect). The ruling's
+                         # own rule: creation is a *distinct value* absent from control,
+                         # never a larger count of one already present — `_value_set_
+                         # creation`/`_scan_values` (`scripts/_docverify.py`) now implement
+                         # this for every (d) alternative, `_d8_verdict` included, and the
+                         # slice-key disclosure note carries the occurrence-growth figures
+                         # instead of the verdict absorbing them. What remains FAIL is the
+                         # genuine, now-correctly-measured un-migrated `W<n>-<n>` population
+                         # row (b)'s entry already named — real, not this PR's to fix.
     "d9": FAIL,         # docs/plans/2026-
     "d10": FAIL,        # docs/audit/
     "d11": FAIL,        # the old notes directory
