@@ -190,6 +190,9 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #723 | fix(scripts): name the code-tree residue by cause — hypothesis 1 killed, four new causes found | `56c0e81` | Not independently re-run — `ci-watcher-723b` confirmed python/docs/history-policy all green (post-rebase head `00935dd`), CLEAN. Row (g)'s code-tree leg of the three-way triage. |
 | #724 | docs(plans): ledger — #721/#722 merges, h2b root-cause, DB-exclusivity proof | `1129df0` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). |
 | #728 | docs(plans): ledger — #724/#725/#727 merges | `0af63b4` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). `ci-watcher-728` confirmed docs/python/history-policy all green, CLEAN. |
+| #731 | docs(plans): ledger — #728/#729 merges | `c462fb6` | UNCHANGED: 14 (this ledger's own continued history). `ci-watcher-731` confirmed docs/python/history-policy all green after settling past three cancelled batches (the lead's own push cadence), CLEAN. |
+| #730 | fix(scripts): DP-7 frontmatter gap (Reference/vendored stamps) + REDIRECTS.csv determinism | `e6384d7` | Not independently re-run — CI green (ruff/mypy/import-linter/pytest, specification audit, no-session-links), CLEAN. Rebased once onto a genuine content conflict with #729's own test additions, resolved additively from each side's clean history. Full gate: 3199 passed, tree held still. |
+| #733 | fix(scripts): W37-6 unit-record inverse — ranges/compounds/relative-links, cause3/3a/4/6, (d5)/(d8) creation rule | `6c92d55` | Not independently re-run — `ci-watcher-733` confirmed python/docs/history-policy all green, CLEAN. Full gate/verify twice (once surfacing and fixing a real crash bug in the author's own diff before reaching a gate). The single largest PR of the day; discharges (d4)/(d5)/(d8) from the checkpoint-1 table. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1199,17 +1202,17 @@ transcribed from any relay.
 | row | verdict | cause (one clause) | owner | PR |
 |---|---|---|---|---|
 | d1 | FAIL | `NT-00`-prefixed citation form, un-migrated | unowned | — |
-| d4 | FAIL | `wf-0[0-9]` case-form, improved not closed (262 < control 272) | executor-30-2 | pending (#30, not yet opened) |
-| d5 | FAIL | `Ruling [0-9]+` un-migrated population, un-masked by row (b)'s boundary fix | executor-30-2 | pending (#30 — scoped as the disclosed-absent-values case) |
+| d4 | FAIL | `wf-0[0-9]` case-form — 269/103 files → **2/1 file** on the fresh `--verify` (run 33884621869, `6c92d55`) | executor-30-2 | one file from zero, resumed to close it |
+| d5 | FAIL | `Ruling [0-9]+` un-migrated population — **unmoved**, 76/20 → 77/20; three values' counts grew, value set unchanged (same pattern as d8's earlier gap) | executor-30-2 | resumed — name the generator |
 | d6 | FAIL | `ADR-0[0-9]{3}` genuine un-migrated 4-digit citations remain | unowned | — |
 | d7 | FAIL | `(FR\|NFR\|OQ\|DEP)-[A-Z]+-[0-9]+` un-migrated | unowned | — |
-| d8 | REGRESSION | workstream/slice `W<n>-<n>` boundary bug at scale, un-masked by row (b) | executor-30-2 | pending (#30 — creation rule fixed to distinct-value per today's ruling) |
+| d8 | FAIL | workstream/slice `W<n>-<n>` — re-recorded REGRESSION→FAIL by #733's distinct-value rule; still fatal: **123 task keys in 40 files + 14 bare work-key remainders in 6 files** (both ruled fatal, `to-lead.md:455`(i)); slice-key population is the disclosed part | executor-30-2 | not fully closed, work continues |
 | d9 | FAIL | `docs/plans/2026-`-prefixed citation form, un-migrated | unowned | — |
 | d10 | FAIL | `docs/audit/`-prefixed citation form, un-migrated | unowned | — |
 | d11 | FAIL | the old notes directory, un-migrated | unowned | — |
 | d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
 | d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
-| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — `classified-by-none` residue | multiple (partial) | #720, #727, #729 merged; #723 in flight; still FAIL overall (326 unclassified per exec-dp7's last read) |
+| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`) but **mangled companion up** (457→472, +15) — a real regression signal `#733` may have introduced | multiple (partial) | #720, #723, #727, #729 merged; executor-30-2 resumed to find the +15 source before d4/d5 |
 | h1 | FAIL | `audit-docs.py` non-disclosed classes (32, 36, 1, 31, 27, …) still non-zero | unowned | — |
 
 **Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
@@ -1257,3 +1260,291 @@ stand down — resumes from its own context via `SendMessage`) with the residue-
 get a fresh unclassified count on current `main`, name any remaining recognizable causes
 the same way #720/#723 did, or report precisely what doesn't fit an existing class. Six of
 eight executors now, still inside the cap.
+
+## 2026-09-04 — exec-paths finds d13's zero-requirement conflicts with a standing ruling; d9-d12 partially fixable, not zeroable
+
+Before writing any code, `exec-paths` classified every surviving line per row rather than
+assuming the citation-inverse mechanism was simply missing a form:
+
+**d9-d12** (`docs/plans/2026-`, `docs/audit/`, `docs/notes/`, `docs/adr/`): the token-map
+mechanism already works for its intended case (a full-path citation with a real `old_path`
+row). A real, fixable gap exists — word-wrapped citations, where a markdown line-wrap
+splits the old path's token across lines so the per-line literal match never sees the whole
+token (141/210 of d9, 47/346 d10, 4/135 d11, 0/38 d12). **But the majority of each row
+(especially d10-d12) is bare directory-prefix/glob prose mentions with no single
+`(old_rel, new_rel)` pair to repoint to** — largely inside frozen historical documents
+(`docs/plans/PL-*`, `docs/closures/CR-*`, `docs/findings/FD-*`, `docs/rulings/RL-*`)
+describing the old scheme as history. **Even after the word-wrap fix, none of d9-d12
+reaches zero.**
+
+**d13** (`.claude/notes/`) is a harder problem — a genuine conflict with an existing
+standing ruling, not a missing form. `.claude/notes/` → `docs/rfcs/RFC-…` was already
+migrated under a separate, earlier effort (RFC-181 Slice 4, Ruling 61 — its own id fenced
+below, landed 2026-09-01) with its own tombstone-stub mechanism and its own test
+
+```
+RL-00230
+```
+
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged.*
+
+(`tests/test_notes_move_citations.py`), which **explicitly exempts `docs/plans/` and other
+provenance-locked artifact families from ever being rewritten to the new path, by ruled
+design, forever** — confirmed passing on the real tree (`1 passed`). `doc-id.py`'s own
+`REDIRECTS.csv` has zero `.claude/notes/` rows; the old→new map for this family lives only
+in `.claude/notes/README.md`'s own table, which `migrate()` never reads. d13's 90 lines:
+54 inside frozen `docs/plans/PL-*` (RL-230-exempt by name), 25 in other frozen families, 6
+in living code, 2 in skills/roles, 3 elsewhere. **Making d13 read zero would mean either
+building a second redirect-consuming path reaching outside NT-0019's domain, or rewriting
+citations inside frozen plans RL-230 explicitly ruled must stay untouched.**
+
+Told `exec-paths` to proceed with the word-wrap fix for d9-d12 now (real, in-scope,
+reduces but does not zero those rows) and hold d13 entirely. **Escalated to the deputy,
+not decided here**: whether d13's zero-requirement needs amending against RL-230's
+exemption, and whether d9-d12's residual directory-prose population is W37-6's scope at
+all or a separate documentation-sweep item.
+
+## 2026-09-04 — exec-h1's classification: three checks already owned, two small new findings, one classifier bug in the instrument itself
+
+Read the ledger's own checkpoint-1 dispatch entry, then cross-checked its own independent
+findings against it rather than transcribing — good discipline. All four checks are the
+check correctly reporting real migration defects, none check-side bugs:
+
+- **Check 36** (5856 hits) — exactly row (d)'s known sub-checks, already owned by
+  `exec-ids`/`exec-paths`/`executor-30-2`. Not duplicated.
+- **Check 1** (270 hits) — ~237 already `executor-30-2`'s cause3 (PR #30). **33 hits are a
+  new, previously unnamed defect**: `docs/INDEX.md` and `docs/closures/INDEX.md` copy a
+  cited document's own relative link verbatim without adjusting for the index file's own
+  directory depth — a link correct one level down from where it was written resolves wrong
+  once copied into a shallower generated file.
+- **Check 31** (1 hit) — id-sequence gap 296→991, matches the known allocate-after-
+  exemptions defect, owned by `alloc` (row b). Not duplicated.
+- **Check 27** — a self-correction: exec-h1's own first automated pass read this as zero,
+  wrongly — it's actually 1 failure. **Root cause traced to a real bug in the instrument's
+  own classifier**: `_docverify.py`'s `_classify_failures`/`_CHECK_PREFIX_RE` expects a
+  `check N:` message prefix, but `check_process_core_digest`'s `fail()` carries none, so
+  the failure silently buckets as unclassified rather than "27" on every run. The
+  underlying defect: the migration's token-rewrite touched `delivery-process.md`'s bytes
+  without reconciling `delivery-process.core.json`'s digest pointer (a deliberate manual
+  step per Ruling 45, not something `migrate()` should auto-fix).
+
+Authorized both new findings (link-depth bug, digest reconciliation) plus the classifier
+fix, all in the same PR — no collision with other in-flight work (`doc-index.py`'s
+generation logic and the digest field are untouched by anyone else right now). Told to
+confirm the root cause by reading `doc-index.py`'s source before fixing, and to diff
+`delivery-process.md` pre/post-migration to confirm the change is token-form-only before
+bumping the digest, not assume either.
+
+## 2026-09-04 — d13 ruled in scope after all: NT-0019 §5 already schedules its own retirement; d9-d12 get a precise three-part fix
+
+**Correction to this ledger's own citation**: an earlier entry cited the string below for
+Ruling 61:
+
+```
+RL-00230
+```
+
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged.*
+
+That id resolves to nothing on `origin/main` — the migration has not minted it yet.
+Should have been cited by file/ruling number, not an unminted id.
+
+**d13 — not a conflict, exec-paths's reading of the exemption was wrong, not its facts.**
+`test_notes_move_citations.py`'s frozen-plan carve-out is not a permanent design decision —
+NT-0019 §5 itself schedules the `.claude/notes/` stubs' deletion (step 4, `:281`/`:342`)
+and that exemption test's own removal (`:409`, replaced by `test_audit_docs_redirects.py`).
+Ruling 61 is recorded **INVALIDATED**, its own horizon explicitly at W37-6
+(`docs/audit/ruling-acceptance-item-sweep.md:133-145`, quoting `audit-docs.py`'s docstring:
+"until W37-6 deletes the stubs entirely"). The test passing on the real tree is the
+pre-migration state, not evidence the exemption still holds — DP-7's predicate
+(`frozen_file_matches_after_migration_stamp`) exists specifically to rewrite frozen files
+under the migration stamp, and the Slice 4 carve-out predates it. **Ruled: d13 stays at
+zero, in scope.** Fix: `migrate()` reads `.claude/notes/README.md`'s tombstone table once
+(its last reader), composes each stub through to its final `docs/rfcs/RFC-…` path, emits
+the `REDIRECTS.csv` row and `token_map` entry, deletes the stubs and README (§5 step 4).
+Proof: d13 at 0; a fixture citation in a frozen plan comes out repointed AND DP-7-clean.
+
+**d9-d12, three parts, all ruled:**
+1. **Word-wrap fix** (141/210 of d9, 47/346 d10, 4/135 d11) — one hard acceptance
+   condition: the rewrite preserves the line break exactly where it stands, never rejoins
+   the token onto one line (a rejoin changes bytes beyond the token, breaking DP-7's
+   inverse on every frozen file it touches). Proof: DP-7 passes on each frozen file
+   changed.
+2. **Directory-level tokens** — `_README_LEGACY_DIR_MOVES` (`doc-id.py:6179`) currently
+   applies to READMEs only; the same constant should feed `token_map` for every file, not
+   just READMEs — takes most of d11 and d12.
+3. **Disclosed class** — what remains is prose naming a directory with no single
+   successor (`docs/audit/`, deliberately absent from the map — "dissolves into four…
+   reported rather than silently sent somewhere plausible" — and the bare dated prefix
+   `docs/plans/2026-` with nothing after it). No `(old_path, new_path)` pair exists;
+   rewriting the sentence is a forbidden meaning edit in a frozen file. Ruled, on Ruling
+   105 §A's pattern: a §7(d) path match not followed by a path present in
+   `REDIRECTS.csv`'s `old_path` column is disclosed by count, excluded from the zero
+   requirement, owner W37-11's citation-form item. Any match that IS a real file path stays
+   fatal — no over-disclosure.
+
+**Scope confirmed W37-6's throughout** — rows, mechanism, and the disclosed class all
+`exec-paths`'s, nothing splits to a separate sweep. Full ruling relayed verbatim.
+
+## 2026-09-04 — exec-ids' 74-line table ruled: all 42 citations are fixed, 32 specifications get three dispositions
+
+`exec-ids` reproduced d1/d6/d7's own predicate directly (`_docid.LEGACY_FORM_PATTERNS`,
+`Corpus.scan`, the row's own exclusions) against a fresh `--verify --keep` snapshot of
+`origin/main` = `56c0e81` — 74/74 matched, not approximated. Clean structural split: every
+CITATION line under `docs/`; every SPECIFICATION line in `.claude/skills/`, `scripts/*.py`
+comments, or `tests/*.py` fixtures, zero overlap.
+
+**Ruled: all 42 citations are `token_map` misses, every one fixed** — the frozen-plan
+exception protects the claim, not the citation's spelling (established three times over:
+`docs/plans/README.md:25-27`, `_normalize_padded_citations`'s #25 precedent, and Ruling
+68's DP-7 predicate itself). `exec-ids`'s deliverable is the cause of each miss, not the
+line. `docs/rulings/INDEX.md:112` gets a one-line determination first (source's own
+unrewritten citation, covered by the general fix — or the generator read the title before
+rewriting, a generator-ordering bug) — generated files are explicitly NOT exempt from row
+(d) the way row (f) exempts them.
+
+**32 specifications, three dispositions by location:**
+
+| Class | Files | Lines | Disposition |
+|---|---|---|---|
+| 3a — Markdown/frozen-prose exhibit | `.claude/skills/docs-audit/SKILL.md`, `docs/plans/PL-00282-…md`, `docs/plans/PL-00066-…md` (borderline, ruled in) | 5 | Fenced, Ruling 103 §5.1's note verbatim, same as (e)'s exhibits |
+| 3b — Python comments in `scripts/` | `scripts/audit-docs.py` (×2 sites), `scripts/doc-id.py` | 4 | Respelled to a non-matching schematic form or the new form — zero exclusions |
+| 3c — Test literals in `tests/` | `test_doc_id_verify.py`, `test_audit_docs_ids.py`, `test_doc_id_migrate.py` | 21 | New 4th declared class in `_docid.sweep_exclusion_reason` — named-tuple exclusion, **three files, not four**; disclosed by file+count; no test outside the tuple qualifies |
+
+(5+4+21 = 30 above; +2 for the two `test_register_owed.py` lines this table originally
+double-counted into 3c, reconciled against `exec-ids`'s own per-file breakdown, sent in
+full to the deputy and available on request.)
+
+**Correction (deputy, 16:4xZ)**: `test_register_owed.py` is not one of "the instrument's
+own test modules" — its subject, `scripts/register-owed.py`, is itself an NT-0019 `:382`
+migration target ("paths, `FD-` parser, `WK-`/`SL-` in the Work-item column, docstrings |
+H + M"). Its legacy literals are fixtures of a parser that changes form under the
+migration — stale test data to migrate WITH the script, not lines to exclude. **The class-
+3c tuple names three files, not four.** Its lines move to a **fourth class-1 fix**: nobody
+else owns `register-owed.py`'s row, so this is W37-6's and `exec-ids` takes it. Relayed.
+
+**Refused**: a document-keyed exemption for skills generally (already refused for row (e),
+same corpus); legacy strings built at runtime in tests to dodge the scanner; leaving the 32
+as standing red with no predicate. Relayed to `exec-ids` in full; cleared to build.
+
+## 2026-09-04 — #733 verified against the (d8) ruling; a reconciliation gap flagged before the row is re-recorded
+
+Deputy confirmed the creation rule landed correctly (`_value_set_creation`, one rule
+across row (d), called for d8 and the shared loop). `EXPECTED_VERDICTS` re-records d8
+`REGRESSION → FAIL`, expected on the next fresh `--verify`.
+
+**Gap caught before it was accepted as closed**: the ledger's generator paragraph
+(`docs/INDEX.md` 19 + `docs/rulings/INDEX.md` 2 = 21) is cited as accounting for "the
+growth," but `executor-30-2`'s own measurement was `W37-6` 685→725 (+40) and `W32-7` 68→78
+(+10) — 50 occurrences. 21 does not reconcile against 50. Resumed `executor-30-2` (its
+own measurement) rather than guess: either the two figures are on different predicates
+(files vs. occurrences, lines vs. occurrences) and the paragraph must say which, or 29
+occurrences have an unnamed source and that's a real finding still owed. Not a blocker on
+anything else in flight; this is a precision correction to the record, not new code.
+
+## 2026-09-04 — shared-worktree incident: two executors' dispatch briefs never said "create your own worktree"; resolved without loss
+
+`exec-ids` caught it first: working directory checked out on `docs-w37-6-ledger-cont6` (the
+lead's own tracking branch), `git status` showing 57 real lines in `scripts/doc-index.py`
+it never touched. Root cause: **the lead's own dispatch briefs for `exec-ids` and `exec-h1`
+never included worktree-creation instructions**, unlike every other executor dispatched
+today — both defaulted to operating in `.claude/worktrees/lead-ruling105`, the lead's own
+worktree, live while the lead was committing ledger entries to it throughout.
+
+**Resolved without loss.** `exec-ids` stopped before committing anything and saved its own
+diff, which turned out to also have captured `exec-h1`'s hunk (a full-file diff, not
+hunk-scoped). `exec-h1` had independently already saved its own, correctly-scoped patch
+before this was even reported. The lead extracted a clean, hunk-separated patch for each
+executor (`scripts/doc-id.py` carried one hunk from each: `exec-ids`'s docstring respelling
+at `:865`, `exec-h1`'s `_write_split_source_indexes` link fix at `:6863`) and verified both
+apply cleanly against fresh `origin/main` (`6c92d55`) before telling either executor
+anything was safe. Both told to create dedicated worktrees now and apply their own clean
+patch there; the shared worktree is cleaned back to matching `origin/main` once both
+confirm.
+
+## 2026-09-04 — exec-ids' major finding: 17 scoped tokens across ~39 lines were never allocated, not un-rewritten
+
+Before fixing anything, `exec-ids` checked every distinct scoped token in its remaining
+citation lines against `docs/specs/*.md` (the only source `_discover_requirements` reads)
+on the control tree. **17 tokens have zero occurrences anywhere** — `token_map` has
+nothing to rewrite them to because nothing ever defined them. Stronger than absence alone:
+the citing rulings themselves (`RL-00144`, `RL-00145`, `RL-00176`, `RL-00178`) say, in the
+exact flagged lines, the token was "deliberately not taken" / "stays free" / "is not
+taken" — these are "next free" markers that moved between successive plans as earlier
+candidates were superseded, never allocated under that name. `exec-ids` correctly refused
+to fabricate a mapping — the same "fabricated id nothing allocated" class row (b)'s
+`OQ-8311` already named as a defect. Escalated to the deputy: confirm nothing else defines
+these tokens, or rule a new disclosed class for never-allocated next-free markers. Not
+decided here. `exec-ids` proceeding on its two unambiguous fixes (`NT-0014-15`'s
+padding-normalization gap) and the specification dispositions while this rules.
+
+## 2026-09-04 — d8's generator-count gap fully reconciled: option (b), a real second unnamed source found and closed
+
+`executor-30-2` re-verified rather than guessing — the earlier "21 vs. 50" gap was option
+(b): the original paragraph named only part of the source. Full reconciliation, on the
+same predicate (occurrences of the literal value) both sides:
+
+**W37-6** (control 710, migrated 750, +40): +22 from generated index files
+(`docs/INDEX.md` +19, `docs/rulings/INDEX.md` +2, `docs/closures/INDEX.md` +1 — a third
+index the original count had missed even on its own terms); **+18 from a source not
+checked at all before**: `_write_document_drafts`'s own front-matter `title:` stamp
+duplicates a document's heading text whenever that heading mentions "W37-6" — the
+front-matter line says it once, the still-present body H1 says it again. Verified directly
+on a real file diff (`docs/plans/2026-09-03-w37-6-time-boxed-delegation.md` 1 occurrence →
+`docs/rulings/RL-00295-...` 2), with a negative control confirming the mechanism is
+conditional on title text, not universal (`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`
+44 → 44, no growth, title doesn't mention W37-6 despite 44 body citations).
+
+**W32-7** (control 71, migrated 81, +10): +9 index, +1 same title-stamp mechanism, one
+document.
+
+Both components are the same class-6 phenomenon (a generator quoting a source title
+verbatim) Ruling 104 §2 already names, occurring at two levels — family/global index
+renderers, and every individual document's own front-matter stamp — not two different
+defects. No code fix required under the ruling as written; this closes the completeness
+gap in the generator paragraph. Comment-only precision on an already-correct
+classification — the dated ledger record is sufficient, no follow-up PR needed today.
+
+## 2026-09-04 — worktree incident closed; the never-allocated-id class ruled mechanical, not sentence-read; fresh `--verify` on the merged tree shows real remaining work, including a regression signal
+
+**Worktree incident, closed.** Ruled not a role-file gap — `executor.md:12` and
+`lead.md:66-68` already require every dispatch to carry its own worktree, and this was a
+dispatch that omitted the sentence, not a charter hole. Verified directly, not by
+trusting either executor's reply: `wt-ids` and `exec-h1-index-link-depth` both confirmed
+via `git status`/`git log -1` to hold the correct patched files, on top of the merged base
+commit. Only then cleaned `.claude/worktrees/lead-ruling105`'s three affected files back
+to matching `origin/main` (`git checkout --`). Every future dispatch brief quotes
+`lead.md:66` verbatim as its first line, per instruction.
+
+**Never-allocated-id class ruled**: decided by a mechanical predicate the instrument
+runs — zero definition rows in every `_discover_*` source and no `old_id` row in
+`REDIRECTS.csv` — never by the citing sentence's wording. A token that fails the
+predicate is a real `token_map` miss regardless of what its citing ruling says; one that
+passes is disclosed by count, excluded from the zero requirement, terminal, never fenced
+(the sentence is a correct historical fact, not an exhibit of a defective form). Broken-
+input proof required both directions. Relayed to `exec-ids` in full, cleared to build.
+
+**Fresh `--verify` on the merged tree** (run `33884621869`, `main` = `6c92d55`, green,
+`UNCHANGED: 13`) — the checkpoint table now carries these real figures, not "pending":
+
+- **d4**: 269/103 files → 2/1 file. One file from zero.
+- **d5**: unmoved, 76/20 → 77/20 — three values' counts grew, value set unchanged, same
+  pattern as d8's earlier generator gap.
+- **d8**: re-recorded REGRESSION→FAIL by #733's own rule, but not fully closed — 123
+  task keys in 40 files + 14 bare work-key remainders in 6 files are both still fatal.
+- **g**: residue down (none=320→190) but **the mangled companion rose by 15** (457→472)
+  — a real regression signal, exactly what Ruling 102 §2 row 1 exists to catch. `#733`
+  may have introduced a new mangling somewhere.
+
+`executor-30-2` resumed a third time with all three asks, mangled-companion regression
+first (before d4/d5), since a growing companion after a fix is the more urgent signal.
+
+## 2026-09-04 — worktree incident's durability gap: the salvaged patches were still uncommitted
+
+Deputy's follow-up check: `lead-ruling105` clean, confirmed — but `wt-ids` and
+`exec-h1-index-link-depth` both showed 0 commits ahead of `main`, the applied patch still
+sitting as working-tree edits only. An uncommitted worktree dies with its session or a
+stray reset — the exact shape that already cost this project one salvage. Both executors
+told to commit (`wip:` prefix fine, squashed at PR time) and push now, before continuing
+their in-progress work. Incident closure is not final until both commit shas exist to
+cite, not merely a clean `git status`.
