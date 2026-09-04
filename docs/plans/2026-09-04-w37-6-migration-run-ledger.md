@@ -985,3 +985,27 @@ comment's story:**
 Both resolutions relayed to executor-30-2. #30's remaining scope: unit-record inverse,
 cause3(a)/cause6, cause4's `MANGLED_CITATION_RE` extension, the one-line stale-comment fix,
 and (d5)/(d8) unmapped-whole-identifier routing.
+
+## 2026-09-04 — (d8) ruled: distinct-value creation, not raw count; h2b's sixth gate — stopped for real this time
+
+**(d) alternatives, one creation rule, ruled from executor-30-2's measurement**: creation is
+a distinct value present in the migrated tree and absent from the control, on the
+alternative's own pattern — any such value is REGRESSION regardless of disclosed-class
+status (the mangling/fabrication test, stated on the quantity that measures it). Occurrence
+growth with an identical value set is not creation — printed as a per-value disclosure line
+(`value control→migrated`), never folded into the verdict. `_d8_verdict`'s first branch
+becomes the value-set comparison; the count delta moves to the note. The duplicating
+generator is still owed a named cause in the ledger — investigation, not a fix, in the same
+PR: which split preamble/title/regenerated index writes the extra occurrences, and whether
+that's class 6 (legitimate verbatim quotation) or a partial-edit (g) defect. Relayed to
+executor-30-2 in full.
+
+**h2b's sixth bare gate** (PID 695814, 174 threads, no cap, no slot, 8 min old) — running
+after the stop instruction had already been read. Killed, confirmed clean from the process
+table. Given six violations across explicit stop instructions each time, a message alone
+cannot guarantee compliance — **stopped the agent process itself** (`TaskStop`) rather than
+rely on a seventh instruction landing. Confirmed, in order: (i) nothing of h2b's runs — `ps
+-eo pid,comm,args | awk '$2=="pytest"' | grep wt-h2b` empty; (ii) h2b receives no further
+dispatch — its process is stopped, not merely instructed; (iii) the fresh executor is
+**`exec-dp7`**, dispatched from `w37-6-dp7-frontmatter` (`2b4c13d`) with the canonical gate
+line and the no-local-gate instruction, already in flight.
