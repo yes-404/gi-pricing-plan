@@ -590,3 +590,26 @@ the work forward).
 `wt-dm` (#701), `wt-rowg-docs` (#720, one untracked `.venv` directory discarded — a
 generated artifact, not work), `wt-rowg2` (#715), `wt-ruling106` (#718). `git worktree
 remove --force` + `prune`; `df -h /` 5.6 GB free (was 5.7 GB), `/tmp` 26 GB free.
+
+## 2026-09-04 — #721's regressions ruled: exposed, not caused; (d5)/(d8) go to the unmapped-token table, never back to prefix matching
+
+Deputy confirmed #721's own `EXPECTED_VERDICTS` re-record ((b) FAIL→PASS, (d5) PASS→FAIL,
+(d8) FAIL→REGRESSION) is the ratchet working correctly, not a defect — "(b)'s PR does not
+touch `EXPECTED_VERDICTS`" (the original dispatch brief) wrongly assumed the recorded value
+was already PASS. Merge #721 on `ci-watcher-721`'s report, unchanged from the prior entry.
+
+**Cause4 is fully resolved by #721** — executor-30 drops its own `\b` fix before opening
+#30 (already relayed) and rebases; `MANGLED_CITATION_RE`'s `WK-\d+[A-Za-z]` extension stays
+(the probe, not the fix, per the deputy's own distinction).
+
+**(d5)/(d8)'s remedy, ruled and relayed to executor-30-2**: the boundary fix stopped prefix
+matches that happened to rewrite longer tokens (`Ruling 10` no longer eats `Ruling 102`'s
+head; `W11-1` no longer eats `W11-1-3`) — those longer identifiers were never mapped as
+wholes; the old prefix rewrite was masking them from the (d) regexes, not fixing them. Fix:
+route them through the **unmapped-token table** (`:310`, the same mechanism as the
+placeholder-id fix already in #30's scope) — mapped as whole identifiers where a target
+exists, disclosed where none does (Ruling 105 A's alias classes). **Never restored via
+prefix matching** — an explicit violation if it recurs. #30's scope now: cause3, the
+placeholder-id fix, the `MANGLED_CITATION_RE` extension, and the (d5)/(d8) whole-identifier
+routing — a real expansion, checkpoint-1 critical since the verdict set moves under #721
+regardless of when #30 lands.
