@@ -694,6 +694,119 @@ def test_a_stray_pycache_already_on_disk_is_excluded_from_the_migration_diff(
 
 
 # ---------------------------------------------------------------------------------------
+# Ruling 105 §2 — DP-7 must strip a leading `---` block only when it is a header this
+# run's own migration wrote, never any leading block that merely happens to open with
+# `---`. `.claude/skills/**` and `.claude/agents/` carry their own, unrelated front
+# matter (`name:`/`description:`) the migration deliberately defers rather than
+# stamping — before the fix, `frozen_file_matches_after_migration_stamp` stripped that
+# foreign header from the migrated side unconditionally while the merge-base side kept
+# it, so a clean citation-token rewrite inside one of those files could never reproduce
+# the header-carrying merge-base text and fell through to `classified-by-none` for a
+# rewrite that was entirely correct — named as the largest single cause of row (g)'s
+# `classified-by-none` population.
+# ---------------------------------------------------------------------------------------
+
+_FOREIGN_FRONT_MATTER_SKILL = (
+    "---\n"
+    "name: demo-skill\n"
+    "description: A demo skill that cites FR-OVR-7 in its body.\n"
+    "---\n"
+    "# Demo skill\n"
+    "\n"
+    "See FR-OVR-7 for the rule.\n"
+)
+
+_FOREIGN_FRONT_MATTER_REDIRECTS = (
+    "old_id,new_id,old_path,new_path,citing_dir\n"
+    "FR-OVR-7,FR-680,,,\n"
+)
+
+
+def _init_git(root: pathlib.Path) -> None:
+    """`root` must be a real git repository before `classify_migration_diff` runs over
+    it, even for a fixture whose own file classifies without ever reaching class 6: a
+    `new_root`-only `docs/REDIRECTS.csv` (this run's own, absent pre-migration by
+    construction) is itself a *new* path with no `old_files` entry, so the classifier's
+    own second loop tries class 6 on it regardless of what the fixture under test needs —
+    `_try_class6`'s fallback runs a second `migrate()` over a copy of `old_root`, and that
+    shells out to `git ls-files`, matching `test_a_contested_inverse_key_is_dropped_not_
+    misresolved` above.
+    """
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=root)
+    _run_git(["config", "user.name", "Test"], cwd=root)
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=root)
+
+
+def test_ruling_105_dp7_foreign_front_matter_clean_rewrite_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 105 §2's positive broken-input proof: a `.claude/skills/**`-shaped file,
+    carrying its own foreign front matter untouched by the migration, whose body gets one
+    correct citation-token rewrite (`FR-OVR-7` -> `FR-680`) must classify as class 2 — not
+    `classified-by-none`, which is what the unconditional strip produced before this fix.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    skill_rel = pathlib.Path(".claude") / "skills" / "demo-skill" / "SKILL.md"
+    (old_root / skill_rel.parent).mkdir(parents=True)
+    (new_root / skill_rel.parent).mkdir(parents=True)
+    (old_root / skill_rel).write_text(_FOREIGN_FRONT_MATTER_SKILL, encoding="utf-8")
+    (new_root / skill_rel).write_text(
+        _FOREIGN_FRONT_MATTER_SKILL.replace(
+            "See FR-OVR-7 for the rule.\n", "See FR-680 for the rule.\n"
+        ),
+        encoding="utf-8",
+    )
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(_FOREIGN_FRONT_MATTER_REDIRECTS, encoding="utf-8")
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = skill_rel.as_posix()
+    assert rel in classification.per_class["2-reference-token"], classification.summary()
+    assert rel not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_ruling_105_dp7_foreign_front_matter_hand_edit_is_still_classified_by_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 105 §2's negative broken-input proof, named in the ruling itself: "the same
+    fixture with a foreign front-matter block *and* a hand-edit somewhere else must still
+    be named as failing" — the frontmatter fix must not accidentally make a genuinely
+    broken rewrite pass. Same skill file and citation rewrite as the positive proof above,
+    plus one hand-typed sentence no rewrite pass produced.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    skill_rel = pathlib.Path(".claude") / "skills" / "demo-skill" / "SKILL.md"
+    (old_root / skill_rel.parent).mkdir(parents=True)
+    (new_root / skill_rel.parent).mkdir(parents=True)
+    (old_root / skill_rel).write_text(_FOREIGN_FRONT_MATTER_SKILL, encoding="utf-8")
+    hand_edited = _FOREIGN_FRONT_MATTER_SKILL.replace(
+        "See FR-OVR-7 for the rule.\n",
+        "See FR-680 for the rule.\n\nA hand-typed sentence no generator wrote.\n",
+    )
+    (new_root / skill_rel).write_text(hand_edited, encoding="utf-8")
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(_FOREIGN_FRONT_MATTER_REDIRECTS, encoding="utf-8")
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = skill_rel.as_posix()
+    assert rel in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel not in classification.per_class["2-reference-token"]
+    assert any(rel in v for v in classification.violations), classification.violations
+
+
+# ---------------------------------------------------------------------------------------
 # Task 4 item 4 — the class-4 link-repoint fix (W37-6 channel `:407-413`): an id-less
 # move's own `old_path`/`new_path` REDIRECTS.csv row records that the file moved, but
 # `_path_rewrite_tokens` also adds tree-wide citation forms to the sweep that had no

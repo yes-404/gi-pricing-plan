@@ -7782,6 +7782,12 @@ def classify_migration_diff(
     """
     audit_docs = _load_audit_docs()
     rows = _read_redirect_rows(new_root)
+    # Ruling 105 §2: every id this run itself allocated, so the shared DP-7 predicate can
+    # tell "a header this run wrote" from "any leading block that happens to parse" --
+    # `.claude/skills/**` and `.claude/agents/` foreign front matter mostly parses (its
+    # `name:`/`description:` keys land in `.extra` with no error) but its `id` is never
+    # one of these, so it is correctly left unstripped by both sides of the comparison.
+    allocated_ids = frozenset(row["new_id"] for row in rows if row.get("new_id"))
 
     def _collision_safe_inverse(pairs: Iterable[tuple[str, str]]) -> dict[str, str]:
         """`{new: old}`, refusing a `new` key two different `old` values both claim.
@@ -7926,7 +7932,7 @@ def classify_migration_diff(
             buckets["3-move" if moved else "1-front-matter-stamp"].append(old_rel)
             return
         if audit_docs.frozen_file_matches_after_migration_stamp(
-            compare_against, new_text, _inverse_for(new_rel)
+            compare_against, new_text, _inverse_for(new_rel), allocated_ids=allocated_ids
         ):
             buckets["3-move" if moved else "2-reference-token"].append(old_rel)
             return
