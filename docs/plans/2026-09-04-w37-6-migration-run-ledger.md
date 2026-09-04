@@ -293,3 +293,37 @@ thread pool (source not located — would need a targeted grep/executor, not don
 this read). Recommended letting the four in-flight runs finish (34–42 min in already; no
 duplicate to kill so the earlier "let it finish" instruction still applies cleanly) and
 ruling the slot cap down for future dispatches.
+
+## 2026-09-04 — (g) `other`-residue triage, docs/ leg (PR #720): cause3 is the dominant cause tree-wide
+
+`triage-docs` sampled 10 of the docs/-tree's 205 `other`-residue files against the real
+`redirects_inverse` map (not pattern-matched from the raw diff) and named two new causes in
+`_residue_cause`/`_residue_cause_table` (`scripts/_docverify.py`), diagnosis-only, no
+predicate changed:
+
+- **`cause3-legacy-path-citation`** (6/10 sampled) — a prose citation to another doc by its
+  pre-migration relative path; the forward sweep resolves it, DP-7's inverse can't (built
+  only from `REDIRECTS.csv` id columns, never a path string). **Whole-tree re-measurement:
+  202 of the prior 355 `other` residue (57%) reclassify under this cause alone** — the
+  dominant cause tree-wide, not just in docs/.
+- **`cause4-compound-token-adjacent-uppercase`** (1/10) — a genuine forward-migration
+  corruption bug, not a citation-diagnosis artifact: `doc-id.py`'s `_compound_token_re` has
+  no trailing `\b` (unlike `_whole_token_re`), so a bare `W<n>` token prefix-matches inside
+  an unrelated identifier (`"W3C/..."` → `"WK-944C/..."`). Invisible to g1's own
+  `MANGLED_CITATION_RE` (scoped to FR/NFR/OQ/DEP only). 10 files whole-tree.
+
+Two findings reported in prose only (docs/README.md's bare-basename citation shape; an
+un-allocated placeholder id in the psi-selector pair) — correctly not turned into detectors
+per this row's no-second-tree-read rule.
+
+**Bonus finding outside triage-docs's own scope, flagged not fixed:** `docs/REDIRECTS.csv`
+is correctly in `MigrateResult.generated_paths`, but two independent `migrate()` runs from
+the same input produce different row *order* for its compound-citation section — fails
+class-6's content-equality check despite being a legitimate generated artifact. The
+module's documented byte-identical-across-independent-runs guarantee does not hold for this
+one file. Not actioned here — belongs to whichever executor next touches class-6 or
+`REDIRECTS.csv` generation.
+
+Gate: ruff/mypy/lint-imports/audit-docs.py clean, 285 passed/1 skipped, two new
+broken-input tests (cause3, cause4, negative control on `W6a`). `ci-watcher-720` dispatched;
+merges on its green report.
