@@ -1740,15 +1740,18 @@ _FAILED_BLOCK = (
     "  - check 32: docs/b.md: PL-09999 does not resolve in docs/INDEX.md\n"
     "  - check 29: docs/audit/register.md: bad Decision cell\n"
     "  - check 30: docs/c.md: no front-matter header\n"
-    "  - broken link in docs/d.md: docs/gone.md\n"
+    "  - check 1: broken link in docs/d.md: docs/gone.md\n"
 )
 
 
 def test_classify_failures_reads_only_the_failed_block_by_check_number(dv: Any) -> None:
     """Ruling 105 §B's own methodology (`docs/plans/…row-h-the-named-h-rows.md:139`), ported
     to Python: a note line mentioning `check 29:` before `FAILED (`n`):` must not be counted
-    — only the `  - ` failure lines after it — and `broken link in …` classifies as check 1,
-    the one shape with no `check N:` prefix."""
+    — only the `  - ` failure lines after it. `broken link in …` (check 1's own message
+    shape) classifies by its own `check 1:` prefix like every other check, since
+    `scripts/audit-docs.py` now writes it — no special case for this shape any more (the
+    deputy's ruling on exec-h1's classifier-gap finding: fix every check's message at the
+    source, never grow a per-check special case in this predicate)."""
     classes = dv._classify_failures(_FAILED_BLOCK)
     assert classes == {"32": 2, "29": 1, "30": 1, "1": 1}
     assert sum(classes.values()) == 5  # not 6 — the pre-FAILED note line is excluded
@@ -1762,28 +1765,6 @@ def test_classify_failures_counts_an_unattributable_message_rather_than_dropping
     out = "FAILED (1):\n  - docs/a.md: header block is missing the **Sequencing** field\n"
     classes = dv._classify_failures(out)
     assert classes == {"unclassified": 1}
-
-
-def test_classify_failures_attributes_a_process_core_message_to_check_27(dv: Any) -> None:
-    """Found live during exec-h1's own checkpoint: `check_process_core_digest` (check 27)
-    is the only other check in the checks-1-39 range whose `fail()` messages carry no
-    `check N:` prefix, and every one of its four call sites begins `"process core "`. Red
-    before the fix: the message fell into `"unclassified"` instead of `"27"`, so h1's own
-    per-class breakdown silently hid a real check-27 failure inside a bucket that also
-    catches genuinely unattributable messages — h1's overall verdict was never wrong (the
-    unclassified bucket already counts toward `h1_other`), but the report could not name
-    which check it was.
-    """
-    out = (
-        "FAILED (1):\n"
-        "  - process core `meta.derived_from_digest` (sha256:aaa) does not match the "
-        "current bytes of delivery-process.md (sha256:bbb) — the spec has changed\n"
-    )
-    classes = dv._classify_failures(out)
-    assert classes == {"27": 1}, (
-        "must be attributed to check 27, not folded into 'unclassified' alongside "
-        "messages this predicate genuinely cannot place"
-    )
 
 
 def test_classify_failures_is_empty_when_the_tree_is_clean(dv: Any) -> None:
