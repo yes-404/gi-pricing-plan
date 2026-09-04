@@ -212,6 +212,48 @@ against what was read pre-rebase. The same discipline as re-verifying a `gh` wri
 the artifact rather than its exit code (above), applied to your own prose instead of a
 tool's report.
 
+**Derive a line number from a command that numbers the whole file** — `grep -n <pat> <file>`,
+or `awk 'NR==<n>'`. The paragraph above is about a citation going stale *after* it was read
+correctly; this is about one that was never right. **Numbering a slice or a filtered stream
+produces well-formed numbers belonging to no file.** `sed -n 'A,Bp' | cat -n` restarts the
+count at 1, so every number is short by exactly `A-1` — a constant offset, which is what
+makes it look consistent and therefore right. **Selecting by position out of a filtered
+stream is worse, because the error is not constant**: `grep -n '.' | sed -n 'A,Bp'` returns
+the `A`-th and `B`-th *non-blank* lines, so the discrepancy grows with every blank line
+passed. Measured on `docs/plans/2026-09-03-w37-6-ruling-104-ci-signal-and-class-6.md` at
+`3dbee20`, `112,113p` over that pipeline returns true lines **139 and 141**. Note what that pipeline actually printed: `grep -n` reports **true** line
+numbers, so the right answer was in its own `139:` prefix and was passed over in favour of
+the position. Neither form errors, and both look exactly like a line number.
+
+**2026-09-03, three ranges for one list, then two wrong verifications of one range.** A
+six-item enumeration in `docs/plans/2026-09-02-w37-migration-preconditions-rulings.md`
+(Ruling 68 §2, read at `a92d4e8`) was cited `:256-262` — a range that opens on the
+introducing sentence and closes inside item 4, so a reader meets four of six classes and no
+statement that there are six. Its true extent is the intro at `:255-256` and the six items at
+`:258-266`, three items wrapping onto continuation lines. A second reader produced
+`:258-265`, short by the last item's continuation line. Later the same day, three citations
+into `…-ruling-104-ci-signal-and-class-6.md` at `3dbee20` were each reported
+**exactly 99 low** (`:13-14`, `:74-77`, `:79` for `:112-113`, `:173-176`, `:178`) —
+the signature of `sed -n '100,183p' | cat -n`, whose offset is exactly `100-1`. The first
+attempt to re-check them selected positions out of `grep -n '.'` and was wrong by a
+different, non-constant amount. The wrong ranges landed on a neighbouring decision in the
+same document and read as plausible — which is the whole difficulty: a mis-derived range
+usually resolves to real prose, not to an error.
+
+**Weigh this trap lower than the rest of the section.** It was observed twice in one
+afternoon, but it **did not reproduce in a five-agent control** asked to check or derive a
+citation into a merged ruling with no guidance: three of those five failed, and all three
+failures were the wrong-tree trap below, not this one. So this is a real observation of two
+incidents, not a demonstrated tendency — treat it as a named hazard to recognise, and spend
+the scepticism budget on the wrong-tree section, which is where the control actually failed.
+
+**Word-agreement cannot verify a locator.** Both re-checks above "confirmed" the citation
+because the quoted text matched — but the text being matched had been *copied from the claim*,
+so it would have agreed wherever the reader looked. **A check whose evidence comes from the
+thing it is checking has no failing case**, the same defect as the self-confirming stale read
+below. Verify a locator by going to those line numbers and reading what is there, not by
+finding the quoted words somewhere in the file.
+
 ## The stash stack is shared by every worktree — never use bare `git stash`
 
 **There is one stash stack per repository, not one per worktree.** Every parallel session in
@@ -799,6 +841,22 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-09-03 — the line-number derivation trap added** (in *the citation section above*),
+from four live mis-citations in one afternoon, every range re-derived here by numbering the
+file directly rather than by adopting any reporter's figure. The 99-line offset was confirmed
+as arithmetic (`112−13 = 173−74 = 178−79 = 99`) and then as content: the reported ranges land
+on a neighbouring decision in the same document, which is why they read as plausible.
+
+**The same day, a baseline that argued against writing a new skill.** Five fresh agents were
+asked to check or derive a citation into a merged ruling, with no guidance. Three failed —
+two reported the merged record *did not exist*, one returned correct line numbers attributed
+to a commit where the file is absent. **All three failures were this file's existing
+wrong-tree trap**, and none was the derivation trap being added. Two of the three had an
+explicit `git show origin/main:<path>` instruction in their own prompt and did a bare read
+anyway. The conclusion recorded rather than acted on: for the mechanisms already written
+down here, the gap is activation, not content, and a second document restating them would
+only be a second place for the sentence to fail to fire from.
 
 **2026-09-02 — three traps added, all from live incidents the same day**, each measured at
 the tree named in its own section rather than described from memory.
