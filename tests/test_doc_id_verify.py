@@ -846,6 +846,42 @@ def test_residue_cause_third_scope_shapes(dv: Any) -> None:
     ) == "other"
 
 
+def test_residue_cause5_fixture_corpus(dv: Any) -> None:
+    """cause5 (code-tree triage, W37-6 channel `:599`'s dispatch): `tests/fixtures/
+    docs-ids/**` and `tests/fixtures/docs-migration/**` are synthetic corpora built to
+    test `doc-id.py` itself, holding deliberately old-form ids as test data — decided by
+    path alone, content irrelevant, the same "path is conclusive" rule `_NOTES_STUB_RE`
+    already uses. A file merely *adjacent* to one of these directories (sharing its
+    prefix as a substring but not contained in it) must not fire.
+    """
+    assert (
+        dv._residue_cause("tests/fixtures/docs-ids/w37-3-corpus/roadmap.md", None)
+        == "cause5-fixture-corpus-old-form-ids"
+    )
+    assert (
+        dv._residue_cause(
+            "tests/fixtures/docs-migration/docs/roadmap.md", ("anything",)
+        )
+        == "cause5-fixture-corpus-old-form-ids"
+    )
+    assert dv._residue_cause("tests/fixtures/docs-ids-other/x.md", ("anything",)) != (
+        "cause5-fixture-corpus-old-form-ids"
+    )
+
+
+def test_residue_cause6_pycache_build_artifact(dv: Any) -> None:
+    """cause6 (code-tree triage): `scripts/__pycache__/*.pyc` — compiled bytecode the
+    verify snapshot's own tree walk should never have included. Binary, so `old_lines` is
+    `None`; checked by path alone before the `old_lines is None -> "other"` fallback
+    would otherwise catch it.
+    """
+    assert (
+        dv._residue_cause("scripts/__pycache__/_docid.cpython-312.pyc", None)
+        == "cause6-pycache-build-artifact"
+    )
+    assert dv._residue_cause("scripts/doc-id.py", None) == "other"
+
+
 def test_row_g_empty_classified_population_fails(dv: Any, tmp_path: pathlib.Path) -> None:
     """NT-0007: a green over an empty population is a fail, not a pass — g2's population
     is the file count `classify_migration_diff` classified, not the corpus size."""
