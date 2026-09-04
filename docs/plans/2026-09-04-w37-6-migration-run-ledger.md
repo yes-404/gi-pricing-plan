@@ -192,6 +192,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #728 | docs(plans): ledger — #724/#725/#727 merges | `0af63b4` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). `ci-watcher-728` confirmed docs/python/history-policy all green, CLEAN. |
 | #731 | docs(plans): ledger — #728/#729 merges | `c462fb6` | UNCHANGED: 14 (this ledger's own continued history). `ci-watcher-731` confirmed docs/python/history-policy all green after settling past three cancelled batches (the lead's own push cadence), CLEAN. |
 | #730 | fix(scripts): DP-7 frontmatter gap (Reference/vendored stamps) + REDIRECTS.csv determinism | `e6384d7` | Not independently re-run — CI green (ruff/mypy/import-linter/pytest, specification audit, no-session-links), CLEAN. Rebased once onto a genuine content conflict with #729's own test additions, resolved additively from each side's clean history. Full gate: 3199 passed, tree held still. |
+| #733 | fix(scripts): W37-6 unit-record inverse — ranges/compounds/relative-links, cause3/3a/4/6, (d5)/(d8) creation rule | `6c92d55` | Not independently re-run — `ci-watcher-733` confirmed python/docs/history-policy all green, CLEAN. Full gate/verify twice (once surfacing and fixing a real crash bug in the author's own diff before reaching a gate). The single largest PR of the day; discharges (d4)/(d5)/(d8) from the checkpoint-1 table. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1201,11 +1202,11 @@ transcribed from any relay.
 | row | verdict | cause (one clause) | owner | PR |
 |---|---|---|---|---|
 | d1 | FAIL | `NT-00`-prefixed citation form, un-migrated | unowned | — |
-| d4 | FAIL | `wf-0[0-9]` case-form, improved not closed (262 < control 272) | executor-30-2 | pending (#30, not yet opened) |
-| d5 | FAIL | `Ruling [0-9]+` un-migrated population, un-masked by row (b)'s boundary fix | executor-30-2 | pending (#30 — scoped as the disclosed-absent-values case) |
+| d4 | FAIL | `wf-0[0-9]` case-form, improved not closed (262 < control 272) | executor-30-2 | **#733 merged (6c92d55) — verdict on next fresh `--verify`** |
+| d5 | FAIL | `Ruling [0-9]+` un-migrated population, un-masked by row (b)'s boundary fix | executor-30-2 | **#733 merged (6c92d55) — verdict on next fresh `--verify`** |
 | d6 | FAIL | `ADR-0[0-9]{3}` genuine un-migrated 4-digit citations remain | unowned | — |
 | d7 | FAIL | `(FR\|NFR\|OQ\|DEP)-[A-Z]+-[0-9]+` un-migrated | unowned | — |
-| d8 | REGRESSION | workstream/slice `W<n>-<n>` boundary bug at scale, un-masked by row (b) | executor-30-2 | pending (#30 — creation rule fixed to distinct-value per today's ruling) |
+| d8 | REGRESSION | workstream/slice `W<n>-<n>` boundary bug at scale, un-masked by row (b) | executor-30-2 | **#733 merged (6c92d55) — verdict on next fresh `--verify`** |
 | d9 | FAIL | `docs/plans/2026-`-prefixed citation form, un-migrated | unowned | — |
 | d10 | FAIL | `docs/audit/`-prefixed citation form, un-migrated | unowned | — |
 | d11 | FAIL | the old notes directory, un-migrated | unowned | — |
