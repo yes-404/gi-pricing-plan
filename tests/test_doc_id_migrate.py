@@ -510,6 +510,190 @@ def test_class6_keys_on_the_generated_set_not_reproducibility(
 
 
 # ---------------------------------------------------------------------------------------
+# W37-6: three declared exclusions from the sweep and from the (d)/(e)/(g) verification
+# corpus (`scripts/_docid.py`'s `sweep_exclusion_reason`, read by `_iter_tree_files` here
+# and by `_docverify.py`'s `tracked_files`):
+#
+# 1. Lockfiles (Ruling 67 Part 2) — generated dependency-resolution data, never a
+#    citation.
+# 2. `tests/fixtures/docs-ids/` and `tests/fixtures/docs-migration/` — the two corpora
+#    built to carry legacy-form and malformed ids so this repository's own id tooling has
+#    something to be tested against, extending
+#    `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3's declared-exception
+#    mechanism from the id-stamp census to the sweep and this corpus.
+# 3. `__pycache__/`/`*.pyc` — the instrument's own exhaust from dynamically loading
+#    `scripts/*.py` by path while it runs (`_load_module`, fixed separately below to stop
+#    writing it at all; this predicate is the second, independent layer for whatever it
+#    still misses).
+# ---------------------------------------------------------------------------------------
+
+
+def test_lockfiles_survive_migration_byte_identical(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A hash inside a lockfile can coincidentally contain a substring that reads like a
+    corrupted legacy-id fragment — `frontend/pnpm-lock.yaml`'s own
+    `.../W5Er5X2X990.../` hash (`'@rolldown/binding-linux-ppc64-gnu'`'s `integrity` field)
+    is the case an earlier token-boundary defect (row (b), fixed in `a2c0afa`) used to
+    corrupt. That specific defect no longer matches this hash (a correctly-`\b`-bounded
+    token needs a following `-<digits>`, which `W5Er...` does not have), so this proof
+    manufactures a real, currently-live risk instead of a historical near-miss: this
+    fixture corpus's own note is legitimately re-cited from `NT-0001` to `RFC-1` by every
+    real `migrate()` run (confirmed directly — `result.assigned` always contains
+    `('NT-0001', 'RFC-1')` for this corpus), so a coincidental, fully-`\b`-bounded
+    `NT-0001` inside a lockfile comment is something migrate()'s citation sweep, absent
+    the exclusion, provably rewrites (checked below by running this exact scenario
+    against `a2c0afa` — pre-fix — where `uv.lock` came back reading `RFC-1`).
+    """
+    frontend_lock_real = (ROOT / "frontend" / "pnpm-lock.yaml").read_bytes()
+    assert b"W5Er" in frontend_lock_real, (
+        "the real file no longer carries the hash this proof exercises — re-derive the "
+        "content from origin/main's current frontend/pnpm-lock.yaml rather than loosening "
+        "this assertion"
+    )
+    uv_lock_text = (
+        "version = 1\n"
+        "# a coincidental mention of NT-0001 in a generated comment, never a citation\n"
+    )
+    frontend_lock_text = (
+        frontend_lock_real.decode("utf-8")
+        + "# a second coincidental mention of NT-0001, alongside the real W5Er hash above\n"
+    )
+    root_pnpm_lock_text = "lockfileVersion: '9.0'\n\npackages: {}\n# NT-0001\n"
+
+    root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
+    (root / "uv.lock").write_text(uv_lock_text, encoding="utf-8")
+    (root / "frontend").mkdir(parents=True, exist_ok=True)
+    (root / "frontend" / "pnpm-lock.yaml").write_text(frontend_lock_text, encoding="utf-8")
+    (root / "pnpm-lock.yaml").write_text(root_pnpm_lock_text, encoding="utf-8")
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(
+        ["-c", "user.email=test@example.com", "-c", "user.name=Test",
+         "commit", "-q", "-m", "add lockfiles"],
+        cwd=root,
+    )
+
+    result = doc_id_cli.migrate(root)
+
+    assert ("NT-0001", "RFC-1") in result.assigned, (
+        "fixture assumption: this corpus's note must still be re-cited NT-0001 -> RFC-1, "
+        "or this proof no longer exercises a real rewrite and tests nothing"
+    )
+    assert (root / "uv.lock").read_text(encoding="utf-8") == uv_lock_text
+    assert (
+        (root / "frontend" / "pnpm-lock.yaml").read_text(encoding="utf-8")
+        == frontend_lock_text
+    )
+    assert (root / "pnpm-lock.yaml").read_text(encoding="utf-8") == root_pnpm_lock_text
+
+
+def test_fixture_corpus_roots_survive_migration_untouched(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3's declared-exception
+    mechanism, extended from the id-stamp census to the migration sweep: `tests/fixtures/
+    docs-ids/` and `tests/fixtures/docs-migration/` hold corpora BUILT to carry legacy-form
+    ids so `doc-id.py`'s own tests have something to exercise. Migrating them in place —
+    inside a real repository's own migration run, which necessarily walks over its own
+    `tests/` directory too — would rewrite the very fixtures every other test in this
+    module depends on staying in their pre-migration shape.
+    """
+    root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
+    nested_ids = root / "tests" / "fixtures" / "docs-ids" / "w37-4-checks" / "sample.md"
+    nested_ids.parent.mkdir(parents=True, exist_ok=True)
+    nested_ids_text = (
+        "---\nid: NT-0001\nfamily: notes\nkind: note\ntitle: Sample\nstatus: draft\n"
+        "created: 2026-08-01\nowner: lead\n---\n\nLegacy id NT-0001, never touched.\n"
+    )
+    nested_ids.write_text(nested_ids_text, encoding="utf-8")
+
+    nested_migration = (
+        root / "tests" / "fixtures" / "docs-migration" / "docs" / "notes"
+        / "0099-nested.md"
+    )
+    nested_migration.parent.mkdir(parents=True, exist_ok=True)
+    nested_migration_text = (
+        "A nested fixture-of-a-fixture: cites NT-0001 and lives at docs/notes/, never "
+        "migrated by the outer run.\n"
+    )
+    nested_migration.write_text(nested_migration_text, encoding="utf-8")
+
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(
+        ["-c", "user.email=test@example.com", "-c", "user.name=Test",
+         "commit", "-q", "-m", "add nested fixture-corpus files"],
+        cwd=root,
+    )
+
+    result = doc_id_cli.migrate(root)
+
+    assert nested_ids.read_text(encoding="utf-8") == nested_ids_text
+    assert nested_migration.read_text(encoding="utf-8") == nested_migration_text
+    # Positive control: the exclusion is scoped to these two roots, not "nothing moved" —
+    # the outer corpus's own real notes are still discovered and migrated exactly as every
+    # other test in this module already proves, so this run must still have assigned ids.
+    assert result.assigned
+
+
+def test_migrate_leaves_no_pycache_in_a_snapshot_carrying_its_own_scripts(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`migrate()` prefers `root`'s own `scripts/doc-index.py`/`audit-docs.py`/
+    `register-lint.py` over this repository's when `root` carries them
+    (`_load_doc_index`'s own docstring: "a real repository snapshot, exactly what
+    `--verify`'s git-archive tree is"). Loading those by path (`_load_module`) used to
+    leave a `.pyc` behind in `root/scripts/__pycache__/` as a side effect — a file
+    `migrate()` did not produce as migration output, but that `_iter_tree_files`'s
+    pre-fix, non-git-aware walk would still read back as one (row (g)'s
+    `classify_migration_diff`, built on the same walk via `_read_tree_text`): the
+    instrument measuring its own exhaust as migration residue. Proven end to end over a
+    snapshot shaped like `--verify`'s own — the fixture corpus plus a real `scripts/`
+    tree copied fresh (`ignore_patterns("__pycache__")`, so a pycache this repository's
+    own test collection already created is never mistaken for one this run produced).
+    """
+    import shutil
+
+    root = tmp_path / "snap"
+    shutil.copytree(FIXTURE_CORPUS, root)
+    shutil.copytree(
+        ROOT / "scripts", root / "scripts",
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=root)
+    _run_git(["config", "user.name", "Test"], cwd=root)
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(["commit", "-q", "-m", "seed"], cwd=root)
+    assert not (root / "scripts" / "__pycache__").exists()  # baseline: none yet
+
+    doc_id_cli.migrate(root)
+
+    assert not (root / "scripts" / "__pycache__").exists()
+    assert not list(root.rglob("*.pyc"))
+
+
+def test_a_stray_pycache_already_on_disk_is_excluded_from_the_migration_diff(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Defence in depth beyond the `_load_module` fix proven above: whatever the cause, a
+    `__pycache__`/`.pyc` file present in the migrated tree when `migration_diff_violations`
+    runs must never register as an unclassifiable hunk (Ruling 68's `CLASSIFIED_BY_NONE`)
+    — the same "new file with no `REDIRECTS.csv` row" shape
+    `test_acceptance_item_g_catches_an_unclassifiable_hunk` above proves a real rogue file
+    correctly fails on, so this proof needs the negative: this one must NOT fail on it.
+    """
+    old_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "old")
+    new_root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "new")
+    doc_id_cli.migrate(new_root)
+    stray = new_root / "scripts" / "__pycache__" / "leftover.cpython-312.pyc"
+    stray.parent.mkdir(parents=True, exist_ok=True)
+    stray.write_bytes(b"\x00fake bytecode, never a real interpreter's output")
+
+    violations = doc_id_cli.migration_diff_violations(old_root, new_root)
+    assert violations == [], violations
+
+
+# ---------------------------------------------------------------------------------------
 # Task 4 item 4 — the class-4 link-repoint fix (W37-6 channel `:407-413`): an id-less
 # move's own `old_path`/`new_path` REDIRECTS.csv row records that the file moved, but
 # `_path_rewrite_tokens` also adds tree-wide citation forms to the sweep that had no

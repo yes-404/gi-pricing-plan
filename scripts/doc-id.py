@@ -882,13 +882,32 @@ def _load_module(name: str, path: Path) -> types.ModuleType:
     `doc-index.py`, copied rather than imported from there: `audit-docs.py` is a sibling
     script, not a package this module can import from, and loading *it* by path (to reuse
     its DP-7 freeze predicate, below) needs the identical helper on this side too.
+
+    Bytecode caching suppressed for the duration of this one `exec_module` call: this
+    helper is what `migrate()` uses (via `_load_doc_index`/`_load_audit_docs`/
+    `_load_register_lint`) to load `root/scripts/*.py` **while `root` is one of `verify`'s
+    snapshot trees**, and the default loader writes a `.pyc` into `root/scripts/
+    __pycache__/` as a side effect of exec'ing it. That directory then exists only because
+    this process ran, appears only in the migrated tree (the control is never `migrate()`d
+    and the loads here never touch it), and — before `_iter_tree_files`'s own
+    `sweep_exclusion_reason` filter, above — was read by `_read_tree_text`/
+    `classify_migration_diff` as a genuinely new file the migration produced: the
+    instrument measuring its own exhaust as row (g) residue. `sys.dont_write_bytecode` is
+    process-global, not per-loader, so it is saved and restored rather than left set —
+    a concurrent import elsewhere in the same interpreter must not have its own caching
+    behaviour silently changed by this helper running.
     """
     spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    previous_dont_write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous_dont_write_bytecode
     return module
 
 
@@ -3376,18 +3395,31 @@ def _discover_vendored_skill_manifests(root: Path) -> _VendoredManifestScan:
 
 
 def _iter_tree_files(root: Path) -> Iterator[Path]:
-    """Every real file under `root`, sorted, excluding `.git/` — every whole-tree walk
-    `migrate` and `migration_diff_violations` run needs this exclusion once a test (or a
-    real checkout) makes `root` an actual git repository: `.git/index` and packed objects
-    are binary, but `.git/HEAD`, `.git/config` and the ref files under `.git/refs/` decode
-    as UTF-8 text perfectly well, so relying on `UnicodeDecodeError` alone to keep this
-    module from ever reading — and, worse, rewriting — git's own plumbing is not a
-    guarantee, only a coincidence of what today's token set happens not to match.
+    """Every real file under `root`, sorted, excluding `.git/` and every
+    `_docid.sweep_exclusion_reason` hit — every whole-tree walk `migrate` and
+    `migration_diff_violations` run needs both exclusions.
+
+    `.git/` matters once a test (or a real checkout) makes `root` an actual git
+    repository: `.git/index` and packed objects are binary, but `.git/HEAD`,
+    `.git/config` and the ref files under `.git/refs/` decode as UTF-8 text perfectly
+    well, so relying on `UnicodeDecodeError` alone to keep this module from ever reading —
+    and, worse, rewriting — git's own plumbing is not a guarantee, only a coincidence of
+    what today's token set happens not to match.
+
+    `sweep_exclusion_reason` matters for the same reason at a different layer: without it
+    this walk would treat `uv.lock`, `frontend/pnpm-lock.yaml`, the entire
+    `tests/fixtures/docs-ids/`/`tests/fixtures/docs-migration/` corpora, and any
+    `__pycache__/*.pyc` this process's own dynamic imports leave behind (`_load_module`
+    below) as real migration input — the instrument reading its own fixtures and its own
+    exhaust as if they were the repository it is migrating.
     """
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
-        if ".git" in path.relative_to(root).parts:
+        rel = path.relative_to(root)
+        if ".git" in rel.parts:
+            continue
+        if _docid.sweep_exclusion_reason(rel.as_posix()) is not None:
             continue
         yield path
 

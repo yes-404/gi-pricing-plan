@@ -317,8 +317,19 @@ _D_EXCLUDED_BASENAME: Final = "REDIRECTS.csv"
 
 
 def tracked_files(tree: Path) -> list[str]:
+    """`_LS_FILES_ARGS`'s population, minus every `_docid.sweep_exclusion_reason` hit —
+    a lockfile, a `tests/fixtures/docs-ids/`/`tests/fixtures/docs-migration/` fixture, or
+    a `__pycache__`/`.pyc` bytecode-cache artifact. `--exclude-standard` already keeps a
+    *tracked-then-.gitignore'd* `.pyc` out of this list on its own, but the exclusion is
+    applied here too regardless — belt and braces, and the one place every corpus
+    consumer (`load_corpus`, and everything built on it: rows (a)/(b)/(d)/(e)/(g)/(h)/(i))
+    shares rather than each re-deriving.
+    """
     out = _git(tree, *_LS_FILES_ARGS).stdout.splitlines()
-    return sorted({rel for rel in out if rel})
+    return sorted(
+        rel for rel in {r for r in out if r}
+        if _docid.sweep_exclusion_reason(rel) is None
+    )
 
 
 def read_text(path: Path) -> str | None:
@@ -586,6 +597,14 @@ def _run_script(tree: Path, script: str, *args: str) -> subprocess.CompletedProc
         )
     env = dict(os.environ)
     env["PYTHONPATH"] = str(tree / "scripts")
+    # This subprocess's own imports (`doc-index.py` loading `_docid.py`, `doc-id.py`, …)
+    # would otherwise cache `.pyc` files into `tree`'s `scripts/__pycache__/` — a second
+    # writer of the same exhaust `doc-id.py`'s `_load_module` guards against in-process.
+    # `--exclude-standard` already keeps a *tracked* `.pyc` out of `tracked_files()`'s
+    # `git ls-files` population regardless, but a non-git-aware whole-tree walk
+    # (`_iter_tree_files`, read via `sweep_exclusion_reason` there too) is not the only
+    # consumer, so both layers stay covered rather than relying on one to save the other.
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run(
         [sys.executable, str(tree / "scripts" / script), *args],
         cwd=tree,

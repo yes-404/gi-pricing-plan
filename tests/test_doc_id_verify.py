@@ -205,6 +205,89 @@ def test_cli_refusal_exits_2_not_1(doc_id_cli: Any) -> None:
 
 
 # =========================================================================================
+# W37-6: `tracked_files`/`load_corpus` exclude a declared lockfile, a
+# `tests/fixtures/docs-ids/`/`tests/fixtures/docs-migration/` path, and a
+# `__pycache__`/`.pyc` artifact — the same `_docid.sweep_exclusion_reason` predicate
+# `doc-id.py`'s `_iter_tree_files` reads (Ruling 67 §2's "one shared constant"), so every
+# row built on `load_corpus` — not only (d) — never counts one of these three classes as
+# residue.
+# =========================================================================================
+
+
+def test_tracked_files_excludes_a_declared_lockfile(dv: Any, tmp_path: pathlib.Path) -> None:
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "a clean line\n",
+        "uv.lock": "a coincidental NT-0001-shaped hash\n",
+    })
+    files = dv.tracked_files(repo)
+    assert "docs/a.md" in files
+    assert "uv.lock" not in files
+
+
+def test_tracked_files_excludes_the_fixture_corpus_roots(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "a clean line\n",
+        "tests/fixtures/docs-ids/sample.md": "NT-0001, deliberately legacy\n",
+        "tests/fixtures/docs-migration/docs/notes/x.md": "NT-0002, deliberately legacy\n",
+    })
+    files = dv.tracked_files(repo)
+    assert "docs/a.md" in files
+    assert "tests/fixtures/docs-ids/sample.md" not in files
+    assert "tests/fixtures/docs-migration/docs/notes/x.md" not in files
+
+
+def test_tracked_files_excludes_pycache_and_pyc(dv: Any, tmp_path: pathlib.Path) -> None:
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "a clean line\n",
+        "scripts/__pycache__/foo.cpython-312.pyc": "binary stand-in\n",
+    })
+    files = dv.tracked_files(repo)
+    assert "docs/a.md" in files
+    assert not any("__pycache__" in rel for rel in files)
+
+
+def test_load_corpus_never_scans_an_excluded_files_content(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The exclusion holds at the corpus a row actually reads, not only at the file
+    listing — a lockfile carrying a legacy-id-shaped string must contribute neither a line
+    nor a file to `Corpus.scan`.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "a clean line with no legacy citation\n",
+        "uv.lock": "a coincidental NT-0001 inside generated data\n",
+    })
+    corpus = dv.load_corpus(repo)
+    assert "uv.lock" not in corpus.files
+    n_lines, n_files = corpus.scan(re.compile(r"\bNT-0001\b"))
+    assert (n_lines, n_files) == (0, 0)
+
+
+def test_run_script_disables_bytecode_caching_in_the_subprocess(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """`_run_script` launches `python <snapshot>/scripts/<script>` as a subprocess, whose
+    own imports (`doc-index.py` loading `_docid.py`, `doc-id.py`, …) would otherwise cache
+    `.pyc` files into the snapshot's `scripts/__pycache__/` — a second, independent writer
+    of the same exhaust `doc-id.py`'s in-process `_load_module` fix stops. Proven by
+    asking the subprocess itself what it saw in its own environment, not by mocking
+    `subprocess.run`.
+    """
+    repo = _mkrepo(tmp_path / "repo", {"docs/a.md": "x\n"})
+    probe = repo / "scripts" / "probe.py"
+    probe.parent.mkdir(parents=True, exist_ok=True)
+    probe.write_text(
+        "import os\nprint(os.environ.get('PYTHONDONTWRITEBYTECODE', ''))\n",
+        encoding="utf-8",
+    )
+    result = dv._run_script(repo, "probe.py")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "1"
+
+
+# =========================================================================================
 # (d) — the per-alternative rows, and the `was:` field test (Ruling 102 §5)
 # =========================================================================================
 

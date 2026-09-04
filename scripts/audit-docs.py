@@ -1213,6 +1213,13 @@ def _load_module(name: str, path: pathlib.Path) -> types.ModuleType:
     """Load a `scripts/` module by path — required for every hyphenated filename here
     (`doc-index.py` is not a legal `import` target), and used for the underscore-leading
     `_docid.py` too so both loads go through one helper.
+
+    Bytecode caching suppressed for this one `exec_module` call — see `doc-id.py`'s own
+    `_load_module` (the sibling copy this one was copied from) for why: when this module
+    is itself loaded by path from inside a `migrate --verify` snapshot
+    (`doc-id.py`'s `_load_audit_docs`), this call writes a `.pyc` into that snapshot's
+    `scripts/__pycache__/`, which a whole-tree walk not aware of `.gitignore` (`doc-id.py`'s
+    `_iter_tree_files`) would otherwise read back as new migration output.
     """
     spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None
@@ -1222,7 +1229,12 @@ def _load_module(name: str, path: pathlib.Path) -> types.ModuleType:
     # `sys.modules[cls.__module__]` to resolve at class-creation time (the same reason
     # `tests/test_doc_id.py`'s own loader does this).
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    previous_dont_write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous_dont_write_bytecode
     return module
 
 
