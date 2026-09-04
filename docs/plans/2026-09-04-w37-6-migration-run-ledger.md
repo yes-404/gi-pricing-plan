@@ -1325,3 +1325,47 @@ generation logic and the digest field are untouched by anyone else right now). T
 confirm the root cause by reading `doc-index.py`'s source before fixing, and to diff
 `delivery-process.md` pre/post-migration to confirm the change is token-form-only before
 bumping the digest, not assume either.
+
+## 2026-09-04 — d13 ruled in scope after all: NT-0019 §5 already schedules its own retirement; d9-d12 get a precise three-part fix
+
+**Correction to this ledger's own citation**: an earlier entry cited "RL-00230" for Ruling
+61. That id resolves to nothing on `origin/main` (`git grep -c 'RL-00230' origin/main` →
+0) — the migration has not minted it yet. Should have been cited by file/ruling number,
+not an unminted id.
+
+**d13 — not a conflict, exec-paths's reading of the exemption was wrong, not its facts.**
+`test_notes_move_citations.py`'s frozen-plan carve-out is not a permanent design decision —
+NT-0019 §5 itself schedules the `.claude/notes/` stubs' deletion (step 4, `:281`/`:342`)
+and that exemption test's own removal (`:409`, replaced by `test_audit_docs_redirects.py`).
+Ruling 61 is recorded **INVALIDATED**, its own horizon explicitly at W37-6
+(`docs/audit/ruling-acceptance-item-sweep.md:133-145`, quoting `audit-docs.py`'s docstring:
+"until W37-6 deletes the stubs entirely"). The test passing on the real tree is the
+pre-migration state, not evidence the exemption still holds — DP-7's predicate
+(`frozen_file_matches_after_migration_stamp`) exists specifically to rewrite frozen files
+under the migration stamp, and the Slice 4 carve-out predates it. **Ruled: d13 stays at
+zero, in scope.** Fix: `migrate()` reads `.claude/notes/README.md`'s tombstone table once
+(its last reader), composes each stub through to its final `docs/rfcs/RFC-…` path, emits
+the `REDIRECTS.csv` row and `token_map` entry, deletes the stubs and README (§5 step 4).
+Proof: d13 at 0; a fixture citation in a frozen plan comes out repointed AND DP-7-clean.
+
+**d9-d12, three parts, all ruled:**
+1. **Word-wrap fix** (141/210 of d9, 47/346 d10, 4/135 d11) — one hard acceptance
+   condition: the rewrite preserves the line break exactly where it stands, never rejoins
+   the token onto one line (a rejoin changes bytes beyond the token, breaking DP-7's
+   inverse on every frozen file it touches). Proof: DP-7 passes on each frozen file
+   changed.
+2. **Directory-level tokens** — `_README_LEGACY_DIR_MOVES` (`doc-id.py:6179`) currently
+   applies to READMEs only; the same constant should feed `token_map` for every file, not
+   just READMEs — takes most of d11 and d12.
+3. **Disclosed class** — what remains is prose naming a directory with no single
+   successor (`docs/audit/`, deliberately absent from the map — "dissolves into four…
+   reported rather than silently sent somewhere plausible" — and the bare dated prefix
+   `docs/plans/2026-` with nothing after it). No `(old_path, new_path)` pair exists;
+   rewriting the sentence is a forbidden meaning edit in a frozen file. Ruled, on Ruling
+   105 §A's pattern: a §7(d) path match not followed by a path present in
+   `REDIRECTS.csv`'s `old_path` column is disclosed by count, excluded from the zero
+   requirement, owner W37-11's citation-form item. Any match that IS a real file path stays
+   fatal — no over-disclosure.
+
+**Scope confirmed W37-6's throughout** — rows, mechanism, and the disclosed class all
+`exec-paths`'s, nothing splits to a separate sweep. Full ruling relayed verbatim.
