@@ -731,3 +731,15 @@ which state the live corpus is in — 6/6 green post-rebase.
 moved to `exec-excl`'s separate PR earlier this entry-set — a scope-split correction that
 crossed in flight with its gate run. Flagged immediately; told to drop it before pushing to
 avoid two PRs independently fixing the same corpus-building code.
+
+## 2026-09-04 — row (e) PR opened (#725)
+
+`rowe2` opened PR #725 (`w37-6-row-e-doc-id-migration`, HEAD `45d4bdd`). `--verify`: row (e)
+and (f) PASS, UNCHANGED against the recorded 13-row standing red. Gate: Python half clean
+(ruff/mypy/lint-imports/audit-docs/req-coverage/generate-contracts --check); frontend half
+unchanged since an earlier clean run; `pytest -q` 3121 passed/5 failed/3 skipped/1 xfailed —
+all 5 failures in `backend/tests/` matching the shared-DB contention shape (zero backend/
+files in this branch's diff, all 5 pass 5/5 in isolation). Two real bugs beyond the salvage
+disposition found and fixed along the way (`_TOKEN_BOUNDARY_RE`'s `<`/`>` handling, the
+same-line duplicate-padded-token bug on both read and write sides — the write-side instance
+already recorded above). `ci-watcher-725` dispatched; merges on its report.
