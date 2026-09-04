@@ -191,6 +191,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #724 | docs(plans): ledger — #721/#722 merges, h2b root-cause, DB-exclusivity proof | `1129df0` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). |
 | #728 | docs(plans): ledger — #724/#725/#727 merges | `0af63b4` | UNCHANGED: 14 (this ledger's own continued history, no `docs/**` migration-scope path or predicate code touched). `ci-watcher-728` confirmed docs/python/history-policy all green, CLEAN. |
 | #731 | docs(plans): ledger — #728/#729 merges | `c462fb6` | UNCHANGED: 14 (this ledger's own continued history). `ci-watcher-731` confirmed docs/python/history-policy all green after settling past three cancelled batches (the lead's own push cadence), CLEAN. |
+| #730 | fix(scripts): DP-7 frontmatter gap (Reference/vendored stamps) + REDIRECTS.csv determinism | `e6384d7` | Not independently re-run — CI green (ruff/mypy/import-linter/pytest, specification audit, no-session-links), CLEAN. Rebased once onto a genuine content conflict with #729's own test additions, resolved additively from each side's clean history. Full gate: 3199 passed, tree held still. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1383,3 +1384,37 @@ Proof: d13 at 0; a fixture citation in a frozen plan comes out repointed AND DP-
 
 **Scope confirmed W37-6's throughout** — rows, mechanism, and the disclosed class all
 `exec-paths`'s, nothing splits to a separate sweep. Full ruling relayed verbatim.
+
+## 2026-09-04 — exec-ids' 74-line table ruled: all 42 citations are fixed, 32 specifications get three dispositions
+
+`exec-ids` reproduced d1/d6/d7's own predicate directly (`_docid.LEGACY_FORM_PATTERNS`,
+`Corpus.scan`, the row's own exclusions) against a fresh `--verify --keep` snapshot of
+`origin/main` = `56c0e81` — 74/74 matched, not approximated. Clean structural split: every
+CITATION line under `docs/`; every SPECIFICATION line in `.claude/skills/`, `scripts/*.py`
+comments, or `tests/*.py` fixtures, zero overlap.
+
+**Ruled: all 42 citations are `token_map` misses, every one fixed** — the frozen-plan
+exception protects the claim, not the citation's spelling (established three times over:
+`docs/plans/README.md:25-27`, `_normalize_padded_citations`'s #25 precedent, and Ruling
+68's DP-7 predicate itself). `exec-ids`'s deliverable is the cause of each miss, not the
+line. `docs/rulings/INDEX.md:112` gets a one-line determination first (source's own
+unrewritten citation, covered by the general fix — or the generator read the title before
+rewriting, a generator-ordering bug) — generated files are explicitly NOT exempt from row
+(d) the way row (f) exempts them.
+
+**32 specifications, three dispositions by location:**
+
+| Class | Files | Lines | Disposition |
+|---|---|---|---|
+| 3a — Markdown/frozen-prose exhibit | `.claude/skills/docs-audit/SKILL.md`, `docs/plans/PL-00282-…md`, `docs/plans/PL-00066-…md` (borderline, ruled in) | 5 | Fenced, Ruling 103 §5.1's note verbatim, same as (e)'s exhibits |
+| 3b — Python comments in `scripts/` | `scripts/audit-docs.py` (×2 sites), `scripts/doc-id.py` | 4 | Respelled to a non-matching schematic form or the new form — zero exclusions |
+| 3c — Test literals in `tests/` | `test_doc_id_verify.py`, `test_audit_docs_ids.py`, `test_doc_id_migrate.py`, `test_register_owed.py` | 23 | New 4th declared class in `_docid.sweep_exclusion_reason` — named-tuple exclusion, disclosed by file+count; no test outside the tuple qualifies |
+
+(5+4+23 = 32, reconciled against `exec-ids`'s own per-file breakdown, sent in full to the
+deputy and available on request — not pasted here at 74-line granularity to keep this
+entry legible; the disposition class is what a reader needs, the per-line detail lives in
+`exec-ids`'s own PR body once opened.)
+
+**Refused**: a document-keyed exemption for skills generally (already refused for row (e),
+same corpus); legacy strings built at runtime in tests to dodge the scanner; leaving the 32
+as standing red with no predicate. Relayed to `exec-ids` in full; cleared to build.
