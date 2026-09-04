@@ -5948,6 +5948,32 @@ def _check_redirect_rows_agree_on_every_old_id(rows: Iterable[dict[str, str]]) -
         seen[key] = new_id
 
 
+def _redirect_row_sort_key(row: dict[str, str]) -> tuple[str, str, str, str, str]:
+    """Sort key for one `REDIRECTS.csv` row: `old_id` then `old_path`, per the
+    dispatched follow-up ("row-order is non-deterministic across independent
+    `migrate()` runs -- same rows, different order -- it should be sorted by `old_id`
+    then `old_path` before writing").
+
+    The two named fields alone are not a total order: two rows can legitimately share
+    both (`_check_redirect_rows_agree_on_every_old_id`'s own docstring names the
+    `citing_dir`-scoped case, and an exact-repeat compound-citation row is a second,
+    identical duplicate of the two-key prefix). Without a full tie-break, two
+    independent runs that discover such a pair in different internal order would sort
+    each pair's own order back in as a stable-sort artifact, which is exactly the
+    non-determinism this sort exists to remove. Appending the remaining
+    `_REDIRECTS_FIELDS` columns (`new_id`, `new_path`, `citing_dir`) makes the key a
+    total order over the full row, so the two named fields still decide first while
+    every row still lands at one fixed position regardless of discovery order.
+    """
+    return (
+        row.get("old_id", ""),
+        row.get("old_path", ""),
+        row.get("new_id", ""),
+        row.get("new_path", ""),
+        row.get("citing_dir", ""),
+    )
+
+
 def _write_redirects(root: Path, rows: list[dict[str, str]]) -> list[str]:
     if not rows:
         return []
@@ -5958,12 +5984,11 @@ def _write_redirects(root: Path, rows: list[dict[str, str]]) -> list[str]:
         with redirects_path.open(newline="", encoding="utf-8") as fh:
             existing = list(csv.DictReader(fh))
     _check_redirect_rows_agree_on_every_old_id([*existing, *rows])
+    all_rows = sorted([*existing, *rows], key=_redirect_row_sort_key)
     with redirects_path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=_REDIRECTS_FIELDS)
         writer.writeheader()
-        for row in existing:
-            writer.writerow(row)
-        for row in rows:
+        for row in all_rows:
             writer.writerow(row)
     return ["docs/REDIRECTS.csv"]
 

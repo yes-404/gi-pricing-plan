@@ -2946,6 +2946,74 @@ def test_write_redirects_allows_multiple_id_less_move_rows(
     doc_id_cli._write_redirects(tmp_path, rows)  # must not raise
 
 
+# ---------------------------------------------------------------------------------------
+# Dispatched follow-up: `docs/REDIRECTS.csv`'s row order was non-deterministic across
+# independent `migrate()` runs -- the same rows, discovered in a different internal order
+# (nothing upstream of `_write_redirects` promises a stable order; a per-process hash seed
+# is enough to reorder any `set`-backed collection feeding it), so byte-for-byte comparison
+# of two independent runs' output could fail on order alone even though the *content* was
+# identical. Fixed by sorting every row by `old_id` then `old_path` (with the remaining
+# `_REDIRECTS_FIELDS` columns as a tie-break, for a genuine total order) before writing.
+# ---------------------------------------------------------------------------------------
+
+
+def test_write_redirects_sorts_by_old_id_then_old_path(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The written file's row order does not depend on the order `rows` arrived in --
+    two calls with the same rows, shuffled differently, produce byte-identical output."""
+    rows_order_1 = [
+        _redirect_row(old_id="OQ-MODEL-9", new_id="OQ-1080", old_path="docs/z.md"),
+        _redirect_row(old_id="FR-DATA-2", new_id="FR-500", old_path="docs/a.md"),
+        _redirect_row(old_id="FR-DATA-2", new_id="FR-500", old_path="docs/m.md"),
+        _redirect_row(old_path="docs/c.md", new_path="docs/d.md"),
+    ]
+    rows_order_2 = list(reversed(rows_order_1))
+    assert rows_order_1 != rows_order_2  # the shuffle is real, not a vacuous no-op
+
+    doc_id_cli._write_redirects(tmp_path / "run1", rows_order_1)
+    doc_id_cli._write_redirects(tmp_path / "run2", rows_order_2)
+
+    bytes_1 = (tmp_path / "run1" / "docs" / "REDIRECTS.csv").read_bytes()
+    bytes_2 = (tmp_path / "run2" / "docs" / "REDIRECTS.csv").read_bytes()
+    assert bytes_1 == bytes_2
+
+    with (tmp_path / "run1" / "docs" / "REDIRECTS.csv").open(
+        newline="", encoding="utf-8"
+    ) as fh:
+        written = list(csv.DictReader(fh))
+    # `old_id=""` (the id-less move row) sorts first; the two `FR-DATA-2` rows -- an
+    # identical `old_id` claiming two different `old_path`s, both legitimate per
+    # `_check_redirect_rows_agree_on_every_old_id`'s own citing-dir-scoped case -- land in
+    # `old_path` order right after it; `OQ-MODEL-9` last.
+    assert [(r["old_id"], r["old_path"]) for r in written] == [
+        ("", "docs/c.md"),
+        ("FR-DATA-2", "docs/a.md"),
+        ("FR-DATA-2", "docs/m.md"),
+        ("OQ-MODEL-9", "docs/z.md"),
+    ]
+
+
+def test_write_redirects_sort_is_stable_across_an_existing_file_and_new_rows(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`_write_redirects` is append-only across runs -- a second call adds to a file a
+    first call already wrote. The merged, sorted output must not depend on which rows
+    were "existing" and which were freshly "appended"."""
+    first_a = [_redirect_row(old_id="RL-9", new_id="RL-900", old_path="docs/p.md")]
+    second_a = [_redirect_row(old_id="ADR-1", new_id="ADR-800", old_path="docs/q.md")]
+    doc_id_cli._write_redirects(tmp_path / "run1", first_a)
+    doc_id_cli._write_redirects(tmp_path / "run1", second_a)
+
+    # Same two rows, written to a fresh file in one call together (a different discovery
+    # order upstream, collapsed to one batch rather than two increments).
+    doc_id_cli._write_redirects(tmp_path / "run2", [*second_a, *first_a])
+
+    bytes_1 = (tmp_path / "run1" / "docs" / "REDIRECTS.csv").read_bytes()
+    bytes_2 = (tmp_path / "run2" / "docs" / "REDIRECTS.csv").read_bytes()
+    assert bytes_1 == bytes_2
+
+
 def test_requirements_guard_is_silent_when_every_id_is_recognised(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
