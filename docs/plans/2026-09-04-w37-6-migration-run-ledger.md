@@ -62,12 +62,35 @@ Two worktrees carried uncommitted diffs at cleanup time; neither was discarded b
   Committed and pushed as `salvage/row-e-padded-id-prose-v2` (`876548b`) rather than
   discarded. `wt-rowe`'s worktree was kept (not in the removal list).
 
-  **Disposition owed from `rowe2`, per symbol, before `wt-rowe` is removed**: `rowe2` reads
-  `salvage/row-e-padded-id-prose-v2` against its own #712 and current branch, and either
-  folds what is genuinely missing (with the proof it lacks) into its open row-(e) work, or
-  records here why not, one line per symbol (`PaddedHit`/`seq`, `_TOKEN_BOUNDARY_RE`,
-  `_TRAILING_LOCATOR_RE`, `_in_path_context`, and the conjunct-2/3 fixes). `wt-rowe` is
-  removed only after that disposition lands here.
+  **Disposition, delivered by `rowe2` 2026-09-04, committed `005bb69` on
+  `w37-6-row-e-doc-id-migration`:**
+
+  - **`PaddedHit`/`seq` field — FOLDED IN, real bug.** `padded_hits`' conjunct-2 loop
+    re-located a hit in the cleaned line by *text* match; two same-text occurrences on one
+    line (a filename exhibit plus a later bare citation — `document-ids.md`'s own rule-3
+    sentence has this shape) collapsed onto whichever the loop found first, wrongly
+    excusing a bare violation sitting next to a path-shaped one. Fix: added `seq` (this
+    hit's ordinal among same-line matches), re-locate by position instead of text. Red-then-
+    green: `test_padded_hits_seq_disambiguates_two_occurrences_on_one_line`.
+  - **`_TOKEN_BOUNDARY_RE` — FOLDED IN, real bug.** `<`/`>` were hard boundaries, so the
+    token walk stopped at an angle-bracket slug placeholder's opening `<` before reaching
+    `.md` — a real filename citation (`PL-01240-<slug>.md`, NT-0019 §1.1 rule 3's own
+    shape) misread as prose. Fix: removed `<`/`>` from the boundary set. Red-then-green:
+    `test_in_path_context_widens_past_an_angle_bracket_slug_placeholder`.
+  - **`_TRAILING_LOCATOR_RE` — no action, already covered.** This branch independently
+    fixed the same defect pre-#712 (`ddea0b7`, folded into #712's squash) as
+    `_TRAILING_LINE_LOCATOR_RE` — functionally equivalent (strips a trailing `:N`/`:N-M`
+    before the extension test, vs. salvage's approach of folding the locator into the
+    extension regex itself). Already on `main`.
+  - **`_in_path_context` + the bundled conjunct-2/3 fixes** — the two folded-in items above
+    are this row's conjunct-2/3 fixes; nothing further found.
+
+  **Why neither latent bug showed in today's `--verify` runs**: the one on-disk example
+  with this shape
+  (`docs/plans/2026-09-03-w37-6-ruling-103-ef-readings-and-index-placement.md`'s
+  `PL-01240-<slug>.md`) survives via conjunct 3 regardless — `PL-1240` names no real plan —
+  so both bugs are real but currently unexercised by this corpus. Full reasoning in the
+  `005bb69` commit message. `wt-rowe` can now be removed; this disposition is complete.
 
 ## `(h4)`'s measurement point — Ruling 105 D2
 
