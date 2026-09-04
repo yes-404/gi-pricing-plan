@@ -572,9 +572,10 @@ def _run_script(tree: Path, script: str, *args: str) -> subprocess.CompletedProc
         <checkout>/scripts/doc-index.py …     -> "OK (byte-stable)"       exit 0
 
     The cause is a citation rewritten inside `doc-index.py`'s own banner *string literal*
-    (`see NT-0019 §1.4` -> `see RFC-216 §1.4`) with the index never regenerated, so the
-    generator and its artifact disagree by exactly the token rewritten in one and not the
-    other. Running the checkout's copy makes row (c) pass forever over a broken corpus —
+    (`see NT-0019 §1.4` -> its post-migration citation form) with the index never
+    regenerated, so the generator and its artifact disagree by exactly the token rewritten
+    in one and not the other. Running the checkout's copy makes row (c) pass forever over a
+    broken corpus —
     the defect would be invisible to the instrument built to detect it.
     """
     resolved = (tree / "scripts" / script).resolve()

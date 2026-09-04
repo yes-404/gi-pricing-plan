@@ -19,7 +19,7 @@ import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
-#: A requirement id defined in a spec, in either form: `**FR-MODEL-45**` before the RFC-216
+#: A requirement id defined in a spec, in either form: `**FR-MODEL-45**` before the NT-0019
 #: id migration, `**FR-1187**` after it (NT-0019 D2). Both are accepted here rather than
 #: selected by tree, because this script's other input -- `@pytest.mark.req("...")` markers
 #: across ~1 988 sites -- is rewritten by the same migration commit and a marker in the old
@@ -63,7 +63,7 @@ def main() -> int:
     if not specified:
         # Zero specified requirements is never a real tree state: `docs/specs/` is eight
         # files of numbered clauses. It means this script's id pattern stopped matching the
-        # corpus -- which is what happened at the RFC-216 migration, where the module-scoped
+        # corpus -- which is what happened at the NT-0019 migration, where the module-scoped
         # pattern above met `**FR-1187**` and matched nothing. Say so; do not divide by it.
         print(
             "\n  FAIL: no requirement ids parsed from docs/specs/ -- the id pattern does "
