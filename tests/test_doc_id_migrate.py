@@ -6027,3 +6027,24 @@ def test_normalize_padded_citations_leaves_a_specimen_and_a_path_untouched(
     assert _normalize_one_file(
         doc_id_cli, tmp_path, specimen_text, index_ids="PL-9998"
     ) == specimen_text
+
+
+def test_normalize_padded_citations_unpads_a_bare_occurrence_sharing_a_line_with_a_path(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The real shape found on this branch's own `--verify` run against
+    `docs/rulings/RL-00290-...md` §5.3: a `was:`-style path exhibit of a padded id,
+    followed later on the SAME line by a bare citation of the same id.
+
+    The rewrite's classification loop used to re-locate a match in the cleaned line by
+    *text* (`cm.group(0) == token`), so the bare occurrence inherited the path
+    occurrence's TRUE verdict and was never rewritten — the write-side half of the same
+    bug `_docverify.padded_hits`' `PaddedHit.seq` fixes on the read side. Red before the
+    fix: the bare occurrence stayed padded. Green after: the path occurrence is
+    untouched, the bare occurrence is unpadded.
+    """
+    line = "see `docs/ledgers/LG-00030-x.md`, including `LG-00030` itself, for the record\n"
+    after = _normalize_one_file(doc_id_cli, tmp_path, line, index_ids="LG-30")
+    assert after == (
+        "see `docs/ledgers/LG-00030-x.md`, including `LG-30` itself, for the record\n"
+    )

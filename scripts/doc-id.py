@@ -5766,6 +5766,17 @@ def _normalize_padded_citations(root: Path) -> list[str]:
     (`docs/plans/2026-09-03-w37-6-ruling-100-split-source-citations.md`,
     `docs/plans/2026-09-03-w37-6-ruling-103-ef-readings-and-index-placement.md`).
 
+    `repl` re-locates each match in the cleaned line by *position* (its own ordinal among
+    same-line matches), not by text — the identical fix `padded_hits.PaddedHit.seq` makes
+    on the read side, needed here too since two occurrences of the same padded id can
+    share one line (a `was:` path exhibit followed by a bare citation of the same id,
+    exactly `docs/rulings/RL-00290-...md`'s own §5.3: `` `was:
+    docs/ledgers/LG-00030-....md`, **including `LG-00030` itself...` ``). Matching by text
+    let the bare occurrence inherit the path occurrence's TRUE verdict and skip rewriting
+    — the write-side half of the same Ruling 103 §1.8 violation the docstring above
+    already names, found by this row moving from PASS to FAIL once the read side alone
+    was fixed and the write side was not.
+
     Runs after `_regenerate_index_for_migrate`, because conjunct 3's authority is the
     POST-migration `docs/INDEX.md` — the only index a padded token's unpadded form can
     resolve against, and the same reason row (e) itself reads `docs/INDEX.md` fresh rather
@@ -5797,18 +5808,26 @@ def _normalize_padded_citations(root: Path) -> list[str]:
             if not _docverify._PADDED_ID_RE.search(line):
                 continue
 
-            def repl(m: re.Match[str], line: str = line) -> str:
+            seq_counter = itertools.count()
+
+            def repl(
+                m: re.Match[str], line: str = line, seq_counter: Iterator[int] = seq_counter
+            ) -> str:
                 token = m.group(0)
+                seq = next(seq_counter)
                 # Conjunct 2, exactly as `_docverify.padded_hits` tests it: strip markdown
-                # emphasis, then ask whether *this token's value*, wherever it recurs in
-                # the cleaned line, sits in a path-shaped token. A padded id inside a
-                # filename is not a citation to normalise.
+                # emphasis, then ask whether *this occurrence's own position* — not text,
+                # per `PaddedHit.seq` — sits in a path-shaped token. A padded id inside a
+                # filename is not a citation to normalise. Stripping asterisks never adds,
+                # removes or reorders a `_PADDED_ID_RE` match, so the cleaned line's
+                # `seq`-th match is still this match's own occurrence.
                 cleaned = _docverify._MD_EMPHASIS_RE.sub("", line)
-                for cm in _docverify._PADDED_ID_RE.finditer(cleaned):
-                    if cm.group(0) == token and _docverify._in_path_context(
-                        cleaned, cm.start(), cm.end()
-                    ):
-                        return token
+                cleaned_hits = list(_docverify._PADDED_ID_RE.finditer(cleaned))
+                cm = cleaned_hits[seq] if seq < len(cleaned_hits) else None
+                if cm is not None and _docverify._in_path_context(
+                    cleaned, cm.start(), cm.end()
+                ):
+                    return token
                 # Conjunct 3: only a token that resolves is a citation; one that does not
                 # is a specimen of the form, and normalising it would be inventing a
                 # citation of nothing.
