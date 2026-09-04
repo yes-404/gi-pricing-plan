@@ -5763,6 +5763,111 @@ def _rewrite_citations(
     return changed, index_resolved, unrewritten
 
 
+def _protected_was_lines(text: str) -> frozenset[int]:
+    """0-based line numbers `_was_field_spans` protects, converted from character spans.
+
+    A `was:` field occupies exactly one physical line (front matter, one key per line),
+    so a span's own line number is enough — no line ever needs two spans.
+    """
+    return frozenset(text.count("\n", 0, start) for start, _ in _was_field_spans(text))
+
+
+def _normalize_padded_citations(root: Path) -> list[str]:
+    """A padded citation of a real governed thing, outside a filesystem path and outside a
+    fenced exhibit, is not the citation's correct form (`_docid.canonical` — NT-0019 §1.1
+    rule 2: unpadded, always) and the migration normalises it exactly as it normalises
+    every other legacy citation — #25's ruling (`docs/plans/README.md`'s frozen-plan
+    exception, "a change that preserves the claim exactly while fixing how it is
+    addressed", read against Ruling 103 §5.1: normalising a citation's form is the
+    migration's own established remedy, not a new one).
+
+    Reuses `_docverify`'s conjuncts 1-3 (`_PADDED_ID_RE`, `_MD_EMPHASIS_RE`,
+    `_in_path_context`, `_unpadded`, `index_ids`) rather than a second implementation —
+    Ruling 103 §1.8's last violation, *"two implementations of one rule that are never
+    compared are two rules"*, applied to the rewrite rather than only to the row. Fenced
+    exhibits are conjunct 0's own exclusion and are never rewritten, by construction: an
+    exhibit's padded value is the observation, and Ruling 103 §5.1 fences it instead
+    (`docs/plans/2026-09-03-w37-6-ruling-100-split-source-citations.md`,
+    `docs/plans/2026-09-03-w37-6-ruling-103-ef-readings-and-index-placement.md`).
+
+    `repl` re-locates each match in the cleaned line by *position* (its own ordinal among
+    same-line matches), not by text — the identical fix `padded_hits.PaddedHit.seq` makes
+    on the read side, needed here too since two occurrences of the same padded id can
+    share one line (a `was:` path exhibit followed by a bare citation of the same id,
+    exactly `docs/rulings/RL-00290-...md`'s own §5.3: `` `was:
+    docs/ledgers/LG-00030-....md`, **including `LG-00030` itself...` ``). Matching by text
+    let the bare occurrence inherit the path occurrence's TRUE verdict and skip rewriting
+    — the write-side half of the same Ruling 103 §1.8 violation the docstring above
+    already names, found by this row moving from PASS to FAIL once the read side alone
+    was fixed and the write side was not.
+
+    Runs after `_regenerate_index_for_migrate`, because conjunct 3's authority is the
+    POST-migration `docs/INDEX.md` — the only index a padded token's unpadded form can
+    resolve against, and the same reason row (e) itself reads `docs/INDEX.md` fresh rather
+    than the pre-migration corpus's.
+    """
+    resolvable = _docverify.index_ids(root)
+    changed: list[str] = []
+    for path in _iter_tree_files(root):
+        if _is_vendored_exempt(path, root):
+            continue
+        if path.name == "REDIRECTS.csv":
+            continue  # never a citation, never rewritten -- conjunct 0's own exclusion
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if not _docverify._PADDED_ID_RE.search(text):
+            continue
+        protected = _protected_was_lines(text)
+        lines = text.split("\n")
+        in_fence = False
+        touched = False
+        for i, line in enumerate(lines):
+            if _docverify._FENCE_RE.match(line):
+                in_fence = not in_fence
+                continue
+            if in_fence or i in protected:
+                continue
+            if not _docverify._PADDED_ID_RE.search(line):
+                continue
+
+            seq_counter = itertools.count()
+
+            def repl(
+                m: re.Match[str], line: str = line, seq_counter: Iterator[int] = seq_counter
+            ) -> str:
+                token = m.group(0)
+                seq = next(seq_counter)
+                # Conjunct 2, exactly as `_docverify.padded_hits` tests it: strip markdown
+                # emphasis, then ask whether *this occurrence's own position* — not text,
+                # per `PaddedHit.seq` — sits in a path-shaped token. A padded id inside a
+                # filename is not a citation to normalise. Stripping asterisks never adds,
+                # removes or reorders a `_PADDED_ID_RE` match, so the cleaned line's
+                # `seq`-th match is still this match's own occurrence.
+                cleaned = _docverify._MD_EMPHASIS_RE.sub("", line)
+                cleaned_hits = list(_docverify._PADDED_ID_RE.finditer(cleaned))
+                cm = cleaned_hits[seq] if seq < len(cleaned_hits) else None
+                if cm is not None and _docverify._in_path_context(
+                    cleaned, cm.start(), cm.end()
+                ):
+                    return token
+                # Conjunct 3: only a token that resolves is a citation; one that does not
+                # is a specimen of the form, and normalising it would be inventing a
+                # citation of nothing.
+                unpadded_token = _docverify._unpadded(token)
+                return unpadded_token if unpadded_token in resolvable else token
+
+            new_line = _docverify._PADDED_ID_RE.sub(repl, line)
+            if new_line != line:
+                lines[i] = new_line
+                touched = True
+        if touched:
+            path.write_text("\n".join(lines), encoding="utf-8")
+            changed.append(path.relative_to(root).as_posix())
+    return changed
+
+
 # ---------------------------------------------------------------------------------------
 # Phase E — regenerate. `docs/REDIRECTS.csv` (append-only across runs, the same convention
 # `widen`'s `_append_redirects` already uses for the identical file) and `docs/INDEX.md`
@@ -7397,6 +7502,9 @@ def migrate(root: Path) -> MigrateResult:
 
     redirects_written = _write_redirects(root, redirect_rows)
     index_written = _regenerate_index_for_migrate(root)
+    # #25's ruling: a padded citation of a real governed thing is normalised like any
+    # other citation, once `docs/INDEX.md` exists to give conjunct 3 its authority.
+    files_written = [*files_written, *_normalize_padded_citations(root)]
 
     # Last, because it reads what was written rather than what was planned, and the
     # roadmap it resolves against is only final after `_restructure_roadmap` above.

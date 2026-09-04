@@ -945,7 +945,17 @@ _MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
 #: every document, the ruling's own included.
 _FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
 
-_TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}<>\"',;]")
+#: `<` and `>` are excluded from this boundary set — this doc suite's own placeholder
+#: convention writes a filename's variable segment in angle brackets (a padded id, a
+#: hyphen, an angle-bracketed slug placeholder, then `.md`; `docs/_templates/*.md`'s own
+#: copy-target lines and NT-0019 §1.1 rule 3's illustration both use it), and treating
+#: `<`/`>` as hard boundaries truncated the right-side walk before it ever reached the
+#: extension — the token stopped one character short of the placeholder's opening `<`, so
+#: a real filename citation (`PL-01240-<slug>.md`) read as prose (`PL-01240-`, no `/`, no
+#: extension). Widening the walk past them can also swallow a literal `<...>` wrapper
+#: around a *bare* id, but that token still has no `/` and does not end in an extension,
+#: so it is classified unchanged.
+_TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}\"',;]")
 
 #: **Conjunct 2's** line-locator strip. Row (e)'s own measurement found a fourth defect
 #: alongside Ruling 103's three: a same-directory `filename.md:123` or `filename.md:401-404`
@@ -1005,6 +1015,16 @@ class PaddedHit:
     line_no: int
     token: str
     line: str
+    #: 0-based ordinal of this occurrence among all `_PADDED_ID_RE` matches on the line, in
+    #: left-to-right order. Needed because two occurrences of the same padded id can share
+    #: one line — a filename exhibit followed later by the bare equivalence-list id is
+    #: `document-ids.md`'s own rule-3 sentence — and conjunct 2 used to re-locate a hit in
+    #: the cleaned line by *text* (`m.group(0) == hit.token`), taking the first same-text
+    #: match's path-context verdict for every hit sharing that text. The bare occurrence
+    #: then inherited the filename occurrence's TRUE verdict and was wrongly excused — a
+    #: false negative that suppresses a real violation. `seq` lets conjunct 2 re-locate
+    #: this hit by its own position instead of by text.
+    seq: int
 
 
 def padded_hits(corpus: Corpus, resolvable: frozenset[str]) -> tuple[
@@ -1028,18 +1048,19 @@ def padded_hits(corpus: Corpus, resolvable: frozenset[str]) -> tuple[
             total += len(hits)
             if in_fence or i in skip:
                 continue
-            for h in hits:
-                after_corpus.append(PaddedHit(rel, i + 1, h.group(0), line.strip()))
+            for seq, h in enumerate(hits):
+                after_corpus.append(PaddedHit(rel, i + 1, h.group(0), line.strip(), seq))
     after_path: list[PaddedHit] = []
     for hit in after_corpus:
         # Conjunct 2 is tested on the line with markdown emphasis stripped, so a bold
-        # marker inside a path cannot hide the path from the path test.
+        # marker inside a path cannot hide the path from the path test. Stripping
+        # asterisks (and `.strip()`'s own whitespace trim, above) never adds, removes or
+        # reorders a `_PADDED_ID_RE` match — they sit at token boundaries, never inside
+        # one — so the cleaned line's `seq`-th match is still this hit's own occurrence.
         cleaned = _MD_EMPHASIS_RE.sub("", hit.line)
-        prose = True
-        for m in _PADDED_ID_RE.finditer(cleaned):
-            if m.group(0) == hit.token and _in_path_context(cleaned, m.start(), m.end()):
-                prose = False
-                break
+        cleaned_hits = list(_PADDED_ID_RE.finditer(cleaned))
+        m = cleaned_hits[hit.seq] if hit.seq < len(cleaned_hits) else None
+        prose = not (m is not None and _in_path_context(cleaned, m.start(), m.end()))
         if prose:
             after_path.append(hit)
     after_index = [h for h in after_path if _unpadded(h.token) in resolvable]
@@ -2040,7 +2061,10 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "d11": FAIL,        # the old notes directory
     "d12": FAIL,        # docs/adr/
     "d13": FAIL,        # the old .claude notes root — INERT, see its unanchored companion
-    "e": FAIL,          # 2 padded ids in prose                    — Ruling 103
+    "e": PASS,          # 0 padded ids in prose — #25's ruling: the migration normalises a
+                         # padded citation to unpadded (`_normalize_padded_citations`), and
+                         # the two exhibits are fenced by hand under Ruling 103 §5.1
+                         # (2026-09-04, task 7)
     "f": PASS,          # VR-DST-1 unchanged, both conjuncts — Ruling 103. Regressed on
                          # `main` (#707, 43d8698) when `docs/INDEX.md` started quoting
                          # requirement bodies mentioning VR-DST-1 with no pre-migration

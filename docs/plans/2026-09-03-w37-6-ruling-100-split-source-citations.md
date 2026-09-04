@@ -91,7 +91,13 @@ mis-pointing at.
 lines 2–4 read, verbatim: *"Ordered by **RL-990** (`docs/rulings/**RL-00993**-q5-file-by-the-f-id-…md`)"*.
 The id is Ruling 50's document; the path is **Ruling 53's** — the last of the five drafts.
 
-*Two corrections to the brief as relayed.* The pair was relayed as `RL-196` / `RL-00199`.
+*Two corrections to the brief as relayed.* The pair was relayed as:
+
+```
+RL-196 / RL-00199
+```
+
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged.*
 
 - **The padding difference is not the defect and is by design.** `scripts/_docid.py:104-108`
   (`canonical`, *"The citation form — NT-0019 §1.1 rule 2: unpadded, always"*) against `:111-116`
