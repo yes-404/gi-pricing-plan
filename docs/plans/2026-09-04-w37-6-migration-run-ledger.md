@@ -190,3 +190,16 @@ at this ledger entry's time; more will land before the review). **The cap value 
 changed here** — whether 2 is the right number for a re-planned slice's own work list, as
 distinct from repeated retries at one gate, is the §14 review's question with this data in
 front of it, not a call made in passing here.
+
+## 2026-09-04 — executor count 9/8, a disclosed one-time overrun
+
+`ruling106-impl` was dispatched before the eight-executor cap took effect, on the reading
+that infrastructure work (editing `.claude/skills/reporter-cycle/`, not a W37-6 worktree)
+sat outside it, the same as a `ci-watcher` or a one-shot. **Corrected by the deputy:** the
+cap counts by what an agent *does* — edits repository files in its own worktree, runs the
+gate, opens a PR — not by which files it touches; that makes `ruling106-impl` a ninth
+executor. Not killed (a task already under way, nothing gained by discarding it for a
+number). **Disposition:** the overrun is recorded here, no further dispatch happens until a
+merge brings the live count to eight, and it is not repeated — the next infrastructure task
+waits for a free slot like any other. Efficiency line reads `9/8 (one-time overrun, this
+entry)` until the count drops.
