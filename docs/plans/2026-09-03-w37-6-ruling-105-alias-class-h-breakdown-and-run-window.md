@@ -197,6 +197,20 @@ Amendments 2 and 4 bind. Five agents live at most, one fresh per task.
 above):** *five agents* means **five executors**; the reporter and watcher own no
 worktree and run no gate, so they stand outside the count.
 
+**Second dated append, 2026-09-04, under the same Authority, following the VM's upgrade to
+16 CPU / 62 GB RAM (maintainer, 2026-09-04):** the cap is **eight executors**, reporter and
+watcher still outside it, `ci-watcher`s and one-shot rebase-only agents still outside it,
+**conditioned on `df -h /` ≥ 3 GB free at every dispatch** — the binding constraint at eight
+is disk, not CPU or RAM (a full local gate is ~9 minutes on one core-set, `--verify` ~3
+minutes; sixteen cores carry eight of each with headroom). The condition is enforced by
+reading `/` free space before each dispatch, never assumed from an earlier reading. Two
+mechanical changes that make eight affordable on the same disk: every executor worktree's
+`.venv` is a symlink into `/tmp` (tmpfs; `uv sync --all-packages` there, not on `/`), and
+every `--verify` snapshot stays on `/tmp` as before. This is a reading of
+`docs/process/delivery-process.md` §8 (Parallelism) for the disk constraint that section's
+general rule did not have numbers for yet; it does not replace §8, and the run's own window
+(one executor, delegation's gates, Amendments 2 and 4) is unchanged by either append.
+
 **What does not open.** W37-7…10 and W37-11. Nothing S3 starts without a further instruction
 here; `CLAUDE.md` stays the maintainer's and is not delegated to the deputy either.
 
