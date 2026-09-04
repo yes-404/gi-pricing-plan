@@ -750,3 +750,16 @@ failure `ci-watcher-725` saw is on an older commit (`aee2783`), not the actual c
 Rebase requested. Same DIRTY pattern now hit two open PRs (#723, #725) in a row — expected
 given how fast `main` is moving through this checkpoint; every open PR from before a recent
 merge batch needs a rebase before its CI can run.
+
+## 2026-09-04 — load back to 57: h2b and executor-30-2 running fully non-compliant gates a third time
+
+Routine check at 13:3xZ found six real gates (`ps -eo pid,args | grep '[/]\.venv/bin/pytest'`):
+`/tmp/verify-wt1`/`verify-wt2` (`db-proof`'s scratch setup), `wt-h2b`, `wt-oq-dup-alloc`
+(alloc's new task), `wt-w376-unit` (executor-30-2), `wt-rowe2`. Load 57.23/50.86/41.06 on
+16 cores. Checked env and ppid chain on all four non-`db-proof` worktrees:
+`wt-oq-dup-alloc` and `wt-rowe2` both correctly capped; `wt-h2b` and `wt-w376-unit` neither
+capped nor `flock`-parented nor on a per-worktree database — bare `uv run pytest -q`,
+identical shape to the very first violation this session. Sent both the exact current
+canonical two-block command (per-worktree DB setup, then the flock+thread-cap gate) with an
+explicit ask for the literal string they're actually running, since this is the third time
+the mechanism hasn't landed for h2b specifically and the cause is still unclear.
