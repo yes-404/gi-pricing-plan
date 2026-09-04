@@ -86,6 +86,22 @@ in `scripts/_docverify.EXPECTED_VERDICTS` — no row moved (exit 1, the standing
 exit 3). This is the reference point the table below starts from; not a merged-PR entry
 itself.
 
+## 2026-09-04 — #701 sequencing, and the census heading refusal
+
+Maintainer's direct priority honoured; deputy's sequencing binds executor slots only. PR
+#701 (a rebase-and-land docs fix, no snapshot, no gate beyond CI) was dispatched as a
+one-shot task outside the five-executor cap rather than queued behind Task #30 and the
+`other`-cause triage.
+
+The `## Ruling 105 D2 — …` heading crash (above) was the census doing its job, not a code
+defect: `_check_multi_ruling_files_not_silently_unrecognised` refused a heading it could not
+classify rather than guessing, and named the offending line — correct behaviour, not a bug to
+route around. Two notes for whoever next touches this area of `scripts/doc-id.py`, not tasks:
+headings under `docs/plans/` should never begin with `Ruling <n>` unless the section *is*
+that ruling's own record; and `NotImplementedError` as the exception class for this refusal
+reads as a code gap when it is actually a corpus condition being reported correctly — a
+rename candidate, not a fix.
+
 ## Merged PRs, from here forward
 
 <One entry per PR merged in W37-6 scope from 2026-09-04 08:56Z onward, each with its number,
