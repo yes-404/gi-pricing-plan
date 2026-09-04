@@ -1156,6 +1156,16 @@ class MigrateResult:
     # and the anchor. A link to an empty index section resolves at the file level, so the
     # dangling-link scanner cannot see it; this is the check that can.
     split_index_violations: tuple[str, ...] = ()
+    # Ruling 105 D3/#18: every path this run generated in full (a class-6 artifact per
+    # Ruling 104 §2, a property this constant records rather than lets each reader
+    # re-derive) — `docs/INDEX.md`, `docs/REDIRECTS.csv`, every family README
+    # `_regenerate_family_readmes` wrote, and every split-source index. Read by (f)'s
+    # exclusion (`_docverify.row_f`) so a product identifier merely echoed into a
+    # generated artifact is not counted as having moved. **Not** the class-6 diff
+    # classifier's own gate — `classify_migration_diff`/`_try_class6` still key on
+    # second-run reproducibility (Ruling 104 §2's property, unchanged here); consolidating
+    # that classifier onto this same list is separate, later work, owned elsewhere.
+    generated_paths: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------------------
@@ -5710,9 +5720,9 @@ def _rewrite_citations(
 # ---------------------------------------------------------------------------------------
 
 
-def _write_redirects(root: Path, rows: list[dict[str, str]]) -> None:
+def _write_redirects(root: Path, rows: list[dict[str, str]]) -> list[str]:
     if not rows:
-        return
+        return []
     redirects_path = root / "docs" / "REDIRECTS.csv"
     redirects_path.parent.mkdir(parents=True, exist_ok=True)
     existing: list[dict[str, str]] = []
@@ -5726,9 +5736,10 @@ def _write_redirects(root: Path, rows: list[dict[str, str]]) -> None:
             writer.writerow(row)
         for row in rows:
             writer.writerow(row)
+    return ["docs/REDIRECTS.csv"]
 
 
-def _regenerate_index_for_migrate(root: Path) -> None:
+def _regenerate_index_for_migrate(root: Path) -> list[str]:
     # `root`, not the default: a later, independent `doc-index.py --check` run against
     # `root` must see the identical generator this call used — `_load_doc_index`'s own
     # docstring has the mechanism and why the default would disagree with it.
@@ -5736,6 +5747,7 @@ def _regenerate_index_for_migrate(root: Path) -> None:
     corpus = doc_index.build_corpus(root / "docs")
     fresh = doc_index.render_index(corpus)
     (root / "docs" / "INDEX.md").write_text(fresh, encoding="utf-8")
+    return ["docs/INDEX.md"]
 
 
 # ---------------------------------------------------------------------------------------
@@ -7267,9 +7279,8 @@ def migrate(root: Path) -> MigrateResult:
     # sweep for the third instance of the same reason: every row quotes a `was:` value,
     # which is a pre-migration path the sweep would rewrite. Checked immediately after
     # writing rather than at the end, so the check reads the bytes this run just wrote.
-    files_written = [
-        *files_written, *_write_split_source_indexes(root, split_sources, token_map)
-    ]
+    split_index_paths = _write_split_source_indexes(root, split_sources, token_map)
+    files_written = [*files_written, *split_index_paths]
     index_faults = _split_index_violations(root, index_resolved)
 
     skipped_vendored: list[str] = []
@@ -7292,8 +7303,8 @@ def migrate(root: Path) -> MigrateResult:
         if _is_vendored_exempt(path, root):
             skipped_vendored.append(path.relative_to(root).as_posix())
 
-    _write_redirects(root, redirect_rows)
-    _regenerate_index_for_migrate(root)
+    redirects_written = _write_redirects(root, redirect_rows)
+    index_written = _regenerate_index_for_migrate(root)
 
     # Last, because it reads what was written rather than what was planned, and the
     # roadmap it resolves against is only final after `_restructure_roadmap` above.
@@ -7338,6 +7349,9 @@ def migrate(root: Path) -> MigrateResult:
         index_resolved_split_citations=tuple(index_resolved),
         unresolved_split_citations=tuple(unrewritten_citations),
         split_index_violations=tuple(index_faults),
+        generated_paths=tuple(dict.fromkeys([
+            *readme_written, *split_index_paths, *redirects_written, *index_written,
+        ])),
     )
 
 

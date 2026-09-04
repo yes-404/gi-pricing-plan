@@ -45,6 +45,37 @@ ID_RE: Final = re.compile(r"\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)
 # NT-0019 §1.1 rule 3: "Filenames pad the integer to the standard's width, currently five."
 PAD_WIDTH: Final = 5
 
+# NT-0019 §7 acceptance item (d)'s pattern, and `audit-docs.py` check 36's third clause —
+# "one rule at two times" (Ruling 67 §2): both must read this **one** shared constant,
+# never a private copy each script maintains independently. Ruling 67 §2 Part 1: every
+# entry matches a COMPLETE legacy identifier or path, never a proper prefix of one — found
+# against `NT-00` self-matching its own defining sentence inside NT-0019 §7 itself, and
+# generalised to every alternative rather than fixed only there. Each entry is
+# independently `\b`-bounded on both sides (or, for a path, matched as a literal substring
+# with no anchor — a path is not a token with a "complete form" the way an id is); no entry
+# shares an outer boundary with another, so a boundary bug in one can never mask or re-open
+# the class in another. This tuple **is** the decomposition — one row (or one check-36
+# hit) per entry, never re-derived from a combined pattern string.
+#
+# Broken-input proof (the consolidation's own, per Ruling 67 §2's own instruction): change
+# one entry here and both `audit-docs.py` check 36 and `_docverify.py`'s (d) rows move
+# together — `tests/test_doc_id_verify.py` proves both consumers hold this exact tuple.
+LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
+    ("note id", re.compile(r"\bNT-\d{4}\b")),
+    ("finding id (workstream form)", re.compile(r"\bF-W\d+-\d+\b")),
+    ("finding id (bare form)", re.compile(r"\bF\d{2}\b")),
+    ("workflow id", re.compile(r"\bwf-0[0-9]\b")),
+    ("ruling reference", re.compile(r"\bRuling \d+\b")),
+    ("ADR id", re.compile(r"\bADR-0[0-9]{3}\b")),
+    ("scoped requirement id", re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")),
+    ("workstream/slice id", re.compile(r"\bW[0-9]+[a-z]?-[0-9]+\b")),
+    ("legacy dated-plan path", re.compile(re.escape("docs/plans/2026-"))),
+    ("legacy audit path", re.compile(re.escape("docs/audit/"))),
+    ("legacy notes path", re.compile(re.escape("docs/notes/"))),
+    ("legacy adr path", re.compile(re.escape("docs/adr/"))),
+    ("legacy claude-notes path", re.compile(re.escape(".claude/notes/"))),
+)
+
 # NT-0019 §1.2's "Kind" column, lowercased, keyed by prefix. What never changes on
 # extension (§1.12): a new family adds a row here via an RFC-/RL-, this table is not
 # reopened for any other reason.
