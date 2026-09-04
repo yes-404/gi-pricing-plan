@@ -1477,3 +1477,30 @@ to fabricate a mapping — the same "fabricated id nothing allocated" class row 
 these tokens, or rule a new disclosed class for never-allocated next-free markers. Not
 decided here. `exec-ids` proceeding on its two unambiguous fixes (`NT-0014-15`'s
 padding-normalization gap) and the specification dispositions while this rules.
+
+## 2026-09-04 — d8's generator-count gap fully reconciled: option (b), a real second unnamed source found and closed
+
+`executor-30-2` re-verified rather than guessing — the earlier "21 vs. 50" gap was option
+(b): the original paragraph named only part of the source. Full reconciliation, on the
+same predicate (occurrences of the literal value) both sides:
+
+**W37-6** (control 710, migrated 750, +40): +22 from generated index files
+(`docs/INDEX.md` +19, `docs/rulings/INDEX.md` +2, `docs/closures/INDEX.md` +1 — a third
+index the original count had missed even on its own terms); **+18 from a source not
+checked at all before**: `_write_document_drafts`'s own front-matter `title:` stamp
+duplicates a document's heading text whenever that heading mentions "W37-6" — the
+front-matter line says it once, the still-present body H1 says it again. Verified directly
+on a real file diff (`docs/plans/2026-09-03-w37-6-time-boxed-delegation.md` 1 occurrence →
+`docs/rulings/RL-00295-...` 2), with a negative control confirming the mechanism is
+conditional on title text, not universal (`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`
+44 → 44, no growth, title doesn't mention W37-6 despite 44 body citations).
+
+**W32-7** (control 71, migrated 81, +10): +9 index, +1 same title-stamp mechanism, one
+document.
+
+Both components are the same class-6 phenomenon (a generator quoting a source title
+verbatim) Ruling 104 §2 already names, occurring at two levels — family/global index
+renderers, and every individual document's own front-matter stamp — not two different
+defects. No code fix required under the ruling as written; this closes the completeness
+gap in the generator paragraph. Comment-only precision on an already-correct
+classification — the dated ledger record is sufficient, no follow-up PR needed today.
