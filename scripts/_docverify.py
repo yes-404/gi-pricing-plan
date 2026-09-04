@@ -1465,16 +1465,55 @@ _FRONTMATTER_BLOCK_RE: Final = re.compile(r"^family:\s")
 #: above it get first refusal on any file carrying more than one shape.
 _WORK_SLICE_KEY_RE: Final = re.compile(r"\bW\d+[a-z]?-\d+\b")
 
+# ---------------------------------------------------------------------------------------
+# Code-tree triage (W37-6 channel `:599`, `:770`): the second of the three parallel
+# executors, scoped to `tests/`+`backend/`+`frontend/`+`scripts/`+`packages/`. Its own
+# dispatched hypothesis — that the code-tree residue is NT-0019 §5.6's comment/docstring/
+# marker citation-rewrite forms (`@pytest.mark.req("FR-...")`, `# FR-...`, an OpenAPI
+# `summary=`/`description=` string) DP-7's inverse does not recognise as one missing
+# *form* — is **killed**: every sampled marker/docstring `FR`/`NFR`/`OQ` single-token
+# substitution inverts correctly, byte for byte, on its own (reproduced directly against
+# `frozen_file_matches_after_migration_stamp`, not inferred from the diff).
+#
+# What this executor's own sample actually found — a compound task-key citation
+# (`W6b-11`, `W10-2`) left half-rewritten, and (investigating the files even that shape
+# could not place) an id-allocation instability where `REDIRECTS.csv` carried two
+# conflicting rows for one legacy id and the code tree cited a third, unmapped number —
+# turned out to share one root cause (`doc-id.py`'s `_compound_token_re` lacking a
+# trailing `\b`) with row (b)'s own regression and (independently) with
+# `unmapped-work-slice-key` above. `#721` (row (b)'s fix) and `#727`'s
+# `_WORK_SLICE_KEY_RE` above already cover that population; adding a fourth name for the
+# same shape here would repeat NT-0003's duplicated-status defect, so it is **not**
+# repeated as a cause of its own. Two shapes remain that neither `#720` nor `#727`'s
+# remainder-scope covers, because both are specific to the code tree:
+# ---------------------------------------------------------------------------------------
+
+#: cause5: `tests/fixtures/docs-ids/**` and `tests/fixtures/docs-migration/**` are
+#: synthetic corpora built to test `doc-id.py`'s own `next`/`check`/`migrate` logic —
+#: sample documents deliberately holding old-form ids as test data, the same role
+#: `docs/roadmap.md` plays for Ruling 68 class 5, but with no equivalent unconditional
+#: exemption. The real migration walks them anyway and rewrites their deliberately-old
+#: content — not a citation defect to fix, a scope gap: these two directories were never
+#: meant to be compared as if they were real citations. Checked by path alone, before any
+#: content is read, the same "path is conclusive" rule `_NOTES_STUB_RE` already uses.
+_FIXTURE_CORPUS_DIRS: Final = ("tests/fixtures/docs-ids/", "tests/fixtures/docs-migration/")
+
+#: cause6: `scripts/__pycache__/*.pyc` — compiled bytecode the verify snapshot's own tree
+#: walk should never have included. Not a citation defect at all; a scan-root hygiene gap
+#: in the instrument itself. Binary, so `old_lines` is `None` for these — checked by path
+#: alone, before the `old_lines is None -> "other"` fallback would otherwise catch it.
+_PYCACHE_RE: Final = re.compile(r"__pycache__/|\.pyc$")
+
 #: One residue member's cause label, checked in this fixed order (a member matching more
-#: than one shape is reported under the first — `_NOTES_STUB_RE` before content-based
-#: checks, since a stub's path alone is conclusive and its content is the same shape every
-#: time; frontmatter before the citation-shaped checks, since a wrong strip or a wrongly
-#: added block explains the whole-file mismatch regardless of what citations the body also
-#: carries; cause4's adjacent-uppercase corruption before the broader citation-shaped
-#: causes, since it is a forward-migration defect rather than an inverse gap and deserves
-#: its own bucket even when the same file also carries a legacy path citation;
-#: `unmapped-work-slice-key` last of all, since it is the most generic shape and must not
-#: steal a file that a more specific, owned cause above it already explains).
+#: than one shape is reported under the first — `_NOTES_STUB_RE` and the two path-only
+#: code-tree causes (5, 6) before any content is read, since a path alone is conclusive
+#: for all three; frontmatter before the citation-shaped checks, since a wrong strip or a
+#: wrongly added block explains the whole-file mismatch regardless of what citations the
+#: body also carries; cause4's adjacent-uppercase corruption before the broader
+#: citation-shaped causes, since it is a forward-migration defect rather than an inverse
+#: gap and deserves its own bucket even when the same file also carries a legacy path
+#: citation; `unmapped-work-slice-key` last of all, since it is the most generic shape and
+#: must not steal a file that a more specific, owned cause above it already explains).
 #:
 #: `new_lines` (the post-migration content at the same path) is optional and used only by
 #: the new-frontmatter-stamp check below — every other check reads `old_lines` alone, as
@@ -1486,6 +1525,10 @@ def _residue_cause(
 ) -> str:
     if _NOTES_STUB_RE.match(rel):
         return "cause2b-notes-stub-relative-link"
+    if _PYCACHE_RE.search(rel):
+        return "cause6-pycache-build-artifact"
+    if rel.startswith(_FIXTURE_CORPUS_DIRS):
+        return "cause5-fixture-corpus-old-form-ids"
     if old_lines is None:
         return "other"
     if old_lines and old_lines[0] == "---" and rel.startswith(_FOREIGN_FRONTMATTER_DIRS):
