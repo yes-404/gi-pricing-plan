@@ -628,8 +628,9 @@ def test_row_e_conjunct_2_strips_a_trailing_line_locator_before_the_path_test(
     is a filename token per rule 3's own wording ("the leading component of a filename
     ending `.md`"), but the trailing `:<line>` defeated the bare `\\.[A-Za-z0-9]{2,4}$`
     extension test, which requires the token to *end* at the extension. Found on three real
-    citations at `e97b97a` (`PL-00092`, `PL-00134`, `PL-00142` each citing a sibling plan's
-    old filename by `:<line>`). Red-then-green on the identical padded id: bare in prose is
+    citations at `e97b97a` (`PL-92`, `PL-134`, `PL-142` each citing a sibling plan's old
+    filename by `:<line>` — unpadded here, a citation rather than a specimen, per rule 2).
+    Red-then-green on the identical padded id: bare in prose is
     still a violation; the same id leading a `filename.md:<line>` token, single line or a
     range, is a path."""
     idx = _index("PL-9998")
