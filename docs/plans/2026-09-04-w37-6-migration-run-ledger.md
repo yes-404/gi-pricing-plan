@@ -574,3 +574,19 @@ Gate on #721: green both halves except two pre-existing `backend/tests/test_scor
 failures (confirmed out of scope — `git diff --stat origin/main...HEAD` touches only
 `scripts/_docverify.py`, `scripts/doc-id.py`, `tests/test_doc_id_migrate.py`). `--verify`:
 row (b) PASS, verdict set fully reconciled. `ci-watcher-721` dispatched.
+
+## 2026-09-04 — three silent executors pinged; four finished worktrees released
+
+Deputy's 12:5xZ read flagged three executors past the 20-minute idle line with no real
+gate running: `wt-h2b` (33 min, no gate since the kill), `wt-r105-ruling105`/verify105
+(18 min, task-key addendum committed but unpushed, no PR), `w37-6-other-codetree`/
+triage-code (18 min, 3 dirty, no PR). Confirmed no real `pytest` process for any of the
+three before acting. Pinged all three per the standing rule (ping this cycle; if unanswered
+with no real gate running, release and respawn fresh from the branch — the branch carries
+the work forward).
+
+**Four finished worktrees released**, each verified clean (`git status --porcelain
+--branch`) and each branch already merged (remote gone or content matches the merge):
+`wt-dm` (#701), `wt-rowg-docs` (#720, one untracked `.venv` directory discarded — a
+generated artifact, not work), `wt-rowg2` (#715), `wt-ruling106` (#718). `git worktree
+remove --force` + `prune`; `df -h /` 5.6 GB free (was 5.7 GB), `/tmp` 26 GB free.
