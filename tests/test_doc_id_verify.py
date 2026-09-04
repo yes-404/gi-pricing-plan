@@ -1566,6 +1566,50 @@ def test_fenced_legacy_form_excluded_from_row_d_but_an_unfenced_sibling_still_co
     )
 
 
+def test_d7_a_defined_token_left_unrewritten_still_fails(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof, direction 1 (the deputy's mechanical predicate, 2026-09-04,
+    W37-6 exec-ids, relayed via team-lead): a scoped id that IS bold-defined in the
+    control tree's `docs/specs/` must never be excused into the never-allocated closed
+    class merely because its citing line reads like an allocation marker — an
+    unrewritten citation of a genuinely definable id is a real `token_map` miss and must
+    FAIL, not disclose. Guards against the class swallowing real misses.
+    """
+    migrated = {
+        "docs/specs/00-overview.md": "**FR-EX-1** A normal requirement.\n",
+        "docs/plans/2026-01-01-x.md": "Next free: `FR-EX-1` — still cited, unrewritten.\n",
+    }
+    control = {
+        "docs/specs/00-overview.md": "**FR-EX-1** A normal requirement.\n",
+    }
+    d7 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    assert d7.verdict == "FAIL", (
+        f"a defined-but-unrewritten token must FAIL, not disclose: {d7.note}"
+    )
+    assert "FR-EX-1" in d7.note
+
+
+def test_d7_an_undefined_token_is_disclosed_as_the_never_allocated_closed_class(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof, direction 2: a scoped id with zero definition in every source
+    `_discover_*` reads, and no `docs/REDIRECTS.csv` row, is the never-allocated closed
+    class — disclosed, count and all, never failed and never rewritten.
+    """
+    text = "Next free: `FR-EX-999` — deliberately never taken.\n"
+    migrated = {"docs/plans/2026-01-01-x.md": text}
+    # Unrewritten means unchanged: the control side carries the identical value, so this
+    # is not "creation" (a value present in migrated and absent from control) — the same
+    # shape the real corpus has for a never-allocated token (nothing rewrites it, so
+    # migrated and control agree byte-for-byte on that one citation).
+    control = {"docs/plans/2026-01-01-x.md": text}
+    d7 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    assert d7.verdict == "DISCLOSE", f"an undefined token must disclose: {d7.note}"
+    assert "closed class" in d7.note
+    assert "none — closed class" in d7.note
+
+
 def test_unanchor_is_a_no_op_for_a_bare_path_literal_the_old_inert_case_is_fixed(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:

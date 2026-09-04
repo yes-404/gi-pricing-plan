@@ -985,6 +985,165 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
     return DISCLOSE, note
 
 
+# ---------------------------------------------------------------------------------------
+# (d7)'s never-allocated closed class — the deputy's mechanical predicate, 2026-09-04,
+# W37-6 exec-ids (relayed via team-lead). §7(d)'s "scoped requirement id" alternative
+# still reads non-zero after the citation-rewrite and specification-class fixes, but not
+# every remaining hit is a `token_map` miss: a "Next free: `<id>`"/"Highest ids in use:
+# <id>" marker in a dated plan or ruling can name a legacy scoped id that was **never
+# allocated** under that name at all — a citation to nothing, not a citation the sweep
+# forgot. `RL-00144` names the mechanism directly: "A frozen document's next-free marker
+# ages the moment anyone else allocates."
+#
+# The class is decided by a predicate the instrument runs, never by the citing
+# sentence's own wording ("`OQ-RATE-8` stays free" is a historical fact, not evidence by
+# itself — it is CONSISTENT with never-allocated, but one sample proves nothing about
+# the other sixteen tokens this row also carries, which is why every hit is checked
+# mechanically below rather than trusted from its citing ruling). A token is
+# never-allocated only when ALL FOUR of: zero bold definitions in `docs/specs/*.md`
+# (`_discover_requirements`'s own source), zero definition row in `open-questions.md`,
+# `roadmap.md` or `docs/audit/register.md` (every other source `_discover_*` reads for a
+# requirement or open-question id), and no `old_id` row for it in the migrated tree's
+# `docs/REDIRECTS.csv` (confirms the migration itself never allocated it). Any ONE of
+# those failing means something actually defines or migrated the id, and the citing line
+# is a real `token_map` miss (FAIL) — a token can never be excused into this class merely
+# because its citing sentence *sounds* like "never taken".
+#
+# Terminal, not owed a future fix: NT-0019 allocates bare integers per family (D1/D2), so
+# a legacy scoped name that was never allocated can never be allocated *later* either —
+# there is no future state in which `token_map["OQ-RATE-8"]` becomes non-empty. Owner:
+# "none — closed class". The citing sentence itself is a correct historical statement
+# about an id that does not exist and stays exactly as written — Ruling 103 §5.1's fence
+# is for an exhibit of a defective FORM, and this is not one.
+_D7_LABEL: Final = "scoped requirement id"
+
+#: `next free\s*:` — the identical device `scripts/audit-docs.py`'s own `UNALLOCATED`
+#: marker check uses (`re.compile(r"next free\s*:", re.IGNORECASE)`) to tell an
+#: allocation note from a citation. A token on the marker's own line, after the marker,
+#: is not "defined" by that line; every other line naming the token is.
+_NEXT_FREE_MARKER_RE: Final = re.compile(r"next free\s*:", re.IGNORECASE)
+
+#: The other three sources `_discover_*` reads for a requirement or open-question id,
+#: beyond `docs/specs/*.md`'s own bold form (`_scoped_id_bold_defined` below) — read from
+#: the control tree, since a migrated tree's specs are already renumbered flat and carry
+#: no scoped-form definition to find.
+_D7_OTHER_DEFINITION_SOURCES: Final = (
+    "docs/open-questions.md", "docs/roadmap.md", "docs/audit/register.md",
+)
+
+
+def _scoped_id_bold_defined(token: str, ctl: Corpus) -> bool:
+    """True if `token` is bold-defined (`**token**`) anywhere in the control tree's
+    `docs/specs/*.md` — `_discover_requirements`'s own source, read the identical way
+    (a plain substring test; `_LEGACY_SPEC_BOLD_RE` matches nothing this substring test
+    would miss, since every one of its matches contains `**<token>**` literally)."""
+    needle = f"**{token}**"
+    return any(
+        needle in line
+        for rel in ctl.files
+        if rel.startswith("docs/specs/") and rel.endswith(".md")
+        for line in ctl.lines[rel]
+    )
+
+
+def _scoped_id_defined_elsewhere(token: str, ctl: Corpus) -> bool:
+    """True if `token` has a genuine definition row in `open-questions.md`, `roadmap.md`
+    or `docs/audit/register.md` — a `next free:`-marker MENTION on the same line, before
+    the token, is not a definition (the identical reading `audit-docs.py`'s own
+    `UNALLOCATED` check gives it); everything else that names the token counts."""
+    for rel in _D7_OTHER_DEFINITION_SOURCES:
+        for line in ctl.lines.get(rel, ()):
+            at = line.find(token)
+            if at == -1:
+                continue
+            if not _NEXT_FREE_MARKER_RE.search(line[:at]):
+                return True
+    return False
+
+
+def _scoped_id_has_redirect(token: str, mig: Corpus) -> bool:
+    """True if `token` has an `old_id` row in the migrated tree's `docs/REDIRECTS.csv` —
+    read directly from disk, since `REDIRECTS.csv` is `_D_EXCLUDED_BASENAME` and never
+    part of `Corpus.lines`."""
+    text = read_text(mig.tree / "docs" / "REDIRECTS.csv")
+    if text is None:
+        return False
+    prefix = f"{token},"
+    return any(line.startswith(prefix) for line in text.splitlines())
+
+
+def _scoped_id_is_never_allocated(token: str, mig: Corpus, ctl: Corpus) -> bool:
+    """The deputy's mechanical predicate, applied to one token. `not any(...)` rather
+    than three separate early-returns so every one of the three checks always runs and
+    a caller can tell, from this function's own body, that no check was short-circuited
+    away — the same shape as the broken-input proof this predicate is required to pass
+    in both directions."""
+    return not (
+        _scoped_id_bold_defined(token, ctl)
+        or _scoped_id_defined_elsewhere(token, ctl)
+        or _scoped_id_has_redirect(token, mig)
+    )
+
+
+def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
+    """(d7)'s non-zero population, split by the never-allocated predicate. Reads the
+    identical migrated-tree population `rows_d`'s own `mig.scan(pattern, skip_fenced=
+    True)` counts (`was:` and fenced lines excluded the same way), so this function's own
+    line count matches the row's reported `migrated` figure exactly.
+
+    Every token on every still-matching line is checked; ONE real hit (a token that is
+    not never-allocated) fails the whole row, named — this is deliberately not a
+    line-by-line partial disclosure, because a row mixing a real miss with disclosed
+    residue would read as clean at a glance while still hiding the real miss.
+    """
+    d7_pattern = re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")
+    real_hits: list[str] = []
+    disclosed_lines = 0
+    disclosed_files: set[str] = set()
+    for rel in mig.files:
+        skip = mig.was_lines[rel] | mig.fenced_lines[rel]
+        line_disclosed = False
+        for i, line in enumerate(mig.lines[rel]):
+            if i in skip:
+                continue
+            tokens = d7_pattern.findall(line)
+            if not tokens:
+                continue
+            for token in tokens:
+                if _scoped_id_is_never_allocated(token, mig, ctl):
+                    line_disclosed = True
+                else:
+                    real_hits.append(f"{token} ({rel}:{i + 1})")
+        if line_disclosed:
+            disclosed_files.add(rel)
+            disclosed_lines += sum(
+                1
+                for i, line in enumerate(mig.lines[rel])
+                if i not in skip and d7_pattern.search(line)
+            )
+    if real_hits:
+        shown = "; ".join(real_hits[:10])
+        more = f" (+{len(real_hits) - 10} more)" if len(real_hits) > 10 else ""
+        return FAIL, (
+            f"{len(real_hits)} hit(s) name a token with a real definition or an "
+            f"existing `docs/REDIRECTS.csv` row — a genuine `token_map` miss, not the "
+            f"never-allocated class: {shown}{more}"
+        )
+    return DISCLOSE, (
+        f"every one of {disclosed_lines} line(s) / {len(disclosed_files)} file(s) "
+        "names only a legacy scoped-form id with zero definition rows in every source "
+        "`_discover_*` reads (`docs/specs/*.md`, `docs/open-questions.md`, "
+        "`docs/roadmap.md`, `docs/audit/register.md`) and no `old_id` row in "
+        "`docs/REDIRECTS.csv` — the closed never-allocated class (deputy's mechanical "
+        "predicate, 2026-09-04, W37-6 exec-ids). Terminal: NT-0019 allocates bare "
+        "integers per family, so a legacy scoped name that was never allocated can "
+        "never be allocated later either. Owner: none — closed class. The citing "
+        "sentence stays exactly as written; Ruling 103 §5.1's fence is for a "
+        "defective-form exhibit, not a correct historical statement about an id that "
+        "does not exist."
+    )
+
+
 def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
     rows: list[Row] = []
     for i, (label, pattern) in enumerate(D_ALTERNATIVES, start=1):
@@ -1013,6 +1172,10 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
                     "excluded from the zero requirement, count disclosed "
                     f"({D_DISCLOSED_CITATION.get(label, 'ruling pending')})"
                 )
+                if creation_note:
+                    note += "; " + creation_note
+            elif label == _D7_LABEL and m_lines > 0:
+                verdict, note = _d7_disclosed_or_fail(mig, ctl)
                 if creation_note:
                     note += "; " + creation_note
             else:
