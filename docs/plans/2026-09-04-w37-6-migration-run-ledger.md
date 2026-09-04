@@ -218,7 +218,8 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #741 | fix(scripts): every audit-docs.py check's fail() message carries its own check-N: prefix | `124d6bb` | Real predicate-code change (not docs-only) — task #43. `history-policy`/`docs`/`python` all `success` on the exact head SHA (`3bc7216`), confirmed live via backgrounded watch. Zero `unclassified` on h1's migrated-tree breakdown after this landed. |
 | #742 | docs(plans): ledger — #738 merge, checkpoint-1 refresh, h1 breakdown/singleton naming | `4b57a40` | Own commits refresh d1/d6/d7/d9-d13/g rows to real current state, add the Acceptance Standard heading, name h1's singletons by check number. `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`fc8a95c`), confirmed live via backgrounded watch. |
 | #743 | docs(plans): ledger — #742 merge, header-drift incident, roster cleanup | `4062810` | Own commits carry the two-mode header-drift incident narrative and the ten-teammate roster cleanup. `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`f383235`); `docs`/`python` each hit one transient GitHub API 504 mid-watch (re-verified directly via `gh run view`, both genuinely `success` — not trusted from the ambiguous wrapper exit code). |
-| #737 | fix(scripts): W37-6 exec-ids — row (d) citation misses and specification dispositions (d1/d6/d7) | `e95ab26` | `docs`/`history-policy` `success` on exact head `1f233eb`; `python` `success` confirmed via direct `gh run view` after its own watch hit a transient 504. Merged during the maintainer's shutdown-order sequence — not independently re-verified against a fresh `--verify` run post-merge before the halt; that's the handover's first listed action. |
+| #737 | fix(scripts): W37-6 exec-ids — row (d) citation misses and specification dispositions (d1/d6/d7) | `e95ab26` | `docs`/`history-policy` `success` on exact head `1f233eb`; `python` `success` confirmed via direct `gh run view` after its own watch hit a transient 504. **Post-merge re-verification landed** (deputy, run `33899769838`): `UNCHANGED: 11 fatal row(s), matching the recorded set of 11` — the checkpoint-1 fatal count fell 13→11 on this merge. |
+| #744 | docs(plans): ledger — #737 merge, halt sequence complete, handover written | `468bd9f` | Own commits carry the completed halt-sequence narrative (steps 2-4) and the full handover reference. `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`9651c67`), confirmed live via direct `gh run view` (not the ambiguous wrapper exit code, per the lesson two PRs earlier). |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1805,5 +1806,68 @@ alignment), the live roster with each member's next action, and the process/infr
 lessons from today (pgrep fix, header-drift commands, the `gh run watch` transient-504
 trap, the batched-ledger-PR convention).
 
-Remaining: steps 5 (halt every process) and 6 (final entry, stop own watches) by
-19:50/19:55 BST.
+## 2026-09-04 19:04 BST — step 3's last item: #745 rebased, pushed, CI'd, found NOT green
+
+executor-30-2's d4/d5/d8 work had not been pushed by the 18:50 BST takeover deadline
+despite still being alive with further uncommitted changes. Lead committed that work
+(`6f3742c`), rebased `w37-6-row-d8-boundary-fix-wip` onto `main` (`468bd9f`), resolved
+four conflict blocks across `scripts/_docverify.py` and `scripts/_docid.py` (kept
+`main`'s already-landed d6/d7 text from #737 where it conflicted with stale content on
+the wip side; took d8's own new work from the wip side; merged both sides' comment text
+where the conflicts were documentation-only), and pushed `--force-with-lease` to
+`ff5102f`. The pre-rebase commit was also preserved verbatim on its own branch,
+`w37-6-row-d8-boundary-fix-wip-2`, per the deputy's instruction, before any conflict was
+touched.
+
+CI ran and **`docs` FAILED at 19:00 BST** (exit code 3, a real measured verdict
+mismatch — confirmed via `gh run view --log-failed` directly, not a wrapper echo or a
+transient signal). Three genuine gaps, all real remaining work rather than anything
+introduced by the rebase itself:
+
+- **d4**: 2 lines/1 file of un-migrated `wf-0[0-9]` remain.
+- **d5**: 69 lines/19 files of un-migrated `Ruling \d+` remain (occurrence growth on 3
+  already-present values, not new creation).
+- **d8**: `EXPECTED_VERDICTS` recorded DISCLOSE (executor-30-2's own target, carried
+  through the rebase merge) but measurement reads FAIL — `RECLASSIFIED: (d8) DISCLOSE ->
+  FAIL`. Root cause: 1 bare work-key remainder in 1 file; `_d8_verdict`'s own documented
+  logic is correctly staying fatal on it. The functional code itself (the `_D8_*`
+  patterns, `TEST_MODULE_EXCLUSIONS`) is present and correct on this tree.
+
+This is the second time this session that a self-reported "verified PASS" on d4/d5 did
+not survive independent measurement (see the earlier premature-close incident above).
+Per the maintainer's own rule (green by 19:30 BST → merge, else leave open), **#745 is
+not merged** and stays open at `ff5102f`. `HANDOVER-2026-09-04.md`'s checkpoint-1 table
+and its #745 entry were corrected in place to carry the real CI numbers rather than the
+earlier optimistic "fix pushed" framing.
+
+## 2026-09-04 19:04 BST — step 5, live processes halted
+
+executor-30-2 and watcher-2-2 both messaged with full context and stopped (18:57 BST) —
+executor-30-2's subject (the PR) exists per the deputy's own stop condition;
+watcher-2-2's balance-watch loop has no further role tonight. reporter-2-2 was already
+stopped earlier, its final Slack post confirmed read back from `#claude-code-update`
+directly (`conversations.history`, not the reporter's own `ok=True`) — text quoted in
+the step-6 `to-deputy.md` entry. `docker compose -f deploy/docker-compose.yml down`
+(minio/postgres/redis stopped and removed cleanly); no `pytest`/`--verify` processes
+found running; all five `/tmp/slots` lockfiles confirmed unheld (`fuser`, empty output on
+each). Only the lead session and its own `to-lead.md` watch loop remain; the watch stops
+as the very last action after the step-6 entry lands.
+
+## 2026-09-04 19:06 BST — the deputy's sharper #745 finding: only d8's fix is real
+
+The deputy checked the pushed tree directly rather than accepting the CI failure at face
+value: `git show origin/w37-6-row-d8-boundary-fix-wip:scripts/doc-id.py` has no
+post-rewrite-slug logic (d4), and `_RULING_HEADING_RE` (`scripts/doc-id.py:1329`) is
+still `^##\s+Ruling…`, H2-only (d5) — **neither fix was ever committed to any pushed
+tree**, not merely incomplete. Only d8's left-bound fix (`_docid.LEFT_BOUND`,
+`_docverify.py:905-909`) is real content on `ff5102f`, one bare-work-key remainder short
+of DISCLOSE. Confirmed not a rebase artefact — the resolution kept exactly what was on
+the branch; nothing was dropped while merging conflicts. `HANDOVER-2026-09-04.md`'s
+checkpoint-1 table and #745 entry corrected again to this sharper finding: d4/d5 read
+*FAIL, ruled, code not started* (ruling at `to-lead.md:1204`); d8 reads *FAIL, one
+remainder short*, with `EXPECTED_VERDICTS["d8"]`'s current DISCLOSE text flagged as wrong
+and due for re-recording to FAIL on resume; #745 flagged for a retitle before it merges,
+since it currently claims three fixes and carries one.
+
+Remaining: step 6 (final `to-deputy.md` entry, stop own watch) — imminent, well ahead of
+the 19:55 BST target.
