@@ -2551,7 +2551,44 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # id used as an illustrative worked example rather than a fake
                          # one — row-g's/#733's code, surfaced by `origin/main` drift,
                          # flagged rather than fixed here, out of this row's own scope).
-    "d8": FAIL,         # W[0-9]+[a-z]?-[0-9]+ — one bare work-key hit remains
+    "d8": DISCLOSE,     # workstream/slice id — re-recorded FAIL -> DISCLOSE, 2026-09-04.
+                         # Both fatal components now measure zero on a real
+                         # `migrate()`-mutated tree; `_d8_verdict` falls through to its own
+                         # DISCLOSE branch (Ruling 105 §A's third alias class), printing the
+                         # slice-key and task-key counts on their own line.
+                         #
+                         # **Task keys** are a disclosed component, not a fatal one — Ruling
+                         # #26 (`to-lead.md:498-510`), reaffirmed against my own later
+                         # entries by the correction at `to-lead.md:1298-1306`: "no family
+                         # exists for a task (NT-0019 §1.2 has `WK` and `SL`, nothing below a
+                         # slice), so a task key has no target by the standard's design — the
+                         # same ground as slice keys". That correction's violation line reads
+                         # "task keys treated as fatal anywhere after this". Their raw count
+                         # also fell 123 -> 0 once the patterns took `_docid.LEFT_BOUND`:
+                         # 91% were the tail of a different, already-classified id family
+                         # (the finding form `F-W<n>-<m>-<k>`, `audit-docs.py`'s
+                         # `_FINDING_ID`) matched from its second character, since a bare
+                         # `\b` is satisfied between a hyphen and the next token.
+                         #
+                         # **The bare work-key remainder** is still fatal on any occurrence
+                         # (a `token_map` defect, not this alias class) and now reads zero.
+                         # The last one was this file's own prior version of this comment,
+                         # which spelled two illustrative keys as literals and so matched
+                         # itself — `scripts/_docverify.py` is not in
+                         # `_docid.TEST_MODULE_EXCLUSIONS` and has no markdown fence to hide
+                         # behind. Dispositioned 3b per `to-lead.md:1243` ("respelled to a
+                         # schematic that cannot match"): illustrative keys are written
+                         # `W<n>` / `W<n><x>` here and must stay schematic. The real-corpus
+                         # exhibits of that shape are fenced under Ruling 103 §5.1 in
+                         # `.claude/skills/close-workstream/SKILL.md`,
+                         # `docs/audit/closure-records.md` and the w6b slice-map plan; the
+                         # instrument's own fixtures are class 3c.
+                         #
+                         # A bare key CAN still be a real defect and is not NECESSARILY one —
+                         # which is why the alternative stays fatal on any remaining
+                         # occurrence rather than trying to tell the two apart at measurement
+                         # time. The earlier comment's "every Work mints a `WK-`, so an
+                         # unmapped one is necessarily a real defect" was false on the tree.
     "d9": FAIL,         # docs/plans/2026-
     "d10": FAIL,        # docs/audit/
     "d11": FAIL,        # the old notes directory
