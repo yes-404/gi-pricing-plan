@@ -1647,21 +1647,24 @@ def test_progress_is_a_set_change_too_and_says_what_to_edit(dv: Any) -> None:
     and left in the table would mask its own later regression, so progress is reported —
     with the edit it requires — rather than passed over.
 
-    "e" rather than "b"/"c": task 17 (2026-09-04) re-recorded (b) and (c) as PASS on
-    `main` (unrelated prior-PR progress), so those two no longer have a FAIL state this
-    test's `dict(..., key=PASS)` override could actually move *from* — the override would
-    be a no-op against the real recorded table, which is exactly the false-pass this test
-    exists to guard against elsewhere. "e" (padded id in prose) stays FAIL.
+    "d9" rather than "b"/"c"/"e": every one of those three has since moved off FAIL at
+    some point in this row's own history and would make the `dict(..., key=PASS)`
+    override a no-op against the real recorded table — exactly the false-pass this test
+    exists to guard against elsewhere. "b" flips between FAIL and PASS across #707/#708's
+    re-recording and #711's regression (task 17, 2026-09-04); "c" and "e" are both PASS as
+    of this commit ("e" folded in here — angle-bracket boundary and same-line duplicate-
+    token fixes). "d9" (a literal legacy-path alternative in (d), not yet migrated) has no
+    such history and stays FAIL.
     """
-    assert dv.EXPECTED_VERDICTS["e"] == dv.FAIL, (
+    assert dv.EXPECTED_VERDICTS["d9"] == dv.FAIL, (
         "this test's premise: the row it moves must start FAIL in the real table"
     )
-    moved = dict(dv.EXPECTED_VERDICTS, e=dv.PASS)
+    moved = dict(dv.EXPECTED_VERDICTS, d9=dv.PASS)
     result = _result(dv, moved)
-    assert [(c.key, c.direction) for c in result.set_changes] == [("e", dv.PROGRESSED)]
+    assert [(c.key, c.direction) for c in result.set_changes] == [("d9", dv.PROGRESSED)]
     assert result.exit_code == 3
     out = dv.render(result)
-    assert "PROGRESS (newly passing): (e) FAIL -> PASS" in out
+    assert "PROGRESS (newly passing): (d9) FAIL -> PASS" in out
     assert "same commit as the change that moved the row" in out
 
 
