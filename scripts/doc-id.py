@@ -5269,8 +5269,10 @@ class _SplitSource:
 
     @property
     def pattern(self) -> re.Pattern[str]:
+        # Left-hand `_docid.TOKEN_LEFT_BOUND`, not `\b` -- `_whole_token_re`'s own
+        # docstring has the reasoning (the deputy's ruling, W37-6, 2026-09-04).
         return re.compile(
-            rf"\b{re.escape(self.token)}\b"
+            rf"{_docid.TOKEN_LEFT_BOUND}{re.escape(self.token)}\b"
             r"(?:#(?P<anchor>[A-Za-z0-9_-]+))?"
             r"(?::(?P<l1>\d+)(?:-(?P<l2>\d+))?)?"
         )
@@ -5278,7 +5280,10 @@ class _SplitSource:
     def _by_id(self, line: str) -> set[int]:
         return {
             i for i, t in enumerate(self.targets)
-            if any(re.search(rf"\b{re.escape(tok)}\b", line) for tok in t.ids)
+            if any(
+                re.search(rf"{_docid.TOKEN_LEFT_BOUND}{re.escape(tok)}\b", line)
+                for tok in t.ids
+            )
         }
 
     def _by_anchor(self, anchor: str | None) -> set[int]:
@@ -5586,20 +5591,30 @@ def _was_field_spans(text: str) -> list[tuple[int, int]]:
 #: legacy ids that therefore survive inside a compound are §7 (d)'s population, ruled
 #: separately (Ruling 102 §2 row 3), not this row's to invent an answer for.
 def _whole_token_re(tok: str) -> re.Pattern[str]:
-    """`tok` as a whole identifier: word-bounded, and not continued by `-`/`/` plus a digit.
+    r"""`tok` as a whole identifier: word-bounded, and not continued by `-`/`/` plus a digit.
 
-    The leading anchor is `(?<!\\w)`, not `\\b` — row (d13)'s own citation-form
-    discovery (W37-6, 2026-09-04): a path token rooted under the old notes directory
-    beneath `.claude` (`<that dir>/NNNN-*.md`) *starts* with a non-word character (`.`),
-    and `\\b` requires a \\w/\\W *transition* either side, so it never fires when the
-    character immediately before the token is ALSO non-word — a backtick, exactly what
-    every real markdown citation of a path writes. `(?<!\\w)` is a strict
-    generalisation: it demands only "no word character immediately before", which for a
-    token that itself starts with a word character (`docs/...`, every id family) behaves
-    identically to `\\b`'s own start-anchor, and additionally covers the
-    non-word-starting case `\\b` silently missed.
+    The leading anchor is `_docid.TOKEN_LEFT_BOUND`, not `\b`. Two defects `\b` has,
+    fixed by the same one lookbehind (the deputy's ruling, W37-6, 2026-09-04):
+
+    * A token starting with a non-word character (row (d13)'s own citation-form
+      discovery: a path rooted under the old notes directory beneath `.claude`,
+      `<that dir>/NNNN-*.md`) is never found when the character immediately before it
+      is ALSO non-word — a backtick, exactly what every real markdown citation of a
+      path writes, since `\b` needs a \w/\W *transition* and both sides are \W there.
+    * A token whose family prefix is a single word character preceded by `-` (a
+      workstream/slice id, `W37-6`) is wrongly matched *inside* a longer identifier
+      that happens to end the same way — `F-W37-6` — because `-` is itself \W, so
+      `\b` sees a transition (`-` to `W`) exactly where none exists in this grammar:
+      `-` separates fields of one identifier here, it does not end one.
+
+    `_docid.TOKEN_LEFT_BOUND` (`(?<![A-Za-z0-9_-])`) refuses both: no letter, digit,
+    underscore *or hyphen* immediately before the token, which is `\b`'s own start
+    behaviour for a token that starts with a word character preceded by a genuine
+    non-identifier character, strictly narrowed to also refuse a hyphen-preceded start
+    and strictly widened to also accept a non-word-starting token after another
+    non-word character.
     """
-    return re.compile(rf"(?<!\w){re.escape(tok)}\b(?![-/][0-9])")
+    return re.compile(rf"{_docid.TOKEN_LEFT_BOUND}{re.escape(tok)}\b(?![-/][0-9])")
 
 
 #: A compound-continuation token, base plus its whole chain: `\btok` then zero or more
@@ -5630,12 +5645,14 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 #: the choice atomic: whichever alternative's own anchors are satisfied wins the position
 #: outright, with no second pass free to reinterpret what the first already matched.
 def _compound_token_re(tok: str) -> re.Pattern[str]:
-    # Leading `(?<!\w)`, not `\b` -- `_whole_token_re`'s own docstring has the reasoning
-    # (row (d13)'s path tokens start with `.`, a non-word character, and a preceding
-    # backtick is non-word too, so `\b` never fires there at all).
+    # Leading `_docid.TOKEN_LEFT_BOUND`, not `\b` -- `_whole_token_re`'s own docstring
+    # has the reasoning (the deputy's ruling, W37-6, 2026-09-04): a non-word-starting
+    # path token after a backtick, and a hyphen-preceded id (`F-W37-6` must not match
+    # `W37-6`), both need this over a bare `\b`.
     escaped = re.escape(tok)
     return re.compile(
-        rf"(?<!\w){escaped}(?:\.\.(?P<range_end>[0-9]+)\b|\b(?P<continuation>(?:[-/]\d+)*))"
+        rf"{_docid.TOKEN_LEFT_BOUND}{escaped}"
+        r"(?:\.\.(?P<range_end>[0-9]+)\b|\b(?P<continuation>(?:[-/]\d+)*))"
     )
 
 
@@ -6994,6 +7011,132 @@ def _rewrite_findings_readme_body(_body: str) -> str:
     return _FINDINGS_README_BODY
 
 
+# ---------------------------------------------------------------------------------------
+# W37-6 row (d13): NT-0019 §5 step 4 -- the tombstone stubs RFC-181 Slice 4 (and NT-0016
+# Slice 4 before it) left behind at the old notes root beneath `.claude` are retired by
+# THIS run, not kept forever. Ruling 61's stub-and-README exemption was recorded
+# invalidated at exactly this horizon -- the deputy's ruling (W37-6 channel, 2026-09-04),
+# quoting `audit-docs.py`'s own docstring: "until W37-6 deletes the stubs entirely".
+# `tests/test_notes_move_
+# citations.py` passing on the pre-migration tree is not evidence the exemption still
+# stands; it is the pre-migration state that test was always going to see, right up until
+# this step runs.
+#
+# The deletion itself is Ruling 104 §2's class 6, the deputy's second ruling
+# (2026-09-04): "class 6 is the property, not the list ... a file whose entire content
+# is the output of one of the migration's generators, replaced whole." A stub's
+# replacement is not new file content -- it is `docs/REDIRECTS.csv` rows, exactly what
+# NT-0019 §5 step 4 itself names ("deleted; REDIRECTS.csv rows"). `classify_migration_
+# diff`'s `_try_class6_deletion` reads that property directly: the file's own body must
+# match the tombstone shape, and a REDIRECTS.csv row must actually name its path.
+# ---------------------------------------------------------------------------------------
+
+#: A tombstone stub's own "moved to" sentence names its target -- the old notes root's own
+#: README (beneath `.claude`) has no per-note mapping at all in its worked table (that
+#: table is a *sibling* rename, the old RFCs root beneath `.claude` -> `docs/rfcs/`, for
+#: RFCs that were never under the notes root to begin with); every numbered stub's body is
+#: the one true source per note. The same pattern is `classify_migration_diff`'s own
+#: class-6-deletion oracle, read by symbol, never retyped, so a change to the stub's own
+#: wording cannot silently un-key either side.
+_CLAUDE_NOTES_STUB_TARGET_RE: Final = re.compile(r"This note moved to \[`([^`]+)`\]")
+
+#: The directory's own README carries a different, but equally fixed, shape -- the "Old
+#: path → new path" table heading every real README at that old notes root (and this
+#: fixture's own stand-in) writes, never the numbered stub's "moved to" sentence.
+#: `_try_class6_deletion` accepts either as proof of a class-6-shaped deletion; recognised
+#: separately because the two files answer different questions (one note's own
+#: destination; the whole directory's history) and conflating them into one regex would
+#: make a future edit to either wording silently stop recognising the other.
+_CLAUDE_NOTES_README_MARKER_RE: Final = re.compile(
+    r"^## Old path.*new path", re.MULTILINE | re.IGNORECASE
+)
+
+
+def _retire_claude_notes_stubs(
+    root: Path, path_moves: Mapping[str, str], *, delete: bool = True,
+) -> tuple[dict[str, str], list[str]]:
+    """Resolve every tombstone stub at the old notes root beneath `.claude` this run can
+    compose to a real final file, and delete it. Returns `(moves, files_deleted)` --
+    `moves` (`old_rel -> new_rel`, no id) feeds the citation rewrite exactly like every
+    other id-less move
+    (`reference_moves`' own shape); the caller owns adding it to `redirect_rows` (an
+    `old_id`/`new_id` citation-form row only -- never `old_path`/`new_path`, the reasoning
+    below) /`path_moves`/`path_move_groups`.
+
+    A stub names its target one of two ways: RFC-181 Slice 4's own stubs name a final
+    `docs/rfcs/RFC-...` path directly; NT-0016 Slice 4's (Ruling 57) instead name an
+    intermediate `docs/notes/NNNN-*.md` -- one of THIS run's own `docs/notes/` ->
+    `docs/rfcs/` moves, composed through `path_moves` to its real final path. `path_moves`
+    is already fully built by the time the caller reaches this function (every draft's
+    own `was -> new_path` pair, `.get`'s fallback a no-op for the already-final case).
+
+    A stub whose target does not resolve to a real file even after composing -- not
+    proven to occur in the real corpus, but not assumed impossible either -- is left in
+    place rather than guessed at, and correctly withholds the README/directory deletion
+    below (an incomplete migration should never destroy the one artifact recording what
+    is still missing).
+
+    The directory's own README, once every stub is accounted for, is added to `moves`
+    too -- pointed at `docs/rfcs/README.md`, the new working index a citation of the old
+    one should now reach -- so its own citers repoint the identical way a stub's citers
+    do, and so its own deletion gets the identical `old_id` row `_try_class6_deletion`
+    needs (its body matches a different fixed shape, the "Old path → new path" table,
+    never the numbered stub's "moved to" sentence -- `_CLAUDE_NOTES_README_MARKER_RE`).
+
+    **No `old_path`/`new_path` row for the stub itself.** Its own body ("This note moved
+    to ...") is discarded outright and the path it names already held independent,
+    unrelated content before this run touched anything -- an `old_path`/`new_path` row
+    would route it through `classify_migration_diff`'s content-comparison branch
+    (`_classify_content`, classes 1-3), which correctly fails it: neither "content
+    preserved" nor a token inversion describes a stub whose deletion carries nothing
+    forward. `_path_citation_redirect_rows`' `old_id`/`new_id` form (blank `old_path`/
+    `new_path`) already gives `(g)`'s inverse the pair a *citing* file needs; the
+    deletion's own accounting is `_try_class6_deletion`'s job, in `classify_migration_
+    diff`, keyed on that same `old_id` row's presence plus the tombstone body shape --
+    not a second row here.
+
+    `delete` defaults to `True` -- NT-0019 §5 step 4's own deletion, ruled in scope now
+    that its class-6 accounting exists. `delete=False` is kept for the isolated unit
+    proof (`test_retire_claude_notes_stubs_unit`'s own dangling-target case needs to
+    inspect `moves` without mutating a fixture tree it does not own).
+
+    Deleted **before** `_rewrite_citations` runs, the identical ordering constraint a
+    relocated README already needs (`_regenerate_family_readmes`'s own docstring): a
+    citer of a stub this same run also deletes must see the rewrite reach a target that
+    still exists when the sweep reads it, not a path this same run removes out from
+    under it.
+    """
+    stubs_dir = root / ".claude" / "notes"
+    if not stubs_dir.is_dir():
+        return {}, []
+    all_stub_paths = sorted(p for p in stubs_dir.glob("*.md") if p.name != "README.md")
+    moves: dict[str, str] = {}
+    for path in all_stub_paths:
+        match = _CLAUDE_NOTES_STUB_TARGET_RE.search(path.read_text(encoding="utf-8"))
+        if match is None:
+            continue
+        target = match.group(1)
+        final = path_moves.get(target, target)
+        if not (root / final).is_file():
+            continue
+        moves[path.relative_to(root).as_posix()] = final
+    deleted: list[str] = []
+    if not delete:
+        return moves, deleted
+    for old_rel in moves:
+        (root / old_rel).unlink()
+        deleted.append(old_rel)
+    if moves and len(moves) == len(all_stub_paths):
+        readme = stubs_dir / "README.md"
+        if readme.is_file():
+            readme_rel = readme.relative_to(root).as_posix()
+            readme.unlink()
+            deleted.append(readme_rel)
+            moves[readme_rel] = "docs/rfcs/README.md"
+        _remove_if_empty(stubs_dir)
+    return moves, deleted
+
+
 def _regenerate_family_readmes(
     root: Path, drafts: Sequence[_Draft], moves: Mapping[str, str]
 ) -> tuple[list[str], list[str], dict[str, str]]:
@@ -7852,19 +7995,19 @@ def migrate(root: Path) -> MigrateResult:
         path_moves[old_rel] = new_rel
         path_move_groups.setdefault(old_rel, []).append((None, new_rel))
 
-    # W37-6 row (d13), NT-0019 §5 step 4 (the old notes root beneath `.claude`'s own
-    # tombstone stubs): NOT implemented in this PR. A working discovery+citation-rewrite
-    # mechanism was built and proven (repoints a citing frozen plan's own reference
-    # correctly, DP-7-clean -- that root's own README table has the
-    # composition-through-`docs/notes/` reasoning), but retiring the stubs themselves
-    # does not fit any of Ruling 68's six
-    # permitted classes for row (g) — the stub's own body ("This note moved to ...") is
-    # discarded outright and its target already held unrelated, independent content
-    # before this run touched anything, so `classify_migration_diff` reports the
-    # deletion "vanished, unaccounted" regardless of whether the citation rewrite itself
-    # is correct. Left for the deputy: either row (g) gains a seventh class for this
-    # shape, or the deletion routes through some other accounting. Reported rather than
-    # shipped partially: d13 stays at its current figure this PR, d9-d12 do not.
+    # W37-6 row (d13), NT-0019 §5 step 4: the old notes root beneath `.claude`'s own
+    # tombstone stubs, retired -- `_retire_claude_notes_stubs`' own docstring has the
+    # composition and the ordering reasoning, and why this loop adds only an `old_id`/
+    # `new_id` citation-form row, never `old_path`/`new_path`. `path_moves` is complete
+    # by this point (every draft's own move, plus every id-less move recorded above), so
+    # a stub naming an intermediate `docs/notes/NNNN-*.md` composes to this run's own
+    # final `docs/rfcs/RFC-...` path.
+    claude_notes_moves, claude_notes_deleted = _retire_claude_notes_stubs(root, path_moves)
+    files_deleted = [*files_deleted, *claude_notes_deleted]
+    for old_rel, new_rel in claude_notes_moves.items():
+        redirect_rows.extend(_path_citation_redirect_rows(old_rel, new_rel))
+        path_moves[old_rel] = new_rel
+        path_move_groups.setdefault(old_rel, []).append((None, new_rel))
 
     # NT-0019 §5.2's README regeneration -- bodies, here, **before** the citation sweep.
     # A relocated README has to leave its old path before `_rewrite_citations` runs, or the
@@ -8229,7 +8372,14 @@ _RULING_68_CLASSES: Final[tuple[tuple[str, str], ...]] = (
      "generated for having no way to be told apart from one): `classify_migration_diff`'s "
      "`_try_class6` requires membership in `_run_second_migration`'s own "
      "`MigrateResult.generated_paths` first, and only then the independent second "
-     "run's content equality"),
+     "run's content equality. The deputy's ruling (W37-6, 2026-09-04) extends the "
+     "identical property to a generator whose own action is a whole-file *deletion*, not "
+     "a write — NT-0019 §5 step 4's tombstone-stub retirement (the old notes root beneath "
+     "`.claude`) replaces "
+     "the file wholly with `REDIRECTS.csv` rows, its own stated output "
+     "(`_try_class6_deletion`: the body matches the tombstone shape, and a REDIRECTS.csv "
+     "row actually names the path — not a filename or a directory check, the same "
+     "by-property standard the write-shaped half already holds to)"),
 )
 
 #: The bucket for a hunk in none of the above. Ruling 68 §2: "A hunk the filter cannot
@@ -8374,6 +8524,12 @@ def classify_migration_diff(
     """
     audit_docs = _load_audit_docs()
     rows = _read_redirect_rows(new_root)
+    # W37-6 row (d13), the deputy's class-6-deletion ruling (2026-09-04): every `old_id`
+    # a REDIRECTS.csv row names, for `_try_class6_deletion`'s "a row actually names this
+    # path" condition -- read from the raw rows, not `moves` below (which only tracks
+    # `old_path`/`new_path` pairs; a stub's own row is deliberately `old_id`/`new_id`
+    # only, `_retire_claude_notes_stubs`' own docstring has why).
+    redirect_old_ids = frozenset(row["old_id"] for row in rows if row.get("old_id"))
     # Ruling 105 §2: every id this run itself allocated, so the shared DP-7 predicate can
     # tell "a header this run wrote" from "any leading block that happens to parse" --
     # `.claude/skills/**` and `.claude/agents/` foreign front matter mostly parses (its
@@ -8531,6 +8687,37 @@ def classify_migration_diff(
         buckets["6-generated-artifact"].append(rel)
         return True
 
+    def _try_class6_deletion(old_rel: str, old_text: str) -> bool:
+        """True (and bucketed) iff a whole-file *deletion* is itself the output of one
+        of the migration's generators -- the deputy's ruling (W37-6, 2026-09-04),
+        extending Ruling 104 §2's property (*"a file whose entire content is the output
+        of one of the migration's generators, replaced whole"*) to a generator whose own
+        action on this file is deletion, not a write. NT-0019 §5 step 4's own words for
+        what replaces a retired tombstone stub at the old notes root beneath `.claude`:
+        *"deleted; REDIRECTS.csv rows"* -- the row **is** the whole of what the generator
+        produces in its place,
+        the identical "replaced whole, never partially edited" property class 6 already
+        states for a regenerated README or INDEX.md.
+
+        Two conditions, both checked directly rather than trusted from the shape of the
+        call site: `old_text` (the file's own pre-migration body) must match one of the
+        two fixed shapes this retirement produces -- a numbered stub's own "moved to"
+        sentence, or the directory's own README table -- never assume every whole-file
+        deletion is one; and `redirect_old_ids` must actually name `old_rel` as an
+        `old_id` -- never assume the generator ran just because the body shape matches; a
+        hand-deleted stub with no row is still unaccounted for and must fail loudly, not
+        pass by resemblance.
+        """
+        if (
+            _CLAUDE_NOTES_STUB_TARGET_RE.search(old_text) is None
+            and _CLAUDE_NOTES_README_MARKER_RE.search(old_text) is None
+        ):
+            return False
+        if old_rel not in redirect_old_ids:
+            return False
+        buckets["6-generated-artifact"].append(old_rel)
+        return True
+
     def _classify_content(
         old_rel: str, new_rel: str, compare_against: str, new_text: str, *, moved: bool,
         stamped_header_removed: bool,
@@ -8581,6 +8768,8 @@ def classify_migration_diff(
             if not targets:
                 new_text = new_files.get(old_rel)
                 if new_text is None:
+                    if _try_class6_deletion(old_rel, old_text):
+                        continue
                     _fail(
                         old_rel,
                         f"{old_rel}: vanished with no REDIRECTS.csv row accounting for it",
@@ -8632,8 +8821,12 @@ def classify_migration_diff(
                 stripped = _strip_front_matter(new_text)
                 target_inverse = _inverse_for(new_rel)
                 for new_token in sorted(target_inverse, key=len, reverse=True):
+                    # `_docid.TOKEN_LEFT_BOUND`, not `\b` -- `_whole_token_re`'s own
+                    # docstring has the reasoning (the deputy's ruling, W37-6,
+                    # 2026-09-04): a plain `\b` inverts `W37-6` inside `F-W37-6` too.
                     stripped = re.sub(
-                        rf"\b{re.escape(new_token)}\b", target_inverse[new_token], stripped
+                        rf"{_docid.TOKEN_LEFT_BOUND}{re.escape(new_token)}\b",
+                        target_inverse[new_token], stripped,
                     )
                 pieces.append(stripped)
             if ok:

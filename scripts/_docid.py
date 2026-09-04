@@ -45,6 +45,23 @@ ID_RE: Final = re.compile(r"\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)
 # NT-0019 §1.1 rule 3: "Filenames pad the integer to the standard's width, currently five."
 PAD_WIDTH: Final = 5
 
+# W37-6, 2026-09-04 (the deputy's ruling): the left-hand boundary a citation-token regex
+# needs, in place of a bare `\b`. `\b` tests a \w/\W *transition*, and `-` is \W, so
+# `\bW[0-9]+[a-z]?-[0-9]+\b` (a workstream/slice id) still matches `W37-6` *starting at its
+# second character* inside `F-W37-6` (a finding id citing that slice): the hyphen before
+# `W` is non-word, `W` is word, that IS a transition, so `\b` fires exactly where it must
+# not. This grammar's identifiers use `-` as an internal separator, not a genuine word
+# boundary, so the character class this lookbehind refuses must include it alongside the
+# ordinary word characters: `(?<![A-Za-z0-9_-])`. Proof: `F-W37-6` leaves `W37-6`
+# unmatched; `(W37-6)` and ` W37-6.` (a real non-identifier character before it) still
+# match, so a genuine citation is not refused along with the false one.
+#
+# One constant, read by every citation-token regex in both `doc-id.py` (the forward sweep
+# and its own inverse helpers) and `audit-docs.py` (DP-7's `_inverse_token_pattern`) —
+# never retyped, for the identical reason `LEGACY_FORM_PATTERNS` above is one shared tuple
+# rather than a private copy per script.
+TOKEN_LEFT_BOUND: Final = r"(?<![A-Za-z0-9_-])"
+
 # NT-0019 §7 acceptance item (d)'s pattern, and `audit-docs.py` check 36's third clause —
 # "one rule at two times" (Ruling 67 §2): both must read this **one** shared constant,
 # never a private copy each script maintains independently. Ruling 67 §2 Part 1: every

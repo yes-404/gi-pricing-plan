@@ -2408,6 +2408,27 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     # split like every other path row, and no real `docs/REDIRECTS.csv` `old_path` entry
     # exists for that root's citation today, so the whole population reads disclosed,
     # none of it fatal — a change in classification, not in what the tree contains.
+    #
+    # UPDATE, W37-6, 2026-09-04 (the deputy's second ruling, correction #2): the
+    # citation-rewrite mechanism for the old notes root beneath `.claude` is now fully
+    # shipped, not deferred — `doc-id.migrate` calls the retirement function and its
+    # numbered stubs, and the directory's own README once every stub resolves, are
+    # actually deleted and their citers repointed, wired into `classify_migration_diff`
+    # as a class-6 deletion (`_try_class6_deletion`, keyed on the stub's own body shape
+    # plus a `docs/REDIRECTS.csv` `old_id` row naming it — never on path or filename
+    # alone, per the deputy's own broken-input-proof requirement). This is a real
+    # reduction, not a reclassification: re-measured against control, the migrated
+    # population for this alternative drops from 188 line(s)/38 file(s) (control) to 93
+    # line(s)/31 file(s) (migrated) — citations this mechanism actually repointed no
+    # longer match the pattern at all. The remaining 93 stay wholly disclosed (0 fatal):
+    # `_path_alternative_verdict`'s fatal check is generic across every `old_path` row in
+    # `docs/REDIRECTS.csv`, and this retirement deliberately never emits one (only
+    # `old_id`/`new_id` citation-form rows — an `old_path`/`new_path` row would route the
+    # DP-7 content-comparison classes 1-3, which cannot pass for a stub whose content is
+    # discarded, not carried forward), so no citation of this root's own files was ever
+    # going to read fatal by this row's own predicate regardless of whether the mechanism
+    # ran — the 188->93 drop is the actual evidence the rewrite happened, not the DISCLOSE
+    # verdict by itself.
     "d9": FAIL,         # docs/plans/2026- — real file citations remain unrewritten
     "d10": FAIL,        # docs/audit/ — real file citations remain unrewritten
     "d11": FAIL,        # docs/notes/ — small fatal residual after the wrap/dir-token fix

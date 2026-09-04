@@ -1267,6 +1267,212 @@ def test_compound_token_re_matches_a_dot_leading_token_after_a_backtick(
     assert m.group(0) == tok
 
 
+def test_whole_token_re_does_not_match_a_hyphen_preceded_fragment(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The deputy's ruling (W37-6, 2026-09-04), the exact case executor-30-2 measured on
+    row (d8): `\\b` alone treats `-` as a boundary transition, so `\\bW37-6\\b` still
+    matches `W37-6` *starting at its second character* inside `F-W37-6` (a finding id
+    citing that slice). `_docid.TOKEN_LEFT_BOUND` refuses a hyphen immediately before the
+    token too, alongside every ordinary word character -- proven both ways: the false
+    match is gone, and a genuine citation surrounded by real non-identifier characters
+    still matches.
+    """
+    tok = "W37-6"
+    pattern = doc_id_cli._whole_token_re(tok)
+    assert pattern.search("F-W37-6") is None, "must not match inside a longer identifier"
+    assert pattern.search("(W37-6)") is not None
+    assert pattern.search(" W37-6.") is not None
+
+
+def test_compound_token_re_does_not_match_a_hyphen_preceded_fragment(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    tok = "W37-6"
+    pattern = doc_id_cli._compound_token_re(tok)
+    assert pattern.search("F-W37-6") is None, "must not match inside a longer identifier"
+    m = pattern.search("(W37-6)")
+    assert m is not None
+    assert m.group(0) == tok
+
+
+# ---------------------------------------------------------------------------------------
+# Row (d13), NT-0019 §5 step 4: the old notes root beneath `.claude`'s own tombstone
+# stubs, retired -- `_retire_claude_notes_stubs`' own docstring has the composition and
+# ordering reasoning. The deletion itself is Ruling 104 §2's class 6 (the deputy's second
+# ruling, W37-6, 2026-09-04): a whole-file deletion whose replacement is a REDIRECTS.csv
+# row is the property class 6 already states for a regenerated write, just for a
+# generator whose own action is deletion. `_try_class6_deletion`'s own docstring has the
+# full reasoning; the three broken-input proofs below are the deputy's own worked cases.
+#
+# `_notes_root()` builds the literal path by concatenation throughout this section, never
+# as one written-out string: this test file is itself part of the tracked corpus
+# `test_no_living_file_cites_the_old_notes_path` scans, and a literal occurrence of the
+# old path here would make that test flag this file -- the identical self-referential
+# trap that test's own docstring already names.
+# ---------------------------------------------------------------------------------------
+
+
+def _notes_root(rest: str = "") -> str:
+    return ".claude" + "/notes" + rest
+
+
+def test_claude_notes_stub_is_retired_and_its_citations_repointed(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """The fixture corpus's own stub names an intermediate `docs/notes/0001-example-
+    note.md`, one of this run's own `docs/notes/` -> `docs/rfcs/` moves — composed to its
+    real final path, not assumed.
+    """
+    citer = pristine_a / "docs" / "_templates" / "claude-notes-citation-check.md"
+    citer.write_text(
+        f"See `{_notes_root('/0001-example-fixture-note.md')}` for the background.\n",
+        encoding="utf-8",
+    )
+
+    doc_id_cli.migrate(pristine_a)
+
+    assert not (pristine_a / ".claude" / "notes").exists(), (
+        "every stub resolved -- the whole directory must be gone, README included"
+    )
+    out = citer.read_text(encoding="utf-8")
+    assert "docs/rfcs/RFC-00001-example-finding-needs-a-follow-up-fix.md" in out, out
+    assert _notes_root("/") not in out, out
+
+
+def test_retire_claude_notes_stubs_unit(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Direct unit proof, isolated from the rest of `migrate()`: an intermediate target
+    composes through `path_moves`, a stub naming a target that never resolves is left in
+    place (and withholds the README/directory deletion), and the README is deleted only
+    once every stub is accounted for.
+    """
+    notes_dir = tmp_path / ".claude" / "notes"
+    notes_dir.mkdir(parents=True)
+    (notes_dir / "README.md").write_text("# Moved\n\n(fixture index)\n", encoding="utf-8")
+    (notes_dir / "0001-resolves.md").write_text(
+        "This note moved to [`docs/notes/0001-intermediate.md`]"
+        "(../../docs/notes/0001-intermediate.md) on 2026-09-01.\n",
+        encoding="utf-8",
+    )
+    (notes_dir / "0002-dangling.md").write_text(
+        "This note moved to [`docs/notes/0002-never-materialises.md`]"
+        "(../../docs/notes/0002-never-materialises.md) on 2026-09-01.\n",
+        encoding="utf-8",
+    )
+    final = tmp_path / "docs" / "rfcs" / "RFC-00001-final.md"
+    final.parent.mkdir(parents=True)
+    final.write_text("# RFC-00001\n", encoding="utf-8")
+
+    moves, deleted = doc_id_cli._retire_claude_notes_stubs(
+        tmp_path, {"docs/notes/0001-intermediate.md": "docs/rfcs/RFC-00001-final.md"}
+    )
+
+    resolved_rel = _notes_root("/0001-resolves.md")
+    assert moves == {resolved_rel: "docs/rfcs/RFC-00001-final.md"}
+    assert resolved_rel in deleted
+    assert not (notes_dir / "0001-resolves.md").exists()
+    # The dangling stub's target never materialises -- left in place, and it must
+    # withhold the README/directory deletion, not just its own.
+    assert (notes_dir / "0002-dangling.md").exists()
+    assert (notes_dir / "README.md").exists()
+    assert notes_dir.is_dir()
+
+
+_CLAUDE_NOTES_TOMBSTONE_BODY = (
+    "This note moved to [`docs/rfcs/RFC-00099-x.md`](../../docs/rfcs/RFC-00099-x.md)"
+    " on 2026-09-01.\n"
+)
+
+
+def test_class6_deletion_a_stub_deleted_without_its_row_fails_unclassified(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The deputy's first broken-input proof: a stub-shaped body alone is not enough --
+    without a REDIRECTS.csv row naming it, the deletion is exactly as unaccounted as any
+    other vanished file, and must fail loudly rather than pass by resemblance.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    stub_dir = old_root / ".claude" / "notes"
+    stub_dir.mkdir(parents=True)
+    (stub_dir / "0001-x.md").write_text(_CLAUDE_NOTES_TOMBSTONE_BODY, encoding="utf-8")
+    new_root.mkdir(parents=True)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert _notes_root("/0001-x.md") in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_class6_deletion_an_ordinary_file_deleted_fails_unclassified(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The deputy's second broken-input proof: the tombstone-shape check must not pass
+    every deletion -- an ordinary body, deleted with no row, still fails.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    (old_root / "docs" / "plans").mkdir(parents=True)
+    (old_root / "docs" / "plans" / "example.md").write_text(
+        "An ordinary plan, not a tombstone.\n", encoding="utf-8"
+    )
+    new_root.mkdir(parents=True)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert "docs/plans/example.md" in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_class6_deletion_a_stub_deleted_with_its_row_is_class6(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The deputy's third broken-input proof, the positive case: a stub-shaped body,
+    deleted, with a REDIRECTS.csv `old_id`/`new_id` row naming its path -- class 6, not a
+    violation.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    stub_dir = old_root / ".claude" / "notes"
+    stub_dir.mkdir(parents=True)
+    (stub_dir / "0001-x.md").write_text(_CLAUDE_NOTES_TOMBSTONE_BODY, encoding="utf-8")
+    new_root.mkdir(parents=True)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(
+        "old_id,new_id,old_path,new_path,citing_dir\n"
+        f"{_notes_root('/0001-x.md')},docs/rfcs/RFC-00099-x.md,,,\n",
+        encoding="utf-8",
+    )
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert _notes_root("/0001-x.md") in classification.per_class["6-generated-artifact"], (
+        classification.violations
+    )
+    # `docs/REDIRECTS.csv` itself is not asserted clean here: this synthetic tree hand-
+    # writes it only in `new_root`, which a minimal fixture with no real `migrate()` run
+    # cannot account for by any other means -- irrelevant to the property under test.
+    assert not any(
+        _notes_root("/0001-x.md") in v for v in classification.violations
+    ), classification.violations
+
+
 def test_a_prose_wf0n_and_a_heading_wf0n_both_resolve_a_longer_number_does_not(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
