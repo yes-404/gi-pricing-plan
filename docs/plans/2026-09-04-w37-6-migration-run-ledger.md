@@ -694,3 +694,21 @@ inverting byte-for-byte. `ci-watcher-723` dispatched; merges on its report.
 legacy paths (57% docs), keys (62% code), fixtures, pycache, lockfiles, paths-in-code, the
 OQ double-allocation. Every finding has an owner. The third triage (`rest`) reports against
 the same table when it lands.
+
+## 2026-09-04 — #30 split: exclusions/corpus-hygiene are a fresh small PR, not folded into the inverse-record work
+
+Deputy corrected the bundling in the prior entry: the lockfile exclusion, fixture-root
+exclusion, and `.pyc` corpus fix touch nothing the unit-record inverse touches, and
+bundling three unrelated scope items into one large PR is one long build, one large
+review, and one rebase point on the critical path. Split:
+
+- **New executor (`exec-excl`), dispatched now**, one small PR: the three exclusions,
+  declared in `scripts/_docid.py` beside `LEGACY_FORM_PATTERNS` so both scripts read one
+  constant (Ruling 67 §2), plus the `.pyc`/`PYTHONDONTWRITEBYTECODE` corpus fix.
+- **executor-30-2 keeps**: the unit-record inverse and its shapes (paths incl. cause3
+  legacy paths, slash compounds, ranges, relative links, lettered rulings), cause3(a)'s
+  compound keys left whole/listed, cause6's contiguous path citations — rebases on the
+  small PR once it lands (disjoint hunks).
+- **verify105's (d8) addendum**: the `.pyc` item moved out, stays a focused small change.
+
+Both executor-30-2 and verify105 messaged with the corrected scope.
