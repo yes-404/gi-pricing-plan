@@ -72,6 +72,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import posixpath
 import re
 import sys
 from collections.abc import Mapping, Sequence
@@ -474,8 +475,50 @@ _BULLET_ID_ROW = re.compile(r"^-\s*\*\*(FR|NFR|DEP|OQ)-(\d+)\*\*\s*[—-]?\s*(.*
 # several, e.g. "float \| None") is not read as a column boundary.
 _UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
 
+# `audit-docs.py` check 1's own link shape (`[text](target#frag)`), narrowed to a group
+# around the target so a rebase can rewrite it in place. Deliberately excludes a
+# fragment-only link (`(#foo)` — the required-non-empty target group cannot match one), so
+# an intra-document anchor is never touched.
+_MD_LINK_TARGET_RE: Final = re.compile(r"(\[[^\]]*\])\(([^)#\s]+)((?:#[^)]*)?)\)")
 
-def scan_bold_id_rows(path: Path) -> list[Record]:
+
+def _rebase_relative_links(text: str, source_dir: Path, dest_dir: Path) -> str:
+    """Rewrite every relative markdown-link target in `text` so it still resolves once the
+    text — quoted verbatim from a file at `source_dir` — is rendered into a row at
+    `dest_dir` (`docs/INDEX.md` always lives at the corpus root).
+
+    A cell's prose is copied, never re-authored, but a relative link inside it is only
+    correct relative to where it was *written* — a spec's own `docs/specs/`, say.
+    Reproducing that identical string one directory level shallower (`docs/INDEX.md`)
+    silently breaks it: `../research/x.md`, correct from `docs/specs/00-overview.md`,
+    resolves outside the repo entirely from `docs/INDEX.md`. Found as check 1's own
+    broken-link scan going red on a migrated tree (33 hits, 20 of them this cause).
+
+    A link already written relative to `dest_dir` (every `open-questions.md` row, since
+    `open-questions.md` and `INDEX.md` are both direct `docs/` children) round-trips as a
+    no-op: `source_dir == dest_dir` makes the normalise-then-relpath pair an identity.
+
+    Pure `posixpath` string arithmetic, deliberately never `Path.resolve()`: a target need
+    not exist on disk (a dangling citation is `check_citations`'/check 1's own problem to
+    report, not this function's to hide by raising), and repo-relative paths are always
+    POSIX here regardless of platform (`scripts/doc-id.py`'s `posixpath` import is the same
+    choice, for the same reason).
+    """
+
+    def rebase(m: re.Match[str]) -> str:
+        label, target, frag = m.group(1), m.group(2), m.group(3)
+        if target.startswith(("http://", "https://", "mailto:", "/")):
+            return m.group(0)
+        absolute_target = posixpath.normpath(
+            posixpath.join(source_dir.as_posix(), target)
+        )
+        new_target = posixpath.relpath(absolute_target, dest_dir.as_posix())
+        return f"{label}({new_target}{frag})"
+
+    return _MD_LINK_TARGET_RE.sub(rebase, text)
+
+
+def scan_bold_id_rows(path: Path, root: Path) -> list[Record]:
     """`FR-`/`NFR-`/`DEP-`/`OQ-` rows: a bold id in the spec's own table, never a fenced
     header (§1.6: "Requirement rows keep the spec's bold-id convention; their fields are
     the spec table's columns").
@@ -492,6 +535,12 @@ def scan_bold_id_rows(path: Path) -> list[Record]:
     which is `doc-id.py check`'s NT-0019 §7(b) noncontiguous-id failure: a requirement
     correctly renumbered in its spec file by `migrate()`'s citation rewrite never reached
     `docs/INDEX.md`, because this scan never saw it as a row.
+
+    `root` is `docs/INDEX.md`'s own directory — every cell captured here is quoted
+    verbatim into a row rendered there, so any relative markdown link the cell carries is
+    rebased from `path`'s directory to `root` (`_rebase_relative_links`) before the
+    `Header` is built, not after: `render_index` never sees `path` at all, so this is the
+    only point in the pipeline that can still make the rewrite.
     """
     if not path.is_file():
         return []
@@ -514,6 +563,8 @@ def scan_bold_id_rows(path: Path) -> list[Record]:
             prefix, n, rest = m.groups()
             title = rest.strip()
             status = ""
+        title = _rebase_relative_links(title, path.parent, root)
+        status = _rebase_relative_links(status, path.parent, root)
         header = Header(
             id=canonical(prefix, int(n)),
             family=family_of(prefix),
@@ -546,9 +597,9 @@ def build_corpus(root: Path) -> Corpus:
     for subdir in FAMILY_DIRS.values():
         records.extend(scan_document_family(root, subdir))
     records.extend(scan_roadmap_rows(root / "roadmap.md"))
-    records.extend(scan_bold_id_rows(root / "open-questions.md"))
+    records.extend(scan_bold_id_rows(root / "open-questions.md", root))
     for spec_path in sorted((root / "specs").glob("*.md")) if (root / "specs").is_dir() else []:
-        records.extend(scan_bold_id_rows(spec_path))
+        records.extend(scan_bold_id_rows(spec_path, root))
     return Corpus(records)
 
 

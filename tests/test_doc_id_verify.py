@@ -1764,6 +1764,28 @@ def test_classify_failures_counts_an_unattributable_message_rather_than_dropping
     assert classes == {"unclassified": 1}
 
 
+def test_classify_failures_attributes_a_process_core_message_to_check_27(dv: Any) -> None:
+    """Found live during exec-h1's own checkpoint: `check_process_core_digest` (check 27)
+    is the only other check in the checks-1-39 range whose `fail()` messages carry no
+    `check N:` prefix, and every one of its four call sites begins `"process core "`. Red
+    before the fix: the message fell into `"unclassified"` instead of `"27"`, so h1's own
+    per-class breakdown silently hid a real check-27 failure inside a bucket that also
+    catches genuinely unattributable messages — h1's overall verdict was never wrong (the
+    unclassified bucket already counts toward `h1_other`), but the report could not name
+    which check it was.
+    """
+    out = (
+        "FAILED (1):\n"
+        "  - process core `meta.derived_from_digest` (sha256:aaa) does not match the "
+        "current bytes of delivery-process.md (sha256:bbb) — the spec has changed\n"
+    )
+    classes = dv._classify_failures(out)
+    assert classes == {"27": 1}, (
+        "must be attributed to check 27, not folded into 'unclassified' alongside "
+        "messages this predicate genuinely cannot place"
+    )
+
+
 def test_classify_failures_is_empty_when_the_tree_is_clean(dv: Any) -> None:
     assert dv._classify_failures("All checks passed.\n") == {}
 
