@@ -1162,3 +1162,31 @@ disclosed rather than glossed over. `ci-watcher-729` dispatched; merges on its r
 (`w37-6-dp7-frontmatter`, exec-dp7's DP-7 gap fix + REDIRECTS.csv determinism) — DIRTY,
 main moved again since its branch point. `ci-watcher-730` dispatched, rebase requested.
 Continuing on `docs-w37-6-ledger-cont5` (PR #731) since the merged ledger branch is gone.
+
+## 2026-09-04 — #729 fully verified and accepted: main is now UNCHANGED at 13 fatal rows, one fewer
+
+Deputy's independent verification of #729 against its own ruling — the single namespace
+(`git grep -ohE '/tmp/slots/[a-z-]+'` on `main` names no third lock), the announced-slot
+export at the right point in the wrapper, `conftest.py`'s unannounced-only acquisition,
+`setdefault` capping, `conftest_db.py`'s refusal (not substitution) — all confirmed by line
+number against the merged code, both proofs exist as named tests. **The docs run on `main`
+prints `UNCHANGED: 13 fatal row(s), matching the recorded set of 13` — one fewer than this
+morning's 14.**
+
+**One design refinement, a follow-up not a blocker**: `_is_bare_full_run` currently exempts
+any run carrying an explicit path from the slot budget, but `uv run pytest -q backend
+tests` — a full gate typed with `testpaths` entries as arguments — is still a full run that
+should count as bare. Ruled: an explicit path argument that is itself a `pyproject.toml`
+`testpaths` entry counts as bare; a narrower path, a node id, `-k`, `-m` stay exempt. One
+predicate change, one test each way — dispatched to exec-excl as a follow-up when
+convenient, not blocking anything.
+
+**#730's rebase is a real content conflict**, not a stale-diff fast-forward: both #729 and
+#730 added tests to `tests/test_doc_id_migrate.py` in the same area
+(`git merge-tree --write-tree` confirms `CONFLICT (content)`). exec-dp7 told to expect this
+and resolve by keeping both sides' additions. **#723** reads `UNKNOWN`, rebase in flight,
+nothing to do until it settles.
+
+**Next: the checkpoint-1 table** — the 13 fatal rows on `0af63b4`, each with verdict, owner
+and discharging PR (or "unowned"). The deputy's next entry carries it; the ledger records
+it from there and each later entry moves rows off it.
