@@ -1109,3 +1109,15 @@ different orders and diffing bytes identical.
 
 Rebased twice onto moving `main`, both clean, no conflicts. Two commits landed. 510
 targeted tests green, 1 skip, ruff clean. Running the one compliant gate + verify now.
+
+## 2026-09-04 — three gates checked, two fully compliant, one on the shared database
+
+Deputy's process-table read of all three live gates: `exec-dp7` (`wt-h2b`) and `exec-excl`
+(`wt-exclusions`) both capped, `flock`, on their own per-worktree databases. `triage-code`'s
+#723-rebase gate is capped and `flock`-held but has **no `GIP_TEST_DATABASE_URL`** — running
+against the shared default database. No collision at this instant, but it's the one gate
+the teardown race can still reach; a spurious status-code failure there is the first
+suspect, not the code. Told triage-code to create its own database before its next run.
+exec-dp7's proof-of-reading line independently checked by the deputy — "copied verbatim"
+against the one real occurrence of the wrapped line in `dev-commands`, none in
+`python-test` — consistent with what it claimed. The gap is closed.
