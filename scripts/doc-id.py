@@ -5615,12 +5615,14 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
       `\b` sees a transition (`-` to `W`) exactly where none exists in this grammar:
       `-` separates fields of one identifier here, it does not end one.
 
-    `_docid.TOKEN_LEFT_BOUND` (`(?<![A-Za-z0-9_-])`) refuses both: no letter, digit,
-    underscore *or hyphen* immediately before the token, which is `\b`'s own start
-    behaviour for a token that starts with a word character preceded by a genuine
-    non-identifier character, strictly narrowed to also refuse a hyphen-preceded start
-    and strictly widened to also accept a non-word-starting token after another
-    non-word character.
+    `_docid.TOKEN_LEFT_BOUND` (`(?<![A-Za-z0-9_])(?<![A-Z0-9]-)`) refuses both. The
+    first lookbehind is `\b`'s own left half made explicit; the second refuses a
+    start preceded by a hyphen that belongs to an identifier — `[A-Z0-9]-`, never a
+    bare `-`. The narrowing matters: refusing *any* preceding hyphen also stopped
+    the sweep rewriting an ordinary lowercase prose compound (an English prefix
+    hyphenated onto a legacy id, which cites it and must still be rewritten), and
+    that regressed row (d1). Widened, as before, to accept a non-word-starting token
+    after another non-word character.
     """
     return re.compile(rf"{_docid.TOKEN_LEFT_BOUND}{re.escape(tok)}\b(?![-/][0-9])")
 

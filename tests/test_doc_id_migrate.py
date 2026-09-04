@@ -7713,3 +7713,62 @@ def test_reconcile_process_core_digest_must_run_after_padded_citation_normalisat
         "invalidates again — check 27 red on every migrated tree despite having 'just' "
         "run the reconciliation"
     )
+
+
+# ---------------------------------------------------------------------------------------
+# `_docid.TOKEN_LEFT_BOUND` — the deputy's ruling (W37-6, 2026-09-04), narrowed the same
+# day after its first version regressed row (d1). The constant is
+# `(?<![A-Za-z0-9_])(?<![A-Z0-9]-)`: `\b`'s left half made explicit, plus a guard against a
+# hyphen that BELONGS TO AN IDENTIFIER rather than against any hyphen at all.
+#
+# These are the four cases the constant's own comment in `scripts/_docid.py` names as its
+# proof. They exercise `doc-id.py`'s shipped `_whole_token_re` — the real consumer — and
+# not a pattern re-derived here: a re-derived pattern is a different predicate and would
+# prove nothing about what the sweep actually does.
+#
+# The legacy-form ids below are literal fixture data. This module is declared in
+# `_docid.TEST_MODULE_EXCLUSIONS`, so they are not counted as the real tree's residue.
+
+
+def test_token_left_bound_leaves_a_slice_id_inside_a_finding_id_unmatched(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    r"""The defect the constant exists for: `-` is `\W`, so a bare `\b` fires between the
+    `-` and the `W` and matches the slice id *inside* the finding id that cites it."""
+    assert doc_id_cli._whole_token_re("W37-6").search("F-W37-6") is None
+
+    assert re.search(r"\bW37-6\b", "F-W37-6") is not None, (
+        "positive control: a bare \\b DOES match here. If this ever stops being true the "
+        "assertion above is passing for a reason other than the lookbehind, and the test "
+        "has quietly stopped guarding the defect"
+    )
+
+
+def test_token_left_bound_still_matches_a_note_id_after_the_prose_prefix_anti(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`anti-` is an English prefix, not an id field. The character before the hyphen is a
+    lowercase letter, which no legacy id form starts with, so this cites the note and the
+    sweep must still rewrite it. Refusing *any* preceding hyphen is what regressed (d1)."""
+    m = doc_id_cli._whole_token_re("NT-0003").search("the anti-NT-0003 clause")
+    assert m is not None
+    assert m.group(0) == "NT-0003"
+
+
+def test_token_left_bound_still_matches_a_note_id_after_the_prose_prefix_non(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The second of the two real survivors row (d1) reported — same shape as `anti-`."""
+    m = doc_id_cli._whole_token_re("NT-0019").search("their own, non-NT-0019 front matter")
+    assert m is not None
+    assert m.group(0) == "NT-0019"
+
+
+def test_token_left_bound_still_matches_a_delimited_or_sentence_final_slice_id(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The narrowing must not refuse a genuine citation along with the false one: a real
+    non-identifier character before the token still matches."""
+    pattern = doc_id_cli._whole_token_re("W37-6")
+    for text in ("(W37-6)", " W37-6.", "see W37-6 for the reasoning"):
+        assert pattern.search(text) is not None, text
