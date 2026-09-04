@@ -347,20 +347,20 @@ def check_open_question_columns() -> None:
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) < 3:
-            fail(f"open-questions.md:{number}: {match.group(1)} has too few columns")
+            fail(f"check 15: open-questions.md:{number}: {match.group(1)} has too few columns")
             continue
         owner = cells[-2].replace("*", "").strip().lower()
         status = cells[-1].replace("*", "").replace("~", "").strip().lower()
         first = status.split()[0] if status else ""
         if first not in allowed:
             fail(
-                f"open-questions.md:{number}: {match.group(1)} status {cells[-1]!r} is not "
-                f"one of {sorted(allowed)}"
+                f"check 15: open-questions.md:{number}: {match.group(1)} status "
+                f"{cells[-1]!r} is not one of {sorted(allowed)}"
             )
         if not owner or owner in allowed:
             fail(
-                f"open-questions.md:{number}: {match.group(1)} owner {cells[-2]!r} looks "
-                "like a status — the columns may be shifted"
+                f"check 15: open-questions.md:{number}: {match.group(1)} owner "
+                f"{cells[-2]!r} looks like a status — the columns may be shifted"
             )
 
 
@@ -425,8 +425,8 @@ def check_open_question_mirror_status(specs: list[pathlib.Path]) -> None:
                 for word in groups.get(reg_status, {reg_status})
             ):
                 fail(
-                    f"{f.name}:{i + 1}: {oq} mirror row carries no status token matching "
-                    f"the register's {reg_status!r} status"
+                    f"check 23: {f.name}:{i + 1}: {oq} mirror row carries no status token "
+                    f"matching the register's {reg_status!r} status"
                 )
             else:
                 ok += 1
@@ -505,34 +505,34 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
         # 16. the header block README.md requires
         for name in required:
             if name not in fields:
-                fail(f"{rel(f)}: header block is missing the **{name}** field")
+                fail(f"check 16: {rel(f)}: header block is missing the **{name}** field")
         if not any(k.startswith(("Sequencing", "Trigger")) for k in fields):
-            fail(f"{rel(f)}: header block needs a **Sequencing** or **Trigger** field")
+            fail(f"check 16: {rel(f)}: header block needs a **Sequencing** or **Trigger** field")
         status = head_word(fields.get("Status", ""))
         if status not in allowed:
             fail(
-                f"{rel(f)}: status {fields.get('Status', '(absent)')!r} is not one of "
-                f"{sorted(allowed)}"
+                f"check 16: {rel(f)}: status {fields.get('Status', '(absent)')!r} is not "
+                f"one of {sorted(allowed)}"
             )
 
         # 17. numbering, and the heading that must agree with it
         match = re.match(r"^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$", f.name)
         if not match:
-            fail(f"{rel(f)}: filename is not of the form NNNN-kebab-title.md")
+            fail(f"check 17: {rel(f)}: filename is not of the form NNNN-kebab-title.md")
         else:
             number = match.group(1)
             heading = re.search(r"^# NT-(\d{4})\b", text, re.M)
             if not heading:
-                fail(f"{rel(f)}: first heading must read '# NT-{number} — <title>'")
+                fail(f"check 17: {rel(f)}: first heading must read '# NT-{number} — <title>'")
             elif heading.group(1) != number:
                 fail(
-                    f"{rel(f)}: heading says NT-{heading.group(1)} but the filename "
-                    f"says {number} — a note has one identity"
+                    f"check 17: {rel(f)}: heading says NT-{heading.group(1)} but the "
+                    f"filename says {number} — a note has one identity"
                 )
             if number in seen:
                 fail(
-                    f"note number NT-{number} is used by both {rel(seen[number])} and "
-                    f"{rel(f)} — numbers are unique and never reused"
+                    f"check 17: note number NT-{number} is used by both {rel(seen[number])} "
+                    f"and {rel(f)} — numbers are unique and never reused"
                 )
             seen[number] = f
             status_of[number] = status
@@ -543,27 +543,27 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
             if target.startswith(("http://", "https://", "mailto:")):
                 continue
             if not (f.parent / target).resolve().exists():
-                fail(f"{rel(f)}: broken link: {target}")
+                fail(f"check 19: {rel(f)}: broken link: {target}")
         for rid in sorted(set(_REQ_CITED.findall(text)) - defined):
-            fail(f"{rel(f)}: references {rid}, which no spec defines")
+            fail(f"check 19: {rel(f)}: references {rid}, which no spec defines")
         for oq in sorted(set(_OQ_CITED.findall(text)) - questions):
-            fail(f"{rel(f)}: references {oq}, which open-questions.md does not list")
+            fail(f"check 19: {rel(f)}: references {oq}, which open-questions.md does not list")
         for ref in sorted({int(n) for n in _ADR_CITED.findall(text)} - adrs):
-            fail(f"{rel(f)}: references ADR-{ref}, for which no file exists")
+            fail(f"check 19: {rel(f)}: references ADR-{ref}, for which no file exists")
         # NT- ids are resolved after the loop: a note may cite one numbered above it.
         cited[f] = set(re.findall(r"\bNT-(\d{4})\b", text)) - {f.name[:4]}
 
         # 20. a note may propose a requirement; it may never define one
         for rid in sorted(set(_REQ_DEFINED.findall(text))):
             fail(
-                f"{rel(f)}: defines {rid} in the bold form reserved for docs/specs/ — "
-                "a note may propose a requirement, never carry one"
+                f"check 20: {rel(f)}: defines {rid} in the bold form reserved for "
+                "docs/specs/ — a note may propose a requirement, never carry one"
             )
 
     # 18. the index and the directory, in both directions
     readme = NOTES / "README.md"
     if not readme.is_file():
-        fail("docs/notes/README.md is missing — the index is part of the standard")
+        fail("check 18: docs/notes/README.md is missing — the index is part of the standard")
         return
     indexed: dict[str, tuple[str, str]] = {}
     for line in readme.read_text(encoding="utf-8").splitlines():
@@ -574,25 +574,25 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
         indexed[row.group(1)] = (row.group(2), cells[3] if len(cells) > 3 else "")
     for number, path in sorted(seen.items()):
         if number not in indexed:
-            fail(f"{rel(path)} is not listed in the docs/notes/README.md index")
+            fail(f"check 18: {rel(path)} is not listed in the docs/notes/README.md index")
         elif indexed[number][0] != path.name:
             fail(
-                f"index row NT-{number} links to {indexed[number][0]}, but the file is "
-                f"{path.name}"
+                f"check 18: index row NT-{number} links to {indexed[number][0]}, but the "
+                f"file is {path.name}"
             )
         elif head_word(indexed[number][1]) != status_of[number]:
             fail(
-                f"note NT-{number}: index says status "
+                f"check 18: note NT-{number}: index says status "
                 f"{head_word(indexed[number][1])!r}, the file says {status_of[number]!r}"
             )
     for number in sorted(set(indexed) - set(seen)):
-        fail(f"index lists note NT-{number}, but no such file exists in docs/notes/")
+        fail(f"check 18: index lists note NT-{number}, but no such file exists in docs/notes/")
 
     # 19, second pass: a note citing another note — a `superseded` row must name a real one,
     # and a retired number must not be quietly resurrected by a reference to it.
     for f, refs in sorted(cited.items()):
         for ref in sorted(refs - set(seen)):
-            fail(f"{rel(f)}: references NT-{ref}, for which no note exists")
+            fail(f"check 19: {rel(f)}: references NT-{ref}, for which no note exists")
     notes.append(f"{len(files)} working notes, indexed and numbered")
 
 
@@ -637,7 +637,7 @@ def check_table_rows(md: list[pathlib.Path]) -> None:
                 offenders = re.findall(r"`[^`]*(?<!\\)\|[^`]*`", line)
                 detail = f" — unescaped pipe in {offenders[0]}" if offenders else ""
                 fail(
-                    f"table row has {cells} cells, its header has {header_cells} "
+                    f"check 22: table row has {cells} cells, its header has {header_cells} "
                     f"({where}){detail}"
                 )
 
@@ -747,8 +747,8 @@ def check_finding_citations() -> None:
         registered |= set(_FINDING_TABLE_CELL.findall(REGISTER.read_text(encoding="utf-8")))
     else:
         fail(
-            f"{REGISTER.relative_to(REPO).as_posix()} does not exist — check 25 has no "
-            "register to resolve against and would pass every citation vacuously"
+            f"check 25: {REGISTER.relative_to(REPO).as_posix()} does not exist — check 25 "
+            "has no register to resolve against and would pass every citation vacuously"
         )
     for phase_register in sorted((ROOT / "audit" / "phases").glob("*/register.md")):
         registered |= set(
@@ -779,7 +779,10 @@ def check_finding_citations() -> None:
     scanned_files: set[pathlib.Path] = set()
     for d in scan_dirs:
         if not d.is_dir():
-            fail(f"{d.relative_to(REPO).as_posix()} does not exist — check 25 cannot scan it")
+            fail(
+                f"check 25: {d.relative_to(REPO).as_posix()} does not exist — check 25 "
+                "cannot scan it"
+            )
             continue
         scanned_files |= set(d.rglob("*.md"))
     scanned = sorted(scanned_files)
@@ -793,10 +796,10 @@ def check_finding_citations() -> None:
         )
         for fid in sorted(cited - registered - local):
             fail(
-                f"{f.relative_to(REPO)}: cites finding {fid}, which resolves nowhere -- "
-                "not docs/audit/register.md, not an archived phase register, not a "
-                "docs/audit/work/*/README.md or closure-records.md closure record, and not "
-                "defined locally in this file"
+                f"check 25: {f.relative_to(REPO)}: cites finding {fid}, which resolves "
+                "nowhere -- not docs/audit/register.md, not an archived phase register, "
+                "not a docs/audit/work/*/README.md or closure-records.md closure record, "
+                "and not defined locally in this file"
             )
     notes.append(
         f"check 25: {len(scanned)} file(s) scanned for finding citations against "
@@ -844,7 +847,7 @@ def check_process_core_drift() -> None:
         # passes when its subject is deleted is a check anyone can disarm by deleting it.
         if "delivery-process.core.json" in spec_text:
             fail(
-                "docs/process/delivery-process.core.json is missing, but "
+                "check 26: docs/process/delivery-process.core.json is missing, but "
                 "delivery-process.md still lists it as a required artifact (§10) — "
                 "restore the extract, or remove the §10 bullet that requires it"
             )
@@ -856,7 +859,7 @@ def check_process_core_drift() -> None:
     try:
         core = json.loads(raw)
     except json.JSONDecodeError as exc:
-        fail(f"docs/process/delivery-process.core.json is not valid JSON: {exc}")
+        fail(f"check 26: docs/process/delivery-process.core.json is not valid JSON: {exc}")
         return
 
     # The authority rule (NT-0014 §3) enforced on the artifact that claims it, rather than
@@ -864,15 +867,15 @@ def check_process_core_drift() -> None:
     meta = core.get("meta", {})
     if meta.get("authoritative") is not False:
         fail(
-            "process core `meta.authoritative` must be `false` — the markdown spec is "
-            f"authoritative and the extract is derived (NT-0014 §3); found "
+            "check 26: process core `meta.authoritative` must be `false` — the markdown "
+            f"spec is authoritative and the extract is derived (NT-0014 §3); found "
             f"{meta.get('authoritative')!r}"
         )
     derived = meta.get("derived_from")
     if not derived or not (REPO / derived).is_file():
         fail(
-            f"process core `meta.derived_from` names {derived!r}, which is not a file in "
-            "this repository — the extract must say what it is derived from"
+            f"check 26: process core `meta.derived_from` names {derived!r}, which is not "
+            "a file in this repository — the extract must say what it is derived from"
         )
 
     # `## 7. Escalation guards …` → section "7"; the largest `N. ` item under it → its step
@@ -908,29 +911,30 @@ def check_process_core_drift() -> None:
         if not found:
             uncited += 1
             fail(
-                f"process core: `source` value {src!r} cites no § section — every block "
-                "must name the spec section it was extracted from (NT-0014 §3)"
+                f"check 26: process core: `source` value {src!r} cites no § section — "
+                "every block must name the spec section it was extracted from (NT-0014 §3)"
             )
             continue
         for section, step in found:
             checked += 1
             if section not in steps:
                 fail(
-                    f"process core cites §{section} (in {src!r}), but delivery-process.md "
-                    f"has no `## {section}.` heading — the extract is derived, so fix the "
-                    "extract, not the spec"
+                    f"check 26: process core cites §{section} (in {src!r}), but "
+                    f"delivery-process.md has no `## {section}.` heading — the extract is "
+                    "derived, so fix the extract, not the spec"
                 )
             elif step and int(step) > steps[section]:
                 fail(
-                    f"process core cites §{section}.{step} (in {src!r}), but §{section} "
-                    f"has only {steps[section]} numbered steps — `§N.M` means step M of "
-                    "that section's list, and the spec has no `###` subsections"
+                    f"check 26: process core cites §{section}.{step} (in {src!r}), but "
+                    f"§{section} has only {steps[section]} numbered steps — `§N.M` means "
+                    "step M of that section's list, and the spec has no `###` subsections"
                 )
 
     if not checked and not uncited:
         fail(
-            "process core carries no `source` citations at all — every block must cite the "
-            "spec section it came from, which is what makes drift detectable (NT-0014 §3)"
+            "check 26: process core carries no `source` citations at all — every block "
+            "must cite the spec section it came from, which is what makes drift "
+            "detectable (NT-0014 §3)"
         )
         return
 
@@ -993,32 +997,34 @@ def check_process_core_digest() -> None:
 
     if not recorded_tree:
         fail(
-            "process core `meta.verified_against_tree` is missing or empty — the digest "
-            "must be paired with the commit it was taken at (Ruling 45 §2), so a future "
-            "mismatch can name the exact range to read"
+            "check 27: process core `meta.verified_against_tree` is missing or empty — "
+            "the digest must be paired with the commit it was taken at (Ruling 45 §2), "
+            "so a future mismatch can name the exact range to read"
         )
 
     if not recorded_digest:
         fail(
-            "process core `meta.derived_from_digest` is missing — Ruling 45 requires a "
-            "`sha256:`-prefixed digest of the exact bytes of `meta.derived_from` "
-            "(delivery-process.md), recorded at the commit it was last reconciled against"
+            "check 27: process core `meta.derived_from_digest` is missing — Ruling 45 "
+            "requires a `sha256:`-prefixed digest of the exact bytes of "
+            "`meta.derived_from` (delivery-process.md), recorded at the commit it was "
+            "last reconciled against"
         )
         return
 
     if not recorded_digest.startswith("sha256:"):
         fail(
-            f"process core `meta.derived_from_digest` {recorded_digest!r} is not "
-            "`sha256:`-prefixed — Ruling 45 specifies a sha256 digest of the exact bytes"
+            f"check 27: process core `meta.derived_from_digest` {recorded_digest!r} is "
+            "not `sha256:`-prefixed — Ruling 45 specifies a sha256 digest of the exact "
+            "bytes"
         )
         return
 
     actual_digest = "sha256:" + hashlib.sha256(PROCESS_SPEC.read_bytes()).hexdigest()
     if recorded_digest != actual_digest:
         fail(
-            f"process core `meta.derived_from_digest` ({recorded_digest}) does not match "
-            f"the current bytes of delivery-process.md ({actual_digest}) — the spec has "
-            f"changed since the extract was last reconciled at "
+            f"check 27: process core `meta.derived_from_digest` ({recorded_digest}) "
+            f"does not match the current bytes of delivery-process.md ({actual_digest}) "
+            f"— the spec has changed since the extract was last reconciled at "
             f"{recorded_tree or '<unrecorded commit>'}; read "
             f"`git diff {recorded_tree or '<unrecorded commit>'}..HEAD -- "
             "docs/process/delivery-process.md`, reconcile the extract against it, and "
@@ -1111,21 +1117,21 @@ def check_plan_acceptance_standard() -> None:
             try:
                 header = _docid.parse_header(f)
             except _docid.HeaderError as exc:
-                fail(f"docs/plans/{name}: check 28 cannot read the header — {exc}")
+                fail(f"check 28: docs/plans/{name}: check 28 cannot read the header — {exc}")
                 continue
             if header is None:
                 fail(
-                    f"docs/plans/{name}: no front-matter header — check 28 takes a filed "
-                    "plan's kind and filing date from `kind:` and `created:` after the "
-                    "NT-0019 migration, and can classify or date nothing without them"
+                    f"check 28: docs/plans/{name}: no front-matter header — check 28 takes "
+                    "a filed plan's kind and filing date from `kind:` and `created:` after "
+                    "the NT-0019 migration, and can classify or date nothing without them"
                 )
                 continue
             if header.kind in _PLAN_TERMINAL_KINDS:
                 continue
             if header.created is None:
                 fail(
-                    f"docs/plans/{name}: header has no `created:` date — check 28 cannot "
-                    "place it against the "
+                    f"check 28: docs/plans/{name}: header has no `created:` date — check "
+                    "28 cannot place it against the "
                     f"{PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} cutoff"
                 )
                 continue
@@ -1137,11 +1143,11 @@ def check_plan_acceptance_standard() -> None:
             m = _PLAN_FILENAME_DATE.match(name)
             if not m:
                 fail(
-                    f"docs/plans/{name}: not one of the four documented kind-suffixes "
-                    "(-ledger/-final-review/-verified/-handover) and carries no "
-                    "`YYYY-MM-DD-` date prefix either — docs/plans/README.md §Naming "
-                    "requires the prefix on every filed plan, and check 28 cannot classify "
-                    "or date this file without it"
+                    f"check 28: docs/plans/{name}: not one of the four documented "
+                    "kind-suffixes (-ledger/-final-review/-verified/-handover) and "
+                    "carries no `YYYY-MM-DD-` date prefix either — "
+                    "docs/plans/README.md §Naming requires the prefix on every filed "
+                    "plan, and check 28 cannot classify or date this file without it"
                 )
                 continue
             filed = date.fromisoformat(m.group(1))
@@ -1158,10 +1164,10 @@ def check_plan_acceptance_standard() -> None:
         )
         if heading_idx is None:
             fail(
-                f"docs/plans/{name}: no \"Acceptance Standard\" heading — every plan filed "
-                f"on or after {PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} must state one "
-                "explicitly (delivery-process.md §5 step 4 / §6 step 1; field format in "
-                ".claude/skills/writing-plans/SKILL.md)"
+                f"check 28: docs/plans/{name}: no \"Acceptance Standard\" heading — every "
+                f"plan filed on or after {PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} "
+                "must state one explicitly (delivery-process.md §5 step 4 / §6 step 1; "
+                "field format in .claude/skills/writing-plans/SKILL.md)"
             )
             continue
 
@@ -1176,9 +1182,9 @@ def check_plan_acceptance_standard() -> None:
                 break
         if not body_has_content:
             fail(
-                f"docs/plans/{name}: \"Acceptance Standard\" heading has no content before "
-                "the next heading — a bare heading is \"implied\", not \"actually defined\" "
-                "(delivery-process.md §5 step 4)"
+                f"check 28: docs/plans/{name}: \"Acceptance Standard\" heading has no "
+                "content before the next heading — a bare heading is \"implied\", not "
+                "\"actually defined\" (delivery-process.md §5 step 4)"
             )
 
     if legacy:
@@ -3211,7 +3217,7 @@ def main() -> int:
             if target.startswith(("http://", "https://", "mailto:")):
                 continue
             if not (f.parent / target).resolve().exists():
-                fail(f"broken link in {f.relative_to(ROOT)}: {target}")
+                fail(f"check 1: broken link in {f.relative_to(ROOT)}: {target}")
 
     # 2/3. requirement ids
     defined: dict[str, list[str]] = collections.defaultdict(list)
@@ -3220,7 +3226,7 @@ def main() -> int:
             defined[m.group(1)].append(f.name)
     for rid, where in defined.items():
         if len(where) > 1:
-            fail(f"{rid} defined in multiple specs: {where}")
+            fail(f"check 2: {rid} defined in multiple specs: {where}")
 
     # A filed plan is written *before* the spec change it argues for, so it names the id it
     # intends to take — "Next free: `FR-DATA-53`" — which by definition is not yet defined.
@@ -3242,7 +3248,7 @@ def main() -> int:
             for m in _REQ_CITED.finditer(cited):
                 referenced[m.group(1)].add(str(f.relative_to(ROOT)))
     for rid in sorted(set(referenced) - set(defined)):
-        fail(f"{rid} referenced but never defined (in {sorted(referenced[rid])})")
+        fail(f"check 2: {rid} referenced but never defined (in {sorted(referenced[rid])})")
 
     # Numbering. Two regimes, and which one applies is read off the ids themselves, not
     # assumed: a module-scoped id (`FR-MODEL-45`) belongs to a per-module sequence that must
@@ -3259,7 +3265,7 @@ def main() -> int:
     for prefix, nums in sorted(by_prefix.items()):
         missing = sorted(set(range(1, max(nums) + 1)) - set(nums))
         if missing:
-            fail(f"{prefix} has numbering gaps: {missing}")
+            fail(f"check 3: {prefix} has numbering gaps: {missing}")
     notes.append(
         f"requirement numbering: {len(scoped)} module-scoped id(s) across "
         f"{len(by_prefix)} per-module sequence(s) checked for contiguity; "
@@ -3280,8 +3286,8 @@ def main() -> int:
             module_of[f.name] = m.group(1)
         else:
             fail(
-                f"{f.relative_to(ROOT)}: no `**Module code:** \u0060XXX\u0060` in its status "
-                "line — check 14 groups workflow coverage by it"
+                f"check 14: {f.relative_to(ROOT)}: no `**Module code:** \u0060XXX\u0060` "
+                "in its status line — check 14 groups workflow coverage by it"
             )
 
     # 4. open questions
@@ -3291,9 +3297,9 @@ def main() -> int:
     oq_file = ROOT / "open-questions.md"
     in_file = set(_OQ_DEFINED.findall(oq_file.read_text(encoding="utf-8")))
     for q in sorted(in_specs - in_file):
-        fail(f"{q} raised in a spec but not mirrored into open-questions.md")
+        fail(f"check 4: {q} raised in a spec but not mirrored into open-questions.md")
     for q in sorted(in_file - in_specs):
-        fail(f"{q} listed in open-questions.md but raised in no spec")
+        fail(f"check 4: {q} listed in open-questions.md but raised in no spec")
     # The verdict goes in the summary line, not just in the failure list (check 21's
     # pattern): a note reading "all mirrored" above a FAILED block hides the failure.
     unmirrored = len(in_specs - in_file) + len(in_file - in_specs)
@@ -3309,7 +3315,7 @@ def main() -> int:
     adrs |= {int(m.group(1)) for p in ROOT.glob("adrs/*.md") if (m := _ADR_FILE.match(p.name))}
     corpus = "\n".join(f.read_text(encoding="utf-8") for f in md)
     for ref in sorted({int(n) for n in _ADR_CITED.findall(corpus)} - adrs):
-        fail(f"ADR-{ref} referenced but no file exists")
+        fail(f"check 5: ADR-{ref} referenced but no file exists")
     notes.append(f"{len(adrs)} ADR(s) on disk, every ADR citation in docs/ resolves")
 
     # 6. spec sections
@@ -3319,7 +3325,7 @@ def main() -> int:
         for name in REQUIRED_SECTIONS:
             key = name.lower().split("(")[0].strip()
             if not any(key in h for h in lowered):
-                fail(f"{f.name} missing required section: {name}")
+                fail(f"check 6: {f.name} missing required section: {name}")
 
     # 7. JSON schemas
     def no_dupes(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -3336,7 +3342,7 @@ def main() -> int:
         try:
             loaded[f] = json.load(f.open(encoding="utf-8"), object_pairs_hook=no_dupes)
         except ValueError as exc:
-            fail(f"{f.relative_to(ROOT)}: {exc}")
+            fail(f"check 7: {f.relative_to(ROOT)}: {exc}")
 
     # 8. $ref resolution
 
@@ -3356,7 +3362,7 @@ def main() -> int:
             tail = ref[len(_ABS_PREFIX):]
         elif ref.startswith("#"):
             if len(ref) > 1 and not resolve_pointer(loaded[src], ref[1:]):
-                fail(f"{src.relative_to(ROOT)}: local $ref {ref} does not resolve")
+                fail(f"check 8: {src.relative_to(ROOT)}: local $ref {ref} does not resolve")
             return
         elif ref.startswith(("http://", "https://")):
             return  # external, not our concern
@@ -3366,9 +3372,9 @@ def main() -> int:
         path = (schema_root / target) if ref.startswith(_ABS_PREFIX) else (src.parent / target)
         path = path.resolve()
         if path not in loaded:
-            fail(f"{src.relative_to(ROOT)}: $ref {ref} -> missing {target}")
+            fail(f"check 8: {src.relative_to(ROOT)}: $ref {ref} -> missing {target}")
         elif fragment and not resolve_pointer(loaded[path], fragment):
-            fail(f"{src.relative_to(ROOT)}: $ref {ref} -> fragment does not resolve")
+            fail(f"check 8: {src.relative_to(ROOT)}: $ref {ref} -> fragment does not resolve")
 
     def walk(node: object, src: pathlib.Path) -> None:
         if isinstance(node, dict):
@@ -3412,7 +3418,7 @@ def main() -> int:
             if not re.search(rf"^#{{2,4}} {re.escape(sec)}[.\s]", body, re.M) and \
                not re.search(rf"^#{{2,4}} {re.escape(top)}\.", body, re.M):
                 fail(
-                    f"{f.relative_to(ROOT)}: reference to {code} §{sec} — "
+                    f"check 9: {f.relative_to(ROOT)}: reference to {code} §{sec} — "
                     f"no such section in {target}"
                 )
 
@@ -3432,7 +3438,7 @@ def main() -> int:
             if code in owner and owner[code] != f.name:
                 conflicts += 1
                 fail(
-                    f"error code {code} claimed by both {owner[code]} and "
+                    f"check 10: error code {code} claimed by both {owner[code]} and "
                     f"{f.name} — annotate one as '(re-raised from `NN`)' or "
                     "give ownership to one module"
                 )
@@ -3468,7 +3474,7 @@ def main() -> int:
             if other == "GOV" and re.search(r"audit|permission|authoris|authoriz|RBAC", row, re.I):
                 continue
             fail(
-                f"{f.name}: DEP-1 violation — {me} consumes from {other}, "
+                f"check 11: {f.name}: DEP-1 violation — {me} consumes from {other}, "
                 "which is to its right"
             )
 
@@ -3481,7 +3487,7 @@ def main() -> int:
     for f in list(md) + schemas:
         for m in money_re.finditer(f.read_text(encoding="utf-8")):
             fail(
-                f"{f.relative_to(ROOT)}: {m.group(1)} written as fractional "
+                f"check 12: {f.relative_to(ROOT)}: {m.group(1)} written as fractional "
                 f"{m.group(2)} (FR-OVR-20)"
             )
 
@@ -3497,7 +3503,7 @@ def main() -> int:
             continue
         for t in terms(f.read_text(encoding="utf-8"), "2") & canon:
             fail(
-                f"{f.name}: glossary term '{t}' is already defined in "
+                f"check 13: {f.name}: glossary term '{t}' is already defined in "
                 "00-overview.md §2 — reference it, do not redefine"
             )
 
@@ -3530,8 +3536,8 @@ def main() -> int:
         ratio = hit / tot if tot else 1.0
         summary.append(f"{mod} {ratio:.0%}")
         if ratio < coverage_floor:
-            fail(f"workflow coverage for {mod} is {ratio:.0%} ({hit}/{tot}), below the "
-                 f"{coverage_floor:.0%} floor — no user journey exercises this module")
+            fail(f"check 14: workflow coverage for {mod} is {ratio:.0%} ({hit}/{tot}), below "
+                 f"the {coverage_floor:.0%} floor — no user journey exercises this module")
     notes.append("workflow coverage: " + ", ".join(summary))
 
     # 15. open-question rows have an owner and a recognised status
@@ -3596,16 +3602,16 @@ def main() -> int:
                 continue
             undeclared += 1
             fail(
-                f"{f.name}: cites `{m.group(1)} {m.group(2)}`, which no spec declares in "
-                "its §5.1 REST API table (FR-OVR-17)"
+                f"check 21: {f.name}: cites `{m.group(1)} {m.group(2)}`, which no spec "
+                "declares in its §5.1 REST API table (FR-OVR-17)"
             )
         for m in re.finditer(r"`([a-z_][a-z0-9_]*)\(\)`", body):
             cited_functions += 1
             if m.group(1) not in declared_functions:
                 undeclared += 1
                 fail(
-                    f"{f.name}: cites `pricing-core` function `{m.group(1)}()`, which no "
-                    "spec declares in its §5.2 interface block (FR-OVR-17)"
+                    f"check 21: {f.name}: cites `pricing-core` function `{m.group(1)}()`, "
+                    "which no spec declares in its §5.2 interface block (FR-OVR-17)"
                 )
     # The verdict goes in the summary line, not just in the failure list. A note reading
     # "all declared" above a `FAILED` block is the shape of thing this audit exists to catch.
@@ -3669,13 +3675,15 @@ def main() -> int:
                 prefix = route[:-1]
                 if not any(r.startswith(prefix) for r in s53):
                     fail(
-                        f"{f.name} §5.3: no route under `{route}` declared in `00` §5.6 "
-                        f"(owner {code}) — fix {f.name} §5.3 (`00` §5.6 is canonical)"
+                        f"check 24: {f.name} §5.3: no route under `{route}` declared in "
+                        f"`00` §5.6 (owner {code}) — fix {f.name} §5.3 (`00` §5.6 is "
+                        "canonical)"
                     )
             elif route not in s53:
                 fail(
-                    f"{f.name} §5.3: route `{route}` declared in `00` §5.6 (owner {code}) "
-                    f"has no matching row — fix {f.name} §5.3 (`00` §5.6 is canonical)"
+                    f"check 24: {f.name} §5.3: route `{route}` declared in `00` §5.6 "
+                    f"(owner {code}) has no matching row — fix {f.name} §5.3 (`00` §5.6 "
+                    "is canonical)"
                 )
 
     # 16-20. the working notes in docs/notes/
