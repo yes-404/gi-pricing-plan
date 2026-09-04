@@ -93,6 +93,32 @@ def _run_all_ten(audit: types.ModuleType, roots: tuple[pathlib.Path, ...]) -> li
     return list(audit.failures)
 
 
+def _write_minimal_plan(path: pathlib.Path, *, doc_id: str, title: str, created: str) -> None:
+    """A minimal, valid `PL-` leaf header — the same reduced field set
+    `tests/fixtures/docs-ids/w37-4-checks/check31/plans/PL-01920-mismatch.md` already
+    proves `_docid.parse_header` accepts, parameterised by id/title/created so a test can
+    place two of these at chosen numbers without a second, hand-rolled header shape.
+    """
+    path.write_text(
+        "---\n"
+        f"id: {doc_id}\n"
+        "family: plan\n"
+        "kind: leaf\n"
+        f"title: {title}\n"
+        "status: active\n"
+        f"created: {created}\n"
+        "owner: planner\n"
+        "tree: fixture\n"
+        "supersedes: []\n"
+        "superseded_by: ~\n"
+        "corrected_by: []\n"
+        "relates: []\n"
+        "---\n\n"
+        f"# {title}\n",
+        encoding="utf-8",
+    )
+
+
 def _only_check(failures: list[str], n: int) -> bool:
     """True when `failures` is non-empty and every entry names check `n` — the "exactly
     one check reds" proof the plan's own broken-input standard asks for.
@@ -229,6 +255,88 @@ def test_check_31_exempts_templates_by_path(audit: types.ModuleType) -> None:
     """
     failures = _run_all_ten(audit, (audit._TEMPLATES_DIR,))
     assert not any(f.startswith("check 31:") for f in failures), failures
+
+
+def test_check_31_counts_a_roadmap_row_id_that_closes_a_document_family_gap(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Found live on a migrated tree (`check_id_filename_directory`'s own docstring): a
+    `WK-`/`SL-` row is a fenced block under a heading in `docs/roadmap.md`'s body
+    (NT-0019 §1.5), never a file of its own, so `_id_scope_documents()` — which walks
+    separate *files* — never saw it, and the id allocator draws row and document numbers
+    from one shared sequence. This is that defect's exact shape: two document-family
+    files claim numbers 1 and 3, and a roadmap row claims 2. A version of this check that
+    cannot see the row reports a false gap between 1 and 3; counting the row closes it —
+    the broken-input proof this test is built to fail without the fix (verified by
+    reverting `check_id_filename_directory`'s roadmap-scanning block and confirming this
+    test goes red with exactly that false-gap message).
+    """
+    root = tmp_path / "corpus"
+    plans = root / "plans"
+    plans.mkdir(parents=True)
+    _write_minimal_plan(
+        plans / "PL-00001-first.md", doc_id="PL-1", title="First", created="2026-01-01"
+    )
+    _write_minimal_plan(
+        plans / "PL-00003-third.md", doc_id="PL-3", title="Third", created="2026-01-03"
+    )
+    (root / "roadmap.md").write_text(
+        "# Roadmap (fixture)\n\n"
+        "### WK-2 — Second, a row not a file\n\n"
+        "```yaml\n"
+        "id: WK-2\n"
+        "family: work\n"
+        "title: Second, a row not a file\n"
+        "status: active\n"
+        "phase: P9\n"
+        "created: 2026-01-02\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    setattr(audit, "REPO", root)  # noqa: B010 -- ditto; `check_id_filename_directory` also relativises against `REPO`
+    setattr(audit, "_ID_SCOPE_ROOTS", (root,))  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_id_filename_directory()
+
+    assert audit.failures == [], audit.failures
+    assert any(
+        "3 id(s) in scope, 3 distinct number(s)" in n for n in audit.notes
+    ), audit.notes
+
+
+def test_check_31_reds_a_gap_a_missing_roadmap_row_would_leave(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Positive control for the test above, proven at the exact same fixture shape rather
+    than assumed: the two document-family files *alone* (no `roadmap.md` row filling
+    number 2) must still trip check 31's own gap rule — confirming the fixture's `1` and
+    `3` really are a gap this check can detect, so the test above's silence at `1, 2, 3`
+    is the row being counted, not the gap rule having gone quiet for an unrelated reason.
+    """
+    root = tmp_path / "corpus"
+    plans = root / "plans"
+    plans.mkdir(parents=True)
+    _write_minimal_plan(
+        plans / "PL-00001-first.md", doc_id="PL-1", title="First", created="2026-01-01"
+    )
+    _write_minimal_plan(
+        plans / "PL-00003-third.md", doc_id="PL-3", title="Third", created="2026-01-03"
+    )
+
+    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    setattr(audit, "REPO", root)  # noqa: B010 -- ditto; `check_id_filename_directory` also relativises against `REPO`
+    setattr(audit, "_ID_SCOPE_ROOTS", (root,))  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_id_filename_directory()
+
+    assert any(
+        f.startswith("check 31: gap in the scoped id sequence between 1 and 3")
+        for f in audit.failures
+    ), audit.failures
 
 
 # =========================================================================================

@@ -1739,9 +1739,35 @@ def check_id_filename_directory() -> None:
     draft must not manufacture a phantom gap), while this runs over the *scoped* working
     tree as part of `audit-docs.py`'s single report (NT-0019 §1.11: "one gate, one
     report").
+
+    **Row families (`WK-`/`SL-`) join the number test, but not the filename/directory
+    ones.** `_id_scope_documents()` walks separate *files*; a `WK-`/`SL-` row is a fenced
+    block embedded in `docs/roadmap.md`'s body (§1.5), never a file of its own, so
+    `_docid.parse_header` — which parses one whole file's front matter — never sees it.
+    Found live: the id allocator draws `WK-`/`SL-` numbers from the same global sequence
+    as every document family, so a real migrated tree had 41 real `WK-` rows (950-990)
+    sitting in `roadmap.md` while this check's own population jumped straight from the
+    document family's 296 to the next document family's 991 — reporting a 694-number
+    "gap" that was really just this check never having looked at the file that fills it.
+    `doc_index.scan_roadmap_rows` (already this check suite's own reader for `WK-`/`SL-`,
+    check 33's `rollup_raise_problems` and `doc-index.py --check` all reuse it) is read
+    here rather than re-parsing `roadmap.md`'s fenced-block grammar a second, divergent
+    way.
+
+    **Gated on `roadmap.md` itself being in the current scope**, not read unconditionally:
+    `_id_scope_documents()` already decides — via the same `_docid.stamp_set_files`
+    predicate every other check in this family answers to — whether `docs/roadmap.md` is
+    reachable from `_ID_SCOPE_ROOTS` as currently set. On the real, unwidened tree and on
+    the post-migration widened tree it is (both include `ROOT`, and every `docs/...` path
+    is in the stamp set). A check-31 fixture narrows `_ID_SCOPE_ROOTS` to a directory
+    outside `docs/` entirely, so it is not; reading `ROOT / "roadmap.md"` unconditionally
+    here would have made every check-31 fixture test silently also read the *real* repo's
+    `docs/roadmap.md` on whatever machine ran the test — the file this check exists to
+    validate, made an unscoped, uncontrolled input to its own test.
     """
     entries: list[tuple[int, str, str, date | None]] = []
-    for path in _id_scope_documents():
+    scoped_documents = _id_scope_documents()
+    for path in scoped_documents:
         rel = path.relative_to(REPO).as_posix()
         try:
             header = _docid.parse_header(path)
@@ -1772,6 +1798,29 @@ def check_id_filename_directory() -> None:
             )
 
         entries.append((number, _docid.canonical(prefix, number), rel, header.created))
+
+    roadmap = ROOT / "roadmap.md"
+    if roadmap in scoped_documents:
+        for record in _doc_index.scan_roadmap_rows(roadmap):
+            row_id = record.header.id
+            if row_id is None:
+                continue  # scan_roadmap_rows already requires "id" in raw; defensive only
+            m = _docid.ID_RE.fullmatch(row_id.strip())
+            if m is None:
+                fail(
+                    f"check 31: docs/roadmap.md: row `id: {row_id}` is not "
+                    "`<PREFIX>-<n>` shaped"
+                )
+                continue
+            prefix, number = m.group(1), int(m.group(2))
+            canon = _docid.canonical(prefix, number)
+            # No filename/directory sub-check: a row family has no file or directory of
+            # its own to compare against — that half of this check is
+            # document-family-only by NT-0019 §1.4's own rule ("the directory is the
+            # family"), which a row never has.
+            entries.append(
+                (number, canon, f"docs/roadmap.md#{canon}", record.header.created)
+            )
 
     seen: dict[int, tuple[str, str]] = {}
     for number, canon, rel, _created in entries:

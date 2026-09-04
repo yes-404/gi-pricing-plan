@@ -4421,7 +4421,7 @@ this slice added tests, not routes.
 #### W32-11 slice — certificate floors and two generated sides, 2026-08-24
 
 The **terminal** slice of W32 — allocated 2026-08-24 by the
-[W32 closure proposal](../plans/2026-08-23-w32-closure-proposal.md)'s Part C decisions and appended
+[closure proposal](../plans/2026-08-23-w32-closure-proposal.md)'s Part C decisions and appended
 to, **not one of**, the five slices that proposal filed. It decides `OQ-MODEL-30` as
 FR-MODEL-126, and gives the last two Phase-1a shapes that had never been compared against code a
 generated side. The ledger is
@@ -4516,7 +4516,7 @@ had not landed. Reconciled by measurement rather than assumption.
 
 #### W32-10 slice — the untested behaviour, 2026-08-24
 
-The first of the five slices the [W32 closure proposal](../plans/2026-08-23-w32-closure-proposal.md)
+The first of the five slices the [closure proposal](../plans/2026-08-23-w32-closure-proposal.md)
 filed, and run first because it touches nothing the other four touch. **It adds no capability.**
 What it adds is the ability for three shipped behaviours to fail: a migration's backfill, the EBM
 prediction route over HTTP, and the partial-dependence exposure share. **No requirement id was
@@ -4587,7 +4587,7 @@ take a database each**, and this record is the second observation of the same co
 
 #### W32-9 slice — the transparency exposure share, 2026-08-24
 
-The second of the five slices the [W32 closure proposal](../plans/2026-08-23-w32-closure-proposal.md)
+The second of the five slices the [closure proposal](../plans/2026-08-23-w32-closure-proposal.md)
 filed. It closes in `transparency.py` the gap W32-5 closed one module away in `diagnostics.py`:
 a share called *exposure* that counted rows. **No requirement id was allocated** — every marker
 names one that already existed.
