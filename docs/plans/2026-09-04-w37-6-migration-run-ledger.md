@@ -180,6 +180,8 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #716 | docs(plans): open W37-6's migration run ledger | `e38ca12` | UNCHANGED: 14 (this ledger's own history above is its full run — every entry, salvage, and correction landed as commits on this PR before it merged; no predicate code touched) |
 | #718 | fix(reporter-cycle): Ruling 106 — 100-word cap, BST-clock ETA, main-move refresh | `a9a733c` | UNCHANGED: 14 (`.claude/**` skill/role/script content only — `reporter.py`, `test_reporter.py`, `reporter.md`, `SKILL.md`, the ruling record — no `docs/**` migration-scope path or predicate code touched). Fourth F49 trailer on this branch (`07ea929`) was amended and force-pushed before merge, root cause fixed the same day (shared vs. per-worktree commit-msg hook, see the F49 entry below); duplicate branch `w37-6-ruling106-work` deleted from origin after merge. |
 | #720 | fix(scripts): (g) other-residue triage, docs/ leg — cause3/cause4 named | `dea2c79` | Diagnosis-only (`_residue_cause`/`_residue_cause_table` gains two named causes, no predicate changed) — not independently re-run at merge, `ci-watcher-720` confirmed python/docs/history-policy all green and mergeStateStatus CLEAN. cause3 (57% of tree-wide `other`) and cause4 (genuine forward-migration corruption) both dispositioned to executor-30-2's #30 PR; REDIRECTS.csv determinism owed to h2b as a follow-up (task #24). |
+| #719 | docs(plans): ledger — #716/#718/#720 merges, thread-cap ruling, kills, salvage disposition | `0375cda` | UNCHANGED: 14 (this ledger's own continued history — every entry above from the merge of #716 forward is this PR's own commits — plus one `dev-commands` SKILL.md edit, no `docs/**` migration-scope path or predicate code touched). Its own CI was repeatedly cancelled by the lead's own rapid push cadence (`ci-watcher-719` flagged it); merged once pushes paused and it settled CLEAN. |
+| #721 | fix(scripts): row (b) — `_compound_token_re`'s missing `\b` fabricated ids and masked (d5)/(d8) | `a2c0afa` | Not independently re-run at merge — CI is the merge gate per this session's own scoping (isolated per-run infra), `ci-watcher-721` confirmed python/docs/history-policy all green, mergeStateStatus CLEAN. `EXPECTED_VERDICTS` re-recorded (b) FAIL→PASS, (d5) PASS→FAIL, (d8) FAIL→REGRESSION — the ratchet working, not a defect. Two local, pre-existing `backend/tests/test_score.py` failures reported by the author (out of branch scope by diff-stat) were not independently confirmed against this exact CI run (`ci-watcher-721` could not reach per-test log detail, token-scope limited) — flagged, not blocking, since CI's overall `success` conclusion is the standing merge criterion. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -503,3 +505,210 @@ the queued restart instruction on its next turn.
 
 Not restarted by the lead — that is the owning agent's own next action once its queue
 unblocks, per the same ruling.
+
+## 2026-09-04 — rowe2's second flock-less restart traced to an incomplete instruction, not agent error
+
+Deputy's 12:3xZ read: `wt-alloc` and `w37-6-other-residue-triage` both correctly
+`flock`-parented and capped; `wt-rowe2` capped but parent `bash` again, 37 s old — the same
+shape as the run already killed once. Verdict: an agent producing the same non-compliant
+restart twice is following its brief, not malfunctioning. Root cause found: my message to
+rowe2 wrapped only `uv run pytest -q` in isolation, not the full chained gate command
+(`ruff && mypy && lint-imports && pytest`) its `gate-runner` subagent actually issues as one
+shell call — the partial line didn't compose into that shape. Fixed: sent rowe2 the
+complete canonical block from `.claude/skills/dev-commands/SKILL.md` verbatim (all four
+gate steps under one `flock`, thread-capped), asked it to echo back the exact command
+string executed for verification rather than a paraphrase.
+
+**Efficiency line** (real gates by `%CPU > 20`, per the deputy's predicate): three —
+`wt-alloc` (compliant), `w37-6-other-residue-triage`/triage-other (compliant), `wt-rowe2`
+(non-compliant, fix just sent). **Between gates:** `h2b` (no real pytest process; message
+landed after the kill, no restart observed yet — likely still on ruff/mypy/lint-imports
+before reaching pytest, or hasn't started); `verify105` (no real pytest process — its capped
+restart was last seen at 76%/~11min, likely finished; no report received yet);
+`executor-30-2`, `triage-code` (no real pytest process at any point this session so far —
+still on their non-gate work, no report yet). Load 6.68/5.53/15.57, CPU demand
+(78.2+92.0+131)/1600 ≈ 0.19 — consistent with the deputy's under-used reading.
+
+**PR #719 (this ledger PR) merged** at `0375cda` once its own CI settled — the lead's rapid
+push cadence had been cancelling its runs (`ci-watcher-719`'s finding); merged clean once
+pushes paused. Continuing on a fresh branch (`docs-w37-6-ledger-cont2`) since the merged
+branch is gone.
+
+## 2026-09-04 — row (b) fixed (PR #721): the missing `_compound_token_re` boundary was fabricating ids AND masking real (d5)/(d8) defects; same fix collided with #30's cause4
+
+`alloc` root-caused row (b)'s `noncontiguous=4`: #711's `_compound_token_re` (compound-
+citation expansion) dropped the trailing `\b` that `_whole_token_re` already carries, so a
+shorter mapped legacy id matched as a bare prefix of a longer unmapped one sharing the same
+leading digits (digit→digit is never a `\b` transition). `OQ-OVR-1` (→`OQ-831`) swallowed
+`OQ-OVR-11` (correctly excluded, ambiguous), leaving the orphan digit:
+`OQ-OVR-11` → `OQ-831`+`1` = fabricated `OQ-8311`. Seven ids fabricated this way, collapsing
+to the four `noncontiguous` gap boundaries. Fix: one `\b` added, broken-input proof both
+directions.
+
+**Collision, caught before landing:** this is the identical defect and identical fix as
+PR #720's cause4 finding, dispatched to executor-30-2's #30 PR. Told executor-30-2 to stop
+before duplicating it — either drop cause4 entirely and rebase on #721 once merged (keeping
+only the `MANGLED_CITATION_RE` extension for the `WK-\d+[A-Za-z]` shape, which alloc did
+not touch), or reconcile if it had already implemented the boundary fix differently.
+
+**Serious finding, flagged for the deputy's ownership call, not actioned here:** the same
+boundary bug was also silently corrupting (not migrating) citations in the space-separated
+`Ruling <n>` and `W<n>-<n>` families — masking real defects in rows (d5) and (d8) rather
+than fixing them. Correcting the boundary un-masks the real, larger populations: **(d5)
+PASS→FAIL (75 instances)**, **(d8) FAIL→REGRESSION (2513, now above the pre-migration
+control of 2358 — worse than before migration ever ran)**. Neither row has an owner right
+now. `EXPECTED_VERDICTS` updated for all three moved rows (b, d5, d8) by alloc, contrary to
+the original dispatch brief's "no verdict-set change needed" — verified empirically: with
+the update `--verify` reports `UNCHANGED: 14, matching the recorded set`; without it, an
+unexplained `SET CHANGE`, exit 3.
+
+**rowe2's flock status corrected**: the deputy's "flock-less" read on `wt-rowe2` was itself
+a self-match artifact — checked directly by tracing the real `pytest` binary's `ppid` chain
+(not a `pgrep -f` scan): PID 310678 ← `uv run pytest -q` ← the thread-capped `bash -c`
+← `flock -n /tmp/slots/gate-2` ← the slot-selection wrapper — genuinely compliant,
+holding gate-2. Not killed. rowe2's own diagnosis (its idle wait-loop's `pgrep -f
+"wt-rowe2/.venv/bin/pytest -q"` argv matches the same string a naive check greps for) is
+the same self-match class recorded earlier this session — worth a durable note if this
+pattern recurs a third time.
+
+Gate on #721: green both halves except two pre-existing `backend/tests/test_score.py`
+failures (confirmed out of scope — `git diff --stat origin/main...HEAD` touches only
+`scripts/_docverify.py`, `scripts/doc-id.py`, `tests/test_doc_id_migrate.py`). `--verify`:
+row (b) PASS, verdict set fully reconciled. `ci-watcher-721` dispatched.
+
+## 2026-09-04 — three silent executors pinged; four finished worktrees released
+
+Deputy's 12:5xZ read flagged three executors past the 20-minute idle line with no real
+gate running: `wt-h2b` (33 min, no gate since the kill), `wt-r105-ruling105`/verify105
+(18 min, task-key addendum committed but unpushed, no PR), `w37-6-other-codetree`/
+triage-code (18 min, 3 dirty, no PR). Confirmed no real `pytest` process for any of the
+three before acting. Pinged all three per the standing rule (ping this cycle; if unanswered
+with no real gate running, release and respawn fresh from the branch — the branch carries
+the work forward).
+
+**Four finished worktrees released**, each verified clean (`git status --porcelain
+--branch`) and each branch already merged (remote gone or content matches the merge):
+`wt-dm` (#701), `wt-rowg-docs` (#720, one untracked `.venv` directory discarded — a
+generated artifact, not work), `wt-rowg2` (#715), `wt-ruling106` (#718). `git worktree
+remove --force` + `prune`; `df -h /` 5.6 GB free (was 5.7 GB), `/tmp` 26 GB free.
+
+## 2026-09-04 — #721's regressions ruled: exposed, not caused; (d5)/(d8) go to the unmapped-token table, never back to prefix matching
+
+Deputy confirmed #721's own `EXPECTED_VERDICTS` re-record ((b) FAIL→PASS, (d5) PASS→FAIL,
+(d8) FAIL→REGRESSION) is the ratchet working correctly, not a defect — "(b)'s PR does not
+touch `EXPECTED_VERDICTS`" (the original dispatch brief) wrongly assumed the recorded value
+was already PASS. Merge #721 on `ci-watcher-721`'s report, unchanged from the prior entry.
+
+**Cause4 is fully resolved by #721** — executor-30 drops its own `\b` fix before opening
+#30 (already relayed) and rebases; `MANGLED_CITATION_RE`'s `WK-\d+[A-Za-z]` extension stays
+(the probe, not the fix, per the deputy's own distinction).
+
+**(d5)/(d8)'s remedy, ruled and relayed to executor-30-2**: the boundary fix stopped prefix
+matches that happened to rewrite longer tokens (`Ruling 10` no longer eats `Ruling 102`'s
+head; `W11-1` no longer eats `W11-1-3`) — those longer identifiers were never mapped as
+wholes; the old prefix rewrite was masking them from the (d) regexes, not fixing them. Fix:
+route them through the **unmapped-token table** (`:310`, the same mechanism as the
+placeholder-id fix already in #30's scope) — mapped as whole identifiers where a target
+exists, disclosed where none does (Ruling 105 A's alias classes). **Never restored via
+prefix matching** — an explicit violation if it recurs. #30's scope now: cause3, the
+placeholder-id fix, the `MANGLED_CITATION_RE` extension, and the (d5)/(d8) whole-identifier
+routing — a real expansion, checkpoint-1 critical since the verdict set moves under #721
+regardless of when #30 lands.
+
+## 2026-09-04 — shared-DB test contention is real; CI is unaffected; rowe2 fully cleared; triage-code's uncapped gate no longer live
+
+**verify105 found, and I verified directly against `.claude/skills/python-test/SKILL.md`**:
+the suite's session-scoped teardown `TRUNCATE`s the shared Postgres at every pytest
+session's end, and two concurrent full-suite runs across worktrees are two sessions on one
+database — "that teardown makes two concurrent runs mutually destructive" (skill's own
+words, quoted verbatim, confirmed present at that heading). verify105's capped run (PID
+202324) came back 2 failed / 3119 passed after finishing in 13m23s (vs. 46+ min stuck
+uncapped) — `test_ebm_model_jobs.py`, `test_model_specs.py`, both nowhere near its
+`scripts/_docverify.py` diff. Confirmed via the skill's own decisive check
+(`git diff --stat origin/main...HEAD -- '*.py' ... backend/ ... scripts/`) that its branch
+touches zero backend Python — cannot be the cause — and via the correct guard (`ps -eo
+pid,etimes,args | grep -E '[b]in/pytest'`, never `pgrep -af`, which self-matches) that two
+other worktrees were executing concurrently at the time.
+
+**Scoped for the record: CI is unaffected.** GitHub-hosted runners get a fresh
+Postgres/Redis/MinIO per run (`services:` + the explicit MinIO step) — this contention is a
+local-shared-box artifact only. Every merge decision today has been made on `ci-watcher`
+reports of CI state, never on an executor's local claim — **no already-merged PR needs
+re-examination for this reason.** What is affected: an executor's local pre-push "gate
+green" claim is unreliable evidence when made concurrently with another worktree's suite,
+producing exactly the false-negative verify105 walked through. Escalated verify105's
+proposed fix (a DB-exclusive lock, nested inside the gate-process slots, held only for the
+portion of a run that executes tests — collection needs no window, per the skill) to the
+deputy as a ruling request; not decided here.
+
+**rowe2 fully cleared.** Deputy's own deeper ancestry trace (three levels up, not two)
+confirmed both `w37-6-other-residue-triage` and `wt-rowe2` are compliant — my two earlier
+"flock-less" reports on rowe2 are both withdrawn by the deputy as checked-too-shallow, not
+by rowe2 being wrong. rowe2's second process (PID 347463) is a targeted multi-file test
+run, not a second full gate — correctly uncapped and unslotted per the standing rule.
+
+**`w37-6-other-codetree`/triage-code**: the deputy's non-compliant gate (no cap, no
+`flock`, launched directly) is no longer running — checked at 13:0xZ, no real `pytest`
+process for that worktree, so nothing to kill. 2 files modified, uncommitted. Sent the
+canonical line for its next run and re-asked its status (idle-ping sent one entry ago,
+unanswered so far).
+
+## 2026-09-04 — rowe2's own row-(e) fix moved PASS→FAIL, correctly: a second copy of the same bug on the write side, Ruling 103 §1.8's own shape
+
+rowe2's final pre-push `--verify` (one, per the rule) caught a genuine regression, not a
+false alarm: `padded_hits`' `seq`-fix (landed earlier from the salvage disposition) stopped
+hiding a real violation — `docs/rulings/RL-00290-...md` §5.3 has a `was:`-path exhibit of
+`LG-00030` followed on the same line by a bare citation of the same id, the exact
+same-line-duplicate shape the fix targets — but the fix only reached the read side
+(`_docverify.padded_hits`, row (e)'s check). The write side
+(`scripts/doc-id.py::_normalize_padded_citations`, the migration's actual rewriter) carried
+an independent, unfixed copy of the identical text-matching bug — Ruling 103 §1.8's "two
+implementations of one rule that are never compared are two rules," undischarged on the
+write side until row (e)'s move forced the comparison. Fixed (`45d4bdd`): the same
+position-based re-location applied to the write side's `repl` closure, red-then-green test
+on the exact corpus shape, targeted suite (490 tests) green, ruff/mypy clean.
+
+**A third/fourth full-suite invocation on this branch, each driven by a genuine finding, not
+a sloppy rerun** — noted for the record so it doesn't read as contention noise against the
+new DB-exclusivity concern above. One more full gate + `--verify`, both under the
+flock/thread-cap pattern, before the PR opens.
+
+## 2026-09-04 — PR #723 (code-tree triage, full 504-file reclassification) ruled; residue named end to end
+
+`triage-code` reclassified the whole code-tree residue, not a sample — hypothesis 1 (a
+missing marker/docstring form) killed by measurement, every single-token substitution
+inverting byte-for-byte. `ci-watcher-723` dispatched; merges on its report.
+
+| Finding | Disposition | Owner |
+|---|---|---|
+| cause3(a) Work/slice/task keys, 85 files (62% of code-tree `other`) — `W6b-11`→`WK-947b-11`, bare map has no compound | classified-table ruling (`:455-470`): slice/task keys are the disclosed alias class, never rewritten — bare `W6b`→`WK-949`, compound `W6b-11` left whole and listed | executor-30-2, #30 |
+| cause3(b) `W3C`/lockfile hashes | already fixed by #721's `\b` boundary (`a2c0afa`) — proof is a fresh-snapshot check that the hash and `W3C` are untouched | executor-30-2 confirms only |
+| Lockfiles in the sweep's corpus (`uv.lock`, `pnpm-lock.yaml`, `frontend/pnpm-lock.yaml`) | new scope defect: a lockfile carries data, never a citation (Ruling 67 Part 2's class) — excluded from the sweep and (d) rows by declared entry, alongside `REDIRECTS.csv` | executor-30-2, same PR |
+| cause4 fixture corpora, 36 files (`tests/fixtures/docs-ids/**`, `docs-migration/**`) | 2026-09-02 ruling (fixtures exempt by path) extends from the stamp to the sweep — skip the declared roots | executor-30-2, same PR |
+| cause5 `scripts/__pycache__/*.pyc`, 4 files | the instrument measuring its own exhaust (`.pyc` created by running `doc-id.py` inside the snapshot) — excluded from the corpus, or `PYTHONDONTWRITEBYTECODE=1` on snapshot invocations | verify105, folds into (d8) |
+| cause6 `docs/…` path citations in code, 9 files, incl. a pathlib `ROOT / "docs" / "audit" / "register.md"` join | contiguous forms use the existing path-record inverse; the pathlib-split form listed unmapped, one file not a class | executor-30-2, same PR |
+| `Ruling 2c` prose → `RL-153c` (lettered rulings) | a unit-record entry, same mechanism | executor-30-2, same PR |
+| `OQ-MODEL-23`/`-24` → `OQ-8623`/`-8624`, `REDIRECTS.csv` holding two rows for `OQ-MODEL-23` | **forward defect, #18 §2's already-ruled fix, never dispatched until now**: the index/allocator read an OQ from the owning spec's §10 only, `open-questions.md` is the mirror (`:368-386`); one draft per OQ, one `REDIRECTS.csv` row per old id (writer refuses a duplicate — that refusal is the proof), rewrite reads the same map the CSV records | **alloc**, new PR, dispatched fresh (its row (b) PR already merged, released) |
+
+**Checkpoint 1 consequence**: with #720 and #723 the residue is named end to end — cause3
+legacy paths (57% docs), keys (62% code), fixtures, pycache, lockfiles, paths-in-code, the
+OQ double-allocation. Every finding has an owner. The third triage (`rest`) reports against
+the same table when it lands.
+
+## 2026-09-04 — #30 split: exclusions/corpus-hygiene are a fresh small PR, not folded into the inverse-record work
+
+Deputy corrected the bundling in the prior entry: the lockfile exclusion, fixture-root
+exclusion, and `.pyc` corpus fix touch nothing the unit-record inverse touches, and
+bundling three unrelated scope items into one large PR is one long build, one large
+review, and one rebase point on the critical path. Split:
+
+- **New executor (`exec-excl`), dispatched now**, one small PR: the three exclusions,
+  declared in `scripts/_docid.py` beside `LEGACY_FORM_PATTERNS` so both scripts read one
+  constant (Ruling 67 §2), plus the `.pyc`/`PYTHONDONTWRITEBYTECODE` corpus fix.
+- **executor-30-2 keeps**: the unit-record inverse and its shapes (paths incl. cause3
+  legacy paths, slash compounds, ranges, relative links, lettered rulings), cause3(a)'s
+  compound keys left whole/listed, cause6's contiguous path citations — rebases on the
+  small PR once it lands (disjoint hunks).
+- **verify105's (d8) addendum**: the `.pyc` item moved out, stays a focused small change.
+
+Both executor-30-2 and verify105 messaged with the corrected scope.

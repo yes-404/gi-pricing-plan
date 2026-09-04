@@ -63,9 +63,20 @@ parent was still bare `uv run pytest -q`, `/tmp/slots/` had no files, and the bu
 in the brief and nowhere else. A dispatch brief must carry the literal script, and
 compliance is checked externally (below), not self-reported.
 
+**Every executor worktree gets its own test database — shared-DB test contention, below,
+is why.** Once per worktree, before its first gate (its release drops the database):
+
+```bash
+WT=$(basename "$PWD")
+PGPASSWORD=gipricing createdb -h localhost -U gipricing -T gipricing "gipricing_${WT}"
+GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_${WT}" \
+    uv run alembic upgrade head
+```
+
 ```bash
 mkdir -p /tmp/slots
-gate_cmd='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 uv run ruff check . && uv run mypy && uv run lint-imports && POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 uv run pytest -q'
+WT=$(basename "$PWD")
+gate_cmd='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"' uv run ruff check . && uv run mypy && uv run lint-imports && POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"' uv run pytest -q'
 got=0
 for i in 1 2 3; do flock -n /tmp/slots/gate-$i -c "$gate_cmd" && { got=1; break; }; done
 [ "$got" = "0" ] && flock -w 7200 /tmp/slots/gate-1 -c "$gate_cmd"
@@ -73,6 +84,34 @@ python3 scripts/audit-docs.py                # structural checks over docs/ and 
 uv run python scripts/req-coverage.py        # requirement traceability
 uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
 ```
+
+**Why every worktree needs its own database.** `backend/tests/conftest_db.py`'s
+session-scoped teardown `TRUNCATE`s the whole test database at every `pytest` session's
+end. Two executors running full suites concurrently against the same DSN are two sessions
+sharing one database — the first to finish truncates every table out from under the
+second, mid-run, and it presents as an unrelated flaky regression (see
+[`python-test`](../python-test/SKILL.md)'s "mutually destructive" section for the full
+symptom table). Measured 2026-09-04: a capped, correctly-`flock`ed gate still came back
+2 failed / 3119 passed in code its own branch never touched, because a second worktree's
+suite was executing concurrently — confirmed via the decisive diff check
+(`git diff --stat origin/main...HEAD -- '*.py' … backend/ … scripts/`, empty) that the
+failing branch could not have caused it. **This is why the gate block above exports
+`GIP_TEST_DATABASE_URL` pointing at `gipricing_<worktree>`, not the shared `gipricing`
+DB** — the `gipricing` role is superuser with `rolcreatedb` (confirmed by direct query),
+so per-worktree databases cost nothing to create. **CI is unaffected**: GitHub-hosted
+runners get a fresh Postgres/Redis/MinIO per run
+(`.github/workflows/python.yml`), so this is a shared-local-box problem only — no merge
+decision, which is always made on CI state via `ci-watcher`, needs re-examination for it.
+Until every gate exports its own `GIP_TEST_DATABASE_URL`, a local "gate green" or "gate
+shows two unrelated failures" claim is not evidence either way — say so in the PR body and
+let CI decide, as it already does.
+
+**Fallback, not the default**: if a branch's `alembic upgrade head` cannot run cleanly
+against a fresh per-worktree copy, serialise instead — a single system-wide lock file
+(e.g. `flock /tmp/slots/db-exclusive`) held only for the portion of a run that executes
+tests (`--collect-only` never enters test setup, so the teardown never fires and needs no
+lock). Record in the ledger when this fallback is used; it re-serialises the gates the
+process slots were widened to parallelise, so it is the exception.
 
 Same shape for `migrate --verify`, two slots instead of three:
 
@@ -486,6 +525,17 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-09-04 (third entry, same day) — per-worktree test database added to the gate block,
+per the deputy's ruling (relayed via `to-lead.md`), fixing the shared-DB truncation-race
+`python-test`'s "mutually destructive" section documents. Confirmed directly before
+writing it: `SELECT rolsuper, rolcreatedb FROM pg_roles WHERE rolname='gipricing'` via
+`asyncpg` returned `(True, True)` — the role is superuser with `rolcreatedb`, so
+`createdb -T gipricing gipricing_<worktree>` costs nothing; only the one shared `gipricing`
+database existed before this change. The DB-exclusive-lock fallback (for a branch whose
+migrations cannot run against a fresh copy) is written but not exercised — no branch has
+needed it yet. Two-worktrees-in-parallel proof delegated to a one-shot agent (see its
+report) rather than run inline, since it needs two genuinely concurrent ~13-minute suites.
 
 2026-09-04 (second entry, same day) — the first version of this section described the
 thread-cap/slot mechanism in prose, relayed to executors as instructions rather than a
