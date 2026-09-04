@@ -651,3 +651,23 @@ run, not a second full gate — correctly uncapped and unslotted per the standin
 process for that worktree, so nothing to kill. 2 files modified, uncommitted. Sent the
 canonical line for its next run and re-asked its status (idle-ping sent one entry ago,
 unanswered so far).
+
+## 2026-09-04 — rowe2's own row-(e) fix moved PASS→FAIL, correctly: a second copy of the same bug on the write side, Ruling 103 §1.8's own shape
+
+rowe2's final pre-push `--verify` (one, per the rule) caught a genuine regression, not a
+false alarm: `padded_hits`' `seq`-fix (landed earlier from the salvage disposition) stopped
+hiding a real violation — `docs/rulings/RL-00290-...md` §5.3 has a `was:`-path exhibit of
+`LG-00030` followed on the same line by a bare citation of the same id, the exact
+same-line-duplicate shape the fix targets — but the fix only reached the read side
+(`_docverify.padded_hits`, row (e)'s check). The write side
+(`scripts/doc-id.py::_normalize_padded_citations`, the migration's actual rewriter) carried
+an independent, unfixed copy of the identical text-matching bug — Ruling 103 §1.8's "two
+implementations of one rule that are never compared are two rules," undischarged on the
+write side until row (e)'s move forced the comparison. Fixed (`45d4bdd`): the same
+position-based re-location applied to the write side's `repl` closure, red-then-green test
+on the exact corpus shape, targeted suite (490 tests) green, ruff/mypy clean.
+
+**A third/fourth full-suite invocation on this branch, each driven by a genuine finding, not
+a sloppy rerun** — noted for the record so it doesn't read as contention noise against the
+new DB-exclusivity concern above. One more full gate + `--verify`, both under the
+flock/thread-cap pattern, before the PR opens.
