@@ -4400,6 +4400,11 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     # needs a sibling `README.md` to prove that file, not this one, is what excludes a
     # directory's own index from discovery).
     "tests/fixtures/docs-migration/docs/workflows/README.md",
+    # The deputy's ruling (W37-6 channel, 2026-09-04): the old notes root beneath
+    # `.claude`'s own fixture for `_retire_claude_notes_stubs`'s tests -- proves the
+    # directory's own "Old path -> new path" table README resolves to class 6 alongside
+    # its numbered stubs once every stub is retired.
+    "tests/fixtures/docs-migration/.claude/notes/README.md",
 )
 
 _REFERENCE_FIXTURE_CORPUS_REASON: Final = (
