@@ -220,11 +220,11 @@ _OQ_CITED = re.compile(r"\b(" + _OQ_ID_BODY + r")\b")
 _OQ_ROW = re.compile(r"\| (?:~~)?\*\*(" + _OQ_ID_BODY + r")\*\*")
 #: An ADR citation. Pre-migration files are `docs/adr/0001-*.md` cited `ADR-0001`;
 #: post-migration they are `docs/adrs/ADR-00004-*.md` cited `ADR-4` (NT-0019 D6 — citations
-#: unpadded, filenames padded to five). The old `ADR-(\d{4})` pattern reads the *first four*
-#: digits of a five-digit padded id, so `ADR-00005` was parsed as a citation of `ADR-0000`
-#: and check 5 failed with "ADR-0000 referenced but no file exists" — a real-looking failure
-#: manufactured entirely by the width of the pattern. Matching `0*(\d+)` with a boundary and
-#: comparing **integers** is width-agnostic in both directions.
+#: unpadded, filenames padded to five). The old `ADR-(\d{4})` pattern reads only the first
+#: four digits of a five-digit padded filename, so `ADR-5`'s padded form was parsed as a
+#: citation of `ADR-0000` and check 5 failed with "ADR-0000 referenced but no file exists"
+#: — a real-looking failure manufactured entirely by the width of the pattern. Matching
+#: `0*(\d+)` with a boundary and comparing **integers** is width-agnostic in both directions.
 #: The `[1-9]` first digit is not cosmetic: with `0*(\d+)` the pattern matches the literal
 #: text `ADR-0[0-9]{3}` — NT-0019 §7(d)'s own grep pattern, written in prose — as a
 #: citation of "ADR-0", and check 5 then fails on a document that cites no ADR at all.
@@ -1337,8 +1337,10 @@ def _safe_header(path: pathlib.Path) -> object | None:
 
 
 def _canon_id(raw: str) -> str:
-    """`"PL-1240"`, `"PL-01240"` and `"PL-001240"` all resolve to `"PL-1240"` (NT-0019
-    §1.1 rule 3) — the same equivalence `_docid.ID_RE`'s `0*` group already encodes;
+    """`"XX-1240"`, `"XX-01240"` and `"XX-001240"` all resolve to `"XX-1240"` (NT-0019
+    §1.1 rule 3; `XX` stands in for any real family prefix here, deliberately not one,
+    so this docstring's own example cannot become a citation of a real document) — the
+    same equivalence `_docid.ID_RE`'s `0*` group already encodes;
     this just re-renders whatever matched in canonical (unpadded) form. Returns `raw`
     unchanged when it is not `<PREFIX>-<n>` shaped at all, so a caller can use this on
     arbitrary strings (a `relates:` entry, a `was:` value) without a separate guard.
@@ -1846,9 +1848,10 @@ def check_citations() -> None:
 
     Gated on `docs/INDEX.md` existing: pre-migration there is no real citation corpus to
     resolve against, and `document-ids.md`'s own illustrative prose (the padding-
-    equivalence example in its lift of NT-0019 §1.1 rule 3 — "the resolver treats
-    `PL-1240`, `PL-01240` and `PL-001240` as one id" — and the §1.4 directory-tree
-    diagram) uses ids, some deliberately padded, to *teach* the grammar rather than to
+    equivalence example in its lift of NT-0019 §1.1 rule 3 — showing the same number
+    written with zero, one and two leading zeros and saying the resolver treats all
+    three as one id — and the §1.4 directory-tree diagram) uses ids, some deliberately
+    padded, to *teach* the grammar rather than to
     cite or name a real file. Running the padding rule against that prose unconditionally
     would red the standard's own reference text for demonstrating the equivalence it
     defines. Every sub-rule activates together once `docs/INDEX.md` exists (W37-6); the

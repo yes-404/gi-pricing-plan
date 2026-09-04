@@ -300,8 +300,8 @@ def scan_roadmap_row_ids(tree_root: Path) -> Iterator[tuple[str, int]]:
 # requirement's description names half a dozen more), and nothing distinguishes such a
 # citation from a row's own definition once the scan is not anchored to the id column: it
 # manufactures a false "present" for a number no row ever defines
-# (`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`'s own illustrative `PL-01240`,
-# quoted verbatim inside another row's body, is exactly this) without correcting the
+# (`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`'s own illustrative padded
+# specimen, quoted verbatim inside another row's body, is exactly this) without correcting the
 # opposite failure -- the id `scan_bold_id_rows` never turned into a row at all, which is
 # what `doc-id.py check`'s NT-0019 §7(b) noncontiguous-id failures actually are.
 _INDEX_ROW_ID_RE: Final = re.compile(

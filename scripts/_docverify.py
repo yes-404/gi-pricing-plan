@@ -659,8 +659,8 @@ def row_c(snap: Snapshot) -> Row:
 #: ruled but not yet carried here**. `ADR-0[0-9]{3}` carries an added trailing `\b`. Without
 #: it, the alternative has no anchor on either side of its digit run, so it matches as a
 #: strict PREFIX of any correctly-migrated five-digit id (`_docid.PAD_WIDTH`):
-#: `ADR-0[0-9]{3}` reads the first three of `ADR-00004`'s four post-hyphen digits and calls
-#: it a hit — the same token-boundary class Ruling 102 §2 row (g) named for the migration
+#: `ADR-0[0-9]{3}` reads only the first three of `ADR-4`'s padded four post-hyphen digits
+#: and calls it a hit — the same token-boundary class Ruling 102 §2 row (g) named for the migration
 #: rewriter, but here inside the verify instrument's own predicate. **Ruling 67 §2 Part 1
 #: already rules this exact requirement for (d)**: *"every alternative in (d) must match a
 #: COMPLETE legacy identifier or path, never a proper prefix of one"* — found there against
@@ -1012,16 +1012,33 @@ _MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
 #: every document, the ruling's own included.
 _FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
 
-_TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}<>\"',;]")
+#: `<` and `>` are excluded from this boundary set (Ruling 103 row (e) follow-up, two more
+#: predicate bugs found the same way defect 3 was — a real filename citation the token walk
+#: never saw as one). This doc suite's own placeholder convention writes a filename's
+#: variable segment in angle brackets (a padded id, a hyphen, an angle-bracketed slug
+#: placeholder, then `.md`), and treating `<`/`>` as hard boundaries truncated the
+#: right-side walk before it ever reached the extension, so the token stopped one
+#: character short of the placeholder's opening `<` — no `/`, no extension, "prose".
+#: Removing them widens the walk to swallow a literal `<...>` wrapper around a *bare* id
+#: too, but that token still has no `/` and does not end in an extension, so it is
+#: classified unchanged.
+_TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}\"',;]")
+
+#: A path citation is routinely followed by `:<line>` or `:<line>-<line>` (this file's own
+#: docstrings and code comments cite this way throughout). Matched only at the end of the
+#: token, after the extension, so it cannot turn an unrelated trailing colon into a path.
+_TRAILING_LOCATOR_RE: Final = r"(?::\d+(?:-\d+)?)?"
 
 
 def _in_path_context(line: str, start: int, end: int) -> bool:
     """True when the occurrence at `line[start:end]` sits inside a path-shaped token.
 
-    Path-shaped means the enclosing token contains a `/` or ends in a file extension. A
-    padded id inside a filename is not "in prose"; a padded id in a sentence is. Defined on
-    the whole enclosing token rather than by a lookbehind on one character, which was the
-    first attempt and missed `[PL-01240-slug](docs/plans/PL-01240-slug.md)`.
+    Path-shaped means the enclosing token contains a `/` or ends in a file extension,
+    optionally followed by a `:line` or `:line-line` locator suffix. A padded id inside a
+    filename is not "in prose"; a padded id in a sentence is. Defined on the whole enclosing
+    token rather than by a lookbehind on one character, which was the first attempt and
+    missed `[PL-1240-slug](docs/plans/PL-01240-slug.md)` — an unpadded link text (rule 2)
+    pointing at its file's padded name (rule 3).
     """
     left = start
     while left > 0 and not _TOKEN_BOUNDARY_RE.match(line[left - 1]):
@@ -1030,12 +1047,16 @@ def _in_path_context(line: str, start: int, end: int) -> bool:
     while right < len(line) and not _TOKEN_BOUNDARY_RE.match(line[right]):
         right += 1
     token = line[left:right]
-    return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", token))
+    return "/" in token or bool(
+        re.search(r"\.[A-Za-z0-9]{2,4}" + _TRAILING_LOCATOR_RE + r"$", token)
+    )
 
 
 def _unpadded(token: str) -> str:
-    """`PL-01240` -> `PL-1240`. Conjunct 3 resolves the *unpadded* form in `docs/INDEX.md`,
-    because that is the form the index carries and the form a citation is supposed to use.
+    """`XX-01240` -> `XX-1240` (`XX` stands in for any real family prefix, deliberately
+    not one, so this docstring's own padded example cannot become a citation of a real
+    document). Conjunct 3 resolves the *unpadded* form in `docs/INDEX.md`, because that
+    is the form the index carries and the form a citation is supposed to use.
     """
     m = re.fullmatch(r"([A-Z]+)-0*([0-9]+)", token)
     return f"{m.group(1)}-{int(m.group(2))}" if m else token
@@ -1061,6 +1082,16 @@ class PaddedHit:
     line_no: int
     token: str
     line: str
+    #: 0-based ordinal of this occurrence among all `_PADDED_ID_RE` matches on the line, in
+    #: left-to-right order. A second predicate bug found alongside the token-boundary ones
+    #: above: conjunct 2 used to re-match `hit.token` by *text* against the cleaned line and
+    #: take the first hit, so two occurrences of the same padded id on one line — one inside
+    #: a filename, one bare (`document-ids.md`'s own rule-3 sentence: `` `PL-01240-<slug>.md` ``
+    #: then, later on the same line, bare `` `PL-01240` `` in the equivalence list) —
+    #: collapsed onto whichever one the loop found first, so the filename occurrence's
+    #: TRUE path verdict got applied to the bare occurrence too. `seq` lets conjunct 2 pick
+    #: this hit's own occurrence instead of the first one matching by text.
+    seq: int
 
 
 def padded_hits(corpus: Corpus, resolvable: frozenset[str]) -> tuple[
@@ -1084,18 +1115,19 @@ def padded_hits(corpus: Corpus, resolvable: frozenset[str]) -> tuple[
             total += len(hits)
             if in_fence or i in skip:
                 continue
-            for h in hits:
-                after_corpus.append(PaddedHit(rel, i + 1, h.group(0), line.strip()))
+            for seq, h in enumerate(hits):
+                after_corpus.append(PaddedHit(rel, i + 1, h.group(0), line.strip(), seq))
     after_path: list[PaddedHit] = []
     for hit in after_corpus:
         # Conjunct 2 is tested on the line with markdown emphasis stripped, so a bold
-        # marker inside a path cannot hide the path from the path test.
+        # marker inside a path cannot hide the path from the path test. Stripping asterisks
+        # never adds or removes a `_PADDED_ID_RE` match (they sit at token boundaries, never
+        # inside one — the same fact that makes the strip safe at all), so the cleaned
+        # line's Nth match is still this hit's own occurrence.
         cleaned = _MD_EMPHASIS_RE.sub("", hit.line)
-        prose = True
-        for m in _PADDED_ID_RE.finditer(cleaned):
-            if m.group(0) == hit.token and _in_path_context(cleaned, m.start(), m.end()):
-                prose = False
-                break
+        cleaned_hits = list(_PADDED_ID_RE.finditer(cleaned))
+        m = cleaned_hits[hit.seq] if hit.seq < len(cleaned_hits) else None
+        prose = not (m is not None and _in_path_context(cleaned, m.start(), m.end()))
         if prose:
             after_path.append(hit)
     after_index = [h for h in after_path if _unpadded(h.token) in resolvable]

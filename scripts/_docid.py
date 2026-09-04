@@ -110,7 +110,9 @@ def canonical(prefix: str, n: int) -> str:
 
 def padded(prefix: str, n: int, width: int = PAD_WIDTH) -> str:
     """The filename form — NT-0019 §1.1 rule 3: padded to `width` (never truncated below
-    the number's own length). `padded("PL", 1240)` -> `"PL-01240"`.
+    the number's own length). `padded("XX", 1240)` -> `"XX-01240"` (`XX` stands in for
+    any real family prefix, deliberately not one, so this docstring's own padded
+    example cannot become a citation of a real document).
     """
     return f"{prefix}-{n:0{width}d}"
 
