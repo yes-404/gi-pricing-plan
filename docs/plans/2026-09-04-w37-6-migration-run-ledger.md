@@ -939,3 +939,14 @@ its work has clearly progressed past it).
 argv — `ps -eo pid,comm,pcpu,etimes,args | awk '$2=="pytest"'` is the census that can't be
 fooled by a wrapper. The earlier "ten pytest sessions" reading was the wrapper count,
 withdrawn by the deputy before it reached this ledger.
+
+## 2026-09-04 — h2b's fourth bare gate, ~28s after the instruction to run none; last warning before reassignment
+
+Killed PID 668780 (`wt-h2b`, `uv → bash → init`, no `flock`, 984% CPU at 28s of age) —
+started within a minute of being told to run no local gates at all. Confirmed clean from
+the process table 30 seconds later, per the deputy's instruction ("confirm compliance from
+the process table, never from its acknowledgement"), and again at this entry — none
+running. Sent h2b the deputy's own threshold explicitly: a fifth bare gate and it is
+stopped, its remaining work (#29 DP-7, the `REDIRECTS.csv` sort follow-up) reassigned to a
+fresh executor with the canonical line in its brief. Asked `exec-excl` for an ETA on the
+conftest enforcement PR — the deputy wants that figure; not yet reported back.
