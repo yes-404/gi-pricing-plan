@@ -1323,11 +1323,69 @@ _NOTES_STUB_RE: Final = re.compile(
 #: executor's assigned scope (2b only); reported by shape for the deputy's triage.
 _SLASH_COMPOUND_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+(?:/[0-9]+){1,}")
 
+# ---------------------------------------------------------------------------------------
+# `docs/` triage (W37-6 channel `:666`, `:770`, the #715 residue table's own `other` row):
+# the deputy's two hypotheses for `docs/`'s 249-file `other` bucket ("dominated by the
+# split-source and generated-README classes the new class 6 no longer absorbs") were
+# checked against ten `docs/`-tree residue members, each read via
+# `audit_docs.frozen_file_matches_after_migration_stamp` run by hand against the exact
+# `redirects_inverse` map `classify_migration_diff` builds, never assumed from the diff
+# alone. **Both named hypotheses are KILLED for `docs/`**: none of the ten sampled files is
+# a Ruling 68 class-4 split or a generated README/INDEX collision. Two new, unrelated
+# causes accounted for eight of the ten; the other two (a bare-basename/non-`docs/`-rooted
+# relative citation, e.g. `docs/README.md`'s `workflows/wf-01-...md` and
+# `phase-0-status.md`; and one *un-allocated placeholder id* cited in a plan's own prose —
+# `docs/plans/2026-08-19-psi-comparison-selector[-ledger].md` both cite `OQ-DATA-11` as an
+# id the plan instructs a *future* reader to raise, never itself a `REDIRECTS.csv` row, so
+# `redirects_inverse` has no entry for its new form `OQ-8471`) are reported here in prose,
+# not as a regex: the first has no single stable prefix to key on (unlike the five
+# `docs/`-rooted forms `_docid.LEGACY_FORM_PATTERNS` already names), and the second needs
+# `REDIRECTS.csv` itself (built in `new_root`, not `ctl`) to tell a placeholder from a real
+# citation — outside what this row's "no second tree read" rule allows a cheap classifier.
+# ---------------------------------------------------------------------------------------
+
+#: cause3 (this executor's `docs/` sample, six of ten files): a prose citation to
+#: *another* document by its pre-migration relative path — `docs/notes/0010-...md`,
+#: `docs/audit/register.md`, `docs/plans/2026-08-30-...md` — inside a file that is not
+#: itself one of `_NOTES_STUB_RE`'s tombstones. The forward sweep resolves these correctly
+#: (`_path_rewrite_tokens`/the citation sweep knows the move); DP-7's inverse does not,
+#: because `redirects_inverse` (`doc-id.classify_migration_diff`) is built only from
+#: `REDIRECTS.csv`'s `old_id`/`new_id` **id** columns, never from a citation's own literal
+#: path string. Reuses `_docid.LEGACY_FORM_PATTERNS`' five already-named `"...path"`
+#: entries (Ruling 67 §2's one shared constant) rather than a new pattern — Verified
+#: against all six: `docs/audit/findings/F27.md`, `docs/notes/0003-duplicated-status-goes-
+#: stale.md`, `docs/process/delivery-process.md`, `docs/process/delivery-process.core.json`
+#: and `docs/research/w11-task-1-4-model-call-concurrency.md` each match on at least one
+#: line; `docs/README.md` does not (see the module comment above) and is left in `other`.
+_LEGACY_PATH_RES: Final = tuple(
+    pattern for name, pattern in _docid.LEGACY_FORM_PATTERNS if "path" in name
+)
+
+#: cause4 (this executor's `docs/` sample, one of ten files, `docs/contracts/schemas/
+#: job.schema.json`): a genuine **forward**-migration corruption, not merely an inverse
+#: gap — `"W3C/OpenTelemetry trace id..."` came out `"WK-944C/OpenTelemetry trace id..."`.
+#: `doc-id.py`'s `_compound_token_re` (the compound-citation expansion regex, task 4 item
+#: 3) is `\b{tok}((?:[-/]\d+)*)` with **no trailing `\b`**, unlike its sibling
+#: `_whole_token_re`'s `\b{tok}\b(?![-/][0-9])` — so a legacy work token (`W3`) matches as
+#: a bare *prefix* of any longer run of word characters that happens to start the same way
+#: and is not itself `[-/]` plus a digit. `W3C` has no separator before its `C`, so
+#: `_whole_token_re`-style matching (which needs a word-boundary on both sides) would not
+#: touch it, but `_compound_token_re` does. `MANGLED_CITATION_RE` (this row's own g1
+#: probe) cannot see it either — its pattern is scoped to `(FR|NFR|OQ|DEP)-\d+/\d+`, not
+#: the `W`/`WK` family. Detected here on the *pre*-migration line: an uppercase letter can
+#: never legitimately continue a work id (`_WORK_FAMILY_TOKEN_RE`'s own suffix group is
+#: `[a-z]?`, lowercase only), so `\bW[0-9]+[A-Z]` is a precise proxy for the input shape
+#: that triggers the bug, without needing the migrated tree to confirm it fired.
+_WORK_ADJACENT_UPPER_RE: Final = re.compile(r"\bW[0-9]+[A-Z]")
+
 #: One residue member's cause label, checked in this fixed order (a member matching more
 #: than one shape is reported under the first — `_NOTES_STUB_RE` before content-based
 #: checks, since a stub's path alone is conclusive and its content is the same shape every
 #: time; frontmatter before the citation-shaped checks, since a wrong strip explains the
-#: whole-file mismatch regardless of what citations the body also carries).
+#: whole-file mismatch regardless of what citations the body also carries; cause4's
+#: adjacent-uppercase corruption before the broader citation-shaped causes, since it is a
+#: forward-migration defect rather than an inverse gap and deserves its own bucket even
+#: when the same file also carries a legacy path citation).
 def _residue_cause(rel: str, old_lines: Sequence[str] | None) -> str:
     if _NOTES_STUB_RE.match(rel):
         return "cause2b-notes-stub-relative-link"
@@ -1336,11 +1394,17 @@ def _residue_cause(rel: str, old_lines: Sequence[str] | None) -> str:
     if old_lines and old_lines[0] == "---" and rel.startswith(_FOREIGN_FRONTMATTER_DIRS):
         return "cause1-foreign-frontmatter"
     for line in old_lines:
+        if _WORK_ADJACENT_UPPER_RE.search(line):
+            return "cause4-compound-token-adjacent-uppercase"
+    for line in old_lines:
         if _RANGE_CITATION_RE.search(line):
             return "cause2a-range-citation"
     for line in old_lines:
         if _SLASH_COMPOUND_RE.search(line):
             return "slash-compound-citation (unassigned — reported, not investigated)"
+    for line in old_lines:
+        if any(pattern.search(line) for pattern in _LEGACY_PATH_RES):
+            return "cause3-legacy-path-citation"
     return "other"
 
 

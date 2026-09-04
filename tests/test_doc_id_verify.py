@@ -654,6 +654,62 @@ def test_residue_cause_precedence_and_slash_compound_shape(dv: Any) -> None:
     assert dv._residue_cause("docs/specs/x.md", None) == "other"
 
 
+def test_residue_cause3_legacy_path_citation(dv: Any) -> None:
+    """cause3 (this executor's `docs/` sample, six of ten files, W37-6 channel `:770`'s
+    `docs/`-tree triage): a prose citation to another document by its pre-migration
+    relative path — `docs/notes/...`, `docs/audit/...`, `docs/plans/2026-...` — fails
+    DP-7's inverse because `redirects_inverse` is built only from `REDIRECTS.csv`'s id
+    columns, never from a citation's own literal path string. Reuses
+    `_docid.LEGACY_FORM_PATTERNS`' five `"...path"` entries rather than a new pattern.
+    Broken-input proof against the actual shapes read in `docs/process/delivery-
+    process.md` and `docs/audit/findings/F27.md`: each of the five legacy-path forms
+    fires, and a citation outside all five (`docs/README.md`'s own residual shape —
+    `workflows/wf-01-dataset-to-model.md`, a bare relative path with no `docs/` prefix)
+    does not, falling through to `other` as documented rather than mis-firing.
+    """
+    assert dv._residue_cause(
+        "docs/process/delivery-process.md",
+        ("Adopted 2026-08-29 from NT-0010 (`docs/notes/0010-layered-slice-based-"
+         "workflow.md`),",),
+    ) == "cause3-legacy-path-citation"
+    assert dv._residue_cause(
+        "docs/audit/findings/F27.md",
+        ("**Register row:** `docs/audit/register.md`, the row self-naming `(F27)`.",),
+    ) == "cause3-legacy-path-citation"
+    assert dv._residue_cause(
+        "docs/research/x.md",
+        ("named in `docs/plans/2026-08-29-w11-1-evaluator-core.md`:",),
+    ) == "cause3-legacy-path-citation"
+    assert dv._residue_cause(
+        "docs/README.md",
+        ("2. `workflows/wf-01-dataset-to-model.md` — the shortest end-to-end story.",),
+    ) == "other"
+
+
+def test_residue_cause4_compound_token_adjacent_uppercase(dv: Any) -> None:
+    """cause4 (this executor's `docs/` sample, `docs/contracts/schemas/job.schema.json`):
+    a genuine forward-migration corruption, not an inverse gap — `doc-id.py`'s
+    `_compound_token_re` (`\\b{tok}((?:[-/]\\d+)*)`) has no trailing `\\b`, so a legacy
+    work token (`W3`) matches as a bare prefix of any longer run of word characters
+    starting the same way, e.g. `W3C` (the web-standards body, unrelated to this
+    repository's `W`-family ids) comes out `WK-944C`. `_WORK_FAMILY_TOKEN_RE`'s own
+    suffix group is lowercase-only (`[a-z]?`), so an uppercase letter can never
+    legitimately continue a work id — `\\bW[0-9]+[A-Z]` is a precise proxy for the
+    pre-migration shape that triggers the bug. Broken-input proof against the actual line
+    read in `job.schema.json` (`"description": "W3C/OpenTelemetry trace id..."`), plus a
+    negative control: a legitimate lowercase work-slice suffix (`W6a`) must not fire this
+    cause, since that shape is not the bug's trigger.
+    """
+    assert dv._residue_cause(
+        "docs/contracts/schemas/job.schema.json",
+        ('          "description": "W3C/OpenTelemetry trace id: 32 lowercase hex '
+         'characters (00 §5.3)."',),
+    ) == "cause4-compound-token-adjacent-uppercase"
+    assert dv._residue_cause(
+        "docs/plans/x.md", ("zero callers since W6a; this slice gives it its caller.",)
+    ) != "cause4-compound-token-adjacent-uppercase"
+
+
 def test_row_g_empty_classified_population_fails(dv: Any, tmp_path: pathlib.Path) -> None:
     """NT-0007: a green over an empty population is a fail, not a pass — g2's population
     is the file count `classify_migration_diff` classified, not the corpus size."""
