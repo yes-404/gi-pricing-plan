@@ -1202,17 +1202,17 @@ transcribed from any relay.
 | row | verdict | cause (one clause) | owner | PR |
 |---|---|---|---|---|
 | d1 | FAIL | `NT-00`-prefixed citation form, un-migrated | unowned | — |
-| d4 | FAIL | `wf-0[0-9]` case-form, improved not closed (262 < control 272) | executor-30-2 | **#733 merged (6c92d55) — verdict on next fresh `--verify`** |
-| d5 | FAIL | `Ruling [0-9]+` un-migrated population, un-masked by row (b)'s boundary fix | executor-30-2 | **#733 merged (6c92d55) — verdict on next fresh `--verify`** |
+| d4 | FAIL | `wf-0[0-9]` case-form — 269/103 files → **2/1 file** on the fresh `--verify` (run 33884621869, `6c92d55`) | executor-30-2 | one file from zero, resumed to close it |
+| d5 | FAIL | `Ruling [0-9]+` un-migrated population — **unmoved**, 76/20 → 77/20; three values' counts grew, value set unchanged (same pattern as d8's earlier gap) | executor-30-2 | resumed — name the generator |
 | d6 | FAIL | `ADR-0[0-9]{3}` genuine un-migrated 4-digit citations remain | unowned | — |
 | d7 | FAIL | `(FR\|NFR\|OQ\|DEP)-[A-Z]+-[0-9]+` un-migrated | unowned | — |
-| d8 | REGRESSION | workstream/slice `W<n>-<n>` boundary bug at scale, un-masked by row (b) | executor-30-2 | **#733 merged (6c92d55) — verdict on next fresh `--verify`** |
+| d8 | FAIL | workstream/slice `W<n>-<n>` — re-recorded REGRESSION→FAIL by #733's distinct-value rule; still fatal: **123 task keys in 40 files + 14 bare work-key remainders in 6 files** (both ruled fatal, `to-lead.md:455`(i)); slice-key population is the disclosed part | executor-30-2 | not fully closed, work continues |
 | d9 | FAIL | `docs/plans/2026-`-prefixed citation form, un-migrated | unowned | — |
 | d10 | FAIL | `docs/audit/`-prefixed citation form, un-migrated | unowned | — |
 | d11 | FAIL | the old notes directory, un-migrated | unowned | — |
 | d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
 | d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
-| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — `classified-by-none` residue | multiple (partial) | #720, #727, #729 merged; #723 in flight; still FAIL overall (326 unclassified per exec-dp7's last read) |
+| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`) but **mangled companion up** (457→472, +15) — a real regression signal `#733` may have introduced | multiple (partial) | #720, #723, #727, #729 merged; executor-30-2 resumed to find the +15 source before d4/d5 |
 | h1 | FAIL | `audit-docs.py` non-disclosed classes (32, 36, 1, 31, 27, …) still non-zero | unowned | — |
 
 **Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
@@ -1504,3 +1504,37 @@ renderers, and every individual document's own front-matter stamp — not two di
 defects. No code fix required under the ruling as written; this closes the completeness
 gap in the generator paragraph. Comment-only precision on an already-correct
 classification — the dated ledger record is sufficient, no follow-up PR needed today.
+
+## 2026-09-04 — worktree incident closed; the never-allocated-id class ruled mechanical, not sentence-read; fresh `--verify` on the merged tree shows real remaining work, including a regression signal
+
+**Worktree incident, closed.** Ruled not a role-file gap — `executor.md:12` and
+`lead.md:66-68` already require every dispatch to carry its own worktree, and this was a
+dispatch that omitted the sentence, not a charter hole. Verified directly, not by
+trusting either executor's reply: `wt-ids` and `exec-h1-index-link-depth` both confirmed
+via `git status`/`git log -1` to hold the correct patched files, on top of the merged base
+commit. Only then cleaned `.claude/worktrees/lead-ruling105`'s three affected files back
+to matching `origin/main` (`git checkout --`). Every future dispatch brief quotes
+`lead.md:66` verbatim as its first line, per instruction.
+
+**Never-allocated-id class ruled**: decided by a mechanical predicate the instrument
+runs — zero definition rows in every `_discover_*` source and no `old_id` row in
+`REDIRECTS.csv` — never by the citing sentence's wording. A token that fails the
+predicate is a real `token_map` miss regardless of what its citing ruling says; one that
+passes is disclosed by count, excluded from the zero requirement, terminal, never fenced
+(the sentence is a correct historical fact, not an exhibit of a defective form). Broken-
+input proof required both directions. Relayed to `exec-ids` in full, cleared to build.
+
+**Fresh `--verify` on the merged tree** (run `33884621869`, `main` = `6c92d55`, green,
+`UNCHANGED: 13`) — the checkpoint table now carries these real figures, not "pending":
+
+- **d4**: 269/103 files → 2/1 file. One file from zero.
+- **d5**: unmoved, 76/20 → 77/20 — three values' counts grew, value set unchanged, same
+  pattern as d8's earlier generator gap.
+- **d8**: re-recorded REGRESSION→FAIL by #733's own rule, but not fully closed — 123
+  task keys in 40 files + 14 bare work-key remainders in 6 files are both still fatal.
+- **g**: residue down (none=320→190) but **the mangled companion rose by 15** (457→472)
+  — a real regression signal, exactly what Ruling 102 §2 row 1 exists to catch. `#733`
+  may have introduced a new mangling somewhere.
+
+`executor-30-2` resumed a third time with all three asks, mangled-companion regression
+first (before d4/d5), since a growing companion after a fix is the more urgent signal.
