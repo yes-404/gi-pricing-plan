@@ -1258,3 +1258,39 @@ stand down — resumes from its own context via `SendMessage`) with the residue-
 get a fresh unclassified count on current `main`, name any remaining recognizable causes
 the same way #720/#723 did, or report precisely what doesn't fit an existing class. Six of
 eight executors now, still inside the cap.
+
+## 2026-09-04 — exec-paths finds d13's zero-requirement conflicts with a standing ruling; d9-d12 partially fixable, not zeroable
+
+Before writing any code, `exec-paths` classified every surviving line per row rather than
+assuming the citation-inverse mechanism was simply missing a form:
+
+**d9-d12** (`docs/plans/2026-`, `docs/audit/`, `docs/notes/`, `docs/adr/`): the token-map
+mechanism already works for its intended case (a full-path citation with a real `old_path`
+row). A real, fixable gap exists — word-wrapped citations, where a markdown line-wrap
+splits the old path's token across lines so the per-line literal match never sees the whole
+token (141/210 of d9, 47/346 d10, 4/135 d11, 0/38 d12). **But the majority of each row
+(especially d10-d12) is bare directory-prefix/glob prose mentions with no single
+`(old_rel, new_rel)` pair to repoint to** — largely inside frozen historical documents
+(`docs/plans/PL-*`, `docs/closures/CR-*`, `docs/findings/FD-*`, `docs/rulings/RL-*`)
+describing the old scheme as history. **Even after the word-wrap fix, none of d9-d12
+reaches zero.**
+
+**d13** (`.claude/notes/`) is a harder problem — a genuine conflict with an existing
+standing ruling, not a missing form. `.claude/notes/` → `docs/rfcs/RFC-…` was already
+migrated under a separate, earlier effort (RFC-181 Slice 4, Ruling 61, `RL-00230`, landed
+2026-09-01) with its own tombstone-stub mechanism and its own test
+(`tests/test_notes_move_citations.py`), which **explicitly exempts `docs/plans/` and other
+provenance-locked artifact families from ever being rewritten to the new path, by ruled
+design, forever** — confirmed passing on the real tree (`1 passed`). `doc-id.py`'s own
+`REDIRECTS.csv` has zero `.claude/notes/` rows; the old→new map for this family lives only
+in `.claude/notes/README.md`'s own table, which `migrate()` never reads. d13's 90 lines:
+54 inside frozen `docs/plans/PL-*` (RL-230-exempt by name), 25 in other frozen families, 6
+in living code, 2 in skills/roles, 3 elsewhere. **Making d13 read zero would mean either
+building a second redirect-consuming path reaching outside NT-0019's domain, or rewriting
+citations inside frozen plans RL-230 explicitly ruled must stay untouched.**
+
+Told `exec-paths` to proceed with the word-wrap fix for d9-d12 now (real, in-scope,
+reduces but does not zero those rows) and hold d13 entirely. **Escalated to the deputy,
+not decided here**: whether d13's zero-requirement needs amending against RL-230's
+exemption, and whether d9-d12's residual directory-prose population is W37-6's scope at
+all or a separate documentation-sweep item.
