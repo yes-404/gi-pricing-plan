@@ -1009,3 +1009,12 @@ rely on a seventh instruction landing. Confirmed, in order: (i) nothing of h2b's
 dispatch — its process is stopped, not merely instructed; (iii) the fresh executor is
 **`exec-dp7`**, dispatched from `w37-6-dp7-frontmatter` (`2b4c13d`) with the canonical gate
 line and the no-local-gate instruction, already in flight.
+
+## 2026-09-04 — h2b's stop confirmed by the deputy's own read; exec-dp7's proof-of-reading owed
+
+Deputy's own table: zero `comm=pytest` under `wt-h2b`, zero `--agent-id h2b@` processes,
+load 4.0 — the first fully quiet box today. Gap named: the stop entry required a
+proof-of-reading line accompany the reassignment dispatch, and exec-dp7's dispatch went out
+without one landing in the ledger. Not a re-dispatch — asked exec-dp7 directly to confirm
+it has read `dev-commands` and `python-test` in full (both changed multiple times today)
+plus its current progress; its reply will carry the line this entry owes.
