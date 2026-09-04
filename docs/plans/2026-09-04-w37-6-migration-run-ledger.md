@@ -532,3 +532,45 @@ still on their non-gate work, no report yet). Load 6.68/5.53/15.57, CPU demand
 push cadence had been cancelling its runs (`ci-watcher-719`'s finding); merged clean once
 pushes paused. Continuing on a fresh branch (`docs-w37-6-ledger-cont2`) since the merged
 branch is gone.
+
+## 2026-09-04 — row (b) fixed (PR #721): the missing `_compound_token_re` boundary was fabricating ids AND masking real (d5)/(d8) defects; same fix collided with #30's cause4
+
+`alloc` root-caused row (b)'s `noncontiguous=4`: #711's `_compound_token_re` (compound-
+citation expansion) dropped the trailing `\b` that `_whole_token_re` already carries, so a
+shorter mapped legacy id matched as a bare prefix of a longer unmapped one sharing the same
+leading digits (digit→digit is never a `\b` transition). `OQ-OVR-1` (→`OQ-831`) swallowed
+`OQ-OVR-11` (correctly excluded, ambiguous), leaving the orphan digit:
+`OQ-OVR-11` → `OQ-831`+`1` = fabricated `OQ-8311`. Seven ids fabricated this way, collapsing
+to the four `noncontiguous` gap boundaries. Fix: one `\b` added, broken-input proof both
+directions.
+
+**Collision, caught before landing:** this is the identical defect and identical fix as
+PR #720's cause4 finding, dispatched to executor-30-2's #30 PR. Told executor-30-2 to stop
+before duplicating it — either drop cause4 entirely and rebase on #721 once merged (keeping
+only the `MANGLED_CITATION_RE` extension for the `WK-\d+[A-Za-z]` shape, which alloc did
+not touch), or reconcile if it had already implemented the boundary fix differently.
+
+**Serious finding, flagged for the deputy's ownership call, not actioned here:** the same
+boundary bug was also silently corrupting (not migrating) citations in the space-separated
+`Ruling <n>` and `W<n>-<n>` families — masking real defects in rows (d5) and (d8) rather
+than fixing them. Correcting the boundary un-masks the real, larger populations: **(d5)
+PASS→FAIL (75 instances)**, **(d8) FAIL→REGRESSION (2513, now above the pre-migration
+control of 2358 — worse than before migration ever ran)**. Neither row has an owner right
+now. `EXPECTED_VERDICTS` updated for all three moved rows (b, d5, d8) by alloc, contrary to
+the original dispatch brief's "no verdict-set change needed" — verified empirically: with
+the update `--verify` reports `UNCHANGED: 14, matching the recorded set`; without it, an
+unexplained `SET CHANGE`, exit 3.
+
+**rowe2's flock status corrected**: the deputy's "flock-less" read on `wt-rowe2` was itself
+a self-match artifact — checked directly by tracing the real `pytest` binary's `ppid` chain
+(not a `pgrep -f` scan): PID 310678 ← `uv run pytest -q` ← the thread-capped `bash -c`
+← `flock -n /tmp/slots/gate-2` ← the slot-selection wrapper — genuinely compliant,
+holding gate-2. Not killed. rowe2's own diagnosis (its idle wait-loop's `pgrep -f
+"wt-rowe2/.venv/bin/pytest -q"` argv matches the same string a naive check greps for) is
+the same self-match class recorded earlier this session — worth a durable note if this
+pattern recurs a third time.
+
+Gate on #721: green both halves except two pre-existing `backend/tests/test_score.py`
+failures (confirmed out of scope — `git diff --stat origin/main...HEAD` touches only
+`scripts/_docverify.py`, `scripts/doc-id.py`, `tests/test_doc_id_migrate.py`). `--verify`:
+row (b) PASS, verdict set fully reconciled. `ci-watcher-721` dispatched.
