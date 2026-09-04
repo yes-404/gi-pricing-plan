@@ -659,9 +659,17 @@ def row_c(snap: Snapshot) -> Row:
 #: ruled but not yet carried here**. `ADR-0[0-9]{3}` carries an added trailing `\b`. Without
 #: it, the alternative has no anchor on either side of its digit run, so it matches as a
 #: strict PREFIX of any correctly-migrated five-digit id (`_docid.PAD_WIDTH`):
-#: `ADR-0[0-9]{3}` reads the first three of `ADR-00004`'s four post-hyphen digits and calls
+#: `ADR-0[0-9]{3}` reads the first three of `ADR-00008`'s four post-hyphen digits and calls
 #: it a hit — the same token-boundary class Ruling 102 §2 row (g) named for the migration
-#: rewriter, but here inside the verify instrument's own predicate. **Ruling 67 §2 Part 1
+#: rewriter, but here inside the verify instrument's own predicate. **`ADR-8` rather than a
+#: real ADR**, deliberately, and not cosmetic: only `ADR-1`…`6` are allocated, so a real
+#: number here would itself be a row (e) violation — the instrument commenting on its
+#: own input and tripping the row it describes, the same shape §5.5 found in this row's own
+#: test fixtures (`RL-09999`/`PL-09998` in `tests/test_doc_id_verify.py`, above the
+#: allocated range for the same reason). Any id past the allocated range preserves the
+#: illustration exactly, because every one-digit id pads to `0000<n>` and the mis-read
+#: prefix is the same four leading zeros regardless of `<n>`.
+#: **Ruling 67 §2 Part 1
 #: already rules this exact requirement for (d)**: *"every alternative in (d) must match a
 #: COMPLETE legacy identifier or path, never a proper prefix of one"* — found there against
 #: `NT-00` self-matching its own defining sentence, generalised by the ruling to every
@@ -1014,14 +1022,24 @@ _FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
 
 _TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}<>\"',;]")
 
+#: **Conjunct 2's** line-locator strip. Row (e)'s own measurement found a fourth defect
+#: alongside Ruling 103's three: a same-directory `filename.md:123` or `filename.md:401-404`
+#: citation (this corpus's own convention for "the peer file, no leading `docs/plans/`,
+#: because both live in the same directory") is a filename token per rule 3's own wording —
+#: "the leading component of a filename ending `.md`" — but the trailing `:<line>` defeats
+#: the bare `\.[A-Za-z0-9]{2,4}$` extension test, which requires the token to *end* at the
+#: extension. Stripped before that test only; the `/` test is unaffected either way.
+_TRAILING_LINE_LOCATOR_RE: Final = re.compile(r":\d+(-\d+)?$")
+
 
 def _in_path_context(line: str, start: int, end: int) -> bool:
     """True when the occurrence at `line[start:end]` sits inside a path-shaped token.
 
-    Path-shaped means the enclosing token contains a `/` or ends in a file extension. A
-    padded id inside a filename is not "in prose"; a padded id in a sentence is. Defined on
-    the whole enclosing token rather than by a lookbehind on one character, which was the
-    first attempt and missed `[PL-01240-slug](docs/plans/PL-01240-slug.md)`.
+    Path-shaped means the enclosing token contains a `/` or ends in a file extension (once a
+    trailing `:<line>` or `:<start>-<end>` locator is stripped). A padded id inside a
+    filename is not "in prose"; a padded id in a sentence is. Defined on the whole enclosing
+    token rather than by a lookbehind on one character, which was the first attempt and
+    missed `[PL-01240-slug](docs/plans/PL-01240-slug.md)`.
     """
     left = start
     while left > 0 and not _TOKEN_BOUNDARY_RE.match(line[left - 1]):
@@ -1030,7 +1048,8 @@ def _in_path_context(line: str, start: int, end: int) -> bool:
     while right < len(line) and not _TOKEN_BOUNDARY_RE.match(line[right]):
         right += 1
     token = line[left:right]
-    return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", token))
+    sans_locator = _TRAILING_LINE_LOCATOR_RE.sub("", token)
+    return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", sans_locator))
 
 
 def _unpadded(token: str) -> str:
