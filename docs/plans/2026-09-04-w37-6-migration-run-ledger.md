@@ -950,3 +950,35 @@ running. Sent h2b the deputy's own threshold explicitly: a fifth bare gate and i
 stopped, its remaining work (#29 DP-7, the `REDIRECTS.csv` sort follow-up) reassigned to a
 fresh executor with the canonical line in its brief. Asked `exec-excl` for an ETA on the
 conftest enforcement PR — the deputy wants that figure; not yet reported back.
+
+## 2026-09-04 — h2b's fifth bare gate: the threshold is reached, stopped, work reassigned; both of executor-30-2's flagged doubts resolved
+
+Killed PID 680976 (`wt-h2b`) — the fifth bare gate against explicit instructions. Per the
+deputy's ruling, h2b is stopped: no further dispatch, session released only once its
+subject closes, not its task. Told it directly and without ambiguity. Its work
+(`w37-6-dp7-frontmatter`, commit `2b4c13d`, clean and pushed) reassigned to a fresh
+executor, **`exec-dp7`**, dispatched with the branch as its starting point, the canonical
+gate line verbatim, and an explicit "no local gate until conftest enforcement merges —
+push and let `ci-watcher` decide" instruction. It also owns the `REDIRECTS.csv` row-order
+determinism fix (task #24).
+
+**executor-30-2's two flagged doubts, both resolved with a direct measurement, not a
+comment's story:**
+
+- **OQ-DATA-11**: ran `doc-id.py migrate --verify --keep` against a fresh `origin/main`
+  (`85a352f`, post-#726) snapshot myself and read the actual output. `docs/REDIRECTS.csv`
+  now carries `OQ-DATA-11,OQ-849,docs/specs/01-data-management.md,...` — a real row, no
+  double-allocation, rewritten consistently everywhere including its own struck-through row
+  in `open-questions.md`. **#726's dedup fix already fully resolves this case as a side
+  effect.** The original "placeholder id, no REDIRECTS.csv row" diagnosis is stale.
+  `scripts/_docverify.py:1338-1340`'s comment (which named it an "un-allocated placeholder"
+  minting `OQ-8471`) is now doubly wrong — both the characterization and the number — and
+  is being corrected as a one-line addition to executor-30-2's PR, since it's already
+  touching that file. Item dropped from #30's scope entirely; no mechanism built.
+- **"Ruling 2c"**: confirmed false positive by two independent checks now (the earlier
+  verification agent, and the deputy's own `git grep -nE '\bRuling [0-9]+[a-z]\b'`, one hit
+  — the ledger's own row). Dropped from #30's scope, no citation exists to fix.
+
+Both resolutions relayed to executor-30-2. #30's remaining scope: unit-record inverse,
+cause3(a)/cause6, cause4's `MANGLED_CITATION_RE` extension, the one-line stale-comment fix,
+and (d5)/(d8) unmapped-whole-identifier routing.
