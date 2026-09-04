@@ -1538,3 +1538,13 @@ input proof required both directions. Relayed to `exec-ids` in full, cleared to 
 
 `executor-30-2` resumed a third time with all three asks, mangled-companion regression
 first (before d4/d5), since a growing companion after a fix is the more urgent signal.
+
+## 2026-09-04 — worktree incident's durability gap: the salvaged patches were still uncommitted
+
+Deputy's follow-up check: `lead-ruling105` clean, confirmed — but `wt-ids` and
+`exec-h1-index-link-depth` both showed 0 commits ahead of `main`, the applied patch still
+sitting as working-tree edits only. An uncommitted worktree dies with its session or a
+stray reset — the exact shape that already cost this project one salvage. Both executors
+told to commit (`wip:` prefix fine, squashed at PR time) and push now, before continuing
+their in-progress work. Incident closure is not final until both commit shas exist to
+cite, not merely a clean `git status`.
