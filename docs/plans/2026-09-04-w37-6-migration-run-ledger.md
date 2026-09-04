@@ -193,6 +193,7 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #731 | docs(plans): ledger — #728/#729 merges | `c462fb6` | UNCHANGED: 14 (this ledger's own continued history). `ci-watcher-731` confirmed docs/python/history-policy all green after settling past three cancelled batches (the lead's own push cadence), CLEAN. |
 | #730 | fix(scripts): DP-7 frontmatter gap (Reference/vendored stamps) + REDIRECTS.csv determinism | `e6384d7` | Not independently re-run — CI green (ruff/mypy/import-linter/pytest, specification audit, no-session-links), CLEAN. Rebased once onto a genuine content conflict with #729's own test additions, resolved additively from each side's clean history. Full gate: 3199 passed, tree held still. |
 | #733 | fix(scripts): W37-6 unit-record inverse — ranges/compounds/relative-links, cause3/3a/4/6, (d5)/(d8) creation rule | `6c92d55` | Not independently re-run — `ci-watcher-733` confirmed python/docs/history-policy all green, CLEAN. Full gate/verify twice (once surfacing and fixing a real crash bug in the author's own diff before reaching a gate). The single largest PR of the day; discharges (d4)/(d5)/(d8) from the checkpoint-1 table. |
+| #732 | docs(plans): ledger — #730/#733 merges, worktree incident, checkpoint-1 real figures | `e3739e1` | UNCHANGED: 14 (this ledger's own continued history). CLEAN, confirmed via the exact head SHA's own workflow runs (not a stale rollup) before merging. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1548,3 +1549,15 @@ stray reset — the exact shape that already cost this project one salvage. Both
 told to commit (`wip:` prefix fine, squashed at PR time) and push now, before continuing
 their in-progress work. Incident closure is not final until both commit shas exist to
 cite, not merely a clean `git status`.
+
+## 2026-09-04 — durability, half done: exec-ids committed but not pushed; exec-h1 still uncommitted; #732 merged
+
+`exec-ids`: 2 commits ahead (`fba9bfb`) but the branch never reached `origin` — told to
+push in one command. `exec-h1`: still 6 dirty files, 0 ahead, 13+ minutes into its gate —
+told to commit and push the moment the gate returns, before even reading the result. A
+local-only commit is the middle case of the three-way durability split: survives a
+session, not a lost worktree.
+
+**PR #732 merged** at `e3739e1` — confirmed CLEAN against the exact head SHA's own
+workflow runs this time (per the earlier #724 lesson), not a stale rollup. Continuing on
+`docs-w37-6-ledger-cont7`.
