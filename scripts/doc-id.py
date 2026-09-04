@@ -294,17 +294,34 @@ def scan_roadmap_row_ids(tree_root: Path) -> Iterator[tuple[str, int]]:
         yield match.group(1), int(match.group(2))
 
 
+# A row's OWN id, in the leading cell `doc-index.py`'s `render_index` always writes it in
+# (`"| " + id + " | " + family + " | " + ...`) -- never a bare `_docid.ID_RE` sweep of the
+# whole file. A generated row's *body* column routinely cites other ids in prose (a large
+# requirement's description names half a dozen more), and nothing distinguishes such a
+# citation from a row's own definition once the scan is not anchored to the id column: it
+# manufactures a false "present" for a number no row ever defines
+# (`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`'s own illustrative `PL-01240`,
+# quoted verbatim inside another row's body, is exactly this) without correcting the
+# opposite failure -- the id `scan_bold_id_rows` never turned into a row at all, which is
+# what `doc-id.py check`'s NT-0019 §7(b) noncontiguous-id failures actually are.
+_INDEX_ROW_ID_RE: Final = re.compile(
+    r"^\|\s*(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*(\d+)\s*\|"
+)
+
+
 def scan_index_ids(tree_root: Path) -> Iterator[tuple[str, int]]:
-    """Source 4 of 4: every id `docs/INDEX.md` lists — the generated safety net. Read
-    generically via `_docid.ID_RE` rather than any assumed column layout: `doc-index.py`
-    (W37-3) owns `INDEX.md`'s exact shape, and this must keep working whatever it is,
-    since NT-0019 only fixes "one row per id", not a column schema.
+    """Source 4 of 4: every id `docs/INDEX.md` lists in a row's own leading id column — the
+    generated safety net. Anchored to `doc-index.py`'s own `render_index` row shape
+    (`_INDEX_ROW_ID_RE`) rather than a whole-text sweep — see that constant's comment.
     """
     index_path = tree_root / "docs" / "INDEX.md"
     if not index_path.is_file():
         return
     text = index_path.read_text(encoding="utf-8", errors="replace")
-    for match in _docid.ID_RE.finditer(text):
+    for line in text.splitlines():
+        match = _INDEX_ROW_ID_RE.match(line)
+        if match is None:
+            continue
         yield match.group(1), int(match.group(2))
 
 
@@ -866,13 +883,33 @@ def _load_module(name: str, path: Path) -> types.ModuleType:
 
 
 def _load_doc_index(repo_root: Path = REPO_ROOT) -> types.ModuleType:
-    """`scripts/doc-index.py`, loaded by path. Always loaded from *this* repository's own
-    `scripts/`, never from a `--repo-root` fixture target — a fixture corpus carries no
-    copy of the tooling, only the governed documents the tooling operates on, the same
-    reason `docs/_templates/` (below) is always read from this repository regardless of
-    which tree `migrate` is pointed at.
+    """`scripts/doc-index.py`, loaded by path.
+
+    Loaded from `repo_root`'s own `scripts/` when it has one, and only then falls back to
+    *this* repository's own copy — the reverse of the rule every other `_load_*` helper in
+    this file states and keeps (`_load_audit_docs`, `_load_register_lint`): those exist to
+    reuse stable *parsing logic* against a target that may carry no tooling of its own (a
+    bare `tests/fixtures/docs-migration/`-style fixture), so pinning them to this
+    repository's own `scripts/` is correct. This call is different: `migrate()`'s own
+    `_regenerate_index_for_migrate` uses this module to *write* `docs/INDEX.md`'s content
+    into `root`, and NT-0019 §7(c)'s instrument later re-derives that same content by
+    running `root/scripts/doc-index.py --check` as an independent process against `root`
+    (Ruling 102 §1's own predicate: "the tree's OWN copy"). When `root` carries its own
+    `scripts/` — a real repository snapshot, exactly what `--verify`'s git-archive tree is —
+    `_rewrite_citations` has, by the time this runs, already swept `root/scripts/
+    doc-index.py` itself (an `NT-0019`/`Ruling NN` docstring or literal is rewritten to its
+    post-migration citation form, and `render_index`'s own written header line, `"...see
+    NT-0019 §1.4."`, is exactly such a literal). Writing `docs/INDEX.md` with *this* repository's
+    still-unrewritten copy while `--check` reads the target's already-rewritten one makes
+    the two disagree by that one line — no `OK (byte-stable)`, NT-0019 §7(c)'s own failure.
+    Loading `root`'s own copy first, when it exists, makes both sides run the identical
+    source. A bare fixture with no `scripts/` at all still falls back to this repository's
+    copy exactly as before.
     """
-    return _load_module("_doc_index_for_migrate", repo_root / "scripts" / "doc-index.py")
+    candidate = repo_root / "scripts" / "doc-index.py"
+    if not candidate.is_file():
+        candidate = REPO_ROOT / "scripts" / "doc-index.py"
+    return _load_module("_doc_index_for_migrate", candidate)
 
 
 def _load_audit_docs(repo_root: Path = REPO_ROOT) -> types.ModuleType:
@@ -5536,7 +5573,10 @@ def _write_redirects(root: Path, rows: list[dict[str, str]]) -> None:
 
 
 def _regenerate_index_for_migrate(root: Path) -> None:
-    doc_index = _load_doc_index()
+    # `root`, not the default: a later, independent `doc-index.py --check` run against
+    # `root` must see the identical generator this call used — `_load_doc_index`'s own
+    # docstring has the mechanism and why the default would disagree with it.
+    doc_index = _load_doc_index(root)
     corpus = doc_index.build_corpus(root / "docs")
     fresh = doc_index.render_index(corpus)
     (root / "docs" / "INDEX.md").write_text(fresh, encoding="utf-8")
@@ -6639,8 +6679,41 @@ def migrate(root: Path) -> MigrateResult:
     # is a `KeyError` part-way through an irreversible migration.
     _check_every_document_draft_is_placeable(drafts)
 
+    # NT-0019 §7(b) / Ruling 102 §2 row 4: "allocate ids after exemptions are applied."
+    # The ids `_assign_numbers` hands out come from one global sequence, and
+    # `docs/INDEX.md` (`_regenerate_index_for_migrate` below) lists a number only once
+    # something in the tree actually carries it — a document's own stamped header, or a
+    # citation this run's own rewrite (below) actually rewrote. Two draft classes are known,
+    # before any number is assigned, never to reach either: a `register_row` (a bare `F<n>`
+    # register finding with no essay — the maintainer's 2026-09-03 ruling on `FD` holds its
+    # citation form out of the rewrite deliberately, "a resolver alias to W37-11", so
+    # nothing ever carries its new id), and a draft whose legacy `old_token` is shared with
+    # another draft (the multi-claim guard below holds that token out of `token_map` for the
+    # identical reason — no citation names which one it meant — and the same hole blocks
+    # the drafts' own definition-row rewrite, not only a citation elsewhere). Numbering both
+    # classes *before* everything else, interleaved by sort order the way a single
+    # `_assign_numbers(drafts, start)` call does, scatters never-discoverable numbers through
+    # the middle of the range `docs/INDEX.md` can see — exactly `doc-id.py check`'s
+    # NT-0019 §7(b) noncontiguous failures. Numbering them *last* instead keeps every
+    # discoverable number a contiguous block, and puts every number that will never be
+    # discoverable past the real maximum — which is not a gap `find_noncontiguous_gaps` can
+    # see, since nothing later ever gets compared against a number nothing in the tree cites.
+    _old_token_counts: dict[str, int] = {}
+    for d in drafts:
+        if d.old_token is not None:
+            _old_token_counts[d.old_token] = _old_token_counts.get(d.old_token, 0) + 1
+
+    def _never_discoverable(d: _Draft) -> bool:
+        if d.materialize == "register_row":
+            return True
+        return d.old_token is not None and _old_token_counts[d.old_token] > 1
+
+    _discoverable_drafts = [d for d in drafts if not _never_discoverable(d)]
+    _exempt_drafts = [d for d in drafts if _never_discoverable(d)]
+
     start = compute_next(root)
-    _assign_numbers(drafts, start)
+    _assign_numbers(_discoverable_drafts, start)
+    _assign_numbers(_exempt_drafts, start + len(_discoverable_drafts))
 
     files_written, files_deleted = _write_document_drafts(root, drafts, roadmap_drafts)
 

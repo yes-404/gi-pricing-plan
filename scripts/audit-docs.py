@@ -130,7 +130,7 @@ ROOT = REPO / "docs"
 
 
 def migrated_tree() -> bool:
-    """True on a tree the RFC-216 (NT-0019) id migration has run over.
+    """True on a tree the NT-0019 id migration has run over.
 
     **Why a sentinel and not a flag.** These parsers have to read the corpus on *both*
     sides of a one-way migration commit: this file lands on `main` before the migration
@@ -169,11 +169,11 @@ def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
     return candidates[0]
 
 
-#: `docs/notes/` pre-migration, `docs/rfcs/` after it (RFC-216 D7: notes become the `RFC`
+#: `docs/notes/` pre-migration, `docs/rfcs/` after it (NT-0019 D7: notes become the `RFC`
 #: family). Resolved by what is on disk, never by a flag — see `migrated_tree`.
 NOTES = _first_dir(ROOT / "notes", ROOT / "rfcs")
 #: The findings register: `docs/audit/register.md` pre-migration, `docs/findings/register.md`
-#: after it (RFC-216 §5.2 — the two registers merge into one). Written as a *constant* and
+#: after it (NT-0019 §5.2 — the two registers merge into one). Written as a *constant* and
 #: not spelled inline at each use, because the migration rewrites the path **string** in this
 #: file's own messages while leaving a `ROOT / "audit" / "register.md"` pathlib join
 #: untouched: post-migration the un-fixed script printed "no docs/findings/register.md —
@@ -186,7 +186,7 @@ UNALLOCATED = re.compile(r"next free\s*:", re.IGNORECASE)
 
 #: Requirement, open-question and dependency id **bodies**, accepting both the pre-migration
 #: module-scoped form (`FR-MODEL-45`) and the post-migration global-sequence form
-#: (`FR-1187`, RFC-216 D2). The optional `[A-Z]+-` segment is the whole difference.
+#: (`FR-1187`, NT-0019 D2). The optional `[A-Z]+-` segment is the whole difference.
 #:
 #: These exist as named constants because the same shape is parsed at eleven sites, and after
 #: the migration every one of them matching nothing is not a failure — it is a **pass over an
@@ -219,7 +219,7 @@ _OQ_CITED = re.compile(r"\b(" + _OQ_ID_BODY + r")\b")
 #: An open-question row's leading cell in `open-questions.md` or a spec §10 mirror table.
 _OQ_ROW = re.compile(r"\| (?:~~)?\*\*(" + _OQ_ID_BODY + r")\*\*")
 #: An ADR citation. Pre-migration files are `docs/adr/0001-*.md` cited `ADR-0001`;
-#: post-migration they are `docs/adrs/ADR-00004-*.md` cited `ADR-4` (RFC-216 D6 — citations
+#: post-migration they are `docs/adrs/ADR-00004-*.md` cited `ADR-4` (NT-0019 D6 — citations
 #: unpadded, filenames padded to five). The old `ADR-(\d{4})` pattern reads the *first four*
 #: digits of a five-digit padded id, so `ADR-00005` was parsed as a citation of `ADR-0000`
 #: and check 5 failed with "ADR-0000 referenced but no file exists" — a real-looking failure
@@ -456,7 +456,7 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
         return
 
     if migrated_tree():
-        # Post-migration the note family is `RFC-` (RFC-216 D7) and every mechanical duty
+        # Post-migration the note family is `RFC-` (NT-0019 D7) and every mechanical duty
         # checks 16-20 discharge has a successor that covers *every* family rather than this
         # one directory: the prose `| **Raised** |` header block becomes YAML front matter
         # (check 30), `NT-0012` becomes an `id:` field that must equal the filename
@@ -641,7 +641,7 @@ def check_table_rows(md: list[pathlib.Path]) -> None:
 #: `F6`, `F26`, or the workstream-scoped `F-W9-1` / `F-W10-1-1` a phase-boundary carry-forward
 #: uses — the findings register's own id shape, confirmed against every row in
 #: `docs/audit/register.md` and `docs/audit/phases/*/register.md`.
-#: The `FD-<n>` alternative is RFC-216 D7's post-migration form (`docs/findings/FD-0nnnn-*.md`,
+#: The `FD-<n>` alternative is NT-0019 D7's post-migration form (`docs/findings/FD-0nnnn-*.md`,
 #: cited `FD-93`). Listed first so the alternation prefers it: `F(?:…|\d+)` would otherwise
 #: match the bare `F` of nothing at all, but more importantly a reader must not have to
 #: re-derive which branch wins.
@@ -755,7 +755,7 @@ def check_finding_citations() -> None:
     # less resolved, and no less a legitimate thing to cite -- confirmed against W9-3's own
     # Findings table, whose id is the bare first cell, the same shape a phase register uses.
     #
-    # Both layouts: `docs/audit/work/*/README.md` + `closure-records.md` before the RFC-216
+    # Both layouts: `docs/audit/work/*/README.md` + `closure-records.md` before the NT-0019
     # migration, `docs/closures/CR-*.md` after it (§5.2 -- the work-item READMEs and the two
     # split files all become `CR-` documents).
     closure_sources = sorted((ROOT / "audit" / "work").glob("*/README.md"))
@@ -1043,7 +1043,7 @@ PLAN_ACCEPTANCE_STANDARD_CUTOFF = date(2026, 8, 31)
 _PLAN_KIND_EXCLUDED_SUFFIXES = ("-ledger.md", "-final-review.md", "-verified.md", "-handover.md")
 _PLAN_FILENAME_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})-")
 #: The post-migration equivalent of `_PLAN_KIND_EXCLUDED_SUFFIXES`: a `PL-` document whose
-#: `kind:` is terminal (RFC-216 §1.6 -- a review is the auditor's verdict, a handover is
+#: `kind:` is terminal (NT-0019 §1.6 -- a review is the auditor's verdict, a handover is
 #: the executor's) declares no acceptance standard of its own, exactly as Ruling 46 §2 says
 #: of `-final-review`/`-verified`/`-handover`. `-ledger` has no counterpart here: a ledger
 #: became its own `LG-` family under `docs/ledgers/` and is not a plan at all.
@@ -1095,7 +1095,7 @@ def check_plan_acceptance_standard() -> None:
             continue
 
         if post_migration:
-            # After the RFC-216 migration a plan is `PL-<nnnnn>-<slug>.md`: the date left the
+            # After the NT-0019 migration a plan is `PL-<nnnnn>-<slug>.md`: the date left the
             # filename (that is what the migration is *for*) and the kind stopped being a
             # suffix. Both now come from the front matter, which is a strictly better source
             # than either -- a parsed field rather than a substring of a name.
@@ -1113,7 +1113,7 @@ def check_plan_acceptance_standard() -> None:
                 fail(
                     f"docs/plans/{name}: no front-matter header — check 28 takes a filed "
                     "plan's kind and filing date from `kind:` and `created:` after the "
-                    "RFC-216 migration, and can classify or date nothing without them"
+                    "NT-0019 migration, and can classify or date nothing without them"
                 )
                 continue
             if header.kind in _PLAN_TERMINAL_KINDS:
@@ -3046,7 +3046,15 @@ def check_index_stable() -> None:
         fail(f"check 39: docs/INDEX.md corpus could not be built — {exc}")
         return
     if not index_path.is_file():
-        if not corpus.records:
+        # `doc-index.py`'s own `_pre_migration_records` — a `- **DEP-<n>**` dependency-rule
+        # bullet already in canonical bare-numeric form (three of `00-overview.md` §7's
+        # four, pre-dating this migration entirely) is picked up by the corpus scan
+        # regardless of migration state, and this check exists to catch a migration
+        # *draft* going unindexed, not a pre-existing, stable bullet no migration ever
+        # touches — see that function's own docstring for the mechanism and why the
+        # fourth bullet, `DEP-1a`, never needs telling apart from the other three here.
+        _new_records = _doc_index._pre_migration_records(corpus.records)
+        if not _new_records:
             # "0 governed record(s)" stated with the same numeral every other check 30-39
             # note uses, not the word "zero" — a reader (or a script) scanning for a
             # digit to confirm a check actually examined something must not have to
@@ -3057,7 +3065,7 @@ def check_index_stable() -> None:
             )
         else:
             fail(
-                f"check 39: {len(corpus.records)} governed record(s) exist but "
+                f"check 39: {len(_new_records)} governed record(s) exist but "
                 "docs/INDEX.md does not"
             )
     else:
@@ -3144,11 +3152,11 @@ def main() -> int:
 
     # Numbering. Two regimes, and which one applies is read off the ids themselves, not
     # assumed: a module-scoped id (`FR-MODEL-45`) belongs to a per-module sequence that must
-    # be contiguous, while a global-sequence id (`FR-1187`, RFC-216 D1/D2) is drawn from one
+    # be contiguous, while a global-sequence id (`FR-1187`, NT-0019 D1/D2) is drawn from one
     # allocator shared with every other family, so gaps in the FR run are not merely legal --
     # they are what a shared sequence looks like, and asserting contiguity over it would red
     # on every correctly-numbered tree. Contiguity of the *global* sequence is
-    # `doc-id.py check`'s (RFC-216 §7(b)); what is left here is uniqueness, checked above.
+    # `doc-id.py check`'s (NT-0019 §7(b)); what is left here is uniqueness, checked above.
     scoped = {rid for rid in defined if _SCOPED_REQ_ID.fullmatch(rid)}
     by_prefix: dict[str, list[int]] = collections.defaultdict(list)
     for rid in scoped:
@@ -3200,7 +3208,7 @@ def main() -> int:
 
     # 5. ADRs
     #
-    # Both layouts, discovered from disk: `docs/adr/0001-*.md` before the RFC-216 migration,
+    # Both layouts, discovered from disk: `docs/adr/0001-*.md` before the NT-0019 migration,
     # `docs/adrs/ADR-00004-*.md` after it. Numbers are compared as **integers** so neither
     # the file's padding nor the citation's decides whether a real ADR resolves.
     adrs = {int(m.group(1)) for p in ROOT.glob("adr/0*.md") if (m := _ADR_FILE.match(p.name))}
@@ -3414,7 +3422,7 @@ def main() -> int:
             continue
         # The module comes from the **spec that defines the requirement**, read off that
         # spec's own `Module code:` line, not from a segment of the id. Post-migration there
-        # is no module segment left in an id (RFC-216 D2), so `rid.split("-")[1]` returned
+        # is no module segment left in an id (NT-0019 D2), so `rid.split("-")[1]` returned
         # the *number*: coverage was reported per requirement — "356 100%, 357 0%, 358 0%",
         # 450 buckets of one — and the 10% floor then fired or did not fire on individual
         # requirements. The id stopped carrying the module; the file always did.
@@ -3465,7 +3473,7 @@ def main() -> int:
         ):
             declared_functions.setdefault(m.group(1), f.name)
 
-    # Both filename forms: `wf-01-dataset-to-approved-model.md` before the RFC-216 migration,
+    # Both filename forms: `wf-01-dataset-to-approved-model.md` before the NT-0019 migration,
     # `WF-00979-dataset-to-approved-model.md` after it. `glob` is case-sensitive on Linux, so
     # the lower-case pattern alone matched **zero** journeys post-migration and check 21
     # reported "0 endpoints, 0 functions, all declared" -- a pass, printed, over nothing.
