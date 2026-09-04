@@ -1213,7 +1213,7 @@ transcribed from any relay.
 | d11 | FAIL | the old notes directory, un-migrated | unowned | — |
 | d12 | FAIL | `docs/adr/`-prefixed citation form, un-migrated | unowned | — |
 | d13 | FAIL | the old `.claude` notes root — INERT, see its unanchored companion | unowned | — |
-| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`); the +15 mangled-companion rise **investigated and resolved as a false alarm** (see 2026-09-04 dated section below) — not a real corpus regression, no fix required beyond an optional self-documenting comment | multiple (partial) | #720, #723, #727, #729 merged; executor-30-2's +15 investigation closed, resuming d4/d5 |
+| g | FAIL | the token-boundary defect, Ruling 102 §2 row 1 — residue down (none=320→190 on `6c92d55`); the +15 mangled-companion rise is **class 3c** (deputy ruling, 18:3xZ) — the instrument's own test modules exhibiting the shapes they detect, same class as (d)'s ruling — **discharged by exec-ids' `_docid.sweep_exclusion_reason` tuple landing, not by explanation**; the predicted per-file fixture-line drop is stated below, awaiting the measured drop once the tuple lands | multiple (partial) | #720, #723, #727, #729 merged; exec-ids' tuple pending (`fba9bfb`, now on `origin/w37-6-citation-inverse-ids`) |
 | h1 | FAIL | `audit-docs.py` non-disclosed classes (32, 36, 1, 31, 27, …) still non-zero | unowned | — |
 
 **Nine of thirteen rows are unowned** (d1, d6, d7, d9, d10, d11, d12, d13, h1) — no dispatch
