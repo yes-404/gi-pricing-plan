@@ -2437,7 +2437,13 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # SET CHANGE (PROGRESSED) on the next `--verify` run regardless.
     "c": PASS,          # docs/INDEX.md byte-stable against its own renderer — same
                          # unrelated prior-PR progress, re-recorded for the same reason
-    "d1": FAIL,         # NT-00
+    "d1": PASS,         # NT-\d{4} — FIXED (2026-09-04, W37-6 exec-ids): `_expand_compound`'s
+                         # padding bug for a zero-padded family's shortened compound
+                         # continuation (`NT-0014-15`, real citation, `docs/plans/...w37-6-
+                         # the-migration-run-the-go-ahead-ask...md`) was the row's only
+                         # citation-class miss; the four specification-class matches
+                         # (a deliberately-broken-input example, three test fixtures) were
+                         # fenced or excluded via the new `tests/`-module class. 0/0.
     "d2": DISCLOSE,     # F-W[0-9] — Ruling 105 §A: the same alias class as `F[0-9]{2}`,
                          # excluded from the zero requirement with its count disclosed
                          # regardless of the migrated/control comparison (2026-09-03, task 14).
@@ -2471,12 +2477,27 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # existing, now-measured defect (a `Ruling <n>` ambiguity/
                          # migration gap, row (d)'s file, previously closed at task 7) — not
                          # fixed here, out of row (b)'s own scope.
-    "d6": FAIL,         # ADR-0[0-9]{3}\b — trailing `\b` added (2026-09-03, task 14, Ruling
-                         # 67 §2 Part 1's already-ruled "complete identifier" requirement,
-                         # not carried here until now): the bare pattern matched as a
-                         # substring of any correctly-migrated five-digit id; genuine
-                         # un-migrated 4-digit citations remain, so the row still fails
-    "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
+    "d6": PASS,         # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
+                         # original matches, plus one more surfaced by `origin/main` drift
+                         # (`docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md`, a
+                         # row-h plan landed after this row's original 74-line snapshot),
+                         # were specification-class — deliberately-fake `ADR-0000`/
+                         # `ADR-0099`/`ADR-5` parsing-width worked examples and test
+                         # fixtures, never a real citation. Fenced or respelled to a
+                         # schematic (`ADR-0NNN`) form; zero citation-class misses. 0/0.
+    "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+ — the 39 "Next free"/"Highest ids
+                         # in use" lines this row carried are now the never-allocated
+                         # closed class (deputy's mechanical predicate, 2026-09-04, W37-6
+                         # exec-ids, this same commit): disclosed, excluded from the zero
+                         # requirement, owner "none — closed class". The row still FAILs
+                         # on two hits neither owned by W37-6 exec-ids: `FR-RATE-41` in
+                         # the generated `docs/rulings/INDEX.md` (a compound-title-sweep
+                         # bug in `_write_split_source_indexes`'s `_sweep_title`, owned by
+                         # exec-h1 per team-lead 2026-09-04) and `FR-PLAT-4` in `scripts/
+                         # doc-id.py`'s own `_expand_range` docstring (a real, bold-defined
+                         # id used as an illustrative worked example rather than a fake
+                         # one — row-g's/#733's code, surfaced by `origin/main` drift,
+                         # flagged rather than fixed here, out of this row's own scope).
     "d8": FAIL,         # workstream/slice id — RECLASSIFIED REGRESSION -> FAIL (2026-09-04
                          # ruling, `to-lead.md:1017`, task #30): the prior REGRESSION verdict
                          # was a raw-line-count artifact. #721's `_compound_token_re`

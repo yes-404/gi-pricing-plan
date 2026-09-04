@@ -1956,17 +1956,19 @@ def test_a_reclassification_between_two_fatal_verdicts_is_a_set_change(dv: Any) 
     """(d4) going FAIL -> REGRESSION is a finding, not noise: the migration began creating
     what the row forbids. A fatal-to-fatal move must not be invisible.
 
-    "d1" rather than "d5": task 17 (2026-09-04) re-recorded (d5) as PASS on `main`
-    (#711's unrelated progress), so a FAIL -> REGRESSION override there would actually be
-    a PASS -> REGRESSION move (REGRESSED, not RECLASSIFIED) against the real table. "d1"
-    (note id) stays FAIL — a genuine fatal-to-fatal example.
+    "d9" rather than "d1" or "d5": task 17 (2026-09-04) re-recorded (d5) as PASS on
+    `main` (#711's unrelated progress), and W37-6 exec-ids (2026-09-04) fixed (d1) to
+    PASS in the same table, so a FAIL -> REGRESSION override at either would actually be
+    a PASS -> REGRESSION move (REGRESSED, not RECLASSIFIED) against the real table. "d9"
+    (legacy dated-plan path) stays FAIL — a genuine fatal-to-fatal example, owned by
+    W37-6's path-repointing track, untouched by this row's own fix.
     """
-    assert dv.EXPECTED_VERDICTS["d1"] == dv.FAIL, (
+    assert dv.EXPECTED_VERDICTS["d9"] == dv.FAIL, (
         "this test's premise: the row it moves must start FAIL (fatal) in the real table"
     )
-    moved = dict(dv.EXPECTED_VERDICTS, d1=dv.REGRESSION)
+    moved = dict(dv.EXPECTED_VERDICTS, d9=dv.REGRESSION)
     result = _result(dv, moved)
-    assert [(c.key, c.direction) for c in result.set_changes] == [("d1", dv.RECLASSIFIED)]
+    assert [(c.key, c.direction) for c in result.set_changes] == [("d9", dv.RECLASSIFIED)]
     assert result.exit_code == 3
 
 
