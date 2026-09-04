@@ -1129,6 +1129,15 @@ class _Draft:
     # requirement/register-row fields:
     source_path: Path | None = None
     match_span: tuple[int, int] | None = None  # char offsets of the old token, for in-place rewrite
+    # Task 4's wf-0n ruling (team-lead, 2026-09-04, citing the deputy): a legacy workflow
+    # is cited two ways in the real corpus -- the filename's own lowercase form (`wf-01`,
+    # `old_token`'s primary key, since that is the identifier itself under §7(d)'s own
+    # `wf-0[0-9]` alternative) and the in-file heading's uppercase form (`WF-01`). Both
+    # must resolve to the same new id or the uppercase form -- what nearly every real
+    # citation of a workflow actually uses -- goes unswept forever (case-sensitive
+    # substitution never bridges the two). `extra_old_tokens` carries every alias beyond
+    # `old_token` that a citation of this draft may use; empty for every other family.
+    extra_old_tokens: tuple[str, ...] = ()
 
 
 @dataclass
@@ -3007,6 +3016,11 @@ def _discover_findings(root: Path) -> list[_Draft]:
 
 
 _WORKFLOW_TITLE_RE: Final = re.compile(r"^#\s+(WF-\d+)\s+—\s+(.+)$", re.MULTILINE)
+#: The filename's own legacy form -- `wf-01-dataset-to-model.md` -> `wf-01`. Task 4's
+#: wf-0n ruling: this, not the heading's uppercase form, is `old_token`'s primary key,
+#: because it is the identifier itself under §7(d)'s own `wf-0[0-9]` alternative and it is
+#: what nearly every real citation in the corpus actually writes.
+_WORKFLOW_FILENAME_RE: Final = re.compile(r"^(wf-\d+)-")
 
 
 def _discover_workflows(root: Path) -> list[_Draft]:
@@ -3053,7 +3067,17 @@ def _discover_workflows(root: Path) -> list[_Draft]:
         title_match = _WORKFLOW_TITLE_RE.search(text)
         if title_match is None:
             continue  # README.md and anything else not a legacy `# WF-0N — <title>` file
-        old_token, title = title_match.group(1), title_match.group(2)
+        heading_token, title = title_match.group(1), title_match.group(2)
+        filename_match = _WORKFLOW_FILENAME_RE.match(path.name)
+        # Task 4's wf-0n ruling: the filename's lowercase form is the primary key; the
+        # heading's uppercase form rides along as an alias to the same target. A filename
+        # that does not match the expected shape (not proven to occur in the real corpus,
+        # but not assumed impossible either) falls back to the heading form alone, exactly
+        # what this function did before the ruling -- never silently drops the draft.
+        if filename_match is not None:
+            old_token, extra_old_tokens = filename_match.group(1), (heading_token,)
+        else:
+            old_token, extra_old_tokens = heading_token, ()
         created = _module_first_commit_date(path, root)
         drafts.append(
             _Draft(
@@ -3061,6 +3085,7 @@ def _discover_workflows(root: Path) -> list[_Draft]:
                 status="active", created=created, owner="decision-maker",
                 tie_break=(path.relative_to(root).as_posix(), 0),
                 old_token=old_token, was=path.relative_to(root).as_posix(), body=text,
+                extra_old_tokens=extra_old_tokens,
             )
         )
     return drafts
@@ -5084,6 +5109,35 @@ def _path_citation_redirect_rows(old_rel: str, new_rel: str) -> list[dict[str, s
     ]
 
 
+def _drop_contested_split_redirects(
+    pairs: Sequence[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    """`(old, new)` pairs with any `old` whose `new` disagrees across occurrences dropped
+    entirely -- never a raise, and never an arbitrary pick of one occurrence's answer.
+
+    `_SplitSource.resolve`'s own contract is that different occurrences of the *same*
+    citing text may legitimately determine *different* targets (an id/anchor/line-span
+    determinant reads the citing line, never a directory) -- unlike a compound's expansion
+    (a pure function of the token and the global map, never the occurrence), this list can
+    and does contain the same `old` mapped to two different `new` values. Found live
+    against a real multi-ruling file (`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`,
+    splitting into `RL-00190`/`RL-00191`/…, each citation determining its own sibling
+    correctly): passing such a pair straight to `_write_redirects` crashes the whole
+    migration, because #726's own write-time guard ("one legacy id must resolve to
+    exactly one new id") cannot tell this shape apart from the allocation bug it exists to
+    catch. Filtered here with the identical collision-safe philosophy
+    `classify_migration_diff`'s own `_collision_safe_inverse` already applies on the read
+    side: a genuinely contested `old` contributes no row at all, and the file(s) whose
+    citation it was correctly, silently keep neither an inverse nor a crash -- named by
+    `(g)`'s own residue accounting rather than by an exception here. An *exact* repeat
+    (the same `old` -> the same `new`, more than once) is not a conflict and survives.
+    """
+    by_old: dict[str, set[str]] = {}
+    for old, new in pairs:
+        by_old.setdefault(old, set()).add(new)
+    return [(old, next(iter(news))) for old, news in by_old.items() if len(news) == 1]
+
+
 def _bare_basename_rewrite(old_rel: str, new_rel: str) -> tuple[str, str, str] | None:
     """`(citing_dir, bare_token, replacement)` for a moved file's **bare-basename** citing
     form, or `None` where there is none.
@@ -5534,35 +5588,37 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 
 
 #: A compound-continuation token, base plus its whole chain: `\btok` then zero or more
-#: `[-/]\d+` groups, captured as one string. Group 1 is empty for a plain, uncontinued
-#: token — the common case, handled the same as `_whole_token_re` always did.
+#: `[-/]\d+` groups, captured as one string. Group `continuation` is empty for a plain,
+#: uncontinued token — the common case, handled the same as `_whole_token_re` always did.
 #:
-#: **`\b` between `tok` and the continuation group — row (b)'s W37-6 regression, #711.**
-#: Without it this pattern is `\btok` with no trailing boundary at all, so it matches `tok`
-#: as a bare PREFIX of a longer, unrelated identifier that merely starts with the same
-#: digits: a mapped `OQ-OVR-1` (-> `OQ-831`) matches inside the un-mapped, ambiguous
-#: `OQ-OVR-11` (two claimants, correctly held out of `token_map` by the guard below) —
-#: `\bOQ-OVR-1` has no trailing `\b` to refuse the immediately-following `1`, since a
-#: digit followed by a digit is never a word-boundary transition for `\b` to test at all.
-#: `_expand_compound` then sees an empty continuation (no `[-/]` follows), returns the
-#: mapped value unchanged, and `.sub()` leaves the un-matched trailing `1` in place:
-#: `OQ-OVR-11` -> `OQ-831` + `1` = `OQ-8311`, a fabricated id nothing allocated, planted
-#: into every mirror of that open question (`docs/open-questions.md`, its owning spec's
-#: §10 row) and from there into `docs/INDEX.md`'s own id column
-#: (`doc-index.py`'s `_BOLD_ID_ROW` has no way to know the id is fabricated), producing the
-#: four `noncontiguous` gaps `find_noncontiguous_gaps` reports between the real discoverable
-#: range and this and five siblings of the same shape (`OQ-OVR-12`+`OQ-OVR-1`->`OQ-8312`,
-#: `OQ-MODEL-10`/`OQ-MODEL-11`+`OQ-MODEL-1`->`OQ-8610`/`OQ-8611`,
-#: `OQ-MODEL-23`/`OQ-MODEL-24`+`OQ-MODEL-2`->`OQ-8623`/`OQ-8624`). A trailing `\b` closes
-#: it exactly as `_whole_token_re` already required for the plain case: between `tok`'s own
-#: last digit and a following `-`/`/` (both non-word) `\b` is satisfied, so a genuine
-#: compound continuation (`NFR-RATE-13/14`, `W1-1`'s own refusal) is unaffected; between
-#: that same digit and another digit (both `\w`) `\b` fails, so the match is refused rather
-#: than truncated. Isolated and reproduced against `971677e` (the commit row (b) was last
-#: recorded `PASS` at) with only #711's `doc-id.py` diff applied: `noncontiguous=4`,
-#: identical to `HEAD`; the same tree with this one-character fix applied: `noncontiguous=0`.
+#: **`\b` between `tok` and the continuation group — row (b)'s W37-6 regression, #711,
+#: fixed by #721.** Without it this pattern is `\btok` with no trailing boundary at all,
+#: so it matches `tok` as a bare PREFIX of a longer, unrelated identifier that merely
+#: starts with the same digits: a mapped `OQ-OVR-1` (-> `OQ-831`) matched inside the
+#: un-mapped, ambiguous `OQ-OVR-11`, `_expand_compound` saw an empty continuation and
+#: returned the mapped value unchanged, and `.sub()` left the un-matched trailing `1` in
+#: place: `OQ-OVR-11` -> `OQ-831` + `1` = `OQ-8311`, a fabricated id nothing allocated.
+#: The identical mechanism also caught `wf-01` matching inside `wf-010` (task 4's own
+#: wf-0n regression) — a digit followed by a digit is never a word-boundary transition,
+#: so the `\b` immediately after `tok` refuses *both* shapes in one place: a genuine
+#: continuation (`NFR-RATE-13/14`) still passes it (digit -> `-`/`/` *is* a transition),
+#: while a bare second digit or dot with nothing separating it does not.
+#:
+#: Task #30's range ruling (W37-6 channel `:526`) adds the sibling alternative
+#: `range_end`, with its *own* trailing `\b` rather than the shared one above: `..` is
+#: itself a boundary-worthy transition (`FR-PLAT-1..4` has a `\b` between `1` and `.`
+#: for free), so nothing stops the continuation alternative from also matching here with
+#: zero repetitions and returning `tok` alone — exactly the row (b) defect one level up,
+#: this time surviving the `\b`-after-`tok` fix because that boundary is satisfied
+#: (digit -> `.` *is* a transition) regardless of which alternative is meant. Trying the
+#: range shape *first*, as one more alternative rather than a second sweep, is what makes
+#: the choice atomic: whichever alternative's own anchors are satisfied wins the position
+#: outright, with no second pass free to reinterpret what the first already matched.
 def _compound_token_re(tok: str) -> re.Pattern[str]:
-    return re.compile(rf"\b{re.escape(tok)}\b((?:[-/]\d+)*)")
+    escaped = re.escape(tok)
+    return re.compile(
+        rf"\b{escaped}(?:\.\.(?P<range_end>[0-9]+)\b|\b(?P<continuation>(?:[-/]\d+)*))"
+    )
 
 
 _CONTINUATION_PART_RE: Final = re.compile(r"([-/])(\d+)")
@@ -5609,7 +5665,7 @@ def _expand_compound(
     tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
     derived: list[tuple[str, str]],
 ) -> str:
-    continuation = m.group(1)
+    continuation = m.group("continuation")
     if not continuation:
         return mapped
     if _WORK_FAMILY_TOKEN_RE.match(tok):
@@ -5647,12 +5703,63 @@ def _expand_compound(
     return replacement
 
 
+#: Task #30's range ruling (W37-6 channel `:526`, extending the maintainer's compound
+#: ruling to the `..` shape): `FR-PLAT-1..4` names the **set** of consecutive legacy ids
+#: `FR-PLAT-1, FR-PLAT-2, FR-PLAT-3, FR-PLAT-4` -- unlike a compound's shorthand list, a
+#: range's members are not written out, so this is the one shape a mapped-lookup cannot
+#: skip: every member in `[start, end]` must be constructed from the base token's own
+#: prefix and looked up before any rewrite can happen at all.
+#:
+#: **The new ids are not consecutive**, so the citation cannot be rewritten as a new range
+#: (`FR-680..703` would silently claim three ids in between that the range never named) --
+#: it is **enumerated**, every mapped id written out in full, comma-separated (the
+#: maintainer's own worked example: `FR-PLAT-1..4` -> `FR-680, FR-681, FR-702, FR-703`).
+#:
+#: **If every member maps, the whole range is replaced and the pair is recorded** — the
+#: identical mechanism `_expand_compound` already uses (`derived`, consumed by `(g)`'s
+#: inverse through `REDIRECTS.csv`'s generic `old_id`/`new_id` columns, no `audit-docs.py`
+#: change needed).
+#:
+#: **If any member does not map, or the range is not ascending, the whole citation comes
+#: out byte-identical** — the same forced "leave it whole" outcome §7 (g) already gives an
+#: unmapped compound component, reached here for the identical reason: a half-enumerated
+#: range is worse than one left alone.
+def _expand_range(
+    tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
+    derived: list[tuple[str, str]],
+) -> str:
+    prefix_match = re.search(r"\d+$", tok)
+    if prefix_match is None:
+        # No trailing digit run on the base token itself -- every family this shape is
+        # proven to occur in (`FR`, `NFR`, `OQ`, `DEP`) ends in digits; defensive, not
+        # reachable by any corpus token today.
+        return m.group(0)
+    prefix = tok[: prefix_match.start()]
+    start = int(prefix_match.group())
+    end = int(m.group("range_end"))
+    if end <= start:
+        # Not an ascending range (`FR-PLAT-4..1`, or a citation that happens to repeat
+        # its own number) -- not a shape any corpus token proves, and guessing what it
+        # meant is worse than leaving it whole.
+        return m.group(0)
+    mapped_members: list[str] = [mapped]
+    for n in range(start + 1, end + 1):
+        member_mapped = active_map.get(prefix + str(n))
+        if member_mapped is None:
+            return m.group(0)  # one unmapped member -- the whole range stays whole
+        mapped_members.append(member_mapped)
+    replacement = ", ".join(mapped_members)
+    derived.append((m.group(0), replacement))
+    return replacement
+
+
 def _rewrite_citations(
     root: Path, token_map: Mapping[str, str], split_sources: Sequence[_SplitSource] = (),
     dir_token_map: Mapping[str, Mapping[str, str]] = types.MappingProxyType({}),
     dir_split_sources: Mapping[str, Sequence[_SplitSource]] = types.MappingProxyType({}),
     derived_redirects: list[tuple[str, str]] | None = None,
     dir_redirects: list[tuple[str, str, str]] | None = None,
+    split_redirects: list[tuple[str, str]] | None = None,
 ) -> tuple[list[str], list[_UnresolvedCitation], list[_UnresolvedCitation]]:
     """Sweep every tree file, rewriting each citation token to its destination.
 
@@ -5679,6 +5786,31 @@ def _rewrite_citations(
     `../audit/register.md` resolves to a different real file than the identical text would
     from a directory at a different depth — so the caller records it with that scope, not
     as a global pair.
+
+    `split_redirects`, when given, is appended to in place with one `(old, new)` pair per
+    split-source citation this run actually resolved to one concrete target (task #30's
+    ruling, W37-6 channel "the cause table dispositions"). `_SplitSource.resolve` decides
+    *which* target a citation with no recorded alternative meant — by an adjacent id, an
+    `#anchor` or a line span, never by directory — and until this parameter existed the
+    decision was thrown away the moment it was made: `repl` below returned `out` and
+    recorded nothing, so `(g)`'s inverse (built off `REDIRECTS.csv`'s `old_id`/`new_id`
+    columns) had no row for a bare path citation of a source that split into more than one
+    document (`docs/audit/register.md` resolving to one phase's own target is the
+    measured case — `.claude/roles/lead.md`'s own worked example). Scoped globally, like
+    `derived_redirects`, never per `citing_dir` like `dir_redirects`: a `_SplitSource`'s
+    determinants (id, anchor, line span) read the citation and its own line, never the
+    citing file's directory, so the same literal old text means the same thing from any
+    file that resolves it the same way — and where two files resolve the identical old
+    text to two different targets, the collision-safe inverse this feeds already drops the
+    contested key rather than guess, exactly as it does for an ambiguous compound.
+
+    The same list also carries one pair per citation Ruling 101 clause 1's family-index
+    fallback answers (`src.index_token`, when no determinant names one target) — measured
+    live alongside the resolved case (`backend/src/app/platform/settings.py` citing a
+    plan with no adjacent id) and strictly safer to record: every occurrence that reaches
+    the fallback for one `_SplitSource` gets the identical `index_token`, a property of
+    the source itself rather than of the one occurrence, so there is no per-occurrence
+    ambiguity for the collision-safe inverse to even need to arbitrate.
     """
     changed: list[str] = []
     index_resolved: list[_UnresolvedCitation] = []
@@ -5688,6 +5820,9 @@ def _rewrite_citations(
     )
     dir_derived: list[tuple[str, str, str]] = (
         dir_redirects if dir_redirects is not None else []
+    )
+    split_derived: list[tuple[str, str]] = (
+        split_redirects if split_redirects is not None else []
     )
     tree_by_token: dict[str, _SplitSource] = {s.token: s for s in split_sources}
     # One ordering over both kinds, longest first for the reason the flat map already
@@ -5740,7 +5875,11 @@ def _rewrite_citations(
                         m: re.Match[str], t: str = tok, v: str = active_map[tok],
                         lmap: Mapping[str, str] | None = local_map, cdir: str = citing_dir,
                     ) -> str:
-                        out = _expand_compound(t, v, active_map, m, derived)
+                        out = (
+                            _expand_range(t, v, active_map, m, derived)
+                            if m.group("range_end") is not None
+                            else _expand_compound(t, v, active_map, m, derived)
+                        )
                         if lmap is not None and t in lmap and out != m.group(0):
                             dir_derived.append((cdir, m.group(0), out))
                         return out
@@ -5754,6 +5893,8 @@ def _rewrite_citations(
                     line = m.string[line_start : line_end if line_end != -1 else None]
                     out = src.resolve(m, line)
                     if out is not None:
+                        if out != m.group(0):
+                            split_derived.append((m.group(0), out))
                         return out
                     record = _UnresolvedCitation(
                         citing_file=rel,
@@ -5769,6 +5910,18 @@ def _rewrite_citations(
                         unrewritten.append(record)
                         return m.group(0)
                     index_resolved.append(record)
+                    # Ruling 101 clause 1's bucket (iv) fallback is a substitution too --
+                    # measured live (task #30's own triage, `backend/src/app/platform/
+                    # settings.py` citing `docs/plans/2026-08-29-w11-slices-3-4-
+                    # rulings.md`): every citation of one split source that lands here
+                    # gets the identical `index_token` (it is the source's own field, not
+                    # derived from this one occurrence), so recording the pair is safe
+                    # with no per-occurrence ambiguity at all -- unlike `src.resolve`'s
+                    # determinant, which reads the citing line and so could in principle
+                    # differ between two occurrences of the same literal old text, this
+                    # fallback cannot.
+                    if src.index_token != m.group(0):
+                        split_derived.append((m.group(0), src.index_token))
                     return src.index_token
 
                 segment = split.pattern.sub(repl, segment)
@@ -7299,6 +7452,14 @@ def migrate(root: Path) -> MigrateResult:
         # held back.
         if d.old_token is not None and d.prefix != "FD":
             id_claims.setdefault(d.old_token, []).append((canon, d.was or canon))
+        # Task 4's wf-0n ruling: every alias beyond the primary key (today, only a
+        # workflow's heading-derived `WF-0n` form alongside its filename-derived
+        # `wf-0n` primary) claims the same canonical id through the same `id_claims`
+        # machinery -- so a genuinely contested alias is caught by the identical
+        # multi-claimant guard `old_token` itself already gets, not a silent second path.
+        for extra in d.extra_old_tokens:
+            if d.prefix != "FD":
+                id_claims.setdefault(extra, []).append((canon, d.was or canon))
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
@@ -7316,6 +7477,23 @@ def migrate(root: Path) -> MigrateResult:
                 "new_path": new_path,
             }
         )
+        # Task 4's wf-0n ruling, the inverse half: an alias's citation form is only
+        # guaranteed correct *inside the draft's own new directory* -- a workflow's own
+        # body still carries its own heading's uppercase `WF-0n` form (rewritten in
+        # place, same file), while every other citer in the tree wrote the lowercase
+        # `wf-0n` filename form the primary `old_id` row above already covers globally.
+        # Recorded `citing_dir`-scoped (never as a second global row for the same
+        # `new_id`, which `_collision_safe_inverse` would then have to drop as contested)
+        # so the workflow's own file inverts on its own heading and nothing else does.
+        if d.extra_old_tokens and d.new_path is not None:
+            extra_citing_dir = posixpath.dirname(new_path)
+            for extra in d.extra_old_tokens:
+                redirect_rows.append(
+                    {
+                        "old_id": extra, "new_id": canon,
+                        "old_path": "", "new_path": "", "citing_dir": extra_citing_dir,
+                    }
+                )
         # A **path** citation (a markdown link's target, or its own repo-relative text)
         # is a different thing from an **id** citation, and the `FD` id-token exclusion
         # above does not apply to it: a path is unique per file, so unlike a bare `F<n>`
@@ -7460,6 +7638,33 @@ def migrate(root: Path) -> MigrateResult:
                 token_map, token_origins,
                 _path_rewrite_tokens(old_rel, moves[0][1]), old_rel,
             )
+            # Task #30's ruling (W37-6 channel, "the cause table dispositions"): an
+            # **id-bearing** move's path citation used to get no row of its own --
+            # `_path_citation_redirect_rows` was called only for the four id-less moves
+            # below (register.md, reference moves, the CSV, the phase-1b deletion), on
+            # the premise that every citer of an id-bearing document writes its bare id,
+            # never its path. Measured false: the tombstone stub left at the old notes
+            # root under `.claude` (a numbered `000N-*.md` file) deliberately cites the
+            # **path** (`` `docs/notes/000N-*.md` ``, with a
+            # relative link alongside it) so the pointer stays readable without doc-id
+            # knowledge -- "what makes a frozen plan's citation still resolve", the
+            # `.claude/` §5.3 ruling's own words for exactly this stub. The forward sweep
+            # already rewrites that path wherever it appears (`token_map` carries every
+            # `_path_rewrite_tokens` form for every draft, id-bearing or not); only the
+            # `old_id`/`new_id` row (g)'s inverse reads was missing for the id-bearing
+            # case. Extended here rather than duplicated, so the two calls cannot drift
+            # into two different sets of forms for what is the same generator --
+            # and gated on this branch, never the per-draft loop above, because that is
+            # exactly where the group is known to be a genuine 1:1 move: a source that
+            # *splits* (below) shares one `old_rel` across several drafts with several
+            # different `new_rel`s, and a naive per-draft emission recorded that same
+            # `old_rel` as an `old_id` against each of those different destinations in
+            # turn -- precisely the shape #726's `_write_redirects` guard now refuses
+            # outright ("one legacy id must resolve to exactly one new id"), found live
+            # against a real multi-ruling file
+            # (`docs/plans/2026-08-29-w11-3-d6-batch-resumability-ruling.md`, splitting
+            # into `RL-00145`/`RL-00146`/…) once that guard existed to catch it.
+            redirect_rows.extend(_path_citation_redirect_rows(old_rel, moves[0][1]))
             bare = _bare_basename_rewrite(old_rel, moves[0][1])
             if bare is not None:
                 citing_dir, tok, replacement = bare
@@ -7501,9 +7706,18 @@ def migrate(root: Path) -> MigrateResult:
     # a global pair, so a file elsewhere in the tree whose relative link happens to read
     # the same text is never silently inverted through someone else's row.
     dir_link_redirects: list[tuple[str, str, str]] = []
+    # Task #30's out-parameter: one `(old, new)` pair per split-source citation this run
+    # resolved to one concrete target (`_SplitSource.resolve`, an id/anchor/line-span
+    # determinant, never a directory) -- `docs/audit/register.md` resolving to one
+    # phase's own destination is the measured case. No `old_path`/`new_path`: the row
+    # records what a *citation* looked like, not that a file moved (that row already
+    # exists, per draft, above); `(g)`'s inverse needs no wiring change to consume it,
+    # the same "generic on old_id/new_id" property `compound_redirects` already has.
+    split_path_redirects: list[tuple[str, str]] = []
     rewritten, index_resolved, unrewritten_citations = _rewrite_citations(
         root, token_map, split_sources, dir_token_map, dir_split_sources,
         derived_redirects=compound_redirects, dir_redirects=dir_link_redirects,
+        split_redirects=split_path_redirects,
     )
     for old_compound, new_compound in compound_redirects:
         redirect_rows.append(
@@ -7517,6 +7731,15 @@ def migrate(root: Path) -> MigrateResult:
             {
                 "old_id": old_link, "new_id": new_link,
                 "old_path": "", "new_path": "", "citing_dir": citing_dir,
+            }
+        )
+    for old_split_citation, new_split_citation in _drop_contested_split_redirects(
+        split_path_redirects
+    ):
+        redirect_rows.append(
+            {
+                "old_id": old_split_citation, "new_id": new_split_citation,
+                "old_path": "", "new_path": "",
             }
         )
 
