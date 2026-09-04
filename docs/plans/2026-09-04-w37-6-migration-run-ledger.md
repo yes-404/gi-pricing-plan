@@ -763,3 +763,34 @@ identical shape to the very first violation this session. Sent both the exact cu
 canonical two-block command (per-worktree DB setup, then the flock+thread-cap gate) with an
 explicit ask for the literal string they're actually running, since this is the third time
 the mechanism hasn't landed for h2b specifically and the cause is still unclear.
+
+## 2026-09-04 — prose stopped being enough: killed h2b/executor-30/db-proof, enforcement moves into `conftest.py`
+
+Deputy's fuller table (13:3xZ): `wt-h2b` 397% CPU, no cap, no slot; `wt-w376-unit`
+(executor-30-2) ×2, 258%+21%, same; `/tmp/verify-wt1`/`verify-wt2` (`db-proof`) both on the
+**default** database — neither had `GIP_TEST_DATABASE_URL` set, so the pair can only be the
+negative control, not the isolation proof it was meant to produce. Load 59.5/55/44, CPU
+demand 0.95, `/` 4.9 GB free and falling.
+
+**Killed on sight, directly by the lead** (dispatch operations, per the standing exception):
+`pkill -P` on h2b's and executor-30-2's `uv run pytest` parents, both confirmed dead;
+`db-proof`'s two processes killed the same way. `wt-w376-unit`'s gate had already exited by
+the time I checked (no process found) — the deputy's ×2 reading may have caught it near its
+own end.
+
+**Root fix, dispatched to `exec-excl` (deputy's assignment, same executor as the
+exclusions PR):** the wrapped-line convention fails because it depends on an executor
+typing it correctly, and that has now failed three separate times. Moving enforcement into
+`tests/conftest.py` and `_docverify.verify` themselves: `os.environ.setdefault` for the six
+thread-cap vars (an explicit override still wins, the default is capped), `pytest_configure`
+acquires a gate slot via blocking `fcntl.flock` on `/tmp/slots/gate-{1,2,3}` (verify path:
+`verify-{1,2}`), and when `GIP_TEST_DATABASE_URL` is unset the conftest derives
+`gipricing_<worktree>` and **refuses to run with a clear error** if that database doesn't
+exist — never silently falling back to the shared one. A bare `uv run pytest` is then
+budgeted and capped regardless of what the executor typed. Proof required: two bare
+sessions started together show the second waiting for a slot; a spawned process shows 4
+threads for the relevant native runtimes, not ~150; a missing per-worktree DB produces a
+clear refusal, not a silent shared-DB run.
+
+`db-proof` told to redo with real, distinct DSNs and report the actual environ lines used —
+its prior report is not usable as isolation evidence per the deputy's finding.
