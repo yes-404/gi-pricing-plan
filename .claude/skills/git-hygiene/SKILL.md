@@ -606,6 +606,16 @@ session handle.
 this instrument as register row **F49**, and rewriting a public `main` would invalidate every
 SHA cited across the register, the plans and the closure records.
 
+**A dispatch-time preventive layer, added 2026-09-04 after three hits in one night despite a
+warning in every dispatch prompt.** The lead installs a worktree-local `commit-msg` hook in
+every dispatch (`git config extensions.worktreeConfig true`; write the hook under
+`$(git rev-parse --git-dir)/hooks-local/commit-msg`; `git config --worktree core.hooksPath` to
+that directory) that rejects a commit whose message matches `claude.ai/code/session`. This is
+worktree-local, never a change to the shared repository's `.git/hooks/` or `core.hooksPath` —
+the isolation guard on a worktree-pinned session refuses a write to the shared checkout, and a
+repo-wide hook would silently bind every worktree, including ones a different session owns.
+`history-policy` CI stays the backstop for anyone who skips the hook.
+
 
 Conventional Commits (`CLAUDE.md` §10). Because PRs are squash-merged, **the squash body is
 the permanent record** — write it as the thing a reader finds in `git log` two years later,
