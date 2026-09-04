@@ -353,3 +353,31 @@ absent) — every native runtime assumed it owned the box.
    near-zero cost), **load 62.65/58.28/50.16 on 16 cores**, still climbing (the three
    uncapped gates have not yet finished). Re-measure once they exit and the cap is live for
    whatever runs next.
+
+## 2026-09-04 — PR #720's findings ruled: cause3/cause4/placeholder-id all fold into #30; REDIRECTS.csv determinism owed to h2b as a follow-up
+
+Deputy ruled #720 mergeable on its watcher's report (diagnosis-only, no predicate moved).
+Its four findings dispositioned, each with a verified locator:
+
+- **cause3** (202/355 `other`, 57%) — `doc-id.py:692`'s `_REDIRECTS_FIELDS` already carries
+  `old_path`/`new_path`/`citing_dir`; no new mechanism needed. Folded into executor-30-2's
+  existing #30 unit-record-inverse PR: read the path columns directly for every path-shaped
+  substitution, plus the `citing_dir`-scoped bare-basename form (absorbs docs/README.md's
+  bare non-rooted citation finding too — no separate class). Proof owed: one real
+  `docs/notes/…` prose citation inverting to merge-base bytes.
+- **cause4** (`W3C/OpenTelemetry` → `WK-944C/OpenTelemetry`, 10 files) — `doc-id.py:5484`'s
+  `_compound_token_re` has no trailing boundary, unlike `_whole_token_re` (`:5393`); Ruling
+  102 §2(g)'s own rule, simply unapplied to the second regex. Folded into #30: add
+  `\b(?![-/][0-9])`, extend `MANGLED_CITATION_RE` for the `WK-\d+[A-Za-z]` shape. Proof
+  owed: `W3C/OpenTelemetry` fixed, `W6a` (real lowercase slice suffix) untouched.
+- **Placeholder id** (`OQ-DATA-11` → `OQ-8471`, no `REDIRECTS.csv` row) — Ruling 100(iv): an
+  unresolved-target citation is listed, not rewritten. Folded into #30: `token_map` excludes
+  keys whose target was never discovered; such tokens join the unmapped-token table
+  (`:310`). Proof owed: an undefined `OQ-XXX-n` fixture comes out unchanged and listed.
+- **`REDIRECTS.csv` row-order non-determinism** — separate defect, **owner: h2b
+  (executor-h2), after its current #29 (DP-7) PR merges**, same file family. Fix: sort rows
+  by `old_id` then `old_path` before writing. Proof owed: two independent `migrate()` runs
+  byte-identical.
+
+Both executors messaged with their scope at 11:1xZ. `ci-watcher-720` still watching (python
+workflow in progress at last check); merge on its report, unchanged from the prior entry.
