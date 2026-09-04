@@ -913,3 +913,28 @@ shape cause3 already covers more generally; dropped the duplicate label rather t
 redundant class, kept its two genuinely distinct findings (new-frontmatter-stamp-no-move,
 unmapped-work-slice-key). Targeted tests (83), ruff, mypy clean. Pushed (`4afe5f8`);
 re-running `--verify` before considering it settled.
+
+## 2026-09-04 — root cause of h2b's repeated non-compliance: two-hour self-matching wait-loop trap, not carelessness
+
+Deputy found what actually explains four straight non-compliant gates: ten idle wrapper
+shells, eight on `until ! pgrep -f 'wt-h2b/.venv/bin/pytest -q'`, two on the equivalent for
+`wt-rowe2`, spaced ~600s apart, ages 53min→2h15min. The pattern is in the loop's own
+argv, so `pgrep -f` always matches itself and the loop never resolves — h2b's Bash calls
+have been timing out every ~10 minutes and it re-issues the identical broken wait, eight
+times, never learning whether its gate finished, crashed, or was killed. **A stalled
+executor that reads as busy.**
+
+By the time I checked, the ten shells were gone (expired on their own), but h2b's third
+non-compliant gate (PID 584454, 677% CPU, 13min, no cap, no `flock`) was still alive —
+killed directly. Told h2b the wait-loop pattern itself was the defect (bracket a character
+or wait on the literal PID, never a bare name match) and, per the deputy's own point 2, to
+stop running local gates entirely until exec-excl's conftest enforcement merges — push and
+let `ci-watcher` read CI, which is what actually gates a merge here regardless. Flagged the
+same trap to rowe2 as a precaution (two of its own earlier waits had the same shape, though
+its work has clearly progressed past it).
+
+**Deputy's counting-predicate correction, for the record**: a real pytest binary has
+`comm == pytest`; a wrapper shell has `comm == bash` and merely mentions the path in its
+argv — `ps -eo pid,comm,pcpu,etimes,args | awk '$2=="pytest"'` is the census that can't be
+fooled by a wrapper. The earlier "ten pytest sessions" reading was the wrapper count,
+withdrawn by the deputy before it reached this ledger.
