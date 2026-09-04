@@ -1081,3 +1081,31 @@ Cross-checked one real multi-ruling split file directly (control vs. its child, 
 executor-30-2's full scope is now done and tested: unit-record inverse, cause3/3a/4/6, the
 stale-comment fix, the split-redirect crash bug it found and fixed mid-rebase, and (d5)/(d8).
 Running its one compliant gate + verify before opening the PR.
+
+## 2026-09-04 — exec-dp7's proof-of-reading, owed since h2b's reassignment: confirmed, plus a real gap found in h2b's original fix
+
+**Proof-of-reading, verbatim**: "I read both `.claude/skills/dev-commands/SKILL.md` and
+`.claude/skills/python-test/SKILL.md` in full before touching anything — the wrapped
+flock+thread-cap gate/verify commands below are copied verbatim, not composed, and I
+created a per-worktree test database (`gipricing_wt-h2b`) before the first gate run." This
+discharges the gap the deputy named at the h2b-stop entry.
+
+**h2b's original DP-7 commit was real and well-reasoned, but incomplete, not wrong**:
+`_this_runs_stamp_id` only recognized "this run's own stamp" via an `id:` field in
+`REDIRECTS.csv`'s `new_id` column — but the Reference family (`.claude/roles/`,
+`.claude/agents/`, plain `.claude/skills/*/SKILL.md`, every `README.md`) and a vendored
+skill manifest are stamped by `migrate` with **no `id:` line at all**, by design (NT-0019
+§1.2). Two real regressions surfaced (`test_acceptance_item_g_clean_migration_has_no_violations`,
+`test_class6_regenerated_readmes_and_indexes_pass_whole`), pre-existing on h2b's own commit
+(verified by isolating the change, not caused by the rebase). Fixed: `_this_runs_stamp_id`
+now also confirms via path membership in the caller's own recorded stamp-target set
+(`_discover_reference_stamp_targets` + `_discover_vendored_skill_manifests(...).to_stamp`)
+when a header carries no id — proven positive and negative (a hand-edit still fails), 5
+new/extended tests.
+
+**Second task also done**: `docs/REDIRECTS.csv` row order now sorted by `old_id` then
+`old_path` (full-row tie-break) in `_write_redirects` — proven by feeding the same rows in
+different orders and diffing bytes identical.
+
+Rebased twice onto moving `main`, both clean, no conflicts. Two commits landed. 510
+targeted tests green, 1 skip, ruff clean. Running the one compliant gate + verify now.
