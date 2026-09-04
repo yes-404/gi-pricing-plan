@@ -1426,3 +1426,18 @@ else owns `register-owed.py`'s row, so this is W37-6's and `exec-ids` takes it. 
 **Refused**: a document-keyed exemption for skills generally (already refused for row (e),
 same corpus); legacy strings built at runtime in tests to dodge the scanner; leaving the 32
 as standing red with no predicate. Relayed to `exec-ids` in full; cleared to build.
+
+## 2026-09-04 — #733 verified against the (d8) ruling; a reconciliation gap flagged before the row is re-recorded
+
+Deputy confirmed the creation rule landed correctly (`_value_set_creation`, one rule
+across row (d), called for d8 and the shared loop). `EXPECTED_VERDICTS` re-records d8
+`REGRESSION → FAIL`, expected on the next fresh `--verify`.
+
+**Gap caught before it was accepted as closed**: the ledger's generator paragraph
+(`docs/INDEX.md` 19 + `docs/rulings/INDEX.md` 2 = 21) is cited as accounting for "the
+growth," but `executor-30-2`'s own measurement was `W37-6` 685→725 (+40) and `W32-7` 68→78
+(+10) — 50 occurrences. 21 does not reconcile against 50. Resumed `executor-30-2` (its
+own measurement) rather than guess: either the two figures are on different predicates
+(files vs. occurrences, lines vs. occurrences) and the paragraph must say which, or 29
+occurrences have an unnamed source and that's a real finding still owed. Not a blocker on
+anything else in flight; this is a precision correction to the record, not new code.
