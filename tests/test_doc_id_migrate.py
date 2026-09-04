@@ -5951,3 +5951,79 @@ def test_row_b_a_mapped_token_still_rewrites_a_genuine_compound_after_the_bounda
         doc_id_cli, tmp_path, dict(_NFR_RATE_MAP), "close NFR-RATE-13/14 now\n"
     )
     assert after == "close NFR-775/776 now\n"
+
+
+# ---------------------------------------------------------------------------------------
+# `_normalize_padded_citations` — #25's ruling. A padded citation of a real governed
+# thing, outside a filesystem path and outside a fenced exhibit, is normalised by the
+# migration exactly as every other legacy citation is: `docs/plans/README.md`'s frozen-plan
+# exception ("a change that preserves the claim exactly while fixing how it is addressed")
+# already covers it, per Ruling 103 §5.1's own remedy for the exhibit case. Three
+# broken-input proofs, as the ruling names them.
+# ---------------------------------------------------------------------------------------
+
+
+def _normalize_one_file(
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    text: str,
+    *,
+    index_ids: str = "",
+) -> str:
+    """Run the real `_normalize_padded_citations` over a one-file tree and return the
+    result. `index_ids` becomes `docs/INDEX.md`'s body — conjunct 3's authority, the same
+    role `_index` plays in `tests/test_doc_id_verify.py`'s row (e) tests."""
+    target = tmp_path / "docs" / "sample.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    (tmp_path / "docs" / "INDEX.md").write_text(f"# Index\n\n{index_ids}\n", encoding="utf-8")
+    doc_id_cli._normalize_padded_citations(tmp_path)
+    return target.read_text(encoding="utf-8")
+
+
+def test_normalize_padded_citations_unpads_a_real_citation(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof 1: a padded citation of a real governed thing, outside a
+    filesystem path and outside a fence, comes out unpadded — the citation form NT-0019
+    §1.1 rule 2 requires, decided by the same conjuncts Ruling 103 §1.2 gives row (e)."""
+    after = _normalize_one_file(
+        doc_id_cli, tmp_path, "see ADR-00005 for the decision\n", index_ids="ADR-5"
+    )
+    assert after == "see ADR-5 for the decision\n"
+
+
+def test_normalize_padded_citations_leaves_a_fenced_exhibit_byte_identical(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof 2, the rewrite's half: an exhibit's padded value *is* the
+    observation, fenced under Ruling 103 §5.1 rather than normalised — unpadding it would
+    destroy the observation. Red-then-green on the identical value: bare in prose is
+    rewritten (this row's own proof 1 restated); the same value inside a fence is not
+    touched at all, matching row (e) itself reading a fenced occurrence as excused
+    (`tests/test_doc_id_verify.py::test_row_e_conjunct_0_excludes_a_fenced_block`, proof 3
+    for the row's own reading)."""
+    fenced = "```\nRL-00199 quoted as the observed value\n```\n"
+    assert _normalize_one_file(doc_id_cli, tmp_path, fenced, index_ids="RL-199") == fenced
+
+    bare = "RL-00199 quoted as the observed value\n"
+    after = _normalize_one_file(doc_id_cli, tmp_path, bare, index_ids="RL-199")
+    assert after == "RL-199 quoted as the observed value\n"
+
+
+def test_normalize_padded_citations_leaves_a_specimen_and_a_path_untouched(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Conjuncts 2 and 3 bind the rewrite exactly as they bind row (e): a token inside a
+    filename is a path, not a citation (unaffected by the migration's citation rewrite
+    either), and a token that resolves to nothing is a specimen of the form, not a
+    citation of anything — normalising it would invent a citation. Neither is touched."""
+    path_text = "see `PL-09998-slug.md` for the source\n"
+    assert _normalize_one_file(
+        doc_id_cli, tmp_path, path_text, index_ids="PL-9998"
+    ) == path_text
+
+    specimen_text = "the standard's own example is PL-01240\n"
+    assert _normalize_one_file(
+        doc_id_cli, tmp_path, specimen_text, index_ids="PL-9998"
+    ) == specimen_text

@@ -26,6 +26,12 @@ The one exception is a change that preserves the claim exactly while fixing how 
 *addressed* — the relative links repointed when these files moved out of `.planning/` are
 the whole of it.
 
+**Appended 2026-09-04, `#25` ruled:** a padded citation of a real governed thing is
+normalised to its unpadded form, and a padded exhibit is fenced under Ruling 103 §5.1 —
+both are the exception applied, not widened: normalising a citation's form is what the
+migration's own citation rewrite already does to every frozen plan under NT-0019 §5.2, and
+fencing an exhibit changes how a value is *rendered*, never what is claimed.
+
 ## The four kinds of file
 
 | Suffix | Written by | Holds |

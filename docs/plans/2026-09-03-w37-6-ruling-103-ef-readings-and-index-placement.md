@@ -812,8 +812,14 @@ exclusion**, and adds fenced code blocks, which `audit-docs.py` check 32 **alrea
 (`_FENCE_LINE_RE`, `:1541-1545`).
 
 **Why the fence clause matters, and why it is not a document-keyed exemption.** The one remaining
-survivor is a line correcting a relayed pair, *"The pair was relayed as `RL-196` / `RL-00199`"* —
-a padded id quoted **as the defective form being corrected**. Without a fence rule, a record that
+survivor is a line correcting a relayed pair:
+
+```
+The pair was relayed as RL-196 / RL-00199
+```
+
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged.* — a padded id quoted **as the
+defective form being corrected**. Without a fence rule, a record that
 documents a padding defect must corrupt its own evidence to pass the lint, which is the check-19
 distortion (§1.3) arriving by a new route. **The fence is the remedy and it already exists**: a
 record exhibiting a defective form fences it, the evidence survives byte-exact, and no exemption
