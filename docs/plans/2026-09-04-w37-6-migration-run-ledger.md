@@ -203,3 +203,22 @@ number). **Disposition:** the overrun is recorded here, no further dispatch happ
 merge brings the live count to eight, and it is not repeated — the next infrastructure task
 waits for a free slot like any other. Efficiency line reads `9/8 (one-time overrun, this
 entry)` until the count drops.
+
+## 2026-09-04 — the fourth F49 trailer, root-caused: the commit-msg guard was worktree-local, never shared
+
+`07ea929` (PR #718) carried a `claude.ai/code/session` trailer despite the git-hygiene
+hook rule (`47fecaf`) — the fourth such hit tonight. Root cause: the commit-msg guard
+installed earlier this session was set with `git config --worktree core.hooksPath`,
+which is **per-worktree** config (`extensions.worktreeConfig = true` makes each worktree's
+`.git/worktrees/<name>/config.worktree` independent) — it only protected the specific
+worktree it was run in (`wt-h2b`, `wt-r105-ruling105`, `wt-rowe2`, `wt-rowg2`,
+`wt-w376-unit`, confirmed still active and correctly configured), never any worktree
+created afterward. Fixed by installing the hook in the **shared** hooks directory instead
+(`$(git rev-parse --git-common-dir)/hooks/commit-msg` — the same physical directory every
+worktree of this repository reads unless it has its own override), so every current and
+future worktree without a per-worktree override is covered without needing per-dispatch
+setup. Verified: `wt-alloc`, `wt-ruling106`, and the three new `(g)` triage worktrees
+(`wt-rowg-docs`, `w37-6-other-codetree`, `w37-6-other-residue-triage`) all resolve to the
+shared hooks dir with no override; the five worktrees with an existing per-worktree hook
+were left as they are (already correctly guarded, redundant with the new shared one but
+not conflicting).
