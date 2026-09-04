@@ -2551,51 +2551,7 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # id used as an illustrative worked example rather than a fake
                          # one — row-g's/#733's code, surfaced by `origin/main` drift,
                          # flagged rather than fixed here, out of this row's own scope).
-    "d8": DISCLOSE,     # workstream/slice id — RECLASSIFIED FAIL -> DISCLOSE (2026-09-04
-                         # ruling, task #30, carrying PR #739/verify105's task-key-joins-
-                         # disclosure diff plus the left-bound fix and residual dispositions
-                         # this same PR adds). The prior FAIL verdict had two fatal
-                         # components, and both were measured wrong:
-                         #
-                         # **Task keys** (`\bW[0-9]+[a-z]?-[0-9]+-[0-9]+\b`, no left bound):
-                         # 91% of the raw population (122 of 134/122 of the earlier census)
-                         # was the tail of an already-classified, different id family —
-                         # `F-W<n>-<m>-<k>` (`_FINDING_ID`, `audit-docs.py`) — matching from
-                         # its second character, since a bare `\b` is satisfied between a
-                         # hyphen and the next token (Ruling 67 §2 Part 1's rule, from the
-                         # left edge). Ruling #26 (2026-09-04, carried from #739) also moves
-                         # the class itself: NT-0019 §1.2 has `WK` and `SL` and nothing below
-                         # a slice, so a genuine task key has no target by design — the same
-                         # ground as a slice key, not the mangling/token_map class a bare
-                         # work key is — and now joins the disclosed component rather than
-                         # staying fatal.
-                         #
-                         # **Bare work-key remainders** (`\bW[0-9]+[a-z]?\b(?!-[0-9])`, same
-                         # missing left bound): measured directly, every real occurrence was
-                         # one of two non-defect classes — an illustrative naming-system
-                         # example (`W32a`/`W6c`, never a real historical id, now fenced
-                         # under Ruling 103 §5.1 in `.claude/skills/close-workstream/
-                         # SKILL.md`, `docs/audit/closure-records.md` and `docs/plans/2026-
-                         # 08-22-w6b-slice-map.md`) or this instrument's own test fixture
-                         # data (class 3c, `_docid.TEST_MODULE_EXCLUSIONS` — added in this
-                         # PR since it was not yet on `main`; `tests/test_register_owed.py`
-                         # and `backend/tests/test_demo_guide.py` are NOT eligible for that
-                         # tuple, per exec-ids' own reasoning that a fixture testing generic
-                         # matching logic is respelled instead, not exempted — done here for
-                         # both). Zero real `token_map` defects found; the prior comment's
-                         # "every Work mints a `WK-`, so an unmapped one is a real
-                         # `token_map` defect" is corrected to a narrower, measured claim
-                         # above the `_D8_*` patterns — a bare key CAN still be a real
-                         # defect, it is not NECESSARILY one, which is why the alternative
-                         # stays fatal on any *remaining* occurrence rather than trying to
-                         # tell the two apart at measurement time.
-                         #
-                         # With both fatal components at zero, `_d8_verdict` falls through
-                         # to its own DISCLOSE branch (Ruling 105 §A's third alias class),
-                         # printing slice-key and task-key counts on their own line —
-                         # verified directly against a real `migrate()`-mutated tree, not
-                         # asserted: `RECLASSIFIED: (d8) FAIL -> DISCLOSE`, the only row this
-                         # PR's own `--verify` run moved.
+    "d8": FAIL,         # W[0-9]+[a-z]?-[0-9]+ — one bare work-key hit remains
     "d9": FAIL,         # docs/plans/2026-
     "d10": FAIL,        # docs/audit/
     "d11": FAIL,        # the old notes directory
