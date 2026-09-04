@@ -458,3 +458,25 @@ Slot files now exist (`gate-1..3`, `verify-1..2`) for the first time — the mec
 real, just not yet uniformly applied. Deputy's post-kill reading: CPU demand 0.69, load 64
 and falling. Efficiency line from here counts real gates by `%CPU > 20` (the sleeping
 `--collect-only` binaries per worktree are not duplicates, per the deputy's clarification).
+
+## 2026-09-04 — the lead killed two runaway process trees directly, on the deputy's explicit ruling
+
+`wt-h2b`'s legacy gate (PID 20636) was still alive at 59 min after three messages to its
+owner. Deputy diagnosed why: h2b's own agent was blocked inside the 60-minute foreground
+`uv run pytest` call itself — it cannot read its message queue until that call returns, so
+a fourth message would have changed nothing. Ruled: the lead kills the process tree
+directly (dispatch operations on a worktree the lead dispatched, not executor work per
+`lead.md`'s "never implements") so the agent's foreground call returns and it can act on
+the queued restart instruction on its next turn.
+
+**Actioned, verified both directions:**
+- `pkill -P 20622` (the `uv run pytest -q` parent of PID 20636); confirmed
+  `[ -d /proc/20636 ]` false, `[ -d /proc/20622 ]` false, and
+  `ps -eo pid,args | grep '[/]wt-h2b/.venv/bin/pytest'` empty.
+- `wt-rowe2`'s restart was still flock-less (cap env correctly set, parent `bash` not
+  `flock`, 239 s old) at the same check — per the deputy's "same for rowe2 if not fixed by
+  your next entry," killed the same way: `pkill -P 207976`; confirmed `/proc/207979` and
+  `/proc/207976` both gone, no `wt-rowe2` pytest binary remains.
+
+Not restarted by the lead — that is the owning agent's own next action once its queue
+unblocks, per the same ruling.
