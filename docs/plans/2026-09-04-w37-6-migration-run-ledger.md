@@ -195,6 +195,8 @@ title, merge commit, and `doc-id.py migrate --verify`'s verdict-set line at that
 | #733 | fix(scripts): W37-6 unit-record inverse — ranges/compounds/relative-links, cause3/3a/4/6, (d5)/(d8) creation rule | `6c92d55` | Not independently re-run — `ci-watcher-733` confirmed python/docs/history-policy all green, CLEAN. Full gate/verify twice (once surfacing and fixing a real crash bug in the author's own diff before reaching a gate). The single largest PR of the day; discharges (d4)/(d5)/(d8) from the checkpoint-1 table. |
 | #732 | docs(plans): ledger — #730/#733 merges, worktree incident, checkpoint-1 real figures | `e3739e1` | UNCHANGED: **13** fatal row(s), matching the recorded set of 13 — run `33888477735` on `docs-w37-6-ledger-cont7`'s `f2885ed` (**correction, deputy 2026-09-04 18:2xZ**: the lead's own entry here previously said 14, a remembered figure from before #725 re-recorded (e), not this run's own printed line — NT-0004 pasted-constant defect, fixed). This ledger's own continued history, no `docs/**` migration-scope path or predicate code touched. CLEAN, confirmed via the exact head SHA's own workflow runs (not a stale rollup) before merging. |
 | #734 | docs(plans): ledger — #732 merge, durability follow-up, row (g) class-3c correction | `61ec8bc` | Not independently re-run; this branch's own commits carry three `--verify` reruns already cited above (14→13 count correction, class-3c reclassification). `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`29a3974`) before merging — confirmed live, not from a stale rollup. |
+| #735 | fix(scripts): exec-h1 — three h1 findings: index link-depth, cross-family bare basenames, check-27 digest reconciliation | `5b6c903` | Real predicate-code change (not docs-only). `history-policy`/`docs`/`python` all `success` on the exact head SHA (`5c1caeb`), confirmed via a backgrounded `gh run watch` per-run-id, not `mergeStateStatus` alone. |
+| #736 | docs(plans): ledger continuation (d4/d5 correction, h1 real figure, pgrep self-match wait-loop fix) | `2a9ed29` | Own commits carry the local `--verify` UNCHANGED: 13 confirmation and the pgrep-fix positive control (run live, not just described). `history-policy`/`docs`/`python` all `success` on the exact final head SHA (`0937628`), confirmed live via backgrounded watch. |
 
 ## 2026-09-04 — retry-cap breach resolved; §7's data logged for the §14 review
 
@@ -1657,3 +1659,34 @@ Both reopened as tasks #44/#45, real fixes dispatched to executor-30-2 (already 
 diagnosing engineer on both). Lesson applied going forward: an unverified citation from an
 executor does not get relayed as settled fact — check it against the tree first, same
 standard as any other reference (CLAUDE.md §13).
+
+## 2026-09-04 — pgrep self-match wait-loop bug: 63 zombie shells found, killed, fixed
+
+`.claude/skills/dev-commands/SKILL.md` and `.claude/roles/executor.md` both taught `until !
+pgrep -f '<pattern>'` as the wait-loop form. The pattern is always a literal substring of
+the wait shell's own argv, however specific it is made, so the loop can never observe its
+own target's exit. Six agents (executor-30-2, verify105, triage-other, triage-docs, rowe2,
+alloc) hit this over the session.
+
+**First census undercounted.** The lead's own search used a narrow literal
+("doc-id.py migrate --verify") and found only its own 3 processes at every check — not a
+namespace-isolation problem (tested: `pid:[4026531836]`, 507 processes visible, ruled out),
+just a predicate too narrow to see loops waiting on other targets (pytest, `run_gate.sh`,
+`verify_new_causes.py`, and more). The deputy's broader `"until ! pgrep -f"` predicate found
+**63 shells**, oldest 5h36m, 0% CPU. Listed once, then `pkill -f 'until ! pgrep -f'`;
+re-checked — 0 survivors (the check command's own self-match aside). One new zombie
+(triage-code, spawned 69s after the sweep, since the fix was still only on a branch) killed
+separately.
+
+**Fix**: primary form is the foreground `flock` wrapper (already blocks and returns, no
+loop needed); `while kill -0 "$pid"` where a PID is available; a bracketed pattern
+(`pgrep -f '[c]haracter...'`) where only a pattern is available. Proved on deliberately
+broken input: `pgrep -af 'X'` matched its own invocation; `pgrep -af '[X]'` did not — same
+binary, only the bracket changed. Both files corrected, `Verified` dates refreshed,
+landed `74c031b` (bundled into this ledger PR chain).
+
+**Every live executor messaged the three-line rule directly** (15 teammates) since they
+were spawned before the fix reached `main` — `#736` merging is what makes a *new* spawn
+read it automatically; the message is what reaches an *already-running* one. All 15
+acknowledged, most confirmed no stray loops of their own; a handful had already switched to
+`kill -0`/backgrounded-task patterns independently.
