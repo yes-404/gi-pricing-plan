@@ -1326,7 +1326,7 @@ def _discover_adrs(root: Path) -> list[_Draft]:
 
 
 _PLAN_FILENAME_RE: Final = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$")
-_RULING_HEADING_RE: Final = re.compile(r"^##\s+Ruling\s+(\d+)\s*(?:—\s*(.+))?$", re.MULTILINE)
+_RULING_HEADING_RE: Final = re.compile(r"^#{1,2}\s+Ruling\s+(\d+)\s*(?:—\s*(.+))?$", re.MULTILINE)
 
 #: NT-0019 §1.6's own default for a ruling: "ruling (RL) — decision-maker; the maintainer
 #: may author one on scope or process." The row already contemplates a ruling authored by
@@ -1421,6 +1421,11 @@ def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
     `YYYY-MM-DD-`-prefixed filename under `docs/plans/` that contains at least one
     `## Ruling N` heading — a post-migration `RL-<n>-*.md` has neither shape.
 
+    The heading is accepted at `#` **or** `##` (row (d5)): Rulings 59/60/61 are H1-only
+    files, so the previous `^##`-anchored pattern discovered nothing in them and left
+    every `Ruling <n>` citation of theirs un-migrated. `###` and deeper stay out — the
+    `_RULING_A_SERIES_HEADING_RE` note below owns that level deliberately.
+
     Date source: this corpus's own reasonable extension of "filename date for plans"
     (NT-0019 §4 step 1) to a file that is *found* under `docs/plans/` with that naming
     convention even though it does not *stay* a plan after the split — flagged in the PR
@@ -1469,7 +1474,7 @@ def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
 #: Ruling 86 (`docs/plans/2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md`,
 #: PR #598): `### Ruling A1`, `A2` and `A3` in `docs/plans/2026-08-30-nt-0012-0013-0014-
 #: adoption.md` are three `RL-` records. `_RULING_HEADING_RE` misses them on **two
-#: independent axes** — its `^##` cannot see a `###` heading and its `(\d+)` cannot see the
+#: independent axes** — its `^#{1,2}` cannot see a `###` heading and its `(\d+)` cannot see the
 #: `A1` token — and Ruling 86 §3 item 1 names that pair explicitly: *"A fix to either alone
 #: reds nothing and looks green."* This pattern is level-independent and letter-led, so
 #: neither axis is left half-fixed.
