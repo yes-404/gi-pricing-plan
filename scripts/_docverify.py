@@ -2328,27 +2328,51 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # substring of any correctly-migrated five-digit id; genuine
                          # un-migrated 4-digit citations remain, so the row still fails
     "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+
-    "d8": FAIL,         # workstream/slice id — RECLASSIFIED REGRESSION -> FAIL (2026-09-04
-                         # ruling, `to-lead.md:1017`, task #30): the prior REGRESSION verdict
-                         # was a raw-line-count artifact. #721's `_compound_token_re`
-                         # boundary fix (see `d8`'s own history above `_D8_...` constants,
-                         # and row `b`'s entry) correctly stopped mangling W-keys, which
-                         # made the true un-migrated population visible — but the resulting
-                         # occurrence-count growth (`W37-6` 685->725, `W32-7` 68->78,
-                         # measured directly) has an IDENTICAL value set before and after:
-                         # zero new distinct slice-key values, only more occurrences of
-                         # already-present ones (traced to `docs/INDEX.md` and
-                         # `docs/rulings/INDEX.md`, both regenerated-from-scratch artifacts
-                         # quoting each ruling's own title verbatim in its index row — a
-                         # legitimate class-6 echo, not a partial-edit defect). The ruling's
-                         # own rule: creation is a *distinct value* absent from control,
-                         # never a larger count of one already present — `_value_set_
-                         # creation`/`_scan_values` (`scripts/_docverify.py`) now implement
-                         # this for every (d) alternative, `_d8_verdict` included, and the
-                         # slice-key disclosure note carries the occurrence-growth figures
-                         # instead of the verdict absorbing them. What remains FAIL is the
-                         # genuine, now-correctly-measured un-migrated `W<n>-<n>` population
-                         # row (b)'s entry already named — real, not this PR's to fix.
+    "d8": DISCLOSE,     # workstream/slice id — RECLASSIFIED FAIL -> DISCLOSE (2026-09-04
+                         # ruling, task #30, carrying PR #739/verify105's task-key-joins-
+                         # disclosure diff plus the left-bound fix and residual dispositions
+                         # this same PR adds). The prior FAIL verdict had two fatal
+                         # components, and both were measured wrong:
+                         #
+                         # **Task keys** (`\bW[0-9]+[a-z]?-[0-9]+-[0-9]+\b`, no left bound):
+                         # 91% of the raw population (122 of 134/122 of the earlier census)
+                         # was the tail of an already-classified, different id family —
+                         # `F-W<n>-<m>-<k>` (`_FINDING_ID`, `audit-docs.py`) — matching from
+                         # its second character, since a bare `\b` is satisfied between a
+                         # hyphen and the next token (Ruling 67 §2 Part 1's rule, from the
+                         # left edge). Ruling #26 (2026-09-04, carried from #739) also moves
+                         # the class itself: NT-0019 §1.2 has `WK` and `SL` and nothing below
+                         # a slice, so a genuine task key has no target by design — the same
+                         # ground as a slice key, not the mangling/token_map class a bare
+                         # work key is — and now joins the disclosed component rather than
+                         # staying fatal.
+                         #
+                         # **Bare work-key remainders** (`\bW[0-9]+[a-z]?\b(?!-[0-9])`, same
+                         # missing left bound): measured directly, every real occurrence was
+                         # one of two non-defect classes — an illustrative naming-system
+                         # example (`W32a`/`W6c`, never a real historical id, now fenced
+                         # under Ruling 103 §5.1 in `.claude/skills/close-workstream/
+                         # SKILL.md`, `docs/audit/closure-records.md` and `docs/plans/2026-
+                         # 08-22-w6b-slice-map.md`) or this instrument's own test fixture
+                         # data (class 3c, `_docid.TEST_MODULE_EXCLUSIONS` — added in this
+                         # PR since it was not yet on `main`; `tests/test_register_owed.py`
+                         # and `backend/tests/test_demo_guide.py` are NOT eligible for that
+                         # tuple, per exec-ids' own reasoning that a fixture testing generic
+                         # matching logic is respelled instead, not exempted — done here for
+                         # both). Zero real `token_map` defects found; the prior comment's
+                         # "every Work mints a `WK-`, so an unmapped one is a real
+                         # `token_map` defect" is corrected to a narrower, measured claim
+                         # above the `_D8_*` patterns — a bare key CAN still be a real
+                         # defect, it is not NECESSARILY one, which is why the alternative
+                         # stays fatal on any *remaining* occurrence rather than trying to
+                         # tell the two apart at measurement time.
+                         #
+                         # With both fatal components at zero, `_d8_verdict` falls through
+                         # to its own DISCLOSE branch (Ruling 105 §A's third alias class),
+                         # printing slice-key and task-key counts on their own line —
+                         # verified directly against a real `migrate()`-mutated tree, not
+                         # asserted: `RECLASSIFIED: (d8) FAIL -> DISCLOSE`, the only row this
+                         # PR's own `--verify` run moved.
     "d9": FAIL,         # docs/plans/2026-
     "d10": FAIL,        # docs/audit/
     "d11": FAIL,        # the old notes directory

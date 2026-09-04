@@ -155,6 +155,33 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
     ),
 )
 
+#: Class 3c (2026-09-04, row (d8)/(g), task #30; the mechanism itself, exec-ids): the
+#: instrument's own test modules carry a legacy-form id as literal fixture data — proving
+#: a check catches (or correctly does not catch) a form needs the form written down
+#: somewhere, and these are the modules where NT-0019's own id grammar and its rewrite/
+#: verification mechanism are exercised against it. Counting that fixture data as the real
+#: repository's residue would be the instrument grading its own tests, the same reasoning
+#: `FIXTURE_CORPUS_ROOTS` above already gives the two on-disk fixture directories — this is
+#: the equivalent class for a literal Python string inside a test function rather than a
+#: checked-in fixture file. Declared per-file with its own reason, per §7(d)'s own
+#: instruction against a structural rule that would silently widen.
+TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
+    (
+        "tests/test_doc_id_verify.py",
+        "NT-0019 §7(d)'s own row (d)/(e)/(g) verification instrument's tests — exercises "
+        "`_docid.LEGACY_FORM_PATTERNS` and the padded-id/fence conjuncts, and row (d8)'s "
+        "task-key/slice-key/bare-key split, against literal legacy-form and "
+        "deliberately-fake ids by construction",
+    ),
+    (
+        "tests/test_doc_id_migrate.py",
+        "doc-id.py's migrate()/_rewrite_citations() own tests — exercises token "
+        "discovery, compound expansion and the citation sweep against literal legacy-form "
+        "ids by construction; the deterministic/idempotent proofs both require pre- and "
+        "post-migration forms to sit side by side in the same file",
+    ),
+)
+
 
 def sweep_exclusion_reason(rel_posix: str) -> str | None:
     """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the NT-0019
@@ -163,8 +190,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     excluded. One predicate, read by both consumers, so they can never disagree about what
     is excluded (Ruling 67 §2's "one shared constant").
 
-    Three declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
-    fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), and a Python bytecode-cache artifact
+    Four declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
+    fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), one of the instrument's own named test
+    modules (`TEST_MODULE_EXCLUSIONS`), and a Python bytecode-cache artifact
     (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing `scripts/`
     modules while it runs, never migration input and never real residue.
     """
@@ -173,6 +201,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
             return reason
     for root, reason in FIXTURE_CORPUS_ROOTS:
         if rel_posix == root.rstrip("/") or rel_posix.startswith(root):
+            return reason
+    for name, reason in TEST_MODULE_EXCLUSIONS:
+        if rel_posix == name:
             return reason
     if "__pycache__" in rel_posix.split("/"):
         return (
