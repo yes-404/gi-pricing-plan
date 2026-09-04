@@ -613,3 +613,41 @@ prefix matching** — an explicit violation if it recurs. #30's scope now: cause
 placeholder-id fix, the `MANGLED_CITATION_RE` extension, and the (d5)/(d8) whole-identifier
 routing — a real expansion, checkpoint-1 critical since the verdict set moves under #721
 regardless of when #30 lands.
+
+## 2026-09-04 — shared-DB test contention is real; CI is unaffected; rowe2 fully cleared; triage-code's uncapped gate no longer live
+
+**verify105 found, and I verified directly against `.claude/skills/python-test/SKILL.md`**:
+the suite's session-scoped teardown `TRUNCATE`s the shared Postgres at every pytest
+session's end, and two concurrent full-suite runs across worktrees are two sessions on one
+database — "that teardown makes two concurrent runs mutually destructive" (skill's own
+words, quoted verbatim, confirmed present at that heading). verify105's capped run (PID
+202324) came back 2 failed / 3119 passed after finishing in 13m23s (vs. 46+ min stuck
+uncapped) — `test_ebm_model_jobs.py`, `test_model_specs.py`, both nowhere near its
+`scripts/_docverify.py` diff. Confirmed via the skill's own decisive check
+(`git diff --stat origin/main...HEAD -- '*.py' ... backend/ ... scripts/`) that its branch
+touches zero backend Python — cannot be the cause — and via the correct guard (`ps -eo
+pid,etimes,args | grep -E '[b]in/pytest'`, never `pgrep -af`, which self-matches) that two
+other worktrees were executing concurrently at the time.
+
+**Scoped for the record: CI is unaffected.** GitHub-hosted runners get a fresh
+Postgres/Redis/MinIO per run (`services:` + the explicit MinIO step) — this contention is a
+local-shared-box artifact only. Every merge decision today has been made on `ci-watcher`
+reports of CI state, never on an executor's local claim — **no already-merged PR needs
+re-examination for this reason.** What is affected: an executor's local pre-push "gate
+green" claim is unreliable evidence when made concurrently with another worktree's suite,
+producing exactly the false-negative verify105 walked through. Escalated verify105's
+proposed fix (a DB-exclusive lock, nested inside the gate-process slots, held only for the
+portion of a run that executes tests — collection needs no window, per the skill) to the
+deputy as a ruling request; not decided here.
+
+**rowe2 fully cleared.** Deputy's own deeper ancestry trace (three levels up, not two)
+confirmed both `w37-6-other-residue-triage` and `wt-rowe2` are compliant — my two earlier
+"flock-less" reports on rowe2 are both withdrawn by the deputy as checked-too-shallow, not
+by rowe2 being wrong. rowe2's second process (PID 347463) is a targeted multi-file test
+run, not a second full gate — correctly uncapped and unslotted per the standing rule.
+
+**`w37-6-other-codetree`/triage-code**: the deputy's non-compliant gate (no cap, no
+`flock`, launched directly) is no longer running — checked at 13:0xZ, no real `pytest`
+process for that worktree, so nothing to kill. 2 files modified, uncommitted. Sent the
+canonical line for its next run and re-asked its status (idle-ping sent one entry ago,
+unanswered so far).
