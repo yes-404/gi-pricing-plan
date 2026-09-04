@@ -794,3 +794,30 @@ clear refusal, not a silent shared-DB run.
 
 `db-proof` told to redo with real, distinct DSNs and report the actual environ lines used —
 its prior report is not usable as isolation evidence per the deputy's finding.
+
+## 2026-09-04 — OQ double-allocation fixed (PR #726), and the dispatch brief's own framing was wrong
+
+`alloc` corrected the dispatch before fixing it: `_discover_requirements` only globs
+`docs/specs/*.md`, `open-questions.md` is never a discovery source — the "defined twice"
+framing was wrong. Real mechanism: `_LEGACY_SPEC_BOLD_RE` is a bare `finditer` with no
+anchor to a row's own leading cell, so it matches every bold occurrence of the shape —
+citation as well as definition. A real OQ id cited in bold from another requirement's own
+prose (`FR-MODEL-88` citing `**OQ-MODEL-23**`) becomes an independent draft alongside its
+owning spec's §10 mirror row, each getting a different new number.
+
+**Also caught**: PR #723's snapshot numbers (`OQ-1058`/`-1064`) predate #721 and were
+themselves shaped by the fabrication bug row (b) fixed — re-verified against current HEAD,
+post-#721, the double allocation is real and independent (`OQ-1060`/`-1066` this time).
+
+**Fix, two layers**: (1) root cause — `_discover_requirements` dedupes by old_token
+globally across the `docs/specs/` walk, first occurrence kept (position-independent since
+the rewrite is keyed on text); (2) belt-and-suspenders — `_write_redirects` refuses outright
+if any old_id resolves to two different new_ids (keyed on `(old_id, citing_dir)` so
+legitimate per-directory bare-basename repeats aren't caught). Verified: `OQ-MODEL-23`/`-24`
+each get exactly one row now, rewriting consistently including the two code-tree citations
+#723 flagged as stuck. Zero old_id conflicts corpus-wide. `--verify`: (b)/(c) both PASS,
+verdict set fully UNCHANGED — this fix doesn't disturb the standing-red set, unlike #721's.
+Full gate green both halves, 3135 passed/0 errors — the earlier `test_score.py` failures did
+not reproduce this run.
+
+`ci-watcher-726` dispatched; merges on its report.
