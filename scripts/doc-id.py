@@ -41,6 +41,7 @@ import importlib.util
 import itertools
 import posixpath
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -5758,45 +5759,29 @@ _README_IN_PLACE: Final[tuple[str, ...]] = (
 #: behind in a directory nothing else writes to.
 _README_NEW_FAMILY_PREFIXES: Final[tuple[str, ...]] = ("CR", "RL", "LG")
 
-#: Every path §5.2's README rows write, on both sides of the migration. Ruling 68's class 6
-#: -- "a generated artifact (`INDEX.md`, `REDIRECTS.csv`) -- unconditionally permitted;
-#: excluded from comparison entirely" -- applied to the files §5.2 itself calls generated:
-#: the `adr` row says "README **generated**", `workflows` "README table **generated**",
-#: `notes` "**README rewritten**", `plans` "naming and four-kinds table -> pointer", and
-#: `audit/README.md` "**deleted**; content to `findings/` and `closures/` READMEs". A
-#: regenerated index cannot satisfy `frozen_file_matches_after_migration_stamp`, which asks
-#: whether a body survived stripping and token-inversion unchanged -- the whole point of
-#: these five rows is that the body does not survive, because the list it carries is a list
-#: of files that moved.
+#: Every path §5.2's README rows write, on both sides of the migration. **Ruling 104 §2
+#: ratifies this set as class 6 -- "a generated artifact regenerated in full" -- as
+#: *members* of the property, not as a path exclusion**: the `adr` row says "README
+#: **generated**", `workflows` "README table **generated**", `notes` "**README
+#: rewritten**", `plans` "naming and four-kinds table -> pointer", and `audit/README.md`
+#: "**deleted**; content to `findings/` and `closures/` READMEs". A regenerated README
+#: cannot satisfy `frozen_file_matches_after_migration_stamp`, which asks whether a body
+#: survived stripping and token-inversion unchanged -- the whole point of these rows is
+#: that the body does not survive, because the list it carries is a list of files that
+#: moved.
 #:
-#: Kept as its own constant rather than folded into `_MIGRATION_DIFF_GENERATED`, so that
-#: the reason above is stated separately from `INDEX.md`'s and either can be revisited
-#: without the other. **Flagged to the lead as an extension of Ruling 68's enumeration
-#: rather than made silently**: the ruling's six classes were written before any code
-#: generated a family README, and this is the seventh kind of hunk a clean run now
-#: produces.
+#: **This constant is not the class-6 gate.** `classify_migration_diff`'s class-6 test is
+#: the property Ruling 104 §2 states -- does this file's content equal a second,
+#: independent `migrate()` run's output at the same path -- checked without regard to
+#: whether the path is in this set at all (Ruling 104: "a class-6 classifier keyed on a
+#: filename or a path ... rather than on the property" is itself a violation). This set is
+#: read only by `_stamp_regenerated_readmes` below, to know which paths need the Reference
+#: header a `carry`/`fresh` write does not add itself.
 _MIGRATION_DIFF_FAMILY_READMES: Final[frozenset[str]] = frozenset(
     set(_README_FAMILY_MOVES)
     | set(_README_FAMILY_MOVES.values())
     | set(_README_IN_PLACE)
     | {f"docs/{_DOCUMENT_FAMILY_DIR[p]}/README.md" for p in _README_NEW_FAMILY_PREFIXES}
-)
-
-#: Ruling 101 clause 1's per-family split-source index, on both sides of the migration, for
-#: the identical reason `_MIGRATION_DIFF_FAMILY_READMES` above exists: Ruling 68's class 6
-#: -- "a generated artifact (`INDEX.md`, `REDIRECTS.csv`) -- unconditionally permitted;
-#: excluded from comparison entirely" -- names `INDEX.md` by basename, and this is that
-#: artifact one directory down. Derived from `_DOCUMENT_FAMILY_DIR`, never a written-out
-#: list of the nine directory names, for the reason that map's own comment gives: a family
-#: renamed there must not leave a stale path behind here. It covers every family, not only
-#: the families a given run happens to write an index for -- an exclusion set is a
-#: statement about which paths are permitted, not about which ones appeared.
-#:
-#: **Flagged rather than made silently**, the same way the README constant above was: this
-#: is a further extension of Ruling 68's six-class enumeration, and the lead is told so in
-#: the PR rather than finding it in a diff.
-_MIGRATION_DIFF_FAMILY_INDEXES: Final[frozenset[str]] = frozenset(
-    _split_index_rel(family_dir) for family_dir in _DOCUMENT_FAMILY_DIR.values()
 )
 
 #: A markdown inline link's target. Deliberately stops at whitespace so a `](path "title")`
@@ -5810,6 +5795,21 @@ _MIGRATION_DIFF_FAMILY_INDEXES: Final[frozenset[str]] = frozenset(
 _MD_LINK_TARGET_RE: Final = re.compile(
     r"\[(?P<text>[^\[\]]*)\]\((?P<target>[^)\s]+)\)"
 )
+
+
+def _has_front_matter(text: str) -> bool:
+    """A leading `---`-fenced block. Used to check Ruling 68 class 1 as a **pair**.
+
+    Class 1 is *"a front-matter block added, **together with** the legacy prose or bullet
+    header it replaces being removed"*. Checking only that the body survives stripping
+    tests one direction: a file whose legacy header was removed and which was then never
+    stamped strips to the identical body (the strip is a no-op when there is no block) and
+    passes. Requiring the block to exist is the other half of the conjunction.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0] != "---":
+        return False
+    return "---" in lines[1:]
 
 
 def _repoint_relative_links(
@@ -7020,15 +7020,92 @@ def migrate(root: Path) -> MigrateResult:
 
 
 # ---------------------------------------------------------------------------------------
-# Acceptance item (g), DP-3's executable form (Ruling 68): the migration diff, filtered to
-# hunks in the six-class closed enumeration, is empty. Independent of `migrate`'s own
-# bookkeeping — computed from two trees on disk plus the `REDIRECTS.csv` `migrate` wrote,
-# never from anything `migrate` claims about itself while running — so a bug in what
-# `migrate` *reports* cannot also hide from what it *did*.
+# Acceptance item (g), DP-3's executable form (Ruling 68, amended by Ruling 104): the
+# migration diff, filtered to hunks in the six-class closed enumeration, is empty.
+# Independent of `migrate`'s own bookkeeping — computed from two trees on disk plus the
+# `REDIRECTS.csv` `migrate` wrote, never from anything `migrate` claims about itself while
+# running — so a bug in what `migrate` *reports* cannot also hide from what it *did*.
 # ---------------------------------------------------------------------------------------
 
-_MIGRATION_DIFF_GENERATED: Final = frozenset({"docs/INDEX.md", "docs/REDIRECTS.csv"})
-_MIGRATION_DIFF_ROADMAP: Final = frozenset({"docs/roadmap.md", "docs/open-questions.md"})
+#: The one file class 5 names, and only that file (Ruling 68 §2: "the `roadmap.md`
+#: restructure of §4 step 3"). Kept singular rather than a set of "living, un-numbered
+#: containers" — the earlier reading also swept in `docs/open-questions.md`, which the
+#: ruling's text never names. A citation-token change to that file is an ordinary class-2
+#: hunk, not something needing an exemption; folding it in here was over-exemption, not
+#: fidelity to the ruling.
+_ROADMAP_REL: Final = "docs/roadmap.md"
+
+#: Ruling 68's closed enumeration, named — the ruling's own §2 wording, amended by Ruling
+#: 104 §2/§3 for class 6. One entry per class, in the ruling's own order; there is no
+#: seventh. Ruling 68 §3 obliges this: "(g)'s filter is implemented as code with the six
+#: classes named, not as a shell pipeline composed at the console." The key is what a
+#: per-class breakdown is bucketed by; the text is quoted so a reader holding none of this
+#: module's context can check a bucket against the rule (`CLAUDE.md` §13, NT-0004).
+_RULING_68_CLASSES: Final[tuple[tuple[str, str], ...]] = (
+    ("1-front-matter-stamp",
+     "a front-matter block added, together with the legacy prose or bullet header it "
+     "replaces being removed (§4 step 5)"),
+    ("2-reference-token",
+     "a reference token substituted inside a line, from the step-6 allow-list "
+     "(§4 step 6)"),
+    ("3-move",
+     "a file moved or renamed, detected as a rename, with no content change beyond 1+2 "
+     "(§4 step 4)"),
+    ("4-split",
+     "a split, where the concatenation of the outputs reproduces the input's body lines "
+     "in order (§4 step 2)"),
+    ("5-roadmap-restructure",
+     f"the `{_ROADMAP_REL}` restructure of §4 step 3 — permitted unconditionally, exactly "
+     "as Ruling 68 §2 states it, which gives this one named file no content predicate"),
+    ("6-generated-artifact",
+     "Ruling 104 §2: a generated artifact regenerated in full — a file whose entire "
+     "content is the output of one of the migration's generators, replaced whole and "
+     "never partially edited. `INDEX.md` (every one the migration generates — Ruling 104 "
+     "§3), `REDIRECTS.csv`, `docs/contracts/`, the core-JSON digest and the §5.2 "
+     "generated READMEs are its EXAMPLES and MEMBERS, not the whole of it. Tested by the "
+     "property, not by path (`classify_migration_diff`'s `_try_class6`, against "
+     "`_run_second_migration`'s independent output)"),
+)
+
+#: The bucket for a hunk in none of the above. Ruling 68 §2: "A hunk the filter cannot
+#: classify fails; it is never passed through." This bucket's population **is** the
+#: violation list, so a reader can never be shown a green row with a non-empty residue.
+CLASSIFIED_BY_NONE: Final = "classified-by-none"
+
+
+@dataclass(frozen=True)
+class MigrationDiffClassification:
+    """Every file the migration diff touches, assigned to exactly one Ruling 68 class or
+    to `CLASSIFIED_BY_NONE`.
+
+    `per_class` and `violations` are two views of one walk, not two measurements: the
+    residue bucket's size is `len(per_class[CLASSIFIED_BY_NONE])` and its members are the
+    files `violations` names. A breakdown computed separately from the total it belongs to
+    is how the parts stop summing to the whole while both look right
+    (`docs/notes/0003-duplicated-status-goes-stale.md`, applied to a count).
+    """
+
+    #: class key -> the repo-relative paths that class accounts for. Every class in
+    #: `_RULING_68_CLASSES` is present, including the ones with an empty list, so a zero
+    #: is a printed zero rather than a missing row.
+    per_class: Mapping[str, tuple[str, ...]]
+    #: One human-readable line per unclassifiable file, naming the file.
+    violations: tuple[str, ...]
+    #: Files present and byte-identical in both trees: not a hunk at all, and excluded
+    #: from every class. Printed as the denominator's complement so that "N classified"
+    #: can be read against the size of the tree it was measured over.
+    unchanged: int
+
+    @property
+    def population(self) -> int:
+        """Every file this walk assigned somewhere — the denominator the per-class
+        figures are parts of."""
+        return sum(len(v) for v in self.per_class.values())
+
+    def summary(self) -> str:
+        parts = [f"{key}={len(self.per_class.get(key, ()))}" for key, _ in _RULING_68_CLASSES]
+        parts.append(f"{CLASSIFIED_BY_NONE}={len(self.per_class.get(CLASSIFIED_BY_NONE, ()))}")
+        return ", ".join(parts)
 
 
 def _read_tree_text(root: Path) -> dict[str, str | None]:
@@ -7056,33 +7133,65 @@ def _read_redirect_rows(new_root: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(fh))
 
 
-def migration_diff_violations(old_root: Path, new_root: Path) -> list[str]:
-    """Every hunk `migrate`'s own output at `new_root` (compared against the pre-migration
-    snapshot at `old_root`) does not fit Ruling 68's six-class closed enumeration — empty
-    means DP-3's executable form of NT-0019 §7 (g) holds.
+def _run_second_migration(old_root: Path) -> Path:
+    """A second, independent `migrate()` run against a fresh copy of `old_root`, in a
+    throwaway directory — class 6's oracle for "would the migration have produced this
+    file, in full?"
 
-    1. a front-matter block added (+ the legacy header it replaces removed) — and
-    2. a reference token substituted — are one combined predicate here, because in this
-       migration they are never separated: every stamped file also has its own citations
-       rewritten in the same pass. `frozen_file_matches_after_migration_stamp` (loaded from
-       `scripts/audit-docs.py`, Ruling 68 §3 — never reimplemented here) is that combined
-       predicate, applied to *every* single-source file this diff finds, not only a
-       DP-7-frozen family's: its own body-equality-after-stripping-and-inversion check is
-       exactly as correct a predicate for a non-frozen single-file transform, and a second,
-       parallel definition is exactly the drift Ruling 67 §2 warns against.
-    3. a file moved with no content change beyond 1+2 — folded into the same predicate:
-       an old/new path difference is not itself inspected, only content.
-    4. a split — the concatenation of every target's stripped-and-inverted body
-       reproduces the source's own body, in order.
-    5. the roadmap (and `open-questions.md`, the same kind of living, un-numbered
-       container) — unconditionally permitted; excluded from comparison entirely.
-    6. a generated artifact (`INDEX.md`, `REDIRECTS.csv`) — unconditionally permitted;
-       excluded from comparison entirely.
+    Ruling 104 §2's class 6 is a **property**: "a file whose entire content is the output
+    of one of the migration's generators". `migrate()` is the only generator this module
+    ships, and its own documented guarantee (module docstring above: "two independent runs
+    from the same starting input produce byte-identical output") is exactly what makes a
+    second, independent run a faithful oracle for that property — with no per-artifact
+    regenerator to hand-write and keep in sync, which is the drift Ruling 67 §2 and Ruling
+    68 §3 both warn against ("implementing it twice is how the two drift apart"). A file
+    whose content differs from this run's — because it was hand-edited after generation,
+    or partially edited — fails the property exactly as Ruling 104's own broken-input proof
+    requires.
 
-    A hunk fitting none of these — an old file vanished with no `REDIRECTS.csv` row
-    naming where it went, a new file appeared with no row naming where it came from, a
-    split target missing, or content that survives stripping-and-inversion changed
-    anyway — is a violation, named with the file(s) involved.
+    The caller owns the returned directory and must remove it.
+    """
+    tmp = Path(tempfile.mkdtemp(prefix="doc-id-class6-"))
+    shutil.copytree(old_root, tmp, dirs_exist_ok=True)
+    migrate(tmp)
+    return tmp
+
+
+def classify_migration_diff(
+    old_root: Path, new_root: Path
+) -> MigrationDiffClassification:
+    """Assign every file `migrate`'s own output at `new_root` (compared against the
+    pre-migration snapshot at `old_root`) touches to one of Ruling 68's six permitted
+    classes, or to `CLASSIFIED_BY_NONE`.
+
+    Ruling 68 §2 states the enumeration and then: *"A hunk the filter cannot classify
+    fails; it is never passed through. A filter that silently drops what it does not
+    understand is the same defect as the vanished scan root that once made five checks
+    skip while the audit printed 'All checks passed' and exited 0."* Every branch below
+    therefore ends in a named class or in a violation; there is no `continue` that means
+    "not sure".
+
+    Classes 1 and 2 share one content predicate, `frozen_file_matches_after_migration_stamp`
+    — loaded from `scripts/audit-docs.py`, never reimplemented, per Ruling 68 §3's *"the
+    frozen-family branch of the filter calls check 34's DP-7 predicate rather than
+    reimplementing it"* and its *"one definition of 'reference tokens only', not two ...
+    implementing it twice is how the two drift apart"*. They are **attributed** apart, by
+    running the predicate's two stages in order: a file whose stripped body already equals
+    the source's needed no token inversion and is class 1 alone; one that needs the
+    inversion too is counted under class 2.
+
+    Class 3 (a move) is attributed by the `REDIRECTS.csv` old_path/new_path difference and
+    still carries the same content predicate: a rename is permitted *"with no content
+    change"* beyond the stamp and the token rewrite it necessarily also receives.
+
+    Class 5 (`docs/roadmap.md`) is permitted unconditionally, by path identity of that one
+    named file — legitimate here for the reason Ruling 68 §2 itself gives it no content
+    predicate, and *not* the general path-exclusion Ruling 68 §2 refused at `:232` (thirteen
+    §5.2 rows mixing script output and hand edits in the same file) or Ruling 104 forbids
+    for class 6.
+
+    Class 6 is tried, for anything that does not fit 1-5, against `_run_second_migration`'s
+    independent regeneration — content, never path.
     """
     audit_docs = _load_audit_docs()
     rows = _read_redirect_rows(new_root)
@@ -7110,110 +7219,185 @@ def migration_diff_violations(old_root: Path, new_root: Path) -> list[str]:
 
     old_files = _read_tree_text(old_root)
     new_files = _read_tree_text(new_root)
+    buckets: dict[str, list[str]] = {key: [] for key, _ in _RULING_68_CLASSES}
+    buckets[CLASSIFIED_BY_NONE] = []
     violations: list[str] = []
     consumed_new: set[str] = set()
+    unchanged = 0
+
+    # Class 6's oracle is expensive (a full second `migrate()` run) and most files never
+    # need it, so it is built at most once, on first use, and torn down when this call
+    # returns — never left for a caller to leak.
+    second_run_root: list[Path] = []
+
+    def _second_run_text(rel: str) -> str | None:
+        if not second_run_root:
+            second_run_root.append(_run_second_migration(old_root))
+        try:
+            return (second_run_root[0] / rel).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return None
+
+    def _fail(rel: str, message: str) -> None:
+        buckets[CLASSIFIED_BY_NONE].append(rel)
+        violations.append(message)
+
+    def _try_class6(rel: str) -> bool:
+        """True (and bucketed) iff `rel`'s content in `new_root` equals what an
+        independent second `migrate()` run over `old_root` produces at that same path —
+        Ruling 104 §2's property, checked without regard to what `rel` is."""
+        actual = new_files.get(rel)
+        if actual is None:
+            return False
+        expected = _second_run_text(rel)
+        if expected is None or expected != actual:
+            return False
+        buckets["6-generated-artifact"].append(rel)
+        return True
+
+    def _classify_content(
+        old_rel: str, new_rel: str, compare_against: str, new_text: str, *, moved: bool,
+        stamped_header_removed: bool,
+    ) -> None:
+        """Put one old->new file pair in class 1, 2 or 3; fall back to class 6 (a whole
+        regenerated body, e.g. a carried or fresh family README); or fail it."""
+        label = old_rel if not moved else f"{old_rel} -> {new_rel}"
+        if stamped_header_removed and not _has_front_matter(new_text):
+            _fail(
+                old_rel,
+                f"{label}: the legacy header was removed but no front-matter block was "
+                "added — Ruling 68 class 1 permits the pair, not either half",
+            )
+            return
+        stripped = _strip_front_matter(new_text)
+        if stripped.strip("\n") == compare_against.strip("\n"):
+            buckets["3-move" if moved else "1-front-matter-stamp"].append(old_rel)
+            return
+        if audit_docs.frozen_file_matches_after_migration_stamp(
+            compare_against, new_text, redirects_inverse
+        ):
+            buckets["3-move" if moved else "2-reference-token"].append(old_rel)
+            return
+        if _try_class6(new_rel):
+            return
+        _fail(
+            old_rel,
+            f"{label}: content changed beyond header stamp + token rewrite"
+            + ("" if moved else ", with no REDIRECTS.csv move recorded"),
+        )
 
     def _lines_no_blank(text: str) -> list[str]:
         return [ln for ln in text.splitlines() if ln.strip()]
 
-    for old_rel, old_text in old_files.items():
-        if (
-            old_rel in _MIGRATION_DIFF_ROADMAP
-            or old_rel in _MIGRATION_DIFF_GENERATED
-            or old_rel in _MIGRATION_DIFF_FAMILY_READMES
-            or old_rel in _MIGRATION_DIFF_FAMILY_INDEXES
-        ):
-            continue
-        if old_text is None:
-            violations.append(f"{old_rel}: not UTF-8 text — this filter cannot classify it")
-            continue
-        compare_against = header_converted_bodies.get(old_rel, old_text)
-        targets = moves.get(old_rel)
-        if not targets:
-            new_text = new_files.get(old_rel)
-            if new_text is None:
-                violations.append(
-                    f"{old_rel}: vanished with no REDIRECTS.csv row accounting for it"
+    try:
+        for old_rel, old_text in old_files.items():
+            if old_rel == _ROADMAP_REL:
+                buckets["5-roadmap-restructure"].append(old_rel)
+                consumed_new.add(old_rel)
+                continue
+            if old_text is None:
+                _fail(old_rel, f"{old_rel}: not UTF-8 text — this filter cannot classify it")
+                continue
+            compare_against = header_converted_bodies.get(old_rel, old_text)
+            stamped_header_removed = old_rel in header_converted_bodies
+            targets = moves.get(old_rel)
+            if not targets:
+                new_text = new_files.get(old_rel)
+                if new_text is None:
+                    _fail(
+                        old_rel,
+                        f"{old_rel}: vanished with no REDIRECTS.csv row accounting for it",
+                    )
+                    continue
+                consumed_new.add(old_rel)
+                if new_text == old_text:
+                    unchanged += 1
+                    continue
+                _classify_content(
+                    old_rel, old_rel, compare_against, new_text, moved=False,
+                    stamped_header_removed=stamped_header_removed,
                 )
                 continue
-            consumed_new.add(old_rel)
-            if new_text == compare_against:
-                continue
-            if not audit_docs.frozen_file_matches_after_migration_stamp(
-                compare_against, new_text, redirects_inverse
-            ):
-                violations.append(
-                    f"{old_rel}: content changed beyond header stamp + token rewrite, "
-                    "with no REDIRECTS.csv move recorded"
-                )
-            continue
 
-        if len(targets) == 1:
-            new_rel = targets[0]
-            new_text = new_files.get(new_rel)
-            if new_text is None:
-                violations.append(
-                    f"{old_rel} -> {new_rel}: REDIRECTS.csv names this target, but it "
-                    "does not exist"
+            if len(targets) == 1:
+                new_rel = targets[0]
+                new_text = new_files.get(new_rel)
+                if new_text is None:
+                    _fail(
+                        old_rel,
+                        f"{old_rel} -> {new_rel}: REDIRECTS.csv names this target, but it "
+                        "does not exist",
+                    )
+                    continue
+                consumed_new.add(new_rel)
+                _classify_content(
+                    old_rel, new_rel, compare_against, new_text, moved=True,
+                    stamped_header_removed=stamped_header_removed,
                 )
                 continue
-            consumed_new.add(new_rel)
-            if not audit_docs.frozen_file_matches_after_migration_stamp(
-                compare_against, new_text, redirects_inverse
-            ):
-                violations.append(
-                    f"{old_rel} -> {new_rel}: content changed beyond header stamp + "
-                    "token rewrite"
-                )
-            continue
 
-        # A genuine split: several *distinct* target files share one `old_path` row. The
-        # concatenation of every target's own body (front matter stripped, tokens
-        # inverted back), compared line-by-line ignoring blank-line-count (formatting,
-        # not content — `migrate`'s own slicing normalises each piece's trailing blank
-        # lines to one `\n`, which a byte-exact join cannot generally undo without
-        # reproducing that same normalisation a second time), must reproduce
-        # `old_text`'s own non-blank lines in order (Ruling 68 class 4).
-        pieces: list[str] = []
-        ok = True
-        for new_rel in targets:
-            new_text = new_files.get(new_rel)
-            if new_text is None:
-                violations.append(f"{old_rel}: split target {new_rel} does not exist")
-                ok = False
+            # A genuine split: several *distinct* target files share one `old_path` row.
+            # The concatenation of every target's own body (front matter stripped, tokens
+            # inverted back), compared line-by-line ignoring blank-line-count (formatting,
+            # not content — `migrate`'s own slicing normalises each piece's trailing blank
+            # lines to one `\n`, which a byte-exact join cannot generally undo without
+            # reproducing that same normalisation a second time), must reproduce
+            # `old_text`'s own non-blank lines in order (Ruling 68 class 4).
+            pieces: list[str] = []
+            ok = True
+            for new_rel in targets:
+                new_text = new_files.get(new_rel)
+                if new_text is None:
+                    _fail(old_rel, f"{old_rel}: split target {new_rel} does not exist")
+                    ok = False
+                    continue
+                consumed_new.add(new_rel)
+                stripped = _strip_front_matter(new_text)
+                for new_token in sorted(redirects_inverse, key=len, reverse=True):
+                    stripped = re.sub(
+                        rf"\b{re.escape(new_token)}\b", redirects_inverse[new_token], stripped
+                    )
+                pieces.append(stripped)
+            if ok:
+                joined_lines = [ln for piece in pieces for ln in _lines_no_blank(piece)]
+                if joined_lines != _lines_no_blank(old_text):
+                    _fail(
+                        old_rel,
+                        f"{old_rel}: split targets {targets} do not reproduce this "
+                        "file's body lines in order",
+                    )
+                else:
+                    buckets["4-split"].append(old_rel)
+
+        for new_rel, _new_text in new_files.items():
+            if new_rel in consumed_new:
                 continue
-            consumed_new.add(new_rel)
-            stripped = _strip_front_matter(new_text)
-            for new_token in sorted(redirects_inverse, key=len, reverse=True):
-                stripped = re.sub(
-                    rf"\b{re.escape(new_token)}\b", redirects_inverse[new_token], stripped
-                )
-            pieces.append(stripped)
-        if ok:
-            joined_lines = [ln for piece in pieces for ln in _lines_no_blank(piece)]
-            if joined_lines != _lines_no_blank(old_text):
-                violations.append(
-                    f"{old_rel}: split targets {targets} do not reproduce this file's "
-                    "body lines in order"
-                )
+            if new_rel in old_files:
+                continue  # untouched, same path — handled by the old_files loop above
+            if _try_class6(new_rel):
+                continue
+            _fail(
+                new_rel,
+                f"{new_rel}: appeared with no REDIRECTS.csv row naming where it came from",
+            )
+    finally:
+        if second_run_root:
+            shutil.rmtree(second_run_root[0], ignore_errors=True)
 
-    for new_rel, _new_text in new_files.items():
-        if new_rel in consumed_new:
-            continue
-        if (
-            new_rel in _MIGRATION_DIFF_ROADMAP
-            or new_rel in _MIGRATION_DIFF_GENERATED
-            or new_rel in _MIGRATION_DIFF_FAMILY_READMES
-            or new_rel in _MIGRATION_DIFF_FAMILY_INDEXES
-        ):
-            continue
-        if new_rel in old_files:
-            continue  # untouched, same path — already handled by the old_files loop above
-        violations.append(
-            f"{new_rel}: appeared with no REDIRECTS.csv row naming where it came from"
-        )
+    return MigrationDiffClassification(
+        per_class={k: tuple(v) for k, v in buckets.items()},
+        violations=tuple(violations),
+        unchanged=unchanged,
+    )
 
-    return violations
+
+def migration_diff_violations(old_root: Path, new_root: Path) -> list[str]:
+    """Every file `migrate`'s own output at `new_root` does not fit Ruling 68's six-class
+    closed enumeration — empty means DP-3's executable form of NT-0019 §7 (g) holds. A thin
+    wrapper over `classify_migration_diff`'s `violations`, kept as its own function because
+    existing callers (and this module's own CLI-level acceptance tests) name it directly.
+    """
+    return list(classify_migration_diff(old_root, new_root).violations)
 
 
 # ---------------------------------------------------------------------------------------

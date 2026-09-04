@@ -357,6 +357,144 @@ def test_every_mangled_example_the_handover_recorded_is_caught(
 
 
 # =========================================================================================
+# (g) g2 — row_g wraps `doc-id.classify_migration_diff`'s per-class breakdown into the
+# Row, never reimplementing the six-class filter itself (Ruling 68 §3). A fake `docid`
+# stands in for the real module so these tests pin row_g's OWN aggregation logic — which
+# class counts get printed, which residue drives the verdict — independent of whether the
+# classifier itself is correct, which `tests/test_doc_id_migrate.py`'s
+# `test_acceptance_item_g_*` and `test_class6_*` tests already prove on the real fixture
+# corpus and the real generators.
+# =========================================================================================
+
+
+class _FakeClassification:
+    def __init__(
+        self,
+        per_class: dict[str, tuple[str, ...]],
+        violations: tuple[str, ...],
+        *,
+        unchanged: int = 0,
+    ) -> None:
+        self.per_class = per_class
+        self.violations = violations
+        self.unchanged = unchanged
+
+    @property
+    def population(self) -> int:
+        return sum(len(v) for v in self.per_class.values())
+
+
+class _FakeDocid:
+    """Every attribute `row_g` reads off the real `doc-id.py` module, and nothing else."""
+
+    CLASSIFIED_BY_NONE = "classified-by-none"
+    _RULING_68_CLASSES = (
+        ("1-front-matter-stamp", "class 1"),
+        ("2-reference-token", "class 2"),
+        ("3-move", "class 3"),
+        ("4-split", "class 4"),
+        ("5-roadmap-restructure", "class 5"),
+        ("6-generated-artifact", "class 6"),
+    )
+
+    def __init__(self, classification: _FakeClassification) -> None:
+        self._classification = classification
+
+    def classify_migration_diff(self, old_root: Any, new_root: Any) -> _FakeClassification:
+        return self._classification
+
+
+#: A compound citation the migration cannot safely rewrite is left exactly as it was
+#: (Ruling 102 §2 row 1's own control) — the g1 sub-predicate exists to catch a *mangled*
+#: rewrite, which this fixture deliberately does not exercise; g1 is proven red-then-green
+#: on its own in `test_row_d_is_green_on_a_clean_corpus_and_red_on_one_planted_token`'s
+#: sibling tests above.
+_G_CLEAN_COMPOUND = {"docs/a.md": "see NFR-RATE-13/14 for the reasoning\n"}
+_G_CLEAN_MIGRATED = dict(_G_CLEAN_COMPOUND)
+
+
+def test_row_g_reports_every_class_count_separately_not_one_aggregate(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 68 §3: "(g)'s filter is implemented as code with the six classes named."
+    Every one of the six classes' counts must be individually readable off the row, plus
+    the residue — never folded into a single pass/fail number.
+    """
+    snap = _snapshot(dv, tmp_path, _G_CLEAN_MIGRATED, _G_CLEAN_COMPOUND)
+    classification = _FakeClassification(
+        per_class={
+            "1-front-matter-stamp": ("docs/x1.md",),
+            "2-reference-token": ("docs/x2.md", "docs/x2b.md"),
+            "3-move": ("docs/x3.md",),
+            "4-split": (),
+            "5-roadmap-restructure": ("docs/roadmap.md",),
+            "6-generated-artifact": ("docs/INDEX.md",),
+            "classified-by-none": (),
+        },
+        violations=(),
+    )
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    row = dv.row_g(fake_docid, snap, mig, ctl)
+
+    assert row.verdict == dv.PASS
+    for key in (
+        "1-front-matter-stamp=1", "2-reference-token=2", "3-move=1", "4-split=0",
+        "5-roadmap-restructure=1", "6-generated-artifact=1", "classified-by-none=0",
+    ):
+        assert key in row.migrated, row.migrated
+
+
+def test_row_g_a_nonempty_residue_fails_and_names_the_violation(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 68 §2: "A hunk the filter cannot classify fails; it is never passed
+    through." One unclassified file must fail the row and name itself in the note, even
+    though every other file is cleanly explained."""
+    snap = _snapshot(dv, tmp_path, _G_CLEAN_MIGRATED, _G_CLEAN_COMPOUND)
+    classification = _FakeClassification(
+        per_class={
+            "1-front-matter-stamp": ("docs/x1.md",),
+            "2-reference-token": (),
+            "3-move": (),
+            "4-split": (),
+            "5-roadmap-restructure": (),
+            "6-generated-artifact": (),
+            "classified-by-none": ("docs/rogue.md",),
+        },
+        violations=("docs/rogue.md: appeared with no REDIRECTS.csv row naming where it "
+                    "came from",),
+    )
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    row = dv.row_g(fake_docid, snap, mig, ctl)
+
+    assert row.verdict == dv.FAIL
+    assert "docs/rogue.md" in row.note
+    assert "classified-by-none=1" in row.migrated
+
+
+def test_row_g_empty_classified_population_fails(dv: Any, tmp_path: pathlib.Path) -> None:
+    """NT-0007: a green over an empty population is a fail, not a pass — g2's population
+    is the file count `classify_migration_diff` classified, not the corpus size."""
+    snap = _snapshot(dv, tmp_path, _G_CLEAN_MIGRATED, _G_CLEAN_COMPOUND)
+    empty_per_class: dict[str, tuple[str, ...]] = {
+        key: () for key, _ in _FakeDocid._RULING_68_CLASSES
+    }
+    empty_per_class["classified-by-none"] = ()
+    classification = _FakeClassification(per_class=empty_per_class, violations=())
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    row = dv.row_g(fake_docid, snap, mig, ctl)
+
+    assert row.verdict == dv.FAIL
+    assert "empty population" in row.note
+
+
+# =========================================================================================
 # (h2) — the vacuous pass, which is the failure mode that reads as a success
 # =========================================================================================
 
