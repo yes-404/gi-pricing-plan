@@ -193,6 +193,10 @@ Then merge. **Then stop.** Delegation §3's reserved list, §4's halt protocol a
 (handover committed first) apply unchanged; a second failure inside the window is a halt.
 Amendments 2 and 4 bind. Five agents live at most, one fresh per task.
 
+**Dated append, 2026-09-04, under the maintainer's delegation of 2026-09-03 (Authority,
+above):** *five agents* means **five executors**; the reporter and watcher own no
+worktree and run no gate, so they stand outside the count.
+
 **What does not open.** W37-7…10 and W37-11. Nothing S3 starts without a further instruction
 here; `CLAUDE.md` stays the maintainer's and is not delegated to the deputy either.
 
