@@ -1059,3 +1059,25 @@ same collision-safe-drop philosophy as the read-side inverse — a genuine ambig
 named and excluded, not crashed on. Two new unit tests. 427 targeted tests green. Told to
 build (d8) in the same PR rather than split to a follow-up, given how much is already
 consolidated here.
+
+## 2026-09-04 — executor-30-2's full scope complete, (d5)/(d8) implemented per the ruling, generator named
+
+`_scan_values`/`_value_set_creation` (new) compare distinct matched values rather than raw
+line counts — wired into `rows_d`'s generic branch (every alternative, not just d8) and
+`_d8_verdict`. A genuinely new value still regresses unconditionally, checked before any
+disclosure; an occurrence-count increase on an unchanged value set is now a disclosure
+line, never folded into the verdict. Two pre-existing tests whose fixtures accidentally
+introduced real new values had their fixtures corrected (their intent was the mechanism,
+not creation); three new tests added. 431 targeted tests green.
+
+**Generator named** (item 3 discharged): `docs/INDEX.md` (19 occurrences) and
+`docs/rulings/INDEX.md` (2, doesn't exist pre-migration) — both regenerated-from-scratch
+artifacts — account for the growth. Sampled lines confirm each ruling's own **title**
+quoted verbatim into its index row, several of which happen to mention `W37-6` in prose.
+**Class 6 exactly, the ruling's own first hypothesis — legitimate, no fix needed.**
+Cross-checked one real multi-ruling split file directly (control vs. its child, both count
+7, no inflation) to rule out split-duplication before landing on the index explanation.
+
+executor-30-2's full scope is now done and tested: unit-record inverse, cause3/3a/4/6, the
+stale-comment fix, the split-redirect crash bug it found and fixed mid-rebase, and (d5)/(d8).
+Running its one compliant gate + verify before opening the PR.
