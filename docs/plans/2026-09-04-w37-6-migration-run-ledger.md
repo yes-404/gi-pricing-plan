@@ -894,3 +894,22 @@ frontend/, scripts/, packages/. Measured against row (g)'s own predicate
 (`doc-id.classify_migration_diff`) at a fresh `--verify --keep` snapshot, not assumed.
 DIRTY like #723/#725 — main moving fast through this checkpoint is now a recurring pattern
 across all three (g)-triage legs. `ci-watcher-727` dispatched; rebase requested.
+
+## 2026-09-04 — #725 and #727 both rebased cleanly, self-resolved
+
+`rowe2`'s #725: rebased to `e951cba`, `mergeStateStatus` CLEAN. One purely-additive conflict
+in `tests/test_doc_id_migrate.py` (two new test sections landing at the same insertion
+point) — kept both, no logic changes. Full re-verification post-rebase: gate green both
+halves, `--verify` row (e)/(f) still PASS, verdict set unchanged (the (d5) label reads
+REGRESSION only because `EXPECTED_VERDICTS["d5"]` now records FAIL per #721, not a new
+move), 5 pytest failures still the same shared-DB-contention signature, confirmed via
+`git diff --stat` and isolated reruns. Force-pushed with `--force-with-lease`, confirmed via
+`gh pr view` rather than the push exit code. CI restarted fresh on the new head (still
+in-flight); `ci-watcher-725b` dispatched to replace the stale pre-rebase watch.
+
+`triage-other`'s #727: rebased onto `205ebc9`, resolved a conflict against #720's cause3
+addition — its own `id-path-compound-citation` finding turned out to be the same underlying
+shape cause3 already covers more generally; dropped the duplicate label rather than keep a
+redundant class, kept its two genuinely distinct findings (new-frontmatter-stamp-no-move,
+unmapped-work-slice-key). Targeted tests (83), ruff, mypy clean. Pushed (`4afe5f8`);
+re-running `--verify` before considering it settled.
