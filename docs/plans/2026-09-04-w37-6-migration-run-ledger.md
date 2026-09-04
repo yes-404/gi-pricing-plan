@@ -381,3 +381,42 @@ Its four findings dispositioned, each with a verified locator:
 
 Both executors messaged with their scope at 11:1xZ. `ci-watcher-720` still watching (python
 workflow in progress at last check); merge on its report, unchanged from the prior entry.
+
+## 2026-09-04 — the slot mechanism was prose, not a real wrapper: killed and restarted the three legacy gates
+
+Deputy's 11:5xZ read: load 94/74/58 on 16 cores; every real `pytest` binary's parent was
+`uv run pytest -q`, never `flock` — `/tmp/slots/` had no files. My earlier messages to
+executors described the mechanism in prose; nobody actually ran the wrapped line. Ruled:
+the wrapped command is the only gate command from now (dispatch briefs carry it verbatim,
+executors do not compose it), and the three uncapped legacy gates (`wt-h2b`,
+`wt-r105-ruling105`, `wt-rowe2`) are killed and restarted under it now — the one case where
+"let it finish" is withdrawn, since 44–52 minutes at ~4.5 cores each will not finish before
+a capped restart does.
+
+**Actioned 11:22Z:** all three messaged with `pkill -P <their real pytest's parent pid>` and
+the exact wrapped command (copy-verbatim, not composed):
+```
+gate_cmd='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 uv run pytest -q'
+got=0
+for i in 1 2 3; do flock -n /tmp/slots/gate-$i -c "$gate_cmd" && { got=1; break; }; done
+[ "$got" = "0" ] && flock -w 7200 /tmp/slots/gate-1 -c "$gate_cmd"
+```
+
+**Found while checking: rowe2 had TWO real pytest binaries running concurrently**
+(PID 47248, 45+ min old; PID 195340, 67s old, parent chain `timeout 2400 uv run pytest -q`)
+— a genuine duplicate this time, not a self-match on wrapper argv (checked by real binary
+path both times, per the earlier-established predicate). Told to kill both and explain the
+cause in its reply.
+
+**Correction flagged to the deputy, not actioned unilaterally:** the two runs read as
+"capped" (`w37-6-other-residue-triage` 240% CPU, `wt-alloc` 178%) have **no thread-cap env
+vars set either** (`/proc/<pid>/environ`, checked directly) — their lower CPU reading is
+more likely because they are earlier in the run (5 and 4.6 minutes in respectively) than
+because a cap is active. Not killed: the deputy's kill instruction scoped to the three
+named gates specifically; this is reported for a ruling, not acted on alone.
+
+CPU-demand figure (sum of `%CPU` over the six real gates ÷ 1600, i.e. ÷16 cores × 100):
+(432+397+370+251+210+186)/1600 ≈ **1.15** — mildly oversubscribed by actual CPU-seconds,
+much less dramatic than the load-average figure (82) suggests; load average also counts
+runnable/blocked threads from the ~150-thread pools, not CPU demand alone, matching the
+deputy's own point.
