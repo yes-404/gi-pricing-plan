@@ -2588,6 +2588,20 @@ def _h1_residue_by_file(out: str) -> Mapping[tuple[str, str], int]:
     disclosed only through h1's aggregate count, exactly as it was before this ceiling
     existed. `cls` is tagged `f"h1-check{n}"` rather than the bare check number, so a
     future (d)-row and an h1 check can never collide on the same key by coincidence.
+
+    **The size of this gap, measured against a real `migrate --verify` snapshot** (PR
+    #756, team-lead's own ask — "that figure is the size of the gap the ceiling cannot
+    see"), not asserted: of h1's 948 non-disclosed failures (excluding checks 29/30/35),
+    **274 are captured** (check 32 alone — its `f"check 32: {rel}:{problem}"` shape
+    matches) and **674 (71%) are pathless** — check 36's 435 (`f"check 36: legacy
+    (pre-migration) form survives — {hit}"`, the descriptive prose sits before the hit's
+    own `path:lineno:` string) and check 1's 235 (`f"check 1: broken link in {f}: ..."`,
+    the path follows "broken link in " rather than the check number directly) are the two
+    classes responsible for nearly all of it. Closing this would mean either changing
+    those two messages at the source to lead with the path (the same "fix the tool, not
+    the residue" direction the deputy's ruling already takes for other framework gaps) or
+    widening this extractor to hunt for a path anywhere in the message — not attempted
+    here, named as a follow-up rather than silently accepted.
     """
     block = _FAILED_BLOCK_RE.search(out)
     tail = out[block.start():] if block else ""

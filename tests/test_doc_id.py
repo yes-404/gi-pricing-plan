@@ -1121,6 +1121,37 @@ def test_classify_the_five_other_living_top_level_files_are_reference_not_none(
     assert doc_id_cli.classify_docs_files(repo) == {"reference": 4}
 
 
+def test_classify_the_w37_11_record_is_reference_not_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """F102's own shape, caught before it repeated (PR #756): `docs/audit/` names no
+    document family of its own (`_CLASSIFY_FAMILY_BY_DIR` has no "audit" entry), so an
+    ordinary-named file added under it — exactly what the W37-11 residue ceiling record
+    is — falls to `"none"` by default and moves row (a) off PASS the moment it exists.
+    Measured directly against a real `migrate --verify` snapshot before this fix landed:
+    `none: 1`, named as `docs/audit/w37-11-record.md`; after, the family disappears from
+    the count entirely rather than merely dropping to 0 among others."""
+    repo = _classify_repo(tmp_path)
+    _write(
+        repo / doc_id_cli._docid.W37_11_RECORD_PATH,
+        "| path | cls | count | reason | owner |\n",
+    )
+    _commit_all(repo)
+    assert doc_id_cli.classify_docs_files(repo) == {"reference": 1}
+
+
+def test_classify_a_similarly_named_docs_audit_file_still_reports_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The negative control: only the exact declared record path is reclassified — a
+    different file under `docs/audit/` is still the genuinely unclassified case, so a
+    real stray file landing there next is not silently blinded by this fix."""
+    repo = _classify_repo(tmp_path)
+    _write(repo / "docs" / "audit" / "some-unrecognised-file.md", "x\n")
+    _commit_all(repo)
+    assert doc_id_cli.classify_docs_files(repo) == {"none": 1}
+
+
 def test_classify_templates_get_their_own_bucket(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
