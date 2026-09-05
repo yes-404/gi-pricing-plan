@@ -1443,7 +1443,9 @@ def _path_alternative_hits_by_file(
 
 
 def rows_d(
-    mig: Corpus, ctl: Corpus, record: "Sequence[ResidueEntry]" = (),
+    mig: Corpus,
+    ctl: Corpus,
+    record: "Sequence[ResidueEntry]" = (),  # noqa: UP037 -- ResidueEntry defined later
 ) -> list[Row]:
     rows: list[Row] = []
     for i, (label, pattern) in enumerate(D_ALTERNATIVES, start=1):
@@ -2580,7 +2582,7 @@ def _classify_failures(out: str) -> dict[str, int]:
 def _h1_verdict(
     other_total: int,
     residue: Mapping[tuple[str, str], int] | None = None,
-    record: "Sequence[ResidueEntry]" = (),
+    record: "Sequence[ResidueEntry]" = (),  # noqa: UP037 -- ResidueEntry defined later
 ) -> str:
     """Ruling 105 §B, extended by the box-end ruling (2026-09-05): (h1) passes iff every
     class outside checks 29/30/35 is zero, OR every one of those non-disclosed classes'
@@ -2729,7 +2731,9 @@ def _probe_summary(out: str) -> dict[str, int | None]:
 
 
 def rows_h(
-    snap: Snapshot, mig: Corpus, record: "Sequence[ResidueEntry]" = (),
+    snap: Snapshot,
+    mig: Corpus,
+    record: "Sequence[ResidueEntry]" = (),  # noqa: UP037 -- ResidueEntry defined later
 ) -> list[Row]:
     """`mig` is the migrated snapshot's own `Corpus` (`compute_rows`' own `load_corpus(
     snap.migrated)`, never re-derived here) — passed on for its `.tree` alone: h1's
@@ -3473,7 +3477,7 @@ class ResidueEntry:
 
 
 def _residue_fully_governed(
-    residue: Mapping[tuple[str, str], int], record: "Sequence[ResidueEntry]",
+    residue: Mapping[tuple[str, str], int], record: Sequence[ResidueEntry],
 ) -> bool:
     """True iff every `(path, cls)` hit in `residue` (count > 0) is named in the governed
     W37-11 record (`docs/audit/w37-11-record.md`) at or above its measured count.
@@ -3659,7 +3663,7 @@ def compute_rows(
     docid: Any,
     snap: Snapshot,
     generated_paths: Sequence[str] = (),
-    record: "Sequence[ResidueEntry]" = (),
+    record: "Sequence[ResidueEntry]" = (),  # noqa: UP037 -- ResidueEntry defined later
 ) -> list[Row]:
     """Every §7 (a)-(i) row, over a snapshot whose `migrated/` has already been migrated.
 
