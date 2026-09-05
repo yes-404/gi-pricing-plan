@@ -2685,27 +2685,29 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # occurrence rather than trying to tell the two apart at measurement
                          # time. The earlier comment's "every Work mints a `WK-`, so an
                          # unmapped one is necessarily a real defect" was false on the tree.
-    "d9": FAIL,         # docs/plans/2026- — 6 fatal remain (2026-09-05, down from 131):
-                         # every one a wrapped citation of a SPLIT source
-                         # (`w11-slice1-rulings.md` etc.) — `_wrapped_path_patterns`'
-                         # own docstring rules this out of scope ("a split source
-                         # resolves its target from the citing line's own content,
-                         # which a wrap can span ... left exactly as it is, same as
-                         # today"), not a regression of this fix. The other 125 were
-                         # three framework defects: a same-path (`old_path==new_path`
-                         # token-rename) `docs/REDIRECTS.csv` row counted as a "real
-                         # moved file", a family split-source `docs/<family>/INDEX.md`'s
-                         # own ruled provenance (RL-287/RL-255) counted as an
-                         # unrewritten citation, and `_rewrite_wrapped_path_citations`'
-                         # `if old_tok in text: continue` shortcut skipping the
-                         # wrap-tolerant pattern for a token that also appears
-                         # contiguous elsewhere in the same file.
-    "d10": FAIL,        # docs/audit/ — 1 fatal remains (2026-09-05, down from 45): the
-                         # same wrapped-split-source shape (d9)'s note describes
-                         # (`docs/audit/plan-reviews.md`, 13 targets). The other 44 were
-                         # the same three framework defects (d9)'s note names, plus a
-                         # fourth wrap shape this fix also covers: a wrap landing right
-                         # before the extension after `.`, not only after `-`/`/`
+    "d9": DISCLOSE,     # docs/plans/2026- — FIXED (2026-09-05, W37-6 rows (d9)-(d12)):
+                         # 0 of 131 fatal lines remain. Four framework defects, each
+                         # fixed generically rather than per-file per the maintainer's
+                         # unconditional ruling (13:25 BST, W37-6 channel: any line
+                         # naming a real moved file in REDIRECTS.csv is a tool miss, not
+                         # residue): a same-path (`old_path==new_path` token-rename)
+                         # `docs/REDIRECTS.csv` row counted as a "real moved file"; a
+                         # family split-source `docs/<family>/INDEX.md`'s own ruled
+                         # provenance (RL-287/RL-255) counted as an unrewritten citation;
+                         # `_rewrite_wrapped_path_citations`'s `if old_tok in text:
+                         # continue` shortcut skipping the wrap-tolerant pattern for a
+                         # token that also appears contiguous elsewhere in the same
+                         # file; and a wrapped citation of a SPLIT source
+                         # (`w11-slice1-rulings.md` etc.), which the first three fixes'
+                         # own commit left deferred as a documented scope limit and a
+                         # follow-up commit resolved via `_SplitSource.resolve()` on the
+                         # wrap-reconstructed line. The row's own disclosed (no real
+                         # successor) population remains, `_verdict_on_zero`'s correct
+                         # DISCLOSE, never PASS.
+    "d10": DISCLOSE,    # docs/audit/ — FIXED (2026-09-05, W37-6 rows (d9)-(d12)): 0 of
+                         # 45 fatal lines remain. The same four defects (d9)'s note
+                         # names, plus a fifth wrap shape: a wrap landing right before
+                         # the extension after `.`, not only after `-`/`/`
                          # (`docs/audit/register.md`'s own citation in
                          # `docs/audit/findings/README.md`).
     "d12": DISCLOSE,    # docs/adr/ — FIXED (2026-09-05, W37-6 rows (d9)-(d12)): every one
