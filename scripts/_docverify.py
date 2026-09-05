@@ -435,7 +435,16 @@ class Corpus:
     def scan(
         self, pattern: re.Pattern[str], *, skip_was: bool = True, skip_fenced: bool = False
     ) -> tuple[int, int]:
-        """(matching lines, matching files) for `pattern` over this corpus."""
+        """(matching lines, matching files) for `pattern` over this corpus.
+
+        `skip_fenced` (2026-09-04, row (d8), task #30): also skips a line inside a
+        ` ``` `/`~~~` fence, using `_FENCE_RE` — the identical, single tracker `padded_
+        hits` (row (e)'s own conjunct 0) already uses, never a second one written here,
+        per Ruling 67 §2's "one rule at two times." Defaults `False` so every existing
+        (d) alternative's own reading is byte-identical to before this parameter existed;
+        opted into only where a real document fences an illustrative example under
+        Ruling 103 §5.1's convention (class 3a) rather than being exempted by name.
+        """
         n_lines = 0
         n_files = 0
         for rel in self.files:
@@ -765,8 +774,8 @@ D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
 
 #: What each §7(d) alternative turns INTO when the rewrite goes wrong. Directed by the lead
 #: after auditor finding A1, whose evidence is the reason this table exists rather than a
-#: comment: `F-W11-1-3` -> `F-WK-952-1-3`, because the rewrite matched the work key `W11`
-#: *inside* the finding id. `F-WK` has a letter where `F-W[0-9]` wants a digit, so the
+#: comment: `F-W<n>-<m>-<k>` -> `F-WK-<xxx>-<m>-<k>`, because the rewrite matched the work
+#: key `W<n>` *inside* the finding id. `F-WK` has a letter where `F-W[0-9]` wants a digit, so the
 #: mangled form matches no §7(d) alternative at all — **and the alternative therefore reads
 #: zero partly BECAUSE the corruption moved the tokens out of its own predicate's reach.**
 #: A row satisfiable by corruption is what neither a control nor a denominator alone
@@ -871,19 +880,47 @@ def _companions_for(
 #: resolver that renders one (`W11-1` -> "WK-952, slice 1") is W37-11's citation-form
 #: item, the same shape as the `F-W`/bare-`F` alias classes already in `D_DISCLOSED`. Kept
 #: as a separate branch rather than folded into `D_DISCLOSED`, because two things on the
-#: SAME row stay fatal regardless of the disclosure — a task key (three segments,
-#: `W<n>-<m>-<k>`; NT-0019 names no live citation of this shape, expected 0 outside
-#: fixtures) and a bare work-key remainder (`W<n>[a-z]?` with no slice number at all —
-#: every Work mints a `WK-`, so an unmapped one is a real `token_map` defect) — and
-#: "creation" (migrated > control on the whole alternative) stays REGRESSION even when the
-#: disclosed branch would otherwise apply, which needs checking BEFORE the disclosure, not
-#: after, unlike `D_DISCLOSED`'s other members.
+#: SAME row stay fatal regardless of the disclosure — a bare work-key remainder
+#: (`W<n>[a-z]?` with no slice number at all) and "creation" (migrated > control on the
+#: whole alternative) — which needs checking BEFORE the disclosure, not after, unlike
+#: `D_DISCLOSED`'s other members.
+#:
+#: **Task keys (`W<n>-<m>-<k>`) join the disclosed component (Ruling #26, 2026-09-04,
+#: `to-lead.md:498-510`; carried here from PR #739, verify105), printed as their own
+#: count line.** First ruled fatal on the belief that the population was fixtures only;
+#: the real measurement found live citations. The class does not change with the count:
+#: NT-0019 §1.2 has `WK` and `SL` and nothing below a slice, so a task key has no target
+#: by the standard's own design — the same ground as a slice key, not the mangling/
+#: token_map class a bare work key is.
+#:
+#: **The code comment this replaced also claimed "every Work mints a `WK-`, so an
+#: unmapped [bare] one is a real `token_map` defect" — corrected here (2026-09-04, task
+#: #30) to a narrower, measured claim.** That absolute is false on the real tree: measured
+#: directly, all 8 real-document bare-key matches are illustrative naming-system examples
+#: (a split-then-letter and a rejected-suffix form, fenced under Ruling 103 §5.1 in
+#: `.claude/skills/close-workstream/SKILL.md`, `docs/audit/closure-records.md` and
+#: `docs/plans/2026-08-22-w6b-slice-map.md` — never real historical ids) and the
+#: remaining 6 are this instrument's own test literals (class 3c,
+#: `_docid.TEST_MODULE_EXCLUSIONS`). A bare, unmapped work key CAN still be a real
+#: `token_map` defect; it is not NECESSARILY one, which is why this alternative stays
+#: fatal on any occurrence rather than trying to tell the two apart at measurement time.
+#:
+#: **Left-bound fix (2026-09-04, task #30, Ruling 67 §2 Part 1 from the other end):** all
+#: three patterns below gained `_docid.TOKEN_LEFT_BOUND` — a bare `\b` at a pattern's own
+#: left edge is satisfied between a hyphen and the next character, so `F-W37-6-12` (a real
+#: `_FINDING_ID`-shaped finding id, `audit-docs.py`) matched `_D8_TASK_KEY_RE` from its
+#: second character. **One shared constant, per Ruling 67 §2** ("one rule at two
+#: times... never a private copy each script maintains independently") — this reads
+#: `_docid.TOKEN_LEFT_BOUND`, the same narrowed left-boundary rule `LEGACY_FORM_PATTERNS`
+#: (row (d)) reads, rather than a second, independently-maintained left-bound constant; see
+#: `_docid.TOKEN_LEFT_BOUND`'s own comment for why the guard is two lookbehinds, not a bare
+#: `(?<![A-Za-z0-9_-])`.
 _D8_LABEL: Final = "workstream/slice id"
-_D8_TASK_KEY_RE: Final = re.compile(r"\bW[0-9]+[a-z]?-[0-9]+-[0-9]+\b")
-_D8_WORK_KEY_BARE_RE: Final = re.compile(r"\bW[0-9]+[a-z]?\b(?!-[0-9])")
+_D8_TASK_KEY_RE: Final = re.compile(_docid.TOKEN_LEFT_BOUND + r"W[0-9]+[a-z]?-[0-9]+-[0-9]+\b")
+_D8_WORK_KEY_BARE_RE: Final = re.compile(_docid.TOKEN_LEFT_BOUND + r"W[0-9]+[a-z]?\b(?!-[0-9])")
 #: A genuine two-segment slice key — the negative lookahead is what stops this from also
-#: matching the first two segments of a longer task key (`W11-1` inside `W11-1-2`).
-_D8_SLICE_KEY_RE: Final = re.compile(r"\bW[0-9]+[a-z]?-[0-9]+\b(?!-[0-9])")
+#: matching the first two segments of a longer task key (`W<n>-<m>` inside `W<n>-<m>-<k>`).
+_D8_SLICE_KEY_RE: Final = re.compile(_docid.TOKEN_LEFT_BOUND + r"W[0-9]+[a-z]?-[0-9]+\b(?!-[0-9])")
 
 
 def _scan_values(corpus: Corpus, pattern: re.Pattern[str]) -> Counter[str]:
@@ -952,11 +989,16 @@ def _value_set_creation(
 
 
 def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[str, str]:
-    """(d8)'s three-way split. Creation is checked first — a *value-set* comparison
-    (2026-09-04 ruling, `to-lead.md:1017`, amending the `:455` entry's clause (ii)) — and
-    stays REGRESSION regardless of what the slice/task/bare breakdown below would say. An
+    """(d8)'s split. Creation is checked first — a *value-set* comparison (2026-09-04
+    ruling, `to-lead.md:1017`, amending the `:455` entry's clause (ii)) — and stays
+    REGRESSION regardless of what the slice/task/bare breakdown below would say. An
     occurrence-count increase with the value set unchanged is not creation; it is
     disclosed alongside the slice-key population's own note.
+
+    Task keys join the disclosed component here (Ruling #26, carried from PR #739,
+    verify105 — see the module comment above `_D8_LABEL`) rather than staying fatal
+    alongside the bare-key check: only a bare work-key remainder is checked before the
+    disclosure now.
     """
     created, creation_note = _value_set_creation(mig, ctl, _D8_SLICE_KEY_RE)
     if created:
@@ -965,30 +1007,26 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
             f"{creation_note} — creation stays REGRESSION even for a disclosed class "
             "(Ruling 105 §A's third alias class)"
         )
-    m_task, task_files = mig.scan(_D8_TASK_KEY_RE)
-    m_bare, bare_files = mig.scan(_D8_WORK_KEY_BARE_RE)
-    if m_task or m_bare:
-        parts = []
-        if m_task:
-            parts.append(
-                f"{m_task} task key(s) in {task_files} file(s) "
-                f"(`{_D8_TASK_KEY_RE.pattern}`, expected 0 outside fixtures)"
-            )
-        if m_bare:
-            parts.append(
-                f"{m_bare} bare work-key remainder(s) in {bare_files} file(s) "
-                f"(`{_D8_WORK_KEY_BARE_RE.pattern}` — a token_map defect, not this alias "
-                "class)"
-            )
-        return FAIL, "; ".join(parts)
+    m_bare, bare_files = mig.scan(_D8_WORK_KEY_BARE_RE, skip_fenced=True)
+    if m_bare:
+        return FAIL, (
+            f"{m_bare} bare work-key remainder(s) in {bare_files} file(s) "
+            f"(`{_D8_WORK_KEY_BARE_RE.pattern}` — a token_map defect, not this alias class)"
+        )
     m_slice, slice_files = mig.scan(_D8_SLICE_KEY_RE)
     c_slice, _ = ctl.scan(_D8_SLICE_KEY_RE)
+    m_task, task_files = mig.scan(_D8_TASK_KEY_RE, skip_fenced=True)
+    c_task, _ = ctl.scan(_D8_TASK_KEY_RE, skip_fenced=True)
     note = (
-        "slice-key population disclosed, excluded from the zero requirement (Ruling 105 "
-        f"§A's third alias class, `to-lead.md` 2026-09-04): {m_slice} line(s) / "
-        f"{slice_files} file(s) (`{_D8_SLICE_KEY_RE.pattern}`), control {c_slice} line(s); "
-        "owner W37-11's citation-form item — the resolver that renders one (e.g. "
-        "'W11-1' -> 'WK-952, slice 1')"
+        "slice-key and task-key population disclosed, excluded from the zero requirement "
+        "(Ruling 105 §A's third alias class; task keys joined by Ruling #26, 2026-09-04 — "
+        "no family exists below a slice per NT-0019 §1.2, so a task key has no target by "
+        f"design, same ground as a slice key): slice-key {m_slice} line(s) / "
+        f"{slice_files} file(s) (`{_D8_SLICE_KEY_RE.pattern}`, control {c_slice}); "
+        f"task-key {m_task} line(s) / {task_files} file(s) "
+        f"(`{_D8_TASK_KEY_RE.pattern}`, control {c_task}); owner W37-11's citation-form "
+        "item — the resolver that renders one (e.g. a slice key -> 'WK-<xxx>, slice "
+        "<m>'; a task key -> 'WK-<xxx>, slice <m>, task <k>')"
     )
     if creation_note:
         note += "; " + creation_note
@@ -1678,7 +1716,7 @@ def row_f(
 #: a bare prefix of a longer run of word characters with no separator at all —
 #: `"W3C/OpenTelemetry…"` came out `"WK-944C/OpenTelemetry…"`, a fabricated identifier no
 #: `FR|NFR|OQ|DEP` alternative could ever see (`W`/`WK` was never in its family list). A
-#: real lowercase slice suffix (`W6a`, `WK-949a`) is not this shape — the corpus's own
+#: real lowercase slice suffix (`W<n>a`, `WK-949a`) is not this shape — the corpus's own
 #: convention for a genuine continuation is lowercase, per `_WORK_FAMILY_TOKEN_RE`'s own
 #: `[a-z]?` — so the alternative is anchored to an *uppercase* letter, which a real slice
 #: id never produces and a corruption like `W3C` always does.
@@ -1816,7 +1854,7 @@ _LEGACY_PATH_RES: Final = tuple(
 #: gap — `"W3C/OpenTelemetry trace id..."` came out `"WK-944C/OpenTelemetry trace id..."`.
 #: `doc-id.py`'s `_compound_token_re` (the compound-citation expansion regex, task 4 item
 #: 3) is `\b{tok}((?:[-/]\d+)*)` with **no trailing `\b`**, unlike its sibling
-#: `_whole_token_re`'s `\b{tok}\b(?![-/][0-9])` — so a legacy work token (`W3`) matches as
+#: `_whole_token_re`'s `\b{tok}\b(?![-/][0-9])` — so a legacy work token (`W<n>`) matches as
 #: a bare *prefix* of any longer run of word characters that happens to start the same way
 #: and is not itself `[-/]` plus a digit. `W3C` has no separator before its `C`, so
 #: `_whole_token_re`-style matching (which needs a word-boundary on both sides) would not
@@ -1862,7 +1900,7 @@ _WORK_ADJACENT_UPPER_RE: Final = re.compile(r"\bW[0-9]+[A-Z]")
 _FRONTMATTER_BLOCK_RE: Final = re.compile(r"^family:\s")
 
 #: A `W<n>[a-z]?-<m>` slice-key token (`W6b-10`) whose Work component is mapped
-#: (`W6b`->`WK-947b`) but whose `-<m>` suffix is retained verbatim rather than itself
+#: (`W<n>b`->`WK-947b`) but whose `-<m>` suffix is retained verbatim rather than itself
 #: rewritten through a map entry — the "no family exists for a task key" gap the deputy's
 #: own unmapped-tokens ruling already named (`W<n>-<m>`: "mapped where a map plan or
 #: roadmap slice row minted an `SL-`; unmapped ones listed"). Not new: this executor is
@@ -2625,65 +2663,50 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # id used as an illustrative worked example rather than a fake
                          # one — row-g's/#733's code, surfaced by `origin/main` drift,
                          # flagged rather than fixed here, out of this row's own scope).
-    "d8": FAIL,         # workstream/slice id — RECLASSIFIED REGRESSION -> FAIL (2026-09-04
-                         # ruling, `to-lead.md:1017`, task #30): the prior REGRESSION verdict
-                         # was a raw-line-count artifact. #721's `_compound_token_re`
-                         # boundary fix (see `d8`'s own history above `_D8_...` constants,
-                         # and row `b`'s entry) correctly stopped mangling W-keys, which
-                         # made the true un-migrated population visible — but the resulting
-                         # occurrence-count growth (`W37-6` 685->725, `W32-7` 68->78,
-                         # measured directly) has an IDENTICAL value set before and after:
-                         # zero new distinct slice-key values, only more occurrences of
-                         # already-present ones (traced to `docs/INDEX.md` and
-                         # `docs/rulings/INDEX.md`, both regenerated-from-scratch artifacts
-                         # quoting each ruling's own title verbatim in its index row — a
-                         # legitimate class-6 echo, not a partial-edit defect). The ruling's
-                         # own rule: creation is a *distinct value* absent from control,
-                         # never a larger count of one already present — `_value_set_
-                         # creation`/`_scan_values` (`scripts/_docverify.py`) now implement
-                         # this for every (d) alternative, `_d8_verdict` included, and the
-                         # slice-key disclosure note carries the occurrence-growth figures
-                         # instead of the verdict absorbing them. What remains FAIL is the
-                         # genuine, now-correctly-measured un-migrated `W<n>-<n>` population
-                         # row (b)'s entry already named — real, not this PR's to fix.
-    # W37-6, 2026-09-04 (the word-wrap/directory-token/disclosed-class fixes): d9/d10
-    # stay FAIL — real, unrewritten file citations remain for both (docs/plans/2026- has
-    # no single successor at all; docs/audit/ dissolves into four, `_README_LEGACY_DIR_
-    # MOVES`'s own docstring). d11/d12 also stay FAIL, but the fatal population dropped
-    # sharply once real file citations were repointed (word-wrap fix) and the directory
-    # itself got a tree-wide token (docs/adr -> docs/adrs, docs/notes -> docs/rfcs): a
-    # small residual of real, still-unrewritten file citations remains fatal on each
-    # (word-wrapped shapes this PR's flat-token-only fix does not cover, e.g. a
-    # split-source citation), disclosed lines make up the rest. d13 moves FAIL ->
-    # DISCLOSE: a citation-rewrite mechanism for the old notes root beneath `.claude`'s
-    # own stubs was built and proven correct but is NOT shipped this PR — retiring the
-    # stubs themselves does not fit any of Ruling 68's six permitted classes for row (g)
-    # (see the comment in `doc-id.migrate` at "NT-0019 §5 step 4"), so d13's population
-    # is unchanged from before this PR. It is now classified against the fatal/disclosed
-    # split like every other path row, and no real `docs/REDIRECTS.csv` `old_path` entry
-    # exists for that root's citation today, so the whole population reads disclosed,
-    # none of it fatal — a change in classification, not in what the tree contains.
-    #
-    # UPDATE, W37-6, 2026-09-04 (the deputy's second ruling, correction #2): the
-    # citation-rewrite mechanism for the old notes root beneath `.claude` is now fully
-    # shipped, not deferred — `doc-id.migrate` calls the retirement function and its
-    # numbered stubs, and the directory's own README once every stub resolves, are
-    # actually deleted and their citers repointed, wired into `classify_migration_diff`
-    # as a class-6 deletion (`_try_class6_deletion`, keyed on the stub's own body shape
-    # plus a `docs/REDIRECTS.csv` `old_id` row naming it — never on path or filename
-    # alone, per the deputy's own broken-input-proof requirement). This is a real
-    # reduction, not a reclassification: re-measured against control, the migrated
-    # population for this alternative drops from 188 line(s)/38 file(s) (control) to 93
-    # line(s)/31 file(s) (migrated) — citations this mechanism actually repointed no
-    # longer match the pattern at all. The remaining 93 stay wholly disclosed (0 fatal):
-    # `_path_alternative_verdict`'s fatal check is generic across every `old_path` row in
-    # `docs/REDIRECTS.csv`, and this retirement deliberately never emits one (only
-    # `old_id`/`new_id` citation-form rows — an `old_path`/`new_path` row would route the
-    # DP-7 content-comparison classes 1-3, which cannot pass for a stub whose content is
-    # discarded, not carried forward), so no citation of this root's own files was ever
-    # going to read fatal by this row's own predicate regardless of whether the mechanism
-    # ran — the 188->93 drop is the actual evidence the rewrite happened, not the DISCLOSE
-    # verdict by itself.
+    "d8": DISCLOSE,     # workstream/slice id — re-recorded FAIL -> DISCLOSE, 2026-09-04.
+                         # Both fatal components now measure zero on a real
+                         # `migrate()`-mutated tree; `_d8_verdict` falls through to its own
+                         # DISCLOSE branch (Ruling 105 §A's third alias class), printing the
+                         # slice-key and task-key counts on their own line.
+                         #
+                         # **Task keys** are a disclosed component, not a fatal one — Ruling
+                         # #26 (`to-lead.md:498-510`), reaffirmed against my own later
+                         # entries by the correction at `to-lead.md:1298-1306`: "no family
+                         # exists for a task (NT-0019 §1.2 has `WK` and `SL`, nothing below a
+                         # slice), so a task key has no target by the standard's design — the
+                         # same ground as slice keys". That correction's violation line reads
+                         # "task keys treated as fatal anywhere after this". Their raw count
+                         # also fell once the patterns took `_docid.TOKEN_LEFT_BOUND` — the
+                         # standard's own narrowed left-bound guard (#740, Ruling 67 §2),
+                         # shared with row (d)'s `LEGACY_FORM_PATTERNS` rather than a private
+                         # copy — since most were the tail of a different, already-classified
+                         # id family (the finding form `F-W<n>-<m>-<k>`, `audit-docs.py`'s
+                         # `_FINDING_ID`) matched from its second character, a bare `\b` being
+                         # satisfied between a hyphen and the next token. Re-measured under
+                         # the narrowed guard (2026-09-05, task-key figure verified against a
+                         # real `migrate()`-mutated tree, not carried over from the earlier
+                         # wide-guard count): see the ledger entry for this row's exact
+                         # before/after numbers.
+                         #
+                         # **The bare work-key remainder** is still fatal on any occurrence
+                         # (a `token_map` defect, not this alias class) and now reads zero.
+                         # The last one was this file's own prior version of this comment,
+                         # which spelled two illustrative keys as literals and so matched
+                         # itself — `scripts/_docverify.py` is not in
+                         # `_docid.TEST_MODULE_EXCLUSIONS` and has no markdown fence to hide
+                         # behind. Dispositioned 3b per `to-lead.md:1243` ("respelled to a
+                         # schematic that cannot match"): illustrative keys are written
+                         # `W<n>` / `W<n><x>` here and must stay schematic. The real-corpus
+                         # exhibits of that shape are fenced under Ruling 103 §5.1 in
+                         # `.claude/skills/close-workstream/SKILL.md`,
+                         # `docs/audit/closure-records.md` and the w6b slice-map plan; the
+                         # instrument's own fixtures are class 3c.
+                         #
+                         # A bare key CAN still be a real defect and is not NECESSARILY one —
+                         # which is why the alternative stays fatal on any remaining
+                         # occurrence rather than trying to tell the two apart at measurement
+                         # time. The earlier comment's "every Work mints a `WK-`, so an
+                         # unmapped one is necessarily a real defect" was false on the tree.
     "d9": FAIL,         # docs/plans/2026- — real file citations remain unrewritten
     "d10": FAIL,        # docs/audit/ — real file citations remain unrewritten
     "d11": FAIL,        # docs/notes/ — small fatal residual after the wrap/dir-token fix

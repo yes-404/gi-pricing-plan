@@ -179,29 +179,31 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
     ),
 )
 
-# W37-6 exec-ids (2026-09-04, per the deputy's ruling relayed via team-lead): the
-# instrument's own test modules carry a legacy-form id as literal fixture data — proving a
-# check catches (or correctly does not catch) a form needs the form written down somewhere,
-# and these three modules are where NT-0019's own id grammar and its rewrite/verification
-# mechanism are exercised against it. Counting that fixture data as the real repository's
-# residue would be the instrument grading its own tests, the same reasoning
-# `FIXTURE_CORPUS_ROOTS` above already gives the two on-disk fixture directories — this is
-# the equivalent class for a literal Python string inside a test function rather than a
-# checked-in fixture file. Declared per-file with its own reason (§7(d)'s own instruction
-# against a structural rule that would silently widen, echoed at task 30's `register-owed.py`
-# correction below): **`tests/test_register_owed.py` does NOT belong here.** Its subject,
-# `register-owed.py`, is a file NT-0019 §4 itself migrates
-# (`docs/notes/0019-one-id-per-document.md:381`), so its fixtures are stale test data that
-# migrates WITH the script rather than exempted test infrastructure — fixed in the same
-# commit as this exclusion (its scoped-requirement-id and workstream/slice-id placeholders
-# respelled to their post-migration shapes), not deferred here as a citation this comment
-# would then repeat, matching row (d)'s own corpus a second time from inside its own fix.
+# W37-6 exec-ids (2026-09-04, per the deputy's ruling relayed via team-lead) and row
+# (d8)/(g), task #30 (executor-30-2, same mechanism): the instrument's own test modules
+# carry a legacy-form id as literal fixture data — proving a check catches (or correctly
+# does not catch) a form needs the form written down somewhere, and these three modules are
+# where NT-0019's own id grammar and its rewrite/verification mechanism are exercised
+# against it. Counting that fixture data as the real repository's residue would be the
+# instrument grading its own tests, the same reasoning `FIXTURE_CORPUS_ROOTS` above already
+# gives the two on-disk fixture directories — this is the equivalent class for a literal
+# Python string inside a test function rather than a checked-in fixture file. Declared
+# per-file with its own reason (§7(d)'s own instruction against a structural rule that
+# would silently widen, echoed at task 30's `register-owed.py` correction below):
+# **`tests/test_register_owed.py` does NOT belong here.** Its subject, `register-owed.py`,
+# is a file NT-0019 §4 itself migrates (`docs/notes/0019-one-id-per-document.md:381`), so
+# its fixtures are stale test data that migrates WITH the script rather than exempted test
+# infrastructure — fixed in the same commit as this exclusion (its scoped-requirement-id
+# and workstream/slice-id placeholders respelled to their post-migration shapes), not
+# deferred here as a citation this comment would then repeat, matching row (d)'s own
+# corpus a second time from inside its own fix.
 TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
     (
         "tests/test_doc_id_verify.py",
         "NT-0019 §7(d)'s own row (d)/(e)/(g) verification instrument's tests — exercises "
-        "`_docid.LEGACY_FORM_PATTERNS` and the padded-id/fence conjuncts against literal "
-        "legacy-form and deliberately-fake ids by construction",
+        "`_docid.LEGACY_FORM_PATTERNS` and the padded-id/fence conjuncts, and row (d8)'s "
+        "task-key/slice-key/bare-key split, against literal legacy-form and "
+        "deliberately-fake ids by construction",
     ),
     (
         "tests/test_audit_docs_ids.py",

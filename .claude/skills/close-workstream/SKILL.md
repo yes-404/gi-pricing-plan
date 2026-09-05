@@ -198,13 +198,22 @@ Proving a check fires is not enough if the note beside it misattributes *why*. T
 closure tripwire is `^#+ W32[a-z]?([ —].*)?: closed <date>`, and its design note credited
 `[a-z]?` with keeping slice headings out. It does not. `^#+ W32[a-z]?.*: closed …` fires on
 `W32-7` and `W32-11` — **the whole exclusion lives in the constrained separator group**,
-`([ —].*)?`, and the letter class only buys coverage of a split-then-letter `W32a` (`\b`
-loses that form outright: `2` and `a` are both word characters, so there is no boundary).
+`([ —].*)?`, and the letter class only buys coverage of a split-then-letter form (its own
+example fenced below — never a real historical id, so it is an illustration, not a
+citation) (`\b` loses that form outright: `2` and `a` are both word characters, so there
+is no boundary).
+
+```
+W32a
+```
+*Fenced 2026-09-04 under Ruling 103 §5.1; value unchanged (row (d8), task #30) — the
+illustrative split-then-letter form above and below, never a real historical id, was
+tripping the bare work-key check.*
 
 | Token | Job | If weakened |
 |---|---|---|
 | `([ —].*)?` | **Safety** — excludes slices | Reports the *workstream* closed when a *slice* closed |
-| `[a-z]?` | **Coverage** — admits `W32a` | Goes silent on the split-then-letter form |
+| `[a-z]?` | **Coverage** — admits the split-then-letter form (fenced above) | Goes silent on that form |
 
 **The safety token is always the one that looks over-engineered**, so a note saying only
 *what* the pattern matches invites the next maintainer to simplify exactly the half that
