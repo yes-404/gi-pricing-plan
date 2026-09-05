@@ -2704,12 +2704,23 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # wrap-reconstructed line. The row's own disclosed (no real
                          # successor) population remains, `_verdict_on_zero`'s correct
                          # DISCLOSE, never PASS.
-    "d10": DISCLOSE,    # docs/audit/ — FIXED (2026-09-05, W37-6 rows (d9)-(d12)): 0 of
-                         # 45 fatal lines remain. The same four defects (d9)'s note
-                         # names, plus a fifth wrap shape: a wrap landing right before
-                         # the extension after `.`, not only after `-`/`/`
-                         # (`docs/audit/register.md`'s own citation in
-                         # `docs/audit/findings/README.md`).
+    "d10": FAIL,        # docs/audit/ — 44 of 45 fatal lines fixed (2026-09-05, W37-6
+                         # rows (d9)-(d12)): the same four framework defects (d9)'s note
+                         # names, plus a fifth wrap shape (a wrap landing right before
+                         # the extension after `.`, `docs/audit/register.md`'s own
+                         # citation in `docs/audit/findings/README.md`). **1 fatal line
+                         # remains, a genuine resistant file, not a tool gap**: `docs/
+                         # plans/PL-00132-nt-0010-nt-0011-adoption-implementation-
+                         # plan.md:126` cites `docs/audit/plan-reviews.md` (13-target
+                         # split source) wrapped across a line break, and its own
+                         # determinant is prose ("plan review 8") rather than a
+                         # recognised `CR-`/anchor/line-span form `_SplitSource.resolve`
+                         # can read — the deputy's own constraint on this fix (relayed
+                         # via the lead, 2026-09-05): an undetermined wrapped citation is
+                         # left byte-identical, never guessed at with the index-token
+                         # fallback the ordinary sweep uses, so it stays fatal and is a
+                         # per-file W37-11 entry (path/class/count/reason) rather than a
+                         # silent answer.
     "d12": DISCLOSE,    # docs/adr/ — FIXED (2026-09-05, W37-6 rows (d9)-(d12)): every one
                          # of this row's 2 fatal lines is gone; the row still carries a
                          # disclosed (no-real-successor) population, `_verdict_on_zero`'s

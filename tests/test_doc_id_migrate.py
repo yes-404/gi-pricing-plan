@@ -1295,21 +1295,56 @@ def test_rewrite_wrapped_split_source_citations_resolves_a_determined_wrap(
     assert after.count("\n") == text.count("\n"), "line count must be preserved"
 
 
-def test_rewrite_wrapped_split_source_citations_falls_back_to_the_index_token(
+def test_rewrite_wrapped_split_source_citations_resolves_a_determinant_that_itself_spans_the_wrap(
     doc_id_cli: types.ModuleType,
 ) -> None:
-    """Ruling 101 clause 1: a citation that determines nothing still resolves — to the
-    family index's own section for this source, never left dangling. Bucket (iv) is 0 by
-    construction, wrapped or not.
+    """2026-09-05, the lead's own constraint on this fix: the hazard the docstring warns
+    about is not merely "the TOKEN wraps" (already covered — the earlier "determined
+    wrap" test's id sits before the wrap starts, on the same physical line as the
+    opening backtick) but "the DETERMINANT can itself sit on either side of the wrap
+    boundary, including the far side" — an adjacent id appearing on the *continuation*
+    line, after the token's own wrap has already closed. A `logical_line` reconstruction
+    that only looked at the physical line the match *starts* on would never see it.
+
+    Without the join across the wrap (`line_end` extending past `m.end()` into the
+    continuation line), `_by_id` would search only `` `docs/audit/`` `` — no id there —
+    and `resolve()` would wrongly return `None`, exactly the failure this test would
+    catch: `src.resolve(m, "the physical start-line alone")` returns `None` for this
+    citation, while `src.resolve(m, logical_line)` (the actual reconstruction) finds
+    `RL-161` on the continuation line and determines target B.
+    """
+    token = "docs/audit/plan-reviews.md"
+    src = _split_source(doc_id_cli, token=token, old_rel=token)
+    patterns = doc_id_cli._wrapped_split_source_patterns([src])
+    text = "see the review record (`docs/audit/\nplan-reviews.md`, RL-161) for detail.\n"
+    # Sanity: the determinant really is unreachable from the start-line alone.
+    start_line_only = text.split("\n")[0]
+    assert "RL-161" not in start_line_only
+    after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
+    assert token not in after, f"the stale token must not survive: {after!r}"
+    flattened = "".join(line.lstrip() for line in after.split("\n"))
+    assert "docs/rulings/RL-00161-b.md" in flattened, after
+    assert after.count("\n") == text.count("\n"), "line count must be preserved"
+
+
+def test_rewrite_wrapped_split_source_citations_leaves_an_undetermined_wrap_byte_identical(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """2026-09-05, the deputy's ruling (relayed via the lead, adopted verbatim as this
+    fix's formal acceptance): unlike the ordinary, contiguous-only sweep — where an
+    undetermined citation always resolves to `src.index_token` (Ruling 101 clause 1,
+    bucket (iv) is 0 by construction) — a WRAPPED citation that `resolve()` cannot
+    determine is left byte-identical, never guessed at with the index-token fallback.
+    "Do not guess a target because the file is one of only seven": a citation that
+    resists here is reported as a per-file W37-11 entry with its own reason, not
+    silently answered.
     """
     token = "docs/audit/plan-reviews.md"
     src = _split_source(doc_id_cli, token=token, old_rel="docs/audit/plan-reviews.md")
     patterns = doc_id_cli._wrapped_split_source_patterns([src])
     text = "see the review record (`docs/audit/\nplan-reviews.md`) for history.\n"
     after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
-    assert token not in after, f"the stale token must not survive: {after!r}"
-    flattened = "".join(line.lstrip() for line in after.split("\n"))
-    assert src.index_token in flattened, after
+    assert after == text, f"an undetermined wrap must stay byte-identical, never guessed: {after!r}"
 
 
 def test_rewrite_wrapped_split_source_citations_never_touches_a_was_field(

@@ -5851,9 +5851,12 @@ def _wrapped_path_patterns(
     old_new_pairs: Iterable[tuple[str, str]],
 ) -> tuple[tuple[str, str, re.Pattern[str]], ...]:
     """One `(old_tok, new_tok, pattern)` per `/`-shaped pair in `token_map` -- flat,
-    single-destination moves only (a split source resolves its target from the citing
-    line's own content, which a wrap can span, so it is out of this fix's scope; a
-    wrapped citation of a split source is left exactly as it is, same as today).
+    single-destination moves only. A split source resolves its target from the citing
+    line's own content, which a wrap can span, so it is out of THIS function's scope --
+    `_wrapped_split_source_patterns`/`_rewrite_wrapped_split_source_citations` below are
+    its counterpart (2026-09-05, the maintainer's unconditional ruling extending rows
+    (d9)-(d12) to this shape too), never "left exactly as it is" at the system level any
+    more, only at this one function's.
 
     `pattern` matches `old_tok` with an optional wrap tolerated after every `-`, `/` or
     `.` it contains -- prose auto-wrap at a fixed line width, not a rule about where a
@@ -6030,11 +6033,17 @@ def _rewrite_wrapped_split_source_citations(
     `line` argument reconstructed here across the wrap rather than read whole from an
     already-contiguous segment.
 
-    Bucket (iv) is 0 by construction (`_SplitSource`'s own docstring): a citation
-    `resolve` cannot determine still gets `src.index_token`, the family index's own
-    section for this source, never left exactly as it was — the same "no citation this
-    class cannot answer" guarantee the ordinary sweep already relies on, extended to a
-    wrapped occurrence rather than a new exception for one.
+    **An undetermined wrapped citation is left byte-identical — never `src.index_token`.**
+    The deputy's ruling (relayed 2026-09-05, W37-6 channel, adopted verbatim as this
+    fix's formal acceptance): unlike the ordinary, contiguous-only sweep — where bucket
+    (iv) is 0 by construction because the index-token fallback is always safe to apply —
+    a wrapped occurrence gets no such guess. "Do not guess a target because the file is
+    one of only seven": an ambiguous `resolve()` here means this one specific citation,
+    in this one specific file, resists the general mechanism, and it is reported as a
+    per-file W37-11 entry with its own reason rather than silently answered. Guessing
+    would be indistinguishable, from the outside, from a correct resolution — the same
+    "detection is not repair" principle `_SplitSource`'s own docstring states for why a
+    determinant that disagrees with itself resolves nothing.
 
     A `was:` field is protected exactly as `_rewrite_wrapped_path_citations` protects
     one — this run's own provenance record, never a citation to resolve.
@@ -6069,7 +6078,9 @@ def _rewrite_wrapped_split_source_citations(
             line_end = m.string.find("\n", m.end())
             logical_line = m.string[line_start : line_end if line_end != -1 else None]
             resolved = src.resolve(m, logical_line)
-            out = resolved if resolved is not None else src.index_token
+            if resolved is None:
+                return matched  # ambiguous -- W37-11's per-file entry, never a guess
+            out = resolved
             markup_match = _WRAP_MARKUP_RE.match(matched, nl_idx)
             assert markup_match is not None  # the pattern's own wrap group produced this
             markup = markup_match.group(0)
