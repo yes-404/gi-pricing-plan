@@ -258,7 +258,8 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
 
 
 # =========================================================================================
-# Ruling 107 Entry 1 item 1: NT-0019 §7 acceptance item (d) (`_docverify.py`'s `rows_d`)
+# `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+# NT-0019 §7 acceptance item (d) (`_docverify.py`'s `rows_d`)
 # and `audit-docs.py` check 36's third clause (`sweep_legacy_forms`) are "one rule at two
 # times" (Ruling 67 §2). (d) already disclosed three classes on `LEGACY_FORM_PATTERNS`
 # residue that a wrong rewrite or a closed historical population still legitimately
@@ -412,6 +413,62 @@ def is_scoped_id_never_allocated(
         or scoped_id_defined_elsewhere(token, definition_root)
         or scoped_id_has_redirect(token, redirect_root)
     )
+
+
+# =========================================================================================
+# docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md Entry 2 item 1:
+# `_docverify.py`'s row (e) (`padded_hits`) and `audit-docs.py` check 32's padding clause
+# are "one rule at two times" over the same corpus. Conjunct 2 (a padded id inside a
+# filesystem path is not a citation) and its stripping/boundary machinery move here so
+# neither consumer re-types them; `_docverify.py` re-exports both names under their
+# existing names for its own callers and tests.
+# =========================================================================================
+
+#: **Conjunct 2's** stripping step. Ruling 103 defect 3: two of the three survivors were
+#: paths — `docs/rulings/**RL-00993**-q5-….md` — whose **bold markers split the token**, so
+#: the path test never saw a path. A predicate bug, not a ruling question.
+_MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
+
+#: `<` and `>` are excluded from this boundary set — this doc suite's own placeholder
+#: convention writes a filename's variable segment in angle brackets (a padded id, a
+#: hyphen, an angle-bracketed slug placeholder, then `.md`; `docs/_templates/*.md`'s own
+#: copy-target lines and NT-0019 §1.1 rule 3's illustration both use it), and treating
+#: `<`/`>` as hard boundaries truncated the right-side walk before it ever reached the
+#: extension — the token stopped one character short of the placeholder's opening `<`, so
+#: a real filename citation (`PL-01240-<slug>.md`) read as prose (`PL-01240-`, no `/`, no
+#: extension). Widening the walk past them can also swallow a literal `<...>` wrapper
+#: around a *bare* id, but that token still has no `/` and does not end in an extension,
+#: so it is classified unchanged.
+_TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}\"',;]")
+
+#: **Conjunct 2's** line-locator strip. Row (e)'s own measurement found a fourth defect
+#: alongside Ruling 103's three: a same-directory `filename.md:123` or `filename.md:401-404`
+#: citation (this corpus's own convention for "the peer file, no leading `docs/plans/`,
+#: because both live in the same directory") is a filename token per rule 3's own wording —
+#: "the leading component of a filename ending `.md`" — but the trailing `:<line>` defeats
+#: the bare `\.[A-Za-z0-9]{2,4}$` extension test, which requires the token to *end* at the
+#: extension. Stripped before that test only; the `/` test is unaffected either way.
+_TRAILING_LINE_LOCATOR_RE: Final = re.compile(r":\d+(-\d+)?$")
+
+
+def _in_path_context(line: str, start: int, end: int) -> bool:
+    """True when the occurrence at `line[start:end]` sits inside a path-shaped token.
+
+    Path-shaped means the enclosing token contains a `/` or ends in a file extension (once a
+    trailing `:<line>` or `:<start>-<end>` locator is stripped). A padded id inside a
+    filename is not "in prose"; a padded id in a sentence is. Defined on the whole enclosing
+    token rather than by a lookbehind on one character, which was the first attempt and
+    missed `[PL-01240-slug](docs/plans/PL-01240-slug.md)`.
+    """
+    left = start
+    while left > 0 and not _TOKEN_BOUNDARY_RE.match(line[left - 1]):
+        left -= 1
+    right = end
+    while right < len(line) and not _TOKEN_BOUNDARY_RE.match(line[right]):
+        right += 1
+    token = line[left:right]
+    sans_locator = _TRAILING_LINE_LOCATOR_RE.sub("", token)
+    return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", sans_locator))
 
 
 # NT-0019 §1.2's "Kind" column, lowercased, keyed by prefix. What never changes on
