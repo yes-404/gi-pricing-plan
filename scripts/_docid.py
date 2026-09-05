@@ -45,6 +45,49 @@ ID_RE: Final = re.compile(r"\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)
 # NT-0019 §1.1 rule 3: "Filenames pad the integer to the standard's width, currently five."
 PAD_WIDTH: Final = 5
 
+# W37-6, 2026-09-04 (the deputy's ruling; narrowed the same day, after the row (d1)
+# regression the first version of it caused). The left-hand boundary the FORWARD SWEEP's
+# citation-token regexes need, in place of a bare `\b`. Two defects `\b` has here, which
+# is why the fix is two lookbehinds and not one:
+#
+# * `\b` tests a \w/\W *transition*, and `-` is \W. A token whose family prefix is a
+#   single word character preceded by `-` — a workstream/slice id inside a finding id that
+#   cites it — is therefore matched *inside* the longer identifier: `\b` sees a transition
+#   exactly where this grammar has none, because `-` separates the fields of one
+#   identifier here, it does not end one.
+# * The mirror case: a token that itself STARTS with a non-word character (a path rooted
+#   under the old notes directory beneath `.claude`) is never found when the character
+#   before it is also non-word — a backtick, which is what every real markdown citation of
+#   a path writes.
+#
+# The guard is NOT "any preceding hyphen". That is what the first version said, and it is
+# what made row (d1) regress: it stopped the sweep rewriting ordinary prose compounds and
+# left two dangling citations in the migrated tree. What must block a match is a hyphen
+# BELONGING TO AN IDENTIFIER — in the finding-id case the character before the hyphen is
+# itself an id character. In an English prose compound (a lowercase prefix such as "anti-"
+# or "non-" hyphenated onto a note id, which cites that note and must still be rewritten)
+# the character before the hyphen is a lowercase letter. So the second lookbehind refuses
+# `[A-Z0-9]-`, never a bare `-`.
+#
+# `(?<![A-Za-z0-9_])` is `\b`'s left half made explicit; `(?<![A-Z0-9]-)` is the
+# compound-id guard. Four cases are the proof, and `tests/test_doc_id_migrate.py` holds
+# them: a finding id leaves the slice id inside it unmatched; each of the two lowercase
+# prose prefixes still matches the note id after it; and a parenthesised or sentence-final
+# slice id still matches.
+#
+# Read by `doc-id.py` (the forward sweep and its own inverse helpers) and by
+# `audit-docs.py` (DP-7's `_inverse_token_pattern`) — never retyped.
+#
+# `LEGACY_FORM_PATTERNS` below deliberately does NOT read it, and that is not an omission.
+# The tuple reproduces NT-0019 §7(d)'s acceptance predicate, which the note states verbatim
+# (at its own line 428) as a `git grep -E` with a plain `\b`, and `\b` matches between `-`
+# and a following letter. Routing the tuple through this constant would make the shipped
+# check blind to a form §7(d) says must be absent — a §7(d) amendment wearing a code
+# change, which `CLAUDE.md` §0 forbids doing silently. The two must instead AGREE on every
+# token the sweep can produce: whatever the sweep leaves behind, §7(d)'s predicate still
+# finds. The four cases above are where that agreement is checked.
+TOKEN_LEFT_BOUND: Final = r"(?<![A-Za-z0-9_])(?<![A-Z0-9]-)"
+
 # NT-0019 §7 acceptance item (d)'s pattern, and `audit-docs.py` check 36's third clause —
 # "one rule at two times" (Ruling 67 §2): both must read this **one** shared constant,
 # never a private copy each script maintains independently. Ruling 67 §2 Part 1: every

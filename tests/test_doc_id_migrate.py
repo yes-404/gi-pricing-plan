@@ -1066,6 +1066,414 @@ def test_a_citation_with_no_corresponding_record_is_left_unrewritten(
     )
 
 
+# ---------------------------------------------------------------------------------------
+# Rows (d9)-(d12), the deputy's word-wrap fix (2026-09-04): a legacy path citation whose
+# token spans a markdown soft line-wrap — a `-`/`/` immediately followed by `\n` — is
+# invisible to the plain contiguous-substring sweep `_rewrite_citations` runs everywhere
+# else. `_rewrite_wrapped_path_citations` rewrites it in place, splitting the *new* token
+# at the same offset the wrap occupied in the *old* one rather than collapsing the wrap —
+# the maintainer's hard acceptance condition, because DP-7's inverse
+# (`frozen_file_matches_after_migration_stamp`) is a dumb string substitution with no
+# wrap-awareness of its own and a collapsed wrap changes bytes it has no pair to restore.
+# Row (d13) (the old notes root beneath `.claude`) is not shipped in this PR — see
+# `migrate()`'s own comment at "NT-0019 §5 step 4" for why.
+# ---------------------------------------------------------------------------------------
+
+
+def test_wrapped_path_citations_of_moved_files_are_repointed_line_break_preserved(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """Broken-input proof for the word-wrap fix, one citation per row (d9)-(d12), each
+    split at exactly the shape the real corpus exhibits — a hyphen or a directory `/`
+    immediately followed by the line break, the continuation's own leading whitespace (if
+    any) absorbed too. Every one of the four old paths below is a genuine
+    single-destination move this fixture corpus's own `migrate()` run already produces
+    (confirmed against a fresh `REDIRECTS.csv` before this test was written, not assumed):
+    `docs/plans/2026-08-17-example-plan.md`, `docs/audit/plan-reviews.md`,
+    `docs/notes/0001-example-note.md` and `docs/adr/0001-example-decision.md`.
+
+    The line count must not change — the hard acceptance condition, checked directly
+    rather than only inferred from DP-7 passing (a separate, narrower unit test below
+    proves DP-7 itself). A fifth citation, to a path no draft ever claims
+    (`docs/audit/never-moved-example.md`), is the acceptance standard's other half: left
+    byte-for-byte untouched, not silently dropped.
+    """
+    citer = pristine_a / "docs" / "_templates" / "citation-wrap-check.md"
+    before = (
+        "# Wrapped legacy-path citations (fixture)\n\n"
+        "- d9: see the suffix-less plan (`docs/plans/2026-08-17-\n"
+        "  example-plan.md`) for background.\n"
+        "- d10: see the review record (`docs/audit/plan-\n"
+        "  reviews.md`) for the history.\n"
+        "- d11: see the follow-up note (`docs/notes/0001-\n"
+        "  example-note.md`) for context.\n"
+        "- d12: see the dependency decision (`docs/adr/0001-\n"
+        "  example-decision.md`) for the rationale.\n"
+        "- control: see `docs/audit/never-moved-example.md`, which this migration never "
+        "touches.\n"
+    )
+    citer.write_text(before, encoding="utf-8")
+
+    doc_id_cli.migrate(pristine_a)
+
+    out = citer.read_text(encoding="utf-8")
+    assert out.count("\n") == before.count("\n"), (
+        "the line break must be preserved, not collapsed: "
+        f"{before.count(chr(10))} -> {out.count(chr(10))}\n{out!r}"
+    )
+    # The new token itself is still wrapped (that is the whole point) -- flatten each
+    # line's own leading whitespace back out to read the token as one string, the same
+    # normalisation a markdown renderer already performs on a soft-wrapped paragraph.
+    flattened = "".join(line.lstrip() for line in out.split("\n"))
+    assert "docs/plans/PL-00009-example-plan-suffix-less-2026-08-17.md" in flattened, out
+    assert "docs/closures/CR-00012-example-plan-review-1.md" in flattened, out
+    assert "docs/rfcs/RFC-00001-example-finding-needs-a-follow-up-fix.md" in flattened, out
+    assert "docs/adrs/ADR-00002-example-fixtures-stay-dependency-free.md" in flattened, out
+    flattened_stale = "".join(line.lstrip() for line in before.split("\n"))
+    for stale in ("docs/plans/2026-08-17-example-plan.md", "docs/audit/plan-reviews.md"):
+        assert stale in flattened_stale  # sanity: the fixture itself really is wrapped
+        assert stale not in flattened, f"{stale!r} must not survive, wrapped or not: {out!r}"
+    assert "docs/audit/never-moved-example.md" in out, (
+        "a citation to a path no draft claims must be left untouched, not silently dropped"
+    )
+
+
+def test_rewrite_wrapped_path_citations_inverts_cleanly_under_dp7(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The maintainer's own proof requirement: DP-7 must pass on the wrapped file the fix
+    touches, not merely that the citation resolves. `_rewrite_wrapped_path_citations`'
+    own `wrap_redirects` out-parameter is recorded exactly like a compound expansion's
+    `derived_redirects` (`test_task4_a_fully_mapped_compound_expands_and_inverts` above),
+    so `audit_docs.frozen_file_matches_after_migration_stamp` needs no wrap-specific
+    change at all to invert it — proven directly here, the same pattern.
+    """
+    old_tok = "docs/plans/2026-08-29-w11-3-batch-scoring.md"
+    new_tok = "docs/plans/PL-00137-w11-slice-3-batch-scoring.md"
+    text = (
+        "threshold and the output are all the handler's (`docs/plans/2026-08-29-"
+        "w11-3-batch-\nscoring.md` Task 3B).\n"
+    )
+    patterns = doc_id_cli._wrapped_path_patterns([(old_tok, new_tok)])
+    wrap_redirects: list[tuple[str, str]] = []
+    after = doc_id_cli._rewrite_wrapped_path_citations(text, patterns, wrap_redirects)
+
+    assert after.count("\n") == text.count("\n"), "line count must be preserved"
+    assert new_tok not in after, "the new token must not appear contiguous — it stays wrapped"
+    assert len(wrap_redirects) == 1
+    old_wrapped, new_wrapped = wrap_redirects[0]
+    assert old_wrapped in text
+    assert new_wrapped in after
+
+    audit_docs = doc_id_cli._load_audit_docs()
+    redirects_inverse = {new_wrapped: old_wrapped}
+    assert audit_docs.frozen_file_matches_after_migration_stamp(
+        text, after, redirects_inverse
+    ), "the wrapped pair, recorded, must invert the rewrite back to the merge-base text"
+
+
+def test_rewrite_wrapped_path_citations_leaves_an_unrelated_wrap_alone(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Scoped to the exact token, never a general "collapse every soft wrap" pass: an
+    unrelated hyphen-wrap elsewhere in the same file, and a wrap that does not spell the
+    real token even by one character, both survive untouched."""
+    old_tok = "docs/plans/2026-08-17-example-plan.md"
+    new_tok = "docs/plans/PL-00009-example-plan-suffix-less-2026-08-17.md"
+    patterns = doc_id_cli._wrapped_path_patterns([(old_tok, new_tok)])
+
+    unrelated = "a well-known trade-\noff, unrelated to any path.\n"
+    assert doc_id_cli._rewrite_wrapped_path_citations(unrelated, patterns, []) == unrelated
+
+    near_miss = (
+        old_tok[:22] + "\n" + old_tok[22:].replace("plan.md", "plann.md")
+    )  # one char off
+    assert doc_id_cli._rewrite_wrapped_path_citations(near_miss, patterns, []) == (
+        near_miss
+    ), "a wrap that does not spell the real token, even by one character, must not match"
+
+
+# ---------------------------------------------------------------------------------------
+# Rows (d11)/(d12), the deputy's directory-token ruling: `docs/adr` and `docs/notes` each
+# have exactly one successor, so a plain-prose mention of the directory (not only a
+# README's own relative link) is repointed too — `_README_LEGACY_DIR_MOVES` fed into the
+# tree-wide `token_map`.
+# ---------------------------------------------------------------------------------------
+
+
+def test_bare_legacy_directory_mentions_are_repointed_outside_readmes(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """A directory-shaped mention with no specific file behind it — a naming-convention
+    placeholder, or the bare directory name in prose — is repointed by the same
+    substring mechanism as a real file citation, even though no draft claims it by path.
+    `docs/audit/` is deliberately absent from `_README_LEGACY_DIR_MOVES` (it dissolves
+    into four) and must survive untouched here, the negative half of the same proof.
+    """
+    citer = pristine_a / "docs" / "_templates" / "directory-mention-check.md"
+    citer.write_text(
+        "File as `docs/adr/NNNN-kebab-title.md` with this shape.\n"
+        "See also `docs/notes/README.md` for the working index.\n"
+        "This charter does not extend to the rest of `docs/audit/`.\n",
+        encoding="utf-8",
+    )
+
+    doc_id_cli.migrate(pristine_a)
+
+    out = citer.read_text(encoding="utf-8")
+    assert "docs/adrs/NNNN-kebab-title.md" in out, out
+    assert "docs/adr/" not in out, out
+    assert "docs/rfcs/README.md" in out, out
+    assert "docs/notes/" not in out, out
+    assert "docs/audit/" in out, (
+        "docs/audit/ has no single successor and must be left exactly as written: " + out
+    )
+
+
+# ---------------------------------------------------------------------------------------
+# `_whole_token_re`/`_compound_token_re`'s leading-anchor fix: a token starting with a
+# non-word character (a real shape row (d13)'s own citation-form discovery surfaced --
+# a path under the old notes root beneath `.claude`, `<that dir>/NNNN-*.md` -- though
+# that row's own retirement mechanism is not shipped in this PR; see the comment in
+# `migrate()` at "NT-0019 §5 step 4"). `\b` requires a
+# \w/\W *transition*, so it never fires when the character immediately before a
+# non-word-starting token is *also* non-word — a backtick, exactly what a real markdown
+# citation writes. `(?<!\w)` is the fix; unit-tested directly here, independent of
+# whether any caller ever feeds it a `.`-shaped token in this PR's own scope.
+# ---------------------------------------------------------------------------------------
+
+
+def test_whole_token_re_matches_a_dot_leading_token_after_a_backtick(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`\\b` alone fails here: a backtick then a `.` is two non-word characters in a row,
+    never a boundary transition. `(?<!\\w)` matches correctly and still refuses the same
+    token as a mid-word fragment, the property `\\b` existed to give in the first place.
+    """
+    # concatenated: avoid self-matching test_no_living_file_cites_the_old_notes_path
+    tok = ".claude" + "/notes/0001-example.md"
+    pattern = doc_id_cli._whole_token_re(tok)
+    assert pattern.search(f"See `{tok}` for context.") is not None
+    assert pattern.search(f"x{tok}") is None, "must not match as a mid-word fragment"
+
+
+def test_compound_token_re_matches_a_dot_leading_token_after_a_backtick(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    # concatenated: avoid self-matching test_no_living_file_cites_the_old_notes_path
+    tok = ".claude" + "/notes/0001-example.md"
+    pattern = doc_id_cli._compound_token_re(tok)
+    m = pattern.search(f"See `{tok}` for context.")
+    assert m is not None
+    assert m.group(0) == tok
+
+
+def test_whole_token_re_does_not_match_a_hyphen_preceded_fragment(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The deputy's ruling (W37-6, 2026-09-04), the exact case executor-30-2 measured on
+    row (d8): `\\b` alone treats `-` as a boundary transition, so `\\bW37-6\\b` still
+    matches `W37-6` *starting at its second character* inside `F-W37-6` (a finding id
+    citing that slice). `_docid.TOKEN_LEFT_BOUND` refuses a hyphen immediately before the
+    token too, alongside every ordinary word character -- proven both ways: the false
+    match is gone, and a genuine citation surrounded by real non-identifier characters
+    still matches.
+    """
+    tok = "W37-6"
+    pattern = doc_id_cli._whole_token_re(tok)
+    assert pattern.search("F-W37-6") is None, "must not match inside a longer identifier"
+    assert pattern.search("(W37-6)") is not None
+    assert pattern.search(" W37-6.") is not None
+
+
+def test_compound_token_re_does_not_match_a_hyphen_preceded_fragment(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    tok = "W37-6"
+    pattern = doc_id_cli._compound_token_re(tok)
+    assert pattern.search("F-W37-6") is None, "must not match inside a longer identifier"
+    m = pattern.search("(W37-6)")
+    assert m is not None
+    assert m.group(0) == tok
+
+
+# ---------------------------------------------------------------------------------------
+# Row (d13), NT-0019 §5 step 4: the old notes root beneath `.claude`'s own tombstone
+# stubs, retired -- `_retire_claude_notes_stubs`' own docstring has the composition and
+# ordering reasoning. The deletion itself is Ruling 104 §2's class 6 (the deputy's second
+# ruling, W37-6, 2026-09-04): a whole-file deletion whose replacement is a REDIRECTS.csv
+# row is the property class 6 already states for a regenerated write, just for a
+# generator whose own action is deletion. `_try_class6_deletion`'s own docstring has the
+# full reasoning; the three broken-input proofs below are the deputy's own worked cases.
+#
+# `_notes_root()` builds the literal path by concatenation throughout this section, never
+# as one written-out string: this test file is itself part of the tracked corpus
+# `test_no_living_file_cites_the_old_notes_path` scans, and a literal occurrence of the
+# old path here would make that test flag this file -- the identical self-referential
+# trap that test's own docstring already names.
+# ---------------------------------------------------------------------------------------
+
+
+def _notes_root(rest: str = "") -> str:
+    return ".claude" + "/notes" + rest
+
+
+def test_claude_notes_stub_is_retired_and_its_citations_repointed(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """The fixture corpus's own stub names an intermediate `docs/notes/0001-example-
+    note.md`, one of this run's own `docs/notes/` -> `docs/rfcs/` moves — composed to its
+    real final path, not assumed.
+    """
+    citer = pristine_a / "docs" / "_templates" / "claude-notes-citation-check.md"
+    citer.write_text(
+        f"See `{_notes_root('/0001-example-fixture-note.md')}` for the background.\n",
+        encoding="utf-8",
+    )
+
+    doc_id_cli.migrate(pristine_a)
+
+    assert not (pristine_a / ".claude" / "notes").exists(), (
+        "every stub resolved -- the whole directory must be gone, README included"
+    )
+    out = citer.read_text(encoding="utf-8")
+    assert "docs/rfcs/RFC-00001-example-finding-needs-a-follow-up-fix.md" in out, out
+    assert _notes_root("/") not in out, out
+
+
+def test_retire_claude_notes_stubs_unit(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Direct unit proof, isolated from the rest of `migrate()`: an intermediate target
+    composes through `path_moves`, a stub naming a target that never resolves is left in
+    place (and withholds the README/directory deletion), and the README is deleted only
+    once every stub is accounted for.
+    """
+    notes_dir = tmp_path / ".claude" / "notes"
+    notes_dir.mkdir(parents=True)
+    (notes_dir / "README.md").write_text("# Moved\n\n(fixture index)\n", encoding="utf-8")
+    (notes_dir / "0001-resolves.md").write_text(
+        "This note moved to [`docs/notes/0001-intermediate.md`]"
+        "(../../docs/notes/0001-intermediate.md) on 2026-09-01.\n",
+        encoding="utf-8",
+    )
+    (notes_dir / "0002-dangling.md").write_text(
+        "This note moved to [`docs/notes/0002-never-materialises.md`]"
+        "(../../docs/notes/0002-never-materialises.md) on 2026-09-01.\n",
+        encoding="utf-8",
+    )
+    final = tmp_path / "docs" / "rfcs" / "RFC-00001-final.md"
+    final.parent.mkdir(parents=True)
+    final.write_text("# RFC-00001\n", encoding="utf-8")
+
+    moves, deleted = doc_id_cli._retire_claude_notes_stubs(
+        tmp_path, {"docs/notes/0001-intermediate.md": "docs/rfcs/RFC-00001-final.md"}
+    )
+
+    resolved_rel = _notes_root("/0001-resolves.md")
+    assert moves == {resolved_rel: "docs/rfcs/RFC-00001-final.md"}
+    assert resolved_rel in deleted
+    assert not (notes_dir / "0001-resolves.md").exists()
+    # The dangling stub's target never materialises -- left in place, and it must
+    # withhold the README/directory deletion, not just its own.
+    assert (notes_dir / "0002-dangling.md").exists()
+    assert (notes_dir / "README.md").exists()
+    assert notes_dir.is_dir()
+
+
+_CLAUDE_NOTES_TOMBSTONE_BODY = (
+    "This note moved to [`docs/rfcs/RFC-00099-x.md`](../../docs/rfcs/RFC-00099-x.md)"
+    " on 2026-09-01.\n"
+)
+
+
+def test_class6_deletion_a_stub_deleted_without_its_row_fails_unclassified(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The deputy's first broken-input proof: a stub-shaped body alone is not enough --
+    without a REDIRECTS.csv row naming it, the deletion is exactly as unaccounted as any
+    other vanished file, and must fail loudly rather than pass by resemblance.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    stub_dir = old_root / ".claude" / "notes"
+    stub_dir.mkdir(parents=True)
+    (stub_dir / "0001-x.md").write_text(_CLAUDE_NOTES_TOMBSTONE_BODY, encoding="utf-8")
+    new_root.mkdir(parents=True)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert _notes_root("/0001-x.md") in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_class6_deletion_an_ordinary_file_deleted_fails_unclassified(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The deputy's second broken-input proof: the tombstone-shape check must not pass
+    every deletion -- an ordinary body, deleted with no row, still fails.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    (old_root / "docs" / "plans").mkdir(parents=True)
+    (old_root / "docs" / "plans" / "example.md").write_text(
+        "An ordinary plan, not a tombstone.\n", encoding="utf-8"
+    )
+    new_root.mkdir(parents=True)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert "docs/plans/example.md" in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_class6_deletion_a_stub_deleted_with_its_row_is_class6(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The deputy's third broken-input proof, the positive case: a stub-shaped body,
+    deleted, with a REDIRECTS.csv `old_id`/`new_id` row naming its path -- class 6, not a
+    violation.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    stub_dir = old_root / ".claude" / "notes"
+    stub_dir.mkdir(parents=True)
+    (stub_dir / "0001-x.md").write_text(_CLAUDE_NOTES_TOMBSTONE_BODY, encoding="utf-8")
+    new_root.mkdir(parents=True)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(
+        "old_id,new_id,old_path,new_path,citing_dir\n"
+        f"{_notes_root('/0001-x.md')},docs/rfcs/RFC-00099-x.md,,,\n",
+        encoding="utf-8",
+    )
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    assert _notes_root("/0001-x.md") in classification.per_class["6-generated-artifact"], (
+        classification.violations
+    )
+    # `docs/REDIRECTS.csv` itself is not asserted clean here: this synthetic tree hand-
+    # writes it only in `new_root`, which a minimal fixture with no real `migrate()` run
+    # cannot account for by any other means -- irrelevant to the property under test.
+    assert not any(
+        _notes_root("/0001-x.md") in v for v in classification.violations
+    ), classification.violations
+
+
 def test_a_prose_wf0n_and_a_heading_wf0n_both_resolve_a_longer_number_does_not(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -7392,3 +7800,62 @@ def test_reconcile_process_core_digest_must_run_after_padded_citation_normalisat
         "invalidates again — check 27 red on every migrated tree despite having 'just' "
         "run the reconciliation"
     )
+
+
+# ---------------------------------------------------------------------------------------
+# `_docid.TOKEN_LEFT_BOUND` — the deputy's ruling (W37-6, 2026-09-04), narrowed the same
+# day after its first version regressed row (d1). The constant is
+# `(?<![A-Za-z0-9_])(?<![A-Z0-9]-)`: `\b`'s left half made explicit, plus a guard against a
+# hyphen that BELONGS TO AN IDENTIFIER rather than against any hyphen at all.
+#
+# These are the four cases the constant's own comment in `scripts/_docid.py` names as its
+# proof. They exercise `doc-id.py`'s shipped `_whole_token_re` — the real consumer — and
+# not a pattern re-derived here: a re-derived pattern is a different predicate and would
+# prove nothing about what the sweep actually does.
+#
+# The legacy-form ids below are literal fixture data. This module is declared in
+# `_docid.TEST_MODULE_EXCLUSIONS`, so they are not counted as the real tree's residue.
+
+
+def test_token_left_bound_leaves_a_slice_id_inside_a_finding_id_unmatched(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    r"""The defect the constant exists for: `-` is `\W`, so a bare `\b` fires between the
+    `-` and the `W` and matches the slice id *inside* the finding id that cites it."""
+    assert doc_id_cli._whole_token_re("W37-6").search("F-W37-6") is None
+
+    assert re.search(r"\bW37-6\b", "F-W37-6") is not None, (
+        "positive control: a bare \\b DOES match here. If this ever stops being true the "
+        "assertion above is passing for a reason other than the lookbehind, and the test "
+        "has quietly stopped guarding the defect"
+    )
+
+
+def test_token_left_bound_still_matches_a_note_id_after_the_prose_prefix_anti(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`anti-` is an English prefix, not an id field. The character before the hyphen is a
+    lowercase letter, which no legacy id form starts with, so this cites the note and the
+    sweep must still rewrite it. Refusing *any* preceding hyphen is what regressed (d1)."""
+    m = doc_id_cli._whole_token_re("NT-0003").search("the anti-NT-0003 clause")
+    assert m is not None
+    assert m.group(0) == "NT-0003"
+
+
+def test_token_left_bound_still_matches_a_note_id_after_the_prose_prefix_non(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The second of the two real survivors row (d1) reported — same shape as `anti-`."""
+    m = doc_id_cli._whole_token_re("NT-0019").search("their own, non-NT-0019 front matter")
+    assert m is not None
+    assert m.group(0) == "NT-0019"
+
+
+def test_token_left_bound_still_matches_a_delimited_or_sentence_final_slice_id(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The narrowing must not refuse a genuine citation along with the false one: a real
+    non-identifier character before the token still matches."""
+    pattern = doc_id_cli._whole_token_re("W37-6")
+    for text in ("(W37-6)", " W37-6.", "see W37-6 for the reasoning"):
+        assert pattern.search(text) is not None, text
