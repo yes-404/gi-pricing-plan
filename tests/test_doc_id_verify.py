@@ -2153,14 +2153,23 @@ _FAILED_BLOCK = (
 )
 
 
-def _files_corpus(dv: Any, *files: str) -> Any:
-    """A minimal `Corpus` whose only property these tests need is `.files` — the
-    membership set `_h1_residue_by_file` resolves a captured token against. Team-lead's
-    ruling on pin-3: resolution against the snapshot's own corpus, never a path-shape
-    heuristic and never the repo working tree.
+def _files_corpus(dv: Any, tmp_path: pathlib.Path, *files: str) -> Any:
+    """A minimal `Corpus` whose only property `_h1_residue_by_file` reads is `.tree` —
+    resolution re-reads the tree's own tracked-file set via `tracked_files(corpus.tree)`
+    (team-lead's ruling: the *unfiltered* tracked set, never `Corpus.files`, which has a
+    row-(d)/(e)/(g)-specific exclusion baked in that has nothing to do with h1's own
+    question). A real git repo, not a fake path, because `tracked_files` shells out to
+    `git ls-files` and a nonexistent tree would simply error rather than resolve nothing.
     """
+    # `_mkrepo` commits whatever it is given; a repo with nothing to commit would error,
+    # so an always-present placeholder keeps `_mkrepo` valid even when a test wants a
+    # corpus with none of its own named files (the "clean tree" case below).
+    root = _mkrepo(
+        tmp_path / "corpus",
+        {"___placeholder___.md": "x\n", **{f: "x\n" for f in files}},
+    )
     return dv.Corpus(
-        tree=pathlib.Path("/nonexistent-corpus"), files=files,
+        tree=root, files=files,
         lines={f: () for f in files},
         was_lines={f: frozenset() for f in files},
         fenced_lines={f: frozenset() for f in files},
@@ -2201,7 +2210,9 @@ def test_h1_verdict_passes_only_when_every_other_class_is_zero(dv: Any) -> None:
     assert dv._h1_verdict(1) == dv.FAIL
 
 
-def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
+def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
     """Team-lead condition 2 on PR #756: (h1) is the largest box-end ruled row and must
     be wired by (file, check), not left a follow-up. `cls` is tagged `h1-check<n>` so an
     (h1) check can never collide with a (d)-row's own key by coincidence.
@@ -2215,7 +2226,8 @@ def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
     see the tests below for the defect that shape rule would have missed).
     """
     corpus = _files_corpus(
-        dv, "docs/a.md", "docs/b.md", "docs/audit/register.md", "docs/c.md", "docs/d.md",
+        dv, tmp_path, "docs/a.md", "docs/b.md", "docs/audit/register.md", "docs/c.md",
+        "docs/d.md",
     )
     residue = dv._h1_residue_by_file(_FAILED_BLOCK, corpus)
     assert dict(residue) == {
@@ -2228,21 +2240,28 @@ def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
     assert sum(residue.values()) == 5  # nothing from _FAILED_BLOCK falls through any more
 
 
-def test_h1_residue_by_file_is_empty_on_a_clean_tree(dv: Any) -> None:
-    assert dict(dv._h1_residue_by_file("All checks passed.\n", _files_corpus(dv))) == {}
+def test_h1_residue_by_file_is_empty_on_a_clean_tree(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    corpus = _files_corpus(dv, tmp_path)
+    assert dict(dv._h1_residue_by_file("All checks passed.\n", corpus)) == {}
 
 
-def test_h1_residue_by_file_sums_repeats_at_the_same_path_and_check(dv: Any) -> None:
+def test_h1_residue_by_file_sums_repeats_at_the_same_path_and_check(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
     out = (
         "FAILED (2):\n"
         "  - check 32: docs/a.md: first problem\n"
         "  - check 32: docs/a.md: second problem\n"
     )
-    corpus = _files_corpus(dv, "docs/a.md")
+    corpus = _files_corpus(dv, tmp_path, "docs/a.md")
     assert dict(dv._h1_residue_by_file(out, corpus)) == {("docs/a.md", "h1-check32"): 2}
 
 
-def test_h1_residue_by_file_pins_a_pathless_message_under_the_sentinel(dv: Any) -> None:
+def test_h1_residue_by_file_pins_a_pathless_message_under_the_sentinel(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
     """Coverage, not just staleness-resistance: a message that names its check number
     but no file must be governed too, or a regression inside that class stays silent —
     the exact gap the team lead's second message named. Checks 2 and 31 have no natural
@@ -2260,33 +2279,37 @@ def test_h1_residue_by_file_pins_a_pathless_message_under_the_sentinel(dv: Any) 
         "  - check 31: gap in the scoped id sequence between 30 and 40\n"
         "  - check 2: NT-9999 referenced but never defined (in docs/a.md)\n"
     )
-    corpus = _files_corpus(dv, "docs/a.md")
+    corpus = _files_corpus(dv, tmp_path, "docs/a.md")
     assert dict(dv._h1_residue_by_file(out, corpus)) == {
         (dv._H1_UNLOCATED_PATH, "h1-check31"): 2,
         (dv._H1_UNLOCATED_PATH, "h1-check2"): 1,
     }
 
 
-def test_h1_residue_by_file_drops_only_the_truly_unclassifiable(dv: Any) -> None:
+def test_h1_residue_by_file_drops_only_the_truly_unclassifiable(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
     """A message with no `check N:` prefix at all has no check number to key on and is
     the one shape this sentinel still cannot cover — `_classify_failures`'s own
     `"unclassified"` bucket, unaffected by this function either before or after."""
     out = "FAILED (1):\n  - docs/a.md: header block is missing the **Sequencing** field\n"
-    assert dict(dv._h1_residue_by_file(out, _files_corpus(dv, "docs/a.md"))) == {}
+    assert dict(dv._h1_residue_by_file(out, _files_corpus(dv, tmp_path, "docs/a.md"))) == {}
 
 
-def test_h1_residue_by_file_resolves_a_real_corpus_member_per_file(dv: Any) -> None:
+def test_h1_residue_by_file_resolves_a_real_corpus_member_per_file(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
     """The positive half of pin-3's own proof — required alongside the negative half
     below so this test cannot pass by rejecting everything (team-lead's own point: a
     predicate that resolves nothing at all produces a very tidy-looking, entirely wrong
     zero-garbage result). A token that IS a member of the corpus must key per-file."""
     out = "FAILED (1):\n  - check 32: docs/a.md: PL-09998 does not resolve\n"
-    corpus = _files_corpus(dv, "docs/a.md", "docs/other.md")
+    corpus = _files_corpus(dv, tmp_path, "docs/a.md", "docs/other.md")
     assert dict(dv._h1_residue_by_file(out, corpus)) == {("docs/a.md", "h1-check32"): 1}
 
 
 def test_h1_residue_by_file_rejects_the_backtick_was_misattribution_by_resolution(
-    dv: Any,
+    dv: Any, tmp_path: pathlib.Path,
 ) -> None:
     """The defect found while building pin-3, as its own broken-input proof. Before
     resolution, `_H1_FAILURE_LOCATION_RE` matched `` `was: NT-0099` has no docs/
@@ -2304,9 +2327,43 @@ def test_h1_residue_by_file_rejects_the_backtick_was_misattribution_by_resolutio
     (`docs/was.md`, `was`) that must NOT be mistaken for the garbage token either.
     """
     out = "FAILED (1):\n  - check 36: `was: NT-0099` has no docs/REDIRECTS.csv row\n"
-    corpus = _files_corpus(dv, "docs/was.md", "was")
+    corpus = _files_corpus(dv, tmp_path, "docs/was.md", "was")
     assert dict(dv._h1_residue_by_file(out, corpus)) == {
         (dv._H1_UNLOCATED_PATH, "h1-check36"): 1,
+    }
+
+
+def test_h1_residue_by_file_never_produces_a_phantom_per_file_key(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The invariant team-lead asked to be an assertion, not just an observation: every
+    per-file key `_h1_residue_by_file` produces resolves to a real member of the corpus
+    it was given — never a token that merely looked path-shaped. This is what the check
+    1 defect violated (`rulings/RL-....md` was accepted as a per-file key while naming
+    no file that exists) before it was found by exactly this property failing to hold.
+
+    A mixed fixture: two messages whose tokens are real corpus members (kept per-file),
+    one whose token is close to a real member but not equal to it (`docs/a.md.bak`, not
+    tracked — must NOT fuzzy-match `docs/a.md`), and one pathless message (sentinel).
+    """
+    out = (
+        "FAILED (4):\n"
+        "  - check 32: docs/a.md: real hit\n"
+        "  - check 30: docs/b.md: real hit\n"
+        "  - check 35: docs/a.md.bak: not a tracked file\n"
+        "  - check 29: some prose with no path at all\n"
+    )
+    corpus = _files_corpus(dv, tmp_path, "docs/a.md", "docs/b.md")
+    known = frozenset(dv.tracked_files(corpus.tree))
+    residue = dv._h1_residue_by_file(out, corpus)
+    for (path, _cls), _count in residue.items():
+        if path != dv._H1_UNLOCATED_PATH:
+            assert path in known, f"{path!r} is not a real file in the corpus"
+    assert dict(residue) == {
+        ("docs/a.md", "h1-check32"): 1,
+        ("docs/b.md", "h1-check30"): 1,
+        (dv._H1_UNLOCATED_PATH, "h1-check35"): 1,
+        (dv._H1_UNLOCATED_PATH, "h1-check29"): 1,
     }
 
 

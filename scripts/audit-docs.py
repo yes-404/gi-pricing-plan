@@ -3405,7 +3405,15 @@ def main() -> int:
                 # `check N: <path>: <prose>` — see check 36's identical fix above; PR
                 # #758's `_docverify._h1_residue_by_file` extraction needs the path
                 # immediately after the check number, not after descriptive prose.
-                fail(f"check 1: {f.relative_to(ROOT)}: broken link to {target}")
+                # `REPO`, not `ROOT` (=`REPO / "docs"`): every other check names its
+                # file relative to the repo root, and a path relative to `docs/` instead
+                # (`rulings/RL-....md`, missing the `docs/` prefix) does not resolve from
+                # the repo root at all — a reader handed it cannot find the file. Found
+                # by `_docverify._h1_residue_by_file`'s resolution-against-the-corpus
+                # check (pin-3, PR #756/#758/#759's own follow-up): the old shape-only
+                # extractor accepted these 235 tokens because they looked path-shaped,
+                # never checking they named a real file.
+                fail(f"check 1: {f.relative_to(REPO)}: broken link to {target}")
 
     # 2/3. requirement ids
     defined: dict[str, list[str]] = collections.defaultdict(list)

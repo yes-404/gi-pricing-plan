@@ -2625,7 +2625,19 @@ def _h1_residue_by_file(out: str, corpus: Corpus) -> Mapping[tuple[str, str], in
     rather than the bare check number, so a future (d)-row and an h1 check can never
     collide on the same key by coincidence.
     """
-    known_files = frozenset(corpus.files)
+    # The unfiltered tracked-file set of the migrated snapshot, not `corpus.files`:
+    # `Corpus.files` already has `_D_EXCLUDED_BASENAME` (`docs/REDIRECTS.csv`) applied,
+    # a row-(d)/(e)/(g) citation-sweep exclusion for a reason that has nothing to do with
+    # h1's own question ("does this token name a real file in the migrated tree?").
+    # Borrowing another row's scanning scope as a stand-in for existence is the same
+    # proxy error the shape rule made — team-lead's ruling, and the third appearance of
+    # this exact REDIRECTS.csv scope mismatch (row (e)'s conjunct 0 vs. check 32's
+    # `_id_scope_documents()` in #752's decomposition; flagged out-of-scope during #756;
+    # now costing real per-file entries here). `tracked_files` re-reads `git ls-files`
+    # once more rather than reusing `corpus.files`, deliberately: it is the property
+    # actually wanted, not a second full `load_corpus` (lines/was_lines/fenced_lines are
+    # not needed here at all).
+    known_files = frozenset(tracked_files(corpus.tree))
     block = _FAILED_BLOCK_RE.search(out)
     tail = out[block.start():] if block else ""
     residue: dict[tuple[str, str], int] = {}
