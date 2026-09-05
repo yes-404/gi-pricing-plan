@@ -2192,11 +2192,12 @@ def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
     be wired by (file, check), not left a follow-up. `cls` is tagged `h1-check<n>` so an
     (h1) check can never collide with a (d)-row's own key by coincidence.
 
-    `check 1: broken link in docs/d.md: docs/gone.md` does NOT match — its message does
-    not open with a bare path immediately after the check number, which is this
-    predicate's own documented, honest limit (not every check's message names a file
-    first) rather than a silent miss: `_classify_failures` still counts it in the row's
-    own aggregate, unaffected by this function at all.
+    `check 1: broken link in docs/d.md: docs/gone.md` does NOT match the per-file shape
+    — its message does not open with a bare path immediately after the check number —
+    but it still names its check number, so it is pinned under `_H1_UNLOCATED_PATH` as a
+    class-level ceiling rather than dropped: a regression inside a pathless class is then
+    still loud, per the team-lead's own disposition (a file-less entry is a class-level
+    ceiling, not a silent gap).
     """
     residue = dv._h1_residue_by_file(_FAILED_BLOCK)
     assert dict(residue) == {
@@ -2204,8 +2205,9 @@ def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
         ("docs/b.md", "h1-check32"): 1,
         ("docs/audit/register.md", "h1-check29"): 1,
         ("docs/c.md", "h1-check30"): 1,
+        (dv._H1_UNLOCATED_PATH, "h1-check1"): 1,
     }
-    assert sum(residue.values()) == 4  # the check-1 broken-link message is not one of them
+    assert sum(residue.values()) == 5  # nothing from _FAILED_BLOCK falls through any more
 
 
 def test_h1_residue_by_file_is_empty_on_a_clean_tree(dv: Any) -> None:
@@ -2219,6 +2221,32 @@ def test_h1_residue_by_file_sums_repeats_at_the_same_path_and_check(dv: Any) -> 
         "  - check 32: docs/a.md: second problem\n"
     )
     assert dict(dv._h1_residue_by_file(out)) == {("docs/a.md", "h1-check32"): 2}
+
+
+def test_h1_residue_by_file_pins_a_pathless_message_under_the_sentinel(dv: Any) -> None:
+    """Coverage, not just staleness-resistance: a message that names its check number
+    but no file must be governed too, or a regression inside that class stays silent —
+    the exact gap the team lead's second message named. Two distinct pathless messages
+    for the SAME check sum under one class-level ceiling key; a different check gets its
+    own key, never merged with the first."""
+    out = (
+        "FAILED (3):\n"
+        "  - check 1: broken link in docs/d.md: docs/gone.md\n"
+        "  - check 1: broken link in docs/e.md: docs/also-gone.md\n"
+        "  - check 31: gap in the full allocation between 10 and 20\n"
+    )
+    assert dict(dv._h1_residue_by_file(out)) == {
+        (dv._H1_UNLOCATED_PATH, "h1-check1"): 2,
+        (dv._H1_UNLOCATED_PATH, "h1-check31"): 1,
+    }
+
+
+def test_h1_residue_by_file_drops_only_the_truly_unclassifiable(dv: Any) -> None:
+    """A message with no `check N:` prefix at all has no check number to key on and is
+    the one shape this sentinel still cannot cover — `_classify_failures`'s own
+    `"unclassified"` bucket, unaffected by this function either before or after."""
+    out = "FAILED (1):\n  - docs/a.md: header block is missing the **Sequencing** field\n"
+    assert dict(dv._h1_residue_by_file(out)) == {}
 
 
 def test_h2_verdict_over_exempt_discloses_but_vacuous_stays_fatal(dv: Any) -> None:

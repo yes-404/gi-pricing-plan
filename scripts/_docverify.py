@@ -2572,8 +2572,20 @@ def _h1_verdict(other_total: int) -> str:
 #: the overwhelming majority of call sites (checks 16-19, 25, 30-33, 36, 1-8 and more)
 #: name the file first, immediately after the check number. Not universal: a message with
 #: no natural file subject (a numbering-gap report, a cross-reference summary naming
-#: several files at once) does not match, and is not this pattern's to guess at.
+#: several files at once) does not match — those fall to `_H1_UNLOCATED_PATH` below,
+#: never dropped.
 _H1_FAILURE_LOCATION_RE: Final = re.compile(r"^check (\d+): ([^\s:]+):")
+
+#: A failure message this predicate cannot place at a real file still belongs to *some*
+#: check, and pinning it under a class-level ceiling (this sentinel `path`, real `cls`)
+#: is better than dropping it: a regression inside a pathless class is then loud too,
+#: never silent because no single file could be named. Team-lead's own disposition on PR
+#: #756 — "if the loader accepts a file-less entry, pin them as a class-level ceiling" —
+#: and `Row.residue`/`ResidueEntry.path` are plain `str`, so no loader change was needed
+#: at all; only this module choosing to use the string rather than skip.
+_H1_UNLOCATED_PATH: Final = "(no file named in message)"
+
+_H1_CHECK_NUMBER_RE: Final = re.compile(r"^check (\d+):")
 
 
 def _h1_residue_by_file(out: str) -> Mapping[tuple[str, str], int]:
@@ -2581,36 +2593,45 @@ def _h1_residue_by_file(out: str) -> Mapping[tuple[str, str], int]:
     (`Row.residue`) — reads the identical failure lines `_classify_failures` already
     parses, never a second sweep of `out`.
 
-    Only a failure message shaped `check N: <path>: ...` (`_H1_FAILURE_LOCATION_RE`)
-    names a file; every other shape still counts in `_classify_failures`'s per-check
-    total (h1's own verdict is unaffected either way) but contributes nothing here — a
-    class with no per-file breakdown is not yet governable by (file, class), and is
-    disclosed only through h1's aggregate count, exactly as it was before this ceiling
-    existed. `cls` is tagged `f"h1-check{n}"` rather than the bare check number, so a
-    future (d)-row and an h1 check can never collide on the same key by coincidence.
+    A failure message shaped `check N: <path>: ...` (`_H1_FAILURE_LOCATION_RE`) names a
+    real file, keyed `(path, f"h1-check{n}")`. A message that still names its check
+    number but no file (a numbering-gap report, a cross-reference summary naming several
+    files at once) is keyed `(_H1_UNLOCATED_PATH, f"h1-check{n}")` instead of being
+    dropped — a class-level ceiling rather than a per-file one, but still governed:
+    `check_residue_ceiling` cannot tell files apart inside it, but a regression that
+    grows the count IS still a fatal `RESIDUE_REGRESSION` once the record names that
+    `cls`. A message with no `check N:` prefix at all (`_classify_failures`'s own
+    `"unclassified"` bucket) has no check number to key on and is not covered by either
+    shape — the same non-coverage it already had. `cls` is tagged `f"h1-check{n}"` rather
+    than the bare check number, so a future (d)-row and an h1 check can never collide on
+    the same key by coincidence.
 
-    **The size of this gap, measured against a real `migrate --verify` snapshot** (PR
-    #756, team-lead's own ask — "that figure is the size of the gap the ceiling cannot
-    see"), not asserted: of h1's 948 non-disclosed failures (excluding checks 29/30/35),
-    **274 are captured** (check 32 alone — its `f"check 32: {rel}:{problem}"` shape
-    matches) and **674 (71%) are pathless** — check 36's 435 (`f"check 36: legacy
-    (pre-migration) form survives — {hit}"`, the descriptive prose sits before the hit's
-    own `path:lineno:` string) and check 1's 235 (`f"check 1: broken link in {f}: ..."`,
-    the path follows "broken link in " rather than the check number directly) are the two
-    classes responsible for nearly all of it. Closing this would mean either changing
-    those two messages at the source to lead with the path (the same "fix the tool, not
-    the residue" direction the deputy's ruling already takes for other framework gaps) or
-    widening this extractor to hunt for a path anywhere in the message — not attempted
-    here, named as a follow-up rather than silently accepted.
+    **Coverage, measured against a real `migrate --verify` snapshot, not estimated** (PR
+    #756, team-lead's own ask — the count *by check* of what used to fall through before
+    this sentinel existed): `check 1: 235, check 2: 1, check 5: 3, check 29: 11,
+    check 36: 435` were entirely unlocated (now pinned under `_H1_UNLOCATED_PATH`);
+    `check 30: 78, check 32: 274, check 35: 79` were already per-file. Check 36's 435
+    (`f"check 36: legacy (pre-migration) form survives — {hit}"`, the descriptive prose
+    sits before the hit's own `path:lineno:` string) and check 1's 235 (`f"check 1:
+    broken link in {f}: ..."`, the path follows "broken link in " rather than the check
+    number directly) are the two classes responsible for nearly all of the unlocated
+    total. With this sentinel, every check-numbered failure is now governed by *some*
+    ceiling key — per-file where the message names one, per-check where it does not —
+    and none of h1's 1116 measured failures at that snapshot fall through silently any
+    more.
     """
     block = _FAILED_BLOCK_RE.search(out)
     tail = out[block.start():] if block else ""
     residue: dict[tuple[str, str], int] = {}
     for msg in _FAILURE_LINE_RE.findall(tail):
         m = _H1_FAILURE_LOCATION_RE.match(msg)
-        if not m:
-            continue
-        check_no, path = m.group(1), m.group(2)
+        if m:
+            check_no, path = m.group(1), m.group(2)
+        else:
+            m2 = _H1_CHECK_NUMBER_RE.match(msg)
+            if not m2:
+                continue
+            check_no, path = m2.group(1), _H1_UNLOCATED_PATH
         key = (path, f"h1-check{check_no}")
         residue[key] = residue.get(key, 0) + 1
     return residue
