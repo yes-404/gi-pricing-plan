@@ -1824,18 +1824,6 @@ def check_id_filename_directory() -> None:
 _MD_LINK_RE: Final = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 _FENCE_LINE_RE: Final = re.compile(r"^\s*```")
 
-#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item
-#: 1: row (e)'s exact-width conjunct 1 (`_docverify._PADDED_ID_RE`), read here — not
-#: retyped as a literal — so a padded citation this exact regex does not match (fewer
-#: leading zeros than `_docid.PAD_WIDTH` gives, e.g. `PL-066`, `PL-0066`) is told apart
-#: from (e)'s own class and listed under its own text rather than folded into it. Built
-#: from `_docid.FAMILY_PREFIXES` and `_docid.PAD_WIDTH` by symbol, matching (e)'s own
-#: construction.
-_EXACT_WIDTH_PADDED_RE: Final = re.compile(
-    r"\b(" + "|".join(_docid.FAMILY_PREFIXES) + r")-0\d{" + str(_docid.PAD_WIDTH - 1) + r"}\b"
-)
-
-
 def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[str]:
     """Every check-32 problem in one file, given the set of canonical ids `docs/INDEX.md`
     carries: a `<PREFIX>-<n>` citation outside a link target that does not resolve; the
@@ -1844,7 +1832,9 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
     fixture can exercise this without a real `docs/INDEX.md` on disk.
 
     `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item
-    1: the padding clause adopts row (e)'s conjuncts 2 and 3 from `_docid` — path
+    1: the padding clause adopts row (e)'s conjuncts 1, 2 and 3 from `_docid` — the
+    exact-width regex (conjunct 1, `_docid._PADDED_ID_RE`, read here rather than
+    reassembled from its own `FAMILY_PREFIXES`/`PAD_WIDTH` symbols a second time), path
     exclusion (conjunct 2, `_docid._in_path_context`) and resolution (conjunct 3: a padded
     token whose unpadded form does not resolve in `docs/INDEX.md` is a specimen of the
     form, not a citation, exactly as (e) reads it) — so path-shaped citations and
@@ -1893,7 +1883,7 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
                 )
                 if _docid._in_path_context(cleaned, cleaned_start, cleaned_end):
                     continue
-                if _EXACT_WIDTH_PADDED_RE.fullmatch(m.group(0)):
+                if _docid._PADDED_ID_RE.fullmatch(m.group(0)):
                     problems.append(
                         f"{lineno}: padded id `{m.group(0)}` outside a link target — "
                         "citations write the integer, never padding (NT-0019 §1.1 rule 2)"

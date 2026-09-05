@@ -418,11 +418,23 @@ def is_scoped_id_never_allocated(
 # =========================================================================================
 # docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md Entry 2 item 1:
 # `_docverify.py`'s row (e) (`padded_hits`) and `audit-docs.py` check 32's padding clause
-# are "one rule at two times" over the same corpus. Conjunct 2 (a padded id inside a
-# filesystem path is not a citation) and its stripping/boundary machinery move here so
-# neither consumer re-types them; `_docverify.py` re-exports both names under their
-# existing names for its own callers and tests.
+# are "one rule at two times" over the same corpus. Conjunct 1's exact-width regex,
+# conjunct 2 (a padded id inside a filesystem path is not a citation) and its
+# stripping/boundary machinery move here so neither consumer re-types — or reassembles —
+# them; `_docverify.py` re-exports every name under its existing name for its own callers
+# and tests.
 # =========================================================================================
+
+#: **Conjunct 1**, and `PAD_WIDTH` is read from the symbol, never written as a literal.
+#: Ruling 103 defect 1: the same corpus gave 2032 under `-0\d{4}` and 2387 under
+#: `-0[0-9]{3,4}` — **355 occurrences from the digit count alone**, F85's exact shape
+#: inside an acceptance predicate. Reading `FAMILY_PREFIXES`/`PAD_WIDTH` by symbol in two
+#: places and reassembling the same regex expression twice is still two rules kept equal
+#: by discipline alone, not one rule — the assembled `re.Pattern` is the shared thing, and
+#: it lives here, once, for exactly that reason.
+_PADDED_ID_RE: Final = re.compile(
+    r"\b(" + "|".join(FAMILY_PREFIXES) + r")-0\d{" + str(PAD_WIDTH - 1) + r"}\b"
+)
 
 #: **Conjunct 2's** stripping step. Ruling 103 defect 3: two of the three survivors were
 #: paths — `docs/rulings/**RL-00993**-q5-….md` — whose **bold markers split the token**, so

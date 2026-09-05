@@ -1522,14 +1522,12 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
 # (e) no padded id in prose — Ruling 103's four conjuncts
 # ---------------------------------------------------------------------------------------
 
-#: **Conjunct 1**, and the `PAD_WIDTH` is read from the symbol, never written as a literal.
-#: Ruling 103 defect 1: the same corpus gave 2032 under `-0\d{4}` and 2387 under
-#: `-0[0-9]{3,4}` — **355 occurrences from the digit count alone**, F85's exact shape inside
-#: an acceptance predicate. `CLAUDE.md` §13's "the shipped constant by symbol, never pasted"
-#: is what stops it recurring.
-_PADDED_ID_RE: Final = re.compile(
-    r"\b(" + "|".join(_docid.FAMILY_PREFIXES) + r")-0\d{" + str(_docid.PAD_WIDTH - 1) + r"}\b"
-)
+#: **Conjunct 1**'s exact-width regex, moved into `_docid` per
+#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item 1
+#: so `audit-docs.py` check 32 can read the identical assembled pattern rather than
+#: reassembling it from the same two symbols in a second place — re-exported here under
+#: this module's existing name for every caller and test already written against it.
+_PADDED_ID_RE: Final = _docid._PADDED_ID_RE
 
 #: **Conjunct 0's** fence tracking. Ruled by the decision-maker: without it, a record
 #: documenting a padding defect must corrupt its own evidence to pass the lint, which is
