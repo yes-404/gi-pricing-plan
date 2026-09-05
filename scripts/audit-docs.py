@@ -3072,9 +3072,18 @@ def check_redirects() -> None:
             # `check N: <path>: <prose>` — the shape every other check's fail() message
             # already uses (`_docverify._h1_residue_by_file`'s own per-file extraction
             # depends on it; team-lead's ruling on PR #758: normalise the source rather
-            # than special-case the extractor). `hit`'s own __str__ is `f"{rel}:{lineno}:
-            # {label} {token!r}"`, so `{hit}` already opens with the path.
-            fail(f"check 36: {hit} (legacy pre-migration form survives)")
+            # than special-case the extractor). Fields expanded in `_LegacyFormHit.
+            # __str__`'s own exact order (`f"{rel}:{lineno}: {label} {token!r}"`) rather
+            # than interpolating `{hit}` — byte-identical output, but this way the path
+            # is its own AST-visible interpolation immediately followed by a literal
+            # `":"`, which a static "path-first" check can verify without evaluating
+            # `__str__` (pin-3, PR #756/#758/#759's own follow-up); see
+            # `test_legacy_form_hit_str_matches_its_own_expanded_fields` for the pin that
+            # keeps the two in agreement.
+            fail(
+                f"check 36: {hit.rel}:{hit.lineno}: {hit.label} {hit.token!r} "
+                "(legacy pre-migration form survives)"
+            )
         else:
             disclosed_by_class[f"{hit.label} ({reason})"] += 1
 
@@ -3396,7 +3405,15 @@ def main() -> int:
                 # `check N: <path>: <prose>` — see check 36's identical fix above; PR
                 # #758's `_docverify._h1_residue_by_file` extraction needs the path
                 # immediately after the check number, not after descriptive prose.
-                fail(f"check 1: {f.relative_to(ROOT)}: broken link to {target}")
+                # `REPO`, not `ROOT` (=`REPO / "docs"`): every other check names its
+                # file relative to the repo root, and a path relative to `docs/` instead
+                # (`rulings/RL-....md`, missing the `docs/` prefix) does not resolve from
+                # the repo root at all — a reader handed it cannot find the file. Found
+                # by `_docverify._h1_residue_by_file`'s resolution-against-the-corpus
+                # check (pin-3, PR #756/#758/#759's own follow-up): the old shape-only
+                # extractor accepted these 235 tokens because they looked path-shaped,
+                # never checking they named a real file.
+                fail(f"check 1: {f.relative_to(REPO)}: broken link to {target}")
 
     # 2/3. requirement ids
     defined: dict[str, list[str]] = collections.defaultdict(list)

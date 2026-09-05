@@ -2588,48 +2588,65 @@ _H1_UNLOCATED_PATH: Final = "(no file named in message)"
 _H1_CHECK_NUMBER_RE: Final = re.compile(r"^check (\d+):")
 
 
-def _h1_residue_by_file(out: str) -> Mapping[tuple[str, str], int]:
+def _h1_residue_by_file(out: str, corpus: Corpus) -> Mapping[tuple[str, str], int]:
     """(h1)'s own per-(file, check) breakdown, for the W37-11 residue ceiling
     (`Row.residue`) — reads the identical failure lines `_classify_failures` already
     parses, never a second sweep of `out`.
 
-    A failure message shaped `check N: <path>: ...` (`_H1_FAILURE_LOCATION_RE`) names a
-    real file, keyed `(path, f"h1-check{n}")`. A message that still names its check
-    number but no file (a numbering-gap report, a cross-reference summary naming several
-    files at once) is keyed `(_H1_UNLOCATED_PATH, f"h1-check{n}")` instead of being
-    dropped — a class-level ceiling rather than a per-file one, but still governed:
-    `check_residue_ceiling` cannot tell files apart inside it, but a regression that
-    grows the count IS still a fatal `RESIDUE_REGRESSION` once the record names that
-    `cls`. A message with no `check N:` prefix at all (`_classify_failures`'s own
-    `"unclassified"` bucket) has no check number to key on and is not covered by either
-    shape — the same non-coverage it already had. `cls` is tagged `f"h1-check{n}"` rather
-    than the bare check number, so a future (d)-row and an h1 check can never collide on
-    the same key by coincidence.
+    A failure message shaped `check N: <token>: ...` (`_H1_FAILURE_LOCATION_RE`) names a
+    file only if `token` **resolves** — is a member of `tracked_files(corpus.tree)`, the
+    unfiltered tracked-file set of the migrated snapshot (`corpus` only for its `.tree`;
+    never the repo working tree, since the snapshot's filenames deliberately differ from
+    the current checkout, and never `corpus.files`, which is `Corpus`'s own row-(d)/(e)/
+    (g)-scoped set with `_D_EXCLUDED_BASENAME` already applied — see the comment above
+    `known_files` below for why that scope does not answer h1's question). A resolving
+    token is keyed `(token, f"h1-check{n}")`; everything else —
+    a message with no colon-terminated leading token, or one that has the shape but does
+    not resolve to a real file — is keyed `(_H1_UNLOCATED_PATH, f"h1-check{n}")` instead
+    of being dropped, a class-level ceiling rather than a per-file one but still
+    governed: `check_residue_ceiling` cannot tell files apart inside it, but a regression
+    that grows the count IS still a fatal `RESIDUE_REGRESSION` once the record names
+    that `cls`.
 
-    **Coverage, measured against a real `migrate --verify` snapshot, not estimated** (PR
-    #756/#758, team-lead's own ask — the count *by check* of what falls through this
-    per-file shape): at the time this sentinel was added, `check 1: 235, check 2: 1,
-    check 5: 3, check 29: 11, check 36: 435` were entirely unlocated, versus
-    `check 30: 78, check 32: 274, check 35: 79` already per-file. **Checks 1 and 36 —
-    671 of the 685 then-unlocated failures — were the two classes responsible for nearly
-    all of it, and the team lead's ruling on PR #758 was to fix them at the source rather
-    than lean on the sentinel**: `audit-docs.py`'s two `fail()` call sites for checks 1
-    and 36 put descriptive prose *before* the path (`f"check 1: broken link in {f}:
-    ..."`, `f"check 36: legacy (pre-migration) form survives — {hit}"`); both were
-    normalised to `check N: <path>: <prose>` (the convention checks 29-35/32 already
-    used), which needed no test changes beyond this module's own fixtures — no other
-    test in the repo asserted on either message's exact text. With that fix, only checks
-    2, 5, 29 and 31-shaped messages (no natural file subject at all — a cross-reference
-    summary, a numbering-gap report) still rely on the sentinel; every check-numbered
-    failure is governed by *some* ceiling key either way, and none of h1's 1116 measured
-    failures at that snapshot fall through silently.
+    **Resolution over shape, deliberately** (team-lead's ruling on PR #758/#759's
+    follow-up): a shape rule ("looks like a path") is fitted to today's messages and
+    survives only until a future message happens to look path-shaped without being one.
+    Resolution is a rule the next unforeseen message cannot survive: a token either
+    names a file in this run's own corpus or it does not. This is what closed a real
+    defect found while building it — check 36 also has a `` `was: {was}` has no
+    docs/REDIRECTS.csv row `` message (audit-docs.py's `check_redirects`) that a shape
+    rule matched anyway (`` `was `` looked path-shaped: no whitespace, a colon
+    immediately after), attributing residue to that four-character garbage token. It
+    never surfaced in a measured corpus because no REDIRECTS.csv-missing hit had fired
+    yet — corpus-lucky, not structurally sound. Resolution rejects `` `was `` because it
+    is not a file in the corpus, the same reason it would reject anything else that
+    happens to look path-shaped without being one.
+
+    A message with no `check N:` prefix at all (`_classify_failures`'s own
+    `"unclassified"` bucket) has no check number to key on and is not covered by either
+    shape — the same non-coverage it already had. `cls` is tagged `f"h1-check{n}"`
+    rather than the bare check number, so a future (d)-row and an h1 check can never
+    collide on the same key by coincidence.
     """
+    # The unfiltered tracked-file set of the migrated snapshot, not `corpus.files`:
+    # `Corpus.files` already has `_D_EXCLUDED_BASENAME` (`docs/REDIRECTS.csv`) applied,
+    # a row-(d)/(e)/(g) citation-sweep exclusion for a reason that has nothing to do with
+    # h1's own question ("does this token name a real file in the migrated tree?").
+    # Borrowing another row's scanning scope as a stand-in for existence is the same
+    # proxy error the shape rule made — team-lead's ruling, and the third appearance of
+    # this exact REDIRECTS.csv scope mismatch (row (e)'s conjunct 0 vs. check 32's
+    # `_id_scope_documents()` in #752's decomposition; flagged out-of-scope during #756;
+    # now costing real per-file entries here). `tracked_files` re-reads `git ls-files`
+    # once more rather than reusing `corpus.files`, deliberately: it is the property
+    # actually wanted, not a second full `load_corpus` (lines/was_lines/fenced_lines are
+    # not needed here at all).
+    known_files = frozenset(tracked_files(corpus.tree))
     block = _FAILED_BLOCK_RE.search(out)
     tail = out[block.start():] if block else ""
     residue: dict[tuple[str, str], int] = {}
     for msg in _FAILURE_LINE_RE.findall(tail):
         m = _H1_FAILURE_LOCATION_RE.match(msg)
-        if m:
+        if m and m.group(2) in known_files:
             check_no, path = m.group(1), m.group(2)
         else:
             m2 = _H1_CHECK_NUMBER_RE.match(msg)
@@ -2672,7 +2689,14 @@ def _probe_summary(out: str) -> dict[str, int | None]:
     return found
 
 
-def rows_h(snap: Snapshot) -> list[Row]:
+def rows_h(snap: Snapshot, mig: Corpus) -> list[Row]:
+    """`mig` is the migrated snapshot's own `Corpus` (`compute_rows`' own `load_corpus(
+    snap.migrated)`, never re-derived here) — passed on for its `.tree` alone: h1's
+    per-file residue extraction resolves a captured token against
+    `tracked_files(mig.tree)`, the unfiltered tracked-file set, never `mig.files` itself
+    (`Corpus`'s own row-(d)/(e)/(g)-scoped set) and never the repo working tree, since
+    the migrated snapshot's filenames deliberately differ from the current checkout.
+    """
     mig_audit = _run_script(snap.migrated, "audit-docs.py")
     ctl_audit = _run_script(snap.control, "audit-docs.py")
     mig_out = mig_audit.stdout + mig_audit.stderr
@@ -2729,7 +2753,7 @@ def rows_h(snap: Snapshot) -> list[Row]:
             )
             if part
         ),
-        residue=_h1_residue_by_file(mig_out),
+        residue=_h1_residue_by_file(mig_out, mig),
     )
 
     mig_probes = _probe_summary(mig_out)
@@ -3492,7 +3516,7 @@ def compute_rows(
     rows.append(row_e(mig, ctl, snap))
     rows.append(row_f(mig, ctl, baseline, snap, generated_paths))
     rows.append(row_g(docid, snap, mig, ctl))
-    rows.extend(rows_h(snap))
+    rows.extend(rows_h(snap, mig))
     rows.append(row_i(snap))
     return rows
 
