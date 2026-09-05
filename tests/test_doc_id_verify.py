@@ -2153,6 +2153,20 @@ _FAILED_BLOCK = (
 )
 
 
+def _files_corpus(dv: Any, *files: str) -> Any:
+    """A minimal `Corpus` whose only property these tests need is `.files` — the
+    membership set `_h1_residue_by_file` resolves a captured token against. Team-lead's
+    ruling on pin-3: resolution against the snapshot's own corpus, never a path-shape
+    heuristic and never the repo working tree.
+    """
+    return dv.Corpus(
+        tree=pathlib.Path("/nonexistent-corpus"), files=files,
+        lines={f: () for f in files},
+        was_lines={f: frozenset() for f in files},
+        fenced_lines={f: frozenset() for f in files},
+    )
+
+
 def test_classify_failures_reads_only_the_failed_block_by_check_number(dv: Any) -> None:
     """Ruling 105 §B's own methodology (`docs/plans/…row-h-the-named-h-rows.md:139`), ported
     to Python: a note line mentioning `check 29:` before `FAILED (`n`):` must not be counted
@@ -2196,9 +2210,14 @@ def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
     normalised this message at the source (it used to read `check 1: broken link in
     docs/d.md: docs/gone.md`, which did not open with a bare path) rather than widen the
     extractor to hunt for a path anywhere in the message. Every message in this fixture
-    is now per-file; the sentinel's own test below exercises the still-pathless shapes.
+    is now per-file, and every captured token is a real member of the corpus passed in
+    (pin-3: resolution against the snapshot's own corpus, not a path-shape heuristic —
+    see the tests below for the defect that shape rule would have missed).
     """
-    residue = dv._h1_residue_by_file(_FAILED_BLOCK)
+    corpus = _files_corpus(
+        dv, "docs/a.md", "docs/b.md", "docs/audit/register.md", "docs/c.md", "docs/d.md",
+    )
+    residue = dv._h1_residue_by_file(_FAILED_BLOCK, corpus)
     assert dict(residue) == {
         ("docs/a.md", "h1-check32"): 1,
         ("docs/b.md", "h1-check32"): 1,
@@ -2210,7 +2229,7 @@ def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
 
 
 def test_h1_residue_by_file_is_empty_on_a_clean_tree(dv: Any) -> None:
-    assert dict(dv._h1_residue_by_file("All checks passed.\n")) == {}
+    assert dict(dv._h1_residue_by_file("All checks passed.\n", _files_corpus(dv))) == {}
 
 
 def test_h1_residue_by_file_sums_repeats_at_the_same_path_and_check(dv: Any) -> None:
@@ -2219,7 +2238,8 @@ def test_h1_residue_by_file_sums_repeats_at_the_same_path_and_check(dv: Any) -> 
         "  - check 32: docs/a.md: first problem\n"
         "  - check 32: docs/a.md: second problem\n"
     )
-    assert dict(dv._h1_residue_by_file(out)) == {("docs/a.md", "h1-check32"): 2}
+    corpus = _files_corpus(dv, "docs/a.md")
+    assert dict(dv._h1_residue_by_file(out, corpus)) == {("docs/a.md", "h1-check32"): 2}
 
 
 def test_h1_residue_by_file_pins_a_pathless_message_under_the_sentinel(dv: Any) -> None:
@@ -2229,14 +2249,19 @@ def test_h1_residue_by_file_pins_a_pathless_message_under_the_sentinel(dv: Any) 
     file subject (a cross-reference summary, a numbering-gap report) and were not
     normalised by PR #758's source fix (unlike checks 1 and 36) for exactly that reason.
     Two distinct pathless messages for the SAME check sum under one class-level ceiling
-    key; a different check gets its own key, never merged with the first."""
+    key; a different check gets its own key, never merged with the first. The corpus
+    below is non-empty (`docs/a.md` exists) so a passing test can't be explained by "the
+    corpus was empty and everything falls to the sentinel regardless" — see the next
+    test for that positive case made explicit.
+    """
     out = (
         "FAILED (3):\n"
         "  - check 31: gap in the full allocation between 10 and 20\n"
         "  - check 31: gap in the scoped id sequence between 30 and 40\n"
         "  - check 2: NT-9999 referenced but never defined (in docs/a.md)\n"
     )
-    assert dict(dv._h1_residue_by_file(out)) == {
+    corpus = _files_corpus(dv, "docs/a.md")
+    assert dict(dv._h1_residue_by_file(out, corpus)) == {
         (dv._H1_UNLOCATED_PATH, "h1-check31"): 2,
         (dv._H1_UNLOCATED_PATH, "h1-check2"): 1,
     }
@@ -2247,7 +2272,42 @@ def test_h1_residue_by_file_drops_only_the_truly_unclassifiable(dv: Any) -> None
     the one shape this sentinel still cannot cover — `_classify_failures`'s own
     `"unclassified"` bucket, unaffected by this function either before or after."""
     out = "FAILED (1):\n  - docs/a.md: header block is missing the **Sequencing** field\n"
-    assert dict(dv._h1_residue_by_file(out)) == {}
+    assert dict(dv._h1_residue_by_file(out, _files_corpus(dv, "docs/a.md"))) == {}
+
+
+def test_h1_residue_by_file_resolves_a_real_corpus_member_per_file(dv: Any) -> None:
+    """The positive half of pin-3's own proof — required alongside the negative half
+    below so this test cannot pass by rejecting everything (team-lead's own point: a
+    predicate that resolves nothing at all produces a very tidy-looking, entirely wrong
+    zero-garbage result). A token that IS a member of the corpus must key per-file."""
+    out = "FAILED (1):\n  - check 32: docs/a.md: PL-09998 does not resolve\n"
+    corpus = _files_corpus(dv, "docs/a.md", "docs/other.md")
+    assert dict(dv._h1_residue_by_file(out, corpus)) == {("docs/a.md", "h1-check32"): 1}
+
+
+def test_h1_residue_by_file_rejects_the_backtick_was_misattribution_by_resolution(
+    dv: Any,
+) -> None:
+    """The defect found while building pin-3, as its own broken-input proof. Before
+    resolution, `_H1_FAILURE_LOCATION_RE` matched `` `was: NT-0099` has no docs/
+    REDIRECTS.csv row `` (audit-docs.py's check_redirects, check 36) because `` `was ``
+    has no whitespace or colon before the literal `:` that follows it — a real match on
+    a four-character garbage token, never a file. It never surfaced in a measured corpus
+    only because no REDIRECTS.csv-missing hit had fired yet: corpus-lucky, not
+    structurally sound (team-lead's own framing).
+
+    Resolution closes it generically: `` `was `` is asserted to land on the sentinel
+    (`_H1_UNLOCATED_PATH`, `"h1-check36"`), not merely "no longer matches" — the
+    distinction team-lead asked for, since a predicate that rejects everything would
+    also produce this half correctly while being useless (see the positive test above).
+    The corpus here deliberately contains real files with similar-looking names
+    (`docs/was.md`, `was`) that must NOT be mistaken for the garbage token either.
+    """
+    out = "FAILED (1):\n  - check 36: `was: NT-0099` has no docs/REDIRECTS.csv row\n"
+    corpus = _files_corpus(dv, "docs/was.md", "was")
+    assert dict(dv._h1_residue_by_file(out, corpus)) == {
+        (dv._H1_UNLOCATED_PATH, "h1-check36"): 1,
+    }
 
 
 def test_h2_verdict_over_exempt_discloses_but_vacuous_stays_fatal(dv: Any) -> None:

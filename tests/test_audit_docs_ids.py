@@ -910,6 +910,19 @@ def test_legacy_form_disclosure_reason_reads_the_shared_never_allocated_predicat
     assert audit._legacy_form_disclosure_reason(undefined_hit, repo_root=tmp_path) is not None
 
 
+def test_legacy_form_hit_str_matches_its_own_expanded_fields(audit: types.ModuleType) -> None:
+    """Pin-3 (PR #756/#758/#759's own follow-up): `check_redirects`'s check-36 `fail()`
+    call expands `hit.rel`/`hit.lineno`/`hit.label`/`hit.token` in `__str__`'s own exact
+    order (`f"{rel}:{lineno}: {label} {token!r}"`) rather than interpolating `{hit}`, so
+    a static "path-first" check can verify the shape without evaluating `__str__`. That
+    duplicates the format in two places, so this pins them together — if either drifts,
+    this test catches it before the two silently disagree.
+    """
+    hit = audit._LegacyFormHit("docs/a.md", 42, "note id", "NT-0099")
+    expanded = f"{hit.rel}:{hit.lineno}: {hit.label} {hit.token!r}"
+    assert expanded == str(hit)
+
+
 def test_check_36_broken_input_proof_one_undisclosed_form_reds_one_alias_form_discloses(
     audit: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
