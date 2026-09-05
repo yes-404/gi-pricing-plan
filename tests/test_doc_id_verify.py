@@ -2367,6 +2367,68 @@ def test_h1_residue_by_file_never_produces_a_phantom_per_file_key(
     }
 
 
+def test_h1_residue_by_file_resolves_redirects_csv_though_corpus_files_excludes_it(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """pin-4: the regression PR #760's docstring review guarded against, tested directly
+    rather than by prose. `docs/REDIRECTS.csv` is a real, tracked file that `Corpus.files`
+    deliberately excludes (`_D_EXCLUDED_BASENAME`, a row-(d)/(e)/(g)-scoped exclusion
+    unrelated to h1's own question) but `tracked_files` does not — exactly the 90-entry
+    regression a future "simplification" back to `corpus.files` would silently
+    reintroduce, and exactly what the phantom-key assertion above cannot catch (these 90
+    paths are real files, merely excluded, never phantom).
+
+    Asserts the property (REDIRECTS.csv-derived keys are present), not a count — a count
+    would rot as files are added or removed and get deleted by someone in a hurry; the
+    membership is what must survive.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/REDIRECTS.csv": "old_path,new_path,old_id,new_id\n",
+        "docs/a.md": "x\n",
+    })
+    corpus = dv.load_corpus(repo)
+    # The exclusion this test exists to route around, confirmed rather than assumed from
+    # the constant's name: REDIRECTS.csv is a real tracked file, but Corpus.files (the
+    # thing #760's docstring fix says never to resolve against) does not carry it.
+    assert "docs/REDIRECTS.csv" not in corpus.files
+    assert "docs/REDIRECTS.csv" in dv.tracked_files(repo)
+
+    out = "FAILED (1):\n  - check 32: docs/REDIRECTS.csv: some citation problem\n"
+    residue = dv._h1_residue_by_file(out, corpus)
+    assert ("docs/REDIRECTS.csv", "h1-check32") in residue
+
+
+def test_swapping_the_resolution_set_to_corpus_files_reds_the_property_above(
+    dv: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Broken-input proof for the test above, per the standing rule (a check that has
+    never printed a failure has not been tested): if `_h1_residue_by_file`'s resolution
+    set were ever "simplified" from `tracked_files(corpus.tree)` back to `Corpus.files`
+    — the regression #760's docstring fix exists to prevent — `docs/REDIRECTS.csv` would
+    stop resolving and this property would go red. Monkeypatches `tracked_files` (the
+    module-level name `_h1_residue_by_file` calls) to return `corpus.files` instead,
+    confirms the property fails exactly as expected, then pytest restores the original
+    on teardown.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/REDIRECTS.csv": "old_path,new_path,old_id,new_id\n",
+        "docs/a.md": "x\n",
+    })
+    corpus = dv.load_corpus(repo)
+    monkeypatch.setattr(dv, "tracked_files", lambda tree: corpus.files)
+
+    out = "FAILED (1):\n  - check 32: docs/REDIRECTS.csv: some citation problem\n"
+    residue = dv._h1_residue_by_file(out, corpus)
+
+    # The exact assertion the positive test above makes, shown to fail under the
+    # regression — not merely a different assertion that happens to also be true.
+    with pytest.raises(AssertionError):
+        assert ("docs/REDIRECTS.csv", "h1-check32") in residue
+    # And confirm where it went instead, so a reader can see this is the known
+    # class-level fallback rather than some other, unrelated breakage.
+    assert (dv._H1_UNLOCATED_PATH, "h1-check32") in residue
+
+
 def test_h2_verdict_over_exempt_discloses_but_vacuous_stays_fatal(dv: Any) -> None:
     """Ruling 105 D3: the zero-denominator probes (`vacuous`) stay fatal even when
     OVER-EXEMPT also fires; OVER-EXEMPT alone is disclosed, not failed."""
