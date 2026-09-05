@@ -2149,7 +2149,7 @@ _FAILED_BLOCK = (
     "  - check 32: docs/b.md: PL-09999 does not resolve in docs/INDEX.md\n"
     "  - check 29: docs/audit/register.md: bad Decision cell\n"
     "  - check 30: docs/c.md: no front-matter header\n"
-    "  - check 1: broken link in docs/d.md: docs/gone.md\n"
+    "  - check 1: docs/d.md: broken link to docs/gone.md\n"
 )
 
 
@@ -2192,12 +2192,11 @@ def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
     be wired by (file, check), not left a follow-up. `cls` is tagged `h1-check<n>` so an
     (h1) check can never collide with a (d)-row's own key by coincidence.
 
-    `check 1: broken link in docs/d.md: docs/gone.md` does NOT match the per-file shape
-    — its message does not open with a bare path immediately after the check number —
-    but it still names its check number, so it is pinned under `_H1_UNLOCATED_PATH` as a
-    class-level ceiling rather than dropped: a regression inside a pathless class is then
-    still loud, per the team-lead's own disposition (a file-less entry is a class-level
-    ceiling, not a silent gap).
+    `check 1: docs/d.md: broken link to docs/gone.md` — the deputy's ruling on PR #758
+    normalised this message at the source (it used to read `check 1: broken link in
+    docs/d.md: docs/gone.md`, which did not open with a bare path) rather than widen the
+    extractor to hunt for a path anywhere in the message. Every message in this fixture
+    is now per-file; the sentinel's own test below exercises the still-pathless shapes.
     """
     residue = dv._h1_residue_by_file(_FAILED_BLOCK)
     assert dict(residue) == {
@@ -2205,7 +2204,7 @@ def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
         ("docs/b.md", "h1-check32"): 1,
         ("docs/audit/register.md", "h1-check29"): 1,
         ("docs/c.md", "h1-check30"): 1,
-        (dv._H1_UNLOCATED_PATH, "h1-check1"): 1,
+        ("docs/d.md", "h1-check1"): 1,
     }
     assert sum(residue.values()) == 5  # nothing from _FAILED_BLOCK falls through any more
 
@@ -2226,18 +2225,20 @@ def test_h1_residue_by_file_sums_repeats_at_the_same_path_and_check(dv: Any) -> 
 def test_h1_residue_by_file_pins_a_pathless_message_under_the_sentinel(dv: Any) -> None:
     """Coverage, not just staleness-resistance: a message that names its check number
     but no file must be governed too, or a regression inside that class stays silent —
-    the exact gap the team lead's second message named. Two distinct pathless messages
-    for the SAME check sum under one class-level ceiling key; a different check gets its
-    own key, never merged with the first."""
+    the exact gap the team lead's second message named. Checks 2 and 31 have no natural
+    file subject (a cross-reference summary, a numbering-gap report) and were not
+    normalised by PR #758's source fix (unlike checks 1 and 36) for exactly that reason.
+    Two distinct pathless messages for the SAME check sum under one class-level ceiling
+    key; a different check gets its own key, never merged with the first."""
     out = (
         "FAILED (3):\n"
-        "  - check 1: broken link in docs/d.md: docs/gone.md\n"
-        "  - check 1: broken link in docs/e.md: docs/also-gone.md\n"
         "  - check 31: gap in the full allocation between 10 and 20\n"
+        "  - check 31: gap in the scoped id sequence between 30 and 40\n"
+        "  - check 2: NT-9999 referenced but never defined (in docs/a.md)\n"
     )
     assert dict(dv._h1_residue_by_file(out)) == {
-        (dv._H1_UNLOCATED_PATH, "h1-check1"): 2,
-        (dv._H1_UNLOCATED_PATH, "h1-check31"): 1,
+        (dv._H1_UNLOCATED_PATH, "h1-check31"): 2,
+        (dv._H1_UNLOCATED_PATH, "h1-check2"): 1,
     }
 
 
