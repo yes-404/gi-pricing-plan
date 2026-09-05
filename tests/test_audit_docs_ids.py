@@ -810,6 +810,127 @@ def test_check_36_is_gated_on_redirects_csv_and_skips_cleanly_pre_migration(
 
 
 # =========================================================================================
+# Ruling 107 Entry 1 item 1: check 36 reads (d)'s disclosed-class predicates from
+# `_docid`, never a private re-typing — the fence exclusion, the alias/slice-key label
+# set, the never-allocated predicate, and the instrument's own test-module tuple.
+# =========================================================================================
+
+
+def _write_redirects(docs_root: pathlib.Path) -> None:
+    docs_root.mkdir(parents=True, exist_ok=True)
+    (docs_root / "REDIRECTS.csv").write_text(
+        "old_id,new_id,old_path,new_path\n", encoding="utf-8"
+    )
+
+
+def test_check_36_alias_and_slice_key_forms_are_disclosed_not_fatal(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """(d2)/(d3)'s alias classes (Ruling 102 §4, Ruling 105 §A) and (d8)'s slice/task-key
+    class (Ruling 105 §A's third alias class) must not fail check 36 — the same text (d)
+    already discloses, read from the identical `_docid.DISCLOSED_ALIAS_LABELS`.
+    """
+    docs_root = tmp_path / "docs"
+    _write_redirects(docs_root)
+    doc = docs_root / "doc.md"
+    doc.write_text(
+        "F-W9-3 and F27 and W11-3 are all cited in this still-governed prose.\n",
+        encoding="utf-8",
+    )
+    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- see _run_all_ten's comment
+    setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_redirects()
+    assert audit.failures == [], audit.failures
+    assert any("(0 fatal, " in n for n in audit.notes), audit.notes
+
+
+def test_check_36_fence_excludes_a_legacy_form_exhibit(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 103 §5.1's fence clause, extended to row (d)'s corpus: a legacy-form id kept
+    byte-exact inside a fenced illustrative exhibit is not a citation the migration is
+    required to rewrite. The identical `_docid.fenced_line_numbers` row (e) and row (d)
+    already read."""
+    docs_root = tmp_path / "docs"
+    _write_redirects(docs_root)
+    doc = docs_root / "doc.md"
+    doc.write_text("```\nNT-0016\n```\n\nNo other legacy form here.\n", encoding="utf-8")
+    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- see _run_all_ten's comment
+    setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_redirects()
+    assert audit.failures == [], audit.failures
+    assert any("0 legacy-form hit(s)" in n for n in audit.notes), audit.notes
+
+
+def test_sweep_legacy_forms_skips_the_instruments_own_test_modules(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The "3c tuple" (`_docid.TEST_MODULE_EXCLUSIONS`): the instrument's own id-grammar
+    test modules carry legacy-form ids as literal fixture data by construction, the
+    identical reading `_docverify.tracked_files` already gives row (d)'s corpus. A
+    same-named file the exclusion does NOT list stays a positive control.
+    """
+    excluded = tmp_path / "tests" / "test_doc_id_verify.py"
+    excluded.parent.mkdir(parents=True)
+    excluded.write_text("NT-0016 lives here as fixture data.\n", encoding="utf-8")
+    hits = audit._sweep_legacy_form_hits([excluded], repo_root=tmp_path)
+    assert hits == [], hits
+
+    not_excluded = tmp_path / "tests" / "test_something_else.py"
+    not_excluded.write_text("NT-0016 lives here too.\n", encoding="utf-8")
+    hits2 = audit._sweep_legacy_form_hits([not_excluded], repo_root=tmp_path)
+    assert hits2 != [], hits2
+
+
+def test_legacy_form_disclosure_reason_reads_the_shared_never_allocated_predicate(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """(d7)'s closed never-allocated class: a scoped-requirement-id token with zero
+    definitions anywhere `_discover_*` reads and no `docs/REDIRECTS.csv` `old_id` row is
+    disclosed; a token that IS bold-defined in `docs/specs/*.md` is a real `token_map`
+    miss and stays fatal — read from the identical `_docid.is_scoped_id_never_allocated`
+    row (d7) uses (`_docverify._scoped_id_is_never_allocated`).
+    """
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "00-overview.md").write_text("**FR-DEFINED-1** exists.\n", encoding="utf-8")
+    (tmp_path / "docs" / "REDIRECTS.csv").write_text(
+        "old_id,new_id,old_path,new_path\n", encoding="utf-8"
+    )
+
+    label = audit._docid.SCOPED_REQUIREMENT_ID_LABEL
+    defined_hit = audit._LegacyFormHit("x.md", 1, label, "FR-DEFINED-1")
+    undefined_hit = audit._LegacyFormHit("x.md", 1, label, "FR-NEVER-99")
+
+    assert audit._legacy_form_disclosure_reason(defined_hit, repo_root=tmp_path) is None
+    assert audit._legacy_form_disclosure_reason(undefined_hit, repo_root=tmp_path) is not None
+
+
+def test_check_36_broken_input_proof_one_undisclosed_form_reds_one_alias_form_discloses(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 107 Entry 1 item 1's own acceptance line: "broken-input proof both ways —
+    one undisclosed legacy form reds both; one `F-W` alias form is disclosed by both".
+    """
+    docs_root = tmp_path / "docs"
+    _write_redirects(docs_root)
+    doc = docs_root / "doc.md"
+    doc.write_text("NT-9999 is a real dangling citation. F-W9-3 is disclosed.\n", encoding="utf-8")
+    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- see _run_all_ten's comment
+    setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_redirects()
+    assert len(audit.failures) == 1, audit.failures
+    assert "NT-9999" in audit.failures[0], audit.failures
+    assert any("(1 fatal, " in n for n in audit.notes), audit.notes
+
+
+# =========================================================================================
 # Check 37 — shape: required ## sections per family template.
 # =========================================================================================
 

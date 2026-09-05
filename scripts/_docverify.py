@@ -379,34 +379,12 @@ def was_field_line_numbers(text: str) -> frozenset[int]:
     )
 
 
-def fenced_line_numbers(text: str) -> frozenset[int]:
-    """0-based line numbers inside a fenced code block, the fence-marker lines themselves
-    included — Ruling 103 §5.1's fence clause, extended to row (d)'s corpus (2026-09-04,
-    W37-6 exec-ids): a legacy-form id kept byte-exact inside a fenced illustrative exhibit
-    is not a citation the migration is required to rewrite, the identical reading row (e)'s
-    own conjunct 0 already gives a padded id inside a fence (`padded_hits`, this module).
-
-    Reuses `_FENCE_RE` — the same predicate row (e) uses, defined below this function but
-    resolved at call time, not a second implementation of the same rule (Ruling 103 §1.8:
-    "two implementations of one rule that are never compared are two rules").
-
-    A fence-marker line is itself excluded (the toggle fires and the line is added before
-    anything can match against it, mirroring row (e)'s own toggle loop exactly), and every
-    line the toggle leaves "inside" is excluded up to the matching close. An unclosed fence
-    (a malformed document) leaves every remaining line excluded rather than raising — the
-    same "prefer silence over losing evidence" reading `was_field_line_numbers` gives an
-    unclosed front-matter block above.
-    """
-    out: set[int] = set()
-    in_fence = False
-    for i, line in enumerate(text.splitlines()):
-        if _FENCE_RE.match(line):
-            in_fence = not in_fence
-            out.add(i)
-            continue
-        if in_fence:
-            out.add(i)
-    return frozenset(out)
+#: Ruling 107 Entry 1 item 1: the fence predicate moved into `_docid` so `audit-docs.py`
+#: check 36 can read the identical rule row (e)'s `padded_hits` and row (d)'s corpus both
+#: use — re-exported here under this module's existing name for every caller and test
+#: already written against it (Ruling 103 §1.8: "two implementations of one rule that are
+#: never compared are two rules"; this is the fix for that, not a second implementation).
+fenced_line_numbers = _docid.fenced_line_numbers
 
 
 @dataclass(frozen=True)
@@ -751,7 +729,14 @@ D_ALTERNATIVES: Final = _docid.LEGACY_FORM_PATTERNS
 #: Keyed by `_docid.LEGACY_FORM_PATTERNS`' own label, not by pattern text, so a Ruling 67
 #: Part 1 anchoring fix to the pattern can never silently un-key a disclosure. Disclosed,
 #: never silent: the row still prints its figure, denominator and control.
-D_DISCLOSED: Final = frozenset({"finding id (bare form)", "finding id (workstream form)"})
+#:
+#: Ruling 107 Entry 1 item 1: moved into `_docid.FINDING_ID_ALIAS_LABELS` so `audit-docs.py`
+#: check 36 can read the identical two-label set — re-exported here under this module's
+#: existing name. Deliberately the *narrower* of `_docid`'s two disclosed-label constants:
+#: `rows_d` below dispatches row (d8) (`label == _D8_LABEL`) before ever consulting this
+#: set, so `_docid.DISCLOSED_ALIAS_LABELS`' third member (the workstream/slice-id label,
+#: check 36's own concern) would be dead here even if aliased to it.
+D_DISCLOSED: Final = _docid.FINDING_ID_ALIAS_LABELS
 
 #: The five §7(d) alternatives that cite a *path* rather than an id (`_docid.
 #: LEGACY_FORM_PATTERNS`' own `"...path"` suffix) — rows (d9)-(d13). Handled by
@@ -1063,73 +1048,38 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
 # "none — closed class". The citing sentence itself is a correct historical statement
 # about an id that does not exist and stays exactly as written — Ruling 103 §5.1's fence
 # is for an exhibit of a defective FORM, and this is not one.
-_D7_LABEL: Final = "scoped requirement id"
+_D7_LABEL: Final = _docid.SCOPED_REQUIREMENT_ID_LABEL
 
-#: `next free\s*:` — the identical device `scripts/audit-docs.py`'s own `UNALLOCATED`
-#: marker check uses (`re.compile(r"next free\s*:", re.IGNORECASE)`) to tell an
-#: allocation note from a citation. A token on the marker's own line, after the marker,
-#: is not "defined" by that line; every other line naming the token is.
-_NEXT_FREE_MARKER_RE: Final = re.compile(r"next free\s*:", re.IGNORECASE)
-
-#: The other three sources `_discover_*` reads for a requirement or open-question id,
-#: beyond `docs/specs/*.md`'s own bold form (`_scoped_id_bold_defined` below) — read from
-#: the control tree, since a migrated tree's specs are already renumbered flat and carry
-#: no scoped-form definition to find.
-_D7_OTHER_DEFINITION_SOURCES: Final = (
-    "docs/open-questions.md", "docs/roadmap.md", "docs/audit/register.md",
-)
+#: Ruling 107 Entry 1 item 1: the never-allocated predicate's sources and function moved
+#: into `_docid` so `audit-docs.py` check 36 can read the identical rule — the four thin
+#: wrappers below preserve this module's existing `Corpus`-based signatures for every
+#: caller and test already written against them, delegating to `_docid`'s pure,
+#: `repo_root`-based versions (which read a tree directly rather than through a `Corpus`,
+#: since check 36's single-snapshot sweep never builds one).
 
 
 def _scoped_id_bold_defined(token: str, ctl: Corpus) -> bool:
     """True if `token` is bold-defined (`**token**`) anywhere in the control tree's
-    `docs/specs/*.md` — `_discover_requirements`'s own source, read the identical way
-    (a plain substring test; `_LEGACY_SPEC_BOLD_RE` matches nothing this substring test
-    would miss, since every one of its matches contains `**<token>**` literally)."""
-    needle = f"**{token}**"
-    return any(
-        needle in line
-        for rel in ctl.files
-        if rel.startswith("docs/specs/") and rel.endswith(".md")
-        for line in ctl.lines[rel]
-    )
+    `docs/specs/*.md` — `_discover_requirements`'s own source."""
+    return _docid.scoped_id_bold_defined(token, ctl.tree)
 
 
 def _scoped_id_defined_elsewhere(token: str, ctl: Corpus) -> bool:
     """True if `token` has a genuine definition row in `open-questions.md`, `roadmap.md`
     or `docs/audit/register.md` — a `next free:`-marker MENTION on the same line, before
-    the token, is not a definition (the identical reading `audit-docs.py`'s own
-    `UNALLOCATED` check gives it); everything else that names the token counts."""
-    for rel in _D7_OTHER_DEFINITION_SOURCES:
-        for line in ctl.lines.get(rel, ()):
-            at = line.find(token)
-            if at == -1:
-                continue
-            if not _NEXT_FREE_MARKER_RE.search(line[:at]):
-                return True
-    return False
+    the token, is not a definition; everything else that names the token counts."""
+    return _docid.scoped_id_defined_elsewhere(token, ctl.tree)
 
 
 def _scoped_id_has_redirect(token: str, mig: Corpus) -> bool:
-    """True if `token` has an `old_id` row in the migrated tree's `docs/REDIRECTS.csv` —
-    read directly from disk, since `REDIRECTS.csv` is `_D_EXCLUDED_BASENAME` and never
-    part of `Corpus.lines`."""
-    text = read_text(mig.tree / "docs" / "REDIRECTS.csv")
-    if text is None:
-        return False
-    prefix = f"{token},"
-    return any(line.startswith(prefix) for line in text.splitlines())
+    """True if `token` has an `old_id` row in the migrated tree's `docs/REDIRECTS.csv`."""
+    return _docid.scoped_id_has_redirect(token, mig.tree)
 
 
 def _scoped_id_is_never_allocated(token: str, mig: Corpus, ctl: Corpus) -> bool:
-    """The deputy's mechanical predicate, applied to one token. `not any(...)` rather
-    than three separate early-returns so every one of the three checks always runs and
-    a caller can tell, from this function's own body, that no check was short-circuited
-    away — the same shape as the broken-input proof this predicate is required to pass
-    in both directions."""
-    return not (
-        _scoped_id_bold_defined(token, ctl)
-        or _scoped_id_defined_elsewhere(token, ctl)
-        or _scoped_id_has_redirect(token, mig)
+    """The deputy's mechanical predicate, applied to one token."""
+    return _docid.is_scoped_id_never_allocated(
+        token, definition_root=ctl.tree, redirect_root=mig.tree
     )
 
 
