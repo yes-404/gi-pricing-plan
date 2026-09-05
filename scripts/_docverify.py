@@ -2607,18 +2607,22 @@ def _h1_residue_by_file(out: str) -> Mapping[tuple[str, str], int]:
     the same key by coincidence.
 
     **Coverage, measured against a real `migrate --verify` snapshot, not estimated** (PR
-    #756, team-lead's own ask — the count *by check* of what used to fall through before
-    this sentinel existed): `check 1: 235, check 2: 1, check 5: 3, check 29: 11,
-    check 36: 435` were entirely unlocated (now pinned under `_H1_UNLOCATED_PATH`);
-    `check 30: 78, check 32: 274, check 35: 79` were already per-file. Check 36's 435
-    (`f"check 36: legacy (pre-migration) form survives — {hit}"`, the descriptive prose
-    sits before the hit's own `path:lineno:` string) and check 1's 235 (`f"check 1:
-    broken link in {f}: ..."`, the path follows "broken link in " rather than the check
-    number directly) are the two classes responsible for nearly all of the unlocated
-    total. With this sentinel, every check-numbered failure is now governed by *some*
-    ceiling key — per-file where the message names one, per-check where it does not —
-    and none of h1's 1116 measured failures at that snapshot fall through silently any
-    more.
+    #756/#758, team-lead's own ask — the count *by check* of what falls through this
+    per-file shape): at the time this sentinel was added, `check 1: 235, check 2: 1,
+    check 5: 3, check 29: 11, check 36: 435` were entirely unlocated, versus
+    `check 30: 78, check 32: 274, check 35: 79` already per-file. **Checks 1 and 36 —
+    671 of the 685 then-unlocated failures — were the two classes responsible for nearly
+    all of it, and the team lead's ruling on PR #758 was to fix them at the source rather
+    than lean on the sentinel**: `audit-docs.py`'s two `fail()` call sites for checks 1
+    and 36 put descriptive prose *before* the path (`f"check 1: broken link in {f}:
+    ..."`, `f"check 36: legacy (pre-migration) form survives — {hit}"`); both were
+    normalised to `check N: <path>: <prose>` (the convention checks 29-35/32 already
+    used), which needed no test changes beyond this module's own fixtures — no other
+    test in the repo asserted on either message's exact text. With that fix, only checks
+    2, 5, 29 and 31-shaped messages (no natural file subject at all — a cross-reference
+    summary, a numbering-gap report) still rely on the sentinel; every check-numbered
+    failure is governed by *some* ceiling key either way, and none of h1's 1116 measured
+    failures at that snapshot fall through silently.
     """
     block = _FAILED_BLOCK_RE.search(out)
     tail = out[block.start():] if block else ""
