@@ -257,6 +257,163 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     return None
 
 
+# =========================================================================================
+# Ruling 107 Entry 1 item 1: NT-0019 §7 acceptance item (d) (`_docverify.py`'s `rows_d`)
+# and `audit-docs.py` check 36's third clause (`sweep_legacy_forms`) are "one rule at two
+# times" (Ruling 67 §2). (d) already disclosed three classes on `LEGACY_FORM_PATTERNS`
+# residue that a wrong rewrite or a closed historical population still legitimately
+# carries; check 36 read no fence exclusion and no disclosed class at all, so the same
+# text failed one check and passed the other. These four members — the fence exclusion,
+# the alias/slice-key label set, the never-allocated predicate's sources and its function
+# — are the shared constants both consumers now read; neither retypes them.
+# =========================================================================================
+
+#: Ruling 103 §5.1's fence clause, extended to row (d)'s corpus (2026-09-04, W37-6
+#: exec-ids): a legacy-form id kept byte-exact inside a fenced illustrative exhibit is not
+#: a citation the migration is required to rewrite. Moved here from `_docverify.py` so
+#: `audit-docs.py` check 36 can read the identical predicate rather than a private copy;
+#: `_docverify.py` re-exports both names for its own existing callers and tests.
+_FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
+
+
+def fenced_line_numbers(text: str) -> frozenset[int]:
+    """0-based line numbers inside a fenced code block, the fence-marker lines themselves
+    included. A fence-marker line toggles `in_fence` and is itself excluded; every line
+    the toggle leaves "inside" is excluded up to the matching close. An unclosed fence (a
+    malformed document) leaves every remaining line excluded rather than raising.
+    """
+    out: set[int] = set()
+    in_fence = False
+    for i, line in enumerate(text.splitlines()):
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            out.add(i)
+            continue
+        if in_fence:
+            out.add(i)
+    return frozenset(out)
+
+
+#: `LEGACY_FORM_PATTERNS`' two finding-id alternatives, excluded from (d)'s zero
+#: requirement **with their count disclosed**, never silently — Ruling 102 §4 (`F<nn>`)
+#: and Ruling 105 §A (the `F-W<n>-<m>` workstream form, the same alias class with a work
+#: prefix; its target is a register row, not a document with an id yet, resolved by
+#: W37-11's alias resolver rather than this instrument). Keyed by `LEGACY_FORM_PATTERNS`'
+#: own label, not by pattern text, so a future anchoring fix can never silently un-key a
+#: disclosure. `_docverify.D_DISCLOSED` reads this exact set — row (d8)'s own dispatch
+#: (`_docverify.rows_d`) checks `label == _D8_LABEL` before ever consulting it, so the
+#: workstream/slice-id alternative below is never folded into this narrower set.
+FINDING_ID_ALIAS_LABELS: Final[frozenset[str]] = frozenset({
+    "finding id (bare form)",
+    "finding id (workstream form)",
+})
+
+#: `audit-docs.py` check 36's own disclosed-label set — `FINDING_ID_ALIAS_LABELS` plus the
+#: `W<n>[a-z]?-<m>` workstream/slice form (Ruling 105 §A's third alias class; row (d8)),
+#: whose target is a register row or a slice with no `SL-`/task id ever minted for it,
+#: resolved by W37-11's alias resolver rather than this instrument.
+#:
+#: The workstream/slice-id alternative's own pattern (`\bW[0-9]+[a-z]?-[0-9]+\b`) cannot
+#: match a bare, suffix-less work key at all — it requires a trailing `-[0-9]+` to match
+#: anything — so every hit this label produces is already a two-segment slice key or the
+#: first two segments of a three-segment task key, and Ruling 105 §A discloses both. The
+#: mig-vs-ctl "did the migration create a new slice-key value" and "bare work-key
+#: remainder" checks `_docverify._d8_verdict` also runs are a *different* question (row
+#: (d8)'s own regression gate over a migration diff) that a single-snapshot sweep has no
+#: control tree to ask; they do not apply here and are not ported. Check 36 alone reads
+#: this wider set — `_docverify.D_DISCLOSED` deliberately stays the narrower
+#: `FINDING_ID_ALIAS_LABELS`, per the note above.
+DISCLOSED_ALIAS_LABELS: Final[frozenset[str]] = FINDING_ID_ALIAS_LABELS | frozenset({
+    "workstream/slice id",
+})
+
+#: `LEGACY_FORM_PATTERNS`' "scoped requirement id" label — (d7)'s closed never-allocated
+#: class, checked per matched token by `is_scoped_id_never_allocated` below rather than
+#: disclosed by label alone (unlike `DISCLOSED_ALIAS_LABELS`, a real `token_map` miss on
+#: this alternative must still fail).
+SCOPED_REQUIREMENT_ID_LABEL: Final = "scoped requirement id"
+
+#: `next free\s*:` — the identical device `audit-docs.py`'s own `UNALLOCATED` marker check
+#: uses to tell an allocation note from a citation. A token on the marker's own line,
+#: after the marker, is not "defined" by that line; every other line naming the token is.
+_NEXT_FREE_MARKER_RE: Final = re.compile(r"next free\s*:", re.IGNORECASE)
+
+#: The three sources (d7)'s deputy-ruled predicate reads beyond `docs/specs/*.md`'s own
+#: bold form, relative to a repo root.
+_SCOPED_ID_OTHER_DEFINITION_SOURCES: Final = (
+    "docs/open-questions.md", "docs/roadmap.md", "docs/audit/register.md",
+)
+
+
+def _read_text_or_none(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def scoped_id_bold_defined(token: str, definition_root: Path) -> bool:
+    """True if `token` is bold-defined (`**token**`) anywhere in `definition_root`'s
+    `docs/specs/*.md` — `_discover_requirements`'s own source, read the identical way (a
+    plain substring test)."""
+    needle = f"**{token}**"
+    specs_dir = definition_root / "docs" / "specs"
+    if not specs_dir.is_dir():
+        return False
+    for path in sorted(specs_dir.glob("*.md")):
+        text = _read_text_or_none(path)
+        if text is not None and needle in text:
+            return True
+    return False
+
+
+def scoped_id_defined_elsewhere(token: str, definition_root: Path) -> bool:
+    """True if `token` has a genuine definition row in `open-questions.md`, `roadmap.md`
+    or `docs/audit/register.md` under `definition_root` — a `next free:`-marker MENTION on
+    the same line, before the token, is not a definition; everything else that names the
+    token counts."""
+    for rel in _SCOPED_ID_OTHER_DEFINITION_SOURCES:
+        text = _read_text_or_none(definition_root / rel)
+        if text is None:
+            continue
+        for line in text.splitlines():
+            at = line.find(token)
+            if at == -1:
+                continue
+            if not _NEXT_FREE_MARKER_RE.search(line[:at]):
+                return True
+    return False
+
+
+def scoped_id_has_redirect(token: str, redirect_root: Path) -> bool:
+    """True if `token` has an `old_id` row in `redirect_root`'s `docs/REDIRECTS.csv`."""
+    text = _read_text_or_none(redirect_root / "docs" / "REDIRECTS.csv")
+    if text is None:
+        return False
+    prefix = f"{token},"
+    return any(line.startswith(prefix) for line in text.splitlines())
+
+
+def is_scoped_id_never_allocated(
+    token: str, *, definition_root: Path, redirect_root: Path
+) -> bool:
+    """The deputy's mechanical predicate (2026-09-04, W37-6 exec-ids), applied to one
+    token: never-allocated only when ALL of zero bold definitions in
+    `definition_root`'s `docs/specs/*.md`, zero definition row in its
+    `open-questions.md`/`roadmap.md`/`docs/audit/register.md`, and no `old_id` row for it
+    in `redirect_root`'s `docs/REDIRECTS.csv`. `definition_root` and `redirect_root` are
+    separate parameters because `_docverify.py`'s (d7) checks definitions against the
+    *control* (un-migrated) tree and the redirect against the *migrated* tree; a
+    single-snapshot sweep (check 36) passes the same root for both. `not any(...)` rather
+    than three early-returns, so every check always runs.
+    """
+    return not (
+        scoped_id_bold_defined(token, definition_root)
+        or scoped_id_defined_elsewhere(token, definition_root)
+        or scoped_id_has_redirect(token, redirect_root)
+    )
+
+
 # NT-0019 §1.2's "Kind" column, lowercased, keyed by prefix. What never changes on
 # extension (§1.12): a new family adds a row here via an RFC-/RL-, this table is not
 # reopened for any other reason.

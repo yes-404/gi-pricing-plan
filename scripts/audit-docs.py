@@ -2856,6 +2856,80 @@ LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
 
 _WAS_LINE_RE: Final = re.compile(r"^\s*was:\s")
 
+#: Ruling 107 Entry 1 item 1: `_docid.TEST_MODULE_EXCLUSIONS`' three names — the
+#: instrument's own id-grammar/check/migrate test modules, which carry legacy-form ids as
+#: literal fixture data by construction (the "3c tuple" the ruling names). Read alone,
+#: never through `_docid.sweep_exclusion_reason`: that function also folds in
+#: `LOCKFILE_EXCLUSIONS` and `FIXTURE_CORPUS_ROOTS`, and check 36's own
+#: `LEGACY_FORM_EXCLUDED_PATHS` above already carves the seven `tests/fixtures/
+#: docs-migration/` files back in **individually**, by design, to prove each is load
+#: bearing (`test_check_36_w37_5_fixture_exclusions_are_load_bearing`); folding in the
+#: *root*-level `FIXTURE_CORPUS_ROOTS` exclusion here would swallow that whole design —
+#: every file the per-file allowlist means to test would stop reaching the sweep at all.
+_TEST_MODULE_EXCLUDED_PATHS: Final[frozenset[str]] = frozenset(
+    name for name, _reason in _docid.TEST_MODULE_EXCLUSIONS
+)
+
+
+@dataclass(frozen=True)
+class _LegacyFormHit:
+    rel: str
+    lineno: int
+    label: str
+    token: str
+
+    def __str__(self) -> str:
+        return f"{self.rel}:{self.lineno}: {self.label} {self.token!r}"
+
+
+def _sweep_legacy_form_hits(
+    paths: Iterable[pathlib.Path],
+    *,
+    repo_root: pathlib.Path = REPO,
+    excluded_paths: Sequence[str] = LEGACY_FORM_EXCLUDED_PATHS,
+    patterns: Sequence[tuple[str, re.Pattern[str]]] = LEGACY_FORM_PATTERNS,
+) -> list[_LegacyFormHit]:
+    """Every legacy (pre-migration) id or path form found across `paths`, outside a
+    `was:` line, outside a fenced code block, outside `excluded_paths`, and outside the
+    instrument's own test-module fixture data (`_TEST_MODULE_EXCLUDED_PATHS`) — NT-0019
+    §7 acceptance item (d) and check 36's third clause are "one rule at two times"
+    (Ruling 67 §2), so both read the identical `_docid` predicates: the fence
+    (`_docid.fenced_line_numbers`, the same rule row (e)'s `padded_hits` and row (d)'s own
+    corpus apply), the pattern tuple (`_docid.LEGACY_FORM_PATTERNS`), and the test-module
+    exclusion (`_docid.TEST_MODULE_EXCLUSIONS`, row (d)'s `tracked_files` applies via
+    `_docid.sweep_exclusion_reason`). Structured, so a caller can classify each hit
+    against (d)'s disclosed-class predicates before deciding what is fatal — `check_redirects`
+    below does exactly that; `sweep_legacy_forms` renders these to strings for every
+    existing caller and test.
+
+    Explicit parameters, never the module constants read implicitly, so a later slice's
+    migration acceptance can call this unscoped over `git ls-files` for (d), and so a test
+    can prove each exclusion entry is load-bearing by calling this with it removed
+    (Ruling 67 §4 item 1) and prove the positive control by calling this with the shipped
+    constants unmodified (§4 item 2: "never a re-typed copy of the pattern").
+    """
+    excluded = frozenset(excluded_paths)
+    hits: list[_LegacyFormHit] = []
+    for path in paths:
+        try:
+            rel = path.relative_to(repo_root).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        if rel in excluded or rel in _TEST_MODULE_EXCLUDED_PATHS:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        fenced = _docid.fenced_line_numbers(text)
+        for i, line in enumerate(text.splitlines()):
+            if i in fenced or _WAS_LINE_RE.match(line):
+                continue
+            for label, pattern in patterns:
+                for m in pattern.finditer(line):
+                    hits.append(_LegacyFormHit(rel, i + 1, label, m.group(0)))
+    return hits
+
 
 def sweep_legacy_forms(
     paths: Iterable[pathlib.Path],
@@ -2864,35 +2938,29 @@ def sweep_legacy_forms(
     excluded_paths: Sequence[str] = LEGACY_FORM_EXCLUDED_PATHS,
     patterns: Sequence[tuple[str, re.Pattern[str]]] = LEGACY_FORM_PATTERNS,
 ) -> list[str]:
-    """Every legacy (pre-migration) id or path form found across `paths`, outside a
-    `was:` line and outside `excluded_paths` — NT-0019 §7 acceptance item (d) and check
-    36's third clause are "one rule at two times" (Ruling 67 §2), so both read this one
-    function. Explicit parameters, never the module constants read implicitly, so a later
-    slice's migration acceptance can call this unscoped over `git ls-files` for (d), and
-    so a test can prove each exclusion entry is load-bearing by calling this with it
-    removed (Ruling 67 §4 item 1) and prove the positive control by calling this with the
-    shipped constants unmodified (§4 item 2: "never a re-typed copy of the pattern").
+    """`_sweep_legacy_form_hits` above, rendered to `"{rel}:{lineno}: {label} {token!r}"`
+    strings — this module's and every test's existing contract, unchanged."""
+    return [
+        str(hit)
+        for hit in _sweep_legacy_form_hits(
+            paths, repo_root=repo_root, excluded_paths=excluded_paths, patterns=patterns
+        )
+    ]
+
+
+def _legacy_form_disclosure_reason(hit: _LegacyFormHit, *, repo_root: pathlib.Path) -> str | None:
+    """Why `hit` is excluded from check 36's fatal count — or `None` when it is a real
+    `token_map` miss. NT-0019 §7 acceptance item (d) already discloses these classes
+    (`_docverify.rows_d`); check 36 reads the identical `_docid` predicates rather than
+    retyping them, so the same text gets the same verdict from both checks.
     """
-    excluded = frozenset(excluded_paths)
-    hits: list[str] = []
-    for path in paths:
-        try:
-            rel = path.relative_to(repo_root).as_posix()
-        except ValueError:
-            rel = path.as_posix()
-        if rel in excluded:
-            continue
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except (OSError, UnicodeDecodeError):
-            continue
-        for lineno, line in enumerate(lines, 1):
-            if _WAS_LINE_RE.match(line):
-                continue
-            for label, pattern in patterns:
-                for m in pattern.finditer(line):
-                    hits.append(f"{rel}:{lineno}: {label} {m.group(0)!r}")
-    return hits
+    if hit.label in _docid.DISCLOSED_ALIAS_LABELS:
+        return "alias class — Ruling 102 §4 / Ruling 105 §A"
+    if hit.label == _docid.SCOPED_REQUIREMENT_ID_LABEL and _docid.is_scoped_id_never_allocated(
+        hit.token, definition_root=repo_root, redirect_root=repo_root
+    ):
+        return "never-allocated closed class — deputy's mechanical predicate, 2026-09-04"
+    return None
 
 
 def check_redirects() -> None:
@@ -2960,20 +3028,36 @@ def check_redirects() -> None:
         # discovered here by running the sweep rather than predicted. `REDIRECTS.csv`'s
         # existence is the migration's own marker, the same role `docs/INDEX.md` plays
         # for check 32's gate.
-        hits: list[str] = []
+        legacy_hits: list[_LegacyFormHit] = []
         notes.append(
             "check 36: no docs/REDIRECTS.csv yet — the legacy-form sweep is a "
             "post-migration invariant and is skipped until it exists (pre-migration, "
             "every citation in scope is to a currently-correct, not-yet-renumbered id)"
         )
     else:
-        hits = sweep_legacy_forms(_id_scope_documents())
-        for hit in hits:
-            fail(f"check 36: legacy (pre-migration) form survives — {hit}")
+        legacy_hits = _sweep_legacy_form_hits(_id_scope_documents())
 
+    fatal_hits = 0
+    disclosed_by_class: collections.Counter[str] = collections.Counter()
+    for hit in legacy_hits:
+        reason = _legacy_form_disclosure_reason(hit, repo_root=REPO)
+        if reason is None:
+            fatal_hits += 1
+            fail(f"check 36: legacy (pre-migration) form survives — {hit}")
+        else:
+            disclosed_by_class[f"{hit.label} ({reason})"] += 1
+
+    disclosed_total = sum(disclosed_by_class.values())
+    disclosed_text = (
+        "; ".join(f"{n} {cls}" for cls, n in sorted(disclosed_by_class.items()))
+        if disclosed_by_class
+        else "none"
+    )
     notes.append(
         f"check 36: {len(redirect_rows)} redirect row(s), {len(was_values)} `was:` "
-        f"field(s) in scope, {len(hits)} legacy-form hit(s)"
+        f"field(s) in scope, {len(legacy_hits)} legacy-form hit(s) "
+        f"({fatal_hits} fatal, {disclosed_total} disclosed — Ruling 107 Entry 1 item 1, "
+        f"same predicates as NT-0019 §7(d)): {disclosed_text}"
     )
 
 
