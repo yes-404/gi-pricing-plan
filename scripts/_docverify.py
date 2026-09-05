@@ -3132,23 +3132,29 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # residue, not the migration's own regression — two frozen
                          # documents (`docs/plans/PL-00283-...md`,
                          # `docs/research/nt-0019-w37-6-condition-2-and-third-
-                         # measurement-2026-09-04.md`) quote the pre-#755 buggy `wf-`
-                         # filename as evidence of the generator defect's own discovery;
-                         # the token is hyphen-fused (`w5-wf-01`), so `TOKEN_LEFT_BOUND`
-                         # correctly refuses it, and rewriting the quotation would falsify
-                         # the handover it documents. Not (d7)'s self-reference/
-                         # never-allocated class: `wf-01` IS an allocated id, just quoted
-                         # historically rather than cited live. Predicate:
-                         # `'\bwf-0[0-9]\b'` over row (d)'s corpus (this table's own row
-                         # (d4) definition, unchanged by this PR) — measured 2 line(s) /
-                         # 2 file(s) fatal on BOTH `f35cfe5` (this PR's base, `git archive`
-                         # of `origin/main`) and this PR's own HEAD (the pattern and
-                         # corpus are untouched; only the record + `_residue_fully_
-                         # governed` gate changed). Both files' 2 hits are filed in
-                         # `docs/audit/w37-11-record.md` under `cls="d4"` with a ceiling
-                         # of 1 each, so `_docverify.rows_d`'s new governance check
-                         # (`_residue_fully_governed`) now returns DISCLOSE instead of
-                         # FAIL for this row; a fatal count now excluded from the zero
+                         # measurement-2026-09-04.md`) quote, hyphen-fused into an old
+                         # ledger filename, the pre-#755 buggy workflow-id token this
+                         # row's own pattern matches, as evidence of the generator
+                         # defect's own discovery; `TOKEN_LEFT_BOUND` correctly refuses
+                         # the fused form, and rewriting the quotation would falsify the
+                         # handover it documents. NOT written out literally in this
+                         # comment on purpose — spelling the exact token here, in a
+                         # tracked `.py` file this row's own predicate also scans, would
+                         # manufacture a third fatal hit against this very row (caught by
+                         # re-measuring this PR's own HEAD before landing it: an earlier
+                         # draft of this comment did exactly that, migrated 2 -> 3). Not
+                         # (d7)'s self-reference/never-allocated class: the token IS an
+                         # allocated id, just quoted historically rather than cited live.
+                         # Predicate: `'\bwf-0[0-9]\b'` over row (d)'s corpus (this
+                         # table's own row (d4) definition, unchanged by this PR) —
+                         # measured 2 line(s) / 2 file(s) fatal on BOTH `f35cfe5` (this
+                         # PR's base, `git archive` of `origin/main`) and this PR's own
+                         # HEAD (the pattern and corpus are untouched; only the record +
+                         # `_residue_fully_governed` gate changed). Both files' 2 hits are
+                         # filed in `docs/audit/w37-11-record.md` under `cls="d4"` with a
+                         # ceiling of 1 each, so `_docverify.rows_d`'s new governance
+                         # check (`_residue_fully_governed`) now returns DISCLOSE instead
+                         # of FAIL for this row; a fatal count now excluded from the zero
                          # requirement, owner W37-6.
     "d5": PASS,         # Ruling [0-9]+ — FIXED (2026-09-04, W37-6 #748): `_RULING_HEADING_RE`
                          # accepted only `^##`, so the H1-only ruling files (Rulings 59/60/61)
