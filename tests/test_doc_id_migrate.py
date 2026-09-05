@@ -1045,6 +1045,100 @@ def test_forward_citation_check_does_not_launder_an_unrelated_hand_edit(
     assert any(rel in v for v in classification.violations), classification.violations
 
 
+def test_forward_citation_check_leaves_a_bare_finding_id_unrewritten(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A bare `F<n>` citation is `migrate`'s own deliberate exclusion from the citation-
+    rewrite sweep (the maintainer's ruling, 2026-09-03, W37-6: "The essays get ids and
+    paths now; `F<n>` stays a resolver alias to W37-11" — `d.prefix != "FD"` gates every
+    entry into `id_claims`/`token_map`), even though `REDIRECTS.csv` still carries the
+    pair for W37-11's resolver (`assigned`/`redirect_rows` record it unconditionally).
+    Live shape: `.github/workflows/history-policy.yml` cites `F49` in prose; the real
+    migration leaves it exactly as `F49`, never `FD-1106`.
+
+    The forward-citation check must not treat this `REDIRECTS.csv` row as a valid
+    citation-rewrite pair — naively forward-substituting `F49` -> `FD-1106` would turn a
+    correct, ruled non-rewrite into a manufactured mismatch. Combined here with the
+    many-to-one path merge (`test_a_contested_inverse_key_is_resolved_forward_not_
+    misresolved_backward`'s own shape) so DP-7's inverse fails first and this proof
+    actually reaches the forward-citation check, rather than passing on DP-7 alone.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    old_root.mkdir(parents=True)
+    new_root.mkdir(parents=True)
+    old_text = (
+        "See F49 for the finding, filed against `audit/register.md`.\n"
+    )
+    (old_root / "NOTES.md").write_text(old_text, encoding="utf-8")
+    (new_root / "NOTES.md").write_text(
+        "See F49 for the finding, filed against `findings/register.md`.\n",
+        encoding="utf-8",
+    )
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(
+        "old_id,new_id,old_path,new_path,citing_dir\n"
+        "F49,FD-1106,,,\n"
+        "audit/register.md,findings/register.md,,,\n"
+        "audit/phases/1b/register.md,findings/register.md,,,\n",
+        encoding="utf-8",
+    )
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = "NOTES.md"
+    assert rel in classification.per_class["2-reference-token"], classification.summary()
+    assert rel not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+    assert rel in classification.forward_confirmed
+
+
+def test_forward_citation_check_does_not_rewrite_a_bare_finding_id_that_should_stay_bare(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Negative broken-input proof for the fix above: a file that WRONGLY shows
+    `FD-1106` in citation prose where `F49` should have stayed bare (a real forward-
+    migration bug, not this fixture's premise), *plus* an unrelated hand-typed sentence
+    to force DP-7's own inverse to fail first (DP-7 alone already inverts a plain,
+    uncontested `FD-1106` -> `F49` substitution correctly — this proof needs to reach the
+    forward-citation check itself, not stop at DP-7). The FD-shaped `new_id` is excluded
+    from `forward_id_map` entirely, so this file must stay `classified-by-none` rather
+    than have the forward check paper over the bad rewrite by chance.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    old_root.mkdir(parents=True)
+    new_root.mkdir(parents=True)
+    (old_root / "NOTES.md").write_text("See F49 for the finding.\n", encoding="utf-8")
+    (new_root / "NOTES.md").write_text(
+        "See FD-1106 for the finding.\n\nA hand-typed sentence no generator wrote.\n",
+        encoding="utf-8",
+    )
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(
+        "old_id,new_id,old_path,new_path,citing_dir\nF49,FD-1106,,,\n", encoding="utf-8"
+    )
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = "NOTES.md"
+    assert rel in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel not in classification.forward_confirmed
+
+
 # ---------------------------------------------------------------------------------------
 # Spot checks on individual §4 steps — narrower than the whole-corpus properties above,
 # so a future regression in one step is diagnosed without re-reading a tree diff.
