@@ -3069,7 +3069,12 @@ def check_redirects() -> None:
         reason = _legacy_form_disclosure_reason(hit, repo_root=REPO)
         if reason is None:
             fatal_hits += 1
-            fail(f"check 36: legacy (pre-migration) form survives — {hit}")
+            # `check N: <path>: <prose>` — the shape every other check's fail() message
+            # already uses (`_docverify._h1_residue_by_file`'s own per-file extraction
+            # depends on it; team-lead's ruling on PR #758: normalise the source rather
+            # than special-case the extractor). `hit`'s own __str__ is `f"{rel}:{lineno}:
+            # {label} {token!r}"`, so `{hit}` already opens with the path.
+            fail(f"check 36: {hit} (legacy pre-migration form survives)")
         else:
             disclosed_by_class[f"{hit.label} ({reason})"] += 1
 
@@ -3388,7 +3393,10 @@ def main() -> int:
             if target.startswith(("http://", "https://", "mailto:")):
                 continue
             if not (f.parent / target).resolve().exists():
-                fail(f"check 1: broken link in {f.relative_to(ROOT)}: {target}")
+                # `check N: <path>: <prose>` — see check 36's identical fix above; PR
+                # #758's `_docverify._h1_residue_by_file` extraction needs the path
+                # immediately after the check number, not after descriptive prose.
+                fail(f"check 1: {f.relative_to(ROOT)}: broken link to {target}")
 
     # 2/3. requirement ids
     defined: dict[str, list[str]] = collections.defaultdict(list)
