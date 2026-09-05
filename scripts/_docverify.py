@@ -2475,7 +2475,18 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "d3": DISCLOSE,     # \bF[0-9]{2}\b — excluded from the zero requirement (§8.5)
     "d4": FAIL,         # wf-0[0-9] — improved (262 < control 272), not the migration's own
                          # regression any more; still non-zero (2026-09-03, task 23)
-    "d5": FAIL,         # Ruling [0-9]+ — REGRESSED (2026-09-04, W37-6 row (b) fresh
+    "d5": PASS,         # Ruling [0-9]+ — FIXED (2026-09-04, W37-6 #748): `_RULING_HEADING_RE`
+                         # accepted only `^##`, so the H1-only ruling files (Rulings 59/60/61)
+                         # were never discovered and so never rewritten. Widened to `^#{1,2}`
+                         # (`scripts/doc-id.py`), covered by
+                         # `tests/test_d5_h1_ruling_heading.py`. Measured locally on this
+                         # branch at 2026-09-04 by `python3 scripts/doc-id.py migrate
+                         # --verify`, which printed `[PASS] (d5) §7(d) alternative 'ruling
+                         # reference' ('\bRuling \d+\b') returns nothing` and, against the
+                         # then-recorded FAIL, `PROGRESS (newly passing): (d5) FAIL -> PASS`.
+                         # SUPERSEDES the reading below, which is kept because it records
+                         # what was believed and why the population looked near-zero before:
+                         # Ruling [0-9]+ — REGRESSED (2026-09-04, W37-6 row (b) fresh
                          # executor): migrated 75 (was near-zero). Not this PR's own new
                          # defect but an existing one this PR's row (b) fix un-masked: the
                          # same `_compound_token_re` boundary bug fixed for row (b) (see

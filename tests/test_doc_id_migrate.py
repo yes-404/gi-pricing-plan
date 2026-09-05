@@ -20,6 +20,7 @@ import collections
 import csv
 import hashlib
 import importlib.util
+import inspect
 import json
 import pathlib
 import posixpath
@@ -29,7 +30,7 @@ import sys
 import types
 from collections.abc import Sequence
 from datetime import date
-from typing import Any
+from typing import Any, Final
 
 import pytest
 
@@ -2403,44 +2404,130 @@ _RULING_87_STANDALONE_SOURCES = (
 )
 
 
-def test_ruling_87_standalone_files_are_untouched_by_this_amendment(
+#: Every `_discover_*` in `doc-id.py` that is NOT part of the document-discovery union
+#: below, each with the reason it is out. Named rather than filtered silently: the union
+#: is built by introspection precisely so a discovery function added later is picked up
+#: without editing this test, and a filter that quietly dropped one would defeat that.
+#: `test_ruling_87_is_enforced_over_the_whole_discovery_union` asserts this set is exactly
+#: what introspection skipped, so a new `_discover_*` reds here until it is classified.
+_NON_DOCUMENT_DISCOVERY: Final = {
+    "_discover_headed_split_file": "a shared helper; needs rel_path/heading_re/prefix/owner",
+    "_discover_roadmap": "returns a tuple; roadmap work-id rows, never a docs/plans file",
+    "_discover_reference_moves": "returns list[_ReferenceMove], not documents",
+    "_discover_vendored_skill_manifests": "returns _VendoredManifestScan",
+    "_discover_reference_stamp_targets": "returns Reference stamps plus a census",
+}
+
+
+def _document_discovery_union(
+    doc_id_cli: types.ModuleType,
+) -> tuple[dict[str, list[Any]], set[str]]:
+    """Every `_discover_*` that takes `root` alone and yields `_Draft`s, called on the
+    real tree, plus the names introspection skipped.
+
+    Ruling 87 §3 item 1 leaves *which* discovery function claims the three standalone
+    ruling files to the executor, so a test naming one would encode a decision the ruling
+    declined to make. The union is the predicate the ruling actually supports.
+    """
+    called: dict[str, list[Any]] = {}
+    skipped: set[str] = set()
+    for name in sorted(dir(doc_id_cli)):
+        if not name.startswith("_discover_"):
+            continue
+        fn = getattr(doc_id_cli, name)
+        if not callable(fn):
+            continue
+        required = [
+            p
+            for p in inspect.signature(fn).parameters.values()
+            if p.default is inspect.Parameter.empty
+            and p.kind
+            in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)
+        ]
+        if len(required) != 1:
+            skipped.add(name)
+            continue
+        out = fn(ROOT)
+        if not isinstance(out, list) or not all(
+            isinstance(d, doc_id_cli._Draft) for d in out
+        ):
+            skipped.add(name)
+            continue
+        called[name] = out
+    return called, skipped
+
+
+def test_ruling_87_is_enforced_over_the_whole_discovery_union(
     doc_id_cli: types.ModuleType,
 ) -> None:
     """Ruling 95 §4 item 3's re-derived instrument (see the module comment above this
-    constant). `owner="planner"` asserted below is *known wrong* for these three --
-    Ruling 87 §3 item 2 ruled `decision-maker` for them, and Ruling 86 item 2's second
-    clause (still standing after Ruling 95, untouched by this PR) is exactly this
-    hardcode. Asserting it here pins today's behaviour so a future change to it is a
-    deliberate act of implementing Ruling 87, not an incidental side effect discovered
-    after the fact -- this test documents the hardcode, it does not bless it.
+    constant), now asserting Ruling 87 §3 rather than the pre-widening placeholder.
 
-    Only `_discover_multi_ruling_files` is checked as "no other discovery function
-    claims these": every other `_discover_*` in this module reads a different real
-    location entirely (`docs/adr/`, `docs/findings/register.md`, `docs/roadmap.md`,
-    `docs/specs/*.md`, `.claude/skills/`, ...), never `docs/plans/*.md` ruling-shaped
-    content, so `_discover_multi_ruling_files` -- the one other function this module
-    ever routes a ruling-shaped file through -- is the one collision this amendment
-    could plausibly have introduced.
+    Read clause by clause at `origin/main`, Ruling 87 §3 says: item 1 makes "not `PL`"
+    **mandatory** and leaves *which* discovery function claims these three to the
+    executor; item 2 **mandates** `owner="decision-maker"`; item 3 forbids naming the
+    three files in the predicate. So `prefix == "RL"` and `owner == "decision-maker"` are
+    both asserted, and both are asserted over the *union* of document discovery rather
+    than over any one function -- naming `_discover_multi_ruling_files` here would encode
+    the choice item 1 deliberately left open, and would red a future tree that claims
+    these files through some other function, which item 1 permits. Naming the three files
+    as a test exhibit is not the same as putting them in the predicate.
 
-    Deliberately not `_ruling_file_owner`: post-Ruling-95 that function is
-    content-independent, so pointing it at these three files' real text would return
-    "decision-maker" for any input whatsoever, discriminating nothing -- a test that
-    cannot fail is worse than no test, since it would read as coverage this PR does not
-    have. It would also test a function Ruling 87 item 1 never committed to using for
-    this set: which discovery function eventually claims these files is still open.
+    **This test is row (d5)'s guard, and that is why the mandate reading matters.** Row
+    (d5)'s predicate is "no surviving `\\bRuling \\d+\\b`", and the citations that survive
+    are of Rulings 59/60/61 -- exactly these files. They can only be rewritten if
+    something claims them and gives them an `RL-` id. Had item 2 merely *permitted* the
+    claim, nothing would stop a later change returning these three to plain-plan status,
+    and row (d5) would regress to FAIL silently with no check firing. Mandate is what
+    makes that regression detectable here.
+
+    **What this asserts is routing, not derivation.** Post-Ruling-95 `_ruling_file_owner`
+    is content-independent -- it returns `decision-maker` for any input whatsoever -- so
+    `owner == "decision-maker"` below shows these files now reach the code path that
+    stamps that value, and does **not** show the value was derived from their content.
+    The predecessor of this test declined to call `_ruling_file_owner` for exactly that
+    reason and that reasoning still stands; the assertion must not be read as stronger
+    than it is.
+
+    The negative control is `tests/test_d5_h1_ruling_heading.py`: reverting
+    `_RULING_HEADING_RE` from `^#{1,2}` to `^##` reds this test and two of that file's
+    three.
     """
-    drafts = doc_id_cli._discover_plain_plans(ROOT)
-    by_was = {d.was: d for d in drafts}
-    for source in _RULING_87_STANDALONE_SOURCES:
-        assert source in by_was, f"fixture assumption: {source} still exists as a plain plan"
-        assert by_was[source].owner == "planner", by_was[source]
-
-    multi_ruling_was = {d.was for d in doc_id_cli._discover_multi_ruling_files(ROOT)}
-    assert not multi_ruling_was & set(_RULING_87_STANDALONE_SOURCES), (
-        "these three are h1-titled ruling records (Ruling 87 §1) _RULING_HEADING_RE does "
-        "not match today; if this now fires, Ruling 86/87's heading-widening has landed "
-        "and this test needs updating to Ruling 87's terms, not silencing"
+    called, skipped = _document_discovery_union(doc_id_cli)
+    assert skipped == set(_NON_DOCUMENT_DISCOVERY), (
+        "the document-discovery union changed: classify each new/removed `_discover_*` in "
+        f"`_NON_DOCUMENT_DISCOVERY`. skipped={sorted(skipped)} "
+        f"classified={sorted(_NON_DOCUMENT_DISCOVERY)}"
     )
+
+    claims: dict[str, list[tuple[str, Any]]] = {s: [] for s in _RULING_87_STANDALONE_SOURCES}
+    for fn_name, drafts in called.items():
+        for d in drafts:
+            if d.was in claims:
+                claims[d.was].append((fn_name, d))
+
+    for source in _RULING_87_STANDALONE_SOURCES:
+        got = claims[source]
+        assert len(got) == 1, (
+            f"Ruling 87 §3 item 1: {source} must be claimed by exactly one discovery "
+            f"function; got {[n for n, _ in got]}"
+        )
+        fn_name, draft = got[0]
+        assert draft.prefix == "RL", (
+            f"Ruling 87 §3 item 1 (mandatory 'not PL'): {source} claimed by {fn_name} "
+            f"with prefix {draft.prefix!r}"
+        )
+        assert draft.owner == "decision-maker", (
+            f"Ruling 87 §3 item 2 (mandated owner): {source} claimed by {fn_name} "
+            f"with owner {draft.owner!r}"
+        )
+
+    plain = {d.was for d in doc_id_cli._discover_plain_plans(ROOT)}
+    assert not plain & set(_RULING_87_STANDALONE_SOURCES), (
+        "Ruling 87 §3 item 1 makes 'not PL' mandatory, so none of the three may still be "
+        f"discovered as a plain plan: {sorted(plain & set(_RULING_87_STANDALONE_SOURCES))}"
+    )
+
 
 
 # ---------------------------------------------------------------------------------------
