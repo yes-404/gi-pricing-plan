@@ -2227,6 +2227,36 @@ def _this_runs_stamp_id(
     return None
 
 
+def stripped_stamp_pair(
+    old_body: str,
+    new_text: str,
+    *,
+    allocated_ids: Collection[str] = frozenset(),
+    old_rel: str | None = None,
+    new_rel: str | None = None,
+    reference_stamp_paths: Collection[str] = frozenset(),
+) -> tuple[str, str]:
+    """`(old_body, new_text)`, each with its own leading front-matter block removed only
+    when `_this_runs_stamp_id` confirms it is a stamp *this run's own migration* wrote
+    (Ruling 105 §2) — extracted from `frozen_file_matches_after_migration_stamp` so a
+    second predicate needing the identical stripped pair (`doc-id.py`'s row (g) g2
+    forward-citation check, below) shares this one determination of which side's block is
+    safe to strip, rather than reimplementing it a second time (Ruling 68 §3: "one
+    definition ... implementing it twice is how the two drift apart").
+    """
+
+    def _strip(text: str, rel: str | None) -> str:
+        if _this_runs_stamp_id(
+            text, allocated_ids, rel=rel, reference_stamp_paths=reference_stamp_paths
+        ) is None:
+            return text
+        lines = text.splitlines()
+        closing = lines.index("---", 1)  # present: _this_runs_stamp_id already found it
+        return "\n".join(lines[closing + 1 :])
+
+    return _strip(old_body, old_rel), _strip(new_text, new_rel)
+
+
 def frozen_file_matches_after_migration_stamp(
     old_body: str,
     new_text: str,
@@ -2298,17 +2328,10 @@ def frozen_file_matches_after_migration_stamp(
     still inverts.
     """
 
-    def _strip_this_runs_stamp(text: str, rel: str | None) -> str:
-        if _this_runs_stamp_id(
-            text, allocated_ids, rel=rel, reference_stamp_paths=reference_stamp_paths
-        ) is None:
-            return text
-        lines = text.splitlines()
-        closing = lines.index("---", 1)  # present: _this_runs_stamp_id already found it
-        return "\n".join(lines[closing + 1 :])
-
-    stripped = _strip_this_runs_stamp(new_text, new_rel)
-    old_stripped = _strip_this_runs_stamp(old_body, old_rel)
+    old_stripped, stripped = stripped_stamp_pair(
+        old_body, new_text, allocated_ids=allocated_ids, old_rel=old_rel, new_rel=new_rel,
+        reference_stamp_paths=reference_stamp_paths,
+    )
     if not redirects_inverse:
         return stripped.strip("\n") == old_stripped.strip("\n")
     pattern = _inverse_token_pattern(tuple(sorted(redirects_inverse, key=len, reverse=True)))

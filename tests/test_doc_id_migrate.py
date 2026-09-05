@@ -932,7 +932,7 @@ def test_path_citation_redirect_rows_covers_every_real_form_and_skips_the_no_op(
         )
 
 
-def test_a_contested_inverse_key_is_dropped_not_misresolved(
+def test_a_contested_inverse_key_is_resolved_forward_not_misresolved_backward(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """Live regression, found building item 4 against the real corpus: two different
@@ -941,10 +941,18 @@ def test_a_contested_inverse_key_is_dropped_not_misresolved(
     string (`findings/register.md`) from two *different* old strings. A flat `{new: old}`
     dict comprehension silently keeps whichever row iterates last -- exactly the
     `dict.update` failure `TokenMapCollisionError`'s own docstring names for the forward
-    direction, recurring in the inverse. There is no per-citation evidence to say which
-    old form a given occurrence actually was, so the contested key must be dropped, not
-    guessed: the citing file is correctly reported `classified-by-none`, never silently
-    inverted to the wrong source.
+    direction, recurring in the inverse. `redirects_inverse` correctly drops the
+    contested key rather than guess -- DP-7's inverse, working *backward* from the shared
+    `findings/register.md` string alone, genuinely cannot say which of the two old forms
+    a given occurrence was.
+
+    **Corrected, W37-6 2026-09-05 (g2's classifier catching up with this):** the
+    *forward* direction is never ambiguous — this citing file's own old text literally
+    reads `audit/register.md`, not the phase-1b path, so `forward_id_map` (built from the
+    same rows, grouped by the always-unique `old_id`) has exactly one answer for it. The
+    file is now classified via the forward-citation check rather than left as residue —
+    the earlier test named this file `classified-by-none`, which was correct only because
+    nothing yet tried the direction that actually has the evidence.
     """
     old_root = tmp_path / "old"
     new_root = tmp_path / "new"
@@ -979,12 +987,62 @@ def test_a_contested_inverse_key_is_dropped_not_misresolved(
 
     classification = doc_id_cli.classify_migration_diff(old_root, new_root)
 
-    assert "docs/rulings/RL-00900-a-ruling.md" in classification.per_class[
-        doc_id_cli.CLASSIFIED_BY_NONE
-    ], (
-        "a contested inverse key must not silently resolve — the file must be reported, "
-        "not classified as an inverting move"
+    rel = "docs/rulings/RL-00900-a-ruling.md"
+    assert rel in classification.per_class["2-reference-token"], classification.summary()
+    assert rel not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+    assert rel in classification.forward_confirmed, (
+        "DP-7's inverse alone cannot resolve this (findings/register.md is genuinely "
+        "contested) — only the forward-citation check, reading this file's own "
+        "unambiguous old citation, can"
     )
+
+
+def test_forward_citation_check_does_not_launder_an_unrelated_hand_edit(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Negative broken-input proof for the fix above: the identical many-to-one merge,
+    plus one hand-typed sentence the migration never wrote. The forward-citation check
+    must not launder it — a file with content beyond the citation rewrite must still be
+    named `classified-by-none`, exactly as any other genuine hand-edit already is for
+    class 1/2/3's own DP-7 check (`test_ruling_105_dp7_foreign_front_matter_hand_edit_is_
+    still_classified_by_none`'s identical shape, applied to this new check).
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    (old_root / "docs" / "rulings").mkdir(parents=True)
+    (new_root / "docs" / "rulings").mkdir(parents=True)
+    old_text = "Body citing `../audit/register.md` for the finding.\n"
+    (old_root / "docs" / "rulings" / "RL-00900-a-ruling.md").write_text(
+        old_text, encoding="utf-8"
+    )
+    (new_root / "docs" / "rulings" / "RL-00900-a-ruling.md").write_text(
+        "Body citing `../findings/register.md` for the finding.\n\n"
+        "A hand-typed sentence no generator wrote.\n",
+        encoding="utf-8",
+    )
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=old_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=old_root)
+    _run_git(["config", "user.name", "Test"], cwd=old_root)
+    _run_git(["add", "-A"], cwd=old_root)
+    _run_git(["commit", "-m", "seed", "--quiet"], cwd=old_root)
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(
+        "old_id,new_id,old_path,new_path,citing_dir\n"
+        "audit/register.md,findings/register.md,,,\n"
+        "audit/phases/1b/register.md,findings/register.md,,,\n",
+        encoding="utf-8",
+    )
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel = "docs/rulings/RL-00900-a-ruling.md"
+    assert rel in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel not in classification.per_class["2-reference-token"]
+    assert rel not in classification.forward_confirmed
+    assert any(rel in v for v in classification.violations), classification.violations
 
 
 # ---------------------------------------------------------------------------------------
