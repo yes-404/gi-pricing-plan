@@ -1827,3 +1827,30 @@ def test_check_34_migration_stamp_allowance_still_inverts_an_adjectival_suffix(
     assert audit.frozen_file_matches_after_migration_stamp(
         old_body, new_text, redirects_inverse={"OQ-500": "OQ-GOV-7"}, allocated_ids={"RL-9"}
     )
+
+
+def test_id_scope_documents_excludes_the_w37_11_residue_ceiling_record(
+    audit: types.ModuleType,
+) -> None:
+    """Team-lead condition 4 on PR #756: `_id_scope_documents()` is checks 30/32/33/35/36's
+    shared corpus (`check_citations`'s `for path in _id_scope_documents()` and
+    `sweep_legacy_forms`'s `_sweep_legacy_form_hits(_id_scope_documents())` both read it),
+    so excluding the governed W37-11 record here in one place covers both checks the
+    deputy named.
+
+    Run under the **widened** (post-migration-shaped) roots, not the default ones: today,
+    pre-migration, `_id_scope_roots()` returns only `_templates/` and `document-ids.md`
+    (D14/Ruling 102 §3's own narrow pre-migration scope), which never reaches
+    `docs/audit/` at all regardless of this exclusion — a test against the default roots
+    would pass whether or not the fix exists (NT-0007's vacuity). `_widened_roots` is the
+    same simulation `test_widening_the_scope_roots_reaches_every_non_markdown_file...`
+    above already uses for exactly this reason.
+    """
+    record_path = audit.REPO / audit._docid.W37_11_RECORD_PATH
+    assert record_path.is_file(), "the W37-11 record itself is missing from the repo"
+    setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
+    rels = {p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()}
+    assert audit._docid.W37_11_RECORD_PATH not in rels
+    # Positive control: the widened scope really does reach `docs/audit/` — otherwise
+    # the assertion above would be vacuous a second way.
+    assert any(r.startswith("docs/audit/") for r in rels)
