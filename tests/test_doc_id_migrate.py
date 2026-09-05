@@ -1193,6 +1193,196 @@ def test_rewrite_wrapped_path_citations_leaves_an_unrelated_wrap_alone(
     ), "a wrap that does not spell the real token, even by one character, must not match"
 
 
+def test_rewrite_wrapped_path_citations_reaches_a_wrap_even_when_the_same_token_is_also_contiguous(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """2026-09-05, rows (d9)-(d12): a file may cite the same moved path both contiguous
+    (four times, say) and wrapped (once). The removed `if old_tok in text: continue`
+    shortcut treated any contiguous sighting as proof every occurrence was contiguous and
+    skipped the wrap-tolerant pattern for the whole file — found live against
+    `docs/plans/2026-08-29-nt-0010-0011-adoption.md`, which cites
+    `...reconciliation-rulings.md` unwrapped four times and wrapped once; the fifth
+    citation survived every `migrate` run until this fix.
+    """
+    old_tok = "docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md"
+    new_tok = "docs/plans/PL-00133-example.md"
+    text = (
+        "first, contiguous: `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`.\n"
+        "second, wrapped: `docs/plans/2026-08-29-nt-0010-0011-reconciliation-\n"
+        "rulings.md:417`.\n"
+    )
+    patterns = doc_id_cli._wrapped_path_patterns([(old_tok, new_tok)])
+    after = doc_id_cli._rewrite_wrapped_path_citations(text, patterns, [])
+    assert old_tok not in after, f"the wrapped occurrence must not survive: {after!r}"
+    assert after.count("\n") == text.count("\n"), "line count must be preserved"
+
+
+def test_wrapped_path_pattern_does_not_match_as_a_bare_prefix(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """2026-09-05: `_wrapped_path_patterns`'s regex must refuse a match with no boundary
+    after it, exactly like `_whole_token_re` does for the ordinary sweep — found live
+    against `docs/_templates/ADR.md`, whose own prose correctly reads "the migration
+    renames `docs/adr/` to `docs/adrs/`": unanchored, the `docs/adr/` -> `docs/adrs/`
+    directory-move token (`docs/adr/` is a literal prefix of `docs/adrs/`) matched
+    *inside* an unrelated, already-correct `docs/adrs/ADR-00002-....md` citation too.
+    """
+    old_tok, new_tok = "docs/adr/", "docs/adrs/"
+    patterns = doc_id_cli._wrapped_path_patterns([(old_tok, new_tok)])
+    correct = "see `docs/adrs/ADR-00002-example.md` for the record.\n"
+    assert doc_id_cli._rewrite_wrapped_path_citations(correct, patterns, []) == correct, (
+        "docs/adr/ must not match as a bare prefix of the unrelated docs/adrs/ citation"
+    )
+    # A bare directory mention immediately closed by a backtick (`` `docs/adr/` ``) has
+    # no `\b` transition between the trailing `/` and the backtick -- both are \W -- so
+    # the ordinary sweep's own `_compound_token_re` never touches this shape either
+    # (found live: `docs/_templates/ADR.md`'s own "the migration renames `docs/adr/` to
+    # `docs/adrs/`" survives every real `migrate` run byte-for-byte). This function must
+    # match that refusal exactly, not merely avoid the worse bug of over-matching.
+    mechanical = "the migration renames `docs/adr/` to `docs/adrs/`.\n"
+    assert doc_id_cli._rewrite_wrapped_path_citations(mechanical, patterns, []) == mechanical
+
+
+def _split_source(
+    doc_id_cli: types.ModuleType, *, token: str, old_rel: str,
+) -> Any:
+    """A two-target split source, close enough to the real corpus's own shape
+    (`docs/plans/2026-08-29-w11-slice1-rulings.md`, 8 targets) to exercise `resolve`
+    without constructing all eight."""
+    targets = (
+        doc_id_cli._SplitTarget(
+            new_rel="docs/rulings/RL-00160-a.md", new_token="docs/rulings/RL-00160-a.md",
+            ids=("RL-160",), anchors=frozenset(), line_span=None, body_line_offset=0,
+            canonical_id="RL-160", title="A",
+        ),
+        doc_id_cli._SplitTarget(
+            new_rel="docs/rulings/RL-00161-b.md", new_token="docs/rulings/RL-00161-b.md",
+            ids=("RL-161",), anchors=frozenset(), line_span=None, body_line_offset=0,
+            canonical_id="RL-161", title="B",
+        ),
+    )
+    return doc_id_cli._SplitSource(
+        old_rel=old_rel, token=token, targets=targets,
+        index_token=f"docs/rulings/INDEX.md#{token.rsplit('/', 1)[-1]}",
+        index_rel="docs/rulings/INDEX.md",
+        index_anchor=token.rsplit("/", 1)[-1],
+    )
+
+
+def test_rewrite_wrapped_split_source_citations_resolves_a_determined_wrap(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """2026-09-05, the maintainer's unconditional ruling on rows (d9)-(d12): a wrapped
+    citation of a SPLIT source (`docs/plans/2026-08-29-w11-slice1-rulings.md`, real
+    corpus, 8 targets) must resolve exactly like a contiguous one — by the adjacent id on
+    its own citing line — not survive because the flat, single-destination wrap pass
+    cannot see it (`_wrapped_path_patterns`'s own docstring puts a split source's wrap out
+    of its scope; this is the counterpart that covers it).
+    """
+    token = "docs/plans/2026-08-29-w11-slice1-rulings.md"
+    src = _split_source(doc_id_cli, token=token, old_rel=token)
+    patterns = doc_id_cli._wrapped_split_source_patterns([src])
+    # Split right after the `-` in "slice1-" — the wrap-tolerant pattern only tolerates a
+    # break immediately after `-`/`/`/`.`, the same real-corpus shape `_wrapped_path_
+    # patterns` reads; a break mid-word (e.g. inside "rulings") is not this fix's shape.
+    split_at = token.index("slice1-") + len("slice1-")
+    text = f"RL-160's addendum, `{token[:split_at]}\n{token[split_at:]}` covers it.\n"
+    assert token[split_at:] not in text.split("\n")[0]  # sanity: really wrapped mid-token
+    after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
+    assert token not in after, f"the stale token must not survive: {after!r}"
+    flattened = "".join(line.lstrip() for line in after.split("\n"))
+    assert "docs/rulings/RL-00160-a.md" in flattened, after
+    assert after.count("\n") == text.count("\n"), "line count must be preserved"
+
+
+def test_rewrite_wrapped_split_source_citations_resolves_a_determinant_that_itself_spans_the_wrap(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """2026-09-05, the lead's own constraint on this fix: the hazard the docstring warns
+    about is not merely "the TOKEN wraps" (already covered — the earlier "determined
+    wrap" test's id sits before the wrap starts, on the same physical line as the
+    opening backtick) but "the DETERMINANT can itself sit on either side of the wrap
+    boundary, including the far side" — an adjacent id appearing on the *continuation*
+    line, after the token's own wrap has already closed. A `logical_line` reconstruction
+    that only looked at the physical line the match *starts* on would never see it.
+
+    Without the join across the wrap (`line_end` extending past `m.end()` into the
+    continuation line), `_by_id` would search only `` `docs/audit/`` `` — no id there —
+    and `resolve()` would wrongly return `None`, exactly the failure this test would
+    catch: `src.resolve(m, "the physical start-line alone")` returns `None` for this
+    citation, while `src.resolve(m, logical_line)` (the actual reconstruction) finds
+    `RL-161` on the continuation line and determines target B.
+    """
+    token = "docs/audit/plan-reviews.md"
+    src = _split_source(doc_id_cli, token=token, old_rel=token)
+    patterns = doc_id_cli._wrapped_split_source_patterns([src])
+    text = "see the review record (`docs/audit/\nplan-reviews.md`, RL-161) for detail.\n"
+    # Sanity: the determinant really is unreachable from the start-line alone.
+    start_line_only = text.split("\n")[0]
+    assert "RL-161" not in start_line_only
+    after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
+    assert token not in after, f"the stale token must not survive: {after!r}"
+    flattened = "".join(line.lstrip() for line in after.split("\n"))
+    assert "docs/rulings/RL-00161-b.md" in flattened, after
+    assert after.count("\n") == text.count("\n"), "line count must be preserved"
+
+
+def test_rewrite_wrapped_split_source_citations_leaves_an_undetermined_wrap_byte_identical(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """2026-09-05, the deputy's ruling (relayed via the lead, adopted verbatim as this
+    fix's formal acceptance): unlike the ordinary, contiguous-only sweep — where an
+    undetermined citation always resolves to `src.index_token` (Ruling 101 clause 1,
+    bucket (iv) is 0 by construction) — a WRAPPED citation that `resolve()` cannot
+    determine is left byte-identical, never guessed at with the index-token fallback.
+    "Do not guess a target because the file is one of only seven": a citation that
+    resists here is reported as a per-file W37-11 entry with its own reason, not
+    silently answered.
+    """
+    token = "docs/audit/plan-reviews.md"
+    src = _split_source(doc_id_cli, token=token, old_rel="docs/audit/plan-reviews.md")
+    patterns = doc_id_cli._wrapped_split_source_patterns([src])
+    text = "see the review record (`docs/audit/\nplan-reviews.md`) for history.\n"
+    after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
+    assert after == text, f"an undetermined wrap must stay byte-identical, never guessed: {after!r}"
+
+
+def test_rewrite_wrapped_split_source_citations_never_touches_a_was_field(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The same `was:`-field protection `_rewrite_wrapped_path_citations` gets, for the
+    split-source counterpart."""
+    token = "docs/audit/plan-reviews.md"
+    src = _split_source(doc_id_cli, token=token, old_rel="docs/audit/plan-reviews.md")
+    patterns = doc_id_cli._wrapped_split_source_patterns([src])
+    text = "---\nfamily: reference\nwas: docs/audit/plan-reviews.md\n---\n\n# Body\n"
+    after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
+    assert after == text, f"a was: field must never be rewritten: {after!r}"
+
+
+def test_rewrite_wrapped_path_citations_never_touches_a_was_field(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """2026-09-05: a `was:` field is this run's own provenance record of the
+    pre-migration path — never a stale citation to repoint, wrapped or not. Found live as
+    a non-idempotency regression: with the `was:`-field guard missing, a second `migrate`
+    run rewrote `was: docs/adr/README.md` to `was: docs/adrs/README.md` because the
+    wrap-tolerant pattern (unlike the ordinary, `was:`-segment-aware sweep) ran over the
+    whole file unconditionally.
+    """
+    old_tok, new_tok = "docs/adr/README.md", "docs/adrs/README.md"
+    patterns = doc_id_cli._wrapped_path_patterns([(old_tok, new_tok)])
+    text = (
+        "---\n"
+        "family: reference\n"
+        "was: docs/adr/README.md\n"
+        "---\n\n"
+        "# Architecture Decision Records\n"
+    )
+    after = doc_id_cli._rewrite_wrapped_path_citations(text, patterns, [])
+    assert after == text, f"a was: field must never be rewritten: {after!r}"
+
+
 # ---------------------------------------------------------------------------------------
 # Rows (d11)/(d12), the deputy's directory-token ruling: `docs/adr` and `docs/notes` each
 # have exactly one successor, so a plain-prose mention of the directory (not only a

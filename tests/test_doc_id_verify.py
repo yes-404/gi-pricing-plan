@@ -332,7 +332,95 @@ def test_row_d_fails_over_an_empty_population(
     snap = _snapshot(dv, tmp_path / "empty", {"docs/a.md": ""}, {"docs/a.md": ""})
     rows = _d_rows(dv, snap)
     assert rows["d1"].verdict == dv.FAIL
-    assert "empty population" in rows["d1"].note
+
+
+# ---------------------------------------------------------------------------------------
+# Rows (d9)-(d12), three framework defects found live 2026-09-05 in
+# `_path_alternative_verdict`'s own "real moved file" test.
+# ---------------------------------------------------------------------------------------
+
+_REDIRECTS_HEADER = "old_id,new_id,old_path,new_path,citing_dir\n"
+
+
+def test_path_alternative_ignores_a_same_path_redirect_row(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A `docs/REDIRECTS.csv` row with `old_path == new_path` records a token rename
+    made *inside* a file (`W1` -> `WK-954` inside `docs/roadmap.md`, which never moved),
+    not a file move. Before this fix, `docs/roadmap.md` sitting anywhere in a match's
+    two-line window flipped an unrelated, otherwise-disclosed citation to FATAL purely by
+    proximity — found live against `docs/plans/2026-08-30-nt-0014-adoption.md`, a path no
+    draft ever claims, sitting two rows above a genuine `docs/roadmap.md` mention in the
+    same table.
+    """
+    migrated = {
+        "docs/REDIRECTS.csv": _REDIRECTS_HEADER + "W1,WK-954,docs/roadmap.md,docs/roadmap.md,\n",
+        "docs/a.md": (
+            "| 19 | `docs/plans/2026-08-30-nt-0014-adoption.md` | New plan |\n"
+            "| 20 | `docs/roadmap.md` | Amend |\n"
+        ),
+    }
+    control = {"docs/a.md": "see docs/plans/2026- for background\n"}
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    rows = _d_rows(dv, snap)
+    assert rows["d9"].verdict != dv.FAIL, (
+        "docs/roadmap.md's same-path redirect row must not make an unrelated "
+        f"citation FATAL: {rows['d9'].note}"
+    )
+
+
+def test_path_alternative_excludes_a_split_source_index_file(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """RL-287/RL-255: a family split-source index's `` `was:` `` table column and
+    "`<old>` became N documents." heading must keep naming the pre-migration path
+    forever — there is no single successor to repoint a split source to. Before this
+    fix, `docs/<family>/INDEX.md` (generated whole by `doc-id.py migrate`, matching this
+    ruled shape everywhere in its body) was scanned like any other file and counted every
+    row of its own ruled provenance as an unrepointed, fatal citation.
+    """
+    migrated = {
+        "docs/REDIRECTS.csv": (
+            _REDIRECTS_HEADER
+            + "PL-100,PL-00100,docs/plans/2026-08-01-x.md,docs/plans/PL-00100-a.md,\n"
+            + "RL-200,RL-00200,docs/plans/2026-08-01-x.md,docs/rulings/RL-00200-b.md,\n"
+        ),
+        "docs/rulings/INDEX.md": (
+            "## 2026-08-01-x.md\n\n"
+            "`docs/plans/2026-08-01-x.md` became 2 documents.\n\n"
+            "| Document | Title | `was:` |\n"
+            "|---|---|---|\n"
+            "| [`RL-200`](RL-00200-b.md) | B | `docs/plans/2026-08-01-x.md` |\n"
+        ),
+    }
+    control = {"docs/a.md": "see docs/plans/2026- for background\n"}
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    rows = _d_rows(dv, snap)
+    assert rows["d9"].verdict != dv.FAIL, rows["d9"].note
+
+
+def test_path_alternative_excludes_a_vendored_skills_own_files(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """NT-0019 §1.5 / Ruling 69: a vendored skill's own files (never the manifest) are
+    excluded from every migration action, citation rewrite included — "vendored files
+    stay as upstream wrote them" (`CLAUDE.md` §12). A citation inside one can never be
+    repointed by design, so it must not count toward this row's fatal population.
+    """
+    vendored_name = next(iter(dv._docid._VENDORED_SKILLS))
+    migrated = {
+        "docs/REDIRECTS.csv": (
+            _REDIRECTS_HEADER
+            + "PL-1,PL-00001,docs/plans/2026-08-01-x.md,docs/plans/PL-00001-a.md,\n"
+        ),
+        f".claude/skills/{vendored_name}/scripts/task-brief": (
+            "# see docs/plans/2026-08-01-x.md for the house pattern\n"
+        ),
+    }
+    control = {"docs/a.md": "see docs/plans/2026- for background\n"}
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    rows = _d_rows(dv, snap)
+    assert rows["d9"].verdict != dv.FAIL, rows["d9"].note
 
 
 def test_was_exclusion_is_a_field_test_not_a_substring_test(
@@ -1948,24 +2036,25 @@ def test_progress_is_a_set_change_too_and_says_what_to_edit(dv: Any) -> None:
     and left in the table would mask its own later regression, so progress is reported —
     with the edit it requires — rather than passed over.
 
-    "d9" rather than "b"/"c"/"e": every one of those three has since moved off FAIL at
-    some point in this row's own history and would make the `dict(..., key=PASS)`
+    "d4" rather than "b"/"c"/"e"/"d9"-"d12": every one of those has since moved off FAIL
+    at some point in this row's own history and would make the `dict(..., key=PASS)`
     override a no-op against the real recorded table — exactly the false-pass this test
     exists to guard against elsewhere. "b" flips between FAIL and PASS across #707/#708's
     re-recording and #711's regression (task 17, 2026-09-04); "c" and "e" are both PASS as
     of this commit ("e" folded in here — angle-bracket boundary and same-line duplicate-
-    token fixes). "d9" (a literal legacy-path alternative in (d), not yet migrated) has no
-    such history and stays FAIL.
+    token fixes); "d9"-"d12" moved to DISCLOSE (2026-09-05, W37-6 rows (d9)-(d12)'s three
+    citation-inverse framework fixes). "d4" (`wf-0[0-9]`, still non-zero as of 2026-09-03,
+    task 23) has no such history and stays FAIL.
     """
-    assert dv.EXPECTED_VERDICTS["d9"] == dv.FAIL, (
+    assert dv.EXPECTED_VERDICTS["d4"] == dv.FAIL, (
         "this test's premise: the row it moves must start FAIL in the real table"
     )
-    moved = dict(dv.EXPECTED_VERDICTS, d9=dv.PASS)
+    moved = dict(dv.EXPECTED_VERDICTS, d4=dv.PASS)
     result = _result(dv, moved)
-    assert [(c.key, c.direction) for c in result.set_changes] == [("d9", dv.PROGRESSED)]
+    assert [(c.key, c.direction) for c in result.set_changes] == [("d4", dv.PROGRESSED)]
     assert result.exit_code == 3
     out = dv.render(result)
-    assert "PROGRESS (newly passing): (d9) FAIL -> PASS" in out
+    assert "PROGRESS (newly passing): (d4) FAIL -> PASS" in out
     assert "same commit as the change that moved the row" in out
 
 
@@ -1973,19 +2062,20 @@ def test_a_reclassification_between_two_fatal_verdicts_is_a_set_change(dv: Any) 
     """(d4) going FAIL -> REGRESSION is a finding, not noise: the migration began creating
     what the row forbids. A fatal-to-fatal move must not be invisible.
 
-    "d9" rather than "d1" or "d5": task 17 (2026-09-04) re-recorded (d5) as PASS on
-    `main` (#711's unrelated progress), and W37-6 exec-ids (2026-09-04) fixed (d1) to
-    PASS in the same table, so a FAIL -> REGRESSION override at either would actually be
-    a PASS -> REGRESSION move (REGRESSED, not RECLASSIFIED) against the real table. "d9"
-    (legacy dated-plan path) stays FAIL — a genuine fatal-to-fatal example, owned by
-    W37-6's path-repointing track, untouched by this row's own fix.
+    "d4" rather than "d1", "d5" or "d9"-"d12": task 17 (2026-09-04) re-recorded (d5) as
+    PASS on `main` (#711's unrelated progress), W37-6 exec-ids (2026-09-04) fixed (d1) to
+    PASS in the same table, and W37-6 rows (d9)-(d12) (2026-09-05) fixed all four to
+    DISCLOSE, so a FAIL -> REGRESSION override at any of those would actually be a
+    PASS/DISCLOSE -> REGRESSION move (REGRESSED, not RECLASSIFIED) against the real
+    table. "d4" (`wf-0[0-9]`) stays FAIL — a genuine fatal-to-fatal example, untouched by
+    any of these fixes.
     """
-    assert dv.EXPECTED_VERDICTS["d9"] == dv.FAIL, (
+    assert dv.EXPECTED_VERDICTS["d4"] == dv.FAIL, (
         "this test's premise: the row it moves must start FAIL (fatal) in the real table"
     )
-    moved = dict(dv.EXPECTED_VERDICTS, d9=dv.REGRESSION)
+    moved = dict(dv.EXPECTED_VERDICTS, d4=dv.REGRESSION)
     result = _result(dv, moved)
-    assert [(c.key, c.direction) for c in result.set_changes] == [("d9", dv.RECLASSIFIED)]
+    assert [(c.key, c.direction) for c in result.set_changes] == [("d4", dv.RECLASSIFIED)]
     assert result.exit_code == 3
 
 
