@@ -1810,6 +1810,28 @@ def check_id_filename_directory() -> None:
 _MD_LINK_RE: Final = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 _FENCE_LINE_RE: Final = re.compile(r"^\s*```")
 
+# Ruling 107: Adopt (e)'s conjuncts for path and resolution filtering
+_MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
+_TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}\"',;]")
+_TRAILING_LINE_LOCATOR_RE: Final = re.compile(r":\d+(-\d+)?$")
+
+
+def _in_path_context(line: str, start: int, end: int) -> bool:
+    """True when the occurrence at `line[start:end]` sits inside a path-shaped token.
+
+    Ruling 107 adoption of (e)'s conjunct 2: a padded id inside a filename is not
+    "in prose"; a padded id in a sentence is.
+    """
+    left = start
+    while left > 0 and not _TOKEN_BOUNDARY_RE.match(line[left - 1]):
+        left -= 1
+    right = end
+    while right < len(line) and not _TOKEN_BOUNDARY_RE.match(line[right]):
+        right += 1
+    token = line[left:right]
+    sans_locator = _TRAILING_LINE_LOCATOR_RE.sub("", token)
+    return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", sans_locator))
+
 
 def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[str]:
     """Every check-32 problem in one file, given the set of canonical ids `docs/INDEX.md`
@@ -1817,6 +1839,10 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
     same citation written padded; a markdown link whose text and target cite different
     ids. Explicit parameters (not the module's own `ROOT`/`_id_scope_documents`) so a
     fixture can exercise this without a real `docs/INDEX.md` on disk.
+
+    Ruling 107: Adopts (e)'s conjuncts 2 and 3 — path exclusion (conjunct 2) and
+    resolution test (conjunct 3) — so path-shaped citations and unresolvable ids are
+    excluded from padding violations.
     """
     problems: list[str] = []
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -1830,6 +1856,9 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
 
         link_spans = [m.span() for m in _MD_LINK_RE.finditer(line)]
 
+        # Conjunct 2 path stripping: strip markdown emphasis before path detection
+        cleaned = _MD_EMPHASIS_RE.sub("", line)
+
         for m in _docid.ID_RE.finditer(line):
             if any(start <= m.start() < end for start, end in link_spans):
                 continue  # a link target may legitimately carry a padded id
@@ -1842,10 +1871,15 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
             # the two capture groups can never find padding. The full match (`m.group(0)`)
             # still carries it, so that is what padding is detected against.
             if m.group(0) != canon:
-                problems.append(
-                    f"{lineno}: padded id `{m.group(0)}` outside a link target — "
-                    "citations write the integer, never padding (NT-0019 §1.1 rule 2)"
-                )
+                # Ruling 107: Conjunct 2 — exclude padded ids in path contexts
+                # Map position from original line to cleaned line (emphasis removed)
+                cleaned_start = len(_MD_EMPHASIS_RE.sub("", line[:m.start()]))
+                cleaned_end = cleaned_start + len(_MD_EMPHASIS_RE.sub("", m.group(0)))
+                if not _in_path_context(cleaned, cleaned_start, cleaned_end):
+                    problems.append(
+                        f"{lineno}: padded id `{m.group(0)}` outside a link target — "
+                        "citations write the integer, never padding (NT-0019 §1.1 rule 2)"
+                    )
 
         for link_m in _MD_LINK_RE.finditer(line):
             text, target = link_m.group(1), link_m.group(2)
