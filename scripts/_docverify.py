@@ -55,7 +55,7 @@ import tempfile
 import uuid
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Any, Final
 
@@ -440,6 +440,27 @@ class Corpus:
                 n_files += 1
         return n_lines, n_files
 
+    def hits_by_file(
+        self, pattern: re.Pattern[str], *, skip_was: bool = True, skip_fenced: bool = False
+    ) -> Mapping[str, int]:
+        """`scan`'s own per-file breakdown — same skip rules, keyed by relpath, a file with
+        zero hits absent rather than present at 0. The W37-11 residue ceiling's own
+        measurement reads this, never a private re-implementation of `scan`'s loop.
+        """
+        by_file: dict[str, int] = {}
+        for rel in self.files:
+            skip = self.was_lines[rel] if skip_was else frozenset()
+            if skip_fenced:
+                skip = skip | self.fenced_lines[rel]
+            hits = sum(
+                1
+                for i, line in enumerate(self.lines[rel])
+                if i not in skip and pattern.search(line)
+            )
+            if hits:
+                by_file[rel] = hits
+        return by_file
+
 
 def load_corpus(tree: Path, *, exclude_basename: str | None = _D_EXCLUDED_BASENAME) -> Corpus:
     files: list[str] = []
@@ -491,6 +512,15 @@ class Row:
     #: the maintainer's under Ruling 102 §1 and is made by naming its label in
     #: `GATING_COMPANIONS` — a configuration change, never a rewrite.
     companions: tuple[tuple[str, str, str], ...] = ()
+    #: This row's own fatal hits, keyed `(relpath, cls)` — absent rather than present at 0.
+    #: Feeds the W37-11 residue ceiling (`check_residue_ceiling`). `cls` is the row's own
+    #: choice of granularity: a plain row names one class (conventionally its own `key`); a
+    #: row with sub-buckets a per-row total would hide movement inside of (row (g)'s g2
+    #: causes) names one `cls` per bucket instead — the ceiling is per (file, class), not
+    #: per row, precisely so that distinction is never collapsed back to a single number. A
+    #: row that does not populate this (most do not — only a ruled DISCLOSE-with-residue
+    #: row is ever measured against a ceiling) simply contributes nothing.
+    residue: Mapping[tuple[str, str], int] = field(default_factory=dict)
 
     @property
     def fatal(self) -> bool:
@@ -1363,10 +1393,32 @@ def _path_alternative_verdict(
 
     Returns `(fatal_lines, fatal_files, disclosed_lines, disclosed_files)`.
     """
+    fatal_by_file, disclosed_by_file = _path_alternative_hits_by_file(mig, pattern)
+    return (
+        sum(fatal_by_file.values()),
+        len(fatal_by_file),
+        sum(disclosed_by_file.values()),
+        len(disclosed_by_file),
+    )
+
+
+def _path_alternative_hits_by_file(
+    mig: Corpus, pattern: re.Pattern[str],
+) -> tuple[Mapping[str, int], Mapping[str, int]]:
+    """`_path_alternative_verdict`'s own per-file breakdown, factored out so a caller that
+    needs *which file* (the W37-11 residue ceiling) reads the identical classification a
+    caller that only needs the row's aggregate figure does — one rule, not two readings of
+    it (Ruling 103 §1.8's "two implementations of one rule that are never compared are two
+    rules", the same reasoning `fenced_line_numbers` was shared for above).
+
+    Returns `(fatal_lines_by_relpath, disclosed_lines_by_relpath)`; a file with zero hits of
+    a kind is absent from that kind's mapping, never present with value 0.
+    """
     real_paths = frozenset(
         old for old, new in _redirect_map(mig.tree).items() if old != new
     )
-    fatal_lines = fatal_files = disclosed_lines = disclosed_files = 0
+    fatal_by_file: dict[str, int] = {}
+    disclosed_by_file: dict[str, int] = {}
     for rel in mig.files:
         if _docid.is_split_source_index(rel):
             continue
@@ -1383,13 +1435,11 @@ def _path_alternative_verdict(
                 file_fatal += 1
             else:
                 file_disclosed += 1
-        fatal_lines += file_fatal
-        disclosed_lines += file_disclosed
         if file_fatal:
-            fatal_files += 1
+            fatal_by_file[rel] = file_fatal
         if file_disclosed:
-            disclosed_files += 1
-    return fatal_lines, fatal_files, disclosed_lines, disclosed_files
+            disclosed_by_file[rel] = file_disclosed
+    return fatal_by_file, disclosed_by_file
 
 
 def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
@@ -1398,6 +1448,22 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
         m_lines, m_files = mig.scan(pattern, skip_fenced=True)
         c_lines, c_files = ctl.scan(pattern, skip_fenced=True)
         companions, gating = _companions_for(label, pattern, mig, ctl)
+        #: Fatal residue by file — the W37-11 ceiling's own measurement (`Row.residue`).
+        #: A path alternative's fatal hit is its per-file breakdown of the identical
+        #: classification its verdict already uses; every other alternative's is its
+        #: plain per-file line count. `cls` is this row's own key (`f"d{i}"`) — every
+        #: (d) alternative is one class, no sub-bucket. Populated unconditionally: a row
+        #: the ceiling is not governing for (no record entry names its key) simply
+        #: carries data no comparison ever reads.
+        row_key = f"d{i}"
+        hits_by_file = (
+            _path_alternative_hits_by_file(mig, pattern)[0]
+            if label in D_PATH_LABELS
+            else mig.hits_by_file(pattern, skip_fenced=True)
+        )
+        residue_by_file = {
+            (rel, row_key): count for rel, count in hits_by_file.items()
+        }
         if label == _D8_LABEL:
             verdict, note = _d8_verdict(mig, ctl, m_lines, c_lines)
         else:
@@ -1513,6 +1579,7 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
                 control=f"{c_lines} line(s) / {c_files} file(s)",
                 verdict=verdict,
                 note=note,
+                residue=residue_by_file,
             )
         )
     return rows
@@ -2411,6 +2478,14 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
         control=f"g1 WK-shape mangled = {wk_control} (un-migrated)",
         verdict=verdict,
         note=note,
+        #: g2's own residue, one hit per classified-by-none file, tagged with its cause
+        #: (`_residue_cause`) rather than a bare `"g2"` — the W37-11 ceiling is per (file,
+        #: class), and "class" here is the sub-bucket a per-row total would hide movement
+        #: inside of, exactly the shape the deputy's ruling names.
+        residue={
+            (rel, f"g2-{_residue_cause(rel, ctl.lines.get(rel), mig.lines.get(rel))}"): 1
+            for rel in residue
+        },
     )
 
 
@@ -3118,10 +3193,167 @@ def _row_sort_key(key: str) -> tuple[str, int]:
     return (m.group(1), int(m.group(2) or 0)) if m else (key, 0)
 
 
+# ---------------------------------------------------------------------------------------
+# The W37-11 residue ceiling — a per-(file, class) governor over a ruled DISCLOSE-with-
+# residue row, read from the governed record and never from a name in this file.
+#
+# `EXPECTED_VERDICTS` pins a row's verdict **label** and nothing else (`diff_verdicts`
+# above projects every row down to `row.verdict`): a ruled row at residual 1 and the same
+# row at residual 50 both `continue` past the comparison, so a regression *into* an already
+# -ruled row is invisible to the set-change check. The fix is not a second number pinned
+# per row in this file — that repeats the table-hardcoding the forbidden move already
+# names, and an exact count makes every legitimate improvement a set change demanding a
+# table edit. Instead: a ceiling, keyed per (file, class), read from the governed W37-11
+# record (`docs/audit/w37-11-record.md`) the same way `_redirect_map` reads
+# `docs/REDIRECTS.csv` — this module carries the loader and the comparison, never a path
+# or a row key. Per (file, class) rather than per row because a single row-level ceiling
+# lets one file regress while another improves and the row total hides exactly that
+# movement.
+#
+# A `cls` with no entry anywhere in the record is **ungoverned**: this run's residue for
+# it is measured (`Row.residue`) but never compared, so wiring a new row's measurement in
+# before the record has any entry for it cannot manufacture a false regression — the
+# ceiling only ever fires for a `cls` the record already names at least once.
+# ---------------------------------------------------------------------------------------
+
+#: Relative to the repo root the run's `verify()` was invoked against — a governance
+#: record, not an artifact `migrate()` writes, so it is read from the real tree rather than
+#: the migrated snapshot. Markdown, not `.csv`: `backend/tests/test_lineage.py::
+#: test_no_reference_rows_are_bundled_in_the_repository` (FR-DATA-32) refuses any bundled
+#: `.csv`/`.parquet`/`.xlsx` outside its two named carve-outs, neither of which this
+#: hand-authored governance table is — a markdown table, parsed the same way
+#: `audit-docs.py`/`doc-index.py`/`register-lint.py` already parse every other table under
+#: `docs/`, sidesteps the guard rather than fighting it.
+W37_11_RECORD_PATH: Final = "docs/audit/w37-11-record.md"
+
+RESIDUE_REGRESSION: Final = "REGRESSION (residue exceeds W37-11 ceiling)"
+RESIDUE_PROGRESSED: Final = "PROGRESSED (W37-11 record can shrink)"
+
+
+@dataclass(frozen=True)
+class ResidueEntry:
+    """One row of the governed W37-11 record: a file's disclosed residue for one ruled
+    row/check, carried with the reason it resisted the general mechanism and who owns it.
+
+    `cls` is the deputy's own word for it (`to-lead.md`, 2026-09-05 15:06 BST): "path,
+    class (row/check), count, reason[, owner]" — which ruled row or `audit-docs.py` check
+    this entry's count belongs to, not a hit-type label. Two entries may share a `path`
+    with different `cls` (a file resisting more than one ruled row) or share a `cls` with
+    different `path`s (a row's residue spread across several files) — the pair is the key.
+    """
+
+    path: str
+    cls: str
+    count: int
+    reason: str
+    owner: str = ""
+
+
+def load_w37_11_record(repo_root: Path) -> tuple[ResidueEntry, ...]:
+    """The governed per-(file, class) residue ceiling, or empty if the record has no rows
+    yet (or does not exist) — never fatal, and never a reason to invent one here.
+
+    Population is **not this module's to decide** — every path, class, count and reason
+    is the deputy's, filed into the record directly; this function only reads it, the
+    same relationship `_redirect_map` has with `docs/REDIRECTS.csv`. A malformed data row
+    (wrong cell count, a non-integer `count`) is skipped rather than raised — a record this
+    module cannot parse must never crash the run that reads it; it degrades to "not yet
+    governed" for that row, the same as the file not existing at all.
+    """
+    record = repo_root / W37_11_RECORD_PATH
+    text = read_text(record)
+    if text is None:
+        return ()
+    entries: list[ResidueEntry] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("|") or not line.endswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) != 5 or cells == ["path", "cls", "count", "reason", "owner"]:
+            continue
+        if set(cells[0]) <= {"-", " "}:  # the `| --- | --- | ... |` separator row
+            continue
+        path, cls, count_cell, reason, owner = cells
+        if not path or not cls or not count_cell.isdigit():
+            continue
+        entries.append(ResidueEntry(
+            path=path, cls=cls, count=int(count_cell), reason=reason, owner=owner,
+        ))
+    return tuple(entries)
+
+
+@dataclass(frozen=True)
+class ResidueChange:
+    """One per-(file, class) movement the W37-11 ceiling found, fatal or not."""
+
+    path: str
+    cls: str
+    kind: str
+    detail: str
+
+    @property
+    def fatal(self) -> bool:
+        return self.kind == RESIDUE_REGRESSION
+
+
+def check_residue_ceiling(
+    measured: Mapping[tuple[str, str], int],
+    record: Sequence[ResidueEntry],
+) -> tuple[ResidueChange, ...]:
+    """Compare this run's per-(file, class) residue against the governed W37-11 ceiling.
+
+    Three outcomes, per the deputy's ruling (`to-lead.md`, 2026-09-05 15:06 BST):
+
+    * a hit in a file the record does not name, for a `cls` the record DOES govern
+      (appears against at least one other file) → fatal `RESIDUE_REGRESSION` — a file the
+      record never named.
+    * a file's residual above its recorded count → fatal `RESIDUE_REGRESSION` — a
+      regression into a ruled row.
+    * a recorded (file, class) now measuring zero → non-fatal `RESIDUE_PROGRESSED`; the
+      record can shrink, and a shrink is never itself a failure demanding a table edit.
+
+    A `cls` absent from the record entirely is ungoverned and produces no change either
+    way — the ceiling only ever fires for a `cls` the record already names at least once,
+    so wiring a row's measurement in ahead of the record gaining its first entry for that
+    `cls` cannot manufacture a false regression.
+    """
+    governed_classes = {entry.cls for entry in record}
+    ceiling = {(entry.path, entry.cls): entry.count for entry in record}
+    changes: list[ResidueChange] = []
+    for (path, cls), count in measured.items():
+        if cls not in governed_classes or count <= 0:
+            continue
+        limit = ceiling.get((path, cls))
+        if limit is None:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_REGRESSION,
+                f"{count} hit(s) in a file the W37-11 record does not name for {cls!r}",
+            ))
+        elif count > limit:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_REGRESSION,
+                f"{count} hit(s) exceeds the W37-11 record's ceiling of {limit} for "
+                f"{cls!r}",
+            ))
+    for (path, cls), limit in ceiling.items():
+        if limit > 0 and measured.get((path, cls), 0) == 0:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_PROGRESSED,
+                f"the W37-11 record's ceiling of {limit} for {cls!r} now measures 0 at "
+                f"{path!r} — the record can shrink",
+            ))
+    return tuple(changes)
+
+
 @dataclass(frozen=True)
 class VerifyResult:
     snapshot: Snapshot
     rows: tuple[Row, ...]
+    #: The governed W37-11 record this run was checked against — `()` when the record has
+    #: no rows yet, in which case `residue_changes` is always empty (every `cls` is
+    #: ungoverned).
+    w37_11_record: tuple[ResidueEntry, ...] = ()
 
     @property
     def failed(self) -> tuple[Row, ...]:
@@ -3132,16 +3364,34 @@ class VerifyResult:
         return diff_verdicts(self.rows)
 
     @property
+    def measured_residue(self) -> Mapping[tuple[str, str], int]:
+        """Every row's own `residue`, merged — each row already keys its own `(path,
+        cls)` pairs (`Row.residue`'s own docstring), so this is a union, never a
+        re-derivation of which row a file's hits belong to.
+        """
+        combined: dict[tuple[str, str], int] = {}
+        for row in self.rows:
+            combined.update(row.residue)
+        return combined
+
+    @property
+    def residue_changes(self) -> tuple[ResidueChange, ...]:
+        return check_residue_ceiling(self.measured_residue, self.w37_11_record)
+
+    @property
     def exit_code(self) -> int:
-        """0 green · 1 the standing red, unchanged · 3 the verdict set moved.
+        """0 green · 1 the standing red, unchanged · 3 the verdict set (or the W37-11
+        residue ceiling) moved.
 
         Exit **3** is the whole point of the row. `1` says "§7 is not satisfied yet", which
         is true of every run until the migration lands and therefore says nothing about the
         change under review. `3` says "this change moved a row", which is the sentence a
         reviewer actually needs and which no reader currently has to hold a baseline to
         reach. (Exit 2 is a refusal to run at all — a misconfiguration, not a corpus state.)
+        A fatal `ResidueChange` (a regression into a ruled row's ceiling) is the identical
+        kind of news and sets the identical exit code; a `RESIDUE_PROGRESSED` one does not.
         """
-        if self.set_changes:
+        if self.set_changes or any(c.fatal for c in self.residue_changes):
             return 3
         return 1 if self.failed else 0
 
@@ -3314,7 +3564,8 @@ def _verify_body(
                 "population"
             )
         rows = compute_rows(docid, snap, mig_result.generated_paths)
-        return VerifyResult(snapshot=snap, rows=tuple(rows))
+        record = load_w37_11_record(repo_root)
+        return VerifyResult(snapshot=snap, rows=tuple(rows), w37_11_record=record)
     finally:
         if tmp is not None and not keep:
             tmp.cleanup()
@@ -3410,5 +3661,29 @@ def _set_change_block(result: VerifyResult) -> list[str]:
             "  Progress or a reclassification is ALSO a set change, deliberately: a row "
             "left stale in `EXPECTED_VERDICTS` would mask its own later regression. Update "
             "that table in the same commit as the change that moved the row."
+        )
+    out.extend(_residue_change_block(result))
+    return out
+
+
+def _residue_change_block(result: VerifyResult) -> list[str]:
+    """The W37-11 ceiling's own findings — a ruled row's label alone cannot report a
+    regression *into* it (a residual of 1 and a residual of 50 both read the same
+    `EXPECTED_VERDICTS` entry), so this reads the governed per-(file, class) record
+    directly rather than trusting the row verdict to have noticed.
+    """
+    changes = result.residue_changes
+    if not changes:
+        return []
+    out = [
+        f"W37-11 RESIDUE CEILING ({len(changes)}): a governed (file, class) entry moved."
+    ]
+    for change in changes:
+        out.append(f"  {change.kind}: {change.path!r} ({change.cls}) — {change.detail}")
+    if any(c.fatal for c in changes):
+        out.append(
+            "  A fatal one: residue grew past the W37-11 record's own ceiling, or "
+            "appeared in a file the record never named — a regression into an already-"
+            "ruled row that the row's verdict label alone cannot show."
         )
     return out

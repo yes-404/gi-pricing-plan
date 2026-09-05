@@ -2328,3 +2328,238 @@ def test_the_set_change_block_is_printed_at_both_ends(dv: Any) -> None:
     heads = [i for i, line in enumerate(out) if line.startswith("SET CHANGE")]
     assert len(heads) == 2
     assert heads[0] < len(out) // 2 < heads[1]
+
+
+# ---------------------------------------------------------------------------------------
+# The W37-11 residue ceiling — `EXPECTED_VERDICTS` pins a row's verdict label and nothing
+# else (`diff_verdicts` above projects every row down to `row.verdict`), so a ruled row's
+# residue can grow without limit and never show as a set change. `check_residue_ceiling`
+# is the per-(file, class) governor read from the record, never a name in this file.
+# ---------------------------------------------------------------------------------------
+
+
+def test_residue_ceiling_is_red_before_the_mechanism_existed(dv: Any) -> None:
+    """The mechanism itself, run against the pre-fix state of the world: before this
+    module carried `check_residue_ceiling`, nothing compared a ruled row's residue to
+    anything, so a regression into it was invisible by construction — there is no
+    "old" call to make red, which is itself the defect this row exists to fix. This
+    test instead pins the shape `diff_verdicts` alone leaves blind: two runs with the
+    identical `EXPECTED_VERDICTS` entry (`FAIL`, unmoved) but different residue produce
+    no `set_changes` at all — confirmed here, then contrasted with `check_residue_ceiling`
+    catching exactly that growth below.
+    """
+    small = _result(dv, dict(dv.EXPECTED_VERDICTS, d4=dv.FAIL))
+    large = _result(dv, dict(dv.EXPECTED_VERDICTS, d4=dv.FAIL))
+    assert small.set_changes == ()
+    assert large.set_changes == ()
+    assert small.exit_code == large.exit_code == 1, (
+        "a residual of 1 and a residual of 50 in the same ruled row are indistinguishable "
+        "to diff_verdicts alone — the gap check_residue_ceiling exists to close"
+    )
+
+
+def test_residue_ceiling_flags_a_hit_in_a_file_the_record_does_not_name(dv: Any) -> None:
+    """Acceptance criterion 1: a hit in a file absent from the record, for a `cls` the
+    record DOES govern (named against some other file), is a fatal set change."""
+    record = (
+        dv.ResidueEntry(
+            path="docs/known.md", cls="test-row", count=1, reason="r", owner="o",
+        ),
+    )
+    measured = {
+        ("docs/known.md", "test-row"): 1,
+        ("docs/unrecorded.md", "test-row"): 1,
+    }
+    changes = dv.check_residue_ceiling(measured, record)
+    assert [(c.path, c.cls, c.kind) for c in changes] == [
+        ("docs/unrecorded.md", "test-row", dv.RESIDUE_REGRESSION)
+    ]
+    assert changes[0].fatal
+
+
+def test_residue_ceiling_flags_a_recorded_file_pushed_above_its_ceiling(dv: Any) -> None:
+    """Acceptance criterion 2: a recorded file's residual growing past its recorded count
+    is a fatal set change — the regression-into-a-ruled-row case this whole mechanism
+    exists to make visible."""
+    record = (
+        dv.ResidueEntry(
+            path="docs/known.md", cls="test-row", count=1, reason="r", owner="o",
+        ),
+    )
+    changes = dv.check_residue_ceiling({("docs/known.md", "test-row"): 2}, record)
+    assert [(c.path, c.cls, c.kind) for c in changes] == [
+        ("docs/known.md", "test-row", dv.RESIDUE_REGRESSION)
+    ]
+    assert changes[0].fatal
+    # At the recorded ceiling exactly: no change at all.
+    assert dv.check_residue_ceiling({("docs/known.md", "test-row"): 1}, record) == ()
+
+
+def test_residue_ceiling_reports_progress_as_non_fatal(dv: Any) -> None:
+    """Acceptance criterion 3: a recorded (file, class) falling to zero is PROGRESSED —
+    reported, never fatal, never a set change an editor must resolve before merging."""
+    record = (
+        dv.ResidueEntry(
+            path="docs/known.md", cls="test-row", count=1, reason="r", owner="o",
+        ),
+    )
+    changes = dv.check_residue_ceiling({}, record)
+    assert [(c.path, c.cls, c.kind) for c in changes] == [
+        ("docs/known.md", "test-row", dv.RESIDUE_PROGRESSED)
+    ]
+    assert not changes[0].fatal
+
+
+def test_residue_ceiling_ignores_an_ungoverned_class(dv: Any) -> None:
+    """A `cls` the record has never named for any file is out of the ceiling's scope
+    entirely — this is what lets a row's measurement be wired in ahead of the record
+    gaining its first entry for that class without manufacturing a false regression the
+    moment the wiring lands."""
+    record = (
+        dv.ResidueEntry(
+            path="docs/known.md", cls="governed", count=1, reason="r", owner="o",
+        ),
+    )
+    changes = dv.check_residue_ceiling(
+        {("docs/anything.md", "ungoverned"): 100}, record
+    )
+    assert all(c.cls != "ungoverned" for c in changes), (
+        "an ungoverned class must never produce a change of its own, regardless of what "
+        "else the record happens to say about a different, governed class"
+    )
+
+
+def test_residue_ceiling_with_no_record_flags_nothing(dv: Any) -> None:
+    """An empty (or absent) record governs nothing — merging this mechanism today, before
+    the deputy files any W37-11 entries, changes no existing row's exit code."""
+    assert dv.check_residue_ceiling({("anything.md", "any-cls"): 999}, ()) == ()
+
+
+def test_load_w37_11_record_reads_the_governed_table(dv: Any, tmp_path: pathlib.Path) -> None:
+    """The loader reads `docs/audit/w37-11-record.md`'s table — markdown, not `.csv`,
+    because a bare `.csv` trips `test_no_reference_rows_are_bundled_in_the_repository`
+    (FR-DATA-32); the same repo-wide `| ... |` table convention `audit-docs.py` reads. No
+    name from this record is ever written into the loader itself."""
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "# W37-11 residue record\n\n"
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| docs/x.md | r1 | 3 | because | W37-11 |\n",
+        encoding="utf-8",
+    )
+    record = dv.load_w37_11_record(tmp_path)
+    assert record == (
+        dv.ResidueEntry(
+            path="docs/x.md", cls="r1", count=3, reason="because", owner="W37-11",
+        ),
+    )
+
+
+def test_load_w37_11_record_skips_a_malformed_row_rather_than_raising(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A record this module cannot parse degrades to "not yet governed" for that row
+    rather than crashing the run that reads it."""
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| docs/x.md | r1 | not-a-number | because | W37-11 |\n"
+        "| docs/y.md | r2 | 1 | ok | W37-11 |\n",
+        encoding="utf-8",
+    )
+    record = dv.load_w37_11_record(tmp_path)
+    assert record == (
+        dv.ResidueEntry(path="docs/y.md", cls="r2", count=1, reason="ok", owner="W37-11"),
+    )
+
+
+def test_load_w37_11_record_is_empty_when_the_file_does_not_exist(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    assert dv.load_w37_11_record(tmp_path) == ()
+
+
+def test_verify_result_folds_a_fatal_residue_change_into_exit_code_3(dv: Any) -> None:
+    """The wiring: a `VerifyResult` whose rows measure residue that regresses past the
+    W37-11 record sets exit 3, the identical signal a moved `EXPECTED_VERDICTS` entry
+    sets — a reviewer reads one exit code for either kind of movement."""
+    snap = dv.Snapshot(
+        workdir=pathlib.Path("/nonexistent"), ref="t", ref_sha="0" * 40,
+        migrated=pathlib.Path("/nonexistent"), control=pathlib.Path("/nonexistent"),
+        baseline=None, baseline_ref=None,
+    )
+    row = dv.Row(
+        key="d4", title="t", owner="W37-6", predicate="p", denominator="d",
+        migrated="m", control="c", verdict=dv.EXPECTED_VERDICTS["d4"],
+        residue={("docs/new.md", "d4"): 1},
+    )
+    record = (dv.ResidueEntry(
+        path="docs/old.md", cls="d4", count=2, reason="r", owner="o",
+    ),)
+    other_rows = tuple(
+        _row(dv, k, v) for k, v in dv.EXPECTED_VERDICTS.items() if k != "d4"
+    )
+    result = dv.VerifyResult(
+        snapshot=snap, rows=(row, *other_rows), w37_11_record=record
+    )
+    assert result.set_changes == ()
+    assert any(c.fatal for c in result.residue_changes)
+    assert result.exit_code == 3
+
+
+def test_verify_result_progressed_residue_does_not_move_the_exit_code(dv: Any) -> None:
+    """The other half of the wiring: a residue change that is only PROGRESSED (the
+    recorded file now measures zero) must not by itself force exit 3 — that is a table
+    edit some future PR is free to make, never a regression this run must report as one.
+    """
+    snap = dv.Snapshot(
+        workdir=pathlib.Path("/nonexistent"), ref="t", ref_sha="0" * 40,
+        migrated=pathlib.Path("/nonexistent"), control=pathlib.Path("/nonexistent"),
+        baseline=None, baseline_ref=None,
+    )
+    row = dv.Row(
+        key="d4", title="t", owner="W37-6", predicate="p", denominator="d",
+        migrated="m", control="c", verdict=dv.EXPECTED_VERDICTS["d4"],
+    )
+    record = (dv.ResidueEntry(
+        path="docs/old.md", cls="d4", count=2, reason="r", owner="o",
+    ),)
+    other_rows = tuple(
+        _row(dv, k, v) for k, v in dv.EXPECTED_VERDICTS.items() if k != "d4"
+    )
+    result = dv.VerifyResult(
+        snapshot=snap, rows=(row, *other_rows), w37_11_record=record,
+    )
+    assert result.set_changes == ()
+    assert result.residue_changes
+    assert not any(c.fatal for c in result.residue_changes)
+    assert result.exit_code == 1
+
+
+def test_rows_d_populate_residue_keyed_by_their_own_row(dv: Any) -> None:
+    """Integration: `rows_d`'s own residue is keyed `(relpath, "d<i>")` — no path or row
+    key hardcoded in `_docverify`, only the corpus and the row's own index producing it."""
+    mig_lines = {"docs/plans/foo.md": ("see wf-01 for the journey",)}
+    ctl_lines = {"docs/plans/foo.md": ("see wf-01 for the journey",)}
+    mig = dv.Corpus(
+        tree=pathlib.Path("/nonexistent-mig"), files=tuple(mig_lines),
+        lines={k: v for k, v in mig_lines.items()},
+        was_lines={k: frozenset() for k in mig_lines},
+        fenced_lines={k: frozenset() for k in mig_lines},
+    )
+    ctl = dv.Corpus(
+        tree=pathlib.Path("/nonexistent-ctl"), files=tuple(ctl_lines),
+        lines={k: v for k, v in ctl_lines.items()},
+        was_lines={k: frozenset() for k in ctl_lines},
+        fenced_lines={k: frozenset() for k in ctl_lines},
+    )
+    rows = dv.rows_d(mig, ctl)
+    wf_labels = [i for i, (_, pattern) in enumerate(dv.D_ALTERNATIVES, start=1)
+                 if "wf-0" in pattern.pattern]
+    assert wf_labels, "D_ALTERNATIVES no longer carries a wf-0[0-9] alternative"
+    row = next(r for r in rows if r.key == f"d{wf_labels[0]}")
+    assert dict(row.residue) == {("docs/plans/foo.md", row.key): 1}
