@@ -3224,7 +3224,13 @@ def _row_sort_key(key: str) -> tuple[str, int]:
 #: hand-authored governance table is — a markdown table, parsed the same way
 #: `audit-docs.py`/`doc-index.py`/`register-lint.py` already parse every other table under
 #: `docs/`, sidesteps the guard rather than fighting it.
-W37_11_RECORD_PATH: Final = "docs/audit/w37-11-record.md"
+#:
+#: Re-exported from `_docid` (one shared constant, Ruling 67 §2's rule the rest of this
+#: file already follows for `D_ALTERNATIVES`/`D_DISCLOSED`), because `_docid.
+#: GOVERNANCE_RECORD_EXCLUSIONS` also excludes this same path from `tracked_files`'
+#: corpus and from `doc-id.py`'s own migration sweep — deputy's condition on PR #756:
+#: populating the record must not itself become residue for the rows it governs.
+W37_11_RECORD_PATH: Final = _docid.W37_11_RECORD_PATH
 
 RESIDUE_REGRESSION: Final = "REGRESSION (residue exceeds W37-11 ceiling)"
 RESIDUE_PROGRESSED: Final = "PROGRESSED (W37-11 record can shrink)"

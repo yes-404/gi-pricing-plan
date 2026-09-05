@@ -221,6 +221,25 @@ TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
     ),
 )
 
+#: The W37-11 residue ceiling record (`_docverify.py`'s `load_w37_11_record`) — a governed
+#: table that, by construction, quotes legacy paths and tokens as *evidence of the residue
+#: they name*, the same class `LOCKFILE_EXCLUSIONS`/`FIXTURE_CORPUS_ROOTS`/
+#: `TEST_MODULE_EXCLUSIONS` above already carve out: data about legacy forms, never a
+#: citation for the migration to rewrite or count as residue. Without this, populating the
+#: record (which is the whole point of it) would itself move rows (d)/(g) it exists to
+#: govern — the record of residue counted as residue. One entry, declared here rather than
+#: guessed at from a basename, because the file's own path is the whole of what identifies
+#: it (2026-09-05, W37-6, deputy's condition on PR #756).
+W37_11_RECORD_PATH: Final = "docs/audit/w37-11-record.md"
+
+GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
+    (
+        W37_11_RECORD_PATH,
+        "the W37-11 residue ceiling record — quotes legacy paths/tokens as evidence of "
+        "the residue they name, never a citation for the migration to rewrite",
+    ),
+)
+
 
 def sweep_exclusion_reason(rel_posix: str) -> str | None:
     """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the NT-0019
@@ -229,11 +248,13 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     excluded. One predicate, read by both consumers, so they can never disagree about what
     is excluded (Ruling 67 §2's "one shared constant").
 
-    Four declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
+    Five declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
     fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), one of the instrument's own named test
-    modules (`TEST_MODULE_EXCLUSIONS`), and a Python bytecode-cache artifact
-    (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing `scripts/`
-    modules while it runs, never migration input and never real residue.
+    modules (`TEST_MODULE_EXCLUSIONS`), a governed record that quotes legacy forms as
+    evidence rather than citing them (`GOVERNANCE_RECORD_EXCLUSIONS`), and a Python
+    bytecode-cache artifact (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from
+    importing `scripts/` modules while it runs, never migration input and never real
+    residue.
     """
     for name, reason in LOCKFILE_EXCLUSIONS:
         if rel_posix == name:
@@ -242,6 +263,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
         if rel_posix == root.rstrip("/") or rel_posix.startswith(root):
             return reason
     for name, reason in TEST_MODULE_EXCLUSIONS:
+        if rel_posix == name:
+            return reason
+    for name, reason in GOVERNANCE_RECORD_EXCLUSIONS:
         if rel_posix == name:
             return reason
     if "__pycache__" in rel_posix.split("/"):

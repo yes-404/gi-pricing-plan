@@ -236,6 +236,33 @@ def test_tracked_files_excludes_the_fixture_corpus_roots(
     files = dv.tracked_files(repo)
     assert "docs/a.md" in files
     assert "tests/fixtures/docs-ids/sample.md" not in files
+
+
+def test_tracked_files_excludes_the_w37_11_record_and_it_reds_nothing(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Team-lead condition 4 on PR #756: a governed record containing a legacy path/id,
+    quoted as evidence of the residue it names, must never itself be counted as residue
+    by row (d)/(g)'s own corpus — a hit *inside the record* would otherwise move rows the
+    moment the deputy populates it, the record of residue counted as residue."""
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "a clean line\n",
+        dv.W37_11_RECORD_PATH: (
+            "| path | cls | count | reason | owner |\n"
+            "| --- | --- | --- | --- | --- |\n"
+            "| docs/audit/register.md | d10 | 1 | quotes docs/notes/ as evidence | W37-11 |\n"
+        ),
+    })
+    files = dv.tracked_files(repo)
+    assert "docs/a.md" in files
+    assert dv.W37_11_RECORD_PATH not in files
+    # Behaviour, not just presence: (d)'s own corpus scans it for zero hits, though the
+    # planted row's `reason` cell literally quotes a legacy-form path (`docs/notes/`).
+    mig = dv.load_corpus(repo)
+    d_pattern = next(p for label, p in dv.D_ALTERNATIVES if label == "legacy notes path")
+    m_lines, m_files = mig.scan(d_pattern, skip_fenced=True)
+    assert m_lines == 0
+    assert m_files == 0
     assert "tests/fixtures/docs-migration/docs/notes/x.md" not in files
 
 

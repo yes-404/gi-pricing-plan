@@ -1343,8 +1343,20 @@ def _id_scope_documents(
     #
     # A caller naming `_templates/` itself is naming exactly what it wants, and is honoured.
     if _TEMPLATES_DIR in roots:
-        return sorted(set(files))
-    return sorted(f for f in set(files) if not f.is_relative_to(_TEMPLATES_DIR))
+        files = sorted(set(files))
+    else:
+        files = sorted(f for f in set(files) if not f.is_relative_to(_TEMPLATES_DIR))
+    # The W37-11 residue ceiling record (`_docid.W37_11_RECORD_PATH`) is exempt
+    # **unconditionally**, by path, never honoured even when a caller names it directly —
+    # unlike `_templates/`, there is no scenario where validating it as a governed
+    # document instance (checks 30/32/33/35/36) is the right question. Checks 32 and 36
+    # both draw their corpus from this function (`check_citations`'s `for path in
+    # _id_scope_documents()`; `sweep_legacy_forms`'s `_sweep_legacy_form_hits(
+    # _id_scope_documents())`), so one exclusion here covers both — the record's own
+    # legacy-path/token quotations would otherwise be counted as the very residue it
+    # exists to disclose (deputy's condition on PR #756).
+    w37_11_record = REPO / _docid.W37_11_RECORD_PATH
+    return [f for f in files if f != w37_11_record]
 
 
 def _safe_header(path: pathlib.Path) -> object | None:
