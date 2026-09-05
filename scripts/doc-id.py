@@ -9174,10 +9174,25 @@ def classify_migration_diff(
     # `new_id` is unique by construction, and reusing `_collision_safe_inverse` (grouping
     # by `old_id` instead of `new_id`) catches a genuine allocation collision the same way
     # `redirects_inverse` already does, never a new mechanism.
+    #: `FD-<n>` (`_docid.canonical("FD", n)`, always this shape) is a finding record's own
+    #: canonical id -- and a bare `F<n>` old-side citation is `migrate`'s own row's
+    #: DELIBERATE exclusion from the citation-rewrite sweep (found live investigating this
+    #: same residue, W37-6, 2026-09-05; the exclusion itself is the maintainer's ruling,
+    #: 2026-09-03, W37-6: *"The essays get ids and paths now; `F<n>` stays a resolver
+    #: alias to W37-11"* — `d.prefix != "FD"` gates every entry into `id_claims`/
+    #: `token_map`, the flat map the real forward sweep applies). `REDIRECTS.csv` still
+    #: carries the pair regardless (`assigned`/`redirect_rows` record it unconditionally,
+    #: for W37-11's resolver — the same paragraph's own words), so naively forward-
+    #: substituting it here would rewrite a citation the real migration deliberately left
+    #: bare, and a correct, ruled non-rewrite would then read as a mismatch. Excluded from
+    #: `forward_id_map` by the new_id's own shape -- the identical predicate the real
+    #: sweep gates on, never a new mechanism or an export from `migrate`'s internals.
+    _fd_canonical_re = re.compile(r"^FD-[0-9]+$")
     forward_id_map = _collision_safe_inverse(
         (row["old_id"], row["new_id"])
         for row in rows
         if row.get("old_id") and row.get("new_id") and not row.get("citing_dir")
+        and _fd_canonical_re.match(row["new_id"]) is None
     )
     # Diagnostic only (row (g)'s own note reports it) -- a member is already counted once
     # in `per_class["2-reference-token"]`/`per_class["3-move"]`, never added twice.
