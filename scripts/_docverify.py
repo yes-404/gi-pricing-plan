@@ -2568,6 +2568,40 @@ def _h1_verdict(other_total: int) -> str:
     return PASS if other_total == 0 else FAIL
 
 
+#: The common shape a `fail()` call in `audit-docs.py` writes: `check N: <path>: ...` —
+#: the overwhelming majority of call sites (checks 16-19, 25, 30-33, 36, 1-8 and more)
+#: name the file first, immediately after the check number. Not universal: a message with
+#: no natural file subject (a numbering-gap report, a cross-reference summary naming
+#: several files at once) does not match, and is not this pattern's to guess at.
+_H1_FAILURE_LOCATION_RE: Final = re.compile(r"^check (\d+): ([^\s:]+):")
+
+
+def _h1_residue_by_file(out: str) -> Mapping[tuple[str, str], int]:
+    """(h1)'s own per-(file, check) breakdown, for the W37-11 residue ceiling
+    (`Row.residue`) — reads the identical failure lines `_classify_failures` already
+    parses, never a second sweep of `out`.
+
+    Only a failure message shaped `check N: <path>: ...` (`_H1_FAILURE_LOCATION_RE`)
+    names a file; every other shape still counts in `_classify_failures`'s per-check
+    total (h1's own verdict is unaffected either way) but contributes nothing here — a
+    class with no per-file breakdown is not yet governable by (file, class), and is
+    disclosed only through h1's aggregate count, exactly as it was before this ceiling
+    existed. `cls` is tagged `f"h1-check{n}"` rather than the bare check number, so a
+    future (d)-row and an h1 check can never collide on the same key by coincidence.
+    """
+    block = _FAILED_BLOCK_RE.search(out)
+    tail = out[block.start():] if block else ""
+    residue: dict[tuple[str, str], int] = {}
+    for msg in _FAILURE_LINE_RE.findall(tail):
+        m = _H1_FAILURE_LOCATION_RE.match(msg)
+        if not m:
+            continue
+        check_no, path = m.group(1), m.group(2)
+        key = (path, f"h1-check{check_no}")
+        residue[key] = residue.get(key, 0) + 1
+    return residue
+
+
 def _h2_verdict(vacuous: Sequence[str], over_exempt: bool) -> str:
     """Ruling 105 D3: the zero-denominator probes stay fatal; OVER-EXEMPT alone discloses."""
     if vacuous:
@@ -2656,6 +2690,7 @@ def rows_h(snap: Snapshot) -> list[Row]:
             )
             if part
         ),
+        residue=_h1_residue_by_file(mig_out),
     )
 
     mig_probes = _probe_summary(mig_out)

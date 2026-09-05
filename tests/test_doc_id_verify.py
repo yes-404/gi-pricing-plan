@@ -2187,6 +2187,40 @@ def test_h1_verdict_passes_only_when_every_other_class_is_zero(dv: Any) -> None:
     assert dv._h1_verdict(1) == dv.FAIL
 
 
+def test_h1_residue_by_file_reads_the_check_n_path_colon_shape(dv: Any) -> None:
+    """Team-lead condition 2 on PR #756: (h1) is the largest box-end ruled row and must
+    be wired by (file, check), not left a follow-up. `cls` is tagged `h1-check<n>` so an
+    (h1) check can never collide with a (d)-row's own key by coincidence.
+
+    `check 1: broken link in docs/d.md: docs/gone.md` does NOT match — its message does
+    not open with a bare path immediately after the check number, which is this
+    predicate's own documented, honest limit (not every check's message names a file
+    first) rather than a silent miss: `_classify_failures` still counts it in the row's
+    own aggregate, unaffected by this function at all.
+    """
+    residue = dv._h1_residue_by_file(_FAILED_BLOCK)
+    assert dict(residue) == {
+        ("docs/a.md", "h1-check32"): 1,
+        ("docs/b.md", "h1-check32"): 1,
+        ("docs/audit/register.md", "h1-check29"): 1,
+        ("docs/c.md", "h1-check30"): 1,
+    }
+    assert sum(residue.values()) == 4  # the check-1 broken-link message is not one of them
+
+
+def test_h1_residue_by_file_is_empty_on_a_clean_tree(dv: Any) -> None:
+    assert dict(dv._h1_residue_by_file("All checks passed.\n")) == {}
+
+
+def test_h1_residue_by_file_sums_repeats_at_the_same_path_and_check(dv: Any) -> None:
+    out = (
+        "FAILED (2):\n"
+        "  - check 32: docs/a.md: first problem\n"
+        "  - check 32: docs/a.md: second problem\n"
+    )
+    assert dict(dv._h1_residue_by_file(out)) == {("docs/a.md", "h1-check32"): 2}
+
+
 def test_h2_verdict_over_exempt_discloses_but_vacuous_stays_fatal(dv: Any) -> None:
     """Ruling 105 D3: the zero-denominator probes (`vacuous`) stay fatal even when
     OVER-EXEMPT also fires; OVER-EXEMPT alone is disclosed, not failed."""
