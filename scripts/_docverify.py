@@ -379,7 +379,8 @@ def was_field_line_numbers(text: str) -> frozenset[int]:
     )
 
 
-#: Ruling 107 Entry 1 item 1: the fence predicate moved into `_docid` so `audit-docs.py`
+#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+#: the fence predicate moved into `_docid` so `audit-docs.py`
 #: check 36 can read the identical rule row (e)'s `padded_hits` and row (d)'s corpus both
 #: use — re-exported here under this module's existing name for every caller and test
 #: already written against it (Ruling 103 §1.8: "two implementations of one rule that are
@@ -730,7 +731,8 @@ D_ALTERNATIVES: Final = _docid.LEGACY_FORM_PATTERNS
 #: Part 1 anchoring fix to the pattern can never silently un-key a disclosure. Disclosed,
 #: never silent: the row still prints its figure, denominator and control.
 #:
-#: Ruling 107 Entry 1 item 1: moved into `_docid.FINDING_ID_ALIAS_LABELS` so `audit-docs.py`
+#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+#: moved into `_docid.FINDING_ID_ALIAS_LABELS` so `audit-docs.py`
 #: check 36 can read the identical two-label set — re-exported here under this module's
 #: existing name. Deliberately the *narrower* of `_docid`'s two disclosed-label constants:
 #: `rows_d` below dispatches row (d8) (`label == _D8_LABEL`) before ever consulting this
@@ -1050,7 +1052,8 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
 # is for an exhibit of a defective FORM, and this is not one.
 _D7_LABEL: Final = _docid.SCOPED_REQUIREMENT_ID_LABEL
 
-#: Ruling 107 Entry 1 item 1: the never-allocated predicate's sources and function moved
+#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+#: the never-allocated predicate's sources and function moved
 #: into `_docid` so `audit-docs.py` check 36 can read the identical rule — the four thin
 #: wrappers below preserve this module's existing `Corpus`-based signatures for every
 #: caller and test already written against them, delegating to `_docid`'s pure,
@@ -1519,19 +1522,12 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
 # (e) no padded id in prose — Ruling 103's four conjuncts
 # ---------------------------------------------------------------------------------------
 
-#: **Conjunct 1**, and the `PAD_WIDTH` is read from the symbol, never written as a literal.
-#: Ruling 103 defect 1: the same corpus gave 2032 under `-0\d{4}` and 2387 under
-#: `-0[0-9]{3,4}` — **355 occurrences from the digit count alone**, F85's exact shape inside
-#: an acceptance predicate. `CLAUDE.md` §13's "the shipped constant by symbol, never pasted"
-#: is what stops it recurring.
-_PADDED_ID_RE: Final = re.compile(
-    r"\b(" + "|".join(_docid.FAMILY_PREFIXES) + r")-0\d{" + str(_docid.PAD_WIDTH - 1) + r"}\b"
-)
-
-#: **Conjunct 2's** stripping step. Ruling 103 defect 3: two of the three survivors were
-#: paths — `docs/rulings/**RL-00993**-q5-….md` — whose **bold markers split the token**, so
-#: the path test never saw a path. A predicate bug, not a ruling question.
-_MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
+#: **Conjunct 1**'s exact-width regex, moved into `_docid` per
+#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item 1
+#: so `audit-docs.py` check 32 can read the identical assembled pattern rather than
+#: reassembling it from the same two symbols in a second place — re-exported here under
+#: this module's existing name for every caller and test already written against it.
+_PADDED_ID_RE: Final = _docid._PADDED_ID_RE
 
 #: **Conjunct 0's** fence tracking. Ruled by the decision-maker: without it, a record
 #: documenting a padding defect must corrupt its own evidence to pass the lint, which is
@@ -1540,46 +1536,15 @@ _MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
 #: every document, the ruling's own included.
 _FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
 
-#: `<` and `>` are excluded from this boundary set — this doc suite's own placeholder
-#: convention writes a filename's variable segment in angle brackets (a padded id, a
-#: hyphen, an angle-bracketed slug placeholder, then `.md`; `docs/_templates/*.md`'s own
-#: copy-target lines and NT-0019 §1.1 rule 3's illustration both use it), and treating
-#: `<`/`>` as hard boundaries truncated the right-side walk before it ever reached the
-#: extension — the token stopped one character short of the placeholder's opening `<`, so
-#: a real filename citation (`PL-01240-<slug>.md`) read as prose (`PL-01240-`, no `/`, no
-#: extension). Widening the walk past them can also swallow a literal `<...>` wrapper
-#: around a *bare* id, but that token still has no `/` and does not end in an extension,
-#: so it is classified unchanged.
-_TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}\"',;]")
-
-#: **Conjunct 2's** line-locator strip. Row (e)'s own measurement found a fourth defect
-#: alongside Ruling 103's three: a same-directory `filename.md:123` or `filename.md:401-404`
-#: citation (this corpus's own convention for "the peer file, no leading `docs/plans/`,
-#: because both live in the same directory") is a filename token per rule 3's own wording —
-#: "the leading component of a filename ending `.md`" — but the trailing `:<line>` defeats
-#: the bare `\.[A-Za-z0-9]{2,4}$` extension test, which requires the token to *end* at the
-#: extension. Stripped before that test only; the `/` test is unaffected either way.
-_TRAILING_LINE_LOCATOR_RE: Final = re.compile(r":\d+(-\d+)?$")
-
-
-def _in_path_context(line: str, start: int, end: int) -> bool:
-    """True when the occurrence at `line[start:end]` sits inside a path-shaped token.
-
-    Path-shaped means the enclosing token contains a `/` or ends in a file extension (once a
-    trailing `:<line>` or `:<start>-<end>` locator is stripped). A padded id inside a
-    filename is not "in prose"; a padded id in a sentence is. Defined on the whole enclosing
-    token rather than by a lookbehind on one character, which was the first attempt and
-    missed `[PL-01240-slug](docs/plans/PL-01240-slug.md)`.
-    """
-    left = start
-    while left > 0 and not _TOKEN_BOUNDARY_RE.match(line[left - 1]):
-        left -= 1
-    right = end
-    while right < len(line) and not _TOKEN_BOUNDARY_RE.match(line[right]):
-        right += 1
-    token = line[left:right]
-    sans_locator = _TRAILING_LINE_LOCATOR_RE.sub("", token)
-    return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", sans_locator))
+#: **Conjunct 2's** stripping step, boundary set and line-locator strip, and the
+#: `_in_path_context` predicate itself, moved into `_docid` per
+#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item 1
+#: so `audit-docs.py` check 32 can read the identical predicate rather than a private copy.
+#: Re-exported here under their existing names for this module's own callers and tests.
+_MD_EMPHASIS_RE: Final = _docid._MD_EMPHASIS_RE
+_TOKEN_BOUNDARY_RE: Final = _docid._TOKEN_BOUNDARY_RE
+_TRAILING_LINE_LOCATOR_RE: Final = _docid._TRAILING_LINE_LOCATOR_RE
+_in_path_context = _docid._in_path_context
 
 
 def _unpadded(token: str) -> str:
@@ -1691,7 +1656,7 @@ def row_e(mig: Corpus, ctl: Corpus, snap: Snapshot) -> Row:
             f"field lines, minus fenced code blocks ({_FENCE_RE.pattern!r}); "
             f"conjunct 1 — {_PADDED_ID_RE.pattern!r}, whose digit count is "
             "`_docid.PAD_WIDTH` **by symbol**, never a literal; "
-            f"conjunct 2 — not path-shaped (`_docverify._in_path_context`) after stripping "
+            f"conjunct 2 — not path-shaped (`_docid._in_path_context`) after stripping "
             f"markdown emphasis ({_MD_EMPHASIS_RE.pattern!r}); "
             "conjunct 3 — the token's UNPADDED form resolves in the generated "
             "docs/INDEX.md (`_docverify.index_ids`)"

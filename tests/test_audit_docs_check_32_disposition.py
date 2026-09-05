@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
-"""Ruling 107's check-32 disposition — the path exclusion, and the kinds of failure
-check 32 reports.
+"""`docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item
+1's check-32 disposition — the padding clause adopts row (e)'s conjuncts 2 and 3 from
+shared `_docid` code: a padded id sitting inside a filesystem path (conjunct 2) or whose
+unpadded form does not resolve in `docs/INDEX.md` (conjunct 3) is not a padding violation.
+Check 32 keeps its own broader `0*` breadth beyond (e)'s exact-width conjunct 1: a padded
+citation with fewer leading zeros than `_docid.PAD_WIDTH` (a "short-padded" id) is a real
+rule-2 violation (e) does not see, and it is listed under its own text, never folded into
+(e)'s count.
 
-Ruling 107 item 1.1 adopts conjunct 2 of `(e)` from `_docverify.py`: a padded id sitting
-inside a filesystem path is not a citation violation, because it is naming a file rather
-than citing an id in prose. Item 2 requires check 32's failures to be distinguishable by
-kind — resolution, padding, and link text/target mismatch.
+`test_check_32_lists_kinds_of_failures` (asserting check 32 must print a machine-readable
+classification) is deleted, not renamed, per the ruling record's discharge/rescoping
+section — nobody ruled that requirement.
 
-Both tests drive `citation_problems_in_file` directly against a document built in a
-tempdir, never against the live `docs/` tree. That is deliberate. The predecessor of the
-second test called `check_citations()` over the real tree, resolved relative to the test
-file's own parent — which was the repository root only by accident of where the file then
-sat, so moving the file would have silently changed what it measured. It also asserted
-only `len(notes) > 0`, which the pre-migration "no docs/INDEX.md yet, skipped" note
-satisfies on its own: deleting the whole body of check 32 left it green.
+Every test drives `citation_problems_in_file` directly against a document built in a
+tempdir, never against the live `docs/` tree. That is deliberate — see the discussion this
+comment's predecessor recorded, still true: a test resolved relative to the test file's own
+parent only measures the repository root by accident of where the file sits, and a test
+asserting only `len(notes) > 0` is satisfied by the pre-migration "skipped" note alone.
 
 This file lives under `tests/` rather than at the repository root because
 `pyproject.toml`'s `testpaths` does not list the root, so a root-level test file is never
@@ -30,26 +33,9 @@ import types
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "audit-docs.py"
 
-#: The one id the fixture index resolves. Everything else in the fixture document is
-#: unresolvable by construction, which is what makes the resolution kind fire.
+#: The one id the fixture index resolves. Every other citation in these fixtures is
+#: unresolvable by construction.
 INDEX_IDS = {"PL-66"}
-
-#: A document carrying exactly one failure of each kind, plus one deliberate non-failure.
-#: Line 4 is the discriminator: before Ruling 107's path exclusion it was reported as a
-#: padding violation, and it is the reason `len(problems)` is asserted rather than only
-#: the three kinds being present.
-BROKEN_DOC = (
-    "See PL-77 for the rationale.\n"  # 1 — resolution: PL-77 is not in the index
-    "The rule in PL-00066 applies here.\n"  # 2 — padding: resolves, but written padded
-    "[PL-66](docs/plans/PL-77-other.md)\n"  # 3 — mismatch: text and target differ
-    "See docs/plans/PL-00066-slug.md for the plan.\n"  # 4 — NOT a failure: a path
-)
-
-EXPECTED_RESOLUTION = "1: PL-77 does not resolve in docs/INDEX.md"
-EXPECTED_PADDING = (
-    "2: padded id `PL-00066` outside a link target — citations write the integer, "
-    "never padding (NT-0019 §1.1 rule 2)"
-)
 
 
 def _load_audit() -> types.ModuleType:
@@ -67,8 +53,8 @@ def _load_audit() -> types.ModuleType:
 
 
 def test_check_32_path_excluded_from_padding_check() -> None:
-    """Ruling 107 item 1.1: a padded id inside a filesystem path is not a padding
-    violation. `docs/plans/PL-00066-slug.md` names a file; it does not cite `PL-00066`.
+    """Conjunct 2: a padded id inside a filesystem path is not a padding violation.
+    `docs/plans/PL-00066-slug.md` names a file; it does not cite `PL-00066`.
     """
     audit = _load_audit()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -79,30 +65,64 @@ def test_check_32_path_excluded_from_padding_check() -> None:
         assert padding_problems == [], f"Path should exclude padding check: {padding_problems}"
 
 
-def test_check_32_lists_kinds_of_failures() -> None:
-    """Ruling 107 item 2: check 32's failures are distinguishable by kind — resolution,
-    padding, and link text/target mismatch — and each names the line it is on.
+def test_check_32_unresolvable_padded_id_is_not_a_padding_violation() -> None:
+    """Conjunct 3: a padded id whose unpadded form does not resolve in `docs/INDEX.md` is
+    a specimen of the form, not a citation — exactly as row (e) reads it. Only the
+    resolution failure fires; no padding failure alongside it.
 
-    Asserted against a deliberately broken document rather than the live tree, and on the
-    problems' actual text rather than their count. The fourth line is a padded id in a
-    path: it must contribute nothing, which is why the total is pinned at three.
+    Made to fail on purpose against the pre-fix code (which had no conjunct 3 at all):
+    pre-fix, this asserted list is `["1: PL-99 does not resolve in docs/INDEX.md"]` but
+    the actual result also carried a padding problem for the same token, since nothing
+    gated the padding branch on resolution.
     """
     audit = _load_audit()
     with tempfile.TemporaryDirectory() as tmpdir:
-        doc = pathlib.Path(tmpdir) / "broken.md"
-        doc.write_text(BROKEN_DOC, encoding="utf-8")
+        doc = pathlib.Path(tmpdir) / "test.md"
+        doc.write_text("See PL-00099 for detail.\n", encoding="utf-8")
         problems = audit.citation_problems_in_file(doc, index_ids=INDEX_IDS)
+    assert problems == ["1: PL-99 does not resolve in docs/INDEX.md"], problems
 
-    resolution = [p for p in problems if "does not resolve in docs/INDEX.md" in p]
-    padding = [p for p in problems if "padded id" in p]
-    mismatch = [p for p in problems if "cites" in p and "names" in p]
 
-    assert resolution == [EXPECTED_RESOLUTION], problems
-    assert padding == [EXPECTED_PADDING], problems
-    assert len(mismatch) == 1, problems
-    assert mismatch[0].startswith("3: link text 'PL-66' cites PL-66 but its target "), problems
-    assert "names PL-77" in mismatch[0], problems
+def test_check_32_exact_width_padded_id_reds_alongside_row_e() -> None:
+    """Broken-input proof (ruling record Entry 2 item 1's acceptance line): a `PL-00066`
+    in prose reds both row (e) and check 32 — it resolves (`PL-66` is indexed), it is not
+    path-shaped, and it matches (e)'s exact-width conjunct 1.
+    """
+    audit = _load_audit()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        doc = pathlib.Path(tmpdir) / "test.md"
+        doc.write_text("The rule in PL-00066 applies here.\n", encoding="utf-8")
+        problems = audit.citation_problems_in_file(doc, index_ids=INDEX_IDS)
+    assert problems == [
+        "1: padded id `PL-00066` outside a link target — citations write the integer, "
+        "never padding (NT-0019 §1.1 rule 2)"
+    ], problems
 
-    # The three kinds are the whole of it: line 4's padded id in a path is excluded, so a
-    # regression that reinstated it would show up here as a fourth problem.
-    assert len(problems) == 3, problems
+
+def test_check_32_path_shaped_padded_id_reds_neither() -> None:
+    """Broken-input proof: a `docs/plans/PL-00066-x.md` path in prose reds neither row (e)
+    nor check 32 — it names a file, it does not cite an id in prose.
+    """
+    audit = _load_audit()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        doc = pathlib.Path(tmpdir) / "test.md"
+        doc.write_text("See docs/plans/PL-00066-x.md for the plan.\n", encoding="utf-8")
+        problems = audit.citation_problems_in_file(doc, index_ids=INDEX_IDS)
+    assert problems == [], problems
+
+
+def test_check_32_short_padded_id_reds_check_32_alone_and_is_listed() -> None:
+    """Broken-input proof: a `PL-066` reds check 32 alone — row (e)'s exact-width conjunct
+    1 does not match a 3-digit padded form — and is listed under its own text: a real
+    NT-0019 §1.1 rule 2 violation, never folded into (e)'s count.
+    """
+    audit = _load_audit()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        doc = pathlib.Path(tmpdir) / "test.md"
+        doc.write_text("See PL-066 for the rationale.\n", encoding="utf-8")
+        problems = audit.citation_problems_in_file(doc, index_ids=INDEX_IDS)
+    assert problems == [
+        "1: short-padded id `PL-066` outside a link target — fewer leading zeros than "
+        "`_docid.PAD_WIDTH`, still a rule-2 violation row (e)'s exact-width conjunct does "
+        "not see (NT-0019 §1.1 rule 2)"
+    ], problems

@@ -1824,29 +1824,6 @@ def check_id_filename_directory() -> None:
 _MD_LINK_RE: Final = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 _FENCE_LINE_RE: Final = re.compile(r"^\s*```")
 
-# Ruling 107: Adopt (e)'s conjuncts for path and resolution filtering
-_MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
-_TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}\"',;]")
-_TRAILING_LINE_LOCATOR_RE: Final = re.compile(r":\d+(-\d+)?$")
-
-
-def _in_path_context(line: str, start: int, end: int) -> bool:
-    """True when the occurrence at `line[start:end]` sits inside a path-shaped token.
-
-    Ruling 107 adoption of (e)'s conjunct 2: a padded id inside a filename is not
-    "in prose"; a padded id in a sentence is.
-    """
-    left = start
-    while left > 0 and not _TOKEN_BOUNDARY_RE.match(line[left - 1]):
-        left -= 1
-    right = end
-    while right < len(line) and not _TOKEN_BOUNDARY_RE.match(line[right]):
-        right += 1
-    token = line[left:right]
-    sans_locator = _TRAILING_LINE_LOCATOR_RE.sub("", token)
-    return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", sans_locator))
-
-
 def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[str]:
     """Every check-32 problem in one file, given the set of canonical ids `docs/INDEX.md`
     carries: a `<PREFIX>-<n>` citation outside a link target that does not resolve; the
@@ -1854,9 +1831,17 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
     ids. Explicit parameters (not the module's own `ROOT`/`_id_scope_documents`) so a
     fixture can exercise this without a real `docs/INDEX.md` on disk.
 
-    Ruling 107: Adopts (e)'s conjuncts 2 and 3 — path exclusion (conjunct 2) and
-    resolution test (conjunct 3) — so path-shaped citations and unresolvable ids are
-    excluded from padding violations.
+    `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item
+    1: the padding clause adopts row (e)'s conjuncts 1, 2 and 3 from `_docid` — the
+    exact-width regex (conjunct 1, `_docid._PADDED_ID_RE`, read here rather than
+    reassembled from its own `FAMILY_PREFIXES`/`PAD_WIDTH` symbols a second time), path
+    exclusion (conjunct 2, `_docid._in_path_context`) and resolution (conjunct 3: a padded
+    token whose unpadded form does not resolve in `docs/INDEX.md` is a specimen of the
+    form, not a citation, exactly as (e) reads it) — so path-shaped citations and
+    unresolvable ids are excluded from the padding population. Check 32 keeps its own
+    broader `0*` breadth beyond that (NT-0019 §1.1 rule 2 admits no exception): a padded
+    citation outside (e)'s exact-width conjunct is a **short-padded** violation, listed
+    under its own text rather than folded into (e)'s count.
     """
     problems: list[str] = []
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -1871,7 +1856,7 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
         link_spans = [m.span() for m in _MD_LINK_RE.finditer(line)]
 
         # Conjunct 2 path stripping: strip markdown emphasis before path detection
-        cleaned = _MD_EMPHASIS_RE.sub("", line)
+        cleaned = _docid._MD_EMPHASIS_RE.sub("", line)
 
         for m in _docid.ID_RE.finditer(line):
             if any(start <= m.start() < end for start, end in link_spans):
@@ -1885,14 +1870,30 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
             # the two capture groups can never find padding. The full match (`m.group(0)`)
             # still carries it, so that is what padding is detected against.
             if m.group(0) != canon:
-                # Ruling 107: Conjunct 2 — exclude padded ids in path contexts
-                # Map position from original line to cleaned line (emphasis removed)
-                cleaned_start = len(_MD_EMPHASIS_RE.sub("", line[:m.start()]))
-                cleaned_end = cleaned_start + len(_MD_EMPHASIS_RE.sub("", m.group(0)))
-                if not _in_path_context(cleaned, cleaned_start, cleaned_end):
+                # Conjunct 3 — an unresolvable padded id is a specimen of the form, not a
+                # citation this rule ever governed; the "does not resolve" problem above
+                # already reports it, so it contributes nothing further here.
+                if canon not in index_ids:
+                    continue
+                # Conjunct 2 — exclude padded ids in path contexts. Map position from the
+                # original line to the cleaned line (emphasis removed).
+                cleaned_start = len(_docid._MD_EMPHASIS_RE.sub("", line[:m.start()]))
+                cleaned_end = cleaned_start + len(
+                    _docid._MD_EMPHASIS_RE.sub("", m.group(0))
+                )
+                if _docid._in_path_context(cleaned, cleaned_start, cleaned_end):
+                    continue
+                if _docid._PADDED_ID_RE.fullmatch(m.group(0)):
                     problems.append(
                         f"{lineno}: padded id `{m.group(0)}` outside a link target — "
                         "citations write the integer, never padding (NT-0019 §1.1 rule 2)"
+                    )
+                else:
+                    problems.append(
+                        f"{lineno}: short-padded id `{m.group(0)}` outside a link "
+                        "target — fewer leading zeros than `_docid.PAD_WIDTH`, still a "
+                        "rule-2 violation row (e)'s exact-width conjunct does not see "
+                        "(NT-0019 §1.1 rule 2)"
                     )
 
         for link_m in _MD_LINK_RE.finditer(line):
@@ -2856,7 +2857,8 @@ LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
 
 _WAS_LINE_RE: Final = re.compile(r"^\s*was:\s")
 
-#: Ruling 107 Entry 1 item 1: `_docid.TEST_MODULE_EXCLUSIONS`' three names — the
+#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+#: `_docid.TEST_MODULE_EXCLUSIONS`' three names — the
 #: instrument's own id-grammar/check/migrate test modules, which carry legacy-form ids as
 #: literal fixture data by construction (the "3c tuple" the ruling names). Read alone,
 #: never through `_docid.sweep_exclusion_reason`: that function also folds in
@@ -3068,8 +3070,9 @@ def check_redirects() -> None:
     notes.append(
         f"check 36: {len(redirect_rows)} redirect row(s), {len(was_values)} `was:` "
         f"field(s) in scope, {len(legacy_hits)} legacy-form hit(s) "
-        f"({fatal_hits} fatal, {disclosed_total} disclosed — Ruling 107 Entry 1 item 1, "
-        f"same predicates as NT-0019 §7(d)): {disclosed_text}"
+        f"({fatal_hits} fatal, {disclosed_total} disclosed — "
+        "docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md "
+        f"Entry 1 item 1, same predicates as NT-0019 §7(d)): {disclosed_text}"
     )
 
 
