@@ -1737,11 +1737,11 @@ def check_id_filename_directory() -> None:
     carries no `id:` at all (Reference, §1.2: "no prefix and no number") — so every
     sub-clause finds nothing to compare *today*; each is proven on fixtures instead.
 
-    Global uniqueness/contiguity here deliberately overlaps `doc-id.py check`'s own gate
-    step: that tool computes contiguity from `docs/INDEX.md` (DP-8 — a local, unmerged
-    draft must not manufacture a phantom gap), while this runs over the *scoped* working
-    tree as part of `audit-docs.py`'s single report (NT-0019 §1.11: "one gate, one
-    report").
+    Contiguity (Ruling 108) reads the full allocation via docs/INDEX.md (same as row (b)
+    in `doc-id.py check`) rather than per-file, to avoid false gaps between document
+    families in the scoped walk. Other clauses remain per-file, run over the scoped
+    working tree as part of `audit-docs.py`'s single report (NT-0019 §1.11: "one gate,
+    one report").
     """
     entries: list[tuple[int, str, str, date | None]] = []
     for path in _id_scope_documents():
@@ -1787,10 +1787,24 @@ def check_id_filename_directory() -> None:
         else:
             seen[number] = (canon, rel)
 
-    numbers = sorted(seen)
-    for lower, upper in itertools.pairwise(numbers):
-        if upper != lower + 1:
-            fail(f"check 31: gap in the scoped id sequence between {lower} and {upper}")
+    # Contiguity check: read full allocation from docs/INDEX.md (Ruling 108)
+    # When INDEX.md exists, read contiguity from it (same as doc-id.py check row (b));
+    # pre-migration, check contiguity within the scoped set only (Ruling 108).
+    if migrated_tree():
+        # Read full allocation from INDEX.md to avoid false gaps between document families
+        index_numbers = sorted({int(m.group(2)) for m in _docid.ID_RE.finditer(
+            (ROOT / "INDEX.md").read_text(encoding="utf-8"))})
+        for lower, upper in itertools.pairwise(index_numbers):
+            if upper != lower + 1:
+                fail(f"check 31: gap in the full allocation between {lower} and {upper}")
+        scoped_count = len(seen)
+    else:
+        # Pre-migration: check contiguity within the scoped set only
+        numbers = sorted(seen)
+        for lower, upper in itertools.pairwise(numbers):
+            if upper != lower + 1:
+                fail(f"check 31: gap in the scoped id sequence between {lower} and {upper}")
+        scoped_count = len(numbers)
 
     dated = sorted((n, c) for n, _canon, _rel, c in entries if c is not None)
     for (n1, c1), (n2, c2) in itertools.pairwise(dated):
@@ -1800,7 +1814,7 @@ def check_id_filename_directory() -> None:
                 f"{n1}'s {c1.isoformat()} — `created` must be non-decreasing with the number"
             )
 
-    notes.append(f"check 31: {len(entries)} id(s) in scope, {len(numbers)} distinct number(s)")
+    notes.append(f"check 31: {len(entries)} id(s) in scope, {scoped_count} distinct number(s)")
 
 
 # =========================================================================================
