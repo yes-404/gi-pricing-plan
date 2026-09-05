@@ -30,6 +30,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import types
 from typing import Any, Final
 
 import pytest
@@ -668,8 +669,30 @@ def test_g1_provenance_check_reads_0_on_the_fixed_output(
     assert mismatches == []
 
 
-# =========================================================================================
-# (g) g2 — row_g wraps `doc-id.classify_migration_diff`'s per-class breakdown into the
+def test_wk_shape_hits_excludes_framework_self_reference_not_a_second_mechanism(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Team-lead's ruling, 2026-09-05: "your WK hits are not a new class — they are the
+    `FR-PLAT-4` class... build one predicate." `_wk_shape_hits` must exclude a WK-944C-
+    shaped string wherever `_is_framework_self_reference` says so (a `tests/*.py` comment,
+    a backtick-quoted exhibit in a `docs/plans/` doc) while still counting a genuine
+    occurrence — proving the SAME predicate (d7)'s `FR-PLAT-4` joins by is doing the work
+    here too, not a second, WK-specific mechanism.
+    """
+    migrated = {
+        # Excluded: a Python comment under tests/.
+        "tests/test_example.py": (
+            "    # `\"W3C/OpenTelemetry\"` came out `\"WK-944C/OpenTelemetry\"`\n"
+        ),
+        # Excluded: a backtick-quoted pattern exhibit in a workstream planning doc.
+        "docs/plans/PL-00001-w37-6-example.md": "broken-input material (`WK-944C`).\n",
+        # NOT excluded: the identical shape in a real, non-self-referential document.
+        "docs/some-real-doc.md": "see WK-944C for detail\n",
+    }
+    mig = dv.load_corpus(_mkrepo(tmp_path / "migrated", migrated))
+    lines, files = dv._wk_shape_hits(mig)
+    assert lines == 1, "only the non-self-referential occurrence must count"
+    assert files == 1
 # Row, never reimplementing the six-class filter itself (Ruling 68 §3). A fake `docid`
 # stands in for the real module so these tests pin row_g's OWN aggregation logic — which
 # class counts get printed, which residue drives the verdict — independent of whether the
@@ -1821,7 +1844,11 @@ def test_d7_a_framework_self_reference_is_disclosed_by_a_line_predicate_not_a_na
         "FR-PLAT-4 must not appear among the FAIL-branch real hits"
     )
     assert "framework self-reference" in d7.note
-    assert "FR-PLAT-4" in d7.note and "OQ-EX-9" in d7.note, (
+    assert "FR-PLAT-4" in d7.note, (
+        "both members of the class, from two unrelated files, must be named -- proving "
+        "this is a predicate over the line and the file, not a table keyed on one token"
+    )
+    assert "OQ-EX-9" in d7.note, (
         "both members of the class, from two unrelated files, must be named -- proving "
         "this is a predicate over the line and the file, not a table keyed on one token"
     )
@@ -1843,11 +1870,8 @@ def test_framework_self_reference_predicate_yields_a_broad_class_on_the_real_cor
     for path in sorted(root.glob("*.py")):
         rel = f"scripts/{path.name}"
         text = path.read_text(encoding="utf-8")
-
-        class _Mig:
-            lines = {rel: text.splitlines()}
-
-        self_ref_lines = dv._framework_self_reference_lines(rel, _Mig())
+        mig = types.SimpleNamespace(lines={rel: text.splitlines()})
+        self_ref_lines = dv._framework_self_reference_lines(rel, mig)
         for i, line in enumerate(text.splitlines()):
             if i in self_ref_lines and id_pattern.search(line):
                 members.append(f"{rel}:{i + 1}")

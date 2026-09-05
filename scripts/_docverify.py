@@ -1147,15 +1147,57 @@ def _python_comment_or_string_lines(text: str) -> frozenset[int]:
     return frozenset(result)
 
 
+#: The second half of framework self-reference (team-lead, 2026-09-05, converging
+#: independently with the deputy's ruling above): this workstream's own planning/ruling
+#: docs, in prose, quoting a citation-form SHAPE as an exhibit — `` `WK-944C` ``,
+#: `` `NFR-775/14` `` — rather than citing a requirement. `docs/plans/`, `docs/rulings/`
+#: and `docs/findings/` are this workstream's own record of its work on the migration
+#: tooling itself, not the platform's requirements corpus (`docs/specs/`) or its audit
+#: register (`docs/audit/register.md`, a REAL citation source, deliberately excluded
+#: here) — the same directories `_D7_OTHER_DEFINITION_SOURCES`-adjacent code already
+#: treats as a different population from a genuine definition source.
+_W37_PLANNING_DOC_DIRS: Final = ("docs/plans/", "docs/rulings/", "docs/findings/")
+
+
+def _is_planning_doc_pattern_exhibit(rel: str, line: str, matched: str) -> bool:
+    """True if `rel` is one of this workstream's own planning/ruling/findings docs and
+    `matched` appears **inside some backtick-quoted span** on `line` — every
+    self-referential exhibit found in the real corpus takes this form, though not always
+    with nothing else in the span: `` `FR-680..4` `` alone, but also `` `WK-944C/...` ``
+    (a quoted before/after example) and `` `WK-944C/OpenTelemetry` `` (the whole
+    corrupted string, quoted). Splitting on the backtick character and checking every
+    odd-indexed segment (the parts a Markdown reader renders as code) covers all three:
+    a real citation of an allocated id in running prose is not typically wrapped in
+    backticks alongside a slash-suffixed elaboration of the pattern's own shape."""
+    if not (rel.startswith(_W37_PLANNING_DOC_DIRS) and rel.endswith(".md")):
+        return False
+    segments = line.split("`")
+    return any(matched in segment for segment in segments[1::2])
+
+
 def _framework_self_reference_lines(rel: str, mig: Corpus) -> frozenset[int]:
     """0-based line numbers in `rel` that are framework self-reference — inside a Python
-    comment or docstring of a `scripts/*.py` file, this repository's own tooling
-    discussing or testing a legacy-id shape rather than citing a requirement. Empty for
-    every other file, so a caller can call this unconditionally per file without its own
-    `scripts/`-path check."""
-    if not (rel.startswith("scripts/") and rel.endswith(".py")):
+    comment or docstring of a `scripts/*.py` or `tests/*.py` file, this repository's own
+    tooling discussing or testing a legacy-id shape rather than citing a requirement.
+    Empty for every other file, so a caller can call this unconditionally per file without
+    its own path check. Does not cover `_is_planning_doc_pattern_exhibit`'s markdown
+    half, which needs the matched substring itself, not just the line index — callers
+    combine both."""
+    if not ((rel.startswith("scripts/") or rel.startswith("tests/")) and rel.endswith(".py")):
         return frozenset()
     return _python_comment_or_string_lines("\n".join(mig.lines[rel]))
+
+
+def _is_framework_self_reference(rel: str, mig: Corpus, line_index: int, matched: str) -> bool:
+    """The one combined predicate (team-lead's ruling, 2026-09-05: "build one predicate
+    and let it cover FR-PLAT-4, the WK hits, and the fixture tokens together"): a Python
+    comment/docstring line under `scripts/`/`tests/`, or a backtick-quoted pattern
+    exhibit in this workstream's own planning docs. Used identically by (d7)'s real-hit
+    classification and (g)'s WK-shape scan — one mechanism, not two, for one class."""
+    return (
+        line_index in _framework_self_reference_lines(rel, mig)
+        or _is_planning_doc_pattern_exhibit(rel, mig.lines[rel][line_index], matched)
+    )
 
 
 def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
@@ -1176,7 +1218,6 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
     self_ref_hits: list[str] = []
     for rel in mig.files:
         skip = mig.was_lines[rel] | mig.fenced_lines[rel]
-        self_ref_lines = _framework_self_reference_lines(rel, mig)
         line_disclosed = False
         for i, line in enumerate(mig.lines[rel]):
             if i in skip:
@@ -1187,7 +1228,7 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
             for token in tokens:
                 if _scoped_id_is_never_allocated(token, mig, ctl):
                     line_disclosed = True
-                elif i in self_ref_lines:
+                elif _is_framework_self_reference(rel, mig, i, token):
                     line_disclosed = True
                     self_ref_hits.append(f"{token} ({rel}:{i + 1})")
                 else:
@@ -1827,6 +1868,32 @@ COMPOUND_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+/[0-9]
 #: existing broken-input-proof tests keep testing the regex they always tested).
 _WK_MANGLED_RE: Final = re.compile(r"\bWK-[0-9]+[A-Z]")
 
+
+def _wk_shape_hits(mig: Corpus) -> tuple[int, int]:
+    """(lines, files) matching `_WK_MANGLED_RE`, **excluding framework self-reference**
+    (team-lead's ruling, 2026-09-05: "your WK hits are not a new class — they are the
+    `FR-PLAT-4` class" — one predicate, `_is_framework_self_reference`, covers both
+    rather than a second mechanism for the identical population). A `WK-944C`-shaped
+    string inside a `scripts/*.py`/`tests/*.py` comment or docstring, or backtick-quoted
+    as a pattern exhibit in this workstream's own planning docs, is this repository
+    talking about #720's cause4, never a citation the real shape test needs to catch."""
+    n_lines = 0
+    n_files = 0
+    for rel in mig.files:
+        skip = mig.was_lines[rel]
+        hits = 0
+        for i, line in enumerate(mig.lines[rel]):
+            if i in skip:
+                continue
+            m = _WK_MANGLED_RE.search(line)
+            if m and not _is_framework_self_reference(rel, mig, i, m.group(0)):
+                hits += 1
+        if hits:
+            n_lines += hits
+            n_files += 1
+    return n_lines, n_files
+
+
 #: g1's legacy-form base pattern — identical to (d7)'s own `d7_pattern`
 #: (`_d7_disclosed_or_fail`), not a second definition: a compound or range citation's
 #: *base* token is a scoped legacy id exactly like (d7)'s population, just followed by a
@@ -2244,8 +2311,8 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
     classification = docid.classify_migration_diff(snap.control, snap.migrated)
     residue = classification.per_class.get(docid.CLASSIFIED_BY_NONE, ())
 
-    wk_mangled, wk_mangled_files = mig.scan(_WK_MANGLED_RE, skip_was=False)
-    wk_control, _ = ctl.scan(_WK_MANGLED_RE, skip_was=False)
+    wk_mangled, wk_mangled_files = _wk_shape_hits(mig)
+    wk_control, _ = _wk_shape_hits(ctl)
     provenance_mismatches = _g1_provenance_mismatches(docid, mig, ctl)
     at_risk, at_risk_files = ctl.scan(COMPOUND_CITATION_RE, skip_was=False)
 
@@ -2305,7 +2372,10 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "expanded compound and a corrupted one are indistinguishable by pattern. The "
             f"WK-family alternative keeps its raw-shape test unchanged: {_WK_MANGLED_RE.pattern!r} "
             "— no legitimate rewrite produces that shape, so shape alone still suffices "
-            "for it. g2 (Ruling 68 §2's closed enumeration, amended by Ruling 104 §2/§3 "
+            "for it, excluding framework self-reference (`_is_framework_self_reference`, "
+            "the identical predicate (d7)'s `FR-PLAT-4` joins the disclosed class by — "
+            "one mechanism for one class, not two). g2 (Ruling 68 §2's closed enumeration, "
+            "amended by Ruling 104 §2/§3 "
             "for class 6, by symbol, never restated here): "
             "`doc-id.classify_migration_diff(control, migrated)`, bucketing every touched "
             "file into `doc-id._RULING_68_CLASSES` or `doc-id.CLASSIFIED_BY_NONE`; classes "
