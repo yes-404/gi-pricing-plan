@@ -2890,14 +2890,22 @@ def _sweep_legacy_form_hits(
     patterns: Sequence[tuple[str, re.Pattern[str]]] = LEGACY_FORM_PATTERNS,
 ) -> list[_LegacyFormHit]:
     """Every legacy (pre-migration) id or path form found across `paths`, outside a
-    `was:` line, outside a fenced code block, outside `excluded_paths`, and outside the
-    instrument's own test-module fixture data (`_TEST_MODULE_EXCLUDED_PATHS`) — NT-0019
+    `was:` line, outside a fenced code block, outside `excluded_paths`, outside the
+    instrument's own test-module fixture data (`_TEST_MODULE_EXCLUDED_PATHS`), and
+    outside a family's own split-source index (`_docid.is_split_source_index`,
+    2026-09-05, rows (d9)-(d12)'s Check-36 alignment) — NT-0019
     §7 acceptance item (d) and check 36's third clause are "one rule at two times"
     (Ruling 67 §2), so both read the identical `_docid` predicates: the fence
     (`_docid.fenced_line_numbers`, the same rule row (e)'s `padded_hits` and row (d)'s own
-    corpus apply), the pattern tuple (`_docid.LEGACY_FORM_PATTERNS`), and the test-module
+    corpus apply), the pattern tuple (`_docid.LEGACY_FORM_PATTERNS`), the test-module
     exclusion (`_docid.TEST_MODULE_EXCLUSIONS`, row (d)'s `tracked_files` applies via
-    `_docid.sweep_exclusion_reason`). Structured, so a caller can classify each hit
+    `_docid.sweep_exclusion_reason`), and the split-index exclusion (row (d)'s own
+    `_path_alternative_verdict` in `_docverify.py` excludes the identical file for the
+    identical reason: `docs/<family>/INDEX.md`'s `` `was:` `` table column and "became N
+    documents" heading are RL-287/RL-255's ruled provenance, generated whole with no
+    other kind of line ever written there, so a file-level exclusion is still correct
+    here rather than the "classify per line, never per path" rule elsewhere in this
+    module). Structured, so a caller can classify each hit
     against (d)'s disclosed-class predicates before deciding what is fatal — `check_redirects`
     below does exactly that; `sweep_legacy_forms` renders these to strings for every
     existing caller and test.
@@ -2915,7 +2923,11 @@ def _sweep_legacy_form_hits(
             rel = path.relative_to(repo_root).as_posix()
         except ValueError:
             rel = path.as_posix()
-        if rel in excluded or rel in _TEST_MODULE_EXCLUDED_PATHS:
+        if (
+            rel in excluded
+            or rel in _TEST_MODULE_EXCLUDED_PATHS
+            or _docid.is_split_source_index(rel)
+        ):
             continue
         try:
             text = path.read_text(encoding="utf-8")

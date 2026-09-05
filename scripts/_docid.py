@@ -771,6 +771,37 @@ def is_vendored(path: Path, repo_root: Path) -> bool:
     return rel_parts[2] in _VENDORED_SKILLS
 
 
+#: The basename `doc-id.py migrate`'s `_write_split_source_indexes` gives each family's
+#: split-source index (`docs/<family>/INDEX.md`) — never the top-level `docs/INDEX.md`,
+#: a different file with a different meaning `is_split_source_index` below excludes by
+#: requiring exactly one directory segment between `docs/` and the basename.
+SPLIT_INDEX_BASENAME: Final = "INDEX.md"
+
+
+def is_split_source_index(rel: str) -> bool:
+    """True for `rel` (a repo-relative, `/`-separated path) naming a family's
+    split-source index — `docs/<family>/INDEX.md`, generated whole by
+    `doc-id.py migrate`'s `_write_split_source_indexes` and never hand-edited.
+
+    Row (d9)-(d12)'s own defect (2026-09-05): every such file's body is RL-287/RL-255's
+    ruled provenance record — a `` `was:` `` table column and a "`<old_rel>` became N
+    documents." heading line that must keep naming the pre-migration path forever (a
+    split source has no single successor to repoint to; RL-287 §3.3 forbids choosing
+    one, RL-255 forbids the path-only rewrite that choosing one would be). §7(d)'s path
+    alternatives could not tell this ruled citation apart from a stale one the
+    citation-inverse mechanism had simply failed to repoint, and counted every row of it
+    fatal. This predicate lets a caller exclude the file's content from that count
+    entirely — the same treatment `docs/REDIRECTS.csv` itself already gets, since the
+    docstring `_write_split_source_indexes` carries calls this file exactly that: "the
+    `../REDIRECTS.csv` row made navigable."
+
+    Never the top-level `docs/INDEX.md` (two segments, not three) or a file two or more
+    directories deep — only a bare `docs/<family>/INDEX.md`.
+    """
+    parts = rel.split("/")
+    return len(parts) == 3 and parts[0] == "docs" and parts[2] == SPLIT_INDEX_BASENAME
+
+
 def vendored_skills_ruff_exclude_mismatch(
     repo_root: Path,
 ) -> tuple[frozenset[str], frozenset[str]]:

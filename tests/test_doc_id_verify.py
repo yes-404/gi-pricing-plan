@@ -332,7 +332,95 @@ def test_row_d_fails_over_an_empty_population(
     snap = _snapshot(dv, tmp_path / "empty", {"docs/a.md": ""}, {"docs/a.md": ""})
     rows = _d_rows(dv, snap)
     assert rows["d1"].verdict == dv.FAIL
-    assert "empty population" in rows["d1"].note
+
+
+# ---------------------------------------------------------------------------------------
+# Rows (d9)-(d12), three framework defects found live 2026-09-05 in
+# `_path_alternative_verdict`'s own "real moved file" test.
+# ---------------------------------------------------------------------------------------
+
+_REDIRECTS_HEADER = "old_id,new_id,old_path,new_path,citing_dir\n"
+
+
+def test_path_alternative_ignores_a_same_path_redirect_row(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A `docs/REDIRECTS.csv` row with `old_path == new_path` records a token rename
+    made *inside* a file (`W1` -> `WK-954` inside `docs/roadmap.md`, which never moved),
+    not a file move. Before this fix, `docs/roadmap.md` sitting anywhere in a match's
+    two-line window flipped an unrelated, otherwise-disclosed citation to FATAL purely by
+    proximity — found live against `docs/plans/2026-08-30-nt-0014-adoption.md`, a path no
+    draft ever claims, sitting two rows above a genuine `docs/roadmap.md` mention in the
+    same table.
+    """
+    migrated = {
+        "docs/REDIRECTS.csv": _REDIRECTS_HEADER + "W1,WK-954,docs/roadmap.md,docs/roadmap.md,\n",
+        "docs/a.md": (
+            "| 19 | `docs/plans/2026-08-30-nt-0014-adoption.md` | New plan |\n"
+            "| 20 | `docs/roadmap.md` | Amend |\n"
+        ),
+    }
+    control = {"docs/a.md": "see docs/plans/2026- for background\n"}
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    rows = _d_rows(dv, snap)
+    assert rows["d9"].verdict != dv.FAIL, (
+        "docs/roadmap.md's same-path redirect row must not make an unrelated "
+        f"citation FATAL: {rows['d9'].note}"
+    )
+
+
+def test_path_alternative_excludes_a_split_source_index_file(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """RL-287/RL-255: a family split-source index's `` `was:` `` table column and
+    "`<old>` became N documents." heading must keep naming the pre-migration path
+    forever — there is no single successor to repoint a split source to. Before this
+    fix, `docs/<family>/INDEX.md` (generated whole by `doc-id.py migrate`, matching this
+    ruled shape everywhere in its body) was scanned like any other file and counted every
+    row of its own ruled provenance as an unrepointed, fatal citation.
+    """
+    migrated = {
+        "docs/REDIRECTS.csv": (
+            _REDIRECTS_HEADER
+            + "PL-100,PL-00100,docs/plans/2026-08-01-x.md,docs/plans/PL-00100-a.md,\n"
+            + "RL-200,RL-00200,docs/plans/2026-08-01-x.md,docs/rulings/RL-00200-b.md,\n"
+        ),
+        "docs/rulings/INDEX.md": (
+            "## 2026-08-01-x.md\n\n"
+            "`docs/plans/2026-08-01-x.md` became 2 documents.\n\n"
+            "| Document | Title | `was:` |\n"
+            "|---|---|---|\n"
+            "| [`RL-200`](RL-00200-b.md) | B | `docs/plans/2026-08-01-x.md` |\n"
+        ),
+    }
+    control = {"docs/a.md": "see docs/plans/2026- for background\n"}
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    rows = _d_rows(dv, snap)
+    assert rows["d9"].verdict != dv.FAIL, rows["d9"].note
+
+
+def test_path_alternative_excludes_a_vendored_skills_own_files(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """NT-0019 §1.5 / Ruling 69: a vendored skill's own files (never the manifest) are
+    excluded from every migration action, citation rewrite included — "vendored files
+    stay as upstream wrote them" (`CLAUDE.md` §12). A citation inside one can never be
+    repointed by design, so it must not count toward this row's fatal population.
+    """
+    vendored_name = next(iter(dv._docid._VENDORED_SKILLS))
+    migrated = {
+        "docs/REDIRECTS.csv": (
+            _REDIRECTS_HEADER
+            + "PL-1,PL-00001,docs/plans/2026-08-01-x.md,docs/plans/PL-00001-a.md,\n"
+        ),
+        f".claude/skills/{vendored_name}/scripts/task-brief": (
+            "# see docs/plans/2026-08-01-x.md for the house pattern\n"
+        ),
+    }
+    control = {"docs/a.md": "see docs/plans/2026- for background\n"}
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    rows = _d_rows(dv, snap)
+    assert rows["d9"].verdict != dv.FAIL, rows["d9"].note
 
 
 def test_was_exclusion_is_a_field_test_not_a_substring_test(

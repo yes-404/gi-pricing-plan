@@ -5855,26 +5855,41 @@ def _wrapped_path_patterns(
     line's own content, which a wrap can span, so it is out of this fix's scope; a
     wrapped citation of a split source is left exactly as it is, same as today).
 
-    `pattern` matches `old_tok` with an optional wrap tolerated after every `-` or `/` it
-    contains -- prose auto-wrap at a fixed line width, not a rule about where a path is
-    "allowed" to break: it lands after a hyphen inside the filename in one corpus example
-    (`docs/plans/2026-08-29-w11-3-batch-\\nscoring.md`) and after the directory separator,
-    before the filename has even started, in another (`` `docs/audit/\\n  plan-
-    reviews.md` `` -- `.claude/roles/planner.md`) -- the two characters a line-width
-    wrapper treats as break-opportunities inside an otherwise unbroken code span. The
-    continuation's own leading whitespace is absorbed, and so is a single `#`
-    comment-continuation marker plus its own trailing space where one is present -- a
-    Python source comment wraps as `# ` on every line, and a bare `[ \\t]*` alone stops at
-    that `#`, never reaching the token's own continuation.
+    `pattern` matches `old_tok` with an optional wrap tolerated after every `-`, `/` or
+    `.` it contains -- prose auto-wrap at a fixed line width, not a rule about where a
+    path is "allowed" to break: it lands after a hyphen inside the filename in one
+    corpus example (`docs/plans/2026-08-29-w11-3-batch-\\nscoring.md`), after the
+    directory separator, before the filename has even started, in another
+    (`` `docs/audit/\\n  plan-reviews.md` `` -- `.claude/roles/planner.md`), and
+    (2026-09-05, row (d10)'s own gap) right before the extension in a third
+    (`` `docs/audit/register.\\nmd`'s `` -- `docs/audit/findings/README.md`) -- the
+    three characters a line-width wrapper treats as break-opportunities inside an
+    otherwise unbroken code span. The continuation's own leading whitespace is
+    absorbed, and so is a single `#` comment-continuation marker plus its own trailing
+    space where one is present -- a Python source comment wraps as `# ` on every line,
+    and a bare `[ \\t]*` alone stops at that `#`, never reaching the token's own
+    continuation.
+
+    Boundary-anchored like `_whole_token_re` -- `_docid.TOKEN_LEFT_BOUND` on the left,
+    `\\b(?![-/][0-9])` on the right -- never a bare literal-character concatenation with
+    no anchor at all (2026-09-05, found live against `docs/_templates/ADR.md`, whose own
+    prose correctly reads "the migration renames `docs/adr/` to `docs/adrs/`": unanchored,
+    the `docs/adr/` -> `docs/adrs/` directory-move token matched inside
+    `docs/adrs/ADR-<nnnnn>...` too, since `docs/adr/` is a literal *prefix* of
+    `docs/adrs/` and nothing here required a transition after it. The ordinary sweep's
+    `_compound_token_re` already refuses this -- a `/` immediately followed by `` ` ``
+    has no `\\b` between them, both being \\W -- this function just never carried the
+    same refusal.
     """
     wrap = r"(?:\n[ \t]*(?:#[ \t]*)?)?"
     out: list[tuple[str, str, re.Pattern[str]]] = []
     for old_tok, new_tok in old_new_pairs:
         if "/" not in old_tok:
             continue
-        pattern = re.compile(
-            "".join(re.escape(ch) + wrap if ch in "-/" else re.escape(ch) for ch in old_tok)
+        body = "".join(
+            re.escape(ch) + wrap if ch in "-/." else re.escape(ch) for ch in old_tok
         )
+        pattern = re.compile(rf"{_docid.TOKEN_LEFT_BOUND}{body}\b(?![-/][0-9])")
         out.append((old_tok, new_tok, pattern))
     return tuple(out)
 
@@ -5920,12 +5935,35 @@ def _rewrite_wrapped_path_citations(
     """
     if not any(p.search(text) for p in _LEGACY_PATH_PREFIX_RES):
         return text
-    for old_tok, new_tok, pattern in patterns:
-        if old_tok in text:
-            continue  # already contiguous -- the ordinary sweep already reaches it
-
-        def repl(m: re.Match[str], new_tok: str = new_tok) -> str:
+    # A `was:` field's value is a pre-migration path *by definition* (it is this run's
+    # own provenance record) and must never be swept, wrapped occurrence or not -- the
+    # same protection the ordinary ("was:"-segment-split) sweep below already gives its
+    # own pass. Computed once per file rather than per token: `_was_field_spans` reads
+    # only the front-matter block, never the body a token's pattern also searches.
+    was_spans = _was_field_spans(text)
+    for _old_tok, new_tok, pattern in patterns:
+        # No `if old_tok in text: continue` shortcut here (removed 2026-09-05, rows
+        # (d9)-(d12)): that guard assumed a contiguous occurrence of `old_tok` anywhere
+        # in the file meant *every* occurrence was contiguous, so the ordinary sweep
+        # would reach all of them. False whenever a file cites the same path both
+        # wrapped and unwrapped -- `docs/plans/2026-08-29-nt-0010-0011-adoption.md`
+        # cites `...reconciliation-rulings.md` four times unwrapped and once wrapped
+        # across a line break; the guard's presence in `text` matched on an unwrapped
+        # occurrence and skipped the wrap-tolerant pattern entirely, leaving the fifth,
+        # wrapped occurrence unrewritten. `pattern` already tolerates a zero-width wrap
+        # (`repl`'s `nl_idx == -1` branch returns `new_tok` unchanged), so running it
+        # unconditionally is correct for both shapes and idempotent with the ordinary
+        # sweep that follows -- **except** inside a `was:` span, found live the same day
+        # (removing the shortcut let this pass reach a `was: docs/adr/README.md` line
+        # for the first time and rewrite it to `was: docs/adrs/README.md` on a second
+        # `migrate` run, a real regression `test_migrate_is_idempotent_on_its_own_output`
+        # catches): `repl` below refuses any match starting inside `was_spans`.
+        def repl(
+            m: re.Match[str], new_tok: str = new_tok, was_spans: list[tuple[int, int]] = was_spans,
+        ) -> str:
             matched = m.group(0)
+            if any(start <= m.start() < end for start, end in was_spans):
+                return matched
             nl_idx = matched.find("\n")
             if nl_idx == -1:
                 return new_tok

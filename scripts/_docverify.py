@@ -1164,11 +1164,34 @@ def _path_alternative_verdict(
     as "no path present" merely because the forward sweep's own wrap fix missed this one
     shape.
 
+    Two exclusions, found live 2026-09-05 while retiring rows (d9)-(d12)'s own fatal
+    population, both applied before any line is even classified:
+
+    * **A same-path `docs/REDIRECTS.csv` row is not a moved file.** `old_path ==
+      new_path` records a token rename made *inside* a file (`W1` -> `WK-954` inside
+      `docs/roadmap.md`, which never moved), reusing the CSV's `old_path`/`new_path`
+      columns for a different fact. Counting `docs/roadmap.md` as a "real moved file"
+      made an unrelated, correct, unchanged citation to it — sitting in the same
+      two-line window as a genuinely stale (or even a bare-directory, no-successor)
+      match — flip a DISCLOSE-worthy or entirely benign line to FATAL by coincidence of
+      proximity, not because the matched text named anything that moved.
+    * **A vendored skill's own files are never swept.** `doc-id.py`'s `_is_vendored_exempt`
+      excludes everything beneath a `_docid._VENDORED_SKILLS` directory except its
+      manifest, by ruling (NT-0019 §1.5, Ruling 69/76) — "vendored files stay as
+      upstream wrote them" (`CLAUDE.md` §12). A citation inside one can never be
+      repointed by design, so it is not this row's population to demand zero of.
+
     Returns `(fatal_lines, fatal_files, disclosed_lines, disclosed_files)`.
     """
-    real_paths = frozenset(_redirect_map(mig.tree))
+    real_paths = frozenset(
+        old for old, new in _redirect_map(mig.tree).items() if old != new
+    )
     fatal_lines = fatal_files = disclosed_lines = disclosed_files = 0
     for rel in mig.files:
+        if _docid.is_split_source_index(rel):
+            continue
+        if _docid.is_vendored(mig.tree / rel, mig.tree):
+            continue
         skip = mig.was_lines[rel]
         lines = mig.lines[rel]
         file_fatal = file_disclosed = 0
@@ -1238,7 +1261,12 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
                     note = (
                         f"{fatal_lines} line(s) / {fatal_files} file(s) still name a "
                         "real moved file present in this run's own docs/REDIRECTS.csv "
-                        "old_path column — the citation-inverse mechanism should have "
+                        "old_path column (a same-path old_path==new_path token-rename "
+                        "row is not a moved file and does not count; a family "
+                        "split-source `docs/<family>/INDEX.md` and a vendored skill's "
+                        "own files are excluded from this scan entirely, "
+                        "`_docid.is_split_source_index`/`_docid.is_vendored` — 2026-09-05, "
+                        "rows (d9)-(d12)) — the citation-inverse mechanism should have "
                         "repointed these and did not"
                     )
                     if disc_lines:
@@ -2657,10 +2685,37 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # occurrence rather than trying to tell the two apart at measurement
                          # time. The earlier comment's "every Work mints a `WK-`, so an
                          # unmapped one is necessarily a real defect" was false on the tree.
-    "d9": FAIL,         # docs/plans/2026- — real file citations remain unrewritten
-    "d10": FAIL,        # docs/audit/ — real file citations remain unrewritten
-    "d11": FAIL,        # docs/notes/ — small fatal residual after the wrap/dir-token fix
-    "d12": FAIL,        # docs/adr/ — small fatal residual after the wrap/dir-token fix
+    "d9": FAIL,         # docs/plans/2026- — 6 fatal remain (2026-09-05, down from 131):
+                         # every one a wrapped citation of a SPLIT source
+                         # (`w11-slice1-rulings.md` etc.) — `_wrapped_path_patterns`'
+                         # own docstring rules this out of scope ("a split source
+                         # resolves its target from the citing line's own content,
+                         # which a wrap can span ... left exactly as it is, same as
+                         # today"), not a regression of this fix. The other 125 were
+                         # three framework defects: a same-path (`old_path==new_path`
+                         # token-rename) `docs/REDIRECTS.csv` row counted as a "real
+                         # moved file", a family split-source `docs/<family>/INDEX.md`'s
+                         # own ruled provenance (RL-287/RL-255) counted as an
+                         # unrewritten citation, and `_rewrite_wrapped_path_citations`'
+                         # `if old_tok in text: continue` shortcut skipping the
+                         # wrap-tolerant pattern for a token that also appears
+                         # contiguous elsewhere in the same file.
+    "d10": FAIL,        # docs/audit/ — 1 fatal remains (2026-09-05, down from 45): the
+                         # same wrapped-split-source shape (d9)'s note describes
+                         # (`docs/audit/plan-reviews.md`, 13 targets). The other 44 were
+                         # the same three framework defects (d9)'s note names, plus a
+                         # fourth wrap shape this fix also covers: a wrap landing right
+                         # before the extension after `.`, not only after `-`/`/`
+                         # (`docs/audit/register.md`'s own citation in
+                         # `docs/audit/findings/README.md`).
+    "d12": DISCLOSE,    # docs/adr/ — FIXED (2026-09-05, W37-6 rows (d9)-(d12)): every one
+                         # of this row's 2 fatal lines is gone; the row still carries a
+                         # disclosed (no-real-successor) population, `_verdict_on_zero`'s
+                         # correct DISCLOSE, never this table's PASS.
+    "d11": DISCLOSE,    # docs/notes/ — FIXED (2026-09-05, W37-6 rows (d9)-(d12)): same
+                         # fix as (d12); 0 of this row's 5 fatal lines remain, and the
+                         # row's own disclosed population still makes DISCLOSE the
+                         # correct verdict, not PASS.
     "d13": DISCLOSE,    # the old .claude notes root — wholly disclosed, 0 fatal
     "e": PASS,          # 0 padded ids in prose — #25's ruling: the migration normalises a
                          # padded citation to unpadded (`_normalize_padded_citations`), and
