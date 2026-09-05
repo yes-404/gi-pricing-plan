@@ -1909,6 +1909,66 @@ def test_write_document_drafts_resolves_a_ledgers_work_and_phase_from_the_roadma
     )
 
 
+def test_write_document_drafts_slugs_from_the_post_rewrite_title(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Row (d4) (auditor A4, 2026-09-05): a document draft whose title mentions another
+    draft's legacy id used to have that id slugged verbatim — lower-cased, hyphenated —
+    into its own filename, a form `_rewrite_citations`'s later tree-wide sweep can never
+    reach because it edits file content, never a filename. Given the referenced draft's
+    `old_token` in `token_map`, the filename must carry the canonical id instead of the
+    legacy one.
+    """
+    root = tmp_path
+    (root / "docs" / "_templates").mkdir(parents=True)
+    (root / "docs" / "_templates" / "LG.md").write_text(
+        (ROOT / "docs" / "_templates" / "LG.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    citing_draft = doc_id_cli._Draft(
+        materialize="document", prefix="LG", kind=None,
+        title="Following on from wf-01, the GLM spine", status="closed",
+        created=date(2026, 8, 15), owner="executor",
+        tie_break=("docs/audit/closure-records.md", 0), old_token=None,
+        was="docs/audit/closure-records.md", body="Body.\n", number=50,
+    )
+
+    doc_id_cli._write_document_drafts(
+        root, [citing_draft], (), {"wf-01": "WF-1"}
+    )
+
+    filename = citing_draft.new_path.name
+    assert "wf-01" not in filename, filename
+    assert "wf-1" in filename, filename
+
+
+def test_write_document_drafts_slugs_from_the_raw_title_without_a_token_map(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The `token_map` parameter is optional — a caller that never resolves one (or
+    resolves an empty one) gets today's behaviour unchanged, never a `None`-indexing
+    crash."""
+    root = tmp_path
+    (root / "docs" / "_templates").mkdir(parents=True)
+    (root / "docs" / "_templates" / "LG.md").write_text(
+        (ROOT / "docs" / "_templates" / "LG.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    citing_draft = doc_id_cli._Draft(
+        materialize="document", prefix="LG", kind=None,
+        title="Following on from wf-01, the GLM spine", status="closed",
+        created=date(2026, 8, 15), owner="executor",
+        tie_break=("docs/audit/closure-records.md", 0), old_token=None,
+        was="docs/audit/closure-records.md", body="Body.\n", number=50,
+    )
+
+    doc_id_cli._write_document_drafts(root, [citing_draft], ())
+
+    assert "wf-01" in citing_draft.new_path.name, citing_draft.new_path.name
+
+
 def test_closure_records_is_silent_on_a_missing_file(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:

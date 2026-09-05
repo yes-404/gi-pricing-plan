@@ -3573,7 +3573,8 @@ def _slug(title: str) -> str:
 
 
 def _write_document_drafts(
-    root: Path, drafts: list[_Draft], roadmap_drafts: Sequence[_Draft] = ()
+    root: Path, drafts: list[_Draft], roadmap_drafts: Sequence[_Draft] = (),
+    token_map: Mapping[str, str] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Every `materialize="document"` draft: stamp its header, write it under its family
     directory, and delete its `was` source once every draft sharing that source has been
@@ -3590,6 +3591,18 @@ def _write_document_drafts(
     separate, unassigned defect — "`_discover_roadmap` converts 0 of 41 works" — is fixed;
     `work:`/`phase:` are simply omitted then, exactly as for any other unresolved optional
     field, never a raise).
+
+    `token_map`, when given, swept through `d.title` (`_sweep_title`, the same
+    longest-token-first whole-token substitution the split-index and README title columns
+    already use for the identical problem — a title captured before `_rewrite_citations`
+    runs) **before** it is slugged into `filename` below. Row (d4)'s regression (auditor
+    A4, 2026-09-05): the filename was slugged from the raw, pre-rewrite title, so a legacy
+    id mentioned in a document's own title (`wf-0[0-9]`) survived — lower-cased and
+    hyphenated — as a permanent filename, unreachable by `_rewrite_citations`'s later
+    tree-wide sweep since that sweep edits file *content*, never a *filename*. The header
+    stamped below still carries the raw `d.title`; that copy is swept correctly by the
+    later tree-wide pass over the file's own new content, so only the filename — the one
+    thing that pass cannot reach — needs the sweep here.
     """
     written: list[str] = []
     was_sources: set[str] = set()
@@ -3601,7 +3614,8 @@ def _write_document_drafts(
             continue
         target_dir = root / "docs" / _DOCUMENT_FAMILY_DIR[d.prefix]
         target_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"{_docid.padded(d.prefix, d.number)}-{_slug(d.title)}.md"
+        slug_title = _sweep_title(d.title, token_map) if token_map else d.title
+        filename = f"{_docid.padded(d.prefix, d.number)}-{_slug(slug_title)}.md"
         new_path = target_dir / filename
         d.new_path = new_path
         work_value: str | None = None
@@ -7904,7 +7918,30 @@ def migrate(root: Path) -> MigrateResult:
     _assign_numbers(_discoverable_drafts, start)
     _assign_numbers(_exempt_drafts, start + len(_discoverable_drafts))
 
-    files_written, files_deleted = _write_document_drafts(root, drafts, roadmap_drafts)
+    # Row (d4) fix (auditor A4, 2026-09-05): a document's own slug is generated from its
+    # title *before* the real `token_map` below exists — that map's own id half
+    # (`id_claims`) is built from `d.new_path`, which `_write_document_drafts` has not
+    # set yet. This is the same id-only subset built early, for the one thing the writer
+    # needs before the real map can exist: whether a legacy id a title mentions resolves
+    # to exactly one draft. `FD` stays excluded and a token claimed by more than one draft
+    # stays out of the map, the identical two rules `id_claims`'s own resolution loop
+    # applies later — mirrored, not reinvented, because the two maps must agree on every
+    # token or a title could be swept one way and the tree-wide sweep the other.
+    _early_id_claims: dict[str, set[str]] = {}
+    for d in drafts:
+        if d.prefix == "FD":
+            continue
+        canon = _docid.canonical(d.prefix, d.number)
+        for tok in (d.old_token, *d.extra_old_tokens):
+            if tok is not None:
+                _early_id_claims.setdefault(tok, set()).add(canon)
+    _early_token_map = {
+        tok: next(iter(canons)) for tok, canons in _early_id_claims.items()
+        if len(canons) == 1
+    }
+    files_written, files_deleted = _write_document_drafts(
+        root, drafts, roadmap_drafts, _early_token_map
+    )
 
     # Reference-family moves (checklists, `retrofit-impossible.md`, `security-posture.md`)
     # and the unstampable-CSV move both physically relocate a file, the same shape
