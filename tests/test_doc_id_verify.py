@@ -737,10 +737,12 @@ class _FakeClassification:
         violations: tuple[str, ...],
         *,
         unchanged: int = 0,
+        forward_confirmed: tuple[str, ...] = (),
     ) -> None:
         self.per_class = per_class
         self.violations = violations
         self.unchanged = unchanged
+        self.forward_confirmed = forward_confirmed
 
     @property
     def population(self) -> int:

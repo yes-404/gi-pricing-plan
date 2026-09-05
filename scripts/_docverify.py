@@ -2536,7 +2536,12 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "`doc-id.classify_migration_diff(control, migrated)`, bucketing every touched "
             "file into `doc-id._RULING_68_CLASSES` or `doc-id.CLASSIFIED_BY_NONE`; classes "
             "1-3 share `audit-docs.frozen_file_matches_after_migration_stamp` (check 34's "
-            "DP-7 predicate, Ruling 68 §3 — not a second one); class 4 requires the "
+            "DP-7 predicate, Ruling 68 §3 — not a second one), or — only where DP-7's "
+            "inverse cannot resolve a genuinely ambiguous many-to-one path merge — "
+            "`doc-id.classify_migration_diff`'s own forward-citation check, the identical "
+            "flat substitution run forward using the file's own unambiguous old id/path, "
+            "never a compound/range expansion (`doc-id._RULING_68_CLASSES` classes 1-3 "
+            "docstring); class 4 requires the "
             "concatenation of a split's outputs to reproduce the source's non-blank body "
             "lines *in order*; class 5 is `docs/roadmap.md` alone, unconditionally, "
             "exactly as the ruling states it; class 6 is tested against an independent "
@@ -2550,7 +2555,10 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
         migrated=(
             f"g1 WK-shape mangled = {wk_mangled} in {wk_mangled_files} file(s), "
             f"provenance mismatch(es) = {len(provenance_mismatches)}; "
-            f"g2 {per_class}, {docid.CLASSIFIED_BY_NONE}={len(residue)}"
+            f"g2 {per_class}, {docid.CLASSIFIED_BY_NONE}={len(residue)} "
+            f"(class 2/3 include {len(classification.forward_confirmed)} member(s) DP-7's "
+            "inverse alone could not confirm — a legitimate many-to-one path merge — and "
+            "the forward-citation check confirmed instead)"
         ),
         control=f"g1 WK-shape mangled = {wk_control} (un-migrated)",
         verdict=verdict,
