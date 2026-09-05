@@ -5663,16 +5663,48 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 #: continuation (`NFR-RATE-13/14`) still passes it (digit -> `-`/`/` *is* a transition),
 #: while a bare second digit or dot with nothing separating it does not.
 #:
-#: Task #30's range ruling (W37-6 channel `:526`) adds the sibling alternative
-#: `range_end`, with its *own* trailing `\b` rather than the shared one above: `..` is
-#: itself a boundary-worthy transition (`FR-PLAT-1..4` has a `\b` between `1` and `.`
-#: for free), so nothing stops the continuation alternative from also matching here with
+#: Task #30's range ruling (W37-6 channel `:526`) adds the sibling group `range_end`.
+#: `..` is itself a boundary-worthy transition (`FR-PLAT-1..4` has a `\b` between `1` and
+#: `.` for free), so nothing stops the continuation group from also matching here with
 #: zero repetitions and returning `tok` alone — exactly the row (b) defect one level up,
 #: this time surviving the `\b`-after-`tok` fix because that boundary is satisfied
-#: (digit -> `.` *is* a transition) regardless of which alternative is meant. Trying the
-#: range shape *first*, as one more alternative rather than a second sweep, is what makes
-#: the choice atomic: whichever alternative's own anchors are satisfied wins the position
-#: outright, with no second pass free to reinterpret what the first already matched.
+#: (digit -> `.` *is* a transition) regardless of which shape is meant.
+#:
+#: **Originally guarded by making `range_end` and `continuation` mutually exclusive
+#: alternatives, tried range-first so its own anchors won the position outright before a
+#: second, zero-repetition continuation match could reinterpret it. That atomicity is no
+#: longer this pattern's own job — 2026-09-05's mixed-shape fix below needs both groups to
+#: fire on the *same* match, which an exclusive alternation cannot do.** What still
+#: prevents row (b)'s fabrication (a mapped token swallowing a longer unmapped
+#: identifier's prefix, `OQ-OVR-1` matched inside `OQ-OVR-11`) is unchanged and does not
+#: depend on this pattern's own structure at all: `_expand_compound`/`_expand_range` both
+#: still refuse to shorten anything (`OQ-OVR-11`'s continuation `"1"` is not itself a
+#: separator-plus-digits shape `_CONTINUATION_PART_RE` recognises as a real sibling, so
+#: it is never consumed), and greedy backtracking still tries the optional range group
+#: first at every position (`(?:...)?` in Python's `re` is greedy), so a genuine range
+#: (`..8`) is still taken whenever it can match, exactly as `\.\.(?P<range_end>...)` tried
+#: first in the exclusive form always was. Both existing row (b) broken-input proofs
+#: (`test_row_b_a_mapped_token_must_not_swallow_a_longer_unmapped_identifiers_prefix`,
+#: `test_row_b_a_mapped_token_still_rewrites_a_genuine_compound_after_the_boundary_fix`)
+#: pass unchanged against this version — verified, not assumed.
+#:
+#: The mixed shape a range and a compound both cite, back to back: `NFR-OVR-1..8/10/11`
+#: names the range `NFR-OVR-1..8` **and** the further siblings `NFR-OVR-10`/`NFR-OVR-11`
+#: in the same shorthand a plain compound's continuation already uses. Before this fix
+#: `range_end` and `continuation` were alternatives (`\.\.(?P<range_end>...)\b|\b(?P<
+#: continuation>...)`), so the range alternative matched, consumed `..8`, and stopped --
+#: the trailing `/10/11` was never inside the match at all and survived untouched, landing
+#: beside the range's own last enumerated member: `NFR-OVR-1..8/10/11` came out
+#: `NFR-751, ..., NFR-758/10/11`, real ids `10`/`11` orphaned in their pre-migration
+#: module-local form -- exactly `MANGLED_CITATION_RE`'s own shape, "a rewrite matched
+#: inside a longer identifier" (the deputy's diagnosis, W37-6, 2026-09-05, real corpus:
+#: `docs/audit/register.md:49`'s `NFR-OVR-1..8/10/11`). Making the range optional and
+#: always following it with the shared `\b`+continuation lets both fire on the same match:
+#: a plain compound (no `..`) skips the optional group and behaves exactly as before: a
+#: plain range (no continuation) matches `..end` and then an empty continuation, also
+#: exactly as before; the mixed shape now matches the range **and** the continuation in
+#: one pass, so `_expand_range` sees both groups and can build `NFR-758/760/761` instead of
+#: `NFR-758/10/11`.
 def _compound_token_re(tok: str) -> re.Pattern[str]:
     # Leading `_docid.TOKEN_LEFT_BOUND`, not `\b` -- `_whole_token_re`'s own docstring
     # has the reasoning (the deputy's ruling, W37-6, 2026-09-04): a non-word-starting
@@ -5681,7 +5713,7 @@ def _compound_token_re(tok: str) -> re.Pattern[str]:
     escaped = re.escape(tok)
     return re.compile(
         rf"{_docid.TOKEN_LEFT_BOUND}{escaped}"
-        r"(?:\.\.(?P<range_end>[0-9]+)\b|\b(?P<continuation>(?:[-/]\d+)*))"
+        r"(?:\.\.(?P<range_end>[0-9]+))?\b(?P<continuation>(?:[-/]\d+)*)"
     )
 
 
@@ -5725,23 +5757,13 @@ _CONTINUATION_PART_RE: Final = re.compile(r"([-/])(\d+)")
 _WORK_FAMILY_TOKEN_RE: Final = re.compile(r"^W\d+[a-z]?(-\d+)*$")
 
 
-def _expand_compound(
-    tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
-    derived: list[tuple[str, str]],
-) -> str:
-    continuation = m.group("continuation")
-    if not continuation:
-        return mapped
-    if _WORK_FAMILY_TOKEN_RE.match(tok):
-        return m.group(0)  # a longer identifier, never a compound -- leave it whole
-    prefix_match = re.search(r"\d+$", tok)
-    if prefix_match is None:
-        # No trailing digit run on the base token itself -- not a shape this ruling
-        # reaches (every enumerated family's legacy citation ends in digits). Defensive,
-        # not reachable by any corpus token today: leave it whole rather than guess.
-        return m.group(0)
-    prefix = tok[: prefix_match.start()]
-    base_width = len(tok) - len(prefix)
+def _resolve_continuation_siblings(
+    prefix: str, base_width: int, continuation: str, active_map: Mapping[str, str],
+) -> list[tuple[str, str]] | None:
+    """Every `(sep, new_id)` pair a compound continuation's own digits map to, or `None`
+    if any component is unmapped — shared by a plain compound (`_expand_compound`) and a
+    range's own trailing compound tail (`_expand_range`'s mixed shape), so the zero-pad
+    retry and the "any unmapped component fails the whole thing" rule live in one place."""
     parts = _CONTINUATION_PART_RE.findall(continuation)
     mapped_siblings: list[tuple[str, str]] = []
     for sep, digits in parts:
@@ -5759,23 +5781,51 @@ def _expand_compound(
             # already length 2) never reaches this branch at all.
             sibling_mapped = active_map.get(prefix + digits.zfill(base_width))
         if sibling_mapped is None:
-            return m.group(0)  # one unmapped component -- the whole compound stays whole
+            return None  # one unmapped component -- the whole compound stays whole
         mapped_siblings.append((sep, sibling_mapped))
-    # Shorthand preserved, the maintainer's own worked example (W37-6 channel `:322-330`):
-    # `NFR-RATE-13/14` -> `NFR-775/776`, not `NFR-775/NFR-776` -- the base is written in
-    # full and each further component only its own trailing number, exactly the citation's
-    # own input convention. Only sound when the sibling's new id shares the base's new
-    # prefix (new family and module can differ from the old ones in principle, even if not
-    # in the corpus today); a sibling that lands in a different family is written in full
-    # rather than have its own prefix silently discarded.
-    new_prefix = mapped.rsplit("-", 1)[0] + "-" if "-" in mapped else None
+    return mapped_siblings
+
+
+def _shorthand_suffix(mapped_base: str, siblings: list[tuple[str, str]]) -> str:
+    """Every sibling's own trailing number, prefixed by its separator — the maintainer's
+    own worked example (W37-6 channel `:322-330`): `NFR-RATE-13/14` -> `NFR-775/776`, not
+    `NFR-775/NFR-776` -- the base is written in full and each further component only its
+    own trailing number, exactly the citation's own input convention. Only sound when the
+    sibling's new id shares the base's new prefix (new family and module can differ from
+    the old ones in principle, even if not in the corpus today); a sibling that lands in a
+    different family is written in full rather than have its own prefix silently
+    discarded."""
+    new_prefix = mapped_base.rsplit("-", 1)[0] + "-" if "-" in mapped_base else None
     parts_out: list[str] = []
-    for sep, sibling_mapped in mapped_siblings:
+    for sep, sibling_mapped in siblings:
         if new_prefix is not None and sibling_mapped.startswith(new_prefix):
             parts_out.append(sep + sibling_mapped[len(new_prefix) :])
         else:
             parts_out.append(sep + sibling_mapped)
-    replacement = mapped + "".join(parts_out)
+    return "".join(parts_out)
+
+
+def _expand_compound(
+    tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
+    derived: list[tuple[str, str]],
+) -> str:
+    continuation = m.group("continuation")
+    if not continuation:
+        return mapped
+    if _WORK_FAMILY_TOKEN_RE.match(tok):
+        return m.group(0)  # a longer identifier, never a compound -- leave it whole
+    prefix_match = re.search(r"\d+$", tok)
+    if prefix_match is None:
+        # No trailing digit run on the base token itself -- not a shape this ruling
+        # reaches (every enumerated family's legacy citation ends in digits). Defensive,
+        # not reachable by any corpus token today: leave it whole rather than guess.
+        return m.group(0)
+    prefix = tok[: prefix_match.start()]
+    base_width = len(tok) - len(prefix)
+    siblings = _resolve_continuation_siblings(prefix, base_width, continuation, active_map)
+    if siblings is None:
+        return m.group(0)  # one unmapped component -- the whole compound stays whole
+    replacement = mapped + _shorthand_suffix(mapped, siblings)
     derived.append((m.group(0), replacement))
     return replacement
 
@@ -5801,6 +5851,21 @@ def _expand_compound(
 #: out byte-identical** — the same forced "leave it whole" outcome §7 (g) already gives an
 #: unmapped compound component, reached here for the identical reason: a half-enumerated
 #: range is worse than one left alone.
+#:
+#: **A range can carry a further compound tail of its own** (found live, 2026-09-05, real
+#: corpus: `docs/audit/register.md:49`'s `NFR-OVR-1..8/10/11` — the range `NFR-OVR-1..8`
+#: plus siblings `NFR-OVR-10`/`NFR-OVR-11`). Before `_compound_token_re` made the range
+#: alternative optional rather than exclusive, this trailing `/10/11` was never inside the
+#: match at all: the range consumed `..8` and stopped, so it survived untouched, glued onto
+#: the range's own last enumerated member — `NFR-758/10/11`, `MANGLED_CITATION_RE`'s own
+#: shape, real ids 10/11 orphaned in their pre-migration module-local form. The two shapes
+#: are combined the way both already work alone: the range enumerates every member in full
+#: (never re-ranged, the new ids are not consecutive), and the tail is appended to only the
+#: **last** enumerated member, in the identical shorthand `_expand_compound` already uses
+#: (`_resolve_continuation_siblings`/`_shorthand_suffix`, shared rather than duplicated —
+#: Ruling 68 §3's "one rule at two times"). Failing either half — one unmapped range
+#: member, or one unmapped tail sibling — leaves the **whole** citation, range and tail,
+#: byte-identical, the same all-or-nothing rule §7 (g) already gives every other shape here.
 def _expand_range(
     tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
     derived: list[tuple[str, str]],
@@ -5812,6 +5877,7 @@ def _expand_range(
         # reachable by any corpus token today.
         return m.group(0)
     prefix = tok[: prefix_match.start()]
+    base_width = len(tok) - len(prefix)
     start = int(prefix_match.group())
     end = int(m.group("range_end"))
     if end <= start:
@@ -5825,6 +5891,12 @@ def _expand_range(
         if member_mapped is None:
             return m.group(0)  # one unmapped member -- the whole range stays whole
         mapped_members.append(member_mapped)
+    continuation = m.group("continuation")
+    if continuation:
+        siblings = _resolve_continuation_siblings(prefix, base_width, continuation, active_map)
+        if siblings is None:
+            return m.group(0)  # one unmapped tail component -- the whole citation stays whole
+        mapped_members[-1] = mapped_members[-1] + _shorthand_suffix(mapped_members[-1], siblings)
     replacement = ", ".join(mapped_members)
     derived.append((m.group(0), replacement))
     return replacement
@@ -7505,21 +7577,45 @@ class _SplitIndexSection:
 
 
 def _sweep_title(text: str, token_map: Mapping[str, str]) -> str:
-    """`text` with every whole `token_map` token substituted, longest first.
+    """`text` with every whole `token_map` token substituted, longest first — a plain
+    token or a compound/range citation alike.
 
     Task 4 item 1 (the deputy's sweep-order ruling, W37-6 channel `:302-306`): a generated
     artifact's title column is built from a `_Draft.title` captured **before**
     `_rewrite_citations` runs, and nothing sweeps the artifact afterward, so a legacy token
     with a real `token_map` entry reached the page unswept — the `was:`-before-sweep bug's
-    mirror image. This is the whole-file sweep's own token-substitution rule
-    (`_whole_token_re`, Ruling 102 §2 row (g)), applied to one string in isolation rather
-    than to a file, so it carries no risk of touching a `was:` provenance cell the way a
-    naive re-sweep of the whole generated file would.
+    mirror image. This is the whole-file sweep's own token-substitution rule, applied to
+    one string in isolation rather than to a file, so it carries no risk of touching a
+    `was:` provenance cell the way a naive re-sweep of the whole generated file would.
+
+    **Compound-aware since 2026-09-05** (real corpus: `docs/rulings/INDEX.md:112`'s own
+    row for `RL-00178`, found investigating (d7)'s residue): this used `_whole_token_re`,
+    which *refuses* to match a token followed by a compound/range continuation
+    (`_whole_token_re`'s own docstring — that refusal is what lets the main sweep's
+    `_compound_token_re` take the match instead). A title is never swept by the main
+    file-level sweep, only by this function, so a title's own compound citation —
+    `FR-RATE-41/42` in the ruling's section heading the split captured its title from —
+    was refused by `_whole_token_re` and never reached by anything else: it stayed
+    `FR-RATE-41/42` in the rendered index row while the same document's own front-matter
+    `title:` field (swept by the real citation sweep, which *does* use
+    `_compound_token_re`) correctly read `FR-555/556`. Switched to the identical
+    `_compound_token_re`/`_expand_compound`/`_expand_range` dispatch `_rewrite_citations`'s
+    own `sweep()` uses, so a title's compound or range citation expands exactly as the
+    body's would; a plain token's `continuation` is simply empty, unchanged from before.
     """
+    derived: list[tuple[str, str]] = []
     for tok in sorted(token_map, key=len, reverse=True):
         if tok not in text:
             continue
-        text = _whole_token_re(tok).sub(lambda m, v=token_map[tok]: v, text)  # type: ignore[misc]
+
+        def _sub(m: re.Match[str], t: str = tok, v: str = token_map[tok]) -> str:
+            return (
+                _expand_range(t, v, token_map, m, derived)
+                if m.group("range_end") is not None
+                else _expand_compound(t, v, token_map, m, derived)
+            )
+
+        text = _compound_token_re(tok).sub(_sub, text)
     return text
 
 

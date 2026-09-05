@@ -592,6 +592,83 @@ def test_every_mangled_example_the_handover_recorded_is_caught(
 
 
 # =========================================================================================
+# (g) g1's provenance narrowing (deputy disposition, 2026-09-05 13:35 BST): a shape test
+# cannot survive a pure-numeric id scheme, so g1's FR/NFR/OQ/DEP alternative is replaced by
+# an independent re-derivation — `_g1_provenance_mismatches` re-runs the real migration's
+# own `_expand_compound`/`_expand_range` over `REDIRECTS.csv`'s map and compares against
+# what the migrated tree actually contains. The required positive control: the real defect
+# `docs/audit/register.md:49` → `docs/findings/register.md:49` must read 1 mismatch on the
+# pre-fix (mixed range-plus-compound) output and 0 on the fixed output, on this exact
+# instrument — a check that has only ever printed zero is indistinguishable from a check
+# that cannot fire.
+# =========================================================================================
+
+_REGISTER_REDIRECTS_CSV = (
+    "old_id,new_id,old_path,new_path,citing_dir\n"
+    "NFR-OVR-1,NFR-751,,,\n"
+    "NFR-OVR-2,NFR-752,,,\n"
+    "NFR-OVR-3,NFR-753,,,\n"
+    "NFR-OVR-4,NFR-754,,,\n"
+    "NFR-OVR-5,NFR-755,,,\n"
+    "NFR-OVR-6,NFR-756,,,\n"
+    "NFR-OVR-7,NFR-757,,,\n"
+    "NFR-OVR-8,NFR-758,,,\n"
+    "NFR-OVR-10,NFR-760,,,\n"
+    "NFR-OVR-11,NFR-761,,,\n"
+    ",,docs/audit/register.md,docs/findings/register.md,\n"
+)
+_REGISTER_CONTROL_LINE = (
+    "| Phase 2/3/4 unevidenced (F22) | NFR-OVR-1..8/10/11 | carry forward |\n"
+)
+
+
+def test_g1_provenance_check_reads_1_on_the_real_pre_fix_defect(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The required positive control, pre-fix output: `NFR-OVR-1..8/10/11`'s range
+    expanded but its compound tail was orphaned in old module-local form — the real
+    `docs/audit/register.md:49` defect, reproduced verbatim. Must read exactly 1."""
+    control = {"docs/audit/register.md": _REGISTER_CONTROL_LINE}
+    migrated = {
+        "docs/findings/register.md": (
+            "| Phase 2/3/4 unevidenced (F22) | NFR-751, NFR-752, NFR-753, NFR-754, "
+            "NFR-755, NFR-756, NFR-757, NFR-758/10/11 | carry forward |\n"
+        ),
+        "docs/REDIRECTS.csv": _REGISTER_REDIRECTS_CSV,
+    }
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    mismatches = dv._g1_provenance_mismatches(doc_id_cli, mig, ctl)
+    assert len(mismatches) == 1, mismatches
+    assert "docs/audit/register.md:1" in mismatches[0]
+    assert "NFR-758/760/761" in mismatches[0], (
+        "the mismatch message must name the correct expected expansion"
+    )
+
+
+def test_g1_provenance_check_reads_0_on_the_fixed_output(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The same real defect, correctly fixed: the compound tail's siblings resolve and
+    land on the range's last enumerated member. Must read exactly 0 — the same instrument,
+    the same input, only the migrated output changed."""
+    control = {"docs/audit/register.md": _REGISTER_CONTROL_LINE}
+    migrated = {
+        "docs/findings/register.md": (
+            "| Phase 2/3/4 unevidenced (F22) | NFR-751, NFR-752, NFR-753, NFR-754, "
+            "NFR-755, NFR-756, NFR-757, NFR-758/760/761 | carry forward |\n"
+        ),
+        "docs/REDIRECTS.csv": _REGISTER_REDIRECTS_CSV,
+    }
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    mismatches = dv._g1_provenance_mismatches(doc_id_cli, mig, ctl)
+    assert mismatches == []
+
+
+# =========================================================================================
 # (g) g2 — row_g wraps `doc-id.classify_migration_diff`'s per-class breakdown into the
 # Row, never reimplementing the six-class filter itself (Ruling 68 §3). A fake `docid`
 # stands in for the real module so these tests pin row_g's OWN aggregation logic — which
@@ -1696,6 +1773,88 @@ def test_d7_an_undefined_token_is_disclosed_as_the_never_allocated_closed_class(
     assert d7.verdict == "DISCLOSE", f"an undefined token must disclose: {d7.note}"
     assert "closed class" in d7.note
     assert "none — closed class" in d7.note
+
+
+def test_d7_a_framework_self_reference_is_disclosed_by_a_line_predicate_not_a_name(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The one real (d7) residue this row's own mechanical predicate cannot resolve on
+    its own (ruled 2026-09-05, W37-6 channel, real corpus: `scripts/doc-id.py`'s
+    `_expand_range` docstring): `FR-PLAT-4` IS genuinely allocated (a `REDIRECTS.csv`
+    row), so `_scoped_id_is_never_allocated` correctly says False for it everywhere the
+    literal string appears — including this one line, where it is not a citation at all
+    but this repository's own worked example of an un-ascending range
+    (`` `FR-PLAT-4..1` ``).
+
+    **Corrected same day**: a table naming `FR-PLAT-4` by file and token is the forbidden
+    per-file exemption. The class it joins is decided per LINE — is this a `scripts/*.py`
+    comment or docstring line — never by naming the token. This test proves the
+    *mechanism*, not the one example: a second, unrelated framework self-reference
+    (`OQ-EX-9` in a different comment, no relation to `FR-PLAT-4`) discloses by the same
+    line predicate, and both are named in the note as members of one class.
+    """
+    migrated = {
+        # REDIRECTS.csv rows, not bold spec definitions -- the latter would themselves be
+        # a second, unrelated (d7)-pattern match (`**FR-PLAT-4**` also matches
+        # `\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b`) and confuse this test with a real hit
+        # this fix has nothing to do with.
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            "FR-PLAT-4,FR-680,,,\n"
+            "OQ-EX-9,OQ-900,,,\n"
+        ),
+        "scripts/doc-id.py": (
+            "        # Not an ascending range (`FR-PLAT-4..1`, or a citation that "
+            "happens to repeat\n"
+        ),
+        "scripts/_docverify.py": (
+            '    """An unrelated worked example naming `OQ-EX-9` as a fake id, never a '
+            'real citation.\n    """\n'
+        ),
+    }
+    control = {k: v for k, v in migrated.items() if k != "docs/REDIRECTS.csv"}
+    d7 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    assert d7.verdict == "DISCLOSE", (
+        f"both framework self-references must disclose, not fail: {d7.note}"
+    )
+    assert "FR-PLAT-4" not in d7.note.split("closed never-allocated class")[0], (
+        "FR-PLAT-4 must not appear among the FAIL-branch real hits"
+    )
+    assert "framework self-reference" in d7.note
+    assert "FR-PLAT-4" in d7.note and "OQ-EX-9" in d7.note, (
+        "both members of the class, from two unrelated files, must be named -- proving "
+        "this is a predicate over the line and the file, not a table keyed on one token"
+    )
+
+
+def test_framework_self_reference_predicate_yields_a_broad_class_on_the_real_corpus(
+    dv: Any,
+) -> None:
+    """The acceptance test that distinguishes a predicate from an allowlist wearing a
+    predicate's clothes (deputy's ruling, 2026-09-05): run over this repository's own
+    real `scripts/*.py` sources, the class must have a broad membership, not exactly one
+    token. `_framework_self_reference_lines` is exercised directly against the real
+    files on disk — no synthetic fixture, no `--verify` run, so this proves the
+    *mechanism* generalizes rather than being tuned to one example.
+    """
+    root = pathlib.Path(__file__).resolve().parent.parent / "scripts"
+    id_pattern = re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")
+    members: list[str] = []
+    for path in sorted(root.glob("*.py")):
+        rel = f"scripts/{path.name}"
+        text = path.read_text(encoding="utf-8")
+
+        class _Mig:
+            lines = {rel: text.splitlines()}
+
+        self_ref_lines = dv._framework_self_reference_lines(rel, _Mig())
+        for i, line in enumerate(text.splitlines()):
+            if i in self_ref_lines and id_pattern.search(line):
+                members.append(f"{rel}:{i + 1}")
+    assert len(members) >= 21, (
+        f"the framework self-reference class must be broad, not a one-token allowlist "
+        f"in disguise: found only {len(members)} member(s): {members}"
+    )
 
 
 def test_unanchor_is_a_no_op_for_a_bare_path_literal_the_old_inert_case_is_fixed(

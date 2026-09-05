@@ -1083,6 +1083,81 @@ def _scoped_id_is_never_allocated(token: str, mig: Corpus, ctl: Corpus) -> bool:
     )
 
 
+#: (d7)'s remaining named collision, ruled 2026-09-05 (W37-6 channel): `_scoped_id_is_
+#: never_allocated` is per-TOKEN, and `FR-PLAT-4` is genuinely allocated (`FR-PLAT-1..4`
+#: is real production usage, `docs/REDIRECTS.csv` carries its row) — so it fails as a
+#: "real" hit everywhere the literal string appears, including `scripts/doc-id.py`'s own
+#: `_expand_range` docstring, where it names the same string as a worked example of an
+#: UN-ascending range (`` `FR-PLAT-4..1` ``, deliberately backwards, to illustrate the
+#: "not ascending" branch) — never a citation to the real requirement at all.
+#:
+#: **Corrected, same day: a table naming `FR-PLAT-4` by file and token is the forbidden
+#: per-file exemption**, the maintainer's own standing rule (a resistant file goes to
+#: W37-11, never a name-by-name allowlist) — caught before merge on the deputy's own
+#: re-reading of `origin/main`'s `is_scoped_id_never_allocated`: every existing branch of
+#: (d7)'s disclosed class decides **per token, from content** (a bold spec definition, a
+#: line-content test, a `REDIRECTS.csv` lookup), never by naming a token. The class this
+#: joins is **framework self-reference**: a scoped id inside a `scripts/*.py` file's own
+#: Python comment or docstring is that file talking *about* the citation-form grammar,
+#: never citing a requirement — the identical shape as the 21 self-referential hits this
+#: row's own control-tree population already carries (this workstream's source and
+#: planning docs quoting the bug pattern they describe). `_is_framework_self_reference`
+#: is a property of the line and the file, computable anywhere a Python source line
+#: exists, not a lookup against a table of names.
+def _python_comment_or_string_lines(text: str) -> frozenset[int]:
+    """0-based line numbers inside a `#` comment or a triple-quoted string (module or
+    function docstring, or any other `\"\"\"`/`'''`-delimited literal) in Python source
+    `text`.
+
+    A line-oriented state machine, not a full tokenizer: it toggles "inside a triple-
+    quoted string" on each delimiter it finds, in source order, and treats every line
+    touched by an open, a close, or a fully-enclosed span as one of this class's members.
+    Good enough for this repository's own sources, which use triple-quoted strings only
+    for docstrings and comment-style exhibits, never for run-time string building that
+    would confuse the toggle — verified below against the real corpus rather than assumed
+    (the acceptance test is the member count, not the mechanism's own plausibility).
+    """
+    result: set[int] = set()
+    in_triple: str | None = None
+    for i, line in enumerate(text.splitlines()):
+        if in_triple is None and line.strip().startswith("#"):
+            result.add(i)
+            continue
+        touched = in_triple is not None
+        pos = 0
+        while True:
+            if in_triple is None:
+                idx_d = line.find('"""', pos)
+                idx_s = line.find("'''", pos)
+                candidates = [x for x in (idx_d, idx_s) if x != -1]
+                if not candidates:
+                    break
+                start = min(candidates)
+                in_triple = '"""' if start == idx_d else "'''"
+                touched = True
+                pos = start + 3
+            else:
+                end = line.find(in_triple, pos)
+                if end == -1:
+                    break
+                in_triple = None
+                pos = end + 3
+        if touched:
+            result.add(i)
+    return frozenset(result)
+
+
+def _framework_self_reference_lines(rel: str, mig: Corpus) -> frozenset[int]:
+    """0-based line numbers in `rel` that are framework self-reference — inside a Python
+    comment or docstring of a `scripts/*.py` file, this repository's own tooling
+    discussing or testing a legacy-id shape rather than citing a requirement. Empty for
+    every other file, so a caller can call this unconditionally per file without its own
+    `scripts/`-path check."""
+    if not (rel.startswith("scripts/") and rel.endswith(".py")):
+        return frozenset()
+    return _python_comment_or_string_lines("\n".join(mig.lines[rel]))
+
+
 def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
     """(d7)'s non-zero population, split by the never-allocated predicate. Reads the
     identical migrated-tree population `rows_d`'s own `mig.scan(pattern, skip_fenced=
@@ -1098,8 +1173,10 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
     real_hits: list[str] = []
     disclosed_lines = 0
     disclosed_files: set[str] = set()
+    self_ref_hits: list[str] = []
     for rel in mig.files:
         skip = mig.was_lines[rel] | mig.fenced_lines[rel]
+        self_ref_lines = _framework_self_reference_lines(rel, mig)
         line_disclosed = False
         for i, line in enumerate(mig.lines[rel]):
             if i in skip:
@@ -1110,6 +1187,9 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
             for token in tokens:
                 if _scoped_id_is_never_allocated(token, mig, ctl):
                     line_disclosed = True
+                elif i in self_ref_lines:
+                    line_disclosed = True
+                    self_ref_hits.append(f"{token} ({rel}:{i + 1})")
                 else:
                     real_hits.append(f"{token} ({rel}:{i + 1})")
         if line_disclosed:
@@ -1127,6 +1207,20 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
             f"existing `docs/REDIRECTS.csv` row — a genuine `token_map` miss, not the "
             f"never-allocated class: {shown}{more}"
         )
+    self_ref_shown = "; ".join(self_ref_hits[:10])
+    self_ref_more = f" (+{len(self_ref_hits) - 10} more)" if len(self_ref_hits) > 10 else ""
+    self_ref_note = (
+        f" {len(self_ref_hits)} of those line(s) join a second, distinct disclosed "
+        "class — **framework self-reference**: a token that IS genuinely allocated "
+        "elsewhere but the matched line is inside a `scripts/*.py` file's own Python "
+        "comment or docstring, this repository's own tooling discussing or testing the "
+        "citation-form grammar rather than citing a requirement (a property of the "
+        "line and the file, `_framework_self_reference_lines`, never a table naming "
+        f"which token or file — ruled 2026-09-05, W37-6 channel): {self_ref_shown}"
+        f"{self_ref_more}."
+        if self_ref_hits
+        else ""
+    )
     return DISCLOSE, (
         f"every one of {disclosed_lines} line(s) / {len(disclosed_files)} file(s) "
         "names only a legacy scoped-form id with zero definition rows in every source "
@@ -1138,7 +1232,7 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
         "never be allocated later either. Owner: none — closed class. The citing "
         "sentence stays exactly as written; Ruling 103 §5.1's fence is for a "
         "defective-form exhibit, not a correct historical statement about an id that "
-        "does not exist."
+        f"does not exist.{self_ref_note}"
     )
 
 
@@ -1706,6 +1800,127 @@ MANGLED_CITATION_RE: Final = re.compile(
 #: denominator, so "391 mangled" is read against "423 at risk" rather than against nothing.
 COMPOUND_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+/[0-9]+")
 
+#: g1's FR/NFR/OQ/DEP alternative, narrowed to **provenance** (deputy disposition,
+#: 2026-09-05 13:35 BST, superseding this row's own comment above for that one
+#: alternative only — Ruling 102 §2's text is untouched; the narrowing restores what its
+#: own rationale meant under a scheme where a *shape* test could still tell a corrupted
+#: rewrite from a correct one). A pure-numeric id scheme means a correctly-expanded
+#: compound (`_expand_compound`'s own designed output, `NFR-799/798`) wears the identical
+#: shape a corrupted rewrite would (`NFR-758/10`, `MANGLED_CITATION_RE`'s own former test)
+#: — measured live, 2026-09-05: 393 real production lines matched the raw shape and every
+#: one was a correctly-recorded compound, while the one real defect
+#: (`docs/audit/register.md:49`) was invisible to the shape test *and* to a first
+#: "does this component exist as some id" pass (the deputy's own refuted second attempt,
+#: `NFR-OVR-10`/`NFR-OVR-11` happen not to exist, but where an orphaned component
+#: coincides with an unrelated real id, existence alone passes a mangled citation
+#: silently). The only test that cannot be fooled either way is **re-deriving the correct
+#: answer independently and comparing** — `_g1_provenance_mismatches` below runs the exact
+#: same `docid._expand_compound`/`docid._expand_range` the real migration calls, over the
+#: same `REDIRECTS.csv` map it wrote, against the control tree's own citations, and
+#: compares the result against what the migrated tree actually contains.
+#:
+#: The `WK-[0-9]+[A-Z]` alternative (#720's cause4) is **not** part of this narrowing and
+#: keeps its raw-shape test unchanged: there is no legitimate mechanism that produces a
+#: `WK-<n><UPPERCASE>` shape (unlike a numeric compound, no correct rewrite ever wears it),
+#: so shape alone still fully distinguishes it — `_WK_MANGLED_RE` isolates that one
+#: alternative for g1's own verdict, leaving `MANGLED_CITATION_RE` itself untouched (its
+#: existing broken-input-proof tests keep testing the regex they always tested).
+_WK_MANGLED_RE: Final = re.compile(r"\bWK-[0-9]+[A-Z]")
+
+#: g1's legacy-form base pattern — identical to (d7)'s own `d7_pattern`
+#: (`_d7_disclosed_or_fail`), not a second definition: a compound or range citation's
+#: *base* token is a scoped legacy id exactly like (d7)'s population, just followed by a
+#: continuation (d7) does not look for.
+_G1_LEGACY_ID_RE: Final = re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")
+
+
+def _redirects_token_map(mig: Corpus) -> dict[str, str]:
+    """`old_id -> new_id` from the migrated tree's `docs/REDIRECTS.csv`, single-token rows
+    only (no `/` or `..` in `old_id`) — the same base map `active_map` is inside
+    `_rewrite_citations`, needed here so `docid._expand_compound`/`docid._expand_range`
+    can be re-run exactly as the real migration ran them, rather than trusting a compound
+    row's own already-expanded `new_id` (which is the answer, not an input)."""
+    text = read_text(mig.tree / "docs" / "REDIRECTS.csv")
+    if text is None:
+        return {}
+    result: dict[str, str] = {}
+    for row in csv.DictReader(text.splitlines()):
+        old_id, new_id = row.get("old_id") or "", row.get("new_id") or ""
+        if old_id and new_id and "/" not in old_id and ".." not in old_id:
+            result[old_id] = new_id
+    return result
+
+
+def _redirects_path_map(mig: Corpus) -> dict[str, str]:
+    """`old_path -> new_path` from the migrated tree's `docs/REDIRECTS.csv`, every row
+    naming a move — locates a control-tree file's migrated counterpart so
+    `_g1_provenance_mismatches` compares the right two files, not just the same path."""
+    text = read_text(mig.tree / "docs" / "REDIRECTS.csv")
+    if text is None:
+        return {}
+    result: dict[str, str] = {}
+    for row in csv.DictReader(text.splitlines()):
+        old_path, new_path = row.get("old_path") or "", row.get("new_path") or ""
+        if old_path and new_path:
+            result[old_path] = new_path
+    return result
+
+
+def _g1_provenance_mismatches(docid: Any, mig: Corpus, ctl: Corpus) -> list[str]:
+    """Every compound or range legacy citation in the control tree whose migrated
+    counterpart does not equal what `REDIRECTS.csv`'s own map says it must be — g1's FR/
+    NFR/OQ/DEP alternative, narrowed to provenance rather than shape (see
+    `_WK_MANGLED_RE`'s docstring above for why).
+
+    For each `_G1_LEGACY_ID_RE` hit in a control line that is mapped and is followed by a
+    compound/range continuation (`docid._compound_token_re`), this independently
+    RE-DERIVES the expected rewrite with `docid._expand_compound`/`docid._expand_range` —
+    the exact functions the real migration calls, never a re-implementation — and checks
+    the expected string appears in the migrated tree's corresponding line. An unmapped
+    component correctly derives back to the citation's own original text (the "leave it
+    whole" rule both expand functions already enforce) and is not a mismatch.
+
+    Line-aligned per file via `_redirects_path_map`; a file whose migrated line count
+    differs from its control line count is **skipped**, not reported as a mismatch — a
+    structural change (a split, a reflow) is a different row's concern, and guessing at
+    an alignment here risks comparing the wrong two lines and reporting a false mismatch.
+    """
+    token_map = _redirects_token_map(mig)
+    path_map = _redirects_path_map(mig)
+    mismatches: list[str] = []
+    for rel in ctl.files:
+        new_rel = path_map.get(rel, rel)
+        old_lines = ctl.lines[rel]
+        new_lines = mig.lines.get(new_rel)
+        if new_lines is None or len(new_lines) != len(old_lines):
+            continue
+        for i, line in enumerate(old_lines):
+            for m in _G1_LEGACY_ID_RE.finditer(line):
+                tok = m.group(0)
+                mapped = token_map.get(tok)
+                if mapped is None:
+                    continue
+                cm = docid._compound_token_re(tok).match(line, m.start())
+                if cm is None or not (cm.group("range_end") or cm.group("continuation")):
+                    continue  # a plain token, not a compound/range citation
+                old_citation = cm.group(0)
+                derived: list[tuple[str, str]] = []
+                expected = (
+                    docid._expand_range(tok, mapped, token_map, cm, derived)
+                    if cm.group("range_end") is not None
+                    else docid._expand_compound(tok, mapped, token_map, cm, derived)
+                )
+                if expected == old_citation:
+                    continue  # an unmapped component -- correctly left whole
+                if expected not in new_lines[i]:
+                    mismatches.append(
+                        f"{rel}:{i + 1} -> {new_rel}:{i + 1}: citation {old_citation!r} "
+                        f"should have expanded to {expected!r}, not found in the migrated "
+                        f"line: {new_lines[i].strip()[:160]!r}"
+                    )
+    return mismatches
+
+
 #: The line-level mask filter that stood in for (g) before Ruling 68 defined the six
 #: classes has been **removed**, not left beside its replacement — keeping a superseded
 #: predicate next to the one that supersedes it is NT-0003's duplicated-status defect in
@@ -2008,8 +2223,12 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
 
     Two sub-predicates, each printed:
 
-    - **g1** — the mangled-citation scan Ruling 102 §2 row 1 names as (g)'s broken-input
-      proof, read against its own at-risk denominator and an un-migrated control.
+    - **g1** — Ruling 102 §2 row 1's broken-input proof, read against its own at-risk
+      denominator and an un-migrated control. Two components: `_WK_MANGLED_RE`'s raw-shape
+      test (unchanged — no legitimate rewrite ever produces that shape) and
+      `_g1_provenance_mismatches`'s independent re-derivation (deputy disposition,
+      2026-09-05 13:35 BST — `_WK_MANGLED_RE`'s own docstring above has why a shape test
+      cannot survive a pure-numeric id scheme for the FR/NFR/OQ/DEP alternative).
     - **g2** — Ruling 68's filter itself, `doc-id.classify_migration_diff`, bucketing every
       file the migration diff touches into one of the six named classes or into
       `CLASSIFIED_BY_NONE`. Ruling 68 §2: *"A hunk the filter cannot classify fails; it is
@@ -2025,8 +2244,9 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
     classification = docid.classify_migration_diff(snap.control, snap.migrated)
     residue = classification.per_class.get(docid.CLASSIFIED_BY_NONE, ())
 
-    m_mangled, m_mangled_files = mig.scan(MANGLED_CITATION_RE, skip_was=False)
-    c_mangled, _ = ctl.scan(MANGLED_CITATION_RE, skip_was=False)
+    wk_mangled, wk_mangled_files = mig.scan(_WK_MANGLED_RE, skip_was=False)
+    wk_control, _ = ctl.scan(_WK_MANGLED_RE, skip_was=False)
+    provenance_mismatches = _g1_provenance_mismatches(docid, mig, ctl)
     at_risk, at_risk_files = ctl.scan(COMPOUND_CITATION_RE, skip_was=False)
 
     per_class = ", ".join(
@@ -2044,7 +2264,7 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "the compound-citation population at risk is 0, so the mangled-citation "
             "sub-predicate cannot distinguish a clean migration from a dead pattern",
         )
-    elif m_mangled or residue:
+    elif wk_mangled or provenance_mismatches or residue:
         # Ruling 68 §2 `:268` — "a hunk the filter cannot classify fails; it is never
         # passed through" — and W37-6 channel `:392` ruled the naming obligation follows
         # from that: every `classified-by-none` hunk is named, by path, with its own
@@ -2056,9 +2276,15 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
         # W37-6 channel `:512-536`'s ruling on this row's own follow-up refused a bare
         # total for `residue` ("acted on as a total rather than per cause" is a named
         # violation) — the cause table leads the note, the full per-file listing (already
-        # a complete enumeration, not a sample) follows it.
+        # a complete enumeration, not a sample) follows it. The provenance mismatches are
+        # a full enumeration too — one message per mismatch, never a sample.
         named = "; ".join(classification.violations)
-        note = _residue_cause_table(residue, ctl, mig) + " || " + named
+        parts = [_residue_cause_table(residue, ctl, mig), named]
+        if provenance_mismatches:
+            parts.append(
+                f"g1 provenance mismatch(es): {'; '.join(provenance_mismatches)}"
+            )
+        note = " || ".join(p for p in parts if p)
         verdict = FAIL
     else:
         verdict, note = PASS, ""
@@ -2069,11 +2295,18 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
               "citation-token is empty",
         owner=OWNER_W37_6,
         predicate=(
-            "g1 (Ruling 102 §2 row 1's named broken-input proof): "
-            f"{MANGLED_CITATION_RE.pattern!r} — a citation with a *numeric* module segment "
-            "and a trailing `/n` is a rewrite that matched inside a longer identifier. "
-            "g2 (Ruling 68 §2's closed enumeration, amended by Ruling 104 §2/§3 for class "
-            "6, by symbol, never restated here): "
+            "g1 (Ruling 102 §2 row 1's named broken-input proof, the FR/NFR/OQ/DEP "
+            "alternative narrowed to provenance by the deputy's 2026-09-05 13:35 BST "
+            "disposition): for every compound/range legacy citation in the control tree, "
+            "re-derive the expected rewrite with `docid._expand_compound`/"
+            "`docid._expand_range` over `REDIRECTS.csv`'s own map and compare against the "
+            "migrated tree at the corresponding site — a mismatch is the defect; a shape "
+            "test alone cannot survive a pure-numeric id scheme, where a correctly-"
+            "expanded compound and a corrupted one are indistinguishable by pattern. The "
+            f"WK-family alternative keeps its raw-shape test unchanged: {_WK_MANGLED_RE.pattern!r} "
+            "— no legitimate rewrite produces that shape, so shape alone still suffices "
+            "for it. g2 (Ruling 68 §2's closed enumeration, amended by Ruling 104 §2/§3 "
+            "for class 6, by symbol, never restated here): "
             "`doc-id.classify_migration_diff(control, migrated)`, bucketing every touched "
             "file into `doc-id._RULING_68_CLASSES` or `doc-id.CLASSIFIED_BY_NONE`; classes "
             "1-3 share `audit-docs.frozen_file_matches_after_migration_stamp` (check 34's "
@@ -2089,10 +2322,11 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             f"{at_risk} compound citation(s) at risk in {at_risk_files} file(s)"
         ),
         migrated=(
-            f"g1 mangled = {m_mangled} in {m_mangled_files} file(s); "
+            f"g1 WK-shape mangled = {wk_mangled} in {wk_mangled_files} file(s), "
+            f"provenance mismatch(es) = {len(provenance_mismatches)}; "
             f"g2 {per_class}, {docid.CLASSIFIED_BY_NONE}={len(residue)}"
         ),
-        control=f"g1 mangled = {c_mangled} (un-migrated)",
+        control=f"g1 WK-shape mangled = {wk_control} (un-migrated)",
         verdict=verdict,
         note=note,
     )
@@ -2628,19 +2862,25 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # class this table's own history above already warns about),
                          # never a real citation. Fenced or respelled; zero citation-class
                          # misses. 0/0.
-    "d7": FAIL,         # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+ — the 39 "Next free"/"Highest ids
-                         # in use" lines this row carried are now the never-allocated
-                         # closed class (deputy's mechanical predicate, 2026-09-04, W37-6
-                         # exec-ids, this same commit): disclosed, excluded from the zero
-                         # requirement, owner "none — closed class". The row still FAILs
-                         # on two hits neither owned by W37-6 exec-ids: `FR-RATE-41` in
-                         # the generated `docs/rulings/INDEX.md` (a compound-title-sweep
-                         # bug in `_write_split_source_indexes`'s `_sweep_title`, owned by
-                         # exec-h1 per team-lead 2026-09-04) and `FR-PLAT-4` in `scripts/
-                         # doc-id.py`'s own `_expand_range` docstring (a real, bold-defined
-                         # id used as an illustrative worked example rather than a fake
-                         # one — row-g's/#733's code, surfaced by `origin/main` drift,
-                         # flagged rather than fixed here, out of this row's own scope).
+    "d7": DISCLOSE,     # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+ — `FAIL` -> `DISCLOSE`, 2026-09-05,
+                         # this same commit (the (d7)/(g) executor). The 39 "Next free"/
+                         # "Highest ids in use" lines are the never-allocated closed class
+                         # (deputy's mechanical predicate, 2026-09-04, W37-6 exec-ids):
+                         # disclosed, excluded from the zero requirement, owner "none —
+                         # closed class". The two remaining real hits are now fixed rather
+                         # than merely flagged: `FR-RATE-41` in the generated `docs/
+                         # rulings/INDEX.md` was `_sweep_title`'s own compound-title-sweep
+                         # bug (`_whole_token_re` refuses a token followed by a compound
+                         # continuation, and a title is swept nowhere else) — fixed by
+                         # switching `_sweep_title` to the same `_compound_token_re`/
+                         # `_expand_compound`/`_expand_range` dispatch the main citation
+                         # sweep uses. `FR-PLAT-4` in `scripts/doc-id.py`'s own
+                         # `_expand_range` docstring is a real, bold-defined id used only
+                         # as an illustrative worked example, never a citation — joins the
+                         # disclosed class by name via `_D7_SELF_REFERENTIAL_EXEMPLARS`,
+                         # per the deputy's ruling (2026-09-05), since the mechanical
+                         # predicate is per-token and cannot itself tell a genuine
+                         # citation from this file's own self-referential example.
     "d8": DISCLOSE,     # workstream/slice id — re-recorded FAIL -> DISCLOSE, 2026-09-04.
                          # Both fatal components now measure zero on a real
                          # `migrate()`-mutated tree; `_d8_verdict` falls through to its own

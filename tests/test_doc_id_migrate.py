@@ -6913,6 +6913,55 @@ def test_a_mapped_token_in_a_split_target_title_appears_mapped_in_the_family_ind
     )
 
 
+def test_a_compound_citation_in_a_split_target_title_expands_in_the_family_index(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """(d7)'s residue investigation (W37-6, 2026-09-05, real corpus:
+    `docs/rulings/INDEX.md:112`'s row for `RL-00178`): `_sweep_title` used
+    `_whole_token_re`, which *refuses* to match a token followed by a compound/range
+    continuation (that refusal is what lets the main sweep's `_compound_token_re` take the
+    match instead in an ordinary file) — but a title is swept *only* by `_sweep_title`,
+    never by the main file-level sweep, so a title's own compound citation was refused by
+    `_whole_token_re` and reached by nothing else.
+
+    Red before the fix: a title of `"D5: FR-RATE-41/42 are not silent about batch"` with
+    both `FR-RATE-41`/`FR-RATE-42` mapped stayed `FR-RATE-41/42` in the generated index —
+    exactly the real corpus finding, where the ruling document's own front-matter `title:`
+    (swept by the real citation sweep, which does use `_compound_token_re`) correctly read
+    `FR-555/556` while the family index row for the identical document still read
+    `FR-RATE-41/42`. Green after: the title's compound citation expands the same way the
+    body's would.
+    """
+    drafts = [
+        doc_id_cli._Draft(
+            materialize="document", prefix="RL", kind=None,
+            title="D5: FR-RATE-41/42 are not silent about batch",
+            status="active", created=date(2026, 9, 1), owner="decision-maker",
+            tie_break=("docs/plans/2026-09-01-one-ruling.md", 0),
+            old_token="Ruling 25", was="docs/plans/2026-09-01-one-ruling.md",
+            body="## Ruling 25 — D5: FR-RATE-41/42 are not silent about batch\n\nBody.\n",
+            source_line_span=(1, 10),
+        ),
+    ]
+    drafts[0].number = 178
+    drafts[0].body_line_offset = 3
+    sources = doc_id_cli._build_split_sources(
+        "docs/plans/2026-09-01-one-ruling.md",
+        [(drafts[0], "docs/rulings/RL-00178-d5.md")],
+    )
+    token_map = {"Ruling 25": "RL-00178", "FR-RATE-41": "FR-555", "FR-RATE-42": "FR-556"}
+
+    doc_id_cli._write_split_source_indexes(tmp_path, sources, token_map)
+
+    text = (tmp_path / "docs" / "rulings" / "INDEX.md").read_text(encoding="utf-8")
+    assert "FR-555/556" in text, "the title's compound citation must expand in the index"
+    assert "FR-RATE-41/42" not in text, (
+        "the title must not still carry the unswept legacy compound citation -- "
+        "`_whole_token_re` refuses a token followed by a compound continuation, and a "
+        "title is swept nowhere else"
+    )
+
+
 def test_the_split_index_preamble_is_swept_for_the_rulings_it_names_by_legacy_form(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -7457,6 +7506,77 @@ def test_task30_a_range_with_an_unmapped_member_stays_whole(
     assert after == text, (
         "FR-PLAT-3 is unmapped, so the whole range must stay whole -- never half-"
         "enumerated and never FR-680..4 (the head alone, tail orphaned)"
+    )
+
+
+def test_row_g_a_range_with_a_trailing_compound_tail_expands_both_and_inverts(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The deputy's diagnosis (W37-6, 2026-09-05, real corpus:
+    `docs/audit/register.md:49`): a range citation can carry a further compound tail of
+    its own, `NFR-OVR-1..8/10/11` — the range `NFR-OVR-1..8` plus siblings `NFR-OVR-10`
+    and `NFR-OVR-11`, in the identical shorthand a plain compound already uses.
+
+    Red before the fix: `_compound_token_re`'s range and continuation groups were
+    alternatives, so the range alone matched (`..8`), consuming nothing past it — the
+    `/10/11` survived untouched, glued onto the range's own last enumerated member:
+    `NFR-751, NFR-752, NFR-753, NFR-754, NFR-755, NFR-756, NFR-757, NFR-758/10/11`, real
+    ids 10/11 orphaned in their pre-migration module-local form — exactly
+    `MANGLED_CITATION_RE`'s own shape.
+
+    Green after the fix: the tail's siblings are resolved and appended to the range's last
+    member in shorthand, `NFR-758/760/761`, and the whole citation (range and tail) is
+    recorded as one reversible unit.
+    """
+    text = "see NFR-OVR-1..8/10/11 for the scope\n"
+    token_map = {
+        "NFR-OVR-1": "NFR-751", "NFR-OVR-2": "NFR-752", "NFR-OVR-3": "NFR-753",
+        "NFR-OVR-4": "NFR-754", "NFR-OVR-5": "NFR-755", "NFR-OVR-6": "NFR-756",
+        "NFR-OVR-7": "NFR-757", "NFR-OVR-8": "NFR-758",
+        "NFR-OVR-10": "NFR-760", "NFR-OVR-11": "NFR-761",
+    }
+    derived: list[tuple[str, str]] = []
+    after = _rewrite_one_file(
+        doc_id_cli, tmp_path, dict(token_map), text, derived_redirects=derived
+    )
+    assert after == (
+        "see NFR-751, NFR-752, NFR-753, NFR-754, NFR-755, NFR-756, NFR-757, "
+        "NFR-758/760/761 for the scope\n"
+    ), "the range enumerates in full and the tail siblings land on the last member only"
+    assert "NFR-758/10/11" not in after, (
+        "the tail must not survive in its pre-migration module-local form, orphaned onto "
+        "the range's last enumerated member"
+    )
+    assert len(derived) == 1, "exactly one citation (range plus tail) was expanded"
+    old_citation, new_citation = derived[0]
+    assert old_citation == "NFR-OVR-1..8/10/11"
+    assert new_citation in after
+
+    audit_docs = doc_id_cli._load_audit_docs()
+    redirects_inverse = {new_citation: old_citation}
+    assert audit_docs.frozen_file_matches_after_migration_stamp(
+        text, after, redirects_inverse
+    ), "the recorded pair must invert the expansion back to the merge-base text"
+
+
+def test_row_g_a_range_with_an_unmapped_tail_component_stays_whole(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The mixed shape's own broken-input proof, mirroring the plain range and plain
+    compound rules: one unmapped tail sibling fails the whole citation, range included --
+    never a half-enumerated range with the tail dropped, and never the range alone with
+    the tail orphaned."""
+    text = "see NFR-OVR-1..8/10/11 for the scope\n"
+    token_map = {
+        "NFR-OVR-1": "NFR-751", "NFR-OVR-2": "NFR-752", "NFR-OVR-3": "NFR-753",
+        "NFR-OVR-4": "NFR-754", "NFR-OVR-5": "NFR-755", "NFR-OVR-6": "NFR-756",
+        "NFR-OVR-7": "NFR-757", "NFR-OVR-8": "NFR-758",
+        "NFR-OVR-10": "NFR-760",  # NFR-OVR-11 deliberately unmapped
+    }
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == text, (
+        "NFR-OVR-11 is unmapped, so the whole citation -- range and tail -- must stay "
+        "whole, never half-enumerated and never NFR-758/10/11 (the tail orphaned)"
     )
 
 
