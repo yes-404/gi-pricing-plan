@@ -2594,10 +2594,13 @@ def _h1_residue_by_file(out: str, corpus: Corpus) -> Mapping[tuple[str, str], in
     parses, never a second sweep of `out`.
 
     A failure message shaped `check N: <token>: ...` (`_H1_FAILURE_LOCATION_RE`) names a
-    file only if `token` **resolves** — is a member of `corpus.files`, the migrated
-    snapshot's own tracked-file set `compute_rows` already built and passed in, never
-    the repo working tree (the snapshot's filenames deliberately differ from the current
-    checkout). A resolving token is keyed `(token, f"h1-check{n}")`; everything else —
+    file only if `token` **resolves** — is a member of `tracked_files(corpus.tree)`, the
+    unfiltered tracked-file set of the migrated snapshot (`corpus` only for its `.tree`;
+    never the repo working tree, since the snapshot's filenames deliberately differ from
+    the current checkout, and never `corpus.files`, which is `Corpus`'s own row-(d)/(e)/
+    (g)-scoped set with `_D_EXCLUDED_BASENAME` already applied — see the comment above
+    `known_files` below for why that scope does not answer h1's question). A resolving
+    token is keyed `(token, f"h1-check{n}")`; everything else —
     a message with no colon-terminated leading token, or one that has the shape but does
     not resolve to a real file — is keyed `(_H1_UNLOCATED_PATH, f"h1-check{n}")` instead
     of being dropped, a class-level ceiling rather than a per-file one but still
@@ -2688,10 +2691,11 @@ def _probe_summary(out: str) -> dict[str, int | None]:
 
 def rows_h(snap: Snapshot, mig: Corpus) -> list[Row]:
     """`mig` is the migrated snapshot's own `Corpus` (`compute_rows`' own `load_corpus(
-    snap.migrated)`, never re-derived here) — h1's per-file residue extraction resolves a
-    captured token against `mig.files`, and it must be this run's own corpus, not the
-    repo working tree: the migrated snapshot's filenames deliberately differ from the
-    current checkout.
+    snap.migrated)`, never re-derived here) — passed on for its `.tree` alone: h1's
+    per-file residue extraction resolves a captured token against
+    `tracked_files(mig.tree)`, the unfiltered tracked-file set, never `mig.files` itself
+    (`Corpus`'s own row-(d)/(e)/(g)-scoped set) and never the repo working tree, since
+    the migrated snapshot's filenames deliberately differ from the current checkout.
     """
     mig_audit = _run_script(snap.migrated, "audit-docs.py")
     ctl_audit = _run_script(snap.control, "audit-docs.py")
