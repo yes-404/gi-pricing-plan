@@ -1442,7 +1442,9 @@ def _path_alternative_hits_by_file(
     return fatal_by_file, disclosed_by_file
 
 
-def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
+def rows_d(
+    mig: Corpus, ctl: Corpus, record: "Sequence[ResidueEntry]" = (),
+) -> list[Row]:
     rows: list[Row] = []
     for i, (label, pattern) in enumerate(D_ALTERNATIVES, start=1):
         m_lines, m_files = mig.scan(pattern, skip_fenced=True)
@@ -1541,6 +1543,18 @@ def rows_d(mig: Corpus, ctl: Corpus) -> list[Row]:
                 verdict, note = _verdict_on_zero(m_lines, mig.n_lines, control=c_lines)
                 if creation_note:
                     note = (note + "; " if note else "") + creation_note
+        if verdict == FAIL and _residue_fully_governed(residue_by_file, record):
+            # The box-end ruling (2026-09-05): a `FAIL` this general mechanism cannot
+            # resolve closes by DISCLOSE once, and only once, every one of its fatal hits
+            # is filed and ceilinged in the W37-11 record — never merely because the
+            # record is silent on it (`_residue_fully_governed` refuses that case).
+            verdict = DISCLOSE
+            total = sum(residue_by_file.values())
+            note = (note + "; " if note else "") + (
+                f"{total} hit(s) filed and ceilinged in docs/audit/w37-11-record.md — "
+                "governed residue the general migration mechanism cannot resolve, "
+                "disclosed per file rather than special-cased in this module"
+            )
         if m_lines == c_lines and m_lines > 0:
             # The auditor's two-column signature, and a better detector than reasoning
             # about `\b`: an alternative the migration does not move has no discriminating
@@ -2563,9 +2577,34 @@ def _classify_failures(out: str) -> dict[str, int]:
     return counter
 
 
-def _h1_verdict(other_total: int) -> str:
-    """Ruling 105 §B: (h1) passes iff every class outside checks 29/30/35 is zero."""
-    return PASS if other_total == 0 else FAIL
+def _h1_verdict(
+    other_total: int,
+    residue: Mapping[tuple[str, str], int] | None = None,
+    record: "Sequence[ResidueEntry]" = (),
+) -> str:
+    """Ruling 105 §B, extended by the box-end ruling (2026-09-05): (h1) passes iff every
+    class outside checks 29/30/35 is zero, OR every one of those non-disclosed classes'
+    per-(file, check) hits is filed and ceilinged in the W37-11 record — closes by
+    DISCLOSE, not by collapse. `residue` is (h1)'s own full per-(file, check) breakdown
+    (`_h1_residue_by_file`, includes checks 29/30/35 too); only the entries whose check is
+    NOT one of `_H1_DISCLOSED_CHECKS` are ever tested against the record, since 29/30/35
+    are already non-fatal by W37-10 ownership and never contribute to `other_total`.
+    """
+    if other_total == 0:
+        return PASS
+    non_disclosed = {
+        key: count
+        for key, count in (residue or {}).items()
+        if key[1][len("h1-check"):] not in _H1_DISCLOSED_CHECKS
+    }
+    # `other_total > 0` with an empty `non_disclosed` means the caller did not supply the
+    # per-(file, check) breakdown (or supplied one that disagrees with `other_total`) —
+    # never DISCLOSE on the strength of a governance check with nothing to check. This is
+    # what keeps every pre-existing call site that passes no `residue` (`_h1_verdict(1)`)
+    # exactly `FAIL`, as it was before this parameter existed.
+    if not non_disclosed:
+        return FAIL
+    return DISCLOSE if _residue_fully_governed(non_disclosed, record) else FAIL
 
 
 #: The common shape a `fail()` call in `audit-docs.py` writes: `check N: <path>: ...` —
@@ -2689,7 +2728,9 @@ def _probe_summary(out: str) -> dict[str, int | None]:
     return found
 
 
-def rows_h(snap: Snapshot, mig: Corpus) -> list[Row]:
+def rows_h(
+    snap: Snapshot, mig: Corpus, record: "Sequence[ResidueEntry]" = (),
+) -> list[Row]:
     """`mig` is the migrated snapshot's own `Corpus` (`compute_rows`' own `load_corpus(
     snap.migrated)`, never re-derived here) — passed on for its `.tree` alone: h1's
     per-file residue extraction resolves a captured token against
@@ -2711,6 +2752,16 @@ def rows_h(snap: Snapshot, mig: Corpus) -> list[Row]:
     h1_other = sum(v for k, v in mig_classes.items() if k not in _H1_DISCLOSED_CHECKS)
     h1_disclosed_text = "; ".join(
         f"check {k}={v} (owner: {OWNER_W37_10})" for k, v in h1_disclosed.items()
+    )
+    h1_residue = _h1_residue_by_file(mig_out, mig)
+    h1_verdict = _h1_verdict(h1_other, h1_residue, record)
+    h1_governed_note = (
+        f"{h1_other} failure(s) outside checks 29/30/35 are filed and ceilinged in "
+        "docs/audit/w37-11-record.md — governed residue audit-docs.py cannot itself "
+        "resolve, disclosed per (file, check) rather than special-cased in this module "
+        "(box-end ruling, 2026-09-05)"
+        if h1_verdict == DISCLOSE
+        else ""
     )
     h1 = Row(
         key="h1",
@@ -2734,14 +2785,14 @@ def rows_h(snap: Snapshot, mig: Corpus) -> list[Row]:
         control=f"exit {ctl_audit.returncode}"
         + (f", FAILED ({ctl_failures.group(1)})" if ctl_failures else "")
         + f", {ctl_absent} check(s) did not execute",
-        verdict=_h1_verdict(h1_other),
+        verdict=h1_verdict,
         note="; ".join(
             part
             for part in (
                 f"checks 29, 30 and 35 are W37-10's residue (Ruling 105 §B), disclosed by "
                 f"count and never fatal: {h1_disclosed_text}. Every other class — including "
                 "checks 32, 36, 1, 31, 27 and any class not named here — must be zero to "
-                "pass",
+                "pass, or filed and ceilinged in the W37-11 record",
                 (
                     f"{mig_absent} check(s) report they CANNOT RUN on the migrated tree "
                     f"(control {ctl_absent}) — the old notes directory is dissolved by the "
@@ -2750,10 +2801,11 @@ def rows_h(snap: Snapshot, mig: Corpus) -> list[Row]:
                     "as a small number of failures rather than as a hole in coverage."
                     if mig_absent else ""
                 ),
+                h1_governed_note,
             )
             if part
         ),
-        residue=_h1_residue_by_file(mig_out, mig),
+        residue=h1_residue,
     )
 
     mig_probes = _probe_summary(mig_out)
@@ -3075,8 +3127,29 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # instruction to the next reader to reverse a decision that was
                          # actually right.
     "d3": DISCLOSE,     # \bF[0-9]{2}\b — excluded from the zero requirement (§8.5)
-    "d4": FAIL,         # wf-0[0-9] — improved (262 < control 272), not the migration's own
-                         # regression any more; still non-zero (2026-09-03, task 23)
+    "d4": DISCLOSE,     # wf-0[0-9] — FAIL -> DISCLOSE, 2026-09-05 (W37-6 Checkpoint 1
+                         # box-end ruling PR): the residual 2 hits are quotation-integrity
+                         # residue, not the migration's own regression — two frozen
+                         # documents (`docs/plans/PL-00283-...md`,
+                         # `docs/research/nt-0019-w37-6-condition-2-and-third-
+                         # measurement-2026-09-04.md`) quote the pre-#755 buggy `wf-`
+                         # filename as evidence of the generator defect's own discovery;
+                         # the token is hyphen-fused (`w5-wf-01`), so `TOKEN_LEFT_BOUND`
+                         # correctly refuses it, and rewriting the quotation would falsify
+                         # the handover it documents. Not (d7)'s self-reference/
+                         # never-allocated class: `wf-01` IS an allocated id, just quoted
+                         # historically rather than cited live. Predicate:
+                         # `'\bwf-0[0-9]\b'` over row (d)'s corpus (this table's own row
+                         # (d4) definition, unchanged by this PR) — measured 2 line(s) /
+                         # 2 file(s) fatal on BOTH `f35cfe5` (this PR's base, `git archive`
+                         # of `origin/main`) and this PR's own HEAD (the pattern and
+                         # corpus are untouched; only the record + `_residue_fully_
+                         # governed` gate changed). Both files' 2 hits are filed in
+                         # `docs/audit/w37-11-record.md` under `cls="d4"` with a ceiling
+                         # of 1 each, so `_docverify.rows_d`'s new governance check
+                         # (`_residue_fully_governed`) now returns DISCLOSE instead of
+                         # FAIL for this row; a fatal count now excluded from the zero
+                         # requirement, owner W37-6.
     "d5": PASS,         # Ruling [0-9]+ — FIXED (2026-09-04, W37-6 #748): `_RULING_HEADING_RE`
                          # accepted only `^##`, so the H1-only ruling files (Rulings 59/60/61)
                          # were never discovered and so never rewritten. Widened to `^#{1,2}`
@@ -3199,23 +3272,35 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # wrap-reconstructed line. The row's own disclosed (no real
                          # successor) population remains, `_verdict_on_zero`'s correct
                          # DISCLOSE, never PASS.
-    "d10": FAIL,        # docs/audit/ — 44 of 45 fatal lines fixed (2026-09-05, W37-6
-                         # rows (d9)-(d12)): the same four framework defects (d9)'s note
-                         # names, plus a fifth wrap shape (a wrap landing right before
-                         # the extension after `.`, `docs/audit/register.md`'s own
-                         # citation in `docs/audit/findings/README.md`). **1 fatal line
-                         # remains, a genuine resistant file, not a tool gap**: `docs/
-                         # plans/PL-00132-nt-0010-nt-0011-adoption-implementation-
-                         # plan.md:126` cites `docs/audit/plan-reviews.md` (13-target
-                         # split source) wrapped across a line break, and its own
-                         # determinant is prose ("plan review 8") rather than a
+    "d10": DISCLOSE,    # docs/audit/ — FAIL -> DISCLOSE, 2026-09-05 (W37-6 Checkpoint 1
+                         # box-end ruling PR). 44 of 45 fatal lines were already fixed
+                         # (2026-09-05, W37-6 rows (d9)-(d12)): the same four framework
+                         # defects (d9)'s note names, plus a fifth wrap shape. **1 fatal
+                         # line is a genuine resistant file, not a tool gap**: re-measured
+                         # at this PR's base `f35cfe5` (`git archive` of `origin/main`,
+                         # never the pre-migration working tree — the migration assigns
+                         # this file's own name) as `docs/plans/PL-00132-rfc-128-
+                         # rfc-129-adoption-implementation-plan.md:126` — NOTE: a prior
+                         # comment on this row named this file `PL-00132-nt-0010-
+                         # nt-0011-adoption-implementation-plan.md`; that basename does
+                         # not exist in this PR's own migrated snapshot at `f35cfe5`,
+                         # reported to the lead as a citation drift rather than silently
+                         # corrected here. The file cites `docs/audit/plan-reviews.md`
+                         # (13-target split source) wrapped across a line break, and its
+                         # own determinant is prose ("plan review 8") rather than a
                          # recognised `CR-`/anchor/line-span form `_SplitSource.resolve`
                          # can read — the deputy's own constraint on this fix (relayed
                          # via the lead, 2026-09-05): an undetermined wrapped citation is
                          # left byte-identical, never guessed at with the index-token
-                         # fallback the ordinary sweep uses, so it stays fatal and is a
-                         # per-file W37-11 entry (path/class/count/reason) rather than a
-                         # silent answer.
+                         # fallback the ordinary sweep uses. Predicate: `'docs/audit/'`
+                         # over row (d)'s corpus, fatal bucket only
+                         # (`_path_alternative_hits_by_file`'s `fatal_by_file`, this
+                         # table's own row (d10) definition, unchanged by this PR) —
+                         # measured 1 line / 1 file fatal on BOTH `f35cfe5` and this PR's
+                         # own HEAD. Filed in `docs/audit/w37-11-record.md` under
+                         # `cls="d10"` with a ceiling of 1, so `_residue_fully_governed`
+                         # now returns DISCLOSE instead of FAIL for this row — a fatal
+                         # count excluded from the zero requirement, owner W37-6.
     "d12": DISCLOSE,    # docs/adr/ — FIXED (2026-09-05, W37-6 rows (d9)-(d12)): every one
                          # of this row's 2 fatal lines is gone; the row still carries a
                          # disclosed (no-real-successor) population, `_verdict_on_zero`'s
@@ -3237,8 +3322,36 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # `MigrateResult.generated_paths` (Ruling 105 D3/#18 §1), keyed on
                          # the run's own generated-output list, never the literal path.
     "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
-    "h1": FAIL,         # audit-docs.py: checks 29/30/35 disclosed (owner W37-10, Ruling 105
-                         # §B), but other classes (32, 36, 1, 31, 27, ...) are still non-zero
+    "h1": DISCLOSE,     # audit-docs.py: FAIL -> DISCLOSE, 2026-09-05 (W37-6 Checkpoint 1
+                         # box-end ruling PR). Checks 29/30/35 remain disclosed-and-never
+                         # -fatal (owner W37-10, Ruling 105 §B). Every other class was
+                         # measured at 948 failure(s) at this PR's base `f35cfe5`, per
+                         # `python3 scripts/audit-docs.py` on the migrated snapshot,
+                         # classified by check number: check 36=435, check 32=274,
+                         # check 1=235, check 5=3, check 2=1 (=948) — same on this PR's
+                         # own HEAD, since neither audit-docs.py nor the migration was
+                         # touched, only `_docverify.py`'s residue-governance check and
+                         # `docs/audit/w37-11-record.md`. Checks 1, 30, 32, 35 and 36
+                         # resolve every failure to a real file in the migrated tree's own
+                         # tracked-file set (`_h1_residue_by_file`'s resolution rule,
+                         # #760) and are filed per-file; checks 2, 5 and 29 carry no
+                         # colon-terminated leading token their message resolves to a
+                         # file (`FR-1187 referenced but never defined`, `ADR-1
+                         # referenced but no file exists`, a backtick-quoted finding id)
+                         # and are filed class-level under the sentinel path `(no file
+                         # named in message)` — 15 entries (check 2=1, check 5=3,
+                         # check 29=11), never claimed as per-file. All 8 classes (1, 2,
+                         # 5, 29, 30, 32, 35, 36) are filed in
+                         # `docs/audit/w37-11-record.md`; the box-end ruling closes (h1)
+                         # by DISCLOSE, not by collapse: `_h1_verdict` now returns
+                         # DISCLOSE when every non-disclosed-check hit is filed and
+                         # ceilinged there (`_residue_fully_governed`), per-class
+                         # disclosure with the ceiling underneath rather than a bare
+                         # "98.7%"/"1101"-style headline (that figure, from #760's own
+                         # per-file resolution proof, is quotable only as "measured,
+                         # every key resolves" — never as a structural guarantee; see
+                         # #760's own merge body for the still-open `` `was ``
+                         # misattribution defect this record does not paper over).
     "h2": DISCLOSE,     # zero-denominator probes now clear; only OVER-EXEMPT fires, which
                          # Ruling 105 D3 disclosed rather than failed (2026-09-03, task 14)
     "h3": PASS,         # req-coverage.py: 533 requirements on both trees, exit 0 on the
@@ -3351,6 +3464,42 @@ class ResidueEntry:
     count: int
     reason: str
     owner: str = ""
+
+
+def _residue_fully_governed(
+    residue: Mapping[tuple[str, str], int], record: "Sequence[ResidueEntry]",
+) -> bool:
+    """True iff every `(path, cls)` hit in `residue` (count > 0) is named in the governed
+    W37-11 record (`docs/audit/w37-11-record.md`) at or above its measured count.
+
+    Used to convert a row's `FAIL` into `DISCLOSE` once, and only once, its entire fatal
+    residue is filed and ceilinged — the box-end ruling's "closes by DISCLOSE, not by
+    collapse" (2026-09-05): a general mechanism that cannot resolve a residual hit
+    disclose it, per file, into the record rather than special-casing the file inside this
+    module (`CLAUDE.md` §12/§13's fix-the-tool-or-disclose-the-file rule, restated in
+    `docs/notes/` as "fix tool / disclose files per-file into W37-11 / never special-case a
+    file"). A `cls` the record does not govern at all, or a single file's count exceeding
+    its own recorded ceiling, both return `False` — "fully disclosed", never merely "not
+    yet flagged" — so a row cannot close by DISCLOSE on an empty or partial record. The
+    identical `(path, cls)` shape `check_residue_ceiling` already reads: this is the
+    verdict-side use of the same governed table, `check_residue_ceiling` the
+    regression-side use — one record, two readers, never two definitions of "governed".
+    """
+    # An empty `residue` is never "fully governed" — a `FAIL` verdict with nothing to
+    # check against the record must stay `FAIL`, not close by vacuous truth over zero
+    # entries. Every real caller's residue is non-empty whenever its verdict is `FAIL`
+    # (the hit count driving the verdict and the residue breakdown are the same
+    # measurement); this guard is for the case that stops being true, not the common one.
+    if not residue:
+        return False
+    ceiling = {(e.path, e.cls): e.count for e in record}
+    for key, count in residue.items():
+        if count <= 0:
+            continue
+        limit = ceiling.get(key)
+        if limit is None or count > limit:
+            return False
+    return True
 
 
 def load_w37_11_record(repo_root: Path) -> tuple[ResidueEntry, ...]:
@@ -3501,22 +3650,32 @@ class VerifyResult:
 
 
 def compute_rows(
-    docid: Any, snap: Snapshot, generated_paths: Sequence[str] = ()
+    docid: Any,
+    snap: Snapshot,
+    generated_paths: Sequence[str] = (),
+    record: "Sequence[ResidueEntry]" = (),
 ) -> list[Row]:
     """Every §7 (a)-(i) row, over a snapshot whose `migrated/` has already been migrated.
 
     `generated_paths` is `MigrateResult.generated_paths` from the same `migrate()` call
     that produced this snapshot's `migrated/` tree — (f)'s exclusion (Ruling 105 D3/#18).
+
+    `record` is the governed W37-11 record (`load_w37_11_record`), threaded into the two
+    row-families whose verdict can close by DISCLOSE rather than FAIL once their fatal
+    residue is filed and ceilinged there (`rows_d`, `rows_h` — `_residue_fully_governed`).
+    Every other row ignores it; `()` (the default, and what every pre-existing caller and
+    test still passes) makes every row behave exactly as before this parameter existed,
+    since an empty record governs nothing.
     """
     mig = load_corpus(snap.migrated)
     ctl = load_corpus(snap.control)
     baseline = load_corpus(snap.baseline) if snap.baseline is not None else None
     rows: list[Row] = [row_a(docid, snap), row_b(docid, snap), row_c(snap)]
-    rows.extend(rows_d(mig, ctl))
+    rows.extend(rows_d(mig, ctl, record))
     rows.append(row_e(mig, ctl, snap))
     rows.append(row_f(mig, ctl, baseline, snap, generated_paths))
     rows.append(row_g(docid, snap, mig, ctl))
-    rows.extend(rows_h(snap, mig))
+    rows.extend(rows_h(snap, mig, record))
     rows.append(row_i(snap))
     return rows
 
@@ -3667,8 +3826,12 @@ def _verify_body(
                 "every row reading `git ls-files` would measure the pre-migration "
                 "population"
             )
-        rows = compute_rows(docid, snap, mig_result.generated_paths)
+        # Loaded before `compute_rows` (not after, as before this change): (d)'s and
+        # (h1)'s own verdicts now read the record to decide FAIL-vs-DISCLOSE
+        # (`_residue_fully_governed`), so it must exist before those rows are computed,
+        # not only afterward for the exit-code-level residue-ceiling comparison.
         record = load_w37_11_record(repo_root)
+        rows = compute_rows(docid, snap, mig_result.generated_paths, record)
         return VerifyResult(snapshot=snap, rows=tuple(rows), w37_11_record=record)
     finally:
         if tmp is not None and not keep:
