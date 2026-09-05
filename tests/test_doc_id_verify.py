@@ -690,7 +690,8 @@ def test_wk_shape_hits_excludes_framework_self_reference_not_a_second_mechanism(
         "docs/some-real-doc.md": "see WK-944C for detail\n",
     }
     mig = dv.load_corpus(_mkrepo(tmp_path / "migrated", migrated))
-    lines, files = dv._wk_shape_hits(mig)
+    ctl = dv.load_corpus(_mkrepo(tmp_path / "control", migrated))
+    lines, files = dv._wk_shape_hits(mig, mig, ctl)
     assert lines == 1, "only the non-self-referential occurrence must count"
     assert files == 1
 # Row, never reimplementing the six-class filter itself (Ruling 68 §3). A fake `docid`
@@ -1796,6 +1797,29 @@ def test_d7_an_undefined_token_is_disclosed_as_the_never_allocated_closed_class(
     assert d7.verdict == "DISCLOSE", f"an undefined token must disclose: {d7.note}"
     assert "closed class" in d7.note
     assert "none — closed class" in d7.note
+
+
+def test_d7_a_real_id_backtick_quoted_in_a_planning_doc_still_fails(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The team-lead's hardening, 2026-09-05: "limb 2 discloses EXHIBITS, and an exhibit
+    is not a real id... a real id surviving in old form inside a backtick span anywhere
+    is a MISS, in any directory whatsoever, and must stay fatal." A genuinely allocated
+    id (a `REDIRECTS.csv` row) that happens to be backtick-quoted in a `docs/plans/` doc
+    is not this class's exhibit — it is exactly the kind of miss (d7) exists to catch,
+    and limb 2's never-allocated conjunct must not swallow it.
+    """
+    migrated = {
+        "docs/REDIRECTS.csv": "old_id,new_id,old_path,new_path,citing_dir\nNFR-EX-5,NFR-900,,,\n",
+        "docs/plans/PL-00002-w37-6-example.md": "the recovered id `NFR-EX-5` is now correct.\n",
+    }
+    control = {k: v for k, v in migrated.items() if k != "docs/REDIRECTS.csv"}
+    d7 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    assert d7.verdict == "FAIL", (
+        f"a real id backtick-quoted in a planning doc must still FAIL, not disclose: "
+        f"{d7.note}"
+    )
+    assert "NFR-EX-5" in d7.note
 
 
 def test_d7_a_framework_self_reference_is_disclosed_by_a_line_predicate_not_a_name(
