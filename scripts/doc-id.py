@@ -570,7 +570,21 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
         parts = Path(rel).parts  # ("docs", ...) always, since the pathspec was "docs"
         if len(parts) < 2:
             continue  # defensive: git ls-files -- "docs" cannot itself return "docs"
-        if parts[-1] in ("README.md", "INDEX.md"):
+        if rel == _docid.W37_11_RECORD_PATH:
+            # F102's own shape, caught before it repeated: an ordinary-named file added
+            # under `docs/audit/` (not `_CLASSIFY_FAMILY_BY_DIR`'s "audit" -> anything,
+            # since that subdir holds no document family of its own) falls to `"none"` by
+            # default, moving row (a) from PASS the moment it is added — measured directly
+            # against a real `migrate --verify` snapshot, not assumed (2026-09-05, PR
+            # #756's own condition, found by running the instrument the row (a) EXPECTED_
+            # VERDICTS entry already exists to catch). The record is governance data, not
+            # a document in any §1.2 family, so `"reference"` is the correct bucket — the
+            # same reading `process/`/`contracts/` and every `README.md`/`INDEX.md` already
+            # get, declared by this one file's own path rather than by widening the
+            # `"audit"` subdir wholesale (which would blind row (a) to a real stray file
+            # landing there next).
+            family = "reference"
+        elif parts[-1] in ("README.md", "INDEX.md"):
             family = "reference"
         elif len(parts) == 2:
             family = "reference" if parts[1] in top_level_reference_files else "none"

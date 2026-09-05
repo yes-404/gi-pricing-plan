@@ -1121,6 +1121,37 @@ def test_classify_the_five_other_living_top_level_files_are_reference_not_none(
     assert doc_id_cli.classify_docs_files(repo) == {"reference": 4}
 
 
+def test_classify_the_w37_11_record_is_reference_not_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """F102's own shape, caught before it repeated (PR #756): `docs/audit/` names no
+    document family of its own (`_CLASSIFY_FAMILY_BY_DIR` has no "audit" entry), so an
+    ordinary-named file added under it — exactly what the W37-11 residue ceiling record
+    is — falls to `"none"` by default and moves row (a) off PASS the moment it exists.
+    Measured directly against a real `migrate --verify` snapshot before this fix landed:
+    `none: 1`, named as `docs/audit/w37-11-record.md`; after, the family disappears from
+    the count entirely rather than merely dropping to 0 among others."""
+    repo = _classify_repo(tmp_path)
+    _write(
+        repo / doc_id_cli._docid.W37_11_RECORD_PATH,
+        "| path | cls | count | reason | owner |\n",
+    )
+    _commit_all(repo)
+    assert doc_id_cli.classify_docs_files(repo) == {"reference": 1}
+
+
+def test_classify_a_similarly_named_docs_audit_file_still_reports_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The negative control: only the exact declared record path is reclassified — a
+    different file under `docs/audit/` is still the genuinely unclassified case, so a
+    real stray file landing there next is not silently blinded by this fix."""
+    repo = _classify_repo(tmp_path)
+    _write(repo / "docs" / "audit" / "some-unrecognised-file.md", "x\n")
+    _commit_all(repo)
+    assert doc_id_cli.classify_docs_files(repo) == {"none": 1}
+
+
 def test_classify_templates_get_their_own_bucket(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -1474,10 +1505,12 @@ def test_main_requires_a_subcommand(doc_id_cli: types.ModuleType) -> None:
 # `LEGACY_FORM_PATTERNS`: three lockfiles (Ruling 67 Part 2), the two fixture-corpus roots
 # (extending the 2026-09-02 RFC §3 declared-exception mechanism —
 # `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3 — from the id-stamp
-# census to the migration sweep and the (d)/(e)/(g) verification corpus), and the
-# instrument's own bytecode-cache exhaust. One shared predicate `doc-id.py`'s
-# `_iter_tree_files` and `_docverify.py`'s `tracked_files` both read, so the two consumers
-# can never disagree about what is excluded (Ruling 67 §2's "one shared constant").
+# census to the migration sweep and the (d)/(e)/(g) verification corpus), the W37-11
+# residue ceiling record (PR #756's condition 4 — a governed table that quotes legacy
+# forms as evidence and must not itself become residue), and the instrument's own
+# bytecode-cache exhaust. One shared predicate `doc-id.py`'s `_iter_tree_files` and
+# `_docverify.py`'s `tracked_files` both read, so the two consumers can never disagree
+# about what is excluded (Ruling 67 §2's "one shared constant").
 # ---------------------------------------------------------------------------------------
 
 
@@ -1546,6 +1579,25 @@ def test_sweep_exclusion_reason_leaves_a_real_python_source_file_alone(
     assert docid.sweep_exclusion_reason("backend/src/app/main.py") is None
 
 
+def test_sweep_exclusion_reason_excludes_the_w37_11_residue_ceiling_record(
+    docid: types.ModuleType,
+) -> None:
+    """The fifth declared class: `_docid.W37_11_RECORD_PATH` (PR #756's condition 4) —
+    the record quotes legacy paths/tokens as evidence, and populating it must not itself
+    become residue for the rows it governs. Without this exclusion, `docs/audit/
+    w37-11-record.md` would be swept like any other document once the deputy fills it."""
+    assert docid.sweep_exclusion_reason(docid.W37_11_RECORD_PATH) is not None
+
+
+def test_sweep_exclusion_reason_leaves_a_similarly_named_docs_audit_file_alone(
+    docid: types.ModuleType,
+) -> None:
+    """The negative control: only the exact declared path is excluded, not every file
+    under `docs/audit/`."""
+    assert docid.sweep_exclusion_reason("docs/audit/register.md") is None
+    assert docid.sweep_exclusion_reason("docs/audit/w37-11-record.md.bak") is None
+
+
 def test_sweep_exclusion_reason_gives_every_class_its_own_named_reason(
     docid: types.ModuleType,
 ) -> None:
@@ -1558,10 +1610,14 @@ def test_sweep_exclusion_reason_gives_every_class_its_own_named_reason(
         "tests/fixtures/docs-migration/docs/README.md"
     )
     pycache_reason = docid.sweep_exclusion_reason("scripts/__pycache__/x.pyc")
+    governance_record_reason = docid.sweep_exclusion_reason(docid.W37_11_RECORD_PATH)
     assert lockfile_reason
     assert fixture_reason
     assert pycache_reason
-    assert len({lockfile_reason, fixture_reason, pycache_reason}) == 3
+    assert governance_record_reason
+    assert len(
+        {lockfile_reason, fixture_reason, pycache_reason, governance_record_reason}
+    ) == 4
 
 
 def test_load_module_does_not_write_bytecode_and_restores_global_state(
