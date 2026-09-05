@@ -1243,6 +1243,88 @@ def test_wrapped_path_pattern_does_not_match_as_a_bare_prefix(
     assert doc_id_cli._rewrite_wrapped_path_citations(mechanical, patterns, []) == mechanical
 
 
+def _split_source(
+    doc_id_cli: types.ModuleType, *, token: str, old_rel: str,
+) -> Any:
+    """A two-target split source, close enough to the real corpus's own shape
+    (`docs/plans/2026-08-29-w11-slice1-rulings.md`, 8 targets) to exercise `resolve`
+    without constructing all eight."""
+    targets = (
+        doc_id_cli._SplitTarget(
+            new_rel="docs/rulings/RL-00160-a.md", new_token="docs/rulings/RL-00160-a.md",
+            ids=("RL-160",), anchors=frozenset(), line_span=None, body_line_offset=0,
+            canonical_id="RL-160", title="A",
+        ),
+        doc_id_cli._SplitTarget(
+            new_rel="docs/rulings/RL-00161-b.md", new_token="docs/rulings/RL-00161-b.md",
+            ids=("RL-161",), anchors=frozenset(), line_span=None, body_line_offset=0,
+            canonical_id="RL-161", title="B",
+        ),
+    )
+    return doc_id_cli._SplitSource(
+        old_rel=old_rel, token=token, targets=targets,
+        index_token=f"docs/rulings/INDEX.md#{token.rsplit('/', 1)[-1]}",
+        index_rel="docs/rulings/INDEX.md",
+        index_anchor=token.rsplit("/", 1)[-1],
+    )
+
+
+def test_rewrite_wrapped_split_source_citations_resolves_a_determined_wrap(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """2026-09-05, the maintainer's unconditional ruling on rows (d9)-(d12): a wrapped
+    citation of a SPLIT source (`docs/plans/2026-08-29-w11-slice1-rulings.md`, real
+    corpus, 8 targets) must resolve exactly like a contiguous one — by the adjacent id on
+    its own citing line — not survive because the flat, single-destination wrap pass
+    cannot see it (`_wrapped_path_patterns`'s own docstring puts a split source's wrap out
+    of its scope; this is the counterpart that covers it).
+    """
+    token = "docs/plans/2026-08-29-w11-slice1-rulings.md"
+    src = _split_source(doc_id_cli, token=token, old_rel=token)
+    patterns = doc_id_cli._wrapped_split_source_patterns([src])
+    # Split right after the `-` in "slice1-" — the wrap-tolerant pattern only tolerates a
+    # break immediately after `-`/`/`/`.`, the same real-corpus shape `_wrapped_path_
+    # patterns` reads; a break mid-word (e.g. inside "rulings") is not this fix's shape.
+    split_at = token.index("slice1-") + len("slice1-")
+    text = f"RL-160's addendum, `{token[:split_at]}\n{token[split_at:]}` covers it.\n"
+    assert token[split_at:] not in text.split("\n")[0]  # sanity: really wrapped mid-token
+    after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
+    assert token not in after, f"the stale token must not survive: {after!r}"
+    flattened = "".join(line.lstrip() for line in after.split("\n"))
+    assert "docs/rulings/RL-00160-a.md" in flattened, after
+    assert after.count("\n") == text.count("\n"), "line count must be preserved"
+
+
+def test_rewrite_wrapped_split_source_citations_falls_back_to_the_index_token(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 101 clause 1: a citation that determines nothing still resolves — to the
+    family index's own section for this source, never left dangling. Bucket (iv) is 0 by
+    construction, wrapped or not.
+    """
+    token = "docs/audit/plan-reviews.md"
+    src = _split_source(doc_id_cli, token=token, old_rel="docs/audit/plan-reviews.md")
+    patterns = doc_id_cli._wrapped_split_source_patterns([src])
+    text = "see the review record (`docs/audit/\nplan-reviews.md`) for history.\n"
+    after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
+    assert token not in after, f"the stale token must not survive: {after!r}"
+    flattened = "".join(line.lstrip() for line in after.split("\n"))
+    assert src.index_token in flattened, after
+
+
+def test_rewrite_wrapped_split_source_citations_never_touches_a_was_field(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The same `was:`-field protection `_rewrite_wrapped_path_citations` gets, for the
+    split-source counterpart."""
+    token = "docs/audit/plan-reviews.md"
+    src = _split_source(doc_id_cli, token=token, old_rel="docs/audit/plan-reviews.md")
+    patterns = doc_id_cli._wrapped_split_source_patterns([src])
+    text = "---\nfamily: reference\nwas: docs/audit/plan-reviews.md\n---\n\n# Body\n"
+    after = doc_id_cli._rewrite_wrapped_split_source_citations(text, patterns, [])
+    assert after == text, f"a was: field must never be rewritten: {after!r}"
+
+
 def test_rewrite_wrapped_path_citations_never_touches_a_was_field(
     doc_id_cli: types.ModuleType,
 ) -> None:

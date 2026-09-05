@@ -5980,6 +5980,109 @@ def _rewrite_wrapped_path_citations(
     return text
 
 
+def _wrapped_split_source_patterns(
+    split_sources: Iterable[_SplitSource],
+) -> tuple[tuple[_SplitSource, re.Pattern[str]], ...]:
+    """One `(split_source, pattern)` per source whose own `token` contains `/` — the
+    wrap-tolerant counterpart of `_wrapped_path_patterns`, for the one population that
+    function's own docstring puts out of scope: a split source's wrapped citation.
+
+    2026-09-05: the maintainer's unconditional ruling on rows (d9)-(d12) ("any line
+    naming a real moved file present in REDIRECTS.csv's old_path column is a tool miss,
+    not residue") reaches this shape too — `docs/plans/2026-08-29-w11-slice1-rulings.md`
+    (8 targets) and `docs/audit/plan-reviews.md` (13 targets) each had a wrapped citation
+    the flat pass could never see, `token_map` holding no entry for a token that resolves
+    to more than one destination.
+
+    `pattern` reuses `_SplitSource.pattern`'s own `#anchor`/`:line[-line]` suffix grammar
+    verbatim, appended straight after the (possibly wrapped) base token — the suffix
+    itself is assumed unwrapped, the real corpus never breaking a line mid-anchor or
+    mid-digit, the identical assumption `_wrapped_path_patterns` already makes about
+    everything past its own token's last character.
+    """
+    wrap = r"(?:\n[ \t]*(?:#[ \t]*)?)?"
+    out: list[tuple[_SplitSource, re.Pattern[str]]] = []
+    for src in split_sources:
+        if "/" not in src.token:
+            continue
+        body = "".join(
+            re.escape(ch) + wrap if ch in "-/." else re.escape(ch) for ch in src.token
+        )
+        pattern = re.compile(
+            rf"{_docid.TOKEN_LEFT_BOUND}{body}\b(?![-/][0-9])"
+            r"(?:#(?P<anchor>[A-Za-z0-9_-]+))?"
+            r"(?::(?P<l1>\d+)(?:-(?P<l2>\d+))?)?"
+        )
+        out.append((src, pattern))
+    return tuple(out)
+
+
+def _rewrite_wrapped_split_source_citations(
+    text: str,
+    patterns: Sequence[tuple[_SplitSource, re.Pattern[str]]],
+    split_redirects: list[tuple[str, str]],
+) -> str:
+    """The wrap-tolerant counterpart of `_rewrite_wrapped_path_citations`, for a split
+    source: the replacement is not a fixed `new_tok` but whatever `_SplitSource.resolve`
+    decides from the citing line's own content (an adjacent id, an `#anchor`, or a line
+    span) — the identical determinant the ordinary, contiguous-only sweep already reads
+    via `split.pattern.sub(repl, segment)` in `_rewrite_citations` below, given the same
+    `line` argument reconstructed here across the wrap rather than read whole from an
+    already-contiguous segment.
+
+    Bucket (iv) is 0 by construction (`_SplitSource`'s own docstring): a citation
+    `resolve` cannot determine still gets `src.index_token`, the family index's own
+    section for this source, never left exactly as it was — the same "no citation this
+    class cannot answer" guarantee the ordinary sweep already relies on, extended to a
+    wrapped occurrence rather than a new exception for one.
+
+    A `was:` field is protected exactly as `_rewrite_wrapped_path_citations` protects
+    one — this run's own provenance record, never a citation to resolve.
+
+    **A genuinely contiguous match is left exactly as it is, `matched` returned
+    unchanged** — never resolved here, even though `resolve()` could answer it just as
+    well. The ordinary sweep's own `split.pattern.sub(repl, segment)` in
+    `_rewrite_citations` below is where a contiguous split-source citation is resolved,
+    and it is the one place `index_resolved`/`unrewritten` (the bucket-(iv) and
+    bucket-(0) diagnostics a caller reports to the reader) are populated. Resolving a
+    contiguous match here too would silently steal that bookkeeping — found live,
+    `test_a_citation_determining_nothing_goes_to_the_family_index_section`'s own
+    `index_resolved` count dropping to 0 the first time this function ran unconditionally.
+    """
+    if not patterns:
+        return text
+    if not any(p.search(text) for p in _LEGACY_PATH_PREFIX_RES):
+        return text
+    was_spans = _was_field_spans(text)
+    for src, pattern in patterns:
+        def repl(
+            m: re.Match[str], src: _SplitSource = src,
+            was_spans: list[tuple[int, int]] = was_spans,
+        ) -> str:
+            matched = m.group(0)
+            nl_idx = matched.find("\n")
+            if nl_idx == -1:
+                return matched  # contiguous -- the ordinary sweep's own job, below
+            if any(start <= m.start() < end for start, end in was_spans):
+                return matched
+            line_start = m.string.rfind("\n", 0, m.start()) + 1
+            line_end = m.string.find("\n", m.end())
+            logical_line = m.string[line_start : line_end if line_end != -1 else None]
+            resolved = src.resolve(m, logical_line)
+            out = resolved if resolved is not None else src.index_token
+            markup_match = _WRAP_MARKUP_RE.match(matched, nl_idx)
+            assert markup_match is not None  # the pattern's own wrap group produced this
+            markup = markup_match.group(0)
+            split = min(nl_idx, len(out))
+            replacement = out[:split] + markup + out[split:]
+            if replacement != matched:
+                split_redirects.append((matched, replacement))
+            return replacement
+
+        text = pattern.sub(repl, text)
+    return text
+
+
 def _rewrite_citations(
     root: Path, token_map: Mapping[str, str], split_sources: Sequence[_SplitSource] = (),
     dir_token_map: Mapping[str, Mapping[str, str]] = types.MappingProxyType({}),
@@ -6066,9 +6169,13 @@ def _rewrite_citations(
     # needed it: a shorter token's word boundary must not consume part of a longer one.
     tree_ordered = sorted({*token_map, *tree_by_token}, key=len, reverse=True)
     # Precompiled once, reused for every file below — `_wrapped_path_patterns`' own
-    # docstring has why a per-file rebuild is not needed. Flat `token_map` pairs only
-    # (never `tree_by_token`'s split sources — the same docstring has why).
+    # docstring has why a per-file rebuild is not needed. Flat `token_map` pairs only.
     wrap_patterns = _wrapped_path_patterns(token_map.items())
+    # 2026-09-05: a split source's own wrapped citations, the maintainer's unconditional
+    # ruling on rows (d9)-(d12) ("any line naming a real moved file is fix, not
+    # residue") extended to the one shape the flat pass above cannot reach —
+    # `_wrapped_split_source_patterns`' own docstring has the mechanism.
+    wrap_split_patterns = _wrapped_split_source_patterns(split_sources)
     for path in _iter_tree_files(root):
         if _is_vendored_exempt(path, root):
             continue
@@ -6084,6 +6191,9 @@ def _rewrite_citations(
         # plain contiguous match cannot see a wrapped occurrence at all, so nothing here
         # double-processes anything the sweep would otherwise have reached.
         text = _rewrite_wrapped_path_citations(text, wrap_patterns, wrap_derived)
+        text = _rewrite_wrapped_split_source_citations(
+            text, wrap_split_patterns, split_derived
+        )
         rel = path.relative_to(root).as_posix()
         # The directory-scoped half: a bare-basename token means *this* file only for a
         # citer inside the directory the cited file sat in, so it joins the token set for
