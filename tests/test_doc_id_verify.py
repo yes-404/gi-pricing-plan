@@ -2450,46 +2450,49 @@ def test_progress_is_a_set_change_too_and_says_what_to_edit(dv: Any) -> None:
     and left in the table would mask its own later regression, so progress is reported —
     with the edit it requires — rather than passed over.
 
-    "d4" rather than "b"/"c"/"e"/"d9"-"d12": every one of those has since moved off FAIL
-    at some point in this row's own history and would make the `dict(..., key=PASS)`
+    "g" rather than "b"/"c"/"e"/"d4"/"d9"-"d12": every one of those has since moved off
+    FAIL at some point in this row's own history and would make the `dict(..., key=PASS)`
     override a no-op against the real recorded table — exactly the false-pass this test
     exists to guard against elsewhere. "b" flips between FAIL and PASS across #707/#708's
     re-recording and #711's regression (task 17, 2026-09-04); "c" and "e" are both PASS as
     of this commit ("e" folded in here — angle-bracket boundary and same-line duplicate-
     token fixes); "d9"-"d12" moved to DISCLOSE (2026-09-05, W37-6 rows (d9)-(d12)'s three
-    citation-inverse framework fixes). "d4" (`wf-0[0-9]`, still non-zero as of 2026-09-03,
-    task 23) has no such history and stays FAIL.
+    citation-inverse framework fixes); "d4" moved to DISCLOSE too (2026-09-05, W37-6
+    Checkpoint 1 box-end ruling PR — its residual 2 hits are filed and ceilinged in the
+    W37-11 record). "g" (the token-boundary defect, still unfixed as of this commit) has
+    no such history and stays FAIL.
     """
-    assert dv.EXPECTED_VERDICTS["d4"] == dv.FAIL, (
+    assert dv.EXPECTED_VERDICTS["g"] == dv.FAIL, (
         "this test's premise: the row it moves must start FAIL in the real table"
     )
-    moved = dict(dv.EXPECTED_VERDICTS, d4=dv.PASS)
+    moved = dict(dv.EXPECTED_VERDICTS, g=dv.PASS)
     result = _result(dv, moved)
-    assert [(c.key, c.direction) for c in result.set_changes] == [("d4", dv.PROGRESSED)]
+    assert [(c.key, c.direction) for c in result.set_changes] == [("g", dv.PROGRESSED)]
     assert result.exit_code == 3
     out = dv.render(result)
-    assert "PROGRESS (newly passing): (d4) FAIL -> PASS" in out
+    assert "PROGRESS (newly passing): (g) FAIL -> PASS" in out
     assert "same commit as the change that moved the row" in out
 
 
 def test_a_reclassification_between_two_fatal_verdicts_is_a_set_change(dv: Any) -> None:
-    """(d4) going FAIL -> REGRESSION is a finding, not noise: the migration began creating
+    """(g) going FAIL -> REGRESSION is a finding, not noise: the migration began creating
     what the row forbids. A fatal-to-fatal move must not be invisible.
 
-    "d4" rather than "d1", "d5" or "d9"-"d12": task 17 (2026-09-04) re-recorded (d5) as
-    PASS on `main` (#711's unrelated progress), W37-6 exec-ids (2026-09-04) fixed (d1) to
-    PASS in the same table, and W37-6 rows (d9)-(d12) (2026-09-05) fixed all four to
-    DISCLOSE, so a FAIL -> REGRESSION override at any of those would actually be a
+    "g" rather than "d1", "d4", "d5" or "d9"-"d12": task 17 (2026-09-04) re-recorded (d5)
+    as PASS on `main` (#711's unrelated progress), W37-6 exec-ids (2026-09-04) fixed (d1)
+    to PASS in the same table, W37-6 rows (d9)-(d12) (2026-09-05) fixed all four to
+    DISCLOSE, and (d4) moved to DISCLOSE too (2026-09-05, W37-6 Checkpoint 1 box-end
+    ruling PR), so a FAIL -> REGRESSION override at any of those would actually be a
     PASS/DISCLOSE -> REGRESSION move (REGRESSED, not RECLASSIFIED) against the real
-    table. "d4" (`wf-0[0-9]`) stays FAIL — a genuine fatal-to-fatal example, untouched by
-    any of these fixes.
+    table. "g" (the token-boundary defect) stays FAIL — a genuine fatal-to-fatal example,
+    untouched by any of these fixes.
     """
-    assert dv.EXPECTED_VERDICTS["d4"] == dv.FAIL, (
+    assert dv.EXPECTED_VERDICTS["g"] == dv.FAIL, (
         "this test's premise: the row it moves must start FAIL (fatal) in the real table"
     )
-    moved = dict(dv.EXPECTED_VERDICTS, d4=dv.REGRESSION)
+    moved = dict(dv.EXPECTED_VERDICTS, g=dv.REGRESSION)
     result = _result(dv, moved)
-    assert [(c.key, c.direction) for c in result.set_changes] == [("d4", dv.RECLASSIFIED)]
+    assert [(c.key, c.direction) for c in result.set_changes] == [("g", dv.RECLASSIFIED)]
     assert result.exit_code == 3
 
 
@@ -2555,8 +2558,8 @@ def test_residue_ceiling_is_red_before_the_mechanism_existed(dv: Any) -> None:
     no `set_changes` at all — confirmed here, then contrasted with `check_residue_ceiling`
     catching exactly that growth below.
     """
-    small = _result(dv, dict(dv.EXPECTED_VERDICTS, d4=dv.FAIL))
-    large = _result(dv, dict(dv.EXPECTED_VERDICTS, d4=dv.FAIL))
+    small = _result(dv, dict(dv.EXPECTED_VERDICTS, g=dv.FAIL))
+    large = _result(dv, dict(dv.EXPECTED_VERDICTS, g=dv.FAIL))
     assert small.set_changes == ()
     assert large.set_changes == ()
     assert small.exit_code == large.exit_code == 1, (
