@@ -737,10 +737,12 @@ class _FakeClassification:
         violations: tuple[str, ...],
         *,
         unchanged: int = 0,
+        forward_confirmed: tuple[str, ...] = (),
     ) -> None:
         self.per_class = per_class
         self.violations = violations
         self.unchanged = unchanged
+        self.forward_confirmed = forward_confirmed
 
     @property
     def population(self) -> int:
@@ -1136,6 +1138,89 @@ def test_row_g_empty_classified_population_fails(dv: Any, tmp_path: pathlib.Path
 
     assert row.verdict == dv.FAIL
     assert "empty population" in row.note
+
+
+def test_row_g_closes_by_disclose_once_its_g2_residue_is_fully_governed(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The maintainer's ruling on the W37-11 record filing (2026-09-06): a `FAIL` this
+    general mechanism cannot resolve closes by DISCLOSE once, and only once, every one
+    of its `classified-by-none` residue hits is filed and ceilinged in the W37-11 record
+    -- the identical mechanism `rows_d` already uses via `_residue_fully_governed`, now
+    wired into `row_g` too. `docs/rogue.md` is absent from both trees, so
+    `_residue_cause` reads it `other` -- the record entry below is keyed accordingly.
+    """
+    snap = _snapshot(dv, tmp_path, _G_CLEAN_MIGRATED, _G_CLEAN_COMPOUND)
+    classification = _FakeClassification(
+        per_class={
+            "1-front-matter-stamp": (),
+            "2-reference-token": (),
+            "3-move": (),
+            "4-split": (),
+            "5-roadmap-restructure": (),
+            "6-generated-artifact": (),
+            "classified-by-none": ("docs/rogue.md",),
+        },
+        violations=("docs/rogue.md: appeared with no REDIRECTS.csv row naming where it "
+                    "came from",),
+    )
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    ungoverned = dv.row_g(fake_docid, snap, mig, ctl)
+    assert ungoverned.verdict == dv.FAIL, "sanity: ungoverned residue must still fail"
+
+    record = (
+        dv.ResidueEntry(
+            path="docs/rogue.md", cls="g2-other", count=1, reason="r", owner="o",
+        ),
+    )
+    row = dv.row_g(fake_docid, snap, mig, ctl, record)
+    assert row.verdict == dv.DISCLOSE
+    assert "filed and ceilinged" in row.note
+    assert dict(row.residue) == {("docs/rogue.md", "g2-other"): 1}
+
+
+def test_row_g_a_g1_defect_stays_fail_even_with_fully_governed_g2_residue(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A `FAIL` g1 alone causes (a mangled WK-shape citation, or a provenance mismatch)
+    must never close by DISCLOSE on the strength of g2's own governance -- the W37-11
+    record files g2's residue, never g1's, so laundering an unrelated g1 defect through
+    it would disclose a real corruption as though it were merely unclassified residue.
+    """
+    migrated = {
+        "docs/a.md": "see NFR-RATE-13/14 for the reasoning\nthe finding WK-952A is cited here\n"
+    }
+    control = {
+        "docs/a.md": "see NFR-RATE-13/14 for the reasoning\nthe finding WK-11 is cited here\n"
+    }
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    classification = _FakeClassification(
+        per_class={
+            "1-front-matter-stamp": (),
+            "2-reference-token": (),
+            "3-move": (),
+            "4-split": (),
+            "5-roadmap-restructure": (),
+            "6-generated-artifact": (),
+            "classified-by-none": ("docs/rogue.md",),
+        },
+        violations=("docs/rogue.md: appeared with no REDIRECTS.csv row naming where it "
+                    "came from",),
+    )
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    record = (
+        dv.ResidueEntry(
+            path="docs/rogue.md", cls="g2-other", count=1, reason="r", owner="o",
+        ),
+    )
+    row = dv.row_g(fake_docid, snap, mig, ctl, record)
+    assert row.verdict == dv.FAIL, (
+        "g2's residue being fully governed must not paper over g1's own defect"
+    )
 
 
 # =========================================================================================

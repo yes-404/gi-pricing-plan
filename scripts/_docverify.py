@@ -2440,7 +2440,13 @@ def _residue_cause_table(residue: Sequence[str], ctl: Corpus, mig: Corpus) -> st
     return "residue by cause: " + "; ".join(parts)
 
 
-def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
+def row_g(
+    docid: Any,
+    snap: Snapshot,
+    mig: Corpus,
+    ctl: Corpus,
+    record: "Sequence[ResidueEntry]" = (),  # noqa: UP037 -- ResidueEntry defined later
+) -> Row:
     """§7 (g), as Ruling 68 defines it and Ruling 104 amends class 6: the migration diff
     filtered to hunks in the **six-class closed enumeration**, empty.
 
@@ -2466,6 +2472,16 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
     """
     classification = docid.classify_migration_diff(snap.control, snap.migrated)
     residue = classification.per_class.get(docid.CLASSIFIED_BY_NONE, ())
+    #: g2's own residue, one hit per classified-by-none file, tagged with its cause
+    #: (`_residue_cause`) rather than a bare `"g2"` — the W37-11 ceiling is per (file,
+    #: class), and "class" here is the sub-bucket a per-row total would hide movement
+    #: inside of, exactly the shape the deputy's ruling names. Computed here, before the
+    #: verdict below, so the same dict both drives a possible FAIL->DISCLOSE conversion
+    #: and is returned on the `Row` unchanged -- one measurement, not a recomputation.
+    residue_by_file = {
+        (rel, f"g2-{_residue_cause(rel, ctl.lines.get(rel), mig.lines.get(rel))}"): 1
+        for rel in residue
+    }
 
     wk_mangled, wk_mangled_files = _wk_shape_hits(mig, mig, ctl)
     wk_control, _ = _wk_shape_hits(ctl, mig, ctl)
@@ -2512,6 +2528,31 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
     else:
         verdict, note = PASS, ""
 
+    if (
+        verdict == FAIL
+        and not wk_mangled
+        and not provenance_mismatches
+        and _residue_fully_governed(residue_by_file, record)
+    ):
+        # The box-end ruling's mechanism (`rows_d` already uses it): a `FAIL` this
+        # general mechanism cannot resolve closes by `DISCLOSE` once, and only once,
+        # every one of its fatal hits is filed and ceilinged in the W37-11 record --
+        # never merely because the record is silent on it (`_residue_fully_governed`
+        # refuses that case). g1's own two alternatives (`wk_mangled`,
+        # `provenance_mismatches`) are excluded deliberately: they are not filed into
+        # the record under any `g2-*` class, so a `FAIL` they alone caused (or a `FAIL`
+        # with BOTH a g1 defect and governed g2 residue) must never close by DISCLOSE on
+        # the strength of g2's governance -- a real, unrelated g1 defect would be
+        # laundered through g2's own disclosure. Only a `FAIL` g2's residue caused, with
+        # g1 clean, can close this way.
+        verdict = DISCLOSE
+        total = sum(residue_by_file.values())
+        note = (note + "; " if note else "") + (
+            f"{total} hit(s) filed and ceilinged in docs/audit/w37-11-record.md — "
+            "governed residue the general migration mechanism cannot resolve, "
+            "disclosed per file rather than special-cased in this module"
+        )
+
     return Row(
         key="g",
         title="migration diff filtered to hunks that are neither header nor "
@@ -2536,7 +2577,12 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "`doc-id.classify_migration_diff(control, migrated)`, bucketing every touched "
             "file into `doc-id._RULING_68_CLASSES` or `doc-id.CLASSIFIED_BY_NONE`; classes "
             "1-3 share `audit-docs.frozen_file_matches_after_migration_stamp` (check 34's "
-            "DP-7 predicate, Ruling 68 §3 — not a second one); class 4 requires the "
+            "DP-7 predicate, Ruling 68 §3 — not a second one), or — only where DP-7's "
+            "inverse cannot resolve a genuinely ambiguous many-to-one path merge — "
+            "`doc-id.classify_migration_diff`'s own forward-citation check, the identical "
+            "flat substitution run forward using the file's own unambiguous old id/path, "
+            "never a compound/range expansion (`doc-id._RULING_68_CLASSES` classes 1-3 "
+            "docstring); class 4 requires the "
             "concatenation of a split's outputs to reproduce the source's non-blank body "
             "lines *in order*; class 5 is `docs/roadmap.md` alone, unconditionally, "
             "exactly as the ruling states it; class 6 is tested against an independent "
@@ -2550,19 +2596,15 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
         migrated=(
             f"g1 WK-shape mangled = {wk_mangled} in {wk_mangled_files} file(s), "
             f"provenance mismatch(es) = {len(provenance_mismatches)}; "
-            f"g2 {per_class}, {docid.CLASSIFIED_BY_NONE}={len(residue)}"
+            f"g2 {per_class}, {docid.CLASSIFIED_BY_NONE}={len(residue)} "
+            f"(class 2/3 include {len(classification.forward_confirmed)} member(s) DP-7's "
+            "inverse alone could not confirm — a legitimate many-to-one path merge — and "
+            "the forward-citation check confirmed instead)"
         ),
         control=f"g1 WK-shape mangled = {wk_control} (un-migrated)",
         verdict=verdict,
         note=note,
-        #: g2's own residue, one hit per classified-by-none file, tagged with its cause
-        #: (`_residue_cause`) rather than a bare `"g2"` — the W37-11 ceiling is per (file,
-        #: class), and "class" here is the sub-bucket a per-row total would hide movement
-        #: inside of, exactly the shape the deputy's ruling names.
-        residue={
-            (rel, f"g2-{_residue_cause(rel, ctl.lines.get(rel), mig.lines.get(rel))}"): 1
-            for rel in residue
-        },
+        residue=residue_by_file,
     )
 
 
@@ -3787,12 +3829,12 @@ def compute_rows(
     `generated_paths` is `MigrateResult.generated_paths` from the same `migrate()` call
     that produced this snapshot's `migrated/` tree — (f)'s exclusion (Ruling 105 D3/#18).
 
-    `record` is the governed W37-11 record (`load_w37_11_record`), threaded into the two
-    row-families whose verdict can close by DISCLOSE rather than FAIL once their fatal
-    residue is filed and ceilinged there (`rows_d`, `rows_h` — `_residue_fully_governed`).
-    Every other row ignores it; `()` (the default, and what every pre-existing caller and
-    test still passes) makes every row behave exactly as before this parameter existed,
-    since an empty record governs nothing.
+    `record` is the governed W37-11 record (`load_w37_11_record`), threaded into every
+    row-family whose verdict can close by DISCLOSE rather than FAIL once its fatal
+    residue is filed and ceilinged there (`rows_d`, `row_g`, `rows_h` —
+    `_residue_fully_governed`). Every other row ignores it; `()` (the default, and what
+    every pre-existing caller and test still passes) makes every row behave exactly as
+    before this parameter existed, since an empty record governs nothing.
     """
     mig = load_corpus(snap.migrated)
     ctl = load_corpus(snap.control)
@@ -3801,7 +3843,7 @@ def compute_rows(
     rows.extend(rows_d(mig, ctl, record))
     rows.append(row_e(mig, ctl, snap))
     rows.append(row_f(mig, ctl, baseline, snap, generated_paths))
-    rows.append(row_g(docid, snap, mig, ctl))
+    rows.append(row_g(docid, snap, mig, ctl, record))
     rows.extend(rows_h(snap, mig, record))
     rows.append(row_i(snap))
     return rows

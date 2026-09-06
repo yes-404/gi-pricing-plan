@@ -8955,6 +8955,13 @@ class MigrationDiffClassification:
     #: from every class. Printed as the denominator's complement so that "N classified"
     #: can be read against the size of the tree it was measured over.
     unchanged: int
+    #: The subset of `per_class["2-reference-token"]`/`per_class["3-move"]` confirmed by
+    #: the forward-citation check (below), never by DP-7's inverse — diagnostic only, a
+    #: member of this tuple is already counted once in `per_class` and must never be added
+    #: a second time. Named so a reader can see how many of class 2/3's members needed the
+    #: forward direction rather than assume DP-7 alone accounts for the whole class
+    #: (CLAUDE.md §13's "a reference carries its own measurement").
+    forward_confirmed: tuple[str, ...] = ()
 
     @property
     def population(self) -> int:
@@ -9150,6 +9157,55 @@ def classify_migration_diff(
         citing_dir: _collision_safe_inverse(pairs) for citing_dir, pairs in dir_pairs.items()
     }
 
+    # The forward direction of the same global id/path pairs `redirects_inverse` inverts,
+    # for the forward-citation check below — found live investigating (g)'s residue
+    # (W37-6, 2026-09-05): a document merged from two legacy sources into one new path
+    # (the phase-1b `register.md` merge into the main register) makes `redirects_inverse`
+    # correctly and unavoidably DROP the contested `new_id` (`_collision_safe_inverse`'s
+    # own docstring above names this exact case) — a citer of the merged file could have
+    # named either source, and the new text alone cannot say which. But a SHORTER alias
+    # of the identical ambiguous relationship (the `docs/audit/`-relative third form,
+    # `_path_citation_redirect_rows`' own docstring) is *not* similarly contested (it is
+    # the only row claiming its own, shorter `new_id`), so it survives uncontested and
+    # then matches as a false-positive substring inside a *different*, correctly-migrated
+    # citation of the merged file elsewhere in the tree (`docs/findings/register.md`'s own
+    # citation in `.claude/roles/auditor.md`, restored to the wrong source). Old-side
+    # citations carry no such ambiguity -- each `old_id` names exactly one file, so its
+    # `new_id` is unique by construction, and reusing `_collision_safe_inverse` (grouping
+    # by `old_id` instead of `new_id`) catches a genuine allocation collision the same way
+    # `redirects_inverse` already does, never a new mechanism.
+    #: `FD-<n>` (`_docid.canonical("FD", n)`, always this shape, `_docid.ID_RE`'s own
+    #: alternation) is a finding record's own canonical id -- and a bare `F<n>` old-side
+    #: citation is `migrate`'s own row's DELIBERATE exclusion from the citation-rewrite
+    #: sweep (found live investigating this same residue, W37-6, 2026-09-05; the
+    #: exclusion itself is the maintainer's ruling, 2026-09-03, W37-6: *"The essays get
+    #: ids and paths now; `F<n>` stays a resolver alias to W37-11"* — `d.prefix != "FD"`
+    #: gates every entry into `id_claims`/`token_map`, the flat map the real forward
+    #: sweep applies). `REDIRECTS.csv` still carries the pair regardless (`assigned`/
+    #: `redirect_rows` record it unconditionally, for W37-11's resolver — the same
+    #: paragraph's own words), so naively forward-substituting it here would rewrite a
+    #: citation the real migration deliberately left bare, and a correct, ruled
+    #: non-rewrite would then read as a mismatch. Excluded from `forward_id_map` below by
+    #: parsing `new_id` through `_docid.ID_RE` (the one shared id grammar every family's
+    #: canonical form is checked against elsewhere in this module, e.g. `header.id`
+    #: above) and comparing its captured family group to `"FD"` — never a re-typed
+    #: `FD-[0-9]+` literal, which would silently drift from `canonical`'s own output the
+    #: moment the shape changes (a suffix, a rename) and the sweep's own `d.prefix`
+    #: check would not.
+    def _is_fd_canonical(new_id: str) -> bool:
+        match = _docid.ID_RE.fullmatch(new_id)
+        return match is not None and match.group(1) == "FD"
+
+    forward_id_map = _collision_safe_inverse(
+        (row["old_id"], row["new_id"])
+        for row in rows
+        if row.get("old_id") and row.get("new_id") and not row.get("citing_dir")
+        and not _is_fd_canonical(row["new_id"])
+    )
+    # Diagnostic only (row (g)'s own note reports it) -- a member is already counted once
+    # in `per_class["2-reference-token"]`/`per_class["3-move"]`, never added twice.
+    forward_confirmed: list[str] = []
+
     def _inverse_for(rel: str) -> Mapping[str, str]:
         """The merged inverse for a file at `rel`: the global id/path pairs, plus any
         directory-scoped link repoints recorded for `rel`'s own directory."""
@@ -9263,6 +9319,50 @@ def classify_migration_diff(
         buckets["6-generated-artifact"].append(old_rel)
         return True
 
+    def _forward_citation_check(
+        old_rel: str, new_rel: str, compare_against: str, new_text: str,
+    ) -> bool:
+        """True iff sweeping `compare_against`'s **own literal id/path tokens forward**
+        through `forward_id_map` reproduces `new_text` exactly (modulo this run's own
+        stamp, `audit_docs.stripped_stamp_pair` — the identical determination DP-7 itself
+        uses for which side's leading block is safe to strip).
+
+        Class 2/3's own defect this closes (found live, W37-6, 2026-09-05): DP-7's
+        inverse cannot invert a citation of a file two legacy sources legitimately merged
+        into one (`_collision_safe_inverse`'s own docstring names the case) — the merged
+        target's `new_id` is genuinely contested and correctly dropped, so DP-7 has
+        nothing to invert a citer's own reference *through*. The **old** side carries no
+        such ambiguity: each `old_id` names exactly one file, so `forward_id_map` (this
+        function's own docstring above) is never contested, and applying it to the file's
+        own pre-migration text is a plain, literal, non-computed substitution — the same
+        operation `frozen_file_matches_after_migration_stamp` already performs, run in the
+        other direction because that direction is the one this shape of citation can
+        actually be verified in. It adds no new permitted transformation Ruling 68 does
+        not already name for class 2/3 (a reference token substituted) and reuses DP-7's
+        own boundary regex (`audit_docs._inverse_token_pattern`) rather than a second one
+        (Ruling 68 §3).
+
+        Never used for a compound or range citation's *expansion* (`_expand_compound`/
+        `_expand_range`): those are non-trivial computed rewrites, and replaying the same
+        computation over `old_text` would reproduce a deterministic defect in the
+        computation itself just as faithfully as a correct one — exactly the flaw the
+        W37-6 channel `:394-417` fix already corrected for class 6's content-equality
+        oracle, real corpus: `docs/audit/register.md`'s own `NFR-MODEL-1..5, 10..13`
+        orphaned continuation is a genuine, live instance, found investigating this same
+        residue. `forward_id_map` here carries flat, whole-token pairs only.
+        """
+        if not forward_id_map:
+            return False
+        old_stripped, new_stripped = audit_docs.stripped_stamp_pair(
+            compare_against, new_text, allocated_ids=allocated_ids, old_rel=old_rel,
+            new_rel=new_rel, reference_stamp_paths=reference_stamp_paths,
+        )
+        pattern = audit_docs._inverse_token_pattern(
+            tuple(sorted(forward_id_map, key=len, reverse=True))
+        )
+        forward_applied = pattern.sub(lambda m: forward_id_map[m.group(0)], old_stripped)
+        return forward_applied.strip("\n") == new_stripped.strip("\n")
+
     def _classify_content(
         old_rel: str, new_rel: str, compare_against: str, new_text: str, *, moved: bool,
         stamped_header_removed: bool,
@@ -9286,6 +9386,10 @@ def classify_migration_diff(
             old_rel=old_rel, new_rel=new_rel, reference_stamp_paths=reference_stamp_paths,
         ):
             buckets["3-move" if moved else "2-reference-token"].append(old_rel)
+            return
+        if _forward_citation_check(old_rel, new_rel, compare_against, new_text):
+            buckets["3-move" if moved else "2-reference-token"].append(old_rel)
+            forward_confirmed.append(old_rel)
             return
         if _try_class6(new_rel):
             return
@@ -9404,6 +9508,7 @@ def classify_migration_diff(
         per_class={k: tuple(v) for k, v in buckets.items()},
         violations=tuple(violations),
         unchanged=unchanged,
+        forward_confirmed=tuple(forward_confirmed),
     )
 
 
