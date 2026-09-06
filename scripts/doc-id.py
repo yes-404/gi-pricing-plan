@@ -7903,17 +7903,17 @@ def _repoint_all_relative_links(
       were silently treated as unmoved. Every one of the 13 drafts independently carries
       its own correct `was`, so `citer_origin` has all 13, not one.
     * **A merge target** (several `old_rel`s, one `new_rel` -- both `docs/audit/register.md`
-      and, unrelatedly, both a `.claude/notes/000N-*.md` stub and its `docs/notes/
-      000N-*.md` real counterpart, converge on one new path): inversion cannot pick a side
-      without guessing, and the collision-safe drop above still left the file reading as
-      "unmoved". `citer_origin` needs no choice here either -- the write site (the draft,
-      or the register move) already knows, singularly, which old path IT came from; the
-      *other* old path's own citations are simply a different file's problem, not this
-      file's ambiguity.
+      and, unrelatedly, both a legacy note stub (a short redirect note under a since-moved
+      `.claude`-rooted mirror, Ruling 57) and its `docs/notes/000N-*.md` real counterpart,
+      converge on one new path): inversion cannot pick a side without guessing, and the
+      collision-safe drop above still left the file reading as "unmoved". `citer_origin`
+      needs no choice here either -- the write site (the draft, or the register move)
+      already knows, singularly, which old path IT came from; the *other* old path's own
+      citations are simply a different file's problem, not this file's ambiguity.
 
     Found live, W37-6, 2026-09-06: 98 links across the real corpus were still broken after
     the collision-safe-inverse version, spread across exactly these two shapes (67 split,
-    31 merge -- 23 of them the `.claude/notes` vs `docs/notes` collision above, 8 the
+    31 merge -- 23 of them the legacy-note-stub-vs-real-note collision above, 8 the
     register merge). The maintainer's ruling: stop inverting a lossy map and carry the
     pairing that already exists at write time instead -- this function no longer inverts
     anything, and both shapes dissolve because neither one was ever a problem for the
