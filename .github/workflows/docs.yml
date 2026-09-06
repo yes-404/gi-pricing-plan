@@ -27,10 +27,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        # `fetch-depth: 0` is what `doc-id.py migrate --verify` needs: it builds its
-        # snapshot with `git archive <ref>` and, for NT-0019 §7(f)'s first reading, also
-        # archives `8f5d57d` — a commit a shallow clone does not have. A shallow clone
-        # would not error; §7(f) would silently lose one of its two readings.
+        # `fetch-depth: 0` is what `doc-id.py migrate --verify` needs, for two reasons
+        # now. NT-0019 §7(f)'s first reading materialises `8f5d57d`, a commit a shallow
+        # clone does not have — and a shallow clone would not error, §7(f) would silently
+        # lose one of its two readings. Since W37-6 PR-A there is a second, larger reason:
+        # the snapshot is a `git clone` of this checkout carrying its **full history**,
+        # because id allocation sorts on each module's git first-commit date (NT-0019
+        # item 1) and that history is a declared input to the allocation, not context.
+        # A shallow checkout here is refused by name rather than silently re-keying every
+        # id (`doc-id.py`'s `GitHistoryUnavailableError`).
         with: {fetch-depth: 0}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: {python-version: "3.12"}
