@@ -147,12 +147,17 @@ jobs:
       # STAGES — every one runs, whatever the ones before it did.
       #
       # Until 2026-09-06 these were ordinary steps, so the job stopped at the
-      # first red one and reported exactly one failure per run. That morning it
-      # stopped at Ruff and hid 174 pytest failures and 3 drifted contracts for
-      # an hour: nobody knew they existed, because the workflow never reached
-      # them. A gate that surfaces one failure per cycle costs one full CI cycle
-      # per failure, and it also makes "is this the only thing wrong?"
-      # unanswerable — which is the worse of the two.
+      # first red one and reported exactly one failure per run. That morning a
+      # run stopped at Ruff, and the failures behind it stayed invisible for an
+      # hour — nobody knew they existed, because the workflow never reached
+      # them. (The W37-6 lead's count of what was hidden that morning, relayed
+      # in the dispatch brief and not independently re-measured here, was 174
+      # pytest failures and 3 drifted contracts. The argument does not rest on
+      # the figure: one hidden failure is the same defect.)
+      #
+      # A gate that surfaces one failure per cycle costs one full CI cycle per
+      # failure, and it also makes "is this the only thing wrong?" unanswerable
+      # — which is the worse of the two.
       #
       # `continue-on-error: true` leaves the step's `conclusion` as `success`
       # while its `outcome` keeps the real result. **The summary therefore

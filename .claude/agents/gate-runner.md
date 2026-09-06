@@ -135,8 +135,8 @@ Add the frontend half's commands to the same table in the same three columns. **
 `GATE:` line is the whole point of the table**: it says how many stages failed, so the
 main thread can tell "one thing is broken" from "six things are broken" without reading
 any output. Never report only the first failure — the workflows and this gate were both
-restructured on 2026-09-06 precisely because stopping at the first red stage hid 174
-pytest failures and 3 drifted contracts for an hour.
+restructured on 2026-09-06 precisely because stopping at the first red stage hid every
+failure behind it for an hour.
 
 Then, **for failing commands only**, the smallest excerpt that identifies the failure —
 the assertion and its file:line, the mypy error lines, the failing test ids. Not the full
