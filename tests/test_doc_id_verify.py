@@ -2656,13 +2656,13 @@ def test_load_w37_11_record_reads_the_governed_table(dv: Any, tmp_path: pathlib.
         "# W37-11 residue record\n\n"
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
-        "| docs/x.md | r1 | 3 | because | W37-11 |\n",
+        "| docs/x.md | d1 | 3 | because | W37-11 |\n",
         encoding="utf-8",
     )
     record = dv.load_w37_11_record(tmp_path)
     assert record == (
         dv.ResidueEntry(
-            path="docs/x.md", cls="r1", count=3, reason="because", owner="W37-11",
+            path="docs/x.md", cls="d1", count=3, reason="because", owner="W37-11",
         ),
     )
 
@@ -2677,13 +2677,13 @@ def test_load_w37_11_record_skips_a_malformed_row_rather_than_raising(
     (docs_audit / "w37-11-record.md").write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
-        "| docs/x.md | r1 | not-a-number | because | W37-11 |\n"
-        "| docs/y.md | r2 | 1 | ok | W37-11 |\n",
+        "| docs/x.md | d1 | not-a-number | because | W37-11 |\n"
+        "| docs/y.md | d2 | 1 | ok | W37-11 |\n",
         encoding="utf-8",
     )
     record = dv.load_w37_11_record(tmp_path)
     assert record == (
-        dv.ResidueEntry(path="docs/y.md", cls="r2", count=1, reason="ok", owner="W37-11"),
+        dv.ResidueEntry(path="docs/y.md", cls="d2", count=1, reason="ok", owner="W37-11"),
     )
 
 
@@ -2691,6 +2691,57 @@ def test_load_w37_11_record_is_empty_when_the_file_does_not_exist(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
     assert dv.load_w37_11_record(tmp_path) == ()
+
+
+# =========================================================================================
+# #763: a record entry carrying `cls = "comma-continuation-left-whole"` — a description of
+# *why* the residue exists, not a class any extractor produces — governs nothing and reads
+# 0 forever, silently, while the real residue surfaces under its true class in files the
+# record does not name. `_known_w37_11_class` is the registry; the broken input is the
+# real value #763 shipped, not an invented placeholder.
+# =========================================================================================
+
+
+def test_load_w37_11_record_rejects_a_class_no_extractor_produces(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| docs/x.md | comma-continuation-left-whole | 1 | because | W37-11 |\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(dv.InvalidResidueClassError, match="comma-continuation-left-whole"):
+        dv.load_w37_11_record(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "cls",
+    ["d1", "d13", "h1-check1", "h1-check36", "h1-check999", "g2-other",
+     "g2-cause3-legacy-path-citation"],
+)
+def test_load_w37_11_record_accepts_every_real_extractor_class(
+    dv: Any, tmp_path: pathlib.Path, cls: str
+) -> None:
+    """The green half: the registry is derived from what the extractors can produce, not
+    a narrower list that would reject a real class alongside the invented ones — "d13"
+    is `D_ALTERNATIVES`'s last-numbered alternative as of this commit, and "h1-check999"
+    is a check number nothing has assigned yet, deliberately, since the h1 predicate is a
+    shape, not an enumerated set."""
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        f"| docs/x.md | {cls} | 1 | because | W37-11 |\n",
+        encoding="utf-8",
+    )
+    record = dv.load_w37_11_record(tmp_path)
+    assert record == (
+        dv.ResidueEntry(path="docs/x.md", cls=cls, count=1, reason="because", owner="W37-11"),
+    )
 
 
 # =========================================================================================

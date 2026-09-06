@@ -9584,6 +9584,12 @@ def _cmd_migrate_verify(args: argparse.Namespace) -> int:
     except GitArchiveError as exc:
         print(f"doc-id.py migrate --verify: {exc}", file=sys.stderr)
         return 2
+    except _docverify.InvalidResidueClassError as exc:
+        print(f"doc-id.py migrate --verify: refused: {exc}", file=sys.stderr)
+        # Same bucket as WorkingCheckoutRefusedError: an unrecognised W37-11 `cls` is a
+        # misconfigured governance table, not a corpus verdict — it must not silently
+        # govern nothing while reporting exit 1 like every other run in this period.
+        return 2
     print(_docverify.render(result))
     # 0 green · 1 the standing red, unchanged · 2 refused to run · 3 the verdict set moved.
     # Exit 3 is what makes a NEW failure distinguishable from the red Ruling 102 §1 requires
