@@ -3512,7 +3512,7 @@ def _residue_fully_governed(
     return True
 
 
-def load_w37_11_record(repo_root: Path) -> tuple[ResidueEntry, ...]:
+def load_w37_11_record(tree_root: Path) -> tuple[ResidueEntry, ...]:
     """The governed per-(file, class) residue ceiling, or empty if the record has no rows
     yet (or does not exist) — never fatal, and never a reason to invent one here.
 
@@ -3522,8 +3522,23 @@ def load_w37_11_record(repo_root: Path) -> tuple[ResidueEntry, ...]:
     (wrong cell count, a non-integer `count`) is skipped rather than raised — a record this
     module cannot parse must never crash the run that reads it; it degrades to "not yet
     governed" for that row, the same as the file not existing at all.
+
+    `tree_root` must be a tree materialised from the ref under verification — never the
+    live checkout `verify()` was invoked against. `_verify_body` passes `snap.control`
+    (2026-09-06 fix): before this fix it passed `repo_root`, the mutable working checkout,
+    which made `--ref` non-hermetic — a `--verify` run's row (d)/(h1) verdicts depended on
+    whatever sat on disk in the invoking executor's own worktree at call time, regardless
+    of which commit `--ref` named. Caught when two runs of the *identical* `--ref` (an
+    executor mid-edit on the record) produced different verdict sets and a residue-ceiling
+    regression neither run's own tree content could explain — `docs/audit/w37-11-record.md`
+    is precisely the legacy `docs/audit/` path row (d10) exists to prove absent from the
+    *migrated* tree, so `snap.control` (the archived, unmigrated `--ref` content) is its
+    committed home, not `snap.migrated`. See `test_verify_reads_the_w37_11_record_from_the_
+    ref_never_the_live_checkout` for the broken-input proof: two `verify()` calls at one
+    ref, with the *live* record deliberately changed between them, must return identical
+    verdicts — this function's own read is the only thing that could make them diverge.
     """
-    record = repo_root / W37_11_RECORD_PATH
+    record = tree_root / W37_11_RECORD_PATH
     text = read_text(record)
     if text is None:
         return ()
@@ -3840,7 +3855,17 @@ def _verify_body(
         # (h1)'s own verdicts now read the record to decide FAIL-vs-DISCLOSE
         # (`_residue_fully_governed`), so it must exist before those rows are computed,
         # not only afterward for the exit-code-level residue-ceiling comparison.
-        record = load_w37_11_record(repo_root)
+        #
+        # `snap.control`, never `repo_root` (2026-09-06 fix, F102): `repo_root` is the
+        # live, mutable checkout — reading the record from it made `--ref` non-hermetic,
+        # since the record on disk in the invoking executor's own worktree need not match
+        # (and during active editing, will not match) the commit `--ref` names.
+        # `snap.control` is the `git archive` of `--ref` this run already built, the
+        # record's own committed home (`docs/audit/` is the legacy path row (d10) proves
+        # absent from `snap.migrated`, never where the record lives post-migration), and
+        # reading it costs no new git call. See `load_w37_11_record`'s own docstring and
+        # `test_verify_reads_the_w37_11_record_from_the_ref_never_the_live_checkout`.
+        record = load_w37_11_record(snap.control)
         rows = compute_rows(docid, snap, mig_result.generated_paths, record)
         return VerifyResult(snapshot=snap, rows=tuple(rows), w37_11_record=record)
     finally:
