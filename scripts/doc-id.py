@@ -37,9 +37,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import functools
 import hashlib
 import importlib.util
 import itertools
+import os
 import posixpath
 import re
 import shutil
@@ -126,7 +128,94 @@ def materialize_ref(ref: str, dest: Path, *, repo_root: Path) -> None:
         )
     with zipfile.ZipFile(zip_path) as zf:
         zf.extractall(dest)
+        # `ZipFile.extractall` drops the mode bits `git archive` recorded, so every file
+        # comes out 0644 and an executable script silently loses its exec bit. That is a
+        # difference between the materialised tree and the committed one, which is exactly
+        # what a materialisation must not have: restore the permission bits the archive
+        # carries in `external_attr`'s high 16 bits.
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            mode = info.external_attr >> 16
+            if mode:
+                (dest / info.filename).chmod(mode & 0o7777)
     zip_path.unlink()
+
+
+def materialize_ref_with_history(ref: str, dest: Path, *, repo_root: Path) -> None:
+    """Materialise `ref` into `dest` **as a git repository carrying its real history**.
+
+    `git archive` + `git init` produces a tree whose content is right and whose history is
+    a single synthetic commit. That is not equivalent: NT-0019 item 1 makes a module's
+    **git first-commit date** the `created` value id allocation sorts on
+    (`docs/notes/0019-one-id-per-document.md`, D1 at `:247` — "numbers carry chronology"),
+    so git history is a *declared input* to the migration, not an incidental property of
+    the checkout it happens to run in. A one-commit tree has no first-commit dates to read,
+    and the old `date.today()` fallback silently substituted for all of them — re-keying
+    the whole sequence and displacing hundreds of ids relative to a real run.
+
+    Supplying the history makes `--verify` and a real run allocate identically **by
+    construction**, rather than by a fallback that happens to agree on the day it is run.
+
+    A local `git clone` is used rather than `git worktree add`: a worktree's `.git` points
+    back into the source repository, and `migrate()` commits into the tree it is given, so
+    a worktree would write objects and refs into the real repository. A clone owns its
+    object store. `origin` is removed afterwards so the result still satisfies
+    `_docverify.assert_tree_is_snapshot`'s "a snapshot has no remotes" invariant, and the
+    checkout is detached so no branch of the source repository is implicated.
+    """
+    if not ref_exists(ref, repo_root):
+        raise GitArchiveError(
+            f"{ref!r} does not resolve to a commit in {repo_root} — fetch it first "
+            f"(e.g. `git fetch origin main`)"
+        )
+    sha = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", f"{ref}^{{commit}}"],
+        capture_output=True, text=True, check=False,
+    ).stdout.strip()
+
+    def _run(args: list[str], *, cwd: Path | None = None) -> None:
+        proc = subprocess.run(args, capture_output=True, text=True, check=False, cwd=cwd)
+        if proc.returncode != 0:
+            raise GitArchiveError(
+                f"`{' '.join(args)}` exited {proc.returncode}: "
+                f"{proc.stderr.strip() or '(no stderr)'}"
+            )
+
+    dest.mkdir(parents=True, exist_ok=True)
+    _run(["git", "clone", "--quiet", "--no-checkout", str(repo_root), str(dest)])
+    _run(["git", "-C", str(dest), "remote", "remove", "origin"])
+    _run(["git", "-C", str(dest), "checkout", "--quiet", "--detach", sha])
+    if is_shallow_repository(dest):
+        raise GitArchiveError(
+            f"{dest} came out of `git clone {repo_root}` shallow — the source repository "
+            "is itself a shallow clone, so the git first-commit dates id allocation is "
+            "keyed on are not all present. Fetch full history (`git fetch --unshallow`) "
+            "before running this instrument."
+        )
+
+
+def is_shallow_repository(root: Path) -> bool:
+    """True when `root`'s git history is truncated. A shallow tree's first-commit dates
+    are wrong wherever the truncation cut, and `created` is a declared allocation input —
+    so this is checked, not assumed, and recorded in the run's own provenance fields.
+    """
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--is-shallow-repository"],
+        capture_output=True, text=True, check=False,
+    )
+    return proc.returncode == 0 and proc.stdout.strip() == "true"
+
+
+def history_commit_count(root: Path) -> int:
+    """`git rev-list --count HEAD` for `root`, or 0 when there is no resolvable HEAD."""
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-list", "--count", "HEAD"],
+        capture_output=True, text=True, check=False,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip().isdigit():
+        return 0
+    return int(proc.stdout.strip())
 
 
 # ---------------------------------------------------------------------------------------
@@ -2376,23 +2465,187 @@ def _discover_requirements(root: Path) -> list[_Draft]:
     return drafts
 
 
-def _module_first_commit_date(path: Path, root: Path) -> date:
-    """The spec module's git first-commit date, when `root` is inside a git checkout;
-    falls back to today's date when it is not (a plain-directory `tmp_path` fixture in a
-    unit test that does not need real date values, only relative order).
+class GitHistoryUnavailableError(RuntimeError):
+    """A `created` date that must come from git history could not be read, naming which
+    path, which tree, and why.
+
+    This is a **refusal, not a fallback**. `created` is a declared input to id allocation
+    (`docs/notes/0019-one-id-per-document.md` item 1: "using the module's first-commit
+    date; git first-commit date otherwise", with D1 at `:247` holding that numbers carry
+    chronology), and it is the primary sort key `_assign_numbers` consumes. Substituting
+    `date.today()` for it does not degrade gracefully — every draft takes the same
+    substituted date, sorts to the back of the sequence, and displaces every id after it.
+    The substitution is silent, and the resulting allocation looks entirely well-formed.
+
+    A tree that genuinely has no history by design (a `tmp_path` unit-test fixture that
+    needs only relative order) says so explicitly, by setting `DOCID_FIXTURE_CREATED_DATE`
+    or calling `set_fixture_created_date`, rather than by being indistinguishable from a
+    shallow clone or an archive-and-init snapshot.
     """
+
+
+#: Explicit `created` date for a tree with no git history *by design*. `None` means "no
+#: such tree here" — and then a missing first-commit date is a refusal. Set it through
+#: `set_fixture_created_date` or the `DOCID_FIXTURE_CREATED_DATE` environment variable
+#: (the latter so a fixture run reached through `subprocess` can declare it too).
+_FIXTURE_CREATED_DATE: date | None = None
+
+FIXTURE_CREATED_DATE_ENV: Final = "DOCID_FIXTURE_CREATED_DATE"
+
+
+def set_fixture_created_date(value: date | None) -> None:
+    """Declare (or clear) the fixture `created` date — see `GitHistoryUnavailableError`."""
+    global _FIXTURE_CREATED_DATE
+    _FIXTURE_CREATED_DATE = value
+
+
+def _fixture_created_date() -> date | None:
+    if _FIXTURE_CREATED_DATE is not None:
+        return _FIXTURE_CREATED_DATE
+    raw = os.environ.get(FIXTURE_CREATED_DATE_ENV, "").strip()
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw)
+    except ValueError as exc:
+        raise GitHistoryUnavailableError(
+            f"{FIXTURE_CREATED_DATE_ENV}={raw!r} is not an ISO date (YYYY-MM-DD): {exc}"
+        ) from exc
+
+
+@functools.cache
+def _root_is_shallow(root: str) -> bool:
+    """`is_shallow_repository`, memoised per tree root.
+
+    `_module_first_commit_date` is called once per draft — hundreds of times in a real run
+    — and a tree does not become shallow halfway through one. Memoised on the path string
+    so the check costs one `git rev-parse` per tree rather than one per requirement.
+    """
+    return is_shallow_repository(Path(root))
+
+
+def _refuse_missing_first_commit_date(path: Path, root: Path, reason: str) -> date:
+    """The fixture date if one is declared; otherwise a named refusal."""
+    declared = _fixture_created_date()
+    if declared is not None:
+        return declared
+    try:
+        rel = path.relative_to(root).as_posix()
+    except ValueError:
+        rel = str(path)
+    shallow = is_shallow_repository(root)
+    commits = history_commit_count(root)
+    raise GitHistoryUnavailableError(
+        f"no git first-commit date for {rel!r} in {root} — {reason}. "
+        f"(tree provenance: rev-list --count HEAD = {commits}, "
+        f"is-shallow-repository = {'true' if shallow else 'false'}.) "
+        "`created` is a DECLARED INPUT to id allocation, not a convenience: NT-0019 item 1 "
+        "keys it on the module's git first-commit date and D1 (`docs/notes/"
+        "0019-one-id-per-document.md:247`) holds that numbers carry chronology, so "
+        "substituting today's date silently re-keys the whole sequence. Run against a tree "
+        "carrying real history — a checkout, or a full `git clone` at the ref; never "
+        "`git archive` + `git init`, and never a shallow clone — or, for a fixture tree "
+        f"that has no history by design, declare the date: {FIXTURE_CREATED_DATE_ENV}="
+        "YYYY-MM-DD."
+    )
+
+
+def _module_first_commit_date(path: Path, root: Path) -> date:
+    """The file's git first-commit date, read from `root`'s real history.
+
+    There is no wall-clock fallback: see `GitHistoryUnavailableError` for why a
+    substituted `created` is worse than a stopped run.
+
+    The shallow case is checked separately and first, because it fails differently from
+    every other case here: `git log --diff-filter=A --follow` in a shallow clone does not
+    come back empty, it comes back with the **shallow boundary commit** — a real,
+    well-formed, wrong date. Nothing downstream could tell it from the right one.
+    """
+    if _root_is_shallow(str(root)):
+        return _refuse_missing_first_commit_date(
+            path, root,
+            "the tree is a shallow clone, so `git log --diff-filter=A --follow` returns "
+            "the shallow boundary commit rather than the commit that added the path: a "
+            "wrong date, not a missing one",
+        )
     try:
         proc = subprocess.run(
             ["git", "-C", str(root), "log", "--diff-filter=A", "--follow",
              "--format=%aI", "--", str(path.relative_to(root))],
             capture_output=True, text=True, check=False,
         )
-    except OSError:
-        return date.today()
+    except OSError as exc:
+        return _refuse_missing_first_commit_date(
+            path, root, f"`git log` could not be run ({exc})"
+        )
     lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
-    if proc.returncode != 0 or not lines:
-        return date.today()
+    if proc.returncode != 0:
+        return _refuse_missing_first_commit_date(
+            path, root,
+            "`git log --diff-filter=A --follow` exited "
+            f"{proc.returncode}: {proc.stderr.strip() or '(no stderr)'}",
+        )
+    if not lines:
+        return _refuse_missing_first_commit_date(
+            path, root,
+            "`git log --diff-filter=A --follow` found no commit adding that path",
+        )
     return date.fromisoformat(lines[-1][:10])
+
+
+def _is_tracked(path: Path, root: Path) -> bool:
+    """True when `path` is in `root`'s git index — i.e. it existed before this run."""
+    try:
+        rel = path.relative_to(root).as_posix()
+    except ValueError:
+        return False
+    proc = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", rel],
+        capture_output=True, text=True, check=False,
+    )
+    return proc.returncode == 0
+
+
+def _created_date_for(path: Path, root: Path) -> date:
+    """The `created` date to stamp on `path`.
+
+    Two cases, told apart explicitly rather than by a fallback:
+
+    * the file was already in the tree — its own git first-commit date, refusing if the
+      history that carries it is absent (`GitHistoryUnavailableError`);
+    * the migration created it in this run — the ref's own commit date, because a file
+      that did not exist has no first-commit date and `date.today()` would make two runs
+      of the same ref differ by the day they happened to run.
+    """
+    if _is_tracked(path, root):
+        return _module_first_commit_date(path, root)
+    return _tree_commit_date(root)
+
+
+def _tree_commit_date(root: Path) -> date:
+    """The author date of `root`'s HEAD commit — the migration's own clock.
+
+    Used for the handful of artifacts the migration *creates* (they have no first-commit
+    date of their own, because they did not exist before the run). Reading HEAD rather than
+    `date.today()` is what makes two materialisations of the same ref byte-identical on
+    different days: the value is a property of the ref, not of when the run happened.
+    """
+    proc = subprocess.run(
+        ["git", "-C", str(root), "log", "-1", "--format=%aI", "HEAD"],
+        capture_output=True, text=True, check=False,
+    )
+    line = proc.stdout.strip()
+    if proc.returncode != 0 or not line:
+        declared = _fixture_created_date()
+        if declared is not None:
+            return declared
+        raise GitHistoryUnavailableError(
+            f"{root} has no resolvable HEAD commit, so the migration has no clock to stamp "
+            "generated artifacts with. `date.today()` is not a substitute — it makes two "
+            "runs of the same ref differ by the day they were run. Run against a tree "
+            f"carrying real history, or declare {FIXTURE_CREATED_DATE_ENV}=YYYY-MM-DD."
+        )
+    return date.fromisoformat(line[:10])
 
 
 
@@ -7681,9 +7934,9 @@ def _stamp_regenerated_readmes(root: Path, origins: Mapping[str, str]) -> list[s
             title=heading.group(1) if heading else posixpath.basename(posixpath.dirname(rel)),
             status="active",
             created=(
-                _module_first_commit_date(root / origin_rel, root)
+                _created_date_for(root / origin_rel, root)
                 if origin_rel is not None and origin_rel != rel
-                else date.today()
+                else _created_date_for(path, root)
             ),
             owner="lead",
             was=origin_rel if origin_rel is not None and origin_rel != rel else None,
@@ -7865,7 +8118,7 @@ def _write_split_source_indexes(
         header = _stamp_header(
             "REFERENCE", None, kind=None,
             title=f"docs/{family_dir} — split-source index",
-            status="active", created=date.today(), owner="lead", was=None,
+            status="active", created=_tree_commit_date(root), owner="lead", was=None,
         )
         rel = _split_index_rel(family_dir)
         path = root / rel
@@ -8871,7 +9124,7 @@ def migrate(root: Path) -> MigrateResult:
     for skill_md in vendored_scan.to_stamp:
         header = _stamp_header(
             "REFERENCE", None, kind=None, title=skill_md.parent.name, status="active",
-            created=date.today(), owner="maintainer", was=None,
+            created=_created_date_for(skill_md, root), owner="maintainer", was=None,
             extra={"vendored": "true", "origin": "vendored fixture, upstream unknown"},
         )
         body = skill_md.read_text(encoding="utf-8")

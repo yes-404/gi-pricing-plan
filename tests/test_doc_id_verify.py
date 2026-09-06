@@ -25,6 +25,7 @@ requirement.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import pathlib
 import re
@@ -174,13 +175,20 @@ def test_verify_accepts_an_empty_directory_outside_a_checkout(
     dv.assert_workdir_disposable(empty)  # must not raise
 
 
-def test_migrate_is_refused_a_tree_with_real_history(
+def test_migrate_is_refused_a_tree_the_sentinel_does_not_vouch_for(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    """The second guard: a tree with more than one commit was not built by this run."""
+    """The second guard, red-then-green, in both directions.
+
+    This test replaces `test_migrate_is_refused_a_tree_with_real_history`, which asserted
+    that a tree with more than one commit is refused. That assertion is now **false by
+    design and was wrong before**: a snapshot carries the ref's real history, because id
+    allocation sorts on each module's git first-commit date (NT-0019 item 1) and a
+    one-commit tree has none. "Exactly one commit" was never evidence that this run built
+    the tree — every `git init` produces it. What is evidence is a sentinel this run wrote
+    that names this exact tree, at the HEAD and depth it recorded.
+    """
     repo = _mkrepo(tmp_path / "wd" / "migrated", {"a.md": "one\n"})
-    (repo.parent / dv.SENTINEL_NAME).write_text("{}\n", encoding="utf-8")
-    dv.assert_tree_is_snapshot(repo)  # green: one commit, sentinel present, no remotes
     (repo / "b.md").write_text("two\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
     subprocess.run(
@@ -188,8 +196,65 @@ def test_migrate_is_refused_a_tree_with_real_history(
          "commit", "-q", "-m", "second"],
         check=True,
     )
-    with pytest.raises(dv.WorkingCheckoutRefusedError):
+    sentinel = repo.parent / dv.SENTINEL_NAME
+    head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+    def _write(payload: dict[str, Any]) -> None:
+        sentinel.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+    good: dict[str, Any] = {
+        "instrument": "doc-id.py migrate --verify",
+        "trees": {
+            str(repo): {
+                "role": "migrated",
+                "head": head,
+                "rev-list --count HEAD": "2",
+                "is-shallow-repository": "false",
+            }
+        },
+    }
+    # GREEN: two commits of real history, vouched for by name, HEAD and depth.
+    _write(good)
+    dv.assert_tree_is_snapshot(repo)
+
+    # RED 1 — a sentinel that does not name this instrument vouches for nothing.
+    _write({**good, "instrument": "something else"})
+    with pytest.raises(dv.WorkingCheckoutRefusedError, match="does not declare instrument"):
         dv.assert_tree_is_snapshot(repo)
+
+    # RED 2 — a sentinel that names some other tree does not make THIS one disposable.
+    _write({**good, "trees": {str(repo.parent / "elsewhere"): good["trees"][str(repo)]}})
+    with pytest.raises(dv.WorkingCheckoutRefusedError, match="does not name"):
+        dv.assert_tree_is_snapshot(repo)
+
+    # RED 3 — the tree has moved since this run materialised it.
+    _write({**good, "trees": {str(repo): {**good["trees"][str(repo)], "head": "0" * 40}}})
+    with pytest.raises(dv.WorkingCheckoutRefusedError, match="has moved since"):
+        dv.assert_tree_is_snapshot(repo)
+
+    # RED 4 — the history present is not the history recorded. `created` is keyed on git
+    # first-commit dates, so a changed history is a changed allocation.
+    _write({
+        **good,
+        "trees": {str(repo): {**good["trees"][str(repo)], "rev-list --count HEAD": "9"}},
+    })
+    with pytest.raises(dv.WorkingCheckoutRefusedError, match="rev-list --count HEAD"):
+        dv.assert_tree_is_snapshot(repo)
+
+    # RED 5 — a shallow tree. The dates are truncated, not absent, so nothing else notices.
+    _write({
+        **good,
+        "trees": {str(repo): {**good["trees"][str(repo)], "is-shallow-repository": "true"}},
+    })
+    with pytest.raises(dv.WorkingCheckoutRefusedError, match="shallow"):
+        dv.assert_tree_is_snapshot(repo)
+
+    # GREEN again, so the five reds are the mutations and not the fixture.
+    _write(good)
+    dv.assert_tree_is_snapshot(repo)
 
 
 def test_migrate_is_refused_a_tree_without_the_sentinel(

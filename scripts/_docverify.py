@@ -133,6 +133,11 @@ class InvalidResidueClassError(RuntimeError):
 #: `git ls-files` population or a diff.
 SENTINEL_NAME: Final = ".doc-id-verify-snapshot"
 
+#: The instrument string the sentinel must declare for `assert_tree_is_snapshot` to
+#: accept the tree it vouches for. One constant, read by both the writer and the
+#: reader, so the two cannot drift (NT-0003).
+_INSTRUMENT: Final = "doc-id.py migrate --verify"
+
 MIGRATED_DIR: Final = "migrated"
 CONTROL_DIR: Final = "control"
 BASELINE_DIR: Final = "baseline"
@@ -209,9 +214,27 @@ def assert_tree_is_snapshot(tree: Path) -> None:
     """Belt-and-braces: refuse to hand `migrate()` anything but a tree this run built.
 
     Checked immediately before `migrate()`, so that a future caller reaching the migration
-    step by some other route still cannot reach a real checkout. Three properties a
-    snapshot has and a checkout does not: the sentinel sits beside it, its history is
-    exactly one synthetic commit, and it has no remotes.
+    step by some other route still cannot reach a real checkout.
+
+    **This guard changed shape in PR-A, and the reason matters.** It used to require the
+    tree to have *exactly one commit*, on the reasoning that "more than one commit means
+    this run did not build it". That reasoning was the archive-and-init defect in encoded
+    form: it demanded precisely the tree shape that has no git first-commit dates, which
+    is the input id allocation sorts on (NT-0019 item 1). A snapshot now carries the ref's
+    real history, so "one commit" can no longer stand in for "built by this run".
+
+    What replaces it is stronger, not weaker, because it is *specific to this run* rather
+    than a property any freshly-`git init`-ed directory shares. The sentinel this run wrote
+    must name this exact tree by absolute path, and the tree's HEAD and history depth must
+    be the ones the sentinel recorded when it built it. A real checkout is not named in any
+    sentinel this run wrote, and neither is a tree some other route produced. `is-shallow-
+    repository` is checked separately: a truncated history is silently wrong rather than
+    absent, and truncation cuts exactly the first-commit dates `created` is keyed on.
+
+    Note that this guard is about not destroying a checkout. It is *not* the thing that
+    stops a history-less tree reaching an allocation — `doc-id.py`'s
+    `GitHistoryUnavailableError` is, at the point the date is actually read. Two guards,
+    two failures, deliberately not collapsed into one.
     """
     sentinel = tree.parent / SENTINEL_NAME
     if not sentinel.is_file():
@@ -219,12 +242,47 @@ def assert_tree_is_snapshot(tree: Path) -> None:
             f"{tree} carries no {SENTINEL_NAME} sentinel beside it — it was not built by "
             "this instrument, so it is not known to be disposable (Ruling 102 §1)."
         )
-    count = _git(tree, "rev-list", "--count", "HEAD", check=False)
-    if count.returncode != 0 or count.stdout.strip() != "1":
+    try:
+        declared = json.loads(sentinel.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
         raise WorkingCheckoutRefusedError(
-            f"{tree} does not have exactly one commit of history "
-            f"(got {count.stdout.strip() or 'no HEAD'}) — not a snapshot this instrument "
-            "built (Ruling 102 §1)."
+            f"{sentinel} is not readable JSON ({exc}) — it cannot vouch for {tree} "
+            "(Ruling 102 §1)."
+        ) from exc
+    if not isinstance(declared, dict) or declared.get("instrument") != _INSTRUMENT:
+        raise WorkingCheckoutRefusedError(
+            f"{sentinel} does not declare instrument {_INSTRUMENT!r} — it was not written "
+            f"by this run, so it does not make {tree} disposable (Ruling 102 §1)."
+        )
+    trees = declared.get("trees")
+    entry = trees.get(str(tree)) if isinstance(trees, dict) else None
+    if not isinstance(entry, dict):
+        raise WorkingCheckoutRefusedError(
+            f"{sentinel} does not name {tree} among the trees this run built "
+            f"({sorted(trees) if isinstance(trees, dict) else trees!r}) — a tree this run "
+            "did not materialise is never migrated in place (Ruling 102 §1)."
+        )
+    head = _git(tree, "rev-parse", "HEAD", check=False).stdout.strip()
+    if not head or head != entry.get("head"):
+        raise WorkingCheckoutRefusedError(
+            f"{tree} is at HEAD {head or '(none)'}, but the sentinel recorded "
+            f"{entry.get('head')!r} when this run built it — it has moved since, so it is "
+            "not the tree this run materialised (Ruling 102 §1)."
+        )
+    count = _git(tree, "rev-list", "--count", "HEAD", check=False)
+    depth = count.stdout.strip()
+    if count.returncode != 0 or depth != str(entry.get("rev-list --count HEAD")):
+        raise WorkingCheckoutRefusedError(
+            f"{tree} reports rev-list --count HEAD = {depth or 'no HEAD'}, but the "
+            f"sentinel recorded {entry.get('rev-list --count HEAD')!r} — the history this "
+            "run materialised is not the history now present. `created` is keyed on git "
+            "first-commit dates (NT-0019 item 1), so a changed history changes the "
+            "allocation."
+        )
+    if entry.get("is-shallow-repository") != "false" or _is_shallow(tree):
+        raise WorkingCheckoutRefusedError(
+            f"{tree} is a shallow clone — the git first-commit dates id allocation is "
+            "keyed on are truncated, and truncation is silent rather than absent."
         )
     remotes = _git(tree, "remote", check=False)
     if remotes.stdout.strip():
@@ -234,13 +292,19 @@ def assert_tree_is_snapshot(tree: Path) -> None:
         )
 
 
+def _is_shallow(tree: Path) -> bool:
+    return _git(tree, "rev-parse", "--is-shallow-repository", check=False).stdout.strip() == "true"
+
+
 @dataclass(frozen=True)
 class Snapshot:
     """The three trees every row is measured over.
 
-    `migrated` and `control` are byte-identical extractions of the **same** archive; only
-    `migrated` has had `migrate()` run over it. That is what makes the control a control:
-    any difference between them is the migration's, and nothing else's.
+    `migrated` and `control` are byte-identical clones of the **same** ref, each carrying
+    the ref's full git history; only `migrated` has had `migrate()` run over it. That is
+    what makes the control a control: any difference between them is the migration's, and
+    nothing else's. The history is not incidental — it is the input `created`, and so id
+    allocation, is read from (NT-0019 item 1).
     """
 
     workdir: Path
@@ -253,20 +317,29 @@ class Snapshot:
 
 
 def _materialise(docid: Any, ref: str, dest: Path, *, repo_root: Path) -> None:
-    """Extract `ref` into `dest` and make it a one-commit git repository.
+    """Clone `ref` into `dest` **with its real git history**.
 
     `migrate()` calls `git ls-files` against the tree it is given (`doc-id.py`'s
-    `git_ls_files`), so the snapshot has to be a repository, not a bare directory. Making
-    it one also buys the diff row (g) reads: after `migrate()` runs, `git diff HEAD` in the
-    snapshot **is** the migration diff, with no second definition of "what changed".
+    `git_ls_files`), so the snapshot has to be a repository, not a bare directory. It also
+    buys the diff row (g) reads: after `migrate()` runs, `git diff HEAD` in the snapshot
+    **is** the migration diff, with no second definition of "what changed".
+
+    It used to be built with `git archive` + `git init`, which satisfies both of those and
+    is nevertheless wrong. Id allocation sorts on `created`, and for a requirement draft
+    `created` is the module's **git first-commit date** (NT-0019 item 1; D1 at
+    `docs/notes/0019-one-id-per-document.md:247` — numbers carry chronology). A one-commit
+    tree has none of those dates, so every requirement draft fell through to the old
+    `date.today()` fallback, took the same date, sorted to the back of the sequence, and
+    displaced the ids after it. `--verify` was therefore measuring an allocation a real run
+    would never produce, and no row said so.
+
+    Supplying the history removes the divergence **by construction** rather than by a
+    fallback that agrees on the day it runs: `doc-id.py`'s `_module_first_commit_date` now
+    refuses outright when the history is not there
+    (`doc-id.py`'s `GitHistoryUnavailableError`), so an archive-and-init snapshot cannot
+    silently reach an allocation again.
     """
-    dest.mkdir(parents=True, exist_ok=True)
-    docid.materialize_ref(ref, dest, repo_root=repo_root)
-    _git(dest, "init", "-q", "-b", "snapshot")
-    _git(dest, "-c", "user.email=verify@localhost", "-c", "user.name=doc-id verify",
-         "add", "-A")
-    _git(dest, "-c", "user.email=verify@localhost", "-c", "user.name=doc-id verify",
-         "-c", "commit.gpgsign=false", "commit", "-q", "-m", f"snapshot of {ref}")
+    docid.materialize_ref_with_history(ref, dest, repo_root=repo_root)
 
 
 def build_snapshot(
@@ -283,21 +356,6 @@ def build_snapshot(
     """
     workdir.mkdir(parents=True, exist_ok=True)
     sha = _git(repo_root, "rev-parse", ref).stdout.strip()
-    (workdir / SENTINEL_NAME).write_text(
-        json.dumps(
-            {
-                "instrument": "doc-id.py migrate --verify",
-                "authority": "Ruling 102 §1",
-                "source_repo": str(repo_root),
-                "ref": ref,
-                "ref_sha": sha,
-                "run": str(uuid.uuid4()),
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
     migrated = workdir / MIGRATED_DIR
     control = workdir / CONTROL_DIR
     _materialise(docid, ref, migrated, repo_root=repo_root)
@@ -308,6 +366,43 @@ def build_snapshot(
         baseline = workdir / BASELINE_DIR
         baseline_ref = _git(repo_root, "rev-parse", BASELINE_REF).stdout.strip()
         _materialise(docid, BASELINE_REF, baseline, repo_root=repo_root)
+    # Written after the trees exist, so the run's provenance fields are *measured* on the
+    # trees this run will actually migrate rather than asserted about the ones it meant to
+    # build. `rev-list --count` and `is-shallow-repository` are here because git history is
+    # a declared input to id allocation (NT-0019 item 1): a snapshot with one commit, or a
+    # truncated one, allocates differently from a real run and did so silently until this
+    # instrument started recording the depth it ran at.
+    (workdir / SENTINEL_NAME).write_text(
+        json.dumps(
+            {
+                "instrument": _INSTRUMENT,
+                "authority": "Ruling 102 §1",
+                "source_repo": str(repo_root),
+                "ref": ref,
+                "ref_sha": sha,
+                "run": str(uuid.uuid4()),
+                "materialisation": "git clone --no-checkout + detached checkout at ref_sha",
+                "trees": {
+                    str(tree): {
+                        "role": name,
+                        "head": _git(tree, "rev-parse", "HEAD").stdout.strip(),
+                        "rev-list --count HEAD": str(docid.history_commit_count(tree)),
+                        "is-shallow-repository": (
+                            "true" if docid.is_shallow_repository(tree) else "false"
+                        ),
+                    }
+                    for name, tree in (
+                        ("migrated", migrated),
+                        ("control", control),
+                        *((("baseline", baseline),) if baseline is not None else ()),
+                    )
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     return Snapshot(
         workdir=workdir,
         ref=ref,

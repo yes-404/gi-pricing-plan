@@ -64,6 +64,27 @@ def doc_id_cli() -> types.ModuleType:
     )
 
 
+#: Every tree in this module is a `tmp_path` copy of the fixture corpus, which has no git
+#: history *by design* — it is a directory of files, not a checkout. `created` is a
+#: declared input to id allocation read from git history (NT-0019 item 1), so `doc-id.py`
+#: refuses rather than substituting a wall-clock date for it
+#: (`GitHistoryUnavailableError`). A fixture tree declares the date explicitly instead of
+#: being indistinguishable from a shallow clone or an archive-and-init snapshot; these
+#: tests assert relative order and content, never the absolute date, so any fixed value
+#: does. It is deliberately not today's date: a test that passes only on the day it was
+#: written is the exact failure the refusal exists to stop.
+FIXTURE_CREATED_DATE: Final = date(2019, 3, 14)
+
+
+@pytest.fixture(autouse=True)
+def _fixture_corpus_declares_its_created_date(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The environment variable rather than the module attribute: several tests here load a
+    # *second, mutated* copy of `doc-id.py` by path to prove a predicate is load-bearing,
+    # and that copy has its own module globals. The declaration has to reach every instance
+    # of the script this test run creates, including the ones it has not created yet.
+    monkeypatch.setenv("DOCID_FIXTURE_CREATED_DATE", FIXTURE_CREATED_DATE.isoformat())
+
+
 @pytest.fixture(autouse=True)
 def _fixture_corpus_declares_its_synthetic_vendored_skill(
     doc_id_cli: types.ModuleType, monkeypatch: pytest.MonkeyPatch
