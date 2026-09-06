@@ -1282,6 +1282,87 @@ def _is_framework_self_reference(
     )
 
 
+def _box_end_refused(
+    docid: Any, active_map: Mapping[str, str], token: str, line: str, m: re.Match[str],
+) -> bool:
+    """True iff `doc-id.py`'s box-end comma-continuation refusal (`_bare_comma_tail_
+    resolves`) is the reason `token` still sits unrewritten on `line` at match `m` — the
+    SAME function the rewriter itself calls to decide the refusal, called here rather
+    than re-implemented, so no caller of this helper can ever disclose a site the
+    rewriter did not itself refuse.
+
+    **Ruling (lead, 2026-09-06), extending the deputy's 2026-09-06 ruling to its full
+    scope:** that ruling is written about a *shape* — "a token immediately followed by a
+    bare comma-digit tail that resolves against the token's own prefix" — not about
+    (d7)'s family. `_bare_comma_tail_resolves` lives inside `_expand_compound`/
+    `_expand_range`, the general rewriter for every id family `doc-id.py` migrates, so a
+    row whose own alternative pattern matches a family the general rewriter also covers
+    (found live: (d6)'s `ADR-0[0-9]{3}`, `docs/skills-map.md:92`'s `ADR-0004, 03 ...`,
+    where `03` resolves as the real `ADR-0003`) can be refused by the identical
+    mechanism (d7) already discloses. Extracted here as ONE predicate every d-row reads,
+    never a per-row copy that happens to agree today — `_d7_disclosed_or_fail`'s own
+    third class and `_box_end_only_residue_or_none` (the generic d-row path, below) both
+    call this, not two independent readings of the rule.
+
+    `token not in active_map` is the SAME precondition the rewriter's own sweep requires
+    before it ever calls `_bare_comma_tail_resolves` at all — a token with no mapping
+    could not have been rewritten in the first place, so it is never this refusal's
+    doing.
+    """
+    prefix_match = re.search(r"\d+$", token)
+    if prefix_match is None:
+        return False
+    prefix = token[: prefix_match.start()]
+    base_width = len(token) - len(prefix)
+    if token not in active_map:
+        return False
+    end_pos = (docid._compound_token_re(token).match(line, m.start()) or m).end()
+    return docid._bare_comma_tail_resolves(prefix, base_width, active_map, line, end_pos)
+
+
+def _box_end_only_residue_or_none(
+    docid: Any, mig: Corpus, ctl: Corpus, pattern: re.Pattern[str],
+) -> tuple[str, str] | None:
+    """The generic d-row path for the SAME disclosed class `_d7_disclosed_or_fail`'s
+    third class already covers, for every alternative that has no bespoke verdict
+    function of its own (Ruling, lead, 2026-09-06 — see `_box_end_refused`'s own
+    docstring for the grounds). Returns `None` when there is nothing to say — no hit at
+    all, or at least one hit that is NOT a box-end refusal (a genuine miss, which must
+    keep failing the row exactly as `_verdict_on_zero` already says; this function never
+    weakens that). Returns `(DISCLOSE, note)` only when EVERY hit on every still-matching
+    line is a refusal this same predicate confirms — never a blanket disclosure trusting
+    that a hit merely resembles the shape.
+    """
+    active_map = _redirects_token_map(mig)
+    real_hits: list[str] = []
+    refusal_hits: list[str] = []
+    for rel in mig.files:
+        skip = mig.was_lines[rel] | mig.fenced_lines[rel]
+        for i, line in enumerate(mig.lines[rel]):
+            if i in skip:
+                continue
+            for m in pattern.finditer(line):
+                token = m.group(0)
+                if _box_end_refused(docid, active_map, token, line, m):
+                    refusal_hits.append(f"{token} ({rel}:{i + 1})")
+                else:
+                    real_hits.append(f"{token} ({rel}:{i + 1})")
+    if real_hits or not refusal_hits:
+        return None
+    shown = "; ".join(refusal_hits[:10])
+    more = f" (+{len(refusal_hits) - 10} more)" if len(refusal_hits) > 10 else ""
+    return DISCLOSE, (
+        f"{len(refusal_hits)} hit(s) are box-end comma-continuation refusals — "
+        "`doc-id.py`'s `_bare_comma_tail_resolves` (the SAME function the rewriter "
+        "itself calls to decide this, not a re-implementation) says each token is "
+        "immediately followed by a bare comma-digit tail that resolves against its own "
+        "prefix, a genuine continuation risk the rewriter refused rather than partially "
+        "rewrite, leaving a real, allocated citation in its legacy form on purpose "
+        "(Ruling, lead, 2026-09-06 — the same class (d7) discloses, extended to every "
+        f"d-row the general rewriter covers). Owner: W37-6. {shown}{more}."
+    )
+
+
 def _d7_disclosed_or_fail(docid: Any, mig: Corpus, ctl: Corpus) -> tuple[str, str]:
     """(d7)'s non-zero population, split by the never-allocated predicate. Reads the
     identical migrated-tree population `rows_d`'s own `mig.scan(pattern, skip_fenced=
@@ -1328,30 +1409,12 @@ def _d7_disclosed_or_fail(docid: Any, mig: Corpus, ctl: Corpus) -> tuple[str, st
                 if prefix_match is None:
                     real_hits.append(f"{token} ({rel}:{i + 1})")
                     continue
-                prefix = token[: prefix_match.start()]
-                base_width = len(token) - len(prefix)
                 if _scoped_id_is_never_allocated(token, mig, ctl):
                     line_disclosed = True
                 elif _is_framework_self_reference(rel, mig, mig, ctl, i, token):
                     line_disclosed = True
                     self_ref_hits.append(f"{token} ({rel}:{i + 1})")
-                elif token in active_map and docid._bare_comma_tail_resolves(
-                    prefix,
-                    base_width,
-                    active_map,
-                    line,
-                    # The rewriter's own refusal checks the bare comma tail AFTER any
-                    # `..range`/`-/`-continuation the citation carries, not right after
-                    # the bare token -- `NFR-MODEL-1..5, 10..13`'s refused span ends
-                    # past `..5`, not past `1`. Re-deriving that same span via the
-                    # rewriter's own `_compound_token_re(token)` (never a
-                    # re-implemented regex) is what makes this check examine the EXACT
-                    # position the rewriter itself decided on. `token in active_map` is
-                    # the SAME precondition the rewriter's own sweep requires before it
-                    # ever calls `_bare_comma_tail_resolves` at all -- co-extensive by
-                    # identity requires both the position and the precondition.
-                    (docid._compound_token_re(token).match(line, m.start()) or m).end(),
-                ):
+                elif _box_end_refused(docid, active_map, token, line, m):
                     line_disclosed = True
                     refusal_hits.append(f"{token} ({rel}:{i + 1})")
                 else:
@@ -1620,6 +1683,14 @@ def rows_d(
                     note = (note + "; " if note else "") + creation_note
             else:
                 verdict, note = _verdict_on_zero(m_lines, mig.n_lines, control=c_lines)
+                if verdict == FAIL:
+                    # Ruling (lead, 2026-09-06): the box-end disclosure is not (d7)'s
+                    # property, it belongs to every d-row the general rewriter covers.
+                    # Found live: (d6) FAILs on docs/skills-map.md's `ADR-0004, 03 ...`,
+                    # refused whole because `03` resolves as the real `ADR-0003`.
+                    box_end_verdict = _box_end_only_residue_or_none(docid, mig, ctl, pattern)
+                    if box_end_verdict is not None:
+                        verdict, note = box_end_verdict
                 if creation_note:
                     note = (note + "; " if note else "") + creation_note
         if verdict == FAIL and _residue_fully_governed(residue_by_file, record):

@@ -2093,6 +2093,71 @@ def test_d7_a_plain_miss_with_no_comma_tail_still_fails_beside_the_new_class(
     )
 
 
+def test_d6_a_box_end_left_whole_adr_citation_is_disclosed_not_failed(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling (lead, 2026-09-06): the box-end disclosure is not (d7)'s property, it
+    belongs to every d-row the general rewriter covers. Found live:
+    `docs/skills-map.md:92` real corpus text `ADR-0004, 03 FR-RATE-1..13, 56..58` —
+    `03` resolves as the real `ADR-0003`, so the rewriter refuses `ADR-0004` whole,
+    exactly the shape (d7) already discloses, on a row that has no bespoke verdict
+    function of its own."""
+    migrated = {
+        "docs/skills-map.md": "ADR-0004, 03 some other text\n",
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            "ADR-0003,ADR-6,,,\nADR-0004,ADR-7,,,\n"
+        ),
+    }
+    control = {"docs/skills-map.md": migrated["docs/skills-map.md"]}
+    d6 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, control))["d6"]
+    assert d6.verdict == "DISCLOSE", (
+        f"a citation the rewriter's own refusal leaves whole must disclose, not fail, "
+        f"on ANY d-row, not only (d7): {d6.note}"
+    )
+    assert "box-end comma-continuation" in d6.note
+    assert "ADR-0004" in d6.note
+
+
+def test_generic_d_row_plain_miss_with_no_comma_tail_still_fails(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The mandatory positive control for the GENERALISED disclosure (Ruling, lead,
+    2026-09-06): a genuinely allocated citation left unrewritten with NO comma-tail at
+    all must still FAIL a generic d-row, exactly the shape `test_d7_a_plain_miss_with_
+    no_comma_tail_still_fails_beside_the_new_class` already proves for (d7) — injected
+    beside a real box-end left-whole citation in the SAME tree, so a generic check that
+    quietly widened past what the rewriter actually refuses would show up here as a
+    false DISCLOSE; it must not."""
+    migrated = {
+        "docs/skills-map.md": "ADR-0004, 03 some other text\n",
+        "docs/other.md": "ADR-0005 still cited, unrewritten, no comma after it at all.\n",
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            "ADR-0003,ADR-6,,,\nADR-0004,ADR-7,,,\nADR-0005,ADR-8,,,\n"
+        ),
+    }
+    control = {
+        "docs/skills-map.md": migrated["docs/skills-map.md"],
+        "docs/other.md": migrated["docs/other.md"],
+    }
+    d6 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, control))["d6"]
+    assert d6.verdict == "FAIL", (
+        f"a plain miss with no comma-tail must still FAIL a generic d-row beside the "
+        f"box-end disclosure, not be swept into it: {d6.note}"
+    )
+
+    # And with the plain miss removed, the same tree's remaining box-end citation
+    # discloses cleanly -- proving the FAIL above came from the plain miss specifically.
+    migrated_without_miss = {k: v for k, v in migrated.items() if k != "docs/other.md"}
+    control_without_miss = {k: v for k, v in control.items() if k != "docs/other.md"}
+    clean_snap = _snapshot(dv, tmp_path / "clean", migrated_without_miss, control_without_miss)
+    d6_clean = _d_rows(dv, doc_id_cli, clean_snap)["d6"]
+    assert d6_clean.verdict == "DISCLOSE", (
+        f"removing the plain miss must restore DISCLOSE: {d6_clean.note}"
+    )
+
+
 def test_framework_self_reference_predicate_yields_a_broad_class_on_the_real_corpus(
     dv: Any,
 ) -> None:
