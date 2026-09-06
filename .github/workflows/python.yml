@@ -173,7 +173,10 @@ jobs:
       - name: Ruff
         id: ruff
         continue-on-error: true
-        run: uv run ruff check .
+        run: |
+          echo "BROKEN-INPUT PROOF: this stage is deliberately failing."
+          uv run ruff check .
+          exit 1
 
       - name: mypy --strict
         id: mypy
@@ -234,7 +237,9 @@ jobs:
       - name: Generated contracts are current
         id: contracts
         continue-on-error: true
-        run: uv run python scripts/generate-contracts.py --check
+        run: |
+          echo "BROKEN-INPUT PROOF: this stage is deliberately failing."
+          exit 1
 
       # skills-map §9.1: requirement coverage is reported, so drift between the
       # specification and what is actually tested is visible rather than assumed.
