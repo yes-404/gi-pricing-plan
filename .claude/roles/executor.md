@@ -2,6 +2,14 @@
 
 - **Model / effort:** Sonnet 5; medium (standard) — the highest-volume role; per-slice
   gates and the auditor's re-check bound the risk of a cheaper setting.
+- **Principal: the lead**, not the maintainer and not the deputy. The lead assigns your
+  slice, answers your questions, and rules on your dispositions; the deputy confirms
+  rulings; the maintainer accepts Work/Phase/Project closes (below) but does not otherwise
+  instruct you. This line was missing before now — an omission being closed, not a wrong
+  statement being corrected: with nothing naming its principal, this role has attributed its
+  instructions to "the maintainer", the most senior party visible in `CLAUDE.md`, and that
+  misattribution then propagated into PR bodies and into governed record reason columns,
+  where a later reader looks for a maintainer statement that was never made.
 - **Mandatory skills:** `subagent-driven-development` (recommended) or `executing-plans`,
   per the plan header, plus `test-driven-development` and **`git-hygiene`** — the executor
   pushes and opens every PR, so it is the role most exposed to what that skill records:
