@@ -5819,10 +5819,38 @@ def _shorthand_suffix(mapped_base: str, siblings: list[tuple[str, str]]) -> str:
     return "".join(parts_out)
 
 
+#: box-end gate-gap (W37-6, 2026-09-06, real corpus: `docs/audit/register.md:58`'s
+#: `NFR-MODEL-1..5, 10..13`): a comma introduces a further segment inheriting the same base
+#: prefix, a citation-authoring convention `_compound_token_re` has no path to reach at all
+#: (its `continuation` group only ever meant `-`/`/`) -- and the maintainer's ruling is that
+#: it never should: `scope-audit.py --extra`'s own precedent (`.claude/skills/
+#: close-workstream/SKILL.md:37-71`, `tests/test_scope_audit.py`) already refuses
+#: `FR-PLAT-47,48` rather than guessing it means `FR-PLAT-47, FR-PLAT-48`, because *"the
+#: failure here was ambiguity, not verbosity"* -- the identical shape is exactly as
+#: ambiguous with unrelated prose after a rewrite (`FR-RATE-20, 03 §5.1` is "spec 03 §5.1",
+#: not a second citation) as it is here. A comma is not a citation-continuation operator in
+#: this corpus, and this module does not learn to read it as one.
+#:
+#: So a bare `,\s*\d` immediately following a matched compound/range whose base maps is
+#: refused, not partially rewritten: the base's own otherwise-valid rewrite is declined too,
+#: and the whole citation comes out byte-identical -- the module's own existing
+#: all-or-nothing convention, extended to a shape it did not know existed rather than a new
+#: mechanism. Today's silent alternative (a rewritten base, an orphaned bare tail) is
+#: strictly worse than either doing nothing or refusing outright: it is unreadable in a way
+#: the untouched original never was, since the original at least let a reader infer the
+#: shared prefix from the line. Refusing restores the floor, and turns a self-inflicted,
+#: undisclosable mangled citation into ordinary disclosed residue -- an un-rewritten legacy
+#: form `REDIRECTS.csv` can still resolve, exactly like any other citation this migration
+#: declines to touch.
+_BARE_COMMA_DIGIT_RE: Final = re.compile(r",\s*\d")
+
+
 def _expand_compound(
     tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
     derived: list[tuple[str, str]],
 ) -> str:
+    if _BARE_COMMA_DIGIT_RE.match(m.string, m.end()):
+        return m.group(0)  # ambiguous with prose -- refused, not guessed (see above)
     continuation = m.group("continuation")
     if not continuation:
         return mapped
@@ -5884,6 +5912,9 @@ def _expand_range(
     tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
     derived: list[tuple[str, str]],
 ) -> str:
+    if _BARE_COMMA_DIGIT_RE.match(m.string, m.end()):
+        return m.group(0)  # ambiguous with prose -- refused, not guessed
+        # (`_BARE_COMMA_DIGIT_RE`'s own docstring has the reasoning)
     prefix_match = re.search(r"\d+$", tok)
     if prefix_match is None:
         # No trailing digit run on the base token itself -- every family this shape is

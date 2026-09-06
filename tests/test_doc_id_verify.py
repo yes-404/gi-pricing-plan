@@ -696,6 +696,75 @@ def test_g1_provenance_check_reads_0_on_the_fixed_output(
     assert mismatches == []
 
 
+_MODEL_REDIRECTS_CSV = (
+    "old_id,new_id,old_path,new_path,citing_dir\n"
+    "NFR-MODEL-1,NFR-772,,,\n"
+    "NFR-MODEL-2,NFR-773,,,\n"
+    "NFR-MODEL-3,NFR-774,,,\n"
+    "NFR-MODEL-4,NFR-776,,,\n"
+    "NFR-MODEL-5,NFR-777,,,\n"
+    ",,docs/audit/register.md,docs/findings/register.md,\n"
+)
+
+
+def test_bare_comma_invariant_reads_non_zero_on_the_box_end_pre_fix_defect(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The box-end gate-gap's real pre-fix output (before ruling (b)'s refusal existed):
+    `NFR-MODEL-1..5` correctly enumerated, `, 10..13` left orphaned bare -- a rewritten
+    token (`NFR-777`) immediately followed by a bare `,\\s*\\d`. The independent,
+    output-side invariant check (never calling the rewriter's own functions) must catch
+    this without being told what a citation is."""
+    migrated = {
+        "docs/findings/register.md": (
+            "| Measured NFRs (F21) | NFR-772, NFR-773, NFR-774, NFR-776, NFR-777, "
+            "10..13 | W4/W5/W7 |\n"
+        ),
+        "docs/REDIRECTS.csv": _MODEL_REDIRECTS_CSV,
+    }
+    snap = _snapshot(dv, tmp_path, migrated, {"placeholder.md": "x\n"})
+    mig = dv.load_corpus(snap.migrated)
+    new_ids = dv._new_id_values(mig)
+    violations = dv._rewritten_base_before_bare_comma(mig, new_ids)
+    assert len(violations) == 1, violations
+    assert "docs/findings/register.md:1" in violations[0]
+
+
+def test_bare_comma_invariant_reads_zero_once_the_whole_citation_is_left_whole(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Ruling (b)'s actual fix: the whole citation, base included, is refused rather than
+    partially rewritten -- so the migrated output still carries the ORIGINAL legacy form,
+    `NFR-MODEL-1..5, 10..13`, not any `NFR-77x` id at all. The invariant check must read
+    zero, the same instrument, the same shape of input, only the migrated output changed."""
+    migrated = {
+        "docs/findings/register.md": (
+            "| Measured NFRs (F21) | NFR-MODEL-1..5, 10..13 | W4/W5/W7 |\n"
+        ),
+        "docs/REDIRECTS.csv": _MODEL_REDIRECTS_CSV,
+    }
+    snap = _snapshot(dv, tmp_path, migrated, {"placeholder.md": "x\n"})
+    mig = dv.load_corpus(snap.migrated)
+    new_ids = dv._new_id_values(mig)
+    violations = dv._rewritten_base_before_bare_comma(mig, new_ids)
+    assert violations == []
+
+
+def test_bare_comma_invariant_ignores_a_rewritten_token_with_nothing_ambiguous_after_it(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """A rewritten token followed by ordinary prose, or nothing, must never be flagged --
+    the invariant is scoped to a BARE comma-digit specifically."""
+    migrated = {
+        "docs/findings/register.md": "see NFR-772 and NFR-773 in the spec\n",
+        "docs/REDIRECTS.csv": _MODEL_REDIRECTS_CSV,
+    }
+    snap = _snapshot(dv, tmp_path, migrated, {"placeholder.md": "x\n"})
+    mig = dv.load_corpus(snap.migrated)
+    new_ids = dv._new_id_values(mig)
+    assert dv._rewritten_base_before_bare_comma(mig, new_ids) == []
+
+
 def test_wk_shape_hits_excludes_framework_self_reference_not_a_second_mechanism(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:

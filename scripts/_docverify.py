@@ -2083,6 +2083,47 @@ def _g1_provenance_mismatches(docid: Any, mig: Corpus, ctl: Corpus) -> list[str]
     return mismatches
 
 
+#: box-end gate-gap's invariant (W37-6, 2026-09-06, ruled (b) over widening
+#: `_compound_token_re`): a bare `,\s*\d` must never sit immediately after a token this
+#: migration's own citation rewrite produced -- if it does, the rewriter's refusal
+#: (`doc-id.py`'s `_BARE_COMMA_DIGIT_RE`) failed to fire somewhere. Deliberately
+#: independent of the rewriter's own functions, unlike `_g1_provenance_mismatches` above
+#: (which calls `docid._expand_range`/`docid._expand_compound` directly and inherits
+#: whatever they do): a check must not assume its own invariant, so this scans the migrated
+#: OUTPUT alone for the shape a violation would leave, using only `REDIRECTS.csv`'s own
+#: `new_id` column to know what "a rewritten token" looks like.
+_NEW_ID_SHAPE_RE: Final = re.compile(r"^(?:FR|NFR|OQ|DEP)-\d+$")
+_BARE_COMMA_DIGIT_RE: Final = re.compile(r",\s*\d")
+
+
+def _new_id_values(mig: Corpus) -> frozenset[str]:
+    """Every `REDIRECTS.csv` `new_id`, restricted to the `FR|NFR|OQ|DEP-<digits>` shape
+    this migration's citation rewrite produces (never a family-lettered old-id shape, so a
+    coincidental old-id-looking string elsewhere is never mistaken for a rewrite)."""
+    return frozenset(
+        v for v in _redirects_token_map(mig).values() if _NEW_ID_SHAPE_RE.match(v)
+    )
+
+
+def _rewritten_base_before_bare_comma(mig: Corpus, new_ids: frozenset[str]) -> list[str]:
+    """Every migrated-tree site where a rewritten token (a member of `new_ids`) is
+    immediately followed by a bare `,\\s*\\d` -- the shape the rewriter's own refusal
+    (`doc-id.py`'s `_BARE_COMMA_DIGIT_RE`) exists to prevent from ever reaching real
+    output. Any hit names a site the refusal should have caught but did not."""
+    violations: list[str] = []
+    for rel in mig.files:
+        skip = mig.was_lines[rel]
+        for i, line in enumerate(mig.lines[rel]):
+            if i in skip:
+                continue
+            for m in re.finditer(r"\b(?:FR|NFR|OQ|DEP)-\d+\b", line):
+                if m.group(0) not in new_ids:
+                    continue
+                if _BARE_COMMA_DIGIT_RE.match(line, m.end()):
+                    violations.append(f"{rel}:{i + 1}: {line.strip()[:160]!r}")
+    return violations
+
+
 #: The line-level mask filter that stood in for (g) before Ruling 68 defined the six
 #: classes has been **removed**, not left beside its replacement — keeping a superseded
 #: predicate next to the one that supersedes it is NT-0003's duplicated-status defect in
