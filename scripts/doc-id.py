@@ -7856,7 +7856,10 @@ def _split_index_section_fault(root: Path, index_rel: str, anchor: str) -> str |
 
 
 def _repoint_all_relative_links(
-    root: Path, path_moves: Mapping[str, str], fresh_paths: Collection[str] = (),
+    root: Path,
+    path_moves: Mapping[str, str],
+    citer_origin: Mapping[str, str],
+    fresh_paths: Collection[str] = (),
 ) -> list[str]:
     """Every tracked file under `root`, its relative markdown links (inline and
     reference-style, `_repoint_relative_links`'s own two shapes) repointed against this
@@ -7873,7 +7876,8 @@ def _repoint_all_relative_links(
     there) -- so a bare `adr/`/`notes/` directory-shaped link repoints the same way a
     family README's own carried body already does; a specific file inside either
     directory is unaffected here because its own move is already a `path_moves` entry in
-    its own right (`_discover_adrs`/`_discover_notes` assign it one).
+    its own right (`_discover_adrs`/`_discover_notes` assign it one). `path_moves` is
+    used ONLY for this forward, target-resolution job below -- never inverted.
 
     Every file is walked, not only ones this run moved: an UNMOVED citer's `old_rel` and
     `new_rel` are identical, and `_repoint_relative_links` already documents that a link
@@ -7882,29 +7886,42 @@ def _repoint_all_relative_links(
     to reach `docs/skills-map.md`'s own shape (a file that never moved, citing a
     directory that did).
 
-    A **split** source (`path_move_groups`, several new paths sharing one `old_rel`) is
-    not resolved correctly here: `path_moves` itself can only hold one destination per
-    key, so a link to a pre-split file repoints to whichever target that source's own
-    `path_moves` entry happens to carry -- the identical, already-accepted limitation
-    `_regenerate_family_readmes`'s own `carry()` call already has for the same reason
-    (Ruling 100/101: "the (g) inverse only knows id tokens, so a split target's own
-    relative links have no inverse" -- the forward direction's mirror image, not solved
-    here either).
+    `citer_origin` (new_rel -> old_rel) is a **carried** pairing, not a reconstructed one
+    -- built by the caller directly from each `_Draft`'s own `was`/`new_path` fields (and,
+    for `docs/findings/register.md`, the physical-move site's own `old_register`/
+    `new_register`), at the moment each file's real origin is already known, never by
+    inverting `path_moves` after the fact. This replaces an earlier version of this
+    function that inverted `path_moves` (`{new: old}`) to recover a citer's own old
+    directory -- collision-safely (a `new_rel` two different `old_rel`s both claimed was
+    dropped, falling back to "unmoved") where it could, but a plain `dict[str, str]` is
+    lossy by construction for exactly the two shapes that inversion needs and `path_moves`
+    itself cannot express:
 
-    A **merge** target (several old paths sharing one new path, e.g. the phase-1b
-    register merged into the main one) is the mirror image on the CITER'S side, and this
-    IS handled: naively inverting `path_moves` (`{new: old}`, keeping whichever pair a
-    dict comprehension enumerates last) picked an arbitrary, frequently wrong, "old
-    directory" for the merged file's OWN citing links -- found live, W37-6, 2026-09-06,
-    on `docs/findings/register.md` itself, whose citations to files under the OLD
-    `docs/audit/` corrupted into a garbled `docs/audit/phases/1b/...` form once resolved
-    against the wrong source's directory. `new_to_old` below is built the same
-    collision-safe way `classify_migration_diff`'s own `_collision_safe_inverse` already
-    is: a `new_rel` two different `old_rel`s both claim is dropped from the map entirely,
-    falling back to "unmoved" (`old_rel == new_rel`) for that file -- not perfectly
-    correct for every line of a genuinely merged document (a line whose relative link was
-    written relative to the OTHER source's directory still cannot be resolved), but never
-    actively wrong, which a silent, arbitrary pick was.
+    * **A split source** (one `old_rel`, several `new_rel`s -- `docs/audit/plan-reviews.md`
+      alone splits into 13 `docs/closures/CR-*.md` files): `path_moves` holds only ONE of
+      the 13 as its value, so the other 12 never appeared in the inverted map at all and
+      were silently treated as unmoved. Every one of the 13 drafts independently carries
+      its own correct `was`, so `citer_origin` has all 13, not one.
+    * **A merge target** (several `old_rel`s, one `new_rel` -- both `docs/audit/register.md`
+      and, unrelatedly, both a `.claude/notes/000N-*.md` stub and its `docs/notes/
+      000N-*.md` real counterpart, converge on one new path): inversion cannot pick a side
+      without guessing, and the collision-safe drop above still left the file reading as
+      "unmoved". `citer_origin` needs no choice here either -- the write site (the draft,
+      or the register move) already knows, singularly, which old path IT came from; the
+      *other* old path's own citations are simply a different file's problem, not this
+      file's ambiguity.
+
+    Found live, W37-6, 2026-09-06: 98 links across the real corpus were still broken after
+    the collision-safe-inverse version, spread across exactly these two shapes (67 split,
+    31 merge -- 23 of them the `.claude/notes` vs `docs/notes` collision above, 8 the
+    register merge). The maintainer's ruling: stop inverting a lossy map and carry the
+    pairing that already exists at write time instead -- this function no longer inverts
+    anything, and both shapes dissolve because neither one was ever a problem for the
+    *forward* direction `citer_origin` is built in.
+
+    A file with no `citer_origin` entry (never discovered as a document draft, and not
+    the register move) is read as unmoved -- `old_rel == new_rel` -- the same safe default
+    an ordinary never-moved citer already gets.
 
     Idempotent by construction: a link this pass already corrected resolves to a path
     `path_moves` never names as an `old_path` (it is a *current*, correct path), so a
@@ -7927,14 +7944,10 @@ def _repoint_all_relative_links(
     against a location the file's own body was never actually written relative to.
     """
     all_moves = {**path_moves, **_README_LEGACY_DIR_MOVES}
-    by_new: dict[str, set[str]] = {}
-    for old, new in path_moves.items():
-        by_new.setdefault(new, set()).add(old)
-    new_to_old = {new: next(iter(olds)) for new, olds in by_new.items() if len(olds) == 1}
     changed: list[str] = []
     for path in _iter_tree_files(root):
         new_rel = path.relative_to(root).as_posix()
-        old_rel = new_rel if new_rel in fresh_paths else new_to_old.get(new_rel, new_rel)
+        old_rel = new_rel if new_rel in fresh_paths else citer_origin.get(new_rel, new_rel)
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -8502,10 +8515,26 @@ def migrate(root: Path) -> MigrateResult:
     # two passes run in. Found live investigating row (g)'s residue (W37-6,
     # 2026-09-05/06): 235 links broken this way across 82 files, control tree zero --
     # entirely this run's own doing, invisible to every id/path-token check because none
-    # of them read link syntax. `_repoint_all_relative_links`'s own docstring has the
-    # split-source and merge-target limitations this shares with `_regenerate_family_
-    # readmes`'s identical, already-accepted use of the same helper.
-    relinked = _repoint_all_relative_links(root, path_moves, fresh_paths=readme_written)
+    # of them read link syntax.
+    #
+    # `citer_origin` (new_rel -> old_rel) is carried forward from each write, never
+    # reconstructed by inverting `path_moves`: an inversion cannot express a split source
+    # (one old path, several new ones -- `docs/audit/plan-reviews.md` alone becomes 13
+    # `docs/closures/CR-*.md` files) or pick a side of a merge (several old paths, one new
+    # one) without guessing, and a maintainer ruling (W37-6, 2026-09-06, after an earlier
+    # collision-safe-inverse version still left 98 links broken across exactly these two
+    # shapes) is that this function must not guess. Every `_Draft` already knows its own
+    # true origin the moment its `new_path` is assigned, so this is read off directly.
+    citer_origin: dict[str, str] = {
+        d.new_path.relative_to(root).as_posix(): d.was
+        for d in drafts
+        if d.was is not None and d.new_path is not None
+    }
+    if register_moved_to is not None:
+        citer_origin[register_moved_to] = "docs/audit/register.md"
+    relinked = _repoint_all_relative_links(
+        root, path_moves, citer_origin, fresh_paths=readme_written
+    )
 
     for old_token, claims in id_claims.items():
         canons = {canon for canon, _ in claims}

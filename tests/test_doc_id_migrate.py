@@ -6545,7 +6545,7 @@ def test_the_dangling_link_check_reddens_when_the_regeneration_is_removed(
     monkeypatch.setattr(
         doc_id_cli,
         "_repoint_all_relative_links",
-        lambda root, moves, fresh_paths=(): [],
+        lambda root, moves, origin, fresh_paths=(): [],
     )
     result = doc_id_cli.migrate(pristine_a)
     dangling = _dangling_links(pristine_a, result.files_deleted)
@@ -6697,6 +6697,13 @@ def test_repoint_all_relative_links_fixture_all_three_sub_classes(
         "docs/audit/work/X/README.md": "docs/closures/CR-00001-x.md",
         "docs/plans/A.md": "docs/plans/B.md",
     }
+    # `citer_origin` is the pairing `migrate()` itself now carries forward from each
+    # `_Draft`'s own `was`/`new_path` fields, never reconstructed by inverting
+    # `path_moves` (W37-6, 2026-09-06 ruling: inversion is lossy for a split source or a
+    # merge target, so the caller must carry the pairing it already has instead of
+    # asking this function to guess it back). No collision in this fixture, so the
+    # straight inverse is exactly what a real caller would have built here too.
+    citer_origin = {new: old for old, new in path_moves.items()}
     # `_repoint_all_relative_links` reads the CURRENT (already-moved) tree, so the files
     # named as `path_moves` values must actually exist there before it runs — the same
     # precondition `migrate()` itself satisfies by running this pass after its own
@@ -6707,7 +6714,7 @@ def test_repoint_all_relative_links_fixture_all_three_sub_classes(
     )
     (root / "docs" / "plans" / "A.md").rename(root / "docs" / "plans" / "B.md")
 
-    changed = doc_id_cli._repoint_all_relative_links(root, path_moves)
+    changed = doc_id_cli._repoint_all_relative_links(root, path_moves, citer_origin)
 
     sub1 = (root / "docs" / "closures" / "CR-00001-x.md").read_text(encoding="utf-8")
     assert "[close-workstream](../../.claude/skills/close-workstream/SKILL.md)" in sub1, sub1
@@ -6721,6 +6728,58 @@ def test_repoint_all_relative_links_fixture_all_three_sub_classes(
     assert set(changed) == {
         "docs/closures/CR-00001-x.md", "docs/plans/C.md", "docs/skills-map.md",
     }
+
+
+def test_repoint_all_relative_links_resolves_a_split_source_citer(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A split source (one old path, several new ones) is exactly what a `path_moves`
+    inversion cannot express: `path_moves` holds only one of the several targets as its
+    value, so an inverted map never contains the others at all. Found live on the real
+    corpus, W37-6, 2026-09-06: `docs/audit/plan-reviews.md` alone splits into 13
+    `docs/closures/CR-*.md` files, and every one of them but whichever `path_moves`
+    happened to keep read as "unmoved", leaving 67 links broken across 12 files.
+
+    `citer_origin` sidesteps the inversion entirely: each of the two split targets below
+    carries its OWN correct `was` (both naming the same source, which is fine — the
+    ambiguity was only ever in trying to recover this by inverting a single-valued dict),
+    so both resolve their sibling-relative links correctly from one call.
+    """
+    root = tmp_path
+    # Both CR files are split targets of the SAME old source, `docs/audit/plan-reviews.md`
+    # -- so their own directory was `docs/audit`, not their new `docs/closures`. Each
+    # cites a sibling, `register.md`, by the old bare-basename relative form it would
+    # have used at `docs/audit/register.md`; that sibling separately moved to
+    # `docs/findings/register.md`.
+    (root / "docs" / "closures").mkdir(parents=True)
+    (root / "docs" / "closures" / "CR-00001-a.md").write_text(
+        "See [register](register.md).\n", encoding="utf-8",
+    )
+    (root / "docs" / "closures" / "CR-00002-b.md").write_text(
+        "See [register](register.md).\n", encoding="utf-8",
+    )
+    (root / "docs" / "findings").mkdir(parents=True)
+    (root / "docs" / "findings" / "register.md").write_text("# register\n", encoding="utf-8")
+
+    # `path_moves` can only hold ONE of the two split targets -- exactly the limitation
+    # being tested. If `_repoint_all_relative_links` inverted this to recover a citer's
+    # own origin, only one of the two CR files could ever resolve correctly.
+    path_moves = {
+        "docs/audit/plan-reviews.md": "docs/closures/CR-00001-a.md",
+        "docs/audit/register.md": "docs/findings/register.md",
+    }
+    citer_origin = {
+        "docs/closures/CR-00001-a.md": "docs/audit/plan-reviews.md",
+        "docs/closures/CR-00002-b.md": "docs/audit/plan-reviews.md",
+    }
+
+    changed = doc_id_cli._repoint_all_relative_links(root, path_moves, citer_origin)
+
+    a = (root / "docs" / "closures" / "CR-00001-a.md").read_text(encoding="utf-8")
+    b = (root / "docs" / "closures" / "CR-00002-b.md").read_text(encoding="utf-8")
+    assert "[register](../findings/register.md)" in a, a
+    assert "[register](../findings/register.md)" in b, b
+    assert set(changed) == {"docs/closures/CR-00001-a.md", "docs/closures/CR-00002-b.md"}
 
 
 def test_repoint_all_relative_links_is_idempotent(
@@ -6742,12 +6801,13 @@ def test_repoint_all_relative_links_is_idempotent(
         encoding="utf-8",
     )
     path_moves = {"docs/audit/work/X/README.md": "docs/closures/CR-00001-x.md"}
+    citer_origin = {"docs/closures/CR-00001-x.md": "docs/audit/work/X/README.md"}
 
-    first = doc_id_cli._repoint_all_relative_links(root, path_moves)
+    first = doc_id_cli._repoint_all_relative_links(root, path_moves, citer_origin)
     assert first == ["docs/closures/CR-00001-x.md"]
     after_first = (root / "docs" / "closures" / "CR-00001-x.md").read_text(encoding="utf-8")
 
-    second = doc_id_cli._repoint_all_relative_links(root, {})
+    second = doc_id_cli._repoint_all_relative_links(root, {}, {})
     after_second = (root / "docs" / "closures" / "CR-00001-x.md").read_text(encoding="utf-8")
 
     assert second == []
