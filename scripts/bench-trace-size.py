@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NFR-RATE-12 — trace storage capacity projection (W11 Task 4D).
+"""NFR-500 — trace storage capacity projection (WK-671 Task 4D).
 
 `docs/specs/03-rating-engine.md` §9 (`:906`): *"Trace storage: 1 % sampling of 50 M annual
 quotes stays under 200 GB/year with the sampled-trace schema."* This is a **projection**,
@@ -9,7 +9,7 @@ is measured directly is the actual serialised byte size of a real `Trace`, produ
 serialises with `trace.model_dump_json().encode()` (`backend/src/app/platform/traces.py`)
 — and that measured size is then multiplied out against the requirement's stated volume.
 Saying which of the two this is, is itself part of Task 4D's deliverable
-(`docs/plans/2026-08-29-w11-4-trace-sampling-persistence.md` Task 4D).
+(`docs/plans/PL-00850-wk-671-slice-4-trace-sampling-the-row-plus-blob-store-and-the-retention-floor.md` Task 4D).
 
 **No database, no blob store, no compose stack.** `BlobStore.put`
 (`backend/src/app/platform/blobs.py:130`) writes the given bytes to S3/MinIO verbatim — no
@@ -29,7 +29,7 @@ function with `trace=True`.
 
     uv run python scripts/bench-trace-size.py
 
-Not a CI gate — Ruling 6's governance (`docs/plans/2026-08-29-w11-slice1-rulings.md`),
+Not a CI gate — RL-872's governance (`docs/rulings/RL-00872-dp3-load-generation-tooling-for-the-sustained-200-rps-test.md`),
 inherited via `bench-rating.py`/`bench-score-batch.py`: a number for a workstream closure
 record, read once against the budget by a human.
 """
@@ -56,13 +56,13 @@ _spec.loader.exec_module(_bench_rating)
 
 from pricing_core.rating.score import score_one  # noqa: E402
 
-#: NFR-RATE-12's own volume: "1 % sampling of 50 M annual quotes".
+#: NFR-500's own volume: "1 % sampling of 50 M annual quotes".
 ANNUAL_QUOTES = 50_000_000
 SAMPLE_RATE = 0.01
 BUDGET_BYTES_PER_YEAR = 200 * 1_000_000_000  # "200 GB/year" read as decimal GB (1e9 bytes)
 
 #: Step counts swept, in addition to `bench-rating.py`'s own `N_EXPR_STEPS` (187) — the
-#: "~200-step motor structure" NFR-RATE-1 itself references, included so the projection's
+#: "~200-step motor structure" NFR-489 itself references, included so the projection's
 #: headline figure is read off the same reference structure the latency budget uses, not
 #: an arbitrary one. `with_gbm=True` throughout: every swept structure includes the one
 #: `model_call` step so trace size at the reference point reflects a real motor pipeline,
@@ -139,13 +139,13 @@ async def main() -> int:
         )
 
     # The reference point: bench-rating.py's own ~200-step motor structure, the same
-    # structure NFR-RATE-1/2 are measured against.
+    # structure NFR-489/490 are measured against.
     reference = next(r for r in rows if r["n_expr"] == _bench_rating.N_EXPR_STEPS)
     ref_bytes = reference["bytes"]
     ref_steps = reference["step_count"]
 
     print(
-        f"\nReference structure (NFR-RATE-1's own '~200-step motor structure', "
+        f"\nReference structure (NFR-489's own '~200-step motor structure', "
         f"with_gbm=True): {ref_steps} steps, {ref_bytes:,} bytes for one serialised "
         "Trace (one scored quote, single sample)."
     )
@@ -160,23 +160,23 @@ async def main() -> int:
     row_projected_gb = sampled_quotes * row_bound / 1_000_000_000
 
     print(
-        "\nProjection — quotes only (Ruling 25: batch contributes nothing to this "
-        "stream), no dedup benefit assumed (Ruling 23):"
+        "\nProjection — quotes only (RL-890: batch contributes nothing to this "
+        "stream), no dedup benefit assumed (RL-888):"
     )
     print(f"  sampled quotes/year = {SAMPLE_RATE:.0%} of {ANNUAL_QUOTES:,} = {sampled_quotes:,}")
     print(f"  blob bytes/year     = {sampled_quotes:,} x {ref_bytes:,} = {projected_bytes:,} "
           f"({projected_gb:,.2f} GB)")
     print(f"  row bytes/year (upper bound) = {sampled_quotes:,} x {row_bound} = "
           f"{row_projected_gb:,.4f} GB")
-    print(f"  budget (NFR-RATE-12) = {budget_gb:,.0f} GB/year")
+    print(f"  budget (NFR-500) = {budget_gb:,.0f} GB/year")
     print(f"  VERDICT = {verdict} — {projected_gb / budget_gb:.3f}x budget "
           f"(blob only; row upper bound adds {row_projected_gb / budget_gb:.5f}x)")
 
     print(
-        "\nNot included: FR-RATE-42's 100% decline/error sampling floor (this projection "
-        "reads NFR-RATE-12's own text literally — '1% sampling of 50M annual quotes' — "
+        "\nNot included: FR-259's 100% decline/error sampling floor (this projection "
+        "reads NFR-500's own text literally — '1% sampling of 50M annual quotes' — "
         "and does not add a decline/error rate assumption the requirement does not "
-        "state); the request-side always-capture-then-discard cost (Ruling 35 moved "
+        "state); the request-side always-capture-then-discard cost (RL-862 moved "
         "capture off the serving request, so it is a worker cost, not a storage one); "
         "compression at the storage layer (none exists — BlobStore.put stores bytes "
         "verbatim); any multi-run statistical variance (n=1 per step count, see the note)."

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate `docs/INDEX.md` — NT-0019 §1.4's "one row per id, rows and documents alike".
+"""Generate `docs/INDEX.md` — RFC-937 §1.4's "one row per id, rows and documents alike".
 
-`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`, Slice W37-3. Three things this
+`docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`, Slice W37-3. Three things this
 script generates, none of them hand-editable (`CLAUDE.md` §2's model-schema rule applied to
 governance data instead of API shapes):
 
@@ -18,7 +18,7 @@ governance data instead of API shapes):
    *file-level* front-matter parsing a second, divergent way — `parse_header` still owns
    that; a row block is a different, smaller grammar `parse_header` cannot reach at all).
 
-2. **The `execution` column** (NT-0019 §1.7) — *derived, never stored*. A `PL-` file's own
+2. **The `execution` column** (RFC-937 §1.7) — *derived, never stored*. A `PL-` file's own
    `status:`/`kind:` only ever says `draft | active | superseded | retired`; whether it was
    *executed* lives in whether an `LG-`/`SL-`/`CR-` elsewhere says so. `derive_execution`
    below is the literal implementation of §1.7's seven-row table, and no `Header` field
@@ -36,21 +36,21 @@ governance data instead of API shapes):
    disappears on the next run, rather than needing a maintainer to notice a hand-written list
    went stale.
 
-**Two points this module first flagged as its own inference or as NT-0019 silence, both
+**Two points this module first flagged as its own inference or as RFC-937 silence, both
 resolved since** — by Rulings 70-72,
-`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`, not by further guessing here:
+`docs/rulings/INDEX.md#2026-09-02-w37-field-set-and-rollup-rulingsmd`, not by further guessing here:
 
-- **The map-plan roll-up** (`_rollup_map_plan`, `_slice_child_state`) implements Ruling 72
+- **The map-plan roll-up** (`_rollup_map_plan`, `_slice_child_state`) implements RL-983
   exactly: children are the map plan's *slices*, not a `work:` proxy over leaf plans, and
   the precedence table has **no catch-all** — an unenumerated combination raises. An
   earlier version of this function used the `work:` proxy plus a trailing
   `return "not started"`, which read a half-planned Work as `closed`, a mid-flight Work as
   `not started`, and a replanned-then-completed slice as `not started` — three confirmed
   defects, all from that one default. This module no longer claims the note is silent about
-  the missing rules: it states two of the seven, and Ruling 72 states the rest.
+  the missing rules: it states two of the seven, and RL-983 states the rest.
 - **The findings phase-report element** (`_parse_register`, `_findings_figures`) reads
   `findings/register.md`, never an `FD-` essay's header. This module's first cut called
-  NT-0019 "silent" on scoping a finding to a phase; Ruling 71 found that claim false — the
+  RFC-937 "silent" on scoping a finding to a phase; RL-982 found that claim false — the
   note says so in §5.2 and §5.4, just not in §1.5's applicability comment, which governs the
   essay's header and was never the carrier. Three figures, plus a separately labelled
   carry-in, replace the earlier single project-wide count.
@@ -99,7 +99,7 @@ padded = _docid.padded
 family_of = _docid.family_of
 STATUS_WORDS = _docid.STATUS_WORDS
 
-# NT-0019 §1.4's directory-is-the-family rule, document families only — row families
+# RFC-937 §1.4's directory-is-the-family rule, document families only — row families
 # (FR/NFR/DEP, OQ, WK, SL) are scanned separately below because they are records embedded
 # in a shared file, not one file per id.
 FAMILY_DIRS: dict[str, str] = {
@@ -119,7 +119,7 @@ _ROW_HEADING_FIELDS = ("id", "family", "title", "status", "phase", "work")
 #: `docs/_templates/` is a fixed governance artifact of the real repository tree — never
 #: the fixture corpus a caller may point `--root` at (`build_corpus(root)` below takes a
 #: fixture root for testing; the field *policy* a row or phase section is checked against
-#: does not vary with that). Ruling 79 §3 item 1 / Ruling 80 §3 item 3.
+#: does not vary with that). RL-998 §3 item 1 / RL-999 §3 item 3.
 _TEMPLATES_DIR: Final = REPO / "docs" / "_templates"
 
 
@@ -269,17 +269,17 @@ def _fenced_yaml_blocks(text: str) -> list[tuple[int, int, list[str]]]:
 
 
 # The row-field policy used to be a hand-written frozenset here (`_ROW_FIELDS`) — a
-# transcription Ruling 70 already forbids, and Ruling 79 found it wrong in both directions
+# transcription RL-981 already forbids, and RL-998 found it wrong in both directions
 # at once: too strict (rejected `tree:`/`corrected_by:`/`relates:`, which `WK.md`/`SL.md`
 # both declare) and too permissive (admitted `kind:`/`slice:`, which `WK.md`'s own comment
-# forbids by name). Deleted, not extended (Ruling 79 §3 item 1) — the permitted set is now
+# forbids by name). Deleted, not extended (RL-998 §3 item 1) — the permitted set is now
 # derived per family from `docs/_templates/WK.md`/`SL.md` via `_docid.row_template_fields`,
 # the one function `scripts/doc-id.py`'s row *writer* (`migrate`) also calls, so the two
-# cannot silently disagree (Ruling 79 §3 items 2 and 4).
+# cannot silently disagree (RL-998 §3 items 2 and 4).
 
 
 def _row_list_value(path: Path, key: str, raw_value: str) -> tuple[str, ...]:
-    """A `[a, b]` row-block list value — `corrected_by:`/`relates:` (NT-0019 §1.5). The
+    """A `[a, b]` row-block list value — `corrected_by:`/`relates:` (RFC-937 §1.5). The
     same flat `[a, b]` grammar `scripts/_docid.py`'s front-matter parser applies to a
     document's own `plans:`/`supersedes:`/etc., re-implemented locally rather than
     imported: that module's published surface is `Header`, `HeaderError`, `parse_header`,
@@ -310,7 +310,7 @@ def _parse_row_block(
     constants — nothing else is contracted, so this slice does not depend on its internals.
 
     `row_field_policy` maps family word -> permitted field set (`_docid.row_template_fields`
-    per family, computed once by the caller — Ruling 79 §3 item 1). A row's own `family:`
+    per family, computed once by the caller — RL-998 §3 item 1). A row's own `family:`
     value decides which policy applies, and that value is itself one of the keys being
     parsed, so validation is a second pass over an already-collected raw dict rather than
     a check inline in the first: every `key: value` line is read first (checking only
@@ -407,9 +407,9 @@ _PHASE_HEADING_RE = re.compile(r"^##\s+(P\d+[a-z]?)\s+—\s+(.+)$")
 
 
 def scan_phase_sections(path: Path) -> list[PhaseSection]:
-    """`## P<n> — <title>` sections (NT-0019 §1.1 rule 4, §1.3): plain `key: value` lines
-    directly beneath the heading, never a fenced block (Ruling 80,
-    `docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md` — `docs/_templates/
+    """`## P<n> — <title>` sections (RFC-937 §1.1 rule 4, §1.3): plain `key: value` lines
+    directly beneath the heading, never a fenced block (RL-999,
+    `docs/rulings/INDEX.md#2026-09-02-w37-template-parser-conflicts-rulingsmd` — `docs/_templates/
     PHASE.md`'s own form, and `scripts/audit-docs.py`'s `_EXPECTED_NO_BLOCK_TEMPLATES`
     already enforces the same by path).
 
@@ -417,10 +417,10 @@ def scan_phase_sections(path: Path) -> list[PhaseSection]:
     the next heading or the first non-`key: value` line, whichever comes first — never a
     lookahead to the rest of the file. That is the fix for the former `rest =
     "\n".join(lines[idx + 1:])`, which let a phase section with no fields of its own
-    silently borrow whichever fenced block happened to sit somewhere below it (Ruling 80
+    silently borrow whichever fenced block happened to sit somewhere below it (RL-999
     §3 item 2). A heading with nothing recognisable directly beneath it therefore
     contributes no `PhaseSection` at all — "must produce no phase, or a loud failure —
-    never a phase built from a later block" (Ruling 80 §4 item 2) — rather than one built
+    never a phase built from a later block" (RL-999 §4 item 2) — rather than one built
     from whatever came after.
     """
     if not path.is_file():
@@ -453,7 +453,7 @@ def scan_phase_sections(path: Path) -> list[PhaseSection]:
 
 # `~{0,2}` on both sides of the bold marker: a *decided* open question in
 # `docs/open-questions.md` is struck through in place rather than removed
-# (`~~**OQ-OVR-7**~~ ✔ | ...`), which is still a governed row and still owns its id — a
+# (`~~**OQ-544**~~ ✔ | ...`), which is still a governed row and still owns its id — a
 # leading `~~` before `**` is not a shape this pattern may refuse to see. `[^|]*` between
 # the closing marker and the next cell boundary absorbs a trailing `~~`/`✔` the same way.
 _BOLD_ID_ROW = re.compile(
@@ -462,9 +462,9 @@ _BOLD_ID_ROW = re.compile(
 
 # A module-less `DEP-<n>` dependency rule (`doc-id.py`'s `_legacy_bare_dep_ids` — "F82:
 # module-less by design") is not a table row at all: `00-overview.md`'s dependency list is
-# a bullet, `- **DEP-1a** — <description>`, never `| **DEP-1a** | ... |`. One `Record` per
+# a bullet, `- **DEP-537** — <description>`, never `| **DEP-537** | ... |`. One `Record` per
 # bullet, the same reason a table row gets one: it is a governed id definition regardless
-# of which markdown block carries it, and NT-0019 §7(b) contiguity needs every one of them
+# of which markdown block carries it, and RFC-937 §7(b) contiguity needs every one of them
 # to reach `docs/INDEX.md`, not only the ones a table-row pattern happens to see.
 _BULLET_ID_ROW = re.compile(r"^-\s*\*\*(FR|NFR|DEP|OQ)-(\d+)\*\*\s*[—-]?\s*(.*)$")
 
@@ -532,7 +532,7 @@ def scan_bold_id_rows(path: Path, root: Path) -> list[Record]:
     function required a fixed 4-column shape and only matched a real two-column row by
     accident, when its description happened to contain a stray, un-escaped literal `|` —
     every row without one (the overwhelming majority) silently produced no `Record` at all,
-    which is `doc-id.py check`'s NT-0019 §7(b) noncontiguous-id failure: a requirement
+    which is `doc-id.py check`'s RFC-937 §7(b) noncontiguous-id failure: a requirement
     correctly renumbered in its spec file by `migrate()`'s citation rewrite never reached
     `docs/INDEX.md`, because this scan never saw it as a row.
 
@@ -614,7 +614,7 @@ def _pre_migration_records(records: Sequence[Record]) -> list[Record]:
     the write path's identical refusal below it, both mean *no migration draft has run
     yet* — a bullet no migration ever touches is not evidence against that, so it is
     excluded here rather than counted as the "corpus is no longer empty" signal both paths
-    use. The fourth bullet, `DEP-1a`, is still module-coded until it *is* migrated, and by
+    use. The fourth bullet, `DEP-537`, is still module-coded until it *is* migrated, and by
     then `docs/INDEX.md` already exists (the same run creates both) — so this function
     never has to tell it apart from the three that pre-date any migration.
     """
@@ -625,7 +625,7 @@ def _pre_migration_records(records: Sequence[Record]) -> list[Record]:
 
 
 # ---------------------------------------------------------------------------------------
-# The execution column (NT-0019 §1.7) — derived, never stored.
+# The execution column (RFC-937 §1.7) — derived, never stored.
 # ---------------------------------------------------------------------------------------
 
 
@@ -678,8 +678,8 @@ def _derive_leaf_execution(header: Header, corpus: Corpus) -> str:
 
 
 def _slice_child_state(slice_header: Header, corpus: Corpus) -> str | None:
-    """One map-plan child's contributed state, per Ruling 72
-    (`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`): the slice's *live* leaf
+    """One map-plan child's contributed state, per RL-983
+    (`docs/rulings/INDEX.md#2026-09-02-w37-field-set-and-rollup-rulingsmd`): the slice's *live* leaf
     plan's derived execution — a `PL- kind: leaf` whose `slice:` names it and whose
     `status:` is neither `superseded` nor `retired` — or, when it has none, the slice row's
     own status mapped directly (`draft` -> `not started`, `active` -> `in progress`,
@@ -703,7 +703,7 @@ def _slice_child_state(slice_header: Header, corpus: Corpus) -> str | None:
     if len(live_leaf_plans) > 1:
         raise ValueError(
             f"{slice_header.id}: more than one live leaf plan "
-            f"({', '.join(p.id or '?' for p in live_leaf_plans)}) — Ruling 72"
+            f"({', '.join(p.id or '?' for p in live_leaf_plans)}) — RL-983"
         )
     if live_leaf_plans:
         return derive_execution(live_leaf_plans[0], corpus)
@@ -719,13 +719,13 @@ def _slice_child_state(slice_header: Header, corpus: Corpus) -> str | None:
 
 
 def _apply_rollup_precedence(included: list[str]) -> str:
-    """Ruling 72's seven-row precedence table over one map plan's non-excluded children,
+    """RL-983's seven-row precedence table over one map plan's non-excluded children,
     already computed (`_slice_child_state`) — split out from `_rollup_map_plan` so the
     table itself, and specifically its "no catch-all" row, is unit-testable against a
     contrived `included` list without needing a corpus that can legitimately produce one
     (every real child state `_slice_child_state` can return is one of `not started`,
     `in progress`, `executed`, `closed`, and every non-empty combination of those four is
-    covered by rows 3-7 — the raise below exists as the safety net Ruling 72 requires, not
+    covered by rows 3-7 — the raise below exists as the safety net RL-983 requires, not
     because today's inputs can reach it).
 
     `included` must be non-empty — rows 1 and 2 are `_rollup_map_plan`'s to apply first,
@@ -745,13 +745,13 @@ def _apply_rollup_precedence(included: list[str]) -> str:
     if all(s == "not started" for s in included):
         return "not started"  # row 7
     raise ValueError(
-        f"map-plan roll-up over {included} matches no row of Ruling 72's precedence table"
+        f"map-plan roll-up over {included} matches no row of RL-983's precedence table"
     )
 
 
 def _rollup_map_plan(header: Header, corpus: Corpus) -> str:
-    """A map plan's roll-up, per Ruling 72
-    (`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`) — **not this module's own
+    """A map plan's roll-up, per RL-983
+    (`docs/rulings/INDEX.md#2026-09-02-w37-field-set-and-rollup-rulingsmd`) — **not this module's own
     inference**: an earlier version enumerated leaf plans sharing the map plan's `work:`
     directly, which left an unplanned slice invisible to the roll-up, and completed §1.7's
     two stated rules with a catch-all `return "not started"` that silently absorbed every
@@ -782,7 +782,7 @@ def _rollup_map_plan(header: Header, corpus: Corpus) -> str:
 
 
 # ---------------------------------------------------------------------------------------
-# The ownership matrix (NT-0019 §1.6) — one row per role, derived by inversion.
+# The ownership matrix (RFC-937 §1.6) — one row per role, derived by inversion.
 # ---------------------------------------------------------------------------------------
 
 # §1.6's "Owner — creates & amends" column, transcribed once. Not byte-identical prose (only
@@ -814,7 +814,7 @@ _OWNERSHIP_TABLE: tuple[tuple[str, str], ...] = (
     ("reference: contracts/", "generated from model-schema; executor via contract-schema"),
 )
 
-# NT-0019 §1.6's own role vocabulary, in the order the process spec introduces them
+# RFC-937 §1.6's own role vocabulary, in the order the process spec introduces them
 # (`.claude/roles/*.md`). Every role appears as a row even when it owns nothing — the
 # reporter and the watcher, explicitly, per §1.6's closing paragraph.
 ROLES: tuple[str, ...] = (
@@ -838,7 +838,7 @@ def ownership_matrix() -> dict[str, tuple[str, ...]]:
 
 
 # ---------------------------------------------------------------------------------------
-# The phase report (NT-0019 §1.10 (c) / Acceptance Standard item 10).
+# The phase report (RFC-937 §1.10 (c) / Acceptance Standard item 10).
 # ---------------------------------------------------------------------------------------
 
 
@@ -861,10 +861,10 @@ def _all_citations(corpus: Corpus, phase_path: Path) -> set[str]:
 
 
 # ---------------------------------------------------------------------------------------
-# The findings register (Ruling 71, `docs/plans/2026-09-02-w37-field-set-and-rollup-
-# rulings.md`) — the phase report's findings element is scoped from here, never from an
-# `FD-` essay's header: the essay carries no `phase:`/`work:` (Ruling 70/§1.5's own
-# applicability comment) and, after Ruling 70, no `decision:` either. The register row
+# The findings register (RL-982, `docs/rulings/RL-00982-the-phase-report-s-findin
+# gs-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-behaviour.md`) — the phase report's findings element is scoped from here, never from an
+# `FD-` essay's header: the essay carries no `phase:`/`work:` (RL-981/§1.5's own
+# applicability comment) and, after RL-981, no `decision:` either. The register row
 # carries both, today, before any migration — this reads that row.
 # ---------------------------------------------------------------------------------------
 
@@ -909,7 +909,7 @@ def _parse_register(path: Path) -> tuple[list[RegisterRow], int]:
     delimiter row marks it, and every `|`-led line after that is data.
 
     Returns `(parsed rows, data-line count)` **separately** so a caller can assert
-    coverage — Ruling 71 acceptance item 2: a malformed row must not silently vanish into
+    coverage — RL-982 acceptance item 2: a malformed row must not silently vanish into
     a smaller-but-plausible count. A row is "parsed" only when it splits into exactly five
     cells; a row that does not still counts toward the data-line total, so the two numbers
     disagree exactly when something did not parse.
@@ -956,7 +956,7 @@ def _phase_rank(phase: str) -> tuple[int, str]:
 
 
 def _findings_figures(rows: list[RegisterRow], phase_id: str) -> tuple[int, int, int, int]:
-    """Ruling 71's three phase-scoped figures plus the separately-labelled carry-in:
+    """RL-982's three phase-scoped figures plus the separately-labelled carry-in:
     `(opened, discharged, unowned_decay, carry_in)`. `opened`/`discharged`/`unowned_decay`
     are computed over rows whose own `Phase` cell equals `phase_id`; `carry_in` is computed
     over every *other* row whose phase sorts earlier, regardless of which phase entered
@@ -1017,15 +1017,15 @@ def phase_report(corpus: Corpus, phase_id: str, root: Path) -> str:
         lines.append(f"   - {w}: {len(rulings)}")
 
     # 5. Findings opened versus discharged, with the unowned-decay count — scoped from
-    # `findings/register.md`, per Ruling 71 (docs/plans/2026-09-02-w37-field-set-and-
-    # rollup-rulings.md): the note was not silent on this, §5.2 and §5.4 name the register
+    # `findings/register.md`, per RL-982 (docs/rulings/RL-00982-the-phase-report-s
+    # -findings-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-behaviour.md): the note was not silent on this, §5.2 and §5.4 name the register
     # as the carrier. A parse-coverage mismatch raises rather than silently under-counting
-    # (Ruling 71 acceptance item 2).
+    # (RL-982 acceptance item 2).
     register_rows, register_data_lines = _parse_register(root / "findings" / "register.md")
     if len(register_rows) != register_data_lines:
         raise ValueError(
             f"findings/register.md: parsed {len(register_rows)} of {register_data_lines} "
-            "data row(s) — coverage mismatch (Ruling 71 acceptance item 2)"
+            "data row(s) — coverage mismatch (RL-982 acceptance item 2)"
         )
     opened, discharged, unowned_decay, carry_in = _findings_figures(register_rows, phase_id)
     lines.append(
@@ -1103,7 +1103,7 @@ def render_index(corpus: Corpus) -> str:
     lines = [
         "# Index",
         "",
-        "Generated by `scripts/doc-index.py`. Do not hand-edit — see NT-0019 §1.4.",
+        "Generated by `scripts/doc-index.py`. Do not hand-edit — see RFC-937 §1.4.",
         "",
         "| id | family | kind | title | status | owner | phase | execution |",
         "|---|---|---|---|---|---|---|---|",
@@ -1213,14 +1213,14 @@ def main(argv: list[str] | None = None) -> int:
         # today's pre-migration `docs/` and every file fails `parse_header`'s "no front
         # matter" test harmlessly, `build_corpus` returns zero records, and the write path
         # below would otherwise happily overwrite a real `docs/INDEX.md` with a
-        # near-empty file that looks like a successful run. NT-0019's own words — "cannot
+        # near-empty file that looks like a successful run. RFC-937's own words — "cannot
         # be run against the live corpus until W37-6, because before the migration there
         # are no ids to index" — become a refusal here rather than a silent no-op success,
         # so this cannot be run by mistake before the migration lands.
         print(
             f"refusing to write {index_path}: zero governed records found under "
-            f"{args.root} — either the corpus has not been migrated to NT-0019's layout "
-            "yet (see docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md, Slice W37-6), "
+            f"{args.root} — either the corpus has not been migrated to RFC-937's layout "
+            "yet (see docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md, Slice W37-6), "
             "or --root points at the wrong tree",
             file=sys.stderr,
         )

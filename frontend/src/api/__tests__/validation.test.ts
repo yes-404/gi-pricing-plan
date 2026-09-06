@@ -34,7 +34,7 @@ const ACK = { user_id: crypto.randomUUID(), at: "2026-08-15T09:05:00Z", justific
 
 describe("banding, which decides what a reader sees first", () => {
   it("puts fails and errors together, because both block equally", () => {
-    // An `error` means the rule did not run. FR-DATA-19 makes that never a pass, and a
+    // An `error` means the rule did not run. FR-48 makes that never a pass, and a
     // reader asking "why can I not fit a model on this?" must see it beside the failures.
     expect(bandOf(rule({ outcome: "fail" }))).toBe("blocking");
     expect(bandOf(rule({ outcome: "error" }))).toBe("blocking");

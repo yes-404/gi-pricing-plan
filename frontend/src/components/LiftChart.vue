@@ -16,19 +16,19 @@ const props = defineProps<{
 }>();
 
 /**
- * Predicted against actual by predicted decile (FR-MODEL-50), both partitions on one axis.
+ * Predicted against actual by predicted decile (FR-171), both partitions on one axis.
  *
  * Four series and not two: the instrument is the *gap* between predicted and actual within a
  * partition, and a chart plotting only one of them per partition shows a ranking rather than
  * a calibration. The train pair and the holdout pair are then read against each other, which
- * is what FR-MODEL-54 asks for.
+ * is what FR-183 asks for.
  */
 /**
  * The caption names the partitions actually plotted, never the fit's two by assumption.
  *
  * This instrument is shared with the backtest view, whose single partition is neither Train
  * nor Holdout. A hardcoded "train and holdout" made the chart assert a split the artifact
- * does not carry — exactly what FR-MODEL-57 forbids a caption from doing — and it did so
+ * does not carry — exactly what FR-187 forbids a caption from doing — and it did so
  * below a column correctly captioned "Backtest".
  *
  * The list exists to say which partitions are read *against each other*. At one partition
@@ -59,7 +59,7 @@ const series = computed(() =>
       data: bins.value.map(
         (bin) => partition.lift.find((candidate) => candidate.bin === bin)?.[measure] ?? null,
       ),
-      // NFR-OVR-10: four series need four distinguishable line types, not four hues.
+      // NFR-463: four series need four distinguishable line types, not four hues.
       lineStyle: { type: LINE_TYPES[partitionIndex * 2 + measureIndex] ?? "solid", width: 2 },
     })),
   ),

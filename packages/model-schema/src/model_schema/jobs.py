@@ -4,7 +4,7 @@
 > a Job, has progress, is cancellable, and persists its result.
 
 The enums are closed on purpose. `kind` and `queue` decide which worker pool runs the work
-(FR-PLAT-13), and a free-string kind means a typo routes to a queue that does not exist and
+(FR-405), and a free-string kind means a typo routes to a queue that does not exist and
 the job sits `queued` forever with nothing to explain why.
 """
 
@@ -54,11 +54,11 @@ class JobKind(enum.StrEnum):
     RATING_REGRESSION = "rating.regression"
     RATE_TABLE_DIFF = "rate_table.diff"
     SCORE_BATCH = "score.batch"
-    #: W11 Task 4B, Ruling 35 (`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-
+    #: WK-671 Task 4B, RL-862 (`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-
     #: ruling.md`): the off-path re-score that fills in a sampled real-time trace's body.
     #: `app.worker.trace_handlers`. Parameters carry only the pending `scoring_traces` row
     #: id — never the Quote Context, which is an access-controlled carrier the trace row
-    #: is, and `JobRow.parameters` is not (Ruling 35 §8.4).
+    #: is, and `JobRow.parameters` is not (RL-862 §8.4).
     SCORE_TRACE_PRODUCE = "score.trace_produce"
     DISLOCATION_RUN = "dislocation.run"
     OPTIMISATION_RUN = "optimisation.run"
@@ -78,7 +78,7 @@ class JobStatus(enum.StrEnum):
 
 
 class JobQueue(enum.StrEnum):
-    """Named Celery queues with independently sized worker pools (FR-PLAT-13)."""
+    """Named Celery queues with independently sized worker pools (FR-405)."""
 
     DEFAULT = "default"
     COMPUTE = "compute"
@@ -100,13 +100,13 @@ class ActorKind(enum.StrEnum):
 
 
 #: Statuses from which no further transition is allowed. A Job that has finished is a
-#: historical record — FR-PLAT-14 keeps it for ≥ 13 months as part of the provenance chain
-#: (FR-OVR-3), and a record that can still change is not provenance.
+#: historical record — FR-410 keeps it for ≥ 13 months as part of the provenance chain
+#: (FR-6), and a record that can still change is not provenance.
 TERMINAL_STATUSES: frozenset[JobStatus] = frozenset(
     {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
 )
 
-#: The lifecycle of FR-PLAT-7, as data rather than as scattered `if` statements.
+#: The lifecycle of FR-399, as data rather than as scattered `if` statements.
 #: `queued → cancelled` is allowed: cancelling before a worker picks the job up is the
 #: common case, and it needs no cooperation from `pricing-core`.
 VALID_TRANSITIONS: dict[JobStatus, frozenset[JobStatus]] = {
@@ -141,7 +141,7 @@ class Principal(BaseModel):
 
 
 class Progress(BaseModel):
-    """Structured progress (FR-PLAT-8) — a fraction, a stage label, and counters."""
+    """Structured progress (FR-400) — a fraction, a stage label, and counters."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -166,7 +166,7 @@ class JobResult(BaseModel):
 
 
 class JobError(BaseModel):
-    """A typed failure (FR-PLAT-11).
+    """A typed failure (FR-403).
 
     `code` is the contract and `retryable` decides whether the platform will try again;
     `detail` carries the field-level cause where the failure is deterministic, which is
@@ -183,7 +183,7 @@ class JobError(BaseModel):
 
 
 class ResourceBudget(BaseModel):
-    """Exceeding it yields a typed error naming the budget, not an opaque kill (FR-PLAT-16)."""
+    """Exceeding it yields a typed error naming the budget, not an opaque kill (FR-412)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -229,13 +229,13 @@ class Job(BaseModel):
     error: JobError | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
     progress_at: datetime | None = Field(
-        default=None, description="Time of the last progress report (NFR-PLAT-3)."
+        default=None, description="Time of the last progress report (NFR-528)."
     )
     stalled: bool = Field(
         default=False,
         description="A running Job that has reported no progress within the configured "
         "window. Derived on read, never stored — a stored flag needs a sweeper to clear "
-        "it and is wrong between sweeps (NFR-PLAT-3).",
+        "it and is wrong between sweeps (NFR-528).",
     )
     queued_at: datetime
     started_at: datetime | None = None

@@ -6,7 +6,7 @@ import type { ComplexityDiagnostic } from "@/api/diagnostics";
 const props = defineProps<{ complexity: ComplexityDiagnostic }>();
 
 /**
- * Complexity counts and ratios beside whatever thresholds are in force (FR-MODEL-81).
+ * Complexity counts and ratios beside whatever thresholds are in force (FR-185).
  *
  * The thresholds are workspace settings and are **unset by default**; there is no
  * platform-wide constant, because a large book legitimately supports a large model and
@@ -117,7 +117,7 @@ const rows = computed(() => [
       </tbody>
     </table>
     <p class="mt-1 text-xs text-slate-500">
-      Complexity is a diagnostic, not a verdict (FR-MODEL-81). Whether this model is
+      Complexity is a diagnostic, not a verdict (FR-185). Whether this model is
       overfitted is a judgement for the Approver with these numbers in front of them.
     </p>
   </div>

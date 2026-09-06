@@ -5,7 +5,7 @@
 * **R1** — a version that is not `validated` cannot be fitted on, refused before a Job
   exists rather than inside one.
 * **R2** — a fitted Model is immutable; a second fit of the same model is refused.
-* **FR-MODEL-66** — the same specification does not fit twice; the existing model is
+* **FR-204** — the same specification does not fit twice; the existing model is
   returned instead.
 
 The fit itself runs through `execute_job`, so what is exercised is the handler a worker
@@ -146,7 +146,7 @@ async def _actuary(database: Database, workspace_id) -> Principal:
 
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
     async with database.unit_of_work() as session:
-        # The workspace row must exist for the membership FK (FR-PLAT-62).
+        # The workspace row must exist for the membership FK (FR-395).
         from app.platform import workspaces
 
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
@@ -185,7 +185,7 @@ async def _actuary(database: Database, workspace_id) -> Principal:
 
 
 async def _dataset(database: Database, blob_store, workspace_id, actor: Principal) -> UUID:
-    """A dataset **with a rule set**: `01` FR-DATA-16 refuses to validate without one, and
+    """A dataset **with a rule set**: `01` FR-45 refuses to validate without one, and
     a version that cannot be validated cannot be fitted on (`02` R1)."""
     return await _seed_dataset_and_rules(database, blob_store, workspace_id, actor)
 
@@ -287,7 +287,7 @@ async def _validated_version(
     return version_id
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-110")
 async def test_a_model_fits_through_the_job_and_stores_its_coefficients(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -333,13 +333,13 @@ async def test_a_model_fits_through_the_job_and_stores_its_coefficients(
     # R5: the estimate arrives with its uncertainty or it does not arrive.
     assert urban.std_error > 0
     assert urban.ci_95[0] < urban.estimate < urban.ci_95[1]
-    # FR-MODEL-21: the relativity table names its base level.
+    # FR-113: the relativity table names its base level.
     base = next(level for level in model.fit_result.relativities["area"] if level.is_base)
     assert base.level == "rural"
     assert base.relativity == 1.0
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-110")
 async def test_an_unvalidated_version_cannot_be_fitted_on(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -369,11 +369,11 @@ async def test_an_unvalidated_version_cannot_be_fitted_on(
         ).scalars().all() == []
 
 
-@pytest.mark.req("FR-MODEL-66")
+@pytest.mark.req("FR-204")
 async def test_the_same_specification_does_not_fit_twice(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-66: the existing model is returned rather than a second one created.
+    """FR-204: the existing model is returned rather than a second one created.
 
     Not an error — the caller asked for a model with this specification and it exists.
     Fitting again would burn a worker to produce the same numbers under a new id, and
@@ -418,7 +418,7 @@ async def test_the_same_specification_does_not_fit_twice(
     assert other.id != first_id
 
 
-@pytest.mark.req("FR-MODEL-65")
+@pytest.mark.req("FR-203")
 async def test_a_fitted_model_cannot_be_refitted(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -475,7 +475,7 @@ async def test_a_fitted_model_cannot_be_refitted(
 # -- What three independent audits found the first version could not catch ----------------
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-110")
 async def test_a_version_that_loses_its_standing_before_the_job_runs_is_refused(
     database: Database, blob_store, workspace_id
 ) -> None:
@@ -527,11 +527,11 @@ async def test_a_version_that_loses_its_standing_before_the_job_runs_is_refused(
     assert model.status is ModelStatus.DRAFT
 
 
-@pytest.mark.req("FR-MODEL-5")
+@pytest.mark.req("FR-90")
 async def test_a_prohibited_factor_is_refused_at_the_attempt(
     database: Database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-5, with its own error code, before anything is queued.
+    """FR-90, with its own error code, before anything is queued.
 
     It was enforced inside `pricing-core` at fit time — after a model row, a version
     number, a `spec_hash` slot, an audit event saying `model.reserved` and a queued Job all
@@ -571,11 +571,11 @@ async def test_a_prohibited_factor_is_refused_at_the_attempt(
     assert rows == [], "no model row, no version number, no spec_hash slot"
 
 
-@pytest.mark.req("FR-MODEL-2")
+@pytest.mark.req("FR-87")
 async def test_a_factor_from_another_dataset_is_refused(
     database: Database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-2 defines a Factor against a **Dataset**.
+    """FR-87 defines a Factor against a **Dataset**.
 
     Nothing compared the factor's dataset to the version being fitted, so a factor declared
     on dataset A fitted a version of dataset B whenever the column names coincided — which
@@ -596,11 +596,11 @@ async def test_a_factor_from_another_dataset_is_refused(
     assert refused.value.code == "FACTOR_RESOLUTION_FAILED"
 
 
-@pytest.mark.req("FR-MODEL-66")
+@pytest.mark.req("FR-204")
 async def test_a_reservation_whose_fit_failed_can_be_retried(
     database: Database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-66 deduplicates *fitted* models, not reservations.
+    """FR-204 deduplicates *fitted* models, not reservations.
 
     A fit that failed — an unreachable blob, a worker that died — left the row behind, and
     every resubmission of the identical spec was told "your model exists" for a model that
@@ -627,11 +627,11 @@ async def test_a_reservation_whose_fit_failed_can_be_retried(
         again, should_fit_again = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor, spec=spec
         )
-    assert again.id == first_id, "still one row — FR-MODEL-66 holds"
+    assert again.id == first_id, "still one row — FR-204 holds"
     assert should_fit_again is True, "and it still needs a Job, because it has no numbers"
 
 
-@pytest.mark.req("FR-MODEL-65")
+@pytest.mark.req("FR-203")
 async def test_a_fitted_model_cannot_be_rewritten_in_the_database(
     database: Database, blob_store, workspace_id
 ) -> None:
@@ -686,12 +686,12 @@ async def test_a_fitted_model_cannot_be_rewritten_in_the_database(
         )
 
 
-@pytest.mark.req("FR-MODEL-20")
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-112")
+@pytest.mark.req("FR-182")
 async def test_a_cv_selected_model_fits_and_records_its_fold_dispersion(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-20/FR-MODEL-53 end to end: `select_by="cv"` reaches `glum` through the
+    """FR-112/FR-182 end to end: `select_by="cv"` reaches `glum` through the
     handler a worker actually runs, and the selected alpha's per-fold deviance — not only
     its mean — lands on the persisted `Diagnostics`.
     """
@@ -742,16 +742,16 @@ async def test_a_cv_selected_model_fits_and_records_its_fold_dispersion(
     assert {p.alpha for p in cv.path} == {0.0, 0.01, 0.1}
     assert cv.selected_alpha in {0.0, 0.01, 0.1}
     assert {m.fold for m in cv.fold_metrics} == {0, 1, 2}
-    # FR-MODEL-53: dispersion, not only the mean — every fold at the selected alpha
+    # FR-182: dispersion, not only the mean — every fold at the selected alpha
     # carries its own score, and they are not all forced equal.
     assert len({round(m.score, 12) for m in cv.fold_metrics}) > 1
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 async def test_an_estimated_power_model_fits_and_persists_the_profile(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-22 end to end: a spec with a `tweedie` block fits through the handler a
+    """FR-114 end to end: a spec with a `tweedie` block fits through the handler a
     worker actually runs — no new endpoint, no handler change — and the persisted fit
     result carries the estimate, its 95% profile-likelihood interval and the curve
     itself, readable through the same `to_model` path `GET /api/v1/models/{id}`
@@ -814,7 +814,7 @@ async def test_an_estimated_power_model_fits_and_persists_the_profile(
     assert diagnostics.glm is not None
 
 
-@pytest.mark.req("FR-MODEL-20")
+@pytest.mark.req("FR-112")
 async def test_a_fixed_alpha_model_still_records_no_cross_validation(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -854,17 +854,17 @@ async def test_a_fixed_alpha_model_still_records_no_cross_validation(
     assert diagnostics.cross_validation is None
 
 
-# -- OQ-PLAT-7: a handler's own error code has to survive the worker ----------------------
+# -- OQ-646: a handler's own error code has to survive the worker ----------------------
 #
 # `execute_job`'s generic `except Exception` stored `JOB_HANDLER_FAILED` for every
 # unexpected exception, `PlatformError` included, and `PlatformError.__init__` calls
 # `super().__init__(detail or title)` — so `str(exc)` is the prose and the `.code` was
-# dropped on the floor. The consequence is the one FR-PLAT-11 exists to prevent: a named
+# dropped on the floor. The consequence is the one FR-403 exists to prevent: a named
 # refusal reached the caller indistinguishable from a handler crash, and no test going
-# through the real dispatch path could assert a specific code. Two W5 refusal tests had to
+# through the real dispatch path could assert a specific code. Two WK-661 refusal tests had to
 # call the handler function directly to get around it.
 #
-# Marked **FR-PLAT-11** rather than an `FR-MODEL` id: the requirement is `07` §3's — "Failed
+# Marked **FR-403** rather than an `FR-MODEL` id: the requirement is `07` §3's — "Failed
 # Jobs record a typed error code, a human message, and — where the failure is deterministic
 # — the field-level cause" — and what is being fixed is the platform's job machinery, not
 # the modelling module. `backend/tests/test_worker.py`'s
@@ -872,7 +872,7 @@ async def test_a_fixed_alpha_model_still_records_no_cross_validation(
 # of the same behaviour.
 
 
-@pytest.mark.req("FR-PLAT-11")
+@pytest.mark.req("FR-403")
 async def test_a_handler_raised_platform_error_keeps_its_own_code(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -915,7 +915,7 @@ async def test_a_handler_raised_platform_error_keeps_its_own_code(
     assert "PlatformError" not in row.error["message"]
 
 
-@pytest.mark.req("FR-PLAT-11")
+@pytest.mark.req("FR-403")
 async def test_an_unexpected_exception_still_fails_as_job_handler_failed(
     database: Database, blob_store: BlobStore, workspace_id, monkeypatch
 ) -> None:
@@ -956,15 +956,15 @@ async def test_an_unexpected_exception_still_fails_as_job_handler_failed(
     assert row.error["retryable"] is False
 
 
-@pytest.mark.req("FR-PLAT-11")
+@pytest.mark.req("FR-403")
 async def test_a_platform_error_is_stored_as_not_retryable(
     database: Database, blob_store: BlobStore, workspace_id, monkeypatch
 ) -> None:
-    """OQ-PLAT-7 changed the stored *code*, and nothing about retry.
+    """OQ-646 changed the stored *code*, and nothing about retry.
 
     `RATE_LIMITED` is deliberate: its 429 is the one status an HTTP client is taught to
     retry, so a clause that inferred retryability from `PlatformError.status_code` would
-    show up here and nowhere else. FR-PLAT-11 retries infrastructure failures, and a
+    show up here and nowhere else. FR-403 retries infrastructure failures, and a
     handler that refused deterministically is not one — re-running it burns a worker to
     produce the same refusal.
     """

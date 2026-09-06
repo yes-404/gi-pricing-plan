@@ -1,4 +1,4 @@
-"""The demo entrance's guide (FR-PLAT-53, FR-PLAT-54).
+"""The demo entrance's guide (FR-408, FR-409).
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -44,7 +44,7 @@ def demo_enabled(request: Request) -> None:
             "The demo entrance is not enabled",
             404,
             "The demo entrance exists only where development identity does "
-            "(FR-PLAT-53), and `dev_auth_enabled` is false here.",
+            "(FR-408), and `dev_auth_enabled` is false here.",
         )
 
 
@@ -55,7 +55,7 @@ AnyCaller = Annotated[Caller, Depends(require_caller)]
 
 @router.get(
     "/guide",
-    summary="What is testable today, derived from the repository (FR-PLAT-54)",
+    summary="What is testable today, derived from the repository (FR-409)",
     responses=problems(401, 403, 404),
 )
 async def get_guide(caller: AnyCaller) -> DemoGuide:

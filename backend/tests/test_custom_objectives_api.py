@@ -1,4 +1,4 @@
-"""The eight Custom Objective routes over HTTP (`02` §5.1, FR-MODEL-95, FR-MODEL-127).
+"""The eight Custom Objective routes over HTTP (`02` §5.1, FR-166, FR-167).
 
 `test_custom_objectives.py` covers the platform layer. This file covers the routes: who may
 call each one, what comes back, the workspace boundary, and the conflicts a route can report
@@ -12,7 +12,7 @@ green.
 the raising sites rather than trusting the plan, and recorded in `02` §5.1 with this slice:
 
 - **There was no list route** — seven routes and none of them listed, which is the
-  observation FR-MODEL-127 was raised from and which `GET /custom-objectives` cured on
+  observation FR-167 was raised from and which `GET /custom-objectives` cured on
   2026-08-23 (W32-8). There are now eight, and the library screen `02` §5.3 specifies has an
   endpoint to draw from. The workspace boundary is still proved on `GET /{id}` *and* on
   `GET /{id}/usage` — and now on the list too, which is the one that would leak a whole
@@ -262,7 +262,7 @@ def _require_an_unverifiable_evidence_kind(workspace_id: UUID) -> None:
 # -- The permits ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_creating_a_template_objective_returns_201_as_a_draft(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -290,11 +290,11 @@ def test_creating_a_template_objective_returns_201_as_a_draft(
     assert body["applicability"]["responses"]
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_an_objective_reads_back_with_its_declared_kind(
     client: TestClient, author: dict[str, str], reader: dict[str, str]
 ) -> None:
-    """The get route, which `02` §5.1 gained with FR-MODEL-95.
+    """The get route, which `02` §5.1 gained with FR-166.
 
     Authored by the `analyst` and read by the **`auditor`**, which holds `model:read` and
     not `model:fit`. Reading it back as the author would prove only that *some* authorised
@@ -312,11 +312,11 @@ def test_an_objective_reads_back_with_its_declared_kind(
     assert body["status"] == "draft"
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_usage_of_a_fresh_objective_is_empty_rather_than_missing(
     client: TestClient, author: dict[str, str], reader: dict[str, str]
 ) -> None:
-    """FR-MODEL-47's blast radius, empty because nothing was fitted under it.
+    """FR-164's blast radius, empty because nothing was fitted under it.
 
     The permit that makes the cross-workspace `usage` refusal below mean something: without
     it a 404 there could equally be a route that answers 404 to everyone. Read by the
@@ -331,7 +331,7 @@ def test_usage_of_a_fresh_objective_is_empty_rather_than_missing(
     assert response.json()["models"] == []
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_certifying_a_draft_returns_202_and_points_at_the_job(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -345,7 +345,7 @@ def test_certifying_a_draft_returns_202_and_points_at_the_job(
     assert response.json()["kind"] == "objective.certify"
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_certify_stores_the_resolved_sampling_grid_not_the_absent_request(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -368,7 +368,7 @@ def test_certify_stores_the_resolved_sampling_grid_not_the_absent_request(
     assert response.json()["parameters"]["sampling"] == expected.model_dump(mode="json")
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_a_certified_objective_submits_into_review(
     client: TestClient, author: dict[str, str], submitter: dict[str, str]
 ) -> None:
@@ -393,7 +393,7 @@ def test_a_certified_objective_submits_into_review(
 # -- The workspace boundary ------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_an_objective_in_another_workspace_is_not_found(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -411,7 +411,7 @@ def test_an_objective_in_another_workspace_is_not_found(
     assert response.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_usage_of_an_objective_in_another_workspace_is_not_found(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -432,7 +432,7 @@ def test_usage_of_an_objective_in_another_workspace_is_not_found(
 # -- The permission refusals -----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_creating_an_objective_without_model_fit_is_refused(
     client: TestClient, reader: dict[str, str]
 ) -> None:
@@ -447,7 +447,7 @@ def test_creating_an_objective_without_model_fit_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_reading_an_objective_without_model_read_is_refused(
     client: TestClient, author: dict[str, str], stranger: dict[str, str]
 ) -> None:
@@ -459,7 +459,7 @@ def test_reading_an_objective_without_model_read_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_certifying_without_model_fit_is_refused(
     client: TestClient, author: dict[str, str], reader: dict[str, str]
 ) -> None:
@@ -477,7 +477,7 @@ def test_certifying_without_model_fit_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_submitting_without_model_submit_is_refused(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -503,7 +503,7 @@ def test_submitting_without_model_submit_is_refused(
 # -- The conflicts ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_certifying_an_objective_under_review_conflicts(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -523,12 +523,12 @@ def test_certifying_an_objective_under_review_conflicts(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_submitting_an_objective_twice_conflicts(
     client: TestClient, author: dict[str, str], submitter: dict[str, str]
 ) -> None:
     """The second submission meets a row already in `review`, and `review` is not a state
-    FR-MODEL-46 reaches `review` from.
+    FR-163 reaches `review` from.
 
     Driven through the route twice rather than seeded into `review`, so what is observed is
     the transition the first call performed.
@@ -547,7 +547,7 @@ def test_submitting_an_objective_twice_conflicts(
     assert second.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_submitting_without_the_required_evidence_is_refused(
     client: TestClient, author: dict[str, str], submitter: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -575,7 +575,7 @@ def test_submitting_without_the_required_evidence_is_refused(
 # -- The expression kind, refused ------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-150")
 def test_creating_an_expression_objective_is_refused_by_name(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -584,7 +584,7 @@ def test_creating_an_expression_objective_is_refused_by_name(
     The permit is `test_creating_a_template_objective_returns_201_as_a_draft` above: the same
     caller, the same route, the same body but for `kind` — so what is observed is the kind
     and not some other property of the request. Phase 1 ships template objectives only
-    (FR-MODEL-75), and the difference between "no such concept" and "not until Phase 2" is
+    (FR-150), and the difference between "no such concept" and "not until Phase 2" is
     exactly what a 404 here would destroy.
     """
     response = client.post(
@@ -599,7 +599,7 @@ def test_creating_an_expression_objective_is_refused_by_name(
 # -- The library list ------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_library_lists_the_workspace_objectives(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -611,13 +611,13 @@ def test_the_library_lists_the_workspace_objectives(
     assert {first["id"], second["id"]} <= ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_slug_filter_is_an_exact_match(
     client: TestClient, author: dict[str, str]
 ) -> None:
     """**Exact**, not a prefix.
 
-    FR-MODEL-127 makes this filter the thing that resolves §5.3's `slug@version` addresses
+    FR-167 makes this filter the thing that resolves §5.3's `slug@version` addresses
     against UUID-only detail routes. A prefix match would resolve `motor-ad` to `motor-ad`
     and `motor-ad-severity` alike, which is a wrong artifact rather than a wide result.
     """
@@ -630,7 +630,7 @@ def test_the_slug_filter_is_an_exact_match(
     assert [row["id"] for row in response.json()["items"]] == [target["id"]]
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_status_filter_selects_one_lifecycle_state(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -644,7 +644,7 @@ def test_the_status_filter_selects_one_lifecycle_state(
     assert draft["id"] not in ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_each_row_carries_its_usage_count(
     client: TestClient, author: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -667,13 +667,13 @@ def test_each_row_carries_its_usage_count(
     assert detail.json()["usage_count"] is None
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_row_count_agrees_with_the_detail_blast_radius(
     client: TestClient, author: dict[str, str], workspace_id: UUID
 ) -> None:
     """The row and `GET /{id}/usage` answer the same question about the same artifact.
 
-    FR-MODEL-127's count is the library's summary of FR-MODEL-47's blast radius. Were the
+    FR-167's count is the library's summary of FR-164's blast radius. Were the
     aggregate to filter on model status where `usage` does not, the row would quietly
     disagree with the page an actuary opens from it — which is worse than either absent.
     """
@@ -692,7 +692,7 @@ def test_the_row_count_agrees_with_the_detail_blast_radius(
     assert listed.json()["items"][0]["usage_count"] == len(detail.json()["models"]) == 3
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_library_stops_at_the_workspace_boundary(
     client: TestClient, author: dict[str, str]
 ) -> None:
@@ -706,7 +706,7 @@ def test_the_library_stops_at_the_workspace_boundary(
     assert str(elsewhere) not in ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_listing_without_model_read_is_refused(
     client: TestClient, author: dict[str, str], stranger: dict[str, str]
 ) -> None:
@@ -721,7 +721,7 @@ def test_listing_without_model_read_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_page_is_cursor_paginated(
     client: TestClient, author: dict[str, str]
 ) -> None:

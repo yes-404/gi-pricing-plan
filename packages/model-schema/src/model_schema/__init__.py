@@ -1,4 +1,4 @@
-"""Single source of truth for every shape crossing a module boundary (ADR-0002).
+"""Single source of truth for every shape crossing a module boundary (ADR-704).
 
 Depends on Pydantic and nothing else. No SQLAlchemy, no FastAPI, no Polars — the
 `.importlinter` contract enforces it, because a convenience import here would quietly make

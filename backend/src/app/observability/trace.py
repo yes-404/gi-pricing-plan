@@ -1,4 +1,4 @@
-"""Trace identity, propagated from the edge inward (R4, FR-PLAT-38/39/42).
+"""Trace identity, propagated from the edge inward (R4, FR-441/442/445).
 
 > **R4** — Every request carries a `trace_id` from edge to worker to `pricing-core`, and
 > that id appears in every log line, error response, and audit event.

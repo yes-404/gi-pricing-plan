@@ -53,7 +53,7 @@ describe("the auth session", () => {
       response_type: "code",
       automaticSilentRenew: true,
     });
-    // FR-PLAT-2: the state store is the adapter over InMemoryWebStorage — never
+    // FR-388: the state store is the adapter over InMemoryWebStorage — never
     // localStorage. `WebStorageStateStore`'s first-call argument carries the store.
     expect(settings.userStore).toBeInstanceOf(WebStorageStateStore);
     const storeOpts = vi.mocked(WebStorageStateStore).mock.calls[0]![0];
@@ -77,7 +77,7 @@ describe("the auth session", () => {
     onExpiring();
     expect(managerStub.signinSilent).toHaveBeenCalled();
     onRenewError();
-    // FR-PLAT-55's sentence: failure to renew logs the session out rather than
+    // FR-393's sentence: failure to renew logs the session out rather than
     // retrying indefinitely — an expired session that looks logged in is worse.
     expect(managerStub.signoutRedirect).toHaveBeenCalled();
   });

@@ -1,4 +1,4 @@
-"""The audit log API (FR-GOV-22, FR-GOV-23, FR-GOV-24, FR-GOV-5)."""
+"""The audit log API (FR-370, FR-371, FR-372, FR-346)."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ async def _events(database: Database, workspace_id, principal: Principal, n: int
             )
 
 
-@pytest.mark.req("FR-GOV-23")
+@pytest.mark.req("FR-371")
 async def test_the_log_is_queryable(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -75,7 +75,7 @@ async def test_the_log_is_queryable(
     assert [i["sequence"] for i in body["items"]] == [3, 2, 1]
 
 
-@pytest.mark.req("FR-GOV-23")
+@pytest.mark.req("FR-371")
 async def test_filters_narrow_by_action_entity_actor_and_text(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -100,7 +100,7 @@ async def test_filters_narrow_by_action_entity_actor_and_text(
     assert len(by_text["items"]) == 1
 
 
-@pytest.mark.req("FR-GOV-23")
+@pytest.mark.req("FR-371")
 async def test_the_query_is_cursor_paginated(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -117,7 +117,7 @@ async def test_the_query_is_cursor_paginated(
     assert seen == [5, 4, 3, 2, 1]
 
 
-@pytest.mark.req("FR-OVR-13")
+@pytest.mark.req("FR-16")
 async def test_another_workspaces_events_are_invisible(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -127,7 +127,7 @@ async def test_another_workspaces_events_are_invisible(
     assert body["items"] == []
 
 
-@pytest.mark.req("FR-GOV-24")
+@pytest.mark.req("FR-372")
 async def test_verify_reports_an_intact_chain(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -138,7 +138,7 @@ async def test_verify_reports_an_intact_chain(
     assert body["broken_at_sequence"] is None
 
 
-@pytest.mark.req("FR-GOV-24")
+@pytest.mark.req("FR-372")
 async def test_verify_reports_a_break_rather_than_failing(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -166,7 +166,7 @@ async def test_verify_reports_a_break_rather_than_failing(
     assert "does not match" in body["reason"]
 
 
-@pytest.mark.req("FR-GOV-23")
+@pytest.mark.req("FR-371")
 async def test_csv_export_carries_the_hashes(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -181,7 +181,7 @@ async def test_csv_export_carries_the_hashes(
     assert "sha256:" in lines[1]
 
 
-@pytest.mark.req("FR-GOV-23")
+@pytest.mark.req("FR-371")
 async def test_json_export_is_line_delimited(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -193,11 +193,11 @@ async def test_json_export_is_line_delimited(
     assert lines[0]["event_hash"].startswith("sha256:")
 
 
-@pytest.mark.req("FR-GOV-5")
+@pytest.mark.req("FR-346")
 async def test_an_auditor_can_read_the_log_but_the_api_offers_no_write(
     client: TestClient, auditor_headers
 ) -> None:
-    """FR-GOV-22: events are emitted by the transactions that cause them, never posted.
+    """FR-370: events are emitted by the transactions that cause them, never posted.
 
     An endpoint that could append would be a way to write history without doing anything.
     """
@@ -207,7 +207,7 @@ async def test_an_auditor_can_read_the_log_but_the_api_offers_no_write(
         assert response.status_code in {404, 405}, method
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_reading_the_audit_log_requires_the_permission(
     client: TestClient, workspace_id, principal, membership
 ) -> None:
@@ -228,7 +228,7 @@ async def test_reading_the_audit_log_requires_the_permission(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-GOV-5")
+@pytest.mark.req("FR-346")
 async def test_an_analyst_cannot_read_the_audit_log(
     client: TestClient, workspace_id, grant
 ) -> None:
@@ -245,7 +245,7 @@ async def test_an_analyst_cannot_read_the_audit_log(
     assert response.status_code == 403
 
 
-@pytest.mark.req("FR-GOV-21")
+@pytest.mark.req("FR-369")
 async def test_an_event_carries_everything_the_requirement_lists(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:

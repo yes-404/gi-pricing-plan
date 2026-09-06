@@ -84,7 +84,7 @@ async def _version(database: Database, workspace_id, actor: Principal) -> UUID:
         return version.id
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 @pytest.mark.parametrize(
     ("outcomes", "expected"),
     [
@@ -107,11 +107,11 @@ def test_overall_outcome_follows_the_rule_results_alone(
     assert validation.overall_outcome(report) is expected
 
 
-@pytest.mark.req("FR-DATA-15")
+@pytest.mark.req("FR-42")
 async def test_a_stored_report_reads_back_byte_identical(
     database: Database, workspace_id
 ) -> None:
-    """NFR-DATA-5 requires byte-identical bodies; that is only checkable if storage is
+    """NFR-469 requires byte-identical bodies; that is only checkable if storage is
     lossless. A report reshaped on the way in or out is not the evidence that was written.
     """
     actor = await _principal_with_role(database, workspace_id, "analyst")
@@ -129,11 +129,11 @@ async def test_a_stored_report_reads_back_byte_identical(
     assert restored.model_dump_json() == report.model_dump_json()
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 async def test_an_analyst_cannot_acknowledge_a_warning(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-17 puts the acknowledgement with an actuary. An analyst who could
+    """FR-46 puts the acknowledgement with an actuary. An analyst who could
     acknowledge could clear the way to `validated` alone, which is the whole control."""
     analyst = await _principal_with_role(database, workspace_id, "analyst")
     version_id = await _version(database, workspace_id, analyst)
@@ -153,7 +153,7 @@ async def test_an_analyst_cannot_acknowledge_a_warning(
     assert excinfo.value.code == "ACKNOWLEDGE_FORBIDDEN_ROLE"
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 async def test_a_failing_rule_cannot_be_acknowledged(
     database: Database, workspace_id
 ) -> None:
@@ -177,11 +177,11 @@ async def test_a_failing_rule_cannot_be_acknowledged(
     assert excinfo.value.status_code == 409
 
 
-@pytest.mark.req("FR-DATA-18")
+@pytest.mark.req("FR-47")
 async def test_one_acknowledgement_per_report_and_rule(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-18 scopes an acknowledgement to `(version, rule, report)`. The unique
+    """FR-47 scopes an acknowledgement to `(version, rule, report)`. The unique
     constraint is what makes that a fact rather than an intention."""
     actuary = await _principal_with_role(database, workspace_id, "pricing_actuary")
     version_id = await _version(database, workspace_id, actuary)
@@ -206,11 +206,11 @@ async def test_one_acknowledgement_per_report_and_rule(
     assert excinfo.value.status_code == 409
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 async def test_promotion_refuses_until_every_warning_is_acknowledged(
     database: Database, workspace_id
 ) -> None:
-    """The gate, end to end (`01` §1.3, FR-DATA-17): two warnings, one acknowledged, and
+    """The gate, end to end (`01` §1.3, FR-46): two warnings, one acknowledged, and
     the version stays out of `validated` until the second is too."""
     actuary = await _principal_with_role(database, workspace_id, "pricing_actuary")
     version_id = await _version(database, workspace_id, actuary)
@@ -249,7 +249,7 @@ async def test_promotion_refuses_until_every_warning_is_acknowledged(
     assert promoted.validation_report_id == report.id
 
 
-@pytest.mark.req("FR-DATA-15")
+@pytest.mark.req("FR-42")
 async def test_a_report_cannot_promote_a_version_it_did_not_validate(
     database: Database, workspace_id
 ) -> None:
@@ -272,11 +272,11 @@ async def test_a_report_cannot_promote_a_version_it_did_not_validate(
     assert excinfo.value.status_code == 409
 
 
-@pytest.mark.req("NFR-DATA-8")
+@pytest.mark.req("NFR-472")
 async def test_an_acknowledgement_is_audited_with_its_justification(
     database: Database, workspace_id
 ) -> None:
-    """NFR-DATA-8: acknowledgements emit an audit event with before/after. The
+    """NFR-472: acknowledgements emit an audit event with before/after. The
     justification is the point — an unexplained decision to model on warned data is what
     the audit exists to prevent."""
     actuary = await _principal_with_role(database, workspace_id, "pricing_actuary")
@@ -307,12 +307,12 @@ async def test_an_acknowledgement_is_audited_with_its_justification(
     assert event.justification == "seasonal, confirmed against 2023"
 
 
-@pytest.mark.req("FR-DATA-27")
+@pytest.mark.req("FR-62")
 async def test_a_one_way_is_read_from_storage_and_a_missing_one_is_a_refusal(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-27: one-ways are read, never computed on request. A fallback that computed
-    the missing column would meet NFR-DATA-4 in testing and miss it in production, so a
+    """FR-62: one-ways are read, never computed on request. A fallback that computed
+    the missing column would meet NFR-468 in testing and miss it in production, so a
     column with no stored one-way is a 404 that names the ones there are."""
     import polars as pl
 
@@ -353,7 +353,7 @@ async def test_a_one_way_is_read_from_storage_and_a_missing_one_is_a_refusal(
     assert "vehicle_group" in excinfo.value.detail
 
 
-@pytest.mark.req("FR-DATA-25")
+@pytest.mark.req("FR-60")
 async def test_storing_a_profile_points_the_version_at_it(
     database: Database, workspace_id
 ) -> None:
@@ -379,7 +379,7 @@ async def test_storing_a_profile_points_the_version_at_it(
     assert stored.id == profile.id
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 async def test_report_summary_columns_match_the_body(
     database: Database, workspace_id
 ) -> None:
@@ -406,7 +406,7 @@ async def test_report_summary_columns_match_the_body(
     assert row.overall == OverallOutcome.FAIL.value
 
 
-@pytest.mark.req("FR-DATA-18")
+@pytest.mark.req("FR-47")
 async def test_the_presented_report_says_which_warning_was_acknowledged(
     database: Database, workspace_id
 ) -> None:
@@ -417,7 +417,7 @@ async def test_the_presented_report_says_which_warning_was_acknowledged(
     the rule it belongs to, with who and why.
 
     The **stored** artifact is untouched — `load_report` still returns it byte for byte,
-    which NFR-DATA-5 depends on. This is the read edge, where an acknowledgement is a fact
+    which NFR-469 depends on. This is the read edge, where an acknowledgement is a fact
     *about* the report rather than inside it.
     """
     actuary = await _principal_with_role(database, workspace_id, "pricing_actuary")
@@ -452,11 +452,11 @@ async def test_the_presented_report_says_which_warning_was_acknowledged(
     # The one still needing attention is distinguishable from the one that had it.
     assert by_rule[first.rule_id].acknowledgement is None
 
-    # And the artifact itself is unchanged, which NFR-DATA-5 compares byte for byte.
+    # And the artifact itself is unchanged, which NFR-469 compares byte for byte.
     assert all(result.acknowledgement is None for result in stored.results)
 
 
-@pytest.mark.req("FR-DATA-22")
+@pytest.mark.req("FR-51")
 async def test_replacing_a_rule_set_points_the_dataset_at_it(
     database: Database, workspace_id
 ) -> None:

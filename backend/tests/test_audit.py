@@ -1,4 +1,4 @@
-"""`06` R2 and FR-GOV-20..24 — the invariants that cannot be retrofitted.
+"""`06` R2 and FR-368, FR-369, FR-370, FR-371, FR-372 — the invariants that cannot be retrofitted.
 
 Against a real PostgreSQL. Every claim here is about what the *database* refuses, so a
 mock would test the wrong thing.
@@ -39,7 +39,7 @@ async def _record(session, workspace_id, principal, action="job.submitted", **kw
     )
 
 
-@pytest.mark.req("FR-GOV-20")
+@pytest.mark.req("FR-368")
 async def test_event_is_written_in_the_callers_transaction(
     database: Database, workspace_id, principal
 ) -> None:
@@ -56,8 +56,8 @@ async def test_event_is_written_in_the_callers_transaction(
     assert stored[0].event_hash == event.event_hash
 
 
-@pytest.mark.req("FR-GOV-20")
-@pytest.mark.req("NFR-GOV-2")
+@pytest.mark.req("FR-368")
+@pytest.mark.req("NFR-519")
 async def test_rollback_discards_the_change_and_its_audit_event_together(
     database: Database, workspace_id, principal
 ) -> None:
@@ -97,7 +97,7 @@ async def test_rollback_discards_the_change_and_its_audit_event_together(
     assert events == []
 
 
-@pytest.mark.req("FR-GOV-20")
+@pytest.mark.req("FR-368")
 async def test_recording_without_a_transaction_is_refused(
     database: Database, workspace_id, principal
 ) -> None:
@@ -107,7 +107,7 @@ async def test_recording_without_a_transaction_is_refused(
             await _record(session, workspace_id, principal)
 
 
-@pytest.mark.req("FR-GOV-24")
+@pytest.mark.req("FR-372")
 async def test_chain_links_each_event_to_its_predecessor(
     database: Database, workspace_id, principal
 ) -> None:
@@ -124,7 +124,7 @@ async def test_chain_links_each_event_to_its_predecessor(
         assert await audit.verify_chain(session, workspace_id) == 3
 
 
-@pytest.mark.req("FR-GOV-24")
+@pytest.mark.req("FR-372")
 async def test_chains_are_independent_per_workspace(
     database: Database, principal
 ) -> None:
@@ -141,7 +141,7 @@ async def test_chains_are_independent_per_workspace(
         assert await audit.verify_chain(session, b) == 1
 
 
-@pytest.mark.req("FR-GOV-24")
+@pytest.mark.req("FR-372")
 async def test_an_event_verifies_against_its_own_content(
     database: Database, workspace_id, principal
 ) -> None:
@@ -151,11 +151,11 @@ async def test_an_event_verifies_against_its_own_content(
     assert event.recompute_hash() == event.event_hash
 
 
-@pytest.mark.req("FR-GOV-24")
+@pytest.mark.req("FR-372")
 async def test_tampering_below_the_application_is_detected(
     database: Database, workspace_id, principal
 ) -> None:
-    """The chain's purpose (FR-GOV-24): detect what privileges and triggers cannot prevent.
+    """The chain's purpose (FR-372): detect what privileges and triggers cannot prevent.
 
     `session_replication_role = replica` disables triggers, which is exactly how a
     privileged operator would edit the log. The hash chain is the layer that survives it.
@@ -180,7 +180,7 @@ async def test_tampering_below_the_application_is_detected(
     assert "content does not match stored hash" in exc.value.reason
 
 
-@pytest.mark.req("FR-GOV-24")
+@pytest.mark.req("FR-372")
 async def test_removing_a_middle_event_is_detected(
     database: Database, workspace_id, principal
 ) -> None:
@@ -203,7 +203,7 @@ async def test_removing_a_middle_event_is_detected(
     assert exc.value.sequence == 3
 
 
-@pytest.mark.req("FR-GOV-22")
+@pytest.mark.req("FR-370")
 @pytest.mark.parametrize(
     "statement", ["UPDATE audit_events SET action = 'x'", "DELETE FROM audit_events"]
 )
@@ -222,7 +222,7 @@ async def test_update_and_delete_are_rejected_by_the_database(
     assert "append-only" in str(exc.value)
 
 
-@pytest.mark.req("FR-GOV-22")
+@pytest.mark.req("FR-370")
 async def test_the_session_teardown_leaves_the_append_only_guard_in_force(
     database: Database,
 ) -> None:
@@ -259,7 +259,7 @@ async def test_the_session_teardown_leaves_the_append_only_guard_in_force(
         assert "append-only" in str(exc.value)
 
 
-@pytest.mark.req("FR-GOV-22")
+@pytest.mark.req("FR-370")
 async def test_truncate_is_rejected(database: Database, workspace_id, principal) -> None:
     """Row triggers do not fire on TRUNCATE — without a statement trigger this wipes the log."""
     async with database.unit_of_work() as session:
@@ -279,9 +279,9 @@ async def test_truncate_is_rejected(database: Database, workspace_id, principal)
     assert len(surviving) == 1
 
 
-@pytest.mark.req("FR-GOV-22")
+@pytest.mark.req("FR-370")
 async def test_application_role_holds_insert_and_select_only(database: Database) -> None:
-    """FR-GOV-22 literally: the role the application connects as cannot UPDATE or DELETE.
+    """FR-370 literally: the role the application connects as cannot UPDATE or DELETE.
 
     Checked as granted privilege rather than by connecting as `gip_app` — the role is
     NOLOGIN by design, because provisioning a credential in a migration is what R3 forbids.
@@ -300,7 +300,7 @@ async def test_application_role_holds_insert_and_select_only(database: Database)
     assert granted == {"SELECT", "INSERT"}
 
 
-@pytest.mark.req("FR-GOV-21")
+@pytest.mark.req("FR-369")
 async def test_event_records_actor_action_entity_and_trace(
     database: Database, workspace_id, principal
 ) -> None:
@@ -329,7 +329,7 @@ async def test_event_records_actor_action_entity_and_trace(
     assert event.at.tzinfo is not None
 
 
-@pytest.mark.req("FR-GOV-24")
+@pytest.mark.req("FR-372")
 async def test_hash_is_reproducible_from_an_export(
     database: Database, workspace_id, principal
 ) -> None:
@@ -350,7 +350,7 @@ async def test_hash_is_reproducible_from_an_export(
     assert compute_event_hash(reparsed, prev_event_hash=prev) == stored_hash == event.event_hash
 
 
-@pytest.mark.req("FR-GOV-21")
+@pytest.mark.req("FR-369")
 async def test_system_principal_needs_no_id_but_a_user_does() -> None:
     Principal(kind=ActorKind.SYSTEM)
     with pytest.raises(ValueError, match="must carry an id"):

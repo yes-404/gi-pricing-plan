@@ -22,7 +22,7 @@ export function listVersions(slug: string): Promise<ReferenceTableVersion[]> {
  * Rows of a **pinned** version — the effective-date viewer (`01` §5.3).
  *
  * `asAt` omitted returns the version whole, which answers "what changed?"; a date answers
- * "what applied then?". Neither ever falls back to the latest version: FR-DATA-32 is the
+ * "what applied then?". Neither ever falls back to the latest version: FR-72 is the
  * rule this screen is most likely to teach by example, and a fallback would teach the
  * opposite of it.
  */
@@ -37,7 +37,7 @@ export function listRows(
   );
 }
 
-/** Point lookup, for debugging (FR-DATA-31) — never how rating resolves a reference. */
+/** Point lookup, for debugging (FR-71) — never how rating resolves a reference. */
 export function lookup(
   slug: string,
   params: { key: string; asAt: string; version?: number | undefined },

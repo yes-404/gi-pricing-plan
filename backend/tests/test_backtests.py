@@ -1,4 +1,4 @@
-"""Backtests, from the request to the stored artifact (`02` FR-MODEL-57, §4.12, §5.1).
+"""Backtests, from the request to the stored artifact (`02` FR-187, §4.12, §5.1).
 
 `packages/pricing-core/tests/test_backtests.py` owns the maths. This file owns the four
 things only the platform can be wrong about:
@@ -12,9 +12,9 @@ things only the platform can be wrong about:
   difference between a backtest and the fit-time holdout figure under a later-period
   heading;
 * **the artifact is immutable in the database**, at both layers — the first test here to
-  exercise the trigger rather than only the grants, and the one that found FR-DATA-47;
-* **both routes are in the published contract**, the omission FR-MODEL-84, FR-MODEL-56 and
-  FR-MODEL-90 each had to repair.
+  exercise the trigger rather than only the grants, and the one that found FR-44;
+* **both routes are in the published contract**, the omission FR-139, FR-186 and
+  FR-192 each had to repair.
 
 The later period is the same book with **every rural row's claim count doubled**, which is a
 known answer: the model was fitted where rural carries half of urban, so a book where the
@@ -128,7 +128,7 @@ async def _later_period(
 # -- The refusals, before a Job exists ----------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 async def test_a_backtest_on_the_version_it_was_fitted_on_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -150,14 +150,14 @@ async def test_a_backtest_on_the_version_it_was_fitted_on_is_refused(
     assert "fitted on" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 async def test_a_backtest_on_a_split_part_is_refused_and_the_part_is_named(
     database, blob_store, workspace_id
 ) -> None:
     """**The refusal the parent-only check would miss**, and the reason it exists.
 
     The frames a model is fitted and judged on are *derived versions* with ids of their own
-    (`01` FR-DATA-36), so a request naming the holdout walks straight past a check that only
+    (`01` FR-76), so a request naming the holdout walks straight past a check that only
     compares against `spec.dataset_version_id` — and produces the fit-time holdout figure
     under a heading that says later period.
     """
@@ -182,7 +182,7 @@ async def test_a_backtest_on_a_split_part_is_refused_and_the_part_is_named(
     assert "'test'" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 async def test_an_unfitted_model_cannot_be_backtested(
     database, blob_store, workspace_id
 ) -> None:
@@ -215,7 +215,7 @@ async def test_an_unfitted_model_cannot_be_backtested(
     assert "draft" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 async def test_a_version_that_is_not_validated_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -240,7 +240,7 @@ async def test_a_version_that_is_not_validated_is_refused(
     assert refused.value.code == "DATASET_NOT_VALIDATED"
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 async def test_a_version_missing_a_scored_column_is_refused_before_the_queue(
     database, blob_store, workspace_id
 ) -> None:
@@ -291,7 +291,7 @@ async def test_a_version_missing_a_scored_column_is_refused_before_the_queue(
 # -- The artifact --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_a_backtest_cannot_be_rewritten_at_either_layer(
     database, blob_store, workspace_id
 ) -> None:
@@ -303,7 +303,7 @@ async def test_a_backtest_cannot_be_rewritten_at_either_layer(
     follows is run as the owner and must still be refused.
 
     This was the first test in the repository to exercise an artifact table's trigger rather
-    than only its grants, and writing it is what found FR-DATA-47: three tables with the
+    than only its grants, and writing it is what found FR-44: three tables with the
     grants and no trigger at all. `e1f2a3b4c5d6` closed that, and six tables rather than
     three — `backend/tests/test_artifact_immutability.py` now derives the list from the
     grants, so this test is no longer the only one of its kind.
@@ -468,7 +468,7 @@ async def _run_residual_backtest(
 # -- The whole path -------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 async def test_the_backtest_job_produces_a_readable_artifact(
     database, blob_store, workspace_id
 ) -> None:
@@ -506,14 +506,14 @@ async def test_the_backtest_job_produces_a_readable_artifact(
     )
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_model_offset_backtest_honours_the_offset(
     database, blob_store, workspace_id
 ) -> None:
     """Request, run, read — the residual model's offset honoured on a period it never saw.
 
     The residual model's prediction is `exp(η_base + β̂·resid_flag)`: the referenced
-    base model's linear predictor plus the residual fit's own terms (FR-MODEL-24). A
+    base model's linear predictor plus the residual fit's own terms (FR-116). A
     backtest that drops the offset scores `exp(β̂·resid_flag)` alone, and a book whose
     claims sit at `exp(η_base + …)` then reads at A/E ≈ e² — which is what makes the
     ≈1.0 assertion discriminate the offset actually being honoured, not merely the job
@@ -533,7 +533,7 @@ async def test_a_model_offset_backtest_honours_the_offset(
     assert stored.summary.partition.ae_overall == pytest.approx(1.0, abs=0.15)
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 async def test_a_second_backtest_of_the_same_pair_is_refused_by_the_database(
     database, blob_store, workspace_id
 ) -> None:
@@ -563,7 +563,7 @@ async def test_a_second_backtest_of_the_same_pair_is_refused_by_the_database(
 # -- The published contract ----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-92")
+@pytest.mark.req("FR-94")
 def test_both_backtest_routes_are_published() -> None:
     """The `GET` matters as much as the `POST`. §5.1 declared only the `POST`, and a 202
     whose artifact has no route is complete to the endpoint audit and unusable to a caller —

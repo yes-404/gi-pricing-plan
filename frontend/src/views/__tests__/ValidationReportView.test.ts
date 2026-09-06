@@ -137,7 +137,7 @@ describe("the validation report view", () => {
 
     const dialog = await screen.findByRole("dialog");
     const confirm = within(dialog).getByRole("button", { name: "Acknowledge" });
-    // FR-DATA-17: the justification is the audit record. The server refuses an empty one;
+    // FR-46: the justification is the audit record. The server refuses an empty one;
     // this only avoids the round trip.
     expect(confirm).toBeDisabled();
 
@@ -184,7 +184,7 @@ describe("the validation report view", () => {
             title: "Acknowledging a validation warning requires the Pricing Actuary role",
             status: 403,
             code: "ACKNOWLEDGE_FORBIDDEN_ROLE",
-            detail: "FR-DATA-17 places this judgement with an actuary.",
+            detail: "FR-46 places this judgement with an actuary.",
             errors: [],
           }),
           { status: 403, headers: { "Content-Type": "application/json" } },

@@ -2,7 +2,7 @@
   "$defs": {
     "ApproximatedModel": {
       "additionalProperties": false,
-      "description": "The Model this GLM approximates, addressed the way a human reads it (FR-MODEL-129).\n\nThe id stays the lookup key — `approximates_model_id` is how the platform resolves the\npin. This block carries the **slug and version** instead, following `IntervalFor`'s\nid-and-version shape with the id left out: naming the same id twice is a fact stated\ntwice, and `CLAUDE.md` §2's rule against a shape defined twice holds for a fact as\nmuch as for a field. `motor-ad-frequency@7` is what a reviewer reads; the slug alone\nwould resolve to the family's latest version, which may not be the version the id\npins.",
+      "description": "The Model this GLM approximates, addressed the way a human reads it (FR-169).\n\nThe id stays the lookup key — `approximates_model_id` is how the platform resolves the\npin. This block carries the **slug and version** instead, following `IntervalFor`'s\nid-and-version shape with the id left out: naming the same id twice is a fact stated\ntwice, and `CLAUDE.md` §2's rule against a shape defined twice holds for a fact as\nmuch as for a field. `motor-ad-frequency@7` is what a reviewer reads; the slug alone\nwould resolve to the family's latest version, which may not be the version the id\npins.",
       "properties": {
         "model_slug": {
           "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
@@ -128,7 +128,7 @@
     },
     "DroppedEvalMetric": {
       "additionalProperties": false,
-      "description": "A declared eval metric the backend could not evaluate (FR-MODEL-111, OQ-MODEL-21).\n\nFR-MODEL-106's objection is to a spec \"reported to the caller as configured\" when it\nwas not. The cheapest honest answer here is neither to refuse an otherwise-valid fit\nnor to punish a portable spec for one backend's evaluation ordering, but to say so on\nthe artifact — so a reader comparing two fits can see why one curve has a series the\nother lacks, instead of inferring a bug.\n\n`reason` is a closed set with one member because exactly one reason exists today. A\nfree-text field would let the second be invented at a call site rather than declared\nin the contract the frontend generates from.",
+      "description": "A declared eval metric the backend could not evaluate (FR-161, OQ-593).\n\nFR-MODEL-106's objection is to a spec \"reported to the caller as configured\" when it\nwas not. The cheapest honest answer here is neither to refuse an otherwise-valid fit\nnor to punish a portable spec for one backend's evaluation ordering, but to say so on\nthe artifact — so a reader comparing two fits can see why one curve has a series the\nother lacks, instead of inferring a bug.\n\n`reason` is a closed set with one member because exactly one reason exists today. A\nfree-text field would let the second be invented at a call site rather than declared\nin the contract the frontend generates from.",
       "properties": {
         "name": {
           "minLength": 1,
@@ -150,7 +150,7 @@
     },
     "EarlyStopping": {
       "additionalProperties": false,
-      "description": "When to stop boosting, and against what (FR-MODEL-30).\n\n**There is no `train` value**, and that is the requirement rather than an oversight:\na stopping rule read off the data being fitted stops when the model has finished\nmemorising. Refusing it by construction means no validator can be relaxed into\nallowing it.",
+      "description": "When to stop boosting, and against what (FR-124).\n\n**There is no `train` value**, and that is the requirement rather than an oversight:\na stopping rule read off the data being fitted stops when the model has finished\nmemorising. Refusing it by construction means no validator can be relaxed into\nallowing it.",
       "properties": {
         "cv_folds": {
           "anyOf": [
@@ -218,7 +218,7 @@
     },
     "EbmFitResult": {
       "additionalProperties": false,
-      "description": "What an EBM fit returns and the Model stores (ADR-0003, FR-MODEL-37).\n\n`02` §4.8: the fit result *is* the model. An EBM is its additive shape functions —\nscoring reproduces `intercept + Σ term scores` exactly, each term a lookup against\nits feature's bins — so this declarative artifact alone rescores the model by a\nprocess that never ran `interpret` (there is no booster blob and no serialised\nestimator to version).",
+      "description": "What an EBM fit returns and the Model stores (ADR-705, FR-140).\n\n`02` §4.8: the fit result *is* the model. An EBM is its additive shape functions —\nscoring reproduces `intercept + Σ term scores` exactly, each term a lookup against\nits feature's bins — so this declarative artifact alone rescores the model by a\nprocess that never ran `interpret` (there is no booster blob and no serialised\nestimator to version).",
       "properties": {
         "best_iteration": {
           "minimum": 0,
@@ -342,7 +342,7 @@
     },
     "EbmSpec": {
       "additionalProperties": false,
-      "description": "`02` §4.4's EBM arm (FR-MODEL-37): additive lookups, transparent by construction.",
+      "description": "`02` §4.4's EBM arm (FR-140): additive lookups, transparent by construction.",
       "properties": {
         "dataset_version_id": {
           "format": "uuid",
@@ -490,7 +490,7 @@
     },
     "EbmTerm": {
       "additionalProperties": false,
-      "description": "One additive term: a univariate lookup or an interaction grid (FR-MODEL-37).",
+      "description": "One additive term: a univariate lookup or an interaction grid (FR-140).",
       "properties": {
         "bin_weights": {
           "anyOf": [
@@ -577,7 +577,7 @@
     },
     "GbmFitResult": {
       "additionalProperties": false,
-      "description": "What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).\n\nThe booster is a **content-addressed blob in the backend's own JSON or text format**,\nnever a pickle — `booster_format` has no spelling for one, so the persistence layer's\nrefusal is not the only thing between a Model and an artifact that executes on load.\n\nEverything needed to score is here beside it: feature order, dtype expectations,\ncategorical encoding maps, the monotone constraint vector, the pinned library version,\nand — required, not optional — the `base_margin` construction. FR-MODEL-71 is emphatic\nabout the last one because omitting the offset at scoring time fails *silently* on both\nbackends, and differently.\n\nThe evaluation curve is **not** here. FR-MODEL-52 names it a GBM-specific *diagnostic*\nand asks for train and holdout side by side, which is FR-MODEL-54's shape; it lives on\n`GbmDiagnostics`, and `fit_gbm` returns it beside this artifact for the caller to place\nthere. `best_iteration` stays, because scoring needs it and diagnostics are not loaded\nto score. (`diagnostics.schema.json` had it this way from Phase 0; this is the code\nagreeing with it rather than the schema being edited to match.)",
+      "description": "What a GBM fit returns and the Model stores (ADR-705, FR-125).\n\nThe booster is a **content-addressed blob in the backend's own JSON or text format**,\nnever a pickle — `booster_format` has no spelling for one, so the persistence layer's\nrefusal is not the only thing between a Model and an artifact that executes on load.\n\nEverything needed to score is here beside it: feature order, dtype expectations,\ncategorical encoding maps, the monotone constraint vector, the pinned library version,\nand — required, not optional — the `base_margin` construction. FR-126 is emphatic\nabout the last one because omitting the offset at scoring time fails *silently* on both\nbackends, and differently.\n\nThe evaluation curve is **not** here. FR-174 names it a GBM-specific *diagnostic*\nand asks for train and holdout side by side, which is FR-183's shape; it lives on\n`GbmDiagnostics`, and `fit_gbm` returns it beside this artifact for the caller to place\nthere. `best_iteration` stays, because scoring needs it and diagnostics are not loaded\nto score. (`diagnostics.schema.json` had it this way from Phase 0; this is the code\nagreeing with it rather than the schema being edited to match.)",
       "properties": {
         "base_margin": {
           "$ref": "#/$defs/OffsetSpec"
@@ -695,7 +695,7 @@
     },
     "GbmFunctionRef": {
       "additionalProperties": false,
-      "description": "A builtin objective or eval metric by name, or an approved artifact by reference.\n\nOne shape for both because FR-MODEL-26 and FR-MODEL-45 declare the same choice twice —\na builtin the backend already implements, or a Custom Objective / Custom Metric that\ncarries its own approval status (R4). Two classes with identical fields would be a\nshape defined twice.",
+      "description": "A builtin objective or eval metric by name, or an approved artifact by reference.\n\nOne shape for both because FR-120 and FR-154 declare the same choice twice —\na builtin the backend already implements, or a Custom Objective / Custom Metric that\ncarries its own approval status (R4). Two classes with identical fields would be a\nshape defined twice.",
       "properties": {
         "kind": {
           "enum": [
@@ -738,7 +738,7 @@
     },
     "GbmSpec": {
       "additionalProperties": false,
-      "description": "`02` §4.4's common block plus the gradient-boosting arm (FR-MODEL-25).\n\n**One contract, two backends.** `model_type` is the backend — §4.4 also gave this arm a\n`backend` field carrying the same two strings, and two fields holding one fact can\ndisagree with nothing downstream able to say which to believe. Backend-specific tuning\nlives in `backend_params`, which is what keeps the contract from forking.\n\n**The offset is declared once.** §4.4 also gave this arm a `base_margin` block of the\nsame shape as the common `offset`. FR-MODEL-27 says the platform *constructs*\n`base_margin` from the declared offset, so a second declaration is a second source of\ntruth for the one number the fit silently depends on. What was actually constructed is\nrecorded on the fit result, where FR-MODEL-71 can assert it at load time.\n\nBoth corrections are recorded in `02` §4.4, dated 2026-08-17.",
+      "description": "`02` §4.4's common block plus the gradient-boosting arm (FR-119).\n\n**One contract, two backends.** `model_type` is the backend — §4.4 also gave this arm a\n`backend` field carrying the same two strings, and two fields holding one fact can\ndisagree with nothing downstream able to say which to believe. Backend-specific tuning\nlives in `backend_params`, which is what keeps the contract from forking.\n\n**The offset is declared once.** §4.4 also gave this arm a `base_margin` block of the\nsame shape as the common `offset`. FR-121 says the platform *constructs*\n`base_margin` from the declared offset, so a second declaration is a second source of\ntruth for the one number the fit silently depends on. What was actually constructed is\nrecorded on the fit result, where FR-126 can assert it at load time.\n\nBoth corrections are recorded in `02` §4.4, dated 2026-08-17.",
       "properties": {
         "backend_params": {
           "additionalProperties": true,
@@ -939,7 +939,7 @@
     },
     "GlmCvSpec": {
       "additionalProperties": false,
-      "description": "FR-MODEL-20/FR-MODEL-53: the cross-validated penalty path `GlmSpec.cv` carries when\n`select_by == \"cv\"`.\n\n`seed` is **not** duplicated here: the seed that makes fold assignment reproducible is\n`ModelSpecCommon.seed` — the one seed the spec already carries and already versions\ninto `spec_hash`. A second seed field on this nested block would let the two disagree,\nwhich is the shape-defined-twice trap `CLAUDE.md` §2 names.",
+      "description": "FR-112/FR-182: the cross-validated penalty path `GlmSpec.cv` carries when\n`select_by == \"cv\"`.\n\n`seed` is **not** duplicated here: the seed that makes fold assignment reproducible is\n`ModelSpecCommon.seed` — the one seed the spec already carries and already versions\ninto `spec_hash`. A second seed field on this nested block would let the two disagree,\nwhich is the shape-defined-twice trap `CLAUDE.md` §2 names.",
       "properties": {
         "alphas": {
           "default": [
@@ -1001,7 +1001,7 @@
     },
     "GlmFitResult": {
       "additionalProperties": false,
-      "description": "What a fit returns and the Model stores (ADR-0003).\n\nData, never a pickled estimator: `PICKLE_PERSISTENCE_REFUSED` is an error code this\nmodule owns, and a Model must be re-scorable by a process that never ran `glum`.",
+      "description": "What a fit returns and the Model stores (ADR-705).\n\nData, never a pickled estimator: `PICKLE_PERSISTENCE_REFUSED` is an error code this\nmodule owns, and a Model must be re-scorable by a process that never ran `glum`.",
       "properties": {
         "coefficients": {
           "default": [],
@@ -1124,7 +1124,7 @@
     },
     "GlmSpec": {
       "additionalProperties": false,
-      "description": "`02` §4.4's common block plus the `glm` arm.\n\nThe spec is what `spec_hash` is taken over, so every field here changes the identity of\nthe model. That is why `loss_treatment` belongs in the spec rather than beside it, and\nwhy two models differing only in a cap must not collide (FR-MODEL-66).",
+      "description": "`02` §4.4's common block plus the `glm` arm.\n\nThe spec is what `spec_hash` is taken over, so every field here changes the identity of\nthe model. That is why `loss_treatment` belongs in the spec rather than beside it, and\nwhy two models differing only in a cap must not collide (FR-204).",
       "properties": {
         "alpha": {
           "default": 0.0,
@@ -1340,7 +1340,7 @@
     },
     "IntervalFor": {
       "additionalProperties": false,
-      "description": "This model is one side of another model's prediction interval (FR-MODEL-78).\n\n**On the spec, so it joins `spec_hash`** (FR-MODEL-100). FR-MODEL-96 set the precedent\nfor a Model that exists relative to another Model — `approximates_model_id` on the\napproximating Model's spec — and the reason is the same one: the pairing is part of\nwhat this model *is*. Two bounds identical but for the central model they bound would\notherwise share a digest, and FR-MODEL-66 would hand the second caller the first\ncaller's model: an interval around a model nobody fitted, rendering identically to a\ncorrect one.\n\nThe central model is named by **id and version**. The id is what the lookup uses; the\nversion is what a human reads in a review, where `motor-ad-frequency@7` is recognisable\nand a UUID is not — the same argument `Prediction` carries for holding both.",
+      "description": "This model is one side of another model's prediction interval (FR-199).\n\n**On the spec, so it joins `spec_hash`** (FR-200). FR-137 set the precedent\nfor a Model that exists relative to another Model — `approximates_model_id` on the\napproximating Model's spec — and the reason is the same one: the pairing is part of\nwhat this model *is*. Two bounds identical but for the central model they bound would\notherwise share a digest, and FR-204 would hand the second caller the first\ncaller's model: an interval around a model nobody fitted, rendering identically to a\ncorrect one.\n\nThe central model is named by **id and version**. The id is what the lookup uses; the\nversion is what a human reads in a review, where `motor-ad-frequency@7` is recognisable\nand a UUID is not — the same argument `Prediction` carries for holding both.",
       "properties": {
         "alpha": {
           "exclusiveMaximum": 1.0,
@@ -1369,7 +1369,7 @@
     },
     "LossTreatment": {
       "additionalProperties": false,
-      "description": "How large losses are treated **as the model is fitted** (FR-MODEL-73).\n\nA modelling decision, not a property of the data: `01` VR-ACT-10 flags large losses and\nnever removes them, so one validated Dataset Version serves many capping assumptions\nwithout re-ingestion. That is only true while the assumption lives here, inside the\nspec — and therefore inside `spec_hash`, so two models differing only in their cap are\ntwo models rather than a collision (FR-MODEL-66).\n\n`cap_minor` is **integer minor units** (`CLAUDE.md` §7). A cap is a money threshold\ncompared against a money column, and a float one compares unequal to itself at the\nboundary — which decides whether the largest claim in the book was capped.",
+      "description": "How large losses are treated **as the model is fitted** (FR-127).\n\nA modelling decision, not a property of the data: `01` VR-ACT-10 flags large losses and\nnever removes them, so one validated Dataset Version serves many capping assumptions\nwithout re-ingestion. That is only true while the assumption lives here, inside the\nspec — and therefore inside `spec_hash`, so two models differing only in their cap are\ntwo models rather than a collision (FR-204).\n\n`cap_minor` is **integer minor units** (`CLAUDE.md` §7). A cap is a money threshold\ncompared against a money column, and a float one compares unequal to itself at the\nboundary — which decides whether the largest claim in the book was capped.",
       "properties": {
         "cap_minor": {
           "anyOf": [
@@ -1424,7 +1424,7 @@
       "type": "object"
     },
     "ModelFlag": {
-      "description": "Conditions raised elsewhere that gate this model's approval (`06` FR-GOV-17).\n\nNamed rather than free strings because two surfaces branch on them — `02` FR-MODEL-67's\nblock on `approved`, and the approvals inbox — and a flag spelled two ways is a gate\nthat holds on one screen and not the other.",
+      "description": "Conditions raised elsewhere that gate this model's approval (`06` FR-359).\n\nNamed rather than free strings because two surfaces branch on them — `02` FR-205's\nblock on `approved`, and the approvals inbox — and a flag spelled two ways is a gate\nthat holds on one screen and not the other.",
       "enum": [
         "dataset_invalidated"
       ],
@@ -1445,7 +1445,7 @@
     },
     "OffsetSpec": {
       "additionalProperties": false,
-      "description": "`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`.\n\n`model` is the offset from another model (FR-MODEL-24): the referenced fitted GLM's\nlinear predictor, resolved by the backend and supplied as the fit's `model_offset`.",
+      "description": "`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`.\n\n`model` is the offset from another model (FR-116): the referenced fitted GLM's\nlinear predictor, resolved by the backend and supplied as the fit's `model_offset`.",
       "properties": {
         "column": {
           "anyOf": [
@@ -1489,7 +1489,7 @@
     },
     "RelativityLevel": {
       "additionalProperties": false,
-      "description": "One level of a categorical factor, as an actuary reads it (FR-MODEL-21).",
+      "description": "One level of a categorical factor, as an actuary reads it (FR-113).",
       "properties": {
         "estimate": {
           "anyOf": [
@@ -1544,7 +1544,7 @@
       "type": "object"
     },
     "ResponseKind": {
-      "description": "What a Model Spec is modelling, as distinct from which column holds it.\n\n`02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was\nbuilt to it, because nothing needed it: the fitting path reads the column, and the\nfamily says what the numbers mean. FR-MODEL-44 needs it — an objective declares the\nresponses it applies to, and a column name cannot be checked against that list. So the\nfield goes live here, under FR-MODEL-87's staging rule, with the slice that populates\nit.\n\nThe first three are FR-MODEL-44's own examples. `conversion` and `retention` are\n`04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`\n(§4.5) exists for exactly them — a catalogue entry whose applicability could not be\nwritten would be a catalogue entry nothing could use.",
+      "description": "What a Model Spec is modelling, as distinct from which column holds it.\n\n`02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was\nbuilt to it, because nothing needed it: the fitting path reads the column, and the\nfamily says what the numbers mean. FR-153 needs it — an objective declares the\nresponses it applies to, and a column name cannot be checked against that list. So the\nfield goes live here, under FR-207's staging rule, with the slice that populates\nit.\n\nThe first three are FR-153's own examples. `conversion` and `retention` are\n`04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`\n(§4.5) exists for exactly them — a catalogue entry whose applicability could not be\nwritten would be a catalogue entry nothing could use.",
       "enum": [
         "claim_count",
         "claim_severity",
@@ -1557,7 +1557,7 @@
     },
     "SplitRef": {
       "additionalProperties": false,
-      "description": "The named split a model was fitted and judged on (`02` §4.4, `01` FR-DATA-36).\n\nA *reference*, not a description. FR-DATA-36 records the split on the **parent**\nversion precisely so that \"trained on the same split\" is one artifact two models cite,\nrather than two derivations that were believed to match. Naming the part versions\ndirectly here would reintroduce the belief.\n\n`train_part` and `holdout_part` are keys into the split's `parts` map; that they name\ntwo *different* parts is checked here, because a model whose holdout is its training\nset reports a flawless fit and no diagnostic downstream can tell.",
+      "description": "The named split a model was fitted and judged on (`02` §4.4, `01` FR-76).\n\nA *reference*, not a description. FR-76 records the split on the **parent**\nversion precisely so that \"trained on the same split\" is one artifact two models cite,\nrather than two derivations that were believed to match. Naming the part versions\ndirectly here would reintroduce the belief.\n\n`train_part` and `holdout_part` are keys into the split's `parts` map; that they name\ntwo *different* parts is checked here, because a model whose holdout is its training\nset reports a flawless fit and no diagnostic downstream can tell.",
       "properties": {
         "holdout_part": {
           "default": "test",
@@ -1583,7 +1583,7 @@
     },
     "TweediePowerFit": {
       "additionalProperties": false,
-      "description": "FR-MODEL-22: the estimated Tweedie power, persisted as an estimate with its own\nuncertainty — the 95% profile-likelihood interval {p : 2(L_max - L(p)) ≤ χ²₀.95(1)\n= 3.841} read from the profile log-likelihood curve, linearly interpolated between\nscanned points — and the curve itself, so the estimate can be re-examined after the\nfit.\n\nCarried on `GlmFitResult`, not on Diagnostics: unlike alpha, the estimated power\nenters every deviance recomputation (diagnostics, type-III refits, backtests), all\nof which receive the fit result as their first argument.",
+      "description": "FR-114: the estimated Tweedie power, persisted as an estimate with its own\nuncertainty — the 95% profile-likelihood interval {p : 2(L_max - L(p)) ≤ χ²₀.95(1)\n= 3.841} read from the profile log-likelihood curve, linearly interpolated between\nscanned points — and the curve itself, so the estimate can be re-examined after the\nfit.\n\nCarried on `GlmFitResult`, not on Diagnostics: unlike alpha, the estimated power\nenters every deviance recomputation (diagnostics, type-III refits, backtests), all\nof which receive the fit result as their first argument.",
       "properties": {
         "ci_lower": {
           "title": "Ci Lower",
@@ -1621,7 +1621,7 @@
     },
     "TweediePowerSpec": {
       "additionalProperties": false,
-      "description": "FR-MODEL-22: the grid over which the Tweedie power `p` is estimated by profile\nlikelihood, and the boundary of that estimate. `GlmSpec.tweedie` being set is the\nspec's request for estimation; the estimated value and its uncertainty are fit-time\nfacts and ride on `GlmFitResult.tweedie` — never a constant baked into the spec.\n\nA scan, not a choice: one point would be a fixed fit, and a maximum at the edge of\nthe scan is refused at fit time (`GLM_TWEEDIE_POWER_GRID_EDGE`) because it reports\nthe scan's boundary as the answer.",
+      "description": "FR-114: the grid over which the Tweedie power `p` is estimated by profile\nlikelihood, and the boundary of that estimate. `GlmSpec.tweedie` being set is the\nspec's request for estimation; the estimated value and its uncertainty are fit-time\nfacts and ride on `GlmFitResult.tweedie` — never a constant baked into the spec.\n\nA scan, not a choice: one point would be a fixed fit, and a maximum at the edge of\nthe scan is refused at fit time (`GLM_TWEEDIE_POWER_GRID_EDGE`) because it reports\nthe scan's boundary as the answer.",
       "properties": {
         "p_grid": {
           "default": [
@@ -1647,7 +1647,7 @@
       "type": "object"
     },
     "TweedieProfilePoint": {
-      "description": "FR-MODEL-22: one scanned power and the profile log-likelihood of the model\nrefitted at it — one point of the profile curve persisted with the estimate.",
+      "description": "FR-114: one scanned power and the profile log-likelihood of the model\nrefitted at it — one point of the profile curve persisted with the estimate.",
       "properties": {
         "log_likelihood": {
           "title": "Log Likelihood",
@@ -1667,7 +1667,7 @@
     },
     "WeightSpec": {
       "additionalProperties": false,
-      "description": "Severity weights by claim count, burning cost by exposure (FR-MODEL-19).",
+      "description": "Severity weights by claim count, burning cost by exposure (FR-111).",
       "properties": {
         "column": {
           "anyOf": [

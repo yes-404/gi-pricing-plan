@@ -1,4 +1,4 @@
-"""Effective-dated reference lookups (`01` FR-DATA-29, FR-DATA-31).
+"""Effective-dated reference lookups (`01` FR-69, FR-71).
 
 > A reference lookup is evaluated **as at a declared date** (typically the policy inception
 > date), not as at "now".
@@ -56,7 +56,7 @@ def lookup_as_at(
     if len(matches) > 1:
         raise ReferenceLookupError(
             f"{len(matches)} reference rows cover {key!r} at {as_at}. Intervals must not "
-            "overlap (FR-DATA-29); choosing one silently would hide the overlap and make "
+            "overlap (FR-69); choosing one silently would hide the overlap and make "
             "the answer depend on row order."
         )
     return matches[0]

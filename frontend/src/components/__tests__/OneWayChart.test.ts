@@ -103,7 +103,7 @@ describe("OneWayChart", () => {
     const fixture = summary();
     render(OneWayChart, { props: { summary: fixture, currency: "GBP" } });
 
-    // `exposure_years` is an exact decimal **string** (FR-OVR-7). A chart coordinate is a
+    // `exposure_years` is an exact decimal **string** (FR-10). A chart coordinate is a
     // float64 either way and nothing computes with it, so `Number()` is safe here — this
     // asserts the conversion happens at the boundary and nowhere else.
     expect(option().series.find((s) => s.name === "Exposure")?.data).toEqual([1234.56, 12.5]);
@@ -114,7 +114,7 @@ describe("OneWayChart", () => {
     render(OneWayChart, { props: { summary: summary(), currency: "GBP" } });
     const ci = option().series.find((s) => s.name === "Frequency CI");
 
-    // FR-DATA-26's interval, encoded as [category index, low, high] against the frequency
+    // FR-61's interval, encoded as [category index, low, high] against the frequency
     // axis. A frequency published without one invites a decision the count cannot support.
     expect(ci?.type).toBe("custom");
     expect(ci?.yAxisIndex).toBe(1);
@@ -147,7 +147,7 @@ describe("OneWayChart", () => {
     expect(screen.getByText("This column has no stored one-way.")).toBeInTheDocument();
   });
 
-  describe("the table beside it (NFR-OVR-10)", () => {
+  describe("the table beside it (NFR-463)", () => {
     function table(currency = "GBP"): HTMLElement {
       render(OneWayChart, { props: { summary: summary(), currency } });
       return screen.getByRole("table", { name: /one-way: vehicle_age/i });
@@ -185,7 +185,7 @@ describe("OneWayChart", () => {
       expect(cellUnder(t, /^4\+/, "Severity CI")).toHaveTextContent("—");
     });
 
-    // FR-DATA-46: `mean_severity` and `mean_burning_cost` are float ratios in minor units,
+    // FR-64: `mean_severity` and `mean_burning_cost` are float ratios in minor units,
     // shown as statistics rather than as currency. `severity_ci` is computed from the same
     // minor-units sum, so it is scaled the same way.
     it("scales the minor-unit statistics without dressing them as currency", () => {

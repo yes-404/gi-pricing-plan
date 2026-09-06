@@ -1,4 +1,4 @@
-"""Profiling and comparison (`01` §3.4, FR-DATA-25..28)."""
+"""Profiling and comparison (`01` §3.4, FR-60, FR-61, FR-62, FR-63)."""
 
 from __future__ import annotations
 
@@ -39,10 +39,10 @@ FRAME = pl.DataFrame(
 )
 
 
-# -- FR-DATA-25: per-column statistics and semantic type ------------------------------------
+# -- FR-60: per-column statistics and semantic type ------------------------------------
 
 
-@pytest.mark.req("FR-DATA-25")
+@pytest.mark.req("FR-60")
 def test_a_profile_reports_the_statistics_the_requirement_lists() -> None:
     profile = profile_frame(FRAME, dataset_version_id=uuid4())
     age = profile.column("driver_age")
@@ -55,7 +55,7 @@ def test_a_profile_reports_the_statistics_the_requirement_lists() -> None:
     assert set(age.quantiles) == {"p1", "p5", "p25", "p50", "p75", "p95", "p99"}
 
 
-@pytest.mark.req("FR-DATA-25")
+@pytest.mark.req("FR-60")
 @pytest.mark.parametrize(
     ("column", "expected"),
     [
@@ -72,14 +72,14 @@ def test_semantic_types_are_inferred(column: str, expected: SemanticType) -> Non
     assert infer_semantic_type(series, row_count=FRAME.height) is expected
 
 
-@pytest.mark.req("FR-DATA-25")
+@pytest.mark.req("FR-60")
 def test_a_low_cardinality_integer_is_ordinal_not_continuous() -> None:
     """Negative: banding NCD years into deciles merges levels an actuary rates on."""
     series = pl.Series("ncd_years", [0, 1, 2, 3, 4, 5] * 10)
     assert infer_semantic_type(series, row_count=60) is SemanticType.ORDINAL
 
 
-@pytest.mark.req("FR-DATA-25")
+@pytest.mark.req("FR-60")
 def test_categorical_levels_are_capped_at_twenty() -> None:
     """A high-cardinality column must not put its whole domain in a persisted artifact."""
     frame = pl.DataFrame({"code": [f"C{i % 50}" for i in range(500)]})
@@ -87,10 +87,10 @@ def test_categorical_levels_are_capped_at_twenty() -> None:
     assert len(profile.column("code").top_levels) == 20
 
 
-# -- FR-DATA-49: per-level exposure on top_levels ---------------------------------------------
+# -- FR-66: per-level exposure on top_levels ---------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_top_levels_carry_exposure_when_the_version_has_an_exposure_column() -> None:
     """80 rows per `vehicle_group` level, 1.0 exposure year each — count and exposure
     agree, and exposure is an exact Decimal rather than a raw float."""
@@ -104,7 +104,7 @@ def test_top_levels_carry_exposure_when_the_version_has_an_exposure_column() -> 
         assert isinstance(level.exposure_years, Decimal)
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_top_levels_exposure_is_none_without_an_exposure_column() -> None:
     """Negative: absent means "no exposure column" — a version with none must not report
     a fabricated zero, which would be indistinguishable from every level genuinely having
@@ -118,12 +118,12 @@ def test_top_levels_exposure_is_none_without_an_exposure_column() -> None:
     assert all(level.exposure_years is None for level in group.top_levels)
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_top_levels_exposure_is_none_without_an_exposure_column_duckdb(tmp_path: Path) -> None:
     """The DuckDB sibling of the Polars-only test above. Both engines must agree that
     "no exposure column" reports `None` on every level rather than a fabricated `0` — the
     Polars path having it right says nothing about the SQL path, which computes the
-    aggregate independently (FR-DATA-27)."""
+    aggregate independently (FR-62)."""
     frame = FRAME.drop("exposure_years")
     path = tmp_path / "no-exposure.parquet"
     frame.write_parquet(path)
@@ -138,7 +138,7 @@ def test_top_levels_exposure_is_none_without_an_exposure_column_duckdb(tmp_path:
     assert all(level.exposure_years is None for level in group.top_levels)
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_a_zero_exposure_level_is_distinguishable_from_no_exposure_column() -> None:
     """Negative: a level that genuinely carries no exposure must report `0`, not `None` —
     the two are different facts and a profile that conflates them cannot be read for a
@@ -159,7 +159,7 @@ def test_a_zero_exposure_level_is_distinguishable_from_no_exposure_column() -> N
     assert levels["G0"] is not None  # zero, not "no exposure column"
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_a_column_is_never_weighted_by_its_own_exposure() -> None:
     """Negative: the histogram's self-weighting guard applies to `top_levels` too — a
     column named as the exposure column must not carry an exposure weight on itself."""
@@ -171,7 +171,7 @@ def test_a_column_is_never_weighted_by_its_own_exposure() -> None:
     assert all(level.exposure_years is None for level in group.top_levels)
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_top_levels_stay_ordered_by_count_not_by_exposure() -> None:
     """Selection stays by count, descending — exposure is carried, not ranked on. A level
     with far more exposure but fewer rows must still rank below a level with more rows."""
@@ -190,7 +190,7 @@ def test_top_levels_stay_ordered_by_count_not_by_exposure() -> None:
     assert group.top_levels[1].exposure_years == Decimal("3000.000000")
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_the_twenty_cap_holds_with_exposure_carried() -> None:
     frame = pl.DataFrame(
         {
@@ -204,7 +204,7 @@ def test_the_twenty_cap_holds_with_exposure_carried() -> None:
     assert all(level.exposure_years is not None for level in top)
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_a_null_level_survives_as_null_not_the_string_none() -> None:
     """Negative: the old `str(level)` coercion turned a SQL/Polars null into the literal
     text "None", indistinguishable from a real level someone recorded that way."""
@@ -218,7 +218,7 @@ def test_a_null_level_survives_as_null_not_the_string_none() -> None:
     assert "None" not in levels
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_both_engines_produce_identical_top_levels(tmp_path: Path) -> None:
     """Polars and DuckDB must agree byte-for-byte on `top_levels`, exposure included and
     a null level included — not just on the rest of the column statistics.
@@ -250,10 +250,10 @@ def test_both_engines_produce_identical_top_levels(tmp_path: Path) -> None:
     ]
 
 
-# -- FR-DATA-26: one-way summaries with exact intervals --------------------------------------
+# -- FR-61: one-way summaries with exact intervals --------------------------------------
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_a_one_way_reports_exposure_claims_frequency_severity_and_burning_cost() -> None:
     summary = one_way(FRAME, column="vehicle_group")
     row = summary.rows[0]
@@ -267,9 +267,9 @@ def test_a_one_way_reports_exposure_claims_frequency_severity_and_burning_cost()
     )
 
 
-@pytest.mark.req("FR-DATA-46")
+@pytest.mark.req("FR-64")
 def test_the_one_way_means_are_named_as_means_not_as_minor_units() -> None:
-    """FR-OVR-7 reserves `_minor` for integer minor units; both of these are float means."""
+    """FR-10 reserves `_minor` for integer minor units; both of these are float means."""
     summary = one_way(
         FRAME,
         column="vehicle_group",
@@ -285,7 +285,7 @@ def test_the_one_way_means_are_named_as_means_not_as_minor_units() -> None:
     assert not hasattr(row, "burning_cost_minor")
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_the_profile_records_which_column_weighted_its_one_ways() -> None:
     """`weight_column` must record the *argument*, not restate its own default.
 
@@ -310,7 +310,7 @@ def test_the_profile_records_which_column_weighted_its_one_ways() -> None:
     assert profile.weight_column == "earned_years"
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_the_poisson_interval_is_exact_not_a_normal_approximation() -> None:
     """The interval must stay positive at low counts.
 
@@ -324,14 +324,14 @@ def test_the_poisson_interval_is_exact_not_a_normal_approximation() -> None:
     assert low != pytest.approx(normal_lower, rel=0.01)
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_a_zero_claim_cell_has_a_lower_bound_of_zero_and_a_positive_upper() -> None:
     low, high = poisson_frequency_interval(0, 500.0)
     assert low == 0.0
     assert high > 0
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_the_interval_narrows_as_exposure_grows() -> None:
     """The property that makes an interval worth showing at all."""
     narrow = poisson_frequency_interval(1000, 10_000.0)
@@ -339,7 +339,7 @@ def test_the_interval_narrows_as_exposure_grows() -> None:
     assert (narrow[1] - narrow[0]) < (wide[1] - wide[0])
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_severity_has_no_interval_below_two_claims() -> None:
     """Negative: an interval from one observation carries no information, and showing one
     invites a decision it cannot support."""
@@ -347,17 +347,17 @@ def test_severity_has_no_interval_below_two_claims() -> None:
     assert gamma_severity_interval(300_000, 2) is not None
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_the_severity_interval_brackets_the_mean() -> None:
     interval = gamma_severity_interval(1_000_000, 10)
     assert interval is not None
     assert interval[0] < 100_000 < interval[1]
 
 
-# -- FR-DATA-27: DuckDB over parquet ----------------------------------------------------------
+# -- FR-62: DuckDB over parquet ----------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-27")
+@pytest.mark.req("FR-62")
 def test_a_profile_is_computed_from_parquet_with_duckdb(tmp_path) -> None:
     path = tmp_path / "exposure.parquet"
     FRAME.write_parquet(path)
@@ -371,17 +371,17 @@ def test_a_profile_is_computed_from_parquet_with_duckdb(tmp_path) -> None:
     assert "duckdb" in profile.library_versions
 
 
-@pytest.mark.req("FR-DATA-27")
+@pytest.mark.req("FR-62")
 def test_profiling_no_files_is_an_error_not_an_empty_profile() -> None:
     """Negative: an empty profile would report a dataset as having no columns."""
     with pytest.raises(ValueError, match="no parquet paths"):
         profile_parquet([], dataset_version_id=uuid4())
 
 
-# -- FR-DATA-28: comparison ---------------------------------------------------------------------
+# -- FR-63: comparison ---------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-28")
+@pytest.mark.req("FR-63")
 def test_a_comparison_reports_psi_shifts_and_level_changes() -> None:
     reference = profile_frame(FRAME, dataset_version_id=uuid4())
     shifted = FRAME.with_columns(
@@ -402,7 +402,7 @@ def test_a_comparison_reports_psi_shifts_and_level_changes() -> None:
     assert group.psi > 0
 
 
-@pytest.mark.req("FR-DATA-28")
+@pytest.mark.req("FR-63")
 def test_an_unchanged_dataset_has_a_psi_of_zero() -> None:
     reference = profile_frame(FRAME, dataset_version_id=uuid4())
     current = profile_frame(FRAME, dataset_version_id=uuid4())
@@ -411,7 +411,7 @@ def test_an_unchanged_dataset_has_a_psi_of_zero() -> None:
     assert group.new_levels == ()
 
 
-@pytest.mark.req("FR-DATA-28")
+@pytest.mark.req("FR-63")
 def test_a_null_rate_shift_is_reported() -> None:
     """The clearest signal a feed has broken."""
     reference = profile_frame(FRAME, dataset_version_id=uuid4())
@@ -426,14 +426,14 @@ def test_a_null_rate_shift_is_reported() -> None:
     assert age.null_rate_shift > 0
 
 
-@pytest.mark.req("FR-DATA-28")
+@pytest.mark.req("FR-63")
 def test_the_row_count_ratio_is_reported() -> None:
     reference = profile_frame(FRAME, dataset_version_id=uuid4())
     current = profile_frame(FRAME.head(_N // 2), dataset_version_id=uuid4())
     assert compare_profiles(current, reference).row_count_ratio == pytest.approx(0.5)
 
 
-@pytest.mark.req("FR-DATA-28")
+@pytest.mark.req("FR-63")
 def test_a_rare_new_level_does_not_report_infinite_psi() -> None:
     """Negative: an infinite PSI reports "everything changed" for one rare code appearing,
     which is a warning nobody can act on."""
@@ -448,7 +448,7 @@ def test_a_rare_new_level_does_not_report_infinite_psi() -> None:
     assert psi < 100
 
 
-@pytest.mark.req("FR-DATA-25")
+@pytest.mark.req("FR-60")
 def test_a_small_extract_does_not_mistake_a_rating_factor_for_an_identifier() -> None:
     """Negative, and a real misfire this heuristic had.
 
@@ -462,9 +462,9 @@ def test_a_small_extract_does_not_mistake_a_rating_factor_for_an_identifier() ->
     )
 
 
-@pytest.mark.req("FR-DATA-27")
+@pytest.mark.req("FR-62")
 def test_the_two_profiling_paths_agree(tmp_path: Path) -> None:
-    """FR-DATA-27: a Profile records what is in a dataset, not which engine read it.
+    """FR-62: a Profile records what is in a dataset, not which engine read it.
 
     `profile_frame` runs in Polars and `profile_parquet` in DuckDB. If they disagree, then
     "what is the p99 claim amount?" has two answers and the honest reply to an actuary is
@@ -514,7 +514,7 @@ def test_the_two_profiling_paths_agree(tmp_path: Path) -> None:
     assert left == right
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_a_one_way_row_is_internally_consistent() -> None:
     """A reader who divides the published claim count by the published exposure gets the
     published frequency back. The ratios are derived from the stored Decimal rather than
@@ -535,11 +535,11 @@ def test_a_one_way_row_is_internally_consistent() -> None:
         )
 
 
-@pytest.mark.req("NFR-DATA-3")
+@pytest.mark.req("NFR-467")
 def test_the_parquet_profiler_never_materialises_the_dataset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """NFR-DATA-3: profiling aggregates in DuckDB; its memory must not scale with rows.
+    """NFR-467: profiling aggregates in DuckDB; its memory must not scale with rows.
 
     Asserted structurally rather than by timing or RSS, both of which are noisy enough on
     a shared runner to be re-run rather than believed. If `profile_parquet` ever again
@@ -559,7 +559,7 @@ def test_the_parquet_profiler_never_materialises_the_dataset(
 
     def refuse(*_args: object, **_kwargs: object) -> None:
         raise AssertionError(
-            "profile_parquet loaded the whole dataset into profile_frame — NFR-DATA-3 "
+            "profile_parquet loaded the whole dataset into profile_frame — NFR-467 "
             "requires the statistics be aggregated in DuckDB"
         )
 
@@ -572,9 +572,9 @@ def test_the_parquet_profiler_never_materialises_the_dataset(
     assert profile.one_ways[0].rows
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_one_way_columns_are_chosen_from_the_inferred_semantic_types() -> None:
-    """FR-DATA-26: one-ways go "per candidate rating column", decided from what the
+    """FR-61: one-ways go "per candidate rating column", decided from what the
     profiler inferred rather than from a list of names.
 
     Shaped on freMTPL2, whose rating factors are `area`, `veh_power`, `veh_brand`,
@@ -611,7 +611,7 @@ def test_one_way_columns_are_chosen_from_the_inferred_semantic_types() -> None:
     assert "density" not in chosen
 
 
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-61")
 def test_a_column_with_too_many_levels_is_not_a_rating_factor() -> None:
     """A one-way is a summary. Two hundred bars is already unreadable, and a column with
     more levels than that is not a factor anyone rates on without banding it first."""
@@ -634,10 +634,10 @@ def test_a_column_with_too_many_levels_is_not_a_rating_factor() -> None:
     assert "postcode" not in chosen, f"300 levels exceeds {MAX_ONE_WAY_LEVELS}"
 
 
-# -- FR-DATA-48: histograms ------------------------------------------------------------
+# -- FR-65: histograms ------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-48")
+@pytest.mark.req("FR-65")
 def test_a_numeric_column_gets_a_histogram() -> None:
     profile = profile_frame(FRAME, dataset_version_id=uuid4())
     age = profile.column("driver_age")
@@ -651,7 +651,7 @@ def test_a_numeric_column_gets_a_histogram() -> None:
     assert sum(age.histogram.counts) == FRAME.height - age.null_count
 
 
-@pytest.mark.req("FR-DATA-48")
+@pytest.mark.req("FR-65")
 def test_an_identifier_and_a_categorical_get_no_histogram() -> None:
     profile = profile_frame(FRAME, dataset_version_id=uuid4())
     policy_id, vehicle_group = profile.column("policy_id"), profile.column("vehicle_group")
@@ -662,7 +662,7 @@ def test_an_identifier_and_a_categorical_get_no_histogram() -> None:
     assert vehicle_group.histogram is None
 
 
-@pytest.mark.req("FR-DATA-48")
+@pytest.mark.req("FR-65")
 def test_the_maximum_lands_in_the_last_bin_not_past_it() -> None:
     """The closed last bin. Without it the maximum falls in bin 20 of 20 and is lost."""
     frame = pl.DataFrame({"x": [float(i) for i in range(101)]})
@@ -674,7 +674,7 @@ def test_the_maximum_lands_in_the_last_bin_not_past_it() -> None:
     assert column.histogram.counts[-1] > 0
 
 
-@pytest.mark.req("FR-DATA-48")
+@pytest.mark.req("FR-65")
 def test_a_constant_column_is_one_bin_not_twenty_empty_ones() -> None:
     frame = pl.DataFrame({"x": [3.0] * 50})
     column = profile_frame(frame, dataset_version_id=uuid4()).column("x")
@@ -685,7 +685,7 @@ def test_a_constant_column_is_one_bin_not_twenty_empty_ones() -> None:
     assert column.histogram.edges == (3.0, 4.0)
 
 
-@pytest.mark.req("FR-DATA-48")
+@pytest.mark.req("FR-65")
 def test_the_histogram_carries_exposure_when_the_column_is_present() -> None:
     age = profile_frame(FRAME, dataset_version_id=uuid4()).column("driver_age")
 
@@ -696,7 +696,7 @@ def test_the_histogram_carries_exposure_when_the_column_is_present() -> None:
     assert [float(e) for e in age.histogram.exposure] == [float(c) for c in age.histogram.counts]
 
 
-@pytest.mark.req("FR-DATA-48")
+@pytest.mark.req("FR-65")
 def test_no_exposure_column_means_no_weights_not_zeroes() -> None:
     frame = pl.DataFrame({"x": [1.0, 2.0, 3.0]})
     column = profile_frame(frame, dataset_version_id=uuid4()).column("x")
@@ -706,7 +706,7 @@ def test_no_exposure_column_means_no_weights_not_zeroes() -> None:
     assert column.histogram.exposure == ()
 
 
-@pytest.mark.req("FR-DATA-48")
+@pytest.mark.req("FR-65")
 def test_nulls_are_excluded_from_every_bin() -> None:
     frame = pl.DataFrame({"x": [1.0, 2.0, None, 4.0]})
     column = profile_frame(frame, dataset_version_id=uuid4()).column("x")
@@ -716,7 +716,7 @@ def test_nulls_are_excluded_from_every_bin() -> None:
     assert sum(column.histogram.counts) == 3
 
 
-@pytest.mark.req("FR-DATA-48")
+@pytest.mark.req("FR-65")
 def test_both_engines_bin_a_column_identically(tmp_path: Path) -> None:
     frame = pl.DataFrame(
         {

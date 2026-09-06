@@ -19,7 +19,7 @@ describe("the version's totals keep the money discipline", () => {
   });
 
   it("keeps the source header a column came from", () => {
-    // FR-DATA-5. Normalisation is lossy — freMTPL2's `IDpol` becomes `i_dpol` — and
+    // FR-30. Normalisation is lossy — freMTPL2's `IDpol` becomes `i_dpol` — and
     // without this a user cannot tell which of their columns a rule is talking about.
     expectTypeOf<DatasetTable["source_names"]>().toEqualTypeOf<
       { [key: string]: string } | undefined

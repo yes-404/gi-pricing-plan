@@ -1,6 +1,6 @@
-"""Ruling 59's `generated_from_tracked_corpus` carve-out — the broken-input proof.
+"""RL-949's `generated_from_tracked_corpus` carve-out — the broken-input proof.
 
-`docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md` §4: `CLAUDE.md` §13 requires a
+`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md` §4: `CLAUDE.md` §13 requires a
 carve-out that has never printed a failure to be treated as untested, and the positive
 control must exercise the same predicate the guard fires on, not an easier case. These tests
 run against a synthetic git repository built in `tmp_path` — mirroring `tests/test_file_
@@ -206,7 +206,7 @@ def test_resolve_commit_resolves_a_real_commit_locally(synthetic_repo: pathlib.P
 def test_resolve_commit_fetches_from_a_remote_when_local_resolution_fails(
     tmp_path: pathlib.Path,
 ) -> None:
-    """The shallow-checkout case Ruling 59 §3 point 2 is written for: the ancestor SHA is
+    """The shallow-checkout case RL-949 §3 point 2 is written for: the ancestor SHA is
     unresolvable in a shallow clone until an explicit `git fetch --depth 1 origin <sha>`
     retrieves it. Built with a real `origin` remote (a `file://` clone of a source repo with
     a second commit the shallow clone never sees) so this exercises the actual fetch path,

@@ -1,21 +1,21 @@
 # ZEN evaluate-side concurrency spike — zen-engine 0.53.0
 
-S1 and S2 (`track-a-findings.md`) and their W8 re-verification (`w8-spike-resolution.md`)
+S1 and S2 (`track-a-findings.md`) and their WK-668 re-verification (`w8-spike-resolution.md`)
 tested the **compile side** of `zen-engine` — expression compilation and a bare XGBoost
 booster benchmark — and `pricing_core.rating.compile` imports `zen` today only for
 `compile_expression` vocabulary checks (`compile.py:244`). No spike in this project has
 exercised the **evaluate side**: loading a decision graph and running it, which is what
-W11's scorer will do on every real-time quote. Dispatched 2026-08-29 ahead of the W11 plan
+WK-671's scorer will do on every real-time quote. Dispatched 2026-08-29 ahead of the WK-671 plan
 freezing, because the answer bears on the evaluator's architecture, not just its estimate.
 
 **The question, in two parts.** (1) Single-call evaluate latency for a graph of roughly
-NFR-RATE-1's own reference size — an order-of-magnitude sanity check. (2) Does the binding
+NFR-489's own reference size — an order-of-magnitude sanity check. (2) Does the binding
 block the asyncio event loop during an evaluation, and does concurrent evaluation give real
 multi-core throughput or merely interleave on one core? The second is the one that bears on
 architecture: if evaluation blocks and offloading it to a thread pool cannot recover
 throughput, that is a materially harder problem than blocking alone.
 
-**This is a spike, not the NFR-RATE-1 harness.** It answers the two questions above and is
+**This is a spike, not the NFR-489 harness.** It answers the two questions above and is
 then thrown away — no code under `packages/` was written or touched. The script and the
 JDM-fetch method live in a throwaway job-dir location, not this repository; reproduce by
 regenerating the graph shown under "Version and method" below.
@@ -30,7 +30,7 @@ regenerating the graph shown under "Version and method" below.
 | `async_evaluate()`, run 2 | 2.3180 ms | 3.3508 ms | 4.3884 ms | 2.3912 ms |
 
 500 iterations per row (20 discarded as warmup), on a 200-step chain — comfortably inside
-NFR-RATE-1's 50 ms budget on an order-of-magnitude basis, consistent with S1/S2. This is a
+NFR-489's 50 ms budget on an order-of-magnitude basis, consistent with S1/S2. This is a
 sanity check, not new information about the budget.
 
 ## Q2 — does evaluate block the event loop?
@@ -83,15 +83,15 @@ slice 1's own latency harness**, not smoothed into "real parallelism, case close
 ## What this spike does not cover
 
 - **No `model_call` step was tested.** GBM invocation inside a decision graph is a "custom
-  node" ADR-0004 describes but which does not exist in `pricing-core` yet — there is
+  node" ADR-706 describes but which does not exist in `pricing-core` yet — there is
   nothing to build one against. The GIL-release finding above is proven for pure
   `expressionNode` evaluation and only **suggested**, not measured, for a graph that also
-  invokes XGBoost mid-evaluation. NFR-RATE-14's `nthread=1` is XGBoost's own internal
+  invokes XGBoost mid-evaluation. NFR-501's `nthread=1` is XGBoost's own internal
   thread pool, a nested and separate mechanism from whatever `async_evaluate()` does — this
   spike says nothing directly about how the two interact once `model_call` is wired in.
 - **The graph is a synthetic 200-step sequential expression chain**, each step reading the
   previous step's output (chosen to mirror a premium ladder's shape, and to match
-  NFR-RATE-1's stated step count) — not a faithful motor rating structure. No lookup,
+  NFR-489's stated step count) — not a faithful motor rating structure. No lookup,
   decision-table, constraint or `model_call` steps are present.
 - **No sustained load.** 64 concurrent calls once is not 200 rps sustained per replica. A
   laptop-class shared box at loadavg ~1 is not a replica under production traffic.
@@ -125,7 +125,7 @@ slice 1's own latency harness**, not smoothed into "real parallelism, case close
 `score_one`'s real-time path actually uses. The choice this evidence bears on is
 `async_evaluate()` built in from the start, versus `evaluate()` plus executor offload
 (non-blocking but throughput-neutral-to-negative, and a second thread-pool layer to reason
-about against NFR-RATE-14). That ruling belongs to the decision-maker.
+about against NFR-501). That ruling belongs to the decision-maker.
 
 ## An observation, not a ruling
 
@@ -143,7 +143,7 @@ rather than a second unrelated correction — not ruled here.
 
 - Engine: `zen-engine` 0.53.0, via the project's own `uv`-managed venv (Python 3.12) — the
   version already resolved as a `pricing-core` dependency, not a separately fetched wheel.
-  Confirmed against the same version W8 re-verified.
+  Confirmed against the same version WK-668 re-verified.
 - Graph: a synthetic chain of 200 `expressionNode`s plus one `inputNode` and one
   `outputNode` (202 nodes total), each step's expression reading the immediately preceding
   step's output (`v{i} = v{i-1} * 1.001 + 1`, seeded from an input field). Built directly

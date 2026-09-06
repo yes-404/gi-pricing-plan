@@ -1,6 +1,6 @@
 """Monetary and decimal primitives.
 
-FR-OVR-7: money is integer minor units (pence/cents) or `Decimal` throughout the rating
+FR-10: money is integer minor units (pence/cents) or `Decimal` throughout the rating
 path. Floats are permitted only inside model fitting and diagnostics, never in a quoted
 premium.
 
@@ -15,12 +15,12 @@ prose is one nobody notices breaking. Two design choices carry the weight:
    Research finding F7 measured that Pydantic renders a bare `Decimal` as
    `anyOf: [{"type": "number"}, {"type": "string"}]` — which permits the lossy binary-float
    form the specification forbids, so a payload could satisfy the generated contract while
-   violating FR-OVR-7. Constraining it here closes that gap at the source.
+   violating FR-10. Constraining it here closes that gap at the source.
 
-3. `DecimalStr` **refuses a `float` on the way in** (`OQ-OVR-8`, decided 2026-08-19).
+3. `DecimalStr` **refuses a `float` on the way in** (`OQ-547`, decided 2026-08-19).
    Choice 2 fixed the *wire* shape; it left the *input* shape open, and
    `OneWayRow(exposure_years=0.1 + 0.2)` returned `Decimal('0.30000000000000004')` — the
-   float's binary error preserved verbatim inside a field FR-OVR-7 defines as exact. By the
+   float's binary error preserved verbatim inside a field FR-10 defines as exact. By the
    time Pydantic sees a float the precision the source amount carried is already gone, so
    there is nothing a validator downstream can recover. A caller that legitimately computes
    in float quantises explicitly first (`pricing_core.data.profile._stored_exposure` is the
@@ -53,7 +53,7 @@ class _DecimalStrSchema:
         return {
             "type": "string",
             "pattern": r"^-?[0-9]+(\.[0-9]+)?$",
-            "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
         }
 
 
@@ -66,7 +66,7 @@ MoneyMinor = Annotated[
 
 
 def _reject_float(value: Any) -> Any:
-    """Refuse a `float` before it is coerced to `Decimal` (FR-OVR-7, `OQ-OVR-8`).
+    """Refuse a `float` before it is coerced to `Decimal` (FR-10, `OQ-547`).
 
     `bool` is not caught here and does not need to be: `isinstance(True, float)` is false,
     and Pydantic rejects a bool for a `Decimal` field on its own.
@@ -74,14 +74,14 @@ def _reject_float(value: Any) -> Any:
     if isinstance(value, float):
         raise ValueError(
             f"{value!r} is a float, and a float has already lost the precision an exact "
-            "decimal is for (FR-OVR-7). Pass a string, an int or a Decimal — quantising "
+            "decimal is for (FR-10). Pass a string, an int or a Decimal — quantising "
             "explicitly first if the value was computed in float."
         )
     return value
 
 
 #: An exact decimal that crosses every boundary as a string. Strict on the way in: a float
-#: is a validation error, not a silent coercion (`OQ-OVR-8`).
+#: is a validation error, not a silent coercion (`OQ-547`).
 DecimalStr = Annotated[
     Decimal,
     BeforeValidator(_reject_float),
@@ -115,7 +115,7 @@ def to_minor(value: Decimal, *, places: int = 2) -> int:
     if scaled != scaled.to_integral_value():
         raise ValueError(
             f"{value} is not exact to {places} decimal places; round explicitly before "
-            "converting to minor units (FR-RATE-12: rounding is never implicit)"
+            "converting to minor units (FR-226: rounding is never implicit)"
         )
     return int(scaled)
 
@@ -123,11 +123,11 @@ def to_minor(value: Decimal, *, places: int = 2) -> int:
 def apply_factor(amount_minor: int, factor: Decimal, *, rounding: str) -> int:
     """Apply a multiplicative factor to a minor-unit amount, rounding explicitly.
 
-    `rounding` is required and has no default. FR-RATE-12 says rounding mode is declared
+    `rounding` is required and has no default. FR-226 says rounding mode is declared
     per step and never implicit, so a default here would quietly undo that requirement.
     """
     if not isinstance(factor, Decimal):  # pragma: no cover - defensive
-        raise TypeError(f"factor must be Decimal, got {type(factor).__name__} (FR-OVR-7)")
+        raise TypeError(f"factor must be Decimal, got {type(factor).__name__} (FR-10)")
     product = Decimal(amount_minor) * factor
     return int(product.quantize(Decimal(1), rounding=rounding))
 

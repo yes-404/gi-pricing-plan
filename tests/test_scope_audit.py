@@ -2,7 +2,7 @@
 
 `--extra` used to be a literal `args.extra.split(",")` with no shared-prefix inheritance,
 so the natural-looking `--extra FR-RATE-40,41,42,NFR-RATE-1,13,14` silently resolved to six
-tokens — `FR-RATE-40`, `"41"`, `"42"`, `NFR-RATE-1`, `"13"`, `"14"` — four of which match no
+tokens — `FR-257`, `"41"`, `"42"`, `NFR-489`, `"13"`, `"14"` — four of which match no
 requirement anywhere. `main` folded every extra token into scope regardless of whether it
 was real, and an unmatched one still printed a `NO EVIDENCE` row indistinguishable from a
 genuine, untested requirement. Worse: one bogus token simply replaced the id it silently
@@ -21,9 +21,9 @@ specifies the tool's own `--extra` behaviour.
 Every case runs the script as a real subprocess, exactly as
 `tests/test_repository_invariants.py` runs `audit-docs.py`: a hyphenated filename is not
 importable, and a subprocess is also the only way to observe the actual exit code, which is
-what the fix changed. The six ids fixed throughout — `FR-RATE-40/41/42`,
-`NFR-RATE-1/13/14` — are real `RATE` requirements confirmed against
-`docs/specs/03-rating-engine.md`: FR-RATE-40..42 sit under §3.8 and NFR-RATE-1/13/14 under
+what the fix changed. The six ids fixed throughout — `FR-257/258/259`,
+`NFR-489/502/501` — are real `RATE` requirements confirmed against
+`docs/specs/03-rating-engine.md`: FR-257, FR-258, FR-259 sit under §3.8 and NFR-489/502/501 under
 its NFR table, both outside `--sections 3.7`, so they only reach scope through `--extra`
 and exercise exactly the path the fix touched.
 """
@@ -37,7 +37,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "scope-audit.py"
 
 _VALID_SIX = (
-    "FR-RATE-40,FR-RATE-41,FR-RATE-42,NFR-RATE-1,NFR-RATE-13,NFR-RATE-14"
+    "FR-257,FR-258,FR-259,NFR-489,NFR-502,NFR-501"
 )
 
 
@@ -75,7 +75,7 @@ def test_the_real_world_comma_split_shape_is_refused_not_half_accepted() -> None
     Comma-splitting turns six intended ids into six literal tokens, four of which —
     `"41"`, `"42"`, `"13"`, `"14"` — match no requirement. Each must get a targeted hint
     naming the prefix a human reader assumes it inherited from the id before it, and the
-    whole list must be refused together: accepting `FR-RATE-40` and `NFR-RATE-1` alone
+    whole list must be refused together: accepting `FR-257` and `NFR-489` alone
     while rejecting the rest would be the same half-accepted shape as the original defect,
     one level down.
     """
@@ -85,10 +85,10 @@ def test_the_real_world_comma_split_shape_is_refused_not_half_accepted() -> None
     assert result.returncode != 0, result.stdout + result.stderr
     assert "--extra names 4 token(s) matching no requirement" in result.stdout
     for bad, guess in [
-        ("41", "FR-RATE-41"),
-        ("42", "FR-RATE-42"),
-        ("13", "NFR-RATE-13"),
-        ("14", "NFR-RATE-14"),
+        ("41", "FR-258"),
+        ("42", "FR-259"),
+        ("13", "NFR-502"),
+        ("14", "NFR-501"),
     ]:
         assert f"'{bad}'" in result.stdout, result.stdout
         assert f"did you mean '{guess}'?" in result.stdout, result.stdout
@@ -103,7 +103,7 @@ def test_a_leading_bare_number_with_no_prior_valid_id_gets_the_plain_refusal() -
     list that opens on a bare number (or one following another bad token) falls back to the
     plain "matches no requirement" refusal rather than guessing.
     """
-    result = _run("RATE", "--sections", "3.7", "--extra", "41,FR-RATE-40")
+    result = _run("RATE", "--sections", "3.7", "--extra", "41,FR-257")
     assert result.returncode != 0, result.stdout + result.stderr
     assert "'41' — no RATE requirement has this id" in result.stdout, result.stdout
     assert "did you mean" not in result.stdout, result.stdout
@@ -111,15 +111,15 @@ def test_a_leading_bare_number_with_no_prior_valid_id_gets_the_plain_refusal() -
 
 def test_an_id_belonging_to_a_different_module_is_refused() -> None:
     """`--extra` is scoped to the module under audit, matching every real invocation on
-    record (`.claude/skills/close-workstream/SKILL.md`'s own `--extra FR-PLAT-47,FR-PLAT-48`
+    record (`.claude/skills/close-workstream/SKILL.md`'s own `--extra FR-450,FR-451`
     example, and the RATE incident this suite is named for) — none of them cross a module
-    boundary. `FR-PLAT-47` is a real requirement (`docs/specs/07-platform.md`), just not a
+    boundary. `FR-450` is a real requirement (`docs/specs/07-platform.md`), just not a
     `RATE` one, so auditing `RATE` must refuse it rather than silently accept an id that
     belongs to a different module's spec.
     """
-    result = _run("RATE", "--sections", "3.7", "--extra", "FR-PLAT-47")
+    result = _run("RATE", "--sections", "3.7", "--extra", "FR-450")
     assert result.returncode != 0, result.stdout + result.stderr
-    assert "'FR-PLAT-47' — no RATE requirement has this id" in result.stdout, result.stdout
+    assert "'FR-450' — no RATE requirement has this id" in result.stdout, result.stdout
 
 
 def test_a_fully_qualified_extra_list_still_passes_unchanged() -> None:
@@ -133,8 +133,8 @@ def test_a_fully_qualified_extra_list_still_passes_unchanged() -> None:
     result = _run("RATE", "--sections", "3.7", "--extra", _VALID_SIX)
     assert "--extra names" not in result.stdout, "a fully valid list must not be refused"
     for rid in (
-        "FR-RATE-40", "FR-RATE-41", "FR-RATE-42",
-        "NFR-RATE-1", "NFR-RATE-13", "NFR-RATE-14",
+        "FR-257", "FR-258", "FR-259",
+        "NFR-489", "NFR-502", "NFR-501",
     ):
         assert f"IN SCOPE  {rid:<34}" in result.stdout, result.stdout
     assert "  in scope        : 13" in result.stdout, result.stdout
@@ -144,5 +144,5 @@ def test_no_extra_flag_at_all_is_unaffected_by_the_new_validation() -> None:
     """The common case — no `--extra` — never touches the new validation path at all."""
     result = _run("RATE", "--sections", "3.7")
     assert "--extra names" not in result.stdout
-    assert "IN SCOPE  FR-RATE-40" not in result.stdout, "40..42 are §3.8, not §3.7"
+    assert "IN SCOPE  FR-257" not in result.stdout, "40..42 are §3.8, not §3.7"
     assert "  in scope        : 7" in result.stdout, result.stdout

@@ -6,7 +6,7 @@ enforcement, triggers — is a PostgreSQL behaviour. A test double would assert 
 calls the right function, which is not the question; the question is whether the database
 refuses the write.
 
-**Audit rows cannot be deleted between tests** — that is the whole point of FR-GOV-22 — so
+**Audit rows cannot be deleted between tests** — that is the whole point of FR-370 — so
 isolation comes from giving each test its own `workspace_id` rather than from cleanup.
 
 That is unchanged. `_empty_the_database_after_the_session` below empties the database once
@@ -230,12 +230,12 @@ async def grant(database: Database, workspace_id: UUID, principal: Principal):
 
         async with database.unit_of_work() as session:
             # The workspace row arrives first: `workspace_members` and `workspace_settings`
-            # now carry a foreign key to it (FR-PLAT-62), so seeding either without it is an
+            # now carry a foreign key to it (FR-395), so seeding either without it is an
             # integrity error rather than a missing name.
             await workspaces.ensure_workspace(session, workspace_id=workspace_id)
             await rbac.seed_builtin_roles(session, workspace_id)
             # The catalogue arrives with the workspace, exactly as the roles do
-            # (FR-DATA-53). `grant` is the only workspace-creation path this suite has, so
+            # (FR-68). `grant` is the only workspace-creation path this suite has, so
             # seeding hangs off it for the same reason `seed_builtin_roles` does.
             await validation_rules.seed_builtin_rules(
                 session, workspace_id, authored_by=principal.id
@@ -256,7 +256,7 @@ async def grant(database: Database, workspace_id: UUID, principal: Principal):
                     scope_type=ScopeType.WORKSPACE.value,
                 )
             )
-            # Idempotent: a test may seed its own membership rows first (FR-PLAT-63's
+            # Idempotent: a test may seed its own membership rows first (FR-396's
             # two-workspace test does), and a duplicate insert would violate
             # `uq_workspace_members_user_workspace` (`models.py`).
             member = principal_id or principal.id
@@ -322,7 +322,7 @@ def principal() -> Principal:
     return Principal(kind=ActorKind.USER, id=new_uuid7(), display="a.actuary@insurer.example")
 
 
-#: Seventeen tables refuse `TRUNCATE`, not one. `audit_events` is the famous one (FR-GOV-22),
+#: Seventeen tables refuse `TRUNCATE`, not one. `audit_events` is the famous one (FR-370),
 #: but artifact immutability is enforced the same way across `validation_reports`,
 #: `models`, `diagnostics`, `blobs`, `transparency_artifacts` and a dozen more — so naming
 #: tables here would mean editing this file every time the platform gains an immutable

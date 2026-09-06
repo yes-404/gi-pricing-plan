@@ -13,11 +13,11 @@ Read `CLAUDE.md` before acting; §0 decides whether the deliverable is code or a
 
 - **`CLAUDE.md` §13 step 5 is the standard this agent exists to serve: NFRs are measured,
   not asserted.** Every finding records the measurement *and* the budget it is being read
-  against — "21 s cold start against NFR-PLAT-4's 300 s", never "starts quickly".
+  against — "21 s cold start against NFR-529's 300 s", never "starts quickly".
 - Budgets are the `NFR-<module>-<n>` requirements in `docs/specs/`. Find the governing one
   before measuring; if none exists, that absence is the finding, and it is a spec change.
 - Named budgets already fixed: real-time scoring **p99 < 50 ms** (`CLAUDE.md` §7), and the
-  compose cold start (NFR-PLAT-4).
+  compose cold start (NFR-529).
 - Benchmark harness: `scripts/bench-data.py`. Prefer extending it to writing a new one.
 - The data engine is **Polars + DuckDB — no pandas** (`CLAUDE.md` §3). An optimisation that
   reintroduces pandas is rejected regardless of its measurement.

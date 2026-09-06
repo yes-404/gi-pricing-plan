@@ -1,13 +1,13 @@
 """`scripts/audit-docs.py`'s check 28: a filed plan states an explicit acceptance standard.
 
-NT-0014 §2's C1 mechanises `delivery-process.md` §5 step 4 / §6 step 1 — the lead's
+RFC-895 §2's C1 mechanises `delivery-process.md` §5 step 4 / §6 step 1 — the lead's
 replan-vs-proceed check that "an acceptance standard was actually defined, not just
 implied." The note's own draft mechanism ("warn until the format lands, red thereafter")
-was **rejected** by Ruling 46
-(`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`): a time-of-run switch makes the same
+was **rejected** by RL-906
+(`docs/rulings/INDEX.md#2026-08-30-nt-0014-q1-q3-q4-rulingsmd`): a time-of-run switch makes the same
 file pass on Tuesday and fail on Wednesday, and a fresh clone cannot reproduce a verdict.
 
-Ruling 46 ruled a durable discriminator instead: **the plan's own filename date against a
+RL-906 ruled a durable discriminator instead: **the plan's own filename date against a
 constant cutoff** (`PLAN_ACCEPTANCE_STANDARD_CUTOFF` in the script) — no warn phase, because
 C1 and the `writing-plans` acceptance-standard field land in the same commit. §3 of the
 ruling requires three cases, "not one", because a check proven only to fire has not been
@@ -68,7 +68,7 @@ def test_a_plan_after_the_cutoff_missing_the_field_is_refused() -> None:
 
 def test_a_legacy_plan_before_the_cutoff_is_never_flagged() -> None:
     """A plan filed before the cutoff, with no acceptance-standard field either, must never
-    red — Ruling 46's "never retro-red-gate a frozen plan". It is counted in the aggregate
+    red — RL-906's "never retro-red-gate a frozen plan". It is counted in the aggregate
     legacy note line, not flagged per-file.
     """
     scratch = PLANS / "2026-08-20-zz-scratch-check28-legacy.md"

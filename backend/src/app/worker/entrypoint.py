@@ -25,11 +25,11 @@ configure_logging(_settings.log_level)
 
 app = create_worker(_settings)
 
-# FR-PLAT-51: the relay is what moves committed intent to the broker. It runs on a short
+# FR-406: the relay is what moves committed intent to the broker. It runs on a short
 # schedule rather than being triggered by the writer, because the writer is inside the
 # transaction and must not touch the broker at all.
 #
-# The interval is the floor on submit-to-running latency, which NFR-PLAT-2 budgets at 5 s.
+# The interval is the floor on submit-to-running latency, which NFR-527 budgets at 5 s.
 app.conf.beat_schedule = {
     "relay-outbox": {
         "task": TASK_RELAY_OUTBOX,

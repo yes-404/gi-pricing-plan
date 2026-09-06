@@ -2,8 +2,8 @@
 /**
  * `02` §5.3's Objective certificate, `/objectives/:id/certificate`.
  *
- * **FR-MODEL-43, as amended 2026-08-25: a `violated` check is a finding, not a failure.** This
- * view is the one FR-OVR-21 named as carrying that obligation, and the amendment is what
+ * **FR-152, as amended 2026-08-25: a `violated` check is a finding, not a failure.** This
+ * view is the one FR-24 named as carrying that obligation, and the amendment is what
  * discharged it. Concretely: `violated` is never styled, labelled, grouped or ordered as a
  * failure; the certificate reads as blocked only when `overall` is `failed`; and where a check
  * is `violated` the declared hessian clipping strategy is shown beside it, because the finding
@@ -13,13 +13,13 @@
  * together would be the "order … as a failure" limb of the amendment, and §4.7's battery has a
  * fixed order a reader can follow.
  *
- * **Nine checks, always** (FR-MODEL-126). A payload carrying fewer is a failure of the run, not
+ * **Nine checks, always** (FR-158). A payload carrying fewer is a failure of the run, not
  * a smaller certificate, so the count is stated rather than quietly rendered.
  *
  * **No convexity heatmap.** The §5.3 cell names one; `CertificateCheck` is name/status/detail
  * and `SamplingSpec` carries only grid parameters, so there are no per-point hessians to plot
- * at any depth. Under FR-OVR-21 that cell binds nothing beyond the presentation rule above, and
- * under OQ-MODEL-15's floor rule a heatmap would be a new requirement plus a contract change.
+ * at any depth. Under FR-24 that cell binds nothing beyond the presentation rule above, and
+ * under OQ-587's floor rule a heatmap would be a new requirement plus a contract change.
  */
 import { computed, onMounted, ref } from "vue";
 
@@ -34,7 +34,7 @@ import CheckStatusBadge from "@/components/CheckStatusBadge.vue";
 
 const props = defineProps<{ id: string }>();
 
-/** §4.7's battery size, held to by `battery_is_exactly` (FR-MODEL-126). */
+/** §4.7's battery size, held to by `battery_is_exactly` (FR-158). */
 const EXPECTED_CHECKS = 9;
 
 const objective = ref<CustomObjective | undefined>(undefined);
@@ -111,7 +111,7 @@ onMounted(async () => {
         </span>
       </p>
 
-      <!-- FR-MODEL-43 as amended: the strategy sits beside the findings, because a finding
+      <!-- FR-152 as amended: the strategy sits beside the findings, because a finding
            without the declared strategy is the half an Approver cannot act on. -->
       <p
         v-if="hasViolation && objective?.hessian_strategy"

@@ -1,4 +1,4 @@
-"""The audit log API (`06` §5.1, FR-GOV-23, FR-GOV-24).
+"""The audit log API (`06` §5.1, FR-371, FR-372).
 
 | Method | Path |
 |---|---|
@@ -11,7 +11,7 @@ that cause them (`06` R2), never posted. An endpoint that could append to the au
 would be a way to write history without doing anything.
 
 `audit:read` is the permission, held by the Auditor role and by every read-everything role.
-FR-GOV-5 is the reason it is not admin-gated: an Auditor must be able to read the log
+FR-346 is the reason it is not admin-gated: an Auditor must be able to read the log
 without being able to change anything, and an Admin must not be able to hide it from them.
 """
 
@@ -65,7 +65,7 @@ class AuditEventView(BaseModel):
 
     Includes `event_hash` and `prev_event_hash`: an auditor exporting the log must be able
     to recompute the chain outside the platform, which is what makes it evidence rather
-    than a report (FR-GOV-24).
+    than a report (FR-372).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -87,7 +87,7 @@ class AuditEventView(BaseModel):
 
 
 class ChainVerification(BaseModel):
-    """The result of recomputing the chain (FR-GOV-24)."""
+    """The result of recomputing the chain (FR-372)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -141,7 +141,7 @@ def _filtered(
     if to is not None:
         conditions.append(AuditEventRow.at <= to)
     if q:
-        # Free text over justifications (FR-GOV-23). Deliberately not over `before`/`after`:
+        # Free text over justifications (FR-371). Deliberately not over `before`/`after`:
         # those are structured state, and a substring match across them would return events
         # whose relevance nobody could explain.
         conditions.append(
@@ -166,7 +166,7 @@ async def query_audit(
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
 ) -> Page[AuditEventView]:
-    """Filtered and cursor-paginated (FR-GOV-23, `00` §5.2).
+    """Filtered and cursor-paginated (FR-371, `00` §5.2).
 
     Ordered by `sequence`, the per-workspace monotonic counter, rather than by `at`: events
     written in one transaction share a timestamp, and a log whose order cannot be
@@ -208,7 +208,7 @@ async def query_audit(
 
 @router.get(
     "/verify",
-    summary="Recompute the hash chain (FR-GOV-24)",
+    summary="Recompute the hash chain (FR-372)",
     responses=problems(401, 403, 422),
 )
 async def verify_chain(caller: ReadAudit, database: DatabaseDep) -> ChainVerification:

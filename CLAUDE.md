@@ -29,7 +29,7 @@ Three rules survive every phase change:
 - **Counts and status that change are not written in this file.** `req-coverage.py` prints
   requirement counts; `docs/roadmap.md` holds workstream and component status. Four
   incidents of the copy here going stale:
-  [`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md).
+  [`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md).
 - **Every spec change runs `python3 scripts/audit-docs.py` before commit.**
 
 ## 1. Project Mission
@@ -43,7 +43,7 @@ design decision favours reproducibility, auditability, and transparency of the m
 ## 2. Repository Layout — *the annotated tree and the reasoning are `.claude/skills/repo-architecture`*
 
 **Component status — exists, partial, scheduled — belongs to `docs/roadmap.md` §6 and only
-there** ([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)). Three entries
+there** ([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)). Three entries
 carry a rule: **`uv.lock` is committed** — a lockfile, not an environment; **`docs/contracts/`
 is generated and never hand-edited**; **a filed plan under `docs/plans/` is frozen at its
 date**. **It is a polyglot monorepo and neither language is the "main" one** — the root
@@ -52,10 +52,10 @@ workflows and one unfiltered `history-policy` workflow; the fourth checks commit
 not files, so path filtering would let it pass by not running** (amended 2026-09-02 by the
 maintainer, with F49's CI enforcement).
 
-**One contract joins backend and frontend, and it flows one way.** ADR-0002's
+**One contract joins backend and frontend, and it flows one way.** ADR-704's
 `model-schema`, the single source of truth, generates `docs/contracts/` — JSON Schema +
 OpenAPI 3.1, committed, a published spec artifact rather than a build output, CI failing on
-drift (FR-PLAT-48) — which generates `frontend/src/api/generated`, VCS-ignored and never
+drift (FR-451) — which generates `frontend/src/api/generated`, VCS-ignored and never
 hand-written.
 
 **The specification is the contract the code is written against**, not a parallel track. A
@@ -95,7 +95,7 @@ arbitrary code — declaration, validation, versioning, audit.
 overview and glossary · `01` data management · `02` modelling · `03` rating engine · `04`
 optimisation · `05` monitoring · `06` governance · `07` platform.
 
-`workflows/wf-01…05` are the **cross-module journeys** — dataset-to-model,
+`workflows/WF-698…05` are the **cross-module journeys** — dataset-to-model,
 model-to-rating-version, rate-change impact, deploy-and-monitor, custom-objective lifecycle.
 A module spec says what one module does; a workflow says what actually happens across all
 of them.
@@ -139,7 +139,7 @@ silent:
 The phase list, workstream rows, closure records, decision gates, the current phase and its
 exit criteria, which workstreams are open, and the retrofit-impossible list are written
 **only** there
-([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md) records this mechanism —
+([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md) records this mechanism —
 this file restating phase or status content and the restatement going stale). Two things
 change how you work rather than what is planned:
 
@@ -178,7 +178,7 @@ follow:
   compaction cap sits, not how light the usage was — a heavy session and a disciplined one
   produce the same zero. Read trends at the boundary (the share of calls near the cap, and
   the spend those calls carry), never absence above it.
-  ([`NT-0007`](docs/notes/0007-context-bound-measures-cap-not-discipline.md))
+  ([`RFC-789`](docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md))
 
 ## 11. Commands Reference — *every command is in `.claude/skills/dev-commands`*
 
@@ -202,7 +202,7 @@ pnpm --dir frontend test && pnpm --dir frontend build
 Project procedures live in `.claude/skills/`, versioned with the repo. **Its `README.md` is
 the index**, `.claude/agents/README.md` the same for the delegable specialists; team roles
 are the `.md` files directly under `.claude/roles/`. **This section keeps no second list**
-([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)).
+([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)).
 
 - **Discovered a non-obvious procedure** (build quirk, test setup, data format rule, deploy
   step)? Write or update a skill, update the README, commit both with the work.
@@ -266,19 +266,19 @@ bind wherever anything here is audited, not only at a close:
   contract name carries its full path; a `Verified` date carries the tree; a word with two
   scopes (`shape`, `slug`, `contract`, `variant`) says which it means. The test: would it still
   resolve for a reader holding none of your open context?
-  ([`NT-0004`](docs/notes/0004-a-reference-that-resolves-only-for-the-writer.md))
+  ([`RFC-777`](docs/rfcs/RFC-00777-a-reference-that-resolves-only-in-the-writer-s-context.md))
   **The predicate clause was added 2026-09-02 by the maintainer, discharging register finding
   F85**: two counts measured at the **same tree** over the **same corpus** differed only by
   pattern — a decorator form against a bare string that also matched prose mentions — and
   **both satisfied this rule as it stood**, while three readers reproduced neither. A pasted
   constant is refused for the same reason a duplicated status line is
-  ([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)): the copy is what goes stale.
+  ([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)): the copy is what goes stale.
 - **Name the range, not the tip; verify the claim, not just the citation.** A review or gate
   names `origin/main...branch`, never the branch's tip SHA — a tip is the record of the last
   edit, not the change set. And a citation can be correct while the content it vouches for is
   wrong: read to the part of the cited artifact that carries the claim — a requirement's
   clauses including its dated amendments, a test's asserts, a function's body.
-  ([`NT-0006`](docs/notes/0006-two-rules-for-reading-an-artifact.md))
+  ([`RFC-779`](docs/rfcs/RFC-00779-two-rules-for-reading-an-artifact-the-one-you-name-and-the-one-you-verify.md))
 - **A Work, Phase or Project close is accepted by the maintainer, with a dated line. A Slice
   is not: it closes on a clean audit and the lead's merge.**
 
@@ -287,7 +287,7 @@ bind wherever anything here is audited, not only at a close:
 §13 audits **one workstream against its own scope**. This audits **the plan** — whether the
 phase boundaries, workstream cuts and requirement set still make sense now that some of the
 work is real. The plan is a working hypothesis, re-tested while the phase is still open.
-*(Raised as [`NT-0001`](docs/notes/0001-phase-boundary-plan-review.md), 2026-08-15.)*
+*(Raised as [`RFC-711`](docs/rfcs/RFC-00711-plan-review-at-each-phase-boundary.md), 2026-08-15.)*
 **Trigger: at each workstream close, and again before a phase's exit demo** — fixed, not
 "sometime". The five questions are in the skill; three rules bind outside it:
 
@@ -313,11 +313,11 @@ extracted so a script can check it. **The markdown is authoritative; the extract
 — read it there. This file said *"a drift check fails the gate when they disagree"*, which was
 **false**: the check that exists resolves each block's *citations*, and nothing compared the
 content, so the extract fell two commits behind its source with the gate green throughout
-(Ruling 45). Corrected 2026-08-30 to a pointer rather than a second description, because a
+(RL-905). Corrected 2026-08-30 to a pointer rather than a second description, because a
 restated enforcement is how one of the two statements goes stale
-([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)) — which is what happened
+([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)) — which is what happened
 here. Read the markdown to know the process; the extract exists so a rule that can be checked
 mechanically is not left to prose.
 
-Distinct from `docs/workflows/wf-01…05`, the domain journeys (§4): one is how the team
+Distinct from `docs/workflows/WF-698…05`, the domain journeys (§4): one is how the team
 works, the other what the platform does.

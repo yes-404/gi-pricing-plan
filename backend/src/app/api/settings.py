@@ -1,11 +1,11 @@
-"""Settings API (`07` §5.1, FR-PLAT-43..46).
+"""Settings API (`07` §5.1, FR-446, FR-447, FR-448, FR-449).
 
 | Method | Path |
 |---|---|
 | `GET` | `/api/v1/settings` — effective values with their resolution source |
 | `PUT` | `/api/v1/settings` — update workspace settings (audited) |
 
-Reads show the whole resolution, not the winning value: FR-PLAT-43 requires the source to
+Reads show the whole resolution, not the winning value: FR-446 requires the source to
 be inspectable, and an Admin asked "why is the PSI threshold 0.25 here?" needs to see which
 layer said so.
 """
@@ -78,7 +78,7 @@ async def get_settings(
 async def update_settings(
     body: UpdateSettings, caller: ManageSettings, database: DatabaseDep, request: Request
 ) -> list[SettingResolution]:
-    """Validate, write and audit each change in one transaction (`06` R2, FR-PLAT-31)."""
+    """Validate, write and audit each change in one transaction (`06` R2, FR-431)."""
     async with database.unit_of_work() as session:
         for key, value in body.values.items():
             before = await setting_service.resolve(

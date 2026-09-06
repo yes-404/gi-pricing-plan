@@ -179,7 +179,7 @@ describe("DiagnosticsView", () => {
   });
 
   /**
-   * FR-MODEL-78 sets `quantile_crossing` on the **second bound of a pair and nowhere else** —
+   * FR-199 sets `quantile_crossing` on the **second bound of a pair and nowhere else** —
    * including the first bound, which had nothing to cross. So `null` means "not a paired
    * quantile model", not "checked and clean", and a block reading `0 of 0 rows crossed` would
    * report a comparison that never happened. The same failure the complexity table's unset

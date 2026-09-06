@@ -4,18 +4,18 @@ The point of this file is the *seam*, not the maths — `packages/pricing-core/t
 test_ebm.py` proves the fit. What is proven here is everything the platform adds around it:
 
 * one Job kind and one handler fit all three arms of `02` §4.4's union;
-* an EBM's fit result IS the model — the exported tables (ADR-0003) — so the fit
+* an EBM's fit result IS the model — the exported tables (ADR-705) — so the fit
   stores no booster and no covariance blob, and the JSONB row alone rescoring it;
 * the diagnostics artifact carries no `glm` or `gbm` block and a populated
   `universal` block, which is what makes `Diagnostics.glm`/`gbm` measurements
-  rather than declared fields (FR-MODEL-52);
+  rather than declared fields (FR-174);
 * the monotone-constraint refusal arrives as the named
   `EBM_MONOTONE_CONSTRAINT_INCOMPLETE` through the same handler mapping the GBM
-  arm uses (FR-MODEL-23);
+  arm uses (FR-115);
 * a pair interaction fits through the job and exports its 2-D grid term;
 * the transparency artifact is the fit exported, not a surrogate — `kinds` carries
   only `ebm_shape_functions`, and monotonicity is read off the exported tables
-  (FR-MODEL-37, FR-MODEL-52).
+  (FR-140, FR-174).
 """
 
 from __future__ import annotations
@@ -112,13 +112,13 @@ async def _fitted_ebm(
     return model_id, await execute_job(database, job.id, blob_store)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 async def test_an_ebm_fits_through_the_same_job_as_a_glm(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """One Job kind, one handler, a third arm of the union.
 
-    The EBM's fit result is the exported tables themselves (ADR-0003): the row's
+    The EBM's fit result is the exported tables themselves (ADR-705): the row's
     `fit_result` validates as an `EbmFitResult` and the spec round-trips as an
     `EbmSpec`, through the same adapters `to_model` applies. R8: the `model.fitted`
     audit event carries the EBM arm's payload — `best_iteration`, `features`,
@@ -157,8 +157,8 @@ async def test_an_ebm_fits_through_the_same_job_as_a_glm(
     assert after["model_type"] == "ebm"
 
 
-@pytest.mark.req("FR-MODEL-49")
-@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-170")
+@pytest.mark.req("FR-174")
 async def test_an_ebm_records_universal_diagnostics_and_no_glm_or_gbm_block(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -167,7 +167,7 @@ async def test_an_ebm_records_universal_diagnostics_and_no_glm_or_gbm_block(
     `glm is None` and `gbm is None` are asserted rather than assumed: a shared
     diagnostics artifact that quietly carried an empty block would render as a model
     with coefficients or trees it does not have. The `universal` block is the same
-    code every arm runs (FR-MODEL-50), and the complexity count is the real bins
+    code every arm runs (FR-171), and the complexity count is the real bins
     across the exported tables.
     """
     model_id, status = await _fitted_ebm(database, blob_store, workspace_id)
@@ -182,18 +182,18 @@ async def test_an_ebm_records_universal_diagnostics_and_no_glm_or_gbm_block(
 
     assert diagnostics.glm is None
     assert diagnostics.gbm is None
-    # FR-MODEL-54: both partitions, always.
+    # FR-183: both partitions, always.
     assert diagnostics.universal.train.ae_overall > 0
     assert diagnostics.universal.holdout.ae_overall > 0
     assert diagnostics.complexity.parameter_count >= 1
 
 
-@pytest.mark.req("FR-MODEL-23")
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-115")
+@pytest.mark.req("FR-140")
 async def test_an_ebm_with_a_bad_monotone_constraint_fails_the_job_with_the_named_code(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """The refusal FR-MODEL-28 demands arrives named, not as a silently-zeroed term.
+    """The refusal FR-122 demands arrives named, not as a silently-zeroed term.
 
     `area` is an identity categorical, so a monotone constraint on it has no order
     to hold against — `fit_ebm`'s pre-check refuses it as
@@ -243,7 +243,7 @@ async def test_an_ebm_with_a_bad_monotone_constraint_fails_the_job_with_the_name
     assert caught.value.code == "EBM_MONOTONE_CONSTRAINT_INCOMPLETE"
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 async def test_the_ebm_fit_job_stores_no_blob(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -289,17 +289,17 @@ async def test_the_ebm_fit_job_stores_no_blob(
     assert after == before
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 async def test_an_ebm_with_interactions_fits_through_the_job(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """`interactions=1` on two factors exports its pair term through the same Job.
 
-    The interaction grid is part of the JSONB fit result (FR-MODEL-37), so a pair
+    The interaction grid is part of the JSONB fit result (FR-140), so a pair
     interaction is a second fit through the same job rather than a different
     artifact. `max_bins=64` keeps the grid small; the pair term is the one whose
     `term_features` has length 2. The setup is inlined because `_fitted_ebm` fits
-    one factor — a pair needs both factors created against this dataset (FR-MODEL-2).
+    one factor — a pair needs both factors created against this dataset (FR-87).
     """
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
@@ -341,19 +341,19 @@ async def test_an_ebm_with_interactions_fits_through_the_job(
     assert len(pair_terms) == 1
 
 
-@pytest.mark.req("FR-MODEL-37")
-@pytest.mark.req("FR-MODEL-33")
-@pytest.mark.req("FR-MODEL-84")
+@pytest.mark.req("FR-140")
+@pytest.mark.req("FR-132")
+@pytest.mark.req("FR-139")
 async def test_an_ebm_transparency_artifact_is_built_and_read_back(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """The EBM arm of `model.transparency`: the fit result exported, nothing approximated.
 
-    An EBM's shape functions ARE the rateable model (FR-MODEL-37), so the artifact
+    An EBM's shape functions ARE the rateable model (FR-140), so the artifact
     carries `ebm_shape_functions` alone — no GLM approximation, no SHAP summary — and
     `kinds` reports exactly that one form. `monotonicity_verified is None` because the
     spec declared no constraints: distinct from `False`, which would say a constraint
-    was checked and failed (FR-MODEL-52). The blob parses as the documented document,
+    was checked and failed (FR-174). The blob parses as the documented document,
     whose `export_version` a reader that cannot parse it must refuse rather than guess.
     """
     model_id, status = await _fitted_ebm(database, blob_store, workspace_id)
@@ -372,18 +372,18 @@ async def test_an_ebm_transparency_artifact_is_built_and_read_back(
     assert document["export_version"] == "ebm-shape-functions/1"
 
 
-@pytest.mark.req("FR-MODEL-52")
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-174")
+@pytest.mark.req("FR-140")
 async def test_an_ebm_with_constraints_verifies_monotonicity_from_the_tables(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-52's monotonicity check for the EBM arm, read off the exported tables.
+    """FR-174's monotonicity check for the EBM arm, read off the exported tables.
 
     `speed` is a numeric factor (over the book's numeric `claim_amount_minor` column), so
     a +1 constraint has an order to hold against — the pre-check that refuses a
     categorical by name would otherwise fire (`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`). The
     artifact's `monotonicity_verified` reads the tables rather than recomputing: the same
-    evidence a Rating Version's approval reads (FR-MODEL-36).
+    evidence a Rating Version's approval reads (FR-136).
     """
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
@@ -417,7 +417,7 @@ async def test_an_ebm_with_constraints_verifies_monotonicity_from_the_tables(
     assert artifact.monotonicity_verified is True
 
 
-@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-132")
 async def test_an_unfitted_ebm_is_refused_a_transparency_artifact(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -450,12 +450,12 @@ async def test_an_unfitted_ebm_is_refused_a_transparency_artifact(
     assert refusal.code == "MODEL_NOT_FITTED"
 
 
-@pytest.mark.req("FR-MODEL-33")
-@pytest.mark.req("FR-MODEL-84")
+@pytest.mark.req("FR-132")
+@pytest.mark.req("FR-139")
 async def test_a_second_artifact_appends_rather_than_replacing(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-33 allows several artifacts, and FR-MODEL-36 makes each one evidence.
+    """FR-132 allows several artifacts, and FR-136 makes each one evidence.
 
     A second build is a new artifact, not a correction of the first — an approval that
     cited the earlier one must still resolve to what the approver read (the

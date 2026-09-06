@@ -8,7 +8,7 @@ Three of them, each stated by `02` §1.3 and none of which a caller can route ar
   answers "may I fit on this?".
 * **R2 — a Model is immutable once fitted.** A refit allocates the next version with
   `parent_model_id` set. Nothing here updates a `fit_result`.
-* **FR-MODEL-66 — the same specification does not fit twice.** `spec_hash` is unique per
+* **FR-204 — the same specification does not fit twice.** `spec_hash` is unique per
   workspace, so a resubmitted spec returns the model that already exists.
 """
 
@@ -92,9 +92,9 @@ __all__ = [
 #:
 #: **Bump this whenever any arm of `ModelSpec` gains, loses or renames a field.** Adding a
 #: field changes the JSON the digest is taken over, so every stored digest silently stops
-#: matching its own specification — a resubmitted spec then looks new, FR-MODEL-66's dedup
+#: matching its own specification — a resubmitted spec then looks new, FR-204's dedup
 #: quietly ends, and the same model is fitted twice under two versions with nothing to say
-#: why. OQ-MODEL-8 named this as the constraint to satisfy *before* the first new field
+#: why. OQ-582 named this as the constraint to satisfy *before* the first new field
 #: lands.
 #:
 #: The tag does not prevent the change; it makes it **legible**. A `v1:` digest in a
@@ -105,47 +105,47 @@ __all__ = [
 #: model resubmitted today looks new. That is the documented cost of the field, paid
 #: visibly: `spec_hash_is_current` reports the stale rows and `LIKE 'v1:%'` finds them.
 #: **v3, 2026-08-17** — `02` §4.4's common block gained `loss_treatment` with the GBM
-#: slice (FR-MODEL-73). It sits on the common block rather than on the GBM arm because
+#: slice (FR-127). It sits on the common block rather than on the GBM arm because
 #: capping is a property of the *response*, and a field defined on one arm of a union is a
 #: field that will be spelled differently on the other. The cost is the same as v2's and is
 #: paid the same way: every `v2:` digest describes a spec this build hashes differently, so
 #: a `v2:` model resubmitted today looks new. `spec_hash_is_current` reports them and
 #: `LIKE 'v2:%'` finds them.
-#: `interval_for` moved it `v3` to `v4` (2026-08-19, FR-MODEL-100): a bound's link to
+#: `interval_for` moved it `v3` to `v4` (2026-08-19, FR-200): a bound's link to
 #: the model it bounds is part of that model's identity, so it joins the payload.
-#: `approximates_model_id` moved it `v4` to `v5` (2026-08-19, FR-MODEL-96): the model a
+#: `approximates_model_id` moved it `v4` to `v5` (2026-08-19, FR-137): the model a
 #: surrogate approximates is part of what that surrogate is, and two approximations of two
-#: different GBMs over one population would otherwise share a digest — which FR-MODEL-66
+#: different GBMs over one population would otherwise share a digest — which FR-204
 #: answers by handing the second caller the first caller's model. Every `v4:` digest is
 #: findable with `LIKE 'v4:%'` and reported stale by `spec_hash_is_current`.
-#: `select_by`/`cv` moved it `v5` to `v6` (2026-08-21, FR-MODEL-20/53): how the fit is
+#: `select_by`/`cv` moved it `v5` to `v6` (2026-08-21, FR-112/182): how the fit is
 #: selected — one alpha, or a CV scan of `cv.alphas` — is part of the fitted question,
-#: and two specs differing there must not share a digest or FR-MODEL-66 answers the
+#: and two specs differing there must not share a digest or FR-204 answers the
 #: second caller with the first caller's model. Every `v5:` digest is now stale and
 #: findable with `LIKE 'v5:%'`.
-#: `tweedie` moved it `v6` to `v7` (2026-08-21, FR-MODEL-22): a model whose power is
+#: `tweedie` moved it `v6` to `v7` (2026-08-21, FR-114): a model whose power is
 #: estimated over `tweedie.p_grid` is a different fitted question than one with a fixed
 #: power — the grid is part of the question, and two specs differing there must not
-#: share a digest or FR-MODEL-66 answers the second caller with the first caller's
+#: share a digest or FR-204 answers the second caller with the first caller's
 #: model. Every `v6:` digest is now stale and findable with `LIKE 'v6:%'`.
-#: `offset_model_ref` (renamed from the scaffold's `model_ref`, FR-MODEL-24) moved it
+#: `offset_model_ref` (renamed from the scaffold's `model_ref`, FR-116) moved it
 #: `v7` to `v8` (2026-08-21, the offset-from-another-model slice): the field joins the
-#: canonicalised spec — the offset it names is part of what a fit means, and FR-MODEL-66's
+#: canonicalised spec — the offset it names is part of what a fit means, and FR-204's
 #: dedup must not match a fit against another model's structure to one that has no offset.
-#: **v9, 2026-08-21** — EbmSpec joined the union (FR-MODEL-37): model_type, objective,
+#: **v9, 2026-08-21** — EbmSpec joined the union (FR-140): model_type, objective,
 #: interactions, max_bins, max_rounds, monotone_constraints. Every `v8:` digest is now
 #: stale and must be findable with `LIKE 'v8:%'`.
 #: **v10, 2026-08-22** — the first bump for an **interpretation** change rather than a
-#: payload one (FR-MODEL-19). `weight` was already in the payload; what changed is that
+#: payload one (FR-111). `weight` was already in the payload; what changed is that
 #: `fit_gbm` began honouring it, having accepted and ignored it since the GBM slice. So a
 #: `v9:` digest over a weighted GBM spec names a fit this build produces differently, and
-#: FR-MODEL-66's dedup would answer the next caller with an unweighted fit for a weighted
+#: FR-204's dedup would answer the next caller with an unweighted fit for a weighted
 #: spec. Every `v9:` digest is now stale and findable with `LIKE 'v9:%'`. The cost is the
 #: documented one and is over-paid: an unweighted GLM's digest goes stale too, for a change
 #: that cannot have affected it. A targeted invalidation has no mechanism here, and
 #: inventing one is larger than the defect it would spare.
-#: `approximates_model` moved it `v10` to `v11` (2026-08-26, FR-MODEL-129,
-#: OQ-MODEL-43): the companion `slug@version` address joined the payload. How a surrogate
+#: `approximates_model` moved it `v10` to `v11` (2026-08-26, FR-169,
+#: OQ-613): the companion `slug@version` address joined the payload. How a surrogate
 #: addresses the model it approximates is part of what the surrogate is — two surrogates
 #: of the same family at different versions are different models — and every `v10:` digest
 #: is now stale and findable with `LIKE 'v10:%'`.
@@ -153,7 +153,7 @@ SPEC_HASH_VERSION: Final = 11
 
 
 def spec_hash(spec: ModelSpec) -> str:
-    """A stable digest of the specification (FR-MODEL-66).
+    """A stable digest of the specification (FR-204).
 
     Over the model's JSON with sorted keys, so two specs that differ only in field order
     are one spec — and two that differ anywhere at all, including a loss treatment or a
@@ -191,7 +191,7 @@ def to_factor(row: FactorRow) -> Factor:
 def to_model(row: ModelRow, *, flags: tuple[ModelFlag, ...] = ()) -> Model:
     """The artifact as the contract declares it (`02` §4.8).
 
-    `flags` is a parameter rather than a column because FR-MODEL-67's flag is computed from
+    `flags` is a parameter rather than a column because FR-205's flag is computed from
     the dataset version's *current* status — see `flags_for`, which is async and therefore
     cannot be called from here. A caller that has not asked for them passes none, and the
     artifact then says `[]` truthfully for "not evaluated on this path" only because every
@@ -223,7 +223,7 @@ async def create_factor(
     actor: Principal,
     factor: Factor,
 ) -> FactorRow:
-    """Author a Factor, or allocate the next version of an existing slug (FR-MODEL-7).
+    """Author a Factor, or allocate the next version of an existing slug (FR-96).
 
     Versioned rather than edited, for the reason a Model Spec pins a factor *version*: an
     edited factor would silently change what every model fitted on it was fitted on.
@@ -290,7 +290,7 @@ async def load_factors(
     and a fit whose columns reordered between runs would produce a different `spec_hash`
     for the same model.
 
-    **Interaction operands are loaded transitively** (FR-MODEL-91, 2026-08-18). A spec pins
+    **Interaction operands are loaded transitively** (FR-92, 2026-08-18). A spec pins
     an `interaction` Factor by id and says nothing about what it crosses, so without this
     every such fit failed in `pricing-core` with "crosses factor …, which was not supplied"
     — a refusal that is correct, arriving from the wrong layer, about something the caller
@@ -373,13 +373,13 @@ async def reserve_model(
     # fails factor resolution — the factors belong to the central model's dataset and not to
     # the one the bound named — so the factor error is a *symptom* of the pairing mistake.
     # Reported in the other order, the caller goes and re-checks factors that were never
-    # wrong (FR-MODEL-78).
+    # wrong (FR-199).
     await _refuse_mismatched_interval_model(
         session, workspace_id=workspace_id, spec=spec
     )
     # Before the factor check too, and for the same reason: a surrogate naming the wrong
     # source model usually also fails factor resolution, and the factor error would send
-    # the caller to re-check factors that were never wrong (FR-MODEL-96). The guard also
+    # the caller to re-check factors that were never wrong (FR-137). The guard also
     # returns the source Model, so the surrogate's family slug can be derived from it
     # below rather than fetched a second time.
     source = await _refuse_mismatched_approximation(
@@ -398,7 +398,7 @@ async def reserve_model(
         )
     ).scalar_one_or_none()
     if existing is not None:
-        # FR-MODEL-66. Not an error: the caller asked for a model with this specification
+        # FR-204. Not an error: the caller asked for a model with this specification
         # and that model exists. Fitting it again would burn a worker to produce the same
         # numbers under a new id, and leave two versions nobody can choose between.
         #
@@ -409,7 +409,7 @@ async def reserve_model(
         # caller queues another Job against the same row.
         return existing, existing.fit_result is None
 
-    # FR-MODEL-102: a surrogate's slug is derived from the source model's family slug,
+    # FR-141: a surrogate's slug is derived from the source model's family slug,
     # never the caller's. A spec may carry any slug; the row stores the one the
     # requirement promises, and an over-long result is refused by name here — before
     # the row is written — rather than as a column `DataError` at the end of the
@@ -427,7 +427,7 @@ async def reserve_model(
             422,
             f"{source.model_family_slug!r} plus the '-approx' suffix is "
             f"{len(family_slug)} characters, and a model family slug is 64. Rename the "
-            "model family, or the approximation FR-MODEL-96 requires cannot be stored.",
+            "model family, or the approximation FR-137 requires cannot be stored.",
         )
 
     version = 1 + (
@@ -481,7 +481,7 @@ async def reserve_model(
 async def _refuse_unusable_factors(
     session: AsyncSession, *, workspace_id: UUID, spec: ModelSpec, dataset_id: UUID
 ) -> None:
-    """FR-MODEL-5 and FR-MODEL-2, at the attempt rather than in the worker.
+    """FR-90 and FR-87, at the attempt rather than in the worker.
 
     Both were enforced inside `pricing-core` at fit time, which is after a model row, a
     version number, a `spec_hash` slot, an audit event and a queued Job already exist. A
@@ -503,12 +503,12 @@ async def _refuse_unusable_factors(
             "FACTOR_PROHIBITED",
             "The spec names a prohibited factor",
             409,
-            f"{detail}. FR-MODEL-5: a prohibited Factor cannot be added to any Model Spec. "
+            f"{detail}. FR-90: a prohibited Factor cannot be added to any Model Spec. "
             "Lifting a prohibition is a change to the Factor, not to the model that wanted "
             "it.",
         )
 
-    # FR-MODEL-2: a Factor is defined against a **Dataset**. A factor from another dataset
+    # FR-87: a Factor is defined against a **Dataset**. A factor from another dataset
     # fits whenever the column names happen to coincide — which in this domain is the norm
     # rather than the exception, and the resulting model cites a factor that was never
     # about this data.
@@ -519,7 +519,7 @@ async def _refuse_unusable_factors(
             "FACTOR_RESOLUTION_FAILED",
             "The spec names factors defined against a different dataset",
             409,
-            f"{detail} against dataset {dataset_id}. FR-MODEL-2 defines a Factor against a "
+            f"{detail} against dataset {dataset_id}. FR-87 defines a Factor against a "
             "Dataset; matching column names elsewhere do not make it the same variable.",
         )
 
@@ -527,7 +527,7 @@ async def _refuse_unusable_factors(
 async def load_interval_models(
     session: AsyncSession, *, workspace_id: UUID, central_model_id: UUID
 ) -> list[ModelRow]:
-    """Every quantile bound fitted for `central_model_id`, lower first (FR-MODEL-78).
+    """Every quantile bound fitted for `central_model_id`, lower first (FR-199).
 
     **Ordered here rather than by the caller.** Two callers sorting the same list two ways
     is how a lower bound reaches the upper side of a response, and `PredictedRow`'s
@@ -537,7 +537,7 @@ async def load_interval_models(
     explicitly: unlike a foreign key, a JSONB path carries no tenancy of its own.
 
     `[]` is the ordinary answer — almost no model is bounded — and the prediction path
-    reads it as FR-MODEL-77's `no_interval_models_fitted` rather than as a failure.
+    reads it as FR-198's `no_interval_models_fitted` rather than as a failure.
     """
     rows = (
         (
@@ -573,7 +573,7 @@ def _bound_alpha(row: ModelRow) -> float:
 async def _refuse_mismatched_interval_model(
     session: AsyncSession, *, workspace_id: UUID, spec: ModelSpec
 ) -> None:
-    """FR-MODEL-78's rules for what a bound must be, enforced before a Job exists.
+    """FR-199's rules for what a bound must be, enforced before a Job exists.
 
     A bound that disagrees with its central model is an interval drawn around a different
     model. It fits without complaint, returns two ordered numbers, and nothing downstream
@@ -586,7 +586,7 @@ async def _refuse_mismatched_interval_model(
 
     **The objective is checked too, and it is the rule most easily left out.** A bound whose
     objective is `count:poisson` passes every structural rule and estimates the *mean*; the
-    pair would then be two mean estimates reported as an interval. FR-MODEL-78 says a bound
+    pair would then be two mean estimates reported as an interval. FR-199 says a bound
     is fitted with the `quantile` template at a declared alpha, and this is where that
     sentence becomes a refusal.
     """
@@ -622,7 +622,7 @@ async def _refuse_mismatched_interval_model(
             "This bound does not match the model it bounds",
             409,
             f"interval_for names {central.model_family_slug}@{central.version}, but the "
-            f"two specifications disagree on {', '.join(mismatches)} (FR-MODEL-78). An "
+            f"two specifications disagree on {', '.join(mismatches)} (FR-199). An "
             "interval fitted on a different design is an interval around a different "
             "model, and renders identically to a correct one.",
         )
@@ -643,7 +643,7 @@ async def _refuse_mismatched_interval_model(
                 409,
                 f"{central.model_family_slug}@{central.version} already has a {side} bound "
                 f"at alpha={existing_alpha} ({existing.model_family_slug}@"
-                f"{existing.version}). FR-MODEL-100 allows one per side: the response "
+                f"{existing.version}). FR-200 allows one per side: the response "
                 "carries a single `level`, and two bounds on one side leave nothing to say "
                 "which pair produced it.",
             )
@@ -652,20 +652,20 @@ async def _refuse_mismatched_interval_model(
 async def _refuse_mismatched_approximation(
     session: AsyncSession, *, workspace_id: UUID, spec: ModelSpec
 ) -> ModelRow | None:
-    """FR-MODEL-96's rules for what a surrogate may approximate, before a Job exists.
+    """FR-137's rules for what a surrogate may approximate, before a Job exists.
 
     The type already refuses a spec that claims to be a surrogate while pointing at an
-    observed response column (FR-MODEL-102). What the type cannot see is the *other* model:
+    observed response column (FR-141). What the type cannot see is the *other* model:
     whether it exists, whether it has predictions to approximate, and whether it was fitted
     over the same population. An approximation of a model it does not describe fits without
     complaint and renders identically to a correct one.
 
     Returns the source Model the spec approximates, or `None` when the spec is not a
-    surrogate — the caller derives the surrogate's family slug from it (FR-MODEL-102).
+    surrogate — the caller derives the surrogate's family slug from it (FR-141).
     """
     if not isinstance(spec, GlmSpec) or spec.approximates_model_id is None:
         return None
-    # The type-level iff (FR-MODEL-129) guarantees the companion whenever the id is set.
+    # The type-level iff (FR-169) guarantees the companion whenever the id is set.
     assert spec.approximates_model is not None
 
     source = await session.get(ModelRow, spec.approximates_model_id)
@@ -683,7 +683,7 @@ async def _refuse_mismatched_approximation(
             "The model this approximates has no fit to approximate",
             409,
             f"{source.model_family_slug}@{source.version} is at "
-            f"{source.status!r} and has no predictions. FR-MODEL-34 fits the surrogate to "
+            f"{source.status!r} and has no predictions. FR-133 fits the surrogate to "
             "the model's own predictions, and a model at `draft` has none.",
         )
 
@@ -693,7 +693,7 @@ async def _refuse_mismatched_approximation(
             "MODEL_APPROXIMATION_INVALID",
             "A GLM needs no approximation",
             409,
-            f"{source.model_family_slug}@{source.version} is a GLM. FR-MODEL-33 applies to "
+            f"{source.model_family_slug}@{source.version} is a GLM. FR-132 applies to "
             "non-GLM models: approximating a GLM with another GLM reports 100 % fidelity, "
             "which looks like evidence and is not.",
         )
@@ -723,7 +723,7 @@ async def _refuse_mismatched_approximation(
             "This approximation does not match the model it approximates",
             409,
             f"approximates_model_id names {source.model_family_slug}@{source.version}, but "
-            f"the two specifications disagree on {', '.join(mismatches)} (FR-MODEL-96). An "
+            f"the two specifications disagree on {', '.join(mismatches)} (FR-137). An "
             "approximation fitted over a different population or design describes a "
             "different model, and renders identically to a correct one.",
         )
@@ -748,7 +748,7 @@ async def _refuse_a_bound_that_is_not_a_quantile_fit(
             "MODEL_INTERVAL_PAIR_INVALID",
             "A bound must be fitted with the quantile template",
             409,
-            f"objective {spec.objective.name!r} is a builtin, and FR-MODEL-78 fits each "
+            f"objective {spec.objective.name!r} is a builtin, and FR-199 fits each "
             "bound with the `quantile` template (§4.5) at a declared alpha. A builtin "
             "objective estimates the mean, so the pair would be two mean estimates "
             "reported as an interval.",
@@ -763,7 +763,7 @@ async def _refuse_a_bound_that_is_not_a_quantile_fit(
             "A bound must be fitted with the quantile template",
             409,
             f"{spec.objective.ref} is the {objective.template.value!r} template, not "
-            "`quantile` (FR-MODEL-78). Only the pinball loss estimates a quantile; every "
+            "`quantile` (FR-199). Only the pinball loss estimates a quantile; every "
             "other template in §4.5 estimates a mean of some kind.",
         )
     objective_alpha = objective.params.get("alpha")
@@ -795,7 +795,7 @@ async def record_fit(
     fitted, and "refit" means a new version, not new coefficients on the old one. Without
     this the rule would hold only for callers who remembered it.
 
-    `diagnostics` is **required**, not optional. FR-MODEL-49 makes them a product of every
+    `diagnostics` is **required**, not optional. FR-170 makes them a product of every
     fit and `02` §4.8 makes them a condition of `fitted`; an optional argument would make
     the invariant depend on each caller remembering to pass one, which is the shape of
     every invariant this repository has had to repair.
@@ -861,7 +861,7 @@ async def record_fit(
             "features": len(fit_result.feature_order),
         }
     else:
-        # The EBM arm (2026-08-21, the W5 EBM slice): the fit IS the exported tables —
+        # The EBM arm (2026-08-21, the WK-661 EBM slice): the fit IS the exported tables —
         # no blob to hash. The payload names what identifies the fit.
         assert isinstance(fit_result, EbmFitResult)
         after |= {
@@ -911,7 +911,7 @@ async def models_referencing_version(
     """Every Model fitted on this Dataset Version (`01` §4.9's `models` arm).
 
     Any status — a draft Model still references the version it was fitted on, and the
-    blast radius FR-DATA-35 exists to compute (FR-DATA-23) does not stop at approval.
+    blast radius FR-75 exists to compute (FR-53) does not stop at approval.
     The `ix_models_dataset_version` index serves the query. Owned by this module, not
     the DATA service's: DEP-1 forbids DATA importing MODEL, so the router assembles
     this arm into the lineage response where the modules meet.
@@ -934,7 +934,7 @@ async def models_referencing_version(
 
 @dataclasses.dataclass(frozen=True)
 class OffsetModelSource:
-    """What an offset-from-another-model ref resolves to (FR-MODEL-24).
+    """What an offset-from-another-model ref resolves to (FR-116).
 
     The η array is deliberately not computed here: the linear predictor is pricing-core
     maths and belongs on the worker thread, not the event loop.
@@ -954,11 +954,11 @@ async def resolve_offset_model(
     ref: str,
     caller_link: str,
 ) -> OffsetModelSource:
-    """Resolve `offset_model_ref` to the artifacts whose η is the offset (FR-MODEL-24).
+    """Resolve `offset_model_ref` to the artifacts whose η is the offset (FR-116).
 
     Every refusal is named: the ref must name a fitted GLM in this workspace whose link
     equals the new spec's — otherwise the fit would be offset by a number from another
-    scale, the defect class FR-MODEL-71 refuses for `base_margin`.
+    scale, the defect class FR-126 refuses for `base_margin`.
     """
     parsed = ArtifactRef.model_validate(ref)
     if parsed.type != "model":
@@ -966,7 +966,7 @@ async def resolve_offset_model(
             "MODEL_OFFSET_REF_INVALID",
             "The model the offset names is not a model",
             409,
-            f"{ref} names a {parsed.type}, and an offset must be another model (FR-MODEL-24).",
+            f"{ref} names a {parsed.type}, and an offset must be another model (FR-116).",
         )
     row = await load_model(
         session, workspace_id=workspace_id, slug=parsed.slug, version=parsed.version
@@ -983,7 +983,7 @@ async def resolve_offset_model(
             "MODEL_OFFSET_REF_INVALID",
             "The model the offset names has no fit to offset against",
             409,
-            f"{ref} is not fitted, and the offset is its linear predictor (FR-MODEL-24).",
+            f"{ref} is not fitted, and the offset is its linear predictor (FR-116).",
         )
     ref_spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
     ref_fit = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
@@ -993,7 +993,7 @@ async def resolve_offset_model(
             "The model the offset names is not a GLM",
             409,
             f"{ref} is not a GLM, and the first offset-from-model slice is GLM-to-GLM "
-            "(FR-MODEL-24, amended 2026-08-21).",
+            "(FR-116, amended 2026-08-21).",
         )
     if ref_spec.link != caller_link:
         raise PlatformError(
@@ -1001,7 +1001,7 @@ async def resolve_offset_model(
             "The offset model's link is not the new spec's",
             409,
             f"{ref} was fitted with a {ref_spec.link} link and the new spec declares "
-            f"{caller_link}; the offset would be a number from another scale (FR-MODEL-24).",
+            f"{caller_link}; the offset would be a number from another scale (FR-116).",
         )
     try:
         factors = await load_factors(
@@ -1032,9 +1032,9 @@ def fit_payload(row: ModelRow) -> dict[str, Any]:
     return {"model_id": str(row.id), "workspace_id": str(row.workspace_id)}
 
 
-# -- The lifecycle (FR-MODEL-64) -----------------------------------------------------------
+# -- The lifecycle (FR-202) -----------------------------------------------------------
 #
-# `06` FR-GOV-9 makes the approval machine uniform across artifact types and stops it at
+# `06` FR-351 makes the approval machine uniform across artifact types and stops it at
 # `approved`: "post-approval states belong to the owning module". This is that module for a
 # Model, and the seam is deliberate in both directions.
 #
@@ -1042,19 +1042,19 @@ def fit_payload(row: ModelRow) -> dict[str, Any]:
 # `approvals` may call back here, which is why `apply_approval_decision` is driven by the
 # caller that already holds both — the API route for `POST /approval-requests/{id}/decide` —
 # rather than by a hook inside the approval machine. `withdraw`'s `artifact_is_live`
-# argument is the same seam, decided the same way when W3 built it: governance owns the
+# argument is the same seam, decided the same way when WK-659 built it: governance owns the
 # rule, the owning module owns the state.
 
 
 async def flags_for(
     session: AsyncSession, *, workspace_id: UUID, row: ModelRow
 ) -> tuple[ModelFlag, ...]:
-    """FR-MODEL-67's flags, **computed rather than stored**.
+    """FR-205's flags, **computed rather than stored**.
 
-    A stored flag is a snapshot, and the thing this one describes moves: `01` FR-DATA-23
+    A stored flag is a snapshot, and the thing this one describes moves: `01` FR-53
     makes validation re-runnable on an already-validated version, so a dataset that was
     good under an older rule set can go to `failed` long after a model was fitted on it.
-    A column written at fit time would then say `[]` for exactly the model FR-MODEL-67
+    A column written at fit time would then say `[]` for exactly the model FR-205
     exists to stop.
 
     The cost is a read per model, which is why it is not called on the list path.
@@ -1080,7 +1080,7 @@ def _require_transition(row: ModelRow, target: ModelStatus) -> ModelStatus:
             "Invalid model lifecycle transition",
             409,
             f"{row.model_family_slug}@{row.version} is {current.value!r} and cannot move "
-            f"to {target.value!r} (FR-MODEL-64).",
+            f"to {target.value!r} (FR-202).",
         )
     return current
 
@@ -1118,7 +1118,7 @@ async def submit_for_review(
     model_id: UUID,
     change_summary: str,
 ) -> tuple[ModelRow, ApprovalRequestRow]:
-    """`fitted → review`, with the approval request it exists to create (`wf-01` E6/E7).
+    """`fitted → review`, with the approval request it exists to create (`WF-698` E6/E7).
 
     Gated on `model:submit` — a permission that existed in `permissions.py` and gated
     nothing until now, held by `pricing_actuary` and not by `analyst`. Submitting is not
@@ -1126,8 +1126,8 @@ async def submit_for_review(
     role that may explore a specification is not automatically the role that may do that.
 
     **The flag is not checked here.** A model whose dataset version has lost its standing
-    can still be submitted; what it cannot do is reach `approved` (FR-MODEL-67). Refusing
-    the submission would hide the flag from the approver, and `06` FR-GOV-17's whole design
+    can still be submitted; what it cannot do is reach `approved` (FR-205). Refusing
+    the submission would hide the flag from the approver, and `06` FR-359's whole design
     is that flags are visible *in the approval surface* rather than being an error the
     submitter alone ever sees.
     """
@@ -1159,7 +1159,7 @@ async def submit_for_review(
     row.approval_request_id = request.id
     await session.flush()
 
-    # Recorded on the submission rather than left for the approver to discover: FR-GOV-17
+    # Recorded on the submission rather than left for the approver to discover: FR-359
     # puts the flag in the approval surface, and the audit trail is where "was it flagged
     # when it was submitted?" is answered after the dataset has moved on again.
     flags = await flags_for(session, workspace_id=workspace_id, row=row)
@@ -1184,26 +1184,26 @@ async def submit_for_review(
 async def _require_evidence(
     session: AsyncSession, *, workspace_id: UUID, row: ModelRow
 ) -> None:
-    """`06` R4 and FR-GOV-10: the policy's required evidence, enforced at submission.
+    """`06` R4 and FR-352: the policy's required evidence, enforced at submission.
 
     `EVIDENCE_INCOMPLETE` was a registered code nothing raised — the shape of gap this
     repository has had to repair twice, where a catalogue entry is indistinguishable from a
     working refusal.
 
     **Fails closed on an evidence kind it cannot check.** A workspace may edit the policy
-    (FR-GOV-12), so it can name evidence this slice has no way to look for — model
+    (FR-354), so it can name evidence this slice has no way to look for — model
     comparison is still declared and unbuilt. Treating an uncheckable requirement as
     satisfied would let a policy tightening silently do nothing, which is worse than a
     submission refused with the reason named.
 
     **The list it reads is the union of `06` §3.3's floor and the workspace policy**
-    (FR-GOV-37, OQ-GOV-7 decided 2026-08-18). The two tables disagreed for a Model and this
+    (FR-364, OQ-639 decided 2026-08-18). The two tables disagreed for a Model and this
     check could only read one of them; §3.3 is now the floor and §4.2 may only add to it, so
     a workspace cannot edit its way past `02` §4.8 R3.
 
     **`transparency` became checkable on 2026-08-17 and this function was still failing
     closed on it.** The artifact exists now, so the policy kind is answered by looking for
-    one rather than by refusing — and FR-MODEL-89's R3 is enforced here whether or not any
+    one rather than by refusing — and FR-211's R3 is enforced here whether or not any
     policy asks for it, because R3 is an invariant of the Model rather than a workspace's
     choice.
     """
@@ -1212,8 +1212,8 @@ async def _require_evidence(
     )
     model_type = str(row.spec.get("model_type", "glm"))
     if model_type != "glm" and not has_transparency:
-        # FR-MODEL-89 / `02` §4.8 R3, enforced at submission for the same reason
-        # FR-MODEL-64 puts it at `review`: `approved` is unreachable without passing here,
+        # FR-211 / `02` §4.8 R3, enforced at submission for the same reason
+        # FR-202 puts it at `review`: `approved` is unreachable without passing here,
         # and refusing at the approval step would waste an approver's attention on a model
         # that was never eligible. The check runs artifact→model, which is the direction
         # the link runs — `models` carries no column anything writes back.
@@ -1222,8 +1222,8 @@ async def _require_evidence(
             "Required evidence is missing",
             422,
             f"{row.model_family_slug}@{row.version} is a {model_type} model and no "
-            "transparency artifact names it. `02` §4.8 R3 and FR-MODEL-89: a non-GLM model "
-            "cannot be approved without one, and FR-MODEL-64 makes `review` the gate. "
+            "transparency artifact names it. `02` §4.8 R3 and FR-211: a non-GLM model "
+            "cannot be approved without one, and FR-202 makes `review` the gate. "
             "POST /api/v1/models/{id}/transparency produces it.",
         )
 
@@ -1241,7 +1241,7 @@ async def _require_evidence(
         "transparency_artifact": transparency_satisfied,
     }
 
-    #: FR-GOV-37: the union of `06` §3.3's floor and the workspace's own entry, so a policy
+    #: FR-364: the union of `06` §3.3's floor and the workspace's own entry, so a policy
     #: stored before the floor existed cannot sit below it.
     required = policy.effective_evidence("model")
     missing = [kind for kind in required if not verifiable.get(kind, False)]
@@ -1249,7 +1249,7 @@ async def _require_evidence(
         unknown = [kind for kind in missing if kind not in verifiable]
         detail = (
             f"{row.model_family_slug}@{row.version} is missing required evidence: "
-            f"{', '.join(missing)}. `06` FR-GOV-19 defines it per artifact type and R4 "
+            f"{', '.join(missing)}. `06` FR-363 defines it per artifact type and R4 "
             "makes it a condition of submission, not of approval."
         )
         if unknown:
@@ -1264,10 +1264,10 @@ async def _require_evidence(
 async def _has_transparency_artifact(
     session: AsyncSession, *, workspace_id: UUID, model_id: UUID
 ) -> bool:
-    """Whether any `TransparencyArtifact` names this model (FR-MODEL-89).
+    """Whether any `TransparencyArtifact` names this model (FR-211).
 
     The artifact carries `model_id` and the Model carries no back-reference that anything
-    writes, so this is the only direction the question can be asked in. FR-MODEL-33 allows
+    writes, so this is the only direction the question can be asked in. FR-132 allows
     many artifacts per model; one is enough to satisfy R3.
     """
     found = await session.scalar(
@@ -1288,7 +1288,7 @@ async def apply_approval_decision(
     actor: Principal,
     request: ApprovalRequestRow,
 ) -> ModelRow | None:
-    """Carry a governance decision into the artifact (`wf-01` E10, FR-MODEL-64).
+    """Carry a governance decision into the artifact (`WF-698` E10, FR-202).
 
     Returns `None` when the request is about something other than a Model, so the caller
     can drive every artifact type through one call rather than branching per type.
@@ -1313,7 +1313,7 @@ async def apply_approval_decision(
         )
     ).scalar_one_or_none()
     if row is None:
-        # **The hole this used to describe is closed.** `06` FR-GOV-36 is built: `POST
+        # **The hole this used to describe is closed.** `06` FR-386 is built: `POST
         # /approval-requests` resolves the reference it is asked to pin before the row
         # exists (`api/approvals.py::_resolve_the_artifact`), so a request naming a model
         # that was never created is now refused with `NOT_FOUND` at submission rather than
@@ -1338,14 +1338,14 @@ async def apply_approval_decision(
     if target is ModelStatus.APPROVED:
         flags = await flags_for(session, workspace_id=workspace_id, row=row)
         if flags:
-            # FR-MODEL-67 and `06` FR-GOV-17. The decision is recorded and the artifact does
+            # FR-205 and `06` FR-359. The decision is recorded and the artifact does
             # not move; the transaction is rolled back by the caller, so neither happens.
             raise PlatformError(
                 "ARTIFACT_FLAGGED",
                 "This model carries a flag and cannot be approved",
                 409,
                 f"{request.artifact_ref} is flagged {[f.value for f in flags]}. "
-                "FR-MODEL-67: a Model whose Dataset Version was invalidated cannot advance "
+                "FR-205: a Model whose Dataset Version was invalidated cannot advance "
                 "to `approved`. Re-validating the version, or refitting on one that holds, "
                 "clears it — the flag is computed, not stored, so nothing needs unsetting.",
             )
@@ -1377,9 +1377,9 @@ def _target_status(request_status: ApprovalStatus) -> ModelStatus | None:
     """What a request's status means for the artifact behind it.
 
     `changes_requested`, `rejected` and `withdrawn` all return the model to **`fitted`**,
-    not to `draft`. FR-GOV-13 says `draft`, and for most artifact types that is right; for a
+    not to `draft`. FR-355 says `draft`, and for most artifact types that is right; for a
     Model it is not, because `02` uses `draft` for *reserved, not yet fitted* and R2 makes
-    the coefficients immutable. A model cannot un-fit. `06` FR-GOV-13 carries the amendment
+    the coefficients immutable. A model cannot un-fit. `06` FR-355 carries the amendment
     (2026-08-17) rather than this code carrying a silent divergence.
     """
     return {

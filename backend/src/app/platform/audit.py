@@ -1,4 +1,4 @@
-"""The audit sink — cross-cutting, and it lands before the governance module (DEP-1a).
+"""The audit sink — cross-cutting, and it lands before the governance module (DEP-537).
 
 > **`06` R2** — Every governed transition writes its event in the same database
 > transaction as the change. If the audit write fails, the change fails.
@@ -8,7 +8,7 @@ The whole design follows from taking that literally. `record()` takes the caller
 `try/except` around the insert. A swallowed audit failure would leave a change with no
 record, which is the one outcome the requirement forbids.
 
-Chain integrity (FR-GOV-24) needs the previous event's hash, so appends are serialised per
+Chain integrity (FR-372) needs the previous event's hash, so appends are serialised per
 workspace by a transaction-scoped advisory lock. Per *workspace*, not globally: two
 workspaces have independent chains and must not queue behind each other.
 """
@@ -156,7 +156,7 @@ def _workspace_lock_key(workspace_id: UUID) -> int:
 
 
 async def verify_chain(session: AsyncSession, workspace_id: UUID) -> int:
-    """Recompute every hash in a workspace's chain (FR-GOV-24). Returns the count checked.
+    """Recompute every hash in a workspace's chain (FR-372). Returns the count checked.
 
     Raises `ChainBrokenError` at the first event whose stored hash disagrees with its content,
     or whose `prev_event_hash` does not match its predecessor. Both matter: the first

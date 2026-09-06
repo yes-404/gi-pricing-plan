@@ -2,7 +2,7 @@
 
 Adds the rate-table store (slice W10-2): a `rate_tables` catalog, immutable
 `rate_table_versions` carrying the definition (keys, value, bounds, default row),
-and per-cell rows for `storage: rows` (FR-RATE-62) — the form that makes FR-RATE-17's
+and per-cell rows for `storage: rows` (FR-232) — the form that makes FR-231's
 cell diff and its exposure weighting SQL-joinable. The parquet blob form and the
 workspace cell-count threshold are W10-3.
 

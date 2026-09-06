@@ -1,4 +1,4 @@
-"""The `sql` escape hatch and its sandbox (`01` §4.5, NFR-DATA-9, OQ-DATA-3).
+"""The `sql` escape hatch and its sandbox (`01` §4.5, NFR-473, OQ-559).
 
 Every test here attempts the attack rather than asserting the configuration. A sandbox
 verified by reading its settings is a sandbox nobody has tried to escape — and the settings
@@ -53,7 +53,7 @@ def _run(query: str, **params: object):
     return CHECKS["sql"](_rule(query, **params), {"exposure": FRAME}, CONTEXT)
 
 
-@pytest.mark.req("FR-DATA-21")
+@pytest.mark.req("FR-50")
 def test_a_counting_query_reports_violating_rows() -> None:
     """The happy path: the query answers the rule's question with a number."""
     outcome = _run("SELECT count(*) FROM exposure WHERE exposure_years <= 0")
@@ -61,7 +61,7 @@ def test_a_counting_query_reports_violating_rows() -> None:
     assert outcome.measured == {"violating_rows": 2}
 
 
-@pytest.mark.req("FR-DATA-21")
+@pytest.mark.req("FR-50")
 def test_a_boolean_query_is_an_assertion() -> None:
     outcome = _run("SELECT min(exposure_years) > 0 FROM exposure")
     assert outcome.violating_rows == 1  # the assertion does not hold
@@ -70,7 +70,7 @@ def test_a_boolean_query_is_an_assertion() -> None:
     assert outcome.violating_rows == 0
 
 
-@pytest.mark.req("NFR-DATA-9")
+@pytest.mark.req("NFR-473")
 @pytest.mark.parametrize(
     "query",
     [
@@ -85,7 +85,7 @@ def test_a_boolean_query_is_an_assertion() -> None:
     ],
 )
 def test_only_a_single_select_is_accepted(query: str) -> None:
-    """NFR-DATA-9: cannot write, cannot load extensions, cannot reach another database.
+    """NFR-473: cannot write, cannot load extensions, cannot reach another database.
 
     Parsed by DuckDB rather than pattern-matched. A regex over SQL is a guess, and the
     comment case above is exactly what it guesses wrong.
@@ -94,7 +94,7 @@ def test_only_a_single_select_is_accepted(query: str) -> None:
         _run(query)
 
 
-@pytest.mark.req("NFR-DATA-9")
+@pytest.mark.req("NFR-473")
 @pytest.mark.parametrize(
     "query",
     [
@@ -104,7 +104,7 @@ def test_only_a_single_select_is_accepted(query: str) -> None:
     ],
 )
 def test_the_query_cannot_read_outside_the_registered_tables(query: str) -> None:
-    """NFR-DATA-9: cannot read outside the target version's data.
+    """NFR-473: cannot read outside the target version's data.
 
     The tables are registered as views from frames already in memory, so the query has
     something to read without the connection having a path to anything else. These are
@@ -116,9 +116,9 @@ def test_the_query_cannot_read_outside_the_registered_tables(query: str) -> None
     assert "Permission" in str(excinfo.value) or "disabled" in str(excinfo.value)
 
 
-@pytest.mark.req("NFR-DATA-9")
+@pytest.mark.req("NFR-473")
 def test_a_runaway_query_is_interrupted_at_its_budget() -> None:
-    """NFR-DATA-9: *killed* at its time budget, not reported on after it finishes.
+    """NFR-473: *killed* at its time budget, not reported on after it finishes.
 
     The engine's per-rule budget is checked after a check returns, which is fine for a
     Polars expression and useless against a query that would run for an hour. This one
@@ -129,9 +129,9 @@ def test_a_runaway_query_is_interrupted_at_its_budget() -> None:
     assert "budget" in str(excinfo.value)
 
 
-@pytest.mark.req("FR-DATA-19")
+@pytest.mark.req("FR-48")
 def test_a_broken_sql_rule_becomes_an_error_and_the_others_still_run() -> None:
-    """FR-DATA-19: rules are independent, and an unrun rule is never a pass.
+    """FR-48: rules are independent, and an unrun rule is never a pass.
 
     The whole reason the escape hatch is survivable: a user's SQL that does not parse
     fails that rule and no other.
@@ -148,7 +148,7 @@ def test_a_broken_sql_rule_becomes_an_error_and_the_others_still_run() -> None:
     assert outcomes[good.rule.id] == "pass"
 
 
-@pytest.mark.req("NFR-DATA-9")
+@pytest.mark.req("NFR-473")
 def test_a_query_returning_a_table_is_refused() -> None:
     """A rule reports a number of violating rows. A query returning a table has not
     answered the question the rule asks, and guessing which column meant what would make

@@ -1,7 +1,7 @@
 # 03 — Rating Engine
 
 **Status:** draft · **Phase:** 0 (specification) · **Module code:** `RATE`
-**Prerequisites:** [`00-overview.md`](00-overview.md) §2.3; [`02-modelling.md`](02-modelling.md) §3.9 (peril structures); [ADR-0004](../adr/0004-zen-engine-for-rating-execution.md).
+**Prerequisites:** [`00-overview.md`](00-overview.md) §2.3; [`02-modelling.md`](02-modelling.md) §3.9 (peril structures); [ADR-706](../adrs/ADR-00706-gorules-zen-engine-executes-rating-dags.md).
 
 ---
 
@@ -16,7 +16,7 @@ Everything between "an approved Peril Structure exists" and "a live system gets 
    an actuary edits when making a rate change.
 3. **Rating Versions** — immutable deployable bundles pinning the algorithm, every rate
    table, every referenced model, and every reference table version.
-4. **Scoring** — real-time single-quote scoring (NFR-OVR-1) and batch portfolio re-rating.
+4. **Scoring** — real-time single-quote scoring (NFR-454) and batch portfolio re-rating.
 5. **Trace** — the per-step record of a scoring call: the backbone of explainability,
    dispute resolution, and testing.
 6. **Testing** — quote sandbox, regression test suites pinned to a rating version, and
@@ -42,14 +42,14 @@ Everything between "an approved Peril Structure exists" and "a live system gets 
 > and reference table version it uses is fixed at bundle time. Nothing resolves "latest" at
 > scoring time. Ever.
 >
-> **R2 — Money is integer minor units or `Decimal` throughout** (FR-OVR-7). The engine
+> **R2 — Money is integer minor units or `Decimal` throughout** (FR-10). The engine
 > refuses to construct a rating step whose output is a float-typed monetary value.
 >
 > **R3 — Every scoring call can produce a full Trace**, and a traced call and an untraced
 > call return identical premiums. Tracing changes performance, never results.
 >
 > **R4 — A Rating Version cannot reach `approved` without dislocation evidence, a passing
-> regression suite, and (where applicable) a GIPP check** (FR-RATE-40).
+> regression suite, and (where applicable) a GIPP check** (FR-257).
 
 ---
 
@@ -60,11 +60,11 @@ Terms from `00-overview.md` §2.3 are used unchanged. Additional terms owned her
 | Term | Definition |
 |---|---|
 | **Rating Input** | A named, typed field the algorithm expects from the caller (`driver_age: int`, `postcode: string`). The input contract is part of the Rating Version and is versioned with it. |
-| **Quote Context** | The complete input to one scoring call: rating inputs, a quote timestamp, an effective date, and a `purpose` (`new_business` \| `renewal` \| `mid_term_adjustment` \| `cancellation` \| `what_if`). `cancellation` was added 2026-08-18 with FR-RATE-63: OQ-RATE-4's answer mounts the refund sub-graph on `purpose`, and the value it keys on has to exist. |
+| **Quote Context** | The complete input to one scoring call: rating inputs, a quote timestamp, an effective date, and a `purpose` (`new_business` \| `renewal` \| `mid_term_adjustment` \| `cancellation` \| `what_if`). `cancellation` was added 2026-08-18 with FR-218: OQ-617's answer mounts the refund sub-graph on `purpose`, and the value it keys on has to exist. |
 | **Derived Value** | A named intermediate produced by a step and consumable by downstream steps. The DAG's edges are these name references, not hand-drawn arrows. |
 | **Rate Table Version** | An immutable version of one rate table. Rate tables version independently of the algorithm so a pure rate change does not require touching structure. |
 | **Bundle** | The serialised, self-contained artifact a Rating Version compiles to: algorithm + tables + model artifacts + reference slices + input contract. What gets deployed and cached. |
-| **Compiled Bundle** | The bundle transformed into its execution form (a ZEN JDM graph plus loaded tables and boosters), held per worker process once pre-warmed (FR-RATE-65). Not itself cached in Redis or content-hash-keyed — only `Bundle` is (FR-RATE-24, FR-RATE-51). *(Clarified 2026-08-29, W11 Slice 2: that denial is of the **distribution** role. A `CompiledBundle` is never what Redis holds and is never addressed by content hash across processes. A per-worker in-process slot may still index the `CompiledBundle` it holds by the `content_hash` of the `Bundle` it was loaded from — which is what FR-RATE-65's exposure of that hash exists to make possible, and without which FR-RATE-51's "either the old or the new bundle, never a mix" is unverifiable at runtime. Ruled in `docs/plans/2026-08-29-w11-slices-2-4-rulings.md` Ruling 16.)* |
+| **Compiled Bundle** | The bundle transformed into its execution form (a ZEN JDM graph plus loaded tables and boosters), held per worker process once pre-warmed (FR-243). Not itself cached in Redis or content-hash-keyed — only `Bundle` is (FR-239, FR-268). *(Clarified 2026-08-29, WK-671 Slice 2: that denial is of the **distribution** role. A `CompiledBundle` is never what Redis holds and is never addressed by content hash across processes. A per-worker in-process slot may still index the `CompiledBundle` it holds by the `content_hash` of the `Bundle` it was loaded from — which is what FR-243's exposure of that hash exists to make possible, and without which FR-268's "either the old or the new bundle, never a mix" is unverifiable at runtime. Ruled in `docs/rulings/RL-00882-d4-slice-2-builds-a-per-worker-in-process-slot-and-it-is-the-first-cache-of-its-kind-in-this-backend.md` RL-882.)* |
 | **Golden Quote** | A named quote context with an expected premium, stored with a Rating Version. Golden quotes must reproduce exactly before promotion. |
 | **Regression Suite** | A collection of golden quotes plus property assertions (monotonicity, no-negative-premium, bounded relativity) run against a candidate Rating Version. |
 | **Dislocation Run** | Batch re-rating of a fixed portfolio under two Rating Versions, producing the distribution of premium change. |
@@ -78,14 +78,14 @@ Terms from `00-overview.md` §2.3 are used unchanged. Additional terms owned her
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-1** | A **Rating Algorithm** is a directed acyclic graph of Rating Steps. Cycles, orphaned steps, and references to undefined Derived Values are rejected at save time, not at scoring time. |
-| **FR-RATE-2** | The algorithm declares a typed **input contract**: for each Rating Input, a name, type (`int`, `decimal`, `string`, `date`, `bool`, `enum`), nullability, valid range or enum domain, and a description. Scoring rejects a Quote Context violating the contract with a field-level error. |
-| **FR-RATE-3** | The algorithm declares typed **outputs**, always including `payable_premium_minor` and the full Premium Ladder (§3.6), and may include additional named outputs (per-peril risk premium, decline reason, IPT amount). |
-| **FR-RATE-4** | Every step has a stable `step_id`, a human label, an optional note, and declares exactly which Derived Values it consumes and which it produces. Renaming a label never changes a `step_id`. |
-| **FR-RATE-5** | The graph is evaluated in topological order. Evaluation is deterministic: no wall-clock reads, no randomness, no external calls except pinned model invocations (FR-OVR-8). |
-| **FR-RATE-6** | An algorithm can be composed from **sub-graphs** (reusable fragments, e.g. "no-claims-discount ladder", "IPT and fees") that are versioned artifacts referenced by the parent and inlined at bundle time. |
-| **FR-RATE-63** | **A mid-term adjustment or cancellation is priced by the same Rating Algorithm for the *risk price*, with pro-rata, refund and charge logic in a separately-versioned sub-graph (FR-RATE-6) mounted only when `purpose ∈ {mid_term_adjustment, cancellation}`.** (OQ-RATE-4, decided 2026-08-18; **Phase 2**.) One risk price, because two algorithms that must agree about risk are two things that will disagree about risk — and the disagreement surfaces as a customer charged one price at renewal and another for the same cover mid-term. Separate policy-administration maths, because pro-rata, cancellation charges and refund rules are genuinely not new-business maths, and folding them in would put an MTA-only branch in every graph that never performs one. The mount is **declared on the Rating Version and version-pinned like any other sub-graph**, so "which refund rules were in force for this cancellation" is answered by the same pinning that answers it for a rate table. A version that mounts no such sub-graph refuses an MTA or cancellation quote rather than pricing it as new business — pricing it as new business is the failure this requirement exists to prevent, and it is silent. |
-| **FR-RATE-7** | Algorithm edits are diffable: the UI and API expose a structural diff between two algorithm versions (steps added/removed/changed, tables re-pointed), which is attached to the approval request. |
+| **FR-212** | A **Rating Algorithm** is a directed acyclic graph of Rating Steps. Cycles, orphaned steps, and references to undefined Derived Values are rejected at save time, not at scoring time. |
+| **FR-213** | The algorithm declares a typed **input contract**: for each Rating Input, a name, type (`int`, `decimal`, `string`, `date`, `bool`, `enum`), nullability, valid range or enum domain, and a description. Scoring rejects a Quote Context violating the contract with a field-level error. |
+| **FR-214** | The algorithm declares typed **outputs**, always including `payable_premium_minor` and the full Premium Ladder (§3.6), and may include additional named outputs (per-peril risk premium, decline reason, IPT amount). |
+| **FR-215** | Every step has a stable `step_id`, a human label, an optional note, and declares exactly which Derived Values it consumes and which it produces. Renaming a label never changes a `step_id`. |
+| **FR-216** | The graph is evaluated in topological order. Evaluation is deterministic: no wall-clock reads, no randomness, no external calls except pinned model invocations (FR-11). |
+| **FR-217** | An algorithm can be composed from **sub-graphs** (reusable fragments, e.g. "no-claims-discount ladder", "IPT and fees") that are versioned artifacts referenced by the parent and inlined at bundle time. |
+| **FR-218** | **A mid-term adjustment or cancellation is priced by the same Rating Algorithm for the *risk price*, with pro-rata, refund and charge logic in a separately-versioned sub-graph (FR-217) mounted only when `purpose ∈ {mid_term_adjustment, cancellation}`.** (OQ-617, decided 2026-08-18; **Phase 2**.) One risk price, because two algorithms that must agree about risk are two things that will disagree about risk — and the disagreement surfaces as a customer charged one price at renewal and another for the same cover mid-term. Separate policy-administration maths, because pro-rata, cancellation charges and refund rules are genuinely not new-business maths, and folding them in would put an MTA-only branch in every graph that never performs one. The mount is **declared on the Rating Version and version-pinned like any other sub-graph**, so "which refund rules were in force for this cancellation" is answered by the same pinning that answers it for a rate table. A version that mounts no such sub-graph refuses an MTA or cancellation quote rather than pricing it as new business — pricing it as new business is the failure this requirement exists to prevent, and it is silent. |
+| **FR-219** | Algorithm edits are diffable: the UI and API expose a structural diff between two algorithm versions (steps added/removed/changed, tables re-pointed), which is attached to the approval request. |
 
 ### 3.2 Rating step types
 
@@ -103,99 +103,99 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-8** | `table` steps resolve a Rate Table Version pinned by the Rating Version (R1). Key expressions may band a continuous input inline, but the banding is a stored artifact reference (`02` FR-MODEL-8), not an inline literal list. |
-| **FR-RATE-9** | `lookup` steps evaluate reference data **as at a declared date** — normally the policy effective date, never "now" (`01` FR-DATA-31). The date source is explicit in the step. |
-| **FR-RATE-10** | `model_call` steps declare `mode`: `exact` invokes the model itself; `approximation` uses the model's GLM approximation relativity tables (`02` OQ-MODEL-3). The choice is recorded on the Rating Version and surfaced at approval with the fidelity statement. |
-| **FR-RATE-60** | **Both modes are supported, and the mode belongs to the Rating Version rather than to the step.** `RatingVersion.model_reference_mode` (§4.3) is the declaration; every `model_call` step's `mode` (FR-RATE-10) must equal it, checked at save time beside FR-RATE-13's type check, and a version whose steps disagree with it is refused with `MODEL_REFERENCE_MODE_INCONSISTENT`. This makes one identifier derived from the other rather than closing a capability: `rating-version.schema.json` enumerates `exact \| approximation` and nothing else, so a per-step mix was never expressible in the published contract. What an `approximation`-mode version must *prove* before it may deploy is **not** settled here — FR-MODEL-36's fidelity statement is descriptive and nothing gates on it (`02` OQ-MODEL-11). (`02` OQ-MODEL-3, decided 2026-08-17.) |
-| **FR-RATE-61** | **An `approximation`-mode Rating Version cannot reach `approved` without a Dislocation Run (FR-RATE-46) whose baseline is the same version in `exact` mode, inside a workspace-declared premium-deviation threshold; FR-MODEL-36's fidelity statement is the cheap pre-check that runs first and is never itself the gate.** (`02` OQ-MODEL-11, decided 2026-08-18; **Phase 2**, with the deployment path it gates — it needs FR-RATE-46 built, and nothing in Phase 1 deploys a Rating Version.) FR-RATE-60 made both modes legal and left this open deliberately: a mode whose deployed prices are by construction not the model that was validated had no floor at all. The approval question is *how different are the prices we will charge*, and only a run over the actual book answers it — R² and coefficient agreement answer a question about the surrogate, and a surrogate can agree on coefficients and disagree on premium wherever exposure is thin. The prerequisite holds: spike S2 (OQ-RATE-2) measured `exact` at p99 1.09 ms (W8 re-measured 1.626 ms — still comfortably inside budget; see OQ-RATE-2), so the baseline costs a portfolio pass rather than a redesign. The threshold is the workspace's — a maximum absolute percentage deviation at a declared portfolio quantile, so that a long tail cannot be averaged away — and the Phase 2 slice that builds this decides where the setting lives; it is recorded on the approval beside FR-RATE-40's other evidence either way. A run that exceeds it is refused at submission with `EVIDENCE_INCOMPLETE` (re-raised from `06`) naming the quantile and the observed deviation. Ordering the fidelity statement first is what keeps the gate cheap: a plainly poor surrogate is refused before a portfolio run is spent on it. |
-| **FR-RATE-11** | `constraint` steps are how business and regulatory limits are expressed: minimum premium, maximum year-on-year increase, decline rules, capping of a relativity. Each carries a `reason_code` that appears in the Trace and in any decline response. |
-| **FR-RATE-12** | `output` steps declare rounding explicitly (mode and unit — e.g. `half_even` to the penny, `ceiling` to the pound). Rounding is never implicit and never happens twice. |
-| **FR-RATE-13** | Every step declares its result type, and type compatibility is checked at save time. A monetary result must be `decimal` or `money_minor` (R2). |
+| **FR-220** | `table` steps resolve a Rate Table Version pinned by the Rating Version (R1). Key expressions may band a continuous input inline, but the banding is a stored artifact reference (`02` FR-97), not an inline literal list. |
+| **FR-221** | `lookup` steps evaluate reference data **as at a declared date** — normally the policy effective date, never "now" (`01` FR-71). The date source is explicit in the step. |
+| **FR-222** | `model_call` steps declare `mode`: `exact` invokes the model itself; `approximation` uses the model's GLM approximation relativity tables (`02` OQ-575). The choice is recorded on the Rating Version and surfaced at approval with the fidelity statement. |
+| **FR-223** | **Both modes are supported, and the mode belongs to the Rating Version rather than to the step.** `RatingVersion.model_reference_mode` (§4.3) is the declaration; every `model_call` step's `mode` (FR-222) must equal it, checked at save time beside FR-227's type check, and a version whose steps disagree with it is refused with `MODEL_REFERENCE_MODE_INCONSISTENT`. This makes one identifier derived from the other rather than closing a capability: `rating-version.schema.json` enumerates `exact \| approximation` and nothing else, so a per-step mix was never expressible in the published contract. What an `approximation`-mode version must *prove* before it may deploy is **not** settled here — FR-136's fidelity statement is descriptive and nothing gates on it (`02` OQ-576). (`02` OQ-575, decided 2026-08-17.) |
+| **FR-224** | **An `approximation`-mode Rating Version cannot reach `approved` without a Dislocation Run (FR-263) whose baseline is the same version in `exact` mode, inside a workspace-declared premium-deviation threshold; FR-136's fidelity statement is the cheap pre-check that runs first and is never itself the gate.** (`02` OQ-576, decided 2026-08-18; **Phase 2**, with the deployment path it gates — it needs FR-263 built, and nothing in Phase 1 deploys a Rating Version.) FR-223 made both modes legal and left this open deliberately: a mode whose deployed prices are by construction not the model that was validated had no floor at all. The approval question is *how different are the prices we will charge*, and only a run over the actual book answers it — R² and coefficient agreement answer a question about the surrogate, and a surrogate can agree on coefficients and disagree on premium wherever exposure is thin. The prerequisite holds: spike S2 (OQ-615) measured `exact` at p99 1.09 ms (WK-668 re-measured 1.626 ms — still comfortably inside budget; see OQ-615), so the baseline costs a portfolio pass rather than a redesign. The threshold is the workspace's — a maximum absolute percentage deviation at a declared portfolio quantile, so that a long tail cannot be averaged away — and the Phase 2 slice that builds this decides where the setting lives; it is recorded on the approval beside FR-257's other evidence either way. A run that exceeds it is refused at submission with `EVIDENCE_INCOMPLETE` (re-raised from `06`) naming the quantile and the observed deviation. Ordering the fidelity statement first is what keeps the gate cheap: a plainly poor surrogate is refused before a portfolio run is spent on it. |
+| **FR-225** | `constraint` steps are how business and regulatory limits are expressed: minimum premium, maximum year-on-year increase, decline rules, capping of a relativity. Each carries a `reason_code` that appears in the Trace and in any decline response. |
+| **FR-226** | `output` steps declare rounding explicitly (mode and unit — e.g. `half_even` to the penny, `ceiling` to the pound). Rounding is never implicit and never happens twice. |
+| **FR-227** | Every step declares its result type, and type compatibility is checked at save time. A monetary result must be `decimal` or `money_minor` (R2). |
 
 ### 3.3 Rate tables
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-14** | A **Rate Table** is a typed table with declared key columns (each bound to a Factor or a banded input), a declared value column with a type and unit (`relativity`, `money_minor`, `percentage`, `count`), and an optional default row. |
-| **FR-RATE-15** | Rate Table Versions are immutable. Editing produces a new version with a required change note. The previous version stays referenceable by existing Rating Versions. |
-| **FR-RATE-16** | A rate table can be **seeded from a Model**: a GLM's relativity table (or a GBM's GLM-approximation relativities) is imported as a starting point, recording the source model reference. Subsequent manual edits are diffed against that seed, so "how far have we moved from the technical rate?" is always answerable. |
-| **FR-RATE-17** | Rate table edits are diffable cell-by-cell against any prior version, with the diff showing absolute and relative change and the exposure weight behind each cell (from the portfolio dataset), so an actuary sees which edits matter. |
-| **FR-RATE-62** | **A Rate Table Version's cells are stored as PostgreSQL rows up to a workspace-configurable cell count (default 250 000) and spill to a content-addressed parquet blob above it, under one contract either way.** (OQ-RATE-3, decided 2026-08-18; **Phase 2**, with the rate-table slice.) Rows are the default because they are what makes the rest of this section cheap: FR-RATE-17's cell diff is a SQL join, its exposure weighting is a join to the portfolio dataset, and the editor pages without a job. Blobs exist because a vehicle × area table reaches millions of cells, where rows stop being free — and the tail must not dictate the design for the many small tables that are the common case. **The threshold is a stored property of the version, not a runtime decision**: `storage` is `rows \| parquet` on `RateTableVersion` (§4.2), fixed when the version is written and immutable with it, so a reader never has to ask which form a past version took and a change of threshold cannot silently re-home existing versions. **What degrades above the threshold is stated rather than discovered:** FR-RATE-17's diff and its exposure weighting become a Job returning the same artifact, and the API answers 202 rather than 200 for them (`07` FR-PLAT-15's model). Everything a caller may *ask* is identical; only the latency and the status code differ. |
-| **FR-RATE-18** | Bulk operations are first-class and recorded as such: uplift a whole table by a percentage, uplift a subset by key filter, floor/cap values, and rebase to a chosen base level. Each records its parameters, not just the resulting cells. |
-| **FR-RATE-19** | Rate tables validate on save: complete coverage of the declared key domain (or an explicit default row), no null values, values within declared bounds, and no key duplication. |
-| **FR-RATE-20** | Rate tables can be exported to and imported from CSV/XLSX for offline work, with a strict round-trip check on import: keys, types, and completeness must match, and the import is presented as a diff for confirmation before it creates a version. |
-| **FR-RATE-21** | A rate table declares whether it is **rateable** (part of the price) or **diagnostic** (present for analysis). Only rateable tables can be referenced by a step feeding the premium ladder. |
+| **FR-228** | A **Rate Table** is a typed table with declared key columns (each bound to a Factor or a banded input), a declared value column with a type and unit (`relativity`, `money_minor`, `percentage`, `count`), and an optional default row. |
+| **FR-229** | Rate Table Versions are immutable. Editing produces a new version with a required change note. The previous version stays referenceable by existing Rating Versions. |
+| **FR-230** | A rate table can be **seeded from a Model**: a GLM's relativity table (or a GBM's GLM-approximation relativities) is imported as a starting point, recording the source model reference. Subsequent manual edits are diffed against that seed, so "how far have we moved from the technical rate?" is always answerable. |
+| **FR-231** | Rate table edits are diffable cell-by-cell against any prior version, with the diff showing absolute and relative change and the exposure weight behind each cell (from the portfolio dataset), so an actuary sees which edits matter. |
+| **FR-232** | **A Rate Table Version's cells are stored as PostgreSQL rows up to a workspace-configurable cell count (default 250 000) and spill to a content-addressed parquet blob above it, under one contract either way.** (OQ-616, decided 2026-08-18; **Phase 2**, with the rate-table slice.) Rows are the default because they are what makes the rest of this section cheap: FR-231's cell diff is a SQL join, its exposure weighting is a join to the portfolio dataset, and the editor pages without a job. Blobs exist because a vehicle × area table reaches millions of cells, where rows stop being free — and the tail must not dictate the design for the many small tables that are the common case. **The threshold is a stored property of the version, not a runtime decision**: `storage` is `rows \| parquet` on `RateTableVersion` (§4.2), fixed when the version is written and immutable with it, so a reader never has to ask which form a past version took and a change of threshold cannot silently re-home existing versions. **What degrades above the threshold is stated rather than discovered:** FR-231's diff and its exposure weighting become a Job returning the same artifact, and the API answers 202 rather than 200 for them (`07` FR-411's model). Everything a caller may *ask* is identical; only the latency and the status code differ. |
+| **FR-233** | Bulk operations are first-class and recorded as such: uplift a whole table by a percentage, uplift a subset by key filter, floor/cap values, and rebase to a chosen base level. Each records its parameters, not just the resulting cells. |
+| **FR-234** | Rate tables validate on save: complete coverage of the declared key domain (or an explicit default row), no null values, values within declared bounds, and no key duplication. |
+| **FR-235** | Rate tables can be exported to and imported from CSV/XLSX for offline work, with a strict round-trip check on import: keys, types, and completeness must match, and the import is presented as a diff for confirmation before it creates a version. |
+| **FR-236** | A rate table declares whether it is **rateable** (part of the price) or **diagnostic** (present for analysis). Only rateable tables can be referenced by a step feeding the premium ladder. |
 
 ### 3.4 Rating versions and bundles
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-22** | A **Rating Version** pins: one Rating Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the input contract. Nothing is unpinned. |
-| **FR-RATE-23** | Lifecycle is `draft → review → approved → live → retired`. Only `approved` versions can be deployed; `live` is a property of a Deployment, and the same Rating Version can be `live` in `uat` and not in `prod`. |
-| **FR-RATE-24** | A Rating Version compiles to a self-contained **Bundle** with a content hash. The bundle is sufficient to score with no database access (NFR-RATE-3) and is what gets cached and distributed. |
-| **FR-RATE-25** | Bundle compilation validates the whole structure: DAG acyclic and fully connected, all references resolvable and at a sufficient maturity (FR-OVR-14), all types compatible, all constraints satisfiable, no `control`-intent factor in a rateable path (`02` FR-MODEL-3), no unapproved custom objective transitively reachable. |
-| **FR-RATE-26** | A Rating Version declares its `effective_from` business date and optional `effective_to`, independent of when it is deployed. Scoring uses the version bound to the environment; the effective date is metadata for governance and monitoring, not a runtime selector — unless the deployment explicitly uses date-based routing (FR-RATE-31). |
-| **FR-RATE-27** | Rating Versions carry a required **change summary**: what changed versus the previous version, why, and expected impact. It is generated as a draft from the structural and rate-table diffs and edited by the actuary. |
-| **FR-RATE-65** | **`CompiledBundle` is a distinct runtime type, produced from a `Bundle` by a hydration step, never a rename of `Bundle` and never itself serialised.** It holds whatever the ZEN engine binding needs to execute the graph and any GBM boosters loaded from `resolved_payloads` into live objects. `Bundle` stays the plain, serialisable, content-hashed form that is compiled once, distributed, and cached in Redis (FR-RATE-24, FR-RATE-51); `CompiledBundle` is what pre-warming (FR-RATE-51, NFR-RATE-6) produces, held per worker process, and what `score_one`/`score_batch`/`dislocate`/`run_regression` actually take (§5.2). (Ruled 2026-08-29, `docs/plans/2026-08-29-w11-prework-rulings.md` Ruling 4.) |
+| **FR-237** | A **Rating Version** pins: one Rating Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the input contract. Nothing is unpinned. |
+| **FR-238** | Lifecycle is `draft → review → approved → live → retired`. Only `approved` versions can be deployed; `live` is a property of a Deployment, and the same Rating Version can be `live` in `uat` and not in `prod`. |
+| **FR-239** | A Rating Version compiles to a self-contained **Bundle** with a content hash. The bundle is sufficient to score with no database access (NFR-491) and is what gets cached and distributed. |
+| **FR-240** | Bundle compilation validates the whole structure: DAG acyclic and fully connected, all references resolvable and at a sufficient maturity (FR-20), all types compatible, all constraints satisfiable, no `control`-intent factor in a rateable path (`02` FR-88), no unapproved custom objective transitively reachable. |
+| **FR-241** | A Rating Version declares its `effective_from` business date and optional `effective_to`, independent of when it is deployed. Scoring uses the version bound to the environment; the effective date is metadata for governance and monitoring, not a runtime selector — unless the deployment explicitly uses date-based routing (FR-247). |
+| **FR-242** | Rating Versions carry a required **change summary**: what changed versus the previous version, why, and expected impact. It is generated as a draft from the structural and rate-table diffs and edited by the actuary. |
+| **FR-243** | **`CompiledBundle` is a distinct runtime type, produced from a `Bundle` by a hydration step, never a rename of `Bundle` and never itself serialised.** It holds whatever the ZEN engine binding needs to execute the graph and any GBM boosters loaded from `resolved_payloads` into live objects. `Bundle` stays the plain, serialisable, content-hashed form that is compiled once, distributed, and cached in Redis (FR-239, FR-268); `CompiledBundle` is what pre-warming (FR-268, NFR-494) produces, held per worker process, and what `score_one`/`score_batch`/`dislocate`/`run_regression` actually take (§5.2). (Ruled 2026-08-29, `docs/rulings/RL-00867-compiledbundle-is-spec-only-bundle-is-the-only-thing-that-exists-and-they-are-not-the-same-type.md` RL-867.) |
 
 ### 3.5 Expression grammar in rating
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-28** | `expression` steps use the same restricted grammar as `02` §4.6, extended with decimal-safe operators and these rating-specific functions: `round(x, mode, dp)`, `band(x, banding_ref)`, `coalesce(a, b)`, `date_diff_years(a, b)`, `min`, `max`, `clip`. No other functions. **Availability is verified against the engine at compile time (FR-RATE-59)** — S1 found the two-argument `min`/`max` forms are not valid ZEN calls, so this list states intent, not a guarantee. |
-| **FR-RATE-29** | Arithmetic on monetary values is evaluated in `Decimal` with an explicit context (28 significant digits, `ROUND_HALF_EVEN`), never in binary floating point (R2). Mixing a monetary value and a float-typed value in one expression is a compile-time error. |
-| **FR-RATE-30** | Expression steps cannot reference anything outside their declared inputs — no globals, no environment, no time-of-day. `now()` does not exist; a quote timestamp is an input. |
+| **FR-244** | `expression` steps use the same restricted grammar as `02` §4.6, extended with decimal-safe operators and these rating-specific functions: `round(x, mode, dp)`, `band(x, banding_ref)`, `coalesce(a, b)`, `date_diff_years(a, b)`, `min`, `max`, `clip`. No other functions. **Availability is verified against the engine at compile time (FR-276)** — S1 found the two-argument `min`/`max` forms are not valid ZEN calls, so this list states intent, not a guarantee. |
+| **FR-245** | Arithmetic on monetary values is evaluated in `Decimal` with an explicit context (28 significant digits, `ROUND_HALF_EVEN`), never in binary floating point (R2). Mixing a monetary value and a float-typed value in one expression is a compile-time error. |
+| **FR-246** | Expression steps cannot reference anything outside their declared inputs — no globals, no environment, no time-of-day. `now()` does not exist; a quote timestamp is an input. |
 
 ### 3.6 Premium ladder
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-31** | Every Rating Version produces a **Premium Ladder** as a structured output, with each rung named, typed, and traceable: `risk_premium` (from the Peril Structure) → `+ expense loadings` → `+ commission` → `+ profit loading` → `office_premium` → `± optimisation adjustment` → `± constraints (min premium, capping)` → `+ IPT and fees` → `payable_premium`. |
-| **FR-RATE-32** | Each ladder rung records both the value and the operation that produced it (multiplicative factor or additive amount), so the ladder reconciles exactly: applying every recorded operation to `risk_premium` reproduces `payable_premium` to the penny. This reconciliation is asserted at scoring time in `dev`/`uat` and sampled in `prod`. |
-| **FR-RATE-33** | Per-peril risk premium components are available as outputs, since monitoring (`05`) and reinsurance analysis both need them. |
+| **FR-247** | Every Rating Version produces a **Premium Ladder** as a structured output, with each rung named, typed, and traceable: `risk_premium` (from the Peril Structure) → `+ expense loadings` → `+ commission` → `+ profit loading` → `office_premium` → `± optimisation adjustment` → `± constraints (min premium, capping)` → `+ IPT and fees` → `payable_premium`. |
+| **FR-248** | Each ladder rung records both the value and the operation that produced it (multiplicative factor or additive amount), so the ladder reconciles exactly: applying every recorded operation to `risk_premium` reproduces `payable_premium` to the penny. This reconciliation is asserted at scoring time in `dev`/`uat` and sampled in `prod`. |
+| **FR-249** | Per-peril risk premium components are available as outputs, since monitoring (`05`) and reinsurance analysis both need them. |
 
 ### 3.7 Scoring
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-34** | **Real-time scoring**: `POST /api/v1/score` evaluates one Quote Context against the Rating Version currently live in the target environment, returning the ladder, outputs, and (optionally) a Trace. Target p99 < 50 ms server-side (NFR-OVR-1). |
-| **FR-RATE-35** | Scoring accepts an explicit `rating_version_ref` for what-if and testing; in `prod` this is permitted only for `approved` versions and is recorded as a `what_if` purpose, never as a quotable price. |
-| **FR-RATE-64** | **The platform prices the *annual* payable premium, and instalment loading is an optional final ladder rung (`instalment_loading`) read from a rate table. APR calculation and schedule generation are downstream and are not built here.** (OQ-RATE-6, decided 2026-08-18; **Phase 2**.) The loading exists because it changes the price the customer actually compares, and without it `04-optimisation.md`'s demand model is fitted against a price nobody was offered. It stops at a loading because APR and schedule generation carry a consumer-credit regulatory surface — disclosure, the regulated APR formula, and rules about what may be charged — that belongs to a billing system with its own compliance obligations, and taking it on here would make every rating release a consumer-credit release. **The boundary is drawn where the maths stops being rating maths**: the platform outputs an annual premium and, where the rung is mounted, the loaded annual equivalent; it never emits a payment schedule, an APR figure, or a credit agreement term. A Quote Context asking for one is refused rather than answered approximately, because an APR that is nearly right is a compliance defect and not a rounding one. |
-| **FR-RATE-36** | **Batch scoring**: `POST /api/v1/score/batch` re-rates a Dataset Version against one or more Rating Versions as a Job, writing results to a new content-addressed parquet output with the quote key, ladder, and selected outputs per row. |
-| **FR-RATE-37** | Batch scoring is chunked, resumable, and progress-reporting, and uses the identical compiled bundle and code path as real-time scoring — never a separate "batch implementation" that could diverge. *(Clarified 2026-08-29, W11 Slice 3: where "resumable" lives, what it is keyed on, and what sits outside it. **Chunk checkpointing is the Job handler's, never `score_batch`'s** — §5.2's signature takes and returns a `pl.LazyFrame` and carries no Job identity, output location or resume point, and ADR-0001/DEP-3 forbids `pricing-core` the durable state a checkpoint needs; so the handler records each completed chunk and skips it on re-entry, while `score_batch` stays a pure chunked transform reporting progress and honouring cancellation. **The checkpoint is keyed on the run's content identity** — the compiled bundle's content hash (FR-RATE-24), the Dataset Version reference and the chunk index — **never on the Job id**, because no terminal Job is ever re-run: `VALID_TRANSITIONS` gives `failed` no outbound edge, and `07` FR-PLAT-64 releases a failed key so the next submission is a *fresh* Job. Chunk parts are scratch written outside the content-addressed store and released when the run completes, so FR-PLAT-20's reference-counted GC never holds them. **The re-run trigger itself is outside this requirement**: it is `07` FR-PLAT-11 and FR-PLAT-64's, owned by whichever workstream builds FR-PLAT-61, so until that is built a batch run is resumable and nothing in production resumes it. Ruled in `docs/plans/2026-08-29-w11-3-d6-batch-resumability-ruling.md` Ruling 31.)* |
-| **FR-RATE-38** | Scoring errors are typed and per-quote: contract violation, reference miss, table miss, constraint decline, model failure. A batch run reports counts and samples per error type and does not abort on individual failures unless the failure rate exceeds a declared threshold. *(Clarified 2026-08-29, W11 Slice 3: where "declared" lives. The threshold is the workspace setting `rating.batch_abort_failure_rate` (`07` FR-PLAT-45), **unset by default** — undeclared means no rate-based abort, and the counts-and-samples half above still applies. A batch request may carry its own value, and it may only **lower** the effective threshold, never raise it: `01` FR-DATA-54 already decided that a threshold has no safe direction to move in, and `01` §4's `severity_override` is the one-directional shape that follows from it. The run's value is an argument to the Job, not a Setting, so `07` FR-PLAT-43's environment-variable → workspace-setting → platform-default precedence is unchanged and stays fully inspectable. When a run aborts it records both the threshold in force and the observed failure rate, because an abort nobody can reconstruct is not auditable. Ruled in `docs/plans/2026-08-29-w11-slices-3-4-rulings.md` Ruling 24.)* |
-| **FR-RATE-39** | A `decline` outcome from a `constraint` step is a **successful** scoring response with `outcome: declined` and reason codes — not an HTTP error. *(Amended 2026-08-29, W11 Slice 1: "reason codes" is plural because evaluation does not short-circuit. The whole DAG evaluates in topological order — FR-RATE-5 defines no early-exit primitive — so `decline_reasons` collects the `reason_code` of every firing constraint step and not only the first, which is what FR-RATE-11's "each ... appears ... in any decline response" requires; and `premium_ladder` stays populated through to `payable_premium`, reconciling under NFR-RATE-8, so a declined quote still reports what it would have cost. `docs/contracts/schemas/scoring.schema.json` already requires `premium_ladder` for every `outcome` including `declined` and types `decline_reasons` as `array<string>`; this amendment makes the requirement say what that contract already assumes. Ruled in `docs/plans/2026-08-29-w11-slice1-rulings.md` Ruling 9.)* |
+| **FR-250** | **Real-time scoring**: `POST /api/v1/score` evaluates one Quote Context against the Rating Version currently live in the target environment, returning the ladder, outputs, and (optionally) a Trace. Target p99 < 50 ms server-side (NFR-454). |
+| **FR-251** | Scoring accepts an explicit `rating_version_ref` for what-if and testing; in `prod` this is permitted only for `approved` versions and is recorded as a `what_if` purpose, never as a quotable price. |
+| **FR-252** | **The platform prices the *annual* payable premium, and instalment loading is an optional final ladder rung (`instalment_loading`) read from a rate table. APR calculation and schedule generation are downstream and are not built here.** (OQ-619, decided 2026-08-18; **Phase 2**.) The loading exists because it changes the price the customer actually compares, and without it `04-optimisation.md`'s demand model is fitted against a price nobody was offered. It stops at a loading because APR and schedule generation carry a consumer-credit regulatory surface — disclosure, the regulated APR formula, and rules about what may be charged — that belongs to a billing system with its own compliance obligations, and taking it on here would make every rating release a consumer-credit release. **The boundary is drawn where the maths stops being rating maths**: the platform outputs an annual premium and, where the rung is mounted, the loaded annual equivalent; it never emits a payment schedule, an APR figure, or a credit agreement term. A Quote Context asking for one is refused rather than answered approximately, because an APR that is nearly right is a compliance defect and not a rounding one. |
+| **FR-253** | **Batch scoring**: `POST /api/v1/score/batch` re-rates a Dataset Version against one or more Rating Versions as a Job, writing results to a new content-addressed parquet output with the quote key, ladder, and selected outputs per row. |
+| **FR-254** | Batch scoring is chunked, resumable, and progress-reporting, and uses the identical compiled bundle and code path as real-time scoring — never a separate "batch implementation" that could diverge. *(Clarified 2026-08-29, WK-671 Slice 3: where "resumable" lives, what it is keyed on, and what sits outside it. **Chunk checkpointing is the Job handler's, never `score_batch`'s** — §5.2's signature takes and returns a `pl.LazyFrame` and carries no Job identity, output location or resume point, and ADR-703/DEP-3 forbids `pricing-core` the durable state a checkpoint needs; so the handler records each completed chunk and skips it on re-entry, while `score_batch` stays a pure chunked transform reporting progress and honouring cancellation. **The checkpoint is keyed on the run's content identity** — the compiled bundle's content hash (FR-239), the Dataset Version reference and the chunk index — **never on the Job id**, because no terminal Job is ever re-run: `VALID_TRANSITIONS` gives `failed` no outbound edge, and `07` FR-414 releases a failed key so the next submission is a *fresh* Job. Chunk parts are scratch written outside the content-addressed store and released when the run completes, so FR-420's reference-counted GC never holds them. **The re-run trigger itself is outside this requirement**: it is `07` FR-403 and FR-414's, owned by whichever workstream builds FR-413, so until that is built a batch run is resumable and nothing in production resumes it. Ruled in `docs/rulings/RL-00857-d6-chunk-checkpointed-resume-built-in-the-job-handler-and-keyed-on-content-not-on-the-job.md` RL-857.)* |
+| **FR-255** | Scoring errors are typed and per-quote: contract violation, reference miss, table miss, constraint decline, model failure. A batch run reports counts and samples per error type and does not abort on individual failures unless the failure rate exceeds a declared threshold. *(Clarified 2026-08-29, WK-671 Slice 3: where "declared" lives. The threshold is the workspace setting `rating.batch_abort_failure_rate` (`07` FR-448), **unset by default** — undeclared means no rate-based abort, and the counts-and-samples half above still applies. A batch request may carry its own value, and it may only **lower** the effective threshold, never raise it: `01` FR-56 already decided that a threshold has no safe direction to move in, and `01` §4's `severity_override` is the one-directional shape that follows from it. The run's value is an argument to the Job, not a Setting, so `07` FR-446's environment-variable → workspace-setting → platform-default precedence is unchanged and stays fully inspectable. When a run aborts it records both the threshold in force and the observed failure rate, because an abort nobody can reconstruct is not auditable. Ruled in `docs/rulings/RL-00889-d3-the-batch-abort-threshold-is-a-workspace-setting-with-a-one-directional-per-run-argument.md` RL-889.)* |
+| **FR-256** | A `decline` outcome from a `constraint` step is a **successful** scoring response with `outcome: declined` and reason codes — not an HTTP error. *(Amended 2026-08-29, WK-671 Slice 1: "reason codes" is plural because evaluation does not short-circuit. The whole DAG evaluates in topological order — FR-216 defines no early-exit primitive — so `decline_reasons` collects the `reason_code` of every firing constraint step and not only the first, which is what FR-225's "each ... appears ... in any decline response" requires; and `premium_ladder` stays populated through to `payable_premium`, reconciling under NFR-496, so a declined quote still reports what it would have cost. `docs/contracts/schemas/scoring.schema.json` already requires `premium_ladder` for every `outcome` including `declined` and types `decline_reasons` as `array<string>`; this amendment makes the requirement say what that contract already assumes. Ruled in `docs/rulings/RL-00875-how-a-decline-is-represented-the-whole-dag-evaluates-and-every-firing-constraint-s-code-is-collected.md` RL-875.)* |
 
 ### 3.8 Trace, testing, and promotion evidence
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-40** | A Rating Version cannot reach `approved` without: a passing Regression Suite, a Dislocation Run against the current live version over an agreed portfolio, a change summary (FR-RATE-27), and — where the insurer has enabled it — a passing GIPP check (`04-optimisation.md`) (R4). |
-| **FR-RATE-41** | **Trace**: on request, scoring returns every step's id, label, consumed values, produced value, matched table row key, and elapsed time, plus the bundle hash and rating version reference. Traces are the same structure in real-time and batch. |
-| **FR-RATE-42** | In production, traces are **sampled** (default 1 %, configurable, plus 100 % of declines and errors) and persisted for ≥ 13 months (NFR-OVR-6), feeding `05-monitoring.md`. *(Clarified 2026-08-29, W11 Slices 3 and 4 — the scope these two opening words already carry, written down because two separate planning documents read this requirement and FR-RATE-41 as silent about batch. **Batch scoring contributes nothing to the sampled stream**, so `score_batch` takes no sampling policy: the stream is the production real-time quoting path, which is what §5.1's route and `05` §7's dependency row both call "sampled production traces", and what NFR-RATE-12 sizes at 1 % of 50 M annual *quotes*. The division of labour is already decided elsewhere — `05` FR-MON-11's 2026-08-26 amendment (OQ-MON-1) puts full-coverage A/E on a batch re-score of the exposure dataset and, in its own words, *not from traces* — leaving sampling for quote-level metrics. A batch run may still produce traces on request under FR-RATE-41, and they are written with that Job's own output and never returned by the production traces route. Ruled in `docs/plans/2026-08-29-w11-slices-3-4-rulings.md` Ruling 25.)* *(Clarified 2026-08-30, W11 Task 4B: what the environment recorded on a sampled trace means, written down because the first implementation derived it from the caller's granted scope. It is the environment the quote was served in — the same target environment FR-RATE-34 selects the live Rating Version from, and the one FR-PLAT-30 (`07`) scopes the presented key to. It stands in for the ScoringTrace's Deployment parent (`00` §4.1) until Deployment exists in W14, which is the deferral Ruling 23 made, so its value must be reconcilable to the Deployment that actually served the quote. It is therefore not derived from the set of environments a Service Account is granted: FR-PLAT-3 (`07`) grants an account named environments, plural, and FR-PLAT-30's per-key check presupposes that it may, so the granted set is an authorisation scope while the served environment is a property of the call. A sampled real-time trace always records one; absence is reserved as the signal that a trace was produced on request for a batch run (FR-RATE-41, Ruling 25), so a real-time trace is never written without it. Ruled in `docs/plans/2026-08-30-w11-4b-trace-environment-ruling.md` Ruling 44.)* |
-| **FR-RATE-43** | A **Golden Quote** stores a Quote Context and the expected outputs. Promotion re-scores every golden quote and refuses promotion on any mismatch beyond a declared tolerance (default: exact for money). |
-| **FR-RATE-44** | A **Regression Suite** may also contain property assertions evaluated over generated quote contexts: premium is positive, premium is monotone in a declared input, no output is null, the ladder reconciles (FR-RATE-32), and premium is bounded by declared limits. Generation uses hypothesis-style sampling over the input contract with a persisted seed. |
-| **FR-RATE-45** | The **Quote Sandbox** lets an actuary score an arbitrary quote against any accessible Rating Version and see the full trace inline, alongside the same quote scored against a comparison version with a step-by-step difference. |
+| **FR-257** | A Rating Version cannot reach `approved` without: a passing Regression Suite, a Dislocation Run against the current live version over an agreed portfolio, a change summary (FR-242), and — where the insurer has enabled it — a passing GIPP check (`04-optimisation.md`) (R4). |
+| **FR-258** | **Trace**: on request, scoring returns every step's id, label, consumed values, produced value, matched table row key, and elapsed time, plus the bundle hash and rating version reference. Traces are the same structure in real-time and batch. |
+| **FR-259** | In production, traces are **sampled** (default 1 %, configurable, plus 100 % of declines and errors) and persisted for ≥ 13 months (NFR-459), feeding `05-monitoring.md`. *(Clarified 2026-08-29, WK-671 Slices 3 and 4 — the scope these two opening words already carry, written down because two separate planning documents read this requirement and FR-258 as silent about batch. **Batch scoring contributes nothing to the sampled stream**, so `score_batch` takes no sampling policy: the stream is the production real-time quoting path, which is what §5.1's route and `05` §7's dependency row both call "sampled production traces", and what NFR-500 sizes at 1 % of 50 M annual *quotes*. The division of labour is already decided elsewhere — `05` FR-317's 2026-08-26 amendment (OQ-627) puts full-coverage A/E on a batch re-score of the exposure dataset and, in its own words, *not from traces* — leaving sampling for quote-level metrics. A batch run may still produce traces on request under FR-258, and they are written with that Job's own output and never returned by the production traces route. Ruled in `docs/rulings/INDEX.md#2026-08-29-w11-slices-3-4-rulingsmd` RL-890.)* *(Clarified 2026-08-30, WK-671 Task 4B: what the environment recorded on a sampled trace means, written down because the first implementation derived it from the caller's granted scope. It is the environment the quote was served in — the same target environment FR-250 selects the live Rating Version from, and the one FR-430 (`07`) scopes the presented key to. It stands in for the ScoringTrace's Deployment parent (`00` §4.1) until Deployment exists in WK-674, which is the deferral RL-888 made, so its value must be reconcilable to the Deployment that actually served the quote. It is therefore not derived from the set of environments a Service Account is granted: FR-389 (`07`) grants an account named environments, plural, and FR-430's per-key check presupposes that it may, so the granted set is an authorisation scope while the served environment is a property of the call. A sampled real-time trace always records one; absence is reserved as the signal that a trace was produced on request for a batch run (FR-258, RL-890), so a real-time trace is never written without it. Ruled in `docs/rulings/RL-00916-the-field-is-the-environment-the-quote-was-served-in-the-spec-already-says-so-and-the-branch-does-not-merge-until-it-says-so-too.md` RL-916.)* |
+| **FR-260** | A **Golden Quote** stores a Quote Context and the expected outputs. Promotion re-scores every golden quote and refuses promotion on any mismatch beyond a declared tolerance (default: exact for money). |
+| **FR-261** | A **Regression Suite** may also contain property assertions evaluated over generated quote contexts: premium is positive, premium is monotone in a declared input, no output is null, the ladder reconciles (FR-248), and premium is bounded by declared limits. Generation uses hypothesis-style sampling over the input contract with a persisted seed. |
+| **FR-262** | The **Quote Sandbox** lets an actuary score an arbitrary quote against any accessible Rating Version and see the full trace inline, alongside the same quote scored against a comparison version with a step-by-step difference. |
 
 ### 3.9 Dislocation
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-46** | A **Dislocation Run** re-rates a fixed portfolio Dataset Version under a baseline and a candidate Rating Version and reports: the distribution of premium change (absolute and percentage), average change overall and by declared segment, the exposure/policy count in each change band, movers beyond configurable thresholds with drill-down to individual quotes, and total portfolio premium change. |
-| **FR-RATE-47** | Dislocation results are sliceable by any Factor available on the portfolio dataset, and by the ladder rung at which the change originated — answering "which part of the change caused this?", not merely "how much did it change?". |
-| **FR-RATE-48** | Dislocation output is a persisted, citable artifact referenced by the approval request, not a transient screen. |
-| **FR-RATE-49** | Where the candidate and baseline differ in more than one respect (new model *and* rate table edits), dislocation supports **attribution**: re-rating with each change applied in isolation and cumulatively, so the change is decomposed into its causes. |
+| **FR-263** | A **Dislocation Run** re-rates a fixed portfolio Dataset Version under a baseline and a candidate Rating Version and reports: the distribution of premium change (absolute and percentage), average change overall and by declared segment, the exposure/policy count in each change band, movers beyond configurable thresholds with drill-down to individual quotes, and total portfolio premium change. |
+| **FR-264** | Dislocation results are sliceable by any Factor available on the portfolio dataset, and by the ladder rung at which the change originated — answering "which part of the change caused this?", not merely "how much did it change?". |
+| **FR-265** | Dislocation output is a persisted, citable artifact referenced by the approval request, not a transient screen. |
+| **FR-266** | Where the candidate and baseline differ in more than one respect (new model *and* rate table edits), dislocation supports **attribution**: re-rating with each change applied in isolation and cumulatively, so the change is decomposed into its causes. |
 
 ### 3.10 Deployment
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-50** | A **Deployment** binds an `approved` Rating Version to an Environment, recording who, when, why, and the bundle hash. Only a Deployer can deploy; `prod` deployment additionally requires the approval record to be complete (`06-governance.md`). |
-| **FR-RATE-51** | Deployment is atomic per environment: a scoring call sees either the old or the new bundle, never a mix. Bundles are pre-warmed into cache before the switch. |
-| **FR-RATE-52** | **Rollback** to any previously-deployed Rating Version in that environment is a single audited operation with the same guarantees, and does not require re-approval. |
-| **FR-RATE-53** | Optional **date-based routing** allows an environment to hold multiple deployed versions selected by the quote's effective date, for pre-loading a future rate change. Overlapping date ranges are rejected at deployment time. |
-| **FR-RATE-54** | Optional **shadow scoring**: a proportion of live traffic is additionally scored against a candidate version, with results recorded but never returned to the caller — the pre-deployment safety net feeding `05-monitoring.md`. |
-| **FR-RATE-55** | Every deployment, rollback, and routing change emits an Audit Event and a notification to a configured channel. |
+| **FR-267** | A **Deployment** binds an `approved` Rating Version to an Environment, recording who, when, why, and the bundle hash. Only a Deployer can deploy; `prod` deployment additionally requires the approval record to be complete (`06-governance.md`). |
+| **FR-268** | Deployment is atomic per environment: a scoring call sees either the old or the new bundle, never a mix. Bundles are pre-warmed into cache before the switch. |
+| **FR-269** | **Rollback** to any previously-deployed Rating Version in that environment is a single audited operation with the same guarantees, and does not require re-approval. |
+| **FR-270** | Optional **date-based routing** allows an environment to hold multiple deployed versions selected by the quote's effective date, for pre-loading a future rate change. Overlapping date ranges are rejected at deployment time. |
+| **FR-271** | Optional **shadow scoring**: a proportion of live traffic is additionally scored against a candidate version, with results recorded but never returned to the caller — the pre-deployment safety net feeding `05-monitoring.md`. |
+| **FR-272** | Every deployment, rollback, and routing change emits an Audit Event and a notification to a configured channel. |
 
 ### 3.11 Numeric precision at the engine boundary
 
@@ -204,7 +204,7 @@ cleanly, and it **corrects an earlier conclusion of ours**
 ([`research`](../research/track-a-findings.md) F14).
 
 **Inside the engine, arithmetic is exact.** `0.1 + 0.2 == 0.3` evaluates `true`;
-`1.005 * 100` gives `100.5`; `1.1 * 3 == 3.3` is `true`. ADR-0004 stands.
+`1.005 * 100` gives `100.5`; `1.1 * 3 == 3.3` is `true`. ADR-706 stands.
 
 **At the Python binding, there is no decimal type at all.** A Python `Decimal` is
 *rejected* (`TypeError: unsupported type Decimal`), and every value returned is a Python
@@ -217,10 +217,10 @@ engine is exact; the binding is not, and the binding is what the platform talks 
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-56** | **Money crosses the engine boundary only as integer minor units.** The binding accepts no decimal type and returns `float`, so exactness cannot survive the crossing as a fractional value. Integers up to 2^53 are exactly representable in `float64` (≈ £90 trillion in pence), which is why the integer form is safe where the fractional form is not. Fractional quantities — relativities, loadings, factors — may be *held* in rate tables and applied *inside* the engine, but any value returning to Python for further arithmetic is an integer minor unit or a string. A startup self-check asserts the round-trip; failing it prevents the service starting. |
-| **FR-RATE-57** | **Division is the guarded operation, not transcendentals.** S1 found `log` and `sqrt` do not exist in the ZEN expression language at all (they fail to parse), so the earlier requirement guarded operations that cannot be called. The real hazard is **division by zero, which returns `null` and does not raise**: `1/0`, `0/0` and `premium/0` all evaluate to `null` silently. The null then raises a `vmError` at the point it is *used*, reporting the multiply rather than the division that caused it. Every division in a rateable path carries an explicit zero guard, bundle compilation (FR-RATE-25) rejects an unguarded one, and **a `null` reaching an `output` step is a hard error** — otherwise a null premium can be emitted. |
-| **FR-RATE-58** | Bundle compilation checks that no rate table value, constant, or intermediate requires a decimal scale beyond `rust_decimal`'s limit of 28, and fails with a named error rather than allowing a silent loss of precision deep in a ladder. Confirmed relevant by S1: `(1/3) * 3 == 1` evaluates `false`, so repeated division loses exactness inside the engine too. |
-| **FR-RATE-59** | The `expression` step's function vocabulary (FR-RATE-28) is validated **against the engine actually in use**, not against this specification's list. S1 found `abs`, `round`, `floor`, `ceil` and `sum` available, but the two-argument `min(a, b)` / `max(a, b)` forms rejected as invalid function calls. Bundle compilation resolves every function name against the engine's real vocabulary and fails on a mismatch, so a graph cannot reference a function that exists only in our documentation. |
+| **FR-273** | **Money crosses the engine boundary only as integer minor units.** The binding accepts no decimal type and returns `float`, so exactness cannot survive the crossing as a fractional value. Integers up to 2^53 are exactly representable in `float64` (≈ £90 trillion in pence), which is why the integer form is safe where the fractional form is not. Fractional quantities — relativities, loadings, factors — may be *held* in rate tables and applied *inside* the engine, but any value returning to Python for further arithmetic is an integer minor unit or a string. A startup self-check asserts the round-trip; failing it prevents the service starting. |
+| **FR-274** | **Division is the guarded operation, not transcendentals.** S1 found `log` and `sqrt` do not exist in the ZEN expression language at all (they fail to parse), so the earlier requirement guarded operations that cannot be called. The real hazard is **division by zero, which returns `null` and does not raise**: `1/0`, `0/0` and `premium/0` all evaluate to `null` silently. The null then raises a `vmError` at the point it is *used*, reporting the multiply rather than the division that caused it. Every division in a rateable path carries an explicit zero guard, bundle compilation (FR-240) rejects an unguarded one, and **a `null` reaching an `output` step is a hard error** — otherwise a null premium can be emitted. |
+| **FR-275** | Bundle compilation checks that no rate table value, constant, or intermediate requires a decimal scale beyond `rust_decimal`'s limit of 28, and fails with a named error rather than allowing a silent loss of precision deep in a ladder. Confirmed relevant by S1: `(1/3) * 3 == 1` evaluates `false`, so repeated division loses exactness inside the engine too. |
+| **FR-276** | The `expression` step's function vocabulary (FR-244) is validated **against the engine actually in use**, not against this specification's list. S1 found `abs`, `round`, `floor`, `ceil` and `sum` available, but the two-argument `min(a, b)` / `max(a, b)` forms rejected as invalid function calls. Bundle compilation resolves every function name against the engine's real vocabulary and fails on a mismatch, so a graph cannot reference a function that exists only in our documentation. |
 
 ---
 
@@ -277,7 +277,7 @@ engine is exact; the binding is not, and the binding is what the platform talks 
 
 **Invariants** — DAG acyclic; every `consumes` name is `produced` by exactly one upstream
 step; every declared output has an `output` step; no step is unreachable from an `input`
-and unreferenced by an `output` (FR-RATE-1).
+and unreferenced by an `output` (FR-212).
 
 ### 4.2 `RateTable` / `RateTableVersion`
 
@@ -307,35 +307,35 @@ and unreferenced by an `output` (FR-RATE-1).
 
 Values are stored as decimal strings, never JSON floats (R2).
 
-> **`storage` added 2026-08-18 with FR-RATE-62** (OQ-RATE-3). `rows` or `parquet`, decided
+> **`storage` added 2026-08-18 with FR-232** (OQ-616). `rows` or `parquet`, decided
 > against the workspace's cell-count threshold when the version is written and **immutable
 > with the version**, so a reader never has to ask which form a past version took and raising
 > the threshold cannot silently re-home versions already written. Above the threshold `rows`
 > is absent from this document and the cells are addressed by a `BlobRef`; every other field
-> here, and every question a caller may ask, is unchanged — what changes is that FR-RATE-17's
+> here, and every question a caller may ask, is unchanged — what changes is that FR-231's
 > diff and its exposure weighting answer **202 with a Job** rather than 200.
 
 > *(`created_by_operation` and `created_by_import` added 2026-08-28, W10-3 readiness.)* A
 > version created by a bulk operation carries the operation record — `BulkOperation`,
-> `04` §4.4 — which is what FR-RATE-18's "records its parameters, not just the resulting
+> `04` §4.4 — which is what FR-233's "records its parameters, not just the resulting
 > cells" means. A version created by CSV/XLSX import carries the source file's identity
 > and the strict round-trip verdict (`created_by_import`: `{"filename", "content_sha256",
 > "round_trip": "passed", "applied_to"}`; `applied_to` added 2026-08-28, naming the
 > addressed baseline version — the import endpoint addresses `{slug}@{version}`, so the
 > record mirrors `BulkOperation.applied_to`); `filename` (amended 2026-08-28, DP5) is the
 > name of the actually-uploaded file as the endpoint received it (stored as text, bounded
-> length, never used as a path), not a format-derived constant — per FR-RATE-20. Both are
+> length, never used as a path), not a format-derived constant — per FR-235. Both are
 > set at creation and immutable with the version; the before/after cells and the actor
-> belong to NFR-RATE-10's Audit Event, not here. This example's version was edited by
+> belong to NFR-498's Audit Event, not here. This example's version was edited by
 > hand, so both are `null`.
 
 > **Seed lineage survives every derivation.** `seeded_from` is set only by
 > seed-from-model, on the first version of a lineage; every derived version — manual
 > edit, bulk operation, import — inherits the baseline's `seeded_from` unchanged, and a
 > version whose baseline had none carries none. This example's hand-edited version keeps
-> its `seeded_from`, and FR-RATE-16's "how far have we moved from the technical rate?"
+> its `seeded_from`, and FR-230's "how far have we moved from the technical rate?"
 > must stay answerable along the whole chain, so `diff_vs_seed` remains meaningful on
-> every derived version. Save-time validation (FR-RATE-19) checks the equality against
+> every derived version. Save-time validation (FR-234) checks the equality against
 > the resolved baseline — `BulkOperation.applied_to` or `created_by_import.applied_to` —
 > and a derived version may not invent or drop the anchor. `created_by_operation` and
 > `created_by_import` remain mutually exclusive.
@@ -369,16 +369,16 @@ Values are stored as decimal strings, never JSON floats (R2).
 ```
 
 **Invariants** — `status ≥ approved` ⟹ every `evidence` field required by the workspace
-policy is present and passing (R4, FR-RATE-40); every pin resolves to an artifact whose
-status is `approved` or better (FR-OVR-14); `bundle.content_hash` is reproducible from the
+policy is present and passing (R4, FR-257); every pin resolves to an artifact whose
+status is `approved` or better (FR-20); `bundle.content_hash` is reproducible from the
 pins; every `model_call` step's `mode` equals `model_reference_mode`
-(FR-RATE-60).
+(FR-223).
 
 > *(Scoped 2026-08-27, W7-3 — OD1.)* Phase 1b builds the **minimal subset** of this shape:
 > `slug`, `version`, `status` (`draft → review → approved`), `workspace_id`,
 > `dataset_version_id`, a single pinned `model:{slug}@{version}` reference, `created_at`,
 > `created_by`, `updated_at`. Compile, score, rate tables, the `pins`/`evidence`/`bundle`
-> blocks, `model_reference_mode`, and deployment stay Phase 2 (FR-PLAT-67). The
+> blocks, `model_reference_mode`, and deployment stay Phase 2 (FR-440). The
 > `RatingVersion` model in `model-schema` carries only the Phase 1b subset; a Phase 2
 > build widens the shape with the full contract.
 
@@ -425,7 +425,7 @@ carries exactly the two keys `score_one` emits: `total` (the whole call, `t_star
 return) and `evaluate` (`async_evaluate()` alone, the DAG walk inside the ZEN engine); their
 difference is input validation and post-evaluation ladder/output construction. No
 requirement anywhere in this suite names a `model_call`/`table_lookups`/`expressions`
-breakdown — `docs/plans/2026-08-31-f62-timing-ms-ruling.md` Ruling 54.
+breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakdown.md` RL-931.
 
 ### 4.5 `Trace`
 
@@ -502,22 +502,22 @@ breakdown — `docs/plans/2026-08-31-f62-timing-ms-ruling.md` Ruling 54.
 
 ### 4.8 `score_batch`'s frame contract
 
-*(Added 2026-08-30, W11 Task 3A follow-up — Ruling 43,
-`docs/plans/2026-08-30-w11-reopen-scope-and-batch-frame-contract-rulings.md`. Mints no
-requirement id: it documents a shape FR-RATE-36, FR-RATE-37 and `05-monitoring.md`
-FR-MON-11 already reach, not a new capability.)*
+*(Added 2026-08-30, WK-671 Task 3A follow-up — RL-923,
+`docs/rulings/INDEX.md#2026-08-30-w11-reopen-scope-and-batch-frame-contract-rulingsmd`. Mints no
+requirement id: it documents a shape FR-253, FR-254 and `05-monitoring.md`
+FR-317 already reach, not a new capability.)*
 
 §5.2's `score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, ...) -> pl.LazyFrame`
 fixes the function's signature only. Nothing else in this suite fixes a row shape for it,
 and this is the first of the four `pl.LazyFrame`-taking/returning signatures §5.2
 publishes (`score_batch`'s `frame`, `dislocate`'s `portfolio`, `attribute`'s `portfolio`,
 `score_batch`'s own return) to become real — `dislocate` and `attribute` are unbuilt. This
-subsection is written so it can hold the portfolio frame's schema when W13 designs it; it
+subsection is written so it can hold the portfolio frame's schema when WK-673 designs it; it
 does not design that schema now.
 
 **Not a `model-schema` artifact.** No document under `docs/contracts/` defines a tabular
 row schema, and Polars column layouts have no generator, no `scripts/generate-contracts.py
---check` drift check, and no frontend consumer — the seam ADR-0002 defines does not carry
+--check` drift check, and no frontend consumer — the seam ADR-704 defines does not carry
 this. Publishing it here, and guarding it with a test asserting every `ScoringResult` field
 is either a mapped column or a named exclusion
 (`packages/pricing-core/tests/test_rating_score_batch.py`), is `CLAUDE.md` §2's "a shape
@@ -532,7 +532,7 @@ not declare, exactly as `_validate_inputs` already tolerates extra `ctx.inputs` 
 
 | Column | Type | Notes |
 |---|---|---|
-| `quote_id` | string, nullable | FR-RATE-36's "quote key"; `ScoringResult` carries no such field (Ruling 31 §3), so this is carried through rather than read off the result |
+| `quote_id` | string, nullable | FR-253's "quote key"; `ScoringResult` carries no such field (RL-857 §3), so this is carried through rather than read off the result |
 | `purpose` | string | one of `QuotePurpose`'s five members |
 | `effective_date` | string | ISO date |
 | `rating_version_ref` | string | the canonical `ArtifactRef` string (`"{type}:{slug}@{version}"`) |
@@ -545,7 +545,7 @@ against the `bundle` it is scoring with. For `score_one` this never diverges: th
 resolves one ref into one bundle for one call, so the two agree by construction. For
 `score_batch`, the frame and the bundle are supplied independently, so that construction is
 gone unless the handler restores it. **Task 3B resolves the reference once per Rating
-Version it loops (FR-RATE-36's "one or more") and stamps that resolved ref into every row
+Version it loops (FR-253's "one or more") and stamps that resolved ref into every row
 of the frame it builds for that bundle — it does not read `rating_version_ref` from the
 Dataset Version being scored.** A build that accepts the ref from the input dataset
 produces a parquet attributing premiums to a Rating Version that did not compute them.
@@ -567,15 +567,15 @@ columns; `trace` and `timing_ms` are excluded.
 | `error_message` | string, nullable | — | populated only on an `"error"` row |
 
 **Two `ScoringResult` fields are deliberately excluded, and no third:** `trace` (batch
-requests no engine trace — Ruling 25 gives `score_batch` no sampling parameter, so this is
+requests no engine trace — RL-890 gives `score_batch` no sampling parameter, so this is
 always absent) and `timing_ms` (a per-call wall-clock breakdown that means nothing
 aggregated across a chunk).
 
 **One failing row becomes an `"error"` output row rather than aborting the chunk it is
-in** — the structural half of FR-RATE-38 ("does not abort on individual failures") a
+in** — the structural half of FR-255 ("does not abort on individual failures") a
 chunked transform has to provide regardless of which task is charged with the requirement
 id. The threshold policy that decides whether the *run* aborts, and the per-category
-counting and sampling FR-RATE-38 also names, are Task 3B's, reading `error_code` off this
+counting and sampling FR-255 also names, are Task 3B's, reading `error_code` off this
 column.
 
 ---
@@ -586,28 +586,28 @@ column.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/v1/rating-algorithms` | Create/version an algorithm (validated on save, FR-RATE-1) |
-| `GET` | `/api/v1/rating-algorithms/{slug}@{version}/diff?against=` | Structural diff (FR-RATE-7) |
+| `POST` | `/api/v1/rating-algorithms` | Create/version an algorithm (validated on save, FR-212) |
+| `GET` | `/api/v1/rating-algorithms/{slug}@{version}/diff?against=` | Structural diff (FR-219) |
 | `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version with change note |
-| `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-RATE-16) |
-| `POST` | `/api/v1/rate-tables/{slug}@{version}/bulk-operation` | Uplift / floor / cap / rebase on that version's cells → new version, operation + parameters recorded (FR-RATE-18) |
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-RATE-17); **202** with a Job where either version is `storage: parquet` (FR-RATE-62) |
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-RATE-20) |
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-RATE-20) |
-| `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation; `confirm: true` re-computes the diff and creates the version (FR-RATE-20) |
-| `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins (FR-RATE-22) |
-| `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-RATE-25) |
-| `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-RATE-40) |
-| `POST` | `/api/v1/score` | Real-time single quote (FR-RATE-34) |
-| `POST` | `/api/v1/score/batch` | **202** Batch re-rate → Job (FR-RATE-36) |
-| `POST` | `/api/v1/score/compare` | Score one quote against two versions with a step-level diff (FR-RATE-45) |
-| `POST` | `/api/v1/rating-versions/{id}/regression-runs` | **202** Run the regression suite (FR-RATE-43/44) |
-| `POST` | `/api/v1/dislocation-runs` | **202** Baseline vs candidate over a portfolio (FR-RATE-46) |
+| `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-230) |
+| `POST` | `/api/v1/rate-tables/{slug}@{version}/bulk-operation` | Uplift / floor / cap / rebase on that version's cells → new version, operation + parameters recorded (FR-233) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-231); **202** with a Job where either version is `storage: parquet` (FR-232) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-235) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-235) |
+| `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation; `confirm: true` re-computes the diff and creates the version (FR-235) |
+| `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins (FR-237) |
+| `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-240) |
+| `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-257) |
+| `POST` | `/api/v1/score` | Real-time single quote (FR-250) |
+| `POST` | `/api/v1/score/batch` | **202** Batch re-rate → Job (FR-253) |
+| `POST` | `/api/v1/score/compare` | Score one quote against two versions with a step-level diff (FR-262) |
+| `POST` | `/api/v1/rating-versions/{id}/regression-runs` | **202** Run the regression suite (FR-260/261) |
+| `POST` | `/api/v1/dislocation-runs` | **202** Baseline vs candidate over a portfolio (FR-263) |
 | `GET` | `/api/v1/dislocation-runs/{id}` | Dislocation artifact |
-| `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version (FR-RATE-50) |
-| `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (FR-RATE-52) |
-| `PUT` | `/api/v1/environments/{env}/shadow` | Configure shadow scoring (FR-RATE-54) |
-| `GET` | `/api/v1/traces?rating_version=&from=&to=` | Sampled production traces (FR-RATE-42) |
+| `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version (FR-267) |
+| `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (FR-269) |
+| `PUT` | `/api/v1/environments/{env}/shadow` | Configure shadow scoring (FR-271) |
+| `GET` | `/api/v1/traces?rating_version=&from=&to=` | Sampled production traces (FR-259) |
 
 **Error codes owned by this module:** `RATING_GRAPH_CYCLIC`, `RATING_GRAPH_UNRESOLVED_REF`,
 `RATING_TYPE_MISMATCH`, `MONETARY_FLOAT_REFUSED`, `EXPRESSION_NON_DETERMINISTIC`,
@@ -623,23 +623,23 @@ column.
 `FLOOR_ABOVE_CAP`, `REBASE_NO_MATCH`, `REBASE_AMBIGUOUS`, `REBASE_ZERO_REFERENCE`,
 `IMPORT_KEY_MISMATCH`, `IMPORT_TYPE_MISMATCH`, `IMPORT_PARSE_ERROR`
 *(added 2026-08-28, W10-3C)*, `MODEL_CALL_FAILED`
-*(added 2026-08-29, W11 Slice 1 — FR-RATE-38's fifth category, model failure; ruled in `docs/plans/2026-08-29-w11-slice1-rulings.md` Ruling 11)*, `NO_LIVE_RATING_VERSION`
-*(added 2026-08-29, W11 Slice 2 — **409**. FR-RATE-34's default path resolves the Rating Version live in the target environment, and `live` is a property of a Deployment (FR-RATE-23), which is W14's. A `POST /api/v1/score` omitting `rating_version_ref` is refused with this code rather than scored against a guessed version. The branch is permanent, not a stub: after W14 it is what an environment holding no Deployment answers. Ruled in `docs/plans/2026-08-29-w11-slice2-rulings.md` Ruling 14)*,
+*(added 2026-08-29, WK-671 Slice 1 — FR-255's fifth category, model failure; ruled in `docs/rulings/RL-00877-model-call-failed.md` RL-877)*, `NO_LIVE_RATING_VERSION`
+*(added 2026-08-29, WK-671 Slice 2 — **409**. FR-250's default path resolves the Rating Version live in the target environment, and `live` is a property of a Deployment (FR-238), which is WK-674's. A `POST /api/v1/score` omitting `rating_version_ref` is refused with this code rather than scored against a guessed version. The branch is permanent, not a stub: after WK-674 it is what an environment holding no Deployment answers. Ruled in `docs/rulings/RL-00880-dp1-post-api-v1-score-takes-an-explicit-rating-version-ref-in-wk-671-and-refuses-rather-than-guesses-when-it-is-absent.md` RL-880)*,
 `BATCH_ABORT_THRESHOLD_ABOVE_SETTING`, `BATCH_ABORTED`
-*(added 2026-08-30, W11 Slice 3 Task 3B — FR-RATE-38, Ruling 24. The first: a `score.batch`
+*(added 2026-08-30, WK-671 Slice 3 Task 3B — FR-255, RL-889. The first: a `score.batch`
 Job argument may only lower `rating.batch_abort_failure_rate`'s resolved effective threshold,
 never raise it; a request whose argument is above it is refused with this code before any
 row is scored. The second: a run whose observed per-quote failure rate crosses the effective
 threshold aborts, recording both the threshold in force and the observed rate — never a
 silent partial result)*,
 `TRACE_RETENTION_FLOOR`
-*(added 2026-08-30, W11 Task 4A — **409**. FR-RATE-42's sampled traces are persisted for
-≥ 13 months (NFR-OVR-6), a preservation floor rather than an expiry (Ruling 23's
+*(added 2026-08-30, WK-671 Task 4A — **409**. FR-259's sampled traces are persisted for
+≥ 13 months (NFR-459), a preservation floor rather than an expiry (RL-888's
 correction). Deleting a `scoring_traces` row while it is still inside that floor is refused
 with this code; outside the floor it is permitted. `app.platform.traces.delete_trace` is
 the only raiser)*,
 `TRACE_NOT_PENDING`
-*(added 2026-08-30, W11 Task 4B — **409**. Ruling 35 moves trace production off the
+*(added 2026-08-30, WK-671 Task 4B — **409**. RL-862 moves trace production off the
 serving request: a sampled real-time outcome is first persisted `pending`, and an
 off-path Job re-scores the pinned bundle and fills in the body. This code is refused when
 that completion is attempted against a row that is not `pending` — already completed, or
@@ -654,7 +654,7 @@ orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raise
 
 > **Superseded 2026-08-28 (W10-3D): the 501 is retired and the 202-with-Job form is
 > live.** The diff Job runs on the compute queue (`JobKind.RATE_TABLE_DIFF`,
-> `07` FR-PLAT-15's model) and computes the same artifact the 200 path computes — the
+> `07` FR-411's model) and computes the same artifact the 200 path computes — the
 > same service call, a parquet-stored version materialised from its blob — then stores
 > it as a JSON blob and returns `result.ref` as the blob's sha256, fetchable from
 > `/blobs/{sha256}`: the codebase's first `JobResult(kind="blob")`. The refusal and its
@@ -666,21 +666,21 @@ orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raise
 
 > **Bulk-operation and import refusals (2026-08-28, W10-3C).** The bulk operations
 > (04 §4.4) and the import preview refuse with their own names: `RATE_TABLE_SEED_MISMATCH`
-> is the save-time seed-lineage equality proof (FR-RATE-19), `NO_RELATIVITIES` is the seed
+> is the save-time seed-lineage equality proof (FR-234), `NO_RELATIVITIES` is the seed
 > gate, `FILTER_UNKNOWN_KEY` / `FLOOR_ABOVE_CAP` / `REBASE_NO_MATCH` / `REBASE_AMBIGUOUS` /
 > `REBASE_ZERO_REFERENCE` are the four operations' named refusals, and
 > `IMPORT_KEY_MISMATCH` / `IMPORT_TYPE_MISMATCH` / `IMPORT_PARSE_ERROR` are the strict
-> round-trip's refusals (FR-RATE-20). All ten were declared in `app/errors.py` before
+> round-trip's refusals (FR-235). All ten were declared in `app/errors.py` before
 > first use — an unregistered code would surface as a 500, so the ownership block is
 > the declaration of record.
 
 > *(Ruled 2026-08-28, decision-maker — bulk-operation, import and export address a
-> specific version, `{slug}@{version}`.)* The W10 plan's T4 drafted `/versions/{version}/`
+> specific version, `{slug}@{version}`.)* The WK-670 plan's T4 drafted `/versions/{version}/`
 > forms; the ruling adopts `@{version}`, this module's established versioned addressing
 > (the diff row above), because an operation must state the baseline it transforms — an
 > implicit "latest" would race concurrent writers and make the recorded operation's
 > meaning drift from the cells it actually changed. Export gained its rows here:
-> FR-RATE-20 requires export, and §5.1 previously had only the import row.
+> FR-235 requires export, and §5.1 previously had only the import row.
 
 > *(`created_by_import.filename` ruled 2026-08-28, DP5.)* The import request carries the
 > uploaded file and its name (multipart/form-data); `created_by_import.filename` records
@@ -699,11 +699,11 @@ orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raise
 # pricing_core/rating/compile.py
 def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle
-def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-0004 translation layer
+def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-706 translation layer
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str    # corrected 2026-08-27 (F-W9-3-2)
 
-# pricing_core/rating/runtime.py                      # added 2026-08-29 (W11 Slice 1)
-def load_bundle(bundle: Bundle) -> CompiledBundle     # FR-RATE-65's hydration step
+# pricing_core/rating/runtime.py                      # added 2026-08-29 (WK-671 Slice 1)
+def load_bundle(bundle: Bundle) -> CompiledBundle     # FR-243's hydration step
 
 # pricing_core/rating/score.py
 async def score_one(bundle: CompiledBundle, ctx: QuoteContext, *,
@@ -723,7 +723,7 @@ def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
 def generate_contexts(contract: InputContract, n: int, seed: int) -> list[QuoteContext]
 
 # pricing_core/money.py — the decimal discipline (R2); path and signatures
-# corrected 2026-08-29 (W11 Slice 1, Ruling 13) — there is no rating/money.py
+# corrected 2026-08-29 (WK-671 Slice 1, RL-879) — there is no rating/money.py
 def apply_factor(amount_minor: int, factor: Decimal, mode: RoundingMode) -> int
 def reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> bool
 # to_minor is model-schema's, not pricing-core's: model_schema/money.py
@@ -743,21 +743,21 @@ def import_from_xlsx(version: RateTableVersion, content: bytes, *, filename: str
 def import_confirmed(version: RateTableVersion, content: bytes, *, filename: str) -> ImportResult
 ```
 
-> *(`import_confirmed` added 2026-08-28, DP6 — the confirmation half of FR-RATE-20.)*
+> *(`import_confirmed` added 2026-08-28, DP6 — the confirmation half of FR-235.)*
 > `POST /import` with `confirm: true` re-parses the same upload through the same strict
 > pipeline and creates the version; `import_confirmed` returns the checked cells and the
 > verdict (`ImportResult`), and the API persists — confirmation cannot override the
 > round-trip verdict, so the created version cannot diverge from the preview (same
 > bytes, same immutable baseline).
 
-`ImportPreview` is the FR-RATE-17 cell diff of the would-be version **against the
-addressed version** plus the strict round-trip verdict (FR-RATE-20); a mismatch in keys,
+`ImportPreview` is the FR-231 cell diff of the would-be version **against the
+addressed version** plus the strict round-trip verdict (FR-235); a mismatch in keys,
 types or completeness is a named error — completeness is checked against the addressed
 version's validated domain (an explicit `default_row` waives it) — and the import only
 creates a version after the diff is confirmed. `KeyFilter`
-matches FR-RATE-18's "key filter"; `rebase_to_level`'s `base_level` names the reference
+matches FR-233's "key filter"; `rebase_to_level`'s `base_level` names the reference
 level (single-key tables: the key value; multi-key: the combination) whose value becomes
-1.0. Each operation validates the result before persisting (FR-RATE-19) and returns a
+1.0. Each operation validates the result before persisting (FR-234) and returns a
 new immutable version whose `created_by_operation` carries the `BulkOperation` record
 (`04` §4.4). The verdict's `filename` is the upload's name as passed, recorded on the
 created version's `created_by_import.filename`.
@@ -765,7 +765,7 @@ created version's `created_by_import.filename`.
 > *(`import_from_csv`/`import_from_xlsx` corrected 2026-08-28 — the W10-3 readiness
 > amendment named a bare `RateTable`; the decision-maker ruled the signature wrong.)* The
 > import endpoint addresses `{slug}@{version}` (§5.1), and the confirmation diff that
-> FR-RATE-20's workflow depends on must show what the import changes against the version
+> FR-235's workflow depends on must show what the import changes against the version
 > the actuary exported — an empty-baseline "all cells new" preview cannot confirm anything,
 > so the round-trip confirmation would be a rubber stamp. The signature therefore takes
 > the addressed `RateTableVersion`: the preview diffs the would-be version against it, and
@@ -776,21 +776,21 @@ created version's `created_by_import.filename`.
 > *(Corrected 2026-08-27, F-W9-3-2 — the decision-maker ruled the spec was wrong.)* The
 > content hash is `bundle_hash(graph, pins)`, never `bundle_hash(bundle)`: the Bundle
 > carries `compiled_at`, and hashing a timestamp would make the hash unreproducible. Per
-> DP1 and FR-RATE-24, the hash covers the graph and the pinned artifact references and is
+> DP1 and FR-239, the hash covers the graph and the pinned artifact references and is
 > reproducible from the pins; `compiled_at` is metadata and is excluded.
 
-> *(Corrected 2026-08-29, W11 Slice 3 — the decision-maker ruled the spec was wrong.)* This
+> *(Corrected 2026-08-29, WK-671 Slice 3 — the decision-maker ruled the spec was wrong.)* This
 > read *"`score_one` and `score_batch` share the identical step evaluator"*. There is no shared
 > step evaluator and there was never going to be one: per-step evaluation happens inside the ZEN
 > engine, not in this repository, and `pricing_core.rating.score` exports exactly
-> `build_scoring_result` and `score_one`. Per Ruling 5, `score_one` reaches the engine through
+> `build_scoring_result` and `score_one`. Per RL-868, `score_one` reaches the engine through
 > `async_evaluate()` while `score_batch` stays plain `def` — different methods, so the phrase was
-> inaccurate at the engine level too. Ruling 32,
-> `docs/plans/2026-08-29-w11-3-d6-batch-resumability-ruling.md`.
+> inaccurate at the engine level too. RL-858,
+> `docs/rulings/INDEX.md#2026-08-29-w11-3-d6-batch-resumability-rulingmd`.
 
 `score_one` and `score_batch` share the identical **post-evaluation tail** —
 `build_scoring_result`, the one function turning an already-evaluated engine result into a
-`ScoringResult` (FR-RATE-37). The byte-identity a batch implementation must prove is exactly
+`ScoringResult` (FR-254). The byte-identity a batch implementation must prove is exactly
 that function producing the same output from the same input, not two implementations that
 happen to agree. `score_batch` is a vectorised driver over the same compiled graph, not a
 second engine.
@@ -818,21 +818,21 @@ module and must be reachable in one click from any traced quote.
 
 | Step | Actor | Action |
 |---|---|---|
-| 1 | Pricing Actuary | Seeds rate tables from the approved Peril Structure's models (FR-RATE-16) |
+| 1 | Pricing Actuary | Seeds rate tables from the approved Peril Structure's models (FR-230) |
 | 2 | Pricing Actuary | Edits the algorithm in the DAG designer; validation runs on every change |
 | 3 | Pricing Actuary | Edits rate tables; diffs vs previous and vs technical seed stay visible |
 | 4 | Frontend → Backend | `POST /rating-versions` + `POST /{id}/compile` → bundle hash |
 | 5 | Analyst | Runs the regression suite; fixes any golden-quote or property failure |
-| 6 | Analyst | Runs dislocation vs the current live version, with attribution (FR-RATE-49) |
+| 6 | Analyst | Runs dislocation vs the current live version, with attribution (FR-266) |
 | 7 | Pricing Actuary | Runs a GIPP check where enabled (`04-optimisation.md`) |
 | 8 | Pricing Actuary | Writes the change summary (drafted from diffs) and submits |
 | 9 | Approver | Reviews structural diff, rate diffs, dislocation, tests, GIPP → approves |
-| 10 | Deployer | Deploys to `uat`, shadow-scores, then deploys to `prod` (FR-RATE-50/54) |
+| 10 | Deployer | Deploys to `uat`, shadow-scores, then deploys to `prod` (FR-267/271) |
 | 11 | Backend | Pre-warms the bundle, switches atomically, emits Audit Event + notification |
 
-Full journeys: [`wf-02-model-to-rating-version.md`](../workflows/wf-02-model-to-rating-version.md),
-[`wf-03-rate-change-impact.md`](../workflows/wf-03-rate-change-impact.md),
-[`wf-04-deploy-and-monitor.md`](../workflows/wf-04-deploy-and-monitor.md).
+Full journeys: [`WF-699-model-to-rating-version.md`](../workflows/WF-00699-approved-models-to-approved-rating-version.md),
+[`WF-700-rate-change-impact.md`](../workflows/WF-00700-rate-change-impact-optimisation-dislocation-gipp-decision.md),
+[`WF-701-deploy-and-monitor.md`](../workflows/WF-00701-deploy-and-monitor.md).
 
 ---
 
@@ -865,7 +865,7 @@ OPT → RATE and DEP-1 is respected.
 
 - The engine never re-implements model prediction; `model_call` delegates to `pricing-core`
   `predict_*` (`02` §7.3), so a diagnostic prediction and a quoted premium cannot diverge.
-- Reference lookups use the same effective-dating semantics as `01` FR-DATA-31; there is
+- Reference lookups use the same effective-dating semantics as `01` FR-71; there is
   one implementation, in `pricing-core`.
 - `05-monitoring` consumes traces as they are; this module does not pre-aggregate for it.
 
@@ -875,16 +875,16 @@ OPT → RATE and DEP-1 is respected.
 
 | Component | Used for | Notes for `skills-map.md` |
 |---|---|---|
-| **GoRules ZEN Engine** | DAG execution substrate (ADR-0004) | JDM graph format, decision tables, `Variable::Number` is `rust_decimal` (exact decimal — verified); the `arbitrary_precision` serde feature and where it is *not* default; `maths-nopanic` returning 0 on invalid input; custom nodes for rate-table lookup and `model_call`; Python binding overhead at 200 rps; native trace output |
-| **Python `decimal`** | All monetary arithmetic (R2, FR-RATE-29) | Contexts, `ROUND_HALF_EVEN`, integer minor units, avoiding float contamination through JSON serialisation |
+| **GoRules ZEN Engine** | DAG execution substrate (ADR-706) | JDM graph format, decision tables, `Variable::Number` is `rust_decimal` (exact decimal — verified); the `arbitrary_precision` serde feature and where it is *not* default; `maths-nopanic` returning 0 on invalid input; custom nodes for rate-table lookup and `model_call`; Python binding overhead at 200 rps; native trace output |
+| **Python `decimal`** | All monetary arithmetic (R2, FR-245) | Contexts, `ROUND_HALF_EVEN`, integer minor units, avoiding float contamination through JSON serialisation |
 | **Polars** | Batch scoring driver, dislocation aggregation, rate table storage in memory | Chunked lazy evaluation; joining portfolio rows to rate tables at scale |
 | **DuckDB** | Dislocation slicing and segment aggregation over scored parquet | Window functions for change-band distributions |
-| **Redis** | `Bundle` cache keyed by content hash; hot-path lookup | Cache warming before an atomic deployment switch (FR-RATE-51) |
+| **Redis** | `Bundle` cache keyed by content hash; hot-path lookup | Cache warming before an atomic deployment switch (FR-268) |
 | **FastAPI** | The scoring endpoint on the latency path | Async request handling, response model overhead, avoiding Pydantic re-validation on the hot path |
 | **XGBoost / LightGBM** | `model_call` in `exact` mode | Booster load time, single-row prediction latency, thread pinning to avoid contention at 200 rps |
-| **hypothesis** | Property assertion generation (FR-RATE-44) | Strategies derived from an input contract; shrinking counterexamples an actuary can read |
+| **hypothesis** | Property assertion generation (FR-261) | Strategies derived from an input contract; shrinking counterexamples an actuary can read |
 | **Vue Flow (frontend)** | The DAG designer | Custom node types per step type, edge validation, layout, undo/redo, mapping canvas state to the `RatingAlgorithm` contract |
-| **openpyxl** | CSV/XLSX import/export with strict round-trip (FR-RATE-20) | XLSX read + write in one library; CSV is stdlib; round-trip keeps decimal strings — never float through the file |
+| **openpyxl** | CSV/XLSX import/export with strict round-trip (FR-235) | XLSX read + write in one library; CSV is stdlib; round-trip keeps decimal strings — never float through the file |
 | **TanStack Table (frontend)** | Rate table editor | Virtualised editable grids, decimal-safe cell input, diff shading |
 | **ECharts (frontend)** | Ladder waterfall, dislocation histogram, attribution waterfall | Waterfall chart construction; large-histogram rendering |
 | **OpenTelemetry** | Per-step timing on the latency path | Low-overhead spans; sampling so tracing does not become the bottleneck |
@@ -899,20 +899,20 @@ single-row GBM inference latency tuning; hypothesis strategies from a declarativ
 
 | ID | Requirement |
 |---|---|
-| **NFR-RATE-1** | Real-time scoring p99 < 50 ms server-side at 200 rps per replica for a ~200-step motor structure with one `exact` GBM call (NFR-OVR-1). Without a GBM call, p99 < 15 ms. |
-| **NFR-RATE-2** | Tracing adds ≤ 20 % to scoring latency and never changes the result (R3). |
-| **NFR-RATE-3** | A compiled bundle scores with **zero** database or network access; everything it needs is inside it (FR-RATE-24). |
-| **NFR-RATE-4** | Bundle compilation for a large motor structure completes in < 60 s; bundle size stays under 500 MB including booster artifacts. |
-| **NFR-RATE-5** | Batch scoring ≥ 1 M risks/hour per worker (NFR-OVR-2), linear in workers. |
-| **NFR-RATE-6** | Deployment switchover is atomic with no dropped or mixed-bundle requests, and completes within 30 s of the deploy command including cache warming. |
-| **NFR-RATE-7** | Determinism: identical bundle hash + quote context ⟹ identical premium, byte-for-byte, across processes, machines, and platform versions (FR-OVR-8). |
-| **NFR-RATE-8** | Money exactness: no rounding is applied more than once; the ladder reconciles to the penny in 100 % of scored quotes (FR-RATE-32), asserted continuously in non-prod and sampled in prod. |
-| **NFR-RATE-9** | Availability: the scoring endpoint targets 99.95 % monthly, degrading to the last-known-good cached bundle if metadata storage is unavailable. |
-| **NFR-RATE-10** | Audit: algorithm edits, rate table versions, bulk operations, compilations, approvals, deployments, rollbacks, and routing changes all emit Audit Events with before/after state. |
-| **NFR-RATE-11** | Security: the scoring API authenticates per Consumer System with scoped credentials and per-client rate limits; quote inputs are never logged in full outside sampled traces, which are access-controlled. *(Clarified 2026-08-30, W11: what "logged" reaches, and the store this clause never carved. **The clause governs persistence, not only log output.** The carve-out names sampled traces, and a trace is not a log, so a rule reaching only log lines would have had no need of that exception — the domain is records of a quote input, of which a trace is one. Read that way it collided with FR-RATE-43, which has a Golden Quote **store a Quote Context** outside any trace, and the defect is here rather than there: this clause names a single instance where its own justification, *"which are access-controlled"*, states a class. **A full quote input may be held only in an access-controlled artifact this specification names for that purpose, and those are sampled traces (FR-RATE-42) and Golden Quotes (FR-RATE-43).** A Golden Quote's stored Quote Context carries the same access-control obligation a trace carries, because that property is what justifies the exception rather than the artifact's name. **Any further store requires its own requirement**, so the next one is a visible decision rather than a third silent collision. FR-RATE-44 persists a seed rather than quote data and FR-RATE-45's sandbox is inline, so neither needs a carve-out. Nothing is in breach: `GoldenQuote` exists in no module, so this is settled before W12 builds it. Ruled in `docs/plans/2026-08-30-w11-nfr-rate-11-quote-input-stores-ruling.md` Ruling 36.)* |
-| **NFR-RATE-12** | Trace storage: 1 % sampling of 50 M annual quotes stays under 200 GB/year with the sampled-trace schema. |
-| **NFR-RATE-14** | GBM `model_call` steps execute with **`nthread=1` per request**. Measured (S2): single-threading beats all-cores at the tail — p99 1.09 ms vs 1.48 ms, worst case 4.5 ms vs 19.9 ms — because thread-pool spin-up dominates a single-row prediction. Parallelism belongs across concurrent requests, not inside one. *(Amended 2026-08-27, W8 — re-measured on the verification machine: p99 1.626 ms vs all-cores' 4.737 ms (max 6.143 ms vs 26.692 ms); `docs/research/w8-spike-resolution.md`. nthread=1 stays 0.34x of all-cores at the tail — the original S2 order holds, though the absolute figures are higher on this machine (slower `DMatrix` construction). p99 1.626 ms is still 3.3 % of the 50 ms budget: PASS. The design rule is unchanged: `nthread=1` per request.)* |
-| **NFR-RATE-13** | The scoring endpoint does **not** apply `response_model` validation to its response. Pydantic validation costs roughly 1 ms per request — 2 % of the 50 ms budget before any pricing work — and the response path otherwise runs three to five transformations. `ScoringResult` is constructed by `pricing-core` and is already trusted, so it is serialised directly with a C-speed encoder (`ORJSONResponse`). Inbound `QuoteContext` **is** validated: untrusted input must be checked, trusted output need not be. *(Amended 2026-08-27, W8 — the premise's ~1 ms figure was not reproduced. A realistic `ScoringResult` (premium, 20 rate steps, 60 factors, metadata) validates and serialises at p99 0.070 ms, 0.14 % of the 50 ms budget, on the verification machine; `docs/research/w8-spike-resolution.md`. The measured shape is the one the premise describes, so the figure was an over-estimate, not a different context. The design rule is unchanged: validate inbound, never outbound; encode with `ORJSONResponse`.)* *(Amended 2026-08-29, W11 Slice 2 — the rule now states the property and no longer names the class. **Validate inbound, never outbound; serialise the trusted result directly with a compiled encoder.** `ORJSONResponse` was named when it was the way to get one. It is deprecated in the pinned FastAPI (0.141.1), it asserts at **render** rather than at import when `orjson` is absent — so a lost dependency boots clean and fails on the first quote — and the replacement its own deprecation notice names, a return type or `response_model`, is outbound validation, which this requirement's first sentence forbids: measured on the verification machine, an annotated route returning a shape that violates its model answers 500, and one returning a valid model drops any extra key. Pydantic v2's own compiled serialiser satisfies the property with no new dependency — `model_dump_json` emits an unvalidated model's contents verbatim, and a raw `Response` carrying those bytes runs no outbound validation at all. Ruled in `docs/plans/2026-08-29-w11-slices-2-4-rulings.md` Ruling 17.)* |
+| **NFR-489** | Real-time scoring p99 < 50 ms server-side at 200 rps per replica for a ~200-step motor structure with one `exact` GBM call (NFR-454). Without a GBM call, p99 < 15 ms. |
+| **NFR-490** | Tracing adds ≤ 20 % to scoring latency and never changes the result (R3). |
+| **NFR-491** | A compiled bundle scores with **zero** database or network access; everything it needs is inside it (FR-239). |
+| **NFR-492** | Bundle compilation for a large motor structure completes in < 60 s; bundle size stays under 500 MB including booster artifacts. |
+| **NFR-493** | Batch scoring ≥ 1 M risks/hour per worker (NFR-455), linear in workers. |
+| **NFR-494** | Deployment switchover is atomic with no dropped or mixed-bundle requests, and completes within 30 s of the deploy command including cache warming. |
+| **NFR-495** | Determinism: identical bundle hash + quote context ⟹ identical premium, byte-for-byte, across processes, machines, and platform versions (FR-11). |
+| **NFR-496** | Money exactness: no rounding is applied more than once; the ladder reconciles to the penny in 100 % of scored quotes (FR-248), asserted continuously in non-prod and sampled in prod. |
+| **NFR-497** | Availability: the scoring endpoint targets 99.95 % monthly, degrading to the last-known-good cached bundle if metadata storage is unavailable. |
+| **NFR-498** | Audit: algorithm edits, rate table versions, bulk operations, compilations, approvals, deployments, rollbacks, and routing changes all emit Audit Events with before/after state. |
+| **NFR-499** | Security: the scoring API authenticates per Consumer System with scoped credentials and per-client rate limits; quote inputs are never logged in full outside sampled traces, which are access-controlled. *(Clarified 2026-08-30, WK-671: what "logged" reaches, and the store this clause never carved. **The clause governs persistence, not only log output.** The carve-out names sampled traces, and a trace is not a log, so a rule reaching only log lines would have had no need of that exception — the domain is records of a quote input, of which a trace is one. Read that way it collided with FR-260, which has a Golden Quote **store a Quote Context** outside any trace, and the defect is here rather than there: this clause names a single instance where its own justification, *"which are access-controlled"*, states a class. **A full quote input may be held only in an access-controlled artifact this specification names for that purpose, and those are sampled traces (FR-259) and Golden Quotes (FR-260).** A Golden Quote's stored Quote Context carries the same access-control obligation a trace carries, because that property is what justifies the exception rather than the artifact's name. **Any further store requires its own requirement**, so the next one is a visible decision rather than a third silent collision. FR-261 persists a seed rather than quote data and FR-262's sandbox is inline, so neither needs a carve-out. Nothing is in breach: `GoldenQuote` exists in no module, so this is settled before WK-672 builds it. Ruled in `docs/rulings/RL-00917-the-clause-reaches-persistence-and-nfr-499-is-the-defective-one.md` RL-917.)* |
+| **NFR-500** | Trace storage: 1 % sampling of 50 M annual quotes stays under 200 GB/year with the sampled-trace schema. |
+| **NFR-501** | GBM `model_call` steps execute with **`nthread=1` per request**. Measured (S2): single-threading beats all-cores at the tail — p99 1.09 ms vs 1.48 ms, worst case 4.5 ms vs 19.9 ms — because thread-pool spin-up dominates a single-row prediction. Parallelism belongs across concurrent requests, not inside one. *(Amended 2026-08-27, WK-668 — re-measured on the verification machine: p99 1.626 ms vs all-cores' 4.737 ms (max 6.143 ms vs 26.692 ms); `docs/research/w8-spike-resolution.md`. nthread=1 stays 0.34x of all-cores at the tail — the original S2 order holds, though the absolute figures are higher on this machine (slower `DMatrix` construction). p99 1.626 ms is still 3.3 % of the 50 ms budget: PASS. The design rule is unchanged: `nthread=1` per request.)* |
+| **NFR-502** | The scoring endpoint does **not** apply `response_model` validation to its response. Pydantic validation costs roughly 1 ms per request — 2 % of the 50 ms budget before any pricing work — and the response path otherwise runs three to five transformations. `ScoringResult` is constructed by `pricing-core` and is already trusted, so it is serialised directly with a C-speed encoder (`ORJSONResponse`). Inbound `QuoteContext` **is** validated: untrusted input must be checked, trusted output need not be. *(Amended 2026-08-27, WK-668 — the premise's ~1 ms figure was not reproduced. A realistic `ScoringResult` (premium, 20 rate steps, 60 factors, metadata) validates and serialises at p99 0.070 ms, 0.14 % of the 50 ms budget, on the verification machine; `docs/research/w8-spike-resolution.md`. The measured shape is the one the premise describes, so the figure was an over-estimate, not a different context. The design rule is unchanged: validate inbound, never outbound; encode with `ORJSONResponse`.)* *(Amended 2026-08-29, WK-671 Slice 2 — the rule now states the property and no longer names the class. **Validate inbound, never outbound; serialise the trusted result directly with a compiled encoder.** `ORJSONResponse` was named when it was the way to get one. It is deprecated in the pinned FastAPI (0.141.1), it asserts at **render** rather than at import when `orjson` is absent — so a lost dependency boots clean and fails on the first quote — and the replacement its own deprecation notice names, a return type or `response_model`, is outbound validation, which this requirement's first sentence forbids: measured on the verification machine, an annotated route returning a shape that violates its model answers 500, and one returning a valid model drops any extra key. Pydantic v2's own compiled serialiser satisfies the property with no new dependency — `model_dump_json` emits an unvalidated model's contents verbatim, and a raw `Response` carrying those bytes runs no outbound validation at all. Ruled in `docs/rulings/RL-00883-f1-nfr-502-is-amended-to-the-property-it-was-always-about-orjson-is-not-added.md` RL-883.)* |
 
 ---
 
@@ -922,10 +922,10 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 
 | ID | Question |
 |---|---|
-| **OQ-RATE-1** | ~~Does the ZEN Engine preserve exact decimal semantics for money?~~ **Resolved 2026-08-14** — it represents numbers as `rust_decimal::Decimal`, so engine arithmetic is exact and ADR-0004 stands. The risk moved to the boundaries and is now specified as FR-RATE-56/57/58; the S1 spike is re-scoped, not cancelled. See [`research`](../research/track-a-findings.md) F1. |
-| **OQ-RATE-2** | ~~Is `model_call` in `exact` mode viable inside the 50 ms p99 budget?~~ **RESOLVED 2026-08-14 by spike S2 — comfortably yes.** A 500-tree × 60-feature booster scores a single row at **p99 1.09 ms** including `DMatrix` construction (0.33 ms predict-only) — about 2 % of the budget. `nthread=1` beat all-cores at the tail (p99 1.09 vs 1.48 ms; max 4.5 vs 19.9 ms), so per-request single-threading is correct. **OQ-MODEL-3 is therefore a genuine design choice, not one forced by latency.** *(Amended 2026-08-27, W8 — re-measured on the verification machine: p99 1.626 ms vs all-cores' 4.737 ms (max 6.143 ms vs 26.692 ms); `docs/research/w8-spike-resolution.md`. nthread=1 still 0.34x of all-cores at the tail — the original S2 order holds, though the absolute figures are higher on this machine. p99 1.626 ms is still 3.3 % of the 50 ms budget: still comfortably viable. Recorded in NFR-RATE-14, amended the same way.)* |
-| **OQ-RATE-3** | ~~Should rate tables live in PostgreSQL as rows or as content-addressed parquet blobs?~~ **DECIDED 2026-08-18: rows to a configurable cell count, spilling to parquet above it under one contract — FR-RATE-62**, with `storage` recorded on the version and the diff degrading to a Job above the threshold. |
-| **OQ-RATE-4** | ~~How do mid-term adjustments and refunds work — a `purpose` on the same algorithm, or a genuinely separate calculation path?~~ **DECIDED 2026-08-18: the same algorithm for the risk price, with pro-rata/refund/charge logic in a separately-versioned sub-graph mounted on `purpose` — FR-RATE-63.** §2's `purpose` gained `cancellation` in the same edit, because the answer keys on a value that did not exist. |
-| ~~**OQ-RATE-5**~~ | ~~Do we support multi-product bundling (motor + home in one quote with a bundle discount) in Phase 2, or is each product a separate Rating Version with bundling left to the Consumer System?~~ **Deferred to Phase 4**: Phase 2 ships single-product Rating Versions and a Consumer System bundling two quotes is a supported pattern — the bundle discount is then unpriced and unmonitored, and cross-product pricing follows the optimisation work that needs the same joint demand modelling. **DECIDED 2026-08-26: deferral confirmed — Phase 4; Consumer System bundling is the supported pattern** |
-| **OQ-RATE-6** | ~~Should the platform own instalment/APR calculation, or is that a downstream billing concern?~~ **DECIDED 2026-08-18: price the annual premium, offer `instalment_loading` as a final ladder rung, and leave APR and schedules downstream — FR-RATE-64.** Enough for `04`'s demand model; not enough to make a rating release a consumer-credit release. |
-| **OQ-RATE-7** | Does a **Rate Table Version** have an approval lifecycle? `06` §2 lists it as a Governed Artifact — *"any artifact with an approval-bearing lifecycle"* — and `06` §3.3 gives it required evidence at submission; this section gives it no status at all and `rate_table_versions` has no status column, so `compile_bundle`'s FR-OVR-14 maturity gate has nothing to read for a `rate_table` pin. **Open.** *(Raised 2026-08-29 from W11 Task 1.2, which needed a maturity to report and found none; the pin is exempted from the gate meanwhile, declared and guarded so a status column turns the exemption red. Ruled in `docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md` Ruling 22.)* |
+| **OQ-614** | ~~Does the ZEN Engine preserve exact decimal semantics for money?~~ **Resolved 2026-08-14** — it represents numbers as `rust_decimal::Decimal`, so engine arithmetic is exact and ADR-706 stands. The risk moved to the boundaries and is now specified as FR-273/274/275; the S1 spike is re-scoped, not cancelled. See [`research`](../research/track-a-findings.md) F1. |
+| **OQ-615** | ~~Is `model_call` in `exact` mode viable inside the 50 ms p99 budget?~~ **RESOLVED 2026-08-14 by spike S2 — comfortably yes.** A 500-tree × 60-feature booster scores a single row at **p99 1.09 ms** including `DMatrix` construction (0.33 ms predict-only) — about 2 % of the budget. `nthread=1` beat all-cores at the tail (p99 1.09 vs 1.48 ms; max 4.5 vs 19.9 ms), so per-request single-threading is correct. **OQ-575 is therefore a genuine design choice, not one forced by latency.** *(Amended 2026-08-27, WK-668 — re-measured on the verification machine: p99 1.626 ms vs all-cores' 4.737 ms (max 6.143 ms vs 26.692 ms); `docs/research/w8-spike-resolution.md`. nthread=1 still 0.34x of all-cores at the tail — the original S2 order holds, though the absolute figures are higher on this machine. p99 1.626 ms is still 3.3 % of the 50 ms budget: still comfortably viable. Recorded in NFR-501, amended the same way.)* |
+| **OQ-616** | ~~Should rate tables live in PostgreSQL as rows or as content-addressed parquet blobs?~~ **DECIDED 2026-08-18: rows to a configurable cell count, spilling to parquet above it under one contract — FR-232**, with `storage` recorded on the version and the diff degrading to a Job above the threshold. |
+| **OQ-617** | ~~How do mid-term adjustments and refunds work — a `purpose` on the same algorithm, or a genuinely separate calculation path?~~ **DECIDED 2026-08-18: the same algorithm for the risk price, with pro-rata/refund/charge logic in a separately-versioned sub-graph mounted on `purpose` — FR-218.** §2's `purpose` gained `cancellation` in the same edit, because the answer keys on a value that did not exist. |
+| ~~**OQ-618**~~ | ~~Do we support multi-product bundling (motor + home in one quote with a bundle discount) in Phase 2, or is each product a separate Rating Version with bundling left to the Consumer System?~~ **Deferred to Phase 4**: Phase 2 ships single-product Rating Versions and a Consumer System bundling two quotes is a supported pattern — the bundle discount is then unpriced and unmonitored, and cross-product pricing follows the optimisation work that needs the same joint demand modelling. **DECIDED 2026-08-26: deferral confirmed — Phase 4; Consumer System bundling is the supported pattern** |
+| **OQ-619** | ~~Should the platform own instalment/APR calculation, or is that a downstream billing concern?~~ **DECIDED 2026-08-18: price the annual premium, offer `instalment_loading` as a final ladder rung, and leave APR and schedules downstream — FR-252.** Enough for `04`'s demand model; not enough to make a rating release a consumer-credit release. |
+| **OQ-620** | Does a **Rate Table Version** have an approval lifecycle? `06` §2 lists it as a Governed Artifact — *"any artifact with an approval-bearing lifecycle"* — and `06` §3.3 gives it required evidence at submission; this section gives it no status at all and `rate_table_versions` has no status column, so `compile_bundle`'s FR-20 maturity gate has nothing to read for a `rate_table` pin. **Open.** *(Raised 2026-08-29 from WK-671 Task 1.2, which needed a maturity to report and found none; the pin is exempted from the gate meanwhile, declared and guarded so a status column turns the exemption red. Ruled in `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md` RL-856.)* |

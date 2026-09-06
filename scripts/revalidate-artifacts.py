@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Revalidate every stored artifact against today's models (OQ-PLAT-11, decided (c)).
+"""Revalidate every stored artifact against today's models (OQ-650, decided (c)).
 
 A stored payload is validated on write against whatever the model said that day, then
 parsed again on read against whatever it says now. A tightening that is correct going

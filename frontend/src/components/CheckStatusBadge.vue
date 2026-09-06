@@ -2,7 +2,7 @@
 /**
  * §4.7's four-value `CheckStatus`, as a badge.
  *
- * **FR-MODEL-43 as amended 2026-08-25: `violated` is a finding, not a failure.** That is why
+ * **FR-152 as amended 2026-08-25: `violated` is a finding, not a failure.** That is why
  * its label is the word "finding" and its tone is the same family as `warn` rather than
  * `failed`'s. A legitimate non-convex pricing loss produces `violated` on a certificate that
  * is otherwise fine, and a red badge saying "violated" is read as a broken objective by every

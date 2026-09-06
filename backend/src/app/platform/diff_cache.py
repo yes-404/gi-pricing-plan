@@ -48,7 +48,7 @@ def version_content_hash(cells: Sequence[dict[str, str]]) -> str:
 
     Canonical across storages: `sort_keys` normalises the key order a loader emits
     and the explicit row sort removes insertion order, so a rows-stored version and
-    its parquet twin hash identically (FR-RATE-62's same-artifact guarantee).
+    its parquet twin hash identically (FR-232's same-artifact guarantee).
     """
     canonical = sorted(cells, key=lambda cell: tuple(cell.values()))
     return hashlib.sha256(

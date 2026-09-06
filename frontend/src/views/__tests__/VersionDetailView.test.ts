@@ -40,7 +40,7 @@ const REJECTED = {
 };
 
 /** The dataset the version belongs to. Its `currency` is what `formatMinor` renders with
- *  (OQ-OVR-14 (b)) — the view fetches it via `getDataset(slug)`, never a hardcoded prop. */
+ *  (OQ-551 (b)) — the view fetches it via `getDataset(slug)`, never a hardcoded prop. */
 const DATASET = {
   id: "01a00495-58d0-71f8-a039-cd4c45337960",
   workspace_id: "01a00495-4977-7ec0-95e3-850dc18d1177",
@@ -92,7 +92,7 @@ describe("the version detail view", () => {
   });
 
   it("reads the currency from the dataset, not from a default", async () => {
-    // The positive control for OQ-OVR-14 (b): a dataset that changed its currency away
+    // The positive control for OQ-551 (b): a dataset that changed its currency away
     // from the model default must render in that currency. A hardcoded "GBP" (or "EUR")
     // anywhere in the view would fail this test.
     stub(REJECTED, 200, { ...DATASET, currency: "USD" });
@@ -101,7 +101,7 @@ describe("the version detail view", () => {
   });
 
   it("shows the source header each column came from", async () => {
-    // FR-DATA-5. `IDpol` normalises to `i_dpol`, and without the original a user cannot
+    // FR-30. `IDpol` normalises to `i_dpol`, and without the original a user cannot
     // tell which of their columns a rule is talking about.
     stub();
     render(VersionDetailView, { props, ...mounted });
@@ -146,8 +146,8 @@ describe("the version detail view", () => {
     expect(link.closest("a")!.getAttribute("to")).toBe(`/factors/${VERSION.id}`);
   });
 
-  it("links the wf-01 A9 profile for a version at any status", async () => {
-    // FR-OVR-22: the profile screen was built but nothing reached it. It is a
+  it("links the WF-698 A9 profile for a version at any status", async () => {
+    // FR-25: the profile screen was built but nothing reached it. It is a
     // version-level surface like the validation report, not gated on `validated`.
     stub();
     render(VersionDetailView, { props, ...mounted });
@@ -158,7 +158,7 @@ describe("the version detail view", () => {
   });
 
   it("treats a version with no ingestion run as an answer, not an error", async () => {
-    // A derived version has no run of its own. FR-DATA-7's 404 here is ordinary.
+    // A derived version has no run of its own. FR-32's 404 here is ordinary.
     stub(
       { title: "This version has no ingestion run", status: 404, code: "NOT_FOUND", errors: [] },
       404,

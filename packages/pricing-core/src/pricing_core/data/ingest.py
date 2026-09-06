@@ -1,16 +1,16 @@
-"""Deterministic ingestion helpers (`01` FR-DATA-4, FR-DATA-5, FR-DATA-7).
+"""Deterministic ingestion helpers (`01` FR-29, FR-30, FR-32).
 
 Three pure functions the platform needs before a Dataset Version can exist:
 
 * **`normalise_columns`** — `snake_case`, deterministic, and **collision-detecting**.
-  FR-DATA-5 is explicit that a collision is an ingestion error rather than a silent rename,
+  FR-30 is explicit that a collision is an ingestion error rather than a silent rename,
   because a silent rename means two source columns quietly become one and the second wins.
-* **`infer_schema`** — the candidate schema FR-DATA-4 presents for confirmation.
-* **`partition_rejects`** — the quarantine split FR-DATA-7 requires. Rows that cannot be
+* **`infer_schema`** — the candidate schema FR-29 presents for confirmation.
+* **`partition_rejects`** — the quarantine split FR-32 requires. Rows that cannot be
   parsed are *kept*, not dropped: an unparseable row is evidence about the feed, and
   discarding it is how a broken upstream export goes unnoticed for a quarter.
 
-All three take frames and return values. The caller reads the file (ADR-0001).
+All three take frames and return values. The caller reads the file (ADR-703).
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ _DATE_FORMATS: Final[tuple[str, ...]] = (
 
 
 class ColumnNameCollisionError(ValueError):
-    """Two source columns normalise to the same name (FR-DATA-5, `COLUMN_NAME_COLLISION`).
+    """Two source columns normalise to the same name (FR-30, `COLUMN_NAME_COLLISION`).
 
     Carries both originals, because the fix is a decision about the source: which column
     did the author mean, and what should the other be called?
@@ -65,7 +65,7 @@ class ColumnNameCollisionError(ValueError):
     def __init__(self, normalised: str, first: str, second: str) -> None:
         super().__init__(
             f"{first!r} and {second!r} both normalise to {normalised!r}. A collision is an "
-            "ingestion error, not a silent rename (FR-DATA-5) — the second column would "
+            "ingestion error, not a silent rename (FR-30) — the second column would "
             "otherwise overwrite the first."
         )
         self.normalised = normalised
@@ -103,7 +103,7 @@ def normalise_column_name(name: str) -> str:
 
 @dataclass(frozen=True)
 class ColumnMapping:
-    """Normalised name to the source name FR-DATA-5 keeps in the Data Dictionary."""
+    """Normalised name to the source name FR-30 keeps in the Data Dictionary."""
 
     normalised: dict[str, str] = field(default_factory=dict)
 
@@ -125,7 +125,7 @@ class ColumnMapping:
 
 
 def normalise_columns(names: list[str]) -> ColumnMapping:
-    """Normalise a set of column names, refusing collisions (FR-DATA-5)."""
+    """Normalise a set of column names, refusing collisions (FR-30)."""
     mapping: dict[str, str] = {}
     for name in names:
         normalised = normalise_column_name(name)
@@ -137,7 +137,7 @@ def normalise_columns(names: list[str]) -> ColumnMapping:
 
 @dataclass(frozen=True)
 class InferredColumn:
-    """One column of the candidate schema FR-DATA-4 presents for confirmation."""
+    """One column of the candidate schema FR-29 presents for confirmation."""
 
     name: str
     source_name: str
@@ -154,7 +154,7 @@ class InferredColumn:
 class InferredSchema:
     """The whole candidate schema.
 
-    *Candidate*, not final: FR-DATA-4 requires it to be presented for confirmation and lets
+    *Candidate*, not final: FR-29 requires it to be presented for confirmation and lets
     the user correct any inference before the version leaves `draft`. Inference is a
     starting point offered to an actuary, not a decision made on their behalf — getting a
     date format wrong silently is how a year of exposure lands in the wrong period.
@@ -209,7 +209,7 @@ def _sniff_date_format(series: pl.Series) -> str | None:
 
     Ambiguity is real and not resolvable from data: `03/04/2026` is both `%d/%m/%Y` and
     `%m/%d/%Y`. The order of `_DATE_FORMATS` puts the ISO form first and the British form
-    before the American one, and FR-DATA-4 makes the user confirm — which is the only
+    before the American one, and FR-29 makes the user confirm — which is the only
     honest resolution.
     """
     if series.dtype != pl.String:
@@ -226,7 +226,7 @@ def _sniff_date_format(series: pl.Series) -> str | None:
 
 @dataclass(frozen=True)
 class RejectPartition:
-    """The clean rows and the quarantined ones (FR-DATA-7)."""
+    """The clean rows and the quarantined ones (FR-32)."""
 
     clean: pl.DataFrame
     rejected: pl.DataFrame
@@ -245,7 +245,7 @@ REJECT_REASON_COLUMN: Final = "_reject_reason"
 def partition_rejects(
     frame: pl.DataFrame, *, required_non_null: list[str] | None = None
 ) -> RejectPartition:
-    """Split rows that cannot be used from rows that can (FR-DATA-7).
+    """Split rows that cannot be used from rows that can (FR-32).
 
     A row is rejected when a **required** column is null — an unparseable date in a required
     date column arrives here as a null, having failed non-strict parsing upstream.

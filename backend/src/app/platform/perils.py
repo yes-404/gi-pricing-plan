@@ -10,8 +10,8 @@ something. There are three, and each is answered **before** a Job exists:
 * **the composition freezes once it has been reconciled.** The number measured *this* set
   of models; a later edit leaves it attached to a composition that never produced it. The
   service refuses, and a trigger refuses the raw `UPDATE` the service cannot see;
-* **`review` is reachable only from `reconciled`.** FR-MODEL-60 makes the reconciliation
-  the evidence FR-MODEL-61's approval reads, so the lifecycle has no edge that skips it.
+* **`review` is reachable only from `reconciled`.** FR-190 makes the reconciliation
+  the evidence FR-191's approval reads, so the lifecycle has no edge that skips it.
 
 Permissions are the Model's — `model:read`, `model:fit`, `model:submit`. `02` declares no
 permission of its own for this artifact, and inventing one here would be governance the
@@ -91,10 +91,10 @@ async def create_structure(
     perils: list[PerilComponent],
     excluded_perils: list[dict[str, Any]],
 ) -> PerilStructureRow:
-    """Create the next version of a Peril Structure, as a `draft` (FR-MODEL-58).
+    """Create the next version of a Peril Structure, as a `draft` (FR-188).
 
     Versioning is by slug: a structure is edited by superseding it, never in place, which is
-    what makes FR-MODEL-61's pinned reference resolvable for as long as any Rating Version
+    what makes FR-191's pinned reference resolvable for as long as any Rating Version
     holds it.
     """
     await rbac.require_permission(
@@ -152,7 +152,7 @@ async def request_reconciliation(
     structure_id: UUID,
     tolerance: Decimal,
 ) -> PerilStructureRow:
-    """Validate a reconciliation request and return the structure (FR-MODEL-60).
+    """Validate a reconciliation request and return the structure (FR-190).
 
     Gated on `model:fit` rather than `model:read`: this queues a compute Job that scores
     every peril's models over the holdout.
@@ -174,7 +174,7 @@ async def request_reconciliation(
             "VALIDATION_FAILED",
             "Tolerance must be positive",
             422,
-            "FR-MODEL-60 reconciles within a *declared* tolerance. A tolerance of zero "
+            "FR-190 reconciles within a *declared* tolerance. A tolerance of zero "
             "passes only an exact match, which no fitted model produces.",
         )
 
@@ -199,7 +199,7 @@ async def request_reconciliation(
                 "This large-loss treatment cannot be reconciled yet",
                 409,
                 f"Peril {peril.peril} declares a 'separate_model' treatment, which needs "
-                "the excess-layer model's own predictions. FR-MODEL-59 declares all four "
+                "the excess-layer model's own predictions. FR-189 declares all four "
                 "treatments and this slice computes three; reconciling it as though it "
                 "were 'none' would under-state the premium by exactly the excess layer.",
             )
@@ -221,7 +221,7 @@ def reconcile_payload(
     """The Job's parameters. Ids and names only — the worker resolves them itself.
 
     `tolerance` crosses as a string: a Job's parameters are JSON, and a `Decimal` that goes
-    through a float loses the exactness FR-OVR-7 exists to keep.
+    through a float loses the exactness FR-10 exists to keep.
     """
     return {
         "structure_id": str(row.id),
@@ -240,9 +240,9 @@ async def record_reconciliation(
     reconciliation: Reconciliation,
     job_id: UUID | None = None,
 ) -> PerilStructureRow:
-    """Persist the reconciliation and move `draft → reconciled` (FR-MODEL-60).
+    """Persist the reconciliation and move `draft → reconciled` (FR-190).
 
-    A `fail` verdict is recorded, not refused. FR-MODEL-60 asks for the reconciliation to be
+    A `fail` verdict is recorded, not refused. FR-190 asks for the reconciliation to be
     *persisted*; a failing one is the finding, and discarding it would leave an actuary
     re-running the same job to see the same number. What a `fail` blocks is `review`, which
     is `submit_for_review`'s answer rather than this one's.
@@ -282,16 +282,16 @@ async def submit_for_review(
     structure_id: UUID,
     change_summary: str,
 ) -> tuple[PerilStructureRow, ApprovalRequestRow]:
-    """`reconciled → review` and the approval request it exists to create (FR-MODEL-61).
+    """`reconciled → review` and the approval request it exists to create (FR-191).
 
-    The approval machine is entirely generic (`06` FR-GOV-9): it takes an `ArtifactRef`, and
+    The approval machine is entirely generic (`06` FR-351): it takes an `ArtifactRef`, and
     `peril_structure` has been a valid artifact type since Phase 0. What was missing was the
     **policy entry** — without one, `approvals.submit` refuses with "no approval policy for
     this artifact type", which is a correct refusal of a structure nobody could ever approve.
     `DEFAULT_POLICY` gained the entry with this slice, naming `reconciliation` as its
     evidence.
 
-    A structure whose reconciliation **failed** is refused. FR-MODEL-60 makes reconciling
+    A structure whose reconciliation **failed** is refused. FR-190 makes reconciling
     within the declared tolerance part of the coherence check, and the tolerance is the
     submitter's own number — a structure that misses it has failed a test it set itself.
     """
@@ -308,7 +308,7 @@ async def submit_for_review(
             "VALIDATION_FAILED",
             "Invalid peril structure lifecycle transition",
             409,
-            f"{row.slug}@{row.version} is {row.status}; FR-MODEL-61 reaches `review` from "
+            f"{row.slug}@{row.version} is {row.status}; FR-191 reaches `review` from "
             "`reconciled` only. The reconciliation is the evidence the approval reads.",
         )
 
@@ -321,7 +321,7 @@ async def submit_for_review(
             422,
             f"{row.slug}@{row.version} reconciles at a ratio of "
             f"{structure.reconciliation.ratio} against a declared tolerance of "
-            f"{structure.reconciliation.tolerance}. FR-MODEL-60 makes reconciling within "
+            f"{structure.reconciliation.tolerance}. FR-190 makes reconciling within "
             "the declared tolerance part of the coherence check, and the tolerance is the "
             "submitter's own number.",
         )
@@ -359,7 +359,7 @@ async def submit_for_review(
 async def load_structure(
     session: AsyncSession, *, workspace_id: UUID, structure_id: UUID
 ) -> PerilStructure:
-    """FR-MODEL-90 — the read `02` §5.1 declared a create and a reconcile without."""
+    """FR-192 — the read `02` §5.1 declared a create and a reconcile without."""
     return to_structure(
         await _get_or_404(session, workspace_id=workspace_id, structure_id=structure_id)
     )
@@ -375,7 +375,7 @@ async def list_peril_structures(
     slug: str | None = None,
     after: UUID | None = None,
 ) -> tuple[Sequence[PerilStructureRow], int]:
-    """One page of the workspace's peril structures, newest first (FR-MODEL-127).
+    """One page of the workspace's peril structures, newest first (FR-167).
 
     `metrics.list_metrics` and `objectives.list_objectives` are the same fifteen lines over
     their own tables, and the three are deliberately **not** factored into a shared generic:
@@ -386,7 +386,7 @@ async def list_peril_structures(
     and objective rows for a blast radius and asks nothing of this row, and the reason is
     that there is no query to write: a Model Spec references an objective and a metric by
     `custom_objective:`/`custom_metric:` ref, and nothing in Phase 1b references a peril
-    structure at all — FR-MODEL-61's Rating Version, which will, is Phase 2. A count here
+    structure at all — FR-191's Rating Version, which will, is Phase 2. A count here
     would be a column of zeroes that reads as "nothing uses this" when the truth is "nothing
     can yet". Raised as an open question with this slice rather than answered by building
     one.
@@ -431,7 +431,7 @@ async def list_peril_structures(
 async def resolve_artifact_ref(
     session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
 ) -> bool:
-    """`peril_structure:<slug>@<version>` → does that version exist? (`06` FR-GOV-36.)
+    """`peril_structure:<slug>@<version>` → does that version exist? (`06` FR-386.)
 
     `False`, having done nothing, for a reference that is not this module's — the contract
     `api/approvals.py`'s fan-out is built on, and the same guard `modelling`, `objectives`
@@ -439,7 +439,7 @@ async def resolve_artifact_ref(
 
     By slug and version rather than by id, unlike `load_structure`: a reference *is* a slug
     and a version (ID-3), and `uq_peril_structures_slug_version` makes the pair identify one
-    row. Status is deliberately not consulted — FR-GOV-36 asks whether the artifact exists,
+    row. Status is deliberately not consulted — FR-386 asks whether the artifact exists,
     and which statuses may be submitted is `submit_for_review`'s question, already answered
     for anything that reached this module's own path.
     """
@@ -486,7 +486,7 @@ async def _resolve_models(
 ) -> dict[str, ModelRow]:
     """Every referenced model, or a refusal naming the first that does not resolve.
 
-    FR-MODEL-58 pins references by version, so this looks each one up by
+    FR-188 pins references by version, so this looks each one up by
     `(model_family_slug, version)` — the pair `ArtifactRef` carries. A ref that resolves to
     nothing is a composition that cannot be priced, and it is cheaper to say so now.
     """
@@ -527,10 +527,10 @@ async def _resolve_models(
 
 
 def _refuse_unshared_holdout(rows: list[ModelRow]) -> None:
-    """Every peril's models must reconcile on one holdout (FR-MODEL-60).
+    """Every peril's models must reconcile on one holdout (FR-190).
 
     The comparison's `_refuse_unshared_splits` makes the same demand for the same reason,
-    and here it is stronger: FR-MODEL-60 sums modelled burning cost across perils and
+    and here it is stronger: FR-190 sums modelled burning cost across perils and
     compares the total to one observed figure. Perils scored on different holdouts are a
     sum over different books, and the ratio would be a number about no population.
 
@@ -548,7 +548,7 @@ def _refuse_unshared_holdout(rows: list[ModelRow]) -> None:
                 "A referenced model cites no split",
                 409,
                 f"{label} declares no `split_ref`, so it has no named holdout to "
-                "reconcile on (`01` FR-DATA-36).",
+                "reconcile on (`01` FR-76).",
             )
         key = (
             str(spec.get("dataset_version_id")),
@@ -566,7 +566,7 @@ def _refuse_unshared_holdout(rows: list[ModelRow]) -> None:
             "PERIL_STRUCTURE_RECONCILIATION_FAILED",
             "The perils were not modelled on the same holdout",
             409,
-            f"{detail}. FR-MODEL-60 sums modelled burning cost across perils and compares "
+            f"{detail}. FR-190 sums modelled burning cost across perils and compares "
             "the total to one observed figure; perils scored on different holdouts sum "
             "over different books.",
         )

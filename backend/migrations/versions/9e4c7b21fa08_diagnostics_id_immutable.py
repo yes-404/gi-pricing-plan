@@ -1,4 +1,4 @@
-"""a fitted Model's diagnostics pointer cannot be repointed (`02` R2, FR-OVR-1)
+"""a fitted Model's diagnostics pointer cannot be repointed (`02` R2, FR-4)
 
 `b2c3d4e5f6a7` froze a fitted Model's `fit_result`, `spec`, `spec_hash` and
 `dataset_version_id`. It did not freeze `diagnostics_id`, and that column is the one an
@@ -6,7 +6,7 @@ approval actually rests on: `02` §4.8 makes `status >= fitted` imply a `diagnos
 `06`'s approver reads the diagnostics that pointer reaches, and a raw
 `UPDATE models SET diagnostics_id = ...` swapped the evidence under an *approved* model
 with the trigger raising nothing. The numbers were immutable; the reason to believe them
-was not. FR-OVR-1 makes an Artifact immutable once it leaves `draft` — a pointer to the
+was not. FR-4 makes an Artifact immutable once it leaves `draft` — a pointer to the
 evidence is part of the artifact, not metadata beside it.
 
 The whole function is replaced rather than altered: PostgreSQL has no "add a clause to a

@@ -15,7 +15,7 @@
         "baseline": {
           "type": "object",
           "required": ["kind", "pinned_at"],
-          "description": "Pinned to specific artifact versions, never 'the current model' (FR-MON-3).",
+          "description": "Pinned to specific artifact versions, never 'the current model' (FR-309).",
           "properties": {
             "kind": {"enum": ["model_fit", "dataset_profile", "prior_period"]},
             "model_ref": {"$ref": "common/artifact-ref.schema.json"},

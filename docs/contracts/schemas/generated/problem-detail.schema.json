@@ -2,7 +2,7 @@
   "$defs": {
     "FieldError": {
       "additionalProperties": false,
-      "description": "One field-level failure inside a problem response.\n\nPresent so that a rejected submission can be rendered against the form that produced\nit — FR-PLAT-11 requires deterministic failures to name the offending field rather\nthan only the operation.",
+      "description": "One field-level failure inside a problem response.\n\nPresent so that a rejected submission can be rendered against the form that produced\nit — FR-403 requires deterministic failures to name the offending field rather\nthan only the operation.",
       "properties": {
         "code": {
           "description": "Stable machine code for this field.",
@@ -96,7 +96,7 @@
         }
       ],
       "default": null,
-      "description": "OpenTelemetry trace id for this request. Appears in every log line for the request, so a support conversation starts with an identifier (FR-PLAT-42).",
+      "description": "OpenTelemetry trace id for this request. Appears in every log line for the request, so a support conversation starts with an identifier (FR-445).",
       "title": "Trace Id"
     },
     "type": {

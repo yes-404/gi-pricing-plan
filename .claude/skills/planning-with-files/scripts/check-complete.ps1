@@ -249,5 +249,5 @@ try { [System.IO.File]::WriteAllText($ledgerFile, [string]$ledgerNow + "`n", [Sy
 # has no quotes or backslashes, so only the heading needs escaping.
 $reason = "[planning-with-files] Gated plan incomplete: phase '" + $phaseEscaped + "' is in_progress (" + $COMPLETE + "/" + $TOTAL + " complete, gate block " + $newBlocks + "/" + $cap + "). Finish or update the plan, then stop."
 
-[Console]::Out.Write('{"decision":"block","reason":"' + $reason + '"}' + "`n")
+[Console]: :Out.Write('{"decision":"block","reason":"' + $reason + '"}' + "`n")
 exit 0

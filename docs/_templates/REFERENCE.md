@@ -32,7 +32,7 @@ relates: []                      # ids only
 # <Title>
 
 <Body appropriate to what this Reference is — a process document's numbered sections,
-a charter's role definition, a skill's SKILL.md, a README's map. NT-0019 does not
+a charter's role definition, a skill's SKILL.md, a README's map. RFC-937 does not
 prescribe this family's body shape; only its header and its exemption from an id.>
 
 <!--
@@ -45,7 +45,7 @@ Vendored skill detection (§1.5): a vendored skill carries two extra fields on i
 The files beneath a vendored skill are exempt from stamping, citation rewrite and shape
 checks. Which skills count is a hand-kept list, not a filesystem property: shipping a
 `LICENSE` is neither necessary (most vendored skills ship none) nor sufficient (the
-repository's own root `LICENSE` does not make everything beneath it vendored) — Ruling 69
+repository's own root `LICENSE` does not make everything beneath it vendored) — RL-990
 rejected that detection rule. The list itself is `scripts/_docid.py`'s `_VENDORED_SKILLS`
 constant, seeded from `.claude/skills/README.md`'s provenance sections and reconciled
 there against `pyproject.toml`'s `[tool.ruff] exclude` list so the two cannot silently

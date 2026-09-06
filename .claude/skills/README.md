@@ -1,3 +1,13 @@
+---
+family: reference
+title: Project skills
+status: active                  # active → retired (§1.2a)
+created: 2026-08-14
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # Project skills
 
 Procedures specific to **this** repository, versioned with it so they travel with the code.
@@ -52,7 +62,7 @@ file is absent. All three had an explicit `git show origin/main:<path>` instruct
 own prompt.
 
 **Both misses were of documented content, so neither is fixed by documenting it again**
-([`NT-0003`](../../docs/notes/0003-duplicated-status-goes-stale.md) — the copy is what goes
+([`RFC-756`](../../docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md) — the copy is what goes
 stale). Recorded here rather than resolved: **whether a role file's mandatory-skill trigger
 should name a re-consult point rather than only the writes that open a branch is the
 maintainer's**, alongside the other role-file finding already with them. The cheap half is
@@ -64,8 +74,8 @@ done — the router table now has a row for the shape of work that was missing f
 |---|---|---|---|
 | [`git-hygiene`](git-hygiene/SKILL.md) | Branch and PR flow, `.gitignore` rules (including what must **not** be ignored), squash-merge cleanup — both `git branch -d` and `ExitWorktree`, which refuse for the same ancestry reason and say different things about it — how a squash title and body are composed, the merge-order trap that strands work, how a stacked PR survives the merge below it, and **why bare `git stash` is unsafe here** — one stash stack is shared by every worktree, and why an amended SHA must name its delta rather than inherit review clearance, and **why `gh pr edit --body-file` silently leaves the old body in place** — it aborts on the projects-classic GraphQL deprecation while reporting nothing about the body, so use `gh api … -X PATCH -F body=@file` and grep the body back for a new *and* an old phrase — and **why a nested fork's unsupervised edits in a sibling worktree can look exactly like a cross-session isolation breach**, and the provenance check that tells them apart, and **merging only the maintainer's own PRs now that the repo is public** — and three traps added 2026-09-02: **quoting a file with a SHA while reading the working tree**, which survives re-reading because the checkout has not moved and is therefore self-confirming (`git show <sha>:<path>`, never a bare `grep`); **sweeping many branches for undelivered content**, where two-dot measures age and three-dot flags every squash-merged branch forever, so only its *zero* is trustworthy and the merged-PR-name list is the cheap sound filter (54 → 4); and **the CI concurrency group**, where each push cancels the in-flight run so a fast edit cadence starves the slow workflow — the tell is a repeated fast-green beside a slow job that is always the newest run and never a finished one, and once the fast half is green the branch is held, because restarting the clock is the merge holder's call and not the author's — and one added 2026-09-03: **a line number derived by numbering a slice or a filtered stream**, which is wrong in a way no re-read catches, since a `cat -n` over a `sed -n 'A,Bp'` slice restarts the count at 1 (a constant `A-1` offset, so it reads as consistent) while selecting positions out of a blank-stripped `grep -n '.'` stream drifts by however many blank lines were skipped — and `grep -n` was printing the true number in its own prefix all along — and **word-agreement cannot verify a locator** when the quoted text was copied from the claim being checked — a check whose evidence comes from the thing it checks has no failing case | self-written | 2026-09-03 |
 | [`spec-change`](spec-change/SKILL.md) | Add or modify a requirement, section, or open question in `docs/specs/` — append-only IDs, ten-section standard, both-direction cross-referencing, what recording a *decision* touches, and the four things a spec introducing a custom objective must say | self-written | 2026-08-23 |
-| [`docs-audit`](docs-audit/SKILL.md) | Verify suite integrity before a commit or PR — bookkeeping, structural, the register and the `docs/notes/` working notes, the journeys' interface citations, table-row cell counts, the §10 mirror rows' status, canonical route agreement, F-id citations against the findings register (or a closure record), the process core extract's citations, and every filed plan's acceptance-standard field, plus the decision-gate invariant the script does not cover. **The numbered list lives in the script's own module docstring and nowhere else** — the count here said 23 while the code had 24 (`NT-0003`) | self-written | 2026-09-02 |
-| [`close-workstream`](close-workstream/SKILL.md) | Audit a workstream against `CLAUDE.md` §13 before writing "closed" into the roadmap — **scope derived from the specs first**, then evidence; gate run locally, new checks proven non-trivial, NFRs measured, every gap given a verdict. Also: a check's design note must say which half **fails open**, which **fails closed** and **what it cannot see at all**; a metric a script computes is **run, never re-derived**, and a repository population is counted with **`git grep`**, whose index excludes ignored output by construction; a **retraction is verified against the artifact it retracts**, never against the retractor's account of it; and `scope-audit.py`'s `--extra` flag is a **literal comma split with no shared-prefix inheritance** — `FR-PLAT-47,48` is not two ids, it is `FR-PLAT-47` and a bare `48`, and since 2026-08-29 the parser **refuses** the whole list and names every token that matches no requirement rather than silently dropping the one you meant; and **a check written against a proxy sees only the clauses the proxy has a shadow of** — an import allowlist catches what makes a module reach out and misses what only requires it to be reached into or to hold a shape, which no positive control can surface because a control is built from violations its author can already see; and **why a false zero argues rather than merely failing to inform** — a "no precedent exists" sweep is a positive claim with a decision attached, `git grep -A1` cannot express the stacked case at all, and fixing the cosmetic half of a broken pattern yields a second zero whose agreement is structurally guaranteed | self-written | 2026-08-30 |
+| [`docs-audit`](docs-audit/SKILL.md) | Verify suite integrity before a commit or PR — bookkeeping, structural, the register and the `docs/notes/` working notes, the journeys' interface citations, table-row cell counts, the §10 mirror rows' status, canonical route agreement, F-id citations against the findings register (or a closure record), the process core extract's citations, and every filed plan's acceptance-standard field, plus the decision-gate invariant the script does not cover. **The numbered list lives in the script's own module docstring and nowhere else** — the count here said 23 while the code had 24 (`RFC-756`) | self-written | 2026-09-02 |
+| [`close-workstream`](close-workstream/SKILL.md) | Audit a workstream against `CLAUDE.md` §13 before writing "closed" into the roadmap — **scope derived from the specs first**, then evidence; gate run locally, new checks proven non-trivial, NFRs measured, every gap given a verdict. Also: a check's design note must say which half **fails open**, which **fails closed** and **what it cannot see at all**; a metric a script computes is **run, never re-derived**, and a repository population is counted with **`git grep`**, whose index excludes ignored output by construction; a **retraction is verified against the artifact it retracts**, never against the retractor's account of it; and `scope-audit.py`'s `--extra` flag is a **literal comma split with no shared-prefix inheritance** — `FR-PLAT-47,48` is not two ids, it is `FR-450` and a bare `48`, and since 2026-08-29 the parser **refuses** the whole list and names every token that matches no requirement rather than silently dropping the one you meant; and **a check written against a proxy sees only the clauses the proxy has a shadow of** — an import allowlist catches what makes a module reach out and misses what only requires it to be reached into or to hold a shape, which no positive control can surface because a control is built from violations its author can already see; and **why a false zero argues rather than merely failing to inform** — a "no precedent exists" sweep is a positive claim with a decision attached, `git grep -A1` cannot express the stacked case at all, and fixing the cosmetic half of a broken pattern yields a second zero whose agreement is structurally guaranteed | self-written | 2026-08-30 |
 | [`phase-review`](phase-review/SKILL.md) | Run `CLAUDE.md` §14's plan review — five questions in order, each answered including "no change"; proposals with a maintainer acceptance line, never edits. Written after the procedure had run twice, as §14 requires | self-written | 2026-08-15 |
 | [`adr-write`](adr-write/SKILL.md) | Create, supersede, or annotate an architecture decision record — including the addendum-versus-edit rule that keeps accepted ADRs immutable | self-written | 2026-08-14 |
 | [`contract-schema`](contract-schema/SKILL.md) | Add or modify a JSON Schema contract in `docs/contracts/` — money conventions, `invariants` annotation, duplicate-key and `$ref` traps, why hand-authored schemas are patched as text, and registering a new schema's slug so the type comparison actually reads it | self-written | 2026-08-19 |
@@ -79,7 +89,7 @@ done — the router table now has a row for the shape of work that was missing f
 | [`vue-frontend`](vue-frontend/SKILL.md) | Frontend conventions specific to **this** platform — the generated-client seam, how money and exact decimals cross into TypeScript, the RFC 9457 error shape, cursor pagination, and the 202-plus-Job model, and the dev-identity proxy without which a browser gets 401 on everything | self-written | 2026-08-19 |
 | [`reporter-cycle`](reporter-cycle/SKILL.md) | The team's 15-minute Slack status cycle and lead-staleness nudge — the outage flag that stops a token failure from spamming the log, why the token is read from disk on every call, quarter-mark cycle timing, the bare-timestamp marker format, and why the nudge is detected here but sent by the agent's own `SendMessage`, never the script | self-written | 2026-08-29 |
 | [`balance-watch`](balance-watch/SKILL.md) | The DeepSeek balance poller — the endpoint, the BEGIN CLOSE and recovery-rearm thresholds and why each, the 15-minute elapsed heartbeat and why wall-clock quarter-hours are unreachable from a 90s poll, and the durable token source versus its ephemeral extracted cache | self-written | 2026-08-29 |
-| [`watcher-runtime-state`](watcher-runtime-state/SKILL.md) | The NT-0014 runtime state file (artifact B) — why Ruling 47 rejected the note's compare-against-artifacts design (a dead writer reads zero on both sides, so a mismatch never fires), the four falsifiability conditions the file's shape must meet, why `position.phase`/`.work`/`.slice` are caller-supplied rather than parsed from `docs/roadmap.md`'s inconsistently-applied strikethrough convention, and the acceptance test shown failing against a reintroduced `roster-state.md`-shaped (F31) defect | self-written | 2026-08-30 |
+| [`watcher-runtime-state`](watcher-runtime-state/SKILL.md) | The RFC-895 runtime state file (artifact B) — why RL-907 rejected the note's compare-against-artifacts design (a dead writer reads zero on both sides, so a mismatch never fires), the four falsifiability conditions the file's shape must meet, why `position.phase`/`.work`/`.slice` are caller-supplied rather than parsed from `docs/roadmap.md`'s inconsistently-applied strikethrough convention, and the acceptance test shown failing against a reintroduced `roster-state.md`-shaped (F31) defect | self-written | 2026-08-30 |
 
 ## External skills
 
@@ -167,8 +177,8 @@ git-ignored.
 **Second deviation, 2026-08-29: `subagent-driven-development/scripts/task-brief` could not
 read this repo's own plan format.** Confirmed empirically (exit 3 on every task) before
 touching anything: this repo's `writing-plans` house pattern numbers tasks as `### 1.1 —
-Title` (`docs/plans/2026-08-29-w11-scoring.md`, citing `docs/plans/2026-08-22-w5-
-audit-remediation.md` as its precedent), grouping several tasks per `## Slice N` section in
+Title` (`docs/plans/PL-00854-wk-671-scoring-sequenced-slice-plan.md`, citing `docs/plans/PL-00748-wk-66
+1-audit-remediation-sequenced-slice-roadmap.md` as its precedent), grouping several tasks per `## Slice N` section in
 one file; upstream's script only recognised a heading containing the literal word "Task"
 followed by a bare integer, and had no rule to stop at a non-task heading, so the *last*
 task in a slice ran on into the next slice's content once the missing-word bug was fixed
@@ -197,17 +207,17 @@ unchanged" is a claim about the *old* input still working, which self-tests, wri
 run, are the only way to have actually checked before writing it down.
 
 **Third deviation, 2026-08-31: `writing-plans` gained a required "Acceptance Standard"
-section, which upstream has no equivalent of.** NT-0014 §2's C1 — a plan validator
+section, which upstream has no equivalent of.** RFC-895 §2's C1 — a plan validator
 mechanising `delivery-process.md` §5 step 4 / §6 step 1's "an acceptance standard was
 actually defined, not just implied" — needs a fixed name/position/format to check against,
 and this repository's own rule (`CLAUDE.md` §3's "nobody hand-writes a shape defined
 twice") is that the format lives in exactly one place. The plan header template gained a
 `## Acceptance Standard` block between `Spec` and `Global Constraints`, formalising a
-pattern four W11 slice plans had already used ad hoc as
+pattern four WK-671 slice plans had already used ad hoc as
 `## Acceptance standard for the slice as a whole`; `scripts/audit-docs.py` check 28 reads
 that heading (case-insensitive match on the words "Acceptance Standard", content required
 under it) on every plan-kind file filed on or after the check's cutoff date. See
-`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md` Ruling 46 for why the mechanism is a
+`docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-thereafter-rejected-as-the-mechanism.md` RL-906 for why the mechanism is a
 constant-cutoff filename check rather than a warn-then-red switch.
 
 **Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
@@ -229,7 +239,7 @@ the network.
 | Skill | Fills | Note |
 |---|---|---|
 | [`reproducing-ci-locally`](reproducing-ci-locally/SKILL.md) | Running the CI gate locally | Immediately found 21 ruff errors and a dead import-linter config |
-| [`security-audit`](security-audit/SKILL.md) | NFR-OVR-8 / NFR-PLAT-8 dependency and CVE scanning | Bundles a scanner script |
+| [`security-audit`](security-audit/SKILL.md) | NFR-461 / NFR-533 dependency and CVE scanning | Bundles a scanner script |
 | [`testing-strategy`](testing-strategy/SKILL.md) | pytest technique — fixtures, parametrization, Hypothesis | Complements this repo's `python-test` |
 | [`code-quality`](code-quality/SKILL.md) | ruff/mypy depth and refactoring | Complements this repo's `python-package` |
 | [`secret-hygiene`](secret-hygiene/SKILL.md) | Secrets and build artifacts in git | **Renamed** from upstream `git-hygiene` to avoid colliding with this repo's own |
@@ -272,8 +282,8 @@ vendored file.
 | `testing-strategy` | The "prove the guard fails" recipe reverts a fix with `git stash` | This repo runs parallel sessions in `.claude/worktrees/*`, and **the stash stack is shared by every worktree**. A bare `stash`/`stash pop` can pop a peer's entry into your tree. Upstream assumes one worktree, where the advice is sound | `git-hygiene`'s stash section — a WIP commit, or `stash push -m <tag>` and `apply <sha>`. The same sentence's *hand-edit* branch is also safe |
 
 Not installed, worth revisiting when the phase needs them: `github-actions` (CI cost and
-trigger hygiene), `performance` (Phase 2, NFR-RATE-1), `api-design` and
-`web-app-architecture` (W2's FastAPI surface).
+trigger hygiene), `performance` (Phase 2, NFR-489), `api-design` and
+`web-app-architecture` (WK-658's FastAPI surface).
 
 ### planning-with-files — working memory on disk
 
@@ -397,7 +407,7 @@ code half. Three things it took a wrong turn on first, all worth keeping:
   mirrors it. Treating both as definitions produced 95 open questions where the repo has 52.
   Likewise an ADR *is* its document — a concept node beside it splits the citations in two.
 - **Cross-check the result against `scripts/req-coverage.py`.** The first run reported 147
-  evidenced requirements against the tool's 148; the missing one was `FR-PLAT-37`, whose
+  evidenced requirements against the tool's 148; the missing one was `FR-439`, whose
   marker lives in `examples/` — a directory the scan roots had omitted. A graph that
   disagrees with the authoritative tool is the failure this whole exercise exists to catch,
   so the diff is the check.
@@ -472,7 +482,7 @@ Verified after patching: `search.py` runs from the vendored path, `--domain ux`,
 and was visible in `CLAUDE.md` §3 as it read then: the stack named ECharts, TanStack Table
 and Vue Flow — the last two now recorded in `docs/skills-map.md` and `roadmap.md` as
 declared-but-not-installed — and `01`–`07` each declare §5.3 views, but nothing in this
-repository said how any of it should *look*. W6a routed seven views and a factor workbench with no design reference at all.
+repository said how any of it should *look*. WK-663 routed seven views and a factor workbench with no design reference at all.
 
 ### Original discovery passes
 
@@ -492,8 +502,8 @@ have to rediscover them:
 
 | Skill | Becomes relevant | For |
 |---|---|---|
-| `xlsx` | Phase 2 | Rate table CSV/XLSX import-export round-tripping (FR-RATE-20) |
-| `pdf` | Phase 3 | Dossier PDF rendering, deterministic output (FR-GOV-29) |
+| `xlsx` | Phase 2 | Rate table CSV/XLSX import-export round-tripping (FR-235) |
+| `pdf` | Phase 3 | Dossier PDF rendering, deterministic output (FR-379) |
 | `webapp-testing` | Phase 1–2 | Frontend and DAG designer testing |
 | `skill-creator` | ~~when this library grows~~ | **Superseded 2026-08-16** by superpowers' `writing-skills`, which covers authoring and verification without spawning a nested `claude -p` |
 

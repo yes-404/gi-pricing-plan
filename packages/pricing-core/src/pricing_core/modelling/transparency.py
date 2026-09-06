@@ -1,14 +1,14 @@
 """Transparency artifacts for non-GLM models (`02` §3.6, FR-MODEL-33..37, 79).
 
 `02` R3: fitting a black box is allowed; pricing with an unexplained one is not. Two forms,
-both computed here and neither of them storing anything — ADR-0001 again, so the caller
+both computed here and neither of them storing anything — ADR-703 again, so the caller
 gets data and the ids and blobs are the platform's business.
 
-**TreeSHAP comes from the backends, not from the `shap` package** (FR-MODEL-35, amended in
+**TreeSHAP comes from the backends, not from the `shap` package** (FR-134, amended in
 `02` §8 on 2026-08-17). XGBoost's `pred_contribs` and LightGBM's `pred_contrib` are the same
 TreeSHAP algorithm on the same trees, already linked against the booster this module holds.
 Taking `shap` would have added scikit-learn, numba and their transitive weight to
-`pricing-core` — which ADR-0001 keeps importable standalone — for utilities this platform
+`pricing-core` — which ADR-703 keeps importable standalone — for utilities this platform
 does not use: the plotting is the frontend's job (`02` §5.3) and the aggregation is fifteen
 lines below.
 
@@ -18,9 +18,9 @@ The asymmetry that costs something is **interaction values**: XGBoost computes t
 is a finding this backend cannot make.
 
 The EBM arm needs none of the above, and says so. An EBM's artifact **is** the model
-(`ebm.py`, ADR-0003): the shape functions export directly as rateable tables, so the
+(`ebm.py`, ADR-705): the shape functions export directly as rateable tables, so the
 transparency block is those tables verbatim plus a fidelity statement that quotes no
-number, and the monotonicity check (FR-MODEL-52) reads the tables rather than the
+number, and the monotonicity check (FR-174) reads the tables rather than the
 estimator.
 """
 
@@ -74,7 +74,7 @@ __all__ = [
     "fidelity_statement",
 ]
 
-#: How many cells the worst-region search reports. Three, because FR-MODEL-36 asks *where*
+#: How many cells the worst-region search reports. Three, because FR-136 asks *where*
 #: the approximation fails rather than for a ranking — a list of twenty cells is a table
 #: nobody reads, and the fidelity statement quotes the first of them.
 _WORST_REGIONS = 3
@@ -87,13 +87,13 @@ def approximation_spec(
 
     Pure, and separate from the fit, because the platform reserves the Model this describes
     **before** it spends a fit on it: `spec_hash` is taken over this object, and a surrogate
-    that already exists must be recognised rather than fitted twice (FR-MODEL-66).
+    that already exists must be recognised rather than fitted twice (FR-204).
 
     The approximating spec mirrors the GBM's structure — same factors, same offset, same
     split — and differs only in what it is fitted *to*. Anything else would make the
     comparison between them a comparison of two different questions.
 
-    The source model is named twice, in the two registers FR-MODEL-129 requires: the id is
+    The source model is named twice, in the two registers FR-169 requires: the id is
     what the lookup uses, and the slug and version are what a human reads
     (`motor-ad-frequency@7`). The caller holds the row, so it asserts both; this function
     does not look anything up.
@@ -120,7 +120,7 @@ def approximation_spec(
 class GlmApproximationFit:
     """What an approximation produces: the measurements, and the model behind them.
 
-    Two halves rather than one because FR-MODEL-96 made the surrogate a Model. The
+    Two halves rather than one because FR-137 made the surrogate a Model. The
     `GlmApproximation` block is a summary and the platform gives it an identity, so it is
     built by `artifact_block` once the Model is reserved — this class cannot construct it,
     because a block with neither a model reference nor an inline table is refused at the
@@ -165,7 +165,7 @@ def build_glm_approximation(
     groupings: Mapping[UUID, Grouping] | None = None,
     progress: ProgressCallback | None = None,
 ) -> GlmApproximationFit:
-    """FR-MODEL-34 — a GLM fitted to the GBM's **own predictions**, not to the response.
+    """FR-133 — a GLM fitted to the GBM's **own predictions**, not to the response.
 
     That distinction is the whole method. Fitting a GLM to the data would produce a second
     model, and the question is not "what would a GLM say" but "how much of what this GBM
@@ -197,7 +197,7 @@ def build_glm_approximation(
             raise GbmFitError(
                 "APPROXIMATION_TARGET_NOT_POSITIVE",
                 f"the booster predicts a non-positive value on the {name} partition, "
-                "which a Gamma approximation cannot take as a response (FR-MODEL-34).",
+                "which a Gamma approximation cannot take as a response (FR-133).",
             )
         frames[name] = frame.with_columns(pl.Series(SURROGATE_RESPONSE_COLUMN, scored))
 
@@ -207,9 +207,9 @@ def build_glm_approximation(
 
     report.update(0.35, "fitting the approximation")
     # `.result` and not the covariance bytes beside it: the surrogate is a *description* of
-    # the booster, and FR-MODEL-63's interval belongs to the model that priced the row, not
+    # the booster, and FR-194's interval belongs to the model that priced the row, not
     # to an approximation of it. The platform strips `covariance_blob` from the result
-    # before persisting it (FR-MODEL-102), so the reference cannot resolve to bytes nobody
+    # before persisting it (FR-141), so the reference cannot resolve to bytes nobody
     # stored.
     fitted = fit_glm(
         train_frame,
@@ -270,7 +270,7 @@ def _worst_regions(
     region they cannot act on, and "young high-mileage drivers" is a rating cell while
     "rows 40000 to 41000" is not.
 
-    The share is a share of **exposure** (FR-MODEL-36), the same quantity FR-MODEL-125
+    The share is a share of **exposure** (FR-136), the same quantity FR-181
     names one module away: a row-count share on a motor book reports a level held for a
     fortnight as a region the same size as one held for a year, and stating how much of
     the book the approximation is wrong over is the whole purpose of the sentence it
@@ -324,16 +324,16 @@ def build_shap_summary(
     groupings: Mapping[UUID, Grouping] | None = None,
     progress: ProgressCallback | None = None,
 ) -> ShapSummary:
-    """FR-MODEL-35 — TreeSHAP mean |contribution| per factor, on a reproducible sample.
+    """FR-134 — TreeSHAP mean |contribution| per factor, on a reproducible sample.
 
     The sample size and the seed are **persisted on the artifact**, because a SHAP summary
     computed on a different sample is a different summary, and two of them placed side by
     side in a model document would look like a change in the model.
 
-    `top_interactions` are FR-MODEL-79 **suggestions**: the platform never writes a Factor into
-    a Model Spec. Each carries its interaction `strength` and FR-MODEL-128's
+    `top_interactions` are FR-135 **suggestions**: the platform never writes a Factor into
+    a Model Spec. Each carries its interaction `strength` and FR-168's
     `holdout_strength_ratio` — a per-pair exposure share was `1.0` by construction and was
-    withdrawn by OQ-MODEL-31 on 2026-08-23, and this ratio is the out-of-sample evidence that
+    withdrawn by OQ-601 on 2026-08-23, and this ratio is the out-of-sample evidence that
     replaces it.
 
     `holdout` is **required, with no default**, matching `02` §5.2's declared signature and
@@ -391,7 +391,7 @@ def build_shap_summary(
     pairs: tuple[ShapInteraction, ...] = ()
     if interactions_available:
         in_sample = _pair_strengths(loaded, x, order, result)
-        # FR-MODEL-128's second pass. `_encoded_matrix` is the same function that produced
+        # FR-168's second pass. `_encoded_matrix` is the same function that produced
         # `x` above, called with the same seed, the same row cap and the same
         # `categorical_maps` — one code path run twice, which is what makes the numerator
         # and the denominator comparable rather than merely adjacent.
@@ -402,7 +402,7 @@ def build_shap_summary(
         assert holdout_order == order, (
             "the two passes encoded to different column orders, so a pair's strengths are "
             "not the same quantity. Both encode with `result.categorical_maps`, so this is "
-            "unreachable unless the maps stopped being the shared source (FR-MODEL-128)."
+            "unreachable unless the maps stopped being the shared source (FR-168)."
         )
         pairs = _interaction_candidates(
             in_sample, _pair_strengths(loaded, holdout_x, holdout_order, result)
@@ -433,13 +433,13 @@ def _encoded_matrix(
 ) -> tuple[np.ndarray, Sequence[str]]:
     """Sample, resolve and encode one partition — the path both passes share.
 
-    Extracted so FR-MODEL-128's "one code path run twice" is a fact about the code rather
+    Extracted so FR-168's "one code path run twice" is a fact about the code rather
     than a claim about two similar blocks. The seed, the sample size, the factor resolution
     and `result.categorical_maps` all arrive from the caller, so the two calls differ in the
     frame and in nothing else.
 
     A partition smaller than `sample` contributes all its rows rather than being padded;
-    `OQ-MODEL-38` records that equal caps therefore give unequal N.
+    `OQ-608` records that equal caps therefore give unequal N.
     """
     rows = min(sample, frame.height)
     sampled = (
@@ -458,12 +458,12 @@ def _encoded_matrix(
 #: `(rows, features+1, features+1)` and a full book at sixty factors would be tens of
 #: gigabytes for a ranking whose order settles in a few thousand rows.
 #:
-#: **This is a cap, not a count**, and FR-MODEL-128 names "the same row cap" among the three
+#: **This is a cap, not a count**, and FR-168 names "the same row cap" among the three
 #: sames it draws comparability from. A partition smaller than the cap contributes all its
-#: rows, so equal caps give unequal N — recorded as `OQ-MODEL-38`, not remedied here.
+#: rows, so equal caps give unequal N — recorded as `OQ-608`, not remedied here.
 _INTERACTION_ROW_CAP = 5_000
 
-#: How many ranked candidates FR-MODEL-79 publishes.
+#: How many ranked candidates FR-135 publishes.
 _TOP_CANDIDATES = 5
 
 
@@ -472,7 +472,7 @@ def _pair_strengths(
 ) -> dict[tuple[str, str], float]:
     """Every pair's interaction strength on one encoded matrix, unranked.
 
-    **This is the code path FR-MODEL-128 requires be run twice**, and returning the whole
+    **This is the code path FR-168 requires be run twice**, and returning the whole
     map rather than the ranked top five is what makes running it twice useful. The holdout
     pass needs a strength for *the pairs the in-sample pass selected* — a pair ranking fourth
     in-sample and eleventh out of sample is precisely the collapse the ratio exists to
@@ -511,10 +511,10 @@ def _interaction_candidates(
     in_sample: Mapping[tuple[str, str], float],
     holdout: Mapping[tuple[str, str], float] | None,
 ) -> tuple[ShapInteraction, ...]:
-    """FR-MODEL-79's ranked pairs, with FR-MODEL-128's ratio where one is defined.
+    """FR-135's ranked pairs, with FR-168's ratio where one is defined.
 
     The ranking is **by in-sample strength**, and the holdout is a lookup on the pairs that
-    ranking chose. `OQ-MODEL-38` records the consequence: the denominator is a selected
+    ranking chose. `OQ-608` records the consequence: the denominator is a selected
     maximum and the numerator an independent re-measurement, so the expected ratio sits
     below `1` even where the structure is identical — which is not what the requirement's
     "near 1 says it survives" sentence assumes, and is not remedied here.
@@ -550,7 +550,7 @@ def _ratio(
 def fidelity_statement(
     approximation: GlmApproximation | None, summary: ShapSummary | None
 ) -> str:
-    """FR-MODEL-36's statement, in the words a Rating Version's approver will read.
+    """FR-136's statement, in the words a Rating Version's approver will read.
 
     Generated rather than left to the author, because the requirement is that the statement
     says *where* the approximation fails and over how much exposure — and a free-text field
@@ -563,7 +563,7 @@ def fidelity_statement(
             f"No GLM approximation was built. The SHAP summary over {summary.sample_rows:,} "
             f"sampled rows attributes most of the score to {top}. Without an approximation "
             "there is no relativity table, so this model is explainable but not rateable "
-            "as one (FR-MODEL-34)."
+            "as one (FR-133)."
         )
 
     parts = [
@@ -584,7 +584,7 @@ def fidelity_statement(
     if summary is not None and not summary.interactions_available:
         parts.append(
             "Interaction candidates were not computed: this backend produces SHAP values "
-            "and not SHAP interaction values (FR-MODEL-79)."
+            "and not SHAP interaction values (FR-135)."
         )
     return " ".join(parts)
 
@@ -596,7 +596,7 @@ EBM_SHAPE_BLOB_VERSION = "ebm-shape-functions/1"
 
 
 def build_ebm_shape_functions(result: EbmFitResult) -> EbmShapeFunctions:
-    """FR-MODEL-37 — the model exported as tables, which is the model.
+    """FR-140 — the model exported as tables, which is the model.
 
     No approximation, no scoring, no data: everything a reader of the blob needs is
     already in `result`, and copying anything else into the document would give the
@@ -676,7 +676,7 @@ def _real_bins(
 
 
 def ebm_fidelity_statement() -> str:
-    """FR-MODEL-36's statement for an EBM, which needs no measurement to make.
+    """FR-136's statement for an EBM, which needs no measurement to make.
 
     The tables are the model — there is no surrogate whose divergence to report —
     so the statement says exactly that, rather than quoting a number that would
@@ -686,12 +686,12 @@ def ebm_fidelity_statement() -> str:
         "This EBM's term shape functions are exported directly as rateable tables. "
         "There is no approximation step and no fidelity to measure: the exported "
         "tables are the fitted model, so a Rating Version that rates on them rates "
-        "on the model itself (FR-MODEL-37)."
+        "on the model itself (FR-140)."
     )
 
 
 def ebm_monotonicity_verified(result: EbmFitResult, spec: EbmSpec) -> bool | None:
-    """FR-MODEL-52's check for the EBM arm, read off the exported tables.
+    """FR-174's check for the EBM arm, read off the exported tables.
 
     `None` when the spec declared no constraints — distinct from `False`, which
     would say a constraint was checked and failed. For a constrained feature, every
@@ -713,7 +713,7 @@ def ebm_monotonicity_verified(result: EbmFitResult, spec: EbmSpec) -> bool | Non
                 "EBM_MONOTONE_CONSTRAINT_UNKNOWN",
                 f"monotone constraint names {slug!r}, which feature_order does not "
                 "contain — a constraint on a feature the fit never saw cannot be "
-                "checked (FR-MODEL-52).",
+                "checked (FR-174).",
                 terms=[slug],
             )
         feature = index_of[slug]

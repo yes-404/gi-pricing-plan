@@ -1,4 +1,4 @@
-"""FR-MODEL-103/104/105 — evaluating and certifying a Custom Metric."""
+"""FR-155/156/157 — evaluating and certifying a Custom Metric."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def _metric(template: ObjectiveTemplate = ObjectiveTemplate.POISSON, **kw: objec
     return CustomMetric(**kwargs)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 def test_the_metric_is_the_weighted_mean_of_the_templates_loss() -> None:
     """Reuses the objective catalogue's arithmetic — no second implementation."""
     from pricing_core.modelling.objectives import template_loss
@@ -54,7 +54,7 @@ def test_the_metric_is_the_weighted_mean_of_the_templates_loss() -> None:
     assert evaluate_metric(_metric(), y, f, w) == pytest.approx(expected)
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 def test_weights_are_honoured_not_ignored() -> None:
     """An exposure-weighted metric that ignores weights is a different metric.
 
@@ -70,7 +70,7 @@ def test_weights_are_honoured_not_ignored() -> None:
     assert flat != pytest.approx(tilted)
 
 
-@pytest.mark.req("FR-MODEL-104")
+@pytest.mark.req("FR-156")
 def test_certification_catches_a_direction_declared_backwards() -> None:
     """The check that exists because the defect is otherwise invisible."""
     backwards = _metric(direction=MetricDirection.HIGHER_IS_BETTER)
@@ -80,7 +80,7 @@ def test_certification_catches_a_direction_declared_backwards() -> None:
     assert result.overall is CertificateOutcome.FAILED
 
 
-@pytest.mark.req("FR-MODEL-105")
+@pytest.mark.req("FR-157")
 def test_a_correctly_declared_metric_certifies() -> None:
     result = certify_metric(_metric(), seed=20260819)
     assert result.overall in (
@@ -95,7 +95,7 @@ def test_a_correctly_declared_metric_certifies() -> None:
     }
 
 
-@pytest.mark.req("FR-MODEL-105")
+@pytest.mark.req("FR-157")
 def test_no_derivative_check_appears_on_a_metric_certificate() -> None:
     """Absent, not `not_applicable` — the question is not askable of a metric."""
     result = certify_metric(_metric(), seed=20260819)
@@ -103,7 +103,7 @@ def test_no_derivative_check_appears_on_a_metric_certificate() -> None:
     assert not {n for n in names if "gradient" in n or "hessian" in n or n == "convexity"}
 
 
-@pytest.mark.req("FR-MODEL-105")
+@pytest.mark.req("FR-157")
 def test_certification_is_deterministic_under_its_seed() -> None:
     first = certify_metric(_metric(), seed=20260819)
     second = certify_metric(_metric(), seed=20260819)
@@ -113,7 +113,7 @@ def test_certification_is_deterministic_under_its_seed() -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-103 — §4.5's defaults, across the **whole** template catalogue
+# FR-155 — §4.5's defaults, across the **whole** template catalogue
 #
 # Every fixture in this suite, in `test_gbm.py` and in
 # `backend/tests/test_custom_metrics_api.py` supplied a complete parameter set for a zero-
@@ -156,7 +156,7 @@ def _catalogue_metric(template: ObjectiveTemplate) -> CustomMetric:
     )
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 @pytest.mark.parametrize("template", _CATALOGUE, ids=_TEMPLATE_IDS)
 def test_every_template_evaluates_with_only_its_required_parameters(
     template: ObjectiveTemplate,
@@ -184,7 +184,7 @@ def test_every_template_evaluates_with_only_its_required_parameters(
     assert dict(metric.params) == author_chose
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 @pytest.mark.parametrize("template", _CATALOGUE, ids=_TEMPLATE_IDS)
 def test_every_template_certifies_with_only_its_required_parameters(
     template: ObjectiveTemplate,
@@ -203,7 +203,7 @@ def test_every_template_certifies_with_only_its_required_parameters(
     }
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 @pytest.mark.parametrize(
     "template",
     [t for t in _CATALOGUE if _REQUIRED[t]],

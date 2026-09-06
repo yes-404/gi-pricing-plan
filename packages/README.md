@@ -1,12 +1,22 @@
+---
+family: reference
+title: Packages
+status: active                  # active → retired (§1.2a)
+created: 2026-08-14
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # Packages
 
 | Package | Purpose | May depend on |
 |---|---|---|
-| [`model-schema`](model-schema) | Every shape crossing a module boundary or persisted as an artifact (ADR-0002) | Pydantic, and nothing else |
-| [`pricing-core`](pricing-core) | All actuarial computation (ADR-0001) | Polars, NumPy/SciPy, glum, XGBoost, LightGBM, ZEN bindings, `model-schema` — **no** web, database or queue client |
+| [`model-schema`](model-schema) | Every shape crossing a module boundary or persisted as an artifact (ADR-704) | Pydantic, and nothing else |
+| [`pricing-core`](pricing-core) | All actuarial computation (ADR-703) | Polars, NumPy/SciPy, glum, XGBoost, LightGBM, ZEN bindings, `model-schema` — **no** web, database or queue client |
 
 Both contracts are enforced by `.importlinter` and checked in CI. They are not style
-preferences: ADR-0001 exists so a reviewer can reproduce a number without the platform, and
+preferences: ADR-703 exists so a reviewer can reproduce a number without the platform, and
 that is only true if nothing has reached for a database client.
 
 ## Running the checks
@@ -22,7 +32,7 @@ uv run python scripts/req-coverage.py     # which requirements the suite claims
 Tests are marked with the requirement they satisfy:
 
 ```python
-@pytest.mark.req("FR-OVR-7")
+@pytest.mark.req("FR-10")
 def test_money_minor_refuses_floats(): ...
 ```
 

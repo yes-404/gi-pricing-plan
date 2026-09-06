@@ -1,4 +1,4 @@
-"""Service Account management endpoints (FR-PLAT-3, FR-PLAT-6)."""
+"""Service Account management endpoints (FR-389, FR-392)."""
 
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ def _create(client: TestClient, headers: dict[str, str], **overrides: object):
     return client.post("/api/v1/service-accounts", json=body, headers=headers)
 
 
-@pytest.mark.req("FR-PLAT-3")
+@pytest.mark.req("FR-389")
 def test_creation_returns_the_key_exactly_once(client: TestClient, headers) -> None:
     response = _create(client, headers)
     assert response.status_code == 201
@@ -87,7 +87,7 @@ def test_creation_returns_the_key_exactly_once(client: TestClient, headers) -> N
     assert key not in str(body["account"])
 
 
-@pytest.mark.req("FR-PLAT-3")
+@pytest.mark.req("FR-389")
 def test_a_permission_outside_the_scoring_set_is_refused(client: TestClient, headers) -> None:
     """Negative: a key that could fit a model would be a standing actuarial credential."""
     response = _create(client, headers, permissions=["model:fit"])
@@ -95,13 +95,13 @@ def test_a_permission_outside_the_scoring_set_is_refused(client: TestClient, hea
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-PLAT-3")
+@pytest.mark.req("FR-389")
 def test_a_duplicate_slug_is_refused(client: TestClient, headers) -> None:
     assert _create(client, headers).status_code == 201
     assert _create(client, headers).status_code == 409
 
 
-@pytest.mark.req("FR-PLAT-3")
+@pytest.mark.req("FR-389")
 def test_rotation_issues_a_new_key_and_gives_the_old_one_a_deadline(
     client: TestClient, headers
 ) -> None:
@@ -126,7 +126,7 @@ def test_rotation_issues_a_new_key_and_gives_the_old_one_a_deadline(
     assert old["revoked_at"] is None
 
 
-@pytest.mark.req("FR-PLAT-3")
+@pytest.mark.req("FR-389")
 async def test_a_revoked_key_stops_authenticating(
     client: TestClient, database: Database, headers
 ) -> None:
@@ -153,7 +153,7 @@ async def test_a_revoked_key_stops_authenticating(
     assert exc.value.code == "API_KEY_INVALID"
 
 
-@pytest.mark.req("FR-PLAT-6")
+@pytest.mark.req("FR-392")
 async def test_key_lifecycle_is_audited_by_prefix_never_by_value(
     client: TestClient, database: Database, headers, workspace_id
 ) -> None:
@@ -190,7 +190,7 @@ async def test_key_lifecycle_is_audited_by_prefix_never_by_value(
     assert events[0].after["key_prefix"] == prefix
 
 
-@pytest.mark.req("FR-OVR-13")
+@pytest.mark.req("FR-16")
 async def test_another_workspaces_account_is_404_not_403(
     client: TestClient, headers, database, principal
 ) -> None:
@@ -210,7 +210,7 @@ async def test_another_workspaces_account_is_404_not_403(
 
     other_workspace = new_uuid7()
     async with database.unit_of_work() as session:
-        # The workspace row must exist for the membership FK (FR-PLAT-62), and the caller
+        # The workspace row must exist for the membership FK (FR-395), and the caller
         # must *be* a member here (W6b-11): the `Workspace-Id` header is checked against
         # the memberships the database holds, so a role without membership would now
         # refuse with `WORKSPACE_SCOPE_DENIED` instead of answering from the second
@@ -247,7 +247,7 @@ async def test_another_workspaces_account_is_404_not_403(
     assert response.status_code == 404
 
 
-@pytest.mark.req("FR-PLAT-1")
+@pytest.mark.req("FR-387")
 def test_service_account_routes_require_authentication() -> None:
     settings = Settings(environment=Environment.LOCAL, version="test")
     with TestClient(create_app(settings), raise_server_exceptions=False) as client:
@@ -256,7 +256,7 @@ def test_service_account_routes_require_authentication() -> None:
         assert response.json()["code"] == "UNAUTHENTICATED"
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 def test_creating_a_service_account_needs_the_admin_permission(
     client: TestClient, unprivileged_headers
 ) -> None:

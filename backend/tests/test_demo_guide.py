@@ -1,4 +1,4 @@
-"""The demo entrance's guide (FR-PLAT-53, FR-PLAT-54).
+"""The demo entrance's guide (FR-408, FR-409).
 
 The guide's purpose is telling a person what to trust, so the property under test is not
 "it renders" but **"it cannot claim more than the repository has"**. Every assertion below
@@ -68,8 +68,8 @@ def _fixture_repo(root: Path, *, routes: tuple[str, ...] = ("/data",)) -> Path:
         "#### Phase 1a status\n\n"
         "| WS | Scope | Status |\n"
         "|---|---|---|\n"
-        "| ~~**W4**~~ ✔ | Data | ✔ **closed 2026-08-15** |\n"
-        "| **W6a** | Frontend | **next** |\n"
+        "| ~~**WK-660**~~ ✔ | Data | ✔ **closed 2026-08-15** |\n"
+        "| **WK-663** | Frontend | **next** |\n"
         "\n### Something else\n\n"
         "| WS | Scope | Status |\n"
         "|---|---|---|\n"
@@ -79,7 +79,7 @@ def _fixture_repo(root: Path, *, routes: tuple[str, ...] = ("/data",)) -> Path:
     return root
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_a_view_is_implemented_because_the_router_routes_it(tmp_path: Path) -> None:
     """Not because anyone said so. The claim is one file agreeing with another."""
     guide = build_guide(_fixture_repo(tmp_path))
@@ -92,7 +92,7 @@ def test_a_view_is_implemented_because_the_router_routes_it(tmp_path: Path) -> N
     assert by_route["/rating"].module == "RATE"
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_the_guide_names_what_is_not_functional(tmp_path: Path) -> None:
     """The valuable half.
 
@@ -107,7 +107,7 @@ def test_the_guide_names_what_is_not_functional(tmp_path: Path) -> None:
     assert {view.route for view in guide.implemented_views} == {"/data"}
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_workstream_state_is_the_roadmaps_word_not_a_second_judgement(
     tmp_path: Path,
 ) -> None:
@@ -115,13 +115,13 @@ def test_workstream_state_is_the_roadmaps_word_not_a_second_judgement(
     disagree. Only tables under a `#### Phase … status` heading are read."""
     guide = build_guide(_fixture_repo(tmp_path))
     assert [(w.workstream, w.closed) for w in guide.workstreams] == [
-        ("W4", True),
-        ("W6a", False),
+        ("WK-660", True),
+        ("WK-663", False),
     ]
     assert all(w.phase == "Phase 1a" for w in guide.workstreams)
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_a_missing_source_is_refused_rather_than_half_answered(tmp_path: Path) -> None:
     """A partial guide looks like a platform missing a capability."""
     (tmp_path / "docs" / "specs").mkdir(parents=True)
@@ -129,7 +129,7 @@ def test_a_missing_source_is_refused_rather_than_half_answered(tmp_path: Path) -
         build_guide(tmp_path)
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_the_real_repository_derives_a_guide() -> None:
     """The fixture proves the parser; this proves it against the repository it describes."""
     guide = build_guide(repository_root())
@@ -140,9 +140,9 @@ def test_the_real_repository_derives_a_guide() -> None:
     assert any(group.tag == "datasets" for group in guide.api)
 
 
-@pytest.mark.req("FR-PLAT-53")
+@pytest.mark.req("FR-408")
 def test_the_entrance_is_absent_where_development_identity_is(tmp_path: Path) -> None:
-    """FR-PLAT-53: one switch, and it is the refusal that already exists.
+    """FR-408: one switch, and it is the refusal that already exists.
 
     `dev_auth_enabled` is `False` by default and refuses to start in a deployed
     environment. A page listing every route beside a pre-authenticated session is a genuine
@@ -158,7 +158,7 @@ def test_the_entrance_is_absent_where_development_identity_is(tmp_path: Path) ->
         assert refused.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-PLAT-53")
+@pytest.mark.req("FR-408")
 async def test_the_guide_is_served_where_the_demo_runs(
     tmp_path: Path, principal, workspace_id, membership
 ) -> None:
@@ -190,7 +190,7 @@ async def test_the_guide_is_served_where_the_demo_runs(
     assert any(view["route"] == "/data" and view["implemented"] for view in body["views"])
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_every_spec_that_declares_views_contributes_them() -> None:
     """The guide cannot go stale; it *could* silently go empty.
 
@@ -221,7 +221,7 @@ def test_every_spec_that_declares_views_contributes_them() -> None:
     assert declaring <= set(_MODULES), f"not in _MODULES: {sorted(declaring - set(_MODULES))}"
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_the_roadmap_yields_workstreams_and_names_the_phases_it_omits() -> None:
     """`_workstreams` matches `#### Phase … status` exactly and returns () when it moves.
 
@@ -237,7 +237,7 @@ def test_the_roadmap_yields_workstreams_and_names_the_phases_it_omits() -> None:
     assert guide.phases_without_status
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_a_commented_out_route_is_not_built(tmp_path: Path) -> None:
     """"Built" is a fact about the router, so it must not be a fact about its comments.
 
@@ -259,9 +259,9 @@ def test_a_commented_out_route_is_not_built(tmp_path: Path) -> None:
     assert by_route["/data/:slug/validation"].implemented is False
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_the_guide_names_the_endpoints_a_spec_declares_and_the_contract_lacks() -> None:
-    """FR-PLAT-54's "not yet functional", applied to the API.
+    """FR-409's "not yet functional", applied to the API.
 
     The page reported "63 endpoints published" and nothing else — true, and silent about
     the declared routes that do not exist, which is the half the question asks about.
@@ -278,7 +278,7 @@ def test_the_guide_names_the_endpoints_a_spec_declares_and_the_contract_lacks() 
     assert {"RATE"} <= modules, modules
 
 
-@pytest.mark.req("FR-PLAT-54")
+@pytest.mark.req("FR-409")
 def test_a_route_carrying_a_query_is_matched_on_its_path(tmp_path: Path) -> None:
     """The query is the view's input, not part of where the view lives.
 

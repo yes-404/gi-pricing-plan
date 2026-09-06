@@ -28,14 +28,14 @@ def _rating(**over: object) -> RatingVersion:
     return RatingVersion(**fields)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-PLAT-67")
+@pytest.mark.req("FR-440")
 def test_a_rating_version_constructs_in_draft() -> None:
     rating = _rating()
     assert rating.status is RatingVersionStatus.DRAFT
     assert rating.model_ref.type == "model"
 
 
-@pytest.mark.req("FR-PLAT-67")
+@pytest.mark.req("FR-440")
 def test_a_rating_version_round_trips_through_every_status() -> None:
     for status in RatingVersionStatus:
         rating = _rating(status=status)
@@ -43,13 +43,13 @@ def test_a_rating_version_round_trips_through_every_status() -> None:
         assert reloaded.status is status
 
 
-@pytest.mark.req("FR-PLAT-67")
+@pytest.mark.req("FR-440")
 def test_the_status_must_be_a_member_of_the_closed_set() -> None:
     with pytest.raises(pydantic.ValidationError, match="status"):
         RatingVersion.model_validate(_rating(status="deployed").model_dump(mode="json"))
 
 
-@pytest.mark.req("FR-PLAT-67")
+@pytest.mark.req("FR-440")
 def test_the_version_number_is_positive() -> None:
     with pytest.raises(pydantic.ValidationError, match="version"):
         _rating(version=0)

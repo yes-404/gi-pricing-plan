@@ -1,7 +1,7 @@
-"""What a penalised GLM may claim about its own uncertainty (FR-MODEL-99, OQ-MODEL-14).
+"""What a penalised GLM may claim about its own uncertainty (FR-197, OQ-586).
 
 `glum` returns the **unpenalised** information matrix for a penalised fit and warns that it
-is incorrect. FR-MODEL-21's standard errors and FR-MODEL-63's interval are both read off
+is incorrect. FR-113's standard errors and FR-194's interval are both read off
 that one matrix, which is why the question could not be answered for the interval alone —
 and the answer is a qualification carried with the numbers rather than a refusal that would
 have had to take the standard errors with it.
@@ -28,7 +28,7 @@ from model_schema import (
     new_uuid7,
 )
 
-#: FR-MODEL-19: a Poisson frequency model must declare its exposure offset, and the spec
+#: FR-111: a Poisson frequency model must declare its exposure offset, and the spec
 #: refuses one that does not — so every spec here carries it rather than dodging the family.
 EXPOSURE = OffsetSpec(kind="log_column", column="exposure_years")
 
@@ -44,7 +44,7 @@ def _glm(**over: object) -> GlmSpec:
     return GlmSpec(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-99")
+@pytest.mark.req("FR-197")
 def test_the_basis_follows_alpha_and_nothing_else() -> None:
     """The single derivation. `alpha` is the only thing that makes a fit penalised.
 
@@ -67,11 +67,11 @@ def test_the_basis_follows_alpha_and_nothing_else() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-99")
+@pytest.mark.req("FR-197")
 def test_a_gbm_has_no_basis_because_it_has_no_matrix() -> None:
     """`None` is the right answer here, and it is not the same as "unknown".
 
-    FR-MODEL-77 refuses a GBM interval outright rather than qualifying one, so there is no
+    FR-198 refuses a GBM interval outright rather than qualifying one, so there is no
     covariance matrix to describe. A basis invented for a GBM would be describing an
     interval the platform declines to produce.
     """
@@ -101,9 +101,9 @@ def test_a_gbm_has_no_basis_because_it_has_no_matrix() -> None:
     assert model.uncertainty_basis is None
 
 
-@pytest.mark.req("FR-MODEL-99")
+@pytest.mark.req("FR-197")
 def test_a_model_reports_the_basis_of_the_spec_it_was_fitted_from() -> None:
-    """The reader for FR-MODEL-21's half: a coefficient surface asks the Model, not `alpha`.
+    """The reader for FR-113's half: a coefficient surface asks the Model, not `alpha`.
 
     Derived rather than stored on the fit result, so the two can never disagree — the spec
     is pinned to the fit by `spec_hash` and both are immutable, so a stored copy could only
@@ -123,11 +123,11 @@ def test_a_model_reports_the_basis_of_the_spec_it_was_fitted_from() -> None:
     assert model.uncertainty_basis is UncertaintyBasis.UNPENALISED_INFORMATION_MATRIX
 
 
-@pytest.mark.req("FR-MODEL-99")
+@pytest.mark.req("FR-197")
 def test_an_interval_with_no_stated_basis_cannot_be_serialised() -> None:
     """Negative: the qualification is not optional on a response that carries an interval.
 
-    This is the defect OQ-MODEL-14 names, at the type: an interval whose basis is unstated
+    This is the defect OQ-586 names, at the type: an interval whose basis is unstated
     is one every reader takes for exact inference, and for a penalised fit that reading is
     wrong in a direction nothing on the page discloses.
     """
@@ -135,7 +135,7 @@ def test_an_interval_with_no_stated_basis_cannot_be_serialised() -> None:
         Uncertainty(kind=UncertaintyKind.CONFIDENCE_INTERVAL_MEAN, level=0.95)
 
 
-@pytest.mark.req("FR-MODEL-99")
+@pytest.mark.req("FR-197")
 def test_an_absent_interval_cannot_carry_a_basis() -> None:
     """Negative, the other way: a basis describes a matrix an interval was read off.
 

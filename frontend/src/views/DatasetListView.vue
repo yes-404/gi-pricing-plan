@@ -30,7 +30,7 @@ async function load(cursor?: string): Promise<void> {
 /**
  * When this Dataset was last usable, and — only where it matters — which version that was.
  *
- * FR-DATA-50 scopes the badge and this date differently on purpose. The badge answers *what
+ * FR-55 scopes the badge and this date differently on purpose. The badge answers *what
  * state is the newest version in*; this answers *when was this Dataset last usable*, read off
  * "the most recently `validated` version, which **need not be the latest one**". A Dataset
  * whose v12 is a fresh `draft` above a `validated` v11 would otherwise render as never
@@ -43,7 +43,7 @@ async function load(cursor?: string): Promise<void> {
  * noise, not honesty.
  *
  * No branch handles a date without its version. `model_schema.datasets` raises when
- * `(last_validated_at is None) != (last_validated_version is None)` — "one fact (FR-DATA-50)"
+ * `(last_validated_at is None) != (last_validated_version is None)` — "one fact (FR-55)"
  * — so the half-populated state cannot reach here, and a defensive branch would be dead code
  * asserting that a state exists which the contract forbids.
  */
@@ -215,16 +215,16 @@ onMounted(() => void load());
             {{ lastValidated(dataset) ?? "—" }}
           </td>
           <!--
-            The resolved display name when the list endpoint resolved one (OQ-OVR-15 (a)),
+            The resolved display name when the list endpoint resolved one (OQ-552 (a)),
             the whole raw id when it could not. An opaque id's only utility is exact copy and
             exact search, and `String.slice` destroys both; narrowing is presentational, so
             CSS does it. The value must also never live only in a `title`: a native tooltip is
             not dismissable, hoverable or persistent, and is unreachable by keyboard and touch
-            — WCAG 2.2 SC 1.4.13, which NFR-OVR-10 binds this SPA to at AA.
+            — WCAG 2.2 SC 1.4.13, which NFR-463 binds this SPA to at AA.
 
             A `None` name is an honest answer: the id did not resolve to a `users` or
             `service_accounts` row, and a raw id is the correct interim — never a fabricated
-            name (OQ-OVR-15).
+            name (OQ-552).
           -->
           <td class="py-3">
             <span

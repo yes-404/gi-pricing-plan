@@ -38,7 +38,7 @@ _REF_RE: Final[re.Pattern[str]] = re.compile(
 Slug = Annotated[str, Field(pattern=rf"^{_SLUG}$")]
 
 #: A canonical reference to a Model specifically: `model:slug@version` (ID-3).
-#: FR-MODEL-24's offset ref is one of these — the prefix is part of the pattern, so
+#: FR-116's offset ref is one of these — the prefix is part of the pattern, so
 #: the published contract admits `model:` refs and nothing else.
 ModelRef = Annotated[str, Field(pattern=rf"^model:{_SLUG}@[1-9][0-9]*$")]
 
@@ -53,7 +53,7 @@ REF_PATTERN: Final[str] = (
 class ArtifactRef(BaseModel, frozen=True):
     """A pinned reference to one immutable artifact version (ID-3).
 
-    Frozen because FR-OVR-1 makes artifacts immutable; a reference that could be mutated
+    Frozen because FR-4 makes artifacts immutable; a reference that could be mutated
     in place would let a "pinned" dependency drift, which is the failure ID-3 exists to
     prevent.
 

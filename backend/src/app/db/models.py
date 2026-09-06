@@ -1,10 +1,10 @@
-"""ORM models for the platform tables (FR-PLAT-17).
+"""ORM models for the platform tables (FR-416).
 
 Three tables, and the relationship between them is the point of this module:
 
-* `jobs` — the tracked unit of work (FR-PLAT-7).
+* `jobs` — the tracked unit of work (FR-399).
 * `audit_events` — append-only, hash-chained, written in the caller's transaction (`06` R2).
-* `outbox` — the transactional outbox that makes Celery enqueue safe (FR-PLAT-51).
+* `outbox` — the transactional outbox that makes Celery enqueue safe (FR-406).
 
 All three are written by the *same* transaction. That is what makes the guarantee real:
 either a job exists, its audit event exists, and its publish intent exists — or none do.
@@ -120,21 +120,21 @@ class JobRow(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    # Cooperative cancellation (FR-PLAT-9): the API sets this, and the worker's progress
+    # Cooperative cancellation (FR-401): the API sets this, and the worker's progress
     # callback observes it at the next checkpoint. A separate column from `status` because
     # a running job stays `running` until it actually stops — reporting `cancelled` while
     # the work is still burning CPU is how a cancelled job appears to have freed a slot it
     # has not.
     cancellation_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    # NFR-PLAT-3: a running job with no progress for longer than the configured window is
+    # NFR-528: a running job with no progress for longer than the configured window is
     # treated as stalled. That needs the time of the last *progress report*, which is not
     # `started_at` and not `queued_at` — a job can run for an hour legitimately, and the
     # question is whether it is still saying anything.
     progress_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
-        # FR-PLAT-12: a repeat submission within the window returns the original job.
+        # FR-404: a repeat submission within the window returns the original job.
         # Partial, because most jobs carry no key — and NULLs never conflict in a unique
         # index anyway, so the predicate keeps the index small rather than changing meaning.
         Index(
@@ -164,7 +164,7 @@ class JobRow(Base):
 class AuditEventRow(Base):
     """An Audit Event (`06` §4.5).
 
-    **Never updated, never deleted.** FR-GOV-22 enforces that at the database privilege
+    **Never updated, never deleted.** FR-370 enforces that at the database privilege
     level; the migration revokes `UPDATE`/`DELETE` from the application role and installs a
     trigger that rejects both. The ORM offers no update path, but the ORM is not the
     protection — a privilege is.
@@ -192,7 +192,7 @@ class AuditEventRow(Base):
     trace_id: Mapped[str | None] = mapped_column(String(32))
     job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
 
-    # The chain (FR-GOV-24). `prev_event_hash` is null only for a workspace's first event.
+    # The chain (FR-372). `prev_event_hash` is null only for a workspace's first event.
     prev_event_hash: Mapped[str | None] = mapped_column(String(71))
     event_hash: Mapped[str] = mapped_column(String(71), nullable=False)
 
@@ -223,7 +223,7 @@ class OutboxStatus(enum.StrEnum):
 
 
 class OutboxRow(Base):
-    """A publish intent, written in the caller's transaction (FR-PLAT-51).
+    """A publish intent, written in the caller's transaction (FR-406).
 
     Celery does not enlist in the database transaction: a task published to Redis survives
     a rollback, leaving a worker acting on state that was never committed — and, because
@@ -272,13 +272,13 @@ class OutboxRow(Base):
 
 
 class BlobRow(Base):
-    """The PostgreSQL side of a content-addressed blob (FR-PLAT-18).
+    """The PostgreSQL side of a content-addressed blob (FR-418).
 
     The object body lives in S3 at `blob/{sha256[:2]}/{sha256}`; size, media type and
     **reference count** live here, because a reference count is a transactional quantity
     and S3 has no transactions.
 
-    The primary key is the digest itself. That is what makes FR-PLAT-19 free rather than
+    The primary key is the digest itself. That is what makes FR-419 free rather than
     something to remember: writing identical content twice is a primary-key conflict, not
     a second object.
     """
@@ -290,7 +290,7 @@ class BlobRow(Base):
     media_type: Mapped[str] = mapped_column(String(255), nullable=False)
     part_count: Mapped[int | None] = mapped_column(Integer)
 
-    # FR-PLAT-20. Incremented when an artifact takes a reference, decremented when one is
+    # FR-420. Incremented when an artifact takes a reference, decremented when one is
     # released. GC only ever considers rows at zero — and even then, only old ones.
     ref_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -310,13 +310,13 @@ class BlobRow(Base):
 
 
 class JobLogRow(Base):
-    """One captured log line for a Job (FR-PLAT-10).
+    """One captured log line for a Job (FR-402).
 
     Retained with the Job and carrying its `trace_id`, so "what happened in this run?" is
     answerable from the Job page rather than by correlating timestamps against a cluster's
     log aggregator — which the actuary reading the failure does not have access to.
 
-    **Secrets must never reach this table** (R3, FR-GOV-26). Only the formatted message is
+    **Secrets must never reach this table** (R3, FR-375). Only the formatted message is
     stored, never a record's arbitrary attributes, so a structured field holding a
     credential cannot be swept in by accident.
     """
@@ -348,9 +348,9 @@ class JobLogRow(Base):
 
 
 class UserRow(Base):
-    """A platform user, created on first login from identity-provider claims (FR-PLAT-4).
+    """A platform user, created on first login from identity-provider claims (FR-390).
 
-    **No password column, and there never will be one** — FR-PLAT-1 puts authentication
+    **No password column, and there never will be one** — FR-387 puts authentication
     entirely with the identity provider. `subject` is the provider's `sub` claim, which is
     stable across email changes; keying on email instead would silently reassign a user's
     history when they change name.
@@ -377,7 +377,7 @@ class UserRow(Base):
 
 
 class ServiceAccountRow(Base):
-    """A non-human principal (`07` §4.3, FR-PLAT-3)."""
+    """A non-human principal (`07` §4.3, FR-389)."""
 
     __tablename__ = "service_accounts"
 
@@ -386,8 +386,8 @@ class ServiceAccountRow(Base):
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
 
-    # FR-PLAT-3: scoped to named environments and the scoring permission set only. A `uat`
-    # key can never score against `prod` (FR-PLAT-30), and that is enforced by comparing
+    # FR-389: scoped to named environments and the scoring permission set only. A `uat`
+    # key can never score against `prod` (FR-430), and that is enforced by comparing
     # this list, not by trusting the environment embedded in the key string.
     environments: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     permissions: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
@@ -406,7 +406,7 @@ class ServiceAccountRow(Base):
 class ApiKeyRow(Base):
     """One key belonging to a Service Account.
 
-    The **secret is never stored** — only its hash (FR-PLAT-3). The prefix is stored in
+    The **secret is never stored** — only its hash (FR-389). The prefix is stored in
     clear so a leaked key can be identified and revoked from the prefix alone, without
     anyone holding the secret.
 
@@ -438,7 +438,7 @@ class ApiKeyRow(Base):
 
 
 class WorkspaceRow(Base):
-    """A Workspace: a named, addressable entity (FR-PLAT-62).
+    """A Workspace: a named, addressable entity (FR-395).
 
     It existed as a `workspace_id` column and nothing else, so a workspace had no name and
     every surface that would show one showed a UUID — which is why `W6b-11`'s switcher had
@@ -464,14 +464,14 @@ class WorkspaceRow(Base):
 class WorkspaceMemberRow(Base):
     """Which workspaces a user may act in.
 
-    FR-PLAT-4: *a user with no mapped role gets no access, not default access.* Roles
-    themselves belong to `06` and arrive with W3; this is the coarsest form of the same
-    rule, and the one W2 can enforce honestly — an authenticated user with no membership
+    FR-390: *a user with no mapped role gets no access, not default access.* Roles
+    themselves belong to `06` and arrive with WK-659; this is the coarsest form of the same
+    rule, and the one WK-658 can enforce honestly — an authenticated user with no membership
     row can reach no workspace at all.
 
-    There is deliberately **no API to create these in W2**. Self-service membership would
-    make authentication sufficient for access, which is precisely what FR-PLAT-4 forbids.
-    Provisioning arrives with the governance write path (W3, FR-GOV-4).
+    There is deliberately **no API to create these in WK-658**. Self-service membership would
+    make authentication sufficient for access, which is precisely what FR-390 forbids.
+    Provisioning arrives with the governance write path (WK-659, FR-345).
     """
 
     __tablename__ = "workspace_members"
@@ -492,7 +492,7 @@ class WorkspaceMemberRow(Base):
 
 
 class WorkspaceSettingRow(Base):
-    """A workspace-level override for one setting (FR-PLAT-43, FR-PLAT-45).
+    """A workspace-level override for one setting (FR-446, FR-448).
 
     The middle layer of the precedence chain: an environment variable still wins, and the
     platform default still applies when no row exists. Only overrides are stored — writing
@@ -508,7 +508,7 @@ class WorkspaceSettingRow(Base):
     )
     key: Mapped[str] = mapped_column(String(128), nullable=False)
 
-    # JSONB rather than text: a setting is typed (FR-PLAT-44), and storing 0.10 as "0.10"
+    # JSONB rather than text: a setting is typed (FR-447), and storing 0.10 as "0.10"
     # would put the parsing — and the chance of parsing it differently in two places — on
     # every reader.
     value: Mapped[Any] = mapped_column(JSONB, nullable=False)
@@ -523,7 +523,7 @@ class WorkspaceSettingRow(Base):
 
 
 class RoleRow(Base):
-    """A role: a named set of permissions (FR-GOV-3).
+    """A role: a named set of permissions (FR-344).
 
     Built-in roles are seeded per workspace from `model_schema.BUILTIN_ROLES` rather than
     referenced by name, so a workspace can *see* what its Approver role grants and a custom
@@ -550,13 +550,13 @@ class RoleRow(Base):
 
 
 class RoleAssignmentRow(Base):
-    """A role granted to a principal, within a scope (FR-GOV-4, FR-GOV-8).
+    """A role granted to a principal, within a scope (FR-345, FR-349).
 
     Scope is what stops a motor actuary approving home pricing: an assignment is
     workspace-wide only when someone chose that, and otherwise names one Dataset, Model
     Family or Rating Algorithm.
 
-    **Break-glass is the same row with an expiry and a reason** (FR-GOV-8) rather than a
+    **Break-glass is the same row with an expiry and a reason** (FR-349) rather than a
     separate mechanism. One table means one place where expiry is checked; a parallel
     emergency-grant table is a second path into the same decision, and the second path is
     the one that gets forgotten when the check is tightened.
@@ -579,7 +579,7 @@ class RoleAssignmentRow(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
-    # Break-glass (FR-GOV-8): time-boxed, reason-required, prominently flagged.
+    # Break-glass (FR-349): time-boxed, reason-required, prominently flagged.
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reason: Mapped[str | None] = mapped_column(Text)
     break_glass: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -594,7 +594,7 @@ class RoleAssignmentRow(Base):
             "(scope_type = 'workspace') = (scope_id IS NULL)",
             name="scope_id_iff_scoped",
         ),
-        # FR-GOV-8: an emergency grant with no expiry is a permanent grant with a story.
+        # FR-349: an emergency grant with no expiry is a permanent grant with a story.
         CheckConstraint(
             "NOT break_glass OR (expires_at IS NOT NULL AND reason IS NOT NULL)",
             name="break_glass_is_time_boxed_and_justified",
@@ -603,11 +603,11 @@ class RoleAssignmentRow(Base):
 
 
 class ApprovalRequestRow(Base):
-    """An artifact submitted for approval (`06` §4.3, FR-GOV-9).
+    """An artifact submitted for approval (`06` §4.3, FR-351).
 
     `artifact_ref` is the canonical `{type}:{slug}@{version}` string, which is what makes
-    approvals pinned without a staleness check (FR-GOV-14): artifacts are immutable
-    (FR-OVR-1), so a changed artifact is a *different* reference and this row does not
+    approvals pinned without a staleness check (FR-356): artifacts are immutable
+    (FR-4), so a changed artifact is a *different* reference and this row does not
     describe it.
     """
 
@@ -648,7 +648,7 @@ class ApprovalRequestRow(Base):
 
 
 class ApprovalDecisionRow(Base):
-    """One approver's decision on one request (FR-GOV-11).
+    """One approver's decision on one request (FR-353).
 
     The unique constraint on `(request, approver)` is separation of duties made structural:
     "where two approvals are required they must be distinct Principals" is not a rule the
@@ -673,7 +673,7 @@ class ApprovalDecisionRow(Base):
 
 
 class ApprovalPolicyRow(Base):
-    """The workspace's approval policy (FR-GOV-12). One row per workspace."""
+    """The workspace's approval policy (FR-354). One row per workspace."""
 
     __tablename__ = "approval_policies"
 
@@ -685,10 +685,10 @@ class ApprovalPolicyRow(Base):
 
 
 class SourceRow(Base):
-    """Where a Dataset's data comes from (FR-DATA-1).
+    """Where a Dataset's data comes from (FR-26).
 
     `credentials_secret_ref` holds a `secret:<slug>` **reference**, never a value
-    (`07` FR-PLAT-25/26). The column is deliberately named for what it stores, so a future
+    (`07` FR-425/426). The column is deliberately named for what it stores, so a future
     reader cannot mistake it for somewhere a password may go.
     """
 
@@ -728,7 +728,7 @@ class DatasetRow(Base):
 
     line_of_business: Mapped[str | None] = mapped_column(String(64))
     territory: Mapped[str | None] = mapped_column(String(64))
-    #: `07` FR-PLAT-46 sets the workspace default; a dataset may differ, because a group
+    #: `07` FR-449 sets the workspace default; a dataset may differ, because a group
     #: writing GB and IE business holds both in one workspace.
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="GBP")
     default_record_grain: Mapped[str | None] = mapped_column(String(32))
@@ -740,7 +740,7 @@ class DatasetRow(Base):
     )
     validation_rule_set_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
 
-    #: FR-DATA-51. Non-null and set at ingestion: a Dataset with no owner has nobody to ask
+    #: FR-82. Non-null and set at ingestion: a Dataset with no owner has nobody to ask
     #: about it, and every review path that reaches for one would have to invent a
     #: fallback. Not a `ForeignKey` — `:1282-1285` states the rule and the reason.
     owner_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
@@ -757,7 +757,7 @@ class DatasetRow(Base):
 
 
 class DatasetVersionRow(Base):
-    """An immutable snapshot (`01` §4.2, FR-DATA-2, FR-DATA-40).
+    """An immutable snapshot (`01` §4.2, FR-27, FR-34).
 
     Two constraints carry `01` §1.3 — *a Model may only be fitted on a `validated`
     version* — down to where it cannot be argued with:
@@ -773,7 +773,7 @@ class DatasetVersionRow(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
     #: The dataset's slug — a version is addressed as `dataset-slug@version`, so this is
-    #: never unique across versions of one dataset (OQ-DATA-13, decided 2026-08-26 (c)).
+    #: never unique across versions of one dataset (OQ-568, decided 2026-08-26 (c)).
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
@@ -802,8 +802,8 @@ class DatasetVersionRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    #: The envelope, persisted (OQ-DATA-13 (c)). `created_by` names who made this
-    #: version; `updated_at` is non-null (OQ-OVR-16, resolved 2026-08-26 (a)) — a version
+    #: The envelope, persisted (OQ-568 (c)). `created_by` names who made this
+    #: version; `updated_at` is non-null (OQ-553, resolved 2026-08-26 (a)) — a version
     #: is created and updated in the same moment, and a nullable timestamp made the two
     #: moments indistinguishable from "never updated".
     created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
@@ -841,10 +841,10 @@ class DatasetVersionRow(Base):
 
 
 class IngestionRunRow(Base):
-    """What one ingestion did (FR-DATA-6, FR-DATA-8).
+    """What one ingestion did (FR-31, FR-33).
 
     Kept whether the run succeeded or failed. A failed run that leaves no record is a
-    question nobody can answer later — "why is there no version 12?" — and FR-DATA-6's list
+    question nobody can answer later — "why is there no version 12?" — and FR-31's list
     is precisely the evidence needed to answer it: what was read, what was written, what
     was rejected and why, and which build of which libraries did it.
     """
@@ -860,7 +860,7 @@ class IngestionRunRow(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     idempotency_key: Mapped[str | None] = mapped_column(String(255))
 
-    # FR-DATA-8: the same key with a *changed* source is a different ingestion, so the
+    # FR-33: the same key with a *changed* source is a different ingestion, so the
     # fingerprint is part of the identity rather than a detail recorded beside it.
     source_fingerprint: Mapped[str | None] = mapped_column(String(128))
 
@@ -898,7 +898,7 @@ class IngestionRunRow(Base):
 
 
 class ReferenceTableRow(Base):
-    """An effective-dated lookup table (FR-DATA-29)."""
+    """An effective-dated lookup table (FR-69)."""
 
     __tablename__ = "reference_tables"
 
@@ -918,7 +918,7 @@ class ReferenceTableRow(Base):
 
 
 class ReferenceTableVersionRow(Base):
-    """An immutable, independently approvable version (FR-DATA-30).
+    """An immutable, independently approvable version (FR-70).
 
     Pinned explicitly by both validation and the rating engine — never "latest". A lookup
     that silently followed the newest version would change a quote's answer without any
@@ -945,7 +945,7 @@ class ReferenceTableVersionRow(Base):
 
 
 class ReferenceRowRow(Base):
-    """One effective-dated row of a reference version (FR-DATA-29).
+    """One effective-dated row of a reference version (FR-69).
 
     The half-open `[effective_from, effective_to)` interval and the exclusion constraint
     below are what make "as at" lookups single-valued. Overlapping intervals for one key
@@ -975,13 +975,13 @@ class ReferenceRowRow(Base):
 
 
 class ValidationReportRow(Base):
-    """One validation run's result (`01` §4.6, FR-DATA-15, FR-DATA-20).
+    """One validation run's result (`01` §4.6, FR-42, FR-49).
 
     The report **is** the artifact: the body is the `ValidationReport` model serialised
     whole, not a shredded set of columns to be reassembled. Two reasons, and both are
     about disputes. A report is evidence that a version was or was not fit to model on,
     and evidence that the platform rewrote on read — because a column was added, or an
-    enum gained a member — is not evidence. And NFR-DATA-5 requires byte-identical bodies
+    enum gained a member — is not evidence. And NFR-469 requires byte-identical bodies
     across runs, which can only be checked against a body that was stored as bytes.
 
     The summary columns beside it are indexes, never the source of truth. `overall` is
@@ -1025,10 +1025,10 @@ class ValidationReportRow(Base):
 
 
 class AcknowledgementRow(Base):
-    """An actuary accepting a `warn` (FR-DATA-17, FR-DATA-18).
+    """An actuary accepting a `warn` (FR-46, FR-47).
 
     Scoped to `(dataset_version_id, rule_id, report_id)` by a unique constraint, which is
-    FR-DATA-18's rule made unarguable: an acknowledgement does not carry forward to the
+    FR-47's rule made unarguable: an acknowledgement does not carry forward to the
     next version or the next report. Re-running validation asks the question again, which
     is the entire point — a warn that was acceptable on last month's data is a fresh
     judgement on this month's.
@@ -1058,10 +1058,10 @@ class AcknowledgementRow(Base):
 
 
 class ProfileRow(Base):
-    """A dataset version's profile (`01` §4.7, FR-DATA-25, FR-DATA-27).
+    """A dataset version's profile (`01` §4.7, FR-60, FR-62).
 
     Stored whole for the same reason as a validation report, plus one of its own:
-    FR-DATA-27 forbids the UI recomputing a one-way, and NFR-DATA-4 gives it 300 ms. Both
+    FR-62 forbids the UI recomputing a one-way, and NFR-468 gives it 300 ms. Both
     are only true if the answer is *read*. A profile assembled from normalised rows on
     each request is a recomputation with extra steps.
     """
@@ -1088,7 +1088,7 @@ class ProfileRow(Base):
 
 
 class ValidationRuleRow(Base):
-    """A custom validation rule, versioned and governed (FR-DATA-21, §4.5).
+    """A custom validation rule, versioned and governed (FR-50, §4.5).
 
     `(slug, version)` is unique per workspace and an approved row is never edited —
     `01` §4.5 step 4 makes an edit a new version needing its own approval. A rule is what
@@ -1117,7 +1117,7 @@ class ValidationRuleRow(Base):
     dry_run_report_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
 
     #: Seeded from `01` §4.4's catalogue rather than authored in this workspace
-    #: (FR-DATA-53), mirroring `RoleRow.builtin` and seeded the same way and for the same
+    #: (FR-68), mirroring `RoleRow.builtin` and seeded the same way and for the same
     #: reason: a workspace can *see* the rule it is validated against, and changing the
     #: shipped catalogue never silently changes what an existing workspace already ran.
     builtin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -1138,7 +1138,7 @@ class ValidationRuleRow(Base):
         # not the author. Both are enforced by the service; the pair that cannot be
         # expressed any other way is enforced here.
         #
-        # `builtin IS TRUE` is the third arm, added 2026-08-23 with FR-DATA-53. A shipped
+        # `builtin IS TRUE` is the third arm, added 2026-08-23 with FR-68. A shipped
         # rule has no in-workspace author to be distinct from and no dry run to point at:
         # it was reviewed once, in `01` §4.4, and every workspace gets the same reviewed
         # text. Without this arm the only way to seed the catalogue approved — and an
@@ -1168,7 +1168,7 @@ class ValidationRuleRow(Base):
 
 
 class ValidationRuleSetRow(Base):
-    """The rule set a dataset is validated against (FR-DATA-22).
+    """The rule set a dataset is validated against (FR-51).
 
     Versioned, because a Validation Report records the exact `rule_set_version` it ran.
     Without that a report says "it passed" without saying what it passed, and the two
@@ -1199,7 +1199,7 @@ class ValidationRuleSetRow(Base):
 
 
 class SubjectPurgeRow(Base):
-    """A GDPR erasure of a pseudonymous subject token (FR-DATA-39).
+    """A GDPR erasure of a pseudonymous subject token (FR-81).
 
     The purge is recorded even though the data is gone — especially because it is. An
     erasure with no record is indistinguishable from data that was never there, and a
@@ -1225,7 +1225,7 @@ class SubjectPurgeRow(Base):
 
 
 class DatasetSplitRow(Base):
-    """A named train/test split, recorded on the **parent** version (FR-DATA-36).
+    """A named train/test split, recorded on the **parent** version (FR-76).
 
     On the parent, not the parts, so that two models can be compared on provably identical
     data: "trained on the same split" is then a single reference both models cite, rather
@@ -1253,9 +1253,9 @@ class DatasetSplitRow(Base):
 
 
 class FactorRow(Base):
-    """A Factor definition, versioned independently of any Model (`02` FR-MODEL-1/7).
+    """A Factor definition, versioned independently of any Model (`02` FR-83/96).
 
-    Keyed to a **Dataset**, not a version: FR-MODEL-2 makes resolution against a specific
+    Keyed to a **Dataset**, not a version: FR-87 makes resolution against a specific
     version a fit-time act, so a factor outlives the version it was first used on.
     """
 
@@ -1279,12 +1279,12 @@ class FactorRow(Base):
 
 
 class BandingRow(Base):
-    """A Banding, versioned independently of any Factor (`02` FR-MODEL-12).
+    """A Banding, versioned independently of any Factor (`02` FR-101).
 
     Same shape as `FactorRow` and for the same reason: editing a banding creates a new
     version and does not alter any Model already fitted with the old one. The body is the
     whole artifact as JSON — boundaries, labels, policies and the derivation evidence —
-    because `model-schema` owns that shape (ADR-0002) and a second column-per-field
+    because `model-schema` owns that shape (ADR-704) and a second column-per-field
     definition here is the divergence `CLAUDE.md` §2 forbids.
     """
 
@@ -1309,9 +1309,9 @@ class BandingRow(Base):
 
 
 class GroupingRow(Base):
-    """A Grouping, versioned like a Banding (`02` FR-MODEL-13..17).
+    """A Grouping, versioned like a Banding (`02` FR-104, FR-105, FR-107, FR-108, FR-109).
 
-    `parent_grouping_id` carries FR-MODEL-17's chain — outcode rolled to area rolled to
+    `parent_grouping_id` carries FR-109's chain — outcode rolled to area rolled to
     region — so the finer level stays available for diagnostics while rating happens on the
     coarser one.
     """
@@ -1340,7 +1340,7 @@ class GroupingRow(Base):
 class ModelRow(Base):
     """A fitted Model (`02` §4.8), immutable once fitted (R2).
 
-    `spec_hash` is unique per workspace: FR-MODEL-66 returns the existing model rather than
+    `spec_hash` is unique per workspace: FR-204 returns the existing model rather than
     fitting the same specification twice, which is what makes a fit idempotent without an
     idempotency key. `parent_model_id` carries the refit lineage — there is no operation
     that edits a coefficient, so a change is always a new row.
@@ -1396,7 +1396,7 @@ class ModelRow(Base):
             "status IN ('draft', 'archived') OR diagnostics_id IS NOT NULL",
             name="fitted_model_has_diagnostics",
         ),
-        # FR-MODEL-64's six states, at the layer a direct `UPDATE` cannot walk past. The
+        # FR-202's six states, at the layer a direct `UPDATE` cannot walk past. The
         # column is a `String(16)`: without this, `'live'` was a legal status and a model
         # holding one is skipped by every lifecycle query rather than refused.
         CheckConstraint(
@@ -1411,9 +1411,9 @@ class ModelRow(Base):
 
 
 class ModelComparisonRow(Base):
-    """A persisted model comparison (`02` §4.11, FR-MODEL-56).
+    """A persisted model comparison (`02` §4.11, FR-186).
 
-    Insert-only at the privilege layer (FR-DATA-42): `06` §3.3 makes a comparison required
+    Insert-only at the privilege layer (FR-43): `06` §3.3 makes a comparison required
     evidence for a Model approval where a predecessor exists, and evidence that can change
     after the approval is not evidence.
 
@@ -1447,7 +1447,7 @@ class ModelComparisonRow(Base):
 
 
 class BacktestRow(Base):
-    """A model measured on a Dataset Version it was not fitted on (`02` §4.12, FR-MODEL-57).
+    """A model measured on a Dataset Version it was not fitted on (`02` §4.12, FR-187).
 
     Insert-only, and here with **both** layers: privileges narrowed to `SELECT, INSERT`, and
     the `artifact_append_only` triggers. `a1b2c3d4e5f6` installed the trigger pattern and
@@ -1455,7 +1455,7 @@ class BacktestRow(Base):
     implicit privileges — so a table with privileges alone is protected against the
     application role and not against a direct connection.
 
-    Unlike `DiagnosticsRow` this is **not** one per model. FR-MODEL-57's backtest is per
+    Unlike `DiagnosticsRow` this is **not** one per model. FR-187's backtest is per
     dataset version, and a model measured against four successive quarters has four rows;
     that is the series `05-monitoring.md` reads. Uniqueness is therefore on
     `(model_id, dataset_version_id)`: re-running the same pair would produce a second answer
@@ -1491,13 +1491,13 @@ class BacktestRow(Base):
 
 
 class TransparencyArtifactRow(Base):
-    """A non-GLM model's explanation (`02` FR-MODEL-33..37, R3).
+    """A non-GLM model's explanation (`02` FR-132, FR-133, FR-134, FR-136, FR-140, R3).
 
-    An **artifact**: insert-only at the privilege layer (FR-DATA-42), because it is the
-    evidence a Rating Version's approval is granted against (FR-MODEL-36) and evidence that
+    An **artifact**: insert-only at the privilege layer (FR-43), because it is the
+    evidence a Rating Version's approval is granted against (FR-136) and evidence that
     can change after the decision is not evidence.
 
-    **Many rows per model, unlike `diagnostics`.** FR-MODEL-33 says *at least one*, both
+    **Many rows per model, unlike `diagnostics`.** FR-132 says *at least one*, both
     forms may be present, and a SHAP summary recomputed on a larger sample is a second
     artifact rather than a correction of the first. The read path takes the most recent;
     the older ones stay because an approval that cited one must still resolve.
@@ -1521,10 +1521,10 @@ class TransparencyArtifactRow(Base):
 
 
 class DiagnosticsRow(Base):
-    """Model quality evidence, computed once at fit time (`02` FR-MODEL-49, §4).
+    """Model quality evidence, computed once at fit time (`02` FR-170, §4).
 
-    An **artifact**: insert-only at the privilege layer like every other one (FR-DATA-42),
-    because FR-MODEL-49 says diagnostics are computed once and read thereafter. A
+    An **artifact**: insert-only at the privilege layer like every other one (FR-43),
+    because FR-170 says diagnostics are computed once and read thereafter. A
     diagnostics row that could be updated would let the evidence behind an approval change
     after the approval.
 
@@ -1553,11 +1553,11 @@ class DiagnosticsRow(Base):
 
 
 class PerilStructureRow(Base):
-    """A Peril Structure (`02` §4.10, FR-MODEL-58..61).
+    """A Peril Structure (`02` §4.10, FR-188, FR-189, FR-190, FR-191).
 
     Versioned and approvable in its own right, so it is shaped like `ModelRow` rather than
     like `ModelComparisonRow`: a slug and a version, a lifecycle, and an approval request —
-    FR-MODEL-61 makes it the artifact a Rating Version references, and a referent reached
+    FR-191 makes it the artifact a Rating Version references, and a referent reached
     only by id is one nothing can cite by name.
 
     **The composition freezes when the reconciliation is written**, enforced by a trigger
@@ -1581,7 +1581,7 @@ class PerilStructureRow(Base):
     excluded_perils: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list
     )
-    #: FR-MODEL-60's persisted reconciliation. Null only while `draft` — the CHECK below is
+    #: FR-190's persisted reconciliation. Null only while `draft` — the CHECK below is
     #: the layer a direct `UPDATE` cannot walk past.
     reconciliation: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
@@ -1598,7 +1598,7 @@ class PerilStructureRow(Base):
             "workspace_id", "slug", "version", name="uq_peril_structures_slug_version"
         ),
         CheckConstraint("version >= 1", name="peril_structure_version_starts_at_one"),
-        # FR-MODEL-61's lifecycle, at the layer a direct `UPDATE` cannot walk past. Without
+        # FR-191's lifecycle, at the layer a direct `UPDATE` cannot walk past. Without
         # it a structure could hold `live`, and a status no query branches on is skipped
         # rather than refused — `model_status_is_in_the_lifecycle`'s lesson.
         CheckConstraint(
@@ -1606,7 +1606,7 @@ class PerilStructureRow(Base):
             "'archived')",
             name="peril_structure_status_is_in_the_lifecycle",
         ),
-        # FR-MODEL-60: the reconciliation is the evidence an approval reads, so every state
+        # FR-190: the reconciliation is the evidence an approval reads, so every state
         # that can be approved or was approved carries one. `fitted_model_has_diagnostics`
         # is the same invariant about the same kind of evidence.
         CheckConstraint(
@@ -1618,14 +1618,14 @@ class PerilStructureRow(Base):
 
 
 class CustomObjectiveRow(Base):
-    """A Custom Objective (`02` §4.5, FR-MODEL-38, FR-MODEL-46).
+    """A Custom Objective (`02` §4.5, FR-142, FR-163).
 
     Shaped like `PerilStructureRow` rather than like `DiagnosticsRow`: it is versioned,
     approvable, and referenced **by name** — a Model Spec carries
     `custom_objective:<slug>@<version>`, so a row reachable only by id could not be resolved
     from the spec that names it.
 
-    Versioned rather than edited, because FR-MODEL-46 makes editing an approved objective a
+    Versioned rather than edited, because FR-163 makes editing an approved objective a
     new version needing fresh certification. That is not a convention the service can be
     trusted to keep alone: a model fitted last month must still resolve its ref to the loss
     it was actually fitted under, so `uq_custom_objectives_slug_version` and the
@@ -1641,7 +1641,7 @@ class CustomObjectiveRow(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
 
-    #: `template` for the whole of Phase 1 (FR-MODEL-75). Stored rather than assumed,
+    #: `template` for the whole of Phase 1 (FR-150). Stored rather than assumed,
     #: because Phase 2's `expression` rows will live in this table beside these and a
     #: column added later cannot say what the existing rows were.
     kind: Mapped[str] = mapped_column(String(16), nullable=False, default="template")
@@ -1652,13 +1652,13 @@ class CustomObjectiveRow(Base):
     #: had silently absorbed them would let a later change to a default rewrite the meaning
     #: of an already-approved objective.
     params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    #: FR-MODEL-44's declaration, whole, through the `Applicability` contract.
+    #: FR-153's declaration, whole, through the `Applicability` contract.
     applicability: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     hessian_strategy: Mapped[str] = mapped_column(String(16), nullable=False, default="clip_to_min")
     hessian_min: Mapped[float] = mapped_column(Float, nullable=False, default=1e-6)
     description: Mapped[str | None] = mapped_column(Text)
 
-    #: FR-MODEL-42's evidence. Not a foreign key to `objective_certificates` only because
+    #: FR-146's evidence. Not a foreign key to `objective_certificates` only because
     #: the certificate points back the other way and one direction is enough; the CHECK
     #: below is what makes a status past `draft` mean something.
     certificate_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
@@ -1675,13 +1675,13 @@ class CustomObjectiveRow(Base):
         ),
         CheckConstraint("version >= 1", name="custom_objective_version_starts_at_one"),
         CheckConstraint("hessian_min > 0", name="custom_objective_hessian_min_is_positive"),
-        # FR-MODEL-46's five states. `certified` sits between `draft` and `review` because
-        # FR-MODEL-42 makes certification the condition of submission, not of approval.
+        # FR-163's five states. `certified` sits between `draft` and `review` because
+        # FR-146 makes certification the condition of submission, not of approval.
         CheckConstraint(
             "status IN ('draft', 'certified', 'review', 'approved', 'deprecated')",
             name="custom_objective_status_is_in_the_lifecycle",
         ),
-        # FR-MODEL-42, at the layer a direct `UPDATE` cannot walk past. `deprecated` joins
+        # FR-146, at the layer a direct `UPDATE` cannot walk past. `deprecated` joins
         # `draft` because it is reachable from `draft`: an objective abandoned before it was
         # ever certified is withdrawn, not certified. The type says the same thing; this is
         # the half that survives a migration or a fixture.
@@ -1689,7 +1689,7 @@ class CustomObjectiveRow(Base):
             "status IN ('draft', 'deprecated') OR certificate_id IS NOT NULL",
             name="certified_objective_has_a_certificate",
         ),
-        # FR-MODEL-75 for the whole of Phase 1. A row whose `kind` is `expression` would
+        # FR-150 for the whole of Phase 1. A row whose `kind` is `expression` would
         # carry no loss at all — every field an expression objective needs is unbuilt — so
         # this is a refusal to persist an artifact nothing could evaluate, not a feature gate.
         CheckConstraint(
@@ -1701,9 +1701,9 @@ class CustomObjectiveRow(Base):
 
 
 class ObjectiveCertificateRow(Base):
-    """An Objective Certificate (`02` §4.7, FR-MODEL-42).
+    """An Objective Certificate (`02` §4.7, FR-146).
 
-    Insert-only at the privilege layer (FR-DATA-42), for `TransparencyArtifactRow`'s reason:
+    Insert-only at the privilege layer (FR-43), for `TransparencyArtifactRow`'s reason:
     `06` §4.2 makes it the required evidence for a Custom Objective's approval, and evidence
     that can change after the decision is not evidence.
 
@@ -1719,7 +1719,7 @@ class ObjectiveCertificateRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     custom_objective_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     #: Denormalised from the objective row on purpose: a certificate names the *version* it
-    #: certifies, and FR-MODEL-46's "editing creates a new version" is only auditable if the
+    #: certifies, and FR-163's "editing creates a new version" is only auditable if the
     #: evidence says which one it measured without a join to a row that may since have moved.
     objective_version: Mapped[int] = mapped_column(Integer, nullable=False)
     certified_at: Mapped[datetime] = mapped_column(
@@ -1741,9 +1741,9 @@ class ObjectiveCertificateRow(Base):
 
 
 class CustomMetricRow(Base):
-    """A Custom Metric (`02` §4.13, FR-MODEL-45, FR-MODEL-103).
+    """A Custom Metric (`02` §4.13, FR-154, FR-155).
 
-    Shaped like `CustomObjectiveRow` on purpose — FR-MODEL-45 makes a metric follow "the
+    Shaped like `CustomObjectiveRow` on purpose — FR-154 makes a metric follow "the
     same lifecycle and grammar as objectives" — but a metric is never differentiated, so it
     carries no `hessian_strategy` and no `hessian_min`.
 
@@ -1763,8 +1763,8 @@ class CustomMetricRow(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
 
-    #: `template` for the whole of Phase 1, mirroring `CustomObjectiveRow.kind` (FR-MODEL-103
-    #: reuses FR-MODEL-75's rule). Stored rather than assumed for the same reason: a Phase 2
+    #: `template` for the whole of Phase 1, mirroring `CustomObjectiveRow.kind` (FR-155
+    #: reuses FR-150's rule). Stored rather than assumed for the same reason: a Phase 2
     #: `expression` row will live in this table beside these.
     kind: Mapped[str] = mapped_column(String(16), nullable=False, default="template")
     #: §4.5's template name, reused whole (§4.13: "`Applicability`, `ObjectiveTemplate`... are
@@ -1776,13 +1776,13 @@ class CustomMetricRow(Base):
     #: Must be no wider than §4.5's own applicability for the template (§4.13) — checked by
     #: `CustomMetric._applicability_is_within_the_template`, not by this column.
     applicability: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    #: FR-MODEL-104: which way is "better", declared with the metric. Only the two directions
+    #: FR-156: which way is "better", declared with the metric. Only the two directions
     #: an early-stopping loop can compare successive values with — see the CHECK below and
     #: `CustomMetric._direction_is_usable_for_stopping`, which the CHECK's name mirrors.
     direction: Mapped[str] = mapped_column(String(32), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
 
-    #: FR-MODEL-105's evidence. Not a foreign key to `metric_certificates`, for
+    #: FR-157's evidence. Not a foreign key to `metric_certificates`, for
     #: `CustomObjectiveRow.certificate_id`'s reason: the certificate points back the other
     #: way, and the CHECK below is what makes a status past `draft` mean something.
     certificate_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
@@ -1797,12 +1797,12 @@ class CustomMetricRow(Base):
             "workspace_id", "slug", "version", name="uq_custom_metrics_slug_version"
         ),
         CheckConstraint("version >= 1", name="custom_metric_version_starts_at_one"),
-        # FR-MODEL-45's "same lifecycle as objectives" — the identical five states.
+        # FR-154's "same lifecycle as objectives" — the identical five states.
         CheckConstraint(
             "status IN ('draft', 'certified', 'review', 'approved', 'deprecated')",
             name="custom_metric_status_is_in_the_lifecycle",
         ),
-        # FR-MODEL-104, at the layer a direct `UPDATE` cannot walk past. `CustomMetric`
+        # FR-156, at the layer a direct `UPDATE` cannot walk past. `CustomMetric`
         # refuses `closer_to_one_is_better` and `not_ordered` in
         # `_direction_is_usable_for_stopping` because early stopping compares successive
         # values and needs a monotone "better"; this CHECK mirrors that validator exactly,
@@ -1812,14 +1812,14 @@ class CustomMetricRow(Base):
             "direction IN ('lower_is_better', 'higher_is_better')",
             name="custom_metric_direction_is_usable_for_stopping",
         ),
-        # FR-MODEL-103/FR-MODEL-75 for the whole of Phase 1, mirroring
+        # FR-155/FR-150 for the whole of Phase 1, mirroring
         # `CustomMetric._only_templates_are_built`: a `kind = 'expression'` row would carry
         # no loss at all, since nothing an expression metric needs is built yet.
         CheckConstraint(
             "kind = 'template' AND template IS NOT NULL",
             name="custom_metric_is_a_template_in_phase_1",
         ),
-        # FR-MODEL-105, at the layer a direct `UPDATE` cannot walk past. Mirrors
+        # FR-157, at the layer a direct `UPDATE` cannot walk past. Mirrors
         # `CustomMetric._a_status_past_draft_rests_on_a_certificate` (corrected 2026-08-19,
         # `30b6388`): `deprecated` joins `draft` because `VALID_METRIC_TRANSITIONS` reaches
         # it directly from `draft` — a metric abandoned before it was ever certified is
@@ -1834,9 +1834,9 @@ class CustomMetricRow(Base):
 
 
 class MetricCertificateRow(Base):
-    """A Metric Certificate (`02` §4.13, FR-MODEL-105).
+    """A Metric Certificate (`02` §4.13, FR-157).
 
-    Insert-only at the privilege layer (FR-DATA-42), for `ObjectiveCertificateRow`'s reason:
+    Insert-only at the privilege layer (FR-43), for `ObjectiveCertificateRow`'s reason:
     a certificate is the required evidence behind a Custom Metric's approval, and evidence
     that can change after the decision is not evidence.
 
@@ -1880,7 +1880,7 @@ class RatingVersionRow(Base):
     Minimal on purpose: `slug`, `version`, `status` (`draft → review → approved`), the
     dataset version it was fitted against, the pinned approved Model as an `ArtifactRef`
     string (`model:{slug}@{version}`), and the envelope timestamps. The full `03` surface
-    stays Phase 2 (FR-PLAT-67).
+    stays Phase 2 (FR-440).
     """
 
     __tablename__ = "rating_versions"
@@ -1976,11 +1976,11 @@ class RateTableRow(Base):
 
 
 class RateTableVersionRow(Base):
-    """An immutable rate table version (03 §3.3, FR-RATE-15/62, W10-2).
+    """An immutable rate table version (03 §3.3, FR-229/232, W10-2).
 
     The `definition` JSONB holds the validated `RateTable` shape (with the real
     version number injected); `seeded_from` holds the `SeededFrom` shape for versions
-    seeded from a model (FR-RATE-16). `storage` is fixed at write time — a `rows`
+    seeded from a model (FR-230). `storage` is fixed at write time — a `rows`
     version carries cells in `rate_table_cells`, a `parquet` version a blob (W10-3).
     """
 
@@ -2011,7 +2011,7 @@ class RateTableVersionRow(Base):
 
 
 class RateTableCellRow(Base):
-    """One cell of a `rows`-storage version (03 §3.3, FR-RATE-17, W10-2).
+    """One cell of a `rows`-storage version (03 §3.3, FR-231, W10-2).
 
     `key` is the key tuple as a JSON array (`["male", 25]`); `value` is the decimal
     relativity as a JSON string — never a float (R2).
@@ -2033,7 +2033,7 @@ class RateTableCellRow(Base):
 class ScoringTraceRow(Base):
     """A sampled scoring trace: a thin queryable row beside its blob body.
 
-    `03` §4.5's `Trace`, `03` FR-RATE-41/42, `00` NFR-OVR-6, W11 Task 4A (Ruling 23).
+    `03` §4.5's `Trace`, `03` FR-258/259, `00` NFR-459, WK-671 Task 4A (RL-888).
 
     **The row is a projection of the blob and is written from the same serialised `Trace`
     object, in one operation** — never assembled separately, which is what would let the
@@ -2042,9 +2042,9 @@ class ScoringTraceRow(Base):
     all. `app.platform.traces.write_trace` is the single writer.
 
     **`environment` is a plain string, not a Deployment FK** (C2): `Deployment` does not
-    exist before W14, so there is nothing to reference yet. A row written for the
+    exist before WK-674, so there is nothing to reference yet. A row written for the
     real-time production path (Slice 2 / Task 4B) carries the environment it was scored
-    in; a row written on request for a batch Job (FR-RATE-41's "on request", Ruling 25)
+    in; a row written on request for a batch Job (FR-258's "on request", RL-890)
     carries no environment at all, because a batch run has no live environment the way a
     real-time quote does. `GET /api/v1/traces` (`03` §5.1, "**production** traces") reads
     that absence as its exclusion signal — a batch-produced trace never has one to match.
@@ -2053,11 +2053,11 @@ class ScoringTraceRow(Base):
     (`app/platform/blobs.py`) is how every other row in this platform keeps a blob alive;
     `write_trace` calls `blobs.retain` in the same transaction as this insert, which is
     what keeps `ref_count > 0` and makes the row's blob invisible to GC's
-    `ref_count == 0` selector (Ruling 23's claim, verified rather than assumed — see
+    `ref_count == 0` selector (RL-888's claim, verified rather than assumed — see
     `backend/tests/test_traces.py`'s GC-survival test).
 
-    **`status`, `pending_quote_context` and `served_summary`** (W11 Task 4B, Ruling 35 —
-    `docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`): trace
+    **`status`, `pending_quote_context` and `served_summary`** (WK-671 Task 4B, RL-862 —
+    `docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`): trace
     *production* is decoupled from the serving request, so a sampled real-time outcome is
     first persisted `pending` — no body yet — with the Quote Context it will be re-scored
     from and the served result's summary to verify reproduction against. An off-path Job
@@ -2067,7 +2067,7 @@ class ScoringTraceRow(Base):
     served result (condition (b), body kept as evidence) or the pinned bundle no longer
     resolves at all (condition (a), no re-score attempted, no body) — recorded either way,
     never swallowed. A row `write_trace` writes directly (a batch Job's on-request trace,
-    FR-RATE-41/Ruling 25) is `complete` from the start — there is no pending phase when
+    FR-258/RL-890) is `complete` from the start — there is no pending phase when
     the caller already holds the full `Trace`.
 
     **Still no `UPDATE` grant** (`d3b955a63d6a`). Completing a pending row is a `DELETE`
@@ -2086,7 +2086,7 @@ class ScoringTraceRow(Base):
     rating_version_ref: Mapped[str] = mapped_column(String(100), nullable=False)
     bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
     #: Why this trace was persisted: `rate` (the configured sampling rate rolled sample),
-    #: `decline` or `error` (FR-RATE-42's 100 % floors). Task 4B decides which.
+    #: `decline` or `error` (FR-259's 100 % floors). Task 4B decides which.
     sample_reason: Mapped[str] = mapped_column(String(16), nullable=False)
     #: Null for a batch-produced trace (see class docstring); set by the real-time path.
     environment: Mapped[str | None] = mapped_column(String(32))
@@ -2099,19 +2099,19 @@ class ScoringTraceRow(Base):
     #: `complete`. Task 4B.
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="complete")
     #: The `QuoteContext` the off-path Job re-scores from, as JSON — the access-controlled
-    #: carrier Ruling 35 §8.4 requires in place of `JobRow.parameters`. `None` once a row
+    #: carrier RL-862 §8.4 requires in place of `JobRow.parameters`. `None` once a row
     #: is `complete`/`mismatch` and no longer needed (or for a `write_trace`-direct row,
     #: which never has a pending phase at all).
     pending_quote_context: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     #: `outcome`/`decline_reasons`/`premium_ladder`/`outputs` of the result actually
     #: served — never raw quote inputs — what the re-score's own summary is compared
-    #: against for Ruling 35's condition (b) reproduction check.
+    #: against for RL-862's condition (b) reproduction check.
     served_summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
-    #: What the ≥ 13-month retention floor (NFR-OVR-6) is measured from. Preserved across
+    #: What the ≥ 13-month retention floor (NFR-459) is measured from. Preserved across
     #: a pending row's completion (the delete-and-reinsert passes the original value
     #: through explicitly) — completion must not reset this, or it would silently shorten
-    #: the floor for a row that, from NFR-OVR-6's point of view, has not moved.
+    #: the floor for a row that, from NFR-459's point of view, has not moved.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

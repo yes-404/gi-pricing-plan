@@ -1,3 +1,13 @@
+---
+family: reference
+title: executor
+status: active                  # active → retired (§1.2a)
+created: 2026-08-29
+owner: maintainer
+corrected_by: []
+relates: []                      # ids only
+---
+
 # executor
 
 - **Model / effort:** Sonnet 5; medium (standard) — the highest-volume role; per-slice
@@ -45,9 +55,9 @@
   never wait for a notification"**. That wording failed twice more the same day: it named
   `pytest` when the third stall was a *benchmark*, and it said "poll" when the executor
   did poll — it wrote a poller, **backgrounded the poller**, and ended its turn anyway.
-  Three stalls on 2026-08-30 (W11 Tasks 3A ×2 and 3D), each holding finished work.
+  Three stalls on 2026-08-30 (WK-671 Tasks 3A ×2 and 3D), each holding finished work.
 - **Tools:** full read/write + Bash, scoped to the current slice's worktree. Not affected by
-  Part A2: `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` (lines 356–357)
+  Part A2: `docs/plans/PL-00845-rfc-840-rfc-841-adoption-reconciliation-and-rulings-2026-08-29.md` (lines 356–357)
   states this explicitly — the executor's write scope is code and tests, not `docs/` policy
   content, and needs no change. **May create or update a skill under `.claude/skills/`** —
   git and CI traps most often, the class `git-hygiene` already exists to hold, and the

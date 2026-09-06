@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/objective-certificate.schema.json",
   "title": "ObjectiveCertificate",
-  "description": "Mathematical evidence gating objective submission. See 02-modelling.md §4.7. Corrected 2026-08-24 (W32-11, OQ-MODEL-30): `result.checks.minItems` was 8, the pre-amendment count of named checks that the 2026-08-18 amendment left behind while adding `branch_discontinuity` to the `name` enum in this same file. It is 9 — §4.7's \"All nine checks are emitted for every template, always\". The floor is enforced on `ObjectiveCertificate` rather than on the shared `CertificateResult`, which stays unbounded because `MetricCertificate` carries four checks (FR-MODEL-126); the generated schema therefore emits no `minItems` here at all, and this floor is published and server-enforced rather than compared.",
-  "$comment": "Amended 2026-08-18 (W5, custom objectives), when this contract first met a generated counterpart. Three resolutions, each the code's (CLAUDE.md §0): (1) the findings moved into `result`, because certification runs in pricing-core and ADR-0001 forbids it an id, a clock or a job — `CertificateResult` is what it returns and this shape is what the platform persists around it; (2) the checks are named `analytic_vs_numeric_*`, not `symbolic_vs_numeric_*`: with expression objectives deferred to Phase 2 (OQ-MODEL-1) nothing is symbolic, and the derivatives compared are the hand-written analytic ones; `branch_discontinuity` joins the list as a ninth named check (FR-MODEL-69); (3) the failing status is `failed`, matching CheckStatus and the `failed` overall, rather than `fail`. The one place the contract was right and the code was not is `sampling.n_points`: the model admitted a grid of 1, and now carries this floor.",
+  "description": "Mathematical evidence gating objective submission. See 02-modelling.md §4.7. Corrected 2026-08-24 (W32-11, OQ-600): `result.checks.minItems` was 8, the pre-amendment count of named checks that the 2026-08-18 amendment left behind while adding `branch_discontinuity` to the `name` enum in this same file. It is 9 — §4.7's \"All nine checks are emitted for every template, always\". The floor is enforced on `ObjectiveCertificate` rather than on the shared `CertificateResult`, which stays unbounded because `MetricCertificate` carries four checks (FR-158); the generated schema therefore emits no `minItems` here at all, and this floor is published and server-enforced rather than compared.",
+  "$comment": "Amended 2026-08-18 (WK-661, custom objectives), when this contract first met a generated counterpart. Three resolutions, each the code's (CLAUDE.md §0): (1) the findings moved into `result`, because certification runs in pricing-core and ADR-703 forbids it an id, a clock or a job — `CertificateResult` is what it returns and this shape is what the platform persists around it; (2) the checks are named `analytic_vs_numeric_*`, not `symbolic_vs_numeric_*`: with expression objectives deferred to Phase 2 (OQ-573) nothing is symbolic, and the derivatives compared are the hand-written analytic ones; `branch_discontinuity` joins the list as a ninth named check (FR-148); (3) the failing status is `failed`, matching CheckStatus and the `failed` overall, rather than `fail`. The one place the contract was right and the code was not is `sampling.n_points`: the model admitted a grid of 1, and now carries this floor.",
   "type": "object",
   "required": ["id", "custom_objective_id", "objective_version", "certified_at", "result"],
   "properties": {
@@ -51,8 +51,8 @@
     }
   },
   "invariants": [
-    "overall == 'failed' blocks submission entirely (FR-MODEL-42)",
+    "overall == 'failed' blocks submission entirely (FR-146)",
     "overall is derived from the checks and enforced: any 'failed' check fails the certificate, any 'warn' or 'violated' makes it 'certified_with_findings'",
-    "convexity status 'violated' requires the objective to declare a hessian_strategy and escalates to two approvers (FR-MODEL-43)"
+    "convexity status 'violated' requires the objective to declare a hessian_strategy and escalates to two approvers (FR-152)"
   ]
 }

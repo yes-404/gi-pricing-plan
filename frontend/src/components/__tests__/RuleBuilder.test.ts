@@ -74,7 +74,7 @@ async function fill(): Promise<void> {
 }
 
 describe("the rule builder", () => {
-  it("walks FR-DATA-21's chain in order: author, dry-run, submit", async () => {
+  it("walks FR-50's chain in order: author, dry-run, submit", async () => {
     render(RuleBuilder, { props: { slug: "fremtpl2" } });
     await fill();
     await userEvent.click(screen.getByRole("button", { name: /Author, dry-run and submit/ }));
@@ -141,7 +141,7 @@ describe("the rule builder", () => {
     render(RuleBuilder, { props: { slug: "fremtpl2", seed: SEED } });
 
     // The slug is fixed, not merely defaulted: reusing it is what makes this the *next
-    // version* of that rule rather than a new one (`FR-DATA-54`).
+    // version* of that rule rather than a new one (`FR-56`).
     expect(await screen.findByDisplayValue("driv-age-range")).toBeInTheDocument();
     // The thresholds an actuary came here to change, already in the box.
     expect(screen.getByDisplayValue(/"min_inclusive": 18/)).toBeInTheDocument();

@@ -1,7 +1,7 @@
-"""GLM fitting against data whose answer is known (`02` FR-MODEL-18..23).
+"""GLM fitting against data whose answer is known (`02` FR-110, FR-111, FR-112, FR-113, FR-114, FR-115).
 
 The test that matters is not "does it return numbers" but **does it return the numbers
-that generated the data**. Everything else here is a refusal: `02` FR-MODEL-23 says a
+that generated the data**. Everything else here is a refusal: `02` FR-115 says a
 degenerate fit is a named error, never a silently returned result, and R5 says an estimate
 without uncertainty is not an estimate.
 """
@@ -70,9 +70,9 @@ def _spec(**over: object) -> GlmSpec:
     return GlmSpec(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-110")
 def test_the_fit_recovers_the_coefficients_that_generated_the_data() -> None:
-    """FR-MODEL-18/19: Poisson, log link, `offset = log(exposure)`.
+    """FR-110/111: Poisson, log link, `offset = log(exposure)`.
 
     Tolerances are loose enough for sampling noise at 20 000 rows and tight enough that a
     wrong offset, a dropped base level or a link mix-up moves the answer well outside them.
@@ -91,7 +91,7 @@ def test_the_fit_recovers_the_coefficients_that_generated_the_data() -> None:
     assert result.library_versions["glum"]
 
 
-@pytest.mark.req("FR-MODEL-21")
+@pytest.mark.req("FR-113")
 def test_every_coefficient_carries_its_uncertainty() -> None:
     """`02` R5. A point estimate alone is half a result, and the half that reads as
     more certain than it is."""
@@ -112,9 +112,9 @@ def test_every_coefficient_carries_its_uncertainty() -> None:
     assert urban.p_value < 1e-6
 
 
-@pytest.mark.req("FR-MODEL-21")
+@pytest.mark.req("FR-113")
 def test_the_relativity_table_marks_its_base_level() -> None:
-    """FR-MODEL-21: the base level is *marked*, at relativity 1.0.
+    """FR-113: the base level is *marked*, at relativity 1.0.
 
     Omitting it is how a reader ends up believing a factor has one fewer level than it has.
     """
@@ -131,9 +131,9 @@ def test_the_relativity_table_marks_its_base_level() -> None:
     assert base.exposure > 0
 
 
-@pytest.mark.req("FR-MODEL-23")
+@pytest.mark.req("FR-115")
 def test_a_collinear_design_is_named_rather_than_returned() -> None:
-    """FR-MODEL-23: rank deficiency is an error with the offending terms, not a fit.
+    """FR-115: rank deficiency is an error with the offending terms, not a fit.
 
     Two columns carrying the same information leave their coefficients unidentified. A GLM
     library will happily return *something*; what it returns is not an estimate.
@@ -147,7 +147,7 @@ def test_a_collinear_design_is_named_rather_than_returned() -> None:
     assert "collinear" in str(refused.value)
 
 
-@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-111")
 def test_zero_exposure_is_refused_rather_than_logged() -> None:
     """`log(0)` is `-inf`, and a row with no exposure carries no information.
 
@@ -165,9 +165,9 @@ def test_zero_exposure_is_refused_rather_than_logged() -> None:
     assert refused.value.code == "OFFSET_REQUIRED_FOR_FREQUENCY"
 
 
-@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-111")
 def test_a_poisson_spec_cannot_be_built_without_an_offset() -> None:
-    """FR-MODEL-19, refused at the type rather than warned about downstream.
+    """FR-111, refused at the type rather than warned about downstream.
 
     A frequency GLM fitted without `log(exposure)` models claims per *record* instead of
     claims per year, and its coefficients look perfectly reasonable on the screen.
@@ -176,9 +176,9 @@ def test_a_poisson_spec_cannot_be_built_without_an_offset() -> None:
         _spec(offset=OffsetSpec(kind="none"))
 
 
-@pytest.mark.req("FR-MODEL-5")
+@pytest.mark.req("FR-90")
 def test_a_prohibited_factor_cannot_be_resolved() -> None:
-    """FR-MODEL-5: the refusal is the whole point of the flag."""
+    """FR-90: the refusal is the whole point of the flag."""
     prohibited = _factor(
         "postcode", "area", prohibited=True,
         prohibited_reason="Proxy for a protected characteristic; board decision 2026-03.",
@@ -187,9 +187,9 @@ def test_a_prohibited_factor_cannot_be_resolved() -> None:
         resolve_factors(_frequency_data(100), [prohibited])
 
 
-@pytest.mark.req("FR-MODEL-2")
+@pytest.mark.req("FR-87")
 def test_a_missing_column_fails_loudly_at_resolution() -> None:
-    """FR-MODEL-2: a Factor is defined against a Dataset and resolved against a version.
+    """FR-87: a Factor is defined against a Dataset and resolved against a version.
 
     This is that resolution failing — the case the requirement exists for.
     """
@@ -197,18 +197,18 @@ def test_a_missing_column_fails_loudly_at_resolution() -> None:
         resolve_factors(_frequency_data(100), [_factor("gone", "no_such_column")])
 
 
-@pytest.mark.req("FR-MODEL-1")
-@pytest.mark.req("FR-MODEL-88")
+@pytest.mark.req("FR-83")
+@pytest.mark.req("FR-208")
 def test_a_factor_type_that_is_not_implemented_says_so() -> None:
     """Silently treating a `spline` as its raw column would produce a fit nobody could
     tell from a correct one.
 
     The example used to be `banding`, which now resolves. Changed rather than deleted: the
-    claim being tested is about the *unimplemented* arms of FR-MODEL-1's closed set, and
+    claim being tested is about the *unimplemented* arms of FR-83's closed set, and
     **three** of the eight are still unimplemented — `spline`, `polynomial` and
-    `expression`. (Was "five of the eight"; `interaction` began resolving with FR-MODEL-91
+    `expression`. (Was "five of the eight"; `interaction` began resolving with FR-92
     on 2026-08-18, and `offset` stopped being unimplemented and became *superseded* with
-    FR-MODEL-114 on 2026-08-22. The distinction is the point of the next test.)
+    FR-209 on 2026-08-22. The distinction is the point of the next test.)
     """
     splined = Factor(
         id=uuid4(), slug="age_spline", dataset_id=uuid4(), version=1,
@@ -218,13 +218,13 @@ def test_a_factor_type_that_is_not_implemented_says_so() -> None:
         resolve_factors(_frequency_data(100), [splined])
 
 
-@pytest.mark.req("FR-MODEL-114")
-@pytest.mark.req("FR-MODEL-88")
+@pytest.mark.req("FR-209")
+@pytest.mark.req("FR-208")
 def test_an_offset_factor_is_refused_as_superseded_and_never_as_pending() -> None:
     """A superseded arm never resolves, so its refusal must not promise that it will.
 
     The generic refusal says the build "does not resolve yet", which is the right message
-    for `spline` and the wrong one for `offset`: OQ-MODEL-23 superseded the type on
+    for `spline` and the wrong one for `offset`: OQ-571 superseded the type on
     2026-08-22 because an offset is declared on the fit spec through `OffsetSpec`, and a
     Factor type meaning the same thing was a second mechanism for a solved problem. A
     caller told "yet" would reasonably wait for a release that is never coming.
@@ -237,40 +237,40 @@ def test_an_offset_factor_is_refused_as_superseded_and_never_as_pending() -> Non
         resolve_factors(_frequency_data(100), [factor])
     assert "does not resolve yet" not in str(raised.value), (
         "a superseded arm was refused with the pending-slice message, which promises a "
-        "release that FR-MODEL-114 says will never come"
+        "release that FR-209 says will never come"
     )
 
 
-@pytest.mark.req("FR-MODEL-114")
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-209")
+@pytest.mark.req("FR-83")
 def test_the_superseded_offset_arm_stays_in_the_closed_set() -> None:
-    """FR-MODEL-114 supersedes `offset` by refusing it permanently, **not** by removing it.
+    """FR-209 supersedes `offset` by refusing it permanently, **not** by removing it.
 
     Artifacts are immutable, so a Factor persisted with `type: "offset"` can never be
     rewritten; dropping the arm would turn `Factor.model_validate` on read into a
     `ValidationError` that fails a whole workspace's factor list rather than the one row.
-    The enum is also the source the published OpenAPI is generated from (ADR-0002), and
-    external consumers have read it since Phase 0 — FR-MODEL-87's 2026-08-22 ruling.
+    The enum is also the source the published OpenAPI is generated from (ADR-704), and
+    external consumers have read it since Phase 0 — FR-207's 2026-08-22 ruling.
 
     This test exists because "superseded" reads like an invitation to delete the member,
     and the deletion would pass every other test in the suite.
     """
     assert FactorType.OFFSET in set(FactorType), (
-        "FR-MODEL-114 supersedes the `offset` Factor type by making its refusal permanent, "
+        "FR-209 supersedes the `offset` Factor type by making its refusal permanent, "
         "not by removing the arm - removing it breaks reads of already-persisted factors"
     )
     assert len(set(FactorType)) == 8, (
-        "FR-MODEL-1 declares a closed set of eight; superseding an arm does not shrink it"
+        "FR-83 declares a closed set of eight; superseding an arm does not shrink it"
     )
 
 
-@pytest.mark.req("FR-MODEL-88")
+@pytest.mark.req("FR-208")
 def test_an_expression_factor_can_be_declared_and_can_never_be_resolved() -> None:
-    """FR-MODEL-88 states this verdict rather than leaving it to be discovered.
+    """FR-208 states this verdict rather than leaving it to be discovered.
 
-    `FactorType.EXPRESSION` is a live member of FR-MODEL-1's closed set and `Factor` carries
+    `FactorType.EXPRESSION` is a live member of FR-83's closed set and `Factor` carries
     no field to hold the expression, so the type is selectable and the payload cannot be
-    supplied. OQ-MODEL-8 (decided 2026-08-17) called that contained rather than corrected:
+    supplied. OQ-582 (decided 2026-08-17) called that contained rather than corrected:
     the refusal is at resolution, which is the boundary where an unresolved factor would
     otherwise become a fit nobody could tell from a correct one. The field and its validator
     arm are Phase 1b's, with the rest of the expression work.
@@ -280,15 +280,15 @@ def test_an_expression_factor_can_be_declared_and_can_never_be_resolved() -> Non
         type=FactorType.EXPRESSION, source_columns=("driv_age",),
     )
     assert not hasattr(factor, "expression"), (
-        "an `expression` field would make this factor resolvable and FR-MODEL-88 wrong"
+        "an `expression` field would make this factor resolvable and FR-208 wrong"
     )
     with pytest.raises(FactorResolutionError, match="'expression'"):
         resolve_factors(_frequency_data(100), [factor])
 
 
-@pytest.mark.req("FR-MODEL-4")
+@pytest.mark.req("FR-89")
 def test_a_monotonic_direction_requires_a_rationale() -> None:
-    """FR-MODEL-4: the direction is an actuarial judgement, and the next person needs to
+    """FR-89: the direction is an actuarial judgement, and the next person needs to
     know whose and why."""
     with pytest.raises(ValueError, match="rationale"):
         _factor("age", "driv_age", monotonic_direction=MonotonicDirection.DECREASING)
@@ -302,9 +302,9 @@ def test_a_monotonic_direction_requires_a_rationale() -> None:
     ).monotonic_direction is MonotonicDirection.DECREASING
 
 
-@pytest.mark.req("FR-MODEL-3")
+@pytest.mark.req("FR-88")
 def test_control_factors_are_fitted_but_not_rateable() -> None:
-    """FR-MODEL-3: year of account absorbs variance and is never rated on."""
+    """FR-88: year of account absorbs variance and is never rated on."""
     from pricing_core.modelling.factors import rateable
 
     risk = _factor("area", "area")
@@ -341,7 +341,7 @@ def _gamma_severity(n: int = 4_000, scale: float = 1.0, seed: int = 20260815) ->
     )
 
 
-@pytest.mark.req("FR-MODEL-21")
+@pytest.mark.req("FR-113")
 def test_the_standard_error_of_a_severity_model_does_not_depend_on_the_currency_unit() -> None:
     """`02` R5, and the defect that made it a lie for every family except Poisson.
 
@@ -377,7 +377,7 @@ def test_the_standard_error_of_a_severity_model_does_not_depend_on_the_currency_
     assert 0.01 < area_term(pounds).std_error < 0.10
 
 
-@pytest.mark.req("FR-MODEL-21")
+@pytest.mark.req("FR-113")
 def test_the_reported_interval_actually_covers_the_truth() -> None:
     """Coverage, measured rather than assumed.
 
@@ -405,9 +405,9 @@ def test_the_reported_interval_actually_covers_the_truth() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-111")
 def test_a_weight_column_changes_the_answer() -> None:
-    """FR-MODEL-19: severity is weighted by claim count, burning cost by exposure.
+    """FR-111: severity is weighted by claim count, burning cost by exposure.
 
     Nothing exercised the weight path at all — replacing `weights` with `None` left every
     test green. Here the weights are deliberately informative, so ignoring them moves the
@@ -433,9 +433,9 @@ def test_a_weight_column_changes_the_answer() -> None:
     assert se(weighted) < se(unweighted) * 0.75
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-110")
 def test_a_burning_cost_model_fits_at_all() -> None:
-    """FR-MODEL-19's third default, which had never run.
+    """FR-111's third default, which had never run.
 
     The family string was built as `tweedie(p=1.5)`; glum parses the power by calling
     `float("p=1.5")`, so every burning cost fit raised a bare `ValueError` from inside the
@@ -463,7 +463,7 @@ def test_a_burning_cost_model_fits_at_all() -> None:
     assert all(c.std_error > 0 for c in result.coefficients)
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-110")
 def test_a_tweedie_power_outside_its_range_is_refused_by_the_spec() -> None:
     """At 1 it is Poisson and at 2 it is Gamma; between them it is what burning cost needs.
 
@@ -475,9 +475,9 @@ def test_a_tweedie_power_outside_its_range_is_refused_by_the_spec() -> None:
               offset=OffsetSpec(kind="none"))
 
 
-@pytest.mark.req("FR-MODEL-23")
+@pytest.mark.req("FR-115")
 def test_separation_is_refused_rather_than_returned_as_an_enormous_coefficient() -> None:
-    """FR-MODEL-23 names separation, and nothing detected it.
+    """FR-115 names separation, and nothing detected it.
 
     A perfectly separated logit returned `converged=True` with a coefficient of 640 and
     p=0 — the "silently returned degenerate fit" the requirement exists to forbid.
@@ -504,7 +504,7 @@ def test_separation_is_refused_rather_than_returned_as_an_enormous_coefficient()
     assert "x" in refused.value.terms
 
 
-@pytest.mark.req("FR-MODEL-21")
+@pytest.mark.req("FR-113")
 def test_a_non_multiplicative_link_reports_no_relativity_rather_than_one() -> None:
     """A relativity is `exp(β)` — a reading of a multiplicative model.
 
@@ -536,7 +536,7 @@ def test_a_non_multiplicative_link_reports_no_relativity_rather_than_one() -> No
     assert urban_level.estimate == pytest.approx(1.2, abs=0.2)
 
 
-@pytest.mark.req("FR-MODEL-21")
+@pytest.mark.req("FR-113")
 def test_the_base_level_is_the_one_carrying_the_most_exposure() -> None:
     """`02` §4.1 declares `base_level_method: largest_exposure`; the code chose
     alphabetically.
@@ -562,13 +562,13 @@ def test_the_base_level_is_the_one_carrying_the_most_exposure() -> None:
     assert base.level == "c"
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_a_boolean_factor_fits_rather_than_being_called_collinear() -> None:
     """`str(True)` is `"True"`; polars renders the same value as `"true"`.
 
     The dummy was therefore all-zero, and the failure surfaced as `GLM_RANK_DEFICIENT`
     "two or more terms are collinear" for a single term with nothing to be collinear with —
-    the wrong cause, which is what FR-MODEL-23's "offending factors identified" is for.
+    the wrong cause, which is what FR-115's "offending factors identified" is for.
     """
     n = 2_000
     rng = np.random.default_rng(13)
@@ -586,9 +586,9 @@ def test_a_boolean_factor_fits_rather_than_being_called_collinear() -> None:
     assert term.estimate == pytest.approx(0.4, abs=0.15)
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-110")
 def test_the_inverse_link_fits_rather_than_dying_inside_the_library() -> None:
-    """FR-MODEL-18 declares `inverse` supported, and it is the canonical Gamma link.
+    """FR-110 declares `inverse` supported, and it is the canonical Gamma link.
 
     It reached `glum` as the string `"inverse"`, which is not in that library's link
     vocabulary, and every such fit died on a bare `ValueError` raised from inside
@@ -626,21 +626,21 @@ def test_the_inverse_link_fits_rather_than_dying_inside_the_library() -> None:
     intercept = result.intercept
     assert intercept is not None
     assert intercept.estimate == pytest.approx(0.5 - 0.004 * 40, abs=5e-3)
-    # FR-MODEL-21: no relativity under a non-multiplicative link — `exp(β)` means nothing
+    # FR-113: no relativity under a non-multiplicative link — `exp(β)` means nothing
     # when the effect is additive on `1/mu`.
     assert slope.relativity is None
 
 
-@pytest.mark.req("FR-MODEL-23")
+@pytest.mark.req("FR-115")
 def test_a_response_outside_the_family_domain_is_named_rather_than_a_stack_trace() -> None:
-    """FR-MODEL-23's remainder: a `glum` refusal that is not rank deficiency.
+    """FR-115's remainder: a `glum` refusal that is not rank deficiency.
 
     The fit site caught only `np.linalg.LinAlgError`, so the *only* library failure it
     named was a singular design. A Gamma severity response containing a nil settlement —
     an ordinary claims table, not a pathological one — reached the caller as a bare
     `ValueError: Some value(s) of y are out of the valid range for
     familyGammaDistribution.` raised from `glum/_glm.py:428`, and the job stored a stack
-    trace where FR-MODEL-23 promises a named error with something to act on.
+    trace where FR-115 promises a named error with something to act on.
 
     Not `GLM_RANK_DEFICIENT`: that code's message names collinear terms, and nothing here
     is collinear with anything. A wrong diagnosis sends the reader off to drop a factor
@@ -670,21 +670,21 @@ def test_a_response_outside_the_family_domain_is_named_rather_than_a_stack_trace
     # message ends up naming the wrong cause.
     assert "out of the valid range" in str(refused.value)
     assert "familyGammaDistribution" in str(refused.value)
-    # Actionable, not merely named (FR-MODEL-23): the reader is told which inputs to look
+    # Actionable, not merely named (FR-115): the reader is told which inputs to look
     # at, and that nothing was estimated.
     assert "Nothing was estimated" in str(refused.value)
     assert refused.value.terms  # the design's terms, as every other GLM refusal carries
     assert isinstance(refused.value.__cause__, ValueError)
 
 
-@pytest.mark.req("FR-MODEL-23")
+@pytest.mark.req("FR-115")
 def test_a_malformed_weight_column_is_named_rather_than_a_stack_trace() -> None:
     """The same clause, reached by a different `glum` check.
 
     `glum` refuses a negative `sample_weight` in `_validation.py` before it solves
     anything, so this never touches the linear algebra and could not have been a
     `LinAlgError` on any input. A severity model weighted by claim count is the ordinary
-    way a weight column reaches a fit (FR-MODEL-19), which is what makes a bad one worth a
+    way a weight column reaches a fit (FR-111), which is what makes a bad one worth a
     named refusal rather than a traceback.
     """
     data = _frequency_data(2_000).with_columns(
@@ -702,7 +702,7 @@ def test_a_malformed_weight_column_is_named_rather_than_a_stack_trace() -> None:
     assert "Sample weights must be non-negative" in str(refused.value)
 
 
-@pytest.mark.req("FR-MODEL-23")
+@pytest.mark.req("FR-115")
 def test_a_singular_design_still_reaches_the_rank_deficient_code() -> None:
     """The clause order is load-bearing, and the language hides why.
 
@@ -726,9 +726,9 @@ def test_a_singular_design_still_reaches_the_rank_deficient_code() -> None:
     assert refused.value.code == "GLM_RANK_DEFICIENT"
 
 
-@pytest.mark.req("NFR-MODEL-6")
+@pytest.mark.req("NFR-481")
 def test_two_fits_of_one_spec_reproduce_identical_coefficients() -> None:
-    """NFR-MODEL-6's GLM half, which carried no marker until 2026-08-22.
+    """NFR-481's GLM half, which carried no marker until 2026-08-22.
 
     The requirement asks for two things and the suite proved one: `test_gbm.py` pins the
     booster hash, and nothing anywhere refitted a GLM and compared coefficients. The
@@ -751,9 +751,9 @@ def test_two_fits_of_one_spec_reproduce_identical_coefficients() -> None:
         assert abs(left.estimate - right.estimate) <= 1e-10, left.term
 
 
-@pytest.mark.req("FR-MODEL-123")
+@pytest.mark.req("FR-179")
 def test_fit_glm_refuses_a_seed_argument() -> None:
-    """FR-MODEL-123: `spec.seed` is the only seed, and the dead kwarg is gone.
+    """FR-179: `spec.seed` is the only seed, and the dead kwarg is gone.
 
     A deleted parameter and a silently-ignored one are indistinguishable to a caller until
     one of them raises — which is how `fit_glm(..., seed=…)` reached twenty call sites, four

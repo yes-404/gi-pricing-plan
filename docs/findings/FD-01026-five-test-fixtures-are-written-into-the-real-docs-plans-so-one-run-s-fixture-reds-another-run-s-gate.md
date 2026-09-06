@@ -1,0 +1,116 @@
+---
+id: FD-1026
+family: finding
+title: five test fixtures are written into the real `docs/plans/`, so one run's fixture reds another run's gate
+status: active                  # active → closed | retired (§1.2a)
+created: 2026-09-02
+owner: auditor
+corrected_by: []
+relates: []                     # ids only — the SL-/WK- this discharges through, once known
+was: docs/audit/findings/F89.md
+---
+
+# F89 — five test fixtures are written into the real `docs/plans/`, so one run's fixture reds another run's gate
+
+**Raised** 2026-09-02 by the W37-5c stamp-path executor, on the lead's instruction, after three
+different failure sets appeared from one branch in one hour and every one of them passed when
+re-run alone. Phase 2. **Demonstrated, not inferred** — the reproduction is below and takes five
+seconds.
+
+## The defect
+
+**Two test modules create fixture files inside the repository's own `docs/plans/`, then run
+`scripts/audit-docs.py` over the real working tree and assert it goes red.** The fixture is
+removed in a `finally`, so a clean serial run leaves nothing behind and the suite is green.
+
+| Module | Scratch files it writes into `docs/plans/` |
+|---|---|
+| `tests/test_audit_docs_plan_acceptance_standard.py` | `2026-08-31-zz-scratch-check28-missing-field.md`, `2026-08-20-zz-scratch-check28-legacy.md`, `2026-08-31-zz-scratch-check28-conforming.md`, `2026-08-31-zz-scratch-check28-bare-heading.md` |
+| `tests/test_audit_docs_finding_citations.py` | `zz-scratch-test-dangling-finding.md` |
+
+**The window is the defect.** While one of those files exists, `docs/plans/` contains a document
+that `audit-docs.py` is *supposed* to reject — and every other reader of that directory sees it
+too. Nothing scopes the fixture to the test that owns it.
+
+## Reproduced
+
+Run against the real tree at `359936b`, with the same content
+`test_a_dangling_finding_id_is_refused` writes:
+
+```
+BEFORE  exit=0
+DURING  exit=1
+        - docs/plans/zz-scratch-test-dangling-finding.md: cites finding F999999, which resolves nowhere ...
+        - docs/plans/zz-scratch-test-dangling-finding.md: not one of the four documented kind-suffixes ...
+AFTER   exit=0
+```
+
+**Two checks fire, not the one the test is about.** The collateral is wider than the fixture's
+own subject, so a reader of the failure cannot tell from the message which test caused it.
+
+## The exposed class, measured
+
+Not the tests that happened to red. **Ten test modules invoke `audit-docs.py` as a subprocess
+over the real working tree**, and every one of them is exposed for the duration of any window
+above. Predicate, verbatim and runnable at `359936b`:
+
+```sh
+for f in tests/*.py; do
+  if grep -q "audit-docs.py" "$f" && grep -q "cwd=ROOT" "$f"; then echo "$f"; fi
+done | wc -l          # -> 10
+```
+
+Two of the ten are also the writers, which is why a single-module run never shows it.
+
+## Three modes, only one of which was observed
+
+1. **Concurrent runs.** Two `pytest` processes over one working tree. Observed three times; the
+   evidence is below.
+2. **An interrupted run.** The cleanup is a `finally`, not a fixture teardown, so a `SIGKILL`,
+   a container stop or a `Ctrl+C` between the write and the `unlink` leaves the file on disk.
+   `audit-docs.py` then stays red until a human notices a `zz-scratch-` file, and the message
+   accuses a document nobody wrote.
+3. **A `git` write during a run.** `git add -A` in another shell stages the fixture. This
+   happened during W37-5c: `git status` reported `AD docs/plans/zz-scratch-test-dangling-finding.md`
+   — staged as added, already deleted from disk — and it was unstaged by hand before the commit.
+   The commit would otherwise have carried a file that never existed by the time it landed.
+
+## The evidence, and the property that makes it dangerous
+
+Three failure sets from one branch, all with the same working tree, none reproducible alone:
+
+| Run | Result |
+|---|---|
+| Serial, nothing else running | **548 passed** |
+| The five suites from set B, alone | **50 passed** |
+| Serial, at the branch head | **550 passed** |
+| Concurrent with a second `pytest` | 3 failed — `test_notes_move_citations`, `test_register_owed::test_check_29_wiring_is_undisturbed`, `test_repository_invariants::test_money_discipline_is_enforced_by_the_docs_audit` |
+| Concurrent with a second `pytest` | 5 failed — `test_register_lint::test_check_29_is_wired_into_the_docs_gate`, `test_register_lint::test_check_29_note_carries_the_residue_line`, `test_register_owed::test_check_29_wiring_is_undisturbed`, `test_repository_invariants::test_money_discipline_is_enforced_by_the_docs_audit`, `test_repository_invariants::test_journey_citations_are_audited_in_ci` |
+
+**The first concurrent set contained one genuine failure** — a real defect in the branch under
+test — **alongside two phantoms, and nothing in the output distinguished them.** That is the cost:
+not that a phantom red wastes time, but that it arrives mixed with real ones and lowers the credit
+given to the whole set. A team that has spent a day separating real reds from instrument artefacts
+is the team this misleads.
+
+## Why it matters now rather than generally
+
+**W37-6 is a one-way migration whose gate is run once**, and its own leaf plan requires
+`audit-docs.py` green before and after. A phantom red there is read as a migration defect; a
+phantom green — a scratch file left behind and then *rewritten* by the migration's citation pass —
+is worse. Any run of the gate concurrent with a test run is exposed, and nothing warns.
+
+## Not proposed here
+
+The disposition is the lead's and the fix is not this finding's to choose. Three shapes exist, and
+they differ in what they give up: a `tmp_path` corpus (loses the real-tree coverage these tests
+exist for); a per-test unique filename plus a session-scoped lock (keeps coverage, adds
+serialisation); or a `--root` argument to `audit-docs.py` so a test can point it at a copy (the
+largest change, and the one that removes the shared mutable state rather than guarding it).
+
+## Falsifiable
+
+Discharged when no test writes into a directory another test's subprocess reads, proven by the
+reproduction above going `exit=0` throughout while the writing tests still pass — and by a run of
+the full suite concurrent with a second run of the same suite, both green. Re-opened if a new test
+adds a fixture inside a scanned root, which is the event that recreates it.

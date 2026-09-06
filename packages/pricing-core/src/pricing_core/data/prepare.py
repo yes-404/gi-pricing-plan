@@ -1,22 +1,22 @@
-"""Preparation recipes (`01` §3.2, §5.2, FR-DATA-9..14).
+"""Preparation recipes (`01` §3.2, §5.2, FR-35, FR-36, FR-37, FR-38, FR-39, FR-41).
 
 > A **Preparation Recipe** is an ordered list of declarative steps applied during
 > ingestion. Supported step types are exactly: … **No free-form code.**
 
-Declarative because a recipe is *evidence*. FR-DATA-14 requires it to be replayable — the
+Declarative because a recipe is *evidence*. FR-41 requires it to be replayable — the
 same recipe over the same bytes reproduces the same version — and a step that could run
 arbitrary code is a step whose replay depends on what that code could reach on the day.
 
 Three steps carry real actuarial weight and are implemented as named functions rather than
 recipe entries, because `02` and the ingestion path both call them:
 
-* **`explode_period`** preserves `sum(exposure)` **exactly**, in `Decimal` (FR-DATA-11).
+* **`explode_period`** preserves `sum(exposure)` **exactly**, in `Decimal` (FR-37).
   Splitting a mid-term change into two rows with floats loses fractions of a policy-year
   per split; across a million policies that is a visible error in the frequency
   denominator, arrived at by arithmetic nobody questioned.
 * **`attach_claims`** reports unlinked and multi-linked claims rather than dropping them
-  (FR-DATA-12) — a claim that fails to link is the most important row in the file.
-* **`pseudonymise`** maps a customer to a stable token per workspace (FR-DATA-13), so the
+  (FR-38) — a claim that fails to link is the most important row in the file.
+* **`pseudonymise`** maps a customer to a stable token per workspace (FR-39), so the
   same person is recognisable across versions and meaningless outside.
 """
 
@@ -47,7 +47,7 @@ __all__ = [
     "pseudonymise",
 ]
 
-#: FR-DATA-9 says *exactly* these. A recipe naming anything else is refused rather than
+#: FR-35 says *exactly* these. A recipe naming anything else is refused rather than
 #: ignored: a step that silently does nothing is worse than one that fails, because the
 #: version it produces looks prepared.
 STEP_TYPES: Final[frozenset[str]] = frozenset(
@@ -92,7 +92,7 @@ def apply_recipe(
     *,
     progress: ProgressCallback | None = None,
 ) -> PreparationResult:
-    """Apply an ordered list of declarative steps (FR-DATA-9).
+    """Apply an ordered list of declarative steps (FR-35).
 
     Steps are applied in order and each sees the previous one's output — a recipe is a
     pipeline, and reordering it is a different recipe rather than the same one written
@@ -106,7 +106,7 @@ def apply_recipe(
         if kind not in STEP_TYPES:
             raise RecipeError(
                 f"step {index} is {kind!r}, which is not one of the declared step types "
-                f"(FR-DATA-9). Permitted: {sorted(STEP_TYPES)}."
+                f"(FR-35). Permitted: {sorted(STEP_TYPES)}."
             )
         if progress is not None:
             progress.check_cancelled()
@@ -200,7 +200,7 @@ def explode_period(
     exposure_column: str = "exposure_years",
     boundaries: Sequence[date] = (),
 ) -> pl.DataFrame:
-    """Split exposure rows at declared boundaries, preserving the total exactly (FR-DATA-11).
+    """Split exposure rows at declared boundaries, preserving the total exactly (FR-37).
 
     The post-condition is checked, not assumed: `sum(exposure)` before must equal
     `sum(exposure)` after, in `Decimal`. Apportioning with floats loses fractions of a
@@ -256,7 +256,7 @@ def explode_period(
     if total_before != total_after:
         raise RecipeError(
             f"explode_period changed total exposure from {total_before} to {total_after}. "
-            "FR-DATA-11 requires sum(exposure) preserved exactly; a difference here is a "
+            "FR-37 requires sum(exposure) preserved exactly; a difference here is a "
             "silent error in every frequency denominator downstream."
         )
     return exploded
@@ -272,7 +272,7 @@ def decimal_sum(frame: pl.DataFrame, column: str) -> Decimal:
 
 @dataclass(frozen=True)
 class AttachResult:
-    """Linked claims, plus the ones that could not be linked (FR-DATA-12)."""
+    """Linked claims, plus the ones that could not be linked (FR-38)."""
 
     linked: pl.DataFrame
     unlinked: pl.DataFrame
@@ -296,7 +296,7 @@ def attach_claims(
     start_column: str = "exposure_start",
     end_column: str = "exposure_end",
 ) -> AttachResult:
-    """Link claims to the exposure row covering the loss date (FR-DATA-12).
+    """Link claims to the exposure row covering the loss date (FR-38).
 
     Unlinked and multi-linked claims are **returned**, not dropped. A claim that fails to
     link is the most important row in the file: it is either a data error or a policy the
@@ -332,12 +332,12 @@ def _claim_key(claims: pl.DataFrame) -> str:
             return candidate
     raise RecipeError(
         "the claim table needs an identifying column (claim_id, claim_reference or id) "
-        "so unlinked and multi-linked claims can be reported individually (FR-DATA-12)"
+        "so unlinked and multi-linked claims can be reported individually (FR-38)"
     )
 
 
 def pseudonymise(frame: pl.DataFrame, *, column: str, key: str) -> pl.DataFrame:
-    """Replace an identifier with a stable, workspace-scoped token (FR-DATA-13).
+    """Replace an identifier with a stable, workspace-scoped token (FR-39).
 
     HMAC-SHA256 rather than a bare hash: a plain `sha256(customer_id)` is reversible by
     anyone who can guess the id space, and customer ids are guessable. The workspace key
@@ -350,7 +350,7 @@ def pseudonymise(frame: pl.DataFrame, *, column: str, key: str) -> pl.DataFrame:
     if not key:
         raise RecipeError(
             "pseudonymise needs a workspace key; without one the token is a plain hash and "
-            "reversible by anyone who can guess the identifier space (FR-DATA-13)"
+            "reversible by anyone who can guess the identifier space (FR-39)"
         )
 
     secret = key.encode()

@@ -59,13 +59,13 @@ describe("the GBM arm panel", () => {
   });
 
   it("says a constraint direction in words, never in colour alone", () => {
-    // NFR-OVR-10. A red or green arrow is not a channel a screen reader has.
+    // NFR-463. A red or green arrow is not a channel a screen reader has.
     render(GbmFitPanel, { props: { spec: SPEC, fit: FIT } });
     expect(screen.getByText("increasing")).toBeInTheDocument();
   });
 
   it("says who applies the inverse link, for both readings of the field", () => {
-    // FR-MODEL-94: null means the library already transformed; a value means the platform
+    // FR-130: null means the library already transformed; a value means the platform
     // must. The value alone cannot distinguish them, so the page says which.
     render(GbmFitPanel, { props: { spec: SPEC, fit: FIT } });
     expect(screen.getByText(/library has already applied/i)).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("the GBM arm panel", () => {
   });
 
   it("reports a declared eval metric the backend did not evaluate", () => {
-    // FR-MODEL-111. Silent absence is exactly the defect the field was added to remove.
+    // FR-161. Silent absence is exactly the defect the field was added to remove.
     render(GbmFitPanel, { props: { spec: SPEC, fit: FIT } });
     expect(screen.getByText(/rmse/)).toBeInTheDocument();
     expect(screen.getByText(/not evaluated/i)).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe("the GBM arm panel", () => {
   });
 
   it("says the offset entered as a base margin, not as a feature", () => {
-    // FR-MODEL-27. Exposure entering as a feature or a weight is the difference between a
+    // FR-121. Exposure entering as a feature or a weight is the difference between a
     // frequency model and a nonsense one, and the fit result is where what was actually
     // constructed is recorded.
     render(GbmFitPanel, { props: { spec: SPEC, fit: FIT } });
@@ -96,7 +96,7 @@ describe("the GBM arm panel", () => {
   });
 
   it("names the early-stopping metric and what it stopped on", () => {
-    // FR-MODEL-30 refuses training-set stopping. The metric and the partition are what say
+    // FR-124 refuses training-set stopping. The metric and the partition are what say
     // the stop was honest; "early stopping: on" says nothing a reader can check.
     render(GbmFitPanel, { props: { spec: SPEC, fit: FIT } });
     expect(screen.getByText(/poisson-nloglik/)).toBeInTheDocument();

@@ -65,7 +65,7 @@ describe("BacktestView", () => {
     expect(paths).toContain(`/api/v1/models/backtests/${BACKTEST.id}`);
   });
 
-  // FR-MODEL-57's caption limb. This assertion is the only evidence that limb can have:
+  // FR-187's caption limb. This assertion is the only evidence that limb can have:
   // `req-coverage.py` scans backend tests and cannot see a frontend caption at all.
   it("captions the single partition Backtest, and shows no fit partition", async () => {
     stubBoth();

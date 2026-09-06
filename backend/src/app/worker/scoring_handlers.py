@@ -1,20 +1,20 @@
-"""`score.batch` — the batch scoring Job handler (`03` §3.7/§5.1/§5.2, FR-RATE-36/37/38;
-W11 Task 3B).
+"""`score.batch` — the batch scoring Job handler (`03` §3.7/§5.1/§5.2, FR-253/254/255;
+WK-671 Task 3B).
 
 **This is where the ruling lives — everything durable is here.** Task 3A's `score_batch`
 (`pricing_core.rating.score`) is a pure, chunked `def` holding no state (Rulings 31 §3/5,
-`docs/plans/2026-08-29-w11-3-d6-batch-resumability-ruling.md`); this module owns the four
+`docs/rulings/INDEX.md#2026-08-29-w11-3-d6-batch-resumability-rulingmd`); this module owns the four
 things it structurally cannot: the manifest, the scratch parts, the abort threshold, and
 the final content-addressed output.
 
 ## The manifest is the scratch key's own existence — no separate table
 
-Ruling 31 §2 fixes the key: **the compiled bundle's content hash (FR-RATE-24), the Dataset
+RL-857 §2 fixes the key: **the compiled bundle's content hash (FR-239), the Dataset
 Version reference, and the chunk index** — never the Job id, because no terminal Job is
-ever re-run (`VALID_TRANSITIONS` gives `failed` no outbound edge). Ruling 31 §7 leaves the
+ever re-run (`VALID_TRANSITIONS` gives `failed` no outbound edge). RL-857 §7 leaves the
 *storage shape* to the executor, naming *"a table, or scratch keys enumerated by
 prefix"* as the two live options. This build takes the second: `BlobStore.write_scratch`/
-`read_scratch` (Ruling 31 §4's "outside the content-addressed store", `blobs.py`'s own
+`read_scratch` (RL-857 §4's "outside the content-addressed store", `blobs.py`'s own
 `scratch/` prefix, never a `BlobRow`) at
 
     score-batch/{bundle.content_hash}/{dataset_version_id}/{chunk_index}
@@ -28,16 +28,16 @@ it can skip.
 
 ## One Job, one or more Rating Versions, one uniform result shape
 
-FR-RATE-36 asks for *"a Dataset Version re-rated against one or more Rating Versions"*.
+FR-253 asks for *"a Dataset Version re-rated against one or more Rating Versions"*.
 `score_batch` takes one `CompiledBundle` per call (`03` §5.2), so this handler loops
 `rating_version_refs`, stamping the **resolved** ref into each frame it builds — never the
 value a caller supplied, which `03` §4.8 rules is Task 3B's constraint to hold
-(Ruling 43 §5(iii)): `CompiledBundle` carries no ref of its own, so nothing downstream of
+(RL-923 §5(iii)): `CompiledBundle` carries no ref of its own, so nothing downstream of
 resolution can check a mismatch, and reading `rating_version_ref` off the *dataset* would
 let a parquet attribute premiums to a version that never computed them.
 
 The Job's `JobResult` is always `kind="blob"`, pointing at one small JSON summary — never
-`kind="artifact"` (no new persisted row type for this; there is nowhere Ruling 31 or the
+`kind="artifact"` (no new persisted row type for this; there is nowhere RL-857 or the
 frozen plan asks for one) and never a bare parquet ref (which cannot represent more than
 one rating version). The summary lists, per ref: the output parquet's own blob ref, the row
 count, the outcome counts, the per-category error counts and a few samples, and whether
@@ -46,14 +46,14 @@ result whose type depends on the caller's own cardinality.
 
 ## Resolving a bundle reuses `app.api.score`'s resolver — never a second one
 
-Ruling 42 (`docs/plans/2026-08-30-w11-reopen-scope-and-batch-frame-contract-rulings.md`)
-put Ruling 41's NFR-RATE-1 remediation here deliberately, because this is the **second**
+RL-922 (`docs/rulings/RL-00922-the-remediation-is-ruled-into-the-reopen-and-nfr-489-s-verdict-is-ruled-out-of-it-they-are-two-different-things-and-the-record-must-not-merge-them.md`)
+put RL-921's NFR-489 remediation here deliberately, because this is the **second**
 caller that needs a `rating_version_ref -> CompiledBundle` resolution, and
 `app.api.score._compiled_for` is the only one in the repository. `CLAUDE.md` §2: *"Nobody
 hand-writes a shape that already exists"* — a second resolver here would be exactly that,
 and in a pricing platform a diverged shape is a mispricing. This handler's own
 `BundleSlot` is local to one Job run (a fresh instance per invocation, capacity 1, unraised
-per Ruling 41 §4) — it is not the API process's per-worker slot, and holds nothing across
+per RL-921 §4) — it is not the API process's per-worker slot, and holds nothing across
 Jobs.
 
 ## Errors are isolated per row by `score_batch` itself; this counts and, above a
@@ -61,12 +61,12 @@ Jobs.
 
 `score_batch`'s own output frame already turns a per-row failure into an `"error"` row
 rather than raising (`pricing_core.rating.score`'s own module docstring) — that is the
-structural half of FR-RATE-38 ("does not abort on individual failures"). What is left to
+structural half of FR-255 ("does not abort on individual failures"). What is left to
 this handler is the **policy** half: counting `error_code` per category, sampling a few
 messages, and comparing the running failure rate against the effective threshold
-(`rating.batch_abort_failure_rate`, Ruling 24, `docs/plans/2026-08-29-w11-slices-3-4-
-rulings.md`) after every chunk. A request's own `abort_failure_rate` argument may only
-*lower* the resolved workspace setting — `01` FR-DATA-54's `severity_override` precedent —
+(`rating.batch_abort_failure_rate`, RL-889, `docs/rulings/RL-00889-d3-the-batch-ab
+ort-threshold-is-a-workspace-setting-with-a-one-directional-per-run-argument.md`) after every chunk. A request's own `abort_failure_rate` argument may only
+*lower* the resolved workspace setting — `01` FR-56's `severity_override` precedent —
 refused with `BATCH_ABORT_THRESHOLD_ABOVE_SETTING` before a row is scored if it would
 raise it. A run that crosses the effective threshold raises `BATCH_ABORTED`, naming both
 numbers, rather than completing with a result that reads as clean.
@@ -105,7 +105,7 @@ __all__ = ["register_scoring_handlers"]
 #: against a prior run's value: nothing records what a prior run used.
 _DEFAULT_CHUNK_ROWS = 100_000
 
-#: FR-RATE-38's five categories, plus the shape a batch row actually carries. Capped so a
+#: FR-255's five categories, plus the shape a batch row actually carries. Capped so a
 #: pathological run with thousands of one kind of failure does not inflate the summary
 #: blob past what a human reads.
 _MAX_ERROR_SAMPLES = 5
@@ -146,7 +146,7 @@ async def _effective_threshold(
     session: Any, app_settings: Any, workspace_id: UUID, requested: float | None
 ) -> float | None:
     """`rating.batch_abort_failure_rate`'s three-layer resolution, plus the per-run
-    argument (Ruling 24) — which is a Job argument, never a fourth resolution tier, and
+    argument (RL-889) — which is a Job argument, never a fourth resolution tier, and
     may only lower the resolved value."""
     resolution = await settings_service.resolve(
         session, app_settings, workspace_id, "rating.batch_abort_failure_rate"
@@ -167,7 +167,7 @@ async def _effective_threshold(
 
 def _dataset_frame(table: pl.DataFrame, ref: ArtifactRef) -> pl.DataFrame:
     """The Dataset Version's chosen table, with `rating_version_ref` stamped to the
-    **resolved** ref (Ruling 43 §5(iii), `03` §4.8) — overwriting whatever the table
+    **resolved** ref (RL-923 §5(iii), `03` §4.8) — overwriting whatever the table
     itself carries, since nothing about that value is trustworthy: `CompiledBundle` has
     no ref to check it against, so this handler is the only place that can make it agree
     with what is actually about to be scored."""
@@ -282,7 +282,7 @@ def _score_one_ref(
 
         output_ref = progress.run_on_loop(_store_output())
 
-    # Ruling 31 §4: chunk parts are released once the run completes — the output parquet
+    # RL-857 §4: chunk parts are released once the run completes — the output parquet
     # they were assembled into is what survives, content-addressed and reference-counted.
     for key in scratch_keys:
         progress.run_on_loop(progress.blob_store.delete_scratch(key))
@@ -301,7 +301,7 @@ def _score_one_ref(
 
 
 def _score_batch_handler(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`score.batch` (FR-RATE-36/37/38, `03` §5.1's `/score/batch` row — Task 3C's route
+    """`score.batch` (FR-253/254/255, `03` §5.1's `/score/batch` row — Task 3C's route
     submits this; Task 3B builds the handler and nothing that calls it yet)."""
     progress = _bridge(callback)
     workspace_id = _workspace(parameters)

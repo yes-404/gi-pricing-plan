@@ -1,4 +1,4 @@
-"""Setting resolution (`07` §4.4, FR-PLAT-43..46).
+"""Setting resolution (`07` §4.4, FR-446, FR-447, FR-448, FR-449).
 
 > Settings resolve by precedence: **environment variable → workspace setting → platform
 > default**. The effective value and its source are inspectable by an Admin.
@@ -62,6 +62,6 @@ class SettingResolution(BaseModel):
     feature_flag: bool = Field(
         default=False,
         description="Feature flags gate optional or risk-bearing capabilities and default "
-        "to the safe value (FR-PLAT-46).",
+        "to the safe value (FR-449).",
     )
     description: str = ""

@@ -1,10 +1,10 @@
-"""Validating a Model Spec without fitting it (`02` FR-MODEL-44, FR-MODEL-81, §5.1).
+"""Validating a Model Spec without fitting it (`02` FR-153, FR-185, §5.1).
 
 The point is **cost**. Every check here is answerable from artifacts the platform already
 stores — the version's status and totals, its profile's distinct counts, the factor rows,
 the split row — so a spec that cannot be fitted is refused in milliseconds instead of after
-a compute job has read a parquet file and run a solver. `wf-01` step D2 is exactly this
-moment, and FR-MODEL-81's "before any compute is spent" is only true if the check itself
+a compute job has read a parquet file and run a solver. `WF-698` step D2 is exactly this
+moment, and FR-185's "before any compute is spent" is only true if the check itself
 spends none.
 
 **Problems are collected, not raised at the first failure.** `02` §5.3 asks the spec
@@ -53,9 +53,9 @@ __all__ = ["complexity_or_refuse", "enforce_complexity", "validate_spec"]
 async def _limits(
     session: AsyncSession, settings: Settings, workspace_id: UUID
 ) -> tuple[int | None, float | None]:
-    """FR-MODEL-81's two thresholds, or `None` where the workspace sets none.
+    """FR-185's two thresholds, or `None` where the workspace sets none.
 
-    `None` is the default and the decision — OQ-MODEL-6 refused a platform-wide constant,
+    `None` is the default and the decision — OQ-580 refused a platform-wide constant,
     so an unset limit means "no gate", not "gate at zero".
     """
     max_factors = await settings_service.resolve(
@@ -78,7 +78,7 @@ def _estimated_parameters(factors: list[Factor], profile: Profile | None) -> int
     An **estimate**, and named one. A factor whose banding collapses forty levels into five
     is over-counted here, so the gate is conservative in the direction that refuses a spec
     which would in fact have fitted. The diagnostics record the true count after the fit
-    (FR-MODEL-81), and that is the number a reviewer reads.
+    (FR-185), and that is the number a reviewer reads.
     """
     counts = {c.name: c.distinct_count for c in profile.columns} if profile else {}
     total = 1  # the intercept
@@ -97,7 +97,7 @@ def complexity_or_refuse(
     max_factor_count: int | None,
     min_exposure_per_parameter: float | None,
 ) -> tuple[list[SpecProblem], int, float | None]:
-    """The FR-MODEL-81 gate, shared by spec validation and model reservation.
+    """The FR-185 gate, shared by spec validation and model reservation.
 
     Returns the problems it found rather than raising, because `validate_spec` reports a
     list and `reserve_model` turns the same list into a refusal. One implementation, two
@@ -113,7 +113,7 @@ def complexity_or_refuse(
                 subject="modelling.max_factor_count",
                 message=(
                     f"the spec declares {len(factors)} factors and this workspace allows "
-                    f"{max_factor_count} (FR-MODEL-81). The limit is a workspace setting, "
+                    f"{max_factor_count} (FR-185). The limit is a workspace setting, "
                     "not a platform constant — a larger book may warrant raising it."
                 ),
             )
@@ -130,7 +130,7 @@ def complexity_or_refuse(
                     message=(
                         f"about {parameters} parameters over {exposure_years} exposure "
                         f"years is {per_parameter:.1f} per parameter, below this "
-                        f"workspace's {min_exposure_per_parameter} (FR-MODEL-81). The "
+                        f"workspace's {min_exposure_per_parameter} (FR-185). The "
                         "parameter count is estimated from the version's profile, so a "
                         "banded factor is counted at its unbanded levels."
                     ),
@@ -148,7 +148,7 @@ async def validate_spec(
     actor: Principal,
     spec: ModelSpec,
 ) -> SpecValidation:
-    """Everything that can refuse this spec, answered before any compute (FR-MODEL-44).
+    """Everything that can refuse this spec, answered before any compute (FR-153).
 
     Structural rules the *type* already enforces — a Poisson model declaring no offset, a
     Tweedie power outside (1, 2) — are absent here on purpose: `GlmSpec` refuses to be
@@ -208,7 +208,7 @@ async def validate_spec(
                     subject=factor.slug,
                     message=(
                         f"{factor.slug!r} is prohibited: {factor.prohibited_reason}. "
-                        "FR-MODEL-5 refuses it in any Model Spec, and the attempt is "
+                        "FR-90 refuses it in any Model Spec, and the attempt is "
                         "audited."
                     ),
                 )
@@ -221,7 +221,7 @@ async def validate_spec(
                     subject=factor.slug,
                     message=(
                         f"{factor.slug!r} reads {missing}, which this version does not "
-                        "have. FR-MODEL-2: a Factor is defined against a Dataset and "
+                        "have. FR-87: a Factor is defined against a Dataset and "
                         "resolved against a version, and this is that resolution failing "
                         "— before a job rather than inside one."
                     ),
@@ -229,7 +229,7 @@ async def validate_spec(
             )
 
     # A surrogate's response is another model's prediction, not a column the version has
-    # (FR-MODEL-96, FR-MODEL-102). Reporting it missing would tell an analyst their
+    # (FR-137, FR-141). Reporting it missing would tell an analyst their
     # approximation was broken because it is an approximation.
     surrogate = isinstance(spec, GlmSpec) and spec.approximates_model_id is not None
     if columns and not surrogate and spec.response_column not in columns:
@@ -256,10 +256,10 @@ async def validate_spec(
             )
         )
 
-    # A `kind="model"` offset is another model's linear predictor (FR-MODEL-24): the ref
+    # A `kind="model"` offset is another model's linear predictor (FR-116): the ref
     # must resolve to a fitted GLM in this workspace whose link is the new spec's. Every
     # refusal the resolver names is reported as the ref's problem here, before a Job
-    # exists — `wf-01` D2's rule applied to offsets-from-model.
+    # exists — `WF-698` D2's rule applied to offsets-from-model.
     if isinstance(spec, GlmSpec) and spec.offset.kind == "model":
         try:
             await resolve_offset_model(
@@ -292,7 +292,7 @@ async def validate_spec(
     problems.extend(complexity)
 
     if complexity:
-        # FR-MODEL-81 requires the refusal to be audited. Only the complexity refusal: a
+        # FR-185 requires the refusal to be audited. Only the complexity refusal: a
         # spec that names a missing column is a typo, and auditing every keystroke of a
         # form with live validation would bury the governance events in noise.
         await audit.record(
@@ -339,11 +339,11 @@ async def _custom_objective_problems(
     with them.** That is the division this module's own docstring already states: the
     validator answers "may this be fitted?" and the fit is the backstop for a spec that was
     valid when it was validated. A check the fit makes and this does not is a spec that
-    validates and then fails — the thing `wf-01` D2 exists to prevent.
+    validates and then fails — the thing `WF-698` D2 exists to prevent.
 
     Not mirrored: `fit_gbm`'s ref-mismatch guard. It compares the artifact handed to the fit
     against the ref the spec names, and exists because `pricing-core` cannot read the store
-    (ADR-0001). Here the artifact is fetched *by* that ref, so the two cannot disagree.
+    (ADR-703). Here the artifact is fetched *by* that ref, so the two cannot disagree.
 
     A ref that resolves to nothing is a **problem, not a 404** — the same treatment
     `_offset_problems` gives an unresolvable offset model twenty lines above, and the same
@@ -362,7 +362,7 @@ async def _custom_objective_problems(
         fittable = ", ".join(sorted(s.value for s in FITTABLE_OBJECTIVE_STATUSES))
         return _unsupported(
             ref,
-            f"Custom Objective {ref} is {objective.status.value} (`02` R4, FR-MODEL-46). "
+            f"Custom Objective {ref} is {objective.status.value} (`02` R4, FR-163). "
             f"A fit may use one that is {fittable}.",
         )
 
@@ -370,7 +370,7 @@ async def _custom_objective_problems(
         return _unsupported(
             ref,
             "the spec names a Custom Objective and declares no `response` "
-            "(FR-MODEL-44). A builtin objective names its own family; a custom one does "
+            "(FR-153). A builtin objective names its own family; a custom one does "
             "not, so the response is what the applicability check and the diagnostics "
             "deviance are both read from, and neither may be guessed.",
         )
@@ -380,7 +380,7 @@ async def _custom_objective_problems(
         return _unsupported(
             ref,
             f"Custom Objective {ref} declares applicability to {allowed} and the spec "
-            f"models {spec.response.value} (FR-MODEL-44).",
+            f"models {spec.response.value} (FR-153).",
         )
 
     backend = ObjectiveBackend(spec.model_type)
@@ -389,7 +389,7 @@ async def _custom_objective_problems(
         return _unsupported(
             ref,
             f"Custom Objective {ref} declares applicability to {allowed} and the spec "
-            f"fits with {backend.value} (FR-MODEL-44).",
+            f"fits with {backend.value} (FR-153).",
         )
 
     return []
@@ -398,10 +398,10 @@ async def _custom_objective_problems(
 async def _objective_problems(
     session: AsyncSession, workspace_id: UUID, spec: ModelSpec
 ) -> list[SpecProblem]:
-    """FR-MODEL-44's *objective applicability* half, for the GBM arm.
+    """FR-153's *objective applicability* half, for the GBM arm.
 
     `fit_gbm` refuses these too, and that is not a duplicate rule: this answers
-    "may this be fitted?" before a Job exists, which is what `wf-01` D2 asks for and what
+    "may this be fitted?" before a Job exists, which is what `WF-698` D2 asks for and what
     `02` §5.3's live validation renders. The fit-time refusal is the backstop for a spec
     that was valid when it was validated and reached the worker anyway.
 
@@ -418,7 +418,7 @@ async def _objective_problems(
                 kind=SpecProblemKind.OBJECTIVE_UNSUPPORTED,
                 subject=str(spec.objective.name),
                 message=(
-                    f"{spec.objective.name!r} is outside FR-MODEL-26's set "
+                    f"{spec.objective.name!r} is outside FR-120's set "
                     f"({', '.join(sorted(SUPPORTED_GBM_OBJECTIVES))})."
                 ),
             )
@@ -450,7 +450,7 @@ def _columns(version: DatasetVersionRow) -> set[str]:
 
 
 def _exposure(version: DatasetVersionRow) -> Decimal | None:
-    """The version's recorded exposure, as `Decimal` (FR-OVR-7)."""
+    """The version's recorded exposure, as `Decimal` (FR-10)."""
     totals = version.totals or {}
     raw = totals.get("exposure_years")
     if raw is None:
@@ -481,7 +481,7 @@ async def _profile(
 async def _split_problems(
     session: AsyncSession, workspace_id: UUID, spec: ModelSpec
 ) -> list[SpecProblem]:
-    """The split must exist and name two real parts (FR-DATA-36, FR-MODEL-54).
+    """The split must exist and name two real parts (FR-76, FR-183).
 
     Checked here rather than only in the fit handler because the handler's refusal arrives
     after the Job has been queued, accepted and started — a `202` followed by a failure is
@@ -493,7 +493,7 @@ async def _split_problems(
                 kind=SpecProblemKind.SPLIT_MISSING,
                 message=(
                     "the spec names no split, so the fit would have no holdout. "
-                    "FR-MODEL-54 makes a diagnostic reported without its holdout "
+                    "FR-183 makes a diagnostic reported without its holdout "
                     "counterpart a defect, and `02` §4.8 makes diagnostics the condition "
                     "of reaching `fitted`."
                 ),
@@ -541,7 +541,7 @@ async def enforce_complexity(
     actor: Principal,
     spec: ModelSpec,
 ) -> None:
-    """Refuse a breaching spec before a Job is queued (FR-MODEL-81).
+    """Refuse a breaching spec before a Job is queued (FR-185).
 
     `POST /models`' half of the gate. It runs the **same** `complexity_or_refuse` that
     `validate_spec` reports, so a spec the validator called acceptable cannot be refused
@@ -554,7 +554,7 @@ async def enforce_complexity(
     max_factors, min_exposure = await _limits(session, settings, workspace_id)
     if max_factors is None and min_exposure is None:
         # The default. No limits set means no gate, so nothing is read and nothing is
-        # audited — FR-MODEL-81's unset default costs a settings lookup and stops.
+        # audited — FR-185's unset default costs a settings lookup and stops.
         return
 
     version = (

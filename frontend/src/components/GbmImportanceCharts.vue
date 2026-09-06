@@ -22,11 +22,11 @@ const props = defineProps<{
 }>();
 
 /**
- * Split importance — gain, cover and frequency (FR-MODEL-52).
+ * Split importance — gain, cover and frequency (FR-174).
  *
  * Unpartitioned: an importance is a property of the fitted booster, counted over its own
  * splits rather than measured against a population of rows, so there is no train and no
- * holdout to report (FR-MODEL-54, as scoped 2026-08-24). `cover` is nullable — LightGBM does
+ * holdout to report (FR-183, as scoped 2026-08-24). `cover` is nullable — LightGBM does
  * not report it — and a null is shown as a null rather than as a zero, which would read as
  * "this feature covered nothing".
  */
@@ -57,7 +57,7 @@ const gainRows = computed(() =>
 );
 
 /**
- * Permutation importance, **on the holdout** (FR-MODEL-52).
+ * Permutation importance, **on the holdout** (FR-174).
  *
  * Single-valued, and labelled as holdout rather than rendered opposite an empty train column.
  * It is not a property of the fit — it *is* computed over rows — but its `degradation` is
@@ -125,7 +125,7 @@ const permutationRows = computed(() =>
       />
     </ChartFigure>
 
-    <!-- FR-MODEL-52: monotonicity verification is that the fitted response actually respects
+    <!-- FR-174: monotonicity verification is that the fitted response actually respects
          the declared constraint, so "declared" and "holds" are read together — a factor with
          no declared direction cannot violate one. The word is what carries the verdict:
          `worst_violation` defaults to `0.0` and is `0.0` whenever the constraint holds, so

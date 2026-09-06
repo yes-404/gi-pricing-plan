@@ -11,22 +11,22 @@ reproducible from the description given.
 
 | # | Question | Verdict | Effect |
 |---|---|---|---|
-| F1 | Does the ZEN Engine preserve exact decimal money? | ✓ **Yes** — `rust_decimal`, not `f64` | **OQ-RATE-1 resolved**; ADR-0004 confirmed; spike re-scoped |
-| F2 | Can SymPy differentiate the `where()` → `Piecewise` form? | ✓ Yes, and the spec's derivatives are provably correct | FR-MODEL-40 confirmed |
+| F1 | Does the ZEN Engine preserve exact decimal money? | ✓ **Yes** — `rust_decimal`, not `f64` | **OQ-614 resolved**; ADR-706 confirmed; spike re-scoped |
+| F2 | Can SymPy differentiate the `where()` → `Piecewise` form? | ✓ Yes, and the spec's derivatives are provably correct | FR-144 confirmed |
 | F3 | Does the certification design work on a piecewise objective? | ⚠ **No** — it would reject sound objectives | §4.7 amended |
 | F4 | Is the spec's example convexity figure real? | ⚠ **It was invented** | Corrected |
 | F5 | Does `predt` include `base_margin` in a custom objective? | ✓ Yes — the spec's comment was right | Confirmed, with a new silent-failure risk |
 | F6 | Do discriminated unions survive to JSON Schema? | ✓ Yes, but in a different shape than drafted | Contracts note added |
-| F7 | Is `Decimal` safe through the generated contract? | ⚠ **Generated schema permits a lossy `number`** | FR-OVR-7 gap closed |
-| F8 | Does glum expose standard errors? | ✓ Yes — named API | FR-MODEL-21 confirmed |
-| F9 | Is pandera's Polars support production-ready? | ✓ Yes, plus a lazy backend | NFR-DATA-2 strengthened |
-| F10 | Is the Polars streaming engine safe for aggregation? | ⚠ Open memory regression | ADR-0005's split validated |
-| F11 | What actually consumes a 50 ms p99 budget? | ⚠ Pydantic on the hot path | NFR-RATE-1 guidance added |
-| F13 | Is LightGBM's `init_score` symmetric with XGBoost's `base_margin`? | ⚠ **Half** — symmetric at fit, **asymmetric at scoring** | FR-MODEL-72 added (spike S3) |
+| F7 | Is `Decimal` safe through the generated contract? | ⚠ **Generated schema permits a lossy `number`** | FR-10 gap closed |
+| F8 | Does glum expose standard errors? | ✓ Yes — named API | FR-113 confirmed |
+| F9 | Is pandera's Polars support production-ready? | ✓ Yes, plus a lazy backend | NFR-466 strengthened |
+| F10 | Is the Polars streaming engine safe for aggregation? | ⚠ Open memory regression | ADR-707's split validated |
+| F11 | What actually consumes a 50 ms p99 budget? | ⚠ Pydantic on the hot path | NFR-489 guidance added |
+| F13 | Is LightGBM's `init_score` symmetric with XGBoost's `base_margin`? | ⚠ **Half** — symmetric at fit, **asymmetric at scoring** | FR-129 added (spike S3) |
 
 ---
 
-## F1 — ZEN Engine numeric semantics (OQ-RATE-1) ✓
+## F1 — ZEN Engine numeric semantics (OQ-614) ✓
 
 **The suite's highest-risk unknown is resolved, favourably.**
 
@@ -38,16 +38,16 @@ float.
 `rust_decimal` characteristics: 96-bit integer mantissa, ~28–29 significant digits, values
 of the form `m / 10^e` with `-2^96 < m < 2^96` and `e ∈ [0, 28]`.
 
-**ADR-0004 stands.** The integer-minor-units workaround proposed in the original OQ-RATE-1
+**ADR-706 stands.** The integer-minor-units workaround proposed in the original OQ-614
 recommendation is **not required for correctness** inside the engine.
 
 ### But the risk moved rather than vanished
 
 | Residual risk | Evidence | Mitigation now specified |
 |---|---|---|
-| **Serialisation boundary** | `rust_decimal` "currently serializes numbers in a float like format by default"; exact JSON needs the `serde-with-arbitrary-precision` feature. `arbitrary_precision` is no longer default for Rust crate consumers, though **Python/Node/C/UniFFI bindings opt in automatically** | `03` FR-RATE-56 — verify arbitrary precision on **both** parse and serialise at every boundary crossing |
-| **`maths-nopanic` returns `0`** | `zen-engine` enables this feature; invalid input to `ln`/`log10` yields **0 instead of panicking** | `03` FR-RATE-57 — no unguarded transcendental in a rateable path; a domain guard is mandatory |
-| **Scale capped at 28** | `rust_decimal` scale ∈ [0, 28] | Bounded by the ladder's rounding discipline (FR-RATE-12); worth a check in the S1 spike |
+| **Serialisation boundary** | `rust_decimal` "currently serializes numbers in a float like format by default"; exact JSON needs the `serde-with-arbitrary-precision` feature. `arbitrary_precision` is no longer default for Rust crate consumers, though **Python/Node/C/UniFFI bindings opt in automatically** | `03` FR-273 — verify arbitrary precision on **both** parse and serialise at every boundary crossing |
+| **`maths-nopanic` returns `0`** | `zen-engine` enables this feature; invalid input to `ln`/`log10` yields **0 instead of panicking** | `03` FR-274 — no unguarded transcendental in a rateable path; a domain guard is mandatory |
+| **Scale capped at 28** | `rust_decimal` scale ∈ [0, 28] | Bounded by the ladder's rounding discipline (FR-226); worth a check in the S1 spike |
 
 The S1 spike is **not cancelled — it is re-scoped**: from "can the engine do decimal?" to
 "is precision preserved across the Python binding boundary, and does any rateable path
@@ -62,7 +62,7 @@ reach a `maths-nopanic` sink?"
 ## F2–F4 — Custom objective certification (spike, SymPy 1.14.0)
 
 The spike took the asymmetric burning-cost objective **exactly as written in
-`02` §4.6** and put it through the pipeline FR-MODEL-40 describes.
+`02` §4.6** and put it through the pipeline FR-144 describes.
 
 ### F2 — SymPy handles the grammar ✓
 
@@ -101,9 +101,9 @@ that point is simply invalid:
 Halving the step does not help: the contaminated band narrows with `h`, but the relative
 error inside it stays at ~1.1e-01 for every `h` tested (1e-4, 1e-6, 1e-8).
 
-**Consequence:** as originally written, FR-MODEL-42 would have failed **every**
+**Consequence:** as originally written, FR-146 would have failed **every**
 `where()`-based objective — the entire reason the expression form exists. Amended in
-`02` FR-MODEL-42 and §4.7:
+`02` FR-146 and §4.7:
 
 1. Sample points within `h` of a `Piecewise` branch boundary are **excluded** from the
    finite-difference comparison, and the excluded count is reported.
@@ -150,7 +150,7 @@ difference             : log(exposure) − 0.5, not log(exposure)
 ```
 
 No error is raised. A forgotten `base_margin` at scoring time yields a **confidently wrong
-premium**. `02` FR-MODEL-31 and FR-MODEL-62 now require the offset construction to be
+premium**. `02` FR-125 and FR-193 now require the offset construction to be
 persisted with the booster and **asserted at load time**, not merely documented.
 
 **Sources:** [Advanced custom objectives](https://xgboost.readthedocs.io/en/latest/tutorials/advanced_custom_obj.html) ·
@@ -171,7 +171,7 @@ persisted with the booster and **asserted at load time**, not merely documented.
 ```
 
 A `Literal` with two values maps **both tags onto one branch** — exactly the
-`xgboost`/`lightgbm` sharing that `model-spec.schema.json` needs. ADR-0002's generation
+`xgboost`/`lightgbm` sharing that `model-spec.schema.json` needs. ADR-704's generation
 path is viable.
 
 **Note for Phase 1:** the hand-drafted contracts express variants as `allOf` + `if`/`then`.
@@ -192,10 +192,10 @@ synthesise the discriminator's field name for these errors.
 
 Serialisation itself is safe — `model_dump_json()` emits `"1.0400"` as an exact **string**.
 But the *generated schema also permits `{"type": "number"}`*, the lossy binary-float form
-that FR-OVR-7 forbids.
+that FR-10 forbids.
 
 The contract would therefore be satisfiable by a payload the specification prohibits.
-`contracts/README.md` and FR-OVR-7 now require monetary and relativity fields to be
+`contracts/README.md` and FR-10 now require monetary and relativity fields to be
 **constrained to the string form** in the generated schema, not left as `anyOf`.
 
 ---
@@ -206,7 +206,7 @@ The contract would therefore be satisfiable by a payload the specification prohi
 non-robust, robust (HC-1) and clustered variants, plus a coefficient table with confidence
 intervals and p-values. Exposure offsets are handled natively.
 
-**FR-MODEL-21 is achievable as written**, and `02` §8 now names the real API instead of
+**FR-113 is achievable as written**, and `02` §8 now names the real API instead of
 assuming one exists.
 
 **Source:** [glum changelog](https://glum.readthedocs.io/en/latest/changelog.html)
@@ -221,14 +221,14 @@ from one schema definition. Polars `DataFrame` and `LazyFrame` are both supporte
 
 **New capability worth adopting:** 0.32.0 ships an optional **Narwhals-powered backend that
 keeps validation fully lazy**, installable as `pandera[narwhals,polars]`. This directly
-serves NFR-DATA-2 (structural layer must fail fast in ≤ 2 min) — recorded in `01` §8.
+serves NFR-466 (structural layer must fail fast in ≤ 2 min) — recorded in `01` §8.
 
 **Sources:** [pandera Polars](https://pandera.readthedocs.io/en/latest/polars.html) ·
 [0.19 release](https://github.com/unionai-oss/pandera/discussions/1617)
 
 ---
 
-## F10 — Polars streaming engine ⚠ (and an accidental validation of ADR-0005)
+## F10 — Polars streaming engine ⚠ (and an accidental validation of ADR-707)
 
 The new morsel-driven streaming engine has out-of-core group-by, equi-join and sort with
 spill-to-disk, and is the recommended path for large workloads in 2026.
@@ -237,17 +237,17 @@ spill-to-disk, and is the recommended path for large workloads in 2026.
 a simple group-by over Parquet consumes **> 6 GB RAM** on Polars 1.35.2 where the *old*
 streaming engine (1.15) did not. A regression, with no team response recorded.
 
-**This validates [ADR-0005](../adr/0005-polars-duckdb-over-pandas.md)'s division of labour
+**This validates [ADR-707](../adrs/ADR-00707-polars-duckdb-as-the-data-engine-not-pandas.md)'s division of labour
 for a reason the ADR did not anticipate.** The ADR assigns *aggregation* to DuckDB and
 *row-level transformation* to Polars. Profiling, one-ways, PSI and dislocation — the heavy
 group-bys — therefore never touch the affected code path. Recorded as an addendum to
-ADR-0005 rather than a change to it.
+ADR-707 rather than a change to it.
 
 ---
 
 ## F11 — Low-latency serving ⚠
 
-Relevant to NFR-RATE-1 (p99 < 50 ms) and NFR-RATE-2:
+Relevant to NFR-489 (p99 < 50 ms) and NFR-490:
 
 - Pydantic validation costs roughly **~1 ms per request** as a baseline — 2 % of the budget
   before any pricing work happens.
@@ -259,14 +259,14 @@ Relevant to NFR-RATE-1 (p99 < 50 ms) and NFR-RATE-2:
 
 **Consequence for `03`:** the scoring endpoint must **not** use `response_model` validation
 on the hot path — the `ScoringResult` is constructed by `pricing-core` and is already
-trusted. Added as NFR-RATE-13.
+trusted. Added as NFR-502.
 
 ---
 
 ## F12 — Vue Flow ✓
 
 `isValidConnection` supports per-handle or global edge validation, which is the mechanism
-behind `03` FR-RATE-1's "an invalid graph is visibly invalid before save". Large graphs
+behind `03` FR-212's "an invalid graph is visibly invalid before save". Large graphs
 need memoised custom node components, and Web Workers are the escape hatch for heavy layout
 — relevant because a motor structure is ~200 steps.
 
@@ -308,7 +308,7 @@ the natural port is *no call at all* — and predictions are then wrong by exact
 `log(exposure)`, with nothing raising. The XGBoost failure at least has an API surface you
 might notice you skipped; this one does not.
 
-Recorded as **FR-MODEL-72**: implement the scoring-side offset per backend, and assert on
+Recorded as **FR-129**: implement the scoring-side offset per backend, and assert on
 each backend independently that `predict(fit_data)` reproduces the fitted raw score.
 
 **Spike S3 is closed.**
@@ -329,7 +329,7 @@ system**.
 1.1 * 3   == 3.3   ->  true          2.675 * 100  ->  267.5
 ```
 
-A float engine fails every one of these. ADR-0004 stands.
+A float engine fails every one of these. ADR-706 stands.
 
 **At the Python binding — no decimal type exists.**
 
@@ -339,12 +339,12 @@ Decimal("1.005")  ->  TypeError: argument 'ctx': unsupported type Decimal
 36120 + 7         ->  36127.0                    (Python float)
 ```
 
-Exactness cannot cross the boundary in either direction. Hence **FR-RATE-56 rewritten**:
+Exactness cannot cross the boundary in either direction. Hence **FR-273 rewritten**:
 money crosses as integer minor units, which *are* exactly representable in `float64` up to
 2^53 (≈ £90 trillion in pence). The workaround is required after all — not because the
 engine is inexact, but because the binding is.
 
-### FR-RATE-57 was aimed at the wrong operation
+### FR-274 was aimed at the wrong operation
 
 It guarded `ln`/`log10` under `maths-nopanic`. S1 found **`log` and `sqrt` do not exist in
 the ZEN expression language** — they fail to parse. The requirement guarded calls that
@@ -363,9 +363,9 @@ null premium. Rewritten accordingly.
 
 ### A third find
 
-`min(1,2)` / `max(1,2)` are **invalid function calls** in ZEN, yet `03` FR-RATE-28 lists
+`min(1,2)` / `max(1,2)` are **invalid function calls** in ZEN, yet `03` FR-244 lists
 `min` and `max` as available. `abs`, `round`, `floor`, `ceil`, `sum` do work. Added
-**FR-RATE-59**: resolve the function vocabulary against the real engine at compile time,
+**FR-276**: resolve the function vocabulary against the real engine at compile time,
 so a graph cannot call something that exists only in our documentation.
 
 **Spike S1 closed.**
@@ -387,14 +387,14 @@ quote. 3 000 iterations after warm-up:
 
 (ms; measured on a 2-core box.)
 
-**`exact` mode costs ~1 ms of a 50 ms budget — about 2 %.** OQ-RATE-2 resolves favourably,
-and importantly **OQ-MODEL-3 is not decided by force**: rating on the exact model or on its
+**`exact` mode costs ~1 ms of a 50 ms budget — about 2 %.** OQ-615 resolves favourably,
+and importantly **OQ-575 is not decided by force**: rating on the exact model or on its
 GLM approximation stays a genuine design choice.
 
 **Threading is the actionable finding.** All-cores is *worse* at the tail than single-thread
 — p99 1.48 vs 1.09 ms, and a 19.9 ms worst case against 4.5 ms — because thread-pool
 spin-up dominates a single-row prediction. Parallelism belongs across concurrent requests.
-Recorded as **NFR-RATE-14**.
+Recorded as **NFR-501**.
 
 **Caveat:** this measures per-request latency on an unloaded 2-core machine, not p99 under
 200 rps sustained. The per-request measurement is the right unit for a single-threaded
@@ -407,15 +407,15 @@ Phase 2.
 
 | Document | Change |
 |---|---|
-| [`open-questions.md`](../open-questions.md) | OQ-RATE-1 → `decided`; S1 spike re-scoped |
-| [`02-modelling.md`](../specs/02-modelling.md) | FR-MODEL-42 kink handling; §4.7 corrected figures + step-aware tolerance; §4.6 canonical derivative form; FR-MODEL-31/62 base_margin assertion; §8 glum API named |
-| [`03-rating-engine.md`](../specs/03-rating-engine.md) | New FR-RATE-56/57 (precision boundary, `maths-nopanic`); NFR-RATE-13 (no `response_model` on the hot path) |
+| [`open-questions.md`](../open-questions.md) | OQ-614 → `decided`; S1 spike re-scoped |
+| [`02-modelling.md`](../specs/02-modelling.md) | FR-146 kink handling; §4.7 corrected figures + step-aware tolerance; §4.6 canonical derivative form; FR-125/193 base_margin assertion; §8 glum API named |
+| [`03-rating-engine.md`](../specs/03-rating-engine.md) | New FR-273/274 (precision boundary, `maths-nopanic`); NFR-502 (no `response_model` on the hot path) |
 | [`01-data-management.md`](../specs/01-data-management.md) | pandera Narwhals lazy backend |
-| [`ADR-0004`](../adr/0004-zen-engine-for-rating-execution.md) | Addendum: confirmed, residual risks named |
-| [`ADR-0005`](../adr/0005-polars-duckdb-over-pandas.md) | Addendum: split validated by the streaming regression |
+| [`ADR-706`](../adrs/ADR-00706-gorules-zen-engine-executes-rating-dags.md) | Addendum: confirmed, residual risks named |
+| [`ADR-707`](../adrs/ADR-00707-polars-duckdb-as-the-data-engine-not-pandas.md) | Addendum: split validated by the streaming regression |
 | [`contracts/README.md`](../contracts/README.md) | `oneOf`+`discriminator` is the generated shape; `Decimal` must be string-constrained |
 | [`skills-map.md`](../skills-map.md) | Version-pinned specifics replacing assumptions; LightGBM row now verified |
-| [`roadmap.md`](../roadmap.md), [`phase-0-status.md`](../phase-0-status.md) | S1 re-scoped, gate counts updated |
+| [`roadmap.md`](../roadmap.md), [`closures/CR-00709-phase-0-specification-status.md`](../closures/CR-00709-phase-0-specification-status.md) | S1 re-scoped, gate counts updated |
 
 ## What Track A did not cover
 

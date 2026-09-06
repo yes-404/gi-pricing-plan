@@ -2,7 +2,7 @@
 
 `POST /rating-algorithms` validates the submitted algorithm at save time and refuses an
 invalid one with the named error; `GET /rating-algorithms/{slug}@{version}/diff` returns
-the structural diff between two versions (FR-RATE-7).
+the structural diff between two versions (FR-219).
 """
 
 from __future__ import annotations
@@ -39,8 +39,8 @@ async def create_rating_algorithm(
     """**201** with the saved slug and version, once save-time validation passes.
 
     The body is the raw `RatingAlgorithm` JSON (03 §4.1). Save-time validation runs
-    before the row is written: the shape's graph invariants (FR-RATE-1) and the deeper
-    checks in `pricing-core` (FR-RATE-5/13/56/57/58/59) — an invalid graph or a broken
+    before the row is written: the shape's graph invariants (FR-212) and the deeper
+    checks in `pricing-core` (FR-216/227/273/274/275/276) — an invalid graph or a broken
     boundary guard is refused with its named code.
     """
     assert caller.principal.id is not None
@@ -62,7 +62,7 @@ async def algorithm_diff(
     database: DatabaseDep,
     against: int = Query(..., description="The version to diff against"),
 ) -> dict[str, Any]:
-    """**200** with the structural diff (FR-RATE-7): steps added, removed, or changed,
+    """**200** with the structural diff (FR-219): steps added, removed, or changed,
     and tables re-pointed."""
     return await service.diff_between(
         database, caller.workspace_id, slug, version, against

@@ -1,4 +1,4 @@
-"""Backtesting a fitted model on data it never saw (`02` FR-MODEL-57).
+"""Backtesting a fitted model on data it never saw (`02` FR-187).
 
 Built on the same known-answer book `test_diagnostics.py` uses — three areas whose true
 relativities are 1, 2 and 3 — so the tests assert what the numbers *are*.
@@ -10,7 +10,7 @@ The two claims worth proving, rather than the fields being non-null:
   against its own training frame and every figure equals the fit-time train partition, to
   the last representable digit. Two implementations that merely agreed would drift.
 
-* **Both arms.** FR-MODEL-57 says nothing about model type, and a backtest that worked only
+* **Both arms.** FR-187 says nothing about model type, and a backtest that worked only
   for GLMs would leave the GBM an actuary trusts least as the one nothing re-measures.
 
 The refusals that make a backtest a backtest rather than a re-score live in the platform,
@@ -88,7 +88,7 @@ def _fitted(frame: pl.DataFrame, factors: list[Factor]) -> tuple[object, GlmSpec
     return fit_glm(frame, spec, factors).result, spec
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_backtest_reproduces_the_fit_time_partition_on_the_same_rows() -> None:
     """The identity that proves "the same diagnostic shapes" is the same code.
 
@@ -113,9 +113,9 @@ def test_a_backtest_reproduces_the_fit_time_partition_on_the_same_rows() -> None
     assert summary.partition == diagnostics.universal.train
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_deteriorating_period_shows_up_as_a_higher_ae() -> None:
-    """The whole point of the artifact: FR-MODEL-57 calls it the evidence bridge into `05`.
+    """The whole point of the artifact: FR-187 calls it the evidence bridge into `05`.
 
     A period with 30 % more claims on the same risks must read as A/E ≈ 1.3, not as a
     number the reader has to interpret. Asserted as a band rather than a point because the
@@ -137,7 +137,7 @@ def test_a_deteriorating_period_shows_up_as_a_higher_ae() -> None:
     assert summary.partition.rows == later.height
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_backtest_refuses_to_name_the_version_it_was_fitted_on() -> None:
     """`BacktestSummary`'s invariant, reached through the function that builds one.
 
@@ -158,7 +158,7 @@ def test_a_backtest_refuses_to_name_the_version_it_was_fitted_on() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_missing_column_is_an_error_and_not_a_zero() -> None:
     """A later period that renamed a column must fail loudly.
 
@@ -179,12 +179,12 @@ def test_a_missing_column_is_an_error_and_not_a_zero() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 @pytest.mark.parametrize("backend", ["xgboost", "lightgbm"])
 def test_a_gbm_is_backtested_through_the_same_path(backend: str) -> None:
-    """FR-MODEL-57 says nothing about model type, so neither does this.
+    """FR-187 says nothing about model type, so neither does this.
 
-    Parametrized over both backends for FR-MODEL-72's reason: the scoring-side offset is
+    Parametrized over both backends for FR-129's reason: the scoring-side offset is
     implemented per backend, and a backtest that dropped it on LightGBM would under-predict
     by exactly the offset and report the deficit as deterioration.
 
@@ -237,9 +237,9 @@ def test_a_gbm_is_backtested_through_the_same_path(backend: str) -> None:
     assert summary.partition.rows == later.height
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_an_ebm_backtests_through_the_shared_path() -> None:
-    """FR-MODEL-57 says nothing about model type, so neither does this.
+    """FR-187 says nothing about model type, so neither does this.
 
     The EBM arm runs through the same `_partition` over `score_fitted` + `_family_of`:
     A/E by level, lift, Gini and calibration are functions of `(y, mu, weights)` and

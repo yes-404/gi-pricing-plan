@@ -1,4 +1,4 @@
-"""The backtest artifact's invariants (`02` FR-MODEL-57, §4.12).
+"""The backtest artifact's invariants (`02` FR-187, §4.12).
 
 No §4 subsection defined this artifact before the slice that built it, so every rule below
 is a choice rather than a transcription, and each test is the record of one.
@@ -11,7 +11,7 @@ Two carry the meaning:
   out-of-time performance. The platform refuses the split parts too — it is the only layer
   that knows them — and `backend/tests/test_backtests.py` is where that is proven.
 
-* **One partition, and it is not called a holdout.** FR-MODEL-54 makes a one-sided *fit*
+* **One partition, and it is not called a holdout.** FR-183 makes a one-sided *fit*
   diagnostic a defect; a backtest population was never split, so there is no counterpart
   being withheld. `Diagnostics` accordingly no longer carries a `backtest` field, and the
   last test here is the one that would fail if it came back.
@@ -61,20 +61,20 @@ def _summary(**overrides: object) -> BacktestSummary:
     return BacktestSummary.model_validate(fields)
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_well_formed_backtest_round_trips() -> None:
     summary = _summary()
     assert BacktestSummary.model_validate(summary.model_dump(mode="json")) == summary
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_backtest_refuses_the_version_it_was_fitted_on() -> None:
     """`02` §2's definition, made unrepresentable rather than merely documented."""
     with pytest.raises(pydantic.ValidationError, match="fitted on"):
         _summary(dataset_version_ref=FITTED_ON)
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_backtest_period_runs_forwards() -> None:
     with pytest.raises(pydantic.ValidationError, match="backwards"):
         _summary(
@@ -83,19 +83,19 @@ def test_a_backtest_period_runs_forwards() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_backtest_may_declare_no_period() -> None:
     """A version that records no period is common and is not an error.
 
     Refusing one would make the artifact unbuildable for exactly the datasets a first
-    backtest is run on — and FR-MODEL-57 asks for the version it ran against, which is
+    backtest is run on — and FR-187 asks for the version it ran against, which is
     always known, rather than the dates, which are not.
     """
     summary = _summary(period_from=None, period_to=None)
     assert summary.period_from is None
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_the_persisted_artifact_round_trips() -> None:
     backtest = Backtest(
         id=new_uuid7(),
@@ -108,16 +108,16 @@ def test_the_persisted_artifact_round_trips() -> None:
     assert Backtest.model_validate(backtest.model_dump(mode="json")) == backtest
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_diagnostics_no_longer_carries_a_backtest_field() -> None:
     """The field was declared from Phase 0 and typed `None`, and nothing could fill it.
 
-    FR-MODEL-49 computes diagnostics once at fit time; a backtest runs later, and again for
+    FR-170 computes diagnostics once at fit time; a backtest runs later, and again for
     every period after that. `extra="forbid"` makes this test the thing that fails if the
     field is reintroduced — the same guard the `double_lift` removal left behind.
     """
     assert "backtest" not in Diagnostics.model_fields
     assert "cross_validation" in Diagnostics.model_fields, (
-        "FR-MODEL-53's cross-validation is computed at fit time and does belong here; "
+        "FR-182's cross-validation is computed at fit time and does belong here; "
         "removing it with the backtest would be the opposite error."
     )

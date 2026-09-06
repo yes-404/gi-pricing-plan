@@ -1,12 +1,12 @@
 """Decimal-safe money arithmetic for the rating path.
 
-`03` R2 and FR-RATE-29: monetary arithmetic is evaluated in `Decimal` with an explicit
-context, never in binary floating point. FR-RATE-12: rounding is explicit and happens
+`03` R2 and FR-245: monetary arithmetic is evaluated in `Decimal` with an explicit
+context, never in binary floating point. FR-226: rounding is explicit and happens
 exactly once.
 
 Research finding F14 sharpened why this module matters more than it looks. The rating
 engine's own arithmetic is exact, but its Python binding has no decimal type at all —
-values cross as floats. So the boundary discipline (FR-RATE-56: money crosses as integer
+values cross as floats. So the boundary discipline (FR-273: money crosses as integer
 minor units) has to be enforced on this side, by code, and this is that code.
 """
 
@@ -33,7 +33,7 @@ ROUNDING_MODES: Final[dict[str, str]] = {
 def apply_factor(amount_minor: int, factor: Decimal, mode: RoundingMode) -> int:
     """Multiply a minor-unit amount by a decimal factor, rounding once, explicitly.
 
-    `mode` has no default. FR-RATE-12 requires rounding to be declared per step; a default
+    `mode` has no default. FR-226 requires rounding to be declared per step; a default
     here would silently satisfy the type checker while defeating the requirement.
 
     >>> apply_factor(24150, Decimal("1.15"), "half_even")
@@ -47,13 +47,13 @@ def apply_factor(amount_minor: int, factor: Decimal, mode: RoundingMode) -> int:
     if not isinstance(factor, Decimal):
         raise TypeError(
             f"factor must be Decimal, got {type(factor).__name__} — a float factor "
-            "reintroduces binary rounding into the rating path (FR-OVR-7)"
+            "reintroduces binary rounding into the rating path (FR-10)"
         )
     return int((Decimal(amount_minor) * factor).quantize(Decimal(1), rounding=ROUNDING_MODES[mode]))
 
 
 def reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> bool:
-    """Check that a premium ladder reconciles to the penny (FR-RATE-32).
+    """Check that a premium ladder reconciles to the penny (FR-248).
 
     `steps` is the ordered list of `(rung, value_minor)` a scoring call produced. The
     ladder reconciles when each rung's recorded value is exactly what the previous rung

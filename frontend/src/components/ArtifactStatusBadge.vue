@@ -2,18 +2,18 @@
 /**
  * The lifecycle status of a Custom Objective, a Custom Metric or a Peril Structure.
  *
- * **These are not one lifecycle, and the badge does not claim they are.** FR-MODEL-45 makes
+ * **These are not one lifecycle, and the badge does not claim they are.** FR-154 makes
  * objectives and metrics share theirs — `MetricStatus` is `ObjectiveStatus`'s five members,
- * declared separately. FR-MODEL-61 gives a Peril Structure a *different* one: it has
+ * declared separately. FR-191 gives a Peril Structure a *different* one: it has
  * `reconciled`, `superseded` and `archived`, and no `certified` or `deprecated`. The prop is
  * typed on the union of all three so that a `Record` over it breaks at compile time the moment
  * any of them gains a member — which is exactly when a shared badge would otherwise start
  * rendering an unstyled status.
  *
- * **Not a ladder, in any of the three.** FR-MODEL-46 writes the objective lifecycle with
+ * **Not a ladder, in any of the three.** FR-163 writes the objective lifecycle with
  * arrows, but `VALID_OBJECTIVE_TRANSITIONS` permits `review → {approved, certified}`. The
  * peril structure's is likewise not a sequence: `draft → review` is not an edge at all, since
- * FR-MODEL-60 makes the reconciliation the evidence an approver reads, so a structure reaching
+ * FR-190 makes the reconciliation the evidence an approver reads, so a structure reaching
  * review without one "is not a state to refuse later — it is a state with no edge into it".
  * Nothing here or in any caller may present these as steps.
  */

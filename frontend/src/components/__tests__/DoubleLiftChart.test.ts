@@ -76,7 +76,7 @@ describe("DoubleLiftChart", () => {
     expect(names).toContain("Challenger predicted");
   });
 
-  // NFR-OVR-10 is WCAG 2.2 AA. Three lines separable only by hue fail for a reader who cannot
+  // NFR-463 is WCAG 2.2 AA. Three lines separable only by hue fail for a reader who cannot
   // distinguish them, so line type carries the same information.
   it("distinguishes the three series by line type as well as colour", () => {
     render(DoubleLiftChart, { props: { series: SERIES } });
@@ -87,7 +87,7 @@ describe("DoubleLiftChart", () => {
     expect(new Set(types).size).toBe(lines.length);
   });
 
-  // `exposure_years` is a DecimalStr — a string on the wire (FR-OVR-7's exact-decimal type).
+  // `exposure_years` is a DecimalStr — a string on the wire (FR-10's exact-decimal type).
   // It must reach ECharts as a number or the bars silently do not draw.
   it("converts the decimal-string exposure to numbers", () => {
     render(DoubleLiftChart, { props: { series: SERIES } });
@@ -109,7 +109,7 @@ describe("DoubleLiftChart", () => {
     expect(names).not.toContain("Exposure");
   });
 
-  describe("the table beside it (NFR-OVR-10)", () => {
+  describe("the table beside it (NFR-463)", () => {
     function table(series: DoubleLift = SERIES): HTMLElement {
       render(DoubleLiftChart, { props: { series } });
       return screen.getByRole("table", {
@@ -153,7 +153,7 @@ describe("DoubleLiftChart", () => {
       }
     });
 
-    // FR-OVR-7: the chart widens the decimal string because a coordinate is a float64 either
+    // FR-10: the chart widens the decimal string because a coordinate is a float64 either
     // way; the table has no such excuse, and "14203.400000" losing its trailing zeros is a
     // recorded value the reader can no longer tell apart from a rounded one.
     it("keeps exposure as the exact decimal string the artifact recorded", () => {

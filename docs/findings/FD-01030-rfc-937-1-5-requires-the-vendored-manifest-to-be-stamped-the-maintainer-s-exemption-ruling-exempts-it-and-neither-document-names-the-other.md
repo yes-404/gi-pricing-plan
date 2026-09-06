@@ -1,0 +1,106 @@
+---
+id: FD-1030
+family: finding
+title: RFC-937 §1.5 requires the vendored manifest to be stamped; the maintainer's exemption ruling exempts it, and neither document names the other
+status: active                  # active → closed | retired (§1.2a)
+created: 2026-09-02
+owner: auditor
+corrected_by: []
+relates: []                     # ids only — the SL-/WK- this discharges through, once known
+was: docs/audit/findings/F93.md
+---
+
+# F93 — RFC-937 §1.5 requires the vendored manifest to be stamped; the maintainer's exemption ruling exempts it, and neither document names the other
+
+**Filed 2026-09-02, at `ac10d30`.** Found while verifying an executor's acceptance clause during
+W37-5c's follow-on work, not by a sweep — the clause quoted §1.5 as *requiring* the manifest be
+stamped while certifying that **0 of 28** were stamped, and both halves were correct.
+
+## The two texts
+
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` §1.5, verbatim at `ac10d30`:
+
+> A vendored skill (`planning-with-files`, `ui-ux-pro-max`, `graphify`, `systematic-debugging`,
+> the `vue-*` skills — anything shipping its own `LICENSE`) **carries `vendored: true` and
+> `origin:` on its `SKILL.md` only**; the files beneath are exempt from stamping, citation
+> rewrite and shape checks.
+
+The same requirement again in the note's §5 impact map:
+
+> | every `SKILL.md` (46) | header stamped; **vendored skills get `vendored: true` + `origin:`**
+> and their subtrees are skipped by the migration … |
+
+Against `docs/rulings/RL-01001-the-vendored-manifest-exemption-the-maintainer-s-ruling-2026-09-02.md`, the maintainer's dated line:
+
+> **Vendored manifests: exemption, as recommended.** Sidecar recorded as the option not taken
+
+**The ruling exempts the manifest itself. §1.5 stamps it with exactly two fields and exempts only
+what lies beneath it.** These cannot both be followed.
+
+## Neither document names the other
+
+Measured at `ac10d30`, with the predicates:
+
+| Predicate | Result |
+|---|---|
+| `grep -c 'vendored-exemption\|exemption ruling\|2026-09-02-w37-vendored' docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` | **0** |
+| `grep -n '1\.5\|vendored: true\|origin:' docs/rulings/RL-01001-the-vendored-manifest-exemption-the-maintainer-s-ruling-2026-09-02.md` | **no hits** |
+
+So a reader arriving at either document is given no reason to look for the other, and §1.5 is
+the one a W37-6 implementer reads.
+
+## The code already follows the ruling, and says so
+
+`scripts/audit-docs.py:1287-1292` excludes `was:`, `vendored:` and `origin:` from its
+required-field set, and its comment records the reasoning as read from *"RFC-937 §1.5's own prose
+rather than its"* example block. A completing `migrate()` run stamps **0 of 28** vendored
+manifests. **The implementation is consistent with the ruling and inconsistent with §1.5's
+sentence, which is the direction `CLAUDE.md` §0 says is usually right — and says must not be left
+unresolved either way.**
+
+Two vendored manifests *are* written by a run — `secret-hygiene` and `writing-plans` — but
+**body-only citation rewrites, not stamps**: their leading front-matter block is unchanged. That
+is a third behaviour §1.5's sentence does not describe, and it is required by §1.5's own
+citation-rewrite clause.
+
+## Why this does not block W37-6, stated before why it matters
+
+**No `§7` acceptance item depends on it.** `sed -n '/^## 7\./,/^## 8\./p'` over the note returns
+no `vendored`, `origin:` or `SKILL` hit. So the run can pass its own acceptance with 0 of 28
+stamped, and this is **not** grounds to withhold a go-ahead.
+
+## Why it is a finding rather than housekeeping
+
+The precedent is F87's, in its own words: the fact *"lived only in a passing test … invisible to
+whoever plans W37-6, who is the person who needs it."* Here the fact lives only in a ruling record
+that the standard does not cite. **A W37-6 planner reading §1.5 and §5's impact map expects 28
+stamped manifests and will find none**, and the impact map is the table the leaf plan is written
+from. The defect is that two documents disagree and nothing joins them — the same shape as
+[`RFC-756`](../rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md), across documents rather than within
+one.
+
+**It is also the second requirement in this Work found to be wider than every implementation**,
+and neither was caught by a check, because a check can only test the reading someone already took.
+
+## Owner and decay event
+
+**No individual owner.** Per RL-909 Text B a row without one must name the event that next
+confirms or assigns it: **the next amendment to `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` for any
+reason**, failing which it decays to the next `CLAUDE.md` §14 plan review, which must give it a
+disposition rather than list it.
+
+**The resolution is the maintainer's**, because RFC-937 arrived accepted and amending §1.5's
+sentence is a spec change to an accepted standard. Three shapes are available and this finding
+recommends none: amend §1.5 and the §5 row to match the ruling; have the ruling record cite §1.5
+as superseded in part; or rule that §1.5's sentence still governs and the exemption is narrower
+than the run implements.
+
+## Falsifiable
+
+This finding is wrong, and reopens, if **either** document gains a reference to the other, **or**
+§1.5's sentence and the ruling can both be satisfied by one behaviour.
+
+Stated as a violation that must become detectable: at any tree where this finding is closed,
+`grep -c` for the ruling's filename in `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` must be non-zero,
+**or** §1.5's stamping sentence must no longer require `vendored: true` on a file the run leaves
+unstamped. Today both fail.

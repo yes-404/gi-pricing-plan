@@ -11,7 +11,7 @@ import SpecProblemList from "../SpecProblemList.vue";
  * That one **cannot be produced by a default workspace**: `model_specs.py` resolves
  * `modelling.max_factor_count` and `modelling.min_exposure_per_parameter` to `None` unless
  * a workspace sets them, and records the decision — "an unset limit means 'no gate', not
- * 'gate at zero'" (OQ-MODEL-6). A suite built from cases a live backend would emit would
+ * 'gate at zero'" (OQ-580). A suite built from cases a live backend would emit would
  * therefore cover ten of eleven and read as complete. This component renders a payload, so
  * every kind is constructible here regardless; the list is written out in full rather than
  * derived from anything, so a member added to the contract fails the count assertion below.

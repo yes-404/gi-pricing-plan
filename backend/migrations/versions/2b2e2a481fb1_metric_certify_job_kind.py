@@ -1,6 +1,6 @@
 """jobs: register the `metric.certify` JobKind value
 
-`02` §5.1/FR-MODEL-108. `metric.certify` has been in `model-schema` since this slice added
+`02` §5.1/FR-162. `metric.certify` has been in `model-schema` since this slice added
 it and in no database — the same gap `d0e1f2a3b4c5` found and fixed for
 `objective.certify`, and `peril_structure.reconcile` before that. It surfaces as
 `invalid input value for enum job_kind` from inside `job_service.submit`, after the

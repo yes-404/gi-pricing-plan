@@ -14,7 +14,7 @@ from model_schema import BUILTIN_RULES
 from pricing_core.data.validate import CHECKS
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_every_builtin_rule_names_a_registered_check() -> None:
     missing = sorted(
         f"{rule.catalogue_id} -> {rule.check}"
@@ -24,7 +24,7 @@ def test_every_builtin_rule_names_a_registered_check() -> None:
     assert not missing, missing
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_the_registry_is_not_trivially_satisfied() -> None:
     """The check above passes vacuously if `CHECKS` is empty or over-broad.
 
@@ -38,13 +38,13 @@ def test_the_registry_is_not_trivially_satisfied() -> None:
     assert {"expression", "sql"} <= set(CHECKS) - used
 
 
-@pytest.mark.req("FR-DATA-54")
+@pytest.mark.req("FR-56")
 def test_every_catalogue_default_names_a_param_its_check_reads() -> None:
     """A catalogue key its check never reads is silently inert.
 
     Every check reads params as `.get(key, literal)`, so a misspelled catalogue key falls
     back to the literal and nothing raises. The seeded rule would then advertise a threshold
-    it does not honour — which is the failure FR-DATA-54 exists to remove, reintroduced one
+    it does not honour — which is the failure FR-56 exists to remove, reintroduced one
     level up.
 
     Matched as `params.get("key"` rather than as a bare quoted `"key"`. The looser form has
@@ -69,7 +69,7 @@ def test_every_catalogue_default_names_a_param_its_check_reads() -> None:
     assert not unread, unread
 
 
-@pytest.mark.req("FR-DATA-54")
+@pytest.mark.req("FR-56")
 def test_the_anti_drift_check_is_not_trivially_satisfied() -> None:
     """The test above passes vacuously if no rule carries params, or if its pattern matches
     anything. Asserted with the *same* pattern the guard uses, not a looser stand-in: a

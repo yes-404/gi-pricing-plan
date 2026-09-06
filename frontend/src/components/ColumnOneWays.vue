@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
  * The candidate rating columns, each with the one-way the Profile already carries
- * (`02` §5.3, `01` FR-DATA-26).
+ * (`02` §5.3, `01` FR-61).
  *
- * **Read, never computed.** FR-DATA-26 says these "are computed once, here" — in the
+ * **Read, never computed.** FR-61 says these "are computed once, here" — in the
  * profiling pass — so the browser renders what the artifact stores and derives nothing.
- * (FR-DATA-27 says a Profile is never recomputed on request, which is the wider claim; the
+ * (FR-62 says a Profile is never recomputed on request, which is the wider claim; the
  * tighter one is what binds this component.)
  *
  * **The incurred amount is deliberately absent, and this is not a styling choice.**
@@ -14,12 +14,12 @@
  * carries no currency, and `/datasets/{dataset_id}` is **PATCH-only** — there is no GET by
  * id — so the only route to `Dataset.currency` needs a slug the view does not have.
  * Rendering the number without a symbol would be a bare integer of minor units, and
- * guessing `GBP` is what `OQ-OVR-14` exists to stop: a euro amount under a pound sign is a
+ * guessing `GBP` is what `OQ-551` exists to stop: a euro amount under a pound sign is a
  * wrong number that looks like a right one.
  *
  * Everything else needs no currency. Exposure, claim counts and frequency are dimensionless
  * or in years; `mean_severity` and `mean_burning_cost` are **statistics** in minor units,
- * not amounts (FR-DATA-46 renamed them off `_minor` for exactly that reason), and W6b-3
+ * not amounts (FR-64 renamed them off `_minor` for exactly that reason), and W6b-3
  * established rendering them as scaled statistics rather than as money.
  *
  * So the omission costs one column of a volume measure the exposure column already conveys,

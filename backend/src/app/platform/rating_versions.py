@@ -1,6 +1,6 @@
 """The Phase 1b rating version (OD1, W7-3) — draft, submit, approve, read.
 
-`FR-PLAT-67`: the demo seed creates and approves a minimal rating version that pins an
+`FR-440`: the demo seed creates and approves a minimal rating version that pins an
 approved Model. The full `03` surface stays Phase 2. The lifecycle mirrors the model's:
 `create_rating_version` (draft), `submit_for_review` (`draft → review`, creating the
 approval request through the same governance `approvals.submit` the model uses), and the
@@ -39,9 +39,9 @@ from model_schema import (
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 
 #: `reference.rows_as_at`'s default `limit` (200) is a UI page size. A compiled Bundle
-#: must be self-contained (FR-RATE-24) and embed a pinned reference table's rows in full —
+#: must be self-contained (FR-239) and embed a pinned reference table's rows in full —
 #: a lookup key past the first page would silently miss inside a `CompiledBundle` that can
-#: perform no I/O (Task 1.3/Ruling 7) — so this resolver asks for effectively all of them.
+#: perform no I/O (Task 1.3/RL-873) — so this resolver asks for effectively all of them.
 _ALL_REFERENCE_ROWS = 10_000_000
 
 __all__ = [
@@ -110,7 +110,7 @@ async def resolve_rating_version_ref(
 ) -> RatingVersionRow:
     """The row a `rating_version:slug@version` reference names, scoped to the workspace.
 
-    Scoring receives a reference rather than an id (Ruling 14), and until now the only
+    Scoring receives a reference rather than an id (RL-880), and until now the only
     ref-to-row resolution in this module was inline in `apply_approval_decision` — a write
     path, so it also took `FOR UPDATE`. This one deliberately does not: a read on the
     scoring path must not take row locks that contend with approvals.
@@ -138,7 +138,7 @@ async def record_bundle_blob(
     rating_version_id: UUID,
     blob_sha256: str,
 ) -> None:
-    """Record the blob key the compiled bundle was stored under (Ruling 37).
+    """Record the blob key the compiled bundle was stored under (RL-915).
 
     Kept here rather than in the Job handler because `row.bundle`'s shape is this module's
     to own — a handler assembling that dict itself would be the second place the shape is
@@ -172,7 +172,7 @@ async def create_rating_version(
     dataset_version_id: UUID,
     model_ref: ArtifactRef,
 ) -> RatingVersionRow:
-    """Create a draft rating version pinned to the approved model (`FR-PLAT-67`)."""
+    """Create a draft rating version pinned to the approved model (`FR-440`)."""
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
@@ -256,7 +256,7 @@ async def apply_approval_decision(
     actor: Principal,
     request: ApprovalRequestRow,
 ) -> RatingVersionRow | None:
-    """Carry a governance decision into the artifact (W7-3, FR-PLAT-67).
+    """Carry a governance decision into the artifact (W7-3, FR-440).
 
     Returns `None` when the request is about something other than a Rating Version, so the
     caller can drive every artifact type through one call per module. Called in the same
@@ -303,11 +303,11 @@ async def compile_rating_version(
     rating_version_id: UUID,
     blob_store: BlobStore,
 ) -> Bundle:
-    """Compile a pinned Rating Version to a self-contained Bundle (W9-3, W11 Task 1.2).
+    """Compile a pinned Rating Version to a self-contained Bundle (W9-3, WK-671 Task 1.2).
 
     Resolves the algorithm and every pin — rate tables, reference tables, custom
     objectives and models — through the workspace's own tables, embedding each pinned
-    artifact's real content in `resolved_payloads` (Ruling 7: inline, never a blob
+    artifact's real content in `resolved_payloads` (RL-873: inline, never a blob
     reference, so `Bundle` stays self-contained and `load_bundle` needs no I/O). Returns
     the full `Bundle`; the caller (the `rating.compile` Job handler) persists it as a
     blob. `row.bundle` keeps carrying just the summary metadata it always has.
@@ -329,7 +329,7 @@ async def compile_rating_version(
                 )
                 if algo is None:
                     raise PlatformError("NOT_FOUND", "Rating algorithm not found", 404)
-                # Ruling 28 (docs/plans/2026-08-29-w11-algorithm-pin-maturity.md):
+                # RL-859 (docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md):
                 # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an
                 # invented maturity rather than a read one. `"no_maturity_concept"` is
                 # the sentinel `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT`
@@ -352,15 +352,15 @@ async def compile_rating_version(
                     # text wrapped in bytes (`bytes(booster.save_raw(raw_format="json"))`)
                     # behind a content-addressed blob reference — the only place the
                     # actual booster content exists. Compile time is when DB/blob access
-                    # is allowed (Ruling 8); dereference it now so the Bundle carries the
-                    # booster itself, never the reference (Ruling 7).
+                    # is allowed (RL-874); dereference it now so the Bundle carries the
+                    # booster itself, never the reference (RL-873).
                     booster_bytes = await blob_store.read(model_obj.fit_result.booster_blob)
                     payload["fit_result"]["booster_content"] = booster_bytes.decode("utf-8")
                 return ResolvedArtifact(status=model.status, payload=payload)
             if ref.type == "rate_table":
                 # `rate_tables.py`'s own materialiser: a version's cells are either row-
                 # or parquet-stored, and `_to_version` always returns them inline as
-                # `rows` — reused rather than re-implemented (03 §3.3, FR-RATE-62).
+                # `rows` — reused rather than re-implemented (03 §3.3, FR-232).
                 table_row = await rate_tables_service._load_table(
                     session, workspace_id, ref.slug
                 )
@@ -372,12 +372,12 @@ async def compile_rating_version(
                 )
                 # `RateTableVersionRow` carries no status column at all (rate tables are
                 # immutable-on-write — seed, operation or import, never a draft phase),
-                # so there is no real maturity value to read here. Ruling 22
-                # (`docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`) refused
+                # so there is no real maturity value to read here. RL-856
+                # (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`) refused
                 # inventing "approved" for it: that would put a constant where
                 # `compile_bundle`'s gate reads a discriminator, and fail open the day
                 # `RateTableVersionRow` gains a real status. `_MATURITY_CHECK_EXEMPT` is
-                # what actually admits this pin past the FR-OVR-14 floor; the sentinel
+                # what actually admits this pin past the FR-20 floor; the sentinel
                 # below is deliberately not a member of `_APPROVED_OR_BETTER`, so a pin
                 # still fails closed if the exemption is ever removed without this
                 # branch being updated to match.
@@ -397,9 +397,9 @@ async def compile_rating_version(
                     as_at=None,
                     limit=_ALL_REFERENCE_ROWS,
                 )
-                # FR-DATA-30's own lifecycle is `draft`/`published`, not compile.py's
+                # FR-70's own lifecycle is `draft`/`published`, not compile.py's
                 # generic `approved`/`live`/`retired` vocabulary. "published" is that
-                # lifecycle's FR-OVR-14 maturity gate (FR-DATA-30: "independently
+                # lifecycle's FR-20 maturity gate (FR-70: "independently
                 # approvable"); bridged here, deliberately and narrowly, rather than by
                 # widening `compile_bundle`'s own `_APPROVED_OR_BETTER` (out of Task
                 # 1.2's scope — see PR description). A real `draft` version still reports

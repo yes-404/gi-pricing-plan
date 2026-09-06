@@ -1,4 +1,4 @@
-"""Workspace rows (`07` FR-PLAT-62).
+"""Workspace rows (`07` FR-395).
 
 A Workspace is created by provisioning, which `06` owns and which does not exist yet. What
 exists here is the idempotent ensure the seeds and the test suite need, modelled on
@@ -55,7 +55,7 @@ async def ensure_member(
     email: str | None = None,
     display_name: str | None = None,
 ) -> UserRow:
-    """Make an OIDC identity a member of a workspace, as a given principal (FR-PLAT-58).
+    """Make an OIDC identity a member of a workspace, as a given principal (FR-398).
 
     Two rows, and each is load-bearing for a different reason:
 
@@ -63,7 +63,7 @@ async def ensure_member(
       `UserRow.id` as the principal and a caller's role assignments are written against the
       principal id it already uses -- a defaulted id yields a member of the workspace who
       may do nothing in it;
-    * the `workspace_members` row, because `FR-PLAT-4` grants no access by default and
+    * the `workspace_members` row, because `FR-390` grants no access by default and
       `authenticate_bearer` reads workspaces from that table alone.
 
     **The workspace must already exist**: `workspace_members.workspace_id` is a foreign key

@@ -1,4 +1,4 @@
-"""Auditing a workspace switch into both chains (`07` FR-PLAT-63)."""
+"""Auditing a workspace switch into both chains (`07` FR-396)."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ async def record_switch(
 ) -> None:
     """Record the departure and the arrival, one event in each workspace's chain.
 
-    `06` FR-GOV-24 chains audit events **per workspace**, so an event written only in the
+    `06` FR-372 chains audit events **per workspace**, so an event written only in the
     workspace entered is invisible from the workspace left — and "when did this principal
     stop acting here" is asked of the chain of the place they left. `left is None` is the
     first selection after login: there is no chain to leave, and one event is the whole
@@ -33,7 +33,7 @@ async def record_switch(
     `workspace` is not in `ARTIFACT_TYPES`. That is the column's normal condition rather
     than a new breakage — 20 of the 39 spellings the backend writes already fail to parse,
     13 of them on a type outside the frozenset. Nothing parses this column, which is why.
-    The measurement and the three options are `OQ-PLAT-14`; widening `ARTIFACT_TYPES` to
+    The measurement and the three options are `OQ-653`; widening `ARTIFACT_TYPES` to
     admit this one string is the option that row exists to refuse.
     """
     entries: list[tuple[UUID, str]] = [(entered, "workspace.entered")]

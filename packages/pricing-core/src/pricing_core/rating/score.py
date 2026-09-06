@@ -1,11 +1,11 @@
-"""`score_one` on `async_evaluate()` (03 §3.7/§3.8, FR-RATE-34/37/38/39/41/56/63/64,
-NFR-RATE-3/7/8/14, W11 Task 1.4).
+"""`score_one` on `async_evaluate()` (03 §3.7/§3.8, FR-250/254/255/256/258/273/218/252,
+NFR-491/495/496/501, WK-671 Task 1.4).
 
-**Ruling 5, not re-argued here.** The real-time path is built directly on
+**RL-868, not re-argued here.** The real-time path is built directly on
 `CompiledBundle.decision.async_evaluate()` — never `evaluate()` plus a thread-pool
 offload, measured twice to be strictly worse than doing nothing
 (`docs/research/zen-evaluate-concurrency.md`). `score_one` is therefore `async def`;
-`score_batch` (Slice 3, `03` §5.2, W11 Task 3A) stays plain `def` and drives
+`score_batch` (Slice 3, `03` §5.2, WK-671 Task 3A) stays plain `def` and drives
 `CompiledBundle.decision.evaluate()`, the engine's synchronous path — see "What
 `score_batch` is, and what it deliberately does not do", below.
 
@@ -54,14 +54,14 @@ another call. Fixed by moving `nthread`'s application into
 `predict_gbm`'s own `nthread` now applies via `set_param` only
 when it performs the load itself (a fresh, unshared `Booster`), and is a documented no-op
 against an already-loaded one. See `gbm.py`'s `predict_gbm`/`load_gbm_booster` docstrings
-for the full mechanism. Named here because it is exactly the class of bug Ruling 5's own
+for the full mechanism. Named here because it is exactly the class of bug RL-868's own
 "instrumented default, not a closed question" warned about — an untested assumption about
 what runs safely under real concurrency — and this one would not have been caught without
 building the concurrency smoke test Task 1.4's own acceptance criteria require.
 
 ## Ladder construction — a documented convention, not a `03` mandate
 
-`03` names the ladder's fixed rung sequence and the reconciliation property (FR-RATE-31/32)
+`03` names the ladder's fixed rung sequence and the reconciliation property (FR-247/248)
 but does not name a mechanism for deriving it from an arbitrary `RatingAlgorithm` graph —
 verified by a full sweep of §3/§4 for a "rung" field on any step type; there is none.
 This module adopts one, stated here because a future reader must not mistake it for a
@@ -78,7 +78,7 @@ ever produces the first one directly. So:
   `output_name == f"{rung}_minor"`.** That step's single `consumes` name is where the
   rung's *raw* value actually lives in the evaluated result (an `expression`, `table`, or
   `model_call` step's own `produces`); its `RoundSpec` is the rung's declared rounding
-  (FR-RATE-12 — read, never defaulted, when a step exists to declare it). An algorithm
+  (FR-226 — read, never defaulted, when a step exists to declare it). An algorithm
   opts a rung into the ladder by adding this one small step; omitting it means the rung is
   simply absent, exactly as an algorithm not implementing an optional loading should be.
 - **`constraints` is always synthesised, never read from its own key.** It carries forward
@@ -115,14 +115,14 @@ never fires scores normally; only a firing one raises.
 
 ## What `score_batch` is, and what it deliberately does not do
 
-**`score_batch` (W11 Task 3A) reuses `build_scoring_result` below** — the shared tail that
+**`score_batch` (WK-671 Task 3A) reuses `build_scoring_result` below** — the shared tail that
 turns one already-evaluated engine `result` into a `ScoringResult` — after its own
 row-by-row, **synchronous** evaluation of the same compiled graph (`bundle.decision.
-evaluate()`, never `async_evaluate()` — Ruling 5). It also reuses `score_one`'s own
+evaluate()`, never `async_evaluate()` — RL-868). It also reuses `score_one`'s own
 pre-evaluation checks (`_validate_inputs`, `_check_purpose_mount`, `_check_billing_surface`)
 and its engine-failure translation (`_reraise_engine_failure`), unmodified, so the two
 paths diverge nowhere except the method used to reach the engine — which is exactly what
-FR-RATE-37's byte-identity proves is safe to diverge on.
+FR-254's byte-identity proves is safe to diverge on.
 
 **The frame contract `score_batch` reads and writes is this task's own design** — `03`
 §5.2 fixes the function's signature (`bundle`, `frame`, `chunk_rows`, `progress`) but not
@@ -131,8 +131,8 @@ the plan's own). **Input row**, one column per reserved key below plus one colum
 name in `bundle.algorithm.input_contract` (extra columns are tolerated, exactly as
 `_validate_inputs` already tolerates extra `ctx.inputs` keys):
 
-- `quote_id` (nullable) — FR-RATE-36's "quote key". Carried straight into the output row;
-  never read off `ScoringResult`, which has no such field (Ruling 31 §3).
+- `quote_id` (nullable) — FR-253's "quote key". Carried straight into the output row;
+  never read off `ScoringResult`, which has no such field (RL-857 §3).
 - `purpose` — one of `QuotePurpose`'s five members.
 - `effective_date` — an ISO date string.
 - `rating_version_ref` — the canonical `ArtifactRef` string (`"{type}:{slug}@{version}"`).
@@ -149,17 +149,17 @@ selected outputs each **pre-serialised to JSON** (`_ladder_json`/`_outputs_json`
 this is what Task 3A's byte-identity test compares: the *serialised* ladder, not a
 polars-native nested column), `decline_reasons`, and — populated only on an `"error"`
 row — `error_code`/`error_message`. The handler (Task 3B) reassembles the final parquet
-from this, and aggregates `error_code` into FR-RATE-38's per-category counts and samples;
+from this, and aggregates `error_code` into FR-255's per-category counts and samples;
 neither is this task's to build. The full column set, its dtypes and the two `ScoringResult`
 fields it deliberately excludes are published at `03` §4.8 — a cross-module data contract,
-not only this docstring (Ruling 43).
+not only this docstring (RL-923).
 
 **One failing row does not raise out of `score_batch`.** Everything `_validate_inputs`,
 `_check_purpose_mount`, `_check_billing_surface` and the engine itself can raise for a row
 is a `ValueError` (the `_raise_named` convention) or, from `_reraise_engine_failure`'s
 final `raise exc`, a bare untyped `RuntimeError` — both are caught per row and turned into
 an `"error"` output row rather than aborting the chunk, which is the structural half of
-FR-RATE-38 ("does not abort on individual failures") that a chunked transform has to
+FR-255 ("does not abort on individual failures") that a chunked transform has to
 provide regardless of who is charged with the requirement id; **the threshold policy that
 decides whether the *run* aborts is explicitly not built here** (3B's). **`NotImplementedError`
 is deliberately excluded from that catch** — it is a Python subclass of `RuntimeError`, but
@@ -177,7 +177,7 @@ scored — a signalled cancellation therefore lets `JobCancelled` propagate havi
 every *complete* chunk before it and none after, matching every other `check_cancelled()`
 call site in this package (`modelling/*.py`): the exception is not caught here: cooperative
 cancellation is a hand-off to whichever caller can make the platform-level Job transition
-(FR-PLAT-9), and `pricing-core` cannot import what makes it durable (ADR-0001).
+(FR-401), and `pricing-core` cannot import what makes it durable (ADR-703).
 """
 
 from __future__ import annotations
@@ -218,9 +218,9 @@ from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, CompiledBundle
 
 __all__ = ["build_scoring_result", "score_batch", "score_one"]
 
-#: FR-RATE-31/64's fixed rung sequence — `scoring.schema.json`'s own `LadderRung.rung`
-#: enum order, which post-dates and supersedes FR-RATE-31's prose order by adding
-#: `instalment_loading` (FR-RATE-64). The ladder's order is fixed by the platform; it is
+#: FR-247/252's fixed rung sequence — `scoring.schema.json`'s own `LadderRung.rung`
+#: enum order, which post-dates and supersedes FR-247's prose order by adding
+#: `instalment_loading` (FR-252). The ladder's order is fixed by the platform; it is
 #: never derived from an algorithm's own step order.
 _RUNG_ORDER: tuple[LadderRungName, ...] = (
     "risk_premium",
@@ -248,7 +248,7 @@ _ADD_RUNGS = frozenset({"ipt_and_fees"})
 _DEFAULT_ROUND_MODE: RoundingMode = "half_even"
 _DEFAULT_ROUND_DP = 0
 
-#: FR-RATE-64's second refusal: a `QuoteContext` asking for a payment schedule, an APR
+#: FR-252's second refusal: a `QuoteContext` asking for a payment schedule, an APR
 #: figure or a credit-agreement term is refused, never answered approximately. `03` names
 #: no wire shape for "asking", so this is a documented, provisional convention: any of
 #: these reserved keys present (regardless of value) in `ctx.inputs` triggers the refusal.
@@ -285,7 +285,7 @@ _BATCH_OUTPUT_COLUMNS: list[tuple[str, Any]] = [
 _BATCH_OUTPUT_SCHEMA: pl.Schema = pl.Schema(_BATCH_OUTPUT_COLUMNS)
 
 #: `ScoringResult`'s own fields, mapped to the batch output column that carries them, or
-#: named on the exclusion list (`03` §4.8, Ruling 43 §4). A field of `ScoringResult` that is
+#: named on the exclusion list (`03` §4.8, RL-923 §4). A field of `ScoringResult` that is
 #: neither a value in this mapping nor in `_SCORING_RESULT_BATCH_EXCLUDED_FIELDS` has
 #: appeared with no batch column to carry it — the drift `test_rating_score_batch.py`'s own
 #: guard exists to catch (`CLAUDE.md` §2: "a shape defined twice will diverge").
@@ -299,7 +299,7 @@ _SCORING_RESULT_TO_BATCH_COLUMN: dict[str, str] = {
 }
 
 #: The two `ScoringResult` fields a batch run has no use for: `trace` (batch takes no
-#: sampling parameter — Ruling 25 — and `score_batch` never requests an engine trace, so
+#: sampling parameter — RL-890 — and `score_batch` never requests an engine trace, so
 #: this is always `None`) and `timing_ms` (per-call wall-clock timing that means nothing
 #: aggregated across a chunk, and `score_batch` does not set it the way `score_one` does).
 _SCORING_RESULT_BATCH_EXCLUDED_FIELDS = frozenset({"trace", "timing_ms"})
@@ -308,7 +308,7 @@ _SCORING_RESULT_BATCH_EXCLUDED_FIELDS = frozenset({"trace", "timing_ms"})
 def _raise_named(code: str, message: str) -> NoReturn:
     """`pricing-core`'s established convention (`compile.py`'s `_raise_named`): a
     code-named bare `ValueError`, never `PlatformError` — `pricing-core` cannot import
-    `app` (`.importlinter`'s `core-has-no-infrastructure`). Ruling 11: the mapping to a
+    `app` (`.importlinter`'s `core-has-no-infrastructure`). RL-877: the mapping to a
     `PlatformError` at the backend boundary is Slice 2's."""
     raise ValueError(f"{code}: {message}")
 
@@ -322,12 +322,12 @@ def _as_decimal(value: Any) -> Decimal:
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-38 category 1: contract violation.
+# FR-255 category 1: contract violation.
 # ---------------------------------------------------------------------------
 
 
 def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> None:
-    """FR-RATE-2/38: every declared input is present (unless nullable), typed, in range,
+    """FR-213/255: every declared input is present (unless nullable), typed, in range,
     and — for `enum` — in the declared domain. Extra keys `ctx.inputs` carries beyond the
     algorithm's own `input_contract` are tolerated; this checks only what the algorithm
     declares."""
@@ -337,7 +337,7 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
             if not field.nullable:
                 _raise_named(
                     "INPUT_CONTRACT_VIOLATION",
-                    f"input {field.name!r} is required (FR-RATE-2)",
+                    f"input {field.name!r} is required (FR-213)",
                 )
             continue
 
@@ -389,7 +389,7 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
 
 
 def _check_purpose_mount(algorithm: RatingAlgorithm, ctx: QuoteContext) -> None:
-    """FR-RATE-63: a `purpose` requiring the MTA/cancellation sub-graph refuses rather than
+    """FR-218: a `purpose` requiring the MTA/cancellation sub-graph refuses rather than
     pricing as new business when this Rating Version mounts none.
 
     `algorithm.sub_graphs` non-empty is a documented, provisional stand-in for "this
@@ -404,26 +404,26 @@ def _check_purpose_mount(algorithm: RatingAlgorithm, ctx: QuoteContext) -> None:
     if ctx.purpose in ("mid_term_adjustment", "cancellation") and not algorithm.sub_graphs:
         _raise_named(
             "INPUT_CONTRACT_VIOLATION",
-            f"purpose={ctx.purpose!r} requires a mounted sub-graph (FR-RATE-63), and this "
+            f"purpose={ctx.purpose!r} requires a mounted sub-graph (FR-218), and this "
             "rating version's algorithm mounts none — refused rather than priced as new "
-            "business, which FR-RATE-63 names as the failure this refusal exists to "
+            "business, which FR-218 names as the failure this refusal exists to "
             "prevent",
         )
 
 
 def _check_billing_surface(ctx: QuoteContext) -> None:
-    """FR-RATE-64's second half: refused, not answered approximately."""
+    """FR-252's second half: refused, not answered approximately."""
     requested = sorted(_BILLING_SURFACE_KEYS & ctx.inputs.keys())
     if requested:
         _raise_named(
             "INPUT_CONTRACT_VIOLATION",
             f"{requested} asks for a payment schedule, an APR figure or a credit "
-            "agreement term (FR-RATE-64) — refused rather than answered approximately",
+            "agreement term (FR-252) — refused rather than answered approximately",
         )
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-38 categories 2/3/5, and Ruling 9's decline representation.
+# FR-255 categories 2/3/5, and RL-875's decline representation.
 # ---------------------------------------------------------------------------
 
 
@@ -435,7 +435,7 @@ def _check_model_call_sentinel(result: Mapping[str, Any]) -> None:
 
 
 def _check_lookup_misses(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> None:
-    """FR-RATE-38 categories 2/3: a `table`/`lookup` step with `on_miss="error"` whose
+    """FR-255 categories 2/3: a `table`/`lookup` step with `on_miss="error"` whose
     `produces` name did not survive evaluation found no matching row — verified live
     (`docs/research/` spike, this task) that a `decisionTableNode` miss simply omits its
     declared output rather than signalling one, so a post-evaluation presence check is the
@@ -446,14 +446,14 @@ def _check_lookup_misses(algorithm: RatingAlgorithm, result: Mapping[str, Any]) 
                 if str(name) not in result:
                     _raise_named(
                         "RATE_TABLE_MISS",
-                        f"table step {step.step_id!r} found no matching row (FR-RATE-38)",
+                        f"table step {step.step_id!r} found no matching row (FR-255)",
                     )
         elif isinstance(step, RatingLookupStep) and step.on_miss == "error":
             for name in _as_list(step.produces):
                 if str(name) not in result:
                     _raise_named(
                         "REFERENCE_LOOKUP_MISS",
-                        f"lookup step {step.step_id!r} found no matching row (FR-RATE-38)",
+                        f"lookup step {step.step_id!r} found no matching row (FR-255)",
                     )
 
 
@@ -468,7 +468,7 @@ def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> No
     this: an unguarded on_miss='error' table/lookup step. This is reported as the
     corresponding typed code with the original engine error preserved in the message
     (rather than a bare re-raise of an untyped `RuntimeError`, which would violate
-    FR-RATE-38's "typed" requirement), and it is honest about being an inference: a
+    FR-255's "typed" requirement), and it is honest about being an inference: a
     correctness gap for a later slice to close by making the wire translation itself
     fail gracefully, not by parsing engine error strings more cleverly.
     """
@@ -484,7 +484,7 @@ def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> No
             code,
             "the engine failed evaluating a downstream step, most likely because an "
             f"on_miss='error' step found no matching row and a later expression "
-            f"referenced its output (FR-RATE-38); original engine error: {exc}",
+            f"referenced its output (FR-255); original engine error: {exc}",
         )
     raise exc
 
@@ -492,7 +492,7 @@ def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> No
 def _apply_constraints(
     algorithm: RatingAlgorithm, result: Mapping[str, Any]
 ) -> tuple[list[str], list[str]]:
-    """Ruling 9: the whole DAG has already evaluated (no early exit exists to build) — this
+    """RL-875: the whole DAG has already evaluated (no early exit exists to build) — this
     reads every constraint step's `{step_id}__violated` flag and returns
     `(decline_reasons, clamp_reason_codes)`. `on_violation="error"` firing raises
     `NotImplementedError` — see the module docstring."""
@@ -519,14 +519,14 @@ def _apply_constraints(
 
 
 # ---------------------------------------------------------------------------
-# The premium ladder (FR-RATE-31/32, NFR-RATE-8) — see the module docstring.
+# The premium ladder (FR-247/248, NFR-496) — see the module docstring.
 # ---------------------------------------------------------------------------
 
 
 def _round_minor(raw: float, mode: RoundingMode) -> int:
     """`Decimal(repr(raw))`, never `Decimal(raw)` — the latter exposes the float's exact
     binary expansion (`Decimal(1.15)` is `1.1499999999999999...`), which is not what
-    FR-RATE-56's "integer minor unit" crossing means. `repr()` is Python's own
+    FR-273's "integer minor unit" crossing means. `repr()` is Python's own
     shortest-round-trip form, which is what the engine's float64 arithmetic actually meant
     to produce (Task 1.3 measured the cross-implementation noise at ~2e-13 relative,
     utterly negligible against one minor unit)."""
@@ -638,7 +638,7 @@ def _build_outputs(
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-41: the trace.
+# FR-258: the trace.
 # ---------------------------------------------------------------------------
 
 
@@ -700,7 +700,7 @@ def _build_trace(
 
 
 # ---------------------------------------------------------------------------
-# The shared tail (FR-RATE-37) and score_one itself.
+# The shared tail (FR-254) and score_one itself.
 # ---------------------------------------------------------------------------
 
 
@@ -712,7 +712,7 @@ def build_scoring_result(
     engine_trace: Mapping[str, Any] | None,
 ) -> ScoringResult:
     """Turn one already-evaluated engine `result` (and, optionally, its `trace`) into a
-    `ScoringResult`. The shared step evaluator FR-RATE-37 requires — see the module
+    `ScoringResult`. The shared step evaluator FR-254 requires — see the module
     docstring's "What this module deliberately does not build". `timing_ms` is not set
     here; callers own their own timing (`score_one` sets it after this returns, via
     `model_copy`, since `ScoringResult` is frozen).
@@ -751,7 +751,7 @@ def build_scoring_result(
 async def score_one(
     bundle: CompiledBundle, ctx: QuoteContext, *, trace: bool = False
 ) -> ScoringResult:
-    """The real-time evaluator (FR-RATE-34), built on `async_evaluate()` (Ruling 5).
+    """The real-time evaluator (FR-250), built on `async_evaluate()` (RL-868).
 
     **`ctx.options.rating_version_ref` is required.** Slice 1 builds no default-live
     resolution (DP1, Slice 2's), so `score_one` has nothing else to populate
@@ -760,7 +760,7 @@ async def score_one(
     *version*'s own identity. A caller (Slice 2's HTTP layer, or a test) resolves the
     version and fills in `ctx.options.rating_version_ref` before calling this.
 
-    NFR-RATE-3: performs no I/O of its own — every value it reads comes from `bundle`
+    NFR-491: performs no I/O of its own — every value it reads comes from `bundle`
     (already hydrated, no cache, no database, no network — `load_bundle`'s own
     guarantee) and `ctx` (already-parsed data). `pricing-core` cannot import a database or
     network client at all (`.importlinter`'s `core-has-no-infrastructure`), so this is
@@ -801,7 +801,7 @@ async def score_one(
 
 
 # ---------------------------------------------------------------------------
-# `score_batch` (W11 Task 3A). See the module docstring, "What `score_batch` is, and what
+# `score_batch` (WK-671 Task 3A). See the module docstring, "What `score_batch` is, and what
 # it deliberately does not do", for the frame contract and the design decisions below.
 # ---------------------------------------------------------------------------
 
@@ -816,7 +816,7 @@ def _ladder_json(ladder: Sequence[LadderRung]) -> str:
 
 
 #: `AlgorithmOutput.type` names shapes this serialiser knows how to write losslessly
-#: (FR-RATE-13). Anything else is refused rather than stringified — Ruling 43 §5(i): a
+#: (FR-227). Anything else is refused rather than stringified — RL-923 §5(i): a
 #: silent `default=str` catch-all put a `Decimal` output and an `int` output in the same
 #: JSON column with no way to tell which was which by reading the text back.
 _KNOWN_OUTPUT_TYPES = frozenset({"money_minor", "decimal", "bool", "string", "date"})
@@ -824,7 +824,7 @@ _KNOWN_OUTPUT_TYPES = frozenset({"money_minor", "decimal", "bool", "string", "da
 
 def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
     """One declared output value -> its canonical, JSON-lossless form, by the algorithm's
-    own declared `type` (FR-RATE-13) rather than by the value's incidental Python type —
+    own declared `type` (FR-227) rather than by the value's incidental Python type —
     `_build_outputs` (unmodified, per the module docstring) hands back whatever the engine's
     raw evaluated result happened to be, which for a `decimal`-typed non-rung output is a
     Python `float` today (verified: nothing converts it, the same way `_build_ladder`'s own
@@ -867,7 +867,7 @@ def _outputs_json(algorithm: RatingAlgorithm, outputs: Mapping[str, Any]) -> str
     """`ScoringResult.outputs` -> a JSON object, total over every declared output type this
     module recognises (`_KNOWN_OUTPUT_TYPES`) and refusing — never silently stringifying —
     anything else, so a type this function does not know about fails loudly instead of
-    reaching `05` FR-MON-11's A/E computation as data of an unknown shape (Ruling 43 §5(i))."""
+    reaching `05` FR-317's A/E computation as data of an unknown shape (RL-923 §5(i))."""
     declared_types = {output.name: output.type for output in algorithm.outputs}
     coerced: dict[str, int | str | bool] = {}
     for name, value in outputs.items():
@@ -880,7 +880,7 @@ def _outputs_json(algorithm: RatingAlgorithm, outputs: Mapping[str, Any]) -> str
 
 def _batch_error_code(exc: Exception) -> tuple[str, str]:
     """Parse the `_raise_named` convention (`f"{code}: {message}"`) back into its parts, so
-    an `"error"` output row carries the same typed code FR-RATE-38 names — `test_worker.py`
+    an `"error"` output row carries the same typed code FR-255 names — `test_worker.py`
     and `runtime.py`'s `MODEL_CALL_FAILED` sentinel both already follow it. An exception
     that does not (should not occur for anything this catches, but a fallback is cheap and
     honest) is reported under its own class name rather than mis-parsed."""
@@ -895,7 +895,7 @@ def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
     """One input row -> the identical `QuoteContext` shape `score_one`'s own checks expect.
     `quoted_at` is not read by anything downstream of this call (`build_scoring_result`'s
     `ScoringResult` has no such field, and `score_batch` never requests an engine trace —
-    Ruling 25 — so `_build_trace` is never reached); it is derived from `effective_date` at
+    RL-890 — so `_build_trace` is never reached); it is derived from `effective_date` at
     midnight only because `QuoteContext` requires *some* value, never because batch scoring
     means anything by it."""
     effective_date = date.fromisoformat(row["effective_date"])
@@ -916,7 +916,7 @@ def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str
     unmodified (the module docstring's "What `score_batch` is"). Never lets a `ValueError`
     (the `_raise_named` convention) or the untyped `RuntimeError` `_reraise_engine_failure`
     can re-raise escape past this row — an `"error"` output row instead, which is the
-    structural half of FR-RATE-38 a chunked transform has to provide regardless of who is
+    structural half of FR-255 a chunked transform has to provide regardless of who is
     charged with the requirement id. `NotImplementedError` (a `RuntimeError` subclass) is
     deliberately let through: it marks a genuinely undesigned case `score_one` does not
     catch either, not a per-quote data error."""
@@ -983,10 +983,10 @@ def score_batch(
     chunk_rows: int = 100_000,
     progress: ProgressCallback | None = None,
 ) -> pl.LazyFrame:
-    """Re-rate every row of `frame` against `bundle` (FR-RATE-36/37, `03` §5.2). A pure,
+    """Re-rate every row of `frame` against `bundle` (FR-253/254, `03` §5.2). A pure,
     chunked transform: it takes a frame and returns a frame, holds no durable state across
     or within calls, and reaches the identical `build_scoring_result` tail `score_one` does
-    (Ruling 32) — see the module docstring for the frame contract and every design decision
+    (RL-858) — see the module docstring for the frame contract and every design decision
     below.
 
     **This is not genuine polars streaming.** `bundle.decision.evaluate()` has no vectorised

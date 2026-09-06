@@ -1,4 +1,4 @@
-"""Preparation recipes (`01` §3.2, FR-DATA-9..14)."""
+"""Preparation recipes (`01` §3.2, FR-35, FR-36, FR-37, FR-38, FR-39, FR-41)."""
 
 from __future__ import annotations
 
@@ -22,10 +22,10 @@ from pricing_core.data.prepare import (
     pseudonymise,
 )
 
-# -- FR-DATA-9: exactly the declared step types --------------------------------------------
+# -- FR-35: exactly the declared step types --------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-9")
+@pytest.mark.req("FR-35")
 def test_the_declared_step_types_are_exactly_the_fifteen_the_spec_names() -> None:
     assert {
         "rename", "cast", "parse_date", "trim_whitespace", "normalise_case", "map_values",
@@ -34,7 +34,7 @@ def test_the_declared_step_types_are_exactly_the_fifteen_the_spec_names() -> Non
     } == STEP_TYPES
 
 
-@pytest.mark.req("FR-DATA-9")
+@pytest.mark.req("FR-35")
 def test_an_undeclared_step_is_refused_not_ignored() -> None:
     """Negative: a step that silently does nothing is worse than one that fails, because
     the version it produces looks prepared."""
@@ -42,7 +42,7 @@ def test_an_undeclared_step_is_refused_not_ignored() -> None:
         apply_recipe({"t": pl.DataFrame({"a": [1]})}, [{"step": "run_python"}])
 
 
-@pytest.mark.req("FR-DATA-9")
+@pytest.mark.req("FR-35")
 def test_steps_apply_in_order_each_seeing_the_last() -> None:
     frame = pl.DataFrame({"Gross Premium": ["  100 ", " 200 "]})
     result = apply_recipe(
@@ -57,10 +57,10 @@ def test_steps_apply_in_order_each_seeing_the_last() -> None:
     assert [s["step"] for s in result.stats["steps"]] == ["rename", "trim_whitespace", "cast"]
 
 
-# -- FR-DATA-10: the restricted expression grammar -------------------------------------------
+# -- FR-36: the restricted expression grammar -------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-10")
+@pytest.mark.req("FR-36")
 def test_arithmetic_and_conditionals_are_permitted() -> None:
     frame = pl.DataFrame({"premium": [100.0, 200.0], "exposure": [1.0, 0.5]})
     derived = frame.with_columns(
@@ -71,7 +71,7 @@ def test_arithmetic_and_conditionals_are_permitted() -> None:
     assert derived.get_column("annual_only").to_list() == [100.0, 0.0]
 
 
-@pytest.mark.req("FR-DATA-10")
+@pytest.mark.req("FR-36")
 @pytest.mark.parametrize(
     "expression",
     [
@@ -86,7 +86,7 @@ def test_arithmetic_and_conditionals_are_permitted() -> None:
     ],
 )
 def test_anything_outside_the_grammar_is_refused(expression: str) -> None:
-    """FR-DATA-10: no network, no filesystem, no builtins.
+    """FR-36: no network, no filesystem, no builtins.
 
     The property is not that these strings were blacklisted — it is that the expression is
     *translated* rather than evaluated, so only what the translator can build exists. Each
@@ -96,27 +96,27 @@ def test_anything_outside_the_grammar_is_refused(expression: str) -> None:
         compile_expression(expression)
 
 
-@pytest.mark.req("FR-DATA-10")
+@pytest.mark.req("FR-36")
 def test_statistical_functions_are_excluded() -> None:
-    """FR-DATA-10 excludes them: a preparation step that could take a mean over the column
+    """FR-36 excludes them: a preparation step that could take a mean over the column
     it derives would make the result depend on which rows the extract happened to hold."""
     with pytest.raises(ExpressionError, match="not an allowed function"):
         compile_expression("mean(premium)")
 
 
-@pytest.mark.req("FR-DATA-10")
+@pytest.mark.req("FR-36")
 def test_referenced_columns_are_reported_for_lineage() -> None:
     assert referenced_columns("round(premium / exposure) + abs(adjustment)") == {
         "premium", "exposure", "adjustment",
     }
 
 
-# -- FR-DATA-11: exposure is preserved exactly ------------------------------------------------
+# -- FR-37: exposure is preserved exactly ------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-11")
+@pytest.mark.req("FR-37")
 def test_splitting_a_period_preserves_total_exposure_exactly() -> None:
-    """The post-condition FR-DATA-11 requires, checked rather than assumed.
+    """The post-condition FR-37 requires, checked rather than assumed.
 
     Apportioning with floats loses fractions of a policy-year per split; across a million
     policies that is a visible error in every frequency denominator.
@@ -136,7 +136,7 @@ def test_splitting_a_period_preserves_total_exposure_exactly() -> None:
     assert total == Decimal("1.0")
 
 
-@pytest.mark.req("FR-DATA-11")
+@pytest.mark.req("FR-37")
 def test_an_awkward_split_still_sums_exactly() -> None:
     """A third of a year does not divide cleanly; the last fragment absorbs the remainder."""
     frame = pl.DataFrame(
@@ -155,7 +155,7 @@ def test_an_awkward_split_still_sums_exactly() -> None:
     assert total == Decimal("0.997")
 
 
-@pytest.mark.req("FR-DATA-11")
+@pytest.mark.req("FR-37")
 def test_a_row_with_no_boundary_inside_it_is_untouched() -> None:
     frame = pl.DataFrame(
         {
@@ -168,10 +168,10 @@ def test_a_row_with_no_boundary_inside_it_is_untouched() -> None:
     assert explode_period(frame, boundaries=[date(2027, 1, 1)]).height == 1
 
 
-# -- FR-DATA-12: linkage is reported, not silently dropped --------------------------------------
+# -- FR-38: linkage is reported, not silently dropped --------------------------------------
 
 
-@pytest.mark.req("FR-DATA-12")
+@pytest.mark.req("FR-38")
 def test_claims_link_to_the_exposure_row_covering_the_loss() -> None:
     exposure = pl.DataFrame(
         {
@@ -188,7 +188,7 @@ def test_claims_link_to_the_exposure_row_covering_the_loss() -> None:
     assert result.counts == {"linked": 2, "unlinked": 0, "multi_linked": 0}
 
 
-@pytest.mark.req("FR-DATA-12")
+@pytest.mark.req("FR-38")
 def test_an_unlinked_claim_is_returned_not_dropped() -> None:
     """Negative: a claim that fails to link is the most important row in the file — either
     a data error or a policy the exposure table does not know about."""
@@ -204,7 +204,7 @@ def test_an_unlinked_claim_is_returned_not_dropped() -> None:
     assert result.unlinked.get_column("claim_id").to_list() == ["C1"]
 
 
-@pytest.mark.req("FR-DATA-12")
+@pytest.mark.req("FR-38")
 def test_a_loss_on_a_renewal_date_belongs_to_the_new_term() -> None:
     """The period is half-open, matching how the policy was actually in force."""
     exposure = pl.DataFrame(
@@ -222,7 +222,7 @@ def test_a_loss_on_a_renewal_date_belongs_to_the_new_term() -> None:
     assert result.linked.get_column("exposure_start").to_list() == [date(2026, 7, 1)]
 
 
-@pytest.mark.req("FR-DATA-12")
+@pytest.mark.req("FR-38")
 def test_a_claim_table_without_an_identifier_is_refused() -> None:
     """Negative: without one, unlinked claims cannot be reported individually."""
     with pytest.raises(RecipeError, match="identifying column"):
@@ -233,10 +233,10 @@ def test_a_claim_table_without_an_identifier_is_refused() -> None:
         )
 
 
-# -- FR-DATA-13: pseudonymisation ----------------------------------------------------------------
+# -- FR-39: pseudonymisation ----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-13")
+@pytest.mark.req("FR-39")
 def test_the_same_customer_maps_to_the_same_token_across_versions() -> None:
     """What makes longitudinal analysis possible without holding the identity."""
     first = pseudonymise(
@@ -250,7 +250,7 @@ def test_the_same_customer_maps_to_the_same_token_across_versions() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-13")
+@pytest.mark.req("FR-39")
 def test_a_different_workspace_key_gives_a_different_token() -> None:
     """The token is meaningless outside the workspace that produced it."""
     a = pseudonymise(pl.DataFrame({"customer_id": ["A"]}), column="customer_id", key="ws-1")
@@ -258,7 +258,7 @@ def test_a_different_workspace_key_gives_a_different_token() -> None:
     assert a.get_column("customer_id")[0] != b.get_column("customer_id")[0]
 
 
-@pytest.mark.req("FR-DATA-13")
+@pytest.mark.req("FR-39")
 def test_the_original_identifier_does_not_survive() -> None:
     tokenised = pseudonymise(
         pl.DataFrame({"customer_id": ["alice@example.com"]}), column="customer_id", key="k"
@@ -266,7 +266,7 @@ def test_the_original_identifier_does_not_survive() -> None:
     assert "alice" not in tokenised.get_column("customer_id")[0]
 
 
-@pytest.mark.req("FR-DATA-13")
+@pytest.mark.req("FR-39")
 def test_pseudonymising_without_a_key_is_refused() -> None:
     """Negative: a keyless hash is reversible by anyone who can guess the identifier space,
     and customer ids are guessable."""
@@ -274,12 +274,12 @@ def test_pseudonymising_without_a_key_is_refused() -> None:
         pseudonymise(pl.DataFrame({"customer_id": ["A"]}), column="customer_id", key="")
 
 
-# -- FR-DATA-14: a recipe is replayable -----------------------------------------------------
+# -- FR-41: a recipe is replayable -----------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-14")
+@pytest.mark.req("FR-41")
 def test_replaying_a_recipe_reproduces_the_same_parquet_bytes() -> None:
-    """FR-DATA-14: `replay(recipe, source_bytes) == stored version`, byte-for-byte on the
+    """FR-41: `replay(recipe, source_bytes) == stored version`, byte-for-byte on the
     parquet content hash, given pinned library versions.
 
     This is what makes a Preparation Recipe *evidence* rather than a description. A
@@ -319,7 +319,7 @@ def test_replaying_a_recipe_reproduces_the_same_parquet_bytes() -> None:
     assert first == second
 
 
-@pytest.mark.req("FR-DATA-14")
+@pytest.mark.req("FR-41")
 def test_a_changed_recipe_produces_a_different_artifact() -> None:
     """Negative: replayability is only meaningful if the recipe actually determines the
     result. If any recipe gave the same bytes, the guarantee would be vacuous."""

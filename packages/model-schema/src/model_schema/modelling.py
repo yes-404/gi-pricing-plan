@@ -14,7 +14,7 @@ by the time anything does.
   a standard error and an interval. A point estimate on its own is not a result here; it is
   half of one, and the half that reads as more certain than it is.
 
-ADR-0003 is why `fit_result` is data rather than a pickled estimator: a Model must be
+ADR-705 is why `fit_result` is data rather than a pickled estimator: a Model must be
 re-scorable without `glum`, by a process that never ran it.
 """
 
@@ -86,7 +86,7 @@ __all__ = [
 
 
 class FactorType(enum.StrEnum):
-    """`02` FR-MODEL-1's closed set. No other types exist without a spec change."""
+    """`02` FR-83's closed set. No other types exist without a spec change."""
 
     IDENTITY = "identity"
     BANDING = "banding"
@@ -99,7 +99,7 @@ class FactorType(enum.StrEnum):
 
 
 class FactorIntent(enum.StrEnum):
-    """What a factor is *for* (FR-MODEL-3).
+    """What a factor is *for* (FR-88).
 
     `control` is the load-bearing one: a variable present to absorb variance but never to
     be rated on — year of account is the standard example. `03` refuses a `control` factor
@@ -120,10 +120,10 @@ class MonotonicDirection(enum.StrEnum):
 
 
 class Factor(BaseModel):
-    """A named, versioned transformation over dataset columns (FR-MODEL-1, FR-MODEL-7).
+    """A named, versioned transformation over dataset columns (FR-83, FR-96).
 
     Defined against a **Dataset**, resolved against a specific **version** at fit time
-    (FR-MODEL-2) — so a factor outlives the version it was first used on, and a column that
+    (FR-87) — so a factor outlives the version it was first used on, and a column that
     changed dtype fails loudly at resolution rather than quietly changing the model.
     """
 
@@ -143,13 +143,13 @@ class Factor(BaseModel):
     intent: FactorIntent = FactorIntent.RISK
     monotonic_direction: MonotonicDirection = MonotonicDirection.NONE
     monotonic_rationale: str | None = None
-    #: FR-MODEL-5. A prohibited factor cannot enter any Model Spec; the attempt is refused
+    #: FR-90. A prohibited factor cannot enter any Model Spec; the attempt is refused
     #: and audited. The reason is required with the flag — "prohibited because someone once
     #: said so" is the state this field exists to prevent.
     prohibited: bool = False
     prohibited_reason: str | None = None
     #: `02` §4.1. The transformation a `banding` or `grouping` factor *is* — pinned by id,
-    #: because both are versioned artifacts (FR-MODEL-12) and a factor that named a slug
+    #: because both are versioned artifacts (FR-101) and a factor that named a slug
     #: would change meaning the next time someone re-cut a boundary.
     banding_id: UUID | None = None
     grouping_id: UUID | None = None
@@ -160,7 +160,7 @@ class Factor(BaseModel):
     #: a column reference cannot express. Pinned by id for the reason `banding_id` is.
     operand_factor_ids: tuple[UUID, ...] = ()
     #: The level relativities are expressed against. Null until the fit picks one, because
-    #: `largest_exposure` cannot be known without the data (FR-MODEL-21).
+    #: `largest_exposure` cannot be known without the data (FR-113).
     base_level: str | None = None
     base_level_method: str = "largest_exposure"
 
@@ -266,7 +266,7 @@ class Factor(BaseModel):
     def _reasons_accompany_their_flags(self) -> Factor:
         if self.prohibited and not (self.prohibited_reason or "").strip():
             raise ValueError(
-                f"factor {self.slug!r} is prohibited with no reason. FR-MODEL-5 requires "
+                f"factor {self.slug!r} is prohibited with no reason. FR-90 requires "
                 "one: a prohibition nobody can explain is one nobody can lift."
             )
         if self.monotonic_direction is not MonotonicDirection.NONE and not (
@@ -274,14 +274,14 @@ class Factor(BaseModel):
         ).strip():
             raise ValueError(
                 f"factor {self.slug!r} declares a monotonic direction with no rationale "
-                "(FR-MODEL-4). The direction is an actuarial judgement, and the next "
+                "(FR-89). The direction is an actuarial judgement, and the next "
                 "person needs to know whose and why."
             )
         return self
 
 
 class BandingMethod(enum.StrEnum):
-    """How a Banding's boundaries were arrived at (`02` §2, FR-MODEL-9).
+    """How a Banding's boundaries were arrived at (`02` §2, FR-98).
 
     Recorded on the artifact because the method *is* the judgement. Two bandings with
     identical boundaries, one hand-drawn and one from exposure quantiles, are different
@@ -297,7 +297,7 @@ class BandingMethod(enum.StrEnum):
 
 
 class BelowRangePolicy(enum.StrEnum):
-    """What a value below the first boundary does (FR-MODEL-8).
+    """What a value below the first boundary does (FR-97).
 
     Explicit rather than defaulted: silently clamping a driver age of 3 into the 17-20 band
     is how a data defect becomes a price.
@@ -309,7 +309,7 @@ class BelowRangePolicy(enum.StrEnum):
 
 
 class AboveRangePolicy(enum.StrEnum):
-    """What a value at or above the last boundary does (FR-MODEL-8)."""
+    """What a value at or above the last boundary does (FR-97)."""
 
     ERROR = "error"
     CLAMP_TO_LAST = "clamp_to_last"
@@ -317,7 +317,7 @@ class AboveRangePolicy(enum.StrEnum):
 
 
 class BandingMinimums(BaseModel):
-    """FR-MODEL-11's thresholds, stored **on the artifact** (`banding.schema.json`).
+    """FR-100's thresholds, stored **on the artifact** (`banding.schema.json`).
 
     On the banding rather than passed to the check, because "configurable" means a reviewer
     can see what was configured. Held at the call site instead, the choice persists nowhere
@@ -328,7 +328,7 @@ class BandingMinimums(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: An exposure, so an exact decimal on the wire and never a binary float (FR-OVR-7) —
+    #: An exposure, so an exact decimal on the wire and never a binary float (FR-10) —
     #: `banding.schema.json` types it as `Decimal` and the first implementation made it a
     #: float, which the money scan caught.
     min_exposure_per_band: DecimalStr = Decimal(0)
@@ -344,7 +344,7 @@ class Banding(BaseModel):
     does not drop the last band — it renames every band after the gap. Both produce a model
     that fits, reads correctly, and is wrong.
 
-    **Versioned, never edited** (FR-MODEL-12). A Model pins the Banding version it was
+    **Versioned, never edited** (FR-101). A Model pins the Banding version it was
     fitted with, so re-cutting a boundary allocates a new version and leaves every existing
     model describing what it actually did.
     """
@@ -358,7 +358,7 @@ class Banding(BaseModel):
     column: str
     method: BandingMethod
     method_params: dict[str, float] = Field(default_factory=dict)
-    #: The version the boundaries and `band_stats` were derived on (FR-MODEL-10). `None`
+    #: The version the boundaries and `band_stats` were derived on (FR-99). `None`
     #: for a `manual` banding authored from an actuary's judgement rather than from data.
     derived_on_dataset_version_id: UUID | None = None
     #: `n + 1` cut points for `n` bands. The outer two are the range's ends, so a value
@@ -372,10 +372,10 @@ class Banding(BaseModel):
     null_level: str | None = None
     below_range: BelowRangePolicy = BelowRangePolicy.ERROR
     above_range: AboveRangePolicy = AboveRangePolicy.ERROR
-    #: FR-MODEL-11's thresholds, as `banding.schema.json` declares them.
+    #: FR-100's thresholds, as `banding.schema.json` declares them.
     minimums: BandingMinimums = BandingMinimums()
-    #: FR-MODEL-10's evidence, as of derivation. `OneWayRow` rather than a second shape
-    #: holding the same numbers: `01` FR-DATA-26 already computes exposure, claims,
+    #: FR-99's evidence, as of derivation. `OneWayRow` rather than a second shape
+    #: holding the same numbers: `01` FR-61 already computes exposure, claims,
     #: frequency, severity and burning cost by level with intervals, and a band is a level.
     band_stats: tuple[OneWayRow, ...] = ()
 
@@ -419,7 +419,7 @@ class Banding(BaseModel):
 
 
 class GroupingMethod(enum.StrEnum):
-    """How Levels were merged (`02` §2, FR-MODEL-14)."""
+    """How Levels were merged (`02` §2, FR-105)."""
 
     MANUAL = "manual"
     CREDIBILITY_WEIGHTED = "credibility_weighted"
@@ -429,7 +429,7 @@ class GroupingMethod(enum.StrEnum):
 
 
 class CredibilityModel(enum.StrEnum):
-    """Which credibility theory `credibility_weighted` merging applies (FR-MODEL-80).
+    """Which credibility theory `credibility_weighted` merging applies (FR-106).
 
     Recorded per grouping rather than fixed in the code because it is a modelling
     judgement, not a platform constant — and because the two disagree on thin cells, which
@@ -446,7 +446,7 @@ class CredibilityModel(enum.StrEnum):
 
 
 class UnseenLevelBehaviour(enum.StrEnum):
-    """What scoring does with a Level the Grouping has never seen (FR-MODEL-13).
+    """What scoring does with a Level the Grouping has never seen (FR-104).
 
     Mandatory — the field carries no default anywhere in this module. A grouping that
     silently drops an unseen level prices it as the base, which is the cheapest cell by
@@ -459,7 +459,7 @@ class UnseenLevelBehaviour(enum.StrEnum):
 
 
 class GroupingEvidence(BaseModel):
-    """The change in fit a Grouping implies (FR-MODEL-15).
+    """The change in fit a Grouping implies (FR-107).
 
     Grouping is a modelling decision and must be defensible as one, so the artifact carries
     what it cost: deviance before and after, the degrees of freedom saved, and the
@@ -480,13 +480,13 @@ class GroupingEvidence(BaseModel):
     deviance_after: float | None = None
     df_saved: int = 0
     chi2_p_value: float | None = Field(default=None, ge=0.0, le=1.0)
-    #: FR-MODEL-80: EVPV, VHM and `k`, so a reviewer can re-derive `Z` rather than take it.
+    #: FR-106: EVPV, VHM and `k`, so a reviewer can re-derive `Z` rather than take it.
     #: `None` under limited fluctuation, which has no variance components to report.
     credibility_components: dict[str, float] | None = None
     #: The source levels the grouping collapsed, carrying the statistics a target level
     #: carries — so "which thin cells went into G1, and what were they worth?" is answered
     #: from the artifact rather than by re-running the one-way against the dataset version
-    #: (FR-MODEL-15). Declared in the contract since Phase 0; added to the model 2026-08-22.
+    #: (FR-107). Declared in the contract since Phase 0; added to the model 2026-08-22.
     source_level_stats: tuple[OneWayRow, ...] = ()
     #: The resulting target levels, carrying the statistics a source level carries — so
     #: "what did merging these four into G1 do to the frequency?" is a comparison rather
@@ -495,7 +495,7 @@ class GroupingEvidence(BaseModel):
 
 
 class Grouping(BaseModel):
-    """Source Levels mapped to target Levels (`02` §4.3, FR-MODEL-13..17).
+    """Source Levels mapped to target Levels (`02` §4.3, FR-104, FR-105, FR-107, FR-108, FR-109).
 
     Exhaustive over the Levels observed when it was derived, and explicit about the ones it
     was not: `unseen_level_behaviour` has no default, because the three answers price an
@@ -511,7 +511,7 @@ class Grouping(BaseModel):
     column: str
     method: GroupingMethod
     #: `Any` rather than `float` because the contract's own params are not all numbers:
-    #: `credibility_model` is a string and `credibility_pk` an object (FR-MODEL-80).
+    #: `credibility_model` is a string and `credibility_pk` an object (FR-106).
     method_params: dict[str, Any] = Field(default_factory=dict)
     derived_on_dataset_version_id: UUID | None = None
     #: Source level → target level. Keys are source levels as strings, because that is what
@@ -519,10 +519,10 @@ class Grouping(BaseModel):
     mapping: dict[str, str] = Field(min_length=1)
     unseen_level_behaviour: UnseenLevelBehaviour
     default_target_level: str | None = None
-    #: FR-MODEL-17: a chain applied in order (outcode → area → region), so the finer level
+    #: FR-109: a chain applied in order (outcode → area → region), so the finer level
     #: stays available for diagnostics while rating happens on the coarser one.
     parent_grouping_id: UUID | None = None
-    #: FR-MODEL-16: the generated model document lists every grouping with its method **and
+    #: FR-108: the generated model document lists every grouping with its method **and
     #: rationale**, and `grouping.schema.json` says it appears verbatim in the dossier
     #: (`06` §4.4 §4). Declared by the contract since Phase 0 and missed by the first
     #: implementation of this shape; a merge nobody can explain is one nobody can defend.
@@ -536,7 +536,7 @@ class Grouping(BaseModel):
             if not self.default_target_level:
                 raise ValueError(
                     f"grouping {self.slug!r} maps unseen levels to a default and names no "
-                    "default (FR-MODEL-13). The behaviour is mandatory precisely so it "
+                    "default (FR-104). The behaviour is mandatory precisely so it "
                     "cannot be half-declared."
                 )
             if self.default_target_level not in targets:
@@ -562,13 +562,13 @@ class Grouping(BaseModel):
             if declared not in tuple(CredibilityModel):
                 raise ValueError(
                     f"grouping {self.slug!r} names credibility model {declared!r}, which "
-                    f"is not one of {[m.value for m in CredibilityModel]} (FR-MODEL-80)."
+                    f"is not one of {[m.value for m in CredibilityModel]} (FR-106)."
                 )
         return self
 
     @property
     def credibility_model(self) -> CredibilityModel | None:
-        """The credibility theory this grouping applied, or `None` (FR-MODEL-80).
+        """The credibility theory this grouping applied, or `None` (FR-106).
 
         Read through a property so callers get the enum without every one of them knowing
         the key it is stored under — and so the storage stays exactly what the contract
@@ -587,7 +587,7 @@ class Grouping(BaseModel):
 
 
 class BandingProposal(BaseModel):
-    """What `POST /bandings/propose` asks for (FR-MODEL-9, `02` §5.2).
+    """What `POST /bandings/propose` asks for (FR-98, `02` §5.2).
 
     A proposal, never a persisted artifact: the boundaries come back editable, and what is
     stored is what the actuary accepted. Hence a separate shape — a `Banding` carries an id
@@ -613,7 +613,7 @@ class BandingProposal(BaseModel):
 
 
 class GroupingProposal(BaseModel):
-    """What `POST /groupings/propose` asks for (FR-MODEL-14, `02` §5.2)."""
+    """What `POST /groupings/propose` asks for (FR-105, `02` §5.2)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -624,12 +624,12 @@ class GroupingProposal(BaseModel):
     #: merges until the standard is met rather than to a count.
     n_groups: int = Field(default=8, ge=1, le=200)
     method_params: dict[str, Any] = Field(default_factory=dict)
-    #: FR-MODEL-80's default, and what a UK reviewer expects to see. Written into the
+    #: FR-106's default, and what a UK reviewer expects to see. Written into the
     #: resulting grouping's `method_params`, never kept beside them.
     credibility_model: CredibilityModel = CredibilityModel.LIMITED_FLUCTUATION
     #: The `(p, k)` pair the full-credibility standard is derived from. 1 082 claims is
     #: ±5 % at 90 % confidence; a reviewer who cannot see `(p, k)` cannot tell 1 082 from a
-    #: house number (FR-MODEL-80).
+    #: house number (FR-106).
     credibility_p: float = Field(default=0.90, gt=0.0, lt=1.0)
     credibility_k: float = Field(default=0.05, gt=0.0)
     exposure_column: str = "exposure_years"
@@ -640,7 +640,7 @@ class GroupingProposal(BaseModel):
 
 
 class BandingEvaluation(BaseModel):
-    """What `POST /bandings/evaluate` asks for (FR-MODEL-75).
+    """What `POST /bandings/evaluate` asks for (FR-150).
 
     A whole `Banding` rather than a list of boundaries, because the answer depends on all
     of it — `closed`, `null_level` and the two range policies each decide where rows land,
@@ -657,7 +657,7 @@ class BandingEvaluation(BaseModel):
 
 
 class GroupingEvaluation(BaseModel):
-    """What `POST /groupings/evaluate` asks for (FR-MODEL-75)."""
+    """What `POST /groupings/evaluate` asks for (FR-150)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -671,7 +671,7 @@ class GroupingEvaluation(BaseModel):
 class OffsetSpec(BaseModel):
     """`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`.
 
-    `model` is the offset from another model (FR-MODEL-24): the referenced fitted GLM's
+    `model` is the offset from another model (FR-116): the referenced fitted GLM's
     linear predictor, resolved by the backend and supplied as the fit's `model_offset`.
     """
 
@@ -681,7 +681,7 @@ class OffsetSpec(BaseModel):
     column: str | None = None
     #: The pinned reference whose linear predictor is the offset: `model:slug@version`.
     #: Renamed from the Phase-0 scaffold's `model_ref` (read by nothing) to the name the
-    #: spec and the hand-authored contract have always carried (FR-MODEL-24, 2026-08-21).
+    #: spec and the hand-authored contract have always carried (FR-116, 2026-08-21).
     offset_model_ref: ModelRef | None = None
 
     @model_validator(mode="after")
@@ -693,16 +693,16 @@ class OffsetSpec(BaseModel):
     @model_validator(mode="after")
     def _a_model_offset_names_its_model(self) -> OffsetSpec:
         if self.kind == "model" and self.offset_model_ref is None:
-            raise ValueError("offset kind 'model' requires offset_model_ref (FR-MODEL-24)")
+            raise ValueError("offset kind 'model' requires offset_model_ref (FR-116)")
         if self.kind != "model" and self.offset_model_ref is not None:
             raise ValueError("offset_model_ref is set but offset kind is not 'model'")
         return self
 
 
 class SplitRef(BaseModel):
-    """The named split a model was fitted and judged on (`02` §4.4, `01` FR-DATA-36).
+    """The named split a model was fitted and judged on (`02` §4.4, `01` FR-76).
 
-    A *reference*, not a description. FR-DATA-36 records the split on the **parent**
+    A *reference*, not a description. FR-76 records the split on the **parent**
     version precisely so that "trained on the same split" is one artifact two models cite,
     rather than two derivations that were believed to match. Naming the part versions
     directly here would reintroduce the belief.
@@ -723,14 +723,14 @@ class SplitRef(BaseModel):
         if self.train_part == self.holdout_part:
             raise ValueError(
                 f"train and holdout are both {self.train_part!r}. A model measured on the "
-                "rows it was fitted on reports its own memory, and FR-MODEL-54's "
+                "rows it was fitted on reports its own memory, and FR-183's "
                 "side-by-side comparison would then show two copies of one number."
             )
         return self
 
 
 class WeightSpec(BaseModel):
-    """Severity weights by claim count, burning cost by exposure (FR-MODEL-19)."""
+    """Severity weights by claim count, burning cost by exposure (FR-111)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -745,13 +745,13 @@ class WeightSpec(BaseModel):
 
 
 class LossTreatment(BaseModel):
-    """How large losses are treated **as the model is fitted** (FR-MODEL-73).
+    """How large losses are treated **as the model is fitted** (FR-127).
 
     A modelling decision, not a property of the data: `01` VR-ACT-10 flags large losses and
     never removes them, so one validated Dataset Version serves many capping assumptions
     without re-ingestion. That is only true while the assumption lives here, inside the
     spec — and therefore inside `spec_hash`, so two models differing only in their cap are
-    two models rather than a collision (FR-MODEL-66).
+    two models rather than a collision (FR-204).
 
     `cap_minor` is **integer minor units** (`CLAUDE.md` §7). A cap is a money threshold
     compared against a money column, and a float one compares unequal to itself at the
@@ -760,13 +760,13 @@ class LossTreatment(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: `spliced` and `excess` are declared by FR-MODEL-73 and refused by the fit path until
+    #: `spliced` and `excess` are declared by FR-127 and refused by the fit path until
     #: a slice implements them (`02` §3.5, noted 2026-08-17). Declared-and-refused rather
     #: than omitted: narrowing the enum now would cost a `spec_hash` version to widen later.
     kind: Literal["none", "capped", "spliced", "excess"] = "none"
     cap_minor: int | None = Field(default=None, ge=0)
     #: The loading that restores the mean after capping. Required with a cap because
-    #: FR-MODEL-74 reconciles a capped model against **uncapped** experience: without it
+    #: FR-128 reconciles a capped model against **uncapped** experience: without it
     #: the reconciliation reports a modelling error where there was an intended adjustment.
     restoration_loading: float | None = Field(default=None, gt=0.0)
     evidence_blob: BlobRef | None = None
@@ -784,7 +784,7 @@ class LossTreatment(BaseModel):
             raise ValueError(f"loss treatment {self.kind!r} requires cap_minor")
         if self.kind == "capped" and self.restoration_loading is None:
             raise ValueError(
-                "a capped response requires restoration_loading (FR-MODEL-74: the "
+                "a capped response requires restoration_loading (FR-128: the "
                 "reconciliation compares restored burning cost against uncapped observed)."
             )
         return self
@@ -795,12 +795,12 @@ class ResponseKind(enum.StrEnum):
 
     `02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was
     built to it, because nothing needed it: the fitting path reads the column, and the
-    family says what the numbers mean. FR-MODEL-44 needs it — an objective declares the
+    family says what the numbers mean. FR-153 needs it — an objective declares the
     responses it applies to, and a column name cannot be checked against that list. So the
-    field goes live here, under FR-MODEL-87's staging rule, with the slice that populates
+    field goes live here, under FR-207's staging rule, with the slice that populates
     it.
 
-    The first three are FR-MODEL-44's own examples. `conversion` and `retention` are
+    The first three are FR-153's own examples. `conversion` and `retention` are
     `04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`
     (§4.5) exists for exactly them — a catalogue entry whose applicability could not be
     written would be a catalogue entry nothing could use.
@@ -825,15 +825,15 @@ class ModelSpecCommon(BaseModel):
     model_family_slug: str
     dataset_version_id: UUID
     #: `02` §4.4's `split_ref`, live from the diagnostics slice. Optional because a model
-    #: may be explored without a holdout; **required to reach `fitted`**, since FR-MODEL-54
-    #: makes a diagnostic without its holdout counterpart a defect and FR-MODEL-64 makes
+    #: may be explored without a holdout; **required to reach `fitted`**, since FR-183
+    #: makes a diagnostic without its holdout counterpart a defect and FR-202 makes
     #: diagnostics the condition of `fitted`. The obligation therefore sits on `Model`,
     #: where the status is, rather than here.
     split_ref: SplitRef | None = None
     peril: str | None = None
     #: `02` §4.4's `response`. Optional because every spec written before this slice
     #: declared only the column, and a required field would invalidate them; **required
-    #: whenever the objective is a Custom Objective**, where FR-MODEL-44's applicability
+    #: whenever the objective is a Custom Objective**, where FR-153's applicability
     #: check has nothing to read without it and the spec validator refuses the pairing.
     response: ResponseKind | None = None
     response_column: str
@@ -845,7 +845,7 @@ class ModelSpecCommon(BaseModel):
 
 
 class GlmCvSpec(BaseModel):
-    """FR-MODEL-20/FR-MODEL-53: the cross-validated penalty path `GlmSpec.cv` carries when
+    """FR-112/FR-182: the cross-validated penalty path `GlmSpec.cv` carries when
     `select_by == "cv"`.
 
     `seed` is **not** duplicated here: the seed that makes fold assignment reproducible is
@@ -856,11 +856,11 @@ class GlmCvSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: `01` FR-DATA-33's three fold-construction methods, generalised to K folds by
-    #: `pricing_core.data.splits.assign_folds` (FR-MODEL-53).
+    #: `01` FR-73's three fold-construction methods, generalised to K folds by
+    #: `pricing_core.data.splits.assign_folds` (FR-182).
     method: Literal["random", "temporal", "grouped_by_key"] = "random"
     folds: int = Field(default=5, ge=2)
-    #: The elastic-net penalty strengths scanned (FR-MODEL-20). `l1_ratio` is fixed by
+    #: The elastic-net penalty strengths scanned (FR-112). `l1_ratio` is fixed by
     #: `GlmSpec.l1_ratio` for every point on the path — only the overall strength is
     #: scanned, mirroring `glum`'s own `GeneralizedLinearRegressorCV` convention.
     alphas: tuple[float, ...] = (0.0, 0.001, 0.01, 0.1, 1.0)
@@ -898,7 +898,7 @@ class GlmCvSpec(BaseModel):
 
 
 class TweediePowerSpec(BaseModel):
-    """FR-MODEL-22: the grid over which the Tweedie power `p` is estimated by profile
+    """FR-114: the grid over which the Tweedie power `p` is estimated by profile
     likelihood, and the boundary of that estimate. `GlmSpec.tweedie` being set is the
     spec's request for estimation; the estimated value and its uncertainty are fit-time
     facts and ride on `GlmFitResult.tweedie` — never a constant baked into the spec.
@@ -927,7 +927,7 @@ class TweediePowerSpec(BaseModel):
             raise ValueError(
                 f"p_grid must lie inside (1, 2), got {self.p_grid} — at 1 the family is "
                 "Poisson and at 2 it is Gamma; the scan stays inside the family "
-                "FR-MODEL-22 estimates."
+                "FR-114 estimates."
             )
         if any(b <= a for a, b in zip(self.p_grid, self.p_grid[1:], strict=False)):
             raise ValueError(
@@ -938,7 +938,7 @@ class TweediePowerSpec(BaseModel):
 
 
 class TweedieProfilePoint(BaseModel):
-    """FR-MODEL-22: one scanned power and the profile log-likelihood of the model
+    """FR-114: one scanned power and the profile log-likelihood of the model
     refitted at it — one point of the profile curve persisted with the estimate."""
 
     model_config = ConfigDict(frozen=True)
@@ -955,7 +955,7 @@ class TweedieProfilePoint(BaseModel):
 
 
 class TweediePowerFit(BaseModel):
-    """FR-MODEL-22: the estimated Tweedie power, persisted as an estimate with its own
+    """FR-114: the estimated Tweedie power, persisted as an estimate with its own
     uncertainty — the 95% profile-likelihood interval {p : 2(L_max - L(p)) ≤ χ²₀.95(1)
     = 3.841} read from the profile log-likelihood curve, linearly interpolated between
     scanned points — and the curve itself, so the estimate can be re-examined after the
@@ -1010,7 +1010,7 @@ class TweediePowerFit(BaseModel):
 
 
 class ApproximatedModel(BaseModel):
-    """The Model this GLM approximates, addressed the way a human reads it (FR-MODEL-129).
+    """The Model this GLM approximates, addressed the way a human reads it (FR-169).
 
     The id stays the lookup key — `approximates_model_id` is how the platform resolves the
     pin. This block carries the **slug and version** instead, following `IntervalFor`'s
@@ -1032,11 +1032,11 @@ class GlmSpec(ModelSpecCommon):
 
     The spec is what `spec_hash` is taken over, so every field here changes the identity of
     the model. That is why `loss_treatment` belongs in the spec rather than beside it, and
-    why two models differing only in a cap must not collide (FR-MODEL-66).
+    why two models differing only in a cap must not collide (FR-204).
     """
 
     model_type: Literal["glm"] = "glm"
-    #: FR-MODEL-18's supported families. `tweedie` carries its power in `family_params`.
+    #: FR-110's supported families. `tweedie` carries its power in `family_params`.
     family: Literal[
         "poisson", "negative_binomial", "gamma", "inverse_gaussian",
         "tweedie", "binomial", "gaussian",
@@ -1045,25 +1045,25 @@ class GlmSpec(ModelSpecCommon):
     link: Literal["log", "logit", "identity", "inverse"] = "log"
     alpha: float = Field(default=0.0, ge=0.0)
     l1_ratio: float = Field(default=0.0, ge=0.0, le=1.0)
-    #: FR-MODEL-20/FR-MODEL-53. `"fixed"` fits once at `alpha`; `"cv"` scans `cv.alphas`
+    #: FR-112/FR-182. `"fixed"` fits once at `alpha`; `"cv"` scans `cv.alphas`
     #: and selects the alpha with the lowest mean cross-validated deviance instead.
     select_by: Literal["fixed", "cv"] = "fixed"
     #: Set iff `select_by == "cv"` (checked below); `None` under `"fixed"` selection.
     cv: GlmCvSpec | None = None
-    # FR-MODEL-22: set to estimate the Tweedie power by profile likelihood over this grid.
+    # FR-114: set to estimate the Tweedie power by profile likelihood over this grid.
     tweedie: TweediePowerSpec | None = None
     max_iter: int = Field(default=200, ge=1)
     tolerance: float = Field(default=1e-8, gt=0.0)
-    #: FR-MODEL-96 — the Model whose predictions this GLM approximates. `None` for every
+    #: FR-137 — the Model whose predictions this GLM approximates. `None` for every
     #: model fitted on an observed response, which is every model but a surrogate.
     approximates_model_id: UUID | None = None
-    #: FR-MODEL-129 — the same pin's `slug@version` address, set iff the id is set
+    #: FR-169 — the same pin's `slug@version` address, set iff the id is set
     #: (checked below). The id is what the lookup uses; this block is what a human reads.
     approximates_model: ApproximatedModel | None = None
 
     @property
     def uncertainty_basis(self) -> UncertaintyBasis:
-        """What a fit of this spec can say about its own uncertainty (FR-MODEL-99).
+        """What a fit of this spec can say about its own uncertainty (FR-197).
 
         **The single derivation, and it is derived rather than stored on purpose.** `alpha`
         is already in the spec, the spec is pinned to the fit by `spec_hash`, and both are
@@ -1075,12 +1075,12 @@ class GlmSpec(ModelSpecCommon):
         warning inside `catch_warnings`, and a library's prose is not a mechanism — it can
         be reworded in a patch release without anything failing.
         """
-        # FR-MODEL-20/FR-MODEL-53 interaction, noted rather than silently resolved (this
+        # FR-112/FR-182 interaction, noted rather than silently resolved (this
         # plan's header carries the reasoning): under `select_by == "cv"`, `alpha` is
         # pinned to 0.0 by `_cv_selection_declares_its_cv_spec_and_nothing_else_does`
         # because the effective penalty comes from `cv.alphas` instead — so `alpha` alone
         # cannot answer this question for a CV fit. Treated as penalised unconditionally:
-        # the elastic-net grid FR-MODEL-20 scans is a path that starts at zero and moves
+        # the elastic-net grid FR-112 scans is a path that starts at zero and moves
         # away from it, so a fit that lands back on exactly zero is the rare point on the
         # path rather than the typical one, and the cost of the cautious label there is a
         # display caveat, not a wrong number.
@@ -1110,7 +1110,7 @@ class GlmSpec(ModelSpecCommon):
 
     @model_validator(mode="after")
     def _frequency_declares_its_exposure(self) -> GlmSpec:
-        """FR-MODEL-19: a Poisson frequency model without an offset is a rate model that
+        """FR-111: a Poisson frequency model without an offset is a rate model that
         thinks it is a count model.
 
         Refused at the type rather than warned about downstream: the coefficients of a
@@ -1119,7 +1119,7 @@ class GlmSpec(ModelSpecCommon):
         """
         if self.family == "poisson" and self.offset.kind == "none":
             raise ValueError(
-                "a Poisson model must declare an offset (FR-MODEL-19: frequency → Poisson, "
+                "a Poisson model must declare an offset (FR-111: frequency → Poisson, "
                 "log link, offset = log(exposure)). Fitting counts without exposure "
                 "silently models 'claims per policy-record' instead of 'claims per year'."
             )
@@ -1127,35 +1127,35 @@ class GlmSpec(ModelSpecCommon):
 
     @model_validator(mode="after")
     def _a_surrogate_says_so_in_both_places(self) -> GlmSpec:
-        """FR-MODEL-102: `approximates_model_id` is set iff the response is the surrogate
+        """FR-141: `approximates_model_id` is set iff the response is the surrogate
         column.
 
         Both directions, because each half alone is a different defect. A spec naming a
         source model over an observed response column is a model fitted on claims that
         every reader takes for a surrogate; one fitted on the surrogate column with no
         source named is a model of a prediction nobody can identify — and its diagnostics
-        are then an A/E against an unnamed target, which is what FR-MODEL-96(iii) exists to
+        are then an A/E against an unnamed target, which is what FR-137(iii) exists to
         prevent.
         """
         surrogate_column = self.response_column == SURROGATE_RESPONSE_COLUMN
         if surrogate_column and self.approximates_model_id is None:
             raise ValueError(
                 f"response_column is {SURROGATE_RESPONSE_COLUMN!r} and no "
-                "approximates_model_id names the model it approximates (FR-MODEL-102). "
+                "approximates_model_id names the model it approximates (FR-141). "
                 "A model of a prediction must say whose prediction it is."
             )
         if self.approximates_model_id is not None and not surrogate_column:
             raise ValueError(
                 f"approximates_model_id is set and response_column is "
                 f"{self.response_column!r}, not {SURROGATE_RESPONSE_COLUMN!r} "
-                "(FR-MODEL-102). A surrogate is fitted to another model's predictions; a "
+                "(FR-141). A surrogate is fitted to another model's predictions; a "
                 "spec fitted to an observed column is a model in its own right."
             )
         return self
 
     @model_validator(mode="after")
     def _the_companion_is_set_iff_the_id_is(self) -> GlmSpec:
-        """FR-MODEL-129: `approximates_model` is set iff `approximates_model_id` is set.
+        """FR-169: `approximates_model` is set iff `approximates_model_id` is set.
 
         The two name the same model in different registers, so a spec carrying one without
         the other is a fact stated once and assertable twice. Each half alone is a
@@ -1166,14 +1166,14 @@ class GlmSpec(ModelSpecCommon):
         if (self.approximates_model is None) != (self.approximates_model_id is None):
             raise ValueError(
                 "approximates_model and approximates_model_id must be set together "
-                "(FR-MODEL-129): the id is the lookup key and the block is its "
+                "(FR-169): the id is the lookup key and the block is its "
                 "slug@version address, and a surrogate's spec carries both or neither."
             )
         return self
 
     @model_validator(mode="after")
     def _cv_selection_declares_its_cv_spec_and_nothing_else_does(self) -> GlmSpec:
-        """FR-MODEL-20/FR-MODEL-53: `select_by`, `cv` and `alpha` must agree.
+        """FR-112/FR-182: `select_by`, `cv` and `alpha` must agree.
 
         `alpha` is refused non-zero under `select_by="cv"` on purpose: the effective
         penalty comes from `cv.alphas` instead, and a spec carrying both a fixed `alpha`
@@ -1183,7 +1183,7 @@ class GlmSpec(ModelSpecCommon):
         if self.select_by == "cv":
             if self.cv is None:
                 raise ValueError(
-                    "select_by='cv' but cv is not set (FR-MODEL-20/FR-MODEL-53). "
+                    "select_by='cv' but cv is not set (FR-112/FR-182). "
                     "Cross-validation needs a path to scan and a fold strategy to scan "
                     "it with."
                 )
@@ -1202,32 +1202,32 @@ class GlmSpec(ModelSpecCommon):
 
     @model_validator(mode="after")
     def _tweedie_estimation_declares_a_tweedie_family_and_no_fixed_power(self) -> GlmSpec:
-        """FR-MODEL-22: the estimation block, the family and the fixed power must agree.
+        """FR-114: the estimation block, the family and the fixed power must agree.
 
         Each direction is a different defect. Estimation on a non-Tweedie family is a
         grid nobody will scan; a fixed power in `family_params` beside the grid is a
         second, unread answer to what p is; and estimation under `select_by == "cv"`
         would need the profile recomputed at every scanned alpha, since the profile is
         penalty-dependent — the pair is refused by name rather than silently estimated
-        against one of them (FR-MODEL-87 staging).
+        against one of them (FR-207 staging).
         """
         if self.tweedie is None:
             return self
         if self.family != "tweedie":
             raise ValueError(
                 f"tweedie estimation is set but family is {self.family!r}, not 'tweedie' "
-                "(FR-MODEL-22): the grid estimates the Tweedie power, and a non-Tweedie "
+                "(FR-114): the grid estimates the Tweedie power, and a non-Tweedie "
                 "family has no power to estimate."
             )
         if "power" in self.family_params:
             raise ValueError(
                 "family_params carries a fixed power beside a profile-likelihood grid "
-                "(FR-MODEL-22): a fixed p beside an estimated p is two answers to what "
+                "(FR-114): a fixed p beside an estimated p is two answers to what "
                 "p is — remove the fixed power or drop the estimation block."
             )
         if self.select_by == "cv":
             raise ValueError(
-                "select_by='cv' and tweedie estimation are refused together (FR-MODEL-22): "
+                "select_by='cv' and tweedie estimation are refused together (FR-114): "
                 "the profile likelihood is penalty-dependent, so a p estimated at one "
                 "alpha describes a fit at that alpha only — supporting both would mean "
                 "rescanning the grid at every scanned alpha."
@@ -1238,7 +1238,7 @@ class GlmSpec(ModelSpecCommon):
 class GbmFunctionRef(BaseModel):
     """A builtin objective or eval metric by name, or an approved artifact by reference.
 
-    One shape for both because FR-MODEL-26 and FR-MODEL-45 declare the same choice twice —
+    One shape for both because FR-120 and FR-154 declare the same choice twice —
     a builtin the backend already implements, or a Custom Objective / Custom Metric that
     carries its own approval status (R4). Two classes with identical fields would be a
     shape defined twice.
@@ -1247,7 +1247,7 @@ class GbmFunctionRef(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: Literal["builtin", "custom"]
-    #: FR-MODEL-26's insurance objectives: `count:poisson`, `reg:gamma`, `reg:tweedie`,
+    #: FR-120's insurance objectives: `count:poisson`, `reg:gamma`, `reg:tweedie`,
     #: `binary:logistic`. Not an enum — the eval-metric vocabulary is the backend's and
     #: differs between them, and a closed set here would refuse a metric XGBoost supports.
     name: str | None = None
@@ -1273,7 +1273,7 @@ class GbmFunctionRef(BaseModel):
 
 
 class EarlyStopping(BaseModel):
-    """When to stop boosting, and against what (FR-MODEL-30).
+    """When to stop boosting, and against what (FR-124).
 
     **There is no `train` value**, and that is the requirement rather than an oversight:
     a stopping rule read off the data being fitted stops when the model has finished
@@ -1299,13 +1299,13 @@ class EarlyStopping(BaseModel):
 
 
 class IntervalFor(BaseModel):
-    """This model is one side of another model's prediction interval (FR-MODEL-78).
+    """This model is one side of another model's prediction interval (FR-199).
 
-    **On the spec, so it joins `spec_hash`** (FR-MODEL-100). FR-MODEL-96 set the precedent
+    **On the spec, so it joins `spec_hash`** (FR-200). FR-137 set the precedent
     for a Model that exists relative to another Model — `approximates_model_id` on the
     approximating Model's spec — and the reason is the same one: the pairing is part of
     what this model *is*. Two bounds identical but for the central model they bound would
-    otherwise share a digest, and FR-MODEL-66 would hand the second caller the first
+    otherwise share a digest, and FR-204 would hand the second caller the first
     caller's model: an interval around a model nobody fitted, rendering identically to a
     correct one.
 
@@ -1327,7 +1327,7 @@ class IntervalFor(BaseModel):
     def _the_median_is_not_a_side(self) -> IntervalFor:
         """`alpha = 0.5` is a central estimate, and an interval has no central side.
 
-        FR-MODEL-100(iv) allocates one bound per side and finds them by comparing `alpha`
+        FR-200(iv) allocates one bound per side and finds them by comparing `alpha`
         with 0.5. A median bound belongs to neither set, so admitting it would make "the
         lower bound of this model" a question with no answer at exactly the point the
         prediction path asks it.
@@ -1341,7 +1341,7 @@ class IntervalFor(BaseModel):
 
 
 class GbmSpec(ModelSpecCommon):
-    """`02` §4.4's common block plus the gradient-boosting arm (FR-MODEL-25).
+    """`02` §4.4's common block plus the gradient-boosting arm (FR-119).
 
     **One contract, two backends.** `model_type` is the backend — §4.4 also gave this arm a
     `backend` field carrying the same two strings, and two fields holding one fact can
@@ -1349,23 +1349,23 @@ class GbmSpec(ModelSpecCommon):
     lives in `backend_params`, which is what keeps the contract from forking.
 
     **The offset is declared once.** §4.4 also gave this arm a `base_margin` block of the
-    same shape as the common `offset`. FR-MODEL-27 says the platform *constructs*
+    same shape as the common `offset`. FR-121 says the platform *constructs*
     `base_margin` from the declared offset, so a second declaration is a second source of
     truth for the one number the fit silently depends on. What was actually constructed is
-    recorded on the fit result, where FR-MODEL-71 can assert it at load time.
+    recorded on the fit result, where FR-126 can assert it at load time.
 
     Both corrections are recorded in `02` §4.4, dated 2026-08-17.
     """
 
     model_type: Literal["xgboost", "lightgbm"]
     objective: GbmFunctionRef
-    #: FR-MODEL-27's escape hatch. A frequency objective with no offset is refused unless
+    #: FR-121's escape hatch. A frequency objective with no offset is refused unless
     #: this says why — a sentence a reviewer reads, rather than an omission nobody sees.
     offset_acknowledgement: str | None = None
-    #: FR-MODEL-28. `derived_from_factors` reads each Factor's monotonic direction; the
+    #: FR-122. `derived_from_factors` reads each Factor's monotonic direction; the
     #: vector that results is persisted on the fit result, beside the feature order.
     monotone_constraints: Literal["derived_from_factors", "none"] = "derived_from_factors"
-    #: FR-MODEL-29: interaction is permitted *within* each declared group and nowhere else.
+    #: FR-123: interaction is permitted *within* each declared group and nowhere else.
     interaction_constraints: tuple[tuple[str, ...], ...] = ()
     #: §4.4's common tuning knobs — `max_depth`, `eta`, `subsample`, `num_boost_round` and
     #: the rest. A dict rather than fields because the two backends spell several of them
@@ -1378,22 +1378,22 @@ class GbmSpec(ModelSpecCommon):
     #: that fails at the backend, one layer past where the mistake was made.
     hyperparameters: dict[str, int | float] = Field(default_factory=dict)
     early_stopping: EarlyStopping | None = None
-    #: FR-MODEL-32, and **no default**: a default would be the silence the requirement
+    #: FR-131, and **no default**: a default would be the silence the requirement
     #: exists to refuse. `native` uses the backend's categorical support; `factor_encoding`
     #: takes the mapping from the Factor's grouping.
     categorical_handling: Literal["native", "factor_encoding"]
     eval_metrics: tuple[GbmFunctionRef, ...] = ()
     #: The backend-specific escape hatch (`tree_method`, `boosting_type`, …), namespaced so
-    #: FR-MODEL-25's single contract does not fork into two.
+    #: FR-119's single contract does not fork into two.
     backend_params: dict[str, Any] = Field(default_factory=dict)
-    #: FR-MODEL-78/100. Set only on a model that *is* a bound; `None` on every other GBM,
+    #: FR-199/200. Set only on a model that *is* a bound; `None` on every other GBM,
     #: which is almost all of them. In the spec rather than beside it because it changes
     #: the model's identity — see `IntervalFor`.
     interval_for: IntervalFor | None = None
 
     @model_validator(mode="after")
     def _a_frequency_gbm_declares_its_exposure(self) -> GbmSpec:
-        """FR-MODEL-27, and the GBM half of what `GlmSpec` refuses for the same reason.
+        """FR-121, and the GBM half of what `GlmSpec` refuses for the same reason.
 
         Exposure rides in `base_margin`/`init_score` as `log(exposure)`. Passed as a
         feature it is a variable the trees may split on; passed as a weight under a count
@@ -1406,26 +1406,26 @@ class GbmSpec(ModelSpecCommon):
         if counting and self.offset.kind == "none" and not self.offset_acknowledgement:
             raise ValueError(
                 f"objective {self.objective.name!r} counts events but the spec declares no "
-                "offset (FR-MODEL-27). Set offset to log(exposure), or say in "
+                "offset (FR-121). Set offset to log(exposure), or say in "
                 "offset_acknowledgement why this data needs none."
             )
         return self
 
     @model_validator(mode="after")
     def _a_gbm_offset_from_another_model_is_refused(self) -> GbmSpec:
-        #: Declared-and-refused rather than omitted (FR-MODEL-87): the enum arm stays so
-        #: the refusal is by name, and the 2026-08-21 FR-MODEL-24 amendment records that
+        #: Declared-and-refused rather than omitted (FR-207): the enum arm stays so
+        #: the refusal is by name, and the 2026-08-21 FR-116 amendment records that
         #: the first slice builds offsets-from-model for GLM specs only.
         if self.offset.kind == "model":
             raise ValueError(
-                "offset kind 'model' is built for GLM specs only (FR-MODEL-24, "
+                "offset kind 'model' is built for GLM specs only (FR-116, "
                 "2026-08-21); a GBM spec must name a column offset instead"
             )
         return self
 
     @model_validator(mode="after")
     def _an_interaction_group_names_at_least_two_features(self) -> GbmSpec:
-        """A group of one permits nothing and forbids nothing (FR-MODEL-29).
+        """A group of one permits nothing and forbids nothing (FR-123).
 
         Written by hand it is almost always a truncated list; read back it looks
         deliberate.
@@ -1440,15 +1440,15 @@ class GbmSpec(ModelSpecCommon):
 
     @model_validator(mode="after")
     def _early_stopping_on_a_holdout_needs_one(self) -> GbmSpec:
-        """FR-MODEL-30: early stopping requires a *declared* holdout or CV scheme.
+        """FR-124: early stopping requires a *declared* holdout or CV scheme.
 
-        `split_ref` is where the holdout is declared (`01` FR-DATA-36). Stopping "on the
+        `split_ref` is where the holdout is declared (`01` FR-76). Stopping "on the
         holdout" with no split named would fall back to the training set, which is the one
         thing the requirement forbids.
         """
         if self.early_stopping and self.early_stopping.on == "holdout" and self.split_ref is None:
             raise ValueError(
-                "early stopping on a holdout requires split_ref (FR-MODEL-30). Without a "
+                "early stopping on a holdout requires split_ref (FR-124). Without a "
                 "declared split there is no holdout, and the stopping metric would be read "
                 "off the training rows."
             )
@@ -1456,18 +1456,18 @@ class GbmSpec(ModelSpecCommon):
 
 
 class EbmSpec(ModelSpecCommon):
-    """`02` §4.4's EBM arm (FR-MODEL-37): additive lookups, transparent by construction."""
+    """`02` §4.4's EBM arm (FR-140): additive lookups, transparent by construction."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     model_type: Literal["ebm"] = "ebm"
     #: The only objectives `interpret`'s regressor exposes, both with an identity link.
     #: §7's families (poisson, gamma, tweedie, ...) and binomial `log_loss` are refused
-    #: by name here, under FR-MODEL-87's staging rule (dated note in `02` §4.4).
+    #: by name here, under FR-207's staging rule (dated note in `02` §4.4).
     objective: Literal["rmse", "mae"] = "rmse"
     #: 0 = univariate terms only; 1 = all pairs. 2 (triples) is declared-and-unbuilt:
     #: a triple grid grows cubically and the JSONB envelope below cannot bound it
-    #: (dated note in `02` §4.4, FR-MODEL-87).
+    #: (dated note in `02` §4.4, FR-207).
     interactions: int = Field(default=0, ge=0, le=1)
     #: `interpret` requires a power of two; the bounds are the library's own. Kept
     #: small by default: the fit result is JSONB, and 1024² cells per pair would be
@@ -1487,7 +1487,7 @@ class EbmSpec(ModelSpecCommon):
             raise ValueError(
                 f"max_bins must be a power of two (got {value}): `interpret` binning "
                 "works on a dyadic grid, and anything else is the library's own refusal "
-                "translated to a spec problem (FR-MODEL-37)."
+                "translated to a spec problem (FR-140)."
             )
         return value
 
@@ -1497,7 +1497,7 @@ class EbmSpec(ModelSpecCommon):
             raise ValueError(
                 f"interactions={self.interactions} with max_bins={self.max_bins}: a "
                 "grid of that size is ~8 MB per pair inside the fit result's JSONB "
-                "envelope. Cap max_bins at 256 with interactions, or use 0 (FR-MODEL-37)."
+                "envelope. Cap max_bins at 256 with interactions, or use 0 (FR-140)."
             )
         return self
 
@@ -1512,7 +1512,7 @@ class EbmSpec(ModelSpecCommon):
             if direction not in (-1, 0, 1):
                 raise ValueError(
                     f"monotone constraint on {slug!r} has direction {direction}; only "
-                    "-1 (decreasing), 0 (none) and 1 (increasing) exist (FR-MODEL-28)."
+                    "-1 (decreasing), 0 (none) and 1 (increasing) exist (FR-122)."
                 )
         return value
 
@@ -1520,7 +1520,7 @@ class EbmSpec(ModelSpecCommon):
     def _an_ebm_has_no_offset(self) -> EbmSpec:
         if self.offset.kind != "none":
             raise ValueError(
-                f"offset kind {self.offset.kind!r} is GLM-only (FR-MODEL-37): an EBM's "
+                f"offset kind {self.offset.kind!r} is GLM-only (FR-140): an EBM's "
                 "lookups are additive on the identity link and `interpret` has no offset "
                 "path — declaring one and ignoring it would be a silent model change."
             )
@@ -1528,7 +1528,7 @@ class EbmSpec(ModelSpecCommon):
 
 
 class RelativityLevel(BaseModel):
-    """One level of a categorical factor, as an actuary reads it (FR-MODEL-21)."""
+    """One level of a categorical factor, as an actuary reads it (FR-113)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -1572,7 +1572,7 @@ class Coefficient(BaseModel):
 
 
 class GlmFitResult(BaseModel):
-    """What a fit returns and the Model stores (ADR-0003).
+    """What a fit returns and the Model stores (ADR-705).
 
     Data, never a pickled estimator: `PICKLE_PERSISTENCE_REFUSED` is an error code this
     module owns, and a Model must be re-scorable by a process that never ran `glum`.
@@ -1592,24 +1592,24 @@ class GlmFitResult(BaseModel):
     dispersion: float | None = None
     deviance: float | None = None
     rows: int = Field(default=0, ge=0)
-    #: FR-MODEL-63's covariance matrix `V`, content-addressed beside the booster it mirrors
-    #: (FR-MODEL-31). A blob rather than a field: it is `p x p` for `p` terms, so a model
+    #: FR-194's covariance matrix `V`, content-addressed beside the booster it mirrors
+    #: (FR-125). A blob rather than a field: it is `p x p` for `p` terms, so a model
     #: with 150 of them carries ~250 KB that every read of the Model row would otherwise
     #: pay for, and only the prediction path needs it. `pricing-core` computes the digest
-    #: and hands back the bytes for the caller to store (ADR-0001) — the same split
+    #: and hands back the bytes for the caller to store (ADR-703) — the same split
     #: `GbmFit` makes for the booster.
     #:
     #: **Optional, and the absence is meaningful.** Every Model fitted before this field
-    #: existed has none, and FR-MODEL-93 makes that a typed `covariance_not_stored` on the
+    #: existed has none, and FR-195 makes that a typed `covariance_not_stored` on the
     #: prediction rather than an interval quietly omitted.
     covariance_blob: BlobRef | None = None
     library_versions: dict[str, str] = Field(default_factory=dict)
-    # FR-MODEL-22: set when the spec requested profile-likelihood estimation — the
+    # FR-114: set when the spec requested profile-likelihood estimation — the
     # estimated power, its 95% profile-likelihood interval, and the persisted profile
     # log-likelihood curve. None under a fixed-power spec: estimation is opt-in.
     tweedie: TweediePowerFit | None = None
     #: What an offset-from-another-model fit was constructed against — the resolved,
-    #: pinned ref (FR-MODEL-24). `None` for every other offset kind.
+    #: pinned ref (FR-116). `None` for every other offset kind.
     offset_model_ref: ModelRef | None = None
 
     @property
@@ -1618,9 +1618,9 @@ class GlmFitResult(BaseModel):
 
 
 class DroppedEvalMetric(BaseModel):
-    """A declared eval metric the backend could not evaluate (FR-MODEL-111, OQ-MODEL-21).
+    """A declared eval metric the backend could not evaluate (FR-161, OQ-593).
 
-    FR-MODEL-106's objection is to a spec "reported to the caller as configured" when it
+    FR-159's objection is to a spec "reported to the caller as configured" when it
     was not. The cheapest honest answer here is neither to refuse an otherwise-valid fit
     nor to punish a portable spec for one backend's evaluation ordering, but to say so on
     the artifact — so a reader comparing two fits can see why one curve has a series the
@@ -1635,14 +1635,14 @@ class DroppedEvalMetric(BaseModel):
 
     #: The declared metric's name, exactly as `eval_metrics` spelled it.
     name: str = Field(min_length=1)
-    #: FR-MODEL-107: LightGBM evaluates builtin metrics before `feval`'s, so a builtin
+    #: FR-160: LightGBM evaluates builtin metrics before `feval`'s, so a builtin
     #: declared alongside a custom stopping target would take position 0 and drive the
     #: stop. `params["metric"] = "None"` prevents that and drops the builtin with it.
     reason: Literal["builtin_evaluated_before_custom_stopping_metric"]
 
 
 class GbmFitResult(BaseModel):
-    """What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).
+    """What a GBM fit returns and the Model stores (ADR-705, FR-125).
 
     The booster is a **content-addressed blob in the backend's own JSON or text format**,
     never a pickle — `booster_format` has no spelling for one, so the persistence layer's
@@ -1650,12 +1650,12 @@ class GbmFitResult(BaseModel):
 
     Everything needed to score is here beside it: feature order, dtype expectations,
     categorical encoding maps, the monotone constraint vector, the pinned library version,
-    and — required, not optional — the `base_margin` construction. FR-MODEL-71 is emphatic
+    and — required, not optional — the `base_margin` construction. FR-126 is emphatic
     about the last one because omitting the offset at scoring time fails *silently* on both
     backends, and differently.
 
-    The evaluation curve is **not** here. FR-MODEL-52 names it a GBM-specific *diagnostic*
-    and asks for train and holdout side by side, which is FR-MODEL-54's shape; it lives on
+    The evaluation curve is **not** here. FR-174 names it a GBM-specific *diagnostic*
+    and asks for train and holdout side by side, which is FR-183's shape; it lives on
     `GbmDiagnostics`, and `fit_gbm` returns it beside this artifact for the caller to place
     there. `best_iteration` stays, because scoring needs it and diagnostics are not loaded
     to score. (`diagnostics.schema.json` had it this way from Phase 0; this is the code
@@ -1666,19 +1666,19 @@ class GbmFitResult(BaseModel):
 
     model_type: Literal["xgboost", "lightgbm"]
     booster_blob: BlobRef
-    #: ADR-0003. `pickle` is not a refused value here — it is not a value.
+    #: ADR-705. `pickle` is not a refused value here — it is not a value.
     booster_format: Literal["xgboost_json", "lightgbm_text"]
     feature_order: tuple[str, ...]
-    #: FR-MODEL-31's dtype expectations, one per feature — checked against `feature_order`
+    #: FR-125's dtype expectations, one per feature — checked against `feature_order`
     #: below, because a scoring frame built from a partial map is a frame with a column
     #: whose type nobody declared.
     feature_dtypes: dict[str, str] = Field(default_factory=dict)
-    #: FR-MODEL-32's encoding maps, per categorical feature.
+    #: FR-131's encoding maps, per categorical feature.
     categorical_maps: dict[str, dict[str, int]] = Field(default_factory=dict)
-    #: FR-MODEL-28, positionally aligned with `feature_order`. Empty when the spec asked
+    #: FR-122, positionally aligned with `feature_order`. Empty when the spec asked
     #: for none.
     monotone_constraints: tuple[int, ...] = ()
-    #: FR-MODEL-71. **Required**: the load-time assertion needs something to assert.
+    #: FR-126. **Required**: the load-time assertion needs something to assert.
     base_margin: OffsetSpec
     #: Kept here and **not** in the diagnostics: `predict_gbm` needs it to score
     #: (`iteration_range` / `num_iteration`), and diagnostics are not loaded at scoring
@@ -1692,7 +1692,7 @@ class GbmFitResult(BaseModel):
     #: applied it. That question has three different answers here. XGBoost under a builtin
     #: objective transforms in `predict` (`None`); XGBoost under a custom objective knows
     #: no link at all and returns the margin; LightGBM is always asked for the raw score,
-    #: because FR-MODEL-72's offset can only be added on this side of it.
+    #: because FR-129's offset can only be added on this side of it.
     #:
     #: Defaulted for the artifacts written before this field existed, whose LightGBM
     #: branch exponentiated unconditionally — see the dated note at `02` §4.3. The default
@@ -1702,14 +1702,14 @@ class GbmFitResult(BaseModel):
     rows: int = Field(default=0, ge=0)
     fit_seconds: float = Field(ge=0.0)
     library_versions: dict[str, str] = Field(default_factory=dict)
-    #: FR-MODEL-111. Empty on every fit that evaluated everything it was asked for, which
+    #: FR-161. Empty on every fit that evaluated everything it was asked for, which
     #: is all of them but the LightGBM-stopping-on-a-custom-metric case, and on every
     #: artifact written before 2026-08-22.
     dropped_eval_metrics: tuple[DroppedEvalMetric, ...] = ()
 
     @model_validator(mode="after")
     def _the_constraint_vector_is_aligned_with_the_feature_order(self) -> GbmFitResult:
-        """FR-MODEL-28: the vector is persisted *alongside* the feature order.
+        """FR-122: the vector is persisted *alongside* the feature order.
 
         Positional data whose length is unchecked is positional data that will one day be
         off by one — and a monotone constraint applied to the wrong column is a model that
@@ -1725,7 +1725,7 @@ class GbmFitResult(BaseModel):
 
     @model_validator(mode="after")
     def _every_feature_declares_its_dtype(self) -> GbmFitResult:
-        """FR-MODEL-31's dtype expectations, checked rather than hoped for.
+        """FR-125's dtype expectations, checked rather than hoped for.
 
         A scoring frame assembled from a partial map has a column whose type nobody
         declared, and the backends differ in what they infer for it.
@@ -1741,7 +1741,7 @@ class GbmFitResult(BaseModel):
 
     @model_validator(mode="after")
     def _a_dropped_metric_is_named_once(self) -> GbmFitResult:
-        """FR-MODEL-111: a repeated name is a producer bug, not two facts about the fit."""
+        """FR-161: a repeated name is a producer bug, not two facts about the fit."""
         names = [dropped.name for dropped in self.dropped_eval_metrics]
         if len(names) != len(set(names)):
             raise ValueError(
@@ -1783,7 +1783,7 @@ EbmFeatureBins = Annotated[EbmNumericBins | EbmCategoricalBins, Field(discrimina
 
 
 class EbmTerm(BaseModel):
-    """One additive term: a univariate lookup or an interaction grid (FR-MODEL-37)."""
+    """One additive term: a univariate lookup or an interaction grid (FR-140)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -1802,7 +1802,7 @@ class EbmTerm(BaseModel):
 
 
 class EbmFitResult(BaseModel):
-    """What an EBM fit returns and the Model stores (ADR-0003, FR-MODEL-37).
+    """What an EBM fit returns and the Model stores (ADR-705, FR-140).
 
     `02` §4.8: the fit result *is* the model. An EBM is its additive shape functions —
     scoring reproduces `intercept + Σ term scores` exactly, each term a lookup against
@@ -1853,14 +1853,14 @@ class EbmFitResult(BaseModel):
         """A term's `term_features` are indices into `feature_order` — 1 for a
         univariate lookup, 2 for a pair. An index beyond the order, or a term with
         any other count of features, is a lookup that can never be scored (triples are
-        declared-and-unbuilt, FR-MODEL-37).
+        declared-and-unbuilt, FR-140).
         """
         for term in self.terms:
             if not 1 <= len(term.term_features) <= 2:
                 raise ValueError(
                     f"term {term.term_name!r} names {len(term.term_features)} "
                     "features; only univariate terms (1) and pairs (2) exist "
-                    "(FR-MODEL-37)."
+                    "(FR-140)."
                 )
             for index in term.term_features:
                 if not 0 <= index < len(self.feature_order):
@@ -1950,9 +1950,9 @@ class EbmFitResult(BaseModel):
         return self
 
 
-#: The response column of a GLM fitted to another model's predictions (FR-MODEL-34).
+#: The response column of a GLM fitted to another model's predictions (FR-133).
 #:
-#: A reserved name rather than a caller's choice: FR-MODEL-102 keys the surrogate invariant
+#: A reserved name rather than a caller's choice: FR-141 keys the surrogate invariant
 #: on it, and a dataset column that happened to be called this would make a model fitted on
 #: observed data indistinguishable from a surrogate. The dunder spelling is what keeps that
 #: collision implausible rather than merely unlikely.
@@ -1982,9 +1982,9 @@ class ModelStatus(enum.StrEnum):
 
 
 class ModelFlag(enum.StrEnum):
-    """Conditions raised elsewhere that gate this model's approval (`06` FR-GOV-17).
+    """Conditions raised elsewhere that gate this model's approval (`06` FR-359).
 
-    Named rather than free strings because two surfaces branch on them — `02` FR-MODEL-67's
+    Named rather than free strings because two surfaces branch on them — `02` FR-205's
     block on `approved`, and the approvals inbox — and a flag spelled two ways is a gate
     that holds on one screen and not the other.
     """
@@ -1992,19 +1992,19 @@ class ModelFlag(enum.StrEnum):
     DATASET_INVALIDATED = "dataset_invalidated"
 
 
-#: FR-MODEL-64's lifecycle, as data rather than as conditionals spread over a service.
+#: FR-202's lifecycle, as data rather than as conditionals spread over a service.
 #: `01`'s `VALID_DATASET_TRANSITIONS` set the pattern; the reasons here are the model's own.
 #:
 #: Three edges are worth reading twice:
 #:
-#: * **`draft → review` does not exist.** FR-MODEL-64 makes diagnostics the condition of
+#: * **`draft → review` does not exist.** FR-202 makes diagnostics the condition of
 #:   `fitted` and `fitted` the condition of `review`, so a model reaching an approver
 #:   without coefficients is not a state to refuse later — it is a state with no edge into
 #:   it.
-#: * **`review → fitted`, never `review → draft`.** `06` FR-GOV-13 returns a
+#: * **`review → fitted`, never `review → draft`.** `06` FR-355 returns a
 #:   `changes_requested` artifact to `draft`; for a Model that would claim the numbers had
 #:   been withdrawn, which R2 makes impossible. The pre-submission state of a Model is
-#:   `fitted`. Amended in `06` FR-GOV-13, 2026-08-17, rather than diverged from silently.
+#:   `fitted`. Amended in `06` FR-355, 2026-08-17, rather than diverged from silently.
 #: * **`approved → archived` does not exist.** An approved model is a Rating Version's
 #:   referent; archiving it would remove the referent while naming no replacement.
 #:   Supersession names one, which is why it is the only edge out.
@@ -2018,12 +2018,12 @@ VALID_MODEL_TRANSITIONS: Final[dict[ModelStatus, frozenset[ModelStatus]]] = {
 }
 
 #: `archived` is the only end state. A model returned from review is `fitted` again and can
-#: be resubmitted, which is what makes FR-GOV-13's loop a loop.
+#: be resubmitted, which is what makes FR-355's loop a loop.
 TERMINAL_MODEL_STATUSES: Final[frozenset[ModelStatus]] = frozenset({ModelStatus.ARCHIVED})
 
 #: The statuses that carry a fit result, and therefore the statuses a model can be **scored**
-#: in — compared (FR-MODEL-56), priced into a peril structure (FR-MODEL-58) or backtested
-#: (FR-MODEL-57). A `draft` has not been fitted, and an `archived` one may never have been
+#: in — compared (FR-186), priced into a peril structure (FR-188) or backtested
+#: (FR-187). A `draft` has not been fitted, and an `archived` one may never have been
 #: (`02` §4.8's CHECK exempts both), so neither can score anything.
 #:
 #: Here rather than in the three services that ask the question. Two private copies of this
@@ -2058,33 +2058,33 @@ class Model(BaseModel):
     spec_hash: str
     fit_result: FitResult | None = None
     #: `02` §4.8. Unmeetable during the spine — diagnostics did not exist — and enforced
-    #: below now that they do. OQ-MODEL-8 cited this field as its own example of a
+    #: below now that they do. OQ-582 cited this field as its own example of a
     #: declared-but-dead contract field.
     diagnostics_id: UUID | None = None
     dataset_version_id: UUID
     parent_model_id: UUID | None = None
     change_reason: str | None = None
-    #: FR-MODEL-67's flags, **computed from the referents rather than stored**. A stored
+    #: FR-205's flags, **computed from the referents rather than stored**. A stored
     #: flag goes stale the moment `01` re-validates the dataset version, and the whole
     #: point of the flag is that it tracks the dataset rather than a snapshot of it.
     flags: tuple[ModelFlag, ...] = ()
     #: `02` §4.8. The open approval request, set when the model enters `review` and left in
     #: place afterwards: it is how a reader gets from an approved model to the decision and
-    #: the comment behind it, which is the trail FR-GOV-14's pinning exists to leave.
+    #: the comment behind it, which is the trail FR-356's pinning exists to leave.
     approval_request_id: UUID | None = None
 
     @property
     def uncertainty_basis(self) -> UncertaintyBasis | None:
-        """What this model's standard errors and intervals are read off (FR-MODEL-99).
+        """What this model's standard errors and intervals are read off (FR-197).
 
-        `None` for a GBM, where the question does not arise: FR-MODEL-77 refuses an
+        `None` for a GBM, where the question does not arise: FR-198 refuses an
         interval outright rather than qualifying one, so there is no matrix to describe.
 
-        This is the reader for FR-MODEL-21's half of OQ-MODEL-14 — the coefficient table's
-        `std_error` and `ci_95` come from the same `V` as FR-MODEL-63's interval, so any
+        This is the reader for FR-113's half of OQ-586 — the coefficient table's
+        `std_error` and `ci_95` come from the same `V` as FR-194's interval, so any
         surface that renders them states this beside them rather than deriving `alpha > 0`
         for itself. There is no such surface yet: regularisation has no UI, which
-        FR-MODEL-99 records with an owner rather than leaving to be discovered.
+        FR-197 records with an owner rather than leaving to be discovered.
         """
         return self.spec.uncertainty_basis if isinstance(self.spec, GlmSpec) else None
 
@@ -2125,7 +2125,7 @@ class Model(BaseModel):
 
         The spine enforced `fitted ⟹ fit_result` and left this one unstated, because
         diagnostics did not exist to point at. It is the stronger of the two: coefficients
-        say what the model *is*, diagnostics say whether it is any good, and FR-MODEL-64
+        say what the model *is*, diagnostics say whether it is any good, and FR-202
         makes the second the condition of leaving `draft`. A model that reached `review`
         with no diagnostics would be an approval request with no evidence.
 
@@ -2136,14 +2136,14 @@ class Model(BaseModel):
         if beyond_draft and self.diagnostics_id is None:
             raise ValueError(
                 f"model {self.model_family_slug}@{self.version} is {self.status.value} "
-                "with no diagnostics (`02` §4.8, FR-MODEL-49). Diagnostics are computed at "
+                "with no diagnostics (`02` §4.8, FR-170). Diagnostics are computed at "
                 "fit time and are what `fitted` means."
             )
         return self
 
 
 class SpecProblemKind(enum.StrEnum):
-    """Why a Model Spec cannot be fitted (`02` FR-MODEL-44, FR-MODEL-81).
+    """Why a Model Spec cannot be fitted (`02` FR-153, FR-185).
 
     A closed set, because the frontend renders each differently and an open string would
     make that a guess about wording.
@@ -2157,13 +2157,13 @@ class SpecProblemKind(enum.StrEnum):
     SPLIT_INVALID = "split_invalid"
     RESPONSE_MISSING = "response_missing"
     OFFSET_MISSING = "offset_missing"
-    #: FR-MODEL-24's ref-resolution half: the offset's model ref names no model, an
+    #: FR-116's ref-resolution half: the offset's model ref names no model, an
     #: unfitted one, a non-GLM, or one whose link is not the new spec's.
     MODEL_OFFSET_UNRESOLVABLE = "model_offset_unresolvable"
     COMPLEXITY_LIMIT = "complexity_limit"
-    #: FR-MODEL-44's *objective applicability* half, live from the GBM slice. A GBM spec
-    #: naming an objective outside FR-MODEL-26's set, or a Custom Objective while none can
-    #: exist, is unfittable — and `wf-01` D2 says the caller learns that before a Job is
+    #: FR-153's *objective applicability* half, live from the GBM slice. A GBM spec
+    #: naming an objective outside FR-120's set, or a Custom Objective while none can
+    #: exist, is unfittable — and `WF-698` D2 says the caller learns that before a Job is
     #: queued rather than from a job that fails three minutes in.
     OBJECTIVE_UNSUPPORTED = "objective_unsupported"
 
@@ -2182,7 +2182,7 @@ class SpecProblem(BaseModel):
 
 
 class SpecValidation(BaseModel):
-    """The answer to "may this be fitted?", without fitting it (FR-MODEL-44).
+    """The answer to "may this be fitted?", without fitting it (FR-153).
 
     Reported as a list rather than raised as the first failure. A spec builder that
     surfaced one error at a time would make a ten-factor spec a ten-round conversation,

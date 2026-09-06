@@ -1,14 +1,14 @@
-"""Shared header parser and id grammar for NT-0019's document-id standard.
+"""Shared header parser and id grammar for RFC-937's document-id standard.
 
-`docs/notes/0019-one-id-per-document.md` §1.1, §1.2, §1.5. Owned by W37-2
-(`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`); `scripts/doc-id.py` and
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` §1.1, §1.2, §1.5. Owned by W37-2
+(`docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`); `scripts/doc-id.py` and
 `scripts/doc-index.py` (W37-3) import this module and do not redefine any of it — it is
 the one place the id grammar and the header's closed field set are stated.
 
 **Standard library only** (G4 / DP-5): `.github/workflows/docs.yml` runs
 `scripts/audit-docs.py` with no dependency-install step, so nothing under `scripts/` that
 feeds that workflow may import a third-party package. The header is YAML front matter in
-*form* only — NT-0019 §1.5's field set is closed and flat (scalars, `[a, b]` lists, `~` for
+*form* only — RFC-937 §1.5's field set is closed and flat (scalars, `[a, b]` lists, `~` for
 null), so a hand-rolled parser over exactly that grammar is a feature, not a shortcut: it
 rejects anything PyYAML would silently accept (a nested mapping, an anchor, a tag) that the
 standard does not use.
@@ -24,17 +24,17 @@ from datetime import date
 from pathlib import Path
 from typing import Final
 
-# NT-0019 §1.2a — five words, identical meaning in every family that uses a subset of them.
+# RFC-937 §1.2a — five words, identical meaning in every family that uses a subset of them.
 STATUS_WORDS: Final = ("draft", "active", "closed", "retired", "superseded")
 
-# NT-0019 §1.2's family table, row families first then document families, left to right,
+# RFC-937 §1.2's family table, row families first then document families, left to right,
 # top to bottom as the table itself lists them.
 FAMILY_PREFIXES: Final = (
     "FR", "NFR", "DEP", "OQ", "WK", "SL", "WF",
     "ADR", "RFC", "PL", "LG", "RL", "RS", "CR", "FD",
 )
 
-# NT-0019 §1.7: "the resolver is `\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*(\d+)\b`
+# RFC-937 §1.7: "the resolver is `\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*(\d+)\b`
 # with a check that the prefix matches the family the number belongs to." Quoted verbatim
 # rather than built from FAMILY_PREFIXES: the note fixes this exact pattern as the citation
 # resolver, and a generated version could silently reorder the alternation (regex
@@ -42,7 +42,7 @@ FAMILY_PREFIXES: Final = (
 # here) without anyone having decided that.
 ID_RE: Final = re.compile(r"\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*(\d+)\b")
 
-# NT-0019 §1.1 rule 3: "Filenames pad the integer to the standard's width, currently five."
+# RFC-937 §1.1 rule 3: "Filenames pad the integer to the standard's width, currently five."
 PAD_WIDTH: Final = 5
 
 # W37-6, 2026-09-04 (the deputy's ruling; narrowed the same day, after the row (d1)
@@ -79,7 +79,7 @@ PAD_WIDTH: Final = 5
 # `audit-docs.py` (DP-7's `_inverse_token_pattern`) — never retyped.
 #
 # `LEGACY_FORM_PATTERNS` below deliberately does NOT read it, and that is not an omission.
-# The tuple reproduces NT-0019 §7(d)'s acceptance predicate, which the note states verbatim
+# The tuple reproduces RFC-937 §7(d)'s acceptance predicate, which the note states verbatim
 # (at its own line 428) as a `git grep -E` with a plain `\b`, and `\b` matches between `-`
 # and a following letter. Routing the tuple through this constant would make the shipped
 # check blind to a form §7(d) says must be absent — a §7(d) amendment wearing a code
@@ -88,11 +88,11 @@ PAD_WIDTH: Final = 5
 # finds. The four cases above are where that agreement is checked.
 TOKEN_LEFT_BOUND: Final = r"(?<![A-Za-z0-9_])(?<![A-Z0-9]-)"
 
-# NT-0019 §7 acceptance item (d)'s pattern, and `audit-docs.py` check 36's third clause —
-# "one rule at two times" (Ruling 67 §2): both must read this **one** shared constant,
-# never a private copy each script maintains independently. Ruling 67 §2 Part 1: every
+# RFC-937 §7 acceptance item (d)'s pattern, and `audit-docs.py` check 36's third clause —
+# "one rule at two times" (RL-988 §2): both must read this **one** shared constant,
+# never a private copy each script maintains independently. RL-988 §2 Part 1: every
 # entry matches a COMPLETE legacy identifier or path, never a proper prefix of one — found
-# against `NT-00` self-matching its own defining sentence inside NT-0019 §7 itself, and
+# against `NT-00` self-matching its own defining sentence inside RFC-937 §7 itself, and
 # generalised to every alternative rather than fixed only there. Each entry is
 # independently `\b`-bounded on both sides (or, for a path, matched as a literal substring
 # with no anchor — a path is not a token with a "complete form" the way an id is); no entry
@@ -100,7 +100,7 @@ TOKEN_LEFT_BOUND: Final = r"(?<![A-Za-z0-9_])(?<![A-Z0-9]-)"
 # the class in another. This tuple **is** the decomposition — one row (or one check-36
 # hit) per entry, never re-derived from a combined pattern string.
 #
-# Broken-input proof (the consolidation's own, per Ruling 67 §2's own instruction): change
+# Broken-input proof (the consolidation's own, per RL-988 §2's own instruction): change
 # one entry here and both `audit-docs.py` check 36 and `_docverify.py`'s (d) rows move
 # together — `tests/test_doc_id_verify.py` proves both consumers hold this exact tuple.
 LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
@@ -119,7 +119,7 @@ LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
     ("legacy claude-notes path", re.compile(re.escape(".claude/notes/"))),
 )
 
-# Ruling 67 Part 2's class: a lockfile carries dependency-resolution DATA a package
+# RL-988 Part 2's class: a lockfile carries dependency-resolution DATA a package
 # manager generated, never a citation into this standard — a hash inside one can
 # coincidentally contain a substring that reads like a corrupted legacy-id fragment (the
 # `W5E...` hash in `frontend/pnpm-lock.yaml` is the case that surfaced this), and neither
@@ -129,21 +129,21 @@ LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
 # `REDIRECTS.csv` — and placed here, beside `LEGACY_FORM_PATTERNS`, so `doc-id.py`'s sweep
 # (`_iter_tree_files`) and `_docverify.py`'s corpus (`tracked_files`) read the identical
 # tuple through `sweep_exclusion_reason` below rather than two independently maintained
-# copies that can diverge (Ruling 67 §2 / `CLAUDE.md` §2: "a shape defined twice will
+# copies that can diverge (RL-988 §2 / `CLAUDE.md` §2: "a shape defined twice will
 # diverge").
 LOCKFILE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
-    ("uv.lock", "Ruling 67 Part 2 — generated dependency-resolution data, never a citation"),
+    ("uv.lock", "RL-988 Part 2 — generated dependency-resolution data, never a citation"),
     (
         "pnpm-lock.yaml",
-        "Ruling 67 Part 2 — generated dependency-resolution data, never a citation",
+        "RL-988 Part 2 — generated dependency-resolution data, never a citation",
     ),
     (
         "frontend/pnpm-lock.yaml",
-        "Ruling 67 Part 2 — generated dependency-resolution data, never a citation",
+        "RL-988 Part 2 — generated dependency-resolution data, never a citation",
     ),
 )
 
-# `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3 ruled `tests/fixtures/`
+# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 ruled `tests/fixtures/`
 # exempt from the id-**stamp census** "by path, each file a declared exception" — a
 # per-file list there because that census's own arithmetic (F83 condition 2) needs the
 # exempt set enumerated one file at a time so a mismatch stays detectable, and a path
@@ -183,7 +183,7 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
 # (d8)/(g), task #30 (executor-30-2, same mechanism): the instrument's own test modules
 # carry a legacy-form id as literal fixture data — proving a check catches (or correctly
 # does not catch) a form needs the form written down somewhere, and these three modules are
-# where NT-0019's own id grammar and its rewrite/verification mechanism are exercised
+# where RFC-937's own id grammar and its rewrite/verification mechanism are exercised
 # against it. Counting that fixture data as the real repository's residue would be the
 # instrument grading its own tests, the same reasoning `FIXTURE_CORPUS_ROOTS` above already
 # gives the two on-disk fixture directories — this is the equivalent class for a literal
@@ -191,7 +191,7 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
 # per-file with its own reason (§7(d)'s own instruction against a structural rule that
 # would silently widen, echoed at task 30's `register-owed.py` correction below):
 # **`tests/test_register_owed.py` does NOT belong here.** Its subject, `register-owed.py`,
-# is a file NT-0019 §4 itself migrates (`docs/notes/0019-one-id-per-document.md:381`), so
+# is a file RFC-937 §4 itself migrates (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:381`), so
 # its fixtures are stale test data that migrates WITH the script rather than exempted test
 # infrastructure — fixed in the same commit as this exclusion (its scoped-requirement-id
 # and workstream/slice-id placeholders respelled to their post-migration shapes), not
@@ -200,14 +200,14 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
 TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
     (
         "tests/test_doc_id_verify.py",
-        "NT-0019 §7(d)'s own row (d)/(e)/(g) verification instrument's tests — exercises "
+        "RFC-937 §7(d)'s own row (d)/(e)/(g) verification instrument's tests — exercises "
         "`_docid.LEGACY_FORM_PATTERNS` and the padded-id/fence conjuncts, and row (d8)'s "
         "task-key/slice-key/bare-key split, against literal legacy-form and "
         "deliberately-fake ids by construction",
     ),
     (
         "tests/test_audit_docs_ids.py",
-        "audit-docs.py's own NT-0019 id-standard checks (30-39) tests — exercises the "
+        "audit-docs.py's own RFC-937 id-standard checks (30-39) tests — exercises the "
         "checks' parsing against literal legacy-form and deliberately-fake ids by "
         "construction, the same reasoning `LEGACY_FORM_EXCLUDED_PATHS` (audit-docs.py) "
         "gives its own on-disk fixture files",
@@ -242,11 +242,11 @@ GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
 
 
 def sweep_exclusion_reason(rel_posix: str) -> str | None:
-    """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the NT-0019
+    """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the RFC-937
     migration sweep (`doc-id.py`'s `_iter_tree_files`) and from the (d)/(e)/(g)
     verification corpus (`_docverify.py`'s `tracked_files`) — or `None` when it is not
     excluded. One predicate, read by both consumers, so they can never disagree about what
-    is excluded (Ruling 67 §2's "one shared constant").
+    is excluded (RL-988 §2's "one shared constant").
 
     Five declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
     fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), one of the instrument's own named test
@@ -282,10 +282,10 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
 
 
 # =========================================================================================
-# `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
-# NT-0019 §7 acceptance item (d) (`_docverify.py`'s `rows_d`)
+# `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+# RFC-937 §7 acceptance item (d) (`_docverify.py`'s `rows_d`)
 # and `audit-docs.py` check 36's third clause (`sweep_legacy_forms`) are "one rule at two
-# times" (Ruling 67 §2). (d) already disclosed three classes on `LEGACY_FORM_PATTERNS`
+# times" (RL-988 §2). (d) already disclosed three classes on `LEGACY_FORM_PATTERNS`
 # residue that a wrong rewrite or a closed historical population still legitimately
 # carries; check 36 read no fence exclusion and no disclosed class at all, so the same
 # text failed one check and passed the other. These four members — the fence exclusion,
@@ -293,7 +293,7 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
 # — are the shared constants both consumers now read; neither retypes them.
 # =========================================================================================
 
-#: Ruling 103 §5.1's fence clause, extended to row (d)'s corpus (2026-09-04, W37-6
+#: RL-1044 §5.1's fence clause, extended to row (d)'s corpus (2026-09-04, W37-6
 #: exec-ids): a legacy-form id kept byte-exact inside a fenced illustrative exhibit is not
 #: a citation the migration is required to rewrite. Moved here from `_docverify.py` so
 #: `audit-docs.py` check 36 can read the identical predicate rather than a private copy;
@@ -320,8 +320,8 @@ def fenced_line_numbers(text: str) -> frozenset[int]:
 
 
 #: `LEGACY_FORM_PATTERNS`' two finding-id alternatives, excluded from (d)'s zero
-#: requirement **with their count disclosed**, never silently — Ruling 102 §4 (`F<nn>`)
-#: and Ruling 105 §A (the `F-W<n>-<m>` workstream form, the same alias class with a work
+#: requirement **with their count disclosed**, never silently — RL-1043 §4 (`F<nn>`)
+#: and RL-1046 §A (the `F-W<n>-<m>` workstream form, the same alias class with a work
 #: prefix; its target is a register row, not a document with an id yet, resolved by
 #: W37-11's alias resolver rather than this instrument). Keyed by `LEGACY_FORM_PATTERNS`'
 #: own label, not by pattern text, so a future anchoring fix can never silently un-key a
@@ -334,14 +334,14 @@ FINDING_ID_ALIAS_LABELS: Final[frozenset[str]] = frozenset({
 })
 
 #: `audit-docs.py` check 36's own disclosed-label set — `FINDING_ID_ALIAS_LABELS` plus the
-#: `W<n>[a-z]?-<m>` workstream/slice form (Ruling 105 §A's third alias class; row (d8)),
+#: `W<n>[a-z]?-<m>` workstream/slice form (RL-1046 §A's third alias class; row (d8)),
 #: whose target is a register row or a slice with no `SL-`/task id ever minted for it,
 #: resolved by W37-11's alias resolver rather than this instrument.
 #:
 #: The workstream/slice-id alternative's own pattern (`\bW[0-9]+[a-z]?-[0-9]+\b`) cannot
 #: match a bare, suffix-less work key at all — it requires a trailing `-[0-9]+` to match
 #: anything — so every hit this label produces is already a two-segment slice key or the
-#: first two segments of a three-segment task key, and Ruling 105 §A discloses both. The
+#: first two segments of a three-segment task key, and RL-1046 §A discloses both. The
 #: mig-vs-ctl "did the migration create a new slice-key value" and "bare work-key
 #: remainder" checks `_docverify._d8_verdict` also runs are a *different* question (row
 #: (d8)'s own regression gate over a migration diff) that a single-snapshot sweep has no
@@ -366,7 +366,7 @@ _NEXT_FREE_MARKER_RE: Final = re.compile(r"next free\s*:", re.IGNORECASE)
 #: The three sources (d7)'s deputy-ruled predicate reads beyond `docs/specs/*.md`'s own
 #: bold form, relative to a repo root.
 _SCOPED_ID_OTHER_DEFINITION_SOURCES: Final = (
-    "docs/open-questions.md", "docs/roadmap.md", "docs/audit/register.md",
+    "docs/open-questions.md", "docs/roadmap.md", "docs/findings/register.md",
 )
 
 
@@ -394,7 +394,7 @@ def scoped_id_bold_defined(token: str, definition_root: Path) -> bool:
 
 def scoped_id_defined_elsewhere(token: str, definition_root: Path) -> bool:
     """True if `token` has a genuine definition row in `open-questions.md`, `roadmap.md`
-    or `docs/audit/register.md` under `definition_root` — a `next free:`-marker MENTION on
+    or `docs/findings/register.md` under `definition_root` — a `next free:`-marker MENTION on
     the same line, before the token, is not a definition; everything else that names the
     token counts."""
     for rel in _SCOPED_ID_OTHER_DEFINITION_SOURCES:
@@ -425,7 +425,7 @@ def is_scoped_id_never_allocated(
     """The deputy's mechanical predicate (2026-09-04, W37-6 exec-ids), applied to one
     token: never-allocated only when ALL of zero bold definitions in
     `definition_root`'s `docs/specs/*.md`, zero definition row in its
-    `open-questions.md`/`roadmap.md`/`docs/audit/register.md`, and no `old_id` row for it
+    `open-questions.md`/`roadmap.md`/`docs/findings/register.md`, and no `old_id` row for it
     in `redirect_root`'s `docs/REDIRECTS.csv`. `definition_root` and `redirect_root` are
     separate parameters because `_docverify.py`'s (d7) checks definitions against the
     *control* (un-migrated) tree and the redirect against the *migrated* tree; a
@@ -440,7 +440,7 @@ def is_scoped_id_never_allocated(
 
 
 # =========================================================================================
-# docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md Entry 2 item 1:
+# docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md Entry 2 item 1:
 # `_docverify.py`'s row (e) (`padded_hits`) and `audit-docs.py` check 32's padding clause
 # are "one rule at two times" over the same corpus. Conjunct 1's exact-width regex,
 # conjunct 2 (a padded id inside a filesystem path is not a citation) and its
@@ -450,7 +450,7 @@ def is_scoped_id_never_allocated(
 # =========================================================================================
 
 #: **Conjunct 1**, and `PAD_WIDTH` is read from the symbol, never written as a literal.
-#: Ruling 103 defect 1: the same corpus gave 2032 under `-0\d{4}` and 2387 under
+#: RL-1044 defect 1: the same corpus gave 2032 under `-0\d{4}` and 2387 under
 #: `-0[0-9]{3,4}` — **355 occurrences from the digit count alone**, F85's exact shape
 #: inside an acceptance predicate. Reading `FAMILY_PREFIXES`/`PAD_WIDTH` by symbol in two
 #: places and reassembling the same regex expression twice is still two rules kept equal
@@ -460,7 +460,7 @@ _PADDED_ID_RE: Final = re.compile(
     r"\b(" + "|".join(FAMILY_PREFIXES) + r")-0\d{" + str(PAD_WIDTH - 1) + r"}\b"
 )
 
-#: **Conjunct 2's** stripping step. Ruling 103 defect 3: two of the three survivors were
+#: **Conjunct 2's** stripping step. RL-1044 defect 3: two of the three survivors were
 #: paths — `docs/rulings/**RL-00993**-q5-….md` — whose **bold markers split the token**, so
 #: the path test never saw a path. A predicate bug, not a ruling question.
 _MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
@@ -468,7 +468,7 @@ _MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
 #: `<` and `>` are excluded from this boundary set — this doc suite's own placeholder
 #: convention writes a filename's variable segment in angle brackets (a padded id, a
 #: hyphen, an angle-bracketed slug placeholder, then `.md`; `docs/_templates/*.md`'s own
-#: copy-target lines and NT-0019 §1.1 rule 3's illustration both use it), and treating
+#: copy-target lines and RFC-937 §1.1 rule 3's illustration both use it), and treating
 #: `<`/`>` as hard boundaries truncated the right-side walk before it ever reached the
 #: extension — the token stopped one character short of the placeholder's opening `<`, so
 #: a real filename citation (`PL-01240-<slug>.md`) read as prose (`PL-01240-`, no `/`, no
@@ -478,7 +478,7 @@ _MD_EMPHASIS_RE: Final = re.compile(r"\*{1,3}")
 _TOKEN_BOUNDARY_RE: Final = re.compile(r"[\s`()\[\]{}\"',;]")
 
 #: **Conjunct 2's** line-locator strip. Row (e)'s own measurement found a fourth defect
-#: alongside Ruling 103's three: a same-directory `filename.md:123` or `filename.md:401-404`
+#: alongside RL-1044's three: a same-directory `filename.md:123` or `filename.md:401-404`
 #: citation (this corpus's own convention for "the peer file, no leading `docs/plans/`,
 #: because both live in the same directory") is a filename token per rule 3's own wording —
 #: "the leading component of a filename ending `.md`" — but the trailing `:<line>` defeats
@@ -507,7 +507,7 @@ def _in_path_context(line: str, start: int, end: int) -> bool:
     return "/" in token or bool(re.search(r"\.[A-Za-z0-9]{2,4}$", sans_locator))
 
 
-# NT-0019 §1.2's "Kind" column, lowercased, keyed by prefix. What never changes on
+# RFC-937 §1.2's "Kind" column, lowercased, keyed by prefix. What never changes on
 # extension (§1.12): a new family adds a row here via an RFC-/RL-, this table is not
 # reopened for any other reason.
 _FAMILY_OF: Final[Mapping[str, str]] = {
@@ -538,7 +538,7 @@ class HeaderError(Exception):
 
 @dataclass(frozen=True)
 class Header:
-    """One document's (or row's) parsed front matter — NT-0019 §1.5's closed field set."""
+    """One document's (or row's) parsed front matter — RFC-937 §1.5's closed field set."""
 
     id: str | None
     family: str
@@ -564,21 +564,21 @@ class Header:
 
 
 def canonical(prefix: str, n: int) -> str:
-    """The citation form — NT-0019 §1.1 rule 2: unpadded, always. `canonical("PL", 1240)`
+    """The citation form — RFC-937 §1.1 rule 2: unpadded, always. `canonical("PL", 1240)`
     -> `"PL-1240"`.
     """
     return f"{prefix}-{n}"
 
 
 def padded(prefix: str, n: int, width: int = PAD_WIDTH) -> str:
-    """The filename form — NT-0019 §1.1 rule 3: padded to `width` (never truncated below
+    """The filename form — RFC-937 §1.1 rule 3: padded to `width` (never truncated below
     the number's own length). `padded("PL", 1240)` -> `"PL-01240"`.
     """
     return f"{prefix}-{n:0{width}d}"
 
 
 def family_of(prefix: str) -> str:
-    """The family word NT-0019 §1.2's "Kind" column gives `prefix`, lowercased.
+    """The family word RFC-937 §1.2's "Kind" column gives `prefix`, lowercased.
 
     Raises `ValueError` naming the prefix for anything not in `FAMILY_PREFIXES` — a
     product identifier (`VR-...`) or a typo, never a silent guess (D5, G5).
@@ -607,7 +607,7 @@ _LIST_ITEM_RE: Final = re.compile(r"^\[(.*)\]$")
 
 
 def _strip_inline_comment(value: str) -> str:
-    """Drop a trailing `  # comment` — the header examples in NT-0019 §1.5 carry one on
+    """Drop a trailing `  # comment` — the header examples in RFC-937 §1.5 carry one on
     almost every line. A `#` is only ever a comment marker here because the closed grammar
     has no quoted-string field whose value legitimately contains one; a bare split on the
     first ` #` is exact for that grammar, not an approximation of full YAML.
@@ -638,7 +638,7 @@ def _parse_front_matter_body(
     lines: list[str], *, path: Path, first_line_no: int
 ) -> dict[str, object]:
     """Parse the flat `key: value` lines of one front-matter block into a plain dict,
-    keyed by the YAML key exactly as written (`slice`, not `slice_`) — NT-0019 §1.5's
+    keyed by the YAML key exactly as written (`slice`, not `slice_`) — RFC-937 §1.5's
     closed grammar: scalars, `[a, b]` lists, `~` for null, nothing nested.
 
     Raises `HeaderError` naming `path` and the 1-based line number for a duplicate key, a
@@ -653,7 +653,7 @@ def _parse_front_matter_body(
         if raw_line[:1] in (" ", "\t"):
             raise HeaderError(
                 f"{path}:{line_no}: indented line — nested mappings are not in the "
-                f"closed field set (NT-0019 §1.5): {raw_line!r}"
+                f"closed field set (RFC-937 §1.5): {raw_line!r}"
             )
         match = _KEY_VALUE_RE.match(raw_line)
         if match is None:
@@ -716,7 +716,7 @@ def parse_header(path: Path) -> Header | None:
     is a legitimate, common state rather than an error.
 
     Raises `HeaderError`, naming `path` and a 1-based line number, when a front-matter
-    block is present but does not fit NT-0019 §1.5's closed grammar: an unterminated
+    block is present but does not fit RFC-937 §1.5's closed grammar: an unterminated
     block, a duplicate key, an indented (nested) line, a malformed list, or a malformed
     `created` date.
 
@@ -785,8 +785,8 @@ def parse_header_text(text: str, *, path: Path | None = None) -> Header | None:
     )
 
 
-# Ruling 69 (`docs/plans/2026-09-02-w37-migration-preconditions-rulings.md`, PR #563,
-# merged): NT-0019 §1.5's parenthetical, naming `planning-with-files`, `ui-ux-pro-max`,
+# RL-990 (`docs/rulings/RL-00990-rfc-937-1-5-s-vendored-parenthesis-is-a-gloss-not-a-detector-the-set-is-declared-and-reconciled-and-the-exemption-reaches-only-the-blanket-passes.md`, PR #563,
+# merged): RFC-937 §1.5's parenthetical, naming `planning-with-files`, `ui-ux-pro-max`,
 # `graphify`, `systematic-debugging` and the `vue-*` skills as vendored while giving "a
 # directory that provides a `LICENSE` of its own" as the reason, is a gloss identifying
 # which skills the note's author had in mind, not a specification of a detector: it is
@@ -798,12 +798,12 @@ def parse_header_text(text: str, *, path: Path | None = None) -> Header | None:
 # authoritative for what is vendored — and reconciled against `pyproject.toml`'s
 # `[tool.ruff] exclude` list by `vendored_skills_ruff_exclude_mismatch` below, which is
 # the independent second witness, never the criterion itself: adopting the ruff list
-# outright is Ruling 69's other rejected option, because nine of its 28 entries carry a
-# deliberate NT-0019 §5.4 edit and two of those (`writing-plans`,
-# `subagent-driven-development`) are creating instruments Ruling 66 requires inside the
+# outright is RL-990's other rejected option, because nine of its 28 entries carry a
+# deliberate RFC-937 §5.4 edit and two of those (`writing-plans`,
+# `subagent-driven-development`) are creating instruments RL-987 requires inside the
 # migration commit — treating ruff-exclusion itself as "vendored" would exempt them from
 # the very migration that must carry them. Extending this set is a deliberate edit,
-# recorded in `.claude/skills/README.md` in the same commit (Ruling 69 §2 part 3), never a
+# recorded in `.claude/skills/README.md` in the same commit (RL-990 §2 part 3), never a
 # rename this constant discovers on its own.
 _VENDORED_SKILLS: Final[frozenset[str]] = frozenset({
     "brainstorming",
@@ -839,12 +839,12 @@ _VENDORED_SKILLS: Final[frozenset[str]] = frozenset({
 
 def is_vendored(path: Path, repo_root: Path) -> bool:
     """True when `path` sits beneath a directory named in `_VENDORED_SKILLS` directly
-    under `.claude/skills/` — NT-0019 §1.5's vendored-skill exemption, as Ruling 69
+    under `.claude/skills/` — RFC-937 §1.5's vendored-skill exemption, as RL-990
     resolved it (see the comment above `_VENDORED_SKILLS`): a membership test against a
     declared constant, never a filesystem probe.
 
     This function's signature is unchanged from the published contract W37-3 and W37-4
-    import (Ruling 69 §2 part 4) — only the body changed, from walking the filesystem
+    import (RL-990 §2 part 4) — only the body changed, from walking the filesystem
     for a `LICENSE` file to testing set membership.
 
     `path` may be a file or a directory, absolute or relative to `repo_root`; both are
@@ -898,16 +898,16 @@ def is_split_source_index(rel: str) -> bool:
 def vendored_skills_ruff_exclude_mismatch(
     repo_root: Path,
 ) -> tuple[frozenset[str], frozenset[str]]:
-    """Ruling 69 §2 part 2's reconciliation: `_VENDORED_SKILLS` against `repo_root`'s
+    """RL-990 §2 part 2's reconciliation: `_VENDORED_SKILLS` against `repo_root`'s
     `pyproject.toml`'s `[tool.ruff] exclude` list, restricted to the `.claude/skills/<name>`
     entries — the independent second witness the ruling requires, never the criterion
     itself (`is_vendored`'s docstring, and the comment above `_VENDORED_SKILLS`, both say
-    why the ruff list is not adopted outright: it over-exempts two of Ruling 66's creating
+    why the ruff list is not adopted outright: it over-exempts two of RL-987's creating
     instruments).
 
     Returns `(only_in_constant, only_in_ruff)`. Both empty means the two agree — this is
     the passing case, and it is what the real repository must show today. Either side
-    non-empty is drift, and the caller must fail loudly naming which side moved (Ruling 69
+    non-empty is drift, and the caller must fail loudly naming which side moved (RL-990
     acceptance item 1) rather than silently trusting one source over the other.
 
     Reads `repo_root/pyproject.toml` fresh on every call, with `tomllib` (standard
@@ -931,7 +931,7 @@ def vendored_skills_ruff_exclude_mismatch(
 
 
 # ---------------------------------------------------------------------------------------
-# NT-0019 §4 step 5's stamp set — the one definition, two consumers.
+# RFC-937 §4 step 5's stamp set — the one definition, two consumers.
 #
 # `scripts/audit-docs.py` needs it twice over (`nt0019_stamp_set`, the corpus the F83
 # exemption register is reconciled against; and `_id_scope_documents`, the population
@@ -944,17 +944,17 @@ def vendored_skills_ruff_exclude_mismatch(
 # **The membership predicate is the definition; the filesystem walk is derived from it.**
 # `stamp_set_files` filters a walk through `in_stamp_set` rather than carrying a second,
 # glob-shaped statement of the same rule — two spellings of one rule is how the two
-# consumers came to disagree in the first place (`NT-0003`).
+# consumers came to disagree in the first place (`RFC-756`).
 #
-# The rule itself is `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §4's
-# ruling, quoting NT-0019 §4 step 5: every file under `docs/`, `.claude/roles/` and
+# The rule itself is `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4's
+# ruling, quoting RFC-937 §4 step 5: every file under `docs/`, `.claude/roles/` and
 # `.claude/agents/`, every `.claude/skills/*/SKILL.md`, plus every `README.md` anywhere in
 # the tree. That last clause is §1.2's Reference row, not step 5's own words, and it is
 # kept because `scripts/doc-id.py`'s README scope reaches those files whatever step 5's
 # roots say.
 # ---------------------------------------------------------------------------------------
 
-#: The directory prefixes NT-0019 §4 step 5 names, repo-relative and without a trailing
+#: The directory prefixes RFC-937 §4 step 5 names, repo-relative and without a trailing
 #: slash. `.claude/skills` is here for `stamp_set_files`' benefit — a root a caller may
 #: legitimately name — even though only its `*/SKILL.md` members are in the set;
 #: `in_stamp_set` is what decides membership, never this tuple on its own.
@@ -965,13 +965,13 @@ STAMP_SET_ROOTS: Final[tuple[str, ...]] = (
     ".claude/skills",
 )
 
-#: The one filename that is in the stamp set wherever it appears (NT-0019 §1.2's
+#: The one filename that is in the stamp set wherever it appears (RFC-937 §1.2's
 #: Reference row, "every `README.md` anywhere in the tree").
 STAMP_SET_ANYWHERE: Final = "README.md"
 
 
 def in_stamp_set(rel: str) -> bool:
-    """Is the repo-relative posix path `rel` in NT-0019 §4 step 5's stamp set?
+    """Is the repo-relative posix path `rel` in RFC-937 §4 step 5's stamp set?
 
     A **path** predicate, not a filesystem probe: it never touches the disk, so the same
     definition answers for a `git ls-files` listing and for a tree walk, and a test can
@@ -997,7 +997,7 @@ def in_stamp_set(rel: str) -> bool:
 
 
 def nt0019_stamp_set(tracked: Iterable[str]) -> list[str]:
-    """Every path in `tracked` that NT-0019 §4 step 5 stamps, sorted and de-duplicated.
+    """Every path in `tracked` that RFC-937 §4 step 5 stamps, sorted and de-duplicated.
 
     `tracked` is the caller's corpus — `git ls-files` in production, for the reason
     `scripts/doc-id.py` records: a working-tree walk picks up `.venv/`, `graphify-out/`
@@ -1043,16 +1043,16 @@ def stamp_set_files(directory: Path, repo_root: Path) -> list[Path]:
 
 # ---------------------------------------------------------------------------------------
 # Template readers — Rulings 79 and 80
-# (`docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md`). Both rulings settle
+# (`docs/rulings/INDEX.md#2026-09-02-w37-template-parser-conflicts-rulingsmd`). Both rulings settle
 # the same way: a family's own template under `docs/_templates/` is the licensing
-# instrument (Ruling 70 §2 item 1), never a hand-written constant in a reader. Kept here,
+# instrument (RL-981 §2 item 1), never a hand-written constant in a reader. Kept here,
 # not in `scripts/doc-index.py`, so `scripts/doc-id.py` (the row/phase *writer*,
 # `migrate`) and `scripts/doc-index.py` (the *reader*) derive from one definition apiece
 # and cannot silently disagree — both already import this module and neither imports the
-# other (Ruling 79 §3 item 2: "the reader must not become a third transcription").
+# other (RL-998 §3 item 2: "the reader must not become a third transcription").
 # ---------------------------------------------------------------------------------------
 
-#: The two row families (NT-0019 §1.5): a `WK-`/`SL-` row's header is a fenced ```yaml
+#: The two row families (RFC-937 §1.5): a `WK-`/`SL-` row's header is a fenced ```yaml
 #: block under the row's own heading, never the file's own front matter. Keyed by family
 #: word, the convention `scripts/audit-docs.py`'s `_TEMPLATE_FAMILY` already uses for a
 #: template's filename.
@@ -1065,10 +1065,10 @@ _TEMPLATE_KEY_RE: Final = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):")
 
 def row_template_fields(templates_dir: Path, family: str) -> frozenset[str]:
     """The permitted field set for a `WK-`/`SL-` row, derived from that family's own
-    template's fenced ```yaml block (Ruling 79 §3 item 1) — Ruling 70 §2 item 1's "the
+    template's fenced ```yaml block (RL-998 §3 item 1) — RL-981 §2 item 1's "the
     permitted set for a family is the set of keys in that family's template front matter",
     applied to a row's fenced block, which is what a `WK-`/`SL-` row carries in place of a
-    document's own top-level front matter (NT-0019 §1.5).
+    document's own top-level front matter (RFC-937 §1.5).
 
     Raises `ValueError` naming `family` for anything not a row family — a document
     family's field policy is `scripts/audit-docs.py`'s `derive_field_policies` to compute,
@@ -1076,7 +1076,7 @@ def row_template_fields(templates_dir: Path, family: str) -> frozenset[str]:
     carries no fenced block at all, rather than deriving a silently smaller policy from
     whatever happened to be found (the same "silent empty coverage must be impossible"
     property `derive_field_policies` already enforces for the other twelve templates,
-    Ruling 70 §4 item 3).
+    RL-981 §4 item 3).
     """
     try:
         filename = ROW_TEMPLATE_FILES[family]
@@ -1104,15 +1104,15 @@ def row_template_fields(templates_dir: Path, family: str) -> frozenset[str]:
 
 def scan_plain_field_block(lines: Sequence[str], start: int) -> dict[str, str]:
     """The plain `key: value` lines directly beneath a heading at `lines[start - 1]` —
-    NT-0019's phase-section grammar (§1.1 rule 4, §1.3; `docs/_templates/PHASE.md`'s own
+    RFC-937's phase-section grammar (§1.1 rule 4, §1.3; `docs/_templates/PHASE.md`'s own
     words: "not built from the closed header field set of §1.5"), the one block form
-    §1.5's closed, fenced grammar does not govern (Ruling 80 §2).
+    §1.5's closed, fenced grammar does not govern (RL-999 §2).
 
     A bounded scan of `lines[start:]`, stopping at the next heading (any line starting
-    with `#`) or a blank line, whichever comes first (Ruling 80 §3 item 1: "stopping at
+    with `#`) or a blank line, whichever comes first (RL-999 §3 item 1: "stopping at
     the next heading or the first line that is not key: value" — a blank line is such a
     line). A non-blank *indented* line is read as a continuation of the field above it —
-    the same signal NT-0019 §1.5's own closed grammar treats as "not a new key" (there, by
+    the same signal RFC-937 §1.5's own closed grammar treats as "not a new key" (there, by
     raising; this grammar has no hard-error concept, so it is tolerated instead) — and is
     skipped without stopping the scan; a non-blank, non-indented line with no `:` does
     stop it. Deliberately **not** `_parse_front_matter_body`'s indented-line rule reused
@@ -1129,7 +1129,7 @@ def scan_plain_field_block(lines: Sequence[str], start: int) -> dict[str, str]:
     Unbounded by design in the *other* direction that matters: `lines` is whatever the
     caller already sliced to `start` onward — this function itself never looks past a
     heading or a blank line, which is the fix for `scripts/doc-index.py`'s former `rest =
-    "\n".join(lines[idx + 1:])` (Ruling 80 §3 item 2: "must not survive the fix in any
+    "\n".join(lines[idx + 1:])` (RL-999 §3 item 2: "must not survive the fix in any
     form").
     """
     raw: dict[str, str] = {}
@@ -1148,14 +1148,14 @@ def scan_plain_field_block(lines: Sequence[str], start: int) -> dict[str, str]:
 
 
 def phase_template_fields(templates_dir: Path) -> frozenset[str]:
-    """The field names NT-0019's phase section declares, read from `docs/_templates/
-    PHASE.md`'s own body — never transcribed (Ruling 80 §3 item 3): matches today
+    """The field names RFC-937's phase section declares, read from `docs/_templates/
+    PHASE.md`'s own body — never transcribed (RL-999 §3 item 3): matches today
     (`("status", "opened", "target", "gates", "exit criteria", "works")`), so this is
     hardening, not repair.
 
     Raises `ValueError` naming `templates_dir` when `PHASE.md` carries no `##` heading, or
     the heading has no plain field directly beneath it — "silent empty coverage must be
-    impossible" (Ruling 70 §4 item 3), applied here to the one template
+    impossible" (RL-981 §4 item 3), applied here to the one template
     `scripts/audit-docs.py`'s `derive_field_policies` deliberately excludes (a phase has
     no family).
     """

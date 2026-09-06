@@ -9,7 +9,7 @@ import { gbmSpec, type Factor, type Model, type TransparencyArtifact } from "@/a
  * A fitted LightGBM, annotated rather than cast.
  *
  * The annotation is the point: `as unknown as Model` would let `GbmFitResult` drift in the
- * generated contract without a single test noticing, which is the failure FR-OVR-6 exists to
+ * generated contract without a single test noticing, which is the failure FR-9 exists to
  * prevent. Annotated, drift fails `pnpm test` rather than review.
  *
  * `lightgbm` and not `xgboost` on purpose — `02` §4.4 (amended 2026-08-17) folded the old
@@ -58,7 +58,7 @@ export const GBM_MODEL: Model = {
 };
 
 /**
- * A transparency artifact for `GBM_MODEL` (FR-MODEL-33, FR-MODEL-34).
+ * A transparency artifact for `GBM_MODEL` (FR-132, FR-133).
  *
  * Carries the GLM-approximation and SHAP blocks but not `ebm_shape_functions`: the three are
  * independently optional, and a fixture with all three present would let a panel that renders
@@ -172,7 +172,7 @@ export const EBM_MODEL: Model = {
 };
 
 /**
- * The same family refitted as a quantile bound of version 7 (FR-MODEL-78).
+ * The same family refitted as a quantile bound of version 7 (FR-199).
  *
  * Built through `gbmSpec` rather than by spreading `GBM_MODEL.spec`: that field is the
  * three-arm union, and spreading a union member produces a value assignable to none of the
@@ -415,7 +415,7 @@ export const DIAGNOSTICS: Diagnostics = {
 };
 
 /**
- * One stored backtest (FR-MODEL-92). The partition is borrowed from `DIAGNOSTICS` rather than
+ * One stored backtest (FR-94). The partition is borrowed from `DIAGNOSTICS` rather than
  * written out: a `PartitionDiagnostics` is the same shape wherever it appears, and a second
  * hand-built copy is a second thing to keep true.
  *

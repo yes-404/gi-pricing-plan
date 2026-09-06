@@ -3,10 +3,10 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:4d47dc1fe582ba56bb92ac4f0eedcc1b76c06bb5a8bcb3a6cd4cbcaeaa79c7f8",
-    "verified_against_tree": "ac8225611da37759b402629c729d9b50e9675c61",
+    "derived_from_digest": "sha256:b38334990629e02a1d4a698053e846743fb62189310f95324dd27d4cde984efe",
+    "verified_against_tree": "cfbc0390c119736a23bdd18b98ff7f4fd595be5f",
     "authoritative": false,
-    "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (NT-0014 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
+    "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
     "spec_adopted": "2026-08-29"
   },
   "vocabularies": {
@@ -363,7 +363,7 @@
         "log_per_slice_reaudit_count",
         "log_gate_reruns"
       ],
-      "enforcement_hook": "scripts/hooks/retry_cap_hook.py (NT-0014 script C2)",
+      "enforcement_hook": "scripts/hooks/retry_cap_hook.py (RFC-895 script C2)",
       "revisit_when": "one_workstreams_worth_of_data_exists",
       "source": "§7"
     },
@@ -446,7 +446,7 @@
     "source": "§13"
   },
   "artifacts": {
-    "findings_register": "docs/audit/register.md",
+    "findings_register": "docs/findings/register.md",
     "open_questions_log": "docs/open-questions.md",
     "roadmap": "docs/roadmap.md",
     "plans_dir": "docs/plans/",
@@ -462,8 +462,8 @@
       "registration": ".claude/settings.json (Claude Code PreToolUse hook, Bash matcher)",
       "enforces": "guards.retry_caps",
       "status": "built",
-      "adoption_slice": "NT-0014 adoption slice G",
-      "note": "record() enforces the cap on its own; the PreToolUse wiring pre-empts a breaching Bash call before it runs. Neither stops a direct hand-edit of the runtime state file or a session with hooks disabled -- no CI-equivalent backstop exists behind C2 (Ruling 40 §4).",
+      "adoption_slice": "RFC-895 adoption slice G",
+      "note": "record() enforces the cap on its own; the PreToolUse wiring pre-empts a breaching Bash call before it runs. Neither stops a direct hand-edit of the runtime state file or a session with hooks disabled -- no CI-equivalent backstop exists behind C2 (RL-920 §4).",
       "source": "§7"
     },
     "C3_verify_gate": {
@@ -473,7 +473,7 @@
     }
   },
   "runtime_state_schema": {
-    "description": "Shape of the runtime state file (NT-0014 artifact B). `position` and `in_flight_expensive_verifications` are written by the watcher (.claude/skills/watcher-runtime-state); `retry_counters` and `pending_human_checkpoint` are written by the retry-cap hook (scripts/hooks/retry_cap_hook.py, NT-0014 script C2, adoption slice G) at the moment a fix/replan decision is recorded. Ruling 47 (docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md) rejected the note's original design -- a state file compared against artifact history -- because a dead or unwired writer and a genuinely idle process both read zero, so a mismatch never fires. Each block is re-derived (watcher) or live-updated at the moment of the event (hook) rather than compared against a second tally; a block whose content is unchanged this cycle is left untouched, timestamp included, which is what makes a no-op watcher cycle byte-identical (Ruling 47(d)'s acceptance test).",
+    "description": "Shape of the runtime state file (RFC-895 artifact B). `position` and `in_flight_expensive_verifications` are written by the watcher (.claude/skills/watcher-runtime-state); `retry_counters` and `pending_human_checkpoint` are written by the retry-cap hook (scripts/hooks/retry_cap_hook.py, RFC-895 script C2, adoption slice G) at the moment a fix/replan decision is recorded. RL-907 (docs/rulings/RL-00907-q4-artifacts-win-where-an-artifact-exists-and-nothing-that-blocks-an-action-may-be-counted-in-b-without-one.md) rejected the note's original design -- a state file compared against artifact history -- because a dead or unwired writer and a genuinely idle process both read zero, so a mismatch never fires. Each block is re-derived (watcher) or live-updated at the moment of the event (hook) rather than compared against a second tally; a block whose content is unchanged this cycle is left untouched, timestamp included, which is what makes a no-op watcher cycle byte-identical (RL-907(d)'s acceptance test).",
     "source": "§8, §10, §13",
     "example": {
       "schema": "gi-pricing-plan-runtime-state",
@@ -487,11 +487,11 @@
           "read_from": "docs/roadmap.md §7"
         },
         "work": {
-          "value": "W11",
+          "value": "WK-671",
           "read_from": "docs/roadmap.md §7"
         },
         "slice": {
-          "value": "W11-S3",
+          "value": "WK-671-S3",
           "read_from": "docs/plans/2026-08-29-w11-map.md"
         }
       },
@@ -512,7 +512,7 @@
         "written_by": "hook:C2",
         "written_at": "2026-08-31T10:00:00Z",
         "entries": {
-          "slice:W11-S3:fix": {
+          "slice:WK-671-S3:fix": {
             "count": 1,
             "evidence": [
               {
@@ -526,8 +526,8 @@
       "pending_human_checkpoint": null
     },
     "not_yet_present": {
-      "flow_step": "has no source artifact -- a running agent's belief about its own step, the roster-state.md (F31) claim verbatim -- so Ruling 47(c) drops it rather than carrying an unfalsifiable field",
-      "escalations_open": "not in NT-0014 script C2's scope (adoption slice G) -- the same standard flow_step is held to: no source artifact yet named for it"
+      "flow_step": "has no source artifact -- a running agent's belief about its own step, the roster-state.md (F31) claim verbatim -- so RL-907(c) drops it rather than carrying an unfalsifiable field",
+      "escalations_open": "not in RFC-895 script C2's scope (adoption slice G) -- the same standard flow_step is held to: no source artifact yet named for it"
     }
   }
 }

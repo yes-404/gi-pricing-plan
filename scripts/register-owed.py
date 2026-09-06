@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Print every open `docs/audit/register.md` row owed by, or blocking, a named close.
+"""Print every open `docs/findings/register.md` row owed by, or blocking, a named close.
 
-Ordered by NT-0015 P5 (`docs/notes/0015-the-register-is-a-ledger-evidence-is-a-file.md`
+Ordered by RFC-896 P5 (`docs/rfcs/RFC-00896-the-register-is-a-ledger-evidence-is-a-file.md`
 §2), which exists to replace an owed list compiled by hand at the moment of highest load —
-F41, verbatim: the W11 close's hand-compiled list "already runs to thirteen items — a list
-that lost NFR-RATE-13/14 for two workstreams even though a register row, F-W9-1, existed for
+F41, verbatim: the WK-671 close's hand-compiled list "already runs to thirteen items — a list
+that lost NFR-502/501 for two workstreams even though a register row, F-W9-1, existed for
 them the whole time." F-W9-1's own Work item column reads `W9-3`; its Decision column names
-"the W11 scoring workstream" as the actual owner. **That gap is why this script searches
+"the WK-671 scoring workstream" as the actual owner. **That gap is why this script searches
 both the Work item and Decision columns, not the Work item column alone** — a search
 restricted to Work item would repeat F41's exact mistake.
 
-**Ruling 52** (`docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`) binds this script's output
+**RL-912** (`docs/rulings/RL-00912-q4-the-generated-output-lands-verbatim-and-it-is-not-the-closure-record-s-findings-table.md`) binds this script's output
 form:
 
   1. The output names the command and the **committed revision** it ran against — a SHA on
      `main` or a named branch range, never a bare date and never a dirty worktree, because
      the register amends several times a day and "the register at a date" is not a
      resolvable object. **Enforced, not documented**: this script refuses to run if
-     `docs/audit/register.md` has an uncommitted diff (`_dirty_register`).
+     `docs/findings/register.md` has an uncommitted diff (`_dirty_register`).
   2. The output lands verbatim in a closure record as a fenced, explicitly-generated
      evidence block — and it is **not** the record's own findings-and-resolutions table,
      which stays hand-written (`.claude/skills/close-workstream` and the checklists carry
@@ -30,8 +30,8 @@ writing a second parser or a second "is this resolved" test — a shape parsed t
 diverges, and a diverged parser here would mean an owed list that silently disagrees with
 the linter about what a row is.
 
-**Scope: `docs/audit/register.md` only**, the same exclusion `register-lint.py` states by
-name for `docs/audit/phases/1b/register.md` (Ruling 50 §2: a closed-phase record, out of
+**Scope: `docs/findings/register.md` only**, the same exclusion `register-lint.py` states by
+name for `docs/findings/register.md` (RL-910 §2: a closed-phase record, out of
 scope regardless of when a check runs, named rather than dated so the exclusion stays
 visible). This script does not read a second-path constant at all — `REGISTER` is a single
 hardcoded path — so the exclusion holds by construction, not by an added check. A future
@@ -52,7 +52,7 @@ would need one; neither exists yet, so nothing here reaches into `phases/1b`.
   - a **phase id** (`1a`, `1b`, `2`, `3`, `4`, …: matches `^[0-9][0-9a-zA-Z]*$`) — rows
     whose Phase column, split on `/` (a row can span several phases, e.g. `2/3/4`), names
     that phase.
-  - anything else — a **work-item id** (`W11`, `W10-2`, `W6b-14`, `nt-0010-0011-adoption`,
+  - anything else — a **work-item id** (`WK-671`, `W10-2`, `W6b-14`, `nt-0010-0011-adoption`,
     …), matched case-insensitively at a word boundary against the Work item column *and*
     the Decision column, so an owner named only in prose (F-W9-1's shape) is still found.
 
@@ -172,7 +172,7 @@ def _mode_label(target: str) -> str:
 
 def _dirty_path(repo: Path, path: Path) -> str | None:
     """None if `path` (inside `repo`) has no uncommitted diff; otherwise a message naming
-    why this script refuses to run (Ruling 52 constraint 1, enforced not documented: never
+    why this script refuses to run (RL-912 constraint 1, enforced not documented: never
     cite a dirty worktree as though it were a committed revision). A pure function of its
     two arguments so it can be proven against a throwaway git repo, not only the real one.
     """

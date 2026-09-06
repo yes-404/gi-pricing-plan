@@ -2,18 +2,18 @@
 
 What this module owes its caller, in the spec's own terms:
 
-* **FR-MODEL-54 — train and holdout, always both.** Every metric here is computed twice
+* **FR-183 — train and holdout, always both.** Every metric here is computed twice
   over two frames and returned in a shape that cannot hold one without the other. The
   requirement calls a one-sided diagnostic a defect; `UniversalDiagnostics` makes it
   unrepresentable rather than merely discouraged.
-* **FR-MODEL-55 — the weighting is part of the metric.** Derived once from the spec, in
+* **FR-184 — the weighting is part of the metric.** Derived once from the spec, in
   `_weighting`, and recorded on both partitions. An exposure-weighted A/E and an
   unweighted one differ by more than rounding on any real book.
-* **FR-MODEL-50/51 — universal metrics for every model type, GLM metrics for GLMs.** The
-  split is the roadmap's: FR-MODEL-50 is the gate, and 51 rides along because the GLM is
-  the only thing this platform can currently fit. FR-MODEL-52's GBM block is owned by the
+* **FR-171/172 — universal metrics for every model type, GLM metrics for GLMs.** The
+  split is the roadmap's: FR-171 is the gate, and 51 rides along because the GLM is
+  the only thing this platform can currently fit. FR-174's GBM block is owned by the
   slice that produces a GBM.
-* **FR-MODEL-81 — complexity is recorded on every fit**, beside the thresholds it was
+* **FR-185 — complexity is recorded on every fit**, beside the thresholds it was
   judged against.
 
 **Deviance is computed here, not in `glm`.** The spine declared `GlmFitResult.deviance`
@@ -112,7 +112,7 @@ class DiagnosticsResult:
 
 
 def _weighting(spec: ModelSpecCommon) -> Weighting:
-    """What the metrics are weighted by, decided once (FR-MODEL-55).
+    """What the metrics are weighted by, decided once (FR-184).
 
     Exposure when the model carries an exposure offset — every frequency and burning-cost
     model. Claim count when a weight column is declared, which is severity's convention
@@ -342,10 +342,10 @@ def _partition(
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> PartitionDiagnostics:
-    """Every universal metric for one partition (FR-MODEL-50).
+    """Every universal metric for one partition (FR-171).
 
     `mu` is passed in rather than predicted here, and `spec` is the **common** block: this
-    is FR-MODEL-50's "all model types" taken literally. Every metric below — A/E by level,
+    is FR-171's "all model types" taken literally. Every metric below — A/E by level,
     lift, Gini, calibration, residuals — is a function of `(y, mu, weights)` and knows
     nothing about how `mu` was produced. Predicting inside would have made the one
     genuinely shared computation in `02` §3.8 the one thing each arm had to reimplement.
@@ -460,14 +460,14 @@ def _type_iii(
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> tuple[TypeIIITest, ...]:
-    """Drop each factor, refit, and report the deviance it was worth (FR-MODEL-51).
+    """Drop each factor, refit, and report the deviance it was worth (FR-172).
 
     A likelihood-ratio test, so the p-value means what a reader assumes: `Δdeviance` on
     `Δdf` degrees of freedom is χ². The alternative — a Wald test read off the coefficient
     table — answers a different question for a multi-level factor, and answers it one level
     at a time.
 
-    Refitting is the cost. It is paid once, at fit time, because FR-MODEL-49 says
+    Refitting is the cost. It is paid once, at fit time, because FR-170 says
     diagnostics are computed once and read thereafter.
     """
     from pricing_core.modelling.glm import GlmFitError, fit_glm
@@ -480,7 +480,7 @@ def _type_iii(
 
     y = data[spec.response_column].cast(pl.Float64).to_numpy()
 
-    # A factor that exists only to be crossed contributes no design column (FR-MODEL-91),
+    # A factor that exists only to be crossed contributes no design column (FR-92),
     # so there is no term to test: dropping it would leave the interaction unresolvable,
     # and "keeping" it changes nothing. The interaction itself is tested instead.
     operand_ids = {
@@ -535,7 +535,7 @@ def _term_count(
     """Degrees of freedom a factor spends: levels - 1 for a categorical, 1 otherwise.
 
     Resolved with its **operands** rather than alone: an `interaction` has no columns of
-    its own (FR-MODEL-91), so resolving it by itself raises rather than counting. The
+    its own (FR-92), so resolving it by itself raises rather than counting. The
     operands come from the model's own factor list, which is why the whole list is a
     parameter — the alternative, resolving every factor here, would recompute the design
     once per term.
@@ -553,7 +553,7 @@ def _term_count(
 
 def _power_of(fit: GlmFitResult, spec: ModelSpec) -> float:
     """The Tweedie power a fit is described by: the profile-likelihood estimate when the
-    spec asked for one (FR-MODEL-22 — an estimate with its own uncertainty, not a
+    spec asked for one (FR-114 — an estimate with its own uncertainty, not a
     constant), else the spec's declared power. Every downstream deviance consumer must
     read p here; the spec's 1.5 default is a fallback for legacy specs, not an answer."""
     if fit.tweedie is not None:
@@ -581,11 +581,11 @@ def compute_diagnostics(
     """Everything `02` §3.8 asks of a GLM fit, for both partitions (FR-MODEL-49..55, 81).
 
     `train` and `holdout` are both required and neither defaults. A caller with only one
-    frame is a caller about to report a one-sided diagnostic, and FR-MODEL-54 calls that a
+    frame is a caller about to report a one-sided diagnostic, and FR-183 calls that a
     defect — so the signature refuses it rather than the reviewer having to notice.
 
     `model_offset_train`/`model_offset_holdout` are the offset-from-another-model arrays
-    (FR-MODEL-24), required when `spec.offset.kind == "model"` — each frame is scored with
+    (FR-116), required when `spec.offset.kind == "model"` — each frame is scored with
     its own, because the referenced model's linear predictor is a per-frame quantity.
     """
     report = progress or NullProgress()
@@ -712,7 +712,7 @@ def backtest_model(
     groupings: Mapping[UUID, Grouping] | None = None,
     progress: ProgressCallback | None = None,
 ) -> BacktestSummary:
-    """FR-MODEL-57 — one fitted model, measured on data it was not fitted on.
+    """FR-187 — one fitted model, measured on data it was not fitted on.
 
     **The same `_partition` the fit ran**, which is the whole of "produces the same
     diagnostic shapes": A/E by level, lift, Gini, calibration and residuals are functions of
@@ -722,16 +722,16 @@ def backtest_model(
     One partition is returned, not two. The backtested population was never split, and
     labelling it a holdout would claim a split nobody made (`BacktestSummary`).
 
-    Both arms, through `score_fitted` — FR-MODEL-57 says nothing about model type, and a
+    Both arms, through `score_fitted` — FR-187 says nothing about model type, and a
     backtest that worked for GLMs alone would mean the GBM an actuary is least sure of is
     the one nothing re-measures. A GBM needs its `booster` bytes for the reason
     `score_fitted` gives.
 
     The refs are parameters rather than derived: `pricing-core` is handed artifacts and
-    never resolves an id (ADR-0001), and `BacktestSummary` is where the "other than the
+    never resolves an id (ADR-703), and `BacktestSummary` is where the "other than the
     version it was fitted on" invariant is enforced — on the two refs this caller supplies.
 
-    `model_offset` is the offset-from-another-model array (FR-MODEL-24), required when
+    `model_offset` is the offset-from-another-model array (FR-116), required when
     `spec.offset.kind == "model"` — a backtest of a model-offset fit must score with the
     referenced model's linear predictor or it re-measures a different model.
     """
@@ -764,7 +764,7 @@ def backtest_model(
 
 
 def _importances(result: GbmFitResult, booster: bytes) -> tuple[FeatureImportance, ...]:
-    """Gain, cover and frequency, per feature, from the persisted booster (FR-MODEL-52).
+    """Gain, cover and frequency, per feature, from the persisted booster (FR-174).
 
     Three measures because they disagree, and the disagreement is the finding: a feature
     the trees reach for constantly and learn little from is frequent and low-gain, and one
@@ -809,11 +809,11 @@ def _importances(result: GbmFitResult, booster: bytes) -> tuple[FeatureImportanc
     )
 
 
-#: FR-MODEL-118's cap on a categorical partial-dependence grid.
+#: FR-175's cap on a categorical partial-dependence grid.
 #:
-#: **20 is a measurement, not a chart convention.** NFR-MODEL-14 measured 0.0480 fits
+#: **20 is a measurement, not a chart convention.** NFR-488 measured 0.0480 fits
 #: per full-population scoring pass, so 20 passes is 0.96 of one fit — which puts a
-#: GBM's per-factor block at the same order as NFR-MODEL-13's budget for the GLM's, one
+#: GBM's per-factor block at the same order as NFR-487's budget for the GLM's, one
 #: fit wall-clock per tested factor, and leaves a numeric factor's ten quantile points
 #: already inside it.
 DEFAULT_PARTIAL_DEPENDENCE_LEVELS = 20
@@ -831,7 +831,7 @@ def _permutation_importances(
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> tuple[PermutationImportance, ...]:
-    """FR-MODEL-52's permutation importance, on the **holdout**.
+    """FR-174's permutation importance, on the **holdout**.
 
     Split importance says how the trees were built; this says what the model would lose if
     the variable were noise, which is the question an actuary is actually asking. They
@@ -851,21 +851,21 @@ def _permutation_importances(
 
     out: list[PermutationImportance] = []
     for index, factor in enumerate(factors):
-        # FR-MODEL-119. An `interaction` names no source columns of its own — its
+        # FR-176. An `interaction` names no source columns of its own — its
         # columns are its operands' — so indexing here raised `IndexError` for any GBM
         # declaring one, which no test covered because none fitted a GBM whose factor
         # *list* held a cross.
         #
-        # FR-MODEL-121 settles what to permute: every operand source column under **one
+        # FR-177 settles what to permute: every operand source column under **one
         # shared order**, which permutes the operand *pairs* and so is exactly a
-        # permutation of the resolved cross column. Not built here — W30 owns the slice.
+        # permutation of the resolved cross column. Not built here — WK-690 owns the slice.
         #
-        # FR-MODEL-122 is the reason skipping the cross was never enough. The operands
+        # FR-178 is the reason skipping the cross was never enough. The operands
         # stay in this loop and are permuted **alone**, which recombines them into cells
         # the fit never saw, and `predict_gbm` then refuses the frame outright with
         # `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`. On a dense cross every recombination happens
         # to be a level the model knows, which is why the suite is green and why a sparse
-        # cross — the only kind FR-MODEL-91 expects — cannot produce diagnostics at all.
+        # cross — the only kind FR-92 expects — cannot produce diagnostics at all.
         if not factor.source_columns:
             continue
         column = factor.source_columns[0]
@@ -937,7 +937,7 @@ def _grid_shares(
     weights: npt.NDArray[np.float64],
     total_weight: float,
 ) -> list[float]:
-    """The exposure sitting at each point of a numeric grid (FR-MODEL-125).
+    """The exposure sitting at each point of a numeric grid (FR-181).
 
     The grid is quantile *points*, not bin edges, so the cells are the midpoints between
     consecutive points — every row falls in exactly one, and the row nearest a point counts
@@ -961,7 +961,7 @@ def _grid_shares(
 #: underneath it. An `identity` factor's resolved column **is** its source column, so it is
 #: absent here and takes the unchanged path. A cross is absent too, and deliberately: its
 #: level is a tuple of raw values across several columns, so there is no single column to
-#: hold at a representative value (FR-MODEL-121, owned by W6b).
+#: hold at a representative value (FR-177, owned by WK-664).
 _TRANSFORMED_FACTOR_TYPES = (FactorType.BANDING, FactorType.GROUPING)
 
 
@@ -976,7 +976,7 @@ def _resolved_axis(
 
     A banded or grouped factor was swept over its raw column until 2026-08-23: a 40-band
     age factor produced a point per integer age, labelled with the age, so the chart's axis
-    was not the axis the model was fitted on (FR-MODEL-118).
+    was not the axis the model was fitted on (FR-175).
     """
     if factor.type not in _TRANSFORMED_FACTOR_TYPES:
         return None
@@ -1030,25 +1030,25 @@ def _sweep(
     partial dependence averaged over the portfolio differ exactly where exposure is thin,
     which is where the curve is most dramatic and least trustworthy.
 
-    **A categorical grid is capped at `max_levels` (FR-MODEL-118).** Each bar costs one
+    **A categorical grid is capped at `max_levels` (FR-175).** Each bar costs one
     full-population scoring pass, so an uncapped column costs one pass per distinct
-    level — 10 000 of them for a column at the scale NFR-MODEL-3 names. The levels the
+    level — 10 000 of them for a column at the scale NFR-477 names. The levels the
     cap drops are **named, not pooled**: a pooled `other` bar would have to be *scored*,
     and a synthetic level the fitted model never saw is refused at encoding by
-    FR-MODEL-32, so there is no value the column could be held at to produce one.
+    FR-131, so there is no value the column could be held at to produce one.
 
     The level ranking that the cap applies and the share each surviving point emits are the
     same quantity, deliberately: a chart whose bars are ordered by one measure and labelled
     with another is a chart that cannot be read. Both are exposure (the spec's weight
     column, or ones where it declares none), not row counts — a row-count share on a motor
-    book ranks a level held for a fortnight beside one held for a year (FR-MODEL-125).
+    book ranks a level held for a fortnight beside one held for a year (FR-181).
     """
     from pricing_core.modelling.gbm import predict_gbm
 
     column = factor.source_columns[0]
     source = data[column]
     # The axis is the factor's, not the raw column's: a banded or grouped factor is swept
-    # over its own levels and labelled with them (FR-MODEL-118). `None` means the two are
+    # over its own levels and labelled with them (FR-175). `None` means the two are
     # the same column, which is every identity factor.
     axis = _resolved_axis(data, factor, bandings=bandings, groupings=groupings)
     series = source if axis is None else axis
@@ -1090,7 +1090,7 @@ def _sweep(
             raise ValueError(
                 f"factor {factor.slug!r} resolves to levels {missing} that no row of this "
                 "frame carries a source value for, so there is nothing to hold the column "
-                "at. A partial-dependence bar must be scored, not imputed (FR-MODEL-118)."
+                "at. A partial-dependence bar must be scored, not imputed (FR-175)."
             )
         values = [representatives[label] for label in labels]
 
@@ -1124,10 +1124,10 @@ def compute_gbm_diagnostics(
 
     The universal block is the *same code* as the GLM's — `_partition` takes `mu` and knows
     nothing about how it was produced — so a GBM and a GLM fitted on one holdout report A/E,
-    lift and calibration computed identically. That is what makes FR-MODEL-56's comparison
+    lift and calibration computed identically. That is what makes FR-186's comparison
     a comparison rather than two conventions side by side.
 
-    `train` and `holdout` are both required for FR-MODEL-54's reason: a one-sided
+    `train` and `holdout` are both required for FR-183's reason: a one-sided
     diagnostic is a defect, and the signature refuses one rather than the reviewer noticing.
     """
     from pricing_core.modelling.gbm import objective_family, predict_gbm, tree_summary
@@ -1170,7 +1170,7 @@ def compute_gbm_diagnostics(
     dependence: list[PartialDependence] = []
     monotonicity: list[MonotonicityCheck] = []
     for factor in factors:
-        # FR-MODEL-119. A cross sources no column of its own, so there is nothing to
+        # FR-176. A cross sources no column of its own, so there is nothing to
         # hold at a value; it used to reach `_sweep` and index off an empty tuple. It
         # is emitted with no points and a stated reason rather than dropped, so a
         # reviewer sees every declared factor and sees which ones no curve describes.
@@ -1221,7 +1221,7 @@ def compute_gbm_diagnostics(
         factor_count=len(factors),
         # Leaves, not factors. A GBM has no coefficient vector, and counting factors would
         # report a stump and a thousand deep trees as equally complex — which is exactly
-        # the comparison FR-MODEL-81's exposure-per-parameter exists to make.
+        # the comparison FR-185's exposure-per-parameter exists to make.
         parameter_count=leaves,
         exposure_per_parameter=exposure_total / leaves if leaves else None,
         claims_per_parameter=claims_total / leaves if leaves else None,
@@ -1265,7 +1265,7 @@ def compute_ebm_diagnostics(
     takes `mu` and knows nothing about how it was produced. The EBM's family is
     gaussian (identity link); its complexity is the number of real bins across the
     exported tables, counted off `bin_weights` — the estimator is gone by the time
-    this runs, and the tables are the model (ADR-0003). `glm` and `gbm` blocks are
+    this runs, and the tables are the model (ADR-705). `glm` and `gbm` blocks are
     `None`: this model has no coefficient vector, no trees, no eval curve, and its
     dependence structure *is* the transparency artifact.
     """
@@ -1294,7 +1294,7 @@ def compute_ebm_diagnostics(
     # Real bins, not terms and not slots. `bin_weights` zeroes the unused base slot,
     # the trailing missing-value slot and any empty bins, so the nonzero count is what
     # the model actually uses — and a grid counts its cells, which is what makes a pair
-    # interaction's cost visible rather than one more term (FR-MODEL-81).
+    # interaction's cost visible rather than one more term (FR-185).
     parameter_count = sum(
         int((np.asarray(term.bin_weights) != 0).sum()) for term in result.terms
     )

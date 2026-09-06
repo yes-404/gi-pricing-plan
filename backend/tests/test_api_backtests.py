@@ -1,12 +1,12 @@
-"""The backtest routes over HTTP (`02` FR-MODEL-57, FR-MODEL-92).
+"""The backtest routes over HTTP (`02` FR-187, FR-94).
 
-**FR-MODEL-57, not FR-MODEL-40.** The plan this file was written from named FR-MODEL-40 as
-"backtest results"; it is nothing of the kind — FR-MODEL-40 is the **symbolic derivation of
+**FR-187, not FR-144.** The plan this file was written from named FR-144 as
+"backtest results"; it is nothing of the kind — FR-144 is the **symbolic derivation of
 gradient and hessian from an `expression` objective's loss**, a Phase 2 capability gated off
-by FR-MODEL-75 and correctly implemented by nothing. Marking these tests with it would have
+by FR-150 and correctly implemented by nothing. Marking these tests with it would have
 put a traceability claim on a requirement no line of this repository satisfies, which is
 precisely the "a marker is a claim, not a proof" failure `CLAUDE.md` §13 warns about.
-FR-MODEL-57 is the backtest requirement and is what `test_backtests.py` already carries.
+FR-187 is the backtest requirement and is what `test_backtests.py` already carries.
 
 `test_backtests.py` covers the platform layer. This file covers the two routes: who may
 call them, what they return, and the workspace boundary — none of which the platform tests
@@ -153,7 +153,7 @@ def _seed_model_and_version(workspace_id: UUID) -> tuple[UUID, UUID]:
                 status="validated",
                 validation_report_id=new_uuid7(),
                 tables=[],
-                # OQ-DATA-13 (c): the envelope columns are non-null since 2057e7372a9a.
+                # OQ-568 (c): the envelope columns are non-null since 2057e7372a9a.
                 # No DatasetRow exists here (the route under test never joins one), so
                 # the slug is a placeholder the constraint only needs to be non-null.
                 slug="motor-gb",
@@ -236,7 +236,7 @@ def _seed_backtest(workspace_id: UUID) -> tuple[UUID, BacktestSummary]:
 # -- The permits ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_requesting_a_backtest_returns_202_and_points_at_the_result(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -256,7 +256,7 @@ def test_requesting_a_backtest_returns_202_and_points_at_the_result(
     assert response.json()["kind"] == "model.backtest"
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_a_completed_backtest_reads_back_with_its_summary(
     client: TestClient, reader: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -286,7 +286,7 @@ def test_a_completed_backtest_reads_back_with_its_summary(
 # -- The refusals --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-92")
+@pytest.mark.req("FR-94")
 def test_a_backtest_in_another_workspace_is_not_found(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -306,11 +306,11 @@ def test_a_backtest_in_another_workspace_is_not_found(
     assert response.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-MODEL-92")
+@pytest.mark.req("FR-94")
 def test_the_refusal_names_the_backtest_that_was_asked_for(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
-    """FR-MODEL-92's "naming it" clause, which `load_backtest` implements as
+    """FR-94's "naming it" clause, which `load_backtest` implements as
     `f"No backtest {backtest_id} in this workspace."` — an operator holding an id from
     another environment needs to see *which* id was refused.
 
@@ -323,7 +323,7 @@ def test_the_refusal_names_the_backtest_that_was_asked_for(
     assert str(missing) in response.json()["detail"]
 
 
-@pytest.mark.req("FR-MODEL-92")
+@pytest.mark.req("FR-94")
 def test_reading_a_backtest_without_model_read_is_refused(
     client: TestClient, stranger: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -335,7 +335,7 @@ def test_reading_a_backtest_without_model_read_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-MODEL-57")
+@pytest.mark.req("FR-187")
 def test_requesting_a_backtest_without_model_fit_is_refused(
     client: TestClient, reader: dict[str, str], workspace_id: UUID
 ) -> None:

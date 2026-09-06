@@ -1,4 +1,4 @@
-"""Documenting the error model in the published contract (FR-PLAT-47, FR-PLAT-48).
+"""Documenting the error model in the published contract (FR-450, FR-451).
 
 `docs/contracts/openapi/generated.json` is what the frontend generates its types from
 (`CLAUDE.md` §2). Until this module existed the document described only success shapes, so
@@ -96,7 +96,7 @@ def without_fastapi_validation_error(document: dict[str, Any]) -> dict[str, Any]
     `errors.install_error_handlers` answers a `RequestValidationError` with an RFC 9457
     problem, so the injected response documents a body the API never sends, and a client
     generated from the document carries a second error type to branch on. That is the
-    FR-PLAT-48 finding this module was written for, arriving by a route the module did not
+    FR-451 finding this module was written for, arriving by a route the module did not
     anticipate.
 
     Until W32-7 the per-route convention was enough, because an operation with no

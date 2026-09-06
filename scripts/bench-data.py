@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Measure the `01` throughput budgets — NFR-DATA-1, -2, -3 (and -4's read path).
+"""Measure the `01` throughput budgets — NFR-465, -2, -3 (and -4's read path).
 
 Not a CI gate. A timing assertion on a shared runner fails for reasons that have nothing
 to do with the code, and a check that fails randomly teaches everyone to re-run it. This
@@ -52,11 +52,11 @@ COLUMNS = 80
 
 #: rows -> the budget the spec states, in seconds
 BUDGETS = {
-    "NFR-DATA-1 parquet ingest+prepare": 15 * 60,
-    "NFR-DATA-1 csv ingest+prepare": 30 * 60,
-    "NFR-DATA-2 validation, ~50 rules": 10 * 60,
-    "NFR-DATA-2 structural layer alone": 2 * 60,
-    "NFR-DATA-3 profiling": 5 * 60,
+    "NFR-465 parquet ingest+prepare": 15 * 60,
+    "NFR-465 csv ingest+prepare": 30 * 60,
+    "NFR-466 validation, ~50 rules": 10 * 60,
+    "NFR-466 structural layer alone": 2 * 60,
+    "NFR-467 profiling": 5 * 60,
 }
 
 results: list[tuple[str, float, float]] = []
@@ -125,7 +125,7 @@ def synthesise(rows: int) -> pl.DataFrame:
 def rule_set(rules: int, *, layers: set[ValidationLayer] | None = None) -> ValidationRuleSet:
     """`rules` rules spread across the layers, matching the spec's "~50 rules" shape.
 
-    `layers` filters to one layer so NFR-DATA-2's separate structural budget is a separate
+    `layers` filters to one layer so NFR-466's separate structural budget is a separate
     measurement rather than the same number printed twice.
     """
     entries = []
@@ -179,7 +179,7 @@ def main() -> int:
         default="all",
         help="Run one phase in a fresh process. Peak RSS is a process high-water mark and "
              "the allocator does not return freed arenas, so a phase measured after "
-             "another inherits its peak — NFR-DATA-3's memory clause needs isolation.",
+             "another inherits its peak — NFR-467's memory clause needs isolation.",
     )
     args = parser.parse_args()
 
@@ -193,7 +193,7 @@ def main() -> int:
     if args.parquet is not None:
         print(f"baseline RSS after imports: {_rss_mb():,.0f} MB")
         payload = args.parquet.stat().st_size / 1e6
-        with timed("NFR-DATA-3 profiling (duckdb/parquet)"):
+        with timed("NFR-467 profiling (duckdb/parquet)"):
             profile_parquet([str(args.parquet)], dataset_version_id=uuid4(),
                             one_way_columns=["vehicle_group", "postcode_area", "driver_age"])
         print(f"\n  payload {payload:,.0f} MB, peak RSS {results[-1][2]:,.0f} MB")
@@ -225,7 +225,7 @@ def main() -> int:
         ]
 
         if args.only == "profile-parquet":
-            with timed("NFR-DATA-3 profiling (duckdb/parquet)"):
+            with timed("NFR-467 profiling (duckdb/parquet)"):
                 profile_parquet([str(parquet)], dataset_version_id=uuid4(),
                                 one_way_columns=["vehicle_group", "postcode_area",
                                                  "driver_age"])
@@ -234,7 +234,7 @@ def main() -> int:
                   f"= {results[-1][2] / payload_mb:.1f}x the payload")
             return 0
         if args.only == "profile-frame":
-            with timed("NFR-DATA-3 profiling (in-memory frame)"):
+            with timed("NFR-467 profiling (in-memory frame)"):
                 profile_frame(pl.read_parquet(parquet), dataset_version_id=uuid4(),
                               one_way_columns=["vehicle_group", "postcode_area",
                                                "driver_age"])
@@ -243,17 +243,17 @@ def main() -> int:
                   f"= {results[-1][2] / payload_mb:.1f}x the payload")
             return 0
 
-        with timed("NFR-DATA-1 parquet ingest+prepare"):
+        with timed("NFR-465 parquet ingest+prepare"):
             tables = {"exposure": pl.read_parquet(parquet)}
             prepared = apply_recipe(tables, recipe).tables
-        with timed("NFR-DATA-1 csv ingest+prepare"):
+        with timed("NFR-465 csv ingest+prepare"):
             apply_recipe({"exposure": pl.read_csv(csv)}, recipe)
 
         full = rule_set(args.rules)
         structural = rule_set(args.rules, layers={ValidationLayer.STRUCTURAL})
-        with timed("NFR-DATA-2 validation, ~50 rules"):
+        with timed("NFR-466 validation, ~50 rules"):
             report = run_validation(prepared, full, dataset_version_id=uuid4())
-        with timed("NFR-DATA-2 structural layer alone"):
+        with timed("NFR-466 structural layer alone"):
             run_validation(prepared, structural, dataset_version_id=uuid4())
 
         # A rule that raises is guarded into an `error` result and returns immediately.
@@ -269,17 +269,17 @@ def main() -> int:
             )
 
         one_ways = ["vehicle_group", "postcode_area", "driver_age"]
-        with timed("NFR-DATA-3 profiling"):
+        with timed("NFR-467 profiling"):
             profile = profile_frame(
                 prepared["exposure"], dataset_version_id=uuid4(), one_way_columns=one_ways
             )
         del prepared, tables
-        with timed("NFR-DATA-3 profiling (duckdb/parquet)"):
+        with timed("NFR-467 profiling (duckdb/parquet)"):
             profile_parquet([str(parquet)], dataset_version_id=uuid4(),
                             one_way_columns=one_ways)
 
         blob = profile.model_dump_json()
-        with timed("NFR-DATA-4 read a stored one-way"):
+        with timed("NFR-468 read a stored one-way"):
             from model_schema import Profile
 
             reloaded = Profile.model_validate_json(blob)

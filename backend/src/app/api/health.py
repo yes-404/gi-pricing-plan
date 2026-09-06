@@ -1,4 +1,4 @@
-"""Liveness, readiness and version (FR-PLAT-41).
+"""Liveness, readiness and version (FR-444).
 
 The distinction matters operationally. `/healthz` answers "is this process alive?" — if it
 fails, the orchestrator restarts the container. `/readyz` answers "can it serve?" and
@@ -107,7 +107,7 @@ async def healthz() -> ReadinessReport:
     responses={503: {"description": "A dependency is unreachable", "model": ReadinessReport}},
 )
 async def readyz(response: Response) -> ReadinessReport:
-    """Probe every registered dependency concurrently (FR-PLAT-41)."""
+    """Probe every registered dependency concurrently (FR-444)."""
     results = await asyncio.gather(
         *(_run_probe(name, probe) for name, probe in sorted(_probes.items()))
     )
@@ -140,7 +140,7 @@ def version_route(settings: Settings) -> Callable[[], VersionInfo]:
     include_in_schema=True,
 )
 async def metrics(request: Request) -> PlainTextResponse:
-    """FR-PLAT-40.
+    """FR-443.
 
     Unauthenticated, like `/healthz` and `/readyz`, because a scraper is infrastructure and
     not a principal — and reachable only from inside the deployment, which is where the
@@ -159,7 +159,7 @@ async def metrics(request: Request) -> PlainTextResponse:
 
 
 async def refresh_platform_gauges(database: Database) -> None:
-    """Queue depth and blob usage, read at scrape time (FR-PLAT-40)."""
+    """Queue depth and blob usage, read at scrape time (FR-443)."""
     from sqlalchemy import func, select
 
     from app.db.models import BlobRow, JobRow

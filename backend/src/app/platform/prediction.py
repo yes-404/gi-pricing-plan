@@ -1,20 +1,20 @@
-"""Scoring a fitted Model over rows a caller supplies (`02` FR-MODEL-62/63/77/93, §5.1).
+"""Scoring a fitted Model over rows a caller supplies (`02` FR-193/194/198/195, §5.1).
 
 **Dev/debug scale, and the cap is the specification.** §5.1 scopes `/predict` to "dev/debug
 scale; production scoring is `03`", and a limit stated in prose is a limit nobody enforces —
 so `MAX_PREDICT_ROWS` is where that sentence becomes a `422`. It also makes the endpoint's
-one expensive property affordable: FR-MODEL-63's interval materialises the `n x p` design,
+one expensive property affordable: FR-194's interval materialises the `n x p` design,
 which the streaming scorers deliberately never do.
 
-`pricing-core` owns the arithmetic. What lives here is everything ADR-0001 keeps out of it —
+`pricing-core` owns the arithmetic. What lives here is everything ADR-703 keeps out of it —
 resolving the model, its factors and their bandings and groupings from ids, and fetching the
 blobs (the booster, the covariance matrix) that the artifacts only reference.
 
 **The uncertainty verdict is decided here, once, per model.** A GLM fitted before the
-covariance blob existed reports `covariance_not_stored` (FR-MODEL-93). A GBM reports
-FR-MODEL-78's paired-quantile interval where a complete, current, sufficiently-reviewed
-pair exists, and otherwise one of FR-MODEL-77's three reasons — all of which became
-reachable with the paired-quantile slice (FR-MODEL-100), where before it could only ever
+covariance blob existed reports `covariance_not_stored` (FR-195). A GBM reports
+FR-199's paired-quantile interval where a complete, current, sufficiently-reviewed
+pair exists, and otherwise one of FR-198's three reasons — all of which became
+reachable with the paired-quantile slice (FR-200), where before it could only ever
 say `no_interval_models_fitted`.
 """
 
@@ -82,7 +82,7 @@ async def predict_rows(
     rows: list[dict[str, Any]],
     blob_store: BlobStore,
 ) -> Prediction:
-    """Score `rows` with model `model_id` (FR-MODEL-62), interval included where there is one.
+    """Score `rows` with model `model_id` (FR-193), interval included where there is one.
 
     `model:read`, not `model:fit`. Every other compute route here is gated on `model:fit`
     because it queues a Job that spends minutes; this one persists nothing, produces no
@@ -207,16 +207,16 @@ async def _score_glm(
     npt.NDArray[np.float64] | None,
     Uncertainty,
 ]:
-    """`μ` and FR-MODEL-63's interval, or `μ` and FR-MODEL-93's typed absence.
+    """`μ` and FR-194's interval, or `μ` and FR-195's typed absence.
 
     **The absence is a property of the stored model, not of the request.** Every GLM fitted
     before the covariance blob existed carries `covariance_blob=None`, and there is no way
     to recover the matrix from the artifact: it is `p x p` and the artifact holds `p`
-    numbers. Saying so is the whole of FR-MODEL-93 — the alternative is an interval quietly
+    numbers. Saying so is the whole of FR-195 — the alternative is an interval quietly
     omitted, which `02` R5 exists to forbid, or a refetch of the fit, which would mean
     re-fitting the model to answer a prediction.
 
-    **A model-offset spec is resolved per request** (FR-MODEL-24): the referenced model is
+    **A model-offset spec is resolved per request** (FR-116): the referenced model is
     looked up and its linear predictor computed on these rows, because the offset is a
     property of the model the request names, not of a stored array. The resolution is on
     the loop and the η arithmetic is pricing-core's — the split every fit makes, kept
@@ -277,7 +277,7 @@ async def _score_glm(
         Uncertainty(
             kind=UncertaintyKind.CONFIDENCE_INTERVAL_MEAN,
             level=CONFIDENCE_LEVEL,
-            # FR-MODEL-99. Read from the spec, which is the one derivation (OQ-MODEL-14):
+            # FR-197. Read from the spec, which is the one derivation (OQ-586):
             # for `alpha > 0` this interval comes from the unpenalised information matrix
             # and is wider than the shrunk estimate warrants. Stating it is the whole of the
             # decision — the alternative is a number a reader takes for exact inference.
@@ -304,9 +304,9 @@ async def _score_gbm(
     npt.NDArray[np.float64] | None,
     Uncertainty,
 ]:
-    """`μ` from the booster, and either FR-MODEL-78's pair or FR-MODEL-77's typed absence.
+    """`μ` from the booster, and either FR-199's pair or FR-198's typed absence.
 
-    **All four of `UnavailableReason`'s values are reachable from here** (FR-MODEL-100).
+    **All four of `UnavailableReason`'s values are reachable from here** (FR-200).
     Until the paired-quantile slice, `no_interval_models_fitted` was the only one a GBM
     could return and the other two were declared and unreachable; the docstring that said
     so is gone with the state it described.
@@ -316,7 +316,7 @@ async def _score_gbm(
     having moved on is the more useful thing to say. Reordered, the caller is told to get
     the bounds approved for a model version nobody should be quoting.
 
-    The variance-model approximation FR-MODEL-77 refuses would still fit here in four lines.
+    The variance-model approximation FR-198 refuses would still fit here in four lines.
     That is why the requirement is written down: a wrong interval on a price is worse than
     no interval, and its cheapness is what makes refusing it a decision rather than an
     omission.
@@ -362,18 +362,18 @@ async def _score_gbm(
         assert bound_spec.interval_for is not None
         sides["lower" if bound_spec.interval_for.alpha < 0.5 else "upper"].append(row)
 
-    # 1. Half a pair is not a pair. FR-MODEL-77's vocabulary is closed, and the absence of a
+    # 1. Half a pair is not a pair. FR-198's vocabulary is closed, and the absence of a
     #    *pair* is what `no_interval_models_fitted` says — a lone bound needs no new code.
     if len(sides["lower"]) != 1 or len(sides["upper"]) != 1:
         return absent(UnavailableReason.NO_INTERVAL_MODELS_FITTED)
 
-    # 2. FR-MODEL-100(iii). `superseded` is scoreable, so this model's bounds are quotable —
+    # 2. FR-200(iii). `superseded` is scoreable, so this model's bounds are quotable —
     #    and quoting them without saying the family has moved past this version is exactly
-    #    the silence FR-MODEL-77 exists to refuse.
+    #    the silence FR-198 exists to refuse.
     if ModelStatus(model.status) is ModelStatus.SUPERSEDED:
         return absent(UnavailableReason.INTERVAL_MODELS_STALE)
 
-    # 3. FR-MODEL-100(ii). Not "unapproved outright" — the bounds must be at least as
+    # 3. FR-200(ii). Not "unapproved outright" — the bounds must be at least as
     #    reviewed as the model they bound. An approved Model quoting a merely `fitted` bound
     #    puts a reviewed and an unreviewed number on one line with nothing separating them.
     lower_row, upper_row = sides["lower"][0], sides["upper"][0]
@@ -390,7 +390,7 @@ async def _score_gbm(
         session, upper_row, frame, workspace_id=workspace_id, blob_store=blob_store
     )
 
-    # 4. FR-MODEL-78: crossing is reported, never reordered — and never quietly dropped.
+    # 4. FR-199: crossing is reported, never reordered — and never quietly dropped.
     #    `PredictedRow` refuses to serialise a reversed pair, so without this the honest
     #    finding arrives as a 500 with the reason buried in a traceback.
     rows_crossing, worst_gap = detect_quantile_crossing(lower, upper)
@@ -400,7 +400,7 @@ async def _score_gbm(
             "The interval models cross on these rows",
             409,
             f"{rows_crossing} of {frame.height} rows have a lower bound above their upper "
-            f"bound (worst gap {worst_gap:.4g}). FR-MODEL-78: a crossing pair does not "
+            f"bound (worst gap {worst_gap:.4g}). FR-199: a crossing pair does not "
             "describe one distribution, so the bounds are reported as computed or not at "
             "all — reordering them would return two plausible numbers that mean nothing. "
             f"The pair's fit-time crossing is recorded on "
@@ -442,11 +442,11 @@ async def _score_ebm(
     """`mu` from an EBM's exported tables, and the typed absence its type forces.
 
     The shortest of the three arms, and the shortness is the requirement rather than a
-    convenience: an EBM's fit result *is* its model (ADR-0003), so there is no blob to
-    fetch, no link to invert, and no `model_offset` to forward — FR-MODEL-24 refuses an
+    convenience: an EBM's fit result *is* its model (ADR-705), so there is no blob to
+    fetch, no link to invert, and no `model_offset` to forward — FR-116 refuses an
     EBM offset ref at the schema, so no spec reaching here can carry one.
 
-    The interval is absent by construction (FR-MODEL-124). `interval_for` lives on
+    The interval is absent by construction (FR-180). `interval_for` lives on
     `GbmSpec`, so no quantile pair is fittable for an EBM, and there is no covariance
     matrix that could have been stored and was not. Reporting either of those reasons
     would tell a reader to do something the schema forbids, which is why this arm carries
@@ -497,7 +497,7 @@ async def _score_bound(
     """One bound's declared alpha and its predictions over `frame`.
 
     Resolved here rather than in `pricing-core`, which is handed dataframes and artifacts
-    and never ids (ADR-0001).
+    and never ids (ADR-703).
     """
     from pricing_core.modelling import ModellingError
     from pricing_core.modelling.predict import PredictionError, score_fitted

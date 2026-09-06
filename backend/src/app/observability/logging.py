@@ -1,10 +1,10 @@
-"""Structured JSON logging with the request's identity attached (FR-PLAT-38).
+"""Structured JSON logging with the request's identity attached (FR-441).
 
 Every line carries `trace_id`, and — once those exist — `workspace_id`, `principal_id`,
 `job_id` and the entity reference. They are pulled from the context rather than passed,
 so a log call in a service module cannot omit them by accident.
 
-FR-PLAT-10 and R3 also apply here: **logs never contain secrets**. Nothing in this module
+FR-402 and R3 also apply here: **logs never contain secrets**. Nothing in this module
 serialises arbitrary objects; a caller passes explicit fields, and `SecretValue` (§3.4)
 has no representation that survives `str()`.
 """

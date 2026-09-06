@@ -27,9 +27,9 @@ const GUIDE = {
   ],
   phases_without_status: ["Phase 1b", "Phase 2"],
   workstreams: [
-    { phase: "Phase 1a", workstream: "W4", scope: "Data", status: "✔ closed 2026-08-15",
+    { phase: "Phase 1a", workstream: "WK-660", scope: "Data", status: "✔ closed 2026-08-15",
       closed: true },
-    { phase: "Phase 1a", workstream: "W6b", scope: "Frontend platform", status: "next",
+    { phase: "Phase 1a", workstream: "WK-664", scope: "Frontend platform", status: "next",
       closed: false },
   ],
 };

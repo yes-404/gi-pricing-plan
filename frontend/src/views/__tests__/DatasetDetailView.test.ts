@@ -99,7 +99,7 @@ describe("the dataset detail view", () => {
   });
 
   it("names the columns that may not be modelled on", async () => {
-    // FR-OVR-9 refuses `direct_identifier` and `special_category` for modelling. Stating
+    // FR-12 refuses `direct_identifier` and `special_category` for modelling. Stating
     // it as a refusal rather than advice, because that is what the platform does.
     render(DatasetDetailView, { props, ...mounted });
     const banner = await screen.findByText(/may not be modelled on/);
@@ -153,7 +153,7 @@ describe("the dataset detail view", () => {
   });
 
   it("says whether the dataset has a rule set, and links to it either way", async () => {
-    // FR-DATA-16: a version cannot be validated until one is defined, so "none" is the
+    // FR-45: a version cannot be validated until one is defined, so "none" is the
     // fact a reader most needs — and the link is where they go to fix it.
     render(DatasetDetailView, { props, ...mounted });
     expect(await screen.findByText("Rule set")).toBeInTheDocument();

@@ -1,4 +1,4 @@
-"""FR-MODEL-111: a declared eval metric a backend could not evaluate is recorded."""
+"""FR-161: a declared eval metric a backend could not evaluate is recorded."""
 
 from __future__ import annotations
 
@@ -29,16 +29,16 @@ def _result(**over: object) -> GbmFitResult:
     return GbmFitResult(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-111")
+@pytest.mark.req("FR-161")
 def test_a_dropped_metric_names_a_reason_from_the_closed_set() -> None:
-    """One reason exists today (FR-MODEL-107). A free-text field would let a second be
+    """One reason exists today (FR-160). A free-text field would let a second be
     invented at a call site instead of declared in the contract the frontend generates
     from, which is how a status enum turns into prose."""
     with pytest.raises(ValidationError):
         DroppedEvalMetric(name="poisson-nll", reason="because")  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-111")
+@pytest.mark.req("FR-161")
 def test_the_same_metric_cannot_be_dropped_twice() -> None:
     """A name appearing twice is a bug in the producer, not two facts about the fit."""
     dropped = DroppedEvalMetric(
@@ -48,7 +48,7 @@ def test_the_same_metric_cannot_be_dropped_twice() -> None:
         _result(dropped_eval_metrics=(dropped, dropped))
 
 
-@pytest.mark.req("FR-MODEL-111")
+@pytest.mark.req("FR-161")
 def test_a_fit_result_drops_nothing_by_default() -> None:
     """The overwhelmingly common case, and the one every artifact written before this
     field existed is in: no metric was dropped, and the tuple says so rather than being

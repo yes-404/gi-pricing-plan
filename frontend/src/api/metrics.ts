@@ -7,7 +7,7 @@ export type MetricStatus = components["schemas"]["MetricStatus"];
 /**
  * The objective library's cap, reused rather than re-derived.
  *
- * `GET /custom-metrics` filters by `status` and `slug` only — the same shape OQ-MODEL-35
+ * `GET /custom-metrics` filters by `status` and `slug` only — the same shape OQ-605
  * decided for objectives, for the same reason — so applicability filtering happens in the
  * client over a capped sweep, and `truncated` is how the screen says so. A second constant
  * with a second rationale would be two numbers to keep equal; there is one rule.

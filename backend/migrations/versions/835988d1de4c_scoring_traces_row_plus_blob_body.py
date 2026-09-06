@@ -1,13 +1,13 @@
-"""scoring traces: row plus blob body (W11 Task 4A)
+"""scoring traces: row plus blob body (WK-671 Task 4A)
 
-`03` §4.5's `Trace`, FR-RATE-41/42, `00` NFR-OVR-6, Ruling 23
-(`docs/plans/2026-08-29-w11-slices-3-4-rulings.md`). A thin queryable row beside the trace
+`03` §4.5's `Trace`, FR-258/259, `00` NFR-459, RL-888
+(`docs/rulings/INDEX.md#2026-08-29-w11-slices-3-4-rulingsmd`). A thin queryable row beside the trace
 body, which lives content-addressed in the blob store — never a full JSON column, per
-NFR-RATE-12's 200 GB/year budget.
+NFR-500's 200 GB/year budget.
 
 **No privilege revocation on `UPDATE`/`DELETE` the way `model_comparisons` and the
 `custom_objectives`/`custom_metrics` family get one.** Those rows are permanently
-immutable and permanently undeletable; a `scoring_traces` row is neither — NFR-OVR-6 is a
+immutable and permanently undeletable; a `scoring_traces` row is neither — NFR-459 is a
 *floor*, not a ban, so an application-level guard (`app.platform.traces.delete_trace`)
 must be able to delete a row once it clears ≥ 13 months, which a `REVOKE DELETE` would make
 impossible for every row for ever. `UPDATE` is revoked: a trace, once written, is never

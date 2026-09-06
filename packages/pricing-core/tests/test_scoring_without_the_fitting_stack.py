@@ -1,6 +1,6 @@
-"""Scoring works with the fitting stack absent (`07` NFR-PLAT-11, ADR-0003, FR-MODEL-62).
+"""Scoring works with the fitting stack absent (`07` NFR-535, ADR-705, FR-193).
 
-OQ-PLAT-3 decided that the scoring service is the same image with a role flag through Phases
+OQ-642 decided that the scoring service is the same image with a role flag through Phases
 1-2 and a separate image from Phase 3. The only thing that makes the later split cheap is
 that the scoring path never grows a dependency on the libraries that *fit* models — and the
 only way to know it has not is to score with those libraries made unimportable.
@@ -15,10 +15,10 @@ weaken it or to restructure modules that have no other reason to move. What matt
 **runtime** property, so the test creates the runtime: a subprocess where importing the
 fitting stack raises.
 
-`xgboost` and `lightgbm` are deliberately not blocked. `02` FR-MODEL-62 scores a GBM by
+`xgboost` and `lightgbm` are deliberately not blocked. `02` FR-193 scores a GBM by
 loading its JSON booster, so a boosting library is a scoring dependency by design; what the
 split sheds is the libraries that fit. `interpret` is blocked like `glum`: an EBM's fit
-exports the additive lookup tables and `predict_ebm` rescored them (FR-MODEL-37) — the
+exports the additive lookup tables and `predict_ebm` rescored them (FR-140) — the
 tables are the model, and the child proves it by scoring with the fitting library
 unimportable.
 """
@@ -48,7 +48,7 @@ from pricing_core.modelling.predict import predict_ebm
 
 #: Run in the child, where the fitting stack must not be reachable. Everything it needs
 #: arrives as JSON on argv — which is also the point: a scoring process receives artifacts,
-#: never a live fitting session (ADR-0003).
+#: never a live fitting session (ADR-705).
 CHILD = r'''
 import json, sys
 
@@ -61,7 +61,7 @@ class Blocker:
     def find_spec(self, name, path=None, target=None):
         if name.split(".")[0] in BLOCKED:
             raise ImportError(
-                f"{name} was imported while scoring — `07` NFR-PLAT-11 forbids it"
+                f"{name} was imported while scoring — `07` NFR-535 forbids it"
             )
         return None
 
@@ -108,8 +108,8 @@ def _book(n: int = 400) -> pl.DataFrame:
     )
 
 
-@pytest.mark.req("NFR-PLAT-11")
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("NFR-535")
+@pytest.mark.req("FR-193")
 def test_a_glm_scores_in_a_process_where_the_fitting_stack_cannot_be_imported() -> None:
     """Fit here, score there — which is what a separate scoring image would do.
 
@@ -157,7 +157,7 @@ def test_a_glm_scores_in_a_process_where_the_fitting_stack_cannot_be_imported() 
     assert scored["total"] == pytest.approx(float(frame["claim_count"].sum()), rel=1e-6)
 
 
-@pytest.mark.req("NFR-PLAT-11")
+@pytest.mark.req("NFR-535")
 @pytest.mark.parametrize("blocked", ["glum", "interpret"])
 def test_the_blocker_would_notice_a_fitting_import(blocked: str) -> None:
     """The guard above is only worth its runtime if the block actually blocks.
@@ -172,13 +172,13 @@ def test_the_blocker_would_notice_a_fitting_import(blocked: str) -> None:
         [sys.executable, "-c", child], capture_output=True, text=True, check=False
     )
     assert completed.returncode != 0
-    assert "NFR-PLAT-11 forbids it" in completed.stderr
+    assert "NFR-535 forbids it" in completed.stderr
 
 
-@pytest.mark.req("NFR-PLAT-11")
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("NFR-535")
+@pytest.mark.req("FR-140")
 def test_an_ebm_scores_in_a_process_where_interpret_cannot_be_imported() -> None:
-    """The strongest ADR-0003 statement in the suite: the tables ARE the model.
+    """The strongest ADR-705 statement in the suite: the tables ARE the model.
 
     Fitted with `interpret` here, then the artifact JSON alone is handed to a child where
     `import interpret` raises. `predict_ebm` rescored the frame from the exported lookup

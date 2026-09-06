@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/banding.schema.json",
   "title": "Banding",
-  "description": "Versioned mapping of a continuous column to ordered intervals. Carries the derivation method and the per-band evidence a reviewer needs (02 FR-MODEL-8..12, §4.2).",
+  "description": "Versioned mapping of a continuous column to ordered intervals. Carries the derivation method and the per-band evidence a reviewer needs (02 FR-97, FR-98, FR-99, FR-100, FR-101, §4.2).",
   "type": "object",
   "required": ["column", "method", "method_params", "derived_on_dataset_version_id",
                "boundaries", "closed", "labels", "null_level", "below_range", "above_range"],
@@ -24,7 +24,7 @@
     "above_range": {"enum": ["error", "clamp_to_last", "null_level"]},
     "band_stats": {
       "type": "array",
-      "description": "Evidence as of derivation, so a reviewer need not re-run anything (FR-MODEL-10). Keyed by `level`, not `label`, and identical to profile.schema.json's one-way row: a band IS a level, 01 FR-DATA-26 already defines a level's statistics, and two definitions of the same numbers would disagree in the fourth digit with nothing to say which is right (amended 2026-08-15, W5 — this file said `label` while profile.schema.json said `level`, for the same statistics).",
+      "description": "Evidence as of derivation, so a reviewer need not re-run anything (FR-99). Keyed by `level`, not `label`, and identical to profile.schema.json's one-way row: a band IS a level, 01 FR-61 already defines a level's statistics, and two definitions of the same numbers would disagree in the fourth digit with nothing to say which is right (amended 2026-08-15, WK-661 — this file said `label` while profile.schema.json said `level`, for the same statistics).",
       "items": {
         "type": "object",
         "required": ["level", "exposure_years", "claim_count"],
@@ -48,12 +48,12 @@
         "min_claims_per_band": {"type": "integer", "minimum": 0},
         "on_violation": {"enum": ["warn", "fail"], "default": "warn"}
       },
-      "description": "An empty band always fails regardless of this setting (FR-MODEL-11)."
+      "description": "An empty band always fails regardless of this setting (FR-100)."
     }
   },
   "invariants": [
     "boundaries strictly increasing",
     "len(labels) == len(boundaries) - 1",
-    "no empty band (FR-MODEL-11)"
+    "no empty band (FR-100)"
   ]
 }

@@ -1,10 +1,10 @@
-"""Rating Version compile endpoint (slice W9-3, FR-RATE-24/25; W11 Task 1.2).
+"""Rating Version compile endpoint (slice W9-3, FR-239/240; WK-671 Task 1.2).
 
 A pinned version compiles to a self-contained Bundle with a reproducible hash; an
 unpinned version and a broken guard are refused with named errors. Compilation is a
-`rating.compile` Job since Task 1.2 (Ruling 2) — the route answers 202 rather than
+`rating.compile` Job since Task 1.2 (RL-865) — the route answers 202 rather than
 computing synchronously — and every resolver branch (rate tables, reference tables,
-custom objectives, models) must resolve real content, embedded inline per Ruling 7, for
+custom objectives, models) must resolve real content, embedded inline per RL-873, for
 the Job to succeed rather than fail with `NOT_FOUND` / `PIN_NOT_APPROVED`.
 """
 
@@ -137,7 +137,7 @@ def _read_blob(database: Database, blob_store: BlobStore, sha256: str) -> bytes:
     return asyncio.get_event_loop().run_until_complete(_run())
 
 
-@pytest.mark.req("FR-RATE-24")
+@pytest.mark.req("FR-239")
 def test_a_pinned_version_compiles_over_http(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
@@ -170,7 +170,7 @@ def test_a_pinned_version_compiles_over_http(
     assert bundle.graph.nodes
 
 
-@pytest.mark.req("FR-RATE-22")
+@pytest.mark.req("FR-237")
 def test_an_unpinned_version_is_refused_over_http(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
@@ -188,11 +188,11 @@ def test_an_unpinned_version_is_refused_over_http(
     assert job_row.error["code"] == "RATING_VERSION_UNPINNED"
 
 
-@pytest.mark.req("FR-RATE-25")
+@pytest.mark.req("FR-240")
 def test_a_version_pinning_a_rate_table_compiles(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
-    """A Rating Version pinning a real W10 rate table resolves and compiles.
+    """A Rating Version pinning a real WK-670 rate table resolves and compiles.
 
     Before Task 1.2, `_Resolver`'s catch-all refuses every `rate_table` ref with
     `NOT_FOUND` and the detail `"has no backend table yet (Phase 2)"` — verified against
@@ -236,43 +236,43 @@ def test_a_version_pinning_a_rate_table_compiles(
     assert bundle.resolved_payloads[ref_key]["rows"], "the rate table's rows were dropped"
 
 
-@pytest.mark.req("FR-OVR-14")
+@pytest.mark.req("FR-20")
 def test_rate_table_version_row_has_no_status_column() -> None:
-    """Self-invalidating guard for Ruling 22's `rate_table` maturity exemption.
+    """Self-invalidating guard for RL-856's `rate_table` maturity exemption.
 
-    `docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`: the resolver above
+    `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`: the resolver above
     cannot report `rate_table`'s real maturity because `RateTableVersionRow` has none to
     read, so `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` exempts the type from
-    the FR-OVR-14 floor rather than inventing `"approved"`. That exemption is only sound
+    the FR-20 floor rather than inventing `"approved"`. That exemption is only sound
     while the premise holds. This test is the tripwire: the day a migration adds a
     `status` column to `rate_table_versions`, it fails and names this record — the
-    exemption (and `OQ-RATE-7`) must be revisited rather than carried forward silently.
+    exemption (and `OQ-620`) must be revisited rather than carried forward silently.
     """
     assert "status" not in RateTableVersionRow.__table__.columns, (
-        "RateTableVersionRow gained a status column — Ruling 22's rate_table maturity "
-        "exemption (docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md) and "
-        "OQ-RATE-7 must be revisited: the resolver should report this real status "
-        "instead of staying exempt from the FR-OVR-14 floor."
+        "RateTableVersionRow gained a status column — RL-856's rate_table maturity "
+        "exemption (docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md) and "
+        "OQ-620 must be revisited: the resolver should report this real status "
+        "instead of staying exempt from the FR-20 floor."
     )
 
 
-@pytest.mark.req("FR-OVR-14")
+@pytest.mark.req("FR-20")
 def test_rating_algorithm_row_has_no_status_column() -> None:
-    """Self-invalidating guard for Ruling 28's `rating_algorithm` maturity exemption.
+    """Self-invalidating guard for RL-859's `rating_algorithm` maturity exemption.
 
-    `docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`: the resolver above cannot
+    `docs/rulings/INDEX.md#2026-08-29-w11-algorithm-pin-maturitymd`: the resolver above cannot
     report `rating_algorithm`'s real maturity because `RatingAlgorithmRow` has none to
     read, so `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` exempts the type from
-    the FR-OVR-14 floor rather than inventing `"approved"`. That exemption is only sound
+    the FR-20 floor rather than inventing `"approved"`. That exemption is only sound
     while the premise holds. This test is the tripwire: the day a migration adds a
     `status` column to `rating_algorithms`, it fails and names this record — the
     exemption must be revisited rather than carried forward silently.
     """
     assert "status" not in RatingAlgorithmRow.__table__.columns, (
-        "RatingAlgorithmRow gained a status column — Ruling 28's rating_algorithm "
-        "maturity exemption (docs/plans/2026-08-29-w11-algorithm-pin-maturity.md) must "
+        "RatingAlgorithmRow gained a status column — RL-859's rating_algorithm "
+        "maturity exemption (docs/rulings/INDEX.md#2026-08-29-w11-algorithm-pin-maturitymd) must "
         "be revisited: the resolver should report this real status instead of staying "
-        "exempt from the FR-OVR-14 floor."
+        "exempt from the FR-20 floor."
     )
 
 
@@ -320,16 +320,16 @@ def _statuses_the_backend_resolver_reported(
     return captured
 
 
-@pytest.mark.req("FR-OVR-14")
+@pytest.mark.req("FR-20")
 def test_the_resolver_reports_the_algorithm_sentinel_not_an_invented_approval(
     api_client, workspace_id, principal, grant, database, blob_store, monkeypatch
 ) -> None:
-    """Ruling 28 part 1's tripwire: the `rating_algorithm` branch must keep failing closed.
+    """RL-859 part 1's tripwire: the `rating_algorithm` branch must keep failing closed.
 
-    `docs/plans/2026-08-29-w11-algorithm-pin-maturity.md` replaced an invented
+    `docs/rulings/INDEX.md#2026-08-29-w11-algorithm-pin-maturitymd` replaced an invented
     `status="approved"` with the `"no_maturity_concept"` sentinel because the invented
     value put a constant where `compile_bundle`'s gate reads a discriminator: it is
-    `_MATURITY_CHECK_EXEMPT` that admits this pin past the FR-OVR-14 floor, and the
+    `_MATURITY_CHECK_EXEMPT` that admits this pin past the FR-20 floor, and the
     sentinel is deliberately not a member of `_APPROVED_OR_BETTER`, so the pin still fails
     **closed** on the day the exemption is lifted. Reverting
     `rating_versions.py`'s `rating_algorithm` branch to `"approved"` left the whole backend
@@ -366,31 +366,31 @@ def test_the_resolver_reports_the_algorithm_sentinel_not_an_invented_approval(
     assert statuses.get("rating_algorithm:minimal@1") == "no_maturity_concept", (
         "the backend resolver no longer reports the `no_maturity_concept` sentinel for a "
         "rating_algorithm pin — it reported "
-        f"{statuses.get('rating_algorithm:minimal@1')!r}. Ruling 28 part 1 "
-        "(docs/plans/2026-08-29-w11-algorithm-pin-maturity.md) forbids inventing a "
+        f"{statuses.get('rating_algorithm:minimal@1')!r}. RL-859 part 1 "
+        "(docs/rulings/INDEX.md#2026-08-29-w11-algorithm-pin-maturitymd) forbids inventing a "
         "maturity `RatingAlgorithmRow` has no column to back. If this is deliberate, the "
         "row now has a real status to read and the `_MATURITY_CHECK_EXEMPT` membership "
         "must go with it."
     )
     assert "no_maturity_concept" not in _APPROVED_OR_BETTER, (
         "the sentinel joined `_APPROVED_OR_BETTER`, so an algorithm pin would now pass "
-        "the FR-OVR-14 floor on the sentinel itself rather than on the exemption — the "
-        "fail-closed property Ruling 28 part 1 was written for is gone."
+        "the FR-20 floor on the sentinel itself rather than on the exemption — the "
+        "fail-closed property RL-859 part 1 was written for is gone."
     )
 
 
-@pytest.mark.req("FR-OVR-14")
+@pytest.mark.req("FR-20")
 def test_the_resolver_reports_the_rate_table_sentinel_not_an_invented_approval(
     api_client, workspace_id, principal, grant, database, blob_store, monkeypatch
 ) -> None:
-    """Ruling 22's list-mate of the tripwire above — the same hole, same shape.
+    """RL-856's list-mate of the tripwire above — the same hole, same shape.
 
-    `docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md` states the safety
+    `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md` states the safety
     property in terms: *"the sentinel below is deliberately not a member of
     `_APPROVED_OR_BETTER`, so a pin still fails closed if the exemption is ever removed
     without this branch being updated to match."* That property had no test either
-    (audit of PR #416, finding ③), and Ruling 22's exemption is the *provisional* one —
-    OQ-RATE-7 may remove it — so it is the likelier of the two to be lifted.
+    (audit of PR #416, finding ③), and RL-856's exemption is the *provisional* one —
+    OQ-620 may remove it — so it is the likelier of the two to be lifted.
     """
     asyncio.get_event_loop().run_until_complete(grant("analyst"))
     headers = _headers(principal, workspace_id)
@@ -428,24 +428,24 @@ def test_the_resolver_reports_the_rate_table_sentinel_not_an_invented_approval(
 
     assert statuses.get(ref_key) == "no_maturity_concept", (
         "the backend resolver no longer reports the `no_maturity_concept` sentinel for a "
-        f"rate_table pin — it reported {statuses.get(ref_key)!r}. Ruling 22 "
-        "(docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md) refused inventing "
-        "a maturity `RateTableVersionRow` has no column to back; see also OQ-RATE-7."
+        f"rate_table pin — it reported {statuses.get(ref_key)!r}. RL-856 "
+        "(docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md) refused inventing "
+        "a maturity `RateTableVersionRow` has no column to back; see also OQ-620."
     )
     assert "no_maturity_concept" not in _APPROVED_OR_BETTER, (
         "the sentinel joined `_APPROVED_OR_BETTER`, so a rate_table pin would now pass "
-        "the FR-OVR-14 floor on the sentinel itself rather than on the exemption — the "
-        "fail-closed property Ruling 22 states in terms is gone."
+        "the FR-20 floor on the sentinel itself rather than on the exemption — the "
+        "fail-closed property RL-856 states in terms is gone."
     )
 
 
-@pytest.mark.req("FR-RATE-25")
+@pytest.mark.req("FR-240")
 def test_a_version_pinning_a_published_reference_table_compiles(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
     """A Rating Version pinning a *published* reference table version resolves.
 
-    FR-DATA-30's own lifecycle (`draft`/`published`) is not `compile_bundle`'s generic
+    FR-70's own lifecycle (`draft`/`published`) is not `compile_bundle`'s generic
     `approved`/`live`/`retired` maturity vocabulary; the resolver bridges "published" to
     "approved" so a real, published reference table can compile at all.
     """
@@ -484,7 +484,7 @@ def test_a_version_pinning_a_published_reference_table_compiles(
     assert bundle.resolved_payloads[ref_key]["rows"], "the reference table's rows were dropped"
 
 
-@pytest.mark.req("FR-OVR-14")
+@pytest.mark.req("FR-20")
 def test_a_version_pinning_an_unpublished_reference_table_is_refused(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
@@ -521,7 +521,7 @@ def test_a_version_pinning_an_unpublished_reference_table_is_refused(
     assert job_row.error["code"] == "PIN_NOT_APPROVED"
 
 
-@pytest.mark.req("FR-RATE-25")
+@pytest.mark.req("FR-240")
 def test_a_version_pinning_an_approved_custom_objective_compiles(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
@@ -559,12 +559,12 @@ def test_a_version_pinning_an_approved_custom_objective_compiles(
     assert objective_ref in bundle.resolved_payloads
 
 
-@pytest.mark.req("FR-RATE-24")
+@pytest.mark.req("FR-239")
 def test_the_compiled_bundle_survives_persistence(
     workspace_id, principal, grant, database, blob_store, api_client
 ) -> None:
     """Compile, fetch the Bundle back from the blob store, and confirm nothing was
-    dropped — including a GBM's booster, which must be the content itself (Ruling 7),
+    dropped — including a GBM's booster, which must be the content itself (RL-873),
     never a blob reference `load_bundle` (Task 1.3) could not fetch without I/O."""
     asyncio.get_event_loop().run_until_complete(grant("analyst"))
     headers = _headers(principal, workspace_id)
@@ -623,7 +623,7 @@ def test_the_compiled_bundle_survives_persistence(
     fit_result = restored.resolved_payloads[model_ref]["fit_result"]
     assert fit_result["model_type"] in ("xgboost", "lightgbm")
     assert "booster_content" in fit_result, "the booster is missing from the payload"
-    # The proof Ruling 7 asks for: real serialised booster content, not a blob sha256.
+    # The proof RL-873 asks for: real serialised booster content, not a blob sha256.
     assert len(fit_result["booster_content"]) > 100
     assert fit_result["booster_content"] != fit_result["booster_blob"]["sha256"]
 
@@ -652,13 +652,13 @@ def _compile_audit_events(database: Database, workspace_id: UUID) -> list[AuditE
     return asyncio.get_event_loop().run_until_complete(_run())
 
 
-@pytest.mark.req("NFR-RATE-10")
+@pytest.mark.req("NFR-498")
 def test_a_compile_emits_an_audit_event_carrying_before_and_after_bundle_hashes(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
-    """NFR-RATE-10: compilations "emit Audit Events with before/after state".
+    """NFR-498: compilations "emit Audit Events with before/after state".
 
-    W11 Task 1.2 built the `rating.compile` Job with no audit event at all, so the one
+    WK-671 Task 1.2 built the `rating.compile` Job with no audit event at all, so the one
     governed operation this workstream added left no trace in the chain `06` §4.5 exists
     to keep. The requirement names *before/after state*, not merely that something was
     recorded — so this compiles **twice** and asserts the second event's `before` carries
@@ -692,7 +692,7 @@ def test_a_compile_emits_an_audit_event_carrying_before_and_after_bundle_hashes(
     events = _compile_audit_events(database, workspace_id)
     assert len(events) == 1, (
         "a successful compile emitted no `rating_version.compiled` audit event — found "
-        f"{len(events)}. NFR-RATE-10 requires compilations to emit Audit Events with "
+        f"{len(events)}. NFR-498 requires compilations to emit Audit Events with "
         "before/after state."
     )
     first = events[0]
@@ -710,7 +710,7 @@ def test_a_compile_emits_an_audit_event_carrying_before_and_after_bundle_hashes(
     assert first.after["bundle_hash"] == first_bundle.content_hash
     assert first.after["blob_sha256"] == first_job.result["ref"], (
         "the after-state must name the blob this compile actually wrote, not just the "
-        "content hash. `blob_sha256` was added to `BundleMetadata` by Ruling 37, so the "
+        "content hash. `blob_sha256` was added to `BundleMetadata` by RL-915, so the "
         "event describing the compile has to report it or the trail cannot answer 'which "
         "stored artifact did this produce' — and these are two different hashes: "
         f"{first.after!r} vs job result {first_job.result!r}"
@@ -729,7 +729,7 @@ def test_a_compile_emits_an_audit_event_carrying_before_and_after_bundle_hashes(
         f"got {second.before!r}. Without it the chain cannot show what changed."
     )
     assert second.after["bundle_hash"] == first_bundle.content_hash, (
-        "the same pins must compile to the same hash (FR-RATE-24 reproducibility)"
+        "the same pins must compile to the same hash (FR-239 reproducibility)"
     )
     assert second.after["blob_sha256"] != first.after["blob_sha256"], (
         "the two compiles wrote the same blob, which they must not: `content_hash` is "

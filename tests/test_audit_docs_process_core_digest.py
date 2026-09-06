@@ -1,8 +1,8 @@
 """`scripts/audit-docs.py`'s check 27: the process core extract's digest against the spec.
 
 Check 26 is, by its own docstring, "the cheap half of a drift check": it resolves every
-block's `source` § citation but compares no content. Ruling 45
-(`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`) verified the gap was not theoretical —
+block's `source` § citation but compares no content. RL-905
+(`docs/rulings/INDEX.md#2026-08-30-nt-0014-q1-q3-q4-rulingsmd`) verified the gap was not theoretical —
 `delivery-process.md` took two commits past the extract's only commit, one of them adding
 two normative rules to the section a guard block cites, and check 26 stayed green
 throughout.
@@ -35,7 +35,7 @@ def _run() -> subprocess.CompletedProcess[str]:
 
 
 def test_a_byte_changed_in_the_spec_reds_the_digest_check() -> None:
-    """Ruling 45 §3's broken-input proof, first half: one byte changed in
+    """RL-905 §3's broken-input proof, first half: one byte changed in
     `delivery-process.md`, with the extract untouched, must red — the digest recorded on
     the extract no longer matches the spec's current bytes.
     """
@@ -53,7 +53,7 @@ def test_a_byte_changed_in_the_spec_reds_the_digest_check() -> None:
 def test_a_missing_digest_field_reds() -> None:
     """`meta.derived_from_digest` absent entirely — not merely stale — must also red. A
     digest field nothing writes is indistinguishable from a true match unless its absence
-    is itself a failure (`NT-0007`'s boundary-metric trap in another dress: a check silent
+    is itself a failure (`RFC-789`'s boundary-metric trap in another dress: a check silent
     on a missing field would let the mechanism be disarmed by deleting the field).
     """
     original = CORE.read_text(encoding="utf-8")
@@ -73,7 +73,7 @@ def test_a_missing_digest_field_reds() -> None:
 
 
 def test_an_unrelated_file_edit_is_the_negative_control_and_stays_green() -> None:
-    """Ruling 45 §3's broken-input proof, second half: a negative control changing a
+    """RL-905 §3's broken-input proof, second half: a negative control changing a
     *different* file must stay green — proof the check is reading `delivery-process.md`
     specifically, not failing on any repository change whatsoever.
     """

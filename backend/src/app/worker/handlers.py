@@ -1,12 +1,12 @@
 """What a Job kind actually does.
 
-The dispatcher exists before the work does: W2 builds the platform, and the handlers for
-`dataset.*` and `model.*` arrive with W4 and W5. Registering them here keeps the worker
+The dispatcher exists before the work does: WK-658 builds the platform, and the handlers for
+`dataset.*` and `model.*` arrive with WK-660 and WK-661. Registering them here keeps the worker
 free of knowledge about any particular module — it moves a Job through its lifecycle and
 calls one function.
 
 A handler is **synchronous** and takes a `ProgressCallback`. That is the `pricing-core`
-contract (ADR-0001): the maths is pure, blocking, and reports through the injected
+contract (ADR-703): the maths is pure, blocking, and reports through the injected
 callback. The worker runs it in a thread so the event loop stays free to service the
 progress writes the callback makes.
 """

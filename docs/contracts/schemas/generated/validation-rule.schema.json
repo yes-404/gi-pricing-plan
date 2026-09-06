@@ -10,7 +10,7 @@
       "type": "string"
     },
     "ValidationLayer": {
-      "description": "The four layers of FR-DATA-16, all of which a Rule Set must cover.",
+      "description": "The four layers of FR-45, all of which a Rule Set must cover.",
       "enum": [
         "structural",
         "referential",

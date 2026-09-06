@@ -1,4 +1,4 @@
-"""OIDC access-token verification (FR-PLAT-1, FR-PLAT-2).
+"""OIDC access-token verification (FR-387, FR-388).
 
 The platform stores no passwords and issues no tokens. It verifies bearer tokens minted by
 an external identity provider, which means the entire security of user authentication is
@@ -51,7 +51,7 @@ class TokenRejectedError(Exception):
 
 @dataclass(frozen=True)
 class TokenClaims:
-    """The claims the platform maps to a Principal (FR-PLAT-4)."""
+    """The claims the platform maps to a Principal (FR-390)."""
 
     subject: str
     email: str | None

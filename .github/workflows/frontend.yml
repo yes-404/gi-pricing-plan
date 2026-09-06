@@ -30,7 +30,7 @@ on:
       # Same argument, one layer further out. `SUPPORTED_GBM_OBJECTIVES` in
       # `pricing_core/modelling/gbm.py` is the authoritative set of builtin GBM objectives
       # and reaches no contract — `model-schema` depends on pydantic alone and cannot
-      # import it (OQ-MODEL-37). `builtinObjectives.test.ts` therefore reads that file as
+      # import it (OQ-607). `builtinObjectives.test.ts` therefore reads that file as
       # text and fails when the two lists disagree, which makes a `pricing-core` edit able
       # to break a frontend test without touching a file under `frontend/`.
       #
@@ -63,7 +63,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # FR-OVR-6: the client is generated, never hand-written.
+      # FR-9: the client is generated, never hand-written.
       #
       # There used to be a `git diff --exit-code -- src/api/generated` here, claiming to be
       # "the only thing that catches a contract change the frontend has not absorbed". It

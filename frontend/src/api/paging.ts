@@ -21,9 +21,9 @@ export const PAGE_SIZE = 200;
  * Follow a cursor to exhaustion or to `cap` pages, whichever comes first.
  *
  * Extracted when the second caller arrived, which is where extraction pays: `listObjectives`
- * had this shape for `OQ-MODEL-35` — applicability is not a filter the objectives route
+ * had this shape for `OQ-605` — applicability is not a filter the objectives route
  * offers, so the client filters over a paginated list — and `listModels` needs it for
- * `OQ-MODEL-40`, the same shape one route over, since `GET /models` cannot filter by dataset
+ * `OQ-611`, the same shape one route over, since `GET /models` cannot filter by dataset
  * version either.
  *
  * **The cap belongs to the caller, not here.** Each caller names its own constant citing its

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Does any file carry two front-matter blocks? — the double-stamp check for NT-0019's
+"""Does any file carry two front-matter blocks? — the double-stamp check for RFC-937's
 migration (`scripts/doc-id.py migrate`).
 
 **Why this exists as a committed instrument rather than a description.** The migration's
@@ -63,7 +63,7 @@ completion with `scripts/doc-id.py` at `854b2a5` (PR #649):
                         is the one this script can actually reproduce.)
     vendored manifests    0 of 28 leading blocks changed
                           2 of 28 changed in the body only -- citation rewrites, which
-                          NT-0019 §1.5 requires: only files *beneath* a vendored skill's
+                          RFC-937 §1.5 requires: only files *beneath* a vendored skill's
                           boundary are exempt, never the manifest itself
 
 That last row is why this script compares the **leading block** and not the whole file. An
@@ -92,7 +92,7 @@ def _load(name: str, path: Path) -> types.ModuleType:
     """`_docid.py` is loaded by path for the same reason `audit-docs.py` loads it that
     way: this directory's hyphenated filenames are not legal `import` targets, and the
     vendored-skill set must come from the declared constant rather than a filesystem
-    probe (Ruling 69)."""
+    probe (RL-990)."""
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:  # pragma: no cover - defensive
         raise ModuleNotFoundError(f"cannot load {name} from {path}")

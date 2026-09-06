@@ -1,10 +1,10 @@
-"""OQ-DATA-13 (c): the envelope backfill resolves every field, and refuses when it cannot.
+"""OQ-568 (c): the envelope backfill resolves every field, and refuses when it cannot.
 
 `2057e7372a9a` gives a `dataset_versions` row the envelope's nine flat fields. For rows
 that already exist the migration answers five questions no other table can: the slug is
 the dataset's own; the creator is read back out of the audit chain's
 `dataset_version.created` event; `parent_id` is the previous version id in the same
-dataset; `updated_at` is the creation moment (OQ-OVR-16, resolved (a)); the currency is
+dataset; `updated_at` is the creation moment (OQ-553, resolved (a)); the currency is
 the dataset's. It falls back to the workspace's earliest member when no creation event
 survived, and stops — `alter_column(nullable=False)` raises — when a row still has no
 slug or no creator: inventing a creator for a governed field is worse than a migration
@@ -24,7 +24,7 @@ Two shapes are used, deliberately, exactly as `test_migration_dataset_owner.py`:
   shadows.
 
 Everything the shadow tests write lives inside one transaction that is never committed,
-including the `audit_events` rows: FR-GOV-22 forbids deleting them, and a rollback is not
+including the `audit_events` rows: FR-370 forbids deleting them, and a rollback is not
 a delete.
 """
 
@@ -265,7 +265,7 @@ async def _envelope_of(session: AsyncSession, version_id: UUID) -> dict[str, obj
     return dict(row.mappings().one())
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_the_backfill_resolves_every_field(shadow_versions: AsyncSession) -> None:
     """The happy path: one dataset, two versions, one creation event."""
     workspace, actor = new_uuid7(), new_uuid7()
@@ -297,7 +297,7 @@ async def test_the_backfill_resolves_every_field(shadow_versions: AsyncSession) 
     assert (await _envelope_of(shadow_versions, v2))["parent_id"] == v1
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_the_currency_falls_back_to_gbp(shadow_versions: AsyncSession) -> None:
     """`COALESCE(d.currency, 'GBP')`, reachable only with the datasets shadow's dropped
     `NOT NULL` — a real dataset always carries a currency, but the statement must not
@@ -312,7 +312,7 @@ async def test_the_currency_falls_back_to_gbp(shadow_versions: AsyncSession) -> 
     assert (await _envelope_of(shadow_versions, v1))["currency"] == "GBP"
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_the_earliest_creation_event_wins_by_sequence(
     shadow_versions: AsyncSession,
 ) -> None:
@@ -350,7 +350,7 @@ async def test_the_earliest_creation_event_wins_by_sequence(
     assert (await _envelope_of(shadow_versions, v1))["created_by"] == first_by_sequence
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_the_backfill_falls_back_to_the_earliest_member(
     shadow_versions: AsyncSession,
 ) -> None:
@@ -376,12 +376,12 @@ async def test_the_backfill_falls_back_to_the_earliest_member(
     assert (await _envelope_of(shadow_versions, v1))["created_by"] == earlier_member
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_a_fingerprint_without_an_extraction_moment_gets_the_creation_moment(
     shadow_versions: AsyncSession,
 ) -> None:
     """A stored fingerprint with no `extracted_at` cannot be serialised — the model
-    requires the field (OQ-DATA-13 (c)) — so the backfill answers with the only honest
+    requires the field (OQ-568 (c)) — so the backfill answers with the only honest
     moment it has, the version's creation moment, and leaves complete fingerprints alone."""
     workspace = new_uuid7()
     created_at = datetime(2026, 8, 14, 9, 0, 0, tzinfo=UTC)
@@ -412,7 +412,7 @@ async def test_a_fingerprint_without_an_extraction_moment_gets_the_creation_mome
     assert row == "2026-08-14T09:00:00+00:00"
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_another_versions_event_does_not_resolve(
     shadow_versions: AsyncSession,
 ) -> None:
@@ -453,7 +453,7 @@ async def test_another_versions_event_does_not_resolve(
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_a_prefix_matching_backfill_would_be_caught(
     shadow_versions: AsyncSession,
 ) -> None:
@@ -538,7 +538,7 @@ async def _upgrade(cfg: Config, revision: str) -> None:
     await asyncio.to_thread(command.upgrade, cfg, revision)
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_the_migration_round_trips_on_seeded_data(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -639,7 +639,7 @@ async def test_the_migration_round_trips_on_seeded_data(
         await engine.dispose()
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_a_version_with_no_creator_stops_the_migration(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:

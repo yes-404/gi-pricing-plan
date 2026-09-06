@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Measure NFR-RATE-1 (component) and NFR-RATE-2 — W11 Slice 1 Task 1.5.
+"""Measure NFR-489 (component) and NFR-490 — WK-671 Slice 1 Task 1.5.
 
 `score_one` measured directly: no HTTP, no FastAPI, no database, no cache. The full-path
-and sustained-200-rps halves of NFR-RATE-1 are Slice 2's Task 2.1
-(`docs/plans/2026-08-29-w11-1-evaluator-core.md`); this discharges the *component* half —
-`docs/roadmap.md`'s "build the latency harness in W11 alongside the evaluator, not after".
+and sustained-200-rps halves of NFR-489 are Slice 2's Task 2.1
+(`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`); this discharges the *component* half —
+`docs/roadmap.md`'s "build the latency harness in WK-671 alongside the evaluator, not after".
 
 `bench-model.py`'s and `bench-data.py`'s sibling, and it inherits their governance rule
-verbatim (Ruling 6, `docs/plans/2026-08-29-w11-slice1-rulings.md`):
+verbatim (RL-872, `docs/rulings/RL-00872-dp3-load-generation-tooling-for-the-sustained-200-rps-test.md`):
 
     Not a CI gate. A timing assertion on a shared runner fails for reasons that have
     nothing to do with the code, and a check that fails randomly teaches everyone to
@@ -16,7 +16,7 @@ verbatim (Ruling 6, `docs/plans/2026-08-29-w11-slice1-rulings.md`):
 
     uv run python scripts/bench-rating.py
 
-**Stdlib-only tooling, per Ruling 6's disposition.** `time.perf_counter` for timing, one
+**Stdlib-only tooling, per RL-872's disposition.** `time.perf_counter` for timing, one
 `asyncio` event loop driving a sequential await loop (no concurrency measurement here —
 Task 1.4's own `docs/research/w11-task-1-4-model-call-concurrency.md` already covers
 `async_evaluate()`'s concurrency behaviour; this is a single-caller latency distribution).
@@ -24,12 +24,12 @@ No load-generation library and no HTTP client: DP3's load generator (`asyncio` +
 is Task 2.1's, for the sustained-rps full-path measurement, not this component one.
 `pricing_core`, `model_schema` and `xgboost` are already-declared workspace dependencies
 used to build the fixture, exactly as `bench-model.py` already imports `numpy`/`polars` for
-the same purpose — Ruling 6's acceptance test is about a *load-generation* dependency
+the same purpose — RL-872's acceptance test is about a *load-generation* dependency
 (`locust`/`k6`/`hey`/`wrk` in a `pyproject.toml`, `uv.lock`, CI workflow or setup
 instruction), never about these.
 
 Fixtures are built here rather than imported from `packages/pricing-core/tests/`, so this
-script stays a `pricing-core` *client* (ADR-0001's boundary) rather than a second entry
+script stays a `pricing-core` *client* (ADR-703's boundary) rather than a second entry
 point into the test suite's private fixtures — `bench-model.py`'s own
 `bench_certify`/`_default_sampling` docstring states the same rule for the same reason.
 """
@@ -69,7 +69,7 @@ from pricing_core.rating.score import build_scoring_result, score_one  # noqa: E
 
 _RATING_VERSION_REF = ArtifactRef(type="rating_version", slug="bench-rating", version=1)
 
-#: NFR-RATE-1/2 (`docs/specs/03-rating-engine.md` §9), in milliseconds / as a fraction.
+#: NFR-489/490 (`docs/specs/03-rating-engine.md` §9), in milliseconds / as a fraction.
 BUDGET_WITH_GBM_P99_MS = 50.0
 BUDGET_WITHOUT_GBM_P99_MS = 15.0
 BUDGET_TRACE_OVERHEAD = 0.20
@@ -79,11 +79,11 @@ BUDGET_TRACE_OVERHEAD = 0.20
 WARMUP_CALLS = 200
 MEASURED_CALLS = 1000
 
-#: A ~200-step motor structure (NFR-RATE-1's own phrase), split as Task 1.3's own
-#: NFR-RATE-4 fixture was: a double-digit input block, one table lookup, one `exact` GBM
+#: A ~200-step motor structure (NFR-489's own phrase), split as Task 1.3's own
+#: NFR-492 fixture was: a double-digit input block, one table lookup, one `exact` GBM
 #: `model_call`, and a long chained-expression tail. `N_EXPR_STEPS` is picked so
 #: `2 (age, channel) + len(FEATURE_ORDER) + 1 (table) + [1 model_call] + N + 1 (output)`
-#: lands at 200 with the GBM step and 199 without it — both "~200" against NFR-RATE-1's
+#: lands at 200 with the GBM step and 199 without it — both "~200" against NFR-489's
 #: own approximation.
 FEATURE_ORDER = [f"f{i}" for i in range(8)]
 N_EXPR_STEPS = 187
@@ -92,12 +92,12 @@ N_EXPR_STEPS = 187
 def loadavg() -> float:
     """The 1-minute load average, read at the moment of the call.
 
-    Read per measured block rather than once at startup. NFR-RATE-1 states its budget
+    Read per measured block rather than once at startup. NFR-489 states its budget
     "at 200 rps per replica", so the contention the box was under is part of the
     measurement's meaning, not context for it — and a single reading taken before a run
     that then trains a booster and issues 3,000 timed calls describes a machine that no
     longer exists by the time the first sample is taken. The audit of PR #416 found
-    NFR-RATE-1's without-GBM half PASSing at load 0.39 and OVER on re-runs at load
+    NFR-489's without-GBM half PASSing at load 0.39 and OVER on re-runs at load
     1.6-6.4; nothing in this script's output had recorded which condition produced which
     number.
     """
@@ -129,8 +129,8 @@ def machine() -> str:
 
 def _train_booster(*, rows: int = 5_000, rounds: int = 300, seed: int = 20260829) -> bytes:
     """A real, trained XGBoost booster on `FEATURE_ORDER` — sized like Task 1.3's own
-    NFR-RATE-4 "real large" fixture (300 rounds), not a 3-round toy: NFR-RATE-1 is a
-    latency budget on the *real* `model_call` path, and NFR-RATE-14's own re-measurement
+    NFR-492 "real large" fixture (300 rounds), not a 3-round toy: NFR-489 is a
+    latency budget on the *real* `model_call` path, and NFR-501's own re-measurement
     already showed tree count barely moves single-row XGBoost latency at `nthread=1` — but
     asserting that from a toy booster here would be begging the question this harness
     exists to measure.
@@ -145,7 +145,7 @@ def _train_booster(*, rows: int = 5_000, rounds: int = 300, seed: int = 20260829
 
 
 def _gbm_model_payload(booster_bytes: bytes, *, rounds: int, rows: int) -> dict[str, Any]:
-    """Shaped like Task 1.2's real resolver produces it (Ruling 7): the `Model` dump's
+    """Shaped like Task 1.2's real resolver produces it (RL-873): the `Model` dump's
     `fit_result`, plus `booster_content` carried inline rather than as a blob reference —
     the same shape `test_rating_runtime._gbm_model_payload` uses, replicated rather than
     imported (see module docstring)."""
@@ -362,7 +362,7 @@ class Measurement:
     """A block of timed calls together with the load the box carried while it ran.
 
     The load is part of the measurement, not metadata about it: the same block of this
-    harness has returned both a PASS and an OVER against NFR-RATE-1's 15 ms bound on this
+    harness has returned both a PASS and an OVER against NFR-489's 15 ms bound on this
     machine, and the load average is the variable that moved. A `Measurement` cannot be
     reported without its condition because the two travel together.
     """
@@ -486,7 +486,7 @@ def _report(label: str, run: Measurement, *, budget_ms: float | None) -> None:
 def _ratio_ladder(label: str, numerator: Measurement, denominator: Measurement) -> None:
     """Print the ratio at every quantile, not only at the one the budget names.
 
-    NFR-RATE-2's overhead was reported at p99 alone, which cannot distinguish a cost that
+    NFR-490's overhead was reported at p99 alone, which cannot distinguish a cost that
     multiplies the whole distribution from one that only fattens the tail. If the ratios
     below are flat across the ladder the effect is multiplicative; if they climb, it is not.
     """
@@ -499,23 +499,23 @@ def _ratio_ladder(label: str, numerator: Measurement, denominator: Measurement) 
     print("    " + "   ".join(cells))
 
 
-# -- the full HTTP path at a sustained offered rate — W11 Slice 2 Task 2D ------------------
+# -- the full HTTP path at a sustained offered rate — WK-671 Slice 2 Task 2D ------------------
 #
-# Everything above measures `score_one` directly. NFR-RATE-1 says **"p99 < 50 ms server-side
+# Everything above measures `score_one` directly. NFR-489 says **"p99 < 50 ms server-side
 # at 200 rps per replica"**, which is two clauses the section above cannot reach: it runs
 # sequentially on one event loop, and it never enters the route. Both untested dimensions of
 # the requirement are untested *by construction*, not by oversight.
 #
-# Ruling 6 reserved `asyncio` + `httpx` for exactly this measurement and drew its forbidden
+# RL-872 reserved `asyncio` + `httpx` for exactly this measurement and drew its forbidden
 # line at *load-generation dependencies* — `locust`/`k6`/`hey`/`wrk` in a `pyproject.toml`,
 # `uv.lock`, CI workflow or setup instruction. `httpx` is already a workspace dependency.
 #
 # Reaching into `backend/src` is new for this file and is confined to this section: the
-# component half above stays a `pricing-core` client (ADR-0001), and the full-path half
+# component half above stays a `pricing-core` client (ADR-703), and the full-path half
 # cannot, because the backend's route is the thing under measurement.
 # `scripts/generate-contracts.py:30` is the precedent for a script doing this.
 
-#: Offered rates for the sweep. NFR-RATE-1 names 200; the rungs below it are why this is a
+#: Offered rates for the sweep. NFR-489 names 200; the rungs below it are why this is a
 #: sweep rather than a point. A single measurement at 200 rps cannot separate "the code is
 #: slow" from "the box saturates near here", and those have different owners. Latency
 #: against offered rate has a knee, and **where the knee sits is the finding**.
@@ -584,8 +584,8 @@ async def _seed(bundle: Bundle, *, dsn: str, bucket: str) -> tuple[str, str]:
 
     `resolve_rating_version_ref` has no status predicate (`rating_versions.py:105-132`), so a
     `draft` row is scoreable and no submit/approve cycle is needed. `score:execute` is
-    granted by no builtin role (FR-GOV-6), so the credential is a Service Account whose own
-    `permissions` satisfy the check through Ruling 38's `credential_permissions` union.
+    granted by no builtin role (FR-347), so the credential is a Service Account whose own
+    `permissions` satisfy the check through RL-924's `credential_permissions` union.
     """
     _backend_on_path()
     from datetime import UTC, datetime, timedelta
@@ -719,7 +719,7 @@ async def _measure_fetch(
 def _serve(*, dsn: str, bucket: str, log_path: Path, port: int) -> Any:
     """`uvicorn app.main:create_app --factory` in its own process — one replica.
 
-    A subprocess rather than an in-process ASGI transport because NFR-RATE-1 measures a
+    A subprocess rather than an in-process ASGI transport because NFR-489 measures a
     *replica*, and an in-process server would have the load generator's own work competing
     for the same event loop and counting inside the latency it is trying to measure.
     `scripts/demo.py:237` launches it exactly this way.
@@ -774,7 +774,7 @@ async def _drive(
     saturating system return a *passing* p99. At an offered rate near this box's measured
     ceiling that is not a theoretical risk, it is the likely outcome.
 
-    NFR-RATE-1 also says "at 200 rps" — an **offered** rate, not an achieved one — so
+    NFR-489 also says "at 200 rps" — an **offered** rate, not an achieved one — so
     scheduling on the clock is the literal reading as well as the honest one. When the server
     cannot keep up, the queue grows and the tail records it, which is the signal wanted.
     """
@@ -876,7 +876,7 @@ def main() -> int:
     parser.add_argument("--expr-steps", type=int, default=N_EXPR_STEPS)
     parser.add_argument(
         "--rounds", type=int, default=300, help="XGBoost boosting rounds (Task 1.3's own "
-        "NFR-RATE-4 fixture used 300)"
+        "NFR-492 fixture used 300)"
     )
     parser.add_argument("--rows", type=int, default=5_000, help="Synthetic training rows")
     parser.add_argument(
@@ -940,7 +940,7 @@ def main() -> int:
         _measure(bundle_gbm, ctx, trace=False, warmup=args.warmup, iterations=args.iterations)
     )
     _report(
-        f"NFR-RATE-1 with GBM ({step_count_gbm} steps, one exact model_call, trace=False)",
+        f"NFR-489 with GBM ({step_count_gbm} steps, one exact model_call, trace=False)",
         run_gbm, budget_ms=BUDGET_WITH_GBM_P99_MS,
     )
 
@@ -950,7 +950,7 @@ def main() -> int:
         )
     )
     _report(
-        f"NFR-RATE-1 without GBM ({step_count_no_gbm} steps, trace=False)",
+        f"NFR-489 without GBM ({step_count_no_gbm} steps, trace=False)",
         run_no_gbm, budget_ms=BUDGET_WITHOUT_GBM_P99_MS,
     )
 
@@ -958,7 +958,7 @@ def main() -> int:
         _measure(bundle_gbm, ctx, trace=True, warmup=args.warmup, iterations=args.iterations)
     )
     _report(
-        f"NFR-RATE-2 with GBM, trace=True ({step_count_gbm} steps)",
+        f"NFR-490 with GBM, trace=True ({step_count_gbm} steps)",
         run_traced, budget_ms=None,
     )
 
@@ -985,7 +985,7 @@ def main() -> int:
     )
 
     _ratio_ladder(
-        "NFR-RATE-2 — traced / untraced at each quantile (flat = multiplicative and "
+        "NFR-490 — traced / untraced at each quantile (flat = multiplicative and "
         "distribution-wide; climbing = a tail effect the p99 alone would misreport)",
         run_traced, run_gbm,
     )
@@ -1026,7 +1026,7 @@ def main() -> int:
 
 
 def _run_http_sweep(args: Any) -> None:
-    """The full-path, sustained-rate half of NFR-RATE-1 — both GBM conditions.
+    """The full-path, sustained-rate half of NFR-489 — both GBM conditions.
 
     Each condition gets its own server process, its own seeded workspace and its own bundle,
     because the two have materially different capacity on this box and a shared ceiling would
@@ -1046,7 +1046,7 @@ def _run_http_sweep(args: Any) -> None:
         (False, BUDGET_WITHOUT_GBM_P99_MS),
     ):
         label = "with GBM" if with_gbm else "without GBM"
-        print(f"\n=== NFR-RATE-1 full path, {label} (budget p99 < {budget:.0f} ms) ===")
+        print(f"\n=== NFR-489 full path, {label} (budget p99 < {budget:.0f} ms) ===")
 
         bundle = asyncio.run(
             _serialisable(

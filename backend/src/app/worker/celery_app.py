@@ -1,9 +1,9 @@
-"""The Celery application and its queue routing (FR-PLAT-13, FR-PLAT-22).
+"""The Celery application and its queue routing (FR-405, FR-422).
 
 Four queues with independently sized pools, because they have nothing in common:
 
 * ``compute`` — few, fat, long (a model fit).
-* ``scoring`` — many, thin, latency-bound (`03` NFR-RATE-1 is 50 ms at p99).
+* ``scoring`` — many, thin, latency-bound (`03` NFR-489 is 50 ms at p99).
 * ``io`` — network-bound (ingestion, exports).
 * ``default`` — everything else.
 
@@ -11,8 +11,8 @@ Putting a model fit on the scoring pool starves the quote path, which is the one
 hard latency budget. Routing is derived from the Job kind rather than chosen at the call
 site, so a caller cannot get it wrong.
 
-Redis is the broker (OQ-PLAT-1, decided 2026-08-14). Nothing durable lives in it — every
-task it carries is reconstructible from the `outbox` table (FR-PLAT-22, FR-PLAT-51).
+Redis is the broker (OQ-640, decided 2026-08-14). Nothing durable lives in it — every
+task it carries is reconstructible from the `outbox` table (FR-422, FR-406).
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def build_celery(settings: Settings | None = None) -> Celery:
         accept_content=["json"],
         timezone="UTC",
         enable_utc=True,
-        # The outbox is the source of truth for "this job should run" (FR-PLAT-51), so a
+        # The outbox is the source of truth for "this job should run" (FR-406), so a
         # task is acknowledged only after it completes. A worker killed mid-job leaves the
         # message for redelivery rather than losing the work silently.
         task_acks_late=True,

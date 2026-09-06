@@ -51,7 +51,7 @@ describe("LiftChart", () => {
     ]);
   });
 
-  // FR-MODEL-57: a caption may not assert a relationship the artifact does not carry. This
+  // FR-187: a caption may not assert a relationship the artifact does not carry. This
   // instrument is shared with the backtest view, and a hardcoded "train and holdout" said
   // so beneath a column correctly captioned "Backtest". Both arities are asserted because
   // the two-partition wording is the one a reader would not notice losing.

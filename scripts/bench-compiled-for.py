@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """Component-level delta: `_compiled_for` on a slot hit vs. the full blob-read path
-(Ruling 41 §2's fix, measured per Ruling 42 §4 — W11 Slice 3, Task 3B).
+(RL-921 §2's fix, measured per RL-922 §4 — WK-671 Slice 3, Task 3B).
 
-**This is not an NFR-RATE-1 re-measurement, and no output of this script may be read as
-one** (Ruling 42 §6). It does not run at 200 rps, it does not run on a dedicated host, and
-a result here does not arm Ruling 41 §4's 15 ms trigger. What it measures is the ratio
-Ruling 41 §2 predicted: on a slot hit, `_compiled_for` skips the blob primary-key lookup,
+**This is not an NFR-489 re-measurement, and no output of this script may be read as
+one** (RL-922 §6). It does not run at 200 rps, it does not run on a dedicated host, and
+a result here does not arm RL-921 §4's 15 ms trigger. What it measures is the ratio
+RL-921 §2 predicted: on a slot hit, `_compiled_for` skips the blob primary-key lookup,
 the object-store read and `Bundle.model_validate_json` entirely, because the content hash
 `row.bundle` carries is checked against the slot before any of those three run. What it
-does not skip, ever: the version-row `SELECT` — Ruling 41 §2 keeps that on the hot path on
+does not skip, ever: the version-row `SELECT` — RL-921 §2 keeps that on the hot path on
 purpose, so a recompile is visible on the very next request.
 
-**`bundle_slot_capacity` is not raised** — it stays the shipped default of 1 (Ruling 41 §4
+**`bundle_slot_capacity` is not raised** — it stays the shipped default of 1 (RL-921 §4
 left it unset; raising it needs its own latency-harness evidence this script does not
 produce). **Ref cardinality is 1** — one compiled Rating Version, scored against
-repeatedly. Ruling 41 §4's own note: *"with capacity 1 and more than one ref in play the
+repeatedly. RL-921 §4's own note: *"with capacity 1 and more than one ref in play the
 slot thrashes and every request pays the full path"* — this script's numbers describe the
 single-ref workload it runs, not a multi-tenant one.
 
@@ -23,7 +23,7 @@ Two conditions, same tree, same host, same run, same compiled bundle:
 - **hit**: one `BundleSlot`, pre-warmed by a first call, then `n` repeat calls against the
   same ref. Every call after the first is a genuine slot hit on a freshly re-read hash.
 - **full path**: a fresh `BundleSlot()` per call, forcing a cold miss every time — the path
-  every request paid before Ruling 41 §2, and what a first-ever request to a worker still
+  every request paid before RL-921 §2, and what a first-ever request to a worker still
   pays today.
 
 No HTTP, no FastAPI — `_compiled_for` measured directly, the same reason `bench-rating.py`
@@ -35,7 +35,7 @@ this component's cost.
         uv run alembic upgrade head
     uv run python scripts/bench-compiled-for.py [--calls N]
 
-Not a CI gate, Ruling 6's governance carried over unchanged: a timing assertion on a shared
+Not a CI gate, RL-872's governance carried over unchanged: a timing assertion on a shared
 runner fails for reasons that have nothing to do with the code. This prints numbers for a
 research note; a human reads them once against the ruling's own boundary, not a budget.
 """
@@ -204,7 +204,7 @@ async def main(n: int) -> None:
         f"delta (mean): {statistics.mean(full_path_samples) - statistics.mean(hit_samples):.3f} ms"
     )
     print(
-        "NOT an NFR-RATE-1 re-measurement (Ruling 42 §6) — component delta of Ruling 41 §2's "
+        "NOT an NFR-489 re-measurement (RL-922 §6) — component delta of RL-921 §2's "
         "own predicate only."
     )
 

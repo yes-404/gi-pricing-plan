@@ -11,7 +11,7 @@ import type { components as requestComponents } from "./generated/schema.request
  * and a hand-written copy that fell behind any one of them would show statistics for a
  * banding the platform would not store.
  *
- * `Banding`/`Grouping` read responses and stay on the **strict** set (OQ-PLAT-16 (c)); the
+ * `Banding`/`Grouping` read responses and stay on the **strict** set (OQ-655 (c)); the
  * write paths take `RequestBanding`/`RequestGrouping` from the **permissive** set, whose
  * defaulted fields (`closed`, `minimums`, `above_range`, …) a request may omit. A strict
  * object is assignable to its permissive twin, so an edited response sends unchanged.
@@ -27,7 +27,7 @@ export type GroupingEvidence = components["schemas"]["GroupingEvidence"];
 export type OneWayRow = components["schemas"]["OneWayRow"];
 export type UnseenLevelBehaviour = components["schemas"]["UnseenLevelBehaviour"];
 
-/** FR-MODEL-9. The platform proposes; nothing is stored until `createBanding`. */
+/** FR-98. The platform proposes; nothing is stored until `createBanding`. */
 export function proposeBanding(body: {
   dataset_version_id: string;
   column: string;
@@ -39,7 +39,7 @@ export function proposeBanding(body: {
 }
 
 /**
- * FR-MODEL-83. What an edited boundary *did*, before the banding is saved.
+ * FR-102. What an edited boundary *did*, before the banding is saved.
  *
  * The whole banding goes over the wire rather than a list of numbers, because the answer
  * depends on all of it — see the module note above.
@@ -54,7 +54,7 @@ export function evaluateBanding(
   });
 }
 
-/** FR-MODEL-12. An existing slug allocates the next version rather than editing. */
+/** FR-101. An existing slug allocates the next version rather than editing. */
 export function createBanding(banding: RequestBanding): Promise<Banding> {
   return request<Banding>("/bandings", { method: "POST", body: banding });
 }
@@ -63,7 +63,7 @@ export function listBandings(datasetId?: string): Promise<Banding[]> {
   return request<Banding[]>("/bandings", { query: { dataset_id: datasetId } });
 }
 
-/** FR-MODEL-14. */
+/** FR-105. */
 export function proposeGrouping(body: {
   dataset_version_id: string;
   column: string;
@@ -75,7 +75,7 @@ export function proposeGrouping(body: {
   return request<Grouping>("/groupings/propose", { method: "POST", body });
 }
 
-/** FR-MODEL-83, and the half `02` §5.3 names: the deviance/df trade-off before saving. */
+/** FR-102, and the half `02` §5.3 names: the deviance/df trade-off before saving. */
 export function evaluateGrouping(
   datasetVersionId: string,
   grouping: RequestGrouping,
@@ -86,7 +86,7 @@ export function evaluateGrouping(
   });
 }
 
-/** FR-MODEL-16. Creation is an audited event, because grouping is a modelling decision. */
+/** FR-108. Creation is an audited event, because grouping is a modelling decision. */
 export function createGrouping(grouping: RequestGrouping): Promise<Grouping> {
   return request<Grouping>("/groupings", { method: "POST", body: grouping });
 }
@@ -120,7 +120,7 @@ export function withBoundary(
  * Point one source level at a different target, and drop any target left with no levels.
  *
  * The drop matters: a target level nobody maps to is a level a fitted model would carry a
- * coefficient for and no data behind, which is FR-MODEL-11's objection in the grouping
+ * coefficient for and no data behind, which is FR-100's objection in the grouping
  * direction.
  */
 export function withMapping(

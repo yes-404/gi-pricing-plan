@@ -60,7 +60,7 @@
     },
     "DatasetTable": {
       "additionalProperties": false,
-      "description": "One table within a version (`01` §4.2).\n\n`_rejected` is a table like any other — the quarantine FR-DATA-7 requires, stored with\nthe version rather than discarded. A row that could not be parsed is evidence about the\nfeed, and throwing it away is how a broken upstream export goes unnoticed for a quarter.",
+      "description": "One table within a version (`01` §4.2).\n\n`_rejected` is a table like any other — the quarantine FR-32 requires, stored with\nthe version rather than discarded. A row that could not be parsed is evidence about the\nfeed, and throwing it away is how a broken upstream export goes unnoticed for a quarter.",
       "properties": {
         "arrow_schema": {
           "additionalProperties": {
@@ -118,7 +118,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Normalised column name to the header it came from (FR-DATA-5). Kept because normalisation is lossy and occasionally surprising: freMTPL2's `IDpol` becomes `i_dpol`, since the splitter reads it as `I` + `Dpol` — the same rule that correctly gives `HTTPServer` → `http_server`. Without the original, a user cannot tell which of their columns a rule is talking about.",
+          "description": "Normalised column name to the header it came from (FR-30). Kept because normalisation is lossy and occasionally surprising: freMTPL2's `IDpol` becomes `i_dpol`, since the splitter reads it as `I` + `Dpol` — the same rule that correctly gives `HTTPServer` → `http_server`. Without the original, a user cannot tell which of their columns a rule is talking about.",
           "title": "Source Names",
           "type": "object"
         }
@@ -133,7 +133,7 @@
     },
     "DerivedFrom": {
       "additionalProperties": false,
-      "description": "How a derived version was produced from its parent (`01` §4.2, FR-DATA-33).\n\nOQ-DATA-13, decided 2026-08-26 (c): the object form replaces a bare dict so the\ndeclared operation's parameters are distinguishable from the identity of the parent —\nthe split that made version 7 from version 6 is not the same fact as which version\nthat was.",
+      "description": "How a derived version was produced from its parent (`01` §4.2, FR-73).\n\nOQ-DATA-13, decided 2026-08-26 (c): the object form replaces a bare dict so the\ndeclared operation's parameters are distinguishable from the identity of the parent —\nthe split that made version 7 from version 6 is not the same fact as which version\nthat was.",
       "properties": {
         "operation": {
           "enum": [
@@ -165,7 +165,7 @@
     },
     "PeriodCovered": {
       "additionalProperties": false,
-      "description": "The policy period the data covers (`01` §4.2).\n\nBoth ends are required and ordered — a version whose exposure window has no known\nend is one whose totals cannot be re-read against a calendar later. OQ-DATA-13,\ndecided 2026-08-26 (c): the object form replaces the model's scalar\n`period_from`/`period_to`, which could not carry an ordered pair as one fact.",
+      "description": "The policy period the data covers (`01` §4.2).\n\nBoth ends are required and ordered — a version whose exposure window has no known\nend is one whose totals cannot be re-read against a calendar later. OQ-568,\ndecided 2026-08-26 (c): the object form replaces the model's scalar\n`period_from`/`period_to`, which could not carry an ordered pair as one fact.",
       "properties": {
         "from": {
           "format": "date",
@@ -218,7 +218,7 @@
     },
     "VersionTotals": {
       "additionalProperties": false,
-      "description": "The headline numbers, checked by validation and shown everywhere.\n\nMoney is integer minor units and exposure is a decimal string (FR-OVR-7): a float\nexposure total silently disagrees with the sum of its parts, and the disagreement is\nexactly the kind of thing an actuary is asked to explain.",
+      "description": "The headline numbers, checked by validation and shown everywhere.\n\nMoney is integer minor units and exposure is a decimal string (FR-10): a float\nexposure total silently disagrees with the sum of its parts, and the disagreement is\nexactly the kind of thing an actuary is asked to explain.",
       "properties": {
         "claim_amount_minor": {
           "default": 0,
@@ -233,7 +233,7 @@
           "type": "integer"
         },
         "exposure_years": {
-          "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
           "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
           "title": "Exposure Years",
           "type": "string"

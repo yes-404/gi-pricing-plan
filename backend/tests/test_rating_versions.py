@@ -1,10 +1,10 @@
 """The Phase 1b rating version — creation, approval, and the approvals fan-out (W7-3).
 
-`FR-PLAT-67`: the demo seeds a minimal rating version pinning an approved Model. The
+`FR-440`: the demo seeds a minimal rating version pinning an approved Model. The
 lifecycle mirrors the model's — `create_rating_version` (draft), `submit_for_review`
 (`draft → review`), and the approver's decision carrying to the artifact through
 `apply_approval_decision`. The approvals resolver must resolve a `rating_version`
-reference (FR-GOV-36) and refuse one that does not exist.
+reference (FR-386) and refuse one that does not exist.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ async def _draft(
         return row.id
 
 
-@pytest.mark.req("FR-PLAT-67")
+@pytest.mark.req("FR-440")
 async def test_create_submit_approve_a_rating_version(
     database: Database, workspace_id
 ) -> None:
@@ -108,11 +108,11 @@ async def test_create_submit_approve_a_rating_version(
         assert row.approval_request_id == request_id
 
 
-@pytest.mark.req("FR-PLAT-67")
+@pytest.mark.req("FR-440")
 async def test_a_rating_version_reference_resolves_in_the_approvals_fanout(
     database: Database, workspace_id
 ) -> None:
-    """`_resolve_the_artifact` accepts a real rating_version reference (FR-GOV-36)."""
+    """`_resolve_the_artifact` accepts a real rating_version reference (FR-386)."""
     from app.api.approvals import _resolve_rating_version
 
     analyst = await _principal(database, workspace_id, "analyst")
@@ -130,7 +130,7 @@ async def test_a_rating_version_reference_resolves_in_the_approvals_fanout(
         )
 
 
-@pytest.mark.req("FR-PLAT-67")
+@pytest.mark.req("FR-440")
 async def test_an_unknown_rating_version_reference_is_refused(
     database: Database, workspace_id
 ) -> None:
@@ -181,7 +181,7 @@ def test_the_rating_version_routes_read_over_http(
 def test_an_unknown_rating_version_id_is_a_404_over_http(
     api_client, workspace_id, principal, grant
 ) -> None:
-    """The by-id read refuses an id that does not exist (FR-PLAT-67, the 404 route)."""
+    """The by-id read refuses an id that does not exist (FR-440, the 404 route)."""
     import asyncio
 
     from app.api.deps import DEV_PRINCIPAL_HEADER
@@ -267,18 +267,18 @@ def test_submit_rating_version_over_http(
     assert data["id"] == rating_id
 
 
-@pytest.mark.req("FR-RATE-40")
+@pytest.mark.req("FR-257")
 def test_a_blank_change_summary_cannot_submit_a_rating_version(
     api_client, workspace_id, principal, grant, database
 ) -> None:
-    """FR-RATE-40 limb 3 — the change summary, which the requirement delegates to FR-RATE-27.
+    """FR-257 limb 3 — the change summary, which the requirement delegates to FR-242.
 
-    FR-RATE-40 (`03` §5, line 173) names **four** conditions a Rating Version must meet before
+    FR-257 (`03` §5, line 173) names **four** conditions a Rating Version must meet before
     `approved`: a passing Regression Suite, a Dislocation Run against the live version, *"a
-    change summary (FR-RATE-27)"*, and a GIPP check where the insurer has enabled it. This
-    marker evidences the third only. The other three are W12's and W13's and are recorded in
-    register row F44, so `req-coverage.py` reporting FR-RATE-40 covered from here says nothing
-    about them — the close audit takes FR-RATE-40's verdict from F44, never the coverage table.
+    change summary (FR-242)"*, and a GIPP check where the insurer has enabled it. This
+    marker evidences the third only. The other three are WK-672's and WK-673's and are recorded in
+    register row F44, so `req-coverage.py` reporting FR-257 covered from here says nothing
+    about them — the close audit takes FR-257's verdict from F44, never the coverage table.
 
     **The summary is `"   "` rather than `""` on purpose, and the code is asserted as well as
     the status.** `RatingVersionSubmit` (`api/models.py:276`) declares `change_summary: str`
@@ -324,10 +324,10 @@ def test_a_blank_change_summary_cannot_submit_a_rating_version(
     problem = response.json()
     assert problem["code"] == "VALIDATION_FAILED", problem
     assert problem["title"] == "A change summary is required", problem
-    # `PlatformError(code, title, status, detail)` — the FR-GOV-10 sentence is the *detail*,
+    # `PlatformError(code, title, status, detail)` — the FR-352 sentence is the *detail*,
     # and asserting on it pins this raise site rather than merely the code, which four other
     # guards in `platform/approvals.py` also use.
-    assert "FR-GOV-10" in problem["detail"], problem
+    assert "FR-352" in problem["detail"], problem
 
     # The version is still submittable: the guard refused the submission, it did not consume it.
     ok = api_client.post(
@@ -339,7 +339,7 @@ def test_a_blank_change_summary_cannot_submit_a_rating_version(
     assert ok.json()["status"] == "review"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_the_submit_route_documents_the_422_it_returns(app) -> None:
     """A client cannot handle a status the contract does not mention.
 

@@ -177,7 +177,7 @@ docker compose -f deploy/docker-compose.yml up -d --wait   # BEFORE the gate, no
 ```
 
 **Without it the suite does not error usefully — it comes back mostly green with a handful
-of failures**, which is the dangerous shape. Seen 2026-08-30 on W11 Task 3A: 2,347 collected,
+of failures**, which is the dangerous shape. Seen 2026-08-30 on WK-671 Task 3A: 2,347 collected,
 **5 failed**, and **255 `botocore.EndpointConnectionError`** entries that were only visible
 because the run was piped through `tail`. Most infra-dependent tests skip when the stack is
 absent; a few fail instead. **A test that fails rather than skips on missing infrastructure is
@@ -356,7 +356,7 @@ in the line most readers stop at.
 foreground limit**, so the tool backgrounds it. That is fine for the main thread, which is
 re-invoked when the command exits. **It is a trap for a subagent**: a backgrounded command
 does not notify an agent that has already ended its turn, so the agent stops "waiting for
-the completion notification" and waits forever. Seen 2026-08-30, W11 Task 3A — the executor
+the completion notification" and waits forever. Seen 2026-08-30, WK-671 Task 3A — the executor
 had a green gate and a finished commit and sat idle on a run that was healthy the whole time.
 
 **The primary form has no wait loop at all.** The gate/verify slot wrapper above
@@ -472,7 +472,7 @@ The three axes answer different questions and none substitutes for another —
 python3 scripts/register-owed.py <work-id | phase | review>   # e.g. W11, 2, review
 ```
 
-NT-0015 P5's owed-list generator (Ruling 52) — every open `docs/audit/register.md` row
+RFC-896 P5's owed-list generator (RL-912) — every open `docs/findings/register.md` row
 owed by, or blocking, the named close, searched across both the Work item and Decision
 columns so an owner named only in prose is still found. **On-demand, not gated**: it is not
 part of `CLAUDE.md` §11's gate command list (same treatment as `scope-audit.py` above), and
@@ -497,7 +497,7 @@ beside wall-clock for that reason.
 **Quote the load with every number, and re-take a headline figure in a quiet window before
 recording it in a spec.**
 
-## The demo entrance (FR-PLAT-53)
+## The demo entrance (FR-408)
 
 ```bash
 uv run python scripts/demo.py                # then open http://localhost:5173/demo
@@ -511,7 +511,7 @@ seeded workspace. Ctrl-C stops everything it started.
 It **refuses outside local/dev before starting anything** — the whole path hangs off
 `dev_auth_enabled`, `False` by default and fatal at startup in a deployed environment.
 
-The demo *guide* (FR-PLAT-54) is derived, not written, so there is nothing to update — but
+The demo *guide* (FR-409) is derived, not written, so there is nothing to update — but
 check that it still derives: `uv run pytest backend/tests/test_demo_guide.py`, which also
 runs in the gate.
 
@@ -523,7 +523,7 @@ docker compose -f deploy/docker-compose.yml down
 ```
 
 `deploy/README.md` has the credentials and ports. Compose brings up **postgres/redis/minio
-only** — there is no app container, because a Dockerfile for it is deployment (W14) rather
+only** — there is no app container, because a Dockerfile for it is deployment (WK-674) rather
 than a dev loop.
 
 ## Migrations — the bare command does not work against the compose stack
@@ -614,7 +614,7 @@ its own probe) — corrected before acting; the real count was one `pytest` bina
 worktree throughout, confirmed with `ps -eo pid,args | grep '[/]\.venv/bin/pytest'` (the
 real binary path, never a bare string match).
 
-2026-08-31 — `register-owed.py` added to the closure-audit section, NT-0015 P5 (Ruling 52).
+2026-08-31 — `register-owed.py` added to the closure-audit section, RFC-896 P5 (RL-912).
 Deliberately not added to `CLAUDE.md` §11's gate command list: it is on-demand, the same
 treatment `scope-audit.py` already has here.
 
@@ -669,5 +669,5 @@ by it.
 
 2026-08-23 — extracted from `CLAUDE.md` §11 verbatim when that section was cut to bare
 invocations. Every trap here was recorded in `CLAUDE.md` at the date its own line states;
-the alembic mismatch was found 2026-08-22 during W5 audit remediation, and the contention
-factor during a W5 grouping measurement.
+the alembic mismatch was found 2026-08-22 during WK-661 audit remediation, and the contention
+factor during a WK-661 grouping measurement.

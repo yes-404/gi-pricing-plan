@@ -1,4 +1,4 @@
-"""The demo entrance's guide (FR-PLAT-53, FR-PLAT-54).
+"""The demo entrance's guide (FR-408, FR-409).
 
 **Every field here is derived** — from the published contract, the specs' §5.3 view tables,
 the frontend router, and the roadmap's status table. Nothing in this module is a place to
@@ -40,7 +40,7 @@ class DemoView(BaseModel):
 
 
 class DemoApiGroup(BaseModel):
-    """Published endpoints under one OpenAPI tag, from `docs/contracts/` (FR-PLAT-48)."""
+    """Published endpoints under one OpenAPI tag, from `docs/contracts/` (FR-451)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

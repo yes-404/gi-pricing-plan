@@ -2,5 +2,5 @@
 
 Orchestration and I/O only. The deterministic parts — column normalisation, schema
 inference, quarantine partitioning — live in `pricing_core.data` so they are callable
-without the platform (ADR-0001, `01` §5.2).
+without the platform (ADR-703, `01` §5.2).
 """

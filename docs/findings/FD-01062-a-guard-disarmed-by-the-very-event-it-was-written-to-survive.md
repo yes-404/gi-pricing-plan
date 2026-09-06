@@ -1,0 +1,118 @@
+---
+id: FD-1062
+family: finding
+title: a guard disarmed by the very event it was written to survive
+status: active                  # active → closed | retired (§1.2a)
+created: 2026-09-04
+owner: auditor
+corrected_by: []
+relates: []                     # ids only — the SL-/WK- this discharges through, once known
+was: docs/audit/findings/F101.md
+---
+
+# F101 — a guard disarmed by the very event it was written to survive
+
+**Filed 2026-09-03 at `4b9117a` by the auditor, on the auditor's own unmerged PR #691.**
+Re-verified and re-filed fresh at `43d86980` (2026-09-04), because #691 fell 8 commits behind
+`main` and DIRTY/CONFLICTING before it could land, and the content it carries elsewhere is
+now superseded (§ Disposition of #691, below) — but this one finding is not. Work item
+**W37-6**, phase 2.
+
+## The defect
+
+`scripts/_docverify.py` reads RFC-937 through a constant that is **deliberately the
+pre-migration path**, so the migration's own redirect table is followed rather than the new
+name guessed:
+
+```python
+#: The note's pre-migration path. Post-migration it is somewhere else, under a slug derived
+#: from its *title*, not its old filename … It is followed through `docs/REDIRECTS.csv`,
+#: which is the artifact the migration writes for exactly this purpose; guessing the new
+#: name instead is how a row silently measures an empty file.
+_NT0019_PATH: Final = "docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md"
+```
+
+(`scripts/_docverify.py:1636-1641`, unchanged since this was first measured — verified by
+line number and content directly against `43d86980`.)
+
+`_follow_redirect(tree, old_path)` (`:1663`) tries the literal path first and falls back to
+`docs/REDIRECTS.csv` only if that literal lookup fails. The fallback is the guard the comment
+above describes.
+
+**The migration rewrites that constant.** Re-measured at `43d86980` with this session's own
+`--verify` snapshot (`scripts/doc-id.py migrate --verify <auditor's own tmpdir> --ref HEAD`):
+
+| | `scripts/_docverify.py:1641` |
+|---|---|
+| control (un-migrated) | `_NT0019_PATH: Final = "docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md"` |
+| migrated | `_NT0019_PATH: Final = "docs/rfcs/RFC-00216-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md"` |
+
+Confirmed by direct `grep -n '_NT0019_PATH'` against both trees of this session's own
+snapshot. It is a genuine path citation, so the citation rewriter rewrites it, **correctly**
+— the new name it produces is the right one, matching `REDIRECTS.csv`'s own row for that
+document. Nothing breaks today, and this finding alleges no present incorrectness.
+
+**But once the migration lands, `_follow_redirect`'s first branch resolves and the
+`REDIRECTS.csv` lookup is never reached again.** The guard becomes dead code. From that
+point, a wrong value ever entering the constant (a bad merge, a manual edit, a future
+citation-rewrite regression) produces exactly the failure the comment names — *"a row
+silently measures an empty file"* — with the mechanism written to prevent it no longer in
+the path.
+
+## Why it is a finding and not an observation
+
+**A guard that stops guarding does so without anything going red.** The tests pass, the row
+reports a number, and the number is even correct today. There is no failing case to notice,
+because the disarming event and the correct-looking output are the same event.
+
+Confirmed still true at `43d86980`: row (i) of the current `--verify` output reports `45 H
+row(s) in §5` — non-zero, unchanged, nothing visibly wrong. That is the point: the guard's
+absence is invisible exactly because the output still looks right.
+
+It is also the third instance of a shape this Work has hit repeatedly, and the one where the
+*remedy* is what gets disarmed:
+
+| | what went green | why |
+|---|---|---|
+| A1 (§7(d)'s `F-W[0-9]`, fixed by PR #693) | corruption moved the tokens out of the predicate's reach | a corrupted token cannot fail a check built to catch it |
+| A5 (§7(d)'s `docs/notes/`, since resolved independently on `main`) | the predicate could never fire | an inert pattern cannot fail either |
+| **F101** | row (i)'s H-row count | **the guard against a silent empty read was removed by the migration it guards against** |
+
+## Acceptance — the violation that must become detectable
+
+*Violation: `_NT0019_PATH` resolves to a file the H-row scan reads as zero rows, and the run
+reports a count rather than failing.*
+
+Row (i) currently reports `45 H row(s) in §5`. **A non-zero assertion on that count is the
+cheapest complete remedy** — it converts a silent empty read into a loud one and does not
+depend on which branch of `_follow_redirect` resolved. It is the same rule the instrument's
+own `(h2)` vacuity probe already applies to `audit-docs.py`: check the denominator, not only
+the count.
+
+An alternative is to exempt the constant from the citation rewrite the way `was:` is
+exempted, so the `REDIRECTS.csv` fallback stays live. **Neither is proposed here**; the
+choice is the implementer's (originally scoped to `executor-verify`; row (i) itself is
+W37-10's under RL-1043 §3 — the *fix* here is in shared instrument code, `_docverify.py`,
+so the owner is whoever next touches that file for a row-(i)-adjacent reason, not
+automatically W37-10).
+
+## Evidence
+
+This session's own migrated snapshot of `43d86980` (`doc-id.py migrate --verify`, standard
+invocation per `docs/process/delivery-process.md` §11a). No real checkout migrated.
+
+```bash
+grep -n '_NT0019_PATH' scripts/_docverify.py            # :1641 definition, :1673 sole use
+sed -n '1641p' <control>/scripts/_docverify.py          # docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md
+sed -n '1641p' <migrated>/scripts/_docverify.py         # docs/rfcs/RFC-00216-…
+```
+
+## Related
+
+- `docs/research/nt-0019-w37-6-condition-2-and-third-measurement-2026-09-04.md` — the
+  companion re-measurement record this finding was re-filed alongside.
+- F99 — the id-allocation sweep constraint this record follows (id **F101** reused from the
+  original filing on #691 rather than re-allocated, since it is the same finding, not a new
+  one; open-PR sweep at filing time: only PR #691 itself and PR #701 — unrelated,
+  `docs/git-hygiene-citation-derivation-and-activation-gap` — were open, neither else
+  claiming F101).

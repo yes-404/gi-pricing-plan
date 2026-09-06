@@ -42,7 +42,7 @@ const router = useRouter();
 /** The dataset the profile is for — its currency is what amounts are denominated in.
  *  The empty string is unreachable at render: the value is read only inside the loaded
  *  branch, where `getDataset` has set it. It exists to keep the required-`string`
- *  consumers honest, not as a money default (OQ-OVR-14, decided 2026-08-26 (b)). */
+ *  consumers honest, not as a money default (OQ-551, decided 2026-08-26 (b)). */
 const dataset = ref<Dataset | null>(null);
 const currency = computed(() => dataset.value?.currency ?? "");
 const rateable = computed(() => (profile.value?.one_ways ?? []).map((o) => o.column));
@@ -68,7 +68,7 @@ const referenceSelection = computed<string>({
 });
 
 /**
- * A chip's label. `level` is nullable (FR-DATA-49): a genuine missing level renders as
+ * A chip's label. `level` is nullable (FR-66): a genuine missing level renders as
  * "—", the same absent-value mark used everywhere else in this view — never the empty
  * string, never the literal word "null". `exposure_years` is an exact decimal string and
  * is rendered, never parsed; it is appended only when the level actually carries one —
@@ -159,7 +159,7 @@ watch(selected, async (column) => {
   try {
     oneWay.value = await getOneWay(versionId.value, column);
   } catch (error) {
-    // FR-DATA-27: a column with no *stored* one-way is an answer, not a failure. The
+    // FR-62: a column with no *stored* one-way is an answer, not a failure. The
     // platform refuses to compute one on request, and so does this.
     if (isProblem(error, "NOT_FOUND")) oneWayMissing.value = true;
     else throw error;
@@ -183,7 +183,7 @@ watch(referenceId, async (id) => {
   try {
     comparison.value = await compareProfiles(versionId.value, id);
   } catch (error) {
-    // A reference with no stored profile is an answer, the same as FR-DATA-27's missing
+    // A reference with no stored profile is an answer, the same as FR-62's missing
     // one-way: the picker disables those versions, so reaching here means a stale or
     // hand-edited link. It explains itself and leaves the rest of the view intact.
     if (isProblem(error, "NOT_FOUND")) referenceMissingProfile.value = true;
@@ -309,7 +309,7 @@ onMounted(() => void load());
           class="mt-2 text-sm text-slate-500"
         >
           {{ referenceLabel }} has no profile to compare against. Profiling runs after a
-          successful ingestion (FR-DATA-25).
+          successful ingestion (FR-60).
         </p>
         <p
           v-else-if="comparison"
@@ -348,7 +348,7 @@ onMounted(() => void load());
           v-if="oneWayMissing"
           class="mt-3 text-sm text-slate-500"
         >
-          No stored one-way for this column. FR-DATA-27 reads them from the Profile and
+          No stored one-way for this column. FR-62 reads them from the Profile and
           never computes one on request.
         </p>
         <template v-else-if="oneWay">
@@ -402,7 +402,7 @@ onMounted(() => void load());
               :drift="driftFor(column.name)"
               :warn-above="warnAbove"
             />
-            <!-- FR-DATA-48. Only continuous columns carry one, so the card shows it only
+            <!-- FR-65. Only continuous columns carry one, so the card shows it only
                  when the profile computed one. -->
             <HistogramChart
               v-if="column.histogram"

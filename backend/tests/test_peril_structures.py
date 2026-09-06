@@ -149,7 +149,7 @@ async def _structure(
 # -- the refusals, before a Job exists -----------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 async def test_a_structure_citing_an_unfitted_model_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -175,7 +175,7 @@ async def test_a_structure_citing_an_unfitted_model_is_refused(
     assert refused.value.code == "MODEL_NOT_FITTED"
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 async def test_a_structure_citing_a_model_that_does_not_resolve_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -192,11 +192,11 @@ async def test_a_structure_citing_a_model_that_does_not_resolve_is_refused(
     assert "no-such-family@3" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 async def test_separate_model_is_refused_before_a_job_exists(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-59 declares four treatments and this slice computes three. The caller is
+    """FR-189 declares four treatments and this slice computes three. The caller is
     told now, naming the peril, rather than by a job that fails after loading the dataset."""
     actor, version_id, area, split = await _book(database, blob_store, workspace_id)
     peril = await _burning_cost_peril(
@@ -226,7 +226,7 @@ async def test_separate_model_is_refused_before_a_job_exists(
     assert "WINDSCREEN" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 async def test_a_zero_tolerance_is_refused(database, blob_store, workspace_id) -> None:
     actor, version_id, area, split = await _book(database, blob_store, workspace_id)
     peril = await _burning_cost_peril(
@@ -245,11 +245,11 @@ async def test_a_zero_tolerance_is_refused(database, blob_store, workspace_id) -
     assert refused.value.code == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 async def test_perils_on_different_holdouts_are_refused_and_both_are_named(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-60 sums across perils and compares the total to one observed figure; perils
+    """FR-190 sums across perils and compares the total to one observed figure; perils
     scored on different holdouts sum over different books."""
     actor, version_id, area, split = await _book(database, blob_store, workspace_id)
     here = await _burning_cost_peril(
@@ -304,9 +304,9 @@ async def test_perils_on_different_holdouts_are_refused_and_both_are_named(
 # -- the lifecycle -------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 async def test_versioning_is_by_slug(database, blob_store, workspace_id) -> None:
-    """A structure is edited by superseding it, which is what keeps FR-MODEL-61's pinned
+    """A structure is edited by superseding it, which is what keeps FR-191's pinned
     reference resolvable for as long as any Rating Version holds it."""
     actor, version_id, area, split = await _book(database, blob_store, workspace_id)
     peril = await _burning_cost_peril(
@@ -328,9 +328,9 @@ async def test_versioning_is_by_slug(database, blob_store, workspace_id) -> None
     assert versions == [1, 2]
 
 
-@pytest.mark.req("FR-MODEL-61")
+@pytest.mark.req("FR-191")
 async def test_a_draft_cannot_be_submitted(database, blob_store, workspace_id) -> None:
-    """FR-MODEL-61 reaches `review` from `reconciled` only: the reconciliation is the
+    """FR-191 reaches `review` from `reconciled` only: the reconciliation is the
     evidence the approval reads, so the lifecycle has no edge that skips it."""
     actor, version_id, area, split = await _book(database, blob_store, workspace_id)
     peril = await _burning_cost_peril(
@@ -349,7 +349,7 @@ async def test_a_draft_cannot_be_submitted(database, blob_store, workspace_id) -
     assert refused.value.status_code == 409
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 async def test_a_reconciled_composition_cannot_be_rewritten(
     database, blob_store, workspace_id
 ) -> None:
@@ -381,7 +381,7 @@ async def test_a_reconciled_composition_cannot_be_rewritten(
     assert "immutable" in str(blocked.value).lower()
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 async def test_a_reconciled_structure_cannot_be_deleted(
     database, blob_store, workspace_id
 ) -> None:
@@ -410,11 +410,11 @@ async def test_a_reconciled_structure_cannot_be_deleted(
 # -- the whole path ------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 async def test_the_reconcile_job_runs_and_persists_its_verdict(
     database, blob_store, workspace_id
 ) -> None:
-    """`wf-01` E5 end to end: compose, reconcile through the real Job, read the artifact.
+    """`WF-698` E5 end to end: compose, reconcile through the real Job, read the artifact.
 
     The tolerance is wide for the reason the module docstring gives — the machinery is what
     is under test, on a book of twenty-one exposure years.
@@ -465,28 +465,28 @@ async def test_the_reconcile_job_runs_and_persists_its_verdict(
     assert structure.status is PerilStructureStatus.RECONCILED
     assert structure.reconciliation is not None
     assert structure.reconciliation.status.value == "pass"
-    # FR-MODEL-74: the treatment is stated beside the number, per peril.
+    # FR-128: the treatment is stated beside the number, per peril.
     assert [p.large_loss_kind for p in structure.reconciliation.perils] == [
         LargeLossKind.NONE
     ]
-    # FR-MODEL-58: the total is the sum over perils, exactly.
+    # FR-188: the total is the sum over perils, exactly.
     assert (
         sum(p.modelled_burning_cost for p in structure.reconciliation.perils)
         == structure.reconciliation.modelled_burning_cost
     )
 
 
-@pytest.mark.req("FR-MODEL-61")
+@pytest.mark.req("FR-191")
 async def test_a_failing_reconciliation_is_recorded_and_blocks_review(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-60 asks for the reconciliation to be *persisted*; a failing one is the
+    """FR-190 asks for the reconciliation to be *persisted*; a failing one is the
     finding. What it blocks is `review`, because the tolerance is the submitter's own
     number and a structure that misses it has failed a test it set itself.
 
     The failure is produced by a **doubled restoration loading**, not by a punitive
     tolerance: the fit reconciles to the penny on this book, so a near-zero tolerance still
-    passed. That is a better test anyway — it drives FR-MODEL-74's restoration through the
+    passed. That is a better test anyway — it drives FR-128's restoration through the
     platform path and shows it moving the ratio, which a `none` treatment cannot.
     """
     actor, version_id, area, split = await _book(database, blob_store, workspace_id)
@@ -550,11 +550,11 @@ async def test_a_failing_reconciliation_is_recorded_and_blocks_review(
     assert refused.value.code == "EVIDENCE_INCOMPLETE"
 
 
-@pytest.mark.req("FR-MODEL-61")
+@pytest.mark.req("FR-191")
 async def test_a_reconciled_structure_reaches_review_with_an_approval_request(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-61's approvability, through the generic machine (`06` FR-GOV-9).
+    """FR-191's approvability, through the generic machine (`06` FR-351).
 
     It works only because `DEFAULT_POLICY` gained a `peril_structure` entry with this slice:
     without one, `approvals.submit` refuses with "no approval policy for this artifact
@@ -609,10 +609,10 @@ async def test_a_reconciled_structure_reaches_review_with_an_approval_request(
 # -- the contract --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-90")
+@pytest.mark.req("FR-192")
 def test_all_five_routes_are_published() -> None:
     """`02` §5.1 declared the create and the reconcile. A create whose artifact nothing can
-    fetch, and an approvable artifact with no way to submit it, are the omission FR-MODEL-84
+    fetch, and an approvable artifact with no way to submit it, are the omission FR-139
     repaired for transparency — and one the endpoint audit cannot see, because it compares
     the spec against the contract and an endpoint missing from both is in neither.
     """
@@ -624,7 +624,7 @@ def test_all_five_routes_are_published() -> None:
     assert "post" in paths["/api/v1/peril-structures/{structure_id}/submit"]
 
 
-@pytest.mark.req("FR-MODEL-90")
+@pytest.mark.req("FR-192")
 def test_reading_a_structure_that_does_not_exist_is_a_404(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -633,7 +633,7 @@ def test_reading_a_structure_that_does_not_exist_is_a_404(
     assert response.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-OVR-18")
+@pytest.mark.req("FR-21")
 def test_a_float_tolerance_is_refused_at_the_wire(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -641,11 +641,11 @@ def test_a_float_tolerance_is_refused_at_the_wire(
 
     A bare `Decimal` accepts a JSON number and keeps the binary error verbatim — measured,
     not assumed: `{"tolerance": 0.1 + 0.2}` validated to `Decimal('0.30000000000000004')`
-    against this exact model. That number then decides a reconciliation, since FR-MODEL-60's
+    against this exact model. That number then decides a reconciliation, since FR-190's
     verdict is `|ratio - 1| <= tolerance`, so the float reached the one comparison the
     artifact exists to record.
 
-    FR-OVR-18 closed this for `DecimalStr` fields on 2026-08-19. It could not close it here,
+    FR-21 closed this for `DecimalStr` fields on 2026-08-19. It could not close it here,
     because the audit behind it swept fields that *were* `DecimalStr` — a field that should
     have been one and was not is invisible to that search. This test is the shape of guard
     that search could not be.
@@ -666,13 +666,13 @@ def test_a_float_tolerance_is_refused_at_the_wire(
     assert "float" in response.text
 
 
-@pytest.mark.req("FR-OVR-18")
+@pytest.mark.req("FR-21")
 def test_the_published_tolerance_admits_no_json_number() -> None:
     """The contract half, which is the half that was actually wrong.
 
     Pydantic renders a bare `Decimal` as `anyOf: [{"type": "number"}, {"type": "string"}]`
     — research finding F7, recorded in `model_schema.money`. So the *published* contract
-    admitted the lossy binary form FR-OVR-7 forbids, and a payload could satisfy
+    admitted the lossy binary form FR-10 forbids, and a payload could satisfy
     `docs/contracts/` while violating the specification it is generated from. Asserting the
     422 alone would not have caught that: the refusal and the declaration are different
     claims, and external consumers read the declaration.
@@ -683,15 +683,15 @@ def test_the_published_tolerance_admits_no_json_number() -> None:
     assert "anyOf" not in tolerance, tolerance
 
 
-# -- FR-MODEL-112(c): the arm that is not built, and the refusal that stands in for it -----
+# -- FR-117(c): the arm that is not built, and the refusal that stands in for it -----
 
 
-@pytest.mark.req("FR-MODEL-24")
-@pytest.mark.req("FR-MODEL-112")
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-117")
 async def test_reconciling_a_structure_whose_model_carries_a_model_offset_is_refused_by_name(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-112(c) is not built, and the refusal is the deliverable until it is.
+    """FR-117(c) is not built, and the refusal is the deliverable until it is.
 
     `_reconcile`'s `_score` calls `score_fitted` with no `model_offset=`, so a GLM whose
     `offset.kind == "model"` reaches `predict._offset` without its resolved array. That is

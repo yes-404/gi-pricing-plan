@@ -5,7 +5,7 @@ export type OidcAuthConfig = components["schemas"]["OidcAuthConfig"];
 
 let cached: OidcAuthConfig | null = null;
 
-/** The issuer and client_id the PKCE flow cannot start without (07 FR-PLAT-66).
+/** The issuer and client_id the PKCE flow cannot start without (07 FR-394).
  *  Fetched once per page load; the values are public by design. */
 export async function loadAuthConfig(): Promise<OidcAuthConfig> {
   cached ??= await request<OidcAuthConfig>("/auth/config");

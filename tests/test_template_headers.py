@@ -8,7 +8,7 @@ Ten document-family templates (`ADR`, `CR`, `FD`, `LG`, `PL`, `REFERENCE`, `RFC`
 the template's own leading `<!-- ... -->` comment and fills in the placeholders, exactly
 the sequence every template's own comment instructs ("Fill in every placeholder, delete
 this comment block"). Three (`WK`, `SL`, `PHASE`) carry no top-level `---` block *by
-design*: NT-0019 (`docs/notes/0019-one-id-per-document.md`) §1.5 puts a `WK-`/`SL-` header
+design*: RFC-937 (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`) §1.5 puts a `WK-`/`SL-` header
 in a fenced ```yaml block under the row's own heading rather than the file's own front
 matter, and §1.1 rule 4 puts a phase outside the id standard entirely. Neither is a defect,
 and this suite must not mistake the one for the other.
@@ -164,7 +164,7 @@ def test_document_template_parses_to_its_family_once_filled_in(
 
 
 # -----------------------------------------------------------------------------------
-# WK.md / SL.md: no top-level `---` by design (NT-0019 §1.5) — the header is a fenced
+# WK.md / SL.md: no top-level `---` by design (RFC-937 §1.5) — the header is a fenced
 # ```yaml block under the row's own heading. The whole-file `None` is checked
 # alongside the fenced block's own content so a `None` here reads as "fenced, as
 # designed" rather than "broken, and silently waved through" — the same distinction
@@ -193,7 +193,7 @@ def test_sl_template_has_no_top_level_front_matter_but_its_fenced_block_parses(
     assert whole_file_header is None
     assert not rendered.lstrip("\n").startswith("---")
 
-    # Signal 2: the fenced block itself — the actual header content, per NT-0019
+    # Signal 2: the fenced block itself — the actual header content, per RFC-937
     # §1.5's "as a fenced block under the row's heading" — is well-formed against the
     # same closed grammar and carries the right family, wrapped in the `---`
     # delimiters the grammar (as opposed to the fence) expects.
@@ -208,13 +208,13 @@ def test_wk_template_has_no_top_level_front_matter_but_its_fenced_block_parses(
     docid: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """WK.md, the same two signals as SL.md above — fixed 2026-09-02 (W37-4,
-    `docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`), deliberately, not by
+    `docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`), deliberately, not by
     loosening this test.
 
     Until this fix, `WK.md`'s fenced block carried the *same class* of defect #570 fixed
     in FD.md/REFERENCE.md/RFC.md: its `owner:` field's inline comment wrapped onto a
     second, indented physical line, which `_parse_front_matter_body` rejects as an
-    indented continuation line (NT-0019 §1.5's closed, flat grammar has no
+    indented continuation line (RFC-937 §1.5's closed, flat grammar has no
     continuation-line concept). #570's own scope was `FD.md`/`REFERENCE.md`/`RFC.md`
     only, and it left WK.md's copy of the defect in place on purpose, pinning
     `HeaderError` here so the finding stayed visible in the suite rather than only in a
@@ -243,7 +243,7 @@ def test_wk_template_has_no_top_level_front_matter_but_its_fenced_block_parses(
 
 
 # -----------------------------------------------------------------------------------
-# PHASE.md: outside the id standard entirely (NT-0019 §1.1 rule 4) — plain fields
+# PHASE.md: outside the id standard entirely (RFC-937 §1.1 rule 4) — plain fields
 # under a heading, not YAML front matter, no `id:`, no `family:`, no fenced block
 # either.
 # -----------------------------------------------------------------------------------
@@ -283,7 +283,7 @@ def test_every_template_on_disk_is_covered_by_the_document_or_row_phase_partitio
 
 # -----------------------------------------------------------------------------------
 # Broken-input proof: a `#` comment or a `<...>` placeholder that wraps onto a
-# second, indented physical line inside a `---` block breaks parsing (NT-0019 §1.5's
+# second, indented physical line inside a `---` block breaks parsing (RFC-937 §1.5's
 # closed, flat grammar has no continuation-line concept) — this is the exact defect
 # fixed in REFERENCE.md, FD.md and RFC.md. Proven directly here on synthetic content
 # mirroring each file's pre-fix shape, so the mechanism is caught even if a future
@@ -338,13 +338,13 @@ def test_a_wrapped_bracket_placeholder_breaks_parsing(
 
 
 # -----------------------------------------------------------------------------------
-# Rulings 79 and 80 (docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md):
+# Rulings 79 and 80 (docs/rulings/INDEX.md#2026-09-02-w37-template-parser-conflicts-rulingsmd):
 # `WK.md`/`SL.md`/`PHASE.md` against the parser that actually consumes a *row* or a
 # *phase section* embedded mid-`roadmap.md` — `scripts/doc-index.py`'s
 # `scan_roadmap_rows`/`scan_phase_sections` — never exercised above, which only proves
-# these templates against `_docid.py`'s file-level `parse_header` (Ruling 79 §1's own
+# these templates against `_docid.py`'s file-level `parse_header` (RL-998 §1's own
 # finding: "It exercises a different parser from the one that consumes a row, and
-# passes."). Extended here rather than in a new file, per Ruling 79 §4: "a second file
+# passes."). Extended here rather than in a new file, per RL-998 §4: "a second file
 # would repeat the near-miss rather than close it."
 # -----------------------------------------------------------------------------------
 
@@ -381,7 +381,7 @@ def test_row_template_fenced_block_parses_through_doc_index_row_parser(
     template_filename: str,
     family: str,
 ) -> None:
-    """Ruling 79 §4's positive control: "a check that copies each row template's fenced
+    """RL-998 §4's positive control: "a check that copies each row template's fenced
     block into a roadmap fixture and parses it with doc-index.py's row parser. It must
     fail today, before the fix, with `unknown row field 'tree'`." `WK.md` and `SL.md` both
     declare `tree:`, `corrected_by:` and `relates:`; the old `_ROW_FIELDS` rejected all
@@ -407,9 +407,9 @@ def test_row_template_fenced_block_parses_through_doc_index_row_parser(
 def test_kind_field_on_a_work_row_is_rejected(
     doc_index: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 79 §4: "a check that `kind:` on a `WK-` row is rejected. This is the half a
+    """RL-998 §4: "a check that `kind:` on a `WK-` row is rejected. This is the half a
     fields-added fix leaves behind, and it must red." `docs/_templates/WK.md`'s own
-    comment forbids `kind:` by name; the old `_ROW_FIELDS` wrongly admitted it (Ruling 79
+    comment forbids `kind:` by name; the old `_ROW_FIELDS` wrongly admitted it (RL-998
     §1: "wrong in both directions at once").
     """
     roadmap = tmp_path / "roadmap.md"
@@ -426,7 +426,7 @@ def test_kind_field_on_a_work_row_is_rejected(
 def test_row_field_policy_changes_with_the_wk_template(
     doc_index: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 70 §4 item 2, applied to `doc-index.py` per Ruling 79 §4: "add a key to
+    """RL-981 §4 item 2, applied to `doc-index.py` per RL-998 §4: "add a key to
     WK.md and a row using it parses; remove a key and the same row is rejected ...  the
     signature of a policy transcribed." Proven on a *copy* of the real templates (never
     the real `docs/_templates/`, which this test must not mutate), by redirecting
@@ -479,7 +479,7 @@ def test_row_field_policy_changes_with_the_wk_template(
 def test_phase_template_body_parses_via_scan_phase_sections(
     doc_index: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 80 §4's positive control: "PHASE.md's own body, placeholders filled, parsed
+    """RL-999 §4's positive control: "PHASE.md's own body, placeholders filled, parsed
     by scan_phase_sections, must yield the phase it describes. It must fail today, before
     the fix." Today `scan_phase_sections` only ever reads the first *fenced* block below a
     phase heading; `PHASE.md`'s own body carries none (`_EXPECTED_NO_BLOCK_TEMPLATES` in
@@ -507,7 +507,7 @@ def test_phase_template_body_parses_via_scan_phase_sections(
 def test_phase_section_with_no_fields_of_its_own_never_borrows_a_later_blocks_fields(
     doc_index: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 80 §4 item 2, PROBE 2's own shape reproduced directly: a phase heading with
+    """RL-999 §4 item 2, PROBE 2's own shape reproduced directly: a phase heading with
     nothing of its own directly beneath it, followed by a `WK-` row whose `status:`
     deliberately differs from any real phase status. Before the fix,
     `scan_phase_sections`'s unbounded lookahead (`rest = "\n".join(lines[idx + 1:])`)
@@ -541,7 +541,7 @@ def test_phase_section_with_no_fields_of_its_own_never_borrows_a_later_blocks_fi
 def test_phase_section_fields_change_with_the_phase_template(
     doc_index: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 80 §4 item 3, Ruling 70 §4 item 2's mutation applied to `PHASE.md`: "rename
+    """RL-999 §4 item 3, RL-981 §4 item 2's mutation applied to `PHASE.md`: "rename
     works: in the template and a phase section using the old name stops being read."
     Proven on a *copy* of the real templates, never the real `docs/_templates/`.
     """
@@ -573,8 +573,8 @@ def test_phase_section_fields_change_with_the_phase_template(
 def test_restructure_roadmap_writer_round_trips_through_doc_index_readers(
     doc_index: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 81 (`docs/plans/2026-09-02-w37-commit-boundary-and-plan-reviews-shape-
-    rulings.md`) §4: "take migrate's emitted row block and phase section, feed each to
+    """RL-977 (`docs/rulings/RL-00977-the-fix-is-inert-on-the-real-corpus-so-the-
+    boundary-is-free-it-lands-on-its-own-and-the-reader-and-the-writer-land-together.md`) §4: "take migrate's emitted row block and phase section, feed each to
     scan_roadmap_rows and scan_phase_sections, and require the fields to survive ... This
     must be a test in the branch that lands the fix, not a task carried into W37-6."
 
@@ -583,21 +583,21 @@ def test_restructure_roadmap_writer_round_trips_through_doc_index_readers(
     the full `migrate()` pipeline (`tests/test_doc_id_migrate.py::
     test_roadmap_restructure_is_readable_by_doc_index` already covers that end to end; this
     is the narrower, Ruling-81-cited proof that the writer and reader this branch changes
-    together still agree). Ruling 81 §2's rejected option — "fix the reader and leave the
+    together still agree). RL-977 §2's rejected option — "fix the reader and leave the
     writer ... migrate emits blocks its own reader rejects" — is exactly the failure this
     would catch: a `HeaderError` here means the split happened.
 
-    Rulings 90-92 (`docs/plans/2026-09-02-w37-roadmap-transform-rulings.md`) turned
+    Rulings 90-92 (`docs/rulings/INDEX.md#2026-09-02-w37-roadmap-transform-rulingsmd`) turned
     `_restructure_roadmap` from a function that *created* `docs/roadmap.md` (a stub built
     only from its draft arguments) into one that edits an *existing* file in place,
     surgically — removing exactly the leading rows its drafts supersede and leaving
-    everything else untouched (Ruling 91 obligation 3). This fixture writes that existing
-    file itself, with a real leading row for `W1` and trailing narrative after it, so the
+    everything else untouched (RL-992 obligation 3). This fixture writes that existing
+    file itself, with a real leading row for `WK-657` and trailing narrative after it, so the
     round-trip below exercises the in-place edit the writer actually performs now, and
     the final assertion — that the trailing narrative survives — is what would have caught
     the writer regressing back to a full overwrite (this file's own fixture used to rely
     on that overwrite to conjure `docs/roadmap.md` out of nothing, which is the defect
-    Ruling 91 exists to remove).
+    RL-992 exists to remove).
     """
     doc_id_cli = _load_by_path("_doc_id_for_template_headers", DOC_ID_MODULE_PATH)
 
@@ -613,7 +613,7 @@ def test_restructure_roadmap_writer_round_trips_through_doc_index_readers(
         "## Phase 2 — Rating Engine\n\n"
         "| WS | Scope | Status |\n"
         "|---|---|---|\n"
-        "| **W1** | Existing workstream, superseded by this restructure | active |\n\n"
+        "| **WK-657** | Existing workstream, superseded by this restructure | active |\n\n"
         f"{trailing_narrative}\n",
         encoding="utf-8",
     )
@@ -621,13 +621,13 @@ def test_restructure_roadmap_writer_round_trips_through_doc_index_readers(
     work = doc_id_cli._Draft(
         materialize="roadmap_row", prefix="WK", kind=None, title="Round-trip work",
         status="active", created=date(2026, 9, 2), owner="maintainer",
-        tie_break=("roadmap.md", 0), old_token="W1", phase="P2", number=1,
+        tie_break=("roadmap.md", 0), old_token="WK-657", phase="P2", number=1,
     )
     slice_ = doc_id_cli._Draft(
         materialize="roadmap_row", prefix="SL", kind=None, title="Round-trip slice",
         status="draft", created=date(2026, 9, 2), owner="planner",
         tie_break=("roadmap.md", 1), old_token="W1-1", phase="P2", number=1,
-        work_token="W1",
+        work_token="WK-657",
     )
     occurrences = doc_id_cli._scan_roadmap_rows(
         (docs_dir / "roadmap.md").read_text(encoding="utf-8")

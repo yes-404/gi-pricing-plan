@@ -1,4 +1,4 @@
-"""FR-PLAT-63 and FR-PLAT-65: choosing a workspace, and the platform verifying the choice."""
+"""FR-396 and FR-397: choosing a workspace, and the platform verifying the choice."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ async def _memberships(database: Database, count: int) -> tuple[AuthenticatedIde
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
         for _ in range(count):
             workspace_id = new_uuid7()
-            # A membership names a workspace that exists (FR-PLAT-62's foreign key).
+            # A membership names a workspace that exists (FR-395's foreign key).
             await workspaces.ensure_workspace(session, workspace_id=workspace_id)
             session.add(
                 WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=workspace_id)
@@ -71,21 +71,21 @@ async def _memberships(database: Database, count: int) -> tuple[AuthenticatedIde
     return identity, ids
 
 
-@pytest.mark.req("FR-PLAT-65")
+@pytest.mark.req("FR-397")
 async def test_a_selection_among_memberships_is_honoured(database: Database) -> None:
-    """A choice among facts the platform already holds is not a claim (FR-PLAT-65)."""
+    """A choice among facts the platform already holds is not a claim (FR-397)."""
     identity, (first, second) = await _memberships(database, 2)
     assert _select_workspace(identity, second).workspace_id == second
     assert _select_workspace(identity, first).workspace_id == first
 
 
-@pytest.mark.req("FR-PLAT-65")
+@pytest.mark.req("FR-397")
 async def test_a_selection_outside_the_memberships_is_denied(database: Database) -> None:
     """**Negative.** The header is checked, never trusted — this is the whole requirement.
 
     A caller who is a genuine member of two workspaces names a third. If this passed, the
     header would be a claim rather than a choice, which is the invariant `deps.py` has
-    carried since W2 and which FR-PLAT-65 answers rather than overrides.
+    carried since WK-658 and which FR-397 answers rather than overrides.
     """
     identity, _ = await _memberships(database, 2)
     with pytest.raises(PlatformError) as exc:
@@ -94,7 +94,7 @@ async def test_a_selection_outside_the_memberships_is_denied(database: Database)
     assert exc.value.status_code == 403
 
 
-@pytest.mark.req("FR-PLAT-63")
+@pytest.mark.req("FR-396")
 async def test_several_memberships_and_no_selection_is_refused(database: Database) -> None:
     """Refusing is the permanent rule; the header only gives a way to satisfy it."""
     identity, _ = await _memberships(database, 2)
@@ -104,14 +104,14 @@ async def test_several_memberships_and_no_selection_is_refused(database: Databas
     assert exc.value.status_code == 403
 
 
-@pytest.mark.req("FR-PLAT-63")
+@pytest.mark.req("FR-396")
 async def test_a_single_membership_needs_no_selection(database: Database) -> None:
     """A Service Account has exactly one by construction and never sends the header."""
     identity, (only,) = await _memberships(database, 1)
     assert _select_workspace(identity, None).workspace_id == only
 
 
-@pytest.mark.req("FR-PLAT-65")
+@pytest.mark.req("FR-397")
 def test_the_header_is_published_on_an_operation(api_client: TestClient) -> None:
     """Declared on the dependency, and therefore on every operation that depends on it.
 
@@ -144,9 +144,9 @@ async def _switch_events(database: Database, workspace_id) -> list[str]:
     return [row.action for row in rows]
 
 
-@pytest.mark.req("FR-PLAT-63")
+@pytest.mark.req("FR-396")
 async def test_a_switch_is_recorded_in_both_chains(database: Database) -> None:
-    """`06` FR-GOV-24 chains per workspace, so one event answers only half the question.
+    """`06` FR-372 chains per workspace, so one event answers only half the question.
 
     An auditor reconstructing "who was acting where, and when did they stop" reads the chain
     of the workspace they are auditing. A single event in the workspace entered is invisible
@@ -164,7 +164,7 @@ async def test_a_switch_is_recorded_in_both_chains(database: Database) -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-63")
+@pytest.mark.req("FR-396")
 async def test_the_first_selection_after_login_writes_one_event(database: Database) -> None:
     """No chain to leave. The requirement says one event, not a synthetic departure."""
     identity, (first, second) = await _memberships(database, 2)

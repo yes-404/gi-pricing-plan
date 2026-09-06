@@ -1,4 +1,4 @@
-"""`01` §4.9's DatasetLineage — the wire form of FR-DATA-35, defined here first."""
+"""`01` §4.9's DatasetLineage — the wire form of FR-75, defined here first."""
 
 import pytest
 from pydantic import ValidationError

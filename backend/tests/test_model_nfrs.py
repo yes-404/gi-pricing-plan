@@ -1,25 +1,25 @@
 """The `02` non-functional requirements that are assertions rather than timings.
 
-The twin of `test_data_nfrs.py`, and it draws the same line. NFR-MODEL-1/2/3/4/5/10/11 are
+The twin of `test_data_nfrs.py`, and it draws the same line. NFR-475/476/477/479/480/485/486 are
 performance and size budgets and are **measured** rather than tested — a timing assertion in
 CI fails on a busy runner and teaches everyone to re-run it, which is worse than no check.
 `scripts/bench-model.py` produces those numbers and `02` §9 records them against their
 budgets, which is where a human reads them once.
 
-What is left here is NFR-MODEL-9, the audit clause, which is an assertion about what the
+What is left here is NFR-484, the audit clause, which is an assertion about what the
 database holds after an act and not about how long the act took.
 
 **Two of the twelve are not testable at all today**, and neither gets a marker in this file:
 
-* **NFR-MODEL-7** — a stored Model round-trips export → import into a clean instance. There
+* **NFR-482** — a stored Model round-trips export → import into a clean instance. There
   is no export path and no import path for a Model anywhere in the repository: no route, no
   CLI, no bundle schema. The one `export` in the HTTP surface is the audit log's
-  (`app/api/audit.py`). Its parent, FR-OVR-2, carries no marker either.
-* **NFR-MODEL-8's** position-accurate error and per-round objective budgets. Its `eval`/
+  (`app/api/audit.py`). Its parent, FR-5, carries no marker either.
+* **NFR-483's** position-accurate error and per-round objective budgets. Its `eval`/
   `exec` clause *is* evidenced, in `packages/pricing-core/tests/test_expression_nfrs.py`,
   where the parser lives.
 
-And one is **half** evidenced where the record says it is whole: **NFR-MODEL-6** asks for
+And one is **half** evidenced where the record says it is whole: **NFR-481** asks for
 identical GLM coefficients to 1e-10 *and* an identical GBM booster hash, and the only marker
 it carries (`packages/pricing-core/tests/test_gbm.py`) is the booster half. Nothing anywhere
 refits a GLM on the same spec and seed and compares the coefficients. That test belongs
@@ -106,7 +106,7 @@ async def _events(database: Database, workspace_id: UUID, action: str) -> list[A
     """Every Audit Event for one action in this workspace.
 
     Queried by `workspace_id` + `action`, the way `test_data_nfrs.py` does it. Audit rows
-    cannot be deleted between tests (FR-GOV-22), so the workspace *is* the isolation and a
+    cannot be deleted between tests (FR-370), so the workspace *is* the isolation and a
     filter on it is a filter on this test's own history.
     """
     async with database.session() as session:
@@ -124,11 +124,11 @@ async def _events(database: Database, workspace_id: UUID, action: str) -> list[A
         )
 
 
-@pytest.mark.req("NFR-MODEL-9")
+@pytest.mark.req("NFR-484")
 async def test_a_model_status_transition_emits_an_audit_event_with_before_and_after(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """NFR-MODEL-9: every model status transition carries before and after state.
+    """NFR-484: every model status transition carries before and after state.
 
     `draft → archived`, which is the one edge reachable without a fit — and the shape it
     proves is the shape all four model transitions share (`platform/modelling.py`'s
@@ -164,11 +164,11 @@ async def test_a_model_status_transition_emits_an_audit_event_with_before_and_af
     assert events[0].after["status"] == "archived"
 
 
-@pytest.mark.req("NFR-MODEL-9")
+@pytest.mark.req("NFR-484")
 async def test_objective_certification_and_approval_emit_before_and_after(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """NFR-MODEL-9: objective certification and approval carry before and after state.
+    """NFR-484: objective certification and approval carry before and after state.
 
     All three acts the requirement names for a Custom Objective that exists —
     certification, submission, and the approval decision reaching the artifact — run
@@ -232,11 +232,11 @@ async def test_objective_certification_and_approval_emit_before_and_after(
     assert approved[0].after["status"] == ObjectiveStatus.APPROVED.value
 
 
-@pytest.mark.req("NFR-MODEL-9")
+@pytest.mark.req("NFR-484")
 async def test_fit_start_and_completion_are_audited_and_creation_carries_no_before(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """NFR-MODEL-9's other half — and the half of it that is not met, pinned rather than
+    """NFR-484's other half — and the half of it that is not met, pinned rather than
     papered over.
 
     The requirement asks for *"factor/banding/grouping creation and edit, fit start and
@@ -323,6 +323,6 @@ async def test_fit_start_and_completion_are_audited_and_creation_carries_no_befo
         # The gap, asserted. See this test's docstring: a create has no prior state, and
         # `before={}` would be a fabricated one.
         assert events[0].before is None, (
-            f"{action} now carries a before state — NFR-MODEL-9's create-only gap has been "
+            f"{action} now carries a before state — NFR-484's create-only gap has been "
             "closed, and `02` §9's verdict on it needs updating rather than this assertion"
         )

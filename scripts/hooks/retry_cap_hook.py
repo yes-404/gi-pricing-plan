@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""C2 -- the retry-cap hook (NT-0014 §2 item C2; Ruling 40 §4 and §6; Ruling 47(a)/(c)).
+"""C2 -- the retry-cap hook (RFC-895 §2 item C2; RL-920 §4 and §6; RL-907(a)/(c)).
 
-`docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md`, Ruling 40 §4,
+`docs/rulings/RL-00920-q2-is-answered-differently-for-c2-and-c3-c3-is-dissolved-c2-gets-claude-settings-json-and-slice-g-is-re-cut-and-still-blocked.md`, RL-920 §4,
 distinguishes C2 from C3 (dissolved): C3 would have re-checked a state already written
 down and already checked more strongly by CI, but C2 "genuinely needs a hook" because it
 **intercepts an action that leaves no artifact** -- blocking the next retry at the moment
@@ -12,9 +12,9 @@ Two entry points, sharing one decision function (`_would_breach`) so the dry-run
 doer can never disagree:
 
 - `record` -- the command a role runs to record a fix/replan decision against a layer
-  (NT-0014 impact-matrix row 11: recording a fix/replan decision updates the retry
+  (RFC-895 impact-matrix row 11: recording a fix/replan decision updates the retry
   counter in the runtime state file "via hook C2, not by hand"). On success, increments
-  `retry_counters[<layer>:<id>:<kind>].count` in the runtime state file (NT-0014 artifact
+  `retry_counters[<layer>:<id>:<kind>].count` in the runtime state file (RFC-895 artifact
   B, `.claude/skills/watcher-runtime-state`). On a would-be breach of
   `docs/process/delivery-process.core.json`'s `guards.retry_caps.values[<layer>]`,
   **refuses** -- exit 1, the counter is left untouched because the retry did not happen
@@ -31,7 +31,7 @@ doer can never disagree:
   invocation is allowed through unparsed -- a mis-parse must never falsely block, only a
   confirmed breach may.
 
-What C2 can and cannot guarantee (stated plainly, per Ruling 40 §3/§5's standard for a
+What C2 can and cannot guarantee (stated plainly, per RL-920 §3/§5's standard for a
 hook -- a check proven only by hand is one that has never printed a failure, and a
 git-hook-style guarantee that can be silently skipped is not a guarantee):
 
@@ -41,10 +41,10 @@ git-hook-style guarantee that can be silently skipped is not a guarantee):
 - **Cannot:** stop an actor from skipping `record` and hand-editing the runtime state
   file's `retry_counters` block directly, from disabling hooks for a session
   (`disableAllHooks`, or an override in the gitignored `.claude/settings.local.json`), or
-  from never recording a retry at all. Unlike C3 (dissolved by Ruling 40 because no
+  from never recording a retry at all. Unlike C3 (dissolved by RL-920 because no
   stronger backstop existed for a git hook -- CI already re-checks the same state), there
   is **no CI-equivalent backstop behind C2**: nothing in this repository re-derives retry
-  counts from durable artifacts (Ruling 47(b) assigns that reconciliation to a future
+  counts from durable artifacts (RL-907(b) assigns that reconciliation to a future
   watcher cycle, not built in this slice). C2's enforcement is real at the moment it
   fires and has no second line of defence.
 
@@ -55,7 +55,7 @@ plan_gate_decision`, `flows.map_layer_flow.plan_gate.transitions.replan`) and `f
 both the map-layer and slice-layer flows). This is deliberately narrower than every
 `guarded_by: "retry_cap"` transition in the extract: `slice_tdd_flow.verify_refactor`'s
 `failure` transition and `guards.retry_caps.instrumentation`'s "gate re-runs" entry are
-Ruling 47(a)'s explicitly **uncapped** class ("Gate re-runs are logged and not capped, so
+RL-907(a)'s explicitly **uncapped** class ("Gate re-runs are logged and not capped, so
 nothing blocks on them") and are out of this slice's scope.
 """
 
@@ -190,7 +190,7 @@ def _parser() -> argparse.ArgumentParser:
         "--evidence",
         required=True,
         help="Durable artifact this decision is grounded in (PR number, commit SHA, plan "
-        "revision) -- Ruling 47(a): nothing that blocks an action may be counted without one.",
+        "revision) -- RL-907(a): nothing that blocks an action may be counted without one.",
     )
     p_record.set_defaults(func=cmd_record)
 

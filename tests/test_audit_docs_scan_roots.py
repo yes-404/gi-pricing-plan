@@ -4,13 +4,13 @@ Before this fix, `check_notes` (checks 16-20) and `check_finding_citations`'s `s
 (check 25) both guard on `NOTES` existing and silently drop out when it does not:
 `check_notes` appends an informational "checks 16-20 skipped" note and returns, and
 `scan_dirs`'s `if d.is_dir()` filter drops the directory from the scan with no message at
-all. Proven at `b551060` (`docs/plans/2026-08-31-nt-0016-investigation.md` §1b), when `NOTES`
+all. Proven at `b551060` (`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §1b), when `NOTES`
 still pointed under `.claude`: loading the script as a module, repointing `NOTES` at a
 non-existent path and calling `main()` printed the skip line and "All checks passed." and
-exited 0. A `git mv` of that directory for any reason -- not only NT-0016's planned move --
+exited 0. A `git mv` of that directory for any reason -- not only RFC-897's planned move --
 would leave the gate green while five checks stopped running.
 
-Re-run against the moved root after NT-0016 Slice 4 (`NOTES` now `docs/notes/`) to confirm
+Re-run against the moved root after RFC-897 Slice 4 (`NOTES` now `docs/notes/`) to confirm
 the fix still watches: a green audit after a directory move proves nothing on its own, per
 the plan's §9 Step 8 -- this is that proof, kept live rather than a one-time note.
 

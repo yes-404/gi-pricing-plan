@@ -6,7 +6,7 @@ on:
     paths:
       - 'packages/**'
       - 'backend/**'
-      - 'pipelines/**'        # arrives in W7, not W4 (CLAUDE.md §2)
+      - 'pipelines/**'        # arrives in WK-665, not WK-660 (CLAUDE.md §2)
       - 'pyproject.toml'
       - 'uv.lock'
       - '.importlinter'
@@ -16,7 +16,7 @@ on:
       - 'scripts/**'
       # `examples/**` for the same reason as `scripts/**`: the seed, its loader and its
       # test are Python that ruff, mypy and pytest all cover, so a change touching only
-      # this directory was checked by nothing. Noticed when W6a's closure edited the seed
+      # this directory was checked by nothing. Noticed when WK-663's closure edited the seed
       # and the python workflow did not run.
       - 'examples/**'
       - 'docs/contracts/**'
@@ -31,7 +31,7 @@ on:
       - 'docs/**'
       # tests/** for the third time this has bitten: the repository-invariant suite
       # lives here and `uv run pytest -q` runs it, so a change touching only this
-      # directory was checked by nothing. Noticed when FR-PLAT-57's single-head guard
+      # directory was checked by nothing. Noticed when FR-417's single-head guard
       # triggered only the docs workflow — a check that cannot run is not enforcement.
       - 'tests/**'
       # .claude/skills/reporter-cycle/** for the fifth time this has bitten (the
@@ -69,7 +69,7 @@ on:
       - 'docs/**'
       # tests/** for the third time this has bitten: the repository-invariant suite
       # lives here and `uv run pytest -q` runs it, so a change touching only this
-      # directory was checked by nothing. Noticed when FR-PLAT-57's single-head guard
+      # directory was checked by nothing. Noticed when FR-417's single-head guard
       # triggered only the docs workflow — a check that cannot run is not enforcement.
       - 'tests/**'
       # .claude/skills/reporter-cycle/** for the fifth time this has bitten (the
@@ -129,7 +129,7 @@ jobs:
       # it: `import lightgbm` fails with `OSError: libgomp.so.1: cannot open shared object
       # file` on an image without it. XGBoost's wheel does vendor one, so a suite
       # exercising only the primary backend passes on a machine where the secondary cannot
-      # even import — which is exactly how this was found, locally, in W5.
+      # even import — which is exactly how this was found, locally, in WK-661.
       #
       # A no-op on the GitHub runner images, which ship libgomp1 with gcc. Kept because
       # "the runner happens to have it" is not a dependency declaration, and the failure it
@@ -149,9 +149,9 @@ jobs:
       - name: mypy --strict
         run: uv run mypy
 
-      # ADR-0001 is only worth having if it is checked. A forbidden import in
+      # ADR-703 is only worth having if it is checked. A forbidden import in
       # pricing-core fails the build here rather than being noticed in review.
-      - name: Architecture contracts (ADR-0001 / ADR-0002 / DEP-3)
+      - name: Architecture contracts (ADR-703 / ADR-704 / DEP-3)
         run: uv run lint-imports
 
       # Deduplication is a primary-key behaviour and presigning is a signature behaviour.
@@ -171,7 +171,7 @@ jobs:
           done
           curl -sf http://localhost:9000/minio/health/live
 
-      # FR-PLAT-35: migrations are an explicit step, never run on application start.
+      # FR-435: migrations are an explicit step, never run on application start.
       - name: Migrate
         run: uv run alembic upgrade head
         env:
@@ -185,7 +185,7 @@ jobs:
           GIP_BLOB_ENDPOINT_URL: http://localhost:9000
           GIP_REDIS_URL: redis://localhost:6379/0
 
-      # FR-PLAT-48 / ADR-0002: the models are the source of truth, so the committed
+      # FR-451 / ADR-704: the models are the source of truth, so the committed
       # contract follows the code. A drift fails the build rather than being noticed when
       # a generated frontend client stops matching the API.
       - name: Generated contracts are current

@@ -8,8 +8,8 @@ export type ObjectiveStatus = components["schemas"]["ObjectiveStatus"];
 /**
  * How many pages `listObjectives` will fetch before it stops and says so.
  *
- * **OQ-MODEL-35.** `GET /custom-objectives` filters by `status` and `slug` only, so
- * applicability filtering — which FR-MODEL-44 makes necessary, since offering an
+ * **OQ-605.** `GET /custom-objectives` filters by `status` and `slug` only, so
+ * applicability filtering — which FR-153 makes necessary, since offering an
  * inapplicable objective manufactures the error the requirement prevents — happens in the
  * client, over a cursor-paginated list. A picker that filtered only the page it happened
  * to hold would render "no applicable objectives" while applicable ones sat on page two,
@@ -26,7 +26,7 @@ export const OBJECTIVE_PAGE_CAP = 5;
 
 /**
  * The statuses a fit accepts — `FITTABLE_OBJECTIVE_STATUSES` in `model-schema`, which
- * reaches no contract (OQ-MODEL-37's second surface, where option (a) cannot help because
+ * reaches no contract (OQ-607's second surface, where option (a) cannot help because
  * a subset of an enum's members is not a field type).
  *
  * **A set, not a ladder.** `objectives.py`:160-161 permits `REVIEW → {APPROVED,
@@ -56,7 +56,7 @@ export async function listObjectives(
 export type ObjectiveCertificate = components["schemas"]["ObjectiveCertificate"];
 
 /**
- * FR-MODEL-95's first read: status, certificate **outcome** and `approval_request_id` — not the
+ * FR-166's first read: status, certificate **outcome** and `approval_request_id` — not the
  * certificate itself, which is the second read below.
  */
 export async function getObjective(id: string): Promise<CustomObjective> {
@@ -64,10 +64,10 @@ export async function getObjective(id: string): Promise<CustomObjective> {
 }
 
 /**
- * FR-MODEL-95's second read: the latest `ObjectiveCertificate` for this version.
+ * FR-166's second read: the latest `ObjectiveCertificate` for this version.
  *
  * **404 is a normal state, not an error.** A `draft` objective has not been certified, and
- * FR-MODEL-95 specifies a 404 naming it. The caller branches on `ProblemError.code`, never on
+ * FR-166 specifies a 404 naming it. The caller branches on `ProblemError.code`, never on
  * the status — several codes share 404.
  */
 export async function getObjectiveCertificate(id: string): Promise<ObjectiveCertificate> {

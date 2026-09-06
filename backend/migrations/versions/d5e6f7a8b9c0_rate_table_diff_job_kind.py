@@ -1,6 +1,6 @@
 """jobs: register the `rate_table.diff` JobKind value
 
-`03` §5.1/FR-RATE-62 (W10-3D). `rate_table.diff` has been in `model-schema` since
+`03` §5.1/FR-232 (W10-3D). `rate_table.diff` has been in `model-schema` since
 W10-3A declared it and in no database — the same gap `2b2e2a481fb1` found and fixed
 for `metric.certify`, and `d0e1f2a3b4c5` for `objective.certify` before that. It
 surfaces as `invalid input value for enum job_kind` from inside `job_service.submit`,

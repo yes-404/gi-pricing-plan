@@ -1,4 +1,4 @@
-# NT-0019 W37-6 — condition 2's re-measurement, and a third independent pass over (d2)/(d8)/(g)
+# RFC-937 W37-6 — condition 2's re-measurement, and a third independent pass over (d2)/(d8)/(g)
 
 **Run:** 2026-09-04, tree `43d86980` (`origin/main`, current at dispatch time) · **Author:**
 the auditor · **Method:** `python3 scripts/doc-id.py migrate --verify <own worktree's tmpdir>
@@ -13,25 +13,25 @@ dispatch, a prior ruling, or PR #691.
 gets one of four verdicts, and the verdict is the lead's. What follows is evidence for the
 lead to rule on.
 
-## 1. Condition 2 (Ruling 102 §5) — re-measured after the `was:` provenance fix
+## 1. Condition 2 (RL-1043 §5) — re-measured after the `was:` provenance fix
 
 ### 1.1 What condition 2 is, and why it was withdrawn
 
-Condition 2 was accepted as met once already, under Ruling 96/97, on the figures
+Condition 2 was accepted as met once already, under RL-1039/1040, on the figures
 **"0 red · 292 exempt by `was:` (then 531 examined) · and the broken-input control"**
-(`docs/plans/2026-09-03-w37-6-time-boxed-delegation.md` §6.3). That acceptance rested on an
+(`docs/rulings/RL-01049-w37-6-the-maintainer-s-time-boxed-delegation-2026-09-03.md` §6.3). That acceptance rested on an
 **enforced population of 0** — every in-scope document was exempted by carrying a `was:`
 field, so check 37's shape rule never fired on anything, and the maintainer accepted that as
 the ruled outcome rather than a defect, with the emptied population disclosed alongside it.
 
-Ruling 102 §5 (`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md:132-145`)
+RL-1043 §5 (`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md:132-145`)
 **withdrew** that acceptance for an independent reason: check 37's `was:` exemption at the
 time keyed on a **substring** test, and the second-fail handover
-(`docs/plans/2026-09-03-w37-6-second-fail-handover.md` §6) measured the field's own
+(`docs/plans/PL-01037-w37-6-the-extended-window-s-second-fail-and-the-handover-2026-09-03.md` §6) measured the field's own
 correctness directly — of 393 stamped documents carrying a `was:` field at `0de529e`, **only
 3** named a real pre-migration path of the same document; 261 named the document's own new
 path (no provenance at all), and 129 named a path that never existed, 90 of those resolving
-to a *different* real document ("resolves and lies"). Ruling 102 §5's own words: **"condition
+to a *different* real document ("resolves and lies"). RL-1043 §5's own words: **"condition
 2 is therefore not carried forward as MET. Its pass is re-measured once the exemption keys on
 the parsed field."**
 
@@ -168,25 +168,25 @@ real file content, independent of anything `doc-id.py` claims about itself:
 - `docs/closures/CR-00017-phase-1a-exit-demo.md` (the document the second-fail handover
   named explicitly as corrupted — `was:` had pointed at an unrelated 233 KB ledger,
   `docs/ledgers/LG-00030-w5-wf-01-driven-end-to-end.md`) now carries
-  `was: docs/audit/closure-records.md`. That file is a real 433 KB document in `control/`
-  (`ls -la control/docs/audit/closure-records.md` → present), and `REDIRECTS.csv` independently
+  `was: docs/closures/INDEX.md#closure-recordsmd`. That file is a real 433 KB document in `control/`
+  (`ls -la control/docs/closures/INDEX.md#closure-recordsmd` → present), and `REDIRECTS.csv` independently
   names it as the split source for CR-00017 among 20 other closure records — corroborated by
   row (g)'s own `g2` split-class breakdown in the same `--verify` run (§2.3 below), computed
   by yet a third code path.
 - `docs/adrs/ADR-00004-pricing-core-is-dependency-free-and-owns-all-actuarial-maths.md` claims
-  `was: docs/adr/0001-pricing-core-is-dependency-free.md`. `diff` between that control-tree
+  `was: docs/adrs/ADR-00703-pricing-core-is-dependency-free-and-owns-all-actuarial-maths.md`. `diff` between that control-tree
   file's body and the migrated document's body (skipping each file's own front matter) shows
   the same content, differing only by two in-body citation rewrites the migration is *for*
-  (`FR-OVR-8` → `FR-304`, `OQ-OVR-4` → `OQ-836`) — genuinely the same document, not a
+  (`FR-11` → `FR-304`, `OQ-545` → `OQ-836`) — genuinely the same document, not a
   coincidental path match.
 
 **One discrepancy investigated and resolved, not smoothed over.** A raw `grep -rlP '^was:'
 migrated/docs --include=*.md` returns 368 files, one more than the 367 the field-parser
 counts. The extra file is `docs/process/document-ids.md:130`, which carries the line
 `was: 2026-08-18-profile-contract.md   # migration only` **inside the document's body**, as a
-worked example quoting NT-0019 §1.5's own illustration of the `was:` field — not inside that
+worked example quoting RFC-937 §1.5's own illustration of the `was:` field — not inside that
 file's own front-matter block (its front matter closes long before line 130). Correctly
-excluded by the field-not-substring parse (§1.2), the same rule Ruling 102 §5 rules for
+excluded by the field-not-substring parse (§1.2), the same rule RL-1043 §5 rules for
 check 37 itself.
 
 ### 1.4 What this does and does not settle
@@ -197,9 +197,9 @@ It is not the whole picture, and this record does not claim it is:
 - **The exemption's population is still what `(h2)`'s DISCLOSE calls OVER-EXEMPT**: 438
   documents in check 37's scope, 367 (84%) exempted by `was:`, leaving 71 shape-checked. That
   is a **separate, already-disclosed** question — whether a check that excuses 84% of its
-  population is doing useful work — ruled non-fatal and disclosed under Ruling 105 D3. This
+  population is doing useful work — ruled non-fatal and disclosed under RL-1046 D3. This
   record does not reopen it; it answers only "is the `was:` field itself trustworthy now",
-  which is what Ruling 102 §5 asked re-measured.
+  which is what RL-1043 §5 asked re-measured.
 - **This measures the field's consistency with the migration's own bookkeeping
   (`REDIRECTS.csv`), not an external ground truth independent of `doc-id.py` entirely.** The
   two spot checks in §1.3 are the mitigation: both were read directly off disk in `control/`
@@ -231,7 +231,7 @@ collapsing into the `F-WK-` form and making the raw `F-W[0-9]` count read as a f
 At `43d86980` the counts move together, which is consistent with the fix holding: no *new*
 mangling is introduced by migration on this population. The row is still `DISCLOSE`, not
 `PASS`, because 221/70 legacy `F-W*` citations remain in the migrated tree — expected and
-tracked separately (Ruling 105 §A; not this record's subject).
+tracked separately (RL-1046 §A; not this record's subject).
 
 ### 2.2 (d8) — `W[0-9]+[a-z]?-[0-9]+` (the work-id alternative)
 
@@ -252,7 +252,7 @@ finding — migration creates W-form tokens") and task #15's register item (audi
 migration writes legacy ids into permanent new filenames") — both already tracked, open, and
 this measurement is consistent with neither having landed a fix yet.
 
-### 2.3 (g) — the migration-diff filter (token-boundary mangling + Ruling 68's six classes)
+### 2.3 (g) — the migration-diff filter (token-boundary mangling + RL-989's six classes)
 
 ```
 [FAIL] (g) migration diff filtered to hunks that are neither header nor citation-token is empty
@@ -269,15 +269,15 @@ this measurement is consistent with neither having landed a fix yet.
 - **g1 (the broken-input mangling proof): migrated 20, control 20 — equal.** No new
   mangling on this proof's population at this tree; consistent with #693's fix holding here
   too, same shape as (d2)'s companion result.
-- **g2 (Ruling 68's six classes, class 6 as Ruling 104 amends it): 1035 files classified,
+- **g2 (RL-989's six classes, class 6 as RL-1045 amends it): 1035 files classified,
   1007 land in a named class, 28 land in `classified-by-none`.** The row is still `FAIL`
   because of the 28 unclassified files and, per the row's own note, because two split
-  sources (`docs/audit/closure-records.md`, `docs/audit/plan-reviews.md`, and 23 more per
+  sources (`docs/closures/INDEX.md#closure-recordsmd`, `docs/closures/INDEX.md#plan-reviewsmd`, and 23 more per
   the truncated note) fail class 4's requirement that a split's targets reproduce the
   source's non-blank body lines **in order** — a line-*ordering* defect, distinct from and
   not fixed by the `was:`-provenance correctness measured in §1 (§1 checks *which* file a
   split target claims descent from; this checks whether the split preserved line order
-  within that descent). Both `docs/audit/closure-records.md` and `docs/audit/plan-reviews.md`
+  within that descent). Both `docs/closures/INDEX.md#closure-recordsmd` and `docs/closures/INDEX.md#plan-reviewsmd`
   are exactly the two files spot-checked in §1.3's first bullet — their `was:`-attribution
   is now correct, and their split-ordering is still not. Tracked under tasks #2/#21
   (row (g) fix, in progress).

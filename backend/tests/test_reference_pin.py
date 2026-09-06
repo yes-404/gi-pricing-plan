@@ -1,11 +1,11 @@
-"""FR-DATA-55: the reference-pin seam — pinned, None, and pinned-but-unprofiled.
+"""FR-57: the reference-pin seam — pinned, None, and pinned-but-unprofiled.
 
 The read sits at `backend/src/app/worker/data_handlers.py:249`: a rule set may pin a
 `reference_dataset_version_id`, and the distributional rules compare against that version's
 profile. The requirement is "never inferred" — no test set the field until this one — so
 this covers all three paths: the pinned profile resolves and the rule runs; `None` skips
 the distributional rules; a pinned version with no profile falls back to `None` and skips
-rather than failing the run (FR-DATA-24's preference, not a hard requirement).
+rather than failing the run (FR-54's preference, not a hard requirement).
 """
 
 from __future__ import annotations
@@ -174,14 +174,14 @@ async def _psi_outcome(
     return next(r.outcome for r in report.results if r.rule_slug == rule_slug)
 
 
-@pytest.mark.req("FR-DATA-55")
+@pytest.mark.req("FR-57")
 async def test_the_reference_pin_seam_three_paths(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """Pinned runs, None skips, pinned-but-unprofiled skips without failing.
 
     The three paths are the requirement's own predicate: the reference is *preferred*, not
-    required (`01` FR-DATA-24), so a pinned version without a profile must skip the
+    required (`01` FR-54), so a pinned version without a profile must skip the
     distributional rules rather than fail the run.
     """
     actor = await _actor(database, workspace_id, "analyst")
@@ -194,7 +194,7 @@ async def test_the_reference_pin_seam_three_paths(
     reference_id = await _ingest(database, blob_store, workspace_id, actor, dataset_id)
     await _validate(database, blob_store, workspace_id, actor, reference_id)
     target_id = await _ingest(database, blob_store, workspace_id, actor, dataset_id)
-    # An ingested version is *always* profiled (FR-DATA-25/26 runs profiling in the
+    # An ingested version is *always* profiled (FR-60/61 runs profiling in the
     # ingestion Job), so the pinned-but-unprofiled reference must be a draft version that
     # was never ingested at all.
     async with database.unit_of_work() as session:

@@ -1,8 +1,8 @@
-"""FR-MODEL-63's interval, and the covariance blob it is computed from.
+"""FR-194's interval, and the covariance blob it is computed from.
 
 The interval is a **confidence interval for `E[Y|x]`** and not a prediction interval for an
 individual outcome — the module docstring on `model_schema.prediction` has the reasoning and
-`02` FR-MODEL-63 the dated note. That distinction is what
+`02` FR-194 the dated note. That distinction is what
 `test_the_interval_covers_the_true_mean_about_as_often_as_it_claims` measures: coverage of
 the *mean*, which is the thing `x'Vx` is the variance of.
 
@@ -70,9 +70,9 @@ def _factors() -> list[Factor]:
     return [_factor("area", "area"), _factor("driv_age", "driv_age")]
 
 
-@pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-194")
 def test_the_fit_returns_a_covariance_blob_addressing_its_own_bytes() -> None:
-    """The `BlobRef` is a pure function of the bytes beside it (ADR-0001, FR-MODEL-31).
+    """The `BlobRef` is a pure function of the bytes beside it (ADR-703, FR-125).
 
     `pricing-core` cannot store a blob, so the contract with the caller is that the digest
     is already correct and the caller's only job is to write those bytes under it. A
@@ -90,7 +90,7 @@ def test_the_fit_returns_a_covariance_blob_addressing_its_own_bytes() -> None:
     assert ref.media_type == "application/json"
 
 
-@pytest.mark.req("FR-MODEL-21")
+@pytest.mark.req("FR-113")
 def test_the_stored_diagonal_is_the_standard_errors_that_were_reported() -> None:
     """One matrix behind both numbers, which is what makes them comparable.
 
@@ -109,7 +109,7 @@ def test_the_stored_diagonal_is_the_standard_errors_that_were_reported() -> None
     assert np.allclose(np.sqrt(matrix.diagonal()), reported, rtol=1e-12)
 
 
-@pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-194")
 def test_the_off_diagonal_terms_change_the_interval_materially() -> None:
     """The off-diagonal terms are why a `p x p` blob is stored rather than `p` numbers.
 
@@ -142,7 +142,7 @@ def test_the_off_diagonal_terms_change_the_interval_materially() -> None:
     assert np.all(np.abs(ratio - 1.0) > 0.05)
 
 
-@pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-194")
 def test_the_interval_covers_the_true_mean_about_as_often_as_it_claims() -> None:
     """A nominal 95 % interval on `E[Y|x]` that covers 60 % of the time is not an interval.
 
@@ -169,7 +169,7 @@ def test_the_interval_covers_the_true_mean_about_as_often_as_it_claims() -> None
     assert 0.85 <= coverage <= 1.0
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 def test_the_expectation_is_the_one_predict_glm_already_returned() -> None:
     """Two entry points, one number. The interval path builds the design as a matrix and the
     streaming path accumulates it column by column; a divergence between them would mean the
@@ -185,7 +185,7 @@ def test_the_expectation_is_the_one_predict_glm_already_returned() -> None:
     assert np.allclose(expected, predict_glm(fit.result, data, factors, spec), rtol=1e-12)
 
 
-@pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-194")
 def test_the_offset_scales_the_interval_without_widening_it_relatively() -> None:
     """The offset is a known constant: it belongs in the centre, not in the width.
 
@@ -209,7 +209,7 @@ def test_the_offset_scales_the_interval_without_widening_it_relatively() -> None
     assert np.allclose(relative_width(data), relative_width(doubled), rtol=1e-10)
 
 
-@pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-194")
 def test_a_covariance_blob_written_for_other_terms_is_refused() -> None:
     """A covariance matrix is positional, and the wrong one produces a plausible number.
 
@@ -234,7 +234,7 @@ def test_a_covariance_blob_written_for_other_terms_is_refused() -> None:
     assert "different set of terms" in str(raised.value)
 
 
-@pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-194")
 def test_a_covariance_blob_that_is_not_one_is_refused_rather_than_guessed_at() -> None:
     """Neither a truncated blob nor a matrix of the wrong size yields an interval."""
     with pytest.raises(GlmFitError):
@@ -248,7 +248,7 @@ def test_a_covariance_blob_that_is_not_one_is_refused_rather_than_guessed_at() -
         )
 
 
-@pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-194")
 def test_the_bounds_come_back_ordered_under_a_decreasing_inverse_link() -> None:
     """`g⁻¹` for `inverse` is decreasing, so the transformed endpoints arrive swapped.
 
@@ -281,7 +281,7 @@ def test_the_bounds_come_back_ordered_under_a_decreasing_inverse_link() -> None:
     assert np.all(expected <= upper)
 
 
-@pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-194")
 def test_a_confidence_level_that_is_not_a_probability_is_refused() -> None:
     """`level=1.0` is an infinitely wide interval and `level=0` a point; neither is one."""
     from pricing_core.modelling.predict import PredictionError

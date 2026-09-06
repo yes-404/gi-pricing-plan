@@ -1,4 +1,4 @@
-"""`POST /api/v1/score` — the real-time scoring endpoint (W11 Slice 2 Task 2B).
+"""`POST /api/v1/score` — the real-time scoring endpoint (WK-671 Slice 2 Task 2B).
 
 **Two groups, and the split is deliberate.** The refusal and RBAC cases exercise the real
 stack end to end, because everything they test happens *before* a bundle is resolved. The
@@ -7,11 +7,11 @@ with what `score_one` hands back, and compiling a real bundle to reach that poin
 the engine, the blob store and the compile job inside the blast radius of a test about
 error mapping. A failure there should name the boundary, not the fixture.
 
-Version resolution itself — ref to row to blob key to bytes — is Ruling 37's, and is
+Version resolution itself — ref to row to blob key to bytes — is RL-915's, and is
 covered by the happy-path and degraded-read tests, which do use a real compiled version.
 
 The caller is a **Service Account**, not a user. `Permission.SCORE_EXECUTE` is granted by
-no builtin role, deliberately (FR-GOV-6, asserted in `test_rbac.py`), so a `grant("analyst")`
+no builtin role, deliberately (FR-347, asserted in `test_rbac.py`), so a `grant("analyst")`
 principal reaches 403 at the permission dependency and never gets far enough to be refused
 for the reason these tests are about.
 """
@@ -79,7 +79,7 @@ async def admin_headers(workspace_id: Any, principal: Any, grant: Any) -> dict[s
 
     Two roles, because the setup spans two modules: `admin` creates the Service Account,
     and `analyst` holds `rating:write` to create and compile the Rating Version. **Neither
-    grants `score:execute`**, which no builtin role grants at all (FR-GOV-6) — that is
+    grants `score:execute`**, which no builtin role grants at all (FR-347) — that is
     precisely why the caller under test has to be a Service Account, and why this principal
     can build the fixture but never use it.
     """
@@ -97,9 +97,9 @@ def scoring_headers(
 ) -> dict[str, str]:
     """A `uat` Service Account holding `score:execute`, presented as an API key.
 
-    `uat` rather than `prod` on purpose: FR-RATE-35's two restrictions — approved-only and
-    a rewritten `what_if` purpose — sit inside its own `prod` clause, and Ruling 14 clause 3
-    rules that W11 imposes neither. Scoring a `draft` version by explicit reference is the
+    `uat` rather than `prod` on purpose: FR-251's two restrictions — approved-only and
+    a rewritten `what_if` purpose — sit inside its own `prod` clause, and RL-880 clause 3
+    rules that WK-671 imposes neither. Scoring a `draft` version by explicit reference is the
     "what-if and testing" the requirement permits.
     """
     created = client.post(
@@ -121,7 +121,7 @@ def scoring_headers(
 def _quote(options: dict[str, Any] | None = None, *, omit_options: bool = False) -> dict[str, Any]:
     """A `QuoteContext` body. `options` is optional and nullable, and stays that way.
 
-    Ruling 14 clause 1: a required `rating_version_ref` would put the code above its own
+    RL-880 clause 1: a required `rating_version_ref` would put the code above its own
     specification — `03` §4.4's own example carries `"rating_version_ref": null`.
     """
     body: dict[str, Any] = {
@@ -135,17 +135,17 @@ def _quote(options: dict[str, Any] | None = None, *, omit_options: bool = False)
     return body
 
 
-@pytest.mark.req("FR-RATE-34")
+@pytest.mark.req("FR-250")
 def test_a_quote_naming_no_rating_version_is_refused(
     client: TestClient, scoring_headers: dict[str, str]
 ) -> None:
-    """FR-RATE-34's **refusal limb only** — not the requirement.
+    """FR-250's **refusal limb only** — not the requirement.
 
-    FR-RATE-34 has three limbs and this marker evidences one of them. The default path
+    FR-250 has three limbs and this marker evidences one of them. The default path
     resolves *"the Rating Version currently live in the target environment"*, and `live` is
-    a property of a Deployment (FR-RATE-23), which is W14's. Rather than guess a version,
-    the platform refuses, and Ruling 14 makes that branch permanent rather than a stub:
-    after W14 it is what an environment holding no Deployment answers.
+    a property of a Deployment (FR-238), which is WK-674's. Rather than guess a version,
+    the platform refuses, and RL-880 makes that branch permanent rather than a stub:
+    after WK-674 it is what an environment holding no Deployment answers.
 
     The delivered limb is evidenced by the happy-path test; the *"p99 < 50 ms server-side"*
     limb the requirement also carries is established by neither, and is Task 2D's.
@@ -158,7 +158,7 @@ def test_a_quote_naming_no_rating_version_is_refused(
     assert response.json()["code"] == "NO_LIVE_RATING_VERSION"
 
 
-@pytest.mark.req("FR-RATE-34")
+@pytest.mark.req("FR-250")
 def test_a_quote_with_no_options_at_all_is_refused(
     client: TestClient, scoring_headers: dict[str, str]
 ) -> None:
@@ -174,7 +174,7 @@ def test_a_quote_with_no_options_at_all_is_refused(
     assert response.json()["code"] == "NO_LIVE_RATING_VERSION"
 
 
-@pytest.mark.req("FR-RATE-34")
+@pytest.mark.req("FR-250")
 def test_the_refusal_is_the_routes_own_not_score_ones(
     client: TestClient, scoring_headers: dict[str, str]
 ) -> None:
@@ -184,7 +184,7 @@ def test_the_refusal_is_the_routes_own_not_score_ones(
     input-contract error. A route that simply forwarded to `score_one` and mapped whatever
     it raised would satisfy a status-only assertion while answering with the wrong code,
     and the caller's operator would be told their input was malformed when in fact the
-    platform has no live version to score against. Ruling 14 puts the refusal in the route,
+    platform has no live version to score against. RL-880 puts the refusal in the route,
     before `score_one` is reached.
     """
     body = client.post(
@@ -196,7 +196,7 @@ def test_the_refusal_is_the_routes_own_not_score_ones(
 
 
 # --------------------------------------------------------------------------------------
-# NFR-RATE-11 — scoped credentials. Ruling 18's two refusal cases land before the route and
+# NFR-499 — scoped credentials. RL-884's two refusal cases land before the route and
 # need no bundle; its first case (a permitted account scoring successfully) needs a real
 # compiled version and so sits with the real-path tests at the end of this file.
 # --------------------------------------------------------------------------------------
@@ -226,13 +226,13 @@ def unpermissioned_headers(
     return {"X-API-Key": created.json()["key"], "Workspace-Id": str(workspace_id)}
 
 
-@pytest.mark.req("NFR-RATE-11")
+@pytest.mark.req("NFR-499")
 def test_an_account_without_score_execute_is_refused(
     client: TestClient, unpermissioned_headers: dict[str, str]
 ) -> None:
-    """Ruling 18: Task 2B *checks* the permission and grants nothing.
+    """RL-884: Task 2B *checks* the permission and grants nothing.
 
-    `SCORE_EXECUTE` is held by no builtin role (FR-GOV-6), so the only way to hold it is an
+    `SCORE_EXECUTE` is held by no builtin role (FR-347), so the only way to hold it is an
     explicit Service Account grant. An account without it must be refused at the permission
     dependency, before any scoring work.
     """
@@ -243,11 +243,11 @@ def test_an_account_without_score_execute_is_refused(
     assert response.status_code == 403, response.text
 
 
-@pytest.mark.req("NFR-RATE-11")
+@pytest.mark.req("NFR-499")
 def test_a_key_relabelled_to_another_environment_is_refused_at_authentication(
     client: TestClient, admin_headers: dict[str, str], workspace_id: Any
 ) -> None:
-    """FR-PLAT-30: the environment in a key is a label, not an authorisation.
+    """FR-430: the environment in a key is a label, not an authorisation.
 
     A key is `gip_{environment}_{prefix}_{secret}` and only the *secret* is hashed, so the
     environment segment is caller-supplied text that can be rewritten while the credential
@@ -336,20 +336,20 @@ def _scored(**overrides: Any) -> ScoringResult:
     return ScoringResult(**body)
 
 
-@pytest.mark.req("NFR-RATE-13")
+@pytest.mark.req("NFR-502")
 def test_the_result_is_returned_without_outbound_validation(
     client: TestClient,
     scoring_headers: dict[str, str],
     served: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ruling 17's acceptance test, and the one that discriminates the implementations.
+    """RL-883's acceptance test, and the one that discriminates the implementations.
 
     A `ScoringResult` built with `model_construct` holds values that violate its own
     declared types — no validation ran to stop them. The route must emit those bytes
     verbatim with a 200. **A route carrying a Pydantic return annotation or a
     `response_model=` answers 500 here**, because FastAPI would validate on the way out,
-    which is exactly what NFR-RATE-13 forbids: validate inbound, never outbound.
+    which is exactly what NFR-502 forbids: validate inbound, never outbound.
     """
     malformed = ScoringResult.model_construct(
         outcome="quoted",
@@ -377,7 +377,7 @@ def test_the_result_is_returned_without_outbound_validation(
     assert body["timing_ms"] == {"total": "not-a-float"}
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 @pytest.mark.parametrize(
     "code",
     [
@@ -394,9 +394,9 @@ def test_each_per_quote_code_maps_to_its_own_problem(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
 ) -> None:
-    """FR-RATE-38: each per-quote failure comes back as its own typed problem.
+    """FR-255: each per-quote failure comes back as its own typed problem.
 
-    `pricing-core` cannot import `PlatformError` (ADR-0001), so it raises a code-named bare
+    `pricing-core` cannot import `PlatformError` (ADR-703), so it raises a code-named bare
     `ValueError` and the mapping is the boundary's. The message half is prose that will
     change, so the route parses the code off the front — this test asserts the code that
     comes back, never the message.
@@ -414,14 +414,14 @@ def test_each_per_quote_code_maps_to_its_own_problem(
     assert response.json()["code"] == code
 
 
-@pytest.mark.req("FR-RATE-39")
+@pytest.mark.req("FR-256")
 def test_a_decline_is_a_two_hundred_with_a_populated_ladder(
     client: TestClient,
     scoring_headers: dict[str, str],
     served: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """FR-RATE-39: a decline is an answer, not a failure.
+    """FR-256: a decline is an answer, not a failure.
 
     **This is the test that stops the mapping above being written too widely.** A boundary
     that caught every `ValueError` and problem-ified it would pass all four cases above and
@@ -446,7 +446,7 @@ def test_a_decline_is_a_two_hundred_with_a_populated_ladder(
     assert len(body["premium_ladder"]) == 2
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 def test_an_undesigned_failure_stays_a_five_hundred(
     client: TestClient,
     scoring_headers: dict[str, str],
@@ -475,7 +475,7 @@ def test_an_undesigned_failure_stays_a_five_hundred(
     assert response.status_code == 500, response.text
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 def test_an_unregistered_code_is_not_invented_into_a_problem(
     client: TestClient,
     scoring_headers: dict[str, str],
@@ -499,7 +499,7 @@ def test_an_unregistered_code_is_not_invented_into_a_problem(
 
 # --------------------------------------------------------------------------------------
 # The real path. These compile a Rating Version for real and resolve it by reference, so
-# they exercise Ruling 37's linkage end to end: ref -> row -> `blob_sha256` -> bytes ->
+# they exercise RL-915's linkage end to end: ref -> row -> `blob_sha256` -> bytes ->
 # `Bundle` -> `CompiledBundle`. Nothing is patched.
 # --------------------------------------------------------------------------------------
 
@@ -538,23 +538,23 @@ def compiled_version(
     return row
 
 
-@pytest.mark.req("FR-RATE-34")
-@pytest.mark.req("FR-RATE-35")
+@pytest.mark.req("FR-250")
+@pytest.mark.req("FR-251")
 def test_a_quote_scores_over_http_against_an_explicit_ref(
     client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
 ) -> None:
-    """FR-RATE-34's **delivered limb** — the explicit-ref path, ladder and outputs.
+    """FR-250's **delivered limb** — the explicit-ref path, ladder and outputs.
 
-    This is the half W11 delivers. The *"currently live in the target environment"* half is
-    W14's and is refused with 409 in the meantime; the *"p99 < 50 ms server-side"* half the
+    This is the half WK-671 delivers. The *"currently live in the target environment"* half is
+    WK-674's and is refused with 409 in the meantime; the *"p99 < 50 ms server-side"* half the
     same requirement carries is established by neither of those tests and is Task 2D's. The
     marker on this test evidences the first only.
 
-    FR-RATE-35's `prod` restrictions are not imposed: this scores a **draft** version by
+    FR-251's `prod` restrictions are not imposed: this scores a **draft** version by
     explicit reference, which is the "what-if and testing" the requirement permits (Ruling
     14 clause 3). Its marker evidences that unconditional limb only — the approved-only and
-    `what_if`-purpose limbs are scoped to `prod`, which W11 has no environments to have, so
-    `req-coverage.py` reporting FR-RATE-35 covered from here says nothing about them.
+    `what_if`-purpose limbs are scoped to `prod`, which WK-671 has no environments to have, so
+    `req-coverage.py` reporting FR-251 covered from here says nothing about them.
     """
     response = client.post(
         SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
@@ -569,25 +569,25 @@ def test_a_quote_scores_over_http_against_an_explicit_ref(
     # The ladder reconciles to its terminal rung: the last rung is the payable premium and
     # its value is the output the algorithm declared. A ladder whose rungs did not add up to
     # what the caller is charged would be a presentation of the price rather than a
-    # derivation of it (FR-RATE-32).
+    # derivation of it (FR-248).
     terminal = body["premium_ladder"][-1]
     assert terminal["rung"] == "payable_premium", body["premium_ladder"]
     assert terminal["value_minor"] == body["outputs"]["payable_premium_minor"]
 
 
-@pytest.mark.req("NFR-RATE-11")
+@pytest.mark.req("NFR-499")
 def test_a_scoped_account_holding_the_permission_may_score(
     client: TestClient,
     scoring_headers: dict[str, str],
     unpermissioned_headers: dict[str, str],
     compiled_version: Any,
 ) -> None:
-    """Ruling 18's first case, paired with its second in one test on purpose.
+    """RL-884's first case, paired with its second in one test on purpose.
 
     Asserting only that the permitted account succeeds would pass against a route with no
     permission check at all. Asserting only that the unpermitted one is refused would pass
     against a route that refuses everyone — which is precisely the state the suite was in
-    before Ruling 38, when all twelve of these tests were red for that reason. **The pair
+    before RL-924, when all twelve of these tests were red for that reason. **The pair
     is what distinguishes an enforced permission from an absent one.**
     """
     body = _quote({"rating_version_ref": SCORED_REF})
@@ -599,16 +599,16 @@ def test_a_scoped_account_holding_the_permission_may_score(
     assert refused.status_code == 403, refused.text
 
 
-@pytest.mark.req("NFR-RATE-9")
+@pytest.mark.req("NFR-497")
 def test_an_already_served_ref_survives_metadata_storage_failing(
     client: TestClient,
     scoring_headers: dict[str, str],
     compiled_version: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ruling 16's acceptance item 2 — the degraded read, end to end over HTTP.
+    """RL-882's acceptance item 2 — the degraded read, end to end over HTTP.
 
-    NFR-RATE-9 requires degradation to *"the last-known-good cached bundle if metadata
+    NFR-497 requires degradation to *"the last-known-good cached bundle if metadata
     storage is unavailable"*. The slot's ref-to-hash memo is what makes that reachable at
     all: the request carries a ref, and ref to hash is itself a metadata read, so a slot
     keyed only by `content_hash` could never be consulted under this failure.
@@ -661,23 +661,23 @@ def test_an_already_served_ref_survives_metadata_storage_failing(
     )
 
 
-@pytest.mark.req("NFR-RATE-1")
+@pytest.mark.req("NFR-489")
 def test_a_repeat_request_does_not_re_read_the_blob_store(
     client: TestClient,
     scoring_headers: dict[str, str],
     compiled_version: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ruling 41
-    (`docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md`): the content
+    """RL-921
+    (`docs/rulings/INDEX.md#2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulingsmd`): the content
     hash `row.bundle` already carries is checked against the slot **before** the blob is
     touched at all, so a worker that has already resolved this exact hash never re-reads
     the object store for it — the `_fetch_bundle`/blob primary-key lookup/`Bundle.
-    model_validate_json` path Ruling 41 §1 measured at ~60% of the handler's own cost.
+    model_validate_json` path RL-921 §1 measured at ~60% of the handler's own cost.
 
     **The wrapper delegates to the real `read` rather than raising**, and deliberately so:
     an earlier version of this test raised from the patch, which `_compiled_for`'s own
-    `except Exception` degradation branch (NFR-RATE-9) silently caught and served from the
+    `except Exception` degradation branch (NFR-497) silently caught and served from the
     **ref**-keyed memo instead — a real 200, for a real reason, but not the one this test
     means to prove, and it passed unchanged against the pre-Ruling-41 code too. Counting a
     delegating call isolates the **content-hash** shortcut this fix adds from that
@@ -702,15 +702,15 @@ def test_a_repeat_request_does_not_re_read_the_blob_store(
     assert second.status_code == 200, second.text
     assert second.json()["outcome"] == "quoted"
     assert calls == 0, (
-        "the slot hit did not short-circuit the blob read (Ruling 41): blob_store.read "
+        "the slot hit did not short-circuit the blob read (RL-921): blob_store.read "
         f"was called {calls} time(s) on a request the content-hash shortcut should have "
         "made unnecessary"
     )
 
 
 # --------------------------------------------------------------------------------------
-# W11 Task 4B — FR-RATE-42's sampling decision, wired into the route. Ruling 35
-# (`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`): the route
+# WK-671 Task 4B — FR-259's sampling decision, wired into the route. RL-862
+# (`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`): the route
 # scores untraced and, on a sampled outcome, writes a pending `scoring_traces` row and
 # submits a `score.trace_produce` Job — never captures a trace inline.
 # --------------------------------------------------------------------------------------
@@ -746,7 +746,7 @@ async def _set_trace_sample_rate(database: Any, workspace_id: Any, rate: float) 
         )
 
 
-@pytest.mark.req("FR-RATE-42")
+@pytest.mark.req("FR-259")
 def test_a_decline_is_persisted_as_a_pending_trace_and_a_job_is_submitted(
     client: TestClient,
     scoring_headers: dict[str, str],
@@ -755,7 +755,7 @@ def test_a_decline_is_persisted_as_a_pending_trace_and_a_job_is_submitted(
     database: Any,
     workspace_id: Any,
 ) -> None:
-    """FR-RATE-42's 100 % decline floor, wired end to end — no rate override needed, since
+    """FR-259's 100 % decline floor, wired end to end — no rate override needed, since
     `decide_sampling` never consults the rate for a decline."""
     declined = _scored(outcome="declined", decline_reasons=["driver_age below minimum"])
 
@@ -772,7 +772,7 @@ def test_a_decline_is_persisted_as_a_pending_trace_and_a_job_is_submitted(
     assert len(rows) == 1
     assert rows[0].status == "pending"
     assert rows[0].sample_reason == "decline"
-    # `scoring_headers`' Service Account is scoped to `["uat"]` (Ruling 14's own fixture) —
+    # `scoring_headers`' Service Account is scoped to `["uat"]` (RL-880's own fixture) —
     # a single-environment account, so this does not discriminate the fix from the defect
     # it replaced (both a stamped `caller.environment` and `min(caller.environments)` agree
     # here). `test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environment`
@@ -784,7 +784,7 @@ def test_a_decline_is_persisted_as_a_pending_trace_and_a_job_is_submitted(
     assert jobs[0].parameters["scoring_trace_id"] == str(rows[0].id)
 
 
-@pytest.mark.req("FR-RATE-42")
+@pytest.mark.req("FR-259")
 def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environment(
     client: TestClient,
     admin_headers: dict[str, str],
@@ -793,7 +793,7 @@ def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environme
     database: Any,
     workspace_id: Any,
 ) -> None:
-    """Ruling 44 part 3, test 1 — the discriminating case.
+    """RL-916 part 3, test 1 — the discriminating case.
 
     A Service Account created `["uat", "dev"]` mints a key for `environments[0]`
     (`service_accounts.py:180`), which is `uat` — the environment the quote is actually
@@ -833,18 +833,18 @@ def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environme
     assert rows[0].environment == "uat"
 
 
-@pytest.mark.req("FR-RATE-42")
+@pytest.mark.req("FR-259")
 def test_a_caller_with_no_environment_writes_no_trace_and_still_serves_the_quote(
     database: Any,
     workspace_id: Any,
     principal: Any,
     api_settings: Settings,
 ) -> None:
-    """Ruling 44 part 3, test 2 — the impossible-state guard.
+    """RL-916 part 3, test 2 — the impossible-state guard.
 
     `caller.environment is None` on the real-time sampling path is unreachable through the
     API today (`score:execute` is granted to no builtin role and no roles API exists to
-    grant it to a custom one — Ruling 44 part 3), so this calls `_maybe_sample_trace`
+    grant it to a custom one — RL-916 part 3), so this calls `_maybe_sample_trace`
     directly rather than through a request: there is no key or bearer token that produces
     this `Caller`. The guard must raise rather than stamp a row that would be
     indistinguishable from Correction 2's batch marker (Task 4A) — and `_maybe_sample_trace`
@@ -875,7 +875,7 @@ def test_a_caller_with_no_environment_writes_no_trace_and_still_serves_the_quote
     assert _run(_trace_produce_jobs(database, workspace_id)) == []
 
 
-@pytest.mark.req("FR-RATE-42")
+@pytest.mark.req("FR-259")
 def test_a_quoted_outcome_at_rate_zero_persists_no_trace(
     client: TestClient,
     scoring_headers: dict[str, str],
@@ -899,7 +899,7 @@ def test_a_quoted_outcome_at_rate_zero_persists_no_trace(
     assert _run(_rows_for(database, workspace_id)) == []
 
 
-@pytest.mark.req("FR-RATE-42")
+@pytest.mark.req("FR-259")
 def test_a_quoted_outcome_at_rate_one_is_sampled(
     client: TestClient,
     scoring_headers: dict[str, str],
@@ -926,7 +926,7 @@ def test_a_quoted_outcome_at_rate_one_is_sampled(
     assert rows[0].sample_reason == "rate"
 
 
-@pytest.mark.req("FR-RATE-42")
+@pytest.mark.req("FR-259")
 def test_a_trace_sampling_failure_does_not_turn_the_response_into_a_500(
     client: TestClient,
     scoring_headers: dict[str, str],
@@ -936,7 +936,7 @@ def test_a_trace_sampling_failure_does_not_turn_the_response_into_a_500(
     workspace_id: Any,
 ) -> None:
     """Negative for `_maybe_sample_trace`'s own guarantee: a sampled outcome whose
-    `bundle_hash` cannot possibly be persisted (the same malformed value NFR-RATE-13's own
+    `bundle_hash` cannot possibly be persisted (the same malformed value NFR-502's own
     acceptance test above uses) fails the trace write, not the response — the caller still
     gets the 200 for the quote the platform already correctly priced."""
     malformed = ScoringResult.model_construct(
@@ -967,7 +967,7 @@ def test_a_trace_sampling_failure_does_not_turn_the_response_into_a_500(
     assert _run(_rows_for(database, workspace_id)) == []
 
 
-@pytest.mark.req("FR-RATE-42")
+@pytest.mark.req("FR-259")
 def test_a_sampled_trace_is_completed_by_the_off_path_job(
     client: TestClient,
     scoring_headers: dict[str, str],
@@ -978,7 +978,7 @@ def test_a_sampled_trace_is_completed_by_the_off_path_job(
 ) -> None:
     """End to end: a real compiled bundle, a real `POST /score`, a real off-path
     `score.trace_produce` Job driven synchronously (no live worker in tests), reproducing
-    the served quote exactly (Ruling 35 §8.2 condition (b))."""
+    the served quote exactly (RL-862 §8.2 condition (b))."""
     register_trace_handlers()
     _run(_set_trace_sample_rate(database, workspace_id, 1.0))
 
@@ -1018,7 +1018,7 @@ def test_a_sampled_trace_is_completed_by_the_off_path_job(
     assert body.bundle_hash == served_body["bundle_hash"]
 
 
-@pytest.mark.req("FR-RATE-42")
+@pytest.mark.req("FR-259")
 def test_a_pinned_bundle_that_no_longer_resolves_is_refused_not_silently_rescored(
     client: TestClient,
     scoring_headers: dict[str, str],
@@ -1028,7 +1028,7 @@ def test_a_pinned_bundle_that_no_longer_resolves_is_refused_not_silently_rescore
     workspace_id: Any,
     principal: Any,
 ) -> None:
-    """Ruling 35 §8.2 condition (a): a pending row pinned to a `bundle_hash` that no
+    """RL-862 §8.2 condition (a): a pending row pinned to a `bundle_hash` that no
     longer matches what `rating_version_ref` resolves to is never scored against the live
     bundle in its place — the Job records a bodyless `mismatch` instead."""
     register_trace_handlers()

@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "A named train/test split, recorded on the parent version (`01` FR-DATA-36).\n\nOn the **parent**, not the parts, so that \"trained on the same split\" is one artifact\ntwo models cite rather than two derivations believed to match. `parts` maps a part name\nto the Derived Dataset Version holding its rows.\n\nAt least two parts, always: a one-part split is a filter, and recording it as a split\nwould let a model claim a holdout it never had.",
+  "description": "A named train/test split, recorded on the parent version (`01` FR-76).\n\nOn the **parent**, not the parts, so that \"trained on the same split\" is one artifact\ntwo models cite rather than two derivations believed to match. `parts` maps a part name\nto the Derived Dataset Version holding its rows.\n\nAt least two parts, always: a one-part split is a filter, and recording it as a split\nwould let a model claim a holdout it never had.",
   "properties": {
     "created_at": {
       "anyOf": [

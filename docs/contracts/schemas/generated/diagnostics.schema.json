@@ -2,7 +2,7 @@
   "$defs": {
     "AeCell": {
       "additionalProperties": false,
-      "description": "Actual versus expected for one level of one factor (FR-MODEL-50).\n\n`ci_95` is on the **ratio**, not on the actual: an A/E of 1.19 whose interval excludes\n1.0 is a finding, and one whose interval spans it is noise. Without the interval the\ntwo render identically, which is how a thin cell becomes a rating decision.",
+      "description": "Actual versus expected for one level of one factor (FR-171).\n\n`ci_95` is on the **ratio**, not on the actual: an A/E of 1.19 whose interval excludes\n1.0 is a finding, and one whose interval spans it is noise. Without the interval the\ntwo render identically, which is how a thin cell becomes a rating decision.",
       "properties": {
         "actual": {
           "title": "Actual",
@@ -41,7 +41,7 @@
         "exposure_years": {
           "anyOf": [
             {
-              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
               "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
               "type": "string"
             },
@@ -73,7 +73,7 @@
     },
     "CalibrationBin": {
       "additionalProperties": false,
-      "description": "Predicted against observed within a predicted-decile bin (FR-MODEL-50).",
+      "description": "Predicted against observed within a predicted-decile bin (FR-171).",
       "properties": {
         "actual": {
           "title": "Actual",
@@ -105,7 +105,7 @@
     },
     "ComplexityDiagnostic": {
       "additionalProperties": false,
-      "description": "Factor and parameter counts against whatever thresholds are in force (FR-MODEL-81).\n\nRecorded on **every** fit. The thresholds are stored with the measurements because they\nare workspace settings that change: a fit judged against no limit and a fit judged\nagainst a limit of 40 are different events, and a diagnostic that stored only the\ncounts would render them identically a year later.",
+      "description": "Factor and parameter counts against whatever thresholds are in force (FR-185).\n\nRecorded on **every** fit. The thresholds are stored with the measurements because they\nare workspace settings that change: a fit judged against no limit and a fit judged\nagainst a limit of 40 are different events, and a diagnostic that stored only the\ncounts would render them identically a year later.",
       "properties": {
         "claims_per_parameter": {
           "anyOf": [
@@ -175,7 +175,7 @@
     },
     "CrossValidationDiagnostics": {
       "additionalProperties": false,
-      "description": "The penalty path and the selected alpha's fold dispersion (FR-MODEL-20, FR-MODEL-53).\n\nPopulated only when the fit's `GlmSpec.select_by == \"cv\"`; `Diagnostics.cross_validation`\nis `None` for every fixed-alpha GLM and every GBM — the honest reading of \"this fit was\nnot cross-validated\" rather than an empty path standing in for one (FR-MODEL-49: a\ndiagnostic is computed once, at fit time, from what the fit actually did).",
+      "description": "The penalty path and the selected alpha's fold dispersion (FR-112, FR-182).\n\nPopulated only when the fit's `GlmSpec.select_by == \"cv\"`; `Diagnostics.cross_validation`\nis `None` for every fixed-alpha GLM and every GBM — the honest reading of \"this fit was\nnot cross-validated\" rather than an empty path standing in for one (FR-170: a\ndiagnostic is computed once, at fit time, from what the fit actually did).",
       "properties": {
         "fold_metrics": {
           "items": {
@@ -228,7 +228,7 @@
     },
     "CvFoldMetric": {
       "additionalProperties": false,
-      "description": "One fold's held-out score at the selected alpha (FR-MODEL-53).\n\n\"Per-fold metrics and their dispersion... not the mean alone\" is the requirement's own\nphrase — this is the *and*: `CrossValidationDiagnostics.path`'s `std_score` at the\nselected alpha is the dispersion computed from exactly these numbers, so the two report\none fact two ways rather than two facts that could drift apart.",
+      "description": "One fold's held-out score at the selected alpha (FR-182).\n\n\"Per-fold metrics and their dispersion... not the mean alone\" is the requirement's own\nphrase — this is the *and*: `CrossValidationDiagnostics.path`'s `std_score` at the\nselected alpha is the dispersion computed from exactly these numbers, so the two report\none fact two ways rather than two facts that could drift apart.",
       "properties": {
         "fold": {
           "minimum": 0,
@@ -255,7 +255,7 @@
     },
     "CvPathPoint": {
       "additionalProperties": false,
-      "description": "One scanned alpha's aggregate cross-validated score (FR-MODEL-20).\n\n`std_score` is this alpha's dispersion across every fold — the curve FR-MODEL-20's\n\"full path, not only the alpha selected\" is. `CrossValidationDiagnostics.fold_metrics`\ncarries the *unaggregated* per-fold scores FR-MODEL-53 also asks for, but only at the\nselected alpha: recording every fold at every alpha would multiply storage by\n`len(alphas)` for a curve this point's `std_score` already summarises.",
+      "description": "One scanned alpha's aggregate cross-validated score (FR-112).\n\n`std_score` is this alpha's dispersion across every fold — the curve FR-112's\n\"full path, not only the alpha selected\" is. `CrossValidationDiagnostics.fold_metrics`\ncarries the *unaggregated* per-fold scores FR-182 also asks for, but only at the\nselected alpha: recording every fold at every alpha would multiply storage by\n`len(alphas)` for a curve this point's `std_score` already summarises.",
       "properties": {
         "alpha": {
           "minimum": 0.0,
@@ -322,7 +322,7 @@
     },
     "GbmDiagnostics": {
       "additionalProperties": false,
-      "description": "GBM-specific evidence (FR-MODEL-52), all six things the requirement names.\n\nThe evaluation curve is here rather than on `GbmFitResult` because FR-MODEL-52 calls it\na diagnostic and asks for **train and holdout** — which is FR-MODEL-54's shape, and the\nshape `diagnostics.schema.json` has carried since Phase 0. `fit_gbm` produces it and\nhands it back for the caller to place here; only `best_iteration` stays on the fit,\nbecause scoring needs it and diagnostics are not loaded to score.",
+      "description": "GBM-specific evidence (FR-174), all six things the requirement names.\n\nThe evaluation curve is here rather than on `GbmFitResult` because FR-174 calls it\na diagnostic and asks for **train and holdout** — which is FR-183's shape, and the\nshape `diagnostics.schema.json` has carried since Phase 0. `fit_gbm` produces it and\nhands it back for the caller to place here; only `best_iteration` stays on the fit,\nbecause scoring needs it and diagnostics are not loaded to score.",
       "properties": {
         "eval_curve": {
           "default": [],
@@ -401,7 +401,7 @@
     },
     "GbmEvalPoint": {
       "additionalProperties": false,
-      "description": "One row of the evaluation curve FR-MODEL-52 requires (FR-MODEL-30 persists it).\n\nBoth partitions on one row rather than two series, because the pair is the point: a\nmetric still improving on train while flat on holdout is the shape early stopping\nexists to catch, and two separately-stored series can be joined wrongly.",
+      "description": "One row of the evaluation curve FR-174 requires (FR-124 persists it).\n\nBoth partitions on one row rather than two series, because the pair is the point: a\nmetric still improving on train while flat on holdout is the shape early stopping\nexists to catch, and two separately-stored series can be joined wrongly.",
       "properties": {
         "holdout": {
           "anyOf": [
@@ -446,7 +446,7 @@
     },
     "GlmDiagnostics": {
       "additionalProperties": false,
-      "description": "GLM-specific evidence (FR-MODEL-51).",
+      "description": "GLM-specific evidence (FR-172).",
       "properties": {
         "aic": {
           "anyOf": [
@@ -548,7 +548,7 @@
     },
     "LiftBin": {
       "additionalProperties": false,
-      "description": "One predicted-decile bin of a lift/gains curve (FR-MODEL-50).",
+      "description": "One predicted-decile bin of a lift/gains curve (FR-171).",
       "properties": {
         "actual": {
           "title": "Actual",
@@ -562,7 +562,7 @@
         "exposure_years": {
           "anyOf": [
             {
-              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
               "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
               "type": "string"
             },
@@ -594,7 +594,7 @@
     },
     "MonotonicityCheck": {
       "additionalProperties": false,
-      "description": "Whether the **fitted** response respects a declared constraint (FR-MODEL-52).\n\nVerified rather than assumed. A constraint is a parameter passed to a library, and the\nthing that makes it true of this model is that someone swept the factor and looked —\nwhich is also what `TransparencyArtifact.monotonicity_verified` reports upward (R3).",
+      "description": "Whether the **fitted** response respects a declared constraint (FR-174).\n\nVerified rather than assumed. A constraint is a parameter passed to a library, and the\nthing that makes it true of this model is that someone swept the factor and looked —\nwhich is also what `TransparencyArtifact.monotonicity_verified` reports upward (R3).",
       "properties": {
         "declared": {
           "title": "Declared",
@@ -625,7 +625,7 @@
     },
     "PartialDependence": {
       "additionalProperties": false,
-      "description": "The fitted response to one factor, averaged over the book (FR-MODEL-52).\n\n`exposure_share` rides with every point because a partial dependence curve is most\ndramatic exactly where the book is thinnest, and a plot without it invites reading a\nspike over 0.2 % of exposure as a rating signal.",
+      "description": "The fitted response to one factor, averaged over the book (FR-174).\n\n`exposure_share` rides with every point because a partial dependence curve is most\ndramatic exactly where the book is thinnest, and a plot without it invites reading a\nspike over 0.2 % of exposure as a rating signal.",
       "properties": {
         "factor": {
           "title": "Factor",
@@ -659,7 +659,7 @@
     },
     "PartialDependenceOmission": {
       "additionalProperties": false,
-      "description": "What a curve leaves out, and why (FR-MODEL-118).\n\nPresent **only** when the curve is incomplete. A complete curve carries `None`, so\n\"omitted nothing\" and \"omitted something not worth recording\" cannot be confused — the\nsecond is the state this model exists to make impossible.\n\n`levels` and `exposure_share` are optional because one arm cannot count them:\n`no_source_column` omits the whole curve for a factor that has no column to sweep, so\nthere is no level count to report and `0` would be a false statement rather than a\nmissing one.",
+      "description": "What a curve leaves out, and why (FR-175).\n\nPresent **only** when the curve is incomplete. A complete curve carries `None`, so\n\"omitted nothing\" and \"omitted something not worth recording\" cannot be confused — the\nsecond is the state this model exists to make impossible.\n\n`levels` and `exposure_share` are optional because one arm cannot count them:\n`no_source_column` omits the whole curve for a factor that has no column to sweep, so\nthere is no level count to report and `0` would be a false statement rather than a\nmissing one.",
       "properties": {
         "exposure_share": {
           "anyOf": [
@@ -699,7 +699,7 @@
       "type": "object"
     },
     "PartialDependenceOmissionReason": {
-      "description": "Why a partial-dependence curve does not cover its factor (FR-MODEL-118).",
+      "description": "Why a partial-dependence curve does not cover its factor (FR-175).",
       "enum": [
         "level_cap",
         "no_source_column"
@@ -735,7 +735,7 @@
     },
     "PartitionDiagnostics": {
       "additionalProperties": false,
-      "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nAt fit time one of these describes train and another describes holdout, and neither is\nmeaningful without the other — which is why a *fit* only ever holds them together\n(`UniversalDiagnostics`).\n\nA backtest holds exactly one (`backtests.BacktestSummary`, FR-MODEL-57), and that is not\nthe same defect: its population was never split, so there is no counterpart to withhold,\nand what it is read against is the model's own fit-time holdout on a different artifact.",
+      "description": "Every universal metric, for one partition (FR-171).\n\nAt fit time one of these describes train and another describes holdout, and neither is\nmeaningful without the other — which is why a *fit* only ever holds them together\n(`UniversalDiagnostics`).\n\nA backtest holds exactly one (`backtests.BacktestSummary`, FR-187), and that is not\nthe same defect: its population was never split, so there is no counterpart to withhold,\nand what it is read against is the model's own fit-time holdout on a different artifact.",
       "properties": {
         "ae_by_factor": {
           "default": [],
@@ -806,7 +806,7 @@
     },
     "PermutationImportance": {
       "additionalProperties": false,
-      "description": "How much the holdout metric degrades when one feature is shuffled (FR-MODEL-52).\n\nOn the **holdout**, and stated as a degradation rather than a score, because that is\nthe question an actuary is asking: what would this model lose if this variable were\nnoise. Split importance answers a different question — how the trees were built — and\na feature can be split on constantly while carrying no predictive weight.",
+      "description": "How much the holdout metric degrades when one feature is shuffled (FR-174).\n\nOn the **holdout**, and stated as a degradation rather than a score, because that is\nthe question an actuary is asking: what would this model lose if this variable were\nnoise. Split importance answers a different question — how the trees were built — and\na feature can be split on constantly while carrying no predictive weight.",
       "properties": {
         "baseline": {
           "title": "Baseline",
@@ -847,7 +847,7 @@
     },
     "QuantileCrossing": {
       "additionalProperties": false,
-      "description": "Whether this bound contradicts its counterpart, over the fit population (FR-MODEL-78).\n\nOn the **second** bound's diagnostics. The first has no counterpart to cross when it is\nfitted, and FR-MODEL-49 computes diagnostics once at fit time and reads them thereafter\n— so the moment both boosters exist is the moment the second one is fitted, and there is\nno later pass in which to fill this in.\n\n`counterpart_model_id` names the model it was compared against, so a reader is not left\ninferring it from the alpha.\n\n**Crossing is reported, never repaired.** A pair whose lower bound exceeds its upper at\nsome rows does not describe one distribution, and reordering the two would produce an\ninterval that looks well formed and means nothing (OQ-MODEL-2).\n\n`None` on every model that is not the second bound of a pair.",
+      "description": "Whether this bound contradicts its counterpart, over the fit population (FR-199).\n\nOn the **second** bound's diagnostics. The first has no counterpart to cross when it is\nfitted, and FR-170 computes diagnostics once at fit time and reads them thereafter\n— so the moment both boosters exist is the moment the second one is fitted, and there is\nno later pass in which to fill this in.\n\n`counterpart_model_id` names the model it was compared against, so a reader is not left\ninferring it from the alpha.\n\n**Crossing is reported, never repaired.** A pair whose lower bound exceeds its upper at\nsome rows does not describe one distribution, and reordering the two would produce an\ninterval that looks well formed and means nothing (OQ-574).\n\n`None` on every model that is not the second bound of a pair.",
       "properties": {
         "counterpart_model_id": {
           "format": "uuid",
@@ -881,7 +881,7 @@
     },
     "ResidualSummary": {
       "additionalProperties": false,
-      "description": "Distribution summary of the working residuals (FR-MODEL-50).",
+      "description": "Distribution summary of the working residuals (FR-171).",
       "properties": {
         "maximum": {
           "title": "Maximum",
@@ -921,7 +921,7 @@
     },
     "TypeIIITest": {
       "additionalProperties": false,
-      "description": "A factor's type-III deviance test (FR-MODEL-51).\n\n`deviance_delta` is the increase in deviance when the factor is dropped, on `df`\ndegrees of freedom — a likelihood-ratio statistic, so the p-value means what a reader\nexpects it to mean.",
+      "description": "A factor's type-III deviance test (FR-172).\n\n`deviance_delta` is the increase in deviance when the factor is dropped, on `df`\ndegrees of freedom — a likelihood-ratio statistic, so the p-value means what a reader\nexpects it to mean.",
       "properties": {
         "deviance_delta": {
           "title": "Deviance Delta",
@@ -954,7 +954,7 @@
     },
     "UniversalDiagnostics": {
       "additionalProperties": false,
-      "description": "Train and holdout, side by side (FR-MODEL-54).\n\nBoth fields are required. The requirement says a diagnostic reported without its\nholdout counterpart *is a defect*, and the cheapest way to honour that is to make the\ndefective shape unrepresentable rather than to check for it later.",
+      "description": "Train and holdout, side by side (FR-183).\n\nBoth fields are required. The requirement says a diagnostic reported without its\nholdout counterpart *is a defect*, and the cheapest way to honour that is to make the\ndefective shape unrepresentable rather than to check for it later.",
       "properties": {
         "holdout": {
           "$ref": "#/$defs/PartitionDiagnostics"
@@ -971,7 +971,7 @@
       "type": "object"
     },
     "Weighting": {
-      "description": "How a metric was weighted (FR-MODEL-55).\n\n`EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where\nthe metric genuinely counts rows. The UI labels an unweighted metric on an\nexposure-weighted problem *as such* — which it can only do if the fit said which.",
+      "description": "How a metric was weighted (FR-184).\n\n`EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where\nthe metric genuinely counts rows. The UI labels an unweighted metric on an\nexposure-weighted problem *as such* — which it can only do if the fit said which.",
       "enum": [
         "exposure",
         "count",
@@ -982,7 +982,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49).\n\n`gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\".\n\n`cross_validation` is populated iff the fit's `GlmSpec.select_by == \"cv\"`\n(FR-MODEL-20, FR-MODEL-53, the regularisation-and-CV slice, 2026-08-21) and `None`\notherwise — a fixed-alpha GLM or a GBM was never cross-validated, and `None` is the\nhonest reading of that.\n\n**`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed\n`None`, and nothing could ever have populated it. FR-MODEL-49 makes these diagnostics\ncomputed once at fit time and read thereafter, while FR-MODEL-57's backtest runs against\na *later* Dataset Version — after this artifact is written, and again for every period\nafter that, which one field has no room for. It is its own artifact (`backtests.Backtest`,\n`02` §4.12), and FR-MODEL-57 carries the amendment. The same removal, for the same\nreason, that `PartitionDiagnostics.double_lift` got.",
+  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-170).\n\n`gbm` is populated from the GBM slice on (FR-174) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\".\n\n`cross_validation` is populated iff the fit's `GlmSpec.select_by == \"cv\"`\n(FR-112, FR-182, the regularisation-and-CV slice, 2026-08-21) and `None`\notherwise — a fixed-alpha GLM or a GBM was never cross-validated, and `None` is the\nhonest reading of that.\n\n**`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed\n`None`, and nothing could ever have populated it. FR-170 makes these diagnostics\ncomputed once at fit time and read thereafter, while FR-187's backtest runs against\na *later* Dataset Version — after this artifact is written, and again for every period\nafter that, which one field has no room for. It is its own artifact (`backtests.Backtest`,\n`02` §4.12), and FR-187 carries the amendment. The same removal, for the same\nreason, that `PartitionDiagnostics.double_lift` got.",
   "properties": {
     "complexity": {
       "$ref": "#/$defs/ComplexityDiagnostic"

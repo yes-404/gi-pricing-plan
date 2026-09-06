@@ -1,6 +1,6 @@
 """The collection routes of `api/models.py`: what they list, and what they refuse.
 
-Two defects the W5 audit found, both of which are only visible from the edge.
+Two defects the WK-661 audit found, both of which are only visible from the edge.
 
 **A filter the handler does not declare is dropped, not refused.** `02` §5.1 published
 `GET /api/v1/factors?dataset={slug}` while the code took `?dataset_id={uuid}`, and FastAPI
@@ -112,7 +112,7 @@ def _factor(api_client: TestClient, actuary: dict[str, str], dataset_id: str) ->
 # -- the silent filter ---------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_an_unrecognised_factor_filter_is_refused_rather_than_ignored(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -136,7 +136,7 @@ def test_an_unrecognised_factor_filter_is_refused_rather_than_ignored(
     assert any("dataset" in error["field"] for error in problem.get("errors", [])), problem
 
 
-@pytest.mark.req("FR-MODEL-2")
+@pytest.mark.req("FR-87")
 def test_the_declared_filter_still_narrows_the_factor_list(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -157,7 +157,7 @@ def test_the_declared_filter_still_narrows_the_factor_list(
     assert datasets == {dataset_a}, "the filter narrowed to exactly the dataset asked for"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 @pytest.mark.parametrize("collection", ["bandings", "groupings"])
 def test_the_sibling_list_routes_refuse_an_unrecognised_filter_too(
     api_client: TestClient, actuary: dict[str, str], collection: str
@@ -177,7 +177,7 @@ def test_the_sibling_list_routes_refuse_an_unrecognised_filter_too(
 # -- GET /models -------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_models_are_listable_and_the_page_declares_its_shape(
     api_client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -193,12 +193,12 @@ def test_models_are_listable_and_the_page_declares_its_shape(
     assert any(row["model_family_slug"] == family for row in body["items"])
     listed_row = next(row for row in body["items"] if row["model_family_slug"] == family)
     assert listed_row["status"] == "draft"
-    # FR-MODEL-67's flag is a per-row read of the dataset version and is not computed on
+    # FR-205's flag is a per-row read of the dataset version and is not computed on
     # the list path; `GET /models/{slug}` is where it is answered.
     assert listed_row["flags"] == []
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_the_model_list_filters_by_family_and_by_status(
     api_client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -224,7 +224,7 @@ def test_the_model_list_filters_by_family_and_by_status(
     assert neither["items"] == [], "both filters apply, not whichever was read last"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_the_model_list_pages_by_cursor_without_repeating_or_dropping_a_row(
     api_client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -251,7 +251,7 @@ def test_the_model_list_pages_by_cursor_without_repeating_or_dropping_a_row(
     assert seeded <= {UUID(model_id) for model_id in seen}
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_the_model_list_is_scoped_to_the_callers_workspace(
     api_client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -272,7 +272,7 @@ def test_the_model_list_is_scoped_to_the_callers_workspace(
     ).json()["items"] == []
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_an_unrecognised_model_filter_is_refused_rather_than_ignored(
     api_client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -288,7 +288,7 @@ def test_an_unrecognised_model_filter_is_refused_rather_than_ignored(
     assert refused.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_the_model_list_bounds_its_limit_and_types_its_cursor(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -308,18 +308,18 @@ def test_the_model_list_bounds_its_limit_and_types_its_cursor(
     assert bad_cursor.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_listing_models_requires_the_read_permission(api_client: TestClient) -> None:
     """**Negative.** Development identity carries no roles; the route is not open."""
     anonymous = api_client.get("/api/v1/models")
     assert anonymous.status_code in (401, 403), anonymous.text
 
 
-@pytest.mark.req("FR-DATA-56")
+@pytest.mark.req("FR-58")
 def test_a_privileged_caller_cannot_fit_on_a_non_validated_version(
     api_client, workspace_id, actuary, database, principal
 ) -> None:
-    """FR-DATA-56 over HTTP: a `model:fit` caller gets `DATASET_NOT_VALIDATED`, no override.
+    """FR-58 over HTTP: a `model:fit` caller gets `DATASET_NOT_VALIDATED`, no override.
 
     The service-level proof exists (`test_model_jobs.py`). This proves the route's own
     permission check and the gate fire together: the caller *holds* `model:fit` (the

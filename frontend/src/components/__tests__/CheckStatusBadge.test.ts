@@ -12,7 +12,7 @@ function badge(status: CheckStatus): HTMLElement {
 }
 
 describe("CheckStatusBadge", () => {
-  // FR-MODEL-43, as amended 2026-08-25: a view rendering a certificate must not style, label,
+  // FR-152, as amended 2026-08-25: a view rendering a certificate must not style, label,
   // group or order a `violated` check as a failure. This is the label half.
   it("labels violated as a finding, not a failure", () => {
     const text = (badge("violated").textContent ?? "").toLowerCase();

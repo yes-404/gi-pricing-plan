@@ -1,4 +1,4 @@
-"""Reference tables and their versions (`01` §4.7, FR-DATA-29..32).
+"""Reference tables and their versions (`01` §4.7, FR-69, FR-70, FR-71, FR-72).
 
 A Reference Table is an effective-dated lookup — postcode to rating area, vehicle code to
 group, ULR band to loading. Two properties make it safe to rate on, and both are visible in
@@ -6,7 +6,7 @@ the shapes here:
 
 * A **version** is immutable and independently approvable. Validation and rating pin an id;
   neither ever resolves "the latest", because "latest" evaluated at scoring time is a
-  different answer each month (FR-DATA-30).
+  different answer each month (FR-70).
 * A row's `[effective_from, effective_to)` interval is **half-open**, and non-overlapping
   per key. Overlap would give a lookup two answers, and which one a quote got would depend
   on row order — a rating difference nobody could reproduce.
@@ -51,7 +51,7 @@ class ReferenceTable(BaseModel):
 
 
 class ReferenceTableVersion(BaseModel):
-    """An immutable version of a table (FR-DATA-30)."""
+    """An immutable version of a table (FR-70)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -84,7 +84,7 @@ class ReferenceRow(BaseModel):
 
 
 class ReferenceLookup(BaseModel):
-    """What a point lookup answers (FR-DATA-31) — for debugging, never for rating."""
+    """What a point lookup answers (FR-71) — for debugging, never for rating."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

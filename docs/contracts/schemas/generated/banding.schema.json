@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AboveRangePolicy": {
-      "description": "What a value at or above the last boundary does (FR-MODEL-8).",
+      "description": "What a value at or above the last boundary does (FR-97).",
       "enum": [
         "error",
         "clamp_to_last",
@@ -11,7 +11,7 @@
       "type": "string"
     },
     "BandingMethod": {
-      "description": "How a Banding's boundaries were arrived at (`02` §2, FR-MODEL-9).\n\nRecorded on the artifact because the method *is* the judgement. Two bandings with\nidentical boundaries, one hand-drawn and one from exposure quantiles, are different\nclaims about the same numbers, and a reviewer needs to know which one they are reading.",
+      "description": "How a Banding's boundaries were arrived at (`02` §2, FR-98).\n\nRecorded on the artifact because the method *is* the judgement. Two bandings with\nidentical boundaries, one hand-drawn and one from exposure quantiles, are different\nclaims about the same numbers, and a reviewer needs to know which one they are reading.",
       "enum": [
         "manual",
         "equal_width",
@@ -25,7 +25,7 @@
     },
     "BandingMinimums": {
       "additionalProperties": false,
-      "description": "FR-MODEL-11's thresholds, stored **on the artifact** (`banding.schema.json`).\n\nOn the banding rather than passed to the check, because \"configurable\" means a reviewer\ncan see what was configured. Held at the call site instead, the choice persists nowhere\nand two fits of the same banding could apply different floors.\n\nAn empty band always fails regardless of these, which is why there is no setting for it.",
+      "description": "FR-100's thresholds, stored **on the artifact** (`banding.schema.json`).\n\nOn the banding rather than passed to the check, because \"configurable\" means a reviewer\ncan see what was configured. Held at the call site instead, the choice persists nowhere\nand two fits of the same banding could apply different floors.\n\nAn empty band always fails regardless of these, which is why there is no setting for it.",
       "properties": {
         "min_claims_per_band": {
           "default": 0,
@@ -35,7 +35,7 @@
         },
         "min_exposure_per_band": {
           "default": "0",
-          "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
           "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
           "title": "Min Exposure Per Band",
           "type": "string"
@@ -54,7 +54,7 @@
       "type": "object"
     },
     "BelowRangePolicy": {
-      "description": "What a value below the first boundary does (FR-MODEL-8).\n\nExplicit rather than defaulted: silently clamping a driver age of 3 into the 17-20 band\nis how a data defect becomes a price.",
+      "description": "What a value below the first boundary does (FR-97).\n\nExplicit rather than defaulted: silently clamping a driver age of 3 into the 17-20 band\nis how a data defect becomes a price.",
       "enum": [
         "error",
         "clamp_to_first",
@@ -65,7 +65,7 @@
     },
     "OneWayRow": {
       "additionalProperties": false,
-      "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-DATA-46).",
+      "description": "One level of a one-way summary (FR-61).\n\nMoney is integer minor units and exposure a decimal string (FR-10). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-64).",
       "properties": {
         "claim_amount_minor": {
           "default": 0,
@@ -80,7 +80,7 @@
           "type": "integer"
         },
         "exposure_years": {
-          "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
           "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
           "title": "Exposure Years",
           "type": "string"
@@ -179,7 +179,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "A continuous column mapped to ordered, exhaustive, non-overlapping bands (§4.2).\n\nThe invariants below are `02` §4.2's, at the type. They are not tidiness: a banding\nwith overlapping intervals assigns one row to two levels, and a label list one short\ndoes not drop the last band — it renames every band after the gap. Both produce a model\nthat fits, reads correctly, and is wrong.\n\n**Versioned, never edited** (FR-MODEL-12). A Model pins the Banding version it was\nfitted with, so re-cutting a boundary allocates a new version and leaves every existing\nmodel describing what it actually did.",
+  "description": "A continuous column mapped to ordered, exhaustive, non-overlapping bands (§4.2).\n\nThe invariants below are `02` §4.2's, at the type. They are not tidiness: a banding\nwith overlapping intervals assigns one row to two levels, and a label list one short\ndoes not drop the last band — it renames every band after the gap. Both produce a model\nthat fits, reads correctly, and is wrong.\n\n**Versioned, never edited** (FR-101). A Model pins the Banding version it was\nfitted with, so re-cutting a boundary allocates a new version and leaves every existing\nmodel describing what it actually did.",
   "properties": {
     "above_range": {
       "$ref": "#/$defs/AboveRangePolicy",

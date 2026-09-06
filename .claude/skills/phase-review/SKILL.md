@@ -19,14 +19,14 @@ happens after the mis-cut is a review of a decision already paid for.
 
 ## The agenda includes every register row that decayed to this review
 
-The agenda includes every `docs/audit/register.md` row that has decayed to this review —
+The agenda includes every `docs/findings/register.md` row that has decayed to this review —
 every unowned row naming no other event. **Each gets a disposition in the review's output:**
 an owner, an accepted deferral with a new named event, or a finding against the register.
-**Listing one without disposing of it is not a disposition.** (NT-0015 P2, Ruling 49 B.)
+**Listing one without disposing of it is not a disposition.** (RFC-896 P2, RL-909 B.)
 
 Generate the list; do not recall it — `python3 scripts/register-owed.py review` against a
-**committed** revision (it refuses a dirty register). The reason is measured: at the W11 close
-the hand-compiled owed list lost NFR-RATE-13/14 (F41), and running the generator over that
+**committed** revision (it refuses a dirty register). The reason is measured: at the WK-671 close
+the hand-compiled owed list lost NFR-502/501 (F41), and running the generator over that
 same close afterwards surfaced ten further attributed rows the record never mentions (F63).
 The output is **evidence, not authority** — where it and the record disagree, one or the other
 is amended, never silently (`CLAUDE.md` §0).
@@ -53,12 +53,12 @@ Distinct from unfinished work. Ask: *what would nobody notice was missing?*
 
 What this has actually found:
 
-- `pipelines/` marked 1a W4 while belonging to W7 — in the plan, wrong phase
+- `pipelines/` marked 1a WK-660 while belonging to WK-665 — in the plan, wrong phase
 - the blob endpoints, declared in a spec and owned by no row
 - **endpoints declared in neither the spec nor the contract** — invisible to
   `--endpoints`, which compares the two
-- **`docs/workflows/wf-01…05` evidenced by nothing.** No test cites a journey; the phase's
-  exit criterion is a slice of `wf-01` and the test covering it does not name it
+- **`docs/workflows/WF-698…05` evidenced by nothing.** No test cites a journey; the phase's
+  exit criterion is a slice of `WF-698` and the test covering it does not name it
 
 The pattern in all four: *a number exists, it is not measuring what its name suggests, and
 nobody had looked.*
@@ -78,13 +78,13 @@ Specs first — §14 makes the **specification** the main target, in both direct
 §5.1 endpoint tables, §5.2 signatures, §5.3 Contents columns, named catalogues, and the
 params a caller would copy off the page. Then the roadmap and open questions. `CLAUDE.md`
 §2 no longer carries component status marks — `docs/roadmap.md` §6 owns them outright since
-the 2026-08-23 restructure ([`NT-0003`](../../notes/0003-duplicated-status-goes-stale.md)),
+the 2026-08-23 restructure ([`RFC-756`](../../../docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)),
 so check them there and not in two places.
 
 Resolve, never soften (§0). Where the code is right, amend the spec with a dated note
 saying which side was wrong. Where the *spec* is right and the code does not meet it, the
-spec gains the obligation — an appended requirement, an owner, a verdict. **FR-DATA-41 and
-FR-DATA-42 are what that looks like**: a review that found the code short of the spec, and
+spec gains the obligation — an appended requirement, an owner, a verdict. **FR-40 and
+FR-43 are what that looks like**: a review that found the code short of the spec, and
 left the spec carrying the precise obligation rather than editing it down to what was
 built.
 
@@ -92,7 +92,7 @@ built.
 
 Split, merge, add, supersede. Two smells worth naming:
 
-- **A row nothing can be said to have closed.** W6b grew to span a Vue view, an OIDC flow
+- **A row nothing can be said to have closed.** WK-664 grew to span a Vue view, an OIDC flow
   and a database trigger. Scope that crosses that many kinds cannot be audited as one thing.
 - **A phase exit criterion the phase cannot meet.** Phase 1a's says the retrofit list is
   fully in place; one item on it is enforced by convention. Either the work lands or the
@@ -109,7 +109,7 @@ Split, merge, add, supersede. Two smells worth naming:
 
 ## When a review gets its own premise wrong
 
-It will. Review 1 proposed adding a `W6b` row that had existed since the 1a/1b split.
+It will. Review 1 proposed adding a `WK-664` row that had existed since the 1a/1b split.
 
 **Record the correction beside the proposal, not instead of it.** The substance usually
 survives — three items had no owner either way — but a review that quietly repairs itself
@@ -121,10 +121,10 @@ closed: check the id against `docs/roadmap.md` before acting on it, and say so p
 
 ## Output
 
-Proposals land in `docs/audit/plan-reviews.md` as a dated `### Plan review N` section, and
+Proposals land in `docs/closures/INDEX.md#plan-reviewsmd` as a dated `### Plan review N` section, and
 anything undecided goes to `docs/open-questions.md` with options and a recommendation.
 
-**Cite the phase's retry counters (NT-0014 artifact B).** The same field
+**Cite the phase's retry counters (RFC-895 artifact B).** The same field
 `close-workstream` cites at Work close (`.claude/skills/close-workstream/SKILL.md`,
 "Closure record template") applies here one layer up: read
 `python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py show` for
@@ -134,19 +134,19 @@ against, once one workstream's worth exists.
 
 ## Verified
 
-2026-08-31 — added the retry-counters citation to Output, NT-0014 adoption slice G
+2026-08-31 — added the retry-counters citation to Output, RFC-895 adoption slice G
 (impact-matrix row 17: "Same as row 16 at phase level"). Not yet exercised by a real
 review — no phase-level review has run since C2 existed to populate the counters.
 
 2026-08-29 — the Output location corrected. It named `docs/roadmap.md`, which was where
-reviews 1-6 originally landed; the roadmap slim (NT-0009, accepted 2026-08-27) moved all six
-to `docs/audit/plan-reviews.md` and nothing updated this skill to match, so a reader following
+reviews 1-6 originally landed; the roadmap slim (RFC-813, accepted 2026-08-27) moved all six
+to `docs/closures/INDEX.md#plan-reviewsmd` and nothing updated this skill to match, so a reader following
 it two days later would have filed the next review in the wrong file. Caught while filing
 plan reviews 7 and 8, which is the proof the correction is right: they land where this now
 says. No other section was stale.
 
 2026-08-23 — question 4 amended when `CLAUDE.md` was cut to its binding rules: §2's
-component status marks no longer exist to check, and the FR-DATA-41/42 exemplar moved here
+component status marks no longer exist to check, and the FR-40/43 exemplar moved here
 from §14. The five questions and their order are unchanged.
 
 2026-08-15 — written after review 2, from what reviews 1 and 2 actually did. Review 1

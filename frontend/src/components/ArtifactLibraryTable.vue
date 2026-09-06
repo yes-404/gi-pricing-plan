@@ -1,14 +1,14 @@
 <script setup lang="ts">
 /**
  * The list surface `02` §5.3 gives the objective, metric and peril-structure libraries — built
- * once and mounted three times (FR-MODEL-127).
+ * once and mounted three times (FR-167).
  *
  * It takes rows, not artifacts: the callers own the mapping from their own shape onto this
  * one, so this component never grows a branch on which library it is rendering.
  *
  * **Rendering is driven by `columns`, never by whether a row's value is present.** A Peril
- * Structure has no `applicability` — that is FR-MODEL-44's objective/metric concept — and
- * FR-MODEL-127 forbids it a usage count outright. Rendering those as blank cells would be
+ * Structure has no `applicability` — that is FR-153's objective/metric concept — and
+ * FR-167 forbids it a usage count outright. Rendering those as blank cells would be
  * worse than wrong: **a blank cell is indistinguishable from a zero, a null and a failed
  * fetch**, so an empty usage cell asserts that a count exists and happens to be unknown, which
  * is the opposite of what the requirement says. The column is *absent*, and the test asserts
@@ -26,9 +26,9 @@ export interface ArtifactRow {
   slug: string;
   version: number;
   status: ObjectiveStatus | MetricStatus | PerilStructureStatus;
-  /** Objectives and metrics only — FR-MODEL-44's concept, which a Peril Structure lacks. */
+  /** Objectives and metrics only — FR-153's concept, which a Peril Structure lacks. */
   applicability?: string[];
-  /** Objectives and metrics only — FR-MODEL-127 forbids a Peril Structure one. */
+  /** Objectives and metrics only — FR-167 forbids a Peril Structure one. */
   usageCount?: number;
   href?: string;
 }

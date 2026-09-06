@@ -42,7 +42,7 @@ if (-not (Test-Path $PlanRoot)) {
 }
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($ActiveFile, $PlanId, $utf8NoBom)
+[System.IO.File]: :WriteAllText($ActiveFile, $PlanId, $utf8NoBom)
 
 Write-Output "Active plan set to: $PlanId"
 Write-Output "Path: $PlanDir"

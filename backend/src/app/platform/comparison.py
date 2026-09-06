@@ -1,4 +1,4 @@
-"""Requesting, recording and reading a model comparison (`02` FR-MODEL-56, §5.1).
+"""Requesting, recording and reading a model comparison (`02` FR-186, §5.1).
 
 `pricing-core` owns the maths; this owns the rules that make a comparison mean something,
 and there is really only one: **the models must be comparable, and that is decided before a
@@ -8,7 +8,7 @@ Job is queued.**
 worker discovers the models cite two different splits and the caller learns it from a failed
 job twenty seconds later — a worse answer to the same question. And the check runs *again*
 inside `pricing-core`, because a Job sits in a queue while the world moves, and because
-`compare_models` is reachable from a notebook where this module is not (ADR-0001).
+`compare_models` is reachable from a notebook where this module is not (ADR-703).
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ async def request_comparison(
             "MODELS_NOT_COMPARABLE",
             "A comparison needs two or more models",
             422,
-            f"{len(model_ids)} model(s) were given. FR-MODEL-56 compares two or more; one "
+            f"{len(model_ids)} model(s) were given. FR-186 compares two or more; one "
             "model measured against nothing is a diagnostics read, and calling it a "
             "comparison would let an approval cite it as evidence a candidate was weighed.",
         )
@@ -128,7 +128,7 @@ async def request_comparison(
 
 
 def _refuse_unshared_splits(rows: list[ModelRow]) -> None:
-    """FR-MODEL-56's "same holdout", made checkable by `01` FR-DATA-36.
+    """FR-186's "same holdout", made checkable by `01` FR-76.
 
     The split is recorded on the parent version precisely so that "trained on the same
     split" is *one artifact two models cite* rather than two derivations believed to match.
@@ -146,7 +146,7 @@ def _refuse_unshared_splits(rows: list[ModelRow]) -> None:
                 "A model cites no split",
                 409,
                 f"{label} declares no `split_ref`, so it has no named holdout to be "
-                "compared on (`01` FR-DATA-36).",
+                "compared on (`01` FR-76).",
             )
         seen.setdefault(
             (str(ref["split_artifact_id"]), str(ref.get("holdout_part", "test"))), []
@@ -161,7 +161,7 @@ def _refuse_unshared_splits(rows: list[ModelRow]) -> None:
             "MODELS_NOT_COMPARABLE",
             "The models were not fitted on the same holdout",
             409,
-            f"{detail}. FR-MODEL-56 compares models fitted on the same holdout; on "
+            f"{detail}. FR-186 compares models fitted on the same holdout; on "
             "different splits the metrics are computed over different rows and the "
             "difference reads as performance.",
         )

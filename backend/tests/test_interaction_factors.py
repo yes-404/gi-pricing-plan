@@ -1,4 +1,4 @@
-"""An interaction Factor through the platform (`02` FR-MODEL-91, FR-MODEL-5).
+"""An interaction Factor through the platform (`02` FR-92, FR-90).
 
 `packages/pricing-core/tests/test_interactions.py` owns the crossing itself. This owns the
 one thing only the platform can be wrong about: **a Model Spec pins an interaction by id
@@ -8,7 +8,7 @@ arriving from the wrong layer, about something the caller had no way to provide.
 
 `ModelSpec.factors` stays flat, which is what makes a spec readable; the platform resolves
 the tree. And because it does, the refusals already written against the pinned factors —
-prohibited (FR-MODEL-5) and foreign-dataset (FR-MODEL-2) — reach the operands for free,
+prohibited (FR-90) and foreign-dataset (FR-87) — reach the operands for free,
 which is the second thing tested here.
 """
 
@@ -93,7 +93,7 @@ async def _interaction_factor(
         return row.id
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 async def test_load_factors_brings_the_operands_a_spec_never_names(
     database, blob_store, workspace_id
 ) -> None:
@@ -118,7 +118,7 @@ async def test_load_factors_brings_the_operands_a_spec_never_names(
     assert loaded[0].type is FactorType.INTERACTION
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 async def test_an_operand_is_loaded_once_even_when_two_interactions_share_it(
     database, blob_store, workspace_id
 ) -> None:
@@ -144,7 +144,7 @@ async def test_an_operand_is_loaded_once_even_when_two_interactions_share_it(
     assert sorted(ids[2:]) == sorted([area, vehicle]), "an operand loaded twice is a bug"
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 async def test_an_operand_that_does_not_exist_is_a_404_naming_it(
     database, blob_store, workspace_id
 ) -> None:
@@ -166,11 +166,11 @@ async def test_an_operand_that_does_not_exist_is_a_404_naming_it(
     assert "operand" in (refused.value.title or "").lower()
 
 
-@pytest.mark.req("FR-MODEL-5")
+@pytest.mark.req("FR-90")
 async def test_a_prohibited_operand_is_refused_before_a_job_exists(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-5 reaching through the cross, at the layer that can refuse the *attempt*.
+    """FR-90 reaching through the cross, at the layer that can refuse the *attempt*.
 
     A prohibited factor that cannot enter a spec directly, but can enter one crossed with
     something else, is not prohibited. The check was already written against the spec's own
@@ -201,11 +201,11 @@ async def test_a_prohibited_operand_is_refused_before_a_job_exists(
     assert "banned" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 async def test_a_fit_on_an_interaction_runs_end_to_end(
     database, blob_store, workspace_id
 ) -> None:
-    """`wf-01` D7's shape: a spec naming only the cross, fitted through the real Job.
+    """`WF-698` D7's shape: a spec naming only the cross, fitted through the real Job.
 
     The seeded book's `area` and `vehicle_group` are both categorical, so the cross is a
     genuine table of cells — which is what makes the fitted model rateable and the whole

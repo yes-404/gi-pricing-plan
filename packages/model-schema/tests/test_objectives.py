@@ -88,7 +88,7 @@ def _objective(
     )
 
 
-@pytest.mark.req("FR-MODEL-38")
+@pytest.mark.req("FR-142")
 def test_a_template_objective_is_the_artifact_a_model_can_reference() -> None:
     objective = _objective()
     assert objective.kind is ObjectiveKind.TEMPLATE
@@ -96,7 +96,7 @@ def test_a_template_objective_is_the_artifact_a_model_can_reference() -> None:
     assert objective.hessian_strategy is HessianStrategy.CLIP_TO_MIN
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-150")
 def test_an_expression_objective_cannot_be_constructed_in_phase_1() -> None:
     """The second door behind the API's `OBJECTIVE_KIND_NOT_ENABLED`.
 
@@ -107,14 +107,14 @@ def test_an_expression_objective_cannot_be_constructed_in_phase_1() -> None:
         _objective(kind=ObjectiveKind.EXPRESSION)
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_every_shipped_template_has_a_parameter_row_and_an_applicability_block() -> None:
     """§4.5's table, checked against the enum rather than trusted to match it."""
     assert set(TEMPLATE_PARAMETERS) == set(ObjectiveTemplate)
     assert set(TEMPLATE_APPLICABILITY) == set(ObjectiveTemplate)
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 @pytest.mark.parametrize("template", list(ObjectiveTemplate))
 def test_every_template_builds_from_its_own_defaults_where_it_has_them(
     template: ObjectiveTemplate,
@@ -131,19 +131,19 @@ def test_every_template_builds_from_its_own_defaults_where_it_has_them(
     assert objective.template is template
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_a_parameter_the_template_does_not_take_is_refused_by_name() -> None:
     with pytest.raises(pydantic.ValidationError, match="does not take w_overs"):
         _objective(ObjectiveTemplate.ASYMMETRIC_SQUARED, {"w_overs": 2.0})
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_a_required_parameter_with_no_default_cannot_be_omitted() -> None:
     with pytest.raises(pydantic.ValidationError, match="requires 'delta'"):
         _objective(ObjectiveTemplate.HUBER, {})
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_a_parameter_outside_its_declared_range_is_refused() -> None:
     """`tweedie.p ∈ (1, 2)` **exclusive** — §4.5 says so, and `p = 2` is Gamma."""
     with pytest.raises(pydantic.ValidationError, match=r"less than 2\.0"):
@@ -152,7 +152,7 @@ def test_a_parameter_outside_its_declared_range_is_refused() -> None:
         _objective(ObjectiveTemplate.TWEEDIE, {"p": 1.0})
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_a_money_parameter_given_as_a_float_is_refused() -> None:
     """`CLAUDE.md` §7. A cap in pounds beside amounts in pence is wrong by a hundred."""
     with pytest.raises(pydantic.ValidationError, match="integer minor units"):
@@ -160,7 +160,7 @@ def test_a_money_parameter_given_as_a_float_is_refused() -> None:
     assert _objective(ObjectiveTemplate.CAPPED_GAMMA, {"cap": 2_500_000}).params["cap"] == 2_500_000
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 def test_an_author_may_narrow_applicability() -> None:
     template = TEMPLATE_APPLICABILITY[ObjectiveTemplate.HUBER]
     narrowed = Applicability(
@@ -176,7 +176,7 @@ def test_an_author_may_narrow_applicability() -> None:
     assert objective.applicability.responses == frozenset({ResponseKind.BURNING_COST})
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 def test_an_author_may_not_widen_applicability_beyond_the_template() -> None:
     """Gamma's loss is `y/μ + f`. On a count response that is `inf` most rows."""
     wider = Applicability(
@@ -191,14 +191,14 @@ def test_an_author_may_not_widen_applicability_beyond_the_template() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 def test_relaxing_an_exclusive_bound_to_an_inclusive_one_is_a_widening() -> None:
     """`y ≥ 0` admits the one value `y > 0` excludes, and it is the value Gamma diverges at."""
     assert not YDomain(min_inclusive=0.0).is_within(YDomain(min_exclusive=0.0))
     assert YDomain(min_exclusive=0.0).is_within(YDomain(min_inclusive=0.0))
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 def test_an_applicability_naming_nothing_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="names no responses"):
         Applicability(responses=frozenset(), backends=frozenset({ObjectiveBackend.XGBOOST}))
@@ -206,7 +206,7 @@ def test_an_applicability_naming_nothing_is_refused() -> None:
         Applicability(responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=frozenset())
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 def test_a_status_past_draft_without_a_certificate_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="with no certificate"):
         _objective(status=ObjectiveStatus.CERTIFIED)
@@ -215,20 +215,20 @@ def test_a_status_past_draft_without_a_certificate_is_refused() -> None:
     ).status is ObjectiveStatus.CERTIFIED
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 def test_an_objective_deprecated_from_draft_needs_no_certificate() -> None:
     """`draft → deprecated` is an edge: an objective abandoned before certification."""
     assert _objective(status=ObjectiveStatus.DEPRECATED).certificate_id is None
 
 
-@pytest.mark.req("FR-MODEL-46")
+@pytest.mark.req("FR-163")
 def test_the_lifecycle_has_no_edge_that_skips_certification_or_review() -> None:
     assert ObjectiveStatus.APPROVED not in VALID_OBJECTIVE_TRANSITIONS[ObjectiveStatus.DRAFT]
     assert ObjectiveStatus.APPROVED not in VALID_OBJECTIVE_TRANSITIONS[ObjectiveStatus.CERTIFIED]
     assert VALID_OBJECTIVE_TRANSITIONS[ObjectiveStatus.DEPRECATED] == frozenset()
 
 
-@pytest.mark.req("FR-MODEL-46")
+@pytest.mark.req("FR-163")
 def test_a_review_decision_returns_an_objective_to_certified_not_to_draft() -> None:
     """A review does not withdraw a certificate, so it cannot return one to `draft`.
 
@@ -239,7 +239,7 @@ def test_a_review_decision_returns_an_objective_to_certified_not_to_draft() -> N
     assert ObjectiveStatus.DRAFT not in back
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 def test_a_certificate_verdict_its_checks_contradict_is_refused() -> None:
     checks = (
         CertificateCheck(name="analytic_vs_numeric_gradient", status=CheckStatus.PASS,
@@ -256,9 +256,9 @@ def test_a_certificate_verdict_its_checks_contradict_is_refused() -> None:
     ).overall is CertificateOutcome.FAILED
 
 
-@pytest.mark.req("FR-MODEL-43")
+@pytest.mark.req("FR-152")
 def test_a_violated_convexity_check_is_a_finding_and_not_a_failure() -> None:
-    """FR-MODEL-43: a non-convex loss is legitimate, flagged, and carried to an approver."""
+    """FR-152: a non-convex loss is legitimate, flagged, and carried to an approver."""
     checks = (
         CertificateCheck(name="convexity", status=CheckStatus.VIOLATED,
                          detail="hessian < 0 wherever exp(f) < y/2"),
@@ -266,14 +266,14 @@ def test_a_violated_convexity_check_is_a_finding_and_not_a_failure() -> None:
     assert CertificateResult.outcome_of(checks) is CertificateOutcome.CERTIFIED_WITH_FINDINGS
 
 
-@pytest.mark.req("FR-MODEL-69")
+@pytest.mark.req("FR-148")
 def test_a_check_must_say_what_it_found() -> None:
-    """FR-MODEL-69 makes a discontinuity a reported finding; an empty detail reports none."""
+    """FR-148 makes a discontinuity a reported finding; an empty detail reports none."""
     with pytest.raises(pydantic.ValidationError):
         CertificateCheck(name="branch_discontinuity", status=CheckStatus.WARN, detail="")
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 def test_a_certificate_over_a_coarse_grid_is_refused() -> None:
     """The published contract's floor of 1 000 points, at the type (2026-08-18).
 
@@ -288,7 +288,7 @@ def test_a_certificate_over_a_coarse_grid_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 def test_a_certificate_over_an_empty_grid_is_refused() -> None:
     """Every check passes over no points, and the certificate would say `certified`."""
     with pytest.raises(pydantic.ValidationError, match="samples nothing"):
@@ -298,14 +298,14 @@ def test_a_certificate_over_an_empty_grid_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 def test_the_persisted_certificate_pins_the_objective_version_it_certified() -> None:
     certificate = _certificate(_battery())
     assert certificate.objective_version == 3
     assert certificate.result.overall is CertificateOutcome.CERTIFIED
 
 
-@pytest.mark.req("FR-MODEL-126")
+@pytest.mark.req("FR-158")
 def test_the_full_nine_check_battery_is_accepted() -> None:
     """The positive control for the two refusals below — nine names, each once."""
     certificate = _certificate(_battery())
@@ -315,9 +315,9 @@ def test_the_full_nine_check_battery_is_accepted() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-126")
+@pytest.mark.req("FR-158")
 def test_an_objective_certificate_short_of_its_battery_is_refused() -> None:
-    """FR-MODEL-126: a short battery is a failure of the run, not a smaller certificate.
+    """FR-158: a short battery is a failure of the run, not a smaller certificate.
 
     Before 2026-08-24 this passed. `CertificateResult` carried `min_length=1` and nothing
     above it counted, so a certificate of one check was a well-formed artifact an approver
@@ -327,11 +327,11 @@ def test_an_objective_certificate_short_of_its_battery_is_refused() -> None:
         _certificate(_battery(("finiteness",)))
 
 
-@pytest.mark.req("FR-MODEL-126")
+@pytest.mark.req("FR-158")
 def test_nine_checks_with_one_name_wrong_is_refused() -> None:
     """The count is right and the evidence is not — which is why the *names* are asserted.
 
-    `branch_discontinuity` is dropped and `finiteness` run twice: nine rows, and FR-MODEL-69's
+    `branch_discontinuity` is dropped and `finiteness` run twice: nine rows, and FR-148's
     discontinuity scan never ran.
     """
     names = tuple(
@@ -345,7 +345,7 @@ def test_nine_checks_with_one_name_wrong_is_refused() -> None:
     assert "duplicated ['finiteness']" in str(raised.value)
 
 
-@pytest.mark.req("FR-MODEL-126")
+@pytest.mark.req("FR-158")
 def test_a_check_name_outside_the_battery_is_refused() -> None:
     """A misspelling is not a tenth check; nine names is a closed set."""
     names = (*OBJECTIVE_CERTIFICATE_CHECKS[:8], "smoke_fitt")

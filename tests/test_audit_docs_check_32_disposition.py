@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item
+"""`docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item
 1's check-32 disposition — the padding clause adopts row (e)'s conjuncts 2 and 3 from
 shared `_docid` code: a padded id sitting inside a filesystem path (conjunct 2) or whose
 unpadded form does not resolve in `docs/INDEX.md` (conjunct 3) is not a padding violation.
@@ -95,7 +95,7 @@ def test_check_32_exact_width_padded_id_reds_alongside_row_e() -> None:
         problems = audit.citation_problems_in_file(doc, index_ids=INDEX_IDS)
     assert problems == [
         "1: padded id `PL-00066` outside a link target — citations write the integer, "
-        "never padding (NT-0019 §1.1 rule 2)"
+        "never padding (RFC-937 §1.1 rule 2)"
     ], problems
 
 
@@ -114,7 +114,7 @@ def test_check_32_path_shaped_padded_id_reds_neither() -> None:
 def test_check_32_short_padded_id_reds_check_32_alone_and_is_listed() -> None:
     """Broken-input proof: a `PL-066` reds check 32 alone — row (e)'s exact-width conjunct
     1 does not match a 3-digit padded form — and is listed under its own text: a real
-    NT-0019 §1.1 rule 2 violation, never folded into (e)'s count.
+    RFC-937 §1.1 rule 2 violation, never folded into (e)'s count.
     """
     audit = _load_audit()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -124,5 +124,5 @@ def test_check_32_short_padded_id_reds_check_32_alone_and_is_listed() -> None:
     assert problems == [
         "1: short-padded id `PL-066` outside a link target — fewer leading zeros than "
         "`_docid.PAD_WIDTH`, still a rule-2 violation row (e)'s exact-width conjunct does "
-        "not see (NT-0019 §1.1 rule 2)"
+        "not see (RFC-937 §1.1 rule 2)"
     ], problems

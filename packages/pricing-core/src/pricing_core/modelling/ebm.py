@@ -1,10 +1,10 @@
-"""The EBM arm of fitting (FR-MODEL-37). `interpret` is imported at call-site scope: the
+"""The EBM arm of fitting (FR-140). `interpret` is imported at call-site scope: the
 scoring path (`predict.py`) must never grow an import of the fitting stack (`07`
-NFR-PLAT-11, `test_scoring_without_the_fitting_stack.py`).
+NFR-535, `test_scoring_without_the_fitting_stack.py`).
 
 An EBM's artifact **is** the model: the additive lookups this module exports verbatim
 from the estimator are enough to rescore the model by a process that never ran `interpret`
-(ADR-0003 — there is no booster blob, no serialised estimator, and therefore no
+(ADR-705 — there is no booster blob, no serialised estimator, and therefore no
 `GlmFit`/`GbmFit`-style wrapper to carry bytes beside the result).
 """
 
@@ -38,7 +38,7 @@ __all__ = ["EbmFitError", "fit_ebm"]
 
 
 class EbmFitError(RuntimeError):
-    """A fit that cannot be returned as a result (FR-MODEL-37).
+    """A fit that cannot be returned as a result (FR-140).
 
     `code` is the platform error code the API surfaces. Named rather than a bare
     `ValueError` for the reason `GlmFitError` gives: the caller has to distinguish
@@ -87,7 +87,7 @@ def _ordinal_levels(
         raise FactorResolutionError(
             f"factor {factor.slug!r} is a banding and its banding ({factor.banding_id}) "
             "was not supplied. The EBM arm resolves the same shapes `resolve_factors` "
-            "does (ADR-0001); refusing here keeps that promise loud."
+            "does (ADR-703); refusing here keeps that promise loud."
         )
     return bandings[factor.banding_id].levels
 
@@ -105,13 +105,13 @@ def fit_ebm(
 
     `factors`, `bandings` and `groupings` are passed explicitly rather than read from the
     spec's ids: `pricing-core` resolves shapes, not references — looking one up would need
-    a database, which ADR-0001 forbids this package.
+    a database, which ADR-703 forbids this package.
 
     The estimator is seeded with `random_state=spec.seed` — the spec's seed is what
-    `spec_hash` pins, so the spec alone must reproduce the fit (Task 0.5, NFR-MODEL-6).
+    `spec_hash` pins, so the spec alone must reproduce the fit (Task 0.5, NFR-481).
     There is no `seed` argument: it mirrored `fit_glm`'s vestigial kwarg for call-site
     symmetry, neither was read by anything, and both were removed 2026-08-22
-    (OQ-MODEL-29, FR-MODEL-123).
+    (OQ-599, FR-179).
     """
     report = progress or NullProgress()
     report.check_cancelled()
@@ -126,7 +126,7 @@ def fit_ebm(
     # string the brief's spike recipe used is refused by `_clean_x` ("categorical type
     # invalid"). The two real values for a string column are `"nominal"` (no order) and
     # an ordered levels list (ordinal); a banding is ordinal by construction, and the
-    # monotone constraint of FR-MODEL-28 can reach it only as the levels list
+    # monotone constraint of FR-122 can reach it only as the levels list
     # (`_ordinal_levels`).
     columns: list[np.ndarray] = []
     feature_types: list[str | tuple[str, ...]] = []
@@ -154,7 +154,7 @@ def fit_ebm(
 
     # Monotone constraints pre-checked before the estimator exists, because the failure
     # mode of a constraint is that *nothing happens* — and nothing happening is
-    # indistinguishable from a constraint that was satisfied (FR-MODEL-28). A banding is
+    # indistinguishable from a constraint that was satisfied (FR-122). A banding is
     # **ordinal** — the same "a banding is ordinal" rule `gbm._encode` documents — so its
     # levels have an order the constraint can reach, and it is allowed.
     #
@@ -170,7 +170,7 @@ def fit_ebm(
                 f"monotone constraint names {slug!r}, which is not among the fitted "
                 "factors. 0.7.8 consumes the constraint list positionally, so a name it "
                 "has never heard of would be silently dropped — and a constraint that "
-                "does nothing is indistinguishable from one that held (FR-MODEL-28).",
+                "does nothing is indistinguishable from one that held (FR-122).",
                 terms=[slug],
             )
         factor = next(f for f in factors if f.slug == slug)
@@ -179,7 +179,7 @@ def fit_ebm(
                 "EBM_MONOTONE_CONSTRAINT_INCOMPLETE",
                 f"a monotone constraint cannot reach a continuous feature: {slug!r} is "
                 "categorical and has no order for a constraint to hold against — 0.7.8 "
-                "silently zeroes its term rather than refuse (FR-MODEL-28).",
+                "silently zeroes its term rather than refuse (FR-122).",
                 terms=[slug],
             )
     # The full positional list, not the spec's partial dict: every feature needs an
@@ -205,7 +205,7 @@ def fit_ebm(
     y = data[spec.response_column].cast(pl.Float64).to_numpy()
     x = np.column_stack(columns)
 
-    # The fitting stack is a call-site import: `07` NFR-PLAT-11 keeps the scoring path
+    # The fitting stack is a call-site import: `07` NFR-535 keeps the scoring path
     # free of it, and this module's import must be the only one anywhere in the package.
     from interpret.glassbox import ExplainableBoostingRegressor
 
@@ -223,7 +223,7 @@ def fit_ebm(
     except ValueError as exc:
         # The backstop for any library-side refusal the pre-checks did not cover: the
         # pre-checks are the named path, this is a translation so a library `ValueError`
-        # never surfaces as a stack trace (the FR-MODEL-23 lesson).
+        # never surfaces as a stack trace (the FR-115 lesson).
         raise EbmFitError(
             "EBM_MONOTONE_CONSTRAINT_INCOMPLETE",
             f"interpret refused the EBM fit: {exc}",
@@ -265,7 +265,7 @@ def fit_ebm(
     report.update(1.0, "ebm complete")
     # Returned **directly**, with no `GlmFit`/`GbmFit`-style wrapper: those wrappers exist
     # to carry bytes beside the artifact, and this artifact has no bytes — the tables are
-    # the whole model (Task 0.6, ADR-0003).
+    # the whole model (Task 0.6, ADR-705).
     return EbmFitResult(
         objective=spec.objective,
         link="identity",

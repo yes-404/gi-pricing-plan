@@ -1,7 +1,7 @@
 [project]
 name = "model-schema"
 version = "0.1.0"
-description = "Single source of truth for every shape crossing a module boundary (ADR-0002)"
+description = "Single source of truth for every shape crossing a module boundary (ADR-704)"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = ["pydantic>=2.9"]

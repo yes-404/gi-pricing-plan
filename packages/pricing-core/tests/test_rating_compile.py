@@ -1,7 +1,7 @@
 """Save-time validation of a RatingAlgorithm (slice W9-2).
 
-Covers FR-RATE-13 (result-type compatibility), FR-RATE-5 (determinism), and the four
-boundary guards FR-RATE-56/57/58/59, each proven to fail on broken input.
+Covers FR-227 (result-type compatibility), FR-216 (determinism), and the four
+boundary guards FR-273/274/275/276, each proven to fail on broken input.
 """
 
 from __future__ import annotations
@@ -64,26 +64,26 @@ def codes(algorithm: RatingAlgorithm) -> set[str]:
     return {issue.code for issue in validate_algorithm(algorithm)}
 
 
-@pytest.mark.req("FR-RATE-56")
+@pytest.mark.req("FR-273")
 def test_integer_minor_units_round_trip() -> None:
-    """FR-RATE-56: the startup self-check asserts the integer round-trip."""
+    """FR-273: the startup self-check asserts the integer round-trip."""
     assert_integer_minor_round_trip()  # must not raise
 
 
-@pytest.mark.req("FR-RATE-13")
+@pytest.mark.req("FR-227")
 def test_a_valid_algorithm_has_no_save_time_issues() -> None:
     algorithm = RatingAlgorithm.model_validate(valid_algorithm())
     assert validate_algorithm(algorithm) == []
 
 
-@pytest.mark.req("FR-RATE-13")
-@pytest.mark.req("FR-RATE-25")
+@pytest.mark.req("FR-227")
+@pytest.mark.req("FR-240")
 def test_a_result_type_mismatch_is_refused() -> None:
-    """FR-RATE-13: an output declared money_minor fed by a string value fails.
+    """FR-227: an output declared money_minor fed by a string value fails.
 
-    Also FR-RATE-25's own clause (3) ("all types compatible") — F-W9-3's cheap half
-    (`docs/audit/register.md`), pointing the already-run mechanism at the umbrella
-    requirement (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`).
+    Also FR-240's own clause (3) ("all types compatible") — F-W9-3's cheap half
+    (`docs/findings/register.md`), pointing the already-run mechanism at the umbrella
+    requirement (`docs/rulings/INDEX.md#2026-08-29-w11-algorithm-pin-maturitymd`).
     """
     data = valid_algorithm()
     data["input_contract"].append(
@@ -105,9 +105,9 @@ def test_a_result_type_mismatch_is_refused() -> None:
     assert "RATING_TYPE_MISMATCH" in codes(algorithm)
 
 
-@pytest.mark.req("FR-RATE-5")
+@pytest.mark.req("FR-216")
 def test_a_non_deterministic_expression_is_refused() -> None:
-    """FR-RATE-5/30: an expression calling now() fails — no wall-clock in the graph."""
+    """FR-216/246: an expression calling now() fails — no wall-clock in the graph."""
     data = valid_algorithm()
     for step in data["steps"]:
         if step["step_id"] == "s_office":
@@ -116,9 +116,9 @@ def test_a_non_deterministic_expression_is_refused() -> None:
     assert "EXPRESSION_NON_DETERMINISTIC" in codes(algorithm)
 
 
-@pytest.mark.req("FR-RATE-57")
+@pytest.mark.req("FR-274")
 def test_an_unguarded_division_is_refused() -> None:
-    """FR-RATE-57: division without an explicit zero guard fails."""
+    """FR-274: division without an explicit zero guard fails."""
     data = valid_algorithm()
     for step in data["steps"]:
         if step["step_id"] == "s_office":
@@ -127,9 +127,9 @@ def test_an_unguarded_division_is_refused() -> None:
     assert "EXPRESSION_UNGUARDED_DIVISION" in codes(algorithm)
 
 
-@pytest.mark.req("FR-RATE-57")
+@pytest.mark.req("FR-274")
 def test_a_guarded_division_is_accepted() -> None:
-    """FR-RATE-57: a division carrying a zero guard is not flagged."""
+    """FR-274: a division carrying a zero guard is not flagged."""
     data = valid_algorithm()
     for step in data["steps"]:
         if step["step_id"] == "s_office":
@@ -138,18 +138,18 @@ def test_a_guarded_division_is_accepted() -> None:
     assert "EXPRESSION_UNGUARDED_DIVISION" not in codes(algorithm)
 
 
-@pytest.mark.req("FR-RATE-58")
+@pytest.mark.req("FR-275")
 def test_a_scale_cap_overflow_is_refused() -> None:
-    """FR-RATE-58: an input bound beyond rust_decimal's 28-place cap fails."""
+    """FR-275: an input bound beyond rust_decimal's 28-place cap fails."""
     data = valid_algorithm()
     data["input_contract"][0]["min"] = "0.12345678901234567890123456789"  # 29 places
     algorithm = RatingAlgorithm.model_validate(data)
     assert "EXPRESSION_SCALE_OVERFLOW" in codes(algorithm)
 
 
-@pytest.mark.req("FR-RATE-59")
+@pytest.mark.req("FR-276")
 def test_a_foreign_function_is_refused() -> None:
-    """FR-RATE-59: an expression using a function the engine lacks fails to compile."""
+    """FR-276: an expression using a function the engine lacks fails to compile."""
     data = valid_algorithm()
     for step in data["steps"]:
         if step["step_id"] == "s_office":

@@ -33,7 +33,7 @@ Everything that answers "is the thing we deployed still working?":
 | Fitting or refitting models in response to drift | `02-modelling.md` — monitoring *triggers* a refit, it does not perform one |
 | Deciding a new price | `04-optimisation.md` |
 | Infrastructure monitoring (CPU, disk, pod health) | `07-platform.md` — standard observability, not pricing monitoring |
-| Claims reserving and IBNR development | Out of platform; developed claims are ingested (`01` OQ-DATA-4) |
+| Claims reserving and IBNR development | Out of platform; developed claims are ingested (`01` OQ-560) |
 
 ### 1.3 Hard rules
 
@@ -68,7 +68,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 | **Maturity** | How developed a cohort's claims experience is, expressed as months of development and an expected development factor (R4). |
 | **Rate Achieved** | The realised average premium change across the live book, versus **Rate Intended** — the change the dislocation run predicted. The gap is the single most-asked question after a rate change. |
 | **Alert** | A raised, routed, acknowledgeable notification produced when a metric breaches a threshold. Has a lifecycle, not just a webhook. |
-| **Shadow Comparison** | Comparison of live prices against a candidate Rating Version scored in shadow (`03` FR-RATE-54). |
+| **Shadow Comparison** | Comparison of live prices against a candidate Rating Version scored in shadow (`03` FR-271). |
 
 ---
 
@@ -78,76 +78,76 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 | ID | Requirement |
 |---|---|
-| **FR-MON-1** | A **Monitor** declares: the metric family (`input_drift`, `model_ae`, `demand`, `price_portfolio`, `operational`, `shadow`), the live population source (traces, a batch dataset, or both), the Monitoring Baseline, the segment breakdown, the cadence (`daily`, `weekly`, `monthly`), the thresholds, and the alert routing. |
-| **FR-MON-2** | Monitors run on schedule as Jobs — submitted by the scheduler tick, `07` FR-PLAT-61 — and can also be run on demand. Each run produces an immutable Monitoring Result (FR-OVR-1). *Amended 2026-08-23 (OQ-PLAT-2): "(Dagster-orchestrated)". The scheduling mechanism changed and the requirement did not — a Monitor still runs as a Job, on a period, or on demand.* |
-| **FR-MON-3** | Monitoring Baselines are pinned to specific artifact versions, never "the current model". Rebaselining is an explicit, audited act with a required reason — because a silently moving baseline is how drift stops being detected. |
-| **FR-MON-4** | A Monitor is automatically created (from a template) when a Rating Version is first deployed to `prod`, so a deployed structure is never unmonitored by default. The auto-created Monitor is editable and deletable, but deleting it is audited. **Amended 2026-08-26 (OQ-MON-5): the template's metric cadences are per family — `input_drift` daily, `operational` hourly (from the metrics backend), `price_portfolio` weekly, `demand` weekly, `model_ae` monthly with a 6-month maturity floor — and the template documents the reasoning.** |
-| **FR-MON-5** | Monitoring Results retain their metric values indefinitely at aggregate level (they are small) and their supporting evidence for ≥ 13 months (NFR-OVR-6). |
+| **FR-307** | A **Monitor** declares: the metric family (`input_drift`, `model_ae`, `demand`, `price_portfolio`, `operational`, `shadow`), the live population source (traces, a batch dataset, or both), the Monitoring Baseline, the segment breakdown, the cadence (`daily`, `weekly`, `monthly`), the thresholds, and the alert routing. |
+| **FR-308** | Monitors run on schedule as Jobs — submitted by the scheduler tick, `07` FR-413 — and can also be run on demand. Each run produces an immutable Monitoring Result (FR-4). *Amended 2026-08-23 (OQ-641): "(Dagster-orchestrated)". The scheduling mechanism changed and the requirement did not — a Monitor still runs as a Job, on a period, or on demand.* |
+| **FR-309** | Monitoring Baselines are pinned to specific artifact versions, never "the current model". Rebaselining is an explicit, audited act with a required reason — because a silently moving baseline is how drift stops being detected. |
+| **FR-310** | A Monitor is automatically created (from a template) when a Rating Version is first deployed to `prod`, so a deployed structure is never unmonitored by default. The auto-created Monitor is editable and deletable, but deleting it is audited. **Amended 2026-08-26 (OQ-631): the template's metric cadences are per family — `input_drift` daily, `operational` hourly (from the metrics backend), `price_portfolio` weekly, `demand` weekly, `model_ae` monthly with a 6-month maturity floor — and the template documents the reasoning.** |
+| **FR-311** | Monitoring Results retain their metric values indefinitely at aggregate level (they are small) and their supporting evidence for ≥ 13 months (NFR-459). |
 
 ### 3.2 Input drift
 
 | ID | Requirement |
 |---|---|
-| **FR-MON-6** | Input drift compares the live population's factor distributions against the Monitoring Baseline's Profile using **the same PSI implementation as `01`** (R1), reporting per-factor PSI, the contributing bins, new and vanished levels, and null-rate shift. |
-| **FR-MON-7** | Drift is reported **exposure-weighted and count-weighted**, since a shift in mix by exposure and a shift in quote volume mix are different problems with different causes. |
-| **FR-MON-8** | Drift is computed against both the modelling baseline (has the world moved since we fitted?) and the prior period (what changed this week?), because the two answer different questions and teams need both. |
-| **FR-MON-9** | Default thresholds are PSI > 0.10 `warn`, > 0.25 `breach`, configurable per factor — a factor known to be seasonal can carry a higher threshold with a recorded rationale. |
-| **FR-MON-10** | Drift on a factor is reported alongside that factor's importance in the model, so a large shift in an unimportant factor does not generate the same urgency as a small shift in the dominant one. |
+| **FR-312** | Input drift compares the live population's factor distributions against the Monitoring Baseline's Profile using **the same PSI implementation as `01`** (R1), reporting per-factor PSI, the contributing bins, new and vanished levels, and null-rate shift. |
+| **FR-313** | Drift is reported **exposure-weighted and count-weighted**, since a shift in mix by exposure and a shift in quote volume mix are different problems with different causes. |
+| **FR-314** | Drift is computed against both the modelling baseline (has the world moved since we fitted?) and the prior period (what changed this week?), because the two answer different questions and teams need both. |
+| **FR-315** | Default thresholds are PSI > 0.10 `warn`, > 0.25 `breach`, configurable per factor — a factor known to be seasonal can carry a higher threshold with a recorded rationale. |
+| **FR-316** | Drift on a factor is reported alongside that factor's importance in the model, so a large shift in an unimportant factor does not generate the same urgency as a small shift in the dominant one. |
 
 ### 3.3 Model performance (A/E)
 
 | ID | Requirement |
 |---|---|
-| **FR-MON-11** | **Actual vs Expected** is computed per model, per peril, by factor level, by cohort, and over time, using the same A/E computation as fit-time diagnostics (R1). Expected comes from the deployed model's predictions as recorded in traces or recomputed on the exposure dataset; actual comes from the claims data ingested through `01`. *(Recorded 2026-08-26, OQ-MON-1: A/E is computed from a full batch re-score of the exposure dataset (`03` FR-RATE-36), not from traces; trace sampling stays for quote-level metrics — conversion, declines, latency, constraint activation.)* |
-| **FR-MON-12** | Every A/E figure is displayed with its cohort maturity and the development assumption applied, or is not displayed at all (R4). Immature cohorts are visually distinct and excluded from threshold evaluation by default. |
-| **FR-MON-13** | A/E is reported with confidence intervals reflecting claim-count volume, so a 1.4 A/E on 12 claims is not presented with the same weight as a 1.05 on 4 000. |
-| **FR-MON-14** | Discrimination decay is tracked: Gini / normalised Gini and lift-curve shape on live cohorts versus at fit time, once a cohort is sufficiently mature. |
-| **FR-MON-15** | A/E breaches produce a drill-down path: overall → peril → factor → level → individual policies with their traces, so an actuary can go from a red cell to actual quotes in a few clicks (R2). |
-| **FR-MON-16** | Where a model was deployed in `approximation` mode (`03` FR-RATE-10), monitoring additionally reports the realised approximation error against the exact model on a sample, closing the loop on the fidelity statement (`02` FR-MODEL-36). |
+| **FR-317** | **Actual vs Expected** is computed per model, per peril, by factor level, by cohort, and over time, using the same A/E computation as fit-time diagnostics (R1). Expected comes from the deployed model's predictions as recorded in traces or recomputed on the exposure dataset; actual comes from the claims data ingested through `01`. *(Recorded 2026-08-26, OQ-627: A/E is computed from a full batch re-score of the exposure dataset (`03` FR-253), not from traces; trace sampling stays for quote-level metrics — conversion, declines, latency, constraint activation.)* |
+| **FR-318** | Every A/E figure is displayed with its cohort maturity and the development assumption applied, or is not displayed at all (R4). Immature cohorts are visually distinct and excluded from threshold evaluation by default. |
+| **FR-319** | A/E is reported with confidence intervals reflecting claim-count volume, so a 1.4 A/E on 12 claims is not presented with the same weight as a 1.05 on 4 000. |
+| **FR-320** | Discrimination decay is tracked: Gini / normalised Gini and lift-curve shape on live cohorts versus at fit time, once a cohort is sufficiently mature. |
+| **FR-321** | A/E breaches produce a drill-down path: overall → peril → factor → level → individual policies with their traces, so an actuary can go from a red cell to actual quotes in a few clicks (R2). |
+| **FR-322** | Where a model was deployed in `approximation` mode (`03` FR-222), monitoring additionally reports the realised approximation error against the exact model on a sample, closing the loop on the fidelity statement (`02` FR-136). |
 
 ### 3.4 Demand performance
 
 | ID | Requirement |
 |---|---|
-| **FR-MON-17** | Realised conversion and retention are measured by segment and compared with (a) the demand model's predictions and (b) the expectations declared in the Optimisation Run that motivated the current prices (`04` FR-OPT-28). |
-| **FR-MON-18** | Realised price elasticity is estimated from live variation where sufficient variation exists, and compared with the demand model's fitted elasticity — with the identifiability caveat from `04` FR-OPT-2 shown alongside, never hidden. |
-| **FR-MON-19** | Conversion monitoring is broken down by channel and by competitive position where that data is available, because an aggregate conversion drop usually has a channel-specific cause. |
+| **FR-323** | Realised conversion and retention are measured by segment and compared with (a) the demand model's predictions and (b) the expectations declared in the Optimisation Run that motivated the current prices (`04` FR-306). |
+| **FR-324** | Realised price elasticity is estimated from live variation where sufficient variation exists, and compared with the demand model's fitted elasticity — with the identifiability caveat from `04` FR-278 shown alongside, never hidden. |
+| **FR-325** | Conversion monitoring is broken down by channel and by competitive position where that data is available, because an aggregate conversion drop usually has a channel-specific cause. |
 
 ### 3.5 Price and portfolio monitoring
 
 | ID | Requirement |
 |---|---|
-| **FR-MON-20** | **Rate achieved vs rate intended**: the realised average premium change on live business is compared with the dislocation run's prediction for the same population, decomposed into the pure rate effect and the mix effect. A gap between the two is the most common post-rate-change question and must be answerable directly. |
-| **FR-MON-21** | Premium distribution, average premium, and portfolio mix are tracked over time by segment, against baseline and prior period. |
-| **FR-MON-22** | Loss ratio is tracked by cohort with development, on both an earned and a written basis, with the maturity treatment of R4. |
-| **FR-MON-23** | Constraint activation rates are tracked: how often minimum premium binds, how often a cap applies, how often a decline fires. A constraint that suddenly binds on 30 % of quotes is a structural signal, not a footnote. |
-| **FR-MON-24** | Where shadow scoring is enabled (`03` FR-RATE-54), the shadow candidate's price distribution is compared against live continuously, giving pre-deployment confidence beyond a point-in-time dislocation run. |
+| **FR-326** | **Rate achieved vs rate intended**: the realised average premium change on live business is compared with the dislocation run's prediction for the same population, decomposed into the pure rate effect and the mix effect. A gap between the two is the most common post-rate-change question and must be answerable directly. |
+| **FR-327** | Premium distribution, average premium, and portfolio mix are tracked over time by segment, against baseline and prior period. |
+| **FR-328** | Loss ratio is tracked by cohort with development, on both an earned and a written basis, with the maturity treatment of R4. |
+| **FR-329** | Constraint activation rates are tracked: how often minimum premium binds, how often a cap applies, how often a decline fires. A constraint that suddenly binds on 30 % of quotes is a structural signal, not a footnote. |
+| **FR-330** | Where shadow scoring is enabled (`03` FR-271), the shadow candidate's price distribution is compared against live continuously, giving pre-deployment confidence beyond a point-in-time dislocation run. |
 
 ### 3.6 Operational monitoring
 
 | ID | Requirement |
 |---|---|
-| **FR-MON-25** | Scoring latency (p50/p95/p99), throughput, error rate by error code, and decline rate by reason code are tracked per environment and per Rating Version, with the deployment timeline overlaid so a change in shape is attributable to a deployment. |
-| **FR-MON-26** | Reference lookup misses and rate table misses are tracked as first-class metrics — they are the early warning that reference data has gone stale (`01` FR-DATA-30). |
-| **FR-MON-27** | Bundle health is tracked: which bundle hash is serving in each environment, cache hit rate, and any divergence between replicas. Divergence is an immediate `breach`. |
+| **FR-331** | Scoring latency (p50/p95/p99), throughput, error rate by error code, and decline rate by reason code are tracked per environment and per Rating Version, with the deployment timeline overlaid so a change in shape is attributable to a deployment. |
+| **FR-332** | Reference lookup misses and rate table misses are tracked as first-class metrics — they are the early warning that reference data has gone stale (`01` FR-70). |
+| **FR-333** | Bundle health is tracked: which bundle hash is serving in each environment, cache hit rate, and any divergence between replicas. Divergence is an immediate `breach`. |
 
 ### 3.7 Alerting
 
 | ID | Requirement |
 |---|---|
-| **FR-MON-28** | An **Alert** has a lifecycle: `raised → acknowledged → resolved` (or `suppressed` with an expiry and a reason). Acknowledgement records who and why; resolution records what was done. |
-| **FR-MON-29** | Alerts carry their evidence: the metric, the threshold, the trend, the affected segment and exposure, and links to the underlying Monitoring Result and drill-down (R2). |
-| **FR-MON-30** | Alert routing is configurable per Monitor: in-app inbox, email, and webhook (Slack/Teams/PagerDuty-compatible). Routing failures are themselves logged and surfaced. |
-| **FR-MON-31** | Alert fatigue is designed against: alerts deduplicate on `(monitor, metric, segment)`, escalate rather than repeat, and a Monitor that has fired every run for N runs is flagged as mis-thresholded. |
-| **FR-MON-32** | Breach thresholds can be **absolute** (PSI > 0.25) or **relative** (A/E outside the CI implied by claim volume), and a Monitor may require **N consecutive breaches** before alerting, so a single noisy day does not page anyone. |
+| **FR-334** | An **Alert** has a lifecycle: `raised → acknowledged → resolved` (or `suppressed` with an expiry and a reason). Acknowledgement records who and why; resolution records what was done. |
+| **FR-335** | Alerts carry their evidence: the metric, the threshold, the trend, the affected segment and exposure, and links to the underlying Monitoring Result and drill-down (R2). |
+| **FR-336** | Alert routing is configurable per Monitor: in-app inbox, email, and webhook (Slack/Teams/PagerDuty-compatible). Routing failures are themselves logged and surfaced. |
+| **FR-337** | Alert fatigue is designed against: alerts deduplicate on `(monitor, metric, segment)`, escalate rather than repeat, and a Monitor that has fired every run for N runs is flagged as mis-thresholded. |
+| **FR-338** | Breach thresholds can be **absolute** (PSI > 0.25) or **relative** (A/E outside the CI implied by claim volume), and a Monitor may require **N consecutive breaches** before alerting, so a single noisy day does not page anyone. |
 
 ### 3.8 Reporting and feedback into the lifecycle
 
 | ID | Requirement |
 |---|---|
-| **FR-MON-33** | A scheduled **monitoring pack** can be generated per portfolio: a document assembling the standing metrics, breaches, and commentary for a pricing committee, produced from persisted artifacts only (`06-governance.md` generation rules). |
-| **FR-MON-34** | Monitoring can raise a **refit recommendation** on a Model — a structured record citing the drift/A-E evidence — which appears on the model and in the Approvals inbox as a prompt. It never triggers an automated refit. |
-| **FR-MON-35** | Monitoring results are linked bidirectionally to the artifacts they concern: from a Model or Rating Version, "how is this performing live?" is one navigation step. |
+| **FR-339** | A scheduled **monitoring pack** can be generated per portfolio: a document assembling the standing metrics, breaches, and commentary for a pricing committee, produced from persisted artifacts only (`06-governance.md` generation rules). |
+| **FR-340** | Monitoring can raise a **refit recommendation** on a Model — a structured record citing the drift/A-E evidence — which appears on the model and in the Approvals inbox as a prompt. It never triggers an automated refit. |
+| **FR-341** | Monitoring results are linked bidirectionally to the artifacts they concern: from a Model or Rating Version, "how is this performing live?" is one navigation step. |
 
 ---
 
@@ -183,7 +183,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 }
 ```
 
-*The `development_pattern_ref` names `development_pattern`, a user-supplied Reference Table — the platform warns about maturity and consumes a pattern, it does not derive one. *(Recorded 2026-08-26, OQ-MON-3; ties off `01` OQ-DATA-4.)*
+*The `development_pattern_ref` names `development_pattern`, a user-supplied Reference Table — the platform warns about maturity and consumes a pattern, it does not derive one. *(Recorded 2026-08-26, OQ-629; ties off `01` OQ-560.)*
 
 ### 4.2 `MonitoringResult`
 
@@ -277,22 +277,22 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/v1/monitors` | Create a Monitor (FR-MON-1) |
+| `POST` | `/api/v1/monitors` | Create a Monitor (FR-307) |
 | `GET` | `/api/v1/monitors?environment=` | List monitors with last run status |
 | `POST` | `/api/v1/monitors/{id}/run` | **202** Run on demand → Job |
-| `POST` | `/api/v1/monitors/{id}/rebaseline` | Rebaseline with a required reason (FR-MON-3) |
+| `POST` | `/api/v1/monitors/{id}/rebaseline` | Rebaseline with a required reason (FR-309) |
 | `GET` | `/api/v1/monitoring-results/{id}` | Result artifact with metrics and evidence links |
-| `GET` | `/api/v1/monitoring/drift?environment=&from=&to=` | Drift time series by factor (FR-MON-6..10) |
-| `GET` | `/api/v1/monitoring/ae?model=&segment=&cohort=` | A/E with CIs and maturity (FR-MON-11..13) |
-| `GET` | `/api/v1/monitoring/rate-achieved?rating_version=` | Rate achieved vs intended with decomposition (FR-MON-20) |
-| `GET` | `/api/v1/monitoring/demand?segment=` | Realised vs expected conversion/retention (FR-MON-17) |
-| `GET` | `/api/v1/monitoring/operational?environment=` | Latency, errors, declines, bundle health (FR-MON-25..27) |
+| `GET` | `/api/v1/monitoring/drift?environment=&from=&to=` | Drift time series by factor (FR-312, FR-313, FR-314, FR-315, FR-316) |
+| `GET` | `/api/v1/monitoring/ae?model=&segment=&cohort=` | A/E with CIs and maturity (FR-317, FR-318, FR-319) |
+| `GET` | `/api/v1/monitoring/rate-achieved?rating_version=` | Rate achieved vs intended with decomposition (FR-326) |
+| `GET` | `/api/v1/monitoring/demand?segment=` | Realised vs expected conversion/retention (FR-323) |
+| `GET` | `/api/v1/monitoring/operational?environment=` | Latency, errors, declines, bundle health (FR-331, FR-332, FR-333) |
 | `GET` | `/api/v1/alerts?status=` | Alert inbox |
-| `POST` | `/api/v1/alerts/{id}/acknowledge` | Acknowledge with a note (FR-MON-28) |
+| `POST` | `/api/v1/alerts/{id}/acknowledge` | Acknowledge with a note (FR-334) |
 | `POST` | `/api/v1/alerts/{id}/resolve` | Resolve with an action and note |
 | `POST` | `/api/v1/alerts/{id}/suppress` | Suppress with expiry and reason |
-| `POST` | `/api/v1/refit-recommendations` | Raise a refit recommendation (FR-MON-34) |
-| `POST` | `/api/v1/monitoring-packs` | **202** Generate a committee pack (FR-MON-33) |
+| `POST` | `/api/v1/refit-recommendations` | Raise a refit recommendation (FR-340) |
+| `POST` | `/api/v1/monitoring-packs` | **202** Generate a committee pack (FR-339) |
 
 **Error codes owned by this module:** `BASELINE_NOT_PINNED`, `INSUFFICIENT_MATURITY`,
 `INSUFFICIENT_CLAIM_VOLUME`, `MONITOR_POPULATION_EMPTY`, `REBASELINE_REASON_REQUIRED`,
@@ -315,7 +315,7 @@ def discrimination(actuals: pl.LazyFrame, predictions: pl.LazyFrame) -> Discrimi
 
 # pricing_core/monitoring/rate.py
 def rate_achieved(live_quotes: pl.LazyFrame, baseline_quotes: pl.LazyFrame,
-                  dislocation: DislocationRun) -> RateAchievedResult   # FR-MON-20
+                  dislocation: DislocationRun) -> RateAchievedResult   # FR-326
 
 # pricing_core/monitoring/demand.py
 def realised_demand(quotes: pl.LazyFrame, outcomes: pl.LazyFrame,
@@ -335,17 +335,17 @@ alerting, and presentation*, not statistics (R1).
 | View | Route | Contents |
 |---|---|---|
 | Monitoring home | `/monitoring/:environment` | Status tiles per metric family, breach count, deployment timeline overlay, last-run freshness |
-| Drift | `/monitoring/:environment/drift` | PSI heat map factor × period, distribution comparison chart per factor, importance-weighted ordering (FR-MON-10) |
+| Drift | `/monitoring/:environment/drift` | PSI heat map factor × period, distribution comparison chart per factor, importance-weighted ordering (FR-316) |
 | A/E | `/monitoring/:environment/ae` | A/E grid by factor level with CI shading and maturity badges, cohort development view, drill-down to policies and traces |
-| Rate achieved | `/monitoring/:environment/rate` | Intended vs achieved with the decomposition waterfall (FR-MON-20) |
+| Rate achieved | `/monitoring/:environment/rate` | Intended vs achieved with the decomposition waterfall (FR-326) |
 | Demand | `/monitoring/:environment/demand` | Conversion/retention realised vs expected by segment and channel, elasticity comparison |
 | Operational | `/monitoring/:environment/ops` | Latency percentiles, error/decline rates by code, lookup miss rates, bundle health per replica |
 | Alerts | `/monitoring/alerts` | Inbox with severity, trend sparkline, affected exposure, acknowledge/resolve/suppress actions |
-| Monitor config | `/monitoring/monitors/:id` | Baseline pin, segments, thresholds, cadence, routing, mis-threshold warning (FR-MON-31) |
+| Monitor config | `/monitoring/monitors/:id` | Baseline pin, segments, thresholds, cadence, routing, mis-threshold warning (FR-337) |
 
 **Interaction requirement:** every red number is a link. The path from a breach tile to
 the individual policies behind it must be traversable without leaving the module or
-constructing a query by hand (R2, FR-MON-15).
+constructing a query by hand (R2, FR-321).
 
 ---
 
@@ -353,17 +353,17 @@ constructing a query by hand (R2, FR-MON-15).
 
 | Step | Actor | Action |
 |---|---|---|
-| 1 | Backend | On first `prod` deployment, auto-creates the template Monitors (FR-MON-4) |
+| 1 | Backend | On first `prod` deployment, auto-creates the template Monitors (FR-310) |
 | 2 | Worker (scheduled) | On cadence, aggregates traces and claims into the monitoring population |
 | 3 | Worker → pricing-core | Computes drift, A/E, demand, rate-achieved, operational metrics |
 | 4 | Backend | Evaluates thresholds with consecutive-breach logic; persists the Monitoring Result |
-| 5 | Backend | Raises, deduplicates, and routes Alerts (FR-MON-30/31) |
+| 5 | Backend | Raises, deduplicates, and routes Alerts (FR-336/337) |
 | 6 | Pricing Actuary | Reviews the alert, drills through to affected policies and traces |
 | 7 | Pricing Actuary | Acknowledges with a note; investigates |
-| 8 | Pricing Actuary | Raises a Refit Recommendation (FR-MON-34) or a rate-change action, or resolves as noise |
-| 9 | — | A refit re-enters `wf-01`; a rate change re-enters `wf-03` |
+| 8 | Pricing Actuary | Raises a Refit Recommendation (FR-340) or a rate-change action, or resolves as noise |
+| 9 | — | A refit re-enters `WF-698`; a rate change re-enters `WF-700` |
 
-Full journey: [`wf-04-deploy-and-monitor.md`](../workflows/wf-04-deploy-and-monitor.md).
+Full journey: [`WF-701-deploy-and-monitor.md`](../workflows/WF-00701-deploy-and-monitor.md).
 
 ---
 
@@ -375,9 +375,9 @@ Full journey: [`wf-04-deploy-and-monitor.md`](../workflows/wf-04-deploy-and-moni
 |---|---|
 | `03-rating-engine` | Sampled production traces, deployment events, premium ladders, per-peril risk premium, constraint activations, dislocation runs (for rate-intended) |
 | `01-data-management` | Claims and exposure Dataset Versions for actuals; Profiles as baselines; the PSI implementation (R1) |
-| `02-modelling` | Fit-time diagnostics as the performance baseline; the A/E kernel (R1); factor importances for FR-MON-10 |
+| `02-modelling` | Fit-time diagnostics as the performance baseline; the A/E kernel (R1); factor importances for FR-316 |
 | `04-optimisation` | Expected volume/profit/loss-ratio targets from the Optimisation Run behind current prices |
-| `07-platform` | Job scheduling (FR-PLAT-61), notification channels, secrets for webhooks, time-series storage |
+| `07-platform` | Job scheduling (FR-413), notification channels, secrets for webhooks, time-series storage |
 
 ### 7.2 Provides
 
@@ -385,7 +385,7 @@ Full journey: [`wf-04-deploy-and-monitor.md`](../workflows/wf-04-deploy-and-moni
 |---|---|
 | `02-modelling` | Refit recommendations with evidence |
 | `03-rating-engine` | Evidence that a rate change did or did not land as intended; shadow-scoring comparisons |
-| `04-optimisation` | Realised elasticity and conversion/retention, closing the optimisation loop (`04` FR-OPT-28) |
+| `04-optimisation` | Realised elasticity and conversion/retention, closing the optimisation loop (`04` FR-306) |
 | `06-governance` | Monitoring packs and ongoing-performance evidence for model documentation and regulatory response |
 
 ---
@@ -396,16 +396,16 @@ Full journey: [`wf-04-deploy-and-monitor.md`](../workflows/wf-04-deploy-and-moni
 |---|---|---|
 | **DuckDB** | Aggregating sampled traces and claims into monitoring populations | Querying trace parquet at scale; window functions for cohort development |
 | **Polars** | Metric computation, joins between quotes, policies, and claims | Reused `pricing-core` kernels (R1) |
-| **PostgreSQL 16** | Monitors, results, alerts; time-series of aggregate metrics | Partitioning the results table by period; JSONB metric bodies with GIN indexes *(Recorded 2026-08-26, OQ-MON-2: pricing metrics on PostgreSQL with declarative partitioning; operational metrics stay on the OpenTelemetry backend — no TSDB is added to the required stack.)* |
-| **SciPy** | A/E confidence intervals at low claim counts; discrimination statistics | Exact Poisson CIs (`01` FR-DATA-26 reuse) |
-| **Notification channels** | Webhook/email routing | Retry and failure surfacing (FR-MON-30); secret references for webhook URLs |
+| **PostgreSQL 16** | Monitors, results, alerts; time-series of aggregate metrics | Partitioning the results table by period; JSONB metric bodies with GIN indexes *(Recorded 2026-08-26, OQ-628: pricing metrics on PostgreSQL with declarative partitioning; operational metrics stay on the OpenTelemetry backend — no TSDB is added to the required stack.)* |
+| **SciPy** | A/E confidence intervals at low claim counts; discrimination statistics | Exact Poisson CIs (`01` FR-61 reuse) |
+| **Notification channels** | Webhook/email routing | Retry and failure surfacing (FR-336); secret references for webhook URLs |
 | **OpenTelemetry / metrics backend** | Operational metrics (latency, errors) | Deriving p99 from histogram buckets correctly; joining ops metrics to deployment events |
 | **ECharts (frontend)** | PSI heat maps, A/E grids with CI shading, decomposition waterfalls, trend sparklines | Heat map performance at factor × period scale; linked drill-down interactions |
 
 New skills this spec adds to `skills-map.md`: claims development/maturity treatment for
 live monitoring; alert lifecycle and fatigue design; rate achieved vs intended
 decomposition (pure rate vs mix); period-anchored scheduling and backfill requests
-(`07` FR-PLAT-61).
+(`07` FR-413).
 
 ---
 
@@ -413,14 +413,14 @@ decomposition (pure rate vs mix); period-anchored scheduling and backfill reques
 
 | ID | Requirement |
 |---|---|
-| **NFR-MON-1** | A weekly monitoring run over 400 k quotes and 1 200 claims completes in < 10 min. |
-| **NFR-MON-2** | Monitoring is fully asynchronous; no monitoring component sits on the scoring latency path (R3). |
-| **NFR-MON-3** | Dashboard reads return in < 500 ms from persisted Monitoring Results; no dashboard computes a metric on request. |
-| **NFR-MON-4** | Metric values are identical to those produced by the equivalent validation or diagnostic computation on the same data, verified by a shared test suite (R1). |
-| **NFR-MON-5** | Alert delivery within 5 minutes of the run completing; routing failures are retried with backoff and surfaced in-app. |
-| **NFR-MON-6** | Aggregate metric history is retained indefinitely; supporting evidence blobs for ≥ 13 months (NFR-OVR-6). |
-| **NFR-MON-7** | Audit: monitor creation/edit, rebaselining, threshold changes, alert acknowledgement/resolution/suppression, and refit decisions all emit Audit Events. |
-| **NFR-MON-8** | A monitoring outage does not lose data: traces and claims remain in their source stores and a missed run is backfillable (FR-MON-2, and `07` FR-PLAT-61's backfill request). *Amended 2026-08-23 (OQ-PLAT-2): "Dagster backfill". A missed *tick* now catches up on its own, because schedules are period-anchored; a missed run whose Job **failed** does not, and needs the explicit backfill request — the distinction Dagster's name hid.* |
+| **NFR-510** | A weekly monitoring run over 400 k quotes and 1 200 claims completes in < 10 min. |
+| **NFR-511** | Monitoring is fully asynchronous; no monitoring component sits on the scoring latency path (R3). |
+| **NFR-512** | Dashboard reads return in < 500 ms from persisted Monitoring Results; no dashboard computes a metric on request. |
+| **NFR-513** | Metric values are identical to those produced by the equivalent validation or diagnostic computation on the same data, verified by a shared test suite (R1). |
+| **NFR-514** | Alert delivery within 5 minutes of the run completing; routing failures are retried with backoff and surfaced in-app. |
+| **NFR-515** | Aggregate metric history is retained indefinitely; supporting evidence blobs for ≥ 13 months (NFR-459). |
+| **NFR-516** | Audit: monitor creation/edit, rebaselining, threshold changes, alert acknowledgement/resolution/suppression, and refit decisions all emit Audit Events. |
+| **NFR-517** | A monitoring outage does not lose data: traces and claims remain in their source stores and a missed run is backfillable (FR-308, and `07` FR-413's backfill request). *Amended 2026-08-23 (OQ-641): "Dagster backfill". A missed *tick* now catches up on its own, because schedules are period-anchored; a missed run whose Job **failed** does not, and needs the explicit backfill request — the distinction Dagster's name hid.* |
 
 ---
 
@@ -430,8 +430,8 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 
 | ID | Question |
 |---|---|
-| ~~**OQ-MON-1**~~ | ~~Is a 1 % trace sample sufficient for segment-level A/E monitoring? At 1 % of 50 M quotes, thin segments have too few observations to say anything. Options: raise the sample rate, stratify sampling by segment, or compute A/E from a full batch re-score of the exposure dataset instead of from traces.~~ **Open** — the recommendation is the full batch re-score (FR-RATE-36), keeping traces for quote-level metrics; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: full batch re-score of the exposure dataset for A/E; traces stay for quote-level metrics** |
-| ~~**OQ-MON-2**~~ | ~~Do we store monitoring time series in PostgreSQL or adopt a dedicated time-series store? Postgres is simpler and adequate at weekly cadence; daily operational metrics at per-replica granularity may outgrow it.~~ **Open** — the recommendation is PostgreSQL with declarative partitioning, no dedicated TSDB; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: PostgreSQL with declarative partitioning; no TSDB in the required stack** |
-| ~~**OQ-MON-3**~~ | ~~Who owns the claims-development pattern used for maturity adjustment (R4) — is it supplied by the user as reference data, fitted by the platform from claim triangles, or out of scope (tied to `01` OQ-DATA-4)?~~ **Open** — the recommendation is user-supplied reference data (`development_pattern`), tying off with `01` OQ-DATA-4; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: user-supplied as a Reference Table (development_pattern), referenced by maturity_policy** |
-| ~~**OQ-MON-4**~~ | ~~Should the platform support automated~~ **champion/challenger** — routing a slice of live traffic to a candidate Rating Version and comparing realised outcomes — or is shadow scoring (no customer impact) the ethical and practical limit? **Deferred (post-Phase 4)**: shadow scoring only (FR-RATE-54) — routing real customers to a challenger price is a live pricing experiment with fair-value implications, the same governed decision as price testing, and it is grouped with OQ-OPT-5 rather than decided separately. **DECIDED 2026-08-26: deferral confirmed — shadow scoring only, grouped with OQ-OPT-5** |
-| ~~**OQ-MON-5**~~ | ~~What is the right default cadence set? Weekly for A/E is too frequent to be meaningful on low-frequency perils but monthly is too slow to catch a broken feed. Likely different cadences per metric family — needs to be specified rather than left to the user.~~ **Open** — the recommendation is per-family cadences (`input_drift` daily, `model_ae` monthly with a maturity floor) as the Monitor's template defaults; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: per family: input_drift daily, operational hourly, price_portfolio weekly, demand weekly, model_ae monthly with a 6-month maturity floor** |
+| ~~**OQ-627**~~ | ~~Is a 1 % trace sample sufficient for segment-level A/E monitoring? At 1 % of 50 M quotes, thin segments have too few observations to say anything. Options: raise the sample rate, stratify sampling by segment, or compute A/E from a full batch re-score of the exposure dataset instead of from traces.~~ **Open** — the recommendation is the full batch re-score (FR-253), keeping traces for quote-level metrics; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: full batch re-score of the exposure dataset for A/E; traces stay for quote-level metrics** |
+| ~~**OQ-628**~~ | ~~Do we store monitoring time series in PostgreSQL or adopt a dedicated time-series store? Postgres is simpler and adequate at weekly cadence; daily operational metrics at per-replica granularity may outgrow it.~~ **Open** — the recommendation is PostgreSQL with declarative partitioning, no dedicated TSDB; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: PostgreSQL with declarative partitioning; no TSDB in the required stack** |
+| ~~**OQ-629**~~ | ~~Who owns the claims-development pattern used for maturity adjustment (R4) — is it supplied by the user as reference data, fitted by the platform from claim triangles, or out of scope (tied to `01` OQ-560)?~~ **Open** — the recommendation is user-supplied reference data (`development_pattern`), tying off with `01` OQ-560; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: user-supplied as a Reference Table (development_pattern), referenced by maturity_policy** |
+| ~~**OQ-630**~~ | ~~Should the platform support automated~~ **champion/challenger** — routing a slice of live traffic to a candidate Rating Version and comparing realised outcomes — or is shadow scoring (no customer impact) the ethical and practical limit? **Deferred (post-Phase 4)**: shadow scoring only (FR-271) — routing real customers to a challenger price is a live pricing experiment with fair-value implications, the same governed decision as price testing, and it is grouped with OQ-625 rather than decided separately. **DECIDED 2026-08-26: deferral confirmed — shadow scoring only, grouped with OQ-625** |
+| ~~**OQ-631**~~ | ~~What is the right default cadence set? Weekly for A/E is too frequent to be meaningful on low-frequency perils but monthly is too slow to catch a broken feed. Likely different cadences per metric family — needs to be specified rather than left to the user.~~ **Open** — the recommendation is per-family cadences (`input_drift` daily, `model_ae` monthly with a maturity floor) as the Monitor's template defaults; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: per family: input_drift daily, operational hourly, price_portfolio weekly, demand weekly, model_ae monthly with a 6-month maturity floor** |

@@ -1,9 +1,9 @@
-"""FR-RATE-14, FR-RATE-15, FR-RATE-21, FR-RATE-62: rate table contracts and invariants.
+"""FR-228, FR-229, FR-236, FR-232: rate table contracts and invariants.
 
 W10-1 adds RateTable and RateTableVersion to model-schema. These tests verify the shapes
 parse correctly, immutability invariants hold, and storage mode is fixed at write time.
-W10-2 extends the contract with `SeededFrom` (FR-RATE-16) and `RateTableDiff`
-(FR-RATE-17) per 03 §4.2. W10-3 reshapes RateTableVersion to the 03 §4.2 wire form and
+W10-2 extends the contract with `SeededFrom` (FR-230) and `RateTableDiff`
+(FR-231) per 03 §4.2. W10-3 reshapes RateTableVersion to the 03 §4.2 wire form and
 adds the BulkOperation record (04 §4.4) and the import verdict/preview (03 §5.2).
 """
 
@@ -29,7 +29,7 @@ from model_schema.rating import (
 from model_schema.refs import ArtifactRef, BlobRef
 
 
-@pytest.mark.req("FR-RATE-14")
+@pytest.mark.req("FR-228")
 class TestRateTableShape:
     """A Rate Table declares keys, a value column, optional default row, and storage mode."""
 
@@ -182,9 +182,9 @@ def _version(
     )
 
 
-@pytest.mark.req("FR-RATE-15")
+@pytest.mark.req("FR-229")
 class TestRateTableVersionImmutability:
-    """Rate Table Versions are immutable (FR-RATE-15, FR-RATE-62)."""
+    """Rate Table Versions are immutable (FR-229, FR-232)."""
 
     def test_rate_table_version_is_frozen(self):
         """RateTableVersion model is frozen (immutable)."""
@@ -206,14 +206,14 @@ class TestRateTableVersionImmutability:
             )
 
     def test_rate_table_version_storage_is_immutable(self):
-        """storage field is immutable with the version (FR-RATE-62)."""
+        """storage field is immutable with the version (FR-232)."""
         version = _version()
         assert version.storage == "rows"
         with pytest.raises(ValidationError):
             version.storage = "parquet"  # type: ignore
 
     def test_rate_table_version_tracks_seed_source(self):
-        """seeded_from tracks the source model reference and timestamp (FR-RATE-16)."""
+        """seeded_from tracks the source model reference and timestamp (FR-230)."""
         version = _version(
             seeded_from=SeededFrom(
                 model_ref=ArtifactRef(type="model", slug="pricing-model-v2", version=5),
@@ -261,12 +261,12 @@ class TestRateTableVersionImmutability:
             )
 
 
-@pytest.mark.req("FR-RATE-21")
+@pytest.mark.req("FR-236")
 class TestRateTableRateableFlag:
     """A rate table declares whether it is rateable (part of price) or diagnostic."""
 
     def test_rate_table_rateable_flag_is_boolean(self):
-        """rateable is a boolean flag on RateTable (FR-RATE-21)."""
+        """rateable is a boolean flag on RateTable (FR-236)."""
         rateable_table = RateTable(
             slug="price-table",
             version=1,
@@ -288,9 +288,9 @@ class TestRateTableRateableFlag:
         assert diagnostic_table.rateable is False
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 class TestStorageMode:
-    """Storage mode is a version property, immutable at write time (FR-RATE-62)."""
+    """Storage mode is a version property, immutable at write time (FR-232)."""
 
     def test_storage_mode_defaults_to_rows_or_parquet(self):
         """storage is a property on RateTableVersion."""
@@ -309,7 +309,7 @@ class TestStorageMode:
         assert parquet_version.storage == "parquet"
 
     def test_parquet_cells_are_a_blob_ref_not_inline_rows(self):
-        """Above the threshold the cells are addressed by a BlobRef (FR-RATE-62)."""
+        """Above the threshold the cells are addressed by a BlobRef (FR-232)."""
         parquet = _version(
             storage="parquet",
             rows=None,
@@ -379,13 +379,13 @@ class TestStorageMode:
             )
 
     def test_storage_is_immutable_with_version(self):
-        """Once written, storage cannot change (FR-RATE-62)."""
+        """Once written, storage cannot change (FR-232)."""
         version = _version()
         with pytest.raises(ValidationError):
             version.storage = "parquet"  # type: ignore
 
 
-@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-230")
 class TestSeededFrom:
     """Seeded-from metadata: the source model reference and the timestamp (03 §4.2)."""
 
@@ -410,7 +410,7 @@ class TestSeededFrom:
         assert str(version.seeded_from.model_ref) == "model:motor-ad-frequency@7"
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 class TestRateTableDiff:
     """The cell-diff artifact (03 §4.2): counts and percentages, never floats."""
 
@@ -448,7 +448,7 @@ class TestRateTableDiff:
             RateTableDiff(changed_cells=-1)
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 class TestBulkOperation:
     """The BulkOperation record (04 §4.4): four kinds, decimal-string parameters, refs."""
 
@@ -535,7 +535,7 @@ class TestBulkOperation:
             )
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 class TestImportContract:
     """The import preview (03 §5.2): a diff for the would-be version + round-trip verdict."""
 
@@ -590,7 +590,7 @@ class TestImportContract:
         assert preview.created_by_import.filename == "motor-relativity.csv"
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 def test_rate_table_diff_job_kind_exists() -> None:
     """The parquet diff answers 202 with a Job whose kind is rate_table.diff (03 §5.1)."""
     assert JobKind.RATE_TABLE_DIFF.value == "rate_table.diff"

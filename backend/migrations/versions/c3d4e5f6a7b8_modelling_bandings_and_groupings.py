@@ -3,14 +3,14 @@
 Three changes, one slice (`02` §3.2, §3.3).
 
 * **`bandings` and `groupings`** — versioned artifacts with the same shape as `factors`,
-  because FR-MODEL-12 makes editing a banding a *new version* rather than an edit: a Model
+  because FR-101 makes editing a banding a *new version* rather than an edit: a Model
   pins the version it was fitted with, and rewriting boundaries under a fitted model would
   change what it means without changing what it says. Both carry the artifact as JSONB;
-  `model-schema` owns the shape (ADR-0002).
+  `model-schema` owns the shape (ADR-704).
 
 * **`models.spec_hash` widens from 71 to 80.** The digest now carries the version of the
   algorithm that produced it — `v1:sha256:…` — so a stored digest from an older algorithm
-  is findable rather than merely unmatchable (OQ-MODEL-8's stated precondition). At 71 the
+  is findable rather than merely unmatchable (OQ-582's stated precondition). At 71 the
   first tagged digest would be silently truncated into a *different* valid-looking digest,
   which is the failure a length limit is least able to report.
 
@@ -105,7 +105,7 @@ def upgrade() -> None:
         type_=sa.String(length=80),
         existing_nullable=False,
     )
-    # `02` FR-MODEL-12: a banding or grouping is versioned, never edited. Insert-only at the
+    # `02` FR-101: a banding or grouping is versioned, never edited. Insert-only at the
     # privilege layer, so the rule survives a direct `UPDATE` from a psql session.
     op.execute(f"GRANT SELECT, INSERT ON bandings, groupings TO {APP_ROLE}")
     op.execute(f"REVOKE UPDATE, DELETE ON bandings, groupings FROM {APP_ROLE}")

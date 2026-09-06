@@ -1,4 +1,4 @@
-"""FR-DATA-50's derived fields, and the pairs that must not come apart."""
+"""FR-55's derived fields, and the pairs that must not come apart."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def _dataset(**kwargs: object) -> Dataset:
     )
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_a_dataset_with_no_versions_carries_neither_field() -> None:
     dataset = _dataset()
     assert dataset.latest_version is None
@@ -31,7 +31,7 @@ def test_a_dataset_with_no_versions_carries_neither_field() -> None:
     assert dataset.last_validated_version is None
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_the_two_fields_may_name_different_versions() -> None:
     """The case the requirement was written for: a fresh draft above a validated version.
 
@@ -49,13 +49,13 @@ def test_the_two_fields_may_name_different_versions() -> None:
     assert dataset.latest_version_status is DatasetStatus.DRAFT
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_a_status_without_the_version_it_describes_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="latest_version"):
         _dataset(latest_version_status=DatasetStatus.VALIDATED)
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_a_version_without_its_status_is_refused() -> None:
     """Both directions. A caller that batched the version numbers and forgot the statuses
     would otherwise render a blank badge for every row — which is exactly the defect
@@ -64,7 +64,7 @@ def test_a_version_without_its_status_is_refused() -> None:
         _dataset(latest_version=12)
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_a_validation_date_without_its_version_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="last_validated_version"):
         _dataset(
@@ -74,7 +74,7 @@ def test_a_validation_date_without_its_version_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_a_validated_version_without_its_date_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="last_validated_at"):
         _dataset(
@@ -84,9 +84,9 @@ def test_a_validated_version_without_its_date_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_owner_name_is_optional_and_unresolved_by_default() -> None:
-    """OQ-OVR-15 (a): the resolved name is a derived field, and `None` is an honest answer.
+    """OQ-552 (a): the resolved name is a derived field, and `None` is an honest answer.
 
     A projection that never resolved the id must still construct — the list renders the raw
     id as its fallback. The default (rather than a required parameter) is what lets every

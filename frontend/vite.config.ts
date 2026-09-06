@@ -44,7 +44,7 @@ export default defineConfig({
         // with W6b-10 when the browser's real authorization-code-with-PKCE flow landed,
         // and `x-dev-workspace-id` went with W6b-11 (2026-08-26) when the selector
         // landed — removal never precedes replacement. The workspace now travels as the
-        // verified `Workspace-Id` header (07 FR-PLAT-65), chosen in the UI, and the
+        // verified `Workspace-Id` header (07 FR-397), chosen in the UI, and the
         // browser authenticates through the real flow. A browser must never be able to
         // choose its own principal; with nothing injected here, the production bundle
         // carries no code path a devtools edit could reach.

@@ -1,4 +1,4 @@
-"""Model comparison (`02` FR-MODEL-56, §5.2).
+"""Model comparison (`02` FR-186, §5.2).
 
 Built on `test_diagnostics`' book, where three areas carry true relativities of 1, 2 and 3
 against exposure — so a **good** model and a **bad** one can be constructed on purpose:
@@ -39,7 +39,7 @@ BASE_RATE = 0.10
 GOOD = "model:freq-area@1"
 BAD = "model:freq-noise@1"
 
-#: **One** split, cited by every candidate. `01` FR-DATA-36 records the split on the parent
+#: **One** split, cited by every candidate. `01` FR-76 records the split on the parent
 #: version precisely so that "the same holdout" is one artifact two models cite; a fixture
 #: that gave each candidate its own would be testing the comparison against exactly the
 #: belief the requirement exists to remove.
@@ -59,7 +59,7 @@ def _book(n: int = 4000, seed: int = 20260817) -> pl.DataFrame:
             "claim_count": rng.poisson(lam).astype(float),
             # Strictly positive, so a Gamma severity model can be fitted on it. It exists
             # only for the weighting-mismatch test: a severity model is precisely the thing
-            # FR-MODEL-55 says must not share a metric table with a frequency model.
+            # FR-184 says must not share a metric table with a frequency model.
             "avg_cost": rng.gamma(shape=2.0, scale=900.0, size=n),
         }
     )
@@ -104,7 +104,7 @@ def candidates(book: pl.DataFrame) -> tuple[ComparisonCandidate, ComparisonCandi
     return _candidate(GOOD, train, "area"), _candidate(BAD, train, "noise")
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_the_better_model_leads_on_gini(book, candidates) -> None:
     """`area` drives the risk and `noise` does not, so the ordering is known before the run.
     A leader picked by list order would pass a test that only checked a leader exists."""
@@ -120,7 +120,7 @@ def test_the_better_model_leads_on_gini(book, candidates) -> None:
     assert values[GOOD] > values[BAD]
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_deviance_is_lower_is_better(book, candidates) -> None:
     good, bad = candidates
     summary = compare_models([good, bad], book[3000:])
@@ -132,7 +132,7 @@ def test_deviance_is_lower_is_better(book, candidates) -> None:
     assert metric.leader == GOOD
 
 
-@pytest.mark.req("FR-MODEL-55")
+@pytest.mark.req("FR-184")
 def test_a_e_leads_on_the_model_closest_to_one_not_the_highest(book, candidates) -> None:
     """The reason `MetricDirection` has three arms rather than being a boolean. An A/E of
     1.4 and one of 0.6 are equally wrong, and a higher-is-better ranking puts 1.4 first."""
@@ -145,7 +145,7 @@ def test_a_e_leads_on_the_model_closest_to_one_not_the_highest(book, candidates)
     assert ae.leader == min(values, key=lambda ref: abs(values[ref] - 1.0))
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_the_row_count_is_reported_and_orders_nothing(book, candidates) -> None:
     """Every model sees the same holdout, so a winner on `rows` would be pure tie-break."""
     good, bad = candidates
@@ -159,7 +159,7 @@ def test_the_row_count_is_reported_and_orders_nothing(book, candidates) -> None:
     assert summary.holdout_rows == holdout.height
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_double_lift_bins_by_the_ratio_and_conserves_the_holdout(book, candidates) -> None:
     """The ordering is what makes the chart answer "where they disagree, who is right?".
 
@@ -182,7 +182,7 @@ def test_double_lift_bins_by_the_ratio_and_conserves_the_holdout(book, candidate
     assert ratios == sorted(ratios), ratios
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_the_baseline_defaults_to_the_first_candidate(book, candidates) -> None:
     good, bad = candidates
     summary = compare_models([bad, good], book[3000:])
@@ -190,7 +190,7 @@ def test_the_baseline_defaults_to_the_first_candidate(book, candidates) -> None:
     assert summary.double_lift[0].challenger_ref == GOOD
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_relativity_differences_name_the_gap_per_level(book, candidates) -> None:
     """The comparison an actuary argues from. Both models here are multiplicative, and only
     the good one has `area`, so `area`'s levels appear with a value for one model and `None`
@@ -207,7 +207,7 @@ def test_relativity_differences_name_the_gap_per_level(book, candidates) -> None
     assert urban.max_abs_difference is None, "one value is not a difference"
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_a_comparison_of_one_model_is_refused(book, candidates) -> None:
     good, _ = candidates
     with pytest.raises(ModellingError) as refused:
@@ -215,16 +215,16 @@ def test_a_comparison_of_one_model_is_refused(book, candidates) -> None:
     assert refused.value.code == "MODELS_NOT_COMPARABLE"
 
 
-@pytest.mark.req("FR-MODEL-55")
+@pytest.mark.req("FR-184")
 def test_models_with_different_weighting_schemes_are_refused(book, candidates) -> None:
-    """FR-MODEL-55 makes the weighting part of the metric. An exposure-weighted A/E and a
+    """FR-184 makes the weighting part of the metric. An exposure-weighted A/E and a
     claim-count-weighted one are different quantities, and aligning them in one table would
     invite exactly the comparison the requirement exists to prevent."""
     good, _ = candidates
     # A real severity model, not a contrived one: Gamma on a positive cost, claim-count
     # weighted, no exposure offset — which is what `CLAUDE.md` §7 prescribes and what makes
     # `_weighting` report `claim_count` rather than `exposure`. The `GlmSpec` type refuses a
-    # Poisson model with no offset (FR-MODEL-19), so this is also the only route to a
+    # Poisson model with no offset (FR-111), so this is also the only route to a
     # different weighting that the contract allows.
     # Fitted on claim-bearing rows only, which is what a severity model is fitted on. Also
     # the difference between a clean run and one where `glum` divides by a zero weight.
@@ -242,7 +242,7 @@ def test_models_with_different_weighting_schemes_are_refused(book, candidates) -
     assert "weighting" in str(refused.value)
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_the_baseline_must_be_among_the_candidates(book, candidates) -> None:
     good, bad = candidates
     with pytest.raises(ModellingError) as refused:
@@ -250,7 +250,7 @@ def test_the_baseline_must_be_among_the_candidates(book, candidates) -> None:
     assert refused.value.code == "MODELS_NOT_COMPARABLE"
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_an_empty_holdout_is_refused(candidates) -> None:
     """An empty holdout produces metrics that cannot be wrong, which is not the same as two
     models that are indistinguishable — the phrasing `_split_frames` already uses."""

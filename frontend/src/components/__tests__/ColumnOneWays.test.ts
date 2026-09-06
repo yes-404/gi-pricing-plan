@@ -51,9 +51,9 @@ describe("the candidate column list", () => {
   });
 
   it("shows the stored numbers exactly as the profile carries them", () => {
-    // FR-DATA-26: computed once, in the profiling pass. `exposure_years` is an exact
+    // FR-61: computed once, in the profiling pass. `exposure_years` is an exact
     // decimal string and is formatted without being parsed — a float64 round-trip is what
-    // FR-OVR-7 exists to prevent.
+    // FR-10 exists to prevent.
     const t = table();
 
     expect(cellUnder(t, /0-3/, "Exposure")).toHaveTextContent("1,234.56");
@@ -62,14 +62,14 @@ describe("the candidate column list", () => {
   });
 
   it("carries the interval beside the frequency it belongs to", () => {
-    // FR-DATA-26 puts an exact Poisson interval on the frequency, and a frequency without
+    // FR-61 puts an exact Poisson interval on the frequency, and a frequency without
     // one invites a decision the claim count cannot support.
     expect(cellUnder(table(), /0-3/, "Frequency CI")).toHaveTextContent("0.0586–0.0895");
   });
 
   it("scales the minor-unit statistics without dressing them as currency", () => {
     // `mean_severity` and `mean_burning_cost` are statistics in minor units, not amounts
-    // (FR-DATA-46). No symbol, because none is knowable here — and none is owed.
+    // (FR-64). No symbol, because none is knowable here — and none is owed.
     const t = table();
 
     expect(cellUnder(t, /0-3/, "Severity")).toHaveTextContent("50.00");
@@ -89,7 +89,7 @@ describe("the candidate column list", () => {
     // Not a styling choice. `claim_amount_minor` is minor units of the workspace currency;
     // the workbench holds a dataset *version* id, `DatasetVersion` carries no currency, and
     // `/datasets/{dataset_id}` is PATCH-only. Rendering it bare would show minor units as
-    // if they were units; guessing GBP is what OQ-OVR-14 exists to stop. The fixture's
+    // if they were units; guessing GBP is what OQ-551 exists to stop. The fixture's
     // 26758000 would appear as some rendering of itself if the column were ever added back
     // without a currency, so this asserts the digits are absent entirely.
     const t = table();

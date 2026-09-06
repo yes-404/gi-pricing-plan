@@ -1,8 +1,8 @@
 """Trace persistence: the row-plus-blob write, the read, and the retention-floor guard.
 
-`03` §4.5's `Trace`, FR-RATE-41/42, `00` NFR-OVR-6, W11 Task 4A
-(`docs/plans/2026-08-29-w11-4-trace-sampling-persistence.md`, Ruling 23 in
-`docs/plans/2026-08-29-w11-slices-3-4-rulings.md`).
+`03` §4.5's `Trace`, FR-258/259, `00` NFR-459, WK-671 Task 4A
+(`docs/plans/PL-00850-wk-671-slice-4-trace-sampling-the-row-plus-blob-store-and-the-retention-floor.md`, RL-888 in
+`docs/rulings/INDEX.md#2026-08-29-w11-slices-3-4-rulingsmd`).
 
 **One serialisation, two writes.** `write_trace` serialises the `Trace` exactly once and
 uses that same payload both for the blob body and for the row's three projected fields
@@ -10,27 +10,27 @@ uses that same payload both for the blob body and for the row's three projected 
 which is what keeps the row from diverging from the body it claims to summarise (Ruling
 23's second constraint).
 
-**No expiry job.** FR-PLAT-20's blob GC is a deletion mechanism; NFR-OVR-6 is a
-preservation floor. Nothing in this module runs on a schedule. The only way NFR-OVR-6 can
+**No expiry job.** FR-420's blob GC is a deletion mechanism; NFR-459 is a
+preservation floor. Nothing in this module runs on a schedule. The only way NFR-459 can
 be breached is an early row deletion, so `delete_trace` is the one guard this slice owes —
 refusing while the floor still covers the row, permitting once it does not.
 
-**The sampling decision (W11 Task 4B) is `decide_sampling`, a pure function.** FR-RATE-42:
+**The sampling decision (WK-671 Task 4B) is `decide_sampling`, a pure function.** FR-259:
 100 % of declines and 100 % of errors, regardless of the configured rate, plus that rate for
 everything else. It takes the roll as an argument rather than calling `random.random()`
 itself, so it stays pure and the statistical boundary is testable with a fixed seed — the
 caller (the scoring route) supplies the roll.
 
-**Trace production is decoupled from the serving request** (Ruling 35,
-`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`): always capturing a
+**Trace production is decoupled from the serving request** (RL-862,
+`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`): always capturing a
 trace inline pinned the traced fraction at 1 and put every real-time request over
-NFR-RATE-1's budget. The quoting path scores untraced and, on a sampled outcome, calls
+NFR-489's budget. The quoting path scores untraced and, on a sampled outcome, calls
 `write_pending_trace` — a row with no body yet, carrying the Quote Context an off-path Job
 needs to reproduce it. `app.worker.trace_handlers` re-scores the *pinned* bundle and calls
 `complete_pending_trace`, which fills in the body and records whether the re-score
-reproduced the served result (Ruling 35 §8.2's two safety conditions). `write_trace` is
+reproduced the served result (RL-862 §8.2's two safety conditions). `write_trace` is
 unchanged and still the single-shot path for a producer that already holds a full `Trace`
-(a batch Job's on-request trace, FR-RATE-41/Ruling 25 — there is no serving-request budget
+(a batch Job's on-request trace, FR-258/RL-890 — there is no serving-request budget
 to protect there, so no pending phase is needed).
 """
 
@@ -59,26 +59,26 @@ __all__ = [
     "write_trace",
 ]
 
-#: The fields `summarise_result` compares a re-score against (Ruling 35 §8.2 condition
+#: The fields `summarise_result` compares a re-score against (RL-862 §8.2 condition
 #: (b)) — never quote inputs, only what was actually served.
 _SUMMARY_FIELDS: Final[set[str]] = {"outcome", "decline_reasons", "premium_ladder", "outputs"}
 
-#: FR-RATE-42's three sampling reasons. Task 4B decides which applies to a given quote;
+#: FR-259's three sampling reasons. Task 4B decides which applies to a given quote;
 #: this module only persists the answer.
 SampleReason = Literal["rate", "decline", "error"]
 
-#: NFR-OVR-6: "≥ 13 months". 13 calendar months average 395.7 days; 396 is that floor with
+#: NFR-459: "≥ 13 months". 13 calendar months average 395.7 days; 396 is that floor with
 #: no rounding-down risk — the same reasoning `retention.job_history_days`
-#: (`app/platform/settings.py`) already uses for FR-PLAT-14's identical ≥ 13-month floor.
-#: A plain constant, not a workspace setting: NFR-OVR-6 states a fixed minimum, never
-#: "configurable" the way FR-RATE-42's sampling *rate* is.
+#: (`app/platform/settings.py`) already uses for FR-410's identical ≥ 13-month floor.
+#: A plain constant, not a workspace setting: NFR-459 states a fixed minimum, never
+#: "configurable" the way FR-259's sampling *rate* is.
 _RETENTION_FLOOR_DAYS: Final = 396
 
 
 def decide_sampling(
     outcome: ScoringOutcome, rate: float, *, roll: float
 ) -> tuple[bool, SampleReason | None]:
-    """FR-RATE-42's sampling policy, as a pure function (W11 Task 4B).
+    """FR-259's sampling policy, as a pure function (WK-671 Task 4B).
 
     A declined or errored quote is sampled at 100 % **regardless of `rate`**, including
     `rate == 0.0` — that is the floor the requirement states, not an additional condition on
@@ -115,13 +115,13 @@ async def write_trace(
     accounting must commit together or not at all.
 
     `environment` is left `None` for a trace written on request against a batch Job
-    (FR-RATE-41, Ruling 25): it has no live environment, and `GET /api/v1/traces` reads
+    (FR-258, RL-890): it has no live environment, and `GET /api/v1/traces` reads
     that absence as the signal that excludes it from the production stream (`03` §5.1).
     """
     payload = trace.model_dump_json().encode()
     ref = await blob_store.put(session, payload, "application/json")
-    # Keeps `ref_count > 0` so FR-PLAT-20's GC (`ref_count == 0` is its selector) can never
-    # consider this blob a candidate for as long as this row exists — the claim Ruling 23
+    # Keeps `ref_count > 0` so FR-420's GC (`ref_count == 0` is its selector) can never
+    # consider this blob a candidate for as long as this row exists — the claim RL-888
     # rests the whole retention design on, verified rather than assumed
     # (`backend/tests/test_traces.py`'s GC-survival test).
     await blobs.retain(session, ref.sha256)
@@ -141,7 +141,7 @@ async def write_trace(
 
 
 def summarise_result(result: ScoringResult) -> dict[str, Any]:
-    """What a re-score is checked against (Ruling 35 §8.2 condition (b)): `outcome`,
+    """What a re-score is checked against (RL-862 §8.2 condition (b)): `outcome`,
     `decline_reasons`, `premium_ladder` and `outputs` — the served answer, never the raw
     quote inputs that produced it (those travel separately, in `pending_quote_context`).
 
@@ -168,11 +168,11 @@ async def write_pending_trace(
     quote_context: dict[str, Any],
     served_summary: dict[str, Any],
 ) -> ScoringTraceRow:
-    """Serve time (W11 Task 4B, Ruling 35): record a sampled outcome before any trace body
+    """Serve time (WK-671 Task 4B, RL-862): record a sampled outcome before any trace body
     exists — no `Trace` to serialise yet, so no blob write and no I/O beyond the insert.
 
     `quote_context` is the `QuoteContext` the off-path Job will re-score, as an
-    already-JSON-safe dict (`QuoteContext.model_dump(mode="json")`) — Ruling 35 §8.4's
+    already-JSON-safe dict (`QuoteContext.model_dump(mode="json")`) — RL-862 §8.4's
     access-controlled carrier, kept on this row rather than in `JobRow.parameters`, which
     a workspace member holding no scoring permission can already read. `served_summary` is
     `summarise_result`'s output for the result actually served, compared against the
@@ -203,16 +203,16 @@ async def complete_pending_trace(
     *,
     reproduced_summary: dict[str, Any] | None,
 ) -> ScoringTraceRow:
-    """Off-path (W11 Task 4B, Ruling 35): resolve a pending row from a re-score attempt.
+    """Off-path (WK-671 Task 4B, RL-862): resolve a pending row from a re-score attempt.
 
     **Never an `UPDATE`.** `835988d1de4c` revokes `UPDATE` on `scoring_traces` outright, so
     this deletes the pending row and inserts the finished one at the same id — and the
-    same `created_at`, explicitly carried across, because NFR-OVR-6's retention floor is
+    same `created_at`, explicitly carried across, because NFR-459's retention floor is
     measured from it and completion must not reset the clock for a row that, from the
     floor's point of view, has not moved. Both statements run inside the caller's open
     transaction, so a crash between them leaves no orphaned state on commit.
 
-    **Two distinct call shapes, for Ruling 35 §8.2's two safety conditions:**
+    **Two distinct call shapes, for RL-862 §8.2's two safety conditions:**
 
     - `trace=None` (condition (a)): the caller could not resolve the *pinned* bundle — it
       refused to score the live one in its place, so no re-score was even attempted. The
@@ -291,7 +291,7 @@ async def delete_trace(
     floor_days: int | None = None,
     now: datetime | None = None,
 ) -> None:
-    """Delete a trace row, refusing while NFR-OVR-6's ≥ 13-month floor still covers it.
+    """Delete a trace row, refusing while NFR-459's ≥ 13-month floor still covers it.
 
     The **only** way the retention floor can be breached is an early row deletion (Ruling
     23) — there is no expiry job, so this is the one place age is ever checked. Releases
@@ -312,7 +312,7 @@ async def delete_trace(
             "TRACE_RETENTION_FLOOR",
             "Trace is inside its retention floor",
             409,
-            f"`00` NFR-OVR-6 retains sampled traces for >= {floor} days; this trace was "
+            f"`00` NFR-459 retains sampled traces for >= {floor} days; this trace was "
             f"written {row.created_at.isoformat()} and cannot be deleted before "
             f"{eligible_at.isoformat()}.",
         )

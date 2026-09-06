@@ -1,24 +1,24 @@
-"""`POST /api/v1/score` — real-time scoring (03 §5.1, FR-RATE-34/35/38/39; W11 Task 2B) and
-`POST /api/v1/score/batch` — batch re-rating (03 §5.1:517, FR-RATE-36/37/38; W11 Task 3C).
+"""`POST /api/v1/score` — real-time scoring (03 §5.1, FR-250/251/255/256; WK-671 Task 2B) and
+`POST /api/v1/score/batch` — batch re-rating (03 §5.1:517, FR-253/254/255; WK-671 Task 3C).
 
-**`/score` scores untraced and never sets `trace=True` for FR-RATE-42's sake** (W11 Task
-4B; Ruling 35, `docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`).
+**`/score` scores untraced and never sets `trace=True` for FR-259's sake** (WK-671 Task
+4B; RL-862, `docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`).
 `ctx.options.trace` is unchanged and still what decides whether `score_one` captures a
-trace *for FR-RATE-41's on-request return* — a caller who asks for one gets one inline and
-knowingly pays for it. FR-RATE-42's *sampled, persisted* trace is a different thing: after
+trace *for FR-258's on-request return* — a caller who asks for one gets one inline and
+knowingly pays for it. FR-259's *sampled, persisted* trace is a different thing: after
 scoring, `decide_sampling(result.outcome, ...)` decides whether this outcome is sampled,
 and a sampled one is recorded as a **pending** `scoring_traces` row and handed to an
 off-path `score.trace_produce` Job (`app.worker.trace_handlers`) to reproduce and persist —
 never captured inline, because always capturing pinned the traced fraction at 1 and put
-every request over NFR-RATE-1's 50 ms budget.
+every request over NFR-489's 50 ms budget.
 
 **`async def`, and not incidentally.** `BundleSlot` is unsynchronised and confined to one
 worker's event loop; FastAPI runs a plain `def` handler in a threadpool, which would put two
 threads on that object and reach the race its docstring documents. A synchronous handler here
 is a defect, not a style choice.
 
-**No `response_model=`, and no Pydantic return annotation** (NFR-RATE-13 as amended by
-Ruling 17). The requirement is *validate inbound, never outbound*: `QuoteContext` is untrusted
+**No `response_model=`, and no Pydantic return annotation** (NFR-502 as amended by
+RL-883). The requirement is *validate inbound, never outbound*: `QuoteContext` is untrusted
 and is validated; `ScoringResult` is built by `pricing-core` and is already trusted, so it is
 serialised with Pydantic v2's compiled encoder and returned in a raw `Response`. A return-type
 annotation is precisely what FastAPI's own `ORJSONResponse` deprecation notice recommends, and
@@ -26,16 +26,16 @@ precisely what this requirement forbids — an annotated route filters extra key
 500 on a shape that violates its model, which is outbound validation by another name.
 
 **The error boundary is this module's.** `pricing-core` cannot import `PlatformError`
-(ADR-0001), so `score_one` raises a code-named bare `ValueError` — `f"{code}: {message}"`. The
+(ADR-703), so `score_one` raises a code-named bare `ValueError` — `f"{code}: {message}"`. The
 codes are parsed off the front and mapped here. Deliberately *not* mapped: a firing
 `on_violation="error"` constraint raises a plain `NotImplementedError`, which is undesigned and
 must stay visible as a 500 rather than be dressed as a typed per-quote error.
 
 **`/score/batch` submits a Job and nothing else.** It carries no bundle-resolution logic of
 its own — that lives in `_compiled_for`/`_fetch_bundle` above, reused (not duplicated,
-Ruling 42) by `app.worker.scoring_handlers`. The route's only responsibilities are to
+RL-922) by `app.worker.scoring_handlers`. The route's only responsibilities are to
 authorise the caller against `Permission.SCORE_BATCH` (granted by no builtin role, deliberately
-— FR-GOV-6, C3 of `docs/plans/2026-08-29-w11-3-batch-scoring.md`) and to translate the request
+— FR-347, C3 of `docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`) and to translate the request
 body into the `score.batch` handler's parameter shape.
 """
 
@@ -110,17 +110,17 @@ ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH))]
 
 
 def _required_ref(ctx: QuoteContext) -> ArtifactRef:
-    """The explicit ref, or Ruling 14's refusal.
+    """The explicit ref, or RL-880's refusal.
 
     Raised *here*, before `score_one`, and that ordering is the whole point. `score_one`
     also refuses a missing ref — with `INPUT_CONTRACT_VIOLATION`, its own input-contract
     error — and forwarding to it would answer a caller who omitted the ref by telling them
     their input was malformed, when the truth is that this platform has no live Rating
-    Version to score against. `live` is a property of a Deployment (FR-RATE-23), which is
-    W14's; until then the endpoint refuses rather than guessing which version is live.
+    Version to score against. `live` is a property of a Deployment (FR-238), which is
+    WK-674's; until then the endpoint refuses rather than guessing which version is live.
 
-    The branch is permanent rather than a stub: after W14 it is what an environment holding
-    no Deployment answers, and W14 narrows the trigger instead of deleting a placeholder.
+    The branch is permanent rather than a stub: after WK-674 it is what an environment holding
+    no Deployment answers, and WK-674 narrows the trigger instead of deleting a placeholder.
     """
     ref = ctx.options.rating_version_ref if ctx.options is not None else None
     if ref is None:
@@ -143,16 +143,16 @@ async def _fetch_bundle(
     ref: ArtifactRef,
 ) -> CompiledBundle:
     """Resolve a ref to its hydrated `CompiledBundle`: one metadata read, then either a
-    slot hit or the blob store (Ruling 41,
-    `docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md`).
+    slot hit or the blob store (RL-921,
+    `docs/rulings/INDEX.md#2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulingsmd`).
 
-    The blob key lives on the version's own metadata (Ruling 37), so this is a single
+    The blob key lives on the version's own metadata (RL-915), so this is a single
     keyed read rather than a scan of Job history for the latest successful compile — which
-    would put an un-indexed JSONB lookup inside NFR-RATE-1's budget and, worse, decide
+    would put an un-indexed JSONB lookup inside NFR-489's budget and, worse, decide
     *which* compiled artifact a version is inside a query nobody had to defend.
 
     **The content hash is read from that same row and checked against the slot before the
-    blob is touched at all.** Ruling 41 found `compile_rating_version` already writes
+    blob is touched at all.** RL-921 found `compile_rating_version` already writes
     `content_hash` into `row.bundle` and this function used to discard it, paying the blob
     primary-key lookup, a ~2 MB object-store read and a full `Bundle.model_validate_json`
     on every request even when this worker already holds the exact bundle that hash names.
@@ -211,7 +211,7 @@ async def _compiled_for(
 ) -> CompiledBundle:
     """The hydrated bundle for `ref`, degrading to the slot when metadata storage is down.
 
-    NFR-RATE-9 requires degradation to *"the last-known-good cached bundle if metadata
+    NFR-497 requires degradation to *"the last-known-good cached bundle if metadata
     storage is unavailable"*, and the slot's ref-to-hash memo is what makes that reachable:
     the request carries a ref, and ref to hash is itself a metadata read.
 
@@ -260,7 +260,7 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
     # Every status this operation can actually produce, because a client cannot handle one
     # the contract does not mention. 409 carries two distinct codes —
     # `NO_LIVE_RATING_VERSION` when no ref is supplied, and `BUNDLE_COMPILE_FAILED` when the
-    # named version has no compiled bundle — and 422 carries FR-RATE-38's four per-quote
+    # named version has no compiled bundle — and 422 carries FR-255's four per-quote
     # codes. 404 is a ref naming no version; 401 and 403 are authentication and the
     # `score:execute` check.
     responses=problems(401, 403, 404, 409, 422),
@@ -273,15 +273,15 @@ async def score(
     slot: BundleSlotDep,
     settings: SettingsDep,
 ) -> Response:
-    """Score one quote (FR-RATE-34/35).
+    """Score one quote (FR-250/251).
 
-    W11 imposes neither of FR-RATE-35's restrictions — approved-only versions, and a
+    WK-671 imposes neither of FR-251's restrictions — approved-only versions, and a
     rewritten `what_if` purpose — because both sit inside that requirement's own `prod`
-    clause and W11 has no environments (Ruling 14 clause 3). Scoring a `draft` version by
+    clause and WK-671 has no environments (RL-880 clause 3). Scoring a `draft` version by
     explicit reference is the "what-if and testing" the requirement permits.
 
     A decline is **not** an error: `build_scoring_result` sets `outcome = "declined"` with a
-    populated ladder, and FR-RATE-39 makes that a 200.
+    populated ladder, and FR-256 makes that a 200.
     """
     ref = _required_ref(ctx)
     compiled = await _compiled_for(
@@ -308,14 +308,14 @@ async def _maybe_sample_trace(
     ctx: QuoteContext,
     result: ScoringResult,
 ) -> None:
-    """FR-RATE-42's sampling decision, and the pending-row write it leads to (W11 Task 4B,
-    Ruling 35). `result` is already untraced — this never sets `trace=True`; a sampled
+    """FR-259's sampling decision, and the pending-row write it leads to (WK-671 Task 4B,
+    RL-862). `result` is already untraced — this never sets `trace=True`; a sampled
     outcome is completed off the request path by `score.trace_produce`
     (`app.worker.trace_handlers`), not here.
 
     **Failures here are logged, never raised.** A caller who received a correctly-priced,
     already-serialised quote must not see it turn into a 500 because an unrelated audit
-    write failed — FR-RATE-42's persistence is a monitoring concern (`03`:175), and losing
+    write failed — FR-259's persistence is a monitoring concern (`03`:175), and losing
     one sample is a smaller failure than refusing to answer a quote the platform already
     successfully priced.
     """
@@ -330,7 +330,7 @@ async def _maybe_sample_trace(
             if not sampled or reason is None:
                 return
             if caller.environment is None:
-                # Ruling 44 part 3: `None` here is an impossible state, not a value to
+                # RL-916 part 3: `None` here is an impossible state, not a value to
                 # stamp — it is indistinguishable from Correction 2's batch marker
                 # (Task 4A), and a mislabelled row is permanent (`TRACE_RETENTION_FLOOR`,
                 # `UPDATE` revoked). Unreachable under the current permission model
@@ -368,13 +368,13 @@ async def _maybe_sample_trace(
 
 
 class BatchScoreRequest(BaseModel):
-    """`POST /score/batch`'s body (`03` §5.1:517, FR-RATE-36).
+    """`POST /score/batch`'s body (`03` §5.1:517, FR-253).
 
-    `rating_version_refs` accepts **one or more** refs (FR-RATE-36) — `score_batch`'s own
+    `rating_version_refs` accepts **one or more** refs (FR-253) — `score_batch`'s own
     signature (`03` §5.2) takes exactly one `CompiledBundle`, so multiple versions is this
-    route/handler looping bundles, never a widened `score_batch` signature (Ruling 43 §3
+    route/handler looping bundles, never a widened `score_batch` signature (RL-923 §3
     forbids that). `chunk_rows` and `abort_failure_rate` are left unset by default so the
-    handler's own default (Ruling 24's workspace-setting resolution) applies rather than a
+    handler's own default (RL-889's workspace-setting resolution) applies rather than a
     route-level guess.
     """
 
@@ -385,7 +385,7 @@ class BatchScoreRequest(BaseModel):
     table_name: str | None = None
     chunk_rows: int | None = Field(default=None, gt=0)
     #: A request-supplied threshold may only *lower* the resolved workspace setting
-    #: (`rating.batch_abort_failure_rate`, Ruling 24) — enforced by the handler
+    #: (`rating.batch_abort_failure_rate`, RL-889) — enforced by the handler
     #: (`BATCH_ABORT_THRESHOLD_ABOVE_SETTING`), not here.
     abort_failure_rate: float | None = Field(default=None, ge=0, le=1)
 
@@ -398,7 +398,7 @@ class BatchScoreRequest(BaseModel):
     # resolve — raised inside the handler (`app.worker.scoring_handlers`), not this route;
     # listed because a client polling the Job can observe it as the terminal failure. 409:
     # `BUNDLE_COMPILE_FAILED`, also handler-side. 422:
-    # `BATCH_ABORT_THRESHOLD_ABOVE_SETTING` (Ruling 24) and request-body validation.
+    # `BATCH_ABORT_THRESHOLD_ABOVE_SETTING` (RL-889) and request-body validation.
     responses=problems(401, 403, 404, 409, 422),
 )
 async def score_batch(
@@ -407,7 +407,7 @@ async def score_batch(
     database: DatabaseDep,
     response: Response,
 ) -> Job:
-    """**202** with a Job (`03` §5.1:517, FR-RATE-36/37/38; W11 Task 3C).
+    """**202** with a Job (`03` §5.1:517, FR-253/254/255; WK-671 Task 3C).
 
     Submits a `JobKind.SCORE_BATCH` Job — chunked, progress-reporting, resumable
     (`app.worker.scoring_handlers`) — never scores inline. Polling the returned Job to
@@ -417,8 +417,8 @@ async def score_batch(
     aborted.
 
     This route resolves nothing itself: bundle resolution, the manifest, the abort
-    threshold and the output are all the handler's (`docs/plans/2026-08-29-w11-3-batch-
-    scoring.md` Task 3B). Widening this route to score inline would duplicate that
+    threshold and the output are all the handler's (`docs/plans/PL-00849-wk-671-slice-3
+    -batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md` Task 3B). Widening this route to score inline would duplicate that
     machinery, exactly what `CLAUDE.md` §2 forbids.
     """
     parameters: dict[str, Any] = {

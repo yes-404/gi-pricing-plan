@@ -18,44 +18,44 @@ Checks (all non-destructive, exit 1 on any failure):
  13. Terms are not redefined in a module glossary after 00-overview defines them.
  14. Every module is exercised by at least one workflow, above a coverage floor.
  15. Every open-question row has an owner and a status from a known set.
- 16. Every working note carries the header block docs/notes/README.md requires.
+ 16. Every working note carries the header block docs/rfcs/README.md requires.
  17. Note numbering is well-formed and unique, and matches each file's own heading.
  18. The notes index and the directory agree, in both directions.
  19. Every reference a note makes resolves — links, FR-/NFR- ids, OQ- ids, ADRs, NT- ids.
  20. No note defines a requirement id; only docs/specs/ may do that.
  21. Every endpoint and pricing-core function a workflow journey cites is declared
-     in the owning module's §5.1 or §5.2 (FR-OVR-17, OQ-OVR-6).
+     in the owning module's §5.1 or §5.2 (FR-19, OQ-543).
  22. Every markdown table row has its own header's cell count — catching a literal
      `|` inside a cell, which shifts every column after it while still rendering.
  23. Every spec §10 open-question mirror row carries a status token matching the
      findings register's status for that question, not just a bare, unstatused mirror.
  24. Every route `00` §5.6 declares as canonical for a module appears in that module's
-     own §5.3 view table (FR-OVR-22); §5.6 is canonical, so a mismatch is a §5.3 error.
+     own §5.3 view table (FR-25); §5.6 is canonical, so a mismatch is a §5.3 error.
  25. Every `(F<n>)` / `(F-W<n>-<n>)` finding id cited in docs/research/, docs/plans/ or
-     docs/notes/ resolves against docs/audit/register.md, an archived phase register, or
+     docs/notes/ resolves against docs/findings/register.md, an archived phase register, or
      a docs/audit/work/*/README.md (or closure-records.md) work-item closure record.
  26. Every `source` citation in docs/process/delivery-process.core.json resolves to a
-     real section, or numbered step, of docs/process/delivery-process.md (NT-0014 §3).
+     real section, or numbered step, of docs/process/delivery-process.md (RFC-895 §3).
  27. The process core extract's recorded digest (`meta.derived_from_digest`) matches the
      current bytes of docs/process/delivery-process.md, paired with the commit it was last
      reconciled against (`meta.verified_against_tree`) — the other half of check 26's own
-     "cheap half of a drift check" (Ruling 45).
+     "cheap half of a drift check" (RL-905).
  28. Every filed plan (the `writing-plans` file kind, dated on or after 2026-08-31) states
-     an explicit "Acceptance Standard" heading with content under it (NT-0014 §2 C1,
-     Ruling 46). Plans dated before the cutoff, and the `-ledger`/`-final-review`/
+     an explicit "Acceptance Standard" heading with content under it (RFC-895 §2 C1,
+     RL-906). Plans dated before the cutoff, and the `-ledger`/`-final-review`/
      `-verified`/`-handover` file kinds, are out of scope by design — never retro-red-gated.
- 29. Every Decision cell in docs/audit/register.md opens with the register's own disposition
+ 29. Every Decision cell in docs/findings/register.md opens with the register's own disposition
      vocabulary, a CLAUDE.md §13 verdict, or the negated fix-before-close shape; every
      resolution annotation names a date and a PR/commit/doc reference; every unowned row
-     says more than the bare word (Ruling 50, `scripts/register-lint.py`). Also prints, as a
+     says more than the bare word (RL-910, `scripts/register-lint.py`). Also prints, as a
      note rather than a failure, the count of rows not yet migrated to
-     docs/audit/findings/<F-id>.md against the migration threshold (Ruling 51, NT-0015 P4).
+     docs/audit/findings/<F-id>.md against the migration threshold (RL-911, RFC-896 P4).
 
-NT-0019 (docs/notes/0019-one-id-per-document.md) §1.11 — one id per governed thing.
+RFC-937 (docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md) §1.11 — one id per governed thing.
 Checks 30-39 below, path-scoped to `_ID_SCOPE_ROOTS` until the migration (Slice W37-6)
-widens it to the whole corpus (docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md,
+widens it to the whole corpus (docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md,
 Slice W37-4, 2026-09-02). **Slot 30 changed identity on this date**: it held
-`check_notes_tombstone` (the vacated `.claude/notes/` tombstone check, Ruling 61); NT-0019
+`check_notes_tombstone` (the vacated `.claude/notes/` tombstone check, RL-951); RFC-937
 §5.5 resolves the collision between that check and this note's own header check — both
 numbered 30 — by replacing the former rather than renumbering either
 (`check_notes_tombstone` -> `check_redirects`, moving to slot 36, which is what its job
@@ -64,18 +64,18 @@ is not reused for two things; `check_notes_tombstone`'s protective job over the 
 stubs ends with this commit, by that same resolution, until W37-6 deletes the stubs
 entirely.
  30. Header present and parseable on every file in scope; no unknown field; required
-     fields per family, read from docs/_templates/ (Ruling 70) — never transcribed from
-     NT-0019 §1.5's own parenthesis, which diverges from the templates in both directions.
+     fields per family, read from docs/_templates/ (RL-981) — never transcribed from
+     RFC-937 §1.5's own parenthesis, which diverges from the templates in both directions.
  31. Header `id` prefix and integer equal the filename's; directory equals family;
      numbers unique and contiguous in scope; `created` non-decreasing with the number.
-     `docs/_templates/` is exempt by path (NT-0019 §1.4).
+     `docs/_templates/` is exempt by path (RFC-937 §1.4).
  32. Every `<PREFIX>-<n>` in prose resolves in docs/INDEX.md and its prefix matches the
      number's family; no padded id outside a link target; a link's text and target cite
      the same id. Gated on docs/INDEX.md existing (pre-migration there is no citation
      corpus, and document-ids.md's own illustrative ids would otherwise false-positive).
  33. `supersedes`/`superseded_by` symmetric; `status:` is in the standard's vocabulary and
      in the family's own subset of it; the map-plan roll-up raise surfaced rather than
-     swallowed (Ruling 72 — doc-index.py's precedence table has no catch-all).
+     swallowed (RL-983 — doc-index.py's precedence table has no catch-all).
  34. Freeze: a frozen family's diff against its merge-base touches only `status:` (forward
      only), `superseded_by:`, an appended `corrected_by:` entry, or (ledgers) an appended
      `plans:` entry (DP-7); every `corrected_by:` entry is a record whose `corrects:` names
@@ -85,15 +85,15 @@ entirely.
      and F83's register of files that cannot carry a header at all (60 generated
      artifacts under docs/ in formats with no comment syntax, 3 unparseable vendored
      SKILL.md manifests, 2 more surfaced by the check itself) reconciled against
-     NT-0019's stamp set by name — every entry citing its reason and its ruling
+     RFC-937's stamp set by name — every entry citing its reason and its ruling
      (condition 1), and the register held equal to the tree so it cannot grow silently
      (condition 2). Naming, never a total: two errors that cancel pass a total-only
-     check, which is Ruling 83's reason and `.claude/skills/docs-audit`
+     check, which is RL-985's reason and `.claude/skills/docs-audit`
      §"a total validates the total, and nothing else".
  36. Redirects (renamed from `check_notes_tombstone`, see above): every `was:` has a
      REDIRECTS.csv row; every row's target exists; no pre-migration id or path form
-     survives outside REDIRECTS.csv and `was:` lines (Ruling 67/DP-2) — one shared
-     pattern-and-exclusion constant, reused unscoped by NT-0019 §7 acceptance item (d)
+     survives outside REDIRECTS.csv and `was:` lines (RL-988/DP-2) — one shared
+     pattern-and-exclusion constant, reused unscoped by RFC-937 §7 acceptance item (d)
      once the migration lands.
  37. Shape: a document carries every `##` section its family's template body declares —
      the ten-section spec rule, generalised.
@@ -130,11 +130,11 @@ ROOT = REPO / "docs"
 
 
 def migrated_tree() -> bool:
-    """True on a tree the NT-0019 id migration has run over.
+    """True on a tree the RFC-937 id migration has run over.
 
     **Why a sentinel and not a flag.** These parsers have to read the corpus on *both*
     sides of a one-way migration commit: this file lands on `main` before the migration
-    runs (Ruling 102 §3's carve-out — "any H row without which `audit-docs.py` finds zero
+    runs (RL-1043 §3's carve-out — "any H row without which `audit-docs.py` finds zero
     requirements lands with the run"), so a parser hard-coded to the post-migration
     shape would red `main` on the day it merged, and one hard-coded to the pre-migration
     shape reports a **vacuous pass** — every count zero, exit code 0 — the moment the
@@ -169,15 +169,15 @@ def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
     return candidates[0]
 
 
-#: `docs/notes/` pre-migration, `docs/rfcs/` after it (NT-0019 D7: notes become the `RFC`
+#: `docs/notes/` pre-migration, `docs/rfcs/` after it (RFC-937 D7: notes become the `RFC`
 #: family). Resolved by what is on disk, never by a flag — see `migrated_tree`.
 NOTES = _first_dir(ROOT / "notes", ROOT / "rfcs")
-#: The findings register: `docs/audit/register.md` pre-migration, `docs/findings/register.md`
-#: after it (NT-0019 §5.2 — the two registers merge into one). Written as a *constant* and
+#: The findings register: `docs/findings/register.md` pre-migration, `docs/findings/register.md`
+#: after it (RFC-937 §5.2 — the two registers merge into one). Written as a *constant* and
 #: not spelled inline at each use, because the migration rewrites the path **string** in this
 #: file's own messages while leaving a `ROOT / "audit" / "register.md"` pathlib join
 #: untouched: post-migration the un-fixed script printed "no docs/findings/register.md —
-#: check 29 skipped" while reading `docs/audit/register.md`. The message moved, the parser
+#: check 29 skipped" while reading `docs/findings/register.md`. The message moved, the parser
 #: did not.
 REGISTER = _first_file(ROOT / "audit" / "register.md", ROOT / "findings" / "register.md")
 _ABS_PREFIX = "https://contracts.gi-pricing.dev/"
@@ -185,8 +185,8 @@ _ABS_PREFIX = "https://contracts.gi-pricing.dev/"
 UNALLOCATED = re.compile(r"next free\s*:", re.IGNORECASE)
 
 #: Requirement, open-question and dependency id **bodies**, accepting both the pre-migration
-#: module-scoped form (`FR-MODEL-45`) and the post-migration global-sequence form
-#: (`FR-1187`, NT-0019 D2). The optional `[A-Z]+-` segment is the whole difference.
+#: module-scoped form (`FR-154`) and the post-migration global-sequence form
+#: (`FR-1187`, RFC-937 D2). The optional `[A-Z]+-` segment is the whole difference.
 #:
 #: These exist as named constants because the same shape is parsed at eleven sites, and after
 #: the migration every one of them matching nothing is not a failure — it is a **pass over an
@@ -199,7 +199,7 @@ UNALLOCATED = re.compile(r"next free\s*:", re.IGNORECASE)
 #: keep matching the scoped form and only the scoped form — that is the form it exists to
 #: find.
 #: **One regime per tree, chosen from the tree.** The two forms are not both accepted at
-#: once: on an un-migrated tree the global form appears only as *illustration* — NT-0019 §3's
+#: once: on an un-migrated tree the global form appears only as *illustration* — RFC-937 §3's
 #: "Today | After" table and `document-ids.md`'s worked examples write `FR-1187` to show what
 #: the migration will produce — and a parser accepting both reads those as citations of
 #: requirements no spec defines. That is the failure mode this repository has hit repeatedly:
@@ -218,8 +218,8 @@ _OQ_DEFINED = re.compile(r"\*\*(" + _OQ_ID_BODY + r")\*\*")
 _OQ_CITED = re.compile(r"\b(" + _OQ_ID_BODY + r")\b")
 #: An open-question row's leading cell in `open-questions.md` or a spec §10 mirror table.
 _OQ_ROW = re.compile(r"\| (?:~~)?\*\*(" + _OQ_ID_BODY + r")\*\*")
-#: An ADR citation. Pre-migration files are `docs/adr/0001-*.md` cited `ADR-0001`;
-#: post-migration they are `docs/adrs/ADR-00004-*.md` cited `ADR-4` (NT-0019 D6 — citations
+#: An ADR citation. Pre-migration files are `docs/adrs/0001-*.md` cited `ADR-703`;
+#: post-migration they are `docs/adrs/ADR-00004-*.md` cited `ADR-4` (RFC-937 D6 — citations
 #: unpadded, filenames padded to five). The old `ADR-(\d{4})` pattern reads the *first four*
 #: digits of a five-digit padded id, so a real five-digit citation shaped `ADR-0NNNx` was
 #: parsed as a citation of the schematic four-digit form `ADR-0NNN` and check 5 failed with
@@ -229,11 +229,11 @@ _OQ_ROW = re.compile(r"\| (?:~~)?\*\*(" + _OQ_ID_BODY + r")\*\*")
 #: pattern. Matching
 #: `0*(\d+)` with a boundary and comparing **integers** is width-agnostic in both
 #: directions. **`ADR-999` rather than a real ADR**, deliberately: highest allocated is
-#: `ADR-10`, and citing a real one here would itself be an `NT-0019` §7(e) violation
-#: (Ruling 103's four conjuncts) — this comment commenting on its own input, the same
+#: `ADR-10`, and citing a real one here would itself be an `RFC-937` §7(e) violation
+#: (RL-1044's four conjuncts) — this comment commenting on its own input, the same
 #: shape §5.5 already fixed in this row's own test fixtures (`RL-09999`/`PL-09998`).
 #: The `[1-9]` first digit is not cosmetic: with `0*(\d+)` the pattern matches the literal
-#: text `ADR-0[0-9]{3}` — NT-0019 §7(d)'s own grep pattern, written in prose — as a
+#: text `ADR-0[0-9]{3}` — RFC-937 §7(d)'s own grep pattern, written in prose — as a
 #: citation of "ADR-0", and check 5 then fails on a document that cites no ADR at all.
 #: Ids are allocated from 1, so a leading run of zeros followed by nothing is never one.
 _ADR_CITED = re.compile(r"\bADR-0*([1-9]\d*)\b")
@@ -268,8 +268,8 @@ def _load_register_lint() -> types.ModuleType:
 
 
 def check_register_grammar() -> None:
-    """Check 29: docs/audit/register.md's Decision-cell grammar (Ruling 50), plus the P4
-    findings-file migration residue line (Ruling 51) — a note, never a failure, so the
+    """Check 29: docs/findings/register.md's Decision-cell grammar (RL-910), plus the P4
+    findings-file migration residue line (RL-911) — a note, never a failure, so the
     "opportunistic migration" claim stays falsifiable everywhere the docs gate runs, not
     only when `register-lint.py` is invoked directly.
     """
@@ -316,7 +316,7 @@ def _placeholder_match(
 ) -> str | None:
     """A declared `{}` segment matches a literal one in a citation.
 
-    Needed because a journey is concrete where the spec is general — wf-04 deploys to `prod`,
+    Needed because a journey is concrete where the spec is general — WF-701 deploys to `prod`,
     and `03` §5.1 declares `/environments/{env}/deployments`. Refusing that would report four
     working, declared endpoints as missing, and a check that cries wolf is one everybody
     learns to skip.
@@ -373,7 +373,7 @@ def check_open_question_mirror_status(specs: list[pathlib.Path]) -> None:
     Check 4 proves every question is mirrored in both directions, but nothing looks at
     what the mirror row *says*. A bare row — the question, no status, no consequence —
     is audit-clean by construction, even when the register has long since decided the
-    question; OQ-OVR-7's two bodies had diverged so far they named different things
+    question; OQ-544's two bodies had diverged so far they named different things
     while every check passed. The register is the source of truth (check 15 constrains
     its status vocabulary), so each mirror row must state its status in the register's
     own words: a decided question's row must carry "decided" (or a mirror-side
@@ -463,10 +463,10 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
         return
 
     if migrated_tree():
-        # Post-migration the note family is `RFC-` (NT-0019 D7) and every mechanical duty
+        # Post-migration the note family is `RFC-` (RFC-937 D7) and every mechanical duty
         # checks 16-20 discharge has a successor that covers *every* family rather than this
         # one directory: the prose `| **Raised** |` header block becomes YAML front matter
-        # (check 30), `NT-0012` becomes an `id:` field that must equal the filename
+        # (check 30), `RFC-842` becomes an `id:` field that must equal the filename
         # (check 31), the five-word status vocabulary is check 33's, citations resolving is
         # check 32's, and the hand-maintained README index table is replaced by the generated
         # `docs/INDEX.md` that check 39 holds byte-stable.
@@ -566,7 +566,7 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
     # 18. the index and the directory, in both directions
     readme = NOTES / "README.md"
     if not readme.is_file():
-        fail("check 18: docs/notes/README.md is missing — the index is part of the standard")
+        fail("check 18: docs/rfcs/README.md is missing — the index is part of the standard")
         return
     indexed: dict[str, tuple[str, str]] = {}
     for line in readme.read_text(encoding="utf-8").splitlines():
@@ -577,7 +577,7 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
         indexed[row.group(1)] = (row.group(2), cells[3] if len(cells) > 3 else "")
     for number, path in sorted(seen.items()):
         if number not in indexed:
-            fail(f"check 18: {rel(path)} is not listed in the docs/notes/README.md index")
+            fail(f"check 18: {rel(path)} is not listed in the docs/rfcs/README.md index")
         elif indexed[number][0] != path.name:
             fail(
                 f"check 18: index row NT-{number} links to {indexed[number][0]}, but the "
@@ -610,7 +610,7 @@ def check_table_rows(md: list[pathlib.Path]) -> None:
     something else. Escaping (`` `rows \| parquet` ``) is the only fix, and it works inside
     a code span even though a backslash escape normally does not.
 
-    Found 2026-08-18 in two rows written the same day — `03` FR-RATE-62 and OQ-RATE-3's
+    Found 2026-08-18 in two rows written the same day — `03` FR-232 and OQ-616's
     register entry — where the Owner column had become part of the recommendation.
 
     Rows are compared against their **own table's** header rather than a per-file majority:
@@ -647,20 +647,20 @@ def check_table_rows(md: list[pathlib.Path]) -> None:
 
 #: `F6`, `F26`, or the workstream-scoped `F-W9-1` / `F-W10-1-1` a phase-boundary carry-forward
 #: uses — the findings register's own id shape, confirmed against every row in
-#: `docs/audit/register.md` and `docs/audit/phases/*/register.md`.
-#: The `FD-<n>` alternative is NT-0019 D7's post-migration form (`docs/findings/FD-0nnnn-*.md`,
+#: `docs/findings/register.md` and `docs/audit/phases/*/register.md`.
+#: The `FD-<n>` alternative is RFC-937 D7's post-migration form (`docs/findings/FD-0nnnn-*.md`,
 #: cited `FD-93`). Listed first so the alternation prefers it: `F(?:…|\d+)` would otherwise
 #: match the bare `F` of nothing at all, but more importantly a reader must not have to
 #: re-derive which branch wins.
 _FINDING_ID = r"(?:FD-0*\d+|F(?:-W\d+-\d+(?:-\d+)?|\d+))"
 #: The register's own citation convention: a finding id in parentheses, immediately after the
-#: text it concerns — `` `Ruling 16's acceptance-test premise (F32)` ``. See
+#: text it concerns — `` `RL-882's acceptance-test premise (F32)` ``. See
 #: `check_finding_citations`'s docstring for why a bare `F1` is deliberately not matched.
 _FINDING_CITED = re.compile(r"\((" + _FINDING_ID + r")\)")
 #: A file defining its own local, private findings — a heading (`## F1 — …`), a ledger
 #: table's own first cell (`| F1 | … |`, the shape both `track-a-findings.md` and every
 #: archived phase register use), or a bold paragraph lead-in (`**F-W11-1-2 — … .**`, the
-#: shape `docs/plans/2026-08-29-w11-1-evaluator-core.md` uses for its own four findings).
+#: shape `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md` uses for its own four findings).
 _FINDING_HEADING = re.compile(r"^#{1,6}\s+(" + _FINDING_ID + r")\b", re.M)
 _FINDING_TABLE_CELL = re.compile(r"^\|\s*(" + _FINDING_ID + r")\s*\|", re.M)
 _FINDING_BOLD_LEAD = re.compile(r"^\*\*(" + _FINDING_ID + r")\b", re.M)
@@ -669,7 +669,7 @@ _FINDING_BOLD_LEAD = re.compile(r"^\*\*(" + _FINDING_ID + r")\b", re.M)
 def check_finding_citations() -> None:
     r"""25. Every finding id cited outside the register resolves to a row there.
 
-    `docs/audit/register.md` is the single register of open findings (`CLAUDE.md` §13), and
+    `docs/findings/register.md` is the single register of open findings (`CLAUDE.md` §13), and
     until now nothing checked it from the *citing* side: a plan, a research spike or a working
     note can write `(F42)` for a withdrawn finding, or `(F45)` for one a tombstone note had
     just promised but no row yet existed for, and nothing complained. Both happened for real
@@ -680,10 +680,10 @@ def check_finding_citations() -> None:
     — where a citation is *made*. Not `docs/audit/` itself, where findings are *filed* and a
     retired id or a not-yet-filed one is legitimately named in the prose explaining exactly
     that (the F42 tombstone note names both F42 and F45 in plain, unparenthesised text for
-    this reason). Not `docs/roadmap.md` or `docs/phase-0-status.md` either, though both carry
-    `(F..)` tokens: building this check found `phase-0-status.md`'s `(F13)` citing
-    `docs/research/track-a-findings.md`'s own local F13 (`FR-MODEL-72`) — a real collision
-    with the register's *unrelated* F13 (`FR-OVR-22`) that a wider scan would have silently
+    this reason). Not `docs/roadmap.md` or `docs/closures/CR-00709-phase-0-specification-status.md` either, though both carry
+    `(F..)` tokens: building this check found `closures/CR-00709-phase-0-specification-status.md`'s `(F13)` citing
+    `docs/research/track-a-findings.md`'s own local F13 (`FR-129`) — a real collision
+    with the register's *unrelated* F13 (`FR-25`) that a wider scan would have silently
     resolved against the wrong row instead of catching. Narrowing to where the incident this
     check answers actually happened is what keeps that kind of false confidence out.
 
@@ -697,9 +697,9 @@ def check_finding_citations() -> None:
     **Only the register's own citation form is matched**: an id in parentheses immediately
     after the text it concerns, `(F32)` or `(F-W9-1)` — exactly how every register row names
     itself, and how every genuine cross-document citation found while writing this check was
-    written (`docs/plans/2026-08-29-w11-3-batch-scoring.md` and its W11 siblings). A bare
+    written (`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md` and its WK-671 siblings). A bare
     `F1` with no parentheses is deliberately never matched: dozens of unrelated documents
-    number their *own* local findings from one — every W5 and W6b task plan's own "Findings"
+    number their *own* local findings from one — every WK-661 and WK-664 task plan's own "Findings"
     section, `track-a-findings.md`'s spike log, the phase 1b predecision plan before it became
     that phase's register — and a bare-token scan over `docs/plans/` and `docs/research/`
     flagged several hundred of those as dangling register references against the corpus this
@@ -709,21 +709,21 @@ def check_finding_citations() -> None:
 
     **A file citing its own locally-defined finding is not citing the register.** A plan that
     opens `### F1 — …` (a heading), or `**F-W11-1-2 — … .**` (a bold paragraph lead-in, the
-    form `docs/plans/2026-08-29-w11-1-evaluator-core.md` uses for its own four findings), and
+    form `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md` uses for its own four findings), and
     later writes `(F1)` or `(F-W11-1-2)` again further down, refers to itself, not to
-    `docs/audit/register.md`. `_FINDING_HEADING`, `_FINDING_TABLE_CELL` and
+    `docs/findings/register.md`. `_FINDING_HEADING`, `_FINDING_TABLE_CELL` and
     `_FINDING_BOLD_LEAD` collect a file's own local ids (all three defining forms seen in the
     real corpus), same-file only: a citation resolved by a *different* file's local heading
-    (the `phase-0-status.md` collision above) is exactly the false match this check must not
+    (the `closures/CR-00709-phase-0-specification-status.md` collision above) is exactly the false match this check must not
     make, which is a second, independent reason that file sits outside this check's scope.
 
     **A finding resolves against the live register, an archived phase register, or a closure
-    record — never only the first.** `docs/audit/register.md`'s own header states the
+    record — never only the first.** `docs/findings/register.md`'s own header states the
     contract: one row per *open* finding, removed when a close resolves it. A finding can
     therefore be real, correctly resolved, and correctly cited, while having never had a row
     in the live register at all — the ordinary case for one closed during a slice's own audit
     rather than carried forward. `F-W9-3-2` is exactly this shape: resolved the same day it
-    was raised (`docs/audit/work/W9-3/README.md`'s Findings table), cited from the spec
+    was raised (`docs/closures/CR-00837-work-item-record-w9-3-bundle-compilation.md`'s Findings table), cited from the spec
     sentence it corrected (`03-rating-engine.md:671`), never filed to `register.md` because
     filing a *closed* finding there would violate the header's own contract. Ruling, 2026-08-30
     (relayed from the lead, who cannot reach this script directly): treating that citation as
@@ -731,13 +731,13 @@ def check_finding_citations() -> None:
     to catch, since it fires on correct behaviour. Resolution therefore checks three sources in
     order: `register.md` (open findings, parenthesised `(F<n>)` form), every
     `docs/audit/phases/*/register.md` (archived-phase snapshots, bare-id table-cell form), and
-    every `docs/audit/work/*/README.md` plus `docs/audit/closure-records.md` (ordinary work-item
+    every `docs/audit/work/*/README.md` plus `docs/closures/INDEX.md#closure-recordsmd` (ordinary work-item
     closure records, the same bare-id table-cell form — confirmed against `W9-3`'s own Findings
     table before relying on it, not assumed from the name).
 
     **The reverse direction — a register row citing a document that does not exist — is
-    deliberately not built here.** A genuine `[text](path)` link inside `docs/audit/
-    register.md` is already covered by check 1, which scans all of `docs/` including
+    deliberately not built here.** A genuine `[text](path)` link inside `docs/findin
+    gs/register.md` is already covered by check 1, which scans all of `docs/` including
     `docs/audit/`. Past that, the register's backtick spans are not reliably file paths: one
     row alone mixes a real path, a code symbol, a `file.py:NNN` citation, a shell command and
     an error-code name with no syntactic marker telling them apart — the same false-positive
@@ -762,7 +762,7 @@ def check_finding_citations() -> None:
     # less resolved, and no less a legitimate thing to cite -- confirmed against W9-3's own
     # Findings table, whose id is the bare first cell, the same shape a phase register uses.
     #
-    # Both layouts: `docs/audit/work/*/README.md` + `closure-records.md` before the NT-0019
+    # Both layouts: `docs/audit/work/*/README.md` + `closure-records.md` before the RFC-937
     # migration, `docs/closures/CR-*.md` after it (§5.2 -- the work-item READMEs and the two
     # split files all become `CR-` documents).
     closure_sources = sorted((ROOT / "audit" / "work").glob("*/README.md"))
@@ -800,7 +800,7 @@ def check_finding_citations() -> None:
         for fid in sorted(cited - registered - local):
             fail(
                 f"check 25: {f.relative_to(REPO)}: cites finding {fid}, which resolves "
-                "nowhere -- not docs/audit/register.md, not an archived phase register, "
+                "nowhere -- not docs/findings/register.md, not an archived phase register, "
                 "not a docs/audit/work/*/README.md or closure-records.md closure record, "
                 "and not defined locally in this file"
             )
@@ -824,7 +824,7 @@ def check_process_core_drift() -> None:
     """26. Every `source` citation in the process core extract resolves in the process spec.
 
     `docs/process/delivery-process.core.json` is the machine-readable extract of
-    `delivery-process.md` (NT-0014). **The markdown is authoritative and the extract is
+    `delivery-process.md` (RFC-895). **The markdown is authoritative and the extract is
     derived**, so an extract citing a section that does not exist means the extract is
     wrong — never the spec. The check is one-directional for that reason.
 
@@ -832,7 +832,7 @@ def check_process_core_drift() -> None:
     which motivated the whole proposal: at `6f77abb` the process spec's own back-reference
     named `CLAUDE.md` §12 for a pointer that lives in §15, and no gate in the repository
     could see it. A citation that *resolves* is not proof the cited text still says what the
-    citer thinks (`NT-0006`); a citation that does **not** resolve is proof of drift, with
+    citer thinks (`RFC-779`); a citation that does **not** resolve is proof of drift, with
     no judgement required. Only the second is mechanised here.
 
     Numbered 26, not 25: 25 is claimed by in-flight work, and a check number is permanent
@@ -865,13 +865,13 @@ def check_process_core_drift() -> None:
         fail(f"check 26: docs/process/delivery-process.core.json is not valid JSON: {exc}")
         return
 
-    # The authority rule (NT-0014 §3) enforced on the artifact that claims it, rather than
+    # The authority rule (RFC-895 §3) enforced on the artifact that claims it, rather than
     # only stated in the prose beside it.
     meta = core.get("meta", {})
     if meta.get("authoritative") is not False:
         fail(
             "check 26: process core `meta.authoritative` must be `false` — the markdown "
-            f"spec is authoritative and the extract is derived (NT-0014 §3); found "
+            f"spec is authoritative and the extract is derived (RFC-895 §3); found "
             f"{meta.get('authoritative')!r}"
         )
     derived = meta.get("derived_from")
@@ -915,7 +915,7 @@ def check_process_core_drift() -> None:
             uncited += 1
             fail(
                 f"check 26: process core: `source` value {src!r} cites no § section — "
-                "every block must name the spec section it was extracted from (NT-0014 §3)"
+                "every block must name the spec section it was extracted from (RFC-895 §3)"
             )
             continue
         for section, step in found:
@@ -937,7 +937,7 @@ def check_process_core_drift() -> None:
         fail(
             "check 26: process core carries no `source` citations at all — every block "
             "must cite the spec section it came from, which is what makes drift "
-            "detectable (NT-0014 §3)"
+            "detectable (RFC-895 §3)"
         )
         return
 
@@ -952,20 +952,20 @@ def check_process_core_digest() -> None:
 
     Check 26 is, by its own docstring, "the cheap half of a drift check": it resolves each
     block's `source` citation but compares nothing about *content*. That gap was not
-    theoretical — at the moment this check was proposed (Ruling 45,
-    `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`), `delivery-process.md` had taken two
+    theoretical — at the moment this check was proposed (RL-905,
+    `docs/rulings/INDEX.md#2026-08-30-nt-0014-q1-q3-q4-rulingsmd`), `delivery-process.md` had taken two
     commits past the extract's only commit, including one that added two normative rules to
     the very section (§15) a guard block cites, and check 26 stayed green throughout.
 
     This is the other half. `meta.derived_from_digest` records a `sha256:` digest of the
     exact bytes of `meta.derived_from` (`delivery-process.md`) as read at the last
     reconciliation, paired with the commit that reconciliation happened at
-    (`meta.verified_against_tree`, already present on the artifact — Ruling 45 makes it
+    (`meta.verified_against_tree`, already present on the artifact — RL-905 makes it
     load-bearing for the first time). Comparing prose to JSON semantically is not buildable;
     comparing "the source has not moved since a human last reconciled the extract against
     it" is exactly this — three lines, and the check that actually forces the reconciliation.
 
-    The pairing with a commit is not decoration (Ruling 45 §2): a bare digest mismatch says
+    The pairing with a commit is not decoration (RL-905 §2): a bare digest mismatch says
     only "it changed", but the recorded commit lets the failure message name the exact range
     a session should read — `git diff <verified_against_tree>..HEAD -- delivery-process.md`
     — the difference between re-reading the diff and blindly bumping a hash.
@@ -975,7 +975,7 @@ def check_process_core_digest() -> None:
     never the spec being wrong. Known cost, accepted per the ruling: this reds on every edit
     to the process spec, including a typo — the right price for a forced re-read.
 
-    Numbered 27, the number Ruling 45 §3 reserved (free at `1407e09`); slice F took 28,
+    Numbered 27, the number RL-905 §3 reserved (free at `1407e09`); slice F took 28,
     leaving 27 here.
     """
     if not PROCESS_SPEC.is_file():
@@ -1001,13 +1001,13 @@ def check_process_core_digest() -> None:
     if not recorded_tree:
         fail(
             "check 27: process core `meta.verified_against_tree` is missing or empty — "
-            "the digest must be paired with the commit it was taken at (Ruling 45 §2), "
+            "the digest must be paired with the commit it was taken at (RL-905 §2), "
             "so a future mismatch can name the exact range to read"
         )
 
     if not recorded_digest:
         fail(
-            "check 27: process core `meta.derived_from_digest` is missing — Ruling 45 "
+            "check 27: process core `meta.derived_from_digest` is missing — RL-905 "
             "requires a `sha256:`-prefixed digest of the exact bytes of "
             "`meta.derived_from` (delivery-process.md), recorded at the commit it was "
             "last reconciled against"
@@ -1017,7 +1017,7 @@ def check_process_core_digest() -> None:
     if not recorded_digest.startswith("sha256:"):
         fail(
             f"check 27: process core `meta.derived_from_digest` {recorded_digest!r} is "
-            "not `sha256:`-prefixed — Ruling 45 specifies a sha256 digest of the exact "
+            "not `sha256:`-prefixed — RL-905 specifies a sha256 digest of the exact "
             "bytes"
         )
         return
@@ -1041,8 +1041,8 @@ def check_process_core_digest() -> None:
     )
 
 
-#: The date C1 and the `writing-plans` acceptance-standard field land together (NT-0014 §2,
-#: Ruling 46 — `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md` Ruling 46). A constant, not
+#: The date C1 and the `writing-plans` acceptance-standard field land together (RFC-895 §2,
+#: RL-906 — `docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-thereafter-rejected-as-the-mechanism.md` RL-906). A constant, not
 #: read from the clock or git history: the verdict must be a property of the plan's own
 #: filename, reproducible in any clone at any revision, never of when the check happens to
 #: run. **Permanent once landed, the same way a check number is (`CLAUDE.md` §5) — do not
@@ -1050,14 +1050,14 @@ def check_process_core_digest() -> None:
 PLAN_ACCEPTANCE_STANDARD_CUTOFF = date(2026, 8, 31)
 
 #: docs/plans/README.md's four file kinds: the plan itself carries no suffix; these four do,
-#: and none of them declares an acceptance standard of their own (Ruling 46 §2). A filename
+#: and none of them declares an acceptance standard of their own (RL-906 §2). A filename
 #: not matching one of these and not carrying a `YYYY-MM-DD-` prefix is a naming defect the
 #: check refuses outright, rather than silently guessing which kind it is.
 _PLAN_KIND_EXCLUDED_SUFFIXES = ("-ledger.md", "-final-review.md", "-verified.md", "-handover.md")
 _PLAN_FILENAME_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})-")
 #: The post-migration equivalent of `_PLAN_KIND_EXCLUDED_SUFFIXES`: a `PL-` document whose
-#: `kind:` is terminal (NT-0019 §1.6 -- a review is the auditor's verdict, a handover is
-#: the executor's) declares no acceptance standard of its own, exactly as Ruling 46 §2 says
+#: `kind:` is terminal (RFC-937 §1.6 -- a review is the auditor's verdict, a handover is
+#: the executor's) declares no acceptance standard of its own, exactly as RL-906 §2 says
 #: of `-final-review`/`-verified`/`-handover`. `-ledger` has no counterpart here: a ledger
 #: became its own `LG-` family under `docs/ledgers/` and is not a plan at all.
 _PLAN_TERMINAL_KINDS = frozenset({"review", "handover"})
@@ -1067,13 +1067,13 @@ _ACCEPTANCE_STANDARD_HEADING = re.compile(r"^#{1,6}\s+.*acceptance standard", re
 def check_plan_acceptance_standard() -> None:
     """28. A filed plan (the `writing-plans` file kind) states an explicit acceptance standard.
 
-    Mechanises NT-0014's C1 and `delivery-process.md` §5 step 4 / §6 step 1: the lead's
+    Mechanises RFC-895's C1 and `delivery-process.md` §5 step 4 / §6 step 1: the lead's
     replan-vs-proceed check that "an acceptance standard was actually defined, not just
     implied." A bare heading is not "actually defined" either, so the check also requires
     content under it — but it cannot judge whether that content is a *good* standard; that
     stays the lead's read (`.claude/roles/lead.md`).
 
-    **The discriminator is Ruling 46's, not a warn-then-red switch**: a plan's own filename
+    **The discriminator is RL-906's, not a warn-then-red switch**: a plan's own filename
     date against `PLAN_ACCEPTANCE_STANDARD_CUTOFF`, a constant. Nothing here reads the clock
     or git history, so the same file gets the same verdict in any clone at any revision —
     the property a time-of-run switch cannot have. C1 and the `writing-plans` field it
@@ -1084,11 +1084,11 @@ def check_plan_acceptance_standard() -> None:
     Scope is the plan *kind* only — the file `writing-plans` produces, discriminated by the
     four documented suffixes in `docs/plans/README.md`, never by guessing at content. Widen
     it past that and it reds on every future ledger, ruling record or handover file, which
-    the "no warn phase" design above cannot excuse (Ruling 46 §2's own warning about a check
+    the "no warn phase" design above cannot excuse (RL-906 §2's own warning about a check
     that guesses).
 
     Legacy plans (filed before the cutoff) get **one aggregate note line**, not one warning
-    each — Ruling 46 §2 took this from the same principle a hundred per-file lines would
+    each — RL-906 §2 took this from the same principle a hundred per-file lines would
     violate: a check nobody reads because it never says anything new is worse than no check.
     """
     plans_dir = ROOT / "plans"
@@ -1098,7 +1098,7 @@ def check_plan_acceptance_standard() -> None:
     for f in sorted(plans_dir.glob("*.md")):
         name = f.name
         # `INDEX.md` joins `README.md` here: both are generated, neither is a filed plan.
-        # Ruling 101 clause 1 puts a split-source index in the family directory of the
+        # RL-1042 clause 1 puts a split-source index in the family directory of the
         # split's targets, and a plan that splits into a `PL-` plus nested `RL-` rulings
         # sorts to `plans` — so `docs/plans/INDEX.md` is a shape a clean migration now
         # produces. Without this line check 28 fails it for carrying no `YYYY-MM-DD-`
@@ -1108,7 +1108,7 @@ def check_plan_acceptance_standard() -> None:
             continue
 
         if post_migration:
-            # After the NT-0019 migration a plan is `PL-<nnnnn>-<slug>.md`: the date left the
+            # After the RFC-937 migration a plan is `PL-<nnnnn>-<slug>.md`: the date left the
             # filename (that is what the migration is *for*) and the kind stopped being a
             # suffix. Both now come from the front matter, which is a strictly better source
             # than either -- a parsed field rather than a substring of a name.
@@ -1126,7 +1126,7 @@ def check_plan_acceptance_standard() -> None:
                 fail(
                     f"check 28: docs/plans/{name}: no front-matter header — check 28 takes "
                     "a filed plan's kind and filing date from `kind:` and `created:` after "
-                    "the NT-0019 migration, and can classify or date nothing without them"
+                    "the RFC-937 migration, and can classify or date nothing without them"
                 )
                 continue
             if header.kind in _PLAN_TERMINAL_KINDS:
@@ -1194,7 +1194,7 @@ def check_plan_acceptance_standard() -> None:
         notes.append(
             f"{legacy} legacy plan(s) filed before "
             f"{PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} exempted from check 28 "
-            "(Ruling 46 — never retro-red-gated)"
+            "(RL-906 — never retro-red-gated)"
         )
     notes.append(
         f"check 28: {checked} plan(s) filed on/after "
@@ -1203,9 +1203,9 @@ def check_plan_acceptance_standard() -> None:
 
 
 ####################################################################################
-# NT-0019 checks 30-39 — one id per governed thing.
+# RFC-937 checks 30-39 — one id per governed thing.
 #
-# docs/notes/0019-one-id-per-document.md §1.11 is the table these implement; each
+# docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md §1.11 is the table these implement; each
 # function's docstring cites the row it is. Every one of them reads the shared parser
 # from `scripts/_docid.py` (loaded by path below, the same idiom `_load_register_lint`
 # above already uses for check 29's dependency) rather than redefining any of it — that
@@ -1265,7 +1265,7 @@ def _id_scope_roots() -> tuple[pathlib.Path, ...]:
     migration PR*, because there is no population to phase in. Left un-widened, checks
     30-39 report `1 governed document(s) checked in scope` on a fully migrated tree of
     ~460 stamped documents: nine checks, every one green, every one over a population of
-    one. That is the vacuity Ruling 102 §3 names, and an exit code of 0 is exactly what it
+    one. That is the vacuity RL-1043 §3 names, and an exit code of 0 is exactly what it
     produces.
 
     The four post-migration roots are **not chosen here.** They are the tuple
@@ -1294,10 +1294,10 @@ def _id_scope_documents(
 ) -> list[pathlib.Path]:
     """Every real *governed-document* file under the checks-30-39 scope roots — never
     `_templates/` itself, which checks 30 and 37 read as a field-policy and shape
-    *source* (Ruling 70), not as a document to validate as one: a template's placeholder
+    *source* (RL-981), not as a document to validate as one: a template's placeholder
     content (`created: YYYY-MM-DD`, `id: PL-NNNNN`) is not valid `Header` content and is
     not supposed to be — the same reason `_templates/` is exempt from check 31 "by path"
-    (NT-0019 §1.4) extends to every check in this family that validates a document
+    (RFC-937 §1.4) extends to every check in this family that validates a document
     *instance* rather than reading the templates as data.
 
     `roots` defaults to `None`, resolved to the module-level `_ID_SCOPE_ROOTS` *inside*
@@ -1309,7 +1309,7 @@ def _id_scope_documents(
     currently names, which is what a broken-input test needs to be able to redirect.
 
     A **directory** root is expanded by `_docid.stamp_set_files`, the filesystem face of
-    NT-0019 §4 step 5's stamp-set predicate — not by a markdown glob. That is `F87`: this
+    RFC-937 §4 step 5's stamp-set predicate — not by a markdown glob. That is `F87`: this
     function used to expand a directory with `rglob("*.md")`, so widening the roots
     reached no non-markdown file at all and 62 of the 65 files on the F83 exemption
     register stayed invisible to checks 30-39 however wide the roots were drawn. The glob
@@ -1332,7 +1332,7 @@ def _id_scope_documents(
             files.append(root)
         elif root.is_dir():
             files.extend(_docid.stamp_set_files(root, REPO))
-    # `_templates/` is exempt **by path** (NT-0019 §1.4, Ruling 70) — this function's own
+    # `_templates/` is exempt **by path** (RFC-937 §1.4, RL-981) — this function's own
     # docstring says so, and the `root == _TEMPLATES_DIR` branch above enforced it only when
     # the templates directory was named as a root in its own right. Once a root *above* it is
     # widened to `docs/`, `_docid.stamp_set_files` reaches all thirteen templates and every
@@ -1374,7 +1374,7 @@ def _safe_header(path: pathlib.Path) -> object | None:
 
 
 def _canon_id(raw: str) -> str:
-    """`"PL-1240"`, `"PL-01240"` and `"PL-001240"` all resolve to `"PL-1240"` (NT-0019
+    """`"PL-1240"`, `"PL-01240"` and `"PL-001240"` all resolve to `"PL-1240"` (RFC-937
     §1.1 rule 3) — the same equivalence `_docid.ID_RE`'s `0*` group already encodes;
     this just re-renders whatever matched in canonical (unpadded) form. Returns `raw`
     unchanged when it is not `<PREFIX>-<n>` shaped at all, so a caller can use this on
@@ -1388,18 +1388,18 @@ def _canon_id(raw: str) -> str:
 
 # =========================================================================================
 # Check 30 — header present and parseable; no unknown field; required fields per family,
-# read from docs/_templates/ (Ruling 70).
+# read from docs/_templates/ (RL-981).
 # =========================================================================================
 
 _LEADING_COMMENT_RE: Final = re.compile(r"\A<!--.*?-->\n?\n?", re.DOTALL)
 _FENCED_YAML_RE: Final = re.compile(r"```yaml\n(.*?)\n```", re.DOTALL)
 _TEMPLATE_KEY_RE: Final = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):")
 
-#: NT-0019 §1.2's "Kind" column, keyed by the template's own filename — needed because a
+#: RFC-937 §1.2's "Kind" column, keyed by the template's own filename — needed because a
 #: template's filename (`FD.md`) is not the family word (`finding`) `Header.family`
 #: carries, and `_docid.py` has no filename->family table (only prefix->family, and a
 #: template's filename is a family *label*, not a prefix-and-number). `PHASE.md` is
-#: deliberately absent: NT-0019 §1.1 rule 4 puts a phase outside the id standard
+#: deliberately absent: RFC-937 §1.1 rule 4 puts a phase outside the id standard
 #: entirely, so it has no family and no header field policy to derive.
 _TEMPLATE_FAMILY: Final[Mapping[str, str]] = {
     "ADR.md": "decision",
@@ -1419,12 +1419,12 @@ _TEMPLATE_FAMILY: Final[Mapping[str, str]] = {
 #: The fields every family's template declares (all thirteen carry `family`, `title`,
 #: `status`, `created`, `owner`; twelve of thirteen also carry `id` — Reference is the one
 #: family with none, §1.2: "carries no prefix and no number"). Required-ness beyond this
-#: core is a per-family template fact, not hand-listed here (Ruling 70 §2 point 1: "the
+#: core is a per-family template fact, not hand-listed here (RL-981 §2 point 1: "the
 #: permitted set for a family is the set of keys in that family's template front matter").
 _CORE_HEADER_FIELDS: Final = ("family", "title", "status", "created", "owner")
 
 
-#: The exact thirteen template filenames NT-0019 §1.2 names, hardcoded rather than
+#: The exact thirteen template filenames RFC-937 §1.2 names, hardcoded rather than
 #: inferred from a directory listing — a coverage count taken against `glob("*.md")`'s
 #: own result is self-consistent even when a file has silently vanished (it would just
 #: report "13 of 13" over a directory that in fact holds 12), which is indistinguishable
@@ -1439,10 +1439,10 @@ _EXPECTED_DASH_BLOCK_TEMPLATES: Final = frozenset(
     {"ADR.md", "CR.md", "FD.md", "LG.md", "PL.md", "REFERENCE.md", "RFC.md", "RL.md",
      "RS.md", "WF.md"}
 )
-#: The two row families, a fenced ```yaml block under the row's own heading (NT-0019
+#: The two row families, a fenced ```yaml block under the row's own heading (RFC-937
 #: §1.5) rather than top-level front matter.
 _EXPECTED_FENCED_BLOCK_TEMPLATES: Final = frozenset({"WK.md", "SL.md"})
-#: The one family outside the id standard entirely (NT-0019 §1.1 rule 4): no `---`, no
+#: The one family outside the id standard entirely (RFC-937 §1.1 rule 4): no `---`, no
 #: fence, no `id:`, no `family:` — checked, not merely assumed, by `derive_field_policies`.
 _EXPECTED_NO_BLOCK_TEMPLATES: Final = frozenset({"PHASE.md"})
 
@@ -1450,7 +1450,7 @@ _EXPECTED_NO_BLOCK_TEMPLATES: Final = frozenset({"PHASE.md"})
 def _template_front_matter_lines(path: pathlib.Path) -> tuple[list[str] | None, str]:
     """The raw `key: value` lines of one template's declared block, plus which shape
     produced them — `"dash"` (a top-level `---` block), `"fenced"` (a ```yaml block), or
-    `"none"` (`PHASE.md`, by design — NT-0019 §1.1 rule 4) — read *after* stripping the
+    `"none"` (`PHASE.md`, by design — RFC-937 §1.1 rule 4) — read *after* stripping the
     template's own leading `<!-- ... -->` comment. The shape is returned alongside the
     lines (not just inferred from `None`-ness) so `derive_field_policies` can assert each
     template landed in its *expected* one of the three, not merely "a block or not".
@@ -1458,7 +1458,7 @@ def _template_front_matter_lines(path: pathlib.Path) -> tuple[list[str] | None, 
     Deliberately not `_docid.parse_header`: a template's placeholder values
     (`created: YYYY-MM-DD`, `id: PL-NNNNN`) are not valid `Header` content, and are not
     meant to be — this reads a template as a *policy source* (field names only), never as
-    a document instance (Ruling 70 §2 point 3).
+    a document instance (RL-981 §2 point 3).
     """
     text = path.read_text(encoding="utf-8")
     stripped = _LEADING_COMMENT_RE.sub("", text, count=1)
@@ -1494,20 +1494,20 @@ def _template_field_keys(path: pathlib.Path) -> tuple[tuple[str, ...] | None, st
 
 @dataclass(frozen=True)
 class _FieldPolicy:
-    """One family's header field policy, derived from its template (Ruling 70)."""
+    """One family's header field policy, derived from its template (RL-981)."""
 
     permitted: frozenset[str]
     required: frozenset[str]
 
 
 def derive_field_policies() -> dict[str, _FieldPolicy]:
-    """NT-0019 §1.5's per-family header field policy, read from `docs/_templates/` —
-    never transcribed from §1.5's own parenthesis (Ruling 70 §2: "the parenthesis is
+    """RFC-937 §1.5's per-family header field policy, read from `docs/_templates/` —
+    never transcribed from §1.5's own parenthesis (RL-981 §2: "the parenthesis is
     illustration of why extras exist, not the register of which ones do"; measured at
     `f226891` to diverge from the templates in both directions at once).
 
     Asserts its own coverage against a *hardcoded* manifest rather than inferring it from
-    a green caller or from the directory's own listing (Ruling 70 §4 item 3, sharpened
+    a green caller or from the directory's own listing (RL-981 §4 item 3, sharpened
     2026-09-02): a coverage count taken over `glob("*.md")`'s own result is
     self-consistent even when a file has silently vanished from the thirteen — it would
     report "N of N" over whatever N the directory now holds, which is exactly as
@@ -1529,7 +1529,7 @@ def derive_field_policies() -> dict[str, _FieldPolicy]:
         raise RuntimeError(
             f"{_TEMPLATES_DIR}: expected exactly {sorted(_EXPECTED_TEMPLATE_FILENAMES)} "
             f"but found {sorted(on_disk_names)} — missing {sorted(missing)}, unexpected "
-            f"{sorted(extra)} (Ruling 70 §4 item 3: a silently vanished template must "
+            f"{sorted(extra)} (RL-981 §4 item 3: a silently vanished template must "
             "not read as a smaller, equally-covered set)"
         )
 
@@ -1552,7 +1552,7 @@ def derive_field_policies() -> dict[str, _FieldPolicy]:
         if name in _EXPECTED_NO_BLOCK_TEMPLATES:
             if shape != "none" or keys is not None:
                 raise RuntimeError(
-                    f"{name}: expected no closed-grammar block (NT-0019 §1.1 rule 4) but "
+                    f"{name}: expected no closed-grammar block (RFC-937 §1.1 rule 4) but "
                     f"the template reader found a {shape!r} block — re-check this function"
                 )
             continue
@@ -1562,7 +1562,7 @@ def derive_field_policies() -> dict[str, _FieldPolicy]:
             raise RuntimeError(
                 f"{name}: expected a {expected_shape!r} field-policy block but found "
                 f"{shape!r} ({keys!r}), or no recognised family — either a real defect "
-                "in the template, or _TEMPLATE_FAMILY needs a new entry (Ruling 70 §4 "
+                "in the template, or _TEMPLATE_FAMILY needs a new entry (RL-981 §4 "
                 "item 3: silent empty coverage is exactly the failure this rules out)"
             )
         permitted = frozenset(keys)
@@ -1599,7 +1599,7 @@ def derive_field_policies() -> dict[str, _FieldPolicy]:
 #: — no template's front-matter block declares any of the three, because all thirteen
 #: are freshly-authored examples and these three apply only to a file *after* something
 #: has already happened to it (a migration rename for `was:`; being a vendored skill's
-#: own `SKILL.md` for `vendored:`/`origin:`, per NT-0019 §1.5's own prose rather than its
+#: own `SKILL.md` for `vendored:`/`origin:`, per RFC-937 §1.5's own prose rather than its
 #: front-matter illustration). Deriving their permission from "does the template show it"
 #: would forbid all three on every family, everywhere, forever — the opposite of what
 #: §1.5 states. They stay known (via `_docid.py`'s closed grammar, so a genuine typo in
@@ -1621,10 +1621,10 @@ def _is_populated(header: object, field: str) -> bool:
 
 def check_header_fields() -> None:
     """30. Header present and parseable on every file in scope; no unknown field;
-    required fields per family (NT-0019 §1.11).
+    required fields per family (RFC-937 §1.11).
 
     Renumbered from `check_notes_tombstone`'s retired slot 30 -- see this module's
-    docstring for the dated substitution note (NT-0019 §5.5).
+    docstring for the dated substitution note (RFC-937 §5.5).
 
     `docs/_templates/` is read for its field policy (`derive_field_policies`), never
     validated as a document instance. `document-ids.md` (S1's one real document in scope)
@@ -1652,7 +1652,7 @@ def check_header_fields() -> None:
     )
 
     # F83's exemption register, consulted here because the scope selector now reaches the
-    # files it exists for. `_id_scope_documents` expands a directory root through NT-0019
+    # files it exists for. `_id_scope_documents` expands a directory root through RFC-937
     # §4 step 5's stamp-set predicate rather than a markdown glob (`F87`), so a widened
     # scope brings in the 59 `.json`, the `.yaml` and the two other non-markdown artifacts
     # the register accounts for — every one of which would otherwise red this check with
@@ -1720,16 +1720,16 @@ def check_header_fields() -> None:
 
 # =========================================================================================
 # Check 31 — id/filename/directory agreement; numbers unique and contiguous in scope;
-# `created` non-decreasing with the number. `_templates/` is exempt by path (NT-0019 §1.4).
+# `created` non-decreasing with the number. `_templates/` is exempt by path (RFC-937 §1.4).
 # =========================================================================================
 
-#: NT-0019 §1.4's directory-is-the-family table, prefix -> directory, document families
+#: RFC-937 §1.4's directory-is-the-family table, prefix -> directory, document families
 #: only (row families FR/NFR/DEP/OQ/WK/SL live embedded in a shared file, not their own
 #: directory). A second, independent transcription of the same note table —
 #: `scripts/doc-index.py`'s own `FAMILY_DIRS` transcribes it for that module's purpose —
 #: is the intended shape (one shared low-level parser, `_docid.py`, with each higher-level
 #: consumer reading its own small, static projection of a table that changes only via an
-#: RFC-/RL- per NT-0019 §1.12), not the drift NT-0003 warns against.
+#: RFC-/RL- per RFC-937 §1.12), not the drift RFC-756 warns against.
 _FAMILY_DIR: Final[Mapping[str, str]] = {
     "WF": "workflows", "ADR": "adrs", "RFC": "rfcs", "PL": "plans", "LG": "ledgers",
     "RL": "rulings", "RS": "research", "CR": "closures", "FD": "findings",
@@ -1743,16 +1743,16 @@ _FILENAME_ID_RE: Final = re.compile(
 def check_id_filename_directory() -> None:
     """31. Header `id` prefix and integer equal the filename's; directory equals family;
     numbers unique and contiguous in scope; `created` non-decreasing with the number
-    (NT-0019 §1.11).
+    (RFC-937 §1.11).
 
     On the real tree in S1 this has exactly one candidate (`document-ids.md`), which
     carries no `id:` at all (Reference, §1.2: "no prefix and no number") — so every
     sub-clause finds nothing to compare *today*; each is proven on fixtures instead.
 
-    Contiguity (Ruling 108) reads the full allocation via docs/INDEX.md (same as row (b)
+    Contiguity (RL-1061) reads the full allocation via docs/INDEX.md (same as row (b)
     in `doc-id.py check`) rather than per-file, to avoid false gaps between document
     families in the scoped walk. Other clauses remain per-file, run over the scoped
-    working tree as part of `audit-docs.py`'s single report (NT-0019 §1.11: "one gate,
+    working tree as part of `audit-docs.py`'s single report (RFC-937 §1.11: "one gate,
     one report").
     """
     entries: list[tuple[int, str, str, date | None]] = []
@@ -1799,9 +1799,9 @@ def check_id_filename_directory() -> None:
         else:
             seen[number] = (canon, rel)
 
-    # Contiguity check: read full allocation from docs/INDEX.md (Ruling 108)
+    # Contiguity check: read full allocation from docs/INDEX.md (RL-1061)
     # When INDEX.md exists, read contiguity from it (same as doc-id.py check row (b));
-    # pre-migration, check contiguity within the scoped set only (Ruling 108).
+    # pre-migration, check contiguity within the scoped set only (RL-1061).
     if migrated_tree():
         # Read full allocation from INDEX.md to avoid false gaps between document families
         index_numbers = sorted({int(m.group(2)) for m in _docid.ID_RE.finditer(
@@ -1843,7 +1843,7 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
     ids. Explicit parameters (not the module's own `ROOT`/`_id_scope_documents`) so a
     fixture can exercise this without a real `docs/INDEX.md` on disk.
 
-    `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item
+    `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item
     1: the padding clause adopts row (e)'s conjuncts 1, 2 and 3 from `_docid` — the
     exact-width regex (conjunct 1, `_docid._PADDED_ID_RE`, read here rather than
     reassembled from its own `FAMILY_PREFIXES`/`PAD_WIDTH` symbols a second time), path
@@ -1851,7 +1851,7 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
     token whose unpadded form does not resolve in `docs/INDEX.md` is a specimen of the
     form, not a citation, exactly as (e) reads it) — so path-shaped citations and
     unresolvable ids are excluded from the padding population. Check 32 keeps its own
-    broader `0*` breadth beyond that (NT-0019 §1.1 rule 2 admits no exception): a padded
+    broader `0*` breadth beyond that (RFC-937 §1.1 rule 2 admits no exception): a padded
     citation outside (e)'s exact-width conjunct is a **short-padded** violation, listed
     under its own text rather than folded into (e)'s count.
     """
@@ -1898,14 +1898,14 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
                 if _docid._PADDED_ID_RE.fullmatch(m.group(0)):
                     problems.append(
                         f"{lineno}: padded id `{m.group(0)}` outside a link target — "
-                        "citations write the integer, never padding (NT-0019 §1.1 rule 2)"
+                        "citations write the integer, never padding (RFC-937 §1.1 rule 2)"
                     )
                 else:
                     problems.append(
                         f"{lineno}: short-padded id `{m.group(0)}` outside a link "
                         "target — fewer leading zeros than `_docid.PAD_WIDTH`, still a "
                         "rule-2 violation row (e)'s exact-width conjunct does not see "
-                        "(NT-0019 §1.1 rule 2)"
+                        "(RFC-937 §1.1 rule 2)"
                     )
 
         for link_m in _MD_LINK_RE.finditer(line):
@@ -1928,11 +1928,11 @@ def check_citations() -> None:
     matches the number's family (the prefix is a checksum — `_docid.ID_RE` already
     requires this by construction, since a resolved match is keyed on the number alone
     and its recorded prefix compared); no padded id outside a link target; a link's text
-    and target cite the same id (NT-0019 §1.11).
+    and target cite the same id (RFC-937 §1.11).
 
     Gated on `docs/INDEX.md` existing: pre-migration there is no real citation corpus to
     resolve against, and `document-ids.md`'s own illustrative prose (the padding-
-    equivalence example in its lift of NT-0019 §1.1 rule 3 — "the resolver treats
+    equivalence example in its lift of RFC-937 §1.1 rule 3 — "the resolver treats
     `PL-1240`, `PL-01240` and `PL-001240` as one id" — and the §1.4 directory-tree
     diagram) uses ids, some deliberately padded, to *teach* the grammar rather than to
     cite or name a real file. Running the padding rule against that prose unconditionally
@@ -1967,10 +1967,10 @@ def check_citations() -> None:
 
 # =========================================================================================
 # Check 33 — supersedes/superseded_by symmetry; status vocabulary and per-family subset;
-# the map-plan roll-up raise (Ruling 72).
+# the map-plan roll-up raise (RL-983).
 # =========================================================================================
 
-#: NT-0019 §1.2's Status subset column, prefix (or family word for Reference, which has
+#: RFC-937 §1.2's Status subset column, prefix (or family word for Reference, which has
 #: no prefix) -> the allowed subset of `_docid.STATUS_WORDS`.
 _STATUS_SUBSET: Final[Mapping[str, frozenset[str]]] = {
     "FR": frozenset({"active", "superseded", "retired"}),
@@ -1994,7 +1994,7 @@ _STATUS_SUBSET: Final[Mapping[str, frozenset[str]]] = {
 
 def rollup_raise_problems(corpus: object) -> list[str]:
     """For every `PL- kind: map` header `corpus` carries, call `doc-index.py`'s own
-    `derive_execution` and report a `ValueError` as a check-33 problem. Ruling 72's own
+    `derive_execution` and report a `ValueError` as a check-33 problem. RL-983's own
     words: "a slice with more than one live leaf plan is a check 33 disagreement, not a
     case to resolve silently", and the precedence table's own last row ("anything else:
     raise") is what makes an unenumerated combination visible instead of swallowed by a
@@ -2014,9 +2014,9 @@ def rollup_raise_problems(corpus: object) -> list[str]:
 
 
 def check_cross_references() -> None:
-    """33. `supersedes`/`superseded_by` symmetric; `status:` is in NT-0019's five-word
+    """33. `supersedes`/`superseded_by` symmetric; `status:` is in RFC-937's five-word
     vocabulary and in the family's own subset of it; the map-plan roll-up raise surfaced
-    rather than swallowed (Ruling 72) (NT-0019 §1.11).
+    rather than swallowed (RL-983) (RFC-937 §1.11).
 
     Several §1.11 sub-clauses (a ledger's `slice:` uniqueness across `active` ledgers,
     `work:`/`slice:`/`phase:` resolving to roadmap rows, a closed `OQ-` citing its
@@ -2082,7 +2082,7 @@ def check_cross_references() -> None:
 # allowed fields; every corrected_by: entry's target corrects: this file.
 # =========================================================================================
 
-#: Mutability = "frozen" families, from NT-0019 §1.2's table. Document families only; row
+#: Mutability = "frozen" families, from RFC-937 §1.2's table. Document families only; row
 #: families have no separate freeze concept (check 33's status-forward-only and
 #: closed-LG-required rules constrain an `SL-` row's lifecycle instead).
 _FROZEN_FAMILIES: Final = frozenset(
@@ -2100,12 +2100,12 @@ _DP7_UNCHECKED_FIELDS: Final = frozenset({"status", "superseded_by", "plans", "c
 def frozen_diff_is_permitted(
     old: object, new: object, *, old_body: str, new_body: str
 ) -> tuple[bool, str]:
-    """DP-7 (docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md): every diff a frozen
+    """DP-7 (docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md): every diff a frozen
     (or append-only, for a ledger's `plans:`) family's file may show against its
     merge-base — a closed, named list of *fields*, never a generic line-diff. Exported at
     module level, not nested inside `check_freeze`, so a later slice's migration-diff
     filter can call the exact same predicate for its own "hunk is neither header nor
-    citation-token" test (Ruling 68 — DP-3: "one definition of 'reference tokens only',
+    citation-token" test (RL-989 — DP-3: "one definition of 'reference tokens only',
     not two ... implementing it twice is how the two drift apart").
 
     `old`/`new` are `_docid.Header` instances (typed `object` here only because this
@@ -2113,7 +2113,7 @@ def frozen_diff_is_permitted(
     them through). Permitted, and only:
       - the body (everything after the closing `---`) is byte-identical;
       - `status:` may change, but never *from* a terminal word (`closed`, `retired`,
-        `superseded` — NT-0019 §1.2a: "closed, retired and superseded are terminal");
+        `superseded` — RFC-937 §1.2a: "closed, retired and superseded are terminal");
       - `superseded_by:` may change;
       - `corrected_by:` may gain entries, never lose or reorder existing ones;
       - `plans:` may gain entries, ledgers only, under the same append-only rule.
@@ -2185,7 +2185,7 @@ def _this_runs_stamp_id(
     stamp, do not strip it." Returns `""` (not `None`) for a confirmed Reference-family
     stamp, which by design carries no `id:` line at all — see below.
 
-    Ruling 105 §2 ("DP-7 must strip only the header this run wrote"): a bare `---`
+    RL-1046 §2 ("DP-7 must strip only the header this run wrote"): a bare `---`
     opener is not enough, because most of `.claude/skills/**` and `.claude/agents/`
     carry their own, unrelated front matter that also opens with `---` — vendored skill
     or agent config this migration deliberately defers rather than stamping
@@ -2198,10 +2198,10 @@ def _this_runs_stamp_id(
     itself just write is left alone even when it happens to parse.
 
     **`allocated_ids` alone is not sufficient — the Reference family has no `id:` at
-    all** (NT-0019 §1.2, `doc-id.py`'s `_stamp_header("REFERENCE", None, ...)`), so its
+    all** (RFC-937 §1.2, `doc-id.py`'s `_stamp_header("REFERENCE", None, ...)`), so its
     stamp can never appear in `allocated_ids` regardless of whether this run wrote it.
     Found live: `.claude/roles/example-role.md` — headerless before this run,
-    Reference-stamped by it (`_stamp_reference_targets`, NT-0019 §4 step 5) — read as
+    Reference-stamped by it (`_stamp_reference_targets`, RFC-937 §4 step 5) — read as
     "not this run's stamp" under the `allocated_ids`-only check, so its citation rewrite
     could never reproduce the merge-base bytes and it fell through to
     `classified-by-none` for a rewrite that was entirely correct. `reference_stamp_paths`
@@ -2217,7 +2217,7 @@ def _this_runs_stamp_id(
     try:
         header = _docid.parse_header_text(text)
     except _docid.HeaderError:
-        return None  # not NT-0019-shaped at all -- e.g. the 3 vendored SKILL.md blocks
+        return None  # not RFC-937-shaped at all -- e.g. the 3 vendored SKILL.md blocks
     if header is None:
         return None
     if header.id is not None:
@@ -2237,14 +2237,14 @@ def frozen_file_matches_after_migration_stamp(
     new_rel: str | None = None,
     reference_stamp_paths: Collection[str] = frozenset(),
 ) -> bool:
-    """Ruling 68's DP-7 disposition, verbatim: "the new bytes, after removing the leading
+    """RL-989's DP-7 disposition, verbatim: "the new bytes, after removing the leading
     front-matter block and applying the inverse of every REDIRECTS.csv mapping, are
     byte-identical to the merge-base bytes." `redirects_inverse` maps a *new* reference
     token to the *old* one it replaced; applying every entry to `new_text` and stripping
     its own leading `---` block should reproduce `old_body` when the only changes are the
     migration's own header stamp and token rewrite.
 
-    **Ruling 105 §2: strip only the header this run wrote, on both sides.** The block
+    **RL-1046 §2: strip only the header this run wrote, on both sides.** The block
     removed from `new_text` (and, symmetrically, from `old_body` — a frozen-family file
     being updated in place already carries a header from an *earlier* run, and that
     header is not this run's stamp either) is stripped only when `_this_runs_stamp_id`
@@ -2260,7 +2260,7 @@ def frozen_file_matches_after_migration_stamp(
     `new_text` that had lost content `old_body` still carried — a clean, correct
     citation-token rewrite in a `.claude/skills/**` or `.claude/agents/` file then failed
     this predicate for reasons unrelated to whether the rewrite itself was correct
-    (Ruling 105 §2, up to 237 of row (g)'s ~504 `classified-by-none` files).
+    (RL-1046 §2, up to 237 of row (g)'s ~504 `classified-by-none` files).
 
     **`old_rel`/`new_rel`/`reference_stamp_paths`: the Reference family carries no
     `id:` at all**, so `allocated_ids` alone cannot confirm a Reference stamp is this
@@ -2272,7 +2272,7 @@ def frozen_file_matches_after_migration_stamp(
 
     Longest `new_token` first (found by W37-5, applying this function against a real
     multi-id redirects map rather than the single-entry maps this module's own tests use):
-    NT-0019's citation rule is the bare integer, so two live ids can be in a literal
+    RFC-937's citation rule is the bare integer, so two live ids can be in a literal
     prefix relationship — `WK-1` and `WK-17` both exist in most real corpora — and
     replacing the shorter one first corrupts the longer one's own digits (`WK-17` loses
     its `WK-1` prefix to the first substitution before its own entry is ever reached, and
@@ -2282,11 +2282,11 @@ def frozen_file_matches_after_migration_stamp(
     the identical ordering `scripts/doc-id.py`'s own citation-rewrite pass uses for the
     forward direction, for the identical reason.
 
-    **Whole identifiers only, in this direction too** — Ruling 102 §2 row (g)
-    (`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`). A plain substring
+    **Whole identifiers only, in this direction too** — RL-1043 §2 row (g)
+    (`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`). A plain substring
     inverse has no notion of where an identifier ends, so it *repaired* the very defect
     §7 (g) exists to find: given the mangled `NFR-775/14` it substituted `NFR-775` and
-    produced `NFR-RATE-13/14`, the merge-base bytes exactly, and the file passed. That is
+    produced `NFR-502/501`, the merge-base bytes exactly, and the file passed. That is
     the trap the ruling names — the mangled citations "must not be treated as a
     citation-token class and thereby excused from §7 (g)'s 'neither header nor
     citation-token' requirement" — and it was literal: §7 (g)'s figure could have been
@@ -2319,7 +2319,7 @@ def frozen_file_matches_after_migration_stamp(
 def check_freeze() -> None:
     """34. Freeze: for a frozen family the diff against the merge-base touches only the
     DP-7 allowance; every `corrected_by:` entry is a record whose `corrects:` names this
-    file (NT-0019 §1.11).
+    file (RFC-937 §1.11).
 
     No in-scope file is ever a frozen-family instance during S1 (`document-ids.md` is a
     Reference, and `_templates/` is excluded as a policy source, not a document), so the
@@ -2374,7 +2374,7 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
     """A directory README's own declared owner allow-list, read from a line
     `Permitted owners: a, b, c` — the one convention this recognises. Returns `None` (no
     clause to enforce) when the README does not state one: no fixed format is specified
-    by NT-0019 anywhere, and `docs/_templates/README.md` / `docs/process/README.md` do
+    by RFC-937 anywhere, and `docs/_templates/README.md` / `docs/process/README.md` do
     not exist yet (`docs/ READMEs` is Slice W37-10's to write) — inventing a required
     format now would be enforcing a document ahead of the slice that writes it.
     """
@@ -2386,7 +2386,7 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 
 # -----------------------------------------------------------------------------------------
 # F83 — the register of files that cannot carry a header at all, and the check that keeps
-# it honest. Filed as `docs/audit/findings/F83.md`; ruled by the maintainer 2026-09-02.
+# it honest. Filed as `docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-custody-is-an-exemption-rather-than-a-sidecar.md`; ruled by the maintainer 2026-09-02.
 #
 # Two conditions bind the exemption, and both are enforced here:
 #
@@ -2396,7 +2396,7 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 #      entry cannot be added without stating them.
 #   2. The register is itself checked against the tree, so it cannot grow silently.
 #      `_check_unstampable_register` implements this, and — per F83's own words, which are
-#      Ruling 83's property applied to an exemption rather than a census — it **names**
+#      RL-985's property applied to an exemption rather than a census — it **names**
 #      every file on each side of the disagreement and never compares two totals. Two
 #      errors that cancel pass a total-only check; `.claude/skills/docs-audit`
 #      §"a total validates the total, and nothing else" records the day that happened here.
@@ -2407,11 +2407,11 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 # the predicate. At `359936b`: **416** files = **51** stamped + **362** with no `---` block
 # + **3** carrying one that will not parse, so **365** unstamped against **65** that can
 # never be stamped. **The total drifts with every markdown file added anywhere under
-# `docs/`** — it was 415 at `f61f9a4` and 417 once `docs/audit/findings/F87.md` lands — so
+# `docs/`** — it was 415 at `f61f9a4` and 417 once `docs/findings/FD-01024-widening-id-scope-roots-reaches-no-non-markdown-file-so-62-of-the-65-exempt-files-stay-invisible-to-checks-30-39.md` lands — so
 # it is given with its tree and its parts, never bare: parts that are stated can be summed,
 # and that is the only check on a decomposition which cannot itself be a proxy. **Check 35's
 # own note prints the live figures every run and is the copy to trust**; a comment restating
-# a number the gate computes is how the two drift apart (`NT-0003`).
+# a number the gate computes is how the two drift apart (`RFC-756`).
 #
 # The predicate that carries F83's intent across that boundary is therefore
 # **cannot be stamped**, not "has not yet been": it is equivalent to F83's wording the
@@ -2419,7 +2419,7 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 # falsifiable, before then. The live figures are printed by check 35's own note on every
 # run, which is the copy to trust — this one is a fixed measurement at a named tree, and
 # a comment restating a number the gate computes is how the two drift apart
-# (`NT-0003`).
+# (`RFC-756`).
 #
 # **Check 35's own owner clause is a no-op for every one of the 65, not merely for the
 # headerless ones.** `check_owner` skips on `header is None` *and* on `HeaderError`, so
@@ -2438,7 +2438,7 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 # `_id_scope_documents` expanded a directory root with `rglob("*.md")`. That was `F87`.
 #
 # `_id_scope_documents` now expands a directory root through `_docid.stamp_set_files`,
-# the filesystem face of the same NT-0019 §4 step 5 predicate `nt0019_stamp_set` reads —
+# the filesystem face of the same RFC-937 §4 step 5 predicate `nt0019_stamp_set` reads —
 # one definition, two consumers, held to each other by
 # `test_the_two_stamp_set_consumers_read_one_definition`. So a widened scope reaches all
 # 65, and check 30 consults the register (see its own body) rather than redding on every
@@ -2478,7 +2478,7 @@ _CONTRACTS_REASON: Final = (
 )
 _CONTRACTS_RULING: Final = (
     "F83, ruled by the maintainer 2026-09-02: `generated: true` exemption rather than a "
-    "sidecar (docs/audit/findings/F83.md §'The decision, and the option not taken')"
+    "sidecar (docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-custody-is-an-exemption-rather-than-a-sidecar.md §'The decision, and the option not taken')"
 )
 
 #: The 59 `.json` + 1 `.yaml` under `docs/contracts/`. Enumerated as literal paths, not
@@ -2562,7 +2562,7 @@ _OTHER_ARTIFACT_RULING: Final = (
 
 #: The two non-markdown files in the stamp set that F83's population of 63 does not name.
 #: F83 measured `docs/contracts/**` and the vendored manifests; the stamp set RFC §4 rules
-#: (`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §4, "every file under
+#: (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4, "every file under
 #: `docs/`, …") is wider than that, and contains two more files that cannot carry front
 #: matter for exactly the reason F83 gives for the contracts. `delivery-process.core.json`
 #: is CLAUDE.md §15's machine-readable process extract; the census CSV is a dated audit
@@ -2570,18 +2570,18 @@ _OTHER_ARTIFACT_RULING: Final = (
 #: alternative was a red gate or a predicate narrowed until the two disappeared, which
 #: would blind the check to the growth it exists to catch.
 _OTHER_ARTIFACT_PATHS: Final = (
-    "docs/audit/file-census-5ef559d.csv",
+    "docs/research/file-census-5ef559d.csv",
     "docs/process/delivery-process.core.json",
 )
 
 _VENDORED_MANIFEST_REASON: Final = (
     "vendored skill manifest whose upstream front matter does not parse under the closed "
-    "field set (NT-0019 §1.5); CLAUDE.md §12 forbids editing it — vendored files stay as "
+    "field set (RFC-937 §1.5); CLAUDE.md §12 forbids editing it — vendored files stay as "
     "upstream wrote them"
 )
 _VENDORED_MANIFEST_RULING: Final = (
     "F83, ruled by the maintainer 2026-09-02: exempt by path rather than by edit "
-    "(docs/plans/2026-09-02-w37-5c-slice-decision.md §5, 'a manifest that won't parse gets "
+    "(docs/plans/PL-00957-w37-5c-the-slice-decision-and-gap-2-ruled.md §5, 'a manifest that won't parse gets "
     "its header from a sidecar or an exemption, never an edit')"
 )
 
@@ -2614,15 +2614,15 @@ UNSTAMPABLE_EXEMPTIONS: Final[tuple[UnstampableExemption, ...]] = (
 
 
 def nt0019_stamp_set(tracked: Sequence[str] | None = None) -> list[str]:
-    """Every tracked file in NT-0019's stamp set, as repo-relative posix paths.
+    """Every tracked file in RFC-937's stamp set, as repo-relative posix paths.
 
-    The set is RFC §4's ruling (`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md`
+    The set is RFC §4's ruling (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md`
     §4, "§4 step 5 governs the stamp set"): every file under `docs/`, `.claude/roles/`,
     `.claude/skills/*/SKILL.md` and `.claude/agents/`, plus every `README.md` in the tree.
 
     That last clause is **derived from what §5.2 reaches** (`scripts/doc-id.py`'s
     `_candidate_header_paths` globs `tree_root.rglob("README.md")`) rather than copied from
-    the RFC's table of six named files. The two disagree: `.claude/notes/README.md` is
+    the RFC's table of six named files. The two disagree: `.claude/rfcs/README.md` is
     tracked, is outside every listed root, and is not in the RFC's six. Deriving the rule
     rather than pasting its enumeration is what makes that visible instead of inherited.
 
@@ -2663,7 +2663,7 @@ def unstampable_reason(rel: str) -> str | None:
 def _check_scope_unstamped_are_registered() -> int:
     """F83 condition 2 over the **enforced** scope — the clause that goes live with W37-6.
 
-    `_check_unstampable_register` above ranges over NT-0019's whole stamp set and asks
+    `_check_unstampable_register` above ranges over RFC-937's whole stamp set and asks
     which files *cannot* be stamped. This one ranges over `_id_scope_documents()` — what
     checks 30-39 actually enforce today — and asks which files *are not* stamped, which is
     F83 condition 2's own wording. The two coincide only after the migration; before it,
@@ -2675,7 +2675,7 @@ def _check_scope_unstamped_are_registered() -> int:
     `rglob("*.md")`, so widening the roots brought in *no* non-markdown file: pointed at
     `docs/` it reached none of the 62 non-`.md` files `UNSTAMPABLE_EXEMPTIONS` mostly
     consists of, and this clause could not see them however the roots were drawn. It now
-    expands through `_docid.stamp_set_files`, the same NT-0019 §4 step 5 predicate
+    expands through `_docid.stamp_set_files`, the same RFC-937 §4 step 5 predicate
     `nt0019_stamp_set` reads, so a fully widened scope reaches all 65 and this clause is
     live over them. The two instruments remain distinct — this one asks *"is it
     stamped?"* over the enforced scope, `_check_unstampable_register` asks *"can it be?"*
@@ -2708,7 +2708,7 @@ def _check_unstampable_register() -> int:
 
     Set equality, reported by **naming both sides of the symmetric difference** — never by
     comparing two totals, which is invariant under a compensating pair of errors and so
-    cannot detect the thing it is asked to detect (Ruling 83; `.claude/skills/docs-audit`
+    cannot detect the thing it is asked to detect (RL-985; `.claude/skills/docs-audit`
     §"a total validates the total, and nothing else").
 
     Returns the size of the stamp set it examined, for the caller's note.
@@ -2723,7 +2723,7 @@ def _check_unstampable_register() -> int:
         # left to surface as a traceback, and never as a silent pass: an unreadable
         # corpus reconciles to zero unstampable files, which is exactly the shape of a
         # register that is perfectly correct.
-        fail(f"check 35: cannot enumerate NT-0019's stamp set: {exc}")
+        fail(f"check 35: cannot enumerate RFC-937's stamp set: {exc}")
         return 0
     registered = {entry.path: entry for entry in UNSTAMPABLE_EXEMPTIONS}
 
@@ -2745,7 +2745,7 @@ def _check_unstampable_register() -> int:
 
     for rel in sorted(set(cannot) - set(registered)):
         fail(
-            f"check 35: {rel}: in NT-0019's stamp set and cannot carry a header "
+            f"check 35: {rel}: in RFC-937's stamp set and cannot carry a header "
             f"({cannot[rel]}), but is not in the F83 exemption register — add it with its "
             "reason and the ruling that permits it, or make the file stampable"
         )
@@ -2754,7 +2754,7 @@ def _check_unstampable_register() -> int:
     for rel in sorted(set(registered) - set(cannot)):
         if rel not in tracked_set:
             fail(
-                f"check 35: {rel}: in the F83 exemption register but not in NT-0019's "
+                f"check 35: {rel}: in the F83 exemption register but not in RFC-937's "
                 "stamp set — the file is untracked, deleted or moved, and the entry is "
                 "stale"
             )
@@ -2777,7 +2777,7 @@ def _check_unstampable_register() -> int:
 
 def check_owner() -> None:
     """35. `owner:` is a role filename under `.claude/roles/`, or `maintainer`, and one
-    the directory's `README.md` permits (NT-0019 §1.11).
+    the directory's `README.md` permits (RFC-937 §1.11).
 
     The second clause enforces only where a directory `README.md` actually exists and
     states a permitted-owner list (see `readme_owner_allowlist`) — neither of
@@ -2814,52 +2814,52 @@ def check_owner() -> None:
     notes.append(
         f"check 35: {checked} owner(s) checked in scope; "
         f"{len(UNSTAMPABLE_EXEMPTIONS)} exemption(s) in the F83 register reconciled "
-        f"against {stamp_set_size} file(s) in NT-0019's stamp set; "
+        f"against {stamp_set_size} file(s) in RFC-937's stamp set; "
         f"{unstamped_in_scope} unstamped file(s) in the enforced checks-30-39 scope"
     )
 
 
 # =========================================================================================
-# Check 36 — Redirects (Ruling 67/DP-2). Renamed and repurposed from the retired
-# `check_notes_tombstone` (slot 30 -> 36; NT-0019 §5.5).
+# Check 36 — Redirects (RL-988/DP-2). Renamed and repurposed from the retired
+# `check_notes_tombstone` (slot 30 -> 36; RFC-937 §5.5).
 # =========================================================================================
 
-#: Ruling 67 §2: NT-0019 §7 acceptance item (d) and this check are "one rule at two
+#: RL-988 §2: RFC-937 §7 acceptance item (d) and this check are "one rule at two
 #: times", so both read this **one** shared pattern-and-exclusion constant, defined once
 #: in `scripts/_docid.py` (stdlib, already imported by both scripts) rather than kept here
 #: as a private copy — `_docverify.py`'s `D_ALTERNATIVES` reads the identical tuple.
-#: Ruling 67 §2 Part 1's anchoring (every entry a COMPLETE legacy identifier or path,
+#: RL-988 §2 Part 1's anchoring (every entry a COMPLETE legacy identifier or path,
 #: never a proper prefix) is documented at the definition, not repeated here.
 LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
     _docid.LEGACY_FORM_PATTERNS
 )
 
-#: Ruling 67 Part 2: the bounded, load-bearing exclusion list — the residue after Part 1's
+#: RL-988 Part 2: the bounded, load-bearing exclusion list — the residue after Part 1's
 #: pattern fix, permitted only for a file whose *function* is to carry legacy forms as
 #: data, never a path the migration is required to rewrite. `REDIRECTS.csv` is "already in
 #: the item"; `was:` lines (wherever they appear) are handled separately below, by line,
 #: not by path, since a `was:` line can appear inside an otherwise-checked file.
 #:
-#: The seven `tests/fixtures/docs-migration/` entries below are W37-5's — Ruling 67 §2's
+#: The seven `tests/fixtures/docs-migration/` entries below are W37-5's — RL-988 §2's
 #: own residue class names exactly this: "the fixtures ... of the migration". Each is
 #: here only because its *discovery-defining* content — the thing that makes the fixture
 #: recognisable as its legacy shape at all, not incidental prose — is itself a legacy
-#: form: an ADR's own `ADR-0001` title, a note's own `NT-0001` title, a multi-ruling
+#: form: an ADR's own `ADR-703` title, a note's own `RFC-711` title, a multi-ruling
 #: file's own `## Ruling N` headings, the roadmap fixture's own `W1-1`/`W1-2` row keys, the
 #: spec fixture's own `**FR-XXX-N**`-shaped bold ids, and the vendored-skill pair's shared
-#: `FR-XXX-N`-shaped citation (respelled schematically, 2026-09-04, Ruling 103 §5.1's fence
+#: `FR-XXX-N`-shaped citation (respelled schematically, 2026-09-04, RL-1044 §5.1's fence
 #: clause extended to row (d): the literal worked example is itself a §7(d) alternative
-#: match; NT-0019 §1.5's own stated property under test: a vendored manifest's citations
+#: match; RFC-937 §1.5's own stated property under test: a vendored manifest's citations
 #: rewrite, a file beneath it does not — needs the same token on
 #: both sides of that boundary to prove the difference). Sixteen files carried a legacy
 #: form before this list was written; sweeping away *incidental* prose citations (a
-#: comment saying "NT-0019 §4 step 2", not tested by anything) — the same fix Ruling 67
+#: comment saying "RFC-937 §4 step 2", not tested by anything) — the same fix RL-988
 #: Part 1 applied to the pattern itself, applied here to the fixture corpus — got that
 #: down to these seven; see `tests/test_audit_docs_ids.py`'s load-bearing proof for each.
 LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
     "docs/REDIRECTS.csv",
-    "tests/fixtures/docs-migration/docs/adr/0001-example-decision.md",
-    "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
+    "tests/fixtures/docs-migration/docs/adrs/0001-example-decision.md",
+    "tests/fixtures/docs-migration/docs/rfcs/0001-example-note.md",
     "tests/fixtures/docs-migration/docs/plans/2026-08-12-example-rulings.md",
     "tests/fixtures/docs-migration/docs/roadmap.md",
     "tests/fixtures/docs-migration/docs/specs/00-overview.md",
@@ -2869,7 +2869,7 @@ LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
 
 _WAS_LINE_RE: Final = re.compile(r"^\s*was:\s")
 
-#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
 #: `_docid.TEST_MODULE_EXCLUSIONS`' three names — the
 #: instrument's own id-grammar/check/migrate test modules, which carry legacy-form ids as
 #: literal fixture data by construction (the "3c tuple" the ruling names). Read alone,
@@ -2907,9 +2907,9 @@ def _sweep_legacy_form_hits(
     `was:` line, outside a fenced code block, outside `excluded_paths`, outside the
     instrument's own test-module fixture data (`_TEST_MODULE_EXCLUDED_PATHS`), and
     outside a family's own split-source index (`_docid.is_split_source_index`,
-    2026-09-05, rows (d9)-(d12)'s Check-36 alignment) — NT-0019
+    2026-09-05, rows (d9)-(d12)'s Check-36 alignment) — RFC-937
     §7 acceptance item (d) and check 36's third clause are "one rule at two times"
-    (Ruling 67 §2), so both read the identical `_docid` predicates: the fence
+    (RL-988 §2), so both read the identical `_docid` predicates: the fence
     (`_docid.fenced_line_numbers`, the same rule row (e)'s `padded_hits` and row (d)'s own
     corpus apply), the pattern tuple (`_docid.LEGACY_FORM_PATTERNS`), the test-module
     exclusion (`_docid.TEST_MODULE_EXCLUSIONS`, row (d)'s `tracked_files` applies via
@@ -2927,7 +2927,7 @@ def _sweep_legacy_form_hits(
     Explicit parameters, never the module constants read implicitly, so a later slice's
     migration acceptance can call this unscoped over `git ls-files` for (d), and so a test
     can prove each exclusion entry is load-bearing by calling this with it removed
-    (Ruling 67 §4 item 1) and prove the positive control by calling this with the shipped
+    (RL-988 §4 item 1) and prove the positive control by calling this with the shipped
     constants unmodified (§4 item 2: "never a re-typed copy of the pattern").
     """
     excluded = frozenset(excluded_paths)
@@ -2976,12 +2976,12 @@ def sweep_legacy_forms(
 
 def _legacy_form_disclosure_reason(hit: _LegacyFormHit, *, repo_root: pathlib.Path) -> str | None:
     """Why `hit` is excluded from check 36's fatal count — or `None` when it is a real
-    `token_map` miss. NT-0019 §7 acceptance item (d) already discloses these classes
+    `token_map` miss. RFC-937 §7 acceptance item (d) already discloses these classes
     (`_docverify.rows_d`); check 36 reads the identical `_docid` predicates rather than
     retyping them, so the same text gets the same verdict from both checks.
     """
     if hit.label in _docid.DISCLOSED_ALIAS_LABELS:
-        return "alias class — Ruling 102 §4 / Ruling 105 §A"
+        return "alias class — RL-1043 §4 / RL-1046 §A"
     if hit.label == _docid.SCOPED_REQUIREMENT_ID_LABEL and _docid.is_scoped_id_never_allocated(
         hit.token, definition_root=repo_root, redirect_root=repo_root
     ):
@@ -2990,7 +2990,7 @@ def _legacy_form_disclosure_reason(hit: _LegacyFormHit, *, repo_root: pathlib.Pa
 
 
 def check_redirects() -> None:
-    """36. Redirects (NT-0019 §1.11) — renamed and repurposed from the retired
+    """36. Redirects (RFC-937 §1.11) — renamed and repurposed from the retired
     `check_notes_tombstone` (slot 30 -> 36; see this module's docstring). Three clauses:
 
     1. Every `was:` field on an in-scope header has a `docs/REDIRECTS.csv` row.
@@ -3004,10 +3004,10 @@ def check_redirects() -> None:
     empirically rather than predicted: the sweep asks whether a legacy form survives
     *instead of* its new one, which presupposes the new corpus exists. Before that, a
     legitimate citation to a not-yet-renumbered thing is indistinguishable from a
-    survivor by pattern alone — document-ids.md's own lift of NT-0019 cites `NT-0016`,
-    `NT-0015`, `NT-0003` and `Ruling 64` in its prose and names `docs/audit/` describing
+    survivor by pattern alone — document-ids.md's own lift of RFC-937 cites `RFC-897`,
+    `RFC-896`, `RFC-756` and `RL-943` in its prose and names `docs/audit/` describing
     its own dissolution, and the unscoped sweep reds on all five the moment it runs
-    unconditionally. This is the same self-match class Ruling 67 diagnosed in NT-0019 §7
+    unconditionally. This is the same self-match class RL-988 diagnosed in RFC-937 §7
     (d)'s own text (the bare `NT-00` fragment); the fix there was the pattern, the fix
     here is the gate — a citation to a real, currently-correct id is not itself a legacy
     *form* no matter how careful the pattern is, until there is a new form for it to have
@@ -3047,10 +3047,10 @@ def check_redirects() -> None:
         # The sweep is a *post*-migration invariant: it asks whether a legacy form
         # survives outside the CSV and `was:` lines, which presupposes the CSV and the
         # new forms exist to survive *instead of*. Before that, a legitimate citation to
-        # a not-yet-renumbered thing (document-ids.md's own lift of NT-0019 cites NT-0016,
-        # NT-0015, NT-0003 and Ruling 64 in its prose, and names `docs/audit/` describing
+        # a not-yet-renumbered thing (document-ids.md's own lift of RFC-937 cites RFC-897,
+        # RFC-896, RFC-756 and RL-943 in its prose, and names `docs/audit/` describing
         # its own dissolution) is indistinguishable from a survivor by pattern alone —
-        # exactly the self-match class Ruling 67 diagnosed in NT-0019 §7 (d) itself,
+        # exactly the self-match class RL-988 diagnosed in RFC-937 §7 (d) itself,
         # discovered here by running the sweep rather than predicted. `REDIRECTS.csv`'s
         # existence is the migration's own marker, the same role `docs/INDEX.md` plays
         # for check 32's gate.
@@ -3097,8 +3097,8 @@ def check_redirects() -> None:
         f"check 36: {len(redirect_rows)} redirect row(s), {len(was_values)} `was:` "
         f"field(s) in scope, {len(legacy_hits)} legacy-form hit(s) "
         f"({fatal_hits} fatal, {disclosed_total} disclosed — "
-        "docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md "
-        f"Entry 1 item 1, same predicates as NT-0019 §7(d)): {disclosed_text}"
+        "docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md "
+        f"Entry 1 item 1, same predicates as RFC-937 §7(d)): {disclosed_text}"
     )
 
 
@@ -3108,13 +3108,13 @@ def check_redirects() -> None:
 
 _SECTION_HEADING_RE: Final = re.compile(r"^##\s+(.+?)\s*$")
 
-# Rulings 96 and 97 (`docs/plans/2026-09-03-w37-6-d1-d2-rulings.md`) — the detector is
+# Rulings 96 and 97 (`docs/rulings/INDEX.md#2026-09-03-w37-6-d1-d2-rulingsmd`) — the detector is
 # **asymmetric** and the required set **excludes placeholder headings**.
 #
 # Template side: `##` exactly, as before. Document side: any depth, with a leading `N. `
 # / `N.N. ` ordinal stripped, because every real ruling numbers its subsections
 # (`### 4. Acceptance — …`) and a depth-agnostic *literal* match still finds nothing
-# (`docs/audit/findings/F90.md` §B).
+# (`docs/findings/FD-01027-check-37-reds-on-95-of-95-post-migration-rulings-unconditional-on-the-flag-day-because-its-section-detector-cannot-see-a-level-heading.md` §B).
 #
 # The asymmetry is not a convenience. Making the **template** side depth-agnostic too
 # would newly require `SL-NNNNN — <Title>` and `WK-NNNNN — <Title>` — the only body
@@ -3177,7 +3177,7 @@ def _template_body_sections(path: pathlib.Path) -> tuple[str, ...]:
 
 def required_sections(family: str) -> tuple[str, ...]:
     """`family`'s required `##` sections, derived from its template — empty for a family
-    whose template declares none (`reference`: "NT-0019 does not prescribe this family's
+    whose template declares none (`reference`: "RFC-937 does not prescribe this family's
     body shape"), which means nothing is required, not that the check is skipped.
 
     A missing template file is check 30's own failure to report (`derive_field_policies`
@@ -3191,7 +3191,7 @@ def required_sections(family: str) -> tuple[str, ...]:
                 declared = _template_body_sections(_TEMPLATES_DIR / template_name)
             except OSError:
                 return ()
-            # Ruling 97: a heading whose text is not a constant cannot be a required literal.
+            # RL-1040: a heading whose text is not a constant cannot be a required literal.
             # `## Verified first, at <tree>` in `RL.md` names a real section of the
             # ruling shape, but its text carries the tree and so differs between documents
             # (measured at `15ed00d`: 40 occurrences over 94 ruling blocks, 18 distinct
@@ -3203,7 +3203,7 @@ def required_sections(family: str) -> tuple[str, ...]:
 
 def check_shape() -> None:
     """37. Shape: a document carries every `##` section its family's template body
-    declares — the ten-section spec rule, generalised (NT-0019 §1.11).
+    declares — the ten-section spec rule, generalised (RFC-937 §1.11).
     """
     checked = 0
     exempt = 0
@@ -3216,10 +3216,10 @@ def check_shape() -> None:
             continue
         checked += 1
         if header.was is not None:
-            # Ruling 96: check 37 governs documents **authored from a template**. A body the
+            # RL-1039: check 37 governs documents **authored from a template**. A body the
             # migration carried over verbatim from a pre-standard file predates the shape
-            # it would be judged against, and `was:` is how the migration says so — NT-0019
-            # §1.5's closed field set, `docs/notes/0019-one-id-per-document.md:125`,
+            # it would be judged against, and `was:` is how the migration says so — RFC-937
+            # §1.5's closed field set, `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:125`,
             # `was: 2026-08-18-profile-contract.md   # migration only`. It is set only on
             # the migration's own write paths and is declared in **no** template, so a
             # later author cannot inherit the exemption by copying one.
@@ -3247,7 +3247,7 @@ def check_shape() -> None:
 
 
 def check_loop_signal() -> None:
-    """38. Loop signal, warn-only (NT-0019 §1.11) — never fails the gate, only notes.
+    """38. Loop signal, warn-only (RFC-937 §1.11) — never fails the gate, only notes.
 
     Every sub-clause (a `PL-`/`RS-`/`RFC-` cited by nothing outside `INDEX.md`, a
     `PL-` still `draft` past its phase's plan-freeze gate, an active plan or slice citing
@@ -3290,7 +3290,7 @@ def check_loop_signal() -> None:
 
 def check_index_stable() -> None:
     """39. `docs/INDEX.md` byte-stable against a fresh regeneration; a merged PR's title
-    names its `SL-`; the slice's ledger records the PR (NT-0019 §1.11).
+    names its `SL-`; the slice's ledger records the PR (RFC-937 §1.11).
 
     The byte-stability clause runs over the *whole* real `docs/` tree, not
     `_ID_SCOPE_ROOTS` — `docs/INDEX.md` is by definition a whole-corpus artifact, and
@@ -3337,7 +3337,7 @@ def check_index_stable() -> None:
         # regardless of migration state, and this check exists to catch a migration
         # *draft* going unindexed, not a pre-existing, stable bullet no migration ever
         # touches — see that function's own docstring for the mechanism and why the
-        # fourth bullet, `DEP-1a`, never needs telling apart from the other three here.
+        # fourth bullet, `DEP-537`, never needs telling apart from the other three here.
         _new_records = _doc_index._pre_migration_records(corpus.records)
         if not _new_records:
             # "0 governed record(s)" stated with the same numeral every other check 30-39
@@ -3375,7 +3375,7 @@ def check_index_stable() -> None:
 
 
 def check_ids_30_39() -> None:
-    """Run every NT-0019 id-standard check (30-39) — one function per the plan's own
+    """Run every RFC-937 id-standard check (30-39) — one function per the plan's own
     "ten broken-input proofs, one per check" framing, called together here so `main`
     keeps one call site the way it already does for `check_notes` (16-20).
     """
@@ -3425,7 +3425,7 @@ def main() -> int:
             fail(f"check 2: {rid} defined in multiple specs: {where}")
 
     # A filed plan is written *before* the spec change it argues for, so it names the id it
-    # intends to take — "Next free: `FR-DATA-53`" — which by definition is not yet defined.
+    # intends to take — "Next free: `FR-68`" — which by definition is not yet defined.
     # That is an allocation note, not a citation, and docs/plans/ is the only place in the
     # suite where an undefined id is the correct thing to write.
     #
@@ -3447,12 +3447,12 @@ def main() -> int:
         fail(f"check 2: {rid} referenced but never defined (in {sorted(referenced[rid])})")
 
     # Numbering. Two regimes, and which one applies is read off the ids themselves, not
-    # assumed: a module-scoped id (`FR-MODEL-45`) belongs to a per-module sequence that must
-    # be contiguous, while a global-sequence id (`FR-1187`, NT-0019 D1/D2) is drawn from one
+    # assumed: a module-scoped id (`FR-154`) belongs to a per-module sequence that must
+    # be contiguous, while a global-sequence id (`FR-1187`, RFC-937 D1/D2) is drawn from one
     # allocator shared with every other family, so gaps in the FR run are not merely legal --
     # they are what a shared sequence looks like, and asserting contiguity over it would red
     # on every correctly-numbered tree. Contiguity of the *global* sequence is
-    # `doc-id.py check`'s (NT-0019 §7(b)); what is left here is uniqueness, checked above.
+    # `doc-id.py check`'s (RFC-937 §7(b)); what is left here is uniqueness, checked above.
     scoped = {rid for rid in defined if _SCOPED_REQ_ID.fullmatch(rid)}
     by_prefix: dict[str, list[int]] = collections.defaultdict(list)
     for rid in scoped:
@@ -3504,10 +3504,10 @@ def main() -> int:
 
     # 5. ADRs
     #
-    # Both layouts, discovered from disk: `docs/adr/0001-*.md` before the NT-0019 migration,
+    # Both layouts, discovered from disk: `docs/adrs/0001-*.md` before the RFC-937 migration,
     # `docs/adrs/ADR-00004-*.md` after it. Numbers are compared as **integers** so neither
     # the file's padding nor the citation's decides whether a real ADR resolves.
-    adrs = {int(m.group(1)) for p in ROOT.glob("adr/0*.md") if (m := _ADR_FILE.match(p.name))}
+    adrs = {int(m.group(1)) for p in ROOT.glob("adrs/0*.md") if (m := _ADR_FILE.match(p.name))}
     adrs |= {int(m.group(1)) for p in ROOT.glob("adrs/*.md") if (m := _ADR_FILE.match(p.name))}
     corpus = "\n".join(f.read_text(encoding="utf-8") for f in md)
     for ref in sorted({int(n) for n in _ADR_CITED.findall(corpus)} - adrs):
@@ -3666,7 +3666,7 @@ def main() -> int:
             other = code_of[src.group(1)]
             if order.index(other) <= order.index(me):
                 continue
-            # DEP-1a: GOV's audit sink and permission check are cross-cutting interfaces
+            # DEP-537: GOV's audit sink and permission check are cross-cutting interfaces
             if other == "GOV" and re.search(r"audit|permission|authoris|authoriz|RBAC", row, re.I):
                 continue
             fail(
@@ -3675,16 +3675,16 @@ def main() -> int:
             )
 
     # 12. money discipline: *_minor fields must never be fractional.
-    #: FR-OVR-20, not FR-OVR-7. FR-OVR-7 governs values and is scoped to the rating path and
+    #: FR-23, not FR-10. FR-10 governs values and is scoped to the rating path and
     #: persisted rate tables, so it does not reach a diagnostic; the reserved *name* is
-    #: FR-OVR-20 and is unscoped, which is the rule this check actually applies. It named
-    #: FR-OVR-7 until 2026-08-24, when FR-OVR-20 was written down (OQ-OVR-11).
+    #: FR-23 and is unscoped, which is the rule this check actually applies. It named
+    #: FR-10 until 2026-08-24, when FR-23 was written down (OQ-539).
     money_re = re.compile(r'"(\w*_minor)"\s*:\s*(-?\d+\.\d+)')
     for f in list(md) + schemas:
         for m in money_re.finditer(f.read_text(encoding="utf-8")):
             fail(
                 f"check 12: {f.relative_to(ROOT)}: {m.group(1)} written as fractional "
-                f"{m.group(2)} (FR-OVR-20)"
+                f"{m.group(2)} (FR-23)"
             )
 
     # 13. glossary terms not redefined downstream
@@ -3718,7 +3718,7 @@ def main() -> int:
             continue
         # The module comes from the **spec that defines the requirement**, read off that
         # spec's own `Module code:` line, not from a segment of the id. Post-migration there
-        # is no module segment left in an id (NT-0019 D2), so `rid.split("-")[1]` returned
+        # is no module segment left in an id (RFC-937 D2), so `rid.split("-")[1]` returned
         # the *number*: coverage was reported per requirement — "356 100%, 357 0%, 358 0%",
         # 450 buckets of one — and the 10% floor then fired or did not fire on individual
         # requirements. The id stopped carrying the module; the file always did.
@@ -3739,7 +3739,7 @@ def main() -> int:
     # 15. open-question rows have an owner and a recognised status
     check_open_question_columns()
 
-    # 21. journey citations resolve to a declared interface (FR-OVR-17, OQ-OVR-6)
+    # 21. journey citations resolve to a declared interface (FR-19, OQ-543)
     #
     # `scope-audit.py --endpoints` compares a spec's §5.1 table against the published
     # contract. This is the same idea one level up: the **journeys** cite endpoints and
@@ -3748,7 +3748,7 @@ def main() -> int:
     # measures whether a journey *mentions* a requirement id, which is a different and much
     # weaker question — the one plan review 2 found it was answering.
     #
-    # It earned its place on the first run: wf-01 A8 cited `profile_version()`, and `01`
+    # It earned its place on the first run: WF-698 A8 cited `profile_version()`, and `01`
     # §5.2 was corrected to `profile_frame` / `profile_parquet` on 2026-08-15 without the
     # journey being updated.
     declared_paths: dict[tuple[str, tuple[str, ...]], str] = {}
@@ -3769,7 +3769,7 @@ def main() -> int:
         ):
             declared_functions.setdefault(m.group(1), f.name)
 
-    # Both filename forms: `wf-01-dataset-to-approved-model.md` before the NT-0019 migration,
+    # Both filename forms: `WF-698-dataset-to-approved-model.md` before the RFC-937 migration,
     # `WF-00979-dataset-to-approved-model.md` after it. `glob` is case-sensitive on Linux, so
     # the lower-case pattern alone matched **zero** journeys post-migration and check 21
     # reported "0 endpoints, 0 functions, all declared" -- a pass, printed, over nothing.
@@ -3799,7 +3799,7 @@ def main() -> int:
             undeclared += 1
             fail(
                 f"check 21: {f.name}: cites `{m.group(1)} {m.group(2)}`, which no spec "
-                "declares in its §5.1 REST API table (FR-OVR-17)"
+                "declares in its §5.1 REST API table (FR-19)"
             )
         for m in re.finditer(r"`([a-z_][a-z0-9_]*)\(\)`", body):
             cited_functions += 1
@@ -3807,7 +3807,7 @@ def main() -> int:
                 undeclared += 1
                 fail(
                     f"check 21: {f.name}: cites `pricing-core` function `{m.group(1)}()`, "
-                    "which no spec declares in its §5.2 interface block (FR-OVR-17)"
+                    "which no spec declares in its §5.2 interface block (FR-19)"
                 )
     # The verdict goes in the summary line, not just in the failure list. A note reading
     # "all declared" above a `FAILED` block is the shape of thing this audit exists to catch.
@@ -3824,7 +3824,7 @@ def main() -> int:
 
     # 24. the §5.3 route column agrees with the §5.6 canonical route column
     #
-    # `00` §5.6 declares the canonical routes (FR-OVR-22); each module's §5.3 gives the
+    # `00` §5.6 declares the canonical routes (FR-25); each module's §5.3 gives the
     # route of every view it builds. A route §5.6 declares for a module must appear in that
     # module's §5.3 — a §5.3 that drops or rewrites a canonical route is drift nothing else
     # sees. Routes, never view names: two named views on one route are two §5.3 rows
@@ -3882,10 +3882,10 @@ def main() -> int:
                     "is canonical)"
                 )
 
-    # 16-20. the working notes in docs/notes/
+    # 16-20. the working notes in docs/rfcs/
     check_notes(set(defined), in_file, adrs)
 
-    # 30-39. NT-0019's id-standard checks, path-scoped to _ID_SCOPE_ROOTS (Slice W37-4).
+    # 30-39. RFC-937's id-standard checks, path-scoped to _ID_SCOPE_ROOTS (Slice W37-4).
     check_ids_30_39()
 
     # 23. every spec §10 mirror row carries the register's status for that question
@@ -3904,7 +3904,7 @@ def main() -> int:
     # 28. every filed plan dated on/after the cutoff states an acceptance standard
     check_plan_acceptance_standard()
 
-    # 29. every docs/audit/register.md Decision cell conforms to its own header grammar
+    # 29. every docs/findings/register.md Decision cell conforms to its own header grammar
     check_register_grammar()
 
     for note in notes:

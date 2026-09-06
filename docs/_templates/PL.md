@@ -44,7 +44,7 @@ relates: []                     # ids only
 
 ## Decision points
 
-Kind, blocking status and resolver per NT-0019 §1.7. A blocking row must carry a
+Kind, blocking status and resolver per RFC-937 §1.7. A blocking row must carry a
 resolver id before the slice it blocks may start; a non-blocking row names the step that
 resolves it and the default applied until then.
 

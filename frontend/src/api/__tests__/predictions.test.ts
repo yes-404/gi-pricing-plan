@@ -48,8 +48,8 @@ describe("predict", () => {
 });
 
 describe("unavailableCopy", () => {
-  it("does not call covariance_not_stored a GBM reason (FR-MODEL-93)", () => {
-    // FR-MODEL-93: "a fourth reason beside FR-MODEL-77's three and it is not one of them".
+  it("does not call covariance_not_stored a GBM reason (FR-195)", () => {
+    // FR-195: "a fourth reason beside FR-198's three and it is not one of them".
     expect(unavailableCopy("covariance_not_stored").family).toBe("glm");
     expect(unavailableCopy("no_interval_models_fitted").family).toBe("gbm");
     expect(unavailableCopy("interval_models_not_approved").family).toBe("gbm");
@@ -57,8 +57,8 @@ describe("unavailableCopy", () => {
     expect(unavailableCopy("model_type_has_no_interval").family).toBe("ebm");
   });
 
-  it("reads `not_approved` as FR-MODEL-100(ii), not as unapproved outright", () => {
-    // Asserted over the whole rendered copy rather than one field. FR-MODEL-100(ii) says the
+  it("reads `not_approved` as FR-200(ii), not as unapproved outright", () => {
+    // Asserted over the whole rendered copy rather than one field. FR-200(ii) says the
     // reason "means the bounds are **less advanced than the model they bound**, not that
     // they are unapproved outright" — a constraint on what the reader is told, not on which
     // of the two strings tells them. Pinning it to `detail` would fail a copy that says it
@@ -68,16 +68,16 @@ describe("unavailableCopy", () => {
     expect(`${headline} ${detail}`).not.toMatch(/\bnot approved\b/);
   });
 
-  it("reads `stale` as FR-MODEL-100(iii): the central model is superseded", () => {
+  it("reads `stale` as FR-200(iii): the central model is superseded", () => {
     const { headline, detail } = unavailableCopy("interval_models_stale");
     expect(`${headline} ${detail}`).toContain("superseded");
   });
 });
 
 describe("intervalClaim", () => {
-  it("separates the two claims FR-MODEL-101 exists to keep apart", () => {
-    // FR-MODEL-98: confidence_interval_mean covers E[Y|x].
-    // FR-MODEL-101: quantile_pair_interval covers Y itself.
+  it("separates the two claims FR-201 exists to keep apart", () => {
+    // FR-196: confidence_interval_mean covers E[Y|x].
+    // FR-201: quantile_pair_interval covers Y itself.
     expect(intervalClaim("confidence_interval_mean")).toContain("average");
     expect(intervalClaim("quantile_pair_interval")).toContain("individual");
     expect(intervalClaim("confidence_interval_mean")).not.toEqual(

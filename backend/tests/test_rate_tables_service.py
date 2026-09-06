@@ -1,9 +1,9 @@
 """Rate table platform service (03 §3.3, slice W10-3C): bulk operations, the parquet
 write path, and the seed-lineage guard.
 
-The four bulk operations (FR-RATE-18, 04 §4.4), the storage-threshold decision at
-version-creation time (FR-RATE-62, DP2), and the save-time seed-lineage equality proof
-(FR-RATE-19, 03 §4.2, DP4). Models are inserted rather than fitted, exactly as the
+The four bulk operations (FR-233, 04 §4.4), the storage-threshold decision at
+version-creation time (FR-232, DP2), and the save-time seed-lineage equality proof
+(FR-234, 03 §4.2, DP4). Models are inserted rather than fitted, exactly as the
 W10-2 API tests do — the service cares that the model row is approved with relativities,
 not how the fit happened.
 """
@@ -110,7 +110,7 @@ async def _version_row(
         return row
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 async def test_bulk_uplift_records_the_operation_and_inherits_seed_lineage(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -162,7 +162,7 @@ async def test_bulk_uplift_records_the_operation_and_inherits_seed_lineage(
     assert version_row.seeded_from == baseline
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_cells_spill_to_parquet_above_the_workspace_threshold(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -206,7 +206,7 @@ async def test_cells_spill_to_parquet_above_the_workspace_threshold(
     }
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_the_seed_obeys_the_threshold(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -222,7 +222,7 @@ async def test_the_seed_obeys_the_threshold(
     assert version_row.cells is not None
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_a_parquet_baseline_feeds_a_bulk_operation(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -271,7 +271,7 @@ async def test_a_parquet_baseline_feeds_a_bulk_operation(
     assert cells == {"17-20": "2", "21-24": "1.551", "25-29": "1.232"}
 
 
-@pytest.mark.req("FR-RATE-19")
+@pytest.mark.req("FR-234")
 async def test_the_seed_lineage_guard_refuses_a_divergent_derived_version(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -309,7 +309,7 @@ async def test_the_seed_lineage_guard_refuses_a_divergent_derived_version(
     assert exc.value.status_code == 422
 
 
-@pytest.mark.req("FR-RATE-19")
+@pytest.mark.req("FR-234")
 async def test_the_seed_lineage_guard_accepts_the_baselines_anchor(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -337,7 +337,7 @@ async def test_the_seed_lineage_guard_accepts_the_baselines_anchor(
     svc._guard_seed_lineage(derived, baseline_row)
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 async def test_floor_above_cap_is_a_named_refusal(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -361,7 +361,7 @@ async def test_floor_above_cap_is_a_named_refusal(
     assert exc.value.status_code == 422
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 async def test_an_unknown_operation_kind_is_refused(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -385,7 +385,7 @@ async def test_an_unknown_operation_kind_is_refused(
     assert exc.value.status_code == 422
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 async def test_malformed_operation_parameters_are_refused(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -409,7 +409,7 @@ async def test_malformed_operation_parameters_are_refused(
     assert exc.value.status_code == 422
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 async def test_import_confirmed_persists_the_verdict_and_inherits_lineage(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -463,7 +463,7 @@ async def test_import_confirmed_persists_the_verdict_and_inherits_lineage(
     assert version_row.seeded_from == baseline
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_import_confirmed_obeys_the_threshold(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -497,7 +497,7 @@ async def test_import_confirmed_obeys_the_threshold(
     assert version_row.cells is not None
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_diff_needs_job_flags_a_diff_touching_parquet(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
@@ -558,12 +558,12 @@ async def test_diff_needs_job_flags_a_diff_touching_parquet(
     )
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_diff_materialises_parquet_cells_to_the_same_artifact(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
     """The Job's compute answers the same artifact as the row-backed 200 — storage
-    decides latency and status, never the maths (FR-RATE-62's 'same API')."""
+    decides latency and status, never the maths (FR-232's 'same API')."""
     family = f"mf-{uuid4().hex[:8]}"
     content = (
         b"driver_age_band,relativity\n"

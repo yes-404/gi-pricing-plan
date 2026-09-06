@@ -1,4 +1,4 @@
-"""Reference tables and their effective-dated versions (`01` §3.5, §4.8, FR-DATA-29..32).
+"""Reference tables and their effective-dated versions (`01` §3.5, §4.8, FR-69, FR-70, FR-71, FR-72).
 
 A reference table is the least glamorous data in a pricing platform and among the most
 dangerous. A vehicle-group table refreshed without versioning changes the rating of every
@@ -6,9 +6,9 @@ in-force policy retroactively, and nothing in the quote records which table it u
 
 Two rules carry that, and both are enforced below rather than documented:
 
-* **A version is loaded whole and pinned by id** (FR-DATA-30). A rating version names the
+* **A version is loaded whole and pinned by id** (FR-70). A rating version names the
   reference version it was built against; "the latest" is not a reference, it is a race.
-* **Intervals for one key never overlap** (FR-DATA-31), enforced by a `btree_gist`
+* **Intervals for one key never overlap** (FR-71), enforced by a `btree_gist`
   exclusion constraint. Two rows covering one date give a lookup two answers, and which
   one a quote gets would depend on row order.
 """
@@ -66,7 +66,7 @@ async def create_table(
     payload_columns: Sequence[str],
     description: str | None = None,
 ) -> ReferenceTableRow:
-    """Declare a reference table (FR-DATA-29)."""
+    """Declare a reference table (FR-69)."""
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
@@ -121,7 +121,7 @@ async def load_version(
     rows: Sequence[dict[str, Any]],
     source_note: str | None = None,
 ) -> ReferenceTableVersionRow:
-    """Load a new version of a reference table (FR-DATA-29, FR-DATA-30).
+    """Load a new version of a reference table (FR-69, FR-70).
 
     Each row carries `key`, `payload`, `effective_from` and an optional `effective_to`.
     The version is loaded **whole**: a partial load would leave a table that looks complete
@@ -173,7 +173,7 @@ async def load_version(
             "REFERENCE_INTERVAL_OVERLAP",
             "Two rows cover the same key on the same date",
             409,
-            "FR-DATA-31 requires effective-dated intervals for one key to be disjoint. "
+            "FR-71 requires effective-dated intervals for one key to be disjoint. "
             "Overlapping rows give an as-at lookup two answers, and which one a quote "
             "receives would depend on row order.",
         ) from exc
@@ -199,7 +199,7 @@ async def publish_version(
     slug: str,
     version: int,
 ) -> ReferenceTableVersionRow:
-    """`draft` → `published` (FR-DATA-30). Only a published version may be pinned."""
+    """`draft` → `published` (FR-70). Only a published version may be pinned."""
     table = await _load_table(session, workspace_id=workspace_id, slug=slug)
     row = (
         await session.execute(
@@ -249,10 +249,10 @@ async def lookup(
     as_at: date,
     version: int | None = None,
 ) -> ReferenceLookup:
-    """Point lookup, as at a date (FR-DATA-31).
+    """Point lookup, as at a date (FR-71).
 
     `version=None` reads the highest published version — acceptable for the debugging
-    endpoint this serves, and **not** how rating resolves one. FR-DATA-30 requires a rating
+    endpoint this serves, and **not** how rating resolves one. FR-70 requires a rating
     version to pin an id, because "latest" evaluated at scoring time is a different answer
     each month.
     """

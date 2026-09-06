@@ -1,29 +1,29 @@
 ---
 name: watcher-runtime-state
-description: Write and maintain the NT-0014 runtime state file (artifact B) — position and the in-flight expensive-verifications list, re-derived every cycle rather than compared against a separate tally, so a dead or unwired writer cannot masquerade as a healthy zero. Use when standing up a new session's watcher, when a role needs to announce or check an expensive verification in flight (spec §8), or when a role needs the current phase/work/slice without reconstructing it from `docs/roadmap.md` itself.
+description: Write and maintain the RFC-895 runtime state file (artifact B) — position and the in-flight expensive-verifications list, re-derived every cycle rather than compared against a separate tally, so a dead or unwired writer cannot masquerade as a healthy zero. Use when standing up a new session's watcher, when a role needs to announce or check an expensive verification in flight (spec §8), or when a role needs the current phase/work/slice without reconstructing it from `docs/roadmap.md` itself.
 ---
 
-# watcher-runtime-state: the NT-0014 runtime state file, re-derived not compared
+# watcher-runtime-state: the RFC-895 runtime state file, re-derived not compared
 
 `write_runtime_state.py` writes `$RUNTIME_STATE_FILE` (default
 `~/gi-pricing-plan.local/handover/runtime-state.json`) — the runtime state file
 `.claude/roles/watcher.md` and `docs/process/delivery-process.md` §13 describe as
-artifact B, NT-0014 §2. Runtime/ops state lives outside this repository (spec §10); the
+artifact B, RFC-895 §2. Runtime/ops state lives outside this repository (spec §10); the
 **script** is repo content, the **file it writes** is not, and is never committed or
 `.gitignore`d — it is not in the repository at all.
 
-## Why this exists, and why its shape changed from NT-0014's original proposal
+## Why this exists, and why its shape changed from RFC-895's original proposal
 
-The note (`docs/notes/0014-machine-readable-process-core.md` §2) proposed B as a
+The note (`docs/rfcs/RFC-00895-a-machine-readable-core-for-the-delivery-process-so-the-rules-a-script-can-check-stop-being-prose.md` §2) proposed B as a
 state file the watcher writes and a mismatch detector compares against artifact history.
-`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`, **Ruling 47**, rejected that design:
+`docs/rulings/RL-00907-q4-artifacts-win-where-an-artifact-exists-and-nothing-that-blocks-an-action-may-be-counted-in-b-without-one.md`, **RL-907**, rejected that design:
 the failure this file will actually have is **agreement by vacancy**, not disagreement —
 if the writer is dead or never wired up, the state file reads zero, the artifacts read
 zero, a mismatch detector never fires, and every reader is told the process is healthy.
 **A mismatch detector cannot detect a dead writer.** So this script **re-derives; it does
 not compare two independently-kept tallies.**
 
-## Falsifiability — the four conditions Ruling 47(c) binds, and how each is met
+## Falsifiability — the four conditions RL-907(c) binds, and how each is met
 
 This repository already withdrew one file of this exact shape:
 `~/gi-pricing-plan.local/handover/roster-state.md` was a heredoc emitting a fixed roster
@@ -37,12 +37,12 @@ no indicator, because it converts 'I do not know' into a confident wrong answer.
    **completely untouched**, timestamp included.
 2. **`retry_counters` is absent entirely, never present as an empty or zero value.** As
    written by *this* script (`write_runtime_state.py`), that remains true: `cycle` never
-   touches the field. **Corrected 2026-08-31, NT-0014 adoption slice G:** the block is no
+   touches the field. **Corrected 2026-08-31, RFC-895 adoption slice G:** the block is no
    longer absent from the file as a whole — `scripts/hooks/retry_cap_hook.py` (C2) now
    writes it at the moment a fix/replan decision is recorded, independently of this
    script's cycle. The reasoning this condition states still binds C2's own design
-   (Ruling 47(c): a `0` from a counter nothing increments is indistinguishable from a
-   true zero — `docs/notes/0007-context-bound-measures-cap-not-discipline.md`'s
+   (RL-907(c): a `0` from a counter nothing increments is indistinguishable from a
+   true zero — `docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md`'s
    boundary-metric trap in another dress); only the "does not exist yet" clause was
    superseded.
 3. **`in_flight_expensive_verifications` entries expire.** This block is genuinely
@@ -60,14 +60,14 @@ no indicator, because it converts 'I do not know' into a confident wrong answer.
 ## `position.phase` / `.work` / `.slice` are caller-supplied, not auto-parsed
 
 `docs/roadmap.md`'s own "closed" convention — a struck-through `#` cell — is not applied
-consistently across it: W5, W6b and W11 are all closed in prose while their `#` cells are
+consistently across it: WK-661, WK-664 and WK-671 are all closed in prose while their `#` cells are
 never struck. A mechanical parser over that file would confidently write a wrong phase or
-work item some fraction of the time, and Ruling 47's governing principle (an absent field
+work item some fraction of the time, and RL-907's governing principle (an absent field
 beats a wrong one) rules that out. So `cycle` takes `--phase VALUE --phase-source "…"`
 (and the same pair for `--work` / `--slice`) — the invoking role reads the value from
 the named artifact and supplies both together; a field is written only when both are
 given, and otherwise keeps whatever was recorded last cycle. **`flow_step` has no CLI
-flag at all** — Ruling 47(c): it has no source artifact, "carried only if slice E can name
+flag at all** — RL-907(c): it has no source artifact, "carried only if slice E can name
 its source, and dropped otherwise", and this slice cannot name one.
 
 This does not eliminate the read of `docs/roadmap.md` — it moves it from *every reader,
@@ -82,8 +82,8 @@ export RUNTIME_STATE_FILE=~/gi-pricing-plan.local/handover/runtime-state.json  #
 # Re-derive and write (only touches blocks whose content actually changed):
 python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py cycle \
     --phase 2 --phase-source "docs/roadmap.md §7" \
-    --work W11 --work-source "docs/roadmap.md §7" \
-    --slice W11-S3 --slice-source "docs/plans/2026-08-29-w11-map.md"
+    --work WK-671 --work-source "docs/roadmap.md §7" \
+    --slice WK-671-S3 --slice-source "docs/plans/2026-08-29-w11-map.md"
 
 # A role announces an expensive verification before starting it (spec §8):
 python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py announce \
@@ -101,7 +101,7 @@ requires just as much of the test suite as of the watcher.
 ## The acceptance test, and what it looks like to fail it
 
 `tests/test_watcher_runtime_state.py::test_a_cycle_with_no_change_is_byte_identical` is
-Ruling 47(d) stated directly: two `cycle` calls with the same position, a real
+RL-907(d) stated directly: two `cycle` calls with the same position, a real
 `time.sleep` between them, must produce byte-identical files. Verified failing against a
 deliberately reintroduced F31 shape (a top-level `updated_at` stamped unconditionally on
 every write, not committed anywhere in this repository): the same assertion fails with a
@@ -110,13 +110,13 @@ one-second-later timestamp as the only diff, at the same byte offset the real
 
 ## Not built in this slice
 
-- **`retry_counters`** — not written by *this* script. NT-0014 adoption slice G shipped
+- **`retry_counters`** — not written by *this* script. RFC-895 adoption slice G shipped
   it via a separate writer, `scripts/hooks/retry_cap_hook.py` (C2) — see the correction on
   condition 2 above and that script's own docstring.
 - **Hook enforcement** (announcing is not required, checking before starting is not
   enforced) — C2 enforces the retry cap it owns (`scripts/hooks/retry_cap_hook.py`); this
   file's own protocol (announce/check an expensive verification) still has no enforcing
-  hook, C3 having been dissolved (Ruling 40) rather than built. This script remains
+  hook, C3 having been dissolved (RL-920) rather than built. This script remains
   descriptive infrastructure only for the blocks it writes; nothing here blocks an action.
 - **Auto-derivation of `position`** — see above. A future slice could attempt one if a
   decision-maker rules the trade-off (a parser that is sometimes wrong) acceptable;
@@ -124,12 +124,12 @@ one-second-later timestamp as the only diff, at the same byte offset the real
 
 ## Verified
 
-2026-08-31 — corrected condition 2 and "Not built in this slice" now that NT-0014
+2026-08-31 — corrected condition 2 and "Not built in this slice" now that RFC-895
 adoption slice G shipped `retry_counters` via a second writer
 (`scripts/hooks/retry_cap_hook.py`, C2) this script does not itself touch. Found while
 implementing slice G and checking this skill against the repository before relying on it
 (`CLAUDE.md` §15: verify against the primary source).
 
-2026-08-30 — filed for NT-0014 adoption slice E
-(`docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` §2), against Ruling 47
-(`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`).
+2026-08-30 — filed for RFC-895 adoption slice E
+(`docs/plans/INDEX.md#2026-08-30-nt-0012-0013-0014-adoptionmd` §2), against RL-907
+(`docs/rulings/INDEX.md#2026-08-30-nt-0014-q1-q3-q4-rulingsmd`).

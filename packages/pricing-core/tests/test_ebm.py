@@ -182,11 +182,11 @@ def _rebuilt(fit: EbmFitResult, slots: list[np.ndarray]) -> np.ndarray:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-37 — the fit and the verbatim tables
+# FR-140 — the fit and the verbatim tables
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_fit_returns_the_expected_tables() -> None:
     data = _book()
     result = fit_ebm(data, _spec(), FACTORS, bandings=BANDINGS)
@@ -216,8 +216,8 @@ def test_fit_returns_the_expected_tables() -> None:
     assert result.rows == data.height
 
 
-@pytest.mark.req("FR-MODEL-37")
-@pytest.mark.req("NFR-PLAT-11")
+@pytest.mark.req("FR-140")
+@pytest.mark.req("NFR-535")
 def test_the_exported_tables_reproduce_interpret_predict() -> None:
     """The round trip: the artifact alone must rescore a frame `interpret` can score.
 
@@ -248,7 +248,7 @@ def test_the_exported_tables_reproduce_interpret_predict() -> None:
     assert np.allclose(rebuilt, estimator.predict(x_sweep), atol=1e-9)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_an_interaction_fit_exports_a_rectangular_grid() -> None:
     data = _book()
     pair = FACTORS[:2]  # speed x area: exactly one pair
@@ -283,11 +283,11 @@ def test_an_interaction_fit_exports_a_rectangular_grid() -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-37 — `predict_ebm`, scoring from the exported tables
+# FR-140 — `predict_ebm`, scoring from the exported tables
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_scoring_matches_interpret_on_a_held_out_frame() -> None:
     """`predict_ebm` agrees with the fitted estimator on a frame the fit never saw.
 
@@ -313,10 +313,10 @@ def test_scoring_matches_interpret_on_a_held_out_frame() -> None:
     assert np.allclose(mu, estimator.predict(x_held), atol=1e-9)
 
 
-@pytest.mark.req("FR-MODEL-32")
+@pytest.mark.req("FR-131")
 def test_an_unseen_level_is_refused_by_name() -> None:
     """A level the fit never saw has no slot — inventing one would score it as
-    whichever level shares the number (the `gbm._encode` rule, FR-MODEL-32)."""
+    whichever level shares the number (the `gbm._encode` rule, FR-131)."""
     fit = fit_ebm(_book(), _spec(), FACTORS, bandings=BANDINGS)
     frame = pl.DataFrame({"speed": [30.0], "area": ["Q"], "age": [40.0]})
 
@@ -326,7 +326,7 @@ def test_an_unseen_level_is_refused_by_name() -> None:
     assert "area" in str(error.value)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_a_scored_term_resolves_from_the_artifact_alone() -> None:
     """The artifact's `feature_order` and `bins` are the only ground truth.
 
@@ -354,11 +354,11 @@ def test_a_scored_term_resolves_from_the_artifact_alone() -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-28 — monotone constraints, by name and by the feature that got them
+# FR-122 — monotone constraints, by name and by the feature that got them
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-28")
+@pytest.mark.req("FR-122")
 def test_a_monotone_constraint_lands_on_the_right_feature() -> None:
     data = _book()
     plain = fit_ebm(data, _spec(), FACTORS, bandings=BANDINGS)
@@ -384,14 +384,14 @@ def test_a_monotone_constraint_lands_on_the_right_feature() -> None:
         assert len(term.scores) == len(plain_by_feature[term.term_features[0]].scores)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_a_monotone_constraint_on_a_categorical_feature_is_refused_by_name() -> None:
     with pytest.raises(EbmFitError) as error:
         fit_ebm(_book(), _spec(monotone_constraints={"area": 1}), FACTORS, bandings=BANDINGS)
     assert error.value.code == "EBM_MONOTONE_CONSTRAINT_INCOMPLETE"
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_a_monotone_constraint_naming_an_unknown_slug_is_refused_by_name() -> None:
     with pytest.raises(EbmFitError) as error:
         fit_ebm(
@@ -404,11 +404,11 @@ def test_a_monotone_constraint_naming_an_unknown_slug_is_refused_by_name() -> No
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-55 / FR-MODEL-37 — weights and the spec seed
+# FR-184 / FR-140 — weights and the spec seed
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-55")
+@pytest.mark.req("FR-184")
 def test_weights_reach_the_estimator() -> None:
     data = _book()
     plain = fit_ebm(data, _spec(), FACTORS, bandings=BANDINGS)
@@ -424,7 +424,7 @@ def test_weights_reach_the_estimator() -> None:
     assert not np.array_equal(plain_speed.scores, weighted_speed.scores)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_the_fit_is_reproducible_under_the_spec_seed() -> None:
     data = _book()
     first = fit_ebm(data, _spec(), FACTORS, bandings=BANDINGS)
@@ -441,16 +441,16 @@ def test_the_fit_is_reproducible_under_the_spec_seed() -> None:
     assert not np.array_equal(other_speed.scores, different_speed.scores)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_fit_seconds_and_library_versions_are_recorded() -> None:
     result = fit_ebm(_book(), _spec(), FACTORS, bandings=BANDINGS)
     assert result.fit_seconds >= 0.0
     assert result.library_versions
 
 
-@pytest.mark.req("FR-MODEL-123")
+@pytest.mark.req("FR-179")
 def test_fit_ebm_refuses_a_seed_argument() -> None:
-    """FR-MODEL-123: `fit_ebm` carried the same dead kwarg as `fit_glm`, and it is gone too.
+    """FR-179: `fit_ebm` carried the same dead kwarg as `fit_glm`, and it is gone too.
 
     Its docstring said outright that the parameter mirrored `fit_glm`'s "vestigial kwarg for
     call-site symmetry" and was "deliberately **not** the reproducibility source" — the fact

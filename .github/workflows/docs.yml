@@ -4,7 +4,7 @@ name: docs
 # the workflow level, not per job, so each component gets its own workflow. The alternative
 # — one workflow with an action-based filter — adds a dependency to save a file.
 #
-# The working notes live under docs/notes/ (moved out from under .claude, NT-0016 Slice 4),
+# The working notes live under docs/notes/ (moved out from under .claude, RFC-897 Slice 4),
 # so `docs/**` below already covers the path checks 16-20 audit; no separate notes entry is
 # needed the way one once was, back when the notes sat outside docs/ entirely.
 # The two path lists are duplicated rather than shared by a YAML anchor: GitHub Actions does
@@ -28,30 +28,30 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         # `fetch-depth: 0` is what `doc-id.py migrate --verify` needs: it builds its
-        # snapshot with `git archive <ref>` and, for NT-0019 §7(f)'s first reading, also
+        # snapshot with `git archive <ref>` and, for RFC-937 §7(f)'s first reading, also
         # archives `8f5d57d` — a commit a shallow clone does not have. A shallow clone
         # would not error; §7(f) would silently lose one of its two readings.
         with: {fetch-depth: 0}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: {python-version: "3.12"}
       # See scripts/audit-docs.py's own module docstring for the numbered list this
-      # summary would otherwise duplicate and go stale against (NT-0003) — it now runs
-      # 1-29 plus NT-0019's id-standard checks 30-39 (docs/notes/0019-one-id-per-document.md
+      # summary would otherwise duplicate and go stale against (RFC-756) — it now runs
+      # 1-29 plus RFC-937's id-standard checks 30-39 (docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md
       # §1.11), the latter path-scoped to `_ID_SCOPE_ROOTS` until the migration (W37-6)
       # widens it to the whole corpus.
       - run: python3 scripts/audit-docs.py
-      # NT-0019 §1.7/§1.11: doc-id.py check fails on a duplicate id, a header/filename
+      # RFC-937 §1.7/§1.11: doc-id.py check fails on a duplicate id, a header/filename
       # mismatch, or a docs/INDEX.md contiguity gap; doc-index.py --check fails when a
       # fresh regeneration of docs/INDEX.md would differ from what is committed. Both are
       # no-ops before the migration (no ids exist yet to check or index).
       - run: python3 scripts/doc-id.py check
       - run: python3 scripts/doc-index.py --check
-      # Ruling 102 §1 (docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md): the
-      # NT-0019 §7 acceptance standard is an instrument, not a hand-maintained table. It
+      # RL-1043 §1 (docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md): the
+      # RFC-937 §7 acceptance standard is an instrument, not a hand-maintained table. It
       # "runs in CI on every PR touching `doc-id.py` or `audit-docs.py`, and is red on
       # `main` until green" — so this step is EXPECTED TO FAIL until the six failing rows
-      # of Ruling 102 §2 are fixed, in that ruling's order. **Do not weaken a predicate to
-      # get a green** (Ruling 102 §1: "A row that cannot be expressed as a predicate the
+      # of RL-1043 §2 are fixed, in that ruling's order. **Do not weaken a predicate to
+      # get a green** (RL-1043 §1: "A row that cannot be expressed as a predicate the
       # script computes is a row that was never enforceable").
       #
       # It is wired into this workflow rather than a new one because this workflow's
@@ -62,8 +62,8 @@ jobs:
       # The snapshot goes in RUNNER_TEMP, outside the checkout: the instrument refuses a
       # target inside any git work tree, which is the guard that keeps `migrate()` off a
       # real checkout. Exit 2 means "refused to run" (a misconfiguration); exit 1 means
-      # "ran, and a row is red" — the standing state Ruling 102 §1 keeps `main` in until
-      # every row is green, not a fact this step exists to carry (Ruling 104 §1, decision
+      # "ran, and a row is red" — the standing state RL-1043 §1 keeps `main` in until
+      # every row is green, not a fact this step exists to carry (RL-1045 §1, decision
       # 1). Exit 3 means the verdict set moved since the last recorded run — that is the
       # one this step fails on, because it is the only exit code that says something
       # about *this* change rather than about the standing backlog.
@@ -71,7 +71,7 @@ jobs:
           code=0
           python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref HEAD || code=$?
           if [ "$code" -eq 1 ]; then
-            echo "::notice::--verify exited 1 (standing red, verdict set unchanged) — Ruling 104 §1 reads this as a pass"
+            echo "::notice::--verify exited 1 (standing red, verdict set unchanged) — RL-1045 §1 reads this as a pass"
             exit 0
           fi
           exit "$code"

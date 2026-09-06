@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Census over every ruling heading in `docs/plans/`, classifying its acceptance item (if
-any) by which of this repository's three phrasing conventions states it — Ruling 83's
-property (`docs/plans/2026-09-02-w37-guard-arithmetic-and-ledger-family-rulings.md`)
+any) by which of this repository's three phrasing conventions states it — RL-985's
+property (`docs/rulings/INDEX.md#2026-09-02-w37-guard-arithmetic-and-ledger-family-rulingsmd`)
 applied to convention discovery rather than to a family census: **every candidate falls
 into exactly one bucket or a named exception, and the buckets sum to the total.**
 
-Filed alongside `docs/audit/ruling-acceptance-item-sweep.md` §8's table (originally a
-separate CSV of the same name; dropped 2026-09-02 — FR-DATA-32's reference-data-bundling
+Filed alongside `docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §8's table (originally a
+separate CSV of the same name; dropped 2026-09-02 — FR-72's reference-data-bundling
 guard cannot cover a hand-classified census, only a regenerate-and-diff one, and §8 states
 why in full), which records the SEMANTIC
 classification (CONSTRUCTIBLE / INVALIDATED / VACUOUS AT BIRTH / INDICATIVE /
@@ -19,28 +19,28 @@ remembered to grep for.
 
 Three known conventions, found by reading the corpus rather than assumed:
 
-  1. **W37 series** (Rulings 66-95, dated 2026-09-02): a heading matching
+  1. **WK-697 series** (Rulings 66-95, dated 2026-09-02): a heading matching
      `_W37_HEADING_RE` inside the ruling's own section — `### N. Acceptance — the
      violation that must become detectable` (N varies with how many subsections precede
      it).
-  2. **W11 series** (Rulings 6-30ish, dated 2026-08-29): a bold inline marker matching
+  2. **WK-671 series** (Rulings 6-30ish, dated 2026-08-29): a bold inline marker matching
      `_W11_MARKER_RE` — `**Acceptance test — ...**`, wording after the em dash varies
      (`expressible`, `impossible`, `stated as the violation`).
   3. **Standalone-file series** (Rulings 59-61, each its own H1-headed file): a heading
      matching `_STANDALONE_HEADING_RE` — `## N. Broken-input proof`.
 
-One named exception, regex-shaped: **Ruling 44** states two tests ("Two tests, each
+One named exception, regex-shaped: **RL-916** states two tests ("Two tests, each
 stated as a violation that must become impossible:") that match none of the three
 regexes above. Found only by reading the ruling's full body; named here rather than
 turned into a fourth regex, because a pattern built to match this one sentence would be
 fitted to a population of one and would not generalise.
 
 **A second, larger, and more honest exception: `_PROSE_ONLY_RULINGS` below.** The sweep
-this script accompanies (`docs/audit/ruling-acceptance-item-sweep.md` §2) found that ten
+this script accompanies (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §2) found that ten
 rulings — 40, 42, 43, 45, 46, 47, 50, 51, 54, 60 — state a genuine, testable acceptance
 item in ordinary prose with **no shared marker at all**: sometimes "§N's broken-input
 proof:", sometimes "Its acceptance evidence is...", sometimes "so this is testable rather
-than hortatory", once (Ruling 60) a re-confirmation of a **different, named** ruling's
+than hortatory", once (RL-950) a re-confirmation of a **different, named** ruling's
 broken-input cases rather than a fresh statement of its own. **No single regex covers
 this set without overfitting to it** — a pattern loose enough to catch all ten also
 matches ordinary prose that is not an acceptance item (the corpus's own "the check is",
@@ -53,7 +53,7 @@ Flagged rather than hidden behind a regex that would only look like coverage.
 A ruling matching **zero** conventions and not on either exception list is NONE_FOUND —
 most of the corpus (Rulings 1-5, 31-38 etc.) predates the acceptance-item convention
 entirely, and 52/53/55-58/62-65/A1-3 state only an "Overridden if" scope clause with no
-violation condition (`docs/audit/ruling-acceptance-item-sweep.md` §4's rule: that clause
+violation condition (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §4's rule: that clause
 is never itself an acceptance item). This is the expected, majority case, not a defect.
 
 A ruling matching **more than one** convention is a CONFLICT, printed and left for a
@@ -61,7 +61,7 @@ human — it has never happened in the corpus this script has been run against, 
 script does not guess which one is authoritative.
 
 **Ruling-form flag-day, 2026-09-02 (maintainer ruling, discharged at `#623`'s merge,
-`aab6327`): every ruling filed after the flag-day must use the W37 form.** Before the
+`aab6327`): every ruling filed after the flag-day must use the WK-697 form.** Before the
 flag-day, `none` was the expected, majority case (most of the corpus predates the
 acceptance-item convention entirely). After it, `none` is only still expected for the
 35 rulings that were already in that bucket when the flag-day landed -- a **post**-flag-day
@@ -104,21 +104,21 @@ _FLAG_DAY_COMMIT: Final = "aab6327"
 #: standalone files use `#`, the ordinary rulings files use `##`, the A-series uses
 #: `###`). Excludes a title that merely *mentions* an existing ruling's number — the
 #: `'s` alternative below exists only to name that exclusion in one place, since
-#: `docs/plans/2026-09-02-w37-ruling-88-acceptance-amendment.md`'s own H1 ("Ruling 88's
-#: second acceptance item, amended...") matches `Ruling 88` followed by `'s`, not by an
-#: em dash, and is the document's title rather than a second declaration of Ruling 88.
+#: `docs/rulings/RL-00994-the-fixture-is-rebuilt-on-the-property-not-the-level-and-the-container-is-identified-positively.md`'s own H1 ("RL-979's
+#: second acceptance item, amended...") matches `RL-979` followed by `'s`, not by an
+#: em dash, and is the document's title rather than a second declaration of RL-979.
 _RULING_HEADING_RE: Final = re.compile(
     r"^(#{1,3})\s+Ruling\s+(\d+|A\d+)\s+—", re.MULTILINE
 )
 
-#: W37 series: a heading, at any level and any leading number, containing this exact
-#: phrase. Verified against the corpus at the sweep's pin: 29 occurrences, 29 W37-series
-#: rulings (66-94), one each -- Ruling 95 (filed after the pin) makes it 30-of-30 today.
+#: WK-697 series: a heading, at any level and any leading number, containing this exact
+#: phrase. Verified against the corpus at the sweep's pin: 29 occurrences, 29 WK-697-series
+#: rulings (66-94), one each -- RL-984 (filed after the pin) makes it 30-of-30 today.
 _W37_HEADING_RE: Final = re.compile(
     r"^#+\s+.*Acceptance.*violation that must become detectable", re.MULTILINE
 )
 
-#: W11 series: a bold inline marker. The wording after "Acceptance test" varies
+#: WK-671 series: a bold inline marker. The wording after "Acceptance test" varies
 #: (`— the violation that must become expressible`, `, stated as the violation that must
 #: become impossible`, `, stated as the violation`, or a bare `.`) -- captured by
 #: requiring only the anchor phrase, not the variable tail.
@@ -129,7 +129,7 @@ _STANDALONE_HEADING_RE: Final = re.compile(
     r"^##\s+\d+\.\s+Broken-input proof", re.MULTILINE
 )
 
-#: Ruling 44: matches none of the three regexes above and is not itself a fourth regex,
+#: RL-916: matches none of the three regexes above and is not itself a fourth regex,
 #: per this module's own docstring. Hand-verified at the sweep's pin; any addition to
 #: this set must cite the reading, not a pattern, in the commit that adds it.
 _NAMED_EXCEPTIONS: Final[frozenset[str]] = frozenset({"44"})
@@ -138,7 +138,7 @@ _NAMED_EXCEPTIONS: Final[frozenset[str]] = frozenset({"44"})
 #: module's docstring for why no regex covers this set without overfitting to it. A
 #: SEPARATE bucket from `_NAMED_EXCEPTIONS` because it is not a "the pattern is this one
 #: sentence" exception; it is an admission that this style has no pattern. Hand-verified
-#: at the sweep's pin (`docs/audit/ruling-acceptance-item-sweep.md` §2); any addition
+#: at the sweep's pin (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §2); any addition
 #: must cite the reading in the commit that adds it, the same rule as `_NAMED_EXCEPTIONS`.
 _PROSE_ONLY_RULINGS: Final[frozenset[str]] = frozenset(
     {"40", "42", "43", "45", "46", "47", "50", "51", "54", "60"}
@@ -176,7 +176,7 @@ def _section_text(root: Path, heading: RulingHeading) -> str:
 def _commit_author_date(root: Path, commit: str) -> str:
     """ISO-8601 author date of `commit`. Raises `RuntimeError` naming the commit rather
     than returning `None` or a sentinel -- a flag-day comparison that cannot resolve one
-    side is not silently skipped (the failure mode Ruling 59's `generated_from_tracked_
+    side is not silently skipped (the failure mode RL-949's `generated_from_tracked_
     corpus` refuses the same way, for the same reason: 'cannot verify, so allow it' is
     the class of bug this repository keeps re-finding).
     """
@@ -302,7 +302,7 @@ def main() -> int:
     print(f"total headings discovered: {discovered}")
 
     # Ruling-form flag-day (see module docstring): split `none` by each heading's own
-    # introduction date. Printed unconditionally, the zero included (`NT-0007`) -- a
+    # introduction date. Printed unconditionally, the zero included (`RFC-789`) -- a
     # passing "0 post-flag-day violations" line says which zero was checked, rather than
     # letting an empty violations list look identical to the split never having run.
     grandfathered, post_flag_day_violations = flag_day_split(args.root, buckets["none"])

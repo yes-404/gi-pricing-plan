@@ -55,7 +55,7 @@
                     "properties": {
                       "reference_table_ref": {"$ref": "common/artifact-ref.schema.json"},
                       "key_expr": {"type": "array", "items": {"type": "string"}},
-                      "as_at": {"type": "string", "description": "A derived value or input name; never 'now' (FR-RATE-9)."},
+                      "as_at": {"type": "string", "description": "A derived value or input name; never 'now' (FR-221)."},
                       "on_miss": {"enum": ["error", "default"]}}}},
           {"if": {"properties": {"type": {"const": "table"}}, "required": ["type"]},
            "then": {"required": ["rate_table_ref", "key_expr", "on_miss"],
@@ -96,9 +96,9 @@
     }
   },
   "invariants": [
-    "DAG is acyclic (FR-RATE-1)",
+    "DAG is acyclic (FR-212)",
     "every consumed name is produced by exactly one upstream step",
     "every declared output has a corresponding output step",
-    "a step whose result_type is monetary must be money_minor or decimal (03 R2, FR-RATE-13)"
+    "a step whose result_type is monetary must be money_minor or decimal (03 R2, FR-227)"
   ]
 }

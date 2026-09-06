@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Measure the `02` budgets — NFR-MODEL-1, -2, -3, -4, -5, -10, -11 (and -12's saving).
+"""Measure the `02` budgets — NFR-475, -2, -3, -4, -5, -10, -11 (and -12's saving).
 
 `bench-data.py`'s sibling, and it inherits that script's rule verbatim:
 
@@ -14,7 +14,7 @@
 it: the fixtures are different (a model needs factors, an offset and a holdout), the
 budgets are different, and three of `02`'s are ratios and sizes rather than throughputs.
 
-**Two of `02`'s budgets name a scale this machine cannot reach.** NFR-MODEL-1, -2 and -10
+**Two of `02`'s budgets name a scale this machine cannot reach.** NFR-475, -2 and -10
 are stated at 5 M rows x 60 factors on a 16-core worker; a 5 M x 60 design matrix is
 ~7 GB dense before glum allocates anything. `--only curve` therefore measures at several
 scales that do fit, fits `t = a·n^b` by least squares in log space, and prints both the
@@ -89,11 +89,11 @@ TARGET_FACTORS = 60
 
 #: label -> the budget the spec states, in seconds (or a ratio / bytes where named).
 BUDGETS: dict[str, float] = {
-    "NFR-MODEL-1 glm fit": 10 * 60,
-    "NFR-MODEL-2 gbm fit, 500 trees": 20 * 60,
-    "NFR-MODEL-3 propose_banding": 5.0,
-    "NFR-MODEL-3 propose_grouping": 5.0,
-    "NFR-MODEL-5 certify_objective": 3 * 60,
+    "NFR-475 glm fit": 10 * 60,
+    "NFR-476 gbm fit, 500 trees": 20 * 60,
+    "NFR-477 propose_banding": 5.0,
+    "NFR-477 propose_grouping": 5.0,
+    "NFR-480 certify_objective": 3 * 60,
 }
 
 #: label -> (wall seconds, peak RSS in MB, CPU seconds)
@@ -252,7 +252,7 @@ def gbm_spec(version_id: UUID, factors: Sequence[Factor], *, rounds: int) -> Gbm
 def levelled_frame(rows: int, levels: int, *, seed: int = 20260822) -> pl.DataFrame:
     """A book whose one categorical column carries `levels` distinct values.
 
-    NFR-MODEL-3's scale is stated in *levels*, not rows, so the row count is freMTPL2's and
+    NFR-477's scale is stated in *levels*, not rows, so the row count is freMTPL2's and
     the level count is the variable. Rates vary smoothly across the levels so the clusterers
     have a real ordering to find rather than noise to partition arbitrarily.
     """
@@ -278,7 +278,7 @@ def levelled_frame(rows: int, levels: int, *, seed: int = 20260822) -> pl.DataFr
 
 
 def bench_proposals(rows: int, levels: int, bands: int, groups: int) -> None:
-    """NFR-MODEL-3, and NFR-MODEL-12's saving, broken down by where the time goes."""
+    """NFR-477, and NFR-478's saving, broken down by where the time goes."""
     print(f"\nNFR-MODEL-3 — {rows:,} rows, {levels:,} distinct levels, budget 5 s")
     frame = levelled_frame(rows, levels)
     dataset_version_id = uuid4()
@@ -290,7 +290,7 @@ def bench_proposals(rows: int, levels: int, bands: int, groups: int) -> None:
             dataset_version_id=dataset_version_id, column="claim_amount_minor",
             method=method, n_bands=bands,
         )
-        with timed(f"NFR-MODEL-3 propose_banding {method.value}"):
+        with timed(f"NFR-477 propose_banding {method.value}"):
             propose_banding(frame, proposal, dataset_id=uuid4(), slug="amt")
 
     for method in (
@@ -303,12 +303,12 @@ def bench_proposals(rows: int, levels: int, bands: int, groups: int) -> None:
             method=method, n_groups=groups,
             unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_DEFAULT,
         )
-        with timed(f"NFR-MODEL-3 propose_grouping {method.value}"):
+        with timed(f"NFR-477 propose_grouping {method.value}"):
             propose_grouping(frame, proposal, dataset_id=uuid4(), slug="terr")
 
 
 def bench_breakdown(rows: int, levels: int, groups: int) -> None:
-    """Where NFR-MODEL-3's wall-clock goes, in a **fresh process**.
+    """Where NFR-477's wall-clock goes, in a **fresh process**.
 
     Its own phase rather than a tail on `bench_proposals`, and the reason is a measurement
     this script produced before it was split: the same `one_way` call timed 15.8 s after
@@ -316,8 +316,8 @@ def bench_breakdown(rows: int, levels: int, groups: int) -> None:
     glibc does not return freed arenas — the same isolation `bench-data.py --only` exists
     for, reached here by the same route.
 
-    NFR-MODEL-12 removed the *second* source summary. This asks what the first one still
-    costs, because that is exactly what a Profile-fed proposal (`01` FR-DATA-26) would not
+    NFR-478 removed the *second* source summary. This asks what the first one still
+    costs, because that is exactly what a Profile-fed proposal (`01` FR-61) would not
     have to pay.
     """
     print(f"\nNFR-MODEL-3 breakdown — {rows:,} rows, {levels:,} levels")
@@ -361,15 +361,15 @@ def _fit_glm_once(frame: pl.DataFrame, *, label: str) -> tuple[object, object, f
 def bench_glm(rows: int, factors: int) -> float:
     print(f"\nNFR-MODEL-1 — {rows:,} rows x {factors} factors, budget 600 s at 5 M x 60")
     frame = synthesise(rows, factors)
-    _, _, elapsed = _fit_glm_once(frame, label="NFR-MODEL-1 glm fit")
+    _, _, elapsed = _fit_glm_once(frame, label="NFR-475 glm fit")
     return elapsed
 
 
 def bench_gbm(rows: int, factors: int, rounds: int) -> float:
-    """NFR-MODEL-2's fit, and NFR-MODEL-11's artifact on the path the 50 MB budget names.
+    """NFR-476's fit, and NFR-486's artifact on the path the 50 MB budget names.
 
     The GLM arm's diagnostics artifact is small because a GLM has no SHAP dependence and no
-    partial dependence. NFR-MODEL-11 names exactly those, so measuring only the GLM arm
+    partial dependence. NFR-486 names exactly those, so measuring only the GLM arm
     would report the budget as met on the path that was never the risk.
     """
     print(
@@ -382,9 +382,9 @@ def bench_gbm(rows: int, factors: int, rounds: int) -> float:
     dataset_id = uuid4()
     factor_objects = factor_set(frame, dataset_id)
     spec = gbm_spec(uuid4(), factor_objects, rounds=rounds)
-    with timed("NFR-MODEL-2 gbm fit, 500 trees") as slot:
+    with timed("NFR-476 gbm fit, 500 trees") as slot:
         fit = fit_gbm(train, spec, factor_objects)
-    with timed("NFR-MODEL-14 gbm diagnostics") as diag_slot:
+    with timed("NFR-488 gbm diagnostics") as diag_slot:
         computed = compute_gbm_diagnostics(
             fit.result, fit.booster_bytes or b"", spec, factor_objects,
             train=train, holdout=holdout, eval_curve=fit.eval_curve,
@@ -395,19 +395,19 @@ def bench_gbm(rows: int, factors: int, rounds: int) -> float:
 
 
 def _gbm_passes(computed: object, diagnostics: float, wall: float, fit: object) -> None:
-    """NFR-MODEL-14: the GBM block is priced per scoring pass, not per factor.
+    """NFR-488: the GBM block is priced per scoring pass, not per factor.
 
     The driver is the **sum of grid points**, not the factor count: partial dependence runs
     one full-population pass per grid point — ten quantiles for a numeric factor, and one
-    per level for a categorical, bounded by FR-MODEL-118's cap
+    per level for a categorical, bounded by FR-175's cap
     (`max_partial_dependence_levels`, 20 by default). A banded or grouped factor costs one
-    pass per *band or group* rather than one per raw value since 2026-08-23 (FR-MODEL-125's
+    pass per *band or group* rather than one per raw value since 2026-08-23 (FR-181's
     slice), so a 40-value column behind four bands costs four passes and not forty. The
     pass count is therefore read off the artifact rather than derived from `len(factors)`:
     it depends on what each factor resolved to and on where the cap fell, neither of which
     the factor list states.
 
-    OQ-MODEL-26 asked what bounds the sweep and is **decided**; this docstring described the
+    OQ-596 asked what bounds the sweep and is **decided**; this docstring described the
     uncapped behaviour until 2026-08-23.
 
     Counted: one pass per partition, one permutation baseline plus one per factor, and one
@@ -421,7 +421,7 @@ def _gbm_passes(computed: object, diagnostics: float, wall: float, fit: object) 
     grid = sum(len(pd.points) for pd in (getattr(gbm, "partial_dependence", ()) or ()))
     passes = 2 + 1 + perm + grid
     print(
-        f"\n  NFR-MODEL-14 — {diagnostics:.2f} s over {passes} scoring passes "
+        f"\n  NFR-488 — {diagnostics:.2f} s over {passes} scoring passes "
         f"({perm} permutation, {grid} partial-dependence grid points)"
     )
     ratio = (diagnostics / passes) / wall if wall and passes else float("nan")
@@ -432,18 +432,18 @@ def _gbm_passes(computed: object, diagnostics: float, wall: float, fit: object) 
 
 
 def bench_diagnostics(rows: int, factors: int, *, type_iii: bool) -> None:
-    """NFR-MODEL-4 and NFR-MODEL-13 — two requirements, because the block has two halves.
+    """NFR-479 and NFR-487 — two requirements, because the block has two halves.
 
     Both are timed here; the platform emits the same pair per fit as `diagnostics_seconds` /
     `diagnostics_over_fit_wall` on `app.worker.model`'s "diagnostics complete" line.
 
-    **Measured with and without FR-MODEL-51's type-III tests**, because those drop each
+    **Measured with and without FR-172's type-III tests**, because those drop each
     factor and *refit*. Until 2026-08-22 both arms were read against one 30 % budget, which
-    no diagnostic containing F refits can meet for any F above zero. OQ-MODEL-24 split them:
-    NFR-MODEL-4 keeps everything else, at 50 % of fit wall-clock and at a named scale, and
-    the refits become NFR-MODEL-13 at one fit wall-clock **per tested factor**.
+    no diagnostic containing F refits can meet for any F above zero. OQ-572 split them:
+    NFR-479 keeps everything else, at 50 % of fit wall-clock and at a named scale, and
+    the refits become NFR-487 at one fit wall-clock **per tested factor**.
 
-    The unit for NFR-MODEL-13 is `len(type_iii_tests)`, read off the artifact rather than
+    The unit for NFR-487 is `len(type_iii_tests)`, read off the artifact rather than
     assumed: interaction operands carry no design column and are skipped, and a refit that
     will not converge is skipped too, so `factors` overcounts the work actually done.
 
@@ -451,10 +451,10 @@ def bench_diagnostics(rows: int, factors: int, *, type_iii: bool) -> None:
     fit — one row-and-factor pair per process — and 41-56 % of it is one-time cost the
     refits never pay. Against a warm fit of the same spec the measured multiples move from
     0.417x/0.574x to roughly 0.95x/0.98x, which is what the mechanism predicts. `02` §9
-    records this; a warm-denominator run is owed before NFR-MODEL-13 is called met.
+    records this; a warm-denominator run is owed before NFR-487 is called met.
     """
     print(
-        f"\nNFR-MODEL-4 / NFR-MODEL-13 — {rows:,} rows x {factors} factors, "
+        f"\nNFR-MODEL-4 / NFR-487 — {rows:,} rows x {factors} factors, "
         "budgets 50 % of fit and 1.0x of fit per tested factor"
     )
     frame = synthesise(rows, factors)
@@ -464,26 +464,26 @@ def bench_diagnostics(rows: int, factors: int, *, type_iii: bool) -> None:
     dataset_id = uuid4()
     factor_objects = factor_set(train, dataset_id)
     spec = glm_spec(uuid4(), factor_objects)
-    with timed("NFR-MODEL-4 glm fit (denominator)") as fit_slot:
+    with timed("NFR-479 glm fit (denominator)") as fit_slot:
         fit = fit_glm(train, spec, factor_objects)
 
-    with timed("NFR-MODEL-4 diagnostics, no type-III") as base_slot:
+    with timed("NFR-479 diagnostics, no type-III") as base_slot:
         computed = compute_diagnostics(
             fit.result, spec, factor_objects, train=train, holdout=holdout, type_iii=False
         )
     _ratios(
-        "NFR-MODEL-4 — diagnostics without FR-MODEL-51's type-III refits",
+        "NFR-479 — diagnostics without FR-172's type-III refits",
         base_slot[0], fit_slot[0], fit, budget=0.50,
     )
 
     if type_iii:
-        with timed(f"NFR-MODEL-13 diagnostics, type-III ({factors} refits)") as full_slot:
+        with timed(f"NFR-487 diagnostics, type-III ({factors} refits)") as full_slot:
             computed = compute_diagnostics(
                 fit.result, spec, factor_objects, train=train, holdout=holdout, type_iii=True
             )
         tested = len(getattr(computed.glm, "type_iii_tests", ()) or ())
         _ratios(
-            "NFR-MODEL-13 — the type-III block alone",
+            "NFR-487 — the type-III block alone",
             full_slot[0] - base_slot[0], fit_slot[0], fit, budget=1.00,
             units=tested, unit_label="tested factor",
         )
@@ -504,7 +504,7 @@ def _ratios(
     """Report against fit wall-clock, and show `fit_seconds` as information only.
 
     Both readings used to be printed as equals, because the requirement said "fit
-    wall-clock" and the code offered two meanings of it. OQ-MODEL-24 settled it on
+    wall-clock" and the code offered two meanings of it. OQ-572 settled it on
     2026-08-22: **wall-clock**, meaning the elapsed fit call including factor resolution and
     design-matrix construction, because that is what a caller waits for and a budget met
     against the solve alone can be met while the user's experience gets worse. The gap is
@@ -512,7 +512,7 @@ def _ratios(
     `fit_seconds` - so the second line stays, labelled as the number the budget is *not*.
 
     `units` divides the ratio when the requirement is stated per unit of work rather than
-    per fit (NFR-MODEL-13 per tested factor, NFR-MODEL-14 per scoring pass).
+    per fit (NFR-487 per tested factor, NFR-488 per scoring pass).
     """
     suffix = f" per {unit_label}" if unit_label else ""
     print(f"\n  {name}: {diagnostics:.2f} s of diagnostics", end="")
@@ -534,7 +534,7 @@ def _ratios(
 
 
 def _artifact_size(computed: object, fit: object) -> None:
-    """NFR-MODEL-11: the diagnostics artifact stays under 50 MB.
+    """NFR-486: the diagnostics artifact stays under 50 MB.
 
     Measured as the JSON the platform stores — `DiagnosticsRow.payload` is one JSONB
     document, so the serialised length *is* the size, not a proxy for it.
@@ -554,12 +554,12 @@ def _artifact_size(computed: object, fit: object) -> None:
 
 
 def bench_certify() -> None:
-    """NFR-MODEL-5: certification, including the synthetic smoke fit, under 3 minutes.
+    """NFR-480: certification, including the synthetic smoke fit, under 3 minutes.
 
     Every template at the **default** grid the platform would use — 2 000 points, and the
     `y`/`f` ranges `app.platform.objectives.default_sampling` derives from the template's
     own applicability. Replicated here rather than imported so this script stays a
-    `pricing-core` client (ADR-0001's boundary, and `bench-data.py`'s shape); the suite's
+    `pricing-core` client (ADR-703's boundary, and `bench-data.py`'s shape); the suite's
     300- and 1 000-point grids exist to keep tests fast and would understate this budget by
     the factor the density was reduced by.
     """
@@ -585,7 +585,7 @@ def bench_certify() -> None:
                 hessian_strategy=HessianStrategy.CLIP_TO_MIN, hessian_min=1e-6,
                 status=ObjectiveStatus.DRAFT,
             )
-            with timed(f"NFR-MODEL-5 certify {template.value}"):
+            with timed(f"NFR-480 certify {template.value}"):
                 certify_objective(objective, sampling=_default_sampling(applicability.responses))
         except Exception as exc:
             # A template this fixture cannot build is a finding about the fixture, not
@@ -617,7 +617,7 @@ def _default_sampling(responses: frozenset[ResponseKind]) -> SamplingSpec:
 
 
 def bench_curve(scales: list[int], factors: int, rounds: int, *, gbm: bool) -> None:
-    """NFR-MODEL-1/-2/-10 at scales that fit, with the growth exponent stated.
+    """NFR-475/-2/-10 at scales that fit, with the growth exponent stated.
 
     `t = a·n^b` fitted by least squares on `(log n, log t)`. `b` is what makes the
     extrapolation defensible or not: at `b ≈ 1` the path is linear in rows and projecting
@@ -644,12 +644,12 @@ def bench_curve(scales: list[int], factors: int, rounds: int, *, gbm: bool) -> N
             gbm_points.append((rows, slot[0], results[-1][2], results[-1][3]))
         del frame, factor_objects
 
-    _report_curve("NFR-MODEL-1 GLM", glm_points, BUDGETS["NFR-MODEL-1 glm fit"])
+    _report_curve("NFR-475 GLM", glm_points, BUDGETS["NFR-475 glm fit"])
     if gbm:
         _report_curve(
-            f"NFR-MODEL-2 GBM ({rounds} trees)",
+            f"NFR-476 GBM ({rounds} trees)",
             gbm_points,
-            BUDGETS["NFR-MODEL-2 gbm fit, 500 trees"],
+            BUDGETS["NFR-476 gbm fit, 500 trees"],
         )
 
 
@@ -702,7 +702,7 @@ def _report_curve(
     )
     print(
         f"    EXTRAPOLATED peak RSS: {projected_mb / 1000:,.1f} GB / 32 GB "
-        f"(NFR-MODEL-10) - {'within' if projected_mb / 1000 <= 32 else 'OVER'}"
+        f"(NFR-485) - {'within' if projected_mb / 1000 <= 32 else 'OVER'}"
     )
     if wall_b > 1.15 or cpu_b > 1.15:
         print(
@@ -722,14 +722,14 @@ def main() -> int:
         default="all",
         help="Run one phase in a fresh process. Peak RSS is a process high-water mark and "
              "glibc does not return freed arenas, so a phase measured after another "
-             "inherits its peak — NFR-MODEL-10 needs the isolation.",
+             "inherits its peak — NFR-485 needs the isolation.",
     )
     parser.add_argument("--rows", type=int, default=678_013, help="freMTPL2's row count")
     parser.add_argument("--factors", type=int, default=TARGET_FACTORS)
-    parser.add_argument("--levels", type=int, default=10_000, help="NFR-MODEL-3's scale")
+    parser.add_argument("--levels", type=int, default=10_000, help="NFR-477's scale")
     parser.add_argument("--bands", type=int, default=20)
     parser.add_argument("--groups", type=int, default=20)
-    parser.add_argument("--rounds", type=int, default=500, help="NFR-MODEL-2's tree count")
+    parser.add_argument("--rounds", type=int, default=500, help="NFR-476's tree count")
     parser.add_argument(
         "--scales",
         default="100000,200000,400000,678013",
@@ -739,7 +739,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-type-iii",
         action="store_true",
-        help="diagnostics: omit FR-MODEL-51's per-factor refits, which are one extra "
+        help="diagnostics: omit FR-172's per-factor refits, which are one extra "
              "GLM fit each and dominate the wall-clock at any real factor count.",
     )
     args = parser.parse_args()

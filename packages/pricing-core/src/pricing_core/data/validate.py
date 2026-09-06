@@ -1,20 +1,20 @@
-"""The validation engine (`01` §3.3, §5.2, FR-DATA-15/16/19/20/22).
+"""The validation engine (`01` §3.3, §5.2, FR-42/45/48/49/51).
 
 > **`01` §1.3** — A Model may only be fitted on a Dataset Version whose status is
 > `validated`. There is no override, no "force fit", and no admin bypass.
 
 This is the engine that decides. Four properties of it are load-bearing:
 
-* **Rules are independent** (FR-DATA-19). Each runs inside its own guard; one rule raising
+* **Rules are independent** (FR-48). Each runs inside its own guard; one rule raising
   does not stop the rest. A run that abandoned the remaining rules after the first error
   would report a dataset as having one problem when it has nine.
-* **An unrun rule is never a pass** (FR-DATA-19). A timeout or an exception is recorded as
+* **An unrun rule is never a pass** (FR-48). A timeout or an exception is recorded as
   `error`, and an `error` anywhere makes the report `error`. "The rule that would have
   caught it timed out" and "the rule passed" must never look the same.
-* **Every non-pass carries its evidence** (FR-DATA-20): the measured value against the
+* **Every non-pass carries its evidence** (FR-49): the measured value against the
   threshold, the affected row count, and up to 100 offending keys — enough for an actuary
   to decide whether the rule or the data is wrong.
-* **It is pure.** Frames in, report out (ADR-0001). The same rule set can be run against a
+* **It is pure.** Frames in, report out (ADR-703). The same rule set can be run against a
   CSV in a notebook, which is how a disputed failure gets settled.
 """
 
@@ -43,13 +43,13 @@ from pricing_core.progress import ProgressCallback
 
 __all__ = ["CHECKS", "CheckOutcome", "register_check", "run_validation"]
 
-#: FR-DATA-20 caps the Offending Sample at 100 primary keys. A failing rule on five
+#: FR-49 caps the Offending Sample at 100 primary keys. A failing rule on five
 #: million rows would otherwise put five million keys into a report somebody has to open.
 #: The cap counts items — one item is one offending row, so a composite key is one item
-#: with several properties (OQ-DATA-12, decided 2026-08-26 (b)).
+#: with several properties (OQ-567, decided 2026-08-26 (b)).
 MAX_OFFENDING_SAMPLE: Final = 100
 
-#: Per-rule budget (FR-DATA-19). Exceeding it is an `error` with reason `timeout`, not a
+#: Per-rule budget (FR-48). Exceeding it is an `error` with reason `timeout`, not a
 #: pass and not a silent skip.
 DEFAULT_RULE_BUDGET_S: Final = 60.0
 
@@ -67,7 +67,7 @@ class CheckOutcome:
     measured: dict[str, Any] | None = None
     threshold: dict[str, Any] | None = None
     detail: str = ""
-    #: Up to 100 offending rows, keyed `{column: value}` (FR-DATA-20, OQ-DATA-12 (b)) —
+    #: Up to 100 offending rows, keyed `{column: value}` (FR-49, OQ-567 (b)) —
     #: property keys are column names, values are the cell value as a string or null.
     offending_sample: tuple[dict[str, str | None], ...] = ()
     affected_exposure_fraction: float | None = None
@@ -87,7 +87,7 @@ class ValidationContext:
     reference_tables: Mapping[str, pl.DataFrame]
     reference_frames: Mapping[str, pl.DataFrame]
     exposure_column: str = "exposure_years"
-    #: The reference version's stored Profile (FR-DATA-24). Distributional rules answer
+    #: The reference version's stored Profile (FR-54). Distributional rules answer
     #: from these aggregates rather than re-scanning the reference dataset — a null rate
     #: and a row count are both already in a Profile, and loading ten million rows to
     #: recompute one of them is the re-scan the requirement exists to avoid.
@@ -130,7 +130,7 @@ def _table(tables: Mapping[str, pl.DataFrame], rule: ValidationRule) -> pl.DataF
 
 
 def _sample(frame: pl.DataFrame, keys: Sequence[str]) -> tuple[dict[str, str | None], ...]:
-    """Up to 100 offending rows, keyed `{column: value}` (FR-DATA-20, OQ-DATA-12 (b)).
+    """Up to 100 offending rows, keyed `{column: value}` (FR-49, OQ-567 (b)).
 
     One item per offending row; property keys are the usable key columns' names, values
     are the cell value as a string or null — `None` is distinct from `""`. A composite
@@ -395,13 +395,13 @@ def _no_unexpected_columns(
 def _reject_rate(
     rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
 ) -> CheckOutcome:
-    """VR-STR-9 / FR-DATA-7: quarantined rows within the permitted share of rows read.
+    """VR-STR-9 / FR-32: quarantined rows within the permitted share of rows read.
 
     The default is 0.1 %, and it is deliberately tight. A reject rate that drifts upward
     is the single most reliable sign that a feed has changed shape, and a threshold loose
     enough never to fire is one nobody would notice going wrong.
 
-    Reads the version's `_rejected` table, which is where FR-DATA-7 puts the quarantine —
+    Reads the version's `_rejected` table, which is where FR-32 puts the quarantine —
     a table on the version, not a log line.
     """
     frame = _table(tables, rule)
@@ -516,7 +516,7 @@ def _reference_lookup(
         if literal is None:
             return CheckOutcome(
                 skipped=True,
-                skip_reason="no as-at date column or literal declared (FR-DATA-31)",
+                skip_reason="no as-at date column or literal declared (FR-71)",
             )
         keys = [
             str(k) for k in frame.get_column(column).drop_nulls().unique().to_list()
@@ -755,7 +755,7 @@ def _no_overlap(
 def _exposure_fraction(
     frame: pl.DataFrame, offending: pl.DataFrame, exposure_column: str
 ) -> float | None:
-    """What share of exposure the violation touches (FR-DATA-20).
+    """What share of exposure the violation touches (FR-49).
 
     Row counts mislead: 17 rows out of five million sounds negligible until they carry 8 %
     of the exposure, which is the number an actuary needs to judge the rule.
@@ -788,7 +788,7 @@ def _linked(
 def _claim_date_in_exposure(
     rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
 ) -> CheckOutcome:
-    """VR-ACT-5 / FR-DATA-12: the loss date falls inside the linked exposure period.
+    """VR-ACT-5 / FR-38: the loss date falls inside the linked exposure period.
 
     Half-open `[start, end)`, matching how exposure is split: a loss on the renewal date
     belongs to the new term, and counting it against both would inflate the frequency of
@@ -954,7 +954,7 @@ def _severity_outlier(
 ) -> CheckOutcome:
     """VR-ACT-10: large losses flagged for large-loss treatment — **never auto-removed**.
 
-    The spec is emphatic and so is this: capping is a modelling decision (OQ-DATA-1,
+    The spec is emphatic and so is this: capping is a modelling decision (OQ-557,
     decided) made where its effect on the fitted result is visible, not a data-cleaning
     step applied silently at ingestion. A platform that dropped the top tail here would
     change every severity model fitted afterwards, and nothing in the model's lineage
@@ -1173,7 +1173,7 @@ def _development_maturity(
 ) -> CheckOutcome:
     """VR-ACT-14: the most recent months are immature, and fitting on them is a choice.
 
-    **This is the platform's only treatment of development** (§1.2, OQ-DATA-4 decided
+    **This is the platform's only treatment of development** (§1.2, OQ-560 decided
     2026-08-14: the user supplies developed data). The warning exists so that modelling on
     a period that has not run off is a visible decision rather than an accident — the
     accident being a frequency model fitted through the last three months, which reads
@@ -1205,7 +1205,7 @@ def _development_maturity(
     exposure_column = rule.params.get("exposure_column", ctx.exposure_column)
     # Measured from the data's own latest period unless the caller pins one. A check that
     # read the wall clock would give a different answer on a re-run of the same version,
-    # and NFR-DATA-5 requires byte-identical reports.
+    # and NFR-469 requires byte-identical reports.
     as_of = _as_date(rule.params["as_of"]) if "as_of" in rule.params else latest
     # Approximate a month as 30 days: the boundary is a judgement anyway ("the last three
     # months are immature"), and a calendar-exact cut would imply a precision the
@@ -1402,7 +1402,7 @@ def _volume_shift(
 def _reference_column(ctx: ValidationContext, rule: ValidationRule, column: str) -> Any:
     """The reference version's `ColumnProfile`, or `None`.
 
-    FR-DATA-24 prefers the stored Profile: a null rate, a mean and a level distribution are
+    FR-54 prefers the stored Profile: a null rate, a mean and a level distribution are
     all in it already, and re-scanning ten million reference rows to recompute one is the
     scan the requirement exists to avoid.
     """
@@ -1553,7 +1553,7 @@ def _vanished_level(
         for summary in ctx.reference_profile.one_ways:
             if summary.column == column:
                 # `OneWayRow.level` still coerces a null level to the string "None"
-                # (unlike `LevelCount.level`, which FR-DATA-49 left nullable — see the
+                # (unlike `LevelCount.level`, which FR-66 left nullable — see the
                 # fallback below). Excluded here for the same reason the `top_levels`
                 # fallback excludes a real null: `_level_counts` on the present side has
                 # already dropped nulls, so keeping a "None" key here would make a
@@ -1566,7 +1566,7 @@ def _vanished_level(
     if not reference_weights:
         profiled = _reference_column(ctx, rule, column)
         if profiled is not None and profiled.top_levels:
-            # FR-DATA-49: per-level exposure now exists on `top_levels`, so this fallback
+            # FR-66: per-level exposure now exists on `top_levels`, so this fallback
             # no longer has to stand a count in for it. A null level is excluded — the
             # same treatment `new_level` and `compare_profiles` give it — so it can never
             # be reported as a vanished level.
@@ -1576,7 +1576,7 @@ def _vanished_level(
                     float(lc.exposure_years)
                     if lc.exposure_years is not None
                     # No exposure column on that version — count is all `top_levels` has,
-                    # same as before FR-DATA-49.
+                    # same as before FR-66.
                     else float(lc.count)
                 )
                 for lc in profiled.top_levels
@@ -1787,7 +1787,7 @@ def _mix_shift_exposure(
 
 # -- `01` §4.5's custom-rule vocabulary ------------------------------------------------
 #
-# FR-DATA-21 lets a user author a rule with `check` drawn from a fixed list, and §4.5 is
+# FR-50 lets a user author a rule with `check` drawn from a fixed list, and §4.5 is
 # that list. Seven of its eleven names were unregistered — a rule authored exactly as the
 # spec documents produced `unknown_check`, which the engine reports as an `error`. The
 # `--catalogue VR` audit could not see it: that check covers the built-in *rule ids*, and
@@ -1987,7 +1987,7 @@ def _distribution_compare(
             skip_reason=(
                 f"metric {metric!r} is not implemented; `psi` and `mean_shift` are. KS "
                 "needs the reference column's values, which a stored Profile does not keep "
-                "(FR-DATA-24 reads aggregates, not rows)"
+                "(FR-54 reads aggregates, not rows)"
             ),
         )
     return CHECKS[delegate](rule, tables, ctx)
@@ -2017,7 +2017,7 @@ _SQL_SANDBOX: Final[dict[str, str]] = {
 
 
 class SqlCheckError(RuntimeError):
-    """A `sql` check that could not be run safely. Never a pass (FR-DATA-19)."""
+    """A `sql` check that could not be run safely. Never a pass (FR-48)."""
 
 
 def _reject_unless_single_select(query: str) -> None:
@@ -2054,7 +2054,7 @@ def _reject_unless_single_select(query: str) -> None:
 def _sql(
     rule: ValidationRule, tables: Mapping[str, pl.DataFrame], context: ValidationContext
 ) -> CheckOutcome:
-    """The escape hatch, sandboxed (`01` §4.5, NFR-DATA-9, OQ-DATA-3).
+    """The escape hatch, sandboxed (`01` §4.5, NFR-473, OQ-559).
 
     Four controls, and the query is refused unless all four hold:
 
@@ -2070,7 +2070,7 @@ def _sql(
 
     Authoring is Admin-only and the whole check is behind a workspace flag that defaults to
     off; both are enforced by the platform, because `pricing-core` has no notion of either
-    (ADR-0001).
+    (ADR-703).
     """
     import threading
 
@@ -2098,8 +2098,8 @@ def _sql(
         except duckdb.InterruptException as exc:
             raise SqlCheckError(
                 f"the query exceeded its {timeout_s:g}s budget and was interrupted "
-                "(NFR-DATA-9). Recorded as an error, because an unrun rule is never a "
-                "pass (FR-DATA-19)."
+                "(NFR-473). Recorded as an error, because an unrun rule is never a "
+                "pass (FR-48)."
             ) from exc
         except duckdb.Error as exc:
             raise SqlCheckError(f"{type(exc).__name__}: {exc}") from exc
@@ -2147,9 +2147,9 @@ def run_validation(
     rule_budget_s: float = DEFAULT_RULE_BUDGET_S,
     progress: ProgressCallback | None = None,
 ) -> ValidationReport:
-    """Execute every enabled rule and produce exactly one report (FR-DATA-15).
+    """Execute every enabled rule and produce exactly one report (FR-42).
 
-    Rules run independently (FR-DATA-19): each is guarded, and a rule that raises or
+    Rules run independently (FR-48): each is guarded, and a rule that raises or
     exceeds its budget becomes an `error` rather than stopping the run or being skipped.
     """
     started = datetime.now(UTC)
@@ -2195,7 +2195,7 @@ def _run_one(
     severity = entry.effective_severity
 
     def failed(reason: str, detail: str) -> RuleResult:
-        # FR-DATA-19: an unrun rule is never a pass. `error`, with the reason, so a report
+        # FR-48: an unrun rule is never a pass. `error`, with the reason, so a report
         # can never make "the rule that would have caught it timed out" look like "passed".
         return RuleResult(
             rule_id=rule.id, rule_slug=rule.slug, rule_version=rule.version,
@@ -2218,7 +2218,7 @@ def _run_one(
         return failed(
             "timeout",
             f"rule exceeded its {budget_s:g}s budget ({elapsed:.1f}s) — recorded as error "
-            "because an unrun rule is never a pass (FR-DATA-19)",
+            "because an unrun rule is never a pass (FR-48)",
         )
 
     if outcome.skipped:

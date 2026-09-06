@@ -1,25 +1,25 @@
 """`score.trace_produce` — the off-path re-score that completes a pending sampled trace
-(`03` FR-RATE-42, W11 Task 4B; Ruling 35,
-`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`).
+(`03` FR-259, WK-671 Task 4B; RL-862,
+`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`).
 
 The serving route (`app.api.score.score`) scores untraced and, on a sampled outcome, writes
 a **pending** `scoring_traces` row (`app.platform.traces.write_pending_trace`) carrying the
 Quote Context, then submits this Job with only that row's id — never the Quote Context
-itself, which is the access-controlled carrier Ruling 35 §8.4 requires in place of
+itself, which is the access-controlled carrier RL-862 §8.4 requires in place of
 `JobRow.parameters` (a Job's `parameters` are a returned API field scoped only by
-workspace, `backend/src/app/api/jobs.py:91`, and NFR-RATE-11 requires quote inputs stay
+workspace, `backend/src/app/api/jobs.py:91`, and NFR-499 requires quote inputs stay
 inside an access-controlled trace).
 
 This handler reads the row, resolves the compiled bundle for `row.rating_version_ref`, and
 **refuses to score it unless its `content_hash` still equals the pinned `row.bundle_hash`**
-(Ruling 35 §8.2 condition (a): never address the live bundle in place of the pinned one — a
+(RL-862 §8.2 condition (a): never address the live bundle in place of the pinned one — a
 trace produced against a later bundle would silently document a quote that was never
 served). Only once that holds does it re-score with `trace=True` and compare the
 reproduction against what was actually served (condition (b)).
 
 **Bundle resolution reuses `app.api.score._compiled_for`, never a second resolver**
 (`CLAUDE.md` §2; the same reuse `app.worker.scoring_handlers` already established for
-`score.batch`, Ruling 42).
+`score.batch`, RL-922).
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def _score_trace_produce(parameters: dict[str, Any], callback: ProgressCallback)
                 # Defensive: a Job's `workspace_id` parameter is set by `job_identity`
                 # from the same caller that wrote the row, so this should be unreachable
                 # — but a row from another workspace is exactly the kind of mistake
-                # NFR-RATE-11's access control exists to catch, not silently score.
+                # NFR-499's access control exists to catch, not silently score.
                 raise PlatformError(
                     "NOT_FOUND",
                     "Trace not found",
@@ -111,7 +111,7 @@ def _score_trace_produce(parameters: dict[str, Any], callback: ProgressCallback)
     # `kind="none"`: this Job's product is the trace row itself, read through
     # `GET /api/v1/traces` (Task 4C) — never through the Job's own result the way
     # `rating.compile`'s blob ref is, because the row is what carries the access control
-    # NFR-RATE-11 requires and a bare blob ref in the Job result would bypass it. Whether
+    # NFR-499 requires and a bare blob ref in the Job result would bypass it. Whether
     # the row landed `complete` or `mismatch` is the row's own field, not this Job's
     # concern to duplicate into a result payload.
     return JobResult(kind="none")

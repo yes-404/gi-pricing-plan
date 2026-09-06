@@ -2,18 +2,18 @@
 
 Four requirements shape everything here:
 
-* **FR-MODEL-8** — bands are ordered, exhaustive and non-overlapping, with *explicit*
+* **FR-97** — bands are ordered, exhaustive and non-overlapping, with *explicit*
   handling of nulls and out-of-range values. The explicitness is the requirement: a
   silently clamped driver age of 3 is a data defect that has become a price.
-* **FR-MODEL-9** — the platform *proposes*; the actuary edits; what is stored is what was
+* **FR-98** — the platform *proposes*; the actuary edits; what is stored is what was
   accepted. So `propose_banding` returns a complete `Banding` rather than a set of numbers,
   and nothing here writes anything.
-* **FR-MODEL-10** — the proposal carries its evidence: per-band exposure, claim count,
+* **FR-99** — the proposal carries its evidence: per-band exposure, claim count,
   frequency, severity and burning cost with intervals, as of derivation. Computed with
-  `01`'s own `one_way`, because a band is a level and `01` FR-DATA-26 already defines what
+  `01`'s own `one_way`, because a band is a level and `01` FR-61 already defines what
   a level's statistics are. Two implementations of "the frequency of this cell" would
   disagree in the fourth digit and nobody would know which screen was right.
-* **FR-MODEL-11** — a band that meets neither the minimum exposure nor the minimum claim
+* **FR-100** — a band that meets neither the minimum exposure nor the minimum claim
   count is reported; an **empty** band always fails.
 
 **Where the last band ends.** Under `closed="left"` band *i* is `[bᵢ, bᵢ₊₁)`, except the
@@ -63,14 +63,14 @@ def propose_banding(
     dataset_id: UUID,
     slug: str,
 ) -> Banding:
-    """Propose boundaries for `proposal.column` by its method (FR-MODEL-9).
+    """Propose boundaries for `proposal.column` by its method (FR-98).
 
     `dataset_id` and `slug` are passed in rather than read from the proposal: a `Banding`
     is an artifact with an identity, and identity is the platform's to allocate.
     `02` §5.2's two-argument signature is unimplementable for the same reason `fit_glm`'s
-    was — it needs facts that live in a database, which ADR-0001 keeps out of this package.
+    was — it needs facts that live in a database, which ADR-703 keeps out of this package.
 
-    The result is a complete, **editable** `Banding`. Nothing is persisted; FR-MODEL-9 is
+    The result is a complete, **editable** `Banding`. Nothing is persisted; FR-98 is
     explicit that the final boundaries are whatever the actuary accepted.
     """
     if proposal.method is BandingMethod.MANUAL:
@@ -83,7 +83,7 @@ def propose_banding(
     column = proposal.column
     if column not in frame.columns:
         raise FactorResolutionError(
-            f"cannot band {column!r}: this dataset version does not have it (FR-MODEL-2)."
+            f"cannot band {column!r}: this dataset version does not have it (FR-87)."
         )
 
     values = frame[column].cast(pl.Float64)
@@ -246,7 +246,7 @@ def _credibility(
     claims: pl.Series | None,
     proposal: BandingProposal,
 ) -> list[float]:
-    """Merge adjacent bands until each meets a minimum claim count (FR-MODEL-9).
+    """Merge adjacent bands until each meets a minimum claim count (FR-98).
 
     Starts from a fine cut — exposure quantiles where exposure exists, row quantiles
     otherwise — and repeatedly dissolves the thinnest band into the *smaller* of its
@@ -295,7 +295,7 @@ def _tree(
 ) -> list[float]:
     """Cut points from a single depth-limited regression tree on the response.
 
-    FR-MODEL-85 (OQ-MODEL-9, decided 2026-08-17). The response is **claim frequency**,
+    FR-103 (OQ-583, decided 2026-08-17). The response is **claim frequency**,
     exposure-weighted — the tree minimises weighted squared error, so a band's estimate is
     trusted in proportion to the exposure behind it, which is the same weighting
     `exposure_quantile` and `hierarchical_clustering` already use.
@@ -323,7 +323,7 @@ def _tree(
     if exposure is None:
         raise BandingError(
             "FACTOR_RESOLUTION_FAILED",
-            f"`tree` banding is exposure-weighted (FR-MODEL-9) and needs "
+            f"`tree` banding is exposure-weighted (FR-98) and needs "
             f"{proposal.exposure_column!r}, which this dataset version does not have. An "
             "unweighted tree is a different method and would be recorded as this one.",
         )
@@ -387,7 +387,7 @@ def _deduplicate(cuts: list[float]) -> list[float]:
     is at zero: two boundaries land on the same value and the band between them is empty.
     Dropping the duplicate is the honest outcome — the proposal returns fewer bands than
     asked for, which `method_params.n_bands` records, rather than an empty one that
-    FR-MODEL-11 would fail anyway.
+    FR-100 would fail anyway.
     """
     out: list[float] = []
     for cut in cuts:
@@ -417,7 +417,7 @@ def _labels(boundaries: list[float], *, closed: str) -> tuple[str, ...]:
 
 
 def apply_banding(series: pl.Series, banding: Banding) -> pl.Series:
-    """Map a numeric column onto its band labels (FR-MODEL-8).
+    """Map a numeric column onto its band labels (FR-97).
 
     Every value gets a level or an error; nothing is dropped. Out-of-range values and nulls
     follow the policies the artifact declares, and where the policy is `error` the refusal
@@ -455,7 +455,7 @@ def apply_banding(series: pl.Series, banding: Banding) -> pl.Series:
         if banding.null_level is None:
             raise FactorResolutionError(
                 f"banding {banding.slug!r} met {int(missing.sum())} null value(s) in "
-                f"{banding.column!r} and declares no `null_level` (FR-MODEL-8). A missing "
+                f"{banding.column!r} and declares no `null_level` (FR-97). A missing "
                 "value is not a band; give the banding a null level or filter the rows."
             )
         out[missing] = banding.null_level
@@ -481,7 +481,7 @@ def _resolve_edge(
             f"banding {banding.slug!r}: {int(mask.sum())} value(s) of "
             f"{banding.column!r} fall {edge} the banded range (boundary {boundary:g}, "
             f"e.g. {float(offending[0]):g}), and `{edge}_range` is `error` "
-            "(FR-MODEL-8). The policy exists so this cannot pass silently."
+            "(FR-97). The policy exists so this cannot pass silently."
         )
     if policy in (BelowRangePolicy.NULL_LEVEL, AboveRangePolicy.NULL_LEVEL):
         if banding.null_level is None:
@@ -504,7 +504,7 @@ def band_statistics(
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
 ) -> tuple[OneWayRow, ...]:
-    """Per-band exposure, claims, frequency, severity and burning cost (FR-MODEL-10).
+    """Per-band exposure, claims, frequency, severity and burning cost (FR-99).
 
     In **band order**, not the alphabetical order a group-by returns: `10-14` sorts before
     `5-9` as text, and a relativity chart with its bands shuffled is read as noise.
@@ -531,7 +531,7 @@ def check_banding(
     claim_count_column: str = "claim_count",
     fail_on_thin: bool | None = None,
 ) -> tuple[str, ...]:
-    """FR-MODEL-11, against a specific Dataset Version.
+    """FR-100, against a specific Dataset Version.
 
     **An empty band always raises**, whatever the configuration says: a level no row reaches
     contributes no information and gets a coefficient anyway, estimated from nothing. Thin
@@ -558,7 +558,7 @@ def check_banding(
         raise BandingError(
             "BAND_EMPTY",
             f"banding {banding.slug!r} has band(s) {empty} that no row of this dataset "
-            "version reaches (FR-MODEL-11). An empty band is still a level in the design "
+            "version reaches (FR-100). An empty band is still a level in the design "
             "matrix, and a coefficient estimated from no data is not an estimate.",
         )
 
@@ -579,6 +579,6 @@ def check_banding(
         raise BandingError(
             "BAND_BELOW_MIN_EXPOSURE",
             f"banding {banding.slug!r} has bands below the configured minimums and this "
-            f"workspace fails rather than warns (FR-MODEL-11): {'; '.join(warnings)}",
+            f"workspace fails rather than warns (FR-100): {'; '.join(warnings)}",
         )
     return tuple(warnings)

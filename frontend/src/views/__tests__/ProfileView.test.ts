@@ -7,7 +7,7 @@ import type { ValidationRule } from "@/api/rules";
 
 import ProfileView from "../ProfileView.vue";
 
-// The view reads `?against` and writes it back with `router.replace` (OQ-DATA-11). A real
+// The view reads `?against` and writes it back with `router.replace` (OQ-556). A real
 // router would make every test in this file wait on navigation readiness; the mock keeps
 // the query controllable and lets one test assert what the view wrote.
 const routerReplace = vi.fn();
@@ -43,7 +43,7 @@ vi.mock("@/components/HistogramChart.vue", () => ({
  * Shaped on freMTPL2 v2 as the API returns it.
  *
  * Annotated with the generated types rather than left a bare literal: the fixtures are
- * then bound to the contract, and a `model-schema` rename — FR-DATA-46's was the last one
+ * then bound to the contract, and a `model-schema` rename — FR-64's was the last one
  * — fails `type-check` here instead of leaving a test that passes against a shape the API
  * no longer sends.
  */
@@ -74,7 +74,7 @@ const PROFILE: Profile = {
       name: "driv_age", dtype: "Int64", semantic_type: "continuous", row_count: 29970,
       null_count: 0, null_rate: 0, distinct_count: 82, mean: 45.2, minimum: 18,
       maximum: 99, std: 14.1, quantiles: {}, top_levels: [],
-      // FR-DATA-48: continuous columns carry one, categorical columns do not.
+      // FR-65: continuous columns carry one, categorical columns do not.
       histogram: { edges: [18, 58, 99], counts: [17000, 12970], exposure: ["8100.5", "6200.25"] },
     },
   ],
@@ -223,7 +223,7 @@ function stub(
       // fall-through below.
       if (/\/versions(\?|$)/.test(url)) return json(versions.body ?? VERSIONS, versions.status ?? 200);
       if (url.includes("/profile")) return json(PROFILE);
-      // The dataset itself, `/datasets/{slug}` — the source of the currency (OQ-OVR-14 (b)).
+      // The dataset itself, `/datasets/{slug}` — the source of the currency (OQ-551 (b)).
       // Everything with a resource past the slug (the single-version lookup below) is not it.
       if (/\/datasets\/[^/]+$/.test(url)) return json(dataset);
       return json(VERSION);
@@ -232,7 +232,7 @@ function stub(
 }
 
 /** The dataset the profile is for — its `currency` is what `OneWayChart` renders with
- *  (OQ-OVR-14 (b)). The view fetches it via `getDataset(slug)`; no prop carries it. */
+ *  (OQ-551 (b)). The view fetches it via `getDataset(slug)`; no prop carries it. */
 const DATASET = {
   id: "22222222-2222-4222-8222-222222222222",
   workspace_id: "11111111-1111-4111-8111-111111111111",
@@ -258,7 +258,7 @@ const mounted = {
 
 describe("the profile view", () => {
   it("offers exactly the columns that have a stored one-way", async () => {
-    // FR-DATA-26's candidate rating columns. Offering a column with no stored one-way
+    // FR-61's candidate rating columns. Offering a column with no stored one-way
     // would invite a 404 the user cannot act on.
     render(ProfileView, { props, ...mounted });
     const select = await screen.findByLabelText("Rating factor");
@@ -280,7 +280,7 @@ describe("the profile view", () => {
   });
 
   it("reads the currency from the dataset, not from a default", async () => {
-    // The positive control for OQ-OVR-14 (b): a dataset that changed its currency away
+    // The positive control for OQ-551 (b): a dataset that changed its currency away
     // from the model default must flow it to the chart. A hardcoded "GBP" anywhere in the
     // view would fail this test.
     stub(200, ONE_WAY, {}, {}, {}, { ...DATASET, currency: "USD" });
@@ -290,8 +290,8 @@ describe("the profile view", () => {
   });
 
   it("treats a column with no stored one-way as an answer", async () => {
-    // FR-DATA-27: the platform refuses to compute one on request, because a fallback
-    // would meet NFR-DATA-4's budget in testing and miss it in production.
+    // FR-62: the platform refuses to compute one on request, because a fallback
+    // would meet NFR-468's budget in testing and miss it in production.
     stub(404, { title: "No stored one-way", status: 404, code: "NOT_FOUND", errors: [] });
     render(ProfileView, { props, ...mounted });
     const select = await screen.findByLabelText("Rating factor");
@@ -301,7 +301,7 @@ describe("the profile view", () => {
   });
 
   it("renders a histogram for the column that has one and none for the column that does not", async () => {
-    // `01` §5.3 asks the Profile view for histograms. FR-DATA-48 only produces one for a
+    // `01` §5.3 asks the Profile view for histograms. FR-65 only produces one for a
     // continuous column, so a card per column would be a chart of nothing for the rest.
     render(ProfileView, { props, ...mounted });
     await screen.findByText(/29,970 rows/);
@@ -391,7 +391,7 @@ describe("the profile view", () => {
   });
 
   it("shows a top-level chip's level and count", async () => {
-    // FR-DATA-49: top_levels is now a named object array, not an unnamed [level, count]
+    // FR-66: top_levels is now a named object array, not an unnamed [level, count]
     // pair — the chip reads `.level`/`.count`, not tuple positions.
     render(ProfileView, { props, ...mounted });
     await screen.findByText(/29,970 rows/);
@@ -494,7 +494,7 @@ describe("the profile view", () => {
   });
 
   it("keeps the profile on screen when the versions list fails to load", async () => {
-    // The picker is auxiliary (FR-DATA-27's refusal pattern, applied to the picker
+    // The picker is auxiliary (FR-62's refusal pattern, applied to the picker
     // itself): a 500 or 403 fetching the sibling versions must not blank an
     // already-loaded profile behind a full-page error.
     stub(200, ONE_WAY, {}, {

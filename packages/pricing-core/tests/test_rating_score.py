@@ -1,4 +1,4 @@
-"""`score_one` (W11 Task 1.4, FR-RATE-34/37/38/39/41/56/63/64, NFR-RATE-3/7/8/14).
+"""`score_one` (WK-671 Task 1.4, FR-250/254/255/256/258/273/218/252, NFR-491/495/496/501).
 
 Fixture shape: `input(driver_age, channel) -> table(expense_factor) -> model_call(risk_
 premium_minor) -> expression(office_premium_minor) -> constraint(clamp on min_premium) ->
@@ -155,11 +155,11 @@ def _ctx(**overrides: Any) -> QuoteContext:
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-34: the golden test.
+# FR-250: the golden test.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-34")
+@pytest.mark.req("FR-250")
 async def test_a_known_quote_prices_to_a_known_premium() -> None:
     """A known `Bundle` (Task 1.3's own tiny fixed booster, age 34 -> 1304.8) + a known
     `QuoteContext` gives an exact, pre-computed `ScoringResult`. The golden numbers below
@@ -182,11 +182,11 @@ async def test_a_known_quote_prices_to_a_known_premium() -> None:
 
 
 # ---------------------------------------------------------------------------
-# NFR-RATE-8: the ladder reconciles — both the library check and a manual re-derivation.
+# NFR-496: the ladder reconciles — both the library check and a manual re-derivation.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("NFR-RATE-8")
+@pytest.mark.req("NFR-496")
 async def test_the_ladder_reconciles_over_a_battery_of_generated_contexts() -> None:
     """Not one example: driver age and channel vary, and every one of `reconcile_ladder`'s
     own check *and* a from-scratch manual re-derivation (applying every recorded operation
@@ -231,13 +231,13 @@ async def test_the_ladder_reconciles_over_a_battery_of_generated_contexts() -> N
 
 
 # ---------------------------------------------------------------------------
-# Ruling 9: the decline representation — collect-all, ladder stays populated.
+# RL-875: the decline representation — collect-all, ladder stays populated.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-39")
+@pytest.mark.req("FR-256")
 async def test_two_firing_constraints_both_appear_in_decline_reasons() -> None:
-    """The acceptance test stated as the violation (Ruling 9): a single-decline test
+    """The acceptance test stated as the violation (RL-875): a single-decline test
     passes under short-circuit and collect-all alike and proves nothing — this fires
     *two* independent constraint steps and requires both codes and a still-reconciling,
     fully-populated ladder."""
@@ -253,11 +253,11 @@ async def test_two_firing_constraints_both_appear_in_decline_reasons() -> None:
     assert len(result.decline_reasons) == 2
     assert [r.rung for r in result.premium_ladder] == [
         "risk_premium", "office_premium", "constraints", "instalment_loading", "payable_premium",
-    ], "a declined quote's ladder must stay fully populated (FR-RATE-39)"
+    ], "a declined quote's ladder must stay fully populated (FR-256)"
     assert result.premium_ladder[-1].value_minor > 0
 
 
-@pytest.mark.req("FR-RATE-39")
+@pytest.mark.req("FR-256")
 async def test_a_clamp_overrides_the_ladder_and_is_recorded_on_the_constraints_rung() -> None:
     compiled = await _compiled()
     ctx = _ctx(inputs={
@@ -274,7 +274,7 @@ async def test_a_clamp_overrides_the_ladder_and_is_recorded_on_the_constraints_r
     assert constraints.operation.applied == ["MIN_PREMIUM_APPLIED"]
 
 
-@pytest.mark.req("FR-RATE-39")
+@pytest.mark.req("FR-256")
 async def test_removing_the_constraint_check_would_be_caught(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -295,11 +295,11 @@ async def test_removing_the_constraint_check_would_be_caught(
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-38: one typed-error test per category.
+# FR-255: one typed-error test per category.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 async def test_a_contract_violation_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     compiled = await _compiled()
     ctx = _ctx(inputs={
@@ -310,7 +310,7 @@ async def test_a_contract_violation_is_refused(monkeypatch: pytest.MonkeyPatch) 
         await score_one(compiled, ctx)
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 async def test_a_rate_table_miss_is_refused() -> None:
     """`on_miss="error"` (Task 1.3's own fixture default) and a key the seeded table does
     not carry."""
@@ -327,7 +327,7 @@ async def test_a_rate_table_miss_is_refused() -> None:
         await score_one(compiled, ctx)
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 async def test_a_rate_table_miss_is_refused_with_the_right_code() -> None:
     """The isolated form of the test above: a channel the input contract accepts but the
     seeded rate table does not carry a row for."""
@@ -351,7 +351,7 @@ async def test_a_rate_table_miss_is_refused_with_the_right_code() -> None:
         await score_one(compiled, ctx)
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 async def test_a_reference_lookup_miss_is_refused() -> None:
     """A minimal, separate algorithm exercising only a `lookup` step with `on_miss="error"`
     — the fixture's own scope is this one error category."""
@@ -396,7 +396,7 @@ async def test_a_reference_lookup_miss_is_refused() -> None:
     _check_lookup_misses(algo, matched)  # must not raise
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 async def test_a_model_call_failure_is_refused_with_the_real_message() -> None:
     """`MODEL_CALL_FAILED` — via the GLM refusal `runtime.py` already establishes, now
     surfaced by `score_one` reading the sentinel rather than the engine's own generic
@@ -407,14 +407,14 @@ async def test_a_model_call_failure_is_refused_with_the_real_message() -> None:
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-63: the purpose-gated sub-graph refusal, parametrised over both members.
+# FR-218: the purpose-gated sub-graph refusal, parametrised over both members.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-63")
+@pytest.mark.req("FR-218")
 @pytest.mark.parametrize("purpose", ["mid_term_adjustment", "cancellation"])
 async def test_a_purpose_needing_a_sub_graph_is_refused_when_none_is_mounted(purpose: str) -> None:
-    """Ruling 12: both members, not one — `cancellation` is `mid_term_adjustment`'s
+    """RL-878: both members, not one — `cancellation` is `mid_term_adjustment`'s
     stranded list-mate, and a guard proven on one limb alone is half-proven."""
     compiled = await _compiled()
     ctx = _ctx(purpose=purpose)
@@ -422,7 +422,7 @@ async def test_a_purpose_needing_a_sub_graph_is_refused_when_none_is_mounted(pur
         await score_one(compiled, ctx)
 
 
-@pytest.mark.req("FR-RATE-63")
+@pytest.mark.req("FR-218")
 async def test_new_business_is_not_refused_by_the_purpose_guard() -> None:
     """Positive control: the guard fires on the two gated purposes only."""
     compiled = await _compiled()
@@ -430,7 +430,7 @@ async def test_new_business_is_not_refused_by_the_purpose_guard() -> None:
     assert result.outcome == "quoted"
 
 
-@pytest.mark.req("FR-RATE-63")
+@pytest.mark.req("FR-218")
 async def test_the_purpose_guard_would_be_caught_if_removed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -444,11 +444,11 @@ async def test_the_purpose_guard_would_be_caught_if_removed(
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-64: the instalment_loading rung, and the billing-surface refusal.
+# FR-252: the instalment_loading rung, and the billing-surface refusal.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-64")
+@pytest.mark.req("FR-252")
 async def test_the_instalment_loading_rung_reconciles() -> None:
     compiled = await _compiled()
     result = await score_one(compiled, _ctx())
@@ -457,10 +457,10 @@ async def test_the_instalment_loading_rung_reconciles() -> None:
     assert rungs["instalment_loading"] != rungs["office_premium"], "the loading did nothing"
 
 
-@pytest.mark.req("FR-RATE-64")
+@pytest.mark.req("FR-252")
 @pytest.mark.parametrize("key", ["payment_schedule", "apr", "credit_agreement_term"])
 async def test_a_billing_surface_request_is_refused(key: str) -> None:
-    """The second half of FR-RATE-64: never answered approximately."""
+    """The second half of FR-252: never answered approximately."""
     compiled = await _compiled()
     ctx = _ctx(inputs={
         "driver_age": 34, "channel": "direct", "min_premium_minor": 0,
@@ -470,7 +470,7 @@ async def test_a_billing_surface_request_is_refused(key: str) -> None:
         await score_one(compiled, ctx)
 
 
-@pytest.mark.req("FR-RATE-64")
+@pytest.mark.req("FR-252")
 async def test_the_billing_surface_guard_would_be_caught_if_removed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -487,12 +487,12 @@ async def test_the_billing_surface_guard_would_be_caught_if_removed(
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-41: the trace.
+# FR-258: the trace.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-41")
-@pytest.mark.req("NFR-RATE-2")
+@pytest.mark.req("FR-258")
+@pytest.mark.req("NFR-490")
 async def test_trace_true_returns_a_populated_trace_and_the_identical_premium() -> None:
     compiled = await _compiled()
     ctx = _ctx()
@@ -514,41 +514,41 @@ async def test_trace_true_returns_a_populated_trace_and_the_identical_premium() 
     )
     assert all(step.elapsed_us >= 0 for step in traced.trace.steps)
 
-    # NFR-RATE-2 / R3: tracing never changes the result.
+    # NFR-490 / R3: tracing never changes the result.
     assert traced.model_copy(update={"trace": None, "timing_ms": {}}) == untraced.model_copy(
         update={"timing_ms": {}}
     )
 
 
 # ---------------------------------------------------------------------------
-# NFR-RATE-3: zero database or network access, proven on broken input.
+# NFR-491: zero database or network access, proven on broken input.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("NFR-RATE-3")
+@pytest.mark.req("NFR-491")
 async def test_score_one_makes_no_network_call(monkeypatch: pytest.MonkeyPatch) -> None:
     """Patches `socket.socket` to raise for the duration of one `score_one` call and
     asserts no exception — then, in the same test, proves the patch actually catches a
     real attempt (a mock that catches nothing passes silently, `CLAUDE.md` §13)."""
 
     def _forbidden(*args: Any, **kwargs: Any) -> Any:
-        raise AssertionError("score_one attempted to open a network socket (NFR-RATE-3)")
+        raise AssertionError("score_one attempted to open a network socket (NFR-491)")
 
     compiled = await _compiled()
     monkeypatch.setattr(socket, "socket", _forbidden)
     result = await score_one(compiled, _ctx())
     assert result.outcome == "quoted"
 
-    with pytest.raises(AssertionError, match="NFR-RATE-3"):
+    with pytest.raises(AssertionError, match="NFR-491"):
         socket.socket()  # the deliberate call the guard must catch
 
 
 # ---------------------------------------------------------------------------
-# NFR-RATE-7: determinism, in-process and across a subprocess.
+# NFR-495: determinism, in-process and across a subprocess.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("NFR-RATE-7")
+@pytest.mark.req("NFR-495")
 async def test_scoring_is_deterministic_in_process() -> None:
     compiled = await _compiled()
     ctx = _ctx()
@@ -557,10 +557,10 @@ async def test_scoring_is_deterministic_in_process() -> None:
     assert first.model_copy(update={"timing_ms": {}}) == second.model_copy(update={"timing_ms": {}})
 
 
-@pytest.mark.req("NFR-RATE-7")
+@pytest.mark.req("NFR-495")
 def test_scoring_is_deterministic_across_a_subprocess() -> None:
     """The same bundle recompiled and scored in a fresh interpreter reproduces the same
-    `content_hash` and the same premium — byte-for-byte, across processes (FR-OVR-8)."""
+    `content_hash` and the same premium — byte-for-byte, across processes (FR-11)."""
     script = (
         "import asyncio, json, sys; sys.path.insert(0, 'packages/pricing-core/tests');"
         "from test_rating_score import _compiled, _ctx;"
@@ -594,7 +594,7 @@ def test_scoring_is_deterministic_across_a_subprocess() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("NFR-RATE-1")
+@pytest.mark.req("NFR-489")
 async def test_concurrent_scoring_against_one_shared_bundle_does_not_cross_talk() -> None:
     """`asyncio.gather` over many `score_one` calls against one shared `CompiledBundle` —
     the shape a real worker process serves, not a bare `asyncio.run` per call. Each quote

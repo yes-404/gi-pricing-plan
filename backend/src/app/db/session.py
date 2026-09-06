@@ -68,7 +68,7 @@ class Database:
 
         Commits once on clean exit; rolls back everything on any exception. There is no
         partial-commit path, which is the point: a change without its audit event, or an
-        outbox row without its job, are the two states `06` R2 and FR-PLAT-51 exist to
+        outbox row without its job, are the two states `06` R2 and FR-406 exist to
         make unreachable.
         """
         async with self._sessionmaker() as session, session.begin():
@@ -79,7 +79,7 @@ class Database:
 
 
 def database_probe(database: Database) -> Callable[[], Awaitable[str | None]]:
-    """Build the `/readyz` probe for the database (FR-PLAT-41)."""
+    """Build the `/readyz` probe for the database (FR-444)."""
 
     async def probe() -> str | None:
         try:

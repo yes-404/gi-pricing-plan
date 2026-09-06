@@ -53,7 +53,7 @@
             "items": {
               "type": "object", "minProperties": 1,
               "additionalProperties": {"type": ["string", "null"]},
-              "$comment": "OQ-DATA-12, decided 2026-08-26: (b) — the item shape was written out by W6b-18. One object per offending row; property keys are column names; values are the cell value as string or null (None is distinct from \"\"). A column-level check emits {\"column\": <name>}."
+              "$comment": "OQ-567, decided 2026-08-26: (b) — the item shape was written out by W6b-18. One object per offending row; property keys are column names; values are the cell value as string or null (None is distinct from \"\"). A column-level check emits {\"column\": <name>}."
             }
           },
           "evidence_blob": {"type": ["string", "null"]},
@@ -73,6 +73,6 @@
   },
   "invariants": [
     "overall == 'pass' iff counts.fail == 0 and counts.error == 0 and counts.warn == 0",
-    "overall == 'pass_with_warnings' iff counts.fail == 0 and counts.error == 0 and every warn result has an acknowledgement (FR-DATA-17)"
+    "overall == 'pass_with_warnings' iff counts.fail == 0 and counts.error == 0 and every warn result has an acknowledgement (FR-46)"
   ]
 }

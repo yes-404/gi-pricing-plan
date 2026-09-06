@@ -1,4 +1,4 @@
-"""The comparison artifact's invariants (`02` FR-MODEL-56, §4.11).
+"""The comparison artifact's invariants (`02` FR-186, §4.11).
 
 The artifact was named in `02` §5.2 from Phase 0 and defined nowhere — no §4 subsection, no
 type, no contract. Designing it here means the invariants are a choice, so each of these
@@ -91,22 +91,22 @@ def _summary(**over: object) -> ComparisonSummary:
     return ComparisonSummary(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_a_valid_comparison_round_trips() -> None:
     summary = _summary()
     assert ComparisonSummary.model_validate(summary.model_dump(mode="json")) == summary
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_a_comparison_of_one_model_is_refused() -> None:
-    """FR-MODEL-56 says "two or more". One model compared against nothing is a diagnostics
+    """FR-186 says "two or more". One model compared against nothing is a diagnostics
     read, and naming it a comparison would let an approval cite it as though a candidate had
     been considered and rejected."""
     with pytest.raises(pydantic.ValidationError):
         _summary(model_refs=(GLM,), double_lift=(), relativity_differences=())
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_the_baseline_must_be_one_of_the_models_compared() -> None:
     """Double lift is measured *against* the baseline. A baseline outside the set is a
     series whose reference line came from a model the reader cannot look up."""
@@ -114,20 +114,20 @@ def test_the_baseline_must_be_one_of_the_models_compared() -> None:
         _summary(baseline_ref="model:something-else@3")
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_a_metrics_leader_must_be_among_its_own_values() -> None:
     with pytest.raises(pydantic.ValidationError):
         _metric(leader="model:not-in-this-comparison@9")
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_a_metric_may_have_no_leader() -> None:
     """Not every metric orders. `rows` is the same number for every model on a shared
     holdout, and a "winner" on it would be an artefact of tie-breaking."""
     assert _metric(metric="rows", leader=None).leader is None
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_a_metric_needs_a_value_for_every_model() -> None:
     """A missing model reads as a model that scored nothing rather than one nobody measured.
     Where a metric genuinely does not apply, the *value* is null and the model is present."""
@@ -141,7 +141,7 @@ def test_a_metric_needs_a_value_for_every_model() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_a_double_lift_series_against_itself_is_refused() -> None:
     """It is a flat line at 1.0, which a reader will take for two models agreeing."""
     with pytest.raises(pydantic.ValidationError):
@@ -158,7 +158,7 @@ def test_a_double_lift_series_against_itself_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_a_relativity_difference_may_be_unavailable_rather_than_zero() -> None:
     """The defect the spine audit found, in its second home. A relativity is `exp(β)` and
     means nothing under `logit` or `identity`; reporting the *difference* as 0.0 there would
@@ -175,7 +175,7 @@ def test_a_relativity_difference_may_be_unavailable_rather_than_zero() -> None:
     assert unavailable.max_abs_difference is None
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_the_persisted_artifact_carries_its_identity_and_the_summary() -> None:
     """The `Diagnostics` pattern: `pricing-core` computes a summary and allocates nothing;
     the backend wraps it with an id, a time and the Job that produced it."""
@@ -189,11 +189,11 @@ def test_the_persisted_artifact_carries_its_identity_and_the_summary() -> None:
     assert ModelComparison.model_validate(comparison.model_dump(mode="json")) == comparison
 
 
-@pytest.mark.req("FR-MODEL-50")
+@pytest.mark.req("FR-171")
 def test_partition_diagnostics_no_longer_declares_double_lift() -> None:
-    """Amended 2026-08-17. FR-MODEL-50 listed "double lift vs a comparison model" among
+    """Amended 2026-08-17. FR-171 listed "double lift vs a comparison model" among
     *universal* diagnostics, and the field was populated by nothing — it could not be.
-    Double lift is pairwise, the comparison model is unknown at fit time, and FR-MODEL-49
+    Double lift is pairwise, the comparison model is unknown at fit time, and FR-170
     makes diagnostics computed once and read thereafter. It lives on the comparison artifact.
 
     `extra="forbid"` is what makes the removal assertable rather than merely intended.

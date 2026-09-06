@@ -30,7 +30,7 @@ const SHELL = readFileSync(`${REPO_ROOT}/frontend/src/App.vue`, "utf8");
  * (frontend/src/api/backtests.ts:10-12). A caller who has just run a backtest
  * reaches it through the Job's backtest:{id} result. The backend exposes only
  * GET /models/backtests/{id} and the Model type carries no backtest ids. The
- * jobs view is a later phase (FR-OVR-21). The exception lifts when that UI
+ * jobs view is a later phase (FR-24). The exception lifts when that UI
  * lands.
  */
 const WHITELISTED = new Set([
@@ -60,7 +60,7 @@ function reachableSet(): Set<string> {
   return reached;
 }
 
-describe("route reachability (FR-OVR-22)", () => {
+describe("route reachability (FR-25)", () => {
   it("names every route with no inbound path from the entry", () => {
     const reached = reachableSet();
     const unreachable = ROUTES.map((route) => route.path).filter(

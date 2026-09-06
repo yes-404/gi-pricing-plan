@@ -1,4 +1,4 @@
-"""Tests for `scripts/_docid.py` and `scripts/doc-id.py` — NT-0019's shared header
+"""Tests for `scripts/_docid.py` and `scripts/doc-id.py` — RFC-937's shared header
 parser, id grammar, and the `next` / `check` / `widen` subcommands (W37-2).
 
 `doc-id.py migrate` is not part of this slice — it is W37-5's, built and proven against a
@@ -8,7 +8,7 @@ Every test that needs a governed-file tree builds one under `tmp_path`, never ag
 repository's own `docs/` — the standard has not been migrated onto this repository yet
 (W37-6), so there are no real ids to scan today, and a test pinned to today's tree would
 start failing the moment migration lands, for a reason unrelated to the code under test.
-`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`'s W37-3 slice makes the identical
+`docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`'s W37-3 slice makes the identical
 point about `doc-index.py`; the same reasoning applies here.
 
 No `@pytest.mark.req` marker: this is correctness of the id-allocator tool itself, not
@@ -160,7 +160,7 @@ def test_id_re_resolves_prefix_and_integer(
 
 
 def test_family_of_maps_every_published_prefix(docid: types.ModuleType) -> None:
-    # NT-0019 §1.2's own "Kind" column, lowercased — every prefix must resolve to
+    # RFC-937 §1.2's own "Kind" column, lowercased — every prefix must resolve to
     # *something*, and a handful are pinned exactly so a typo'd mapping is caught.
     assert docid.family_of("PL") == "plan"
     assert docid.family_of("FR") == "requirement"
@@ -177,7 +177,7 @@ def test_family_of_rejects_an_unknown_prefix(docid: types.ModuleType) -> None:
 
 
 # ---------------------------------------------------------------------------------------
-# parse_header — NT-0019 §1.5's closed field set, hand-rolled over stdlib only (G4).
+# parse_header — RFC-937 §1.5's closed field set, hand-rolled over stdlib only (G4).
 # ---------------------------------------------------------------------------------------
 
 _FULL_HEADER = """\
@@ -291,7 +291,7 @@ def test_parse_header_captures_an_unrecognised_field_in_extra(
     docid: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     # A skill's SKILL.md carries Claude Code's own `name:`/`description:` front matter
-    # today, unrelated to NT-0019's field set — the parser must not choke on it, and must
+    # today, unrelated to RFC-937's field set — the parser must not choke on it, and must
     # not silently drop it either: a later, family-aware check (audit-docs check 30, not
     # this parser) is what decides whether an extra field is permitted for that family.
     path = tmp_path / "SKILL.md"
@@ -369,17 +369,17 @@ def test_parse_header_error_names_path_and_line_number(
 
 
 # ---------------------------------------------------------------------------------------
-# is_vendored — Ruling 69: NT-0019 §1.5's detection-by-filesystem gloss is rejected.
+# is_vendored — RL-990: RFC-937 §1.5's detection-by-filesystem gloss is rejected.
 # `is_vendored` now tests membership in `_VENDORED_SKILLS`, a declared constant reconciled
-# against `pyproject.toml`'s ruff `exclude` list (Ruling 69 §2 part 2) — nothing in the
-# function inspects a `LICENSE` file any more (Ruling 76's member 1 of 3; the other two are
+# against `pyproject.toml`'s ruff `exclude` list (RL-990 §2 part 2) — nothing in the
+# function inspects a `LICENSE` file any more (RL-973's member 1 of 3; the other two are
 # `docs/_templates/REFERENCE.md` and this file).
 #
-# The signature is unchanged (Ruling 69 §2 part 4), so these still build a synthetic repo
+# The signature is unchanged (RL-990 §2 part 4), so these still build a synthetic repo
 # tree under `tmp_path`; what changed is which directory *name* counts, so each test
 # monkeypatches `_VENDORED_SKILLS` down to a small closed fixture set rather than relying
 # on the real 28 — coupling these tests to the real list would make them fail the moment a
-# skill is vendored or un-vendored, the exact coupling Ruling 69 rejected for the runtime
+# skill is vendored or un-vendored, the exact coupling RL-990 rejected for the runtime
 # predicate itself. The reconciliation against the real `pyproject.toml` is proven
 # separately, below.
 # ---------------------------------------------------------------------------------------
@@ -449,7 +449,7 @@ def test_is_vendored_accepts_a_directory_path_as_well_as_a_file(
 
 
 # ---------------------------------------------------------------------------------------
-# vendored_skills_ruff_exclude_mismatch — Ruling 69 §2 part 2 and acceptance item 1. The
+# vendored_skills_ruff_exclude_mismatch — RL-990 §2 part 2 and acceptance item 1. The
 # first test is the one that matters at the real repository: it must be empty today, and
 # it is the check that reds the moment `_VENDORED_SKILLS` and `pyproject.toml`'s ruff
 # `exclude` list disagree, in either direction, naming which side moved. The rest are the
@@ -486,7 +486,7 @@ def test_vendored_skills_ruff_exclude_mismatch_is_empty_when_the_two_lists_agree
 def test_vendored_skills_ruff_exclude_mismatch_catches_a_skill_only_ruff_excludes(
     docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ruling 69 acceptance item 1, one direction: a skill line added to `pyproject.toml`
+    """RL-990 acceptance item 1, one direction: a skill line added to `pyproject.toml`
     but not to `_VENDORED_SKILLS` must be named as having moved on the ruff side."""
     monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"alpha", "beta"}))
     (tmp_path / "pyproject.toml").write_text(
@@ -502,7 +502,7 @@ def test_vendored_skills_ruff_exclude_mismatch_catches_a_skill_only_ruff_exclude
 def test_vendored_skills_ruff_exclude_mismatch_catches_a_skill_only_the_constant_names(
     docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ruling 69 acceptance item 1, the other direction: an entry added to
+    """RL-990 acceptance item 1, the other direction: an entry added to
     `_VENDORED_SKILLS` but not to `pyproject.toml` must be named as having moved on the
     constant side — the direction that matters most, since it is silent over-exemption
     otherwise (§5.4's "under-exempts 240 tracked files" failure mode, inverted)."""
@@ -517,7 +517,7 @@ def test_vendored_skills_ruff_exclude_mismatch_catches_a_skill_only_the_constant
 
 
 # ---------------------------------------------------------------------------------------
-# `doc-id.py next` — NT-0019 §1.7: "fetches origin/main, reads the maximum across every
+# `doc-id.py next` — RFC-937 §1.7: "fetches origin/main, reads the maximum across every
 # header, every spec bold-id, every roadmap row and INDEX.md, prints max + 1."
 #
 # Each of the four sources is tested alone against an otherwise-empty tree — the plan's own
@@ -568,7 +568,7 @@ def test_scan_header_ids_excludes_templates(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     # `_templates/` carries example headers with placeholder ids, never real ones —
-    # NT-0019 §1.4's own exemption for check 31, applied the same way here so a
+    # RFC-937 §1.4's own exemption for check 31, applied the same way here so a
     # placeholder cannot poison the allocator's max.
     _write(tmp_path / "docs" / "_templates" / "PL.md", _header("PL-99999"))
     assert list(doc_id_cli.scan_header_ids(tmp_path)) == []
@@ -577,7 +577,7 @@ def test_scan_header_ids_excludes_templates(
 def test_scan_header_ids_excludes_a_vendored_skills_content(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Ruling 69: vendored is membership in `_docid._VENDORED_SKILLS`, not a `LICENSE`
+    # RL-990: vendored is membership in `_docid._VENDORED_SKILLS`, not a `LICENSE`
     # file — declare the fixture directory into the set rather than dropping a licence.
     monkeypatch.setattr(
         doc_id_cli._docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"})
@@ -592,8 +592,8 @@ def test_scan_header_ids_skips_a_file_whose_front_matter_is_not_the_closed_gramm
 ) -> None:
     # Modelled on `.claude/skills/create-adaptable-composable/SKILL.md`, which carries a
     # `metadata:` mapping with an indented `author:`/`version:` underneath it — upstream
-    # front matter, not an NT-0019 header. That real file is itself named in
-    # `_VENDORED_SKILLS` (Ruling 69), so `is_vendored` excludes it before `parse_header`
+    # front matter, not an RFC-937 header. That real file is itself named in
+    # `_VENDORED_SKILLS` (RL-990), so `is_vendored` excludes it before `parse_header`
     # ever runs on it; "some-skill" here is deliberately *not* in the set, so this fixture
     # still exercises the unparseable-but-not-vendored path `next` must survive: a file it
     # cannot parse contributes nothing, the same as a file with no front matter at all,
@@ -608,7 +608,7 @@ def test_scan_header_ids_skips_a_file_whose_front_matter_is_not_the_closed_gramm
 
 # ---------------------------------------------------------------------------------------
 # scan_governed_headers — the skip must be reported, not silent. Raised in review of
-# PR #567: a file with no NT-0019 header at all (every file in this repo, pre-migration)
+# PR #567: a file with no RFC-937 header at all (every file in this repo, pre-migration)
 # must stay silent, but a file whose front matter exists and fails to parse must be
 # visible — a count and the paths at minimum — because the code cannot tell "malformed
 # governed header" (what `check` exists to catch) from "legitimately foreign front
@@ -656,7 +656,7 @@ def test_scan_governed_headers_does_not_report_a_header_with_no_id_field(
 def test_scan_governed_headers_does_not_report_a_template_or_vendored_exclusion(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Ruling 69: vendored is membership in `_docid._VENDORED_SKILLS`, not a `LICENSE`
+    # RL-990: vendored is membership in `_docid._VENDORED_SKILLS`, not a `LICENSE`
     # file — declare the fixture directory into the set rather than dropping a licence.
     monkeypatch.setattr(
         doc_id_cli._docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"})
@@ -700,7 +700,7 @@ def test_scan_governed_headers_candidates_scanned_counts_every_candidate(
 def test_scan_header_ids_ignores_a_skills_non_skill_md_files(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    # Only `.claude/skills/*/SKILL.md` carries a header (NT-0019 §1.5) — a reference file
+    # Only `.claude/skills/*/SKILL.md` carries a header (RFC-937 §1.5) — a reference file
     # underneath a skill is not itself a governed document.
     _write(
         tmp_path / ".claude" / "skills" / "some-skill" / "references" / "deep.md",
@@ -809,7 +809,7 @@ def test_compute_next_takes_the_max_across_all_four_sources(
 def test_compute_next_against_the_shared_fixture_corpus(
     doc_id_cli: types.ModuleType,
 ) -> None:
-    # `tests/fixtures/docs-ids/next-basic/` — the shared fixture root NT-0019 §5.7 names
+    # `tests/fixtures/docs-ids/next-basic/` — the shared fixture root RFC-937 §5.7 names
     # and W37-4 also uses, populated here with the same four-source scenario as the
     # tmp_path test above, so the directory this slice is asked to create carries real,
     # git-tracked content rather than staying empty (git does not track empty
@@ -821,8 +821,8 @@ def test_compute_next_against_the_shared_fixture_corpus(
 
 # ---------------------------------------------------------------------------------------
 # Git-ref reading: `next` must read a ref's committed content, never the working tree and
-# never an uncommitted local file (NT-0019 §1.7; DP-8's contiguity argument depends on
-# this — see `docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`'s DP-8 disposition).
+# never an uncommitted local file (RFC-937 §1.7; DP-8's contiguity argument depends on
+# this — see `docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`'s DP-8 disposition).
 # ---------------------------------------------------------------------------------------
 
 
@@ -911,7 +911,7 @@ def test_compute_next_at_ref_raises_a_clear_error_for_an_unresolvable_ref(
 
 
 # ---------------------------------------------------------------------------------------
-# `doc-id.py check` — NT-0019 §1.7: "fails the gate on any duplicate or header/filename
+# `doc-id.py check` — RFC-937 §1.7: "fails the gate on any duplicate or header/filename
 # mismatch"; contiguity is "computed over INDEX.md, never over the working tree" (DP-8).
 # ---------------------------------------------------------------------------------------
 
@@ -944,7 +944,7 @@ def test_check_finds_no_duplicate_when_every_number_is_unique(
 def test_check_finds_a_header_filename_mismatch(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    # Filename pads 1241; header claims 1240 — NT-0019 §1.1 rule 3's resolver treats them
+    # Filename pads 1241; header claims 1240 — RFC-937 §1.1 rule 3's resolver treats them
     # as different ids by design, so a mismatch here is a real, catchable authoring error.
     _write(tmp_path / "docs" / "plans" / "PL-01241-example.md", _header("PL-1240"))
     failures = doc_id_cli.check(tmp_path)
@@ -1013,7 +1013,7 @@ def test_check_skips_a_file_whose_front_matter_is_not_the_closed_grammar(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     # Same real-world case as `scan_header_ids`'s equivalent test: `check` must not crash
-    # on a file whose front matter is not NT-0019's grammar at all.
+    # on a file whose front matter is not RFC-937's grammar at all.
     _write(
         tmp_path / ".claude" / "skills" / "some-skill" / "SKILL.md",
         "---\nname: some-skill\nmetadata:\n  author: example\n  version: '1.0'\n---\n",
@@ -1174,7 +1174,7 @@ def test_classify_total_equals_git_ls_files_count(
 
 
 # ---------------------------------------------------------------------------------------
-# `doc-id.py widen --to WIDTH` — NT-0019 §1.8: "renames every padded file, rewrites every
+# `doc-id.py widen --to WIDTH` — RFC-937 §1.8: "renames every padded file, rewrites every
 # padded link target, appends to REDIRECTS.csv, updates the width in document-ids.md,
 # regenerates INDEX.md; touches no citation, number, header or body line."
 #
@@ -1204,7 +1204,7 @@ def test_widen_rewrites_a_link_target_but_not_its_citation_text(
         encoding="utf-8"
     )
     assert "[PL-1240](../plans/PL-001240-example.md)" in text
-    # The citation (link text) is unpadded and must never change — NT-0019 §1.1 rule 2.
+    # The citation (link text) is unpadded and must never change — RFC-937 §1.1 rule 2.
     assert "[PL-001240]" not in text
 
 
@@ -1279,7 +1279,7 @@ def test_widen_appends_to_an_existing_redirects_csv_without_discarding_its_rows(
     _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", "# Example\n")
     doc_id_cli.widen(tmp_path, to=6)
     redirects = (tmp_path / "docs" / "REDIRECTS.csv").read_text(encoding="utf-8")
-    assert "NT-0001,RFC-1,old.md,rfcs/RFC-00001-x.md" in redirects
+    assert "RFC-711,RFC-1,old.md,rfcs/RFC-00001-x.md" in redirects
     assert "docs/plans/PL-001240-example.md" in redirects
 
 
@@ -1502,15 +1502,15 @@ def test_main_requires_a_subcommand(doc_id_cli: types.ModuleType) -> None:
 
 # ---------------------------------------------------------------------------------------
 # `_docid.sweep_exclusion_reason` — the declared exclusion list W37-6 adds beside
-# `LEGACY_FORM_PATTERNS`: three lockfiles (Ruling 67 Part 2), the two fixture-corpus roots
+# `LEGACY_FORM_PATTERNS`: three lockfiles (RL-988 Part 2), the two fixture-corpus roots
 # (extending the 2026-09-02 RFC §3 declared-exception mechanism —
-# `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3 — from the id-stamp
+# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 — from the id-stamp
 # census to the migration sweep and the (d)/(e)/(g) verification corpus), the W37-11
 # residue ceiling record (PR #756's condition 4 — a governed table that quotes legacy
 # forms as evidence and must not itself become residue), and the instrument's own
 # bytecode-cache exhaust. One shared predicate `doc-id.py`'s `_iter_tree_files` and
 # `_docverify.py`'s `tracked_files` both read, so the two consumers can never disagree
-# about what is excluded (Ruling 67 §2's "one shared constant").
+# about what is excluded (RL-988 §2's "one shared constant").
 # ---------------------------------------------------------------------------------------
 
 
@@ -1538,7 +1538,7 @@ def test_sweep_exclusion_reason_leaves_a_lock_shaped_name_alone(
     "rel",
     [
         "tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md",
-        "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
+        "tests/fixtures/docs-migration/docs/rfcs/0001-example-note.md",
         "tests/fixtures/docs-migration",
     ],
 )
@@ -1594,7 +1594,7 @@ def test_sweep_exclusion_reason_leaves_a_similarly_named_docs_audit_file_alone(
 ) -> None:
     """The negative control: only the exact declared path is excluded, not every file
     under `docs/audit/`."""
-    assert docid.sweep_exclusion_reason("docs/audit/register.md") is None
+    assert docid.sweep_exclusion_reason("docs/findings/register.md") is None
     assert docid.sweep_exclusion_reason("docs/audit/w37-11-record.md.bak") is None
 
 
@@ -1647,7 +1647,7 @@ def test_iter_tree_files_applies_the_shared_exclusion_and_still_yields_real_file
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """`doc-id.py`'s own migration-sweep walk, `_iter_tree_files` — the population
-    `migrate()`'s citation rewrite, vendored-skip loop and Ruling 68 row (g) classifier
+    `migrate()`'s citation rewrite, vendored-skip loop and RL-989 row (g) classifier
     (`_read_tree_text`) all iterate. Proof at the walk itself, not only at the shared
     predicate it calls: a wiring mistake (calling the predicate on the wrong string, or
     not at all) would pass the predicate-only tests above and still leak here.
@@ -1658,14 +1658,14 @@ def test_iter_tree_files_applies_the_shared_exclusion_and_still_yields_real_file
         "pnpm-lock.yaml",
         "frontend/pnpm-lock.yaml",
         "tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md",
-        "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
+        "tests/fixtures/docs-migration/docs/rfcs/0001-example-note.md",
         "scripts/__pycache__/doc-index.cpython-312.pyc",
     ]
-    included = ["docs/notes/0002-real.md", "scripts/doc-id.py", "README.md"]
+    included = ["docs/rfcs/0002-real.md", "scripts/doc-id.py", "README.md"]
     for rel in [*excluded, *included]:
         target = root / rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text("NT-0001 lives here\n", encoding="utf-8")
+        target.write_text("RFC-711 lives here\n", encoding="utf-8")
     (root / ".git").mkdir()
     (root / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
 

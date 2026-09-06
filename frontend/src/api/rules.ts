@@ -9,7 +9,7 @@ export type RuleSetEntry = components["schemas"]["RuleSetEntry"];
 export type ValidationLayer = components["schemas"]["ValidationLayer"];
 export type Severity = components["schemas"]["Severity"];
 // The two shapes the client **writes** — request bodies, so they alias the permissive
-// generated set (OQ-PLAT-16 (c)): `RuleCreate.message`/`rationale` and
+// generated set (OQ-655 (c)): `RuleCreate.message`/`rationale` and
 // `RuleSetMemberWrite.enabled` carry defaults a request may omit.
 export type RuleSetMemberWrite = requestComponents["schemas"]["RuleSetMemberWrite"];
 export type RuleCreate = requestComponents["schemas"]["RuleCreate"];
@@ -27,7 +27,7 @@ export function getRuleSet(slug: string): Promise<ValidationRuleSet> {
 }
 
 /**
- * Replace the rule set, which creates a **new version** (FR-DATA-22).
+ * Replace the rule set, which creates a **new version** (FR-51).
  *
  * Never an edit in place: a Validation Report records the exact `rule_set_version` it ran,
  * so mutating a set would change what every past report was a report *of* — and "it passed"
@@ -62,13 +62,13 @@ export function membersOf(ruleSet: ValidationRuleSet): RuleSetMemberWrite[] {
 }
 
 /**
- * Step 1 of `FR-DATA-21`'s chain. The body is the **generated** `RuleCreate` and is never
+ * Step 1 of `FR-50`'s chain. The body is the **generated** `RuleCreate` and is never
  * restated here: it carries `catalogue_id`, which is what records that a workspace rule
- * descends from a built-in (`FR-DATA-53`), and a hand-written copy of this shape is exactly
+ * descends from a built-in (`FR-68`), and a hand-written copy of this shape is exactly
  * how that field failed to reach the browser once already.
  *
  * Re-using an existing rule's `slug` is not an error — the platform allocates the next
- * version, which is `FR-DATA-54`'s path for a threshold change.
+ * version, which is `FR-56`'s path for a threshold change.
  */
 export function createRule(body: RuleCreate): Promise<ValidationRule> {
   return request<ValidationRule>("/validation-rules", { method: "POST", body });

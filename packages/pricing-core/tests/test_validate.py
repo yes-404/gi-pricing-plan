@@ -1,4 +1,4 @@
-"""The validation engine (`01` §3.3, FR-DATA-15/16/19/20/22).
+"""The validation engine (`01` §3.3, FR-42/45/48/49/51).
 
 Pure: frames in, report out. These run with no database and no platform, which is what
 lets a disputed failure be settled in a notebook against the same rule set.
@@ -63,10 +63,10 @@ def _run(rule_set: ValidationRuleSet, tables=None, **kw):
     )
 
 
-# -- FR-DATA-19: independence, and an unrun rule is never a pass ---------------------------
+# -- FR-48: independence, and an unrun rule is never a pass ---------------------------
 
 
-@pytest.mark.req("FR-DATA-19")
+@pytest.mark.req("FR-48")
 def test_one_rule_erroring_does_not_stop_the_others() -> None:
     """A run that abandoned the rest would report one problem where there are nine."""
     broken = _rule("range", slug="broken", target={"table": "policy_exposure", "column": "nope"},
@@ -84,9 +84,9 @@ def test_one_rule_erroring_does_not_stop_the_others() -> None:
     assert len(report.results) == 2
 
 
-@pytest.mark.req("FR-DATA-19")
+@pytest.mark.req("FR-48")
 def test_an_errored_rule_is_never_a_pass() -> None:
-    """FR-DATA-19's sentence, asserted: an unrun rule blocks validation.
+    """FR-48's sentence, asserted: an unrun rule blocks validation.
 
     "The rule that would have caught it timed out" and "the rule passed" must never look
     the same in a report an actuary relies on.
@@ -98,7 +98,7 @@ def test_an_errored_rule_is_never_a_pass() -> None:
     assert report.permits_validation is False
 
 
-@pytest.mark.req("FR-DATA-19")
+@pytest.mark.req("FR-48")
 def test_a_rule_exceeding_its_budget_is_an_error_with_reason_timeout() -> None:
     import time
 
@@ -118,7 +118,7 @@ def test_a_rule_exceeding_its_budget_is_an_error_with_reason_timeout() -> None:
         CHECKS.pop("deliberately_slow", None)
 
 
-@pytest.mark.req("FR-DATA-19")
+@pytest.mark.req("FR-48")
 def test_a_duplicate_check_registration_is_refused() -> None:
     """Negative: two implementations of one name makes meaning depend on import order."""
     with pytest.raises(ValueError, match="already registered"):
@@ -128,7 +128,7 @@ def test_a_duplicate_check_registration_is_refused() -> None:
 # -- `01` §4.6: the overall outcome is derived --------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_a_clean_run_passes() -> None:
     report = _run(
         _set(
@@ -143,7 +143,7 @@ def test_a_clean_run_passes() -> None:
     assert report.permits_validation is True
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_an_unacknowledged_warning_is_pass_with_warnings_and_still_blocks_promotion() -> (
     None
 ):
@@ -152,14 +152,14 @@ def test_an_unacknowledged_warning_is_pass_with_warnings_and_still_blocks_promot
     `overall` is a function of the rule results alone, so a warning is
     `pass_with_warnings` from the moment the report is written — the state *every* report
     with warnings is in before anyone has looked at it. Whether the version may be promoted
-    is the second question, and FR-DATA-17 answers it at promotion from
+    is the second question, and FR-46 answers it at promotion from
     `unacknowledged_warnings`, which is a fact about the report rather than inside it.
 
     This test asserted `FAIL` until 2026-08-17, encoding the pre-amendment rule. It was not
     a harmless stale assertion: the property it pinned deadlocked promotion for every
     dataset version carrying a warning, since `dataset.validate` reads
     `permits_validation`, acknowledgement happens afterwards, and re-validating regenerates
-    the warning unacknowledged. `wf-01` B8/B9 is what asked for the state that shows it.
+    the warning unacknowledged. `WF-698` B8/B9 is what asked for the state that shows it.
     """
     warning = _rule("range", slug="warn-rule", severity=Severity.WARN,
                     target={"table": "policy_exposure", "column": "exposure_years"},
@@ -172,7 +172,7 @@ def test_an_unacknowledged_warning_is_pass_with_warnings_and_still_blocks_promot
     assert report.permits_validation is True
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_an_acknowledged_warning_permits_validation() -> None:
     warning = _rule("range", slug="warn-rule", severity=Severity.WARN,
                     target={"table": "policy_exposure", "column": "exposure_years"},
@@ -196,7 +196,7 @@ def test_an_acknowledged_warning_permits_validation() -> None:
     assert acknowledged.permits_validation is True
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_a_failure_blocks_validation_however_many_warnings_are_acknowledged() -> None:
     failing = _rule("range", slug="fail-rule", severity=Severity.FAIL,
                     target={"table": "policy_exposure", "column": "exposure_years"},
@@ -206,10 +206,10 @@ def test_a_failure_blocks_validation_however_many_warnings_are_acknowledged() ->
     assert report.permits_validation is False
 
 
-# -- FR-DATA-21 / §4.3: an override may only raise ------------------------------------------
+# -- FR-50 / §4.3: an override may only raise ------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-21")
+@pytest.mark.req("FR-50")
 def test_an_override_may_raise_a_warning_to_a_failure() -> None:
     rule = _rule("range", slug="tightened", severity=Severity.WARN,
                  target={"table": "policy_exposure", "column": "exposure_years"},
@@ -218,21 +218,21 @@ def test_an_override_may_raise_a_warning_to_a_failure() -> None:
     assert report.results[0].outcome is RuleOutcome.FAIL
 
 
-@pytest.mark.req("FR-DATA-21")
+@pytest.mark.req("FR-50")
 def test_an_override_may_not_lower_a_failure_to_a_warning() -> None:
     """Negative: lowering severity in a rule set would be a way to pass validation without
-    changing anything a reviewer sees. Lowering means editing the rule (FR-DATA-21)."""
+    changing anything a reviewer sees. Lowering means editing the rule (FR-50)."""
     rule = _rule("range", slug="weakened", severity=Severity.FAIL)
     with pytest.raises(ValueError, match="may only raise"):
         RuleSetEntry(rule=rule, severity_override=Severity.WARN)
 
 
-# -- FR-DATA-16: four layers -----------------------------------------------------------------
+# -- FR-45: four layers -----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_a_rule_set_missing_a_layer_reports_it() -> None:
-    """FR-DATA-16: an empty layer is a configuration warning, surfaced rather than silent.
+    """FR-45: an empty layer is a configuration warning, surfaced rather than silent.
 
     Silence would let a rule set lose its whole distributional layer in an edit and still
     look complete.
@@ -247,7 +247,7 @@ def test_a_rule_set_missing_a_layer_reports_it() -> None:
     }
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_a_rule_set_covering_every_layer_reports_none_empty() -> None:
     rules = [
         _rule("not_null", slug="structural-rule", layer=ValidationLayer.STRUCTURAL,
@@ -265,10 +265,10 @@ def test_a_rule_set_covering_every_layer_reports_none_empty() -> None:
     assert report.empty_layers == ()
 
 
-# -- FR-DATA-20: every non-pass carries its evidence -----------------------------------------
+# -- FR-49: every non-pass carries its evidence -----------------------------------------
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 def test_a_failure_records_measurement_threshold_rows_and_sample() -> None:
     frame = pl.DataFrame(
         {"policy_id": ["P1", "P2", "P3"], "exposure_years": [0.5, -0.1, 0.0]}
@@ -286,11 +286,11 @@ def test_a_failure_records_measurement_threshold_rows_and_sample() -> None:
     assert result.detail
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 def test_the_offending_sample_is_capped_at_a_hundred_items() -> None:
     """A failing rule on five million rows must not put five million rows in a report.
 
-    The cap counts items (OQ-DATA-12 (b)): one item is one offending row, so a composite
+    The cap counts items (OQ-567 (b)): one item is one offending row, so a composite
     key is one item with several properties.
     """
     frame = pl.DataFrame(
@@ -303,7 +303,7 @@ def test_the_offending_sample_is_capped_at_a_hundred_items() -> None:
     assert len(report.results[0].offending_sample) == 100
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 def test_the_affected_exposure_fraction_is_reported() -> None:
     """Row counts mislead: 2 rows of 5 sounds small until they carry 80 % of exposure."""
     frame = pl.DataFrame(
@@ -318,7 +318,7 @@ def test_the_affected_exposure_fraction_is_reported() -> None:
     assert report.results[0].affected_exposure_fraction == pytest.approx(0.8)
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 def test_a_passing_rule_carries_no_offending_sample() -> None:
     """Negative: evidence for a pass is noise, and a sample on a passing rule reads as a
     finding to anyone skimming the report."""
@@ -329,10 +329,10 @@ def test_a_passing_rule_carries_no_offending_sample() -> None:
     assert result.affected_rows is None
 
 
-# -- FR-DATA-22: a report is interpretable after the rules change ----------------------------
+# -- FR-51: a report is interpretable after the rules change ----------------------------
 
 
-@pytest.mark.req("FR-DATA-22")
+@pytest.mark.req("FR-51")
 def test_the_report_records_the_rule_set_and_rule_versions() -> None:
     rule = _rule("range", target={"table": "policy_exposure", "column": "exposure_years"},
                  params={"min_exclusive": 0})
@@ -346,7 +346,7 @@ def test_the_report_records_the_rule_set_and_rule_versions() -> None:
 # -- the checks themselves --------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_structural_checks_find_their_violations() -> None:
     frame = pl.DataFrame({"policy_id": ["P1", "P1", None], "peril": ["AD", "XX", "AD"]})
     rules = [
@@ -369,7 +369,7 @@ def test_structural_checks_find_their_violations() -> None:
     }
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_actuarial_checks_find_overlaps_and_bad_periods() -> None:
     frame = pl.DataFrame(
         {
@@ -391,7 +391,7 @@ def test_actuarial_checks_find_overlaps_and_bad_periods() -> None:
     assert outcomes["period"] is RuleOutcome.FAIL    # P2 ends before it starts
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_a_referential_check_finds_an_unresolved_key() -> None:
     claims = pl.DataFrame({"claim_id": ["C1", "C2"], "policy_id": ["P1", "UNKNOWN"]})
     rule = _rule("cross_table_key", slug="linkage", layer=ValidationLayer.REFERENTIAL,
@@ -402,7 +402,7 @@ def test_a_referential_check_finds_an_unresolved_key() -> None:
     assert report.results[0].offending_sample == ({"policy_id": "UNKNOWN"},)
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_a_distributional_check_without_a_reference_is_skipped_not_passed() -> None:
     """Negative: a distributional rule with nothing to compare against has not passed.
 
@@ -415,7 +415,7 @@ def test_a_distributional_check_without_a_reference_is_skipped_not_passed() -> N
     assert "reference" in report.results[0].detail
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_a_distributional_check_detects_a_volume_shift() -> None:
     reference = EXPOSURE.head(2)
     rule = _rule("volume_shift", slug="volume", layer=ValidationLayer.DISTRIBUTIONAL,
@@ -426,7 +426,7 @@ def test_a_distributional_check_detects_a_volume_shift() -> None:
     assert report.results[0].measured["ratio"] == 2.0
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_a_tolerance_lets_a_known_level_of_violation_pass() -> None:
     frame = pl.DataFrame({"policy_id": ["P1", "P2"], "exposure_years": [0.5, -0.1]})
     rule = _rule("range", target={"table": "t", "column": "exposure_years"},
@@ -435,9 +435,9 @@ def test_a_tolerance_lets_a_known_level_of_violation_pass() -> None:
     assert report.results[0].outcome is RuleOutcome.PASS
 
 
-@pytest.mark.req("FR-DATA-18")
+@pytest.mark.req("FR-47")
 def test_an_acknowledgement_does_not_carry_forward_to_the_next_report() -> None:
-    """FR-DATA-18: an acknowledgement is scoped to `(version, rule, report)`.
+    """FR-47: an acknowledgement is scoped to `(version, rule, report)`.
 
     Each run produces a fresh report whose results carry no acknowledgements, so
     re-validating cannot inherit a previous acceptance. That is the property the
@@ -479,9 +479,9 @@ def test_an_acknowledgement_does_not_carry_forward_to_the_next_report() -> None:
     assert second.overall is OverallOutcome.PASS_WITH_WARNINGS
 
 
-@pytest.mark.req("FR-DATA-24")
+@pytest.mark.req("FR-54")
 def test_distributional_rules_answer_from_a_stored_profile() -> None:
-    """FR-DATA-24: distributional rules use pre-computed profile aggregates rather than
+    """FR-54: distributional rules use pre-computed profile aggregates rather than
     re-scanning the reference version.
 
     A null rate and a row count are both already in a Profile. Loading ten million

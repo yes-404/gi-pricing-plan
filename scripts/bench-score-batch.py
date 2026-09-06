@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Measure NFR-RATE-5 — batch scoring throughput per worker (W11 Slice 3, Task 3D).
+"""Measure NFR-493 — batch scoring throughput per worker (WK-671 Slice 3, Task 3D).
 
 `docs/specs/03-rating-engine.md` §9: *"Batch scoring ≥ 1 M risks/hour per worker
-(NFR-OVR-2), linear in workers."* This measures the **handler**
+(NFR-455), linear in workers."* This measures the **handler**
 (`app.worker.scoring_handlers._score_batch_handler`), not the route: `POST
 /api/v1/score/batch` (Task 3C) only submits a Job, and a route's own HTTP overhead is not
 this component's cost — the same reason `bench-rating.py` measures `score_one` directly
@@ -11,24 +11,24 @@ and `bench-compiled-for.py` measures `_compiled_for` directly rather than throug
 **Fixture: no `model_call` step.** `_algorithm_payload` below is `bench-compiled-for.py`'s
 own minimal shape (one `int` input, one expression step) — a single Rating Version pin,
 no rate table, no GBM booster to train. This is a deliberate, disclosed simplification, not
-an attempt to make the number pass: NFR-RATE-5's own budget is about the batch **pipeline**
+an attempt to make the number pass: NFR-493's own budget is about the batch **pipeline**
 (chunking, the manifest, scratch I/O, the final parquet write) at scale, and per-row
-algorithm cost is NFR-RATE-1/2's budget, already measured separately in `bench-rating.py`
+algorithm cost is NFR-489/490's budget, already measured separately in `bench-rating.py`
 against a ~200-step motor structure. A reader who wants the two costs combined multiplies
-this script's per-row overhead estimate by NFR-RATE-1's own per-row figure; this script does
+this script's per-row overhead estimate by NFR-489's own per-row figure; this script does
 not do that arithmetic for them, because it has not measured the with-GBM case itself.
 
 Real Postgres and MinIO, exactly as production runs: the handler does real I/O (a
 version-row read, a dataset-table blob read, one scratch write/read per chunk, one final
-blob write), so a fixture with no I/O would not be measuring what NFR-RATE-5 asks about.
+blob write), so a fixture with no I/O would not be measuring what NFR-493 asks about.
 
     docker compose -f deploy/docker-compose.yml up -d --wait
     GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
         uv run alembic upgrade head
     uv run python scripts/bench-score-batch.py [--rows N] [--chunk-rows N]
 
-Not a CI gate, Ruling 6's governance carried over unchanged (`docs/plans/2026-08-29-w11-
-slice1-rulings.md`): a timing assertion on a shared runner fails for reasons that have
+Not a CI gate, RL-872's governance carried over unchanged (`docs/rulings/RL-00872-dp3-
+load-generation-tooling-for-the-sustained-200-rps-test.md`): a timing assertion on a shared runner fails for reasons that have
 nothing to do with the code. This prints numbers for a dated research note; a human reads
 them once against the budget, and a failing number is reported as failing, not tuned away
 (`CLAUDE.md` §13).
@@ -257,12 +257,12 @@ async def main(n_rows: int, chunk_rows: int, warmup_rows: int) -> None:
     print(f"load average (1-min): {load_start:.2f} -> {load_end:.2f}")
     print(f"measured: {n_rows} rows in {elapsed:.3f} s ({n_rows / elapsed:.1f} rows/s)")
     print(f"throughput: {rows_per_hour:,.0f} risks/hour/worker")
-    print("budget (NFR-RATE-5): >= 1,000,000 risks/hour/worker")
+    print("budget (NFR-493): >= 1,000,000 risks/hour/worker")
     verdict = "PASS" if rows_per_hour >= 1_000_000 else "FAIL"
     print(f"verdict: {verdict}")
     print(
         "single worker only -- 'linear in workers' is NOT measured by this run "
-        "(NFR-RATE-5's second clause; would need >= 2 concurrent workers)"
+        "(NFR-493's second clause; would need >= 2 concurrent workers)"
     )
     print(f"job result kind: {result.kind}")
 

@@ -1,6 +1,6 @@
-"""Evaluating and certifying a Custom Metric — FR-MODEL-103/104/105, `02` §4.7 and §4.13.
+"""Evaluating and certifying a Custom Metric — FR-155/156/157, `02` §4.7 and §4.13.
 
-`pricing-core` is handed the artifact and never resolves a reference (ADR-0001): every
+`pricing-core` is handed the artifact and never resolves a reference (ADR-703): every
 function here takes a `CustomMetric`, and the backend is what turned a
 `custom_metric:<slug>@<version>` string into one.
 """
@@ -42,15 +42,15 @@ def _template_of(metric: CustomMetric) -> ObjectiveTemplate:
     `certify_objective`'s own pattern rather than silencing the narrowing.
     """
     if metric.template is None:  # pragma: no cover — refused at the type
-        raise ValueError("a Phase 1 metric always names a template (FR-MODEL-103)")
+        raise ValueError("a Phase 1 metric always names a template (FR-155)")
     return metric.template
 
 
 def evaluate_metric(metric: CustomMetric, y: _Arr, f: _Arr, w: _Arr) -> float:
-    """The template's loss as an exposure-weighted mean (FR-MODEL-103).
+    """The template's loss as an exposure-weighted mean (FR-155).
 
     `f` is the **raw score**, not the transformed prediction — the same convention the
-    objective path uses, and the reason FR-MODEL-107 exists: a backend's builtin metric
+    objective path uses, and the reason FR-160 exists: a backend's builtin metric
     receives the raw score under a callable objective and silently means something else.
 
     §4.5's defaults are resolved through `resolve_template_params`, the same call
@@ -81,10 +81,10 @@ def _better(direction: MetricDirection, candidate: float, reference: float) -> b
 
 
 def certify_metric(metric: CustomMetric, *, seed: int) -> CertificateResult:
-    """§4.7's four metric checks (FR-MODEL-105).
+    """§4.7's four metric checks (FR-157).
 
     Returns the findings only: no id, no clock, no Job — the backend stamps those around
-    this into a `MetricCertificate` (ADR-0001, the same split as `certify_objective`).
+    this into a `MetricCertificate` (ADR-703, the same split as `certify_objective`).
     """
     template = _template_of(metric)
     y, f, w = _grid(seed)

@@ -1,11 +1,11 @@
-"""Pure Python actuarial engine (ADR-0001).
+"""Pure Python actuarial engine (ADR-703).
 
 May depend on: Polars, NumPy/SciPy, glum, statsmodels, XGBoost, LightGBM, interpret, the
 ZEN Engine bindings, and `model-schema`.
 
 Must not depend on: FastAPI, SQLAlchemy, Celery, Redis, boto3, or any HTTP/DB/queue client.
 `.importlinter` enforces this and CI fails the build on a forbidden import — the contract
-is checked, not trusted, because ADR-0001's whole value is that a reviewer can verify a
+is checked, not trusted, because ADR-703's whole value is that a reviewer can verify a
 number without the platform.
 """
 

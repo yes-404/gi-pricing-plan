@@ -1,7 +1,7 @@
-"""`score.batch` — the batch scoring Job handler (W11 Task 3B, FR-RATE-36/37/38).
+"""`score.batch` — the batch scoring Job handler (WK-671 Task 3B, FR-253/254/255).
 
-**The handler is invoked directly, never through `execute_job`.** Ruling 31 §6's addendum
-(`docs/plans/2026-08-29-w11-3-d6-batch-resumability-ruling.md`) is explicit that
+**The handler is invoked directly, never through `execute_job`.** RL-857 §6's addendum
+(`docs/rulings/INDEX.md#2026-08-29-w11-3-d6-batch-resumability-rulingmd`) is explicit that
 resumability can only be tested at the handler level: `execute_job`'s own `QUEUED` guard
 (`app/worker/tasks.py:94`/`:103`) refuses a second call for the *same* Job id outright, and
 nothing in this suite has ever invoked a handler function directly before this file —
@@ -52,7 +52,7 @@ def _scoring_frame(n: int, *, bad_row: int | None = None) -> pl.DataFrame:
 
     `bad_row`, if given, sets that row's `premium_in` to `None` — `_minimal_algorithm`
     declares it `nullable: False`, so that row alone raises `INPUT_CONTRACT_VIOLATION`
-    (FR-RATE-2) without disturbing any other row's column type (an out-of-range value
+    (FR-213) without disturbing any other row's column type (an out-of-range value
     would do the same without polars widening the whole column — the same trap
     `test_rating_score_batch.py`'s own error-isolation test documents).
     """
@@ -190,7 +190,7 @@ def headers(principal: Principal, workspace_id: UUID) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-37")
+@pytest.mark.req("FR-254")
 async def test_a_resumed_run_does_not_re_score_completed_chunks_and_matches_an_uninterrupted_run(
     api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
     workspace_id: UUID, principal: Principal, grant: Any, monkeypatch: pytest.MonkeyPatch,
@@ -284,11 +284,11 @@ async def test_a_resumed_run_does_not_re_score_completed_chunks_and_matches_an_u
 
 
 # ---------------------------------------------------------------------------
-# Step 3: the threshold, in both directions (Ruling 24). FR-RATE-38.
+# Step 3: the threshold, in both directions (RL-889). FR-255.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 async def test_a_requested_threshold_above_the_workspace_setting_is_refused(
     api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
     workspace_id: UUID, principal: Principal, grant: Any,
@@ -319,7 +319,7 @@ async def test_a_requested_threshold_above_the_workspace_setting_is_refused(
     assert not [k for k in surviving if f"/{dataset_version_id}/" in k]
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 async def test_a_run_crossing_the_effective_threshold_aborts_recording_both_numbers(
     api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
     workspace_id: UUID, principal: Principal, grant: Any,
@@ -356,13 +356,13 @@ async def test_a_run_crossing_the_effective_threshold_aborts_recording_both_numb
     assert not [k for k in surviving if f"/{dataset_version_id}/" in k]
 
 
-@pytest.mark.req("FR-RATE-38")
+@pytest.mark.req("FR-255")
 async def test_the_unset_default_means_no_rate_based_abort_but_counts_still_accrue(
     api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
     workspace_id: UUID, principal: Principal, grant: Any,
 ) -> None:
     """Nothing sets `rating.batch_abort_failure_rate` for this workspace and the request
-    carries no `abort_failure_rate` either — FR-RATE-38's own construction makes an
+    carries no `abort_failure_rate` either — FR-255's own construction makes an
     undeclared threshold mean *no rate-based abort*, and the counts-and-samples half still
     applies (Step 4 asserts the counting in full; this asserts the non-abort)."""
     await _compiled_version(
@@ -390,11 +390,11 @@ async def test_the_unset_default_means_no_rate_based_abort_but_counts_still_accr
 
 
 # ---------------------------------------------------------------------------
-# Step 5: chunk parts are scratch, released when the run completes (Ruling 31 §4).
+# Step 5: chunk parts are scratch, released when the run completes (RL-857 §4).
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-37")
+@pytest.mark.req("FR-254")
 async def test_chunk_parts_are_scratch_and_the_blob_store_holds_exactly_one_new_object(
     api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
     workspace_id: UUID, principal: Principal, grant: Any,
@@ -429,5 +429,5 @@ async def test_chunk_parts_are_scratch_and_the_blob_store_holds_exactly_one_new_
 
     surviving = await blob_store.list_scratch("score-batch/")
     assert not [k for k in surviving if f"/{dataset_version_id}/" in k], (
-        "scratch parts were not released when the run completed (Ruling 31 §4)"
+        "scratch parts were not released when the run completed (RL-857 §4)"
     )

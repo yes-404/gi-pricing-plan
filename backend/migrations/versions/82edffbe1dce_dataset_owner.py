@@ -1,8 +1,8 @@
 """dataset owner
 
-A Dataset gains an explicit, non-null `owner_id` (`01` FR-DATA-51). Ownership is a fact
+A Dataset gains an explicit, non-null `owner_id` (`01` FR-82). Ownership is a fact
 about the container rather than a projection of its versions, so it is a column — unlike
-FR-DATA-50's status and last-validated date, which are derived per request and stored
+FR-55's status and last-validated date, which are derived per request and stored
 nowhere.
 
 Revision ID: 82edffbe1dce

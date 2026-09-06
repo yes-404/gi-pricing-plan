@@ -1,10 +1,10 @@
 # Delivery Process — Project → Phase → Work → Slice
 
-Adopted 2026-08-29 from NT-0010 (`docs/notes/0010-layered-slice-based-workflow.md`),
-reconciled and ruled in `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`
+Adopted 2026-08-29 from RFC-840 (`docs/rfcs/RFC-00840-a-layered-slice-based-workflow-project-phase-work-slice-gated-at-every-layer.md`),
+reconciled and ruled in `docs/plans/PL-00845-rfc-840-rfc-841-adoption-reconciliation-and-rulings-2026-08-29.md`
 ("the rulings record"). This document is the process specification `CLAUDE.md` §15 points
 at. It governs how a Claude Code team does the work in this repository — a distinct concept
-from `docs/workflows/wf-01…05`, the cross-module *domain* journeys (`CLAUDE.md` §4): one
+from `docs/workflows/WF-698…05`, the cross-module *domain* journeys (`CLAUDE.md` §4): one
 describes how the team works, the other what the platform does.
 
 ## 1. Purpose
@@ -21,7 +21,7 @@ Phase and Project close, never at Slice close — see §2.** Everything else is 
 named layers — Work, Phase and Project close — with the maintainer deciding at each,
 verbatim: *"close a work stream: maintainer only makes decision on work, phase and project
 close but not slice close."* **Slice close is not the maintainer's**: a slice closes on a clean audit and the
-lead's merge, exactly as it does today. NT-0010 §9's single checkpoint at Project close only
+lead's merge, exactly as it does today. RFC-840 §9's single checkpoint at Project close only
 is rejected, not amended — escalation-on-stuck and acceptance-of-done are different events,
 and every layer that currently waits on a human keeps one.
 
@@ -54,14 +54,14 @@ One template, applied recursively three times (§5), plus a leaf-level variant a
 (§6). **Project** is the whole-repository scope `CLAUDE.md` §1 (Mission) already names
 informally — no new artifact, per the rulings record Part C row 3; only the label is new.
 **Phase** is `CLAUDE.md` §9's existing phase concept (1a, 1b, 2, …). **Work** is the
-existing workstream (W1, W2, … W11, …). **Slice** is the existing per-task/PR unit a
+existing workstream (WK-657, WK-658, … WK-671, …). **Slice** is the existing per-task/PR unit a
 workstream is already sliced into.
 
 > **"Slice" has two scopes in this repository, and only one of them is this one**
 > (pilot finding P4). A **process-slice** — the sense used everywhere in this document — is
 > **one TDD leaf, one PR, one audit, one gate**, and it is what §7's retry caps and §8's
 > no-two-at-once govern. A **plan's `## Slice N` heading** is a *grouping of tasks* in a
-> filed plan, and a single one may hold several process-slices: W11's "Slice 1" held five.
+> filed plan, and a single one may hold several process-slices: WK-671's "Slice 1" held five.
 > The two differ by a factor of the group's size, so applying §7 or §8 to a plan heading
 > silently changes what they bound. **When either word could be meant, say which**
 > (`CLAUDE.md` §13's reference rule). Where a plan groups tasks under a `Slice N` heading,
@@ -91,8 +91,8 @@ workstream is already sliced into.
    missing requirements, every gate actually achieved, watching specifically for drift at
    this layer's own level (a Phase audit checks work-level drift, not implementation
    detail — that is the Slice audit's job).
-7. **Verdict** — **corrected from NT-0010's original assignment** (rulings record Part C
-   row 4 / NT-0011 §3 delta 1): the auditor **proposes** fix / accept / defer; the
+7. **Verdict** — **corrected from RFC-840's original assignment** (rulings record Part C
+   row 4 / RFC-841 §3 delta 1): the auditor **proposes** fix / accept / defer; the
    **lead** adopts, amends, or rejects the proposal and merges. The decision-maker rules
    decision points and spec-vs-code conflicts only, not audit verdicts. **Fix** loops back
    to this layer's own map plan (guarded, §7). **Accept** proceeds to close-out. **Defer**
@@ -108,8 +108,8 @@ workstream is already sliced into.
    standard.
 3. **Implement (green)** — executor writes just enough code to pass.
 4. **Verify & refactor** — the full local gate must be green. **Deliberately not built as
-   a blocking hook** (rulings record: `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`,
-   Ruling 48, closing Part C row 5) — CI runs the full gate on every pushed branch on a
+   a blocking hook** (rulings record: `docs/rulings/INDEX.md#2026-08-30-nt-0014-q1-q3-q4-rulingsmd`,
+   RL-908, closing Part C row 5) — CI runs the full gate on every pushed branch on a
    clean runner, which is the stronger check; a local or git hook would check a weaker
    thing at higher cost and can be bypassed without trace. Today this is an instruction
    the executor follows, and the enforcement sits at CI and at the merge. The residual gap
@@ -135,14 +135,14 @@ workstream is already sliced into.
 
 Adopted **as instrumented defaults**, not permanent governance (rulings record Part B3):
 log every replan/audit-fix loop iteration and every per-slice re-audit count and gate
-re-run from the first slice run under this process (the pilot — W11's first slice);
+re-run from the first slice run under this process (the pilot — WK-671's first slice);
 revisit the numbers once a workstream's worth of data exists, not before. On breach, the
 loop pauses and notifies a human instead of retrying again; the redirect goes back into
 that layer's own map plan (or Implement, at Slice level) — it does not require the whole
-project to stop. **The mechanism doing this logging is the runtime state file (NT-0014
+project to stop. **The mechanism doing this logging is the runtime state file (RFC-895
 artifact B, `.claude/skills/watcher-runtime-state`) and the retry-cap hook
 (`scripts/hooks/retry_cap_hook.py`, registered as a Claude Code `PreToolUse` hook in
-`.claude/settings.json`, NT-0014 script C2)** — recording a replan/fix decision runs the
+`.claude/settings.json`, RFC-895 script C2)** — recording a replan/fix decision runs the
 hook, which increments the counter in the runtime state file and, on breach, refuses the
 retry and writes a durable notification there. Cap values are unchanged by this
 mechanism; only their instrumentation moved from prose to an artifact.
@@ -152,15 +152,15 @@ mechanism; only their instrumentation moved from prose to an artifact.
 Sequential processing of a layer's **children** (Project→Phase→Work→Slice: no two Slices
 run at once, at any layer) — the same bound on context/resource usage per session
 the **reproduced design proposal's** §7 intended, at
-`docs/notes/0010-layered-slice-based-workflow.md:322-327` ("this bounds context/resource
+`docs/rfcs/RFC-00840-a-layered-slice-based-workflow-project-phase-work-slice-gated-at-every-layer.md:322-327` ("this bounds context/resource
 usage per session ... revisit only if resource budget materially changes"). That is the
-proposal reproduced *inside* the note, **not** NT-0010's own §7, which is a different
-subject; the bare "NT-0010 §7" resolved only for a reader who already knew which numbering
-was meant (Ruling 33, `docs/plans/2026-08-29-w11-slice-parallelism-ruling.md`).
+proposal reproduced *inside* the note, **not** RFC-840's own §7, which is a different
+subject; the bare "RFC-840 §7" resolved only for a reader who already knew which numbering
+was meant (RL-871, `docs/rulings/RL-00871-no-8-stands-unamended-and-unexcepted-and-the-test-the-question-proposed-is-the-wrong-one.md`).
 
 **The interest §8 protects is resource contention, not plan stability.** Two children can be
 perfectly plan-independent and running them concurrently still breaches this rule, so an
-exception argued on plan-independence argues past it (Ruling 33 refused exactly that
+exception argued on plan-independence argues past it (RL-871 refused exactly that
 argument). Where a child carries an NFR *measurement*, the rule is also a correctness
 control: a measurement taken while another child's suite or load test runs is a contended
 one, and it fails in the direction that gets booked as a pass. **With a carve-out** (rulings record Part B1): unrestricted
@@ -192,7 +192,7 @@ does not buy better, and risks the borrowed-environment traps `dev-commands` doc
 
 ## 9. Global findings register
 
-Adopted as-is (rulings record Part C row 8) — this **is** `docs/audit/register.md`,
+Adopted as-is (rulings record Part C row 8) — this **is** `docs/findings/register.md`,
 verbatim-matching per the rulings record's own verification, including the literal "fix
 before close" decision-taxonomy wording. No new file. One row per open finding, keyed by
 the requirement or artifact id it concerns, naming the carrying work item, the phase, and
@@ -233,7 +233,7 @@ rows relevant to it before finalizing (§11 obligation 7).
 ## 11. Plan file obligations
 
 See `.claude/skills/writing-plans/SKILL.md` and `docs/plans/README.md` — those
-conventions are stronger than anything this document would add, per NT-0010 §11's own
+conventions are stronger than anything this document would add, per RFC-840 §11's own
 words. Not restated here; one source, not two.
 
 ## 11a. Adding a document under `docs/` — run `--verify` before opening the PR
@@ -241,9 +241,9 @@ words. Not restated here; one source, not two.
 **Any change that adds a file under `docs/` runs
 `python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD` before its PR is opened**, and
 the author reads row **(a)** of the output. Added 2026-09-03, from finding
-[`F102`](../audit/findings/F102.md).
+[`F102`](../findings/FD-01052-a-document-that-is-well-formed-today-and-unclassifiable-after-the-migration-with-nothing-before-the-migration-able-to-say-so.md).
 
-**Why this cannot be left to the ordinary gate.** NT-0019's family classification is **name-based
+**Why this cannot be left to the ordinary gate.** RFC-937's family classification is **name-based
 and exists only on the far side of the migration**. A document whose filename matches no family
 rule is perfectly well-formed today — `audit-docs.py`, `register-lint.py` and the full local gate
 all pass on it — and becomes an unclassified file, `none`, only once `migrate()` runs. **§7(a)'s
@@ -262,11 +262,11 @@ sweep.md` → `RS-01000`, `file-census.md` → `RS-00998`, `ruling-acceptance-it
 **The rule generalises past this one row.** Three distinct defects in a single day shared one
 shape: a figure measured on the wrong side of the migration, a claim about a string checked
 against the wrong tree, and a document that is only invalid on the other side of the transform.
-**`--verify` is the only instrument that sees any of them**, which is Ruling 102 §1's argument
+**`--verify` is the only instrument that sees any of them**, which is RL-1043 §1's argument
 reaching a case its author did not have in mind. **The remedy is running the instrument, not
 being careful.**
 
-**Until the migration lands**, `--verify` is red by design on every PR (Ruling 102 §1), so the
+**Until the migration lands**, `--verify` is red by design on every PR (RL-1043 §1), so the
 author reads **row (a) specifically** rather than the exit code, and compares it against `main`'s
 own output rather than against zero.
 
@@ -288,10 +288,10 @@ plan's Task 6. This section describes the mechanism `.claude/roles/watcher.md` a
   hygiene checks — deterministic, no LLM. Publishes `roster-state.md` (the single source
   of team state) and computes a rolling mechanical ETA from per-slice durations. Re-arms
   one-shot triggers on confirmed recovery. Spawns the watcher agent only when an anomaly
-  needs judgment or a written signal. Also maintains the runtime state file (NT-0014
+  needs judgment or a written signal. Also maintains the runtime state file (RFC-895
   artifact B, `.claude/skills/watcher-runtime-state`): position and the in-flight
   expensive-verifications list, **re-derived each cycle rather than compared against a
-  separate tally** — `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md` Ruling 47, a
+  separate tally** — `docs/rulings/RL-00907-q4-artifacts-win-where-an-artifact-exists-and-nothing-that-blocks-an-action-may-be-counted-in-b-without-one.md` RL-907, a
   comparison cannot tell a dead writer from a genuinely idle one.
 - **Reporter (mechanical first):** routine summaries template-filled from the state
   files; the reporter agent is invoked only for critical relays and the stale-lead
@@ -319,12 +319,12 @@ plan artifacts.
 ## 14. Adoption workflow
 
 This document, the rulings record, and the adoption implementation plan are steps 1–3 of
-NT-0010 §15's own adoption workflow (freeze → reconcile → plan → implement → audit →
+RFC-840 §15's own adoption workflow (freeze → reconcile → plan → implement → audit →
 pilot → close and supersede), **complete: accepted by the maintainer 2026-08-29, and this
 document is authoritative from that date.** The two proposal notes carry dated `superseded`
-status and are kept as the proposal record. See `docs/plans/2026-08-29-nt-0010-0011-
-reconciliation-rulings.md` Part B4 (adopted as written) and `docs/plans/2026-08-29-nt-
-0010-0011-adoption.md` for the record of each step.
+status and are kept as the proposal record. See `docs/plans/PL-00845-rfc-840-rfc-841
+-adoption-reconciliation-and-rulings-2026-08-29.md` Part B4 (adopted as written) and `docs/plans/PL-00844-rfc-8
+40-rfc-841-adoption-implementation-plan.md` for the record of each step.
 
 ## 15. Correction and message discipline
 
@@ -335,7 +335,7 @@ than counted — this line said "three" while listing four, because a bullet was
 the number was not. **None was caught by a check; each was caught by someone declining to
 accept something.** Rules 1–5 below predate numbering; Rules 6–9 are the four unnumbered
 candidates review 9 recommended and review 11 completed, **numbered at the 2026-09-01
-acceptance** of plan reviews 9/10/11 (review 9's proposal 5.4, `docs/audit/plan-reviews.md`; a
+acceptance** of plan reviews 9/10/11 (review 9's proposal 5.4, `docs/closures/INDEX.md#plan-reviewsmd`; a
 number assigned before the thing exists was the defect the candidates were held unnumbered
 to avoid, so the numbering is this date's act).
 
@@ -361,13 +361,13 @@ to avoid, so the numbering is this date's act).
   auditor's Tools line minutes after that same file had been assigned to the planner in the
   same conversation — caught by running `git log` against the file itself and finding every
   commit on it was already a plan review, not by remembering the earlier assignment.
-- **Rule 4 — remove the relay, do not merely distrust it** (`NT-0013`). The bullet above says
+- **Rule 4 — remove the relay, do not merely distrust it** (`RFC-843`). The bullet above says
   do not *trust* a relay; this says do not *create* one. **Members send artifacts directly to
   whoever needs them. The lead is addressed for a decision or a verdict — the one thing that
   cannot be delegated — and not as a conduit for everything else.** The two are one rule, and
   the reason they are stated together is that the weaker half landed alone first: a reader
   who finds only "verify the relay" concludes the remedy is more careful reading, which is
-  exactly what `NT-0013`'s eight instances refute — the relay was reading carefully each
+  exactly what `RFC-843`'s eight instances refute — the relay was reading carefully each
   time, and still restated things wrongly. Routing is the fix; attention is not. This
   practice was adopted mid-session on 2026-08-29 and decayed within the hour because it was
   announced and never written down, which is why it is written here.
@@ -397,11 +397,11 @@ to avoid, so the numbering is this date's act).
   Never by re-reading the passage just edited.
 - **Rule 10 — a branch open when a ruling merges is re-read against that ruling before the
   branch itself merges** (the lead's decision, 2026-09-02, on §7 of
-  [`the W37-6 leaf-plan findings rulings`](../plans/2026-09-02-w37-6-leaf-plan-findings-rulings.md)).
+  [`the W37-6 leaf-plan findings rulings`](../rulings/RL-00975-a-pre-run-predicate-is-insufficient-as-the-plan-states-it-and-it-is-also-mis-sized-by-a-factor-of-four-the-remedy-is-an-enumerated-table-whose-positive-control-the-corpus-already-supplies.md)).
   CI gates a branch's own diff. Nothing re-checks a branch against a ruling that landed on
   `main` while the branch sat open, so a branch can pass every check and still ship a rule its
   own author never saw superseded. **Two instances in one night**, with the merge order and
-  timestamps in Ruling 76 §1 rather than restated here: a template taught the vendored-skill
+  timestamps in RL-973 §1 rather than restated here: a template taught the vendored-skill
   criterion a ruling had rejected eight minutes earlier, and a script shipped the same rejected
   rule half an hour after that. **A longer obligation list would not have caught either** — the
   second was already named in the ruling's own obligations; its branch was simply never re-read

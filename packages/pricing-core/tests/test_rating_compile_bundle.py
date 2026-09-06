@@ -1,8 +1,8 @@
 """Bundle compilation (slice W9-3) — a pinned version compiles to a self-contained
 Bundle with a reproducible hash, and every validation failure is named.
 
-Covers FR-RATE-22 (nothing unpinned), FR-RATE-24 (self-contained Bundle, content hash),
-FR-RATE-25 (compilation validates), FR-RATE-60 (mode match), FR-OVR-14 (pins approved).
+Covers FR-237 (nothing unpinned), FR-239 (self-contained Bundle, content hash),
+FR-240 (compilation validates), FR-223 (mode match), FR-20 (pins approved).
 """
 
 from __future__ import annotations
@@ -120,9 +120,9 @@ def _resolver() -> ArtifactResolver:
     )
 
 
-@pytest.mark.req("FR-RATE-24")
+@pytest.mark.req("FR-239")
 async def test_a_pinned_version_compiles_to_a_self_contained_bundle() -> None:
-    """FR-RATE-24: the Bundle carries the graph and the resolved payloads."""
+    """FR-239: the Bundle carries the graph and the resolved payloads."""
     bundle = await compile_bundle(_version(), _resolver())
     assert bundle.algorithm_ref == "rating_algorithm:motor-gb@14"
     assert bundle.graph.slug == "motor-gb"
@@ -132,9 +132,9 @@ async def test_a_pinned_version_compiles_to_a_self_contained_bundle() -> None:
     assert bundle.resolved_payloads["model:motor-ad-frequency@7"]["status"] == "approved"
 
 
-@pytest.mark.req("FR-RATE-24")
+@pytest.mark.req("FR-239")
 async def test_the_content_hash_is_reproducible() -> None:
-    """FR-RATE-24: compiling the same pins and graph yields the same hash."""
+    """FR-239: compiling the same pins and graph yields the same hash."""
     first = await compile_bundle(_version(), _resolver())
     second = await compile_bundle(_version(), _resolver())
     assert first.content_hash == second.content_hash
@@ -142,28 +142,28 @@ async def test_the_content_hash_is_reproducible() -> None:
     assert bundle_hash(first.graph, first.pins) == first.content_hash
 
 
-@pytest.mark.req("FR-RATE-22")
+@pytest.mark.req("FR-237")
 async def test_an_unpinned_version_is_refused() -> None:
-    """FR-RATE-22: nothing unpinned — a version with no algorithm_ref fails."""
+    """FR-237: nothing unpinned — a version with no algorithm_ref fails."""
     version = _version().model_copy(update={"algorithm_ref": None})
     with pytest.raises(ValueError, match="RATING_VERSION_UNPINNED"):
         await compile_bundle(version, _resolver())
 
 
-@pytest.mark.req("FR-OVR-14")
-@pytest.mark.req("FR-RATE-25")
+@pytest.mark.req("FR-20")
+@pytest.mark.req("FR-240")
 async def test_an_unapproved_pin_is_refused() -> None:
-    """FR-OVR-14: a pin whose artifact is not approved fails, naming the pin.
+    """FR-20: a pin whose artifact is not approved fails, naming the pin.
 
-    Targets the `model` pin rather than `rate_table`: Ruling 22
-    (`docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`) exempts
+    Targets the `model` pin rather than `rate_table`: RL-856
+    (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`) exempts
     `rate_table` from this floor (`_MATURITY_CHECK_EXEMPT`), so it can no longer be the
     example that proves the gate fires.
 
-    Also FR-RATE-25's own clause (2) ("references resolvable and at a sufficient
-    maturity") — F-W9-3's cheap half (`docs/audit/register.md`), pointing the
+    Also FR-240's own clause (2) ("references resolvable and at a sufficient
+    maturity") — F-W9-3's cheap half (`docs/findings/register.md`), pointing the
     already-run mechanism at the umbrella requirement rather than writing a new test for
-    it (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`).
+    it (`docs/rulings/INDEX.md#2026-08-29-w11-algorithm-pin-maturitymd`).
     """
     resolver = _resolver()
     resolver._statuses["model:motor-ad-frequency@7"] = "draft"
@@ -171,9 +171,9 @@ async def test_an_unapproved_pin_is_refused() -> None:
         await compile_bundle(_version(), resolver)
 
 
-@pytest.mark.req("FR-OVR-14")
+@pytest.mark.req("FR-20")
 async def test_a_rate_table_pin_compiles_regardless_of_status() -> None:
-    """Ruling 22: `rate_table` is exempt from the FR-OVR-14 floor, not a fourth member
+    """RL-856: `rate_table` is exempt from the FR-20 floor, not a fourth member
     of `_APPROVED_OR_BETTER` — the gate is bypassed for the type, not satisfied by it.
 
     Proves the exemption is real rather than incidental: the resolver reports a status
@@ -189,10 +189,10 @@ async def test_a_rate_table_pin_compiles_regardless_of_status() -> None:
     assert "rate_table:motor-expense@3" in bundle.resolved_payloads
 
 
-@pytest.mark.req("FR-RATE-25")
+@pytest.mark.req("FR-240")
 async def test_a_rating_algorithm_pin_compiles_regardless_of_status() -> None:
-    """Ruling 28 (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`): `rating_algorithm`
-    is exempt from the FR-OVR-14 floor for the same shape of reason Ruling 22 exempted
+    """RL-859 (`docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md`): `rating_algorithm`
+    is exempt from the FR-20 floor for the same shape of reason RL-856 exempted
     `rate_table` — `RatingAlgorithmRow` has no status column to read a real maturity from
     (`test_rating_algorithm_row_has_no_status_column`,
     `backend/tests/test_rating_version_compile.py`), so the real resolver reports the
@@ -208,12 +208,12 @@ async def test_a_rating_algorithm_pin_compiles_regardless_of_status() -> None:
     assert bundle.algorithm_ref == "rating_algorithm:motor-gb@14"
 
 
-@pytest.mark.req("FR-RATE-25")
+@pytest.mark.req("FR-240")
 async def test_the_algorithm_maturity_check_would_be_caught_if_removed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Proves Ruling 28's algorithm-maturity check is live code, not a declared-and-inert
-    control (`06` FR-GOV-39's own language for exactly this defect — a member of an
+    """Proves RL-859's algorithm-maturity check is live code, not a declared-and-inert
+    control (`06` FR-367's own language for exactly this defect — a member of an
     exemption set that nothing reads).
 
     Removing `rating_algorithm` from `_MATURITY_CHECK_EXEMPT` must turn an unapproved
@@ -230,17 +230,17 @@ async def test_the_algorithm_maturity_check_would_be_caught_if_removed(
         await compile_bundle(_version(), resolver)
 
 
-@pytest.mark.req("FR-RATE-60")
+@pytest.mark.req("FR-223")
 async def test_a_mode_mismatch_is_refused_at_compile() -> None:
-    """FR-RATE-60: a model_call mode disagreeing with the version fails compilation."""
+    """FR-223: a model_call mode disagreeing with the version fails compilation."""
     version = _version().model_copy(update={"model_reference_mode": "approximation"})
-    with pytest.raises(ValueError, match="FR-RATE-60"):
+    with pytest.raises(ValueError, match="FR-223"):
         await compile_bundle(version, _resolver())
 
 
-@pytest.mark.req("FR-RATE-25")
+@pytest.mark.req("FR-240")
 async def test_a_broken_guard_fails_compilation_with_a_named_error() -> None:
-    """FR-RATE-25: a boundary-guard violation re-checked at compile is named."""
+    """FR-240: a boundary-guard violation re-checked at compile is named."""
     payload = valid_algorithm_payload()
     for step in payload["steps"]:
         if step["step_id"] == "s_office":
@@ -257,7 +257,7 @@ async def test_a_broken_guard_fails_compilation_with_a_named_error() -> None:
         await compile_bundle(_version(), resolver)
 
 
-@pytest.mark.req("FR-RATE-24")
+@pytest.mark.req("FR-239")
 def test_to_jdm_translates_the_steps() -> None:
     """to_jdm names the nodes and edges of the DAG."""
     from model_schema.rating import RatingAlgorithm

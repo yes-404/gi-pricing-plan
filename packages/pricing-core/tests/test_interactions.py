@@ -1,4 +1,4 @@
-"""Crossing Factors: the `interaction` arm of FR-MODEL-1 (FR-MODEL-91).
+"""Crossing Factors: the `interaction` arm of FR-83 (FR-92).
 
 An interaction crosses **Factors**, not columns, so every test here builds its operands
 first and pins them by id. That is the whole point of the design: crossing the raw columns
@@ -9,7 +9,7 @@ The refusals matter more than the happy path. A cross resolved wrongly is a desi
 with plausible-looking levels and the wrong rows behind them, which is the failure mode
 `resolve_factors` exists to refuse for every other type.
 
-**A continuous operand is refused by name** (OQ-MODEL-12). Crossing with one is a varying
+**A continuous operand is refused by name** (OQ-584). Crossing with one is a varying
 *slope*, and `03`'s rating DAG is tables — a product term would fit perfectly well and
 would not be rateable. The refusal names the remedy: band it first.
 """
@@ -101,7 +101,7 @@ def _region(grouping: Grouping) -> Factor:
 # -- the cross itself ----------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 def test_an_interaction_crosses_its_operands_resolved_levels() -> None:
     """The cross is of `18-37` with `NORTH`, never of 23.0 with `N1`."""
     banding, grouping = _banding(), _grouping()
@@ -121,7 +121,7 @@ def test_an_interaction_crosses_its_operands_resolved_levels() -> None:
     }
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 def test_an_operand_contributes_no_term_of_its_own() -> None:
     """A full cross spans every cell, so its operands' main effects are collinear with it.
 
@@ -148,7 +148,7 @@ def test_an_operand_contributes_no_term_of_its_own() -> None:
     assert set(plain.terms) == {"age_banded", "region_ns"}
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 def test_only_observed_combinations_become_levels() -> None:
     """An empty cell would be a coefficient fitted on nothing — and on a wide cross most
     cells are empty, so this is the ordinary case rather than the corner."""
@@ -168,7 +168,7 @@ def test_only_observed_combinations_become_levels() -> None:
     assert "18-37 | NORTH" in levels
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 def test_an_interaction_resolves_wherever_it_appears_in_the_sequence() -> None:
     """Operands are looked up by id, so a caller need not order the list — a resolution
     that depended on order would be a fit that depended on it."""
@@ -183,7 +183,7 @@ def test_an_interaction_resolves_wherever_it_appears_in_the_sequence() -> None:
     assert matrix.frame[matrix.terms["age_x_region"]].n_unique() == 6
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 def test_a_three_way_interaction_is_one_factor_over_three_operands() -> None:
     banding, grouping = _banding(), _grouping()
     age, region = _age(banding), _region(grouping)
@@ -209,7 +209,7 @@ def test_a_three_way_interaction_is_one_factor_over_three_operands() -> None:
 # -- the refusals --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 def test_an_operand_that_was_not_supplied_is_refused() -> None:
     """The `bandings` map's refusal one level up: resolving the cross without one of its
     sides would produce the other side alone, under the interaction's name."""
@@ -224,10 +224,10 @@ def test_an_operand_that_was_not_supplied_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-91")
-@pytest.mark.req("FR-MODEL-97")
+@pytest.mark.req("FR-92")
+@pytest.mark.req("FR-93")
 def test_a_continuous_operand_is_refused_by_name_with_its_remedy() -> None:
-    """OQ-MODEL-12, decided 2026-08-18 as FR-MODEL-97 — see the module docstring. A product
+    """OQ-584, decided 2026-08-18 as FR-93 — see the module docstring. A product
     term would fit and would not be rateable, which is the kind of success worth refusing.
     The decision keeps the `diagnostic`-intent variant open, so what this test pins is the
     refusal, not the absence of any future product term."""
@@ -245,9 +245,9 @@ def test_a_continuous_operand_is_refused_by_name_with_its_remedy() -> None:
     assert "band" in message.lower()
 
 
-@pytest.mark.req("FR-MODEL-5")
+@pytest.mark.req("FR-90")
 def test_a_prohibited_operand_is_refused_through_the_cross() -> None:
-    """FR-MODEL-5 has to reach *through* the interaction. A prohibited factor that cannot
+    """FR-90 has to reach *through* the interaction. A prohibited factor that cannot
     enter a spec directly but can enter one crossed with something else is not prohibited.
     """
     banding, grouping = _banding(), _grouping()
@@ -265,7 +265,7 @@ def test_a_prohibited_operand_is_refused_through_the_cross() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-92")
 def test_an_interaction_of_an_interaction_is_refused() -> None:
     """A three-way interaction is one factor over three operands. Nesting would give two
     names for one design column, and the resolver a cycle to chase."""
@@ -284,7 +284,7 @@ def test_an_interaction_of_an_interaction_is_refused() -> None:
 # -- the reason interactions exist ---------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-21")
+@pytest.mark.req("FR-113")
 def test_a_glm_on_a_crossed_factor_recovers_the_cell_rates() -> None:
     """The real assertion, and the reason an interaction exists at all.
 

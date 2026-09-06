@@ -53,7 +53,7 @@ function detail(structure: api.PerilStructure = STRUCTURE) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("PerilStructureDetailView", () => {
-  it("pins each model reference by version (FR-MODEL-58)", async () => {
+  it("pins each model reference by version (FR-188)", async () => {
     // The canonical string, not its parts. Splitting it into "ad-freq (v4)" makes the pinned
     // reference unsearchable against traces and audit rows.
     const { container } = detail();
@@ -61,8 +61,8 @@ describe("PerilStructureDetailView", () => {
     expect(container.textContent ?? "").toContain("model:ad-freq@4");
   });
 
-  it("names every excluded peril and its reason (FR-MODEL-60)", async () => {
-    // The panel no noun in the §5.3 cell asked for, and which FR-MODEL-60 requires: every
+  it("names every excluded peril and its reason (FR-190)", async () => {
+    // The panel no noun in the §5.3 cell asked for, and which FR-190 requires: every
     // peril is either modelled or explicitly excluded with a reason.
     const { container } = detail();
     await screen.findByText("COURTESY_CAR:", { exact: false });
@@ -71,7 +71,7 @@ describe("PerilStructureDetailView", () => {
 
   it("renders a large-loss kind the platform cannot compute (Finding 5)", async () => {
     // `pricing_core` refuses `flat_loading` by name, but the contract carries all four kinds
-    // and FR-MODEL-87 makes that intended. A `v-if` over the computable pair would render a
+    // and FR-207 makes that intended. A `v-if` over the computable pair would render a
     // blank treatment for a structure that declares one.
     const { container } = detail();
     await screen.findByText("Large-loss treatment");
@@ -79,10 +79,10 @@ describe("PerilStructureDetailView", () => {
     expect(container.textContent ?? "").toContain("1.15");
   });
 
-  it("states the treatment's parameters, not just its kind (FR-MODEL-59)", async () => {
+  it("states the treatment's parameters, not just its kind (FR-189)", async () => {
     // A panel saying `capped` without saying capped *at what* has not recorded the treatment,
     // only that there is one. Integer minor units, no symbol — the view cannot source a
-    // currency (OQ-OVR-14) and will not assert one.
+    // currency (OQ-551) and will not assert one.
     const { container } = detail();
     await screen.findByText("Large-loss treatment");
     const text = container.textContent ?? "";
@@ -91,7 +91,7 @@ describe("PerilStructureDetailView", () => {
     expect(text).not.toMatch(/[£$€]/);
   });
 
-  it("names each peril's method, which decides what its refs mean (FR-MODEL-58)", async () => {
+  it("names each peril's method, which decides what its refs mean (FR-188)", async () => {
     const { container } = detail();
     await screen.findByText("Composition");
     expect(container.textContent ?? "").toContain("frequency_severity");

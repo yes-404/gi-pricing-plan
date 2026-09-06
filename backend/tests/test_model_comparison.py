@@ -1,4 +1,4 @@
-"""Comparison, from the request to the stored artifact (`02` FR-MODEL-56, §5.1).
+"""Comparison, from the request to the stored artifact (`02` FR-186, §5.1).
 
 `packages/pricing-core/tests/test_comparison.py` owns the maths. This file owns the four
 things only the platform can be wrong about:
@@ -7,11 +7,11 @@ things only the platform can be wrong about:
   reason: learning that two models are incomparable from a failed job twenty seconds later
   is a worse answer to the same question. The handler checks again, because the world can
   move while a Job sits in a queue;
-* **the artifact is immutable at the privilege layer** (FR-DATA-42). An approval cites it;
+* **the artifact is immutable at the privilege layer** (FR-43). An approval cites it;
 * **both routes are in the published contract.** A `POST` that produces an artifact with no
   `GET` is the surface `01`'s reference lifecycle had — complete to the endpoint audit,
   unusable to a caller;
-* **the whole path runs**, `wf-01` E1 end to end, on two models fitted through the real fit
+* **the whole path runs**, `WF-698` E1 end to end, on two models fitted through the real fit
   Job on one recorded split.
 
 The two candidates differ by **regularisation** — `alpha = 0` against a heavily penalised
@@ -115,7 +115,7 @@ def _ebm_spec(
 # -- The refusals, before a Job exists ----------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 async def test_a_comparison_of_one_model_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -128,11 +128,11 @@ async def test_a_comparison_of_one_model_is_refused(
     assert refused.value.code == "MODELS_NOT_COMPARABLE"
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 async def test_models_on_different_splits_are_refused_and_both_are_named(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-56 compares models fitted on the **same holdout**, and `01` FR-DATA-36 made
+    """FR-186 compares models fitted on the **same holdout**, and `01` FR-76 made
     that checkable: the split is one artifact two models cite. Comparing across two splits
     compares two models on different rows and reports the difference as performance.
 
@@ -177,7 +177,7 @@ async def test_models_on_different_splits_are_refused_and_both_are_named(
     assert str(other.split_artifact_id) in detail
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 async def test_an_unfitted_model_cannot_be_compared(
     database, blob_store, workspace_id
 ) -> None:
@@ -206,7 +206,7 @@ async def test_an_unfitted_model_cannot_be_compared(
     assert "draft" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 async def test_the_same_model_twice_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -220,11 +220,11 @@ async def test_the_same_model_twice_is_refused(
     assert refused.value.code == "MODELS_NOT_COMPARABLE"
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 async def test_an_ebm_row_is_refused_by_name_at_the_comparison_boundary(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-37's model is transparent by construction, so `wf-01` E1 — surrogate
+    """FR-140's model is transparent by construction, so `WF-698` E1 — surrogate
     validation of a GLM against a GBM — has nothing to compare.
 
     The refusal lives in the handler, not in `request_comparison`, because the Job can
@@ -298,7 +298,7 @@ async def test_an_ebm_row_is_refused_by_name_at_the_comparison_boundary(
 # -- The artifact --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_a_comparison_cannot_be_rewritten(database, workspace_id) -> None:
     """An approval cites this artifact (`06` §3.3). Evidence that can change after the
     approval is not evidence — the same discipline `diagnostics` and validation reports
@@ -318,10 +318,10 @@ async def test_a_comparison_cannot_be_rewritten(database, workspace_id) -> None:
     assert "DELETE" not in granted
 
 
-# -- The whole path, `wf-01` E1 -----------------------------------------------------------
+# -- The whole path, `WF-698` E1 -----------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 async def test_the_comparison_job_produces_a_readable_artifact(
     database, blob_store, workspace_id
 ) -> None:
@@ -390,7 +390,7 @@ async def test_the_comparison_job_produces_a_readable_artifact(
 # -- The published contract ----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_both_comparison_routes_are_published() -> None:
     """The `GET` matters as much as the `POST`. `02` §5.1 declared only the `POST`, and a
     202 whose artifact has no route is complete to the endpoint audit and unusable to a
@@ -400,7 +400,7 @@ def test_both_comparison_routes_are_published() -> None:
     assert "get" in paths["/api/v1/models/comparisons/{comparison_id}"]
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_comparing_over_the_api_answers_202_with_a_job(
     api_client: TestClient, workspace_id, database, blob_store
 ) -> None:
@@ -439,7 +439,7 @@ def test_comparing_over_the_api_answers_202_with_a_job(
     assert accepted.headers["Location"].startswith("/api/v1/jobs/")
 
 
-@pytest.mark.req("FR-MODEL-56")
+@pytest.mark.req("FR-186")
 def test_reading_an_unknown_comparison_is_a_404(
     api_client: TestClient, workspace_id, principal, grant
 ) -> None:

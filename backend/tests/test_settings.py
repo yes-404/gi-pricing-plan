@@ -1,4 +1,4 @@
-"""Settings resolution and feature flags (FR-PLAT-43..46, `07` §4.4)."""
+"""Settings resolution and feature flags (FR-446, FR-447, FR-448, FR-449, `07` §4.4)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ FLAG = "features.expression_objectives_enabled"
 async def _override(session, workspace_id, key, value) -> None:
     """Set a workspace override, having first ensured the workspace exists.
 
-    `workspace_settings` carries a foreign key to `workspaces` (FR-PLAT-62). These tests
+    `workspace_settings` carries a foreign key to `workspaces` (FR-395). These tests
     mint a bare `workspace_id` rather than going through `grant`, which is the suite's
     other workspace-creation path, so the row has to arrive here instead.
     """
@@ -29,12 +29,12 @@ async def _override(session, workspace_id, key, value) -> None:
 
 
 
-@pytest.mark.req("FR-PLAT-45")
+@pytest.mark.req("FR-448")
 def test_the_registry_covers_every_category_the_requirement_names() -> None:
-    """FR-PLAT-45 enumerates what workspace settings must include.
+    """FR-448 enumerates what workspace settings must include.
 
-    `workspace.currency` rather than `display.currency`: OQ-OVR-3 makes it the workspace's
-    single operating currency, not a rendering preference, and FR-PLAT-45 lists currency
+    `workspace.currency` rather than `display.currency`: OQ-542 makes it the workspace's
+    single operating currency, not a rendering preference, and FR-448 lists currency
     separately from "locale/timezone **for display**".
     """
     keys = set(svc.REGISTRY)
@@ -52,7 +52,7 @@ def test_the_registry_covers_every_category_the_requirement_names() -> None:
         assert required in keys, required
 
 
-@pytest.mark.req("FR-PLAT-46")
+@pytest.mark.req("FR-449")
 def test_every_feature_flag_defaults_to_its_safe_value() -> None:
     """Negative: a flag whose default drifted away from safe would gate nothing."""
     flags = {k: d for k, d in svc.REGISTRY.items() if d.feature_flag}
@@ -62,9 +62,9 @@ def test_every_feature_flag_defaults_to_its_safe_value() -> None:
         assert definition.default == svc.SAFE_DEFAULT[key], key
 
 
-@pytest.mark.req("FR-PLAT-14")
+@pytest.mark.req("FR-410")
 def test_the_job_retention_default_meets_the_thirteen_month_floor() -> None:
-    """FR-PLAT-14 requires ≥ 13 months; the constraint makes a shorter value unsettable."""
+    """FR-410 requires ≥ 13 months; the constraint makes a shorter value unsettable."""
     definition = svc.REGISTRY["retention.job_history_days"]
     assert definition.default >= 396
     assert definition.constraints["min"] >= 396
@@ -73,7 +73,7 @@ def test_the_job_retention_default_meets_the_thirteen_month_floor() -> None:
     assert exc.value.title == "Setting value is out of range"
 
 
-@pytest.mark.req("FR-PLAT-43")
+@pytest.mark.req("FR-446")
 async def test_a_setting_with_no_override_resolves_to_the_default(
     database: Database, workspace_id
 ) -> None:
@@ -88,7 +88,7 @@ async def test_a_setting_with_no_override_resolves_to_the_default(
     ]
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 def test_the_rate_table_cell_threshold_defaults_to_250000() -> None:
     definition = svc.REGISTRY["rate_tables.cell_threshold"]
     assert definition.type is SettingType.INT
@@ -96,7 +96,7 @@ def test_the_rate_table_cell_threshold_defaults_to_250000() -> None:
     assert definition.constraints["min"] == 1
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_the_rate_table_cell_threshold_resolves_to_the_default(
     database: Database, workspace_id
 ) -> None:
@@ -108,7 +108,7 @@ async def test_the_rate_table_cell_threshold_resolves_to_the_default(
     assert resolution.resolved_from is SettingSource.DEFAULT
 
 
-@pytest.mark.req("FR-PLAT-43")
+@pytest.mark.req("FR-446")
 async def test_a_workspace_override_wins_over_the_default(
     database: Database, workspace_id
 ) -> None:
@@ -122,11 +122,11 @@ async def test_a_workspace_override_wins_over_the_default(
     assert resolution.candidates[2].value == 0.10
 
 
-@pytest.mark.req("FR-PLAT-43")
+@pytest.mark.req("FR-446")
 async def test_an_environment_variable_wins_over_a_workspace_override(
     database: Database, workspace_id, monkeypatch
 ) -> None:
-    """The precedence FR-PLAT-43 states, asserted at its most contested point."""
+    """The precedence FR-446 states, asserted at its most contested point."""
     async with database.unit_of_work() as session:
         await _override(session, workspace_id, PSI, 0.2)
     monkeypatch.setenv("GIP_SETTING_VALIDATION_PSI_WARN_THRESHOLD", "0.35")
@@ -138,7 +138,7 @@ async def test_an_environment_variable_wins_over_a_workspace_override(
     assert resolution.candidates[1].value == 0.2
 
 
-@pytest.mark.req("FR-PLAT-44")
+@pytest.mark.req("FR-447")
 async def test_a_workspace_override_of_the_wrong_type_is_refused(
     database: Database, workspace_id
 ) -> None:
@@ -149,7 +149,7 @@ async def test_a_workspace_override_of_the_wrong_type_is_refused(
     assert exc.value.code == "SETTING_INVALID"
 
 
-@pytest.mark.req("FR-PLAT-44")
+@pytest.mark.req("FR-447")
 async def test_a_value_outside_its_constraints_is_refused(
     database: Database, workspace_id
 ) -> None:
@@ -160,7 +160,7 @@ async def test_a_value_outside_its_constraints_is_refused(
     assert exc.value.code == "SETTING_INVALID"
 
 
-@pytest.mark.req("FR-PLAT-44")
+@pytest.mark.req("FR-447")
 async def test_an_undeclared_key_is_refused(database: Database, workspace_id) -> None:
     """Negative: a stored value nothing reads is worse than an error — it looks applied."""
     async with database.unit_of_work() as session:
@@ -169,7 +169,7 @@ async def test_an_undeclared_key_is_refused(database: Database, workspace_id) ->
     assert exc.value.status_code == 404
 
 
-@pytest.mark.req("FR-PLAT-46")
+@pytest.mark.req("FR-449")
 async def test_a_flag_is_off_until_a_workspace_turns_it_on(
     database: Database, workspace_id
 ) -> None:
@@ -186,14 +186,14 @@ async def test_a_flag_is_off_until_a_workspace_turns_it_on(
     assert after.resolved_from is SettingSource.WORKSPACE
 
 
-@pytest.mark.req("FR-PLAT-46")
+@pytest.mark.req("FR-449")
 async def test_a_flag_rejects_a_non_boolean(database: Database, workspace_id) -> None:
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError):
             await svc.set_workspace_setting(session, workspace_id, FLAG, "yes")
 
 
-@pytest.mark.req("FR-PLAT-43")
+@pytest.mark.req("FR-446")
 async def test_resolve_all_returns_every_declared_setting(
     database: Database, workspace_id
 ) -> None:
@@ -202,11 +202,11 @@ async def test_resolve_all_returns_every_declared_setting(
     assert {r.key for r in resolutions} == set(svc.REGISTRY)
 
 
-@pytest.mark.req("FR-PLAT-45")
+@pytest.mark.req("FR-448")
 async def test_updating_a_setting_is_audited_with_its_previous_value(
     database: Database, workspace_id, principal
 ) -> None:
-    """FR-PLAT-31's principle: configuration changes are audited, with what changed."""
+    """FR-431's principle: configuration changes are audited, with what changed."""
     from app.platform import audit
     from model_schema import JobSource
 

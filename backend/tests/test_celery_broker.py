@@ -1,4 +1,4 @@
-"""The broker hop itself (FR-PLAT-22, FR-PLAT-51).
+"""The broker hop itself (FR-422, FR-406).
 
 `test_worker.py` covers the lifecycle without a broker. This covers what only a real
 broker can show: that a relayed outbox row becomes a message, on the right queue, in a
@@ -39,7 +39,7 @@ def celery_app(settings: Settings):
     client.delete(QUEUE, JobQueue.COMPUTE.value)
 
 
-@pytest.mark.req("FR-PLAT-22")
+@pytest.mark.req("FR-422")
 async def test_publisher_puts_a_readable_message_on_the_named_queue(
     celery_app, settings: Settings
 ) -> None:
@@ -92,7 +92,7 @@ async def _drain(database: Database, celery_app: object) -> None:
         pass
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_relay_publishes_a_committed_job_and_marks_it(
     database: Database, celery_app, settings: Settings, workspace_id, principal
 ) -> None:
@@ -124,7 +124,7 @@ async def test_relay_publishes_a_committed_job_and_marks_it(
     assert client.llen(JobQueue.COMPUTE.value) >= 1
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_nothing_is_published_when_the_transaction_rolls_back(
     database: Database, celery_app, settings: Settings, workspace_id, principal
 ) -> None:

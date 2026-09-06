@@ -84,7 +84,7 @@ describe("PartialDependencePanel", () => {
   /**
    * Also mine. `exposure_share` is what the contract calls "the number that says whether a
    * truncated curve is nearly complete or badly so", and `level_cap` cannot be recorded
-   * without it. A truncation reported without it is the unquantified one FR-MODEL-118 forbids.
+   * without it. A truncation reported without it is the unquantified one FR-175 forbids.
    */
   it("says what exposure the omitted levels carry, which decides how bad the truncation is", () => {
     render(PartialDependencePanel, { props: { partialDependence: CAPPED } });

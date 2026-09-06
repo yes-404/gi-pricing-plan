@@ -1,4 +1,4 @@
-"""Paired quantile models — the pairing rules and the lookup (`02` FR-MODEL-78/100).
+"""Paired quantile models — the pairing rules and the lookup (`02` FR-199/200).
 
 Almost every test here is a **prohibition**, and that is the point (`CLAUDE.md` §13). A
 bound that agrees with the model it bounds is a bound; a bound that disagrees is an interval
@@ -62,7 +62,7 @@ register_model_handlers()
 
 @dataclass(frozen=True)
 class _Central:
-    """A central Model plus everything FR-MODEL-78 makes a bound match it on."""
+    """A central Model plus everything FR-199 makes a bound match it on."""
 
     actor: Principal
     id: UUID
@@ -150,12 +150,12 @@ async def _central_model(
 
 
 def _bound_spec(central: _Central, *, alpha: float, ref: str | None = None, **over) -> GbmSpec:
-    """A bound that matches `central` on everything FR-MODEL-78 names, before `over`."""
+    """A bound that matches `central` on everything FR-199 names, before `over`."""
     matching: dict[str, object] = {
         "model_family_slug": central.slug,
         "split_ref": central.split,
         "objective": GbmFunctionRef(kind="custom", ref=ref or central.quantile_ref),
-        # FR-MODEL-44: a custom objective declares the responses it applies to, and a
+        # FR-153: a custom objective declares the responses it applies to, and a
         # column name cannot be checked against that list — so a spec naming one must say
         # what it is modelling. A builtin objective names its own family and needs none.
         "response": ResponseKind.CLAIM_COUNT,
@@ -176,11 +176,11 @@ async def _reserve(database: Database, workspace_id, central: _Central, spec: Gb
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-78 — a bound must match the model it bounds
+# FR-199 — a bound must match the model it bounds
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_matching_bound_is_accepted(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -196,7 +196,7 @@ async def test_a_matching_bound_is_accepted(
     assert should_fit is True
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_bound_on_a_different_dataset_version_is_refused(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -220,7 +220,7 @@ async def test_a_bound_on_a_different_dataset_version_is_refused(
     assert "dataset_version_id" in str(caught.value.detail)
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_bound_with_a_different_factor_set_is_refused(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -237,7 +237,7 @@ async def test_a_bound_with_a_different_factor_set_is_refused(
     assert "factors" in str(caught.value.detail)
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_bound_whose_factors_are_only_reordered_is_accepted(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -258,11 +258,11 @@ async def test_a_bound_whose_factors_are_only_reordered_is_accepted(
     assert should_fit is True
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_bound_in_a_different_model_family_is_refused(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-78 names the family first, and a family is how a reader finds the pair."""
+    """FR-199 names the family first, and a family is how a reader finds the pair."""
     central = await _central_model(database, blob_store, workspace_id)
     with pytest.raises(PlatformError) as caught:
         await _reserve(
@@ -274,11 +274,11 @@ async def test_a_bound_in_a_different_model_family_is_refused(
     assert "model_family_slug" in str(caught.value.detail)
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_bound_fitted_with_a_poisson_objective_is_refused(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-78: a bound is fitted **with the `quantile` template**, and this is that.
+    """FR-199: a bound is fitted **with the `quantile` template**, and this is that.
 
     The sharpest of these rules and the one most easily left out: a bound whose objective is
     `count:poisson` estimates the *mean*, not a quantile. Every other rule would pass — same
@@ -299,7 +299,7 @@ async def test_a_bound_fitted_with_a_poisson_objective_is_refused(
     assert "quantile" in str(caught.value.detail)
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_bound_whose_objective_alpha_disagrees_with_its_own_is_refused(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -319,11 +319,11 @@ async def test_a_bound_whose_objective_alpha_disagrees_with_its_own_is_refused(
     assert "0.25" in str(caught.value.detail)
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 async def test_a_second_bound_on_the_same_side_is_refused(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-100(iv). One lower and one upper, so the response's `level` is unambiguous.
+    """FR-200(iv). One lower and one upper, so the response's `level` is unambiguous.
 
     Two lower bounds at 0.05 and 0.10 satisfy every other rule, and the prediction path
     would have to choose between them with nothing in either artifact saying which the
@@ -340,7 +340,7 @@ async def test_a_second_bound_on_the_same_side_is_refused(
     assert "lower bound" in str(caught.value.detail)
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 async def test_the_opposite_side_is_still_allowed_after_one_is_taken(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -354,7 +354,7 @@ async def test_the_opposite_side_is_still_allowed_after_one_is_taken(
     assert should_fit is True
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 async def test_a_bound_naming_a_model_that_does_not_exist_is_a_404(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -375,11 +375,11 @@ async def test_a_bound_naming_a_model_that_does_not_exist_is_a_404(
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-78 — finding the pair
+# FR-199 — finding the pair
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_the_bounds_come_back_lower_first(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -405,14 +405,14 @@ async def test_the_bounds_come_back_lower_first(
     assert alphas == [0.05, 0.95]
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_model_with_no_bounds_finds_none(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """The common case, and the one that must not be an error.
 
     Almost no model is bounded, so `[]` is the normal answer and the prediction path reads
-    it as FR-MODEL-77's `no_interval_models_fitted` rather than as a failure.
+    it as FR-198's `no_interval_models_fitted` rather than as a failure.
     """
     central = await _central_model(database, blob_store, workspace_id)
     async with database.unit_of_work() as session:
@@ -424,7 +424,7 @@ async def test_a_model_with_no_bounds_finds_none(
         )
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_the_lookup_does_not_reach_another_models_bounds(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -463,7 +463,7 @@ def _alpha_of(row: ModelRow) -> float:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-78 — crossing, detected when the second bound is fitted
+# FR-199 — crossing, detected when the second bound is fitted
 # --------------------------------------------------------------------------------------
 
 
@@ -515,7 +515,7 @@ async def _gbm_diagnostics_of(database: Database, model_id: UUID):
     return diagnostics_service.to_diagnostics(stored).gbm
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_only_the_second_bound_of_a_pair_records_crossing(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -552,14 +552,14 @@ async def test_only_the_second_bound_of_a_pair_records_crossing(
     assert crossing.rows_crossing <= crossing.rows_checked
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_an_ordinary_gbm_records_no_crossing_block(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """A model that is not a bound carries `None`, not a zeroed block.
 
     A zeroed block would read as "checked, and they did not cross", which is a measurement
-    this model never made — the same defect FR-MODEL-50's `double_lift` and
+    this model never made — the same defect FR-171's `double_lift` and
     `Diagnostics.backtest` were removed for.
     """
     model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
@@ -568,7 +568,7 @@ async def test_an_ordinary_gbm_records_no_crossing_block(
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-77/78/100/101 — what a prediction says about a bounded GBM
+# FR-198/199/200/201 — what a prediction says about a bounded GBM
 # --------------------------------------------------------------------------------------
 
 
@@ -637,8 +637,8 @@ async def _predict(database: Database, blob_store: BlobStore, workspace_id, cent
         )
 
 
-@pytest.mark.req("FR-MODEL-78")
-@pytest.mark.req("FR-MODEL-101")
+@pytest.mark.req("FR-199")
+@pytest.mark.req("FR-201")
 async def test_a_gbm_with_a_complete_pair_returns_an_interval(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -646,7 +646,7 @@ async def test_a_gbm_with_a_complete_pair_returns_an_interval(
 
     `level` is the spread between the alphas — 0.90 for a 0.05/0.95 pair — and not
     `CONFIDENCE_LEVEL`, which describes a covariance matrix this interval never used.
-    `basis` is absent for the same reason: there is no matrix to describe (FR-MODEL-101).
+    `basis` is absent for the same reason: there is no matrix to describe (FR-201).
     """
     central, lower_id, upper_id = await _fitted_pair(database, blob_store, workspace_id)
     prediction = await _predict(database, blob_store, workspace_id, central, central.id)
@@ -661,13 +661,13 @@ async def test_a_gbm_with_a_complete_pair_returns_an_interval(
     assert all(row.lower is not None and row.upper is not None for row in prediction.rows)
 
 
-@pytest.mark.req("FR-MODEL-77")
+@pytest.mark.req("FR-198")
 async def test_a_gbm_with_only_one_bound_says_no_interval_models_fitted(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """Half a pair is not a pair, and it needs no new vocabulary to say so.
 
-    FR-MODEL-77's set is closed; the absence of a *pair* is exactly what
+    FR-198's set is closed; the absence of a *pair* is exactly what
     `no_interval_models_fitted` already says, so a lone bound reuses it rather than earning
     a fifth reason.
     """
@@ -681,11 +681,11 @@ async def test_a_gbm_with_only_one_bound_says_no_interval_models_fitted(
     assert all(row.lower is None for row in prediction.rows)
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 async def test_an_approved_model_whose_bounds_are_only_fitted_says_not_approved(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-100(ii), and the first time this reason has been reachable at all.
+    """FR-200(ii), and the first time this reason has been reachable at all.
 
     The bounds are left at `fitted` while the model they bound is `approved`. Quoting them
     would put a reviewed and an unreviewed number on one line with nothing separating them.
@@ -697,11 +697,11 @@ async def test_an_approved_model_whose_bounds_are_only_fitted_says_not_approved(
     assert prediction.uncertainty.reason is UnavailableReason.INTERVAL_MODELS_NOT_APPROVED
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 async def test_an_approved_model_with_approved_bounds_still_gets_its_interval(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """The other half of FR-MODEL-100(ii), so the rule cannot be satisfied by refusing.
+    """The other half of FR-200(ii), so the rule cannot be satisfied by refusing.
 
     Without this, "the bounds must be at least as reviewed" and "an approved model never
     gets an interval" pass the same tests.
@@ -714,15 +714,15 @@ async def test_an_approved_model_with_approved_bounds_still_gets_its_interval(
     assert prediction.uncertainty.kind is UncertaintyKind.QUANTILE_PAIR_INTERVAL
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 async def test_a_superseded_model_reports_its_bounds_stale(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-100(iii), and the fourth reason made reachable.
+    """FR-200(iii), and the fourth reason made reachable.
 
     `SCOREABLE_MODEL_STATUSES` admits `superseded`, so this model answers a prediction and
     its bounds are quotable. Quoting them without saying the family has moved past this
-    version is the silence FR-MODEL-77 exists to refuse.
+    version is the silence FR-198 exists to refuse.
     """
     central, _, _ = await _fitted_pair(database, blob_store, workspace_id)
     await _set_status(database, central.id, ModelStatus.SUPERSEDED)
@@ -731,7 +731,7 @@ async def test_a_superseded_model_reports_its_bounds_stale(
     assert prediction.uncertainty.reason is UnavailableReason.INTERVAL_MODELS_STALE
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 async def test_staleness_outranks_approval_because_it_is_the_more_useful_thing_to_say(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -748,11 +748,11 @@ async def test_staleness_outranks_approval_because_it_is_the_more_useful_thing_t
     assert prediction.uncertainty.reason is UnavailableReason.INTERVAL_MODELS_STALE
 
 
-@pytest.mark.req("FR-MODEL-78")
+@pytest.mark.req("FR-199")
 async def test_a_crossing_pair_is_refused_rather_than_reordered(
     database: Database, blob_store: BlobStore, workspace_id, monkeypatch
 ) -> None:
-    """FR-MODEL-78's "never silently reordered", at the point a caller would see it.
+    """FR-199's "never silently reordered", at the point a caller would see it.
 
     **The crossing is injected, and deliberately so.** Two quantile fits at 0.05 and 0.95
     over this fixture's 400 rows do not cross, and manufacturing data that makes them cross
@@ -778,17 +778,17 @@ async def test_a_crossing_pair_is_refused_rather_than_reordered(
     assert "1.5" in str(caught.value.detail)
 
 
-@pytest.mark.req("FR-MODEL-87")
-@pytest.mark.req("FR-MODEL-124")
+@pytest.mark.req("FR-207")
+@pytest.mark.req("FR-180")
 def test_every_unavailable_reason_is_returned_by_the_platform() -> None:
-    """FR-MODEL-87's staging rule, as a check rather than as a sentence.
+    """FR-207's staging rule, as a check rather than as a sentence.
 
     Two of these were declared and unreachable until this slice, and the docstrings saying
     so have been removed. This is what stops that removal being a claim: if a member is ever
     added, or one stops being produced, the set stops matching and this fails.
 
     It fired as designed on 2026-08-23: `MODEL_TYPE_HAS_NO_INTERVAL` was added for the EBM
-    predict arm (FR-MODEL-124) and this test failed until the new member was listed here.
+    predict arm (FR-180) and this test failed until the new member was listed here.
     The EBM arm in `app.platform.prediction` returns it, so listing it is the resolution
     rather than a weakening — `backend/tests/test_prediction.py` holds the test that shows
     a scored EBM actually carries it.

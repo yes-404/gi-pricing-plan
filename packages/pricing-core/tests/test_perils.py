@@ -5,7 +5,7 @@ is why almost every test here is a refusal.
 
 Two are the reason the module exists rather than being a `.sum()` at the call site:
 
-* **restoration happens before the comparison** (FR-MODEL-74). A capped model reconciled
+* **restoration happens before the comparison** (FR-128). A capped model reconciled
   against uncapped observed data reads as a modelling error unless its mean is put back
   first, and `test_restoration_is_what_makes_a_capped_peril_reconcile` is that sentence
   as an executable one: the same peril fails without it and passes with it.
@@ -63,7 +63,7 @@ def _windscreen(burning_cost: list[float], **kw: object) -> PerilPrediction:
 # -- assembly ------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_frequency_times_severity_summed_over_perils() -> None:
     assembled = assemble_risk_premium(
         [_ad([0.1, 0.2], [20_000.0, 10_000.0]), _windscreen([500.0, 400.0])]
@@ -73,7 +73,7 @@ def test_frequency_times_severity_summed_over_perils() -> None:
     assert assembled["risk_premium"].to_list() == [2_500.0, 2_400.0]
 
 
-@pytest.mark.req("FR-MODEL-74")
+@pytest.mark.req("FR-128")
 def test_a_capped_peril_is_restored_before_it_is_summed() -> None:
     assembled = assemble_risk_premium(
         [_ad([0.1], [20_000.0], large_loss=_capped("1.10"))]
@@ -81,7 +81,7 @@ def test_a_capped_peril_is_restored_before_it_is_summed() -> None:
     assert assembled["peril_AD"].to_list() == [2_200.0]
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 def test_a_flat_loading_multiplies_the_peril() -> None:
     flat = LargeLossTreatment(
         kind=LargeLossKind.FLAT_LOADING,
@@ -92,7 +92,7 @@ def test_a_flat_loading_multiplies_the_peril() -> None:
     assert assembled["peril_WINDSCREEN"].to_list() == [1_050.0]
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 def test_separate_model_refuses_by_name() -> None:
     """The one treatment this slice does not compute. It needs an excess-layer model's own
     predictions, and reconciling as though it were `none` would under-state the premium by
@@ -109,19 +109,19 @@ def test_separate_model_refuses_by_name() -> None:
     assert "separate_model" in str(refused.value)
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_perils_of_different_lengths_are_refused() -> None:
     with pytest.raises(ModellingError, match="rows"):
         assemble_risk_premium([_ad([0.1, 0.2], [1.0, 2.0]), _windscreen([500.0])])
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_a_structure_with_no_perils_assembles_nothing() -> None:
     with pytest.raises(ModellingError, match="no perils"):
         assemble_risk_premium([])
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_a_frequency_severity_peril_without_severity_is_refused() -> None:
     """The prediction, not the contract: `PerilComponent` refuses a missing *model*, and
     this refuses a missing *array*. A frequency alone would sum as a cost."""
@@ -137,13 +137,13 @@ def test_a_frequency_severity_peril_without_severity_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_a_duplicate_peril_is_refused() -> None:
     with pytest.raises(ModellingError, match="AD"):
         assemble_risk_premium([_ad([0.1], [1.0]), _ad([0.2], [2.0])])
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_a_negative_prediction_is_refused() -> None:
     """A negative expected cost is not a risk premium, and summed with positives it hides."""
     with pytest.raises(ModellingError, match="negative"):
@@ -153,7 +153,7 @@ def test_a_negative_prediction_is_refused() -> None:
 # -- reconciliation ------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_reconciliation_compares_exposure_weighted_means() -> None:
     assembled = assemble_risk_premium([_windscreen([100.0, 300.0])])
     result = reconcile(
@@ -169,7 +169,7 @@ def test_reconciliation_compares_exposure_weighted_means() -> None:
     assert result.status == "pass"
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_outside_tolerance_fails_and_says_by_how_much() -> None:
     assembled = assemble_risk_premium([_windscreen([100.0, 100.0])])
     result = reconcile(
@@ -183,9 +183,9 @@ def test_outside_tolerance_fails_and_says_by_how_much() -> None:
     assert result.ratio < 1
 
 
-@pytest.mark.req("FR-MODEL-74")
+@pytest.mark.req("FR-128")
 def test_restoration_is_what_makes_a_capped_peril_reconcile() -> None:
-    """FR-MODEL-74 in one test: the same capped model against the same uncapped observed
+    """FR-128 in one test: the same capped model against the same uncapped observed
     data, failing without its restoration loading and passing with it."""
     observed = np.array([220.0, 220.0])
     exposure = np.array([1.0, 1.0])
@@ -209,7 +209,7 @@ def test_restoration_is_what_makes_a_capped_peril_reconcile() -> None:
     assert restored.status == "pass"
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_the_per_peril_figures_sum_to_the_total_exactly() -> None:
     """Rounding three perils and the total independently loses a penny about half the time,
     and the artifact's own invariant would then reject a correct reconciliation."""
@@ -237,7 +237,7 @@ def test_the_per_peril_figures_sum_to_the_total_exactly() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_zero_exposure_is_refused() -> None:
     assembled = assemble_risk_premium([_windscreen([100.0])])
     with pytest.raises(ModellingError, match="exposure"):
@@ -250,9 +250,9 @@ def test_zero_exposure_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_a_treatment_missing_from_the_map_is_refused() -> None:
-    """FR-MODEL-74 requires the treatment to be stated beside the number. A peril whose
+    """FR-128 requires the treatment to be stated beside the number. A peril whose
     treatment nobody supplied would be reported as `none`, which is a claim."""
     assembled = assemble_risk_premium([_windscreen([100.0])])
     with pytest.raises(ModellingError, match="WINDSCREEN"):
@@ -265,7 +265,7 @@ def test_a_treatment_missing_from_the_map_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_a_non_positive_tolerance_is_refused() -> None:
     assembled = assemble_risk_premium([_windscreen([100.0])])
     with pytest.raises(ModellingError, match="tolerance"):
@@ -278,7 +278,7 @@ def test_a_non_positive_tolerance_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_nothing_observed_is_refused_rather_than_divided_by() -> None:
     assembled = assemble_risk_premium([_windscreen([100.0])])
     with pytest.raises(ModellingError, match="observed"):

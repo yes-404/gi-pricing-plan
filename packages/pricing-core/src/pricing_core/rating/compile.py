@@ -1,10 +1,10 @@
 """Save-time validation of a `RatingAlgorithm` (03 §5.2, slice W9-2).
 
 `validate_algorithm` returns a list of `ValidationIssue`s for everything the shape
-itself cannot refuse: result-type compatibility (FR-RATE-13), deterministic evaluation
-(FR-RATE-5) and the four W8-confirmed boundary guards — integer minor units
-(FR-RATE-56), guarded division (FR-RATE-57), the decimal scale cap (FR-RATE-58) and
-the engine vocabulary (FR-RATE-59).
+itself cannot refuse: result-type compatibility (FR-227), deterministic evaluation
+(FR-216) and the four WK-668-confirmed boundary guards — integer minor units
+(FR-273), guarded division (FR-274), the decimal scale cap (FR-275) and
+the engine vocabulary (FR-276).
 
 The graph invariants (acyclic, fully connected, every `consumes` resolved) are enforced
 by the `RatingAlgorithm` shape's own validator (W9-1); the API maps those refusals to
@@ -36,9 +36,9 @@ from model_schema.rating import (
 from model_schema.refs import ArtifactRef
 
 _NON_DETERMINISTIC: tuple[str, ...] = ("now(", "random(", "rand(", "today(", "clock(")
-#: FR-RATE-30: a quote timestamp is an input; `now()` does not exist.
+#: FR-246: a quote timestamp is an input; `now()` does not exist.
 _GUARD_MARKERS: tuple[str, ...] = ("!= 0", "> 0", "== 0", "< 0", "?:", "coalesce(", "if(", "guard")
-#: FR-RATE-58 / W8 S1: `rust_decimal` caps the scale at 28.
+#: FR-275 / WK-668 S1: `rust_decimal` caps the scale at 28.
 _SCALE_CAP = 28
 _DECIMAL_LITERAL = re.compile(r"\b\d+\.\d+\b")
 #: The numeric family — values that may legitimately cross where a number is expected.
@@ -65,7 +65,7 @@ def _as_list(value: str | list[str]) -> list[str]:
 
 
 def assert_integer_minor_round_trip() -> None:
-    """FR-RATE-56: money crosses the engine boundary as integer minor units.
+    """FR-273: money crosses the engine boundary as integer minor units.
 
     Integers up to 2^53 are exactly representable in the engine's `float64` binding
     (≈ £90 trillion in pence), so the integer form survives the crossing where the
@@ -76,7 +76,7 @@ def assert_integer_minor_round_trip() -> None:
     for value in (1, 36120, 999_999_999, 2**53 - 1):
         assert int(float(value)) == value, (
             f"integer minor unit {value} does not round-trip through the engine's "
-            "float64 binding (FR-RATE-56)"
+            "float64 binding (FR-273)"
         )
 
 
@@ -111,7 +111,7 @@ def _compatible(producer: str, declared: str) -> bool:
 
 
 def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
-    """FR-RATE-13: every declared output's type is compatible with its producing step."""
+    """FR-227: every declared output's type is compatible with its producing step."""
     issues: list[ValidationIssue] = []
     types = _producer_types(algo)
     output_by_name = {output.name: output for output in algo.outputs}
@@ -129,7 +129,7 @@ def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
                     code="RATING_TYPE_MISMATCH",
                     message=(
                         f"output {step.output_name!r} is declared {declared.type!r} but "
-                        f"its producing step yields {producer_type!r} (FR-RATE-13)"
+                        f"its producing step yields {producer_type!r} (FR-227)"
                     ),
                     step_id=step.step_id,
                     field="outputs",
@@ -139,7 +139,7 @@ def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
 
 
 def _check_determinism(algo: RatingAlgorithm) -> list[ValidationIssue]:
-    """FR-RATE-5/30: evaluation is deterministic — no wall-clock, no randomness."""
+    """FR-216/246: evaluation is deterministic — no wall-clock, no randomness."""
     issues: list[ValidationIssue] = []
     for step in algo.steps:
         if not isinstance(step, RatingExpressionStep):
@@ -152,7 +152,7 @@ def _check_determinism(algo: RatingAlgorithm) -> list[ValidationIssue]:
                         code="EXPRESSION_NON_DETERMINISTIC",
                         message=(
                             f"expression calls non-deterministic {marker.strip('(')!r} "
-                            "(FR-RATE-5/30); a quote timestamp is an input"
+                            "(FR-216/246); a quote timestamp is an input"
                         ),
                         step_id=step.step_id,
                         field="expr",
@@ -163,9 +163,9 @@ def _check_determinism(algo: RatingAlgorithm) -> list[ValidationIssue]:
 
 
 def _check_division_guards(algo: RatingAlgorithm) -> list[ValidationIssue]:
-    """FR-RATE-57: every division in a rateable path carries an explicit zero guard.
+    """FR-274: every division in a rateable path carries an explicit zero guard.
 
-    W8 S1 found the engine returns `null` on division by zero and raises a `vmError`
+    WK-668 S1 found the engine returns `null` on division by zero and raises a `vmError`
     only when the null is used — so an unguarded division is a silent hazard. This is
     the save-time heuristic: an expression containing `/` must also carry a guard
     construct. The authoritative check is re-run at bundle compilation (W9-3).
@@ -182,7 +182,7 @@ def _check_division_guards(algo: RatingAlgorithm) -> list[ValidationIssue]:
                 ValidationIssue(
                     code="EXPRESSION_UNGUARDED_DIVISION",
                     message=(
-                        "expression divides without an explicit zero guard (FR-RATE-57); "
+                        "expression divides without an explicit zero guard (FR-274); "
                         "the engine returns null on division by zero and raises only on use"
                     ),
                     step_id=step.step_id,
@@ -193,7 +193,7 @@ def _check_division_guards(algo: RatingAlgorithm) -> list[ValidationIssue]:
 
 
 def _check_scale_cap(algo: RatingAlgorithm) -> list[ValidationIssue]:
-    """FR-RATE-58: no literal, constant, or bound needs a decimal scale beyond 28."""
+    """FR-275: no literal, constant, or bound needs a decimal scale beyond 28."""
     issues: list[ValidationIssue] = []
     for step in algo.steps:
         if not isinstance(step, RatingExpressionStep):
@@ -206,7 +206,7 @@ def _check_scale_cap(algo: RatingAlgorithm) -> list[ValidationIssue]:
                         code="EXPRESSION_SCALE_OVERFLOW",
                         message=(
                             f"literal {match.group(0)!r} needs {len(fraction)} decimal "
-                            f"places, beyond rust_decimal's cap of {_SCALE_CAP} (FR-RATE-58)"
+                            f"places, beyond rust_decimal's cap of {_SCALE_CAP} (FR-275)"
                         ),
                         step_id=step.step_id,
                         field="expr",
@@ -221,7 +221,7 @@ def _check_scale_cap(algo: RatingAlgorithm) -> list[ValidationIssue]:
                         code="EXPRESSION_SCALE_OVERFLOW",
                         message=(
                             f"input {field.name!r} {bound_name} needs more than "
-                            f"{_SCALE_CAP} decimal places (FR-RATE-58)"
+                            f"{_SCALE_CAP} decimal places (FR-275)"
                         ),
                         field=f"input_contract.{bound_name}",
                     )
@@ -230,9 +230,9 @@ def _check_scale_cap(algo: RatingAlgorithm) -> list[ValidationIssue]:
 
 
 def _check_vocabulary(algo: RatingAlgorithm) -> list[ValidationIssue]:
-    """FR-RATE-59: every expression compiles against the engine's real vocabulary.
+    """FR-276: every expression compiles against the engine's real vocabulary.
 
-    W8 S1 verified the engine directly; this check does the same thing on every saved
+    WK-668 S1 verified the engine directly; this check does the same thing on every saved
     expression — `zen.compile_expression` fails on a function the engine does not have
     (including the two-argument `min`/`max` forms the spec's own list names).
     """
@@ -248,7 +248,7 @@ def _check_vocabulary(algo: RatingAlgorithm) -> list[ValidationIssue]:
                     code="EXPRESSION_INVALID_VOCABULARY",
                     message=(
                         f"expression does not compile against the engine: {exc} "
-                        "(FR-RATE-59)"
+                        "(FR-276)"
                     ),
                     step_id=step.step_id,
                     field="expr",
@@ -258,9 +258,9 @@ def _check_vocabulary(algo: RatingAlgorithm) -> list[ValidationIssue]:
 
 
 def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]:
-    """Save-time validation of a `RatingAlgorithm` (03 §5.2, FR-RATE-13/5/56/57/58/59).
+    """Save-time validation of a `RatingAlgorithm` (03 §5.2, FR-227/216/273/274/275/276).
 
-    The graph invariants (FR-RATE-1) are enforced by the `RatingAlgorithm` shape's own
+    The graph invariants (FR-212) are enforced by the `RatingAlgorithm` shape's own
     validator; the API maps those refusals to `RATING_GRAPH_CYCLIC` and
     `RATING_GRAPH_UNRESOLVED_REF`. This function returns every issue the expression text
     and the engine can name.
@@ -275,28 +275,28 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]:
 
 
 # ---------------------------------------------------------------------------
-# Bundle compilation (03 §4.3, FR-RATE-24/25, slice W9-3).
+# Bundle compilation (03 §4.3, FR-239/240, slice W9-3).
 #
 # DP1 (ruled 2026-08-27): the Bundle is the JDM graph plus the pinned artifacts'
 # resolved payloads, wrapped by the pricing-core facade. The content hash covers the
-# graph and the pinned artifact refs, so it is reproducible from the pins (FR-RATE-24).
+# graph and the pinned artifact refs, so it is reproducible from the pins (FR-239).
 # The Bundle is self-contained: sufficient to score with no database access.
 # ---------------------------------------------------------------------------
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 
-# Ruling 22 (2026-08-29, `docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`):
+# RL-856 (2026-08-29, `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`):
 # `rate_table` has no status column to read a real maturity from at all —
 # `RateTableVersionRow` carries none — while `06` §2's Governed Artifact row still calls a
-# Rate Table Version approval-bearing and FR-OVR-14 requires every pin to be at least as
+# Rate Table Version approval-bearing and FR-20 requires every pin to be at least as
 # mature as the referencing artifact's own state. Exempting the type from the floor below,
 # rather than inventing an "approved" the row cannot back, is declared rather than silent,
-# and it is provisional: OQ-RATE-7 asks whether `06`'s governance claim or the rate-table
+# and it is provisional: OQ-620 asks whether `06`'s governance claim or the rate-table
 # lifecycle (`03` §3.3, the schema) is the side that needs to change. Membership is
 # expected to be temporary — `test_rate_table_version_row_has_no_status_column`
 # (`backend/tests/test_rating_version_compile.py`) fails the day a `status` column is
 # added to `RateTableVersionRow`, and names this record for revisiting.
-# Ruling 28 (2026-08-29, `docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`):
+# RL-859 (2026-08-29, `docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md`):
 # `rating_algorithm` joins the exemption for the same shape of reason as `rate_table` —
 # `RatingAlgorithmRow` (`backend/src/app/db/models.py`) carries no `status` column, so
 # the resolver has nothing real to report and now returns the `"no_maturity_concept"`
@@ -324,15 +324,15 @@ class ArtifactResolver(Protocol):
     """Resolves a pinned artifact to its payload and maturity (the DB-backed half).
 
     `compile_bundle` never touches a database; the caller supplies a resolver that
-    does. This keeps `pricing-core` standalone (ADR-0001).
+    does. This keeps `pricing-core` standalone (ADR-703).
     """
 
     async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact: ...
 
 
 class JdmGraph(BaseModel):
-    """The algorithm translated to pricing-core's own intermediate graph shape (ADR-0004,
-    DP1) — **not** the engine's wire shape (corrected W11 Task 1.3, `runtime.py`'s
+    """The algorithm translated to pricing-core's own intermediate graph shape (ADR-706,
+    DP1) — **not** the engine's wire shape (corrected WK-671 Task 1.3, `runtime.py`'s
     `to_wire`).
 
     Each step becomes one entry in `nodes`, keyed by `step_id`, carrying its ZEN-usable
@@ -355,10 +355,10 @@ class JdmGraph(BaseModel):
 
 
 def to_jdm(algo: RatingAlgorithm) -> JdmGraph:
-    """Translate a `RatingAlgorithm` to pricing-core's own `JdmGraph` (ADR-0004) — the
+    """Translate a `RatingAlgorithm` to pricing-core's own `JdmGraph` (ADR-706) — the
     step towards the engine's wire shape, not that shape itself. See `JdmGraph`'s own
     docstring: `pricing_core.rating.runtime.to_wire` is what a live `zen.ZenEngine` call
-    actually needs, verified rather than assumed (W11 Task 1.3)."""
+    actually needs, verified rather than assumed (WK-671 Task 1.3)."""
     nodes: dict[str, dict[str, Any]] = {}
     for step in algo.steps:
         step_dump = step.model_dump()
@@ -383,10 +383,10 @@ def to_jdm(algo: RatingAlgorithm) -> JdmGraph:
 
 
 class Bundle(BaseModel):
-    """A self-contained compiled rating bundle (03 §4.3, FR-RATE-24).
+    """A self-contained compiled rating bundle (03 §4.3, FR-239).
 
     `graph` and `resolved_payloads` are sufficient to score with no database access
-    (NFR-RATE-3); `content_hash` is reproducible from the pins and the graph.
+    (NFR-491); `content_hash` is reproducible from the pins and the graph.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -400,11 +400,11 @@ class Bundle(BaseModel):
 
 
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
-    """A reproducible content hash from the graph and the pins (FR-RATE-24).
+    """A reproducible content hash from the graph and the pins (FR-239).
 
     The hash covers the graph and the pinned artifact references, excluding `compiled_at`
     and any prior `content_hash` — hashing a timestamp would break reproducibility. Per
-    DP1 and FR-RATE-24, the hash is reproducible from the pins and the graph (03 §5.2,
+    DP1 and FR-239, the hash is reproducible from the pins and the graph (03 §5.2,
     corrected 2026-08-27, F-W9-3-2).
     """
     canonical = json.dumps(
@@ -420,29 +420,29 @@ def _raise_named(code: str, message: str) -> NoReturn:
 
 
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
-    """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-RATE-24/25).
+    """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
     Validates the whole structure: the algorithm's DAG, references, types, constraints
     and boundary guards (re-checked via `validate_algorithm`), the pins resolve to
-    `approved` or better (FR-OVR-14), every `model_call` mode equals the version's
-    `model_reference_mode` (FR-RATE-60), and no pinned custom objective is unapproved.
+    `approved` or better (FR-20), every `model_call` mode equals the version's
+    `model_reference_mode` (FR-223), and no pinned custom objective is unapproved.
     Raises `ValueError` named with the first failure's code.
     """
     if version.algorithm_ref is None:
         _raise_named(
             "RATING_VERSION_UNPINNED",
-            "the rating version has no algorithm_ref (FR-RATE-22)",
+            "the rating version has no algorithm_ref (FR-237)",
         )
     if version.pins is None:
         _raise_named(
             "RATING_VERSION_UNPINNED",
-            "the rating version has no pins (FR-RATE-22)",
+            "the rating version has no pins (FR-237)",
         )
 
     resolved_algorithm = await resolver.resolve(version.algorithm_ref)
     algorithm = RatingAlgorithm.model_validate(resolved_algorithm.payload)
 
-    # Ruling 28: FR-RATE-25 clause (2) ("all references resolvable and at a sufficient
+    # RL-859: FR-240 clause (2) ("all references resolvable and at a sufficient
     # maturity") named four of five pin kinds — the loop below — and left the algorithm
     # itself unchecked. Checked here, at the point it is already resolved, rather than
     # added to `all_refs`: that list is resolved a second time below, and
@@ -452,7 +452,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         _raise_named(
             "PIN_NOT_APPROVED",
             f"{version.algorithm_ref} is {resolved_algorithm.status!r}, not approved or "
-            "better (FR-OVR-14)",
+            "better (FR-20)",
         )
 
     issues = validate_algorithm(algorithm)
@@ -473,7 +473,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         if not exempt and resolved.status not in _APPROVED_OR_BETTER:
             _raise_named(
                 "PIN_NOT_APPROVED",
-                f"{ref} is {resolved.status!r}, not approved or better (FR-OVR-14)",
+                f"{ref} is {resolved.status!r}, not approved or better (FR-20)",
             )
         payloads[str(ref)] = resolved.payload
 

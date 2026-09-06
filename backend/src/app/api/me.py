@@ -1,4 +1,4 @@
-"""`GET /api/v1/me` — who am I, and what may I do (`06` §5.1, FR-GOV-2).
+"""`GET /api/v1/me` — who am I, and what may I do (`06` §5.1, FR-343).
 
 > The frontend hides what a user cannot do; it never *enforces* it.
 
@@ -61,7 +61,7 @@ class RoleAssignmentView(BaseModel):
 
 
 class WorkspaceMembership(BaseModel):
-    """One workspace this principal may act in, named (FR-PLAT-62, FR-PLAT-63)."""
+    """One workspace this principal may act in, named (FR-395, FR-396)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -71,7 +71,7 @@ class WorkspaceMembership(BaseModel):
 
 
 class SwitchWorkspaceRequest(BaseModel):
-    """The workspace a principal chooses to act in (FR-PLAT-63's fourth obligation)."""
+    """The workspace a principal chooses to act in (FR-396's fourth obligation)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -97,7 +97,7 @@ class Me(BaseModel):
     workspaces: tuple[WorkspaceMembership, ...] = Field(
         default=(),
         description="Every workspace this principal is a member of, each named. A principal "
-        "with more than one names its choice in the `Workspace-Id` header (FR-PLAT-65); this "
+        "with more than one names its choice in the `Workspace-Id` header (FR-397); this "
         "is the list that choice is made from.",
     )
 
@@ -113,7 +113,7 @@ async def get_me(caller: CallerDep, database: DatabaseDep) -> Me:
             session,
             workspace_id=caller.workspace_id,
             principal=caller.principal,
-            # The same set the enforcement uses (Ruling 38). `effective_permissions` is
+            # The same set the enforcement uses (RL-924). `effective_permissions` is
             # deliberately one computation for both the UI and the gate — omitting the
             # credential's own grants here would have `/me` under-report what its caller
             # may actually do, which is the mirror of the control-then-refused defect the
@@ -134,7 +134,7 @@ async def get_me(caller: CallerDep, database: DatabaseDep) -> Me:
 
         # A Service Account has no `workspace_members` row — its workspace comes from the
         # account itself — so this list is empty for one. That is correct rather than a
-        # gap: FR-PLAT-65 says a Service Account never sends the header, because it has
+        # gap: FR-397 says a Service Account never sends the header, because it has
         # exactly one workspace by construction and nothing to choose between.
         memberships = (
             (
@@ -187,7 +187,7 @@ async def list_workspaces(
 ) -> tuple[WorkspaceMembership, ...]:
     # The same join the `/me` memberships query runs (above), keyed on
     # identity.principal.id and ordered by name — but deliberately NOT scoped: this is the
-    # list a first selection is made from, and there is no selection yet (FR-PLAT-63's
+    # list a first selection is made from, and there is no selection yet (FR-396's
     # second amendment, PR #237). A Service Account has no `workspace_members` row, so the
     # list is empty for one — the designed state, not an error (see above).
     async with database.session() as session:
@@ -225,10 +225,10 @@ async def switch_workspace(
         str | None, Header(alias="Workspace-Id", description=WORKSPACE_ID_DESCRIPTION)
     ] = None,
 ) -> WorkspaceMembership:
-    """A switch is a human act, and it is audited into both chains (OQ-PLAT-12).
+    """A switch is a human act, and it is audited into both chains (OQ-652).
 
     The absent header is the first selection after login: there is no chain to leave, and
-    `record_switch` takes `left=None` for it (FR-PLAT-63's fourth obligation). A malformed
+    `record_switch` takes `left=None` for it (FR-396's fourth obligation). A malformed
     header is a typed platform refusal, never a bare `422` — the header parses as `str`
     then `UUID`, mirroring `deps.py`'s handling of the same header.
     """
@@ -245,7 +245,7 @@ async def switch_workspace(
             ) from exc
 
     # The choice is checked against the memberships the platform holds, never trusted
-    # (FR-PLAT-65) — for both the workspace left and the workspace entered.
+    # (FR-397) — for both the workspace left and the workspace entered.
     if body.workspace_id not in identity.workspaces:
         raise PlatformError(
             "WORKSPACE_SCOPE_DENIED",
@@ -253,7 +253,7 @@ async def switch_workspace(
             403,
             "The requested workspace is not a membership of this principal. The "
             "selection is checked against the memberships the platform holds "
-            "(07 FR-PLAT-65); it is never taken on trust.",
+            "(07 FR-397); it is never taken on trust.",
         )
     if left is not None and left not in identity.workspaces:
         raise PlatformError(
@@ -262,7 +262,7 @@ async def switch_workspace(
             403,
             "The Workspace-Id header names a workspace this principal is not a member "
             "of. The selection is checked against the memberships the platform holds "
-            "(07 FR-PLAT-65); it is never taken on trust.",
+            "(07 FR-397); it is never taken on trust.",
         )
 
     async with database.unit_of_work() as session:

@@ -1,4 +1,4 @@
-"""Requesting, recording and reading a backtest (`02` FR-MODEL-57, §4.12, §5.1).
+"""Requesting, recording and reading a backtest (`02` FR-187, §4.12, §5.1).
 
 `pricing-core` owns the maths. This owns the rules that make a backtest mean what its name
 says, and there are two that carry the weight:
@@ -140,7 +140,7 @@ async def _refuse_the_data_it_learned_on(
 
     The parent case alone would be a check that looks right and misses the likeliest
     mistake. A model's `dataset_version_id` is the parent; the frames it was fitted and
-    judged on are *derived versions* with ids of their own (`01` FR-DATA-36), so a request
+    judged on are *derived versions* with ids of their own (`01` FR-76), so a request
     naming the holdout passes a parent-only check and produces the fit-time holdout figure
     under a heading that says out-of-time.
     """
@@ -152,7 +152,7 @@ async def _refuse_the_data_it_learned_on(
             409,
             f"{label} was fitted on this version. A model measured on its own training "
             "data reports how well it memorised, and that number renders identically to "
-            "out-of-time performance (`02` §2, FR-MODEL-57).",
+            "out-of-time performance (`02` §2, FR-187).",
         )
 
     if spec.split_ref is None:
@@ -168,7 +168,7 @@ async def _refuse_the_data_it_learned_on(
             "A backtest cannot run on a part of the split the model was fitted on",
             409,
             f"This version is the {part!r} part of split {split.name!r}, which {label} "
-            "was fitted and judged on (`01` FR-DATA-36). Backtesting the holdout "
+            "was fitted and judged on (`01` FR-76). Backtesting the holdout "
             "reproduces the fit-time holdout figure and presents it as a later period.",
         )
 

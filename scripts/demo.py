@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""The demo entrance: one command from a clean checkout to a browser (FR-PLAT-53).
+"""The demo entrance: one command from a clean checkout to a browser (FR-408).
 
     uv run python scripts/demo.py
 
 It starts the compose stack including the local provider behind the `auth` profile,
 migrates, fetches and seeds freMTPL2 through the platform's own Job path, then runs the
 API and the frontend — and prints the URL. The browser signs in through that provider
-(`analyst` / `analyst`, FR-PLAT-58), and the seeded membership answers the login.
+(`analyst` / `analyst`, FR-398), and the seeded membership answers the login.
 `Ctrl-C` stops everything it started.
 
 **One switch, and it is the refusal that already exists.** Every part of this hangs off
-`dev_auth_enabled` (FR-PLAT-1), which is `False` by default and *raises at startup* in a
+`dev_auth_enabled` (FR-387), which is `False` by default and *raises at startup* in a
 deployed environment. This script sets it for the processes it starts and refuses to run
 where `GIP_ENVIRONMENT` is not local or dev — a page that lists every route beside a
 pre-authenticated session is a genuine hole if it ever ships, so there is no second flag to
@@ -66,7 +66,7 @@ def check_environment(environ: dict[str, str] | None = None) -> None:
     if configured not in LOCAL_ENVIRONMENTS:
         raise DemoRefusedError(
             f"GIP_ENVIRONMENT is {configured!r}. The demo entrance exists only where "
-            "development identity does (FR-PLAT-53), and development identity refuses to "
+            "development identity does (FR-408), and development identity refuses to "
             "start outside local/dev."
         )
 
@@ -178,7 +178,7 @@ def _stop_group(process: subprocess.Popen[bytes]) -> None:
 def demo_env() -> dict[str, str]:
     """The environment the demo's processes run with.
 
-    The local provider (FR-PLAT-58) is started behind the `auth` profile, and the API must
+    The local provider (FR-398) is started behind the `auth` profile, and the API must
     verify against it: `deploy/README.md` pins these OIDC values, and the browser signs in
     through this issuer — so the one-command demo sets them here, not on the operator.
     Exposed as a function so `test_demo_command.py` can assert the browser path is wired
@@ -229,7 +229,7 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
             seed += ["--rows", str(rows)]
         run(seed, step="seed freMTPL2 through the real Job path", env=env)
 
-    # The record the seed wrote is the membership the login resolves to (FR-PLAT-58).
+    # The record the seed wrote is the membership the login resolves to (FR-398).
     # Read it here — after the seed, and in `--skip-seed` runs as the proof the
     # workspace this run reuses was seeded at all.
     record = read_seed_record()
@@ -281,11 +281,11 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
                 f"  Open  http://localhost:{FRONTEND_PORT}/demo\n"
                 f"{'═' * 62}\n"
                 f"  Seeded to a usable state in {elapsed:.0f}s"
-                f"  (NFR-PLAT-4: < 5 min on a developer laptop).\n\n"
+                f"  (NFR-529: < 5 min on a developer laptop).\n\n"
                 "  That page is derived from this checkout — the specs' view tables\n"
                 "  against the router, the published contract, and the roadmap. It says\n"
                 "  what is worth clicking and, more usefully, what is not built yet.\n\n"
-                f"  The seeded membership that answers the login (FR-PLAT-58) is analyst\n"
+                f"  The seeded membership that answers the login (FR-398) is analyst\n"
                 f"  {record['analyst_id']} in workspace {record['workspace_id']}.\n\n"
                 "  Ctrl-C to stop everything this command started.\n",
                 flush=True,
@@ -295,7 +295,7 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
 
 
 def _verify_journey_postconditions(record: dict[str, str], env: dict[str, str]) -> None:
-    """wf-01 §4's demo subset, over HTTP: an approved model exists (W7-5 T1).
+    """WF-698 §4's demo subset, over HTTP: an approved model exists (W7-5 T1).
 
     The full §4 list includes bandings, a peril structure and a reconciliation the demo
     does not seed; the demo's subset is the validated dataset, the split, one approved
@@ -318,9 +318,9 @@ def _verify_journey_postconditions(record: dict[str, str], env: dict[str, str]) 
     approved = body.get("items", [])
     if not approved:
         raise DemoRefusedError(
-            "wf-01's demo subset: no approved model after the seed — see the seed output"
+            "WF-698's demo subset: no approved model after the seed — see the seed output"
         )
-    print(f"  wf-01 demo subset: {len(approved)} approved model(s)", flush=True)
+    print(f"  WF-698 demo subset: {len(approved)} approved model(s)", flush=True)
 
 
 def _wait_for_interrupt() -> None:

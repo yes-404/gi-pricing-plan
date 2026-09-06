@@ -9,9 +9,9 @@
 | `POST` | `/api/v1/approval-requests/{id}/withdraw` |
 | `GET`/`PUT` | `/api/v1/approval-policy` |
 
-**FR-GOV-16's Approvals inbox is not this.** The list endpoint supports its query
+**FR-358's Approvals inbox is not this.** The list endpoint supports its query
 (`?status=review`), but the requirement is about *evidence inline* — diffs, diagnostics,
-dislocation, GIPP — and none of those artifacts exist before W4 and W5. Shipping a list and
+dislocation, GIPP — and none of those artifacts exist before WK-660 and WK-661. Shipping a list and
 calling it the inbox would claim the requirement while delivering the part that was easy.
 """
 
@@ -128,7 +128,7 @@ async def submit_for_approval(
     it. Gating the ask as well would mean an analyst who built a model could not put it
     forward.
 
-    The `404` this route now declares is FR-GOV-36's: the reference is the pin, and a
+    The `404` this route now declares is FR-386's: the reference is the pin, and a
     reference to a version that was never created pins nothing. `_resolve_the_artifact` is
     what makes that refusal, and `service.submit` is what sequences it.
     """
@@ -234,7 +234,7 @@ async def decide_request(
 ) -> dict[str, Any]:
     """The decision, and the artifact transition it implies, in **one** transaction.
 
-    `06` FR-GOV-9 stops the approval machine at `approved` — "post-approval states belong to
+    `06` FR-351 stops the approval machine at `approved` — "post-approval states belong to
     the owning module" — so something has to carry the decision across, and the direction
     settles where. `MODEL` depends on `GOV` and never the reverse (DEP-1), so a hook inside
     `approvals.decide` calling back into modelling is the one design that is not available.
@@ -243,7 +243,7 @@ async def decide_request(
 
     One transaction is not a tidiness preference: a model left in `review` after its request
     reached `approved` is a model no Rating Version may reference and no screen can explain,
-    and two transactions is all it takes to produce one. It also makes FR-MODEL-67's block
+    and two transactions is all it takes to produce one. It also makes FR-205's block
     work — the flag refusal rolls the decision back with it, so an approver is told the
     model is flagged rather than finding their approval recorded against nothing.
     """
@@ -271,7 +271,7 @@ async def decide_request(
 
 @router.post(
     "/approval-requests/{request_id}/withdraw",
-    summary="Withdraw before deployment (FR-GOV-15)",
+    summary="Withdraw before deployment (FR-357)",
     responses=problems(401, 403, 404, 409, 422),
 )
 async def withdraw_request(
@@ -363,7 +363,7 @@ async def _resolve_custom_metric(
     `metrics.resolve_ref` raises **`METRIC_REF_UNRESOLVED`** where its sibling
     `objectives.resolve_ref` raises `NOT_FOUND`, deliberately: `02` §4.13's caller resolves
     a reference embedded in a `GbmSpec.eval_metrics` entry and needs to tell a stale
-    reference from a missing artifact at the fit path. FR-GOV-36 names `NOT_FOUND` for
+    reference from a missing artifact at the fit path. FR-386 names `NOT_FOUND` for
     *this* path, and one of the six types answering a submission differently from the other
     five is a difference a client would have to branch on for no reason it could see.
 
@@ -397,7 +397,7 @@ async def _resolve_rating_version(
     """W7-3's own by-slug-and-version read, adapted to the fan-out's contract.
 
     A `rating_version` reference must resolve so a submission naming a rating version is
-    refused if it does not exist (FR-GOV-36) — and accepted once `W7-3` builds the version.
+    refused if it does not exist (FR-386) — and accepted once `W7-3` builds the version.
     """
     if artifact_ref.type != "rating_version":
         return False
@@ -418,7 +418,7 @@ async def _resolve_rating_version(
 async def _resolve_the_artifact(
     session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
 ) -> None:
-    """Refuse a submission whose reference names a version that does not exist (FR-GOV-36).
+    """Refuse a submission whose reference names a version that does not exist (FR-386).
 
     `_carry_to_the_artifact`'s shape for the other direction, and for its reason: one call
     per artifact type rather than a branch here, each returning `False` for a reference that
@@ -431,7 +431,7 @@ async def _resolve_the_artifact(
     and no module, because `03` is unbuilt, and thirteen more of `ARTIFACT_TYPES`' twenty
     have neither. `07`'s `JOB_HANDLER_NOT_REGISTERED` settles what a platform deployable
     before every kind has an implementation owes the caller: say the capability is absent.
-    Letting the submission through instead recreates FR-GOV-36's own defect one level up —
+    Letting the submission through instead recreates FR-386's own defect one level up —
     a request that decides without effect, and nothing to explain why.
     """
     if await _resolve_model(session, workspace_id=workspace_id, artifact_ref=artifact_ref):
@@ -473,7 +473,7 @@ async def _resolve_the_artifact(
         422,
         f"{artifact_ref.type!r} has an approval policy but no owning module here, so a "
         f"request pinning {artifact_ref} could be decided and would move nothing "
-        "(`06` FR-GOV-36). Refused rather than accepted, for the reason `07` refuses a Job "
+        "(`06` FR-386). Refused rather than accepted, for the reason `07` refuses a Job "
         "whose kind has no handler.",
     )
 
