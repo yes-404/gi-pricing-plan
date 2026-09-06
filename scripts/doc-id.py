@@ -5827,16 +5827,93 @@ def _shorthand_suffix(mapped_base: str, siblings: list[tuple[str, str]]) -> str:
     return "".join(parts_out)
 
 
+#: box-end gate-gap (W37-6, 2026-09-06, real corpus: `docs/audit/register.md:58`'s
+#: `NFR-MODEL-1..5, 10..13`): a comma introduces a further segment inheriting the same base
+#: prefix, a citation-authoring convention `_compound_token_re` has no path to reach at all
+#: (its `continuation` group only ever meant `-`/`/`) -- and the maintainer's ruling is that
+#: it never should: `scope-audit.py --extra`'s own precedent (`.claude/skills/
+#: close-workstream/SKILL.md:37-71`, `tests/test_scope_audit.py`) already refuses
+#: `FR-PLAT-47,48` rather than guessing it means `FR-PLAT-47, FR-PLAT-48`, because *"the
+#: failure here was ambiguity, not verbosity"* -- the identical shape is exactly as
+#: ambiguous with unrelated prose after a rewrite (`FR-RATE-20, 03 §5.1` is "spec 03 §5.1",
+#: not a second citation) as it is here. A comma is not a citation-continuation operator in
+#: this corpus, and this module does not learn to read it as one.
+#:
+#: So a bare `,\s*\d` immediately following a matched compound/range whose base maps is a
+#: REFUSAL CANDIDATE, not an automatic refusal -- resolved once more before deciding: does
+#: the tail's own first member resolve against the SAME `prefix` (`_bare_comma_tail_resolves`
+#: below)? If it does, the shape is treated as a genuine continuation risk and the whole
+#: citation is refused, byte-identical -- an unrelated resolve-coincidence (a hypothetical
+#: `FR-RATE-03` existing) over-refuses, which is harmless: an extra citation left whole is
+#: ordinary disclosable residue. If it does NOT resolve, the base's own otherwise-valid
+#: rewrite proceeds normally and the bare tail -- never part of the match to begin with --
+#: is reproduced verbatim by construction (it sits outside `m.group(0)` entirely).
+#:
+#: This is a correction, stated for the record rather than silently made: an earlier version
+#: of this rule refused on SHAPE alone, unconditionally, reasoning from `scope-audit.py
+#: --extra`'s precedent that resolving the tail was itself the judgment being refused.
+#: Read against the real corpus (2026-09-06, all 39 sites where shape and resolution
+#: disagree), that was wrong in the harmful direction: refusing unconditionally files a
+#: governed W37-11 record entry asserting "ambiguous comma-continuation" for sites that are
+#: not ambiguous at all -- `FR-RATE-20, 03 §5.1` is unambiguously "spec 03 §5.1", not a
+#: citation, and `FR-RATE-20` could safely have rewritten with the tail left alone. A false
+#: record entry is the same class of defect this whole workstream spent the night closing
+#: (a governed reason asserting something the tree does not show); an over-cautious
+#: resolve-based refusal that leaves an occasional genuine continuation whole for want of a
+#: stale `REDIRECTS.csv` entry is not -- it recreates the SAME kind of residue every other
+#: unmapped-component case in this module already produces, disclosable and resolvable.
+#: All 39 sites where shape and resolution disagree were read by hand and are prose (a
+#: date, a spec/section reference, a ruling reference); none is a real continuation, so this
+#: correction has no known cost today.
+_BARE_COMMA_ITEM_RE: Final = re.compile(r",[^\S\n]*(\d+)")
+
+
+def _bare_comma_tail_resolves(
+    prefix: str, base_width: int, active_map: Mapping[str, str], text: str, pos: int,
+) -> bool:
+    """Whether the bare comma-digit tail immediately following position `pos` in `text`
+    resolves against `prefix` -- the discriminator between a genuine shared-prefix
+    citation continuation and unrelated prose after a comma (a date, a section reference:
+    `03` in `FR-RATE-20, 03 §5.1` does not resolve as `FR-RATE-03`). Checks only the
+    tail's first member -- resolving is enough to treat the whole tail as a continuation
+    risk and refuse; this function decides whether to refuse, it never expands anything
+    itself.
+
+    Takes a plain `(text, pos)` pair rather than a live `re.Match`, deliberately: this is
+    the identical predicate `(d7)`'s own disclosed-class check calls (Ruling, W37-6,
+    2026-09-06 -- co-extensive by identity, not by a second, similar-looking predicate),
+    and `(d7)` walks tokens it finds by `finditer` over the MIGRATED tree's own text, not a
+    live rewrite match -- there is no `re.Match` to hand it there, only a line and a
+    position. `m.string, m.end()` at each of this function's two rewriter call sites are
+    exactly such a pair; extracting the signature to accept one directly costs nothing at
+    the rewriter and is what makes the second caller possible without a second
+    implementation."""
+    cm = _BARE_COMMA_ITEM_RE.match(text, pos)
+    if cm is None:
+        return False
+    digits = cm.group(1)
+    if active_map.get(prefix + digits) is not None:
+        return True
+    if len(digits) < base_width:
+        return active_map.get(prefix + digits.zfill(base_width)) is not None
+    return False
+
+
 def _expand_compound(
     tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
     derived: list[tuple[str, str]],
 ) -> str:
     continuation = m.group("continuation")
+    prefix_match = re.search(r"\d+$", tok)
+    if prefix_match is not None:
+        prefix = tok[: prefix_match.start()]
+        base_width = len(tok) - len(prefix)
+        if _bare_comma_tail_resolves(prefix, base_width, active_map, m.string, m.end()):
+            return m.group(0)  # the tail resolves -- a genuine continuation risk, refused
     if not continuation:
         return mapped
     if _WORK_FAMILY_TOKEN_RE.match(tok):
         return m.group(0)  # a longer identifier, never a compound -- leave it whole
-    prefix_match = re.search(r"\d+$", tok)
     if prefix_match is None:
         # No trailing digit run on the base token itself -- not a shape this ruling
         # reaches (every enumerated family's legacy citation ends in digits). Defensive,
@@ -5900,6 +5977,9 @@ def _expand_range(
         return m.group(0)
     prefix = tok[: prefix_match.start()]
     base_width = len(tok) - len(prefix)
+    if _bare_comma_tail_resolves(prefix, base_width, active_map, m.string, m.end()):
+        return m.group(0)  # the tail resolves -- a genuine continuation risk, refused
+        # (`_bare_comma_tail_resolves`'s own docstring has the reasoning)
     start = int(prefix_match.group())
     end = int(m.group("range_end"))
     if end <= start:

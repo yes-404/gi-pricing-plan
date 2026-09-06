@@ -1282,37 +1282,153 @@ def _is_framework_self_reference(
     )
 
 
-def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
+def _box_end_refused(
+    docid: Any, active_map: Mapping[str, str], token: str, line: str, m: re.Match[str],
+) -> bool:
+    """True iff `doc-id.py`'s box-end comma-continuation refusal (`_bare_comma_tail_
+    resolves`) is the reason `token` still sits unrewritten on `line` at match `m` — the
+    SAME function the rewriter itself calls to decide the refusal, called here rather
+    than re-implemented, so no caller of this helper can ever disclose a site the
+    rewriter did not itself refuse.
+
+    **Ruling (lead, 2026-09-06), extending the deputy's 2026-09-06 ruling to its full
+    scope:** that ruling is written about a *shape* — "a token immediately followed by a
+    bare comma-digit tail that resolves against the token's own prefix" — not about
+    (d7)'s family. `_bare_comma_tail_resolves` lives inside `_expand_compound`/
+    `_expand_range`, the general rewriter for every id family `doc-id.py` migrates, so a
+    row whose own alternative pattern matches a family the general rewriter also covers
+    (found live: (d6)'s `ADR-0[0-9]{3}`, `docs/skills-map.md:92`'s `ADR-0004, 03 ...`,
+    where `03` resolves as the real `ADR-0003`) can be refused by the identical
+    mechanism (d7) already discloses. Extracted here as ONE predicate every d-row reads,
+    never a per-row copy that happens to agree today — `_d7_disclosed_or_fail`'s own
+    third class and `_box_end_only_residue_or_none` (the generic d-row path, below) both
+    call this, not two independent readings of the rule.
+
+    `token not in active_map` is the SAME precondition the rewriter's own sweep requires
+    before it ever calls `_bare_comma_tail_resolves` at all — a token with no mapping
+    could not have been rewritten in the first place, so it is never this refusal's
+    doing.
+    """
+    prefix_match = re.search(r"\d+$", token)
+    if prefix_match is None:
+        return False
+    prefix = token[: prefix_match.start()]
+    base_width = len(token) - len(prefix)
+    if token not in active_map:
+        return False
+    end_pos = (docid._compound_token_re(token).match(line, m.start()) or m).end()
+    return docid._bare_comma_tail_resolves(prefix, base_width, active_map, line, end_pos)
+
+
+def _box_end_only_residue_or_none(
+    docid: Any, mig: Corpus, ctl: Corpus, pattern: re.Pattern[str],
+) -> tuple[str, str] | None:
+    """The generic d-row path for the SAME disclosed class `_d7_disclosed_or_fail`'s
+    third class already covers, for every alternative that has no bespoke verdict
+    function of its own (Ruling, lead, 2026-09-06 — see `_box_end_refused`'s own
+    docstring for the grounds). Returns `None` when box-end refusal has nothing to say
+    about this row at all (no hit is a refusal), leaving `_verdict_on_zero`'s own
+    verdict and note untouched. Returns `(FAIL, note-naming-the-real-hit)` when at least
+    one hit IS a refusal but at least one other is not — the mandatory positive control
+    this class must never swallow, named rather than left in `_verdict_on_zero`'s own
+    silent empty-string FAIL note so a reviewer can see the real miss did not vanish
+    into the new disclosure. Returns `(DISCLOSE, note)` only when EVERY hit on every
+    still-matching line is a refusal this same predicate confirms — never a blanket
+    disclosure trusting that a hit merely resembles the shape.
+    """
+    active_map = _redirects_token_map(mig)
+    real_hits: list[str] = []
+    refusal_hits: list[str] = []
+    for rel in mig.files:
+        skip = mig.was_lines[rel] | mig.fenced_lines[rel]
+        for i, line in enumerate(mig.lines[rel]):
+            if i in skip:
+                continue
+            for m in pattern.finditer(line):
+                token = m.group(0)
+                if _box_end_refused(docid, active_map, token, line, m):
+                    refusal_hits.append(f"{token} ({rel}:{i + 1})")
+                else:
+                    real_hits.append(f"{token} ({rel}:{i + 1})")
+    if not refusal_hits:
+        return None
+    if real_hits:
+        shown = "; ".join(real_hits[:10])
+        more = f" (+{len(real_hits) - 10} more)" if len(real_hits) > 10 else ""
+        return FAIL, (
+            f"{len(real_hits)} hit(s) are a genuine miss, not disclosed — "
+            f"{len(refusal_hits)} other hit(s) on this row ARE box-end comma-continuation "
+            "refusals, but a real miss still fails the whole row (this row has no "
+            f"per-line partial disclosure, the same rule (d7) applies): {shown}{more}."
+        )
+    shown = "; ".join(refusal_hits[:10])
+    more = f" (+{len(refusal_hits) - 10} more)" if len(refusal_hits) > 10 else ""
+    return DISCLOSE, (
+        f"{len(refusal_hits)} hit(s) are box-end comma-continuation refusals — "
+        "`doc-id.py`'s `_bare_comma_tail_resolves` (the SAME function the rewriter "
+        "itself calls to decide this, not a re-implementation) says each token is "
+        "immediately followed by a bare comma-digit tail that resolves against its own "
+        "prefix, a genuine continuation risk the rewriter refused rather than partially "
+        "rewrite, leaving a real, allocated citation in its legacy form on purpose "
+        "(Ruling, lead, 2026-09-06 — the same class (d7) discloses, extended to every "
+        f"d-row the general rewriter covers). Owner: W37-6. {shown}{more}."
+    )
+
+
+def _d7_disclosed_or_fail(docid: Any, mig: Corpus, ctl: Corpus) -> tuple[str, str]:
     """(d7)'s non-zero population, split by the never-allocated predicate. Reads the
     identical migrated-tree population `rows_d`'s own `mig.scan(pattern, skip_fenced=
     True)` counts (`was:` and fenced lines excluded the same way), so this function's own
     line count matches the row's reported `migrated` figure exactly.
 
     Every token on every still-matching line is checked; ONE real hit (a token that is
-    not never-allocated) fails the whole row, named — this is deliberately not a
-    line-by-line partial disclosure, because a row mixing a real miss with disclosed
-    residue would read as clean at a glance while still hiding the real miss.
+    not disclosed under any of this function's classes) fails the whole row, named — this
+    is deliberately not a line-by-line partial disclosure, because a row mixing a real
+    miss with disclosed residue would read as clean at a glance while still hiding the
+    real miss.
+
+    **Third disclosed class, co-extensive by identity (Ruling, W37-6, 2026-09-06):** a
+    token immediately followed by a bare comma-digit tail that resolves against the
+    token's own prefix is exactly the shape `doc-id.py`'s box-end comma-continuation
+    refusal (`_bare_comma_tail_resolves`) leaves whole rather than partially rewrite —
+    the SAME function decides both sides, called here rather than re-implemented, so this
+    class can never disclose a site the rewriter did not itself refuse. Before that
+    refusal existed, the base was rewritten and the tail orphaned (`, 10..13` citing
+    nothing) and this row never fired at all, since bare digits do not match its own
+    pattern — the citations were unmigrated either way. Legacy-but-intact beats mangled:
+    `REDIRECTS.csv` resolves one and nothing resolves the other, but the row must say so
+    rather than stay silently green on the worse output.
     """
     d7_pattern = re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")
+    active_map = _redirects_token_map(mig)
     real_hits: list[str] = []
     disclosed_lines = 0
     disclosed_files: set[str] = set()
     self_ref_hits: list[str] = []
+    refusal_hits: list[str] = []
     for rel in mig.files:
         skip = mig.was_lines[rel] | mig.fenced_lines[rel]
         line_disclosed = False
         for i, line in enumerate(mig.lines[rel]):
             if i in skip:
                 continue
-            tokens = d7_pattern.findall(line)
-            if not tokens:
+            matches = list(d7_pattern.finditer(line))
+            if not matches:
                 continue
-            for token in tokens:
+            for m in matches:
+                token = m.group(0)
+                prefix_match = re.search(r"\d+$", token)
+                if prefix_match is None:
+                    real_hits.append(f"{token} ({rel}:{i + 1})")
+                    continue
                 if _scoped_id_is_never_allocated(token, mig, ctl):
                     line_disclosed = True
                 elif _is_framework_self_reference(rel, mig, mig, ctl, i, token):
                     line_disclosed = True
                     self_ref_hits.append(f"{token} ({rel}:{i + 1})")
+                elif _box_end_refused(docid, active_map, token, line, m):
+                    line_disclosed = True
+                    refusal_hits.append(f"{token} ({rel}:{i + 1})")
                 else:
                     real_hits.append(f"{token} ({rel}:{i + 1})")
         if line_disclosed:
@@ -1354,6 +1470,24 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
         if self_ref_hits
         else ""
     )
+    refusal_shown = "; ".join(refusal_hits[:10])
+    refusal_more = f" (+{len(refusal_hits) - 10} more)" if len(refusal_hits) > 10 else ""
+    refusal_note = (
+        f" {len(refusal_hits)} of those line(s) join a third, distinct disclosed "
+        "class — **box-end comma-continuation refusal**: `doc-id.py`'s "
+        "`_bare_comma_tail_resolves` (the SAME function the rewriter itself calls to "
+        "decide this, not a re-implementation) says the token is immediately followed "
+        "by a bare comma-digit tail that resolves against its own prefix — a genuine "
+        "continuation risk the rewriter refused rather than partially rewrite, "
+        "leaving this real, allocated citation in its legacy form on purpose (Ruling, "
+        "W37-6, 2026-09-06). Owner: W37-6. This is not a closed class the way "
+        "never-allocated is: `REDIRECTS.csv` can still resolve every one of these, and "
+        "each is governed by its own W37-11 per-file ceiling entry, unlike the "
+        f"never-allocated class above. This line's own count: {refusal_shown}"
+        f"{refusal_more}."
+        if refusal_hits
+        else ""
+    )
     return DISCLOSE, (
         f"every one of {disclosed_lines} line(s) / {len(disclosed_files)} file(s) "
         "names only a legacy scoped-form id with zero definition rows in every source "
@@ -1365,7 +1499,7 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
         "never be allocated later either. Owner: none — closed class. The citing "
         "sentence stays exactly as written; Ruling 103 §5.1's fence is for a "
         "defective-form exhibit, not a correct historical statement about an id that "
-        f"does not exist.{self_ref_note}"
+        f"does not exist.{self_ref_note}{refusal_note}"
     )
 
 
@@ -1460,6 +1594,7 @@ def _path_alternative_hits_by_file(
 
 
 def rows_d(
+    docid: Any,
     mig: Corpus,
     ctl: Corpus,
     record: "Sequence[ResidueEntry]" = (),  # noqa: UP037 -- ResidueEntry defined later
@@ -1510,7 +1645,7 @@ def rows_d(
                 if creation_note:
                     note += "; " + creation_note
             elif label == _D7_LABEL and m_lines > 0:
-                verdict, note = _d7_disclosed_or_fail(mig, ctl)
+                verdict, note = _d7_disclosed_or_fail(docid, mig, ctl)
                 if creation_note:
                     note += "; " + creation_note
             elif label in D_PATH_LABELS:
@@ -1560,6 +1695,14 @@ def rows_d(
                     note = (note + "; " if note else "") + creation_note
             else:
                 verdict, note = _verdict_on_zero(m_lines, mig.n_lines, control=c_lines)
+                if verdict == FAIL:
+                    # Ruling (lead, 2026-09-06): the box-end disclosure is not (d7)'s
+                    # property, it belongs to every d-row the general rewriter covers.
+                    # Found live: (d6) FAILs on docs/skills-map.md's `ADR-0004, 03 ...`,
+                    # refused whole because `03` resolves as the real `ADR-0003`.
+                    box_end_verdict = _box_end_only_residue_or_none(docid, mig, ctl, pattern)
+                    if box_end_verdict is not None:
+                        verdict, note = box_end_verdict
                 if creation_note:
                     note = (note + "; " if note else "") + creation_note
         if verdict == FAIL and _residue_fully_governed(residue_by_file, record):
@@ -2098,6 +2241,80 @@ def _g1_provenance_mismatches(docid: Any, mig: Corpus, ctl: Corpus) -> list[str]
                         f"line: {new_lines[i].strip()[:160]!r}"
                     )
     return mismatches
+
+
+#: box-end gate-gap's invariant (W37-6, 2026-09-06, ruled (b), corrected to key the
+#: rewriter's refusal on resolution rather than shape): a rewritten token immediately
+#: followed by a bare `,\s*\d` is a violation only when that tail digit ALSO resolves as a
+#: further citation of the SAME old prefix -- exactly `doc-id.py`'s own
+#: `_bare_comma_tail_resolves` question, asked a second, independent way. A rewritten token
+#: followed by a bare comma-digit that does NOT resolve (a date, a section reference) is
+#: correct output under the corrected rule, not a violation -- an earlier version of this
+#: check, written for the shape-only refusal, would have wrongly flagged all 39 such sites.
+#:
+#: Deliberately independent of the rewriter's own functions, unlike `_g1_provenance_mismatches`
+#: above (which calls `docid._expand_range`/`docid._expand_compound` directly and inherits
+#: whatever they do): a check must not assume its own invariant, so this reimplements the
+#: resolution question from scratch over the migrated OUTPUT and `REDIRECTS.csv`'s
+#: `old_id`/`new_id` columns, rather than calling `doc-id.py`'s own resolution helper.
+_NEW_ID_SHAPE_RE: Final = re.compile(r"^(?:FR|NFR|OQ|DEP)-\d+$")
+_BARE_COMMA_DIGIT_ITEM_RE: Final = re.compile(r",[^\S\n]*(\d+)")
+
+
+def _new_id_values(mig: Corpus) -> frozenset[str]:
+    """Every `REDIRECTS.csv` `new_id`, restricted to the `FR|NFR|OQ|DEP-<digits>` shape
+    this migration's citation rewrite produces (never a family-lettered old-id shape, so a
+    coincidental old-id-looking string elsewhere is never mistaken for a rewrite)."""
+    return frozenset(
+        v for v in _redirects_token_map(mig).values() if _NEW_ID_SHAPE_RE.match(v)
+    )
+
+
+def _rewritten_base_before_bare_comma(
+    mig: Corpus, token_map: Mapping[str, str]
+) -> list[str]:
+    """Every migrated-tree site where a rewritten token is immediately followed by a bare
+    `,\\s*\\d` whose digits ALSO resolve as a further citation of the token's own OLD
+    prefix -- a genuine continuation the rewriter's refusal should have caught but did not.
+    A rewritten token followed by a bare comma-digit that does not resolve this way (a
+    date, a section reference) is correct output and never reported.
+
+    `token_map` is the full `old_id -> new_id` map: for each candidate site, every old id
+    that produced the seen new id is looked up (normally exactly one; REDIRECTS.csv is not
+    assumed injective), its own prefix extracted, and `prefix + tail_digits` checked
+    against `token_map` again -- the SAME question `doc-id.py`'s
+    `_bare_comma_tail_resolves` answers, asked independently rather than by calling it."""
+    reverse: dict[str, list[str]] = {}
+    for old_id, new_id in token_map.items():
+        reverse.setdefault(new_id, []).append(old_id)
+    new_ids = frozenset(v for v in token_map.values() if _NEW_ID_SHAPE_RE.match(v))
+    violations: list[str] = []
+    for rel in mig.files:
+        skip = mig.was_lines[rel]
+        for i, line in enumerate(mig.lines[rel]):
+            if i in skip:
+                continue
+            for m in re.finditer(r"\b(?:FR|NFR|OQ|DEP)-\d+\b", line):
+                new_tok = m.group(0)
+                if new_tok not in new_ids:
+                    continue
+                bm = _BARE_COMMA_DIGIT_ITEM_RE.match(line, m.end())
+                if bm is None:
+                    continue
+                digits = bm.group(1)
+                for old_id in reverse.get(new_tok, ()):
+                    prefix_match = re.search(r"\d+$", old_id)
+                    if prefix_match is None:
+                        continue
+                    prefix = old_id[: prefix_match.start()]
+                    base_width = len(old_id) - len(prefix)
+                    resolves = token_map.get(prefix + digits) is not None
+                    if not resolves and len(digits) < base_width:
+                        resolves = token_map.get(prefix + digits.zfill(base_width)) is not None
+                    if resolves:
+                        violations.append(f"{rel}:{i + 1}: {line.strip()[:160]!r}")
+                        break
+    return violations
 
 
 #: The line-level mask filter that stood in for (g) before Ruling 68 defined the six
@@ -3250,7 +3467,7 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # existing, now-measured defect (a `Ruling <n>` ambiguity/
                          # migration gap, row (d)'s file, previously closed at task 7) — not
                          # fixed here, out of row (b)'s own scope.
-    "d6": PASS,         # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
+    "d6": DISCLOSE,     # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
                          # original matches, plus one more surfaced by `origin/main` drift
                          # (`docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md`, a
                          # row-h plan landed after this row's original 74-line snapshot),
@@ -3261,6 +3478,22 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # class this table's own history above already warns about),
                          # never a real citation. Fenced or respelled; zero citation-class
                          # misses. 0/0.
+                         #
+                         # APPENDED, not a correction to the above (2026-09-06, W37-6
+                         # exec-pin, ruled by the lead and confirmed by the deputy):
+                         # `PASS` -> `DISCLOSE`. `docs/skills-map.md:92` now reads
+                         # `ADR-0004, 03 FR-RATE-1..13, 56..58` — `03` resolves as the real
+                         # `ADR-0003`, so this branch's own box-end comma-continuation
+                         # refusal (built for (d7), the identical shape `_bare_comma_tail_
+                         # resolves` decides for every id family the general rewriter
+                         # covers) correctly refuses to partially rewrite `ADR-0004`,
+                         # leaving it legacy-but-intact rather than mangled. This is not
+                         # the FIXED defect above regressing: base (pre-refusal, `aeeb1fe`)
+                         # measured 0/0 exactly as this entry already said; head measures
+                         # 1 line / 1 file, entirely this one new refusal. `_box_end_only_
+                         # residue_or_none` (generalised from (d7)'s own third disclosed
+                         # class) discloses it; docs/audit/w37-11-record.md carries the one
+                         # entry this class needs, reconciled exact against measurement.
     "d7": DISCLOSE,     # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+ — `FAIL` -> `DISCLOSE`, 2026-09-05,
                          # this same commit (the (d7)/(g) executor). The 39 "Next free"/
                          # "Highest ids in use" lines are the never-allocated closed class
@@ -3798,7 +4031,7 @@ def compute_rows(
     ctl = load_corpus(snap.control)
     baseline = load_corpus(snap.baseline) if snap.baseline is not None else None
     rows: list[Row] = [row_a(docid, snap), row_b(docid, snap), row_c(snap)]
-    rows.extend(rows_d(mig, ctl, record))
+    rows.extend(rows_d(docid, mig, ctl, record))
     rows.append(row_e(mig, ctl, snap))
     rows.append(row_f(mig, ctl, baseline, snap, generated_paths))
     rows.append(row_g(docid, snap, mig, ctl))

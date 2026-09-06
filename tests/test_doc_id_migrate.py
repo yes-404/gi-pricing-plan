@@ -7776,6 +7776,143 @@ def test_row_g_a_range_with_an_unmapped_tail_component_stays_whole(
     )
 
 
+def test_box_end_comma_tail_refused_register_md_line(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The box-end gate-gap, found live 2026-09-06 by testing `_g1_provenance_mismatches`
+    against the real corpora rather than reasoning from shape: `docs/audit/register.md:58`'s
+    `NFR-MODEL-1..5, 10..13` -- a comma introduces a further segment inheriting the SAME
+    base prefix, a citation-authoring convention `_compound_token_re`'s `continuation`
+    group (only `-`/`/`) has no path to reach at all. `, 10..13` sat entirely outside
+    every match the old regex produced and survived byte-identical -- citing nothing.
+
+    Ruled (b), corrected once: refuse only when the tail's own first member RESOLVES
+    against the same prefix (`NFR-MODEL-10` here) -- a genuine continuation risk. An
+    unconditional shape-only refusal was tried first and reverted: it filed a governed
+    W37-11 record entry asserting "ambiguous continuation" for sites that are not
+    ambiguous at all (dates, section references), the same class of false record entry
+    this workstream spent the night closing elsewhere.
+
+    Red before the fix: the base range `1..5` is correctly enumerated and `, 10..13`
+    survives bare, orphaned -- a rewritten base beside an un-rewritten tail. Green after:
+    the whole citation, `NFR-MODEL-1..5, 10..13` including the base, is refused and comes
+    out byte-identical, because `NFR-MODEL-10` resolves."""
+    text = "Measured NFRs (F21) | NFR-DATA-1/2, NFR-MODEL-1..5, 10..13 | W4/W5/W7\n"
+    token_map = {
+        "NFR-DATA-1": "NFR-900", "NFR-DATA-2": "NFR-901",
+        "NFR-MODEL-1": "NFR-772", "NFR-MODEL-2": "NFR-773", "NFR-MODEL-3": "NFR-774",
+        "NFR-MODEL-4": "NFR-776", "NFR-MODEL-5": "NFR-777",
+        "NFR-MODEL-10": "NFR-780", "NFR-MODEL-11": "NFR-781",
+        "NFR-MODEL-12": "NFR-782", "NFR-MODEL-13": "NFR-783",
+    }
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == (
+        "Measured NFRs (F21) | NFR-900/901, NFR-MODEL-1..5, 10..13 | W4/W5/W7\n"
+    ), (
+        "NFR-DATA-1/2 is a SEPARATE citation, not followed by a bare comma-digit, and must "
+        "still rewrite normally; only NFR-MODEL-1..5's own citation -- immediately "
+        "followed by ', 10..13', whose first member NFR-MODEL-10 resolves -- is refused, "
+        "base included, never partially rewritten"
+    )
+    assert "NFR-772" not in after, (
+        "the base must not partially rewrite while the tail stays bare -- refuse or "
+        "rewrite the whole thing, never half"
+    )
+
+
+def test_bare_comma_digit_that_resolves_after_a_bare_mapped_token_also_refuses(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The most common real shape (`backend/src/app/api/custom_metrics.py:1`'s
+    `FR-MODEL-45, 103, 104, 105, 108, 127`): no range, no `-`/`/` continuation, just a bare
+    mapped token immediately followed by a comma-digit list whose first member
+    (`FR-MODEL-103`) resolves. The refusal must fire here too, not only when a range or
+    continuation is already present -- and it must key on resolution, not shape alone."""
+    text = "see FR-MODEL-45, 103, 104 for the scope\n"
+    token_map = {"FR-MODEL-45": "FR-451", "FR-MODEL-103": "FR-509"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == text, (
+        "FR-MODEL-45 maps and FR-MODEL-103 (the tail's first member) resolves -- a genuine "
+        "continuation risk, so the whole citation must be refused, not just partially left "
+        "as 'FR-451, 103, 104'"
+    )
+
+
+def test_bare_comma_digit_that_does_not_resolve_is_prose_and_rewrites_normally(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The correction, stated as a test: `backend/src/app/errors.py:186`'s real text,
+    `FR-MODEL-24, 2026-08-21` -- the comma-digit here is a DATE. `FR-MODEL-2026` does not
+    resolve (no such id), so this is prose, not a citation continuation, and the base
+    rewrites normally -- the tail, never part of the match, is reproduced verbatim by
+    construction. An earlier, shape-only version of this rule refused here anyway; that was
+    wrong, because it filed a false "ambiguous continuation" record entry for a date."""
+    text = "# FR-MODEL-24, 2026-08-21, the offset-from-another-model slice.\n"
+    token_map = {"FR-MODEL-24": "FR-413"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == "# FR-413, 2026-08-21, the offset-from-another-model slice.\n", (
+        "FR-MODEL-2026 does not resolve -- this is a date, not a continuation, and the "
+        "base must rewrite normally, tail reproduced verbatim"
+    )
+
+
+def test_bare_comma_digit_section_ref_that_does_not_resolve_rewrites_normally(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`backend/src/app/platform/rate_tables.py:347`'s real text, `FR-RATE-20, 03 §5.1` --
+    `03` is a spec-module reference, not a citation continuation. `FR-RATE-03` does not
+    resolve, so the base rewrites normally and `, 03 §5.1` is reproduced verbatim."""
+    text = "see FR-RATE-20, 03 §5.1 for the scope\n"
+    token_map = {"FR-RATE-20": "FR-680"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == "see FR-680, 03 §5.1 for the scope\n"
+
+
+def test_a_mapped_token_with_no_following_comma_still_rewrites_normally(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The refusal must be scoped to an actual following bare comma-digit -- it must not
+    regress the overwhelming majority of citations that have nothing after them, or are
+    followed by ordinary prose."""
+    text = "see FR-MODEL-45 and FR-MODEL-46 in the spec\n"
+    token_map = {"FR-MODEL-45": "FR-451", "FR-MODEL-46": "FR-452"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == "see FR-451 and FR-452 in the spec\n"
+
+
+def test_bare_comma_tail_never_crosses_a_markdown_soft_line_wrap(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Found live, 2026-09-06, real corpus (`docs/plans/PL-00099-...md:118-119`): a
+    citation-list comma-tail can be split across a markdown soft line-wrap --
+    `FR-MODEL-63,\\n77, 93, 98, 99, 124 --` -- and the refusal must NEVER cross that wrap
+    to decide the tail resolves, matching `_compound_token_re`'s own `continuation` group
+    (`(?:[-/]\\d+)*`, no `\\s` at all -- a wrapped occurrence has always been invisible to
+    it, the same reason rows (d9)-(d12) exist as separate machinery for a wrapped PATH
+    citation). `\\s*` in the comma-tail regex would match the newline too and refuse a
+    citation whose tail is not even on the same line -- a real regression this fixture
+    reproduces from the real corpus line, not a hypothetical.
+
+    Green: the base still rewrites normally (matching the pre-refusal behaviour this
+    exact real citation always had), and the wrapped continuation text is reproduced
+    verbatim, since it was never inside any match to begin with."""
+    text = (
+        "Three requirements, all backend-evidenced. The other six of the pre-split set "
+        "— FR-MODEL-63,\n"
+        "77, 93, 98, 99, 124 — are prediction-side uncertainty.\n"
+    )
+    token_map = {"FR-MODEL-63": "FR-680", "FR-MODEL-77": "FR-694"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert "FR-680" in after, (
+        "the base must still rewrite -- the wrapped tail must never cause a refusal that "
+        "was invisible to every other continuation shape this module already has"
+    )
+    assert "FR-MODEL-63" not in after
+    assert "77, 93, 98, 99, 124" in after, (
+        "the wrapped continuation, never part of any match, must be reproduced verbatim"
+    )
+
+
 def test_task30_a_half_rewritten_range_is_named_mangled(
     doc_id_cli: types.ModuleType,
 ) -> None:
