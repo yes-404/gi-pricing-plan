@@ -2158,7 +2158,7 @@ def _g1_provenance_mismatches(docid: Any, mig: Corpus, ctl: Corpus) -> list[str]
 #: resolution question from scratch over the migrated OUTPUT and `REDIRECTS.csv`'s
 #: `old_id`/`new_id` columns, rather than calling `doc-id.py`'s own resolution helper.
 _NEW_ID_SHAPE_RE: Final = re.compile(r"^(?:FR|NFR|OQ|DEP)-\d+$")
-_BARE_COMMA_DIGIT_ITEM_RE: Final = re.compile(r",\s*(\d+)")
+_BARE_COMMA_DIGIT_ITEM_RE: Final = re.compile(r",[^\S\n]*(\d+)")
 
 
 def _new_id_values(mig: Corpus) -> frozenset[str]:

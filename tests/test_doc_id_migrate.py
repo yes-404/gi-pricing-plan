@@ -7684,6 +7684,39 @@ def test_a_mapped_token_with_no_following_comma_still_rewrites_normally(
     assert after == "see FR-451 and FR-452 in the spec\n"
 
 
+def test_bare_comma_tail_never_crosses_a_markdown_soft_line_wrap(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Found live, 2026-09-06, real corpus (`docs/plans/PL-00099-...md:118-119`): a
+    citation-list comma-tail can be split across a markdown soft line-wrap --
+    `FR-MODEL-63,\\n77, 93, 98, 99, 124 --` -- and the refusal must NEVER cross that wrap
+    to decide the tail resolves, matching `_compound_token_re`'s own `continuation` group
+    (`(?:[-/]\\d+)*`, no `\\s` at all -- a wrapped occurrence has always been invisible to
+    it, the same reason rows (d9)-(d12) exist as separate machinery for a wrapped PATH
+    citation). `\\s*` in the comma-tail regex would match the newline too and refuse a
+    citation whose tail is not even on the same line -- a real regression this fixture
+    reproduces from the real corpus line, not a hypothetical.
+
+    Green: the base still rewrites normally (matching the pre-refusal behaviour this
+    exact real citation always had), and the wrapped continuation text is reproduced
+    verbatim, since it was never inside any match to begin with."""
+    text = (
+        "Three requirements, all backend-evidenced. The other six of the pre-split set "
+        "— FR-MODEL-63,\n"
+        "77, 93, 98, 99, 124 — are prediction-side uncertainty.\n"
+    )
+    token_map = {"FR-MODEL-63": "FR-680", "FR-MODEL-77": "FR-694"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert "FR-680" in after, (
+        "the base must still rewrite -- the wrapped tail must never cause a refusal that "
+        "was invisible to every other continuation shape this module already has"
+    )
+    assert "FR-MODEL-63" not in after
+    assert "77, 93, 98, 99, 124" in after, (
+        "the wrapped continuation, never part of any match, must be reproduced verbatim"
+    )
+
+
 def test_task30_a_half_rewritten_range_is_named_mangled(
     doc_id_cli: types.ModuleType,
 ) -> None:

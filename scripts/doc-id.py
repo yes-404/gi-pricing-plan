@@ -5857,7 +5857,7 @@ def _shorthand_suffix(mapped_base: str, siblings: list[tuple[str, str]]) -> str:
 #: All 39 sites where shape and resolution disagree were read by hand and are prose (a
 #: date, a spec/section reference, a ruling reference); none is a real continuation, so this
 #: correction has no known cost today.
-_BARE_COMMA_ITEM_RE: Final = re.compile(r",\s*(\d+)")
+_BARE_COMMA_ITEM_RE: Final = re.compile(r",[^\S\n]*(\d+)")
 
 
 def _bare_comma_tail_resolves(
