@@ -166,6 +166,19 @@ surprise edit appearing in `git status` from a command labelled as a check.
 `--check`; this block was the odd one out. When `--check` reports drift, regenerate
 deliberately with `uv run python scripts/generate-contracts.py` and commit the result.
 
+**The body sets `GIP_TEST_DATABASE_URL` and nothing else, and that is checked, not
+assumed.** `.github/workflows/python.yml` also exports `GIP_BLOB_ENDPOINT_URL` and
+`GIP_REDIS_URL` for its `Tests` step, and `.claude/agents/gate-runner.md` used to repeat
+both. They are omitted here because `backend/src/app/config.py` already defaults them to
+**exactly the values CI sets** — `blob_endpoint_url: str = "http://localhost:9000"` and
+`redis_url: SecretStr = SecretStr("redis://localhost:6379/0")` — so against the compose
+stack on its default ports, setting them changes nothing. `database_url`'s default is
+*not* the local stack (`postgresql+asyncpg://gip:gip@localhost:5432/gip`), which is why
+`GIP_TEST_DATABASE_URL` above is not optional and why the `alembic` command documented
+separately sets `GIP_DATABASE_URL` explicitly. **If the compose stack is ever moved off
+its default ports, these two come back into this block** — a default that happens to match
+is not the same as a value that is pinned.
+
 **`nproc` lies inside this body.** GNU `nproc` honours `OMP_NUM_THREADS`, so once the
 caps above are exported it reports `4` on this 16-core box. That is the intended effect
 for anything sizing a pool off it — but it means `nproc` cannot be used *inside* the gate
