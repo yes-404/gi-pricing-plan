@@ -111,21 +111,13 @@ class WorkingCheckoutRefusedError(RuntimeError):
     """
 
 
-class InvalidResidueClassError(RuntimeError):
-    """A `docs/audit/w37-11-record.md` row names a `cls` no extractor can produce.
-
-    #763's defect: a record entry carrying `cls = "comma-continuation-left-whole"` — a
-    description of *why* the residue exists, not a class `rows_d`/`row_g`/`rows_h`
-    actually key their measurements on. Such an entry governs nothing (`check_residue_
-    ceiling`/`_residue_fully_governed` both key on the real `cls`, never find it, and
-    silently read the entry as 0 forever) while the real residue surfaces under its true
-    class in files the record does not name — a double failure that produces no error and
-    no red, only a governance table that reads clean and is not. This is why an unknown
-    `cls` is fatal at load rather than skipped like a malformed row (wrong cell count, a
-    non-integer count): those degrade to "not yet governed", the same as the file not
-    existing; an unknown `cls` degrades to "governs nothing, forever, silently", which
-    `load_w37_11_record`'s own leniency rule was never meant to cover.
-    """
+#: Re-exported from `_docid`, where the whole W37-11 ceiling mechanism now lives so that
+#: `audit-docs.py` — the reader CI actually runs — reads the identical record through the
+#: identical code rather than a second copy of it (2026-09-06). #763's defect, which this
+#: error exists to catch, is recorded in full on `_docid.InvalidResidueClassError` itself:
+#: a record entry keyed on a description of *why* the residue exists rather than on a class
+#: an extractor actually produces governs nothing, silently, forever.
+InvalidResidueClassError = _docid.InvalidResidueClassError
 
 
 #: Written into the *work directory*, never into either tree, so that the trees stay
@@ -2559,23 +2551,23 @@ _PYCACHE_RE: Final = re.compile(r"__pycache__/|\.pyc$")
 #: this single source rather than a second, hand-restated list — the identical shape the
 #: unknown-`cls` defect (#763) itself was: a governance table's key describing why the
 #: residue exists rather than naming a class an extractor can actually produce.
-_CAUSE_OTHER: Final = "other"
-_CAUSE_1_FOREIGN_FRONTMATTER: Final = "cause1-foreign-frontmatter"
-_CAUSE_2A_RANGE_CITATION: Final = "cause2a-range-citation"
-_CAUSE_2B_NOTES_STUB: Final = "cause2b-notes-stub-relative-link"
-_CAUSE_3_LEGACY_PATH_CITATION: Final = "cause3-legacy-path-citation"
-_CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE: Final = "cause4-compound-token-adjacent-uppercase"
-_CAUSE_5_FIXTURE_CORPUS: Final = "cause5-fixture-corpus-old-form-ids"
-_CAUSE_6_PYCACHE: Final = "cause6-pycache-build-artifact"
-_CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE: Final = (
-    "new-frontmatter-stamp-no-move (unassigned — reported, not investigated)"
+#: The label *vocabulary* is `_docid`'s, so that `audit-docs.py` can validate a record
+#: row's `cls` cell without owning row (g)'s patterns; the *classifying* — which cause a
+#: file's residue has — stays here, with the patterns that decide it. Re-exported under the
+#: names this module already used rather than renamed at ~30 call sites.
+_CAUSE_OTHER: Final = _docid.CAUSE_OTHER
+_CAUSE_1_FOREIGN_FRONTMATTER: Final = _docid.CAUSE_1_FOREIGN_FRONTMATTER
+_CAUSE_2A_RANGE_CITATION: Final = _docid.CAUSE_2A_RANGE_CITATION
+_CAUSE_2B_NOTES_STUB: Final = _docid.CAUSE_2B_NOTES_STUB
+_CAUSE_3_LEGACY_PATH_CITATION: Final = _docid.CAUSE_3_LEGACY_PATH_CITATION
+_CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE: Final = (
+    _docid.CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE
 )
-_CAUSE_SLASH_COMPOUND_CITATION: Final = (
-    "slash-compound-citation (unassigned — reported, not investigated)"
-)
-_CAUSE_UNMAPPED_WORK_SLICE_KEY: Final = (
-    "unmapped-work-slice-key (named elsewhere, reported here by shape)"
-)
+_CAUSE_5_FIXTURE_CORPUS: Final = _docid.CAUSE_5_FIXTURE_CORPUS
+_CAUSE_6_PYCACHE: Final = _docid.CAUSE_6_PYCACHE
+_CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE: Final = _docid.CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE
+_CAUSE_SLASH_COMPOUND_CITATION: Final = _docid.CAUSE_SLASH_COMPOUND_CITATION
+_CAUSE_UNMAPPED_WORK_SLICE_KEY: Final = _docid.CAUSE_UNMAPPED_WORK_SLICE_KEY
 
 
 def _residue_cause(
@@ -2623,19 +2615,7 @@ def _residue_cause(
 #: `"g2-"` prefix is what makes a hand-typed, plausible-but-invalid label (`#763`'s
 #: `comma-continuation-left-whole`, a description of a cause rather than a produced class)
 #: fail loudly at record-load time instead of governing nothing and reading 0 forever.
-_G2_RESIDUE_CAUSE_LABELS: Final[frozenset[str]] = frozenset({
-    _CAUSE_OTHER,
-    _CAUSE_1_FOREIGN_FRONTMATTER,
-    _CAUSE_2A_RANGE_CITATION,
-    _CAUSE_2B_NOTES_STUB,
-    _CAUSE_3_LEGACY_PATH_CITATION,
-    _CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE,
-    _CAUSE_5_FIXTURE_CORPUS,
-    _CAUSE_6_PYCACHE,
-    _CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE,
-    _CAUSE_SLASH_COMPOUND_CITATION,
-    _CAUSE_UNMAPPED_WORK_SLICE_KEY,
-})
+_G2_RESIDUE_CAUSE_LABELS: Final[frozenset[str]] = _docid.G2_RESIDUE_CAUSE_LABELS
 
 
 def _residue_cause_table(residue: Sequence[str], ctl: Corpus, mig: Corpus) -> str:
@@ -2917,7 +2897,7 @@ def _h1_verdict(
 #: no natural file subject (a numbering-gap report, a cross-reference summary naming
 #: several files at once) does not match — those fall to `_H1_UNLOCATED_PATH` below,
 #: never dropped.
-_H1_FAILURE_LOCATION_RE: Final = re.compile(r"^check (\d+): ([^\s:]+):")
+_H1_FAILURE_LOCATION_RE: Final = _docid.H1_FAILURE_LOCATION_RE
 
 #: A failure message this predicate cannot place at a real file still belongs to *some*
 #: check, and pinning it under a class-level ceiling (this sentinel `path`, real `cls`)
@@ -2926,9 +2906,9 @@ _H1_FAILURE_LOCATION_RE: Final = re.compile(r"^check (\d+): ([^\s:]+):")
 #: #756 — "if the loader accepts a file-less entry, pin them as a class-level ceiling" —
 #: and `Row.residue`/`ResidueEntry.path` are plain `str`, so no loader change was needed
 #: at all; only this module choosing to use the string rather than skip.
-_H1_UNLOCATED_PATH: Final = "(no file named in message)"
+_H1_UNLOCATED_PATH: Final = _docid.H1_UNLOCATED_PATH
 
-_H1_CHECK_NUMBER_RE: Final = re.compile(r"^check (\d+):")
+_H1_CHECK_NUMBER_RE: Final = _docid.H1_CHECK_NUMBER_RE
 
 
 def _h1_residue_by_file(out: str, corpus: Corpus) -> Mapping[tuple[str, str], int]:
@@ -2984,19 +2964,32 @@ def _h1_residue_by_file(out: str, corpus: Corpus) -> Mapping[tuple[str, str], in
     # actually wanted, not a second full `load_corpus` (lines/was_lines/fenced_lines are
     # not needed here at all).
     known_files = frozenset(tracked_files(corpus.tree))
-    block = _FAILED_BLOCK_RE.search(out)
-    tail = out[block.start():] if block else ""
+    # From whichever block comes first: since 2026-09-06 `audit-docs.py` honours the same
+    # W37-11 record and prints the failures at or under their ceiling under its own
+    # `DISCLOSED (...)` header instead of counting them into `FAILED(n)`. (h1) must still
+    # measure the residue that EXISTS, not the half still being counted — reading only the
+    # `FAILED` block would make every ceilinged entry measure 0 and hand
+    # `check_residue_ceiling` a `RESIDUE_PROGRESSED` ("the record can shrink") for residue
+    # that has not moved by one hit. The verdict side (`_classify_failures`) deliberately
+    # does NOT do this: h1's verdict follows what `audit-docs.py` actually failed on.
+    starts = [
+        m.start()
+        for m in (_FAILED_BLOCK_RE.search(out), _docid.W37_11_DISCLOSED_HEADER_RE.search(out))
+        if m is not None
+    ]
+    tail = out[min(starts):] if starts else ""
     residue: dict[tuple[str, str], int] = {}
     for msg in _FAILURE_LINE_RE.findall(tail):
-        m = _H1_FAILURE_LOCATION_RE.match(msg)
-        if m and m.group(2) in known_files:
-            check_no, path = m.group(1), m.group(2)
-        else:
-            m2 = _H1_CHECK_NUMBER_RE.match(msg)
-            if not m2:
-                continue
-            check_no, path = m2.group(1), _H1_UNLOCATED_PATH
-        key = (path, f"h1-check{check_no}")
+        # One keying rule, shared with `audit-docs.py`'s own disclosure partition
+        # (`_docid.residue_key_for_failure`): the instrument and the reader CI runs must
+        # agree on which `(path, cls)` a given failure message belongs to, or the record
+        # ceilings one key while the gate counts another. `known_files` differs
+        # legitimately between the two callers — this one resolves against the migrated
+        # snapshot's tracked files — which is why the corpus is passed in rather than read
+        # inside the shared rule.
+        key = _docid.residue_key_for_failure(msg, known_files)
+        if key is None:
+            continue
         residue[key] = residue.get(key, 0) + 1
     return residue
 
@@ -3771,27 +3764,13 @@ def _row_sort_key(key: str) -> tuple[str, int]:
 #: populating the record must not itself become residue for the rows it governs.
 W37_11_RECORD_PATH: Final = _docid.W37_11_RECORD_PATH
 
-RESIDUE_REGRESSION: Final = "REGRESSION (residue exceeds W37-11 ceiling)"
-RESIDUE_PROGRESSED: Final = "PROGRESSED (W37-11 record can shrink)"
-
-
-@dataclass(frozen=True)
-class ResidueEntry:
-    """One row of the governed W37-11 record: a file's disclosed residue for one ruled
-    row/check, carried with the reason it resisted the general mechanism and who owns it.
-
-    `cls` is the deputy's own word for it (`to-lead.md`, 2026-09-05 15:06 BST): "path,
-    class (row/check), count, reason[, owner]" — which ruled row or `audit-docs.py` check
-    this entry's count belongs to, not a hit-type label. Two entries may share a `path`
-    with different `cls` (a file resisting more than one ruled row) or share a `cls` with
-    different `path`s (a row's residue spread across several files) — the pair is the key.
-    """
-
-    path: str
-    cls: str
-    count: int
-    reason: str
-    owner: str = ""
+#: The ceiling mechanism itself is `_docid`'s from 2026-09-06 — `audit-docs.py`, the reader
+#: CI actually runs, has to honour the identical record through the identical code, and a
+#: second copy of a governance rule is a second rule. Re-exported here under the names this
+#: module and `tests/test_doc_id_verify.py` already use.
+RESIDUE_REGRESSION: Final = _docid.RESIDUE_REGRESSION
+RESIDUE_PROGRESSED: Final = _docid.RESIDUE_PROGRESSED
+ResidueEntry = _docid.ResidueEntry
 
 
 def _residue_fully_governed(
@@ -3829,158 +3808,17 @@ def _residue_fully_governed(
             return False
     return True
 
-
-#: `h1-check<n>` for any digit string — a shape predicate, not a hand-listed set of check
-#: numbers, because audit-docs.py's own check numbers are unbounded and this registry must
-#: not go stale the moment a new check is added. Derived from `_h1_residue_by_file`'s own
-#: `f"h1-check{check_no}"` construction (`check_no` is `_H1_FAILURE_LOCATION_RE`/
-#: `_H1_CHECK_NUMBER_RE`'s own `(\d+)` capture group), never restated as a literal list.
-_H1_CLASS_RE: Final = re.compile(r"^h1-check\d+$")
-
-#: `d<i>` for every `i` `rows_d` actually allocates — `range(1, len(D_ALTERNATIVES) + 1)`,
-#: read from `D_ALTERNATIVES` itself (`rows_d`'s own `f"d{i}"`, `enumerate(D_ALTERNATIVES,
-#: start=1)`) rather than a hand-typed count, so this set grows the moment a `D_ALTERNATIVES`
-#: entry does and never needs a second edit here.
-_D_ROW_CLASSES: Final = frozenset(f"d{i}" for i in range(1, len(D_ALTERNATIVES) + 1))
-
-
-def _known_w37_11_class(cls: str) -> bool:
-    """True iff `cls` is a class one of the three extractors (`rows_d`, `row_g`, `rows_h`)
-    can actually produce — the registry `load_w37_11_record` checks every row's `cls`
-    against, per `InvalidResidueClassError`'s own reasoning. Derived from each extractor's
-    own construction (`_D_ROW_CLASSES`, `_G2_RESIDUE_CAUSE_LABELS`, `_H1_CLASS_RE`) rather
-    than hand-restated as a fourth, independent list — the identical defect this whole
-    registry exists to catch, one level up.
-    """
-    if cls in _D_ROW_CLASSES:
-        return True
-    if cls.startswith("g2-") and cls[len("g2-"):] in _G2_RESIDUE_CAUSE_LABELS:
-        return True
-    return bool(_H1_CLASS_RE.match(cls))
-
-
-def load_w37_11_record(tree_root: Path) -> tuple[ResidueEntry, ...]:
-    """The governed per-(file, class) residue ceiling, or empty if the record has no rows
-    yet (or does not exist) — never fatal, and never a reason to invent one here.
-
-    Population is **not this module's to decide** — every path, class, count and reason
-    is the deputy's, filed into the record directly; this function only reads it, the
-    same relationship `_redirect_map` has with `docs/REDIRECTS.csv`. A malformed data row
-    (wrong cell count, a non-integer `count`) is skipped rather than raised — a record this
-    module cannot parse must never crash the run that reads it; it degrades to "not yet
-    governed" for that row, the same as the file not existing at all.
-
-    A row whose `cls` is not one `_known_w37_11_class` recognises is different: it does
-    not degrade quietly, it raises `InvalidResidueClassError`. #763's defect is exactly
-    this shape not being caught — a plausible-looking, hand-typed label that governs
-    nothing while the real residue moves unnoticed. See `InvalidResidueClassError`'s own
-    docstring for why silence is the wrong failure mode here specifically.
-
-    `tree_root` must be a tree materialised from the ref under verification — never the
-    live checkout `verify()` was invoked against. `_verify_body` passes `snap.control`
-    (2026-09-06 fix): before this fix it passed `repo_root`, the mutable working checkout,
-    which made `--ref` non-hermetic — a `--verify` run's row (d)/(h1) verdicts depended on
-    whatever sat on disk in the invoking executor's own worktree at call time, regardless
-    of which commit `--ref` named. Caught when two runs of the *identical* `--ref` (an
-    executor mid-edit on the record) produced different verdict sets and a residue-ceiling
-    regression neither run's own tree content could explain — `docs/audit/w37-11-record.md`
-    is precisely the legacy `docs/audit/` path row (d10) exists to prove absent from the
-    *migrated* tree, so `snap.control` (the archived, unmigrated `--ref` content) is its
-    committed home, not `snap.migrated`. See `test_verify_reads_the_w37_11_record_from_the_
-    ref_never_the_live_checkout` for the broken-input proof: two `verify()` calls at one
-    ref, with the *live* record deliberately changed between them, must return identical
-    verdicts — this function's own read is the only thing that could make them diverge.
-    """
-    record = tree_root / W37_11_RECORD_PATH
-    text = read_text(record)
-    if text is None:
-        return ()
-    entries: list[ResidueEntry] = []
-    for line in text.splitlines():
-        line = line.strip()
-        if not line.startswith("|") or not line.endswith("|"):
-            continue
-        cells = [c.strip() for c in line.strip("|").split("|")]
-        if len(cells) != 5 or cells == ["path", "cls", "count", "reason", "owner"]:
-            continue
-        if set(cells[0]) <= {"-", " "}:  # the `| --- | --- | ... |` separator row
-            continue
-        path, cls, count_cell, reason, owner = cells
-        if not path or not cls or not count_cell.isdigit():
-            continue
-        if not _known_w37_11_class(cls):
-            raise InvalidResidueClassError(
-                f"{record}: {cls!r} is not a class any extractor produces (path {path!r})"
-                " — a hand-typed label governs nothing; see InvalidResidueClassError's own"
-                " docstring"
-            )
-        entries.append(ResidueEntry(
-            path=path, cls=cls, count=int(count_cell), reason=reason, owner=owner,
-        ))
-    return tuple(entries)
-
-
-@dataclass(frozen=True)
-class ResidueChange:
-    """One per-(file, class) movement the W37-11 ceiling found, fatal or not."""
-
-    path: str
-    cls: str
-    kind: str
-    detail: str
-
-    @property
-    def fatal(self) -> bool:
-        return self.kind == RESIDUE_REGRESSION
-
-
-def check_residue_ceiling(
-    measured: Mapping[tuple[str, str], int],
-    record: Sequence[ResidueEntry],
-) -> tuple[ResidueChange, ...]:
-    """Compare this run's per-(file, class) residue against the governed W37-11 ceiling.
-
-    Three outcomes, per the deputy's ruling (`to-lead.md`, 2026-09-05 15:06 BST):
-
-    * a hit in a file the record does not name, for a `cls` the record DOES govern
-      (appears against at least one other file) → fatal `RESIDUE_REGRESSION` — a file the
-      record never named.
-    * a file's residual above its recorded count → fatal `RESIDUE_REGRESSION` — a
-      regression into a ruled row.
-    * a recorded (file, class) now measuring zero → non-fatal `RESIDUE_PROGRESSED`; the
-      record can shrink, and a shrink is never itself a failure demanding a table edit.
-
-    A `cls` absent from the record entirely is ungoverned and produces no change either
-    way — the ceiling only ever fires for a `cls` the record already names at least once,
-    so wiring a row's measurement in ahead of the record gaining its first entry for that
-    `cls` cannot manufacture a false regression.
-    """
-    governed_classes = {entry.cls for entry in record}
-    ceiling = {(entry.path, entry.cls): entry.count for entry in record}
-    changes: list[ResidueChange] = []
-    for (path, cls), count in measured.items():
-        if cls not in governed_classes or count <= 0:
-            continue
-        limit = ceiling.get((path, cls))
-        if limit is None:
-            changes.append(ResidueChange(
-                path, cls, RESIDUE_REGRESSION,
-                f"{count} hit(s) in a file the W37-11 record does not name for {cls!r}",
-            ))
-        elif count > limit:
-            changes.append(ResidueChange(
-                path, cls, RESIDUE_REGRESSION,
-                f"{count} hit(s) exceeds the W37-11 record's ceiling of {limit} for "
-                f"{cls!r}",
-            ))
-    for (path, cls), limit in ceiling.items():
-        if limit > 0 and measured.get((path, cls), 0) == 0:
-            changes.append(ResidueChange(
-                path, cls, RESIDUE_PROGRESSED,
-                f"the W37-11 record's ceiling of {limit} for {cls!r} now measures 0 at "
-                f"{path!r} — the record can shrink",
-            ))
-    return tuple(changes)
+#: The class registry and the ceiling comparison are `_docid`'s from 2026-09-06, for the
+#: reason recorded on `RESIDUE_REGRESSION` above: `audit-docs.py` must honour the same
+#: record through the same code. Every name below is a re-export, kept so this module's own
+#: call sites and `tests/test_doc_id_verify.py` read as they did — the definitions, and the
+#: reasoning for each, are in `_docid.py`'s W37-11 section.
+_H1_CLASS_RE: Final = _docid.H1_CLASS_RE
+_D_ROW_CLASSES: Final = _docid.D_ROW_CLASSES
+_known_w37_11_class = _docid.known_w37_11_class
+load_w37_11_record = _docid.load_w37_11_record
+ResidueChange = _docid.ResidueChange
+check_residue_ceiling = _docid.check_residue_ceiling
 
 
 @dataclass(frozen=True)
