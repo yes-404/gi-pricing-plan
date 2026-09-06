@@ -2146,6 +2146,10 @@ def test_generic_d_row_plain_miss_with_no_comma_tail_still_fails(
         f"a plain miss with no comma-tail must still FAIL a generic d-row beside the "
         f"box-end disclosure, not be swept into it: {d6.note}"
     )
+    assert "ADR-0005" in d6.note, (
+        f"the injected miss must be named in the note, not merely cause a silent FAIL: "
+        f"{d6.note}"
+    )
 
     # And with the plain miss removed, the same tree's remaining box-end citation
     # discloses cleanly -- proving the FAIL above came from the plain miss specifically.
@@ -3022,6 +3026,40 @@ def test_a_real_d7_record_entry_round_trips_through_the_ceiling(dv: Any) -> None
     d7_entries = [e for e in record if e.cls == "d7"]
     assert d7_entries, "the real record must carry at least one d7 entry"
     target = d7_entries[0]
+    measured = {(target.path, target.cls): target.count}
+
+    def _for_target(
+        changes: Sequence[dv.ResidueChange],
+    ) -> list[dv.ResidueChange]:
+        return [c for c in changes if c.path == target.path and c.cls == target.cls]
+
+    assert _for_target(dv.check_residue_ceiling(measured, record)) == [], (
+        "at its own recorded ceiling, a real entry must produce no change"
+    )
+
+    lowered = tuple(
+        dv.ResidueEntry(e.path, e.cls, e.count - 1, e.reason, e.owner)
+        if e is target else e
+        for e in record
+    )
+    changes = _for_target(dv.check_residue_ceiling(measured, lowered))
+    assert len(changes) == 1
+    assert changes[0].fatal, "a ceiling lowered below the measured count must be fatal"
+
+    assert _for_target(dv.check_residue_ceiling(measured, record)) == [], (
+        "restoring the real ceiling must clear the regression again"
+    )
+
+
+def test_the_d6_record_entry_round_trips_through_the_ceiling(dv: Any) -> None:
+    """The (d6) twin of the (d7) round-trip test above (Ruling, lead, 2026-09-06,
+    condition 6): the ONE `d6` entry this PR adds must do real mechanical work too, not
+    merely exist as documentation. Proof against the REAL, currently-committed
+    `docs/audit/w37-11-record.md`, not a synthetic fixture."""
+    record = dv.load_w37_11_record(pathlib.Path("."))
+    d6_entries = [e for e in record if e.cls == "d6"]
+    assert d6_entries, "the real record must carry at least one d6 entry"
+    target = d6_entries[0]
     measured = {(target.path, target.cls): target.count}
 
     def _for_target(

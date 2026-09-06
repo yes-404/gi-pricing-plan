@@ -1326,12 +1326,15 @@ def _box_end_only_residue_or_none(
     """The generic d-row path for the SAME disclosed class `_d7_disclosed_or_fail`'s
     third class already covers, for every alternative that has no bespoke verdict
     function of its own (Ruling, lead, 2026-09-06 — see `_box_end_refused`'s own
-    docstring for the grounds). Returns `None` when there is nothing to say — no hit at
-    all, or at least one hit that is NOT a box-end refusal (a genuine miss, which must
-    keep failing the row exactly as `_verdict_on_zero` already says; this function never
-    weakens that). Returns `(DISCLOSE, note)` only when EVERY hit on every still-matching
-    line is a refusal this same predicate confirms — never a blanket disclosure trusting
-    that a hit merely resembles the shape.
+    docstring for the grounds). Returns `None` when box-end refusal has nothing to say
+    about this row at all (no hit is a refusal), leaving `_verdict_on_zero`'s own
+    verdict and note untouched. Returns `(FAIL, note-naming-the-real-hit)` when at least
+    one hit IS a refusal but at least one other is not — the mandatory positive control
+    this class must never swallow, named rather than left in `_verdict_on_zero`'s own
+    silent empty-string FAIL note so a reviewer can see the real miss did not vanish
+    into the new disclosure. Returns `(DISCLOSE, note)` only when EVERY hit on every
+    still-matching line is a refusal this same predicate confirms — never a blanket
+    disclosure trusting that a hit merely resembles the shape.
     """
     active_map = _redirects_token_map(mig)
     real_hits: list[str] = []
@@ -1347,8 +1350,17 @@ def _box_end_only_residue_or_none(
                     refusal_hits.append(f"{token} ({rel}:{i + 1})")
                 else:
                     real_hits.append(f"{token} ({rel}:{i + 1})")
-    if real_hits or not refusal_hits:
+    if not refusal_hits:
         return None
+    if real_hits:
+        shown = "; ".join(real_hits[:10])
+        more = f" (+{len(real_hits) - 10} more)" if len(real_hits) > 10 else ""
+        return FAIL, (
+            f"{len(real_hits)} hit(s) are a genuine miss, not disclosed — "
+            f"{len(refusal_hits)} other hit(s) on this row ARE box-end comma-continuation "
+            "refusals, but a real miss still fails the whole row (this row has no "
+            f"per-line partial disclosure, the same rule (d7) applies): {shown}{more}."
+        )
     shown = "; ".join(refusal_hits[:10])
     more = f" (+{len(refusal_hits) - 10} more)" if len(refusal_hits) > 10 else ""
     return DISCLOSE, (
@@ -3455,7 +3467,7 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # existing, now-measured defect (a `Ruling <n>` ambiguity/
                          # migration gap, row (d)'s file, previously closed at task 7) — not
                          # fixed here, out of row (b)'s own scope.
-    "d6": PASS,         # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
+    "d6": DISCLOSE,     # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
                          # original matches, plus one more surfaced by `origin/main` drift
                          # (`docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md`, a
                          # row-h plan landed after this row's original 74-line snapshot),
@@ -3466,6 +3478,22 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # class this table's own history above already warns about),
                          # never a real citation. Fenced or respelled; zero citation-class
                          # misses. 0/0.
+                         #
+                         # APPENDED, not a correction to the above (2026-09-06, W37-6
+                         # exec-pin, ruled by the lead and confirmed by the deputy):
+                         # `PASS` -> `DISCLOSE`. `docs/skills-map.md:92` now reads
+                         # `ADR-0004, 03 FR-RATE-1..13, 56..58` — `03` resolves as the real
+                         # `ADR-0003`, so this branch's own box-end comma-continuation
+                         # refusal (built for (d7), the identical shape `_bare_comma_tail_
+                         # resolves` decides for every id family the general rewriter
+                         # covers) correctly refuses to partially rewrite `ADR-0004`,
+                         # leaving it legacy-but-intact rather than mangled. This is not
+                         # the FIXED defect above regressing: base (pre-refusal, `aeeb1fe`)
+                         # measured 0/0 exactly as this entry already said; head measures
+                         # 1 line / 1 file, entirely this one new refusal. `_box_end_only_
+                         # residue_or_none` (generalised from (d7)'s own third disclosed
+                         # class) discloses it; docs/audit/w37-11-record.md carries the one
+                         # entry this class needs, reconciled exact against measurement.
     "d7": DISCLOSE,     # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+ — `FAIL` -> `DISCLOSE`, 2026-09-05,
                          # this same commit (the (d7)/(g) executor). The 39 "Next free"/
                          # "Highest ids in use" lines are the never-allocated closed class
