@@ -2273,10 +2273,10 @@ def stripped_stamp_pair(
 ) -> tuple[str, str]:
     """`(old_body, new_text)`, each with its own leading front-matter block removed only
     when `_this_runs_stamp_id` confirms it is a stamp *this run's own migration* wrote
-    (Ruling 105 §2) — extracted from `frozen_file_matches_after_migration_stamp` so a
+    (RL-1046 §2) — extracted from `frozen_file_matches_after_migration_stamp` so a
     second predicate needing the identical stripped pair (`doc-id.py`'s row (g) g2
     forward-citation check, below) shares this one determination of which side's block is
-    safe to strip, rather than reimplementing it a second time (Ruling 68 §3: "one
+    safe to strip, rather than reimplementing it a second time (RL-989 §3: "one
     definition ... implementing it twice is how the two drift apart").
     """
 

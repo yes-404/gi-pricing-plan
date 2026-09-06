@@ -10061,10 +10061,10 @@ def classify_migration_diff(
         own pre-migration text is a plain, literal, non-computed substitution — the same
         operation `frozen_file_matches_after_migration_stamp` already performs, run in the
         other direction because that direction is the one this shape of citation can
-        actually be verified in. It adds no new permitted transformation Ruling 68 does
+        actually be verified in. It adds no new permitted transformation RL-989 does
         not already name for class 2/3 (a reference token substituted) and reuses DP-7's
         own boundary regex (`audit_docs._inverse_token_pattern`) rather than a second one
-        (Ruling 68 §3).
+        (RL-989 §3).
 
         Never used for a compound or range citation's *expansion* (`_expand_compound`/
         `_expand_range`): those are non-trivial computed rewrites, and replaying the same
