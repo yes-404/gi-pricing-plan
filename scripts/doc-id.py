@@ -1214,6 +1214,14 @@ class MigrateResult:
     # recorded set, read by both consumers, rather than each re-deriving its own
     # (`docs/notes/0003-duplicated-status-goes-stale.md` — the copy is what goes stale).
     generated_paths: tuple[str, ...] = ()
+    # W37-6, 2026-09-06: every file `_repoint_all_relative_links` rewrote a relative
+    # markdown link in — a citer's own link re-rooted for its new directory depth, a
+    # link whose target moved elsewhere, or a link to a `_README_LEGACY_DIR_MOVES`
+    # directory, all found live as the cause of 235 broken links across 82 files (row
+    # (g), `classified-by-none`; check 1, control zero). Carried by name for the
+    # identical reason `deferred_reference_stamps` is: a population this run silently
+    # changed is a population a reader cannot audit without it.
+    relinked_paths: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------------------
@@ -6940,6 +6948,19 @@ _MD_LINK_TARGET_RE: Final = re.compile(
     r"\[(?P<text>[^\[\]]*)\]\((?P<target>[^)\s]+)\)"
 )
 
+#: A markdown *reference-style* link definition — `[label]: ../path "optional title"`,
+#: always its own line. Carries the identical defect an inline `[text](target)` link
+#: does (a relative target that a move can silently misdirect), and a fix scoped to the
+#: inline form alone would leave this shape unrepointed -- found live investigating W37-6
+#: row (g)'s residue, 2026-09-06: `check_paths`/`audit-docs.py`'s own scanner counts both
+#: shapes as the same population, so a rewriter that only repoints one is invisible to
+#: half of what the check already measures. `(?m)` anchors `^` to each line, not the
+#: whole string. The target ends at whitespace or end-of-line, matching the inline form's
+#: own "stops at whitespace" convention (`_MD_LINK_TARGET_RE`'s own docstring).
+_MD_REFERENCE_LINK_TARGET_RE: Final = re.compile(
+    r"(?m)^\[(?P<text>[^\[\]]*)\]:\s*(?P<target>\S+)"
+)
+
 
 def _has_front_matter(text: str) -> bool:
     """A leading `---`-fenced block. Used to check Ruling 68 class 1 as a **pair**.
@@ -6956,12 +6977,40 @@ def _has_front_matter(text: str) -> bool:
     return "---" in lines[1:]
 
 
+def _rebase_relative_target(
+    target: str, old_dir: str, new_dir: str, moves: Mapping[str, str]
+) -> str | None:
+    """`target` (a markdown link's raw target string, inline or reference-style),
+    resolved against `old_dir`, looked up in `moves` (repo-relative old -> repo-relative
+    new) and re-expressed relative to `new_dir` -- or `None` when `target` is not a
+    same-repository relative path this migration can reason about (absolute, a URL, a
+    bare anchor, `mailto:`, or a path that resolves above the repository root), in which
+    case the caller leaves the original text untouched.
+
+    The one computation both link shapes (`_repoint_relative_links`'s inline and
+    reference-style passes) share -- extracted so the two never drift into two different
+    readings of "what does this target mean" (Ruling 67 §2's "one rule at two times").
+    """
+    if target.startswith(("http://", "https://", "#", "mailto:", "/")):
+        return None
+    base, sep, anchor = target.partition("#")
+    if not base:
+        return None
+    trailing = "/" if base.endswith("/") else ""
+    resolved = posixpath.normpath(posixpath.join(old_dir, base))
+    if resolved.startswith(".."):
+        return None
+    moved = moves.get(resolved, resolved)
+    return posixpath.relpath(moved, new_dir) + trailing + sep + anchor
+
+
 def _repoint_relative_links(
     text: str, old_rel: str, new_rel: str, moves: Mapping[str, str]
 ) -> str:
-    """`text`'s relative markdown link targets, each resolved against `old_rel`'s directory,
-    looked up in `moves` (repo-relative old -> repo-relative new) and re-expressed relative
-    to `new_rel`'s directory.
+    """`text`'s relative markdown link targets -- both inline `[text](target)` and
+    reference-style `[label]: target` definitions -- each resolved against `old_rel`'s
+    directory, looked up in `moves` (repo-relative old -> repo-relative new) and
+    re-expressed relative to `new_rel`'s directory.
 
     Two independent things are fixed by one pass, and both are needed even when only one of
     them applies to a given link: the **target** may have moved, and the **citing file** may
@@ -6976,29 +7025,29 @@ def _repoint_relative_links(
     old_dir = posixpath.dirname(old_rel)
     new_dir = posixpath.dirname(new_rel) or "."
 
-    def _one(match: re.Match[str]) -> str:
+    def _inline(match: re.Match[str]) -> str:
         text_label, target = match.group("text"), match.group("target")
-        if target.startswith(("http://", "https://", "#", "mailto:", "/")):
+        rebased = _rebase_relative_target(target, old_dir, new_dir, moves)
+        if rebased is None:
             return match.group(0)
-        base, sep, anchor = target.partition("#")
-        if not base:
-            return match.group(0)
-        trailing = "/" if base.endswith("/") else ""
-        resolved = posixpath.normpath(posixpath.join(old_dir, base))
-        if resolved.startswith(".."):
-            return match.group(0)
-        moved = moves.get(resolved, resolved)
-        rebased = posixpath.relpath(moved, new_dir) + trailing
         # A label that repeated the old target repeats the new one; a label that said
         # anything else is the author's prose and is not touched. Both bare and
         # backticked, because the corpus writes it both ways.
         for wrapper in ("{}", "`{}`"):
             if text_label == wrapper.format(target):
-                text_label = wrapper.format(rebased + sep + anchor)
+                text_label = wrapper.format(rebased)
                 break
-        return f"[{text_label}]({rebased}{sep}{anchor})"
+        return f"[{text_label}]({rebased})"
 
-    return _MD_LINK_TARGET_RE.sub(_one, text)
+    def _reference(match: re.Match[str]) -> str:
+        text_label, target = match.group("text"), match.group("target")
+        rebased = _rebase_relative_target(target, old_dir, new_dir, moves)
+        if rebased is None:
+            return match.group(0)
+        return f"[{text_label}]: {rebased}"
+
+    text = _MD_LINK_TARGET_RE.sub(_inline, text)
+    return _MD_REFERENCE_LINK_TARGET_RE.sub(_reference, text)
 
 
 def _split_front_matter(text: str) -> tuple[str, str]:
@@ -7806,6 +7855,79 @@ def _split_index_section_fault(root: Path, index_rel: str, anchor: str) -> str |
     return "the index file has no section with that anchor"
 
 
+def _repoint_all_relative_links(
+    root: Path, path_moves: Mapping[str, str], fresh_paths: Collection[str] = (),
+) -> list[str]:
+    """Every tracked file under `root`, its relative markdown links (inline and
+    reference-style, `_repoint_relative_links`'s own two shapes) repointed against this
+    run's own moves -- both a moved citer's own links (re-rooted for its new directory
+    depth) and an unmoved citer's link to a file this run moved elsewhere (repointed even
+    though the citer itself never moved), the two failure modes found live investigating
+    row (g)'s residue (W37-6, 2026-09-05/06): `_rewrite_citations`'s token sweep never
+    reaches either, because a markdown link's target is not an id/path CITATION TOKEN --
+    it is link syntax `_rewrite_citations` never parses, only ever a source of tokens
+    *inside* it (an id cited in the link text, not the target string itself).
+
+    `path_moves` is unioned with `_README_LEGACY_DIR_MOVES` -- the identical union
+    `_regenerate_family_readmes`'s own `carry()` helper already builds (`all_moves`
+    there) -- so a bare `adr/`/`notes/` directory-shaped link repoints the same way a
+    family README's own carried body already does; a specific file inside either
+    directory is unaffected here because its own move is already a `path_moves` entry in
+    its own right (`_discover_adrs`/`_discover_notes` assign it one).
+
+    Every file is walked, not only ones this run moved: an UNMOVED citer's `old_rel` and
+    `new_rel` are identical, and `_repoint_relative_links` already documents that a link
+    neither the citer nor the target moved comes back byte-identical -- so walking the
+    whole tree costs nothing for the files this defect never touches and is the only way
+    to reach `docs/skills-map.md`'s own shape (a file that never moved, citing a
+    directory that did).
+
+    A **split** source (`path_move_groups`, several new paths sharing one `old_rel`) is
+    not resolved correctly here: `path_moves` itself can only hold one destination per
+    key, so a link to a pre-split file repoints to whichever target that source's own
+    `path_moves` entry happens to carry -- the identical, already-accepted limitation
+    `_regenerate_family_readmes`'s own `carry()` call already has for the same reason
+    (Ruling 100/101: "the (g) inverse only knows id tokens, so a split target's own
+    relative links have no inverse" -- the forward direction's mirror image, not solved
+    here either).
+
+    Idempotent by construction: a link this pass already corrected resolves to a path
+    `path_moves` never names as an `old_path` (it is a *current*, correct path), so a
+    second run's `moves.get(resolved, resolved)` returns it unchanged and recomputes the
+    identical relative string.
+
+    `fresh_paths` — the population `MigrateResult.generated_paths` also names — is every
+    file whose CONTENT this run just built from scratch (a family README's regenerated
+    table, an INDEX.md, a split-source index), never carried over from an old body. Such
+    a file's own links are already expressed relative to its **current** location, not
+    an old one this run is undoing — found live, W37-6, 2026-09-06:
+    `_render_adrs_readme_table`'s own bare-basename link (`ADR-00002-….md`, correct,
+    same-directory) was being resolved against `docs/adr/`'s OLD directory (because the
+    ADR README itself IS a `path_moves` entry, `docs/adr/README.md` -> `docs/adrs/
+    README.md`), turning an already-correct link into `../adr/ADR-00002-….md` — a
+    regression this pass introduced, caught by `test_migrate_is_idempotent_on_its_own_
+    output` reddening. For a path in `fresh_paths`, `old_dir` is forced equal to
+    `new_dir` (the identical "unmoved" resolution an ordinary never-moved citer already
+    gets), so its own already-correct links are read as what they are, never re-resolved
+    against a location the file's own body was never actually written relative to.
+    """
+    all_moves = {**path_moves, **_README_LEGACY_DIR_MOVES}
+    new_to_old = {new: old for old, new in path_moves.items()}
+    changed: list[str] = []
+    for path in _iter_tree_files(root):
+        new_rel = path.relative_to(root).as_posix()
+        old_rel = new_rel if new_rel in fresh_paths else new_to_old.get(new_rel, new_rel)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        rewritten = _repoint_relative_links(text, old_rel, new_rel, all_moves)
+        if rewritten != text:
+            path.write_text(rewritten, encoding="utf-8")
+            changed.append(new_rel)
+    return changed
+
+
 # ---------------------------------------------------------------------------------------
 # `migrate` itself.
 # ---------------------------------------------------------------------------------------
@@ -8477,6 +8599,25 @@ def migrate(root: Path) -> MigrateResult:
         {f"{k}/": f"{v}/" for k, v in _README_LEGACY_DIR_MOVES.items()},
         "_README_LEGACY_DIR_MOVES",
     )
+    # The identical `docs/`-stripped bare form `_path_rewrite_tokens` already derives for
+    # a FILE move (its own second form, "the link text is the repo-relative form, the
+    # link target is the docs/-relative form... because roadmap.md lives one level
+    # inside docs/ and a same-tree relative link omits the shared prefix") -- applied here
+    # to a directory move by the same predicate, never a directory-specific mechanism.
+    # Found live: `docs/skills-map.md` (itself inside `docs/`) cites the directory as
+    # bare `adr/`, which the full `docs/adr/` form above cannot match (row (g),
+    # `classified-by-none`, W37-6, 2026-09-06). Trailing slash on both sides for the
+    # identical reason the full form already uses one: `adr/` cannot match inside
+    # `adrs/` (no `/` follows `adr` there), so this adds no new ambiguity the full form
+    # did not already avoid.
+    _add_tokens(
+        token_map, token_origins,
+        {
+            f"{k[len('docs/'):]}/": f"{v[len('docs/'):]}/"
+            for k, v in _README_LEGACY_DIR_MOVES.items()
+        },
+        "_README_LEGACY_DIR_MOVES (bare form)",
+    )
     # The token feeds the sweep unconditionally (a hand-added stale mention deserves
     # fixing on any run, not only the one that found the directory still there), but the
     # REDIRECTS.csv row is gated on `legacy_dir_existed` (captured at the top of this
@@ -8540,6 +8681,19 @@ def migrate(root: Path) -> MigrateResult:
                 "old_path": "", "new_path": "",
             }
         )
+
+    # After the citation-token sweep, and over the whole tree rather than only files this
+    # run moved: a markdown link's TARGET is not an id/path citation token
+    # `_rewrite_citations` above ever parses, so a link whose target moved (a sibling
+    # renamed at the same directory depth), a link whose own citer moved (a depth
+    # change), or a link to a directory `_README_LEGACY_DIR_MOVES` renamed survives that
+    # sweep untouched regardless of which of the three applies. Found live investigating
+    # row (g)'s residue (W37-6, 2026-09-05/06): 235 links broken this way across 82
+    # files, control tree zero -- entirely this run's own doing, invisible to every
+    # id/path-token check because none of them read link syntax. `_repoint_all_relative_
+    # links`'s own docstring has the split-source limitation this shares with
+    # `_regenerate_family_readmes`'s identical, already-accepted use of the same helper.
+    relinked = _repoint_all_relative_links(root, path_moves, fresh_paths=readme_written)
 
     # Alongside the vendored-manifest stamp below, and after the citation rewrite for the
     # same reason it is: a header this run writes carries no legacy token to rewrite.
@@ -8617,7 +8771,7 @@ def migrate(root: Path) -> MigrateResult:
     return MigrateResult(
         assigned=tuple(assigned),
         redirect_rows=tuple(redirect_rows),
-        files_written=tuple(dict.fromkeys([*files_written, *rewritten])),
+        files_written=tuple(dict.fromkeys([*files_written, *rewritten, *relinked])),
         files_deleted=tuple(files_deleted),
         skipped_vendored=tuple(skipped_vendored),
         warnings=tuple(warnings),
@@ -8640,6 +8794,7 @@ def migrate(root: Path) -> MigrateResult:
             *readme_written, *split_index_paths, *redirects_written, *index_written,
             *process_core_written,
         ])),
+        relinked_paths=tuple(relinked),
     )
 
 

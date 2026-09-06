@@ -6519,21 +6519,33 @@ def test_the_dangling_link_check_reddens_when_the_regeneration_is_removed(
     reported `grep -c '](' ` returning **0** for the five files, where the true counts are
     20, 6, 8, 6 and 5.
 
-    **The named citer was `docs/adr/README.md` and is now derived from
-    `_MIGRATION_DIFF_FAMILY_READMES` instead.** The bare-basename citing form (W37-6,
-    Ruling 100's implementing PR) legitimately repairs that file: its index table cites
-    sibling ADRs by bare filename, those ADRs move within their own directory to
-    `docs/adrs/`, and the rewrite now sends the link to `../adrs/ADR-…md` — which resolves,
-    from the old path the mutation leaves the README at. So the exemplar stopped dangling
-    because it stopped being broken, not because the probe stopped working. Re-derived
-    from the rule the assertion is *for* — the surviving §5.2 READMEs must be named — the
-    probe still fires, and it now cannot go stale the next time one member of that set is
-    repaired ahead of the others.
+    **This is the mutation's second re-derivation, for the identical reason as its
+    first** (below): `docs/adr/README.md` stopped dangling under Ruling 100's
+    bare-basename citing form, so the mutation moved to `_MIGRATION_DIFF_FAMILY_READMES`
+    generally; now `_repoint_all_relative_links` (W37-6, 2026-09-06 — every relative
+    markdown link in the tree repointed against this run's own moves, independent of
+    whether the citing file's own body was regenerated) repairs the **rest** of that set
+    too, since each cited sibling's own move is a `path_moves` entry regardless of
+    whether the citer's body was rewritten wholesale. Disabling `_regenerate_family_
+    readmes` alone no longer produces a dangling link anywhere — a genuine improvement,
+    not a probe going stale, and precisely the improvement this PR exists to make.
+
+    **So the mutation now disables both protections that can repair this population**,
+    the narrower one (regeneration) and the general one (`_repoint_all_relative_links`)
+    — otherwise either alone patches over the missing other, and the assertion below
+    would test nothing. `_MIGRATION_DIFF_FAMILY_READMES` is still the population named,
+    because the *rule* (the surviving §5.2 READMEs must be named when neither writer
+    protecting them ran) has not changed, only which mechanisms exist to protect it.
     """
     monkeypatch.setattr(
         doc_id_cli,
         "_regenerate_family_readmes",
         lambda root, drafts, moves: ([], [], {}),
+    )
+    monkeypatch.setattr(
+        doc_id_cli,
+        "_repoint_all_relative_links",
+        lambda root, moves, fresh_paths=(): [],
     )
     result = doc_id_cli.migrate(pristine_a)
     dangling = _dangling_links(pristine_a, result.files_deleted)
@@ -6616,6 +6628,130 @@ def test_repointing_follows_both_a_moved_target_and_a_moved_citer(
     assert "[0001](RFC-00007-example.md)" in moved
     assert "[`../adrs/`](../adrs/)" in moved
     assert "[see](../roadmap.md)" in moved  # citer moved sideways: same depth, same path
+
+
+def test_repointing_preserves_an_anchor_and_repoints_a_reference_style_link(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Two things a depth-changing move needs beyond the plain inline case
+    `test_repointing_follows_both_a_moved_target_and_a_moved_citer` already proves:
+    an `#anchor` fragment survives the re-rooting untouched, and a reference-style
+    `[label]: target` definition (a markdown shape distinct from an inline
+    `[text](target)` link, always its own line) gets the identical treatment — found
+    live investigating row (g)'s residue, W37-6, 2026-09-06: `audit-docs.py`'s own
+    scanner counts both shapes as one population, so a rewriter that only handled the
+    inline form would still leave half of what the check measures broken.
+    """
+    text = (
+        "See [the section](../../../../.claude/skills/x/SKILL.md#some-heading).\n"
+        "\n"
+        "[ref]: ../../../../.claude/skills/x/SKILL.md\n"
+    )
+    moved = doc_id_cli._repoint_relative_links(
+        text, "docs/audit/work/X/README.md", "docs/closures/CR-00001-x.md", {}
+    )
+    assert "[the section](../../.claude/skills/x/SKILL.md#some-heading)" in moved
+    assert "[ref]: ../../.claude/skills/x/SKILL.md" in moved
+
+
+def test_repoint_all_relative_links_fixture_all_three_sub_classes(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Three sub-classes, because the real corpus proved three exist (W37-6, 2026-09-06,
+    row (g)'s 235-broken-link finding): a depth-changing move whose own relative link is
+    not re-rooted, a same-depth move whose sibling's relative link is not repointed to
+    the new name, and a citer that never moved at all but cites a directory this run
+    renamed. `_repoint_all_relative_links` must fix all three from one call, using only
+    `path_moves` (plus the module's own `_README_LEGACY_DIR_MOVES`), never a special case
+    keyed on which sub-class a given file happens to be.
+    """
+    root = tmp_path
+
+    # Sub-class 1: depth change. old_rel is 4 directories deep, new_rel is 2 -- the link's
+    # own "../../../../ " needs to become "../../ ".
+    (root / "docs" / "audit" / "work" / "X").mkdir(parents=True)
+    (root / "docs" / "audit" / "work" / "X" / "README.md").write_text(
+        "Follows [close-workstream](../../../../.claude/skills/close-workstream/SKILL.md).\n",
+        encoding="utf-8",
+    )
+
+    # Sub-class 2: same-depth renamed sibling. `A.md` moves to `B.md`, same directory
+    # depth; `C.md` never moves but cites `A.md` by its old bare-basename relative form.
+    (root / "docs" / "plans").mkdir(parents=True)
+    (root / "docs" / "plans" / "A.md").write_text("# A\n", encoding="utf-8")
+    (root / "docs" / "plans" / "C.md").write_text(
+        "See [A](A.md) for detail.\n", encoding="utf-8"
+    )
+
+    # Sub-class 3: unmoved citer of a renamed directory, no move to hang the rewrite on
+    # at all — `_README_LEGACY_DIR_MOVES`'s own `docs/adr` -> `docs/adrs`.
+    (root / "docs" / "skills-map.md").write_text(
+        "ADRs live in [`adr/`](adr/).\n", encoding="utf-8"
+    )
+    (root / ".claude" / "skills" / "close-workstream").mkdir(parents=True)
+    (root / ".claude" / "skills" / "close-workstream" / "SKILL.md").write_text(
+        "# close-workstream\n", encoding="utf-8"
+    )
+
+    path_moves = {
+        "docs/audit/work/X/README.md": "docs/closures/CR-00001-x.md",
+        "docs/plans/A.md": "docs/plans/B.md",
+    }
+    # `_repoint_all_relative_links` reads the CURRENT (already-moved) tree, so the files
+    # named as `path_moves` values must actually exist there before it runs — the same
+    # precondition `migrate()` itself satisfies by running this pass after its own
+    # physical-move phases.
+    (root / "docs" / "closures").mkdir(parents=True)
+    (root / "docs" / "audit" / "work" / "X" / "README.md").rename(
+        root / "docs" / "closures" / "CR-00001-x.md"
+    )
+    (root / "docs" / "plans" / "A.md").rename(root / "docs" / "plans" / "B.md")
+
+    changed = doc_id_cli._repoint_all_relative_links(root, path_moves)
+
+    sub1 = (root / "docs" / "closures" / "CR-00001-x.md").read_text(encoding="utf-8")
+    assert "[close-workstream](../../.claude/skills/close-workstream/SKILL.md)" in sub1, sub1
+
+    sub2 = (root / "docs" / "plans" / "C.md").read_text(encoding="utf-8")
+    assert "[A](B.md)" in sub2, sub2
+
+    sub3 = (root / "docs" / "skills-map.md").read_text(encoding="utf-8")
+    assert "[`adrs/`](adrs/)" in sub3, sub3
+
+    assert set(changed) == {
+        "docs/closures/CR-00001-x.md", "docs/plans/C.md", "docs/skills-map.md",
+    }
+
+
+def test_repoint_all_relative_links_is_idempotent(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A second `migrate()` run over an already-migrated tree must change nothing.
+    `path_moves` is rebuilt fresh on every run and is empty for a document that is
+    already at its final path — the identical "gated on the source still being at its
+    old path" construction every `_discover_*` step already uses, per `migrate()`'s own
+    existing idempotence guarantee (`test_migrate_is_idempotent_on_its_own_output`) — so
+    the realistic second call passes an empty `path_moves`, not the first call's. A link
+    rewriter that keeps adjusting its own output when there is nothing left to move would
+    corrupt a file a little more on every re-run, invisible to a single-pass test
+    (W37-6, 2026-09-06)."""
+    root = tmp_path
+    (root / "docs" / "closures").mkdir(parents=True)
+    (root / "docs" / "closures" / "CR-00001-x.md").write_text(
+        "Follows [close-workstream](../../../../.claude/skills/close-workstream/SKILL.md).\n",
+        encoding="utf-8",
+    )
+    path_moves = {"docs/audit/work/X/README.md": "docs/closures/CR-00001-x.md"}
+
+    first = doc_id_cli._repoint_all_relative_links(root, path_moves)
+    assert first == ["docs/closures/CR-00001-x.md"]
+    after_first = (root / "docs" / "closures" / "CR-00001-x.md").read_text(encoding="utf-8")
+
+    second = doc_id_cli._repoint_all_relative_links(root, {})
+    after_second = (root / "docs" / "closures" / "CR-00001-x.md").read_text(encoding="utf-8")
+
+    assert second == []
+    assert after_second == after_first
 
 
 # ---------------------------------------------------------------------------------------
