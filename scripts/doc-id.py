@@ -7891,6 +7891,21 @@ def _repoint_all_relative_links(
     relative links have no inverse" -- the forward direction's mirror image, not solved
     here either).
 
+    A **merge** target (several old paths sharing one new path, e.g. the phase-1b
+    register merged into the main one) is the mirror image on the CITER'S side, and this
+    IS handled: naively inverting `path_moves` (`{new: old}`, keeping whichever pair a
+    dict comprehension enumerates last) picked an arbitrary, frequently wrong, "old
+    directory" for the merged file's OWN citing links -- found live, W37-6, 2026-09-06,
+    on `docs/findings/register.md` itself, whose citations to files under the OLD
+    `docs/audit/` corrupted into a garbled `docs/audit/phases/1b/...` form once resolved
+    against the wrong source's directory. `new_to_old` below is built the same
+    collision-safe way `classify_migration_diff`'s own `_collision_safe_inverse` already
+    is: a `new_rel` two different `old_rel`s both claim is dropped from the map entirely,
+    falling back to "unmoved" (`old_rel == new_rel`) for that file -- not perfectly
+    correct for every line of a genuinely merged document (a line whose relative link was
+    written relative to the OTHER source's directory still cannot be resolved), but never
+    actively wrong, which a silent, arbitrary pick was.
+
     Idempotent by construction: a link this pass already corrected resolves to a path
     `path_moves` never names as an `old_path` (it is a *current*, correct path), so a
     second run's `moves.get(resolved, resolved)` returns it unchanged and recomputes the
@@ -7912,7 +7927,10 @@ def _repoint_all_relative_links(
     against a location the file's own body was never actually written relative to.
     """
     all_moves = {**path_moves, **_README_LEGACY_DIR_MOVES}
-    new_to_old = {new: old for old, new in path_moves.items()}
+    by_new: dict[str, set[str]] = {}
+    for old, new in path_moves.items():
+        by_new.setdefault(new, set()).add(old)
+    new_to_old = {new: next(iter(olds)) for new, olds in by_new.items() if len(olds) == 1}
     changed: list[str] = []
     for path in _iter_tree_files(root):
         new_rel = path.relative_to(root).as_posix()
@@ -8463,6 +8481,32 @@ def migrate(root: Path) -> MigrateResult:
     files_written = [*files_written, *readme_written]
     files_deleted = [*files_deleted, *readme_deleted]
 
+    # BEFORE the citation-token sweep, not after -- found live, W37-6, 2026-09-06: a
+    # relative link's basename can ALSO be a recognised citation token in its own right
+    # (a bare `F<n>.md` this run's own bare-basename mechanism substitutes for the
+    # essay's new `FD-<n>-<slug>.md` filename). Run after the sweep, this pass would see
+    # the ALREADY-SUBSTITUTED new basename still glued to the OLD directory prefix --
+    # `docs/audit/FD-01041-….md`, a path that never existed on either side of this run --
+    # and correctly, uselessly, report it as unresolvable, because `path_moves` was
+    # keyed on the file's OLD basename. Run first, this pass resolves the ORIGINAL
+    # `docs/audit/findings/F77.md`-shaped target against `path_moves` while it is still
+    # recognisable, producing the correct new relative path outright; the citation sweep
+    # then finds nothing left in the target to substitute (the new basename is already
+    # there) and only updates the link's own visible text/label as it already would.
+    #
+    # A markdown link's TARGET is not an id/path citation token `_rewrite_citations`
+    # below ever parses in the first place, so a link whose target moved (a sibling
+    # renamed at the same directory depth), a link whose own citer moved (a depth
+    # change), or a link to a directory `_README_LEGACY_DIR_MOVES` renamed would survive
+    # that sweep untouched regardless of which of the three applies or which order the
+    # two passes run in. Found live investigating row (g)'s residue (W37-6,
+    # 2026-09-05/06): 235 links broken this way across 82 files, control tree zero --
+    # entirely this run's own doing, invisible to every id/path-token check because none
+    # of them read link syntax. `_repoint_all_relative_links`'s own docstring has the
+    # split-source and merge-target limitations this shares with `_regenerate_family_
+    # readmes`'s identical, already-accepted use of the same helper.
+    relinked = _repoint_all_relative_links(root, path_moves, fresh_paths=readme_written)
+
     for old_token, claims in id_claims.items():
         canons = {canon for canon, _ in claims}
         if len(canons) > 1:
@@ -8681,19 +8725,6 @@ def migrate(root: Path) -> MigrateResult:
                 "old_path": "", "new_path": "",
             }
         )
-
-    # After the citation-token sweep, and over the whole tree rather than only files this
-    # run moved: a markdown link's TARGET is not an id/path citation token
-    # `_rewrite_citations` above ever parses, so a link whose target moved (a sibling
-    # renamed at the same directory depth), a link whose own citer moved (a depth
-    # change), or a link to a directory `_README_LEGACY_DIR_MOVES` renamed survives that
-    # sweep untouched regardless of which of the three applies. Found live investigating
-    # row (g)'s residue (W37-6, 2026-09-05/06): 235 links broken this way across 82
-    # files, control tree zero -- entirely this run's own doing, invisible to every
-    # id/path-token check because none of them read link syntax. `_repoint_all_relative_
-    # links`'s own docstring has the split-source limitation this shares with
-    # `_regenerate_family_readmes`'s identical, already-accepted use of the same helper.
-    relinked = _repoint_all_relative_links(root, path_moves, fresh_paths=readme_written)
 
     # Alongside the vendored-manifest stamp below, and after the citation rewrite for the
     # same reason it is: a header this run writes carries no legacy token to rewrite.
