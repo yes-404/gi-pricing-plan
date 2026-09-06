@@ -68,22 +68,109 @@ is why.** Once per worktree, before its first gate (its release drops the databa
 
 ```bash
 WT=$(basename "$PWD")
-PGPASSWORD=gipricing createdb -h localhost -U gipricing -T gipricing "gipricing_${WT}"
+docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing "gipricing_${WT}"
 GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_${WT}" \
     uv run alembic upgrade head
 ```
 
+**`createdb` runs inside the container, not on the host — the host form does not work
+here.** This block used to read `PGPASSWORD=gipricing createdb -h localhost -U gipricing
+…`. Checked 2026-09-06 on this box: `which psql createdb` finds neither, and
+`/usr/lib/postgresql/*/bin/createdb` does not exist — there is no PostgreSQL client
+package installed at all. The server is a container (`docker ps` shows
+`gi-pricing-postgres-1`, `postgres:16-alpine`), and `createdb` ships inside that image.
+The host form fails with `createdb: command not found`, which — piped into anything, or
+followed by `; echo $?` after a pipe — reads as success. Two of the per-worktree databases
+on this box are named with underscores rather than the hyphens `basename "$PWD"` produces
+(`gipricing_w37_6_gate_base` beside `gipricing_wt-d8-fix`), which is the residue of people
+working around this by hand and not agreeing on how.
+
+**THE GATE BODY. This block is the single definition** — `.claude/agents/gate-runner.md`
+points at it rather than restating it, because two copies of a gate body is how they
+diverge. Copy it verbatim.
+
 ```bash
 mkdir -p /tmp/slots
 WT=$(basename "$PWD")
-gate_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"' uv run ruff check . && uv run mypy && uv run lint-imports && POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"' uv run pytest -q'
+gate_body='
+set -u
+L=$(mktemp -d)
+export POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4
+export GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"'
+( uv run ruff check .                                 >$L/ruff.log          2>&1; echo $? >$L/ruff.rc ) &
+( uv run mypy                                         >$L/mypy.log          2>&1; echo $? >$L/mypy.rc ) &
+( uv run lint-imports                                 >$L/import_linter.log 2>&1; echo $? >$L/import_linter.rc ) &
+( python3 scripts/audit-docs.py                       >$L/audit_docs.log    2>&1; echo $? >$L/audit_docs.rc ) &
+( uv run python scripts/req-coverage.py               >$L/req_coverage.log  2>&1; echo $? >$L/req_coverage.rc ) &
+( uv run python scripts/generate-contracts.py --check >$L/contracts.log     2>&1; echo $? >$L/contracts.rc ) &
+( uv run pytest -q                                    >$L/pytest.log        2>&1; echo $? >$L/pytest.rc ) &
+wait
+nfail=0; failed=""
+echo "| stage | result | detail |"
+echo "|---|---|---|"
+for s in ruff mypy import_linter audit_docs req_coverage contracts pytest; do
+  rc=$(cat $L/$s.rc)
+  if [ "$rc" = "0" ]; then
+    echo "| $s | pass | exit=$rc |"
+  else
+    echo "| $s | FAIL | exit=$rc |"
+    nfail=$((nfail+1)); failed="$failed $s"
+  fi
+done
+echo ""
+if [ "$nfail" = "0" ]; then
+  echo "GATE: pass — 7 of 7 stages passed"
+else
+  echo "GATE: FAIL — $nfail of 7 stages failed:$failed"
+  echo "logs: $L"
+fi
+[ "$nfail" = "0" ]
+'
 got=0
-for i in 1 2 3; do flock -n /tmp/slots/gate-$i -c "export GIP_GATE_SLOT=/tmp/slots/gate-$i; $gate_body" && { got=1; break; }; done
+for i in 1 2 3; do
+  flock -n -E 99 /tmp/slots/gate-$i -c "export GIP_GATE_SLOT=/tmp/slots/gate-$i; $gate_body"
+  rc=$?
+  if [ "$rc" -ne 99 ]; then got=1; break; fi
+done
 [ "$got" = "0" ] && flock -w 7200 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1; $gate_body"
-python3 scripts/audit-docs.py                # structural checks over docs/ and docs/notes/ — not thread-heavy, no slot needed
-uv run python scripts/req-coverage.py        # requirement traceability
-uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
 ```
+
+**The seven stages are independent, so they run at once inside one slot.** All seven are
+read-only checks against the same tree, and the three that write, write to different
+places: `.ruff_cache`, `.mypy_cache`, `.pytest_cache`. `pytest` is the only one that
+touches the database, and it has the per-worktree DSN to itself. Nothing here reads
+another stage's output, so there is no ordering to preserve — the old `&&` chain was
+sequencing them for no reason beyond it being the obvious way to type a list.
+
+**The slot count did not change, and neither did the lock.** There is still one
+`flock` — three non-blocking attempts, then a single blocking wait on slot 1 — and it
+still wraps the whole body. The parallelism is *inside* the slot, so the box still runs at
+most three gates at once and the thread caps still hold each stage to 4. **Do not give
+each stage its own `flock`**: that is seven locks where the budget assumed one, and it
+reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
+
+**Read the table, not the exit code alone.** The body's last statement is
+`[ "$nfail" = "0" ]`, so a failing gate exits 1 and a passing one 0 — and 1 is
+distinguishable from the wrapper's busy-slot 99, which is what the `-E 99` fix below is
+for. On a failure the body prints the scratch directory holding all seven logs; read the
+failing stage's log there rather than re-running the gate to see the output.
+
+**`generate-contracts.py` runs with `--check` here, and that is a change.** This block
+used to end with a bare `uv run python scripts/generate-contracts.py` — no `--check` — so
+the local gate *regenerated* the contracts instead of detecting drift. Two consequences,
+both bad: the local gate could never fail the way CI's `--check` fails, so "gate green
+locally" said nothing about the check that actually gates the merge; and it wrote into
+`docs/contracts/`, which for an executor whose brief forbids touching `docs/` is a
+surprise edit appearing in `git status` from a command labelled as a check.
+`.github/workflows/python.yml` and `.claude/agents/gate-runner.md` both already used
+`--check`; this block was the odd one out. When `--check` reports drift, regenerate
+deliberately with `uv run python scripts/generate-contracts.py` and commit the result.
+
+**`nproc` lies inside this body.** GNU `nproc` honours `OMP_NUM_THREADS`, so once the
+caps above are exported it reports `4` on this 16-core box. That is the intended effect
+for anything sizing a pool off it — but it means `nproc` cannot be used *inside* the gate
+to learn how big the machine is. Read `/proc/cpuinfo` or `getconf _NPROCESSORS_ONLN` for
+that.
 
 **`GIP_GATE_SLOT` is the announcement, not a second lock.** The repository-root
 `conftest.py` (W37-6) enforces the same budget for a *bare* `uv run pytest -q` — thread
@@ -131,7 +218,11 @@ Same shape for `migrate --verify`, two slots instead of three:
 ```bash
 verify_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
 got=0
-for i in 1 2; do flock -n /tmp/slots/verify-$i -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-$i; $verify_body" && { got=1; break; }; done
+for i in 1 2; do
+  flock -n -E 99 /tmp/slots/verify-$i -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-$i; $verify_body"
+  rc=$?
+  if [ "$rc" -ne 99 ]; then got=1; break; fi
+done
 [ "$got" = "0" ] && flock -w 7200 /tmp/slots/verify-1 -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-1; $verify_body"
 ```
 
@@ -139,6 +230,57 @@ Same announcement shape as `GIP_GATE_SLOT` above: `scripts/_docverify.py`'s `ver
 checks `GIP_VERIFY_SLOT` first and skips its own `/tmp/slots/verify-{1,2}` lock when the
 wrapper has already announced one, so a correctly-wrapped `migrate --verify` run never
 double-locks against itself.
+
+**Both slot wrappers above carry `-E 99`, and it is load-bearing, not decoration.** Before
+it was added, each loop read `flock -n /tmp/slots/<name>-$i -c "..." && { got=1; break; }`.
+`flock -n`'s exit code, when the lock IS acquired, is the wrapped command's own exit code —
+and `flock`'s exit code when the lock could NOT be acquired is **also 1**, the same value an
+ordinary failing command returns. `&&` cannot tell "this slot was busy, try the next one"
+apart from "this slot ran the command and the command failed", so on any non-zero exit the
+loop wrongly assumed the lock was busy and re-ran the full command on the next slot, then
+again in the blocking fallback. Verified directly: `flock -n <lock> -c 'exit 3'` returns 3
+(a command exit passes through untouched), but `flock -n <lock> -c 'exit 1'` also returns 1
+— indistinguishable from a busy lock using only `&&`. `-E 99` makes `flock` return 99
+specifically for "lock not acquired" (a code no wrapped command here produces on its own),
+so the loop now checks `$rc -ne 99` instead of relying on `&&` — a busy slot is
+distinguishable from any exit code the wrapped command itself can produce.
+
+**The two wrappers bit asymmetrically, and neither bite is rare.** `migrate --verify`'s
+*normal, successful* pass exits 1 (the standing red with the verdict set unchanged is a PASS
+under Ruling 104 §1), and a moved set exits 3 — neither is 0, so under the old loop **every
+run** hit two busy-looking slots plus the blocking fallback and executed the instrument
+**three times**. The gate wrapper only mistriggers when the gate **fails** (a green gate
+exits 0 and the old `&&` correctly stopped after one pass) — but a failing gate ran **four
+times** (three slots plus the fallback), exactly when someone is iterating on a red gate and
+least wants triple-cost turnaround.
+
+**Correctness was never in question — only timing and scratch cost.** All three (or four)
+passes agree byte-for-byte; nothing about `migrate --verify`'s or the gate's verdict was
+ever wrong. What the bug corrupted is **any elapsed-time figure taken under the old
+wrapper**: a "how long does a verify take" reading is roughly 3x the instrument's true
+per-run cost, because it silently timed three sequential runs as if they were one. Each pass
+also creates its own `/tmp/doc-id-verify-*` scratch tree, so a triple run under the old loop
+leaves up to three such trees behind — `/tmp` is tmpfs here, so that cost is RAM, and it
+does not show up in `df /`.
+
+**How it was found:** one run's captured log carried the full verify report three times
+over, against three separate scratch trees, byte-for-byte identical each time. Three
+separate agents had independently reproduced the exact same triplication — which is the tell
+that the defect is in the documented procedure itself, not in any one user of it.
+
+**Broken-input proof, runnable by anyone reading this:**
+
+```bash
+flock -n /tmp/slots/probe -c 'exit 1' && echo ran-once
+flock -n /tmp/slots/probe -c 'exit 1' && echo ran-again   # both echo under the OLD (&&) loop shape
+```
+
+Under the old loop shape (`&&`-chained, no `-E`), a body that exits 1 runs on **every** slot
+the loop tries, because `flock`'s own busy-lock code and the body's failure code are the
+same value. Under the corrected loop (`-E 99`, checked via `$rc`), the same body still fails
+once per slot attempt — but a lock genuinely held by another process now short-circuits with
+`rc=99` and is skipped without ever invoking the body, where the old shape could not tell the
+difference.
 
 Iterate with targeted tests (`pytest <file> -k <symbol>`) while working, uncapped and
 unslotted — the slot budget is for the full gate and full `--verify` only, run once each,
@@ -566,6 +708,42 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
+capturing its own exit code, ending in a per-stage table and a `GATE:` verdict line. Three
+defects in the block it replaced were found while doing it, and all three are fixed above:
+(1) `createdb` was documented in its host form, and there is no PostgreSQL client on this
+box at all — `which psql createdb` finds neither and `/usr/lib/postgresql/*/bin/createdb`
+does not exist, so the documented command failed with `command not found`; the server is
+the `gi-pricing-postgres-1` container and `createdb` ships inside it. (2)
+`generate-contracts.py` was invoked without `--check`, so the local gate *regenerated* the
+contracts rather than detecting drift — it could never fail the way CI's `--check` fails,
+and it wrote into `docs/contracts/` from a command labelled as a check.
+(3) `.claude/agents/gate-runner.md` carried a second copy of the command list which had
+already drifted from this one in two ways (no thread caps, no per-worktree database); it
+now points here instead of restating.
+
+Wall time, measured on this box the same day — see the parallel-versus-serial note above
+for the numbers and, more importantly, for what a single paired measurement under varying
+multi-agent load can and cannot establish. The `-E 99` fix below is preserved unchanged:
+the parallelism is inside the slot, and there is still exactly one `flock`.
+
+2026-09-06 — both slot wrappers (gate, three slots; `migrate --verify`, two slots) corrected
+from `flock -n ... && { got=1; break; }` to `flock -n -E 99 ...` with the busy code checked
+via `$rc -ne 99`. `flock -n`'s exit code on a lock actually acquired is the wrapped command's
+own exit code, and `flock`'s own busy-lock code is also 1 by default — indistinguishable
+from an ordinary command failure under `&&`, so every busy-slot guess that happened to be a
+failing command instead re-ran the whole body on the next slot and again in the blocking
+fallback. `migrate --verify`'s normal successful pass exits 1 and a moved set exits 3, so
+every run triplicated under the old loop; the gate wrapper triplicated (quadruplicated,
+counting the fallback) only when the gate failed. Correctness was never affected — all
+passes agreed byte-for-byte — only elapsed-time figures (~3x inflated) and `/tmp` scratch
+usage (up to three `/tmp/doc-id-verify-*` trees per run, tmpfs so it costs RAM invisible to
+`df /`). Found when one run's log carried the identical report three times over against
+three separate scratch trees, independently reproduced by three separate agents. Verified
+directly: `flock -n <lock> -c 'exit 3'` returns 3; `flock -n <lock> -c 'exit 1'` also returns
+1 (the old, ambiguous shape); with `-E 99` a busy lock returns 99, distinguishable from any
+exit code the wrapped body itself can produce.
 
 2026-09-04 (fourth entry, same day) — the wait-loop section's `pgrep -f 'bin/pytest -q'`
 example rewritten after it stalled fifteen shells across six agents (executor-30-2 ×7,

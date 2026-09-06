@@ -50,32 +50,43 @@ uv run pytest -q --collect-only 2>&1 | tail -1
 
 ### Half 1 — Python and docs
 
-```bash
-uv run ruff check .
-uv run mypy
-uv run lint-imports
-uv run pytest -q
-python3 scripts/audit-docs.py
-uv run python scripts/req-coverage.py
-uv run python scripts/generate-contracts.py --check
-```
+**Do not type a command list here. There is exactly one definition of the gate body, and
+it is not in this file.**
 
-`pytest` needs a live database, MinIO and Redis, and the env below. **A green pytest run
-with no database is a partial one** — `.claude/skills/python-test` records why. Check the
-stack is up first, and if it is not, bring it up rather than reporting a green run:
+`Read` the block headed **"THE GATE BODY"** in
+[`.claude/skills/dev-commands/SKILL.md`](../skills/dev-commands/SKILL.md) — the section
+"The gate is two halves, and one of them is not Python" — and run it **verbatim**. It
+already carries, and you must not strip, any of:
+
+- the seven stages running in parallel inside one slot, each capturing its own exit code;
+- the thread caps (`POLARS_MAX_THREADS` and the five beside it), without which one gate
+  costs ~4.5 cores by itself on this shared box;
+- the per-worktree `GIP_TEST_DATABASE_URL`, without which a concurrent executor's suite
+  truncates the database out from under yours mid-run and it presents as a flaky
+  regression in code your branch never touched;
+- the single `flock` — three non-blocking attempts with `-E 99`, then one blocking wait.
+  `-E 99` is load-bearing: `flock -n`'s busy-lock code is otherwise `1`, the same value a
+  failing command returns, and the loop then re-runs the whole gate on every slot.
+
+This file used to restate that list as seven bare commands. It had already drifted from
+the skill in two ways — no thread caps, no per-worktree database — which is the whole
+argument against a second copy. **If the block in the skill is wrong, fix it there**; a
+correction typed into this file fixes one caller and leaves the other wrong.
+
+The skill's block prints the per-stage table for you. Report that table as-is; it is
+already the format this file's "What you return" section asks for.
+
+**Before the first gate in a fresh worktree**, run the skill's one-off setup — `uv sync
+--all-packages` (without it you get ~690 phantom mypy errors) and the per-worktree
+`createdb`, which runs *inside the container* (`docker exec gi-pricing-postgres-1
+createdb …`); there is no PostgreSQL client on this host.
+
+`pytest` needs a live database, MinIO and Redis. **A green pytest run with no database is
+a partial one** — `.claude/skills/python-test` records why. Check the stack is up first,
+and if it is not, bring it up rather than reporting a green run:
 
 ```bash
 docker compose -f deploy/docker-compose.yml up -d --wait
-uv run alembic upgrade head
-```
-
-with, for both `alembic` and `pytest` (taken from `.github/workflows/python.yml`):
-
-```
-GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
-GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
-GIP_BLOB_ENDPOINT_URL=http://localhost:9000
-GIP_REDIS_URL=redis://localhost:6379/0
 ```
 
 If the stack cannot start, say so as the result. Do not report the Python half as passing
@@ -103,13 +114,29 @@ than reporting the frontend half as unrunnable.
 
 A table, then the excerpts. Nothing else.
 
+The Python/docs half already prints its own table — reproduce it, do not retype it into a
+different shape:
+
 ```
-| Command | Exit | Note |
+| stage | result | detail |
 |---|---|---|
-| ruff check .                     | 0 | — |
-| mypy                             | 1 | 3 errors, backend/src/app/data/profile.py |
-| ...
+| ruff | pass | exit=0 |
+| mypy | FAIL | exit=1 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | FAIL | exit=1 |
+
+GATE: FAIL — 2 of 7 stages failed: mypy pytest
 ```
+
+Add the frontend half's commands to the same table in the same three columns. **The
+`GATE:` line is the whole point of the table**: it says how many stages failed, so the
+main thread can tell "one thing is broken" from "six things are broken" without reading
+any output. Never report only the first failure — the workflows and this gate were both
+restructured on 2026-09-06 precisely because stopping at the first red stage hid 174
+pytest failures and 3 drifted contracts for an hour.
 
 Then, **for failing commands only**, the smallest excerpt that identifies the failure —
 the assertion and its file:line, the mypy error lines, the failing test ids. Not the full
