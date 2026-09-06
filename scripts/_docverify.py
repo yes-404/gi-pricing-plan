@@ -4281,13 +4281,19 @@ def _release_verify_slot(handle: IO[Any] | None) -> None:
 #     own subprocess calls — real but unobserved, and narrowing the scrub is exactly the
 #     kind of subprocess-plumbing change this table's `_template_header_lines` near-miss
 #     argues for testing thoroughly rather than shipping same-night.
-#   - A handful of `date.today()` reads inside `migrate()`'s writers (`doc-id.py:2383,
-#     2386, 7557, 7739, 8571`) stamp a `created:`/comparison date from the wall clock.
-#     Affects written content, not a row's pass/fail shape, except in the (unobserved,
-#     midnight-boundary-only) case where `row_g`'s class-6 oracle
-#     (`_run_second_migration`) reruns `migrate()` on the opposite side of midnight from
-#     the first run and a date-stamped file's regenerated content disagrees only on that
-#     field. Named, not fixed, for the same "narrow but untested" reason as the env scrub.
+#   - DISCHARGED by W37-6 PR-A. This entry read: "a handful of `date.today()` reads
+#     inside `migrate()`'s writers stamp a `created:`/comparison date from the wall
+#     clock ... affects written content, not a row's pass/fail shape, except in the
+#     (unobserved, midnight-boundary-only) case ... Named, not fixed." Both halves of that
+#     assessment were wrong. There were exactly five such reads and they are all gone: two
+#     were `_module_first_commit_date`'s fallback, which is now a named refusal
+#     (`GitHistoryUnavailableError`), and three were REFERENCE header stamps, which now
+#     take the file's own git first-commit date or the ref's commit date. And the effect
+#     was never confined to written content on a midnight boundary: the snapshot was built
+#     by `git archive` + `git init`, so EVERY requirement draft's first-commit date was the
+#     synthetic commit's, `created` stopped discriminating, and the whole id allocation
+#     shifted (`WF-00995` -> `WF-00698`, measured). It was a row-shape defect all along,
+#     invisible because two runs on one day agree.
 #   - `_acquire_verify_slot`'s `os.environ.get(_VERIFY_ANNOUNCEMENT_VAR)` and the
 #     `/tmp/slots/*` lock files: concurrency control over *when* `verify()` runs, never
 #     *what* it measures — gates entry, never feeds a row.
