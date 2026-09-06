@@ -2841,6 +2841,85 @@ def test_verify_reads_the_w37_11_record_from_the_ref_never_the_live_checkout(
     assert first == dv.DISCLOSE
 
 
+def test_verify_is_unaffected_by_every_live_checkout_perturbation_the_table_names(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The generalised version of the test above — this one is its first case, that test
+    the record specifically. The 2026-09-06 input-provenance table (above `verify()`'s own
+    definition) states that every hermetic row is keyed on `snap.migrated`/`snap.control`/
+    `snap.baseline` alone, none of which a live-checkout edit can reach (they are `git
+    archive` extractions of a pinned commit). This test is the checked half of that claim:
+    perturb `repo_root`'s live working tree in three different ways between two `verify()`
+    calls at the identical, unmoved ref, and assert every row's verdict — not only (d4)'s
+    — comes back byte-identical.
+
+    Three perturbations, one per accident that found this class tonight:
+
+    1. **Modify the governed record** (the fixed defect itself, #762/#764) — an
+       uncommitted edit to `docs/audit/w37-11-record.md`.
+    2. **Add a stray untracked file** (the reused-directory hypothesis's own shape, ruled
+       out for `--verify`'s *target* directory by `assert_workdir_disposable`, but never
+       tested against `repo_root` itself — nothing stops a stray file appearing in the
+       *source* checkout between two runs).
+    3. **Edit a governed, corpus-scanned document** (`docs/a.md`, the file every row (d)
+       alternative and `audit-docs.py` itself would read if anything read `repo_root`
+       instead of the snapshot) — appending a line that would flip (d5)'s `Ruling \\d+`
+       alternative from PASS to FAIL if it were somehow read live.
+
+    None of the three is committed. `--ref` is pinned to the same commit before, during
+    and after all three; a hermetic `verify()` must not see any of them.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: (
+            "| path | cls | count | reason | owner |\n"
+            "| --- | --- | --- | --- | --- |\n"
+            "| docs/a.md | d4 | 1 | historical citation | W37-11 |\n"
+        ),
+    })
+    ref = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    docid = _NoOpMigrateDocid(doc_id_cli)
+
+    def _verdicts(run_name: str) -> dict[str, str]:
+        workdir = tmp_path / f"wd-{run_name}"
+        result = dv.verify(
+            docid, repo_root=repo, ref=ref, workdir=workdir, keep=True,
+            with_baseline=False,
+        )
+        return {row.key: str(row.verdict) for row in result.rows}
+
+    before = _verdicts("before")
+
+    # Perturbation 1: modify the governed record (empty it — the same shape the
+    # dedicated F102 test above uses, generalised here alongside the other two).
+    (repo / dv.W37_11_RECORD_PATH).write_text(
+        "| path | cls | count | reason | owner |\n| --- | --- | --- | --- | --- |\n",
+        encoding="utf-8",
+    )
+    # Perturbation 2: a stray untracked file in the live checkout — nothing commits it,
+    # nothing adds it to git; it simply exists on disk the way a leftover from an earlier,
+    # unrelated run would.
+    (repo / "docs" / "stray-untracked.md").write_text(
+        "NT-9999 this file was never committed and must never be measured\n",
+        encoding="utf-8",
+    )
+    # Perturbation 3: edit a tracked, governed document in place — not committed, so `git
+    # archive HEAD` still extracts its old content.
+    (repo / "docs" / "a.md").write_text(
+        "cites wf-01 historically\nRuling 999 would flip (d5) if this were read live\n",
+        encoding="utf-8",
+    )
+
+    after = _verdicts("after")
+    assert before == after, (
+        "verify() at an unmoved ref must not see any live-checkout perturbation — "
+        f"diverged rows: {[k for k in before if before[k] != after.get(k)]}"
+    )
+
+
 def test_verify_result_folds_a_fatal_residue_change_into_exit_code_3(dv: Any) -> None:
     """The wiring: a `VerifyResult` whose rows measure residue that regresses past the
     W37-11 record sets exit 3, the identical signal a moved `EXPECTED_VERDICTS` entry
