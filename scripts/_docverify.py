@@ -1265,37 +1265,78 @@ def _is_framework_self_reference(
     )
 
 
-def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
+def _d7_disclosed_or_fail(docid: Any, mig: Corpus, ctl: Corpus) -> tuple[str, str]:
     """(d7)'s non-zero population, split by the never-allocated predicate. Reads the
     identical migrated-tree population `rows_d`'s own `mig.scan(pattern, skip_fenced=
     True)` counts (`was:` and fenced lines excluded the same way), so this function's own
     line count matches the row's reported `migrated` figure exactly.
 
     Every token on every still-matching line is checked; ONE real hit (a token that is
-    not never-allocated) fails the whole row, named — this is deliberately not a
-    line-by-line partial disclosure, because a row mixing a real miss with disclosed
-    residue would read as clean at a glance while still hiding the real miss.
+    not disclosed under any of this function's classes) fails the whole row, named — this
+    is deliberately not a line-by-line partial disclosure, because a row mixing a real
+    miss with disclosed residue would read as clean at a glance while still hiding the
+    real miss.
+
+    **Third disclosed class, co-extensive by identity (Ruling, W37-6, 2026-09-06):** a
+    token immediately followed by a bare comma-digit tail that resolves against the
+    token's own prefix is exactly the shape `doc-id.py`'s box-end comma-continuation
+    refusal (`_bare_comma_tail_resolves`) leaves whole rather than partially rewrite —
+    the SAME function decides both sides, called here rather than re-implemented, so this
+    class can never disclose a site the rewriter did not itself refuse. Before that
+    refusal existed, the base was rewritten and the tail orphaned (`, 10..13` citing
+    nothing) and this row never fired at all, since bare digits do not match its own
+    pattern — the citations were unmigrated either way. Legacy-but-intact beats mangled:
+    `REDIRECTS.csv` resolves one and nothing resolves the other, but the row must say so
+    rather than stay silently green on the worse output.
     """
     d7_pattern = re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")
+    active_map = _redirects_token_map(mig)
     real_hits: list[str] = []
     disclosed_lines = 0
     disclosed_files: set[str] = set()
     self_ref_hits: list[str] = []
+    refusal_hits: list[str] = []
     for rel in mig.files:
         skip = mig.was_lines[rel] | mig.fenced_lines[rel]
         line_disclosed = False
         for i, line in enumerate(mig.lines[rel]):
             if i in skip:
                 continue
-            tokens = d7_pattern.findall(line)
-            if not tokens:
+            matches = list(d7_pattern.finditer(line))
+            if not matches:
                 continue
-            for token in tokens:
+            for m in matches:
+                token = m.group(0)
+                prefix_match = re.search(r"\d+$", token)
+                if prefix_match is None:
+                    real_hits.append(f"{token} ({rel}:{i + 1})")
+                    continue
+                prefix = token[: prefix_match.start()]
+                base_width = len(token) - len(prefix)
                 if _scoped_id_is_never_allocated(token, mig, ctl):
                     line_disclosed = True
                 elif _is_framework_self_reference(rel, mig, mig, ctl, i, token):
                     line_disclosed = True
                     self_ref_hits.append(f"{token} ({rel}:{i + 1})")
+                elif token in active_map and docid._bare_comma_tail_resolves(
+                    prefix,
+                    base_width,
+                    active_map,
+                    line,
+                    # The rewriter's own refusal checks the bare comma tail AFTER any
+                    # `..range`/`-/`-continuation the citation carries, not right after
+                    # the bare token -- `NFR-MODEL-1..5, 10..13`'s refused span ends
+                    # past `..5`, not past `1`. Re-deriving that same span via the
+                    # rewriter's own `_compound_token_re(token)` (never a
+                    # re-implemented regex) is what makes this check examine the EXACT
+                    # position the rewriter itself decided on. `token in active_map` is
+                    # the SAME precondition the rewriter's own sweep requires before it
+                    # ever calls `_bare_comma_tail_resolves` at all -- co-extensive by
+                    # identity requires both the position and the precondition.
+                    (docid._compound_token_re(token).match(line, m.start()) or m).end(),
+                ):
+                    line_disclosed = True
+                    refusal_hits.append(f"{token} ({rel}:{i + 1})")
                 else:
                     real_hits.append(f"{token} ({rel}:{i + 1})")
         if line_disclosed:
@@ -1337,6 +1378,24 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
         if self_ref_hits
         else ""
     )
+    refusal_shown = "; ".join(refusal_hits[:10])
+    refusal_more = f" (+{len(refusal_hits) - 10} more)" if len(refusal_hits) > 10 else ""
+    refusal_note = (
+        f" {len(refusal_hits)} of those line(s) join a third, distinct disclosed "
+        "class — **box-end comma-continuation refusal**: `doc-id.py`'s "
+        "`_bare_comma_tail_resolves` (the SAME function the rewriter itself calls to "
+        "decide this, not a re-implementation) says the token is immediately followed "
+        "by a bare comma-digit tail that resolves against its own prefix — a genuine "
+        "continuation risk the rewriter refused rather than partially rewrite, "
+        "leaving this real, allocated citation in its legacy form on purpose (Ruling, "
+        "W37-6, 2026-09-06). Owner: W37-6. This is not a closed class the way "
+        "never-allocated is: `REDIRECTS.csv` can still resolve every one of these, and "
+        "each is governed by its own W37-11 per-file ceiling entry, unlike the "
+        f"never-allocated class above. This line's own count: {refusal_shown}"
+        f"{refusal_more}."
+        if refusal_hits
+        else ""
+    )
     return DISCLOSE, (
         f"every one of {disclosed_lines} line(s) / {len(disclosed_files)} file(s) "
         "names only a legacy scoped-form id with zero definition rows in every source "
@@ -1348,7 +1407,7 @@ def _d7_disclosed_or_fail(mig: Corpus, ctl: Corpus) -> tuple[str, str]:
         "never be allocated later either. Owner: none — closed class. The citing "
         "sentence stays exactly as written; Ruling 103 §5.1's fence is for a "
         "defective-form exhibit, not a correct historical statement about an id that "
-        f"does not exist.{self_ref_note}"
+        f"does not exist.{self_ref_note}{refusal_note}"
     )
 
 
@@ -1443,6 +1502,7 @@ def _path_alternative_hits_by_file(
 
 
 def rows_d(
+    docid: Any,
     mig: Corpus,
     ctl: Corpus,
     record: "Sequence[ResidueEntry]" = (),  # noqa: UP037 -- ResidueEntry defined later
@@ -1493,7 +1553,7 @@ def rows_d(
                 if creation_note:
                     note += "; " + creation_note
             elif label == _D7_LABEL and m_lines > 0:
-                verdict, note = _d7_disclosed_or_fail(mig, ctl)
+                verdict, note = _d7_disclosed_or_fail(docid, mig, ctl)
                 if creation_note:
                     note += "; " + creation_note
             elif label in D_PATH_LABELS:
@@ -3755,7 +3815,7 @@ def compute_rows(
     ctl = load_corpus(snap.control)
     baseline = load_corpus(snap.baseline) if snap.baseline is not None else None
     rows: list[Row] = [row_a(docid, snap), row_b(docid, snap), row_c(snap)]
-    rows.extend(rows_d(mig, ctl, record))
+    rows.extend(rows_d(docid, mig, ctl, record))
     rows.append(row_e(mig, ctl, snap))
     rows.append(row_f(mig, ctl, baseline, snap, generated_paths))
     rows.append(row_g(docid, snap, mig, ctl))

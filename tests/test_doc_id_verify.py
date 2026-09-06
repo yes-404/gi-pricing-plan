@@ -110,11 +110,13 @@ def _snapshot(
     )
 
 
-def _d_rows(dv: Any, snap: Any) -> dict[str, Any]:
+def _d_rows(dv: Any, doc_id_cli: Any, snap: Any) -> dict[str, Any]:
     """(d)'s thirteen rows, keyed `d1`..`d13`."""
     return {
         row.key: row
-        for row in dv.rows_d(dv.load_corpus(snap.migrated), dv.load_corpus(snap.control))
+        for row in dv.rows_d(
+            doc_id_cli, dv.load_corpus(snap.migrated), dv.load_corpus(snap.control)
+        )
     }
 
 
@@ -323,23 +325,23 @@ _CLEAN = {"docs/a.md": "a clean line with no legacy citation\n"}
 
 
 def test_row_d_is_green_on_a_clean_corpus_and_red_on_one_planted_token(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """Red-then-green on the same predicate: one planted `NT-0001` flips the row."""
     control = {"docs/a.md": "see NT-0001 for the reasoning\n"}
     snap = _snapshot(dv, tmp_path / "green", _CLEAN, control)
-    rows = _d_rows(dv, snap)
+    rows = _d_rows(dv, doc_id_cli, snap)
     assert rows["d1"].verdict == dv.PASS
 
     broken = {"docs/a.md": "a line that still says NT-0001\n"}
     snap2 = _snapshot(dv, tmp_path / "red", broken, control)
-    rows2 = _d_rows(dv, snap2)
+    rows2 = _d_rows(dv, doc_id_cli, snap2)
     assert rows2["d1"].verdict == dv.FAIL
     assert rows2["d1"].migrated.startswith("1 line")
 
 
 def test_row_d_fails_when_its_control_is_zero(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """§7(d)'s `F-W[0-9]` case, generalised: a zero with a zero control proves nothing.
 
@@ -348,17 +350,17 @@ def test_row_d_fails_when_its_control_is_zero(
     predicate are indistinguishable from that figure alone.
     """
     snap = _snapshot(dv, tmp_path / "nocontrol", _CLEAN, _CLEAN)
-    rows = _d_rows(dv, snap)
+    rows = _d_rows(dv, doc_id_cli, snap)
     assert rows["d1"].verdict == dv.FAIL
     assert "control is 0" in rows["d1"].note
 
 
 def test_row_d_fails_over_an_empty_population(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """NT-0007: a green over a zero denominator is a fail, not a pass."""
     snap = _snapshot(dv, tmp_path / "empty", {"docs/a.md": ""}, {"docs/a.md": ""})
-    rows = _d_rows(dv, snap)
+    rows = _d_rows(dv, doc_id_cli, snap)
     assert rows["d1"].verdict == dv.FAIL
 
 
@@ -371,7 +373,7 @@ _REDIRECTS_HEADER = "old_id,new_id,old_path,new_path,citing_dir\n"
 
 
 def test_path_alternative_ignores_a_same_path_redirect_row(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """A `docs/REDIRECTS.csv` row with `old_path == new_path` records a token rename
     made *inside* a file (`W1` -> `WK-954` inside `docs/roadmap.md`, which never moved),
@@ -390,7 +392,7 @@ def test_path_alternative_ignores_a_same_path_redirect_row(
     }
     control = {"docs/a.md": "see docs/plans/2026- for background\n"}
     snap = _snapshot(dv, tmp_path, migrated, control)
-    rows = _d_rows(dv, snap)
+    rows = _d_rows(dv, doc_id_cli, snap)
     assert rows["d9"].verdict != dv.FAIL, (
         "docs/roadmap.md's same-path redirect row must not make an unrelated "
         f"citation FATAL: {rows['d9'].note}"
@@ -398,7 +400,7 @@ def test_path_alternative_ignores_a_same_path_redirect_row(
 
 
 def test_path_alternative_excludes_a_split_source_index_file(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """RL-287/RL-255: a family split-source index's `` `was:` `` table column and
     "`<old>` became N documents." heading must keep naming the pre-migration path
@@ -423,12 +425,12 @@ def test_path_alternative_excludes_a_split_source_index_file(
     }
     control = {"docs/a.md": "see docs/plans/2026- for background\n"}
     snap = _snapshot(dv, tmp_path, migrated, control)
-    rows = _d_rows(dv, snap)
+    rows = _d_rows(dv, doc_id_cli, snap)
     assert rows["d9"].verdict != dv.FAIL, rows["d9"].note
 
 
 def test_path_alternative_excludes_a_vendored_skills_own_files(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """NT-0019 §1.5 / Ruling 69: a vendored skill's own files (never the manifest) are
     excluded from every migration action, citation rewrite included — "vendored files
@@ -447,7 +449,7 @@ def test_path_alternative_excludes_a_vendored_skills_own_files(
     }
     control = {"docs/a.md": "see docs/plans/2026- for background\n"}
     snap = _snapshot(dv, tmp_path, migrated, control)
-    rows = _d_rows(dv, snap)
+    rows = _d_rows(dv, doc_id_cli, snap)
     assert rows["d9"].verdict != dv.FAIL, rows["d9"].note
 
 
@@ -497,7 +499,7 @@ def test_was_field_line_numbers_ignores_a_was_key_outside_front_matter(
 
 
 def test_disclosed_alternative_does_not_set_the_exit_code_but_still_reports(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """`\\bF[0-9]{2}\\b` is excluded from the zero requirement **with its count disclosed**.
 
@@ -509,14 +511,14 @@ def test_disclosed_alternative_does_not_set_the_exit_code_but_still_reports(
     migrated = {"docs/a.md": "F41 and F85 and F96\n"}
     control = {"docs/a.md": "F41 and F85 and F96, again\n"}
     snap = _snapshot(dv, tmp_path / "disc", migrated, control)
-    rows = _d_rows(dv, snap)
+    rows = _d_rows(dv, doc_id_cli, snap)
     assert rows["d3"].verdict == dv.DISCLOSE
     assert rows["d3"].fatal is False
     assert rows["d3"].migrated.startswith("1 line")  # one *line*, three occurrences
 
 
 def test_disclosed_alternative_still_regresses_on_a_new_value(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """The 2026-09-04 ruling (`to-lead.md:1017`), clause 1, applied to a `D_DISCLOSED`
     member other than (d8): "any such value is REGRESSION, disclosed class or not."
@@ -525,7 +527,7 @@ def test_disclosed_alternative_still_regresses_on_a_new_value(
     from the zero requirement."""
     migrated = {"docs/a.md": "F41 and F96\n"}
     control = {"docs/a.md": "F41\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "disc-new", migrated, control))["d3"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "disc-new", migrated, control))["d3"]
     assert row.verdict == dv.REGRESSION
     assert row.fatal
     assert "F96" in row.note
@@ -1537,7 +1539,7 @@ def test_the_shared_constant_reproduces_the_hand_written_label_and_pattern_list(
 
 
 def test_a_mutated_constant_moves_both_docverify_and_check_36_the_same_way(
-    dv: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Ruling 67 §2's own broken-input proof: *"change one alternative in the constant and
     both check 36 and the (d) rows move together; leave either reading a private copy and
@@ -1559,7 +1561,7 @@ def test_a_mutated_constant_moves_both_docverify_and_check_36_the_same_way(
     snap = _snapshot(dv, tmp_path / "mut", {"docs/a.md": doc}, {"docs/a.md": doc})
     mig, ctl = dv.load_corpus(snap.migrated), dv.load_corpus(snap.control)
 
-    before_rows = {r.key: r for r in dv.rows_d(mig, ctl)}
+    before_rows = {r.key: r for r in dv.rows_d(doc_id_cli, mig, ctl)}
     adr_key_before = next(k for k, r in before_rows.items() if "ADR id" in r.title)
     assert not before_rows[adr_key_before].migrated.startswith("0 line")
 
@@ -1569,7 +1571,7 @@ def test_a_mutated_constant_moves_both_docverify_and_check_36_the_same_way(
     assert any("ADR id" in hit for hit in before_sweep)
 
     monkeypatch.setattr(dv, "D_ALTERNATIVES", mutated)
-    after_rows = {r.key: r for r in dv.rows_d(mig, ctl)}
+    after_rows = {r.key: r for r in dv.rows_d(doc_id_cli, mig, ctl)}
     assert after_rows[adr_key_before].migrated.startswith("0 line"), (
         "the mutated pattern must no longer match ADR-0004"
     )
@@ -1761,7 +1763,7 @@ def test_end_to_end_is_red_on_this_tree_and_names_its_rows(
 
 
 def test_a_row_can_read_zero_because_corruption_moved_the_token_out_of_reach(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """Auditor finding A1, as a corpus. `F-W[0-9]` reads **0** on the migrated tree while
     the mangled form `F-WK-…` reads non-zero, and `F-WK` has a letter where the alternative
@@ -1775,7 +1777,7 @@ def test_a_row_can_read_zero_because_corruption_moved_the_token_out_of_reach(
     """
     migrated = {"docs/a.md": "the finding F-WK-952-1-3 is cited here\n"}
     control = {"docs/a.md": "the finding F-W11-1-3 is cited here\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "a1", migrated, control))["d2"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "a1", migrated, control))["d2"]
     assert row.verdict == dv.DISCLOSE
     assert row.fatal is False
     assert row.migrated.startswith("0 line")
@@ -1787,7 +1789,7 @@ def test_a_row_can_read_zero_because_corruption_moved_the_token_out_of_reach(
 
 
 def test_a_companion_is_promoted_to_gating_by_configuration_not_a_rewrite(
-    dv: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The lead's directive: built so a companion can be promoted by configuration.
 
@@ -1798,25 +1800,25 @@ def test_a_companion_is_promoted_to_gating_by_configuration_not_a_rewrite(
     migrated = {"docs/a.md": "the finding F-WK-952-1-3 is cited here\n"}
     control = {"docs/a.md": "the finding F-W11-1-3 is cited here\n"}
     snap = _snapshot(dv, tmp_path / "promote", migrated, control)
-    assert _d_rows(dv, snap)["d2"].verdict == dv.DISCLOSE
+    assert _d_rows(dv, doc_id_cli, snap)["d2"].verdict == dv.DISCLOSE
     label = "mangled: work key rewritten inside the finding id"
     monkeypatch.setattr(dv, "GATING_COMPANIONS", frozenset({label}))
-    promoted = _d_rows(dv, snap)["d2"]
+    promoted = _d_rows(dv, doc_id_cli, snap)["d2"]
     assert promoted.verdict == dv.FAIL
     assert "GATING_COMPANIONS" in promoted.note
 
 
 def test_an_alternative_with_no_companion_says_so_by_name(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """A silent absence would read as "asked and found nothing"."""
     snap = _snapshot(dv, tmp_path / "nocomp", _CLEAN, {"docs/a.md": "ADR-0004\n"})
-    row = _d_rows(dv, snap)["d6"]  # ADR-0[0-9]{3}\b, no companion declared
+    row = _d_rows(dv, doc_id_cli, snap)["d6"]  # ADR-0[0-9]{3}\b, no companion declared
     assert any(c[2].startswith("no companion predicate declared") for c in row.companions)
 
 
 def test_d6_anchor_does_not_trip_on_a_correctly_migrated_five_digit_id(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """The peer executor's finding, folded into this ruling's follow-up (same file).
 
@@ -1833,20 +1835,20 @@ def test_d6_anchor_does_not_trip_on_a_correctly_migrated_five_digit_id(
     above already guard against.
     """
     migrated_ok = {"docs/a.md": "see ADR-00999 for the decision\n"}
-    row_ok = _d_rows(dv, _snapshot(dv, tmp_path / "d6ok", migrated_ok, _CLEAN))["d6"]
+    row_ok = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "d6ok", migrated_ok, _CLEAN))["d6"]
     assert row_ok.migrated.startswith("0 line"), (
         "a correctly-migrated five-digit id must not be read as a legacy citation"
     )
 
     migrated_bad = {"docs/a.md": "see ADR-0999 for the decision\n"}
-    row_bad = _d_rows(dv, _snapshot(dv, tmp_path / "d6bad", migrated_bad, _CLEAN))["d6"]
+    row_bad = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "d6bad", migrated_bad, _CLEAN))["d6"]
     assert not row_bad.migrated.startswith("0 line"), (
         "a genuinely un-migrated 4-digit legacy citation must still trip the row"
     )
 
 
 def test_fenced_legacy_form_excluded_from_row_d_but_an_unfenced_sibling_still_counts(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """W37-6 exec-ids specification-class disposition (Ruling 103 §5.1's fence clause,
     extended to row (d)'s corpus, 2026-09-04): an id-shaped exhibit kept byte-exact inside
@@ -1868,14 +1870,14 @@ def test_fenced_legacy_form_excluded_from_row_d_but_an_unfenced_sibling_still_co
             "and a genuine un-migrated citation on the next line: NT-0043\n"
         ),
     }
-    d1 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, _CLEAN))["d1"]
+    d1 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, _CLEAN))["d1"]
     assert d1.migrated.startswith("1 line"), (
         "the fenced NT-0042 must be excluded; only the unfenced NT-0043 counts"
     )
 
 
 def test_d7_a_defined_token_left_unrewritten_still_fails(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """Broken-input proof, direction 1 (the deputy's mechanical predicate, 2026-09-04,
     W37-6 exec-ids, relayed via team-lead): a scoped id that IS bold-defined in the
@@ -1891,7 +1893,7 @@ def test_d7_a_defined_token_left_unrewritten_still_fails(
     control = {
         "docs/specs/00-overview.md": "**FR-EX-1** A normal requirement.\n",
     }
-    d7 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    d7 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, control))["d7"]
     assert d7.verdict == "FAIL", (
         f"a defined-but-unrewritten token must FAIL, not disclose: {d7.note}"
     )
@@ -1899,7 +1901,7 @@ def test_d7_a_defined_token_left_unrewritten_still_fails(
 
 
 def test_d7_an_undefined_token_is_disclosed_as_the_never_allocated_closed_class(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """Broken-input proof, direction 2: a scoped id with zero definition in every source
     `_discover_*` reads, and no `docs/REDIRECTS.csv` row, is the never-allocated closed
@@ -1912,14 +1914,14 @@ def test_d7_an_undefined_token_is_disclosed_as_the_never_allocated_closed_class(
     # shape the real corpus has for a never-allocated token (nothing rewrites it, so
     # migrated and control agree byte-for-byte on that one citation).
     control = {"docs/plans/2026-01-01-x.md": text}
-    d7 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    d7 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, control))["d7"]
     assert d7.verdict == "DISCLOSE", f"an undefined token must disclose: {d7.note}"
     assert "closed class" in d7.note
     assert "none — closed class" in d7.note
 
 
 def test_d7_a_real_id_backtick_quoted_in_a_planning_doc_still_fails(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """The team-lead's hardening, 2026-09-05: "limb 2 discloses EXHIBITS, and an exhibit
     is not a real id... a real id surviving in old form inside a backtick span anywhere
@@ -1933,7 +1935,7 @@ def test_d7_a_real_id_backtick_quoted_in_a_planning_doc_still_fails(
         "docs/plans/PL-00002-w37-6-example.md": "the recovered id `NFR-EX-5` is now correct.\n",
     }
     control = {k: v for k, v in migrated.items() if k != "docs/REDIRECTS.csv"}
-    d7 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    d7 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, control))["d7"]
     assert d7.verdict == "FAIL", (
         f"a real id backtick-quoted in a planning doc must still FAIL, not disclose: "
         f"{d7.note}"
@@ -1942,7 +1944,7 @@ def test_d7_a_real_id_backtick_quoted_in_a_planning_doc_still_fails(
 
 
 def test_d7_a_framework_self_reference_is_disclosed_by_a_line_predicate_not_a_name(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """The one real (d7) residue this row's own mechanical predicate cannot resolve on
     its own (ruled 2026-09-05, W37-6 channel, real corpus: `scripts/doc-id.py`'s
@@ -1979,7 +1981,7 @@ def test_d7_a_framework_self_reference_is_disclosed_by_a_line_predicate_not_a_na
         ),
     }
     control = {k: v for k, v in migrated.items() if k != "docs/REDIRECTS.csv"}
-    d7 = _d_rows(dv, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    d7 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, control))["d7"]
     assert d7.verdict == "DISCLOSE", (
         f"both framework self-references must disclose, not fail: {d7.note}"
     )
@@ -1994,6 +1996,99 @@ def test_d7_a_framework_self_reference_is_disclosed_by_a_line_predicate_not_a_na
     assert "OQ-EX-9" in d7.note, (
         "both members of the class, from two unrelated files, must be named -- proving "
         "this is a predicate over the line and the file, not a table keyed on one token"
+    )
+
+
+def test_d7_a_box_end_left_whole_citation_is_disclosed_not_failed(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """Co-extensiveness by identity (Ruling, W37-6, 2026-09-06): a citation the rewriter's
+    own `_bare_comma_tail_resolves` refuses -- left whole, base included, because its
+    comma-tail resolves against its own prefix -- must be disclosed here, not failed. The
+    real box-end shape: `NFR-MODEL-1..5, 10..13` where `10` resolves as `NFR-MODEL-10`.
+
+    Before this class existed, (d7) never fired on `, 10..13` at all -- bare digits do
+    not match its own pattern, and the base was rewritten with the tail orphaned, citing
+    nothing. After ruling (b)'s refusal, the WHOLE citation survives legacy, still
+    matching (d7)'s pattern on `NFR-MODEL-1` -- and this is the row correctly reporting a
+    truth the previous state concealed: legacy-but-intact beats mangled, but the citation
+    is still unmigrated either way, which is what (d7) exists to say."""
+    migrated = {
+        "docs/findings/register.md": (
+            "| Measured NFRs | NFR-MODEL-1..5, 10..13 | W4/W5/W7 |\n"
+        ),
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            "NFR-MODEL-1,NFR-772,,,\nNFR-MODEL-2,NFR-773,,,\nNFR-MODEL-3,NFR-774,,,\n"
+            "NFR-MODEL-4,NFR-776,,,\nNFR-MODEL-5,NFR-777,,,\nNFR-MODEL-10,NFR-780,,,\n"
+            "NFR-MODEL-11,NFR-781,,,\nNFR-MODEL-12,NFR-782,,,\nNFR-MODEL-13,NFR-783,,,\n"
+        ),
+    }
+    control = {
+        "docs/findings/register.md": migrated["docs/findings/register.md"],
+    }
+    d7 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    assert d7.verdict == "DISCLOSE", (
+        f"a citation the rewriter's own refusal leaves whole must disclose, not fail: "
+        f"{d7.note}"
+    )
+    assert "box-end comma-continuation refusal" in d7.note
+    assert "NFR-MODEL-1" in d7.note
+
+
+def test_d7_a_plain_miss_with_no_comma_tail_still_fails_beside_the_new_class(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The mandatory positive control (Ruling, W37-6, 2026-09-06): the new disclosed
+    class must not weaken (d7) for an ORDINARY miss -- a genuinely allocated citation left
+    unrewritten with NO comma-tail at all, the shape (d7) has always existed to catch.
+    Injected beside a real box-end left-whole citation in the SAME tree, so a class that
+    quietly widened past what the rewriter actually refuses would show up here as a false
+    DISCLOSE; it must not."""
+    migrated = {
+        "docs/findings/register.md": (
+            "| Measured NFRs | NFR-MODEL-1..5, 10..13 | W4/W5/W7 |\n"
+        ),
+        "docs/specs/00-overview.md": "**FR-EX-1** A normal requirement.\n",
+        "docs/plans/2026-01-01-x.md": (
+            "Next free: `FR-EX-1` — still cited, unrewritten, no comma after it at all.\n"
+        ),
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            "NFR-MODEL-1,NFR-772,,,\nNFR-MODEL-2,NFR-773,,,\nNFR-MODEL-3,NFR-774,,,\n"
+            "NFR-MODEL-4,NFR-776,,,\nNFR-MODEL-5,NFR-777,,,\nNFR-MODEL-10,NFR-780,,,\n"
+            "NFR-MODEL-11,NFR-781,,,\nNFR-MODEL-12,NFR-782,,,\nNFR-MODEL-13,NFR-783,,,\n"
+        ),
+    }
+    control = {
+        "docs/findings/register.md": migrated["docs/findings/register.md"],
+        "docs/specs/00-overview.md": migrated["docs/specs/00-overview.md"],
+        "docs/plans/2026-01-01-x.md": migrated["docs/plans/2026-01-01-x.md"],
+    }
+    d7 = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path, migrated, control))["d7"]
+    assert d7.verdict == "FAIL", (
+        f"a plain miss with no comma-tail must still FAIL beside the new disclosed "
+        f"class, not be swept into it: {d7.note}"
+    )
+    assert "FR-EX-1" in d7.note
+
+    # And with the plain miss (and its own definition file) removed entirely, the same
+    # tree's remaining (box-end) citation discloses cleanly -- proving the FAIL above
+    # came from FR-EX-1 specifically, not from some other interaction with the box-end
+    # fixture.
+    fr_ex_1_files = {"docs/plans/2026-01-01-x.md", "docs/specs/00-overview.md"}
+    migrated_without_miss = {
+        k: v for k, v in migrated.items() if k not in fr_ex_1_files
+    }
+    control_without_miss = {
+        k: v for k, v in control.items() if k not in fr_ex_1_files
+    }
+    clean_snap = _snapshot(
+        dv, tmp_path / "clean", migrated_without_miss, control_without_miss
+    )
+    d7_clean = _d_rows(dv, doc_id_cli, clean_snap)["d7"]
+    assert d7_clean.verdict == "DISCLOSE", (
+        f"removing the plain miss must restore DISCLOSE: {d7_clean.note}"
     )
 
 
@@ -2025,7 +2120,7 @@ def test_framework_self_reference_predicate_yields_a_broad_class_on_the_real_cor
 
 
 def test_unanchor_is_a_no_op_for_a_bare_path_literal_the_old_inert_case_is_fixed(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """The path entries carry no `\\b` at all under the shared constant (task 17) — a path
     has no "complete form" the way an id token does, so Ruling 67 §2 Part 1 anchors it as a
@@ -2041,7 +2136,7 @@ def test_unanchor_is_a_no_op_for_a_bare_path_literal_the_old_inert_case_is_fixed
     old_root = "." + "claude" + "/" + "notes"
     doc = f"see `{old_root}/README.md` and {old_root}/x.md\n"
     snap = _snapshot(dv, tmp_path / "inert", {"docs/a.md": doc}, {"docs/a.md": doc})
-    row = _d_rows(dv, snap)["d13"]
+    row = _d_rows(dv, doc_id_cli, snap)["d13"]
     assert "legacy claude-notes path" in row.title
     assert row.migrated.startswith("1 line"), (
         "the bare-literal form must match this backtick-preceded occurrence directly, "
@@ -2058,7 +2153,7 @@ def test_unanchor_is_a_no_op_for_a_bare_path_literal_the_old_inert_case_is_fixed
 
 
 def test_an_alternative_that_gets_worse_is_a_regression_not_a_fail(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """(d4) `wf-0[0-9]`, 267 -> 327. The migration CREATES what the row forbids, so no
     citation rewrite reaches zero. That is not a bigger version of "did not reach zero" —
@@ -2066,14 +2161,14 @@ def test_an_alternative_that_gets_worse_is_a_regression_not_a_fail(
     (`wf-02`, absent from control), not merely a larger occurrence count."""
     migrated = {"docs/a.md": "wf-01 here\n", "docs/b.md": "wf-02 there\n"}
     control = {"docs/a.md": "wf-01 here\n", "docs/b.md": "nothing\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "reg", migrated, control))["d4"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "reg", migrated, control))["d4"]
     assert row.verdict == dv.REGRESSION
     assert row.fatal
     assert "wf-02" in row.note
 
 
 def test_an_alternative_with_a_larger_occurrence_count_but_the_same_values_is_not_a_regression(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """The 2026-09-04 ruling itself (`to-lead.md:1017`), stated from the measurement that
     provoked it: `W37-6` 685->725 and `W32-7` 68->78 on the real corpus, value set
@@ -2082,7 +2177,7 @@ def test_an_alternative_with_a_larger_occurrence_count_but_the_same_values_is_no
     (d4) must not regress on the count alone."""
     migrated = {"docs/a.md": "wf-01 here\n", "docs/b.md": "wf-01 there too\n"}
     control = {"docs/a.md": "wf-01 here\n", "docs/b.md": "nothing\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "growth", migrated, control))["d4"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "growth", migrated, control))["d4"]
     assert row.verdict != dv.REGRESSION
     assert "wf-01 1->2" in row.note, row.note
 
@@ -2094,12 +2189,12 @@ def test_an_alternative_with_a_larger_occurrence_count_but_the_same_values_is_no
 # =========================================================================================
 
 
-def test_d8_slice_key_alone_is_disclosed(dv: Any, tmp_path: pathlib.Path) -> None:
+def test_d8_slice_key_alone_is_disclosed(dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path) -> None:
     """A plain two-segment slice key, no task key and no bare work-key remainder in
     sight: the whole row discloses rather than fails."""
     migrated = {"docs/a.md": "see W11-1 for the plan\n"}
     control = {"docs/a.md": "see W11-1 for the plan\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8slice", migrated, control))["d8"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "d8slice", migrated, control))["d8"]
     assert row.verdict == dv.DISCLOSE
     assert row.fatal is False
     assert "slice-key and task-key population disclosed" in row.note
@@ -2107,7 +2202,7 @@ def test_d8_slice_key_alone_is_disclosed(dv: Any, tmp_path: pathlib.Path) -> Non
 
 
 def test_d8_task_key_is_disclosed_alongside_the_slice_key(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """A three-segment task key on the same row as a clean slice key: it joins the
     DISCLOSED component and is counted on its own line, rather than failing the row.
@@ -2125,7 +2220,7 @@ def test_d8_task_key_is_disclosed_alongside_the_slice_key(
     asserted here so the disclosure cannot silently degrade into an unreported skip."""
     migrated = {"docs/a.md": "see W11-1 and also W11-1-2\n"}
     control = {"docs/a.md": "see W11-1 and also W11-1-2\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8task", migrated, control))["d8"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "d8task", migrated, control))["d8"]
     assert row.verdict == dv.DISCLOSE
     assert row.fatal is False
     assert "slice-key and task-key population disclosed" in row.note
@@ -2133,12 +2228,14 @@ def test_d8_task_key_is_disclosed_alongside_the_slice_key(
     assert "slice-key 1 line(s) / 1 file(s)" in row.note
 
 
-def test_d8_bare_work_key_remainder_stays_fatal(dv: Any, tmp_path: pathlib.Path) -> None:
+def test_d8_bare_work_key_remainder_stays_fatal(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
     """A bare `W<n>` with no slice number at all is a `token_map` defect, not the alias
     class — it must fail the row even with no task key present."""
     migrated = {"docs/a.md": "see W11-1 and the bare W12 citation\n"}
     control = {"docs/a.md": "see W11-1 and the bare W12 citation\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8bare", migrated, control))["d8"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "d8bare", migrated, control))["d8"]
     assert row.verdict == dv.FAIL
     assert row.fatal
     assert "bare work-key remainder(s)" in row.note
@@ -2146,7 +2243,7 @@ def test_d8_bare_work_key_remainder_stays_fatal(dv: Any, tmp_path: pathlib.Path)
 
 
 def test_d8_creation_stays_regression_even_though_the_class_is_disclosed(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """Ruling 105 §A: "creation... stays REGRESSION even for a disclosed class, because a
     disclosed count that grows is the mangling class, not the alias class." A slice key
@@ -2154,7 +2251,7 @@ def test_d8_creation_stays_regression_even_though_the_class_is_disclosed(
     disclose quietly — it must still fail as REGRESSION, checked before the disclosure."""
     migrated = {"docs/a.md": "W11-1 here\n", "docs/b.md": "W11-2 there\n"}
     control = {"docs/a.md": "W11-1 here\n", "docs/b.md": "nothing\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "d8creation", migrated, control))["d8"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "d8creation", migrated, control))["d8"]
     assert row.verdict == dv.REGRESSION
     assert row.fatal
     assert "creation stays REGRESSION" in row.note
@@ -2173,12 +2270,12 @@ def test_d8_slice_key_regex_does_not_double_count_a_task_key_as_a_slice_key(
 
 
 def test_an_alternative_the_migration_does_not_move_is_marked_inert(
-    dv: Any, tmp_path: pathlib.Path
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
 ) -> None:
     """The auditor's two-column signature: control == migrated means no discriminating
     power, whatever the absolute figure looks like."""
     same = {"docs/a.md": "NT-0019 is cited\n"}
-    row = _d_rows(dv, _snapshot(dv, tmp_path / "inert2", same, same))["d1"]
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "inert2", same, same))["d1"]
     assert "INERT" in row.note
 
 
@@ -2904,7 +3001,7 @@ def test_verify_result_progressed_residue_does_not_move_the_exit_code(dv: Any) -
     assert result.exit_code == 1
 
 
-def test_rows_d_populate_residue_keyed_by_their_own_row(dv: Any) -> None:
+def test_rows_d_populate_residue_keyed_by_their_own_row(dv: Any, doc_id_cli: Any) -> None:
     """Integration: `rows_d`'s own residue is keyed `(relpath, "d<i>")` — no path or row
     key hardcoded in `_docverify`, only the corpus and the row's own index producing it."""
     mig_lines = {"docs/plans/foo.md": ("see wf-01 for the journey",)}
@@ -2921,7 +3018,7 @@ def test_rows_d_populate_residue_keyed_by_their_own_row(dv: Any) -> None:
         was_lines={k: frozenset() for k in ctl_lines},
         fenced_lines={k: frozenset() for k in ctl_lines},
     )
-    rows = dv.rows_d(mig, ctl)
+    rows = dv.rows_d(doc_id_cli, mig, ctl)
     wf_labels = [i for i, (_, pattern) in enumerate(dv.D_ALTERNATIVES, start=1)
                  if "wf-0" in pattern.pattern]
     assert wf_labels, "D_ALTERNATIVES no longer carries a wf-0[0-9] alternative"
