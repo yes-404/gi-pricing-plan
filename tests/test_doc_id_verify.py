@@ -934,6 +934,74 @@ def test_row_g_a_nonempty_residue_fails_and_names_the_violation(
     assert "classified-by-none=1" in row.migrated
 
 
+def test_row_g_names_a_real_bare_comma_after_rewrite_violation(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Mandatory positive control (Ruling, lead, 2026-09-06, deputy-confirmed):
+    `_rewritten_base_before_bare_comma` was defined, tested against fixtures only, and
+    called from nowhere in the module -- `migrate --verify` never computed it and never
+    printed it on a real corpus. An injected site -- a rewritten base (`NFR-772`, from
+    `NFR-MODEL-1`) immediately followed by a bare comma-tail (`, 10`) that resolves as a
+    further citation of the base's OLD prefix (`NFR-MODEL-10`) -- must fail (g) and name
+    itself in the note, beside an otherwise-clean classification and a nonzero at-risk
+    population."""
+    migrated = {
+        "docs/a.md": "see NFR-RATE-13/14 for the reasoning\n",
+        # `docs/b.md`'s new-form text is identical in both trees -- this test is about
+        # `_rewritten_base_before_bare_comma`, which reads only `mig`, not about
+        # `_g1_provenance_mismatches`, which would need a real `docid._compound_token_re`
+        # for a legacy-scoped control citation, unavailable on `_FakeDocid`.
+        "docs/b.md": "NFR-772, 10 still needs review\n",
+        "docs/REDIRECTS.csv": _MODEL_REDIRECTS_CSV,
+    }
+    control = {
+        "docs/a.md": "see NFR-RATE-13/14 for the reasoning\n",
+        "docs/b.md": "NFR-772, 10 still needs review\n",
+        "docs/REDIRECTS.csv": _MODEL_REDIRECTS_CSV,
+    }
+    snap = _snapshot(dv, tmp_path, migrated, control)
+    classification = _FakeClassification(
+        per_class={
+            "1-front-matter-stamp": ("docs/x1.md",), "2-reference-token": (),
+            "3-move": (), "4-split": (), "5-roadmap-restructure": (),
+            "6-generated-artifact": (), "classified-by-none": (),
+        },
+        violations=(),
+    )
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    row = dv.row_g(fake_docid, snap, mig, ctl)
+
+    assert row.verdict == dv.FAIL, row.note
+    assert "NFR-772 (docs/b.md:1)" in row.note
+    assert "bare-comma-after-rewrite violation(s) = 1" in row.migrated
+
+
+def test_row_g_is_unaffected_when_no_bare_comma_after_rewrite_site_exists(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """Removing the injected site restores PASS -- proving the FAIL above came from the
+    bare-comma-after-rewrite site specifically, not some other interaction in the
+    fixture."""
+    snap = _snapshot(dv, tmp_path, _G_CLEAN_MIGRATED, _G_CLEAN_COMPOUND)
+    classification = _FakeClassification(
+        per_class={
+            "1-front-matter-stamp": ("docs/x1.md",), "2-reference-token": (),
+            "3-move": (), "4-split": (), "5-roadmap-restructure": (),
+            "6-generated-artifact": (), "classified-by-none": (),
+        },
+        violations=(),
+    )
+    fake_docid = _FakeDocid(classification)
+    mig = dv.load_corpus(snap.migrated)
+    ctl = dv.load_corpus(snap.control)
+    row = dv.row_g(fake_docid, snap, mig, ctl)
+
+    assert row.verdict == dv.PASS, row.note
+    assert "bare-comma-after-rewrite violation(s) = 0" in row.migrated
+
+
 def test_row_g_names_every_residue_hunk_never_truncates(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
