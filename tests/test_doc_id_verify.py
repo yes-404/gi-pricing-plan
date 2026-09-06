@@ -2693,6 +2693,103 @@ def test_load_w37_11_record_is_empty_when_the_file_does_not_exist(
     assert dv.load_w37_11_record(tmp_path) == ()
 
 
+# =========================================================================================
+# F102, 2026-09-06: `--ref` must be hermetic. `_verify_body` used to read the W37-11
+# record from `repo_root` — the live, mutable checkout `verify()` was invoked against —
+# rather than from `snap.control`, the `git archive` of `--ref` it already built. Two
+# `--verify` runs of the *identical* ref, with an executor mid-edit on the record in its
+# own worktree between them, produced two different verdict sets and a residue-ceiling
+# regression neither run's own committed tree content could explain. Fixed by reading the
+# record from `snap.control` (`load_w37_11_record`'s and `_verify_body`'s own comments
+# carry the full account); this is that fix's broken-input proof.
+# =========================================================================================
+
+
+class _NoOpMigrateDocid:
+    """A `docid` stand-in whose `migrate()` does nothing to the tree, delegating every
+    other attribute (`classify_docs_files`, `check`, `materialize_ref`, `ref_exists`, …)
+    to the real `scripts/doc-id.py` — `compute_rows` calls into `docid` from most of its
+    (a)-(i) rows, not only `migrate()`, so a stub narrower than "everything except
+    `migrate`" breaks rows this test never claims to exercise. Exercises `build_snapshot`/
+    `verify()`'s real wiring (real `git archive`) without paying for the real
+    ~9000-line `migrate()`, which is not what this test is about: `snap.migrated` and
+    `snap.control` end up byte-identical, both the same `git archive` of `ref`, and the
+    one row this test reads ((d4)) only needs the two trees, never a real migration.
+    """
+
+    def __init__(self, real: Any) -> None:
+        self._real = real
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._real, name)
+
+    def migrate(self, _tree: pathlib.Path) -> types.SimpleNamespace:
+        return types.SimpleNamespace(generated_paths=())
+
+
+def test_verify_reads_the_w37_11_record_from_the_ref_never_the_live_checkout(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The broken-input proof: two `verify()` calls at one ref, with the *live* record
+    deliberately changed between them, must return identical verdicts. Only
+    `load_w37_11_record`'s own read of the wrong tree could make them diverge, so this is
+    a genuine red-then-green proof of the fix rather than a restatement of it — reverting
+    `_verify_body`'s `snap.control` back to `repo_root` makes this test fail (the two
+    verdicts diverge, `FAIL` vs `DISCLOSE`), confirmed while writing it.
+
+    A tiny real git repo stands in for `repo_root`: one committed line matching (d4)'s own
+    `\\bwf-0[0-9]\\b` pattern, plus a *committed* W37-11 record entry that governs and
+    ceilings exactly that hit. `--ref` names that commit throughout — it never moves. The
+    only thing that changes between the two `verify()` calls is an **uncommitted** edit to
+    the record on disk, which a hermetic `--ref` run must never see.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: (
+            "| path | cls | count | reason | owner |\n"
+            "| --- | --- | --- | --- | --- |\n"
+            "| docs/a.md | d4 | 1 | historical citation | W37-11 |\n"
+        ),
+    })
+    ref = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    docid = _NoOpMigrateDocid(doc_id_cli)
+
+    def _d4_verdict(run_name: str, record_on_disk: str) -> str:
+        # The live, uncommitted edit `--ref` must not see — never committed, so `ref`
+        # (pinned to the commit above) is unaffected by it either way.
+        (repo / dv.W37_11_RECORD_PATH).write_text(record_on_disk, encoding="utf-8")
+        workdir = tmp_path / f"wd-{run_name}"
+        result = dv.verify(
+            docid, repo_root=repo, ref=ref, workdir=workdir, keep=True,
+            with_baseline=False,
+        )
+        d4 = next(r for r in result.rows if r.key == "d4")
+        return str(d4.verdict)
+
+    governing = (
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| docs/a.md | d4 | 1 | historical citation | W37-11 |\n"
+    )
+    empty = (
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+    )
+    first = _d4_verdict("a", empty)
+    second = _d4_verdict("b", governing)
+    assert first == second, (
+        "the same ref verified twice must not disagree on (d4) merely because the live "
+        f"checkout's own record file changed underneath it (got {first!r} then {second!r})"
+    )
+    # Not merely "agree" — agree on the value the *committed* record (matching what
+    # `--ref` actually names) governs, proving the read came from the ref and not from
+    # whichever of the two live edits happened to be on disk at call time.
+    assert first == dv.DISCLOSE
+
+
 def test_verify_result_folds_a_fatal_residue_change_into_exit_code_3(dv: Any) -> None:
     """The wiring: a `VerifyResult` whose rows measure residue that regresses past the
     W37-11 record sets exit 3, the identical signal a moved `EXPECTED_VERDICTS` entry
