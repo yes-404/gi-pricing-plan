@@ -39,13 +39,34 @@ jobs:
       # 1-29 plus NT-0019's id-standard checks 30-39 (docs/notes/0019-one-id-per-document.md
       # §1.11), the latter path-scoped to `_ID_SCOPE_ROOTS` until the migration (W37-6)
       # widens it to the whole corpus.
-      - run: python3 scripts/audit-docs.py
+      # =====================================================================
+      # STAGES — every one runs, whatever the ones before it did. Same change,
+      # and the same reason, as `python.yml`'s: on 2026-09-06 a run that died at
+      # its first red step hid every later failure for an hour. `docs.yml` has
+      # the identical shape — four independent checks in a row — so it had the
+      # identical defect.
+      #
+      # The summary at the end aggregates each stage's `outcome` (the real
+      # result), never its `conclusion` (which `continue-on-error` forces to
+      # `success`). The checkout and setup-python steps above are not stages:
+      # nothing below can run without them.
+      # =====================================================================
+      - name: audit-docs
+        id: auditdocs
+        continue-on-error: true
+        run: python3 scripts/audit-docs.py
       # NT-0019 §1.7/§1.11: doc-id.py check fails on a duplicate id, a header/filename
       # mismatch, or a docs/INDEX.md contiguity gap; doc-index.py --check fails when a
       # fresh regeneration of docs/INDEX.md would differ from what is committed. Both are
       # no-ops before the migration (no ids exist yet to check or index).
-      - run: python3 scripts/doc-id.py check
-      - run: python3 scripts/doc-index.py --check
+      - name: doc-id check
+        id: docidcheck
+        continue-on-error: true
+        run: python3 scripts/doc-id.py check
+      - name: doc-index --check
+        id: docindex
+        continue-on-error: true
+        run: python3 scripts/doc-index.py --check
       # Ruling 102 §1 (docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md): the
       # NT-0019 §7 acceptance standard is an instrument, not a hand-maintained table. It
       # "runs in CI on every PR touching `doc-id.py` or `audit-docs.py`, and is red on
@@ -67,7 +88,10 @@ jobs:
       # 1). Exit 3 means the verdict set moved since the last recorded run — that is the
       # one this step fails on, because it is the only exit code that says something
       # about *this* change rather than about the standing backlog.
-      - run: |
+      - name: doc-id migrate --verify
+        id: docidverify
+        continue-on-error: true
+        run: |
           code=0
           python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref HEAD || code=$?
           if [ "$code" -eq 1 ]; then
@@ -75,3 +99,56 @@ jobs:
             exit 0
           fi
           exit "$code"
+
+      # =====================================================================
+      # THE VERDICT. This step, and only this step, decides whether the job is
+      # red. The stage list is written out by hand and must be kept in step with
+      # the `id:`s above — a job cannot enumerate its own steps, so the
+      # alternative to this list is no table at all.
+      #
+      # Note what this step does NOT do: it does not re-interpret exit codes.
+      # `doc-id migrate --verify`'s Ruling 104 §1 normalisation (exit 1 is a
+      # PASS — the standing red with the verdict set unchanged; exit 3 is the
+      # failure) stays inside that stage's own `run:` block, where the reasoning
+      # for it is written down. The summary only ever asks "did the stage
+      # succeed?", so moving that logic here would have split one rule across
+      # two places.
+      # =====================================================================
+      - name: Gate summary
+        if: always()
+        env:
+          S_audit_docs: ${{ steps.auditdocs.outcome }}
+          S_doc_id_check: ${{ steps.docidcheck.outcome }}
+          S_doc_index: ${{ steps.docindex.outcome }}
+          S_doc_id_verify: ${{ steps.docidverify.outcome }}
+        run: |
+          set -u
+          stages="audit_docs doc_id_check doc_index doc_id_verify"
+          failed=""
+          nfail=0
+          ntotal=0
+          {
+            echo "| stage | result | detail |"
+            echo "|---|---|---|"
+          } > summary.md
+          for s in $stages; do
+            ntotal=$((ntotal + 1))
+            eval "outcome=\${S_${s}}"
+            if [ "$outcome" = "success" ]; then
+              printf '| %s | pass | %s |\n' "$s" "$outcome" >> summary.md
+            else
+              printf '| %s | FAIL | %s |\n' "$s" "$outcome" >> summary.md
+              failed="$failed $s"
+              nfail=$((nfail + 1))
+            fi
+          done
+          if [ "$nfail" -eq 0 ]; then
+            verdict="GATE: pass — $ntotal of $ntotal stages passed"
+          else
+            verdict="GATE: FAIL — $nfail of $ntotal stages failed:$failed"
+          fi
+          echo "" >> summary.md
+          echo "$verdict" >> summary.md
+          cat summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+          [ "$nfail" -eq 0 ]

@@ -143,15 +143,48 @@ jobs:
         with: {enable-cache: true}
       - run: uv sync --all-packages --dev
 
+      # =====================================================================
+      # STAGES — every one runs, whatever the ones before it did.
+      #
+      # Until 2026-09-06 these were ordinary steps, so the job stopped at the
+      # first red one and reported exactly one failure per run. That morning it
+      # stopped at Ruff and hid 174 pytest failures and 3 drifted contracts for
+      # an hour: nobody knew they existed, because the workflow never reached
+      # them. A gate that surfaces one failure per cycle costs one full CI cycle
+      # per failure, and it also makes "is this the only thing wrong?"
+      # unanswerable — which is the worse of the two.
+      #
+      # `continue-on-error: true` leaves the step's `conclusion` as `success`
+      # while its `outcome` keeps the real result. **The summary therefore
+      # aggregates `outcome`, never `conclusion`** — aggregating `conclusion`
+      # would produce a job that is green no matter what failed, which is the
+      # obvious wrong form of this change.
+      #
+      # The setup steps above (checkout, libgomp, setup-uv, `uv sync`) are
+      # deliberately NOT stages. Nothing below can run without them, so failing
+      # fast there is the honest answer rather than eight identical
+      # "uv: command not found" errors. The line between the two groups is
+      # "would this failure make every later stage's result meaningless?".
+      #
+      # Same runners, same `fetch-depth: 0`, same commands as before. Only the
+      # early exit is gone.
+      # =====================================================================
+
       - name: Ruff
+        id: ruff
+        continue-on-error: true
         run: uv run ruff check .
 
       - name: mypy --strict
+        id: mypy
+        continue-on-error: true
         run: uv run mypy
 
       # ADR-0001 is only worth having if it is checked. A forbidden import in
       # pricing-core fails the build here rather than being noticed in review.
       - name: Architecture contracts (ADR-0001 / ADR-0002 / DEP-3)
+        id: importlinter
+        continue-on-error: true
         run: uv run lint-imports
 
       # Deduplication is a primary-key behaviour and presigning is a signature behaviour.
@@ -160,7 +193,13 @@ jobs:
       # A `services:` entry cannot express this: minio/minio needs the `server /data`
       # command, and service containers take no command. (bitnami/minio, which starts a
       # server by default, no longer publishes a `latest` tag.) So it starts as a step.
+      #
+      # A stage rather than a setup step: it gates only `Tests`, and a MinIO that
+      # will not start must not also cost the run its ruff, mypy and contract
+      # results.
       - name: Start MinIO
+        id: minio
+        continue-on-error: true
         run: |
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=gipricing -e MINIO_ROOT_PASSWORD=gipricing \
@@ -173,11 +212,15 @@ jobs:
 
       # FR-PLAT-35: migrations are an explicit step, never run on application start.
       - name: Migrate
+        id: migrate
+        continue-on-error: true
         run: uv run alembic upgrade head
         env:
           GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
 
       - name: Tests
+        id: pytest
+        continue-on-error: true
         run: uv run pytest -q
         env:
           GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
@@ -189,9 +232,68 @@ jobs:
       # contract follows the code. A drift fails the build rather than being noticed when
       # a generated frontend client stops matching the API.
       - name: Generated contracts are current
+        id: contracts
+        continue-on-error: true
         run: uv run python scripts/generate-contracts.py --check
 
       # skills-map §9.1: requirement coverage is reported, so drift between the
       # specification and what is actually tested is visible rather than assumed.
       - name: Requirement coverage
+        id: reqcoverage
+        continue-on-error: true
         run: uv run python scripts/req-coverage.py
+
+      # =====================================================================
+      # THE VERDICT. This step, and only this step, decides whether the job is
+      # red. `if: always()` so a cancelled-adjacent state still reports.
+      #
+      # The stage list below is written out by hand and must be kept in step
+      # with the `id:`s above. There is no way to enumerate a job's steps from
+      # inside it, so the alternative to this list is no table at all. A stage
+      # added above and forgotten here is invisible to the verdict — the
+      # broken-input proof for this workflow (see the PR that introduced it)
+      # deliberately fails two NON-ADJACENT stages precisely to show the table
+      # names both rather than stopping at the first.
+      # =====================================================================
+      - name: Gate summary
+        if: always()
+        env:
+          S_ruff: ${{ steps.ruff.outcome }}
+          S_mypy: ${{ steps.mypy.outcome }}
+          S_import_linter: ${{ steps.importlinter.outcome }}
+          S_minio: ${{ steps.minio.outcome }}
+          S_migrate: ${{ steps.migrate.outcome }}
+          S_pytest: ${{ steps.pytest.outcome }}
+          S_contracts: ${{ steps.contracts.outcome }}
+          S_req_coverage: ${{ steps.reqcoverage.outcome }}
+        run: |
+          set -u
+          stages="ruff mypy import_linter minio migrate pytest contracts req_coverage"
+          failed=""
+          nfail=0
+          ntotal=0
+          {
+            echo "| stage | result | detail |"
+            echo "|---|---|---|"
+          } > summary.md
+          for s in $stages; do
+            ntotal=$((ntotal + 1))
+            eval "outcome=\${S_${s}}"
+            if [ "$outcome" = "success" ]; then
+              printf '| %s | pass | %s |\n' "$s" "$outcome" >> summary.md
+            else
+              printf '| %s | FAIL | %s |\n' "$s" "$outcome" >> summary.md
+              failed="$failed $s"
+              nfail=$((nfail + 1))
+            fi
+          done
+          if [ "$nfail" -eq 0 ]; then
+            verdict="GATE: pass — $ntotal of $ntotal stages passed"
+          else
+            verdict="GATE: FAIL — $nfail of $ntotal stages failed:$failed"
+          fi
+          echo "" >> summary.md
+          echo "$verdict" >> summary.md
+          cat summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+          [ "$nfail" -eq 0 ]

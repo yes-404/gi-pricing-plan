@@ -77,7 +77,81 @@ jobs:
       # steps must stay in this order.
       - run: pnpm run generate:api
 
-      - run: pnpm run lint
-      - run: pnpm run type-check
-      - run: pnpm run test
-      - run: pnpm run build
+      # =====================================================================
+      # STAGES — every one runs, whatever the ones before it did. Same change,
+      # and the same reason, as `python.yml`'s and `docs.yml`'s: a job that
+      # stops at its first red step reports one failure per CI cycle, and makes
+      # "is this the only thing wrong?" unanswerable.
+      #
+      # `install` and `generate:api` above stay hard-fail setup steps rather
+      # than stages: `lint`, `type-check`, `test` and `build` all read the
+      # generated client, so a failure in either makes all four results
+      # meaningless rather than merely absent. That is the line between the two
+      # groups here — the same line `python.yml` draws at `uv sync`.
+      #
+      # The summary aggregates each stage's `outcome` (the real result), never
+      # its `conclusion` (which `continue-on-error` forces to `success`).
+      # =====================================================================
+      - name: lint
+        id: lint
+        continue-on-error: true
+        run: pnpm run lint
+      - name: type-check
+        id: typecheck
+        continue-on-error: true
+        run: pnpm run type-check
+      - name: test
+        id: test
+        continue-on-error: true
+        run: pnpm run test
+      - name: build
+        id: build
+        continue-on-error: true
+        run: pnpm run build
+
+      # THE VERDICT. This step, and only this step, decides whether the job is
+      # red. The stage list is written out by hand and must be kept in step with
+      # the `id:`s above.
+      #
+      # `working-directory: frontend` is inherited from `defaults:` above, so
+      # `summary.md` is written under `frontend/`. That is scratch in the
+      # runner's checkout and never committed; it is also why this step does not
+      # need its own `working-directory`.
+      - name: Gate summary
+        if: always()
+        env:
+          S_lint: ${{ steps.lint.outcome }}
+          S_type_check: ${{ steps.typecheck.outcome }}
+          S_test: ${{ steps.test.outcome }}
+          S_build: ${{ steps.build.outcome }}
+        run: |
+          set -u
+          stages="lint type_check test build"
+          failed=""
+          nfail=0
+          ntotal=0
+          {
+            echo "| stage | result | detail |"
+            echo "|---|---|---|"
+          } > summary.md
+          for s in $stages; do
+            ntotal=$((ntotal + 1))
+            eval "outcome=\${S_${s}}"
+            if [ "$outcome" = "success" ]; then
+              printf '| %s | pass | %s |\n' "$s" "$outcome" >> summary.md
+            else
+              printf '| %s | FAIL | %s |\n' "$s" "$outcome" >> summary.md
+              failed="$failed $s"
+              nfail=$((nfail + 1))
+            fi
+          done
+          if [ "$nfail" -eq 0 ]; then
+            verdict="GATE: pass — $ntotal of $ntotal stages passed"
+          else
+            verdict="GATE: FAIL — $nfail of $ntotal stages failed:$failed"
+          fi
+          echo "" >> summary.md
+          echo "$verdict" >> summary.md
+          cat summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+          [ "$nfail" -eq 0 ]
