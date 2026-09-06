@@ -3391,6 +3391,59 @@ def check_ids_30_39() -> None:
     check_index_stable()
 
 
+def _partition_by_w37_11_record() -> tuple[list[str], list[str]]:
+    """Split `failures` into `(counted, disclosed)` against the governed W37-11 record.
+
+    This is the substantive half of honouring that record in the reader CI actually runs.
+    Before 2026-09-06 this script's entire knowledge of the record was excluding the record
+    file itself from `_id_scope_documents()`' corpus; it never read a ceiling row, so every
+    governed failure the record ceilings still counted into `FAILED(n)` and the `docs` gate
+    was red on every migrated tree for the whole of W37-11's duration. This implements the
+    2026-09-05 box-end ruling here rather than only in `doc-id.py migrate --verify`.
+
+    The rule, and it is deliberately asymmetric: a `(path, cls)` whose whole measured
+    population is **at or under** its recorded ceiling is disclosed — printed by name under
+    a named header, and not counted. **Over** its ceiling, or in a file the record does not
+    name for that class, it fails exactly as it did before, in full: disclosing the first
+    `limit` of `limit + 1` hits would report a ceiling still being honoured at the very
+    moment it stopped being. `_docid.disclosed_by_w37_11_record` is where that is decided,
+    shared with the instrument rather than restated here.
+
+    Keying is `_docid.residue_key_for_failure`, the same rule `_docverify._h1_residue_by_
+    file` uses, so checks 29/30/35 and every other check reach the record through one
+    keying rule rather than a parallel path. `known_files` is this repository's tracked set
+    — resolution, not shape: a token names a real file here or it does not.
+
+    A record naming a class no extractor produces is fatal, and `_docid.
+    load_w37_11_record` raises rather than degrading: an unloadable governance table must
+    not silently become an empty one, which would count everything and read as an ordinary
+    regression while the real fault — a row governing nothing, forever — went unnamed. The
+    exception is deliberately NOT turned into a `fail()` here and is left for `main` to
+    report under its own heading, because every `fail()` message in this script must open
+    with its own `check N: ` prefix (`tests/test_audit_docs_check_prefixes.py`) so that row
+    (h1)'s per-file extraction can key it. This fault belongs to no check and names no
+    document: it is the audit's own governance input being invalid.
+    """
+    record = _docid.load_w37_11_record(REPO)
+    if not record:
+        return list(failures), []
+    known_files = frozenset(_file_census.git_ls_files(REPO))
+    keys = [_docid.residue_key_for_failure(msg, known_files) for msg in failures]
+    measured: dict[tuple[str, str], int] = {}
+    for key in keys:
+        if key is not None:
+            measured[key] = measured.get(key, 0) + 1
+    disclosed_keys = _docid.disclosed_by_w37_11_record(measured, record)
+    counted: list[str] = []
+    disclosed: list[str] = []
+    for msg, key in zip(failures, keys, strict=True):
+        if key is not None and key in disclosed_keys:
+            disclosed.append(msg)
+        else:
+            counted.append(msg)
+    return counted, disclosed
+
+
 def main() -> int:
     md = sorted(ROOT.rglob("*.md"))
     specs = sorted(ROOT.glob("specs/*.md"))
@@ -3907,12 +3960,30 @@ def main() -> int:
     # 29. every docs/audit/register.md Decision cell conforms to its own header grammar
     check_register_grammar()
 
+    # Last, after every check has had its say: the governed W37-11 residue ceiling
+    # decides which of the failures above are disclosed rather than counted.
+    try:
+        counted, disclosed = _partition_by_w37_11_record()
+    except _docid.InvalidResidueClassError as exc:
+        # Loud and fatal, under its own heading rather than as a `check N: ` failure —
+        # it is the governance input that is invalid, not any document under audit.
+        print(f"\nW37-11 RECORD CANNOT BE LOADED:\n  - {exc}")
+        return 1
+
     for note in notes:
         print(f"  {note}")
 
-    if failures:
-        print(f"\nFAILED ({len(failures)}):")
-        for msg in failures:
+    # Printed whether or not anything is counted below, and by name rather than as a
+    # tally: a ceilinged failure stops being fatal, it does not stop being true, and a
+    # population nothing reports is a population nothing can disposition.
+    if disclosed:
+        print(f"\n{_docid.w37_11_disclosed_header(len(disclosed))}")
+        for msg in disclosed:
+            print(f"  - {msg}")
+
+    if counted:
+        print(f"\nFAILED ({len(counted)}):")
+        for msg in counted:
             print(f"  - {msg}")
         return 1
     print("\nAll checks passed.")

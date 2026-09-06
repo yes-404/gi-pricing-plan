@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 import tomllib
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -1175,3 +1175,339 @@ def phase_template_fields(templates_dir: Path) -> frozenset[str]:
             "heading"
         )
     return frozenset(fields)
+
+
+# ---------------------------------------------------------------------------------------
+# The W37-11 residue ceiling — one implementation, two readers.
+#
+# `_docverify.py` (the `doc-id.py migrate --verify` instrument) and `audit-docs.py` (the
+# reader CI actually runs) both have to honour the governed record at
+# `W37_11_RECORD_PATH`. Until 2026-09-06 only the first of them did: `audit-docs.py`'s
+# whole knowledge of the record was dropping that one file from its own corpus, so every
+# governed failure the record ceilings still counted into its own `FAILED(n)` tally, and
+# the `docs` gate was red on every migrated tree for the whole of W37-11's duration. This
+# block is the shared half, moved here rather than copied: `_docid` imports stdlib only,
+# and both readers already import it (`_docverify` by `import _docid`, `audit-docs.py` by
+# its `_load_module` idiom), so neither a cycle nor a second definition is needed.
+#
+# Two definitions of one governance rule are two rules
+# (`docs/notes/0003-duplicated-status-goes-stale.md` — the copy is what goes stale), which
+# is why the class registry below is derived from each extractor's own construction rather
+# than restated: every label an extractor can emit is built by one of the constructors
+# here, and validated against those same constructors.
+# ---------------------------------------------------------------------------------------
+
+#: Every cause label `_docverify._residue_cause` can return, owned here so the class
+#: registry and the extractor that produces the labels read one source. The *classifying*
+#: — which cause a file's residue has — stays in `_docverify`, where the patterns that
+#: decide it live; only the vocabulary is shared, because `audit-docs.py` has to validate a
+#: `cls` cell without owning row (g)'s patterns.
+CAUSE_OTHER: Final = "other"
+CAUSE_1_FOREIGN_FRONTMATTER: Final = "cause1-foreign-frontmatter"
+CAUSE_2A_RANGE_CITATION: Final = "cause2a-range-citation"
+CAUSE_2B_NOTES_STUB: Final = "cause2b-notes-stub-relative-link"
+CAUSE_3_LEGACY_PATH_CITATION: Final = "cause3-legacy-path-citation"
+CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE: Final = "cause4-compound-token-adjacent-uppercase"
+CAUSE_5_FIXTURE_CORPUS: Final = "cause5-fixture-corpus-old-form-ids"
+CAUSE_6_PYCACHE: Final = "cause6-pycache-build-artifact"
+CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE: Final = (
+    "new-frontmatter-stamp-no-move (unassigned — reported, not investigated)"
+)
+CAUSE_SLASH_COMPOUND_CITATION: Final = (
+    "slash-compound-citation (unassigned — reported, not investigated)"
+)
+CAUSE_UNMAPPED_WORK_SLICE_KEY: Final = (
+    "unmapped-work-slice-key (named elsewhere, reported here by shape)"
+)
+
+#: Collected once from the constants above, never hand-listed a second time.
+G2_RESIDUE_CAUSE_LABELS: Final[frozenset[str]] = frozenset({
+    CAUSE_OTHER,
+    CAUSE_1_FOREIGN_FRONTMATTER,
+    CAUSE_2A_RANGE_CITATION,
+    CAUSE_2B_NOTES_STUB,
+    CAUSE_3_LEGACY_PATH_CITATION,
+    CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE,
+    CAUSE_5_FIXTURE_CORPUS,
+    CAUSE_6_PYCACHE,
+    CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE,
+    CAUSE_SLASH_COMPOUND_CITATION,
+    CAUSE_UNMAPPED_WORK_SLICE_KEY,
+})
+
+_G2_CLASS_PREFIX: Final = "g2-"
+
+
+def g2_class(cause: str) -> str:
+    """Row (g)'s `cls` for one cause label — the single constructor
+    `known_w37_11_class` validates against, so a produced class and an accepted class
+    cannot come apart.
+    """
+    return f"{_G2_CLASS_PREFIX}{cause}"
+
+
+def d_row_class(index: int) -> str:
+    """Row (d)'s `cls` for the `index`-th `LEGACY_FORM_PATTERNS` alternative (1-based)."""
+    return f"d{index}"
+
+
+def h1_class(check_no: int | str) -> str:
+    """Row (h1)'s `cls` for one `audit-docs.py` check number.
+
+    Tagged rather than bare so a row-(d) class and an h1 check can never collide on the
+    same key by coincidence.
+    """
+    return f"h1-check{check_no}"
+
+
+#: `audit-docs.py`'s check numbers are unbounded, so this is a shape predicate over
+#: `h1_class`'s own output rather than a hand-listed set that goes stale the moment a
+#: check is added.
+H1_CLASS_RE: Final = re.compile(r"^h1-check\d+$")
+
+#: Built from `LEGACY_FORM_PATTERNS` itself, so the set grows with the table and never
+#: needs a second edit here.
+D_ROW_CLASSES: Final[frozenset[str]] = frozenset(
+    d_row_class(i) for i in range(1, len(LEGACY_FORM_PATTERNS) + 1)
+)
+
+
+def known_w37_11_class(cls: str) -> bool:
+    """True iff `cls` is a class one of the three extractors can actually produce.
+
+    Derived from each extractor's own constructor above rather than restated as a fourth,
+    independent list — the identical defect this registry exists to catch, one level up.
+    """
+    if cls in D_ROW_CLASSES:
+        return True
+    if cls.startswith(_G2_CLASS_PREFIX):
+        return cls[len(_G2_CLASS_PREFIX):] in G2_RESIDUE_CAUSE_LABELS
+    return bool(H1_CLASS_RE.match(cls))
+
+
+#: A failure message shaped `check N: <token>:` names a file in `<token>`, the shape the
+#: overwhelming majority of `audit-docs.py`'s own `fail()` call sites already use. Not
+#: universal: a message with no natural file subject does not match, and falls to
+#: `H1_UNLOCATED_PATH` rather than being dropped.
+H1_FAILURE_LOCATION_RE: Final = re.compile(r"^check (\d+): ([^\s:]+):")
+
+#: A failure this predicate cannot place at a real file still belongs to *some* check, and
+#: pinning it under a class-level ceiling (this sentinel `path`, the real `cls`) is better
+#: than dropping it: a regression inside a pathless class is then loud too, never silent
+#: because no single file could be named.
+H1_UNLOCATED_PATH: Final = "(no file named in message)"
+
+H1_CHECK_NUMBER_RE: Final = re.compile(r"^check (\d+):")
+
+
+def residue_key_for_failure(
+    msg: str, known_files: Collection[str],
+) -> tuple[str, str] | None:
+    """The `(path, cls)` W37-11 key for one `audit-docs.py` failure message, or `None`
+    when the message carries no check number at all and so has nothing to key on.
+
+    **Resolution over shape, deliberately.** A shape rule ("looks like a path") is fitted
+    to today's messages and survives only until a future message happens to look
+    path-shaped without being one; resolution is a rule the next unforeseen message cannot
+    survive, because a token either names a file in the caller's own corpus or it does
+    not. `known_files` is that corpus, and it differs legitimately between the two callers
+    — the instrument resolves against the migrated snapshot's tracked files, `audit-docs`
+    against the repository it is auditing — which is why it is a parameter rather than
+    something this function reads for itself.
+    """
+    located = H1_FAILURE_LOCATION_RE.match(msg)
+    if located and located.group(2) in known_files:
+        return located.group(2), h1_class(located.group(1))
+    numbered = H1_CHECK_NUMBER_RE.match(msg)
+    if not numbered:
+        return None
+    return H1_UNLOCATED_PATH, h1_class(numbered.group(1))
+
+
+class InvalidResidueClassError(RuntimeError):
+    """A W37-11 record row names a `cls` no extractor can produce.
+
+    Such an entry governs nothing — every reader keys on the real `cls`, never finds it,
+    and silently reads the entry as 0 forever — while the real residue surfaces under its
+    true class in files the record does not name. A double failure that produces no error
+    and no red, only a governance table that reads clean and is not. This is why an
+    unknown `cls` is fatal at load rather than skipped like a malformed row (wrong cell
+    count, a non-integer count): those degrade to "not yet governed", the same as the file
+    not existing; an unknown `cls` degrades to "governs nothing, forever, silently", which
+    `load_w37_11_record`'s own leniency rule was never meant to cover.
+    """
+
+
+RESIDUE_REGRESSION: Final = "REGRESSION (residue exceeds W37-11 ceiling)"
+RESIDUE_PROGRESSED: Final = "PROGRESSED (W37-11 record can shrink)"
+
+
+@dataclass(frozen=True)
+class ResidueEntry:
+    """One row of the governed W37-11 record: a file's disclosed residue for one ruled row
+    or check, carried with the reason it resisted the general mechanism and who owns it.
+
+    `cls` names which ruled row or `audit-docs.py` check this entry's count belongs to,
+    not a hit-type label. Two entries may share a `path` with different `cls` (a file
+    resisting more than one ruled row) or share a `cls` with different `path`s (a row's
+    residue spread across several files) — the pair is the key.
+    """
+
+    path: str
+    cls: str
+    count: int
+    reason: str
+    owner: str = ""
+
+
+def load_w37_11_record(tree_root: Path) -> tuple[ResidueEntry, ...]:
+    """The governed per-(file, class) residue ceiling, or empty when the record has no
+    rows yet (or does not exist) — never fatal, and never a reason to invent one here.
+
+    Population is not a reader's to decide — every path, class, count and reason is the
+    deputy's, filed into the record directly; this function only reads it. A malformed
+    data row (wrong cell count, a non-integer `count`) is skipped rather than raised: a
+    record a reader cannot parse must never crash the run that reads it, and it degrades
+    to "not yet governed" for that row, the same as the file not existing at all.
+
+    A row whose `cls` is not one `known_w37_11_class` recognises is different: it does not
+    degrade quietly, it raises `InvalidResidueClassError`. See that class's own docstring
+    for why silence is the wrong failure mode for that case specifically.
+
+    `tree_root` is the root of the tree whose record is to be read — for the `--verify`
+    instrument the archived snapshot of the ref under verification, never the mutable
+    working checkout; for `audit-docs.py` the repository root it is auditing.
+    """
+    record = tree_root / W37_11_RECORD_PATH
+    try:
+        text = record.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ()
+    entries: list[ResidueEntry] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line.startswith("|") or not line.endswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) != 5 or cells == ["path", "cls", "count", "reason", "owner"]:
+            continue
+        if set(cells[0]) <= {"-", " "}:  # the `| --- | --- | ... |` separator row
+            continue
+        path, cls, count_cell, reason, owner = cells
+        if not path or not cls or not count_cell.isdigit():
+            continue
+        if not known_w37_11_class(cls):
+            raise InvalidResidueClassError(
+                f"{record}: {cls!r} is not a class any extractor produces (path {path!r})"
+                " — a hand-typed label governs nothing; see InvalidResidueClassError's own"
+                " docstring"
+            )
+        entries.append(ResidueEntry(
+            path=path, cls=cls, count=int(count_cell), reason=reason, owner=owner,
+        ))
+    return tuple(entries)
+
+
+@dataclass(frozen=True)
+class ResidueChange:
+    """One per-(file, class) movement the W37-11 ceiling found, fatal or not."""
+
+    path: str
+    cls: str
+    kind: str
+    detail: str
+
+    @property
+    def fatal(self) -> bool:
+        return self.kind == RESIDUE_REGRESSION
+
+
+def check_residue_ceiling(
+    measured: Mapping[tuple[str, str], int],
+    record: Sequence[ResidueEntry],
+) -> tuple[ResidueChange, ...]:
+    """Compare one run's per-(file, class) residue against the governed W37-11 ceiling.
+
+    Three outcomes:
+
+    * a hit in a file the record does not name, for a `cls` the record DOES govern
+      (appears against at least one other file) → fatal `RESIDUE_REGRESSION` — a file the
+      record never named.
+    * a file's residual above its recorded count → fatal `RESIDUE_REGRESSION` — a
+      regression into a ruled row.
+    * a recorded (file, class) now measuring zero → non-fatal `RESIDUE_PROGRESSED`; the
+      record can shrink, and a shrink is never itself a failure demanding a table edit.
+
+    A `cls` absent from the record entirely is ungoverned and produces no change either
+    way — the ceiling only ever fires for a `cls` the record already names at least once,
+    so wiring a row's measurement in ahead of the record gaining its first entry for that
+    `cls` cannot manufacture a false regression.
+    """
+    governed_classes = {entry.cls for entry in record}
+    ceiling = {(entry.path, entry.cls): entry.count for entry in record}
+    changes: list[ResidueChange] = []
+    for (path, cls), count in measured.items():
+        if cls not in governed_classes or count <= 0:
+            continue
+        limit = ceiling.get((path, cls))
+        if limit is None:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_REGRESSION,
+                f"{count} hit(s) in a file the W37-11 record does not name for {cls!r}",
+            ))
+        elif count > limit:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_REGRESSION,
+                f"{count} hit(s) exceeds the W37-11 record's ceiling of {limit} for "
+                f"{cls!r}",
+            ))
+    for (path, cls), limit in ceiling.items():
+        if limit > 0 and measured.get((path, cls), 0) == 0:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_PROGRESSED,
+                f"the W37-11 record's ceiling of {limit} for {cls!r} now measures 0 at "
+                f"{path!r} — the record can shrink",
+            ))
+    return tuple(changes)
+
+
+def w37_11_disclosed_header(count: int) -> str:
+    """The header `audit-docs.py` prints above the failures the W37-11 record ceilings.
+
+    A named header, matching `W37_11_DISCLOSED_HEADER_RE` below, because a disclosed
+    failure must stay *visible* while ceasing to be *counted*: the ceiling exists to hold
+    a known residue still, not to hide it. Constructor and pattern live together so the
+    line one reader writes and the line the other reader parses cannot drift apart.
+    """
+    return f"DISCLOSED ({count}, at or under the W37-11 residue ceiling):"
+
+
+#: The counterpart of `w37_11_disclosed_header` — `_docverify._h1_residue_by_file` scans
+#: from whichever of this block and the `FAILED (n)` block comes first, so that row (h1)
+#: keeps measuring the residue that *exists* even once `audit-docs.py` has stopped counting
+#: the disclosed part of it. Measuring only the counted half would make every ceilinged
+#: entry read as 0 and report `RESIDUE_PROGRESSED` ("the record can shrink") for residue
+#: that has not moved at all — the ceiling erasing the measurement it exists to bound.
+W37_11_DISCLOSED_HEADER_RE: Final = re.compile(
+    r"^DISCLOSED \(\d+, at or under the W37-11 residue ceiling\):$", re.MULTILINE
+)
+
+
+def disclosed_by_w37_11_record(
+    measured: Mapping[tuple[str, str], int], record: Sequence[ResidueEntry],
+) -> frozenset[tuple[str, str]]:
+    """The `(path, cls)` keys whose whole measured population is at or under its recorded
+    ceiling, and which a reader may therefore disclose instead of counting as a failure.
+
+    A key the record does not name is absent, and so is a key measuring **above** its
+    ceiling: over-ceiling "fails as today", in full, rather than being partly disclosed
+    down to the recorded number. Disclosing the first `limit` of `limit + 1` hits would
+    report a ceiling that is still being honoured at the exact moment it stopped being —
+    the record's whole purpose is to make that moment loud.
+    """
+    ceiling = {(entry.path, entry.cls): entry.count for entry in record}
+    return frozenset(
+        key
+        for key, count in measured.items()
+        if key in ceiling and count <= ceiling[key]
+    )
