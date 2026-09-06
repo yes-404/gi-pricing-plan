@@ -111,6 +111,23 @@ class WorkingCheckoutRefusedError(RuntimeError):
     """
 
 
+class InvalidResidueClassError(RuntimeError):
+    """A `docs/audit/w37-11-record.md` row names a `cls` no extractor can produce.
+
+    #763's defect: a record entry carrying `cls = "comma-continuation-left-whole"` — a
+    description of *why* the residue exists, not a class `rows_d`/`row_g`/`rows_h`
+    actually key their measurements on. Such an entry governs nothing (`check_residue_
+    ceiling`/`_residue_fully_governed` both key on the real `cls`, never find it, and
+    silently read the entry as 0 forever) while the real residue surfaces under its true
+    class in files the record does not name — a double failure that produces no error and
+    no red, only a governance table that reads clean and is not. This is why an unknown
+    `cls` is fatal at load rather than skipped like a malformed row (wrong cell count, a
+    non-integer count): those degrade to "not yet governed", the same as the file not
+    existing; an unknown `cls` degrades to "governs nothing, forever, silently", which
+    `load_w37_11_record`'s own leniency rule was never meant to cover.
+    """
+
+
 #: Written into the *work directory*, never into either tree, so that the trees stay
 #: byte-identical to the archive they came from and the sentinel can never turn up in a
 #: `git ls-files` population or a diff.
@@ -2320,44 +2337,88 @@ _PYCACHE_RE: Final = re.compile(r"__pycache__/|\.pyc$")
 #: `new_lines` (the post-migration content at the same path) is optional and used only by
 #: the new-frontmatter-stamp check below — every other check reads `old_lines` alone, as
 #: it did before that check was added.
+#: Every label `_residue_cause` can return, named once so the W37-11 class registry
+#: (`_g2_residue_cause_labels`, read by `load_w37_11_record`'s validation) is derived from
+#: this single source rather than a second, hand-restated list — the identical shape the
+#: unknown-`cls` defect (#763) itself was: a governance table's key describing why the
+#: residue exists rather than naming a class an extractor can actually produce.
+_CAUSE_OTHER: Final = "other"
+_CAUSE_1_FOREIGN_FRONTMATTER: Final = "cause1-foreign-frontmatter"
+_CAUSE_2A_RANGE_CITATION: Final = "cause2a-range-citation"
+_CAUSE_2B_NOTES_STUB: Final = "cause2b-notes-stub-relative-link"
+_CAUSE_3_LEGACY_PATH_CITATION: Final = "cause3-legacy-path-citation"
+_CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE: Final = "cause4-compound-token-adjacent-uppercase"
+_CAUSE_5_FIXTURE_CORPUS: Final = "cause5-fixture-corpus-old-form-ids"
+_CAUSE_6_PYCACHE: Final = "cause6-pycache-build-artifact"
+_CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE: Final = (
+    "new-frontmatter-stamp-no-move (unassigned — reported, not investigated)"
+)
+_CAUSE_SLASH_COMPOUND_CITATION: Final = (
+    "slash-compound-citation (unassigned — reported, not investigated)"
+)
+_CAUSE_UNMAPPED_WORK_SLICE_KEY: Final = (
+    "unmapped-work-slice-key (named elsewhere, reported here by shape)"
+)
+
+
 def _residue_cause(
     rel: str,
     old_lines: Sequence[str] | None,
     new_lines: Sequence[str] | None = None,
 ) -> str:
     if _NOTES_STUB_RE.match(rel):
-        return "cause2b-notes-stub-relative-link"
+        return _CAUSE_2B_NOTES_STUB
     if _PYCACHE_RE.search(rel):
-        return "cause6-pycache-build-artifact"
+        return _CAUSE_6_PYCACHE
     if rel.startswith(_FIXTURE_CORPUS_DIRS):
-        return "cause5-fixture-corpus-old-form-ids"
+        return _CAUSE_5_FIXTURE_CORPUS
     if old_lines is None:
-        return "other"
+        return _CAUSE_OTHER
     if old_lines and old_lines[0] == "---" and rel.startswith(_FOREIGN_FRONTMATTER_DIRS):
-        return "cause1-foreign-frontmatter"
+        return _CAUSE_1_FOREIGN_FRONTMATTER
     if (
         (not old_lines or old_lines[0] != "---")
         and new_lines
         and new_lines[0] == "---"
         and any(_FRONTMATTER_BLOCK_RE.match(line) for line in new_lines[1:12])
     ):
-        return "new-frontmatter-stamp-no-move (unassigned — reported, not investigated)"
+        return _CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE
     for line in old_lines:
         if _WORK_ADJACENT_UPPER_RE.search(line):
-            return "cause4-compound-token-adjacent-uppercase"
+            return _CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE
     for line in old_lines:
         if _RANGE_CITATION_RE.search(line):
-            return "cause2a-range-citation"
+            return _CAUSE_2A_RANGE_CITATION
     for line in old_lines:
         if _SLASH_COMPOUND_RE.search(line):
-            return "slash-compound-citation (unassigned — reported, not investigated)"
+            return _CAUSE_SLASH_COMPOUND_CITATION
     for line in old_lines:
         if any(pattern.search(line) for pattern in _LEGACY_PATH_RES):
-            return "cause3-legacy-path-citation"
+            return _CAUSE_3_LEGACY_PATH_CITATION
     for line in old_lines:
         if _WORK_SLICE_KEY_RE.search(line):
-            return "unmapped-work-slice-key (named elsewhere, reported here by shape)"
-    return "other"
+            return _CAUSE_UNMAPPED_WORK_SLICE_KEY
+    return _CAUSE_OTHER
+
+
+#: Every `g2-<cause>` class `row_g`'s residue can key on — `_residue_cause`'s own return
+#: values, collected once. `cls not in _g2_residue_cause_labels` after stripping the
+#: `"g2-"` prefix is what makes a hand-typed, plausible-but-invalid label (`#763`'s
+#: `comma-continuation-left-whole`, a description of a cause rather than a produced class)
+#: fail loudly at record-load time instead of governing nothing and reading 0 forever.
+_G2_RESIDUE_CAUSE_LABELS: Final[frozenset[str]] = frozenset({
+    _CAUSE_OTHER,
+    _CAUSE_1_FOREIGN_FRONTMATTER,
+    _CAUSE_2A_RANGE_CITATION,
+    _CAUSE_2B_NOTES_STUB,
+    _CAUSE_3_LEGACY_PATH_CITATION,
+    _CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE,
+    _CAUSE_5_FIXTURE_CORPUS,
+    _CAUSE_6_PYCACHE,
+    _CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE,
+    _CAUSE_SLASH_COMPOUND_CITATION,
+    _CAUSE_UNMAPPED_WORK_SLICE_KEY,
+})
 
 
 def _residue_cause_table(residue: Sequence[str], ctl: Corpus, mig: Corpus) -> str:
@@ -3512,6 +3573,35 @@ def _residue_fully_governed(
     return True
 
 
+#: `h1-check<n>` for any digit string — a shape predicate, not a hand-listed set of check
+#: numbers, because audit-docs.py's own check numbers are unbounded and this registry must
+#: not go stale the moment a new check is added. Derived from `_h1_residue_by_file`'s own
+#: `f"h1-check{check_no}"` construction (`check_no` is `_H1_FAILURE_LOCATION_RE`/
+#: `_H1_CHECK_NUMBER_RE`'s own `(\d+)` capture group), never restated as a literal list.
+_H1_CLASS_RE: Final = re.compile(r"^h1-check\d+$")
+
+#: `d<i>` for every `i` `rows_d` actually allocates — `range(1, len(D_ALTERNATIVES) + 1)`,
+#: read from `D_ALTERNATIVES` itself (`rows_d`'s own `f"d{i}"`, `enumerate(D_ALTERNATIVES,
+#: start=1)`) rather than a hand-typed count, so this set grows the moment a `D_ALTERNATIVES`
+#: entry does and never needs a second edit here.
+_D_ROW_CLASSES: Final = frozenset(f"d{i}" for i in range(1, len(D_ALTERNATIVES) + 1))
+
+
+def _known_w37_11_class(cls: str) -> bool:
+    """True iff `cls` is a class one of the three extractors (`rows_d`, `row_g`, `rows_h`)
+    can actually produce — the registry `load_w37_11_record` checks every row's `cls`
+    against, per `InvalidResidueClassError`'s own reasoning. Derived from each extractor's
+    own construction (`_D_ROW_CLASSES`, `_G2_RESIDUE_CAUSE_LABELS`, `_H1_CLASS_RE`) rather
+    than hand-restated as a fourth, independent list — the identical defect this whole
+    registry exists to catch, one level up.
+    """
+    if cls in _D_ROW_CLASSES:
+        return True
+    if cls.startswith("g2-") and cls[len("g2-"):] in _G2_RESIDUE_CAUSE_LABELS:
+        return True
+    return bool(_H1_CLASS_RE.match(cls))
+
+
 def load_w37_11_record(tree_root: Path) -> tuple[ResidueEntry, ...]:
     """The governed per-(file, class) residue ceiling, or empty if the record has no rows
     yet (or does not exist) — never fatal, and never a reason to invent one here.
@@ -3522,6 +3612,12 @@ def load_w37_11_record(tree_root: Path) -> tuple[ResidueEntry, ...]:
     (wrong cell count, a non-integer `count`) is skipped rather than raised — a record this
     module cannot parse must never crash the run that reads it; it degrades to "not yet
     governed" for that row, the same as the file not existing at all.
+
+    A row whose `cls` is not one `_known_w37_11_class` recognises is different: it does
+    not degrade quietly, it raises `InvalidResidueClassError`. #763's defect is exactly
+    this shape not being caught — a plausible-looking, hand-typed label that governs
+    nothing while the real residue moves unnoticed. See `InvalidResidueClassError`'s own
+    docstring for why silence is the wrong failure mode here specifically.
 
     `tree_root` must be a tree materialised from the ref under verification — never the
     live checkout `verify()` was invoked against. `_verify_body` passes `snap.control`
@@ -3555,6 +3651,12 @@ def load_w37_11_record(tree_root: Path) -> tuple[ResidueEntry, ...]:
         path, cls, count_cell, reason, owner = cells
         if not path or not cls or not count_cell.isdigit():
             continue
+        if not _known_w37_11_class(cls):
+            raise InvalidResidueClassError(
+                f"{record}: {cls!r} is not a class any extractor produces (path {path!r})"
+                " — a hand-typed label governs nothing; see InvalidResidueClassError's own"
+                " docstring"
+            )
         entries.append(ResidueEntry(
             path=path, cls=cls, count=int(count_cell), reason=reason, owner=owner,
         ))
@@ -3765,6 +3867,79 @@ def _release_verify_slot(handle: IO[Any] | None) -> None:
     if handle is not None:
         fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
         handle.close()
+
+
+# ---------------------------------------------------------------------------------------
+# INPUT-PROVENANCE TABLE, 2026-09-06. F102's own class ("--ref must be hermetic") was
+# found three times by accident tonight before it was named once on purpose: the seed
+# hypothesis (ruled out — four runs, three PYTHONHASHSEED values, byte-identical output),
+# the reused-directory hypothesis (ruled out — `assert_workdir_disposable` refuses a
+# reused target outright, exit 2, before a second run can even start), and the actual
+# cause (`load_w37_11_record` reading `repo_root`, the live checkout, instead of
+# `snap.control`). Three accidents finding the same class is why this table exists rather
+# than trusting the third catch to have been the last one: every input to a §7(a)-(i) row
+# verdict or to `VerifyResult.exit_code`/`residue_changes`, traced to its source and
+# classified. Audited by reading every row function and the `docid.*` calls it reaches,
+# not by grepping one variable name.
+#
+# HERMETIC (keyed on `snap.migrated`/`snap.control`/`snap.baseline` alone, all three
+# themselves `git archive` extractions of `--ref` — see `build_snapshot`/`_materialise`):
+#   - row_a, row_b: `docid.classify_docs_files`/`docid.check`/`docid.scan_governed_
+#     headers`, each called with `snap.migrated`/`snap.control` directly.
+#   - row_c, rows_h: `_run_script(snap.migrated/control, ...)` — the snapshot's OWN copy
+#     of doc-index.py/audit-docs.py/req-coverage.py, per `_run_script`'s own docstring
+#     ("DO NOT simplify this to call the invoking checkout's copy").
+#   - rows_d, row_e, row_f, row_i: `Corpus`/`load_corpus` built from the snap trees;
+#     `row_f`'s `baseline` from `snap.baseline`, itself `BASELINE_REF` (a fixed historical
+#     SHA constant, `"8f5d57d"`) archived the same hermetic way as `--ref`.
+#   - row_g: `docid.classify_migration_diff(snap.control, snap.migrated)` — the trees
+#     passed in are hermetic; see the documented exception below for what it loads inside.
+#   - `load_w37_11_record(snap.control)` — the F102 fix this table was written beside.
+#     `check_residue_ceiling`, `_residue_fully_governed`, `VerifyResult.exit_code`/
+#     `.residue_changes`/`.set_changes` are pure functions of the rows and the record
+#     above; nothing in that chain reads a tree or the environment directly.
+#
+# DOCUMENTED EXCEPTIONS (read live state, by design, not by oversight — each verified by
+# running the affected test suite, not merely by reading the comment that justifies it):
+#   - `doc-id.py`'s `_load_audit_docs`/`_load_register_lint` default to `REPO_ROOT` (the
+#     live checkout) rather than the tree `migrate()` is given. `_load_doc_index`'s own
+#     docstring (`doc-id.py:931-954`) states the reason directly: these two exist to
+#     reuse *stable parsing logic* (register.md's row grammar, check 34's DP-7 freeze
+#     predicate) against a target that may carry no tooling of its own — most of
+#     `tests/test_doc_id_migrate.py`'s fixtures are exactly that, a bare `docs/` tree with
+#     no `scripts/`. An earlier draft of this table tried threading the snapshot's own
+#     tree through both call sites anyway, on the theory that `audit-docs.py` is one of
+#     the three scripts `_run_script`'s docstring names as migration-rewritten. That
+#     broke nothing structurally but a bare fixture has no `scripts/audit-docs.py` to
+#     load — reverted before landing here, since a "fix" that fails the suite it
+#     touches is not a fix.
+#   - The identical shape at `_template_header_lines`/`_stamp_header`: reads
+#     `REPO_ROOT / "docs" / "_templates"`, not the tree `migrate()` was given, for the
+#     same reason — confirmed empirically: threading `root` through instead made 66 of
+#     `test_doc_id_migrate.py`'s tests fail with `FileNotFoundError`, because those
+#     fixtures have no `docs/_templates/` of their own and were relying on exactly this
+#     fallback. Not previously named alongside `_load_audit_docs`/`_load_register_lint`
+#     in `_load_doc_index`'s comment; it belongs in the same bucket and is named here so
+#     the next reader does not have to rediscover it by breaking the suite.
+#   - `_run_script`'s subprocess env (`env = dict(os.environ)`, two keys overridden) —
+#     an allow-list-of-two over a full live-environment copy, the wrong shape for
+#     "hermetic by construction" in the abstract, but not fixed here: none of doc-index.py
+#     /audit-docs.py/req-coverage.py reads `os.environ` directly (checked), so the actual
+#     exposure is `git`'s own env-var sensitivity (`GIT_DIR` etc.) inside those scripts'
+#     own subprocess calls — real but unobserved, and narrowing the scrub is exactly the
+#     kind of subprocess-plumbing change this table's `_template_header_lines` near-miss
+#     argues for testing thoroughly rather than shipping same-night.
+#   - A handful of `date.today()` reads inside `migrate()`'s writers (`doc-id.py:2383,
+#     2386, 7557, 7739, 8571`) stamp a `created:`/comparison date from the wall clock.
+#     Affects written content, not a row's pass/fail shape, except in the (unobserved,
+#     midnight-boundary-only) case where `row_g`'s class-6 oracle
+#     (`_run_second_migration`) reruns `migrate()` on the opposite side of midnight from
+#     the first run and a date-stamped file's regenerated content disagrees only on that
+#     field. Named, not fixed, for the same "narrow but untested" reason as the env scrub.
+#   - `_acquire_verify_slot`'s `os.environ.get(_VERIFY_ANNOUNCEMENT_VAR)` and the
+#     `/tmp/slots/*` lock files: concurrency control over *when* `verify()` runs, never
+#     *what* it measures — gates entry, never feeds a row.
+# ---------------------------------------------------------------------------------------
 
 
 def verify(

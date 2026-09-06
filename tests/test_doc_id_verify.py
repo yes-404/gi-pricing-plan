@@ -2656,13 +2656,13 @@ def test_load_w37_11_record_reads_the_governed_table(dv: Any, tmp_path: pathlib.
         "# W37-11 residue record\n\n"
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
-        "| docs/x.md | r1 | 3 | because | W37-11 |\n",
+        "| docs/x.md | d1 | 3 | because | W37-11 |\n",
         encoding="utf-8",
     )
     record = dv.load_w37_11_record(tmp_path)
     assert record == (
         dv.ResidueEntry(
-            path="docs/x.md", cls="r1", count=3, reason="because", owner="W37-11",
+            path="docs/x.md", cls="d1", count=3, reason="because", owner="W37-11",
         ),
     )
 
@@ -2677,13 +2677,13 @@ def test_load_w37_11_record_skips_a_malformed_row_rather_than_raising(
     (docs_audit / "w37-11-record.md").write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
-        "| docs/x.md | r1 | not-a-number | because | W37-11 |\n"
-        "| docs/y.md | r2 | 1 | ok | W37-11 |\n",
+        "| docs/x.md | d1 | not-a-number | because | W37-11 |\n"
+        "| docs/y.md | d2 | 1 | ok | W37-11 |\n",
         encoding="utf-8",
     )
     record = dv.load_w37_11_record(tmp_path)
     assert record == (
-        dv.ResidueEntry(path="docs/y.md", cls="r2", count=1, reason="ok", owner="W37-11"),
+        dv.ResidueEntry(path="docs/y.md", cls="d2", count=1, reason="ok", owner="W37-11"),
     )
 
 
@@ -2691,6 +2691,57 @@ def test_load_w37_11_record_is_empty_when_the_file_does_not_exist(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
     assert dv.load_w37_11_record(tmp_path) == ()
+
+
+# =========================================================================================
+# #763: a record entry carrying `cls = "comma-continuation-left-whole"` — a description of
+# *why* the residue exists, not a class any extractor produces — governs nothing and reads
+# 0 forever, silently, while the real residue surfaces under its true class in files the
+# record does not name. `_known_w37_11_class` is the registry; the broken input is the
+# real value #763 shipped, not an invented placeholder.
+# =========================================================================================
+
+
+def test_load_w37_11_record_rejects_a_class_no_extractor_produces(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| docs/x.md | comma-continuation-left-whole | 1 | because | W37-11 |\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(dv.InvalidResidueClassError, match="comma-continuation-left-whole"):
+        dv.load_w37_11_record(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "cls",
+    ["d1", "d13", "h1-check1", "h1-check36", "h1-check999", "g2-other",
+     "g2-cause3-legacy-path-citation"],
+)
+def test_load_w37_11_record_accepts_every_real_extractor_class(
+    dv: Any, tmp_path: pathlib.Path, cls: str
+) -> None:
+    """The green half: the registry is derived from what the extractors can produce, not
+    a narrower list that would reject a real class alongside the invented ones — "d13"
+    is `D_ALTERNATIVES`'s last-numbered alternative as of this commit, and "h1-check999"
+    is a check number nothing has assigned yet, deliberately, since the h1 predicate is a
+    shape, not an enumerated set."""
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        f"| docs/x.md | {cls} | 1 | because | W37-11 |\n",
+        encoding="utf-8",
+    )
+    record = dv.load_w37_11_record(tmp_path)
+    assert record == (
+        dv.ResidueEntry(path="docs/x.md", cls=cls, count=1, reason="because", owner="W37-11"),
+    )
 
 
 # =========================================================================================
@@ -2788,6 +2839,85 @@ def test_verify_reads_the_w37_11_record_from_the_ref_never_the_live_checkout(
     # `--ref` actually names) governs, proving the read came from the ref and not from
     # whichever of the two live edits happened to be on disk at call time.
     assert first == dv.DISCLOSE
+
+
+def test_verify_is_unaffected_by_every_live_checkout_perturbation_the_table_names(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The generalised version of the test above — this one is its first case, that test
+    the record specifically. The 2026-09-06 input-provenance table (above `verify()`'s own
+    definition) states that every hermetic row is keyed on `snap.migrated`/`snap.control`/
+    `snap.baseline` alone, none of which a live-checkout edit can reach (they are `git
+    archive` extractions of a pinned commit). This test is the checked half of that claim:
+    perturb `repo_root`'s live working tree in three different ways between two `verify()`
+    calls at the identical, unmoved ref, and assert every row's verdict — not only (d4)'s
+    — comes back byte-identical.
+
+    Three perturbations, one per accident that found this class tonight:
+
+    1. **Modify the governed record** (the fixed defect itself, #762/#764) — an
+       uncommitted edit to `docs/audit/w37-11-record.md`.
+    2. **Add a stray untracked file** (the reused-directory hypothesis's own shape, ruled
+       out for `--verify`'s *target* directory by `assert_workdir_disposable`, but never
+       tested against `repo_root` itself — nothing stops a stray file appearing in the
+       *source* checkout between two runs).
+    3. **Edit a governed, corpus-scanned document** (`docs/a.md`, the file every row (d)
+       alternative and `audit-docs.py` itself would read if anything read `repo_root`
+       instead of the snapshot) — appending a line that would flip (d5)'s `Ruling \\d+`
+       alternative from PASS to FAIL if it were somehow read live.
+
+    None of the three is committed. `--ref` is pinned to the same commit before, during
+    and after all three; a hermetic `verify()` must not see any of them.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: (
+            "| path | cls | count | reason | owner |\n"
+            "| --- | --- | --- | --- | --- |\n"
+            "| docs/a.md | d4 | 1 | historical citation | W37-11 |\n"
+        ),
+    })
+    ref = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    docid = _NoOpMigrateDocid(doc_id_cli)
+
+    def _verdicts(run_name: str) -> dict[str, str]:
+        workdir = tmp_path / f"wd-{run_name}"
+        result = dv.verify(
+            docid, repo_root=repo, ref=ref, workdir=workdir, keep=True,
+            with_baseline=False,
+        )
+        return {row.key: str(row.verdict) for row in result.rows}
+
+    before = _verdicts("before")
+
+    # Perturbation 1: modify the governed record (empty it — the same shape the
+    # dedicated F102 test above uses, generalised here alongside the other two).
+    (repo / dv.W37_11_RECORD_PATH).write_text(
+        "| path | cls | count | reason | owner |\n| --- | --- | --- | --- | --- |\n",
+        encoding="utf-8",
+    )
+    # Perturbation 2: a stray untracked file in the live checkout — nothing commits it,
+    # nothing adds it to git; it simply exists on disk the way a leftover from an earlier,
+    # unrelated run would.
+    (repo / "docs" / "stray-untracked.md").write_text(
+        "NT-9999 this file was never committed and must never be measured\n",
+        encoding="utf-8",
+    )
+    # Perturbation 3: edit a tracked, governed document in place — not committed, so `git
+    # archive HEAD` still extracts its old content.
+    (repo / "docs" / "a.md").write_text(
+        "cites wf-01 historically\nRuling 999 would flip (d5) if this were read live\n",
+        encoding="utf-8",
+    )
+
+    after = _verdicts("after")
+    assert before == after, (
+        "verify() at an unmoved ref must not see any live-checkout perturbation — "
+        f"diverged rows: {[k for k in before if before[k] != after.get(k)]}"
+    )
 
 
 def test_verify_result_folds_a_fatal_residue_change_into_exit_code_3(dv: Any) -> None:
