@@ -31,6 +31,7 @@ import re
 import subprocess
 import sys
 import types
+from collections.abc import Sequence
 from typing import Any, Final
 
 import pytest
@@ -2942,6 +2943,43 @@ def test_load_w37_11_record_is_empty_when_the_file_does_not_exist(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
     assert dv.load_w37_11_record(tmp_path) == ()
+
+
+def test_a_real_d7_record_entry_round_trips_through_the_ceiling(dv: Any) -> None:
+    """Ruling (W37-6, 2026-09-06): the (d7) box-end entries this PR adds must do real
+    mechanical work, not merely exist as documentation -- `check_residue_ceiling` is the
+    SEPARATE mechanism (from `_d7_disclosed_or_fail`'s own verdict) that reads them. Proof
+    against the REAL, currently-committed `docs/audit/w37-11-record.md`, not a synthetic
+    fixture: take one real `d7` entry, confirm it is silent at its own recorded ceiling,
+    confirm lowering that ceiling by one produces a fatal REGRESSION, and confirm
+    restoring it clears the regression again -- the round-trip, not just one direction."""
+    record = dv.load_w37_11_record(pathlib.Path("."))
+    d7_entries = [e for e in record if e.cls == "d7"]
+    assert d7_entries, "the real record must carry at least one d7 entry"
+    target = d7_entries[0]
+    measured = {(target.path, target.cls): target.count}
+
+    def _for_target(
+        changes: Sequence[dv.ResidueChange],
+    ) -> list[dv.ResidueChange]:
+        return [c for c in changes if c.path == target.path and c.cls == target.cls]
+
+    assert _for_target(dv.check_residue_ceiling(measured, record)) == [], (
+        "at its own recorded ceiling, a real entry must produce no change"
+    )
+
+    lowered = tuple(
+        dv.ResidueEntry(e.path, e.cls, e.count - 1, e.reason, e.owner)
+        if e is target else e
+        for e in record
+    )
+    changes = _for_target(dv.check_residue_ceiling(measured, lowered))
+    assert len(changes) == 1
+    assert changes[0].fatal, "a ceiling lowered below the measured count must be fatal"
+
+    assert _for_target(dv.check_residue_ceiling(measured, record)) == [], (
+        "restoring the real ceiling must clear the regression again"
+    )
 
 
 def test_verify_result_folds_a_fatal_residue_change_into_exit_code_3(dv: Any) -> None:
