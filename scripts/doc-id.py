@@ -8532,6 +8532,15 @@ def migrate(root: Path) -> MigrateResult:
     }
     if register_moved_to is not None:
         citer_origin[register_moved_to] = "docs/audit/register.md"
+    # `_REFERENCE_MOVE_TARGETS`'s four files (the checklists, `retrofit-impossible.md`,
+    # `security-posture.md`) are moved by `_write_reference_moves`, never a `_Draft` --
+    # found live, W37-6, 2026-09-06: `docs/process/checklists/work-item-close.md`'s own
+    # `[../register.md](../register.md)` was still unrepointed after the citer_origin
+    # refactor above, because this move's own (old, new) pairing was never carried in.
+    # A straight dict, safe here without any collision handling: `_REFERENCE_MOVE_TARGETS`
+    # is a fixed, hand-enumerated bijection (four distinct keys, four distinct values).
+    for move in reference_moves:
+        citer_origin[move.new_rel] = move.old_rel
     relinked = _repoint_all_relative_links(
         root, path_moves, citer_origin, fresh_paths=readme_written
     )
