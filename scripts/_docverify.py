@@ -2083,17 +2083,22 @@ def _g1_provenance_mismatches(docid: Any, mig: Corpus, ctl: Corpus) -> list[str]
     return mismatches
 
 
-#: box-end gate-gap's invariant (W37-6, 2026-09-06, ruled (b) over widening
-#: `_compound_token_re`): a bare `,\s*\d` must never sit immediately after a token this
-#: migration's own citation rewrite produced -- if it does, the rewriter's refusal
-#: (`doc-id.py`'s `_BARE_COMMA_DIGIT_RE`) failed to fire somewhere. Deliberately
-#: independent of the rewriter's own functions, unlike `_g1_provenance_mismatches` above
-#: (which calls `docid._expand_range`/`docid._expand_compound` directly and inherits
-#: whatever they do): a check must not assume its own invariant, so this scans the migrated
-#: OUTPUT alone for the shape a violation would leave, using only `REDIRECTS.csv`'s own
-#: `new_id` column to know what "a rewritten token" looks like.
+#: box-end gate-gap's invariant (W37-6, 2026-09-06, ruled (b), corrected to key the
+#: rewriter's refusal on resolution rather than shape): a rewritten token immediately
+#: followed by a bare `,\s*\d` is a violation only when that tail digit ALSO resolves as a
+#: further citation of the SAME old prefix -- exactly `doc-id.py`'s own
+#: `_bare_comma_tail_resolves` question, asked a second, independent way. A rewritten token
+#: followed by a bare comma-digit that does NOT resolve (a date, a section reference) is
+#: correct output under the corrected rule, not a violation -- an earlier version of this
+#: check, written for the shape-only refusal, would have wrongly flagged all 39 such sites.
+#:
+#: Deliberately independent of the rewriter's own functions, unlike `_g1_provenance_mismatches`
+#: above (which calls `docid._expand_range`/`docid._expand_compound` directly and inherits
+#: whatever they do): a check must not assume its own invariant, so this reimplements the
+#: resolution question from scratch over the migrated OUTPUT and `REDIRECTS.csv`'s
+#: `old_id`/`new_id` columns, rather than calling `doc-id.py`'s own resolution helper.
 _NEW_ID_SHAPE_RE: Final = re.compile(r"^(?:FR|NFR|OQ|DEP)-\d+$")
-_BARE_COMMA_DIGIT_RE: Final = re.compile(r",\s*\d")
+_BARE_COMMA_DIGIT_ITEM_RE: Final = re.compile(r",\s*(\d+)")
 
 
 def _new_id_values(mig: Corpus) -> frozenset[str]:
@@ -2105,11 +2110,24 @@ def _new_id_values(mig: Corpus) -> frozenset[str]:
     )
 
 
-def _rewritten_base_before_bare_comma(mig: Corpus, new_ids: frozenset[str]) -> list[str]:
-    """Every migrated-tree site where a rewritten token (a member of `new_ids`) is
-    immediately followed by a bare `,\\s*\\d` -- the shape the rewriter's own refusal
-    (`doc-id.py`'s `_BARE_COMMA_DIGIT_RE`) exists to prevent from ever reaching real
-    output. Any hit names a site the refusal should have caught but did not."""
+def _rewritten_base_before_bare_comma(
+    mig: Corpus, token_map: Mapping[str, str]
+) -> list[str]:
+    """Every migrated-tree site where a rewritten token is immediately followed by a bare
+    `,\\s*\\d` whose digits ALSO resolve as a further citation of the token's own OLD
+    prefix -- a genuine continuation the rewriter's refusal should have caught but did not.
+    A rewritten token followed by a bare comma-digit that does not resolve this way (a
+    date, a section reference) is correct output and never reported.
+
+    `token_map` is the full `old_id -> new_id` map: for each candidate site, every old id
+    that produced the seen new id is looked up (normally exactly one; REDIRECTS.csv is not
+    assumed injective), its own prefix extracted, and `prefix + tail_digits` checked
+    against `token_map` again -- the SAME question `doc-id.py`'s
+    `_bare_comma_tail_resolves` answers, asked independently rather than by calling it."""
+    reverse: dict[str, list[str]] = {}
+    for old_id, new_id in token_map.items():
+        reverse.setdefault(new_id, []).append(old_id)
+    new_ids = frozenset(v for v in token_map.values() if _NEW_ID_SHAPE_RE.match(v))
     violations: list[str] = []
     for rel in mig.files:
         skip = mig.was_lines[rel]
@@ -2117,10 +2135,25 @@ def _rewritten_base_before_bare_comma(mig: Corpus, new_ids: frozenset[str]) -> l
             if i in skip:
                 continue
             for m in re.finditer(r"\b(?:FR|NFR|OQ|DEP)-\d+\b", line):
-                if m.group(0) not in new_ids:
+                new_tok = m.group(0)
+                if new_tok not in new_ids:
                     continue
-                if _BARE_COMMA_DIGIT_RE.match(line, m.end()):
-                    violations.append(f"{rel}:{i + 1}: {line.strip()[:160]!r}")
+                bm = _BARE_COMMA_DIGIT_ITEM_RE.match(line, m.end())
+                if bm is None:
+                    continue
+                digits = bm.group(1)
+                for old_id in reverse.get(new_tok, ()):
+                    prefix_match = re.search(r"\d+$", old_id)
+                    if prefix_match is None:
+                        continue
+                    prefix = old_id[: prefix_match.start()]
+                    base_width = len(old_id) - len(prefix)
+                    resolves = token_map.get(prefix + digits) is not None
+                    if not resolves and len(digits) < base_width:
+                        resolves = token_map.get(prefix + digits.zfill(base_width)) is not None
+                    if resolves:
+                        violations.append(f"{rel}:{i + 1}: {line.strip()[:160]!r}")
+                        break
     return violations
 
 

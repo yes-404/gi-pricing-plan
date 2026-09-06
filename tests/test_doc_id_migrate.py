@@ -7590,22 +7590,24 @@ def test_box_end_comma_tail_refused_register_md_line(
     group (only `-`/`/`) has no path to reach at all. `, 10..13` sat entirely outside
     every match the old regex produced and survived byte-identical -- citing nothing.
 
-    Ruled (b): a comma is not a citation-continuation operator in this corpus
-    (`scope-audit.py --extra`'s own precedent -- `FR-PLAT-47,48` is refused rather than
-    guessed, "the failure here was ambiguity, not verbosity"). The rewriter does not learn
-    to expand a comma tail; it refuses the WHOLE citation, base included, whenever a bare
-    `,\\s*\\d` immediately follows a match whose base maps -- byte-identical output, never a
-    partially-rewritten one worse than either alternative.
+    Ruled (b), corrected once: refuse only when the tail's own first member RESOLVES
+    against the same prefix (`NFR-MODEL-10` here) -- a genuine continuation risk. An
+    unconditional shape-only refusal was tried first and reverted: it filed a governed
+    W37-11 record entry asserting "ambiguous continuation" for sites that are not
+    ambiguous at all (dates, section references), the same class of false record entry
+    this workstream spent the night closing elsewhere.
 
     Red before the fix: the base range `1..5` is correctly enumerated and `, 10..13`
     survives bare, orphaned -- a rewritten base beside an un-rewritten tail. Green after:
     the whole citation, `NFR-MODEL-1..5, 10..13` including the base, is refused and comes
-    out byte-identical."""
+    out byte-identical, because `NFR-MODEL-10` resolves."""
     text = "Measured NFRs (F21) | NFR-DATA-1/2, NFR-MODEL-1..5, 10..13 | W4/W5/W7\n"
     token_map = {
         "NFR-DATA-1": "NFR-900", "NFR-DATA-2": "NFR-901",
         "NFR-MODEL-1": "NFR-772", "NFR-MODEL-2": "NFR-773", "NFR-MODEL-3": "NFR-774",
         "NFR-MODEL-4": "NFR-776", "NFR-MODEL-5": "NFR-777",
+        "NFR-MODEL-10": "NFR-780", "NFR-MODEL-11": "NFR-781",
+        "NFR-MODEL-12": "NFR-782", "NFR-MODEL-13": "NFR-783",
     }
     after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
     assert after == (
@@ -7613,7 +7615,8 @@ def test_box_end_comma_tail_refused_register_md_line(
     ), (
         "NFR-DATA-1/2 is a SEPARATE citation, not followed by a bare comma-digit, and must "
         "still rewrite normally; only NFR-MODEL-1..5's own citation -- immediately "
-        "followed by ', 10..13' -- is refused, base included, never partially rewritten"
+        "followed by ', 10..13', whose first member NFR-MODEL-10 resolves -- is refused, "
+        "base included, never partially rewritten"
     )
     assert "NFR-772" not in after, (
         "the base must not partially rewrite while the tail stays bare -- refuse or "
@@ -7621,41 +7624,52 @@ def test_box_end_comma_tail_refused_register_md_line(
     )
 
 
-def test_bare_comma_digit_after_a_bare_mapped_token_also_refuses(
+def test_bare_comma_digit_that_resolves_after_a_bare_mapped_token_also_refuses(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """The most common real shape (`backend/src/app/api/custom_metrics.py:1`'s
     `FR-MODEL-45, 103, 104, 105, 108, 127`): no range, no `-`/`/` continuation, just a bare
-    mapped token immediately followed by a comma-digit list. The refusal must fire here
-    too, not only when a range or continuation is already present -- the invariant is
-    "a bare ,\\s*\\d follows a matched, mapping token", not "follows a range/continuation"."""
+    mapped token immediately followed by a comma-digit list whose first member
+    (`FR-MODEL-103`) resolves. The refusal must fire here too, not only when a range or
+    continuation is already present -- and it must key on resolution, not shape alone."""
     text = "see FR-MODEL-45, 103, 104 for the scope\n"
-    token_map = {"FR-MODEL-45": "FR-451"}
+    token_map = {"FR-MODEL-45": "FR-451", "FR-MODEL-103": "FR-509"}
     after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
     assert after == text, (
-        "FR-MODEL-45 maps but is immediately followed by a bare comma-digit -- the whole "
-        "citation must be refused, not just partially left as 'FR-451, 103, 104'"
+        "FR-MODEL-45 maps and FR-MODEL-103 (the tail's first member) resolves -- a genuine "
+        "continuation risk, so the whole citation must be refused, not just partially left "
+        "as 'FR-451, 103, 104'"
     )
 
 
-def test_bare_comma_digit_that_is_actually_a_date_or_section_ref_still_refuses(
+def test_bare_comma_digit_that_does_not_resolve_is_prose_and_rewrites_normally(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """The false-negative this rule deliberately accepts, stated as a test rather than left
-    implicit: `backend/src/app/errors.py:186`'s real text, `FR-MODEL-24, 2026-08-21` -- the
-    comma-digit here is a DATE, not a citation continuation, but this rule cannot tell the
-    difference (that is the whole point -- `scope-audit.py --extra`'s precedent is that
-    telling the difference is not attempted). So this citation, which a smarter rule COULD
-    safely rewrite, is refused anyway: `FR-MODEL-24` stays in its legacy form. That is the
-    price of refusing to guess, paid honestly rather than silently."""
+    """The correction, stated as a test: `backend/src/app/errors.py:186`'s real text,
+    `FR-MODEL-24, 2026-08-21` -- the comma-digit here is a DATE. `FR-MODEL-2026` does not
+    resolve (no such id), so this is prose, not a citation continuation, and the base
+    rewrites normally -- the tail, never part of the match, is reproduced verbatim by
+    construction. An earlier, shape-only version of this rule refused here anyway; that was
+    wrong, because it filed a false "ambiguous continuation" record entry for a date."""
     text = "# FR-MODEL-24, 2026-08-21, the offset-from-another-model slice.\n"
     token_map = {"FR-MODEL-24": "FR-413"}
     after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
-    assert after == text, (
-        "even though the comma-digits are a date and FR-MODEL-24 could safely have "
-        "rewritten, this rule refuses anyway -- it cannot distinguish a date from a "
-        "citation continuation, and does not try to"
+    assert after == "# FR-413, 2026-08-21, the offset-from-another-model slice.\n", (
+        "FR-MODEL-2026 does not resolve -- this is a date, not a continuation, and the "
+        "base must rewrite normally, tail reproduced verbatim"
     )
+
+
+def test_bare_comma_digit_section_ref_that_does_not_resolve_rewrites_normally(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`backend/src/app/platform/rate_tables.py:347`'s real text, `FR-RATE-20, 03 §5.1` --
+    `03` is a spec-module reference, not a citation continuation. `FR-RATE-03` does not
+    resolve, so the base rewrites normally and `, 03 §5.1` is reproduced verbatim."""
+    text = "see FR-RATE-20, 03 §5.1 for the scope\n"
+    token_map = {"FR-RATE-20": "FR-680"}
+    after = _rewrite_one_file(doc_id_cli, tmp_path, dict(token_map), text)
+    assert after == "see FR-680, 03 §5.1 for the scope\n"
 
 
 def test_a_mapped_token_with_no_following_comma_still_rewrites_normally(

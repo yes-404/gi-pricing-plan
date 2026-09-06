@@ -703,6 +703,10 @@ _MODEL_REDIRECTS_CSV = (
     "NFR-MODEL-3,NFR-774,,,\n"
     "NFR-MODEL-4,NFR-776,,,\n"
     "NFR-MODEL-5,NFR-777,,,\n"
+    "NFR-MODEL-10,NFR-780,,,\n"
+    "NFR-MODEL-11,NFR-781,,,\n"
+    "NFR-MODEL-12,NFR-782,,,\n"
+    "NFR-MODEL-13,NFR-783,,,\n"
     ",,docs/audit/register.md,docs/findings/register.md,\n"
 )
 
@@ -712,9 +716,10 @@ def test_bare_comma_invariant_reads_non_zero_on_the_box_end_pre_fix_defect(
 ) -> None:
     """The box-end gate-gap's real pre-fix output (before ruling (b)'s refusal existed):
     `NFR-MODEL-1..5` correctly enumerated, `, 10..13` left orphaned bare -- a rewritten
-    token (`NFR-777`) immediately followed by a bare `,\\s*\\d`. The independent,
-    output-side invariant check (never calling the rewriter's own functions) must catch
-    this without being told what a citation is."""
+    token (`NFR-777`) immediately followed by a bare `,\\s*\\d` whose digits (`10`) resolve
+    as `NFR-MODEL-10` under the same old prefix -- a genuine continuation the refusal
+    should have caught. The independent, output-side invariant check (reimplementing the
+    resolution question rather than calling the rewriter's own functions) must catch this."""
     migrated = {
         "docs/findings/register.md": (
             "| Measured NFRs (F21) | NFR-772, NFR-773, NFR-774, NFR-776, NFR-777, "
@@ -724,8 +729,8 @@ def test_bare_comma_invariant_reads_non_zero_on_the_box_end_pre_fix_defect(
     }
     snap = _snapshot(dv, tmp_path, migrated, {"placeholder.md": "x\n"})
     mig = dv.load_corpus(snap.migrated)
-    new_ids = dv._new_id_values(mig)
-    violations = dv._rewritten_base_before_bare_comma(mig, new_ids)
+    token_map = dv._redirects_token_map(mig)
+    violations = dv._rewritten_base_before_bare_comma(mig, token_map)
     assert len(violations) == 1, violations
     assert "docs/findings/register.md:1" in violations[0]
 
@@ -745,8 +750,8 @@ def test_bare_comma_invariant_reads_zero_once_the_whole_citation_is_left_whole(
     }
     snap = _snapshot(dv, tmp_path, migrated, {"placeholder.md": "x\n"})
     mig = dv.load_corpus(snap.migrated)
-    new_ids = dv._new_id_values(mig)
-    violations = dv._rewritten_base_before_bare_comma(mig, new_ids)
+    token_map = dv._redirects_token_map(mig)
+    violations = dv._rewritten_base_before_bare_comma(mig, token_map)
     assert violations == []
 
 
@@ -761,8 +766,26 @@ def test_bare_comma_invariant_ignores_a_rewritten_token_with_nothing_ambiguous_a
     }
     snap = _snapshot(dv, tmp_path, migrated, {"placeholder.md": "x\n"})
     mig = dv.load_corpus(snap.migrated)
-    new_ids = dv._new_id_values(mig)
-    assert dv._rewritten_base_before_bare_comma(mig, new_ids) == []
+    token_map = dv._redirects_token_map(mig)
+    assert dv._rewritten_base_before_bare_comma(mig, token_map) == []
+
+
+def test_bare_comma_invariant_accepts_a_rewritten_base_before_a_non_resolving_date(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """The correction: a rewritten token followed by a bare comma-digit that does NOT
+    resolve as a further citation of the old prefix -- `NFR-772` (from `NFR-MODEL-1`)
+    followed by `, 2026-08-21` -- is correct output under the resolution-based rule (a
+    date, not a continuation of `NFR-MODEL-`), and the invariant must not flag it. An
+    earlier, shape-only version of this check would have wrongly reported this."""
+    migrated = {
+        "docs/findings/register.md": "see NFR-772, 2026-08-21 for the change\n",
+        "docs/REDIRECTS.csv": _MODEL_REDIRECTS_CSV,
+    }
+    snap = _snapshot(dv, tmp_path, migrated, {"placeholder.md": "x\n"})
+    mig = dv.load_corpus(snap.migrated)
+    token_map = dv._redirects_token_map(mig)
+    assert dv._rewritten_base_before_bare_comma(mig, token_map) == []
 
 
 def test_wk_shape_hits_excludes_framework_self_reference_not_a_second_mechanism(
