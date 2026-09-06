@@ -2312,7 +2312,7 @@ def _rewritten_base_before_bare_comma(
                     if not resolves and len(digits) < base_width:
                         resolves = token_map.get(prefix + digits.zfill(base_width)) is not None
                     if resolves:
-                        violations.append(f"{rel}:{i + 1}: {line.strip()[:160]!r}")
+                        violations.append(f"{new_tok} ({rel}:{i + 1})")
                         break
     return violations
 
@@ -2687,6 +2687,9 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
     wk_mangled, wk_mangled_files = _wk_shape_hits(mig, mig, ctl)
     wk_control, _ = _wk_shape_hits(ctl, mig, ctl)
     provenance_mismatches = _g1_provenance_mismatches(docid, mig, ctl)
+    bare_comma_violations = _rewritten_base_before_bare_comma(
+        mig, _redirects_token_map(mig)
+    )
     at_risk, at_risk_files = ctl.scan(COMPOUND_CITATION_RE, skip_was=False)
 
     per_class = ", ".join(
@@ -2704,7 +2707,7 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "the compound-citation population at risk is 0, so the mangled-citation "
             "sub-predicate cannot distinguish a clean migration from a dead pattern",
         )
-    elif wk_mangled or provenance_mismatches or residue:
+    elif wk_mangled or provenance_mismatches or bare_comma_violations or residue:
         # Ruling 68 §2 `:268` — "a hunk the filter cannot classify fails; it is never
         # passed through" — and W37-6 channel `:392` ruled the naming obligation follows
         # from that: every `classified-by-none` hunk is named, by path, with its own
@@ -2723,6 +2726,19 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
         if provenance_mismatches:
             parts.append(
                 f"g1 provenance mismatch(es): {'; '.join(provenance_mismatches)}"
+            )
+        if bare_comma_violations:
+            # W37-6, 2026-09-06 (lead's ruling, deputy-confirmed, `to-lead.md` 06:30 BST):
+            # `_rewritten_base_before_bare_comma` was defined, tested against fixtures
+            # only, and called from nowhere in the module -- `migrate --verify` never
+            # computed it and never printed it on a real corpus. Wired here so a real
+            # surviving site (a rewritten base immediately followed by a bare comma-tail
+            # that resolves as a further citation of the base's OLD prefix -- the box-end
+            # mangling ruling (b)'s own refusal exists to prevent) fails the row rather
+            # than passing silently for want of a caller. One line per site, never a bare
+            # count -- `bare_comma_violations` is already a full enumeration.
+            parts.append(
+                f"bare-comma-after-rewrite violation(s): {'; '.join(bare_comma_violations)}"
             )
         note = " || ".join(p for p in parts if p)
         verdict = FAIL
@@ -2747,7 +2763,14 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "— no legitimate rewrite produces that shape, so shape alone still suffices "
             "for it, excluding framework self-reference (`_is_framework_self_reference`, "
             "the identical predicate (d7)'s `FR-PLAT-4` joins the disclosed class by — "
-            "one mechanism for one class, not two). g2 (Ruling 68 §2's closed enumeration, "
+            "one mechanism for one class, not two). A third g1 component, wired in on "
+            "2026-09-06 (lead's ruling, deputy-confirmed): `_rewritten_base_before_bare_"
+            "comma` re-derives, independently of `docid._bare_comma_tail_resolves`, "
+            "whether a REWRITTEN token is immediately followed by a bare comma-digit tail "
+            "that resolves as a further citation of the token's OLD prefix — the box-end "
+            "mangling ruling (b)'s refusal exists to prevent; previously defined and "
+            "tested against fixtures only, never called from this row. g2 (Ruling 68 §2's "
+            "closed enumeration, "
             "amended by Ruling 104 §2/§3 "
             "for class 6, by symbol, never restated here): "
             "`doc-id.classify_migration_diff(control, migrated)`, bucketing every touched "
@@ -2766,7 +2789,8 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
         ),
         migrated=(
             f"g1 WK-shape mangled = {wk_mangled} in {wk_mangled_files} file(s), "
-            f"provenance mismatch(es) = {len(provenance_mismatches)}; "
+            f"provenance mismatch(es) = {len(provenance_mismatches)}, "
+            f"bare-comma-after-rewrite violation(s) = {len(bare_comma_violations)}; "
             f"g2 {per_class}, {docid.CLASSIFIED_BY_NONE}={len(residue)}"
         ),
         control=f"g1 WK-shape mangled = {wk_control} (un-migrated)",
