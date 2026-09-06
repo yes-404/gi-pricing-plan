@@ -5861,15 +5861,26 @@ _BARE_COMMA_ITEM_RE: Final = re.compile(r",\s*(\d+)")
 
 
 def _bare_comma_tail_resolves(
-    prefix: str, base_width: int, active_map: Mapping[str, str], m: re.Match[str],
+    prefix: str, base_width: int, active_map: Mapping[str, str], text: str, pos: int,
 ) -> bool:
-    """Whether the bare comma-digit tail immediately following `m`'s own match resolves
-    against `prefix` -- the discriminator between a genuine shared-prefix citation
-    continuation and unrelated prose after a comma (a date, a section reference: `03` in
-    `FR-RATE-20, 03 §5.1` does not resolve as `FR-RATE-03`). Checks only the tail's first
-    member -- resolving is enough to treat the whole tail as a continuation risk and refuse;
-    this function decides whether to refuse, it never expands anything itself."""
-    cm = _BARE_COMMA_ITEM_RE.match(m.string, m.end())
+    """Whether the bare comma-digit tail immediately following position `pos` in `text`
+    resolves against `prefix` -- the discriminator between a genuine shared-prefix
+    citation continuation and unrelated prose after a comma (a date, a section reference:
+    `03` in `FR-RATE-20, 03 §5.1` does not resolve as `FR-RATE-03`). Checks only the
+    tail's first member -- resolving is enough to treat the whole tail as a continuation
+    risk and refuse; this function decides whether to refuse, it never expands anything
+    itself.
+
+    Takes a plain `(text, pos)` pair rather than a live `re.Match`, deliberately: this is
+    the identical predicate `(d7)`'s own disclosed-class check calls (Ruling, W37-6,
+    2026-09-06 -- co-extensive by identity, not by a second, similar-looking predicate),
+    and `(d7)` walks tokens it finds by `finditer` over the MIGRATED tree's own text, not a
+    live rewrite match -- there is no `re.Match` to hand it there, only a line and a
+    position. `m.string, m.end()` at each of this function's two rewriter call sites are
+    exactly such a pair; extracting the signature to accept one directly costs nothing at
+    the rewriter and is what makes the second caller possible without a second
+    implementation."""
+    cm = _BARE_COMMA_ITEM_RE.match(text, pos)
     if cm is None:
         return False
     digits = cm.group(1)
@@ -5889,7 +5900,7 @@ def _expand_compound(
     if prefix_match is not None:
         prefix = tok[: prefix_match.start()]
         base_width = len(tok) - len(prefix)
-        if _bare_comma_tail_resolves(prefix, base_width, active_map, m):
+        if _bare_comma_tail_resolves(prefix, base_width, active_map, m.string, m.end()):
             return m.group(0)  # the tail resolves -- a genuine continuation risk, refused
     if not continuation:
         return mapped
@@ -5958,7 +5969,7 @@ def _expand_range(
         return m.group(0)
     prefix = tok[: prefix_match.start()]
     base_width = len(tok) - len(prefix)
-    if _bare_comma_tail_resolves(prefix, base_width, active_map, m):
+    if _bare_comma_tail_resolves(prefix, base_width, active_map, m.string, m.end()):
         return m.group(0)  # the tail resolves -- a genuine continuation risk, refused
         # (`_bare_comma_tail_resolves`'s own docstring has the reasoning)
     start = int(prefix_match.group())
