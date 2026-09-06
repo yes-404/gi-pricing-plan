@@ -2908,13 +2908,13 @@ def test_load_w37_11_record_reads_the_governed_table(dv: Any, tmp_path: pathlib.
         "# W37-11 residue record\n\n"
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
-        "| docs/x.md | r1 | 3 | because | W37-11 |\n",
+        "| docs/x.md | d1 | 3 | because | W37-11 |\n",
         encoding="utf-8",
     )
     record = dv.load_w37_11_record(tmp_path)
     assert record == (
         dv.ResidueEntry(
-            path="docs/x.md", cls="r1", count=3, reason="because", owner="W37-11",
+            path="docs/x.md", cls="d1", count=3, reason="because", owner="W37-11",
         ),
     )
 
@@ -2929,13 +2929,13 @@ def test_load_w37_11_record_skips_a_malformed_row_rather_than_raising(
     (docs_audit / "w37-11-record.md").write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
-        "| docs/x.md | r1 | not-a-number | because | W37-11 |\n"
-        "| docs/y.md | r2 | 1 | ok | W37-11 |\n",
+        "| docs/x.md | d1 | not-a-number | because | W37-11 |\n"
+        "| docs/y.md | d2 | 1 | ok | W37-11 |\n",
         encoding="utf-8",
     )
     record = dv.load_w37_11_record(tmp_path)
     assert record == (
-        dv.ResidueEntry(path="docs/y.md", cls="r2", count=1, reason="ok", owner="W37-11"),
+        dv.ResidueEntry(path="docs/y.md", cls="d2", count=1, reason="ok", owner="W37-11"),
     )
 
 
@@ -2979,6 +2979,233 @@ def test_a_real_d7_record_entry_round_trips_through_the_ceiling(dv: Any) -> None
 
     assert _for_target(dv.check_residue_ceiling(measured, record)) == [], (
         "restoring the real ceiling must clear the regression again"
+    )
+
+
+# =========================================================================================
+# #763: a record entry carrying `cls = "comma-continuation-left-whole"` — a description of
+# *why* the residue exists, not a class any extractor produces — governs nothing and reads
+# 0 forever, silently, while the real residue surfaces under its true class in files the
+# record does not name. `_known_w37_11_class` is the registry; the broken input is the
+# real value #763 shipped, not an invented placeholder.
+# =========================================================================================
+
+
+def test_load_w37_11_record_rejects_a_class_no_extractor_produces(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| docs/x.md | comma-continuation-left-whole | 1 | because | W37-11 |\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(dv.InvalidResidueClassError, match="comma-continuation-left-whole"):
+        dv.load_w37_11_record(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "cls",
+    ["d1", "d13", "h1-check1", "h1-check36", "h1-check999", "g2-other",
+     "g2-cause3-legacy-path-citation"],
+)
+def test_load_w37_11_record_accepts_every_real_extractor_class(
+    dv: Any, tmp_path: pathlib.Path, cls: str
+) -> None:
+    """The green half: the registry is derived from what the extractors can produce, not
+    a narrower list that would reject a real class alongside the invented ones — "d13"
+    is `D_ALTERNATIVES`'s last-numbered alternative as of this commit, and "h1-check999"
+    is a check number nothing has assigned yet, deliberately, since the h1 predicate is a
+    shape, not an enumerated set."""
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        f"| docs/x.md | {cls} | 1 | because | W37-11 |\n",
+        encoding="utf-8",
+    )
+    record = dv.load_w37_11_record(tmp_path)
+    assert record == (
+        dv.ResidueEntry(path="docs/x.md", cls=cls, count=1, reason="because", owner="W37-11"),
+    )
+
+
+# =========================================================================================
+# F102, 2026-09-06: `--ref` must be hermetic. `_verify_body` used to read the W37-11
+# record from `repo_root` — the live, mutable checkout `verify()` was invoked against —
+# rather than from `snap.control`, the `git archive` of `--ref` it already built. Two
+# `--verify` runs of the *identical* ref, with an executor mid-edit on the record in its
+# own worktree between them, produced two different verdict sets and a residue-ceiling
+# regression neither run's own committed tree content could explain. Fixed by reading the
+# record from `snap.control` (`load_w37_11_record`'s and `_verify_body`'s own comments
+# carry the full account); this is that fix's broken-input proof.
+# =========================================================================================
+
+
+class _NoOpMigrateDocid:
+    """A `docid` stand-in whose `migrate()` does nothing to the tree, delegating every
+    other attribute (`classify_docs_files`, `check`, `materialize_ref`, `ref_exists`, …)
+    to the real `scripts/doc-id.py` — `compute_rows` calls into `docid` from most of its
+    (a)-(i) rows, not only `migrate()`, so a stub narrower than "everything except
+    `migrate`" breaks rows this test never claims to exercise. Exercises `build_snapshot`/
+    `verify()`'s real wiring (real `git archive`) without paying for the real
+    ~9000-line `migrate()`, which is not what this test is about: `snap.migrated` and
+    `snap.control` end up byte-identical, both the same `git archive` of `ref`, and the
+    one row this test reads ((d4)) only needs the two trees, never a real migration.
+    """
+
+    def __init__(self, real: Any) -> None:
+        self._real = real
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._real, name)
+
+    def migrate(self, _tree: pathlib.Path) -> types.SimpleNamespace:
+        return types.SimpleNamespace(generated_paths=())
+
+
+def test_verify_reads_the_w37_11_record_from_the_ref_never_the_live_checkout(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The broken-input proof: two `verify()` calls at one ref, with the *live* record
+    deliberately changed between them, must return identical verdicts. Only
+    `load_w37_11_record`'s own read of the wrong tree could make them diverge, so this is
+    a genuine red-then-green proof of the fix rather than a restatement of it — reverting
+    `_verify_body`'s `snap.control` back to `repo_root` makes this test fail (the two
+    verdicts diverge, `FAIL` vs `DISCLOSE`), confirmed while writing it.
+
+    A tiny real git repo stands in for `repo_root`: one committed line matching (d4)'s own
+    `\\bwf-0[0-9]\\b` pattern, plus a *committed* W37-11 record entry that governs and
+    ceilings exactly that hit. `--ref` names that commit throughout — it never moves. The
+    only thing that changes between the two `verify()` calls is an **uncommitted** edit to
+    the record on disk, which a hermetic `--ref` run must never see.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: (
+            "| path | cls | count | reason | owner |\n"
+            "| --- | --- | --- | --- | --- |\n"
+            "| docs/a.md | d4 | 1 | historical citation | W37-11 |\n"
+        ),
+    })
+    ref = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    docid = _NoOpMigrateDocid(doc_id_cli)
+
+    def _d4_verdict(run_name: str, record_on_disk: str) -> str:
+        # The live, uncommitted edit `--ref` must not see — never committed, so `ref`
+        # (pinned to the commit above) is unaffected by it either way.
+        (repo / dv.W37_11_RECORD_PATH).write_text(record_on_disk, encoding="utf-8")
+        workdir = tmp_path / f"wd-{run_name}"
+        result = dv.verify(
+            docid, repo_root=repo, ref=ref, workdir=workdir, keep=True,
+            with_baseline=False,
+        )
+        d4 = next(r for r in result.rows if r.key == "d4")
+        return str(d4.verdict)
+
+    governing = (
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| docs/a.md | d4 | 1 | historical citation | W37-11 |\n"
+    )
+    empty = (
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+    )
+    first = _d4_verdict("a", empty)
+    second = _d4_verdict("b", governing)
+    assert first == second, (
+        "the same ref verified twice must not disagree on (d4) merely because the live "
+        f"checkout's own record file changed underneath it (got {first!r} then {second!r})"
+    )
+    # Not merely "agree" — agree on the value the *committed* record (matching what
+    # `--ref` actually names) governs, proving the read came from the ref and not from
+    # whichever of the two live edits happened to be on disk at call time.
+    assert first == dv.DISCLOSE
+
+
+def test_verify_is_unaffected_by_every_live_checkout_perturbation_the_table_names(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """The generalised version of the test above — this one is its first case, that test
+    the record specifically. The 2026-09-06 input-provenance table (above `verify()`'s own
+    definition) states that every hermetic row is keyed on `snap.migrated`/`snap.control`/
+    `snap.baseline` alone, none of which a live-checkout edit can reach (they are `git
+    archive` extractions of a pinned commit). This test is the checked half of that claim:
+    perturb `repo_root`'s live working tree in three different ways between two `verify()`
+    calls at the identical, unmoved ref, and assert every row's verdict — not only (d4)'s
+    — comes back byte-identical.
+
+    Three perturbations, one per accident that found this class tonight:
+
+    1. **Modify the governed record** (the fixed defect itself, #762/#764) — an
+       uncommitted edit to `docs/audit/w37-11-record.md`.
+    2. **Add a stray untracked file** (the reused-directory hypothesis's own shape, ruled
+       out for `--verify`'s *target* directory by `assert_workdir_disposable`, but never
+       tested against `repo_root` itself — nothing stops a stray file appearing in the
+       *source* checkout between two runs).
+    3. **Edit a governed, corpus-scanned document** (`docs/a.md`, the file every row (d)
+       alternative and `audit-docs.py` itself would read if anything read `repo_root`
+       instead of the snapshot) — appending a line that would flip (d5)'s `Ruling \\d+`
+       alternative from PASS to FAIL if it were somehow read live.
+
+    None of the three is committed. `--ref` is pinned to the same commit before, during
+    and after all three; a hermetic `verify()` must not see any of them.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: (
+            "| path | cls | count | reason | owner |\n"
+            "| --- | --- | --- | --- | --- |\n"
+            "| docs/a.md | d4 | 1 | historical citation | W37-11 |\n"
+        ),
+    })
+    ref = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    docid = _NoOpMigrateDocid(doc_id_cli)
+
+    def _verdicts(run_name: str) -> dict[str, str]:
+        workdir = tmp_path / f"wd-{run_name}"
+        result = dv.verify(
+            docid, repo_root=repo, ref=ref, workdir=workdir, keep=True,
+            with_baseline=False,
+        )
+        return {row.key: str(row.verdict) for row in result.rows}
+
+    before = _verdicts("before")
+
+    # Perturbation 1: modify the governed record (empty it — the same shape the
+    # dedicated F102 test above uses, generalised here alongside the other two).
+    (repo / dv.W37_11_RECORD_PATH).write_text(
+        "| path | cls | count | reason | owner |\n| --- | --- | --- | --- | --- |\n",
+        encoding="utf-8",
+    )
+    # Perturbation 2: a stray untracked file in the live checkout — nothing commits it,
+    # nothing adds it to git; it simply exists on disk the way a leftover from an earlier,
+    # unrelated run would.
+    (repo / "docs" / "stray-untracked.md").write_text(
+        "NT-9999 this file was never committed and must never be measured\n",
+        encoding="utf-8",
+    )
+    # Perturbation 3: edit a tracked, governed document in place — not committed, so `git
+    # archive HEAD` still extracts its old content.
+    (repo / "docs" / "a.md").write_text(
+        "cites wf-01 historically\nRuling 999 would flip (d5) if this were read live\n",
+        encoding="utf-8",
+    )
+
+    after = _verdicts("after")
+    assert before == after, (
+        "verify() at an unmoved ref must not see any live-checkout perturbation — "
+        f"diverged rows: {[k for k in before if before[k] != after.get(k)]}"
     )
 
 
