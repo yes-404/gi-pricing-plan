@@ -455,8 +455,16 @@ def test_a_split_sources_two_parts_stay_distinct_under_two_allocations(
     assert len(ceiling) == 2
 
     for tree, path_a, path_b in (
-        (allocation_one, "docs/plans/PL-00010-part-a-topic.md", "docs/plans/PL-00011-part-b-topic.md"),
-        (allocation_two, "docs/plans/PL-00099-part-a-topic-renamed.md", "docs/plans/PL-00098-part-b-topic-renamed.md"),
+        (
+            allocation_one,
+            "docs/plans/PL-00010-part-a-topic.md",
+            "docs/plans/PL-00011-part-b-topic.md",
+        ),
+        (
+            allocation_two,
+            "docs/plans/PL-00099-part-a-topic-renamed.md",
+            "docs/plans/PL-00098-part-b-topic-renamed.md",
+        ),
     ):
         measured = {(path_a, _docid.h1_class(36)): 3, (path_b, _docid.h1_class(36)): 5}
         resolved = _docid.resolve_to_control_paths(measured, tree)
@@ -509,7 +517,11 @@ def test_a_split_sources_key_stays_stable_when_the_slug_rewrites_two_ids(
     # Allocation 1 (snapshot, `f35cfe5`): the real basenames on `main`'s record today.
     _write_redirects_csv(allocation_snapshot, [
         (control_path, "docs/closures/CR-00209-plan-review-9-at-wk-968-s-close.md", ordinal_9),
-        (control_path, "docs/closures/CR-00210-plan-review-10-at-wk-968-s-second-close.md", ordinal_10),
+        (
+            control_path,
+            "docs/closures/CR-00210-plan-review-10-at-wk-968-s-second-close.md",
+            ordinal_10,
+        ),
         (
             control_path,
             "docs/closures/CR-00215-plan-review-11-completing-the-review-sequence-at-"
@@ -522,7 +534,11 @@ def test_a_split_sources_key_stays_stable_when_the_slug_rewrites_two_ids(
     # same slug for plan-review-11 (968->671 AND 969->672).
     _write_redirects_csv(allocation_full_history, [
         (control_path, "docs/closures/CR-00925-plan-review-9-at-wk-671-s-close.md", ordinal_9),
-        (control_path, "docs/closures/CR-00926-plan-review-10-at-wk-671-s-second-close.md", ordinal_10),
+        (
+            control_path,
+            "docs/closures/CR-00926-plan-review-10-at-wk-671-s-second-close.md",
+            ordinal_10,
+        ),
         (
             control_path,
             "docs/closures/CR-00932-plan-review-11-completing-the-review-sequence-at-"
@@ -531,7 +547,9 @@ def test_a_split_sources_key_stays_stable_when_the_slug_rewrites_two_ids(
         ),
     ])
 
-    slug_snapshot = "plan-review-11-completing-the-review-sequence-at-wk-968-s-close-before-wk-969-opens.md"
+    slug_snapshot = (
+        "plan-review-11-completing-the-review-sequence-at-wk-968-s-close-before-wk-969-opens.md"
+    )
     slug_full_history = (
         "plan-review-11-completing-the-review-sequence-at-wk-671-s-close-before-wk-672-opens.md"
     )
