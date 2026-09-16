@@ -57,8 +57,12 @@ FAMILY_PREFIXES: Final = (
 # exception carved into the existing two lookbehinds: preceded by the literal two-byte
 # sequence `\n`, the position is ALWAYS a valid token start, independent of and prior to
 # the ordinary `\b`-and-hyphen-guard case below. This does not touch the hyphen-fused
-# refusal (`[A-Z0-9]-`) at all -- `w5-wf-01` is refused by the second branch exactly as
-# before, since its own two preceding characters are never `\n`.
+# refusal (`[A-Z0-9]-`) at all -- a slice id fused onto a workflow-shaped id (as in
+# "W5-WF-01") is refused by the second branch exactly as before, since its own two
+# preceding characters are never `\n`. (Written uppercase here on purpose: a lowercase
+# `wf-0` is `LEGACY_FORM_PATTERNS`' own "workflow id" alternative, and this file is not
+# exempt from the sweep it feeds -- spelling the example that way turned this very
+# comment into residue the (d4) row then measured, W37-6 PR-B 2026-09-16.)
 ID_RE: Final = re.compile(r"\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*(\d+)\b")
 
 # NT-0019 §1.1 rule 3: "Filenames pad the integer to the standard's width, currently five."
