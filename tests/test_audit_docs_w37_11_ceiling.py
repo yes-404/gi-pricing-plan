@@ -225,11 +225,24 @@ def test_an_unknown_class_is_rejected_by_the_shared_registry() -> None:
 # ---------------------------------------------------------------------------------------
 
 
-def _write_redirects_csv(tree_root: pathlib.Path, rows: list[tuple[str, str]]) -> None:
+def _write_redirects_csv(
+    tree_root: pathlib.Path,
+    rows: list[tuple[str, str]] | list[tuple[str, str, str]],
+) -> None:
+    """Write a synthetic `docs/REDIRECTS.csv`. A 2-tuple row leaves `part_ordinal`
+    blank (the non-split, overwhelming-majority shape); a 3-tuple row's third element
+    is the control-side part identity `doc-id.py`'s `_control_side_part_ordinals`
+    would have written for a genuine fan-out — never derived here from `new`'s own
+    basename, which is exactly the withdrawn `part_slug` mistake this file's tests
+    exist to catch.
+    """
     docs = tree_root / "docs"
     docs.mkdir(parents=True, exist_ok=True)
-    lines = ["old_id,new_id,old_path,new_path,citing_dir"]
-    lines.extend(f",,{old},{new}," for old, new in rows)
+    lines = ["old_id,new_id,old_path,new_path,citing_dir,part_ordinal"]
+    for row in rows:
+        old, new = row[0], row[1]
+        part_ordinal = row[2] if len(row) > 2 else ""
+        lines.append(f",,{old},{new},,{part_ordinal}")
     (docs / "REDIRECTS.csv").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -405,31 +418,34 @@ def test_a_split_sources_two_parts_stay_distinct_under_two_allocations(
 ) -> None:
     """One control document splits into two migrated files; each keeps its own residue
     under its own composite key, never collapsed onto the shared control path — proven
-    against two trees whose REDIRECTS.csv assigns the same two slugs DIFFERENT ids.
+    against two trees whose REDIRECTS.csv assigns the same two parts DIFFERENT ids AND
+    (D1b) different basenames, keyed by `part_ordinal` (the control-side identity
+    `doc-id.py`'s `_control_side_part_ordinals` writes), never by the migrated slug.
     """
     control_path = "docs/plans/2026-09-01-two-part-plan.md"
-    slug_a, slug_b = "part-a-topic.md", "part-b-topic.md"
+    ordinal_a, ordinal_b = "0", "1"
 
     allocation_one = tmp_path / "allocation_one"
     allocation_two = tmp_path / "allocation_two"
     _write_redirects_csv(allocation_one, [
-        (control_path, f"docs/plans/PL-00010-{slug_a}"),
-        (control_path, f"docs/plans/PL-00011-{slug_b}"),
+        (control_path, "docs/plans/PL-00010-part-a-topic.md", ordinal_a),
+        (control_path, "docs/plans/PL-00011-part-b-topic.md", ordinal_b),
     ])
-    # A different allocation assigns different ids to the identical two slugs — the
-    # shape PR-A's fix (real git history vs a one-commit snapshot's fallback) produces.
+    # A different allocation assigns different ids AND different slugs to the same two
+    # control-side parts — the shape PR-A's fix (real git history vs a one-commit
+    # snapshot's fallback) produces; `part_ordinal` is unchanged either way.
     _write_redirects_csv(allocation_two, [
-        (control_path, f"docs/plans/PL-00099-{slug_a}"),
-        (control_path, f"docs/plans/PL-00098-{slug_b}"),
+        (control_path, "docs/plans/PL-00099-part-a-topic-renamed.md", ordinal_a),
+        (control_path, "docs/plans/PL-00098-part-b-topic-renamed.md", ordinal_b),
     ])
 
     record = (
         _docid.ResidueEntry(
-            path=_docid.composite_control_key(control_path, slug_a), cls=_docid.h1_class(36),
+            path=_docid.composite_control_key(control_path, ordinal_a), cls=_docid.h1_class(36),
             count=3, reason="part A's own residue", owner="test",
         ),
         _docid.ResidueEntry(
-            path=_docid.composite_control_key(control_path, slug_b), cls=_docid.h1_class(36),
+            path=_docid.composite_control_key(control_path, ordinal_b), cls=_docid.h1_class(36),
             count=5, reason="part B's own residue", owner="test",
         ),
     )
@@ -439,19 +455,19 @@ def test_a_split_sources_two_parts_stay_distinct_under_two_allocations(
     assert len(ceiling) == 2
 
     for tree, path_a, path_b in (
-        (allocation_one, f"docs/plans/PL-00010-{slug_a}", f"docs/plans/PL-00011-{slug_b}"),
-        (allocation_two, f"docs/plans/PL-00099-{slug_a}", f"docs/plans/PL-00098-{slug_b}"),
+        (allocation_one, "docs/plans/PL-00010-part-a-topic.md", "docs/plans/PL-00011-part-b-topic.md"),
+        (allocation_two, "docs/plans/PL-00099-part-a-topic-renamed.md", "docs/plans/PL-00098-part-b-topic-renamed.md"),
     ):
         measured = {(path_a, _docid.h1_class(36)): 3, (path_b, _docid.h1_class(36)): 5}
         resolved = _docid.resolve_to_control_paths(measured, tree)
         assert resolved == {
-            (_docid.composite_control_key(control_path, slug_a), _docid.h1_class(36)): 3,
-            (_docid.composite_control_key(control_path, slug_b), _docid.h1_class(36)): 5,
+            (_docid.composite_control_key(control_path, ordinal_a), _docid.h1_class(36)): 3,
+            (_docid.composite_control_key(control_path, ordinal_b), _docid.h1_class(36)): 5,
         }
         assert _docid.disclosed_by_w37_11_record(resolved, record) == frozenset(
             {
-                (_docid.composite_control_key(control_path, slug_a), _docid.h1_class(36)),
-                (_docid.composite_control_key(control_path, slug_b), _docid.h1_class(36)),
+                (_docid.composite_control_key(control_path, ordinal_a), _docid.h1_class(36)),
+                (_docid.composite_control_key(control_path, ordinal_b), _docid.h1_class(36)),
             }
         )
         # RED shape without the fix: collapsing both parts onto the bare control path
@@ -465,7 +481,92 @@ def test_a_split_sources_two_parts_stay_distinct_under_two_allocations(
         )
         assert len(changes) == 1
         assert changes[0].fatal
-        assert changes[0].path == _docid.composite_control_key(control_path, slug_b)
+        assert changes[0].path == _docid.composite_control_key(control_path, ordinal_b)
+
+
+def test_a_split_sources_key_stays_stable_when_the_slug_rewrites_two_ids(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Condition 4 (deputy 2026-09-16 22:47:56 BST, sharpened by the lead's two
+    additions): two allocations that rewrite an id **inside** a part's own title AND
+    inside a part's own heading — the real shape, `plan-review-11-completing-the-
+    review-sequence-at-wk-968-s-close-before-wk-969-opens` (two `WK-` ids in one slug,
+    both allocation-dependent) and the closure-records `fr-`/`wf-` rows (an `FR-`/`WF-`
+    id embedded mid-slug, not at the leading prefix `part_slug` already stripped).
+
+    RED on the withdrawn `part_slug` mechanism (asserted directly below, so this test
+    fails loudly the day someone reintroduces it): the two allocations' slugs, with
+    only the LEADING id prefix stripped, are still two different strings, because both
+    embedded ids changed too. GREEN on D1b's `part_ordinal`: the control-side identity
+    never reads the migrated slug at all, so it is byte-identical across both
+    allocations.
+    """
+    control_path = "docs/audit/plan-reviews.md"
+    ordinal_9, ordinal_10, ordinal_11 = "8", "9", "10"  # matches the real record's shape
+
+    allocation_snapshot = tmp_path / "allocation_snapshot"
+    allocation_full_history = tmp_path / "allocation_full_history"
+    # Allocation 1 (snapshot, `f35cfe5`): the real basenames on `main`'s record today.
+    _write_redirects_csv(allocation_snapshot, [
+        (control_path, "docs/closures/CR-00209-plan-review-9-at-wk-968-s-close.md", ordinal_9),
+        (control_path, "docs/closures/CR-00210-plan-review-10-at-wk-968-s-second-close.md", ordinal_10),
+        (
+            control_path,
+            "docs/closures/CR-00215-plan-review-11-completing-the-review-sequence-at-"
+            "wk-968-s-close-before-wk-969-opens.md",
+            ordinal_11,
+        ),
+    ])
+    # Allocation 2 (full history): the real basenames the one-step test measured on
+    # `e6eb278`/`394a0d7` — every embedded `WK-` id renumbered, TWO of them inside the
+    # same slug for plan-review-11 (968->671 AND 969->672).
+    _write_redirects_csv(allocation_full_history, [
+        (control_path, "docs/closures/CR-00925-plan-review-9-at-wk-671-s-close.md", ordinal_9),
+        (control_path, "docs/closures/CR-00926-plan-review-10-at-wk-671-s-second-close.md", ordinal_10),
+        (
+            control_path,
+            "docs/closures/CR-00932-plan-review-11-completing-the-review-sequence-at-"
+            "wk-671-s-close-before-wk-672-opens.md",
+            ordinal_11,
+        ),
+    ])
+
+    slug_snapshot = "plan-review-11-completing-the-review-sequence-at-wk-968-s-close-before-wk-969-opens.md"
+    slug_full_history = (
+        "plan-review-11-completing-the-review-sequence-at-wk-671-s-close-before-wk-672-opens.md"
+    )
+    # RED on main's withdrawn mechanism: stripping only the leading id prefix (exactly
+    # what `part_slug` does) still leaves two DIFFERENT strings, because both embedded
+    # ids changed. This is the defect the one-step test caught on the real corpus.
+    assert _docid.part_slug(f"docs/closures/CR-00215-{slug_snapshot}") == slug_snapshot
+    assert _docid.part_slug(f"docs/closures/CR-00932-{slug_full_history}") == slug_full_history
+    assert slug_snapshot != slug_full_history  # <-- main's key changes with the allocation
+
+    # GREEN on D1b: `resolve_to_control_paths` never reads either slug.
+    cls = _docid.h1_class(32)
+    for tree, path_9, path_10, path_11 in (
+        (
+            allocation_snapshot,
+            "docs/closures/CR-00209-plan-review-9-at-wk-968-s-close.md",
+            "docs/closures/CR-00210-plan-review-10-at-wk-968-s-second-close.md",
+            f"docs/closures/CR-00215-{slug_snapshot}",
+        ),
+        (
+            allocation_full_history,
+            "docs/closures/CR-00925-plan-review-9-at-wk-671-s-close.md",
+            "docs/closures/CR-00926-plan-review-10-at-wk-671-s-second-close.md",
+            f"docs/closures/CR-00932-{slug_full_history}",
+        ),
+    ):
+        measured = {
+            (path_9, cls): 1, (path_10, cls): 1, (path_11, cls): 9,
+        }
+        resolved = _docid.resolve_to_control_paths(measured, tree)
+        assert resolved == {
+            (_docid.composite_control_key(control_path, ordinal_9), cls): 1,
+            (_docid.composite_control_key(control_path, ordinal_10), cls): 1,
+            (_docid.composite_control_key(control_path, ordinal_11), cls): 9,
+        }
 
 
 def test_a_merge_targets_key_is_deterministic_regardless_of_csv_row_order(

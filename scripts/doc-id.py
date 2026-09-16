@@ -704,7 +704,29 @@ def _rewrite_link_targets(repo_root: Path, renames: Iterable[tuple[str, str]]) -
 #: would be silently wrong for every other citing directory it happened to also match.
 #: `(g)`'s inverse and the class-4 split-body check both read this column to build a
 #: per-file merged inverse rather than the single flat one every other row still uses.
-_REDIRECTS_FIELDS: Final = ("old_id", "new_id", "old_path", "new_path", "citing_dir")
+#: `part_ordinal` (D1b, deputy 2026-09-16 22:47:56): the control-side identity of a split
+#: source's part, set only for a row whose `old_path` genuinely fans out to more than one
+#: `new_path` (a "the overwhelming majority" of rows leave it blank, same gating
+#: `composite_control_key` already applies to `part`). Withdraws D1's merged
+#: `part_slug` design — a slug built from the MIGRATED basename, which stays
+#: allocation-dependent whenever a citation *inside* the part's own title or heading gets
+#: rewritten by this same run (the real case: `plan-review-9-at-wk-968-s-close.md` under
+#: the snapshot allocation vs `plan-review-9-at-wk-671-s-close.md` under full history —
+#: the `WK-` number cited inside the heading, not the leading id prefix `part_slug`
+#: already stripped). `part_ordinal` is derived once, at the exact point each draft's
+#: `redirect_rows` row is built (`_control_side_part_ordinals` below), from data that
+#: cannot be touched by any later citation-rewrite pass: the 0-based rank of the part's
+#: own `_Draft.source_line_span` among its siblings — the splitter's own recorded
+#: position within the control file — or, only when a sibling records no span at all,
+#: the draft's own raw `title` (captured at discovery time, before `_sweep_title`
+#: produces the separate, rewritten copy `slug_title` uses for the filename — see the
+#: `slug_title = _sweep_title(d.title, token_map)` line below, which never mutates
+#: `d.title` itself). A duplicate raw title within one such fallback group is refused
+#: (`TokenMapCollisionError`) rather than guessed. **Nothing derived from `new_path` (the
+#: migrated tree) enters this value.**
+_REDIRECTS_FIELDS: Final = (
+    "old_id", "new_id", "old_path", "new_path", "citing_dir", "part_ordinal",
+)
 
 
 def _append_redirects(repo_root: Path, renames: Iterable[tuple[str, str]]) -> None:
@@ -6656,7 +6678,7 @@ def _check_redirect_rows_agree_on_every_old_id(rows: Iterable[dict[str, str]]) -
         seen[key] = new_id
 
 
-def _redirect_row_sort_key(row: dict[str, str]) -> tuple[str, str, str, str, str]:
+def _redirect_row_sort_key(row: dict[str, str]) -> tuple[str, str, str, str, str, str]:
     """Sort key for one `REDIRECTS.csv` row: `old_id` then `old_path`, per the
     dispatched follow-up ("row-order is non-deterministic across independent
     `migrate()` runs -- same rows, different order -- it should be sorted by `old_id`
@@ -6669,9 +6691,9 @@ def _redirect_row_sort_key(row: dict[str, str]) -> tuple[str, str, str, str, str
     independent runs that discover such a pair in different internal order would sort
     each pair's own order back in as a stable-sort artifact, which is exactly the
     non-determinism this sort exists to remove. Appending the remaining
-    `_REDIRECTS_FIELDS` columns (`new_id`, `new_path`, `citing_dir`) makes the key a
-    total order over the full row, so the two named fields still decide first while
-    every row still lands at one fixed position regardless of discovery order.
+    `_REDIRECTS_FIELDS` columns (`new_id`, `new_path`, `citing_dir`, `part_ordinal`) makes
+    the key a total order over the full row, so the two named fields still decide first
+    while every row still lands at one fixed position regardless of discovery order.
     """
     return (
         row.get("old_id", ""),
@@ -6679,6 +6701,7 @@ def _redirect_row_sort_key(row: dict[str, str]) -> tuple[str, str, str, str, str
         row.get("new_id", ""),
         row.get("new_path", ""),
         row.get("citing_dir", ""),
+        row.get("part_ordinal", ""),
     )
 
 
@@ -8044,6 +8067,90 @@ def _repoint_all_relative_links(
 # ---------------------------------------------------------------------------------------
 
 
+class SplitPartIdentityCollisionError(TokenMapCollisionError):
+    """A split source's parts could not be told apart by control-side data alone.
+
+    Raised only in the fallback case (no `source_line_span` recorded for at least one
+    part): two parts sharing the same file and the identical raw `title` text, with no
+    ordinal to break the tie. `TokenMapCollisionError`'s own subclass, not a bare
+    `RuntimeError`, so an existing `except TokenMapCollisionError` catch around
+    `migrate()` still sees it.
+    """
+
+
+def _control_side_part_ordinals(
+    drafts: Sequence[_Draft], root: Path, register_moved_to: str | None,
+) -> dict[int, str]:
+    """`id(draft) -> REDIRECTS.csv`'s `part_ordinal` cell, for every draft that is one
+    part of a split source (an `old_path` more than one draft shares).
+
+    D1b (deputy, 2026-09-16 22:47:56 BST): withdraws D1's merged `part_slug` design — a
+    slug built from the MIGRATED basename, still allocation-dependent whenever a
+    citation *inside* the part's own title or heading gets rewritten by this same run
+    (the real defect: `plan-review-9-at-wk-968-s-close.md` under the snapshot
+    allocation vs `plan-review-9-at-wk-671-s-close.md` under full history — the `WK-`
+    number cited *inside* the heading, not the leading id prefix `part_slug` already
+    stripped). Nothing here reads `d.new_path`'s basename or any id this run assigned;
+    every value comes from data fixed before this run's citation-rewrite pass ever
+    touches it:
+
+    1. **Preferred: the 0-based rank of `d.source_line_span` among its siblings.** Set at
+       discovery time directly from the control file's own text (`_line_span`, called by
+       every discovery function that can produce more than one draft per source) —
+       exactly "the splitter's own recorded position of the part within its control
+       file", never a title parsed for an embedded ordinal (a heading's own `N` in
+       `## Plan review N` is *content*, and two allocations are free to reorder or
+       renumber content the same discovery pass reads identically either way).
+    2. **Fallback: the draft's own raw `title`.** Only used for a sibling with no
+       recorded span. `d.title` is captured once, at discovery, from the control file's
+       text; the separate, rewritten `slug_title = _sweep_title(d.title, token_map)`
+       used to build the destination filename never mutates `d.title` itself (see that
+       assignment further down this function's caller), so this stays control-side too.
+       A duplicate raw title within one such fallback group is refused
+       (`SplitPartIdentityCollisionError`) rather than guessed — condition 1's "never
+       first-match" rule applied to this resolver's own write side.
+
+    Empty string for every draft whose `old_path` does not genuinely fan out (the
+    overwhelming majority) — `composite_control_key`'s existing gate on an empty `part`
+    is unchanged by this function.
+    """
+    groups: dict[str, list[_Draft]] = {}
+    for d in drafts:
+        old_path = d.was or ""
+        new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
+        if d.materialize == "register_row":
+            old_path, new_path = "docs/audit/register.md", (register_moved_to or "")
+        elif d.materialize == "requirement" and d.source_path is not None:
+            old_path = new_path = d.source_path.relative_to(root).as_posix()
+        elif d.materialize == "roadmap_row":
+            old_path = new_path = "docs/roadmap.md"
+        if old_path and new_path and old_path != new_path:
+            groups.setdefault(old_path, []).append(d)
+
+    ordinal_by_id: dict[int, str] = {}
+    for old_path, members in groups.items():
+        if len(members) <= 1:
+            continue
+        with_span = [m for m in members if m.source_line_span is not None]
+        without_span = [m for m in members if m.source_line_span is None]
+        with_span.sort(key=lambda m: m.source_line_span)
+        for rank, m in enumerate(with_span):
+            ordinal_by_id[id(m)] = str(rank)
+        seen_titles: dict[str, _Draft] = {}
+        for m in without_span:
+            prior = seen_titles.get(m.title)
+            if prior is not None:
+                raise SplitPartIdentityCollisionError(
+                    f"{old_path} splits into a part with no recorded source line span "
+                    f"and a title duplicated within the file ({m.title!r}) — the "
+                    "control-side part identity cannot tell these two parts apart "
+                    "without an ordinal to break the tie"
+                )
+            seen_titles[m.title] = m
+            ordinal_by_id[id(m)] = f"title:{m.title}"
+    return ordinal_by_id
+
+
 def migrate(root: Path) -> MigrateResult:
     """NT-0019 §4 steps 1-7 against `root` (a repository root, real or a fixture). Nothing
     outside `root` is read or written — no `--repo-root` argument reaches beyond the tree
@@ -8384,6 +8491,7 @@ def migrate(root: Path) -> MigrateResult:
     id_claims: dict[str, list[tuple[str, str]]] = {}
     redirect_rows: list[dict[str, str]] = []
     assigned: list[tuple[str, str]] = []
+    part_ordinal_by_draft = _control_side_part_ordinals(drafts, root, register_moved_to)
     for d in drafts:
         canon = _docid.canonical(d.prefix, d.number)
         assigned.append((d.old_token or "", canon))
@@ -8427,6 +8535,7 @@ def migrate(root: Path) -> MigrateResult:
                 "new_id": canon,
                 "old_path": old_path,
                 "new_path": new_path,
+                "part_ordinal": part_ordinal_by_draft.get(id(d), ""),
             }
         )
         # Task 4's wf-0n ruling, the inverse half: an alias's citation form is only
