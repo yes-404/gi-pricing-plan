@@ -3648,36 +3648,40 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # `MigrateResult.generated_paths` (Ruling 105 D3/#18 §1), keyed on
                          # the run's own generated-output list, never the literal path.
     "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
-    "h1": DISCLOSE,     # audit-docs.py: FAIL -> DISCLOSE, 2026-09-05 (W37-6 Checkpoint 1
-                         # box-end ruling PR). Checks 29/30/35 remain disclosed-and-never
-                         # -fatal (owner W37-10, Ruling 105 §B). Every other class was
-                         # measured at 948 failure(s) at this PR's base `f35cfe5`, per
-                         # `python3 scripts/audit-docs.py` on the migrated snapshot,
-                         # classified by check number: check 36=435, check 32=274,
-                         # check 1=235, check 5=3, check 2=1 (=948) — same on this PR's
-                         # own HEAD, since neither audit-docs.py nor the migration was
-                         # touched, only `_docverify.py`'s residue-governance check and
-                         # `docs/audit/w37-11-record.md`. Checks 1, 30, 32, 35 and 36
-                         # resolve every failure to a real file in the migrated tree's own
-                         # tracked-file set (`_h1_residue_by_file`'s resolution rule,
-                         # #760) and are filed per-file; checks 2, 5 and 29 carry no
-                         # colon-terminated leading token their message resolves to a
-                         # file (`FR-1187 referenced but never defined`, `ADR-1
-                         # referenced but no file exists`, a backtick-quoted finding id)
-                         # and are filed class-level under the sentinel path `(no file
-                         # named in message)` — 15 entries (check 2=1, check 5=3,
-                         # check 29=11), never claimed as per-file. All 8 classes (1, 2,
-                         # 5, 29, 30, 32, 35, 36) are filed in
-                         # `docs/audit/w37-11-record.md`; the box-end ruling closes (h1)
-                         # by DISCLOSE, not by collapse: `_h1_verdict` now returns
-                         # DISCLOSE when every non-disclosed-check hit is filed and
-                         # ceilinged there (`_residue_fully_governed`), per-class
-                         # disclosure with the ceiling underneath rather than a bare
-                         # "98.7%"/"1101"-style headline (that figure, from #760's own
-                         # per-file resolution proof, is quotable only as "measured,
-                         # every key resolves" — never as a structural guarantee; see
-                         # #760's own merge body for the still-open `` `was ``
-                         # misattribution defect this record does not paper over).
+    "h1": PASS,         # audit-docs.py: DISCLOSE -> PASS, D1b (deputy 2026-09-16
+                         # 22:47:56 BST; root cause measured by the deputy 00:4x BST).
+                         # Merged D1's `audit-docs.py` own `_partition_by_w37_11_record`
+                         # built its control-path reverse map from `_docid.
+                         # redirects_path_map`, documented "lossy by construction for a
+                         # fan-out source" (one `new_path` per `old_path`): for a genuine
+                         # split source (`docs/audit/plan-reviews.md`, 13 targets;
+                         # `docs/findings/register.md`, ~75 contributing old paths; the
+                         # multi-ruling files RL-00286/RL-00287/etc.) that map held only
+                         # one sibling, so the other siblings' residue never resolved to
+                         # any control key and was always counted (FAILED), never
+                         # disclosed, independent of `part_slug` vs `part_ordinal`. D1b's
+                         # reach fix (7f61f19: `_docid.resolve_keys_to_control_paths`,
+                         # sharing `_control_path_for` with `resolve_to_control_paths`)
+                         # closes that gap. **Set proof** (control run = a1f587a's own
+                         # code and record, same snapshot allocation as D1b's, evidence
+                         # in `/tmp/d1b-ctl-audit.log` / `/tmp/d1b-diag-audit.log`):
+                         # control's 115 FAILED bullets, UNIONED with control's 859
+                         # DISCLOSED bullets, equal D1b's 974 DISCLOSED bullets exactly —
+                         # `diff` empty (`/tmp/ctl_failed.txt` + `/tmp/ctl_disc.txt` ==
+                         # `/tmp/diag_disc.txt`). No new content, no new check, no
+                         # ceiling lowered: the identical 115 residue lines that were
+                         # always governed and always within their recorded ceiling move
+                         # from miscounted to correctly disclosed. `audit-docs.py` itself
+                         # now exits 0 (`/tmp/d1b-diag-audit.log`: "All checks passed"),
+                         # so (h1) is PASS, not DISCLOSE — every governed hit resolves
+                         # and every resolved hit clears its ceiling. The 164 PROGRESSED
+                         # lines `migrate --verify` prints for this change are `_docid.
+                         # check_residue_ceiling`'s own (path, cls) comparison, computed
+                         # identically on both a1f587a and 7f61f19 (`_docverify.py`,
+                         # `_docid.check_residue_ceiling` — both byte-identical between
+                         # the two SHAs) and printed only because THIS row's own verdict
+                         # moved (`_set_change_block`'s gate) — a correction merged D1's
+                         # own bug hid rather than a new regression.
     "h2": DISCLOSE,     # zero-denominator probes now clear; only OVER-EXEMPT fires, which
                          # Ruling 105 D3 disclosed rather than failed (2026-09-03, task 14)
     "h3": PASS,         # req-coverage.py: 533 requirements on both trees, exit 0 on the

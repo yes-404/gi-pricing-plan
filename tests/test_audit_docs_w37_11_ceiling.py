@@ -675,3 +675,105 @@ def test_audit_docs_refuses_an_ambiguous_record_under_its_own_heading(
     monkeypatch.setattr(audit_docs._docid, "load_w37_11_record", lambda _root: colliding)
     with pytest.raises(audit_docs._docid.AmbiguousResidueKeyError):
         audit_docs._partition_by_w37_11_record()
+
+
+# ---------------------------------------------------------------------------------------
+# D1b, the `_partition_by_w37_11_record` reach fix (deputy 2026-09-16 22:47:56 BST,
+# root-caused by the deputy 2026-09-17 00:4x BST). Merged D1's `_partition_by_w37_11_
+# record` built its control-path reverse map from `_docid.redirects_path_map`, whose own
+# docstring already says it is "lossy by construction for a fan-out source" (one
+# `new_path` per `old_path`, by plain-dict construction: the last row wins, every other
+# sibling is simply absent). For a genuine split source this meant every migrated file
+# but one never resolved to a control path at all and was always counted as FAILED,
+# independent of `part_slug` vs `part_ordinal` — the real-corpus set proof: control's 115
+# FAILED bullets, unioned with control's 859 DISCLOSED bullets, equal D1b's 974 DISCLOSED
+# bullets exactly (`diff` empty). D1b's fix reads the SAME record through
+# `resolve_keys_to_control_paths` instead.
+# ---------------------------------------------------------------------------------------
+
+
+def test_a_split_sources_second_sibling_is_lost_by_the_withdrawn_reverse_map(
+    tmp_path: pathlib.Path,
+) -> None:
+    """RED on merged D1 (764f341): `_docid.redirects_path_map` (unchanged by D1b, still
+    present, still documented lossy) inverted the way `_partition_by_w37_11_record` used
+    to — one entry per `old_path` — loses every fan-out sibling but the last one written.
+    GREEN on D1b: `resolve_keys_to_control_paths` resolves every sibling correctly.
+    """
+    control_path = "docs/plans/2026-09-01-two-part-plan.md"
+    path_a = "docs/plans/PL-00010-part-a-topic.md"
+    path_b = "docs/plans/PL-00011-part-b-topic.md"
+    _write_redirects_csv(tmp_path, [(control_path, path_a, "0"), (control_path, path_b, "1")])
+
+    # RED: merged D1's own reach mechanism, reconstructed verbatim from its own removed
+    # lines (`_docid.redirects_path_map` itself is untouched by D1b — this is exactly
+    # what `_partition_by_w37_11_record` built and inverted before commit 7f61f19).
+    old_reverse = {
+        new: old for old, new in _docid.redirects_path_map(tmp_path).items()
+    }
+    resolved_old = {
+        path_a: old_reverse.get(path_a, path_a),
+        path_b: old_reverse.get(path_b, path_b),
+    }
+    # Exactly one sibling keeps its control path; the other is lost to its own raw
+    # migrated path — never equal to `control_path`, so it can never match a record row
+    # keyed by the control path. This is the RED: the withdrawn mechanism cannot resolve
+    # both siblings, whichever one `redirects_path_map`'s single-slot dict happened to
+    # keep.
+    lost = [p for p, resolved in resolved_old.items() if resolved != control_path]
+    assert len(lost) == 1, (
+        "expected the withdrawn reverse map to lose exactly one sibling: "
+        f"{resolved_old}"
+    )
+
+    # GREEN: D1b's own reach fix resolves both, each to its own distinct part key —
+    # never collapsed onto the bare control path (that would be the loop-1 bug this
+    # module's earlier tests already cover).
+    resolved_new = _docid.resolve_keys_to_control_paths(
+        {(path_a, _docid.h1_class(32)), (path_b, _docid.h1_class(32))}, tmp_path,
+    )
+    assert resolved_new[(path_a, _docid.h1_class(32))] == (
+        _docid.composite_control_key(control_path, "0"), _docid.h1_class(32),
+    )
+    assert resolved_new[(path_b, _docid.h1_class(32))] == (
+        _docid.composite_control_key(control_path, "1"), _docid.h1_class(32),
+    )
+
+
+def test_a_split_part_lost_by_the_old_reach_is_disclosed_under_the_new_one(
+    audit_docs: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
+    """The end-to-end shape: a residue line on a split part that merged D1's own
+    `_partition_by_w37_11_record` would have counted as FAILED (its control key never
+    resolved) is DISCLOSED under D1b's fix, because the record already governs it at its
+    real, control-side key.
+    """
+    control_path = "docs/plans/2026-09-01-two-part-plan.md"
+    path_a = "docs/plans/PL-00010-part-a-topic.md"
+    path_b = "docs/plans/PL-00011-part-b-topic.md"
+    _write_redirects_csv(tmp_path, [(control_path, path_a, "0"), (control_path, path_b, "1")])
+
+    record = (
+        _docid.ResidueEntry(
+            path=_docid.composite_control_key(control_path, "0"), cls=_docid.h1_class(32),
+            count=1, reason="part A's own governed residue", owner="test",
+        ),
+        _docid.ResidueEntry(
+            path=_docid.composite_control_key(control_path, "1"), cls=_docid.h1_class(32),
+            count=1, reason="part B's own governed residue", owner="test",
+        ),
+    )
+    failures = [
+        f"check 32: {path_a}:1: id does not resolve in docs/INDEX.md",
+        f"check 32: {path_b}:1: id does not resolve in docs/INDEX.md",
+    ]
+    monkeypatch.setattr(audit_docs, "REPO", tmp_path)
+    monkeypatch.setattr(audit_docs, "failures", failures)
+    monkeypatch.setattr(audit_docs._docid, "load_w37_11_record", lambda _root: record)
+    monkeypatch.setattr(
+        audit_docs._file_census, "git_ls_files", lambda _root: {path_a, path_b},
+    )
+
+    counted, disclosed = audit_docs._partition_by_w37_11_record()
+    assert counted == []
+    assert sorted(disclosed) == sorted(failures)
