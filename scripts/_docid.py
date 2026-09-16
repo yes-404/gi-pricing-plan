@@ -16,9 +16,10 @@ standard does not use.
 
 from __future__ import annotations
 
+import csv
 import re
 import tomllib
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -1175,3 +1176,555 @@ def phase_template_fields(templates_dir: Path) -> frozenset[str]:
             "heading"
         )
     return frozenset(fields)
+
+
+# ---------------------------------------------------------------------------------------
+# The W37-11 residue ceiling — one implementation, two readers.
+#
+# `_docverify.py` (the `doc-id.py migrate --verify` instrument) and `audit-docs.py` (the
+# reader CI actually runs) both have to honour the governed record at
+# `W37_11_RECORD_PATH`. Until 2026-09-06 only the first of them did: `audit-docs.py`'s
+# whole knowledge of the record was dropping that one file from its own corpus, so every
+# governed failure the record ceilings still counted into its own `FAILED(n)` tally, and
+# the `docs` gate was red on every migrated tree for the whole of W37-11's duration. This
+# block is the shared half, moved here rather than copied: `_docid` imports stdlib only,
+# and both readers already import it (`_docverify` by `import _docid`, `audit-docs.py` by
+# its `_load_module` idiom), so neither a cycle nor a second definition is needed.
+#
+# Two definitions of one governance rule are two rules
+# (`docs/notes/0003-duplicated-status-goes-stale.md` — the copy is what goes stale), which
+# is why the class registry below is derived from each extractor's own construction rather
+# than restated: every label an extractor can emit is built by one of the constructors
+# here, and validated against those same constructors.
+# ---------------------------------------------------------------------------------------
+
+#: Every cause label `_docverify._residue_cause` can return, owned here so the class
+#: registry and the extractor that produces the labels read one source. The *classifying*
+#: — which cause a file's residue has — stays in `_docverify`, where the patterns that
+#: decide it live; only the vocabulary is shared, because `audit-docs.py` has to validate a
+#: `cls` cell without owning row (g)'s patterns.
+CAUSE_OTHER: Final = "other"
+CAUSE_1_FOREIGN_FRONTMATTER: Final = "cause1-foreign-frontmatter"
+CAUSE_2A_RANGE_CITATION: Final = "cause2a-range-citation"
+CAUSE_2B_NOTES_STUB: Final = "cause2b-notes-stub-relative-link"
+CAUSE_3_LEGACY_PATH_CITATION: Final = "cause3-legacy-path-citation"
+CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE: Final = "cause4-compound-token-adjacent-uppercase"
+CAUSE_5_FIXTURE_CORPUS: Final = "cause5-fixture-corpus-old-form-ids"
+CAUSE_6_PYCACHE: Final = "cause6-pycache-build-artifact"
+CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE: Final = (
+    "new-frontmatter-stamp-no-move (unassigned — reported, not investigated)"
+)
+CAUSE_SLASH_COMPOUND_CITATION: Final = (
+    "slash-compound-citation (unassigned — reported, not investigated)"
+)
+CAUSE_UNMAPPED_WORK_SLICE_KEY: Final = (
+    "unmapped-work-slice-key (named elsewhere, reported here by shape)"
+)
+
+#: Collected once from the constants above, never hand-listed a second time.
+G2_RESIDUE_CAUSE_LABELS: Final[frozenset[str]] = frozenset({
+    CAUSE_OTHER,
+    CAUSE_1_FOREIGN_FRONTMATTER,
+    CAUSE_2A_RANGE_CITATION,
+    CAUSE_2B_NOTES_STUB,
+    CAUSE_3_LEGACY_PATH_CITATION,
+    CAUSE_4_COMPOUND_TOKEN_ADJACENT_UPPERCASE,
+    CAUSE_5_FIXTURE_CORPUS,
+    CAUSE_6_PYCACHE,
+    CAUSE_NEW_FRONTMATTER_STAMP_NO_MOVE,
+    CAUSE_SLASH_COMPOUND_CITATION,
+    CAUSE_UNMAPPED_WORK_SLICE_KEY,
+})
+
+_G2_CLASS_PREFIX: Final = "g2-"
+
+
+def g2_class(cause: str) -> str:
+    """Row (g)'s `cls` for one cause label — the single constructor
+    `known_w37_11_class` validates against, so a produced class and an accepted class
+    cannot come apart.
+    """
+    return f"{_G2_CLASS_PREFIX}{cause}"
+
+
+def d_row_class(index: int) -> str:
+    """Row (d)'s `cls` for the `index`-th `LEGACY_FORM_PATTERNS` alternative (1-based)."""
+    return f"d{index}"
+
+
+def h1_class(check_no: int | str) -> str:
+    """Row (h1)'s `cls` for one `audit-docs.py` check number.
+
+    Tagged rather than bare so a row-(d) class and an h1 check can never collide on the
+    same key by coincidence.
+    """
+    return f"h1-check{check_no}"
+
+
+#: `audit-docs.py`'s check numbers are unbounded, so this is a shape predicate over
+#: `h1_class`'s own output rather than a hand-listed set that goes stale the moment a
+#: check is added.
+H1_CLASS_RE: Final = re.compile(r"^h1-check\d+$")
+
+#: Built from `LEGACY_FORM_PATTERNS` itself, so the set grows with the table and never
+#: needs a second edit here.
+D_ROW_CLASSES: Final[frozenset[str]] = frozenset(
+    d_row_class(i) for i in range(1, len(LEGACY_FORM_PATTERNS) + 1)
+)
+
+
+def known_w37_11_class(cls: str) -> bool:
+    """True iff `cls` is a class one of the three extractors can actually produce.
+
+    Derived from each extractor's own constructor above rather than restated as a fourth,
+    independent list — the identical defect this registry exists to catch, one level up.
+    """
+    if cls in D_ROW_CLASSES:
+        return True
+    if cls.startswith(_G2_CLASS_PREFIX):
+        return cls[len(_G2_CLASS_PREFIX):] in G2_RESIDUE_CAUSE_LABELS
+    return bool(H1_CLASS_RE.match(cls))
+
+
+#: A failure message shaped `check N: <token>:` names a file in `<token>`, the shape the
+#: overwhelming majority of `audit-docs.py`'s own `fail()` call sites already use. Not
+#: universal: a message with no natural file subject does not match, and falls to
+#: `H1_UNLOCATED_PATH` rather than being dropped.
+H1_FAILURE_LOCATION_RE: Final = re.compile(r"^check (\d+): ([^\s:]+):")
+
+#: A failure this predicate cannot place at a real file still belongs to *some* check, and
+#: pinning it under a class-level ceiling (this sentinel `path`, the real `cls`) is better
+#: than dropping it: a regression inside a pathless class is then loud too, never silent
+#: because no single file could be named.
+H1_UNLOCATED_PATH: Final = "(no file named in message)"
+
+H1_CHECK_NUMBER_RE: Final = re.compile(r"^check (\d+):")
+
+#: The one sentinel `path` a re-key writes for a W37-11 record row whose original
+#: (migrated-path-keyed) entry could not be resolved back to a control path — deliberately
+#: a single named constant, never a per-row hand-typed string, so every unresolved row is
+#: found by symbol rather than by grepping for prose. This is NOT `H1_UNLOCATED_PATH`
+#: (which means "the failure message itself named no file") — it means "this row's
+#: *original* path is known, but no REDIRECTS.csv this project can still produce maps it
+#: back to a control path". A row keyed here governs nothing it can ever match: any real
+#: hit in the same `cls` at a real path is a hit `check_residue_ceiling` finds in "a file
+#: the record does not name", which is fatal `RESIDUE_REGRESSION` — the record cannot
+#: silently swallow that residue simply because it could not be re-keyed, and it does not:
+#: it only stops naming the one file it can no longer identify, and the general mechanism
+#: still catches every real occurrence loudly. Re-deriving these rows' true control paths
+#: (by content, not by REDIRECTS.csv reconstruction) is out of this module's scope.
+CONTROL_PATH_UNRESOLVED: Final = "(control path unresolved at re-key — see w37-11-record.md header)"
+
+
+def residue_key_for_failure(
+    msg: str, known_files: Collection[str],
+) -> tuple[str, str] | None:
+    """The `(path, cls)` W37-11 key for one `audit-docs.py` failure message, or `None`
+    when the message carries no check number at all and so has nothing to key on.
+
+    **Resolution over shape, deliberately.** A shape rule ("looks like a path") is fitted
+    to today's messages and survives only until a future message happens to look
+    path-shaped without being one; resolution is a rule the next unforeseen message cannot
+    survive, because a token either names a file in the caller's own corpus or it does
+    not. `known_files` is that corpus, and it differs legitimately between the two callers
+    — the instrument resolves against the migrated snapshot's tracked files, `audit-docs`
+    against the repository it is auditing — which is why it is a parameter rather than
+    something this function reads for itself.
+    """
+    located = H1_FAILURE_LOCATION_RE.match(msg)
+    if located and located.group(2) in known_files:
+        return located.group(2), h1_class(located.group(1))
+    numbered = H1_CHECK_NUMBER_RE.match(msg)
+    if not numbered:
+        return None
+    return H1_UNLOCATED_PATH, h1_class(numbered.group(1))
+
+
+class InvalidResidueClassError(RuntimeError):
+    """A W37-11 record row names a `cls` no extractor can produce.
+
+    Such an entry governs nothing — every reader keys on the real `cls`, never finds it,
+    and silently reads the entry as 0 forever — while the real residue surfaces under its
+    true class in files the record does not name. A double failure that produces no error
+    and no red, only a governance table that reads clean and is not. This is why an
+    unknown `cls` is fatal at load rather than skipped like a malformed row (wrong cell
+    count, a non-integer count): those degrade to "not yet governed", the same as the file
+    not existing; an unknown `cls` degrades to "governs nothing, forever, silently", which
+    `load_w37_11_record`'s own leniency rule was never meant to cover.
+    """
+
+
+RESIDUE_REGRESSION: Final = "REGRESSION (residue exceeds W37-11 ceiling)"
+RESIDUE_PROGRESSED: Final = "PROGRESSED (W37-11 record can shrink)"
+
+
+@dataclass(frozen=True)
+class ResidueEntry:
+    """One row of the governed W37-11 record: a file's disclosed residue for one ruled row
+    or check, carried with the reason it resisted the general mechanism and who owns it.
+
+    `cls` names which ruled row or `audit-docs.py` check this entry's count belongs to,
+    not a hit-type label. Two entries may share a `path` with different `cls` (a file
+    resisting more than one ruled row) or share a `cls` with different `path`s (a row's
+    residue spread across several files) — the pair is the key.
+    """
+
+    path: str
+    cls: str
+    count: int
+    reason: str
+    owner: str = ""
+
+
+def load_w37_11_record(tree_root: Path) -> tuple[ResidueEntry, ...]:
+    """The governed per-(file, class) residue ceiling, or empty when the record has no
+    rows yet (or does not exist) — never fatal, and never a reason to invent one here.
+
+    Population is not a reader's to decide — every path, class, count and reason is the
+    deputy's, filed into the record directly; this function only reads it. A malformed
+    data row (wrong cell count, a non-integer `count`) is skipped rather than raised: a
+    record a reader cannot parse must never crash the run that reads it, and it degrades
+    to "not yet governed" for that row, the same as the file not existing at all.
+
+    A row whose `cls` is not one `known_w37_11_class` recognises is different: it does not
+    degrade quietly, it raises `InvalidResidueClassError`. See that class's own docstring
+    for why silence is the wrong failure mode for that case specifically.
+
+    `tree_root` is the root of the tree whose record is to be read — for the `--verify`
+    instrument the archived snapshot of the ref under verification, never the mutable
+    working checkout; for `audit-docs.py` the repository root it is auditing.
+    """
+    record = tree_root / W37_11_RECORD_PATH
+    try:
+        text = record.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ()
+    entries: list[ResidueEntry] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line.startswith("|") or not line.endswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) != 5 or cells == ["path", "cls", "count", "reason", "owner"]:
+            continue
+        if set(cells[0]) <= {"-", " "}:  # the `| --- | --- | ... |` separator row
+            continue
+        path, cls, count_cell, reason, owner = cells
+        if not path or not cls or not count_cell.isdigit():
+            continue
+        if not known_w37_11_class(cls):
+            raise InvalidResidueClassError(
+                f"{record}: {cls!r} is not a class any extractor produces (path {path!r})"
+                " — a hand-typed label governs nothing; see InvalidResidueClassError's own"
+                " docstring"
+            )
+        entries.append(ResidueEntry(
+            path=path, cls=cls, count=int(count_cell), reason=reason, owner=owner,
+        ))
+    return tuple(entries)
+
+
+@dataclass(frozen=True)
+class ResidueChange:
+    """One per-(file, class) movement the W37-11 ceiling found, fatal or not."""
+
+    path: str
+    cls: str
+    kind: str
+    detail: str
+
+    @property
+    def fatal(self) -> bool:
+        return self.kind == RESIDUE_REGRESSION
+
+
+class AmbiguousResidueKeyError(RuntimeError):
+    """More than one W37-11 record row shares the identical `(path, cls)` key.
+
+    Never resolved by first-match — the dict comprehension `{(e.path, e.cls): e.count for
+    e in record}` this replaces would silently keep whichever row iteration happened to
+    visit last and discard the rest, which is exactly the defect loop 1 found: a split
+    source's several migrated files, once collapsed to one control path without
+    `part_slug`, landed several distinct rows on one key and the ceiling comparison
+    measured either a false `RESIDUE_REGRESSION` (the surviving row's ceiling too low for
+    the combined residue) or a false `RESIDUE_PROGRESSED` (a discarded row's own residue
+    read as having vanished). `build_ceiling` below raises instead, naming every
+    colliding row, so the fix for a NEW collision the resolver does not yet disambiguate
+    is loud rather than a second silent merge.
+    """
+
+
+def build_ceiling(
+    record: Sequence[ResidueEntry],
+) -> Mapping[tuple[str, str], int]:
+    """The governed `(path, cls) -> count` ceiling `check_residue_ceiling` and
+    `disclosed_by_w37_11_record` both compare against — one builder, so a future second
+    inline `{(e.path, e.cls): e.count for e in record}` cannot silently reintroduce the
+    same first-match defect `AmbiguousResidueKeyError` exists to catch.
+    """
+    by_key: dict[tuple[str, str], list[ResidueEntry]] = {}
+    for entry in record:
+        by_key.setdefault((entry.path, entry.cls), []).append(entry)
+    ambiguous = {key: entries for key, entries in by_key.items() if len(entries) > 1}
+    if ambiguous:
+        candidates = "; ".join(
+            f"{path!r} / {cls!r}: {len(entries)} row(s), count(s) "
+            f"{[e.count for e in entries]}"
+            for (path, cls), entries in ambiguous.items()
+        )
+        raise AmbiguousResidueKeyError(
+            f"{len(ambiguous)} (path, cls) key(s) name more than one W37-11 record row "
+            f"— never resolved by first-match: {candidates}"
+        )
+    return {key: entries[0].count for key, entries in by_key.items()}
+
+
+def check_residue_ceiling(
+    measured: Mapping[tuple[str, str], int],
+    record: Sequence[ResidueEntry],
+) -> tuple[ResidueChange, ...]:
+    """Compare one run's per-(file, class) residue against the governed W37-11 ceiling.
+
+    Three outcomes:
+
+    * a hit in a file the record does not name, for a `cls` the record DOES govern
+      (appears against at least one other file) → fatal `RESIDUE_REGRESSION` — a file the
+      record never named.
+    * a file's residual above its recorded count → fatal `RESIDUE_REGRESSION` — a
+      regression into a ruled row.
+    * a recorded (file, class) now measuring zero → non-fatal `RESIDUE_PROGRESSED`; the
+      record can shrink, and a shrink is never itself a failure demanding a table edit.
+
+    A `cls` absent from the record entirely is ungoverned and produces no change either
+    way — the ceiling only ever fires for a `cls` the record already names at least once,
+    so wiring a row's measurement in ahead of the record gaining its first entry for that
+    `cls` cannot manufacture a false regression.
+    """
+    governed_classes = {entry.cls for entry in record}
+    ceiling = build_ceiling(record)
+    changes: list[ResidueChange] = []
+    for (path, cls), count in measured.items():
+        if cls not in governed_classes or count <= 0:
+            continue
+        limit = ceiling.get((path, cls))
+        if limit is None:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_REGRESSION,
+                f"{count} hit(s) in a file the W37-11 record does not name for {cls!r}",
+            ))
+        elif count > limit:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_REGRESSION,
+                f"{count} hit(s) exceeds the W37-11 record's ceiling of {limit} for "
+                f"{cls!r}",
+            ))
+    for (path, cls), limit in ceiling.items():
+        if limit > 0 and measured.get((path, cls), 0) == 0:
+            changes.append(ResidueChange(
+                path, cls, RESIDUE_PROGRESSED,
+                f"the W37-11 record's ceiling of {limit} for {cls!r} now measures 0 at "
+                f"{path!r} — the record can shrink",
+            ))
+    return tuple(changes)
+
+
+def w37_11_disclosed_header(count: int) -> str:
+    """The header `audit-docs.py` prints above the failures the W37-11 record ceilings.
+
+    A named header, matching `W37_11_DISCLOSED_HEADER_RE` below, because a disclosed
+    failure must stay *visible* while ceasing to be *counted*: the ceiling exists to hold
+    a known residue still, not to hide it. Constructor and pattern live together so the
+    line one reader writes and the line the other reader parses cannot drift apart.
+    """
+    return f"DISCLOSED ({count}, at or under the W37-11 residue ceiling):"
+
+
+#: The counterpart of `w37_11_disclosed_header` — `_docverify._h1_residue_by_file` scans
+#: from whichever of this block and the `FAILED (n)` block comes first, so that row (h1)
+#: keeps measuring the residue that *exists* even once `audit-docs.py` has stopped counting
+#: the disclosed part of it. Measuring only the counted half would make every ceilinged
+#: entry read as 0 and report `RESIDUE_PROGRESSED` ("the record can shrink") for residue
+#: that has not moved at all — the ceiling erasing the measurement it exists to bound.
+W37_11_DISCLOSED_HEADER_RE: Final = re.compile(
+    r"^DISCLOSED \(\d+, at or under the W37-11 residue ceiling\):$", re.MULTILINE
+)
+
+
+def disclosed_by_w37_11_record(
+    measured: Mapping[tuple[str, str], int], record: Sequence[ResidueEntry],
+) -> frozenset[tuple[str, str]]:
+    """The `(path, cls)` keys whose whole measured population is at or under its recorded
+    ceiling, and which a reader may therefore disclose instead of counting as a failure.
+
+    A key the record does not name is absent, and so is a key measuring **above** its
+    ceiling: over-ceiling "fails as today", in full, rather than being partly disclosed
+    down to the recorded number. Disclosing the first `limit` of `limit + 1` hits would
+    report a ceiling that is still being honoured at the exact moment it stopped being —
+    the record's whole purpose is to make that moment loud.
+    """
+    ceiling = build_ceiling(record)
+    return frozenset(
+        key
+        for key, count in measured.items()
+        if key in ceiling and count <= ceiling[key]
+    )
+
+
+# ---------------------------------------------------------------------------------------
+# The control-path resolver — the record is keyed by control path, not by migrated path.
+#
+# W37-6 handover 2026-09-06 §3 item 5 / to-lead.md 2026-09-06 10:14:55: a migrated path
+# depends on the id-allocation `doc-id.py migrate` computed for the run that produced it,
+# and that allocation is a fact about the RUN, not about the file — PR-A changes it (a
+# one-commit snapshot's `date.today()` fallback versus real git history), and even two runs
+# of the same buggy allocation on the same ref are not guaranteed to agree (verified
+# 2026-09-16: `doc-id.py migrate --verify --ref f35cfe5` run today allocates
+# `docs/plans/PL-00031-...`; the governed record, populated from the identical ref's
+# `--verify` output on 2026-09-05, cites `docs/plans/PL-00132-...` for the same file). A
+# key built from a migrated path is therefore keyed to one run's coordinate system and
+# stops resolving the moment a different run's allocation is read against it.
+#
+# The control path — the file's own pre-migration path — has no such dependency: it is a
+# fact about the file, stable across every allocation. So the record's own `path` column
+# is the CONTROL path, and a reader resolves it against whichever tree it is reading by
+# following that tree's own `docs/REDIRECTS.csv` — the map that tree's own migration run
+# produced, correct for that run's allocation by construction, never a second, independent
+# derivation of "where did this file end up".
+# ---------------------------------------------------------------------------------------
+
+#: `docs/REDIRECTS.csv`'s own column name for a moved file's post-migration path — kept as
+#: a symbol so nothing here hand-repeats the literal `_write_redirects` in `doc-id.py`
+#: owns.
+_REDIRECTS_OLD_PATH_COLUMN: Final = "old_path"
+_REDIRECTS_NEW_PATH_COLUMN: Final = "new_path"
+
+#: A migrated basename's own id prefix (`PL-00132-`, `RL-00225-`, …) — stripped to recover
+#: `part_slug` below, the content-derived remainder that survives a change of id
+#: allocation. Deliberately the same shape `check_slug_uniqueness2.py` (PR-D1's own
+#: verification script, not shipped) used to prove 0 collisions among 365 real moves.
+_MIGRATED_ID_PREFIX_RE: Final = re.compile(r"^[A-Z]+-\d+-")
+
+
+def part_slug(migrated_path: str) -> str:
+    """The migrated basename of `migrated_path`, with its id prefix stripped.
+
+    Content-derived, not allocation-derived: two different ids can be assigned to the
+    same split part across two allocations, but the slug — built from the split's own
+    heading/content, the same way every migrated filename is — does not depend on which
+    id it received. Used only to disambiguate a control path that fans out to more than
+    one migrated file (`resolve_to_control_paths`'s own fan-out map); a path with no
+    prefix (never migrated, or not itself the target of a move) returns unchanged, which
+    is harmless since callers only consult this for a genuine fan-out source.
+    """
+    return _MIGRATED_ID_PREFIX_RE.sub("", Path(migrated_path).name)
+
+
+def composite_control_key(control_path: str, part: str) -> str:
+    """The record's `path` cell for one `(control_path, part)` pair.
+
+    `ResidueEntry.path` stays a single string column — no schema change to the governed
+    table — so a fan-out source's several parts are told apart by suffixing the slug onto
+    the control path, `#`-separated (a character no path in this corpus carries). `part`
+    is empty for every control path that resolves to exactly one migrated file (the
+    overwhelming majority), so this is the identity there and the record is unaffected.
+    """
+    return f"{control_path}#{part}" if part else control_path
+
+
+def redirects_path_map(tree_root: Path) -> Mapping[str, str]:
+    """`old_path -> new_path` from `tree_root`'s own `docs/REDIRECTS.csv`, every row
+    naming a move (a same-path `old_path == new_path` token-rename row maps to itself,
+    which `resolve_to_control_paths` below needs to be a no-op for exactly the same reason
+    `_docverify.rows_d`'s own path-alternative scan excludes it: nothing moved).
+
+    **Lossy by construction for a fan-out source** (one `old_path`, several `new_path`s —
+    a split source): this dict can only hold one `new_path` per `old_path`, so it is never
+    used to invert a measurement — `resolve_to_control_paths` below builds its own
+    new-path-keyed reverse map (never lossy, since `new_path` is unique per row) plus a
+    fan-out count, in one pass, rather than composing this function with a second parse.
+    Kept and still used by callers that only need "the one path this old_path moved to"
+    for a non-split source (e.g. row (d)'s own move-detection, which excludes split
+    sources by `_docid.is_split_source_index` already).
+
+    Empty, never fatal, when `tree_root` has no `docs/REDIRECTS.csv` yet — a tree that has
+    not been migrated (every real checkout of `main` until W37-6's migration lands) simply
+    resolves every path to itself; `resolve_to_control_paths` below is then the identity.
+    """
+    text = _read_text_or_none(tree_root / "docs" / "REDIRECTS.csv")
+    if text is None:
+        return {}
+    result: dict[str, str] = {}
+    for row in csv.DictReader(text.splitlines()):
+        old_path = row.get(_REDIRECTS_OLD_PATH_COLUMN) or ""
+        new_path = row.get(_REDIRECTS_NEW_PATH_COLUMN) or ""
+        if old_path and new_path:
+            result[old_path] = new_path
+    return result
+
+
+def resolve_to_control_paths(
+    measured: Mapping[tuple[str, str], int], tree_root: Path,
+) -> Mapping[tuple[str, str], int]:
+    """Re-key `measured`'s `(path, cls)` pairs from `tree_root`'s own migrated paths to
+    their control (pre-migration) paths, via that tree's own `docs/REDIRECTS.csv`.
+
+    This is the one place a measurement crosses from "this run's coordinate system" into
+    the record's — every caller that builds a `measured` mapping over a migrated tree
+    (`_docverify.rows_d`, `_docverify._h1_residue_by_file`, `audit-docs.py`'s own
+    W37-11 partition) must pass its result through here before comparing against
+    `load_w37_11_record`'s rows; a path this tree's REDIRECTS.csv does not mention was not
+    moved by this run's migration, so its control path is itself — this also covers the
+    h1 class-level sentinel path (`H1_UNLOCATED_PATH`), which names no real file and so
+    has no redirect row either.
+
+    **A control path is not always a unique key — in either direction.**
+
+    A **split** source (`old_path` with more than one distinct `new_path` — e.g. one plan
+    splitting into several rulings) produces several migrated files that all resolve to
+    the identical control path; collapsing them to `(control_path, cls)` alone silently
+    merges their otherwise-distinct residue (found the hard way: the first re-key did
+    exactly this, and the merged count either exceeded every governed ceiling — a false
+    `RESIDUE_REGRESSION` — or overwrote all but one row's ceiling, one control path
+    colliding with one case-file — a false `RESIDUE_PROGRESSED` `SET CHANGE`). So: for a
+    fan-out control path, the key gains `part_slug`'s content-derived slug
+    (`composite_control_key`); for every other path (the overwhelming majority) `part` is
+    empty and the key is the plain control path, unchanged from before this fan-out
+    handling existed.
+
+    A **merge** target (`new_path` fed by more than one distinct `old_path` — real
+    example: `docs/findings/register.md` <- both `docs/audit/register.md` and
+    `docs/audit/phases/1b/register.md`) is the opposite shape, and there is no slug that
+    resolves it: a citation found in the merged file cannot be attributed to one of its
+    several sources from its path alone, and `csv.DictReader`'s row order is not a
+    property of the *content*, so picking "whichever `old_path` this row happened to name"
+    would let the same migrated file resolve to a *different* control path depending on
+    row order alone — never-first-matches (deputy's condition, loop 1) forbids exactly
+    that guess. A merge target is therefore never added to the reverse map at all, and
+    resolves to **itself** — deterministic regardless of the CSV's row order, and correct
+    because a merge target's own path does not depend on the numeric id allocation this
+    whole module exists to be independent of (a file `doc-id.py` merges into keeps a fixed,
+    non-sequential name; nothing here defends a merge target that DID get an allocated id,
+    which the corpus does not currently contain).
+    """
+    fan_out: dict[str, set[str]] = {}
+    fan_in: dict[str, set[str]] = {}
+    text = _read_text_or_none(tree_root / "docs" / "REDIRECTS.csv")
+    if text is not None:
+        for row in csv.DictReader(text.splitlines()):
+            old_path = row.get(_REDIRECTS_OLD_PATH_COLUMN) or ""
+            new_path = row.get(_REDIRECTS_NEW_PATH_COLUMN) or ""
+            if old_path and new_path:
+                fan_out.setdefault(old_path, set()).add(new_path)
+                fan_in.setdefault(new_path, set()).add(old_path)
+    # A merge target (len(fan_in[new_path]) > 1) is deliberately absent from `reverse`:
+    # `.get(path, path)` below then falls through to identity, never an arbitrary pick.
+    reverse: dict[str, str] = {
+        new_path: next(iter(olds)) for new_path, olds in fan_in.items() if len(olds) == 1
+    }
+    resolved: dict[tuple[str, str], int] = {}
+    for (path, cls), count in measured.items():
+        control = reverse.get(path, path)
+        part = part_slug(path) if len(fan_out.get(control, ())) > 1 else ""
+        key = (composite_control_key(control, part), cls)
+        resolved[key] = resolved.get(key, 0) + count
+    return resolved
