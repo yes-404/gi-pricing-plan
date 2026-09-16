@@ -386,3 +386,173 @@ def test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue(
     print(f"GREEN: counted={len(counted)} disclosed={len(disclosed)}")
     assert counted == []
     assert disclosed == []
+
+
+# ---------------------------------------------------------------------------------------
+# Loop 1's finding (to-lead.md, 2026-09-16): a control path is not injective in EITHER
+# direction. A SPLIT source (one old_path -> many new_paths) collapsed several distinct
+# rows onto one `(control_path, cls)` key when the resolver ignored the split; a MERGE
+# target (many old_paths -> one new_path) risks the opposite defect, an arbitrary pick
+# among the several old_paths a merged file could have come from. Both are tested here,
+# each under two different allocations (two different id numbers for the same content),
+# proving the key stays correct — distinct for a split, deterministic for a merge —
+# regardless of which allocation produced the tree.
+# ---------------------------------------------------------------------------------------
+
+
+def test_a_split_sources_two_parts_stay_distinct_under_two_allocations(
+    tmp_path: pathlib.Path,
+) -> None:
+    """One control document splits into two migrated files; each keeps its own residue
+    under its own composite key, never collapsed onto the shared control path — proven
+    against two trees whose REDIRECTS.csv assigns the same two slugs DIFFERENT ids.
+    """
+    control_path = "docs/plans/2026-09-01-two-part-plan.md"
+    slug_a, slug_b = "part-a-topic.md", "part-b-topic.md"
+
+    allocation_one = tmp_path / "allocation_one"
+    allocation_two = tmp_path / "allocation_two"
+    _write_redirects_csv(allocation_one, [
+        (control_path, f"docs/plans/PL-00010-{slug_a}"),
+        (control_path, f"docs/plans/PL-00011-{slug_b}"),
+    ])
+    # A different allocation assigns different ids to the identical two slugs — the
+    # shape PR-A's fix (real git history vs a one-commit snapshot's fallback) produces.
+    _write_redirects_csv(allocation_two, [
+        (control_path, f"docs/plans/PL-00099-{slug_a}"),
+        (control_path, f"docs/plans/PL-00098-{slug_b}"),
+    ])
+
+    record = (
+        _docid.ResidueEntry(
+            path=_docid.composite_control_key(control_path, slug_a), cls=_docid.h1_class(36),
+            count=3, reason="part A's own residue", owner="test",
+        ),
+        _docid.ResidueEntry(
+            path=_docid.composite_control_key(control_path, slug_b), cls=_docid.h1_class(36),
+            count=5, reason="part B's own residue", owner="test",
+        ),
+    )
+    # The two rows' keys must themselves be distinct — the fix this test exists for.
+    assert len({(e.path, e.cls) for e in record}) == 2
+    ceiling = _docid.build_ceiling(record)  # must not raise AmbiguousResidueKeyError
+    assert len(ceiling) == 2
+
+    for tree, path_a, path_b in (
+        (allocation_one, f"docs/plans/PL-00010-{slug_a}", f"docs/plans/PL-00011-{slug_b}"),
+        (allocation_two, f"docs/plans/PL-00099-{slug_a}", f"docs/plans/PL-00098-{slug_b}"),
+    ):
+        measured = {(path_a, _docid.h1_class(36)): 3, (path_b, _docid.h1_class(36)): 5}
+        resolved = _docid.resolve_to_control_paths(measured, tree)
+        assert resolved == {
+            (_docid.composite_control_key(control_path, slug_a), _docid.h1_class(36)): 3,
+            (_docid.composite_control_key(control_path, slug_b), _docid.h1_class(36)): 5,
+        }
+        assert _docid.disclosed_by_w37_11_record(resolved, record) == frozenset(
+            {
+                (_docid.composite_control_key(control_path, slug_a), _docid.h1_class(36)),
+                (_docid.composite_control_key(control_path, slug_b), _docid.h1_class(36)),
+            }
+        )
+        # RED shape without the fix: collapsing both parts onto the bare control path
+        # would report 8 hits (3+5) against whichever single row's ceiling survived a
+        # first-match dict build — always a REGRESSION against either row's real
+        # ceiling (3 or 5). With the fix, each part's own regression fires independently
+        # and only when it actually exceeds ITS OWN ceiling:
+        over_b = {(path_a, _docid.h1_class(36)): 3, (path_b, _docid.h1_class(36)): 6}
+        changes = _docid.check_residue_ceiling(
+            _docid.resolve_to_control_paths(over_b, tree), record,
+        )
+        assert len(changes) == 1
+        assert changes[0].fatal
+        assert changes[0].path == _docid.composite_control_key(control_path, slug_b)
+
+
+def test_a_merge_targets_key_is_deterministic_regardless_of_csv_row_order(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Two control documents merge into one migrated file — the real shape in this
+    project's own record (`docs/findings/register.md`, fed by both
+    `docs/audit/register.md` and `docs/audit/phases/1b/register.md`). The merged file's
+    key must resolve to ITSELF, deterministically, never to an arbitrary one of its two
+    sources — proven by writing the identical two rows in both orders, and again under a
+    second allocation that renames both sources.
+    """
+    merged_path = "docs/findings/register.md"
+
+    for tree_name, old_a, old_b, row_order in (
+        ("order_a_then_b", "docs/audit/register.md", "docs/audit/phases/1b/register.md", 0),
+        ("order_b_then_a", "docs/audit/register.md", "docs/audit/phases/1b/register.md", 1),
+        # A second allocation: the same merge, with both control paths under different
+        # (still pre-migration, hence allocation-independent by definition) names.
+        ("second_allocation", "docs/audit/legacy-register.md", "docs/audit/phase1b-register.md", 0),
+    ):
+        tree = tmp_path / tree_name
+        rows = [(old_a, merged_path), (old_b, merged_path)]
+        if row_order:
+            rows = list(reversed(rows))
+        _write_redirects_csv(tree, rows)
+
+        measured = {(merged_path, _docid.h1_class(1)): 8}
+        resolved = _docid.resolve_to_control_paths(measured, tree)
+        # Resolves to ITSELF, not to old_a or old_b — never a guess among the candidates.
+        assert resolved == {(merged_path, _docid.h1_class(1)): 8}
+
+    record = (
+        _docid.ResidueEntry(
+            path=merged_path, cls=_docid.h1_class(1), count=8,
+            reason="the merge target's own governed residue", owner="test",
+        ),
+    )
+    ceiling = _docid.build_ceiling(record)
+    assert ceiling == {(merged_path, _docid.h1_class(1)): 8}
+
+
+def test_ambiguous_ceiling_key_refuses_rather_than_first_matches() -> None:
+    """Two record rows sharing an identical `(path, cls)` key — the exact shape loop 1's
+    bug produced when a split source's parts were collapsed without `part_slug` — must
+    make `build_ceiling` raise, naming both colliding rows, never silently keep
+    whichever the dict comprehension visited last.
+    """
+    colliding_path = "docs/plans/2026-09-01-two-part-plan.md"  # no part_slug: the bug
+    record = (
+        _docid.ResidueEntry(
+            path=colliding_path, cls=_docid.h1_class(36), count=3,
+            reason="part A's own residue, wrongly unslugged", owner="test",
+        ),
+        _docid.ResidueEntry(
+            path=colliding_path, cls=_docid.h1_class(36), count=5,
+            reason="part B's own residue, wrongly unslugged", owner="test",
+        ),
+    )
+    with pytest.raises(_docid.AmbiguousResidueKeyError, match=r"3, 5|5, 3") as exc_info:
+        _docid.build_ceiling(record)
+    message = str(exc_info.value)
+    assert colliding_path in message
+    assert _docid.h1_class(36) in message
+    # Propagates through both public comparisons, never swallowed part-way:
+    with pytest.raises(_docid.AmbiguousResidueKeyError):
+        _docid.check_residue_ceiling({(colliding_path, _docid.h1_class(36)): 3}, record)
+    with pytest.raises(_docid.AmbiguousResidueKeyError):
+        _docid.disclosed_by_w37_11_record({(colliding_path, _docid.h1_class(36)): 3}, record)
+
+
+def test_audit_docs_refuses_an_ambiguous_record_under_its_own_heading(
+    audit_docs: types.ModuleType, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same refusal, reached through `audit-docs.py`'s own partition — printed under
+    the governance-fault heading `main` uses, never swallowed into a `check N: ` failure.
+    """
+    colliding_path = "docs/plans/2026-09-01-two-part-plan.md"
+    colliding = (
+        _docid.ResidueEntry(
+            path=colliding_path, cls=_docid.h1_class(36), count=3, reason="a", owner="t",
+        ),
+        _docid.ResidueEntry(
+            path=colliding_path, cls=_docid.h1_class(36), count=5, reason="b", owner="t",
+        ),
+    )
+    monkeypatch.setattr(audit_docs, "failures", [])
+    monkeypatch.setattr(audit_docs._docid, "load_w37_11_record", lambda _root: colliding)
+    with pytest.raises(audit_docs._docid.AmbiguousResidueKeyError):
+        audit_docs._partition_by_w37_11_record()

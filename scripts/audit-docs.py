@@ -3984,9 +3984,12 @@ def main() -> int:
     # decides which of the failures above are disclosed rather than counted.
     try:
         counted, disclosed = _partition_by_w37_11_record()
-    except _docid.InvalidResidueClassError as exc:
+    except (_docid.InvalidResidueClassError, _docid.AmbiguousResidueKeyError) as exc:
         # Loud and fatal, under its own heading rather than as a `check N: ` failure —
         # it is the governance input that is invalid, not any document under audit.
+        # `AmbiguousResidueKeyError` (loop 1's fix): more than one record row shares a
+        # `(path, cls)` key without a disambiguating `part_slug` — never resolved by
+        # first-match, named here with every colliding row.
         print(f"\nW37-11 RECORD CANNOT BE LOADED:\n  - {exc}")
         return 1
 

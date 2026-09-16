@@ -3804,7 +3804,7 @@ def _residue_fully_governed(
     # measurement); this guard is for the case that stops being true, not the common one.
     if not residue:
         return False
-    ceiling = {(e.path, e.cls): e.count for e in record}
+    ceiling = _docid.build_ceiling(record)
     for key, count in residue.items():
         if count <= 0:
             continue
@@ -3824,6 +3824,8 @@ _known_w37_11_class = _docid.known_w37_11_class
 load_w37_11_record = _docid.load_w37_11_record
 ResidueChange = _docid.ResidueChange
 check_residue_ceiling = _docid.check_residue_ceiling
+AmbiguousResidueKeyError = _docid.AmbiguousResidueKeyError
+build_ceiling = _docid.build_ceiling
 
 
 @dataclass(frozen=True)

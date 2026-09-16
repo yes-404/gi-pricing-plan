@@ -1438,6 +1438,47 @@ class ResidueChange:
         return self.kind == RESIDUE_REGRESSION
 
 
+class AmbiguousResidueKeyError(RuntimeError):
+    """More than one W37-11 record row shares the identical `(path, cls)` key.
+
+    Never resolved by first-match — the dict comprehension `{(e.path, e.cls): e.count for
+    e in record}` this replaces would silently keep whichever row iteration happened to
+    visit last and discard the rest, which is exactly the defect loop 1 found: a split
+    source's several migrated files, once collapsed to one control path without
+    `part_slug`, landed several distinct rows on one key and the ceiling comparison
+    measured either a false `RESIDUE_REGRESSION` (the surviving row's ceiling too low for
+    the combined residue) or a false `RESIDUE_PROGRESSED` (a discarded row's own residue
+    read as having vanished). `build_ceiling` below raises instead, naming every
+    colliding row, so the fix for a NEW collision the resolver does not yet disambiguate
+    is loud rather than a second silent merge.
+    """
+
+
+def build_ceiling(
+    record: Sequence[ResidueEntry],
+) -> Mapping[tuple[str, str], int]:
+    """The governed `(path, cls) -> count` ceiling `check_residue_ceiling` and
+    `disclosed_by_w37_11_record` both compare against — one builder, so a future second
+    inline `{(e.path, e.cls): e.count for e in record}` cannot silently reintroduce the
+    same first-match defect `AmbiguousResidueKeyError` exists to catch.
+    """
+    by_key: dict[tuple[str, str], list[ResidueEntry]] = {}
+    for entry in record:
+        by_key.setdefault((entry.path, entry.cls), []).append(entry)
+    ambiguous = {key: entries for key, entries in by_key.items() if len(entries) > 1}
+    if ambiguous:
+        candidates = "; ".join(
+            f"{path!r} / {cls!r}: {len(entries)} row(s), count(s) "
+            f"{[e.count for e in entries]}"
+            for (path, cls), entries in ambiguous.items()
+        )
+        raise AmbiguousResidueKeyError(
+            f"{len(ambiguous)} (path, cls) key(s) name more than one W37-11 record row "
+            f"— never resolved by first-match: {candidates}"
+        )
+    return {key: entries[0].count for key, entries in by_key.items()}
+
+
 def check_residue_ceiling(
     measured: Mapping[tuple[str, str], int],
     record: Sequence[ResidueEntry],
@@ -1460,7 +1501,7 @@ def check_residue_ceiling(
     `cls` cannot manufacture a false regression.
     """
     governed_classes = {entry.cls for entry in record}
-    ceiling = {(entry.path, entry.cls): entry.count for entry in record}
+    ceiling = build_ceiling(record)
     changes: list[ResidueChange] = []
     for (path, cls), count in measured.items():
         if cls not in governed_classes or count <= 0:
@@ -1521,7 +1562,7 @@ def disclosed_by_w37_11_record(
     report a ceiling that is still being honoured at the exact moment it stopped being —
     the record's whole purpose is to make that moment loud.
     """
-    ceiling = {(entry.path, entry.cls): entry.count for entry in record}
+    ceiling = build_ceiling(record)
     return frozenset(
         key
         for key, count in measured.items()
@@ -1557,12 +1598,53 @@ def disclosed_by_w37_11_record(
 _REDIRECTS_OLD_PATH_COLUMN: Final = "old_path"
 _REDIRECTS_NEW_PATH_COLUMN: Final = "new_path"
 
+#: A migrated basename's own id prefix (`PL-00132-`, `RL-00225-`, …) — stripped to recover
+#: `part_slug` below, the content-derived remainder that survives a change of id
+#: allocation. Deliberately the same shape `check_slug_uniqueness2.py` (PR-D1's own
+#: verification script, not shipped) used to prove 0 collisions among 365 real moves.
+_MIGRATED_ID_PREFIX_RE: Final = re.compile(r"^[A-Z]+-\d+-")
+
+
+def part_slug(migrated_path: str) -> str:
+    """The migrated basename of `migrated_path`, with its id prefix stripped.
+
+    Content-derived, not allocation-derived: two different ids can be assigned to the
+    same split part across two allocations, but the slug — built from the split's own
+    heading/content, the same way every migrated filename is — does not depend on which
+    id it received. Used only to disambiguate a control path that fans out to more than
+    one migrated file (`resolve_to_control_paths`'s own fan-out map); a path with no
+    prefix (never migrated, or not itself the target of a move) returns unchanged, which
+    is harmless since callers only consult this for a genuine fan-out source.
+    """
+    return _MIGRATED_ID_PREFIX_RE.sub("", Path(migrated_path).name)
+
+
+def composite_control_key(control_path: str, part: str) -> str:
+    """The record's `path` cell for one `(control_path, part)` pair.
+
+    `ResidueEntry.path` stays a single string column — no schema change to the governed
+    table — so a fan-out source's several parts are told apart by suffixing the slug onto
+    the control path, `#`-separated (a character no path in this corpus carries). `part`
+    is empty for every control path that resolves to exactly one migrated file (the
+    overwhelming majority), so this is the identity there and the record is unaffected.
+    """
+    return f"{control_path}#{part}" if part else control_path
+
 
 def redirects_path_map(tree_root: Path) -> Mapping[str, str]:
     """`old_path -> new_path` from `tree_root`'s own `docs/REDIRECTS.csv`, every row
     naming a move (a same-path `old_path == new_path` token-rename row maps to itself,
     which `resolve_to_control_paths` below needs to be a no-op for exactly the same reason
     `_docverify.rows_d`'s own path-alternative scan excludes it: nothing moved).
+
+    **Lossy by construction for a fan-out source** (one `old_path`, several `new_path`s —
+    a split source): this dict can only hold one `new_path` per `old_path`, so it is never
+    used to invert a measurement — `resolve_to_control_paths` below builds its own
+    new-path-keyed reverse map (never lossy, since `new_path` is unique per row) plus a
+    fan-out count, in one pass, rather than composing this function with a second parse.
+    Kept and still used by callers that only need "the one path this old_path moved to"
+    for a non-split source (e.g. row (d)'s own move-detection, which excludes split
+    sources by `_docid.is_split_source_index` already).
 
     Empty, never fatal, when `tree_root` has no `docs/REDIRECTS.csv` yet — a tree that has
     not been migrated (every real checkout of `main` until W37-6's migration lands) simply
@@ -1593,13 +1675,56 @@ def resolve_to_control_paths(
     `load_w37_11_record`'s rows; a path this tree's REDIRECTS.csv does not mention was not
     moved by this run's migration, so its control path is itself — this also covers the
     h1 class-level sentinel path (`H1_UNLOCATED_PATH`), which names no real file and so
-    has no redirect row either. Two measured migrated paths mapping to the same control
-    path (only possible for a genuine same-path rename-in-place row, since `_write_redirects`
-    otherwise refuses a duplicate `old_path`) are summed, never overwritten.
+    has no redirect row either.
+
+    **A control path is not always a unique key — in either direction.**
+
+    A **split** source (`old_path` with more than one distinct `new_path` — e.g. one plan
+    splitting into several rulings) produces several migrated files that all resolve to
+    the identical control path; collapsing them to `(control_path, cls)` alone silently
+    merges their otherwise-distinct residue (found the hard way: the first re-key did
+    exactly this, and the merged count either exceeded every governed ceiling — a false
+    `RESIDUE_REGRESSION` — or overwrote all but one row's ceiling, one control path
+    colliding with one case-file — a false `RESIDUE_PROGRESSED` `SET CHANGE`). So: for a
+    fan-out control path, the key gains `part_slug`'s content-derived slug
+    (`composite_control_key`); for every other path (the overwhelming majority) `part` is
+    empty and the key is the plain control path, unchanged from before this fan-out
+    handling existed.
+
+    A **merge** target (`new_path` fed by more than one distinct `old_path` — real
+    example: `docs/findings/register.md` <- both `docs/audit/register.md` and
+    `docs/audit/phases/1b/register.md`) is the opposite shape, and there is no slug that
+    resolves it: a citation found in the merged file cannot be attributed to one of its
+    several sources from its path alone, and `csv.DictReader`'s row order is not a
+    property of the *content*, so picking "whichever `old_path` this row happened to name"
+    would let the same migrated file resolve to a *different* control path depending on
+    row order alone — never-first-matches (deputy's condition, loop 1) forbids exactly
+    that guess. A merge target is therefore never added to the reverse map at all, and
+    resolves to **itself** — deterministic regardless of the CSV's row order, and correct
+    because a merge target's own path does not depend on the numeric id allocation this
+    whole module exists to be independent of (a file `doc-id.py` merges into keeps a fixed,
+    non-sequential name; nothing here defends a merge target that DID get an allocated id,
+    which the corpus does not currently contain).
     """
-    reverse = {new: old for old, new in redirects_path_map(tree_root).items()}
+    fan_out: dict[str, set[str]] = {}
+    fan_in: dict[str, set[str]] = {}
+    text = _read_text_or_none(tree_root / "docs" / "REDIRECTS.csv")
+    if text is not None:
+        for row in csv.DictReader(text.splitlines()):
+            old_path = row.get(_REDIRECTS_OLD_PATH_COLUMN) or ""
+            new_path = row.get(_REDIRECTS_NEW_PATH_COLUMN) or ""
+            if old_path and new_path:
+                fan_out.setdefault(old_path, set()).add(new_path)
+                fan_in.setdefault(new_path, set()).add(old_path)
+    # A merge target (len(fan_in[new_path]) > 1) is deliberately absent from `reverse`:
+    # `.get(path, path)` below then falls through to identity, never an arbitrary pick.
+    reverse: dict[str, str] = {
+        new_path: next(iter(olds)) for new_path, olds in fan_in.items() if len(olds) == 1
+    }
     resolved: dict[tuple[str, str], int] = {}
     for (path, cls), count in measured.items():
-        key = (reverse.get(path, path), cls)
+        control = reverse.get(path, path)
+        part = part_slug(path) if len(fan_out.get(control, ())) > 1 else ""
+        key = (composite_control_key(control, part), cls)
         resolved[key] = resolved.get(key, 0) + count
     return resolved
