@@ -160,11 +160,21 @@ jobs:
       # A `services:` entry cannot express this: minio/minio needs the `server /data`
       # command, and service containers take no command. (bitnami/minio, which starts a
       # server by default, no longer publishes a `latest` tag.) So it starts as a step.
+      #
+      # 2026-09-16: `minio/minio` on Docker Hub started failing every run with
+      # `docker: Error response from daemon: pull access denied for minio/minio,
+      # repository does not exist or may require 'docker login': denied: requested
+      # access to the resource is denied` (exit 125) — the vendor withdrew anonymous
+      # pulls of this image from Docker Hub; class is "repository access removed",
+      # not a rate limit or a moved tag. `quay.io/minio/minio` is the vendor's own
+      # mirror and still pulls anonymously (verified via `docker manifest inspect`),
+      # so the step is pinned to that registry by digest (the `latest` multi-arch
+      # manifest-list digest at the time of this fix) rather than a floating tag.
       - name: Start MinIO
         run: |
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=gipricing -e MINIO_ROOT_PASSWORD=gipricing \
-            minio/minio:latest server /data
+            quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
           for _ in $(seq 1 30); do
             curl -sf http://localhost:9000/minio/health/live && break
             sleep 2
