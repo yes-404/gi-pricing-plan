@@ -1922,6 +1922,45 @@ def test_a_row_can_read_zero_because_corruption_moved_the_token_out_of_reach(
     assert "control 0" in mangled[2]
 
 
+# W37-6 PR-B, defect 2 (2026-09-16): `docs/audit/plan-reviews.md` -> `docs/closures/
+# INDEX.md#plan-reviewsmd`, landing inside a `scripts/*.py` string literal read as a
+# filesystem path at runtime (`doc-id.py:1862`/`:1949`). The "legacy audit path"
+# alternative (`d10`) itself correctly reads 0 on the migrated tree -- the literal
+# `docs/audit/` text really is gone -- which is exactly the corruption: it moved the
+# token out of the alternative's own reach, the identical shape `d2`'s `F-WK-…` companion
+# above already names for an id. The gate printed "mangled = 0" over a tree carrying this
+# because no companion predicate had ever been asked what this alternative's own wrong
+# rewrite produces -- this test is the row gaining that shape.
+def test_a_split_source_fallback_folded_into_a_non_markdown_consumer_is_a_mangled_companion(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    migrated = {
+        "scripts/example.py": (
+            '_PLAN_REVIEWS_REL_PATH: Final = "docs/closures/INDEX.md#plan-reviewsmd"\n'
+        ),
+    }
+    control = {
+        "scripts/example.py": (
+            '_PLAN_REVIEWS_REL_PATH: Final = "docs/audit/plan-reviews.md"\n'
+        ),
+    }
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "d10mangle", migrated, control))[
+        "d10"
+    ]
+    assert row.migrated.startswith("0 line"), (
+        "the alternative's own predicate must read 0 -- the literal `docs/audit/` text "
+        "is gone, which is the corruption, not a clean row"
+    )
+    labels = {c[0]: c for c in row.companions}
+    mangled = next(c for k, c in labels.items() if k.startswith("mangled"))
+    assert "migrated 1 line(s)" in mangled[2], (
+        "broken input (the mangled constant present) must read non-zero here"
+    )
+    assert "control 0" in mangled[2], (
+        "clean input (the real, unmangled path constant) must read zero here"
+    )
+
+
 def test_a_companion_is_promoted_to_gating_by_configuration_not_a_rewrite(
     dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

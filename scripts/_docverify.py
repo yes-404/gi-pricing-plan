@@ -905,8 +905,9 @@ D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
 #: An alternative with no entry here prints `no companion predicate declared`, by name and
 #: unconditionally. The gap is the point: the general question — *for every alternative,
 #: what does a wrong rewrite turn this token into, and is that form counted anywhere?* — is
-#: answered for three of thirteen today, and a silent absence would read as "asked and
-#: found nothing".
+#: answered for eight of thirteen today (three id-shaped alternatives below, plus every
+#: `D_PATH_LABELS` member sharing one path companion — see it below), and a silent
+#: absence would read as "asked and found nothing".
 #: Keyed by `_docid.LEGACY_FORM_PATTERNS`' own label (task 17) — a pattern-text key would
 #: silently un-key itself the next time Ruling 67 §2 Part 1 changes an anchoring, as it
 #: already had for `NT-00` -> `\bNT-\d{4}\b` and `F-W[0-9]` -> `\bF-W\d+-\d+\b` here.
@@ -928,6 +929,30 @@ D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
         "mangled: legacy id baked into a generated filename slug",
         r"/[^/\s]*wf-0[0-9]",
     ),),
+    # W37-6 PR-B (2026-09-16), defect 2. Ruling 101 clause 1's own fallback -- a split
+    # source citation with no single determined target resolves to its family index's
+    # `#<old-basename-without-its-dot>` anchor (`doc-id.py`'s `_split_index_anchor`,
+    # through `_docid`'s own `_anchor_slug`) -- assumed every citing occurrence is prose a
+    # reader follows as a markdown link. Measured live: `docs/audit/plan-reviews.md` ->
+    # `docs/closures/INDEX.md#plan-reviewsmd` landing inside a `scripts/*.py` string
+    # literal that is READ AS A FILESYSTEM PATH AT RUNTIME (`doc-id.py:1862`'s
+    # `_PLAN_REVIEWS_REL_PATH`, consumed at `:1949`) is invisible to every one of the five
+    # path alternatives themselves: each correctly reads 0, because the literal legacy
+    # path text really is gone -- exactly the shape `d2`'s `F-WK-…` companion above
+    # already names for an id ("the row reads zero BECAUSE the corruption moved the token
+    # out of the predicate's reach"). One companion, shared by every `D_PATH_LABELS`
+    # member via the loop below, never five pasted copies: the shape does not depend on
+    # which of the five legacy path forms was folded, only on where the fallback landed.
+    **{
+        label: ((
+            "mangled: a split source's family-index fallback (Ruling 101 clause 1) "
+            "resolved into a fragment with no file destination — a file folded into an "
+            "index section, cited from a non-markdown consumer that reads the text as "
+            "a real path",
+            r"INDEX\.md#[a-z0-9-]+md\b",
+        ),)
+        for label in D_PATH_LABELS
+    },
 }
 
 #: Companion labels promoted to gating. **Empty, and changing it is the maintainer's under

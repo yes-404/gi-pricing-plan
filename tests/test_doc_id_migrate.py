@@ -6978,6 +6978,43 @@ def test_a_citation_naming_its_target_by_id_still_reaches_that_target(
     assert index_resolved == []
 
 
+# W37-6 PR-B, defect 2 (2026-09-16): the same undetermined-citation fallback as
+# `test_a_citation_determining_nothing_goes_to_the_family_index_section` above, except the
+# citing file is not markdown -- it is a runtime path constant, `scripts/doc-id.py:1862`'s
+# own shape (`_PLAN_REVIEWS_REL_PATH: Final = "docs/audit/plan-reviews.md"`, later read
+# with `root / _PLAN_REVIEWS_REL_PATH`). Ruling 101 clause 1's fallback assumed every
+# citing occurrence is prose a reader follows as a markdown link; a `.py` string literal
+# consumed as a filesystem path at runtime has no such reader, and `docs/closures/
+# INDEX.md#...` is not a file that exists on disk. "A file folded into an index section
+# has no file destination": the migration must refuse the substitution and disclose it,
+# never write it.
+def test_an_undetermined_citation_inside_a_non_markdown_file_is_refused_not_folded(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    split = _split_fixture(doc_id_cli)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    citer = tmp_path / "scripts" / "example.py"
+    citer.parent.mkdir(parents=True)
+    original = 'PLAN_PATH: Final = "docs/plans/2026-09-01-two-rulings.md"\n'
+    citer.write_text(original, encoding="utf-8")
+
+    refused: list[Any] = []
+    _changed, index_resolved, _unrewritten = doc_id_cli._rewrite_citations(
+        tmp_path, {}, [split], refused_fragment_rewrites=refused
+    )
+
+    after = citer.read_text(encoding="utf-8")
+    assert after == original, (
+        "a runtime path constant must never be rewritten to a fragment with no file "
+        "destination -- refuse and disclose, never make the rewrite"
+    )
+    assert "INDEX.md#" not in after
+    assert index_resolved == [], "not folded into the ordinary bucket (iv) disclosure"
+    assert len(refused) == 1
+    assert refused[0].citing_file == "scripts/example.py"
+    assert refused[0].old_rel == "docs/plans/2026-09-01-two-rulings.md"
+
+
 def test_the_index_section_check_reddens_on_a_section_that_lists_no_choice(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -8583,3 +8620,68 @@ def test_token_left_bound_still_matches_a_delimited_or_sentence_final_slice_id(
     pattern = doc_id_cli._whole_token_re("W37-6")
     for text in ("(W37-6)", " W37-6.", "see W37-6 for the reasoning"):
         assert pattern.search(text) is not None, text
+
+
+# W37-6 PR-B, defect 1 (2026-09-16): `TOKEN_LEFT_BOUND` cannot see a token after an
+# escaped newline. In a JSON string or a Python string, a wrap is the two RAW characters
+# `\` `n` (never an actual newline byte) -- the token's left neighbour is then the
+# letter `n`, and the first lookbehind (`(?<![A-Za-z0-9_])`) refuses it exactly as it
+# would refuse a token glued onto any other word character. The handover's own count
+# (20 survivors + 1, 7 files, 2 extensions, 5 families, 10 outside `docs/contracts/`) was
+# taken by a probe that reproduced the lookbehind it was measuring -- an instrument
+# entangled with what it measures. The fixed lookbehind is therefore never used to COUNT
+# survivors here; the independent predicate below (`_ESCAPED_NEWLINE_SURVIVOR_RE`, a bare
+# `\b` with no lookbehind of its own) is.
+def test_token_left_bound_still_matches_a_token_after_an_escaped_newline(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    r"""The defect: the two literal characters `\` `n` (as they appear in a JSON string or
+    a Python triple-quoted string's source bytes, never an interpreted newline) precede
+    the token. Before the fix this is `None`; after, it is a match."""
+    pattern = doc_id_cli._whole_token_re("NT-0019")
+    text = "line one\\nNT-0019 line two"  # literal backslash + n, then the token
+    m = pattern.search(text)
+    assert m is not None
+    assert m.group(0) == "NT-0019"
+
+
+def test_token_left_bound_still_matches_after_an_escaped_newline_in_a_json_string(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The same shape as it actually occurs on disk: a JSON string value whose line wrap
+    is `\\n` inside the quotes."""
+    pattern = doc_id_cli._whole_token_re("W37-6")
+    text = '{"body": "first line\\nW37-6 second line"}'
+    assert pattern.search(text) is not None
+
+
+def test_token_left_bound_still_refuses_a_hyphen_fused_token_after_the_fix(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Control for the escaped-newline widening: a genuinely hyphen-fused token — the
+    workflow id `wf-01` glued onto a slice id exactly as `w5-wf-01` fuses them — must
+    still be refused. The escaped-newline fix must not become "any preceding letter is
+    fine": it widens the boundary only for the literal `\\n` two-character sequence, never
+    for an ordinary hyphen-joined compound."""
+    pattern = doc_id_cli._whole_token_re("wf-01")
+    assert pattern.search("w5-wf-01") is None
+    # Positive control: a bare `\b` DOES match here, so a test that stopped guarding the
+    # defect would still pass for the wrong reason.
+    assert re.search(r"\bwf-01\b", "w5-wf-01") is not None
+
+
+#: The independent survivor predicate the handover's own warning requires: it shares no
+#: lookbehind, no anchor and no code path with `_docid.TOKEN_LEFT_BOUND` (fixed or
+#: unfixed), so a count taken with it cannot be an artifact of the fix it is checking for.
+#: A "survivor" is a legacy-family token whose immediate left neighbour in the raw file
+#: bytes is a literal `\` `n` pair -- the shape `TOKEN_LEFT_BOUND` used to refuse.
+_ESCAPED_NEWLINE_SURVIVOR_RE: Final = re.compile(
+    r"\\n(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*[0-9]+\b"
+)
+
+
+def test_escaped_newline_survivor_predicate_matches_the_defects_own_shape() -> None:
+    """Names the independent predicate verbatim and proves it fires on the shape the
+    handover described, with no dependency on `_docid.TOKEN_LEFT_BOUND` at all."""
+    assert _ESCAPED_NEWLINE_SURVIVOR_RE.search(r'"line one\nADR-0019 line two"') is not None
+    assert _ESCAPED_NEWLINE_SURVIVOR_RE.search("a\\nWF-01 wrapped line") is not None
