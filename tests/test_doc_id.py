@@ -1598,6 +1598,52 @@ def test_sweep_exclusion_reason_leaves_a_similarly_named_docs_audit_file_alone(
     assert docid.sweep_exclusion_reason("docs/audit/w37-11-record.md.bak") is None
 
 
+# W37-6 PR-B, defect 3 (2026-09-16): the generated-contract tier (ADR-0002/FR-PLAT-48) --
+# `scripts/generate-contracts.py`'s own `OPENAPI_PATH`/`SCHEMA_DIR` symbols, read here
+# rather than pasted, so this exclusion can never drift from the generator's own
+# definition of what it writes (CLAUDE.md §2: "Nobody hand-writes a shape that already
+# exists ... A shape defined twice will diverge"). The migration must never touch these
+# 25-odd files -- they are regenerated after the run, never migration input.
+def test_sweep_exclusion_reason_excludes_the_generated_openapi_document(
+    docid: types.ModuleType,
+) -> None:
+    assert docid.sweep_exclusion_reason(
+        "docs/contracts/openapi/generated.json"
+    ) is not None
+
+
+def test_sweep_exclusion_reason_excludes_every_generated_schema(
+    docid: types.ModuleType,
+) -> None:
+    assert docid.sweep_exclusion_reason(
+        "docs/contracts/schemas/generated/job.schema.json"
+    ) is not None
+    assert docid.sweep_exclusion_reason(
+        "docs/contracts/schemas/generated/artifact-envelope.schema.json"
+    ) is not None
+
+
+def test_sweep_exclusion_reason_leaves_the_design_stub_and_a_hand_authored_schema_alone(
+    docid: types.ModuleType,
+) -> None:
+    """The negative control: `gi-pricing.yaml` is the Phase 0 design stub
+    (`generate-contracts.py`'s own docstring: "It is not overwritten"), never generated,
+    and a hand-authored schema outside `SCHEMA_DIR` is not part of the tier either."""
+    assert docid.sweep_exclusion_reason("docs/contracts/openapi/gi-pricing.yaml") is None
+    assert docid.sweep_exclusion_reason("docs/contracts/schemas/job.schema.json") is None
+
+
+def test_generated_contract_relpaths_are_read_from_the_generator_by_symbol(
+    docid: types.ModuleType,
+) -> None:
+    """The exclusion must be driven by `generate-contracts.py`'s own `OPENAPI_PATH`/
+    `SCHEMA_DIR` symbols -- never a pasted copy of their current value, which would
+    silently stop matching the day the generator's own layout moves."""
+    openapi_rel, schema_dir_rel = docid._generated_contract_relpaths()
+    assert openapi_rel == "docs/contracts/openapi/generated.json"
+    assert schema_dir_rel == "docs/contracts/schemas/generated"
+
+
 def test_sweep_exclusion_reason_gives_every_class_its_own_named_reason(
     docid: types.ModuleType,
 ) -> None:
