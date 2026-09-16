@@ -1961,6 +1961,138 @@ def test_a_split_source_fallback_folded_into_a_non_markdown_consumer_is_a_mangle
     )
 
 
+# =========================================================================================
+# W37-6 PR-B follow-up (2026-09-16, deputy's option (A)): a refused fragment rewrite is
+# disclosed, never fatal -- through the SAME `_residue_fully_governed`/W37-11-record
+# mechanism (d)/(h) already use for any other governed residue, never a parallel
+# disclosure path. What's new is a way to derive the (path, cls, count) a disclosure row
+# must carry FROM `MigrateResult.refused_fragment_rewrites` itself -- by symbol, never
+# pasted -- so the count a disclosure row names can never silently drift from what the
+# migration actually refused.
+# =========================================================================================
+
+
+def _refusal(
+    doc_id_cli: Any, *, citing_file: str, line: int, old_rel: str,
+) -> Any:
+    return doc_id_cli._UnresolvedCitation(
+        citing_file=citing_file, line=line, old_rel=old_rel, text="",
+        candidates=(), resolved_to=f"docs/rulings/INDEX.md#{old_rel}",
+        index_rel="docs/rulings/INDEX.md", index_anchor=old_rel,
+    )
+
+
+def test_refused_fragment_rewrite_disclosure_counts_keys_by_file_and_class(
+    dv: Any, doc_id_cli: Any
+) -> None:
+    """The two real, measured examples (W37-6 PR-B's own gate log): a runtime path
+    constant in `scripts/doc-id.py` refusing a `docs/audit/` (d10) citation, and a
+    backend docstring refusing a `docs/plans/2026-` (d9) citation."""
+    refused = [
+        _refusal(
+            doc_id_cli, citing_file="scripts/doc-id.py", line=1871,
+            old_rel="docs/audit/plan-reviews.md",
+        ),
+        _refusal(
+            doc_id_cli, citing_file="backend/src/app/platform/settings.py", line=177,
+            old_rel="docs/plans/2026-08-29-w11-slices-3-4-rulings.md",
+        ),
+    ]
+    counts = dv.refused_fragment_rewrite_disclosure_counts(refused)
+    assert counts[("scripts/doc-id.py", "d10")] == 1
+    assert counts[("backend/src/app/platform/settings.py", "d9")] == 1
+    assert len(counts) == 2
+
+
+def test_refused_fragment_rewrite_disclosure_counts_sums_repeats_in_one_file(
+    dv: Any, doc_id_cli: Any
+) -> None:
+    refused = [
+        _refusal(
+            doc_id_cli, citing_file="scripts/doc-id.py", line=n,
+            old_rel="docs/audit/plan-reviews.md",
+        )
+        for n in (1871, 1943, 1988)
+    ]
+    counts = dv.refused_fragment_rewrite_disclosure_counts(refused)
+    assert counts[("scripts/doc-id.py", "d10")] == 3
+
+
+def test_a_refusal_named_in_the_w37_11_record_at_its_measured_count_reads_disclose(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof (i): a FATAL path-alternative hit -- a citation that still
+    names a real moved file per `docs/REDIRECTS.csv` -- reads DISCLOSE once the W37-11
+    record names it at or above its measured count. This exercises the EXISTING
+    `_residue_fully_governed` mechanism (no new verdict branch), which is the point:
+    option (A) is "wire refusals INTO it", never a parallel path.
+    """
+    migrated = {
+        "scripts/example.py": '_X: Final = "docs/audit/plan-reviews.md"\n',
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            ",,docs/audit/plan-reviews.md,docs/closures/CR-00001-x.md,\n"
+        ),
+    }
+    control = dict(migrated)
+    snap = _snapshot(dv, tmp_path / "d10-disclosed", migrated, control)
+    refused = [
+        _refusal(
+            doc_id_cli, citing_file="scripts/example.py", line=1,
+            old_rel="docs/audit/plan-reviews.md",
+        ),
+    ]
+    counts = dv.refused_fragment_rewrite_disclosure_counts(refused)
+    record = [
+        dv.ResidueEntry(
+            path=path, cls=cls, count=count,
+            reason="refused fragment rewrite (doc-id.py's refused_fragment_rewrites) "
+                   "-- a file folded into an index section has no file destination for "
+                   "this non-markdown consumer",
+            owner="W37-6",
+        )
+        for (path, cls), count in counts.items()
+    ]
+    rows = _d_rows(dv, doc_id_cli, snap)
+    assert rows["d10"].verdict != dv.DISCLOSE, (
+        "positive control: without the record, this exact corpus must still read "
+        "FAIL/FATAL, or the test proves nothing about the record's own effect"
+    )
+    rows = {
+        r.key: r
+        for r in dv.rows_d(
+            doc_id_cli, dv.load_corpus(snap.migrated), dv.load_corpus(snap.control),
+            record,
+        )
+    }
+    assert rows["d10"].verdict == dv.DISCLOSE
+
+
+def test_a_refusal_not_named_in_the_w37_11_record_stays_fatal(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof (ii): the identical corpus as the DISCLOSE test above, with
+    an EMPTY record -- the row must stay FAIL. A disclosure is never automatic; it is
+    earned by a record row naming the file, the class and the count."""
+    migrated = {
+        "scripts/example.py": '_X: Final = "docs/audit/plan-reviews.md"\n',
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            ",,docs/audit/plan-reviews.md,docs/closures/CR-00001-x.md,\n"
+        ),
+    }
+    control = dict(migrated)
+    snap = _snapshot(dv, tmp_path / "d10-undisclosed", migrated, control)
+    rows = {
+        r.key: r
+        for r in dv.rows_d(
+            doc_id_cli, dv.load_corpus(snap.migrated), dv.load_corpus(snap.control), (),
+        )
+    }
+    assert rows["d10"].verdict != dv.DISCLOSE
+    assert "docs/audit/" in rows["d10"].title
+
+
 def test_a_companion_is_promoted_to_gating_by_configuration_not_a_rewrite(
     dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

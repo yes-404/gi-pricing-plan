@@ -3902,6 +3902,39 @@ RESIDUE_PROGRESSED: Final = _docid.RESIDUE_PROGRESSED
 ResidueEntry = _docid.ResidueEntry
 
 
+def refused_fragment_rewrite_disclosure_counts(
+    refused: Sequence[Any],
+) -> dict[tuple[str, str], int]:
+    """`(citing_file, cls)` -> count, for `MigrateResult.refused_fragment_rewrites`
+    (doc-id.py's own out-parameter, W37-6 PR-B, 2026-09-16) -- the deputy's option (A):
+    "refuse EVERY undetermined split-source citation in any non-markdown file... and
+    DISCLOSE the refusals, never rewrite them." A refusal is disclosed through the SAME
+    mechanism every other governed residue already uses -- `_residue_fully_governed`
+    against a `ResidueEntry` the caller writes into `docs/audit/w37-11-record.md` -- not
+    a parallel disclosure path. What this function supplies is the `(path, cls, count)`
+    a disclosure row must carry, derived FROM the refusal list by symbol, never pasted:
+    a hand-typed count could silently drift from what `_rewrite_citations` actually
+    refused, exactly the "the copy is what goes stale" failure
+    (`docs/notes/0003-duplicated-status-goes-stale.md`) this function exists to avoid.
+
+    `cls` is `f"d{i}"` for whichever `_docid.LEGACY_FORM_PATTERNS` alternative (1-based
+    index, matching `rows_d`'s own `enumerate(D_ALTERNATIVES, start=1)`) the refusal's
+    `old_rel` matches -- the identical predicate `rows_d` applies to the corpus text, run
+    here against the citation's own recorded `old_rel` instead of re-scanning the tree.
+    A refusal whose `old_rel` matches no alternative at all (should not happen --
+    `_build_split_sources` only ever routes a real legacy path through this mechanism --
+    but never assumed) contributes to no key, so a caller summing this dict's values
+    never over- or under-counts a class it does not recognise.
+    """
+    counts: dict[tuple[str, str], int] = {}
+    for r in refused:
+        for i, (_label, pattern) in enumerate(D_ALTERNATIVES, start=1):
+            if pattern.search(r.old_rel):
+                key = (r.citing_file, f"d{i}")
+                counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
 def _residue_fully_governed(
     residue: Mapping[tuple[str, str], int], record: Sequence[ResidueEntry],
 ) -> bool:
