@@ -36,9 +36,12 @@ predicates stay in one module rather than being re-derived beside the code they 
 from __future__ import annotations
 
 import argparse
+import ast
 import csv
+import fnmatch
 import hashlib
 import importlib.util
+import io
 import itertools
 import posixpath
 import re
@@ -46,6 +49,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tokenize
+import tomllib
 import types
 import zipfile
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
@@ -1201,6 +1206,12 @@ class MigrateResult:
     # and the anchor. A link to an empty index section resolves at the file level, so the
     # dangling-link scanner cannot see it; this is the check that can.
     split_index_violations: tuple[str, ...] = ()
+    # Every line this run lengthened past the project's own line limit and would not break
+    # — the refusal population of `_reflow_long_lines`, carried out by name under a named
+    # class rather than reported as a count, because the disposition is per line: each one
+    # is disclosed per file into the governed W37-11 record. Printed unconditionally,
+    # including the zero, for the reason the ledger-axis zeros above are.
+    refused_long_lines: tuple[_RefusedLongLine, ...] = ()
     # Ruling 105 D3/#18: every path this run generated in full (a class-6 artifact per
     # Ruling 104 §2, a property this constant records rather than lets each reader
     # re-derive) — `docs/INDEX.md`, `docs/REDIRECTS.csv`, every family README
@@ -6093,6 +6104,32 @@ def _wrapped_path_patterns(
 _WRAP_MARKUP_RE: Final = re.compile(r"\n[ \t]*(?:#[ \t]*)?")
 
 
+def _dewrap_reference_tokens(text: str, tokens: Iterable[str]) -> str:
+    """Collapse a wrap `_reflow_long_lines` (or any other step) introduced *inside* one
+    of `tokens`, restoring the contiguous spelling `frozen_file_matches_after_migration_
+    stamp`'s flat, non-wrap-tolerant inverse (`_inverse_token_pattern`) expects.
+
+    W37-6 PR-C, row (g) class 2: `_rewrite_citations` substitutes a citation for a longer,
+    id-based path, and where that substitution alone pushed the line over the project's
+    limit, `_reflow_long_lines` wraps it -- a hunk that is nothing but a reference-token
+    substitution then fails DP-7's flat inverse and falls through Ruling 68's six classes
+    to `classified-by-none`. Never reimplemented here: this calls the existing
+    `_wrapped_path_patterns` (the forward-direction counterpart of the identical wrap
+    shape) to *find* a wrapped token, and strips `_WRAP_MARKUP_RE`'s own match from
+    inside it -- the one substitution `_rewrite_wrapped_path_citations` does not offer,
+    since it always preserves a wrap's position rather than collapsing it.
+
+    A wrap that does not fall inside one of `tokens`' own characters is not matched by
+    any pattern this builds, so it is returned untouched -- a hunk carrying an unrelated
+    wrap (a hand edit, or any cause besides this file's own reference-token substitution)
+    still fails the retry exactly as it failed the flat inverse, and is still reported.
+    """
+    patterns = _wrapped_path_patterns((tok, tok) for tok in tokens)
+    for _old, _new, pattern in patterns:
+        text = pattern.sub(lambda m: _WRAP_MARKUP_RE.sub("", m.group(0)), text)
+    return text
+
+
 def _rewrite_wrapped_path_citations(
     text: str,
     patterns: Sequence[tuple[str, str, re.Pattern[str]]],
@@ -6699,6 +6736,553 @@ def _write_redirects(root: Path, rows: list[dict[str, str]]) -> list[str]:
         for row in all_rows:
             writer.writerow(row)
     return ["docs/REDIRECTS.csv"]
+
+
+#: A newline may be inserted here without changing what Python does, and the migration is
+#: therefore free to reflow the line: the whole line is one `#` comment token (`tokenize`),
+#: or it lies inside a module/class/function docstring literal (`ast`), outside a doctest
+#: example block. Everything else is refused, never reflowed — see `_REFUSAL_*` below.
+_REFLOW_COMMENT: Final = "comment"
+_REFLOW_DOCSTRING: Final = "docstring"
+
+#: The named refusal classes. A line the migration lengthened past the limit that it cannot
+#: prove safe to break is left exactly as it is and disclosed under one of these, per file
+#: — never given a per-line lint suppression, never hand-edited afterwards, and never
+#: fixed by widening the project's limit. All three would put the tree and the tool that
+#: produced it out of agreement, so the next run would reproduce the whole population
+#: again. (Written without naming the suppression comment in its own literal form: a
+#: comment that *describes* such a directive is read by the linter as *being* one.)
+_REFUSAL_NOT_PROVABLY_SAFE: Final = "not-provably-semantics-free"
+_REFUSAL_NO_BREAK_POINT: Final = "no-break-point-within-the-limit"
+_REFUSAL_TOOL_DIRECTIVE: Final = "carries-a-tool-directive"
+
+#: A full-line comment carrying one of these is refused rather than reflowed: a directive
+#: binds to the physical line it sits on, so moving half of it onto a continuation silently
+#: changes which line is suppressed, checked or formatted. Matched case-insensitively on
+#: the comment body.
+_TOOL_DIRECTIVE_MARKERS: Final[tuple[str, ...]] = (
+    "noqa", "type:", "pragma:", "fmt:", "ruff:", "mypy:", "isort:", "pylint:",
+)
+
+#: The three characters a wrap may fall after *inside* an unbroken token. Not a new
+#: convention: `_wrapped_path_patterns` above already defines a wrapped path citation as
+#: one broken after a `-`, `/` or `.` with an optional `# ` continuation marker, and reads
+#: such a citation back. Needed because the ids this migration writes are themselves longer
+#: than the line limit — a filename of well over a hundred characters carries no space at
+#: all, so a whitespace-only wrap cannot bring its line under the limit and would leave the
+#: reflow reporting success while the linter stayed red.
+_TOKEN_BREAK_CHARS: Final = "-/."
+
+
+@dataclass(frozen=True)
+class _RefusedLongLine:
+    """One line the migration lengthened past the limit and would not break."""
+
+    path: str  #: tree-relative, forward-slash
+    line: int  #: 1-based, in the migrated file
+    cls: str  #: one of the `_REFUSAL_*` classes above
+    text: str
+
+
+@dataclass(frozen=True)
+class _PythonLintScope:
+    """What the project's own linter would measure, read from its config rather than
+    restated here.
+
+    All three fields are read, never hard-coded: a limit, an exclusion or an ignore
+    written down a second time is a second declaration of something the linter already
+    owns, and the copy is what goes stale. It also keeps the reflow honest in both
+    directions — reflowing a line nothing was ever going to flag is as wrong as leaving
+    one that will be, and *refusing* such a line would report a residue that does not
+    exist.
+    """
+
+    limit: int
+    #: Directory prefixes the linter does not look at, `[tool.ruff] exclude`.
+    excluded: tuple[str, ...] = ()
+    #: Globs whose over-long lines are already ignored, from `per-file-ignores`.
+    exempt: tuple[str, ...] = ()
+
+
+def _python_lint_scope(root: Path) -> _PythonLintScope:
+    """`root`'s own line limit, excluded prefixes and long-line-exempt globs."""
+    try:
+        config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return _PythonLintScope(0)
+    ruff = config.get("tool", {}).get("ruff", {})
+    limit = ruff.get("line-length")
+    if not isinstance(limit, int):
+        return _PythonLintScope(0)
+    excluded = ruff.get("exclude", [])
+    per_file = ruff.get("lint", {}).get("per-file-ignores", {})
+    return _PythonLintScope(
+        limit,
+        tuple(e for e in excluded if isinstance(e, str)) if isinstance(excluded, list)
+        else (),
+        tuple(
+            glob for glob, codes in per_file.items()
+            if isinstance(codes, list) and "E501" in codes
+        ),
+    )
+
+
+def _docstring_doctest_rows(lines: list[str], start: int, end: int) -> set[int]:
+    """1-based row numbers in `[start, end]` that are part of a doctest example block: a
+    `>>>`/`...` source line, or one of its immediately following expected-output lines,
+    terminated by a blank line (or the docstring's own end).
+
+    Deputy ruling, `to-lead.md` 2026-09-06 08:42 BST, ACCEPTED: "where a docstring's value
+    is *read*, a reflow is a behaviour change" — the doctest runner executes a `>>>` line
+    and compares its output against the line(s) that follow verbatim, so a newline
+    inserted anywhere in that block is not the semantics-free move `_reflowable_lines`'s
+    docstring proof otherwise establishes. Such a line is excluded from that proof here,
+    which sends it to `_REFUSAL_NOT_PROVABLY_SAFE` in `_reflow_long_lines` below — refused
+    and disclosed, never silently reflowed.
+    """
+    doctest_rows: set[int] = set()
+    in_block = False
+    for row in range(start, end + 1):
+        if row < 1 or row > len(lines):
+            continue
+        stripped = lines[row - 1].strip()
+        if stripped.startswith(">>>") or stripped.startswith("..."):
+            doctest_rows.add(row)
+            in_block = True
+        elif in_block and stripped and row < end:
+            # The docstring's own last physical line carries the closing `"""`/`'''` —
+            # never itself an expected-output line, even when nothing blank separates it
+            # from a doctest example above it (a common docstring style puts the closer
+            # on its own line right after the example, PEP 257's own convention).
+            doctest_rows.add(row)
+        else:
+            in_block = False
+    return doctest_rows
+
+
+def _reflowable_lines(text: str) -> dict[int, str]:
+    """1-based line numbers where a newline is provably semantics-free, and which proof.
+
+    Two proofs, both mechanical, neither a guess about what a line "looks like":
+
+    * `tokenize` reports a `COMMENT` token with nothing but whitespace before it on its
+      physical line. A *trailing* comment does not qualify — the code before it would have
+      to move too, and that is not a proof this function can offer.
+    * `ast` places the line inside a module, class or function docstring literal, and the
+      line is not part of a doctest example block within it (`_docstring_doctest_rows`) —
+      the doctest runner reads that block's value, so a newline there is not proof-covered.
+
+    A file that neither tokenizes nor parses yields nothing, and every one of its long
+    lines is refused: an unparseable file is exactly where a guess would be most confident
+    and least safe.
+    """
+    proof: dict[int, str] = {}
+    lines = text.splitlines()
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+            if tok.type != tokenize.COMMENT:
+                continue
+            row = tok.start[0]
+            if 1 <= row <= len(lines) and not lines[row - 1][: tok.start[1]].strip():
+                proof[row] = _REFLOW_COMMENT
+    except (SyntaxError, tokenize.TokenError, IndentationError):
+        return {}
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return {}
+    for node in ast.walk(tree):
+        if not isinstance(
+            node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+        ):
+            continue
+        body = node.body
+        if not body:
+            continue
+        first = body[0]
+        if not (isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant)):
+            continue
+        if not isinstance(first.value.value, str):
+            continue
+        end = first.value.end_lineno or 0
+        doctest_rows = _docstring_doctest_rows(lines, first.value.lineno, end)
+        for row in range(first.value.lineno, end + 1):
+            if row in doctest_rows:
+                continue
+            proof.setdefault(row, _REFLOW_DOCSTRING)
+    return proof
+
+
+#: A trailing pragma comment — the type-checker and linter directives that must sit on the
+#: line they bind to and so cannot be moved off it. The project's linter does not report a
+#: long line whose length is owed entirely to one of these, and neither does this pass:
+#: `_over_limit` below measures the line without it. Discovered by reconciliation rather
+#: than from the documentation — fifteen such lines, none of them created by the migration,
+#: were being refused and would have been disclosed as a residue that does not exist.
+_TRAILING_PRAGMA_RE: Final = re.compile(r"\s*#\s*(?:type|noqa|pyright|mypy|pylint)\b.*$")
+
+
+def _over_limit(line: str, limit: int) -> bool:
+    """True iff `line` is longer than `limit` in the way the project's linter counts.
+
+    Two exemptions the linter applies and this pass must apply too, or it refuses lines
+    nothing will ever flag and discloses a residue that does not exist:
+
+    * a trailing pragma comment is not counted (`_TRAILING_PRAGMA_RE`);
+    * a line carrying no whitespace after its indentation is never reported at all, since
+      there is nowhere to break it. Both were found by reconciling this pass's refusals
+      against the linter's own output rather than read out of its documentation first —
+      seventeen lines, none of them created by the migration.
+    """
+    if len(line) <= limit:
+        return False
+    if not any(ch.isspace() for ch in line.strip()):
+        return False
+    return len(_TRAILING_PRAGMA_RE.sub("", line)) > limit
+
+
+#: The characters a path or an id slug is made of.
+_PATH_CHARS: Final = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./-"
+)
+
+
+def _token_break(rest: str, room: int) -> int | None:
+    """The largest cut index `<= room` falling just after a `_TOKEN_BREAK_CHARS` character
+    that is **inside a run of path characters**, or `None` when there is none.
+
+    The test is local to the break point — the character before it, and the characters on
+    either side — rather than a judgement about the whole leading token, because two real
+    shapes defeat every whole-token test tried before it:
+
+    * a wrapped citation's own continuation line begins in the middle of a filename, so it
+      opens with a hyphen and carries no slash at all. `_rewrite_wrapped_path_citations`
+      preserves an existing wrap while substituting a longer id-based target, which is how
+      such a line gets pushed over the limit in the first place.
+    * a markdown link puts the path after a bracket and a backtick, so a rule anchored at
+      the token's first character measures the link text and never reaches the path.
+
+    Requiring instead that the break land between two path characters keeps the property
+    that actually matters — the resulting wrap is one `_wrapped_path_patterns` reads back —
+    while accepting both. Prose is not endangered by the looser rule: a break is only ever
+    sought for a token too long to fit a line on its own, and prose has no such words.
+    """
+    head = rest.split(" ", 1)[0]
+    for cut in range(min(room, len(head) - 1), 1, -1):
+        if (
+            head[cut - 1] in _TOKEN_BREAK_CHARS
+            and head[cut] in _PATH_CHARS
+            and head[cut - 2] in _PATH_CHARS
+        ):
+            return cut
+    return None
+
+
+def _wrap_content(
+    content: str, first_prefix: str, cont_prefix: str, limit: int,
+) -> list[str] | None:
+    """`content` laid out under `first_prefix`/`cont_prefix` with every line within
+    `limit`, or `None` when no set of break points achieves that.
+
+    Slices the original string at chosen break points rather than re-joining split words,
+    so runs of internal whitespace, aligned bullets and two-space sentence breaks survive
+    the reflow unchanged. Prefers a whitespace break and falls back to `_token_break`.
+    """
+    out: list[str] = []
+    prefix = first_prefix
+    rest = content
+    while True:
+        room = limit - len(prefix)
+        if room <= 0:
+            return None
+        if len(rest) <= room:
+            out.append(prefix + rest)
+            return out or None
+        cut = rest.rfind(" ", 1, room + 1)
+        if cut > 0:
+            out.append(prefix + rest[:cut].rstrip())
+            rest = rest[cut:].lstrip(" ")
+        else:
+            token_cut = _token_break(rest, room)
+            if token_cut is None:
+                return None
+            out.append(prefix + rest[:token_cut])
+            rest = rest[token_cut:]
+        if not rest:
+            return out or None
+        prefix = cont_prefix
+
+
+_COMMENT_PREFIX_RE: Final = re.compile(r"^([ \t]*)(#+:?)([ \t]*)(.*)$")
+
+
+def _reflow_line(line: str, proof: str, limit: int) -> tuple[list[str] | None, str]:
+    """`(replacement_lines, refusal_class)` for one over-long line.
+
+    `replacement_lines` is `None` when the line is refused, and `refusal_class` is `""`
+    when it is not.
+    """
+    if proof == _REFLOW_COMMENT:
+        m = _COMMENT_PREFIX_RE.match(line)
+        if m is None:  # unreachable: `proof` says tokenize found a line-leading comment
+            return None, _REFUSAL_NOT_PROVABLY_SAFE
+        indent, marker, gap, body = m.groups()
+        if any(d in body.lower() for d in _TOOL_DIRECTIVE_MARKERS):
+            return None, _REFUSAL_TOOL_DIRECTIVE
+        wrapped = _wrap_content(body, f"{indent}{marker}{gap}", f"{indent}{marker} ", limit)
+        return (wrapped, "") if wrapped else (None, _REFUSAL_NO_BREAK_POINT)
+    indent = line[: len(line) - len(line.lstrip())]
+    wrapped = _wrap_content(line.strip(), indent, indent, limit)
+    return (wrapped, "") if wrapped else (None, _REFUSAL_NO_BREAK_POINT)
+
+
+def _reflow_long_lines(root: Path) -> tuple[list[str], list[_RefusedLongLine]]:
+    """Reflow every Python line this migration pushed past the project's line limit, and
+    return `(changed_files, refused)`.
+
+    **Why this exists at all.** `_rewrite_citations` substitutes a citation with a longer,
+    id-based path and does not reflow the line it just lengthened. At the base of this
+    branch the tree is lint-clean; after a migration run it was not, on one rule only and
+    in comments and docstrings — the tool produced output its own project could not lint,
+    and CI stopped at the linter before any later stage ran. The fix belongs here, in the
+    tool, and never in the tool's output: a hand-edited tree and the tool that produced it
+    would disagree, and the next run would reproduce the whole population.
+
+    **What it will and will not do.** Only where `_reflowable_lines` can *prove* a newline
+    is semantics-free, by `tokenize` or by `ast` (and, within a docstring, outside a
+    doctest example block — `_docstring_doctest_rows`). Every other over-long line is left
+    exactly as it is and returned in `refused`, under a named class, for disclosure per
+    file into the governed W37-11 record. Reflowing a line no proof covers — a string
+    literal, whose value would change — is precisely the kind of silent edit this
+    migration must not make.
+
+    Runs last of every step that writes bytes into a Python file, because it measures
+    length and any later rewrite could change one.
+    """
+    scope = _python_lint_scope(root)
+    limit = scope.limit
+    if limit <= 0:
+        return [], []
+    changed: list[str] = []
+    refused: list[_RefusedLongLine] = []
+    for path in _iter_tree_files(root):
+        if path.suffix != ".py" or _is_vendored_exempt(path, root):
+            continue
+        rel = path.relative_to(root).as_posix()
+        # A file the linter never reads has no over-long line to fix and, just as
+        # importantly, none to *refuse*: disclosing a line nothing will ever flag reports
+        # a residue that does not exist. `_is_vendored_exempt` above is a near neighbour
+        # of this list but not the same set, which is why both are applied.
+        if any(rel == e or rel.startswith(f"{e}/") for e in scope.excluded):
+            continue
+        if any(fnmatch.fnmatch(rel, glob) for glob in scope.exempt):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if not any(_over_limit(line, limit) for line in text.splitlines()):
+            continue
+        proofs = _reflowable_lines(text)
+        out: list[str] = []
+        touched = False
+        for number, line in enumerate(text.splitlines(), start=1):
+            # A refusal is reported at its line number in the file this run WRITES, which
+            # is `len(out) + 1` — not at `number`, its number in the text read. Every
+            # reflow above it has inserted lines, so the two diverge, and the first
+            # reconciliation of this pass against the linter found exactly that: refusals
+            # citing line 3079 for a line the linter reported at 3097. A disclosure row
+            # whose line number resolves to the wrong line is worse than no row.
+            written = len(out) + 1
+            if not _over_limit(line, limit):
+                out.append(line)
+                continue
+            proof = proofs.get(number)
+            if proof is None:
+                refused.append(_RefusedLongLine(
+                    rel, written, _REFUSAL_NOT_PROVABLY_SAFE, line.strip(),
+                ))
+                out.append(line)
+                continue
+            wrapped, refusal = _reflow_line(line, proof, limit)
+            if wrapped is None:
+                refused.append(_RefusedLongLine(rel, written, refusal, line.strip()))
+                out.append(line)
+                continue
+            out.extend(wrapped)
+            touched = True
+        if touched:
+            ending = "\n" if text.endswith("\n") else ""
+            path.write_text("\n".join(out) + ending, encoding="utf-8")
+            changed.append(rel)
+    return changed, refused
+
+
+# ---------------------------------------------------------------------------------------
+# The 13 refused string literals (deputy ruling, `to-lead.md` 2026-09-06 08:42 BST,
+# ACCEPTED region: "ast-proven split for the 13"). A second, separate pass over
+# `_reflow_long_lines`'s own `_REFUSAL_NOT_PROVABLY_SAFE` population, kept apart from
+# that function so its own pinned proofs are untouched -- this only ever revisits a line
+# that pass already refused, and only ever a bare `NAME = "literal"` assignment on one
+# physical line.
+# ---------------------------------------------------------------------------------------
+
+
+def _module_constants(text: str) -> dict[str, object] | None:
+    """`{name: value}` for every module-level `NAME = <constant>` assignment (a single
+    `ast.Name` target, an `ast.Constant` value) in `text`, or `None` when it does not
+    parse.
+
+    The proof `_split_string_literal_line` below rests on: compared whole, before and
+    after a candidate rewrite, over every module-level constant, not only the one being
+    split. A candidate that merely re-parses is not proof that nothing changed -- a file
+    that parses can still have a corrupted literal value elsewhere, and a check scoped to
+    the one name being split cannot see that.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return None
+    out: dict[str, object] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name) or not isinstance(node.value, ast.Constant):
+            continue
+        out[target.id] = node.value.value
+    return out
+
+
+#: A bare `NAME = "literal"` (optionally annotated) on one physical line: no string
+#: prefix (`r`/`b`/`f` -- a prefix can change what the literal *means*, not only how it is
+#: spelled, and this pass proves only spelling-preserving rewrites), not triple-quoted,
+#: and the body carries neither quote character nor a backslash. The backslash exclusion
+#: is deliberate and conservative: a cut could land inside an escape sequence, and
+#: refusing rather than reasoning about escapes is the same "no proof, no touch"
+#: discipline `_reflowable_lines` already applies to a line no proof covers.
+_STRING_ASSIGN_RE: Final = re.compile(
+    r'^(?P<indent>[ \t]*)(?P<name>[A-Za-z_]\w*)(?P<ann>\s*:\s*[^=]+?)?\s*=\s*'
+    r'(?P<quote>[\'"])(?P<body>[^\'"\\]*)(?P=quote)(?P<trail>\s*(?:#.*)?)$'
+)
+
+
+def _split_by_room(content: str, room: int) -> list[str] | None:
+    """`content` cut into chunks each of length `<= room`, or `None` when no set of cuts
+    achieves that.
+
+    Prefers a whitespace break and falls back to `_token_break`'s path-character rule --
+    the identical two-break strategy `_wrap_content` above already applies for the
+    comment/docstring limb, reused rather than re-derived, because concatenating string
+    literals tolerates an arbitrary cut point even more than a comment's prose does: two
+    adjacent literals concatenate to the identical value regardless of where either one
+    is cut, so no new break rule is invented for this shape.
+    """
+    if room <= 0:
+        return None
+    chunks: list[str] = []
+    rest = content
+    while True:
+        if len(rest) <= room:
+            chunks.append(rest)
+            return chunks
+        cut = rest.rfind(" ", 1, room + 1)
+        if cut > 0:
+            chunks.append(rest[: cut + 1])
+            rest = rest[cut + 1 :]
+        else:
+            token_cut = _token_break(rest, room)
+            if token_cut is None:
+                return None
+            chunks.append(rest[:token_cut])
+            rest = rest[token_cut:]
+
+
+def _split_string_literal_line(
+    text: str, lines: list[str], number: int, limit: int,
+) -> list[str] | None:
+    """`number`'s replacement lines (an implicit-concatenation split), or `None` when no
+    split is available or the `ast` round-trip proof refuses it.
+
+    Restricted to the shape `_STRING_ASSIGN_RE` matches, and accepted only when
+    `_module_constants(text)` (the ORIGINAL file) equals `_module_constants` of the
+    candidate file with only this one line replaced -- comparing constants means BEFORE
+    *and* AFTER, never just parsing the after-state, per the deputy's ruling.
+    """
+    line = lines[number - 1]
+    m = _STRING_ASSIGN_RE.match(line)
+    if m is None:
+        return None
+    indent, name = m["indent"], m["name"]
+    ann, quote, body, trail = m["ann"] or "", m["quote"], m["body"], m["trail"] or ""
+    cont_indent = indent + "    "
+    room = limit - len(cont_indent) - 2  # the two quote characters
+    chunks = _split_by_room(body, room)
+    if chunks is None or len(chunks) < 2:
+        return None  # nothing to concatenate -- a single chunk proves nothing
+    opener = f"{indent}{name}{ann} = ("
+    closer = f"{indent}){trail}"
+    body_lines = [f"{cont_indent}{quote}{chunk}{quote}" for chunk in chunks]
+    if any(len(cl) > limit for cl in (opener, closer, *body_lines)):
+        return None
+    candidate_lines = [opener, *body_lines, closer]
+    candidate_text = "\n".join([*lines[: number - 1], *candidate_lines, *lines[number:]])
+    before = _module_constants(text)
+    after = _module_constants(candidate_text)
+    if before is None or after is None or before != after:
+        return None
+    return candidate_lines
+
+
+def _split_long_string_literals(
+    root: Path, limit: int, refused: Sequence[_RefusedLongLine],
+) -> tuple[list[str], list[_RefusedLongLine]]:
+    """Revisit `refused` -- `_reflow_long_lines`'s own return -- and split every
+    `_REFUSAL_NOT_PROVABLY_SAFE` line that `_split_string_literal_line` can prove safe.
+    Returns `(changed_files, still_refused)`: `still_refused` is `refused` with every
+    resolved entry removed and every remaining one's `line` renumbered for the file this
+    pass writes, the identical "written, not read" discipline `_reflow_long_lines` uses.
+
+    A line refused for any other reason (`_REFUSAL_NO_BREAK_POINT`,
+    `_REFUSAL_TOOL_DIRECTIVE` -- both comment-only classes) is never a candidate here and
+    is carried through unresolved, renumbered the same way.
+    """
+    by_path: dict[str, list[_RefusedLongLine]] = {}
+    for entry in refused:
+        by_path.setdefault(entry.path, []).append(entry)
+    changed: list[str] = []
+    still_refused: list[_RefusedLongLine] = []
+    for path_str, entries in by_path.items():
+        target = root / path_str
+        try:
+            text = target.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            still_refused.extend(entries)
+            continue
+        lines = text.splitlines()
+        by_row = {e.line: e for e in entries}
+        candidates = {row for row, e in by_row.items() if e.cls == _REFUSAL_NOT_PROVABLY_SAFE}
+        out: list[str] = []
+        touched = False
+        for row_num, line in enumerate(lines, start=1):
+            written = len(out) + 1
+            entry = by_row.get(row_num)
+            if row_num in candidates:
+                split = _split_string_literal_line(text, lines, row_num, limit)
+                if split is not None:
+                    out.extend(split)
+                    touched = True
+                    continue
+            if entry is not None:
+                still_refused.append(
+                    _RefusedLongLine(path_str, written, entry.cls, entry.text)
+                )
+            out.append(line)
+        if touched:
+            ending = "\n" if text.endswith("\n") else ""
+            target.write_text("\n".join(out) + ending, encoding="utf-8")
+            changed.append(path_str)
+    return changed, still_refused
 
 
 def _regenerate_index_for_migrate(root: Path) -> list[str]:
@@ -8896,6 +9480,26 @@ def migrate(root: Path) -> MigrateResult:
     # `delivery-process.md` itself), so every migrated tree still reappeared at check 27.
     process_core_written = _reconcile_process_core_digest(root)
 
+    # Last of every step that writes bytes into a Python file: this one measures line
+    # length, so any later rewrite could invalidate what it measured. `_rewrite_citations`
+    # substitutes a longer, id-based path into a line and does not reflow it; without this
+    # the migration produced a tree its own linter rejected, and CI stopped there before
+    # any later stage ran. Only provably semantics-free newlines are inserted; every other
+    # over-long line is left alone and carried out by name in `refused_long_lines`.
+    reflowed, refused_long_lines = _reflow_long_lines(root)
+    files_written = [*files_written, *reflowed]
+
+    # A second, separate pass over `_reflow_long_lines`'s own refusals -- the deputy's
+    # ruling on the 13 string literals: split by implicit concatenation only where an
+    # `ast` round-trip proves the module's constants are unchanged before and after.
+    # Runs immediately after, on the same reasoning ("last of every step that writes
+    # bytes into a Python file"), and never folded into `_reflow_long_lines` itself so
+    # that function's own pinned proofs stay untouched.
+    resplit, refused_long_lines = _split_long_string_literals(
+        root, _python_lint_scope(root).limit, refused_long_lines
+    )
+    files_written = [*files_written, *resplit]
+
     # Last, because it reads what was written rather than what was planned, and the
     # roadmap it resolves against is only final after `_restructure_roadmap` above.
     #
@@ -8939,6 +9543,7 @@ def migrate(root: Path) -> MigrateResult:
         index_resolved_split_citations=tuple(index_resolved),
         unresolved_split_citations=tuple(unrewritten_citations),
         split_index_violations=tuple(index_faults),
+        refused_long_lines=tuple(refused_long_lines),
         generated_paths=tuple(dict.fromkeys([
             *readme_written, *split_index_paths, *redirects_written, *index_written,
             *process_core_written,
@@ -9361,9 +9966,25 @@ def classify_migration_diff(
         if stripped.strip("\n") == compare_against.strip("\n"):
             buckets["3-move" if moved else "1-front-matter-stamp"].append(old_rel)
             return
+        inverse = _inverse_for(new_rel)
         if audit_docs.frozen_file_matches_after_migration_stamp(
-            compare_against, new_text, _inverse_for(new_rel), allocated_ids=allocated_ids,
+            compare_against, new_text, inverse, allocated_ids=allocated_ids,
             old_rel=old_rel, new_rel=new_rel, reference_stamp_paths=reference_stamp_paths,
+        ) or (
+            # W37-6 PR-C, row (g) class 2: a hunk that is nothing but a reference-token
+            # substitution, where the substitution itself lengthened the line past the
+            # project's limit and `_reflow_long_lines` wrapped it, must still classify
+            # class 2 -- the wrap is the migration's own, not a hand edit. Collapsed via
+            # `_dewrap_reference_tokens` (below), which reuses `_wrapped_path_patterns`'
+            # own wrap-tolerant matching rather than reimplementing it, before retrying
+            # the identical, unmodified DP-7 predicate. A wrap that does not fall inside
+            # one of `inverse`'s own tokens is untouched by this and the retry fails
+            # exactly as before -- the control this fix's own tests name.
+            bool(inverse) and audit_docs.frozen_file_matches_after_migration_stamp(
+                compare_against, _dewrap_reference_tokens(new_text, inverse),
+                inverse, allocated_ids=allocated_ids, old_rel=old_rel, new_rel=new_rel,
+                reference_stamp_paths=reference_stamp_paths,
+            )
         ):
             buckets["3-move" if moved else "2-reference-token"].append(old_rel)
             return
@@ -9632,6 +10253,20 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     )
     for violation in result.split_index_violations:
         print(f"  {violation}", file=sys.stderr)
+    # Unconditionally, including the zero, and by name with its refusal class: a line the
+    # migration lengthened past the limit and would not break is left long on purpose, and
+    # the disposition for each is a per-file row in the governed W37-11 record. A count
+    # alone is not something a reader can disposition.
+    print(
+        f"doc-id.py migrate: {len(result.refused_long_lines)} over-long line(s) refused "
+        "rather than reflowed (no proof a newline there is semantics-free):",
+        file=sys.stderr,
+    )
+    for refused in result.refused_long_lines:
+        print(
+            f"  {refused.path}:{refused.line} [{refused.cls}] {refused.text[:80]}",
+            file=sys.stderr,
+        )
     print(f"doc-id.py migrate: {len(result.assigned)} id(s) assigned")
     return 0
 
