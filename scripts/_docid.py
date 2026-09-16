@@ -1748,6 +1748,38 @@ def resolve_to_control_paths(
     non-sequential name; nothing here defends a merge target that DID get an allocated id,
     which the corpus does not currently contain).
     """
+    resolved: dict[tuple[str, str], int] = {}
+    for (path, cls), count in measured.items():
+        control = _control_path_for(path, tree_root)
+        key = (control, cls)
+        resolved[key] = resolved.get(key, 0) + count
+    return resolved
+
+
+def resolve_keys_to_control_paths(
+    keys: Iterable[tuple[str, str]], tree_root: Path,
+) -> Mapping[tuple[str, str], tuple[str, str]]:
+    """The per-item counterpart of `resolve_to_control_paths`: for every `(path, cls)` in
+    `keys`, the exact `(composite_control_path, cls)` it resolves to — never aggregated.
+
+    A caller that must decide, for one specific failure MESSAGE, whether that individual
+    message's key is disclosed (rather than only the total count for a `(control, cls)`
+    pair) needs this — `resolve_to_control_paths` alone only answers "how many, in
+    total". Built from the identical resolution `resolve_to_control_paths` performs
+    (`_control_path_for`, one shared implementation), so the two can never disagree on
+    which composite key one message belongs to.
+    """
+    return {(path, cls): (_control_path_for(path, tree_root), cls) for path, cls in keys}
+
+
+def _load_redirect_maps(tree_root: Path) -> tuple[
+    dict[str, set[str]], dict[str, str], dict[str, str],
+]:
+    """`(fan_out, reverse, part_ordinal_by_new_path)` from `tree_root`'s own
+    `docs/REDIRECTS.csv`, and the resolver's own condition-1 ambiguity refusal (never
+    first-match) — read once per call site, since a `REDIRECTS.csv` never changes within
+    one run.
+    """
     fan_out: dict[str, set[str]] = {}
     fan_in: dict[str, set[str]] = {}
     part_ordinal_by_new_path: dict[str, str] = {}
@@ -1803,10 +1835,16 @@ def resolve_to_control_paths(
             f"pairwise-distinct part_ordinal cells in {tree_root / 'docs' / 'REDIRECTS.csv'} "
             f"— never resolved by first-match: {detail}"
         )
-    resolved: dict[tuple[str, str], int] = {}
-    for (path, cls), count in measured.items():
-        control = reverse.get(path, path)
-        part = part_ordinal_by_new_path.get(path, "") if len(fan_out.get(control, ())) > 1 else ""
-        key = (composite_control_key(control, part), cls)
-        resolved[key] = resolved.get(key, 0) + count
-    return resolved
+    return fan_out, reverse, part_ordinal_by_new_path
+
+
+def _control_path_for(path: str, tree_root: Path) -> str:
+    """The composite `(control_path[#part])` string one migrated `path` resolves to,
+    against `tree_root`'s own `docs/REDIRECTS.csv` — the single implementation
+    `resolve_to_control_paths` and `resolve_keys_to_control_paths` both call, so the
+    aggregate and the per-message answer can never drift apart.
+    """
+    fan_out, reverse, part_ordinal_by_new_path = _load_redirect_maps(tree_root)
+    control = reverse.get(path, path)
+    part = part_ordinal_by_new_path.get(path, "") if len(fan_out.get(control, ())) > 1 else ""
+    return composite_control_key(control, part)

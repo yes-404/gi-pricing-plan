@@ -3440,13 +3440,25 @@ def _partition_by_w37_11_record() -> tuple[list[str], list[str]]:
     # own id allocation produced (`_docid.resolve_to_control_paths`'s own docstring: an
     # allocation is a fact about the run, not about the file). `REPO`'s own
     # `docs/REDIRECTS.csv` — empty until this repository has actually been migrated — is
-    # what resolves this run's migrated-path keys into the record's coordinate system; the
-    # reverse map is built once and reused per message, never re-read per failure.
-    redirect_reverse = {
-        new: old for old, new in _docid.redirects_path_map(REPO).items()
-    }
+    # what resolves this run's migrated-path keys into the record's coordinate system.
+    #
+    # D1b (deputy, 2026-09-16 22:47:56 BST): this used to build its own one-shot reverse
+    # map from `_docid.redirects_path_map` — a dict that can hold only ONE `new_path` per
+    # `old_path` by construction (that function's own docstring: "Lossy by construction
+    # for a fan-out source"). For a genuine split source (`docs/audit/plan-reviews.md`,
+    # 13 migrated targets) that reverse map held exactly one of the 13, so the other 12
+    # never resolved to their control path at all — every one of their failures was
+    # counted, never disclosed, regardless of `part_slug` or `part_ordinal`, because this
+    # function never reached the fan-out-aware resolver in the first place. Condition 1
+    # ("refuse ambiguity, never first-match, in the ceiling and audit-docs") applies here
+    # via the identical shared resolver `_docverify.py`'s own h1-residue instrument calls
+    # — `resolve_keys_to_control_paths`/`resolve_to_control_paths`, one implementation,
+    # so the instrument and this reader can no longer disagree on which composite key one
+    # message belongs to.
+    non_none_keys = {key for key in keys if key is not None}
+    resolved_by_key = _docid.resolve_keys_to_control_paths(non_none_keys, REPO)
     control_keys = [
-        (redirect_reverse.get(key[0], key[0]), key[1]) if key is not None else None
+        resolved_by_key[key] if key is not None else None
         for key in keys
     ]
     measured: dict[tuple[str, str], int] = {}
