@@ -2093,6 +2093,97 @@ def test_a_refusal_not_named_in_the_w37_11_record_stays_fatal(
     assert "docs/audit/" in rows["d10"].title
 
 
+# =========================================================================================
+# W37-6 PR-B prep (2026-09-16, resume): the deputy's decision (A) governs (d9) and (d10)
+# for the first time -- both classes have ZERO rows anywhere in the record today, and the
+# real fatal population (`/tmp/w37-6-pr-b-verify-2bd3f37`, cross-checked against the
+# deputy's own count in `to-deputy.md` 21:35:56 BST) puts one file, `scripts/doc-id.py`,
+# under BOTH classes at once (6 (d9) hits, 15 (d10) hits). Neither shape -- a class
+# governed for the first time, or one path carrying two distinct classes' counts -- has
+# a test naming it explicitly; `_D_ROW_CLASSES`/`test_load_w37_11_record_accepts_every_
+# real_extractor_class` already prove "d9"/"d10" are accepted labels (they are members of
+# `_D_ROW_CLASSES`, `range(1, len(D_ALTERNATIVES) + 1)`), and `test_residue_ceiling_
+# ignores_an_ungoverned_class`/`test_residue_ceiling_flags_a_recorded_file_pushed_above_
+# its_ceiling` already prove the general mechanism generically. These two tests exercise
+# the same mechanism on the REAL shape rather than inventing a new one -- both pass
+# already against `e50fda4`'s code, which is the finding itself: (A)'s disclosure path
+# needs no new loader or ceiling code, only the record rows (drafted in
+# `/tmp/w37-6-pr-b2-rows-draft.md`, not yet written into the governed table).
+# =========================================================================================
+
+
+def test_w37_11_record_parses_a_path_governed_under_two_distinct_classes(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """`scripts/doc-id.py` carries both a (d9) and a (d10) disclosed count in the PR-B
+    draft rows -- one path, two rows, distinguished only by `cls`. The loader must keep
+    both as distinct `ResidueEntry` rows (the pair `(path, cls)` is the key, per
+    `ResidueEntry`'s own docstring), never collapse or overwrite one with the other."""
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| scripts/doc-id.py | d9 | 6 | refused split-source citation, decision (A) |"
+        " W37-6 |\n"
+        "| scripts/doc-id.py | d10 | 15 | refused split-source citation, decision (A) |"
+        " W37-6 |\n",
+        encoding="utf-8",
+    )
+    record = dv.load_w37_11_record(tmp_path)
+    assert record == (
+        dv.ResidueEntry(
+            path="scripts/doc-id.py", cls="d9", count=6,
+            reason="refused split-source citation, decision (A)", owner="W37-6",
+        ),
+        dv.ResidueEntry(
+            path="scripts/doc-id.py", cls="d10", count=15,
+            reason="refused split-source citation, decision (A)", owner="W37-6",
+        ),
+    )
+    # `build_ceiling` is D1's own constructor (`scripts/_docid.py` on `origin/main`,
+    # commit 7fa287c94d599cdb8fa9cace24e74c73130d4035, not yet merged onto this
+    # pre-rebase branch) -- this branch still reads the ceiling the way
+    # `check_residue_ceiling`/`_residue_fully_governed` already do here, a plain
+    # `{(e.path, e.cls): e.count for e in record}`, which the assertions below exercise
+    # through the real function rather than restating that dict comprehension a third
+    # time in this test.
+    at_ceiling = dv.check_residue_ceiling(
+        {("scripts/doc-id.py", "d9"): 6, ("scripts/doc-id.py", "d10"): 15}, record,
+    )
+    assert at_ceiling == ()
+    over_ceiling = dv.check_residue_ceiling(
+        {("scripts/doc-id.py", "d9"): 7, ("scripts/doc-id.py", "d10"): 15}, record,
+    )
+    assert [(c.path, c.cls, c.kind) for c in over_ceiling] == [
+        ("scripts/doc-id.py", "d9", dv.RESIDUE_REGRESSION)
+    ]
+
+
+def test_a_class_governed_for_the_first_time_ceilings_from_its_first_entry(
+    dv: Any,
+) -> None:
+    """(d9) has zero rows anywhere in the record today (decision (A) files its first
+    ones in this same PR). The moment that first row lands, `check_residue_ceiling` must
+    govern it exactly like any long-governed class: at the recorded count, silence; one
+    hit over it, a fatal `RESIDUE_REGRESSION`. Proven both ways on the identical record,
+    per `test_residue_ceiling_ignores_an_ungoverned_class`'s own reasoning ("wiring a new
+    row's measurement in ahead of the record gaining its first entry... cannot manufacture
+    a false regression") -- this is the day that class's first entry actually lands."""
+    record = (
+        dv.ResidueEntry(
+            path="scripts/doc-id.py", cls="d9", count=6, reason="r", owner="W37-6",
+        ),
+    )
+    at_ceiling = dv.check_residue_ceiling({("scripts/doc-id.py", "d9"): 6}, record)
+    assert at_ceiling == ()
+    over_ceiling = dv.check_residue_ceiling({("scripts/doc-id.py", "d9"): 7}, record)
+    assert [(c.path, c.cls, c.kind) for c in over_ceiling] == [
+        ("scripts/doc-id.py", "d9", dv.RESIDUE_REGRESSION)
+    ]
+    assert over_ceiling[0].fatal
+
+
 def test_a_companion_is_promoted_to_gating_by_configuration_not_a_rewrite(
     dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
