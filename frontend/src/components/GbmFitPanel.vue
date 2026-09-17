@@ -9,7 +9,7 @@ const props = defineProps<{ spec: GbmSpec; fit: GbmFitResult }>();
  * `monotone_constraints` is positional against `feature_order` (`02` §4.8). Zipping is what
  * turns a vector of integers into the actuarial judgement it encodes, and the words are the
  * accessible channel: a direction shown only as a coloured arrow is a direction a screen
- * reader does not have (NFR-OVR-10).
+ * reader does not have (NFR-463).
  */
 const DIRECTION: Record<string, string> = {
   "-1": "decreasing",
@@ -31,7 +31,7 @@ const objective = computed(() =>
 );
 
 /**
- * FR-MODEL-94: the field names the transform the platform must apply, or is null where the
+ * FR-130: the field names the transform the platform must apply, or is null where the
  * library already applied it. The value alone cannot distinguish those two readings, so the
  * page spells out which one holds rather than printing `exp` or a dash.
  */
@@ -42,7 +42,7 @@ const inverseLink = computed(() =>
 );
 
 /**
- * FR-MODEL-27: exposure enters as a `base_margin` the platform constructs from the declared
+ * FR-121: exposure enters as a `base_margin` the platform constructs from the declared
  * offset — never as a feature and never as a weight. Which construction was used is the
  * difference between a frequency model and a nonsense one, so it is named rather than
  * summarised as "offset: yes".
@@ -117,7 +117,7 @@ const libraries = computed(() =>
         <dt class="w-48 shrink-0 text-slate-500">
           Base margin
         </dt>
-        <!-- FR-MODEL-27: named, not summarised. "offset: yes" is not checkable. -->
+        <!-- FR-121: named, not summarised. "offset: yes" is not checkable. -->
         <dd class="font-mono text-xs">
           {{ baseMargin }}
         </dd>
@@ -166,7 +166,7 @@ const libraries = computed(() =>
       </div>
     </dl>
 
-    <!-- FR-MODEL-111: a declared metric the backend could not evaluate. Silent absence is
+    <!-- FR-161: a declared metric the backend could not evaluate. Silent absence is
          the defect the field exists to remove, so this renders only when there is something
          to say and says "not evaluated" in words. -->
     <div
@@ -221,7 +221,7 @@ const libraries = computed(() =>
           <td class="py-2 font-mono text-xs text-slate-600">
             {{ feature.dtype }}
           </td>
-          <!-- The word is the accessible channel, not a colour or an arrow (NFR-OVR-10). -->
+          <!-- The word is the accessible channel, not a colour or an arrow (NFR-463). -->
           <td class="py-2">
             {{ feature.direction }}
           </td>
@@ -233,7 +233,7 @@ const libraries = computed(() =>
     </table>
 
     <p class="mt-3 text-xs text-slate-500">
-      Dtypes and categorical maps travel with the booster (FR-MODEL-31): the exported model
+      Dtypes and categorical maps travel with the booster (FR-125): the exported model
       cannot express them, so scoring elsewhere needs them from here.
     </p>
   </section>

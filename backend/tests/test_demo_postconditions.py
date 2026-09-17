@@ -1,4 +1,4 @@
-"""The demo's wf-01 postcondition check, exercised in pytest (finding F3).
+"""The demo's WF-698 postcondition check, exercised in pytest (finding F3).
 
 `scripts/demo.py`'s `_verify_journey_postconditions` runs only inside the exit demo, over
 the real seed, so nothing in pytest exercised the check until this file. The HTTP call is

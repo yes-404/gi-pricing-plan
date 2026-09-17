@@ -11,11 +11,11 @@ Both inputs are documents. Requirements come from `docs/specs/`, evidence comes 
 written, which is what makes the result independent of whoever runs it.
 
     scripts/scope-audit.py PLAT                    # every PLAT requirement, by section
-    scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 --extra FR-PLAT-47,FR-PLAT-48
+    scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 --extra FR-450,FR-451
     scripts/scope-audit.py DATA --endpoints        # also check the §5.1 endpoint table
     scripts/scope-audit.py DATA --catalogue VR     # also check a declared catalogue
 
-**A requirement can also summarise a catalogue it does not enumerate.** `01` FR-DATA-16
+**A requirement can also summarise a catalogue it does not enumerate.** `01` FR-45
 says "validation covers four layers", which one test can evidence — while §4.4's catalogue
 of 38 named rules behind it was 12 implemented. `--catalogue VR` compares the ids a spec
 declares against the ids the code names, which is the difference between "the layers work"
@@ -23,13 +23,13 @@ and "the rules exist".
 
 **A requirement can be fully evidenced while the module is unreachable.** Requirement
 markers live on unit and service tests, so a module can pass every one of them and expose
-not a single HTTP route — which is exactly what `--endpoints` found for W4: 49 of 50
+not a single HTTP route — which is exactly what `--endpoints` found for WK-660: 49 of 50
 `DATA` requirements evidenced, and 0 of the 28 endpoints `01` §5.1 declares. Coverage of
 the requirement list is not coverage of the interface.
 
 `--sections` restricts to the spec sections a workstream's named areas cover; `--extra`
 adds individual requirements it also owns. The resulting count is the number to reconcile
-against the roadmap's claim — **a disagreement is itself a finding**, and was one for W2.
+against the roadmap's claim — **a disagreement is itself a finding**, and was one for WK-658.
 
 Exit code is 1 when any in-scope requirement has no evidence, so a closure procedure can
 run this and stop.
@@ -49,7 +49,12 @@ from collections import defaultdict
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS = ROOT / "docs" / "specs"
 
-_REQUIREMENT = re.compile(r"^\| \*\*((?:FR|NFR)-([A-Z]+)-\d+)\*\*")
+_REQUIREMENT = re.compile(r"^\| \*\*((?:FR|NFR)-\d+)\*\*")
+#: `**Module code:** \`RATE\`` -- each spec's own header line (`00-overview.md` §7.1's
+#: table restates the same mapping for humans). Post-migration requirement ids are flat
+#: (`FR-212`, not `FR-RATE-212` -- NT-0019 dropped the per-module infix), so a row's module
+#: is no longer readable from its id; it is read from which spec file the row lives in.
+_MODULE_CODE = re.compile(r"\*\*Module code:\*\* `([A-Z]+)`")
 # Both heading levels. Specs differ: `07` puts requirements under `### 3.2 Jobs`, while
 # `00` puts them under `## 3. Functional requirements`. Matching only `###` made the last
 # level-3 heading stick, and every FR-OVR requirement was attributed to
@@ -73,16 +78,18 @@ _PATH_IN_CELL = re.compile(r"`([^`]+)`")
 def requirements_by_section(module: str) -> dict[str, list[str]]:
     """Every requirement for a module, grouped by the spec section that defines it."""
     found: dict[str, list[str]] = defaultdict(list)
-    for spec in sorted(SPECS.glob("*.md")):
-        section = "(preamble)"
-        for line in spec.read_text(encoding="utf-8").splitlines():
-            if _NFR_HEADING.match(line):
-                section = "NFR"
-            elif heading := _SECTION.match(line):
-                section = f"{heading.group(2)} {heading.group(3)}"
-            match = _REQUIREMENT.match(line)
-            if match and match.group(2) == module:
-                found[section].append(match.group(1))
+    spec = owning_spec(module)
+    if spec is None:
+        return dict(found)
+    section = "(preamble)"
+    for line in spec.read_text(encoding="utf-8").splitlines():
+        if _NFR_HEADING.match(line):
+            section = "NFR"
+        elif heading := _SECTION.match(line):
+            section = f"{heading.group(2)} {heading.group(3)}"
+        match = _REQUIREMENT.match(line)
+        if match:
+            found[section].append(match.group(1))
     return dict(found)
 
 
@@ -210,18 +217,18 @@ def report_catalogue(module: str, prefix: str) -> int:
 def owning_spec(module: str) -> pathlib.Path | None:
     """The spec that *defines* a module, not merely one that mentions it.
 
-    Almost every spec references `FR-DATA-*` somewhere — cross-module dependencies are the
-    point of §7 — so "contains the module code" selects nearly the whole suite and drags
-    in `03`'s rating endpoints as if `01` had declared them. Ownership is where the
-    requirement rows are.
+    Almost every spec references the other modules' requirements somewhere — cross-module
+    dependencies are the point of §7 — so "mentions the module" selects nearly the whole
+    suite and drags in `03`'s rating endpoints as if `01` had declared them. Ownership is
+    read from each spec's own "Module code" header line (`00-overview.md` §7.1
+    restates the same one-to-one mapping for humans), never from counting requirement rows:
+    post-migration ids carry no module segment to count (`FR-212`, not `FR-RATE-212`).
     """
-    counts = {
-        spec: len(re.findall(rf"^\| \*\*(?:FR|NFR)-{module}-\d+\*\*", spec.read_text(
-            encoding="utf-8"), re.MULTILINE))
-        for spec in sorted(SPECS.glob("*.md"))
-    }
-    best = max(counts, key=lambda spec: counts[spec])
-    return best if counts[best] else None
+    for spec in sorted(SPECS.glob("*.md")):
+        match = _MODULE_CODE.search(spec.read_text(encoding="utf-8"))
+        if match and match.group(1) == module:
+            return spec
+    return None
 
 
 def declared_endpoints(module: str) -> set[tuple[str, str]]:
@@ -263,7 +270,7 @@ def implemented_endpoints() -> set[tuple[str, str]]:
     """The (method, path) pairs the committed OpenAPI contract publishes.
 
     Read from `docs/contracts/`, not from the running app: the contract is the published
-    artifact (FR-PLAT-48), and CI already fails when the app drifts from it. Auditing the
+    artifact (FR-451), and CI already fails when the app drifts from it. Auditing the
     app instead would make this check pass on a route that was never published.
     """
     contract = ROOT / "docs" / "contracts" / "openapi" / "generated.json"
@@ -303,7 +310,7 @@ def report_endpoints(module: str) -> int:
     return 0
 
 
-#: A token that lost its prefix to a comma split, e.g. the `41` in `FR-RATE-40,41`.
+#: A token that lost its prefix to a comma split, e.g. the `258` in `FR-257,258`.
 _BARE_NUMBER = re.compile(r"^\d+$")
 
 
@@ -312,8 +319,8 @@ def _extra_ids(raw: str, known: set[str], module: str) -> set[str] | None:
 
     The parser is a literal `raw.split(",")` with no shared-prefix inheritance: a comma
     reads to a human as "and repeat the prefix", but the parser reads it as a plain
-    separator. `--extra FR-RATE-40,41,42` is not three requirement ids, it is
-    `FR-RATE-40`, `"41"` and `"42"`. Before this check existed, `main` folded every token
+    separator. `--extra FR-257,258,259` is not three requirement ids, it is
+    `FR-257`, `"258"` and `"259"`. Before this check existed, `main` folded every token
     straight into scope regardless, and an unmatched one still got a `NO EVIDENCE` row
     printed for it — indistinguishable from a real requirement lacking a test, and with one
     bogus token swapped in for the id it silently replaced, the in-scope *count* still came
@@ -364,7 +371,7 @@ def main() -> int:
     parser.add_argument(
         "--extra",
         help="Comma-separated requirement ids also in scope, each written out in full, "
-        "e.g. FR-PLAT-47,FR-PLAT-48 (NOT FR-PLAT-47,48 — the comma does not repeat "
+        "e.g. FR-450,FR-451 (NOT FR-PLAT-47,48 — the comma does not repeat "
         "the prefix)",
     )
     parser.add_argument(

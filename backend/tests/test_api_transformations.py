@@ -7,7 +7,7 @@ audit reported a complete surface because it compares the spec against the *cont
 A route the contract does not carry is invisible to that audit, so it has to be visible
 here.
 
-The round trip is the point of the first test. FR-MODEL-9 says the proposal is always
+The round trip is the point of the first test. FR-98 says the proposal is always
 editable and what is stored is what was accepted — which is only true if the shape that
 comes back is the shape that can be posted.
 """
@@ -59,7 +59,7 @@ def _grouping_body(slug: str, dataset_id: str) -> dict[str, object]:
     }
 
 
-@pytest.mark.req("FR-MODEL-12")
+@pytest.mark.req("FR-101")
 def test_a_banding_round_trips_through_the_api(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -76,7 +76,7 @@ def test_a_banding_round_trips_through_the_api(
     assert body["labels"] == ["17-24", "25-39", "40+"]
     assert body["above_range"] == "clamp_to_last"
 
-    # FR-MODEL-12: the same slug again is a **new version**, not an edit.
+    # FR-101: the same slug again is a **new version**, not an edit.
     edited = _banding_body(slug, dataset_id)
     edited["boundaries"] = [17.0, 22.0, 40.0, 99.0]
     again = api_client.post("/api/v1/bandings", json=edited, headers=actuary)
@@ -91,7 +91,7 @@ def test_a_banding_round_trips_through_the_api(
     assert versions == [1, 2]
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_a_grouping_round_trips_and_keeps_its_unseen_level_behaviour(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -108,7 +108,7 @@ def test_a_grouping_round_trips_and_keeps_its_unseen_level_behaviour(
     assert body["mapping"]["N2"] == "NORTH"
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_a_grouping_without_an_unseen_level_behaviour_is_refused_at_the_edge(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -130,7 +130,7 @@ def test_a_grouping_without_an_unseen_level_behaviour_is_refused_at_the_edge(
     ), problem
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_an_invalid_banding_is_refused_at_the_edge(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -143,7 +143,7 @@ def test_an_invalid_banding_is_refused_at_the_edge(
     assert refused.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_a_banding_factor_declares_its_banding_over_the_api(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -186,11 +186,11 @@ def test_a_banding_factor_declares_its_banding_over_the_api(
     assert without.status_code == 422, without.text
 
 
-@pytest.mark.req("FR-MODEL-7")
+@pytest.mark.req("FR-96")
 def test_a_factor_of_an_existing_slug_becomes_the_next_version(
     api_client: TestClient, actuary: dict[str, str]
 ) -> None:
-    """FR-MODEL-7: factors are versioned independently and a Model Spec pins the version.
+    """FR-96: factors are versioned independently and a Model Spec pins the version.
 
     Untested until now, which the scope audit reported and this closes: `create_factor`
     has always allocated the next version, but nothing asserted that editing a factor
@@ -225,9 +225,9 @@ def test_a_factor_of_an_existing_slug_becomes_the_next_version(
     assert by_version[2]["intent"] == "control"
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 def test_the_published_contract_carries_all_four_declared_routes() -> None:
-    """`02` §5.1's table, against the artifact external consumers read (FR-PLAT-48).
+    """`02` §5.1's table, against the artifact external consumers read (FR-451).
 
     Asserted against the committed contract rather than the running app: a route the
     contract does not carry is invisible to the endpoint audit, which is how `01`'s

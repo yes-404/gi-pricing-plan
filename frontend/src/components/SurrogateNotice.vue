@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * A GLM approximation's diagnostics are measured against another model's predictions
- * (FR-MODEL-96, FR-MODEL-102).
+ * (FR-137, FR-141).
  *
  * A surrogate is a GLM in every visible respect — family, link, coefficients, relativities —
  * so nothing on a page distinguishes one, and its A/E, residuals and lift are read as fit to

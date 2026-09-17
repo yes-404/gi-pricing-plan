@@ -34,7 +34,7 @@ own spec section.>
 
 ## Steps
 
-1. <Module> — <endpoint or pricing-core function, cited so FR-OVR-17 / OQ-OVR-6 can
+1. <Module> — <endpoint or pricing-core function, cited so FR-19 / OQ-543 can
    check it against that module's own §5.1 / §5.2>.
 2. ...
 

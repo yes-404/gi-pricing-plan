@@ -1,4 +1,4 @@
-"""`OidcAuthConfig` — the shape `07` FR-PLAT-66 publishes (`07` §5.1)."""
+"""`OidcAuthConfig` — the shape `07` FR-394 publishes (`07` §5.1)."""
 
 import pytest
 from pydantic import ValidationError
@@ -6,13 +6,13 @@ from pydantic import ValidationError
 from model_schema import OidcAuthConfig
 
 
-@pytest.mark.req("FR-PLAT-66")
+@pytest.mark.req("FR-394")
 def test_every_value_the_flow_needs_is_required() -> None:
     with pytest.raises(ValidationError):
         OidcAuthConfig.model_validate({"issuer": "https://idp.example/realms/gip"})
 
 
-@pytest.mark.req("FR-PLAT-66")
+@pytest.mark.req("FR-394")
 def test_a_full_config_round_trips() -> None:
     model = OidcAuthConfig.model_validate(
         {

@@ -3,7 +3,7 @@
   "$id": "https://contracts.gi-pricing.dev/model.schema.json",
   "title": "Model",
   "description": "A fitted model for one (peril, response) pair. Immutable once fitted. See 02-modelling.md §4.8.",
-  "$comment": "Amended 2026-08-22 (W5, the contract-reconciliation slice). `fit_result` was one flat object written for the GLM arm alone: it required `converged`, which `GbmFitResult` and `EbmFitResult` do not have, so no GBM or EBM fit could validate against the published contract, and it omitted `booster_format`, `base_margin` and `best_iteration`, without which a booster cannot be scored. It is now three `if`/`then` arms on `fit_result.model_type`, mirroring the discriminated union the code has always returned. Also resolved, each the code's (CLAUDE.md §0): `dataset_version_id` is declared at last — it is required on `Model` and appeared in no `properties` block at all; `Coefficient.exposure_years` is deleted, having never existed on the type; `relativity` becomes nullable, which §4.8's dated amendment records as the fix to a real defect (`exp(β)` reported as 1.0 under a logit link) whose pre-fix shape this contract was still publishing; `monotone_constraint_vector` takes the name the fit result actually uses; `covariance_blob` is a BlobRef, not a string; and `flags` keeps only `dataset_invalidated`, the one value FR-MODEL-67 names and `ModelFlag` defines.",
+  "$comment": "Amended 2026-08-22 (WK-661, the contract-reconciliation slice). `fit_result` was one flat object written for the GLM arm alone: it required `converged`, which `GbmFitResult` and `EbmFitResult` do not have, so no GBM or EBM fit could validate against the published contract, and it omitted `booster_format`, `base_margin` and `best_iteration`, without which a booster cannot be scored. It is now three `if`/`then` arms on `fit_result.model_type`, mirroring the discriminated union the code has always returned. Also resolved, each the code's (CLAUDE.md §0): `dataset_version_id` is declared at last — it is required on `Model` and appeared in no `properties` block at all; `Coefficient.exposure_years` is deleted, having never existed on the type; `relativity` becomes nullable, which §4.8's dated amendment records as the fix to a real defect (`exp(β)` reported as 1.0 under a logit link) whose pre-fix shape this contract was still publishing; `monotone_constraint_vector` takes the name the fit result actually uses; `covariance_blob` is a BlobRef, not a string; and `flags` keeps only `dataset_invalidated`, the one value FR-205 names and `ModelFlag` defines.",
   "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
   "type": "object",
   "required": ["model_family_slug", "version", "status", "spec", "spec_hash", "dataset_version_id"],
@@ -19,7 +19,7 @@
     "fit_result": {
       "type": ["object", "null"],
       "required": ["model_type", "fit_seconds"],
-      "description": "What the fit returned and the Model stores (ADR-0003) — data, never a pickled estimator. Discriminated on `model_type`; the three arms are below.",
+      "description": "What the fit returned and the Model stores (ADR-705) — data, never a pickled estimator. Discriminated on `model_type`; the three arms are below.",
       "properties": {
         "model_type": {"enum": ["glm", "xgboost", "lightgbm", "ebm"]},
         "fit_seconds": {"type": "number", "minimum": 0},
@@ -38,23 +38,23 @@
               "relativities": {
                 "type": "object",
                 "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/RelativityLevel"}},
-                "description": "FR-MODEL-21's relativity table per categorical Factor, with the base level marked."
+                "description": "FR-113's relativity table per categorical Factor, with the base level marked."
               },
               "dispersion": {"type": ["number", "null"],
                 "description": "The scale parameter φ. Estimated for Gamma, Gaussian, inverse-Gaussian and Tweedie; fixed at 1 for Poisson and binomial."},
               "deviance": {"type": ["number", "null"]},
               "covariance_blob": {
                 "oneOf": [{"$ref": "common/blob-ref.schema.json"}, {"type": "null"}],
-                "description": "FR-MODEL-63's covariance matrix V, content-addressed rather than inline: it is p×p, and only the prediction path reads it. Absent on every Model fitted before the field existed, which FR-MODEL-93 surfaces as a typed `covariance_not_stored`."
+                "description": "FR-194's covariance matrix V, content-addressed rather than inline: it is p×p, and only the prediction path reads it. Absent on every Model fitted before the field existed, which FR-195 surfaces as a typed `covariance_not_stored`."
               },
               "tweedie": {
                 "oneOf": [{"$ref": "#/$defs/TweediePowerFit"}, {"type": "null"}],
-                "description": "FR-MODEL-22: set when the spec requested profile-likelihood estimation of the power. Null under a fixed-power spec."
+                "description": "FR-114: set when the spec requested profile-likelihood estimation of the power. Null under a fixed-power spec."
               },
               "offset_model_ref": {
                 "type": ["string", "null"],
                 "pattern": "^model:[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
-                "description": "FR-MODEL-24: the resolved, pinned ref an offset-from-another-model fit was constructed against. Null for every other offset kind."
+                "description": "FR-116: the resolved, pinned ref an offset-from-another-model fit was constructed against. Null for every other offset kind."
               }
             }
           }
@@ -66,29 +66,29 @@
             "properties": {
               "booster_blob": {
                 "$ref": "common/blob-ref.schema.json",
-                "description": "Backend JSON/text model format only; pickles are refused (ADR-0003, FR-MODEL-31)."
+                "description": "Backend JSON/text model format only; pickles are refused (ADR-705, FR-125)."
               },
               "booster_format": {
                 "enum": ["xgboost_json", "lightgbm_text"],
-                "description": "ADR-0003. `pickle` is not a refused value here — it is not a value."
+                "description": "ADR-705. `pickle` is not a refused value here — it is not a value."
               },
               "feature_order": {"type": "array", "items": {"type": "string"}},
               "feature_dtypes": {
                 "type": "object", "additionalProperties": {"type": "string"},
-                "description": "FR-MODEL-31's dtype expectations, one per feature and checked against `feature_order`: a scoring frame built from a partial map has a column whose type nobody declared."
+                "description": "FR-125's dtype expectations, one per feature and checked against `feature_order`: a scoring frame built from a partial map has a column whose type nobody declared."
               },
               "categorical_maps": {
                 "type": "object",
                 "additionalProperties": {"type": "object", "additionalProperties": {"type": "integer"}},
-                "description": "FR-MODEL-32's encoding maps, per categorical feature."
+                "description": "FR-131's encoding maps, per categorical feature."
               },
               "monotone_constraints": {
                 "type": "array", "items": {"enum": [-1, 0, 1]},
-                "description": "FR-MODEL-28, positionally aligned with `feature_order`. Empty when the spec asked for none."
+                "description": "FR-122, positionally aligned with `feature_order`. Empty when the spec asked for none."
               },
               "base_margin": {
                 "$ref": "model-spec.schema.json#/$defs/OffsetSpec",
-                "description": "FR-MODEL-71, and required: the exposure offset the fit was actually constructed with, so the load-time assertion has something to assert. Omitting it at scoring time fails silently on both backends, and differently."
+                "description": "FR-126, and required: the exposure offset the fit was actually constructed with, so the load-time assertion has something to assert. Omitting it at scoring time fails silently on both backends, and differently."
               },
               "best_iteration": {
                 "type": "integer", "minimum": 0,
@@ -108,7 +108,7 @@
                     "reason": {"enum": ["builtin_evaluated_before_custom_stopping_metric"]}
                   }
                 },
-                "description": "FR-MODEL-111. Empty on every fit that evaluated everything it was asked for; populated only where LightGBM early-stops on a Custom Metric and its declared builtins are suppressed so they cannot take position 0 and drive the stop."
+                "description": "FR-161. Empty on every fit that evaluated everything it was asked for; populated only where LightGBM early-stops on a Custom Metric and its declared builtins are suppressed so they cannot take position 0 and drive the stop."
               }
             }
           }
@@ -117,7 +117,7 @@
           "if": {"properties": {"model_type": {"const": "ebm"}}, "required": ["model_type"]},
           "then": {
             "required": ["objective", "intercept", "feature_order", "bins", "terms", "best_iteration"],
-            "description": "FR-MODEL-37. The fit result IS the model: scoring reproduces `intercept + Σ term scores` exactly, each term a lookup against its feature's bins, so there is no booster blob and no serialised estimator to version.",
+            "description": "FR-140. The fit result IS the model: scoring reproduces `intercept + Σ term scores` exactly, each term a lookup against its feature's bins, so there is no booster blob and no serialised estimator to version.",
             "properties": {
               "objective": {"enum": ["rmse", "mae"]},
               "link": {"const": "identity"},
@@ -161,26 +161,26 @@
     "diagnostics_id": {"type": ["string", "null"], "format": "uuid"},
     "transparency_artifact_id": {
       "type": ["string", "null"], "format": "uuid",
-      "description": "DECLARED AND UNBUILT — SUPERSEDED, NOT OWED (FR-MODEL-87, amended 2026-08-22). `Model` carries no such field and none is coming: the open question this description used to pose was answered on that date, and W5 no longer owns it. FR-MODEL-96 (built 2026-08-19) made the reference run the other way — `TransparencyArtifact.model_id` — and `ix_transparency_model` is not unique, so a single id here could name only one of the artifacts a model accumulates as it is re-derived. R3 is enforced by query at model submission (FR-MODEL-89). The property is kept rather than dropped because external consumers have read it since Phase 0."
+      "description": "DECLARED AND UNBUILT — SUPERSEDED, NOT OWED (FR-207, amended 2026-08-22). `Model` carries no such field and none is coming: the open question this description used to pose was answered on that date, and WK-661 no longer owns it. FR-137 (built 2026-08-19) made the reference run the other way — `TransparencyArtifact.model_id` — and `ix_transparency_model` is not unique, so a single id here could name only one of the artifacts a model accumulates as it is re-derived. R3 is enforced by query at model submission (FR-211). The property is kept rather than dropped because external consumers have read it since Phase 0."
     },
     "custom_objective_ref": {
       "type": ["string", "null"],
-      "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner W30 — Phase 2, reassigned 2026-08-22 and confirmed 2026-08-25 to reach this field and its `GlmSpec` twin, not the `Model` one alone). A custom objective on the GLM arm needs `GlmSpec.custom_objective_ref`, which is absent entirely; a GBM names its objective through `spec.objective` instead, and R4 is enforced off that ref rather than this one. This field would record what the GLM arm cannot yet declare, so it cannot be built before its twin."
+      "description": "DECLARED AND UNBUILT (FR-207, owner WK-690 — Phase 2, reassigned 2026-08-22 and confirmed 2026-08-25 to reach this field and its `GlmSpec` twin, not the `Model` one alone). A custom objective on the GLM arm needs `GlmSpec.custom_objective_ref`, which is absent entirely; a GBM names its objective through `spec.objective` instead, and R4 is enforced off that ref rather than this one. This field would record what the GLM arm cannot yet declare, so it cannot be built before its twin."
     },
     "parent_model_id": {"type": ["string", "null"], "format": "uuid"},
     "change_reason": {
       "type": ["string", "null"],
-      "description": "UNRECONCILED (W5, 2026-08-22): this contract has always declared a closed set, and `Model.change_reason` is an unconstrained `str | None`. The enum is kept as the documented vocabulary — refit_new_data, respecified, rebanded, regrouped, hyperparameter_change, objective_change, bug_fix — but nothing enforces it; see CLAUDE.md §0."
+      "description": "UNRECONCILED (WK-661, 2026-08-22): this contract has always declared a closed set, and `Model.change_reason` is an unconstrained `str | None`. The enum is kept as the documented vocabulary — refit_new_data, respecified, rebanded, regrouped, hyperparameter_change, objective_change, bug_fix — but nothing enforces it; see CLAUDE.md §0."
     },
     "flags": {
       "type": "array", "items": {"enum": ["dataset_invalidated"]},
-      "description": "FR-MODEL-67, and computed from the referents rather than stored: a stored flag goes stale the moment `01` re-validates the dataset version. `objective_deprecated` and `attestation_overdue` were declared here from Phase 0, are named by no requirement and defined by no type, and were deleted on 2026-08-22."
+      "description": "FR-205, and computed from the referents rather than stored: a stored flag goes stale the moment `01` re-validates the dataset version. `objective_deprecated` and `attestation_overdue` were declared here from Phase 0, are named by no requirement and defined by no type, and were deleted on 2026-08-22."
     },
     "approval_request_id": {"type": ["string", "null"], "format": "uuid"}
   },
   "invariants": [
-    "status in {fitted, review, approved} implies diagnostics_id is set (FR-MODEL-64)",
-    "fit_result.model_type != 'glm' and status == 'approved' implies a transparency artifact names this model (02 R3, FR-MODEL-89 — enforced by query at submission, not by a column here)",
+    "status in {fitted, review, approved} implies diagnostics_id is set (FR-202)",
+    "fit_result.model_type != 'glm' and status == 'approved' implies a transparency artifact names this model (02 R3, FR-211 — enforced by query at submission, not by a column here)",
     "custom_objective_ref set and status == 'approved' implies that objective version is approved (02 R4)",
     "booster_blob present iff model_type in {xgboost, lightgbm}",
     "fit_result.model_type == spec.model_type — neither discriminator can see the other, so the Model asserts the pairing"
@@ -205,7 +205,7 @@
     },
     "RelativityLevel": {
       "type": "object",
-      "description": "One level of a categorical factor, as an actuary reads it (FR-MODEL-21).",
+      "description": "One level of a categorical factor, as an actuary reads it (FR-113).",
       "required": ["level"],
       "properties": {
         "level": {"type": "string"},
@@ -217,7 +217,7 @@
     },
     "TweediePowerFit": {
       "type": "object",
-      "description": "FR-MODEL-22's estimated power, its profile-likelihood interval, and the persisted curve.",
+      "description": "FR-114's estimated power, its profile-likelihood interval, and the persisted curve.",
       "required": ["estimated_power", "ci_lower", "ci_upper", "level", "curve"],
       "properties": {
         "estimated_power": {"type": "number"},

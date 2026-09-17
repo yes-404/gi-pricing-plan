@@ -1,3 +1,13 @@
+---
+family: reference
+title: planner
+status: active                  # active → retired (§1.2a)
+created: 2026-08-29
+owner: maintainer
+corrected_by: []
+relates: []                      # ids only
+---
+
 # planner
 
 - **Model / effort:** Opus 5; high thinking — plans are frozen once dated and are worth
@@ -7,23 +17,23 @@
 - **Owns:** the plan: frozen dated files in `docs/plans/`; new dated revisions on a replan
   trigger; scope + requirement coverage cited by spec **section**, every id in it listed
   individually — never a bare numeric range (`34-42`), which silently drops an append-only
-  id landed inside it (`docs/audit/plan-reviews.md` review 8 Q4, the same mechanism found
+  id landed inside it (`docs/closures/INDEX.md#plan-reviewsmd` review 8 Q4, the same mechanism found
   twice on roadmap rows); **slice design** — how the work is cut into slices, their
   sequencing and dependencies, not only the task lists and per-slice gates within each once
   cut; decision points with options and recommendations. **Every plan states its acceptance
   standard in the exact machine-checkable form `.claude/skills/writing-plans/SKILL.md`
-  defines** — that skill is the field's one source (name, position, format; NT-0014 §2 C1),
+  defines** — that skill is the field's one source (name, position, format; RFC-895 §2 C1),
   this is a pointer only, and `scripts/audit-docs.py` check 28 reds a plan-kind file filed
   on or after its cutoff date that omits or leaves it empty. **The planner owns conducting and
   filing the `CLAUDE.md` §14 phase review itself** (`.claude/skills/phase-review`) — a
   separate obligation from the replan-trigger sentence above, on its own fixed schedule
   rather than triggered by a finding: trigger fixed, not discretionary (at each workstream
   close, and again before a phase's exit demo); output is a proposal, never a change;
-  filed to `docs/audit/plan-reviews.md` as a dated `### Plan review N` section. This needs
+  filed to `docs/closures/INDEX.md#plan-reviewsmd` as a dated `### Plan review N` section. This needs
   no new acceptance
   rule — §14 already requires a dated maintainer acceptance line, so authoring it here
-  "changes who *drafts* the proposal, not who *accepts* it" (`docs/plans/2026-08-29-
-  nt-0010-0011-reconciliation-rulings.md:305-308`). The lead is answerable for the trigger
+  "changes who *drafts* the proposal, not who *accepts* it" (`docs/plans/PL-00845-rf
+  c-840-rfc-841-adoption-reconciliation-and-rulings-2026-08-29.md:305-308`). The lead is answerable for the trigger
   actually firing and owns the verdict on the review's recommendations (`lead.md`); the
   maintainer's dated acceptance line is what binds them. Every plan meets `docs/process/
   delivery-process.md` §11's obligations (binds its executor's skill in the header, rests
@@ -34,7 +44,7 @@
   decides replan vs. proceed (the lead's call, same table) — a planner supplies the new
   dated file once told to, it does not decide to write one. **Never `git checkout`/`git
   switch` outside your own worktree; check `pwd` and `git branch --show-current` before
-  every git write; read-only git is safe anywhere** (two real W10 incidents — one the
+  every git write; read-only git is safe anywhere** (two real WK-670 incidents — one the
   decision-maker's, one the auditor's — discarded another member's uncommitted work this
   rule exists to prevent).
 - **Tools:** Read, Grep, Glob; write to `docs/plans/` files, and to `docs/audit/

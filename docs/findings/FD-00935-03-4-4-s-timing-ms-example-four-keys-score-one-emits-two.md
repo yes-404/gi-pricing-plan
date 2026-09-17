@@ -1,0 +1,99 @@
+---
+id: FD-935
+family: finding
+title: `03` §4.4's `timing_ms` example: four keys, `score_one` emits two
+status: closed                  # active → closed | retired (§1.2a)
+created: 2026-08-31
+owner: auditor
+corrected_by: []
+relates: []                     # ids only — the SL-/WK- this discharges through, once known
+was: docs/audit/findings/F62.md
+---
+
+# F62 — `03` §4.4's `timing_ms` example: four keys, `score_one` emits two
+
+**Register row:** `docs/findings/register.md`, the row self-naming `(F62)`. This file is the
+evidence essay migrated out of that row's Concerns and Decision cells, per RFC-896 P4 and
+`docs/audit/findings/README.md`'s naming and compression rules. The row keeps the index —
+Finding id, a short Concerns synopsis, Work item, Phase, and Decision compressed to its
+disposition — and is the record `register-lint.py`, `register-owed.py` and
+`scripts/audit-docs.py` check 25 all read; nothing here is parsed by any of them.
+
+Migrated 2026-08-31, triggered by amending the row to record RL-931's resolution
+(`docs/audit/findings/README.md`:106-112 — a substantive amendment to an already
+over-threshold row is exactly the migration trigger named there, not a bulk sweep and not
+"just because it is long"). Content below is carried over verbatim from the register row as
+it stood immediately before this amendment, plus the resolution reasoning this same
+amendment adds, reformatted into sections; no wording is changed.
+
+## Concerns — the divergence
+
+`docs/specs/03-rating-engine.md:419`, the `ScoringResult` example in §4.4, shows a four-key
+per-phase breakdown: `{"total": 7.4, "model_call": 3.1, "table_lookups": 0.9, "expressions":
+0.4}`. The code disagrees: `packages/pricing-core/src/pricing_core/rating/score.py:800`,
+`score_one`'s (WK-671 Task 1.4, per the module docstring) final line, emits
+`scored.model_copy(update={"timing_ms": {"total": total_ms, "evaluate": eval_ms}})` — two
+keys, and `evaluate` names none of the spec's other three (`model_call`, `table_lookups`,
+`expressions`), which are produced nowhere in this module.
+
+**Verified the placeholder is not the story**: `build_scoring_result` (`score.py:747`) sets
+`timing_ms={}` — a deliberate placeholder its own docstring (`:716-718`) explains callers
+fill in afterwards — but `score_one` (the only caller `build_scoring_result` has today)
+overwrites it via `model_copy` at `:800` with the two-key dict above, so the two-key shape
+is what actually reaches a caller, not an unfinished stub.
+
+**The published contract does not itself forbid this**: `model-schema`'s
+`ScoringResult.timing_ms` (`packages/model-schema/src/model_schema/scoring.py:187-188`) is
+`dict[str, float] = Field(default_factory=dict)`, and
+`docs/contracts/schemas/scoring.schema.json:57` mirrors it as an open object
+(`"additionalProperties": {"type": "number"}`), no required or enumerated keys — so this is
+not a schema violation, only a drift between §4.4's worked example and what the engine
+actually returns.
+
+**Checked whether the batch-context mentions rescue or contradict the example**: `03:548`
+(`timing_ms` is one of two `ScoringResult` fields excluded from the `score_batch` output
+row) and `03:564` ("`timing_ms` (a per-call wall-clock breakdown that means nothing
+aggregated across a chunk)") both discuss only *whether* `timing_ms` appears in the batch
+row, never its key set — neither confirms nor corrects the four-key example.
+
+**Checked for a non-normative marker**: no occurrence of "illustrative", "non-normative" or
+"example only" anywhere in `03-rating-engine.md` — §4.4 carries no such disclaimer.
+
+The concrete harm: `timing_ms` is on the live, published contract, open-shaped by design, so
+a consumer's only source for what it will actually contain is §4.4's worked example; today
+that consumer would code against `model_call`/`table_lookups`/`expressions` and receive
+`total`/`evaluate` instead. Per `CLAUDE.md` §0, which side is wrong is a real question this
+row does not answer: the engine may owe the per-phase breakdown §4.4 illustrates, or §4.4's
+example may be aspirational and need correcting to the two keys the engine actually
+produces.
+
+## Decision — reasoning
+
+**Carry forward with an owner — the decision-maker, per `CLAUDE.md` §0, to rule which side
+is correct**: extend `score_one`/`build_scoring_result` to populate a real
+`model_call`/`table_lookups`/`expressions` breakdown, or correct `03:419`'s example to the
+two keys (`total`, `evaluate`) the engine actually emits. Absent a dated ruling this decays
+to the next `CLAUDE.md` §14 phase review, which must give it a disposition rather than
+merely list it.
+
+**Resolved 2026-08-31 — RL-931** (`docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakdown.md`,
+merged `e241bb4`, PR #528) rules the example wrong, not `score_one`: `03:419`'s `timing_ms`
+worked example is corrected to the two keys the engine actually emits (`total`,
+`evaluate`), and the engine is **not** extended to build a
+`model_call`/`table_lookups`/`expressions` breakdown — no requirement anywhere names one,
+and building it would add unconditional trace capture to the real-time hot path
+`NFR-489` is already measured failing on.
+
+**One gap is left open, named rather than silently**: `score_one`'s two-key shape is pinned
+by no test — `packages/pricing-core/tests/test_rating_score.py:518-519,557,621-622` all
+normalise `timing_ms` to `{}` before comparing (verified directly), so nothing fails today
+if a third key is added. Folded into the ruling's own acceptance standard as owed to
+whichever slice next touches `score.py`, not a new workstream.
+
+**Left appended rather than opening the cell, deliberately.** The spec-vs-code question
+RL-931 was asked is closed, but the test-pin residual named above is not, so this row is
+meant to keep surfacing on `register-owed.py`'s output (`_opens_with_status` reads the
+cell's opening, `carry forward with an owner`, not the appended marker, so it is not
+auto-excluded — confirmed by running the real `select_matches`/`_is_resolved` against this
+exact row, not just its predicate) until that test lands. A future reader seeing F62 on an
+owed list is seeing the open test gap, not a stale entry the tool failed to drop.

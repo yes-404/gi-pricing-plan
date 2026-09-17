@@ -98,7 +98,7 @@ onMounted(async () => {
         </div>
       </dl>
       <p class="mt-6 text-xs text-slate-500">
-        The Phase 1b rating version (FR-PLAT-67). Compile, score, rate tables and deployment
+        The Phase 1b rating version (FR-440). Compile, score, rate tables and deployment
         stay Phase 2.
       </p>
     </template>

@@ -1,4 +1,4 @@
-"""The Model lifecycle, at the layers that can be reached independently (FR-MODEL-64).
+"""The Model lifecycle, at the layers that can be reached independently (FR-202).
 
 `packages/model-schema/tests/test_model_lifecycle.py` proves the transition table refuses
 the edges that must not exist. This file proves the three layers *below* the table hold:
@@ -8,7 +8,7 @@ the edges that must not exist. This file proves the three layers *below* the tab
 * **the service** — the transitions, their refusals, and the audit event each one writes in
   the caller's transaction (`06` R2);
 * **the seam to governance** — a decision on an approval request reaching the artifact,
-  which is `wf-01` E9 → E10 and the arm of the journey that did not exist before this slice.
+  which is `WF-698` E9 → E10 and the arm of the journey that did not exist before this slice.
 
 Every test that matters here is a **prohibition**. For a governed system the suite has to
 prove the wrong thing cannot happen: a model reaching an approver with no evidence, a
@@ -65,7 +65,7 @@ async def _grant_role(
     runs. Idempotent — a caller may be granted two roles across two calls.
     """
     async with database.unit_of_work() as session:
-        # The workspace row must exist for the membership FK (FR-PLAT-62).
+        # The workspace row must exist for the membership FK (FR-395).
         from app.platform import workspaces
 
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
@@ -113,7 +113,7 @@ async def _principal_with(
 # -- The database -------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_the_database_refuses_a_status_outside_the_lifecycle(
     database, workspace_id
 ) -> None:
@@ -144,7 +144,7 @@ async def test_the_database_refuses_a_status_outside_the_lifecycle(
             )
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_every_lifecycle_status_is_accepted_by_the_constraint(
     database, workspace_id
 ) -> None:
@@ -201,7 +201,7 @@ async def _draft_with_diagnostics(
         return row.id, diagnostics.id
 
 
-@pytest.mark.req("FR-OVR-1")
+@pytest.mark.req("FR-4")
 async def test_the_first_write_of_a_diagnostics_pointer_is_not_refused(
     database, workspace_id
 ) -> None:
@@ -238,8 +238,8 @@ async def test_the_first_write_of_a_diagnostics_pointer_is_not_refused(
         assert row.diagnostics_id == diagnostics_id
 
 
-@pytest.mark.req("FR-OVR-1")
-@pytest.mark.req("FR-MODEL-65")
+@pytest.mark.req("FR-4")
+@pytest.mark.req("FR-203")
 async def test_a_fitted_models_diagnostics_pointer_cannot_be_repointed(
     database, blob_store, workspace_id
 ) -> None:
@@ -298,11 +298,11 @@ async def test_a_fitted_models_diagnostics_pointer_cannot_be_repointed(
 # -- The service: `fitted → review` -------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_a_draft_model_cannot_be_submitted_for_review(
     database, workspace_id
 ) -> None:
-    """`draft → review` is not an edge (FR-MODEL-64), and the refusal must arrive at the
+    """`draft → review` is not an edge (FR-202), and the refusal must arrive at the
     caller rather than at an approver: a model in `draft` has no coefficients, so the
     approval request would carry nothing to review.
 
@@ -338,11 +338,11 @@ async def test_a_draft_model_cannot_be_submitted_for_review(
     assert "is 'draft' and cannot move to 'review'" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_submission_moves_the_model_to_review_and_creates_the_request(
     database, blob_store, workspace_id
 ) -> None:
-    """`wf-01` E6/E7 in one call: the model enters `review`, the approval request exists,
+    """`WF-698` E6/E7 in one call: the model enters `review`, the approval request exists,
     and the model names it — `02` §4.8's `approval_request_id`, live from this slice."""
     actor, model_id = await _fit(database, blob_store, workspace_id)
 
@@ -360,7 +360,7 @@ async def test_submission_moves_the_model_to_review_and_creates_the_request(
         assert request.artifact_type == "model"
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_a_second_submission_of_one_model_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -391,7 +391,7 @@ async def test_a_second_submission_of_one_model_is_refused(
     assert "cannot move to 'review'" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-GOV-10")
+@pytest.mark.req("FR-352")
 async def test_submission_without_the_policys_evidence_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -406,7 +406,7 @@ async def test_submission_without_the_policys_evidence_is_refused(
     as satisfied would let a policy tightening silently do nothing.
 
     **The example used to be `transparency_artifact`**, and was changed rather than deleted
-    when that kind became checkable (FR-MODEL-89, 2026-08-17). A test whose uncheckable
+    when that kind became checkable (FR-211, 2026-08-17). A test whose uncheckable
     example quietly becomes checkable stops testing failing-closed and starts testing
     nothing — the same trap in the other direction.
     """
@@ -424,7 +424,7 @@ async def test_submission_without_the_policys_evidence_is_refused(
                         artifact_type="model",
                         approvers_required=1,
                         approver_roles=("approver",),
-                        # The floor kinds are present because FR-GOV-37 refuses a policy
+                        # The floor kinds are present because FR-364 refuses a policy
                         # without them; `model_comparison` is the addition under test.
                         evidence=(
                             "diagnostics",
@@ -449,11 +449,11 @@ async def test_submission_without_the_policys_evidence_is_refused(
 # -- The seam to governance: E9 → E10 -----------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_the_final_approval_moves_the_model_to_approved(
     database, blob_store, workspace_id
 ) -> None:
-    """`wf-01` E10. The whole arm this slice exists to open: before it, an approved request
+    """`WF-698` E10. The whole arm this slice exists to open: before it, an approved request
     sat beside a model still in `review`, and nothing joined the two."""
     actor, model_id = await _fit(database, blob_store, workspace_id)
     approver = await _principal_with(database, workspace_id, "approver")
@@ -477,14 +477,14 @@ async def test_the_final_approval_moves_the_model_to_approved(
         assert row.status == ModelStatus.APPROVED.value
 
 
-@pytest.mark.req("FR-GOV-13")
+@pytest.mark.req("FR-355")
 async def test_requesting_changes_returns_the_model_to_fitted_not_draft(
     database, blob_store, workspace_id
 ) -> None:
-    """The divergence this slice resolved rather than absorbed. FR-GOV-13 returns a
+    """The divergence this slice resolved rather than absorbed. FR-355 returns a
     changes-requested artifact to `draft`; for a Model `draft` means *reserved, not yet
     fitted*, and R2 makes the coefficients immutable — so a model cannot un-fit. `06`
-    FR-GOV-13 carries the amendment; this is the test that holds the code to it."""
+    FR-355 carries the amendment; this is the test that holds the code to it."""
     actor, model_id = await _fit(database, blob_store, workspace_id)
     approver = await _principal_with(database, workspace_id, "approver")
 
@@ -511,11 +511,11 @@ async def test_requesting_changes_returns_the_model_to_fitted_not_draft(
         assert row.diagnostics_id is not None
 
 
-@pytest.mark.req("FR-GOV-11")
+@pytest.mark.req("FR-353")
 async def test_a_submitter_cannot_approve_and_the_model_stays_in_review(
     database, blob_store, workspace_id
 ) -> None:
-    """`wf-01` E9's negative case, at the artifact rather than at the request. R1 is not
+    """`WF-698` E9's negative case, at the artifact rather than at the request. R1 is not
     configurable, and the model must not move on a decision that was refused."""
     actor, model_id = await _fit(database, blob_store, workspace_id)
     await _grant_role(database, workspace_id, actor.id, "approver")
@@ -542,12 +542,12 @@ async def test_a_submitter_cannot_approve_and_the_model_stays_in_review(
         assert row.status == ModelStatus.REVIEW.value
 
 
-@pytest.mark.req("FR-MODEL-67")
+@pytest.mark.req("FR-205")
 async def test_a_model_whose_dataset_lost_its_standing_cannot_be_approved(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-67. The dataset version is moved out of `validated` after the fit — which
-    `01` FR-DATA-23 makes a real sequence, not a contrived one, because validation is
+    """FR-205. The dataset version is moved out of `validated` after the fit — which
+    `01` FR-53 makes a real sequence, not a contrived one, because validation is
     re-runnable and a changed rule set can fail a version that once passed.
 
     The flag is computed rather than stored precisely so that this test does not have to
@@ -677,7 +677,7 @@ async def _status_of(database: Database, model_id: UUID) -> str:
         ).scalar_one()
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_approving_a_new_version_supersedes_the_approved_predecessor(
     database, blob_store, workspace_id
 ) -> None:
@@ -695,7 +695,7 @@ async def test_approving_a_new_version_supersedes_the_approved_predecessor(
     assert await _status_of(database, first) == ModelStatus.SUPERSEDED.value
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_approving_a_new_version_leaves_a_merely_fitted_predecessor_alone(
     database, blob_store, workspace_id
 ) -> None:
@@ -711,7 +711,7 @@ async def test_approving_a_new_version_leaves_a_merely_fitted_predecessor_alone(
     assert await _status_of(database, first) == ModelStatus.FITTED.value
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_an_approved_model_cannot_be_archived(
     database, blob_store, workspace_id
 ) -> None:
@@ -730,7 +730,7 @@ async def test_an_approved_model_cannot_be_archived(
     assert "cannot move to 'archived'" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_a_fitted_model_can_be_archived(database, blob_store, workspace_id) -> None:
     """The lifecycle's only end state, reachable from the states that have no successor in
     force: a fit nobody submitted, and a version something else replaced."""
@@ -743,7 +743,7 @@ async def test_a_fitted_model_can_be_archived(database, blob_store, workspace_id
         assert row.status == ModelStatus.ARCHIVED.value
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 async def test_a_model_in_review_cannot_be_archived(
     database, blob_store, workspace_id
 ) -> None:

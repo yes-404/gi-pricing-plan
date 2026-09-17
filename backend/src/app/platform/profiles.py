@@ -1,9 +1,9 @@
-"""Stored profiles and the one-ways read from them (`01` §3.4, §4.7, FR-DATA-25..28).
+"""Stored profiles and the one-ways read from them (`01` §3.4, §4.7, FR-60, FR-61, FR-62, FR-63).
 
-FR-DATA-27 forbids the UI recomputing a one-way and NFR-DATA-4 gives it 300 ms. Both are
+FR-62 forbids the UI recomputing a one-way and NFR-468 gives it 300 ms. Both are
 statements about *reading*, and they are only true if a profile is computed once and
 stored whole. This module is the storage; `pricing_core.data.profile` is the computation,
-and it does not know this module exists (ADR-0001).
+and it does not know this module exists (ADR-703).
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ async def store_profile(
     profile: Profile,
     job_id: UUID | None = None,
 ) -> ProfileRow:
-    """Persist a profile against its version and point the version at it (FR-DATA-25)."""
+    """Persist a profile against its version and point the version at it (FR-60)."""
     version = await session.get(DatasetVersionRow, profile.dataset_version_id)
     if version is None or version.workspace_id != workspace_id:
         raise PlatformError(
@@ -89,7 +89,7 @@ async def load_profile(
 async def latest_profile(
     session: AsyncSession, *, workspace_id: UUID, version_id: UUID
 ) -> Profile:
-    """The current profile of a version (FR-DATA-25)."""
+    """The current profile of a version (FR-60)."""
     result = await session.execute(
         select(ProfileRow)
         .where(
@@ -105,7 +105,7 @@ async def latest_profile(
             "NOT_FOUND",
             "This dataset version has no profile",
             404,
-            "Profiling runs after a successful ingestion (FR-DATA-25); a version without "
+            "Profiling runs after a successful ingestion (FR-60); a version without "
             "one has not completed ingestion or predates profiling.",
         )
     return Profile.model_validate(row.body)
@@ -114,11 +114,11 @@ async def latest_profile(
 async def one_way_of(
     session: AsyncSession, *, workspace_id: UUID, version_id: UUID, column: str
 ) -> OneWaySummary:
-    """One column's one-way, **read** from the stored profile (FR-DATA-27, NFR-DATA-4).
+    """One column's one-way, **read** from the stored profile (FR-62, NFR-468).
 
     Never computed here. A function that fell back to computing when the column was not in
     the stored profile would meet the latency budget in testing and miss it in production,
-    which is the failure mode NFR-DATA-4 exists to prevent — so a missing column is a 404
+    which is the failure mode NFR-468 exists to prevent — so a missing column is a 404
     naming the ones that are present.
     """
     profile = await latest_profile(session, workspace_id=workspace_id, version_id=version_id)
@@ -130,6 +130,6 @@ async def one_way_of(
         "NOT_FOUND",
         f"No stored one-way for column {column!r}",
         404,
-        f"FR-DATA-27: one-ways are read from the stored Profile, never computed on "
+        f"FR-62: one-ways are read from the stored Profile, never computed on "
         f"request. Columns with a stored one-way: {available}.",
     )

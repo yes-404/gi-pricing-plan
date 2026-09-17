@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""`doc-id.py migrate --verify` — NT-0019 §7 (a)-(i) as an instrument, not a table.
+"""`doc-id.py migrate --verify` — RFC-937 §7 (a)-(i) as an instrument, not a table.
 
-**Authority: Ruling 102 §1** (`docs/plans/2026-09-03-w37-6-ruling-102-verify-instrument.md`):
+**Authority: RL-1043 §1**
+(`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`):
 
     `doc-id.py migrate --verify <snapshot>` — it
       - runs the migration on a disposable snapshot, never a real checkout;
       - computes all nine §7 (a)-(i) rows with their predicates, as one table;
       - exits 1 on any fail.
 
-**Why a script and not a better table** (Ruling 102 §1, verbatim): *"A table's rows are
+**Why a script and not a better table** (RL-1043 §1, verbatim): *"A table's rows are
 re-derived by hand each window, and each re-derivation is a fresh chance to substitute a
 narrower predicate for the name of a wider one. A script's predicate is the thing that
 runs."* `CLAUDE.md` §13's requirement that a count carry "the predicate it counted with" is
@@ -16,7 +17,7 @@ satisfied structurally here, because the predicate **is** the artifact: every ro
 pattern it counted with, verbatim and runnable, or the shipped constant by symbol.
 
 Four design constraints, each bought by a measured failure across three halted windows
-(`docs/plans/2026-09-03-w37-6-second-fail-handover.md` §7):
+(`docs/plans/PL-01037-w37-6-the-extended-window-s-second-fail-and-the-handover-2026-09-03.md` §7):
 
 1. **A check's name is not its predicate, and only the predicate is enforced.** Every row
    prints its predicate beside its number.
@@ -28,12 +29,13 @@ Four design constraints, each bought by a measured failure across three halted w
 3. **A green over an empty population is a fail, not a pass.** On a migrated tree
    `audit-docs.py` prints *"0 requirements defined across 8 specs"* as a **passing** line.
    Every row prints its denominator, and a zero denominator where the control has a non-zero
-   one fails loudly (`docs/notes/0007-context-bound-measures-cap-not-discipline.md`).
-4. **Field tests, never substring tests** (Ruling 102 §5). §7(d)'s `was:` exclusion is a
+   one fails loudly
+   (`docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md`).
+4. **Field tests, never substring tests** (RL-1043 §5). §7(d)'s `was:` exclusion is a
    parsed front-matter field, not a `"was:" in line` substring: two `was:`-keyed results have
    now needed re-deriving and both times a substring stood in for a field.
 
-Ownership. Ruling 102 §1 says the instrument computes **nine** rows (a)-(i); Ruling 102 §3
+Ownership. RL-1043 §1 says the instrument computes **nine** rows (a)-(i); RL-1043 §3
 rules that **(i) is W37-10's**, not W37-6's. Both are obeyed here: all nine are computed as
 §1 requires, and every row carries an `owner` so the split is visible in the table rather
 than argued about. The tension is reported, not resolved, by this module.
@@ -68,14 +70,14 @@ import _docid
 PASS: Final = "PASS"
 FAIL: Final = "FAIL"
 #: Non-fatal by ruling, not by convenience: `\bF[0-9]{2}\b` is excluded from §7(d)'s zero
-#: requirement "with its count disclosed" (§8.5, re-affirmed by Ruling 102 §4). A DISCLOSE
+#: requirement "with its count disclosed" (§8.5, re-affirmed by RL-1043 §4). A DISCLOSE
 #: row still prints its figure, its denominator and its control; it just does not set the
 #: exit code.
 DISCLOSE: Final = "DISCLOSE"
 #: Fatal. The row's predicate ran, but §7's sentence admits two readings and the
-#: decision-maker has not yet ruled which one the standard means (Ruling 102 §2, row 5:
+#: decision-maker has not yet ruled which one the standard means (RL-1043 §2, row 5:
 #: "Each gets one reading, ruled by the decision-maker citing §7's sentence — not two").
-#: Both readings are printed. An undetermined row is red, because Ruling 102 §2 says two
+#: Both readings are printed. An undetermined row is red, because RL-1043 §2 says two
 #: readings "is not an acceptable state for an acceptance row".
 UNDETERMINED: Final = "UNDETERMINED"
 #: Fatal. The row is defined and its population is known, but this instrument cannot
@@ -104,7 +106,7 @@ OWNER_W37_10: Final = "W37-10"
 class WorkingCheckoutRefusedError(RuntimeError):
     """`--verify` was pointed at something that is, or lives inside, a real checkout.
 
-    Ruling 102 §1's first clause — *"runs the migration on a disposable snapshot, never a
+    RL-1043 §1's first clause — *"runs the migration on a disposable snapshot, never a
     real checkout"* — is enforced here as a guarded refusal rather than left to convention,
     because `migrate()` rewrites, moves and deletes ~1400 files in place and a working
     checkout has no undo for the untracked half of that.
@@ -127,7 +129,7 @@ SENTINEL_NAME: Final = ".doc-id-verify-snapshot"
 
 #: The instrument string the sentinel must declare for `assert_tree_is_snapshot` to
 #: accept the tree it vouches for. One constant, read by both the writer and the
-#: reader, so the two cannot drift (NT-0003).
+#: reader, so the two cannot drift (RFC-756).
 _INSTRUMENT: Final = "doc-id.py migrate --verify"
 
 MIGRATED_DIR: Final = "migrated"
@@ -176,7 +178,7 @@ def assert_workdir_disposable(workdir: Path) -> None:
 
     1. the target exists and is not an empty directory — it holds someone's files;
     2. the target is inside a git work tree — including the repository this instrument
-       ships in, which is the exact mistake Ruling 102 §1's clause exists to prevent;
+       ships in, which is the exact mistake RL-1043 §1's clause exists to prevent;
     3. the target is a file.
 
     A pre-existing *empty* directory is allowed: `mktemp -d` produces one, and CI's runner
@@ -191,14 +193,14 @@ def assert_workdir_disposable(workdir: Path) -> None:
         raise WorkingCheckoutRefusedError(
             f"--verify target {resolved} is a non-empty directory. This instrument runs "
             "the migration in place and would destroy it; point --verify at a new or "
-            "empty path (Ruling 102 §1: 'a disposable snapshot, never a real checkout')."
+            "empty path (RL-1043 §1: 'a disposable snapshot, never a real checkout')."
         )
     top = _inside_git_work_tree(resolved)
     if top is not None:
         raise WorkingCheckoutRefusedError(
             f"--verify target {resolved} is inside the git work tree at {top}. "
             "`migrate()` rewrites, moves and deletes files in place; it is never run "
-            "against a checkout (Ruling 102 §1)."
+            "against a checkout (RL-1043 §1)."
         )
 
 
@@ -212,7 +214,7 @@ def assert_tree_is_snapshot(tree: Path) -> None:
     tree to have *exactly one commit*, on the reasoning that "more than one commit means
     this run did not build it". That reasoning was the archive-and-init defect in encoded
     form: it demanded precisely the tree shape that has no git first-commit dates, which
-    is the input id allocation sorts on (NT-0019 item 1). A snapshot now carries the ref's
+    is the input id allocation sorts on (RFC-937 item 1). A snapshot now carries the ref's
     real history, so "one commit" can no longer stand in for "built by this run".
 
     What replaces it is stronger, not weaker, because it is *specific to this run* rather
@@ -232,19 +234,19 @@ def assert_tree_is_snapshot(tree: Path) -> None:
     if not sentinel.is_file():
         raise WorkingCheckoutRefusedError(
             f"{tree} carries no {SENTINEL_NAME} sentinel beside it — it was not built by "
-            "this instrument, so it is not known to be disposable (Ruling 102 §1)."
+            "this instrument, so it is not known to be disposable (RL-1043 §1)."
         )
     try:
         declared = json.loads(sentinel.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise WorkingCheckoutRefusedError(
             f"{sentinel} is not readable JSON ({exc}) — it cannot vouch for {tree} "
-            "(Ruling 102 §1)."
+            "(RL-1043 §1)."
         ) from exc
     if not isinstance(declared, dict) or declared.get("instrument") != _INSTRUMENT:
         raise WorkingCheckoutRefusedError(
             f"{sentinel} does not declare instrument {_INSTRUMENT!r} — it was not written "
-            f"by this run, so it does not make {tree} disposable (Ruling 102 §1)."
+            f"by this run, so it does not make {tree} disposable (RL-1043 §1)."
         )
     trees = declared.get("trees")
     entry = trees.get(str(tree)) if isinstance(trees, dict) else None
@@ -252,14 +254,14 @@ def assert_tree_is_snapshot(tree: Path) -> None:
         raise WorkingCheckoutRefusedError(
             f"{sentinel} does not name {tree} among the trees this run built "
             f"({sorted(trees) if isinstance(trees, dict) else trees!r}) — a tree this run "
-            "did not materialise is never migrated in place (Ruling 102 §1)."
+            "did not materialise is never migrated in place (RL-1043 §1)."
         )
     head = _git(tree, "rev-parse", "HEAD", check=False).stdout.strip()
     if not head or head != entry.get("head"):
         raise WorkingCheckoutRefusedError(
             f"{tree} is at HEAD {head or '(none)'}, but the sentinel recorded "
             f"{entry.get('head')!r} when this run built it — it has moved since, so it is "
-            "not the tree this run materialised (Ruling 102 §1)."
+            "not the tree this run materialised (RL-1043 §1)."
         )
     count = _git(tree, "rev-list", "--count", "HEAD", check=False)
     depth = count.stdout.strip()
@@ -268,7 +270,7 @@ def assert_tree_is_snapshot(tree: Path) -> None:
             f"{tree} reports rev-list --count HEAD = {depth or 'no HEAD'}, but the "
             f"sentinel recorded {entry.get('rev-list --count HEAD')!r} — the history this "
             "run materialised is not the history now present. `created` is keyed on git "
-            "first-commit dates (NT-0019 item 1), so a changed history changes the "
+            "first-commit dates (RFC-937 item 1), so a changed history changes the "
             "allocation."
         )
     if entry.get("is-shallow-repository") != "false" or _is_shallow(tree):
@@ -280,7 +282,7 @@ def assert_tree_is_snapshot(tree: Path) -> None:
     if remotes.stdout.strip():
         raise WorkingCheckoutRefusedError(
             f"{tree} has git remotes ({remotes.stdout.split()}) — a snapshot has none "
-            "(Ruling 102 §1)."
+            "(RL-1043 §1)."
         )
 
 
@@ -296,7 +298,7 @@ class Snapshot:
     the ref's full git history; only `migrated` has had `migrate()` run over it. That is
     what makes the control a control: any difference between them is the migration's, and
     nothing else's. The history is not incidental — it is the input `created`, and so id
-    allocation, is read from (NT-0019 item 1).
+    allocation, is read from (RFC-937 item 1).
     """
 
     workdir: Path
@@ -318,8 +320,9 @@ def _materialise(docid: Any, ref: str, dest: Path, *, repo_root: Path) -> None:
 
     It used to be built with `git archive` + `git init`, which satisfies both of those and
     is nevertheless wrong. Id allocation sorts on `created`, and for a requirement draft
-    `created` is the module's **git first-commit date** (NT-0019 item 1; D1 at
-    `docs/notes/0019-one-id-per-document.md:247` — numbers carry chronology). A one-commit
+    `created` is the module's **git first-commit date** (RFC-937 item 1; D1 at
+    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:247`
+    — numbers carry chronology). A one-commit
     tree has none of those dates, so every requirement draft fell through to the old
     `date.today()` fallback, took the same date, sorted to the back of the sequence, and
     displaced the ids after it. `--verify` was therefore measuring an allocation a real run
@@ -361,14 +364,14 @@ def build_snapshot(
     # Written after the trees exist, so the run's provenance fields are *measured* on the
     # trees this run will actually migrate rather than asserted about the ones it meant to
     # build. `rev-list --count` and `is-shallow-repository` are here because git history is
-    # a declared input to id allocation (NT-0019 item 1): a snapshot with one commit, or a
+    # a declared input to id allocation (RFC-937 item 1): a snapshot with one commit, or a
     # truncated one, allocates differently from a real run and did so silently until this
     # instrument started recording the depth it ran at.
     (workdir / SENTINEL_NAME).write_text(
         json.dumps(
             {
                 "instrument": _INSTRUMENT,
-                "authority": "Ruling 102 §1",
+                "authority": "RL-1043 §1",
                 "source_repo": str(repo_root),
                 "ref": ref,
                 "ref_sha": sha,
@@ -446,11 +449,11 @@ def read_text(path: Path) -> str | None:
         return None
 
 
-# --- the `was:` field test (Ruling 102 §5) ----------------------------------------------
+# --- the `was:` field test (RL-1043 §5) ----------------------------------------------
 
 #: Reused from `_docid`, never restated: one definition of "a front-matter key line", so
 #: the exclusion here and the parser that produces `Header.was` can never drift apart
-#: (NT-0003 applied to code). `_docid._KEY_VALUE_RE` is `^([A-Za-z_][A-Za-z0-9_]*):[ \t]?(.*)$`.
+#: (RFC-756 applied to code). `_docid._KEY_VALUE_RE` is `^([A-Za-z_][A-Za-z0-9_]*):[ \t]?(.*)$`.
 _KEY_VALUE_RE: Final = _docid._KEY_VALUE_RE
 
 
@@ -464,7 +467,7 @@ def was_field_line_numbers(text: str) -> frozenset[int]:
     * the line parses as `key: value` with the key exactly `was`.
 
     A prose line reading ``the `was:` field`` is *not* excluded, and neither is a `was:`
-    inside a fenced example further down the file. Ruling 102 §5 rules this ("keys on the
+    inside a fenced example further down the file. RL-1043 §5 rules this ("keys on the
     parsed `was:` field, never a substring"), and the handover §2 table shows what the
     substring reading costs: it hid real hits on three of thirteen §7(d) alternatives
     (`NT-00` 32→35, `\\bF[0-9]{2}\\b` 1330→1340, `docs/audit/` 291→293).
@@ -483,11 +486,13 @@ def was_field_line_numbers(text: str) -> frozenset[int]:
     )
 
 
-#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: the fence predicate moved into `_docid` so `audit-docs.py`
 #: check 36 can read the identical rule row (e)'s `padded_hits` and row (d)'s corpus both
 #: use — re-exported here under this module's existing name for every caller and test
-#: already written against it (Ruling 103 §1.8: "two implementations of one rule that are
+#: already written against it (RL-1044 §1.8: "two implementations of one rule that are
 #: never compared are two rules"; this is the fix for that, not a second implementation).
 fenced_line_numbers = _docid.fenced_line_numbers
 
@@ -523,10 +528,10 @@ class Corpus:
         `skip_fenced` (2026-09-04, row (d8), task #30): also skips a line inside a
         ` ``` `/`~~~` fence, using `_FENCE_RE` — the identical, single tracker `padded_
         hits` (row (e)'s own conjunct 0) already uses, never a second one written here,
-        per Ruling 67 §2's "one rule at two times." Defaults `False` so every existing
+        per RL-988 §2's "one rule at two times." Defaults `False` so every existing
         (d) alternative's own reading is byte-identical to before this parameter existed;
         opted into only where a real document fences an illustrative example under
-        Ruling 103 §5.1's convention (class 3a) rather than being exempted by name.
+        RL-1044 §5.1's convention (class 3a) rather than being exempted by name.
         """
         n_lines = 0
         n_files = 0
@@ -613,7 +618,7 @@ class Row:
     #: A companion answers the question the row's own predicate cannot: *what does this
     #: token turn INTO when the rewrite goes wrong, and is that form counted anywhere?*
     #: Directed by the lead after finding A1. Promotion of a companion to a gating row is
-    #: the maintainer's under Ruling 102 §1 and is made by naming its label in
+    #: the maintainer's under RL-1043 §1 and is made by naming its label in
     #: `GATING_COMPANIONS` — a configuration change, never a rewrite.
     companions: tuple[tuple[str, str, str], ...] = ()
     #: This row's own fatal hits, keyed `(relpath, cls)` — absent rather than present at 0.
@@ -640,7 +645,7 @@ def _verdict_on_zero(figure: int, denominator: int, *, control: int) -> tuple[st
     * otherwise → PASS iff the figure is 0.
     """
     if denominator == 0:
-        return FAIL, "empty population — a green over a zero denominator is a fail (NT-0007)"
+        return FAIL, "empty population — a green over a zero denominator is a fail (RFC-789)"
     if control == 0:
         return (
             FAIL,
@@ -744,7 +749,7 @@ def _run_script(tree: Path, script: str, *args: str) -> subprocess.CompletedProc
         <checkout>/scripts/doc-index.py …     -> "OK (byte-stable)"       exit 0
 
     The cause is a citation rewritten inside `doc-index.py`'s own banner *string literal*
-    (`see NT-0019 §1.4` -> its post-migration citation form) with the index never
+    (`see RFC-937 §1.4` -> its post-migration citation form) with the index never
     regenerated, so the generator and its artifact disagree by exactly the token rewritten
     in one and not the other. Running the checkout's copy makes row (c) pass forever over a
     broken corpus —
@@ -834,16 +839,16 @@ def row_c(snap: Snapshot) -> Row:
 # (d) the id/path grep, one row per alternative
 # ---------------------------------------------------------------------------------------
 
-#: §7(d)'s alternatives, one row per alternative (Ruling 102 §2 row 3, "(d) Per
+#: §7(d)'s alternatives, one row per alternative (RL-1043 §2 row 3, "(d) Per
 #: alternative") — **read from `_docid.LEGACY_FORM_PATTERNS`, never retyped** (task 17,
-#: Ruling 67 §2's "one shared constant"). `audit-docs.py`'s check 36 reads the identical
+#: RL-988 §2's "one shared constant"). `audit-docs.py`'s check 36 reads the identical
 #: tuple; the two were, until this task, two independently-maintained copies that had
 #: already diverged (this module's old `F-W[0-9]` matched a bare `F-W<n>` with no second
 #: segment, a proper PREFIX of the real shape `F-W<n>-<n>`, and its `NT-00` matched the
-#: bare prefix fragment Ruling 67 §2 Part 1 was ruled against by name). The tuple **is**
+#: bare prefix fragment RL-988 §2 Part 1 was ruled against by name). The tuple **is**
 #: the decomposition — there is no separate combined-pattern string to parse and no
 #: self-check against one, because there is nothing left for a splitting bug to get wrong.
-#: Every entry is already anchored per Ruling 67 §2 Part 1: a `\b`-bounded COMPLETE legacy
+#: Every entry is already anchored per RL-988 §2 Part 1: a `\b`-bounded COMPLETE legacy
 #: identifier on both sides, or (for a path) a bare literal substring with no anchor at all
 #: — a path has no "complete form" the way an id token does, so `\b` would only ever add
 #: back the artificial restriction row (d13) used to read as INERT under.
@@ -857,15 +862,17 @@ def row_c(snap: Snapshot) -> Row:
 D_ALTERNATIVES: Final = _docid.LEGACY_FORM_PATTERNS
 
 #: Excluded from §7(d)'s zero requirement **with its count disclosed** — §8.5, re-affirmed
-#: by Ruling 102 §4 ("`\bF[0-9]{2}\b` remains excluded with its count disclosed; this ruling
-#: reaches `Ruling [0-9]+` only") and, for the workstream finding-id form, by Ruling 105 §A:
+#: by RL-1043 §4 ("`\bF[0-9]{2}\b` remains excluded with its count disclosed; this ruling
+#: reaches `Ruling [0-9]+` only") and, for the workstream finding-id form, by RL-1046 §A:
 #: the same alias class as `F<nn>` with a work prefix — its target is a register row, not a
 #: document with an id yet, resolved by W37-11's alias resolver rather than this instrument.
-#: Keyed by `_docid.LEGACY_FORM_PATTERNS`' own label, not by pattern text, so a Ruling 67
+#: Keyed by `_docid.LEGACY_FORM_PATTERNS`' own label, not by pattern text, so a RL-988
 #: Part 1 anchoring fix to the pattern can never silently un-key a disclosure. Disclosed,
 #: never silent: the row still prints its figure, denominator and control.
 #:
-#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: moved into `_docid.FINDING_ID_ALIAS_LABELS` so `audit-docs.py`
 #: check 36 can read the identical two-label set — re-exported here under this module's
 #: existing name. Deliberately the *narrower* of `_docid`'s two disclosed-label constants:
@@ -887,8 +894,8 @@ D_PATH_LABELS: Final = frozenset(
 #: Which ruling reads each disclosed alternative, printed in its row's own note so a reader
 #: does not have to guess which citation covers which alternative.
 D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
-    "finding id (bare form)": "§8.5; Ruling 102 §4",
-    "finding id (workstream form)": "§7(d); Ruling 105 §A — the same alias class as the "
+    "finding id (bare form)": "§8.5; RL-1043 §4",
+    "finding id (workstream form)": "§7(d); RL-1046 §A — the same alias class as the "
                                      "bare finding id, resolved by W37-11's alias resolver",
 }
 
@@ -909,7 +916,7 @@ D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
 #: `D_PATH_LABELS` member sharing one path companion — see it below), and a silent
 #: absence would read as "asked and found nothing".
 #: Keyed by `_docid.LEGACY_FORM_PATTERNS`' own label (task 17) — a pattern-text key would
-#: silently un-key itself the next time Ruling 67 §2 Part 1 changes an anchoring, as it
+#: silently un-key itself the next time RL-988 §2 Part 1 changes an anchoring, as it
 #: already had for `NT-00` -> `\bNT-\d{4}\b` and `F-W[0-9]` -> `\bF-W\d+-\d+\b` here.
 D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
     "finding id (workstream form)": ((
@@ -929,7 +936,7 @@ D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
         "mangled: legacy id baked into a generated filename slug",
         r"/[^/\s]*wf-0[0-9]",
     ),),
-    # W37-6 PR-B (2026-09-16), defect 2. Ruling 101 clause 1's own fallback -- a split
+    # W37-6 PR-B (2026-09-16), defect 2. RL-1042 clause 1's own fallback -- a split
     # source citation with no single determined target resolves to its family index's
     # `#<old-basename-without-its-dot>` anchor (`doc-id.py`'s `_split_index_anchor`,
     # through `_docid`'s own `_anchor_slug`) -- assumed every citing occurrence is prose a
@@ -945,7 +952,7 @@ D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
     # which of the five legacy path forms was folded, only on where the fallback landed.
     **{
         label: ((
-            "mangled: a split source's family-index fallback (Ruling 101 clause 1) "
+            "mangled: a split source's family-index fallback (RL-1042 clause 1) "
             "resolved into a fragment with no file destination — a file folded into an "
             "index section, cited from a non-markdown consumer that reads the text as "
             "a real path",
@@ -956,7 +963,7 @@ D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
 }
 
 #: Companion labels promoted to gating. **Empty, and changing it is the maintainer's under
-#: Ruling 102 §1** — the row set is not the instrument's to widen. Naming a label here makes
+#: RL-1043 §1** — the row set is not the instrument's to widen. Naming a label here makes
 #: a non-zero companion figure fail its row; that is the whole promotion mechanism, and it
 #: is a configuration change rather than a rewrite, as the lead directed.
 GATING_COMPANIONS: Final[frozenset[str]] = frozenset()
@@ -980,10 +987,10 @@ def _companions_for(
 
     * **mangled** — `D_COMPANIONS`, above: the row reads zero because the corruption moved
       the token out of the predicate's reach (auditor A1's workstream finding id).
-    * **unanchored** — the same alternative with its own Ruling 67 Part 1 `\b`-anchoring
+    * **unanchored** — the same alternative with its own RL-988 Part 1 `\b`-anchoring
       stripped. A genuinely clean alternative reads the same figure either way; one that
       only reads zero because the anchor keeps it from firing at all reads a different,
-      larger figure unanchored — Ruling 102 §1's own test, "a row that cannot be expressed
+      larger figure unanchored — RL-1043 §1's own test, "a row that cannot be expressed
       as a predicate the script computes is a row that was never enforceable", applied to a
       row that computes but cannot fail.
     """
@@ -1013,16 +1020,16 @@ def _companions_for(
     u_ctl, _ = ctl.scan(unanchored, skip_fenced=True)
     out.append((
         "unanchored (inertness probe)",
-        f"{unanchored_src!r} — the same alternative with Ruling 67 Part 1's own `\\b` "
+        f"{unanchored_src!r} — the same alternative with RL-988 Part 1's own `\\b` "
         "anchoring stripped",
         f"migrated {u_mig}; control {u_ctl}",
     ))
     return out, gating
 
 
-#: Ruling 105 §A's third alias class (2026-09-04, `to-lead.md:459-465`): a slice key
+#: RL-1046 §A's third alias class (2026-09-04, `to-lead.md:459-465`): a slice key
 #: `W<n>[a-z]?-<m>` names a historical execution unit no `SL-` id was ever minted for and
-#: never will be — NT-0019 §5.2 asks for zero of the ~864 historical rows, and the
+#: never will be — RFC-937 §5.2 asks for zero of the ~864 historical rows, and the
 #: resolver that renders one (`W11-1` -> "WK-952, slice 1") is W37-11's citation-form
 #: item, the same shape as the `F-W`/bare-`F` alias classes already in `D_DISCLOSED`. Kept
 #: as a separate branch rather than folded into `D_DISCLOSED`, because two things on the
@@ -1035,7 +1042,7 @@ def _companions_for(
 #: `to-lead.md:498-510`; carried here from PR #739, verify105), printed as their own
 #: count line.** First ruled fatal on the belief that the population was fixtures only;
 #: the real measurement found live citations. The class does not change with the count:
-#: NT-0019 §1.2 has `WK` and `SL` and nothing below a slice, so a task key has no target
+#: RFC-937 §1.2 has `WK` and `SL` and nothing below a slice, so a task key has no target
 #: by the standard's own design — the same ground as a slice key, not the mangling/
 #: token_map class a bare work key is.
 #:
@@ -1043,19 +1050,19 @@ def _companions_for(
 #: unmapped [bare] one is a real `token_map` defect" — corrected here (2026-09-04, task
 #: #30) to a narrower, measured claim.** That absolute is false on the real tree: measured
 #: directly, all 8 real-document bare-key matches are illustrative naming-system examples
-#: (a split-then-letter and a rejected-suffix form, fenced under Ruling 103 §5.1 in
+#: (a split-then-letter and a rejected-suffix form, fenced under RL-1044 §5.1 in
 #: `.claude/skills/close-workstream/SKILL.md`, `docs/audit/closure-records.md` and
-#: `docs/plans/2026-08-22-w6b-slice-map.md` — never real historical ids) and the
+#: `docs/plans/PL-00753-wk-664-and-wk-692-the-slice-map.md` — never real historical ids) and the
 #: remaining 6 are this instrument's own test literals (class 3c,
 #: `_docid.TEST_MODULE_EXCLUSIONS`). A bare, unmapped work key CAN still be a real
 #: `token_map` defect; it is not NECESSARILY one, which is why this alternative stays
 #: fatal on any occurrence rather than trying to tell the two apart at measurement time.
 #:
-#: **Left-bound fix (2026-09-04, task #30, Ruling 67 §2 Part 1 from the other end):** all
+#: **Left-bound fix (2026-09-04, task #30, RL-988 §2 Part 1 from the other end):** all
 #: three patterns below gained `_docid.TOKEN_LEFT_BOUND` — a bare `\b` at a pattern's own
 #: left edge is satisfied between a hyphen and the next character, so `F-W37-6-12` (a real
 #: `_FINDING_ID`-shaped finding id, `audit-docs.py`) matched `_D8_TASK_KEY_RE` from its
-#: second character. **One shared constant, per Ruling 67 §2** ("one rule at two
+#: second character. **One shared constant, per RL-988 §2** ("one rule at two
 #: times... never a private copy each script maintains independently") — this reads
 #: `_docid.TOKEN_LEFT_BOUND`, the same narrowed left-boundary rule `LEGACY_FORM_PATTERNS`
 #: (row (d)) reads, rather than a second, independently-maintained left-bound constant; see
@@ -1151,7 +1158,7 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
         return REGRESSION, (
             "the migration introduces a slice-key value the control never had: "
             f"{creation_note} — creation stays REGRESSION even for a disclosed class "
-            "(Ruling 105 §A's third alias class)"
+            "(RL-1046 §A's third alias class)"
         )
     m_bare, bare_files = mig.scan(_D8_WORK_KEY_BARE_RE, skip_fenced=True)
     if m_bare:
@@ -1165,8 +1172,8 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
     c_task, _ = ctl.scan(_D8_TASK_KEY_RE, skip_fenced=True)
     note = (
         "slice-key and task-key population disclosed, excluded from the zero requirement "
-        "(Ruling 105 §A's third alias class; task keys joined by Ruling #26, 2026-09-04 — "
-        "no family exists below a slice per NT-0019 §1.2, so a task key has no target by "
+        "(RL-1046 §A's third alias class; task keys joined by Ruling #26, 2026-09-04 — "
+        "no family exists below a slice per RFC-937 §1.2, so a task key has no target by "
         f"design, same ground as a slice key): slice-key {m_slice} line(s) / "
         f"{slice_files} file(s) (`{_D8_SLICE_KEY_RE.pattern}`, control {c_slice}); "
         f"task-key {m_task} line(s) / {task_files} file(s) "
@@ -1196,22 +1203,24 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
 # mechanically below rather than trusted from its citing ruling). A token is
 # never-allocated only when ALL FOUR of: zero bold definitions in `docs/specs/*.md`
 # (`_discover_requirements`'s own source), zero definition row in `open-questions.md`,
-# `roadmap.md` or `docs/audit/register.md` (every other source `_discover_*` reads for a
+# `roadmap.md` or `docs/findings/register.md` (every other source `_discover_*` reads for a
 # requirement or open-question id), and no `old_id` row for it in the migrated tree's
 # `docs/REDIRECTS.csv` (confirms the migration itself never allocated it). Any ONE of
 # those failing means something actually defines or migrated the id, and the citing line
 # is a real `token_map` miss (FAIL) — a token can never be excused into this class merely
 # because its citing sentence *sounds* like "never taken".
 #
-# Terminal, not owed a future fix: NT-0019 allocates bare integers per family (D1/D2), so
+# Terminal, not owed a future fix: RFC-937 allocates bare integers per family (D1/D2), so
 # a legacy scoped name that was never allocated can never be allocated *later* either —
 # there is no future state in which `token_map["OQ-RATE-8"]` becomes non-empty. Owner:
 # "none — closed class". The citing sentence itself is a correct historical statement
-# about an id that does not exist and stays exactly as written — Ruling 103 §5.1's fence
+# about an id that does not exist and stays exactly as written — RL-1044 §5.1's fence
 # is for an exhibit of a defective FORM, and this is not one.
 _D7_LABEL: Final = _docid.SCOPED_REQUIREMENT_ID_LABEL
 
-#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: the never-allocated predicate's sources and function moved
 #: into `_docid` so `audit-docs.py` check 36 can read the identical rule — the four thin
 #: wrappers below preserve this module's existing `Corpus`-based signatures for every
@@ -1228,7 +1237,7 @@ def _scoped_id_bold_defined(token: str, ctl: Corpus) -> bool:
 
 def _scoped_id_defined_elsewhere(token: str, ctl: Corpus) -> bool:
     """True if `token` has a genuine definition row in `open-questions.md`, `roadmap.md`
-    or `docs/audit/register.md` — a `next free:`-marker MENTION on the same line, before
+    or `docs/findings/register.md` — a `next free:`-marker MENTION on the same line, before
     the token, is not a definition; everything else that names the token counts."""
     return _docid.scoped_id_defined_elsewhere(token, ctl.tree)
 
@@ -1246,14 +1255,14 @@ def _scoped_id_is_never_allocated(token: str, mig: Corpus, ctl: Corpus) -> bool:
 
 
 #: (d7)'s remaining named collision, ruled 2026-09-05 (W37-6 channel): `_scoped_id_is_
-#: never_allocated` is per-TOKEN, and `FR-PLAT-4` is genuinely allocated (`FR-PLAT-1..4`
-#: is real production usage, `docs/REDIRECTS.csv` carries its row) — so it fails as a
-#: "real" hit everywhere the literal string appears, including `scripts/doc-id.py`'s own
-#: `_expand_range` docstring, where it names the same string as a worked example of an
-#: UN-ascending range (`` `FR-PLAT-4..1` ``, deliberately backwards, to illustrate the
-#: "not ascending" branch) — never a citation to the real requirement at all.
+#: never_allocated` is per-TOKEN, and `FR-390` is genuinely allocated (`FR-387, FR-388, FR-389,
+#: FR-390` is real production usage, `docs/REDIRECTS.csv` carries its row) — so it fails as a "real"
+#: hit everywhere the literal string appears, including `scripts/doc-id.py`'s own `_expand_range`
+#: docstring, where it names the same string as a worked example of an UN-ascending range (``
+#: `FR-PLAT-4..1` ``, deliberately backwards, to illustrate the "not ascending" branch) — never a
+#: citation to the real requirement at all.
 #:
-#: **Corrected, same day: a table naming `FR-PLAT-4` by file and token is the forbidden
+#: **Corrected, same day: a table naming `FR-390` by file and token is the forbidden
 #: per-file exemption**, the maintainer's own standing rule (a resistant file goes to
 #: W37-11, never a name-by-name allowlist) — caught before merge on the deputy's own
 #: re-reading of `origin/main`'s `is_scoped_id_never_allocated`: every existing branch of
@@ -1317,7 +1326,7 @@ def _python_comment_or_string_lines(text: str) -> frozenset[int]:
 #: itself, not the platform's requirements corpus (`docs/specs/`) or a real citation
 #: source. **`docs/findings/` is deliberately NOT in this tuple** (corrected 2026-09-05,
 #: team-lead's own re-reading): a migration's own move can land inside a directory this
-#: tuple names — `docs/audit/register.md` (a REAL citation source, and the file that
+#: tuple names — `docs/findings/register.md` (a REAL citation source, and the file that
 #: held today's one real defect) becomes `docs/findings/register.md` on the migrated
 #: tree, the one this predicate actually scans. `docs/findings/` currently holds zero
 #: members of this class (measured against the real corpus before this correction), so
@@ -1372,9 +1381,9 @@ def _is_framework_self_reference(
     rel: str, tree: Corpus, mig: Corpus, ctl: Corpus, line_index: int, matched: str
 ) -> bool:
     """The one combined predicate (team-lead's ruling, 2026-09-05: "build one predicate
-    and let it cover FR-PLAT-4, the WK hits, and the fixture tokens together"): a Python
+    and let it cover FR-390, the WK hits, and the fixture tokens together"): a Python
     comment/docstring line under `scripts/`/`tests/` (limb 1 — a real id MAY be disclosed
-    here; framework source text is exactly where a worked example like `FR-PLAT-4`
+    here; framework source text is exactly where a worked example like `FR-390`
     lives), or a backtick-quoted, never-allocated pattern exhibit in this workstream's
     own planning docs (limb 2 — a real id may NOT be disclosed here; limb 2 discloses
     exhibits, and an exhibit is not a real id — team-lead's hardening, same date). Used
@@ -1410,7 +1419,7 @@ def _box_end_refused(
     `_expand_range`, the general rewriter for every id family `doc-id.py` migrates, so a
     row whose own alternative pattern matches a family the general rewriter also covers
     (found live: (d6)'s `ADR-0[0-9]{3}`, `docs/skills-map.md:92`'s `ADR-0004, 03 ...`,
-    where `03` resolves as the real `ADR-0003`) can be refused by the identical
+    where `03` resolves as the real `ADR-705`) can be refused by the identical
     mechanism (d7) already discloses. Extracted here as ONE predicate every d-row reads,
     never a per-row copy that happens to agree today — `_d7_disclosed_or_fail`'s own
     third class and `_box_end_only_residue_or_none` (the generic d-row path, below) both
@@ -1604,12 +1613,12 @@ def _d7_disclosed_or_fail(docid: Any, mig: Corpus, ctl: Corpus) -> tuple[str, st
         f"every one of {disclosed_lines} line(s) / {len(disclosed_files)} file(s) "
         "names only a legacy scoped-form id with zero definition rows in every source "
         "`_discover_*` reads (`docs/specs/*.md`, `docs/open-questions.md`, "
-        "`docs/roadmap.md`, `docs/audit/register.md`) and no `old_id` row in "
+        "`docs/roadmap.md`, `docs/findings/register.md`) and no `old_id` row in "
         "`docs/REDIRECTS.csv` — the closed never-allocated class (deputy's mechanical "
-        "predicate, 2026-09-04, W37-6 exec-ids). Terminal: NT-0019 allocates bare "
+        "predicate, 2026-09-04, W37-6 exec-ids). Terminal: RFC-937 allocates bare "
         "integers per family, so a legacy scoped name that was never allocated can "
         "never be allocated later either. Owner: none — closed class. The citing "
-        "sentence stays exactly as written; Ruling 103 §5.1's fence is for a "
+        "sentence stays exactly as written; RL-1044 §5.1's fence is for a "
         "defective-form exhibit, not a correct historical statement about an id that "
         f"does not exist.{self_ref_note}{refusal_note}"
     )
@@ -1618,7 +1627,7 @@ def _d7_disclosed_or_fail(docid: Any, mig: Corpus, ctl: Corpus) -> tuple[str, st
 def _path_alternative_verdict(
     mig: Corpus, pattern: re.Pattern[str],
 ) -> tuple[int, int, int, int]:
-    """The deputy's ruling (W37-6 channel, 2026-09-04): Ruling 105 §A's disclosed-alias
+    """The deputy's ruling (W37-6 channel, 2026-09-04): RL-1046 §A's disclosed-alias
     pattern applied to a §7(d) *path* alternative. A match immediately naming a real
     moved file — present in this run's own `docs/REDIRECTS.csv` `old_path` column — is
     fatal: the citation-inverse mechanism owns exactly that shape (a known `(old_path,
@@ -1641,7 +1650,7 @@ def _path_alternative_verdict(
     population, both applied before any line is even classified:
 
     * **A same-path `docs/REDIRECTS.csv` row is not a moved file.** `old_path ==
-      new_path` records a token rename made *inside* a file (`W1` -> `WK-954` inside
+      new_path` records a token rename made *inside* a file (`WK-657` -> `WK-954` inside
       `docs/roadmap.md`, which never moved), reusing the CSV's `old_path`/`new_path`
       columns for a different fact. Counting `docs/roadmap.md` as a "real moved file"
       made an unrelated, correct, unchanged citation to it — sitting in the same
@@ -1650,7 +1659,7 @@ def _path_alternative_verdict(
       proximity, not because the matched text named anything that moved.
     * **A vendored skill's own files are never swept.** `doc-id.py`'s `_is_vendored_exempt`
       excludes everything beneath a `_docid._VENDORED_SKILLS` directory except its
-      manifest, by ruling (NT-0019 §1.5, Ruling 69/76) — "vendored files stay as
+      manifest, by ruling (RFC-937 §1.5, RL-990/973) — "vendored files stay as
       upstream wrote them" (`CLAUDE.md` §12). A citation inside one can never be
       repointed by design, so it is not this row's population to demand zero of.
 
@@ -1671,7 +1680,7 @@ def _path_alternative_hits_by_file(
     """`_path_alternative_verdict`'s own per-file breakdown, factored out so a caller that
     needs *which file* (the W37-11 residue ceiling) reads the identical classification a
     caller that only needs the row's aggregate figure does — one rule, not two readings of
-    it (Ruling 103 §1.8's "two implementations of one rule that are never compared are two
+    it (RL-1044 §1.8's "two implementations of one rule that are never compared are two
     rules", the same reasoning `fenced_line_numbers` was shared for above).
 
     Returns `(fatal_lines_by_relpath, disclosed_lines_by_relpath)`; a file with zero hits of
@@ -1786,7 +1795,7 @@ def rows_d(
                     if disc_lines:
                         note += (
                             f"; {disc_lines} line(s) / {disc_files} file(s) additionally "
-                            "disclosed (Ruling 105 §A's pattern, owner W37-11's "
+                            "disclosed (RL-1046 §A's pattern, owner W37-11's "
                             "citation-form item) — no real file behind the match, "
                             "excluded from the zero requirement"
                         )
@@ -1811,7 +1820,7 @@ def rows_d(
                     # Ruling (lead, 2026-09-06): the box-end disclosure is not (d7)'s
                     # property, it belongs to every d-row the general rewriter covers.
                     # Found live: (d6) FAILs on docs/skills-map.md's `ADR-0004, 03 ...`,
-                    # refused whole because `03` resolves as the real `ADR-0003`.
+                    # refused whole because `03` resolves as the real `ADR-705`.
                     box_end_verdict = _box_end_only_residue_or_none(docid, mig, ctl, pattern)
                     if box_end_verdict is not None:
                         verdict, note = box_end_verdict
@@ -1853,13 +1862,13 @@ def rows_d(
                     "--others --exclude-standard`, minus REDIRECTS.csv, minus "
                     "front-matter `was:` **field** lines "
                     "(`_docverify.was_field_line_numbers`), minus lines inside a fenced "
-                    "code block (`_docverify.fenced_line_numbers` — Ruling 103 §5.1's "
+                    "code block (`_docverify.fenced_line_numbers` — RL-1044 §5.1's "
                     "fence clause, extended to row (d)'s corpus 2026-09-04, W37-6 "
                     "exec-ids: an illustrative exhibit kept byte-exact inside a fence is "
                     "not a citation); taken verbatim, by index, "
-                    "from `_docid.LEGACY_FORM_PATTERNS` — Ruling 67 §2's one shared "
+                    "from `_docid.LEGACY_FORM_PATTERNS` — RL-988 §2's one shared "
                     "constant, the same tuple `audit-docs.py` check 36 reads, anchored "
-                    "per Ruling 67 §2 Part 1 (a `\\b`-bounded complete identifier, or a "
+                    "per RL-988 §2 Part 1 (a `\\b`-bounded complete identifier, or a "
                     "bare literal path substring)"
                 ),
                 denominator=f"{mig.n_lines} line(s) in {mig.n_files} file(s)",
@@ -1874,11 +1883,13 @@ def rows_d(
 
 
 # ---------------------------------------------------------------------------------------
-# (e) no padded id in prose — Ruling 103's four conjuncts
+# (e) no padded id in prose — RL-1044's four conjuncts
 # ---------------------------------------------------------------------------------------
 
 #: **Conjunct 1**'s exact-width regex, moved into `_docid` per
-#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item 1
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 2 item 1
 #: so `audit-docs.py` check 32 can read the identical assembled pattern rather than
 #: reassembling it from the same two symbols in a second place — re-exported here under
 #: this module's existing name for every caller and test already written against it.
@@ -1893,7 +1904,9 @@ _FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
 
 #: **Conjunct 2's** stripping step, boundary set and line-locator strip, and the
 #: `_in_path_context` predicate itself, moved into `_docid` per
-#: `docs/plans/2026-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` Entry 2 item 1
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 2 item 1
 #: so `audit-docs.py` check 32 can read the identical predicate rather than a private copy.
 #: Re-exported here under their existing names for this module's own callers and tests.
 _MD_EMPHASIS_RE: Final = _docid._MD_EMPHASIS_RE
@@ -1993,7 +2006,7 @@ def row_e(mig: Corpus, ctl: Corpus, snap: Snapshot) -> Row:
         verdict, note = (
             FAIL,
             "conjunct 3 has no authority — docs/INDEX.md resolves no governed id, so "
-            "every token would be excused as a specimen (NT-0007)",
+            "every token would be excused as a specimen (RFC-789)",
         )
     elif m_index:
         verdict = FAIL
@@ -2004,7 +2017,7 @@ def row_e(mig: Corpus, ctl: Corpus, snap: Snapshot) -> Row:
         verdict, note = PASS, ""
     return Row(
         key="e",
-        title="no padded id in prose (Ruling 103's four conjuncts)",
+        title="no padded id in prose (RL-1044's four conjuncts)",
         owner=OWNER_W37_6,
         predicate=(
             "conjunct 0 — (d)'s corpus, minus REDIRECTS.csv, minus front-matter `was:` "
@@ -2039,11 +2052,11 @@ def row_e(mig: Corpus, ctl: Corpus, snap: Snapshot) -> Row:
 
 
 # ---------------------------------------------------------------------------------------
-# (f) VR-DST-1 unchanged — Ruling 103's two conjuncts
+# (f) VR-DST-1 unchanged — RL-1044's two conjuncts
 # ---------------------------------------------------------------------------------------
 
 #: §7(f) verbatim: "`git grep -c 'VR-DST-1'` is unchanged from `8f5d57d` — no product
-#: identifier moved". Ruling 103 rules the comparison is a before/after pair on the SAME
+#: identifier moved". RL-1044 rules the comparison is a before/after pair on the SAME
 #: archive, not a comparison to `8f5d57d`; the baseline tree is still measured and printed,
 #: because §7's own sentence names that sha and a reader will look for it.
 _VR_DST_RE: Final = re.compile(r"VR-DST-1\b")
@@ -2065,10 +2078,10 @@ def row_f(
     snap: Snapshot,
     generated_paths: Sequence[str] = (),
 ) -> Row:
-    # Ruling 105 D3 / #18 §1: excludes every file the migration generated in full, keyed
+    # RL-1046 D3 / #18 §1: excludes every file the migration generated in full, keyed
     # on the run's own generated-output list (`MigrateResult.generated_paths` —
     # `docs/INDEX.md`, `docs/REDIRECTS.csv`, the family READMEs, the split-source indexes),
-    # never on the literal path `docs/INDEX.md`. Ruling 104 §2: class 6 is the property
+    # never on the literal path `docs/INDEX.md`. RL-1045 §2: class 6 is the property
     # (a file whose entire content is the output of one of the migration's generators, by
     # reproducibility — not by whether it happens to carry forward original prose), not the
     # list; `_MIGRATION_DIFF_FAMILY_READMES` is ratified as a member, in-place READMEs
@@ -2109,7 +2122,7 @@ def row_f(
             f"conjunct 2 passes with {len(disagreements)} disclosed split-source "
             "disagreement(s), summing to zero: "
             + "; ".join(f"{b}->{a} {p}" for p, b, a in disagreements[:4])
-            + ". Ruling 103 rules conjunct 2 sums over ALL targets a source routes to, from "
+            + ". RL-1044 rules conjunct 2 sums over ALL targets a source routes to, from "
             "§3.3's routing table. That table is not an artifact in the tree, so this is a "
             "table-free approximation: it treats a set of disagreements that nets to zero "
             "as one split source's content arriving in several files. NAMED LIMITATION — it "
@@ -2123,7 +2136,7 @@ def row_f(
         note = "; ".join(
             part for part in (
                 note,
-                "GENERATED, excluded (Ruling 105 D3/#18, Ruling 104 §2's class-6 "
+                "GENERATED, excluded (RL-1046 D3/#18, RL-1045 §2's class-6 "
                 f"property): {sum(excluded.values())} occurrence(s) in "
                 f"{len(excluded)} generated file(s) — "
                 + ", ".join(f"{p}={n}" for p, n in sorted(excluded.items())[:6])
@@ -2139,7 +2152,7 @@ def row_f(
         b_desc = f"{b_lines} line(s) / {b_files} file(s) at {BASELINE_REF}"
     return Row(
         key="f",
-        title="git grep -c 'VR-DST-1' unchanged (Ruling 103's two conjuncts)",
+        title="git grep -c 'VR-DST-1' unchanged (RL-1044's two conjuncts)",
         owner=OWNER_W37_6,
         predicate=(
             f"{_VR_DST_RE.pattern!r} over (d)'s corpus, `was:` lines INCLUDED (a product "
@@ -2147,7 +2160,7 @@ def row_f(
             "and after the migration on the same archive; conjunct 2 — per-file counts are "
             "equal, each pre-migration path mapped through the run's own docs/REDIRECTS.csv "
             "(`_docverify._redirect_map`), summing over a split source's targets; every "
-            "path in `MigrateResult.generated_paths` is excluded first (Ruling 105 D3/#18)"
+            "path in `MigrateResult.generated_paths` is excluded first (RL-1046 D3/#18)"
         ),
         denominator=(
             f"{len(c_per)} file(s) carry the identifier before, {len(m_per)} after "
@@ -2171,8 +2184,8 @@ def row_f(
 # (g) the migration diff, filtered to hunks that are neither header nor citation-token
 # ---------------------------------------------------------------------------------------
 
-#: Ruling 102 §2 row 1 names this **the** broken-input proof for (g): "a rewrite may not
-#: match inside a longer identifier. `NFR-RATE-13/14` is the broken-input proof". A compound
+#: RL-1043 §2 row 1 names this **the** broken-input proof for (g): "a rewrite may not
+#: match inside a longer identifier. `NFR-502/501` is the broken-input proof". A compound
 #: citation names two requirements in shorthand; a rewrite that matches inside the longer
 #: identifier turns it into `NFR-775/14` — one real requirement and one meaningless
 #: fragment. The post-migration form has a *numeric* module segment, which is what
@@ -2205,16 +2218,16 @@ COMPOUND_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+/[0-9]
 
 #: g1's FR/NFR/OQ/DEP alternative, narrowed to **provenance** (deputy disposition,
 #: 2026-09-05 13:35 BST, superseding this row's own comment above for that one
-#: alternative only — Ruling 102 §2's text is untouched; the narrowing restores what its
+#: alternative only — RL-1043 §2's text is untouched; the narrowing restores what its
 #: own rationale meant under a scheme where a *shape* test could still tell a corrupted
 #: rewrite from a correct one). A pure-numeric id scheme means a correctly-expanded
 #: compound (`_expand_compound`'s own designed output, `NFR-799/798`) wears the identical
 #: shape a corrupted rewrite would (`NFR-758/10`, `MANGLED_CITATION_RE`'s own former test)
 #: — measured live, 2026-09-05: 393 real production lines matched the raw shape and every
 #: one was a correctly-recorded compound, while the one real defect
-#: (`docs/audit/register.md:49`) was invisible to the shape test *and* to a first
+#: (`docs/findings/register.md:49`) was invisible to the shape test *and* to a first
 #: "does this component exist as some id" pass (the deputy's own refuted second attempt,
-#: `NFR-OVR-10`/`NFR-OVR-11` happen not to exist, but where an orphaned component
+#: `NFR-463`/`NFR-464` happen not to exist, but where an orphaned component
 #: coincides with an unrelated real id, existence alone passes a mangled citation
 #: silently). The only test that cannot be fooled either way is **re-deriving the correct
 #: answer independently and comparing** — `_g1_provenance_mismatches` below runs the exact
@@ -2234,7 +2247,7 @@ _WK_MANGLED_RE: Final = re.compile(r"\bWK-[0-9]+[A-Z]")
 def _wk_shape_hits(scan: Corpus, mig: Corpus, ctl: Corpus) -> tuple[int, int]:
     """(lines, files) matching `_WK_MANGLED_RE` in `scan`, **excluding framework
     self-reference** (team-lead's ruling, 2026-09-05: "your WK hits are not a new class
-    — they are the `FR-PLAT-4` class" — one predicate, `_is_framework_self_reference`,
+    — they are the `FR-390` class" — one predicate, `_is_framework_self_reference`,
     covers both rather than a second mechanism for the identical population). A
     `WK-944C`-shaped string inside a `scripts/*.py`/`tests/*.py` comment or docstring, or
     a NEVER-ALLOCATED backtick-quoted exhibit in this workstream's own planning docs, is
@@ -2429,18 +2442,18 @@ def _rewritten_base_before_bare_comma(
     return violations
 
 
-#: The line-level mask filter that stood in for (g) before Ruling 68 defined the six
+#: The line-level mask filter that stood in for (g) before RL-989 defined the six
 #: classes has been **removed**, not left beside its replacement — keeping a superseded
-#: predicate next to the one that supersedes it is NT-0003's duplicated-status defect in
+#: predicate next to the one that supersedes it is RFC-756's duplicated-status defect in
 #: code form. It implemented exactly one of the six classes (class 2, a reference token
 #: substituted from the step-6 allow-list) and scored every other permitted class
-#: `unexplained`. Ruling 68 §3: "one definition of 'reference tokens only', not two ...
+#: `unexplained`. RL-989 §3: "one definition of 'reference tokens only', not two ...
 #: implementing it twice is how the two drift apart." The replacement,
 #: `doc-id.classify_migration_diff`, is that one definition — file-granularity, all six
 #: classes, sharing `audit-docs.py`'s DP-7 predicate rather than a home-grown line mask.
 
 # ---------------------------------------------------------------------------------------
-# W37-6 channel `:512-536` — Ruling 102 §3's "name them", applied to `classified-by-none`
+# W37-6 channel `:512-536` — RL-1043 §3's "name them", applied to `classified-by-none`
 # itself: the deputy's ruling on the class-6 keying fix refused a bare total ("the ~504
 # acted on as a total rather than per cause" is a named violation) and required the
 # residue printed *by cause*, with counts and three examples each. Investigative, never
@@ -2449,12 +2462,12 @@ def _rewritten_base_before_bare_comma(
 # elsewhere; this only *reports* the shape each residue member matches, on the same
 # un-migrated corpus (`ctl`) every other row already shares, never a second read of the
 # tree. A member matching none of the named shapes lands in `other`, which is not a
-# failure of this classifier — Ruling 102 §3 obliges naming what is understood, not
+# failure of this classifier — RL-1043 §3 obliges naming what is understood, not
 # claiming to understand all of it.
 # ---------------------------------------------------------------------------------------
 
 #: Cause 1 (deputy's ruling `:522`): `.claude/skills/**`, `.claude/agents/` and
-#: `.claude/roles/` carry their own, non-NT-0019 front matter (agent/skill config) that
+#: `.claude/roles/` carry their own, non-RFC-937 front matter (agent/skill config) that
 #: the migration defers rather than stamps — DP-7 strips the leading `---…---` block of
 #: `new_text` unconditionally and compares against the *raw* old text, so a clean token
 #: rewrite in one of these files loses the foreign block on one side of the comparison
@@ -2462,15 +2475,14 @@ def _rewritten_base_before_bare_comma(
 #: wrongly strips is the one that was always there.
 _FOREIGN_FRONTMATTER_DIRS: Final = (".claude/skills/", ".claude/agents/", ".claude/roles/")
 
-#: Cause 2a (deputy's ruling `:526`): a legacy range citation (`FR-PLAT-1..4`) names a
-#: consecutive block of ids, not a single one; the migration's ids are not consecutive, so
-#: the rewrite must enumerate the range rather than substitute one token, which DP-7's
-#: flat inverse cannot undo. Read on the pre-migration line — the range notation the
-#: rewrite had to expand away.
+#: Cause 2a (deputy's ruling `:526`): a legacy range citation (`FR-387, FR-388, FR-389, FR-390`)
+#: names a consecutive block of ids, not a single one; the migration's ids are not consecutive, so
+#: the rewrite must enumerate the range rather than substitute one token, which DP-7's flat inverse
+#: cannot undo. Read on the pre-migration line — the range notation the rewrite had to expand away.
 _RANGE_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\.\.[0-9]+")
 
 #: Cause 2b (deputy's ruling `:528-530`, this executor's to investigate): every
-#: `NNNN-*.md` file left behind, under `_NOTES_TOMBSTONE_DIR` below, by Ruling 57's own
+#: `NNNN-*.md` file left behind, under `_NOTES_TOMBSTONE_DIR` below, by RL-947's own
 #: historical move is a one-line "This note moved to `[...]`(../../...)" self-reference, a
 #: *relative* markdown link to the note's own current location. `_repoint_relative_links`
 #: rewrites it correctly in the forward direction (the diff shows the new path and its new
@@ -2478,7 +2490,7 @@ _RANGE_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\.\.[0-9
 #: exact one-line shape, no exceptions found. DP-7's inverse cannot undo it:
 #: `redirects_inverse` only carries the flat, `docs/`-rooted and bare-basename token forms
 #: `_path_rewrite_tokens` produces, never a `../../`-relative one, so the single line that
-#: differs has no entry to invert through. The same mechanism Ruling 100/101 already named
+#: differs has no entry to invert through. The same mechanism RL-1041/1042 already named
 #: for a split target's own relative links ("the (g) inverse only knows id tokens, so the
 #: path-shaped rewrite has no inverse") — reported here rather than assumed to be that
 #: same, already-ruled class, since these are not split targets and the deputy's own
@@ -2495,11 +2507,11 @@ _NOTES_STUB_RE: Final = re.compile(
 )
 
 #: Not one of the deputy's three named causes — found investigating cause 2b, reported
-#: because Ruling 102 §3 obliges naming what is understood rather than folding it into
+#: because RL-1043 §3 obliges naming what is understood rather than folding it into
 #: `other`. A citation naming three or more legacy ids in one slash-chain
-#: (`FR-RATE-56/57/58`) rewrites each component correctly (verified: every number present
+#: (`FR-273/274/275`) rewrites each component correctly (verified: every number present
 #: substitutes to its own new id) but the compound-redirect mechanism the deputy's own
-#: `:318` ruling describes for a *two*-id slash compound (`NFR-RATE-13/14` ->
+#: `:318` ruling describes for a *two*-id slash compound (`NFR-502/501` ->
 #: `NFR-775/776`, one `REDIRECTS.csv` row) does not obviously extend to a chain, and DP-7's
 #: inverse fails the whole file over it. Not investigated further — out of this
 #: executor's assigned scope (2b only); reported by shape for the deputy's triage.
@@ -2513,39 +2525,40 @@ _SLASH_COMPOUND_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+(?:/[0-9
 # `audit_docs.frozen_file_matches_after_migration_stamp` run by hand against the exact
 # `redirects_inverse` map `classify_migration_diff` builds, never assumed from the diff
 # alone. **Both named hypotheses are KILLED for `docs/`**: none of the ten sampled files is
-# a Ruling 68 class-4 split or a generated README/INDEX collision. Two new, unrelated
+# a RL-989 class-4 split or a generated README/INDEX collision. Two new, unrelated
 # causes accounted for eight of the ten; the other one (a bare-basename/non-`docs/`-rooted
-# relative citation, e.g. `docs/README.md`'s `workflows/wf-01-...md` and
-# `phase-0-status.md`) is reported here in prose, not as a regex, because it has no single
-# stable prefix to key on (unlike the five `docs/`-rooted forms
+# relative citation, e.g. `docs/README.md`'s `workflows/WF-698-...md` and
+# `closures/CR-00709-phase-0-specification-status.md`) is reported here in prose, not as a regex,
+# because it has no single stable prefix to key on (unlike the five `docs/`-rooted forms
 # `_docid.LEGACY_FORM_PATTERNS` already names).
 #
-# **Corrected, task #30:** this comment used to also report a second finding — `OQ-DATA-11`
+# **Corrected, task #30:** this comment used to also report a second finding — `OQ-556`
 # (cited in `docs/plans/2026-08-19-psi-comparison-selector[-ledger].md`'s own historical
 # narrative) as an *"un-allocated placeholder id"* that the run supposedly rewrote to
 # `OQ-8471` with no `REDIRECTS.csv` row for `redirects_inverse` to consume. That was false:
-# `OQ-DATA-11` is a real, decided open question (`docs/open-questions.md:63`,
-# `~~**OQ-DATA-11**~~ ✔`), and #726 (the same-shaped `_discover_requirements` dedup fix,
+# `OQ-556` is a real, decided open question (`docs/open-questions.md:63`,
+# `~~**OQ-556**~~ ✔`), and #726 (the same-shaped `_discover_requirements` dedup fix,
 # "one draft per legacy OQ id") already gives it exactly one `REDIRECTS.csv` row and a
 # consistent rewrite everywhere it is cited, plan narrative included — measured directly
-# against a real `migrate()` run: `OQ-DATA-11,OQ-849,docs/specs/01-data-management.md,
+# against a real `migrate()` run: `OQ-556,OQ-849,docs/specs/01-data-management.md,
 # docs/specs/01-data-management.md,`, one row, no conflict. Left here as a record that the
 # claim was checked and refuted, not silently dropped.
 # ---------------------------------------------------------------------------------------
 
 #: cause3 (this executor's `docs/` sample, six of ten files): a prose citation to
-#: *another* document by its pre-migration relative path — `docs/notes/0010-...md`,
-#: `docs/audit/register.md`, `docs/plans/2026-08-30-...md` — inside a file that is not
+#: *another* document by its pre-migration relative path — `docs/rfcs/0010-...md`,
+#: `docs/findings/register.md`, `docs/plans/2026-08-30-...md` — inside a file that is not
 #: itself one of `_NOTES_STUB_RE`'s tombstones. The forward sweep resolves these correctly
 #: (`_path_rewrite_tokens`/the citation sweep knows the move); DP-7's inverse does not,
 #: because `redirects_inverse` (`doc-id.classify_migration_diff`) is built only from
 #: `REDIRECTS.csv`'s `old_id`/`new_id` **id** columns, never from a citation's own literal
 #: path string. Reuses `_docid.LEGACY_FORM_PATTERNS`' five already-named `"...path"`
-#: entries (Ruling 67 §2's one shared constant) rather than a new pattern — Verified
-#: against all six: `docs/audit/findings/F27.md`, `docs/notes/0003-duplicated-status-goes-
-#: stale.md`, `docs/process/delivery-process.md`, `docs/process/delivery-process.core.json`
-#: and `docs/research/w11-task-1-4-model-call-concurrency.md` each match on at least one
-#: line; `docs/README.md` does not (see the module comment above) and is left in `other`.
+#: entries (RL-988 §2's one shared constant) rather than a new pattern — Verified
+#: against all six: `docs/findings/FD-00934-03-rating-shapes-vs-hand-authored-contracts.md`,
+#: `docs/rfcs/0003-duplicated-status-goes- stale.md`, `docs/process/delivery-process.md`,
+#: `docs/process/delivery-process.core.json` and
+#: `docs/research/w11-task-1-4-model-call-concurrency.md` each match on at least one line;
+#: `docs/README.md` does not (see the module comment above) and is left in `other`.
 _LEGACY_PATH_RES: Final = tuple(
     pattern for name, pattern in _docid.LEGACY_FORM_PATTERNS if "path" in name
 )
@@ -2574,11 +2587,11 @@ _WORK_ADJACENT_UPPER_RE: Final = re.compile(r"\bW[0-9]+[A-Z]")
 # remainder (14 files, small enough to read whole rather than sample ten) — reported here
 # by the same convention as `_SLASH_COMPOUND_RE` above: named and counted, not fixed, not
 # assigned an owner by this executor. A third candidate (an id token and its `docs/plans/`
-# or `docs/notes/` path rewritten together, e.g. `` [`NT-0003`](docs/notes/0003-....md) ``)
+# or `docs/notes/` path rewritten together, e.g. `` [`RFC-756`](docs/rfcs/0003-....md) ``)
 # was found on the same 4 files but turned out to be the sibling `docs/`-triage executor's
 # cause3 read one level more generally (a legacy path citation, id present or not) — see
 # `_LEGACY_PATH_RES` above, which already matches every one of those 4 lines. Naming it
-# again here would be NT-0003's duplicated-status defect in cause-table form, so it is not
+# again here would be RFC-756's duplicated-status defect in cause-table form, so it is not
 # kept as a separate label; cause3 is checked first below and claims them. None of the two
 # surviving shapes changes what row (g) fails on.
 # ---------------------------------------------------------------------------------------
@@ -2588,7 +2601,7 @@ _WORK_ADJACENT_UPPER_RE: Final = re.compile(r"\bW[0-9]+[A-Z]")
 #: trees at the same path — otherwise `old_lines` above is `None` already). Distinct from
 #: cause 1: cause 1 is an *existing* foreign block DP-7 strips before comparing; this is a
 #: *new* block DP-7 adds with nothing on the old side to strip. Per the #706 read folded
-#: into Ruling 68's class-6 keying ("class 1 = 0 ... nearly every document moves, so
+#: into RL-989's class-6 keying ("class 1 = 0 ... nearly every document moves, so
 #: classes 1 and 2 live inside the 48 moves"), a stamp *paired with a move* is absorbed
 #: into class 3; a stamp on a file that stays in place has no class to land in and falls
 #: through to `classified-by-none`. Verified on all 8 members: `.claude/roles/*.md`,
@@ -2616,7 +2629,7 @@ _WORK_SLICE_KEY_RE: Final = re.compile(r"\bW\d+[a-z]?-\d+\b")
 # ---------------------------------------------------------------------------------------
 # Code-tree triage (W37-6 channel `:599`, `:770`): the second of the three parallel
 # executors, scoped to `tests/`+`backend/`+`frontend/`+`scripts/`+`packages/`. Its own
-# dispatched hypothesis — that the code-tree residue is NT-0019 §5.6's comment/docstring/
+# dispatched hypothesis — that the code-tree residue is RFC-937 §5.6's comment/docstring/
 # marker citation-rewrite forms (`@pytest.mark.req("FR-...")`, `# FR-...`, an OpenAPI
 # `summary=`/`description=` string) DP-7's inverse does not recognise as one missing
 # *form* — is **killed**: every sampled marker/docstring `FR`/`NFR`/`OQ` single-token
@@ -2631,7 +2644,7 @@ _WORK_SLICE_KEY_RE: Final = re.compile(r"\bW\d+[a-z]?-\d+\b")
 # trailing `\b`) with row (b)'s own regression and (independently) with
 # `unmapped-work-slice-key` above. `#721` (row (b)'s fix) and `#727`'s
 # `_WORK_SLICE_KEY_RE` above already cover that population; adding a fourth name for the
-# same shape here would repeat NT-0003's duplicated-status defect, so it is **not**
+# same shape here would repeat RFC-756's duplicated-status defect, so it is **not**
 # repeated as a cause of its own. Two shapes remain that neither `#720` nor `#727`'s
 # remainder-scope covers, because both are specific to the code tree:
 # ---------------------------------------------------------------------------------------
@@ -2639,7 +2652,7 @@ _WORK_SLICE_KEY_RE: Final = re.compile(r"\bW\d+[a-z]?-\d+\b")
 #: cause5: `tests/fixtures/docs-ids/**` and `tests/fixtures/docs-migration/**` are
 #: synthetic corpora built to test `doc-id.py`'s own `next`/`check`/`migrate` logic —
 #: sample documents deliberately holding old-form ids as test data, the same role
-#: `docs/roadmap.md` plays for Ruling 68 class 5, but with no equivalent unconditional
+#: `docs/roadmap.md` plays for RL-989 class 5, but with no equivalent unconditional
 #: exemption. The real migration walks them anyway and rewrites their deliberately-old
 #: content — not a citation defect to fix, a scope gap: these two directories were never
 #: meant to be compared as if they were real citations. Checked by path alone, before any
@@ -2739,7 +2752,7 @@ _G2_RESIDUE_CAUSE_LABELS: Final[frozenset[str]] = _docid.G2_RESIDUE_CAUSE_LABELS
 
 
 def _residue_cause_table(residue: Sequence[str], ctl: Corpus, mig: Corpus) -> str:
-    """Ruling 102 §3's "name them", applied to the residue as a population: one line per
+    """RL-1043 §3's "name them", applied to the residue as a population: one line per
     cause, its count, and up to three example paths — computed on `ctl` and `mig` (the
     same un-migrated and migrated corpora every other row already shares), never a second
     tree read. `mig` is read only by the new-frontmatter-stamp check
@@ -2758,20 +2771,20 @@ def _residue_cause_table(residue: Sequence[str], ctl: Corpus, mig: Corpus) -> st
 
 
 def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
-    """§7 (g), as Ruling 68 defines it and Ruling 104 amends class 6: the migration diff
+    """§7 (g), as RL-989 defines it and RL-1045 amends class 6: the migration diff
     filtered to hunks in the **six-class closed enumeration**, empty.
 
     Two sub-predicates, each printed:
 
-    - **g1** — Ruling 102 §2 row 1's broken-input proof, read against its own at-risk
+    - **g1** — RL-1043 §2 row 1's broken-input proof, read against its own at-risk
       denominator and an un-migrated control. Two components: `_WK_MANGLED_RE`'s raw-shape
       test (unchanged — no legitimate rewrite ever produces that shape) and
       `_g1_provenance_mismatches`'s independent re-derivation (deputy disposition,
       2026-09-05 13:35 BST — `_WK_MANGLED_RE`'s own docstring above has why a shape test
       cannot survive a pure-numeric id scheme for the FR/NFR/OQ/DEP alternative).
-    - **g2** — Ruling 68's filter itself, `doc-id.classify_migration_diff`, bucketing every
+    - **g2** — RL-989's filter itself, `doc-id.classify_migration_diff`, bucketing every
       file the migration diff touches into one of the six named classes or into
-      `CLASSIFIED_BY_NONE`. Ruling 68 §2: *"A hunk the filter cannot classify fails; it is
+      `CLASSIFIED_BY_NONE`. RL-989 §2: *"A hunk the filter cannot classify fails; it is
       never passed through."* The residue bucket therefore sets the verdict, and its
       members are named in the note — never folded into one aggregate number, so a reader
       can see which of the six classes a clean run actually rests on.
@@ -2779,7 +2792,7 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
     The filter is **not** reimplemented here. `classify_migration_diff` is the one
     definition, and it in turn calls `audit-docs.py`'s own DP-7 predicate for classes 1-3
     and re-derives class 6 by an independent second `migrate()` run, never by path —
-    Ruling 104 §2's own violation clause for a classifier keyed on a filename.
+    RL-1045 §2's own violation clause for a classifier keyed on a filename.
     """
     classification = docid.classify_migration_diff(snap.control, snap.migrated)
     residue = classification.per_class.get(docid.CLASSIFIED_BY_NONE, ())
@@ -2808,7 +2821,7 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             "sub-predicate cannot distinguish a clean migration from a dead pattern",
         )
     elif wk_mangled or provenance_mismatches or bare_comma_violations or residue:
-        # Ruling 68 §2 `:268` — "a hunk the filter cannot classify fails; it is never
+        # RL-989 §2 `:268` — "a hunk the filter cannot classify fails; it is never
         # passed through" — and W37-6 channel `:392` ruled the naming obligation follows
         # from that: every `classified-by-none` hunk is named, by path, with its own
         # `_fail` message, never truncated to an exemplar-plus-count. The population is
@@ -2851,7 +2864,7 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
               "citation-token is empty",
         owner=OWNER_W37_6,
         predicate=(
-            "g1 (Ruling 102 §2 row 1's named broken-input proof, the FR/NFR/OQ/DEP "
+            "g1 (RL-1043 §2 row 1's named broken-input proof, the FR/NFR/OQ/DEP "
             "alternative narrowed to provenance by the deputy's 2026-09-05 13:35 BST "
             "disposition): for every compound/range legacy citation in the control tree, "
             "re-derive the expected rewrite with `docid._expand_compound`/"
@@ -2862,21 +2875,21 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
             f"WK-family alternative keeps its raw-shape test unchanged: {_WK_MANGLED_RE.pattern!r} "
             "— no legitimate rewrite produces that shape, so shape alone still suffices "
             "for it, excluding framework self-reference (`_is_framework_self_reference`, "
-            "the identical predicate (d7)'s `FR-PLAT-4` joins the disclosed class by — "
+            "the identical predicate (d7)'s `FR-390` joins the disclosed class by — "
             "one mechanism for one class, not two). A third g1 component, wired in on "
             "2026-09-06 (lead's ruling, deputy-confirmed): `_rewritten_base_before_bare_"
             "comma` re-derives, independently of `docid._bare_comma_tail_resolves`, "
             "whether a REWRITTEN token is immediately followed by a bare comma-digit tail "
             "that resolves as a further citation of the token's OLD prefix — the box-end "
             "mangling ruling (b)'s refusal exists to prevent; previously defined and "
-            "tested against fixtures only, never called from this row. g2 (Ruling 68 §2's "
+            "tested against fixtures only, never called from this row. g2 (RL-989 §2's "
             "closed enumeration, "
-            "amended by Ruling 104 §2/§3 "
+            "amended by RL-1045 §2/§3 "
             "for class 6, by symbol, never restated here): "
             "`doc-id.classify_migration_diff(control, migrated)`, bucketing every touched "
             "file into `doc-id._RULING_68_CLASSES` or `doc-id.CLASSIFIED_BY_NONE`; classes "
             "1-3 share `audit-docs.frozen_file_matches_after_migration_stamp` (check 34's "
-            "DP-7 predicate, Ruling 68 §3 — not a second one); class 4 requires the "
+            "DP-7 predicate, RL-989 §3 — not a second one); class 4 requires the "
             "concatenation of a split's outputs to reproduce the source's non-blank body "
             "lines *in order*; class 5 is `docs/roadmap.md` alone, unconditionally, "
             "exactly as the ruling states it; class 6 is tested against an independent "
@@ -2912,7 +2925,7 @@ def row_g(docid: Any, snap: Snapshot, mig: Corpus, ctl: Corpus) -> Row:
 # ---------------------------------------------------------------------------------------
 
 #: The summary lines `audit-docs.py` prints as *passing* while their population is empty.
-#: Each is `(label, regex, group index of the denominator)`. This is NT-0007 at scale: on a
+#: Each is `(label, regex, group index of the denominator)`. This is RFC-789 at scale: on a
 #: migrated tree these read "0 requirements defined across 8 specs" and the exit code alone
 #: would never have surfaced it (handover §4).
 _VACUITY_PROBES: Final = (
@@ -2935,8 +2948,9 @@ _VACUITY_PROBES: Final = (
 #: has no way to say so.
 _ABSENT_CHECK_RE: Final = re.compile(r"cannot run|cannot scan it")
 
-#: Ruling 105 §B's own methodology, originally ported from the shell one-liner
-#: `docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md:139` used to derive the taxonomy
+#: RL-1046 §B's own methodology, originally ported from the shell one-liner
+#: `docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-one-is-named-
+#: by-2026-09-03.md:139` used to derive the taxonomy
 #: the ruling reads: `sed -n '/^FAILED/,$p' <log> | grep '^  - ' | sed -E
 #: 's/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' | sort | uniq -c`. Everything
 #: from the `FAILED (`n`):` line onward, one `  - <msg>` per failure.
@@ -2961,7 +2975,7 @@ _FAILED_BLOCK_RE: Final = re.compile(r"^FAILED \(\d+\):$", re.MULTILINE)
 _FAILURE_LINE_RE: Final = re.compile(r"^  - (.*)$", re.MULTILINE)
 _CHECK_PREFIX_RE: Final = re.compile(r"^check (\d+):")
 
-#: Checks 29, 30 and 35 are (h1)'s W37-10 residue — Ruling 105 §B: disclosed by count,
+#: Checks 29, 30 and 35 are (h1)'s W37-10 residue — RL-1046 §B: disclosed by count,
 #: owner-labelled, never fatal. Every other class, including a failure this predicate
 #: cannot attribute to a check number at all (`"unclassified"`, never dropped — §13 admits
 #: no silence), must be zero for (h1) to pass.
@@ -2986,7 +3000,7 @@ def _h1_verdict(
     residue: Mapping[tuple[str, str], int] | None = None,
     record: "Sequence[ResidueEntry]" = (),  # noqa: UP037 -- ResidueEntry defined later
 ) -> str:
-    """Ruling 105 §B, extended by the box-end ruling (2026-09-05): (h1) passes iff every
+    """RL-1046 §B, extended by the box-end ruling (2026-09-05): (h1) passes iff every
     class outside checks 29/30/35 is zero, OR every one of those non-disclosed classes'
     per-(file, check) hits is filed and ceilinged in the W37-11 record — closes by
     DISCLOSE, not by collapse. `residue` is (h1)'s own full per-(file, check) breakdown
@@ -3120,7 +3134,7 @@ def _h1_residue_by_file(out: str, corpus: Corpus) -> Mapping[tuple[str, str], in
 
 
 def _h2_verdict(vacuous: Sequence[str], over_exempt: bool) -> str:
-    """Ruling 105 D3: the zero-denominator probes stay fatal; OVER-EXEMPT alone discloses."""
+    """RL-1046 D3: the zero-denominator probes stay fatal; OVER-EXEMPT alone discloses."""
     if vacuous:
         return FAIL
     if over_exempt:
@@ -3189,12 +3203,13 @@ def rows_h(
     )
     h1 = Row(
         key="h1",
-        title="audit-docs.py green on the migrated tree, per failure class (Ruling 105 §B)",
+        title="audit-docs.py green on the migrated tree, per failure class (RL-1046 §B)",
         owner=OWNER_W37_6,
         predicate=(
             "python3 scripts/audit-docs.py   (run with cwd = the tree); failures classified "
-            "by `_docverify._classify_failures` — Ruling 105 §B's own methodology, ported "
-            "from `docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md:139`'s `sed -n "
+            "by `_docverify._classify_failures` — RL-1046 §B's own methodology, ported "
+            "from `docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-on"
+            "e-is-named-by-2026-09-03.md:139`'s `sed -n "
             "'/^FAILED/,$p' <log> | grep '^  - ' | sed -E 's/^(check [0-9]+):.*/\\1/; "
             "s/^broken link in .*/check 1/' | sort | uniq -c`"
         ),
@@ -3213,7 +3228,7 @@ def rows_h(
         note="; ".join(
             part
             for part in (
-                f"checks 29, 30 and 35 are W37-10's residue (Ruling 105 §B), disclosed by "
+                f"checks 29, 30 and 35 are W37-10's residue (RL-1046 §B), disclosed by "
                 f"count and never fatal: {h1_disclosed_text}. Every other class — including "
                 "checks 32, 36, 1, 31, 27 and any class not named here — must be zero to "
                 "pass, or filed and ceilinged in the W37-11 record",
@@ -3257,7 +3272,7 @@ def rows_h(
         predicate=(
             "each of `_docverify._VACUITY_PROBES` matched against audit-docs.py's output "
             "on both trees; a probe whose migrated denominator is 0 while the "
-            "un-migrated control's is non-zero is a vacuous pass (NT-0007)"
+            "un-migrated control's is non-zero is a vacuous pass (RFC-789)"
         ),
         denominator=f"{len(_VACUITY_PROBES)} probe(s)",
         migrated="; ".join(f"{k}={v}" for k, v in mig_probes.items()),
@@ -3268,13 +3283,13 @@ def rows_h(
             for part in (
                 ("vacuous on: " + ", ".join(vacuous)) if vacuous else "",
                 (
-                    "OVER-EXEMPT (Ruling 105 D3, disclosed not failed): Ruling 97 §4's four "
+                    "OVER-EXEMPT (RL-1046 D3, disclosed not failed): RL-1040 §4's four "
                     f"figures — {check37_reds} red · {in_scope} examined · {exempt} exempt "
-                    f"by `was:` ({rate:.0%}) · the broken-input control (Ruling 97 §3 proof "
+                    f"by `was:` ({rate:.0%}) · the broken-input control (RL-1040 §3 proof "
                     "2, evidence that the exemption is what holds the population out rather "
                     "than a detector that stopped working) — a large population almost "
                     "entirely excused rather than an empty one; the zero-denominator rule "
-                    "cannot see this shape. Ruling 96's ruled outcome, accepted with its "
+                    "cannot see this shape. RL-1039's ruled outcome, accepted with its "
                     "disclosure at delegation §6.3"
                 ) if over_exempt else "",
                 f"check 37 exemption rate {exempt}/{in_scope}" if in_scope else "",
@@ -3318,13 +3333,13 @@ def rows_h(
             + ", ".join(_UNMEASURED_GATE_HALVES)
         ),
         denominator=f"{len(_UNMEASURED_GATE_HALVES)} gate half/halves",
-        migrated="not run in-snapshot — see the migration PR's own CI (Ruling 105 D2)",
+        migrated="not run in-snapshot — see the migration PR's own CI (RL-1046 D2)",
         control="not run",
         verdict=DISCLOSE,
         note=(
             "measured by the migration PR's own CI on its exact head — all four workflows "
             "green — plus the executor's local run of CLAUDE.md §11's two halves, both "
-            "recorded in W37-6's ledger with the head SHA (Ruling 105 D2). Never `NOT "
+            "recorded in W37-6's ledger with the head SHA (RL-1046 D2). Never `NOT "
             "MEASURED` in the snapshot: a `git archive` snapshot has no uv venv and no pnpm "
             "store, so these cannot run in-snapshot at all, and that absence is disclosed "
             "rather than reported as an unmeasured verdict. handover §2.3 is the precedent "
@@ -3336,10 +3351,10 @@ def rows_h(
 
 
 # ---------------------------------------------------------------------------------------
-# (i) every H row in NT-0019 §5 closed by a named commit — W37-10's
+# (i) every H row in RFC-937 §5 closed by a named commit — W37-10's
 # ---------------------------------------------------------------------------------------
 
-#: An H row in one of NT-0019 §5's tables: the last cell is `H` (optionally `H + M`).
+#: An H row in one of RFC-937 §5's tables: the last cell is `H` (optionally `H + M`).
 _H_ROW_RE: Final = re.compile(r"^\|.*\|\s*H(\s*\+\s*[A-Z])?\s*\|\s*$")
 
 
@@ -3348,6 +3363,7 @@ _H_ROW_RE: Final = re.compile(r"^\|.*\|\s*H(\s*\+\s*[A-Z])?\s*\|\s*$")
 #: — so a `rglob("*one-id-per-document*")` finds nothing. It is followed through
 #: `docs/REDIRECTS.csv`, which is the artifact the migration writes for exactly this
 #: purpose; guessing the new name instead is how a row silently measures an empty file.
+# rfc-937: legacy-form-spec
 _NT0019_PATH: Final = "docs/notes/0019-one-id-per-document.md"
 
 
@@ -3356,7 +3372,7 @@ def _redirect_map(tree: Path) -> Mapping[str, str]:
 
     One definition, two consumers (row (f)'s conjunct 2 and `_follow_redirect`), because two
     parsers of one artifact is how they drift apart. **It is one-to-one**, which is exactly
-    what Ruling 103 found conjunct 2's first wording could not express: a split source's
+    what RL-1044 found conjunct 2's first wording could not express: a split source's
     content goes to several files and this map names one of them.
     """
     redirects = tree / "docs" / "REDIRECTS.csv"
@@ -3399,11 +3415,12 @@ def row_i(snap: Snapshot) -> Row:
     h_rows = _count_h_rows(snap.migrated)
     return Row(
         key="i",
-        title="every H row in NT-0019 §5 closed by a named commit",
+        title="every H row in RFC-937 §5 closed by a named commit",
         owner=OWNER_W37_10,
         predicate=(
             f"`_docverify._H_ROW_RE` = {_H_ROW_RE.pattern!r} over the §5 tables of "
-            "docs/notes/0019-one-id-per-document.md; 'closed by a named commit' needs a "
+            "docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-des"
+            "cribing-layout-and-roles-per-family.md; 'closed by a named commit' needs a "
             "row→commit mapping artifact, and no such artifact exists in the tree"
         ),
         denominator=f"{h_rows} H row(s) in §5",
@@ -3412,11 +3429,11 @@ def row_i(snap: Snapshot) -> Row:
         verdict=DISCLOSE if h_rows else FAIL,
         note=("" if h_rows else
               "empty population — no H row was found in §5, so this row's own predicate "
-              "measured nothing (NT-0007). ") + (
-            "OWNERSHIP TENSION, ruled by Ruling 105 D1. Ruling 102 §1 requires the "
-            "instrument to compute all NINE rows (a)-(i); Ruling 102 §3 rules that (i) is "
+              "measured nothing (RFC-789). ") + (
+            "OWNERSHIP TENSION, ruled by RL-1046 D1. RL-1043 §1 requires the "
+            "instrument to compute all NINE rows (a)-(i); RL-1043 §3 rules that (i) is "
             "W37-10's, not W37-6's ('Eight rows, not nine'). Both are obeyed: the row is "
-            "computed as §1 says and its owner is printed as §3 says. Ruling 105 D1 rules "
+            "computed as §1 says and its owner is printed as §3 says. RL-1046 D1 rules "
             "(i) non-fatal — it does not set the exit code — so this instrument is not red "
             "on a row W37-6 cannot fix; `FATAL_VERDICTS` keeps `NOT MEASURED` fatal for "
             "every other row that uses it."
@@ -3436,7 +3453,7 @@ def row_i(snap: Snapshot) -> Row:
 #: **Every row's verdict as recorded at the tree this constant was last reviewed at.**
 #:
 #: The problem this solves is a property of the wiring, not of anyone's habits. While §7 is
-#: red by design (Ruling 102 §1), the `docs` job's pass/fail bit **carries no information
+#: red by design (RL-1043 §1), the `docs` job's pass/fail bit **carries no information
 #: about the change under review**: it is red before a regression and red after it. One of
 #: CI's three signals is switched off, and the duration is "until the migration lands".
 #:
@@ -3447,7 +3464,7 @@ def row_i(snap: Snapshot) -> Row:
 #: was caught only because that reader happened to be holding a baseline of their own.
 #:
 #: **Both directions are enforced, and that is what stops the baseline going stale.**
-#: A committed baseline nobody updates is `NT-0003`; a baseline regenerated automatically
+#: A committed baseline nobody updates is `RFC-756`; a baseline regenerated automatically
 #: records whatever is currently broken and can never fail. Neither is right. So:
 #:
 #: * a row **newly failing** is a REGRESSION — the case F102 is about;
@@ -3477,7 +3494,7 @@ def row_i(snap: Snapshot) -> Row:
 #:   duplicates that citation into two new permanent locations neither protected by the
 #:   `was:`-line exclusion nor rewritten by `_rewrite_citations`. Confirmed at
 #:   `docs/rulings/RL-00167-...md` (front matter `title:` line 4, body heading — carried
-#:   over from the control's `## Ruling 13 —...`) and `docs/INDEX.md`/`docs/rulings/
+#:   over from the control's `## RL-879 —...`) and `docs/INDEX.md`/`docs/rulings/
 #:   INDEX.md` (generated fresh, no control-tree counterpart at all). Not filed as a
 #:   register finding by this change — reported to the lead for ownership (task 22 is the
 #:   analogous, larger-scale instance on row (d8), and may be the same fix).
@@ -3501,22 +3518,22 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # executor). #711 item 3's `_compound_token_re` (compound-citation
                          # expansion) dropped the trailing `\b` `_whole_token_re` already
                          # had between the base token and its optional continuation group,
-                         # so a shorter mapped legacy id (`OQ-OVR-1`) matched as a bare
+                         # so a shorter mapped legacy id (`OQ-540`) matched as a bare
                          # prefix of a longer, unrelated, unmapped one that merely starts
-                         # with the same digits (`OQ-OVR-11`, itself correctly excluded
+                         # with the same digits (`OQ-539`, itself correctly excluded
                          # from `token_map` by the multi-claim guard) — `_expand_compound`
                          # then returned the mapped value alone and left the unmatched
-                         # trailing digit orphaned onto it: `OQ-OVR-11` -> `OQ-831` + `1` =
+                         # trailing digit orphaned onto it: `OQ-539` -> `OQ-831` + `1` =
                          # `OQ-8311`, a fabricated id nothing allocated, planted into every
                          # mirror of that open question and from there into
                          # `docs/INDEX.md`'s own id column. Six siblings of the same shape
-                         # (`OQ-OVR-12`, `OQ-DATA-11`, `OQ-MODEL-10/11/23/24`, against their
-                         # own shorter mapped prefixes) did the same; `OQ-GOV-8` has no
+                         # (`OQ-538`, `OQ-556`, `OQ-577/576/571/572`, against their
+                         # own shorter mapped prefixes) did the same; `OQ-632` has no
                          # shorter same-prefix sibling to collide with and was never
                          # affected. Fixed by giving `_compound_token_re` the same trailing
                          # `\b` `_whole_token_re` already had
                          # (`scripts/doc-id.py::_compound_token_re`); a genuine `-`/`/`
-                         # continuation (`NFR-RATE-13/14`, `W1-1`'s own refusal) is
+                         # continuation (`NFR-502/501`, `W1-1`'s own refusal) is
                          # unaffected, since digit -> `-`/`/` is a real `\b` transition
                          # while digit -> digit is not. Isolated and reproduced against
                          # `971677e` (this row's last recorded `PASS`) with only #711's
@@ -3533,12 +3550,12 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # unrelated prior-PR progress, re-recorded for the same reason
     "d1": PASS,         # NT-\d{4} — FIXED (2026-09-04, W37-6 exec-ids): `_expand_compound`'s
                          # padding bug for a zero-padded family's shortened compound
-                         # continuation (`NT-0014-15`, real citation, `docs/plans/...w37-6-
+                         # continuation (`RFC-895-896`, real citation, `docs/plans/...w37-6-
                          # the-migration-run-the-go-ahead-ask...md`) was the row's only
                          # citation-class miss; the four specification-class matches
                          # (a deliberately-broken-input example, three test fixtures) were
                          # fenced or excluded via the new `tests/`-module class. 0/0.
-    "d2": DISCLOSE,     # F-W[0-9] — Ruling 105 §A: the same alias class as `F[0-9]{2}`,
+    "d2": DISCLOSE,     # F-W[0-9] — RL-1046 §A: the same alias class as `F[0-9]{2}`,
                          # excluded from the zero requirement with its count disclosed
                          # regardless of the migrated/control comparison (2026-09-03, task 14).
                          # History, corrected (2026-09-04, task 17): PASS at `ac82256`/
@@ -3598,8 +3615,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # `_compound_token_re`'s docstring, `scripts/doc-id.py`) also
                          # mangled the space-separated `Ruling <n>` family the identical
                          # way — a shorter mapped `Ruling <n>` swallowing a longer,
-                         # unrelated `Ruling <nm>` as a bare prefix (`Ruling 5` + `9` ->
-                         # a mangled `Ruling 59`, e.g.) — which is what let this row's grep
+                         # unrelated `Ruling <nm>` as a bare prefix (`RL-868` + `9` ->
+                         # a mangled `RL-949`, e.g.) — which is what let this row's grep
                          # for the *un-migrated* literal `Ruling <n>` form read as near-zero:
                          # the citations were still there, just corrupted into a shape the
                          # pattern no longer matched, not actually rewritten. Fixing the
@@ -3611,7 +3628,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # fixed here, out of row (b)'s own scope.
     "d6": DISCLOSE,     # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
                          # original matches, plus one more surfaced by `origin/main` drift
-                         # (`docs/plans/2026-09-03-w37-6-row-h-the-named-h-rows.md`, a
+                         # (`docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-
+                         # failure-each-one-is-named-by-2026-09-03.md`, a
                          # row-h plan landed after this row's original 74-line snapshot),
                          # were specification-class — deliberately-fake, schematic
                          # `ADR-0NNN`-shaped parsing-width worked examples and test
@@ -3625,10 +3643,10 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # exec-pin, ruled by the lead and confirmed by the deputy):
                          # `PASS` -> `DISCLOSE`. `docs/skills-map.md:92` now reads
                          # `ADR-0004, 03 FR-RATE-1..13, 56..58` — `03` resolves as the real
-                         # `ADR-0003`, so this branch's own box-end comma-continuation
+                         # `ADR-705`, so this branch's own box-end comma-continuation
                          # refusal (built for (d7), the identical shape `_bare_comma_tail_
                          # resolves` decides for every id family the general rewriter
-                         # covers) correctly refuses to partially rewrite `ADR-0004`,
+                         # covers) correctly refuses to partially rewrite `ADR-706`,
                          # leaving it legacy-but-intact rather than mangled. This is not
                          # the FIXED defect above regressing: base (pre-refusal, `aeeb1fe`)
                          # measured 0/0 exactly as this entry already said; head measures
@@ -3642,13 +3660,13 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # (deputy's mechanical predicate, 2026-09-04, W37-6 exec-ids):
                          # disclosed, excluded from the zero requirement, owner "none —
                          # closed class". The two remaining real hits are now fixed rather
-                         # than merely flagged: `FR-RATE-41` in the generated `docs/
+                         # than merely flagged: `FR-258` in the generated `docs/
                          # rulings/INDEX.md` was `_sweep_title`'s own compound-title-sweep
                          # bug (`_whole_token_re` refuses a token followed by a compound
                          # continuation, and a title is swept nowhere else) — fixed by
                          # switching `_sweep_title` to the same `_compound_token_re`/
                          # `_expand_compound`/`_expand_range` dispatch the main citation
-                         # sweep uses. `FR-PLAT-4` in `scripts/doc-id.py`'s own
+                         # sweep uses. `FR-390` in `scripts/doc-id.py`'s own
                          # `_expand_range` docstring is a real, bold-defined id used only
                          # as an illustrative worked example, never a citation — joins the
                          # disclosed class by name via `_D7_SELF_REFERENTIAL_EXEMPLARS`,
@@ -3658,18 +3676,18 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "d8": DISCLOSE,     # workstream/slice id — re-recorded FAIL -> DISCLOSE, 2026-09-04.
                          # Both fatal components now measure zero on a real
                          # `migrate()`-mutated tree; `_d8_verdict` falls through to its own
-                         # DISCLOSE branch (Ruling 105 §A's third alias class), printing the
+                         # DISCLOSE branch (RL-1046 §A's third alias class), printing the
                          # slice-key and task-key counts on their own line.
                          #
                          # **Task keys** are a disclosed component, not a fatal one — Ruling
                          # #26 (`to-lead.md:498-510`), reaffirmed against my own later
                          # entries by the correction at `to-lead.md:1298-1306`: "no family
-                         # exists for a task (NT-0019 §1.2 has `WK` and `SL`, nothing below a
+                         # exists for a task (RFC-937 §1.2 has `WK` and `SL`, nothing below a
                          # slice), so a task key has no target by the standard's design — the
                          # same ground as slice keys". That correction's violation line reads
                          # "task keys treated as fatal anywhere after this". Their raw count
                          # also fell once the patterns took `_docid.TOKEN_LEFT_BOUND` — the
-                         # standard's own narrowed left-bound guard (#740, Ruling 67 §2),
+                         # standard's own narrowed left-bound guard (#740, RL-988 §2),
                          # shared with row (d)'s `LEGACY_FORM_PATTERNS` rather than a private
                          # copy — since most were the tail of a different, already-classified
                          # id family (the finding form `F-W<n>-<m>-<k>`, `audit-docs.py`'s
@@ -3689,7 +3707,7 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # behind. Dispositioned 3b per `to-lead.md:1243` ("respelled to a
                          # schematic that cannot match"): illustrative keys are written
                          # `W<n>` / `W<n><x>` here and must stay schematic. The real-corpus
-                         # exhibits of that shape are fenced under Ruling 103 §5.1 in
+                         # exhibits of that shape are fenced under RL-1044 §5.1 in
                          # `.claude/skills/close-workstream/SKILL.md`,
                          # `docs/audit/closure-records.md` and the w6b slice-map plan; the
                          # instrument's own fixtures are class 3c.
@@ -3758,16 +3776,16 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
     "d13": DISCLOSE,    # the old .claude notes root — wholly disclosed, 0 fatal
     "e": PASS,          # 0 padded ids in prose — #25's ruling: the migration normalises a
                          # padded citation to unpadded (`_normalize_padded_citations`), and
-                         # the two exhibits are fenced by hand under Ruling 103 §5.1
+                         # the two exhibits are fenced by hand under RL-1044 §5.1
                          # (2026-09-04, task 7)
-    "f": PASS,          # VR-DST-1 unchanged, both conjuncts — Ruling 103. Regressed on
+    "f": PASS,          # VR-DST-1 unchanged, both conjuncts — RL-1044. Regressed on
                          # `main` (#707, 43d8698) when `docs/INDEX.md` started quoting
                          # requirement bodies mentioning VR-DST-1 with no pre-migration
                          # counterpart; disclosed rather than fixed there. Fixed here
                          # (2026-09-04, task 17/#20): (f) excludes every path in
-                         # `MigrateResult.generated_paths` (Ruling 105 D3/#18 §1), keyed on
+                         # `MigrateResult.generated_paths` (RL-1046 D3/#18 §1), keyed on
                          # the run's own generated-output list, never the literal path.
-    "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
+    "g": FAIL,          # the token-boundary defect                — RL-1043 §2 row 1
     "h1": DISCLOSE,     # audit-docs.py: DISCLOSE -> PASS, D1b (deputy 2026-09-16
                          # 22:47:56 BST; root cause measured by the deputy 00:4x BST).
                          # Merged D1's `audit-docs.py` own `_partition_by_w37_11_record`
@@ -3809,12 +3827,12 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # /tmp/w37-6-prb-verify-b62405f.log: SET CHANGE "(h1) PASS ->
                          # DISCLOSE", 0 residue REGRESSION.
     "h2": DISCLOSE,     # zero-denominator probes now clear; only OVER-EXEMPT fires, which
-                         # Ruling 105 D3 disclosed rather than failed (2026-09-03, task 14)
+                         # RL-1046 D3 disclosed rather than failed (2026-09-03, task 14)
     "h3": PASS,         # req-coverage.py: 533 requirements on both trees, exit 0 on the
                          # migrated tree (was 0/empty-population FAIL; 2026-09-03, task 23)
-    "h4": DISCLOSE,     # Ruling 105 D2: measured at the migration PR's own CI, never
+    "h4": DISCLOSE,     # RL-1046 D2: measured at the migration PR's own CI, never
                          # `NOT MEASURED` in the snapshot (2026-09-03, task 14)
-    "i": DISCLOSE,      # Ruling 105 D1: W37-10's, non-fatal, does not set the exit code
+    "i": DISCLOSE,      # RL-1046 D1: W37-10's, non-fatal, does not set the exit code
                          # (2026-09-03, task 14)
 }
 
@@ -3886,13 +3904,13 @@ def _row_sort_key(key: str) -> tuple[str, int]:
 #: Relative to the repo root the run's `verify()` was invoked against — a governance
 #: record, not an artifact `migrate()` writes, so it is read from the real tree rather than
 #: the migrated snapshot. Markdown, not `.csv`: `backend/tests/test_lineage.py::
-#: test_no_reference_rows_are_bundled_in_the_repository` (FR-DATA-32) refuses any bundled
+#: test_no_reference_rows_are_bundled_in_the_repository` (FR-72) refuses any bundled
 #: `.csv`/`.parquet`/`.xlsx` outside its two named carve-outs, neither of which this
 #: hand-authored governance table is — a markdown table, parsed the same way
 #: `audit-docs.py`/`doc-index.py`/`register-lint.py` already parse every other table under
 #: `docs/`, sidesteps the guard rather than fighting it.
 #:
-#: Re-exported from `_docid` (one shared constant, Ruling 67 §2's rule the rest of this
+#: Re-exported from `_docid` (one shared constant, RL-988 §2's rule the rest of this
 #: file already follows for `D_ALTERNATIVES`/`D_DISCLOSED`), because `_docid.
 #: GOVERNANCE_RECORD_EXCLUSIONS` also excludes this same path from `tracked_files`'
 #: corpus and from `doc-id.py`'s own migration sweep — deputy's condition on PR #756:
@@ -3921,7 +3939,8 @@ def refused_fragment_rewrite_disclosure_counts(
     a disclosure row must carry, derived FROM the refusal list by symbol, never pasted:
     a hand-typed count could silently drift from what `_rewrite_citations` actually
     refused, exactly the "the copy is what goes stale" failure
-    (`docs/notes/0003-duplicated-status-goes-stale.md`) this function exists to avoid.
+    (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md`) this function exists to
+    avoid.
 
     `cls` is `f"d{i}"` for whichever `_docid.LEGACY_FORM_PATTERNS` alternative (1-based
     index, matching `rows_d`'s own `enumerate(D_ALTERNATIVES, start=1)`) the refusal's
@@ -4050,7 +4069,7 @@ def compute_rows(
     """Every §7 (a)-(i) row, over a snapshot whose `migrated/` has already been migrated.
 
     `generated_paths` is `MigrateResult.generated_paths` from the same `migrate()` call
-    that produced this snapshot's `migrated/` tree — (f)'s exclusion (Ruling 105 D3/#18).
+    that produced this snapshot's `migrated/` tree — (f)'s exclusion (RL-1046 D3/#18).
 
     `record` is the governed W37-11 record (`load_w37_11_record`), threaded into the two
     row-families whose verdict can close by DISCLOSE rather than FAIL once their fatal
@@ -4205,7 +4224,7 @@ def _release_verify_slot(handle: IO[Any] | None) -> None:
 #     was never confined to written content on a midnight boundary: the snapshot was built
 #     by `git archive` + `git init`, so EVERY requirement draft's first-commit date was the
 #     synthetic commit's, `created` stopped discriminating, and the whole id allocation
-#     shifted (`WF-00995` -> `WF-00698`, measured). It was a row-shape defect all along,
+#     shifted (`WF-00995` -> `WF-698`, measured). It was a row-shape defect all along,
 #     invisible because two runs on one day agree.
 #   - `_acquire_verify_slot`'s `os.environ.get(_VERIFY_ANNOUNCEMENT_VAR)` and the
 #     `/tmp/slots/*` lock files: concurrency control over *when* `verify()` runs, never
@@ -4275,7 +4294,7 @@ def _verify_body(
         # the migration's input as if it were its output: the first run of this instrument
         # reported row (a) as `none=74` on both trees — identical, because neither tree had
         # seen the migration as far as `ls-files` was concerned. That is precisely the
-        # narrower-population-behind-a-wider-name failure Ruling 102 §1 exists to stop, and
+        # narrower-population-behind-a-wider-name failure RL-1043 §1 exists to stop, and
         # it is recorded here rather than fixed silently.
         _git(snap.migrated, "add", "-A")
         # Assert it, rather than assume the `add` did what it says. The auditor measured
@@ -4330,7 +4349,7 @@ def _verify_body(
 def render(result: VerifyResult) -> str:
     snap = result.snapshot
     out: list[str] = []
-    out.append("doc-id.py migrate --verify — NT-0019 §7 (a)-(i) (authority: Ruling 102 §1)")
+    out.append("doc-id.py migrate --verify — RFC-937 §7 (a)-(i) (authority: RL-1043 §1)")
     out.append(f"  ref            {snap.ref} = {snap.ref_sha}")
     out.append(f"  migrated tree  {snap.migrated}")
     out.append(f"  control tree   {snap.control} (same archive, never migrated)")

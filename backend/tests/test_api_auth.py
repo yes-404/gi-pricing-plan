@@ -1,4 +1,4 @@
-"""FR-PLAT-66 — the unauthenticated values the browser login needs to start.
+"""FR-394 — the unauthenticated values the browser login needs to start.
 
 The channel exists because the flow cannot start with an auth gate: the issuer and the
 client_id are what a *public* client publishes, and nothing here is a credential.
@@ -11,7 +11,7 @@ from app.config import Environment, Settings
 from app.main import create_app
 
 
-@pytest.mark.req("FR-PLAT-66")
+@pytest.mark.req("FR-394")
 def test_the_auth_config_publishes_the_flow_s_bootstrap_values() -> None:
     app = create_app(
         Settings(
@@ -31,14 +31,14 @@ def test_the_auth_config_publishes_the_flow_s_bootstrap_values() -> None:
     }
 
 
-@pytest.mark.req("FR-PLAT-66")
+@pytest.mark.req("FR-394")
 def test_the_auth_config_answers_with_no_credential_at_all(client: TestClient) -> None:
     """The flow cannot start with an auth gate — no dependency, so no 401, no dev header."""
     body = client.get("/api/v1/auth/config").json()
     assert body == {"issuer": "", "client_id": "", "dev_auth_enabled": False}
 
 
-@pytest.mark.req("FR-PLAT-66")
+@pytest.mark.req("FR-394")
 def test_the_auth_config_is_published_in_the_contract(api_client: TestClient) -> None:
     """The generated client is the reason a route must be declared rather than assumed."""
     document = api_client.get("/openapi.json").json()

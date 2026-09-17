@@ -1,10 +1,10 @@
-"""FR-MODEL-127: the per-page usage aggregate behind each library row's `usage_count`.
+"""FR-167: the per-page usage aggregate behind each library row's `usage_count`.
 
 The library rows count Model Specs; `objectives.usage` and `metrics.usage` answer the same
 question for one artifact. These tests pin the three things that make the aggregate usable
 as a row value: the shape (a count per ref, an unused ref absent rather than zero), the
 JSONB reading on each side (a top-level scalar for objectives, an array for metrics), and
-the **budget** — one statement per page, which FR-MODEL-127 makes part of the requirement
+the **budget** — one statement per page, which FR-167 makes part of the requirement
 rather than an implementation note.
 """
 
@@ -93,7 +93,7 @@ async def _model(
         return row.id
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 async def test_objective_usage_counts_are_returned_per_ref(
     database: Database, workspace_id: UUID
 ) -> None:
@@ -119,7 +119,7 @@ async def test_objective_usage_counts_are_returned_per_ref(
     assert unused not in counts, "an unused ref is absent, not zero — the caller supplies zero"
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 async def test_metric_usage_counts_expand_the_eval_metrics_array(
     database: Database, workspace_id: UUID
 ) -> None:
@@ -150,7 +150,7 @@ async def test_metric_usage_counts_expand_the_eval_metrics_array(
     assert counts == {first: 1, second: 2}
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 async def test_a_count_matches_the_detail_route_blast_radius(
     database: Database, workspace_id: UUID
 ) -> None:
@@ -179,7 +179,7 @@ async def test_a_count_matches_the_detail_route_blast_radius(
     assert counts[ref] == len(blast.models) == 3
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 async def test_one_page_of_refs_costs_one_query(
     database: Database, workspace_id: UUID
 ) -> None:
@@ -187,7 +187,7 @@ async def test_one_page_of_refs_costs_one_query(
 
     Asserted with a counter because an N+1 implementation returns identical results and
     would stay correct-looking until a workspace held a few hundred artifacts — the exact
-    failure FR-MODEL-127 says it is stating the budget to prevent.
+    failure FR-167 says it is stating the budget to prevent.
     """
     refs = [f"custom_objective:page-{n}-{new_uuid7().hex[-6:]}@1" for n in range(25)]
     await _model(database, workspace_id, _objective_spec(refs[0]))
@@ -213,7 +213,7 @@ async def test_one_page_of_refs_costs_one_query(
     )
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 async def test_an_empty_page_asks_the_database_nothing(
     database: Database, workspace_id: UUID
 ) -> None:

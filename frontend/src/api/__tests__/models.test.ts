@@ -23,7 +23,7 @@ describe("reading a coefficient", () => {
   it("measures an interval's width in the coefficient's own units", () => {
     // 0.7 - 0.3, not (0.7 - 0.3) / 0.5. The fixture's estimate is 0.5 precisely so that an
     // absolute width and a fraction-of-estimate width differ; a fractional reading returns
-    // 0.8 and fails here. See docs/plans/2026-08-24-w6b-1a-model-detail-non-glm-arms.md Task 8.
+    // 0.8 and fails here. See docs/plans/PL-00783-w6b-1a-model-detail-the-non-glm-arms-implementation-plan.md Task 8.
     expect(intervalWidth(coefficient())).toBeCloseTo(0.4, 10);
   });
 
@@ -83,7 +83,7 @@ describe("the model arm narrowers", () => {
   });
 
   it("locates the model a bound bounds, from the bound alone", () => {
-    // FR-MODEL-78: a bound shares its central model's Model Family, and the backend refuses
+    // FR-199: a bound shares its central model's Model Family, and the backend refuses
     // a mismatch by name (MODEL_INTERVAL_PAIR_INVALID). The slug on the bound IS the central
     // model's slug — read off the contract, not derived from a naming convention.
     const bound = {

@@ -1,7 +1,9 @@
-"""`scripts/register-lint.py` — the register grammar linter Ruling 50 ordered.
+"""`scripts/register-lint.py` — the register grammar linter RL-910 ordered.
 
-Ruling 50 (`docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`) found that nothing enforced
-`docs/audit/register.md`'s own Decision-cell grammar, ruled "no legacy class, no exemption,
+RL-910 (
+`docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`
+) found that nothing enforced
+`docs/findings/register.md`'s own Decision-cell grammar, ruled "no legacy class, no exemption,
 no warn phase, no flag day," and required the check to be red on the first day it lands if
 the live register does not conform, and green if it does. `CLAUDE.md` §13: "a check that has
 never printed a failure has not been tested" — so this suite proves each of the three rules
@@ -22,7 +24,6 @@ from typing import cast
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "register-lint.py"
 AUDIT_SCRIPT = ROOT / "scripts" / "audit-docs.py"
-REGISTER = ROOT / "docs" / "audit" / "register.md"
 
 _spec = importlib.util.spec_from_file_location("_register_lint_under_test", SCRIPT)
 assert _spec is not None
@@ -30,11 +31,14 @@ assert _spec.loader is not None
 register_lint = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(register_lint)
 
+# Same pre/post-migration resolution as `register-lint.py`'s own `TARGETS[0]`.
+REGISTER = register_lint.TARGETS[0]
+
 
 def _table(decision: str, finding: str = "X (F999998)") -> str:
     """One well-formed data row wrapped in a minimal, otherwise-conforming table."""
     header = "| Finding id | Concerns | Work item | Phase | Decision |\n|---|---|---|---|---|\n"
-    return header + f"| {finding} | concerns | W1 | 1 | {decision} |\n"
+    return header + f"| {finding} | concerns | WK-657 | 1 | {decision} |\n"
 
 
 def _lint(tmp_path: pathlib.Path, content: str) -> list[str]:
@@ -48,7 +52,7 @@ def _lint(tmp_path: pathlib.Path, content: str) -> list[str]:
 def test_a_decision_outside_the_grammar_is_refused(tmp_path: pathlib.Path) -> None:
     """A Decision cell that is not one of the register's own disposition words, CLAUDE.md
     §13's four verdicts, or a resolution marker must fail — this is the failure mode Text C
-    (Ruling 49) exists to name: a free-text opening invents a sixth disposition.
+    (RL-909) exists to name: a free-text opening invents a sixth disposition.
     """
     failures = _lint(tmp_path, _table("TBD, someone should look at this."))
     assert failures, "a non-grammar Decision cell must be refused"
@@ -58,7 +62,7 @@ def test_a_decision_outside_the_grammar_is_refused(tmp_path: pathlib.Path) -> No
 
 def test_the_four_claude_md_13_verdicts_are_accepted(tmp_path: pathlib.Path) -> None:
     """CLAUDE.md §13's verdicts are binding and 'may not be linted away by a register-local
-    vocabulary' (Ruling 50 §2) — a grammar that reds F53/F54's own openings would be a
+    vocabulary' (RL-910 §2) — a grammar that reds F53/F54's own openings would be a
     register check overruling CLAUDE.md.
     """
     for verdict in (
@@ -70,7 +74,7 @@ def test_the_four_claude_md_13_verdicts_are_accepted(tmp_path: pathlib.Path) -> 
 
 def test_the_negated_fix_before_close_shape_is_accepted(tmp_path: pathlib.Path) -> None:
     """The negated form F37/F40 need — 'is not available' / 'is not required' — is part of
-    the grammar's union (Ruling 50 §2), not an outsider.
+    the grammar's union (RL-910 §2), not an outsider.
     """
     for cell in (
         "fix before close is not available — this is a spec amendment first",
@@ -81,7 +85,7 @@ def test_the_negated_fix_before_close_shape_is_accepted(tmp_path: pathlib.Path) 
 
 def test_a_bare_pipe_broken_row_is_refused(tmp_path: pathlib.Path) -> None:
     """A literal `|` inside a cell, unescaped, splits the row into more than 5 fields — the
-    defect Ruling 49's PR fixed by hand in F27 and F49. Nothing prevented a new one before
+    defect RL-909's PR fixed by hand in F27 and F49. Nothing prevented a new one before
     this check existed.
     """
     content = (
@@ -98,7 +102,7 @@ def test_a_bare_pipe_broken_row_is_refused(tmp_path: pathlib.Path) -> None:
 # --- Rule 2: resolution-annotation format -----------------------------------------------
 
 def test_a_resolution_marker_with_no_date_or_reference_is_refused(tmp_path: pathlib.Path) -> None:
-    """Ruling 49 Text A: a resolved row is annotated in place, 'naming the PR or commit that
+    """RL-909 Text A: a resolved row is annotated in place, 'naming the PR or commit that
     discharged it.' A bare '*resolved*' with neither a date nor a PR/commit/doc reference
     names nothing.
     """
@@ -136,7 +140,7 @@ def test_an_appended_resolution_with_no_reference_is_refused(tmp_path: pathlib.P
     (`_STATUS_MARKER`, searched anywhere in the cell) covered a shape `_opens_with_status`
     structurally cannot see: a row that opens with a disposition/verdict and is discharged
     later, appended in place, when the finding lands. F50 and F51 are exactly this shape —
-    `carry forward, unowned. … ***Resolved 2026-08-30*** — Ruling 42 §7 assigned the fix …` —
+    `carry forward, unowned. … ***Resolved 2026-08-30*** — RL-922 §7 assigned the fix …` —
     and it is the *common* discharge shape here, not an edge case. Built from that real form,
     with the reference stripped out, rather than a minimal string.
     """
@@ -176,7 +180,7 @@ def test_resolved_used_in_prose_about_something_else_is_not_a_false_positive(
 # --- Rule 3: unowned-row decay -----------------------------------------------------------
 
 def test_a_bare_unowned_row_naming_no_event_is_refused(tmp_path: pathlib.Path) -> None:
-    """Ruling 49 Text B: an unowned row must name the event that next confirms or assigns
+    """RL-909 Text B: an unowned row must name the event that next confirms or assigns
     its owner, or it decays to the next CLAUDE.md §14 plan review. A cell that says
     'unowned' and stops names nothing.
     """
@@ -196,9 +200,9 @@ def test_an_unowned_row_with_a_named_trigger_is_accepted(tmp_path: pathlib.Path)
 # --- Rows across a blank line ------------------------------------------------------------
 
 def test_a_data_row_after_a_blank_line_is_still_parsed(tmp_path: pathlib.Path) -> None:
-    """Regression for a proven bug (found building `register-owed.py`, NT-0015 P5): the live
+    """Regression for a proven bug (found building `register-owed.py`, RFC-896 P5): the live
     register uses blank lines inside its one data table for readability, with no repeated
-    header (`docs/audit/register.md` around F52-F61). An earlier `parse_register` reset
+    header (`docs/findings/register.md` around F52-F61). An earlier `parse_register` reset
     `in_table` on any non-`|` line, including a blank one, and only a fresh separator/header
     row set it back — so every row after the first such blank line was silently dropped, and
     `main()` still printed 'OK (0 violations)' because a dropped row is never checked. This
@@ -210,10 +214,10 @@ def test_a_data_row_after_a_blank_line_is_still_parsed(tmp_path: pathlib.Path) -
     content = (
         "| Finding id | Concerns | Work item | Phase | Decision |\n"
         "|---|---|---|---|---|\n"
-        "| A (F999996) | before the gap | W1 | 1 | carry forward — unowned by design, "
+        "| A (F999996) | before the gap | WK-657 | 1 | carry forward — unowned by design, "
         "decays to the next §14 review |\n"
         "\n"
-        "| B (F999995) | after the gap | W1 | 1 | **not started** — nothing built yet |\n"
+        "| B (F999995) | after the gap | WK-657 | 1 | **not started** — nothing built yet |\n"
     )
     f = tmp_path / "register.md"
     f.write_text(content, encoding="utf-8")
@@ -240,9 +244,9 @@ def test_a_contiguous_table_reports_no_gap(tmp_path: pathlib.Path) -> None:
     content = (
         "| Finding id | Concerns | Work item | Phase | Decision |\n"
         "|---|---|---|---|---|\n"
-        "| A (F999996) | before | W1 | 1 | carry forward — unowned by design, "
+        "| A (F999996) | before | WK-657 | 1 | carry forward — unowned by design, "
         "decays to the next §14 review |\n"
-        "| B (F999995) | after | W1 | 1 | **not started** — nothing built yet |\n"
+        "| B (F999995) | after | WK-657 | 1 | **not started** — nothing built yet |\n"
     )
     f = tmp_path / "register.md"
     f.write_text(content, encoding="utf-8")
@@ -271,10 +275,10 @@ def test_a_row_missing_its_leading_pipe_is_reported_even_as_the_last_line(
         "|---|---|---|---|---|\n"
     )
     good = (
-        "| A (F999996) | before | W1 | 1 | carry forward — unowned by design, "
+        "| A (F999996) | before | WK-657 | 1 | carry forward — unowned by design, "
         "decays to the next §14 review |\n"
     )
-    hidden = "C (F999994) | no leading pipe | W1 | 1 | **not started** — nothing built yet |\n"
+    hidden = "C (F999994) | no leading pipe | WK-657 | 1 | **not started** — nothing built yet |\n"
 
     trailing = tmp_path / "trailing.md"
     trailing.write_text(header + good + hidden, encoding="utf-8")
@@ -310,7 +314,7 @@ def test_prose_and_a_fenced_example_table_below_the_register_are_not_flagged(
         "|---|---|---|---|---|\n"
     )
     good = (
-        "| A (F999996) | before | W1 | 1 | carry forward — unowned by design, "
+        "| A (F999996) | before | WK-657 | 1 | carry forward — unowned by design, "
         "decays to the next §14 review |\n"
     )
 
@@ -366,9 +370,9 @@ def test_a_data_row_naming_both_column_headers_is_not_dropped(tmp_path: pathlib.
         "|---|---|---|---|---|\n"
         "| Parser drops rows naming its own columns (F964) | `register-lint.py`'s header "
         "test matches any line containing both `Finding id` and `Decision` as substrings, "
-        "so a row about this exact bug is itself silently dropped | NT-0015 | 2 | fix "
+        "so a row about this exact bug is itself silently dropped | RFC-896 | 2 | fix "
         "before close — detect the header by position, not by text |\n"
-        "| Second, unrelated row (F963) | nothing special | W1 | 1 | **not started** |\n"
+        "| Second, unrelated row (F963) | nothing special | WK-657 | 1 | **not started** |\n"
     )
     f = tmp_path / "register.md"
     f.write_text(content, encoding="utf-8")
@@ -388,7 +392,7 @@ def test_the_header_row_itself_is_never_parsed_as_data(tmp_path: pathlib.Path) -
     content = (
         "| Finding id | Concerns | Work item | Phase | Decision |\n"
         "|---|---|---|---|---|\n"
-        "| A (F962) | concerns | W1 | 1 | **not started** |\n"
+        "| A (F962) | concerns | WK-657 | 1 | **not started** |\n"
     )
     f = tmp_path / "register.md"
     f.write_text(content, encoding="utf-8")
@@ -422,7 +426,7 @@ def test_live_register_row_count_matches_a_direct_count(tmp_path: pathlib.Path) 
 # --- Control: the live register must pass, on the tree this check lands on -------------
 
 def test_the_live_register_passes() -> None:
-    """Ruling 50 §3: 'the live register at the tree the check lands on must pass, reported
+    """RL-910 §3: 'the live register at the tree the check lands on must pass, reported
     with that tree.' Without this control, a linter that exempted everything would also show
     green on the three failing fixtures above — this is the case that makes the check's
     passes mean something.
@@ -444,9 +448,9 @@ def test_check_29_is_wired_into_the_docs_gate() -> None:
     assert "check 29" in result.stdout, result.stdout
 
 
-# --- P4: findings-file migration residue (Ruling 51) ------------------------------------
+# --- P4: findings-file migration residue (RL-911) ------------------------------------
 #
-# Ruling 51 §2: "the residue is measured, in one aggregate line" — "with no such line,
+# RL-911 §2: "the residue is measured, in one aggregate line" — "with no such line,
 # 'incremental migration' is a claim nothing can falsify." CLAUDE.md §13: "a check that has
 # never printed a failure has not been tested" — so this proves the count non-zero on a
 # fixture built to need migration, and zero on one that does not, rather than asserting the
@@ -492,7 +496,7 @@ def test_residue_is_zero_when_every_row_is_short(tmp_path: pathlib.Path) -> None
 
 
 def test_residue_counts_are_never_treated_as_lint_failures() -> None:
-    """An over-threshold row must not, on its own, fail `lint_register` — Ruling 51: 'never a
+    """An over-threshold row must not, on its own, fail `lint_register` — RL-911: 'never a
     per-row judgement,' and the migration is opportunistic-on-amendment, not mandatory. This
     guards against the residue mechanism accidentally growing into a fourth grammar rule.
     """
@@ -530,7 +534,7 @@ def test_register_lint_main_prints_the_residue_line() -> None:
 
 def test_check_29_note_carries_the_residue_line() -> None:
     """The docs gate itself (not just standalone `register-lint.py`) must surface the residue
-    count, per Ruling 51's 'printed every run' — otherwise a developer who only ever runs
+    count, per RL-911's 'printed every run' — otherwise a developer who only ever runs
     `audit-docs.py` never sees it.
     """
     result = subprocess.run(
@@ -538,3 +542,130 @@ def test_check_29_note_carries_the_residue_line() -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "residue —" in result.stdout, result.stdout
+
+
+# --- Residue class 2: the phase-1b merge (RL-1046 check 29, owner W37-10) --------------
+
+
+def _table_phase(decision: str, phase: str, finding: str = "X (F999998)") -> str:
+    """One well-formed data row wrapped in a minimal, otherwise-conforming table, with an
+    explicit Phase cell — `_table` above always writes `1` and cannot exercise a
+    predicate keyed on the Phase column reading `1b` specifically.
+    """
+    header = "| Finding id | Concerns | Work item | Phase | Decision |\n|---|---|---|---|---|\n"
+    return header + f"| {finding} | concerns | WK-657 | {phase} | {decision} |\n"
+
+
+_UNGRAMMATICAL_DECISION = "discharged — some note carrying no recognised opening at all"
+
+
+def test_a_defective_phase1b_row_is_residue_not_a_failure(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 1: a Decision cell that would otherwise fail rule 1
+    (`_UNGRAMMATICAL_DECISION` opens with neither the disposition vocabulary, a CLAUDE.md
+    §13 verdict, nor a resolution marker), on a row whose Phase cell reads `1b`, is
+    residue class 2 — `lint_register` returns no failure for it (the `main()`-equivalent
+    outcome: exit 0), and `phase1b_residue` counts it as the one defective row of one
+    phase-1b row total.
+    """
+    content = _table_phase(_UNGRAMMATICAL_DECISION, phase="1b")
+    failures = _lint(tmp_path, content)
+    assert failures == [], failures
+    rows, problems = register_lint.parse_register(tmp_path / "register.md")
+    assert problems == []
+    assert register_lint.phase1b_residue(rows) == (1, 1)
+
+
+def test_the_same_defect_on_a_non_phase1b_row_still_fails(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 2: the identical defective Decision cell, on a row whose Phase
+    cell reads anything else, is unaffected by residue class 2 and still fails rule 1 —
+    the predicate is the Phase cell, not the finding or the defect shape.
+    """
+    content = _table_phase(_UNGRAMMATICAL_DECISION, phase="2")
+    failures = _lint(tmp_path, content)
+    assert len(failures) == 1
+    assert "matches none of" in failures[0]
+
+
+def test_a_conforming_phase1b_row_is_counted_in_neither(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 3: a phase-1b row with a genuinely well-formed Decision cell is
+    not a lint failure (unsurprising — it conforms) and not residue either (it is not
+    defective, so it must not inflate the residue count the way a bug in `phase1b_residue`
+    counting every phase-1b row rather than only the failing ones would).
+    """
+    content = _table_phase("accept — a clean, conforming decision", phase="1b")
+    failures = _lint(tmp_path, content)
+    assert failures == []
+    rows, problems = register_lint.parse_register(tmp_path / "register.md")
+    assert problems == []
+    assert register_lint.phase1b_residue(rows) == (0, 1)
+
+
+def test_phase1b_residue_predicate_is_the_phase_column_not_an_id_list() -> None:
+    """`_is_phase1b_merge_row` must read `row.fields[_PHASE_FIELD_INDEX]` — a column
+    already on disk — never a hand-maintained finding-id set: the reproducibility RL-910
+    §2 requires (a check whose verdict depends on a maintained allowlist cannot be
+    reproduced in a fresh clone). Proven by construction rather than by inspection: a row
+    carrying a phase-1b-only finding id text but a *different* Phase cell must not be
+    treated as phase-1b, and a row carrying an ordinary finding id but Phase `1b` must be.
+    """
+    non_1b_phase_row = register_lint.Row(
+        "resolved 2026-08-27 (#280) — the strings no longer assert minor units (F1)",
+        ["F1", "concerns", "WK-664", "2", "resolved 2026-08-27 (#280) — no ref"],
+        1, "raw",
+    )
+    assert not register_lint._is_phase1b_merge_row(non_1b_phase_row)
+    ordinary_id_phase1b_row = register_lint.Row(
+        "Some ordinary finding",
+        ["Some ordinary finding", "concerns", "WK-664", "1b", "accept — fine"],
+        1, "raw",
+    )
+    assert register_lint._is_phase1b_merge_row(ordinary_id_phase1b_row)
+
+
+def test_a_reordered_header_column_fails_loudly_naming_what_it_found(
+    tmp_path: pathlib.Path,
+) -> None:
+    """`_is_phase1b_merge_row` trusts `row.fields[_PHASE_FIELD_INDEX]` by position,
+    without re-deriving the index from the header every call — safe only as long as the
+    header's own cell at that index still reads "Phase". Broken-input proof: a table
+    whose header swaps "Work item" and "Phase" (so index 3 reads "Work item" instead)
+    must fail loudly, naming what it actually found, rather than silently reading the
+    wrong column as every row's phase from then on.
+    """
+    header = (
+        "| Finding id | Concerns | Phase | Work item | Decision |\n"
+        "|---|---|---|---|---|\n"
+    )
+    content = header + "| X (F999997) | concerns | 1b | WK-657 | accept — fine |\n"
+    f = tmp_path / "register.md"
+    f.write_text(content, encoding="utf-8")
+    _rows, problems = register_lint.parse_register(f)
+    assert len(problems) == 1, problems
+    assert "header column 3 reads 'Work item', not \"Phase\"" in problems[0], problems[0]
+    failures = register_lint.lint_register(f)
+    assert problems[0] in failures, (
+        "a reordered header column is a structural problem, which lint_register must "
+        "surface as a failure -- silence here is the exact defect this proof exists to "
+        "make impossible to miss"
+    )
+
+
+def test_phase1b_residue_count_matches_check_29s_own_count() -> None:
+    """Cross-check between `register-lint.py`'s two consumers: a direct import
+    (`register_lint.phase1b_residue`, what this suite uses throughout) and the subprocess
+    `scripts/audit-docs.py` actually runs in CI (check 29, via `residue_line`). Both read
+    the identical live register, so the defective count either both report must agree —
+    no literal count on either side, so this holds regardless of how the register grows.
+    """
+    rows, problems = register_lint.parse_register(REGISTER)
+    assert problems == []
+    defective, _total = register_lint.phase1b_residue(rows)
+    result = subprocess.run(
+        ["python3", str(AUDIT_SCRIPT)], capture_output=True, text=True, cwd=ROOT
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    check_29_line = next(
+        line for line in result.stdout.splitlines() if line.strip().startswith("check 29:")
+        and "residue class 2" in line
+    )
+    assert f"{defective} of" in check_29_line, check_29_line

@@ -7,7 +7,7 @@ import { boundCentral, type Model } from "@/api/models";
 const props = defineProps<{ model: Model }>();
 
 /**
- * FR-MODEL-78: a bound is a Model in its own right — same Model Family, dataset version,
+ * FR-199: a bound is a Model in its own right — same Model Family, dataset version,
  * split and factor set — fitted with the `quantile` template at a declared alpha. Nothing
  * about its coefficients, its metadata or its fit time distinguishes it from the central
  * estimate on screen, so a bound that does not say it is a bound is a model whose
@@ -43,7 +43,7 @@ const side = computed(() =>
         {{ bound.slug }}@{{ bound.version }}
       </RouterLink>, at alpha {{ bound.alpha }}.
     </p>
-    <!-- FR-MODEL-78: a bound is fitted with the `quantile` template and estimates that
+    <!-- FR-199: a bound is fitted with the `quantile` template and estimates that
          quantile. Its predictions are not this family's central estimate, and a page that
          shows the numbers without saying so invites exactly that reading. -->
     <p class="mt-1 text-slate-600">

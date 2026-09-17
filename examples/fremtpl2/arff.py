@@ -1,4 +1,4 @@
-"""Minimal ARFF reader for the freMTPL2 files (`07` FR-PLAT-37).
+"""Minimal ARFF reader for the freMTPL2 files (`07` FR-439).
 
 Fifty lines rather than a dependency: ARFF's full grammar has sparse rows, dates, relational
 attributes and comment handling that these two files do not use, and a parser that supports

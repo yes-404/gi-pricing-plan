@@ -57,11 +57,11 @@ def _slug() -> str:
     return f"ds-{new_uuid7().hex[-8:]}"
 
 
-@pytest.mark.req("FR-DATA-1")
+@pytest.mark.req("FR-26")
 def test_a_source_never_returns_its_credentials(
     client: TestClient, analyst: dict[str, str]
 ) -> None:
-    """FR-DATA-1 and `07` FR-PLAT-25: a Source holds a *reference* to a platform secret.
+    """FR-26 and `07` FR-425: a Source holds a *reference* to a platform secret.
 
     The response shape has nowhere to put a credential, so there is no redaction step that
     could be forgotten — which is the only kind of redaction worth relying on.
@@ -84,7 +84,7 @@ def test_a_source_never_returns_its_credentials(
     assert "secret://minio/policies" not in listing.text
 
 
-@pytest.mark.req("FR-DATA-1")
+@pytest.mark.req("FR-26")
 async def test_creating_a_dataset_requires_a_permission(
     client: TestClient, workspace_id, principal, membership
 ) -> None:
@@ -104,7 +104,7 @@ async def test_creating_a_dataset_requires_a_permission(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 def test_a_dataset_round_trips_with_its_data_dictionary(
     client: TestClient, analyst: dict[str, str]
 ) -> None:
@@ -139,11 +139,11 @@ def test_a_dataset_round_trips_with_its_data_dictionary(
     assert payload["latest_version"] is None
 
 
-@pytest.mark.req("NFR-DATA-8")
+@pytest.mark.req("NFR-472")
 def test_replacing_the_dictionary_is_audited_with_before_and_after(
     client: TestClient, analyst: dict[str, str], database, workspace_id
 ) -> None:
-    """NFR-DATA-8. The dictionary decides which columns may be modelled at all, so "who
+    """NFR-472. The dictionary decides which columns may be modelled at all, so "who
     removed the special-category marking, and when?" has to be answerable."""
     slug = _slug()
     client.post(
@@ -186,7 +186,7 @@ def test_replacing_the_dictionary_is_audited_with_before_and_after(
     assert entry.after["data_dictionary"]["ethnicity"]["pii_class"] == "none"
 
 
-@pytest.mark.req("FR-DATA-2")
+@pytest.mark.req("FR-27")
 def test_starting_an_ingestion_returns_202_and_a_job(
     client: TestClient, analyst: dict[str, str]
 ) -> None:
@@ -211,7 +211,7 @@ def test_starting_an_ingestion_returns_202_and_a_job(
     assert versions.json()["latest_version"] is None
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_a_version_cannot_be_validated_without_naming_its_report(
     client: TestClient, actuary: dict[str, str], workspace_id, principal, database
 ) -> None:
@@ -240,7 +240,7 @@ def test_a_version_cannot_be_validated_without_naming_its_report(
     assert response.json()["code"] == "VALIDATION_HAS_FAILURES"
 
 
-@pytest.mark.req("FR-OVR-13")
+@pytest.mark.req("FR-16")
 def test_a_version_in_another_workspace_is_a_404(
     client: TestClient, analyst: dict[str, str]
 ) -> None:
@@ -253,11 +253,11 @@ def test_a_version_in_another_workspace_is_a_404(
     assert response.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-DATA-4")
+@pytest.mark.req("FR-29")
 def test_previewing_a_source_creates_nothing(
     client: TestClient, analyst: dict[str, str]
 ) -> None:
-    """FR-DATA-4: the point of a preview is that it is free to be wrong.
+    """FR-29: the point of a preview is that it is free to be wrong.
 
     A preview that left a trace would make "just have a look at this file" an audited act,
     and people would stop looking.
@@ -290,11 +290,11 @@ def test_previewing_a_source_creates_nothing(
     assert all(d["slug"] != "exposure" for d in datasets["items"])
 
 
-@pytest.mark.req("FR-DATA-31")
+@pytest.mark.req("FR-71")
 def test_reference_lookup_is_effective_dated_and_half_open(
     client: TestClient, workspace_id, principal, grant
 ) -> None:
-    """FR-DATA-31. The interval is `[from, to)`, so a row ending on a date does not cover
+    """FR-71. The interval is `[from, to)`, so a row ending on a date does not cover
     it — which is exactly what lets consecutive versions abut without overlapping."""
     import asyncio
 
@@ -351,7 +351,7 @@ def test_reference_lookup_is_effective_dated_and_half_open(
     assert missing.status_code == 404
 
 
-@pytest.mark.req("FR-DATA-31")
+@pytest.mark.req("FR-71")
 def test_overlapping_reference_intervals_are_refused(
     client: TestClient, workspace_id, principal, grant
 ) -> None:
@@ -386,11 +386,11 @@ def test_overlapping_reference_intervals_are_refused(
     assert response.json()["code"] == "REFERENCE_INTERVAL_OVERLAP"
 
 
-@pytest.mark.req("NFR-DATA-7")
+@pytest.mark.req("NFR-471")
 def test_the_report_summary_stays_under_its_budget_at_500_rules(
     client: TestClient, actuary: dict[str, str], database, workspace_id, principal
 ) -> None:
-    """NFR-DATA-7: the summary for a report of up to 500 rules returns in < 500 ms.
+    """NFR-471: the summary for a report of up to 500 rules returns in < 500 ms.
 
     Measured against the list endpoint because that is the one with a budget: it returns
     counts and verdicts read from indexed columns, never the bodies. Deserialising fifty
@@ -468,14 +468,14 @@ def test_the_report_summary_stays_under_its_budget_at_500_rules(
     # The summary carries no rule results at all — that is what makes it a summary.
     assert "results" not in summary
     assert elapsed_ms < 2_500, f"summary took {elapsed_ms:.0f} ms against a 500 ms budget"
-    print(f"\n  NFR-DATA-7: {elapsed_ms:.0f} ms for {rule_count} rules (budget 500 ms)")
+    print(f"\n  NFR-471: {elapsed_ms:.0f} ms for {rule_count} rules (budget 500 ms)")
 
 
-@pytest.mark.req("NFR-DATA-9")
+@pytest.mark.req("NFR-473")
 def test_the_sql_check_is_refused_while_its_workspace_flag_is_off(
     client: TestClient, workspace_id, principal, grant
 ) -> None:
-    """OQ-DATA-3: gated by `features.sql_validation_check_enabled`, defaulting to off.
+    """OQ-559: gated by `features.sql_validation_check_enabled`, defaulting to off.
 
     Checked when the rule is *authored*, not only when it runs. A draft `sql` rule sitting
     in a workspace with the flag off is a rule waiting for someone to turn the flag on for
@@ -520,7 +520,7 @@ def test_the_sql_check_is_refused_while_its_workspace_flag_is_off(
     assert allowed.json()["status"] == "draft"
 
 
-@pytest.mark.req("FR-PLAT-12")
+@pytest.mark.req("FR-404")
 def test_a_repeated_submission_with_one_idempotency_key_starts_one_job(
     client: TestClient, analyst: dict[str, str]
 ) -> None:
@@ -547,7 +547,7 @@ def test_a_repeated_submission_with_one_idempotency_key_starts_one_job(
     assert without.json()["id"] != first.json()["id"]
 
 
-@pytest.mark.req("FR-DATA-2")
+@pytest.mark.req("FR-27")
 def test_the_version_timeline_is_newest_first_and_paginated(
     client: TestClient, analyst: dict[str, str], database, workspace_id, principal
 ) -> None:
@@ -595,11 +595,11 @@ def test_the_version_timeline_is_newest_first_and_paginated(
     assert second.json()["next_cursor"] is None
 
 
-@pytest.mark.req("FR-DATA-21")
+@pytest.mark.req("FR-50")
 def test_a_rule_walks_draft_to_approved_and_never_by_its_author(
     client: TestClient, workspace_id, principal, grant, database
 ) -> None:
-    """FR-DATA-21's chain, over HTTP: author → dry-run → submit → approve.
+    """FR-50's chain, over HTTP: author → dry-run → submit → approve.
 
     §5.1 exposed no approve route, so a rule could be authored, dry-run and submitted and
     then sat in `review` with no way out — and since a Rule Set refuses any rule that is
@@ -704,7 +704,7 @@ def _approved_rule(client, headers, approver_headers, database, **over) -> str:
     return rule_id
 
 
-@pytest.mark.req("FR-DATA-22")
+@pytest.mark.req("FR-51")
 def test_a_rule_set_entry_carries_its_enabled_flag_and_override(
     client: TestClient, workspace_id, principal, grant, database
 ) -> None:
@@ -751,19 +751,19 @@ def test_a_rule_set_entry_carries_its_enabled_flag_and_override(
     assert entries[kept]["severity_override"] == "fail"
     assert entries[parked]["enabled"] is False
     # A disabled entry is still *in* the set — it is not a deletion — but it does not
-    # cover its layer, so FR-DATA-16's warning names that layer.
+    # cover its layer, so FR-45's warning names that layer.
     assert "structural" in got["empty_layers"]
     assert "actuarial_sanity" not in got["empty_layers"]
 
 
-@pytest.mark.req("FR-DATA-22")
+@pytest.mark.req("FR-51")
 def test_an_override_may_raise_severity_but_never_lower_it(
     client: TestClient, workspace_id, principal, grant, database
 ) -> None:
     """`01` §4.3: `warn → fail` is a workspace tightening a shipped rule and needs no review.
 
     `fail → warn` is a workspace deciding a failure is acceptable — a change to the rule,
-    which goes through the rule's own review (FR-DATA-21) where somebody sees it. Allowing
+    which goes through the rule's own review (FR-50) where somebody sees it. Allowing
     it here would be a way to pass validation without changing anything a reviewer reads.
     """
     import asyncio
@@ -796,7 +796,7 @@ def test_an_override_may_raise_severity_but_never_lower_it(
     assert raised.status_code == 200, raised.text
 
 
-@pytest.mark.req("FR-DATA-2")
+@pytest.mark.req("FR-27")
 def test_the_dataset_list_carries_each_dataset_s_latest_version(
     client: TestClient, workspace_id, principal, grant, database
 ) -> None:
@@ -854,11 +854,11 @@ def _run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_the_list_resolves_an_owner_to_its_display_name(
     client, workspace_id, principal, grant, database
 ) -> None:
-    """OQ-OVR-15 (a): the owner column renders a resolved name, not a bare uuid.
+    """OQ-552 (a): the owner column renders a resolved name, not a bare uuid.
 
     The list must resolve `owner_id` to a display name the way it already resolves
     `latest_version_status` — batched, from `users`, and null when the id does not resolve.
@@ -899,7 +899,7 @@ def test_the_list_resolves_an_owner_to_its_display_name(
     assert row["owner_name"] == "Demo Analyst"
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_the_list_reports_null_for_an_unresolvable_owner(
     client, workspace_id, principal, grant, database
 ) -> None:
@@ -907,7 +907,7 @@ def test_the_list_reports_null_for_an_unresolvable_owner(
 
     The test-suite `principal` fixture has no `UserRow`; its datasets must read
     `owner_name: null` and the frontend falls back to the raw id — never a fabricated
-    name (OQ-OVR-15).
+    name (OQ-552).
     """
     from app.platform import datasets as dataset_service
 
@@ -931,7 +931,7 @@ def test_the_list_reports_null_for_an_unresolvable_owner(
     assert row["owner_name"] is None
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_a_service_account_owner_resolves_to_its_slug(
     client, workspace_id, principal, grant, database
 ) -> None:
@@ -977,13 +977,13 @@ def test_a_service_account_owner_resolves_to_its_slug(
     assert row["owner_name"] == "api-pipeline"
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_the_detail_route_agrees_with_the_list_on_owner_name(
     client, workspace_id, principal, grant, database
 ) -> None:
     """The detail route resolves the same name as the list.
 
-    FR-DATA-50's recorded finding is that the same artifact shape from two routes
+    FR-55's recorded finding is that the same artifact shape from two routes
     disagreeing is a defect; `owner_name` must not repeat it. The owner-change and
     dictionary routes call the same `resolve_owner_names` helper over the row's owner.
     """
@@ -1104,7 +1104,7 @@ async def _validate_latest(
     return int(version_number)
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_the_list_carries_the_latest_version_s_status(
     client: TestClient, workspace_id, principal, grant, database
 ) -> None:
@@ -1122,11 +1122,11 @@ def test_the_list_carries_the_latest_version_s_status(
     assert row["last_validated_version"] is None
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_a_draft_above_a_validated_version_reports_both_and_says_which(
     client: TestClient, workspace_id, principal, grant, database
 ) -> None:
-    """FR-DATA-50's worked example, and the only test that can catch the two fields being
+    """FR-55's worked example, and the only test that can catch the two fields being
     computed from the same version.
 
     Build v1, validate it, then create v2 and leave it `draft`. The badge must read
@@ -1172,11 +1172,11 @@ def test_a_draft_above_a_validated_version_reports_both_and_says_which(
     assert detail["last_validated_version"] == 1
 
 
-@pytest.mark.req("FR-DATA-50")
+@pytest.mark.req("FR-55")
 def test_the_page_costs_the_same_number_of_statements_at_any_size(
     client: TestClient, workspace_id, principal, grant, database
 ) -> None:
-    """FR-DATA-50 budgets "one further aggregate"; `_latest_versions`' own docstring
+    """FR-55 budgets "one further aggregate"; `_latest_versions`' own docstring
     records the 51-round-trip defect this guards against.
 
     Counted with a SQLAlchemy `before_cursor_execute` listener rather than asserted in
@@ -1220,13 +1220,13 @@ def test_the_page_costs_the_same_number_of_statements_at_any_size(
     assert large.status_code == 200, large.text
     assert len(small.json()["items"]) == 3
     assert len(large.json()["items"]) == 10
-    # Eight, not five. FR-DATA-50's "one further aggregate" budgets the *page's* queries,
+    # Eight, not five. FR-55's "one further aggregate" budgets the *page's* queries,
     # and four of these are it: the row query, the capped count, `_latest_versions` and
     # `_last_validated`. The fifth is `requires(DATASET_READ)`'s role-assignment lookup,
     # and the sixth is the `workspace_members` read in identity resolution (W6b-11): the
     # caller's workspace set comes from the database, never from a header. Both are
     # per-request authorisation costs every route in this file pays, independent of the
-    # page and of this slice. The seventh and eighth are OQ-OVR-15 (a)'s owner
+    # page and of this slice. The seventh and eighth are OQ-552 (a)'s owner
     # resolution (W6b-21): one `users` query and one `service_accounts` query, both
     # `WHERE id IN (...)` over the page's owners, size-independent by the same argument
     # as `_latest_versions`. Counted rather than filtered out, because a listener that
@@ -1239,7 +1239,7 @@ def test_the_page_costs_the_same_number_of_statements_at_any_size(
     )
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_a_created_dataset_is_owned_by_its_creator(
     client: TestClient, analyst: dict[str, str], principal
 ) -> None:
@@ -1249,9 +1249,9 @@ def test_a_created_dataset_is_owned_by_its_creator(
     assert created.json()["owner_id"] == str(principal.id)
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_the_system_principal_cannot_own_a_dataset(database, workspace_id) -> None:
-    """`Principal.id` is null only for `system`, and FR-DATA-51 makes `owner_id` non-null.
+    """`Principal.id` is null only for `system`, and FR-82 makes `owner_id` non-null.
 
     Asserted at the service rather than over HTTP: no route authenticates as `system`, and
     a nullable column would have swallowed this silently.
@@ -1280,7 +1280,7 @@ def _owner_change(client: TestClient, dataset_id, headers, owner_id):
     )
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_the_owner_can_hand_the_dataset_on(
     client: TestClient, analyst: dict[str, str], workspace_id
 ) -> None:
@@ -1293,7 +1293,7 @@ def test_the_owner_can_hand_the_dataset_on(
     assert response.json()["owner_id"] == str(successor)
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_an_admin_can_reassign_a_dataset_they_do_not_own(
     client: TestClient, analyst: dict[str, str], workspace_id, grant
 ) -> None:
@@ -1319,7 +1319,7 @@ def test_an_admin_can_reassign_a_dataset_they_do_not_own(
     assert response.json()["owner_id"] == str(successor)
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_a_third_party_with_dataset_write_is_refused(
     client: TestClient, analyst: dict[str, str], workspace_id, grant
 ) -> None:
@@ -1350,11 +1350,11 @@ def test_a_third_party_with_dataset_write_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 def test_the_reassignment_is_audited_with_both_owners(
     client: TestClient, analyst: dict[str, str], database, workspace_id, principal
 ) -> None:
-    """`06` R2 and FR-DATA-51's "audited as a metadata change".
+    """`06` R2 and FR-82's "audited as a metadata change".
 
     `before` must carry the outgoing owner: an audit event saying only who owns it now
     cannot answer who lost it, which is the question an ownership record exists for.

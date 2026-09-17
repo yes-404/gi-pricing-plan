@@ -7,7 +7,7 @@ import TransparencyPanel from "../TransparencyPanel.vue";
 
 describe("the transparency panel", () => {
   it("puts the fidelity statement where it cannot be missed", () => {
-    // FR-MODEL-34: the approximation is what makes a booster rateable as a table, and the
+    // FR-133: the approximation is what makes a booster rateable as a table, and the
     // fidelity statement is where it says where it stops being one.
     render(TransparencyPanel, { props: { artifact: ARTIFACT, state: "ready" } });
     expect(screen.getByText(/under-price/i)).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe("the transparency panel", () => {
   });
 
   it("reads a missing artifact as a state, never as a failure", () => {
-    // FR-MODEL-33 makes the artifact an obligation for a non-GLM model. Not having one yet is
+    // FR-132 makes the artifact an obligation for a non-GLM model. Not having one yet is
     // a thing to say, not an error banner: the red box is for a call that went wrong.
     render(TransparencyPanel, { props: { artifact: null, state: "absent" } });
     expect(screen.getByText(/no transparency artifact/i)).toBeInTheDocument();
@@ -52,7 +52,7 @@ describe("the transparency panel", () => {
   });
 
   it("renders no approximation block when the artifact carries none", () => {
-    // FR-MODEL-33 allows any combination of the three blocks, so an absent block is not a
+    // FR-132 allows any combination of the three blocks, so an absent block is not a
     // gap — and an empty table headed "Where the approximation is worst" says there is an
     // approximation and it is perfect everywhere.
     render(TransparencyPanel, {

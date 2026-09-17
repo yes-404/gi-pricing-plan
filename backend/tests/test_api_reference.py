@@ -51,14 +51,14 @@ def _table(api_client: TestClient, admin: dict[str, str], *, publish: bool = Tru
     return slug
 
 
-@pytest.mark.req("FR-DATA-30")
+@pytest.mark.req("FR-70")
 def test_a_table_with_only_drafts_reports_no_published_version(
     api_client: TestClient, admin: dict[str, str]
 ) -> None:
     """The state that decides whether the table can be pinned at all.
 
     A list that showed a version number regardless would say a table is usable when
-    nothing in it has been published, and rating pins a published version (FR-DATA-30).
+    nothing in it has been published, and rating pins a published version (FR-70).
     """
     slug = _table(api_client, admin, publish=False)
     listed = api_client.get("/api/v1/reference-tables", headers=admin).json()
@@ -71,7 +71,7 @@ def test_a_table_with_only_drafts_reports_no_published_version(
     assert next(t for t in listed if t["slug"] == slug)["latest_published_version"] == 1
 
 
-@pytest.mark.req("FR-DATA-30")
+@pytest.mark.req("FR-70")
 def test_a_version_reports_the_period_its_rows_actually_cover(
     api_client: TestClient, admin: dict[str, str]
 ) -> None:
@@ -88,7 +88,7 @@ def test_a_version_reports_the_period_its_rows_actually_cover(
     assert timeline[0]["covers_to"] is None
 
 
-@pytest.mark.req("FR-DATA-30")
+@pytest.mark.req("FR-70")
 def test_the_write_routes_report_what_was_stored_not_what_was_asked_for(
     api_client: TestClient, admin: dict[str, str]
 ) -> None:
@@ -117,7 +117,7 @@ def test_the_write_routes_report_what_was_stored_not_what_was_asked_for(
     assert published["status"] == "published"
 
 
-@pytest.mark.req("FR-DATA-31")
+@pytest.mark.req("FR-71")
 def test_the_effective_date_viewer_reads_the_interval_as_half_open(
     api_client: TestClient, admin: dict[str, str]
 ) -> None:
@@ -140,13 +140,13 @@ def test_the_effective_date_viewer_reads_the_interval_as_half_open(
     assert [(r["key"], r["payload"]["area"]) for r in on_the_boundary] == [("SW1A", 13)]
 
 
-@pytest.mark.req("FR-DATA-30")
+@pytest.mark.req("FR-70")
 def test_the_viewer_reads_the_pinned_version_and_never_falls_back(
     api_client: TestClient, admin: dict[str, str]
 ) -> None:
     """A version that does not exist is a 404, not the latest one.
 
-    Falling back would be the mistake FR-DATA-30 exists to prevent, taught by the one
+    Falling back would be the mistake FR-70 exists to prevent, taught by the one
     screen an actuary uses to understand reference data.
     """
     slug = _table(api_client, admin)
@@ -157,7 +157,7 @@ def test_the_viewer_reads_the_pinned_version_and_never_falls_back(
     assert missing.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-DATA-31")
+@pytest.mark.req("FR-71")
 def test_the_lookup_debugger_explains_a_miss_in_terms_of_the_interval(
     api_client: TestClient, admin: dict[str, str]
 ) -> None:

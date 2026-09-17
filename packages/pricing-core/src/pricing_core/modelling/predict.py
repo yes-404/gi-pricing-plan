@@ -1,10 +1,10 @@
-"""Scoring a fitted GLM or EBM from its artifact alone (`02` FR-MODEL-62/37, ADR-0003).
+"""Scoring a fitted GLM or EBM from its artifact alone (`02` FR-193/140, ADR-705).
 
 The point of this module is what it does **not** import. `glum` fits and `interpret`
 fits; nothing here needs either. A GLM is a set of named coefficients, and scoring is
 rebuilding the design columns those names describe and taking a dot product; an EBM is
 its additive lookup tables, and scoring is the lookups themselves — both things a
-process that never ran the fitting library can do, which is the whole of ADR-0003.
+process that never ran the fitting library can do, which is the whole of ADR-705.
 
 The term naming is the contract between `glm._design` and this module: a categorical
 contributes `slug[level]` for every level except the base, and a continuous factor
@@ -151,25 +151,25 @@ def _offset(
 
     `kind="model"` takes the array the backend resolved — pricing-core cannot resolve
     the ref itself, and returning `None` here would score as though no offset were
-    declared (FR-MODEL-24): named, never silent.
+    declared (FR-116): named, never silent.
     """
     if spec.offset.kind == "model":
         if model_offset is None:
             raise PredictionError(
                 "MODEL_OFFSET_MISSING",
                 "offset kind 'model' requires the resolved offset array (model_offset), "
-                "and none was supplied (FR-MODEL-24).",
+                "and none was supplied (FR-116).",
             )
         if model_offset.shape != (data.height,):
             raise PredictionError(
                 "MODEL_OFFSET_MISSING",
                 f"model_offset has {model_offset.shape[0]} rows for {data.height} "
-                "data rows (FR-MODEL-24).",
+                "data rows (FR-116).",
             )
         if not np.all(np.isfinite(model_offset)):
             raise PredictionError(
                 "MODEL_OFFSET_MISSING",
-                "model_offset carries non-finite values (FR-MODEL-24).",
+                "model_offset carries non-finite values (FR-116).",
             )
         return np.asarray(model_offset, dtype=np.float64)
     if spec.offset.kind not in {"log_column", "column"}:
@@ -211,7 +211,7 @@ def linear_predictor(
     everything else, and computing the design twice to get both would double the cost of
     the expensive half.
 
-    `model_offset` is the offset-from-another-model array (FR-MODEL-24): the referenced
+    `model_offset` is the offset-from-another-model array (FR-116): the referenced
     fitted GLM's linear predictor, resolved by the backend and required when
     `spec.offset.kind == "model"`.
     """
@@ -237,15 +237,15 @@ def predict_glm(
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
 ) -> npt.NDArray[np.float64]:
-    """`μ`, the expectation, for every row of `data` (FR-MODEL-62).
+    """`μ`, the expectation, for every row of `data` (FR-193).
 
-    Uncertainty is **not** returned here, and deliberately still is not. FR-MODEL-63's
+    Uncertainty is **not** returned here, and deliberately still is not. FR-194's
     interval needs the covariance matrix, which the fit stores as a blob this signature
     does not take — `predict_glm_interval` is the entry point that does. Every caller that
     only wants `μ` (the diagnostics, the backtest, the comparison, the peril structure)
     keeps a signature that costs one column of the design at a time.
 
-    `model_offset` is the offset-from-another-model array (FR-MODEL-24), required when
+    `model_offset` is the offset-from-another-model array (FR-116), required when
     `spec.offset.kind == "model"`.
     """
     return _inverse_link(
@@ -271,14 +271,14 @@ def predict_glm_interval(
 ) -> tuple[
     npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]
 ]:
-    """`μ` and FR-MODEL-63's interval around it: `(expected, lower, upper)`.
+    """`μ` and FR-194's interval around it: `(expected, lower, upper)`.
 
     **What this interval is.** `Var(η̂) = x'Vx`, the sampling variance of the *estimated*
     linear predictor, so `g⁻¹(η̂ ± z·√(x'Vx))` is a confidence interval for `E[Y|x]` — how
     precisely the fit located the mean. It is not a prediction interval for an individual
     outcome, which would add the process variance `φ·V(μ)` the covariance matrix does not
     contain. `model_schema.UncertaintyKind` carries that distinction into the response as
-    `confidence_interval_mean`, and `02` FR-MODEL-63 has the dated note.
+    `confidence_interval_mean`, and `02` FR-194 has the dated note.
 
     **The offset is in the centre and not in the width.** It is a known constant per row, so
     it shifts `η̂` and contributes no variance — the interval on a frequency prediction is
@@ -343,7 +343,7 @@ def predict_ebm(
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
 ) -> npt.NDArray[np.float64]:
-    """`μ` for an EBM, from its additive lookup tables alone (FR-MODEL-37, ADR-0003).
+    """`μ` for an EBM, from its additive lookup tables alone (FR-140, ADR-705).
 
     No `interpret` import, no spec, no offset, no link inversion: the tables are the
     model, the link is identity, and `μ = intercept + Σ term scores`. The index rule
@@ -352,7 +352,7 @@ def predict_ebm(
     in the last populated bin, no clamping), categorical by position in `levels` plus
     one. A level the fit never saw has no slot, and inventing one would score it as
     whichever level shares the number — `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` (the
-    `gbm._encode` rule, FR-MODEL-32).
+    `gbm._encode` rule, FR-131).
     """
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
 
@@ -386,7 +386,7 @@ def predict_ebm(
                 raise PredictionError(
                     "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
                     f"factor {slug!r} carries level {unknown[0]!r} that the fitted "
-                    "model never saw (FR-MODEL-32).",
+                    "model never saw (FR-131).",
                     terms=[slug],
                 )
             slots.append(text.replace_strict(lookup, return_dtype=pl.Int32).to_numpy())
@@ -417,20 +417,20 @@ def score_fitted(
     """`μ` for a fitted model of **any** kind, on the mean scale.
 
     The dispatch is the only thing that separates scoring a GLM from scoring a GBM or an
-    EBM, and the callers need it: the comparison (`wf-01` E1, an actuary weighing a
+    EBM, and the callers need it: the comparison (`WF-698` E1, an actuary weighing a
     booster's lift against a GLM's transparency), the peril structure (E4, where each
-    peril's models are scored before they are summed), and the backtest (FR-MODEL-57,
+    peril's models are scored before they are summed), and the backtest (FR-187,
     where every arm is re-measured on data it never saw). It lives here rather than in
     any of them, because a second copy of a dispatch is a second place for the kinds to
     diverge — and a peril priced through the wrong branch is a silently wrong risk
     premium.
 
     `booster` is required only for a GBM: a GLM's fit result *is* its model, a GBM's is
-    a reference to bytes the caller must fetch (ADR-0001 keeps that fetch out of this
+    a reference to bytes the caller must fetch (ADR-703 keeps that fetch out of this
     package), and an EBM's *is* its model in the strongest sense — the exported lookup
     tables themselves, which `predict_ebm` scores without the fitting stack.
 
-    `model_offset` is forwarded on the GLM arm only (FR-MODEL-24): a `GbmSpec` or
+    `model_offset` is forwarded on the GLM arm only (FR-116): a `GbmSpec` or
     `EbmSpec` declaring `kind="model"` is schema-refused, so there is no arm that could
     use it.
     """
@@ -462,12 +462,12 @@ def score_fitted(
 def detect_quantile_crossing(
     lower: npt.NDArray[np.float64], upper: npt.NDArray[np.float64]
 ) -> tuple[int, float]:
-    """How often, and how badly, a quantile pair contradicts itself (FR-MODEL-78).
+    """How often, and how badly, a quantile pair contradicts itself (FR-199).
 
     Returns `(rows_crossing, worst_gap)`. **It reorders nothing** — that is the
     requirement's own word, and the reason this returns numbers rather than a corrected
     pair: a reordered pair still does not describe one distribution, and hiding that is the
-    failure mode OQ-MODEL-2 was decided to avoid.
+    failure mode OQ-574 was decided to avoid.
 
     Both figures, because either alone misleads. One crossing row in a million is a
     curiosity; one crossing row by a factor of ten is a bound nobody should quote, and a

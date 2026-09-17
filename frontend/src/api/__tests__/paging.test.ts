@@ -71,7 +71,7 @@ describe("models for a dataset version", () => {
     const page = await listModels();
 
     // `m1` sits on page two, so a filter over page one alone would miss it — the defect
-    // OQ-MODEL-40 records. And the surviving order is the route's, so the caller's
+    // OQ-611 records. And the surviving order is the route's, so the caller's
     // default of "the first" means "the most recent".
     expect(modelsForVersion(page, "v1").map((m) => m.id)).toEqual(["m3", "m1"]);
   });

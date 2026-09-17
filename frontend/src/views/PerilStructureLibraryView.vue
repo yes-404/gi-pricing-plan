@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * `02` §5.3's Peril structure library, `/peril-structures` (FR-MODEL-127).
+ * `02` §5.3's Peril structure library, `/peril-structures` (FR-167).
  *
- * **Three columns, not five.** A Peril Structure has no `applicability` — FR-MODEL-44's
- * objective/metric concept — and FR-MODEL-127 gives it no usage count. Those columns are
+ * **Three columns, not five.** A Peril Structure has no `applicability` — FR-153's
+ * objective/metric concept — and FR-167 gives it no usage count. Those columns are
  * declared absent rather than rendered blank: a blank cell would assert that a count exists
  * and is merely unknown.
  *

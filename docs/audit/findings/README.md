@@ -1,22 +1,32 @@
+---
+family: reference
+title: docs/audit/findings — evidence essays for register rows too long to carry inline
+status: active                  # active → retired (§1.2a)
+created: 2026-08-31
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # docs/audit/findings — evidence essays for register rows too long to carry inline
 
-`docs/audit/register.md` is the ledger: one row per open finding, and the row is the
+`docs/findings/register.md` is the ledger: one row per open finding, and the row is the
 authority for its **status** (Work item, Phase, Decision — the fields `register-lint.py`
 and `register-owed.py` parse). This directory is not a second ledger. It holds the
 **evidence essay** — the Concerns-column prose that established a finding — for the rows
 where that essay has grown too long to serve as an index entry at the same time it serves
-as the record of how the finding was established. NT-0015 P4 (`docs/notes/0015-the-
-register-is-a-ledger-evidence-is-a-file.md` §2) is why this directory exists; Ruling 51 and
-Ruling 53 (`docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`) are what bind its shape below.
+as the record of how the finding was established. RFC-896 P4 (`docs/rfcs/RFC-00896-
+the-register-is-a-ledger-evidence-is-a-file.md` §2) is why this directory exists; RL-911 and
+RL-913 (`docs/rulings/RL-00913-q5-file-by-the-f-id-verbatim-the-requirement-id-cannot-name-a-file-and-is-cross-linked-from-inside-it.md`) are what bind its shape below.
 
 ## Naming — the F-id, verbatim, nothing else
 
-A file is named `<F-id>.md`, exactly as `docs/audit/register.md` writes the id in a row's
-own Finding-id cell: `F27.md`, `F-W9-3.md`, `F-W10-1-1.md`. **No suffix, no slug, no
+A file is named `<F-id>.md`, exactly as `docs/findings/register.md` writes the id in a row's
+own Finding-id cell: `../../findings/FD-00934-03-rating-shapes-vs-hand-authored-contracts.md`, `F-W9-3.md`, `F-W10-1-1.md`. **No suffix, no slug, no
 description.** A filename carrying the concerns phrase (`F27-rating-shapes.md`) would go
 stale the first time that phrase is amended, and the register amends daily.
 
-`docs/audit/register.md`'s own `_FINDING_ID` shape (`scripts/audit-docs.py`) is the
+`docs/findings/register.md`'s own `_FINDING_ID` shape (`scripts/audit-docs.py`) is the
 authority for what a valid id looks like: `F<n>` or `F-W<n>-<n>` with an optional third
 segment. A findings file's name has no other source.
 
@@ -31,7 +41,7 @@ not a finding, it is a clause of one.
 **A migrated row's Finding-id cell is not touched.** It still reads `... (F27)` exactly as
 before. `scripts/audit-docs.py` check 25 resolves every finding citation made outside
 `docs/audit/` (`docs/research/`, `docs/plans/`, `docs/notes/`) by matching that exact
-parenthesised form against `docs/audit/register.md`'s own text — never against this
+parenthesised form against `docs/findings/register.md`'s own text — never against this
 directory, which the check does not read at all. Move the essay, keep the self-naming: a
 citation that resolved before a row's migration resolves identically after it, because
 nothing check 25 reads changed.
@@ -43,8 +53,8 @@ entry rather than an essay.
 
 ## What moves, what stays, and which way the link points
 
-**Every field is reduced to an index-level value; both essays move** (NT-0015 P4, `.claude/
-notes/0015-the-register-is-a-ledger-evidence-is-a-file.md` §2 — *"The register row becomes
+**Every field is reduced to an index-level value; both essays move** (RFC-896 P4, `.claude/
+rfcs/RFC-00896-the-register-is-a-ledger-evidence-is-a-file.md` §2 — *"The register row becomes
 the index entry: id, concerns, work item, phase, decision, owner, status, link"*). Concerns
 is not the only cell that can be an essay: a Decision cell that argues its own reasoning at
 length (F27's is the case that surfaced this) migrates exactly the same way.
@@ -77,8 +87,8 @@ the Work item cell (`_matches_work_id`). Prose that reads as redundant restateme
 person may be the only thing one of these matches on.
 
 **Shortening a Decision cell can therefore remove a row from a future agenda with no test
-failing and no signal printed anywhere** — the same silent-loss shape `docs/audit/register.
-md`'s F63 records at the register level, reproduced one layer down inside a single row's own
+failing and no signal printed anywhere** — the same silent-loss shape `docs/findings/regist
+er.md`'s F63 records at the register level, reproduced one layer down inside a single row's own
 edit. Before compressing a Decision cell: check what the two functions named above currently
 match in it, and keep those tokens verbatim in the compressed sentence. **This list is the
 code's, not this README's — if a future predicate is added to either script, this paragraph
@@ -97,14 +107,14 @@ different claims; only the second is evidence.
 Same convention the register's own header already states for a row: a findings file is
 **never silently rewritten**. A correction is appended or annotated in place, dated, quoting
 what it supersedes — `**Corrected <date>**` or `**Amended <date>**`, naming the PR or commit.
-A findings file is deleted only when the finding it evidences is retired the way `docs/audit/
-register.md`'s F42 tombstone note describes: the id stays reserved and a tombstone note says
+A findings file is deleted only when the finding it evidences is retired the way `docs/findin
+gs/register.md`'s F42 tombstone note describes: the id stays reserved and a tombstone note says
 so; the essay is not quietly removed.
 
 ## When a row migrates
 
 **Existing over-threshold rows migrate opportunistically, at their next substantive
-amendment — never in a bulk sweep, never on a schedule** (Ruling 51). `register-lint.py`
+amendment — never in a bulk sweep, never on a schedule** (RL-911). `register-lint.py`
 prints the residue — the count of unmigrated rows still over the threshold, against the
 corpus size — on every run, as a single aggregate line; that line is what makes "incremental
 migration" a checkable claim rather than an assertion nobody can falsify. A row does not

@@ -1,7 +1,7 @@
 """The widened RatingVersion (03 §4.3, slice W9-3).
 
-Covers the lifecycle states (FR-RATE-23), the pins (FR-RATE-22), the mode-match
-invariant (FR-RATE-60), and that the Phase 1b subset still parses.
+Covers the lifecycle states (FR-238), the pins (FR-237), the mode-match
+invariant (FR-223), and that the Phase 1b subset still parses.
 """
 
 from __future__ import annotations
@@ -41,11 +41,11 @@ def test_the_phase_1b_subset_still_parses() -> None:
     assert version.bundle is None
 
 
-@pytest.mark.req("FR-RATE-22")
-@pytest.mark.req("FR-RATE-26")
-@pytest.mark.req("FR-RATE-27")
+@pytest.mark.req("FR-237")
+@pytest.mark.req("FR-241")
+@pytest.mark.req("FR-242")
 def test_the_full_43_contract_parses() -> None:
-    """FR-RATE-22/26/27: pins, mode, effective dates, bundle and change summary parse."""
+    """FR-237/241/242: pins, mode, effective dates, bundle and change summary parse."""
     data = _base()
     data.update({
         "algorithm_ref": "rating_algorithm:motor-gb@14",
@@ -75,10 +75,10 @@ def test_the_full_43_contract_parses() -> None:
     assert version.change_summary == "AD frequency model refit on 2026H1 data."
 
 
-@pytest.mark.req("FR-RATE-23")
+@pytest.mark.req("FR-238")
 def test_live_and_retired_are_declared_but_unreachable() -> None:
-    """FR-RATE-23: live/retired are part of the lifecycle; approved has no transition
-    to them yet (DP3 defers the deployment transitions to W14)."""
+    """FR-238: live/retired are part of the lifecycle; approved has no transition
+    to them yet (DP3 defers the deployment transitions to WK-674)."""
     assert RatingVersionStatus.LIVE.value == "live"
     assert RatingVersionStatus.RETIRED.value == "retired"
     # The lifecycle map documents the reachable transitions; live/retired are declared
@@ -116,19 +116,19 @@ def _algorithm_with_mode(mode: str) -> RatingAlgorithm:
     })
 
 
-@pytest.mark.req("FR-RATE-60")
+@pytest.mark.req("FR-223")
 def test_a_model_reference_mode_mismatch_is_refused() -> None:
-    """FR-RATE-60: a model_call step whose mode disagrees with the version is refused."""
+    """FR-223: a model_call step whose mode disagrees with the version is refused."""
     version = RatingVersion.model_validate(_base())
     assert version.model_reference_mode == "exact"
     algorithm = _algorithm_with_mode("approximation")
-    with pytest.raises(ValueError, match="FR-RATE-60"):
+    with pytest.raises(ValueError, match="FR-223"):
         check_model_reference_mode(version, algorithm)
 
 
-@pytest.mark.req("FR-RATE-60")
+@pytest.mark.req("FR-223")
 def test_a_matching_model_reference_mode_passes() -> None:
-    """FR-RATE-60: a model_call step whose mode matches the version compiles."""
+    """FR-223: a model_call step whose mode matches the version compiles."""
     version = RatingVersion.model_validate(_base())
     algorithm = _algorithm_with_mode("exact")
     check_model_reference_mode(version, algorithm)  # must not raise

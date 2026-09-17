@@ -1,11 +1,11 @@
-"""Comparing fitted models on a shared holdout (`02` FR-MODEL-56, §5.2).
+"""Comparing fitted models on a shared holdout (`02` FR-186, §5.2).
 
-`wf-01` E1: two or more candidates, aligned metrics, double lift, and the factor-by-factor
+`WF-698` E1: two or more candidates, aligned metrics, double lift, and the factor-by-factor
 relativity differences an actuary actually argues from.
 
 **The declared signature was `compare_models(models, holdout)` and could not be written.**
 That is the third instance of one defect: a `Model` carries *references* — factor ids,
-banding ids, a dataset version — and resolving one needs a database, which ADR-0001 forbids
+banding ids, a dataset version — and resolving one needs a database, which ADR-703 forbids
 this package. `predict_glm` and `compute_diagnostics` were corrected the same way on
 2026-08-16. The caller resolves; this module computes. `ComparisonCandidate` is that
 resolution, and it carries the model's canonical ref purely so the output can be labelled.
@@ -14,7 +14,7 @@ Two refusals are the module's own, not the platform's:
 
 * **A comparison of one model** is a diagnostics read. Naming it a comparison would let an
   approval cite it as evidence a candidate had been weighed.
-* **Candidates with different weighting schemes.** FR-MODEL-55 makes the weighting part of
+* **Candidates with different weighting schemes.** FR-184 makes the weighting part of
   the metric, so an exposure-weighted A/E beside a claim-count-weighted one is two
   quantities in one column — precisely the comparison the requirement exists to prevent.
   A frequency model and a severity model are not rivals; they are different questions.
@@ -72,7 +72,7 @@ _BINS = 10
 
 @dataclass(frozen=True, slots=True)
 class ComparisonCandidate:
-    """One model, resolved to everything scoring it needs (ADR-0001).
+    """One model, resolved to everything scoring it needs (ADR-703).
 
     `ref` is the canonical `{type}:{slug}@{version}` string (ID-3) and is used only as a
     label: this module never resolves it, because resolving it is the database work the
@@ -104,7 +104,7 @@ def compare_models(
     *,
     baseline: str | None = None,
 ) -> ComparisonSummary:
-    """Align two or more candidates on one holdout (FR-MODEL-56).
+    """Align two or more candidates on one holdout (FR-186).
 
     `baseline` names the model double lift is measured against, defaulting to the first
     candidate. The `split_ref` is **not** verified here — that is the platform's job, because
@@ -165,7 +165,7 @@ def _refuse_an_incomparable_set(
         raise ModellingError(
             "MODELS_NOT_COMPARABLE",
             f"a comparison needs two or more models and was given {len(candidates)} "
-            "(FR-MODEL-56). One model measured against nothing is a diagnostics read, and "
+            "(FR-186). One model measured against nothing is a diagnostics read, and "
             "calling it a comparison would let an approval cite it as evidence that a "
             "candidate had been considered.",
         )
@@ -189,7 +189,7 @@ def _refuse_an_incomparable_set(
         detail = ", ".join(f"{ref} is {s.value}" for ref, s in schemes.items())
         raise ModellingError(
             "MODELS_NOT_COMPARABLE",
-            f"the candidates disagree about weighting — {detail}. FR-MODEL-55 makes the "
+            f"the candidates disagree about weighting — {detail}. FR-184 makes the "
             "weighting part of the metric, so aligning them in one table would put two "
             "different quantities in one column. A frequency model and a severity model are "
             "not rivals; they answer different questions.",
@@ -207,8 +207,8 @@ def _refuse_an_incomparable_set(
     if None in splits or len(splits) > 1:
         raise ModellingError(
             "MODELS_NOT_COMPARABLE",
-            "the candidates do not cite one shared split. FR-MODEL-56 compares models "
-            "fitted on the same holdout, and `01` FR-DATA-36 records the split on the parent "
+            "the candidates do not cite one shared split. FR-186 compares models "
+            "fitted on the same holdout, and `01` FR-76 records the split on the parent "
             "version precisely so that 'the same holdout' is one artifact two models cite "
             "rather than two derivations believed to match.",
         )
@@ -256,7 +256,7 @@ def _metrics(
     predicted: Mapping[str, npt.NDArray[np.float64]],
     scheme: Weighting,
 ) -> tuple[ComparisonMetric, ...]:
-    """The aligned table (FR-MODEL-56), recomputed on the shared holdout.
+    """The aligned table (FR-186), recomputed on the shared holdout.
 
     Recomputed rather than read from each model's stored diagnostics, deliberately. Two
     models' diagnostics were computed by two Jobs, and the point of the comparison is that
@@ -345,7 +345,7 @@ def _double_lift(
     The ordering is the chart. Sorting by either model's prediction gives two lift curves
     side by side, which answers "does each model order risk?"; sorting by the ratio answers
     "where they disagree, which one does the data support?" — the question a selection
-    decision actually turns on (`wf-01` E2).
+    decision actually turns on (`WF-698` E2).
 
     Per-bin figures are means **per unit of exposure**, matching `LiftBin` in diagnostics, so
     a reader moving between the two charts is reading the same kind of number.
@@ -398,7 +398,7 @@ def _relativity_differences(
 
     **Only models that have relativities appear**, and with fewer than two the section is
     empty. A booster has no coefficient table: its factor effects are the transparency
-    artifact's GLM approximation (FR-MODEL-34), which is a *different* model fitted for the
+    artifact's GLM approximation (FR-133), which is a *different* model fitted for the
     purpose and would be read here as the GBM's own relativities. An empty section says the
     comparison has nothing to show; a column of nulls beside a GLM would say the GBM priced
     none of these levels, which is false.

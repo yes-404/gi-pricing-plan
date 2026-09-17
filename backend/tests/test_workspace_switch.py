@@ -1,6 +1,6 @@
 """The switcher's endpoints: the unscoped membership list, and the audited switch.
 
-FR-PLAT-63's fourth obligation and the ruling that shapes it (PR #237): the list must be
+FR-396's fourth obligation and the ruling that shapes it (PR #237): the list must be
 readable before a selection exists, and the switch is an explicit, audited act.
 """
 
@@ -18,7 +18,7 @@ from app.main import create_app
 from app.platform import workspaces
 from model_schema import new_uuid7
 
-pytestmark = pytest.mark.req("FR-PLAT-63")
+pytestmark = pytest.mark.req("FR-396")
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def headers(principal) -> dict[str, str]:
 
     The switch endpoints authenticate through `require_identity`, which reads only
     `x-dev-principal-id`; the workspace is a selection these routes must work before
-    (`FR-PLAT-63`'s second amendment, PR #237).
+    (`FR-396`'s second amendment, PR #237).
     """
     return {DEV_PRINCIPAL_HEADER: str(principal.id)}
 
@@ -41,7 +41,7 @@ def headers(principal) -> dict[str, str]:
 async def _add_membership(
     database: Database, user_id, workspace_id, *, name: str
 ) -> None:
-    """Create the workspace and make the principal a member of it (FR-PLAT-62's FK).
+    """Create the workspace and make the principal a member of it (FR-395's FK).
 
     The slug is the one `ensure_workspace` derives from the fresh per-test workspace id
     (`workspaces.py:37-41`). A fixed slug would collide: the suite's isolation is per-test
@@ -85,7 +85,7 @@ async def test_a_service_account_sees_an_empty_list(
     """A Service Account's workspace comes from the account, never a membership row.
 
     Its list is empty rather than an error (`me.py:114-117`): an SA has nothing to choose
-    between, and `FR-PLAT-65` says it never sends the header.
+    between, and `FR-397` says it never sends the header.
     """
     # The creation request travels as a scoped dev caller. The dev path resolves the
     # `Workspace-Id` header against the memberships (W6b-11 Task 8 landed); the header
@@ -113,7 +113,7 @@ async def test_a_service_account_sees_an_empty_list(
 
 
 def test_no_credential_is_unauthenticated(client: TestClient) -> None:
-    """The list is authenticated; anonymous reaches nothing (FR-GOV-1)."""
+    """The list is authenticated; anonymous reaches nothing (FR-342)."""
     response = client.get("/api/v1/me/workspaces")
 
     assert response.status_code == 401
@@ -143,7 +143,7 @@ async def _switch_events(database: Database, workspace_id) -> list[str]:
 async def test_a_switch_is_recorded_in_both_chains(
     client: TestClient, database: Database, principal, headers
 ) -> None:
-    """`06` FR-GOV-24 chains per workspace, so one event answers only half the question.
+    """`06` FR-372 chains per workspace, so one event answers only half the question.
 
     An auditor reconstructing "who was acting where, and when did they stop" reads the
     chain of the workspace they are auditing; the workspace left must record its own side.
@@ -171,7 +171,7 @@ async def test_a_switch_is_recorded_in_both_chains(
 async def test_the_first_selection_writes_one_event(
     client: TestClient, database: Database, principal, headers
 ) -> None:
-    """No chain to leave. `FR-PLAT-63` says one event, not a synthetic departure."""
+    """No chain to leave. `FR-396` says one event, not a synthetic departure."""
     first = new_uuid7()
     await _add_membership(database, principal.id, first, name="Alpha")
 
@@ -187,7 +187,7 @@ async def test_the_first_selection_writes_one_event(
 async def test_a_switch_to_a_non_membership_is_denied(
     client: TestClient, database: Database, principal, headers
 ) -> None:
-    """The choice is checked against the memberships, never taken on trust (FR-PLAT-65)."""
+    """The choice is checked against the memberships, never taken on trust (FR-397)."""
     member, outsider = new_uuid7(), new_uuid7()
     await _add_membership(database, principal.id, member, name="Alpha")
 
@@ -246,7 +246,7 @@ async def test_reselecting_the_current_workspace_writes_one_event(
 
 
 def test_the_header_is_published_on_the_switch_operation(client: TestClient) -> None:
-    """Declared on the route, so the generated client carries it (FR-PLAT-65)."""
+    """Declared on the route, so the generated client carries it (FR-397)."""
     document = client.get("/openapi.json").json()
     operation = document["paths"]["/api/v1/me/workspace"]["post"]
     params = {p["name"]: p for p in operation.get("parameters", [])}

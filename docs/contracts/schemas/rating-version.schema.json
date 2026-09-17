@@ -12,7 +12,7 @@
     "pins": {
       "type": "object",
       "required": ["rate_tables", "models", "reference_tables"],
-      "description": "Nothing resolves 'latest' at scoring time (03 R1, FR-RATE-22).",
+      "description": "Nothing resolves 'latest' at scoring time (03 R1, FR-237).",
       "properties": {
         "rate_tables": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
         "models": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
@@ -47,8 +47,8 @@
     "approval_request_id": {"type": ["string", "null"], "format": "uuid"}
   },
   "invariants": [
-    "status >= approved requires every evidence item the workspace policy demands (FR-RATE-40, 06 §3.3)",
-    "every pin resolves to an artifact whose status is approved or better (FR-OVR-14)",
-    "bundle.content_hash is reproducible from the pins (NFR-RATE-7)"
+    "status >= approved requires every evidence item the workspace policy demands (FR-257, 06 §3.3)",
+    "every pin resolves to an artifact whose status is approved or better (FR-20)",
+    "bundle.content_hash is reproducible from the pins (NFR-495)"
   ]
 }

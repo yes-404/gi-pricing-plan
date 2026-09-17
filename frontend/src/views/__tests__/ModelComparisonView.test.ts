@@ -115,7 +115,7 @@ describe("ModelComparisonView", () => {
     await waitFor(() => expect(screen.getByTestId("metrics")).toBeInTheDocument());
     expect(screen.getByTestId("double-lift")).toBeInTheDocument();
     expect(screen.getByTestId("relativity")).toBeInTheDocument();
-    // FR-DATA-36 makes the shared holdout stored rather than promised, and §4.11 keeps the
+    // FR-76 makes the shared holdout stored rather than promised, and §4.11 keeps the
     // SplitRef "so the claim is checkable by a reader". The reader has to be shown it.
     expect(screen.getByText(/169503/)).toBeInTheDocument();
   });
@@ -174,7 +174,7 @@ describe("ModelComparisonView", () => {
     );
   });
 
-  // FR-MODEL-56 compares "two or more". One id is a diagnostics read, and the endpoint would
+  // FR-186 compares "two or more". One id is a diagnostics read, and the endpoint would
   // 422 it — refusing before the request makes that a sentence rather than a stack trace.
   it("refuses fewer than two ids without calling the API", async () => {
     routeQuery.ids = "11111111-1111-4111-8111-111111111111";

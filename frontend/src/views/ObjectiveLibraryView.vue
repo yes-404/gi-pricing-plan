@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
- * `02` §5.3's Custom objective library, `/objectives` (FR-MODEL-127).
+ * `02` §5.3's Custom objective library, `/objectives` (FR-167).
  *
  * List only. The cell also names an editor with live parse errors, derived gradient/hessian
- * display and a loss-curve preview: under FR-OVR-21 that cell binds nothing, and FR-MODEL-75
+ * display and a loss-curve preview: under FR-24 that cell binds nothing, and FR-150
  * gates `expression` authoring off throughout Phase 1, so a parse-error editor would be a
- * Phase 2 capability. If one is judged necessary, OQ-MODEL-15's floor rule makes it a new
+ * Phase 2 capability. If one is judged necessary, OQ-587's floor rule makes it a new
  * requirement raised at build time, never a silent addition here.
  */
 import { onMounted, ref } from "vue";
@@ -15,8 +15,8 @@ import ArtifactLibraryTable, { type ArtifactRow } from "@/components/ArtifactLib
 
 /**
  * The columns this library declares. Both objective and metric libraries have all five;
- * the peril-structure library declares three, because FR-MODEL-127 gives a Peril Structure no
- * usage count and FR-MODEL-44's applicability is not its concept.
+ * the peril-structure library declares three, because FR-167 gives a Peril Structure no
+ * usage count and FR-153's applicability is not its concept.
  */
 const LIBRARY_COLUMNS = ["slug", "version", "status", "applicability", "usageCount"] as const;
 

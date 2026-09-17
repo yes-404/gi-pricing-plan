@@ -7,9 +7,9 @@ test_gbm.py` proves the fit. What is proven here is everything the platform adds
 * the booster is stored as a blob **in the transaction that writes the model row**, so a
   committed model never references an object nobody wrote;
 * the diagnostics artifact carries the `gbm` block and no `glm` block, which is what makes
-  `Diagnostics.gbm` a measurement rather than a declared field (FR-MODEL-52);
+  `Diagnostics.gbm` a measurement rather than a declared field (FR-174);
 * `POST /model-specs/validate` refuses an unfittable objective **before** a Job exists
-  (FR-MODEL-44), which is the half of that requirement nothing built until now.
+  (FR-153), which is the half of that requirement nothing built until now.
 """
 
 from __future__ import annotations
@@ -118,7 +118,7 @@ async def _fitted_gbm(
 #: A grid dense enough to satisfy `CertificateResult`'s shape and small enough that its
 #: values are never read — both `_certified_metric` and `_certified_objective` below
 #: bypass the real sampling the way `test_custom_metrics.py`'s `_certified` does, so what
-#: is under test is the worker's ref-resolution wiring (FR-MODEL-106/107), not the
+#: is under test is the worker's ref-resolution wiring (FR-159/160), not the
 #: certification maths `test_custom_metrics.py`/`test_custom_objectives.py` already cover.
 _CERTIFY_GRID = SamplingSpec(
     n_points=1_000, y_range=(0.0, 20.0), f_range=(-5.0, 4.0), w_range=(0.01, 10.0), seed=7
@@ -207,11 +207,11 @@ async def _certified_objective(
         return certified
 
 
-@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.req("FR-159")
 async def test_a_certified_custom_metric_is_resolved_and_reaches_the_fit(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """The worker seam `pricing-core` cannot cross (ADR-0001): `metric_service.resolve_ref`
+    """The worker seam `pricing-core` cannot cross (ADR-703): `metric_service.resolve_ref`
     turns the ref the spec names into the artifact `fit_gbm` needs, inside the same
     session the objective resolution already uses. The resolved metric showing up in the
     stored diagnostics' curve is the evidence the wiring reached the fit, not that the
@@ -235,11 +235,11 @@ async def test_a_certified_custom_metric_is_resolved_and_reaches_the_fit(
     assert ref in {point.metric for point in diagnostics.gbm.eval_curve}
 
 
-@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.req("FR-159")
 async def test_a_custom_eval_metric_that_was_not_supplied_fails_the_job(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """ADR-0001 at the worker seam: a ref `eval_metrics` names with no Custom Metric row
+    """ADR-703 at the worker seam: a ref `eval_metrics` names with no Custom Metric row
     behind it is the caller's bug, and `_resolve_metrics` refuses it by name
     (`METRIC_REF_UNRESOLVED`) — the same shape as the unsupplied-objective case, now for
     a metric.
@@ -288,11 +288,11 @@ async def test_a_custom_eval_metric_that_was_not_supplied_fails_the_job(
     assert caught.value.code == "METRIC_REF_UNRESOLVED"
 
 
-@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.req("FR-160")
 async def test_early_stopping_on_a_custom_metric_reaches_fitted_through_the_job(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """The refusal FR-MODEL-45 was deferred behind, retired end to end: a spec pairing a
+    """The refusal FR-154 was deferred behind, retired end to end: a spec pairing a
     Custom Objective with early stopping on a Custom Metric it declares now fits through
     the same Job every other GBM does, rather than hitting the unconditional
     `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED` every such spec used to."""
@@ -321,7 +321,7 @@ async def test_early_stopping_on_a_custom_metric_reaches_fitted_through_the_job(
     assert metric_ref in {point.metric for point in diagnostics.gbm.eval_curve}
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 async def test_a_gbm_fits_through_the_same_job_as_a_glm(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -344,13 +344,13 @@ async def test_a_gbm_fits_through_the_same_job_as_a_glm(
     assert model.fit_result.feature_order == ("area",)
 
 
-@pytest.mark.req("FR-MODEL-31")
+@pytest.mark.req("FR-125")
 async def test_the_booster_is_stored_under_the_digest_the_fit_computed(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-31: content-addressed, and **written in the model's own transaction**.
+    """FR-125: content-addressed, and **written in the model's own transaction**.
 
-    `pricing-core` computes the reference and cannot store the payload (ADR-0001), so the
+    `pricing-core` computes the reference and cannot store the payload (ADR-703), so the
     one failure this has to exclude is a committed model whose `booster_blob` points at an
     object nobody wrote. Reading the bytes back through the store is what proves it.
     """
@@ -365,12 +365,12 @@ async def test_the_booster_is_stored_under_the_digest_the_fit_computed(
 
     payload = await blob_store.read(ref)
     assert len(payload) == ref.bytes_
-    # The backend's own format, readable as itself — ADR-0003's refusal of a pickle is not
+    # The backend's own format, readable as itself — ADR-705's refusal of a pickle is not
     # a convention here, it is what the bytes are.
     assert payload.lstrip().startswith(b"{")
 
 
-@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-174")
 async def test_a_gbm_records_gbm_diagnostics_and_no_glm_block(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -396,18 +396,18 @@ async def test_a_gbm_records_gbm_diagnostics_and_no_glm_block(
     assert diagnostics.gbm.tree_count == 30
     assert diagnostics.gbm.importances
     assert diagnostics.gbm.permutation_importances
-    # FR-MODEL-54: both partitions, always.
+    # FR-183: both partitions, always.
     assert diagnostics.universal.train.ae_overall > 0
     assert diagnostics.universal.holdout.ae_overall > 0
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_an_unsupported_objective_is_a_spec_problem_not_a_failed_job(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
-    """FR-MODEL-44's *objective applicability* half, which nothing built until this slice.
+    """FR-153's *objective applicability* half, which nothing built until this slice.
 
-    `wf-01` D2: the caller learns before any compute is spent. The alternative is a 202, a
+    `WF-698` D2: the caller learns before any compute is spent. The alternative is a 202, a
     queued Job, and a failure three minutes later saying the same thing — which is also
     what `02` §5.3's live validation would render on every keystroke.
     """
@@ -434,16 +434,16 @@ async def test_an_unsupported_objective_is_a_spec_problem_not_a_failed_job(
     assert problem.subject == "rank:pairwise"
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_a_custom_objective_whose_ref_resolves_to_nothing_is_refused(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
     """**This test replaced one that refused every Custom Objective.**
 
-    It asserted the spec was unfittable because "FR-MODEL-38 has not been built at all",
+    It asserted the spec was unfittable because "FR-142 has not been built at all",
     which was true when it was written and is not now: the artifact type, the routes, the
     certify and approval paths and the whole fit path all ship. `02` §5.1 authorised that
-    placeholder conditionally — "a Custom Objective **while FR-MODEL-38 is unbuilt**" —
+    placeholder conditionally — "a Custom Objective **while FR-142 is unbuilt**" —
     and the condition has expired.
 
     What survives is the narrow case the old assertion happened to exercise: this ref
@@ -476,7 +476,7 @@ async def test_a_custom_objective_whose_ref_resolves_to_nothing_is_refused(
     assert problem.subject == "custom_objective:capped-gamma@2"
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_a_certified_custom_objective_is_accepted_before_a_job_exists(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
@@ -515,11 +515,11 @@ async def test_a_certified_custom_objective_is_accepted_before_a_job_exists(
     ]
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_a_draft_custom_objective_is_refused_before_a_job_exists(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
-    """A `draft` objective has no certificate, so FR-MODEL-42 is unsatisfied.
+    """A `draft` objective has no certificate, so FR-146 is unsatisfied.
 
     Written because a §13 mutation deleting the status gate broke **nothing**: every other
     test here uses `_certified_objective`, so the gate was never exercised on a status it
@@ -565,11 +565,11 @@ async def test_a_draft_custom_objective_is_refused_before_a_job_exists(
     assert "draft" in problem.message
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_a_custom_objective_inapplicable_to_the_response_is_refused(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
-    """FR-MODEL-44's applicability half, on the response axis.
+    """FR-153's applicability half, on the response axis.
 
     The objective is Poisson-templated, so its applicability admits `claim_count` alone;
     the spec models `claim_severity`. `fit_gbm` raises `OBJECTIVE_NOT_APPLICABLE` for this
@@ -607,11 +607,11 @@ async def test_a_custom_objective_inapplicable_to_the_response_is_refused(
     assert "models claim_severity" in problem.message
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_a_custom_objective_inapplicable_to_the_backend_is_refused(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
-    """FR-MODEL-44's applicability half, on the backend axis.
+    """FR-153's applicability half, on the backend axis.
 
     An objective narrowed to LightGBM against an XGBoost spec. The narrowing is legal —
     `Applicability.is_within` refuses an author who *widened* the template's, not one who
@@ -650,7 +650,7 @@ async def test_a_custom_objective_inapplicable_to_the_backend_is_refused(
     assert "fits with xgboost" in problem.message
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_a_custom_objective_with_no_declared_response_is_refused(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
@@ -687,11 +687,11 @@ async def test_a_custom_objective_with_no_declared_response_is_refused(
     assert "declares no `response`" in problem.message
 
 
-@pytest.mark.req("FR-MODEL-30")
+@pytest.mark.req("FR-124")
 async def test_early_stopping_uses_the_split_the_spec_declares(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-30 end to end: the worker passes the holdout frame it derived from
+    """FR-124 end to end: the worker passes the holdout frame it derived from
     `split_ref`, so the stopping metric is read off rows the model was not fitted on.
 
     Without the holdout argument `fit_gbm` refuses, so a green result here is the evidence
@@ -708,8 +708,8 @@ async def test_early_stopping_uses_the_split_the_spec_declares(
             session, workspace_id=workspace_id, model_id=model_id
         )
 
-    # The curve is a **diagnostic** (FR-MODEL-52), not part of the fit artifact, and it
-    # carries both partitions (FR-MODEL-54).
+    # The curve is a **diagnostic** (FR-174), not part of the fit artifact, and it
+    # carries both partitions (FR-183).
     assert diagnostics.gbm is not None
     assert diagnostics.gbm.eval_curve
     assert all(p.holdout is not None for p in diagnostics.gbm.eval_curve)
@@ -721,14 +721,14 @@ async def test_early_stopping_uses_the_split_the_spec_declares(
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-132")
 async def test_a_transparency_artifact_is_built_and_read_back(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-33 end to end, through the Job that builds it and the route that reads it.
+    """FR-132 end to end, through the Job that builds it and the route that reads it.
 
     Both halves matter. A `POST` whose artifact nothing can fetch is complete to the
-    endpoint audit and useless to a caller — the omission FR-MODEL-84 was appended to close.
+    endpoint audit and useless to a caller — the omission FR-139 was appended to close.
     """
     from app.platform import transparency as transparency_service
 
@@ -757,15 +757,15 @@ async def test_a_transparency_artifact_is_built_and_read_back(
     assert artifact.glm_approximation is not None
     assert artifact.shap_summary is not None
     assert artifact.shap_summary.sample_rows <= 2_000
-    # FR-MODEL-36: prose that says where, not a score that says how much.
+    # FR-136: prose that says where, not a score that says how much.
     assert "%" in artifact.fidelity_statement
 
 
-@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-132")
 async def test_a_glm_is_refused_a_transparency_artifact(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-33 applies to **non-GLM** models, and the refusal is the interesting half.
+    """FR-132 applies to **non-GLM** models, and the refusal is the interesting half.
 
     A GLM approximating itself would report perfect fidelity — an artifact that satisfies
     R3 and carries no information, which is worse than none because it reads as evidence.
@@ -805,7 +805,7 @@ async def test_a_glm_is_refused_a_transparency_artifact(
     assert refusal.value.status_code == 409
 
 
-@pytest.mark.req("FR-MODEL-84")
+@pytest.mark.req("FR-139")
 async def test_a_model_with_no_artifact_reports_that_rather_than_an_empty_one(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -830,11 +830,11 @@ async def test_a_model_with_no_artifact_reports_that_rather_than_an_empty_one(
     assert "POST /api/v1/models/{id}/transparency" in str(missing.value)
 
 
-@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-132")
 async def test_a_second_artifact_appends_rather_than_replacing(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-33 allows several, and FR-MODEL-36 makes each one evidence.
+    """FR-132 allows several, and FR-136 makes each one evidence.
 
     A re-sampled SHAP summary is a second artifact, not a correction of the first: an
     approval that cited the earlier one must still resolve to what the approver read. The
@@ -869,19 +869,19 @@ async def test_a_second_artifact_appends_rather_than_replacing(
     assert ids[0] != ids[1], "the second build replaced the first instead of appending"
 
 
-@pytest.mark.req("FR-MODEL-89")
+@pytest.mark.req("FR-211")
 async def test_a_gbm_cannot_reach_review_until_an_artifact_names_it(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """`02` §4.8 R3, enforced in the direction the link actually runs (FR-MODEL-89).
+    """`02` §4.8 R3, enforced in the direction the link actually runs (FR-211).
 
     R3 used to read `⟹ transparency_artifact_id set`, and could not be enforced: the
     artifact carries `model_id` and nothing writes a column back onto the model, so the
     invariant was a field-set claim about a field nobody populates — the same shape as
-    `status ≥ fitted ⟹ diagnostics_id`, which is the failure OQ-MODEL-8 was written around.
+    `status ≥ fitted ⟹ diagnostics_id`, which is the failure OQ-582 was written around.
 
     Both halves are asserted, because the refusal alone would pass against a build that
-    refuses every GBM submission. FR-MODEL-64 puts the gate at `review` rather than at
+    refuses every GBM submission. FR-202 puts the gate at `review` rather than at
     `approved`: an approver's attention should not be spent on a model that was never
     eligible.
     """

@@ -1,21 +1,21 @@
-"""GLM fitting with `glum` (`02` FR-MODEL-18..23, §5.2).
+"""GLM fitting with `glum` (`02` FR-110, FR-111, FR-112, FR-113, FR-114, FR-115, §5.2).
 
 What this module owes its caller, in the spec's own terms:
 
-* **FR-MODEL-19** — the actuarial defaults are applied by the *spec*, not here: frequency
+* **FR-111** — the actuarial defaults are applied by the *spec*, not here: frequency
   is Poisson, log link, `offset = log(exposure)`, and `GlmSpec` refuses a Poisson model
   with no offset at the type. A fit function that silently supplied a default would make
-  the override invisible, and FR-MODEL-19 requires an override to be recorded.
-* **FR-MODEL-21** — every coefficient carries estimate, standard error, z, p-value and a
+  the override invisible, and FR-111 requires an override to be recorded.
+* **FR-113** — every coefficient carries estimate, standard error, z, p-value and a
   95 % interval, and every categorical factor gets a relativity table with the base level
   marked. Not optional extras: `02` R5 makes uncertainty part of what an estimate *is*.
-* **FR-MODEL-23** — non-convergence, rank deficiency and separation are **named errors**
+* **FR-115** — non-convergence, rank deficiency and separation are **named errors**
   with the offending terms identified. The failure mode this exists to prevent is a
   degenerate fit returned as though it were a result. Those three are the conditions the
   requirement names; every *other* refusal `glum` raises is named too, as
   `GLM_FIT_FAILED`, because a library traceback reaching the caller is the same failure
   wearing a different coat.
-* **ADR-0003** — what comes back is data. No estimator is returned, pickled or stored; a
+* **ADR-705** — what comes back is data. No estimator is returned, pickled or stored; a
   Model must be re-scorable by a process that never imported `glum`.
 """
 
@@ -75,23 +75,23 @@ _NORMAL_975 = 1.959963984540054
 _SEPARATION_ETA = 20.0
 
 #: The covariance blob is JSON, for the reason the booster is `xgboost_json` and never a
-#: pickle (ADR-0003): a stored artifact must be readable by something that did not fit it.
+#: pickle (ADR-705): a stored artifact must be readable by something that did not fit it.
 COVARIANCE_MEDIA_TYPE = "application/json"
 
 PROFILE_CI_CUTOFF: float = float(stats.chi2.ppf(0.95, 1))
-# FR-MODEL-22: the 95% profile-likelihood interval keeps the powers whose log-likelihood
+# FR-114: the 95% profile-likelihood interval keeps the powers whose log-likelihood
 # is within chi2_0.95(1)/2 of the maximum — the likelihood-ratio cutoff with one degree
 # of freedom, the power itself.
 
 
 class GlmFitError(RuntimeError):
-    """A fit that cannot be returned as a result (FR-MODEL-23).
+    """A fit that cannot be returned as a result (FR-115).
 
     `code` is the platform error code the API surfaces: `GLM_DID_NOT_CONVERGE`,
-    `GLM_RANK_DEFICIENT`, `GLM_SEPARATION_DETECTED` — the three conditions FR-MODEL-23
+    `GLM_RANK_DEFICIENT`, `GLM_SEPARATION_DETECTED` — the three conditions FR-115
     names — or `GLM_FIT_FAILED`, the residual code for a library refusal that is none of
     them. Every one of these is a fit that *cannot be returned*; a code carried as data
-    because `pricing-core` cannot import the backend's registry (ADR-0001).
+    because `pricing-core` cannot import the backend's registry (ADR-703).
     """
 
     def __init__(self, code: str, message: str, *, terms: Sequence[str] = ()) -> None:
@@ -103,10 +103,10 @@ class GlmFitError(RuntimeError):
 @dataclass(frozen=True)
 class GlmFit:
     """What a GLM fit returns: the artifact, the covariance bytes it addresses, and — when
-    `spec.select_by == "cv"` — the cross-validation diagnostics (FR-MODEL-20, FR-MODEL-53).
+    `spec.select_by == "cv"` — the cross-validation diagnostics (FR-112, FR-182).
 
     Two values rather than one for the reason `GbmFit` is two — `pricing-core` cannot store
-    a blob (ADR-0001) and the artifact cannot hold a `p x p` matrix (`02` §4.8, and the
+    a blob (ADR-703) and the artifact cannot hold a `p x p` matrix (`02` §4.8, and the
     field comment on `covariance_blob`). The `BlobRef` inside `result` is already complete,
     because a content-addressed reference is a pure function of the payload, so the caller's
     job is to store `covariance_bytes` under that digest — and a caller that forgets has a
@@ -128,7 +128,7 @@ def encode_covariance(terms: Sequence[str], matrix: npt.NDArray[np.float64]) -> 
     matrix is positional, and `x'Vx` computed against a design built in a different order
     is a variance for a model nobody fitted — which comes out a plausible positive number,
     so nothing downstream would catch it. Storing the names lets the scorer *assert* the
-    order it is about to use, which is what FR-MODEL-71 does for the GBM's `base_margin`
+    order it is about to use, which is what FR-126 does for the GBM's `base_margin`
     and for the same reason: the silent failure is the one worth a byte.
 
     Canonical JSON — sorted keys, no incidental whitespace — because the digest is taken
@@ -158,7 +158,7 @@ def decode_covariance(
     covariance matrix is positional: pair it with a design built in a different order and
     `x'Vx` is the variance of a linear combination nobody estimated. That comes out a
     plausible positive number, so no downstream assertion catches it and the interval is
-    simply wrong — the failure mode FR-MODEL-71 guards for the GBM's `base_margin`, in the
+    simply wrong — the failure mode FR-126 guards for the GBM's `base_margin`, in the
     other direction.
 
     `terms` is the caller's expected order, intercept first, as `encode_covariance` wrote it.
@@ -237,7 +237,7 @@ def _design(
     """One-hot the categoricals, base level excluded, and keep the mapping.
 
     Built here rather than handed to `glum`'s formula interface so the base level is a
-    decision this module makes and records — FR-MODEL-21 requires the base to be *marked*,
+    decision this module makes and records — FR-113 requires the base to be *marked*,
     and a base chosen inside a library is one nobody can point at.
     """
     frame = matrix.frame
@@ -272,7 +272,7 @@ def _fit_cv_path(
 ) -> tuple[float, CrossValidationDiagnostics]:
     """Score every alpha in `spec.cv.alphas` over `spec.cv.folds` held-out folds, and
     return the alpha with the lowest mean held-out deviance alongside the full scanned
-    path (FR-MODEL-20, FR-MODEL-53).
+    path (FR-112, FR-182).
 
     Refits `len(cv.alphas) * cv.folds` times against the same design `fit_glm` already
     built for the final fit — CV selects the penalty a single fit at that alpha would use,
@@ -367,7 +367,7 @@ def _profile_log_likelihood(
     phi: float,
     power: float,
 ) -> float:
-    """FR-MODEL-22: the profile log-likelihood at one scanned power.
+    """FR-114: the profile log-likelihood at one scanned power.
 
     L = sum_i w_i log f(y_i; mu_i, phi, power), weights 1.0 when none are declared — the
     log-likelihood of the data under the Tweedie series density at the fitted mean and
@@ -392,7 +392,7 @@ def _estimate_tweedie_power(
     weights: np.ndarray | None,
     report: ProgressCallback,
 ) -> TweediePowerFit:
-    """FR-MODEL-22: the Tweedie power by profile likelihood over `spec.tweedie.p_grid`.
+    """FR-114: the Tweedie power by profile likelihood over `spec.tweedie.p_grid`.
 
     Refits the GLM once per scanned power with the power fixed, and scores each refit by
     the profile log-likelihood L(p) = sum_i w_i log f(y_i; mu_i(p), phi_hat(p), p) of
@@ -443,7 +443,7 @@ def _estimate_tweedie_power(
             f"the profile over tweedie.p_grid={tuple(grid)} is maximised at its "
             f"{'first' if best is curve[0] else 'last'} point ({best.power}), so the "
             "maximum lies at or beyond the scan's edge — not an estimate. Widen the grid "
-            "towards the maximum or reconsider the model (FR-MODEL-22).",
+            "towards the maximum or reconsider the model (FR-114).",
         )
     lo, hi = _profile_ci(curve, best.log_likelihood - PROFILE_CI_CUTOFF / 2.0, best.power)
     return TweediePowerFit(
@@ -456,7 +456,7 @@ def _profile_ci(
     threshold: float,
     estimate: float,
 ) -> tuple[float, float]:
-    """FR-MODEL-22: the powers where the profile log-likelihood crosses the threshold,
+    """FR-114: the powers where the profile log-likelihood crosses the threshold,
     linearly interpolated between scanned points. The profile is a hill around its
     maximum on a fine enough grid, so exactly two crossings exist: ascending on the left
     arm (the lower bound), descending on the right arm (the upper bound)."""
@@ -493,28 +493,28 @@ def _model_offset(
     data: pl.DataFrame, spec: GlmSpec, model_offset: np.ndarray | None
 ) -> np.ndarray:
     """The `kind="model"` offset: the referenced model's linear predictor, which
-    pricing-core cannot resolve itself — the caller supplies it (FR-MODEL-24). Missing
+    pricing-core cannot resolve itself — the caller supplies it (FR-116). Missing
     it would fit as though no offset were declared: named, never silent."""
     if model_offset is None:
         raise GlmFitError(
             "MODEL_OFFSET_MISSING",
             "offset kind 'model' requires the resolved offset array (model_offset), and "
             "none was supplied. The fit job resolves offset_model_ref before fitting "
-            "(FR-MODEL-24).",
+            "(FR-116).",
             terms=[str(spec.offset.offset_model_ref)],
         )
     if model_offset.shape != (data.height,):
         raise GlmFitError(
             "MODEL_OFFSET_MISSING",
             f"model_offset has {model_offset.shape[0]} rows for {data.height} data rows "
-            "(FR-MODEL-24).",
+            "(FR-116).",
             terms=[str(spec.offset.offset_model_ref)],
         )
     if not np.all(np.isfinite(model_offset)):
         raise GlmFitError(
             "MODEL_OFFSET_MISSING",
             "model_offset carries non-finite values; the referenced model's linear "
-            "predictor must be finite (FR-MODEL-24).",
+            "predictor must be finite (FR-116).",
             terms=[str(spec.offset.offset_model_ref)],
         )
     return np.asarray(model_offset, dtype=np.float64)
@@ -534,19 +534,19 @@ def fit_glm(
 
     `factors`, `bandings` and `groupings` are passed explicitly rather than read from the
     spec's ids: `pricing-core` resolves shapes, not references — looking one up would need
-    a database, which ADR-0001 forbids this package.
+    a database, which ADR-703 forbids this package.
 
     `spec.seed` is the only seed, because it is what `spec_hash` pins — the spec alone must
-    reproduce the fit (NFR-MODEL-6). There is no `seed` argument: one existed, was read by
-    nothing, and was removed 2026-08-22 (OQ-MODEL-29, FR-MODEL-123).
+    reproduce the fit (NFR-481). There is no `seed` argument: one existed, was read by
+    nothing, and was removed 2026-08-22 (OQ-599, FR-179).
 
     When the spec carries `tweedie`, the Tweedie power is estimated by profile likelihood
     over `tweedie.p_grid` and recorded with its 95% profile-likelihood interval on
-    `.result.tweedie` (FR-MODEL-22).
+    `.result.tweedie` (FR-114).
 
     `progress` is `00` §5.5's injected callback. It was dropped from this signature during
     the spine and a long fit then sat at one fraction for its whole duration, which is the
-    failure FR-PLAT-8 exists to prevent. The stages are the four that actually take time,
+    failure FR-400 exists to prevent. The stages are the four that actually take time,
     reported before each rather than after, so the label names what is happening now.
     """
     from glum import GeneralizedLinearRegressor, TweedieLink
@@ -579,7 +579,7 @@ def fit_glm(
             raise GlmFitError(
                 "OFFSET_REQUIRED_FOR_FREQUENCY",
                 f"{spec.offset.column!r} has non-positive values, and log(exposure) is the "
-                "offset (FR-MODEL-19). A row with zero exposure contributes no information "
+                "offset (FR-111). A row with zero exposure contributes no information "
                 "and must be filtered before fitting, not silently logged.",
             )
         offset = np.log(exposure)
@@ -595,7 +595,7 @@ def fit_glm(
     # `glum` has no `"inverse"` spelling. Its link vocabulary is identity/log/logit/cloglog/
     # tweedie, and the string reaches `fit` unrecognised and raises a bare `ValueError` from
     # inside the library. The link is not missing, only unnamed: `TweedieLink(p)` is
-    # `mu**(1-p)`, so `TweedieLink(2)` **is** `1/mu`. FR-MODEL-18 declares `inverse`
+    # `mu**(1-p)`, so `TweedieLink(2)` **is** `1/mu`. FR-110 declares `inverse`
     # supported and `GlmSpec.link` accepts it, and `predict._inverse_link` has always
     # implemented it — the gap was here, in the translation, and it killed every Gamma fit
     # on the canonical link at `estimator.fit`.
@@ -649,7 +649,7 @@ def fit_glm(
             estimator.fit(x, response, sample_weight=weights, offset=offset)
     except np.linalg.LinAlgError as exc:
         # `glum` raises this from its own solve when the design is singular. Translated
-        # rather than propagated: FR-MODEL-23 requires a *named* error with the offending
+        # rather than propagated: FR-115 requires a *named* error with the offending
         # terms, and a library traceback names an internal slice index instead.
         raise GlmFitError(
             "GLM_RANK_DEFICIENT",
@@ -744,18 +744,18 @@ def _covariance(
     offset: np.ndarray | None,
     weights: np.ndarray | None,
 ) -> npt.NDArray[np.float64]:
-    """`V`, the coefficient covariance matrix — FR-MODEL-21's errors and FR-MODEL-63's.
+    """`V`, the coefficient covariance matrix — FR-113's errors and FR-194's.
 
     **This replaced a call to `estimator.std_errors()`, and costs nothing extra.** glum's
     `std_errors` is defined as `sqrt(covariance_matrix(...).diagonal())` — verified against
     the installed source, not assumed — so the matrix was already being computed on every
-    fit and everything off the diagonal thrown away. FR-MODEL-63's interval needs
+    fit and everything off the diagonal thrown away. FR-194's interval needs
     `x'Vx`, which is off-diagonal: `Var(sum b_j x_j)` is not the sum of the coefficient
     variances unless the estimates are independent, which for a design with a shared
     intercept they never are. Keeping what was already computed is the whole change.
 
     `robust=False` is explicit because **glum's default is `True`** — the HC-1 sandwich.
-    That is a defensible estimator and a different one, and FR-MODEL-21 asks for the
+    That is a defensible estimator and a different one, and FR-113 asks for the
     model-based standard error that pairs with the z and p-value beside it.
 
     The ordering is glum's: index 0 is the intercept, then the design columns in order.
@@ -871,7 +871,7 @@ def _coefficients(
 
 
 def _refuse_separation(coefficients: Sequence[Coefficient]) -> None:
-    """FR-MODEL-23 names separation; nothing detected it.
+    """FR-115 names separation; nothing detected it.
 
     A perfectly separated logit returned `converged=True` with a coefficient of **640** and
     p=0 — a degenerate fit presented as a result, which is the failure the requirement
@@ -927,7 +927,7 @@ def _relativities(
     *,
     link: str,
 ) -> dict[str, tuple[RelativityLevel, ...]]:
-    """The table an actuary reads: one row per level, base marked (FR-MODEL-21).
+    """The table an actuary reads: one row per level, base marked (FR-113).
 
     The base carries relativity 1.0 by construction — it is what everything else is
     expressed against, and showing it blank is how a reader ends up thinking a factor has

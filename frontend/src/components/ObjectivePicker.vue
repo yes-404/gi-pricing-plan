@@ -1,14 +1,14 @@
 <script setup lang="ts">
 /**
- * The GBM arm's objective: one of FR-MODEL-26's builtins, or an approved-enough Custom
- * Objective (FR-MODEL-38, FR-MODEL-44).
+ * The GBM arm's objective: one of FR-120's builtins, or an approved-enough Custom
+ * Objective (FR-142, FR-153).
  *
  * Emits a `GbmFunctionRef`, whose validator makes the two arms mutually exclusive —
  * `kind: "builtin"` carries a `name` and no `ref`, `kind: "custom"` a `ref` and no `name`,
  * because "the fit path would have to choose, and two runs could choose differently".
  *
- * **GBM only.** `GlmSpec` has no `custom_objective_ref`; FR-MODEL-87 records it "absent
- * entirely" with **W30** as owner — Phase 2, reassigned 2026-08-22 — and
+ * **GBM only.** `GlmSpec` has no `custom_objective_ref`; FR-207 records it "absent
+ * entirely" with **WK-690** as owner — Phase 2, reassigned 2026-08-22 — and
  * `test_contracts.py` allowlists the divergence deliberately. A governed gap, not a §0
  * disagreement — and nothing here hints that custom
  * objectives are coming to the GLM arm, because that would assert a schedule no
@@ -33,7 +33,7 @@ import {
 
 const props = defineProps<{
   modelValue: GbmFunctionRef;
-  /** The spec's response. Custom objectives declare which they apply to (FR-MODEL-44). */
+  /** The spec's response. Custom objectives declare which they apply to (FR-153). */
   response: ResponseKind | "";
   /** `xgboost` or `lightgbm` — the spec's `model_type`, an applicability axis too. */
   backend: string;
@@ -67,10 +67,10 @@ function approvable(objective: CustomObjective): boolean {
 }
 
 /**
- * Applicable to the spec as it stands (FR-MODEL-44).
+ * Applicable to the spec as it stands (FR-153).
  *
  * Filtered here rather than by the server because the route cannot: its query is `status`,
- * `slug`, `cursor`, `limit`. That is OQ-MODEL-35, and `truncated` is how this picker
+ * `slug`, `cursor`, `limit`. That is OQ-605, and `truncated` is how this picker
  * admits the consequence rather than hiding it.
  *
  * With no response chosen, nothing is offered — not everything. A custom objective

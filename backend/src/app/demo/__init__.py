@@ -1,4 +1,4 @@
-"""The demo entrance (FR-PLAT-53) and its derived guide (FR-PLAT-54)."""
+"""The demo entrance (FR-408) and its derived guide (FR-409)."""
 
 from app.demo.guide import build_guide
 

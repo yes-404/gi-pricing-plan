@@ -63,7 +63,7 @@ describe("the /models routes", () => {
     expect(resolved.params.slug).toBe("motor-ad-frequency");
   });
 
-  // Two params, and the backtest id is the one that addresses the read (FR-MODEL-92) — the
+  // Two params, and the backtest id is the one that addresses the read (FR-94) — the
   // slug is only the breadcrumb. Asserted by resolution rather than declaration order, which
   // is the property that survives the list being reordered.
   it("resolves a backtest to its own view, with both params", () => {

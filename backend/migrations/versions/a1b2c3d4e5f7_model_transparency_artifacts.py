@@ -1,14 +1,14 @@
 """modelling: the transparency artifact
 
-`02` FR-MODEL-33..37 and R3 — fitting a black box is allowed, pricing with an unexplained
+`02` FR-132, FR-133, FR-134, FR-136, FR-140 and R3 — fitting a black box is allowed, pricing with an unexplained
 one is not. This is where the explanation lives.
 
-**Insert-only at the privilege layer** (FR-DATA-42), like `diagnostics` and
-`model_comparisons`: FR-MODEL-36 makes this the evidence a Rating Version's approval is
+**Insert-only at the privilege layer** (FR-43), like `diagnostics` and
+`model_comparisons`: FR-136 makes this the evidence a Rating Version's approval is
 granted against, and evidence that can change after the decision is not evidence.
 
 **No unique constraint on `model_id`**, which is where this differs from `diagnostics`.
-FR-MODEL-33 says *at least one* artifact and allows both forms; a SHAP summary recomputed
+FR-132 says *at least one* artifact and allows both forms; a SHAP summary recomputed
 on a larger sample is a second artifact, not a correction of the first. The read path takes
 the most recent, and the older rows stay because an approval that cited one must still
 resolve to it.

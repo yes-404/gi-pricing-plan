@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/common/money.schema.json",
   "title": "Money and decimal primitives",
-  "description": "Money is integer minor units or a decimal string; never a fractional JSON number (FR-OVR-7).",
+  "description": "Money is integer minor units or a decimal string; never a fractional JSON number (FR-10).",
   "$defs": {
     "MoneyMinor": {
       "type": "integer",

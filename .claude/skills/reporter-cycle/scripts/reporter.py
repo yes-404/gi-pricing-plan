@@ -31,7 +31,7 @@ LONDON = ZoneInfo("Europe/London")
 
 DEFAULT_CHANNEL = "C0BSYRQ6NGM"  # #claude-code-update
 
-# Ruling 106 (2026-09-04), rule 1: a routine post is at most this many words, counted over
+# RL-1059 (2026-09-04), rule 1: a routine post is at most this many words, counted over
 # the whole rendered body. The ETA headline (and its staleness annotation) is exempt from
 # truncation — see `_truncate_to_word_cap`.
 MAX_ROUTINE_POST_WORDS = 100
@@ -41,7 +41,7 @@ MAX_ROUTINE_POST_WORDS = 100
 # pushes the final post back over the cap.
 _TRUNCATION_MARKER_WORD_COST = 3
 
-# Ruling 106 (2026-09-04), rule 2: the ETA headline must name a clock time in BST — a bare
+# RL-1059 (2026-09-04), rule 2: the ETA headline must name a clock time in BST — a bare
 # duration ("~2 hours", "soon") is rejected. Optionally followed by a `YYYY-MM-DD` date.
 _BST_CLOCK_TIME_PATTERN = re.compile(r"\b\d{1,2}:\d{2}\s*BST\b(?:\s+\d{4}-\d{2}-\d{2})?")
 
@@ -223,7 +223,7 @@ def get_eta(eta_file: Path, now: datetime) -> tuple[str | None, bool | None]:
     stamp parses and is compared against `now`; it is `None` when a headline was found but
     the stamp was not, so the caller can say staleness is unknown instead of guessing.
 
-    Ruling 106 (2026-09-04), rule 2: a headline naming no `HH:MM BST` clock time (optionally
+    RL-1059 (2026-09-04), rule 2: a headline naming no `HH:MM BST` clock time (optionally
     followed by `YYYY-MM-DD`) is never returned as given — a bare duration ("~2 hours",
     "soon") is rejected in favour of the fixed `ETA_MALFORMED_MESSAGE`, with `stale=None`
     (the staleness annotation describes the lead's actual ETA text, which this is not).
@@ -266,7 +266,7 @@ def get_eta(eta_file: Path, now: datetime) -> tuple[str | None, bool | None]:
 
 def get_eta_main_sha(eta_file: Path) -> str | None:
     """Read eta.md's `**main:**` field: the `origin/main` sha the lead derived the current
-    ETA against (Ruling 106, 2026-09-04, rule 3). Beside `**Updated:**`, e.g.
+    ETA against (RL-1059, 2026-09-04, rule 3). Beside `**Updated:**`, e.g.
     ``**main:** `ad51906` `` — the backticks are optional, a bare short or full sha also
     parses. `None` covers a missing file, an unreadable one, or a file with no `main:`
     field — the same "unknown, never guessed" contract as `get_eta_updated`.
@@ -287,7 +287,7 @@ def check_main_staleness(
     """Return the stale-ETA line when eta.md's recorded `main:` sha disagrees with the live
     `origin/main` tip, or `None` when they agree or either side is unknown (never guessed).
 
-    Ruling 106 (2026-09-04), rule 3: the ETA is refreshed on every move of `origin/main`'s
+    RL-1059 (2026-09-04), rule 3: the ETA is refreshed on every move of `origin/main`'s
     HEAD, and that refresh is the lead's own work, not the reporter's. This is the backstop
     that makes a missed refresh visible to a reader — not the mechanism itself. The
     comparison is prefix-based, since `eta_main_sha` is typically the 7-char short sha the
@@ -513,7 +513,7 @@ def _truncate_to_word_cap(headline_lines: list[str], body_lines: list[str]) -> s
     """Truncate `body_lines` (the PR and merged-commit sections) to fit the whole post
     under `MAX_ROUTINE_POST_WORDS`, appending `(+N words cut)`.
 
-    Ruling 106 (2026-09-04), rule 1: the ETA headline (`headline_lines`) is never
+    RL-1059 (2026-09-04), rule 1: the ETA headline (`headline_lines`) is never
     truncated — a half-cut ETA is worse than a full one with less context around it — so
     only the non-headline sections are candidates for the cut. `words_cut` counts every
     word actually dropped from the original body, computed as a difference so it stays
@@ -562,7 +562,7 @@ def format_routine_post(
     (no prior post to diff against), `"unchanged"`, or `"changed"` — see `main`, which
     derives it from `get_remote_main_sha` and `get_last_reported_sha`.
 
-    Ruling 106 (2026-09-04), rule 1: the whole rendered body is capped at
+    RL-1059 (2026-09-04), rule 1: the whole rendered body is capped at
     `MAX_ROUTINE_POST_WORDS` words. Over the cap, the non-headline sections (PR list,
     merged-commit list) are truncated first — the ETA headline never is — and a
     `(+N words cut)` marker is appended. See `_truncate_to_word_cap`.
@@ -613,7 +613,7 @@ def main() -> int:
         merged_status = "changed"
         merged_subjects = get_merged_subjects(repo_dir, last_sha, remote_sha)
 
-    # Ruling 106 (2026-09-04), rule 3: if eta.md's own `main:` field has fallen behind
+    # RL-1059 (2026-09-04), rule 3: if eta.md's own `main:` field has fallen behind
     # `origin/main`'s live tip, the carried-forward headline is replaced with a stale-ETA
     # line rather than posted as if it were still current. The lead's own obligation is to
     # re-derive eta.md on every merge; this is only the backstop that makes a missed

@@ -1,9 +1,9 @@
 """Rate-table operations (03 §3.3, slices W10-2 and W10-3B): seeding, validation,
-cell diffs, the four bulk operations of FR-RATE-18, and the CSV/XLSX import/export
-of FR-RATE-20.
+cell diffs, the four bulk operations of FR-233, and the CSV/XLSX import/export
+of FR-235.
 
-The pricing actions behind FR-RATE-16 (seed a table from an approved model),
-FR-RATE-19 (validation on save, checked before the version persists) and FR-RATE-17
+The pricing actions behind FR-230 (seed a table from an approved model),
+FR-234 (validation on save, checked before the version persists) and FR-231
 (cell-level diffs with exposure weighting). Pure operations: cells are rows of
 decimal strings (R2), exposure weights are supplied by the caller at diff-fetch time
 (DP1), and no persistence happens here. Each bulk operation returns a new immutable
@@ -65,7 +65,7 @@ NULL_VALUE = "NULL_VALUE"
 OUT_OF_BOUNDS = "OUT_OF_BOUNDS"
 DUPLICATE_KEY = "DUPLICATE_KEY"
 
-#: W10-3B's named failure codes (03 §5.2, FR-RATE-18/20/62). Internal codes: the API
+#: W10-3B's named failure codes (03 §5.2, FR-233/235/232). Internal codes: the API
 #: maps them onto 03 §5.1's module error codes at the boundary.
 PARQUET_CELLS_UNAVAILABLE = "PARQUET_CELLS_UNAVAILABLE"
 FILTER_UNKNOWN_KEY = "FILTER_UNKNOWN_KEY"
@@ -111,7 +111,7 @@ class ImportResult:
 
 
 def check_model_approved(model: Model) -> None:
-    """FR-OVR-14: only an approved (or better) model may seed a rate table."""
+    """FR-20: only an approved (or better) model may seed a rate table."""
     if model.status not in _APPROVED_OR_BETTER:
         raise ValueError(
             f"PIN_NOT_APPROVED: model {model.model_family_slug}@{model.version} "
@@ -124,7 +124,7 @@ def _glm_relativities(
 ) -> dict[str, tuple[RelativityLevel, ...]]:
     """The GLM relativity table, or a named refusal for any other fit kind.
 
-    Only `GlmFitResult` carries per-level relativities (ADR-0003): a GBM or EBM fit has
+    Only `GlmFitResult` carries per-level relativities (ADR-705): a GBM or EBM fit has
     nothing to seed a rate table from. Raised as a plain message rather than a coded
     one so the API's boundary maps it to `VALIDATION_FAILED` — the code shape is
     reserved for codes the owning spec enumerates.
@@ -142,7 +142,7 @@ def _glm_relativities(
 def extract_relativity_table(
     model: Model, *, value_name: str = "relativity"
 ) -> list[CellRow]:
-    """The model's factor relativities as cell rows (FR-RATE-16).
+    """The model's factor relativities as cell rows (FR-230).
 
     Levels without a relativity (non-log links) are skipped: they have nothing to
     seed, and seeding 1.0 there would fabricate a technical rate. Values are
@@ -174,7 +174,7 @@ def seed_from_model(
     rateable: bool = True,
     value_name: str = "relativity",
 ) -> SeedResult:
-    """Seed a rate table from an approved model (FR-RATE-16, plan §Slice W10-2 T1).
+    """Seed a rate table from an approved model (FR-230, plan §Slice W10-2 T1).
 
     Builds the table definition from the model's factor relativities, validates the
     extracted cells (T3's check runs before the version persists), and pins the seed
@@ -224,7 +224,7 @@ def seed_from_model(
 def _value_issue(
     row: CellRow, value: RateTableValue, key_names: Sequence[str]
 ) -> ValidationIssue | None:
-    """The value half of FR-RATE-19 for one row: non-null, decimal, in bounds.
+    """The value half of FR-234 for one row: non-null, decimal, in bounds.
 
     Shared by save-time validation and by the bulk operations' result check (03 §5.2:
     each operation validates the result before persisting).
@@ -274,7 +274,7 @@ def validate_rate_table(
     key_domains: Mapping[str, frozenset[str]],
     default_row: CellRow | None = None,
 ) -> list[ValidationIssue]:
-    """FR-RATE-19: named validation, checked before the version persists.
+    """FR-234: named validation, checked before the version persists.
 
     Coverage is the Cartesian product of the declared key domains unless an explicit
     `default_row` waives it. Every row must have a non-null, in-bounds decimal value,
@@ -335,7 +335,7 @@ def _compute_diff(
     value: RateTableValue,
     weights: Weights | None,
 ) -> RateTableDiff:
-    """The shared core of diff_vs_previous and diff_vs_seed (FR-RATE-17).
+    """The shared core of diff_vs_previous and diff_vs_seed (FR-231).
 
     A cell counts as changed when its value differs from the baseline; an added or
     removed key counts. Percentage statistics cover cells comparable in both
@@ -388,7 +388,7 @@ def diff_vs_previous(
     *,
     weights: Weights | None = None,
 ) -> RateTableDiff:
-    """Diff against the immediately prior version (FR-RATE-17)."""
+    """Diff against the immediately prior version (FR-231)."""
     return _compute_diff(previous_cells, current_cells, keys, value, weights)
 
 
@@ -400,14 +400,14 @@ def diff_vs_seed(
     *,
     weights: Weights | None = None,
 ) -> RateTableDiff:
-    """Diff against the seed origin, the technical rate (FR-RATE-16/17)."""
+    """Diff against the seed origin, the technical rate (FR-230/231)."""
     return _compute_diff(seed_cells, current_cells, keys, value, weights)
 
 
 def _rows_of(table: RateTableVersion) -> list[CellRow]:
     """The version's cells as rows, or a named refusal when storage hides them.
 
-    Parquet-stored versions keep their cells as a blob (FR-RATE-62); the pricing core
+    Parquet-stored versions keep their cells as a blob (FR-232); the pricing core
     is the pure engine and reads inline rows only, so every operation refuses the blob
     with PARQUET_CELLS_UNAVAILABLE rather than pretending it can open it.
     """
@@ -426,7 +426,7 @@ def _key_domains_of_version(
 
 
 def _validate_result(rows: Cells, table: RateTableVersion) -> None:
-    """FR-RATE-19 on an operation's result: the first named issue is the refusal."""
+    """FR-234 on an operation's result: the first named issue is the refusal."""
     issues = validate_rate_table(
         rows,
         table.keys,
@@ -503,17 +503,17 @@ def _row_matches(row: CellRow, filter: KeyFilter) -> bool:
 def decide_storage_mode(
     cell_count: int, threshold: int = 250_000
 ) -> Literal["rows", "parquet"]:
-    """FR-RATE-62: rows storage at or below the threshold, parquet above it."""
+    """FR-232: rows storage at or below the threshold, parquet above it."""
     return "parquet" if cell_count > threshold else "rows"
 
 
 def uplift_table(
     table: RateTableVersion, *, percentage: Decimal
 ) -> RateTableVersion:
-    """FR-RATE-18: multiply every cell by (1 + percentage), new immutable version.
+    """FR-233: multiply every cell by (1 + percentage), new immutable version.
 
     The result is validated against the declared bounds before it persists
-    (FR-RATE-19), and the version records the operation (04 §4.4).
+    (FR-234), and the version records the operation (04 §4.4).
     """
     rows = _rows_of(table)
     factor = Decimal(1) + percentage
@@ -535,7 +535,7 @@ def uplift_table(
 def uplift_by_filter(
     table: RateTableVersion, *, percentage: Decimal, filter: KeyFilter
 ) -> RateTableVersion:
-    """FR-RATE-18: uplift only the cells matching the filter, new immutable version."""
+    """FR-233: uplift only the cells matching the filter, new immutable version."""
     rows = _rows_of(table)
     _check_filter_key(table, filter)
     factor = Decimal(1) + percentage
@@ -573,7 +573,7 @@ def uplift_by_filter(
 def floor_and_cap(
     table: RateTableVersion, *, floor: Decimal, cap: Decimal
 ) -> RateTableVersion:
-    """FR-RATE-18: clamp every cell into [floor, cap], new immutable version.
+    """FR-233: clamp every cell into [floor, cap], new immutable version.
 
     The floor is enforced at operation time (03 §5.2), not shape-enforced: a version
     may still carry values outside the declared bounds if an earlier save allowed it.
@@ -601,7 +601,7 @@ def floor_and_cap(
 def rebase_to_level(
     table: RateTableVersion, *, base_level: KeyFilter
 ) -> RateTableVersion:
-    """FR-RATE-18: rescale every level against the reference level, new version.
+    """FR-233: rescale every level against the reference level, new version.
 
     The reference row's value becomes exactly 1 and everything else is expressed
     relative to it. Every cell is re-stringified (the ratio), so even a row whose
@@ -642,7 +642,7 @@ def rebase_to_level(
 
 
 def export_to_csv(table: RateTableVersion) -> bytes:
-    """FR-RATE-20: the version as CSV — header then rows, decimal strings only."""
+    """FR-235: the version as CSV — header then rows, decimal strings only."""
     rows = _rows_of(table)
     header = [key.name for key in table.keys] + [table.value.name]
     buffer = StringIO()
@@ -654,7 +654,7 @@ def export_to_csv(table: RateTableVersion) -> bytes:
 
 
 def export_to_xlsx(table: RateTableVersion) -> bytes:
-    """FR-RATE-20: the version as XLSX — every cell written as text, never float.
+    """FR-235: the version as XLSX — every cell written as text, never float.
 
     The strict round-trip (import back to the same decimal strings) requires cells
     that a spreadsheet's number handling cannot silently re-type, so openpyxl cells
@@ -780,7 +780,7 @@ def _checked_import(
 def import_from_csv(
     version: RateTableVersion, content: bytes, *, filename: str
 ) -> ImportPreview:
-    """FR-RATE-20: preview the would-be version against the addressed one (03 §5.1)."""
+    """FR-235: preview the would-be version against the addressed one (03 §5.1)."""
     result = _checked_import(version, content, filename=filename)
     diff = _compute_diff(
         _rows_of(version), result.cells, version.keys, version.value, None
@@ -791,7 +791,7 @@ def import_from_csv(
 def import_from_xlsx(
     version: RateTableVersion, content: bytes, *, filename: str
 ) -> ImportPreview:
-    """FR-RATE-20: preview the would-be version against the addressed one (03 §5.1)."""
+    """FR-235: preview the would-be version against the addressed one (03 §5.1)."""
     result = _checked_import(version, content, filename=filename)
     diff = _compute_diff(
         _rows_of(version), result.cells, version.keys, version.value, None

@@ -23,7 +23,7 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    // FR-PLAT-53's entrance. Routed unconditionally; the API answers 404 where the demo is
+    // FR-408's entrance. Routed unconditionally; the API answers 404 where the demo is
     // not enabled, and the view reads that as a state rather than a failure — so there is
     // one switch (`dev_auth_enabled`), not a second one in the frontend build.
     path: "/demo",
@@ -111,7 +111,7 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     // `02` §5.3's Backtest view. Addressed by backtest id, not by model — a model has many
-    // (FR-MODEL-92) — so `:slug` here is for the breadcrumb and the link back to the fit.
+    // (FR-94) — so `:slug` here is for the breadcrumb and the link back to the fit.
     path: "/models/:slug/backtests/:backtestId",
     name: "model-backtest",
     meta: { requiresAuth: true },
@@ -138,8 +138,8 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
-    // `02` §5.3. List only — FR-MODEL-127. The cell's editor is Phase 2 (FR-MODEL-75 gates
-    // `expression` authoring off throughout Phase 1), and under FR-OVR-21 the cell binds
+    // `02` §5.3. List only — FR-167. The cell's editor is Phase 2 (FR-150 gates
+    // `expression` authoring off throughout Phase 1), and under FR-24 the cell binds
     // nothing, so the editor is not a shortfall here.
     path: "/objectives",
     name: "objective-library",
@@ -159,7 +159,7 @@ export const routes: RouteRecordRaw[] = [
   {
     // `02` §5.3's mirror of the objective library. **Name collision, latent and deliberate.**
     // The API serves an unauthenticated Prometheus endpoint at `/metrics`
-    // (`backend/src/app/api/health.py`, FR-PLAT-40). Nothing collides today: the API is
+    // (`backend/src/app/api/health.py`, FR-443). Nothing collides today: the API is
     // mounted under `/api/v1` and the SPA is served separately, so the two `/metrics` never
     // share an origin. Under same-origin serving they would, and the scrape path is the one
     // with an external consumer. Recorded here rather than renamed — renaming a scrape path
@@ -230,7 +230,7 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
-    // The Phase 1b rating version the demo seeds (FR-PLAT-67, W7-5). Routed by id because
+    // The Phase 1b rating version the demo seeds (FR-440, W7-5). Routed by id because
     // the read route is by id; the full `03` surface stays Phase 2.
     path: "/rating-versions/:id",
     name: "rating-version",
@@ -275,7 +275,7 @@ export const router = createRouter({
   routes,
 });
 
-// FR-PLAT-55's guard: a guarded route refuses an anonymous visitor and sends the whole
+// FR-393's guard: a guarded route refuses an anonymous visitor and sends the whole
 // page to the provider (`signIn` navigates via `window.location`, Task 4). `return false`
 // cancels the navigation — the provider round-trip lands back on `/callback`, which the
 // guard never protects (record above), so the loop cannot form.

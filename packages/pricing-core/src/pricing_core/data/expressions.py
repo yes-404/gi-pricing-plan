@@ -1,4 +1,4 @@
-"""The restricted expression grammar for `derive_expression` (FR-DATA-10).
+"""The restricted expression grammar for `derive_expression` (FR-36).
 
 > It cannot call out to the network, filesystem, or Python builtins.
 
@@ -56,7 +56,7 @@ _ALLOWED_NODES: Final[tuple[type[ast.AST], ...]] = (
     ast.GtE,
 )
 
-#: The only callable names. No statistical functions — FR-DATA-10 excludes them, because a
+#: The only callable names. No statistical functions — FR-36 excludes them, because a
 #: preparation step that could compute a mean over the column it is deriving would make the
 #: result depend on which rows happened to be in the extract.
 _FUNCTIONS: Final[frozenset[str]] = frozenset(
@@ -67,7 +67,7 @@ _FUNCTIONS: Final[frozenset[str]] = frozenset(
 class ExpressionError(ValueError):
     """The expression is outside the grammar. The message names what was refused.
 
-    It also names *where*, when the AST can say (NFR-MODEL-8). `lineno` and `col_offset`
+    It also names *where*, when the AST can say (NFR-483). `lineno` and `col_offset`
     are exactly what `ast` reports — 1-based and 0-based respectively — so a caller can
     underline the offending token without re-parsing.
 
@@ -92,7 +92,7 @@ def _walk_positioned(node: ast.AST) -> Iterator[tuple[ast.AST, ast.AST | None]]:
     `operator`, `cmpop`, `boolop` or `unaryop` can never say where it is — and those are
     exactly the nodes a grammar refusal most often names (`FloorDiv`, `Is`, `In`). The
     enclosing expression can say, and its span is what a caller should underline
-    (NFR-MODEL-8): for `exposure + premium // 2` that is `premium // 2`, not the whole
+    (NFR-483): for `exposure + premium // 2` that is `premium // 2`, not the whole
     string.
 
     Breadth-first, in `ast.walk`'s own order, so which node is refused first is unchanged
@@ -111,7 +111,7 @@ def _check(node: ast.AST) -> None:
         if not isinstance(child, _ALLOWED_NODES):
             raise ExpressionError(
                 f"{type(child).__name__} is not permitted in a derive_expression "
-                "(FR-DATA-10). The grammar admits arithmetic, comparison, conditionals and "
+                "(FR-36). The grammar admits arithmetic, comparison, conditionals and "
                 f"a fixed function list: {sorted(_FUNCTIONS)}.",
                 node=position,
             )
