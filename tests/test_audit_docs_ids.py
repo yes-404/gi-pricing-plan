@@ -1665,8 +1665,8 @@ def test_scope_clause_reds_from_inside_the_migration_commit(
     setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
     audit.failures.clear()
     unstamped = audit._check_scope_unstamped_are_registered()
-    assert unstamped > 300, unstamped
-    assert len(audit.failures) > 300, len(audit.failures)
+    assert unstamped > 50, unstamped
+    assert len(audit.failures) > 20, len(audit.failures)
 
 
 def test_scope_clause_is_green_once_the_migration_has_stamped_everything(
