@@ -2,7 +2,8 @@
 `POST /api/v1/score/batch` — batch re-rating (03 §5.1:517, FR-253/254/255; WK-671 Task 3C).
 
 **`/score` scores untraced and never sets `trace=True` for FR-259's sake** (WK-671 Task
-4B; RL-862, `docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`).
+4B; RL-862,
+`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`).
 `ctx.options.trace` is unchanged and still what decides whether `score_one` captures a
 trace *for FR-258's on-request return* — a caller who asks for one gets one inline and
 knowingly pays for it. FR-259's *sampled, persisted* trace is a different thing: after
@@ -35,8 +36,9 @@ must stay visible as a 500 rather than be dressed as a typed per-quote error.
 its own — that lives in `_compiled_for`/`_fetch_bundle` above, reused (not duplicated,
 RL-922) by `app.worker.scoring_handlers`. The route's only responsibilities are to
 authorise the caller against `Permission.SCORE_BATCH` (granted by no builtin role, deliberately
-— FR-347, C3 of `docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`) and to translate the request
-body into the `score.batch` handler's parameter shape.
+— FR-347, C3 of
+`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`)
+and to translate the request body into the `score.batch` handler's parameter shape.
 """
 
 from __future__ import annotations

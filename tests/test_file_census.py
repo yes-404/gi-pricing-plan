@@ -1,6 +1,7 @@
 """`scripts/file-census.py` — Stage 0 evidence for RFC-897 (Q1, Q2, Q3).
 
-`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §7 (Slice 2). These tests run against a
+`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md`
+§7 (Slice 2). These tests run against a
 synthetic git repository built in `tmp_path`, never against this repository's own tree — the
 repository's numbers move (the next merge adds or removes files), and a test pinned to a
 live count fails for a reason unrelated to the code under test.

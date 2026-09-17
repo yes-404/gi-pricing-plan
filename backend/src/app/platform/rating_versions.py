@@ -374,8 +374,9 @@ async def compile_rating_version(
                 # `RateTableVersionRow` carries no status column at all (rate tables are
                 # immutable-on-write — seed, operation or import, never a draft phase),
                 # so there is no real maturity value to read here. RL-856
-                # (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`) refused
-                # inventing "approved" for it: that would put a constant where
+                # (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-
+                # exemption-is-declared-and-self-invalidating.md`)
+                # refused inventing "approved" for it: that would put a constant where
                 # `compile_bundle`'s gate reads a discriminator, and fail open the day
                 # `RateTableVersionRow` gains a real status. `_MATURITY_CHECK_EXEMPT` is
                 # what actually admits this pin past the FR-20 floor; the sentinel

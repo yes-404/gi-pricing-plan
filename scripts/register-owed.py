@@ -10,7 +10,9 @@ them the whole time." F-W9-1's own Work item column reads `W9-3`; its Decision c
 both the Work item and Decision columns, not the Work item column alone** — a search
 restricted to Work item would repeat F41's exact mistake.
 
-**RL-912** (`docs/rulings/RL-00912-q4-the-generated-output-lands-verbatim-and-it-is-not-the-closure-record-s-findings-table.md`) binds this script's output
+**RL-912**
+(`docs/rulings/RL-00912-q4-the-generated-output-lands-verbatim-and-it-is-not-the-closure-record-s-findings-table.md`)
+binds this script's output
 form:
 
   1. The output names the command and the **committed revision** it ran against — a SHA on

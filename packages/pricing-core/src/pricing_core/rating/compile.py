@@ -285,7 +285,9 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]:
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 
-# RL-856 (2026-08-29, `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`):
+# RL-856 (2026-08-29,
+# `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-
+# declared-and-self-invalidating.md`):
 # `rate_table` has no status column to read a real maturity from at all —
 # `RateTableVersionRow` carries none — while `06` §2's Governed Artifact row still calls a
 # Rate Table Version approval-bearing and FR-20 requires every pin to be at least as

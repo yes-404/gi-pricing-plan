@@ -8,7 +8,9 @@ Ten document-family templates (`ADR`, `CR`, `FD`, `LG`, `PL`, `REFERENCE`, `RFC`
 the template's own leading `<!-- ... -->` comment and fills in the placeholders, exactly
 the sequence every template's own comment instructs ("Fill in every placeholder, delete
 this comment block"). Three (`WK`, `SL`, `PHASE`) carry no top-level `---` block *by
-design*: RFC-937 (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`) §1.5 puts a `WK-`/`SL-` header
+design*: RFC-937 (
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+) §1.5 puts a `WK-`/`SL-` header
 in a fenced ```yaml block under the row's own heading rather than the file's own front
 matter, and §1.1 rule 4 puts a phase outside the id standard entirely. Neither is a defect,
 and this suite must not mistake the one for the other.

@@ -51,7 +51,9 @@ Checks (all non-destructive, exit 1 on any failure):
      note rather than a failure, the count of rows not yet migrated to
      docs/audit/findings/<F-id>.md against the migration threshold (RL-911, RFC-896 P4).
 
-RFC-937 (docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md) §1.11 — one id per governed thing.
+RFC-937
+(docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md)
+§1.11 — one id per governed thing.
 Checks 30-39 below, path-scoped to `_ID_SCOPE_ROOTS` until the migration (Slice W37-6)
 widens it to the whole corpus (docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md,
 Slice W37-4, 2026-09-02). **Slot 30 changed identity on this date**: it held
@@ -700,7 +702,9 @@ def check_finding_citations() -> None:
     **Only the register's own citation form is matched**: an id in parentheses immediately
     after the text it concerns, `(F32)` or `(F-W9-1)` — exactly how every register row names
     itself, and how every genuine cross-document citation found while writing this check was
-    written (`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md` and its WK-671 siblings). A bare
+    written
+    (`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`
+    and its WK-671 siblings). A bare
     `F1` with no parentheses is deliberately never matched: dozens of unrelated documents
     number their *own* local findings from one — every WK-661 and WK-664 task plan's own "Findings"
     section, `track-a-findings.md`'s spike log, the phase 1b predecision plan before it became
@@ -1047,7 +1051,8 @@ def check_process_core_digest() -> None:
 
 
 #: The date C1 and the `writing-plans` acceptance-standard field land together (RFC-895 §2,
-#: RL-906 — `docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-thereafter-rejected-as-the-mechanism.md` RL-906). A constant, not
+#: RL-906 — `docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-
+#: thereafter-rejected-as-the-mechanism.md` RL-906). A constant, not
 #: read from the clock or git history: the verdict must be a property of the plan's own
 #: filename, reproducible in any clone at any revision, never of when the check happens to
 #: run. **Permanent once landed, the same way a check number is (`CLAUDE.md` §5) — do not
@@ -1210,7 +1215,8 @@ def check_plan_acceptance_standard() -> None:
 ####################################################################################
 # RFC-937 checks 30-39 — one id per governed thing.
 #
-# docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md §1.11 is the table these implement; each
+# docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-
+# layout-and-roles-per-family.md §1.11 is the table these implement; each
 # function's docstring cites the row it is. Every one of them reads the shared parser
 # from `scripts/_docid.py` (loaded by path below, the same idiom `_load_register_lint`
 # above already uses for check 29's dependency) rather than redefining any of it — that
@@ -1848,7 +1854,8 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
     ids. Explicit parameters (not the module's own `ROOT`/`_id_scope_documents`) so a
     fixture can exercise this without a real `docs/INDEX.md` on disk.
 
-    `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item
+    `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md`
+    Entry 2 item
     1: the padding clause adopts row (e)'s conjuncts 1, 2 and 3 from `_docid` — the
     exact-width regex (conjunct 1, `_docid._PADDED_ID_RE`, read here rather than
     reassembled from its own `FAMILY_PREFIXES`/`PAD_WIDTH` symbols a second time), path
@@ -2389,7 +2396,8 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 
 # -----------------------------------------------------------------------------------------
 # F83 — the register of files that cannot carry a header at all, and the check that keeps
-# it honest. Filed as `docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-custody-is-an-exemption-rather-than-a-sidecar.md`; ruled by the maintainer 2026-09-02.
+# it honest. Filed as `docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-
+# custody-is-an-exemption-rather-than-a-sidecar.md`; ruled by the maintainer 2026-09-02.
 #
 # Two conditions bind the exemption, and both are enforced here:
 #
@@ -2410,7 +2418,9 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 # the predicate. At `359936b`: **416** files = **51** stamped + **362** with no `---` block
 # + **3** carrying one that will not parse, so **365** unstamped against **65** that can
 # never be stamped. **The total drifts with every markdown file added anywhere under
-# `docs/`** — it was 415 at `f61f9a4` and 417 once `docs/findings/FD-01024-widening-id-scope-roots-reaches-no-non-markdown-file-so-62-of-the-65-exempt-files-stay-invisible-to-checks-30-39.md` lands — so
+# `docs/`** — it was 415 at `f61f9a4` and 417 once `docs/findings/FD-01024-widening-id-scope-roots-
+# reaches-no-non-markdown-file-so-62-of-the-65-exempt-files-stay-invisible-to-checks-30-39.md` lands
+# — so
 # it is given with its tree and its parts, never bare: parts that are stated can be summed,
 # and that is the only check on a decomposition which cannot itself be a proxy. **Check 35's
 # own note prints the live figures every run and is the copy to trust**; a comment restating
@@ -2878,7 +2888,9 @@ LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
 
 _WAS_LINE_RE: Final = re.compile(r"^\s*was:\s")
 
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: `_docid.TEST_MODULE_EXCLUSIONS`' three names — the
 #: instrument's own id-grammar/check/migrate test modules, which carry legacy-form ids as
 #: literal fixture data by construction (the "3c tuple" the ruling names). Read alone,
@@ -3125,7 +3137,8 @@ _SECTION_HEADING_RE: Final = re.compile(r"^##\s+(.+?)\s*$")
 # Template side: `##` exactly, as before. Document side: any depth, with a leading `N. `
 # / `N.N. ` ordinal stripped, because every real ruling numbers its subsections
 # (`### 4. Acceptance — …`) and a depth-agnostic *literal* match still finds nothing
-# (`docs/findings/FD-01027-check-37-reds-on-95-of-95-post-migration-rulings-unconditional-on-the-flag-day-because-its-section-detector-cannot-see-a-level-heading.md` §B).
+# (`docs/findings/FD-01027-check-37-reds-on-95-of-95-post-migration-rulings-unconditional-on-the-
+# flag-day-because-its-section-detector-cannot-see-a-level-heading.md` §B).
 #
 # The asymmetry is not a convenience. Making the **template** side depth-agnostic too
 # would newly require `SL-NNNNN — <Title>` and `WK-NNNNN — <Title>` — the only body
@@ -3230,7 +3243,8 @@ def check_shape() -> None:
             # RL-1039: check 37 governs documents **authored from a template**. A body the
             # migration carried over verbatim from a pre-standard file predates the shape
             # it would be judged against, and `was:` is how the migration says so — RFC-937
-            # §1.5's closed field set, `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:125`,
+            # §1.5's closed field set, `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-
+            # integer-identity-a-self-describing-layout-and-roles-per-family.md:125`,
             # `was: 2026-08-18-profile-contract.md   # migration only`. It is set only on
             # the migration's own write paths and is declared in **no** template, so a
             # later author cannot inherit the exemption by copying one.

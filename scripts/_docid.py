@@ -1,6 +1,7 @@
 """Shared header parser and id grammar for RFC-937's document-id standard.
 
-`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` §1.1, §1.2, §1.5. Owned by W37-2
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+§1.1, §1.2, §1.5. Owned by W37-2
 (`docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`); `scripts/doc-id.py` and
 `scripts/doc-index.py` (W37-3) import this module and do not redefine any of it — it is
 the one place the id grammar and the header's closed field set are stated.
@@ -214,7 +215,9 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
 # per-file with its own reason (§7(d)'s own instruction against a structural rule that
 # would silently widen, echoed at task 30's `register-owed.py` correction below):
 # **`tests/test_register_owed.py` does NOT belong here.** Its subject, `register-owed.py`,
-# is a file RFC-937 §4 itself migrates (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:381`), so
+# is a file RFC-937 §4 itself migrates
+# (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-
+# layout-and-roles-per-family.md:381`), so
 # its fixtures are stale test data that migrates WITH the script rather than exempted test
 # infrastructure — fixed in the same commit as this exclusion (its scoped-requirement-id
 # and workstream/slice-id placeholders respelled to their post-migration shapes), not
@@ -374,7 +377,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
 
 
 # =========================================================================================
-# `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+# `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+# classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+# typing.md` Entry 1 item 1:
 # RFC-937 §7 acceptance item (d) (`_docverify.py`'s `rows_d`)
 # and `audit-docs.py` check 36's third clause (`sweep_legacy_forms`) are "one rule at two
 # times" (RL-988 §2). (d) already disclosed three classes on `LEGACY_FORM_PATTERNS`
@@ -532,7 +537,9 @@ def is_scoped_id_never_allocated(
 
 
 # =========================================================================================
-# docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md Entry 2 item 1:
+# docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+# classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+# typing.md Entry 2 item 1:
 # `_docverify.py`'s row (e) (`padded_hits`) and `audit-docs.py` check 32's padding clause
 # are "one rule at two times" over the same corpus. Conjunct 1's exact-width regex,
 # conjunct 2 (a padded id inside a filesystem path is not a citation) and its
@@ -877,7 +884,9 @@ def parse_header_text(text: str, *, path: Path | None = None) -> Header | None:
     )
 
 
-# RL-990 (`docs/rulings/RL-00990-rfc-937-1-5-s-vendored-parenthesis-is-a-gloss-not-a-detector-the-set-is-declared-and-reconciled-and-the-exemption-reaches-only-the-blanket-passes.md`, PR #563,
+# RL-990
+# (`docs/rulings/RL-00990-rfc-937-1-5-s-vendored-parenthesis-is-a-gloss-not-a-detector-the-set-is-
+# declared-and-reconciled-and-the-exemption-reaches-only-the-blanket-passes.md`, PR #563,
 # merged): RFC-937 §1.5's parenthetical, naming `planning-with-files`, `ui-ux-pro-max`,
 # `graphify`, `systematic-debugging` and the `vue-*` skills as vendored while giving "a
 # directory that provides a `LICENSE` of its own" as the reason, is a gloss identifying

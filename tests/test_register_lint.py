@@ -1,6 +1,8 @@
 """`scripts/register-lint.py` — the register grammar linter RL-910 ordered.
 
-RL-910 (`docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`) found that nothing enforced
+RL-910 (
+`docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`
+) found that nothing enforced
 `docs/findings/register.md`'s own Decision-cell grammar, ruled "no legacy class, no exemption,
 no warn phase, no flag day," and required the check to be red on the first day it lands if
 the live register does not conform, and green if it does. `CLAUDE.md` §13: "a check that has

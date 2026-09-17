@@ -375,7 +375,8 @@ async def test_write_requires_a_transaction(database: Database, blob_store: Blob
 
 # ------------------------------------------------------------------------------------
 # WK-671 Task 4B — the pending row and its off-path completion (RL-862,
-# `docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`).
+# `docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-
+# score.md`).
 # ------------------------------------------------------------------------------------
 
 

@@ -2,11 +2,13 @@
 """doc-id.py — RFC-937's id allocator, checker, widener and migrator.
 
 Subcommands: `next`, `check`, `widen`, `migrate`. `migrate` (W37-5) implements
-`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` §4 steps 1-7, built and proven against the
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+§4 steps 1-7, built and proven against the
 fixture corpus at `tests/fixtures/docs-migration/` — nothing in the real tree moves
 until W37-6 points `--repo-root` at it, under its own preconditions.
 
-`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` §1.7 (`next`, `check`), §1.8 (`widen`), §4
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+§1.7 (`next`, `check`), §1.8 (`widen`), §4
 (`migrate`).
 
 **Standard library only** (G4/DP-5) — see `scripts/_docid.py`'s module docstring for why.
@@ -148,7 +150,8 @@ def materialize_ref_with_history(ref: str, dest: Path, *, repo_root: Path) -> No
     `git archive` + `git init` produces a tree whose content is right and whose history is
     a single synthetic commit. That is not equivalent: RFC-937 item 1 makes a module's
     **git first-commit date** the `created` value id allocation sorts on
-    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`, D1 at `:247` — "numbers carry chronology"),
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`,
+    D1 at `:247` — "numbers carry chronology"),
     so git history is a *declared input* to the migration, not an incidental property of
     the checkout it happens to run in. A one-commit tree has no first-commit dates to read,
     and the old `date.today()` fallback silently substituted for all of them — re-keying
@@ -1878,7 +1881,9 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
 
 
 # ---------------------------------------------------------------------------------------
-# F84 (`docs/findings/FD-01021-17-closure-records-have-no-discovery-code-and-no-guard-the-migration-cannot-see-them.md`): the 17 closure records the migration cannot see.
+# F84
+#(`docs/findings/FD-01021-17-closure-records-have-no-discovery-code-and-no-guard-the-migration-cannot-see-them.md`):
+# the 17 closure records the migration cannot see.
 #
 # `_discover_closure_records` above reads `docs/audit/closure-records.md` and nothing
 # else -- its own docstring says so ("one `###` heading per record"). The per-work and
@@ -1942,7 +1947,8 @@ def _discover_audit_closure_readmes(root: Path) -> list[_Draft]:
     and `docs/audit/phases/<phase>/README.md` (1). F84's first limb.
 
     `owner: auditor` is §1.6's `CR` row read from the cell
-    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:152`, mirrored at
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:152`,
+    mirrored at
     `docs/process/document-ids.md:157`): *"auditor (`work`, `phase`); lead (`review`)"*.
     Neither of the two kinds this function produces is `review`, so the value is uniform
     and is not derived from what a role ought to own.
@@ -1985,7 +1991,8 @@ def _discover_audit_closure_readmes(root: Path) -> list[_Draft]:
 
 _PLAN_REVIEWS_REL_PATH: Final = "docs/audit/plan-reviews.md"
 
-#: RL-979 (`docs/rulings/RL-00979-the-container-is-rfc-kind-process-status-closed-owner-is-the-maintainer-not-the-planner.md`,
+#: RL-979
+#:(`docs/rulings/RL-00979-the-container-is-rfc-kind-process-status-closed-owner-is-the-maintainer-not-the-planner.md`,
 #: PR #601): `docs/audit/plan-reviews.md`'s "Pending proposals" section is a record in its
 #: own right -- `RFC-`, `kind: process`, `status: closed`, `owner: maintainer` -- not
 #: preamble to the review that follows it. RL-980 §1 held that *stamping* it happens
@@ -2146,8 +2153,9 @@ _PLAN_REVIEWS_SPLIT_LEVEL: Final = 3  # `_REVIEW_HEADING_RE` records are `###` h
 
 
 def _check_plan_reviews_heading_census(root: Path) -> None:
-    """RL-985 (row 1, `docs/plans/PL-00961-w37-6-everything-it-owns-before-the-run-one-list-with-each-item-s-state-and-what-discharges-it.md`): a
-    guard may not derive its denominator from the same matcher it is checking --
+    """RL-985 (row 1,
+    `docs/plans/PL-00961-w37-6-everything-it-owns-before-the-run-one-list-with-each-item-s-state-and-what-discharges-it.md`):
+    a guard may not derive its denominator from the same matcher it is checking --
     `_check_legacy_file_not_silently_unrecognised`'s `if drafts: return` cannot tell
     "found every review" from "found ten of eleven", since both give it a non-empty
     list (measured: `_discover_plan_reviews` returns ten drafts for eleven real
@@ -2212,11 +2220,14 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
         )
 
 
-#: RL-1047 §2.1 (`docs/rulings/RL-01047-a-document-whose-entire-content-is-a-maintainer-decision-migrates-as-rl-owner-maintainer-no-kind-field.md`): a document
+#: RL-1047 §2.1
+#:(`docs/rulings/RL-01047-a-document-whose-entire-content-is-a-maintainer-decision-migrates-as-rl-owner-maintainer-no-kind-field.md`):
+#: a document
 #: filed under `docs/plans/` **whose entire content is a decision the maintainer made and
 #: dated**, carrying no `## Ruling N` heading, migrates as `RL-`, `owner: maintainer`, with
 #: **no `kind:` field** (`docs/_templates/RL.md:8` forbids the field on this family). The
-#: cells the ruling reads from are RFC-937 §1.13 (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:
+#: cells the ruling reads from are RFC-937 §1.13
+#:(`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:
 #: 238`, *"maintainer decisions and phase pre-decisions → `RL-` with `owner: maintainer`"*)
 #: and §1.6's `RL` row (`:149`, *"the maintainer may author one on scope or process"*).
 #:
@@ -2262,7 +2273,8 @@ _MAINTAINER_DECISION_TITLE_RE: Final = re.compile(
     r"the maintainer(?:'|\u2019)s\b|reserved to the maintainer\b", re.IGNORECASE
 )
 
-#: RL-1047 §2.2: the exclusion of `docs/plans/PL-01032-reserved-to-the-maintainer-one-batch-f90-s-prior-question-filed-2026-09-03.md`
+#: RL-1047 §2.2: the exclusion of
+#:`docs/plans/PL-01032-reserved-to-the-maintainer-one-batch-f90-s-prior-question-filed-2026-09-03.md`
 #: is **a state of one tree, not a property of the file** — *"the predicate in §2.1 tests
 #: content at the tree in question, never a title and never a past reading of that
 #: content"*. That file is a planner-assembled batch of `> **Decision:**` / `> **Date:**`
@@ -2505,7 +2517,8 @@ class GitHistoryUnavailableError(RuntimeError):
     path, which tree, and why.
 
     This is a **refusal, not a fallback**. `created` is a declared input to id allocation
-    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` item 1: "using the module's first-commit
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+    item 1: "using the module's first-commit
     date; git first-commit date otherwise", with D1 at `:247` holding that numbers carry
     chronology), and it is the primary sort key `_assign_numbers` consumes. Substituting
     `date.today()` for it does not degrade gracefully — every draft takes the same
@@ -3213,7 +3226,8 @@ _FINDING_EXTRA_ESSAY_LOCATIONS: Final[Mapping[str, str]] = {
 
 def _discover_findings(root: Path) -> list[_Draft]:
     """`docs/audit/findings/F<n>.md`: one essay per finding (RFC-937 §5.2's own routing,
-    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:323`: *"`audit/findings/F*.md` (5) + README |
+    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:323`:
+    *"`audit/findings/F*.md` (5) + README |
     `findings/FD-0nnnn-*.md`; README rewritten"*). `docs/audit/findings/README.md` is the
     family's own index, not a governed finding, and is excluded by the filename match
     below exactly as `docs/adrs/README.md` is excluded from `_discover_adrs`.
@@ -3301,7 +3315,9 @@ def _discover_findings(root: Path) -> list[_Draft]:
                 )
             )
             order += 1
-    # RL-1048 (`docs/rulings/RL-01048-three-docs-audit-files-no-rfc-937-clause-maps-get-destinations-not-a-halt.md`) §2,
+    # RL-1048
+    #(`docs/rulings/RL-01048-three-docs-audit-files-no-rfc-937-clause-maps-get-destinations-not-a-halt.md`)
+    # §2,
     # File 3: `pilot-findings.md` is not itself an `F<n>.md`-shaped essay -- it lives at a
     # different path entirely and carries no `# F<n> — <title>` heading -- but is the
     # essay half of an *already-open* register finding, F28, which `docs/findin
@@ -3344,7 +3360,8 @@ _WORKFLOW_FILENAME_RE: Final = re.compile(r"^(wf-\d+)-")
 
 def _discover_workflows(root: Path) -> list[_Draft]:
     """`docs/workflows/wf-0N-*.md`: RFC-937 §5.2's own routing
-    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:322`: *"`workflows/wf-0n-*.md` (5) + README |
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:322`:
+    *"`workflows/wf-0n-*.md` (5) + README |
     `WF-0nnnn-*.md`, stamped; README table generated"*). Matched on the file's own legacy
     heading `# WF-0N — <title>` (`_WORKFLOW_TITLE_RE`) — the same heading-derived
     `old_token` reading `_discover_adrs` gives `# ADR-<n> — <title>`, invisible to a second
@@ -3416,7 +3433,8 @@ _GENERIC_H1_RE: Final = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 #: Every standalone `docs/audit/` file RFC-937 or a later ruling routes into
 #: `research/RS-...` by explicit path, `rel -> (kind, owner)`:
 #:
-#: - `file-census.md`/`file-taxonomy-draft.md` — `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md
+#: - `file-census.md`/`file-taxonomy-draft.md` —
+#:`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md
 #: :328` ("`audit/file-census*.{md,csv}`, `research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md`
 #: | → `research/RS-…`"), `:238` ("census and taxonomy draft → `RS- kind: measurement`/ `audit`").
 #: `kind: measurement` for both is a **reading**, not a citation: RFC-937 gives a disjunction and
@@ -3425,7 +3443,9 @@ _GENERIC_H1_RE: Final = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 #: in §1.2's table. Owner `executor` — D13 (§3): "research → executor, except `RS- kind: audit` →
 #: auditor".
 #: - `nt-0019-verification-and-impact-sweep.md`/`ruling-acceptance-item-sweep.md` — Ruling
-#:   99 (`docs/rulings/RL-01048-three-docs-audit-files-no-rfc-937-clause-maps-get-destinations-not-a-halt.md`) §2: neither file
+#:   99
+#:(`docs/rulings/RL-01048-three-docs-audit-files-no-rfc-937-clause-maps-get-destinations-not-a-halt.md`)
+#:   §2: neither file
 #:   existed at RFC-937's own `8f5d57d` base tree (§1.13: "every governance file **at
 #:   `8f5d57d`**"), so RFC-937 cannot have named them — both are dispatched audit records
 #:   with method, evidence and verdicts, matching `RS`'s unit and `kind: audit`'s
@@ -3507,7 +3527,9 @@ def _move_unstampable_research_files(root: Path) -> tuple[list[str], list[str]]:
 
 def _discover_named_phase_records(root: Path) -> list[_Draft]:
     """The two standalone `docs/audit/` files RFC-937 names individually as `CR- kind:
-    phase` records (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:238`: *"exit-demo UAT and
+    phase` records
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:238`:
+    *"exit-demo UAT and
     `closures/CR-00709-phase-0-specification-status.md` → `CR- kind: phase`"*; `:314` and `:324` for
     their own §5.2 rows). Neither is a per-directory README (`_discover_audit_closure_readmes`'s
     shape) or a heading inside a shared file (`_discover_closure_records`'s shape) -- each is its
@@ -3972,7 +3994,9 @@ def _remove_if_empty(path: Path) -> None:
 # Plain `key: value` lines directly beneath the heading, no fence and no blank line
 # before the first field — `docs/_templates/PHASE.md`'s own form, matching RFC-937 §1.3's
 # unfenced illustration and `document-ids.md` §1.3 byte-for-byte apart from heading depth.
-# RL-999 (`docs/rulings/RL-00999-the-phase-section-is-plain-fields-under-its-heading-the-fence-requirement-in-scan-phase-sections-is-the-defect-and-its-unbounded-lookahead-is-what-makes-the-failure-silent-instead-of-loud.md`) settled
+# RL-999
+#(`docs/rulings/RL-00999-the-phase-section-is-plain-fields-under-its-heading-the-fence-requirement-in-scan-phase-sections-is-the-defect-and-its-unbounded-lookahead-is-what-makes-the-failure-silent-instead-of-loud.md`)
+# settled
 # this the other way from how it was first built here: `scripts/doc-index.py`'s
 # `scan_phase_sections` used to require a fence too, so the two agreed with each other
 # while disagreeing with the standard, `PHASE.md` and `audit-docs.py` check 30's
@@ -4357,8 +4381,9 @@ def _check_requirements_not_silently_unrecognised(root: Path) -> None:
     (`**FR-38**`); `docs/specs/00-overview.md`'s `DEP-1`, `DEP-537`, `DEP-2`, `DEP-3`
     are real, module-spec-defined dependency rules that never carry one -- confirmed
     empirically (zero `DEP` occurrences anywhere in `docs/specs/*.md` carry a module code),
-    and invisible to every count built on that assumption, `docs/rfcs/RFC-00937-one-id-
-    per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`'s own acceptance-criteria greps included.
+    and invisible to every count built on that assumption,
+    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`'s
+    own acceptance-criteria greps included.
 
     The census drops the module-code assumption entirely (via `_CENSUS_BARE_ID_RE`),
     keeping the one genuinely structural signal a definition marker has and a reference
@@ -4593,7 +4618,8 @@ def _check_audit_closure_readmes_not_silently_unrecognised(
 # Before this block the only file `migrate` stamped outside a document family was a
 # *vendored* `SKILL.md`. §4 step 5 stamps *"every file under `docs/`, `.claude/roles/`,
 # `.claude/skills/*/SKILL.md`, `.claude/agents/`"*, and
-# `docs/plans/PL-00963-what-owner-means-the-family-table-the-historical-author-or-neither-a-derivation-for-ruling-2026-09-02.md:179` states the gap in terms:
+#`docs/plans/PL-00963-what-owner-means-the-family-table-the-historical-author-or-neither-a-derivation-for-ruling-2026-09-02.md:179`
+# states the gap in terms:
 # **"There is no discovery or stamp path for `.claude/skills/`, `.claude/agents/` or
 # `.claude/roles/` at all"**. Same shape as F84 — a population outside the question, so
 # the run completes and reports success — and it is fixed the same way: discovery, then a
@@ -7107,7 +7133,8 @@ def _reconcile_process_core_digest(root: Path) -> list[str]:
 
 # ---------------------------------------------------------------------------------------
 # RL-986 §4's second acceptance item, as RL-1000 substituted it
-# (`docs/rulings/RL-01000-the-property-stands-the-instrument-is-amended-because-a-broken-input-need-not-be-a-document.md` §2 — register finding
+#(`docs/rulings/RL-01000-the-property-stands-the-instrument-is-amended-because-a-broken-input-need-not-be-a-document.md`
+# §2 — register finding
 # F77). The struck form asked for a check reddening "on a deliberately broken fixture
 # carrying `slice: SL-99999`", which no fixture can produce: `_stamp_header` skips `slice`
 # for every caller, so the writer refuses to emit the key a fixture would have to carry.
@@ -7140,7 +7167,8 @@ class _LedgerAxes:
     """What the ledger-axis check looked at, not only what it found. The three counts are
     reported unconditionally (including zero) by `_cmd_migrate`, per RL-1000's "the
     passing state today is a count of **zero**, and the check must **say so** rather than
-    pass silently" and [`RFC-789`](../docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md):
+    pass silently" and
+    [`RFC-789`](../docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md):
     a boundary metric that reads zero by construction reports where the boundary sits, not
     that anything was verified.
     """
@@ -9001,7 +9029,8 @@ def migrate(root: Path) -> MigrateResult:
     # `docs/audit/FD-01041-….md`, a path that never existed on either side of this run --
     # and correctly, uselessly, report it as unresolvable, because `path_moves` was
     # keyed on the file's OLD basename. Run first, this pass resolves the ORIGINAL
-    # `docs/findings/FD-01015-rl-986-4-s-second-acceptance-item-is-vacuously-true-no-code-path-can-ever-write-the-slice-value-the-acceptance-item-asks-a-broken-fixture-to-test.md`-shaped target against `path_moves` while it is still
+    #`docs/findings/FD-01015-rl-986-4-s-second-acceptance-item-is-vacuously-true-no-code-path-can-ever-write-the-slice-value-the-acceptance-item-asks-a-broken-fixture-to-test.md`-shaped
+    # target against `path_moves` while it is still
     # recognisable, producing the correct new relative path outright; the citation sweep
     # then finds nothing left in the target to substitute (the new basename is already
     # there) and only updates the link's own visible text/label as it already would.
@@ -9331,7 +9360,8 @@ def migrate(root: Path) -> MigrateResult:
     # three unconditional guards (F80-F82) abort a real run before it, so making it abort
     # would add an unmeasured stop to an irreversible migration. It is a hard assertion in
     # the tests instead. Flagged as an interpretation rather than made silently, in
-    # `docs/findings/FD-01015-rl-986-4-s-second-acceptance-item-is-vacuously-true-no-code-path-can-ever-write-the-slice-value-the-acceptance-item-asks-a-broken-fixture-to-test.md`'s 2026-09-02 update and this row's register entry.
+    #`docs/findings/FD-01015-rl-986-4-s-second-acceptance-item-is-vacuously-true-no-code-path-can-ever-write-the-slice-value-the-acceptance-item-asks-a-broken-fixture-to-test.md`'s
+    # 2026-09-02 update and this row's register entry.
     ledger_axes = _check_emitted_ledger_axes(root)
     warnings.extend(ledger_axes.work_violations)
     if ledger_axes.slice_violations:

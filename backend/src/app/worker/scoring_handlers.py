@@ -46,7 +46,8 @@ result whose type depends on the caller's own cardinality.
 
 ## Resolving a bundle reuses `app.api.score`'s resolver — never a second one
 
-RL-922 (`docs/rulings/RL-00922-the-remediation-is-ruled-into-the-reopen-and-nfr-489-s-verdict-is-ruled-out-of-it-they-are-two-different-things-and-the-record-must-not-merge-them.md`)
+RL-922
+(`docs/rulings/RL-00922-the-remediation-is-ruled-into-the-reopen-and-nfr-489-s-verdict-is-ruled-out-of-it-they-are-two-different-things-and-the-record-must-not-merge-them.md`)
 put RL-921's NFR-489 remediation here deliberately, because this is the **second**
 caller that needs a `rating_version_ref -> CompiledBundle` resolution, and
 `app.api.score._compiled_for` is the only one in the repository. `CLAUDE.md` §2: *"Nobody

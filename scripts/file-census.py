@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """File census over the repository's tracked corpus — RFC-897 Stage 0.
 
-`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §7 (Slice 2). RFC-897 asks three questions
+`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md`
+§7 (Slice 2). RFC-897 asks three questions
 (Q1, Q2, Q3) about the shape of this repository's file population — how many files, what
 kinds, how they cluster — and none of them can be answered from recollection. This script
 produces the evidence: one CSV row per tracked file, with a header, a corpus rule, and a

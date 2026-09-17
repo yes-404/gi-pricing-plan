@@ -15,7 +15,9 @@ Two things proven here, both required before the flag-day rule can be trusted:
      commit, not the file's, and not the ruling's number. Both synthetic rulings are
      shaped like one an author would actually write — a verification table, a Ruled
      section, an obligations section — not a one-line stub: the lead's own finding
-     against `docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md` RL-910's own broken-
+     against
+     `docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`
+     RL-910's own broken-
      input fixture (a 24-character bare stop, easily caught, unlike the live population
      it was meant to stand in for) is the reason a trivial fixture here would prove
      nothing about a ruling that genuinely just forgot the section.

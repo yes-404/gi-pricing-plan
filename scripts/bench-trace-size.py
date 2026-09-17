@@ -9,7 +9,8 @@ is measured directly is the actual serialised byte size of a real `Trace`, produ
 serialises with `trace.model_dump_json().encode()` (`backend/src/app/platform/traces.py`)
 — and that measured size is then multiplied out against the requirement's stated volume.
 Saying which of the two this is, is itself part of Task 4D's deliverable
-(`docs/plans/PL-00850-wk-671-slice-4-trace-sampling-the-row-plus-blob-store-and-the-retention-floor.md` Task 4D).
+(`docs/plans/PL-00850-wk-671-slice-4-trace-sampling-the-row-plus-blob-store-and-the-retention-floor.md`
+Task 4D).
 
 **No database, no blob store, no compose stack.** `BlobStore.put`
 (`backend/src/app/platform/blobs.py:130`) writes the given bytes to S3/MinIO verbatim — no

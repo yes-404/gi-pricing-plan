@@ -29,7 +29,8 @@ Four design constraints, each bought by a measured failure across three halted w
 3. **A green over an empty population is a fail, not a pass.** On a migrated tree
    `audit-docs.py` prints *"0 requirements defined across 8 specs"* as a **passing** line.
    Every row prints its denominator, and a zero denominator where the control has a non-zero
-   one fails loudly (`docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md`).
+   one fails loudly
+   (`docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md`).
 4. **Field tests, never substring tests** (RL-1043 §5). §7(d)'s `was:` exclusion is a
    parsed front-matter field, not a `"was:" in line` substring: two `was:`-keyed results have
    now needed re-deriving and both times a substring stood in for a field.
@@ -320,7 +321,8 @@ def _materialise(docid: Any, ref: str, dest: Path, *, repo_root: Path) -> None:
     It used to be built with `git archive` + `git init`, which satisfies both of those and
     is nevertheless wrong. Id allocation sorts on `created`, and for a requirement draft
     `created` is the module's **git first-commit date** (RFC-937 item 1; D1 at
-    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:247` — numbers carry chronology). A one-commit
+    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:247`
+    — numbers carry chronology). A one-commit
     tree has none of those dates, so every requirement draft fell through to the old
     `date.today()` fallback, took the same date, sorted to the back of the sequence, and
     displaced the ids after it. `--verify` was therefore measuring an allocation a real run
@@ -484,7 +486,9 @@ def was_field_line_numbers(text: str) -> frozenset[int]:
     )
 
 
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: the fence predicate moved into `_docid` so `audit-docs.py`
 #: check 36 can read the identical rule row (e)'s `padded_hits` and row (d)'s corpus both
 #: use — re-exported here under this module's existing name for every caller and test
@@ -866,7 +870,9 @@ D_ALTERNATIVES: Final = _docid.LEGACY_FORM_PATTERNS
 #: Part 1 anchoring fix to the pattern can never silently un-key a disclosure. Disclosed,
 #: never silent: the row still prints its figure, denominator and control.
 #:
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: moved into `_docid.FINDING_ID_ALIAS_LABELS` so `audit-docs.py`
 #: check 36 can read the identical two-label set — re-exported here under this module's
 #: existing name. Deliberately the *narrower* of `_docid`'s two disclosed-label constants:
@@ -1212,7 +1218,9 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
 # is for an exhibit of a defective FORM, and this is not one.
 _D7_LABEL: Final = _docid.SCOPED_REQUIREMENT_ID_LABEL
 
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: the never-allocated predicate's sources and function moved
 #: into `_docid` so `audit-docs.py` check 36 can read the identical rule — the four thin
 #: wrappers below preserve this module's existing `Corpus`-based signatures for every
@@ -1879,7 +1887,9 @@ def rows_d(
 # ---------------------------------------------------------------------------------------
 
 #: **Conjunct 1**'s exact-width regex, moved into `_docid` per
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item 1
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 2 item 1
 #: so `audit-docs.py` check 32 can read the identical assembled pattern rather than
 #: reassembling it from the same two symbols in a second place — re-exported here under
 #: this module's existing name for every caller and test already written against it.
@@ -1894,7 +1904,9 @@ _FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
 
 #: **Conjunct 2's** stripping step, boundary set and line-locator strip, and the
 #: `_in_path_context` predicate itself, moved into `_docid` per
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item 1
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 2 item 1
 #: so `audit-docs.py` check 32 can read the identical predicate rather than a private copy.
 #: Re-exported here under their existing names for this module's own callers and tests.
 _MD_EMPHASIS_RE: Final = _docid._MD_EMPHASIS_RE
@@ -2937,7 +2949,8 @@ _VACUITY_PROBES: Final = (
 _ABSENT_CHECK_RE: Final = re.compile(r"cannot run|cannot scan it")
 
 #: RL-1046 §B's own methodology, originally ported from the shell one-liner
-#: `docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-one-is-named-by-2026-09-03.md:139` used to derive the taxonomy
+#: `docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-one-is-named-
+#: by-2026-09-03.md:139` used to derive the taxonomy
 #: the ruling reads: `sed -n '/^FAILED/,$p' <log> | grep '^  - ' | sed -E
 #: 's/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' | sort | uniq -c`. Everything
 #: from the `FAILED (`n`):` line onward, one `  - <msg>` per failure.
@@ -3617,7 +3630,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # fixed here, out of row (b)'s own scope.
     "d6": DISCLOSE,     # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
                          # original matches, plus one more surfaced by `origin/main` drift
-                         # (`docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-one-is-named-by-2026-09-03.md`, a
+                         # (`docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-
+                         # failure-each-one-is-named-by-2026-09-03.md`, a
                          # row-h plan landed after this row's original 74-line snapshot),
                          # were specification-class — deliberately-fake, schematic
                          # `ADR-0NNN`-shaped parsing-width worked examples and test

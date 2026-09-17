@@ -102,7 +102,8 @@ _FLAG_DAY_COMMIT: Final = "aab6327"
 #: standalone files use `#`, the ordinary rulings files use `##`, the A-series uses
 #: `###`). Excludes a title that merely *mentions* an existing ruling's number — the
 #: `'s` alternative below exists only to name that exclusion in one place, since
-#: `docs/rulings/RL-00994-the-fixture-is-rebuilt-on-the-property-not-the-level-and-the-container-is-identified-positively.md`'s own H1 ("RL-979's
+#: `docs/rulings/RL-00994-the-fixture-is-rebuilt-on-the-property-not-the-level-and-the-container-is-
+#: identified-positively.md`'s own H1 ("RL-979's
 #: second acceptance item, amended...") matches `RL-979` followed by `'s`, not by an
 #: em dash, and is the document's title rather than a second declaration of RL-979.
 _RULING_HEADING_RE: Final = re.compile(

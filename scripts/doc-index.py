@@ -1018,7 +1018,8 @@ def phase_report(corpus: Corpus, phase_id: str, root: Path) -> str:
 
     # 5. Findings opened versus discharged, with the unowned-decay count — scoped from
     # `findings/register.md`, per RL-982 (docs/rulings/RL-00982-the-phase-report-s
-    # -findings-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-behaviour.md): the note was not silent on this, §5.2 and §5.4 name the register
+    # -findings-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-
+    # behaviour.md): the note was not silent on this, §5.2 and §5.4 name the register
     # as the carrier. A parse-coverage mismatch raises rather than silently under-counting
     # (RL-982 acceptance item 2).
     register_rows, register_data_lines = _parse_register(root / "findings" / "register.md")

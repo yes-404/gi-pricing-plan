@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Register grammar linter — enforces `docs/findings/register.md`'s own Decision-cell grammar.
 
-Ordered by RL-910 (`docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`), which found that
+Ordered by RL-910
+(`docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`),
+which found that
 RL-906's mechanism (a filename-date cutoff) has no analogue for a register row — a row
 carries no date and is edited in place as its normal operation — so the answer here is not
 a flag day or a legacy class but conforming the corpus once (RL-909's PR) and red-gating

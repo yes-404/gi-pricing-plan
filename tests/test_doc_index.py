@@ -400,7 +400,10 @@ def test_phase_report_plans_superseded_and_rulings_per_work() -> None:
     assert "WK-1210: 0" in report
 
 
-# --- RL-982 (docs/rulings/RL-00982-the-phase-report-s-findings-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-behaviour.md): the findings
+# --- RL-982 (
+# docs/rulings/RL-00982-the-phase-report-s-findings-element-is-phase-scoped-from-the-register-
+# project-wide-is-a-defect-not-correct-behaviour.md
+# ): the findings
 # element is phase-scoped from `findings/register.md`, never from an `FD-` essay's header
 # (which, after RL-981, does not even carry `decision:` any more). The fixture register
 # holds: FD-1450 (P9, unowned, active), FD-1451 (P9, resolved -> closed), FD-1452 (P9,

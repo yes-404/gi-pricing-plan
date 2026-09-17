@@ -7,12 +7,14 @@ merely citing it (`_SPECIFICATIONS_OF_THE_OLD_PATH` below -- added 2026-09-02 fo
 see that constant's own comment for what this narrow exemption stops catching).
 
 This is the slice's own TDD leaf, per
-`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §9 Step 1: the invariant the move must
+`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md`
+§9 Step 1: the invariant the move must
 establish, written and run to failure *before* the `git mv` of the notes directory to
 `docs/notes` and the mechanism edits, rather than asserted after the fact. A count of living
 citations differing from the plan's own re-derivation is expected -- the citation surface
 moves day to day (see the plan's §1a) -- but the *classes* the citations fall into should
-match what §1a and RL-948 of `docs/rulings/RL-00948-q7-notes-half-only-cite-notes-by-nt-00nn-id-path-citations-are-rejected-for-this-one-category.md`
+match what §1a and RL-948 of
+`docs/rulings/RL-00948-q7-notes-half-only-cite-notes-by-nt-00nn-id-path-citations-are-rejected-for-this-one-category.md`
 describe: frozen plans (untouched, C4), and everything else (edited by the move).
 
 **Widened 2026-09-01 for RL-951** (`docs/rulings/RL-00951-rl-947-s-tombstone-gains-p
@@ -67,7 +69,10 @@ _PRE_MOVE_SNAPSHOTS = {
 
 # The class: a document that *specifies or verifies RFC-937's own future migration* of
 # this exact path, rather than a stale reference left over from the RFC-897 move this test
-# otherwise polices. RFC-937 (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`) is itself the
+# otherwise polices. RFC-937 (
+# `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-
+# layout-and-roles-per-family.md`
+# ) is itself the
 # reason this class exists at all: its own §4 step 4 will *delete* the stub files check 30
 # watches, so both it and everything that verifies it against the tree necessarily name the
 # path being deleted. `docs/plans/` already has a blanket carve-out above for the same
