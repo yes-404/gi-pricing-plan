@@ -1,4 +1,5 @@
-"""Reference tables and their effective-dated versions (`01` §3.5, §4.8, FR-69, FR-70, FR-71, FR-72).
+"""Reference tables and their effective-dated versions (`01` §3.5, §4.8, FR-69, FR-70, FR-71,
+FR-72).
 
 A reference table is the least glamorous data in a pricing platform and among the most
 dangerous. A vehicle-group table refreshed without versioning changes the rating of every

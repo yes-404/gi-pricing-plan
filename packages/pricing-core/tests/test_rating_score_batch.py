@@ -2,8 +2,9 @@
 
 Fixture shape: reuses Task 1.4's own fixtures (`_compiled`, `_ctx`) from `test_rating_
 score.py` rather than duplicating them — the established convention in this test suite.
-Task 3A's own acceptance standard (`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`, Task
-3A Steps 1-5) is exactly four properties: byte-identity with `score_one` through the
+Task 3A's own acceptance standard
+(`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`,
+Task 3A Steps 1-5) is exactly four properties: byte-identity with `score_one` through the
 shared `build_scoring_result` tail, chunked progress reporting, cooperative cancellation
 at a chunk boundary, and purity (no I/O, no state across calls). A fifth test (per-row
 error isolation) is added because it is what makes "chunked" safe to call on real data —

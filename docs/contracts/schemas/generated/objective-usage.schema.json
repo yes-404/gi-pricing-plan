@@ -1,7 +1,7 @@
 {
   "$defs": {
     "ObjectiveStatus": {
-      "description": "FR-MODEL-46's lifecycle.",
+      "description": "FR-163's lifecycle.",
       "enum": [
         "draft",
         "certified",
@@ -14,7 +14,7 @@
     },
     "ObjectiveUsageModel": {
       "additionalProperties": false,
-      "description": "One Model fitted under an objective version (FR-MODEL-47).\n\nSlug, version and status rather than the whole Model: the blast-radius question is\n\"what does a defect in this loss reach, and how far has each of them got?\" — a `draft`\nmodel is a experiment to re-fit and an `approved` one is a decision to revisit, and\nthose are different pieces of work.",
+      "description": "One Model fitted under an objective version (FR-164).\n\nSlug, version and status rather than the whole Model: the blast-radius question is\n\"what does a defect in this loss reach, and how far has each of them got?\" — a `draft`\nmodel is a experiment to re-fit and an `approved` one is a decision to revisit, and\nthose are different pieces of work.",
       "properties": {
         "dataset_version_id": {
           "format": "uuid",
@@ -53,7 +53,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "FR-MODEL-47's blast radius for one Custom Objective version.\n\n**`rating_versions` and `deployments` are named and always empty in Phase 1**, and this\nis FR-MODEL-87's staging rule rather than an oversight: `03 — Rating Engine` is not\nbuilt, so there is no table to query and no row that could appear. Naming them here\nmeans the slice that builds `03` fills a field the frontend already renders, instead of\nchanging a response shape that clients have learned. The field's emptiness is stated in\n`02` §5.1 with its date, so a reader does not have to infer \"none\" from \"not yet\".\n\nNot paginated, deliberately. This is read when a defect is found, and a truncated blast\nradius is the one answer here that is worse than a slow one.",
+  "description": "FR-164's blast radius for one Custom Objective version.\n\n**`rating_versions` and `deployments` are named and always empty in Phase 1**, and this\nis FR-207's staging rule rather than an oversight: `03 — Rating Engine` is not\nbuilt, so there is no table to query and no row that could appear. Naming them here\nmeans the slice that builds `03` fills a field the frontend already renders, instead of\nchanging a response shape that clients have learned. The field's emptiness is stated in\n`02` §5.1 with its date, so a reader does not have to infer \"none\" from \"not yet\".\n\nNot paginated, deliberately. This is read when a defect is found, and a truncated blast\nradius is the one answer here that is worse than a slow one.",
   "properties": {
     "custom_objective_id": {
       "format": "uuid",

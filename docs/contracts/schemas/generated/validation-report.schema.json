@@ -2,7 +2,7 @@
   "$defs": {
     "Acknowledgement": {
       "additionalProperties": false,
-      "description": "A Principal accepting a warning, on this report (FR-DATA-17, FR-DATA-18).",
+      "description": "A Principal accepting a warning, on this report (FR-46, FR-47).",
       "properties": {
         "at": {
           "format": "date-time",
@@ -41,7 +41,7 @@
     },
     "RuleResult": {
       "additionalProperties": false,
-      "description": "One rule's outcome (`01` §4.6, FR-DATA-20).",
+      "description": "One rule's outcome (`01` §4.6, FR-49).",
       "properties": {
         "acknowledgement": {
           "anyOf": [
@@ -168,7 +168,7 @@
       "type": "string"
     },
     "ValidationLayer": {
-      "description": "The four layers of FR-DATA-16, all of which a Rule Set must cover.",
+      "description": "The four layers of FR-45, all of which a Rule Set must cover.",
       "enum": [
         "structural",
         "referential",

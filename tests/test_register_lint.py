@@ -1,6 +1,8 @@
 """`scripts/register-lint.py` — the register grammar linter RL-910 ordered.
 
-RL-910 (`docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`) found that nothing enforced
+RL-910 (
+`docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`
+) found that nothing enforced
 `docs/findings/register.md`'s own Decision-cell grammar, ruled "no legacy class, no exemption,
 no warn phase, no flag day," and required the check to be red on the first day it lands if
 the live register does not conform, and green if it does. `CLAUDE.md` §13: "a check that has
@@ -22,13 +24,15 @@ from typing import cast
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "register-lint.py"
 AUDIT_SCRIPT = ROOT / "scripts" / "audit-docs.py"
-REGISTER = ROOT / "docs" / "audit" / "register.md"
 
 _spec = importlib.util.spec_from_file_location("_register_lint_under_test", SCRIPT)
 assert _spec is not None
 assert _spec.loader is not None
 register_lint = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(register_lint)
+
+# Same pre/post-migration resolution as `register-lint.py`'s own `TARGETS[0]`.
+REGISTER = register_lint.TARGETS[0]
 
 
 def _table(decision: str, finding: str = "X (F999998)") -> str:
@@ -538,3 +542,130 @@ def test_check_29_note_carries_the_residue_line() -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "residue —" in result.stdout, result.stdout
+
+
+# --- Residue class 2: the phase-1b merge (RL-1046 check 29, owner W37-10) --------------
+
+
+def _table_phase(decision: str, phase: str, finding: str = "X (F999998)") -> str:
+    """One well-formed data row wrapped in a minimal, otherwise-conforming table, with an
+    explicit Phase cell — `_table` above always writes `1` and cannot exercise a
+    predicate keyed on the Phase column reading `1b` specifically.
+    """
+    header = "| Finding id | Concerns | Work item | Phase | Decision |\n|---|---|---|---|---|\n"
+    return header + f"| {finding} | concerns | WK-657 | {phase} | {decision} |\n"
+
+
+_UNGRAMMATICAL_DECISION = "discharged — some note carrying no recognised opening at all"
+
+
+def test_a_defective_phase1b_row_is_residue_not_a_failure(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 1: a Decision cell that would otherwise fail rule 1
+    (`_UNGRAMMATICAL_DECISION` opens with neither the disposition vocabulary, a CLAUDE.md
+    §13 verdict, nor a resolution marker), on a row whose Phase cell reads `1b`, is
+    residue class 2 — `lint_register` returns no failure for it (the `main()`-equivalent
+    outcome: exit 0), and `phase1b_residue` counts it as the one defective row of one
+    phase-1b row total.
+    """
+    content = _table_phase(_UNGRAMMATICAL_DECISION, phase="1b")
+    failures = _lint(tmp_path, content)
+    assert failures == [], failures
+    rows, problems = register_lint.parse_register(tmp_path / "register.md")
+    assert problems == []
+    assert register_lint.phase1b_residue(rows) == (1, 1)
+
+
+def test_the_same_defect_on_a_non_phase1b_row_still_fails(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 2: the identical defective Decision cell, on a row whose Phase
+    cell reads anything else, is unaffected by residue class 2 and still fails rule 1 —
+    the predicate is the Phase cell, not the finding or the defect shape.
+    """
+    content = _table_phase(_UNGRAMMATICAL_DECISION, phase="2")
+    failures = _lint(tmp_path, content)
+    assert len(failures) == 1
+    assert "matches none of" in failures[0]
+
+
+def test_a_conforming_phase1b_row_is_counted_in_neither(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 3: a phase-1b row with a genuinely well-formed Decision cell is
+    not a lint failure (unsurprising — it conforms) and not residue either (it is not
+    defective, so it must not inflate the residue count the way a bug in `phase1b_residue`
+    counting every phase-1b row rather than only the failing ones would).
+    """
+    content = _table_phase("accept — a clean, conforming decision", phase="1b")
+    failures = _lint(tmp_path, content)
+    assert failures == []
+    rows, problems = register_lint.parse_register(tmp_path / "register.md")
+    assert problems == []
+    assert register_lint.phase1b_residue(rows) == (0, 1)
+
+
+def test_phase1b_residue_predicate_is_the_phase_column_not_an_id_list() -> None:
+    """`_is_phase1b_merge_row` must read `row.fields[_PHASE_FIELD_INDEX]` — a column
+    already on disk — never a hand-maintained finding-id set: the reproducibility RL-910
+    §2 requires (a check whose verdict depends on a maintained allowlist cannot be
+    reproduced in a fresh clone). Proven by construction rather than by inspection: a row
+    carrying a phase-1b-only finding id text but a *different* Phase cell must not be
+    treated as phase-1b, and a row carrying an ordinary finding id but Phase `1b` must be.
+    """
+    non_1b_phase_row = register_lint.Row(
+        "resolved 2026-08-27 (#280) — the strings no longer assert minor units (F1)",
+        ["F1", "concerns", "WK-664", "2", "resolved 2026-08-27 (#280) — no ref"],
+        1, "raw",
+    )
+    assert not register_lint._is_phase1b_merge_row(non_1b_phase_row)
+    ordinary_id_phase1b_row = register_lint.Row(
+        "Some ordinary finding",
+        ["Some ordinary finding", "concerns", "WK-664", "1b", "accept — fine"],
+        1, "raw",
+    )
+    assert register_lint._is_phase1b_merge_row(ordinary_id_phase1b_row)
+
+
+def test_a_reordered_header_column_fails_loudly_naming_what_it_found(
+    tmp_path: pathlib.Path,
+) -> None:
+    """`_is_phase1b_merge_row` trusts `row.fields[_PHASE_FIELD_INDEX]` by position,
+    without re-deriving the index from the header every call — safe only as long as the
+    header's own cell at that index still reads "Phase". Broken-input proof: a table
+    whose header swaps "Work item" and "Phase" (so index 3 reads "Work item" instead)
+    must fail loudly, naming what it actually found, rather than silently reading the
+    wrong column as every row's phase from then on.
+    """
+    header = (
+        "| Finding id | Concerns | Phase | Work item | Decision |\n"
+        "|---|---|---|---|---|\n"
+    )
+    content = header + "| X (F999997) | concerns | 1b | WK-657 | accept — fine |\n"
+    f = tmp_path / "register.md"
+    f.write_text(content, encoding="utf-8")
+    _rows, problems = register_lint.parse_register(f)
+    assert len(problems) == 1, problems
+    assert "header column 3 reads 'Work item', not \"Phase\"" in problems[0], problems[0]
+    failures = register_lint.lint_register(f)
+    assert problems[0] in failures, (
+        "a reordered header column is a structural problem, which lint_register must "
+        "surface as a failure -- silence here is the exact defect this proof exists to "
+        "make impossible to miss"
+    )
+
+
+def test_phase1b_residue_count_matches_check_29s_own_count() -> None:
+    """Cross-check between `register-lint.py`'s two consumers: a direct import
+    (`register_lint.phase1b_residue`, what this suite uses throughout) and the subprocess
+    `scripts/audit-docs.py` actually runs in CI (check 29, via `residue_line`). Both read
+    the identical live register, so the defective count either both report must agree —
+    no literal count on either side, so this holds regardless of how the register grows.
+    """
+    rows, problems = register_lint.parse_register(REGISTER)
+    assert problems == []
+    defective, _total = register_lint.phase1b_residue(rows)
+    result = subprocess.run(
+        ["python3", str(AUDIT_SCRIPT)], capture_output=True, text=True, cwd=ROOT
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    check_29_line = next(
+        line for line in result.stdout.splitlines() if line.strip().startswith("check 29:")
+        and "residue class 2" in line
+    )
+    assert f"{defective} of" in check_29_line, check_29_line

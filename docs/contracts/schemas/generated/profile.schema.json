@@ -126,7 +126,7 @@
     },
     "Histogram": {
       "additionalProperties": false,
-      "description": "The binned distribution of a numeric column (`01` §4.7, FR-DATA-48).\n\nBin *edges* rather than a bin width, because the last bin is closed and the others are\nhalf-open: `[e0, e1) … [e(n-1), en]`. A reader given only a width has to guess which\nend carries the maximum, and the two profiling engines would guess differently.\n\n`exposure` is optional and, when present, holds one exact decimal weight per bin\n(FR-OVR-7). A count histogram of an exposure-weighted book overstates the tail: a bin\nof 200 policies each on risk a fortnight is not the same risk as 200 policies on risk a\nyear, and pricing reads the second.",
+      "description": "The binned distribution of a numeric column (`01` §4.7, FR-65).\n\nBin *edges* rather than a bin width, because the last bin is closed and the others are\nhalf-open: `[e0, e1) … [e(n-1), en]`. A reader given only a width has to guess which\nend carries the maximum, and the two profiling engines would guess differently.\n\n`exposure` is optional and, when present, holds one exact decimal weight per bin\n(FR-10). A count histogram of an exposure-weighted book overstates the tail: a bin\nof 200 policies each on risk a fortnight is not the same risk as 200 policies on risk a\nyear, and pricing reads the second.",
       "properties": {
         "counts": {
           "default": [],
@@ -148,7 +148,7 @@
         "exposure": {
           "default": [],
           "items": {
-            "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
             "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
             "type": "string"
           },
@@ -161,7 +161,7 @@
     },
     "LevelCount": {
       "additionalProperties": false,
-      "description": "One level of `ColumnProfile.top_levels` (FR-DATA-25, FR-DATA-49).\n\nThe authored contract (`docs/contracts/schemas/profile.schema.json`) has declared this\nshape since Phase 0 — `{level, count, exposure_years}`, only `level` and `count`\nrequired — while the model carried an unnamed `(str, int)` pair with no exposure\nweight. FR-DATA-49 closes that gap on the model-schema side.",
+      "description": "One level of `ColumnProfile.top_levels` (FR-60, FR-66).\n\nThe authored contract (`docs/contracts/schemas/profile.schema.json`) has declared this\nshape since Phase 0 — `{level, count, exposure_years}`, only `level` and `count`\nrequired — while the model carried an unnamed `(str, int)` pair with no exposure\nweight. FR-66 closes that gap on the model-schema side.",
       "properties": {
         "count": {
           "minimum": 0,
@@ -171,7 +171,7 @@
         "exposure_years": {
           "anyOf": [
             {
-              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
               "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
               "type": "string"
             },
@@ -203,7 +203,7 @@
     },
     "OneWayRow": {
       "additionalProperties": false,
-      "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-DATA-46).",
+      "description": "One level of a one-way summary (FR-61).\n\nMoney is integer minor units and exposure a decimal string (FR-10). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-64).",
       "properties": {
         "claim_amount_minor": {
           "default": 0,
@@ -218,7 +218,7 @@
           "type": "integer"
         },
         "exposure_years": {
-          "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
           "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
           "title": "Exposure Years",
           "type": "string"
@@ -317,7 +317,7 @@
     },
     "OneWaySummary": {
       "additionalProperties": false,
-      "description": "A candidate rating column summarised by level (FR-DATA-26).\n\nComputed here, once, because `02`'s factor workbench and the pricing actuary looking at\na dataset must see the same numbers — and because recomputing per request is the\ndifference between an interactive screen and a spinner.",
+      "description": "A candidate rating column summarised by level (FR-61).\n\nComputed here, once, because `02`'s factor workbench and the pricing actuary looking at\na dataset must see the same numbers — and because recomputing per request is the\ndifference between an interactive screen and a spinner.",
       "properties": {
         "banding": {
           "default": "levels",
@@ -344,7 +344,7 @@
       "type": "object"
     },
     "SemanticType": {
-      "description": "What a column *means*, inferred separately from its dtype (FR-DATA-25).\n\nA dtype says `int32`; a semantic type says whether that is a policy id, a vehicle\ngroup, or an age. The distinction decides whether a one-way summary is meaningful —\nbanding a policy id produces a chart with five million bars.",
+      "description": "What a column *means*, inferred separately from its dtype (FR-60).\n\nA dtype says `int32`; a semantic type says whether that is a policy id, a vehicle\ngroup, or an age. The distinction decides whether a one-way summary is meaningful —\nbanding a policy id produces a chart with five million bars.",
       "enum": [
         "identifier",
         "categorical",
@@ -359,7 +359,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The profile artifact for one Dataset Version (`01` §4.7, FR-DATA-25/26/27).",
+  "description": "The profile artifact for one Dataset Version (`01` §4.7, FR-60/61/62).",
   "properties": {
     "columns": {
       "default": [],

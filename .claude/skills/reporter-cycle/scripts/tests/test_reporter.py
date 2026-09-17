@@ -295,7 +295,8 @@ def test_success_path_log_line_still_says_ok_and_carries_the_body(tmp_path: Path
 # RL-1059 (2026-09-04) — the Slack routine: a 100-word cap, a BST clock time in the
 # ETA, and a refresh on every `origin/main` move. Three rules, three broken-input proofs,
 # named verbatim in the ruling's own "Acceptance" section
-# (docs/rulings/RL-01059-a-100-word-cap-a-bst-clock-time-in-the-eta-and-a-refresh-on-every-origin-main-move.md).
+# (docs/rulings/RL-01059-a-100-word-cap-a-bst-clock-time-in-the-eta-and-a-refresh-on-every-origin-
+# main-move.md).
 # ---------------------------------------------------------------------------
 
 

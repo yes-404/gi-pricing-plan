@@ -51,7 +51,9 @@ Checks (all non-destructive, exit 1 on any failure):
      note rather than a failure, the count of rows not yet migrated to
      docs/audit/findings/<F-id>.md against the migration threshold (RL-911, RFC-896 P4).
 
-RFC-937 (docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md) §1.11 — one id per governed thing.
+RFC-937
+(docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md)
+§1.11 — one id per governed thing.
 Checks 30-39 below, path-scoped to `_ID_SCOPE_ROOTS` until the migration (Slice W37-6)
 widens it to the whole corpus (docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md,
 Slice W37-4, 2026-09-02). **Slot 30 changed identity on this date**: it held
@@ -660,7 +662,9 @@ _FINDING_CITED = re.compile(r"\((" + _FINDING_ID + r")\)")
 #: A file defining its own local, private findings — a heading (`## F1 — …`), a ledger
 #: table's own first cell (`| F1 | … |`, the shape both `track-a-findings.md` and every
 #: archived phase register use), or a bold paragraph lead-in (`**F-W11-1-2 — … .**`, the
-#: shape `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md` uses for its own four findings).
+#: shape
+#: `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`
+#: uses for its own four findings).
 _FINDING_HEADING = re.compile(r"^#{1,6}\s+(" + _FINDING_ID + r")\b", re.M)
 _FINDING_TABLE_CELL = re.compile(r"^\|\s*(" + _FINDING_ID + r")\s*\|", re.M)
 _FINDING_BOLD_LEAD = re.compile(r"^\*\*(" + _FINDING_ID + r")\b", re.M)
@@ -680,12 +684,13 @@ def check_finding_citations() -> None:
     — where a citation is *made*. Not `docs/audit/` itself, where findings are *filed* and a
     retired id or a not-yet-filed one is legitimately named in the prose explaining exactly
     that (the F42 tombstone note names both F42 and F45 in plain, unparenthesised text for
-    this reason). Not `docs/roadmap.md` or `docs/closures/CR-00709-phase-0-specification-status.md` either, though both carry
-    `(F..)` tokens: building this check found `closures/CR-00709-phase-0-specification-status.md`'s `(F13)` citing
-    `docs/research/track-a-findings.md`'s own local F13 (`FR-129`) — a real collision
-    with the register's *unrelated* F13 (`FR-25`) that a wider scan would have silently
-    resolved against the wrong row instead of catching. Narrowing to where the incident this
-    check answers actually happened is what keeps that kind of false confidence out.
+    this reason). Not `docs/roadmap.md` or `docs/closures/CR-00709-phase-0-specification-status.md`
+    either, though both carry `(F..)` tokens: building this check found
+    `closures/CR-00709-phase-0-specification-status.md`'s `(F13)` citing
+    `docs/research/track-a-findings.md`'s own local F13 (`FR-129`) — a real collision with the
+    register's *unrelated* F13 (`FR-25`) that a wider scan would have silently resolved against the
+    wrong row instead of catching. Narrowing to where the incident this check answers actually
+    happened is what keeps that kind of false confidence out.
 
     **All three scan roots are unconditionally present, so a missing one is an error, not a
     legitimate absence.** Unlike an artifact the repository may not have built yet, `research/`,
@@ -697,7 +702,9 @@ def check_finding_citations() -> None:
     **Only the register's own citation form is matched**: an id in parentheses immediately
     after the text it concerns, `(F32)` or `(F-W9-1)` — exactly how every register row names
     itself, and how every genuine cross-document citation found while writing this check was
-    written (`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md` and its WK-671 siblings). A bare
+    written
+    (`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`
+    and its WK-671 siblings). A bare
     `F1` with no parentheses is deliberately never matched: dozens of unrelated documents
     number their *own* local findings from one — every WK-661 and WK-664 task plan's own "Findings"
     section, `track-a-findings.md`'s spike log, the phase 1b predecision plan before it became
@@ -709,13 +716,15 @@ def check_finding_citations() -> None:
 
     **A file citing its own locally-defined finding is not citing the register.** A plan that
     opens `### F1 — …` (a heading), or `**F-W11-1-2 — … .**` (a bold paragraph lead-in, the
-    form `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md` uses for its own four findings), and
-    later writes `(F1)` or `(F-W11-1-2)` again further down, refers to itself, not to
-    `docs/findings/register.md`. `_FINDING_HEADING`, `_FINDING_TABLE_CELL` and
-    `_FINDING_BOLD_LEAD` collect a file's own local ids (all three defining forms seen in the
-    real corpus), same-file only: a citation resolved by a *different* file's local heading
-    (the `closures/CR-00709-phase-0-specification-status.md` collision above) is exactly the false match this check must not
-    make, which is a second, independent reason that file sits outside this check's scope.
+    form
+    `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`
+    uses for its own four findings), and later writes `(F1)` or `(F-W11-1-2)` again further down,
+    refers to itself, not to `docs/findings/register.md`. `_FINDING_HEADING`, `_FINDING_TABLE_CELL`
+    and `_FINDING_BOLD_LEAD` collect a file's own local ids (all three defining forms seen in the
+    real corpus), same-file only: a citation resolved by a *different* file's local heading (the
+    `closures/CR-00709-phase-0-specification-status.md` collision above) is exactly the false match
+    this check must not make, which is a second, independent reason that file sits outside this
+    check's scope.
 
     **A finding resolves against the live register, an archived phase register, or a closure
     record — never only the first.** `docs/findings/register.md`'s own header states the
@@ -723,17 +732,17 @@ def check_finding_citations() -> None:
     therefore be real, correctly resolved, and correctly cited, while having never had a row
     in the live register at all — the ordinary case for one closed during a slice's own audit
     rather than carried forward. `F-W9-3-2` is exactly this shape: resolved the same day it
-    was raised (`docs/closures/CR-00837-work-item-record-w9-3-bundle-compilation.md`'s Findings table), cited from the spec
-    sentence it corrected (`03-rating-engine.md:671`), never filed to `register.md` because
-    filing a *closed* finding there would violate the header's own contract. Ruling, 2026-08-30
-    (relayed from the lead, who cannot reach this script directly): treating that citation as
-    dangling — the check's first version did — is a worse defect than the gap the check exists
-    to catch, since it fires on correct behaviour. Resolution therefore checks three sources in
-    order: `register.md` (open findings, parenthesised `(F<n>)` form), every
-    `docs/audit/phases/*/register.md` (archived-phase snapshots, bare-id table-cell form), and
-    every `docs/audit/work/*/README.md` plus `docs/audit/closure-records.md` (ordinary work-item
-    closure records, the same bare-id table-cell form — confirmed against `W9-3`'s own Findings
-    table before relying on it, not assumed from the name).
+    was raised (`docs/closures/CR-00837-work-item-record-w9-3-bundle-compilation.md`'s Findings
+    table), cited from the spec sentence it corrected (`03-rating-engine.md:671`), never filed to
+    `register.md` because filing a *closed* finding there would violate the header's own contract.
+    Ruling, 2026-08-30 (relayed from the lead, who cannot reach this script directly): treating that
+    citation as dangling — the check's first version did — is a worse defect than the gap the check
+    exists to catch, since it fires on correct behaviour. Resolution therefore checks three sources
+    in order: `register.md` (open findings, parenthesised `(F<n>)` form), every
+    `docs/audit/phases/*/register.md` (archived-phase snapshots, bare-id table-cell form), and every
+    `docs/audit/work/*/README.md` plus `docs/audit/closure-records.md` (ordinary work-item closure
+    records, the same bare-id table-cell form — confirmed against `W9-3`'s own Findings table before
+    relying on it, not assumed from the name).
 
     **The reverse direction — a register row citing a document that does not exist — is
     deliberately not built here.** A genuine `[text](path)` link inside `docs/findin
@@ -1042,7 +1051,8 @@ def check_process_core_digest() -> None:
 
 
 #: The date C1 and the `writing-plans` acceptance-standard field land together (RFC-895 §2,
-#: RL-906 — `docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-thereafter-rejected-as-the-mechanism.md` RL-906). A constant, not
+#: RL-906 — `docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-
+#: thereafter-rejected-as-the-mechanism.md` RL-906). A constant, not
 #: read from the clock or git history: the verdict must be a property of the plan's own
 #: filename, reproducible in any clone at any revision, never of when the check happens to
 #: run. **Permanent once landed, the same way a check number is (`CLAUDE.md` §5) — do not
@@ -1205,7 +1215,8 @@ def check_plan_acceptance_standard() -> None:
 ####################################################################################
 # RFC-937 checks 30-39 — one id per governed thing.
 #
-# docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md §1.11 is the table these implement; each
+# docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-
+# layout-and-roles-per-family.md §1.11 is the table these implement; each
 # function's docstring cites the row it is. Every one of them reads the shared parser
 # from `scripts/_docid.py` (loaded by path below, the same idiom `_load_register_lint`
 # above already uses for check 29's dependency) rather than redefining any of it — that
@@ -1843,7 +1854,8 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
     ids. Explicit parameters (not the module's own `ROOT`/`_id_scope_documents`) so a
     fixture can exercise this without a real `docs/INDEX.md` on disk.
 
-    `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item
+    `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md`
+    Entry 2 item
     1: the padding clause adopts row (e)'s conjuncts 1, 2 and 3 from `_docid` — the
     exact-width regex (conjunct 1, `_docid._PADDED_ID_RE`, read here rather than
     reassembled from its own `FAMILY_PREFIXES`/`PAD_WIDTH` symbols a second time), path
@@ -1959,6 +1971,17 @@ def check_citations() -> None:
     checked = 0
     for path in _id_scope_documents():
         rel = path.relative_to(REPO).as_posix()
+        # F103, 2026-09-17: the generated-contract tier
+        # (`_docid.generated_contract_tier_reason`) is written by `generate-contracts.py`
+        # from the models, never a citation a person wrote — `_id_scope_documents()`
+        # still reaches it for check 30's F83 exemption bookkeeping, but check 32's
+        # citation-resolution rule reads the identical narrow shared predicate the
+        # migration's own (d)/(e) corpus already excludes it by, rather than scanning a
+        # tier this check was never meant to police. The narrow predicate, not the full
+        # `_docid.sweep_exclusion_reason` — that also folds in `FIXTURE_CORPUS_ROOTS`,
+        # which reaches files check 32 has no reason to exempt.
+        if _docid.generated_contract_tier_reason(rel) is not None:
+            continue
         for problem in citation_problems_in_file(path, index_ids):
             fail(f"check 32: {rel}:{problem}")
         checked += 1
@@ -2283,19 +2306,17 @@ def frozen_file_matches_after_migration_stamp(
     forward direction, for the identical reason.
 
     **Whole identifiers only, in this direction too** — RL-1043 §2 row (g)
-    (`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`). A plain substring
-    inverse has no notion of where an identifier ends, so it *repaired* the very defect
-    §7 (g) exists to find: given the mangled `NFR-775/14` it substituted `NFR-775` and
-    produced `NFR-502/501`, the merge-base bytes exactly, and the file passed. That is
-    the trap the ruling names — the mangled citations "must not be treated as a
-    citation-token class and thereby excused from §7 (g)'s 'neither header nor
-    citation-token' requirement" — and it was literal: §7 (g)'s figure could have been
-    computed on the migrated tree and still read empty. The inverse now applies the same
-    rule `_whole_token_re` applies forward, so a token substituted inside a longer
-    identifier fails to invert and its file is reported. `\b` alone would not do it: it
-    matches between `775` and `/`. The `-`/`/`-followed-by-a-digit form is what the corpus
-    holds; a separator followed by a letter (`OQ-500-shaped`) is not a continuation and
-    still inverts.
+    (`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`). A plain
+    substring inverse has no notion of where an identifier ends, so it *repaired* the very defect §7
+    (g) exists to find: given the mangled `NFR-775/14` it substituted `NFR-775` and produced
+    `NFR-502/501`, the merge-base bytes exactly, and the file passed. That is the trap the ruling
+    names — the mangled citations "must not be treated as a citation-token class and thereby excused
+    from §7 (g)'s 'neither header nor citation-token' requirement" — and it was literal: §7 (g)'s
+    figure could have been computed on the migrated tree and still read empty. The inverse now
+    applies the same rule `_whole_token_re` applies forward, so a token substituted inside a longer
+    identifier fails to invert and its file is reported. `\b` alone would not do it: it matches
+    between `775` and `/`. The `-`/`/`-followed-by-a-digit form is what the corpus holds; a
+    separator followed by a letter (`OQ-500-shaped`) is not a continuation and still inverts.
     """
 
     def _strip_this_runs_stamp(text: str, rel: str | None) -> str:
@@ -2369,6 +2390,53 @@ _ROLES_DIR: Final = REPO / ".claude" / "roles"
 _VALID_OWNERS: Final = frozenset({"maintainer", *(p.stem for p in _ROLES_DIR.glob("*.md"))})
 _PERMITTED_OWNERS_RE: Final = re.compile(r"^Permitted owners:\s*(.+)$", re.MULTILINE)
 
+#: RL-1046 §B (`docs/rulings/RL-01046-the-alias-class-the-disclosed-rows-and-the-run-s-
+#: conditional-window.md`; cited by file path, never as "Ruling 105" — `docs/REDIRECTS.csv`
+#: maps that number to this file, and after the migration the bare number resolves to a
+#: different ruling entirely, RL-01059): "`(h1)` passes when every `audit-docs.py` failure
+#: class on the migrated snapshot is zero except checks 29, 30 and 35, which the row prints
+#: by count, each labelled `owner: W37-10`, and which do not set the exit code." F92's own
+#: row (`docs/findings/register.md`) names the population precisely: 46 `.claude/skills/
+#: */SKILL.md` plus 7 `.claude/agents/*.md` — "which carry front matter a stamp must merge
+#: into" — deferred to W37-10 rather than hand-stamped here (that would be W37-10's own
+#: work, not this check's to do), and never exempted via `UNSTAMPABLE_EXEMPTIONS` either
+#: (these files CAN carry a header; they already do, just not an RFC-937 one).
+_AGENTS_README = ".claude/agents/README.md"
+_SKILL_MD_RE: Final = re.compile(r"\.claude/skills/[^/]+/SKILL\.md")
+
+
+def _is_stamp_deferred_w37_10(path: pathlib.Path, header: object) -> bool:
+    """True when `path`/`header` is a member of F92's exact deferred population: a file
+    under `.claude/agents/` (its own `README.md` excepted — that one carries a real
+    RFC-937 stamp, `family: reference`) or a `.claude/skills/*/SKILL.md`, whose front
+    matter is Claude Code's own harness schema (`name:`/`description:`/…) rather than an
+    RFC-937 header — no `family:` field populated.
+
+    Anchored on **both** path and content, never either alone: a harness-schema file
+    parked outside these two locations is not F92's population (path), and a file at one
+    of these two locations that DOES carry `family:` — a future, properly stamped agent
+    or skill — is not harness-schema-shaped any more and is not deferred either (content).
+    That second clause is what keeps this predicate from silently widening as files here
+    get migrated one at a time: the day a skill or agent file is stamped, it drops out of
+    this set on its own and check 35 checks it like any other document.
+
+    `header` is typed `object` rather than `_docid.Header`: `_docid` is loaded by path
+    (`_load_module`, above), so mypy sees it only as `types.ModuleType`, and this
+    function's only use of `header` is `.family`, read via `getattr` for exactly that
+    reason.
+    """
+    if getattr(header, "family", None):
+        return False
+    try:
+        rel = path.relative_to(REPO).as_posix()
+    except ValueError:
+        return False
+    if rel == _AGENTS_README:
+        return False
+    if rel.startswith(".claude/agents/"):
+        return True
+    return bool(_SKILL_MD_RE.fullmatch(rel))
+
 
 def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
     """A directory README's own declared owner allow-list, read from a line
@@ -2386,7 +2454,8 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 
 # -----------------------------------------------------------------------------------------
 # F83 — the register of files that cannot carry a header at all, and the check that keeps
-# it honest. Filed as `docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-custody-is-an-exemption-rather-than-a-sidecar.md`; ruled by the maintainer 2026-09-02.
+# it honest. Filed as `docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-
+# custody-is-an-exemption-rather-than-a-sidecar.md`; ruled by the maintainer 2026-09-02.
 #
 # Two conditions bind the exemption, and both are enforced here:
 #
@@ -2407,7 +2476,9 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 # the predicate. At `359936b`: **416** files = **51** stamped + **362** with no `---` block
 # + **3** carrying one that will not parse, so **365** unstamped against **65** that can
 # never be stamped. **The total drifts with every markdown file added anywhere under
-# `docs/`** — it was 415 at `f61f9a4` and 417 once `docs/findings/FD-01024-widening-id-scope-roots-reaches-no-non-markdown-file-so-62-of-the-65-exempt-files-stay-invisible-to-checks-30-39.md` lands — so
+# `docs/`** — it was 415 at `f61f9a4` and 417 once `docs/findings/FD-01024-widening-id-scope-roots-
+# reaches-no-non-markdown-file-so-62-of-the-65-exempt-files-stay-invisible-to-checks-30-39.md` lands
+# — so
 # it is given with its tree and its parts, never bare: parts that are stated can be summed,
 # and that is the only check on a decomposition which cannot itself be a proxy. **Check 35's
 # own note prints the live figures every run and is the copy to trust**; a comment restating
@@ -2478,7 +2549,8 @@ _CONTRACTS_REASON: Final = (
 )
 _CONTRACTS_RULING: Final = (
     "F83, ruled by the maintainer 2026-09-02: `generated: true` exemption rather than a "
-    "sidecar (docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-custody-is-an-exemption-rather-than-a-sidecar.md §'The decision, and the option not taken')"
+    "sidecar (docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-custody-is-a"
+    "n-exemption-rather-than-a-sidecar.md §'The decision, and the option not taken')"
 )
 
 #: The 59 `.json` + 1 `.yaml` under `docs/contracts/`. Enumerated as literal paths, not
@@ -2560,18 +2632,21 @@ _OTHER_ARTIFACT_RULING: Final = (
     "tuple's entries"
 )
 
-#: The two non-markdown files in the stamp set that F83's population of 63 does not name.
+#: The three non-markdown files in the stamp set that F83's population of 63 does not name.
 #: F83 measured `docs/contracts/**` and the vendored manifests; the stamp set RFC §4 rules
-#: (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4, "every file under
-#: `docs/`, …") is wider than that, and contains two more files that cannot carry front
-#: matter for exactly the reason F83 gives for the contracts. `delivery-process.core.json`
-#: is CLAUDE.md §15's machine-readable process extract; the census CSV is a dated audit
-#: artifact. Listed here rather than left out so the register equals the tree — the
-#: alternative was a red gate or a predicate narrowed until the two disappeared, which
-#: would blind the check to the growth it exists to catch.
+#: (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4,
+#: "every file under `docs/`, …") is wider than that, and contains two more files that cannot carry
+#: front matter for exactly the reason F83 gives for the contracts. `delivery-process.core.json` is
+#: CLAUDE.md §15's machine-readable process extract; the census CSV is a dated audit artifact;
+#: `REDIRECTS.csv` is RFC-937 §1.8's migration artifact, written by `doc-id.py migrate` and read
+#: by checks 31, 32, 36 and 39 — generated, and CSV, so front matter would break every reader.
+#: Listed here rather than left out so the register equals the tree — the alternative was a red gate
+#: or a predicate narrowed until the two disappeared, which would blind the check to the growth it
+#: exists to catch.
 _OTHER_ARTIFACT_PATHS: Final = (
     "docs/research/file-census-5ef559d.csv",
     "docs/process/delivery-process.core.json",
+    "docs/REDIRECTS.csv",
 )
 
 _VENDORED_MANIFEST_REASON: Final = (
@@ -2581,7 +2656,8 @@ _VENDORED_MANIFEST_REASON: Final = (
 )
 _VENDORED_MANIFEST_RULING: Final = (
     "F83, ruled by the maintainer 2026-09-02: exempt by path rather than by edit "
-    "(docs/plans/PL-00957-w37-5c-the-slice-decision-and-gap-2-ruled.md §5, 'a manifest that won't parse gets "
+    "(docs/plans/PL-00957-w37-5c-the-slice-decision-and-gap-2-ruled.md §5, "
+    "'a manifest that won't parse gets "
     "its header from a sidecar or an exemption, never an edit')"
 )
 
@@ -2616,8 +2692,9 @@ UNSTAMPABLE_EXEMPTIONS: Final[tuple[UnstampableExemption, ...]] = (
 def nt0019_stamp_set(tracked: Sequence[str] | None = None) -> list[str]:
     """Every tracked file in RFC-937's stamp set, as repo-relative posix paths.
 
-    The set is RFC §4's ruling (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md`
-    §4, "§4 step 5 governs the stamp set"): every file under `docs/`, `.claude/roles/`,
+    The set is RFC §4's ruling
+    (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4,
+    "§4 step 5 governs the stamp set"): every file under `docs/`, `.claude/roles/`,
     `.claude/skills/*/SKILL.md` and `.claude/agents/`, plus every `README.md` in the tree.
 
     That last clause is **derived from what §5.2 reaches** (`scripts/doc-id.py`'s
@@ -2782,14 +2859,22 @@ def check_owner() -> None:
     The second clause enforces only where a directory `README.md` actually exists and
     states a permitted-owner list (see `readme_owner_allowlist`) — neither of
     `_ID_SCOPE_ROOTS`'s two directories carries one today.
+
+    F92's 53 deferred files (`_is_stamp_deferred_w37_10`) are counted, never checked
+    against `_VALID_OWNERS` — RL-1046 §B, `owner: W37-10`, printed by count and non-fatal
+    here for the same reason it is non-fatal in `--verify`'s `(h1)` row.
     """
     checked = 0
+    deferred = 0
     for path in _id_scope_documents():
         try:
             header = _docid.parse_header(path)
         except _docid.HeaderError:
             continue
         if header is None:
+            continue
+        if _is_stamp_deferred_w37_10(path, header):
+            deferred += 1
             continue
         checked += 1
         rel = path.relative_to(REPO).as_posix()
@@ -2812,7 +2897,8 @@ def check_owner() -> None:
     stamp_set_size = _check_unstampable_register()
     unstamped_in_scope = _check_scope_unstamped_are_registered()
     notes.append(
-        f"check 35: {checked} owner(s) checked in scope; "
+        f"check 35: {checked} owner(s) checked in scope; {deferred} owner check(s) "
+        "deferred (owner: W37-10, RL-01046 §B — F92's stamp-deferred population); "
         f"{len(UNSTAMPABLE_EXEMPTIONS)} exemption(s) in the F83 register reconciled "
         f"against {stamp_set_size} file(s) in RFC-937's stamp set; "
         f"{unstamped_in_scope} unstamped file(s) in the enforced checks-30-39 scope"
@@ -2858,8 +2944,11 @@ LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
 #: down to these seven; see `tests/test_audit_docs_ids.py`'s load-bearing proof for each.
 LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
     "docs/REDIRECTS.csv",
-    "tests/fixtures/docs-migration/docs/adrs/0001-example-decision.md",
-    "tests/fixtures/docs-migration/docs/rfcs/0001-example-note.md",
+    # The fixture corpus is frozen at its pre-migration shape -- that shape is what
+    # `migrate()` operates on -- so these two carry the legacy family names, not the
+    # post-migration ones `docs/findings/register.md`-style paths would suggest.
+    "tests/fixtures/docs-migration/docs/adr/0001-example-decision.md",
+    "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
     "tests/fixtures/docs-migration/docs/plans/2026-08-12-example-rulings.md",
     "tests/fixtures/docs-migration/docs/roadmap.md",
     "tests/fixtures/docs-migration/docs/specs/00-overview.md",
@@ -2869,7 +2958,9 @@ LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
 
 _WAS_LINE_RE: Final = re.compile(r"^\s*was:\s")
 
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: `_docid.TEST_MODULE_EXCLUSIONS`' three names — the
 #: instrument's own id-grammar/check/migrate test modules, which carry legacy-form ids as
 #: literal fixture data by construction (the "3c tuple" the ruling names). Read alone,
@@ -2905,9 +2996,17 @@ def _sweep_legacy_form_hits(
 ) -> list[_LegacyFormHit]:
     """Every legacy (pre-migration) id or path form found across `paths`, outside a
     `was:` line, outside a fenced code block, outside `excluded_paths`, outside the
-    instrument's own test-module fixture data (`_TEST_MODULE_EXCLUDED_PATHS`), and
-    outside a family's own split-source index (`_docid.is_split_source_index`,
-    2026-09-05, rows (d9)-(d12)'s Check-36 alignment) — RFC-937
+    instrument's own test-module fixture data (`_TEST_MODULE_EXCLUDED_PATHS`), outside
+    a family's own split-source index (`_docid.is_split_source_index`,
+    2026-09-05, rows (d9)-(d12)'s Check-36 alignment), and outside the generated-
+    contract tier (`_docid.generated_contract_tier_reason`, F103, 2026-09-17, the narrow
+    predicate rather than the full `_docid.sweep_exclusion_reason` — that also folds in
+    `FIXTURE_CORPUS_ROOTS`, which would swallow the per-file fixture allowlist below
+    whole): the same generated JSON/YAML `_docverify.tracked_files` already excludes from
+    the migration's own (d)/(e)
+    verification corpus, read by the identical shared predicate rather than a private
+    re-typing of `generate-contracts.py`'s paths — F103 named exactly this scope mismatch,
+    check 36 scanning a tier the migration instrument itself never treats as residue — RFC-937
     §7 acceptance item (d) and check 36's third clause are "one rule at two times"
     (RL-988 §2), so both read the identical `_docid` predicates: the fence
     (`_docid.fenced_line_numbers`, the same rule row (e)'s `padded_hits` and row (d)'s own
@@ -2941,6 +3040,7 @@ def _sweep_legacy_form_hits(
             rel in excluded
             or rel in _TEST_MODULE_EXCLUDED_PATHS
             or _docid.is_split_source_index(rel)
+            or _docid.generated_contract_tier_reason(rel) is not None
         ):
             continue
         try:
@@ -3097,7 +3197,9 @@ def check_redirects() -> None:
         f"check 36: {len(redirect_rows)} redirect row(s), {len(was_values)} `was:` "
         f"field(s) in scope, {len(legacy_hits)} legacy-form hit(s) "
         f"({fatal_hits} fatal, {disclosed_total} disclosed — "
-        "docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md "
+        "docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-"
+        "disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-"
+        "docid-not-a-private-re-typing.md "
         f"Entry 1 item 1, same predicates as RFC-937 §7(d)): {disclosed_text}"
     )
 
@@ -3114,7 +3216,8 @@ _SECTION_HEADING_RE: Final = re.compile(r"^##\s+(.+?)\s*$")
 # Template side: `##` exactly, as before. Document side: any depth, with a leading `N. `
 # / `N.N. ` ordinal stripped, because every real ruling numbers its subsections
 # (`### 4. Acceptance — …`) and a depth-agnostic *literal* match still finds nothing
-# (`docs/findings/FD-01027-check-37-reds-on-95-of-95-post-migration-rulings-unconditional-on-the-flag-day-because-its-section-detector-cannot-see-a-level-heading.md` §B).
+# (`docs/findings/FD-01027-check-37-reds-on-95-of-95-post-migration-rulings-unconditional-on-the-
+# flag-day-because-its-section-detector-cannot-see-a-level-heading.md` §B).
 #
 # The asymmetry is not a convenience. Making the **template** side depth-agnostic too
 # would newly require `SL-NNNNN — <Title>` and `WK-NNNNN — <Title>` — the only body
@@ -3219,7 +3322,8 @@ def check_shape() -> None:
             # RL-1039: check 37 governs documents **authored from a template**. A body the
             # migration carried over verbatim from a pre-standard file predates the shape
             # it would be judged against, and `was:` is how the migration says so — RFC-937
-            # §1.5's closed field set, `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:125`,
+            # §1.5's closed field set, `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-
+            # integer-identity-a-self-describing-layout-and-roles-per-family.md:125`,
             # `was: 2026-08-18-profile-contract.md   # migration only`. It is set only on
             # the migration's own write paths and is declared in **no** template, so a
             # later author cannot inherit the exemption by copying one.
