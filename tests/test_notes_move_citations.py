@@ -131,6 +131,26 @@ _SPECIFICATIONS_OF_THE_OLD_PATH = {
     "docs/research/RS-01002-rfc-937-verification-and-impact-sweep-audit-record.md",
     "docs/findings/FD-01009-python-yml-never-triggered-on-docs-so-a-docs-only-change-could-break-any-root-test-with-ci-green.md",
     "docs/findings/register.md",
+    # Reviewed W37-6 (2026-09-17), the six rulings that decided RFC-937's own notes-move
+    # (RFC-897's predecessor decision, moving the old notes root under `.claude` to
+    # `docs/notes/`/`docs/rfcs/`): each names the path as the subject of the decision it
+    # records, not as a living instruction
+    # to keep using it. Q4-Q7 (RL-945..948) are one ruling series answering "where does the
+    # notes half land, in what form, cited how" in turn; RL-913 and RL-988 each name the
+    # path once, inside a grep pattern / a historical count table about detecting it, the
+    # same reason `scripts/_docid.py` below is in this set.
+    "docs/rulings/RL-00913-q5-file-by-the-f-id-verbatim-the-requirement-id-cannot-name-a-file-and-is-cross-linked-from-inside-it.md",
+    "docs/rulings/RL-00945-q4-the-ownership-matrix-lands-in-docs-process-a-note-appendix-is-rejected.md",
+    "docs/rulings/RL-00946-q5-destination-is-docs-notes-folding-into-an-existing-docs-family-is-rejected.md",
+    "docs/rulings/RL-00947-q6-tombstone-form-is-a-readme-mapping-symlinks-are-rejected.md",
+    "docs/rulings/RL-00948-q7-notes-half-only-cite-notes-by-nt-00nn-id-path-citations-are-rejected-for-this-one-category.md",
+    "docs/rulings/RL-00951-rl-947-s-tombstone-gains-per-file-stubs-watched-by-a-new-check-not-left.md",
+    "docs/rulings/RL-00988-dp-2-the-legacy-form-sweep-is-repaired-in-two-parts-fix-the-pattern-first-then-a-bounded-load-bearing-exclusion-list.md",
+    # Reviewed W37-6 (2026-09-17): `docs/REDIRECTS.csv` is `doc-id.py migrate`'s own
+    # generated old-path -> new-path record (RFC-937 §1.4) -- the same reason
+    # `docs/findings/register.md` above is in this set rather than exempted by a data-file
+    # pattern. Recording the old path IS the row's content, not a stray leftover citation.
+    "docs/REDIRECTS.csv",
     # Reviewed in 2026-09-03, and the first member of this set that is code rather than a
     # document. `scripts/_docverify.py` is RL-1043 §1's instrument, and its
     # `D_FULL_PATTERN` is RFC-937 §7(d)'s grep **verbatim** — a constant whose whole
