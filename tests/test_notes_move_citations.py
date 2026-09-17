@@ -38,10 +38,30 @@ their own unmarked tests.
 
 from __future__ import annotations
 
+import importlib.util
 import pathlib
+import re
 import subprocess
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+# `scripts/doc-id.py` cannot be `import`ed by name (hyphenated); loaded by path, the same
+# idiom `tests/test_audit_docs_ids.py`'s `_load_by_path` uses for `scripts/audit-docs.py`.
+# `scripts/` itself is put on `sys.path` first because `doc-id.py`'s own top-level `import
+# _docid` (unqualified, exactly as the real CLI invocation resolves it) needs to find that
+# sibling module the same way running the script directly would.
+_DOC_ID_TOOL_DIR = ROOT / "scripts"
+if str(_DOC_ID_TOOL_DIR) not in sys.path:
+    sys.path.insert(0, str(_DOC_ID_TOOL_DIR))
+_DOC_ID_SPEC = importlib.util.spec_from_file_location(
+    "_doc_id_tool_for_notes_move_citations", _DOC_ID_TOOL_DIR / "doc-id.py",
+)
+assert _DOC_ID_SPEC is not None
+assert _DOC_ID_SPEC.loader is not None
+_doc_id_tool = importlib.util.module_from_spec(_DOC_ID_SPEC)
+sys.modules[_DOC_ID_SPEC.name] = _doc_id_tool
+_DOC_ID_SPEC.loader.exec_module(_doc_id_tool)
 
 # The check that watches the old path, its skill documentation, and its own test all
 # name the old path deliberately and permanently. Originally check 30 (RL-951,
@@ -205,11 +225,32 @@ _D13_RETIREMENT_FIXTURE_DATA = {
 }
 
 
+def _has_uncovered_citation(text: str, old_path: str) -> bool:
+    """True when at least one occurrence of `old_path` in `text` sits outside every
+    `# rfc-937: legacy-form-spec` marked span (`scripts/doc-id.py`'s
+    `_legacy_form_spec_spans`) -- W37-6's addition, 2026-09-17: the mechanism that already
+    protects a marked line from `_rewrite_citations` during a migration run is the same
+    "specification of the path, not a citation of it" distinction `_SPECIFICATIONS_OF_THE_
+    OLD_PATH` names, read per-line instead of per-file. A file with every occurrence marked
+    is not an offender even if it names no entry in any of the sets above; a file with even
+    one *unmarked* occurrence still is, whether or not some of its other occurrences happen
+    to fall inside a marked span.
+
+    The cheap `old_path in text` check happens first, at the call site, so the marker-span
+    regex scan (`_legacy_form_spec_spans`, a whole-file `re.finditer`) only ever runs on a
+    file this test would otherwise flag.
+    """
+    spans = _doc_id_tool._legacy_form_spec_spans(text)
+    positions = (m.start() for m in re.finditer(re.escape(old_path), text))
+    return any(not any(start <= p < end for start, end in spans) for p in positions)
+
+
 def test_no_living_file_cites_the_old_notes_path() -> None:
     """After the move, the old notes root under `.claude` may be named only by the
     tombstone README left there, by files frozen under `docs/plans/`, by check 30's own
-    watching mechanism, by pre-move provenance-locked snapshots, and by a maintainer-accepted
-    note that specifies the path's eventual deletion (`_SPECIFICATIONS_OF_THE_OLD_PATH`).
+    watching mechanism, by pre-move provenance-locked snapshots, by a maintainer-accepted
+    note that specifies the path's eventual deletion (`_SPECIFICATIONS_OF_THE_OLD_PATH`),
+    or by a `# rfc-937: legacy-form-spec` marked line (`_has_uncovered_citation`).
 
     A frozen plan is never edited to agree with a later move (`docs/plans/README.md`'s
     write-once rule, RFC-897 C4) -- the tombstone this slice creates at the vacated path
@@ -230,12 +271,15 @@ def test_no_living_file_cites_the_old_notes_path() -> None:
         | _SPECIFICATIONS_OF_THE_OLD_PATH
         | _D13_RETIREMENT_FIXTURE_DATA
     )
-    offenders = [
-        f
-        for f in tracked
-        if old_path in (ROOT / f).read_text(encoding="utf-8", errors="replace")
-        and not f.startswith("docs/plans/")
-        and f != old_path + "/README.md"
-        and f not in exempt
-    ]
+    offenders = []
+    for f in tracked:
+        text = (ROOT / f).read_text(encoding="utf-8", errors="replace")
+        if (
+            old_path in text
+            and not f.startswith("docs/plans/")
+            and f != old_path + "/README.md"
+            and f not in exempt
+            and _has_uncovered_citation(text, old_path)
+        ):
+            offenders.append(f)
     assert offenders == [], offenders
