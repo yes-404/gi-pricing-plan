@@ -1034,6 +1034,97 @@ def test_check_32_excludes_the_generated_contract_tier(
     ], audit.failures
 
 
+def test_sweep_legacy_forms_excludes_the_governance_record_class(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """W37-6 h1-check36 follow-up, 2026-09-17: check 36's sweep must not fire inside the
+    governance-record class (`_docid.governance_record_reason` /
+    `_docid.GOVERNANCE_RECORD_EXCLUSIONS`) — a census record such as
+    `docs/research/file-census-<sha>.csv` quotes legacy `docs/audit/`-shaped paths as its
+    own per-file evidence of the tree it describes, never a citation for the migration to
+    rewrite, and `_docid.sweep_exclusion_reason` already excludes it from the migration
+    sweep and the (d)/(e)/(g) verification corpus on this basis. Before this fix, check 36
+    read only `generated_contract_tier_reason` (F103's narrow predicate) and so still
+    flagged every legacy path the census quotes (audit-docs.py FAILED with 184 such lines
+    on a real census file before this fix).
+
+    A same-shaped file OUTSIDE the class is the positive control: it must still fire, so
+    the exclusion is proven to exempt the governance-record class specifically, not to
+    have gone vacuous.
+    """
+    excluded = tmp_path / "docs" / "research" / "file-census-5ef559d.csv"
+    excluded.parent.mkdir(parents=True)
+    excluded.write_text(
+        "path,note\ndocs/audit/w37-11-record.md,legacy location at this commit\n",
+        encoding="utf-8",
+    )
+    hits = audit._sweep_legacy_form_hits([excluded], repo_root=tmp_path)
+    assert hits == [], hits
+
+    not_excluded = tmp_path / "docs" / "research" / "file-census.csv"
+    not_excluded.write_text(
+        "path,note\ndocs/audit/w37-11-record.md,legacy location at this commit\n",
+        encoding="utf-8",
+    )
+    hits2 = audit._sweep_legacy_form_hits([not_excluded], repo_root=tmp_path)
+    assert hits2 != [], hits2
+
+    not_excluded_md = tmp_path / "docs" / "notes" / "0099-unrelated.md"
+    not_excluded_md.parent.mkdir(parents=True)
+    not_excluded_md.write_text("see docs/audit/ for background.\n", encoding="utf-8")
+    hits3 = audit._sweep_legacy_form_hits([not_excluded_md], repo_root=tmp_path)
+    assert hits3 != [], hits3
+
+
+def test_check_32_excludes_the_governance_record_class(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
+    """W37-6 h1-check36 follow-up, 2026-09-17: check 32's citation-resolution sweep must
+    skip the same governance-record class check 36 skips, read from the identical
+    `_docid.governance_record_reason` rather than a private re-typing. A same-shaped
+    citation OUTSIDE the class is the positive control: it must still fail, proving the
+    exclusion is scoped to the class, not to "any unresolvable id".
+    """
+    index_path = tmp_path / "docs" / "INDEX.md"
+    index_path.parent.mkdir(parents=True)
+    index_path.write_text("no real ids here\n", encoding="utf-8")
+
+    census = tmp_path / "docs" / "research" / "file-census-5ef559d.csv"
+    census.parent.mkdir(parents=True)
+    census.write_text("path,note\nsee PL-09999,legacy row\n", encoding="utf-8")
+
+    control = tmp_path / "docs" / "notes" / "0099-unrelated.md"
+    control.parent.mkdir(parents=True)
+    control.write_text("see PL-09999\n", encoding="utf-8")
+
+    monkeypatch.setattr(audit, "REPO", tmp_path)
+    monkeypatch.setattr(audit, "ROOT", tmp_path / "docs")
+    monkeypatch.setattr(audit, "_ID_SCOPE_ROOTS", (census, control))
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_citations()
+    assert audit.failures == [
+        "check 32: docs/notes/0099-unrelated.md:1: PL-9999 does not resolve in docs/INDEX.md"
+    ], audit.failures
+
+
+@pytest.mark.parametrize("entry", _W37_5_FIXTURE_EXCLUSIONS)
+def test_check_36_w37_5_fixture_exclusions_still_pass_with_governance_record_predicate(
+    audit: types.ModuleType, entry: str
+) -> None:
+    """W37-6 h1-check36 follow-up, 2026-09-17: adding the governance-record predicate to
+    check 36's sweep must not disturb the seven `tests/fixtures/docs-migration/`
+    per-file allowlist entries (`test_check_36_w37_5_fixture_exclusions_are_load_bearing`
+    above) — none of those paths matches `_docid.GOVERNANCE_RECORD_EXCLUSIONS`, so this
+    new predicate must return `None` for every one of them and leave that allowlist's own
+    load-bearing proof untouched.
+    """
+    path = ROOT / entry
+    assert path.is_file(), path
+    rel = path.relative_to(ROOT).as_posix()
+    assert audit._docid.governance_record_reason(rel) is None, rel
+
+
 def test_legacy_form_disclosure_reason_reads_the_shared_never_allocated_predicate(
     audit: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:

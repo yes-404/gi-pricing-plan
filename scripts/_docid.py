@@ -298,6 +298,31 @@ GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
     ),
 )
 
+
+def governance_record_reason(rel_posix: str) -> str | None:
+    """Why `rel_posix` sits in the governance-record class (`GOVERNANCE_RECORD_EXCLUSIONS`
+    above) — a record that quotes legacy paths or tokens as evidence of the residue they
+    name, never a citation for the migration to rewrite — or `None` when it does not. Split
+    out of `sweep_exclusion_reason` (F103-shaped follow-up, 2026-09-17) for the identical
+    reason `generated_contract_tier_reason` below was: a caller that wants *only* this one
+    class — audit-docs.py's checks 32 and 36, which already read
+    `generated_contract_tier_reason` alone rather than the full `sweep_exclusion_reason`
+    (that also folds in `FIXTURE_CORPUS_ROOTS`, which would swallow check 36's own
+    per-file fixture allowlist, `test_check_36_w37_5_fixture_exclusions_are_load_bearing`)
+    — can ask this question alone too, rather than treat the governance-record class as
+    reachable only through the migration tool's combined predicate. Without this, a census
+    record such as `docs/research/file-census-<sha>.csv` — excluded from the migration
+    sweep and from the (d)/(e)/(g) verification corpus by `GOVERNANCE_RECORD_EXCLUSIONS`
+    — stayed invisible to `sweep_exclusion_reason`'s two narrow-predicate callers, so its
+    168 rows quoting legacy `docs/audit/` paths as evidence read as citations for check 36
+    to flag and check 32 to try to resolve.
+    """
+    for pattern, reason in GOVERNANCE_RECORD_EXCLUSIONS:
+        if pattern.fullmatch(rel_posix):
+            return reason
+    return None
+
+
 #: W37-6 PR-B (2026-09-16), defect 3. ADR-704/FR-451's generated-contract tier —
 #: `scripts/generate-contracts.py`'s own `OPENAPI_PATH` (one file) and `SCHEMA_DIR` (a
 #: directory of `<slug>.schema.json` files) — is written by the generator FROM the
@@ -405,9 +430,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     for name, reason in TEST_MODULE_EXCLUSIONS:
         if rel_posix == name:
             return reason
-    for pattern, reason in GOVERNANCE_RECORD_EXCLUSIONS:
-        if pattern.fullmatch(rel_posix):
-            return reason
+    governance_reason = governance_record_reason(rel_posix)
+    if governance_reason is not None:
+        return governance_reason
     contract_reason = generated_contract_tier_reason(rel_posix)
     if contract_reason is not None:
         return contract_reason

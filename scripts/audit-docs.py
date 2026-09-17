@@ -1980,7 +1980,19 @@ def check_citations() -> None:
         # tier this check was never meant to police. The narrow predicate, not the full
         # `_docid.sweep_exclusion_reason` — that also folds in `FIXTURE_CORPUS_ROOTS`,
         # which reaches files check 32 has no reason to exempt.
-        if _docid.generated_contract_tier_reason(rel) is not None:
+        #
+        # W37-6 h1-check36 follow-up, 2026-09-17: the governance-record class
+        # (`_docid.governance_record_reason`) — a record such as
+        # `docs/research/file-census-<sha>.csv` that quotes legacy paths/tokens as
+        # evidence of the residue they name, never a citation for the migration to
+        # rewrite — is excluded from the migration sweep by the identical shared
+        # predicate and must be invisible to check 32 for the same reason the
+        # generated-contract tier is: reading its data cells as citations produces
+        # unresolvable-id failures for text the record is not citing.
+        if (
+            _docid.generated_contract_tier_reason(rel) is not None
+            or _docid.governance_record_reason(rel) is not None
+        ):
             continue
         for problem in citation_problems_in_file(path, index_ids):
             fail(f"check 32: {rel}:{problem}")
@@ -3041,6 +3053,17 @@ def _sweep_legacy_form_hits(
             or rel in _TEST_MODULE_EXCLUDED_PATHS
             or _docid.is_split_source_index(rel)
             or _docid.generated_contract_tier_reason(rel) is not None
+            # W37-6 h1-check36 follow-up, 2026-09-17: the governance-record class
+            # (`_docid.governance_record_reason`) — e.g.
+            # `docs/research/file-census-<sha>.csv`, whose per-file `path` column is a
+            # full per-file dump of the tree at the commit its own name names
+            # (GOVERNANCE_RECORD_EXCLUSIONS) — quotes legacy pre-migration forms as the
+            # record's own evidence, never a survivor for this sweep to flag. Read
+            # through the identical narrow predicate `generated_contract_tier_reason`
+            # above already uses, not the full `_docid.sweep_exclusion_reason` (that
+            # also folds in `FIXTURE_CORPUS_ROOTS`, which would swallow the per-file
+            # fixture allowlist this function's docstring names).
+            or _docid.governance_record_reason(rel) is not None
         ):
             continue
         try:
