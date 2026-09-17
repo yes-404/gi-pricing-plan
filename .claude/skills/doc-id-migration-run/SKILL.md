@@ -271,6 +271,36 @@ Measure with `--check` when auditing, which fails on drift:
 uv run python scripts/generate-contracts.py --check  # fails if committed != generated
 ```
 
+## Never run migrate over a root carrying a synced venv
+
+Never run `doc-id.py migrate --repo-root <root>` over a root carrying a synced `.venv/`
+(or any gitignored build dir); wrappers refuse by name (`[ -d "$RP/.venv" ] && exit 97`).
+
+Why: on 2026-09-17 a T′ run over `w37-6-fbb5555-unmigrated` rewrote `certifi/cacert.pem`
+(`W2` → `WK-658` inside a base64 block) and two hypothesis modules (`notes/` → `rfcs/` in a
+URL); uv hardlinks site-packages from its cache, so one in-place write (inode 410131, 40
+links) broke every venv on the box, surfacing hours later as `ssl.SSLError: [X509] PEM
+lib` in an unrelated blob test. The tool now enumerates with `git ls-files -z --cached
+--others --exclude-standard` inside a work tree (`_enumerate_tree`, PR #782), but the
+wrapper rule stands for older tools.
+
+Verified: 2026-09-17
+
+## CI verify ref resolution on a migrated checkout
+
+`docs.yml`'s verify step resolves `--ref` from
+`docs/process/delivery-process.core.json` `meta.verified_against_tree` when
+`docs/INDEX.md` and `docs/REDIRECTS.csv` exist (a migrated checkout; on a pull request
+`HEAD` is GitHub's merge ref = the migrated tree); otherwise `--ref HEAD`.
+
+Local proof form: from the migrated checkout,
+`python3 scripts/doc-id.py migrate --verify <dir outside any git tree> --ref <that
+field>`; expect the standing 15/1/8, FAIL (g), REGRESSION 0.
+
+Why: run 35261236904 exited 3 with nine phantom fatal rows by migrating a migrated tree.
+
+Verified: 2026-09-17
+
 ## Verify from the unmigrated control tree, never the migrated root
 
 When running `migrate --verify` for the record, use:

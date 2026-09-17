@@ -756,6 +756,29 @@ diagnostic enabled mid-pytest; (2) by git-logging when the build output vanished
 two concurrent slots' mktemp calls returning the same dir (verified with `ls -i` on 
 identical inodes).
 
+## Fail-closed wrapper pattern
+
+A wrapper prints its own `<NAME>_EXIT=<n>` line; an empty inner exit or `collected != ran`
+is a named non-zero exit (91/92), never 0; strip ANSI before grepping pytest output.
+
+Verified: 2026-09-17
+
+## Shared-inode diagnosis — a PEM/TLS failure that is not a code change
+
+When a test fails on a certificate/PEM/TLS or "corrupted vendored file" error on a box
+where the tree did not change:
+
+1. `stat -c '%i %h %y' <file>` — links > 1 and a recent mtime mean a uv-cache inode
+   shared by every venv.
+2. Diff against `uv pip install --no-cache --no-deps <pkg>==<ver>` into a throwaway venv.
+3. Find the writer by the run's own log (`wrote <path>` lines) or the session
+   transcripts' `tool_use` Bash commands around the mtime — never by a directory's birth
+   time.
+4. Restore IN PLACE (`cp` over the same path so every link heals), recording sha256
+   before/after/pristine.
+
+Verified: 2026-09-17
+
 ## Verified
 
 2026-09-17 (three traps, expensive-run section) — W37-6, executor-h's gate runs at 
