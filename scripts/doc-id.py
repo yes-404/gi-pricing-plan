@@ -4858,11 +4858,10 @@ _REFERENCE_CLAUDE_DIR_EXCEPTIONS: Final[Mapping[str, str]] = {
         "are not in \u00a74 step 5's stamp set under any reading. Note the directory holds "
         "**18** stubs plus the README, not the 19 stubs \u00a75.3 counts. "
         "STILL LOAD-BEARING for `migrate()` runs against the fixture corpus and any other "
-        # rfc-937: legacy-form-spec
-        "pre-migration tree (`tests/fixtures/docs-migration/.claude/notes/` still exists,"
-        # rfc-937: legacy-form-spec
-        " frozen at that shape) even though the real ROOT's own `.claude/notes/` is "
-        "correctly gone post-migration -- `test_reference_declared_exceptions_all_carry_"
+        "pre-migration tree (the fixture corpus's frozen copy of that directory still "
+        "exists, frozen at that shape) even though the real ROOT's own copy of that "
+        "directory is correctly gone post-migration -- "
+        "`test_reference_declared_exceptions_all_carry_"
         "a_reason_and_name_a_real_file`'s `(ROOT / key).exists()` check is itself a "
         "'ROOT is already migrated' false negative on this one entry, not a signal this "
         "declaration is dead; removing it broke `migrate()` on the fixture corpus"
