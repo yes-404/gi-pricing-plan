@@ -1,4 +1,4 @@
-"""`GET /api/v1/me` (FR-GOV-1, FR-GOV-2)."""
+"""`GET /api/v1/me` (FR-342, FR-343)."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ async def headers(workspace_id, principal, grant) -> dict[str, str]:
     }
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 def test_me_reports_the_permissions_the_frontend_should_render_by(
     client: TestClient, headers
 ) -> None:
@@ -55,13 +55,13 @@ def test_me_reports_the_permissions_the_frontend_should_render_by(
     assert [r["role"] for r in body["roles"]] == ["pricing_actuary"]
 
 
-@pytest.mark.req("FR-GOV-1")
+@pytest.mark.req("FR-342")
 def test_me_requires_a_principal(client: TestClient) -> None:
-    """FR-GOV-1: anonymous access exists only for health checks and the OpenAPI document."""
+    """FR-342: anonymous access exists only for health checks and the OpenAPI document."""
     assert client.get("/api/v1/me").status_code == 401
 
 
-@pytest.mark.req("FR-GOV-1")
+@pytest.mark.req("FR-342")
 def test_health_and_openapi_are_the_only_anonymous_surfaces(client: TestClient) -> None:
     """Negative: anything else answering anonymously is an unauthenticated read."""
     for path in ("/healthz", "/readyz", "/version", "/openapi.json"):
@@ -70,7 +70,7 @@ def test_health_and_openapi_are_the_only_anonymous_surfaces(client: TestClient) 
         assert client.get(path).status_code == 401, path
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_a_principal_with_no_role_reports_no_permissions(
     client: TestClient, workspace_id, principal, membership
 ) -> None:
@@ -92,11 +92,11 @@ async def test_a_principal_with_no_role_reports_no_permissions(
     assert body["roles"] == []
 
 
-@pytest.mark.req("FR-GOV-8")
+@pytest.mark.req("FR-349")
 async def test_break_glass_is_visible_on_me(
     client: TestClient, database, workspace_id, principal, grant, membership
 ) -> None:
-    """FR-GOV-8: prominently flagged. A user must be able to see they are elevated."""
+    """FR-349: prominently flagged. A user must be able to see they are elevated."""
     from app.platform import rbac
     from model_schema import ActorKind, Principal, new_uuid7
 
@@ -128,7 +128,7 @@ async def test_break_glass_is_visible_on_me(
     assert elevated[0]["expires_at"] is not None
 
 
-@pytest.mark.req("FR-PLAT-63")
+@pytest.mark.req("FR-396")
 async def test_me_lists_every_membership_with_its_name(
     client: TestClient, database, workspace_id, principal, grant
 ) -> None:

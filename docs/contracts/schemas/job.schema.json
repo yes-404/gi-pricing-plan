@@ -192,7 +192,7 @@
           "exclusiveMinimum": 0
         }
       },
-      "description": "Exceeding the budget yields a typed error naming it, not an opaque OOM kill (FR-PLAT-16)."
+      "description": "Exceeding the budget yields a typed error naming it, not an opaque OOM kill (FR-412)."
     },
     "retries": {
       "type": "object",
@@ -219,7 +219,7 @@
         "null"
       ],
       "format": "date-time",
-      "description": "Time of the last progress report (NFR-PLAT-3)."
+      "description": "Time of the last progress report (NFR-528)."
     },
     "stalled": {
       "type": "boolean",

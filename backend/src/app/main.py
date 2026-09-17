@@ -59,7 +59,7 @@ API_PREFIX = "/api/v1"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """Build the API application. Fails loudly on invalid configuration (FR-PLAT-44)."""
+    """Build the API application. Fails loudly on invalid configuration (FR-447)."""
     settings = settings or load_settings()
     configure_logging(settings.log_level)
 
@@ -72,12 +72,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        # FR-RATE-56: "A startup self-check asserts the round-trip; failing it prevents
+        # FR-273: "A startup self-check asserts the round-trip; failing it prevents
         # the service starting." First, before any I/O — it is pure computation, and a
         # machine that fails it must never reach the probes or the blob bucket below.
         # `assert_integer_minor_round_trip` raises a bare `AssertionError` on failure,
         # which this lifespan does not catch, so it propagates and the app never starts
-        # (W11 Task 1.4, F-W11-1-3 — the function has existed since W9-2 with no
+        # (WK-671 Task 1.4, F-W11-1-3 — the function has existed since W9-2 with no
         # production caller; this is the first one).
         assert_integer_minor_round_trip()
         # Probes are registered here rather than at import time so that building an app
@@ -98,13 +98,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="GI Pricing Platform API",
         version=settings.version,
         # OpenAPI 3.1 generated from the Pydantic models, published here and committed to
-        # docs/contracts/ where CI checks it for drift (FR-PLAT-48).
+        # docs/contracts/ where CI checks it for drift (FR-451).
         openapi_url="/openapi.json",
         docs_url="/docs",
     )
 
     # The document FastAPI assembles, minus the `422` it injects into any operation that
-    # has a parameter — a shape this API replaced and never emits (FR-PLAT-48). Applied
+    # has a parameter — a shape this API replaced and never emits (FR-451). Applied
     # here rather than in `scripts/generate-contracts.py` so the served document and the
     # committed contract are the same bytes; the script reads this same method.
     _assemble = app.openapi
@@ -149,7 +149,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         summary="Service name, version and environment",
         response_model=health.VersionInfo,
     )
-    # FR-PLAT-66: the browser login cannot start behind an auth gate, so this publishes
+    # FR-394: the browser login cannot start behind an auth gate, so this publishes
     # unauthenticated — the issuer and the client_id are public by design, and the route
     # is mounted with the prefix because the requirement names the full path.
     app.add_api_route(
@@ -161,14 +161,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response_model=OidcAuthConfig,
     )
 
-    # FR-PLAT-35: migrations are an explicit pre-deploy step. Nothing here runs them.
+    # FR-435: migrations are an explicit pre-deploy step. Nothing here runs them.
     app.state.settings = settings
     app.state.oidc_verifier = oidc_verifier
     app.state.database = database
     app.state.blob_store = blob_store
     # One slot per worker process, built once at startup and read per request — the same
     # lifetime `blob_store` has. Deliberately *not* per request: a slot rebuilt per call
-    # holds nothing, which is the state option (a) was rejected for (Ruling 16).
+    # holds nothing, which is the state option (a) was rejected for (RL-882).
     app.state.bundle_slot = BundleSlot(capacity=settings.bundle_slot_capacity)
 
     _log.info(

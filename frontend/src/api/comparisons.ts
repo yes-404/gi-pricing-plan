@@ -12,7 +12,7 @@ export type RelativityDifference = components["schemas"]["RelativityDifference"]
 export type MetricDirection = components["schemas"]["MetricDirection"];
 
 /**
- * Start a comparison (FR-MODEL-56). **202 with a Job, not the artifact** — the comparison
+ * Start a comparison (FR-186). **202 with a Job, not the artifact** — the comparison
  * reads the holdout and scores every candidate, which is work.
  *
  * Every comparability rule is answered by this call before a Job exists — two or more models,

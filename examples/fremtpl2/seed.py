@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed a freMTPL2 workspace, through the platform's own path (`07` FR-PLAT-37).
+"""Seed a freMTPL2 workspace, through the platform's own path (`07` FR-439).
 
     uv run python examples/fremtpl2/fetch.py
     uv run python examples/fremtpl2/seed.py            # full 678 013 rows
@@ -44,7 +44,7 @@ REALM_SUBJECT = "84eea68e-a19e-46a0-9f35-a27cbd51c795"
 #: `IDpol` normalises to `i_dpol`, not `idpol`: the camel-case splitter reads it as
 #: `I` + `Dpol`, the same rule that correctly gives `HTTPServer` → `http_server`. No
 #: mechanical splitter can know that `ID` is the acronym here. The original header is kept
-#: in the version's `source_names` (FR-DATA-5), and this rename is the remedy — which the
+#: in the version's `source_names` (FR-30), and this rename is the remedy — which the
 #: seed needs anyway, to reach the platform's vocabulary (`CLAUDE.md` §7).
 RENAMES = {
     "i_dpol": "policy_id",
@@ -68,7 +68,7 @@ MAX_EXPOSURE = 1.05
 
 
 def recipe(*, drop_implausible_exposure: bool) -> list[dict[str, Any]]:
-    """The Preparation Recipe, applied during ingestion (FR-DATA-9).
+    """The Preparation Recipe, applied during ingestion (FR-35).
 
     Version 1 renames and casts and nothing else — the shape a user gets by uploading the
     file and accepting the inferred schema. Version 2 adds the one step that fixes what
@@ -76,7 +76,7 @@ def recipe(*, drop_implausible_exposure: bool) -> list[dict[str, Any]]:
     """
     steps: list[dict[str, Any]] = [
         {"step": "rename", "table": "policy_exposure", "params": {"columns": RENAMES}},
-        # Every column arrives as a string on purpose (FR-DATA-4): a policy id of `007`
+        # Every column arrives as a string on purpose (FR-29): a policy id of `007`
         # must not become `7`. Without this step every numeric rule compares a string to a
         # number and errors.
         {"step": "cast", "table": "policy_exposure", "params": {"columns": NUMERIC}},
@@ -97,7 +97,7 @@ def build_csv(rows: int | None) -> bytes:
 
     The claim amounts are joined here rather than by the platform because `ingest_upload`
     accepts **one** table per version, while `01` §4.2's `tables[]` is plural and
-    FR-DATA-12's `attach_claims` expects a separate claim table. Multi-table ingestion is a
+    FR-38's `attach_claims` expects a separate claim table. Multi-table ingestion is a
     gap this seed found; joining first is what an analyst would do today, and it is
     recorded rather than hidden.
     """
@@ -109,7 +109,7 @@ def build_csv(rows: int | None) -> bytes:
     severity = pl.read_csv(io.BytesIO(to_csv(DATA_DIR / "freMTPL2sev.arff")), infer_schema=False)
 
     # Amounts are euros with at most two decimals — verified against the pinned file — so
-    # scaling to integer minor units is exact rather than rounded (FR-OVR-7).
+    # scaling to integer minor units is exact rather than rounded (FR-10).
     totals = (
         severity.with_columns(
             (pl.col("ClaimAmount").cast(pl.Float64) * 100).round(0).cast(pl.Int64)
@@ -197,7 +197,7 @@ DICTIONARY: dict[str, dict[str, Any]] = {
 }
 
 
-#: One rule per layer plus the exposure bound, so FR-DATA-16's four layers are all present
+#: One rule per layer plus the exposure bound, so FR-45's four layers are all present
 #: and the rule set carries no configuration warning. Real thresholds, not placeholders:
 #: motor third-party frequency of 2 to 25 % and a mean severity between €50 and €50 000 are
 #: the bands a French motor book is actually judged against.
@@ -341,12 +341,12 @@ async def run(rows: int | None) -> int:
     await grant(actuary, "pricing_actuary")
     await grant(approver, "approver")
 
-    # A real login through the local provider (FR-PLAT-58) resolves to `analyst`, so it
+    # A real login through the local provider (FR-398) resolves to `analyst`, so it
     # inherits the role assignments granted just above rather than needing its own. The
     # workspace row comes first: `workspace_members.workspace_id` is a foreign key, and
     # nothing has created that row until now -- `RoleRow.workspace_id` has no foreign key,
     # which is why the seed has worked without one. The actuary has no realm user; one demo
-    # login is what FR-PLAT-58 asks for.
+    # login is what FR-398 asks for.
     async with database.unit_of_work() as session:
         await workspaces.ensure_workspace(
             session, workspace_id=workspace_id, name="freMTPL2 demo"
@@ -407,7 +407,7 @@ async def run(rows: int | None) -> int:
         dataset_id = dataset.id
 
         # `01` §4.4's catalogue arrives with the workspace, exactly as the roles do
-        # (FR-DATA-53). It is the shipped *definitions*: names, checks and severities, with
+        # (FR-68). It is the shipped *definitions*: names, checks and severities, with
         # no target — §4.4 says what the rule is, and a workspace says which of its tables
         # the rule runs against.
         await rule_service.seed_builtin_rules(
@@ -529,7 +529,7 @@ async def run(rows: int | None) -> int:
     first_report = await validate(first)
 
     # No manual transition: `dataset.validate` opens `validating` and closes it. This
-    # version's report failed, so it is already `failed` (FR-DATA-43).
+    # version's report failed, so it is already `failed` (FR-52).
     try:
         async with database.unit_of_work() as session:
             await validation_service.promote_using_report(
@@ -553,7 +553,7 @@ async def run(rows: int | None) -> int:
             # takes the file from 4 errors to 0.
             version_row = await verify_session.get(DatasetVersionRow, first)
             assert version_row is not None, f"dataset version {first} vanished mid-run"
-            print(f"    version 1 is {version_row.status} — not left mid-run (FR-DATA-43)\n")
+            print(f"    version 1 is {version_row.status} — not left mid-run (FR-52)\n")
 
     print("── version 2: one preparation step later " + "─" * 34)
     second = await ingest("ingest", cleaned=True)

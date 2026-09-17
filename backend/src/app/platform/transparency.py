@@ -1,13 +1,13 @@
-"""Persisting and reading transparency artifacts (`02` FR-MODEL-33..37, R3, §5.1).
+"""Persisting and reading transparency artifacts (`02` FR-132, FR-133, FR-134, FR-136, FR-140, R3, §5.1).
 
-Unlike diagnostics, a model may carry **several**: FR-MODEL-33 says *at least one* and
+Unlike diagnostics, a model may carry **several**: FR-132 says *at least one* and
 allows any of three forms — a GLM approximation, a SHAP summary, or an EBM's exported
-shape functions (FR-MODEL-37) — and a SHAP summary recomputed on a larger sample is a
+shape functions (FR-140) — and a SHAP summary recomputed on a larger sample is a
 second artifact rather than a correction of the first. So the write appends and the read
 takes the latest — older rows stay because an approval that cited one must still resolve
 to it.
 
-The row is insert-only at the privilege layer (FR-DATA-42) for FR-MODEL-36's reason: this
+The row is insert-only at the privilege layer (FR-43) for FR-136's reason: this
 is the evidence a Rating Version's approval is granted against, and evidence that can change
 after the decision is not evidence.
 """
@@ -54,7 +54,7 @@ async def record_transparency(
     artifact: TransparencyArtifact,
     job_id: UUID | None = None,
 ) -> TransparencyArtifactRow:
-    """Append an artifact and audit it (NFR-MODEL-9).
+    """Append an artifact and audit it (NFR-484).
 
     Audited because R3 turns this row into a precondition for pricing: the event that
     created the evidence is part of the trail an approver's decision hangs from.
@@ -114,9 +114,9 @@ async def load_transparency(
             "No transparency artifact for this model",
             404,
             f"Model {model_id} carries no transparency artifact. `02` R3 requires one "
-            "before a Rating Version may reference a non-GLM model (FR-MODEL-33) — a "
+            "before a Rating Version may reference a non-GLM model (FR-132) — a "
             "GLM approximation, a SHAP summary, or an EBM's shape functions "
-            "(FR-MODEL-37). `POST /api/v1/models/{id}/transparency` builds it.",
+            "(FR-140). `POST /api/v1/models/{id}/transparency` builds it.",
         )
     return to_artifact(row)
 
@@ -133,7 +133,7 @@ async def fitted_gbm_or_refuse(
     100 % that means nothing, which is worse than no artifact because it looks like
     evidence.
 
-    An **EBM** passes through unchanged: its exported tables are the model (FR-MODEL-37),
+    An **EBM** passes through unchanged: its exported tables are the model (FR-140),
     so the builder needs nothing more than the fit result and the spec.
     """
     row = await session.get(ModelRow, model_id)
@@ -145,14 +145,14 @@ async def fitted_gbm_or_refuse(
             "This model has no fit to explain",
             409,
             "A transparency artifact approximates a model's predictions and walks its "
-            "trees (FR-MODEL-34, FR-MODEL-35). A model at `draft` has neither.",
+            "trees (FR-133, FR-134). A model at `draft` has neither.",
         )
     if str(row.spec.get("model_type")) == "glm":
         raise PlatformError(
             "MODEL_ALREADY_TRANSPARENT",
             "A GLM needs no transparency artifact",
             409,
-            "FR-MODEL-33 applies to **non-GLM** models. A GLM's coefficients are the "
+            "FR-132 applies to **non-GLM** models. A GLM's coefficients are the "
             "explanation; approximating one with another GLM would report 100 % fidelity, "
             "which looks like evidence and is not.",
         )

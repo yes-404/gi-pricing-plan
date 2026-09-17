@@ -10,10 +10,10 @@ This owns the six things only the platform can be wrong about:
   the status never rests on evidence that has since been contradicted;
 * **submission is refused without a certificate**, which is `06` R4 for this artifact type;
 * **the approval decision reaches the objective** in the deciding transaction;
-* **`expression` is refused by name**, with the flag off and with it on (FR-MODEL-75);
+* **`expression` is refused by name**, with the flag off and with it on (FR-150);
 * **a model actually fits under one**, which is the whole point — and the worker resolving
   the ref is the seam `pricing-core` cannot test, because resolving a reference is exactly
-  what ADR-0001 forbids it to do.
+  what ADR-703 forbids it to do.
 
 The certificate is run over a **small grid** — `COUNT_GRID` below, whose `n_points` is the
 floor `SamplingSpec` permits. §4.7's checks are analytic comparisons at each sampled point;
@@ -136,7 +136,7 @@ async def _certified(
 # -- authoring -----------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-38")
+@pytest.mark.req("FR-142")
 async def test_a_new_objective_is_a_draft_and_versions_from_one(
     database: Database, workspace_id
 ) -> None:
@@ -149,7 +149,7 @@ async def test_a_new_objective_is_a_draft_and_versions_from_one(
     assert first.certificate_id is None
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 async def test_a_parameter_outside_the_templates_range_is_refused_before_the_row_exists(
     database: Database, workspace_id
 ) -> None:
@@ -174,11 +174,11 @@ async def test_a_parameter_outside_the_templates_range_is_refused_before_the_row
     assert stored == []
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-150")
 async def test_an_expression_objective_is_refused_by_name_whether_the_flag_is_on_or_off(
     database: Database, workspace_id, api_settings
 ) -> None:
-    """The flag being **on** must still refuse (FR-MODEL-75).
+    """The flag being **on** must still refuse (FR-150).
 
     A feature flag that admitted the kind would persist an artifact nothing can certify or
     fit — the derivation, the compilation target and the review path are not built, and no
@@ -195,7 +195,7 @@ async def test_an_expression_objective_is_refused_by_name_whether_the_flag_is_on
     assert off.value.status_code == 409
 
     async with database.unit_of_work() as session:
-        # FR-PLAT-62: the settings row now references a workspace row.
+        # FR-395: the settings row now references a workspace row.
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await settings_service.set_workspace_setting(
             session, workspace_id, "features.expression_objectives_enabled", True
@@ -213,7 +213,7 @@ async def test_an_expression_objective_is_refused_by_name_whether_the_flag_is_on
 # -- the definition cannot move ------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-41")
+@pytest.mark.req("FR-145")
 async def test_the_definition_cannot_be_rewritten_while_the_lifecycle_can(
     database: Database, workspace_id
 ) -> None:
@@ -244,11 +244,11 @@ async def test_the_definition_cannot_be_rewritten_while_the_lifecycle_can(
         )
 
 
-@pytest.mark.req("FR-MODEL-47")
+@pytest.mark.req("FR-164")
 async def test_an_objective_cannot_be_deleted_or_truncated(
     database: Database, workspace_id
 ) -> None:
-    """FR-MODEL-47 asks what was fitted under an objective. A deleted row answers nothing —
+    """FR-164 asks what was fitted under an objective. A deleted row answers nothing —
     and the models that cite it by ref would keep citing a slug that resolves to nobody."""
     actor = await _actuary(database, workspace_id)
     row = await _objective(database, workspace_id, actor)
@@ -263,7 +263,7 @@ async def test_an_objective_cannot_be_deleted_or_truncated(
             await session.execute(text("TRUNCATE custom_objectives"))
 
 
-@pytest.mark.req("FR-MODEL-38")
+@pytest.mark.req("FR-142")
 async def test_a_slug_and_version_cannot_be_used_twice(
     database: Database, workspace_id
 ) -> None:
@@ -282,7 +282,7 @@ async def test_a_slug_and_version_cannot_be_used_twice(
             )
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 async def test_the_application_role_cannot_rewrite_or_delete_a_certificate(
     database: Database,
 ) -> None:
@@ -306,7 +306,7 @@ async def test_the_application_role_cannot_rewrite_or_delete_a_certificate(
 # -- certification -------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 async def test_certifying_records_the_certificate_and_moves_the_objective(
     database: Database, blob_store, workspace_id
 ) -> None:
@@ -323,7 +323,7 @@ async def test_certifying_records_the_certificate_and_moves_the_objective(
     # `certified_with_findings`, not `certified`: over a grid spanning y ∈ [0, 20] the
     # gradient of a Poisson loss covers ~7 orders of magnitude and §4.7's
     # `scale_behaviour` check warns. That a finding does not block is the point —
-    # FR-MODEL-43 carries it to the approver instead (`02` §4.7).
+    # FR-152 carries it to the approver instead (`02` §4.7).
     assert certificate.result.overall is CertificateOutcome.CERTIFIED_WITH_FINDINGS
     assert {check.status for check in certificate.result.checks} == {
         CheckStatus.PASS,
@@ -338,7 +338,7 @@ async def test_certifying_records_the_certificate_and_moves_the_objective(
     }
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 async def test_a_never_certified_objective_has_no_certificate_to_read(
     database: Database, workspace_id
 ) -> None:
@@ -352,7 +352,7 @@ async def test_a_never_certified_objective_has_no_certificate_to_read(
     assert refused.value.status_code == 404
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 async def test_a_failed_certificate_is_recorded_and_clears_the_passing_one(
     database: Database, blob_store, workspace_id
 ) -> None:
@@ -401,7 +401,7 @@ async def test_a_failed_certificate_is_recorded_and_clears_the_passing_one(
     assert len(stored) == 2
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 async def test_re_certifying_under_review_is_refused(
     database: Database, blob_store, workspace_id
 ) -> None:
@@ -425,7 +425,7 @@ async def test_re_certifying_under_review_is_refused(
 # -- approval ------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-46")
+@pytest.mark.req("FR-163")
 async def test_submission_without_a_certificate_is_refused(
     database: Database, workspace_id
 ) -> None:
@@ -442,7 +442,7 @@ async def test_submission_without_a_certificate_is_refused(
     assert refused.value.status_code == 409  # `draft → review` is not a transition at all
 
 
-@pytest.mark.req("FR-MODEL-46")
+@pytest.mark.req("FR-163")
 async def test_the_approval_decision_reaches_the_objective(
     database: Database, blob_store, workspace_id
 ) -> None:
@@ -471,7 +471,7 @@ async def test_the_approval_decision_reaches_the_objective(
     assert applied.status == ObjectiveStatus.APPROVED.value
 
 
-@pytest.mark.req("FR-MODEL-46")
+@pytest.mark.req("FR-163")
 async def test_a_decision_about_another_artifact_type_leaves_the_objective_alone(
     database: Database, workspace_id
 ) -> None:
@@ -500,15 +500,15 @@ async def test_a_decision_about_another_artifact_type_leaves_the_objective_alone
 # -- fitting under one, and the blast radius -----------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-43")
+@pytest.mark.req("FR-152")
 async def test_a_gbm_fits_under_a_custom_objective_and_shows_up_in_its_usage(
     database: Database, blob_store, workspace_id
 ) -> None:
     """The seam `pricing-core` cannot test.
 
     `fit_gbm` refuses a `custom` objective that arrives without its artifact — resolving the
-    ref is the platform's job (ADR-0001), and until the worker did it every custom objective
-    was a spec nothing could fit. FR-MODEL-47's usage query is the same ref, read backwards.
+    ref is the platform's job (ADR-703), and until the worker did it every custom objective
+    was a spec nothing could fit. FR-164's usage query is the same ref, read backwards.
     """
     actor = await _actuary(database, workspace_id)
     objective = await _certified(database, blob_store, workspace_id, actor)
@@ -554,11 +554,11 @@ async def test_a_gbm_fits_under_a_custom_objective_and_shows_up_in_its_usage(
     assert usage.deployments == ()
 
 
-@pytest.mark.req("FR-MODEL-43")
+@pytest.mark.req("FR-152")
 async def test_a_draft_objective_cannot_be_fitted_with(
     database: Database, blob_store, workspace_id
 ) -> None:
-    """A `draft` objective has no certificate, so FR-MODEL-42 has not been satisfied and its
+    """A `draft` objective has no certificate, so FR-146 has not been satisfied and its
     derivatives are unproven. The Job fails rather than producing a model nobody can defend."""
     actor = await _actuary(database, workspace_id)
     objective = await _objective(database, workspace_id, actor)
@@ -595,7 +595,7 @@ async def test_a_draft_objective_cannot_be_fitted_with(
 # -- the published contract ----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-95")
+@pytest.mark.req("FR-166")
 def test_every_custom_objective_route_is_in_the_published_contract() -> None:
     """Including the two `02` §5.1 did not declare — the gap the endpoint audit cannot see,
     because it compares the spec against the contract and an absent endpoint is in neither."""
@@ -613,7 +613,7 @@ def test_every_custom_objective_route_is_in_the_published_contract() -> None:
         assert method in paths.get(path, {}), f"{method.upper()} {path} is unpublished"
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-150")
 async def test_deriving_without_model_fit_is_refused(
     api_client: TestClient, workspace_id, principal, grant
 ) -> None:
@@ -623,7 +623,7 @@ async def test_deriving_without_model_fit_is_refused(
     and asserted `status_code in (403, 409)`. `FitModels` is a route dependency, resolved
     before the handler body, so the 409 arm was unreachable — and a disjunctive assertion
     cannot fail when the wrong one of the two arrives. It was marked as evidence for
-    FR-MODEL-75, which is about *what this platform will and will not derive*, and observed
+    FR-150, which is about *what this platform will and will not derive*, and observed
     only that an unauthorised caller is refused. The requirement's actual subject is the
     test below.
 
@@ -643,15 +643,15 @@ async def test_deriving_without_model_fit_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-150")
 async def test_deriving_refuses_by_name_rather_than_pretending_the_concept_is_unknown(
     api_client: TestClient, workspace_id, principal, grant
 ) -> None:
     """The arm the old test could never reach. Granting `model:fit` is what makes this a test
-    of FR-MODEL-75 rather than of RBAC.
+    of FR-150 rather than of RBAC.
 
     A 404 would say "this platform has no such concept". The truth is "not until Phase 2",
-    and FR-MODEL-75 names this endpoint as one of the two that must say so — so the code is
+    and FR-150 names this endpoint as one of the two that must say so — so the code is
     asserted, not merely the status.
 
     The objective id names nothing, deliberately: `refuse_expression_kind` is reached before
@@ -669,7 +669,7 @@ async def test_deriving_refuses_by_name_rather_than_pretending_the_concept_is_un
     assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"
 
 
-@pytest.mark.req("FR-MODEL-38")
+@pytest.mark.req("FR-142")
 async def test_a_money_parameter_survives_the_route_as_an_integer(
     api_client: TestClient, workspace_id, principal, grant
 ) -> None:

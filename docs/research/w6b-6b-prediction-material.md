@@ -1,11 +1,11 @@
 # W6b-6b — verified material for the prediction view
 
-> **Superseded 2026-08-25 by [`docs/plans/2026-08-25-w6b-6b-prediction-view.md`](../plans/2026-08-25-w6b-6b-prediction-view.md).**
+> **Superseded 2026-08-25 by [`docs/plans/PL-00800-w6b-6b-prediction-view-implementation-plan.md`](../plans/PL-00800-w6b-6b-prediction-view-implementation-plan.md).**
 > That plan is the artifact to build from; this note is kept as the record of what was
 > verified before it, not as a second source of truth. Two things here are now wrong and are
 > corrected in the plan rather than silently here: the requirement set is **nine**, not six —
-> FR-MODEL-78, FR-MODEL-100 and FR-MODEL-101 were added on re-verification against
-> `origin/main` — and FR-MODEL-99 is **not** discharged whole by this slice. It splits: the
+> FR-199, FR-200 and FR-201 were added on re-verification against
+> `origin/main` — and FR-197 is **not** discharged whole by this slice. It splits: the
 > prediction path carries `Uncertainty.basis` and is evidenced, while the coefficient path has
 > nowhere to state a basis (`Coefficient` has no such field and forbids extras), so limb B is
 > structurally unevidenceable and goes to the closure record as not started, backend owner.
@@ -23,18 +23,18 @@ brief** — this is a dated snapshot, not a live read, and the frontend moves.
 ## Requirements that moved here on the split
 
 Six, all with backend test evidence — **superseded: the set is nine.** See the banner above;
-FR-MODEL-78, FR-MODEL-100 and FR-MODEL-101 are absent from this table and are in the plan.
+FR-199, FR-200 and FR-201 are absent from this table and are in the plan.
 
 | Requirement | Markers | Note |
 |---|---|---|
-| FR-MODEL-63 | 13 | Expectation plus uncertainty |
-| FR-MODEL-99 | 12 | Penalised GLM states its basis |
-| FR-MODEL-77 | 10 | The first three unavailability reasons |
-| FR-MODEL-124 | 6 | EBM → `model_type_has_no_interval`; evidenced over HTTP |
-| FR-MODEL-93 | 3 | `covariance_not_stored` |
-| FR-MODEL-98 | 1 | See below |
+| FR-194 | 13 | Expectation plus uncertainty |
+| FR-197 | 12 | Penalised GLM states its basis |
+| FR-198 | 10 | The first three unavailability reasons |
+| FR-180 | 6 | EBM → `model_type_has_no_interval`; evidenced over HTTP |
+| FR-195 | 3 | `covariance_not_stored` |
+| FR-196 | 1 | See below |
 
-**FR-MODEL-98's single marker is not a gap.** It sits on
+**FR-196's single marker is not a gap.** It sits on
 `backend/tests/test_prediction.py:268` and asserts the substantive half —
 `prediction.uncertainty.kind is UncertaintyKind.CONFIDENCE_INTERVAL_MEAN`, with
 non-degenerate bounds. Its other half — *"adds a process-variance prediction interval only
@@ -45,7 +45,7 @@ something builds it. Book it as such; do not book it unevidenced.
 
 | Method | Path | Requirement |
 |---|---|---|
-| `POST` | `/api/v1/models/{model_id}/predict` | FR-MODEL-63 |
+| `POST` | `/api/v1/models/{model_id}/predict` | FR-194 |
 
 **200 synchronously, not 202** — the only compute route in `02` that is not a Job. The
 contract's own reason: every other compute route reads a whole dataset version, while this
@@ -71,8 +71,8 @@ UnavailableReason    no_interval_models_fitted | interval_models_not_approved
 IntervalModels       lower_model_id, upper_model_id, lower_alpha, upper_alpha (all required)
 ```
 
-All five `UnavailableReason` members must render **by name** — three from FR-MODEL-77, the
-fourth from FR-MODEL-93, the fifth from FR-MODEL-124. FR-MODEL-99 requires the **basis** be
+All five `UnavailableReason` members must render **by name** — three from FR-198, the
+fourth from FR-195, the fifth from FR-180. FR-197 requires the **basis** be
 stated wherever an interval or standard error is shown; `unpenalised_information_matrix`
 means the interval is the one an unpenalised fit would earn, and is **wider than the shrunk
 estimate warrants** — a caveat the view has to say, not just a label.
@@ -86,17 +86,17 @@ estimate warrants** — a caveat the view has to say, not just a label.
    row with no interval is **normal, not an error** — read the reason from `uncertainty`,
    never infer it from the nulls.
 3. **1000-row cap** on `PredictRows`. State it in the UI before the request, not after a 422.
-4. **§5.3's "uploaded batch" is non-binding prose.** Under FR-OVR-21 the Prediction Contents
+4. **§5.3's "uploaded batch" is non-binding prose.** Under FR-24 the Prediction Contents
    cell is prose that binds nothing, and it is **not** among the seven carve-outs;
    `PredictRows` carries only inline `rows`. So a file-upload affordance is not owed — and if
-   the view is judged to need one, OQ-MODEL-15's floor rule makes that a **new requirement
+   the view is judged to need one, OQ-587's floor rule makes that a **new requirement
    raised at build time**, brought to the manager, never a silent addition.
 
 ## Not in scope for W6b-6b
 
 - Any backend change — all six requirements are evidenced. **Superseded: nine, and the claim
-  does not carry to all of them.** FR-MODEL-99 needs no backend change on the prediction path
+  does not carry to all of them.** FR-197 needs no backend change on the prediction path
   (limb A) but its coefficient path (limb B) cannot be evidenced at all without one; see the
   banner above.
 - File/batch upload — see trap 4; portfolio re-rate is `03`'s batch scoring.
-- A second interval kind — FR-MODEL-98 admits one, and adding one needs a named consumer.
+- A second interval kind — FR-196 admits one, and adding one needs a named consumer.

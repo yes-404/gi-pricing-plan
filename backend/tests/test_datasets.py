@@ -56,10 +56,10 @@ async def _dataset(database: Database, workspace_id, actor: Principal, slug="mot
         return row.id
 
 
-# -- version allocation (FR-DATA-2, ID-2) ------------------------------------------------
+# -- version allocation (FR-27, ID-2) ------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-2")
+@pytest.mark.req("FR-27")
 async def test_versions_start_at_one_and_increment(
     database: Database, workspace_id
 ) -> None:
@@ -76,13 +76,13 @@ async def test_versions_start_at_one_and_increment(
     assert versions == [1, 2, 3]
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_a_version_carries_its_envelope_inline(
     database: Database, workspace_id
 ) -> None:
-    """OQ-DATA-13 (c): a version names its own provenance — the slug is its dataset's,
+    """OQ-568 (c): a version names its own provenance — the slug is its dataset's,
     the creator is the caller, the currency is the dataset's, and the parent is the
-    previous version's row. Archiving records the moment (FR-DATA-21)."""
+    previous version's row. Archiving records the moment (FR-50)."""
     actor = await _analyst(database, workspace_id)
     dataset_id = await _dataset(database, workspace_id, actor, slug="motor-gb")
 
@@ -110,7 +110,7 @@ async def test_a_version_carries_its_envelope_inline(
         assert second.archived_at is not None
 
 
-@pytest.mark.req("FR-DATA-2")
+@pytest.mark.req("FR-27")
 async def test_a_version_number_is_never_reused(
     database: Database, workspace_id
 ) -> None:
@@ -142,7 +142,7 @@ async def test_a_version_number_is_never_reused(
     assert (first.version, third.version) == (1, 3)
 
 
-@pytest.mark.req("FR-DATA-2")
+@pytest.mark.req("FR-27")
 async def test_the_unique_constraint_backs_the_allocation(
     database: Database, workspace_id
 ) -> None:
@@ -177,10 +177,10 @@ async def test_the_unique_constraint_backs_the_allocation(
             )
 
 
-# -- the gate (`01` §1.3, FR-DATA-17) ------------------------------------------------------
+# -- the gate (`01` §1.3, FR-46) ------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 async def test_validated_is_not_reachable_through_transition(
     database: Database, workspace_id
 ) -> None:
@@ -206,7 +206,7 @@ async def test_validated_is_not_reachable_through_transition(
     assert exc.value.code == "DATASET_VERSION_IMMUTABLE"
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 async def test_a_failing_report_cannot_validate_a_version(
     database: Database, workspace_id
 ) -> None:
@@ -233,7 +233,7 @@ async def test_a_failing_report_cannot_validate_a_version(
     assert exc.value.code == "VALIDATION_HAS_FAILURES"
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 async def test_unacknowledged_warnings_block_validation(
     database: Database, workspace_id
 ) -> None:
@@ -260,7 +260,7 @@ async def test_unacknowledged_warnings_block_validation(
     assert exc.value.code == "WARN_NOT_ACKNOWLEDGED"
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 async def test_a_passing_acknowledged_report_validates_the_version(
     database: Database, workspace_id
 ) -> None:
@@ -286,7 +286,7 @@ async def test_a_passing_acknowledged_report_validates_the_version(
     assert row.validation_report_id == report_id
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 async def test_a_validated_version_cannot_exist_without_a_report(
     database: Database, workspace_id
 ) -> None:
@@ -309,11 +309,11 @@ async def test_a_validated_version_cannot_exist_without_a_report(
             )
 
 
-@pytest.mark.req("FR-DATA-23")
+@pytest.mark.req("FR-53")
 async def test_a_validated_version_can_be_revalidated_and_fail(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-23: a dataset that was good under an older rule set is not good now, and
+    """FR-53: a dataset that was good under an older rule set is not good now, and
     models fitted on it are the reason anyone would want to know."""
     actor = await _analyst(database, workspace_id)
     dataset_id = await _dataset(database, workspace_id, actor)
@@ -345,7 +345,7 @@ async def test_a_validated_version_can_be_revalidated_and_fail(
     assert row.status == DatasetStatus.FAILED
 
 
-@pytest.mark.req("FR-DATA-15")
+@pytest.mark.req("FR-42")
 async def test_fitting_on_an_unvalidated_version_is_refused(
     database: Database, workspace_id
 ) -> None:
@@ -368,7 +368,7 @@ async def test_fitting_on_an_unvalidated_version_is_refused(
     assert "no override" in (exc.value.detail or "")
 
 
-@pytest.mark.req("FR-DATA-2")
+@pytest.mark.req("FR-27")
 async def test_an_archived_version_cannot_transition(
     database: Database, workspace_id
 ) -> None:
@@ -393,10 +393,10 @@ async def test_an_archived_version_cannot_transition(
             )
 
 
-# -- sources (FR-DATA-1) --------------------------------------------------------------------
+# -- sources (FR-26) --------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-1")
+@pytest.mark.req("FR-26")
 async def test_credentials_must_be_a_secret_reference(
     database: Database, workspace_id
 ) -> None:
@@ -411,7 +411,7 @@ async def test_credentials_must_be_a_secret_reference(
     assert exc.value.code == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-DATA-1")
+@pytest.mark.req("FR-26")
 async def test_the_database_also_refuses_a_credential_value(
     database: Database, workspace_id
 ) -> None:
@@ -430,7 +430,7 @@ async def test_the_database_also_refuses_a_credential_value(
             )
 
 
-@pytest.mark.req("FR-DATA-1")
+@pytest.mark.req("FR-26")
 async def test_a_source_with_a_reference_is_accepted(
     database: Database, workspace_id
 ) -> None:
@@ -446,7 +446,7 @@ async def test_a_source_with_a_reference_is_accepted(
 # -- permissions and auditing ---------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_creating_a_dataset_requires_the_permission(
     database: Database, workspace_id
 ) -> None:
@@ -458,7 +458,7 @@ async def test_creating_a_dataset_requires_the_permission(
     assert exc.value.code == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-GOV-20")
+@pytest.mark.req("FR-368")
 async def test_every_lifecycle_step_is_audited_and_chained(
     database: Database, workspace_id
 ) -> None:

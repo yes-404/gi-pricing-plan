@@ -28,7 +28,7 @@ RESPONSE_HEADER = "x-trace-id"
 
 
 class TraceMiddleware(BaseHTTPMiddleware):
-    """Give every request a trace id, and give it back to the caller (R4, FR-PLAT-42).
+    """Give every request a trace id, and give it back to the caller (R4, FR-445).
 
     The id is echoed in a response header on success as well as failure. A user reporting
     "the page was slow" has no error body to quote, and the alternative — asking them to
@@ -79,7 +79,7 @@ class TraceMiddleware(BaseHTTPMiddleware):
 
 
 def _observe(request: Request, status_code: int, seconds: float) -> None:
-    """Record the request against its **route template** (FR-PLAT-40).
+    """Record the request against its **route template** (FR-443).
 
     Labelling by resolved path would create one Prometheus time series per job id, and an
     instance that has seen a million jobs would hold a million series for one counter. The

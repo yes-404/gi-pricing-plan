@@ -1,10 +1,10 @@
-"""The Custom Objective catalogue and its certification (`02` §4.5/§4.7, FR-MODEL-38..48).
+"""The Custom Objective catalogue and its certification (`02` §4.5/§4.7, FR-142, FR-143, FR-144, FR-145, FR-146, FR-152, FR-153, FR-154, FR-163, FR-164, FR-165).
 
 **The parametrised certification test is the test for the maths.** This module ships 12
 templates, each with an analytic gradient and an analytic hessian written out by hand — 24
 derivatives, any one of which could carry a sign error that a fit would absorb into a
 plausible-looking book. Certification compares every one of them against a
-Richardson-extrapolated numeric derivative of that template's own loss (FR-MODEL-70), so
+Richardson-extrapolated numeric derivative of that template's own loss (FR-149), so
 `test_every_template_certifies` proves all 24 at once, and a mistake in any of them fails
 with the template's name on it.
 
@@ -80,7 +80,7 @@ _GRIDS: dict[ObjectiveTemplate, tuple[tuple[float, float], tuple[float, float]]]
 }
 
 #: `quantile` and `asymmetric_squared` have a hessian that is negative over much of the
-#: domain (FR-MODEL-43), so they are certified under the strategy an author would actually
+#: domain (FR-152), so they are certified under the strategy an author would actually
 #: deploy them with. `clip_to_min` is the default and covers the rest.
 _STRATEGIES: dict[ObjectiveTemplate, HessianStrategy] = {
     T.QUANTILE: HessianStrategy.ABS,
@@ -126,7 +126,7 @@ def _detail(result: Any, name: str) -> str:
 # --- the catalogue ---------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 @pytest.mark.parametrize("template", list(T), ids=lambda t: t.value)
 def test_every_template_certifies(template: ObjectiveTemplate) -> None:
     """All 12 templates, and both of their analytic derivatives, against numerics.
@@ -144,7 +144,7 @@ def test_every_template_certifies(template: ObjectiveTemplate) -> None:
     assert _status(result, "smoke_fit") is not CheckStatus.FAILED
 
 
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-146")
 @pytest.mark.parametrize("template", list(T), ids=lambda t: t.value)
 def test_every_certificate_carries_every_check(template: ObjectiveTemplate) -> None:
     """§4.7's nine checks, on every objective — a missing check is not a passing one."""
@@ -165,7 +165,7 @@ def test_every_certificate_carries_every_check(template: ObjectiveTemplate) -> N
     assert set(result.library_versions) >= {"numpy", "xgboost"}
 
 
-@pytest.mark.req("FR-MODEL-76")
+@pytest.mark.req("FR-151")
 def test_certification_is_reproducible() -> None:
     """Same objective, same sampling, same verdicts — a certificate is evidence.
 
@@ -200,11 +200,11 @@ def test_certification_is_reproducible() -> None:
 # --- what certification is supposed to find --------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-43")
+@pytest.mark.req("FR-152")
 def test_a_non_convex_objective_is_flagged_and_not_refused() -> None:
     """`quantile`'s hessian is its gradient — negative wherever the gradient is.
 
-    FR-MODEL-43 in one test: the finding reaches the approver (`violated`, with the share
+    FR-152 in one test: the finding reaches the approver (`violated`, with the share
     and the mitigation named) and does not block (`certified_with_findings`, not `failed`).
     """
     result = certify_objective(_objective(T.QUANTILE), sampling=_sampling(T.QUANTILE))
@@ -216,7 +216,7 @@ def test_a_non_convex_objective_is_flagged_and_not_refused() -> None:
     assert "abs" in detail
 
 
-@pytest.mark.req("FR-MODEL-43")
+@pytest.mark.req("FR-152")
 def test_a_convex_objective_is_not_flagged() -> None:
     """The negative control. Poisson's hessian is `w·exp(f)`, positive everywhere."""
     result = certify_objective(_objective(T.POISSON), sampling=_sampling(T.POISSON))
@@ -225,7 +225,7 @@ def test_a_convex_objective_is_not_flagged() -> None:
     assert result.overall is CertificateOutcome.CERTIFIED
 
 
-@pytest.mark.req("FR-MODEL-68")
+@pytest.mark.req("FR-147")
 def test_points_near_a_branch_boundary_are_excluded_and_counted() -> None:
     """A central difference straddling `exp(f) = y` compares two different functions.
 
@@ -246,7 +246,7 @@ def test_points_near_a_branch_boundary_are_excluded_and_counted() -> None:
     assert "no branch boundary" in _detail(smooth, "analytic_vs_numeric_gradient")
 
 
-@pytest.mark.req("FR-MODEL-69")
+@pytest.mark.req("FR-148")
 @pytest.mark.parametrize(
     "template",
     [T.CAPPED_GAMMA, T.SPLICED_SEVERITY, T.HUBER, T.QUANTILE, T.ZERO_INFLATED_POISSON],
@@ -260,7 +260,7 @@ def test_a_branch_is_a_reported_finding(template: ObjectiveTemplate) -> None:
     assert _detail(result, "branch_discontinuity") != ""
 
 
-@pytest.mark.req("FR-MODEL-69")
+@pytest.mark.req("FR-148")
 def test_a_template_with_no_branch_says_so() -> None:
     """The negative control for the branch check: Gamma is smooth in `f` everywhere."""
     result = certify_objective(_objective(T.GAMMA), sampling=_sampling(T.GAMMA))
@@ -268,11 +268,11 @@ def test_a_template_with_no_branch_says_so() -> None:
     assert _status(result, "branch_discontinuity") is CheckStatus.PASS
 
 
-@pytest.mark.req("FR-MODEL-70")
+@pytest.mark.req("FR-149")
 def test_the_derivative_tolerance_is_step_aware() -> None:
     """The check reports its step and its measured error, not a bare verdict.
 
-    FR-MODEL-70 exists because a fixed tight tolerance at `h = 1e-6` fails a *correct*
+    FR-149 exists because a fixed tight tolerance at `h = 1e-6` fails a *correct*
     derivative on a steeply-curved loss. What makes the tolerance step-aware is visible in
     the detail: the step, and an error expressed against the finite-difference noise floor
     rather than against a constant.
@@ -305,7 +305,7 @@ def _with_a_broken_derivative(
     )
 
 
-@pytest.mark.req("FR-MODEL-76")
+@pytest.mark.req("FR-151")
 @pytest.mark.parametrize("which", ["grad", "hess"])
 def test_a_wrong_derivative_fails_certification(
     monkeypatch: pytest.MonkeyPatch, which: str
@@ -315,7 +315,7 @@ def test_a_wrong_derivative_fails_certification(
     A derivative 1 % too large is the shape of the mistake certification exists to catch —
     a dropped constant or a mis-transcribed term, not a sign error a fit would blow up on.
     It must reach `failed` rather than `certified_with_findings`: a finding is carried to
-    the approver (FR-MODEL-43), and an objective whose gradient is simply wrong is not
+    the approver (FR-152), and an objective whose gradient is simply wrong is not
     something an approver should be offered.
     """
     _with_a_broken_derivative(monkeypatch, T.GAMMA, which, lambda d: d * 1.01)
@@ -327,7 +327,7 @@ def test_a_wrong_derivative_fails_certification(
     assert result.overall is CertificateOutcome.FAILED
 
 
-@pytest.mark.req("FR-MODEL-70")
+@pytest.mark.req("FR-149")
 def test_a_wrong_derivative_is_caught_where_the_true_one_is_near_zero(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -352,7 +352,7 @@ def test_a_wrong_derivative_is_caught_where_the_true_one_is_near_zero(
 # --- compilation -----------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_compile_resolves_the_templates_defaults() -> None:
     """§4.5's defaults are resolved when the objective is compiled, not when it is stored.
 
@@ -368,7 +368,7 @@ def test_compile_resolves_the_templates_defaults() -> None:
     assert fns.ref == f"custom_objective:{objective.slug}@1"
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_gauss_newton_is_refused_where_there_is_no_gauss_newton_form() -> None:
     """A Gauss-Newton surrogate exists for a least-squares loss and is invented elsewhere.
 
@@ -384,7 +384,7 @@ def test_gauss_newton_is_refused_where_there_is_no_gauss_newton_form() -> None:
     assert "poisson" in str(raised.value)
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 @pytest.mark.parametrize(
     "template", [T.ASYMMETRIC_SQUARED, T.HUBER, T.PSEUDO_HUBER], ids=lambda t: t.value
 )
@@ -400,7 +400,7 @@ def test_gauss_newton_is_accepted_where_the_loss_is_least_squares(
     assert np.all(fns.stabilise(y, f, w) > 0.0)
 
 
-@pytest.mark.req("FR-MODEL-43")
+@pytest.mark.req("FR-152")
 def test_clip_to_min_floors_a_negative_hessian_without_hiding_it() -> None:
     """`hess` stays analytic so `convexity` can see the truth; `stabilise` is what fits.
 
@@ -419,7 +419,7 @@ def test_clip_to_min_floors_a_negative_hessian_without_hiding_it() -> None:
     assert np.all(stabilised >= fns.hessian_min)
 
 
-@pytest.mark.req("FR-MODEL-43")
+@pytest.mark.req("FR-152")
 def test_abs_preserves_the_magnitude_a_clip_would_discard() -> None:
     fns = compile_objective(_objective(T.QUANTILE, strategy=HessianStrategy.ABS))
     y = np.array([1.0e5, 9.0e5])
@@ -449,7 +449,7 @@ class _DMatrix:
         return self._w
 
 
-@pytest.mark.req("FR-MODEL-48")
+@pytest.mark.req("FR-165")
 def test_the_xgboost_adapter_returns_the_weighted_pair() -> None:
     """`preds` already carries `base_margin`, so the adapter must not add the offset again.
 
@@ -467,7 +467,7 @@ def test_the_xgboost_adapter_returns_the_weighted_pair() -> None:
     assert np.allclose(hess, fns.stabilise(y, f, w))
 
 
-@pytest.mark.req("FR-MODEL-48")
+@pytest.mark.req("FR-165")
 def test_the_lightgbm_adapter_takes_the_form_lgb_train_calls() -> None:
     """`(preds, dataset)` — `lgb.train`'s form, not the sklearn wrapper's `(y, f, w)`.
 
@@ -489,9 +489,9 @@ def test_the_lightgbm_adapter_takes_the_form_lgb_train_calls() -> None:
     assert not np.allclose(grad, fns.grad(y, f, np.ones_like(y)))
 
 
-@pytest.mark.req("FR-MODEL-48")
+@pytest.mark.req("FR-165")
 def test_a_non_finite_derivative_aborts_naming_the_round_and_the_inputs() -> None:
-    """FR-MODEL-48's abort is only useful if it says *where*.
+    """FR-165's abort is only useful if it says *where*.
 
     A boosting fit that dies on round 41 with `nan` and no further detail leaves an author
     with a 20-million-row dataset and no way in; the round and the offending input range
@@ -513,7 +513,7 @@ def test_a_non_finite_derivative_aborts_naming_the_round_and_the_inputs() -> Non
     assert "2 of 3 rows" in message
 
 
-@pytest.mark.req("FR-MODEL-48")
+@pytest.mark.req("FR-165")
 def test_a_finite_pair_does_not_abort() -> None:
     fns = compile_objective(_objective(T.GAMMA))
     ok = np.array([1.0, 2.0, 3.0])
@@ -524,7 +524,7 @@ def test_a_finite_pair_does_not_abort() -> None:
 # --- applicability ----------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 def test_an_author_may_narrow_applicability_and_the_narrowed_form_still_certifies() -> None:
     """A Huber restricted to severity is still a Huber; certification follows the objective.
 
@@ -564,7 +564,7 @@ class _Recorder:
         return None
 
 
-@pytest.mark.req("FR-MODEL-76")
+@pytest.mark.req("FR-151")
 def test_certification_reports_progress_monotonically() -> None:
     """Certification runs as a Job, and a Job with no progress reads as a hung one."""
     recorder = _Recorder()
@@ -576,7 +576,7 @@ def test_certification_reports_progress_monotonically() -> None:
     assert len({stage for stage in recorder.stages}) > 1
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_compiled_functions_are_linear_in_the_case_weight() -> None:
     """Every template's loss is linear in `w`, which is why `w` is not in the templates.
 

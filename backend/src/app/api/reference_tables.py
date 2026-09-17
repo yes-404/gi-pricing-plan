@@ -1,22 +1,22 @@
-"""Reference tables (`01` §5.1, FR-DATA-29..32).
+"""Reference tables (`01` §5.1, FR-69, FR-70, FR-71, FR-72).
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/reference-tables` | Declare a table |
-| `POST` | `/reference-tables/{slug}/versions` | Load a new version (FR-DATA-29) |
+| `POST` | `/reference-tables/{slug}/versions` | Load a new version (FR-69) |
 | `POST` | `/reference-tables/{slug}/versions/{version}/publish` | Make it pinnable |
 | `GET` | `/reference-tables` | List declared tables |
 | `GET` | `/reference-tables/{slug}/versions` | The version timeline |
 | `GET` | `/reference-tables/{slug}/versions/{version}/rows` | Rows, optionally as at a date |
-| `GET` | `/reference-tables/{slug}/lookup` | Point lookup for debugging (FR-DATA-31) |
+| `GET` | `/reference-tables/{slug}/lookup` | Point lookup for debugging (FR-71) |
 
-The three read routes were added in W6a. `01` §5.3 asks the `/reference` view for a table
+The three read routes were added in WK-663. `01` §5.3 asks the `/reference` view for a table
 list, a version timeline and an effective-date viewer, and §5.1 declared none of them —
 so the endpoint audit, which compares the spec's table against the published contract,
 saw a complete surface. An endpoint missing from **both** is invisible to it.
 
 The lookup endpoint is **for debugging**, and its docstring says so where a reader will
-see it. Rating resolves a reference through a pinned version id (FR-DATA-30); an endpoint
+see it. Rating resolves a reference through a pinned version id (FR-70); an endpoint
 that answers "what does the latest table say?" is the wrong thing to build a rating on,
 because "latest" is a different answer each month.
 """
@@ -131,7 +131,7 @@ async def create_table(
 async def load_version(
     slug: str, body: VersionLoad, caller: ManageReference, database: DatabaseDep
 ) -> ReferenceTableVersion:
-    """FR-DATA-29. Loaded whole, into `draft`; publish it to make it pinnable."""
+    """FR-69. Loaded whole, into `draft`; publish it to make it pinnable."""
     async with database.unit_of_work() as session:
         row = await service.load_version(
             session,
@@ -186,9 +186,9 @@ async def lookup(
     as_at: Annotated[date, Query()],
     version: Annotated[int | None, Query(ge=1)] = None,
 ) -> ReferenceLookup:
-    """**For debugging** (FR-DATA-31).
+    """**For debugging** (FR-71).
 
-    Rating pins a reference version id (FR-DATA-30) and never resolves "the latest" at
+    Rating pins a reference version id (FR-70) and never resolves "the latest" at
     scoring time. This endpoint exists to answer "what does this table say about this key
     on this date?" when a quote looks wrong.
     """
@@ -257,7 +257,7 @@ async def list_rows(
     Always reads the **pinned** version named in the path. Omitting `as_at` returns the
     version whole, which answers "what changed?"; supplying one answers "what applied
     then?". Neither ever falls back to the latest version — that is the mistake
-    FR-DATA-30 exists to prevent, and a viewer that made it would teach it.
+    FR-70 exists to prevent, and a viewer that made it would teach it.
     """
     async with database.session() as session:
         return await service.rows_as_at(

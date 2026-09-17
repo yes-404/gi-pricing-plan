@@ -1,0 +1,553 @@
+---
+id: PL-958
+family: plan
+kind: leaf
+title: W37-6 — the migration run: the go-ahead ask, with condition 6 discharged
+status: active                  # draft → active → superseded | retired (§1.2a)
+created: 2026-09-02
+owner: planner
+supersedes: []
+superseded_by: ~
+corrected_by: []
+relates: []                     # ids only
+was: docs/plans/2026-09-02-w37-6-go-ahead-ask.md
+---
+
+# W37-6 — the migration run: the go-ahead ask, with condition 6 discharged
+
+**Date:** 2026-09-02 · **Tree:** `7082c38` · **Author:** the lead ·
+**Status:** awaiting the maintainer's dated line (§8)
+
+**What this is.** The maintainer withheld W37-6's go-ahead on 2026-09-02 with six conditions
+([`../rulings/RL-00969-w37-6-s-go-ahead-is-withheld-the-maintainer-s-decision-of-2026-09-02-and-what-yet-costs.md`](../rulings/RL-00969-w37-6-s-go-ahead-is-withheld-the-maintainer-s-decision-of-2026-09-02-and-what-yet-costs.md)) and said:
+*"Bring the ask when condition 2 is fully discharged (both open PRs merged or closed with a
+reason) and W37-5b's closure record is filed."* Both are now true. This record is the ask.
+
+**What it is not.** It does not authorise anything. W37-6 runs only on the maintainer's dated
+line in §8, and this document exists so that line is an informed one.
+
+**Read §5 before §8.** Three things have changed since the plan was written that the plan
+could not have known, and one of them means the run cannot complete today.
+
+---
+
+## Acceptance Standard
+
+The violation this record must make detectable: **a W37-6 go-ahead given against figures that
+were not re-derived on the day, or against a description of the run that omits why it cannot
+complete.** Each item is stated as the violation, not the pass.
+
+1. Every figure in §3 carries both pins and the command class that produced it. **Violation:** a
+   figure quoted here that cannot be re-run, or that carries no tree — which is the defect
+   condition 6 exists to catch, reappearing inside the document that discharges it.
+2. §5.3's marker figures are stated with the unit they were measured in. **Violation:** `2446`,
+   `461` or `422` compared against a figure in the other unit without saying so — which is the
+   defect §5.3 documents in the plan it re-derives, and the one this record itself made and had
+   to retract. A bare-string count and a decorator count are different quantities, not two
+   estimates of one.
+3. §5.1 names all three aborting guards, their sites and their pipeline order. **Violation:** a
+   go-ahead recorded against this document while a reader could not tell that the run halts at
+   `scripts/doc-id.py:2984` before doing any work.
+4. §4's bucket-C population is stated as counts with their commands. **Violation:** the
+   population described in prose without numbers, which is what the maintainer's instruction
+   ruled out.
+5. §8 is empty until the maintainer writes it, and no other section records a go-ahead.
+   **Violation:** an approval inferred from the lead's recommendation in §6, or a date in §8 in
+   any hand but the maintainer's.
+6. No frozen plan is edited by the branch carrying this record. **Violation:** the superseded or
+   the superseding leaf plan modified to agree with a figure re-derived here — the figures are
+   superseded *by this record*, and those documents stay correct at their own pins.
+
+---
+
+## 1. The six conditions
+
+| # | Condition | State |
+|---|---|---|
+| 1 | Full list of what W37-6 owns before the run | **DISCHARGED** — 39 obligations with state, owner and discharge, [`…-outstanding-obligations.md`](PL-00961-w37-6-everything-it-owns-before-the-run-one-list-with-each-item-s-state-and-what-discharges-it.md), `b648c22` |
+| 2 | The four discovery defects fixed | **DISCHARGED** — all four merged in W37-5b; no PR open |
+| 3 | Guards fail on **undercount**, not only zero | **DISCHARGED** — RL-985's census, six call sites, refusing by naming units |
+| 4 | Every fix proven on deliberately broken input | **DISCHARGED** — red-before/green-after in each PR body |
+| 5 | WK-697 row's `plan-reviews` figures corrected | **DISCHARGED** — `#590` |
+| 6 | Re-derive every figure at the day's tree; §4 in full | **DISCHARGED HERE** — §3 and §4 below, measured at `64f63ee`/`7082c38` |
+
+**W37-5b closed 2026-09-02** on a clean audit and the lead's merge (`64f63ee`, PR #617), per
+`CLAUDE.md` §13. Its record is [`docs/closures/CR-01004-work-item-record-w37-5b-the-group-a-preconditions-slice.md`](../closures/CR-01004-work-item-record-w37-5b-the-group-a-preconditions-slice.md).
+
+---
+
+## 2. How condition 6 was run
+
+Every figure below was measured at **`64f63ee`** — the tree at which the closure record landed
+and the last commit before this record's own branch — using **git plumbing against an explicit
+revision** (`git ls-tree`, `git grep <rev>`, `git archive <rev>`), never the working tree. The
+legacy-form sweep imports the **shipped** `LEGACY_FORM_PATTERNS` and `sweep_legacy_forms` from
+`scripts/audit-docs.py` out of each pin's own extracted snapshot, rather than a re-typed regex.
+
+**Each pattern was first validated against its `958cb7d` target and only then trusted at
+`64f63ee`.** That ordering is what makes a moved figure readable: it moved because the corpus
+moved, not because the instrument changed underneath it. Three figures failed that validation
+and are reported as unreproducible in §5.3 rather than carried forward.
+
+---
+
+## 3. §4 in full, re-derived — the disclosure
+
+This supersedes the **figures** in the superseding leaf plan's §4
+([`…-leaf-plan-v2.md`](PL-00959-w37-6-the-migration-run-leaf-plan-superseding.md)), which are pinned at
+`958cb7d` and correct there. It does not supersede that document's reasoning, which is carried
+here and unchanged.
+
+### 3.1 In one sentence
+
+One squash-merged commit renames or rewrites most of the repository's governed documents, gives
+every one of them a header and a number from a single global sequence, renumbers every
+requirement id, dissolves four directory trees into six, and rewrites every citation in every
+tracked file — after which the old paths and ids exist only in `REDIRECTS.csv` and `was:` fields.
+
+### 3.2 The size, by area
+
+**1506 tracked files at `64f63ee`** (1495 at `958cb7d`).
+
+| The migration… | `958cb7d` | **`64f63ee`** | Which |
+|---|---|---|---|
+| **rewrites a citation token in** | 954 | **966** | 21 959 matching lines, 29 716 token hits. By tree: `docs/` 326 · `backend/` 217 · `frontend/` 143 · `packages/` 135 · `.claude/` 54 · `tests/` 54 · `scripts/` 19 · 7 root · `examples/` 6 · `.github/` 3 · `deploy/` 2 |
+| **stamps a header on** | 313 | **324** | 263 `.md` under `docs/` (276 less 13 templates, exempt by path) + 46 `SKILL.md` + 8 agent files + 7 role charters. Overlaps the 966 |
+| **moves, splits or deletes** | 231 | **242** | `docs/audit/` 52 · `docs/plans/` 151 · `docs/notes/` 20 · `.claude/notes/` 19, **plus 95 ruling headings split out of 39 plans** |
+| **regenerates, never hand-edits** | 61 | **61** | `docs/contracts/`, rebuilt from `model-schema` then drift-checked |
+| **does not touch at all** | 541 | **540** | 1506 − 966 |
+| **must leave unchanged, by rule** | 43 | **43** | Files carrying a `VR-` catalogue id. D5 and G5 put these permanently out of scope; acceptance item (f) is the check |
+
+**Requirement ids renumbered: 675** (673 at `958cb7d`). Distinct requirement-family id tokens
+**718** (716 at `958cb7d`, of which 43 are `VR-` and out of scope). The v2 plan's "710 at the
+older pin" is a figure from the *superseded* plan, not from `958cb7d`; the like-for-like
+comparison is **716 → 718**.
+
+**Every file added to the rewrite population since `958cb7d` sits in `docs/` (+11) or `tests/`
+(+1).** Nothing in `backend/`, `frontend/`, `packages/`, `.claude/`, `scripts/`, `examples/`,
+`.github/` or `deploy/` moved at all. Sixteen commits landed between the pins.
+
+### 3.3 The corpus grows while the decision is open, and the growth is self-referential
+
+| Pin | Tracked | Rewrite pop. | `VR-DST-1` | Ruling headings |
+|---|---|---|---|---|
+| `39ee30c` — superseded plan filed | 1447 | 930 | 109 | 72 over 29 files |
+| `59bba94` — mid-session | 1473 | 938 | 120 | 82 over 32 files |
+| `cc17404` — v2 filed as draft | 1493 | 952 | 123 | 87 over 35 files |
+| `958cb7d` — v2 draft lifted | 1495 | 954 | 125 | 89 over 36 files |
+| **`64f63ee` — this ask** | **1506** | **966** | **125** | **95 over 39 files** |
+
+`VR-DST-1` is **flat at 125** across the last two pins, having moved +13 in the day before them.
+The volatility is real but not monotonic, and a figure that moved fast once is not thereby moving
+now — which is an argument for re-deriving at the day of decision, not for hurrying the decision.
+
+**The self-referential growth continues.** The `Ruling A<n>` token appeared in **8** files at
+`958cb7d` and **13** at `64f63ee` — the new ones being documents written *about* the A-series:
+this ask's own predecessors, two derivations, and RL-984. **A governed corpus grows by being
+governed.** Presented as a trend, not as an argument for haste: later is measurably larger, and
+nothing here says the decision should be quick.
+
+### 3.4 The enlargement RL-987 requires
+
+RL-987 makes the creating-instrument set **a criterion, not a list**: every instrument whose
+output is checked by checks 30–39 from the migration commit lands in W37-6. The derivation is
+**thirteen members and nine explicit exclusions**, carried unchanged from the superseded plan's
+§6. RL-997 has since ruled that RFC-937 §8's stage list is sequencing and S3 a residue rather
+than a fixed list, which is what makes that enlargement consistent with §8 rather than an
+unrecorded re-cut. **This enlargement is part of what the go-ahead authorises**, and the original
+precondition did not cover it — which is why RL-987 §3 requires it be disclosed here.
+
+### 3.5 What becomes irreversible
+
+- **Every document's path changes.** Any link held outside this repository — a bookmark, a chat
+  message, a local note — pointing at `docs/notes/…`, `docs/findings/register.md` or
+  `docs/plans/2026-…` breaks. `REDIRECTS.csv` records every old-to-new mapping *inside* the
+  repository; it cannot fix a link held elsewhere.
+- **Every requirement id changes.** A module-qualified id becomes a bare number. Anyone holding
+  one in their head, in a notebook, or in a file outside the repository is holding a retired one.
+  `was:` and `REDIRECTS.csv` make the translation mechanical, not automatic.
+- **`docs/audit/` ceases to exist.** Its register, closure records, plan reviews, work READMEs,
+  checklists and findings become four other trees.
+- **The commit is squash-merged and the branch auto-deletes.** RL-989 computed acceptance item
+  (g) as a property of the *script* over its own output precisely so the evidence survives that
+  deletion: it is re-derivable at any later date from the recorded merge-base, because `migrate`
+  is deterministic and idempotent. **The recorded merge-base SHA is load-bearing evidence, not a
+  courtesy.**
+- **`git blame` and `git log --follow` degrade** across every moved file. Rename detection handles
+  a pure move; a move plus a header stamp plus a citation rewrite in one commit is detected as a
+  rename only above git's similarity threshold. **This is not recoverable later.**
+
+### 3.6 What does not change
+
+- **No product identifier moves.** `VR-*` catalogue ids, artifact ids, job kinds and any string
+  persisted or asserted as data are out of scope; acceptance item (f) is the check. **43 distinct
+  `VR-` ids, flat across both pins.**
+- **Nothing outside the repository is touched** — by construction, not only by rule.
+- **No body line of a frozen file changes.** Splits preserve every line; stamps add lines;
+  rewrites change reference tokens only. Item (g) is the check, and RL-989 makes it a closed
+  enumeration with **no pass-through** for a hunk the filter cannot classify.
+- **Nothing in RFC-937 §1 is edited.** §1 stays byte-identical to the maintainer's original.
+
+### 3.7 The window this closes, and the one it opens
+
+**Closes:** the DP-1 window — a document created between the migration and W37-7 under a retired
+grammar, which checks 30, 31, 33 and 36 would red. RL-987 established that this window is
+occupied by construction.
+
+**Opens, disclosed rather than fixed here:** between this commit and W37-9, `CLAUDE.md` states at
+two sites a permanence rule the repository has just broken (assigned to W37-9 — a known interval,
+not an oversight); and between this commit and W37-7, `git-hygiene` teaches a branch and PR-title
+grammar naming work keys that no longer exist after the roadmap restructure.
+
+### 3.8 What the go-ahead does not cover
+
+RFC-937 §7 runs **(a) to (k)**, not (a) to (h). Items (i), (j) and (k) belong to later slices —
+(i) to the Work's closure record, (j) and (k) to W37-11. **Accepting this run is not accepting
+the Work close**, which is a separate dated line under `CLAUDE.md` §12.
+
+---
+
+## 4. The bucket-C stamp population, counted
+
+Asked for explicitly: *"the bucket-C stamp population… with the `owner:` each will receive under
+whatever resolves gap 2. I want that population counted, not described."*
+
+Measured at **`22d8d64`** — the pin the RFC's own §3 names — and re-measured at `64f63ee`.
+
+| Row | `22d8d64` | **`64f63ee`** |
+|---|---|---|
+| Reference — `docs/contracts/` | 61 | **61** |
+| Reference — skills (`SKILL.md`) | 46 | **46** |
+| **WK** — distinct roadmap `W<n>` row keys | 41 | **41** |
+| **Phase** sections | 4 | **4** |
+| **Total in scope — receives an `owner:` under gap 2** | **152** | **152** |
+| Reference — agents | 8 | **8** |
+| Reference — role charters | 7 | **7** |
+| Reference — `docs/process/` | 3 | **3** |
+| **Total already sourced by §1.6** | **18** | **18** |
+
+**Flat by construction, not by coincidence.** Diffing the two roadmap snapshots directly, the
+only change between the pins is prose appended inside the existing **WK-697** row's own cell — no
+row added or removed, no phase heading touched.
+
+**One counting trap, recorded because a naive check gets it wrong:** raw table-row occurrences of
+a `W<n>` key are **56**, not 41, because several keys repeat across the workstreams table, the
+older per-phase tables and the historical-record table. Deduplicating on a full match of
+`W[0-9]+[a-z]?` — which also excludes slice keys like `W32-1` — gives 41.
+
+**Gap 2 itself remains the maintainer's**, filed as an `RFC-` on their three constraints and
+awaiting accept-or-strike. Two of the four bucket-C rows carry a candidate `owner:` with the cell
+it is read from; **two deliberately carry none**, because an unsourced candidate invites
+acceptance without the check.
+
+---
+
+## 5. What has changed since the plan — read before deciding
+
+### 5.1 The run cannot complete today: three independent aborts
+
+**A real `migrate()` run against today's tree would abort at the first of three unconditional
+guards.** Verified by the lead by executing them, not by reading a report. In pipeline order:
+
+| # | Guard | Site | Finding |
+|---|---|---|---|
+| 1 | `_check_multi_ruling_files_not_silently_unrecognised` | `scripts/doc-id.py:2984` | **F81** — the real `RL-902/A2/A3` file, ruled `RL-` by Rulings 86/87, with no discovery code yet |
+| 2 | `_check_plan_reviews_heading_census` | `:3000` | **F80** — the `"Pending proposals"` container, ruled `RFC-` by Rulings 88/93, same gap |
+| 3 | `_check_requirements_not_silently_unrecognised` | `:3008` | **F82** — `DEP-1`, `DEP-537`, `DEP-2`, `DEP-3` in `docs/specs/00-overview.md`, module-less by design and invisible to the module-coded matcher |
+
+They fire **sequentially**, so clearing F81 reveals F80, and clearing F80 reveals F82. **All three
+are unowned.**
+
+**None is a defect in W37-5b.** Each is instrumentation that slice built, correctly catching a gap
+that pre-existed it — the guards doing exactly what they were made to do, against a corpus nobody
+had pointed them at. F80 could not have been on the obligations list's 39 rows at all: RL-979
+postdates that list's pin.
+
+`_check_roadmap_not_silently_unrecognised` is **not** on this list. It runs only inside
+`migrate()`'s zero-discovery `else` branch, which is not today's case; invoking it standalone
+raises on a defect a real run never reaches, and is evidence of nothing. That distinction was the
+auditor's, correcting a looser reading of the lead's.
+
+**This is disclosure, not a reason to withhold.** It is the same reasoning that justified W37-5b's
+own existence — a slice whose acceptance standard cannot pass is not a slice that should be
+authorised — applied one ruling later than the obligations list could see. **The practical
+consequence: a go-ahead given today authorises a run that stops before it starts.** Either the
+three are cleared first, or the go-ahead is given knowing its first act is three aborts.
+
+### 5.2 F81's guard is proven by execution, not pinned by a test
+
+Every test of the guard in §5.1 row 1 builds its input under `tmp_path`. The constant naming the
+real A-series file is used only by the `_ruling_file_owner` and discovery tests. So its behaviour
+on the corpus it will abort against is **proven by running it and not held by any regression
+test** — recorded as an amendment to F81. Separately, `d7c9b08`'s commit body says that guard
+names *"A1 and A2"*; it names three. That is the **second** commit body in W37-5b to misdescribe
+what it landed, after `614c92c` (§3 of the closure record). Both corrections live in amendable
+documents citing the hash, because a squash body cannot be amended.
+
+### 5.3 §4.2's marker figures are measured and correct — but the prose mixes two units
+
+**Corrects an earlier revision of this section, which said these figures were "derived by
+argument, not measured". That was wrong**, and the retraction is recorded here rather than
+edited away — see the end of this section.
+
+**All three reproduce exactly**, at `cc17404`, the tree §4.2 names, under the pattern their
+author actually used:
+
+```
+git grep -o '@pytest\.mark\.req(' cc17404                      → 2446
+git grep -o '@pytest\.mark\.req(' cc17404 -- backend packages  → 1985
+git grep -o '@pytest\.mark\.req(' cc17404 -- docs/plans        →  422
+```
+
+`461 = 2446 − 1985`, arithmetic on two measured values. Re-executed by the lead.
+
+**Why three independent attempts failed to reproduce them.** Every attempt used the **bare
+string** `pytest.mark.req`. The real pattern is the **decorator form** — with the `@` and the
+opening parenthesis. The bare string additionally matches prose *mentions* of the marker, so it
+is a different unit, not a worse approximation of the same one: at `cc17404` it gives **2534**
+repo-wide and **457** in `docs/plans`. The earlier-reported 2519 / 445 is that same family
+measured at a later tree.
+
+**The real defect, which is not the one that was being looked for.** The obligations list
+(`b648c22`) carries the unit caveat explicitly — *"1988 is a line count; 1985 decorators sit on
+1988 matching lines. Both reproduce; neither is the repository-wide figure."* **§4.2 dropped that
+sentence.** As merged it reads *"2446… not 1988… Of the extra 461"* — but **2446 − 1988 = 458,
+not 461**. The subtraction is against **1985** (decorators) while the contrast is against **1988**
+(a line count). The arithmetic is right and the numbers are right; the prose contrasts two units
+three apart and gives a reader no way to see the switch.
+
+**Correcting this record's own earlier direction claim too.** An earlier revision said 445 > 422
+meant the figure *understated* the load and was therefore conservative. **In a single unit the
+comparison is 422 decorators against 457 bare-string matches**, and the extra 35 are prose
+mentions, not citations the run rewrites. **422 is the right number for the frozen-plan diff load
+RL-989's predicate must classify.** It is not conservative; it is correct.
+
+**What is owed, and it is small.** §4.2 needs its unit caveat restored and *"not 1988"* changed to
+*"not 1985"*, so the subtraction and the contrast share a unit. That is its author's own proposal
+and two single-line edits. **This branch does not make them** — the acceptance standard's item 6
+forbids editing either leaf plan to agree with a figure re-derived here, and that rule holds even
+when the edit would be an improvement. It is filed separately.
+
+**How this record got it wrong, recorded because it is the more useful part.** §4.2 justifies the
+repo-wide scope with *"step 6 rewrites over `git ls-files`, 'nothing exempt'."* That sentence is
+the **justification for why repo-wide is the right scope**, not the method by which the number was
+obtained — but it sits where a method would sit, and three readers in sequence took it for one.
+The lead then hardened a hedged reading (*"that is the signature of a number derived by
+reasoning"*) into a stated finding in a maintainer-facing document. **A reading became a finding
+by being restated once.** The author was asked and answered with a command that reproduces to the
+digit, which is why asking beat inferring.
+
+### 5.4 RL-984 landed today and changes a stamped value
+
+Gap 1 is ruled (`7082c38`): RL-995 §3 item 2 does not survive, and the A-series rulings take
+`owner: decision-maker` from §1.6's table. **The departure machinery is still live in
+`scripts/doc-id.py` and its removal is in flight.** It must be on `main` before the run, because
+after the run the stamped `owner:` value is what exists.
+
+---
+
+## 6. What the lead recommends
+
+**Do not give the go-ahead today**, and this ask does not press for one.
+
+The conditions are discharged and the disclosure is complete, but §5.1 means a go-ahead granted
+now buys nothing: the run aborts three times before doing any work. The honest sequence is to
+clear F81, F80 and F82 — each small, each outside the irreversible commit, each provable on broken
+input — then ask again against a tree where the run can actually complete. §5.3 argues the same
+way for a different reason: one disclosed figure is currently unverified, and the maintainer
+should not have to weigh a number nobody can reproduce.
+
+**What the lead asks for instead is a decision on sequencing**, which is the maintainer's and not
+the lead's: whether F80/F81/F82 are cleared inside W37-6 as its first tasks, or as a further
+narrow slice before it. The obligations list's precedent points to a slice; the cost is another
+cut and another close.
+
+---
+
+## 7. Standing facts
+
+- **Rulings 66–95 filed**, all on `main`.
+- **W37-6 has not run.** Nothing merged is the migration; all of it is preconditions.
+- **Full local `pytest -q` is not run by the team** — three concurrent runs OOM-killed each other;
+  CI runs the identical command in a clean environment (`.github/workflows/python.yml:181`).
+
+---
+
+## 8. Maintainer's line
+
+**This section is the maintainer's alone.** A go-ahead for W37-6 is not the lead's to record, and
+nothing above authorises the run.
+
+> **Decision: not yet.**
+>
+> **Date: 2026-09-02.**
+
+**Recorded by the lead from the maintainer's own words, which are quoted rather than
+paraphrased.** The go-ahead is withheld a second time, and the sequencing question §6 asked is
+answered: **a slice.**
+
+> *"a slice, W37-5c, between W37-5b and W37-6, scoped to everything that stops or blinds the run
+> and is provable on broken input outside it: F80, F81, F82; the discovery-and-stamp path for
+> `.claude/skills/`, `.claude/agents/`, `.claude/roles/` and the README population; the three
+> unparseable vendored manifests; R84 §4 item 2 built; R86 §4 item 3 rebuilt so it can pass on
+> some input. Same discipline as 5b: red-before/green-after, and the arithmetic closes over the
+> real corpus."*
+
+**The scope is wider than §5.1's three guards**, and deliberately so: the criterion is
+**everything that stops *or blinds* the run** — a check that cannot fail blinds it as surely as a
+guard that aborts stops it, which is why Addendum A's two owed items (R84 §4 item 2, R86 §4
+item 3) are in scope rather than carried.
+
+**Gap 2 is ruled in the same instruction**, so the slice has a rule to build against rather than
+an open question to work around. It is recorded at
+[`PL-00957-w37-5c-the-slice-decision-and-gap-2-ruled.md`](PL-00957-w37-5c-the-slice-decision-and-gap-2-ruled.md) with the two points
+the maintainer asked to have challenged.
+
+**The re-ask conditions, verbatim:** *"§3 and §4 re-derived at that tree, the addendum merged and
+re-run, F80–F82 shown cleared by execution. Then I read one document and write one line."*
+
+**This ask is therefore closed, not withdrawn.** It is superseded at the re-ask by a document
+built to those four conditions; §3's figures stay pinned at `64f63ee` as the record of what was
+disclosed on the day the question was put.
+
+---
+
+## Addendum A — 2026-09-02: every defective acceptance item in a ruling W37-6 applies
+
+**Filed on the maintainer's instruction**, so the disclosure can be read without re-reading §3:
+*"Every defective item that sits in a ruling W37-6 applies is listed in an addendum to the ask —
+replace, re-instrument, or disclosed-as-is — before I open the disclosure."*
+
+**Two trees, because they differ and the difference matters.** The classification and the
+applicability determination were made at **`5c0d24d`**. This addendum is written at **`2e48960`**,
+two merges later, and **one item's status changed in between** — R95 §4 item 3 was re-instrumented
+and merged in `2e48960` itself. Every row below states which tree its disposition is true at.
+
+**Source.** A sweep of **all 98 rulings across 41 record files** — not the twelve RL-994 names
+nor the fourteen RL-1000 revises it to; **30 files carry a genuine acceptance item**, of which
+**28 already existed when RL-994 was written**. Classes at `5c0d24d`:
+`CONSTRUCTIBLE=54 · INVALIDATED=3 · VACUOUS=2 · INDICATIVE=2 · CANNOT_DETERMINE=2 · NONE_FOUND=35`,
+summing to 98.
+
+**Those two figures were `52` and `37` when this addendum was first written, and the error was
+found by the sweep re-deriving the list rather than by anything checking it.** The counts had been
+folded into a running total instead of recounted from the full enumeration. **The lead verified
+them by checking that they summed to 98 — which they did, and so does the correct set.** A sum is
+invariant under a transfer between two buckets, so the check that was run could not, even in
+principle, have caught the error that was there. Recorded because the same shape governs every
+reconciliation in this work: **a total validates the total, and nothing else.** The five defective
+rows, both `CANNOT_DETERMINE`s, the search commands and the 28-before/2-after split are unaffected
+— this was arithmetic on a summary line, not a reclassification.
+
+### A.1 The seven that apply
+
+| # | Item | Class | Disposition | State |
+|---|---|---|---|---|
+| 1 | **R84 §4 item 2** — an `LG-`'s `slice:` resolves to no roadmap row | VACUOUS at birth | **REPLACE** | **Owed, unowned.** `_stamp_header` skips `slice` unconditionally (`doc-id.py:946`), so no `LG-` can carry the value the check reads. RL-1000 designed the substitute; **it is not built.** Register F77 |
+| 2 | **R88 §4 item 2** — the fixture's only level-2 heading | INVALIDATED | **Re-instrumented — done** | Rebuilt by RL-994 on a property rather than a heading level. **But the gap beneath it is open:** the `"Pending proposals"` container has no discovery code, and `_check_plan_reviews_heading_census` (`doc-id.py:3000`) halts a real run. That is **F80**, unowned, already disclosed in §5.1 |
+| 3 | **R61** — `check_notes_tombstone()` reds on a stray or edited stub | INVALIDATED | **Disclosed as is** | **Deliberate, documented, and W37-6 is its horizon.** RFC-937 §5.5 resolved a slot-30 collision by replacing the check rather than renumbering; `audit-docs.py:55-64` states the protective job *"ends with this commit… until W37-6 deletes the stubs entirely."* **18 tombstone stubs are unchecked in the interval**, which is now open-ended for as long as the run is deferred |
+| 4 | **R86 §4 item 3** — an `RL-`'s owner is **not** `decision-maker` | INVALIDATED | **REPLACE or retire** | **Owed, unowned.** RL-984 struck the clause this item encoded, making `decision-maker` the only value. The item therefore **fails on every input, permanently** — not "never fires" but "cannot pass". A new mechanism: *a later ruling reversing the rule an earlier acceptance item encoded* |
+| 5 | **R95 §4 item 3** — RL-996's `decision-maker` still holds | VACUOUS at birth | **RE-INSTRUMENTED — done at `2e48960`** | Property discharged, stated instrument unbuildable: no code path emits `decision-maker` for those three files. Rebuilt as `test_ruling_87_standalone_files_are_untouched_by_this_amendment`, proven non-vacuous by two mutations against the real corpus |
+| 6 | **R66 item 2** — the creating-instrument enumeration | WITHDRAWN | **Closed — history only** | Withdrawn by RL-970, *"and the replacement tests H content in two limbs"*; that replacement was itself amended into the superseding leaf plan's Acceptance Standard item 11 as the three-limb H-content test. **Live and sound; no action** |
+| 7 | **R85 item 3** — §8 is sequencing, not standard | CANNOT DETERMINE | **Disclosed as is** | Carries **no Violation clause**, among two genuine siblings in the same §4 that do. It reads as disclosure prose rather than a check. **Whether it was ever meant as one is its author's to say**, and is routed |
+
+**Two rows in that table are not defects, and the distinction matters more than it looks.**
+Rows 6 and 7 appear because the **question asked** was *"does W37-6 apply the ruling this item
+belongs to"*, and for both the answer is yes. **Neither is open work.** In particular: **RL-987
+governs W37-6 — through §3.4's enlargement — but that is its live, sound obligation, not its
+withdrawn acceptance item.** RL-970 replaced item 2 with a three-limb test whose falsifiability
+was demonstrated against the real corpus in RL-970's own §5, and that replacement is what the
+superseding leaf plan's Acceptance Standard item 11 now carries. **There is no open RL-987
+defect.** R16 item 1 is the same shape and does not even reach W37-6: it was corrected the same day
+it was found, discharging register F32, so it was never a standing defect.
+
+**The open work in this table is rows 1 and 4, and nothing else.**
+
+### A.2 What this means for the run, in one paragraph
+
+**Nothing here is a new reason to withhold the go-ahead, and nothing here changes §5.1.** Items 2
+and 3 are the two already disclosed as aborting or as awaiting the run. Items 1 and 4 are **absent
+checks, not failing ones**: the migration is not blocked by them, but two acceptance items that
+were meant to police it will not police anything until they are rebuilt, and both are **unowned**.
+Item 5 is discharged. Items 6 and 7 need no action from the run.
+
+**The honest summary: of the seven, two are done, two need no action, one is deliberate with W37-6
+as its own remedy, and two are owed and ownerless.**
+
+### A.3 The four that do not apply
+
+`R16 item 1` (WITHDRAWN, `load_bundle` purity), `R21` (INDICATIVE, spec-declared error-code
+registration), `R51` (INDICATIVE, `register-lint.py` row-length residue) and `R29`
+(CANNOT DETERMINE, a register row's owner convention). All four confirmed on the same evidence
+standard — zero hits across `scripts/doc-id.py`, this ask, and both leaf plans — and all four are
+WK-671/WK-672/RFC-895-896 territory rather than the id migration.
+
+### A.4 Two findings against the sweep's own instruments, recorded rather than smoothed
+
+**A seventh class was missing from the brief.** `WITHDRAWN` — *an item that fires constantly and
+returns the wrong verdict, false positives **and** false negatives* — is expressible in none of the
+six classes the sweep was given: it is not vacuous (it fires), not invalidated (nothing broke it;
+it was wrong when written), and not indicative (it is a genuine check). R66 item 2 was wrong in
+both directions — 8 false positives, 4 false negatives including a primary instrument. **A
+taxonomy that cannot express a defect it contains is the same failure the sweep exists to find.**
+
+**One item was demonstrated; the rest were proved structurally.** Only **R21** has an *observed*
+failure — a sweep worker built the check, then had to invent the pass/fail threshold itself,
+because the ruling states none. Every other verdict here rests on a code path shown absent or
+reversed. **That distinction is stated because it is the one most easily lost**: a demonstration
+and a reading are not the same evidence, and today already produced one false finding from
+treating a reading as a demonstration (§5.3).
+
+---
+
+## Addendum B — 2026-09-02: the run aborts at **four** points, not three, and the line numbers in this document were measured at a tree it does not name
+
+**Two corrections to §5.1 and to Addendum A, both found by the executor who cleared the guards.**
+Neither changes the decision already recorded in §8; both change what that decision was told.
+
+### B.1 Four abort points, not three — and the fourth was already written down
+
+§5.1 says a real `migrate()` run aborts at **three** unconditional guards. **It aborts at four.**
+Measured at `ba31cd1`, the call sites in `migrate()` are:
+
+| Order | Guard | Site | Gap |
+|---|---|---|---|
+| 1 | `_check_multi_ruling_files_not_silently_unrecognised` | `:2969` | **F81** |
+| 2 | `_check_plan_reviews_heading_census` | `:2985` | **F80** |
+| 3 | **`_check_headed_split_file_not_silently_unrecognised`** | **`:2986`** | **F80 — the second guard on the same heading** |
+| 4 | `_check_requirements_not_silently_unrecognised` | `:2994` | **F82** |
+
+**Three *gaps*, four *abort points*.** F80's gap is covered by two independent guards refusing on
+the **same** heading, one line apart, so **clearing the census alone still aborts.**
+
+**The fourth was never undiscovered.** F80's own finding records it — its *related collision*
+section names `_check_headed_split_file_not_silently_unrecognised` explicitly. **The lead's
+summary of F80 collapsed a two-guard gap into one guard**, and that collapse then propagated into
+§5.1, Addendum A, the roadmap's WK-697 row and the W37-5c slice decision. The finding was right and
+every restatement of it was wrong — a reading of an artifact, hardened by repetition, exactly as
+§5.3 records for a different figure on the same day.
+
+**All four are cleared** by the F80/F81/F82 discovery work, proven red-before / green-after
+against the real tree rather than a fixture.
+
+### B.2 Every `doc-id.py` line number in this document is stale, and states no tree
+
+The citations `:2984`, `:3000` and `:3008` were measured at **`3f41d60`**. This document names
+**`64f63ee`**, Addendum A names **`2e48960`**, and the correct values at `ba31cd1` are the four
+above. **The numbers never resolved at the tree the documents claim.**
+
+**`CLAUDE.md` §13 already requires the fix** — *"a reference carries its scope and its
+measurement"*, and a line number's measurement is its revision. **Eight tracked documents
+currently carry `doc-id.py` line numbers with no tree**: this ask, the slice decision, the
+roadmap, the register, `F80`, `F81`, `F82`, and W37-5b's closure record. F80's own `:3001-3003`
+is stale by the same mechanism, so this is not one author's slip.
+
+**They are not corrected file-by-file here, deliberately.** Rewriting eight documents to
+`ba31cd1` line numbers produces eight citations that are stale again at the next commit to
+`doc-id.py` — which #629 is about to be. **The durable form is the function name**, which is
+stable across edits and greppable; a line number is an optimisation that costs its own
+correctness, and should carry its tree when used at all.
+
+**What is corrected is this document**, because it is the one a decision was taken against: read
+§5.1's and Addendum A's guard citations as **function names**, and take their line numbers from
+the table in §B.1 with its tree, `ba31cd1`.

@@ -1,4 +1,4 @@
-"""The Peril Structure's invariants (`02` FR-MODEL-58..61, FR-MODEL-74, §4.10).
+"""The Peril Structure's invariants (`02` FR-188, FR-189, FR-190, FR-191, FR-128, §4.10).
 
 §4.10 prints an example, not a contract: it shows one well-formed structure and says nothing
 about which malformed ones must be impossible. Choosing those is this file, and each test is
@@ -8,10 +8,10 @@ The prohibitions worth reading twice, because each is a mispricing rather than a
 
 * **a `frequency_severity` peril missing its severity model.** The risk premium would be a
   frequency, silently — a number three orders of magnitude too small that still adds up;
-* **a `capped` treatment with no restoration loading.** FR-MODEL-59 caps to stabilise the
+* **a `capped` treatment with no restoration loading.** FR-189 caps to stabilise the
   fit and restores the mean afterwards. Capping without restoring under-prices the book by
   exactly the large-loss share, which is the part nobody can afford to lose;
-* **a peril both modelled and excluded.** FR-MODEL-60 asks for every peril to be one or the
+* **a peril both modelled and excluded.** FR-190 asks for every peril to be one or the
   other; being both means the reader cannot tell whether its cost is in the total;
 * **a reconciliation whose `status` is stored.** Derived from `ratio` and `tolerance`
   instead, for the reason §4.9's `kinds` is derived: two statements of one fact disagree,
@@ -126,14 +126,14 @@ def _reconciliation(**overrides: object) -> Reconciliation:
 # -- the method decides which model references are required ------------------------------
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_a_well_formed_structure_round_trips() -> None:
     structure = _structure()
     again = PerilStructure.model_validate(structure.model_dump(mode="json"))
     assert again == structure
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_frequency_severity_needs_both_models() -> None:
     with pytest.raises(pydantic.ValidationError, match="severity_model"):
         PerilComponent(
@@ -144,7 +144,7 @@ def test_frequency_severity_needs_both_models() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_frequency_severity_refuses_a_burning_cost_model() -> None:
     """Both routes present is two answers to what the peril costs."""
     with pytest.raises(pydantic.ValidationError, match="burning_cost_model"):
@@ -158,7 +158,7 @@ def test_frequency_severity_refuses_a_burning_cost_model() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_burning_cost_needs_its_model() -> None:
     with pytest.raises(pydantic.ValidationError, match="burning_cost_model"):
         PerilComponent(
@@ -166,7 +166,7 @@ def test_burning_cost_needs_its_model() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_burning_cost_refuses_frequency_or_severity_models() -> None:
     with pytest.raises(pydantic.ValidationError, match="frequency_model"):
         PerilComponent(
@@ -181,7 +181,7 @@ def test_burning_cost_refuses_frequency_or_severity_models() -> None:
 # -- large-loss treatment ------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 def test_capped_needs_a_cap_and_a_restoration_loading() -> None:
     with pytest.raises(pydantic.ValidationError, match="cap_minor"):
         LargeLossTreatment(
@@ -195,20 +195,20 @@ def test_capped_needs_a_cap_and_a_restoration_loading() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 def test_a_restoration_loading_below_one_is_refused() -> None:
     """Restoration puts the capped mean *back*. Below 1 it caps a second time."""
     with pytest.raises(pydantic.ValidationError, match="restoration_loading"):
         _capped("0.98")
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 def test_none_carries_no_parameters() -> None:
     with pytest.raises(pydantic.ValidationError, match="cap_minor"):
         LargeLossTreatment(kind=LargeLossKind.NONE, cap_minor=2_500_000)
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 def test_separate_model_needs_an_excess_model_and_an_attachment() -> None:
     with pytest.raises(pydantic.ValidationError, match="attachment_minor"):
         LargeLossTreatment(
@@ -222,15 +222,15 @@ def test_separate_model_needs_an_excess_model_and_an_attachment() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 def test_flat_loading_needs_its_factor() -> None:
     with pytest.raises(pydantic.ValidationError, match="loading_factor"):
         LargeLossTreatment(kind=LargeLossKind.FLAT_LOADING, evidence_blob=EVIDENCE)
 
 
-@pytest.mark.req("FR-MODEL-59")
+@pytest.mark.req("FR-189")
 def test_every_treatment_but_none_carries_its_calibration_evidence() -> None:
-    """FR-MODEL-59: "whatever is chosen is recorded with its calibration evidence".
+    """FR-189: "whatever is chosen is recorded with its calibration evidence".
 
     A restoration loading of 1.043 is a *number someone calibrated*. Without the evidence
     behind it, an approver is asked to accept it because it is written down.
@@ -247,13 +247,13 @@ def test_every_treatment_but_none_carries_its_calibration_evidence() -> None:
 # -- coherence across the structure --------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_a_duplicate_peril_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="AD"):
         _structure(perils=(_ad(), _ad()))
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_a_peril_cannot_be_both_modelled_and_excluded() -> None:
     with pytest.raises(pydantic.ValidationError, match="AD"):
         _structure(
@@ -261,13 +261,13 @@ def test_a_peril_cannot_be_both_modelled_and_excluded() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_an_exclusion_needs_a_reason() -> None:
     with pytest.raises(pydantic.ValidationError):
         ExcludedPeril(peril="COURTESY_CAR", reason="   ")
 
 
-@pytest.mark.req("FR-MODEL-58")
+@pytest.mark.req("FR-188")
 def test_a_structure_with_no_perils_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError):
         _structure(perils=())
@@ -276,7 +276,7 @@ def test_a_structure_with_no_perils_is_refused() -> None:
 # -- the reconciliation --------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_status_and_ratio_are_derived_not_stored() -> None:
     """Within tolerance, so `pass` — and neither field can be asserted independently."""
     reconciliation = _reconciliation()
@@ -287,7 +287,7 @@ def test_status_and_ratio_are_derived_not_stored() -> None:
     assert payload["status"] == "pass"
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_a_reconciliation_round_trips_through_its_own_serialised_form() -> None:
     """The derived fields **are** serialised, so any payload round-tripped back carries
     them — and `extra="forbid"` would otherwise reject the artifact's own output.
@@ -304,7 +304,7 @@ def test_a_reconciliation_round_trips_through_its_own_serialised_form() -> None:
     assert Reconciliation.model_validate(tampered).ratio == original.ratio
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_outside_the_declared_tolerance_is_a_fail() -> None:
     reconciliation = _reconciliation(
         modelled_burning_cost=15_000,
@@ -324,29 +324,29 @@ def test_outside_the_declared_tolerance_is_a_fail() -> None:
     assert reconciliation.status is ReconciliationStatus.FAIL
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_the_total_must_be_the_sum_of_the_perils() -> None:
-    """FR-MODEL-58 sums over perils. A total that is not the sum is a third number."""
+    """FR-188 sums over perils. A total that is not the sum is a third number."""
     with pytest.raises(pydantic.ValidationError, match="sum"):
         _reconciliation(modelled_burning_cost=99_999)
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_a_non_positive_tolerance_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError):
         _reconciliation(tolerance=Decimal("0"))
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_reconciling_against_nothing_observed_is_refused() -> None:
     """A ratio needs a denominator; zero observed burning cost has none."""
     with pytest.raises(pydantic.ValidationError, match="observed"):
         _reconciliation(observed_burning_cost=0)
 
 
-@pytest.mark.req("FR-MODEL-74")
+@pytest.mark.req("FR-128")
 def test_the_reconciliation_states_each_perils_loss_treatment() -> None:
-    """FR-MODEL-74 — a capped model reconciling to uncapped data reads as a modelling error
+    """FR-128 — a capped model reconciling to uncapped data reads as a modelling error
     unless the treatment is stated beside the number."""
     reconciliation = _reconciliation(
         perils=(
@@ -366,7 +366,7 @@ def test_the_reconciliation_states_each_perils_loss_treatment() -> None:
     assert treatments == {"AD": LargeLossKind.CAPPED, "WINDSCREEN": LargeLossKind.NONE}
 
 
-@pytest.mark.req("FR-MODEL-60")
+@pytest.mark.req("FR-190")
 def test_money_stays_integer_minor_units() -> None:
     with pytest.raises(pydantic.ValidationError):
         _reconciliation(observed_burning_cost=18_412.5)
@@ -375,7 +375,7 @@ def test_money_stays_integer_minor_units() -> None:
 # -- the lifecycle -------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-61")
+@pytest.mark.req("FR-191")
 def test_a_structure_reaching_review_carries_its_reconciliation() -> None:
     """The approval policy's evidence kind *is* the reconciliation (`06` §4.2), so a
     structure in review without one is an approval with nothing to read."""
@@ -388,9 +388,9 @@ def test_a_structure_reaching_review_carries_its_reconciliation() -> None:
     assert reviewable.reconciliation is not None
 
 
-@pytest.mark.req("FR-MODEL-61")
+@pytest.mark.req("FR-191")
 def test_the_lifecycle_has_no_edge_from_draft_to_review() -> None:
-    """The Model's lesson (FR-MODEL-64): a structure reaching an approver without its
+    """The Model's lesson (FR-202): a structure reaching an approver without its
     reconciliation is not a state to refuse later, it is a state with no edge into it."""
     assert (
         PerilStructureStatus.REVIEW
@@ -402,9 +402,9 @@ def test_the_lifecycle_has_no_edge_from_draft_to_review() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-61")
+@pytest.mark.req("FR-191")
 def test_an_approved_structure_can_only_be_superseded() -> None:
-    """A Rating Version references it (FR-MODEL-61); archiving would remove the referent
+    """A Rating Version references it (FR-191); archiving would remove the referent
     while naming no replacement."""
     assert VALID_PERIL_STRUCTURE_TRANSITIONS[PerilStructureStatus.APPROVED] == frozenset(
         {PerilStructureStatus.SUPERSEDED}

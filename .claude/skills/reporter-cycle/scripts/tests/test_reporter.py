@@ -49,7 +49,7 @@ from reporter import (  # noqa: E402
 
 
 def _write_eta(tmp_path: Path, updated_line: str) -> Path:
-    # The headline carries a BST clock time (Ruling 106, 2026-09-04, rule 2) so these
+    # The headline carries a BST clock time (RL-1059, 2026-09-04, rule 2) so these
     # fixtures exercise the `**Updated:**`-staleness logic under test here, not rule 2's
     # own malformed-headline path — that path has its own dedicated test below.
     eta_file = tmp_path / "eta.md"
@@ -292,10 +292,10 @@ def test_success_path_log_line_still_says_ok_and_carries_the_body(tmp_path: Path
 
 
 # ---------------------------------------------------------------------------
-# Ruling 106 (2026-09-04) — the Slack routine: a 100-word cap, a BST clock time in the
+# RL-1059 (2026-09-04) — the Slack routine: a 100-word cap, a BST clock time in the
 # ETA, and a refresh on every `origin/main` move. Three rules, three broken-input proofs,
 # named verbatim in the ruling's own "Acceptance" section
-# (docs/plans/2026-09-04-ruling-106-slack-routine-word-cap-bst-eta-and-head-refresh.md).
+# (docs/rulings/RL-01059-a-100-word-cap-a-bst-clock-time-in-the-eta-and-a-refresh-on-every-origin-main-move.md).
 # ---------------------------------------------------------------------------
 
 

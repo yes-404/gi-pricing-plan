@@ -11,8 +11,8 @@ import {
 const props = defineProps<{ uncertainty: Uncertainty; row: PredictedRow }>();
 
 /**
- * FR-MODEL-101 forbids `basis` on a `quantile_pair_interval` and requires `interval_models`
- * on it; FR-MODEL-98's kind is the mirror image. The generated `Uncertainty` is a flat object
+ * FR-201 forbids `basis` on a `quantile_pair_interval` and requires `interval_models`
+ * on it; FR-196's kind is the mirror image. The generated `Uncertainty` is a flat object
  * with every field nullable, so neither rule is expressible in the type — the component
  * branches on `kind` and reads only the fields that kind is allowed to carry. A stray `basis`
  * on a quantile pair is therefore ignored rather than rendered, which matters because
@@ -45,7 +45,7 @@ const refusal = computed(() => {
 });
 
 /**
- * FR-MODEL-99: `unpenalised_information_matrix` means the matrix was computed as though the
+ * FR-197: `unpenalised_information_matrix` means the matrix was computed as though the
  * fit were unpenalised, so the interval is **wider** than the shrunk estimate warrants. That
  * direction is the whole content of the caveat — an actuary who reads it as "narrower" draws
  * the opposite conclusion about precision.
@@ -93,7 +93,7 @@ const percent = computed(() =>
       >
         Computed on the {{ basisCopy }}.
       </p>
-      <!-- FR-MODEL-78: a bound is a Model in its own right, at a declared alpha. Naming both
+      <!-- FR-199: a bound is a Model in its own right, at a declared alpha. Naming both
            is what lets a reader check the pair is the one they think it is. -->
       <p
         v-if="showIntervalModels && uncertainty.interval_models"
@@ -117,13 +117,13 @@ const percent = computed(() =>
           {{ refusal.detail }}
         </p>
       </template>
-      <!-- FR-MODEL-63 requires the reason, so a null one is a breach on the server's side.
+      <!-- FR-194 requires the reason, so a null one is a breach on the server's side.
            Reported as such: an empty panel would read as "the page forgot". -->
       <p
         v-else
         class="text-sm text-amber-900"
       >
-        No interval, and the response carried no reason for it. FR-MODEL-63 requires one.
+        No interval, and the response carried no reason for it. FR-194 requires one.
       </p>
     </div>
   </section>

@@ -6,7 +6,7 @@ import * as paging from "../paging";
 describe("listPerilStructures", () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  it("passes both of FR-MODEL-127's filters through, and no others", async () => {
+  it("passes both of FR-167's filters through, and no others", async () => {
     const spy = vi.spyOn(paging, "pageThrough").mockResolvedValue({ items: [], truncated: false });
     await listPerilStructures({ status: "reconciled", slug: "motor-2026" });
     expect(spy).toHaveBeenCalledWith(

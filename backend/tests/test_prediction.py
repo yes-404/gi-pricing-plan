@@ -1,4 +1,4 @@
-"""Scoring a model over supplied rows (`02` FR-MODEL-62/63/77/93, §5.1).
+"""Scoring a model over supplied rows (`02` FR-193/194/198/195, §5.1).
 
 `packages/pricing-core/tests/test_prediction_interval.py` owns the arithmetic — that the
 interval is `g⁻¹(η̂ ± z·√(x'Vx))`, that the off-diagonal terms matter, and that it covers
@@ -6,11 +6,11 @@ the mean as often as it claims. This file owns the four things only the platform
 wrong about:
 
 * **the covariance blob makes the round trip.** The fit computes the digest and hands back
-  the bytes (ADR-0001); the worker stores them; the prediction path fetches them by that
+  the bytes (ADR-703); the worker stores them; the prediction path fetches them by that
   digest. Three components, and nothing but an end-to-end fit-then-score proves the chain,
   because each of them is individually happy with a matrix that never arrives.
 * **the uncertainty verdict matches the model in front of it** — an interval for a GLM
-  that has its matrix, `covariance_not_stored` for one that does not, and FR-MODEL-77's
+  that has its matrix, `covariance_not_stored` for one that does not, and FR-198's
   `no_interval_models_fitted` for every GBM. `02` R5 is satisfied by the *right* one of
   these, not by any of them.
 * **the refusals are refusals**, with the status a caller can act on: `422` for a request
@@ -98,7 +98,7 @@ async def _fitted_glm(
     With `spare=True` a second model is reserved on the same factors and left at `draft`,
     for the one test that needs a row whose `fit_result` can still be written.
 
-    `alpha > 0` fits a **penalised** model, which is the case FR-MODEL-99 is about: `glum`
+    `alpha > 0` fits a **penalised** model, which is the case FR-197 is about: `glum`
     returns the unpenalised information matrix and warns that it is incorrect, and the
     prediction has to say so rather than pass the interval off as exact.
     """
@@ -147,7 +147,7 @@ async def _fitted_ebm(database, blob_store, workspace_id) -> tuple[Principal, UU
     Seeded off `_fitted_glm` so the two fixtures share one dataset/version/factor setup
     path — the EBM is reserved on the very factors the GLM was fitted on, and on the same
     split. `split_ref` is not optional in practice: the fit handler refuses a spec without
-    one (`01` FR-DATA-36, FR-MODEL-54), so the GLM's is read back off its stored spec
+    one (`01` FR-76, FR-183), so the GLM's is read back off its stored spec
     rather than a second split being cut for the same version.
     """
     actor, glm_id = await _fitted_glm(database, blob_store, workspace_id)
@@ -186,7 +186,7 @@ async def _fitted_ebm(database, blob_store, workspace_id) -> tuple[Principal, UU
 def _ebm_spec(
     version_id: UUID, factor_ids: tuple[UUID, ...], **over: object
 ) -> EbmSpec:
-    """The same shape a W5 fit would have reserved: the EBM arm of the union, on the
+    """The same shape a WK-661 fit would have reserved: the EBM arm of the union, on the
     same version and factors `_spec` uses for the GLM."""
     base: dict[str, object] = {
         "model_family_slug": f"freq-{new_uuid7().hex[-6:]}",
@@ -264,13 +264,13 @@ async def _fitted_residual_pair(database, blob_store, workspace_id) -> _Residual
 # -- The interval, end to end -------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-63")
-@pytest.mark.req("FR-MODEL-98")
+@pytest.mark.req("FR-194")
+@pytest.mark.req("FR-196")
 async def test_the_covariance_blob_survives_the_fit_the_store_and_the_prediction(
     database, blob_store, workspace_id
 ) -> None:
     """**The chain no single component can prove.** `fit_glm` computes a digest over bytes
-    it does not store (ADR-0001), the worker stores them under it, and the prediction path
+    it does not store (ADR-703), the worker stores them under it, and the prediction path
     fetches them back by that digest — and a break anywhere in between surfaces as a
     perfectly well-formed prediction with no interval on it, which is the one failure mode
     that looks like a design decision."""
@@ -297,11 +297,11 @@ async def test_the_covariance_blob_survives_the_fit_the_store_and_the_prediction
         assert row.upper > row.lower
 
 
-@pytest.mark.req("FR-MODEL-93")
+@pytest.mark.req("FR-195")
 async def test_a_glm_fitted_before_the_covariance_blob_says_so_rather_than_going_quiet(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-93, on the models that make it necessary.
+    """FR-195, on the models that make it necessary.
 
     The matrix is `p x p` and the artifact holds `p` numbers, so a fit that predates the
     blob cannot have one reconstructed — the only honest answers are a typed reason and a
@@ -347,18 +347,18 @@ async def test_a_glm_fitted_before_the_covariance_blob_says_so_rather_than_going
     assert prediction.uncertainty.kind is UncertaintyKind.UNAVAILABLE
     assert prediction.uncertainty.reason is UnavailableReason.COVARIANCE_NOT_STORED
     assert prediction.uncertainty.level is None
-    # The expectation is still served. FR-MODEL-93 removes the interval, not the answer.
+    # The expectation is still served. FR-195 removes the interval, not the answer.
     assert all(row.lower is None and row.upper is None for row in prediction.rows)
     assert prediction.rows[0].expected > prediction.rows[1].expected
 
 
-@pytest.mark.req("FR-MODEL-77")
+@pytest.mark.req("FR-198")
 async def test_a_gbm_names_the_reason_it_has_no_interval_rather_than_approximating_one(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-77 refuses the variance-model approximation because it *renders* as a
+    """FR-198 refuses the variance-model approximation because it *renders* as a
     predictive interval. `no_interval_models_fitted` is the only one of its three reasons
-    reachable until FR-MODEL-78's paired quantile models exist — and saying which one
+    reachable until FR-199's paired quantile models exist — and saying which one
     applies is what distinguishes a refusal from an omission."""
     model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
     assert status is JobStatus.SUCCEEDED
@@ -378,10 +378,10 @@ async def test_a_gbm_names_the_reason_it_has_no_interval_rather_than_approximati
     assert all(row.lower is None for row in prediction.rows)
 
 
-# -- The model offset, end to end (FR-MODEL-24) --------------------------------------------
+# -- The model offset, end to end (FR-116) --------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_model_offset_prediction_is_the_referenced_linear_predictor_plus_the_fit(
     database, blob_store, workspace_id
 ) -> None:
@@ -420,13 +420,13 @@ async def test_a_model_offset_prediction_is_the_referenced_linear_predictor_plus
     for i, row in enumerate(prediction.rows):
         assert row.expected == pytest.approx(expected[i], rel=1e-9)
         # The interval is the same centre — the offset contributes to it and not to the
-        # width (FR-MODEL-63) — so it brackets the expectation as it does for any GLM.
+        # width (FR-194) — so it brackets the expectation as it does for any GLM.
         assert row.lower is not None
         assert row.upper is not None
         assert row.lower <= row.expected <= row.upper
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_model_offset_ref_that_names_no_model_is_not_found_not_a_500(
     database, blob_store, workspace_id
 ) -> None:
@@ -474,7 +474,7 @@ async def test_a_model_offset_ref_that_names_no_model_is_not_found_not_a_500(
 # -- The refusals --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 async def test_more_rows_than_the_endpoint_scores_is_refused_rather_than_served_slowly(
     database, blob_store, workspace_id
 ) -> None:
@@ -502,7 +502,7 @@ async def test_more_rows_than_the_endpoint_scores_is_refused_rather_than_served_
     assert empty.value.status_code == 422
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 async def test_a_model_with_no_fit_result_cannot_be_scored(
     database, blob_store, workspace_id
 ) -> None:
@@ -533,8 +533,8 @@ async def test_a_model_with_no_fit_result_cannot_be_scored(
     assert refused.value.status_code == 409
 
 
-@pytest.mark.req("FR-MODEL-37")
-@pytest.mark.req("FR-MODEL-124")
+@pytest.mark.req("FR-140")
+@pytest.mark.req("FR-180")
 async def test_an_ebm_is_scored_and_states_that_its_type_has_no_interval(
     database, blob_store, workspace_id
 ) -> None:
@@ -567,13 +567,13 @@ async def test_an_ebm_is_scored_and_states_that_its_type_has_no_interval(
     assert prediction.rows[0].expected != prediction.rows[1].expected
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 async def test_an_ebm_scored_on_a_level_it_never_saw_is_refused_by_name(
     database, blob_store, workspace_id
 ) -> None:
     """An EBM's categorical lookup has one slot per level the fit observed, and a level
     with no slot has no score. Inventing one would price the row as whichever level shares
-    its index — FR-MODEL-32's rule, reaching the caller as a named 409 rather than as an
+    its index — FR-131's rule, reaching the caller as a named 409 rather than as an
     `IndexError` in a traceback."""
     actor, model_id = await _fitted_ebm(database, blob_store, workspace_id)
 
@@ -593,7 +593,7 @@ async def test_an_ebm_scored_on_a_level_it_never_saw_is_refused_by_name(
     assert "area" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 async def test_an_ebm_spec_carrying_a_glm_fit_result_is_refused_by_name(
     database, blob_store, workspace_id
 ) -> None:
@@ -648,7 +648,7 @@ async def test_an_ebm_spec_carrying_a_glm_fit_result_is_refused_by_name(
     assert "GlmFitResult" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 async def test_rows_missing_a_column_the_model_needs_are_refused_by_name(
     database, blob_store, workspace_id
 ) -> None:
@@ -666,7 +666,7 @@ async def test_rows_missing_a_column_the_model_needs_are_refused_by_name(
     assert "area" in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 async def test_a_model_in_another_workspace_is_not_found(
     database, blob_store, workspace_id
 ) -> None:
@@ -686,7 +686,7 @@ async def test_a_model_in_another_workspace_is_not_found(
 # -- Over HTTP ----------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 def test_the_predict_route_is_published_with_its_refusals() -> None:
     """`test_api_diagnostics` records three requirements repaired by this check: a route
     absent from the published contract is invisible to the endpoint audit, however
@@ -699,7 +699,7 @@ def test_the_predict_route_is_published_with_its_refusals() -> None:
         assert status in responses
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 def test_a_caller_without_model_read_is_refused_at_the_edge(
     api_client: TestClient, workspace_id, principal
 ) -> None:
@@ -715,13 +715,13 @@ def test_a_caller_without_model_read_is_refused_at_the_edge(
     assert refused.status_code == 403
 
 
-@pytest.mark.req("FR-MODEL-124")
-@pytest.mark.req("FR-MODEL-37")
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-180")
+@pytest.mark.req("FR-140")
+@pytest.mark.req("FR-193")
 async def test_an_ebm_scores_over_http(
     api_client: TestClient, database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-124 for the EBM arm at the edge, which nothing asserts today.
+    """FR-180 for the EBM arm at the edge, which nothing asserts today.
 
     The route's own tests prove it is published and that it refuses without the
     permission. Neither would notice if the EBM branch returned the GLM's numbers, the
@@ -762,8 +762,8 @@ async def test_an_ebm_scores_over_http(
     assert body["rows"][0]["expected"] != body["rows"][1]["expected"]
 
 
-@pytest.mark.req("FR-MODEL-124")
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-180")
+@pytest.mark.req("FR-193")
 async def test_the_ebm_refusal_reaches_the_client_by_name(
     api_client: TestClient, database, blob_store, workspace_id
 ) -> None:
@@ -791,11 +791,11 @@ async def test_the_ebm_refusal_reaches_the_client_by_name(
     assert all(row["lower"] is None and row["upper"] is None for row in body["rows"])
 
 
-@pytest.mark.req("FR-MODEL-99")
+@pytest.mark.req("FR-197")
 async def test_a_penalised_fits_interval_says_which_matrix_it_came_from(
     database, blob_store, workspace_id
 ) -> None:
-    """OQ-MODEL-14, decided 2026-08-18: report it, and say what it is.
+    """OQ-586, decided 2026-08-18: report it, and say what it is.
 
     `glum` warns on every penalised fit that the covariance matrix "will be incorrect" — it
     is the information matrix of the unpenalised problem, which knows nothing about the
@@ -817,13 +817,13 @@ async def test_a_penalised_fits_interval_says_which_matrix_it_came_from(
 
     assert prediction.uncertainty.kind is UncertaintyKind.CONFIDENCE_INTERVAL_MEAN
     assert prediction.uncertainty.basis is UncertaintyBasis.UNPENALISED_INFORMATION_MATRIX
-    #: The interval is still returned. Refusing it would have had to take FR-MODEL-21's
+    #: The interval is still returned. Refusing it would have had to take FR-113's
     #: standard errors with it, since both are read off this matrix — which is the reason
-    #: OQ-MODEL-14 could not be decided for the interval alone.
+    #: OQ-586 could not be decided for the interval alone.
     assert all(row.lower is not None and row.upper is not None for row in prediction.rows)
 
 
-@pytest.mark.req("FR-MODEL-99")
+@pytest.mark.req("FR-197")
 async def test_an_unpenalised_fit_claims_the_matrix_it_actually_used(
     database, blob_store, workspace_id
 ) -> None:

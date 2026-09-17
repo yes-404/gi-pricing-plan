@@ -1,4 +1,4 @@
-"""The unauthenticated OIDC bootstrap values the browser login needs (FR-PLAT-66).
+"""The unauthenticated OIDC bootstrap values the browser login needs (FR-394).
 
 One route, built the way `/version` is (`health.version_route`, `main.py:124-131`): a
 closure bound to the loaded settings, mounted in `main.py`. Deliberately **no** auth

@@ -5,8 +5,8 @@ governance around it, which is where a transformation stops being a statistic an
 an artifact a model can pin:
 
 * **R1** — a proposal is derived against a `validated` version, or refused. Evidence
-  (FR-MODEL-10) for a fit that cannot happen is worse than no evidence.
-* **FR-MODEL-12 / FR-MODEL-16** — versioned, never edited, and audited on creation.
+  (FR-99) for a fit that cannot happen is worse than no evidence.
+* **FR-101 / FR-108** — versioned, never edited, and audited on creation.
 * **The fit that pins one** — a `banding` factor reaching `model.fit` must resolve through
   its stored Banding, which is only true if the handler loaded it.
 """
@@ -76,11 +76,11 @@ async def _banding(
         return transform_service.to_banding(row)
 
 
-@pytest.mark.req("FR-MODEL-12")
+@pytest.mark.req("FR-101")
 async def test_a_second_banding_of_one_slug_allocates_the_next_version(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-12: editing a banding creates a new version and alters no fitted model."""
+    """FR-101: editing a banding creates a new version and alters no fitted model."""
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
     slug = f"amt-{uuid4().hex[-6:]}"
@@ -100,11 +100,11 @@ async def test_a_second_banding_of_one_slug_allocates_the_next_version(
         assert tuple(stored.body["boundaries"]) == (0.0, 150_000.0, 300_000.0)
 
 
-@pytest.mark.req("FR-MODEL-16")
+@pytest.mark.req("FR-108")
 async def test_creating_a_grouping_emits_an_audit_event(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-16 makes it auditable because grouping is a modelling decision.
+    """FR-108 makes it auditable because grouping is a modelling decision.
 
     The event carries the method and the level counts, so the model document can list the
     grouping with its method without re-reading the artifact.
@@ -144,13 +144,13 @@ async def test_creating_a_grouping_emits_an_audit_event(
     assert event.after["unseen_level_behaviour"] == "error"
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 async def test_a_proposal_needs_a_validated_version(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """`02` R1 again, one layer out.
 
-    Bands proposed from a draft version carry FR-MODEL-10 evidence for a fit the platform
+    Bands proposed from a draft version carry FR-99 evidence for a fit the platform
     has already refused — and the numbers would look exactly as authoritative.
     """
     from backend.tests.test_data_jobs import _ingest
@@ -177,11 +177,11 @@ async def test_a_proposal_needs_a_validated_version(
     assert refused.value.code == "DATASET_NOT_VALIDATED"
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 async def test_a_proposal_reads_the_version_and_persists_nothing(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-9: the platform proposes, the actuary edits, and nothing is stored yet."""
+    """FR-98: the platform proposes, the actuary edits, and nothing is stored yet."""
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
     version_id = await _validated_version(
@@ -204,7 +204,7 @@ async def test_a_proposal_reads_the_version_and_persists_nothing(
         )
 
     assert proposed.derived_on_dataset_version_id == version_id
-    assert proposed.band_stats, "FR-MODEL-10: a proposal carries its evidence"
+    assert proposed.band_stats, "FR-99: a proposal carries its evidence"
 
     async with database.session() as session:
         stored = (
@@ -215,11 +215,11 @@ async def test_a_proposal_reads_the_version_and_persists_nothing(
     assert stored == [], "proposing is not persisting"
 
 
-@pytest.mark.req("FR-MODEL-14")
+@pytest.mark.req("FR-105")
 async def test_a_grouping_proposal_carries_its_change_in_fit(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-15's evidence, from the real read path rather than a fixture frame."""
+    """FR-107's evidence, from the real read path rather than a fixture frame."""
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
     version_id = await _validated_version(
@@ -252,11 +252,11 @@ async def test_a_grouping_proposal_carries_its_change_in_fit(
     assert proposed.evidence.chi2_p_value < 0.01
 
 
-@pytest.mark.req("FR-MODEL-83")
+@pytest.mark.req("FR-102")
 async def test_evaluating_edited_boundaries_moves_the_band_statistics(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-83: what an edited boundary *did*, before the banding is saved.
+    """FR-102: what an edited boundary *did*, before the banding is saved.
 
     The assertion that matters is that the numbers **change with the cut**. A stub that
     echoed the request, or one that recomputed against the wrong column, would return
@@ -305,7 +305,7 @@ async def test_evaluating_edited_boundaries_moves_the_band_statistics(
     assert split != lumped, "the statistics must follow the boundary, not the request"
 
 
-@pytest.mark.req("FR-MODEL-83")
+@pytest.mark.req("FR-102")
 async def test_evaluating_an_edited_mapping_moves_the_evidence(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -355,7 +355,7 @@ async def test_evaluating_an_edited_mapping_moves_the_evidence(
     assert kept.chi2_p_value is None, "no degrees of freedom saved, so no test to report"
 
 
-@pytest.mark.req("FR-MODEL-83")
+@pytest.mark.req("FR-102")
 async def test_evaluating_needs_a_validated_version_too(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -387,7 +387,7 @@ async def test_evaluating_needs_a_validated_version_too(
     assert refused.value.code == "DATASET_NOT_VALIDATED"
 
 
-@pytest.mark.req("FR-MODEL-83")
+@pytest.mark.req("FR-102")
 async def test_evaluating_persists_nothing(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -425,7 +425,7 @@ async def test_evaluating_persists_nothing(
     assert stored == []
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 async def test_a_model_fits_through_a_stored_banding(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -482,7 +482,7 @@ async def test_a_model_fits_through_a_stored_banding(
     )
 
 
-@pytest.mark.req("FR-MODEL-2")
+@pytest.mark.req("FR-87")
 async def test_a_fit_naming_a_banding_that_does_not_exist_fails_the_job(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -520,13 +520,13 @@ async def test_a_fit_naming_a_banding_that_does_not_exist_fails_the_job(
     assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
 
 
-@pytest.mark.req("FR-MODEL-12")
+@pytest.mark.req("FR-101")
 async def test_a_stored_banding_cannot_be_updated_or_deleted(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """The privilege layer, not the service layer.
 
-    FR-MODEL-12 holds for callers who remember it; this is what holds for a psql session.
+    FR-101 holds for callers who remember it; this is what holds for a psql session.
     """
     from sqlalchemy import text
 
@@ -550,7 +550,7 @@ async def test_a_stored_banding_cannot_be_updated_or_deleted(
             )
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 async def test_groupings_and_bandings_list_by_dataset(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -567,7 +567,7 @@ async def test_groupings_and_bandings_list_by_dataset(
     assert [row.id for row in rows] == [mine.id]
 
 
-@pytest.mark.req("FR-MODEL-2")
+@pytest.mark.req("FR-87")
 async def test_loading_a_banding_that_does_not_exist_names_the_id(
     database: Database, workspace_id
 ) -> None:
@@ -581,11 +581,11 @@ async def test_loading_a_banding_that_does_not_exist_names_the_id(
     assert str(missing) in (refused.value.detail or "")
 
 
-@pytest.mark.req("FR-MODEL-14")
+@pytest.mark.req("FR-105")
 async def test_a_grouping_row_records_its_parent_for_a_hierarchy(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-17's chain, stored as a column so it is queryable rather than only in JSON."""
+    """FR-109's chain, stored as a column so it is queryable rather than only in JSON."""
     from model_schema import Grouping
 
     actor = await _actuary(database, workspace_id)

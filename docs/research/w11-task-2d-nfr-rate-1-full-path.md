@@ -1,14 +1,14 @@
-# NFR-RATE-1 at the full HTTP path and under offered load — W11 Slice 2 Task 2D
+# NFR-489 at the full HTTP path and under offered load — WK-671 Slice 2 Task 2D
 
 `docs/research/w11-task-1-5-nfr-rate-1-2.md` measured `score_one` directly: no HTTP, no
 FastAPI, no database, sequential calls on one event loop. It said so, and it named what it
-was not covering — *"NFR-RATE-1's sustained-200-rps and full-path halves remain entirely
+was not covering — *"NFR-489's sustained-200-rps and full-path halves remain entirely
 unmeasured here, by design (Slice 2's)."* This is that measurement.
 
-**NFR-RATE-1, verbatim** (`docs/specs/03-rating-engine.md:797`):
+**NFR-489, verbatim** (`docs/specs/03-rating-engine.md:797`):
 
 > Real-time scoring p99 < 50 ms **server-side** at **200 rps per replica** for a ~200-step
-> motor structure with one `exact` GBM call (NFR-OVR-1). **Without a GBM call, p99 < 15 ms.**
+> motor structure with one `exact` GBM call (NFR-454). **Without a GBM call, p99 < 15 ms.**
 
 Three claims, of which Task 1.5 could reach one. The other two — *server-side*, meaning the
 endpoint rather than the function, and *at 200 rps*, meaning under offered load — were
@@ -33,10 +33,10 @@ negligible, so this is not a capacity result.
   (`score_one`).
 - **Harness.** `scripts/bench-rating.py --http`, extending Task 1.5's script rather than
   adding a second — the leaf plan is explicit that two scripts measuring one thing is how two
-  numbers start disagreeing. Ruling 6 reserved `asyncio` + `httpx` for this measurement and
+  numbers start disagreeing. RL-872 reserved `asyncio` + `httpx` for this measurement and
   draws its forbidden line at load-generation dependencies (`locust`/`k6`/`hey`/`wrk`);
   `httpx` is already a workspace dependency. **Not a CI gate**, per the same ruling.
-- **Shape.** `uvicorn app.main:create_app --factory` in **its own process** — NFR-RATE-1
+- **Shape.** `uvicorn app.main:create_app --factory` in **its own process** — NFR-489
   measures a *replica*, and an in-process ASGI transport would put the load generator's own
   work on the server's event loop and inside the latency it is trying to measure. Client and
   server communicate over loopback, which adds ~0.1 ms against a 50 ms budget.
@@ -52,7 +52,7 @@ negligible, so this is not a capacity result.
   rate, not on completions. A closed-loop generator throttles itself when the server slows —
   it issues fewer requests, and the ones that would have been slowest are never sent — which
   is coordinated omission, and its effect is to make a saturating system return a *passing*
-  p99. NFR-RATE-1 also says *"at 200 rps"*, an **offered** rate, so scheduling on the clock is
+  p99. NFR-489 also says *"at 200 rps"*, an **offered** rate, so scheduling on the clock is
   the literal reading as well as the honest one.
 - **Server-side timing comes from the app's own instrumentation.** The request middleware
   already emits `duration_ms` per completed request; parsing its JSON log needs no production
@@ -77,18 +77,18 @@ a full MinIO object read, and `Bundle.model_validate_json` over the whole payloa
 included — and the slot saves `load_bundle` and nothing upstream of it.
 
 > **Corrected 2026-08-30 (F51,
-> `docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md` Ruling 41 §2).**
+> `docs/rulings/RL-00921-a-ref-may-not-be-served-from-the-memo-without-a-metadata-read-and-it-does-not-need-to-be-the-content-hash-is-already-in-hand-after-the-first-read-and-is-discarded.md` RL-921 §2).**
 > The sentence above — *"the slot is keyed on `content_hash`, and the only way to learn a
 > ref's content hash is to fetch the bundle"* — is **false at this tree and still false at
 > `daa6fbe`/`e882727`**. `compile_rating_version` writes `content_hash` into `row.bundle`
 > (`backend/src/app/platform/rating_versions.py:440-444`), the same dict `_fetch_bundle`
 > already reads for `blob_sha256` (`:126-127`) — the hash is in hand after the version-row
 > read and was simply discarded. This annotation does not touch the measurements above,
-> which Ruling 41 §1 re-read at source and found holding; only this premise sentence, and
+> which RL-921 §1 re-read at source and found holding; only this premise sentence, and
 > the "correctness/latency trade, no way around the fetch" conclusion it was built on, are
 > wrong. `backend/src/app/api/score.py`'s `_fetch_bundle` now checks the freshly read hash
 > against the slot before the blob read this section measures — see that function's own
-> docstring for the fix Ruling 41 §2 ordered.
+> docstring for the fix RL-921 §2 ordered.
 
 | condition | bundle | mean | stdev | p50 | p99 | max | 1-min load |
 |---|---|---|---|---|---|---|---|
@@ -104,15 +104,15 @@ costs**.
 
 **This is a deliberate correctness choice with an unmeasured cost, not a broken cache.** The
 `slot.hash_for(ref)` memo that would skip the fetch exists (Task 2A) and is wired into the
-`except Exception` degradation branch for NFR-RATE-9. It is not on the happy path because a
+`except Exception` degradation branch for NFR-497. It is not on the happy path because a
 ref that had been re-pointed would then serve a stale bundle — trading correctness for latency
 silently. The design is correct. What this measurement establishes is that it is also
-expensive enough that **NFR-RATE-1 may be unreachable without revisiting it**, and that is a
+expensive enough that **NFR-489 may be unreachable without revisiting it**, and that is a
 question above a measurement task.
 
 ---
 
-## Result — NFR-RATE-1 at the full path, by offered rate
+## Result — NFR-489 at the full path, by offered rate
 
 Client-observed round trip over loopback. `handler` is the app's own `duration_ms`.
 `queue+loopback` is the difference at p99. `ceiling` is capacity implied by **that rung's
@@ -157,7 +157,7 @@ serialisation.
 
 ## Result — the component half re-measured (F38)
 
-F38 records NFR-RATE-1's without-GBM half as *"measured; verdict unstable across runs — not
+F38 records NFR-489's without-GBM half as *"measured; verdict unstable across runs — not
 established"*, on 2 of 5 runs breaching. This run is a sixth observation of the same committed
 harness, and it breaches.
 
@@ -174,7 +174,7 @@ recorded ~4.0×.
 
 ---
 
-## Result — NFR-RATE-2 (trace overhead), incidental to this task
+## Result — NFR-490 (trace overhead), incidental to this task
 
 Not this task's deliverable; recorded because the run produced it and F35 tracks it.
 
@@ -196,13 +196,13 @@ depending on how it is cut" and does not move it.
 
 ## What this does not cover
 
-- **NFR-RATE-13 is not isolated.** The plan's acceptance asked for it re-measured on the real
-  path against W8's synthetic p99 0.070 ms. This run bounds it but does not isolate it: the
+- **NFR-502 is not isolated.** The plan's acceptance asked for it re-measured on the real
+  path against WK-668's synthetic p99 0.070 ms. This run bounds it but does not isolate it: the
   ~12 ms residual after subtracting fetch and `score_one` from the handler mean contains
   framework, routing, authentication, dependency injection **and** response serialisation
   together. An upper bound containing four other things is not a measurement of the one, and
   reporting it as such is the substitution this note exists to avoid. **Owed, not delivered.**
-- **NFR-RATE-11's rate limit is not exercised, deliberately.** `rate_limit_rps` exists as a
+- **NFR-499's rate limit is not exercised, deliberately.** `rate_limit_rps` exists as a
   column (`db/models.py:394`), a request and response field (`api/service_accounts.py:65`,
   `:90`, `:113`, `:175`), an error code `RATE_LIMITED` (`errors.py:58`) and a 429 title
   (`api/responses.py:34`) — and is **enforced nowhere**. A load test against an absent rate
@@ -229,7 +229,7 @@ depending on how it is cut" and does not move it.
 
 **Forced (measured, not inferred):**
 
-- **NFR-RATE-1 fails at the full path in both conditions, at every offered rate tested,
+- **NFR-489 fails at the full path in both conditions, at every offered rate tested,
   starting at 10 rps.** The requirement asks for 200.
 - **The dominant cost is `_fetch_bundle`, not scoring.** 36.574 ms mean against `score_one`'s
   12.326 ms on the same bundle; ~60 % of handler time at the cleanest rung.
@@ -247,12 +247,12 @@ depending on how it is cut" and does not move it.
 
 **Not decided here, and not this document's place to decide:**
 
-- **Whether NFR-RATE-1 is achievable with the present design.** If fetch dominates, the
+- **Whether NFR-489 is achievable with the present design.** If fetch dominates, the
   requirement's with-GBM half is a statement about object-store throughput rather than about
   scoring speed — at 200 rps it implies ~400 MB/s of object reads and 200 full booster parses
   per second — and the remedy is architectural rather than an optimisation. Moving
   `slot.hash_for(ref)` onto the happy path is the obvious candidate and is **not** safe as-is:
   it would serve a stale bundle when a ref is re-pointed. That trade belongs to a ruling.
-- **Whether NFR-RATE-1's numbers are right.** A requirement measured only now, at the end of
+- **Whether NFR-489's numbers are right.** A requirement measured only now, at the end of
   the workstream that implements it, may be describing a machine nobody has. That is a §14
   question.

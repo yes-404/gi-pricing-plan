@@ -6,7 +6,7 @@
  * outright: the banding and grouping editors must show the *consequence* of an edit before
  * it is saved. An actuary should never have to fit a model to find out whether a grouping
  * was sensible. So every edit here re-evaluates against the real dataset version through
- * FR-MODEL-83's `/evaluate` routes — the numbers on screen are the platform's, computed on
+ * FR-102's `/evaluate` routes — the numbers on screen are the platform's, computed on
  * the same code path a fit would use, never approximated in the browser.
  *
  * What is deliberately *not* here: drag handles on the boundaries. §5.3 asks for draggable
@@ -96,14 +96,14 @@ const VERDICT_TONE: Record<string, string> = {
   untested: "border-slate-200 bg-slate-50 text-slate-700",
 };
 
-/** Columns the profile marked as candidate rating factors — `01` FR-DATA-26's one-ways. */
+/** Columns the profile marked as candidate rating factors — `01` FR-61's one-ways. */
 const columns = computed(() => (profile.value?.one_ways ?? []).map((o) => o.column));
 
 /**
  * The selected model's interaction candidates.
  *
  * A per-**Model** artifact reached from a view addressed by Dataset Version — the selector
- * bridges that (`OQ-MODEL-40`). A model with no transparency artifact 404s, which is a
+ * bridges that (`OQ-611`). A model with no transparency artifact 404s, which is a
  * state rather than a failure: nothing has been built for it yet.
  */
 const shapSummary = ref<ShapSummary | null>(null);
@@ -168,7 +168,7 @@ async function runBandingProposal(): Promise<void> {
 }
 
 /**
- * FR-MODEL-83. The edit's consequence, from the platform, before anything is saved.
+ * FR-102. The edit's consequence, from the platform, before anything is saved.
  *
  * An invalid move — a boundary crossing its neighbour — is marked and **not** sent: the
  * platform would refuse it correctly with a 422, and a 422 per keystroke is not an editor.
@@ -234,7 +234,7 @@ async function runGroupingProposal(): Promise<void> {
   }
 }
 
-/** FR-MODEL-83: re-merge, and show what it cost, before the grouping is saved. */
+/** FR-102: re-merge, and show what it cost, before the grouping is saved. */
 async function moveLevel(level: string, target: string): Promise<void> {
   if (!grouping.value) return;
   groupingBusy.value = true;
@@ -278,7 +278,7 @@ function share(value: string | number): string {
 }
 
 function isThin(row: { claim_count: number }): boolean {
-  // A band nobody can estimate from. Not a platform threshold — FR-MODEL-11's minimums are
+  // A band nobody can estimate from. Not a platform threshold — FR-100's minimums are
   // configured per fit — but the number an actuary scans the column for.
   return row.claim_count < 30;
 }
@@ -328,7 +328,7 @@ defineExpose({ isProblem });
       <!--
         `02` §5.3's first named item, and the one this view had only as select options: the
         candidate columns with the one-ways the Profile already carries. Read, never
-        recomputed — FR-DATA-26 computes them once, in the profiling pass.
+        recomputed — FR-61 computes them once, in the profiling pass.
       -->
       <ColumnOneWays
         class="mb-6"
@@ -337,7 +337,7 @@ defineExpose({ isProblem });
 
       <!--
         `02` §5.3's intent and monotonic-direction controls. On the **creation** path only:
-        a Factor is frozen and `/factors` has no PATCH, so intent is set once (FR-MODEL-7).
+        a Factor is frozen and `/factors` has no PATCH, so intent is set once (FR-96).
       -->
       <FactorCreateForm
         v-if="datasetId"
@@ -348,7 +348,7 @@ defineExpose({ isProblem });
 
       <!--
         `02` §5.3's interaction suggestions. The panel this slice's owner clause names —
-        FR-MODEL-128 assigns the requirement to "the slice that builds the factor
+        FR-168 assigns the requirement to "the slice that builds the factor
         workbench's suggestion panel", and W6b-5a built its backend half.
       -->
       <ModelSelector
@@ -461,7 +461,7 @@ defineExpose({ isProblem });
           <p class="mt-5 text-sm text-slate-600">
             <span class="font-medium">{{ banding.labels.length }}</span> bands by
             <span class="font-mono text-xs">{{ banding.method }}</span>. Edit a boundary and
-            the statistics below are recomputed against the version (FR-MODEL-83).
+            the statistics below are recomputed against the version (FR-102).
           </p>
 
           <div class="mt-3 flex flex-wrap gap-2">
@@ -567,7 +567,7 @@ defineExpose({ isProblem });
           </table>
           <p class="mt-2 text-xs text-slate-500">
             A shaded row holds fewer than 30 claims — its interval is the column to read, not
-            its frequency. FR-MODEL-11's configured minimums are enforced at fit time.
+            its frequency. FR-100's configured minimums are enforced at fit time.
           </p>
 
           <div class="mt-4 flex items-center gap-3">
@@ -586,7 +586,7 @@ defineExpose({ isProblem });
               Saved as
               <span class="font-mono text-xs">{{ bandingSaved.slug }}</span>
               version {{ bandingSaved.version }}. Editing it again allocates the next version
-              (FR-MODEL-12).
+              (FR-101).
             </p>
           </div>
         </template>

@@ -37,7 +37,7 @@ __all__ = [
 DEFAULT_LIMIT: Final = 50
 MAX_LIMIT: Final = 200
 
-#: Counting is capped rather than exact. FR-PLAT-14 retains job history for ≥ 13 months, so
+#: Counting is capped rather than exact. FR-410 retains job history for ≥ 13 months, so
 #: an unbounded `COUNT(*)` on the jobs table would scan the year to render one page. The
 #: field is `total_estimate` in the spec for exactly this reason.
 COUNT_CAP: Final = 10_000

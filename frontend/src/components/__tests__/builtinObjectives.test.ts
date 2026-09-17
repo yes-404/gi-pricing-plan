@@ -12,9 +12,9 @@ import { BUILTIN_GBM_OBJECTIVES } from "@/api/modelSpecs";
 import { FITTABLE_OBJECTIVE_STATUSES } from "@/api/objectives";
 
 /**
- * The divergence guard for OQ-MODEL-37, and the only part of it this slice can build.
+ * The divergence guard for OQ-607, and the only part of it this slice can build.
  *
- * `SUPPORTED_GBM_OBJECTIVES` in `pricing_core/modelling/gbm.py` is FR-MODEL-26's set —
+ * `SUPPORTED_GBM_OBJECTIVES` in `pricing_core/modelling/gbm.py` is FR-120's set —
  * the authoritative answer to "which builtin objectives does the platform support?" — and
  * it reaches no contract: `model-schema` depends on pydantic alone and cannot import it,
  * `generated.json` has zero occurrences of `count:poisson`, and the hand-authored schema
@@ -29,7 +29,7 @@ import { FITTABLE_OBJECTIVE_STATUSES } from "@/api/objectives";
  *    supports, and the disagreement would show up as a spec that validated and then
  *    failed."
  *
- * This test cannot remove the second list — that is OQ-MODEL-37(a), a `model-schema`
+ * This test cannot remove the second list — that is OQ-607(a), a `model-schema`
  * change with no owner. It converts the divergence that comment predicts from silent into
  * a red test: the difference between shipping a spec that validates and then fails, and
  * finding out at `pnpm test`.
@@ -51,14 +51,14 @@ function objectivesDeclaredInPricingCore(): string[] {
     throw new Error(
       "Could not find the _OBJECTIVES table in pricing_core/modelling/gbm.py. If it was " +
         "restructured, update this guard — do not delete it, because the divergence it " +
-        "catches is otherwise silent (OQ-MODEL-37).",
+        "catches is otherwise silent (OQ-607).",
     );
   }
   return Array.from(table[1].matchAll(/^\s*"([^"]+)":/gm), (match) => match[1] as string);
 }
 
 /**
- * OQ-MODEL-37's **second surface**, added by W6b-4b.
+ * OQ-607's **second surface**, added by W6b-4b.
  *
  * `FITTABLE_OBJECTIVE_STATUSES` is `{certified, review, approved}` — the statuses a fit
  * accepts, and deliberately *not* R4's `approved`-alone rule for a model reaching
@@ -82,7 +82,7 @@ function fittableStatusesDeclaredInModelSchema(): string[] {
   if (table?.[1] === undefined) {
     throw new Error(
       "Could not find FITTABLE_OBJECTIVE_STATUSES in model_schema/objectives.py. If it " +
-        "was restructured, update this guard — do not delete it (OQ-MODEL-37).",
+        "was restructured, update this guard — do not delete it (OQ-607).",
     );
   }
   return Array.from(

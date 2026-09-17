@@ -1,6 +1,6 @@
-"""Artifacts cannot be rewritten, and the database is what says so (FR-DATA-42).
+"""Artifacts cannot be rewritten, and the database is what says so (FR-43).
 
-`01` FR-DATA-15 has said a Validation Report is immutable since the spec was written. Until
+`01` FR-42 has said a Validation Report is immutable since the spec was written. Until
 this was built, that was `frozen=True` on a Pydantic model — a rule about one process, which
 an independent audit demonstrated by rewriting **190 stored reports** from `fail` to `pass`
 in one statement. `01` §1.3's whole gate, undone by an `UPDATE`.
@@ -112,7 +112,7 @@ async def _report(database: Database, workspace_id, version_id):
     return report.id
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_a_stored_report_cannot_be_rewritten(database: Database, workspace_id) -> None:
     """The exact statement an audit used to turn 190 failures into passes."""
     report_id = await _report(database, workspace_id, await _version(database, workspace_id))
@@ -135,7 +135,7 @@ async def test_a_stored_report_cannot_be_rewritten(database: Database, workspace
     assert overall == "fail"
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_a_stored_report_cannot_be_deleted_or_truncated(
     database: Database, workspace_id
 ) -> None:
@@ -159,12 +159,12 @@ async def test_a_stored_report_cannot_be_deleted_or_truncated(
     assert "append-only" in str(truncated.value)
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_a_profile_cannot_be_rewritten(database: Database, workspace_id) -> None:
     """A profile is what the factor workbench reads and what drift is measured against.
 
     A rewritten profile makes two runs of the same comparison disagree with no artifact
-    changing, which is the property FR-DATA-24 depends on.
+    changing, which is the property FR-54 depends on.
     """
     version_id = await _version(database, workspace_id)
     profile = Profile(
@@ -184,11 +184,11 @@ async def test_a_profile_cannot_be_rewritten(database: Database, workspace_id) -
     assert "append-only" in str(refused.value)
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_an_acknowledgement_cannot_be_rewritten_or_removed(
     database: Database, workspace_id
 ) -> None:
-    """An acknowledgement is a named person accepting a warning (FR-DATA-18).
+    """An acknowledgement is a named person accepting a warning (FR-47).
 
     Editing its justification, or deleting it, would leave a version `validated` on the
     strength of a decision nobody made.
@@ -220,7 +220,7 @@ async def test_an_acknowledgement_cannot_be_rewritten_or_removed(
     assert "append-only" in str(removed.value)
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_a_blobs_content_cannot_change_while_its_lifecycle_can(
     database: Database, workspace_id
 ) -> None:
@@ -262,11 +262,11 @@ async def test_a_blobs_content_cannot_change_while_its_lifecycle_can(
         await session.execute(text("DELETE FROM blobs WHERE sha256 = :d"), {"d": digest})
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_the_application_role_holds_only_select_and_insert(
     database: Database,
 ) -> None:
-    """Layer 1, as FR-GOV-22 does it: the application cannot even attempt the write.
+    """Layer 1, as FR-370 does it: the application cannot even attempt the write.
 
     Asserted as an exact set — `UPDATE` granted back by a later migration would otherwise
     pass unnoticed, since the triggers would still refuse and every test above would stay
@@ -293,7 +293,7 @@ async def test_the_application_role_holds_only_select_and_insert(
             assert granted == {"SELECT", "INSERT"}, f"{table}: {sorted(granted)}"
 
 
-# -- Every artifact table, not the three anybody had counted (FR-DATA-47) ------------------
+# -- Every artifact table, not the three anybody had counted (FR-44) ------------------
 
 #: One insertable row per table `e1f2a3b4c5d6` repaired. None of these tables carries a
 #: foreign key, so a bare `INSERT` is enough to give the row trigger something to refuse —
@@ -334,7 +334,7 @@ _APPEND_ONLY_ROWS: dict[str, str] = {
 }
 
 
-@pytest.mark.req("FR-DATA-47")
+@pytest.mark.req("FR-44")
 @pytest.mark.parametrize("table", sorted(_APPEND_ONLY_ROWS))
 async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
     database: Database, workspace_id, table: str
@@ -379,13 +379,13 @@ async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
     assert survived == 1
 
 
-@pytest.mark.req("FR-DATA-47")
+@pytest.mark.req("FR-44")
 async def test_every_table_the_grants_call_append_only_carries_both_triggers(
     database: Database,
 ) -> None:
     """The check that catches the *next* table, rather than the six this slice found.
 
-    FR-DATA-47 was raised naming three tables, measured by hand. Measuring the invariant
+    FR-44 was raised naming three tables, measured by hand. Measuring the invariant
     instead of re-reading the list found three more — `bandings`, `groupings` and
     `objective_certificates` each had the `TRUNCATE` half and not the row half, and
     `c3d4e5f6a7b8` claimed in a comment that a direct `UPDATE` was refused while it was not.

@@ -75,12 +75,12 @@
     "schema_version": {
       "type": "integer",
       "minimum": 1,
-      "description": "Contract version of this artifact body; readers must accept every historical value (ADR-0002)."
+      "description": "Contract version of this artifact body; readers must accept every historical value (ADR-704)."
     },
     "currency": {
       "type": "string",
       "pattern": "^[A-Z]{3}$",
-      "description": "ISO 4217 code for the workspace's single currency (OQ-OVR-3). Recorded on every artifact so multi-currency in Phase 4 is additive."
+      "description": "ISO 4217 code for the workspace's single currency (OQ-542). Recorded on every artifact so multi-currency in Phase 4 is additive."
     }
   }
 }

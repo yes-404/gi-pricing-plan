@@ -1,4 +1,4 @@
-"""The diagnostics artifact, and the invariant it makes meetable (`02` §4.8, FR-MODEL-49).
+"""The diagnostics artifact, and the invariant it makes meetable (`02` §4.8, FR-170).
 
 The spine enforced `fitted ⟹ fit_result` and left `status ≥ fitted ⟹ diagnostics_id`
 unstated, because diagnostics did not exist to point at. These prove the second half now
@@ -50,16 +50,16 @@ def _partition(weighting: Weighting = Weighting.EXPOSURE) -> PartitionDiagnostic
 # -- The type -----------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-54")
+@pytest.mark.req("FR-183")
 def test_a_diagnostic_cannot_be_built_without_its_holdout() -> None:
-    """FR-MODEL-54 calls a one-sided diagnostic a defect. The cheapest way to honour that
+    """FR-183 calls a one-sided diagnostic a defect. The cheapest way to honour that
     is to make the defective shape unrepresentable — so this is a `TypeError`-class failure
     at construction, not a check somebody has to remember downstream."""
     with pytest.raises(pydantic.ValidationError):
         UniversalDiagnostics(train=_partition())  # type: ignore[call-arg]
 
 
-@pytest.mark.req("FR-MODEL-55")
+@pytest.mark.req("FR-184")
 def test_train_and_holdout_must_share_a_weighting_scheme() -> None:
     """Negative: an exposure-weighted train A/E beside an unweighted holdout A/E are two
     different quantities, and side by side is exactly where a reader assumes they are
@@ -70,7 +70,7 @@ def test_train_and_holdout_must_share_a_weighting_scheme() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-49")
+@pytest.mark.req("FR-170")
 def test_a_model_beyond_draft_without_diagnostics_is_refused_at_the_type() -> None:
     """`02` §4.8's invariant. A model at `review` with no diagnostics is an approval
     request with no evidence in it."""
@@ -101,7 +101,7 @@ def test_a_model_beyond_draft_without_diagnostics_is_refused_at_the_type() -> No
 # -- The database -------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-49")
+@pytest.mark.req("FR-170")
 async def test_the_database_refuses_a_fitted_model_with_no_diagnostics(
     database, workspace_id
 ) -> None:
@@ -120,9 +120,9 @@ async def test_the_database_refuses_a_fitted_model_with_no_diagnostics(
             )
 
 
-@pytest.mark.req("FR-DATA-42")
+@pytest.mark.req("FR-43")
 async def test_diagnostics_cannot_be_rewritten(database, workspace_id) -> None:
-    """Artifact discipline: computed once at fit time and read thereafter (FR-MODEL-49).
+    """Artifact discipline: computed once at fit time and read thereafter (FR-170).
     A diagnostics row that could be updated would let the evidence behind an approval
     change after the approval."""
     async with database.session() as session:
@@ -170,11 +170,11 @@ async def _fit(database, blob_store, workspace_id):
     return actor, model_id
 
 
-@pytest.mark.req("FR-MODEL-49")
+@pytest.mark.req("FR-170")
 async def test_a_fit_produces_and_stores_its_diagnostics(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-49: **every** fit produces a persisted Diagnostics artifact — not an
+    """FR-170: **every** fit produces a persisted Diagnostics artifact — not an
     optional extra a caller may request afterwards."""
     _, model_id = await _fit(database, blob_store, workspace_id)
 
@@ -198,7 +198,7 @@ async def test_a_fit_produces_and_stores_its_diagnostics(
     assert stored.complexity.factor_count == 1
 
 
-@pytest.mark.req("FR-MODEL-54")
+@pytest.mark.req("FR-183")
 async def test_the_holdout_is_not_the_training_set(
     database, blob_store, workspace_id
 ) -> None:
@@ -219,7 +219,7 @@ async def test_the_holdout_is_not_the_training_set(
     assert train + holdout == 400, "the parts partition the book, losing and sharing nothing"
 
 
-@pytest.mark.req("FR-MODEL-54")
+@pytest.mark.req("FR-183")
 async def test_a_spec_with_no_split_cannot_be_fitted(
     database, blob_store, workspace_id
 ) -> None:

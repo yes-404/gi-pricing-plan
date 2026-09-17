@@ -2,7 +2,7 @@
 import type { PartitionCaption } from "@/api/diagnostics";
 
 /**
- * Scalar metrics with one column per partition (FR-MODEL-54).
+ * Scalar metrics with one column per partition (FR-183).
  *
  * The partition columns are passed in rather than derived, so a caller cannot render a
  * holdout column for a diagnostic that has no holdout value — the misreading this slice

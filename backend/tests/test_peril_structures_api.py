@@ -1,8 +1,8 @@
-"""The Peril Structure library list over HTTP (`02` §5.1, FR-MODEL-127).
+"""The Peril Structure library list over HTTP (`02` §5.1, FR-167).
 
 `test_peril_structures.py` owns the composition, the refusals, the reconciliation Job and
 the approval — everything the artifact does. This file owns the fifth route, the collection
-`GET` FR-MODEL-127 added on 2026-08-23: who may call it, what comes back, the workspace
+`GET` FR-167 added on 2026-08-23: who may call it, what comes back, the workspace
 boundary, and the one field it deliberately does **not** carry.
 
 **The structures here are composed over a directly-seeded fitted Model rather than a real
@@ -195,7 +195,7 @@ def _copy_into(workspace_id: UUID, structure: dict[str, Any]) -> UUID:
 # -- The library list ------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_library_lists_the_workspace_structures(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -209,16 +209,16 @@ def test_the_library_lists_the_workspace_structures(
     assert {first["id"], second["id"]} <= ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_slug_filter_is_an_exact_match(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
     """**Exact**, not a prefix.
 
-    FR-MODEL-127 makes this filter the thing that resolves §5.3's `slug@version` addresses
+    FR-167 makes this filter the thing that resolves §5.3's `slug@version` addresses
     against UUID-only detail routes. A prefix match would resolve `motor-gb` to `motor-gb`
     and `motor-gb-fleet` alike, which is a wrong artifact rather than a wide result — and
-    FR-MODEL-61 makes this the artifact a Rating Version pins by name.
+    FR-191 makes this the artifact a Rating Version pins by name.
     """
     model_ref = _seed_fitted_model(workspace_id)
     target = _create(client, actuary, model_ref)
@@ -230,7 +230,7 @@ def test_the_slug_filter_is_an_exact_match(
     assert [row["id"] for row in response.json()["items"]] == [target["id"]]
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_status_filter_selects_one_lifecycle_state(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -245,14 +245,14 @@ def test_the_status_filter_selects_one_lifecycle_state(
     assert draft["id"] not in ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_row_carries_no_usage_count(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
     """§5.1:1712 asks for pagination and two filters and no count, unlike its two siblings.
 
     Asserted rather than left implicit: the difference between the three rows is an open
-    question W32-8 raises against FR-MODEL-127's unqualified prose, and a row that silently
+    question W32-8 raises against FR-167's unqualified prose, and a row that silently
     grew a count would answer it by accident.
     """
     model_ref = _seed_fitted_model(workspace_id)
@@ -263,7 +263,7 @@ def test_the_row_carries_no_usage_count(
     assert "usage_count" not in rows[created["id"]]
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_library_stops_at_the_workspace_boundary(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -278,7 +278,7 @@ def test_the_library_stops_at_the_workspace_boundary(
     assert str(elsewhere) not in ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_listing_without_model_read_is_refused(
     client: TestClient,
     actuary: dict[str, str],
@@ -296,7 +296,7 @@ def test_listing_without_model_read_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_page_is_cursor_paginated(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:

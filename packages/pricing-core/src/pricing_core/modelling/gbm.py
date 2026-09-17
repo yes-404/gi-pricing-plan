@@ -1,11 +1,11 @@
 """Gradient boosting on XGBoost and LightGBM (`02` FR-MODEL-25..32, 71..73, §5.2).
 
-**One contract, two backends** (FR-MODEL-25). `GbmSpec.model_type` chooses the library;
+**One contract, two backends** (FR-119). `GbmSpec.model_type` chooses the library;
 everything else — objective, offset, constraints, early stopping, categorical handling —
 is written once and translated here. A spec that fitted on one backend and failed on the
 other would be a forked contract wearing a shared name.
 
-The requirement this module exists to satisfy carefully is **FR-MODEL-72**, and it is
+The requirement this module exists to satisfy carefully is **FR-129**, and it is
 worth stating plainly because the failure is silent:
 
 * At **fit** time both backends behave alike. XGBoost takes the offset as `base_margin`
@@ -20,10 +20,10 @@ A single "apply the offset" implementation written against XGBoost's API therefo
 nothing on LightGBM and under-predicts by exactly the exposure. Both paths are written
 separately below, and `test_a_prediction_scales_exactly_with_exposure` runs on each.
 
-ADR-0001 holds: nothing here resolves a reference. Factors, bandings and groupings arrive
+ADR-703 holds: nothing here resolves a reference. Factors, bandings and groupings arrive
 as objects, and the booster arrives and leaves as **bytes** — the caller stores them under
 the digest this module computes, because content addressing makes the reference derivable
-without storage (ADR-0003).
+without storage (ADR-705).
 """
 
 from __future__ import annotations
@@ -96,12 +96,12 @@ __all__ = [
     "tree_summary",
 ]
 
-#: FR-MODEL-26's closed set, spelled in XGBoost's vocabulary because that is the
+#: FR-120's closed set, spelled in XGBoost's vocabulary because that is the
 #: vocabulary the requirement uses, mapped to LightGBM's. The third element is the inverse
 #: link, which LightGBM's raw-score path needs and XGBoost's does not — see `predict_gbm`.
 #:
 #: `SUPPORTED_GBM_OBJECTIVES` below is the same set, exported: `POST /model-specs/validate`
-#: reports an unsupported objective as a spec problem before a Job exists (FR-MODEL-44) and
+#: reports an unsupported objective as a spec problem before a Job exists (FR-153) and
 #: the fit refuses it again as a backstop. Two hand-written lists would eventually disagree
 #: about which objectives the platform supports, and the disagreement would show up as a
 #: spec that validated and then failed.
@@ -112,7 +112,7 @@ _OBJECTIVES: Final[dict[str, tuple[str, str, Literal["exp", "logistic"]]]] = {
     "binary:logistic": ("binary:logistic", "binary", "logistic"),
 }
 
-#: FR-MODEL-26's set, for callers that need to *check* rather than translate.
+#: FR-120's set, for callers that need to *check* rather than translate.
 SUPPORTED_GBM_OBJECTIVES: Final[frozenset[str]] = frozenset(_OBJECTIVES)
 
 #: Eval metrics that mean the same thing under two names. Anything else is passed to the
@@ -158,8 +158,8 @@ class GbmFitError(RuntimeError):
 class GbmFit:
     """What a GBM fit returns: the artifact, and the bytes it addresses.
 
-    Two values rather than one because `pricing-core` cannot store a blob (ADR-0001) and
-    `GbmFitResult` cannot hold a booster (ADR-0003). The `BlobRef` inside `result` is
+    Two values rather than one because `pricing-core` cannot store a blob (ADR-703) and
+    `GbmFitResult` cannot hold a booster (ADR-705). The `BlobRef` inside `result` is
     already complete — a content-addressed reference is a pure function of the payload —
     so the caller's job is to store `booster_bytes` under that digest, and a caller that
     forgets has a reference that resolves to nothing rather than a model that half exists.
@@ -167,7 +167,7 @@ class GbmFit:
 
     result: GbmFitResult
     booster_bytes: bytes
-    #: FR-MODEL-52's evaluation curve, which belongs on the **diagnostics** artifact rather
+    #: FR-174's evaluation curve, which belongs on the **diagnostics** artifact rather
     #: than on the fit. Returned here because the fit is what produces it and
     #: `compute_gbm_diagnostics` is a separate call — handing it back is what lets the
     #: caller place it where the requirement says without the fit reaching into diagnostics.
@@ -175,13 +175,13 @@ class GbmFit:
 
 
 def apply_loss_treatment(response: np.ndarray, treatment: LossTreatment) -> np.ndarray:
-    """FR-MODEL-73: large-loss treatment is applied to the **response**, at fit time.
+    """FR-127: large-loss treatment is applied to the **response**, at fit time.
 
     Not to the dataset. `01` VR-ACT-10 flags large losses and never removes them, so one
     validated Dataset Version serves many capping assumptions without re-ingestion — which
     is only true while the assumption is applied here.
 
-    `spliced` and `excess` are declared by FR-MODEL-73 and implemented by nothing. They are
+    `spliced` and `excess` are declared by FR-127 and implemented by nothing. They are
     refused by name rather than treated as `none`: fitting an uncapped model under a spec
     that says otherwise would be wrong in the one direction nobody checks, since the spec
     is what `spec_hash` and the model document both report.
@@ -193,7 +193,7 @@ def apply_loss_treatment(response: np.ndarray, treatment: LossTreatment) -> np.n
         return np.asarray(capped, dtype=np.float64)
     raise GbmFitError(
         "LOSS_TREATMENT_UNIMPLEMENTED",
-        f"loss treatment {treatment.kind!r} is declared by FR-MODEL-73 and built by no "
+        f"loss treatment {treatment.kind!r} is declared by FR-127 and built by no "
         "slice yet. Refused rather than applied as 'none', which would fit an uncapped "
         "model under a spec that records a treatment.",
         terms=[treatment.kind],
@@ -203,7 +203,7 @@ def apply_loss_treatment(response: np.ndarray, treatment: LossTreatment) -> np.n
 def _offset(data: pl.DataFrame, offset: OffsetSpec, *, what: str) -> np.ndarray | None:
     """`log(exposure)` for `log_column`, the column itself for `column`, else nothing.
 
-    Shared by the fit and the scoring path deliberately: FR-MODEL-71 asserts at load time
+    Shared by the fit and the scoring path deliberately: FR-126 asserts at load time
     that the offset can be *reconstructed*, and reconstruction means the same arithmetic,
     not arithmetic that resembles it.
     """
@@ -214,7 +214,7 @@ def _offset(data: pl.DataFrame, offset: OffsetSpec, *, what: str) -> np.ndarray 
         raise GbmFitError(
             "OFFSET_NOT_RECONSTRUCTABLE",
             f"{what} needs the offset column {column!r} and the frame does not carry it "
-            "(FR-MODEL-71). Refused rather than scored without it: both backends return "
+            "(FR-126). Refused rather than scored without it: both backends return "
             "predictions of the right shape and every one is wrong by the exposure.",
             terms=[column],
         )
@@ -225,7 +225,7 @@ def _offset(data: pl.DataFrame, offset: OffsetSpec, *, what: str) -> np.ndarray 
         raise GbmFitError(
             "OFFSET_REQUIRED_FOR_FREQUENCY",
             f"{column!r} has non-positive values and the offset is log(exposure) "
-            "(FR-MODEL-27). A row with zero exposure contributes no information; it must "
+            "(FR-121). A row with zero exposure contributes no information; it must "
             "be filtered before fitting rather than silently logged to -inf.",
             terms=[column],
         )
@@ -233,7 +233,7 @@ def _offset(data: pl.DataFrame, offset: OffsetSpec, *, what: str) -> np.ndarray 
 
 
 def _weights(data: pl.DataFrame, weight: WeightSpec) -> np.ndarray | None:
-    """The weight column as a float array, or `None` for `kind: "none"` (FR-MODEL-19).
+    """The weight column as a float array, or `None` for `kind: "none"` (FR-111).
 
     Two lines, mirroring `fit_glm`'s (glm.py) deliberately: severity weights by claim
     count and burning cost by exposure are properties of the *response*, not of the
@@ -252,11 +252,11 @@ class Encoded(NamedTuple):
 
     x: np.ndarray
     order: tuple[str, ...]
-    #: `f64` numeric · `ord` ordered integer codes · `cat` native categorical (FR-MODEL-31).
+    #: `f64` numeric · `ord` ordered integer codes · `cat` native categorical (FR-125).
     dtypes: dict[str, str]
     maps: dict[str, dict[str, int]]
     #: The features whose levels have **no** order — the ones a backend must be told are
-    #: categorical, and the ones FR-MODEL-28 refuses a direction on.
+    #: categorical, and the ones FR-122 refuses a direction on.
     unordered: frozenset[str]
 
 
@@ -269,7 +269,7 @@ def _encode(
 ) -> Encoded:
     """One column per factor, categoricals as integer codes with the map returned.
 
-    This *is* label encoding, and FR-MODEL-32 refuses the **silent** kind: the map comes
+    This *is* label encoding, and FR-131 refuses the **silent** kind: the map comes
     back to be persisted, and `predict_gbm` reuses it rather than deriving a new one. A map
     derived from the scoring frame renumbers the levels whenever one is absent from it, and
     every prediction after that is for a different level.
@@ -281,7 +281,7 @@ def _encode(
     label order — which is boundary order, the order of the underlying values — and it is
     *not* declared to the backend as a categorical. Both halves matter.
 
-    The order is what makes FR-MODEL-28 meaningful on a band: sorted lexicographically
+    The order is what makes FR-122 meaningful on a band: sorted lexicographically
     `"10-49"` lands second, between `"0-1"` and `"2-4"`, so "frequency falls with licence
     years" would constrain the alphabet. The declaration is what makes it *possible*:
     LightGBM refuses monotone constraints on a categorical feature and does so by aborting
@@ -289,7 +289,7 @@ def _encode(
     categorical features`, verified here on 4.7.0 — so a band declared categorical cannot
     carry the constraint `02` §4.4's own `driver_age_banded` example declares.
 
-    FR-MODEL-32 refuses the silent label-encoding of an **unordered** categorical. A band
+    FR-131 refuses the silent label-encoding of an **unordered** categorical. A band
     is ordered and its map is persisted, so this is neither.
     """
     columns: list[np.ndarray] = []
@@ -302,8 +302,8 @@ def _encode(
         slug = factor.slug
         column = matrix.terms.get(slug)
         if column is None:
-            # FR-MODEL-119. An `interaction`'s **operands** are resolved because the cross
-            # needs their levels, and contribute no term of their own (FR-MODEL-91): the
+            # FR-176. An `interaction`'s **operands** are resolved because the cross
+            # needs their levels, and contribute no term of their own (FR-92): the
             # cross spans every cell, so designing on both it and its operands is a rank
             # deficiency dressed up as a richer model. `fit_glm` gets this for free by
             # iterating `matrix.terms`; this loop iterated the *factor list* and so raised
@@ -323,7 +323,7 @@ def _encode(
                         "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
                         f"factor {slug!r} carries level(s) {unknown} that the fitted model "
                         "never saw, so they have no code in its persisted encoding map "
-                        "(FR-MODEL-32).",
+                        "(FR-131).",
                         terms=unknown,
                     )
             else:
@@ -377,7 +377,7 @@ def _ordered_levels(
 def _monotone(
     factors: Sequence[Factor], order: Sequence[str], unordered: frozenset[str]
 ) -> tuple[int, ...]:
-    """FR-MODEL-28: the direction is declared on the Factor and derived here.
+    """FR-122: the direction is declared on the Factor and derived here.
 
     A direction on an **unordered** categorical is refused. Both backends accept the
     constraint and apply it to whatever integer codes the levels happened to receive, so
@@ -385,7 +385,7 @@ def _monotone(
     direction that reads as an actuarial judgement.
 
     A **banding is ordered** and is therefore allowed — `02` §4.4's own example is a
-    monotone constraint on `driver_age_banded`, and `wf-01` C7 declares one. `_encode`
+    monotone constraint on `driver_age_banded`, and `WF-698` C7 declares one. `_encode`
     codes it in the artifact's label order and declares it ordinal rather than categorical,
     which is what lets the constraint hold in the underlying value.
     """
@@ -397,7 +397,7 @@ def _monotone(
             raise GbmFitError(
                 "MONOTONE_CONSTRAINT_CONFLICT",
                 f"factor {slug!r} is an unordered categorical and declares a "
-                f"{direction.value} direction (FR-MODEL-28). The constraint would be "
+                f"{direction.value} direction (FR-122). The constraint would be "
                 "applied to the encoding's arbitrary order, and recorded as a judgement.",
                 terms=[slug],
             )
@@ -415,7 +415,7 @@ def _objective(spec: GbmSpec) -> tuple[str, str, Literal["exp", "logistic"]]:
     if name not in _OBJECTIVES:
         raise GbmFitError(
             "OBJECTIVE_NOT_APPLICABLE",
-            f"objective {name!r} is outside FR-MODEL-26's set "
+            f"objective {name!r} is outside FR-120's set "
             f"({', '.join(sorted(_OBJECTIVES))}).",
             terms=[name],
         )
@@ -426,7 +426,7 @@ def _is_custom_metric_ref(name: str, eval_metrics: Sequence[GbmFunctionRef]) -> 
     """Whether `name` is one of the spec's own declared `kind: custom` eval metrics.
 
     Early stopping is only allowed to target a metric the spec itself declares
-    (FR-MODEL-107) — a ref that merely happens to exist in the caller's `metrics` mapping
+    (FR-160) — a ref that merely happens to exist in the caller's `metrics` mapping
     but is not named in `eval_metrics` is not a documented stopping target, and the spec
     (not the caller's mapping) is what `spec_hash` and the model document both report.
     """
@@ -444,7 +444,7 @@ def _resolve_metrics(
     """Validate every `kind: custom` entry of `spec.eval_metrics` against `metrics`.
 
     Mirrors `_compile_custom`'s checks against the objective: the artifact is **passed
-    in**, never looked up (ADR-0001), so an absent ref is the caller's bug, not a lookup
+    in**, never looked up (ADR-703), so an absent ref is the caller's bug, not a lookup
     failure to retry. Keyed by ref, so a fit can honour more than one custom eval metric.
     """
     supplied = metrics or {}
@@ -458,7 +458,7 @@ def _resolve_metrics(
             raise GbmFitError(
                 "METRIC_REF_UNRESOLVED",
                 f"the spec names Custom Metric {name!r} in `eval_metrics` and no artifact "
-                "was passed. `pricing-core` does not read the metric store (ADR-0001); "
+                "was passed. `pricing-core` does not read the metric store (ADR-703); "
                 "the caller that resolved the reference must hand the artifact to the fit.",
                 terms=[name],
             )
@@ -469,7 +469,7 @@ def _resolve_metrics(
                 "METRIC_NOT_APPLICABLE",
                 f"Custom Metric {name!r} declares applicability to {allowed} and the spec "
                 f"models {response.value if response else 'no declared response'} "
-                "(FR-MODEL-106).",
+                "(FR-159).",
                 terms=[name],
             )
         backend = ObjectiveBackend(spec.model_type)
@@ -478,14 +478,14 @@ def _resolve_metrics(
             raise GbmFitError(
                 "METRIC_NOT_APPLICABLE",
                 f"Custom Metric {name!r} declares applicability to {allowed} and the spec "
-                f"fits on {spec.model_type} (FR-MODEL-106).",
+                f"fits on {spec.model_type} (FR-159).",
                 terms=[name],
             )
         if metric.status not in FITTABLE_METRIC_STATUSES:
             raise GbmFitError(
                 "METRIC_NOT_FITTABLE",
-                f"Custom Metric {name!r} is {metric.status.value} (FR-MODEL-45, "
-                f"FR-MODEL-106). A fit may use one that is "
+                f"Custom Metric {name!r} is {metric.status.value} (FR-154, "
+                f"FR-159). A fit may use one that is "
                 f"{' or '.join(sorted(s.value for s in FITTABLE_METRIC_STATUSES))}.",
                 terms=[name],
             )
@@ -496,7 +496,7 @@ def _resolve_metrics(
 def _compile_custom(spec: GbmSpec, objective: CustomObjective | None) -> ObjectiveFns | None:
     """Resolve `spec.objective` to compiled functions, or `None` for a builtin.
 
-    The artifact is **passed in**, never looked up: ADR-0001 keeps `pricing-core` free of
+    The artifact is **passed in**, never looked up: ADR-703 keeps `pricing-core` free of
     the store the objective lives in, so the caller that read the row is the caller that
     supplies it. The checks here are the ones a mismatch would otherwise turn into a fit
     against the wrong loss.
@@ -518,7 +518,7 @@ def _compile_custom(spec: GbmSpec, objective: CustomObjective | None) -> Objecti
         raise GbmFitError(
             "OBJECTIVE_NOT_SUPPLIED",
             f"the spec names Custom Objective {ref!r} and no artifact was passed. "
-            "`pricing-core` does not read the objective store (ADR-0001); the caller that "
+            "`pricing-core` does not read the objective store (ADR-703); the caller that "
             "resolved the reference must hand the artifact to the fit.",
             terms=[ref],
         )
@@ -533,7 +533,7 @@ def _compile_custom(spec: GbmSpec, objective: CustomObjective | None) -> Objecti
     if objective.status not in FITTABLE_OBJECTIVE_STATUSES:
         raise GbmFitError(
             "OBJECTIVE_NOT_APPROVED",
-            f"Custom Objective {ref!r} is {objective.status.value} (`02` R4, FR-MODEL-46). "
+            f"Custom Objective {ref!r} is {objective.status.value} (`02` R4, FR-163). "
             f"A fit may use one that is "
             f"{' or '.join(sorted(s.value for s in FITTABLE_OBJECTIVE_STATUSES))}.",
             terms=[ref],
@@ -542,7 +542,7 @@ def _compile_custom(spec: GbmSpec, objective: CustomObjective | None) -> Objecti
         raise GbmFitError(
             "OBJECTIVE_RESPONSE_UNDECLARED",
             f"the spec names Custom Objective {ref!r} and declares no `response` "
-            "(FR-MODEL-44). A builtin objective names its own family; a custom one does "
+            "(FR-153). A builtin objective names its own family; a custom one does "
             "not, so the response is what the applicability check and the diagnostics "
             "deviance are both read from, and neither may be guessed.",
             terms=[ref],
@@ -552,7 +552,7 @@ def _compile_custom(spec: GbmSpec, objective: CustomObjective | None) -> Objecti
         raise GbmFitError(
             "OBJECTIVE_NOT_APPLICABLE",
             f"Custom Objective {ref!r} declares applicability to {allowed} and the spec "
-            f"models {spec.response.value} (FR-MODEL-44).",
+            f"models {spec.response.value} (FR-153).",
             terms=[ref],
         )
     backend = ObjectiveBackend(spec.model_type)
@@ -561,14 +561,14 @@ def _compile_custom(spec: GbmSpec, objective: CustomObjective | None) -> Objecti
         raise GbmFitError(
             "OBJECTIVE_NOT_APPLICABLE",
             f"Custom Objective {ref!r} declares applicability to {allowed} and the spec "
-            f"fits on {spec.model_type} (FR-MODEL-44).",
+            f"fits on {spec.model_type} (FR-153).",
             terms=[ref],
         )
     if objective.applicability.offset_required and spec.offset.kind == "none":
         raise GbmFitError(
             "OBJECTIVE_REQUIRES_OFFSET",
             f"Custom Objective {ref!r} requires an offset and the spec declares none "
-            "(FR-MODEL-27/44). Fitted without one it models claims per record rather than "
+            "(FR-121/153). Fitted without one it models claims per record rather than "
             "claims per year, which converges and prices wrongly.",
             terms=[ref],
         )
@@ -581,8 +581,8 @@ def _compile_custom(spec: GbmSpec, objective: CustomObjective | None) -> Objecti
             f"metric {spec.early_stopping.metric!r}. Under a callable objective both "
             "backends hand a builtin metric the **raw score** rather than the transformed "
             "prediction, so the metric it stops on is not the metric it names. Custom "
-            "eval metrics (FR-MODEL-45) are the answer, and are now built: declare a "
-            "Custom Metric in `eval_metrics` and stop on that instead (FR-MODEL-107).",
+            "eval metrics (FR-154) are the answer, and are now built: declare a "
+            "Custom Metric in `eval_metrics` and stop on that instead (FR-160).",
             terms=[ref, str(spec.early_stopping.metric)],
         )
     try:
@@ -616,11 +616,11 @@ def fit_gbm(
 
     `holdout` is required when `spec.early_stopping.on == "holdout"`. `GbmSpec` refuses a
     stopping rule with no `split_ref`; this refuses a caller that declared the split and
-    then passed no rows, because the backends fall back to the training set — FR-MODEL-30's
+    then passed no rows, because the backends fall back to the training set — FR-124's
     prohibition, reached by omission rather than by asking for it.
 
     `metrics` is `spec.eval_metrics`'s `kind: custom` entries, resolved by the caller and
-    keyed by ref — the same ADR-0001 split `objective` already follows (§0, FR-MODEL-106).
+    keyed by ref — the same ADR-703 split `objective` already follows (§0, FR-159).
     """
     report = progress or NullProgress()
     report.check_cancelled()
@@ -649,7 +649,7 @@ def fit_gbm(
     # by then the objective is a string in a spec nobody kept. XGBoost transforms in
     # `predict` under a builtin objective and cannot under a callable one, having been
     # handed gradients and no link; LightGBM is always asked for the raw score, because
-    # FR-MODEL-72's offset has to be added before the transform rather than after it.
+    # FR-129's offset has to be added before the transform rather than after it.
     inverse_link: Literal["exp", "logistic"] | None = (
         None if spec.model_type == "xgboost" and fns is None else link
     )
@@ -665,7 +665,7 @@ def fit_gbm(
         raise GbmFitError(
             "EARLY_STOPPING_REQUIRES_HOLDOUT",
             "early stopping is declared on a holdout and no holdout frame was passed "
-            "(FR-MODEL-30). Without one the backend evaluates on the training rows, which "
+            "(FR-124). Without one the backend evaluates on the training rows, which "
             "is the training-set early stopping the requirement forbids.",
         )
 
@@ -676,7 +676,7 @@ def fit_gbm(
         vy = apply_loss_treatment(
             holdout[spec.response_column].cast(pl.Float64).to_numpy(), spec.loss_treatment
         )
-        # The holdout is weighted too, and for the same reason FR-MODEL-54 gives for
+        # The holdout is weighted too, and for the same reason FR-183 gives for
         # reporting both partitions: a curve whose train half is weighted and whose holdout
         # half is not is two different quantities plotted on one axis, and the divergence
         # early stopping exists to catch would be read off the difference between the
@@ -728,10 +728,10 @@ def fit_gbm(
 
 
 def _interaction_groups(spec: GbmSpec, order: Sequence[str]) -> list[list[str]] | None:
-    """FR-MODEL-29's groups, validated against the feature set.
+    """FR-123's groups, validated against the feature set.
 
     Returned as **names**, and converted to positions only where a backend wants them —
-    the two disagree, which is one more thing FR-MODEL-25's single contract has to absorb.
+    the two disagree, which is one more thing FR-119's single contract has to absorb.
     XGBoost resolves the groups against the `DMatrix`'s `feature_names` and raises
     `Constrained features are not a subset of training data feature names` on an integer;
     LightGBM takes indices.
@@ -750,7 +750,7 @@ def _interaction_groups(spec: GbmSpec, order: Sequence[str]) -> list[list[str]] 
             raise GbmFitError(
                 "INTERACTION_FEATURE_UNKNOWN",
                 f"interaction group names {unknown}, which no factor in this spec "
-                "produces (FR-MODEL-29). An unmatched name would leave the group "
+                "produces (FR-123). An unmatched name would leave the group "
                 "permitting what it was written to forbid.",
                 terms=unknown,
             )
@@ -763,7 +763,7 @@ def _curve(
     *,
     declared: Mapping[str, str] | None = None,
 ) -> tuple[GbmEvalPoint, ...]:
-    """Both partitions on one row per iteration (FR-MODEL-52, FR-MODEL-54).
+    """Both partitions on one row per iteration (FR-174, FR-183).
 
     The two libraries key their history identically once the eval sets are named, so this
     is shared. `declared` maps a backend-reported key to the name the **spec** spelled it
@@ -777,7 +777,7 @@ def _curve(
 
     Keyed by backend name rather than a single override string: the previous single
     `declared` string was applied to *every* key found in `history`, which happened to be
-    harmless only because history never held more than one metric before FR-MODEL-106.
+    harmless only because history never held more than one metric before FR-159.
     """
     mapping = declared or {}
     train = dict(history.get("train", {}))
@@ -866,7 +866,7 @@ def _fit_xgboost(
         **({"base_score": 0.0} if custom else {"objective": objective}),
         "seed": spec.seed,
         # `hist` is deterministic on CPU for a fixed seed and thread count, which is what
-        # NFR-MODEL-6 needs. `deterministic_histogram` is **not** set: xgboost 3.4 reports
+        # NFR-481 needs. `deterministic_histogram` is **not** set: xgboost 3.4 reports
         # it as an unused parameter, and a parameter the library ignores is a guarantee
         # that exists only in the code that sets it.
         "tree_method": "hist",
@@ -892,7 +892,7 @@ def _fit_xgboost(
     dtrain = matrix(x, y, base_margin, weights)
     evals: list[tuple[Any, str]] = []
     if valid is not None:
-        # Train **and** holdout: FR-MODEL-52 asks for the curve on both, and FR-MODEL-54
+        # Train **and** holdout: FR-174 asks for the curve on both, and FR-183
         # calls a diagnostic reported without its holdout counterpart a defect — which
         # reads the same way round. A curve on one partition cannot show the divergence
         # that early stopping exists to catch.
@@ -923,14 +923,14 @@ def _fit_xgboost(
     # A named metric_name/data_name callback rather than the `early_stopping_rounds=`
     # shorthand, **on both branches**: the shorthand auto-picks the *last* eval set and the
     # *last* eval_metric in insertion order, which is exactly ambiguous once a custom metric
-    # is also being reported (FR-MODEL-106/107) — explicit targeting has no such ambiguity
+    # is also being reported (FR-159/160) — explicit targeting has no such ambiguity
     # to resolve.
     #
     # The builtin branch used the shorthand until 2026-08-20, and the ambiguity was not
     # theoretical: `EarlyStopping.after_iteration` takes `list(data_log.keys())[-1]`, and
     # XGBoost appends custom-metric results *after* the builtin ones. A spec naming
     # `poisson-nloglik` with any Custom Metric also declared therefore stopped on the
-    # custom metric, minimising it whatever direction it declared. FR-MODEL-104's stated
+    # custom metric, minimising it whatever direction it declared. FR-156's stated
     # failure verbatim: the fit stops at the wrong round and produces a model, not an error.
     callbacks: list[Any] = []
     if stopping is not None and evals:
@@ -975,7 +975,7 @@ def _fit_xgboost(
     curve = _curve(history, declared=custom_declared or None)
     payload = bytes(booster.save_raw(raw_format="json"))
     # Nothing is ever dropped here: `eval_metric` takes the whole builtin list and
-    # `custom_metric` runs beside it, so XGBoost evaluates both (FR-MODEL-111).
+    # `custom_metric` runs beside it, so XGBoost evaluates both (FR-161).
     return payload, best + 1, curve, {"xgboost": xgb.__version__}, ()
 
 
@@ -1019,7 +1019,7 @@ def _fit_lightgbm(
         "objective": objective,
         "seed": spec.seed,
         "verbose": -1,
-        # NFR-MODEL-6 again, and LightGBM needs both: `deterministic` alone still varies
+        # NFR-481 again, and LightGBM needs both: `deterministic` alone still varies
         # with the multi-threaded histogram construction `force_row_wise` pins down.
         "deterministic": True,
         "force_row_wise": True,
@@ -1061,7 +1061,7 @@ def _fit_lightgbm(
         # section exists to prevent. Pinned by
         # `test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it`.
         params["metric"] = "None"
-        # FR-MODEL-111: the builtins suppressed by the line above were *declared*, and a
+        # FR-161: the builtins suppressed by the line above were *declared*, and a
         # caller who cannot see them in the curve is owed the reason rather than left to
         # infer one. The same list the `else` arm passes to `params["metric"]`.
         dropped = tuple(
@@ -1082,7 +1082,7 @@ def _fit_lightgbm(
             # Stopping's target first. Before 2026-08-20 the spec's declaration order was
             # kept and `first_metric_only` was left False whenever no custom metric was
             # declared, on the premise that "with none declared there is exactly one metric
-            # and nothing to disambiguate" — which FR-MODEL-106 had already falsified by
+            # and nothing to disambiguate" — which FR-159 had already falsified by
             # letting `eval_metrics` put builtins in `params["metric"]` beside the stopping
             # one. LightGBM then halted as soon as *any* of them stalled.
             target = str(stopping.metric)
@@ -1135,7 +1135,7 @@ def _fit_lightgbm(
 
 
 def _native_categoricals(result: GbmFitResult) -> frozenset[str]:
-    """The fitted features the backend was told are categorical (FR-MODEL-31's dtypes).
+    """The fitted features the backend was told are categorical (FR-125's dtypes).
 
     Scoring has to declare exactly what fitting declared: XGBoost splits a `c` feature by
     set membership and a `q` feature by threshold, so a band scored as `c` reads a booster
@@ -1167,7 +1167,7 @@ def _apply_inverse_link(raw: np.ndarray, link: Literal["exp", "logistic"]) -> np
 
 
 def _to_raw(predicted: np.ndarray, link: Literal["exp", "logistic"]) -> np.ndarray:
-    """`g`, the inverse of `_apply_inverse_link` — FR-MODEL-107's other half.
+    """`g`, the inverse of `_apply_inverse_link` — FR-160's other half.
 
     Both backends hand `feval`/`custom_metric` the **transformed** prediction under a
     builtin (string) objective and the **raw score** under a callable one — confirmed by
@@ -1188,7 +1188,7 @@ def load_gbm_booster(
 ) -> object:
     """Deserialise `booster` once into a live, reusable native booster object.
 
-    W11 Task 1.3's loaded-booster seam (Ruling 8, `02` §5.2): `predict_gbm` re-loaded a
+    WK-671 Task 1.3's loaded-booster seam (RL-874, `02` §5.2): `predict_gbm` re-loaded a
     fresh booster on every call, which put a deserialisation inside a real-time scoring
     request's latency budget. `predict_gbm`'s own `booster` parameter now accepts either
     raw bytes (the historical behaviour — re-loads every call, unchanged for every
@@ -1198,10 +1198,10 @@ def load_gbm_booster(
     quotes against one bundle deserialises once, not N times.
 
     The return type is `object`, not a `Booster` union, because XGBoost and LightGBM are
-    both optional, lazily-imported backends (ADR-0001) — the caller never needs to name
+    both optional, lazily-imported backends (ADR-703) — the caller never needs to name
     the concrete type, only to hand it back to `predict_gbm`.
 
-    **`nthread` (W11 Task 1.4, F-W11-1-2) is applied here, once, and never again on this
+    **`nthread` (WK-671 Task 1.4, F-W11-1-2) is applied here, once, and never again on this
     object.** Verified live and the reason it must be this way: calling
     `xgb.Booster.set_param({"nthread": ...})` concurrently with `predict()` on the *same*
     shared `Booster` — exactly what a warm worker's `CompiledBundle.boosters` is, scored by
@@ -1241,7 +1241,7 @@ def predict_gbm(
 ) -> pl.Series:
     """Score `data`, on the mean scale, with the offset applied **per backend**.
 
-    This is FR-MODEL-72's asymmetry, and the whole reason the two branches below are not
+    This is FR-129's asymmetry, and the whole reason the two branches below are not
     one. `μ = g⁻¹(f(x) + offset)`, and the two libraries disagree about who adds the
     offset:
 
@@ -1256,11 +1256,11 @@ def predict_gbm(
     is part of the feature and not of the frame.
 
     `booster` is either the raw persisted bytes (loaded fresh, here, on this call — the
-    original behaviour) or an object already returned by `load_gbm_booster` (Ruling 8):
+    original behaviour) or an object already returned by `load_gbm_booster` (RL-874):
     passing the loaded form skips deserialisation entirely, which is what a real-time
     `model_call` handler scoring many quotes against one `CompiledBundle` needs.
 
-    `nthread` (F-W11-1-2, `02` §5.2) is the thread-count control `NFR-RATE-14` requires
+    `nthread` (F-W11-1-2, `02` §5.2) is the thread-count control `NFR-501` requires
     (`nthread=1` per request). Keyword-only, no process-wide default: a global would
     silently change every other caller's behaviour, including the fit path.
 
@@ -1275,7 +1275,7 @@ def predict_gbm(
     !this->need_configuration_`. So for XGBoost, `nthread` is applied via `set_param`
     **only when this call performs the load itself** (`booster` was raw `bytes`, so the
     resulting `Booster` is local and unshared); against an **already-loaded** booster
-    (Ruling 8's seam — `CompiledBundle.boosters`, shared and scored concurrently) it is a
+    (RL-874's seam — `CompiledBundle.boosters`, shared and scored concurrently) it is a
     silent no-op, because the only safe place to configure that object is once, at load
     time, before any concurrent scoring begins (`load_gbm_booster`'s own `nthread`
     parameter — see its docstring, which is where a caller wanting `nthread` on a
@@ -1376,7 +1376,7 @@ def predict_gbm(
     return pl.Series("prediction", values)
 
 
-#: FR-MODEL-26's objectives as the exponential-dispersion families the deviance functions
+#: FR-120's objectives as the exponential-dispersion families the deviance functions
 #: already know. The pair is what `unit_deviance` takes; the power is Tweedie's and is
 #: ignored elsewhere.
 _FAMILIES: Final[dict[str, tuple[str, float]]] = {
@@ -1410,7 +1410,7 @@ def objective_family(spec: GbmSpec) -> tuple[str, float]:
     it here keeps the mapping in one place rather than beside every caller.
 
     A **Custom Objective names no family**, and the artifact that would is not in scope
-    here (ADR-0001: this function takes a spec, not a store). `spec.response` is what
+    here (ADR-703: this function takes a spec, not a store). `spec.response` is what
     carries the answer, which is why `_compile_custom` refuses to fit a custom objective
     on a spec that leaves it unset — the alternative is a `capped_gamma` severity model
     whose A/E was computed as a Poisson deviance, reported without comment.
@@ -1435,13 +1435,13 @@ def tree_summary(result: GbmFitResult, booster: bytes) -> tuple[int, int, float,
     """`(tree_count, max_depth, mean_depth, leaf_count)` from the persisted booster.
 
     Read from the artifact rather than from a live estimator, because that is what a
-    reviewer will have: the diagnostics are computed once (FR-MODEL-49) and everything
+    reviewer will have: the diagnostics are computed once (FR-170) and everything
     afterwards reads the stored bytes.
 
     `leaf_count` is what `ComplexityDiagnostic.parameter_count` means for a boosted model.
     A GBM has no coefficient vector, and counting factors instead would report the same
     complexity for a stump and for a thousand deep trees — which is the comparison
-    FR-MODEL-81's exposure-per-parameter exists to make.
+    FR-185's exposure-per-parameter exists to make.
     """
     depths: list[int] = []
     leaves = 0

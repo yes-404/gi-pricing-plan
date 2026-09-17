@@ -71,7 +71,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("the reference view", () => {
   it("says when a table has no published version, rather than showing a number", async () => {
-    // FR-DATA-32: rating pins a published version. A table whose versions are all drafts
+    // FR-72: rating pins a published version. A table whose versions are all drafts
     // cannot be pinned at all, and a version number here would say it is usable.
     render(ReferenceView);
     const tables = await screen.findByRole("table", { name: "Reference tables" });

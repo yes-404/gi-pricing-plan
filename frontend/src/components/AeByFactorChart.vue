@@ -16,10 +16,10 @@ const props = defineProps<{
 }>();
 
 /**
- * Actual over expected by factor level (FR-MODEL-50), train and holdout on one axis.
+ * Actual over expected by factor level (FR-171), train and holdout on one axis.
  *
  * Two charts side by side would carry two y-axes and invite the reader to compare positions
- * rather than values; FR-MODEL-54 asks for the comparison, so both partitions share an axis.
+ * rather than values; FR-183 asks for the comparison, so both partitions share an axis.
  *
  * The key is factor **and** level: `level` alone is not unique across factors — "0-3" can
  * belong to vehicle age and to years-since-claim on the same model — and an axis keyed on it
@@ -47,7 +47,7 @@ const series = computed(() =>
     data: levels.value.map(
       (level) => partition.ae_by_factor.find((cell) => key(cell) === level)?.ae ?? null,
     ),
-    // NFR-OVR-10: hue alone is not a channel. The line type carries the same distinction.
+    // NFR-463: hue alone is not a channel. The line type carries the same distinction.
     lineStyle: { type: LINE_TYPES[index] ?? "solid", width: 2 },
   })),
 );
@@ -67,7 +67,7 @@ const columns = computed(() => [
 ]);
 
 /**
- * `exposure_years` is an exact decimal **string** (FR-OVR-7) and is passed through as one.
+ * `exposure_years` is an exact decimal **string** (FR-10) and is passed through as one.
  * It is not plotted and nothing computes with it, so there is no reason to widen it to a
  * float here — the string is what the fit recorded.
  */

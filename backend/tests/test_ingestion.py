@@ -1,4 +1,4 @@
-"""Ingestion end to end (`01` §3.1, FR-DATA-2..8, FR-DATA-40).
+"""Ingestion end to end (`01` §3.1, FR-27, FR-28, FR-29, FR-30, FR-31, FR-32, FR-33, FR-34).
 
 Against a real database and a real blob store: parquet round-trips and content-addressed
 storage are the behaviours under test, and neither survives a double.
@@ -63,7 +63,7 @@ async def _dataset(database: Database, workspace_id, actor):
         return row.id
 
 
-@pytest.mark.req("FR-DATA-3")
+@pytest.mark.req("FR-28")
 async def test_a_csv_upload_becomes_a_draft_version(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -90,7 +90,7 @@ async def test_a_csv_upload_becomes_a_draft_version(
     assert row.tables[0]["row_count"] == 2
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 async def test_column_names_are_normalised_and_the_source_names_kept(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -108,7 +108,7 @@ async def test_column_names_are_normalised_and_the_source_names_kept(
     assert table["source_names"]["policy_id"] == "Policy ID"
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 async def test_a_column_collision_fails_the_ingestion(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -127,11 +127,11 @@ async def test_a_column_collision_fails_the_ingestion(
     assert exc.value.code == "COLUMN_NAME_COLLISION"
 
 
-@pytest.mark.req("FR-DATA-7")
+@pytest.mark.req("FR-32")
 async def test_unusable_rows_are_quarantined_with_the_version(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-DATA-7: rejected to a quarantine table stored with the version, not dropped."""
+    """FR-32: rejected to a quarantine table stored with the version, not dropped."""
     actor = await _analyst(database, workspace_id)
     dataset_id = await _dataset(database, workspace_id, actor)
     data = b"Policy ID,Exposure Start\nP1,2026-01-01\nP2,\nP3,2026-03-01\n"
@@ -154,7 +154,7 @@ async def test_unusable_rows_are_quarantined_with_the_version(
     assert run.reject_sample[0]["_reject_reason"] == "exposure_start is null"
 
 
-@pytest.mark.req("FR-DATA-6")
+@pytest.mark.req("FR-31")
 async def test_the_run_records_what_the_requirement_lists(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -176,7 +176,7 @@ async def test_the_run_records_what_the_requirement_lists(
     assert outcome.version.library_versions["polars"]
 
 
-@pytest.mark.req("FR-DATA-8")
+@pytest.mark.req("FR-33")
 async def test_the_same_key_and_unchanged_source_returns_the_original_version(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -200,7 +200,7 @@ async def test_the_same_key_and_unchanged_source_returns_the_original_version(
     assert second.version.id == first_id
 
 
-@pytest.mark.req("FR-DATA-8")
+@pytest.mark.req("FR-33")
 async def test_the_same_key_with_changed_data_creates_a_new_version(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -231,11 +231,11 @@ async def test_the_same_key_with_changed_data_creates_a_new_version(
     assert second.version.version == 2
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_each_version_is_a_complete_snapshot(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-DATA-40 / OQ-DATA-2: a version is complete and independently validatable, never
+    """FR-34 / OQ-558: a version is complete and independently validatable, never
     a delta against its predecessor."""
     actor = await _analyst(database, workspace_id)
     dataset_id = await _dataset(database, workspace_id, actor)
@@ -262,7 +262,7 @@ async def test_each_version_is_a_complete_snapshot(
     assert first_ref["sha256"] != second_ref["sha256"]
 
 
-@pytest.mark.req("FR-DATA-3")
+@pytest.mark.req("FR-28")
 async def test_a_gzipped_upload_is_handled_transparently(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -276,7 +276,7 @@ async def test_a_gzipped_upload_is_handled_transparently(
     assert outcome.run.rows_read == 2
 
 
-@pytest.mark.req("FR-DATA-3")
+@pytest.mark.req("FR-28")
 async def test_a_parquet_upload_round_trips(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -294,7 +294,7 @@ async def test_a_parquet_upload_round_trips(
     assert outcome.run.rows_written == 2
 
 
-@pytest.mark.req("FR-DATA-3")
+@pytest.mark.req("FR-28")
 async def test_an_unsupported_file_type_is_refused(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -309,11 +309,11 @@ async def test_an_unsupported_file_type_is_refused(
     assert exc.value.code == "SCHEMA_INFERENCE_CONFLICT"
 
 
-@pytest.mark.req("FR-DATA-2")
+@pytest.mark.req("FR-27")
 async def test_ingestion_never_mutates_an_existing_version(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-DATA-2: every run produces a new version or none. There is no path editing @11."""
+    """FR-27: every run produces a new version or none. There is no path editing @11."""
     actor = await _analyst(database, workspace_id)
     dataset_id = await _dataset(database, workspace_id, actor)
     async with database.unit_of_work() as session:
@@ -335,7 +335,7 @@ async def test_ingestion_never_mutates_an_existing_version(
     assert unchanged.version == 1
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_ingestion_requires_the_write_permission(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -351,7 +351,7 @@ async def test_ingestion_requires_the_write_permission(
     assert exc.value.code == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-DATA-6")
+@pytest.mark.req("FR-31")
 async def test_the_run_is_queryable_after_the_fact(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -372,7 +372,7 @@ async def test_the_run_is_queryable_after_the_fact(
     assert runs[0].status == "succeeded"
 
 
-# -- FR-DATA-41: a direct identifier is refused at ingestion ------------------------------
+# -- FR-40: a direct identifier is refused at ingestion ------------------------------
 
 PII_CSV = (
     b"policy_id,customer_email,exposure_start,exposure_years\n"
@@ -415,15 +415,15 @@ async def _dataset_with_pii_dictionary(
         return row.id
 
 
-@pytest.mark.req("FR-DATA-41")
+@pytest.mark.req("FR-40")
 async def test_a_direct_identifier_column_is_refused_at_ingestion(
     database: Database, blob_store, workspace_id
 ) -> None:
-    """FR-DATA-13's other half, which nothing enforced until now.
+    """FR-39's other half, which nothing enforced until now.
 
     `DIRECT_IDENTIFIER_PRESENT` was registered in the error catalogue and raised nowhere;
     `modelling_forbidden_columns` had no caller. A dataset carrying an email address
-    ingested cleanly, and every FR-DATA-13 marker sat on `pseudonymise`.
+    ingested cleanly, and every FR-39 marker sat on `pseudonymise`.
     """
     actor = await _analyst(database, workspace_id)
     dataset_id = await _dataset_with_pii_dictionary(database, workspace_id, actor)
@@ -451,11 +451,11 @@ async def test_a_direct_identifier_column_is_refused_at_ingestion(
     assert versions == []
 
 
-@pytest.mark.req("FR-DATA-41")
+@pytest.mark.req("FR-40")
 async def test_pseudonymising_the_column_lets_the_upload_through(
     database: Database, blob_store, workspace_id
 ) -> None:
-    """The remedy FR-DATA-13 names, and the reason the check runs *after* the recipe.
+    """The remedy FR-39 names, and the reason the check runs *after* the recipe.
 
     Checked before it, a pseudonymise step could never satisfy the rule it exists for.
     """
@@ -478,7 +478,7 @@ async def test_pseudonymising_the_column_lets_the_upload_through(
     assert outcome.run.rows_written == 2
 
 
-@pytest.mark.req("FR-DATA-41")
+@pytest.mark.req("FR-40")
 async def test_a_column_the_dictionary_does_not_forbid_is_not_refused(
     database: Database, blob_store, workspace_id
 ) -> None:

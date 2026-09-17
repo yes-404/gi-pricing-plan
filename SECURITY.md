@@ -5,7 +5,7 @@
 This is an **unreleased platform with no production deployment**. There is no hosted
 service, no customer data, and no live endpoint to attack — the scope is the codebase as
 published on `main` and any other branch in this repository. Once the platform is
-deployed (Phase 2's `W14`, per [`docs/roadmap.md`](docs/roadmap.md)), this file will be
+deployed (Phase 2's `WK-674`, per [`docs/roadmap.md`](docs/roadmap.md)), this file will be
 updated to describe the deployed surface; until then, treat every finding as a codebase
 finding.
 
@@ -37,4 +37,4 @@ Reporters are credited in whatever record the fix produces, unless they ask not 
 
 This file is the outward-facing summary. The internal record of what is configured on
 this repository — settings, rulesets, workflow trust — and why, is
-[`docs/audit/security-posture.md`](docs/audit/security-posture.md).
+[`docs/process/security-posture.md`](docs/process/security-posture.md).

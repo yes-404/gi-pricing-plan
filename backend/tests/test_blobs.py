@@ -1,4 +1,4 @@
-"""FR-PLAT-18..21 and ID-4 — content addressing, dedup, refcounts, conservative GC.
+"""FR-418, FR-419, FR-420, FR-421 and ID-4 — content addressing, dedup, refcounts, conservative GC.
 
 Against real MinIO and real PostgreSQL. Deduplication is a primary-key behaviour and
 presigning is an S3 signature behaviour; neither is testable against a double.
@@ -34,13 +34,13 @@ def unique(label: bytes) -> bytes:
     return label + b" " + str(new_uuid7()).encode()
 
 
-@pytest.mark.req("FR-PLAT-18")
+@pytest.mark.req("FR-418")
 def test_key_layout_shards_by_digest_prefix() -> None:
     """`blob/{sha256[:2]}/{sha256}` — a flat namespace degrades at millions of objects."""
     assert blob_key(TEXT_SHA) == f"blob/{TEXT_SHA[:2]}/{TEXT_SHA}"
 
 
-@pytest.mark.req("FR-PLAT-18")
+@pytest.mark.req("FR-418")
 async def test_put_stores_content_and_records_size_and_type(
     database: Database, blob_store: BlobStore
 ) -> None:
@@ -58,11 +58,11 @@ async def test_put_stores_content_and_records_size_and_type(
     assert row.ref_count == 0
 
 
-@pytest.mark.req("FR-PLAT-19")
+@pytest.mark.req("FR-419")
 async def test_identical_content_is_stored_once(
     database: Database, blob_store: BlobStore
 ) -> None:
-    """FR-PLAT-19: writing identical content is a no-op returning the existing reference."""
+    """FR-419: writing identical content is a no-op returning the existing reference."""
     payload = unique(b"identical bytes")
     async with database.unit_of_work() as session:
         first = await blob_store.put(session, payload, "application/octet-stream")
@@ -78,7 +78,7 @@ async def test_identical_content_is_stored_once(
     assert len(rows) == 1
 
 
-@pytest.mark.req("FR-PLAT-19")
+@pytest.mark.req("FR-419")
 async def test_different_content_gets_a_different_reference(
     database: Database, blob_store: BlobStore
 ) -> None:
@@ -88,7 +88,7 @@ async def test_different_content_gets_a_different_reference(
     assert a.sha256 != b.sha256
 
 
-@pytest.mark.req("FR-PLAT-18")
+@pytest.mark.req("FR-418")
 async def test_content_round_trips_byte_for_byte(
     database: Database, blob_store: BlobStore
 ) -> None:
@@ -98,7 +98,7 @@ async def test_content_round_trips_byte_for_byte(
     assert await blob_store.read(ref) == payload
 
 
-@pytest.mark.req("FR-PLAT-18")
+@pytest.mark.req("FR-418")
 async def test_streaming_read_reassembles_the_content(
     database: Database, blob_store: BlobStore
 ) -> None:
@@ -112,7 +112,7 @@ async def test_streaming_read_reassembles_the_content(
     assert b"".join(chunks) == payload
 
 
-@pytest.mark.req("FR-PLAT-18")
+@pytest.mark.req("FR-418")
 async def test_put_requires_a_transaction(database: Database, blob_store: BlobStore) -> None:
     """Negative: the row is accounting; accounting that commits alone drifts."""
     async with database.session() as session:
@@ -120,7 +120,7 @@ async def test_put_requires_a_transaction(database: Database, blob_store: BlobSt
             await blob_store.put(session, b"anything", "text/plain")
 
 
-@pytest.mark.req("FR-PLAT-18")
+@pytest.mark.req("FR-418")
 async def test_reading_a_missing_blob_is_a_typed_error(blob_store: BlobStore) -> None:
     missing = BlobRef(sha256="0" * 64, bytes=1, media_type="text/plain")
     with pytest.raises(PlatformError) as exc:
@@ -129,7 +129,7 @@ async def test_reading_a_missing_blob_is_a_typed_error(blob_store: BlobStore) ->
     assert exc.value.status_code == 404
 
 
-@pytest.mark.req("FR-PLAT-20")
+@pytest.mark.req("FR-420")
 async def test_reference_counting_tracks_retain_and_release(
     database: Database, blob_store: BlobStore
 ) -> None:
@@ -140,7 +140,7 @@ async def test_reference_counting_tracks_retain_and_release(
         assert await blobs.release(session, ref.sha256) == 1
 
 
-@pytest.mark.req("FR-PLAT-20")
+@pytest.mark.req("FR-420")
 async def test_releasing_below_zero_fails_the_transaction(
     database: Database, blob_store: BlobStore
 ) -> None:
@@ -155,7 +155,7 @@ async def test_releasing_below_zero_fails_the_transaction(
             await blobs.release(session, ref.sha256)
 
 
-@pytest.mark.req("FR-PLAT-20")
+@pytest.mark.req("FR-420")
 async def test_retaining_a_missing_blob_is_a_typed_error(database: Database) -> None:
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:
@@ -163,7 +163,7 @@ async def test_retaining_a_missing_blob_is_a_typed_error(database: Database) -> 
     assert exc.value.code == "BLOB_NOT_FOUND"
 
 
-@pytest.mark.req("FR-PLAT-20")
+@pytest.mark.req("FR-420")
 async def test_gc_defaults_to_dry_run_and_deletes_nothing(
     database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
@@ -185,7 +185,7 @@ async def test_gc_defaults_to_dry_run_and_deletes_nothing(
         assert await session.get(BlobRow, ref.sha256) is not None
 
 
-@pytest.mark.req("FR-PLAT-20")
+@pytest.mark.req("FR-420")
 async def test_gc_spares_a_referenced_blob(
     database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
@@ -205,7 +205,7 @@ async def test_gc_spares_a_referenced_blob(
         assert await session.get(BlobRow, ref.sha256) is not None
 
 
-@pytest.mark.req("FR-PLAT-20")
+@pytest.mark.req("FR-420")
 async def test_gc_spares_a_young_unreferenced_blob(
     database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
@@ -223,7 +223,7 @@ async def test_gc_spares_a_young_unreferenced_blob(
         assert await session.get(BlobRow, ref.sha256) is not None
 
 
-@pytest.mark.req("FR-PLAT-20")
+@pytest.mark.req("FR-420")
 async def test_gc_deletes_an_old_unreferenced_blob_and_audits_it(
     database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
@@ -255,7 +255,7 @@ async def test_gc_deletes_an_old_unreferenced_blob_and_audits_it(
         await blob_store.read(ref)
 
 
-@pytest.mark.req("FR-PLAT-21")
+@pytest.mark.req("FR-421")
 async def test_presigned_single_part_upload_is_usable(blob_store: BlobStore) -> None:
     """The URL must actually accept the bytes — a signature that only looks right is not one."""
     import httpx
@@ -271,7 +271,7 @@ async def test_presigned_single_part_upload_is_usable(blob_store: BlobStore) -> 
     assert response.status_code == 200
 
 
-@pytest.mark.req("FR-PLAT-21")
+@pytest.mark.req("FR-421")
 async def test_presigned_multipart_returns_one_url_per_part(blob_store: BlobStore) -> None:
     upload = await blob_store.presign_upload("application/octet-stream", parts=3)
     assert upload.upload_id is not None
@@ -279,15 +279,15 @@ async def test_presigned_multipart_returns_one_url_per_part(blob_store: BlobStor
     assert len(set(upload.urls)) == 3
 
 
-@pytest.mark.req("FR-PLAT-21")
+@pytest.mark.req("FR-421")
 async def test_presign_rejects_zero_parts(blob_store: BlobStore) -> None:
     with pytest.raises(ValueError, match="at least 1"):
         await blob_store.presign_upload("text/plain", parts=0)
 
 
-@pytest.mark.req("NFR-PLAT-7")
+@pytest.mark.req("NFR-532")
 async def test_no_credential_survives_a_settings_dump() -> None:
-    """R3 / NFR-PLAT-7: a settings object reaching a log line must not carry secrets.
+    """R3 / NFR-532: a settings object reaching a log line must not carry secrets.
 
     Every credential is given a distinctive value, so the assertion is about the property
     — no secret escapes — rather than about a substring that legitimately appears

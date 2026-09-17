@@ -1,4 +1,4 @@
-"""data: a stored rule names its `01` §4.4 catalogue entry (FR-DATA-53)
+"""data: a stored rule names its `01` §4.4 catalogue entry (FR-68)
 
 `01` §4.4 catalogues 38 named validation rules and calls their ids stable. The platform
 held none of them: `validation_rules` could only carry a workspace's own rules, so the

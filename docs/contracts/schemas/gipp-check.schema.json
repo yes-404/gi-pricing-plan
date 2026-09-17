@@ -118,7 +118,7 @@
           }
         }
       },
-      "description": "ICOBS 6B covers home and motor (plus combined packages and connected add-ons). Outside that scope the check is voluntary good practice and must be labelled as such (FR-OPT-30)."
+      "description": "ICOBS 6B covers home and motor (plus combined packages and connected add-ons). Outside that scope the check is voluntary good practice and must be labelled as such (FR-296)."
     },
     "channel_basis": {
       "type": "object",
@@ -155,11 +155,11 @@
           "maximum": 1
         }
       },
-      "description": "Which limb of the rule produced each ENBP. A large fallback share is a data-quality finding, not a compliance result (FR-OPT-29)."
+      "description": "Which limb of the rule produced each ENBP. A large fallback share is a data-quality finding, not a compliance result (FR-295)."
     }
   },
   "invariants": [
-    "ENBP is computed through the original purchase channel; falling back only per ICOBS 6B.2.5R(2) (FR-OPT-18/29)",
+    "ENBP is computed through the original purchase channel; falling back only per ICOBS 6B.2.5R(2) (FR-294/295)",
     "verdict reflects ICOBS 6B.2.1R: no renewal price may exceed its ENBP"
   ]
 }

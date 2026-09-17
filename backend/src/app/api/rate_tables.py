@@ -1,11 +1,11 @@
 """Rate table routes (03 §5.1, slices W10-2/W10-3C).
 
 `POST /rate-tables/{slug}/seed-from-model` seeds a new rate table version from an
-approved model's relativities (FR-RATE-15, FR-RATE-16); `GET
+approved model's relativities (FR-229, FR-230); `GET
 /rate-tables/{slug}@{version}/diff?against=` computes the cell diff against the
-previous version or the seed version (FR-RATE-17); `POST
+previous version or the seed version (FR-231); `POST
 /rate-tables/{slug}@{version}/bulk-operation` applies a bulk operation to a version
-(FR-RATE-18). Cell diffs are computed on read: the portfolio weights live in the
+(FR-233). Cell diffs are computed on read: the portfolio weights live in the
 platform, not in pricing-core (DP1, DP3).
 """
 
@@ -58,7 +58,7 @@ def _seed_body(body: dict[str, Any]) -> tuple[ArtifactRef, str]:
     """Validate the seed request body, returning the canonical model ref and change note.
 
     The body is the raw JSON from 03 §4.2: `model_ref` is the canonical wire form
-    `model:slug@version` (ID-3), and `change_note` is required (FR-RATE-15).
+    `model:slug@version` (ID-3), and `change_note` is required (FR-229).
     """
     raw_ref = body.get("model_ref")
     if not isinstance(raw_ref, str):
@@ -90,7 +90,7 @@ def _seed_body(body: dict[str, Any]) -> tuple[ArtifactRef, str]:
             "VALIDATION_FAILED",
             "Request validation failed",
             422,
-            detail="change_note is required and must be non-empty (FR-RATE-15)",
+            detail="change_note is required and must be non-empty (FR-229)",
         )
     return ref, change_note.strip()
 
@@ -123,12 +123,12 @@ async def seed_rate_table_from_model(
     settings: SettingsDep,
     blob_store: BlobStoreDep,
 ) -> dict[str, Any]:
-    """**201** with the seeded version: its definition, rows, and `seeded_from` (FR-RATE-15).
+    """**201** with the seeded version: its definition, rows, and `seeded_from` (FR-229).
 
     The source model must be approved (PIN_NOT_APPROVED otherwise), and its relativities
     must validate as a rate table (named `RATE_TABLE_*` codes, 03 §5.2). Storage is
     decided against the workspace's cell-count threshold at creation and immutable with
-    the version (FR-RATE-62, DP2).
+    the version (FR-232, DP2).
     """
     assert caller.principal.id is not None
     model_ref, change_note = _seed_body(body)
@@ -160,9 +160,9 @@ async def bulk_operate_rate_table(
     settings: SettingsDep,
     blob_store: BlobStoreDep,
 ) -> dict[str, Any]:
-    """**201** with the new version (FR-RATE-18): the operation and its parameters
+    """**201** with the new version (FR-233): the operation and its parameters
     recorded as `created_by_operation` (04 §4.4), the seed anchor inherited and
-    proven equal to the baseline's at save time (03 §4.2, FR-RATE-19).
+    proven equal to the baseline's at save time (03 §4.2, FR-234).
 
     The body is `{"kind", "parameters"}` — `applied_to` and `result` are server-side:
     `applied_to` names the addressed version, and `result` is computed by the
@@ -204,7 +204,7 @@ async def export_rate_table_csv(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
 ) -> Response:
-    """**200** with the CSV (FR-RATE-20): header, then one row per cell — decimal
+    """**200** with the CSV (FR-235): header, then one row per cell — decimal
     strings, never floats (R2). Parquet-stored versions are read inline from their
     blob; the Job-worthy read is the diff (W10-3D), not a bounded export."""
     content = await service.export_csv(
@@ -225,7 +225,7 @@ async def export_rate_table_xlsx(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
 ) -> Response:
-    """**200** with the XLSX (FR-RATE-20): every cell written as text, so the strict
+    """**200** with the XLSX (FR-235): every cell written as text, so the strict
     round-trip an import's verdict asserts survives a spreadsheet's number handling."""
     content = await service.export_xlsx(
         database, caller.workspace_id, slug, version, blob_store
@@ -254,7 +254,7 @@ async def import_rate_table(
     file: Annotated[UploadFile, File()],
     confirm: Annotated[bool, Form()] = False,
 ) -> dict[str, Any]:
-    """**200** with the would-be version's diff and its strict verdict (FR-RATE-20,
+    """**200** with the would-be version's diff and its strict verdict (FR-235,
     03 §5.1): the file is checked against the addressed version's own domain — same
     keys, same key types, same coverage — and nothing is created.
 
@@ -321,8 +321,8 @@ async def rate_table_diff(
     blob_store: BlobStoreDep,
     against: str = Query(..., description="`previous`, `seed`, or a version number"),
 ) -> RateTableDiff | Job:
-    """**200** with the diff (FR-RATE-17); **202** with a Job where either version is
-    `storage: parquet` (FR-RATE-62) — the same artifact, only latency and status
+    """**200** with the diff (FR-231); **202** with a Job where either version is
+    `storage: parquet` (FR-232) — the same artifact, only latency and status
     differ.
 
     The baseline resolves to the previous version, the seed version, or an explicit

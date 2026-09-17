@@ -1,10 +1,10 @@
-"""The single error shape every module returns (`00` §5.3, FR-PLAT-47).
+"""The single error shape every module returns (`00` §5.3, FR-450).
 
 RFC 9457 `application/problem+json`, extended with three fields the RFC leaves to the
 application: a stable machine `code`, a `trace_id`, and a list of field-level errors.
 
 It lives here rather than in the backend because every module returns it and the frontend
-generates its type from it (ADR-0002). A second definition anywhere would drift, and the
+generates its type from it (ADR-704). A second definition anywhere would drift, and the
 one thing a client must be able to rely on is that `code` means the same thing everywhere.
 """
 
@@ -21,7 +21,7 @@ class FieldError(BaseModel):
     """One field-level failure inside a problem response.
 
     Present so that a rejected submission can be rendered against the form that produced
-    it — FR-PLAT-11 requires deterministic failures to name the offending field rather
+    it — FR-403 requires deterministic failures to name the offending field rather
     than only the operation.
     """
 
@@ -63,5 +63,5 @@ class ProblemDetail(BaseModel):
     trace_id: str | None = Field(
         default=None,
         description="OpenTelemetry trace id for this request. Appears in every log line "
-        "for the request, so a support conversation starts with an identifier (FR-PLAT-42).",
+        "for the request, so a support conversation starts with an identifier (FR-445).",
     )

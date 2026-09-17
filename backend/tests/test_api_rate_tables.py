@@ -1,10 +1,10 @@
 """Rate table routes (03 §5.1, slices W10-2/W10-3C): seeding, cell diffs, bulk
 operations, and the export/import preview.
 
-`POST /rate-tables/{slug}/seed-from-model` (FR-RATE-16),
-`GET /rate-tables/{slug}@{version}/diff?against=` (FR-RATE-17),
-`POST /rate-tables/{slug}@{version}/bulk-operation` (FR-RATE-18), and the CSV/XLSX
-export and import preview (FR-RATE-20). Models are inserted rather than fitted —
+`POST /rate-tables/{slug}/seed-from-model` (FR-230),
+`GET /rate-tables/{slug}@{version}/diff?against=` (FR-231),
+`POST /rate-tables/{slug}@{version}/bulk-operation` (FR-233), and the CSV/XLSX
+export and import preview (FR-235). Models are inserted rather than fitted —
 these routes care that the model row carries an approved status and a fit result with
 relativities, not how the fit happened, and a real GLM fit per test would buy nothing
 this file asserts.
@@ -51,7 +51,7 @@ def auditor_headers(workspace_id, grant) -> dict[str, str]:
 @pytest.fixture
 def admin_headers(workspace_id, grant) -> dict[str, str]:
     """A caller with `ADMIN_MANAGE_SETTINGS` — the workspace threshold is a setting
-    (FR-RATE-62), so the parquet-path tests set it through the API like an operator."""
+    (FR-232), so the parquet-path tests set it through the API like an operator."""
     other = uuid4()
     asyncio.get_event_loop().run_until_complete(grant("admin", principal_id=other))
     return _headers(other, workspace_id)
@@ -144,7 +144,7 @@ def _table_slug() -> str:
     return f"motor-driver-age-{uuid4().hex[:8]}"
 
 
-@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-230")
 def test_seed_creates_version_one_with_cells(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -176,8 +176,8 @@ def test_seed_creates_version_one_with_cells(
     assert [row["relativity"] for row in body["rows"]] == ["1.92", "1.41", "1.12"]
 
 
-@pytest.mark.req("FR-RATE-16")
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-231")
 def test_seed_appends_the_next_version_and_diff_vs_previous(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -216,7 +216,7 @@ def test_seed_appends_the_next_version_and_diff_vs_previous(
     assert body["exposure_weighted_mean_change_pct"] is None
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 def test_diff_vs_seed_compares_against_the_origin_not_the_previous_version(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -257,7 +257,7 @@ def test_diff_vs_seed_compares_against_the_origin_not_the_previous_version(
     assert vs_seed.json()["changed_cells"] == 2  # 17-20 and 21-24, from the origin
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 def test_diff_against_an_explicit_version(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -284,7 +284,7 @@ def test_diff_against_an_explicit_version(
     assert diff.json()["changed_cells"] == 1
 
 
-@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-230")
 def test_seed_refuses_a_non_approved_model(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -314,7 +314,7 @@ def test_seed_refuses_a_non_approved_model(
     assert response.json()["code"] == "PIN_NOT_APPROVED"
 
 
-@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-230")
 def test_seed_refuses_a_missing_model(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -326,8 +326,8 @@ def test_seed_refuses_a_missing_model(
     assert response.status_code == 404, response.text
 
 
-@pytest.mark.req("FR-RATE-15")
-@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-229")
+@pytest.mark.req("FR-230")
 def test_seed_refuses_a_bad_body(api_client: TestClient, workspace_id, actuary) -> None:
     response = api_client.post(
         f"/api/v1/rate-tables/{_table_slug()}/seed-from-model",
@@ -352,7 +352,7 @@ def test_seed_refuses_a_bad_body(api_client: TestClient, workspace_id, actuary) 
     assert wrong_type.status_code == 422, wrong_type.text
 
 
-@pytest.mark.req("FR-RATE-19")
+@pytest.mark.req("FR-234")
 def test_seed_validation_failure_is_named(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -372,7 +372,7 @@ def test_seed_validation_failure_is_named(
     assert response.json()["code"] == "RATE_TABLE_KEY_DUPLICATE"
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 def test_diff_404s_for_unknown_table_and_version(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -409,7 +409,7 @@ def test_diff_404s_for_unknown_table_and_version(
     assert no_previous.status_code == 404, no_previous.text
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 def test_diff_rejects_an_unknown_baseline(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -432,7 +432,7 @@ def test_diff_rejects_an_unknown_baseline(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 def test_diff_seed_without_a_seed_origin_404s(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -490,13 +490,13 @@ def test_diff_seed_without_a_seed_origin_404s(
     assert response.json()["code"] == "RATE_TABLE_MISS"
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 def test_a_diff_touching_a_parquet_version_answers_202_with_a_job(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
     """03 §5.1: where either version is `storage: parquet` the diff answers 202 with a
-    Job on the compute queue (FR-RATE-62) — the same artifact the row-backed 200
-    returns, only latency and status differ (FR-RATE-17)."""
+    Job on the compute queue (FR-232) — the same artifact the row-backed 200
+    returns, only latency and status differ (FR-231)."""
     slug = _table_slug()
     definition = {
         "slug": slug,
@@ -592,7 +592,7 @@ def test_a_diff_touching_a_parquet_version_answers_202_with_a_job(
     assert response.headers["location"] == f"/api/v1/jobs/{job['id']}"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_routes_are_permission_gated(
     api_client: TestClient, workspace_id, principal, auditor_headers, actuary
 ) -> None:
@@ -675,7 +675,7 @@ def _bulk_body(kind: str, parameters: dict[str, object]) -> dict[str, object]:
     return {"kind": kind, "parameters": parameters}
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 def test_bulk_operation_creates_a_new_version_with_the_operation_record(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -712,7 +712,7 @@ def test_bulk_operation_creates_a_new_version_with_the_operation_record(
     assert body["seeded_from"]["model_ref"] == f"model:{family}@1"
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 def test_bulk_operation_refuses_an_unknown_kind(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -735,7 +735,7 @@ def test_bulk_operation_refuses_an_unknown_kind(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 def test_bulk_operation_refuses_floor_above_cap(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -758,7 +758,7 @@ def test_bulk_operation_refuses_floor_above_cap(
     assert response.json()["code"] == "FLOOR_ABOVE_CAP"
 
 
-@pytest.mark.req("FR-RATE-18")
+@pytest.mark.req("FR-233")
 def test_bulk_operation_on_a_missing_version_is_refused(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -775,7 +775,7 @@ def test_bulk_operation_on_a_missing_version_is_refused(
 def _set_threshold(
     api_client: TestClient, admin_headers: dict[str, str], value: int
 ) -> None:
-    """The workspace cell-count threshold through the settings API (FR-RATE-62)."""
+    """The workspace cell-count threshold through the settings API (FR-232)."""
     response = api_client.put(
         "/api/v1/settings",
         json={"values": {"rate_tables.cell_threshold": value}},
@@ -800,7 +800,7 @@ def _seeded_table(
     return slug, family
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 def test_export_csv_returns_the_seeded_cells(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -821,7 +821,7 @@ def test_export_csv_returns_the_seeded_cells(
     )
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 def test_export_xlsx_parses_to_the_seeded_cells(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -843,7 +843,7 @@ def test_export_xlsx_parses_to_the_seeded_cells(
     ]
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 def test_import_previews_a_modified_export(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -871,7 +871,7 @@ def test_import_previews_a_modified_export(
     assert verdict["applied_to"] == f"rate_table:{slug}@1"
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 def test_import_preview_creates_nothing(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -899,7 +899,7 @@ def test_import_preview_creates_nothing(
     assert missing.json()["code"] == "RATE_TABLE_MISS"
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 def test_import_confirm_creates_the_version(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -938,7 +938,7 @@ def test_import_confirm_creates_the_version(
     assert b"21-24,1.4500" in exported_v2.content
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 def test_import_confirm_cannot_override_the_verdict(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -964,8 +964,8 @@ def test_import_confirm_cannot_override_the_verdict(
     assert missing.json()["code"] == "RATE_TABLE_MISS"
 
 
-@pytest.mark.req("FR-RATE-62")
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-232")
+@pytest.mark.req("FR-235")
 def test_import_confirm_on_a_parquet_baseline_spills(
     api_client: TestClient, workspace_id, actuary, admin_headers
 ) -> None:
@@ -991,7 +991,7 @@ def test_import_confirm_on_a_parquet_baseline_spills(
     assert response.json()["cells"]["media_type"] == "application/parquet"
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 def test_import_refuses_an_oversized_filename(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -1013,7 +1013,7 @@ def test_import_refuses_an_oversized_filename(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-235")
 def test_import_refuses_a_wrong_header(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -1029,8 +1029,8 @@ def test_import_refuses_a_wrong_header(
     assert response.json()["code"] == "IMPORT_KEY_MISMATCH"
 
 
-@pytest.mark.req("FR-RATE-62")
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-232")
+@pytest.mark.req("FR-235")
 def test_export_reads_a_parquet_version_inline(
     api_client: TestClient, workspace_id, actuary, admin_headers
 ) -> None:
@@ -1053,8 +1053,8 @@ def test_export_reads_a_parquet_version_inline(
     )
 
 
-@pytest.mark.req("FR-RATE-62")
-@pytest.mark.req("FR-RATE-20")
+@pytest.mark.req("FR-232")
+@pytest.mark.req("FR-235")
 def test_import_diffs_against_a_parquet_baseline(
     api_client: TestClient, workspace_id, actuary, admin_headers
 ) -> None:

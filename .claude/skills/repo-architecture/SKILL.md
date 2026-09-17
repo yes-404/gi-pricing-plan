@@ -15,23 +15,23 @@ behind all of them, kept out of the file that loads into every session.
 `CLAUDE.md` §2 carries the bare tree. This is the same tree with what each entry is for.
 **Component status — what exists, what is partial, what is scheduled — is not here and not
 there: it belongs to `docs/roadmap.md` §6 and only there**
-([`NT-0003`](../../notes/0003-duplicated-status-goes-stale.md)).
+([`RFC-756`](../../../docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)).
 
 ```
 /
 ├── CLAUDE.md               phase, conventions, binding rules — loaded into every session
-├── LICENSE                 Apache-2.0 (OQ-OVR-2)
+├── LICENSE                 Apache-2.0 (OQ-541)
 ├── alembic.ini             migrations — dev-commands has the DSN it does *not* default to
 ├── pyproject.toml          uv workspace root; ruff, mypy, pytest config
 ├── uv.lock                 COMMITTED — a lockfile, not an environment
-├── .importlinter           ADR-0001/0002/DEP-3 — 3 contracts, enforced in CI
+├── .importlinter           ADR-703/704/DEP-3 — 3 contracts, enforced in CI
 ├── .gitignore              see .claude/skills/git-hygiene
 ├── .github/workflows/      python.yml · frontend.yml · docs.yml, path-filtered
 │
 ├── docs/                   the specification suite — authoritative
 │   ├── README.md           the fuller index of the suite (CLAUDE.md §4 is the one-line version)
 │   ├── specs/              00–07, the contract code is written against
-│   ├── workflows/          wf-01…05, the end-to-end journeys
+│   ├── workflows/          WF-698…05, the end-to-end journeys
 │   ├── adr/                architecture decisions
 │   ├── contracts/          JSON Schema + OpenAPI, generated from model-schema, published
 │   ├── research/           spike findings, with what each one changed
@@ -40,9 +40,9 @@ there: it belongs to `docs/roadmap.md` §6 and only there**
 │   ├── roadmap.md          phases, workstreams, decision gates, component status
 │   ├── open-questions.md   every unresolved choice, gated by phase
 │   ├── skills-map.md       stack component → where used → skills
-│   └── phase-0-status.md   what the specification phase closed with
+│   └── closures/CR-00709-phase-0-specification-status.md   what the specification phase closed with
 │
-├── packages/model-schema/  shapes crossing a boundary (ADR-0002)
+├── packages/model-schema/  shapes crossing a boundary (ADR-704)
 ├── packages/pricing-core/  progress + money + the data/ maths, and modelling/: factors,
 │                           bandings, groupings, GLM, GBM, diagnostics, transparency,
 │                           custom objectives
@@ -50,7 +50,7 @@ there: it belongs to `docs/roadmap.md` §6 and only there**
 │                           validation, profiling, reference, the demo guide,
 │                           factors/bandings/groupings/models, GBM fits, transparency
 │                           artifacts and custom objectives
-├── pipelines/              scheduled ingestion (07 FR-PLAT-61)
+├── pipelines/              scheduled ingestion (07 FR-413)
 ├── frontend/               Vue 3 SPA — the routed views, /demo, the factor workbench
 ├── examples/               freMTPL2 seed
 │
@@ -75,7 +75,7 @@ own `package.json` and `tsconfig.json`, and those are the authority for the Type
 
 | Component | Language | Governed by | Tooling config | CI workflow |
 |---|---|---|---|---|
-| `packages/model-schema` | Python | `00` §4.3, FR-OVR-1/6/7 | root `pyproject.toml` | `python.yml` |
+| `packages/model-schema` | Python | `00` §4.3, FR-4/9/10 | root `pyproject.toml` | `python.yml` |
 | `packages/pricing-core` | Python | `02`–`05` — the maths | root `pyproject.toml` | `python.yml` |
 | `backend/` | Python | `01`, `06`, `07` | root `pyproject.toml` | `python.yml` |
 | `pipelines/` | Python | `01` ingestion, `05` scheduling | root `pyproject.toml` | `python.yml` |
@@ -99,11 +99,11 @@ half has been green while the frontend half was red. `.claude/skills/dev-command
 One contract joins them, and it flows in one direction:
 
 ```
-packages/model-schema      ← the single source of truth (ADR-0002)
+packages/model-schema      ← the single source of truth (ADR-704)
         │  generated
         ▼
 docs/contracts/            ← JSON Schema + OpenAPI 3.1, committed; CI fails on drift
-        │  consumed                                        (FR-PLAT-48)
+        │  consumed                                        (FR-451)
         ▼
 frontend/src/api/generated ← openapi-typescript output, VCS-ignored, never hand-written
 ```
@@ -115,7 +115,7 @@ for two reasons:
 
 - **It is a published specification artifact.** External consumers read
   `docs/contracts/` to integrate against the platform. That makes it part of the
-  specification suite, not a by-product of building it. FR-PLAT-48 pins the location.
+  specification suite, not a by-product of building it. FR-451 pins the location.
 - **Committing it is what makes drift detectable.** `generate-contracts.py --check`
   regenerates and compares; without a committed copy there is nothing to compare against,
   and a schema change could reach the frontend without anyone reviewing it.
@@ -144,7 +144,7 @@ the code is written against.** Two scripts keep that honest, and both are in the
   cross-references in both directions, dependency direction, glossary single-sourcing,
   money discipline, schema validity. It also checks the `docs/notes/` working notes,
   and the `docs/workflows/` journeys' citations against the interfaces the specs declare
-  (FR-OVR-17).
+  (FR-19).
 - **`scripts/req-coverage.py`** — turns `@pytest.mark.req` marks into a report of which
   requirements the suite covers, failing when a test claims a requirement that does not
   exist. This is why the marker is checked rather than decorative.
@@ -170,7 +170,7 @@ spec's §8 names what that module depends on. The rest of the decided-against se
 because it binds when a *dependency* is chosen rather than on every keystroke.
 
 **`statsmodels` is not a dependency and never has been.** `02-modelling.md` §8 names it for
-FR-MODEL-51, but the type-III block was built on `glum` refits instead. That spec row is
+FR-172, but the type-III block was built on `glum` refits instead. That spec row is
 stale, and correcting it is a `CLAUDE.md` §0 resolution — the record of which side was
 believed — rather than a silent edit to either side.
 

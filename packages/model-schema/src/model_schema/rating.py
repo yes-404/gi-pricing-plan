@@ -2,7 +2,7 @@
 
 The full 03 surface — compile, score, rate tables, deployment — stays Phase 2. This is
 the artifact the exit demo needs: a slugged, versioned, draft → review → approved rating
-version that pins an approved Model, so `wf-01`'s journey ends with something a rating
+version that pins an approved Model, so `WF-698`'s journey ends with something a rating
 version can be approved against and the demo can display.
 """
 
@@ -28,11 +28,11 @@ from model_schema.refs import ArtifactRef, BlobRef, Slug
 
 
 class RatingVersionStatus(StrEnum):
-    """The lifecycle of a rating version (03 §3.4, FR-RATE-23).
+    """The lifecycle of a rating version (03 §3.4, FR-238).
 
     W9-3 builds through `approved`; `live` and `retired` are declared here because they
     are part of the lifecycle (DP3), but their transitions belong to the deployment
-    slice W14 — `live` is a property of a Deployment, not of the version.
+    slice WK-674 — `live` is a property of a Deployment, not of the version.
     """
 
     DRAFT = "draft"
@@ -45,7 +45,7 @@ class RatingVersionStatus(StrEnum):
 #: The lifecycle, as data rather than scattered `if` statements. `draft` may skip review
 #: straight to `approved` only where the caller is an approver deciding in one step; the
 #: normal path goes through `review`. `live` and `retired` are unreachable here — their
-#: transitions are W14's, because FR-RATE-23 makes `live` a property of a Deployment.
+#: transitions are WK-674's, because FR-238 makes `live` a property of a Deployment.
 VALID_RATING_VERSION_TRANSITIONS: dict[
     RatingVersionStatus, frozenset[RatingVersionStatus]
 ] = {
@@ -60,7 +60,7 @@ VALID_RATING_VERSION_TRANSITIONS: dict[
 
 
 class Pins(BaseModel):
-    """The exact artifact pins of a Rating Version (03 §4.3, FR-RATE-22).
+    """The exact artifact pins of a Rating Version (03 §4.3, FR-237).
 
     Nothing is unpinned: every rate table a `table` step references, every model or peril
     structure a `model_call` references, every reference table a `lookup` references, and
@@ -76,15 +76,15 @@ class Pins(BaseModel):
 
 
 class BundleMetadata(BaseModel):
-    """The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash,
+    """The compiled Bundle's identity (03 §4.3, FR-239): a reproducible content hash,
     and the blob key the serialised bundle was stored under.
 
     **`content_hash` and `blob_sha256` are hashes of different things, and their patterns
     keep them apart on purpose.** `content_hash` is reproducible from the graph and pins
-    (FR-RATE-24) and carries a `sha256:` prefix. `blob_sha256` is the blob store's content
+    (FR-239) and carries a `sha256:` prefix. `blob_sha256` is the blob store's content
     address for the serialised bundle and is bare hex, matching `BlobRef.sha256`. Neither
     value validates into the other's field, so passing one where the other belongs is
-    refused loudly at the boundary rather than warned about in a comment (Ruling 37 §3).
+    refused loudly at the boundary rather than warned about in a comment (RL-915 §3).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -95,10 +95,10 @@ class BundleMetadata(BaseModel):
     #: The blob store key for the serialised `Bundle`, so a Rating Version resolves to its
     #: compiled form through its own metadata rather than through Job history — which is an
     #: operational record with its own pruning, and would make the version unresolvable the
-    #: day it is trimmed (Ruling 37 §2).
+    #: day it is trimmed (RL-915 §2).
     #:
     #: **Nullable because of `to_schema`, not because legacy rows are tolerated**
-    #: (Ruling 37 §3). `rating_versions.to_schema` runs
+    #: (RL-915 §3). `rating_versions.to_schema` runs
     #: `BundleMetadata.model_validate(row.bundle) if row.bundle else None` on *every* read of
     #: a rating version — the list and get routes, and the create and submit paths. A required
     #: field would turn one keyless row into a hard validation failure of all of them, not
@@ -114,7 +114,7 @@ class BundleMetadata(BaseModel):
 
 
 class RatingVersionEvidence(BaseModel):
-    """The evidence an `approved` version carries (03 §4.3, FR-RATE-40)."""
+    """The evidence an `approved` version carries (03 §4.3, FR-257)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -124,7 +124,7 @@ class RatingVersionEvidence(BaseModel):
     structural_diff_blob: str | None = None
 
 
-#: The model reference mode (FR-RATE-60): the version declares it, and every `model_call`
+#: The model reference mode (FR-223): the version declares it, and every `model_call`
 #: step's `mode` must equal it.
 ModelReferenceMode = Literal["exact", "approximation"]
 
@@ -133,9 +133,9 @@ class RatingVersion(BaseModel):
     """A Rating Version (03 §4.3) — the artifact a rating algorithm approves against.
 
     W9-3 widens the Phase 1b subset with the full contract: `algorithm_ref`, the exact
-    `pins` (FR-RATE-22), `model_reference_mode` (FR-RATE-60), the effective dates
-    (FR-RATE-26), the compiled `bundle` (FR-RATE-24), the `change_summary`
-    (FR-RATE-27), `evidence`, and `approval_request_id`. The Phase 1b fields stay:
+    `pins` (FR-237), `model_reference_mode` (FR-223), the effective dates
+    (FR-241), the compiled `bundle` (FR-239), the `change_summary`
+    (FR-242), `evidence`, and `approval_request_id`. The Phase 1b fields stay:
     `model_ref` is the single pinned approved Model the exit demo carries.
     """
 
@@ -165,7 +165,7 @@ class RatingVersion(BaseModel):
 
 
 def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorithm) -> None:
-    """FR-RATE-60: every `model_call` step's `mode` equals the version's declared mode.
+    """FR-223: every `model_call` step's `mode` equals the version's declared mode.
 
     Raises `ValueError` on the first mismatch, so a version whose steps disagree with its
     `model_reference_mode` is refused before it can compile.
@@ -174,7 +174,7 @@ def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorith
         if isinstance(step, RatingModelCallStep) and step.mode != version.model_reference_mode:
             raise ValueError(
                 f"model_call step {step.step_id!r} declares mode {step.mode!r}, but the "
-                f"version declares {version.model_reference_mode!r} (FR-RATE-60)"
+                f"version declares {version.model_reference_mode!r} (FR-223)"
             )
 
 
@@ -182,13 +182,13 @@ def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorith
 # Rating Algorithm (03 §4.1) — the declarative graph of rating steps.
 #
 # W9-1. The shape carries the seven step types (§3.2), the typed input contract
-# (FR-RATE-2), the typed outputs (FR-RATE-3), the sub-graph references (FR-RATE-6),
+# (FR-213), the typed outputs (FR-214), the sub-graph references (FR-217),
 # and the graph invariants the spec states beside the §4.1 example. The strict
 # save-time validation and the bundle compilation are W9-2 / W9-3.
 # ---------------------------------------------------------------------------
 
 class RatingInputType(StrEnum):
-    """The six Rating Input types (FR-RATE-2)."""
+    """The six Rating Input types (FR-213)."""
 
     INT = "int"
     DECIMAL = "decimal"
@@ -199,7 +199,7 @@ class RatingInputType(StrEnum):
 
 
 class InputContractField(BaseModel):
-    """One Rating Input (FR-RATE-2): name, type, nullability, range or domain, description."""
+    """One Rating Input (FR-213): name, type, nullability, range or domain, description."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -214,14 +214,14 @@ class InputContractField(BaseModel):
 
 
 def _reject_float_type(value: str) -> str:
-    """FR-RATE-13: a monetary result is `decimal` or `money_minor`, never float.
+    """FR-227: a monetary result is `decimal` or `money_minor`, never float.
 
     The whole rating path is integer minor units or Decimal (`CLAUDE.md` §7), so
     `float` is refused in every declared result type, not just the monetary ones.
     """
     if "float" in value:
         raise ValueError(
-            "a rating result type is never float (FR-RATE-13); a monetary result is "
+            "a rating result type is never float (FR-227); a monetary result is "
             f"decimal or money_minor (got {value!r})"
         )
     return value
@@ -232,7 +232,7 @@ RatingResultType = Annotated[str, AfterValidator(_reject_float_type)]
 
 
 class AlgorithmOutput(BaseModel):
-    """A declared output (FR-RATE-3): name, type, required flag."""
+    """A declared output (FR-214): name, type, required flag."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -242,7 +242,7 @@ class AlgorithmOutput(BaseModel):
 
 
 class RoundSpec(BaseModel):
-    """Explicit rounding for an `output` step (FR-RATE-12) — never implicit, never twice."""
+    """Explicit rounding for an `output` step (FR-226) — never implicit, never twice."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -251,7 +251,7 @@ class RoundSpec(BaseModel):
 
 
 class RatingStepBase(BaseModel):
-    """Common step fields (FR-RATE-4): stable id, label, optional note, produces/consumes."""
+    """Common step fields (FR-215): stable id, label, optional note, produces/consumes."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -302,7 +302,7 @@ class RatingModelCallStep(RatingStepBase):
         if (self.model_ref is None) == (self.peril_structure_ref is None):
             raise ValueError(
                 "a model_call step declares exactly one of model_ref or "
-                "peril_structure_ref (FR-RATE-10)"
+                "peril_structure_ref (FR-222)"
             )
         return self
 
@@ -334,7 +334,7 @@ RatingStep = Annotated[
 
 
 class SubGraphRef(BaseModel):
-    """A versioned sub-graph referenced by a parent algorithm (FR-RATE-6).
+    """A versioned sub-graph referenced by a parent algorithm (FR-217).
 
     The sub-graph is a versioned artifact (`sub_graph:slug@version`) mounted at a named
     point in the parent's DAG; it is inlined at bundle time (W9-3).
@@ -371,7 +371,7 @@ class RatingAlgorithm(BaseModel):
 
     Invariants (spec §4.1): the DAG is acyclic; every `consumes` name is produced by
     exactly one upstream step; every declared output has an `output` step; no step is
-    unreachable from an `input` and unreferenced by an `output` (FR-RATE-1). Enforced
+    unreachable from an `input` and unreferenced by an `output` (FR-212). Enforced
     here at the shape level; the strict save-time validation (types, determinism) is
     W9-2.
     """
@@ -390,17 +390,17 @@ class RatingAlgorithm(BaseModel):
         steps = self.steps
         ids = [s.step_id for s in steps]
         if len(ids) != len(set(ids)):
-            raise ValueError("every step_id is unique (FR-RATE-4)")
+            raise ValueError("every step_id is unique (FR-215)")
 
         produced = _produced_by(steps)
         consumed = _consumed_by(steps)
 
-        # FR-RATE-3: every declared output has an output step.
+        # FR-214: every declared output has an output step.
         output_steps = {s.output_name for s in steps if isinstance(s, RatingOutputStep)}
         for out in self.outputs:
             if out.name not in output_steps:
                 raise ValueError(
-                    f"declared output {out.name!r} has no output step (FR-RATE-3)"
+                    f"declared output {out.name!r} has no output step (FR-214)"
                 )
 
         # Build the dependency graph: edge A -> B when B consumes a name A produces.
@@ -413,13 +413,13 @@ class RatingAlgorithm(BaseModel):
                 if not producers:
                     raise ValueError(
                         f"step {step.step_id!r} consumes undefined value {name!r} "
-                        "(FR-RATE-1)"
+                        "(FR-212)"
                     )
                 dependencies[step.step_id].update(
                     pid for pid in producers if pid != step.step_id
                 )
 
-        # Kahn's algorithm — a cycle fails (FR-RATE-1).
+        # Kahn's algorithm — a cycle fails (FR-212).
         order: list[str] = []
         pending = {s.step_id: len(dependencies[s.step_id]) for s in steps}
         ready = [sid for sid, n in pending.items() if n == 0]
@@ -432,14 +432,14 @@ class RatingAlgorithm(BaseModel):
                     if pending[other.step_id] == 0:
                         ready.append(other.step_id)
         if len(order) != len(steps):
-            raise ValueError("the rating DAG contains a cycle (FR-RATE-1)")
+            raise ValueError("the rating DAG contains a cycle (FR-212)")
         position = {sid: i for i, sid in enumerate(order)}
         step_by_id = {s.step_id: s for s in steps}
 
         # A value may be re-produced only as a chain: each producer after the first
         # consumes the name, so the value has exactly one *effective* producer (the last
         # in topological order). Two unrelated producers of the same name are ambiguous
-        # (FR-RATE-1). This is what lets a `constraint` clamp a value in place: it
+        # (FR-212). This is what lets a `constraint` clamp a value in place: it
         # consumes the value and re-produces it, ordered after the original producer.
         for name, producers in produced.items():
             if len(producers) < 2:
@@ -449,7 +449,7 @@ class RatingAlgorithm(BaseModel):
                 if name not in _as_list(step_by_id[nxt].consumes):
                     raise ValueError(
                         f"value {name!r} is produced by {len(producers)} steps that do "
-                        "not form a single re-production chain (FR-RATE-1)"
+                        "not form a single re-production chain (FR-212)"
                     )
 
         # No orphan: a step unreachable from an `input` AND unreferenced by an `output`.
@@ -465,7 +465,7 @@ class RatingAlgorithm(BaseModel):
             if step.step_id not in reachable_from_input and step.step_id not in feeds_output:
                 raise ValueError(
                     f"step {step.step_id!r} is unreachable from any input and referenced "
-                    "by no output (FR-RATE-1)"
+                    "by no output (FR-212)"
                 )
         return self
 
@@ -511,7 +511,7 @@ class RatingAlgorithm(BaseModel):
 
 
 class AlgorithmStepChange(BaseModel):
-    """One changed field on a step that exists in both versions (FR-RATE-7)."""
+    """One changed field on a step that exists in both versions (FR-219)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -522,7 +522,7 @@ class AlgorithmStepChange(BaseModel):
 
 
 class AlgorithmTableRepoint(BaseModel):
-    """A `table` or `lookup` step whose artifact reference changed (FR-RATE-7)."""
+    """A `table` or `lookup` step whose artifact reference changed (FR-219)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -533,7 +533,7 @@ class AlgorithmTableRepoint(BaseModel):
 
 
 class AlgorithmDiff(BaseModel):
-    """The structural diff between two algorithm versions (FR-RATE-7)."""
+    """The structural diff between two algorithm versions (FR-219)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -563,7 +563,7 @@ class AlgorithmDiff(BaseModel):
 
 
 def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff:
-    """The structural diff between two algorithm versions (FR-RATE-7).
+    """The structural diff between two algorithm versions (FR-219).
 
     Names steps added, removed, or changed field-by-field, and tables re-pointed
     (a `table`/`lookup` step's artifact reference changed). The diff is attached to
@@ -614,7 +614,7 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
 
 
 # ---------------------------------------------------------------------------
-# Rate Tables (03 §3.3, FR-RATE-14..21, FR-RATE-62) — versioned typed tables
+# Rate Tables (03 §3.3, FR-228, FR-229, FR-230, FR-231, FR-233, FR-234, FR-235, FR-236, FR-232) — versioned typed tables
 # of factors and constants that actuaries edit when making a rate change.
 #
 # W10-1 adds RateTable and RateTableVersion to model-schema: keys, value
@@ -635,7 +635,7 @@ class RateTableKeyType(StrEnum):
 
 
 class RateTableValueType(StrEnum):
-    """Valid types for a rate table value (FR-RATE-14, 03 §3.3)."""
+    """Valid types for a rate table value (FR-228, 03 §3.3)."""
 
     RELATIVITY = "relativity"
     MONEY_MINOR = "money_minor"
@@ -644,7 +644,7 @@ class RateTableValueType(StrEnum):
 
 
 class RateTableStorageMode(StrEnum):
-    """Storage mode for rate table cells (FR-RATE-62, 03 §3.3).
+    """Storage mode for rate table cells (FR-232, 03 §3.3).
 
     `rows` is the default for small tables (< 250k cells); `parquet` is used
     for larger tables. Once written, the storage mode is immutable with the version.
@@ -655,7 +655,7 @@ class RateTableStorageMode(StrEnum):
 
 
 class RateTableKey(BaseModel):
-    """A key column declaration (FR-RATE-14): name, type, optional banding reference."""
+    """A key column declaration (FR-228): name, type, optional banding reference."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -665,7 +665,7 @@ class RateTableKey(BaseModel):
 
 
 class RateTableValue(BaseModel):
-    """A value column declaration (FR-RATE-14): name, type, unit, optional bounds."""
+    """A value column declaration (FR-228): name, type, unit, optional bounds."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -677,7 +677,7 @@ class RateTableValue(BaseModel):
 
 
 class RateTable(BaseModel):
-    """A Rate Table definition (FR-RATE-14, FR-RATE-21, 03 §3.3).
+    """A Rate Table definition (FR-228, FR-236, 03 §3.3).
 
     A typed table with declared key columns (each bound to a Factor or banded input),
     a declared value column with type and unit, an optional default row, and a
@@ -696,7 +696,7 @@ class RateTable(BaseModel):
 
 
 class SeededFrom(BaseModel):
-    """The seed origin of a rate table version (03 §4.2, FR-RATE-16).
+    """The seed origin of a rate table version (03 §4.2, FR-230).
 
     The pinned source model reference and the timestamp at which the relativities were
     imported, so "how far have we moved from the technical rate?" is answerable by
@@ -710,7 +710,7 @@ class SeededFrom(BaseModel):
 
 
 class RateTableDiff(BaseModel):
-    """A cell-level diff between two rate table versions (03 §4.2, FR-RATE-17).
+    """A cell-level diff between two rate table versions (03 §4.2, FR-231).
 
     `changed_cells` is the number of cells whose value differs. The two percentages are
     `None` where there is nothing to compare (no cells, or no cell has a non-zero
@@ -844,13 +844,13 @@ class ImportPreview(BaseModel):
 
 
 class RateTableVersion(BaseModel):
-    """A Rate Table Version (FR-RATE-15, FR-RATE-62, 03 §4.2).
+    """A Rate Table Version (FR-229, FR-232, 03 §4.2).
 
     An immutable version of one rate table, in the §4.2 wire form: the definition
     (`keys`, `value`, `default_row`), the cells (`rows` for row storage, `cells` as a
     parquet BlobRef above the threshold), the seed origin, and the creation metadata.
     Editing produces a new version with a required change note. The storage mode is
-    fixed when the version is written and immutable with it (FR-RATE-62), and a version
+    fixed when the version is written and immutable with it (FR-232), and a version
     is created by a seed, an operation or an import — never more than one.
     """
 
@@ -876,12 +876,12 @@ class RateTableVersion(BaseModel):
         if self.storage == RateTableStorageMode.ROWS:
             if self.rows is None or self.cells is not None:
                 raise ValueError(
-                    "a rows-stored version carries inline rows and no blob (FR-RATE-62)"
+                    "a rows-stored version carries inline rows and no blob (FR-232)"
                 )
         elif self.rows is not None or self.cells is None:
             raise ValueError(
                 "a parquet version addresses its cells by a BlobRef, never inline "
-                "rows (FR-RATE-62)"
+                "rows (FR-232)"
             )
         return self
 

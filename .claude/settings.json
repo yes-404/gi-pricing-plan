@@ -9,7 +9,7 @@
             "command": "python3 scripts/hooks/retry_cap_hook.py hook",
             "if": "Bash(python3 scripts/hooks/retry_cap_hook.py record*)",
             "timeout": 15,
-            "statusMessage": "Checking retry cap (NT-0014 C2)..."
+            "statusMessage": "Checking retry cap (RFC-895 C2)..."
           }
         ]
       }

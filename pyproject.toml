@@ -141,7 +141,7 @@ warn_unreachable = true
 disallow_any_explicit = false
 
 # scikit-learn ships no `py.typed` marker, so a --strict run cannot see through
-# `sklearn.tree` and reports the import itself as an error (FR-MODEL-85's two call sites,
+# `sklearn.tree` and reports the import itself as an error (FR-103's two call sites,
 # `tree` banding and `tree` grouping). The alternative — a per-line `type: ignore` at each
 # import — states the same fact twice and goes stale silently when the package starts
 # shipping types. Both call sites read `tree_.threshold` and `tree_.feature`, which are
@@ -151,7 +151,7 @@ module = ["sklearn.*"]
 ignore_missing_imports = true
 
 # interpret-core 0.7.8 ships no `py.typed` marker either, and `fit_ebm` imports it at
-# call-site scope (FR-MODEL-37) — the same shape as the sklearn pair, for the same
+# call-site scope (FR-140) — the same shape as the sklearn pair, for the same
 # reason: the fit reads `term_scores_`/`bins_`/`best_iteration_` off an untyped object.
 [[tool.mypy.overrides]]
 module = ["interpret.*"]
@@ -169,13 +169,13 @@ testpaths = [
     "tests",
     # The demo seed. Its 36 MB of data is fetched rather than committed, so CI cannot run
     # it end to end — but everything that decides whether it still works is pure: the ARFF
-    # reader, the recipe order, and the rule set's conformance to FR-DATA-16.
+    # reader, the recipe order, and the rule set's conformance to FR-45.
     "examples/fremtpl2",
     # A regression test nothing runs is not a regression test. This is the fourth time
     # this exact defect has bitten (see the sibling comments above and
     # .github/workflows/python.yml's `paths:` filter, which each record one prior
     # occurrence — scope-audit.py, the seed under examples/**, and tests/** for
-    # FR-PLAT-57): a script or its tests lived somewhere `uv run pytest -q` and CI's path
+    # FR-417): a script or its tests lived somewhere `uv run pytest -q` and CI's path
     # filter both skip, and the gap was noticed only after something went unchecked.
     # `.claude/skills/reporter-cycle/scripts/` is stdlib-only and outside the uv
     # workspace, but `pyproject.toml` itself IS in python.yml's filter, so listing its
@@ -193,5 +193,5 @@ asyncio_mode = "auto"
 markers = [
     # Requirement traceability: mark each test with the requirement it satisfies.
     # skills-map §9.1 "spec-to-implementation conformance".
-    "req: the requirement ID this test satisfies, e.g. @pytest.mark.req('FR-OVR-7')",
+    "req: the requirement ID this test satisfies, e.g. @pytest.mark.req('FR-10')",
 ]

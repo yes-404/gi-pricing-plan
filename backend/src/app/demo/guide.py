@@ -1,4 +1,4 @@
-"""Derive the demo guide from the repository, at request time (FR-PLAT-54).
+"""Derive the demo guide from the repository, at request time (FR-409).
 
 **Derived at request time rather than generated into a committed file.** A stored guide
 would need a drift check to stay honest, and a drift check is a promise that someone will
@@ -10,12 +10,12 @@ The four sources, each of which a reader can open and check:
 |---|---|---|
 | Views | each spec's §5.3 table | what the design says exists |
 | — routed? | `frontend/src/router/index.ts` | what the frontend actually serves |
-| API | `docs/contracts/openapi/generated.json` | the published surface (FR-PLAT-48) |
+| API | `docs/contracts/openapi/generated.json` | the published surface (FR-451) |
 | Workstreams | `docs/roadmap.md` phase status tables | what is closed, in its own words |
 
 Nothing here states a capability. Every "yes" is a file agreeing with another file, which
 is the only kind of claim that cannot drift away from the repository — and the reason
-FR-PLAT-54 requires the guide to be derived rather than written.
+FR-409 requires the guide to be derived rather than written.
 """
 
 from __future__ import annotations
@@ -77,7 +77,7 @@ def repository_root() -> Path:
     """The checkout this package was imported from.
 
     `backend/src/app/demo/guide.py` → four levels up. Only ever correct in a checkout,
-    which is the only place the demo entrance runs (FR-PLAT-53 gates it on
+    which is the only place the demo entrance runs (FR-408 gates it on
     `dev_auth_enabled`).
     """
     return Path(__file__).resolve().parents[4]
@@ -195,7 +195,7 @@ def _normalise_path(path: str) -> str:
 def _unpublished(root: Path) -> tuple[DemoEndpoint, ...]:
     """Endpoints a spec's §5.1 table declares that the published contract does not carry.
 
-    FR-PLAT-54's "what is present but **not** yet functional" applied to the API. Without
+    FR-409's "what is present but **not** yet functional" applied to the API. Without
     it the page reported "63 endpoints published" and stopped — true, and silent about the
     105 declared endpoints that do not exist, which is the half a reader is asking about.
     """

@@ -1,7 +1,7 @@
 """interval_for index
 
-A quantile bound names the Model it bounds inside its spec document (`02` FR-MODEL-78,
-FR-MODEL-100), so finding a model's bounds is a JSONB path lookup rather than a foreign
+A quantile bound names the Model it bounds inside its spec document (`02` FR-199,
+FR-200), so finding a model's bounds is a JSONB path lookup rather than a foreign
 key. Every GBM prediction asks the question, and for almost every model the answer is
 "none" — so the common case is the one that must stay cheap.
 

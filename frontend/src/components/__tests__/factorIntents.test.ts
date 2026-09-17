@@ -11,8 +11,8 @@ import {
 /**
  * The refused intents against their executable authority.
  *
- * `FactorIntent` publishes four arms and the platform honours two. FR-MODEL-116 supersedes
- * `offset` and FR-MODEL-120 supersedes `diagnostic`, both **keeping the arm in the contract
+ * `FactorIntent` publishes four arms and the platform honours two. FR-84 supersedes
+ * `offset` and FR-86 supersedes `diagnostic`, both **keeping the arm in the contract
  * deliberately** — so the union never narrows, and the permitted pair cannot be derived from
  * the type.
  *

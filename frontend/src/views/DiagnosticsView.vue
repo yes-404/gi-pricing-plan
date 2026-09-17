@@ -26,7 +26,7 @@ const problem = ref<ProblemError | null>(null);
 const versionNumber = computed(() => (props.version ? Number(props.version) : undefined));
 
 /**
- * The two partitions FR-MODEL-54 requires, and the only two the contract expresses.
+ * The two partitions FR-183 requires, and the only two the contract expresses.
  * `UniversalDiagnostics` declares `train` and `holdout` as separate `PartitionDiagnostics`;
  * `glm`, `complexity` and `cross_validation` declare neither, and `gbm` splits internally at
  * `GbmEvalPoint` rather than at member level. Nothing below this line may assume a partition
@@ -50,7 +50,7 @@ const headline = computed(() => {
 });
 
 /**
- * The residual distribution per partition (FR-MODEL-50).
+ * The residual distribution per partition (FR-171).
  *
  * All six fields `ResidualSummary` declares, not four. The plan's own list stopped at
  * mean/std/minimum/maximum; `diagnostics.py:124-134` also declares `p01` and `p99`, and
@@ -80,7 +80,7 @@ const residuals = computed(() => {
 });
 
 /**
- * FR-MODEL-55: the weighting is a property of each partition, and the two are the same
+ * FR-184: the weighting is a property of each partition, and the two are the same
  * scheme on every fit this platform produces — but it is read off `train` rather than
  * assumed, and the holdout's is shown beside it when they differ, because a metric compared
  * across two weightings is not a comparison.
@@ -94,7 +94,7 @@ const weighting = computed(() => {
 });
 
 /**
- * A surrogate's A/E denominator is another model's predictions (FR-MODEL-102). The flag
+ * A surrogate's A/E denominator is another model's predictions (FR-141). The flag
  * lives on the Model's spec, not on the diagnostics artifact, so this view fetches the model
  * as well — one extra read, against showing an A/E under a label that is wrong for it.
  */
@@ -133,7 +133,7 @@ onMounted(async () => {
         v-if="diagnostics"
         class="mt-1 text-sm text-slate-500"
       >
-        Computed at fit time and read since (FR-MODEL-49) — nothing on this page is
+        Computed at fit time and read since (FR-170) — nothing on this page is
         recalculated.
         <span v-if="weighting"> Metrics are {{ weighting }}.</span>
       </p>
@@ -314,11 +314,11 @@ onMounted(async () => {
           </tbody>
         </table>
 
-        <!-- FR-MODEL-78. Present only on the second bound of a quantile pair, and a scalar
+        <!-- FR-199. Present only on the second bound of a quantile pair, and a scalar
              record rather than a series: how often this model's prediction crossed its
              counterpart's, and by how much at worst. `QuantileBoundNotice` on the model page
              reads the spec's `interval_for` and says nothing about crossing; this is the
-             measurement. Crossing is reported and never repaired (OQ-MODEL-2). -->
+             measurement. Crossing is reported and never repaired (OQ-574). -->
         <div
           v-if="diagnostics.gbm.quantile_crossing"
           class="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm"

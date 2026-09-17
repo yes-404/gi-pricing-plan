@@ -1,11 +1,11 @@
-"""`If-Match` optimistic concurrency (`00` §5.4, FR-PLAT-47).
+"""`If-Match` optimistic concurrency (`00` §5.4, FR-450).
 
 > Mutating requests on versioned entities require `If-Match: <etag>`; a mismatch yields
 > `409 CONFLICT_STALE_WRITE`.
 
 **What this guards, stated precisely, because two workstreams deferred it for being
-misdescribed.** W2 recorded it as not applicable — no W2 resource is a versioned entity —
-and W4 recorded it as "a second, weaker guard over the same field", which was true of W4's
+misdescribed.** WK-658 recorded it as not applicable — no WK-658 resource is a versioned entity —
+and WK-660 recorded it as "a second, weaker guard over the same field", which was true of WK-660's
 routes: they mutate a status, and the transition state machine already refuses every unsafe
 move by reading that status under a row lock.
 

@@ -56,10 +56,10 @@ def _fit(backend: str, factors=None, n: int = 6_000):  # type: ignore[no-untyped
     return data, spec, use, fit_gbm(data, spec, use)
 
 
-@pytest.mark.req("FR-MODEL-34")
+@pytest.mark.req("FR-133")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_approximation_is_fitted_to_the_boosters_predictions(backend: str) -> None:
-    """FR-MODEL-34's whole method: the GLM is fitted to what the **GBM says**, not to the
+    """FR-133's whole method: the GLM is fitted to what the **GBM says**, not to the
     data.
 
     A GLM fitted to the response would be a second model, and the question is not "what
@@ -76,16 +76,16 @@ def test_the_approximation_is_fitted_to_the_boosters_predictions(backend: str) -
     )
     assert approximation.r_squared > 0.8
     assert approximation.deviance_explained > 0.5
-    # It is a rateable table or it is not an approximation (FR-MODEL-34) — and from
-    # FR-MODEL-96 the table is the surrogate Model's fit result.
+    # It is a rateable table or it is not an approximation (FR-133) — and from
+    # FR-137 the table is the surrogate Model's fit result.
     assert approximation.result.relativities
     assert any(c.term == "intercept" for c in approximation.result.coefficients)
 
 
-@pytest.mark.req("FR-MODEL-36")
+@pytest.mark.req("FR-136")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_worst_regions_name_a_cell_and_its_share_of_the_book(backend: str) -> None:
-    """FR-MODEL-36 asks *where* the approximation fails and over how much exposure.
+    """FR-136 asks *where* the approximation fails and over how much exposure.
 
     By factor level rather than by arbitrary slice: a region an actuary cannot name is a
     region they cannot act on. The share is what stops "11 % out for young drivers" being
@@ -107,7 +107,7 @@ def test_the_worst_regions_name_a_cell_and_its_share_of_the_book(backend: str) -
     assert percentages == sorted(percentages, reverse=True)
 
 
-@pytest.mark.req("FR-MODEL-36")
+@pytest.mark.req("FR-136")
 def test_worst_region_shares_are_exposure_and_not_row_counts() -> None:
     """A frame where the two definitions give opposite orderings.
 
@@ -144,10 +144,10 @@ def test_worst_region_shares_are_exposure_and_not_row_counts() -> None:
     assert share["area = common"] == pytest.approx(4.0 / 204.0, abs=1e-6)
 
 
-@pytest.mark.req("FR-MODEL-35")
+@pytest.mark.req("FR-134")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_shap_summary_persists_the_sample_it_was_computed_on(backend: str) -> None:
-    """FR-MODEL-35: a reproducible sample, with the seed and the size persisted.
+    """FR-134: a reproducible sample, with the seed and the size persisted.
 
     Both, because a SHAP summary computed on a different sample is a different summary —
     and two of them side by side in a model document would read as a change in the model
@@ -169,7 +169,7 @@ def test_the_shap_summary_persists_the_sample_it_was_computed_on(backend: str) -
     assert values == sorted(values, reverse=True)
 
 
-@pytest.mark.req("FR-MODEL-35")
+@pytest.mark.req("FR-134")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_same_seed_reproduces_the_same_summary(backend: str) -> None:
     """"Reproducible" is a claim, and this is the test that makes it one."""
@@ -185,9 +185,9 @@ def test_the_same_seed_reproduces_the_same_summary(backend: str) -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-79")
+@pytest.mark.req("FR-135")
 def test_interaction_candidates_are_reported_where_the_backend_can_compute_them() -> None:
-    """FR-MODEL-79: suggestions, ranked, and **never** written into a Model Spec.
+    """FR-135: suggestions, ranked, and **never** written into a Model Spec.
 
     XGBoost only — LightGBM computes SHAP values and not SHAP interaction values. Named as
     a backend fact rather than parametrized away, because the asymmetry is the finding.
@@ -203,7 +203,7 @@ def test_interaction_candidates_are_reported_where_the_backend_can_compute_them(
     assert pair.strength >= 0.0
 
 
-@pytest.mark.req("FR-MODEL-79")
+@pytest.mark.req("FR-135")
 def test_lightgbm_says_it_cannot_compute_interactions_rather_than_finding_none() -> None:
     """An empty `top_interactions` with `interactions_available=True` would read as "the
     model has no interactions", which is a finding.
@@ -220,14 +220,14 @@ def test_lightgbm_says_it_cannot_compute_interactions_rather_than_finding_none()
     assert summary.top_interactions == ()
 
 
-@pytest.mark.req("FR-MODEL-79")
+@pytest.mark.req("FR-135")
 def test_an_interaction_candidate_carries_no_exposure_share() -> None:
     """The field was `1.0` at its construction site and `1.0` as a default on its type.
 
     It could not have been anything else — a pair spans the whole frame, and
     `_interaction_candidates` receives neither a spec nor a weight vector — so publishing it
-    told an actuary nothing while looking like a measurement. OQ-MODEL-31 withdrew it on
-    2026-08-23; `strength` alone is what the artifact truthfully carries until FR-MODEL-128's
+    told an actuary nothing while looking like a measurement. OQ-601 withdrew it on
+    2026-08-23; `strength` alone is what the artifact truthfully carries until FR-168's
     holdout strength ratio lands.
     """
     assert "exposure_share" not in ShapInteraction.model_fields
@@ -235,10 +235,10 @@ def test_an_interaction_candidate_carries_no_exposure_share() -> None:
         ShapInteraction(pair=("a", "b"), strength=0.1, exposure_share=1.0)
 
 
-@pytest.mark.req("FR-MODEL-36")
+@pytest.mark.req("FR-136")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_fidelity_statement_says_where_the_approximation_fails(backend: str) -> None:
-    """FR-MODEL-36 is prose because a number cannot say *where*.
+    """FR-136 is prose because a number cannot say *where*.
 
     Generated rather than authored: a free-text field carrying that obligation is a field
     that eventually says "good fit", and this is the sentence an approver reads at the
@@ -256,7 +256,7 @@ def test_the_fidelity_statement_says_where_the_approximation_fails(backend: str)
     statement = fidelity_statement(approximation.artifact_block(new_uuid7()), summary)
     assert "%" in statement
     assert "Divergence concentrates in area = " in statement
-    # The noun matters: the number beside it is a share of exposure (FR-MODEL-36), and `02`
+    # The noun matters: the number beside it is a share of exposure (FR-136), and `02`
     # §4.9's own example sentence says so. Naming it "of rows" describes a quantity the
     # artifact no longer carries.
     assert "% of exposure" in statement
@@ -265,9 +265,9 @@ def test_the_fidelity_statement_says_where_the_approximation_fails(backend: str)
         assert "not SHAP interaction values" in statement
 
 
-@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-132")
 def test_an_artifact_that_explains_nothing_is_refused() -> None:
-    """FR-MODEL-33 asks for *at least one* form.
+    """FR-132 asks for *at least one* form.
 
     An artifact with neither block would satisfy R3 — a Rating Version could reference the
     model — while explaining nothing at all. That is the one state this shape must not be
@@ -285,7 +285,7 @@ def test_an_artifact_that_explains_nothing_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-132")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_kinds_are_derived_from_what_is_present(backend: str) -> None:
     """§4.9 declared `kinds` beside the blocks and wrote the agreement between them as an
@@ -307,7 +307,7 @@ def test_the_kinds_are_derived_from_what_is_present(backend: str) -> None:
     assert artifact.kinds == (TransparencyKind.GLM_APPROXIMATION,)
 
 
-@pytest.mark.req("FR-MODEL-34")
+@pytest.mark.req("FR-133")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_monotone_gbm_approximates_to_a_monotone_table(backend: str) -> None:
     """The approximation inherits the shape it is approximating.
@@ -331,14 +331,14 @@ def test_a_monotone_gbm_approximates_to_a_monotone_table(backend: str) -> None:
     assert age.estimate > 0
 
 
-@pytest.mark.req("FR-MODEL-34")
+@pytest.mark.req("FR-133")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_an_approximation_reports_a_poor_fit_as_a_poor_fit(backend: str) -> None:
     """The number that matters most is the one nobody wants: a surrogate that cannot
     reproduce the booster must say so rather than reporting the best it managed.
 
     Built by hiding the structure from the surrogate — the GBM sees a factor the
-    approximation is not given — which is exactly the situation FR-MODEL-36 exists for.
+    approximation is not given — which is exactly the situation FR-136 exists for.
     """
     rng = np.random.default_rng(11)
     n = 6_000
@@ -368,10 +368,10 @@ def test_an_approximation_reports_a_poor_fit_as_a_poor_fit(backend: str) -> None
     assert "Divergence concentrates" in statement
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_approximation_returns_the_fit_that_produced_it(backend: str) -> None:
-    """FR-MODEL-96 persists the surrogate as a Model, so its fit result must survive.
+    """FR-137 persists the surrogate as a Model, so its fit result must survive.
 
     Before this it was fitted and thrown away, and the artifact kept a summary of a model
     nothing could reproduce.
@@ -387,7 +387,7 @@ def test_the_approximation_returns_the_fit_that_produced_it(backend: str) -> Non
     assert any(c.term == "intercept" for c in approximation.result.coefficients)
     assert approximation.result.relativities
     assert approximation.spec.approximates_model_id == source
-    # FR-MODEL-129: the companion names the same model in the register a human reads.
+    # FR-169: the companion names the same model in the register a human reads.
     assert approximation.spec.approximates_model is not None
     assert approximation.spec.approximates_model.model_slug == "motor-ad-frequency"
     assert approximation.spec.approximates_model.model_version == 1
@@ -398,7 +398,7 @@ def test_the_approximation_returns_the_fit_that_produced_it(backend: str) -> Non
     assert SURROGATE_RESPONSE_COLUMN in approximation.holdout.columns
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_artifact_block_names_the_model_and_carries_no_table(backend: str) -> None:
     """The table lives on the Model now; the block carries the measurements and the id."""
@@ -418,11 +418,11 @@ def test_the_artifact_block_names_the_model_and_carries_no_table(backend: str) -
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-37 / FR-MODEL-36 / FR-MODEL-52 — the EBM transparency arm
+# FR-140 / FR-136 / FR-174 — the EBM transparency arm
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_an_ebm_exports_its_shape_functions_verbatim() -> None:
     """The blob is the model: every table the fit produced, written through verbatim.
 
@@ -459,7 +459,7 @@ def test_an_ebm_exports_its_shape_functions_verbatim() -> None:
             assert row["levels"] == list(bins.levels)
 
 
-@pytest.mark.req("FR-MODEL-36")
+@pytest.mark.req("FR-136")
 def test_the_ebm_fidelity_statement_is_exact_by_construction() -> None:
     """The wording is the contract: exact, and quoting no number.
 
@@ -471,7 +471,7 @@ def test_the_ebm_fidelity_statement_is_exact_by_construction() -> None:
         "This EBM's term shape functions are exported directly as rateable tables. "
         "There is no approximation step and no fidelity to measure: the exported "
         "tables are the fitted model, so a Rating Version that rates on them rates "
-        "on the model itself (FR-MODEL-37)."
+        "on the model itself (FR-140)."
     )
     statement = ebm_fidelity_statement()
     assert statement == expected
@@ -479,9 +479,9 @@ def test_the_ebm_fidelity_statement_is_exact_by_construction() -> None:
     assert "%" not in statement
 
 
-@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-174")
 def test_monotonicity_verified_reads_the_exported_tables() -> None:
-    """FR-MODEL-52's three states — None, True, False — read off the tables.
+    """FR-174's three states — None, True, False — read off the tables.
 
     +1 means non-decreasing along the constrained feature's axis (the direction
     lesson of `test_ebm.py`'s dated note): the univariate term's real-bin scores, or
@@ -607,7 +607,7 @@ def _pair_grid(scores: tuple[tuple[float, ...], ...]) -> EbmFitResult:
     )
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_an_interaction_term_exports_per_feature_bins_aligned_with_features() -> None:
     """A pair term's blob pins the interaction shape: nested tables, and per-feature
     cuts/levels each aligned with `features` — a mixed pair carries both keys.
@@ -650,7 +650,7 @@ def test_an_interaction_term_exports_per_feature_bins_aligned_with_features() ->
     ]
 
 
-@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-174")
 def test_a_grid_is_checked_along_the_constrained_features_own_axis() -> None:
     """The per-column branch: a constraint on the **first** feature is read down the
     grid's columns, real bins only — and a grid monotone along both axes verifies
@@ -697,7 +697,7 @@ def test_a_grid_is_checked_along_the_constrained_features_own_axis() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-174")
 def test_a_constraint_on_a_feature_the_tables_do_not_contain_is_refused() -> None:
     """A verdict for an uncheckable constraint would be made up: refuse by name.
 
@@ -712,13 +712,13 @@ def test_a_constraint_on_a_feature_the_tables_do_not_contain_is_refused() -> Non
     assert error.value.code == "EBM_MONOTONE_CONSTRAINT_UNKNOWN"
 
 
-@pytest.mark.req("FR-MODEL-128")
+@pytest.mark.req("FR-168")
 def test_an_identical_holdout_gives_a_ratio_of_exactly_one() -> None:
     """The sharpest available check that the two passes are comparable.
 
     If the holdout frame *is* the training frame, every difference between numerator and
     denominator has been removed — same rows, same seed, same cap, same encoding — so any
-    departure from exactly `1.0` is a difference the two code paths introduced. FR-MODEL-128
+    departure from exactly `1.0` is a difference the two code paths introduced. FR-168
     requires them to be one path run twice, and this is what makes that a fact rather than a
     claim about two blocks that look alike.
     """
@@ -732,7 +732,7 @@ def test_an_identical_holdout_gives_a_ratio_of_exactly_one() -> None:
         assert pair.holdout_strength_ratio == pytest.approx(1.0)
 
 
-@pytest.mark.req("FR-MODEL-128")
+@pytest.mark.req("FR-168")
 def test_a_weaker_holdout_gives_a_ratio_below_one() -> None:
     """A pair whose structure does not survive shows as a collapse, which is the point.
 
@@ -753,7 +753,7 @@ def test_a_weaker_holdout_gives_a_ratio_below_one() -> None:
         assert pair.holdout_strength_ratio > 0.0
 
 
-@pytest.mark.req("FR-MODEL-128")
+@pytest.mark.req("FR-168")
 def test_the_ratio_is_the_quotient_of_the_two_strengths() -> None:
     """The arithmetic, checked against a strength this test measures itself.
 
@@ -779,7 +779,7 @@ def test_the_ratio_is_the_quotient_of_the_two_strengths() -> None:
             )
 
 
-@pytest.mark.req("FR-MODEL-128")
+@pytest.mark.req("FR-168")
 def test_lightgbm_carries_no_ratio_because_it_carries_no_candidates() -> None:
     """XGBoost-only, and for a reason that is not about this requirement.
 
@@ -798,7 +798,7 @@ def test_lightgbm_carries_no_ratio_because_it_carries_no_candidates() -> None:
     assert summary.top_interactions == ()
 
 
-@pytest.mark.req("FR-MODEL-128")
+@pytest.mark.req("FR-168")
 def test_an_absent_ratio_serialises_as_null_rather_than_a_missing_key() -> None:
     """"Absent rather than defaulted" does not pin an encoding, so this pins it.
 
@@ -819,7 +819,7 @@ def test_an_absent_ratio_serialises_as_null_rather_than_a_missing_key() -> None:
     assert payload["holdout_strength_ratio"] is None
 
 
-@pytest.mark.req("FR-MODEL-128")
+@pytest.mark.req("FR-168")
 def test_a_zero_in_sample_strength_publishes_no_ratio() -> None:
     """No quotient exists, and neither `0.0` nor `1.0` may stand in for one.
 
@@ -832,7 +832,7 @@ def test_a_zero_in_sample_strength_publishes_no_ratio() -> None:
     assert _ratio(0.5, {("a", "b"): 0.25}, ("a", "b")) == pytest.approx(0.5)
 
 
-@pytest.mark.req("FR-MODEL-128")
+@pytest.mark.req("FR-168")
 def test_the_spec_example_is_a_valid_instance_now_that_the_field_exists() -> None:
     """`02` §4.9's printed example, constructed exactly as printed.
 
@@ -858,7 +858,7 @@ def test_the_spec_example_is_a_valid_instance_now_that_the_field_exists() -> Non
     assert instance.holdout_strength_ratio == pytest.approx(0.83)
 
 
-@pytest.mark.req("FR-MODEL-128")
+@pytest.mark.req("FR-168")
 def test_the_holdout_is_looked_up_on_the_pairs_the_in_sample_pass_selected() -> None:
     """The ranking is by **in-sample** strength, and the holdout is a lookup on those pairs.
 
@@ -893,9 +893,9 @@ def test_the_holdout_is_looked_up_on_the_pairs_the_in_sample_pass_selected() -> 
     assert candidates[2].holdout_strength_ratio == pytest.approx(8.0)
 
 
-@pytest.mark.req("FR-MODEL-79")
+@pytest.mark.req("FR-135")
 def test_only_the_top_five_candidates_are_published() -> None:
-    """FR-MODEL-79 publishes a ranked few, and the cut is by in-sample strength."""
+    """FR-135 publishes a ranked few, and the cut is by in-sample strength."""
     in_sample = {("f", str(i)): float(i) for i in range(9)}
 
     candidates = _interaction_candidates(in_sample, None)

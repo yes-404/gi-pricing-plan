@@ -1,4 +1,4 @@
-"""FR-PLAT-48 / ADR-0002 — the committed contract follows the models, and is checked.
+"""FR-451 / ADR-704 — the committed contract follows the models, and is checked.
 
 Two distinct claims are tested here, and conflating them is how a generated contract
 becomes decorative:
@@ -34,7 +34,7 @@ GENERATOR = ROOT / "scripts" / "generate-contracts.py"
 #: Schemas whose authored and generated sides are compared field-type by field-type. Written
 #: out rather than globbed so that adding one is a visible act; `test_every_eligible_schema_
 #: is_compared` is what stops the list going quietly stale, which is how `peril-structure`
-#: sat outside it declaring three exact decimals as JSON numbers (`OQ-OVR-8`, 2026-08-19).
+#: sat outside it declaring three exact decimals as JSON numbers (`OQ-547`, 2026-08-19).
 COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "artifact-envelope",
     "artifact-ref",
@@ -57,24 +57,24 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
 )
 
 #: Slugs present on exactly one of the authored/generated sides, declared on purpose
-#: (OQ-PLAT-10 (b)). The value is the reason, and it is documentation rather than
+#: (OQ-649 (b)). The value is the reason, and it is documentation rather than
 #: load-bearing: the guard (`test_every_one_sided_slug_is_declared`) keeps the set equal
 #: to the corpus in both directions — a one-sided slug without a declaration fails, and a
 #: declared slug that gained the other side fails too (the `peril-structure` drift, in
 #: reverse). Generated-only entries are first written forms; `metric-certificate` is the
-#: exception — OQ-PLAT-13 (c) makes it a known gap with a trigger, never a claim of
+#: exception — OQ-651 (c) makes it a known gap with a trigger, never a claim of
 #: intent. Authored-only entries are later-phase shapes or shared `common/` defs.
 ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     # generated-only — first written forms
-    "backtest": "first written form — FR-MODEL-57 named it; no document defined its shape",
+    "backtest": "first written form — FR-187 named it; no document defined its shape",
     "custom-metric": "first written form — 02 §4.13 printed an example, no contract",
     "dataset-lineage": "first written form — 01 §4.9 (W6b-12)",
     "dataset-split": "first written form — the split artifact the spec builder reads",
     "model-comparison": "first written form — 02 §5.2 named the return type",
-    "objective-usage": "first written form — FR-MODEL-47 named the query",
-    "oidc-auth-config": "first written form — FR-PLAT-66 names the contents",
+    "objective-usage": "first written form — FR-164 named the query",
+    "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",
-    "metric-certificate": "OQ-PLAT-13 (c): authored by the next certificate workstream",
+    "metric-certificate": "OQ-651 (c): authored by the next certificate workstream",
     # authored-only — later-phase shapes, shared common/ defs, or (F27) shapes that
     # have since shipped in model-schema and are excluded by omission rather than by plan
     "approval-request": "later-phase — 06 governance",
@@ -87,11 +87,11 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "rating-algorithm": "shipped in model-schema, never compared — register F27",
     "rating-version": "shipped in model-schema, never compared — register F27",
     "regression-suite": "later-phase — 04 optimisation",
-    # Corrected 2026-08-29 (W11 Task 1.4): "later-phase" stopped being true the moment
+    # Corrected 2026-08-29 (WK-671 Task 1.4): "later-phase" stopped being true the moment
     # this task defined QuoteContext/ScoringResult/LadderRung/Trace in model-schema —
-    # Ruling 12's addendum (docs/plans/2026-08-29-w11-slice1-rulings.md) obligation 4
+    # RL-878's addendum (docs/rulings/RL-00878-quotecontext-purpose-the-spec-is-right-and-the-hand-authored-contract-is-stale-and-the-fix-belongs-to-task-1-4.md) obligation 4
     # asks this slug be lifted into COMPARED_SLUGS in the same PR, and the register's
-    # F27 row (docs/audit/register.md, Ruling 29) confirms that obligation as "W11's,
+    # F27 row (docs/findings/register.md, RL-860) confirms that obligation as "WK-671's,
     # accepted" rather than something the §14 review absorbs.
     #
     # Full COMPARED_SLUGS membership is still not done, and the reason is sharper than
@@ -121,7 +121,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     # level of coverage `job`/`audit-event` get without ever joining `COMPARED_SLUGS`
     # either — verified to fail on three independent kinds of broken input (an extra
     # authored field, a removed authored field, an unmodelled fifth top-level shape).
-    # Ruling 12's actual substance (the five-member `purpose` enum, in both `model-schema`
+    # RL-878's actual substance (the five-member `purpose` enum, in both `model-schema`
     # and this contract, in one commit) was never at risk either way. What remains open is
     # specifically type/constraint/nested-union parity — the part that needs the walker
     # rewrite — reported here rather than forced through under time pressure.
@@ -172,7 +172,7 @@ def _resolve(document: dict, node: dict) -> dict:
     return document["$defs"][ref.rsplit("/", 1)[-1]]
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_committed_contracts_match_the_models() -> None:
     """The check CI runs. A failure here means someone changed a model without regenerating."""
     result = subprocess.run(
@@ -184,23 +184,23 @@ def test_committed_contracts_match_the_models() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_generated_document_is_openapi_31() -> None:
     """OpenAPI 3.1, because it is the version whose schema dialect is JSON Schema 2020-12 —
     the same dialect `docs/contracts/schemas/` is written in."""
     assert _load(OPENAPI)["openapi"].startswith("3.1")
 
 
-@pytest.mark.req("FR-PLAT-41")
+@pytest.mark.req("FR-444")
 def test_health_endpoints_are_published() -> None:
     paths = _load(OPENAPI)["paths"]
     assert {"/healthz", "/readyz", "/version"} <= set(paths)
 
 
-@pytest.mark.req("FR-OVR-7")
+@pytest.mark.req("FR-10")
 def test_decimal_money_is_pinned_to_the_string_form() -> None:
     """Research F7: a bare `Decimal` renders as `anyOf: [number, string]`, and the number
-    branch is the lossy binary form FR-OVR-7 forbids — a payload could satisfy the contract
+    branch is the lossy binary form FR-10 forbids — a payload could satisfy the contract
     while violating the spec.
 
     Asserted against `DecimalStr` itself rather than by scanning today's generated files.
@@ -238,7 +238,7 @@ def test_decimal_money_is_pinned_to_the_string_form() -> None:
     ]
 
 
-@pytest.mark.req("FR-OVR-7")
+@pytest.mark.req("FR-10")
 def test_no_generated_money_field_admits_a_json_number() -> None:
     """The scan, kept as a guard for the shapes that arrive later.
 
@@ -248,12 +248,12 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     money_like = re.compile(r"(_minor$|relativity|premium|exposure)", re.I)
     offenders: list[str] = []
 
-    #: `x_per_y` is a **ratio**, not a quantity of `x`. FR-MODEL-81's
+    #: `x_per_y` is a **ratio**, not a quantity of `x`. FR-185's
     #: `exposure_per_parameter` is exposure divided by a count, and dividing a decimal
     #: exposure by an integer does not produce a decimal exposure — it produces a number
     #: whose precision carries no monetary meaning.
     #:
-    #: A rule rather than a hand-written list of names. OQ-OVR-7 objects to money-discipline
+    #: A rule rather than a hand-written list of names. OQ-544 objects to money-discipline
     #: exceptions maintained as a hand-written list precisely because such lists only grow;
     #: this one recognises a *shape* of name, so the next ratio needs no entry and no
     #: decision.
@@ -275,7 +275,7 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     #: affected exposure, dimensionless and bounded by the field itself, which a rule's
     #: `tolerance` is compared against. Both sides already agree it is a JSON number, so
     #: this is the heuristic's word list catching up with its own stated rule and not a
-    #: money-discipline exception. FR-OVR-7 is untouched: no quantity of money is named
+    #: money-discipline exception. FR-10 is untouched: no quantity of money is named
     #: `_fraction`, and a fraction rounded to minor units would be a rounded ratio.
     ratio_suffix = re.compile(r"(_per_parameter|_share|_fraction)$", re.I)
 
@@ -283,7 +283,7 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     #: `Coefficient` and `RelativityLevel` carry `exp(β)` and the exposure it was measured
     #: over, each beside its own confidence interval. Rounding an estimate to a money grid
     #: would misstate the interval printed next to it — the same reason `01`'s one-way row
-    #: keeps its own mean fields as floats (FR-DATA-46).
+    #: keeps its own mean fields as floats (FR-64).
     #:
     #: Excluded by **owning type**, never by field name. `relativity` is also what a Rate
     #: Table entry is called (`03`), and that one *is* on the rating path, where
@@ -317,7 +317,7 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     assert offenders == []
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 def test_artifact_ref_is_a_string_on_the_wire() -> None:
     """ID-3 makes `{type}:{slug}@{version}` the canonical external form.
 
@@ -331,7 +331,7 @@ def test_artifact_ref_is_a_string_on_the_wire() -> None:
     assert "properties" not in generated
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 def test_artifact_ref_pattern_matches_the_authored_contract() -> None:
     """Conformance: the Phase 0 contract and the model must accept the same strings."""
     generated = _load(GENERATED / "artifact-ref.schema.json")
@@ -339,7 +339,7 @@ def test_artifact_ref_pattern_matches_the_authored_contract() -> None:
     assert generated["pattern"] == authored["pattern"]
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 @pytest.mark.parametrize(
     ("reference", "valid"),
     [
@@ -371,7 +371,7 @@ def test_authored_pattern_accepts_exactly_what_the_parser_accepts(
             ArtifactRef.model_validate(reference)
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 @pytest.mark.parametrize("slug", ["job", "audit-event"])
 def test_generated_and_authored_agree_on_field_names(slug: str) -> None:
     """The two descriptions of one shape must not drift apart silently."""
@@ -380,9 +380,9 @@ def test_generated_and_authored_agree_on_field_names(slug: str) -> None:
     assert set(generated["properties"]) == set(authored["properties"])
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 def test_generated_and_authored_agree_on_scoring_field_names() -> None:
-    """Ruling 12 addendum, obligation 4 (`docs/plans/2026-08-29-w11-slice1-rulings.md`),
+    """RL-878 addendum, obligation 4 (`docs/rulings/RL-00878-quotecontext-purpose-the-spec-is-right-and-the-hand-authored-contract-is-stale-and-the-fix-belongs-to-task-1-4.md`),
     the field-names slice of it: `scoring` is no longer wholly uncompared.
 
     `scoring.schema.json` bundles four unrelated top-level shapes — `QuoteContext` (input),
@@ -479,7 +479,7 @@ def _composes_the_envelope(authored: dict[str, Any]) -> bool:
     )
 
 
-#: **A recorded divergence the guard is told not to litigate** (W5 audit, 2026-08-22).
+#: **A recorded divergence the guard is told not to litigate** (WK-661 audit, 2026-08-22).
 #:
 #: Twelve authored contracts `allOf` the envelope and thereby promise fourteen fields.
 #: `ArtifactEnvelope` is defined at `model_schema/envelope.py:16` and exported at
@@ -501,7 +501,7 @@ ENVELOPE_GAP_IS_RECORDED_NOT_FIXED: Final = True
 #: `:497`) and is declared by neither `banding.schema.json` nor `grouping.schema.json`,
 #: which name `derived_on_dataset_version_id` instead. It sat inside `ENVELOPE_FIELDS`
 #: labelled an envelope field, which it has never been. Named honestly here, for `01`/`02`'s
-#: banding-and-grouping owner; W5 owns the six `02` artifact slugs and not these two.
+#: banding-and-grouping owner; WK-661 owns the six `02` artifact slugs and not these two.
 MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
     "banding": frozenset({"dataset_id"}),
     "grouping": frozenset({"dataset_id"}),
@@ -509,9 +509,9 @@ MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
 
 #: Contract fields **declared and unbuilt on purpose**, each with a requirement and an owner.
 #:
-#: FR-MODEL-87 is the rule: *"§4 is a staged contract: a field is shown live only once a
+#: FR-207 is the rule: *"§4 is a staged contract: a field is shown live only once a
 #: slice populates it, and anything else is named in place with a dated note saying it is
-#: declared-and-unbuilt and which workstream owns it"* (OQ-MODEL-8, decided 2026-08-17).
+#: declared-and-unbuilt and which workstream owns it"* (OQ-582, decided 2026-08-17).
 #: Deleting these from the published contract to make a test green would destroy exactly the
 #: staging record that requirement exists to keep, and `CLAUDE.md` §0 forbids building them
 #: to match: a later phase's capability is a spec change, not code.
@@ -519,22 +519,22 @@ MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
 #: Each entry carries its note in the schema's own `description` beside the field, so a
 #: reader of the contract meets the same fact as a reader of this list:
 #:
-#: * `model.custom_objective_ref` / `model-spec`'s `custom_objective_ref` — FR-MODEL-87,
+#: * `model.custom_objective_ref` / `model-spec`'s `custom_objective_ref` — FR-207,
 #:   which gives the two *different* verdicts: the `GlmSpec` field is *"absent entirely"*
-#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by W30** — Phase 2,
+#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by WK-690** — Phase 2,
 #:   reassigned 2026-08-22 and confirmed 2026-08-25 to reach the pair rather than the
 #:   `Model` half alone. They cannot be split: `Model.custom_objective_ref` would record
 #:   what `GlmSpec.custom_objective_ref` declares, and a GBM names its objective through
 #:   `spec.objective` instead, which is what `02` R4 is enforced off.
 #:   `ObjectiveBackend.glm` exists so an author can narrow applicability to a backend
 #:   nothing reaches yet (`objectives.py`, `ObjectiveBackend`).
-#: * `model-spec.filter` — FR-MODEL-87, *"absent entirely … owned by Phase 1b"*. **Still
+#: * `model-spec.filter` — FR-207, *"absent entirely … owned by Phase 1b"*. **Still
 #:   Phase 1b**: the 2026-08-22 reassignment moved its list-mates and not it, so this entry
 #:   is the control showing that correction was not a blanket one.
-#: * `model.transparency_artifact_id` — FR-MODEL-87, and no longer *"declared and unbuilt …
-#:   owned by W5"*: the 2026-08-22 amendment **struck it from the residual list as
+#: * `model.transparency_artifact_id` — FR-207, and no longer *"declared and unbuilt …
+#:   owned by WK-661"*: the 2026-08-22 amendment **struck it from the residual list as
 #:   superseded rather than owed**, which answers the open question this note used to pose.
-#:   FR-MODEL-96 was built on 2026-08-19 and made the reference run the other way —
+#:   FR-137 was built on 2026-08-19 and made the reference run the other way —
 #:   `TransparencyArtifact` carries `model_id`, and R3 is enforced by query in
 #:   `backend/src/app/platform/modelling.py` (`EVIDENCE_INCOMPLETE`), not by a column on
 #:   `Model`. The deciding fact is cardinality: `ix_transparency_model` is not unique, so a
@@ -544,7 +544,7 @@ MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
 #:   `bound_symbols`, `parameters`. `ObjectiveKind.EXPRESSION` is Phase 2 behind
 #:   `expression_objectives_enabled` (`objectives.py:75-81`) and `CustomObjective` **refuses
 #:   to be constructed with it** (`objectives.py:8-12`), so the shape is not merely absent —
-#:   it is refused by name (OQ-MODEL-1).
+#:   it is refused by name (OQ-573).
 #:
 #: The `if kind == "template"` branch is *not* here: `template` and `params` are built, and
 #: the flattening above now sees them where the retired `CONDITIONAL_FIELDS` exemption used
@@ -584,7 +584,7 @@ def _declared_fields(
     return names
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 @pytest.mark.parametrize(
     "slug",
     [
@@ -614,7 +614,7 @@ def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str)
     * `band_stats` keyed by `label` in one schema and `level` in another, for the same
       statistics from the same requirement;
     * no `minimums` on the Banding, which the contract declares;
-    * no `rationale` on the Grouping, which FR-MODEL-16 requires and the dossier prints
+    * no `rationale` on the Grouping, which FR-108 requires and the dossier prints
       verbatim.
 
     A missing field is a promise the platform breaks. An extra one is a shape defined twice,
@@ -642,7 +642,7 @@ def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str)
     )
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 def test_the_column_profile_shape_matches_its_contract() -> None:
     """The profile's divergences live one level down, where the flat tests do not look.
 
@@ -651,7 +651,7 @@ def test_the_column_profile_shape_matches_its_contract() -> None:
     histogram was missing for three days and where `min`/`minimum` still disagreed — so a
     flat comparison would have reported this contract as conforming throughout.
 
-    `top_levels` is nested a level deeper still, and until FR-DATA-49 that second hop was
+    `top_levels` is nested a level deeper still, and until FR-66 that second hop was
     where a *structural* disagreement hid: the model carried an unnamed `(str, int)` pair
     and the contract declared `{level, count, exposure_years}`, but `top_levels` itself
     existed on both sides, so comparing only this function's first-level property-name set
@@ -794,7 +794,7 @@ def _variants(
     when authored. Flattening both to the set of branches lets one comparison read them the
     same way, which is what makes `severity_ci` — an optional *array* — comparable at all.
 
-    **`then`/`else` joined `anyOf`/`oneOf`/`allOf` on 2026-08-22 (W5).** A hand-authored
+    **`then`/`else` joined `anyOf`/`oneOf`/`allOf` on 2026-08-22 (WK-661).** A hand-authored
     contract refines a tagged union with `allOf: [{"if": …, "then": {"properties": …}}]`,
     and a walker reading only the three combinators sees a branch node carrying neither
     `properties` nor `type` and moves on. Every field in every conditional arm of the suite
@@ -949,7 +949,7 @@ def _scalar_types(
 ) -> set[str]:
     """The JSON types this node admits — including `null` where `keep_null` is set.
 
-    **Corrected 2026-08-22 (W5).** This function dropped `null` unconditionally, and said
+    **Corrected 2026-08-22 (WK-661).** This function dropped `null` unconditionally, and said
     why: *"the generated contracts mark every `X | None` nullable and the authored ones mark
     almost none, so comparing nullability would report a divergence on nearly every optional
     field — a uniform difference of idiom, not the integer-for-a-float this test exists to
@@ -1032,7 +1032,7 @@ def _type_map(
     as a type mismatch would be describing the wrong problem.
 
     **A property declared by more than one variant is unioned, not overwritten (2026-08-22,
-    W5).** This read `properties.update(...)`, so the *last* variant to name a field
+    WK-661).** This read `properties.update(...)`, so the *last* variant to name a field
     replaced every earlier definition of it wholesale. A conditional refinement is exactly
     that shape — `peril-structure`'s `{"if": large_loss.kind == "capped", "then":
     {"properties": {"large_loss": {"required": [...]}}}}` names `large_loss` again only to
@@ -1103,15 +1103,15 @@ def _type_map(
 #: An entry is a live question, never a permission, and it is spelled out rather than
 #: curated: `test_the_escalated_type_disagreements_are_still_unresolved` deletes the excuse
 #: the moment it stops earning its place. This is the shape the pin for `diagnostics`'
-#: `aliasing` had before `OQ-MODEL-15` was decided and it was removed rather than relaxed.
+#: `aliasing` had before `OQ-587` was decided and it was removed rather than relaxed.
 #:
-#: **A pin was held from 2026-08-25 (OQ-OVR-16, W6b) to 2026-08-26 (W6b-19):**
+#: **A pin was held from 2026-08-25 (OQ-553, WK-664) to 2026-08-26 (W6b-19):**
 #: `artifact-envelope.updated_at` — non-null in the hand-authored contract under `common/`,
 #: nullable-with-`default: null` in the generated one, with the field specified-and-unbuilt
 #: and no producer to settle which side was right. The pin's own removal condition was "the
 #: first artifact that persists an envelope"; W6b-19 is exactly that — `DatasetVersion`
 #: composes the envelope, its row persists `updated_at`, and the model now types it
-#: non-null. Resolved per OQ-OVR-16 option (a), the authored side, and the pin was
+#: non-null. Resolved per OQ-553 option (a), the authored side, and the pin was
 #: **released — deleted, not relaxed**.
 UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {}
 def _admits(constraints: Arm, arm: Arm) -> bool:
@@ -1184,8 +1184,8 @@ def _arm_name(arm: Arm) -> str:
     ) + ":"
 
 
-@pytest.mark.req("FR-OVR-6")
-@pytest.mark.req("FR-DATA-46")
+@pytest.mark.req("FR-9")
+@pytest.mark.req("FR-64")
 @pytest.mark.parametrize("slug", COMPARED_SLUGS)
 def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     """The same field must not be a float in the model and an integer in the contract.
@@ -1196,10 +1196,10 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     hand-authored contract in both `banding` and `profile`, and `profile`'s `severity_ci`
     typed its interval bounds as integers while `banding`'s copy of the identical shape
     typed them as numbers. A mean severity of 45812.42 fails all four. Nothing failed,
-    because the names matched, and the rename in FR-DATA-46 carried the names across
+    because the names matched, and the rename in FR-64 carried the names across
     without ever looking at the type beneath them.
 
-    That is the divergence FR-DATA-46 exists to prevent, stated in the contract itself: a
+    That is the divergence FR-64 exists to prevent, stated in the contract itself: a
     mean is a statistic, not an amount, and rounding it to minor units discards the
     precision the confidence interval beside it is expressing.
 
@@ -1207,7 +1207,7 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     skipped rather than reported. `ColumnProfile.top_levels` used to be the live example:
     the model produced an array of `[level, count]` pairs against a contract declaring an
     array of objects, the two sides shared no path, and this test said nothing about it.
-    **Corrected 2026-08-19 (FR-DATA-49):** the model now carries `LevelCount` —
+    **Corrected 2026-08-19 (FR-66):** the model now carries `LevelCount` —
     `{level, count, exposure_years}` — matching the contract's shape, so
     `columns.[].top_levels.[].level/.count/.exposure_years` are paths on both sides and
     this test does compare them; it currently finds no disagreement, `exposure_years`
@@ -1217,12 +1217,12 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     to arbitrate structure — `test_the_column_profile_shape_matches_its_contract` does
     that, one level into `top_levels`' item.
 
-    **Widened 2026-08-19 (`OQ-OVR-8`).** The list covered six slugs while twelve schemas
+    **Widened 2026-08-19 (`OQ-547`).** The list covered six slugs while twelve schemas
     have both an authored and a generated side, and the six it omitted were not chosen —
     they were simply never added. `peril-structure` was one of them, and it declared
     `restoration_loading`, `ratio` and `tolerance` as `{"type": "number"}` while all three
     are exact decimals the model has always serialised as strings. A client following the
-    published contract would have posted a JSON number; before `OQ-OVR-8` that was silently
+    published contract would have posted a JSON number; before `OQ-547` that was silently
     coerced, after it the request is refused. The check that existed would have caught it on
     the day it was written, and did not, because the schema was outside its parametrize
     list — which is the argument for deriving the list rather than curating it. It is still
@@ -1231,12 +1231,12 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     below is what keeps the written list honest.
 
     Every eligible slug is now compared. The last excused one, `diagnostics`, was corrected
-    on 2026-08-21 (`OQ-MODEL-15` decided — FR-MODEL-109): `aliasing` is an array of the
+    on 2026-08-21 (`OQ-587` decided — FR-173): `aliasing` is an array of the
     strings the model always produced, and the pin that excused it is deleted rather than
     relaxed.
 
     **A pin was held from 2026-08-24 (W32-11) to 2026-08-26 (W6b-18):**
-    `validation-report`'s `results.[].offending_sample.[]`, escalated as `OQ-DATA-12`,
+    `validation-report`'s `results.[].offending_sample.[]`, escalated as `OQ-567`,
     released — deleted, not relaxed — when the decision landed: the item is a keyed object,
     `{column: value}` with values string or null, written out on the model, the authored
     contract, the engine's emission and §4.6's example. The refusal above is of a *curated*
@@ -1292,13 +1292,13 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 @pytest.mark.parametrize("slug", sorted(UNRESOLVED_TYPE_DISAGREEMENTS))
 def test_the_escalated_type_disagreements_are_still_unresolved(slug: str) -> None:
     """The pin above must not outlive the question it was taken for.
 
     `CLAUDE.md` §12's rule for a curated list: whatever notices it went stale ships with it.
-    A path excused while `OQ-DATA-12` is open is a hole in the type comparison the moment the
+    A path excused while `OQ-567` is open is a hole in the type comparison the moment the
     question is answered, and nothing else in this file would say so — the comparison just
     keeps skipping a path that now agrees.
 
@@ -1420,8 +1420,8 @@ def _required_map(
     return found
 
 
-@pytest.mark.req("FR-PLAT-48")
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-451")
+@pytest.mark.req("FR-9")
 @pytest.mark.parametrize("slug", COMPARED_SLUGS)
 def test_the_contract_never_marks_optional_what_the_model_requires(slug: str) -> None:
     """One direction, deliberately, and the direction is the whole design.
@@ -1545,7 +1545,7 @@ def _closure_paths(
     return _paths(_closure_map(document, node, base))
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 @pytest.mark.parametrize("slug", COMPARED_SLUGS)
 def test_generated_and_authored_agree_on_what_an_open_map_admits(slug: str) -> None:
     """An open map's value type is published, and a client validates against it.
@@ -1612,11 +1612,11 @@ _COMPARED_CONSTRAINTS: Final[frozenset[str]] = frozenset(
 )
 
 #: A compared constraint keyword declared on exactly one side at a field path present on
-#: both sides, declared on purpose (OQ-PLAT-10 (b), finding F2 subsumed). Keyed
+#: both sides, declared on purpose (OQ-649 (b), finding F2 subsumed). Keyed
 #: `(slug, dotted_path)`; the value is the one-sided keywords. These are the bounds the
 #: corpus carried at 8b0977f where the model and the contract do not agree on whether a
 #: bound exists — measured 2026-08-27, 36 rows over 31 paths, with the five examples
-#: OQ-PLAT-10 names (`banding.slug`, `grouping.slug`, `model.spec_hash`, `job.error.code`,
+#: OQ-649 names (`banding.slug`, `grouping.slug`, `model.spec_hash`, `job.error.code`,
 #: `job.result.kind`) all reproducing. A side converging deletes the entry, never leaves it.
 #: `test_a_constraint_keyword_on_one_side_is_not_silent` keeps this equal to the corpus in
 #: both directions.
@@ -1769,7 +1769,7 @@ def _constraint_map(
     one-sided bound is — drift, or a difference of intent the shape comparison arbitrates —
     decides how 70 findings land across thirteen slugs, and `CLAUDE.md` §0 forbids picking
     one silently inside a test-infrastructure fix. It is raised for decision, not settled
-    here: **`OQ-PLAT-10`** carries it, and names this comparison's double intersection —
+    here: **`OQ-649`** carries it, and names this comparison's double intersection —
     paths, then keywords within a shared path — as one instance of a scope every layer of
     the guard shares.
 
@@ -1890,7 +1890,7 @@ def _constraint_paths(
 #:
 #: **Empty since 2026-08-24 (W32-11).** Its one entry —
 #: `objective-certificate` / `result.checks` / `minItems`, model 1 against contract 8 — was
-#: OQ-MODEL-30, decided as FR-MODEL-126: the shared `CertificateResult` stays unbounded and
+#: OQ-600, decided as FR-158: the shared `CertificateResult` stays unbounded and
 #: each certificate type enforces its own battery, so the carve-out died with the question,
 #: in the same commit. The dict is kept rather than deleted: it is the mechanism for the next
 #: escalation, and its companion test collects zero cases while it is empty.
@@ -1909,7 +1909,7 @@ def _constraint_paths(
 UNRESOLVED_CONSTRAINT_DISAGREEMENTS: Final[dict[str, frozenset[tuple[str, str]]]] = {}
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 @pytest.mark.parametrize("slug", COMPARED_SLUGS)
 def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
     """A bound is part of the published contract, and a wrong one is refused input.
@@ -1940,7 +1940,7 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
 
     A pair may be scoped out through `UNRESOLVED_CONSTRAINT_DISAGREEMENTS` when the
     disagreement is a question for the maintainer rather than a fix. **That dict is empty**
-    — its one entry was OQ-MODEL-30, settled 2026-08-24 — so nothing is skipped here today,
+    — its one entry was OQ-600, settled 2026-08-24 — so nothing is skipped here today,
     and `test_the_escalated_constraint_disagreements_are_still_unresolved` is what notices
     if a future entry outlives its question.
 
@@ -1981,14 +1981,14 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_a_constraint_keyword_on_one_side_is_not_silent() -> None:
-    """OQ-PLAT-10's F2, subsumed: a bound on one side at a shared field is declared, not silent.
+    """OQ-649's F2, subsumed: a bound on one side at a shared field is declared, not silent.
 
     The comparison above intersects keys and then keywords, so a `minItems` the authored
     side declares at a path the generated side carries unconstrained is dropped before
     anything can look at it — the `gbm.quantile_crossing` case, and the reason F2 needed no
-    separate row from OQ-PLAT-10. This closes it: at every field path present on **both**
+    separate row from OQ-649. This closes it: at every field path present on **both**
     sides, a compared constraint keyword on exactly one side must be declared in
     `ONE_SIDED_KEYWORDS`, and a declared entry that is no longer one-sided is stale.
     """
@@ -2007,7 +2007,7 @@ def test_a_constraint_keyword_on_one_side_is_not_silent() -> None:
                 f"{slug} {path} carries a compared keyword on one side only "
                 f"({sorted(one_sided)}), and ONE_SIDED_KEYWORDS records {sorted(registered)} "
                 "— declare it with a reason, or delete the entry once the sides agree "
-                "(OQ-PLAT-10 (b), F2)"
+                "(OQ-649 (b), F2)"
             )
 
         for (slug_, path) in sorted(ONE_SIDED_KEYWORDS):
@@ -2025,7 +2025,7 @@ def test_a_constraint_keyword_on_one_side_is_not_silent() -> None:
                 )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 @pytest.mark.parametrize("slug", sorted(UNRESOLVED_CONSTRAINT_DISAGREEMENTS))
 def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) -> None:
     """The carve-out above must not outlive the question it was taken for.
@@ -2070,7 +2070,7 @@ def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) 
     )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 @pytest.mark.parametrize(
     ("walker", "slug", "path"),
     [
@@ -2100,7 +2100,7 @@ def test_each_new_walker_reaches_a_nested_path_it_is_supposed_to(
     )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_a_generated_union_branch_is_tagged_with_its_discriminator_values() -> None:
     """The generated side spells an arm as a `$ref` and a `discriminator.mapping` entry.
 
@@ -2115,7 +2115,7 @@ def test_a_generated_union_branch_is_tagged_with_its_discriminator_values() -> N
     assert frozenset({"glm"}) in values
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_an_authored_conditional_arm_is_tagged_from_its_sibling_if() -> None:
     """The authored side spells the same arm as `{"if": ..., "then": ...}`.
 
@@ -2132,7 +2132,7 @@ def test_an_authored_conditional_arm_is_tagged_from_its_sibling_if() -> None:
     assert frozenset({"glm"}) in values
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_both_sides_declare_the_same_complete_arms() -> None:
     """The comparison is only meaningful if the two arm sets are the same set.
 
@@ -2145,7 +2145,7 @@ def test_both_sides_declare_the_same_complete_arms() -> None:
     assert _arms(generated, generated, GENERATED) == _arms(authored, authored, AUTHORED)
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_a_document_with_no_union_has_one_unconditional_arm() -> None:
     """Twelve of the fifteen compared slugs have no union at all.
 
@@ -2188,7 +2188,7 @@ def _move_property_between_arms(
     return moved
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_a_field_moved_between_arms_is_drift() -> None:
     """**The defect, on the case it was measured on.**
 
@@ -2212,7 +2212,7 @@ def test_a_field_moved_between_arms_is_drift() -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_a_closed_map_moved_between_arms_is_drift() -> None:
     """**The closure defect, on the case it was measured on.**
 
@@ -2263,7 +2263,7 @@ def test_a_closed_map_moved_between_arms_is_drift() -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_an_arm_specific_type_is_not_unioned_across_arms() -> None:
     """`monotone_constraints` reports a union no single arm admits.
 
@@ -2293,7 +2293,7 @@ def test_an_arm_specific_type_is_not_unioned_across_arms() -> None:
             )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_two_arms_declaring_different_bounds_are_both_kept() -> None:
     """**Last-writer-wins, per keyword** — the sharpest form of this defect.
 
@@ -2341,7 +2341,7 @@ def test_two_arms_declaring_different_bounds_are_both_kept() -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_a_bound_moved_between_arms_is_drift() -> None:
     """**The constraint defect, on a case measured in the repository's own contract.**
 
@@ -2383,7 +2383,7 @@ def test_a_bound_moved_between_arms_is_drift() -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_two_variants_bounding_one_path_differently_are_refused() -> None:
     """The within-arm merge is the gap this slice left open, and `_conjoin` holds it open.
 
@@ -2418,7 +2418,7 @@ def test_two_variants_bounding_one_path_differently_are_refused() -> None:
 #: field names only, and `test_generated_and_authored_agree_on_scalar_types` compares only
 #: paths present on both sides — so a *nested* field deleted from a contract appears in
 #: neither: it stops being a shared path and the type comparison simply says less. That is
-#: exactly how `gbm.quantile_crossing` (FR-MODEL-78) and `gbm.tree_count` came to be absent
+#: exactly how `gbm.quantile_crossing` (FR-199) and `gbm.tree_count` came to be absent
 #: from `diagnostics.schema.json` for months with every check green, and it was rediscovered
 #: on 2026-08-22 by trying to break the improved guard and finding it did not notice
 #: (`CLAUDE.md` §13.4).
@@ -2498,7 +2498,7 @@ REACHED_NESTED_PATHS: Final[dict[str, frozenset[str]]] = {
 }
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 @pytest.mark.parametrize("slug", sorted(REACHED_NESTED_PATHS))
 def test_the_comparison_reaches_the_nested_fields_this_slice_added(slug: str) -> None:
     """The control for the two comparisons above, at the depth where they go quiet.
@@ -2523,7 +2523,7 @@ def test_the_comparison_reaches_the_nested_fields_this_slice_added(slug: str) ->
     )
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 def test_every_model_owned_slug_compares_nullability() -> None:
     """The nullability comparison is scoped; this is what stops the scope shrinking.
 
@@ -2555,7 +2555,7 @@ def test_every_model_owned_slug_compares_nullability() -> None:
     )
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 def test_the_envelope_gap_is_still_the_shape_the_carve_out_assumes() -> None:
     """The recorded-not-fixed envelope divergence, held to its recorded shape.
 
@@ -2590,15 +2590,15 @@ def test_the_envelope_gap_is_still_the_shape_the_carve_out_assumes() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-109")
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-173")
+@pytest.mark.req("FR-9")
 def test_every_eligible_schema_is_compared() -> None:
     """A curated list is only as good as the thing that notices it went stale.
 
     The parametrize list above is written out rather than globbed, so that adding a schema
     is a visible act. This is the other half of that bargain: every slug with both an
     authored and a generated side must be compared. The one excused slug, `diagnostics`,
-    was corrected on 2026-08-21 (FR-MODEL-109) and the pin that excused it retired with it,
+    was corrected on 2026-08-21 (FR-173) and the pin that excused it retired with it,
     which is why no exemption mechanism remains. Widening the list on 2026-08-19 found a
     contract that had been wrong since Phase 0 precisely because nothing enforced this.
     """
@@ -2630,9 +2630,9 @@ def _one_sided_slugs() -> tuple[set[str], set[str]]:
     return authored - generated, generated - authored
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_every_one_sided_slug_is_declared() -> None:
-    """OQ-PLAT-10 (b): one-sidedness is declared, never inferred.
+    """OQ-649 (b): one-sidedness is declared, never inferred.
 
     The intersection of the two sides is what the comparisons above cover; a shape present
     on exactly one side is outside all of them by construction, so the guard is silent in
@@ -2647,7 +2647,7 @@ def test_every_one_sided_slug_is_declared() -> None:
     undeclared = one_sided - set(ONE_SIDED_SLUGS)
     assert not undeclared, (
         "a schema present on exactly one side must declare that in ONE_SIDED_SLUGS "
-        f"(OQ-PLAT-10 (b)): {sorted(undeclared)}"
+        f"(OQ-649 (b)): {sorted(undeclared)}"
     )
 
     stale = set(ONE_SIDED_SLUGS) - one_sided
@@ -2657,7 +2657,7 @@ def test_every_one_sided_slug_is_declared() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-46")
+@pytest.mark.req("FR-64")
 @pytest.mark.parametrize(
     ("slug", "row"), [("banding", "band_stats.[]"), ("profile", "one_ways.[].rows.[]")]
 )
@@ -2670,7 +2670,7 @@ def test_the_type_comparison_reaches_the_one_way_row(slug: str, row: str) -> Non
     of what the walker produced shrinks along with the walker, so any threshold expressed
     as a fraction of its own output moves out of the way of the defect it is meant to catch.
 
-    So this names the paths instead. All three are fields FR-DATA-46 governs, and
+    So this names the paths instead. All three are fields FR-64 governs, and
     `severity_ci` is the one that matters most: it is a `tuple[float, float]`, which Pydantic
     emits as `prefixItems` rather than `items`, and the first version of the walker read only
     `items`. Every tuple field in every contract was invisible to it, and nothing said so —
@@ -2689,7 +2689,7 @@ def test_the_type_comparison_reaches_the_one_way_row(slug: str, row: str) -> Non
     )
 
 
-@pytest.mark.req("FR-MODEL-15")
+@pytest.mark.req("FR-107")
 @pytest.mark.parametrize(
     "block", ["evidence.source_level_stats.[]", "evidence.target_level_stats.[]"]
 )
@@ -2736,7 +2736,7 @@ def test_the_grouping_evidence_rows_are_the_shared_one_way_row(block: str) -> No
     )
 
 
-@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-9")
 def test_job_status_and_kind_enums_agree_with_the_contract() -> None:
     """An enum in the code but not the contract routes work nowhere; the reverse is a
     value a client may legitimately send and the platform will reject."""
@@ -2754,7 +2754,7 @@ def test_job_status_and_kind_enums_agree_with_the_contract() -> None:
     assert set(generated["$defs"][kind_ref]["enum"]) == authored_kinds
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_the_phase_zero_design_stub_is_not_overwritten() -> None:
     """`gi-pricing.yaml` describes the whole intended surface across eight modules.
 
@@ -2770,7 +2770,7 @@ def test_the_phase_zero_design_stub_is_not_overwritten() -> None:
 # -- the error model in the published contract (found missing by audit, 2026-08-14) --------
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_the_contract_publishes_the_problem_shape() -> None:
     """The audit finding this guards against.
 
@@ -2786,7 +2786,7 @@ def test_the_contract_publishes_the_problem_shape() -> None:
     assert "ValidationError" not in schemas
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_the_injected_validation_error_is_stripped_and_ours_is_kept() -> None:
     """The rule above, exercised on a document that breaks it.
 
@@ -2837,15 +2837,15 @@ def test_the_injected_validation_error_is_stripped_and_ours_is_kept() -> None:
     assert set(result["components"]["schemas"]) == {"ProblemDetail"}
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_every_operation_documents_the_problems_it_returns() -> None:
     """A client cannot handle a status the contract does not mention."""
     paths = _load(OPENAPI)["paths"]
     # The unauthenticated operational surface. A scraper and a kubelet are infrastructure,
     # not principals, and are reachable only from inside the deployment — so these four
     # have no 401 to document. `/metrics` is here for that reason and not because it was
-    # awkward: FR-PLAT-52 keeps identifiers out of its labels, so it discloses nothing.
-    # `/api/v1/auth/config` is the same category by design (FR-PLAT-66): the browser
+    # awkward: FR-407 keeps identifiers out of its labels, so it discloses nothing.
+    # `/api/v1/auth/config` is the same category by design (FR-394): the browser
     # needs the issuer and `client_id` to start a login, so the endpoint is unauthenticated
     # and has no 401 to document — `/version` is the precedent the requirement cites.
     exempt = {"/healthz", "/readyz", "/version", "/metrics", "/api/v1/auth/config"}
@@ -2858,7 +2858,7 @@ def test_every_operation_documents_the_problems_it_returns() -> None:
             assert documented - {"200", "201"}, f"{method.upper()} {path}"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_problem_responses_advertise_the_rfc_9457_media_type() -> None:
     paths = _load(OPENAPI)["paths"]
     cancel = paths["/api/v1/jobs/{job_id}/cancel"]["post"]["responses"]["409"]
@@ -2869,6 +2869,6 @@ def test_problem_responses_advertise_the_rfc_9457_media_type() -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_the_settings_endpoints_are_published() -> None:
     assert "/api/v1/settings" in _load(OPENAPI)["paths"]

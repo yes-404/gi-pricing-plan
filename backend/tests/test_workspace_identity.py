@@ -22,7 +22,7 @@ from app.main import create_app
 from app.platform import workspaces
 from model_schema import new_uuid7
 
-pytestmark = pytest.mark.req("FR-PLAT-63")
+pytestmark = pytest.mark.req("FR-396")
 
 ISSUER = "https://idp.test.example/realms/gip"
 
@@ -82,7 +82,7 @@ def _with_caller_route(app: FastAPI) -> TestClient:
 
 
 async def _membership(database: Database, user_id, workspace_id) -> None:
-    """A membership naming a workspace that exists (FR-PLAT-62's foreign key)."""
+    """A membership naming a workspace that exists (FR-395's foreign key)."""
     async with database.unit_of_work() as session:
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         session.add(WorkspaceMemberRow(user_id=user_id, workspace_id=workspace_id))
@@ -103,7 +103,7 @@ async def test_a_multi_membership_principal_without_a_header_is_authenticated(
         identity = await authenticate_bearer(session, StubVerifier(claims), "t")
         for _ in range(2):
             workspace_id = new_uuid7()
-            # A membership names a workspace that exists (FR-PLAT-62's foreign key).
+            # A membership names a workspace that exists (FR-395's foreign key).
             await workspaces.ensure_workspace(session, workspace_id=workspace_id)
             session.add(
                 WorkspaceMemberRow(

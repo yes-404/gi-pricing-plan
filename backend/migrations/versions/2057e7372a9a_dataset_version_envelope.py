@@ -1,6 +1,6 @@
 """dataset_version_envelope
 
-`DatasetVersion` catches up to its published contract (OQ-DATA-13, decided (c)): the
+`DatasetVersion` catches up to its published contract (OQ-568, decided (c)): the
 row gains the envelope's nine flat fields — `slug`, `description`, `created_by`,
 `updated_at`, `archived_at`, `parent_id`, `labels`, `schema_version`, `currency` — so a
 version serialises to a document that names its own provenance instead of borrowing it
@@ -20,9 +20,9 @@ The backfill answers four questions no other table can:
   same decision `82edffbe1dce` records for `datasets.owner_id`.
 * **`parent_id`** — the previous version id within the same dataset, null on version 1
   (the `Model.parent_model_id` precedent).
-* **`updated_at`** — a version is created and updated in the same moment (OQ-OVR-16,
+* **`updated_at`** — a version is created and updated in the same moment (OQ-553,
   resolved (a)), so the honest backfill is `created_at`, not `now()`.
-* **`source_fingerprint.extracted_at`** — OQ-DATA-13 (c) made the object form carry the
+* **`source_fingerprint.extracted_at`** — OQ-568 (c) made the object form carry the
   extraction moment, and the moment a stored fingerprint was extracted is the moment its
   version was created. The backfill only touches fingerprints that lack the field, and the
   new ingestion code writes it from then on.

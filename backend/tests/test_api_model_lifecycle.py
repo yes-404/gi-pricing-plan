@@ -1,4 +1,4 @@
-"""The lifecycle over HTTP: the routes, the ETag, and `wf-01` E6 → E10 (`02` §5.1).
+"""The lifecycle over HTTP: the routes, the ETag, and `WF-698` E6 → E10 (`02` §5.1).
 
 The service tests own the transitions. This file owns the three things only the edge can be
 wrong about:
@@ -7,11 +7,11 @@ wrong about:
   nothing served it. The endpoint audit compares the spec's table against the *published*
   contract, so an endpoint missing from both is invisible to it, which is how `01`'s
   reference lifecycle survived a workstream closure;
-* **`If-Match`** — `00` §5.4's optimistic concurrency, deferred by W2 and then by W4 and
+* **`If-Match`** — `00` §5.4's optimistic concurrency, deferred by WK-658 and then by WK-660 and
   reassigned here. `CONFLICT_STALE_WRITE` was absent from the error registry until now;
 * **the seam** — the `decide` route carrying its decision into the model. The service
   function exists either way; whether the *route* calls it is a different claim, and the
-  one `wf-01` E10 actually makes.
+  one `WF-698` E10 actually makes.
 
 The model is fitted through the real path — ingestion, validation, a split, a GLM — because
 a lifecycle test on a model that never had numbers is a test of the transition table, which
@@ -78,7 +78,7 @@ async def _slug_of(database: Database, model_id: UUID) -> str:
     list route — `02` §5.1 declared none, and inventing one for a test's convenience would
     have added an endpoint to the surface with no requirement behind it.
 
-    **`GET /models` exists from 2026-08-22** (W5, the audit-remediation slice): the gap was
+    **`GET /models` exists from 2026-08-22** (WK-661, the audit-remediation slice): the gap was
     a defect in §5.1 rather than a decision, and this docstring is the record of where it
     was noticed. The direct read stays, because the setup for a lifecycle test should not
     depend on a second route being correct — `test_api_models` owns the list route.
@@ -98,7 +98,7 @@ async def _slug_of(database: Database, model_id: UUID) -> str:
 # -- The published contract ---------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 def test_the_lifecycle_routes_are_published() -> None:
     """Declared in `02` §5.1 since Phase 0, served by nothing until this slice."""
     paths = _load(OPENAPI)["paths"]
@@ -108,7 +108,7 @@ def test_the_lifecycle_routes_are_published() -> None:
     assert "post" in paths["/api/v1/models/{model_id}/archive"]
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_the_lifecycle_routes_declare_if_match_and_the_stale_write_conflict() -> None:
     """`00` §5.4 is part of the contract a client generates from, not a runtime detail. A
     required header absent from the published spec is a 409 nobody's client expects."""
@@ -121,7 +121,7 @@ def test_the_lifecycle_routes_declare_if_match_and_the_stale_write_conflict() ->
 # -- `If-Match` ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_a_submission_without_if_match_is_refused(
     api_client: TestClient, workspace_id
 ) -> None:
@@ -138,7 +138,7 @@ def test_a_submission_without_if_match_is_refused(
     assert refused.json()["code"] == "CONFLICT_STALE_WRITE"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_a_stale_if_match_is_refused_and_the_current_one_is_accepted(
     api_client: TestClient, workspace_id
 ) -> None:
@@ -168,7 +168,7 @@ def test_a_stale_if_match_is_refused_and_the_current_one_is_accepted(
 
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_the_model_etag_changes_when_the_status_does(
     api_client: TestClient, workspace_id
 ) -> None:
@@ -189,11 +189,11 @@ def test_the_model_etag_changes_when_the_status_does(
 # -- The seam: E6 → E10 over HTTP ---------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 def test_the_journeys_approval_arm_runs_end_to_end(
     api_client: TestClient, workspace_id
 ) -> None:
-    """`wf-01` E6 → E10, over the routes an actuary and an approver actually use.
+    """`WF-698` E6 → E10, over the routes an actuary and an approver actually use.
 
     Before this slice the arm stopped at E6: the route did not exist, and even with the
     service function in place an approved *request* left the model in `review` unless the
@@ -243,11 +243,11 @@ def test_the_journeys_approval_arm_runs_end_to_end(
     assert after.json()["status"] == "approved"
 
 
-@pytest.mark.req("FR-GOV-13")
+@pytest.mark.req("FR-355")
 def test_requesting_changes_returns_the_model_to_fitted_over_the_api(
     api_client: TestClient, workspace_id
 ) -> None:
-    """The amendment to `06` FR-GOV-13, at the edge: a model returned from review is
+    """The amendment to `06` FR-355, at the edge: a model returned from review is
     `fitted` and resubmittable, not `draft` and apparently unfitted."""
     actor, model_id, slug, approver = _fitted(workspace_id)
     author = _headers(actor.id, workspace_id)
@@ -271,7 +271,7 @@ def test_requesting_changes_returns_the_model_to_fitted_over_the_api(
     assert after["fit_result"] is not None
 
 
-@pytest.mark.req("FR-MODEL-64")
+@pytest.mark.req("FR-202")
 def test_submitting_requires_the_submit_permission(
     api_client: TestClient, workspace_id
 ) -> None:
