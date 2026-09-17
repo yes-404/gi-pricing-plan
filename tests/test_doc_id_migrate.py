@@ -3236,9 +3236,21 @@ def _document_discovery_union(
             skipped.add(name)
             continue
         out = fn(root)
-        if not isinstance(out, list) or not all(
-            isinstance(d, doc_id_cli._Draft) for d in out
-        ):
+        if not isinstance(out, list):
+            skipped.add(name)
+            continue
+        # A vacuous `all(...)` over an empty `out` cannot distinguish "genuinely yields
+        # _Draft, produced none at this root" from "yields something else entirely,
+        # produced none here" -- `_discover_reference_moves` is exactly the second case:
+        # `list[_ReferenceMove]`, empty at some roots, non-empty at others. The element
+        # type is behaviour, not the function's own return annotation (declared type is
+        # not proof of runtime type), so it is observed from a sample: this call's own
+        # output when non-empty, else a probe against `ROOT` -- every real `_discover_*`
+        # that yields `_Draft` at all produces at least one on the live, fully-populated
+        # corpus, so an empty `ROOT` probe too is a reliable "yields nothing" signal, not
+        # an ambiguous one.
+        sample = out or fn(ROOT)
+        if sample and not all(isinstance(d, doc_id_cli._Draft) for d in sample):
             skipped.add(name)
             continue
         called[name] = out
@@ -3316,6 +3328,38 @@ def test_ruling_87_is_enforced_over_the_whole_discovery_union(
         f"discovered as a plain plan: {sorted(plain & set(_RULING_87_STANDALONE_SOURCES))}"
     )
 
+
+def test_discovery_union_classifies_a_draft_yielding_function_that_ran_empty_as_called(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path,
+) -> None:
+    """Positive control for `_document_discovery_union`'s empty-output branch: a function
+    that genuinely yields `_Draft` and simply found none at this particular root must be
+    classified `called` (with an empty list), never `skipped`.
+
+    Before the fix, `all(isinstance(d, doc_id_cli._Draft) for d in [])` is vacuously
+    `True` for *any* empty output, `_Draft`-yielding or not — so this positive case was
+    accidentally correct by the same vacuous logic that misclassified
+    `_discover_reference_moves` (`list[_ReferenceMove]`, non-empty at `ROOT`, empty at a
+    root with no reference moves) as `called`. This proves the fixed version — which
+    probes `ROOT` to determine element type when the primary call is empty — still gets
+    the `_Draft`-yielding, empty-at-this-root case right, not just the non-`_Draft` case.
+    An empty `docs/plans/` directory has no plain plans, multi-ruling files, or anything
+    else `_discover_plain_plans` yields, so it is empty by construction, not by accident.
+    """
+    empty_root = tmp_path / "empty"
+    (empty_root / "docs" / "plans").mkdir(parents=True)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=empty_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=empty_root)
+    _run_git(["config", "user.name", "Test"], cwd=empty_root)
+    (empty_root / "docs" / "plans" / ".gitkeep").write_text("", encoding="utf-8")
+    _run_git(["add", "-A"], cwd=empty_root)
+    _run_git(["commit", "-m", "seed: empty plans dir", "--quiet"], cwd=empty_root)
+    called, skipped = _document_discovery_union(doc_id_cli, empty_root)
+    assert "_discover_plain_plans" in called, (
+        "a _Draft-yielding function that ran and found nothing must be `called`, not "
+        f"`skipped`: {sorted(skipped)}"
+    )
+    assert called["_discover_plain_plans"] == []
 
 
 # ---------------------------------------------------------------------------------------
