@@ -2859,6 +2859,17 @@ def _row_status_signal(rest: str) -> tuple[str, str | None] | None:
 
 
 def _work_id_sort_key(work_id: str) -> tuple[int, str]:
+    """Numeric order within a phase, letter suffix breaking a tie (`W1` before `W1a`).
+
+    Two forms reach here: the legacy `W<n>[a-z]` a migration discovery/merge pass reads off
+    the pre-migration roadmap, and the canonical `WK-<n>` `_restructure_roadmap` also sorts
+    by when it edits an ALREADY-migrated roadmap in place (RL-992 obligation 3 turned it
+    from a from-scratch writer into a surgical editor of existing rows, which can now carry
+    either form depending on how recently the row itself was touched).
+    """
+    canonical_match = re.match(r"WK-0*(\d+)$", work_id)
+    if canonical_match is not None:
+        return int(canonical_match.group(1)), ""
     m = re.match(r"W(\d+)([a-z]?)", work_id)
     assert m is not None
     return int(m.group(1)), m.group(2)
