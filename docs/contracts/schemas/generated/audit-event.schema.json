@@ -62,7 +62,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "One immutable record of a governed change (FR-GOV-21).\n\n`before`/`after` hold the changed state, not the whole entity: an audit log that\nduplicates every row is unreadable at the moment it is needed, and FR-GOV-26 forbids\nverbatim secrets and full quote inputs regardless.",
+  "description": "One immutable record of a governed change (FR-369).\n\n`before`/`after` hold the changed state, not the whole entity: an audit log that\nduplicates every row is unreadable at the moment it is needed, and FR-375 forbids\nverbatim secrets and full quote inputs regardless.",
   "properties": {
     "action": {
       "pattern": "^[a-z_]+\\.[a-z_]+$",
@@ -129,7 +129,7 @@
         }
       ],
       "default": null,
-      "description": "The Job that caused this change, where one did (FR-GOV-25).",
+      "description": "The Job that caused this change, where one did (FR-374).",
       "title": "Job Id"
     },
     "justification": {

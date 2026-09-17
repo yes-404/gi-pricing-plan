@@ -11,7 +11,7 @@
     },
     "JobError": {
       "additionalProperties": false,
-      "description": "A typed failure (FR-PLAT-11).\n\n`code` is the contract and `retryable` decides whether the platform will try again;\n`detail` carries the field-level cause where the failure is deterministic, which is\nwhat lets the UI point at the offending input instead of showing a stack trace.",
+      "description": "A typed failure (FR-403).\n\n`code` is the contract and `retryable` decides whether the platform will try again;\n`detail` carries the field-level cause where the failure is deterministic, which is\nwhat lets the UI point at the offending input instead of showing a stack trace.",
       "properties": {
         "code": {
           "pattern": "^[A-Z][A-Z0-9_]*$",
@@ -84,7 +84,7 @@
       "type": "string"
     },
     "JobQueue": {
-      "description": "Named Celery queues with independently sized worker pools (FR-PLAT-13).",
+      "description": "Named Celery queues with independently sized worker pools (FR-405).",
       "enum": [
         "default",
         "compute",
@@ -186,7 +186,7 @@
     },
     "Progress": {
       "additionalProperties": false,
-      "description": "Structured progress (FR-PLAT-8) — a fraction, a stage label, and counters.",
+      "description": "Structured progress (FR-400) — a fraction, a stage label, and counters.",
       "properties": {
         "counters": {
           "additionalProperties": {
@@ -213,7 +213,7 @@
     },
     "ResourceBudget": {
       "additionalProperties": false,
-      "description": "Exceeding it yields a typed error naming the budget, not an opaque kill (FR-PLAT-16).",
+      "description": "Exceeding it yields a typed error naming the budget, not an opaque kill (FR-412).",
       "properties": {
         "memory_gb": {
           "anyOf": [
@@ -352,7 +352,7 @@
         }
       ],
       "default": null,
-      "description": "Time of the last progress report (NFR-PLAT-3).",
+      "description": "Time of the last progress report (NFR-528).",
       "title": "Progress At"
     },
     "queue": {
@@ -393,7 +393,7 @@
     },
     "stalled": {
       "default": false,
-      "description": "A running Job that has reported no progress within the configured window. Derived on read, never stored — a stored flag needs a sweeper to clear it and is wrong between sweeps (NFR-PLAT-3).",
+      "description": "A running Job that has reported no progress within the configured window. Derived on read, never stored — a stored flag needs a sweeper to clear it and is wrong between sweeps (NFR-528).",
       "title": "Stalled",
       "type": "boolean"
     },
