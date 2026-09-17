@@ -2,7 +2,7 @@
   "$defs": {
     "ComparisonMetric": {
       "additionalProperties": false,
-      "description": "One metric, aligned across every model in the comparison (FR-MODEL-56).",
+      "description": "One metric, aligned across every model in the comparison (FR-186).",
       "properties": {
         "direction": {
           "$ref": "#/$defs/MetricDirection"
@@ -46,7 +46,7 @@
     },
     "ComparisonSummary": {
       "additionalProperties": false,
-      "description": "What a comparison found, before the platform gives it an identity.\n\nThe `DiagnosticsResult` split, for the same reason: `pricing-core` computes and does not\nallocate ids, know about rows, or read a clock (ADR-0001).",
+      "description": "What a comparison found, before the platform gives it an identity.\n\nThe `DiagnosticsResult` split, for the same reason: `pricing-core` computes and does not\nallocate ids, know about rows, or read a clock (ADR-703).",
       "properties": {
         "baseline_ref": {
           "title": "Baseline Ref",
@@ -131,7 +131,7 @@
     },
     "DoubleLift": {
       "additionalProperties": false,
-      "description": "One challenger against the baseline (FR-MODEL-56, and FR-MODEL-50 as amended).",
+      "description": "One challenger against the baseline (FR-186, and FR-171 as amended).",
       "properties": {
         "baseline_ref": {
           "title": "Baseline Ref",
@@ -186,7 +186,7 @@
         "exposure_years": {
           "anyOf": [
             {
-              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
               "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
               "type": "string"
             },
@@ -226,7 +226,7 @@
     },
     "RelativityDifference": {
       "additionalProperties": false,
-      "description": "How the models price one level of one factor differently (FR-MODEL-56).\n\nThe comparison an actuary actually argues from: two models can score almost identically\nand disagree by 15 % on young drivers, and the aggregate metrics cannot show that.",
+      "description": "How the models price one level of one factor differently (FR-186).\n\nThe comparison an actuary actually argues from: two models can score almost identically\nand disagree by 15 % on young drivers, and the aggregate metrics cannot show that.",
       "properties": {
         "factor": {
           "title": "Factor",
@@ -267,7 +267,7 @@
     },
     "SplitRef": {
       "additionalProperties": false,
-      "description": "The named split a model was fitted and judged on (`02` §4.4, `01` FR-DATA-36).\n\nA *reference*, not a description. FR-DATA-36 records the split on the **parent**\nversion precisely so that \"trained on the same split\" is one artifact two models cite,\nrather than two derivations that were believed to match. Naming the part versions\ndirectly here would reintroduce the belief.\n\n`train_part` and `holdout_part` are keys into the split's `parts` map; that they name\ntwo *different* parts is checked here, because a model whose holdout is its training\nset reports a flawless fit and no diagnostic downstream can tell.",
+      "description": "The named split a model was fitted and judged on (`02` §4.4, `01` FR-76).\n\nA *reference*, not a description. FR-76 records the split on the **parent**\nversion precisely so that \"trained on the same split\" is one artifact two models cite,\nrather than two derivations that were believed to match. Naming the part versions\ndirectly here would reintroduce the belief.\n\n`train_part` and `holdout_part` are keys into the split's `parts` map; that they name\ntwo *different* parts is checked here, because a model whose holdout is its training\nset reports a flawless fit and no diagnostic downstream can tell.",
       "properties": {
         "holdout_part": {
           "default": "test",
@@ -292,7 +292,7 @@
       "type": "object"
     },
     "Weighting": {
-      "description": "How a metric was weighted (FR-MODEL-55).\n\n`EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where\nthe metric genuinely counts rows. The UI labels an unweighted metric on an\nexposure-weighted problem *as such* — which it can only do if the fit said which.",
+      "description": "How a metric was weighted (FR-184).\n\n`EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where\nthe metric genuinely counts rows. The UI labels an unweighted metric on an\nexposure-weighted problem *as such* — which it can only do if the fit said which.",
       "enum": [
         "exposure",
         "count",
@@ -303,7 +303,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The persisted comparison artifact (`02` §4.11, FR-MODEL-56).\n\nImmutable, and enforced at the privilege layer as well as here (FR-DATA-42): an approval\ncites this, and evidence that can change after the approval is not evidence.\n\nIt has no slug and no version of its own, for the reason `Diagnostics` has none — it is\nalways reached by id, from the Job that produced it or the approval that cites it.",
+  "description": "The persisted comparison artifact (`02` §4.11, FR-186).\n\nImmutable, and enforced at the privilege layer as well as here (FR-43): an approval\ncites this, and evidence that can change after the approval is not evidence.\n\nIt has no slug and no version of its own, for the reason `Diagnostics` has none — it is\nalways reached by id, from the Job that produced it or the approval that cites it.",
   "properties": {
     "computed_at": {
       "format": "date-time",

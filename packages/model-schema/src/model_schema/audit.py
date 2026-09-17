@@ -1,4 +1,5 @@
-"""The Audit Event and its hash chain (`06` §4.5, FR-368, FR-369, FR-370, FR-371, FR-372, FR-374, FR-375).
+"""The Audit Event and its hash chain (`06` §4.5, FR-368, FR-369, FR-370, FR-371, FR-372, FR-374,
+FR-375).
 
 > **R2** — The audit log is append-only and complete. Every governed transition writes its
 > event in the same database transaction as the change — if the audit write fails, the

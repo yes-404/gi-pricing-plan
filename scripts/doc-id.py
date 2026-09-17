@@ -2,11 +2,13 @@
 """doc-id.py — RFC-937's id allocator, checker, widener and migrator.
 
 Subcommands: `next`, `check`, `widen`, `migrate`. `migrate` (W37-5) implements
-`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` §4 steps 1-7, built and proven against the
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+§4 steps 1-7, built and proven against the
 fixture corpus at `tests/fixtures/docs-migration/` — nothing in the real tree moves
 until W37-6 points `--repo-root` at it, under its own preconditions.
 
-`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` §1.7 (`next`, `check`), §1.8 (`widen`), §4
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+§1.7 (`next`, `check`), §1.8 (`widen`), §4
 (`migrate`).
 
 **Standard library only** (G4/DP-5) — see `scripts/_docid.py`'s module docstring for why.
@@ -26,11 +28,11 @@ Usage:
     python3 scripts/doc-id.py migrate --verify [SNAPSHOT] [--ref REF]
 
 `migrate --verify` is RL-1043 §1's instrument
-(`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`): it runs the migration on a
-disposable snapshot — never a real checkout — computes all nine RFC-937 §7 (a)-(i)
-acceptance rows with the predicate each counted with, and exits 1 on any fail. The rows
-themselves live in `scripts/_docverify.py`; this file only owns the CLI seam, so that the
-predicates stay in one module rather than being re-derived beside the code they measure.
+(`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`): it runs the
+migration on a disposable snapshot — never a real checkout — computes all nine RFC-937 §7 (a)-(i)
+acceptance rows with the predicate each counted with, and exits 1 on any fail. The rows themselves
+live in `scripts/_docverify.py`; this file only owns the CLI seam, so that the predicates stay in
+one module rather than being re-derived beside the code they measure.
 """
 
 from __future__ import annotations
@@ -148,7 +150,8 @@ def materialize_ref_with_history(ref: str, dest: Path, *, repo_root: Path) -> No
     `git archive` + `git init` produces a tree whose content is right and whose history is
     a single synthetic commit. That is not equivalent: RFC-937 item 1 makes a module's
     **git first-commit date** the `created` value id allocation sorts on
-    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`, D1 at `:247` — "numbers carry chronology"),
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`,
+    D1 at `:247` — "numbers carry chronology"),
     so git history is a *declared input* to the migration, not an incidental property of
     the checkout it happens to run in. A one-commit tree has no first-commit dates to read,
     and the old `date.today()` fallback silently substituted for all of them — re-keying
@@ -1332,7 +1335,8 @@ class MigrateResult:
     # deterministic defect — and now requires membership in this same recorded set first,
     # keeping the second-run content equality only as a second condition within it. One
     # recorded set, read by both consumers, rather than each re-deriving its own
-    # (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md` — the copy is what goes stale).
+    # (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md` — the copy is what goes
+    # stale).
     generated_paths: tuple[str, ...] = ()
     # W37-6, 2026-09-06: every file `_repoint_all_relative_links` rewrote a relative
     # markdown link in — a citer's own link re-rooted for its new directory depth, a
@@ -1537,11 +1541,11 @@ def _plan_title(text: str) -> str | None:
     next blank line or heading — never just the first physical line. A title that reads as
     one continuous sentence in the source can be hard-wrapped across two (or more) physical
     lines with no other marker (`docs/rulings/RL-00950-rl-949-3-point-2-s-fetch-pat
-    h-is-broken-against-github-com-resolved-by.md` and two siblings, found migrating them as `PL-`: the same wrapped-
-    heading defect class already fixed in `FD.md`/`REFERENCE.md`/`RFC.md`/`WK.md`'s
-    templates, here in a real document rather than a template). Verified against every
-    plan-shaped file in the real corpus: joining changes the extracted title for exactly
-    those three files and nothing else, each into one coherent sentence.
+    h-is-broken-against-github-com-resolved-by.md` and two siblings, found migrating them as `PL-`:
+    the same wrapped- heading defect class already fixed in
+    `FD.md`/`REFERENCE.md`/`RFC.md`/`WK.md`'s templates, here in a real document rather than a
+    template). Verified against every plan-shaped file in the real corpus: joining changes the
+    extracted title for exactly those three files and nothing else, each into one coherent sentence.
     """
     lines = text.splitlines()
     for idx, line in enumerate(lines):
@@ -1789,7 +1793,8 @@ _REVIEW_HEADING_RE: Final = re.compile(r"^###\s+(.+?),\s*(\d{4}-\d{2}-\d{2})(.*)
 # file does not silently misfile a different row onto this disposition.
 _CLOSURE_AUDIT_TITLE_PREFIXES: Final = (
     "Independent audit",
-    "WK-660 mid-workstream scope findings",
+    # rfc-937: legacy-form-spec
+    "W4 mid-workstream scope findings",
 )
 
 
@@ -1877,7 +1882,9 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
 
 
 # ---------------------------------------------------------------------------------------
-# F84 (`docs/findings/FD-01021-17-closure-records-have-no-discovery-code-and-no-guard-the-migration-cannot-see-them.md`): the 17 closure records the migration cannot see.
+# F84
+#(`docs/findings/FD-01021-17-closure-records-have-no-discovery-code-and-no-guard-the-migration-cannot-see-them.md`):
+# the 17 closure records the migration cannot see.
 #
 # `_discover_closure_records` above reads `docs/audit/closure-records.md` and nothing
 # else -- its own docstring says so ("one `###` heading per record"). The per-work and
@@ -1895,33 +1902,36 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
 # ---------------------------------------------------------------------------------------
 
 #: RFC-937 §5.2's own routing, read from the row `"audit/work/*/README.md (15),
-#: closures/CR-00822-phase-record-1b-modelling-workbench.md, closures/CR-00821-phase-1b-exit-demo-uat-acceptance-record.md"` -> `"closures/CR-0nnnn-*.md,
-#: kind: work / phase"`. The **directory decides the `kind:`**, which is what makes this
-#: a routing rule rather than a filename rule -- the discriminator
-#: `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §1 states for the README
-#: row: *"A `README.md` takes the family §5.2 routes it to"*, never its filename.
+#: closures/CR-00822-phase-record-1b-modelling-workbench.md,
+#: closures/CR-00821-phase-1b-exit-demo-uat-acceptance-record.md"` -> `"closures/CR-0nnnn-*.md,
+#: kind: work / phase"`. The **directory decides the `kind:`**, which is what makes this a routing
+#: rule rather than a filename rule -- the discriminator
+#: `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §1
+#: states for the README row: *"A `README.md` takes the family §5.2 routes it to"*, never its
+#: filename.
 #:
 #: §5.2's row says 15 work READMEs where 16 now exist (16 at `544b90c`); the rule is used
 #: here, not the count, which is why this survives that drift.
 #:
-#: **`docs/closures/CR-00821-phase-1b-exit-demo-uat-acceptance-record.md` is in that same §5.2 row and has the same defect, and
-#: is deliberately not folded in here**: it is under neither directory, and F84's
-#: falsifiable section is written over 17 files. It is reported as a residual instead --
-#: widening a finding's discharge past what the finding states is how a discharge stops
-#: being checkable against its own text.
+#: **`docs/closures/CR-00821-phase-1b-exit-demo-uat-acceptance-record.md` is in that same §5.2 row
+#: and has the same defect, and is deliberately not folded in here**: it is under neither directory,
+#: and F84's falsifiable section is written over 17 files. It is reported as a residual instead --
+#: widening a finding's discharge past what the finding states is how a discharge stops being
+#: checkable against its own text.
 _AUDIT_CLOSURE_README_DIRS: Final[Mapping[str, str]] = {
     "docs/audit/work": "work",
     "docs/audit/phases": "phase",
 }
 
 #: The record heading these files actually carry, verified against all 17 at `544b90c`
-#: with `grep -h '^# ' docs/audit/work/*/README.md docs/closures/CR-00822-phase-record-1b-modelling-workbench.md`:
-#: **14** read `# Work-item record — <id> (<title>)`, **two** read `# Audit record —
-#: <slug> (<clause>)` (`nt-0010-0011-adoption`, `nt-0012-0013-0014-adoption`) and **one**
-#: reads `# Phase record — 1b (Modelling Workbench)`. F84's own prose says their headings
-#: read *"`# Work-item record — WK-671`, `# Phase record — 1b`"*; that is true of 15 of the
-#: 17, and the two `# Audit record —` files are the exception the finding does not name.
-#: Matching the three forms rather than the one is what keeps all 17 discovered.
+#: with `grep -h '^# ' docs/audit/work/*/README.md
+#: docs/closures/CR-00822-phase-record-1b-modelling-workbench.md`: **14** read `# Work-item record —
+#: <id> (<title>)`, **two** read `# Audit record — <slug> (<clause>)` (`nt-0010-0011-adoption`,
+#: `nt-0012-0013-0014-adoption`) and **one** reads `# Phase record — 1b (Modelling Workbench)`.
+#: F84's own prose says their headings read *"`# Work-item record — WK-671`, `# Phase record —
+#: 1b`"*; that is true of 15 of the 17, and the two `# Audit record —` files are the exception the
+#: finding does not name. Matching the three forms rather than the one is what keeps all 17
+#: discovered.
 #:
 #: **Matched, never assumed from the path.** A file under these directories whose H1 is
 #: none of the three forms is deliberately *not* claimed: `title:` would have to be
@@ -1938,7 +1948,8 @@ def _discover_audit_closure_readmes(root: Path) -> list[_Draft]:
     and `docs/audit/phases/<phase>/README.md` (1). F84's first limb.
 
     `owner: auditor` is §1.6's `CR` row read from the cell
-    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:152`, mirrored at
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:152`,
+    mirrored at
     `docs/process/document-ids.md:157`): *"auditor (`work`, `phase`); lead (`review`)"*.
     Neither of the two kinds this function produces is `review`, so the value is uniform
     and is not derived from what a role ought to own.
@@ -1981,7 +1992,8 @@ def _discover_audit_closure_readmes(root: Path) -> list[_Draft]:
 
 _PLAN_REVIEWS_REL_PATH: Final = "docs/audit/plan-reviews.md"
 
-#: RL-979 (`docs/rulings/RL-00979-the-container-is-rfc-kind-process-status-closed-owner-is-the-maintainer-not-the-planner.md`,
+#: RL-979
+#:(`docs/rulings/RL-00979-the-container-is-rfc-kind-process-status-closed-owner-is-the-maintainer-not-the-planner.md`,
 #: PR #601): `docs/audit/plan-reviews.md`'s "Pending proposals" section is a record in its
 #: own right -- `RFC-`, `kind: process`, `status: closed`, `owner: maintainer` -- not
 #: preamble to the review that follows it. RL-980 §1 held that *stamping* it happens
@@ -2142,8 +2154,9 @@ _PLAN_REVIEWS_SPLIT_LEVEL: Final = 3  # `_REVIEW_HEADING_RE` records are `###` h
 
 
 def _check_plan_reviews_heading_census(root: Path) -> None:
-    """RL-985 (row 1, `docs/plans/PL-00961-w37-6-everything-it-owns-before-the-run-one-list-with-each-item-s-state-and-what-discharges-it.md`): a
-    guard may not derive its denominator from the same matcher it is checking --
+    """RL-985 (row 1,
+    `docs/plans/PL-00961-w37-6-everything-it-owns-before-the-run-one-list-with-each-item-s-state-and-what-discharges-it.md`):
+    a guard may not derive its denominator from the same matcher it is checking --
     `_check_legacy_file_not_silently_unrecognised`'s `if drafts: return` cannot tell
     "found every review" from "found ten of eleven", since both give it a non-empty
     list (measured: `_discover_plan_reviews` returns ten drafts for eleven real
@@ -2208,11 +2221,14 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
         )
 
 
-#: RL-1047 §2.1 (`docs/rulings/RL-01047-a-document-whose-entire-content-is-a-maintainer-decision-migrates-as-rl-owner-maintainer-no-kind-field.md`): a document
+#: RL-1047 §2.1
+#:(`docs/rulings/RL-01047-a-document-whose-entire-content-is-a-maintainer-decision-migrates-as-rl-owner-maintainer-no-kind-field.md`):
+#: a document
 #: filed under `docs/plans/` **whose entire content is a decision the maintainer made and
 #: dated**, carrying no `## Ruling N` heading, migrates as `RL-`, `owner: maintainer`, with
 #: **no `kind:` field** (`docs/_templates/RL.md:8` forbids the field on this family). The
-#: cells the ruling reads from are RFC-937 §1.13 (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:
+#: cells the ruling reads from are RFC-937 §1.13
+#:(`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:
 #: 238`, *"maintainer decisions and phase pre-decisions → `RL-` with `owner: maintainer`"*)
 #: and §1.6's `RL` row (`:149`, *"the maintainer may author one on scope or process"*).
 #:
@@ -2258,7 +2274,8 @@ _MAINTAINER_DECISION_TITLE_RE: Final = re.compile(
     r"the maintainer(?:'|\u2019)s\b|reserved to the maintainer\b", re.IGNORECASE
 )
 
-#: RL-1047 §2.2: the exclusion of `docs/plans/PL-01032-reserved-to-the-maintainer-one-batch-f90-s-prior-question-filed-2026-09-03.md`
+#: RL-1047 §2.2: the exclusion of
+#:`docs/plans/PL-01032-reserved-to-the-maintainer-one-batch-f90-s-prior-question-filed-2026-09-03.md`
 #: is **a state of one tree, not a property of the file** — *"the predicate in §2.1 tests
 #: content at the tree in question, never a title and never a past reading of that
 #: content"*. That file is a planner-assembled batch of `> **Decision:**` / `> **Date:**`
@@ -2501,7 +2518,8 @@ class GitHistoryUnavailableError(RuntimeError):
     path, which tree, and why.
 
     This is a **refusal, not a fallback**. `created` is a declared input to id allocation
-    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` item 1: "using the module's first-commit
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+    item 1: "using the module's first-commit
     date; git first-commit date otherwise", with D1 at `:247` holding that numbers carry
     chronology), and it is the primary sort key `_assign_numbers` consumes. Substituting
     `date.today()` for it does not degrade gracefully — every draft takes the same
@@ -2715,8 +2733,19 @@ def _tree_commit_date(root: Path) -> date:
 # never a silent pick of the first, the last, or the richest cell.
 # ---------------------------------------------------------------------------------------
 
+#: Matches the pre-migration legacy leading cell (`W<n>[<letter>]`) that the one real
+#: migration pass discovers, and also the post-migration canonical form (`WK-<n>`) a
+#: *later* in-place restructure can find already sitting in a leading row — `_restructure_
+#: roadmap` now edits an already-migrated tree too (RL-992 obligation 3), so a fresh
+#: draft's `old_token` can name either shape depending on how recently the row it
+#: supersedes was itself touched (`_work_id_sort_key`'s own docstring already documents
+#: this dual-form reality; this pattern was the one place still assuming only the first).
+#: Before this broadening, a canonical `**WK-657**` leading row matched nothing here, so
+#: `_scan_roadmap_rows` never reported it as an occurrence and `_restructure_roadmap`'s
+#: removal set — built only from reported occurrences — left it behind, duplicated
+#: alongside the new block that was meant to replace it.
 _ROADMAP_WORK_ROW_RE: Final = re.compile(
-    r"^\|\s*(~~)?\*\*(W\d+[a-z]?)\*\*(~~)?\s*(?:✔)?\s*\|(.*)$"
+    r"^\|\s*(~~)?\*\*(W\d+[a-z]?|WK-\d+)\*\*(~~)?\s*(?:✔)?\s*\|(.*)$"
 )
 _ROADMAP_PHASE_LABEL_RE: Final = re.compile(r"^#{2,4}\s+(?:\d+\.\s+)?Phase\s+(\S+)\b")
 _ROADMAP_PHASE_TITLE_RE: Final = re.compile(
@@ -2753,7 +2782,8 @@ _ROADMAP_STATUS_DATE_RE: Final = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
 # derivation is specific to this one id — a dependency reference in another row (`WK-665`'s
 # `Depends on` cell names `WK-662`), not anything mechanically visible in `WK-662`'s own row.
 _ROADMAP_RETIRED_WORK_IDS: Final[Mapping[str, str]] = {
-    "WK-662": (
+    # rfc-937: legacy-form-spec
+    "W6": (
         "Retired rather than closed (RL-993): this work's own row carries no closed "
         "signal, and its scope was re-cut into WK-successors before it completed under "
         "this name — see the successors named below."
@@ -2763,7 +2793,9 @@ _ROADMAP_RETIRED_WORK_IDS: Final[Mapping[str, str]] = {
 # from the roadmap's own dependency reference (`WK-665`'s `Depends on` cell names `WK-660, WK-661,
 # WK-662`) and prose ("The pre-split frontend work... re-cut into WK-663 and WK-664"), not
 # mechanically derivable from `WK-662`'s own row.
-_ROADMAP_RETIRED_SUCCESSORS: Final[Mapping[str, tuple[str, ...]]] = {"WK-662": ("WK-663", "WK-664")}
+# rfc-937: legacy-form-spec
+# rfc-937: legacy-form-spec
+_ROADMAP_RETIRED_SUCCESSORS: Final[Mapping[str, tuple[str, ...]]] = {"W6": ("W6a", "W6b")}
 
 # RL-993 found that `docs/roadmap.md`'s heading nesting is unreliable — `### Original
 # scope, for reference` (317) and its sibling `### Workstreams` (327, which actually
@@ -2855,6 +2887,17 @@ def _row_status_signal(rest: str) -> tuple[str, str | None] | None:
 
 
 def _work_id_sort_key(work_id: str) -> tuple[int, str]:
+    """Numeric order within a phase, letter suffix breaking a tie (`W1` before `W1a`).
+
+    Two forms reach here: the legacy `W<n>[a-z]` a migration discovery/merge pass reads off
+    the pre-migration roadmap, and the canonical `WK-<n>` `_restructure_roadmap` also sorts
+    by when it edits an ALREADY-migrated roadmap in place (RL-992 obligation 3 turned it
+    from a from-scratch writer into a surgical editor of existing rows, which can now carry
+    either form depending on how recently the row itself was touched).
+    """
+    canonical_match = re.match(r"WK-0*(\d+)$", work_id)
+    if canonical_match is not None:
+        return int(canonical_match.group(1)), ""
     m = re.match(r"W(\d+)([a-z]?)", work_id)
     assert m is not None
     return int(m.group(1)), m.group(2)
@@ -3185,7 +3228,8 @@ def _discover_register(root: Path, *, exclude: Collection[str] = ()) -> list[_Dr
             _Draft(
                 materialize="register_row", prefix="FD", kind=None, title=title,
                 status="active", created=created, owner="auditor",
-                tie_break=("docs/findings/register.md", order), old_token=token,
+                # rfc-937: legacy-form-spec
+                tie_break=("docs/audit/register.md", order), old_token=token,
                 source_path=path,
             )
         )
@@ -3203,13 +3247,15 @@ _FINDING_FILENAME_RE: Final = re.compile(r"^(F\d+)\.md$")
 #: the identical `_discover_register` exclusion every `F*.md` essay goes through, never a
 #: number of its own.
 _FINDING_EXTRA_ESSAY_LOCATIONS: Final[Mapping[str, str]] = {
-    "F28": "docs/findings/FD-00894-rfc-840-841-adoption-pilot.md",
+    # rfc-937: legacy-form-spec
+    "F28": "docs/audit/work/nt-0010-0011-adoption/pilot-findings.md",
 }
 
 
 def _discover_findings(root: Path) -> list[_Draft]:
     """`docs/audit/findings/F<n>.md`: one essay per finding (RFC-937 §5.2's own routing,
-    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:323`: *"`audit/findings/F*.md` (5) + README |
+    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:323`:
+    *"`audit/findings/F*.md` (5) + README |
     `findings/FD-0nnnn-*.md`; README rewritten"*). `docs/audit/findings/README.md` is the
     family's own index, not a governed finding, and is excluded by the filename match
     below exactly as `docs/adrs/README.md` is excluded from `_discover_adrs`.
@@ -3234,9 +3280,10 @@ def _discover_findings(root: Path) -> list[_Draft]:
     optional field.
 
     **`was:`** is the bare `F<n>` token (RFC-937 line 269's illustrative row: *"`F27` +
-    `docs/findings/FD-00934-03-rating-shapes-vs-hand-authored-contracts.md`" → "`docs/findings/FD-0nnnn-rating-shapes.md`, register
-    row `was: F27`"* — not the path, not `F27.md`), so it doubles as the citation-rewrite
-    key `migrate()`'s Phase D pass already keys every other family's `was:`/`old_token` on.
+    `docs/findings/FD-00934-03-rating-shapes-vs-hand-authored-contracts.md`" →
+    "`docs/findings/FD-0nnnn-rating-shapes.md`, register row `was: F27`"* — not the path, not
+    `F27.md`), so it doubles as the citation-rewrite key `migrate()`'s Phase D pass already keys
+    every other family's `was:`/`old_token` on.
 
     **Title** comes from the essay's own `# F<n> — <title>` heading (`_FINDING_TITLE_RE`),
     the same heading-derived reading `_discover_adrs` gives `# ADR-<n> — <title>` and
@@ -3296,14 +3343,17 @@ def _discover_findings(root: Path) -> list[_Draft]:
                 )
             )
             order += 1
-    # RL-1048 (`docs/rulings/RL-01048-three-docs-audit-files-no-rfc-937-clause-maps-get-destinations-not-a-halt.md`) §2,
+    # RL-1048
+    #(`docs/rulings/RL-01048-three-docs-audit-files-no-rfc-937-clause-maps-get-destinations-not-a-halt.md`)
+    # §2,
     # File 3: `pilot-findings.md` is not itself an `F<n>.md`-shaped essay -- it lives at a
     # different path entirely and carries no `# F<n> — <title>` heading -- but is the
-    # essay half of an *already-open* register finding, F28, which `docs/findin
-    # gs/register.md:70` cites it by name as the disposition trail for. "Not a new finding,
-    # no new id" (§3): it must produce a draft that shares F28's own number, not mint one
-    # of its own, so it goes through the identical exclusion path every `F*.md` essay
-    # does -- `_discover_register`'s caller filters `register_drafts` by every `old_token`
+    # essay half of an *already-open* register finding, F28, which
+    # `docs/findings/register.md:70` cites it by name as the disposition trail for.
+    # "Not a new finding, no new id" (§3): it must produce a draft that shares F28's own
+    # number, not mint one of its own, so it goes through the identical exclusion path
+    # every `F*.md` essay does -- `_discover_register`'s caller filters `register_drafts`
+    # by every `old_token`
     # this function returns, F28 included.
     for token, rel in _FINDING_EXTRA_ESSAY_LOCATIONS.items():
         path = root / rel
@@ -3339,7 +3389,8 @@ _WORKFLOW_FILENAME_RE: Final = re.compile(r"^(wf-\d+)-")
 
 def _discover_workflows(root: Path) -> list[_Draft]:
     """`docs/workflows/wf-0N-*.md`: RFC-937 §5.2's own routing
-    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:322`: *"`workflows/wf-0n-*.md` (5) + README |
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:322`:
+    *"`workflows/wf-0n-*.md` (5) + README |
     `WF-0nnnn-*.md`, stamped; README table generated"*). Matched on the file's own legacy
     heading `# WF-0N — <title>` (`_WORKFLOW_TITLE_RE`) — the same heading-derived
     `old_token` reading `_discover_adrs` gives `# ADR-<n> — <title>`, invisible to a second
@@ -3411,16 +3462,19 @@ _GENERIC_H1_RE: Final = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 #: Every standalone `docs/audit/` file RFC-937 or a later ruling routes into
 #: `research/RS-...` by explicit path, `rel -> (kind, owner)`:
 #:
-#: - `file-census.md`/`file-taxonomy-draft.md` — `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md
-#:   :328` ("`audit/file-census*.{md,csv}`, `research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md` | →
-#:   `research/RS-…`"), `:238` ("census and taxonomy draft → `RS- kind: measurement`/
-#:   `audit`"). `kind: measurement` for both is a **reading**, not a citation: RFC-937
-#:   gives a disjunction and neither file reads as a formal audit with scope, evidence and
-#:   verdicts (§1.6's own `RS` `audit` row) — both are raw counts and a draft
-#:   classification exercise, which is what `measurement` names in §1.2's table. Owner
-#:   `executor` — D13 (§3): "research → executor, except `RS- kind: audit` → auditor".
+#: - `file-census.md`/`file-taxonomy-draft.md` —
+#:`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md
+#: :328` ("`audit/file-census*.{md,csv}`, `research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md`
+#: | → `research/RS-…`"), `:238` ("census and taxonomy draft → `RS- kind: measurement`/ `audit`").
+#: `kind: measurement` for both is a **reading**, not a citation: RFC-937 gives a disjunction and
+#: neither file reads as a formal audit with scope, evidence and verdicts (§1.6's own `RS` `audit`
+#: row) — both are raw counts and a draft classification exercise, which is what `measurement` names
+#: in §1.2's table. Owner `executor` — D13 (§3): "research → executor, except `RS- kind: audit` →
+#: auditor".
 #: - `nt-0019-verification-and-impact-sweep.md`/`ruling-acceptance-item-sweep.md` — Ruling
-#:   99 (`docs/rulings/RL-01048-three-docs-audit-files-no-rfc-937-clause-maps-get-destinations-not-a-halt.md`) §2: neither file
+#:   99
+#:(`docs/rulings/RL-01048-three-docs-audit-files-no-rfc-937-clause-maps-get-destinations-not-a-halt.md`)
+#:   §2: neither file
 #:   existed at RFC-937's own `8f5d57d` base tree (§1.13: "every governance file **at
 #:   `8f5d57d`**"), so RFC-937 cannot have named them — both are dispatched audit records
 #:   with method, evidence and verdicts, matching `RS`'s unit and `kind: audit`'s
@@ -3430,10 +3484,17 @@ _GENERIC_H1_RE: Final = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 #: no shared shape to glob on (a bare `F<n>.md` filename, a `# WF-0N —` heading) — named
 #: legacy files, the same reading `_REFERENCE_MOVE_TARGETS` below gives its four.
 _RESEARCH_ESSAY_TARGETS: Final[Mapping[str, tuple[str, str]]] = {
-    "docs/research/RS-00952-file-census-rfc-897-stage-0.md": ("measurement", "executor"),
-    "docs/research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md": ("measurement", "executor"),
-    "docs/research/RS-01002-rfc-937-verification-and-impact-sweep-audit-record.md": ("audit", "auditor"),
-    "docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md": ("audit", "auditor"),
+    # rfc-937: legacy-form-spec
+    "docs/audit/file-census.md": ("measurement", "executor"),
+    # rfc-937: legacy-form-spec
+    "docs/audit/file-taxonomy-draft.md": ("measurement", "executor"),
+    # rfc-937: legacy-form-spec
+    "docs/audit/nt-0019-verification-and-impact-sweep.md": (
+        "audit",
+        "auditor",
+    ),
+    # rfc-937: legacy-form-spec
+    "docs/audit/ruling-acceptance-item-sweep.md": ("audit", "auditor"),
 }
 
 
@@ -3471,7 +3532,8 @@ def _discover_research_essays(root: Path) -> list[_Draft]:
 #: numbers into the sequence — a document family membership without an id would itself be
 #: a new, undeclared shape).
 _RESEARCH_UNSTAMPABLE_MOVE: Final[Mapping[str, str]] = {
-    "docs/research/file-census-5ef559d.csv": "docs/research/file-census-5ef559d.csv",
+    # rfc-937: legacy-form-spec
+    "docs/audit/file-census-5ef559d.csv": "docs/research/file-census-5ef559d.csv",
 }
 
 
@@ -3499,11 +3561,13 @@ def _move_unstampable_research_files(root: Path) -> tuple[list[str], list[str]]:
 
 def _discover_named_phase_records(root: Path) -> list[_Draft]:
     """The two standalone `docs/audit/` files RFC-937 names individually as `CR- kind:
-    phase` records (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:238`: *"exit-demo UAT and
-    `closures/CR-00709-phase-0-specification-status.md` → `CR- kind: phase`"*; `:314` and `:324` for their own §5.2 rows).
-    Neither is a per-directory README (`_discover_audit_closure_readmes`'s shape) or a
-    heading inside a shared file (`_discover_closure_records`'s shape) -- each is its own
-    whole file with its own H1, so matched by explicit path exactly as
+    phase` records
+    (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:238`:
+    *"exit-demo UAT and
+    `closures/CR-00709-phase-0-specification-status.md` → `CR- kind: phase`"*; `:314` and `:324` for
+    their own §5.2 rows). Neither is a per-directory README (`_discover_audit_closure_readmes`'s
+    shape) or a heading inside a shared file (`_discover_closure_records`'s shape) -- each is its
+    own whole file with its own H1, so matched by explicit path exactly as
     `_discover_research_essays` matches its two.
 
     **Owner `auditor`** — §1.6's `CR` row: "auditor (`work`, `phase`); lead (`review`)".
@@ -3511,13 +3575,15 @@ def _discover_named_phase_records(root: Path) -> list[_Draft]:
     the family's only value, ever.
 
     **`phase:`** is read, not derived: `exit-demo-uat.md`'s own H1 names "Phase 1b"
-    (`P1b`); `closures/CR-00709-phase-0-specification-status.md`'s own H1 names "Phase 0" (`P0`). Neither is guessed from
-    a roadmap lookup the way `_write_document_drafts`'s `LG-` `work:` resolution is,
-    because both files say their own phase directly.
+    (`P1b`); `closures/CR-00709-phase-0-specification-status.md`'s own H1 names "Phase 0" (`P0`).
+    Neither is guessed from a roadmap lookup the way `_write_document_drafts`'s `LG-` `work:`
+    resolution is, because both files say their own phase directly.
     """
     targets: tuple[tuple[str, str], ...] = (
-        ("docs/closures/CR-00821-phase-1b-exit-demo-uat-acceptance-record.md", "P1b"),
-        ("docs/closures/CR-00709-phase-0-specification-status.md", "P0"),
+        # rfc-937: legacy-form-spec
+        ("docs/audit/exit-demo-uat.md", "P1b"),
+        # rfc-937: legacy-form-spec
+        ("docs/phase-0-status.md", "P0"),
     )
     drafts: list[_Draft] = []
     for order, (rel, phase) in enumerate(targets):
@@ -3550,10 +3616,14 @@ def _discover_named_phase_records(root: Path) -> list[_Draft]:
 #: outside`, `freeze-gate`) -- the only tree-wide hit is the map plan restating the same
 #: instruction, not any authored text to carry over.
 _REFERENCE_MOVE_TARGETS: Final[Mapping[str, str]] = {
-    "docs/process/checklists/phase-close.md": "docs/process/checklists/phase-close.md",
-    "docs/process/checklists/work-item-close.md": "docs/process/checklists/work-item-close.md",
-    "docs/process/retrofit-impossible.md": "docs/process/retrofit-impossible.md",
-    "docs/process/security-posture.md": "docs/process/security-posture.md",
+    # rfc-937: legacy-form-spec
+    "docs/audit/checklists/phase-close.md": "docs/process/checklists/phase-close.md",
+    # rfc-937: legacy-form-spec
+    "docs/audit/checklists/work-item-close.md": "docs/process/checklists/work-item-close.md",
+    # rfc-937: legacy-form-spec
+    "docs/audit/retrofit-impossible.md": "docs/process/retrofit-impossible.md",
+    # rfc-937: legacy-form-spec
+    "docs/audit/security-posture.md": "docs/process/security-posture.md",
 }
 
 
@@ -3700,14 +3770,14 @@ def _discover_vendored_skill_manifests(root: Path) -> _VendoredManifestScan:
     here, and its absence is not an oversight.** That register answers *"can this file
     carry a governed header at all?"* — a stamp-set question, owned by the gate, whose
     three vendored entries are exempt by the maintainer's 2026-09-02 ruling
-    (`docs/rulings/RL-01001-the-vendored-manifest-exemption-the-maintainer-s-ruling-2026-09-02.md`). This function answers
-    *"has this migration already stamped this manifest?"* — an idempotency question.
-    Substituting one for the other is what produced the defect above, and importing the
-    register would substitute a *different* wrong predicate rather than fix it: at
-    `c888b61` all 28 vendored manifests classify `"foreign"`, so the 3 registered ones
-    need no separate treatment here — they are deferred alongside the other 25, by the
-    same rule, for the same reason. (`UNSTAMPABLE_EXEMPTIONS`'s own declaration names
-    `audit-docs.py` check 30 as the consumer it was made public for, not this module.)
+    (`docs/rulings/RL-01001-the-vendored-manifest-exemption-the-maintainer-s-ruling-2026-09-02.md`).
+    This function answers *"has this migration already stamped this manifest?"* — an idempotency
+    question. Substituting one for the other is what produced the defect above, and importing the
+    register would substitute a *different* wrong predicate rather than fix it: at `c888b61` all 28
+    vendored manifests classify `"foreign"`, so the 3 registered ones need no separate treatment
+    here — they are deferred alongside the other 25, by the same rule, for the same reason.
+    (`UNSTAMPABLE_EXEMPTIONS`'s own declaration names `audit-docs.py` check 30 as the consumer it
+    was made public for, not this module.)
 
     Forward reference by design: `_front_matter_state` and `_REFERENCE_FOREIGN_REASON` are
     defined below, in the Reference-stamp section that carries their rationale. Moving
@@ -3751,16 +3821,50 @@ def _iter_tree_files(root: Path) -> Iterator[Path]:
     `__pycache__/*.pyc` this process's own dynamic imports leave behind (`_load_module`
     below) as real migration input — the instrument reading its own fixtures and its own
     exhaust as if they were the repository it is migrating.
+
+    **Inside a git work tree the enumeration is git's, not a walk** (2026-09-17, W37-6
+    run 2). A `migrate --repo-root <checkout>` over a checkout carrying a synced `.venv/`
+    swept the venv: `certifi/cacert.pem`'s Buypass Class 2 Root CA block had its base64
+    `W2` rewritten to `WK-658` (the token map) and two `hypothesis` modules had a
+    `…/notes/fastmath/` URL rewritten to `…/rfcs/fastmath/` (the directory move), all at
+    13:43:54Z — and because uv hardlinks every site-packages file from its cache, the one
+    in-place write corrupted the CA bundle of all 40 venvs on the box (inode 410131),
+    which surfaced hours later as `ssl.SSLError: [X509] PEM lib` in an unrelated gate.
+    `sweep_exclusion_reason` names paths the *repository* excludes; it cannot know what a
+    checkout's `.gitignore` excludes, so the walk is replaced by `git ls-files -z --cached
+    --others --exclude-standard` — tracked files plus untracked-but-not-ignored ones, the
+    predicate `_docverify._LS_FILES_ARGS` already uses — filtered to files that exist
+    (an index entry whose file `migrate` has already moved is listed but gone). Untracked
+    files are kept deliberately: `migrate`'s own new files (`docs/INDEX.md`, the split
+    indexes, `REDIRECTS.csv`) are untracked until committed and later phases must see
+    them. The walk survives only for a `root` that is not inside a work tree at all.
     """
-    for path in sorted(root.rglob("*")):
-        if not path.is_file():
-            continue
+    for path in _enumerate_tree(root):
         rel = path.relative_to(root)
         if ".git" in rel.parts:
             continue
         if _docid.sweep_exclusion_reason(rel.as_posix()) is not None:
             continue
         yield path
+
+
+_LS_FILES_ARGS: Final = ("ls-files", "-z", "--cached", "--others", "--exclude-standard")
+
+
+def _enumerate_tree(root: Path) -> list[Path]:
+    """Every real file under `root`, sorted: git's own view of the tree when `root` is
+    inside a git work tree (`_iter_tree_files` says why), a plain walk otherwise."""
+    probe = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
+        capture_output=True, text=True, check=False,
+    )
+    if probe.returncode != 0 or probe.stdout.strip() != "true":
+        return [path for path in sorted(root.rglob("*")) if path.is_file()]
+    listing = subprocess.run(
+        ["git", "-C", str(root), *_LS_FILES_ARGS], capture_output=True, check=True,
+    )
+    names = {name for name in listing.stdout.decode("utf-8").split("\0") if name}
+    return [path for path in sorted(root / name for name in names) if path.is_file()]
 
 
 def _is_vendored_exempt(path: Path, root: Path) -> bool:
@@ -3964,7 +4068,9 @@ def _remove_if_empty(path: Path) -> None:
 # Plain `key: value` lines directly beneath the heading, no fence and no blank line
 # before the first field — `docs/_templates/PHASE.md`'s own form, matching RFC-937 §1.3's
 # unfenced illustration and `document-ids.md` §1.3 byte-for-byte apart from heading depth.
-# RL-999 (`docs/rulings/RL-00999-the-phase-section-is-plain-fields-under-its-heading-the-fence-requirement-in-scan-phase-sections-is-the-defect-and-its-unbounded-lookahead-is-what-makes-the-failure-silent-instead-of-loud.md`) settled
+# RL-999
+#(`docs/rulings/RL-00999-the-phase-section-is-plain-fields-under-its-heading-the-fence-requirement-in-scan-phase-sections-is-the-defect-and-its-unbounded-lookahead-is-what-makes-the-failure-silent-instead-of-loud.md`)
+# settled
 # this the other way from how it was first built here: `scripts/doc-index.py`'s
 # `scan_phase_sections` used to require a fence too, so the two agreed with each other
 # while disagreeing with the standard, `PHASE.md` and `audit-docs.py` check 30's
@@ -4349,8 +4455,9 @@ def _check_requirements_not_silently_unrecognised(root: Path) -> None:
     (`**FR-38**`); `docs/specs/00-overview.md`'s `DEP-1`, `DEP-537`, `DEP-2`, `DEP-3`
     are real, module-spec-defined dependency rules that never carry one -- confirmed
     empirically (zero `DEP` occurrences anywhere in `docs/specs/*.md` carry a module code),
-    and invisible to every count built on that assumption, `docs/rfcs/RFC-00937-one-id-
-    per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`'s own acceptance-criteria greps included.
+    and invisible to every count built on that assumption,
+    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`'s
+    own acceptance-criteria greps included.
 
     The census drops the module-code assumption entirely (via `_CENSUS_BARE_ID_RE`),
     keeping the one genuinely structural signal a definition marker has and a reference
@@ -4529,10 +4636,10 @@ def _check_flat_document_directory_not_silently_unrecognised(
 #: that is **not** one of the 17 records, each with the reason it is not. Declared by
 #: path relative to the directory, never by prefix -- a prefix silently swallows every
 #: future file beneath it, the failure
-#: `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 names for
-#: `tests/fixtures/`. Neither entry is a file this slice migrates; both are named so the
-#: exemption list is the record of what is unstamped and why, and cannot grow without an
-#: arithmetic failure saying so (F83's condition 2).
+#: `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3
+#: names for `tests/fixtures/`. Neither entry is a file this slice migrates; both are named so the
+#: exemption list is the record of what is unstamped and why, and cannot grow without an arithmetic
+#: failure saying so (F83's condition 2).
 _AUDIT_CLOSURE_CENSUS_EXCEPTIONS: Final[Mapping[str, Mapping[str, str]]] = {
     "docs/audit/work": {
         "nt-0010-0011-adoption/pilot-findings.md": (
@@ -4585,7 +4692,8 @@ def _check_audit_closure_readmes_not_silently_unrecognised(
 # Before this block the only file `migrate` stamped outside a document family was a
 # *vendored* `SKILL.md`. §4 step 5 stamps *"every file under `docs/`, `.claude/roles/`,
 # `.claude/skills/*/SKILL.md`, `.claude/agents/`"*, and
-# `docs/plans/PL-00963-what-owner-means-the-family-table-the-historical-author-or-neither-a-derivation-for-ruling-2026-09-02.md:179` states the gap in terms:
+#`docs/plans/PL-00963-what-owner-means-the-family-table-the-historical-author-or-neither-a-derivation-for-ruling-2026-09-02.md:179`
+# states the gap in terms:
 # **"There is no discovery or stamp path for `.claude/skills/`, `.claude/agents/` or
 # `.claude/roles/` at all"**. Same shape as F84 — a population outside the question, so
 # the run completes and reports success — and it is fixed the same way: discovery, then a
@@ -4634,8 +4742,8 @@ def _front_matter_state(text: str) -> str:
     Deliberately textual rather than a `_docid.parse_header` call: three real `SKILL.md`
     raise `HeaderError` (`create-adaptable-composable`, `planning-with-files`,
     `vue-best-practices` — all three vendored, all three named in
-    `docs/plans/PL-00966-rfc-draft-the-owner-value-for-1-6-s-four-unsourced-rows.md` §2.1), and a classifier that
-    crashes on the very files it exists to classify cannot report them.
+    `docs/plans/PL-00966-rfc-draft-the-owner-value-for-1-6-s-four-unsourced-rows.md` §2.1), and a
+    classifier that crashes on the very files it exists to classify cannot report them.
 
     `"stamped"` is decided by `family:`, the one key every family's template carries and
     no harness block does — a positive test for this migration's own output, the same
@@ -4715,13 +4823,17 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     # corpus previously carried only `docs/workflows/README.md` of the five §5.2 rows
     # name, so four of the five branches in `_regenerate_family_readmes` had no fixture to
     # run against at all -- which is the state that let 36 dangling links reach the gate.
-    "tests/fixtures/docs-migration/docs/adrs/README.md",
-    "tests/fixtures/docs-migration/docs/findings/README.md",
-    "tests/fixtures/docs-migration/docs/rfcs/README.md",
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/docs/adr/README.md",
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/docs/audit/README.md",
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/docs/notes/README.md",
     "tests/fixtures/docs-migration/docs/plans/README.md",
     "tests/fixtures/docs-migration/docs/audit/phases/1a/README.md",
-    "tests/fixtures/docs-migration/docs/audit/work/WK-657/README.md",
-    # W37-6's own `_discover_workflows` fixture (docs/workflows/WF-698-example-journey.md
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/docs/audit/work/W1/README.md",
+    # W37-6's own `_discover_workflows` fixture (docs/workflows/wf-01-example-journey.md
     # needs a sibling `README.md` to prove that file, not this one, is what excludes a
     # directory's own index from discovery).
     "tests/fixtures/docs-migration/docs/workflows/README.md",
@@ -4732,7 +4844,8 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     # as one literal: `tests/test_notes_move_citations.py`'s own citation-surface test
     # scans every tracked file's *content*, this module's source included, for exactly
     # this contiguous substring.
-    "tests/fixtures/docs-migration/" + ".claude" + "/rfcs/README.md",
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/" + ".claude" + "/notes/README.md",
 )
 
 _REFERENCE_FIXTURE_CORPUS_REASON: Final = (
@@ -4749,7 +4862,8 @@ _REFERENCE_README_EXCEPTIONS: Final[Mapping[str, str]] = {
     "tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md": (
         "deliberately headerless — its own test says a header here \"would then also red "
         "check 30, contaminating this check-35 proof\". Exempt by "
-        "docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md §3, declared by name "
+        "docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md §3"
+        ", declared by name "
         "so the exemption cannot grow into a subtree"
     ),
 }
@@ -4775,7 +4889,8 @@ _REFERENCE_FOREIGN_REASON: Final = (
 _REFERENCE_CLAUDE_DIR_EXCEPTIONS: Final[Mapping[str, str]] = {
     "notes/": (
         "**RULED deleted, 2026-09-02** -- the maintainer, on the second RFC's dated "
-        "amendment (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md`, filed as "
+        "amendment (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-sta"
+        "mp-set.md`, filed as "
         "PR #643): this directory's README goes with its stubs, \u00a75.3 governs, and "
         "\u00a74 step 4 is amended rather than \u00a75.6 carved out again. Three sections "
         "had disagreed -- \u00a75.3's row deletes \"stubs + README\", \u00a74 step 4 "
@@ -4786,7 +4901,17 @@ _REFERENCE_CLAUDE_DIR_EXCEPTIONS: Final[Mapping[str, str]] = {
         "it as what makes a frozen plan's citation still resolve, which is the job "
         "\u00a75.3 hands to `REDIRECTS.csv` in the same row that removes it. The 18 stubs "
         "are not in \u00a74 step 5's stamp set under any reading. Note the directory holds "
-        "**18** stubs plus the README, not the 19 stubs \u00a75.3 counts"
+        "**18** stubs plus the README, not the 19 stubs \u00a75.3 counts. "
+        "STILL LOAD-BEARING for `migrate()` runs against the fixture corpus and any other "
+        "pre-migration tree (the fixture corpus's frozen copy of that directory still "
+        "exists, frozen at that shape) even though the real ROOT's own copy of that "
+        "directory is correctly gone post-migration -- "
+        "`test_reference_declared_exceptions_all_carry_"
+        "a_reason_and_name_a_real_file`'s `(ROOT / key).exists()` check is itself a "
+        "'ROOT is already migrated' false negative on this one entry, not a signal this "
+        "declaration is dead; removing it broke `migrate()` on the fixture corpus"
+        " (`test_the_dangling_link_check_reddens_when_the_regeneration_is_removed`,"
+        " confirmed live 2026-09-17)."
     ),
     "settings.json": (
         "RFC-937 §5.3's only change for it is \"hook `statusMessage` citation\", kind "
@@ -5023,11 +5148,12 @@ def _discover_reference_stamp_targets(
             # either. It skips any manifest `_docid.parse_header` reads, and it reads 25
             # of the 28; the other 3 raise `HeaderError` and are F83's own third row
             # (`create-adaptable-composable`, `planning-with-files`, `vue-best-practices`
-            # -- named in `docs/plans/PL-00966-rfc-draft-the-owner-value-for-1-6-s-four-unsourced-rows.md` §2.1,
-            # all three vendored). **The two populations are distinct and only overlap by
-            # those 3**: F83's 65 are files that cannot carry front matter *in any form*,
-            # while these 53 can and already do -- someone else's. Both are unblocked by
-            # different work: F83 by its ruled exemption, these by W37-6's Task 1 merge.
+            # -- named in
+            # `docs/plans/PL-00966-rfc-draft-the-owner-value-for-1-6-s-four-unsourced-rows.md` §2.1,
+            # all three vendored). **The two populations are distinct and only overlap by those 3**:
+            # F83's 65 are files that cannot carry front matter *in any form*, while these 53 can
+            # and already do -- someone else's. Both are unblocked by different work: F83 by its
+            # ruled exemption, these by W37-6's Task 1 merge.
             if isinstance(outcome, _ReferenceStamp) and _is_vendored_skill_manifest(manifest):
                 outcome = _ACCOUNTED_VENDORED
             resolved[key] = outcome
@@ -5573,15 +5699,15 @@ class _SplitSource:
     three ways a citation of it is allowed to be rewritten.
 
     Authority: RL-980 (`docs/rulings/RL-00980-a-line-number-citation-into-a-split-file
-    -is-re-derived-or-replaced-a-path-only-rewrite-is-forbidden.md` §3) — *"a rewrite that changes only the path is forbidden"* — as the
-    maintainer extended it from the line-offset case it was written for to the path-only
-    case. A citation is rewritten **only when the citation itself determines which target
-    it means**, by (i) an id adjacent to the path, (ii) an `#anchor` matching exactly one
-    target's heading, or (iii) a line number falling inside exactly one target's span in
-    the source file — RL-980's re-derivation, done here rather than by hand. Anything
-    else is left exactly as it is: it dangles, gate condition 7 lists it, and it is
-    dispositioned by name. **Detection is not repair, and a citation that is wrong while
-    resolving is worse than one that fails loudly.**
+    -is-re-derived-or-replaced-a-path-only-rewrite-is-forbidden.md` §3) — *"a rewrite that changes
+    only the path is forbidden"* — as the maintainer extended it from the line-offset case it was
+    written for to the path-only case. A citation is rewritten **only when the citation itself
+    determines which target it means**, by (i) an id adjacent to the path, (ii) an `#anchor`
+    matching exactly one target's heading, or (iii) a line number falling inside exactly one
+    target's span in the source file — RL-980's re-derivation, done here rather than by hand.
+    Anything else is left exactly as it is: it dangles, gate condition 7 lists it, and it is
+    dispositioned by name. **Detection is not repair, and a citation that is wrong while resolving
+    is worse than one that fails loudly.**
     """
 
     old_rel: str
@@ -5891,13 +6017,57 @@ def _was_field_spans(text: str) -> list[tuple[int, int]]:
     ]
 
 
-#: RL-1043 §2 row (g) (`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`,
-#: "On (g)"), the maintainer's own diagnosis: *"A rewrite may not match inside a longer
-#: identifier."* A word boundary is not that rule. `\b` sits between a token's trailing
-#: digit and a following `/` or `-`, so `\bNFR-RATE-13\b` matches inside `NFR-502/501`
-#: — one identifier expression naming two requirements in shorthand — and rewriting there
-#: leaves `NFR-775/14`: one real requirement and one meaningless fragment. Measured on the
-#: migrated tree at `0de529e`: 391 such fragments, against 0 on the un-migrated control.
+#: F103 companion finding, 2026-09-17: a standalone `# rfc-937: legacy-form-spec` comment
+#: line, protecting the physical line immediately after it (never a trailing comment on
+#: the protected line itself — a long dict entry plus a trailing marker routinely exceeds
+#: E501's 100 columns, and this repo's own lint convention refuses a suppression comment
+#: for it). Commit
+#: 1's migration rewrote this tool's OWN literal legacy-form values —
+#: `_ROADMAP_RETIRED_WORK_IDS`/`_ROADMAP_RETIRED_SUCCESSORS`'s dict keys `"W6"`/`"W6a"`/
+#: `"W6b"` became `"WK-662"`/`"WK-663"`/`"WK-664"`, and `_README_FAMILY_MOVES`'s keys
+#: (the pre-migration filenames the tool must recognise on an un-migrated tree) tracked
+#: the migration too — so a migrated binary could no longer recognise the legacy-form
+#: input it exists to compare against an un-migrated control tree (`migrate --verify`'s
+#: own mechanism). The `TEST_MODULE_EXCLUSIONS`/`FIXTURE_CORPUS_ROOTS` classes in
+#: `_docid.py` are file-level and would freeze this tool's own ordinary prose citations
+#: (ruling numbers, `NT-0019`->`RFC-937`, `docs/audit/`->`docs/findings/`) forever —
+#: `_docid.TEST_MODULE_EXCLUSIONS`'s own comment already rules against exactly that for
+#: `register-owed.py` ("its fixtures are stale test data that migrates WITH the script").
+#: This is the narrower, line-scoped equivalent: a spec author marks the one physical
+#: line whose literal is a lookup key/value compared against tree content rather than a
+#: citation for a reader, and the line survives `_rewrite_citations` byte-identical —
+#: everything else in the same file, including this docstring's own citations, keeps
+#: migrating normally.
+_LEGACY_FORM_SPEC_MARKER_RE: Final = re.compile(
+    r"^[ \t]*#\s*rfc-937:\s*legacy-form-spec[ \t]*$\n", re.MULTILINE
+)
+
+
+def _legacy_form_spec_spans(text: str) -> list[tuple[int, int]]:
+    """Every whole-line span `_rewrite_citations` must leave byte-identical: a standalone
+    `# rfc-937: legacy-form-spec` marker line together with the physical line right after
+    it (see that constant's own comment for why the marker is never a trailing comment on
+    the protected line itself). Unscoped — unlike `_was_field_spans`, this marker is not
+    confined to front matter, since the class it protects (a lookup constant in a
+    `scripts/*.py` module) has no front-matter block at all. A marker with nothing after
+    it (end of file) protects nothing further and is not matched — there is no next line
+    for it to name.
+    """
+    spans: list[tuple[int, int]] = []
+    for m in _LEGACY_FORM_SPEC_MARKER_RE.finditer(text):
+        next_line_end = text.find("\n", m.end())
+        spans.append((m.start(), next_line_end + 1 if next_line_end != -1 else len(text)))
+    return spans
+
+
+#: RL-1043 §2 row (g)
+#: (`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`, "On (g)"),
+#: the maintainer's own diagnosis: *"A rewrite may not match inside a longer identifier."* A word
+#: boundary is not that rule. `\b` sits between a token's trailing digit and a following `/` or `-`,
+#: so `\bNFR-RATE-13\b` matches inside `NFR-502/501` — one identifier expression naming two
+#: requirements in shorthand — and rewriting there leaves `NFR-775/14`: one real requirement and one
+#: meaningless fragment. Measured on the migrated tree at `0de529e`: 391 such fragments, against 0
+#: on the un-migrated control.
 #:
 #: The continuation this refuses is a separator **followed by a digit**, because that is
 #: what the corpus at `e97b97a` actually holds. Enumerated, not inferred from the ruling's
@@ -5970,11 +6140,11 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 #: while a bare second digit or dot with nothing separating it does not.
 #:
 #: Task #30's range ruling (W37-6 channel `:526`) adds the sibling group `range_end`.
-#: `..` is itself a boundary-worthy transition (`FR-387, FR-388, FR-389, FR-390` has a `\b` between `1` and
-#: `.` for free), so nothing stops the continuation group from also matching here with
-#: zero repetitions and returning `tok` alone — exactly the row (b) defect one level up,
-#: this time surviving the `\b`-after-`tok` fix because that boundary is satisfied
-#: (digit -> `.` *is* a transition) regardless of which shape is meant.
+#: `..` is itself a boundary-worthy transition (`FR-387, FR-388, FR-389, FR-390` has a `\b` between
+#: `1` and `.` for free), so nothing stops the continuation group from also matching here with zero
+#: repetitions and returning `tok` alone — exactly the row (b) defect one level up, this time
+#: surviving the `\b`-after-`tok` fix because that boundary is satisfied (digit -> `.` *is* a
+#: transition) regardless of which shape is meant.
 #:
 #: **Originally guarded by making `range_end` and `continuation` mutually exclusive
 #: alternatives, tried range-first so its own anchors won the position outright before a
@@ -5994,23 +6164,23 @@ def _whole_token_re(tok: str) -> re.Pattern[str]:
 #: `test_row_b_a_mapped_token_still_rewrites_a_genuine_compound_after_the_boundary_fix`)
 #: pass unchanged against this version — verified, not assumed.
 #:
-#: The mixed shape a range and a compound both cite, back to back: `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459, NFR-460, NFR-461/463/464`
-#: names the range `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459, NFR-460, NFR-461` **and** the further siblings `NFR-463`/`NFR-464`
-#: in the same shorthand a plain compound's continuation already uses. Before this fix
-#: `range_end` and `continuation` were alternatives (`\.\.(?P<range_end>...)\b|\b(?P<
-#: continuation>...)`), so the range alternative matched, consumed `..8`, and stopped --
-#: the trailing `/10/11` was never inside the match at all and survived untouched, landing
-#: beside the range's own last enumerated member: `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459, NFR-460, NFR-461/463/464` came out
-#: `NFR-751, ..., NFR-758/10/11`, real ids `10`/`11` orphaned in their pre-migration
-#: module-local form -- exactly `MANGLED_CITATION_RE`'s own shape, "a rewrite matched
-#: inside a longer identifier" (the deputy's diagnosis, W37-6, 2026-09-05, real corpus:
-#: `docs/findings/register.md:49`'s `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459, NFR-460, NFR-461/463/464`). Making the range optional and
-#: always following it with the shared `\b`+continuation lets both fire on the same match:
-#: a plain compound (no `..`) skips the optional group and behaves exactly as before: a
-#: plain range (no continuation) matches `..end` and then an empty continuation, also
-#: exactly as before; the mixed shape now matches the range **and** the continuation in
-#: one pass, so `_expand_range` sees both groups and can build `NFR-758/760/761` instead of
-#: `NFR-758/10/11`.
+#: The mixed shape a range and a compound both cite, back to back: `NFR-454, NFR-455, NFR-456,
+#: NFR-457, NFR-458, NFR-459, NFR-460, NFR-461/463/464` names the range `NFR-454, NFR-455, NFR-456,
+#: NFR-457, NFR-458, NFR-459, NFR-460, NFR-461` **and** the further siblings `NFR-463`/`NFR-464` in
+#: the same shorthand a plain compound's continuation already uses. Before this fix `range_end` and
+#: `continuation` were alternatives (`\.\.(?P<range_end>...)\b|\b(?P< continuation>...)`), so the
+#: range alternative matched, consumed `..8`, and stopped -- the trailing `/10/11` was never inside
+#: the match at all and survived untouched, landing beside the range's own last enumerated member:
+#: `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459, NFR-460, NFR-461/463/464` came out
+#: `NFR-751, ..., NFR-758/10/11`, real ids `10`/`11` orphaned in their pre-migration module-local
+#: form -- exactly `MANGLED_CITATION_RE`'s own shape, "a rewrite matched inside a longer identifier"
+#: (the deputy's diagnosis, W37-6, 2026-09-05, real corpus: `docs/findings/register.md:49`'s
+#: `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459, NFR-460, NFR-461/463/464`). Making the
+#: range optional and always following it with the shared `\b`+continuation lets both fire on the
+#: same match: a plain compound (no `..`) skips the optional group and behaves exactly as before: a
+#: plain range (no continuation) matches `..end` and then an empty continuation, also exactly as
+#: before; the mixed shape now matches the range **and** the continuation in one pass, so
+#: `_expand_range` sees both groups and can build `NFR-758/760/761` instead of `NFR-758/10/11`.
 def _compound_token_re(tok: str) -> re.Pattern[str]:
     # Leading `_docid.TOKEN_LEFT_BOUND`, not `\b` -- `_whole_token_re`'s own docstring
     # has the reasoning (the deputy's ruling, W37-6, 2026-09-04): a non-word-starting
@@ -6214,16 +6384,17 @@ def _expand_compound(
 
 
 #: Task #30's range ruling (W37-6 channel `:526`, extending the maintainer's compound
-#: ruling to the `..` shape): `FR-387, FR-388, FR-389, FR-390` names the **set** of consecutive legacy ids
-#: `FR-387, FR-388, FR-389, FR-390` -- unlike a compound's shorthand list, a
-#: range's members are not written out, so this is the one shape a mapped-lookup cannot
-#: skip: every member in `[start, end]` must be constructed from the base token's own
-#: prefix and looked up before any rewrite can happen at all.
+#: ruling to the `..` shape): `FR-387, FR-388, FR-389, FR-390` names the **set** of consecutive
+#: legacy ids `FR-387, FR-388, FR-389, FR-390` -- unlike a compound's shorthand list, a range's
+#: members are not written out, so this is the one shape a mapped-lookup cannot skip: every member
+#: in `[start, end]` must be constructed from the base token's own prefix and looked up before any
+#: rewrite can happen at all.
 #:
 #: **The new ids are not consecutive**, so the citation cannot be rewritten as a new range
 #: (`FR-680..703` would silently claim three ids in between that the range never named) --
 #: it is **enumerated**, every mapped id written out in full, comma-separated (the
-#: maintainer's own worked example: `FR-387, FR-388, FR-389, FR-390` -> `FR-680, FR-681, FR-702, FR-703`).
+#: maintainer's own worked example: `FR-387, FR-388, FR-389, FR-390` -> `FR-680, FR-681, FR-702,
+#: FR-703`).
 #:
 #: **If every member maps, the whole range is replaced and the pair is recorded** — the
 #: identical mechanism `_expand_compound` already uses (`derived`, consumed by `(g)`'s
@@ -6236,19 +6407,20 @@ def _expand_compound(
 #: range is worse than one left alone.
 #:
 #: **A range can carry a further compound tail of its own** (found live, 2026-09-05, real
-#: corpus: `docs/findings/register.md:49`'s `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459, NFR-460, NFR-461/463/464` — the range `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459, NFR-460, NFR-461`
-#: plus siblings `NFR-463`/`NFR-464`). Before `_compound_token_re` made the range
-#: alternative optional rather than exclusive, this trailing `/10/11` was never inside the
-#: match at all: the range consumed `..8` and stopped, so it survived untouched, glued onto
-#: the range's own last enumerated member — `NFR-758/10/11`, `MANGLED_CITATION_RE`'s own
-#: shape, real ids 10/11 orphaned in their pre-migration module-local form. The two shapes
-#: are combined the way both already work alone: the range enumerates every member in full
-#: (never re-ranged, the new ids are not consecutive), and the tail is appended to only the
-#: **last** enumerated member, in the identical shorthand `_expand_compound` already uses
-#: (`_resolve_continuation_siblings`/`_shorthand_suffix`, shared rather than duplicated —
-#: RL-989 §3's "one rule at two times"). Failing either half — one unmapped range
-#: member, or one unmapped tail sibling — leaves the **whole** citation, range and tail,
-#: byte-identical, the same all-or-nothing rule §7 (g) already gives every other shape here.
+#: corpus: `docs/findings/register.md:49`'s `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459,
+#: NFR-460, NFR-461/463/464` — the range `NFR-454, NFR-455, NFR-456, NFR-457, NFR-458, NFR-459,
+#: NFR-460, NFR-461` plus siblings `NFR-463`/`NFR-464`). Before `_compound_token_re` made the range
+#: alternative optional rather than exclusive, this trailing `/10/11` was never inside the match at
+#: all: the range consumed `..8` and stopped, so it survived untouched, glued onto the range's own
+#: last enumerated member — `NFR-758/10/11`, `MANGLED_CITATION_RE`'s own shape, real ids 10/11
+#: orphaned in their pre-migration module-local form. The two shapes are combined the way both
+#: already work alone: the range enumerates every member in full (never re-ranged, the new ids are
+#: not consecutive), and the tail is appended to only the **last** enumerated member, in the
+#: identical shorthand `_expand_compound` already uses
+#: (`_resolve_continuation_siblings`/`_shorthand_suffix`, shared rather than duplicated — RL-989
+#: §3's "one rule at two times"). Failing either half — one unmapped range member, or one unmapped
+#: tail sibling — leaves the **whole** citation, range and tail, byte-identical, the same
+#: all-or-nothing rule §7 (g) already gives every other shape here.
 def _expand_range(
     tok: str, mapped: str, active_map: Mapping[str, str], m: re.Match[str],
     derived: list[tuple[str, str]],
@@ -6421,18 +6593,18 @@ def _rewrite_wrapped_path_citations(
         # (d9)-(d12)): that guard assumed a contiguous occurrence of `old_tok` anywhere
         # in the file meant *every* occurrence was contiguous, so the ordinary sweep
         # would reach all of them. False whenever a file cites the same path both
-        # wrapped and unwrapped -- `docs/plans/PL-00844-rfc-840-rfc-841-adoption-implementation-plan.md`
-        # cites `...reconciliation-rulings.md` four times unwrapped and once wrapped
-        # across a line break; the guard's presence in `text` matched on an unwrapped
-        # occurrence and skipped the wrap-tolerant pattern entirely, leaving the fifth,
-        # wrapped occurrence unrewritten. `pattern` already tolerates a zero-width wrap
-        # (`repl`'s `nl_idx == -1` branch returns `new_tok` unchanged), so running it
-        # unconditionally is correct for both shapes and idempotent with the ordinary
-        # sweep that follows -- **except** inside a `was:` span, found live the same day
-        # (removing the shortcut let this pass reach a `was: docs/adrs/README.md` line
-        # for the first time and rewrite it to `was: docs/adrs/README.md` on a second
-        # `migrate` run, a real regression `test_migrate_is_idempotent_on_its_own_output`
-        # catches): `repl` below refuses any match starting inside `was_spans`.
+        # wrapped and unwrapped --
+        # `docs/plans/PL-00844-rfc-840-rfc-841-adoption-implementation-plan.md` cites
+        # `...reconciliation-rulings.md` four times unwrapped and once wrapped across a line break;
+        # the guard's presence in `text` matched on an unwrapped occurrence and skipped the
+        # wrap-tolerant pattern entirely, leaving the fifth, wrapped occurrence unrewritten.
+        # `pattern` already tolerates a zero-width wrap (`repl`'s `nl_idx == -1` branch returns
+        # `new_tok` unchanged), so running it unconditionally is correct for both shapes and
+        # idempotent with the ordinary sweep that follows -- **except** inside a `was:` span, found
+        # live the same day (removing the shortcut let this pass reach a `was: docs/adrs/README.md`
+        # line for the first time and rewrite it to `was: docs/adrs/README.md` on a second `migrate`
+        # run, a real regression `test_migrate_is_idempotent_on_its_own_output` catches): `repl`
+        # below refuses any match starting inside `was_spans`.
         def repl(
             m: re.Match[str], new_tok: str = new_tok, was_spans: list[tuple[int, int]] = was_spans,
         ) -> str:
@@ -6798,15 +6970,22 @@ def _rewrite_citations(
                 segment = split.pattern.sub(repl, segment)
             return segment
 
-        # The sweep runs over the segments **between** the protected `was:` lines rather
-        # than over the whole text, so a protected line is not "rewritten and put back" —
-        # it is never passed to a substitution at all. Protected spans are whole lines and
-        # no citation token contains a newline, so no match can straddle a boundary and be
-        # lost by the partition. `line_offset` keeps a bucket-(iv) record's reported line
-        # number in the file's own numbering rather than the segment's.
+        # The sweep runs over the segments **between** the protected `was:` lines and the
+        # protected `# rfc-937: legacy-form-spec` lines (F103 companion finding,
+        # 2026-09-17) rather than over the whole text, so a protected line is not
+        # "rewritten and put back" — it is never passed to a substitution at all.
+        # Protected spans are whole lines and no citation token contains a newline, so no
+        # match can straddle a boundary and be lost by the partition; the two span sources
+        # are merged and sorted because either can occur in either order in a real file,
+        # and the `cursor` walk below assumes ascending, non-overlapping spans (the two
+        # kinds of line can never be the same line — front matter closes before a
+        # `scripts/*.py` module's own body begins). `line_offset` keeps a bucket-(iv)
+        # record's reported line number in the file's own numbering rather than the
+        # segment's.
         pieces: list[str] = []
         cursor = 0
-        for start, end in _was_field_spans(text):
+        protected_spans = sorted(_was_field_spans(text) + _legacy_form_spec_spans(text))
+        for start, end in protected_spans:
             pieces.append(sweep(text[cursor:start], text.count("\n", 0, cursor)))
             pieces.append(text[start:end])
             cursor = end
@@ -7093,7 +7272,8 @@ def _reconcile_process_core_digest(root: Path) -> list[str]:
 
 # ---------------------------------------------------------------------------------------
 # RL-986 §4's second acceptance item, as RL-1000 substituted it
-# (`docs/rulings/RL-01000-the-property-stands-the-instrument-is-amended-because-a-broken-input-need-not-be-a-document.md` §2 — register finding
+#(`docs/rulings/RL-01000-the-property-stands-the-instrument-is-amended-because-a-broken-input-need-not-be-a-document.md`
+# §2 — register finding
 # F77). The struck form asked for a check reddening "on a deliberately broken fixture
 # carrying `slice: SL-99999`", which no fixture can produce: `_stamp_header` skips `slice`
 # for every caller, so the writer refuses to emit the key a fixture would have to carry.
@@ -7126,7 +7306,8 @@ class _LedgerAxes:
     """What the ledger-axis check looked at, not only what it found. The three counts are
     reported unconditionally (including zero) by `_cmd_migrate`, per RL-1000's "the
     passing state today is a count of **zero**, and the check must **say so** rather than
-    pass silently" and [`RFC-789`](../docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md):
+    pass silently" and
+    [`RFC-789`](../docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md):
     a boundary metric that reads zero by construction reports where the boundary sits, not
     that anything was verified.
     """
@@ -7229,7 +7410,9 @@ def _check_emitted_ledger_axes(root: Path) -> _LedgerAxes:
 # general dangling-link scanner -- every `](...)` in every surviving file, resolved
 # relative to its citing file, checked against the full deleted set -- found **36** live
 # links in these five files resolving to paths the migration deletes. That is what stopped
-# the W37-6 run (`docs/plans/PL-01034-w37-6-handover-at-the-halt-of-the-renewed-delegated-window-2026-09-03.md` §6).
+# the W37-6 run
+# (`docs/plans/PL-01034-w37-6-handover-at-the-halt-of-the-renewed-delegated-window-2026-09-03.md`
+# §6).
 #
 # §5.2 already says what happens to each of the five, and the rows are the specification
 # this section implements -- not an invention of this code:
@@ -7275,9 +7458,26 @@ def _check_emitted_ledger_axes(root: Path) -> _LedgerAxes:
 #: `REDIRECTS.csv` carries one destination per old path, and a split's second destination
 #: is recorded by the surviving README's own prose, which points at its sibling.
 _README_FAMILY_MOVES: Final[Mapping[str, str]] = {
-    "docs/adrs/README.md": "docs/adrs/README.md",
-    "docs/rfcs/README.md": "docs/rfcs/README.md",
-    "docs/findings/README.md": "docs/findings/README.md",
+    # rfc-937: legacy-form-spec
+    "docs/adr/README.md": "docs/adrs/README.md",
+    # rfc-937: legacy-form-spec
+    "docs/notes/README.md": "docs/rfcs/README.md",
+    # rfc-937: legacy-form-spec
+    "docs/audit/README.md": "docs/findings/README.md",
+}
+
+#: `_README_FAMILY_MOVES`'s keys, mapped instead to the true pre-migration legacy path each
+#: one's content is carried from -- `docs/adr/README.md`, `docs/notes/README.md`,
+#: `docs/audit/README.md` (the latter dissolves; the larger half of its content lands
+#: here). `_README_FAMILY_MOVES` cannot serve this role itself: it is keyed by the NEW path
+#: for the populations that need to recognise the file by its POST-migration name
+#: (`_discover_reference_stamp_targets`'s `routed`, `_stamp_regenerated_readmes`), and using
+#: it as an old-path source gates every idempotency check in this module on a path that
+#: does not exist until the move it is meant to trigger has already happened.
+_README_FAMILY_LEGACY_PATHS: Final[Mapping[str, str]] = {
+    "docs/adrs/README.md": "docs/adr/README.md",
+    "docs/rfcs/README.md": "docs/notes/README.md",
+    "docs/findings/README.md": "docs/audit/README.md",
 }
 
 #: Directory-shaped link targets (`[../adr/](../adr/)`) resolve to a directory, never to a
@@ -7329,6 +7529,14 @@ _README_NEW_FAMILY_PREFIXES: Final[tuple[str, ...]] = ("CR", "RL", "LG")
 _MIGRATION_DIFF_FAMILY_READMES: Final[frozenset[str]] = frozenset(
     set(_README_FAMILY_MOVES)
     | set(_README_FAMILY_MOVES.values())
+    # The pre-migration legacy paths too (docs/adr/README.md etc.): when neither writer
+    # that would carry a relocated README away runs, the surviving file is still at its
+    # OLD path, and the surviving-README rule this set backs (test_the_dangling_link_
+    # check_reddens_when_the_regeneration_is_removed) is stated over that population, not
+    # the new one. `_stamp_regenerated_readmes`, this set's other reader, is unaffected --
+    # a legacy path is never `.is_file()` once a real run's `carry()` has moved it, so it
+    # is skipped there the same as any other already-migrated path.
+    | set(_README_FAMILY_LEGACY_PATHS.values())
     | set(_README_IN_PLACE)
     | {f"docs/{_DOCUMENT_FAMILY_DIR[p]}/README.md" for p in _README_NEW_FAMILY_PREFIXES}
 )
@@ -7338,7 +7546,7 @@ _MIGRATION_DIFF_FAMILY_READMES: Final[frozenset[str]] = frozenset(
 #: (`target = m.group(1).split(" ", 1)[0]`) -- one reading of the syntax, so a link this
 #: rewrites and a link that check counts cannot be two different populations.
 #: A markdown inline link, with the text ahead of it kept so the two can be compared. The
-#: corpus writes `[`../adr/`](../adr/)` and `[docs/rfcs/README.md](../../docs/notes/
+#: corpus writes `[`../adr/`](../adr/)` and `[docs/notes/README.md](../../docs/notes/
 #: README.md)` -- the first repeats its own target as its label, and repointing the target
 #: while leaving the label is how a link comes to display one path and go to another.
 _MD_LINK_TARGET_RE: Final = re.compile(
@@ -7920,8 +8128,10 @@ def _regenerate_family_readmes(
 
     # --- `adr/` + README -> `adrs/`, README generated.
     carry(
-        "docs/adrs/README.md",
-        _README_FAMILY_MOVES["docs/adrs/README.md"],
+        # rfc-937: legacy-form-spec
+        "docs/adr/README.md",
+        # rfc-937: legacy-form-spec
+        _README_FAMILY_MOVES["docs/adr/README.md"],
         lambda _body: _ADRS_README_BODY.format(
             pad="n" * _docid.PAD_WIDTH, table=_render_adrs_readme_table(drafts),
         ),
@@ -7929,8 +8139,10 @@ def _regenerate_family_readmes(
 
     # --- `notes/` + README -> `rfcs/`, README rewritten, index table dropped for INDEX.md.
     carry(
-        "docs/rfcs/README.md",
-        _README_FAMILY_MOVES["docs/rfcs/README.md"],
+        # rfc-937: legacy-form-spec
+        "docs/notes/README.md",
+        # rfc-937: legacy-form-spec
+        _README_FAMILY_MOVES["docs/notes/README.md"],
         _rewrite_rfcs_readme_body,
     )
 
@@ -7942,10 +8154,12 @@ def _regenerate_family_readmes(
     # --- `plans/README.md`: naming and four-kinds table -> pointer, nine conventions kept.
     carry(in_place_plans, in_place_plans, _rewrite_plans_readme_body)
 
-    # --- `findings/README.md` deleted, content to the `findings/` and `closures/` READMEs.
+    # --- `audit/README.md` deleted, content to the `findings/` and `closures/` READMEs.
     carry(
-        "docs/findings/README.md",
-        _README_FAMILY_MOVES["docs/findings/README.md"],
+        # rfc-937: legacy-form-spec
+        "docs/audit/README.md",
+        # rfc-937: legacy-form-spec
+        _README_FAMILY_MOVES["docs/audit/README.md"],
         _rewrite_findings_readme_body,
     )
     for prefix, body in (
@@ -8010,15 +8224,16 @@ def _stamp_regenerated_readmes(root: Path, origins: Mapping[str, str]) -> list[s
     return written
 
 
+# rfc-937: legacy-form-spec
 _SPLIT_INDEX_PREAMBLE: Final = """**This file is generated by `scripts/doc-id.py migrate`.
 Do not hand-edit it.**
 
-Each section below names one pre-migration file the RFC-937 migration split into more than
+Each section below names one pre-migration file the NT-0019 migration split into more than
 one document, and lists every document it became beside the `was:` provenance each of those
 documents carries. A citation of the old path that did **not** say which of them it meant
-resolves here rather than to any one of them (RL-1042 clause 1): this is the
+resolves here rather than to any one of them (Ruling 101 clause 1): this is the
 [`../REDIRECTS.csv`](../REDIRECTS.csv) row made navigable, not a target chosen on the
-reader's behalf. RL-1041 §3.3 forbids choosing one, and RL-980 forbids the path-only
+reader's behalf. Ruling 100 §3.3 forbids choosing one, and Ruling 89 forbids the path-only
 rewrite that choosing one would be.
 
 A citation that *did* determine its target -- by an adjacent id, by an `#anchor` matching
@@ -8413,7 +8628,8 @@ def _control_side_part_ordinals(
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
-            old_path, new_path = "docs/findings/register.md", (register_moved_to or "")
+            # rfc-937: legacy-form-spec
+            old_path, new_path = "docs/audit/register.md", (register_moved_to or "")
         elif d.materialize == "requirement" and d.source_path is not None:
             old_path = new_path = d.source_path.relative_to(root).as_posix()
         elif d.materialize == "roadmap_row":
@@ -8616,6 +8832,11 @@ def migrate(root: Path) -> MigrateResult:
         # `test_no_path_is_both_stamped_and_deleted_by_the_same_run` forbids.
         routed=(
             {d.was for d in audit_closure_drafts if d.was is not None}
+            # Both the pre-migration path (a first run's `git ls-files` sees this) and the
+            # post-migration one (a second, idempotent run over an already-migrated tree
+            # sees this instead) — `_regenerate_family_readmes`'s `carry()` owns this
+            # README's header on either side of that boundary, never this generic scope.
+            | {"docs/adr/README.md", "docs/notes/README.md", "docs/audit/README.md"}
             | set(_README_FAMILY_MOVES)
         ),
     )
@@ -8731,7 +8952,8 @@ def migrate(root: Path) -> MigrateResult:
             new_register.write_text(old_register.read_text(encoding="utf-8"), encoding="utf-8")
             old_register.unlink()
             files_written = [*files_written, "docs/findings/register.md"]
-            files_deleted = [*files_deleted, "docs/findings/register.md"]
+            # rfc-937: legacy-form-spec
+            files_deleted = [*files_deleted, "docs/audit/register.md"]
             register_moved_to = "docs/findings/register.md"
 
     # F84: `_write_document_drafts` deletes each migrated `docs/audit/work/<work>/
@@ -8817,7 +9039,8 @@ def migrate(root: Path) -> MigrateResult:
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
-            old_path, new_path = "docs/findings/register.md", (register_moved_to or "")
+            # rfc-937: legacy-form-spec
+            old_path, new_path = "docs/audit/register.md", (register_moved_to or "")
         elif d.materialize == "requirement" and d.source_path is not None:
             # Stays at the same path — a row family embedded in a shared file, not moved.
             old_path = new_path = d.source_path.relative_to(root).as_posix()
@@ -8870,11 +9093,13 @@ def migrate(root: Path) -> MigrateResult:
         redirect_rows.append(
             {
                 "old_id": "", "new_id": "",
-                "old_path": "docs/findings/register.md", "new_path": register_moved_to,
+                # rfc-937: legacy-form-spec
+                "old_path": "docs/audit/register.md", "new_path": register_moved_to,
             }
         )
         redirect_rows.extend(
-            _path_citation_redirect_rows("docs/findings/register.md", register_moved_to)
+            # rfc-937: legacy-form-spec
+            _path_citation_redirect_rows("docs/audit/register.md", register_moved_to)
         )
     # Reference moves and the unstampable-CSV move carry no `_Draft` and so no `id:` --
     # neither claims a number (§1.2: Reference has none; the CSV is deliberately exempt) --
@@ -8935,7 +9160,8 @@ def migrate(root: Path) -> MigrateResult:
             (None, phase1b_new_path)
         )
     if register_moved_to is not None:
-        path_moves["docs/findings/register.md"] = register_moved_to
+        # rfc-937: legacy-form-spec
+        path_moves["docs/audit/register.md"] = register_moved_to
 
     # RFC-937 §5.2's three relocated READMEs, registered here rather than inside
     # `_regenerate_family_readmes` below because the rewrite and the redirect row are owed
@@ -8943,7 +9169,14 @@ def migrate(root: Path) -> MigrateResult:
     # path is exactly as stale as one citing any other moved file (§4 step 1). The files
     # themselves are moved after `_stamp_reference_targets`, so each carries the header that
     # pass wrote rather than one re-derived here.
-    for old_rel, new_rel in _README_FAMILY_MOVES.items():
+    # `_README_FAMILY_MOVES` is keyed by the NEW path (it doubles as the population
+    # `_discover_reference_stamp_targets`'s `routed` set and `_stamp_regenerated_readmes`
+    # consult), not the legacy one this loop actually moves from -- the true source is
+    # `_README_FAMILY_LEGACY_PATHS` below. Gating existence on the new path here reproduced
+    # the exact `carry()` bug above one level up: on a second, idempotent run the new path
+    # already exists, so the guard passed and re-added an `old_path == new_path` no-op row
+    # every run (`test_migrate_is_idempotent_on_its_own_output`, found live).
+    for new_rel, old_rel in _README_FAMILY_LEGACY_PATHS.items():
         if not (root / old_rel).is_file():
             continue
         redirect_rows.append(
@@ -8985,7 +9218,8 @@ def migrate(root: Path) -> MigrateResult:
     # `docs/audit/FD-01041-….md`, a path that never existed on either side of this run --
     # and correctly, uselessly, report it as unresolvable, because `path_moves` was
     # keyed on the file's OLD basename. Run first, this pass resolves the ORIGINAL
-    # `docs/findings/FD-01015-rl-986-4-s-second-acceptance-item-is-vacuously-true-no-code-path-can-ever-write-the-slice-value-the-acceptance-item-asks-a-broken-fixture-to-test.md`-shaped target against `path_moves` while it is still
+    #`docs/findings/FD-01015-rl-986-4-s-second-acceptance-item-is-vacuously-true-no-code-path-can-ever-write-the-slice-value-the-acceptance-item-asks-a-broken-fixture-to-test.md`-shaped
+    # target against `path_moves` while it is still
     # recognisable, producing the correct new relative path outright; the citation sweep
     # then finds nothing left in the target to substitute (the new basename is already
     # there) and only updates the link's own visible text/label as it already would.
@@ -9014,7 +9248,8 @@ def migrate(root: Path) -> MigrateResult:
         if d.was is not None and d.new_path is not None
     }
     if register_moved_to is not None:
-        citer_origin[register_moved_to] = "docs/findings/register.md"
+        # rfc-937: legacy-form-spec
+        citer_origin[register_moved_to] = "docs/audit/register.md"
     # `_REFERENCE_MOVE_TARGETS`'s four files (the checklists, `retrofit-impossible.md`,
     # `security-posture.md`) are moved by `_write_reference_moves`, never a `_Draft` --
     # found live, W37-6, 2026-09-06: `docs/process/checklists/work-item-close.md`'s own
@@ -9315,7 +9550,8 @@ def migrate(root: Path) -> MigrateResult:
     # three unconditional guards (F80-F82) abort a real run before it, so making it abort
     # would add an unmeasured stop to an irreversible migration. It is a hard assertion in
     # the tests instead. Flagged as an interpretation rather than made silently, in
-    # `docs/findings/FD-01015-rl-986-4-s-second-acceptance-item-is-vacuously-true-no-code-path-can-ever-write-the-slice-value-the-acceptance-item-asks-a-broken-fixture-to-test.md`'s 2026-09-02 update and this row's register entry.
+    #`docs/findings/FD-01015-rl-986-4-s-second-acceptance-item-is-vacuously-true-no-code-path-can-ever-write-the-slice-value-the-acceptance-item-asks-a-broken-fixture-to-test.md`'s
+    # 2026-09-02 update and this row's register entry.
     ledger_axes = _check_emitted_ledger_axes(root)
     warnings.extend(ledger_axes.work_violations)
     if ledger_axes.slice_violations:
@@ -9600,10 +9836,10 @@ def classify_migration_diff(
         """`{new: old}`, refusing a `new` key two different `old` values both claim.
 
         Task 4 item 4, found live: `_path_citation_redirect_rows`' own docs-stripped form
-        collided here on the real corpus -- `docs/findings/register.md` and `docs/findin
-        gs/register.md` (the phase-1b merge target) both strip to a `new_id` of
-        `findings/register.md`, with *different* `old_id`s (`findings/register.md` vs
-        `findings/register.md`). A flat `{new: old}` dict comprehension picks
+        collided here on the real corpus -- `docs/audit/register.md` and `docs/audit/
+        phases/1b/register.md` (the phase-1b merge target) both strip to a `new_id` of
+        `findings/register.md`, with *different* `old_id`s (`audit/register.md` vs
+        `audit/phases/1b/register.md`). A flat `{new: old}` dict comprehension picks
         whichever row iterates last, silently -- the exact `dict.update` failure mode
         `TokenMapCollisionError`'s own docstring already names for the forward direction,
         recurring here in the inverse. There is no per-citation evidence at this point to

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """C2 -- the retry-cap hook (RFC-895 §2 item C2; RL-920 §4 and §6; RL-907(a)/(c)).
 
-`docs/rulings/RL-00920-q2-is-answered-differently-for-c2-and-c3-c3-is-dissolved-c2-gets-claude-settings-json-and-slice-g-is-re-cut-and-still-blocked.md`, RL-920 §4,
+`docs/rulings/RL-00920-q2-is-answered-differently-for-c2-and-c3-c3-is-dissolved-c2-gets-claude-settings-json-and-slice-g-is-re-cut-and-still-blocked.md`,
+RL-920 §4,
 distinguishes C2 from C3 (dissolved): C3 would have re-checked a state already written
 down and already checked more strongly by CI, but C2 "genuinely needs a hook" because it
 **intercepts an action that leaves no artifact** -- blocking the next retry at the moment

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import importlib.util
 import pathlib
 import re
 import subprocess
+import sys
 from datetime import date
 
 import pytest
@@ -569,22 +571,43 @@ async def test_a_purge_without_a_reason_is_refused(
 
 # -- FR-72: loaders, and the licence rule OQ-561 settled --------------------------------
 
-# RL-949 (`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) §3: a second,
-# conditional carve-out for a generated repository self-census, alongside
-# `licensed_vendored_skill` below. It is a closed, explicit registry of
-# (generator script, filename pattern the generator owns) — a filename match makes a file a
-# *candidate* only; it never itself grants the exemption (§3 point 1 and point 4). Everything
-# unregistered still goes through the unmodified whole-tree sweep.
+# RL-949
+# (`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) §3:
+# a second, conditional carve-out for a generated repository self-census, alongside
+# `licensed_vendored_skill` below. It is a closed, explicit registry of (generator script, filename
+# pattern the generator owns) — a filename match makes a file a *candidate* only; it never itself
+# grants the exemption (§3 point 1 and point 4). Everything unregistered still goes through the
+# unmodified whole-tree sweep.
 GENERATED_CORPUS_REGISTRY: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "scripts/file-census.py",
-        re.compile(r"^docs/audit/file-census-(?P<sha>[0-9a-f]{7,40})\.csv$"),
+        # `docs/audit/` pre-migration, `docs/research/` after it -- `docs/audit/` dissolves
+        # (RFC-937 §1.4) and this committed census moved with the rest of the research
+        # essays.
+        re.compile(r"^docs/research/file-census-(?P<sha>[0-9a-f]{7,40})\.csv$"),
     ),
 )
 
 # The header `scripts/file-census.py` writes (plan §7 Interfaces). Checked verbatim, not
 # inferred, so a header drift is itself caught rather than silently tolerated.
 CENSUS_CSV_HEADER = "path,area,name_pattern,size_bytes,mutability,referenced_by"
+
+# `scripts/_docid.py` cannot be `import`ed by name (no `scripts/__init__.py`); loaded by
+# path, the same idiom `backend/tests/test_demo_command.py` already uses for
+# `scripts/demo.py`. `redirects_path_map` is the one place `old_path -> new_path` is
+# parsed from `docs/REDIRECTS.csv` — reused here rather than re-parsed a second time.
+_DOCID_SPEC = importlib.util.spec_from_file_location(
+    "_docid_for_test_lineage",
+    pathlib.Path(__file__).resolve().parents[2] / "scripts" / "_docid.py",
+)
+assert _DOCID_SPEC is not None
+assert _DOCID_SPEC.loader is not None
+_docid = importlib.util.module_from_spec(_DOCID_SPEC)
+# `_docid.py` declares `@dataclass`es, and `dataclasses` resolves their module via
+# `sys.modules[cls.__module__]` — registered first, the same idiom
+# `tests/test_audit_docs_ids.py`'s `_load_by_path` already uses for the same module.
+sys.modules[_DOCID_SPEC.name] = _docid
+_DOCID_SPEC.loader.exec_module(_docid)
 
 
 def resolve_commit(root: pathlib.Path, sha: str) -> str | None:
@@ -693,6 +716,33 @@ def licensed_vendored_skill(path: pathlib.Path) -> bool:
     return False
 
 
+def verified_migration_redirects_manifest(path: pathlib.Path, root: pathlib.Path) -> bool:
+    """A third, conditional carve-out for `docs/REDIRECTS.csv` — RFC-937 §1.8's own
+    generated move-history record (`doc-id.py`'s migration and widening steps "append to
+    `REDIRECTS.csv`"; §7's regenerate step lists it beside `INDEX.md`). It is a structural
+    byproduct of this repository's own documentation tooling, not a UK reference dataset
+    FR-72 is about, but the exemption is bought by verified content, never by the filename
+    alone — the same shape `generated_from_tracked_corpus` above uses for the file-census
+    carve-out: a fixed, well-known location (there is exactly one `REDIRECTS.csv` in the
+    corpus, at `docs/`, unlike the census's per-commit filenames) plus a proof the file
+    really is what its position claims. The proof: the manifest is non-empty (a real
+    migration produced it) and every `new_path` it names resolves to a file that actually
+    exists in this tree — `audit-docs.py` check 36's own "every row's target exists" rule,
+    read through `_docid.redirects_path_map` rather than re-parsed a second time here.
+    Delete a row, or point one at a path that is not there, and this stops being verified.
+    """
+    try:
+        rel = path.relative_to(root).as_posix()
+    except ValueError:
+        return False
+    if rel != "docs/REDIRECTS.csv":
+        return False
+    redirects = _docid.redirects_path_map(root)
+    if not redirects:
+        return False
+    return all((root / new_path).is_file() for new_path in redirects.values())
+
+
 @pytest.mark.req("FR-72")
 def test_loaders_ship_for_every_reference_set_the_requirement_names() -> None:
     from app.data.reference_loaders import LOADERS
@@ -742,10 +792,16 @@ def test_no_reference_rows_are_bundled_in_the_repository() -> None:
     licence and this fails, which is the point.
 
     The second is `generated_from_tracked_corpus` (RL-949,
-    `docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) — a closed registry of
-    generated repository self-census artifacts, bought by provable reproducibility against
-    the tree their own filename names, never by location or filename alone. Delete a row
-    from the census, or point it at a tree it does not match, and this fails too.
+    `docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) — a
+    closed registry of generated repository self-census artifacts, bought by provable
+    reproducibility against the tree their own filename names, never by location or filename alone.
+    Delete a row from the census, or point it at a tree it does not match, and this fails too.
+
+    The third, added with W37-6's id migration, is `verified_migration_redirects_manifest`
+    for `docs/REDIRECTS.csv` — RFC-937 §1.8's own generated move-history record, bought by
+    the same kind of proof: the manifest is non-empty and every path it names as a move
+    target actually exists in the tree. Point a row at a path that is not there and this
+    fails too.
     """
     root = pathlib.Path(__file__).resolve().parents[2]
 
@@ -757,6 +813,7 @@ def test_no_reference_rows_are_bundled_in_the_repository() -> None:
         and ".git" not in path.parts
         and not licensed_vendored_skill(path)
         and not generated_from_tracked_corpus(path, root)
+        and not verified_migration_redirects_manifest(path, root)
     ]
     assert data_files == [], f"unexpected bundled data: {data_files}"
 

@@ -614,8 +614,8 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
 
 
 # ---------------------------------------------------------------------------
-# Rate Tables (03 §3.3, FR-228, FR-229, FR-230, FR-231, FR-233, FR-234, FR-235, FR-236, FR-232) — versioned typed tables
-# of factors and constants that actuaries edit when making a rate change.
+# Rate Tables (03 §3.3, FR-228, FR-229, FR-230, FR-231, FR-233, FR-234, FR-235, FR-236, FR-232) —
+# versioned typed tables of factors and constants that actuaries edit when making a rate change.
 #
 # W10-1 adds RateTable and RateTableVersion to model-schema: keys, value
 # column, storage mode (rows vs parquet), immutability invariants, and

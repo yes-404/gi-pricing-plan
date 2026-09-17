@@ -3,11 +3,13 @@
 
 `score_one` measured directly: no HTTP, no FastAPI, no database, no cache. The full-path
 and sustained-200-rps halves of NFR-489 are Slice 2's Task 2.1
-(`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`); this discharges the *component* half —
-`docs/roadmap.md`'s "build the latency harness in WK-671 alongside the evaluator, not after".
+(`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`);
+this discharges the *component* half — `docs/roadmap.md`'s "build the latency harness in WK-671
+alongside the evaluator, not after".
 
 `bench-model.py`'s and `bench-data.py`'s sibling, and it inherits their governance rule
-verbatim (RL-872, `docs/rulings/RL-00872-dp3-load-generation-tooling-for-the-sustained-200-rps-test.md`):
+verbatim (RL-872,
+`docs/rulings/RL-00872-dp3-load-generation-tooling-for-the-sustained-200-rps-test.md`):
 
     Not a CI gate. A timing assertion on a shared runner fails for reasons that have
     nothing to do with the code, and a check that fails randomly teaches everyone to

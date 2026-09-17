@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Common fields for every artifact.\n\n`frozen=True` is the type-level expression of FR-OVR-1: an artifact is immutable once\nit leaves `draft`, and corrections create a new version rather than editing in place.\nMaking the model mutable \"for convenience\" would put that invariant back into review\ncomments, where it does not survive.\n\n`extra=\"forbid\"` is deliberate too — ADR-0002 makes this package the single source of\ntruth, so a field that is not declared here does not exist, and silently accepting one\nwould let a shape drift into being without a contract change.",
+  "description": "Common fields for every artifact.\n\n`frozen=True` is the type-level expression of FR-4: an artifact is immutable once\nit leaves `draft`, and corrections create a new version rather than editing in place.\nMaking the model mutable \"for convenience\" would put that invariant back into review\ncomments, where it does not survive.\n\n`extra=\"forbid\"` is deliberate too — ADR-704 makes this package the single source of\ntruth, so a field that is not declared here does not exist, and silently accepting one\nwould let a shape drift into being without a contract change.",
   "properties": {
     "archived_at": {
       "anyOf": [

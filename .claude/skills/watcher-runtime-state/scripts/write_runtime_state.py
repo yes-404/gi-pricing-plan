@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Write and maintain the RFC-895 runtime state file (artifact B), per RL-907.
 
-`docs/rulings/RL-00907-q4-artifacts-win-where-an-artifact-exists-and-nothing-that-blocks-an-action-may-be-counted-in-b-without-one.md`, RL-907, rejected the note's
+`docs/rulings/RL-00907-q4-artifacts-win-where-an-artifact-exists-and-nothing-that-blocks-an-action-may-be-counted-in-b-without-one.md`,
+RL-907, rejected the note's
 original design (a state file the watcher writes and a mismatch detector compares
 against artifact history) because that shape fails silently: if the writer dies or is
 never wired up, the state file reads zero, the artifacts read zero, a mismatch detector
