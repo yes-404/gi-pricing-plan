@@ -272,25 +272,29 @@ GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
         "the residue they name, never a citation for the migration to rewrite",
     ),
     (
-        # `re.escape`'d up to the sha group: `docs/audit/file-census-<sha>.csv`, the
-        # committed evidence base RFC-897 §2 (Stage 0) names -- "committed under
-        # docs/audit/ ..., stamped with the tree". A DATA file whose own NAME binds it to
-        # one commit (`5ef559d` today; a future re-census would carry a different sha,
-        # hence the class rather than a literal filename), the same "quotes a legacy path
-        # as evidence, never a citation" reasoning the W37-11 record entry above gives —
-        # its own `path` column is a full per-file dump of the tree AT THAT COMMIT, so a
-        # tree-wide citation sweep reading those cells as prose citations to rewrite
-        # rewrites the record's own evidence out from under it (found live: commit 1
-        # rewrote 168 of the census's 1320 rows, which is the record no longer describing
-        # the tree its own name and header claim it describes). Class F loop 2, W37-6,
-        # deputy's ruling 2026-09-17 17:23 BST: joins this list as a predicate rather than
+        # RFC-937 §5.2 :328 routes `docs/audit/file-census-<sha>.csv` to
+        # `docs/research/file-census-<sha>.csv` (`_RESEARCH_UNSTAMPABLE_MOVE`) -- the move
+        # itself is correct and stands; a ruling cannot amend an RFC, and "stays in place"
+        # (this class's own earlier, WITHDRAWN reading, class F loop 2 first pass,
+        # 2026-09-17 17:23 BST) was wrong on exactly that point. The defect commit 1 found
+        # is narrower: the moved file's own `path` column is a full per-file dump of the
+        # tree AT THE COMMIT ITS NAME NAMES (RFC-897 §2 Stage 0: "committed ..., stamped
+        # with the tree"), so a tree-wide citation sweep reading those cells as prose
+        # citations rewrote 168 of the census's 1320 rows -- the record no longer
+        # describing the tree its own name and header claim it describes. The fix is the
+        # citation sweep skipping the file's CONTENT, never its location: matches the
+        # basename at EITHER `docs/audit/` (before this migration's own move step runs)
+        # or `docs/research/` (after it), so the exclusion holds regardless of which side
+        # of the move `_iter_tree_files` happens to see it on. Corrected, class F loop 2,
+        # deputy's ruling 2026-09-17 17:40 BST. Joins this list as a predicate rather than
         # a per-row exemption or a hand-maintained id list, so it reproduces from the tree
         # itself in a fresh clone (RL-910 §2's own reason, the identical shape this file's
         # other exclusion tuples above already satisfy).
-        re.compile(r"^docs/audit/file-census-[0-9a-f]{7,40}\.csv$"),
-        "RFC-897 §2 (Stage 0) census evidence, committed under docs/audit/ and named for "
-        "the commit it describes — quotes tree-relative paths as the census's own data, "
-        "never a citation for the migration to rewrite",
+        re.compile(r"^docs/(?:audit|research)/file-census-[0-9a-f]{7,40}\.csv$"),
+        "RFC-897 §2 (Stage 0) census evidence, named for the commit it describes, at "
+        "either its pre-move (docs/audit/) or post-move (docs/research/, RFC-937 §5.2) "
+        "location — quotes tree-relative paths as the census's own data, never a "
+        "citation for the migration to rewrite",
     ),
 )
 

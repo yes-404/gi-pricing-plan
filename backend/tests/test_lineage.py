@@ -579,16 +579,10 @@ async def test_a_purge_without_a_reason_is_refused(
 GENERATED_CORPUS_REGISTRY: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "scripts/file-census.py",
-        # Stays at `docs/audit/` — never moves. An earlier reading of RFC-937 §5.2 :328
-        # had this committed census moving to `docs/research/` with the rest of the
-        # research essays; superseded by class F loop 2 (deputy's ruling, 2026-09-17
-        # 17:23 BST): RFC-897 §2 (Stage 0) commits it "under docs/audit/... stamped with
-        # the tree", the census's own name already binds it to the commit it documents,
-        # and `scripts/_docid.py`'s `GOVERNANCE_RECORD_EXCLUSIONS` now excludes it from
-        # the citation sweep on that basis rather than moving and content-rewriting it —
-        # the move was what let a tree-wide citation sweep read the census's own
-        # per-file `path` column as prose and rewrite 168 of its 1320 rows.
-        re.compile(r"^docs/audit/file-census-(?P<sha>[0-9a-f]{7,40})\.csv$"),
+        # `docs/audit/` pre-migration, `docs/research/` after it -- `docs/audit/` dissolves
+        # (RFC-937 §1.4) and this committed census moved with the rest of the research
+        # essays.
+        re.compile(r"^docs/research/file-census-(?P<sha>[0-9a-f]{7,40})\.csv$"),
     ),
 )
 
