@@ -258,11 +258,39 @@ TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
 #: it (2026-09-05, W37-6, deputy's condition on PR #756).
 W37_11_RECORD_PATH: Final = "docs/audit/w37-11-record.md"
 
-GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
+#: Each entry's own case tests whether it matches `rel_posix` **exactly as this repository
+#: names that one governed record today** (`re.escape`'d, so a regex-special character in
+#: a literal path can never accidentally become a wildcard) or, for a record whose commit-
+#: bound name varies by tree (the census below), a real pattern. One shared shape —
+#: `tuple[re.Pattern[str], str]` — rather than a literal-string tuple that could only ever
+#: express the first case, because a second member needing the second case (found live,
+#: class F loop 2, 2026-09-17) should join this list rather than fork a parallel one.
+GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
     (
-        W37_11_RECORD_PATH,
+        re.compile(re.escape(W37_11_RECORD_PATH)),
         "the W37-11 residue ceiling record — quotes legacy paths/tokens as evidence of "
         "the residue they name, never a citation for the migration to rewrite",
+    ),
+    (
+        # `re.escape`'d up to the sha group: `docs/audit/file-census-<sha>.csv`, the
+        # committed evidence base RFC-897 §2 (Stage 0) names -- "committed under
+        # docs/audit/ ..., stamped with the tree". A DATA file whose own NAME binds it to
+        # one commit (`5ef559d` today; a future re-census would carry a different sha,
+        # hence the class rather than a literal filename), the same "quotes a legacy path
+        # as evidence, never a citation" reasoning the W37-11 record entry above gives —
+        # its own `path` column is a full per-file dump of the tree AT THAT COMMIT, so a
+        # tree-wide citation sweep reading those cells as prose citations to rewrite
+        # rewrites the record's own evidence out from under it (found live: commit 1
+        # rewrote 168 of the census's 1320 rows, which is the record no longer describing
+        # the tree its own name and header claim it describes). Class F loop 2, W37-6,
+        # deputy's ruling 2026-09-17 17:23 BST: joins this list as a predicate rather than
+        # a per-row exemption or a hand-maintained id list, so it reproduces from the tree
+        # itself in a fresh clone (RL-910 §2's own reason, the identical shape this file's
+        # other exclusion tuples above already satisfy).
+        re.compile(r"^docs/audit/file-census-[0-9a-f]{7,40}\.csv$"),
+        "RFC-897 §2 (Stage 0) census evidence, committed under docs/audit/ and named for "
+        "the commit it describes — quotes tree-relative paths as the census's own data, "
+        "never a citation for the migration to rewrite",
     ),
 )
 
@@ -373,8 +401,8 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     for name, reason in TEST_MODULE_EXCLUSIONS:
         if rel_posix == name:
             return reason
-    for name, reason in GOVERNANCE_RECORD_EXCLUSIONS:
-        if rel_posix == name:
+    for pattern, reason in GOVERNANCE_RECORD_EXCLUSIONS:
+        if pattern.fullmatch(rel_posix):
             return reason
     contract_reason = generated_contract_tier_reason(rel_posix)
     if contract_reason is not None:

@@ -586,7 +586,7 @@ def test_class6_keys_on_the_generated_set_not_reproducibility(
 
 
 # ---------------------------------------------------------------------------------------
-# W37-6: three declared exclusions from the sweep and from the (d)/(e)/(g) verification
+# W37-6: declared exclusions from the sweep and from the (d)/(e)/(g) verification
 # corpus (`scripts/_docid.py`'s `sweep_exclusion_reason`, read by `_iter_tree_files` here
 # and by `_docverify.py`'s `tracked_files`):
 #
@@ -601,6 +601,14 @@ def test_class6_keys_on_the_generated_set_not_reproducibility(
 #    `scripts/*.py` by path while it runs (`_load_module`, fixed separately below to stop
 #    writing it at all; this predicate is the second, independent layer for whatever it
 #    still misses).
+# 4. `docs/audit/file-census-<sha>.csv` (`_docid.GOVERNANCE_RECORD_EXCLUSIONS`, class F
+#    loop 2, deputy's ruling 2026-09-17 17:23 BST) — RFC-897 §2 (Stage 0) census
+#    evidence, committed under `docs/audit/` and named for the commit it describes; a
+#    tree-wide citation sweep reading its own per-file `path` column as prose rewrote
+#    168 of the real census's 1320 rows, so it now sits in the same "quotes a legacy
+#    path as evidence, never a citation" class the W37-11 record already does. A regex
+#    predicate on the basename, not a literal path — the sha varies with the tree a
+#    future re-census would document.
 # ---------------------------------------------------------------------------------------
 
 
@@ -661,6 +669,92 @@ def test_lockfiles_survive_migration_byte_identical(
         == frontend_lock_text
     )
     assert (root / "pnpm-lock.yaml").read_text(encoding="utf-8") == root_pnpm_lock_text
+
+
+def test_file_census_under_docs_audit_survives_migration_byte_identical_and_in_place(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Class F loop 2, deputy's ruling 2026-09-17 17:23 BST: `docs/audit/file-census-
+    <sha>.csv` is RFC-897 §2 (Stage 0) evidence, committed under `docs/audit/` and named
+    for the commit it documents — a real census's own `path` column is a full per-file
+    dump of the tree at that commit, so a tree-wide citation sweep reading those cells as
+    prose citations rewrites the record's own evidence out from under it (found live:
+    commit 1 rewrote 168 of 1320 rows). Broken-input proof, positive half: a legacy-form
+    citation (`NT-0001`, this fixture corpus's own re-cited note — the same token
+    `test_lockfiles_survive_migration_byte_identical` uses) planted inside a `docs/audit/
+    file-census-<sha>.csv` file must survive `migrate()` completely untouched, at its
+    original path, never moved.
+    """
+    census_text = (
+        "path,area,name_pattern,size_bytes,mutability,referenced_by\n"
+        "docs/notes/NT-0001-example.md,notes,NT-DDDD-example,42,frozen,0\n"
+    )
+    root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
+    census_path = root / "docs" / "audit" / "file-census-abc1234.csv"
+    census_path.parent.mkdir(parents=True, exist_ok=True)
+    census_path.write_text(census_text, encoding="utf-8")
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(
+        ["-c", "user.email=test@example.com", "-c", "user.name=Test",
+         "commit", "-q", "-m", "add file-census"],
+        cwd=root,
+    )
+
+    result = doc_id_cli.migrate(root)
+
+    assert ("NT-0001", "RFC-1") in result.assigned, (
+        "fixture assumption: this corpus's note must still be re-cited NT-0001 -> RFC-1, "
+        "or this proof no longer exercises a real rewrite and tests nothing"
+    )
+    assert census_path.is_file(), (
+        "docs/audit/file-census-<sha>.csv must stay at its original path — the "
+        "exclusion is from the citation sweep, never a move"
+    )
+    assert census_path.read_text(encoding="utf-8") == census_text
+    assert not (root / "docs" / "research" / "file-census-abc1234.csv").exists()
+
+
+def test_file_census_shaped_files_outside_the_predicate_are_still_rewritten(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof, negative half: the identical `NT-0001` citation, in a file
+    shaped like a census but that does not satisfy the predicate — no sha
+    (`file-census.csv`) or the right name under the wrong directory
+    (`docs/research/file-census-<sha>.csv`) — is unaffected by the exclusion and still
+    gets rewritten like any other tracked file. Proves the predicate is `docs/audit/
+    file-census-<sha>.csv` specifically, not "any file that looks like a census."
+    """
+    census_text = (
+        "path,area,name_pattern,size_bytes,mutability,referenced_by\n"
+        "docs/notes/NT-0001-example.md,notes,NT-DDDD-example,42,frozen,0\n"
+    )
+    root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
+    no_sha = root / "docs" / "audit" / "file-census.csv"
+    no_sha.parent.mkdir(parents=True, exist_ok=True)
+    no_sha.write_text(census_text, encoding="utf-8")
+    wrong_dir = root / "docs" / "research" / "file-census-abc1234.csv"
+    wrong_dir.parent.mkdir(parents=True, exist_ok=True)
+    wrong_dir.write_text(census_text, encoding="utf-8")
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(
+        ["-c", "user.email=test@example.com", "-c", "user.name=Test",
+         "commit", "-q", "-m", "add non-matching census-shaped files"],
+        cwd=root,
+    )
+
+    result = doc_id_cli.migrate(root)
+
+    assert ("NT-0001", "RFC-1") in result.assigned, (
+        "fixture assumption: this corpus's note must still be re-cited NT-0001 -> RFC-1, "
+        "or this proof no longer exercises a real rewrite and tests nothing"
+    )
+    assert "RFC-1" in no_sha.read_text(encoding="utf-8"), (
+        "file-census.csv (no sha) does not match the predicate and must still be swept"
+    )
+    assert "RFC-1" in wrong_dir.read_text(encoding="utf-8"), (
+        "docs/research/file-census-<sha>.csv (right name, wrong directory) does not "
+        "match the predicate and must still be swept"
+    )
 
 
 def test_fixture_corpus_roots_survive_migration_untouched(

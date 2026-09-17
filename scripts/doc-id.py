@@ -3521,20 +3521,24 @@ def _discover_research_essays(root: Path) -> list[_Draft]:
     return drafts
 
 
-#: RFC-937 §5.2 :328 routes this file into `research/RS-...` alongside its two markdown
-#: siblings above, but it cannot carry the family's YAML front matter -- F83's own
-#: corrected population (`docs/findings/register.md`, F83 row, "Corrected 2026-09-02") names
-#: this exact file as one of the two non-`.md` files added to the "cannot physically
-#: carry front matter" exempt set: a prepended `---` block makes row 1 stop being the
-#: CSV's own header, breaking `scripts/file-census.py` and any other CSV reader.
-#: `classify_docs_files` buckets by directory, not by header, so the move alone satisfies
-#: RFC-937 §7(a); no header follows it, and no `id:` is minted for it either (it never
-#: numbers into the sequence — a document family membership without an id would itself be
-#: a new, undeclared shape).
-_RESEARCH_UNSTAMPABLE_MOVE: Final[Mapping[str, str]] = {
-    # rfc-937: legacy-form-spec
-    "docs/audit/file-census-5ef559d.csv": "docs/research/file-census-5ef559d.csv",
-}
+#: RFC-937 §5.2 :328 read as routing `docs/audit/file-census-<sha>.csv` into
+#: `research/RS-...` alongside its two markdown siblings above, the same "cannot carry
+#: the family's YAML front matter" reasoning F83's corrected population gives (a
+#: prepended `---` block breaks row 1 as the CSV's own header). **Superseded, class F
+#: loop 2, deputy's ruling 2026-09-17 17:23 BST**: the census is RFC-897 §2 (Stage 0)
+#: evidence "committed under `docs/audit/`... stamped with the tree" — a data file whose
+#: own name already binds it to the commit it documents, so it never needed the
+#: `research/RS-` family's own id-and-front-matter shape to stay identifiable, and a move
+#: was never RFC-937's only reading. It stays at its original `docs/audit/` path,
+#: excluded from the citation sweep by `_docid.GOVERNANCE_RECORD_EXCLUSIONS` (the same
+#: "quotes a legacy path as evidence, never a citation" class the W37-11 record already
+#: uses) rather than moved and content-rewritten — the commit-1 defect this superseding
+#: entry exists to record: a tree-wide citation sweep read the census's own per-file
+#: `path` column as prose citations and rewrote 168 of its 1320 rows, leaving a record
+#: that no longer describes the tree its own name and header claim it describes. Empty
+#: below, not removed: the mechanism stays generic for a future commit-bound data file
+#: that genuinely does need a move (unlike this one).
+_RESEARCH_UNSTAMPABLE_MOVE: Final[Mapping[str, str]] = {}
 
 
 def _move_unstampable_research_files(root: Path) -> tuple[list[str], list[str]]:
