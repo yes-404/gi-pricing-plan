@@ -4095,7 +4095,7 @@ def test_requirements_guard_is_silent_on_the_real_corpus(
 
 
 def test_real_corpus_dep_ids_split_into_discovered_and_already_canonical(
-    doc_id_cli: types.ModuleType
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """The four ids F82 names, against the real `docs/specs/00-overview.md`: `DEP-1`,
     `DEP-2` and `DEP-3` are already in the canonical form `compute_next` counts, and
@@ -4103,10 +4103,10 @@ def test_real_corpus_dep_ids_split_into_discovered_and_already_canonical(
     either the corpus or the classification is caught here rather than in the irreversible
     run.
     """
-    dep = [d for d in doc_id_cli._discover_requirements(ROOT) if d.prefix == "DEP"]
+    dep = [d for d in doc_id_cli._discover_requirements(pre_migration_root) if d.prefix == "DEP"]
     assert [d.old_token for d in dep] == ["DEP-1a"]
     assert dep[0].owner == "decision-maker"
-    text = (ROOT / "docs" / "specs" / "00-overview.md").read_text(encoding="utf-8")
+    text = (pre_migration_root / "docs" / "specs" / "00-overview.md").read_text(encoding="utf-8")
     canonical = {f"DEP-{m.group(2)}" for m in doc_id_cli._SPEC_BOLD_RE.finditer(text)
                  if m.group(1) == "DEP"}
     assert canonical == {"DEP-1", "DEP-2", "DEP-3"}
@@ -4259,7 +4259,7 @@ def test_migrate_still_raises_via_the_multi_ruling_guard_on_an_unnumbered_ruling
 
 
 def test_a_series_is_discovered_from_the_real_source_with_ruling_86s_fields(
-    doc_id_cli: types.ModuleType
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """F81's falsifiable discharge condition and Ruling 86 §2's field list, against the
     real `docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` rather than a fixture --
@@ -4269,8 +4269,11 @@ def test_a_series_is_discovered_from_the_real_source_with_ruling_86s_fields(
     each carrying `was:` the adoption file's path and its old token."* `owner:` is
     `decision-maker` per Ruling 95, which struck Ruling 86 §3 item 2's departure.
     """
-    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(ROOT)  # must not raise
-    drafts = [d for d in doc_id_cli._discover_lettered_rulings(ROOT) if d.was == _A_SERIES_SOURCE]
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(pre_migration_root)  # must not raise
+    drafts = [
+        d for d in doc_id_cli._discover_lettered_rulings(pre_migration_root)
+        if d.was == _A_SERIES_SOURCE
+    ]
     assert [d.old_token for d in drafts] == ["Ruling A1", "Ruling A2", "Ruling A3"]
     assert {d.prefix for d in drafts} == {"RL"}
     assert {d.status for d in drafts} == {"active"}
@@ -4315,7 +4318,7 @@ def test_migrate_stays_idempotent_with_all_three_new_discoveries_present(
 
 
 def test_a_series_extraction_leaves_the_residual_plan_ruling_86_requires(
-    doc_id_cli: types.ModuleType
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 86 §3 item 5 presupposes a surviving plan: *"The residual `PL-` is checked
     for sense: after §3's subsections leave, its §3 heading has nothing under it."* That is
@@ -4324,10 +4327,16 @@ def test_a_series_extraction_leaves_the_residual_plan_ruling_86_requires(
     `_RULING_HEADING_RE` -- the widening would have made `_discover_plain_plans` skip the
     file and produce no `PL-` at all. This is the assertion that pins that choice.
     """
-    plain = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.was == _A_SERIES_SOURCE]
+    plain = [
+        d for d in doc_id_cli._discover_plain_plans(pre_migration_root)
+        if d.was == _A_SERIES_SOURCE
+    ]
     assert len(plain) == 1
     assert (plain[0].prefix, plain[0].kind) == ("PL", "leaf")
-    multi = [d for d in doc_id_cli._discover_multi_ruling_files(ROOT) if d.was == _A_SERIES_SOURCE]
+    multi = [
+        d for d in doc_id_cli._discover_multi_ruling_files(pre_migration_root)
+        if d.was == _A_SERIES_SOURCE
+    ]
     assert multi == []  # not a whole-file split
 
 
