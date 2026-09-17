@@ -111,14 +111,21 @@ def synthetic_repo(tmp_path: pathlib.Path) -> pathlib.Path:
     shape `flag_day_split` exists to distinguish. Both bodies are shaped like a ruling
     someone would actually write (see `_REALISTIC_RULING_BODY`), not a one-line stub.
 
-    Headings are `RL-1 —` / `RL-2 —`, arbitrary synthetic numbers unrelated to any real
-    ruling id -- never allocated in this repository's own history and used only inside
-    this isolated `tmp_path` git repo. Pre-migration this fixture spelled them `Ruling 1
-    —`/`Ruling 2 —` (`dc1666f`); the NT-0019 migration run swept this file along with
-    the rest of the tree and renumbered them into the real corpus's id sequence as
-    `RL-864`/`RL-865` -- indistinguishable, to the migration's id-allocation pass, from a
-    real citation. Restored here to the pre-migration synthetic numbers under the
-    current `RL-N` heading form, matching this test's own `{"1", "2"}` assertions.
+    Headings are `RL-1 —` / `RL-2 —`, placeholder numbers chosen for this fixture, used
+    only inside this isolated `tmp_path` git repo. Pre-migration this fixture spelled
+    them `Ruling 1 —`/`Ruling 2 —` (`dc1666f`) -- and those exact strings are not
+    fixture-only: real, distinct rulings titled "Ruling 1" and "Ruling 2" exist at
+    `fbb5555:docs/plans/2026-08-29-w11-prework-rulings.md:18` and `:97`, allocated
+    `RL-864`/`RL-865` by commit 1 (`docs/INDEX.md:1000-1001`,
+    `docs/REDIRECTS.csv:1758` and `:1779`). The NT-0019 citation rewriter sweeps every
+    tree file, including this one, and correctly rewrote this fixture's placeholder text
+    to match those real rulings' own real redirect -- the two labels collided, and the
+    rewrite is the citation rewriter doing exactly what it does everywhere else in the
+    tree, not a defect and not something "allocated from tests/". Restored here to the
+    pre-migration placeholder numbers under the current `RL-N` heading form, matching
+    this test's own `{"1", "2"}` assertions -- and, to stop the same collision recurring
+    on a future re-migration, this docstring is the record of why `RL-1`/`RL-2` must
+    never again literally read `Ruling 1`/`Ruling 2` in this file.
     """
     root = tmp_path / "repo"
     root.mkdir()

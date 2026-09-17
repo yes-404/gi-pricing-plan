@@ -3363,6 +3363,7 @@ _H_ROW_RE: Final = re.compile(r"^\|.*\|\s*H(\s*\+\s*[A-Z])?\s*\|\s*$")
 #: — so a `rglob("*one-id-per-document*")` finds nothing. It is followed through
 #: `docs/REDIRECTS.csv`, which is the artifact the migration writes for exactly this
 #: purpose; guessing the new name instead is how a row silently measures an empty file.
+# rfc-937: legacy-form-spec
 _NT0019_PATH: Final = "docs/notes/0019-one-id-per-document.md"
 
 
