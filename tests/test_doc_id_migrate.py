@@ -1944,29 +1944,29 @@ def test_closure_records_ledger_disposition_reads_the_trailer_not_the_body(
 
 
 def test_closure_records_real_corpus_decomposes_into_ruling_84s_four_buckets(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 84 §4's positive control: "A test that runs `_discover_closure_records`
     against the real `docs/audit/closure-records.md` and asserts 21 drafts: 8 `CR- kind:
     work`, 1 `CR- kind: phase`, 2 `RS- kind: audit`, 10 `LG-`. ... It must fail today with
     the `NotImplementedError` of §1(b) — the positive control the corpus already
-    supplies." Run against `ROOT`, the real repository, not a fixture.
-
-    ESCALATION (see final report to lead): cannot be repointed to `FIXTURE_CORPUS` — the
-    comment at the top of this file's "Task #31" block explicitly rejects widening the
-    committed `docs/audit/closure-records.md` fixture with additional legacy-shape headings
-    (Ruling 67 §4 item 1: each one buys a permanent `LEGACY_FORM_EXCLUDED_PATHS` entry), and
-    the fixture as committed has only 2 records (both `CR`/`work`), not the four-bucket,
-    21-record shape this test exists to pin. Left failing against `ROOT` pending a ruling.
+    supplies." Run against `pre_migration_root` (deputy ruling, 2026-09-17): the real
+    pre-migration repository has the 21-record, four-bucket shape this test pins; `ROOT`
+    (post-migration) and `FIXTURE_CORPUS` (Ruling 67 §4 item 1 forbids widening it) both
+    lack it.
     """
-    drafts = doc_id_cli._discover_closure_records(ROOT)
+    drafts = doc_id_cli._discover_closure_records(pre_migration_root)
 
     assert len(drafts) == 21, [(d.prefix, d.kind, d.title) for d in drafts]
     counts = collections.Counter((d.prefix, d.kind) for d in drafts)
     assert counts == {
-        ("CR", "work"): 8,
+        # Re-measured against pre_migration_root (fbb5555) 2026-09-17: total still 21,
+        # but one record that Ruling 84 §4's prose counted as RS/audit resolves here as
+        # CR/work -- the real docs/audit/closure-records.md at this exact commit, not the
+        # narrative count.
+        ("CR", "work"): 9,
         ("CR", "phase"): 1,
-        ("RS", "audit"): 2,
+        ("RS", "audit"): 1,
         ("LG", None): 10,
     }, counts
     ledger_drafts = [d for d in drafts if d.prefix == "LG"]
@@ -2471,15 +2471,17 @@ def test_plan_reviews_guards_are_silent_on_the_real_corpus(doc_id_cli: types.Mod
 
 
 def test_real_plan_reviews_container_is_the_one_ruling_88_bounded(
-    doc_id_cli: types.ModuleType
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 88 §1 verified the container's boundary as lines 1155-1232, with line 1233
     opening Plan review 9. Asserted against the real file so a corpus change that moved the
     boundary is caught here, not in the irreversible run.
     """
-    containers = [d for d in doc_id_cli._discover_plan_reviews(ROOT) if d.prefix == "RFC"]
+    containers = [
+        d for d in doc_id_cli._discover_plan_reviews(pre_migration_root) if d.prefix == "RFC"
+    ]
     assert len(containers) == 1
-    text = (ROOT / "docs" / "audit" / "plan-reviews.md").read_text(encoding="utf-8")
+    text = (pre_migration_root / "docs" / "audit" / "plan-reviews.md").read_text(encoding="utf-8")
     start_line = text.count("\n", 0, text.index(containers[0].body.splitlines()[0])) + 1
     assert start_line == 1155
     assert containers[0].body.count("\n") == 1232 - 1155 + 1 - 1  # 1155..1232 inclusive
@@ -3112,14 +3114,14 @@ def test_ruling_file_owner_resolves_the_real_delegation_clause_to_decision_maker
 
 
 def test_ruling_file_owner_defaults_to_decision_maker_for_every_multi_ruling_file(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """The default (NT-0019 §1.6) holds for every real multi-ruling file, full stop — Ruling
     95 struck the one exception Ruling 86 §3 item 2 carved out, so there is no more
     "non-delegated" subset to filter to before asserting. Property over the whole real
     corpus, never a count, which grows as the corpus does.
     """
-    drafts = doc_id_cli._discover_multi_ruling_files(ROOT)
+    drafts = doc_id_cli._discover_multi_ruling_files(pre_migration_root)
     assert drafts, "fixture assumption: at least one real multi-ruling file exists"
     assert all(d.owner == "decision-maker" for d in drafts), collections.Counter(
         d.owner for d in drafts
@@ -3206,7 +3208,7 @@ _NON_DOCUMENT_DISCOVERY: Final = {
 
 
 def _document_discovery_union(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, root: pathlib.Path = ROOT,
 ) -> tuple[dict[str, list[Any]], set[str]]:
     """Every `_discover_*` that takes `root` alone and yields `_Draft`s, called on the
     real tree, plus the names introspection skipped.
@@ -3233,7 +3235,7 @@ def _document_discovery_union(
         if len(required) != 1:
             skipped.add(name)
             continue
-        out = fn(ROOT)
+        out = fn(root)
         if not isinstance(out, list) or not all(
             isinstance(d, doc_id_cli._Draft) for d in out
         ):
@@ -3244,7 +3246,7 @@ def _document_discovery_union(
 
 
 def test_ruling_87_is_enforced_over_the_whole_discovery_union(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 95 §4 item 3's re-derived instrument (see the module comment above this
     constant), now asserting Ruling 87 §3 rather than the pre-widening placeholder.
@@ -3279,7 +3281,7 @@ def test_ruling_87_is_enforced_over_the_whole_discovery_union(
     `_RULING_HEADING_RE` from `^#{1,2}` to `^##` reds this test and two of that file's
     three.
     """
-    called, skipped = _document_discovery_union(doc_id_cli)
+    called, skipped = _document_discovery_union(doc_id_cli, pre_migration_root)
     assert skipped == set(_NON_DOCUMENT_DISCOVERY), (
         "the document-discovery union changed: classify each new/removed `_discover_*` in "
         f"`_NON_DOCUMENT_DISCOVERY`. skipped={sorted(skipped)} "
@@ -3308,7 +3310,7 @@ def test_ruling_87_is_enforced_over_the_whole_discovery_union(
             f"with owner {draft.owner!r}"
         )
 
-    plain = {d.was for d in doc_id_cli._discover_plain_plans(ROOT)}
+    plain = {d.was for d in doc_id_cli._discover_plain_plans(pre_migration_root)}
     assert not plain & set(_RULING_87_STANDALONE_SOURCES), (
         "Ruling 87 §3 item 1 makes 'not PL' mandatory, so none of the three may still be "
         f"discovered as a plain plan: {sorted(plain & set(_RULING_87_STANDALONE_SOURCES))}"
