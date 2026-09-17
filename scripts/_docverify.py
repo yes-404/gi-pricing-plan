@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """`doc-id.py migrate --verify` — RFC-937 §7 (a)-(i) as an instrument, not a table.
 
-**Authority: RL-1043 §1** (`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`):
+**Authority: RL-1043 §1**
+(`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`):
 
     `doc-id.py migrate --verify <snapshot>` — it
       - runs the migration on a disposable snapshot, never a real checkout;
@@ -28,7 +29,8 @@ Four design constraints, each bought by a measured failure across three halted w
 3. **A green over an empty population is a fail, not a pass.** On a migrated tree
    `audit-docs.py` prints *"0 requirements defined across 8 specs"* as a **passing** line.
    Every row prints its denominator, and a zero denominator where the control has a non-zero
-   one fails loudly (`docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md`).
+   one fails loudly
+   (`docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md`).
 4. **Field tests, never substring tests** (RL-1043 §5). §7(d)'s `was:` exclusion is a
    parsed front-matter field, not a `"was:" in line` substring: two `was:`-keyed results have
    now needed re-deriving and both times a substring stood in for a field.
@@ -319,7 +321,8 @@ def _materialise(docid: Any, ref: str, dest: Path, *, repo_root: Path) -> None:
     It used to be built with `git archive` + `git init`, which satisfies both of those and
     is nevertheless wrong. Id allocation sorts on `created`, and for a requirement draft
     `created` is the module's **git first-commit date** (RFC-937 item 1; D1 at
-    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:247` — numbers carry chronology). A one-commit
+    `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:247`
+    — numbers carry chronology). A one-commit
     tree has none of those dates, so every requirement draft fell through to the old
     `date.today()` fallback, took the same date, sorted to the back of the sequence, and
     displaced the ids after it. `--verify` was therefore measuring an allocation a real run
@@ -483,7 +486,9 @@ def was_field_line_numbers(text: str) -> frozenset[int]:
     )
 
 
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: the fence predicate moved into `_docid` so `audit-docs.py`
 #: check 36 can read the identical rule row (e)'s `padded_hits` and row (d)'s corpus both
 #: use — re-exported here under this module's existing name for every caller and test
@@ -865,7 +870,9 @@ D_ALTERNATIVES: Final = _docid.LEGACY_FORM_PATTERNS
 #: Part 1 anchoring fix to the pattern can never silently un-key a disclosure. Disclosed,
 #: never silent: the row still prints its figure, denominator and control.
 #:
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: moved into `_docid.FINDING_ID_ALIAS_LABELS` so `audit-docs.py`
 #: check 36 can read the identical two-label set — re-exported here under this module's
 #: existing name. Deliberately the *narrower* of `_docid`'s two disclosed-label constants:
@@ -1211,7 +1218,9 @@ def _d8_verdict(mig: Corpus, ctl: Corpus, m_lines: int, c_lines: int) -> tuple[s
 # is for an exhibit of a defective FORM, and this is not one.
 _D7_LABEL: Final = _docid.SCOPED_REQUIREMENT_ID_LABEL
 
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 1 item 1:
 #: the never-allocated predicate's sources and function moved
 #: into `_docid` so `audit-docs.py` check 36 can read the identical rule — the four thin
 #: wrappers below preserve this module's existing `Corpus`-based signatures for every
@@ -1246,12 +1255,12 @@ def _scoped_id_is_never_allocated(token: str, mig: Corpus, ctl: Corpus) -> bool:
 
 
 #: (d7)'s remaining named collision, ruled 2026-09-05 (W37-6 channel): `_scoped_id_is_
-#: never_allocated` is per-TOKEN, and `FR-390` is genuinely allocated (`FR-387, FR-388, FR-389, FR-390`
-#: is real production usage, `docs/REDIRECTS.csv` carries its row) — so it fails as a
-#: "real" hit everywhere the literal string appears, including `scripts/doc-id.py`'s own
-#: `_expand_range` docstring, where it names the same string as a worked example of an
-#: UN-ascending range (`` `FR-PLAT-4..1` ``, deliberately backwards, to illustrate the
-#: "not ascending" branch) — never a citation to the real requirement at all.
+#: never_allocated` is per-TOKEN, and `FR-390` is genuinely allocated (`FR-387, FR-388, FR-389,
+#: FR-390` is real production usage, `docs/REDIRECTS.csv` carries its row) — so it fails as a "real"
+#: hit everywhere the literal string appears, including `scripts/doc-id.py`'s own `_expand_range`
+#: docstring, where it names the same string as a worked example of an UN-ascending range (``
+#: `FR-PLAT-4..1` ``, deliberately backwards, to illustrate the "not ascending" branch) — never a
+#: citation to the real requirement at all.
 #:
 #: **Corrected, same day: a table naming `FR-390` by file and token is the forbidden
 #: per-file exemption**, the maintainer's own standing rule (a resistant file goes to
@@ -1878,7 +1887,9 @@ def rows_d(
 # ---------------------------------------------------------------------------------------
 
 #: **Conjunct 1**'s exact-width regex, moved into `_docid` per
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item 1
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 2 item 1
 #: so `audit-docs.py` check 32 can read the identical assembled pattern rather than
 #: reassembling it from the same two symbols in a second place — re-exported here under
 #: this module's existing name for every caller and test already written against it.
@@ -1893,7 +1904,9 @@ _FENCE_RE: Final = re.compile(r"^\s{0,3}(```|~~~)")
 
 #: **Conjunct 2's** stripping step, boundary set and line-locator strip, and the
 #: `_in_path_context` predicate itself, moved into `_docid` per
-#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item 1
+#: `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+#: classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+#: typing.md` Entry 2 item 1
 #: so `audit-docs.py` check 32 can read the identical predicate rather than a private copy.
 #: Re-exported here under their existing names for this module's own callers and tests.
 _MD_EMPHASIS_RE: Final = _docid._MD_EMPHASIS_RE
@@ -2462,11 +2475,10 @@ def _rewritten_base_before_bare_comma(
 #: wrongly strips is the one that was always there.
 _FOREIGN_FRONTMATTER_DIRS: Final = (".claude/skills/", ".claude/agents/", ".claude/roles/")
 
-#: Cause 2a (deputy's ruling `:526`): a legacy range citation (`FR-387, FR-388, FR-389, FR-390`) names a
-#: consecutive block of ids, not a single one; the migration's ids are not consecutive, so
-#: the rewrite must enumerate the range rather than substitute one token, which DP-7's
-#: flat inverse cannot undo. Read on the pre-migration line — the range notation the
-#: rewrite had to expand away.
+#: Cause 2a (deputy's ruling `:526`): a legacy range citation (`FR-387, FR-388, FR-389, FR-390`)
+#: names a consecutive block of ids, not a single one; the migration's ids are not consecutive, so
+#: the rewrite must enumerate the range rather than substitute one token, which DP-7's flat inverse
+#: cannot undo. Read on the pre-migration line — the range notation the rewrite had to expand away.
 _RANGE_CITATION_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\.\.[0-9]+")
 
 #: Cause 2b (deputy's ruling `:528-530`, this executor's to investigate): every
@@ -2516,8 +2528,8 @@ _SLASH_COMPOUND_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+(?:/[0-9
 # a RL-989 class-4 split or a generated README/INDEX collision. Two new, unrelated
 # causes accounted for eight of the ten; the other one (a bare-basename/non-`docs/`-rooted
 # relative citation, e.g. `docs/README.md`'s `workflows/WF-698-...md` and
-# `closures/CR-00709-phase-0-specification-status.md`) is reported here in prose, not as a regex, because it has no single
-# stable prefix to key on (unlike the five `docs/`-rooted forms
+# `closures/CR-00709-phase-0-specification-status.md`) is reported here in prose, not as a regex,
+# because it has no single stable prefix to key on (unlike the five `docs/`-rooted forms
 # `_docid.LEGACY_FORM_PATTERNS` already names).
 #
 # **Corrected, task #30:** this comment used to also report a second finding — `OQ-556`
@@ -2542,10 +2554,11 @@ _SLASH_COMPOUND_RE: Final = re.compile(r"\b(FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+(?:/[0-9
 #: `REDIRECTS.csv`'s `old_id`/`new_id` **id** columns, never from a citation's own literal
 #: path string. Reuses `_docid.LEGACY_FORM_PATTERNS`' five already-named `"...path"`
 #: entries (RL-988 §2's one shared constant) rather than a new pattern — Verified
-#: against all six: `docs/findings/FD-00934-03-rating-shapes-vs-hand-authored-contracts.md`, `docs/rfcs/0003-duplicated-status-goes-
-#: stale.md`, `docs/process/delivery-process.md`, `docs/process/delivery-process.core.json`
-#: and `docs/research/w11-task-1-4-model-call-concurrency.md` each match on at least one
-#: line; `docs/README.md` does not (see the module comment above) and is left in `other`.
+#: against all six: `docs/findings/FD-00934-03-rating-shapes-vs-hand-authored-contracts.md`,
+#: `docs/rfcs/0003-duplicated-status-goes- stale.md`, `docs/process/delivery-process.md`,
+#: `docs/process/delivery-process.core.json` and
+#: `docs/research/w11-task-1-4-model-call-concurrency.md` each match on at least one line;
+#: `docs/README.md` does not (see the module comment above) and is left in `other`.
 _LEGACY_PATH_RES: Final = tuple(
     pattern for name, pattern in _docid.LEGACY_FORM_PATTERNS if "path" in name
 )
@@ -2936,7 +2949,8 @@ _VACUITY_PROBES: Final = (
 _ABSENT_CHECK_RE: Final = re.compile(r"cannot run|cannot scan it")
 
 #: RL-1046 §B's own methodology, originally ported from the shell one-liner
-#: `docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-one-is-named-by-2026-09-03.md:139` used to derive the taxonomy
+#: `docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-one-is-named-
+#: by-2026-09-03.md:139` used to derive the taxonomy
 #: the ruling reads: `sed -n '/^FAILED/,$p' <log> | grep '^  - ' | sed -E
 #: 's/^(check [0-9]+):.*/\1/; s/^broken link in .*/check 1/' | sort | uniq -c`. Everything
 #: from the `FAILED (`n`):` line onward, one `  - <msg>` per failure.
@@ -3194,7 +3208,8 @@ def rows_h(
         predicate=(
             "python3 scripts/audit-docs.py   (run with cwd = the tree); failures classified "
             "by `_docverify._classify_failures` — RL-1046 §B's own methodology, ported "
-            "from `docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-one-is-named-by-2026-09-03.md:139`'s `sed -n "
+            "from `docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-on"
+            "e-is-named-by-2026-09-03.md:139`'s `sed -n "
             "'/^FAILED/,$p' <log> | grep '^  - ' | sed -E 's/^(check [0-9]+):.*/\\1/; "
             "s/^broken link in .*/check 1/' | sort | uniq -c`"
         ),
@@ -3348,7 +3363,8 @@ _H_ROW_RE: Final = re.compile(r"^\|.*\|\s*H(\s*\+\s*[A-Z])?\s*\|\s*$")
 #: — so a `rglob("*one-id-per-document*")` finds nothing. It is followed through
 #: `docs/REDIRECTS.csv`, which is the artifact the migration writes for exactly this
 #: purpose; guessing the new name instead is how a row silently measures an empty file.
-_NT0019_PATH: Final = "docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md"
+# rfc-937: legacy-form-spec
+_NT0019_PATH: Final = "docs/notes/0019-one-id-per-document.md"
 
 
 def _redirect_map(tree: Path) -> Mapping[str, str]:
@@ -3403,7 +3419,8 @@ def row_i(snap: Snapshot) -> Row:
         owner=OWNER_W37_10,
         predicate=(
             f"`_docverify._H_ROW_RE` = {_H_ROW_RE.pattern!r} over the §5 tables of "
-            "docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md; 'closed by a named commit' needs a "
+            "docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-des"
+            "cribing-layout-and-roles-per-family.md; 'closed by a named commit' needs a "
             "row→commit mapping artifact, and no such artifact exists in the tree"
         ),
         denominator=f"{h_rows} H row(s) in §5",
@@ -3611,7 +3628,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # fixed here, out of row (b)'s own scope.
     "d6": DISCLOSE,     # ADR-0[0-9]{3}\b — FIXED (2026-09-04, W37-6 exec-ids): all five
                          # original matches, plus one more surfaced by `origin/main` drift
-                         # (`docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-failure-each-one-is-named-by-2026-09-03.md`, a
+                         # (`docs/plans/PL-01036-w37-6-row-h-the-named-h-rows-with-the-parser-
+                         # failure-each-one-is-named-by-2026-09-03.md`, a
                          # row-h plan landed after this row's original 74-line snapshot),
                          # were specification-class — deliberately-fake, schematic
                          # `ADR-0NNN`-shaped parsing-width worked examples and test
@@ -3921,7 +3939,8 @@ def refused_fragment_rewrite_disclosure_counts(
     a disclosure row must carry, derived FROM the refusal list by symbol, never pasted:
     a hand-typed count could silently drift from what `_rewrite_citations` actually
     refused, exactly the "the copy is what goes stale" failure
-    (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md`) this function exists to avoid.
+    (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md`) this function exists to
+    avoid.
 
     `cls` is `f"d{i}"` for whichever `_docid.LEGACY_FORM_PATTERNS` alternative (1-based
     index, matching `rows_d`'s own `enumerate(D_ALTERNATIVES, start=1)`) the refusal's

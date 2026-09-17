@@ -156,8 +156,8 @@ async def test_an_unapproved_pin_is_refused() -> None:
     """FR-20: a pin whose artifact is not approved fails, naming the pin.
 
     Targets the `model` pin rather than `rate_table`: RL-856
-    (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`) exempts
-    `rate_table` from this floor (`_MATURITY_CHECK_EXEMPT`), so it can no longer be the
+    (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`)
+    exempts `rate_table` from this floor (`_MATURITY_CHECK_EXEMPT`), so it can no longer be the
     example that proves the gate fires.
 
     Also FR-240's own clause (2) ("references resolvable and at a sufficient
@@ -191,7 +191,8 @@ async def test_a_rate_table_pin_compiles_regardless_of_status() -> None:
 
 @pytest.mark.req("FR-240")
 async def test_a_rating_algorithm_pin_compiles_regardless_of_status() -> None:
-    """RL-859 (`docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md`): `rating_algorithm`
+    """RL-859 (`docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md`):
+    `rating_algorithm`
     is exempt from the FR-20 floor for the same shape of reason RL-856 exempted
     `rate_table` — `RatingAlgorithmRow` has no status column to read a real maturity from
     (`test_rating_algorithm_row_has_no_status_column`,

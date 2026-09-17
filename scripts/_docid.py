@@ -1,6 +1,7 @@
 """Shared header parser and id grammar for RFC-937's document-id standard.
 
-`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` §1.1, §1.2, §1.5. Owned by W37-2
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+§1.1, §1.2, §1.5. Owned by W37-2
 (`docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`); `scripts/doc-id.py` and
 `scripts/doc-index.py` (W37-3) import this module and do not redefine any of it — it is
 the one place the id grammar and the header's closed field set are stated.
@@ -166,11 +167,11 @@ LOCKFILE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
     ),
 )
 
-# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 ruled `tests/fixtures/`
-# exempt from the id-**stamp census** "by path, each file a declared exception" — a
-# per-file list there because that census's own arithmetic (F83 condition 2) needs the
-# exempt set enumerated one file at a time so a mismatch stays detectable, and a path
-# prefix would silently swallow every future file beneath it.
+# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 ruled
+# `tests/fixtures/` exempt from the id-**stamp census** "by path, each file a declared exception" —
+# a per-file list there because that census's own arithmetic (F83 condition 2) needs the exempt set
+# enumerated one file at a time so a mismatch stays detectable, and a path prefix would silently
+# swallow every future file beneath it.
 #
 # The migration sweep and the (d)/(e)/(g) verification corpus answer a different question
 # — not "which files are exempt from a header stamp" but "which entire subtrees are
@@ -214,7 +215,9 @@ FIXTURE_CORPUS_ROOTS: Final[tuple[tuple[str, str], ...]] = (
 # per-file with its own reason (§7(d)'s own instruction against a structural rule that
 # would silently widen, echoed at task 30's `register-owed.py` correction below):
 # **`tests/test_register_owed.py` does NOT belong here.** Its subject, `register-owed.py`,
-# is a file RFC-937 §4 itself migrates (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md:381`), so
+# is a file RFC-937 §4 itself migrates
+# (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-
+# layout-and-roles-per-family.md:381`), so
 # its fixtures are stale test data that migrates WITH the script rather than exempted test
 # infrastructure — fixed in the same commit as this exclusion (its scoped-requirement-id
 # and workstream/slice-id placeholders respelled to their post-migration shapes), not
@@ -255,11 +258,43 @@ TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
 #: it (2026-09-05, W37-6, deputy's condition on PR #756).
 W37_11_RECORD_PATH: Final = "docs/audit/w37-11-record.md"
 
-GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
+#: Each entry's own case tests whether it matches `rel_posix` **exactly as this repository
+#: names that one governed record today** (`re.escape`'d, so a regex-special character in
+#: a literal path can never accidentally become a wildcard) or, for a record whose commit-
+#: bound name varies by tree (the census below), a real pattern. One shared shape —
+#: `tuple[re.Pattern[str], str]` — rather than a literal-string tuple that could only ever
+#: express the first case, because a second member needing the second case (found live,
+#: class F loop 2, 2026-09-17) should join this list rather than fork a parallel one.
+GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
     (
-        W37_11_RECORD_PATH,
+        re.compile(re.escape(W37_11_RECORD_PATH)),
         "the W37-11 residue ceiling record — quotes legacy paths/tokens as evidence of "
         "the residue they name, never a citation for the migration to rewrite",
+    ),
+    (
+        # RFC-937 §5.2 :328 routes `docs/audit/file-census-<sha>.csv` to
+        # `docs/research/file-census-<sha>.csv` (`_RESEARCH_UNSTAMPABLE_MOVE`) -- the move
+        # itself is correct and stands; a ruling cannot amend an RFC, and "stays in place"
+        # (this class's own earlier, WITHDRAWN reading, class F loop 2 first pass,
+        # 2026-09-17 17:23 BST) was wrong on exactly that point. The defect commit 1 found
+        # is narrower: the moved file's own `path` column is a full per-file dump of the
+        # tree AT THE COMMIT ITS NAME NAMES (RFC-897 §2 Stage 0: "committed ..., stamped
+        # with the tree"), so a tree-wide citation sweep reading those cells as prose
+        # citations rewrote 168 of the census's 1320 rows -- the record no longer
+        # describing the tree its own name and header claim it describes. The fix is the
+        # citation sweep skipping the file's CONTENT, never its location: matches the
+        # basename at EITHER `docs/audit/` (before this migration's own move step runs)
+        # or `docs/research/` (after it), so the exclusion holds regardless of which side
+        # of the move `_iter_tree_files` happens to see it on. Corrected, class F loop 2,
+        # deputy's ruling 2026-09-17 17:40 BST. Joins this list as a predicate rather than
+        # a per-row exemption or a hand-maintained id list, so it reproduces from the tree
+        # itself in a fresh clone (RL-910 §2's own reason, the identical shape this file's
+        # other exclusion tuples above already satisfy).
+        re.compile(r"^docs/(?:audit|research)/file-census-[0-9a-f]{7,40}\.csv$"),
+        "RFC-897 §2 (Stage 0) census evidence, named for the commit it describes, at "
+        "either its pre-move (docs/audit/) or post-move (docs/research/, RFC-937 §5.2) "
+        "location — quotes tree-relative paths as the census's own data, never a "
+        "citation for the migration to rewrite",
     ),
 )
 
@@ -324,6 +359,28 @@ def _generated_contract_relpaths() -> tuple[str, str]:
     return _generated_contract_relpaths_cache
 
 
+def generated_contract_tier_reason(rel_posix: str) -> str | None:
+    """Why `rel_posix` sits in the generated-contract tier (ADR-704/FR-451) —
+    `scripts/generate-contracts.py`'s own `OPENAPI_PATH`/`SCHEMA_DIR`, read by symbol
+    (`_generated_contract_relpaths`) — or `None` when it does not. Split out of
+    `sweep_exclusion_reason` (F103, 2026-09-17) so a caller that wants *only* this one
+    class — audit-docs.py's checks 32 and 36, which reach `tests/fixtures/docs-migration/`
+    files that `sweep_exclusion_reason`'s `FIXTURE_CORPUS_ROOTS` clause would also
+    swallow, defeating check 36's own per-file allowlist design
+    (`test_check_36_w37_5_fixture_exclusions_are_load_bearing`) — can ask this question
+    alone rather than pull in classes it does not mean to exempt.
+    """
+    openapi_rel, schema_dir_rel = _generated_contract_relpaths()
+    if rel_posix == openapi_rel or rel_posix.startswith(schema_dir_rel + "/"):
+        return (
+            "the generated-contract tier (ADR-704/FR-451) — "
+            "scripts/generate-contracts.py's own OPENAPI_PATH/SCHEMA_DIR, regenerated "
+            "by that script from the models, never migration input, and 'diff undetectable "
+            "by --check' if a migration wrote here between two generator runs"
+        )
+    return None
+
+
 def sweep_exclusion_reason(rel_posix: str) -> str | None:
     """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the RFC-937
     migration sweep (`doc-id.py`'s `_iter_tree_files`) and from the (d)/(e)/(g)
@@ -335,10 +392,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), one of the instrument's own named test
     modules (`TEST_MODULE_EXCLUSIONS`), a governed record that quotes legacy forms as
     evidence rather than citing them (`GOVERNANCE_RECORD_EXCLUSIONS`), the generated-
-    contract tier read by symbol from `scripts/generate-contracts.py`
-    (`_generated_contract_relpaths`), and a Python bytecode-cache artifact
-    (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing `scripts/`
-    modules while it runs, never migration input and never real residue.
+    contract tier (`generated_contract_tier_reason` above), and a Python bytecode-cache
+    artifact (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing
+    `scripts/` modules while it runs, never migration input and never real residue.
     """
     for name, reason in LOCKFILE_EXCLUSIONS:
         if rel_posix == name:
@@ -349,17 +405,12 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     for name, reason in TEST_MODULE_EXCLUSIONS:
         if rel_posix == name:
             return reason
-    for name, reason in GOVERNANCE_RECORD_EXCLUSIONS:
-        if rel_posix == name:
+    for pattern, reason in GOVERNANCE_RECORD_EXCLUSIONS:
+        if pattern.fullmatch(rel_posix):
             return reason
-    openapi_rel, schema_dir_rel = _generated_contract_relpaths()
-    if rel_posix == openapi_rel or rel_posix.startswith(schema_dir_rel + "/"):
-        return (
-            "the generated-contract tier (ADR-704/FR-451) — "
-            "scripts/generate-contracts.py's own OPENAPI_PATH/SCHEMA_DIR, regenerated "
-            "by that script from the models, never migration input, and 'diff undetectable "
-            "by --check' if a migration wrote here between two generator runs"
-        )
+    contract_reason = generated_contract_tier_reason(rel_posix)
+    if contract_reason is not None:
+        return contract_reason
     if "__pycache__" in rel_posix.split("/"):
         return (
             "a __pycache__ bytecode-cache directory created by importing this tooling's "
@@ -374,7 +425,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
 
 
 # =========================================================================================
-# `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 1 item 1:
+# `docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+# classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+# typing.md` Entry 1 item 1:
 # RFC-937 §7 acceptance item (d) (`_docverify.py`'s `rows_d`)
 # and `audit-docs.py` check 36's third clause (`sweep_legacy_forms`) are "one rule at two
 # times" (RL-988 §2). (d) already disclosed three classes on `LEGACY_FORM_PATTERNS`
@@ -532,7 +585,9 @@ def is_scoped_id_never_allocated(
 
 
 # =========================================================================================
-# docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md Entry 2 item 1:
+# docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-
+# classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-
+# typing.md Entry 2 item 1:
 # `_docverify.py`'s row (e) (`padded_hits`) and `audit-docs.py` check 32's padding clause
 # are "one rule at two times" over the same corpus. Conjunct 1's exact-width regex,
 # conjunct 2 (a padded id inside a filesystem path is not a citation) and its
@@ -877,7 +932,9 @@ def parse_header_text(text: str, *, path: Path | None = None) -> Header | None:
     )
 
 
-# RL-990 (`docs/rulings/RL-00990-rfc-937-1-5-s-vendored-parenthesis-is-a-gloss-not-a-detector-the-set-is-declared-and-reconciled-and-the-exemption-reaches-only-the-blanket-passes.md`, PR #563,
+# RL-990
+# (`docs/rulings/RL-00990-rfc-937-1-5-s-vendored-parenthesis-is-a-gloss-not-a-detector-the-set-is-
+# declared-and-reconciled-and-the-exemption-reaches-only-the-blanket-passes.md`, PR #563,
 # merged): RFC-937 §1.5's parenthetical, naming `planning-with-files`, `ui-ux-pro-max`,
 # `graphify`, `systematic-debugging` and the `vue-*` skills as vendored while giving "a
 # directory that provides a `LICENSE` of its own" as the reason, is a gloss identifying
@@ -1038,12 +1095,12 @@ def vendored_skills_ruff_exclude_mismatch(
 # glob-shaped statement of the same rule — two spellings of one rule is how the two
 # consumers came to disagree in the first place (`RFC-756`).
 #
-# The rule itself is `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4's
+# The rule itself is
+# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4's
 # ruling, quoting RFC-937 §4 step 5: every file under `docs/`, `.claude/roles/` and
-# `.claude/agents/`, every `.claude/skills/*/SKILL.md`, plus every `README.md` anywhere in
-# the tree. That last clause is §1.2's Reference row, not step 5's own words, and it is
-# kept because `scripts/doc-id.py`'s README scope reaches those files whatever step 5's
-# roots say.
+# `.claude/agents/`, every `.claude/skills/*/SKILL.md`, plus every `README.md` anywhere in the tree.
+# That last clause is §1.2's Reference row, not step 5's own words, and it is kept because
+# `scripts/doc-id.py`'s README scope reaches those files whatever step 5's roots say.
 # ---------------------------------------------------------------------------------------
 
 #: The directory prefixes RFC-937 §4 step 5 names, repo-relative and without a trailing
@@ -1283,10 +1340,10 @@ def phase_template_fields(templates_dir: Path) -> frozenset[str]:
 # its `_load_module` idiom), so neither a cycle nor a second definition is needed.
 #
 # Two definitions of one governance rule are two rules
-# (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md` — the copy is what goes stale), which
-# is why the class registry below is derived from each extractor's own construction rather
-# than restated: every label an extractor can emit is built by one of the constructors
-# here, and validated against those same constructors.
+# (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md` — the copy is what goes
+# stale), which is why the class registry below is derived from each extractor's own construction
+# rather than restated: every label an extractor can emit is built by one of the constructors here,
+# and validated against those same constructors.
 # ---------------------------------------------------------------------------------------
 
 #: Every cause label `_docverify._residue_cause` can return, owned here so the class

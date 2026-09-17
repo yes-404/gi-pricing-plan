@@ -2,7 +2,7 @@
   "$defs": {
     "GroupingEvidence": {
       "additionalProperties": false,
-      "description": "The change in fit a Grouping implies (FR-MODEL-15).\n\nGrouping is a modelling decision and must be defensible as one, so the artifact carries\nwhat it cost: deviance before and after, the degrees of freedom saved, and the\nlikelihood-ratio p-value that says whether the collapse was affordable.",
+      "description": "The change in fit a Grouping implies (FR-107).\n\nGrouping is a modelling decision and must be defensible as one, so the artifact carries\nwhat it cost: deviance before and after, the degrees of freedom saved, and the\nlikelihood-ratio p-value that says whether the collapse was affordable.",
       "properties": {
         "chi2_p_value": {
           "anyOf": [
@@ -97,7 +97,7 @@
       "type": "object"
     },
     "GroupingMethod": {
-      "description": "How Levels were merged (`02` §2, FR-MODEL-14).",
+      "description": "How Levels were merged (`02` §2, FR-105).",
       "enum": [
         "manual",
         "credibility_weighted",
@@ -110,7 +110,7 @@
     },
     "OneWayRow": {
       "additionalProperties": false,
-      "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-DATA-46).",
+      "description": "One level of a one-way summary (FR-61).\n\nMoney is integer minor units and exposure a decimal string (FR-10). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-64).",
       "properties": {
         "claim_amount_minor": {
           "default": 0,
@@ -125,7 +125,7 @@
           "type": "integer"
         },
         "exposure_years": {
-          "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
           "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
           "title": "Exposure Years",
           "type": "string"
@@ -223,7 +223,7 @@
       "type": "object"
     },
     "UnseenLevelBehaviour": {
-      "description": "What scoring does with a Level the Grouping has never seen (FR-MODEL-13).\n\nMandatory — the field carries no default anywhere in this module. A grouping that\nsilently drops an unseen level prices it as the base, which is the cheapest cell by\nconstruction, and nobody finds out before the loss ratio does.",
+      "description": "What scoring does with a Level the Grouping has never seen (FR-104).\n\nMandatory — the field carries no default anywhere in this module. A grouping that\nsilently drops an unseen level prices it as the base, which is the cheapest cell by\nconstruction, and nobody finds out before the loss ratio does.",
       "enum": [
         "error",
         "map_to_default",
@@ -234,7 +234,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Source Levels mapped to target Levels (`02` §4.3, FR-MODEL-13..17).\n\nExhaustive over the Levels observed when it was derived, and explicit about the ones it\nwas not: `unseen_level_behaviour` has no default, because the three answers price an\nunknown vehicle group very differently and none of them is obviously right.",
+  "description": "Source Levels mapped to target Levels (`02` §4.3, FR-104, FR-105, FR-107, FR-108, FR-109).\n\nExhaustive over the Levels observed when it was derived, and explicit about the ones it\nwas not: `unseen_level_behaviour` has no default, because the three answers price an\nunknown vehicle group very differently and none of them is obviously right.",
   "properties": {
     "column": {
       "title": "Column",

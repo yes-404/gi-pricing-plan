@@ -1,7 +1,8 @@
 """`CompiledBundle`, `load_bundle`, and the JDM wire translation (03 §5.2, FR-243,
 WK-671 Task 1.3).
 
-**Two types, deliberately not one** (RL-867, `docs/rulings/RL-00867-compiledbundle-is-spec-only-bundle-is-the-only-thing-that-exists-and-they-are-not-the-same-type.md`).
+**Two types, deliberately not one** (RL-867,
+`docs/rulings/RL-00867-compiledbundle-is-spec-only-bundle-is-the-only-thing-that-exists-and-they-are-not-the-same-type.md`).
 `Bundle` (`pricing_core.rating.compile`) is the record: a frozen, JSON-shaped, hashable,
 Redis-cacheable `BaseModel`. `CompiledBundle` is what a warm worker holds after loading
 one — a live `zen.ZenDecision` handle plus any GBM boosters deserialised into objects — and
@@ -15,7 +16,8 @@ per-worker slot, bounded, keyed by `Bundle.content_hash`) is Slice 2's Task 2.1 
 keyed by `step_id`, with `produces`/`consumes` lists standing in for edges — pricing-core's
 own intermediate form. The ZEN engine's Python binding consumes a different shape entirely:
 a node **list** plus an explicit **edge list**, verified live against `zen.ZenEngine` rather
-than assumed from any binding's docstring (`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`,
+than assumed from any binding's docstring
+(`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`,
 *Verified facts*). `to_wire` is that translation.
 
 **What this module does not yet translate.** A `constraint` step's wire translation was
@@ -345,7 +347,8 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
     `produces`/`consumes` lists standing in for edges. The engine wants a node *list* plus
     an explicit edge list — verified against a live `ZenEngine().create_decision(...)`
     call, never a docstring (see this module's own docstring and
-    `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`'s *Verified facts*).
+    `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`'s
+    *Verified facts*).
 
     `input`/`output`-typed steps are **not** translated 1:1 — the engine wants exactly one
     `inputNode` and one `outputNode` (Step 3, rule 2), so every input step collapses into

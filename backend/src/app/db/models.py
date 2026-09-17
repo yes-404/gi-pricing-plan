@@ -2057,8 +2057,8 @@ class ScoringTraceRow(Base):
     `backend/tests/test_traces.py`'s GC-survival test).
 
     **`status`, `pending_quote_context` and `served_summary`** (WK-671 Task 4B, RL-862 —
-    `docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`): trace
-    *production* is decoupled from the serving request, so a sampled real-time outcome is
+    `docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`):
+    trace *production* is decoupled from the serving request, so a sampled real-time outcome is
     first persisted `pending` — no body yet — with the Quote Context it will be re-scored
     from and the served result's summary to verify reproduction against. An off-path Job
     (`app.worker.trace_handlers`) re-scores the *pinned* bundle, and

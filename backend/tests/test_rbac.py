@@ -1,4 +1,5 @@
-"""Roles, scopes and enforcement (`06` §3.1, FR-342, FR-343, FR-344, FR-345, FR-346, FR-347, FR-348, FR-349)."""
+"""Roles, scopes and enforcement (`06` §3.1, FR-342, FR-343, FR-344, FR-345, FR-346, FR-347, FR-348,
+FR-349)."""
 
 from __future__ import annotations
 

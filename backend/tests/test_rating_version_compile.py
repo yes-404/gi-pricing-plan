@@ -240,8 +240,9 @@ def test_a_version_pinning_a_rate_table_compiles(
 def test_rate_table_version_row_has_no_status_column() -> None:
     """Self-invalidating guard for RL-856's `rate_table` maturity exemption.
 
-    `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`: the resolver above
-    cannot report `rate_table`'s real maturity because `RateTableVersionRow` has none to
+    `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`:
+    the resolver above cannot report `rate_table`'s real maturity because
+    `RateTableVersionRow` has none to
     read, so `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` exempts the type from
     the FR-20 floor rather than inventing `"approved"`. That exemption is only sound
     while the premise holds. This test is the tripwire: the day a migration adds a
@@ -250,7 +251,8 @@ def test_rate_table_version_row_has_no_status_column() -> None:
     """
     assert "status" not in RateTableVersionRow.__table__.columns, (
         "RateTableVersionRow gained a status column — RL-856's rate_table maturity "
-        "exemption (docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md) and "
+        "exemption (docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the"
+        "-exemption-is-declared-and-self-invalidating.md) and "
         "OQ-620 must be revisited: the resolver should report this real status "
         "instead of staying exempt from the FR-20 floor."
     )
@@ -385,8 +387,8 @@ def test_the_resolver_reports_the_rate_table_sentinel_not_an_invented_approval(
 ) -> None:
     """RL-856's list-mate of the tripwire above — the same hole, same shape.
 
-    `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md` states the safety
-    property in terms: *"the sentinel below is deliberately not a member of
+    `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`
+    states the safety property in terms: *"the sentinel below is deliberately not a member of
     `_APPROVED_OR_BETTER`, so a pin still fails closed if the exemption is ever removed
     without this branch being updated to match."* That property had no test either
     (audit of PR #416, finding ③), and RL-856's exemption is the *provisional* one —
@@ -429,7 +431,8 @@ def test_the_resolver_reports_the_rate_table_sentinel_not_an_invented_approval(
     assert statuses.get(ref_key) == "no_maturity_concept", (
         "the backend resolver no longer reports the `no_maturity_concept` sentinel for a "
         f"rate_table pin — it reported {statuses.get(ref_key)!r}. RL-856 "
-        "(docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md) refused inventing "
+        "(docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption"
+        "-is-declared-and-self-invalidating.md) refused inventing "
         "a maturity `RateTableVersionRow` has no column to back; see also OQ-620."
     )
     assert "no_maturity_concept" not in _APPROVED_OR_BETTER, (

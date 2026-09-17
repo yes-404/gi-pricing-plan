@@ -1,4 +1,5 @@
-"""Persisting and reading transparency artifacts (`02` FR-132, FR-133, FR-134, FR-136, FR-140, R3, §5.1).
+"""Persisting and reading transparency artifacts (`02` FR-132, FR-133, FR-134, FR-136, FR-140, R3,
+§5.1).
 
 Unlike diagnostics, a model may carry **several**: FR-132 says *at least one* and
 allows any of three forms — a GLM approximation, a SHAP summary, or an EBM's exported

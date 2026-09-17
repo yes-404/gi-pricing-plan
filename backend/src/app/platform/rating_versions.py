@@ -329,11 +329,12 @@ async def compile_rating_version(
                 )
                 if algo is None:
                     raise PlatformError("NOT_FOUND", "Rating algorithm not found", 404)
-                # RL-859 (docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md):
-                # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an
-                # invented maturity rather than a read one. `"no_maturity_concept"` is
-                # the sentinel `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT`
-                # reads for a pin kind with nothing to report.
+                # RL-859
+                # (docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md):
+                # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an invented
+                # maturity rather than a read one. `"no_maturity_concept"` is the sentinel
+                # `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` reads for a pin kind with
+                # nothing to report.
                 return ResolvedArtifact(status="no_maturity_concept", payload=algo.content)
             if ref.type == "model":
                 model = await session.scalar(
@@ -373,8 +374,9 @@ async def compile_rating_version(
                 # `RateTableVersionRow` carries no status column at all (rate tables are
                 # immutable-on-write — seed, operation or import, never a draft phase),
                 # so there is no real maturity value to read here. RL-856
-                # (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md`) refused
-                # inventing "approved" for it: that would put a constant where
+                # (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-
+                # exemption-is-declared-and-self-invalidating.md`)
+                # refused inventing "approved" for it: that would put a constant where
                 # `compile_bundle`'s gate reads a discriminator, and fail open the day
                 # `RateTableVersionRow` gains a real status. `_MATURITY_CHECK_EXEMPT` is
                 # what actually admits this pin past the FR-20 floor; the sentinel
