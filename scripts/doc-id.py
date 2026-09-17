@@ -2757,7 +2757,7 @@ _ROADMAP_STATUS_DATE_RE: Final = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
 # derivation is specific to this one id — a dependency reference in another row (`WK-665`'s
 # `Depends on` cell names `WK-662`), not anything mechanically visible in `WK-662`'s own row.
 _ROADMAP_RETIRED_WORK_IDS: Final[Mapping[str, str]] = {
-    "WK-662": (
+    "W6": (  # rfc-937: legacy-form-spec
         "Retired rather than closed (RL-993): this work's own row carries no closed "
         "signal, and its scope was re-cut into WK-successors before it completed under "
         "this name — see the successors named below."
@@ -2767,7 +2767,7 @@ _ROADMAP_RETIRED_WORK_IDS: Final[Mapping[str, str]] = {
 # from the roadmap's own dependency reference (`WK-665`'s `Depends on` cell names `WK-660, WK-661,
 # WK-662`) and prose ("The pre-split frontend work... re-cut into WK-663 and WK-664"), not
 # mechanically derivable from `WK-662`'s own row.
-_ROADMAP_RETIRED_SUCCESSORS: Final[Mapping[str, tuple[str, ...]]] = {"WK-662": ("WK-663", "WK-664")}
+_ROADMAP_RETIRED_SUCCESSORS: Final[Mapping[str, tuple[str, ...]]] = {"W6": ("WK-663", "WK-664")}  # rfc-937: legacy-form-spec
 
 # RL-993 found that `docs/roadmap.md`'s heading nesting is unreliable — `### Original
 # scope, for reference` (317) and its sibling `### Workstreams` (327, which actually
@@ -3218,7 +3218,7 @@ _FINDING_FILENAME_RE: Final = re.compile(r"^(F\d+)\.md$")
 #: the identical `_discover_register` exclusion every `F*.md` essay goes through, never a
 #: number of its own.
 _FINDING_EXTRA_ESSAY_LOCATIONS: Final[Mapping[str, str]] = {
-    "F28": "docs/findings/FD-00894-rfc-840-841-adoption-pilot.md",
+    "F28": "docs/audit/work/nt-0010-0011-adoption/pilot-findings.md",  # rfc-937: legacy-form-spec
 }
 
 
@@ -3446,13 +3446,13 @@ _GENERIC_H1_RE: Final = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 #: no shared shape to glob on (a bare `F<n>.md` filename, a `# WF-0N —` heading) — named
 #: legacy files, the same reading `_REFERENCE_MOVE_TARGETS` below gives its four.
 _RESEARCH_ESSAY_TARGETS: Final[Mapping[str, tuple[str, str]]] = {
-    "docs/research/RS-00952-file-census-rfc-897-stage-0.md": ("measurement", "executor"),
-    "docs/research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md": ("measurement", "executor"),
-    "docs/research/RS-01002-rfc-937-verification-and-impact-sweep-audit-record.md": (
+    "docs/audit/file-census.md": ("measurement", "executor"),  # rfc-937: legacy-form-spec
+    "docs/audit/file-taxonomy-draft.md": ("measurement", "executor"),  # rfc-937: legacy-form-spec
+    "docs/audit/nt-0019-verification-and-impact-sweep.md": (  # rfc-937: legacy-form-spec
         "audit",
         "auditor",
     ),
-    "docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md": ("audit", "auditor"),
+    "docs/audit/ruling-acceptance-item-sweep.md": ("audit", "auditor"),  # rfc-937: legacy-form-spec
 }
 
 
@@ -3490,7 +3490,7 @@ def _discover_research_essays(root: Path) -> list[_Draft]:
 #: numbers into the sequence — a document family membership without an id would itself be
 #: a new, undeclared shape).
 _RESEARCH_UNSTAMPABLE_MOVE: Final[Mapping[str, str]] = {
-    "docs/research/file-census-5ef559d.csv": "docs/research/file-census-5ef559d.csv",
+    "docs/audit/file-census-5ef559d.csv": "docs/research/file-census-5ef559d.csv",  # rfc-937: legacy-form-spec
 }
 
 
@@ -3569,10 +3569,10 @@ def _discover_named_phase_records(root: Path) -> list[_Draft]:
 #: outside`, `freeze-gate`) -- the only tree-wide hit is the map plan restating the same
 #: instruction, not any authored text to carry over.
 _REFERENCE_MOVE_TARGETS: Final[Mapping[str, str]] = {
-    "docs/process/checklists/phase-close.md": "docs/process/checklists/phase-close.md",
-    "docs/process/checklists/work-item-close.md": "docs/process/checklists/work-item-close.md",
-    "docs/process/retrofit-impossible.md": "docs/process/retrofit-impossible.md",
-    "docs/process/security-posture.md": "docs/process/security-posture.md",
+    "docs/audit/checklists/phase-close.md": "docs/process/checklists/phase-close.md",  # rfc-937: legacy-form-spec
+    "docs/audit/checklists/work-item-close.md": "docs/process/checklists/work-item-close.md",  # rfc-937: legacy-form-spec
+    "docs/audit/retrofit-impossible.md": "docs/process/retrofit-impossible.md",  # rfc-937: legacy-form-spec
+    "docs/audit/security-posture.md": "docs/process/security-posture.md",  # rfc-937: legacy-form-spec
 }
 
 
@@ -5924,6 +5924,36 @@ def _was_field_spans(text: str) -> list[tuple[int, int]]:
     ]
 
 
+#: F103 companion finding, 2026-09-17: a line ending `# rfc-937: legacy-form-spec`. Commit
+#: 1's migration rewrote this tool's OWN literal legacy-form values —
+#: `_ROADMAP_RETIRED_WORK_IDS`/`_ROADMAP_RETIRED_SUCCESSORS`'s dict keys `"W6"`/`"W6a"`/
+#: `"W6b"` became `"WK-662"`/`"WK-663"`/`"WK-664"`, and `_README_FAMILY_MOVES`'s keys
+#: (the pre-migration filenames the tool must recognise on an un-migrated tree) tracked
+#: the migration too — so a migrated binary could no longer recognise the legacy-form
+#: input it exists to compare against an un-migrated control tree (`migrate --verify`'s
+#: own mechanism). The `TEST_MODULE_EXCLUSIONS`/`FIXTURE_CORPUS_ROOTS` classes in
+#: `_docid.py` are file-level and would freeze this tool's own ordinary prose citations
+#: (ruling numbers, `NT-0019`->`RFC-937`, `docs/audit/`->`docs/findings/`) forever —
+#: `_docid.TEST_MODULE_EXCLUSIONS`'s own comment already rules against exactly that for
+#: `register-owed.py` ("its fixtures are stale test data that migrates WITH the script").
+#: This is the narrower, line-scoped equivalent: a spec author marks the one physical
+#: line whose literal is a lookup key/value compared against tree content rather than a
+#: citation for a reader, and the line survives `_rewrite_citations` byte-identical —
+#: everything else in the same file, including this docstring's own citations, keeps
+#: migrating normally.
+_LEGACY_FORM_SPEC_LINE_RE: Final = re.compile(r"^.*#\s*rfc-937:\s*legacy-form-spec\s*$", re.MULTILINE)
+
+
+def _legacy_form_spec_spans(text: str) -> list[tuple[int, int]]:
+    """Every whole-line span `_rewrite_citations` must leave byte-identical: a line ending
+    in the `# rfc-937: legacy-form-spec` marker (see that constant's own comment for why).
+    Unscoped — unlike `_was_field_spans`, this marker is not confined to front matter,
+    since the class it protects (a lookup constant in a `scripts/*.py` module) has no
+    front-matter block at all.
+    """
+    return [(m.start(), m.end()) for m in _LEGACY_FORM_SPEC_LINE_RE.finditer(text)]
+
+
 #: RL-1043 §2 row (g)
 #: (`docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md`, "On (g)"),
 #: the maintainer's own diagnosis: *"A rewrite may not match inside a longer identifier."* A word
@@ -6834,15 +6864,22 @@ def _rewrite_citations(
                 segment = split.pattern.sub(repl, segment)
             return segment
 
-        # The sweep runs over the segments **between** the protected `was:` lines rather
-        # than over the whole text, so a protected line is not "rewritten and put back" —
-        # it is never passed to a substitution at all. Protected spans are whole lines and
-        # no citation token contains a newline, so no match can straddle a boundary and be
-        # lost by the partition. `line_offset` keeps a bucket-(iv) record's reported line
-        # number in the file's own numbering rather than the segment's.
+        # The sweep runs over the segments **between** the protected `was:` lines and the
+        # protected `# rfc-937: legacy-form-spec` lines (F103 companion finding,
+        # 2026-09-17) rather than over the whole text, so a protected line is not
+        # "rewritten and put back" — it is never passed to a substitution at all.
+        # Protected spans are whole lines and no citation token contains a newline, so no
+        # match can straddle a boundary and be lost by the partition; the two span sources
+        # are merged and sorted because either can occur in either order in a real file,
+        # and the `cursor` walk below assumes ascending, non-overlapping spans (the two
+        # kinds of line can never be the same line — front matter closes before a
+        # `scripts/*.py` module's own body begins). `line_offset` keeps a bucket-(iv)
+        # record's reported line number in the file's own numbering rather than the
+        # segment's.
         pieces: list[str] = []
         cursor = 0
-        for start, end in _was_field_spans(text):
+        protected_spans = sorted(_was_field_spans(text) + _legacy_form_spec_spans(text))
+        for start, end in protected_spans:
             pieces.append(sweep(text[cursor:start], text.count("\n", 0, cursor)))
             pieces.append(text[start:end])
             cursor = end
@@ -7313,23 +7350,9 @@ def _check_emitted_ledger_axes(root: Path) -> _LedgerAxes:
 #: `REDIRECTS.csv` carries one destination per old path, and a split's second destination
 #: is recorded by the surviving README's own prose, which points at its sibling.
 _README_FAMILY_MOVES: Final[Mapping[str, str]] = {
-    "docs/adrs/README.md": "docs/adrs/README.md",
-    "docs/rfcs/README.md": "docs/rfcs/README.md",
-    "docs/findings/README.md": "docs/findings/README.md",
-}
-
-#: `_README_FAMILY_MOVES`'s keys, mapped instead to the true pre-migration legacy path each
-#: one's content is carried from -- `docs/adr/README.md`, `docs/notes/README.md`,
-#: `docs/audit/README.md` (the latter dissolves; the larger half of its content lands
-#: here). `_README_FAMILY_MOVES` cannot serve this role itself: it is keyed by the NEW path
-#: for the populations that need to recognise the file by its POST-migration name
-#: (`_discover_reference_stamp_targets`'s `routed`, `_stamp_regenerated_readmes`), and using
-#: it as an old-path source gates every idempotency check in this module on a path that
-#: does not exist until the move it is meant to trigger has already happened.
-_README_FAMILY_LEGACY_PATHS: Final[Mapping[str, str]] = {
-    "docs/adrs/README.md": "docs/adr/README.md",
-    "docs/rfcs/README.md": "docs/notes/README.md",
-    "docs/findings/README.md": "docs/audit/README.md",
+    "docs/adr/README.md": "docs/adrs/README.md",  # rfc-937: legacy-form-spec
+    "docs/notes/README.md": "docs/rfcs/README.md",  # rfc-937: legacy-form-spec
+    "docs/audit/README.md": "docs/findings/README.md",  # rfc-937: legacy-form-spec
 }
 
 #: Directory-shaped link targets (`[../adr/](../adr/)`) resolve to a directory, never to a
@@ -7379,16 +7402,16 @@ _README_NEW_FAMILY_PREFIXES: Final[tuple[str, ...]] = ("CR", "RL", "LG")
 #: read only by `_stamp_regenerated_readmes` below, to know which paths need the Reference
 #: header a `carry`/`fresh` write does not add itself.
 _MIGRATION_DIFF_FAMILY_READMES: Final[frozenset[str]] = frozenset(
+    # Both sides of `_README_FAMILY_MOVES` (the pre-migration legacy path AND the new
+    # one): when neither writer that would carry a relocated README away runs, the
+    # surviving file is still at its OLD path, and the surviving-README rule this set
+    # backs (test_the_dangling_link_check_reddens_when_the_regeneration_is_removed) is
+    # stated over that population, not just the new one. `_stamp_regenerated_readmes`,
+    # this set's other reader, is unaffected by including the old paths too -- a legacy
+    # path is never `.is_file()` once a real run's `carry()` has moved it, so it is
+    # skipped there the same as any other already-migrated path.
     set(_README_FAMILY_MOVES)
     | set(_README_FAMILY_MOVES.values())
-    # The pre-migration legacy paths too (docs/adr/README.md etc.): when neither writer
-    # that would carry a relocated README away runs, the surviving file is still at its
-    # OLD path, and the surviving-README rule this set backs (test_the_dangling_link_
-    # check_reddens_when_the_regeneration_is_removed) is stated over that population, not
-    # the new one. `_stamp_regenerated_readmes`, this set's other reader, is unaffected --
-    # a legacy path is never `.is_file()` once a real run's `carry()` has moved it, so it
-    # is skipped there the same as any other already-migrated path.
-    | set(_README_FAMILY_LEGACY_PATHS.values())
     | set(_README_IN_PLACE)
     | {f"docs/{_DOCUMENT_FAMILY_DIR[p]}/README.md" for p in _README_NEW_FAMILY_PREFIXES}
 )
@@ -7980,8 +8003,8 @@ def _regenerate_family_readmes(
 
     # --- `adr/` + README -> `adrs/`, README generated.
     carry(
-        "docs/adr/README.md",
-        _README_FAMILY_MOVES["docs/adrs/README.md"],
+        "docs/adr/README.md",  # rfc-937: legacy-form-spec
+        _README_FAMILY_MOVES["docs/adr/README.md"],  # rfc-937: legacy-form-spec
         lambda _body: _ADRS_README_BODY.format(
             pad="n" * _docid.PAD_WIDTH, table=_render_adrs_readme_table(drafts),
         ),
@@ -7989,8 +8012,8 @@ def _regenerate_family_readmes(
 
     # --- `notes/` + README -> `rfcs/`, README rewritten, index table dropped for INDEX.md.
     carry(
-        "docs/notes/README.md",
-        _README_FAMILY_MOVES["docs/rfcs/README.md"],
+        "docs/notes/README.md",  # rfc-937: legacy-form-spec
+        _README_FAMILY_MOVES["docs/notes/README.md"],  # rfc-937: legacy-form-spec
         _rewrite_rfcs_readme_body,
     )
 
@@ -8002,10 +8025,10 @@ def _regenerate_family_readmes(
     # --- `plans/README.md`: naming and four-kinds table -> pointer, nine conventions kept.
     carry(in_place_plans, in_place_plans, _rewrite_plans_readme_body)
 
-    # --- `findings/README.md` deleted, content to the `findings/` and `closures/` READMEs.
+    # --- `audit/README.md` deleted, content to the `findings/` and `closures/` READMEs.
     carry(
-        "docs/audit/README.md",
-        _README_FAMILY_MOVES["docs/findings/README.md"],
+        "docs/audit/README.md",  # rfc-937: legacy-form-spec
+        _README_FAMILY_MOVES["docs/audit/README.md"],  # rfc-937: legacy-form-spec
         _rewrite_findings_readme_body,
     )
     for prefix, body in (
@@ -8680,8 +8703,8 @@ def migrate(root: Path) -> MigrateResult:
             # post-migration one (a second, idempotent run over an already-migrated tree
             # sees this instead) — `_regenerate_family_readmes`'s `carry()` owns this
             # README's header on either side of that boundary, never this generic scope.
-            | {"docs/adr/README.md", "docs/notes/README.md", "docs/audit/README.md"}
             | set(_README_FAMILY_MOVES)
+            | set(_README_FAMILY_MOVES.values())
         ),
     )
     _check_reference_stamp_set_not_silently_unrecognised(reference_censuses)
@@ -9008,14 +9031,12 @@ def migrate(root: Path) -> MigrateResult:
     # path is exactly as stale as one citing any other moved file (§4 step 1). The files
     # themselves are moved after `_stamp_reference_targets`, so each carries the header that
     # pass wrote rather than one re-derived here.
-    # `_README_FAMILY_MOVES` is keyed by the NEW path (it doubles as the population
-    # `_discover_reference_stamp_targets`'s `routed` set and `_stamp_regenerated_readmes`
-    # consult), not the legacy one this loop actually moves from -- the true source is
-    # `_README_FAMILY_LEGACY_PATHS` below. Gating existence on the new path here reproduced
-    # the exact `carry()` bug above one level up: on a second, idempotent run the new path
-    # already exists, so the guard passed and re-added an `old_path == new_path` no-op row
-    # every run (`test_migrate_is_idempotent_on_its_own_output`, found live).
-    for new_rel, old_rel in _README_FAMILY_LEGACY_PATHS.items():
+    # Gating existence on the NEW path here (instead of `_README_FAMILY_MOVES`'s own old
+    # key) reproduced the exact `carry()` bug above one level up: on a second, idempotent
+    # run the new path already exists, so the guard passed and re-added an
+    # `old_path == new_path` no-op row every run
+    # (`test_migrate_is_idempotent_on_its_own_output`, found live).
+    for old_rel, new_rel in _README_FAMILY_MOVES.items():
         if not (root / old_rel).is_file():
             continue
         redirect_rows.append(
