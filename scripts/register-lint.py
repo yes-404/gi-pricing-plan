@@ -67,9 +67,10 @@ commit that creates it, which means adding its path to `TARGETS` below by hand w
 comes — never inferring it from a glob, which would silently reach into `phases/1b` too.
 
 **Residue class 2: the phase-1b merge (RL-1046 check 29, owner W37-10).** The merge above
-is not free of consequence: 11 of the phase-1b rows (Phase column `1b`) never satisfied
-rule 1 or rule 2's grammar — they were never checked, under any rule, before this file's
-own path became the enforced one. This is **not** the per-row exemption line 10 forbids —
+is not free of consequence: 11 at `0b8d200`, measured by `phase1b_residue(rows)` — of the
+phase-1b rows (Phase column `1b`) never satisfied rule 1 or rule 2's grammar — they were
+never checked, under any rule, before this file's own path became the enforced one. This
+is **not** the per-row exemption line 10 forbids —
 an exemption is a hand-maintained id list (an `F1`, `F2`, ... allowlist) that cannot be
 reproduced by reading the tree; this is a **column predicate read from the row itself**
 (`row.fields[3]`, the Phase cell already on disk) — `phase1b_residue()` below recomputes
@@ -231,6 +232,27 @@ def parse_register(path: pathlib.Path) -> tuple[list[Row], list[str]]:
         if idx in header_lines:
             in_table = True
             classified += 1
+            # `_is_phase1b_merge_row` (residue class 2) reads `row.fields[
+            # _PHASE_FIELD_INDEX]` by position, trusting that index without re-deriving it
+            # from the header every call. That trust is safe only as long as the header's
+            # own cell at that index still reads "Phase" -- a future column reorder would
+            # otherwise silently misjudge every row's phase rather than failing loudly.
+            # Checked here, once, at the point the header is identified, naming whatever
+            # the header actually reads if it does not match.
+            header_fields = _split_row(line)
+            header_phase_cell = (
+                header_fields[_PHASE_FIELD_INDEX]
+                if len(header_fields) > _PHASE_FIELD_INDEX
+                else "<column missing>"
+            )
+            if header_phase_cell != "Phase":
+                problems.append(
+                    f"{path.name}:{lineno}: header column {_PHASE_FIELD_INDEX} reads "
+                    f"{header_phase_cell!r}, not \"Phase\" -- residue class 2's "
+                    "predicate (`_is_phase1b_merge_row`) reads this index by position "
+                    "and would silently misjudge every row's phase if the columns "
+                    "were reordered without updating `_PHASE_FIELD_INDEX`"
+                )
             continue
         if _SEP_ROW.match(line):
             in_table = True

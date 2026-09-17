@@ -622,6 +622,34 @@ def test_phase1b_residue_predicate_is_the_phase_column_not_an_id_list() -> None:
     assert register_lint._is_phase1b_merge_row(ordinary_id_phase1b_row)
 
 
+def test_a_reordered_header_column_fails_loudly_naming_what_it_found(
+    tmp_path: pathlib.Path,
+) -> None:
+    """`_is_phase1b_merge_row` trusts `row.fields[_PHASE_FIELD_INDEX]` by position,
+    without re-deriving the index from the header every call — safe only as long as the
+    header's own cell at that index still reads "Phase". Broken-input proof: a table
+    whose header swaps "Work item" and "Phase" (so index 3 reads "Work item" instead)
+    must fail loudly, naming what it actually found, rather than silently reading the
+    wrong column as every row's phase from then on.
+    """
+    header = (
+        "| Finding id | Concerns | Phase | Work item | Decision |\n"
+        "|---|---|---|---|---|\n"
+    )
+    content = header + "| X (F999997) | concerns | 1b | WK-657 | accept — fine |\n"
+    f = tmp_path / "register.md"
+    f.write_text(content, encoding="utf-8")
+    _rows, problems = register_lint.parse_register(f)
+    assert len(problems) == 1, problems
+    assert "header column 3 reads 'Work item', not \"Phase\"" in problems[0], problems[0]
+    failures = register_lint.lint_register(f)
+    assert problems[0] in failures, (
+        "a reordered header column is a structural problem, which lint_register must "
+        "surface as a failure -- silence here is the exact defect this proof exists to "
+        "make impossible to miss"
+    )
+
+
 def test_phase1b_residue_count_matches_check_29s_own_count() -> None:
     """Cross-check between `register-lint.py`'s two consumers: a direct import
     (`register_lint.phase1b_residue`, what this suite uses throughout) and the subprocess
