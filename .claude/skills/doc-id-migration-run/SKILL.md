@@ -1,6 +1,11 @@
 ---
-name: doc-id-migration-run
-description: How to safely re-derive Commit 1 after tool changes during a doc-id migration. Two materialisations (worktree and clean state), git write-tree equality checks, all generators regenerated before reading counts, verify runs from unmigrated control tree (never migrated root), legacy-form-spec constants excluded from the write set, and Commit 1 reproduction before the gate. Includes two proof scripts for AST-level change detection (no docstring/structural drift, which constants changed).
+family: reference
+title: doc-id-migration-run
+status: active                  # active → retired (§1.2a)
+created: 2026-09-17
+owner: lead
+corrected_by: []
+relates: []                      # ids only
 ---
 
 # doc-id migration — safe re-derivation after tool changes
@@ -8,6 +13,37 @@ description: How to safely re-derive Commit 1 after tool changes during a doc-id
 This skill documents how to detect when a tool change requires Commit 1 to be re-derived, 
 how to reproduce it correctly, and how to verify the result. Used when `scripts/doc-id.py` 
 or `scripts/_docid.py` changes inside `migrate()` or affects legacy-form recognition.
+
+## Before the run: the record ceiling and the lock
+
+**The W37-11 record ceiling lives on `main` at the run's own ref, not on the live
+checkout.** `_docverify.py` loads it with `load_w37_11_record(snap.control)` —
+`snap.control` is the `git archive` of `--ref` the run already built, never `repo_root`
+(the F102 fix: reading `repo_root` instead reads the live checkout, which drifts under
+concurrent work). A consequence: a change to the file named by `W37_11_RECORD_PATH`
+(`scripts/_docid.py`) made *inside*
+this migration PR never reaches that PR's own verify, because the run already archived
+its control tree before the change landed. **A record change is its own PR, merged to
+`main` first; only then does the next run's `--ref` move onto that merge** (precedent:
+PR-D1 and `#784`). Getting this backwards costs real time — one W37-6 run 2 slip ran
+~2 hours before the deputy's 18:59 BST ruling caught it.
+
+**Announce an expensive run before locking it, then detach.** Before starting a Commit 1
+reproduction or a `migrate --verify` run:
+
+```bash
+python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py announce \
+    --what commit1_reproduction --by executor --tree <sha> --ttl-seconds <n>
+```
+
+(`.claude/skills/watcher-runtime-state`, spec §8 — lets another role see one is already
+in flight before starting its own). Then acquire the slot lock in the foreground-blocking,
+fail-closed form — `flock -w <timeout> -E 99 /tmp/slots/<slot-name> -c "..."` — per
+`dev-commands`' fail-closed wrapper pattern: `-E 99` makes a busy slot return a named,
+distinguishable exit rather than silently re-running under `&&`. Only once the lock is
+held does the run detach (`setsid ... & disown`) so it survives the announcing shell's own
+exit. The lead never kills a detached expensive run in flight — see the executor charter's
+"never end your turn while work you started is still outstanding."
 
 ## When Commit 1 must be reproduced
 
@@ -79,174 +115,60 @@ fbb5555:scripts/doc-id.py`) rather than hand-typing. The mechanism enforcing thi
    literal unmarked is (run on a test file with one marked and one unmarked copy of the 
    constant).
 
+## Governance-record exclusion class
+
+`GOVERNANCE_RECORD_EXCLUSIONS` (`scripts/_docid.py`) is a different exclusion from the
+legacy-form-spec markers above: it is the class for **records of a named tree** — census
+CSVs, the W37-11 record itself (path named by `W37_11_RECORD_PATH`, `scripts/_docid.py`)
+— content that *documents*
+a snapshot rather than being live, citeable prose. Location is per RFC-937 §5.2's routing
+row. `governance_record_reason` is the audit-time counterpart: `audit-docs.py` checks
+32 and 36 skip a file this class claims through the same predicate the sweep excludes it
+with — one definition, not two, so the two cannot silently disagree about which files are
+in scope.
+
+The sentinel bucket `(no file named in message)` is, **by construction**, the residue of
+sweep-excluded files (`residue_key_for_failure`, `_docverify._h1_residue_by_file`) — not a
+defect the sweep should ever close. A governance record naming a legacy path *is* its
+content (the thing it is a record of), not a stale citation to fix. When the record itself
+moves or is re-keyed, that residue count can transfer without changing: the W37-6 run 2
+sentinel h1-check36 row moved 904 → 1088 hits when the census record's check-36 hits were
+relocated — a **transfer**, not new residue the sweep newly found (verify: old ceiling +
+the moved file's own hit count == the new ceiling, never assume the delta is growth).
+
 ## Two proof scripts (AST-level verification)
 
-Include these as inline scripts in `.claude/skills/` so they are available before commit 1 
-is reproduced. Run them against the branch's migrated commits to verify no non-docstring 
-changes slip in.
+Five small AST-diffing scripts live in this skill's own `scripts/` directory (copied
+2026-09-17 from `~/gi-pricing-plan.local/handover/`, kept as written apart from ruff
+reformatting — logic and output format unchanged). Run them against the branch's
+migrated commits to verify no non-docstring or structural drift slips in.
 
-### `ast_strings.py` — structural and string-value comparison
+**A lookup literal matches the tree the instrument reads at run time.** `doc-id.py`
+reads the *pre-migration* input (the tool that writes the migration); `audit-docs.py`
+reads the *migrated* tree (the check that reads what shipped); `_docverify.py` reads
+*both* (`snap.control` and `snap.migrated`) because it verifies one against the other.
+Passing the wrong tree as `<ref_a>`/`<ref_b>` below does not error — it silently compares
+the wrong pair and prints a confident, wrong answer.
 
-```python
-#!/usr/bin/env python3
-"""
-Compare AST structure and string literals across a reflow, rejecting structural changes.
+- **`scripts/ast_strings.py <ref_a> <ref_b>`** — for every changed `.py` file between two
+  refs, counts docstring-value changes separately from non-docstring string-value changes,
+  and flags a structural (non-string) diff. The whole-diff summary tool.
+- **`scripts/ast_diff_consts.py <ref_a> <ref_b> <path>`** — lists non-docstring string
+  constants that changed value in *one* file, with before/after and line numbers.
+- **`scripts/ast_still_migrated.py <pre> <commit1_migrated> <fixed> <path>`** — checks
+  whether a migration-introduced value in one file survives (or a pre-migration value
+  got restored) at a later "fixed" ref — the tool for "did the fix actually revert the
+  bad rewrite, or just paper over it."
+- **`scripts/ast_equal.py <ref_a> <ref_b>`** — whole-tree check: for every `.py` file that
+  differs between two refs, is the parsed AST identical once source-position attributes
+  are stripped? The broadest "nothing but formatting changed" proof.
+- **`scripts/ast_tables.py <ref_a> <ref_b_or_WORKTREE> <path> <name> [name ...]`** —
+  compares named top-level constant tables (`AnnAssign`/`Assign` to a bare `Name`) in one
+  file between two refs, or a ref against the live working tree (`WORKTREE`) — the tool
+  for confirming one specific table did or did not change shape.
 
-Usage: ast_strings.py <tree1> <tree2>
-  tree1/tree2: git tree refs (e.g. 6da994d, 4407a5d)
-  
-Prints: files=N docstring-value-changes=M NON-docstring string-value changes=K structural diffs=L
-  N = number of .py files changed
-  M = docstrings whose text differed (reflowed text OK)
-  K = non-docstring string literals that changed value (MUST BE 0)
-  L = structural changes: block structure, return/assignment targets (MUST BE 0)
-"""
-import ast
-import sys
-import subprocess
-import tempfile
-import os
-
-def get_tree_files(ref):
-    """List all .py files in a git tree."""
-    result = subprocess.run(
-        ['git', 'ls-tree', '-r', '--name-only', ref],
-        capture_output=True, text=True, check=True
-    )
-    return [f for f in result.stdout.strip().split('\n') if f.endswith('.py')]
-
-def get_file_content(ref, path):
-    """Get file content from a git ref."""
-    result = subprocess.run(
-        ['git', 'show', f'{ref}:{path}'],
-        capture_output=True, text=True, check=True
-    )
-    return result.stdout
-
-def ast_with_strings_masked(code):
-    """Parse code and return AST with all string constants replaced by 'S'."""
-    tree = ast.parse(code)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            node.value = 'S'
-    return ast.dump(tree)
-
-def is_docstring(node, parent_idx):
-    """Check if a node is a docstring (first statement in module/class/function)."""
-    return isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) \
-        and isinstance(node.value.value, str) and parent_idx == 0
-
-def non_docstring_strings(tree):
-    """Extract non-docstring string constants in order."""
-    strings = []
-    for parent in ast.walk(tree):
-        for i, child in enumerate(ast.iter_child_nodes(parent)):
-            if isinstance(child, ast.Constant) and isinstance(child.value, str):
-                if not is_docstring(child, i):
-                    strings.append(child.value)
-    return strings
-
-if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print(f'Usage: {sys.argv[0]} <tree1> <tree2>', file=sys.stderr)
-        sys.exit(1)
-    
-    tree1, tree2 = sys.argv[1], sys.argv[2]
-    files1 = set(get_tree_files(tree1))
-    files2 = set(get_tree_files(tree2))
-    common = files1 & files2
-    
-    docstring_changes = 0
-    nondoc_changes = 0
-    structural_changes = 0
-    
-    for path in common:
-        try:
-            code1 = get_file_content(tree1, path)
-            code2 = get_file_content(tree2, path)
-            tree_obj1 = ast.parse(code1)
-            tree_obj2 = ast.parse(code2)
-            
-            # Check structural equivalence with masked strings
-            if ast_with_strings_masked(code1) != ast_with_strings_masked(code2):
-                structural_changes += 1
-            
-            # Check non-docstring string constants
-            strings1 = non_docstring_strings(tree_obj1)
-            strings2 = non_docstring_strings(tree_obj2)
-            if strings1 != strings2:
-                nondoc_changes += 1
-            
-            # Count docstring-only changes
-            if code1 != code2 and structural_changes == 0 and nondoc_changes == 0:
-                docstring_changes += 1
-        except Exception as e:
-            print(f'Warning: {path}: {e}', file=sys.stderr)
-    
-    print(f'files={len(common)} docstring-value changes={docstring_changes} '
-          f'NON-docstring string-value changes={nondoc_changes} '
-          f'structural(non-string) diffs={structural_changes}')
-```
-
-### `ast_diff_consts.py` — which constants changed between commits
-
-```python
-#!/usr/bin/env python3
-"""
-List which string constants changed between two commits in a specific file.
-
-Usage: ast_diff_consts.py <commit1> <commit2> <filepath>
-  commit1/commit2: git commit refs
-  filepath: path relative to repo root (e.g. scripts/doc-id.py)
-
-Prints: One line per changed constant: "<line> <old> → <new>"
-"""
-import ast
-import sys
-import subprocess
-
-def get_file_at_commit(commit, filepath):
-    """Get file content at a specific commit."""
-    result = subprocess.run(
-        ['git', 'show', f'{commit}:{filepath}'],
-        capture_output=True, text=True, check=True
-    )
-    return result.stdout
-
-def extract_constants(code):
-    """Extract all string constants with their line numbers."""
-    tree = ast.parse(code)
-    constants = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            if hasattr(node, 'lineno'):
-                constants[node.lineno] = node.value
-    return constants
-
-if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print(f'Usage: {sys.argv[0]} <commit1> <commit2> <filepath>', file=sys.stderr)
-        sys.exit(1)
-    
-    commit1, commit2, filepath = sys.argv[1], sys.argv[2], sys.argv[3]
-    
-    try:
-        code1 = get_file_at_commit(commit1, filepath)
-        code2 = get_file_at_commit(commit2, filepath)
-        
-        consts1 = extract_constants(code1)
-        consts2 = extract_constants(code2)
-        
-        # Find changed constants
-        for line in sorted(set(consts1.keys()) | set(consts2.keys())):
-            val1 = consts1.get(line)
-            val2 = consts2.get(line)
-            if val1 and val2 and val1 != val2:
-                print(f'{line} {repr(val1)} → {repr(val2)}')
-    except subprocess.CalledProcessError as e:
-        print(f'Error: {e.stderr}', file=sys.stderr)
-        sys.exit(1)
-```
+All five print a summary line to stdout; none writes to the tree. Run with
+`python3 .claude/skills/doc-id-migration-run/scripts/<name>.py <args>` from the repo root.
 
 ## When all generators must be re-run
 
@@ -353,3 +275,14 @@ Tested in production: W37-6 executive summary at 14:31:04 BST, all measurements 
 forms above, result is the leading basis for commit-1 re-derivation and the 103-node 
 convergence run that followed. Two proof scripts were written inline during execution and 
 used to verify the reflow had no structural changes or non-docstring string changes.
+
+2026-09-17 (deputy pre-review fold, PR #783): five AST proof scripts moved from
+`~/gi-pricing-plan.local/handover/` into this skill's own `scripts/` directory (a
+governed path, unlike the local handover one) and reformatted for `ruff check` (imports,
+line length, type hints, statement-per-line) with logic and output format kept as
+written; header stamped `family: reference` (`docs/_templates/REFERENCE.md`,
+`docs/process/document-ids.md` §1.5/§1.6) since check 30 governs `.claude/skills/*/SKILL.md`
+post-migration; added the "before the run" record-ceiling/lock section, the
+governance-record exclusion class section, and the refined instrument-vs-tree-read
+predicate for the proof scripts. `.claude/skills/README.md` indexed in the same commit
+(`CLAUDE.md` §12).

@@ -83,9 +83,20 @@ do not guess at a fix or carry it silently. Follow this form:
 2. **Give one recommendation** — which one you think is best and why (not "let the lead decide among N unranked options").
 3. **Stand by for decision** — do not touch that code path until the lead rules; "I'll fix it while waiting" means the lead's decision arrives to in-progress code they cannot see.
 
-**Example from today (13:40 and 14:26 BST, to-lead.md):** "43 tests failing; ~39 are ROOT-already-migrated type; option A: add fixture shapes (30 min), option B: retire the tests (not allowed), option C: materialise pre-migration tree (45 min). Recommend C because the tests assert on specific real content and high-fidelity mocking violates Ruling 67. Standing by." Lead ruled at 13:52, executor implemented at 14:05. No silent speculation, no half-fixed code awaiting guidance.
+**Example (2026-09-17, W37-6 run 2, #782):**
 
-Reference: to-lead.md 13:40, 13:52:10, 14:05:40 (escalation + ruling + implementation).
+```text
+43 tests failing; ~39 are ROOT-already-migrated type; option A: add fixture shapes (30
+min), option B: retire the tests (not allowed), option C: materialise pre-migration tree
+(45 min). Recommend C because the tests assert on specific real content and
+high-fidelity mocking violates Ruling 67. Standing by.
+[deputy note: "Ruling 67" here resolved to no ruling on mocking; the repo's Ruling 67 is
+RL-988, DP-2]
+```
+
+Lead ruled at 13:52, executor implemented at 14:05. No silent speculation, no half-fixed code awaiting guidance.
+
+Reference: #782, `docs/plans/PL-01058-w37-6-migration-run-ledger.md` (to-lead.md 13:40, 13:52:10, 14:05:40).
 
 ### Measure before you edit the tool
 
