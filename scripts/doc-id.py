@@ -1790,7 +1790,8 @@ _REVIEW_HEADING_RE: Final = re.compile(r"^###\s+(.+?),\s*(\d{4}-\d{2}-\d{2})(.*)
 # file does not silently misfile a different row onto this disposition.
 _CLOSURE_AUDIT_TITLE_PREFIXES: Final = (
     "Independent audit",
-    "WK-660 mid-workstream scope findings",
+    # rfc-937: legacy-form-spec
+    "W4 mid-workstream scope findings",
 )
 
 
@@ -2769,7 +2770,8 @@ _ROADMAP_RETIRED_WORK_IDS: Final[Mapping[str, str]] = {
 # WK-662`) and prose ("The pre-split frontend work... re-cut into WK-663 and WK-664"), not
 # mechanically derivable from `WK-662`'s own row.
 # rfc-937: legacy-form-spec
-_ROADMAP_RETIRED_SUCCESSORS: Final[Mapping[str, tuple[str, ...]]] = {"W6": ("WK-663", "WK-664")}
+# rfc-937: legacy-form-spec
+_ROADMAP_RETIRED_SUCCESSORS: Final[Mapping[str, tuple[str, ...]]] = {"W6": ("W6a", "W6b")}
 
 # RL-993 found that `docs/roadmap.md`'s heading nesting is unreliable — `### Original
 # scope, for reference` (317) and its sibling `### Workstreams` (327, which actually
