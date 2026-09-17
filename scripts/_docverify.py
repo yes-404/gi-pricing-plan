@@ -3768,7 +3768,7 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # `MigrateResult.generated_paths` (Ruling 105 D3/#18 §1), keyed on
                          # the run's own generated-output list, never the literal path.
     "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
-    "h1": PASS,         # audit-docs.py: DISCLOSE -> PASS, D1b (deputy 2026-09-16
+    "h1": DISCLOSE,     # audit-docs.py: DISCLOSE -> PASS, D1b (deputy 2026-09-16
                          # 22:47:56 BST; root cause measured by the deputy 00:4x BST).
                          # Merged D1's `audit-docs.py` own `_partition_by_w37_11_record`
                          # built its control-path reverse map from `_docid.
@@ -3802,6 +3802,12 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # the two SHAs) and printed only because THIS row's own verdict
                          # moved (`_set_change_block`'s gate) — a correction merged D1's
                          # own bug hid rather than a new regression.
+                         # PASS -> DISCLOSE again, W37-6 PR-B loop 2 of 2 (0044a62): F103's
+                         # h1-check32/h1-check36 sentinel rows (16, 904) are ruled
+                         # disclosures, not a resolved-to-zero residue, so this row's own
+                         # governed hits no longer all clear to PASS. Measured
+                         # /tmp/w37-6-prb-verify-b62405f.log: SET CHANGE "(h1) PASS ->
+                         # DISCLOSE", 0 residue REGRESSION.
     "h2": DISCLOSE,     # zero-denominator probes now clear; only OVER-EXEMPT fires, which
                          # Ruling 105 D3 disclosed rather than failed (2026-09-03, task 14)
     "h3": PASS,         # req-coverage.py: 533 requirements on both trees, exit 0 on the
