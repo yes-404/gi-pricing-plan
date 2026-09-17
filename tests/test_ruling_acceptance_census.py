@@ -110,6 +110,15 @@ def synthetic_repo(tmp_path: pathlib.Path) -> pathlib.Path:
     and a second, unrelated ruling with no acceptance item filed afterward -- the exact
     shape `flag_day_split` exists to distinguish. Both bodies are shaped like a ruling
     someone would actually write (see `_REALISTIC_RULING_BODY`), not a one-line stub.
+
+    Headings are `RL-1 —` / `RL-2 —`, arbitrary synthetic numbers unrelated to any real
+    ruling id -- never allocated in this repository's own history and used only inside
+    this isolated `tmp_path` git repo. Pre-migration this fixture spelled them `Ruling 1
+    —`/`Ruling 2 —` (`dc1666f`); the NT-0019 migration run swept this file along with
+    the rest of the tree and renumbered them into the real corpus's id sequence as
+    `RL-864`/`RL-865` -- indistinguishable, to the migration's id-allocation pass, from a
+    real citation. Restored here to the pre-migration synthetic numbers under the
+    current `RL-N` heading form, matching this test's own `{"1", "2"}` assertions.
     """
     root = tmp_path / "repo"
     root.mkdir()
@@ -121,18 +130,18 @@ def synthetic_repo(tmp_path: pathlib.Path) -> pathlib.Path:
     plans.mkdir(parents=True)
     rulings = plans / "synthetic-rulings.md"
     rulings.write_text(
-        "## RL-864 — pre-flag-day, a fully-drafted ruling with no acceptance item\n\n"
+        "## RL-1 — pre-flag-day, a fully-drafted ruling with no acceptance item\n\n"
         + _REALISTIC_RULING_BODY.format(sha="0000000"),
         encoding="utf-8",
     )
-    _commit(root, "seed: RL-864, pre-flag-day", date="2026-01-01T00:00:00+00:00")
+    _commit(root, "seed: RL-1, pre-flag-day", date="2026-01-01T00:00:00+00:00")
 
     with rulings.open("a", encoding="utf-8") as f:
         f.write(
-            "\n## RL-865 — post-flag-day, a fully-drafted ruling with no acceptance "
+            "\n## RL-2 — post-flag-day, a fully-drafted ruling with no acceptance "
             "item\n\n" + _REALISTIC_RULING_BODY.format(sha="1111111")
         )
-    _commit(root, "add: RL-865, post-flag-day", date="2026-06-01T00:00:00+00:00")
+    _commit(root, "add: RL-2, post-flag-day", date="2026-06-01T00:00:00+00:00")
 
     return root
 
@@ -152,7 +161,7 @@ def test_flag_day_split_separates_pre_and_post_flag_day_none_rulings(
 
     assert {h.number for h in grandfathered} == {"1"}
     assert {h.number for h in violations} == {"2"}, (
-        "RL-865 was introduced after the flag-day and has no acceptance item -- this "
+        "RL-2 was introduced after the flag-day and has no acceptance item -- this "
         "is the violation the flag-day rule exists to catch"
     )
 
@@ -178,7 +187,7 @@ def test_flag_day_split_uses_the_headings_own_commit_not_the_files(
     ).stdout.splitlines()[0]
 
     assert introduced != file_first_commit, (
-        "RL-865's own introduction date must differ from the file's first-commit date "
+        "RL-2's own introduction date must differ from the file's first-commit date "
         "-- if they were ever equal by construction this test would not be exercising "
         "the per-heading resolution at all"
     )

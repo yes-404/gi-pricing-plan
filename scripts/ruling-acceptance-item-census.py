@@ -98,16 +98,21 @@ REPO_ROOT: Final = Path(__file__).resolve().parent.parent
 #: `_PROSE_ONLY_RULINGS` are frozen -- a later commit does not move the flag-day.
 _FLAG_DAY_COMMIT: Final = "aab6327"
 
-#: Every canonical "Ruling N" / "Ruling AN" heading, at heading depth 1-3 (the three
-#: standalone files use `#`, the ordinary rulings files use `##`, the A-series uses
-#: `###`). Excludes a title that merely *mentions* an existing ruling's number — the
-#: `'s` alternative below exists only to name that exclusion in one place, since
+#: Every canonical `RL-N` heading, at heading depth 1-3 (the three standalone files use
+#: `#`, the ordinary rulings files use `##`, the A-series uses `###`). Pre-NT-0019 this
+#: matched the literal words "Ruling N" / "Ruling AN"; the migration flattened every
+#: heading in the live corpus to the bare `RL-<digits>` id form (`docs/REDIRECTS.csv`:
+#: `Ruling 105,RL-1046,...` is one of many such rows) and folded the A-series into the
+#: same numeric sequence, so no heading anywhere in the tree still reads "Ruling N" —
+#: matching only the pre-migration text left this predicate discovering zero headings.
+#: Excludes a title that merely *mentions* an existing ruling's number — the `'s`
+#: alternative below exists only to name that exclusion in one place, since
 #: `docs/rulings/RL-00994-the-fixture-is-rebuilt-on-the-property-not-the-level-and-the-container-is-
 #: identified-positively.md`'s own H1 ("RL-979's
 #: second acceptance item, amended...") matches `RL-979` followed by `'s`, not by an
 #: em dash, and is the document's title rather than a second declaration of RL-979.
 _RULING_HEADING_RE: Final = re.compile(
-    r"^(#{1,3})\s+Ruling\s+(\d+|A\d+)\s+—", re.MULTILINE
+    r"^(#{1,3})\s+RL-(\d+)\s+—", re.MULTILINE
 )
 
 #: WK-697 series: a heading, at any level and any leading number, containing this exact
@@ -154,10 +159,10 @@ class RulingHeading:
 
 
 def _discover_ruling_headings(root: Path) -> list[RulingHeading]:
-    """Every `Ruling N`/`Ruling AN` heading under `docs/plans/`, each paired with the
-    span of its own section -- from its heading to the next ruling heading in the same
-    file, or end of file. Multiple ruling files are handled independently; headings are
-    returned in file, then position, order.
+    """Every `RL-N` heading under `docs/plans/`, each paired with the span of its own
+    section -- from its heading to the next ruling heading in the same file, or end of
+    file. Multiple ruling files are handled independently; headings are returned in
+    file, then position, order.
     """
     headings: list[RulingHeading] = []
     for path in sorted((root / "docs" / "plans").glob("*.md")):
@@ -191,7 +196,7 @@ def _commit_author_date(root: Path, commit: str) -> str:
 
 def _heading_introduced_at(root: Path, heading: RulingHeading) -> str:
     """ISO-8601 **author** date of the commit that first introduced `heading`'s own
-    line -- via `git log -S` pickaxed on `"Ruling {number} —"`, scoped to the file the
+    line -- via `git log -S` pickaxed on `"RL-{number} —"`, scoped to the file the
     heading lives in, never on the file as a whole. Author date, not committer date: a
     rebase or `git commit --amend` changes the SHA and the committer date but preserves
     the author date unless someone deliberately backdates, so this predicate survives
@@ -199,7 +204,7 @@ def _heading_introduced_at(root: Path, heading: RulingHeading) -> str:
     treating an unresolvable heading as pre-flag-day by default -- the same
     raise-rather-than-guess rule `_commit_author_date` follows.
     """
-    anchor = f"Ruling {heading.number} —"
+    anchor = f"RL-{heading.number} —"
     rel = heading.file.relative_to(root).as_posix()
     proc = subprocess.run(
         ["git", "-C", str(root), "log", "--reverse", "--format=%aI", "-S", anchor,
@@ -208,13 +213,13 @@ def _heading_introduced_at(root: Path, heading: RulingHeading) -> str:
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"Ruling {heading.number}: git log failed resolving its introduction date: "
+            f"RL-{heading.number}: git log failed resolving its introduction date: "
             f"{proc.stderr.strip()}"
         )
     lines = [line for line in proc.stdout.splitlines() if line.strip()]
     if not lines:
         raise RuntimeError(
-            f"Ruling {heading.number}: no commit in {rel}'s history introduces the "
+            f"RL-{heading.number}: no commit in {rel}'s history introduces the "
             f"heading line {anchor!r} -- uncommitted, or the anchor text does not match "
             "what is on disk"
         )
@@ -294,7 +299,7 @@ def main() -> int:
         if name == "conflict":
             for h in items:
                 print(
-                    f"  CONFLICT: Ruling {h.number} in {h.file.name} "
+                    f"  CONFLICT: RL-{h.number} in {h.file.name} "
                     "matches more than one convention"
                 )
 
@@ -315,7 +320,7 @@ def main() -> int:
         f"{len(post_flag_day_violations)}"
     )
     for h in post_flag_day_violations:
-        print(f"  VIOLATION: Ruling {h.number} in {h.file.name} has no acceptance item "
+        print(f"  VIOLATION: RL-{h.number} in {h.file.name} has no acceptance item "
               f"and was introduced after the ruling-form flag-day ({_FLAG_DAY_COMMIT})")
 
     if total != discovered:
