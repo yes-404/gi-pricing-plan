@@ -75,12 +75,62 @@ def audit() -> types.ModuleType:
     return _load_by_path("_audit_docs_under_test", SCRIPT)
 
 
-def _run_all_ten(audit: types.ModuleType, roots: tuple[pathlib.Path, ...]) -> list[str]:
+def _run_all_ten(
+    audit: types.ModuleType,
+    roots: tuple[pathlib.Path, ...],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> list[str]:
     """Run every one of checks 30-39 with `_ID_SCOPE_ROOTS` pointed at `roots`, and
     return the resulting `failures` list. `notes`/`failures` are reset first so a
     fixture's own prior use (there is none in practice, since `audit` is function-scoped)
     can never leak between calls.
+
+    **D2 (deputy, 2026-09-17 03:18:29 BST): pins pre-migration state hermetically.**
+    Production `audit-docs.py` always runs *inside* the tree it audits, so `check_
+    citations` (32) and `check_redirects` (36) correctly gate on the real `ROOT` there —
+    the tool is not wrong. But every fixture `roots` argument here was built to prove
+    ONE check in isolation, on the assumption that `docs/INDEX.md`/`docs/REDIRECTS.csv`
+    do not exist yet — an assumption that silently depended on running this suite before
+    the migration landed. `check_citations`/`check_redirects` read `ROOT / "INDEX.md"`/
+    `ROOT / "REDIRECTS.csv"` directly (not `migrated_tree()`, and not `_ID_SCOPE_ROOTS`,
+    which `roots` overrides below regardless) to decide whether to run their corpus-wide
+    sub-clauses at all, so pointing `ROOT` at an empty `tmp_path` — guaranteed to carry
+    neither file — makes that gate read pre-migration on ANY tree this suite runs
+    against, migrated or not. `migrated_tree` is pinned to the same state explicitly,
+    even though none of checks 30-39's own gates read it directly, so a reader (or a
+    future check) cannot observe one pinned signal disagreeing with the other.
+
+    A second, independent mechanism needs its own pin: `_check_unstampable_register`
+    (check 35's F83 condition 2 clause) calls `nt0019_stamp_set()` with no argument,
+    which then asks `git ls-files` for the WHOLE real repository — never gated by
+    `ROOT`, `_ID_SCOPE_ROOTS` or `migrated_tree()` at all, so patching those three does
+    not touch it. `nt0019_stamp_set`'s own docstring says its `tracked` parameter "is
+    injectable so a test can put a corpus in front of this without a filesystem" —
+    exactly the seam a hermetic test needs; only `_check_unstampable_register` never
+    exercises it. Pinned here to an empty stamp set: none of `_run_all_ten`'s own
+    callers test F83 condition 2 (the six `test_f83_register_*` tests and
+    `test_scope_clause_reds_from_inside_the_migration_commit` call `_check_unstampable_
+    register`/`_check_scope_unstamped_are_registered` directly, never through this
+    helper), so an empty set costs those tests nothing and the real, unpinned
+    `nt0019_stamp_set()` still catches whatever a real corpus gap is register-worthy
+    the moment any of those six run — proof, not just assertion, in `docs/audit/
+    register.md`'s D2 finding.
+
+    An empty stamp set alone is not enough: `_check_unstampable_register` also compares
+    the REAL `UNSTAMPABLE_EXEMPTIONS` register against whatever `nt0019_stamp_set()`
+    returns, so an empty stamp set against a non-empty real register reports every real
+    entry "stale" — a pollution this pin introduces rather than removes. Pinning both to
+    empty together keeps the comparison vacuously true (nothing on either side), which
+    is what "this test's fixture carries no F83-registered file" actually means.
+
+    `monkeypatch.setattr` restores all four automatically; no `importlib.reload`
+    anywhere.
     """
+    monkeypatch.setattr(audit, "ROOT", tmp_path)
+    monkeypatch.setattr(audit, "nt0019_stamp_set", lambda tracked=None: [])
+    monkeypatch.setattr(audit, "UNSTAMPABLE_EXEMPTIONS", ())
+    monkeypatch.setattr(audit, "migrated_tree", lambda: False)
     audit.failures.clear()
     audit.notes.clear()
     # `setattr`, not `audit._ID_SCOPE_ROOTS = roots`: `types.ModuleType`'s stub declares
@@ -109,35 +159,44 @@ def _only_check(failures: list[str], n: int) -> bool:
 # =========================================================================================
 
 
-def test_check_30_reds_alone_on_an_unknown_field(audit: types.ModuleType) -> None:
+def test_check_30_reds_alone_on_an_unknown_field(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
     """Ruling 70 §4 item 1: a fixture `FD-` essay whose front matter carries `decision:`
     must fail check 30 — `decision:` is a register-row field (Ruling 70), not this
     essay's, so `_docid.parse_header` puts it in `.extra` and check 30 must reject it.
     """
-    failures = _run_all_ten(audit, (CHECKS_FIXTURES / "check30-unknown-field.md",))
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check30-unknown-field.md",), monkeypatch, tmp_path,
+    )
     assert _only_check(failures, 30), failures
     assert any("decision" in f for f in failures), failures
 
 
-def test_check_30_reds_alone_on_a_ledger_prs_field(audit: types.ModuleType) -> None:
+def test_check_30_reds_alone_on_a_ledger_prs_field(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
     """Ruling 70 §4 item 4: a fixture ledger header carrying `prs:` must fail check 30 —
     `docs/_templates/LG.md` does not declare it (a ledger's PR list lives in its `## PRs`
     body section instead), so it is not a permitted field despite §1.5's parenthesis.
     """
-    failures = _run_all_ten(audit, (CHECKS_FIXTURES / "check30-ledger-prs.md",))
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check30-ledger-prs.md",), monkeypatch, tmp_path,
+    )
     assert _only_check(failures, 30), failures
     assert any("prs" in f for f in failures), failures
 
 
 def test_check_30_positive_control_a_clean_finding_essay_passes(
-    audit: types.ModuleType,
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
 ) -> None:
     """Positive control: a finding essay carrying exactly `docs/_templates/FD.md`'s own
     field set, and nothing more, must pass every one of the ten checks — proving the
     unknown-field rule does not false-positive on a legitimately clean header.
     """
     failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check30-good-finding" / "findings",)
+        audit, (CHECKS_FIXTURES / "check30-good-finding" / "findings",),
+        monkeypatch, tmp_path,
     )
     assert failures == [], failures
 
@@ -215,19 +274,25 @@ def test_check_30_reports_the_full_thirteen_template_coverage_on_the_real_tree(
 # =========================================================================================
 
 
-def test_check_31_reds_alone_on_a_header_filename_mismatch(audit: types.ModuleType) -> None:
-    failures = _run_all_ten(audit, (CHECKS_FIXTURES / "check31" / "plans",))
+def test_check_31_reds_alone_on_a_header_filename_mismatch(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check31" / "plans",), monkeypatch, tmp_path,
+    )
     assert _only_check(failures, 31), failures
     assert "PL-1920" in failures[0], failures
     assert "PL-1921" in failures[0], failures
 
 
-def test_check_31_exempts_templates_by_path(audit: types.ModuleType) -> None:
+def test_check_31_exempts_templates_by_path(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
     """NT-0019 §1.4: "`_templates/` is exempt from check 31 by path." Pointing
     `_ID_SCOPE_ROOTS` at the real templates directory alone must not trip check 31 on the
     `NNNNN`/`XX-NNNNN` placeholders every template carries.
     """
-    failures = _run_all_ten(audit, (audit._TEMPLATES_DIR,))
+    failures = _run_all_ten(audit, (audit._TEMPLATES_DIR,), monkeypatch, tmp_path)
     assert not any(f.startswith("check 31:") for f in failures), failures
 
 
@@ -300,12 +365,20 @@ def test_check_32_ignores_ids_inside_a_fenced_code_block(
 
 
 def test_check_32_is_gated_on_index_md_and_skips_cleanly_pre_migration(
-    audit: types.ModuleType,
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
 ) -> None:
-    """Production behaviour: on the real tree, `docs/INDEX.md` does not exist yet, so
+    """Production behaviour: pre-migration, `docs/INDEX.md` does not exist yet, so
     check 32 must skip with a note rather than reading document-ids.md's own
     illustrative, sometimes-padded ids as citation violations (see module docstring).
+
+    D2 (deputy, 2026-09-17 03:18:29 BST): pins that state explicitly via `ROOT`, rather
+    than asserting it holds on whatever tree happens to be checked out — production
+    `audit-docs.py` runs inside the tree it audits and is not wrong to see `INDEX.md`
+    there once the migration lands; this test's own meaning ("check 32 skips cleanly
+    when there is no real citation corpus yet") is independent of that and must hold on
+    any tree. `monkeypatch.setattr` restores `ROOT` automatically; no `importlib.reload`.
     """
+    monkeypatch.setattr(audit, "ROOT", tmp_path)
     assert not (audit.ROOT / "INDEX.md").is_file(), "fixture assumption: no real INDEX.md"
     audit.failures.clear()
     audit.notes.clear()
@@ -321,16 +394,20 @@ def test_check_32_is_gated_on_index_md_and_skips_cleanly_pre_migration(
 
 
 def test_check_33_reds_alone_on_a_status_outside_the_vocabulary(
-    audit: types.ModuleType,
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
 ) -> None:
-    failures = _run_all_ten(audit, (CHECKS_FIXTURES / "check33-bad-status.md",))
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check33-bad-status.md",), monkeypatch, tmp_path,
+    )
     assert _only_check(failures, 33), failures
     assert any("nonsense" in f for f in failures), failures
 
 
-def test_check_33_reds_alone_on_asymmetric_supersedes(audit: types.ModuleType) -> None:
+def test_check_33_reds_alone_on_asymmetric_supersedes(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
     failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check33-supersedes" / "adrs",)
+        audit, (CHECKS_FIXTURES / "check33-supersedes" / "adrs",), monkeypatch, tmp_path,
     )
     assert _only_check(failures, 33), failures
     assert "ADR-1930" in failures[0], failures
@@ -538,18 +615,20 @@ def test_check_34_migration_stamp_allowance_is_order_independent_under_prefix_co
 
 
 def test_check_34_reds_alone_on_a_dangling_corrected_by_entry(
-    audit: types.ModuleType,
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
 ) -> None:
     """The one check-34 sub-clause that *is* live over `_ID_SCOPE_ROOTS` today: "every
     `corrected_by:` entry is a record whose `corrects:` names this file." Two files in
     `tests/fixtures/docs-ids/w37-4-checks/check34-dangling-corrected-by/rulings/` — the
     frozen one (`RL-1950`) claims a corrector (`RL-1951`) that does not `corrects:` back
-    to it (it corrects `RL-1999` instead). Real fixture files, not `tmp_path`: every
-    check-30-39 function renders paths relative to the module's own `REPO`, and a file
-    outside the real repository tree cannot be `.relative_to()`'d against it.
+    to it (it corrects `RL-1999` instead). Real fixture files, not the `tmp_path` D2's
+    hermetic pin uses for `ROOT`: every check-30-39 function renders paths relative to
+    the module's own `REPO` (left untouched by that pin), and a file outside the real
+    repository tree cannot be `.relative_to()`'d against it.
     """
     failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check34-dangling-corrected-by" / "rulings",)
+        audit, (CHECKS_FIXTURES / "check34-dangling-corrected-by" / "rulings",),
+        monkeypatch, tmp_path,
     )
     assert _only_check(failures, 34), failures
     assert "RL-1951" in failures[0], failures
@@ -561,8 +640,12 @@ def test_check_34_reds_alone_on_a_dangling_corrected_by_entry(
 # =========================================================================================
 
 
-def test_check_35_reds_alone_on_an_unrecognised_owner(audit: types.ModuleType) -> None:
-    failures = _run_all_ten(audit, (CHECKS_FIXTURES / "check35-bad-owner.md",))
+def test_check_35_reds_alone_on_an_unrecognised_owner(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check35-bad-owner.md",), monkeypatch, tmp_path,
+    )
     assert _only_check(failures, 35), failures
     assert "some-random-person" in failures[0], failures
 
@@ -576,7 +659,7 @@ def test_check_35_valid_owners_include_every_real_role_and_maintainer(
 
 
 def test_check_35_readme_allowlist_is_enforced_when_a_readme_declares_one(
-    audit: types.ModuleType,
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
 ) -> None:
     """`tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/` carries both
     `doc.md` and its own `README.md` ("Permitted owners: planner, lead"). `_ID_SCOPE_ROOTS`
@@ -588,7 +671,7 @@ def test_check_35_readme_allowlist_is_enforced_when_a_readme_declares_one(
     """
     fixture_dir = CHECKS_FIXTURES / "check35-readme-allowlist"
     assert (fixture_dir / "README.md").is_file(), "fixture assumption"
-    failures = _run_all_ten(audit, (fixture_dir / "doc.md",))
+    failures = _run_all_ten(audit, (fixture_dir / "doc.md",), monkeypatch, tmp_path)
     assert _only_check(failures, 35), failures
     assert "permitted-owner list" in failures[0], failures
     assert "permitted-owner list" in failures[0], failures
@@ -791,7 +874,7 @@ def test_check_36_reds_alone_when_a_was_field_has_no_redirects_row(
 
 
 def test_check_36_is_gated_on_redirects_csv_and_skips_cleanly_pre_migration(
-    audit: types.ModuleType,
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
 ) -> None:
     """Production behaviour, found while building this slice: the sweep is a
     *post*-migration invariant. Before `docs/REDIRECTS.csv` exists, document-ids.md's own
@@ -799,11 +882,18 @@ def test_check_36_is_gated_on_redirects_csv_and_skips_cleanly_pre_migration(
     and names `docs/audit/` describing its own dissolution — indistinguishable from a
     survivor by pattern alone. Running the sweep unconditionally on the real tree reds on
     all five; this proves the gate, not just asserts it.
+
+    D2 (deputy, 2026-09-17 03:18:29 BST): the real `document-ids.md` (the scope this
+    test's corpus scan needs, captured before the pin) is unaffected by pinning `ROOT`
+    for the gate check alone — `REPO`, which the scan renders paths relative to, is
+    never touched.
     """
+    real_document_ids = audit.ROOT / "process" / "document-ids.md"
+    monkeypatch.setattr(audit, "ROOT", tmp_path)
     assert not (audit.ROOT / "REDIRECTS.csv").is_file(), "fixture assumption: no real REDIRECTS.csv"
     audit.failures.clear()
     audit.notes.clear()
-    setattr(audit, "_ID_SCOPE_ROOTS", (audit.ROOT / "process" / "document-ids.md",))  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    setattr(audit, "_ID_SCOPE_ROOTS", (real_document_ids,))  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
     audit.check_redirects()
     assert audit.failures == [], audit.failures
     assert any("post-migration invariant" in n for n in audit.notes), audit.notes
@@ -948,8 +1038,12 @@ def test_check_36_broken_input_proof_one_undisclosed_form_reds_one_alias_form_di
 # =========================================================================================
 
 
-def test_check_37_reds_alone_on_a_missing_required_section(audit: types.ModuleType) -> None:
-    failures = _run_all_ten(audit, (CHECKS_FIXTURES / "check37" / "adrs",))
+def test_check_37_reds_alone_on_a_missing_required_section(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check37" / "adrs",), monkeypatch, tmp_path,
+    )
     assert _only_check(failures, 37), failures
     assert "Consequences" in failures[0], failures
 
@@ -1044,7 +1138,14 @@ def test_check_39_passes_on_a_freshly_generated_index(
     assert any("byte-stable" in n for n in audit.notes), audit.notes
 
 
-def test_check_39_is_silent_on_the_real_pre_migration_tree(audit: types.ModuleType) -> None:
+def test_check_39_is_silent_on_the_real_pre_migration_tree(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
+    """D2 (deputy, 2026-09-17 03:18:29 BST): pins pre-migration state explicitly via
+    `ROOT` (an empty `tmp_path`, which `_doc_index.build_corpus` degrades to an empty
+    corpus over, by the check's own docstring), rather than assuming it of whatever real
+    tree happens to be checked out."""
+    monkeypatch.setattr(audit, "ROOT", tmp_path)
     assert not (audit.ROOT / "INDEX.md").is_file(), "fixture assumption: no real INDEX.md"
     audit.failures.clear()
     audit.notes.clear()
