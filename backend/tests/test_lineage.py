@@ -579,7 +579,10 @@ async def test_a_purge_without_a_reason_is_refused(
 GENERATED_CORPUS_REGISTRY: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "scripts/file-census.py",
-        re.compile(r"^docs/audit/file-census-(?P<sha>[0-9a-f]{7,40})\.csv$"),
+        # `docs/audit/` pre-migration, `docs/research/` after it -- `docs/audit/` dissolves
+        # (RFC-937 §1.4) and this committed census moved with the rest of the research
+        # essays.
+        re.compile(r"^docs/research/file-census-(?P<sha>[0-9a-f]{7,40})\.csv$"),
     ),
 )
 
