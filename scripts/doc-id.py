@@ -4734,12 +4734,14 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     # corpus previously carried only `docs/workflows/README.md` of the five §5.2 rows
     # name, so four of the five branches in `_regenerate_family_readmes` had no fixture to
     # run against at all -- which is the state that let 36 dangling links reach the gate.
-    "tests/fixtures/docs-migration/docs/adrs/README.md",
-    "tests/fixtures/docs-migration/docs/findings/README.md",
-    "tests/fixtures/docs-migration/docs/rfcs/README.md",
+    # The fixture corpus is frozen at its pre-migration shape (it's what `migrate` runs
+    # against), so these three carry the legacy family names.
+    "tests/fixtures/docs-migration/docs/adr/README.md",
+    "tests/fixtures/docs-migration/docs/audit/README.md",
+    "tests/fixtures/docs-migration/docs/notes/README.md",
     "tests/fixtures/docs-migration/docs/plans/README.md",
     "tests/fixtures/docs-migration/docs/audit/phases/1a/README.md",
-    "tests/fixtures/docs-migration/docs/audit/work/WK-657/README.md",
+    "tests/fixtures/docs-migration/docs/audit/work/W1/README.md",
     # W37-6's own `_discover_workflows` fixture (docs/workflows/WF-698-example-journey.md
     # needs a sibling `README.md` to prove that file, not this one, is what excludes a
     # directory's own index from discovery).
@@ -4751,7 +4753,7 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     # as one literal: `tests/test_notes_move_citations.py`'s own citation-surface test
     # scans every tracked file's *content*, this module's source included, for exactly
     # this contiguous substring.
-    "tests/fixtures/docs-migration/" + ".claude" + "/rfcs/README.md",
+    "tests/fixtures/docs-migration/" + ".claude" + "/notes/README.md",
 )
 
 _REFERENCE_FIXTURE_CORPUS_REASON: Final = (
