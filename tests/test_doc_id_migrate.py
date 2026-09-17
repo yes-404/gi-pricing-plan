@@ -25,8 +25,10 @@ import json
 import pathlib
 import posixpath
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import types
 from collections.abc import Sequence
 from datetime import date
@@ -140,6 +142,56 @@ def pristine_a(tmp_path: pathlib.Path) -> pathlib.Path:
 @pytest.fixture
 def pristine_b(tmp_path: pathlib.Path) -> pathlib.Path:
     return _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "b")
+
+
+#: The last commit before NT-0019's migration landed on `main` (W37-6, 2026-09-17). A
+#: handful of `ROOT`-scoped tests below assert on specific real pre-migration content --
+#: particular filenames, particular ruling numbers, particular line ranges -- that
+#: `FIXTURE_CORPUS`'s deliberately generic, synthetic corpus has no analogue for and must
+#: not be widened to fabricate (Ruling 67 §4 item 1 already forbids growing that committed
+#: fixture with more real-shaped legacy content; each addition buys a permanent
+#: `LEGACY_FORM_EXCLUDED_PATHS` entry). Deputy ruling (w37-maintainer, 2026-09-17): read
+#: this commit from git history instead, the same ref E1's independent migration-verify
+#: run uses, rather than fabricate its content a second time.
+_PRE_MIGRATION_SHA: Final = "fbb5555b45f9b22ef8bc5571865ee8d9a86b62e8"
+
+
+@pytest.fixture(scope="session")
+def pre_migration_root() -> Any:
+    """A `git worktree add --detach` checkout of `_PRE_MIGRATION_SHA`, real content the
+    migration has not yet touched -- session-scoped, one checkout shared by every test
+    that needs it, torn down (`git worktree remove --force`) once the session ends.
+
+    Fails loudly (`RuntimeError`, naming the SHA) if the ref cannot be resolved locally,
+    rather than falling back to a fetch or silently skipping every test that depends on
+    it: a test suite that goes quietly green because its own fixture could not find its
+    input is the exact failure class RL-949's `generated_from_tracked_corpus` refuses for
+    the same reason (`.claude/skills/close-workstream/SKILL.md`'s "cannot verify, so
+    allow it").
+    """
+    verify = subprocess.run(
+        ["git", "rev-parse", "--quiet", "--verify", f"{_PRE_MIGRATION_SHA}^{{commit}}"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    if verify.returncode != 0:
+        raise RuntimeError(
+            f"pre_migration_root: {_PRE_MIGRATION_SHA!r} does not resolve to a commit in "
+            f"this checkout's git history -- {verify.stderr.strip()}"
+        )
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="pre-migration-root-"))
+    worktree = tmp / "worktree"
+    subprocess.run(
+        ["git", "worktree", "add", "--detach", str(worktree), _PRE_MIGRATION_SHA],
+        cwd=ROOT, check=True, capture_output=True, text=True,
+    )
+    try:
+        yield worktree
+    finally:
+        subprocess.run(
+            ["git", "worktree", "remove", "--force", str(worktree)],
+            cwd=ROOT, check=False, capture_output=True, text=True,
+        )
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _tree_files(root: pathlib.Path) -> dict[str, bytes]:
@@ -3013,7 +3065,7 @@ def test_ruling_owner_departure_machinery_is_removed_not_left_inert() -> None:
 
 
 def test_ruling_file_owner_resolves_the_real_delegation_clause_to_decision_maker(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """`_ruling_file_owner`, run directly against the real A1-A3 source file's own text —
     the exact file and heading ("### 1.1 The delegation — ... delegated to the lead") that
@@ -3044,7 +3096,7 @@ def test_ruling_file_owner_resolves_the_real_delegation_clause_to_decision_maker
     *and* `_discover_lettered_rulings` returns 3, while `_discover_plain_plans` drops from
     1 to 0.
     """
-    path = ROOT / _A_SERIES_SOURCE
+    path = pre_migration_root / _A_SERIES_SOURCE
     text = path.read_text(encoding="utf-8")
 
     assert not list(doc_id_cli._RULING_HEADING_RE.finditer(text)), (
