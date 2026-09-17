@@ -5690,7 +5690,9 @@ _REAL_CLAUDE_FILES = ("README.md", "docs/README.md", "packages/README.md",
                       ".claude/settings.json")
 
 
-def _real_claude_copy(tmp_path: pathlib.Path, name: str) -> pathlib.Path:
+def _real_claude_copy(
+    tmp_path: pathlib.Path, name: str, *, source: pathlib.Path = ROOT
+) -> pathlib.Path:
     """The real `.claude/` charters, agents and skills plus three real READMEs, in a git
     repository — `git ls-files` is how the README scope reads "every `README.md` anywhere
     in the tree", so a plain directory would give it nothing to find and every assertion
@@ -5700,10 +5702,10 @@ def _real_claude_copy(tmp_path: pathlib.Path, name: str) -> pathlib.Path:
 
     root = tmp_path / name
     for rel in _REAL_CLAUDE_SUBTREES:
-        shutil.copytree(ROOT / rel, root / rel)
+        shutil.copytree(source / rel, root / rel)
     for rel in _REAL_CLAUDE_FILES:
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(ROOT / rel, root / rel)
+        shutil.copy(source / rel, root / rel)
     _run_git(["init", "--initial-branch=main", "--quiet"], cwd=root)
     _run_git(["config", "user.email", "test@example.com"], cwd=root)
     _run_git(["config", "user.name", "Test"], cwd=root)
@@ -5731,7 +5733,7 @@ def test_reference_stamp_census_is_silent_on_the_real_corpus(
 
 
 def test_reference_stamp_owners_are_only_the_two_values_their_cells_carry(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """`owner:` is read from a §1 cell, never from what a role ought to own — the
     constraint the gap-2 RFC exists to enforce, scoped by the maintainer on 2026-09-02 to
@@ -5742,8 +5744,8 @@ def test_reference_stamp_owners_are_only_the_two_values_their_cells_carry(
     per-file rule rather than as a pair of counts, so a charter that silently took `lead`
     fails here even if the totals still balanced.
     """
-    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
-    targets, _ = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(pre_migration_root)}
+    targets, _ = doc_id_cli._discover_reference_stamp_targets(pre_migration_root, routed=routed)
     for target in targets:
         expected = "maintainer" if target.rel.startswith(".claude/roles/") else "lead"
         assert target.owner == expected, target.rel
@@ -5752,7 +5754,7 @@ def test_reference_stamp_owners_are_only_the_two_values_their_cells_carry(
 
 
 def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §4, checked against the
     tree rather than restated: *"step 5's scope **gains six**; **one of the six** — the
@@ -5770,13 +5772,19 @@ def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
     # population the same way and for the same reason (§5.2 routes the file somewhere, and
     # the writer that moves it owns its header). Passing a different `routed` here would
     # measure a configuration nothing runs.
-    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)} | set(
-        doc_id_cli._README_FAMILY_MOVES
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(pre_migration_root)} | set(
+        doc_id_cli._README_FAMILY_LEGACY_PATHS.values()
     )
-    targets, censuses = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
+    targets, censuses = doc_id_cli._discover_reference_stamp_targets(
+        pre_migration_root, routed=routed
+    )
     readme_census = next(c for c in censuses if c.scope.startswith("every tracked"))
 
-    tracked = {r for r in doc_id_cli.git_ls_files(ROOT, ".") if pathlib.Path(r).name == "README.md"}
+    tracked = {
+        r
+        for r in doc_id_cli.git_ls_files(pre_migration_root, ".")
+        if pathlib.Path(r).name == "README.md"
+    }
     stamped = {t.rel for t in targets if pathlib.Path(t.rel).name == "README.md"}
     # The identity: three disjoint buckets, and nothing outside them.
     assert stamped | set(readme_census.accounted) | set(readme_census.excepted) == tracked
@@ -5812,7 +5820,7 @@ def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
 
 
 def test_reference_declared_exceptions_all_carry_a_reason_and_name_a_real_file(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """F83's two conditions on an exemption list, applied here: every entry cites its
     reason, and the set is checked rather than trusted. A declaration left behind after
@@ -5825,11 +5833,13 @@ def test_reference_declared_exceptions_all_carry_a_reason_and_name_a_real_file(
     }
     for key, reason in declared.items():
         assert reason.strip(), key
-        assert (ROOT / key.rstrip("/")).exists(), f"{key}: declared, but nothing is there"
+        assert (pre_migration_root / key.rstrip("/")).exists(), (
+            f"{key}: declared, but nothing is there"
+        )
 
     fixture_readmes = sorted(
         rel
-        for rel in doc_id_cli.git_ls_files(ROOT, "tests/fixtures/docs-migration")
+        for rel in doc_id_cli.git_ls_files(pre_migration_root, "tests/fixtures/docs-migration")
         if pathlib.Path(rel).name == "README.md"
     )
     assert sorted(doc_id_cli._REFERENCE_FIXTURE_CORPUS_READMES) == fixture_readmes, (
@@ -5885,14 +5895,14 @@ def test_reference_census_names_what_no_scope_accounts_for(
 
 
 def test_reference_census_names_a_stamp_target_with_no_heading_to_title_it(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """`_reference_target` returns `None` — no bucket, no disposition string — for a file
     it cannot read a `title:` from, so the census names it. The alternative it refuses is
     stamping `title:` with the filename, which would be a value invented by the tool and
     then indistinguishable from one someone chose.
     """
-    root = _real_claude_copy(tmp_path, "untitled-charter")
+    root = _real_claude_copy(tmp_path, "untitled-charter", source=pre_migration_root)
     path = root / ".claude" / "roles" / "auditor.md"
     text = path.read_text(encoding="utf-8")
     assert text.startswith("# auditor\n"), "re-derive this mutation from the real file"
@@ -5917,7 +5927,7 @@ def test_reference_census_refuses_a_declared_exception_whose_reason_is_blank(
 
 
 def test_reference_stamp_targets_are_claimed_once_across_overlapping_scopes(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """`.claude/agents/README.md` sits inside two scopes at once — the README row and the
     `Reference — agents` cell — and the cell-extent rule (RFC §2: *"a cell governs what
@@ -5928,7 +5938,7 @@ def test_reference_stamp_targets_are_claimed_once_across_overlapping_scopes(
     claims would stamp two headers onto one file, and the second would land in front of
     the first.
     """
-    root = _real_claude_copy(tmp_path, "overlap")
+    root = _real_claude_copy(tmp_path, "overlap", source=pre_migration_root)
     targets = _reference_census(doc_id_cli, root)
     rels = [t.rel for t in targets]
     assert sorted(rels) == sorted(set(rels)), (
