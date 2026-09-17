@@ -64,18 +64,23 @@ def test_a_finding_resolved_only_by_a_closure_record_is_not_flagged() -> None:
     """`F-W9-3-2`: real, resolved 2026-08-27, recorded in
     `docs/closures/CR-00837-work-item-record-w9-3-bundle-compilation.md`'s
     Findings table, never filed to `register.md` (the register holds only open findings), and
-    cited from `docs/plans/2026-08-29-w11-slice1-rulings.md`. The check's first version, before
-    this fix, flagged this exact citation as dangling -- the incident that forced the redesign.
+    cited from `docs/rulings/RL-00879-...md` (the migration's split of the old
+    `docs/plans/2026-08-29-w11-slice1-rulings.md`, Ruling 13 -- see `docs/REDIRECTS.csv`). The
+    check's first version, before this fix, flagged this exact citation as dangling -- the
+    incident that forced the redesign.
 
     Pinned against the real tree rather than a synthetic fixture deliberately: this is the
     actual case that exposed the design gap, so it is the one case that must never regress.
     """
-    closure_record = ROOT / "docs" / "audit" / "work" / "W9-3" / "README.md"
+    closure_record = ROOT / "docs" / "closures" / "CR-00837-work-item-record-w9-3-bundle-compilation.md"
     assert "F-W9-3-2" in closure_record.read_text(encoding="utf-8"), (
         "the real-world case this test pins has moved or been renamed -- "
         "re-derive against the current closure record before trusting this test"
     )
-    citing_file = ROOT / "docs" / "plans" / "2026-08-29-w11-slice1-rulings.md"
+    citing_file = (
+        ROOT / "docs" / "rulings"
+        / "RL-00879-03-5-2-s-money-block-the-code-is-right-and-the-spec-is-stale-in-more-places-than-f-w11-1-5-reports.md"
+    )
     assert "F-W9-3-2" in citing_file.read_text(encoding="utf-8"), (
         "the citation this test pins has moved -- re-derive before trusting this test"
     )

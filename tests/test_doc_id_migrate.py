@@ -4751,7 +4751,7 @@ def test_register_discovery_matches_every_row_register_lint_itself_declares(
     growing a 74th row tomorrow, unlike a hard-coded "73".
     """
     register_lint = doc_id_cli._load_register_lint()
-    path = ROOT / "docs" / "audit" / "register.md"
+    path = register_lint.TARGETS[0]
     rows, problems = register_lint.parse_register(path)
     assert not problems  # no structurally malformed row on the real tree today
     assert len(rows) > 1  # non-vacuous

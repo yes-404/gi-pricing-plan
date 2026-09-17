@@ -19,7 +19,6 @@ from typing import Any, cast
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "register-owed.py"
-REGISTER = ROOT / "docs" / "audit" / "register.md"
 
 _spec = importlib.util.spec_from_file_location("_register_owed_under_test", SCRIPT)
 assert _spec is not None
@@ -28,6 +27,8 @@ register_owed = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(register_owed)
 
 register_lint = register_owed.register_lint
+# Same pre/post-migration resolution as `register-owed.py`'s own `REGISTER`.
+REGISTER = register_owed.REGISTER
 
 
 def _write(tmp_path: pathlib.Path, content: str) -> pathlib.Path:

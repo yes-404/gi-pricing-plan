@@ -24,13 +24,15 @@ from typing import cast
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "register-lint.py"
 AUDIT_SCRIPT = ROOT / "scripts" / "audit-docs.py"
-REGISTER = ROOT / "docs" / "audit" / "register.md"
 
 _spec = importlib.util.spec_from_file_location("_register_lint_under_test", SCRIPT)
 assert _spec is not None
 assert _spec.loader is not None
 register_lint = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(register_lint)
+
+# Same pre/post-migration resolution as `register-lint.py`'s own `TARGETS[0]`.
+REGISTER = register_lint.TARGETS[0]
 
 
 def _table(decision: str, finding: str = "X (F999998)") -> str:

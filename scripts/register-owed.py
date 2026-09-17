@@ -85,7 +85,6 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-REGISTER = REPO / "docs" / "audit" / "register.md"
 
 _spec = importlib.util.spec_from_file_location(
     "_register_lint", REPO / "scripts" / "register-lint.py"
@@ -94,6 +93,10 @@ assert _spec is not None
 assert _spec.loader is not None
 register_lint = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(register_lint)
+
+# Same pre/post-migration resolution as `register-lint.py`'s own `TARGETS[0]` — derived
+# from it rather than duplicated, so the two scripts cannot point at different files.
+REGISTER = register_lint.TARGETS[0]
 
 _PHASE_ID = re.compile(r"^[0-9][0-9a-zA-Z]*$")
 _REVIEW_MARKER = re.compile(r"§14")
