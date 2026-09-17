@@ -6502,7 +6502,7 @@ def _emittable_document_prefixes_from_source() -> set[str]:
 
 
 def test_every_emittable_document_prefix_has_a_family_dir_and_a_template(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Close the set, both directions, against **both** tables separately.
 
@@ -6526,7 +6526,7 @@ def test_every_emittable_document_prefix_has_a_family_dir_and_a_template(
             "_discover_reference_moves",            # returns `_ReferenceMove`, not `_Draft`
         ):
             continue
-        produced = getattr(doc_id_cli, name)(ROOT)
+        produced = getattr(doc_id_cli, name)(pre_migration_root)
         if name == "_discover_roadmap":
             produced = produced[0]
         empirical |= {x.prefix for x in produced if x.materialize == "document"}
@@ -6622,7 +6622,7 @@ def test_without_the_guard_the_same_input_is_a_mid_write_crash(
 
 
 def test_the_double_claim_guard_fires_when_its_precondition_is_removed(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path,
 ) -> None:
     """`_discover_reference_stamp_targets` refuses if any path is claimed by two scopes.
     Zero paths are, so the raise is unreachable from any real corpus — which is exactly
@@ -6633,7 +6633,7 @@ def test_the_double_claim_guard_fires_when_its_precondition_is_removed(
     by the `Reference — agents` cell, and the guard names it. The mutation is applied to
     the shipped source, so what is proven is the shipped raise, not a re-creation of it.
     """
-    root = _real_claude_copy(tmp_path, "double-claim")
+    root = _real_claude_copy(tmp_path, "double-claim", source=pre_migration_root)
     doc_id_cli._discover_reference_stamp_targets(root)  # control: the shipped code is fine
 
     disarmed = _module_with_source_mutations(
