@@ -1894,3 +1894,108 @@ since it currently claims three fixes and carries one.
 
 Remaining: step 6 (final `to-deputy.md` entry, stop own watch) — imminent, well ahead of
 the 19:55 BST target.
+
+## 2026-09-17 21:12 BST — #782 merged to main 71f5a2208c7a92bad486ae128775a4a42c7ebc63; #774 closed as superseded
+
+Squash of branch head `f777159030527e8e692224670e2ea1c88884839b` (commit 1
+`0c41a0b9f2b2c43cc7ee897190feee072adafa6c`, tree
+`6d058ba642481404815ab573e848a8cf34e671ee`; commit 2
+`f777159030527e8e692224670e2ea1c88884839b`, tree
+`390ff37358efdc2071eeae6ce8b114141eb7c9be`) merged to `main` at
+`71f5a2208c7a92bad486ae128775a4a42c7ebc63` (sole parent
+`0651c1e265648cbd3918adfc729ad965b83b1e0b`; committer date `2026-09-17T21:03:42+01:00`,
+`git log -1 --format=%cI 71f5a22`). Deputy merge-ACK: `to-lead.md` 2026-09-17 21:03:03 BST
+("MERGE-ACK for #782 ... GRANTED"); deputy's own merged-and-verified entry, `to-lead.md`
+2026-09-17 21:04:32 BST, quoted verbatim (an exhibit, not a live citation for a sweep to
+rewrite):
+
+```
+#782 MERGED — verified from origin/main: 71f5a2208c7a92bad486ae128775a4a42c7ebc63 ...
+PR #782 MERGED 2026-09-17T20:03:42Z ... The NT-0019 / RFC-937 migration is on main.
+```
+
+`#774` ("fix(scripts): W37-6 PR-C — reflow, the 13 string literals, row (g) class 2 wrap")
+closed as superseded — its content folded into commit 2 (reflow, literal restores, (g)
+class 2) — with the lead's close comment (`gh pr view 774`, comment 2026-09-17T20:04:21Z):
+"Superseded by #782's commit 2 (reflow, the string-literal restores and row (g) class 2
+handled there), squash-merged to main as 71f5a2208c7a92bad486ae128775a4a42c7ebc63 under the
+deputy merge-ACK of 2026-09-17 21:03:03 BST (channel to-lead.md). Closed by the lead
+(w37-team2)."
+
+Full evidence — the 13:43:54Z incident, the docs-CI exit-3 incident, the census rows'
+shrink, the disclosures to W37-11, the idempotence item, and (g)'s standing second
+half — is in the closure/(g) record filed alongside this entry.
+
+## 2026-09-17 21:12 BST — UNFREEZE taxonomy (task #10's prerequisite)
+
+**The freeze itself**, `to-lead.md:2825`, 2026-09-06 08:13 BST (deputy): "GATE MET
+verified against gate-cfbc0390.log (lines 2/229/272/275); taxonomy agents FROZEN; run
+live (PIDs 3109516/3109517, single blocking flock, no loop in do_migration_run.sh);
+DECISION-0800 verdict line still <FILL> — fill now" — and the same entry's own release
+condition: "Frozen at 08:13: `tax-census [bab052]` and `tax-research [a1ff26]` — no git
+command of any kind, no process heavier than a read, nothing outside `wt-taxonomy`, until
+UNFREEZE from me. UNFREEZE comes after the migration PR is merged and you have written its
+merge line."
+
+**The rule that put it there**, `to-lead.md:2781`, under the 2026-09-06 07:54 BST
+maintainer-decision entry: "The taxonomy freeze moves with the run: deputy's side; agents
+idle from the moment the lead announces the run window until the migration PR merges."
+
+**Condition met tonight**: the migration PR (#782) merged to `main`
+`71f5a2208c7a92bad486ae128775a4a42c7ebc63` (committer date `2026-09-17T21:03:42+01:00`,
+`git log -1 --format=%cI 71f5a22`), deputy merge-ACK `to-lead.md` 2026-09-17 21:03:03 BST,
+and the deputy's own merge line written at `to-lead.md` 2026-09-17 21:04:32 BST. Both the
+08:13 freeze entry and its release condition are satisfied, so the hold this ledger has
+carried since 2026-09-06 is lifted: task #10 (the next taxonomy step, for which this is
+the prerequisite — `to-lead.md` 2026-09-17 21:04:32 BST, "UNFREEZE taxonomy entry (task
+#10's prerequisite) in the ledger") may start. The taxonomy stream itself resumes as RFC-897
+Stage C — the proposal branch rebased onto the migrated `main`, the census re-run on the
+migrated tree, the proposal filed under the new scheme (deputy ruling, socket message
+~21:12 BST relayed by the lead; the deputy files its own entry). For context on what the
+frozen proposal branch touches, `to-lead.md:2741`, 2026-09-06 06:34 BST (deputy, note for
+task #9, the taxonomy chunk), quoted verbatim:
+
+```
+Note for task #9 (taxonomy chunk): the migration creates docs/research/... as a pair of
+docs/audit/.... My proposal branch writes only new files under docs/research/; the
+Sunday rebase must check the migrated docs/research/ for that pair before adding
+anything, so the two never collide by name.
+```
+
+**Resumption itself is the deputy's/maintainer's action, not this entry's** — this entry
+records only that the hold's own stated condition is now met.
+
+## 2026-09-17 21:12 BST — #757 recorded as the first W37-11 item
+
+`#757` ("fix(scripts): row (g) g2 classifier — forward-citation check + bare finding-id
+exclusion") is **5 ahead / 13 behind** `main` at `71f5a22` (`git rev-list --left-right
+--count origin/main...origin/w37-6-g2-classifier-catchup` → `13\t5`). A dry-run merge onto
+`71f5a22` (`git merge-tree --write-tree origin/main origin/w37-6-g2-classifier-catchup`)
+reports (this run's own output, an exhibit rather than a live citation):
+
+```
+CONFLICT (content): Merge conflict in docs/audit/w37-11-record.md
+CONFLICT (content): Merge conflict in scripts/_docverify.py
+Auto-merging scripts/audit-docs.py
+Auto-merging scripts/doc-id.py
+Auto-merging tests/test_doc_id_migrate.py
+Auto-merging tests/test_doc_id_verify.py
+```
+
+— those last four auto-merge without a conflict marker, but they are the migration's own
+files and want a read after the rebase even though git resolves them mechanically.
+
+PR comment posted by the lead (`gh pr view 757`, comment 2026-09-17T20:06:00Z), quoted
+verbatim:
+
+```
+Status after the W37-6 run-2 merge (#782 -> main 71f5a2208c7a92bad486ae128775a4a42c7ebc63,
+deputy merge-ACK 2026-09-17 21:03:03 BST): this branch is 5 ahead / 13 behind main, and a
+dry-run merge onto 71f5a22 (git merge-tree --write-tree origin/main
+origin/w37-6-g2-classifier-catchup) reports content conflicts in
+docs/audit/w37-11-record.md and scripts/_docverify.py; scripts/audit-docs.py,
+scripts/doc-id.py, tests/test_doc_id_migrate.py and tests/test_doc_id_verify.py
+auto-merge but are the migration's own files and need review after the rebase. Per the
+deputy's ruling of 2026-09-17 (channel to-lead.md): first W37-11 item: rebase onto
+71f5a22, with its own gate and CI; not tonight's. Left as is by the lead (w37-team2).
+```
