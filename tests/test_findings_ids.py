@@ -39,7 +39,19 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 FINDINGS = ROOT / "docs" / "audit" / "findings"
-REGISTER = ROOT / "docs" / "audit" / "register.md"
+
+
+def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
+    """The first candidate that is a file, else the first candidate."""
+    for path in candidates:
+        if path.is_file():
+            return path
+    return candidates[0]
+
+
+# `docs/audit/register.md` pre-migration, `docs/findings/register.md` after it (RFC-937
+# §5.2) — same resolution as `scripts/register-lint.py`'s own `TARGETS[0]`.
+REGISTER = _first_file(ROOT / "docs" / "audit" / "register.md", ROOT / "docs" / "findings" / "register.md")
 
 _FILE_ID = re.compile(r"^F\d+$")
 _HEADING_ID = re.compile(r"^#\s+(F\d+)\b")

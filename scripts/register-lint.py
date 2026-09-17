@@ -54,11 +54,15 @@ below print one aggregate line, every run, counting rows whose evidence has outg
 table and not yet migrated to `docs/audit/findings/<F-id>.md` (RL-911) — never a per-row
 failure, and no row is ever red-gated for being long.
 
-**Scope.** `docs/findings/register.md` is excluded **by name**, not by date (Ruling
-50 §2: it is a closed-phase record, out of scope regardless of when this check runs). A
-future phase-2 register is in scope from the commit that creates it, which means adding its
-path to `TARGETS` below by hand when that day comes — never inferring it from a glob, which
-would silently reach into `phases/1b` too.
+**Scope.** Pre-migration, `docs/findings/register.md` (the phase-1b register) was excluded
+**by name**, not by date (Ruling 50 §2: it was a closed-phase record, out of scope
+regardless of when this check runs), while `docs/audit/register.md` was the live register
+`TARGETS` enforces. RFC-937 §5.2 merges the two into the single post-migration
+`docs/findings/register.md` — the excluded file and the enforced one are now the same path,
+so the exclusion is moot rather than restated; `TARGETS` resolves to whichever of the two
+paths is on disk. A future phase-2 register is in scope from the
+commit that creates it, which means adding its path to `TARGETS` below by hand when that day
+comes — never inferring it from a glob, which would silently reach into `phases/1b` too.
 
 Usage: `python3 scripts/register-lint.py` (exit 1 on any violation), or import
 `lint_register(path)` — used by `scripts/audit-docs.py` check 29 so this ships inside the
@@ -74,9 +78,20 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
-# Deliberately explicit, never a glob — see "Scope" above. `docs/findings/register.md`
-# is NOT here, by name, per RL-910 §2.
-TARGETS = [REPO / "docs" / "audit" / "register.md"]
+
+def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
+    """The first candidate that is a file, else the first candidate."""
+    for path in candidates:
+        if path.is_file():
+            return path
+    return candidates[0]
+
+
+# Deliberately explicit, never a glob — see "Scope" above. `docs/audit/register.md`
+# pre-migration, `docs/findings/register.md` after it (RFC-937 §5.2 merges the excluded
+# phase-1b register into this one) — resolved by what is on disk, same as
+# `scripts/audit-docs.py`'s `REGISTER`.
+TARGETS = [_first_file(REPO / "docs" / "audit" / "register.md", REPO / "docs" / "findings" / "register.md")]
 
 DISPOSITIONS = ("fix before close", "accept", "carry forward", "split verdict")
 # CLAUDE.md §13's four verdicts — binding, may not be linted away (RL-910 §2).
