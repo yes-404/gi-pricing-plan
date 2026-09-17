@@ -976,6 +976,64 @@ def test_sweep_legacy_forms_skips_the_instruments_own_test_modules(
     assert hits2 != [], hits2
 
 
+def test_sweep_legacy_forms_excludes_the_generated_contract_tier(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """F103, 2026-09-17: check 36's sweep must not fire inside the generated-contract
+    tier (`_docid.sweep_exclusion_reason`) — `docs/contracts/openapi/generated.json` is
+    written by `generate-contracts.py` from the models, never a citation a person wrote,
+    and `--check` already holds it to its source; check 36 previously scanned it anyway
+    (audit-docs.py FAILED on `FR-MODEL-45`/`FR-MODEL-40` there before this fix). A
+    same-shaped file OUTSIDE the tier is the positive control: it must still fire, so
+    the exclusion is proven to exempt the tier specifically, not to have gone vacuous.
+    """
+    excluded = tmp_path / "docs" / "contracts" / "openapi" / "generated.json"
+    excluded.parent.mkdir(parents=True)
+    excluded.write_text('{"description": "see NT-0016 for background"}\n', encoding="utf-8")
+    hits = audit._sweep_legacy_form_hits([excluded], repo_root=tmp_path)
+    assert hits == [], hits
+
+    not_excluded = tmp_path / "docs" / "notes" / "0099-unrelated.md"
+    not_excluded.parent.mkdir(parents=True)
+    not_excluded.write_text("NT-0016 lives here too.\n", encoding="utf-8")
+    hits2 = audit._sweep_legacy_form_hits([not_excluded], repo_root=tmp_path)
+    assert hits2 != [], hits2
+
+
+def test_check_32_excludes_the_generated_contract_tier(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
+    """F103, 2026-09-17: check 32's citation-resolution sweep must skip the same
+    generated-contract tier check 36 skips, read from the identical
+    `_docid.sweep_exclusion_reason` rather than a private re-typing — `_id_scope_documents`
+    itself still reaches these files (check 30's F83 exemption bookkeeping needs to), so
+    the exclusion belongs at the point each check decides what is fatal, not in the scope
+    function. A same-shaped citation OUTSIDE the tier is the positive control: it must
+    still fail, proving the exclusion is scoped to the tier, not to "any unresolvable id".
+    """
+    index_path = tmp_path / "docs" / "INDEX.md"
+    index_path.parent.mkdir(parents=True)
+    index_path.write_text("no real ids here\n", encoding="utf-8")
+
+    contract = tmp_path / "docs" / "contracts" / "openapi" / "generated.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text('{"description": "see PL-09999"}\n', encoding="utf-8")
+
+    control = tmp_path / "docs" / "notes" / "0099-unrelated.md"
+    control.parent.mkdir(parents=True)
+    control.write_text("see PL-09999\n", encoding="utf-8")
+
+    monkeypatch.setattr(audit, "REPO", tmp_path)
+    monkeypatch.setattr(audit, "ROOT", tmp_path / "docs")
+    monkeypatch.setattr(audit, "_ID_SCOPE_ROOTS", (contract, control))
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_citations()
+    assert audit.failures == [
+        "check 32: docs/notes/0099-unrelated.md:1: PL-9999 does not resolve in docs/INDEX.md"
+    ], audit.failures
+
+
 def test_legacy_form_disclosure_reason_reads_the_shared_never_allocated_predicate(
     audit: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
