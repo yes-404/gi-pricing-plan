@@ -4856,7 +4856,16 @@ _REFERENCE_CLAUDE_DIR_EXCEPTIONS: Final[Mapping[str, str]] = {
         "it as what makes a frozen plan's citation still resolve, which is the job "
         "\u00a75.3 hands to `REDIRECTS.csv` in the same row that removes it. The 18 stubs "
         "are not in \u00a74 step 5's stamp set under any reading. Note the directory holds "
-        "**18** stubs plus the README, not the 19 stubs \u00a75.3 counts"
+        "**18** stubs plus the README, not the 19 stubs \u00a75.3 counts. "
+        "STILL LOAD-BEARING for `migrate()` runs against the fixture corpus and any other "
+        "pre-migration tree (`tests/fixtures/docs-migration/.claude/notes/` still exists,"
+        " frozen at that shape) even though the real ROOT's own `.claude/notes/` is "
+        "correctly gone post-migration -- `test_reference_declared_exceptions_all_carry_"
+        "a_reason_and_name_a_real_file`'s `(ROOT / key).exists()` check is itself a "
+        "'ROOT is already migrated' false negative on this one entry, not a signal this "
+        "declaration is dead; removing it broke `migrate()` on the fixture corpus"
+        " (`test_the_dangling_link_check_reddens_when_the_regeneration_is_removed`,"
+        " confirmed live 2026-09-17)."
     ),
     "settings.json": (
         "RFC-937 §5.3's only change for it is \"hook `statusMessage` citation\", kind "
@@ -7474,6 +7483,14 @@ _README_NEW_FAMILY_PREFIXES: Final[tuple[str, ...]] = ("CR", "RL", "LG")
 _MIGRATION_DIFF_FAMILY_READMES: Final[frozenset[str]] = frozenset(
     set(_README_FAMILY_MOVES)
     | set(_README_FAMILY_MOVES.values())
+    # The pre-migration legacy paths too (docs/adr/README.md etc.): when neither writer
+    # that would carry a relocated README away runs, the surviving file is still at its
+    # OLD path, and the surviving-README rule this set backs (test_the_dangling_link_
+    # check_reddens_when_the_regeneration_is_removed) is stated over that population, not
+    # the new one. `_stamp_regenerated_readmes`, this set's other reader, is unaffected --
+    # a legacy path is never `.is_file()` once a real run's `carry()` has moved it, so it
+    # is skipped there the same as any other already-migrated path.
+    | set(_README_FAMILY_LEGACY_PATHS.values())
     | set(_README_IN_PLACE)
     | {f"docs/{_DOCUMENT_FAMILY_DIR[p]}/README.md" for p in _README_NEW_FAMILY_PREFIXES}
 )
