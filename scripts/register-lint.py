@@ -66,11 +66,28 @@ paths is on disk. A future phase-2 register is in scope from the
 commit that creates it, which means adding its path to `TARGETS` below by hand when that day
 comes — never inferring it from a glob, which would silently reach into `phases/1b` too.
 
+**Residue class 2: the phase-1b merge (RL-1046 check 29, owner W37-10).** The merge above
+is not free of consequence: 11 of the phase-1b rows (Phase column `1b`) never satisfied
+rule 1 or rule 2's grammar — they were never checked, under any rule, before this file's
+own path became the enforced one. This is **not** the per-row exemption line 10 forbids —
+an exemption is a hand-maintained id list (an `F1`, `F2`, ... allowlist) that cannot be
+reproduced by reading the tree; this is a **column predicate read from the row itself**
+(`row.fields[3]`, the Phase cell already on disk) — `phase1b_residue()` below recomputes
+it fresh from `docs/findings/register.md` every run, the same reproducibility RL-910 §2
+demands of everything else in this file. A phase-1b row's grammar defect is counted on
+the residue line exactly like the existing P4 length residue — never a per-row failure —
+but only a row that actually fails one of the three grammar rules is residue; a
+conforming phase-1b row is simply a passing row, counted in neither the residue nor the
+failures. **A defect on a non-phase-1b row is unaffected and still fails**: the predicate
+is the Phase cell, not the finding, so this narrows to exactly the rows RFC-937 §5.2's
+merge newly exposed, nothing wider.
+
 Usage: `python3 scripts/register-lint.py` (exit 1 on any violation), or import
 `lint_register(path)` — used by `scripts/audit-docs.py` check 29 so this ships inside the
 one gate command everyone already runs, without a second gate-command impact-matrix row
-(precedent: checks 25-28). `residue_line(path, rows)` is the P4 residue line; check 29
-prints it as a note (never a failure) so the docs gate carries it too.
+(precedent: checks 25-28). `residue_line(path, rows)` reports both the P4 length residue
+and residue class 2 in the one line check 29 prints as a note (never a failure), so the
+docs gate carries both without a second gate-command line.
 """
 from __future__ import annotations
 
@@ -113,6 +130,13 @@ _PR_OR_SHA_OR_DOC = re.compile(
     r"PR\s*#\d+|`[0-9a-f]{7,40}`|`docs/[^`]+`|`\.claude/[^`]+`", re.IGNORECASE
 )
 _UNOWNED = re.compile(r"\bunowned\b", re.IGNORECASE)
+# The Phase column, index 3 of the 5 (`Finding id, Concerns, Work item, Phase, Decision`)
+# `parse_register` splits every data row into. Residue class 2's predicate reads this
+# cell directly off the row it is judging — never a second, hand-maintained list of
+# finding ids, which is exactly the reproducibility RL-910 §2 requires (a check whose
+# verdict depends on a maintained allowlist cannot be reproduced in a fresh clone).
+_PHASE_FIELD_INDEX = 3
+_PHASE_1B = "1b"
 # A genuine status annotation is markdown-emphasised at the word itself — `*resolved …*`,
 # `**Fixed**`, `***Resolved …***` — never a bare "resolved"/"fixed" occurring in prose about
 # something else (e.g. "resolved separately by PR #355", "rather than fixed because …",
@@ -363,14 +387,30 @@ def check_unowned_decay(row: Row) -> str | None:
     )
 
 
+def _is_phase1b_merge_row(row: Row) -> bool:
+    """True when `row`'s own Phase cell (`row.fields[_PHASE_FIELD_INDEX]`) reads `1b` —
+    residue class 2's predicate (RL-1046 check 29, owner W37-10). Read fresh from the row
+    every call, never from a maintained id list — see the module docstring's "Residue
+    class 2" section for why that distinction is the one RL-910 §2 cares about.
+    """
+    return row.fields[_PHASE_FIELD_INDEX].strip() == _PHASE_1B
+
+
 def lint_register(path: pathlib.Path) -> list[str]:
     rows, problems = parse_register(path)
     failures = list(problems)
     for row in rows:
         for check in (check_decision_grammar, check_resolution_annotation, check_unowned_decay):
             msg = check(row)
-            if msg:
-                failures.append(msg)
+            if msg is None:
+                continue
+            if _is_phase1b_merge_row(row):
+                # Residue class 2 (see `phase1b_residue` and the module docstring):
+                # counted on the residue line, never a failure, and only because this
+                # SPECIFIC row's Phase cell reads `1b` — the identical defect on a row
+                # whose Phase cell reads anything else still appends to `failures` below.
+                continue
+            failures.append(msg)
     return failures
 
 
@@ -424,13 +464,37 @@ def residue(rows: list[Row]) -> tuple[int, int]:
     return over, len(rows)
 
 
+def phase1b_residue(rows: list[Row]) -> tuple[int, int]:
+    """(phase-1b rows that fail a grammar rule, total phase-1b rows) — residue class 2
+    (RL-1046 check 29, owner W37-10). Same shape as `residue()`: never per-row, and the
+    denominator is every row the predicate applies to (a conforming phase-1b row counts
+    toward the total but not toward the defective count — it is not residue, it is
+    simply a passing row).
+    """
+    phase1b_rows = [r for r in rows if _is_phase1b_merge_row(r)]
+    defective = sum(
+        1
+        for r in phase1b_rows
+        if any(
+            check(r) is not None
+            for check in (check_decision_grammar, check_resolution_annotation, check_unowned_decay)
+        )
+    )
+    return defective, len(phase1b_rows)
+
+
 def residue_line(path: pathlib.Path, rows: list[Row]) -> str:
     over, total = residue(rows)
+    p1b_defective, p1b_total = phase1b_residue(rows)
     return (
         f"{path.name}: residue — {over} of {total} row(s) exceed the "
         f"{ROW_LENGTH_THRESHOLD}-character findings-file migration threshold (RL-911). "
         "Not a violation — opportunistic-on-amendment only; this line is what makes that "
-        "claim falsifiable rather than assumed."
+        "claim falsifiable rather than assumed. residue class 2 — "
+        f"{p1b_defective} of {p1b_total} phase-1b row(s) (RFC-937 §5.2 merge) fail a "
+        "grammar rule (RL-1046 check 29, owner W37-10). Not a failure — a column "
+        "predicate read from each row's own Phase cell, recomputed every run, never a "
+        "hand-maintained finding-id list."
     )
 
 

@@ -542,3 +542,102 @@ def test_check_29_note_carries_the_residue_line() -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "residue —" in result.stdout, result.stdout
+
+
+# --- Residue class 2: the phase-1b merge (RL-1046 check 29, owner W37-10) --------------
+
+
+def _table_phase(decision: str, phase: str, finding: str = "X (F999998)") -> str:
+    """One well-formed data row wrapped in a minimal, otherwise-conforming table, with an
+    explicit Phase cell — `_table` above always writes `1` and cannot exercise a
+    predicate keyed on the Phase column reading `1b` specifically.
+    """
+    header = "| Finding id | Concerns | Work item | Phase | Decision |\n|---|---|---|---|---|\n"
+    return header + f"| {finding} | concerns | WK-657 | {phase} | {decision} |\n"
+
+
+_UNGRAMMATICAL_DECISION = "discharged — some note carrying no recognised opening at all"
+
+
+def test_a_defective_phase1b_row_is_residue_not_a_failure(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 1: a Decision cell that would otherwise fail rule 1
+    (`_UNGRAMMATICAL_DECISION` opens with neither the disposition vocabulary, a CLAUDE.md
+    §13 verdict, nor a resolution marker), on a row whose Phase cell reads `1b`, is
+    residue class 2 — `lint_register` returns no failure for it (the `main()`-equivalent
+    outcome: exit 0), and `phase1b_residue` counts it as the one defective row of one
+    phase-1b row total.
+    """
+    content = _table_phase(_UNGRAMMATICAL_DECISION, phase="1b")
+    failures = _lint(tmp_path, content)
+    assert failures == [], failures
+    rows, problems = register_lint.parse_register(tmp_path / "register.md")
+    assert problems == []
+    assert register_lint.phase1b_residue(rows) == (1, 1)
+
+
+def test_the_same_defect_on_a_non_phase1b_row_still_fails(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 2: the identical defective Decision cell, on a row whose Phase
+    cell reads anything else, is unaffected by residue class 2 and still fails rule 1 —
+    the predicate is the Phase cell, not the finding or the defect shape.
+    """
+    content = _table_phase(_UNGRAMMATICAL_DECISION, phase="2")
+    failures = _lint(tmp_path, content)
+    assert len(failures) == 1
+    assert "matches none of" in failures[0]
+
+
+def test_a_conforming_phase1b_row_is_counted_in_neither(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof 3: a phase-1b row with a genuinely well-formed Decision cell is
+    not a lint failure (unsurprising — it conforms) and not residue either (it is not
+    defective, so it must not inflate the residue count the way a bug in `phase1b_residue`
+    counting every phase-1b row rather than only the failing ones would).
+    """
+    content = _table_phase("accept — a clean, conforming decision", phase="1b")
+    failures = _lint(tmp_path, content)
+    assert failures == []
+    rows, problems = register_lint.parse_register(tmp_path / "register.md")
+    assert problems == []
+    assert register_lint.phase1b_residue(rows) == (0, 1)
+
+
+def test_phase1b_residue_predicate_is_the_phase_column_not_an_id_list() -> None:
+    """`_is_phase1b_merge_row` must read `row.fields[_PHASE_FIELD_INDEX]` — a column
+    already on disk — never a hand-maintained finding-id set: the reproducibility RL-910
+    §2 requires (a check whose verdict depends on a maintained allowlist cannot be
+    reproduced in a fresh clone). Proven by construction rather than by inspection: a row
+    carrying a phase-1b-only finding id text but a *different* Phase cell must not be
+    treated as phase-1b, and a row carrying an ordinary finding id but Phase `1b` must be.
+    """
+    non_1b_phase_row = register_lint.Row(
+        "resolved 2026-08-27 (#280) — the strings no longer assert minor units (F1)",
+        ["F1", "concerns", "WK-664", "2", "resolved 2026-08-27 (#280) — no ref"],
+        1, "raw",
+    )
+    assert not register_lint._is_phase1b_merge_row(non_1b_phase_row)
+    ordinary_id_phase1b_row = register_lint.Row(
+        "Some ordinary finding",
+        ["Some ordinary finding", "concerns", "WK-664", "1b", "accept — fine"],
+        1, "raw",
+    )
+    assert register_lint._is_phase1b_merge_row(ordinary_id_phase1b_row)
+
+
+def test_phase1b_residue_count_matches_check_29s_own_count() -> None:
+    """Cross-check between `register-lint.py`'s two consumers: a direct import
+    (`register_lint.phase1b_residue`, what this suite uses throughout) and the subprocess
+    `scripts/audit-docs.py` actually runs in CI (check 29, via `residue_line`). Both read
+    the identical live register, so the defective count either both report must agree —
+    no literal count on either side, so this holds regardless of how the register grows.
+    """
+    rows, problems = register_lint.parse_register(REGISTER)
+    assert problems == []
+    defective, _total = register_lint.phase1b_residue(rows)
+    result = subprocess.run(
+        ["python3", str(AUDIT_SCRIPT)], capture_output=True, text=True, cwd=ROOT
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    check_29_line = next(
+        line for line in result.stdout.splitlines() if line.strip().startswith("check 29:")
+        and "residue class 2" in line
+    )
+    assert f"{defective} of" in check_29_line, check_29_line
