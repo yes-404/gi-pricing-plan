@@ -1612,13 +1612,33 @@ def test_f83_register_reds_naming_an_unstampable_file_it_does_not_list(
     """F83's falsifiable clause, verbatim: "an unstamped in-scope file absent from the
     exempt list must red". Proven by dropping a real entry rather than by planting a
     file, so the file the check names is one that genuinely exists in this tree.
+
+    **Two messages, not one** (found W37-6, 2026-09-17, pre-existing on 0b8d200 before
+    any of this branch's own commits — measured directly against a copy of the
+    unmodified tool). `gi-pricing.yaml` is non-markdown, so dropping its entry violates
+    F83 condition 1 (`_check_unstampable_register`: "cannot carry a header … not
+    registered") AND condition 2 (`_check_scope_unstamped_are_registered`:
+    `_docid.parse_header` returns `None` for a file with no `---` first line, so it is
+    also "unstamped in scope … not registered") simultaneously — F87's widening of
+    `_id_scope_documents` is what lets condition 2 reach a non-markdown file at all,
+    which it could not before. Both facts are true and both name their own remedy
+    ("make the file stampable" vs. "stamp it"), so both messages are asserted, the same
+    shape `test_f83_register_names_both_sides_when_the_two_totals_cancel` already uses
+    for two simultaneous, independently-caused messages.
     """
     dropped = "docs/contracts/openapi/gi-pricing.yaml"
     setattr(audit, "UNSTAMPABLE_EXEMPTIONS", _register_without(audit, dropped))  # noqa: B010
     failures = _run_check_35(audit)
-    assert len(failures) == 1, failures
-    assert dropped in failures[0]
-    assert "not in the F83 exemption register" in failures[0]
+    assert len(failures) == 2, failures
+    assert any(
+        dropped in f and "cannot carry a header" in f and "not in the F83 exemption "
+        "register" in f
+        for f in failures
+    ), failures
+    assert any(
+        dropped in f and "in the checks-30-39 scope with no parseable header" in f
+        for f in failures
+    ), failures
 
 
 def test_f83_register_reds_on_an_entry_for_a_file_that_can_carry_a_header(
@@ -1657,8 +1677,24 @@ def test_f83_register_names_both_sides_when_the_two_totals_cancel(
     setattr(audit, "UNSTAMPABLE_EXEMPTIONS", mutated)  # noqa: B010
 
     failures = _run_check_35(audit)
-    assert len(failures) == 2, failures
-    assert any(dropped in f and "not in the F83 exemption register" in f for f in failures)
+    # Three messages, not two (same cause as test_f83_register_reds_naming_an_
+    # unstampable_file_it_does_not_list, found the same day): `delivery-process.core.json`
+    # is non-markdown, so dropping its entry fires BOTH F83 sub-checks (condition 1 and
+    # condition 2), on top of the bogus `docs/contracts/README.md` entry's own single
+    # "CAN carry a header" message (condition 1 only — README.md is markdown, so
+    # condition 2's `parse_header` sees a real, if unstamped-for-RFC-937, front-matter
+    # block and does not independently flag it — check 30's own docstring already
+    # distinguishes "no front matter" from "front matter present but not RFC-937 shaped").
+    assert len(failures) == 3, failures
+    assert any(
+        dropped in f and "cannot carry a header" in f and "not in the F83 exemption "
+        "register" in f
+        for f in failures
+    ), failures
+    assert any(
+        dropped in f and "in the checks-30-39 scope with no parseable header" in f
+        for f in failures
+    ), failures
     assert any("docs/contracts/README.md" in f and "CAN carry a header" in f for f in failures)
 
 
