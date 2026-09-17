@@ -6057,7 +6057,7 @@ def test_cmd_migrate_prints_the_deferred_reference_stamps_by_name(
 
 
 def test_exactly_one_discovery_writer_claims_the_closure_readmes(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Every F84 test above selects with `_discover_audit_closure_readmes`. **That is a
     claim about scope wearing setup's clothes**, so it is derived here rather than assumed:
@@ -6087,9 +6087,9 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
     of surfacing for the first time inside the irreversible run.
     """
     in_scope = {
-        p.relative_to(ROOT).as_posix()
+        p.relative_to(pre_migration_root).as_posix()
         for rel_dir in doc_id_cli._AUDIT_CLOSURE_README_DIRS
-        for p in (ROOT / rel_dir).rglob("*")
+        for p in (pre_migration_root / rel_dir).rglob("*")
         if p.is_file()
     }
     assert in_scope, "no corpus to test against"
@@ -6102,7 +6102,7 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
         if name == "_discover_headed_split_file":
             continue  # a parameterised helper, called by the writers above, not one itself
         try:
-            produced = getattr(doc_id_cli, name)(ROOT)
+            produced = getattr(doc_id_cli, name)(pre_migration_root)
         except doc_id_cli._docid.HeaderError:
             raised.append(name)
             continue
