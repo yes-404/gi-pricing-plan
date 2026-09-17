@@ -4666,7 +4666,7 @@ def _naive_leading_work_ids(text: str) -> list[str]:
 
 
 def test_roadmap_census_matches_an_independently_derived_row_count_on_the_real_tree(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """The positive control the real corpus already supplies (W37-6 outstanding
     obligations row 2): before this fix, `_discover_roadmap` found nothing at all against
@@ -4675,14 +4675,14 @@ def test_roadmap_census_matches_an_independently_derived_row_count_on_the_real_t
     row a wholly independent re-derivation also finds — a property that holds regardless
     of how many rows the file carries on the day this runs, unlike a hard-coded count.
     """
-    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    text = (pre_migration_root / "docs" / "roadmap.md").read_text(encoding="utf-8")
     occurrences = doc_id_cli._scan_roadmap_rows(text)
     assert sorted(o.work_id for o in occurrences) == sorted(_naive_leading_work_ids(text))
     assert len(occurrences) > 1  # non-vacuous
 
 
 def test_discover_roadmap_converts_every_real_id_with_none_left_over(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Rulings 90-92: every distinct id the census finds becomes exactly one `WK-` draft
     — the property Ruling 90 acceptance states directly ("41 work ids in, 41 WK- rows
@@ -4690,26 +4690,26 @@ def test_discover_roadmap_converts_every_real_id_with_none_left_over(
     against the independently-derived id set above, never a hard-coded "41", so a future
     edit to `docs/roadmap.md` cannot make this test stale by adding or closing a work.
     """
-    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    text = (pre_migration_root / "docs" / "roadmap.md").read_text(encoding="utf-8")
     expected_ids = set(_naive_leading_work_ids(text))
-    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(ROOT)
+    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(pre_migration_root)
     assert {d.old_token for d in drafts} == expected_ids
     assert len(drafts) == len(expected_ids)  # no id produced twice
     assert set(phase_titles) >= {d.phase[1:] for d in drafts if d.phase}
     assert occurrences  # the full census is returned too, for the restructure below
 
 
-def _copy_roadmap_and_templates(dest: pathlib.Path) -> None:
+def _copy_roadmap_and_templates(dest: pathlib.Path, root: pathlib.Path = ROOT) -> None:
     dest_docs = dest / "docs"
     dest_docs.mkdir(parents=True, exist_ok=True)
     (dest_docs / "roadmap.md").write_text(
-        (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8"), encoding="utf-8"
+        (root / "docs" / "roadmap.md").read_text(encoding="utf-8"), encoding="utf-8"
     )
     templates_dir = dest_docs / "_templates"
     templates_dir.mkdir()
     for name in ("WK.md", "SL.md"):
         (templates_dir / name).write_text(
-            (ROOT / "docs" / "_templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+            (root / "docs" / "_templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
         )
 
 
@@ -4754,7 +4754,7 @@ def test_restructure_roadmap_preserves_the_narrative_on_the_real_tree(
 
 
 def test_restructure_roadmap_is_readable_by_doc_index_on_the_real_tree(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path,
 ) -> None:
     """Round-trip validation against the real corpus, the same property
     `test_roadmap_restructure_is_readable_by_doc_index` proves on the fixture: the output
@@ -4762,7 +4762,7 @@ def test_restructure_roadmap_is_readable_by_doc_index_on_the_real_tree(
     work population `_discover_roadmap` computed — a property, so a future edit changing
     which ids exist does not make this assertion stale the way a hard-coded count would.
     """
-    _copy_roadmap_and_templates(tmp_path)
+    _copy_roadmap_and_templates(tmp_path, pre_migration_root)
     drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(tmp_path)
     for i, d in enumerate(drafts):
         d.number = 9000 + i
@@ -4781,13 +4781,13 @@ def test_restructure_roadmap_is_readable_by_doc_index_on_the_real_tree(
 
 
 def test_w6_retires_naming_its_successors_on_the_real_tree(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 92's acceptance items directly: `W6`'s migrated row is `status: retired`
     (never dropped — it is a live dependency target, `W7`'s `Depends on` cell names it)
     and its body names `W6a` and `W6b` as the works its scope was re-cut into.
     """
-    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(ROOT)
+    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(pre_migration_root)
     w6 = next(d for d in drafts if d.old_token == "W6")
     assert w6.status == "retired"
     assert "W6a" in w6.body
@@ -4795,7 +4795,7 @@ def test_w6_retires_naming_its_successors_on_the_real_tree(
 
 
 def test_w5s_three_source_rows_all_survive_the_merge_on_the_real_tree(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 91's own worked example, on the real tree rather than a reproduction of it:
     `W5` heads three rows — a status-table pointer, a delivery breakdown, and a
@@ -4803,7 +4803,7 @@ def test_w5s_three_source_rows_all_survive_the_merge_on_the_real_tree(
     drops the rest. Each fragment quoted here is frozen, dated, already-closed-workstream
     prose that does not change as the roadmap grows elsewhere.
     """
-    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(ROOT)
+    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(pre_migration_root)
     w5 = next(d for d in drafts if d.old_token == "W5")
     assert w5.status == "closed"
     for fragment in (
@@ -4815,7 +4815,7 @@ def test_w5s_three_source_rows_all_survive_the_merge_on_the_real_tree(
 
 
 def test_register_discovery_matches_every_row_register_lint_itself_declares(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """The positive control the real corpus already supplies (W37-6 outstanding
     obligations row 3): before this fix, `_discover_register` matched none of the real
@@ -4823,9 +4823,18 @@ def test_register_discovery_matches_every_row_register_lint_itself_declares(
     real cell is compound). After it, every data row `register-lint.py`'s own
     `parse_register` returns must be recognised — a property immune to the register
     growing a 74th row tomorrow, unlike a hard-coded "73".
+
+    `_discover_register` only ever reads the legacy `docs/audit/register.md` path (its own
+    docstring: "a second run ... finds nothing there"), which the migration has since
+    moved to `docs/findings/register.md` -- so both the register file and the discovery
+    call are read from `pre_migration_root`, the last tree where that legacy path exists.
+    `register_lint.parse_register` itself is content-addressed by the `path` argument, not
+    by `register_lint.TARGETS` (fixed to *this* checkout's own `scripts/`, per
+    `_load_register_lint`'s docstring), so pointing `path` at the pre-migration file is
+    the only change needed.
     """
     register_lint = doc_id_cli._load_register_lint()
-    path = register_lint.TARGETS[0]
+    path = pre_migration_root / "docs" / "audit" / "register.md"
     rows, problems = register_lint.parse_register(path)
     assert not problems  # no structurally malformed row on the real tree today
     assert len(rows) > 1  # non-vacuous
@@ -4836,7 +4845,7 @@ def test_register_discovery_matches_every_row_register_lint_itself_declares(
     ]
     assert not unmatched, f"finding-id cell(s) with no recognised id: {unmatched}"
 
-    drafts = doc_id_cli._discover_register(ROOT)
+    drafts = doc_id_cli._discover_register(pre_migration_root)
     assert len(drafts) == len(rows)
     old_tokens = [d.old_token for d in drafts]
     assert len(set(old_tokens)) == len(old_tokens)  # every id discovered exactly once
