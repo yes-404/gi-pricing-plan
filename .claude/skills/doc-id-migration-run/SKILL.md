@@ -62,8 +62,14 @@ Commit 1's tree id.
 
 ### 1. Original (already in the repo — Commit 1's tree)
 
-The tree id of Commit 1 at the control ref is fixed and pasted in documentation. For 
-example, if Commit 1 is `039fe8b0…`, that tree id is the target.
+**Never paste a tree id as the target value** (§13: a shipped constant is cited by symbol
+or by where it is read from, never pasted). Read Commit 1's tree id from the squash
+commit's own message (`git log -1 --format=%B <squash-sha>` — the "Commit 1 —" section
+names it) or from the W37-6 ledger's merge entry
+(`docs/plans/PL-01058-w37-6-migration-run-ledger.md`); it is *not* the squash commit's own
+`^{tree}` (that is the final merged content tree, a different thing from the migration
+tool's own reproduction tree recorded inside the message). The run 2 base landed as
+`71f5a22`; its own message is the current source for that tree id, not this file.
 
 ### 2. Fresh materialisation (after tool fixes)
 
@@ -76,14 +82,19 @@ git worktree add --detach ~/.claude/worktrees/w37-repro-commit1 \
 # (tool is copied or imported from the branch, tree is unmigrated)
 cd ~/.claude/worktrees/w37-repro-commit1
 python3 <branch-path>/scripts/doc-id.py migrate --repo-root . \
-    --ref fbb5555b45f9b22ef8bc5571865ee8d9a86b62e8 \
-    --what w37_6_reproduce_commit1 --tree fbb5555b45f9…
+    --ref fbb5555b45f9b22ef8bc5571865ee8d9a86b62e8
 
 # Capture the tree hash
 git add -A
 T_PRIME=$(git write-tree)
 echo "T′ = $T_PRIME"
 ```
+
+`migrate`'s real flags (`python3 scripts/doc-id.py migrate --help` on `main`): `--verify
+[SNAPSHOT]`, `--ref REF`, `--keep`, `--no-baseline`, `--repo-root REPO_ROOT`. `--what`,
+`--by`, `--tree` and `--ttl-seconds` are `write_runtime_state.py announce`'s flags (the
+"Before the run" section above), not `migrate`'s — passing them to `migrate` is an
+argparse error.
 
 ### 3. Comparison
 
@@ -94,22 +105,20 @@ echo "T′ = $T_PRIME"
 
 ## Legacy-form-spec constants — what stays unmigrated
 
-Certain constants in `scripts/doc-id.py` and `scripts/_docid.py` are *specifications* of 
-legacy forms the tool must recognise, not citations to rewrite. They are marked with a 
-trailing comment (`# rfc-937: legacy-form-spec`) and excluded from the write set. Examples:
-
-- `_ROADMAP_RETIRED_WORK_IDS` (lookup table by pre-migration work id)
-- `_ROADMAP_RETIRED_SUCCESSORS` (what W6 was split into: `{"W6": ("W6a", "W6b")}`)
-- `_README_FAMILY_MOVES` (old paths as keys for the family README carry)
-- `_REFERENCE_CLAUDE_DIR_EXCEPTIONS` (carve-out registry keyed by pre-migration path)
-- `_FINDING_EXTRA_ESSAY_LOCATIONS` (lookup keyed by pre-migration finding id)
+Certain constants in `scripts/doc-id.py` are *specifications* of legacy forms the tool
+must recognise, not citations to rewrite. A standalone `# rfc-937: legacy-form-spec`
+marker line protects exactly the physical line right after it, and excludes that one line
+from the write set (`_legacy_form_spec_spans`'s own docstring). **Which constants carry
+the marker is not stable prose to enumerate here** — it changes as the tool changes; read
+it fresh with `grep -n 'rfc-937: legacy-form-spec' scripts/doc-id.py` (42 lines at
+`71f5a22`) rather than trusting a pasted list.
 
 When fixing one of these constants, **restore it to fbb5555 text verbatim** (via `git show 
 fbb5555:scripts/doc-id.py`) rather than hand-typing. The mechanism enforcing this is:
 
-1. **Mechanism:** `scripts/_docid.py`'s `_rewrite_citations()` honours a line-level marker 
-   `# rfc-937: legacy-form-spec` on any constant, excluding that constant's value from 
-   rewrite.
+1. **Mechanism:** `scripts/doc-id.py`'s `_rewrite_citations()` calls `_legacy_form_spec_spans()`
+   (both defined in `doc-id.py`, not `_docid.py`) to compute the protected line spans, and
+   excludes them from rewrite.
 
 2. **Broken-input proof:** a marked line carrying `W6` is not rewritten by migrate; the same 
    literal unmarked is (run on a test file with one marked and one unmarked copy of the 
@@ -136,7 +145,7 @@ sentinel h1-check36 row moved 904 → 1088 hits when the census record's check-3
 relocated — a **transfer**, not new residue the sweep newly found (verify: old ceiling +
 the moved file's own hit count == the new ceiling, never assume the delta is growth).
 
-## Two proof scripts (AST-level verification)
+## Five proof scripts (AST-level verification)
 
 Five small AST-diffing scripts live in this skill's own `scripts/` directory (copied
 2026-09-17 from `~/gi-pricing-plan.local/handover/`, kept as written apart from ruff
@@ -196,7 +205,10 @@ uv run python scripts/generate-contracts.py --check  # fails if committed != gen
 ## Never run migrate over a root carrying a synced venv
 
 Never run `doc-id.py migrate --repo-root <root>` over a root carrying a synced `.venv/`
-(or any gitignored build dir); wrappers refuse by name (`[ -d "$RP/.venv" ] && exit 97`).
+(or any gitignored build dir). **This is a rule a wrapper around the tool must implement,
+not a description of a mechanism already in this repo's own wrappers** — no repo wrapper
+carries it today; the guard form to write is `[ -d "$RP/.venv" ] && exit 97` (the handover
+scripts that hit the incident below were local, ad hoc, and had no such guard).
 
 Why: on 2026-09-17 a T′ run over `w37-6-fbb5555-unmigrated` rewrote `certifi/cacert.pem`
 (`W2` → `WK-658` inside a base64 block) and two hypothesis modules (`notes/` → `rfcs/` in a
@@ -223,43 +235,50 @@ Why: run 35261236904 exited 3 with nine phantom fatal rows by migrating a migrat
 
 Verified: 2026-09-17
 
-## Verify from the unmigrated control tree, never the migrated root
+## Verify: the two proven forms, and the one measured trap
 
-When running `migrate --verify` for the record, use:
+**Two forms are proven correct**, both because `--verify`'s own contract builds a
+disposable snapshot rather than reading the invoking checkout (`migrate --help`:
+"SNAPSHOT is a new or empty directory outside any git work tree ... Refuses a real
+checkout"):
 
 ```bash
-# CORRECT: the control tree is unmigrated, tool is main's at that ref
+# 1. Unmigrated control ref, from a pristine worktree at that ref:
 git worktree add --detach ~/.claude/worktrees/verify-fbb5555 fbb5555b45f9…
 cd ~/.claude/worktrees/verify-fbb5555
 python3 scripts/doc-id.py migrate --verify --keep --ref fbb5555b45f9…
 
-# WRONG: the current worktree is migrated, repo_root already has REDIRECTS.csv
-# This produces false "regressions" (74 phantom paths, see W37-6 13:33:21)
-# Never do this:
-cd <migrated-worktree>
-python3 scripts/doc-id.py migrate --verify --keep --ref fbb5555b45f9…
+# 2. Migrated checkout, verifying against the recorded base (the CI form above):
+python3 scripts/doc-id.py migrate --verify <dir outside any git tree> \
+    --ref <meta.verified_against_tree>
 ```
 
-The tool's `_docid.sweep_exclusion_reason` uses `REDIRECTS.csv` to re-key citations; 
-running from a migrated root means the csv already exists and the re-keying resolves against 
-an already-migrated file tree, inflating the residue. The record re-derivation command from 
-PR #780 is the form to follow: run from the control tree with no REDIRECTS.csv.
+**The one measured trap:** `cd`ing into an actual migrated checkout (a real repo
+directory, `REDIRECTS.csv` already on disk) and running `migrate --verify --keep --ref
+fbb5555b45f9…` from inside it measured 74 phantom "regression" rows (13:15:56 BST, see
+Measured incidents below) against the same run's 0 from a pristine unmigrated worktree.
+**The mechanism is not established** — `_docid.sweep_exclusion_reason` does not mention
+`REDIRECTS.csv` at all (grep it: 0 hits), so "re-keying against REDIRECTS.csv" is not a
+supported explanation; do not repeat it. Treat the symptom as measured and avoid the
+form: use one of the two proven forms above instead of `cd`ing into a real checkout.
 
 ## Measured incidents from W37-6
 
-- **14:09:57 BST:** 74 constants in commit 1 were tool-behaviour specifications (W6 → WK-662, 
-  the family README carry logic), not citations. The migration rewrote them, making the 
+- **14:09:57 BST:** the `W6 → WK-662` family-README carry logic constants in commit 1 were
+  tool-behaviour specifications, not citations. The migration rewrote them, making the 
   shipped tool unable to read the pre-migration corpus. Fixed by marking those constants 
   with `# rfc-937: legacy-form-spec` and excluding them from the write set. Test proof: 
   `test_w6_retires_naming_its_successors_on_the_real_tree` passes with main's tool on the 
   pre-migration tree, fails with the migrated tool on the same tree, passes again after the 
-  fix.
+  fix. This is one incident within the larger classification: `71f5a22`'s own squash
+  message records 181 self-migrated string constants (107 docstring, 74 non-docstring)
+  across a 45-row table, 10 restored and marked, 35 left as prose — read that message for
+  the full table, never a pasted subset here.
 
 - **13:15:56 BST:** verify run from migrated worktree (w37-6-final-m1) reported 74 
   "regressions"; same run from unmigrated worktree reported 0, matching the original record. 
-  The root's `REDIRECTS.csv` is already present, so re-keying resolves migrations that were 
-  already applied, inflating the count. Class: instrument entangled with its subject. Always 
-  verify from a pristine tree at the control ref.
+  Class: instrument entangled with its subject — see "Verify: the two proven forms" above
+  for the two correct forms and why the cause of this specific trap is not established.
 
 - **12:43:44 BST:** E2's family-README fix (`_README_FAMILY_MOVES` not using new path as its 
   own source) changed `migrate()` output. Reproduction run at 14:14:06 confirmed T′ ≠ 
@@ -269,7 +288,7 @@ PR #780 is the form to follow: run from the control tree with no REDIRECTS.csv.
 
 ## Verified
 
-589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17, W37-6 closure)
+Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 Tested in production: W37-6 executive summary at 14:31:04 BST, all measurements run with the 
 forms above, result is the leading basis for commit-1 re-derivation and the 103-node 

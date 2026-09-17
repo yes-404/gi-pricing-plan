@@ -874,9 +874,10 @@ EXTERNAL_API_ENDPOINT = "https://example.com/v1/very/long/path/that/is/part/of/t
 (12:06:37 BST ruling, 12:47:01 BST verification). All three patterns written as procedure 
 based on measured incidents from the test-fix stream (to-lead.md entries with measurements 
 and fixture listings). The pre_migration_root pattern is implemented in commit 073f7e0 and 
-used through 87fcfb4. Verified against the working test suite on origin/w37-6-h1-checks-31-32-36.
+used through 87fcfb4 (branch history that landed). Verified against the fixture as it
+exists at `71f5a22` — `pre_migration_root` in `tests/test_doc_id_migrate.py`.
 
-Verified: 589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17 W37-6 closure)
+Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 ## Verified
 

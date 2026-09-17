@@ -111,4 +111,4 @@ didn't edit the test, edited the tool. Reference: #782,
 `docs/plans/PL-01058-w37-6-migration-run-ledger.md` (to-lead.md 14:05:40, escalation 2
 measurement).
 
-Verified: 589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17 W37-6 closure)
+Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63

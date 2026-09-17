@@ -128,4 +128,4 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md Â
    record their response in the handover. Reference: 13:30:31 (ESCALATION entry, 
    dispatcher alarm rather than executor kill).
 
-Verified: 589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17 W37-6 closure)
+Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63

@@ -727,29 +727,31 @@ minutes each.** Three traps found in W37-6 (to-lead.md entries 10:55, 11:02:41, 
 
 1. **Tool-call timeout kills pytest mid-run with no summary.** A full `uv run pytest -q` 
    invoked inside a Bash tool call dies silently when the tool timeout (10 min) arrives. The 
-   suite collects 2,347 tests, routinely runs 11+ minutes — the timeout cuts it off 
-   mid-execution, mid-worker-pool, leaving no `N passed / M failed` summary. Never invoke 
-   the full suite directly from a Bash tool call. Use the `flock` gate wrapper (foreground 
-   blocking, returns when done) or background it with `run_in_background` for a notification 
-   when it finishes.
+   suite's collected-test count drifts as tests are added — read it fresh with `uv run 
+   pytest --collect-only -q | tail -1` rather than pasting a figure here — and routinely 
+   runs 11+ minutes, so the timeout cuts it off mid-execution, mid-worker-pool, leaving no 
+   `N passed / M failed` summary. Never invoke the full suite directly from a Bash tool call. 
+   Use the `flock` gate wrapper (foreground blocking, returns when done) or background it 
+   with `run_in_background` for a notification when it finishes.
 
 2. **Gate script's frontend block runs from wrong cwd.** The frontend `pnpm` commands 
    (`pnpm install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test`, 
    `build`) must run with `--dir frontend` or from inside `frontend/`. A gate block that 
    sourced the gate script from the root's cwd, then tried to run `pnpm …` directly (without 
    `--dir`), silently did nothing — no build, no error, exit 0. Measured W37-6 11:02:41 BST: 
-   git workflow changed to run from root only, `pnpm --dir frontend` is the only form now, 
-   and compliance is checked externally (the gate runner verifies cwd before every pnpm 
-   invocation).
+   git workflow changed to run from root only, `pnpm --dir frontend` is the only form now.
 
-3. **`mktemp -d` result dirs collide under concurrency.** When three gate slots run 
-   simultaneously, all three call `mktemp -d` at the same epoch second, and on tmpfs or a 
-   slow disk the three pids might get the same random suffix (`/tmp/tmp.XXXXXXXX`) — result 
-   is the same dir object, three processes truncating each other's working directory. Use 
-   `mktemp -d` once per gate slot, reuse the same dir inside the body, and delete it 
-   explicitly at the end (do not rely on auto-cleanup); or use `$TMPDIR` with a slot-specific 
-   prefix if the infrastructure already provides it (`$GIP_GATE_SLOT` for this project — its 
-   value is the flock path, convert `/tmp/slots/gate-N` to `GIP_GATE_TMPDIR=/tmp/gate-$N`).
+3. **`mktemp -d` result dirs measured with identical inodes under concurrency.** When three 
+   gate slots ran simultaneously, `ls -i` on two slots' `mktemp -d` results showed the same 
+   inode — two processes sharing one working directory and truncating each other's output. 
+   The symptom is measured; the cause is not established (`mktemp -d`'s own contract is an 
+   atomic, exclusive create, so a same-second collision on the random suffix is not a 
+   mechanism this note can stand behind — do not repeat it as an explanation). The rule 
+   holds regardless of cause: use `mktemp -d` once per gate slot, reuse the same dir inside 
+   the body, and delete it explicitly at the end (do not rely on auto-cleanup); or use 
+   `$TMPDIR` with a slot-specific prefix if the infrastructure already provides it 
+   (`$GIP_GATE_SLOT` for this project — its value is the flock path, convert 
+   `/tmp/slots/gate-N` to `GIP_GATE_TMPDIR=/tmp/gate-$N`).
 
 Each trap is measured, not presumed: (1) confirmed by running a gate with the timeout 
 diagnostic enabled mid-pytest; (2) by git-logging when the build output vanished; (3) by 
@@ -789,7 +791,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17 W37-6 closure)
+Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
 capturing its own exit code, ending in a per-stage table and a `GATE:` verdict line. Three
