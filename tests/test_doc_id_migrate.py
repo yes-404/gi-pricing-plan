@@ -6584,7 +6584,11 @@ def test_every_section_5_2_readme_row_lands_where_its_row_says(
     `findings/` and `closures/` READMEs"; `workflows/` and `plans/` keep theirs.
     """
     doc_id_cli.migrate(pristine_a)
-    for old_rel, new_rel in doc_id_cli._README_FAMILY_MOVES.items():
+    # `_README_FAMILY_MOVES` is keyed identity-style by the NEW path alone (it doubles as
+    # the routed/stamped population, per its own module docstring) -- the true old-path ->
+    # new-path pairing for this row-by-row check is `_README_FAMILY_LEGACY_PATHS`, keyed
+    # new -> old.
+    for new_rel, old_rel in doc_id_cli._README_FAMILY_LEGACY_PATHS.items():
         assert not (pristine_a / old_rel).exists(), old_rel
         assert (pristine_a / new_rel).is_file(), new_rel
     for rel in doc_id_cli._README_IN_PLACE:
@@ -7099,7 +7103,10 @@ def test_cmd_migrate_prints_both_split_citation_counts_including_the_zero(
     doc_id_cli._cmd_migrate(argparse.Namespace(repo_root=pristine_a))
     err = capsys.readouterr().err
     assert "0 citation(s) of a split source left unrewritten" in err
-    assert "resolved to their family index section (Ruling 101 clause 1)" in err
+    # RL-1042 is the migrated id form of what was once cited as "Ruling 101" -- the
+    # shipped string at scripts/doc-id.py's `_cmd_migrate` (the print building
+    # `result.index_resolved_split_citations`'s summary line) names the clause this way.
+    assert "resolved to their family index section (RL-1042 clause 1)" in err
     assert "0 citation(s) resolved to a family index section that is missing" in err
 
 
