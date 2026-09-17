@@ -93,7 +93,12 @@ def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
 # pre-migration, `docs/findings/register.md` after it (RFC-937 §5.2 merges the excluded
 # phase-1b register into this one) — resolved by what is on disk, same as
 # `scripts/audit-docs.py`'s `REGISTER`.
-TARGETS = [_first_file(REPO / "docs" / "audit" / "register.md", REPO / "docs" / "findings" / "register.md")]
+TARGETS = [
+    _first_file(
+        REPO / "docs" / "audit" / "register.md",
+        REPO / "docs" / "findings" / "register.md",
+    )
+]
 
 DISPOSITIONS = ("fix before close", "accept", "carry forward", "split verdict")
 # CLAUDE.md §13's four verdicts — binding, may not be linted away (RL-910 §2).

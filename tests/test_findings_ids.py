@@ -53,7 +53,10 @@ def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
 
 # `docs/audit/register.md` pre-migration, `docs/findings/register.md` after it (RFC-937
 # §5.2) — same resolution as `scripts/register-lint.py`'s own `TARGETS[0]`.
-REGISTER = _first_file(ROOT / "docs" / "audit" / "register.md", ROOT / "docs" / "findings" / "register.md")
+REGISTER = _first_file(
+    ROOT / "docs" / "audit" / "register.md",
+    ROOT / "docs" / "findings" / "register.md",
+)
 
 _FILE_ID = re.compile(r"^F\d+$")
 _HEADING_ID = re.compile(r"^#\s+(F\d+)\b")

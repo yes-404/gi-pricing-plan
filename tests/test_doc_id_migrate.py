@@ -4314,7 +4314,8 @@ def test_a_series_is_discovered_from_the_real_source_with_ruling_86s_fields(
     each carrying `was:` the adoption file's path and its old token."* `owner:` is
     `decision-maker` per Ruling 95, which struck Ruling 86 §3 item 2's departure.
     """
-    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(pre_migration_root)  # must not raise
+    # must not raise
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(pre_migration_root)
     drafts = [
         d for d in doc_id_cli._discover_lettered_rulings(pre_migration_root)
         if d.was == _A_SERIES_SOURCE

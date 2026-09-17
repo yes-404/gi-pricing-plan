@@ -72,14 +72,16 @@ def test_a_finding_resolved_only_by_a_closure_record_is_not_flagged() -> None:
     Pinned against the real tree rather than a synthetic fixture deliberately: this is the
     actual case that exposed the design gap, so it is the one case that must never regress.
     """
-    closure_record = ROOT / "docs" / "closures" / "CR-00837-work-item-record-w9-3-bundle-compilation.md"
+    closure_record = (
+        ROOT / "docs" / "closures" / "CR-00837-work-item-record-w9-3-bundle-compilation.md"
+    )
     assert "F-W9-3-2" in closure_record.read_text(encoding="utf-8"), (
         "the real-world case this test pins has moved or been renamed -- "
         "re-derive against the current closure record before trusting this test"
     )
     citing_file = (
-        ROOT / "docs" / "rulings"
-        / "RL-00879-03-5-2-s-money-block-the-code-is-right-and-the-spec-is-stale-in-more-places-than-f-w11-1-5-reports.md"
+        ROOT / "docs" / "rulings" /
+        "RL-00879-03-5-2-s-money-block-the-code-is-right-and-the-spec-is-stale-in-more-places-than-f-w11-1-5-reports.md"
     )
     assert "F-W9-3-2" in citing_file.read_text(encoding="utf-8"), (
         "the citation this test pins has moved -- re-derive before trusting this test"
