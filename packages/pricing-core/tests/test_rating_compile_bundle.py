@@ -191,7 +191,8 @@ async def test_a_rate_table_pin_compiles_regardless_of_status() -> None:
 
 @pytest.mark.req("FR-240")
 async def test_a_rating_algorithm_pin_compiles_regardless_of_status() -> None:
-    """RL-859 (`docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md`): `rating_algorithm`
+    """RL-859 (`docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md`):
+    `rating_algorithm`
     is exempt from the FR-20 floor for the same shape of reason RL-856 exempted
     `rate_table` — `RatingAlgorithmRow` has no status column to read a real maturity from
     (`test_rating_algorithm_row_has_no_status_column`,

@@ -1,4 +1,5 @@
-"""Groupings against levels whose true structure is known (`02` FR-104, FR-105, FR-107, FR-108, FR-109).
+"""Groupings against levels whose true structure is known (`02` FR-104, FR-105, FR-107, FR-108,
+FR-109).
 
 The book below has twenty observed levels drawn from **four** distinct underlying rates, so
 a proposal asked for four groups has a right answer and the evidence has a right shape: the

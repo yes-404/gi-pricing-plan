@@ -126,7 +126,11 @@ def test_area_is_first_path_segment() -> None:
 @pytest.mark.parametrize(
     ("rel_path", "expected"),
     [
-        ("docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md", "frozen"),
+        (
+            "docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-"
+            "research-and-the-slice-cut.md",
+            "frozen",
+        ),
         ("docs/audit/work/some-task.md", "frozen"),
         ("docs/contracts/openapi/generated.json", "generated"),
         ("docs/specs/00-overview.md", "living"),

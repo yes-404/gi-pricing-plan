@@ -418,8 +418,8 @@ async def score_batch(
 
     This route resolves nothing itself: bundle resolution, the manifest, the abort
     threshold and the output are all the handler's (`docs/plans/PL-00849-wk-671-slice-3
-    -batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md` Task 3B). Widening this route to score inline would duplicate that
-    machinery, exactly what `CLAUDE.md` §2 forbids.
+    -batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md` Task 3B). Widening
+    this route to score inline would duplicate that machinery, exactly what `CLAUDE.md` §2 forbids.
     """
     parameters: dict[str, Any] = {
         **job_identity(caller),

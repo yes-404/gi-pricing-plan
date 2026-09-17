@@ -1,4 +1,5 @@
-"""Ingestion: file to Dataset Version (`01` §3.1, FR-27, FR-28, FR-29, FR-30, FR-31, FR-32, FR-33, FR-34).
+"""Ingestion: file to Dataset Version (`01` §3.1, FR-27, FR-28, FR-29, FR-30, FR-31, FR-32, FR-33,
+FR-34).
 
 The orchestration around `pricing_core.data.ingest`'s pure functions. This module owns the
 I/O and the bookkeeping; the decisions — how a name normalises, what the schema looks like,
@@ -109,7 +110,8 @@ async def ingest_upload(
     sheet: str | None = None,
     recipe: Sequence[Mapping[str, Any]] | None = None,
 ) -> IngestionOutcome:
-    """Ingest an uploaded file as a new Dataset Version (FR-27, FR-28, FR-29, FR-30, FR-31, FR-32, FR-33, FR-34).
+    """Ingest an uploaded file as a new Dataset Version (FR-27, FR-28, FR-29, FR-30, FR-31, FR-32,
+    FR-33, FR-34).
 
     The Preparation Recipe is applied **during** ingestion (FR-35) and stored with the
     version (FR-41). Applying it afterwards would mean the parquet on the version is

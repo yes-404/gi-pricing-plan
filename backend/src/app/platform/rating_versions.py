@@ -329,11 +329,12 @@ async def compile_rating_version(
                 )
                 if algo is None:
                     raise PlatformError("NOT_FOUND", "Rating algorithm not found", 404)
-                # RL-859 (docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md):
-                # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an
-                # invented maturity rather than a read one. `"no_maturity_concept"` is
-                # the sentinel `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT`
-                # reads for a pin kind with nothing to report.
+                # RL-859
+                # (docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md):
+                # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an invented
+                # maturity rather than a read one. `"no_maturity_concept"` is the sentinel
+                # `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` reads for a pin kind with
+                # nothing to report.
                 return ResolvedArtifact(status="no_maturity_concept", payload=algo.content)
             if ref.type == "model":
                 model = await session.scalar(

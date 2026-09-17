@@ -862,11 +862,11 @@ def _all_citations(corpus: Corpus, phase_path: Path) -> set[str]:
 
 # ---------------------------------------------------------------------------------------
 # The findings register (RL-982, `docs/rulings/RL-00982-the-phase-report-s-findin
-# gs-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-behaviour.md`) — the phase report's findings element is scoped from here, never from an
-# `FD-` essay's header: the essay carries no `phase:`/`work:` (RL-981/§1.5's own
-# applicability comment) and, after RL-981, no `decision:` either. The register row
-# carries both, today, before any migration — this reads that row.
-# ---------------------------------------------------------------------------------------
+# gs-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-behaviour.md`) —
+# the phase report's findings element is scoped from here, never from an `FD-` essay's header: the
+# essay carries no `phase:`/`work:` (RL-981/§1.5's own applicability comment) and, after RL-981, no
+# `decision:` either. The register row carries both, today, before any migration — this reads that
+# row. ---------------------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -1220,7 +1220,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"refusing to write {index_path}: zero governed records found under "
             f"{args.root} — either the corpus has not been migrated to RFC-937's layout "
-            "yet (see docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md, Slice W37-6), "
+            "yet (see docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md, Slice W37-6"
+            "), "
             "or --root points at the wrong tree",
             file=sys.stderr,
         )

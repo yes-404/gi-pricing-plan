@@ -250,7 +250,8 @@ def test_rate_table_version_row_has_no_status_column() -> None:
     """
     assert "status" not in RateTableVersionRow.__table__.columns, (
         "RateTableVersionRow gained a status column — RL-856's rate_table maturity "
-        "exemption (docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md) and "
+        "exemption (docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the"
+        "-exemption-is-declared-and-self-invalidating.md) and "
         "OQ-620 must be revisited: the resolver should report this real status "
         "instead of staying exempt from the FR-20 floor."
     )
@@ -429,7 +430,8 @@ def test_the_resolver_reports_the_rate_table_sentinel_not_an_invented_approval(
     assert statuses.get(ref_key) == "no_maturity_concept", (
         "the backend resolver no longer reports the `no_maturity_concept` sentinel for a "
         f"rate_table pin — it reported {statuses.get(ref_key)!r}. RL-856 "
-        "(docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md) refused inventing "
+        "(docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption"
+        "-is-declared-and-self-invalidating.md) refused inventing "
         "a maturity `RateTableVersionRow` has no column to back; see also OQ-620."
     )
     assert "no_maturity_concept" not in _APPROVED_OR_BETTER, (

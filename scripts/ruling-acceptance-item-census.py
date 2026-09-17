@@ -5,17 +5,15 @@ property (`docs/plans/2026-09-02-w37-guard-arithmetic-and-ledger-family-rulings.
 applied to convention discovery rather than to a family census: **every candidate falls
 into exactly one bucket or a named exception, and the buckets sum to the total.**
 
-Filed alongside `docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §8's table (originally a
-separate CSV of the same name; dropped 2026-09-02 — FR-72's reference-data-bundling
-guard cannot cover a hand-classified census, only a regenerate-and-diff one, and §8 states
-why in full), which records the SEMANTIC
-classification (CONSTRUCTIBLE / INVALIDATED / VACUOUS AT BIRTH / INDICATIVE /
-CANNOT_DETERMINE / NONE_FOUND) that no script can derive — that requires reading the
-governed code the item checks. **This script answers a narrower, mechanical question
-only: did the sweep find every acceptance item there was to find, or did its enumeration
-method have a blind spot?** A fourth phrasing convention introduced by a future ruling
-shows up here as a heading the buckets do not sum to cover, not as a form nobody
-remembered to grep for.
+Filed alongside `docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §8's table
+(originally a separate CSV of the same name; dropped 2026-09-02 — FR-72's reference-data-bundling
+guard cannot cover a hand-classified census, only a regenerate-and-diff one, and §8 states why in
+full), which records the SEMANTIC classification (CONSTRUCTIBLE / INVALIDATED / VACUOUS AT BIRTH /
+INDICATIVE / CANNOT_DETERMINE / NONE_FOUND) that no script can derive — that requires reading the
+governed code the item checks. **This script answers a narrower, mechanical question only: did the
+sweep find every acceptance item there was to find, or did its enumeration method have a blind
+spot?** A fourth phrasing convention introduced by a future ruling shows up here as a heading the
+buckets do not sum to cover, not as a form nobody remembered to grep for.
 
 Three known conventions, found by reading the corpus rather than assumed:
 
@@ -36,25 +34,25 @@ turned into a fourth regex, because a pattern built to match this one sentence w
 fitted to a population of one and would not generalise.
 
 **A second, larger, and more honest exception: `_PROSE_ONLY_RULINGS` below.** The sweep
-this script accompanies (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §2) found that ten
-rulings — 40, 42, 43, 45, 46, 47, 50, 51, 54, 60 — state a genuine, testable acceptance
-item in ordinary prose with **no shared marker at all**: sometimes "§N's broken-input
-proof:", sometimes "Its acceptance evidence is...", sometimes "so this is testable rather
-than hortatory", once (RL-950) a re-confirmation of a **different, named** ruling's
-broken-input cases rather than a fresh statement of its own. **No single regex covers
-this set without overfitting to it** — a pattern loose enough to catch all ten also
-matches ordinary prose that is not an acceptance item (the corpus's own "the check is",
-"testable definition of done" near-misses). This is therefore a **hand-verified list,
-not a derived one**, and it is the one place this module's own promise — "the arithmetic
-catches an undercount" — does not hold: a future ruling using this same loose, marker-free
-style would land silently in `none` below, not in a bucket whose count visibly moved.
+this script accompanies (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §2)
+found that ten rulings — 40, 42, 43, 45, 46, 47, 50, 51, 54, 60 — state a genuine, testable
+acceptance item in ordinary prose with **no shared marker at all**: sometimes "§N's broken-input
+proof:", sometimes "Its acceptance evidence is...", sometimes "so this is testable rather than
+hortatory", once (RL-950) a re-confirmation of a **different, named** ruling's broken-input cases
+rather than a fresh statement of its own. **No single regex covers this set without overfitting to
+it** — a pattern loose enough to catch all ten also matches ordinary prose that is not an acceptance
+item (the corpus's own "the check is", "testable definition of done" near-misses). This is therefore
+a **hand-verified list, not a derived one**, and it is the one place this module's own promise —
+"the arithmetic catches an undercount" — does not hold: a future ruling using this same loose,
+marker-free style would land silently in `none` below, not in a bucket whose count visibly moved.
 Flagged rather than hidden behind a regex that would only look like coverage.
 
 A ruling matching **zero** conventions and not on either exception list is NONE_FOUND —
 most of the corpus (Rulings 1-5, 31-38 etc.) predates the acceptance-item convention
 entirely, and 52/53/55-58/62-65/A1-3 state only an "Overridden if" scope clause with no
-violation condition (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §4's rule: that clause
-is never itself an acceptance item). This is the expected, majority case, not a defect.
+violation condition (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §4's
+rule: that clause is never itself an acceptance item). This is the expected, majority case, not a
+defect.
 
 A ruling matching **more than one** convention is a CONFLICT, printed and left for a
 human — it has never happened in the corpus this script has been run against, and this
@@ -138,8 +136,9 @@ _NAMED_EXCEPTIONS: Final[frozenset[str]] = frozenset({"44"})
 #: module's docstring for why no regex covers this set without overfitting to it. A
 #: SEPARATE bucket from `_NAMED_EXCEPTIONS` because it is not a "the pattern is this one
 #: sentence" exception; it is an admission that this style has no pattern. Hand-verified
-#: at the sweep's pin (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §2); any addition
-#: must cite the reading in the commit that adds it, the same rule as `_NAMED_EXCEPTIONS`.
+#: at the sweep's pin (`docs/research/RS-01003-ruling-acceptance-item-sweep-audit-record.md` §2);
+#: any addition must cite the reading in the commit that adds it, the same rule as
+#: `_NAMED_EXCEPTIONS`.
 _PROSE_ONLY_RULINGS: Final[frozenset[str]] = frozenset(
     {"40", "42", "43", "45", "46", "47", "50", "51", "54", "60"}
 )

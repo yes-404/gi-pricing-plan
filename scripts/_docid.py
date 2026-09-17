@@ -166,11 +166,11 @@ LOCKFILE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
     ),
 )
 
-# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 ruled `tests/fixtures/`
-# exempt from the id-**stamp census** "by path, each file a declared exception" — a
-# per-file list there because that census's own arithmetic (F83 condition 2) needs the
-# exempt set enumerated one file at a time so a mismatch stays detectable, and a path
-# prefix would silently swallow every future file beneath it.
+# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 ruled
+# `tests/fixtures/` exempt from the id-**stamp census** "by path, each file a declared exception" —
+# a per-file list there because that census's own arithmetic (F83 condition 2) needs the exempt set
+# enumerated one file at a time so a mismatch stays detectable, and a path prefix would silently
+# swallow every future file beneath it.
 #
 # The migration sweep and the (d)/(e)/(g) verification corpus answer a different question
 # — not "which files are exempt from a header stamp" but "which entire subtrees are
@@ -1038,12 +1038,12 @@ def vendored_skills_ruff_exclude_mismatch(
 # glob-shaped statement of the same rule — two spellings of one rule is how the two
 # consumers came to disagree in the first place (`RFC-756`).
 #
-# The rule itself is `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4's
+# The rule itself is
+# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4's
 # ruling, quoting RFC-937 §4 step 5: every file under `docs/`, `.claude/roles/` and
-# `.claude/agents/`, every `.claude/skills/*/SKILL.md`, plus every `README.md` anywhere in
-# the tree. That last clause is §1.2's Reference row, not step 5's own words, and it is
-# kept because `scripts/doc-id.py`'s README scope reaches those files whatever step 5's
-# roots say.
+# `.claude/agents/`, every `.claude/skills/*/SKILL.md`, plus every `README.md` anywhere in the tree.
+# That last clause is §1.2's Reference row, not step 5's own words, and it is kept because
+# `scripts/doc-id.py`'s README scope reaches those files whatever step 5's roots say.
 # ---------------------------------------------------------------------------------------
 
 #: The directory prefixes RFC-937 §4 step 5 names, repo-relative and without a trailing
@@ -1283,10 +1283,10 @@ def phase_template_fields(templates_dir: Path) -> frozenset[str]:
 # its `_load_module` idiom), so neither a cycle nor a second definition is needed.
 #
 # Two definitions of one governance rule are two rules
-# (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md` — the copy is what goes stale), which
-# is why the class registry below is derived from each extractor's own construction rather
-# than restated: every label an extractor can emit is built by one of the constructors
-# here, and validated against those same constructors.
+# (`docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md` — the copy is what goes
+# stale), which is why the class registry below is derived from each extractor's own construction
+# rather than restated: every label an extractor can emit is built by one of the constructors here,
+# and validated against those same constructors.
 # ---------------------------------------------------------------------------------------
 
 #: Every cause label `_docverify._residue_cause` can return, owned here so the class
