@@ -8443,7 +8443,7 @@ def _control_side_part_ordinals(
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
-            old_path, new_path = "docs/findings/register.md", (register_moved_to or "")
+            old_path, new_path = "docs/audit/register.md", (register_moved_to or "")
         elif d.materialize == "requirement" and d.source_path is not None:
             old_path = new_path = d.source_path.relative_to(root).as_posix()
         elif d.materialize == "roadmap_row":
@@ -8766,7 +8766,7 @@ def migrate(root: Path) -> MigrateResult:
             new_register.write_text(old_register.read_text(encoding="utf-8"), encoding="utf-8")
             old_register.unlink()
             files_written = [*files_written, "docs/findings/register.md"]
-            files_deleted = [*files_deleted, "docs/findings/register.md"]
+            files_deleted = [*files_deleted, "docs/audit/register.md"]
             register_moved_to = "docs/findings/register.md"
 
     # F84: `_write_document_drafts` deletes each migrated `docs/audit/work/<work>/
@@ -8852,7 +8852,7 @@ def migrate(root: Path) -> MigrateResult:
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
-            old_path, new_path = "docs/findings/register.md", (register_moved_to or "")
+            old_path, new_path = "docs/audit/register.md", (register_moved_to or "")
         elif d.materialize == "requirement" and d.source_path is not None:
             # Stays at the same path — a row family embedded in a shared file, not moved.
             old_path = new_path = d.source_path.relative_to(root).as_posix()
@@ -8905,11 +8905,11 @@ def migrate(root: Path) -> MigrateResult:
         redirect_rows.append(
             {
                 "old_id": "", "new_id": "",
-                "old_path": "docs/findings/register.md", "new_path": register_moved_to,
+                "old_path": "docs/audit/register.md", "new_path": register_moved_to,
             }
         )
         redirect_rows.extend(
-            _path_citation_redirect_rows("docs/findings/register.md", register_moved_to)
+            _path_citation_redirect_rows("docs/audit/register.md", register_moved_to)
         )
     # Reference moves and the unstampable-CSV move carry no `_Draft` and so no `id:` --
     # neither claims a number (§1.2: Reference has none; the CSV is deliberately exempt) --

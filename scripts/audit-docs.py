@@ -2867,8 +2867,11 @@ LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
 #: down to these seven; see `tests/test_audit_docs_ids.py`'s load-bearing proof for each.
 LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
     "docs/REDIRECTS.csv",
-    "tests/fixtures/docs-migration/docs/adrs/0001-example-decision.md",
-    "tests/fixtures/docs-migration/docs/rfcs/0001-example-note.md",
+    # The fixture corpus is frozen at its pre-migration shape -- that shape is what
+    # `migrate()` operates on -- so these two carry the legacy family names, not the
+    # post-migration ones `docs/findings/register.md`-style paths would suggest.
+    "tests/fixtures/docs-migration/docs/adr/0001-example-decision.md",
+    "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
     "tests/fixtures/docs-migration/docs/plans/2026-08-12-example-rulings.md",
     "tests/fixtures/docs-migration/docs/roadmap.md",
     "tests/fixtures/docs-migration/docs/specs/00-overview.md",
