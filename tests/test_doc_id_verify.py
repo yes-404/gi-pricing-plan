@@ -1922,6 +1922,268 @@ def test_a_row_can_read_zero_because_corruption_moved_the_token_out_of_reach(
     assert "control 0" in mangled[2]
 
 
+# W37-6 PR-B, defect 2 (2026-09-16): `docs/audit/plan-reviews.md` -> `docs/closures/
+# INDEX.md#plan-reviewsmd`, landing inside a `scripts/*.py` string literal read as a
+# filesystem path at runtime (`doc-id.py:1862`/`:1949`). The "legacy audit path"
+# alternative (`d10`) itself correctly reads 0 on the migrated tree -- the literal
+# `docs/audit/` text really is gone -- which is exactly the corruption: it moved the
+# token out of the alternative's own reach, the identical shape `d2`'s `F-WK-…` companion
+# above already names for an id. The gate printed "mangled = 0" over a tree carrying this
+# because no companion predicate had ever been asked what this alternative's own wrong
+# rewrite produces -- this test is the row gaining that shape.
+def test_a_split_source_fallback_folded_into_a_non_markdown_consumer_is_a_mangled_companion(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    migrated = {
+        "scripts/example.py": (
+            '_PLAN_REVIEWS_REL_PATH: Final = "docs/closures/INDEX.md#plan-reviewsmd"\n'
+        ),
+    }
+    control = {
+        "scripts/example.py": (
+            '_PLAN_REVIEWS_REL_PATH: Final = "docs/audit/plan-reviews.md"\n'
+        ),
+    }
+    row = _d_rows(dv, doc_id_cli, _snapshot(dv, tmp_path / "d10mangle", migrated, control))[
+        "d10"
+    ]
+    assert row.migrated.startswith("0 line"), (
+        "the alternative's own predicate must read 0 -- the literal `docs/audit/` text "
+        "is gone, which is the corruption, not a clean row"
+    )
+    labels = {c[0]: c for c in row.companions}
+    mangled = next(c for k, c in labels.items() if k.startswith("mangled"))
+    assert "migrated 1 line(s)" in mangled[2], (
+        "broken input (the mangled constant present) must read non-zero here"
+    )
+    assert "control 0" in mangled[2], (
+        "clean input (the real, unmangled path constant) must read zero here"
+    )
+
+
+# =========================================================================================
+# W37-6 PR-B follow-up (2026-09-16, deputy's option (A)): a refused fragment rewrite is
+# disclosed, never fatal -- through the SAME `_residue_fully_governed`/W37-11-record
+# mechanism (d)/(h) already use for any other governed residue, never a parallel
+# disclosure path. What's new is a way to derive the (path, cls, count) a disclosure row
+# must carry FROM `MigrateResult.refused_fragment_rewrites` itself -- by symbol, never
+# pasted -- so the count a disclosure row names can never silently drift from what the
+# migration actually refused.
+# =========================================================================================
+
+
+def _refusal(
+    doc_id_cli: Any, *, citing_file: str, line: int, old_rel: str,
+) -> Any:
+    return doc_id_cli._UnresolvedCitation(
+        citing_file=citing_file, line=line, old_rel=old_rel, text="",
+        candidates=(), resolved_to=f"docs/rulings/INDEX.md#{old_rel}",
+        index_rel="docs/rulings/INDEX.md", index_anchor=old_rel,
+    )
+
+
+def test_refused_fragment_rewrite_disclosure_counts_keys_by_file_and_class(
+    dv: Any, doc_id_cli: Any
+) -> None:
+    """The two real, measured examples (W37-6 PR-B's own gate log): a runtime path
+    constant in `scripts/doc-id.py` refusing a `docs/audit/` (d10) citation, and a
+    backend docstring refusing a `docs/plans/2026-` (d9) citation."""
+    refused = [
+        _refusal(
+            doc_id_cli, citing_file="scripts/doc-id.py", line=1871,
+            old_rel="docs/audit/plan-reviews.md",
+        ),
+        _refusal(
+            doc_id_cli, citing_file="backend/src/app/platform/settings.py", line=177,
+            old_rel="docs/plans/2026-08-29-w11-slices-3-4-rulings.md",
+        ),
+    ]
+    counts = dv.refused_fragment_rewrite_disclosure_counts(refused)
+    assert counts[("scripts/doc-id.py", "d10")] == 1
+    assert counts[("backend/src/app/platform/settings.py", "d9")] == 1
+    assert len(counts) == 2
+
+
+def test_refused_fragment_rewrite_disclosure_counts_sums_repeats_in_one_file(
+    dv: Any, doc_id_cli: Any
+) -> None:
+    refused = [
+        _refusal(
+            doc_id_cli, citing_file="scripts/doc-id.py", line=n,
+            old_rel="docs/audit/plan-reviews.md",
+        )
+        for n in (1871, 1943, 1988)
+    ]
+    counts = dv.refused_fragment_rewrite_disclosure_counts(refused)
+    assert counts[("scripts/doc-id.py", "d10")] == 3
+
+
+def test_a_refusal_named_in_the_w37_11_record_at_its_measured_count_reads_disclose(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof (i): a FATAL path-alternative hit -- a citation that still
+    names a real moved file per `docs/REDIRECTS.csv` -- reads DISCLOSE once the W37-11
+    record names it at or above its measured count. This exercises the EXISTING
+    `_residue_fully_governed` mechanism (no new verdict branch), which is the point:
+    option (A) is "wire refusals INTO it", never a parallel path.
+    """
+    migrated = {
+        "scripts/example.py": '_X: Final = "docs/audit/plan-reviews.md"\n',
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            ",,docs/audit/plan-reviews.md,docs/closures/CR-00001-x.md,\n"
+        ),
+    }
+    control = dict(migrated)
+    snap = _snapshot(dv, tmp_path / "d10-disclosed", migrated, control)
+    refused = [
+        _refusal(
+            doc_id_cli, citing_file="scripts/example.py", line=1,
+            old_rel="docs/audit/plan-reviews.md",
+        ),
+    ]
+    counts = dv.refused_fragment_rewrite_disclosure_counts(refused)
+    record = [
+        dv.ResidueEntry(
+            path=path, cls=cls, count=count,
+            reason="refused fragment rewrite (doc-id.py's refused_fragment_rewrites) "
+                   "-- a file folded into an index section has no file destination for "
+                   "this non-markdown consumer",
+            owner="W37-6",
+        )
+        for (path, cls), count in counts.items()
+    ]
+    rows = _d_rows(dv, doc_id_cli, snap)
+    assert rows["d10"].verdict != dv.DISCLOSE, (
+        "positive control: without the record, this exact corpus must still read "
+        "FAIL/FATAL, or the test proves nothing about the record's own effect"
+    )
+    rows = {
+        r.key: r
+        for r in dv.rows_d(
+            doc_id_cli, dv.load_corpus(snap.migrated), dv.load_corpus(snap.control),
+            record,
+        )
+    }
+    assert rows["d10"].verdict == dv.DISCLOSE
+
+
+def test_a_refusal_not_named_in_the_w37_11_record_stays_fatal(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof (ii): the identical corpus as the DISCLOSE test above, with
+    an EMPTY record -- the row must stay FAIL. A disclosure is never automatic; it is
+    earned by a record row naming the file, the class and the count."""
+    migrated = {
+        "scripts/example.py": '_X: Final = "docs/audit/plan-reviews.md"\n',
+        "docs/REDIRECTS.csv": (
+            "old_id,new_id,old_path,new_path,citing_dir\n"
+            ",,docs/audit/plan-reviews.md,docs/closures/CR-00001-x.md,\n"
+        ),
+    }
+    control = dict(migrated)
+    snap = _snapshot(dv, tmp_path / "d10-undisclosed", migrated, control)
+    rows = {
+        r.key: r
+        for r in dv.rows_d(
+            doc_id_cli, dv.load_corpus(snap.migrated), dv.load_corpus(snap.control), (),
+        )
+    }
+    assert rows["d10"].verdict != dv.DISCLOSE
+    assert "docs/audit/" in rows["d10"].title
+
+
+# =========================================================================================
+# W37-6 PR-B prep (2026-09-16, resume): the deputy's decision (A) governs (d9) and (d10)
+# for the first time -- both classes have ZERO rows anywhere in the record today, and the
+# real fatal population (`/tmp/w37-6-pr-b-verify-2bd3f37`, cross-checked against the
+# deputy's own count in `to-deputy.md` 21:35:56 BST) puts one file, `scripts/doc-id.py`,
+# under BOTH classes at once (6 (d9) hits, 15 (d10) hits). Neither shape -- a class
+# governed for the first time, or one path carrying two distinct classes' counts -- has
+# a test naming it explicitly; `_D_ROW_CLASSES`/`test_load_w37_11_record_accepts_every_
+# real_extractor_class` already prove "d9"/"d10" are accepted labels (they are members of
+# `_D_ROW_CLASSES`, `range(1, len(D_ALTERNATIVES) + 1)`), and `test_residue_ceiling_
+# ignores_an_ungoverned_class`/`test_residue_ceiling_flags_a_recorded_file_pushed_above_
+# its_ceiling` already prove the general mechanism generically. These two tests exercise
+# the same mechanism on the REAL shape rather than inventing a new one -- both pass
+# already against `e50fda4`'s code, which is the finding itself: (A)'s disclosure path
+# needs no new loader or ceiling code, only the record rows (drafted in
+# `/tmp/w37-6-pr-b2-rows-draft.md`, not yet written into the governed table).
+# =========================================================================================
+
+
+def test_w37_11_record_parses_a_path_governed_under_two_distinct_classes(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """`scripts/doc-id.py` carries both a (d9) and a (d10) disclosed count in the PR-B
+    draft rows -- one path, two rows, distinguished only by `cls`. The loader must keep
+    both as distinct `ResidueEntry` rows (the pair `(path, cls)` is the key, per
+    `ResidueEntry`'s own docstring), never collapse or overwrite one with the other."""
+    docs_audit = tmp_path / "docs" / "audit"
+    docs_audit.mkdir(parents=True)
+    (docs_audit / "w37-11-record.md").write_text(
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| scripts/doc-id.py | d9 | 6 | refused split-source citation, decision (A) |"
+        " W37-6 |\n"
+        "| scripts/doc-id.py | d10 | 15 | refused split-source citation, decision (A) |"
+        " W37-6 |\n",
+        encoding="utf-8",
+    )
+    record = dv.load_w37_11_record(tmp_path)
+    assert record == (
+        dv.ResidueEntry(
+            path="scripts/doc-id.py", cls="d9", count=6,
+            reason="refused split-source citation, decision (A)", owner="W37-6",
+        ),
+        dv.ResidueEntry(
+            path="scripts/doc-id.py", cls="d10", count=15,
+            reason="refused split-source citation, decision (A)", owner="W37-6",
+        ),
+    )
+    # `build_ceiling` is D1's own constructor (`scripts/_docid.py` on `origin/main`,
+    # commit 7fa287c94d599cdb8fa9cace24e74c73130d4035, not yet merged onto this
+    # pre-rebase branch) -- this branch still reads the ceiling the way
+    # `check_residue_ceiling`/`_residue_fully_governed` already do here, a plain
+    # `{(e.path, e.cls): e.count for e in record}`, which the assertions below exercise
+    # through the real function rather than restating that dict comprehension a third
+    # time in this test.
+    at_ceiling = dv.check_residue_ceiling(
+        {("scripts/doc-id.py", "d9"): 6, ("scripts/doc-id.py", "d10"): 15}, record,
+    )
+    assert at_ceiling == ()
+    over_ceiling = dv.check_residue_ceiling(
+        {("scripts/doc-id.py", "d9"): 7, ("scripts/doc-id.py", "d10"): 15}, record,
+    )
+    assert [(c.path, c.cls, c.kind) for c in over_ceiling] == [
+        ("scripts/doc-id.py", "d9", dv.RESIDUE_REGRESSION)
+    ]
+
+
+def test_a_class_governed_for_the_first_time_ceilings_from_its_first_entry(
+    dv: Any,
+) -> None:
+    """(d9) has zero rows anywhere in the record today (decision (A) files its first
+    ones in this same PR). The moment that first row lands, `check_residue_ceiling` must
+    govern it exactly like any long-governed class: at the recorded count, silence; one
+    hit over it, a fatal `RESIDUE_REGRESSION`. Proven both ways on the identical record,
+    per `test_residue_ceiling_ignores_an_ungoverned_class`'s own reasoning ("wiring a new
+    row's measurement in ahead of the record gaining its first entry... cannot manufacture
+    a false regression") -- this is the day that class's first entry actually lands."""
+    record = (
+        dv.ResidueEntry(
+            path="scripts/doc-id.py", cls="d9", count=6, reason="r", owner="W37-6",
+        ),
+    )
+    at_ceiling = dv.check_residue_ceiling({("scripts/doc-id.py", "d9"): 6}, record)
+    assert at_ceiling == ()
+    over_ceiling = dv.check_residue_ceiling({("scripts/doc-id.py", "d9"): 7}, record)
+    assert [(c.path, c.cls, c.kind) for c in over_ceiling] == [
+        ("scripts/doc-id.py", "d9", dv.RESIDUE_REGRESSION)
+    ]
+    assert over_ceiling[0].fatal
+
+
 def test_a_companion_is_promoted_to_gating_by_configuration_not_a_rewrite(
     dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

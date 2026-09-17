@@ -17,7 +17,9 @@ standard does not use.
 from __future__ import annotations
 
 import csv
+import importlib.util
 import re
+import sys
 import tomllib
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -41,6 +43,26 @@ FAMILY_PREFIXES: Final = (
 # resolver, and a generated version could silently reorder the alternation (regex
 # alternation order can change which of two overlapping prefixes wins, though none overlap
 # here) without anyone having decided that.
+#
+# W37-6 PR-B (2026-09-16, defect 1): a third case, found live in `bench-model.py` and six
+# other files. A line wrap inside a JSON string or a Python string is the two RAW
+# characters `\` `n` -- never an interpreted newline byte, because the corpus this sweep
+# reads is source text, not a decoded value. The token's left neighbour is then the
+# letter `n`, a plain word character, so the FIRST lookbehind
+# (`(?<![A-Za-z0-9_])`) refuses it exactly as it would refuse a token glued onto any
+# other word character -- the same `\b`-style transition test, applied to a boundary
+# this grammar does not treat as a boundary at all (an escaped line wrap is not a
+# character adjacent to the token in any sense a reader or a citation resolver cares
+# about; it is mid-sentence). The fix is an alternative left edge, not a further
+# exception carved into the existing two lookbehinds: preceded by the literal two-byte
+# sequence `\n`, the position is ALWAYS a valid token start, independent of and prior to
+# the ordinary `\b`-and-hyphen-guard case below. This does not touch the hyphen-fused
+# refusal (`[A-Z0-9]-`) at all -- a slice id fused onto a workflow-shaped id (as in
+# "W5-WF-01") is refused by the second branch exactly as before, since its own two
+# preceding characters are never `\n`. (Written uppercase here on purpose: a lowercase
+# `wf-0` is `LEGACY_FORM_PATTERNS`' own "workflow id" alternative, and this file is not
+# exempt from the sweep it feeds -- spelling the example that way turned this very
+# comment into residue the (d4) row then measured, W37-6 PR-B 2026-09-16.)
 ID_RE: Final = re.compile(r"\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*(\d+)\b")
 
 # NT-0019 §1.1 rule 3: "Filenames pad the integer to the standard's width, currently five."
@@ -87,7 +109,7 @@ PAD_WIDTH: Final = 5
 # change, which `CLAUDE.md` §0 forbids doing silently. The two must instead AGREE on every
 # token the sweep can produce: whatever the sweep leaves behind, §7(d)'s predicate still
 # finds. The four cases above are where that agreement is checked.
-TOKEN_LEFT_BOUND: Final = r"(?<![A-Za-z0-9_])(?<![A-Z0-9]-)"
+TOKEN_LEFT_BOUND: Final = r"(?:(?<=\\n)|(?<![A-Za-z0-9_])(?<![A-Z0-9]-))"
 
 # NT-0019 §7 acceptance item (d)'s pattern, and `audit-docs.py` check 36's third clause —
 # "one rule at two times" (Ruling 67 §2): both must read this **one** shared constant,
@@ -241,6 +263,66 @@ GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
     ),
 )
 
+#: W37-6 PR-B (2026-09-16), defect 3. ADR-0002/FR-PLAT-48's generated-contract tier —
+#: `scripts/generate-contracts.py`'s own `OPENAPI_PATH` (one file) and `SCHEMA_DIR` (a
+#: directory of `<slug>.schema.json` files) — is written by the generator FROM the
+#: models, never by a person, and never by this migration: `generate-contracts.py --check`
+#: is what proves the two agree, and a migration write that lands between two runs of it
+#: is drift `--check` cannot distinguish from a real regression. "Exclude that tier by
+#: importing or reading those symbols, never by pasting the paths" (the brief, verbatim):
+#: `_generated_contract_relpaths` below loads `generate-contracts.py` by path and reads
+#: `OPENAPI_PATH`/`SCHEMA_DIR` off the loaded module — the identical technique
+#: `doc-id.py`'s own `_load_module` already uses for its sibling scripts — so a future
+#: change to the generator's own layout is inherited automatically rather than silently
+#: un-matching a copy pasted here (CLAUDE.md §2: "a shape defined twice will diverge").
+#: `gi-pricing.yaml`, the Phase 0 design stub, is deliberately NOT in this tier —
+#: `generate-contracts.py`'s own docstring: "It is not overwritten" — so it is not
+#: excluded here and remains ordinary migration input.
+_GENERATED_CONTRACTS_SCRIPT: Final = Path(__file__).resolve().with_name(
+    "generate-contracts.py"
+)
+
+#: Cache for `_generated_contract_relpaths`, populated on first call. Module-level and
+#: process-lifetime, like every other constant here — the generator's own layout does not
+#: change mid-run, and every call in a given process asks the identical question.
+_generated_contract_relpaths_cache: tuple[str, str] | None = None
+
+
+def _generated_contract_relpaths() -> tuple[str, str]:
+    """`(openapi_rel, schema_dir_rel)` — the tree-relative posix paths of
+    `generate-contracts.py`'s own `OPENAPI_PATH` and `SCHEMA_DIR`, read by loading that
+    script and inspecting its two symbols, never pasted.
+
+    Safe to load for this alone: `generate-contracts.py`'s own module-level code imports
+    only `argparse`/`json`/`pathlib`/`sys`/`typing` (stdlib) — its heavier imports
+    (`pydantic`, `model_schema`, the FastAPI app) are deferred inside `_targets()`/
+    `main()`, never executed by merely exec'ing the module — so this stays within G4/DP-5
+    ("standard library only") exactly as importing any other sibling script here would.
+    Bytecode-cache writing is suppressed for the duration, the same guard `doc-id.py`'s
+    `_load_module` uses, so calling this from `audit-docs.py`'s own no-install CI run does
+    not leave a `scripts/__pycache__/` the sweep would then have to exclude in turn.
+    """
+    global _generated_contract_relpaths_cache
+    if _generated_contract_relpaths_cache is not None:
+        return _generated_contract_relpaths_cache
+    spec = importlib.util.spec_from_file_location(
+        "_generate_contracts_for_docid", _GENERATED_CONTRACTS_SCRIPT
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    previous_dont_write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous_dont_write_bytecode
+    root = module.ROOT
+    openapi_rel = module.OPENAPI_PATH.relative_to(root).as_posix()
+    schema_dir_rel = module.SCHEMA_DIR.relative_to(root).as_posix()
+    _generated_contract_relpaths_cache = (openapi_rel, schema_dir_rel)
+    return _generated_contract_relpaths_cache
+
 
 def sweep_exclusion_reason(rel_posix: str) -> str | None:
     """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the NT-0019
@@ -249,13 +331,14 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     excluded. One predicate, read by both consumers, so they can never disagree about what
     is excluded (Ruling 67 §2's "one shared constant").
 
-    Five declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
+    Six declared classes, checked in this order: a lockfile (`LOCKFILE_EXCLUSIONS`), a
     fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), one of the instrument's own named test
     modules (`TEST_MODULE_EXCLUSIONS`), a governed record that quotes legacy forms as
-    evidence rather than citing them (`GOVERNANCE_RECORD_EXCLUSIONS`), and a Python
-    bytecode-cache artifact (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from
-    importing `scripts/` modules while it runs, never migration input and never real
-    residue.
+    evidence rather than citing them (`GOVERNANCE_RECORD_EXCLUSIONS`), the generated-
+    contract tier read by symbol from `scripts/generate-contracts.py`
+    (`_generated_contract_relpaths`), and a Python bytecode-cache artifact
+    (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing `scripts/`
+    modules while it runs, never migration input and never real residue.
     """
     for name, reason in LOCKFILE_EXCLUSIONS:
         if rel_posix == name:
@@ -269,6 +352,14 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     for name, reason in GOVERNANCE_RECORD_EXCLUSIONS:
         if rel_posix == name:
             return reason
+    openapi_rel, schema_dir_rel = _generated_contract_relpaths()
+    if rel_posix == openapi_rel or rel_posix.startswith(schema_dir_rel + "/"):
+        return (
+            "the generated-contract tier (ADR-0002/FR-PLAT-48) — "
+            "scripts/generate-contracts.py's own OPENAPI_PATH/SCHEMA_DIR, regenerated "
+            "by that script from the models, never migration input, and 'diff undetectable "
+            "by --check' if a migration wrote here between two generator runs"
+        )
     if "__pycache__" in rel_posix.split("/"):
         return (
             "a __pycache__ bytecode-cache directory created by importing this tooling's "

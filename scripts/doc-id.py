@@ -1307,6 +1307,15 @@ class MigrateResult:
     # anyway, because "0 by construction" is a claim about the code and this is the
     # measurement of it — the two have come apart here before.
     unresolved_split_citations: tuple[_UnresolvedCitation, ...] = ()
+    # W37-6 PR-B, defect 2 (2026-09-16): every Ruling 101 clause 1 fallback this run
+    # REFUSED rather than wrote, because the citing file is not markdown — a citation
+    # inside a `scripts/*.py` string literal that is read back as a real filesystem path
+    # at runtime (the measured case: `doc-id.py:1862`'s own `_PLAN_REVIEWS_REL_PATH`) has
+    # no reader who could follow a markdown-link fragment, so "a file folded into an
+    # index section has no file destination" for it and the occurrence is left
+    # byte-identical rather than folded into `index_resolved_split_citations` (bucket
+    # (iv)), which would misreport it as a citation a reader can follow.
+    refused_fragment_rewrites: tuple[_UnresolvedCitation, ...] = ()
     # Ruling 101 clause 3: every `INDEX.md#<anchor>` a citation was resolved to whose
     # section does not exist or lists fewer than two documents, named with the citing file
     # and the anchor. A link to an empty index section resolves at the file level, so the
@@ -6565,6 +6574,7 @@ def _rewrite_citations(
     dir_redirects: list[tuple[str, str, str]] | None = None,
     split_redirects: list[tuple[str, str]] | None = None,
     wrap_redirects: list[tuple[str, str]] | None = None,
+    refused_fragment_rewrites: list[_UnresolvedCitation] | None = None,
 ) -> tuple[list[str], list[_UnresolvedCitation], list[_UnresolvedCitation]]:
     """Sweep every tree file, rewriting each citation token to its destination.
 
@@ -6622,10 +6632,26 @@ def _rewrite_citations(
     markup embedded in both strings, never the plain unwrapped token, because DP-7's
     inverse is a generic string substitution with no wrap-awareness of its own:
     `_rewrite_wrapped_path_citations`' own docstring has the full reasoning.
+
+    `refused_fragment_rewrites`, when given, is appended to in place with one
+    `_UnresolvedCitation` per Ruling 101 clause 1 fallback this run REFUSED rather than
+    wrote (W37-6 PR-B, defect 2, 2026-09-16). The fallback's own `index_token` is a
+    markdown link fragment (`docs/<family>/INDEX.md#<anchor>`) -- a real destination only
+    for a reader following a markdown link. A citing file that is not markdown (a
+    `scripts/*.py` string literal read back as a filesystem path at runtime is the
+    measured case, `doc-id.py:1862`'s own `_PLAN_REVIEWS_REL_PATH`) has no such reader:
+    "a file folded into an index section has no file destination" for it, so the
+    substitution is refused -- the occurrence is left byte-identical, exactly like the
+    (by-construction-empty) `unrewritten` bucket -- and disclosed here by name instead of
+    silently folded into `index_resolved`'s bucket (iv), which would misreport it as a
+    citation a reader can follow.
     """
     changed: list[str] = []
     index_resolved: list[_UnresolvedCitation] = []
     unrewritten: list[_UnresolvedCitation] = []
+    refused: list[_UnresolvedCitation] = (
+        refused_fragment_rewrites if refused_fragment_rewrites is not None else []
+    )
     derived: list[tuple[str, str]] = (
         derived_redirects if derived_redirects is not None else []
     )
@@ -6738,6 +6764,21 @@ def _rewrite_citations(
                     )
                     if not src.index_token:  # unreachable: `_build_split_sources` raises
                         unrewritten.append(record)
+                        return m.group(0)
+                    if not rel.endswith(".md"):
+                        # W37-6 PR-B, defect 2: `src.index_token` is a markdown link
+                        # fragment (`docs/<family>/INDEX.md#<anchor>`) -- a real
+                        # destination only for a reader following a markdown link. The
+                        # citing file here is not one: it is a non-markdown consumer (the
+                        # measured case is a `scripts/*.py` string literal read back with
+                        # `root / <constant>`), so writing the fragment would turn a real
+                        # runtime path into "a file folded into an index section", which
+                        # has no file destination at all. Refuse the substitution --
+                        # leave the occurrence byte-identical, like `unrewritten` -- and
+                        # disclose it under its own name rather than folding it into
+                        # bucket (iv), which would misreport it as a citation a reader
+                        # can follow.
+                        refused.append(record)
                         return m.group(0)
                     index_resolved.append(record)
                     # Ruling 101 clause 1's bucket (iv) fallback is a substitution too --
@@ -9168,10 +9209,14 @@ def migrate(root: Path) -> MigrateResult:
     # identical collision-safe helper `split_path_redirects` already uses below: an exact
     # repeat (the same wrap shape found again) survives, a genuine collision is dropped.
     wrap_path_redirects: list[tuple[str, str]] = []
+    # W37-6 PR-B, defect 2's own out-parameter: one `_UnresolvedCitation` per fallback
+    # this run refused rather than wrote, because the citing file is not markdown.
+    refused_fragment_rewrites: list[_UnresolvedCitation] = []
     rewritten, index_resolved, unrewritten_citations = _rewrite_citations(
         root, token_map, split_sources, dir_token_map, dir_split_sources,
         derived_redirects=compound_redirects, dir_redirects=dir_link_redirects,
         split_redirects=split_path_redirects, wrap_redirects=wrap_path_redirects,
+        refused_fragment_rewrites=refused_fragment_rewrites,
     )
     for old_compound, new_compound in compound_redirects:
         redirect_rows.append(
@@ -9300,6 +9345,7 @@ def migrate(root: Path) -> MigrateResult:
         ),
         index_resolved_split_citations=tuple(index_resolved),
         unresolved_split_citations=tuple(unrewritten_citations),
+        refused_fragment_rewrites=tuple(refused_fragment_rewrites),
         split_index_violations=tuple(index_faults),
         generated_paths=tuple(dict.fromkeys([
             *readme_written, *split_index_paths, *redirects_written, *index_written,
@@ -9981,6 +10027,22 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     for cite in result.index_resolved_split_citations:
         print(
             f"  {cite.citing_file}:{cite.line} cites {cite.old_rel} -> "
+            f"{cite.resolved_to} -- candidates: {', '.join(cite.candidates)}",
+            file=sys.stderr,
+        )
+    # W37-6 PR-B, defect 2, unconditionally including the zero: a fallback refused rather
+    # than written because its citing file is not markdown -- "a file folded into an
+    # index section has no file destination" for a non-markdown consumer, so this
+    # occurrence was left byte-identical instead.
+    print(
+        f"doc-id.py migrate: {len(result.refused_fragment_rewrites)} citation(s) of a "
+        "split source's family-index fallback refused because the citing file is not "
+        "markdown (no file destination for a non-markdown consumer):",
+        file=sys.stderr,
+    )
+    for cite in result.refused_fragment_rewrites:
+        print(
+            f"  {cite.citing_file}:{cite.line} cites {cite.old_rel} -- would-be fragment "
             f"{cite.resolved_to} -- candidates: {', '.join(cite.candidates)}",
             file=sys.stderr,
         )

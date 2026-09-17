@@ -905,8 +905,9 @@ D_DISCLOSED_CITATION: Final[Mapping[str, str]] = {
 #: An alternative with no entry here prints `no companion predicate declared`, by name and
 #: unconditionally. The gap is the point: the general question — *for every alternative,
 #: what does a wrong rewrite turn this token into, and is that form counted anywhere?* — is
-#: answered for three of thirteen today, and a silent absence would read as "asked and
-#: found nothing".
+#: answered for eight of thirteen today (three id-shaped alternatives below, plus every
+#: `D_PATH_LABELS` member sharing one path companion — see it below), and a silent
+#: absence would read as "asked and found nothing".
 #: Keyed by `_docid.LEGACY_FORM_PATTERNS`' own label (task 17) — a pattern-text key would
 #: silently un-key itself the next time Ruling 67 §2 Part 1 changes an anchoring, as it
 #: already had for `NT-00` -> `\bNT-\d{4}\b` and `F-W[0-9]` -> `\bF-W\d+-\d+\b` here.
@@ -928,6 +929,30 @@ D_COMPANIONS: Final[Mapping[str, tuple[tuple[str, str], ...]]] = {
         "mangled: legacy id baked into a generated filename slug",
         r"/[^/\s]*wf-0[0-9]",
     ),),
+    # W37-6 PR-B (2026-09-16), defect 2. Ruling 101 clause 1's own fallback -- a split
+    # source citation with no single determined target resolves to its family index's
+    # `#<old-basename-without-its-dot>` anchor (`doc-id.py`'s `_split_index_anchor`,
+    # through `_docid`'s own `_anchor_slug`) -- assumed every citing occurrence is prose a
+    # reader follows as a markdown link. Measured live: `docs/audit/plan-reviews.md` ->
+    # `docs/closures/INDEX.md#plan-reviewsmd` landing inside a `scripts/*.py` string
+    # literal that is READ AS A FILESYSTEM PATH AT RUNTIME (`doc-id.py:1862`'s
+    # `_PLAN_REVIEWS_REL_PATH`, consumed at `:1949`) is invisible to every one of the five
+    # path alternatives themselves: each correctly reads 0, because the literal legacy
+    # path text really is gone -- exactly the shape `d2`'s `F-WK-…` companion above
+    # already names for an id ("the row reads zero BECAUSE the corruption moved the token
+    # out of the predicate's reach"). One companion, shared by every `D_PATH_LABELS`
+    # member via the loop below, never five pasted copies: the shape does not depend on
+    # which of the five legacy path forms was folded, only on where the fallback landed.
+    **{
+        label: ((
+            "mangled: a split source's family-index fallback (Ruling 101 clause 1) "
+            "resolved into a fragment with no file destination — a file folded into an "
+            "index section, cited from a non-markdown consumer that reads the text as "
+            "a real path",
+            r"INDEX\.md#[a-z0-9-]+md\b",
+        ),)
+        for label in D_PATH_LABELS
+    },
 }
 
 #: Companion labels promoted to gating. **Empty, and changing it is the maintainer's under
@@ -3743,7 +3768,7 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # `MigrateResult.generated_paths` (Ruling 105 D3/#18 §1), keyed on
                          # the run's own generated-output list, never the literal path.
     "g": FAIL,          # the token-boundary defect                — Ruling 102 §2 row 1
-    "h1": PASS,         # audit-docs.py: DISCLOSE -> PASS, D1b (deputy 2026-09-16
+    "h1": DISCLOSE,     # audit-docs.py: DISCLOSE -> PASS, D1b (deputy 2026-09-16
                          # 22:47:56 BST; root cause measured by the deputy 00:4x BST).
                          # Merged D1's `audit-docs.py` own `_partition_by_w37_11_record`
                          # built its control-path reverse map from `_docid.
@@ -3777,6 +3802,12 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # the two SHAs) and printed only because THIS row's own verdict
                          # moved (`_set_change_block`'s gate) — a correction merged D1's
                          # own bug hid rather than a new regression.
+                         # PASS -> DISCLOSE again, W37-6 PR-B loop 2 of 2 (0044a62): F103's
+                         # h1-check32/h1-check36 sentinel rows (16, 904) are ruled
+                         # disclosures, not a resolved-to-zero residue, so this row's own
+                         # governed hits no longer all clear to PASS. Measured
+                         # /tmp/w37-6-prb-verify-b62405f.log: SET CHANGE "(h1) PASS ->
+                         # DISCLOSE", 0 residue REGRESSION.
     "h2": DISCLOSE,     # zero-denominator probes now clear; only OVER-EXEMPT fires, which
                          # Ruling 105 D3 disclosed rather than failed (2026-09-03, task 14)
     "h3": PASS,         # req-coverage.py: 533 requirements on both trees, exit 0 on the
@@ -3875,6 +3906,39 @@ W37_11_RECORD_PATH: Final = _docid.W37_11_RECORD_PATH
 RESIDUE_REGRESSION: Final = _docid.RESIDUE_REGRESSION
 RESIDUE_PROGRESSED: Final = _docid.RESIDUE_PROGRESSED
 ResidueEntry = _docid.ResidueEntry
+
+
+def refused_fragment_rewrite_disclosure_counts(
+    refused: Sequence[Any],
+) -> dict[tuple[str, str], int]:
+    """`(citing_file, cls)` -> count, for `MigrateResult.refused_fragment_rewrites`
+    (doc-id.py's own out-parameter, W37-6 PR-B, 2026-09-16) -- the deputy's option (A):
+    "refuse EVERY undetermined split-source citation in any non-markdown file... and
+    DISCLOSE the refusals, never rewrite them." A refusal is disclosed through the SAME
+    mechanism every other governed residue already uses -- `_residue_fully_governed`
+    against a `ResidueEntry` the caller writes into `docs/audit/w37-11-record.md` -- not
+    a parallel disclosure path. What this function supplies is the `(path, cls, count)`
+    a disclosure row must carry, derived FROM the refusal list by symbol, never pasted:
+    a hand-typed count could silently drift from what `_rewrite_citations` actually
+    refused, exactly the "the copy is what goes stale" failure
+    (`docs/notes/0003-duplicated-status-goes-stale.md`) this function exists to avoid.
+
+    `cls` is `f"d{i}"` for whichever `_docid.LEGACY_FORM_PATTERNS` alternative (1-based
+    index, matching `rows_d`'s own `enumerate(D_ALTERNATIVES, start=1)`) the refusal's
+    `old_rel` matches -- the identical predicate `rows_d` applies to the corpus text, run
+    here against the citation's own recorded `old_rel` instead of re-scanning the tree.
+    A refusal whose `old_rel` matches no alternative at all (should not happen --
+    `_build_split_sources` only ever routes a real legacy path through this mechanism --
+    but never assumed) contributes to no key, so a caller summing this dict's values
+    never over- or under-counts a class it does not recognise.
+    """
+    counts: dict[tuple[str, str], int] = {}
+    for r in refused:
+        for i, (_label, pattern) in enumerate(D_ALTERNATIVES, start=1):
+            if pattern.search(r.old_rel):
+                key = (r.citing_file, f"d{i}")
+                counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 def _residue_fully_governed(
