@@ -1598,25 +1598,50 @@ def disclosed_by_w37_11_record(
 _REDIRECTS_OLD_PATH_COLUMN: Final = "old_path"
 _REDIRECTS_NEW_PATH_COLUMN: Final = "new_path"
 
-#: A migrated basename's own id prefix (`PL-00132-`, `RL-00225-`, …) — stripped to recover
-#: `part_slug` below, the content-derived remainder that survives a change of id
-#: allocation. Deliberately the same shape `check_slug_uniqueness2.py` (PR-D1's own
-#: verification script, not shipped) used to prove 0 collisions among 365 real moves.
+#: A migrated basename's own id prefix (`PL-00132-`, `RL-00225-`, …) — stripped by
+#: `part_slug` below.
 _MIGRATED_ID_PREFIX_RE: Final = re.compile(r"^[A-Z]+-\d+-")
 
 
 def part_slug(migrated_path: str) -> str:
-    """The migrated basename of `migrated_path`, with its id prefix stripped.
+    """**WITHDRAWN as a key (D1b, deputy 2026-09-16 22:47:56 BST) — kept only so the
+    regression test that caught the defect can still show it colliding.**
 
-    Content-derived, not allocation-derived: two different ids can be assigned to the
-    same split part across two allocations, but the slug — built from the split's own
-    heading/content, the same way every migrated filename is — does not depend on which
-    id it received. Used only to disambiguate a control path that fans out to more than
-    one migrated file (`resolve_to_control_paths`'s own fan-out map); a path with no
-    prefix (never migrated, or not itself the target of a move) returns unchanged, which
-    is harmless since callers only consult this for a genuine fan-out source.
+    The migrated basename of `migrated_path`, with its id prefix stripped. D1's merged
+    design called this "content-derived, not allocation-derived": two different ids can
+    be assigned to the same split part across two allocations, but (the claim was) the
+    slug — built from the split's own heading/content, the same way every migrated
+    filename is — does not depend on which id it received. **False whenever a citation
+    *inside* the part's own title or heading gets rewritten by the same run that decides
+    the leading id** — the real defect this slug never protected against:
+    `plan-review-9-at-wk-968-s-close.md` under the snapshot allocation vs
+    `plan-review-9-at-wk-671-s-close.md` under full history, the same control-side part,
+    two different slugs, because the `WK-` number *cited inside the heading* is itself
+    allocation-dependent. `_control_side_part_ordinals` in `doc-id.py` and the
+    `part_ordinal` column it writes to `REDIRECTS.csv` replace this for every
+    `resolve_to_control_paths` call; this function is no longer called by any production
+    path in this module.
     """
     return _MIGRATED_ID_PREFIX_RE.sub("", Path(migrated_path).name)
+
+
+#: `docs/REDIRECTS.csv`'s own column name for a split part's control-side identity
+#: (`doc-id.py`'s `_control_side_part_ordinals`) — kept as a symbol for the same reason
+#: `_REDIRECTS_OLD_PATH_COLUMN`/`_REDIRECTS_NEW_PATH_COLUMN` are.
+_REDIRECTS_PART_ORDINAL_COLUMN: Final = "part_ordinal"
+
+
+class AmbiguousSplitPartKeyError(RuntimeError):
+    """Two migrated files sharing one control path resolved to the identical (or both
+    empty/missing) control-side part identity in `tree_root`'s own `REDIRECTS.csv`.
+
+    Never resolved by first-match — the same rule `AmbiguousResidueKeyError` already
+    enforces on the record's own `(path, cls)` key, applied here one step earlier, at
+    the resolver that BUILDS that key from a fan-out control path. A `doc-id.py` write
+    defect (two siblings the migration itself could not tell apart) surfaces here rather
+    than silently merging their residue under one part identity, or worse, letting
+    whichever row a dict comprehension visits last win.
+    """
 
 
 def composite_control_key(control_path: str, part: str) -> str:
@@ -1686,10 +1711,27 @@ def resolve_to_control_paths(
     exactly this, and the merged count either exceeded every governed ceiling — a false
     `RESIDUE_REGRESSION` — or overwrote all but one row's ceiling, one control path
     colliding with one case-file — a false `RESIDUE_PROGRESSED` `SET CHANGE`). So: for a
-    fan-out control path, the key gains `part_slug`'s content-derived slug
-    (`composite_control_key`); for every other path (the overwhelming majority) `part` is
-    empty and the key is the plain control path, unchanged from before this fan-out
-    handling existed.
+    fan-out control path, the key gains a **control-side** part identity
+    (`composite_control_key`), read from that same row's own `part_ordinal` cell in
+    `REDIRECTS.csv` — `doc-id.py`'s `_control_side_part_ordinals`, set once at
+    migration-write time from the part's own `source_line_span` (or, only where no span
+    was recorded, its raw discovery-time `title`), never from anything `new_path` names.
+    D1b (deputy, 2026-09-16 22:47:56 BST) withdraws the merged design this replaces —
+    `part_slug`, a slug taken from the *migrated* basename — because a citation *inside*
+    a part's own title or heading is exactly the kind of text this run's own
+    citation-rewrite pass changes: `plan-review-9-at-wk-968-s-close.md` (snapshot
+    allocation) and `plan-review-9-at-wk-671-s-close.md` (full history) are the same
+    control-side part, cited under two different `WK-` numbers, and `part_slug` told them
+    apart as if they were two different rows. For every other path (the overwhelming
+    majority) `part` is empty and the key is the plain control path, unchanged from
+    before this fan-out handling existed.
+
+    **Never resolved by first-match.** If two migrated files sharing one control path
+    carry the identical (or both-blank) `part_ordinal`, this raises
+    `AmbiguousSplitPartKeyError` naming every colliding row rather than merging their
+    residue under one part identity or picking whichever `csv.DictReader` visited last —
+    condition 1's rule, applied here as well as at the record's own `(path, cls)` key
+    (`AmbiguousResidueKeyError`, `build_ceiling`).
 
     A **merge** target (`new_path` fed by more than one distinct `old_path` — real
     example: `docs/findings/register.md` <- both `docs/audit/register.md` and
@@ -1706,8 +1748,41 @@ def resolve_to_control_paths(
     non-sequential name; nothing here defends a merge target that DID get an allocated id,
     which the corpus does not currently contain).
     """
+    resolved: dict[tuple[str, str], int] = {}
+    for (path, cls), count in measured.items():
+        control = _control_path_for(path, tree_root)
+        key = (control, cls)
+        resolved[key] = resolved.get(key, 0) + count
+    return resolved
+
+
+def resolve_keys_to_control_paths(
+    keys: Iterable[tuple[str, str]], tree_root: Path,
+) -> Mapping[tuple[str, str], tuple[str, str]]:
+    """The per-item counterpart of `resolve_to_control_paths`: for every `(path, cls)` in
+    `keys`, the exact `(composite_control_path, cls)` it resolves to — never aggregated.
+
+    A caller that must decide, for one specific failure MESSAGE, whether that individual
+    message's key is disclosed (rather than only the total count for a `(control, cls)`
+    pair) needs this — `resolve_to_control_paths` alone only answers "how many, in
+    total". Built from the identical resolution `resolve_to_control_paths` performs
+    (`_control_path_for`, one shared implementation), so the two can never disagree on
+    which composite key one message belongs to.
+    """
+    return {(path, cls): (_control_path_for(path, tree_root), cls) for path, cls in keys}
+
+
+def _load_redirect_maps(tree_root: Path) -> tuple[
+    dict[str, set[str]], dict[str, str], dict[str, str],
+]:
+    """`(fan_out, reverse, part_ordinal_by_new_path)` from `tree_root`'s own
+    `docs/REDIRECTS.csv`, and the resolver's own condition-1 ambiguity refusal (never
+    first-match) — read once per call site, since a `REDIRECTS.csv` never changes within
+    one run.
+    """
     fan_out: dict[str, set[str]] = {}
     fan_in: dict[str, set[str]] = {}
+    part_ordinal_by_new_path: dict[str, str] = {}
     text = _read_text_or_none(tree_root / "docs" / "REDIRECTS.csv")
     if text is not None:
         for row in csv.DictReader(text.splitlines()):
@@ -1716,15 +1791,60 @@ def resolve_to_control_paths(
             if old_path and new_path:
                 fan_out.setdefault(old_path, set()).add(new_path)
                 fan_in.setdefault(new_path, set()).add(old_path)
+                # `row.get(...)` returns `None` only when the CSV's own header has no
+                # `part_ordinal` column at all — a tree migrated before D1b (every
+                # fixture literal in this test suite that predates it, and any tree a
+                # future rollback produced). D1b's own `_write_redirects` always emits
+                # the column, blank string included, for every row it writes, so this
+                # branch is never reached for a tree D1b's own `migrate()` built; it
+                # exists only so a pre-D1b `REDIRECTS.csv` keeps behaving exactly as it
+                # did before this change, rather than every incidental multi-target
+                # fixture in the suite turning into a new, unrelated
+                # `AmbiguousSplitPartKeyError`. A row that DOES carry the column, blank
+                # or not, is never given this fallback — only a genuinely absent column
+                # gets it.
+                raw_ordinal = row.get(_REDIRECTS_PART_ORDINAL_COLUMN)
+                part_ordinal_by_new_path[new_path] = (
+                    part_slug(new_path) if raw_ordinal is None else raw_ordinal
+                )
     # A merge target (len(fan_in[new_path]) > 1) is deliberately absent from `reverse`:
     # `.get(path, path)` below then falls through to identity, never an arbitrary pick.
     reverse: dict[str, str] = {
         new_path: next(iter(olds)) for new_path, olds in fan_in.items() if len(olds) == 1
     }
-    resolved: dict[tuple[str, str], int] = {}
-    for (path, cls), count in measured.items():
-        control = reverse.get(path, path)
-        part = part_slug(path) if len(fan_out.get(control, ())) > 1 else ""
-        key = (composite_control_key(control, part), cls)
-        resolved[key] = resolved.get(key, 0) + count
-    return resolved
+    # Condition 1, applied at the resolver: a genuine fan-out whose siblings do not carry
+    # pairwise-distinct part identities is refused outright, named, before anything below
+    # silently sums two different parts' residue onto one key.
+    ambiguous: dict[str, dict[str, list[str]]] = {}
+    for control, news in fan_out.items():
+        if len(news) <= 1:
+            continue
+        by_part: dict[str, list[str]] = {}
+        for new_path in sorted(news):
+            by_part.setdefault(part_ordinal_by_new_path.get(new_path, ""), []).append(new_path)
+        collisions = {part: paths for part, paths in by_part.items() if len(paths) > 1}
+        if collisions:
+            ambiguous[control] = collisions
+    if ambiguous:
+        detail = "; ".join(
+            f"{control!r}: " + "; ".join(f"{part!r} -> {paths}" for part, paths in coll.items())
+            for control, coll in sorted(ambiguous.items())
+        )
+        raise AmbiguousSplitPartKeyError(
+            f"{len(ambiguous)} control path(s) split into siblings that do not carry "
+            f"pairwise-distinct part_ordinal cells in {tree_root / 'docs' / 'REDIRECTS.csv'} "
+            f"— never resolved by first-match: {detail}"
+        )
+    return fan_out, reverse, part_ordinal_by_new_path
+
+
+def _control_path_for(path: str, tree_root: Path) -> str:
+    """The composite `(control_path[#part])` string one migrated `path` resolves to,
+    against `tree_root`'s own `docs/REDIRECTS.csv` — the single implementation
+    `resolve_to_control_paths` and `resolve_keys_to_control_paths` both call, so the
+    aggregate and the per-message answer can never drift apart.
+    """
+    fan_out, reverse, part_ordinal_by_new_path = _load_redirect_maps(tree_root)
+    control = reverse.get(path, path)
+    part = part_ordinal_by_new_path.get(path, "") if len(fan_out.get(control, ())) > 1 else ""
+    return composite_control_key(control, part)
