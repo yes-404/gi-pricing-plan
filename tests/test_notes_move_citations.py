@@ -7,26 +7,28 @@ merely citing it (`_SPECIFICATIONS_OF_THE_OLD_PATH` below -- added 2026-09-02 fo
 see that constant's own comment for what this narrow exemption stops catching).
 
 This is the slice's own TDD leaf, per
-`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §9 Step 1: the invariant the move must
+`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md`
+§9 Step 1: the invariant the move must
 establish, written and run to failure *before* the `git mv` of the notes directory to
 `docs/notes` and the mechanism edits, rather than asserted after the fact. A count of living
 citations differing from the plan's own re-derivation is expected -- the citation surface
 moves day to day (see the plan's §1a) -- but the *classes* the citations fall into should
-match what §1a and RL-948 of `docs/rulings/RL-00948-q7-notes-half-only-cite-notes-by-nt-00nn-id-path-citations-are-rejected-for-this-one-category.md`
+match what §1a and RL-948 of
+`docs/rulings/RL-00948-q7-notes-half-only-cite-notes-by-nt-00nn-id-path-citations-are-rejected-for-this-one-category.md`
 describe: frozen plans (untouched, C4), and everything else (edited by the move).
 
 **Widened 2026-09-01 for RL-951** (`docs/rulings/RL-00951-rl-947-s-tombstone-gains-p
-er-file-stubs-watched-by-a-new-check-not-left.md`): the ruled tombstone gained 18 per-file redirect stubs at the vacated
-path plus a new check (30) that watches them, both landed after this test was first
-written. The check's own implementation and its test necessarily and permanently name the
-old path -- that is not a citation left behind by the move, it is the move's own watch
-mechanism -- so `EXEMPT_FILES` below names them explicitly rather than widening the
-`docs/plans/`-shaped carve-out to something looser. Two more exemptions came from a
-rebase-time interaction, not from this slice's own work: `docs/research/file-census-5ef559d.csv`
-and `docs/research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md` (landed on `main` under PRs #537/#545 while this
-branch was open) are provenance-locked snapshots of the tree as it stood at `4f95fb3`,
-*before* this move -- editing either to say `docs/notes/` would misrepresent what was true
-at the tree the filename itself pins, the same reason a frozen plan is not edited.
+er-file-stubs-watched-by-a-new-check-not-left.md`): the ruled tombstone gained 18 per-file redirect
+stubs at the vacated path plus a new check (30) that watches them, both landed after this test was
+first written. The check's own implementation and its test necessarily and permanently name the old
+path -- that is not a citation left behind by the move, it is the move's own watch mechanism -- so
+`EXEMPT_FILES` below names them explicitly rather than widening the `docs/plans/`-shaped carve-out
+to something looser. Two more exemptions came from a rebase-time interaction, not from this slice's
+own work: `docs/research/file-census-5ef559d.csv` and
+`docs/research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md` (landed on `main` under PRs
+#537/#545 while this branch was open) are provenance-locked snapshots of the tree as it stood at
+`4f95fb3`, *before* this move -- editing either to say `docs/notes/` would misrepresent what was
+true at the tree the filename itself pins, the same reason a frozen plan is not edited.
 
 No `@pytest.mark.req` marker: this is a check on the repository's own citation surface, not
 evidence for a numbered platform requirement -- the same reasoning
@@ -36,10 +38,30 @@ their own unmarked tests.
 
 from __future__ import annotations
 
+import importlib.util
 import pathlib
+import re
 import subprocess
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+# `scripts/doc-id.py` cannot be `import`ed by name (hyphenated); loaded by path, the same
+# idiom `tests/test_audit_docs_ids.py`'s `_load_by_path` uses for `scripts/audit-docs.py`.
+# `scripts/` itself is put on `sys.path` first because `doc-id.py`'s own top-level `import
+# _docid` (unqualified, exactly as the real CLI invocation resolves it) needs to find that
+# sibling module the same way running the script directly would.
+_DOC_ID_TOOL_DIR = ROOT / "scripts"
+if str(_DOC_ID_TOOL_DIR) not in sys.path:
+    sys.path.insert(0, str(_DOC_ID_TOOL_DIR))
+_DOC_ID_SPEC = importlib.util.spec_from_file_location(
+    "_doc_id_tool_for_notes_move_citations", _DOC_ID_TOOL_DIR / "doc-id.py",
+)
+assert _DOC_ID_SPEC is not None
+assert _DOC_ID_SPEC.loader is not None
+_doc_id_tool = importlib.util.module_from_spec(_DOC_ID_SPEC)
+sys.modules[_DOC_ID_SPEC.name] = _doc_id_tool
+_DOC_ID_SPEC.loader.exec_module(_doc_id_tool)
 
 # The check that watches the old path, its skill documentation, and its own test all
 # name the old path deliberately and permanently. Originally check 30 (RL-951,
@@ -67,7 +89,10 @@ _PRE_MOVE_SNAPSHOTS = {
 
 # The class: a document that *specifies or verifies RFC-937's own future migration* of
 # this exact path, rather than a stale reference left over from the RFC-897 move this test
-# otherwise polices. RFC-937 (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`) is itself the
+# otherwise polices. RFC-937 (
+# `docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-
+# layout-and-roles-per-family.md`
+# ) is itself the
 # reason this class exists at all: its own §4 step 4 will *delete* the stub files check 30
 # watches, so both it and everything that verifies it against the tree necessarily name the
 # path being deleted. `docs/plans/` already has a blanket carve-out above for the same
@@ -79,13 +104,13 @@ _PRE_MOVE_SNAPSHOTS = {
 # in this comment, for the same self-referential reason the module docstring gives below)
 # -- §4 step 4's migration instruction, and §7(d)'s acceptance grep, which must contain the
 # literal pattern among the tokens a *later* migration tree is checked to no longer
-# contain. `docs/research/RS-01002-rfc-937-verification-and-impact-sweep-audit-record.md` (PR #560, merged
-# 2026-09-02, the day after RFC-937 itself) names it once, in its own §5.3/§5.4 scope note,
-# listing the directories RFC-937's impact-map sweep covers. Confirmed by re-running this
-# test against the merged tip that added it: exactly one new offender, that file alone --
-# not RFC-937 itself, which the exemption below already covered; a claim from outside this
-# session that a second, different file was *also* newly implicated did not hold up against
-# a direct check of the actual failure at that tree and is not reflected here.
+# contain. `docs/research/RS-01002-rfc-937-verification-and-impact-sweep-audit-record.md` (PR #560,
+# merged 2026-09-02, the day after RFC-937 itself) names it once, in its own §5.3/§5.4 scope note,
+# listing the directories RFC-937's impact-map sweep covers. Confirmed by re-running this test
+# against the merged tip that added it: exactly one new offender, that file alone -- not RFC-937
+# itself, which the exemption below already covered; a claim from outside this session that a
+# second, different file was *also* newly implicated did not hold up against a direct check of the
+# actual failure at that tree and is not reflected here.
 #
 # Why an explicit set and not a structural rule (e.g. "exempt any file that also cites
 # `RFC-937`"): a content-marker match would let the exemption widen itself the moment any
@@ -126,6 +151,26 @@ _SPECIFICATIONS_OF_THE_OLD_PATH = {
     "docs/research/RS-01002-rfc-937-verification-and-impact-sweep-audit-record.md",
     "docs/findings/FD-01009-python-yml-never-triggered-on-docs-so-a-docs-only-change-could-break-any-root-test-with-ci-green.md",
     "docs/findings/register.md",
+    # Reviewed W37-6 (2026-09-17), the six rulings that decided RFC-937's own notes-move
+    # (RFC-897's predecessor decision, moving the old notes root under `.claude` to
+    # `docs/notes/`/`docs/rfcs/`): each names the path as the subject of the decision it
+    # records, not as a living instruction
+    # to keep using it. Q4-Q7 (RL-945..948) are one ruling series answering "where does the
+    # notes half land, in what form, cited how" in turn; RL-913 and RL-988 each name the
+    # path once, inside a grep pattern / a historical count table about detecting it, the
+    # same reason `scripts/_docid.py` below is in this set.
+    "docs/rulings/RL-00913-q5-file-by-the-f-id-verbatim-the-requirement-id-cannot-name-a-file-and-is-cross-linked-from-inside-it.md",
+    "docs/rulings/RL-00945-q4-the-ownership-matrix-lands-in-docs-process-a-note-appendix-is-rejected.md",
+    "docs/rulings/RL-00946-q5-destination-is-docs-notes-folding-into-an-existing-docs-family-is-rejected.md",
+    "docs/rulings/RL-00947-q6-tombstone-form-is-a-readme-mapping-symlinks-are-rejected.md",
+    "docs/rulings/RL-00948-q7-notes-half-only-cite-notes-by-nt-00nn-id-path-citations-are-rejected-for-this-one-category.md",
+    "docs/rulings/RL-00951-rl-947-s-tombstone-gains-per-file-stubs-watched-by-a-new-check-not-left.md",
+    "docs/rulings/RL-00988-dp-2-the-legacy-form-sweep-is-repaired-in-two-parts-fix-the-pattern-first-then-a-bounded-load-bearing-exclusion-list.md",
+    # Reviewed W37-6 (2026-09-17): `docs/REDIRECTS.csv` is `doc-id.py migrate`'s own
+    # generated old-path -> new-path record (RFC-937 §1.4) -- the same reason
+    # `docs/findings/register.md` above is in this set rather than exempted by a data-file
+    # pattern. Recording the old path IS the row's content, not a stray leftover citation.
+    "docs/REDIRECTS.csv",
     # Reviewed in 2026-09-03, and the first member of this set that is code rather than a
     # document. `scripts/_docverify.py` is RL-1043 §1's instrument, and its
     # `D_FULL_PATTERN` is RFC-937 §7(d)'s grep **verbatim** — a constant whose whole
@@ -180,11 +225,32 @@ _D13_RETIREMENT_FIXTURE_DATA = {
 }
 
 
+def _has_uncovered_citation(text: str, old_path: str) -> bool:
+    """True when at least one occurrence of `old_path` in `text` sits outside every
+    `# rfc-937: legacy-form-spec` marked span (`scripts/doc-id.py`'s
+    `_legacy_form_spec_spans`) -- W37-6's addition, 2026-09-17: the mechanism that already
+    protects a marked line from `_rewrite_citations` during a migration run is the same
+    "specification of the path, not a citation of it" distinction `_SPECIFICATIONS_OF_THE_
+    OLD_PATH` names, read per-line instead of per-file. A file with every occurrence marked
+    is not an offender even if it names no entry in any of the sets above; a file with even
+    one *unmarked* occurrence still is, whether or not some of its other occurrences happen
+    to fall inside a marked span.
+
+    The cheap `old_path in text` check happens first, at the call site, so the marker-span
+    regex scan (`_legacy_form_spec_spans`, a whole-file `re.finditer`) only ever runs on a
+    file this test would otherwise flag.
+    """
+    spans = _doc_id_tool._legacy_form_spec_spans(text)
+    positions = (m.start() for m in re.finditer(re.escape(old_path), text))
+    return any(not any(start <= p < end for start, end in spans) for p in positions)
+
+
 def test_no_living_file_cites_the_old_notes_path() -> None:
     """After the move, the old notes root under `.claude` may be named only by the
     tombstone README left there, by files frozen under `docs/plans/`, by check 30's own
-    watching mechanism, by pre-move provenance-locked snapshots, and by a maintainer-accepted
-    note that specifies the path's eventual deletion (`_SPECIFICATIONS_OF_THE_OLD_PATH`).
+    watching mechanism, by pre-move provenance-locked snapshots, by a maintainer-accepted
+    note that specifies the path's eventual deletion (`_SPECIFICATIONS_OF_THE_OLD_PATH`),
+    or by a `# rfc-937: legacy-form-spec` marked line (`_has_uncovered_citation`).
 
     A frozen plan is never edited to agree with a later move (`docs/plans/README.md`'s
     write-once rule, RFC-897 C4) -- the tombstone this slice creates at the vacated path
@@ -205,12 +271,48 @@ def test_no_living_file_cites_the_old_notes_path() -> None:
         | _SPECIFICATIONS_OF_THE_OLD_PATH
         | _D13_RETIREMENT_FIXTURE_DATA
     )
-    offenders = [
-        f
-        for f in tracked
-        if old_path in (ROOT / f).read_text(encoding="utf-8", errors="replace")
-        and not f.startswith("docs/plans/")
-        and f != old_path + "/README.md"
-        and f not in exempt
-    ]
+    offenders = []
+    for f in tracked:
+        text = (ROOT / f).read_text(encoding="utf-8", errors="replace")
+        if (
+            old_path in text
+            and not f.startswith("docs/plans/")
+            and f != old_path + "/README.md"
+            and f not in exempt
+            and _has_uncovered_citation(text, old_path)
+        ):
+            offenders.append(f)
     assert offenders == [], offenders
+
+
+def test_an_unmarked_citation_still_reds(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof for `_has_uncovered_citation`, added W37-6 (2026-09-17) alongside
+    the marker-span mechanism: a `# rfc-937: legacy-form-spec` marker protects only the one
+    physical line right after it, so a script naming the old path on an *unmarked* line
+    must still red even while it sits right beside a properly marked one -- the same
+    "the marker names exactly the next line" scoping `_legacy_form_spec_spans` documents.
+    Proven directly against `_has_uncovered_citation`, not by writing into the real tree
+    (`tests/test_audit_docs_ids.py`'s own reasoning for testing fixtures rather than ROOT).
+    """
+    old_path = ".claude" + "/" + "notes"
+    unmarked = (
+        "# rfc-937: legacy-form-spec\n"
+        f'MARKED = "{old_path}/marked.md"\n'
+        f'UNMARKED = "{old_path}/unmarked.md"\n'
+    )
+    assert _has_uncovered_citation(unmarked, old_path)
+
+
+def test_every_occurrence_marked_does_not_red() -> None:
+    """The positive control for the same mechanism: every occurrence of the old path
+    covered by its own marker is not an offender -- the shape `scripts/doc-id.py`'s real
+    `_REFERENCE_CLAUDE_DIR_EXCEPTIONS["notes/"]` entry has after this slice's own fix.
+    """
+    old_path = ".claude" + "/" + "notes"
+    fully_marked = (
+        "# rfc-937: legacy-form-spec\n"
+        f'FIRST = "{old_path}/one.md"\n'
+        "# rfc-937: legacy-form-spec\n"
+        f'SECOND = "{old_path}/two.md"\n'
+    )
+    assert not _has_uncovered_citation(fully_marked, old_path)

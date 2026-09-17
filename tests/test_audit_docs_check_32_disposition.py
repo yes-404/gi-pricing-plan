@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""`docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md` Entry 2 item
-1's check-32 disposition — the padding clause adopts row (e)'s conjuncts 2 and 3 from
-shared `_docid` code: a padded id sitting inside a filesystem path (conjunct 2) or whose
+"""
+`docs/rulings/RL-01060-check-36-is-one-rule-at-two-times-with-d-and-must-carry-d-s-disclosed-classes-check-32-s-padding-resolution-clause-adopts-e-s-conjuncts-from-docid-not-a-private-re-typing.md`
+Entry 2 item 1's check-32 disposition — the padding clause adopts row (e)'s conjuncts 2 and 3
+from shared `_docid` code: a padded id sitting inside a filesystem path (conjunct 2) or whose
 unpadded form does not resolve in `docs/INDEX.md` (conjunct 3) is not a padding violation.
 Check 32 keeps its own broader `0*` breadth beyond (e)'s exact-width conjunct 1: a padded
 citation with fewer leading zeros than `_docid.PAD_WIDTH` (a "short-padded" id) is a real
