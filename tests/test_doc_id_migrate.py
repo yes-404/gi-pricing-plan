@@ -4922,7 +4922,11 @@ def _module_with_source_mutations(
 
 
 def _emit_the_real_w5_ledgers(
-    module: types.ModuleType, scratch: pathlib.Path, *, resolve_work: bool
+    module: types.ModuleType,
+    scratch: pathlib.Path,
+    *,
+    resolve_work: bool,
+    root: pathlib.Path = ROOT,
 ) -> list[Any]:
     """Write the real ten `W5 ... (in progress, not closed)` records of
     `docs/audit/closure-records.md` into `scratch` as `LG-` documents, exactly as
@@ -4937,9 +4941,9 @@ def _emit_the_real_w5_ledgers(
     Returns the ledger drafts so a caller states its expected counts in terms of the
     corpus it actually read, not a number retyped from this docstring.
     """
-    ledgers = [d for d in module._discover_closure_records(ROOT) if d.prefix == "LG"]
+    ledgers = [d for d in module._discover_closure_records(root) if d.prefix == "LG"]
     assert ledgers, "fixture assumption: the real closure-records file still yields LG- drafts"
-    roadmap_drafts, _phase_titles, _occurrences = module._discover_roadmap(ROOT)
+    roadmap_drafts, _phase_titles, _occurrences = module._discover_roadmap(root)
     works = [d for d in roadmap_drafts if d.old_token == "W5"] if resolve_work else []
     if resolve_work:
         assert len(works) == 1, works
@@ -4957,7 +4961,7 @@ def _emit_the_real_w5_ledgers(
 
 
 def test_ledger_slice_check_reports_the_zero_it_counted_on_the_real_ten(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 94: "The passing state today is a count of **zero**, and the check must
     **say so** rather than pass silently -- a boundary metric that reads zero by
@@ -4971,7 +4975,9 @@ def test_ledger_slice_check_reports_the_zero_it_counted_on_the_real_ten(
     rather than this test.
     """
     scratch = tmp_path / "control"
-    ledgers = _emit_the_real_w5_ledgers(doc_id_cli, scratch, resolve_work=True)
+    ledgers = _emit_the_real_w5_ledgers(
+        doc_id_cli, scratch, resolve_work=True, root=pre_migration_root
+    )
     assert len(ledgers) == 10, (
         "Ruling 84 §4 item 1's own number, over the real docs/audit/closure-records.md"
     )
@@ -4986,7 +4992,7 @@ def test_ledger_slice_check_reports_the_zero_it_counted_on_the_real_ten(
 
 
 def test_ledger_slice_check_reds_on_ruling_94s_stamp_header_mutation(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 94's named broken input, run against the real corpus: "The deliberately
     broken input is a one-line mutation of `_stamp_header` -- remove `slice` from the skip
@@ -5007,7 +5013,9 @@ def test_ledger_slice_check_reds_on_ruling_94s_stamp_header_mutation(
         tmp_path, ((_STAMP_SKIP_WITH_SLICE, _STAMP_SKIP_WITHOUT_SLICE),), name="stamp-skip"
     )
     mutated_tree = tmp_path / "mutated-tree"
-    ledgers = _emit_the_real_w5_ledgers(mutated, mutated_tree, resolve_work=True)
+    ledgers = _emit_the_real_w5_ledgers(
+        mutated, mutated_tree, resolve_work=True, root=pre_migration_root
+    )
     mutated_report = mutated._check_emitted_ledger_axes(mutated_tree)
 
     assert mutated_report.records == len(ledgers), mutated_report
@@ -5018,7 +5026,9 @@ def test_ledger_slice_check_reds_on_ruling_94s_stamp_header_mutation(
     )
 
     control_tree = tmp_path / "control-tree"
-    _emit_the_real_w5_ledgers(doc_id_cli, control_tree, resolve_work=True)
+    _emit_the_real_w5_ledgers(
+        doc_id_cli, control_tree, resolve_work=True, root=pre_migration_root
+    )
     control_report = doc_id_cli._check_emitted_ledger_axes(control_tree)
     assert control_report.records == len(ledgers), control_report
     assert control_report.slice_values == 0, control_report
@@ -5081,7 +5091,7 @@ def test_ledger_slice_check_separates_a_resolving_slice_from_a_dangling_one(
 
 
 def test_ruling_84_item_3_reds_on_an_emitted_ledger_with_neither_axis(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 84 §4's third acceptance item, which Ruling 94 §4 obliges to be exercised
     here rather than assumed: "Ruling 84 §4's third item is exercised too, since §1(a)
@@ -5100,11 +5110,13 @@ def test_ruling_84_item_3_reds_on_an_emitted_ledger_with_neither_axis(
     being silent: written without either axis is allowed, *ending* without either is not.
     """
     resolved = tmp_path / "resolved"
-    ledgers = _emit_the_real_w5_ledgers(doc_id_cli, resolved, resolve_work=True)
+    ledgers = _emit_the_real_w5_ledgers(
+        doc_id_cli, resolved, resolve_work=True, root=pre_migration_root
+    )
     assert doc_id_cli._check_emitted_ledger_axes(resolved).work_violations == ()
 
     orphaned = tmp_path / "orphaned"
-    _emit_the_real_w5_ledgers(doc_id_cli, orphaned, resolve_work=False)
+    _emit_the_real_w5_ledgers(doc_id_cli, orphaned, resolve_work=False, root=pre_migration_root)
     report = doc_id_cli._check_emitted_ledger_axes(orphaned)
 
     assert report.records == len(ledgers), report
