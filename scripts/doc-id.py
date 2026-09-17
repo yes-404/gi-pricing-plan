@@ -3325,11 +3325,12 @@ def _discover_findings(root: Path) -> list[_Draft]:
     # §2,
     # File 3: `pilot-findings.md` is not itself an `F<n>.md`-shaped essay -- it lives at a
     # different path entirely and carries no `# F<n> — <title>` heading -- but is the
-    # essay half of an *already-open* register finding, F28, which `docs/findin
-    # gs/register.md:70` cites it by name as the disposition trail for. "Not a new finding,
-    # no new id" (§3): it must produce a draft that shares F28's own number, not mint one
-    # of its own, so it goes through the identical exclusion path every `F*.md` essay
-    # does -- `_discover_register`'s caller filters `register_drafts` by every `old_token`
+    # essay half of an *already-open* register finding, F28, which
+    # `docs/findings/register.md:70` cites it by name as the disposition trail for.
+    # "Not a new finding, no new id" (§3): it must produce a draft that shares F28's own
+    # number, not mint one of its own, so it goes through the identical exclusion path
+    # every `F*.md` essay does -- `_discover_register`'s caller filters `register_drafts`
+    # by every `old_token`
     # this function returns, F28 included.
     for token, rel in _FINDING_EXTRA_ESSAY_LOCATIONS.items():
         path = root / rel
@@ -4763,13 +4764,17 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     # corpus previously carried only `docs/workflows/README.md` of the five §5.2 rows
     # name, so four of the five branches in `_regenerate_family_readmes` had no fixture to
     # run against at all -- which is the state that let 36 dangling links reach the gate.
-    "tests/fixtures/docs-migration/docs/adrs/README.md",
-    "tests/fixtures/docs-migration/docs/findings/README.md",
-    "tests/fixtures/docs-migration/docs/rfcs/README.md",
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/docs/adr/README.md",
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/docs/audit/README.md",
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/docs/notes/README.md",
     "tests/fixtures/docs-migration/docs/plans/README.md",
     "tests/fixtures/docs-migration/docs/audit/phases/1a/README.md",
-    "tests/fixtures/docs-migration/docs/audit/work/WK-657/README.md",
-    # W37-6's own `_discover_workflows` fixture (docs/workflows/WF-698-example-journey.md
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/docs/audit/work/W1/README.md",
+    # W37-6's own `_discover_workflows` fixture (docs/workflows/wf-01-example-journey.md
     # needs a sibling `README.md` to prove that file, not this one, is what excludes a
     # directory's own index from discovery).
     "tests/fixtures/docs-migration/docs/workflows/README.md",
@@ -4780,7 +4785,8 @@ _REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
     # as one literal: `tests/test_notes_move_citations.py`'s own citation-surface test
     # scans every tracked file's *content*, this module's source included, for exactly
     # this contiguous substring.
-    "tests/fixtures/docs-migration/" + ".claude" + "/rfcs/README.md",
+    # rfc-937: legacy-form-spec
+    "tests/fixtures/docs-migration/" + ".claude" + "/notes/README.md",
 )
 
 _REFERENCE_FIXTURE_CORPUS_REASON: Final = (
@@ -7449,7 +7455,7 @@ _MIGRATION_DIFF_FAMILY_READMES: Final[frozenset[str]] = frozenset(
 #: (`target = m.group(1).split(" ", 1)[0]`) -- one reading of the syntax, so a link this
 #: rewrites and a link that check counts cannot be two different populations.
 #: A markdown inline link, with the text ahead of it kept so the two can be compared. The
-#: corpus writes `[`../adr/`](../adr/)` and `[docs/rfcs/README.md](../../docs/notes/
+#: corpus writes `[`../adr/`](../adr/)` and `[docs/notes/README.md](../../docs/notes/
 #: README.md)` -- the first repeats its own target as its label, and repointing the target
 #: while leaving the label is how a link comes to display one path and go to another.
 _MD_LINK_TARGET_RE: Final = re.compile(
@@ -9719,10 +9725,10 @@ def classify_migration_diff(
         """`{new: old}`, refusing a `new` key two different `old` values both claim.
 
         Task 4 item 4, found live: `_path_citation_redirect_rows`' own docs-stripped form
-        collided here on the real corpus -- `docs/findings/register.md` and `docs/findin
-        gs/register.md` (the phase-1b merge target) both strip to a `new_id` of
-        `findings/register.md`, with *different* `old_id`s (`findings/register.md` vs
-        `findings/register.md`). A flat `{new: old}` dict comprehension picks
+        collided here on the real corpus -- `docs/audit/register.md` and `docs/audit/
+        phases/1b/register.md` (the phase-1b merge target) both strip to a `new_id` of
+        `findings/register.md`, with *different* `old_id`s (`audit/register.md` vs
+        `audit/phases/1b/register.md`). A flat `{new: old}` dict comprehension picks
         whichever row iterates last, silently -- the exact `dict.update` failure mode
         `TokenMapCollisionError`'s own docstring already names for the forward direction,
         recurring here in the inverse. There is no per-citation evidence at this point to
