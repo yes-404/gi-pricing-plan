@@ -3413,7 +3413,7 @@ _RULING_98_HANDOVERS = (
 
 
 def test_ruling_98_the_seven_are_exactly_the_rl_drafts_plain_plans_emits(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance items 1 and 6, over the real corpus at `2ae31f7`.
 
@@ -3422,45 +3422,45 @@ def test_ruling_98_the_seven_are_exactly_the_rl_drafts_plain_plans_emits(
     third-level headings the `## Ruling N` splitter cannot reach, so the whole record
     leaves this function as a single draft, which is what §2.3 rules.
     """
-    rl = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "RL"]
+    rl = [d for d in doc_id_cli._discover_plain_plans(pre_migration_root) if d.prefix == "RL"]
     assert sorted(d.was for d in rl) == sorted(_RULING_98_MAINTAINER_DECISIONS)
     assert len([d for d in rl if d.was == _RULING_98_MAINTAINER_DECISIONS[6]]) == 1
 
 
 def test_ruling_98_every_such_draft_is_owner_maintainer_and_carries_no_kind(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance items 1 and 2, as a property over whatever the predicate selects rather
     than over the seven — so a later member cannot arrive with a `kind:` unnoticed.
     `docs/_templates/RL.md:8`: *"`kind:` and `plans:` do not apply to this family and must
     not appear here."*
     """
-    rl = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "RL"]
+    rl = [d for d in doc_id_cli._discover_plain_plans(pre_migration_root) if d.prefix == "RL"]
     assert rl, "fixture assumption: the predicate selects at least one real document"
     assert [(d.was, d.owner, d.kind) for d in rl if d.owner != "maintainer" or d.kind] == []
 
 
 def test_ruling_98_the_two_handovers_are_not_reclassified(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance item 3. Both routes to the answer are asserted, because Ruling 98 §1
     records both precisely so a reader who checks one knows the other agrees: the suffix
     table still produces `kind: handover`/`owner: executor`, and the content predicate is
     independently false for each file's own title.
     """
-    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(ROOT)}
+    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(pre_migration_root)}
     for rel in _RULING_98_HANDOVERS:
         assert rel in by_was, f"fixture assumption: {rel} still exists"
         draft = by_was[rel]
         assert (draft.prefix, draft.kind, draft.owner) == ("PL", "handover", "executor")
-        text = (ROOT / rel).read_text(encoding="utf-8")
+        text = (pre_migration_root / rel).read_text(encoding="utf-8")
         assert not doc_id_cli._is_maintainer_decision_plan(
             doc_id_cli._plan_title(text) or "", text
         )
 
 
 def test_ruling_98_conditional_exclusion_holds_while_the_decision_lines_are_blank(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance item 4, first direction: `…-w37-6-maintainer-decisions.md` keeps the
     shipped `PL- kind: leaf, owner: planner` default while its `> **Decision:**` blocks
@@ -3471,19 +3471,19 @@ def test_ruling_98_conditional_exclusion_holds_while_the_decision_lines_are_blan
     at `e56d038`: if the maintainer has since filled a line in, this assertion is the
     thing that says so, instead of a stale expectation quietly passing.
     """
-    text = (ROOT / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
+    text = (pre_migration_root / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
     assert doc_id_cli._UNFILLED_DECISION_BLOCK_RE.search(text), (
         "this file's Decision: lines are no longer blank at this tree -- Ruling 98 "
         "§2.2 then routes it to RL-/owner: maintainer, and this expectation, not the "
         "predicate, is what has to change"
     )
-    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(ROOT)}
+    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(pre_migration_root)}
     draft = by_was[_RULING_98_CONDITIONAL_EXCLUSION]
     assert (draft.prefix, draft.kind, draft.owner) == ("PL", "leaf", "planner")
 
 
 def test_ruling_98_the_exclusion_lifts_the_moment_the_maintainer_fills_a_decision_in(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance item 4, **second** direction — the one a reading frozen at `e56d038`
     gets wrong: *"stamped `owner: planner` after a dated correction has filled them in, on
@@ -3495,7 +3495,7 @@ def test_ruling_98_the_exclusion_lifts_the_moment_the_maintainer_fills_a_decisio
     """
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
-    source = (ROOT / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
+    source = (pre_migration_root / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
     filled = re.sub(
         r"^> \*\*Decision:\*\*[ \t]*$", "> **Decision:** (a), as asked.", source, flags=re.M
     )
@@ -3553,7 +3553,7 @@ _RULING_98_BRANCH_DISARMED = "prefix, kind, owner = prefix, kind, owner"
 
 
 def test_ruling_98_instrument_reds_when_the_branch_is_removed(
-    tmp_path: pathlib.Path,
+    tmp_path: pathlib.Path, pre_migration_root: pathlib.Path,
 ) -> None:
     """CLAUDE.md §13: *"enforcement is proven on deliberately broken input. A check that
     has never printed a failure has not been tested."*
@@ -3566,7 +3566,7 @@ def test_ruling_98_instrument_reds_when_the_branch_is_removed(
     mutated = _module_with_source_mutations(
         tmp_path, ((_RULING_98_BRANCH, _RULING_98_BRANCH_DISARMED),), name="ruling98"
     )
-    by_was = {d.was: d for d in mutated._discover_plain_plans(ROOT)}
+    by_was = {d.was: d for d in mutated._discover_plain_plans(pre_migration_root)}
     regressed = [
         (rel, by_was[rel].prefix, by_was[rel].kind, by_was[rel].owner)
         for rel in _RULING_98_MAINTAINER_DECISIONS
@@ -3574,7 +3574,7 @@ def test_ruling_98_instrument_reds_when_the_branch_is_removed(
     assert regressed == [
         (rel, "PL", "leaf", "planner") for rel in _RULING_98_MAINTAINER_DECISIONS
     ]
-    assert not [d for d in mutated._discover_plain_plans(ROOT) if d.prefix == "RL"]
+    assert not [d for d in mutated._discover_plain_plans(pre_migration_root) if d.prefix == "RL"]
 
 
 # ---------------------------------------------------------------------------------------
@@ -3593,10 +3593,10 @@ _WRAPPED_TITLE_FILES = (
 
 
 def test_plan_title_joins_a_wrapped_heading_on_the_real_files(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     for rel in _WRAPPED_TITLE_FILES:
-        text = (ROOT / rel).read_text(encoding="utf-8")
+        text = (pre_migration_root / rel).read_text(encoding="utf-8")
         title = doc_id_cli._plan_title(text)
         assert title is not None, rel
         first_line = text.splitlines()[0].removeprefix("# ")
