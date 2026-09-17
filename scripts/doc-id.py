@@ -7296,6 +7296,20 @@ _README_FAMILY_MOVES: Final[Mapping[str, str]] = {
     "docs/findings/README.md": "docs/findings/README.md",
 }
 
+#: `_README_FAMILY_MOVES`'s keys, mapped instead to the true pre-migration legacy path each
+#: one's content is carried from -- `docs/adr/README.md`, `docs/notes/README.md`,
+#: `docs/audit/README.md` (the latter dissolves; the larger half of its content lands
+#: here). `_README_FAMILY_MOVES` cannot serve this role itself: it is keyed by the NEW path
+#: for the populations that need to recognise the file by its POST-migration name
+#: (`_discover_reference_stamp_targets`'s `routed`, `_stamp_regenerated_readmes`), and using
+#: it as an old-path source gates every idempotency check in this module on a path that
+#: does not exist until the move it is meant to trigger has already happened.
+_README_FAMILY_LEGACY_PATHS: Final[Mapping[str, str]] = {
+    "docs/adrs/README.md": "docs/adr/README.md",
+    "docs/rfcs/README.md": "docs/notes/README.md",
+    "docs/findings/README.md": "docs/audit/README.md",
+}
+
 #: Directory-shaped link targets (`[../adr/](../adr/)`) resolve to a directory, never to a
 #: file, so they are absent from a move map built out of file moves and would survive a
 #: repoint untouched -- pointing at a directory this migration removes. The two legacy
@@ -7936,7 +7950,7 @@ def _regenerate_family_readmes(
 
     # --- `adr/` + README -> `adrs/`, README generated.
     carry(
-        "docs/adrs/README.md",
+        "docs/adr/README.md",
         _README_FAMILY_MOVES["docs/adrs/README.md"],
         lambda _body: _ADRS_README_BODY.format(
             pad="n" * _docid.PAD_WIDTH, table=_render_adrs_readme_table(drafts),
@@ -7945,7 +7959,7 @@ def _regenerate_family_readmes(
 
     # --- `notes/` + README -> `rfcs/`, README rewritten, index table dropped for INDEX.md.
     carry(
-        "docs/rfcs/README.md",
+        "docs/notes/README.md",
         _README_FAMILY_MOVES["docs/rfcs/README.md"],
         _rewrite_rfcs_readme_body,
     )
@@ -7960,7 +7974,7 @@ def _regenerate_family_readmes(
 
     # --- `findings/README.md` deleted, content to the `findings/` and `closures/` READMEs.
     carry(
-        "docs/findings/README.md",
+        "docs/audit/README.md",
         _README_FAMILY_MOVES["docs/findings/README.md"],
         _rewrite_findings_readme_body,
     )
@@ -8632,6 +8646,11 @@ def migrate(root: Path) -> MigrateResult:
         # `test_no_path_is_both_stamped_and_deleted_by_the_same_run` forbids.
         routed=(
             {d.was for d in audit_closure_drafts if d.was is not None}
+            # Both the pre-migration path (a first run's `git ls-files` sees this) and the
+            # post-migration one (a second, idempotent run over an already-migrated tree
+            # sees this instead) — `_regenerate_family_readmes`'s `carry()` owns this
+            # README's header on either side of that boundary, never this generic scope.
+            | {"docs/adr/README.md", "docs/notes/README.md", "docs/audit/README.md"}
             | set(_README_FAMILY_MOVES)
         ),
     )
@@ -8959,7 +8978,14 @@ def migrate(root: Path) -> MigrateResult:
     # path is exactly as stale as one citing any other moved file (§4 step 1). The files
     # themselves are moved after `_stamp_reference_targets`, so each carries the header that
     # pass wrote rather than one re-derived here.
-    for old_rel, new_rel in _README_FAMILY_MOVES.items():
+    # `_README_FAMILY_MOVES` is keyed by the NEW path (it doubles as the population
+    # `_discover_reference_stamp_targets`'s `routed` set and `_stamp_regenerated_readmes`
+    # consult), not the legacy one this loop actually moves from -- the true source is
+    # `_README_FAMILY_LEGACY_PATHS` below. Gating existence on the new path here reproduced
+    # the exact `carry()` bug above one level up: on a second, idempotent run the new path
+    # already exists, so the guard passed and re-added an `old_path == new_path` no-op row
+    # every run (`test_migrate_is_idempotent_on_its_own_output`, found live).
+    for new_rel, old_rel in _README_FAMILY_LEGACY_PATHS.items():
         if not (root / old_rel).is_file():
             continue
         redirect_rows.append(
