@@ -1463,6 +1463,77 @@ def _run_check_35(audit: types.ModuleType) -> list[str]:
     return list(audit.failures)
 
 
+# ---------------------------------------------------------------------------------------
+# W37-6 (2026-09-17): F92's stamp-deferred population (RL-01046 §B, `docs/rulings/
+# RL-01046-the-alias-class-the-disclosed-rows-and-the-run-s-conditional-window.md` — cited
+# by file path, never as "Ruling 105": `docs/REDIRECTS.csv` maps that number to this file,
+# and post-migration the bare number resolves to RL-01059 instead). `_is_stamp_deferred_
+# w37_10` is a pure function of `(path, header)`, so both directions are proven directly
+# against it rather than through `check_owner`'s full loop plus its two unconditional F83
+# reconciliation sub-calls, which read the real corpus regardless of any fixture and would
+# make an exact `failures == [...]` assertion fragile to unrelated real-tree drift.
+# ---------------------------------------------------------------------------------------
+
+
+def test_a_harness_schema_file_at_a_deferred_location_is_stamp_deferred(
+    audit: types.ModuleType,
+) -> None:
+    """Broken input: a `.claude/agents/*.md` or `.claude/skills/*/SKILL.md`-shaped header
+    (Claude Code's own harness schema, no `family:`) at one of the two locations F92
+    names is the population RL-01046 §B defers to W37-10.
+    """
+    header = audit._docid.parse_header_text(
+        "---\nname: made-up\ndescription: x\n---\n"
+    )
+    assert header is not None
+    agent_path = audit.REPO / ".claude" / "agents" / "made-up-agent.md"
+    skill_path = audit.REPO / ".claude" / "skills" / "made-up-skill" / "SKILL.md"
+    assert audit._is_stamp_deferred_w37_10(agent_path, header)
+    assert audit._is_stamp_deferred_w37_10(skill_path, header)
+
+
+def test_a_family_stamped_file_at_the_same_location_is_not_deferred(
+    audit: types.ModuleType,
+) -> None:
+    """The counter-exemplar RL-01046 §B's ruling requires: a file at one of F92's two
+    locations that DOES carry `family:` — a future, properly stamped agent or skill — is
+    not harness-schema-shaped any more, is not part of F92's population, and stays
+    checked normally (reds on a bad owner exactly like any other stamped document).
+    Proven both on a real file (`.claude/agents/README.md`, `family: reference`) and a
+    synthetic one at the skills location, so the exemption can never widen to "any file
+    under these two directories" by path alone.
+    """
+    real_header = audit._docid.parse_header(audit.REPO / ".claude" / "agents" / "README.md")
+    assert real_header is not None
+    assert real_header.family
+    assert not audit._is_stamp_deferred_w37_10(
+        audit.REPO / ".claude" / "agents" / "README.md", real_header
+    )
+
+    synthetic_header = audit._docid.parse_header_text(
+        "---\nfamily: reference\ntitle: t\nstatus: active\nowner: lead\n---\n"
+    )
+    assert synthetic_header is not None
+    skill_path = audit.REPO / ".claude" / "skills" / "made-up-skill" / "SKILL.md"
+    assert not audit._is_stamp_deferred_w37_10(skill_path, synthetic_header)
+
+
+def test_a_harness_schema_file_outside_the_two_locations_is_not_deferred(
+    audit: types.ModuleType,
+) -> None:
+    """Path-anchored, not schema-anchored: the same harness-schema header used in the
+    positive proof above, at a path outside `.claude/agents/`/`.claude/skills/*/SKILL.md`,
+    is not F92's population — proving the predicate cannot be satisfied by content alone,
+    which would defer every accidentally-harness-shaped document repository-wide.
+    """
+    header = audit._docid.parse_header_text(
+        "---\nname: made-up\ndescription: x\n---\n"
+    )
+    assert header is not None
+    other_path = audit.REPO / "docs" / "plans" / "PL-99999-made-up.md"
+    assert not audit._is_stamp_deferred_w37_10(other_path, header)
+
+
 def test_f83_register_reconciles_clean_against_the_real_tree(
     audit: types.ModuleType,
 ) -> None:
@@ -1615,7 +1686,7 @@ def test_nt0019_stamp_set_is_the_ruled_corpus_measured_against_git(
     stamp_set = set(audit.nt0019_stamp_set())
 
     # 1. Every tracked file under docs/ — RFC §4's "every file under `docs/`". This is
-    #    the clause that carries all 62 non-markdown exemptions; if it narrows to `*.md`
+    #    the clause that carries all 63 non-markdown exemptions; if it narrows to `*.md`
     #    the register silently becomes a list of three.
     docs = {p for p in tracked if p.startswith("docs/")}
     assert docs
@@ -1768,13 +1839,23 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     which pinned the defect: `_id_scope_documents` expanded a directory root with
     `rglob("*.md")`, so a fully widened scope reached **3** of the register's 65 — the
     vendored manifests, which are markdown — and **none** of the 62 non-`.md` files the
-    register mostly consists of. The glob was the gate, not the roots, and F87's own
-    falsifiable clause says so: *"not discharged by widening `_ID_SCOPE_ROOTS`, and not by
-    checks 30-39 passing"*.
+    register held *at that measurement*. The glob was the gate, not the roots, and F87's
+    own falsifiable clause says so: *"not discharged by widening `_ID_SCOPE_ROOTS`, and
+    not by checks 30-39 passing"*.
 
-    The assertion is therefore made on one of the 62 rather than on a fixture: a real
-    `.json` under `docs/contracts/`, named from the register itself so this cannot pass
-    against a file the register does not carry.
+    **62 became 63 (W37-6, 2026-09-17), by a later and unrelated addition, not a
+    regression of this fix.** `_OTHER_ARTIFACT_PATHS`'s own comment in `audit-docs.py`
+    already says so ("the stamp set … contains two more files that cannot carry front
+    matter … `docs/REDIRECTS.csv` is RFC-937 §1.8's migration artifact"): `REDIRECTS.csv`
+    joined the register after F87 was discharged, for §1.8's reason, not F87's. The
+    assertion below reads the count from `UNSTAMPABLE_EXEMPTIONS` itself rather than a
+    second hard-coded literal, so the next legitimate addition changes one number instead
+    of two — but it still asserts a real count, never `>= `, so a silent *removal* still
+    reds.
+
+    The assertion is therefore made on one of the (now 63) non-markdown entries rather
+    than on a fixture: a real `.json` under `docs/contracts/`, named from the register
+    itself so this cannot pass against a file the register does not carry.
     """
     setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
     rels = {p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()}
@@ -1785,10 +1866,10 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     assert not missing, sorted(missing)
 
     non_markdown = sorted(r for r in registered if not r.endswith(".md"))
-    assert len(non_markdown) == 62, len(non_markdown)
+    assert len(non_markdown) == 63, len(non_markdown)
     assert set(non_markdown) <= rels
 
-    # Named individually, so the proof is "one of the 62" and not "62 of something".
+    # Named individually, so the proof is "one of the 63" and not "63 of something".
     exemplar = "docs/contracts/openapi/gi-pricing.yaml"
     assert exemplar in registered, "the register no longer carries the exemplar"
     assert exemplar in rels
@@ -1920,12 +2001,12 @@ def test_the_equality_reds_when_one_consumer_reads_a_different_definition(
 def test_check_35_owner_clause_is_a_no_op_for_every_registered_file(
     audit: types.ModuleType,
 ) -> None:
-    """Check 35's *owner* clause cannot fire on any of the 65, which is why F83's
+    """Check 35's *owner* clause cannot fire on any of the 66, which is why F83's
     disposition ("a `generated: true` exemption in check 35") is a no-op on its own and
     the register had to bring its own enforcement.
 
     `check_owner` skips on `header is None` **and** on `HeaderError`, so this covers the
-    three unparseable manifests as well as the 62 headerless files — the wider claim, and
+    three unparseable manifests as well as the 63 headerless files — the wider claim, and
     the true one.
     """
     for entry in audit.UNSTAMPABLE_EXEMPTIONS:

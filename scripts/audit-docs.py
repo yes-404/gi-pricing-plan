@@ -2390,6 +2390,53 @@ _ROLES_DIR: Final = REPO / ".claude" / "roles"
 _VALID_OWNERS: Final = frozenset({"maintainer", *(p.stem for p in _ROLES_DIR.glob("*.md"))})
 _PERMITTED_OWNERS_RE: Final = re.compile(r"^Permitted owners:\s*(.+)$", re.MULTILINE)
 
+#: RL-1046 §B (`docs/rulings/RL-01046-the-alias-class-the-disclosed-rows-and-the-run-s-
+#: conditional-window.md`; cited by file path, never as "Ruling 105" — `docs/REDIRECTS.csv`
+#: maps that number to this file, and after the migration the bare number resolves to a
+#: different ruling entirely, RL-01059): "`(h1)` passes when every `audit-docs.py` failure
+#: class on the migrated snapshot is zero except checks 29, 30 and 35, which the row prints
+#: by count, each labelled `owner: W37-10`, and which do not set the exit code." F92's own
+#: row (`docs/findings/register.md`) names the population precisely: 46 `.claude/skills/
+#: */SKILL.md` plus 7 `.claude/agents/*.md` — "which carry front matter a stamp must merge
+#: into" — deferred to W37-10 rather than hand-stamped here (that would be W37-10's own
+#: work, not this check's to do), and never exempted via `UNSTAMPABLE_EXEMPTIONS` either
+#: (these files CAN carry a header; they already do, just not an RFC-937 one).
+_AGENTS_README = ".claude/agents/README.md"
+_SKILL_MD_RE: Final = re.compile(r"\.claude/skills/[^/]+/SKILL\.md")
+
+
+def _is_stamp_deferred_w37_10(path: pathlib.Path, header: object) -> bool:
+    """True when `path`/`header` is a member of F92's exact deferred population: a file
+    under `.claude/agents/` (its own `README.md` excepted — that one carries a real
+    RFC-937 stamp, `family: reference`) or a `.claude/skills/*/SKILL.md`, whose front
+    matter is Claude Code's own harness schema (`name:`/`description:`/…) rather than an
+    RFC-937 header — no `family:` field populated.
+
+    Anchored on **both** path and content, never either alone: a harness-schema file
+    parked outside these two locations is not F92's population (path), and a file at one
+    of these two locations that DOES carry `family:` — a future, properly stamped agent
+    or skill — is not harness-schema-shaped any more and is not deferred either (content).
+    That second clause is what keeps this predicate from silently widening as files here
+    get migrated one at a time: the day a skill or agent file is stamped, it drops out of
+    this set on its own and check 35 checks it like any other document.
+
+    `header` is typed `object` rather than `_docid.Header`: `_docid` is loaded by path
+    (`_load_module`, above), so mypy sees it only as `types.ModuleType`, and this
+    function's only use of `header` is `.family`, read via `getattr` for exactly that
+    reason.
+    """
+    if getattr(header, "family", None):
+        return False
+    try:
+        rel = path.relative_to(REPO).as_posix()
+    except ValueError:
+        return False
+    if rel == _AGENTS_README:
+        return False
+    if rel.startswith(".claude/agents/"):
+        return True
+    return bool(_SKILL_MD_RE.fullmatch(rel))
+
 
 def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
     """A directory README's own declared owner allow-list, read from a line
@@ -2812,14 +2859,22 @@ def check_owner() -> None:
     The second clause enforces only where a directory `README.md` actually exists and
     states a permitted-owner list (see `readme_owner_allowlist`) — neither of
     `_ID_SCOPE_ROOTS`'s two directories carries one today.
+
+    F92's 53 deferred files (`_is_stamp_deferred_w37_10`) are counted, never checked
+    against `_VALID_OWNERS` — RL-1046 §B, `owner: W37-10`, printed by count and non-fatal
+    here for the same reason it is non-fatal in `--verify`'s `(h1)` row.
     """
     checked = 0
+    deferred = 0
     for path in _id_scope_documents():
         try:
             header = _docid.parse_header(path)
         except _docid.HeaderError:
             continue
         if header is None:
+            continue
+        if _is_stamp_deferred_w37_10(path, header):
+            deferred += 1
             continue
         checked += 1
         rel = path.relative_to(REPO).as_posix()
@@ -2842,7 +2897,8 @@ def check_owner() -> None:
     stamp_set_size = _check_unstampable_register()
     unstamped_in_scope = _check_scope_unstamped_are_registered()
     notes.append(
-        f"check 35: {checked} owner(s) checked in scope; "
+        f"check 35: {checked} owner(s) checked in scope; {deferred} owner check(s) "
+        "deferred (owner: W37-10, RL-01046 §B — F92's stamp-deferred population); "
         f"{len(UNSTAMPABLE_EXEMPTIONS)} exemption(s) in the F83 register reconciled "
         f"against {stamp_set_size} file(s) in RFC-937's stamp set; "
         f"{unstamped_in_scope} unstamped file(s) in the enforced checks-30-39 scope"
