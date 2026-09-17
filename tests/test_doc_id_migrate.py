@@ -1899,6 +1899,13 @@ def test_closure_records_real_corpus_decomposes_into_ruling_84s_four_buckets(
     work`, 1 `CR- kind: phase`, 2 `RS- kind: audit`, 10 `LG-`. ... It must fail today with
     the `NotImplementedError` of §1(b) — the positive control the corpus already
     supplies." Run against `ROOT`, the real repository, not a fixture.
+
+    ESCALATION (see final report to lead): cannot be repointed to `FIXTURE_CORPUS` — the
+    comment at the top of this file's "Task #31" block explicitly rejects widening the
+    committed `docs/audit/closure-records.md` fixture with additional legacy-shape headings
+    (Ruling 67 §4 item 1: each one buys a permanent `LEGACY_FORM_EXCLUDED_PATHS` entry), and
+    the fixture as committed has only 2 records (both `CR`/`work`), not the four-bucket,
+    21-record shape this test exists to pin. Left failing against `ROOT` pending a ruling.
     """
     drafts = doc_id_cli._discover_closure_records(ROOT)
 
@@ -3288,7 +3295,7 @@ def test_plain_plans_owner_is_derived_from_kind_not_hardcoded(
 
 
 def test_plain_plans_real_corpus_owner_always_matches_its_own_kind(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """Property over the whole real corpus, not a count (the corpus grows): every emitted
     `PL-` draft's `owner` is exactly `_PLAN_KIND_OWNER[kind]` — proves the derivation is
@@ -3299,8 +3306,12 @@ def test_plain_plans_real_corpus_owner_always_matches_its_own_kind(
     `owner: maintainer`), for which `_PLAN_KIND_OWNER` has no row and must not — the
     family carries no `kind:` at all (`docs/_templates/RL.md:8`). The `RL-` half has its
     own property test below; this one keeps saying exactly what its own docstring says.
+
+    Run against a git-tracked copy of `FIXTURE_CORPUS` (the frozen pre-migration shape),
+    not `ROOT`, which is now fully post-migration and has no plain plans left to discover.
     """
-    drafts = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "PL"]
+    root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
+    drafts = [d for d in doc_id_cli._discover_plain_plans(root) if d.prefix == "PL"]
     assert drafts, "fixture assumption: at least one plain plan exists in the real corpus"
     mismatched = [
         (d.was, d.kind, d.owner)
