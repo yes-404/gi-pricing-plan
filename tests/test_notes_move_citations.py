@@ -283,3 +283,36 @@ def test_no_living_file_cites_the_old_notes_path() -> None:
         ):
             offenders.append(f)
     assert offenders == [], offenders
+
+
+def test_an_unmarked_citation_still_reds(tmp_path: pathlib.Path) -> None:
+    """Broken-input proof for `_has_uncovered_citation`, added W37-6 (2026-09-17) alongside
+    the marker-span mechanism: a `# rfc-937: legacy-form-spec` marker protects only the one
+    physical line right after it, so a script naming the old path on an *unmarked* line
+    must still red even while it sits right beside a properly marked one -- the same
+    "the marker names exactly the next line" scoping `_legacy_form_spec_spans` documents.
+    Proven directly against `_has_uncovered_citation`, not by writing into the real tree
+    (`tests/test_audit_docs_ids.py`'s own reasoning for testing fixtures rather than ROOT).
+    """
+    old_path = ".claude" + "/" + "notes"
+    unmarked = (
+        "# rfc-937: legacy-form-spec\n"
+        f'MARKED = "{old_path}/marked.md"\n'
+        f'UNMARKED = "{old_path}/unmarked.md"\n'
+    )
+    assert _has_uncovered_citation(unmarked, old_path)
+
+
+def test_every_occurrence_marked_does_not_red() -> None:
+    """The positive control for the same mechanism: every occurrence of the old path
+    covered by its own marker is not an offender -- the shape `scripts/doc-id.py`'s real
+    `_REFERENCE_CLAUDE_DIR_EXCEPTIONS["notes/"]` entry has after this slice's own fix.
+    """
+    old_path = ".claude" + "/" + "notes"
+    fully_marked = (
+        "# rfc-937: legacy-form-spec\n"
+        f'FIRST = "{old_path}/one.md"\n'
+        "# rfc-937: legacy-form-spec\n"
+        f'SECOND = "{old_path}/two.md"\n'
+    )
+    assert not _has_uncovered_citation(fully_marked, old_path)
