@@ -1960,13 +1960,14 @@ def test_closure_records_real_corpus_decomposes_into_ruling_84s_four_buckets(
     assert len(drafts) == 21, [(d.prefix, d.kind, d.title) for d in drafts]
     counts = collections.Counter((d.prefix, d.kind) for d in drafts)
     assert counts == {
-        # Re-measured against pre_migration_root (fbb5555) 2026-09-17: total still 21,
-        # but one record that Ruling 84 §4's prose counted as RS/audit resolves here as
-        # CR/work -- the real docs/audit/closure-records.md at this exact commit, not the
-        # narrative count.
-        ("CR", "work"): 9,
+        # Re-measured against pre_migration_root (fbb5555) 2026-09-17, after E1's
+        # _CLOSURE_AUDIT_TITLE_PREFIXES revert (commit 5f1cf68): total still 21, and this
+        # decomposition now matches Ruling 84 §4's own prose count exactly -- the earlier
+        # 9/1/1/10 reading was against the tool's own self-migrated (and therefore wrong)
+        # title-prefix constant, not the real corpus.
+        ("CR", "work"): 8,
         ("CR", "phase"): 1,
-        ("RS", "audit"): 1,
+        ("RS", "audit"): 2,
         ("LG", None): 10,
     }, counts
     ledger_drafts = [d for d in drafts if d.prefix == "LG"]
