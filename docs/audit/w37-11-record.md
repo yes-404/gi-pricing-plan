@@ -269,7 +269,7 @@ whose `(path, cls)` is in its update table, or appends a whole new row).
 | docs/specs/07-platform.md | h1-check30 | 1 | check 30: family has no known docs/_templates entry — W37-10's own residue (Ruling 105 §B), filed per-file into the W37-11 record for completeness. | W37-10 |
 | .claude/skills/docs-audit/SKILL.md | h1-check32 | 1 | check 32: docs/INDEX.md id-format violation reported by audit-docs.py on the migrated tree — filed as h1 governed residue. | W37-6 |
 | docs/INDEX.md | h1-check32 | 2 | check 32: docs/INDEX.md id-format violation reported by audit-docs.py on the migrated tree — filed as h1 governed residue. | W37-6 |
-| docs/REDIRECTS.csv | h1-check32 | 87 | check 32: docs/INDEX.md id-format violation reported by audit-docs.py on the migrated tree — filed as h1 governed residue. | W37-6 |
+| docs/REDIRECTS.csv | h1-check32 | 88 | check 32: docs/INDEX.md id-format violation reported by audit-docs.py on the migrated tree — filed as h1 governed residue. | W37-6 |
 | docs/audit/findings/F100.md | h1-check32 | 8 | check 32: docs/INDEX.md id-format violation reported by audit-docs.py on the migrated tree — filed as h1 governed residue. | W37-6 |
 | docs/audit/findings/F77.md | h1-check32 | 4 | check 32: docs/INDEX.md id-format violation reported by audit-docs.py on the migrated tree — filed as h1 governed residue. | W37-6 |
 | docs/audit/findings/F88.md | h1-check32 | 4 | check 32: docs/INDEX.md id-format violation reported by audit-docs.py on the migrated tree — filed as h1 governed residue. | W37-6 |
