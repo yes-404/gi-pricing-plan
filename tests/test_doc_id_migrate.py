@@ -1685,6 +1685,54 @@ def test_class6_deletion_a_stub_deleted_with_its_row_is_class6(
     ), classification.violations
 
 
+def test_legacy_form_spec_marker_protects_only_the_line_after_it(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """F103 companion finding, 2026-09-17: `_legacy_form_spec_spans` must return the span
+    of the line right after a standalone `# rfc-937: legacy-form-spec` marker, and nothing
+    else — proven directly on the pure function before the integration test below proves
+    `_rewrite_citations` actually respects it.
+    """
+    text = (
+        '_X: Final = {"W6": "old"}\n'
+        "# rfc-937: legacy-form-spec\n"
+        '_Y: Final = {"W6": "old"}\n'
+        '_Z: Final = {"W6": "old"}\n'
+    )
+    spans = doc_id_cli._legacy_form_spec_spans(text)
+    assert len(spans) == 1, spans
+    start, end = spans[0]
+    protected = text[start:end]
+    assert protected == "# rfc-937: legacy-form-spec\n_Y: Final = {\"W6\": \"old\"}\n"
+    assert '_X: Final = {"W6": "old"}' not in protected
+    assert '_Z: Final = {"W6": "old"}' not in protected
+
+
+def test_rewrite_citations_leaves_a_marked_line_untouched_and_rewrites_an_unmarked_one(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path,
+) -> None:
+    """The required broken-input proof for the F103 companion fix, verbatim: a marked
+    `W6` line must NOT be rewritten by `_rewrite_citations`, and an unmarked `W6` line in
+    the same file — the positive control, proving the marker is scoped to its one line
+    and the check has not gone vacuous — must still be rewritten, exactly like every
+    other citation `token_map` names.
+    """
+    docs_dir = tmp_path / "docs" / "sample"
+    docs_dir.mkdir(parents=True)
+    doc = docs_dir / "note.md"
+    doc.write_text(
+        "# rfc-937: legacy-form-spec\n"
+        "See W6 in the lookup table (must NOT be rewritten).\n"
+        "See W6 in ordinary prose (must be rewritten).\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._rewrite_citations(tmp_path, {"W6": "WK-662"})
+    after = doc.read_text(encoding="utf-8")
+    lines = after.splitlines()
+    assert "W6" in lines[1], f"the marked line must survive byte-identical: {lines[1]!r}"
+    assert "WK-662" in lines[2], f"the unmarked line must still be rewritten: {lines[2]!r}"
+
+
 def test_a_prose_wf0n_and_a_heading_wf0n_both_resolve_a_longer_number_does_not(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
