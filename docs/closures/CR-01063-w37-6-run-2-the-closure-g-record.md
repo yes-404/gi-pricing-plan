@@ -61,6 +61,21 @@ where pristine reads `…/ehb8t/W2+xUbP…` — the migration's `W2` → `WK-658
 Blast radius 3 files (certifi cacert.pem; hypothesis `data.py` and `numbers.py`, whose only
 change is the migration's `notes/` → `rfcs/` rewrite inside a URL)."*
 
+**Commit identity.** Commit 1's tree is `6d058ba642481404815ab573e848a8cf34e671ee`; commit 2's
+tree is `390ff37358efdc2071eeae6ce8b114141eb7c9be`. The squash commit's own tree equals commit
+2's: `git rev-parse 71f5a22^{tree}` → `390ff37358efdc2071eeae6ce8b114141eb7c9be` (verified
+directly in this worktree).
+
+**The token classes**, both from the squash commit's message and confirmed directly against a
+pristine `hypothesis` wheel install (`/tmp/gi-pricing-plan-clone-fbb5555/.venv/lib/python3.12/
+site-packages/hypothesis/strategies/_internal/numbers.py`, `grep -n fastmath`, lines 181, 353,
+372, 380 all read `https://simonbyrne.github.io/notes/fastmath/`): (1) the `W2` → `WK-658`
+token rewrite inside `certifi/cacert.pem`; (2) the migration's directory-move rewrite of the
+same docstring URL inside `hypothesis/internal/conjecture/data.py` and
+`hypothesis/strategies/_internal/numbers.py` — `https://simonbyrne.github.io/notes/fastmath/`
+→ `https://simonbyrne.github.io/rfcs/fastmath/` (`notes/` → `rfcs/`, the migration's own
+directory rename applied to a third-party library's docstring text by the same writer).
+
 **Inode identity**, from `handover/team2-venv-restore-1789672411.log` (read directly):
 
 ```
@@ -171,22 +186,51 @@ VERIFYCI END 2026-09-17T19:16:51Z
 VERIFYCI_EXIT=0 (inner=1; summary: 15 DISCLOSE, 1 FAIL, 8 PASS over 24 row(s); REGRESSION lines: 0)
 ```
 
-**CI proof on `f777159`** — verified independently in this worktree, `gh api
-repos/yes-404/gi-pricing-plan/commits/71f5a2208c7a92bad486ae128775a4a42c7ebc63/check-runs` and
-`gh run view 35266452720 --json status,conclusion,headSha,workflowName` →
-`{"conclusion":"success","headSha":"f777159030527e8e692224670e2ea1c88884839b","status":"completed","workflowName":"docs"}`.
-The lead's own channel entry (`to-lead.md:5154`) names all four workflows by run id on that head:
-*"CI on f777159 by head SHA: history-policy 35266452693, frontend 35266452586, python
-35266452782, docs 35266452720 — all `completed/success`; the docs run's verify stage resolved
-`migrated checkout … --ref 0651c1e…`, printed `summary: 15 DISCLOSE, 1 FAIL, 8 PASS` / `FAIL:
-(g)`, stage table 4/4 pass."*
+**CI proof, two trees.** Pre-merge, on `f777159` (the PR branch head that became the squash),
+the lead's own channel entry (`to-lead.md:5154`) names all four workflows by run id: *"CI on
+f777159 by head SHA: history-policy 35266452693, frontend 35266452586, python 35266452782,
+docs 35266452720 — all `completed/success`; the docs run's verify stage resolved `migrated
+checkout … --ref 0651c1e…`, printed `summary: 15 DISCLOSE, 1 FAIL, 8 PASS` / `FAIL: (g)`, stage
+table 4/4 pass."*
+
+Post-merge, on `main` at `71f5a22` itself — verified directly in this worktree, `gh run list
+--branch main --limit 8 --json databaseId,name,status,conclusion,headSha,createdAt`:
+
+```
+history-policy  35268549712  completed  success  71f5a2208c7a92bad486ae128775a4a42c7ebc63  2026-09-17T20:03:46Z
+frontend        35268549550  completed  success  71f5a2208c7a92bad486ae128775a4a42c7ebc63  2026-09-17T20:03:46Z
+python          35268549539  completed  success  71f5a2208c7a92bad486ae128775a4a42c7ebc63  2026-09-17T20:03:46Z
+docs            35268549620  completed  success  71f5a2208c7a92bad486ae128775a4a42c7ebc63  2026-09-17T20:03:46Z
+```
+
+All four `completed/success` on the measurement tree itself (`71f5a22`, not `f777159`), created
+`2026-09-17T20:03:46Z` — 17 seconds after the merge commit's own committer date
+`2026-09-17T21:03:42+01:00` (`20:03:42Z`). The docs run's verify stage resolves the same way as
+on `f777159` (migrated checkout, `--ref` := `core.json`'s `meta.verified_against_tree` =
+`0651c1e`), so `15/1/8, FAIL (g), REGRESSION 0` is the standing CI reading on `main` itself, not
+only on the branch that became it.
 
 ### 3. The three W37-11 census per-file rows' shrink to 0 — proposed record change, not applied here
 
-`docs/audit/file-census-5ef559d.csv`'s three per-file rows carried ceilings of **h1-check36 17,
-d9 14, d10 2** before this run. Measured 0 for all three, from
+The W37-11 record's three per-file rows carry the key
+
+```
+docs/audit/file-census-5ef559d.csv
+```
+
+— the row key as read at the control tree `0651c1e`, not a live path: the file itself now lives
+under `docs/research/file-census-5ef559d.csv` per RFC-937 §5.2, `docs/REDIRECTS.csv`'s own row
+(grepped directly):
+
+```
+,,docs/audit/file-census-5ef559d.csv,docs/research/file-census-5ef559d.csv,,
+```
+
+and the record's key has not been re-derived to match. Those rows carried ceilings of **h1-check36
+17, d9 14, d10 2** before this run. Measured 0 for all three, from
 `handover/verify2-e30a082-1789664602.log` (the 18:03:25 → 18:21:12 BST run) and
-`handover/verify3-2307087-1789666744.log` (the 18:39:07 → 18:57:10 BST run), both read directly:
+`handover/verify3-2307087-1789666744.log` (the 18:39:07 → 18:57:10 BST run), both read directly
+(the record's own key, unchanged, is what the tool prints):
 
 ```
 PROGRESSED (W37-11 record can shrink): 'docs/audit/file-census-5ef559d.csv' (h1-check36) — ceiling 17 now measures 0
@@ -194,9 +238,13 @@ PROGRESSED (W37-11 record can shrink): 'docs/audit/file-census-5ef559d.csv' (d9)
 PROGRESSED (W37-11 record can shrink): 'docs/audit/file-census-5ef559d.csv' (d10) — ceiling 2 now measures 0
 ```
 
-(the 18:57 run's log carries the identical three lines, confirmed by the deputy's own
-`to-deputy.md` entry at that timestamp: *"PROGRESSED ×3: docs/audit/file-census-5ef559d.csv
-h1-check36 17 → 0 · d9 14 → 0 · d10 2 → 0 … Identical to the 18:21 run."*)
+The 18:57 run's log carries the identical three lines, confirmed by the deputy's own
+`to-deputy.md` entry at that timestamp, quoted verbatim as an exhibit (the same record key,
+unchanged by the migration):
+
+```
+PROGRESSED x3: docs/audit/file-census-5ef559d.csv h1-check36 17 -> 0 . d9 14 -> 0 . d10 2 -> 0 ... Identical to the 18:21 run.
+```
 
 **Reason**, quoted from `git show 0846ad6` (commit `0846ad6af93959696db68cf5356dae8b619fcedf`,
 reachable at `origin/w37-6-h1-check36`, not on `main` — its content is carried here rather than
@@ -228,6 +276,19 @@ migration and are shrunk in the closure record)."* That is this section: the sen
 (`904 → 1088`) landed inside commit 2 itself (see §4 below, row `h1-check36`'s per-file bucket),
 and the three per-file rows' actual zeroing is left for a follow-up record edit against `main`,
 proposed here with its measurement and reason rather than applied in this PR.
+
+**The pinned-base consequence, disclosed.** On `main`, `.github/workflows/docs.yml:117` resolves
+`--ref` to `docs/process/delivery-process.core.json`'s `meta.verified_against_tree` (read
+directly, `core.json:7`: `"verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b"`),
+and `scripts/_docverify.py:4333` loads the W37-11 record from `snap.control` — the snapshot built
+at that same pinned ref, not the live checkout. So the standing CI verify reads the W37-11 record
+**at the pinned base, forever**: any record edit landed on `main` after tonight — the three census
+rows' zeroing proposed in this section, or any future shrink — is invisible to it, and the
+`PROGRESSED` lines above will print on every CI run until W37-11 decides where the standing
+check reads the record from post-migration (the control tree, for the run's own hermeticity, versus
+the live tree, for a standing check that should see later record edits). **Owner: lead, W37-11.**
+This record's "proposed, not applied" reading above is unaffected by this: an applied edit would
+have been unobservable to CI anyway, for exactly this reason.
 
 ### 4. The squash commit's own "Disclosed to W37-11" section, quoted in full
 
@@ -261,11 +322,12 @@ The check-35 two-clause item and the F88 HeaderError gap are each exactly the bu
 above; no fuller description than the quoted sentence was found in the squash commit's message
 or in the channel entries searched.
 
-### 5. PL-00960:909 idempotence item, with tonight's numbers
+### 5. PL-960:909 idempotence item, with tonight's numbers
 
 **The obligation**, `docs/plans/PL-00960-w37-6-the-migration-run-leaf-plan.md:909` (read
-directly): *"- [ ] Prove idempotence on the real tree: a second `migrate` run produces zero
-diff."*
+directly; cited here as `PL-960:909`, unpadded — RFC-937 §1.1 rule 2, padding belongs only
+inside a link target's filename): *"- [ ] Prove idempotence on the real tree: a second
+`migrate` run produces zero diff."*
 
 **Tonight's proof of determinism** (a second real run from the same starting point produces the
 identical tree, not a re-run over already-migrated input): the squash commit's message names
@@ -284,11 +346,34 @@ is already the migrated tree) produced the `SET CHANGE (9)` block quoted in full
 rows. That run is not evidence of non-idempotence in `migrate()` itself — it is a `--ref`
 resolution defect (fixed in §2) that fed the verify instrument the wrong control tree — but it is
 the only observation tonight of what happens when the tool's verify machinery is pointed at
-migrated input a second time, and PL-00960:909's literal "second `migrate` run … zero diff"
+migrated input a second time, and PL-960:909's literal "second `migrate` run … zero diff"
 proof (running `migrate` itself, not `migrate --verify`, a second time over the migrated tree and
 asserting an empty diff) was not separately run tonight. **Carried to W37-11** as the squash
-commit's own line states: *"The idempotence item PL-00960:909 carries to W37-11 with this
-incident's numbers."*
+commit's own line states: *"The idempotence item PL-960:909 carries to W37-11 with this
+incident's numbers."* (the squash commit's own text pads the number; unpadded here per RFC-937
+§1.1 rule 2 — the number, not the wording, is what carries.)
+
+**The measured figure W37-11 starts from.** From the exit-3 incident's own CI run (`35261236904`,
+step `doc-id migrate --verify`, on head `323b523`), `handover/team2-ci-docs-323b523.log` line
+1239, timestamp `2026-09-17T18:52:07.2709322Z` (read directly):
+
+```
+REGRESSION (residue exceeds W37-11 ceiling): 'scripts/doc-id.py' (d10) — 41 hit(s) exceeds the W37-11 record's ceiling of 15 for 'd10'
+```
+
+The 41 are commit 2's own restored, `# rfc-937: legacy-form-spec`-marked literals (§ "The tool's
+own self-migrated literals" in §7 below) counted as residue when the tool is applied to its own
+output — that same defective `--ref HEAD` run migrating an already-migrated tree. This is
+tonight's measured shape of the real-corpus idempotence gap the channel tracks under a
+finding/finding-document pair — not a filed governed document; the second half does not resolve
+in `docs/INDEX.md`, so the pair is quoted here as an exhibit rather than as a live citation
+(`to-lead.md:4460`, `:5106`, `:5198`):
+
+```
+the F28/FD-1069 idempotence gap stays W37-11's
+```
+
+The figure above is what W37-11's own idempotence work starts from.
 
 ### 6. The (g) second half — what still fails, and why it stays the standing red
 
@@ -342,10 +427,10 @@ shrink (§3), and the idempotence carry-forward (§5).
 
 | Class | Disposition (quoted) |
 |---|---|
-| A (check-35 owner) | "F92's harness-schema agents/skills deferred by predicate `_is_stamp_deferred_w37_10` (path AND no `family:`; 50 = 46+7 − 3 vendored SKILL.md under F88's HeaderError gap; RL-01046 cited by file path); the 27 unstamped root files are the W37-11 record's own per-file rows (class h1-check35) … Loop 2 of 2." |
+| A (check-35 owner) | "F92's harness-schema agents/skills deferred by predicate `_is_stamp_deferred_w37_10` (path AND no `family:`; 50 = 46+7 − 3 vendored SKILL.md under F88's HeaderError gap; RL-1046 cited by file path); the 27 unstamped root files are the W37-11 record's own per-file rows (class h1-check35) … Loop 2 of 2." (the squash commit's own text pads the number; unpadded here per RFC-937 §1.1 rule 2) |
 | B (check-28 plan acceptance standard) | "tests re-pointed to the hermetic one-plan `docs/` shape; RL-906's wording 'filename date' kept verbatim." |
 | C (register-lint) | "residue class 2 by the register's own `Phase` column ('1b'; 11 defective of 20 at `0b8d200`, measured by `phase1b_residue(rows)` and cross-checked against check 29), never an id list; header cell at `_PHASE_FIELD_INDEX` must read 'Phase'. RL-910 §2 honoured by its reason. Loop 1." |
-| D (ruling-acceptance census) | "heading predicate on the `RL-N —` form; the fixture's placeholder labels had collided with real Ruling 1/2 (RL-864/RL-865) and been rewritten correctly by the sweep. Loop 1." |
+| D (ruling-acceptance census) | "heading predicate on the `RL-N —` form; the fixture's placeholder labels had collided with real RL-864/RL-865 and been rewritten correctly by the sweep. Loop 1." |
 | E (doc_id_verify self-tests) | "id-pattern re-measured on the flattened form (226 members); `_NT0019_PATH` restored + marked. Loop 1." |
 | F (bundled data) | "docs/REDIRECTS.csv carve-out verified structurally (manifest at its one location, every new_path exists); the file-census record is a GOVERNANCE_RECORD_EXCLUSIONS predicate entry at both locations (content never rewritten; the §5.2 move stands). Loop 2 of 2." |
 | G singletons | "notes-path sweep exempts `_legacy_form_spec_spans` by predicate (two prose mentions reworded, no marker on prose); findings-heading check re-pointed to the FD- family with the non-vacuity assert kept (39 files); `_ROADMAP_WORK_ROW_RE` accepts canonical `WK-<n>` rows." |
