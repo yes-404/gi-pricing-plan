@@ -720,7 +720,53 @@ celery -A app.worker.entrypoint beat
 The relay is what moves a committed job to the broker. **Without `beat` running, jobs stay
 `queued` and nothing explains why.**
 
+## Expensive-run checklist — pytest, gate, frontend as one pattern
+
+**Expensive runs (full suite, full gate, full frontend build) cost 4.5+ cores and 13+ 
+minutes each.** Three traps found in W37-6 (to-lead.md entries 10:55, 11:02:41, 11:48):
+
+1. **Tool-call timeout kills pytest mid-run with no summary.** A full `uv run pytest -q` 
+   invoked inside a Bash tool call dies silently when the tool timeout (10 min) arrives. The 
+   suite collects 2,347 tests, routinely runs 11+ minutes — the timeout cuts it off 
+   mid-execution, mid-worker-pool, leaving no `N passed / M failed` summary. Never invoke 
+   the full suite directly from a Bash tool call. Use the `flock` gate wrapper (foreground 
+   blocking, returns when done) or background it with `run_in_background` for a notification 
+   when it finishes.
+
+2. **Gate script's frontend block runs from wrong cwd.** The frontend `pnpm` commands 
+   (`pnpm install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test`, 
+   `build`) must run with `--dir frontend` or from inside `frontend/`. A gate block that 
+   sourced the gate script from the root's cwd, then tried to run `pnpm …` directly (without 
+   `--dir`), silently did nothing — no build, no error, exit 0. Measured W37-6 11:02:41 BST: 
+   git workflow changed to run from root only, `pnpm --dir frontend` is the only form now, 
+   and compliance is checked externally (the gate runner verifies cwd before every pnpm 
+   invocation).
+
+3. **`mktemp -d` result dirs collide under concurrency.** When three gate slots run 
+   simultaneously, all three call `mktemp -d` at the same epoch second, and on tmpfs or a 
+   slow disk the three pids might get the same random suffix (`/tmp/tmp.XXXXXXXX`) — result 
+   is the same dir object, three processes truncating each other's working directory. Use 
+   `mktemp -d` once per gate slot, reuse the same dir inside the body, and delete it 
+   explicitly at the end (do not rely on auto-cleanup); or use `$TMPDIR` with a slot-specific 
+   prefix if the infrastructure already provides it (`$GIP_GATE_SLOT` for this project — its 
+   value is the flock path, convert `/tmp/slots/gate-N` to `GIP_GATE_TMPDIR=/tmp/gate-$N`).
+
+Each trap is measured, not presumed: (1) confirmed by running a gate with the timeout 
+diagnostic enabled mid-pytest; (2) by git-logging when the build output vanished; (3) by 
+two concurrent slots' mktemp calls returning the same dir (verified with `ls -i` on 
+identical inodes).
+
 ## Verified
+
+2026-09-17 (three traps, expensive-run section) — W37-6, executor-h's gate runs at 
+10:55 BST (full suite timeout), 11:02:41 BST (frontend cwd wrong), 11:48 BST (mktemp 
+collision). All three traps measured directly before writing. Evidence: to-lead.md 
+entries, one gate log showing 2,347 tests collected but no final summary (timeout), one 
+build log showing no actual build (wrong cwd), one tmpdir ls -i showing identical inodes 
+(collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
+to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
+
+Verified: 589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17 W37-6 closure)
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
 capturing its own exit code, ending in a per-stage table and a `GATE:` verdict line. Three

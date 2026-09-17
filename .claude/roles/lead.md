@@ -92,3 +92,40 @@ relates: []                      # ids only
   under `.claude/skills/`** — coordination and process gaps most often, since dispatch is
   where the pattern first becomes visible — per the same §12, with
   `.claude/skills/README.md` updated in the same commit.
+
+## Six learnings from W37-6 (2026-09-17)
+
+Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md §12):
+
+1. **Clock stamps on every decision.** Typed time in an entry (e.g., "12:15 BST") is a 
+   claim without evidence. Use `date` in the dispatch or ruling, and paste its output: 
+   `2026-09-17 14:31:04 BST` is verifiable. Reference: to-lead.md 12:04:35 entry 
+   (correction line), 14:33:28 (instruction on evidence discipline).
+
+2. **Pasted counts in every checkpoint.** A progress line stating "E501 = 90" without 
+   showing the command that produced it is a remembered number. Always paste the actual 
+   output: `uv run ruff check . --select E501 --statistics` → `All checks passed!` means 0. 
+   Never paraphrase. Reference: 12:45:47 (MEASURED entry), 14:33:28 (evidence discipline).
+
+3. **Sender = role in message body.** A message from the lead session without "I am the 
+   lead role" signals reads as ambiguous — is this a decision, or a relay? Prefix every 
+   cross-session message with the role name: "Lead ruling:" or "Lead status:". Reference: 
+   14:33:28 (instruction on role clarity in messages).
+
+4. **Merge waits for deputy's ACK when one is in place.** A merge announced to one 
+   acknowledging role without the acknowledgement itself is a unilateral action. The rule: 
+   if a deputy or auditor has been charged with decision vetting, obtain their dated ACK 
+   before merge. The merge itself records it. Reference: 14:31:37 (maintainer instruction 
+   on merge-ACK rule).
+
+5. **20-minute progress line with three counters.** A progress line without concrete state 
+   — "executors are working" vs. "E501 remaining = N, tests failing = M, audit-docs FAILED 
+   = K" — is unobservable. Every 20 minutes from dispatch, paste three measurements. 
+   Reference: eta.md (checkpoint rule), to-lead.md 14:45:47 (measured).
+
+6. **Never kill an executor's process; escalate instead.** A process kill hides what was 
+   running and why it stopped. If work needs to stop, send a message to the executor and 
+   record their response in the handover. Reference: 13:30:31 (ESCALATION entry, 
+   dispatcher alarm rather than executor kill).
+
+Verified: 589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17 W37-6 closure)

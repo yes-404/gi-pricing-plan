@@ -772,6 +772,112 @@ Related: benchmark phases run in **separate processes** (`--only <phase>`), beca
 does not return freed arenas to the OS — a peak-RSS reading taken after an earlier phase in
 the same process is that earlier phase's high-water mark, not this one's.
 
+## Three patterns from W37-6 migration testing
+
+### pre_migration_root fixture — session-scoped materialisation of a historical tree
+
+When tests assert on real corpus content (specific filenames, ruling numbers, plan-reviews 
+line ranges), the fixture must be the real tree at a point in history, not a hand-crafted 
+subset. Materialise it via a session-scoped `git worktree add --detach` pinned to a known 
+commit SHA.
+
+```python
+PRE_MIGRATION_REF = "fbb5555b45f9b22ef8bc5571865ee8d9a86b62e8"
+
+@pytest.fixture(scope="session")
+def pre_migration_root(tmp_path_factory):
+    """Real corpus at the last pre-migration tree; git history keeps what the 
+    migration removed.
+    
+    If the ref is absent (shallow clone), fails loudly naming the ref — never skips.
+    """
+    worktree_path = tmp_path_factory.mktemp("pre_migration") / "root"
+    subprocess.run(
+        ["git", "worktree", "add", "--detach", str(worktree_path), PRE_MIGRATION_REF],
+        check=True
+    )
+    yield worktree_path
+    subprocess.run(["git", "worktree", "remove", "--force", str(worktree_path)], check=True)
+```
+
+Trap: marking a pre_migration_root test `@pytest.fixture(scope="session")` in a conftest 
+that pytest shares across multiple test files causes isolation failures — each file's own 
+fixture invocation materialises a separate worktree, wastes RAM and time, and leaves the 
+count ambiguous. Scope the fixture to a single test file if multiple files need the same 
+tree, or use a module-scoped fixture in conftest and have individual files wrap it in a 
+function-scoped pass-through if test isolation needs it.
+
+### Vacuous-empty-list bug pattern and positive control
+
+`all(isinstance(...) for x in [])` is `True` — the loop never runs, so all returns true. 
+A function whose only success case is "I found nothing" cannot distinguish that from "I ran 
+nothing" via a classification helper.
+
+```python
+def classify_draft_discovery(discovery_output):
+    """Classify discovery function results. Cannot tell 'ran and found nothing' 
+    from 'never ran' if output is always []."""
+    # WRONG: cannot fail, vacuous truth on empty
+    # return all(isinstance(d, _Draft) for d in discovery_output)
+    
+    # CORRECT: the discovery function's actual contract for "ran successfully"
+    # (read the function signature and implementation — is the return None? a sentinel?)
+    if discovery_output is None:  # function's skip condition
+        return None
+    return all(isinstance(d, _Draft) for d in discovery_output)
+
+@pytest.mark.parametrize("input,expected", [
+    ([], True),  # ran, found nothing — must distinguish from skipped
+    (None, None),  # function was skipped — different return
+    ([_Draft(...)], True),  # ran, found one draft
+])
+def test_classify_covers_both_ran_and_skipped(input, expected):
+    """Positive control: test must show both the success case AND the skip case.
+    A test that passes only one shows neither."""
+    assert classify_draft_discovery(input) == expected
+```
+
+### ruff E501 single-token-line exemption
+
+ruff exempts a line consisting of a single token (no whitespace) after indentation. Long 
+path literals are reflowable this way:
+
+```python
+# GOOD — on own line, no ruff error
+X = [
+    "docs/rulings/RL-00999-the-phase-section-is-plain-fields-and-owned-by-the-closer.md",
+]
+
+# GOOD — in a function call or parenthesized expression, on own line, no error
+path = (
+    "docs/rulings/RL-00999-the-phase-section-is-plain-fields-and-owned-by-the-closer.md"
+)
+
+# WRONG — implicit concatenation breaks grep-ability (paths split across lines cannot be found)
+# Never do this:
+path = (
+    "docs/rulings/RL-00999-the-phase-section-is-plain-fields-and-owned-by-"
+    "closer.md"
+)
+
+# If a path token is >100 chars and stuck on a line with code, mark it with noqa 
+# ONLY when the path is from an external source and cannot be shortened:
+# Do not use noqa to avoid the real reflow above.
+EXTERNAL_API_ENDPOINT = "https://example.com/v1/very/long/path/that/is/part/of/the/api/contract/and/cannot/be/changed"  # noqa: E501
+```
+
+## Verified
+
+2026-09-17 (three patterns, W37-6 migration) — pre_migration_root fixture used in 85e31b0 
+(option C ruling, 13:52:10 BST), vacuous-empty test bug found and fixed in test suite 
+(14:05:40 BST, escalation 1), E501 reflow exemption discovered and applied to 38 files 
+(12:06:37 BST ruling, 12:47:01 BST verification). All three patterns written as procedure 
+based on measured incidents from the test-fix stream (to-lead.md entries with measurements 
+and fixture listings). The pre_migration_root pattern is implemented in commit 073f7e0 and 
+used through 87fcfb4. Verified against the working test suite on origin/w37-6-h1-checks-31-32-36.
+
+Verified: 589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17 W37-6 closure)
+
 ## Verified
 
 2026-09-04 — "mutually destructive" gained a pointer to the per-worktree-database fix now
