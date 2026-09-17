@@ -507,8 +507,10 @@ in the line most readers stop at.
 
 ### Never end a turn with a command still running — the suite, a benchmark, anything
 
-`uv run pytest -q` collects **2,347 tests** and routinely runs past the **10-minute
-foreground limit**, so the tool backgrounds it. That is fine for the main thread, which is
+`uv run pytest -q` collects a number of tests that drifts as tests are added — read it
+fresh with `uv run pytest --collect-only -q | tail -1` rather than trusting a pasted
+figure — and routinely runs past the **10-minute foreground limit**, so the tool
+backgrounds it. That is fine for the main thread, which is
 re-invoked when the command exits. **It is a trap for a subagent**: a backgrounded command
 does not notify an agent that has already ended its turn, so the agent stops "waiting for
 the completion notification" and waits forever. Seen 2026-08-30, WK-671 Task 3A — the executor
@@ -786,7 +788,7 @@ Verified: 2026-09-17
 2026-09-17 (three traps, expensive-run section) — W37-6, executor-h's gate runs at 
 10:55 BST (full suite timeout), 11:02:41 BST (frontend cwd wrong), 11:48 BST (mktemp 
 collision). All three traps measured directly before writing. Evidence: to-lead.md 
-entries, one gate log showing 2,347 tests collected but no final summary (timeout), one 
+entries, one gate log showing a tests-collected line but no final summary (timeout), one 
 build log showing no actual build (wrong cwd), one tmpdir ls -i showing identical inodes 
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
