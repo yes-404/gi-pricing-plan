@@ -7,7 +7,7 @@ was **rejected** by RL-906
 (`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`): a time-of-run switch makes the same
 file pass on Tuesday and fail on Wednesday, and a fresh clone cannot reproduce a verdict.
 
-RL-906 ruled a durable discriminator instead: **the plan's own filing date against a
+RL-906 ruled a durable discriminator instead: **the plan's own filename date against a
 constant cutoff** (`PLAN_ACCEPTANCE_STANDARD_CUTOFF` in the script) — no warn phase, because
 C1 and the `writing-plans` acceptance-standard field land in the same commit. §3 of the
 ruling requires three cases, "not one", because a check proven only to fire has not been
