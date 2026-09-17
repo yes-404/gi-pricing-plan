@@ -148,7 +148,8 @@ class Settings(BaseSettings):
     #: picked up without a restart; long enough that the IdP is not fetched per request.
     oidc_jwks_ttl_s: Annotated[int, Field(ge=30, le=86400)] = 300
 
-    # Development-only identity, an alternative to OIDC for local work (FR-387, FR-388, FR-389, FR-390).
+    # Development-only identity, an alternative to OIDC for local work (FR-387, FR-388, FR-389,
+    # FR-390).
     #
     # Defaults to False and is refused outright in `uat` and `prod` — see
     # `require_startable`. An endpoint that is open because a flag defaulted the wrong way

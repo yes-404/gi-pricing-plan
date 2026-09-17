@@ -1,6 +1,7 @@
 """`scripts/hooks/retry_cap_hook.py` -- RFC-895 script C2, the retry-cap hook.
 
-`docs/rulings/RL-00920-q2-is-answered-differently-for-c2-and-c3-c3-is-dissolved-c2-gets-claude-settings-json-and-slice-g-is-re-cut-and-still-blocked.md`, RL-920 §5,
+`docs/rulings/RL-00920-q2-is-answered-differently-for-c2-and-c3-c3-is-dissolved-c2-gets-claude-settings-json-and-slice-g-is-re-cut-and-still-blocked.md`,
+RL-920 §5,
 states the standard this file exists to meet: a hook proven once by hand is "a check that
 has never printed a failure", and the harness must be a repository test that runs in the
 gate, drives the hook's entry point with a synthetic runtime state at the cap boundary,

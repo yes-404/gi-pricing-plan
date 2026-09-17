@@ -28,7 +28,7 @@
     },
     "LineageDependsOn": {
       "additionalProperties": false,
-      "description": "What depends on this version (`01` §4.9).\n\n`rating_versions` and `monitoring_baselines` are declared and always empty — W9's\nand W27's arms, kept on the wire so a blast radius that silently omits two of the\nthree downstream kinds cannot read as a blast radius of one (FR-DATA-35).",
+      "description": "What depends on this version (`01` §4.9).\n\n`rating_versions` and `monitoring_baselines` are declared and always empty — WK-669's\nand WK-687's arms, kept on the wire so a blast radius that silently omits two of the\nthree downstream kinds cannot read as a blast radius of one (FR-75).",
       "properties": {
         "derived_versions": {
           "items": {
@@ -86,7 +86,7 @@
     },
     "LineageModel": {
       "additionalProperties": false,
-      "description": "A Model fitted on this version (`01` §4.9's `models` arm).\n\nAny status: a draft Model still references the version it was fitted on, and the\nblast radius FR-DATA-35 exists to compute (FR-DATA-23) does not stop at approval.",
+      "description": "A Model fitted on this version (`01` §4.9's `models` arm).\n\nAny status: a draft Model still references the version it was fitted on, and the\nblast radius FR-75 exists to compute (FR-53) does not stop at approval.",
       "properties": {
         "model_id": {
           "format": "uuid",
@@ -112,7 +112,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The lineage graph for one Dataset Version (`01` §4.9, FR-DATA-35).",
+  "description": "The lineage graph for one Dataset Version (`01` §4.9, FR-75).",
   "properties": {
     "built_from": {
       "anyOf": [

@@ -10,7 +10,9 @@ them the whole time." F-W9-1's own Work item column reads `W9-3`; its Decision c
 both the Work item and Decision columns, not the Work item column alone** — a search
 restricted to Work item would repeat F41's exact mistake.
 
-**RL-912** (`docs/rulings/RL-00912-q4-the-generated-output-lands-verbatim-and-it-is-not-the-closure-record-s-findings-table.md`) binds this script's output
+**RL-912**
+(`docs/rulings/RL-00912-q4-the-generated-output-lands-verbatim-and-it-is-not-the-closure-record-s-findings-table.md`)
+binds this script's output
 form:
 
   1. The output names the command and the **committed revision** it ran against — a SHA on
@@ -83,7 +85,6 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-REGISTER = REPO / "docs" / "audit" / "register.md"
 
 _spec = importlib.util.spec_from_file_location(
     "_register_lint", REPO / "scripts" / "register-lint.py"
@@ -92,6 +93,10 @@ assert _spec is not None
 assert _spec.loader is not None
 register_lint = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(register_lint)
+
+# Same pre/post-migration resolution as `register-lint.py`'s own `TARGETS[0]` — derived
+# from it rather than duplicated, so the two scripts cannot point at different files.
+REGISTER = register_lint.TARGETS[0]
 
 _PHASE_ID = re.compile(r"^[0-9][0-9a-zA-Z]*$")
 _REVIEW_MARKER = re.compile(r"§14")

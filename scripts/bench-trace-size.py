@@ -9,7 +9,8 @@ is measured directly is the actual serialised byte size of a real `Trace`, produ
 serialises with `trace.model_dump_json().encode()` (`backend/src/app/platform/traces.py`)
 — and that measured size is then multiplied out against the requirement's stated volume.
 Saying which of the two this is, is itself part of Task 4D's deliverable
-(`docs/plans/PL-00850-wk-671-slice-4-trace-sampling-the-row-plus-blob-store-and-the-retention-floor.md` Task 4D).
+(`docs/plans/PL-00850-wk-671-slice-4-trace-sampling-the-row-plus-blob-store-and-the-retention-floor.md`
+Task 4D).
 
 **No database, no blob store, no compose stack.** `BlobStore.put`
 (`backend/src/app/platform/blobs.py:130`) writes the given bytes to S3/MinIO verbatim — no
@@ -29,9 +30,10 @@ function with `trace=True`.
 
     uv run python scripts/bench-trace-size.py
 
-Not a CI gate — RL-872's governance (`docs/rulings/RL-00872-dp3-load-generation-tooling-for-the-sustained-200-rps-test.md`),
-inherited via `bench-rating.py`/`bench-score-batch.py`: a number for a workstream closure
-record, read once against the budget by a human.
+Not a CI gate — RL-872's governance
+(`docs/rulings/RL-00872-dp3-load-generation-tooling-for-the-sustained-200-rps-test.md`), inherited
+via `bench-rating.py`/`bench-score-batch.py`: a number for a workstream closure record, read once
+against the budget by a human.
 """
 
 from __future__ import annotations

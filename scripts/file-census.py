@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 """File census over the repository's tracked corpus — RFC-897 Stage 0.
 
-`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §7 (Slice 2). RFC-897 asks three questions
+`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md`
+§7 (Slice 2). RFC-897 asks three questions
 (Q1, Q2, Q3) about the shape of this repository's file population — how many files, what
 kinds, how they cluster — and none of them can be answered from recollection. This script
 produces the evidence: one CSV row per tracked file, with a header, a corpus rule, and a
-committed companion document (`docs/research/RS-00952-file-census-rfc-897-stage-0.md`) so the evidence is reproducible
-by a reader holding none of this session's context.
+committed companion document (`docs/research/RS-00952-file-census-rfc-897-stage-0.md`) so the
+evidence is reproducible by a reader holding none of this session's context.
 
 **The corpus is `git ls-files`, never the working tree.** `docs/plans/PL-00929-rfc-897-fi
-le-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §1 measured that a working-tree walk (`find`, `grep -r
---exclude-dir=.git`) picks up `.venv/`, `graphify-out/` and `node_modules/` when they exist
-locally — directories that are not tracked and differ between two checkouts of the same
-commit. A census is evidence only if it reproduces from a stated corpus; `git ls-files` is
-the one enumeration that does, because it reads the index rather than the filesystem.
+le-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §1 measured that a
+working-tree walk (`find`, `grep -r --exclude-dir=.git`) picks up `.venv/`, `graphify-out/` and
+`node_modules/` when they exist locally — directories that are not tracked and differ between two
+checkouts of the same commit. A census is evidence only if it reproduces from a stated corpus; `git
+ls-files` is the one enumeration that does, because it reads the index rather than the filesystem.
 
 **Four columns, four rules, none of them silent:**
 

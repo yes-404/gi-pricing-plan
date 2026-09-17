@@ -89,8 +89,10 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "regression-suite": "later-phase — 04 optimisation",
     # Corrected 2026-08-29 (WK-671 Task 1.4): "later-phase" stopped being true the moment
     # this task defined QuoteContext/ScoringResult/LadderRung/Trace in model-schema —
-    # RL-878's addendum (docs/rulings/RL-00878-quotecontext-purpose-the-spec-is-right-and-the-hand-authored-contract-is-stale-and-the-fix-belongs-to-task-1-4.md) obligation 4
-    # asks this slug be lifted into COMPARED_SLUGS in the same PR, and the register's
+    # RL-878's addendum
+    # (docs/rulings/RL-00878-quotecontext-purpose-the-spec-is-right-and-the-hand-authored-contract-
+    # is-stale-and-the-fix-belongs-to-task-1-4.md)
+    # obligation 4 asks this slug be lifted into COMPARED_SLUGS in the same PR, and the register's
     # F27 row (docs/findings/register.md, RL-860) confirms that obligation as "WK-671's,
     # accepted" rather than something the §14 review absorbs.
     #
@@ -382,7 +384,8 @@ def test_generated_and_authored_agree_on_field_names(slug: str) -> None:
 
 @pytest.mark.req("FR-9")
 def test_generated_and_authored_agree_on_scoring_field_names() -> None:
-    """RL-878 addendum, obligation 4 (`docs/rulings/RL-00878-quotecontext-purpose-the-spec-is-right-and-the-hand-authored-contract-is-stale-and-the-fix-belongs-to-task-1-4.md`),
+    """RL-878 addendum, obligation 4
+    (`docs/rulings/RL-00878-quotecontext-purpose-the-spec-is-right-and-the-hand-authored-contract-is-stale-and-the-fix-belongs-to-task-1-4.md`),
     the field-names slice of it: `scoring` is no longer wholly uncompared.
 
     `scoring.schema.json` bundles four unrelated top-level shapes — `QuoteContext` (input),

@@ -8,7 +8,9 @@ Ten document-family templates (`ADR`, `CR`, `FD`, `LG`, `PL`, `REFERENCE`, `RFC`
 the template's own leading `<!-- ... -->` comment and fills in the placeholders, exactly
 the sequence every template's own comment instructs ("Fill in every placeholder, delete
 this comment block"). Three (`WK`, `SL`, `PHASE`) carry no top-level `---` block *by
-design*: RFC-937 (`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`) §1.5 puts a `WK-`/`SL-` header
+design*: RFC-937 (
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md`
+) §1.5 puts a `WK-`/`SL-` header
 in a fenced ```yaml block under the row's own heading rather than the file's own front
 matter, and §1.1 rule 4 puts a phase outside the id standard entirely. Neither is a defect,
 and this suite must not mistake the one for the other.
@@ -574,9 +576,10 @@ def test_restructure_roadmap_writer_round_trips_through_doc_index_readers(
     doc_index: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """RL-977 (`docs/rulings/RL-00977-the-fix-is-inert-on-the-real-corpus-so-the-
-    boundary-is-free-it-lands-on-its-own-and-the-reader-and-the-writer-land-together.md`) §4: "take migrate's emitted row block and phase section, feed each to
-    scan_roadmap_rows and scan_phase_sections, and require the fields to survive ... This
-    must be a test in the branch that lands the fix, not a task carried into W37-6."
+    boundary-is-free-it-lands-on-its-own-and-the-reader-and-the-writer-land-together.md`) §4: "take
+    migrate's emitted row block and phase section, feed each to scan_roadmap_rows and
+    scan_phase_sections, and require the fields to survive ... This must be a test in the branch
+    that lands the fix, not a task carried into W37-6."
 
     Exercises `doc-id.py`'s `_restructure_roadmap` — the writer half of Rulings 79 §3 item
     4 and 80 §3 item 4 — directly against `doc-index.py`'s own readers, rather than through

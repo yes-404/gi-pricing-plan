@@ -2,7 +2,7 @@
   "$defs": {
     "Applicability": {
       "additionalProperties": false,
-      "description": "Where an objective may be used (FR-MODEL-44).\n\nA Model Spec pairing an objective with a response outside `responses`, a backend outside\n`backends`, or no offset where one is required, is refused **at spec validation** —\nbefore any compute is spent, and with a `SpecProblem` naming which of the three it was.",
+      "description": "Where an objective may be used (FR-153).\n\nA Model Spec pairing an objective with a response outside `responses`, a backend outside\n`backends`, or no offset where one is required, is refused **at spec validation** —\nbefore any compute is spent, and with a `SpecProblem` naming which of the three it was.",
       "properties": {
         "backends": {
           "items": {
@@ -43,7 +43,7 @@
       "type": "object"
     },
     "HessianStrategy": {
-      "description": "FR-MODEL-43's three declared treatments of a negative hessian.\n\nAlways declared, never inferred: boosting divides by the hessian, so what happens where\nit is negative decides what the fit *is*, and a default chosen inside the fitting code\nwould be a modelling decision made where no reviewer reads it.",
+      "description": "FR-152's three declared treatments of a negative hessian.\n\nAlways declared, never inferred: boosting divides by the hessian, so what happens where\nit is negative decides what the fit *is*, and a default chosen inside the fitting code\nwould be a modelling decision made where no reviewer reads it.",
       "enum": [
         "clip_to_min",
         "abs",
@@ -53,7 +53,7 @@
       "type": "string"
     },
     "ObjectiveBackend": {
-      "description": "FR-MODEL-44's backend vocabulary.\n\n`glm` is declared and no shipped template names it: a custom objective on the GLM arm\nneeds `GlmSpec.custom_objective_ref`, which FR-MODEL-87 records as absent entirely\nand owned by W30 — Phase 2, not this one. The owner was reassigned on 2026-08-22 and\nconfirmed on 2026-08-25 to cover this field as well as its `Model` twin, which\nrecords what it declares. The member exists because FR-MODEL-44 names it and an author\nnarrowing applicability should not be able to name a backend the enum has never heard\nof — not because anything reaches it today.",
+      "description": "FR-153's backend vocabulary.\n\n`glm` is declared and no shipped template names it: a custom objective on the GLM arm\nneeds `GlmSpec.custom_objective_ref`, which FR-207 records as absent entirely\nand owned by WK-690 — Phase 2, not this one. The owner was reassigned on 2026-08-22 and\nconfirmed on 2026-08-25 to cover this field as well as its `Model` twin, which\nrecords what it declares. The member exists because FR-153 names it and an author\nnarrowing applicability should not be able to name a backend the enum has never heard\nof — not because anything reaches it today.",
       "enum": [
         "xgboost",
         "lightgbm",
@@ -63,7 +63,7 @@
       "type": "string"
     },
     "ObjectiveKind": {
-      "description": "FR-MODEL-38's two kinds. Only `template` is constructible in Phase 1.",
+      "description": "FR-142's two kinds. Only `template` is constructible in Phase 1.",
       "enum": [
         "template",
         "expression"
@@ -72,7 +72,7 @@
       "type": "string"
     },
     "ObjectiveStatus": {
-      "description": "FR-MODEL-46's lifecycle.",
+      "description": "FR-163's lifecycle.",
       "enum": [
         "draft",
         "certified",
@@ -103,7 +103,7 @@
       "type": "string"
     },
     "ResponseKind": {
-      "description": "What a Model Spec is modelling, as distinct from which column holds it.\n\n`02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was\nbuilt to it, because nothing needed it: the fitting path reads the column, and the\nfamily says what the numbers mean. FR-MODEL-44 needs it — an objective declares the\nresponses it applies to, and a column name cannot be checked against that list. So the\nfield goes live here, under FR-MODEL-87's staging rule, with the slice that populates\nit.\n\nThe first three are FR-MODEL-44's own examples. `conversion` and `retention` are\n`04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`\n(§4.5) exists for exactly them — a catalogue entry whose applicability could not be\nwritten would be a catalogue entry nothing could use.",
+      "description": "What a Model Spec is modelling, as distinct from which column holds it.\n\n`02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was\nbuilt to it, because nothing needed it: the fitting path reads the column, and the\nfamily says what the numbers mean. FR-153 needs it — an objective declares the\nresponses it applies to, and a column name cannot be checked against that list. So the\nfield goes live here, under FR-207's staging rule, with the slice that populates\nit.\n\nThe first three are FR-153's own examples. `conversion` and `retention` are\n`04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`\n(§4.5) exists for exactly them — a catalogue entry whose applicability could not be\nwritten would be a catalogue entry nothing could use.",
       "enum": [
         "claim_count",
         "claim_severity",
@@ -116,7 +116,7 @@
     },
     "YDomain": {
       "additionalProperties": false,
-      "description": "The valid range of the response for an objective (FR-MODEL-44).\n\n§4.6's example writes `{\"min_inclusive\": 0}`; the exclusive bounds are added here\nbecause the Gamma family needs `y > 0` and an inclusive zero is the one value at which\nits loss is undefined. At most one bound per side.",
+      "description": "The valid range of the response for an objective (FR-153).\n\n§4.6's example writes `{\"min_inclusive\": 0}`; the exclusive bounds are added here\nbecause the Gamma family needs `y > 0` and an inclusive zero is the one value at which\nits loss is undefined. At most one bound per side.",
       "properties": {
         "max_exclusive": {
           "anyOf": [
@@ -172,7 +172,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "A named, versioned, reusable objective (FR-MODEL-38, §4.5).\n\nVersioned rather than edited: FR-MODEL-46 makes editing an approved objective a new\nversion requiring fresh certification, and a Model referencing\n`custom_objective:<slug>@<version>` must keep meaning the loss it was fitted under.",
+  "description": "A named, versioned, reusable objective (FR-142, §4.5).\n\nVersioned rather than edited: FR-163 makes editing an approved objective a new\nversion requiring fresh certification, and a Model referencing\n`custom_objective:<slug>@<version>` must keep meaning the loss it was fitted under.",
   "properties": {
     "applicability": {
       "$ref": "#/$defs/Applicability"

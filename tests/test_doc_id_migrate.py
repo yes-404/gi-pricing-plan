@@ -25,8 +25,10 @@ import json
 import pathlib
 import posixpath
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import types
 from collections.abc import Sequence
 from datetime import date
@@ -140,6 +142,56 @@ def pristine_a(tmp_path: pathlib.Path) -> pathlib.Path:
 @pytest.fixture
 def pristine_b(tmp_path: pathlib.Path) -> pathlib.Path:
     return _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "b")
+
+
+#: The last commit before NT-0019's migration landed on `main` (W37-6, 2026-09-17). A
+#: handful of `ROOT`-scoped tests below assert on specific real pre-migration content --
+#: particular filenames, particular ruling numbers, particular line ranges -- that
+#: `FIXTURE_CORPUS`'s deliberately generic, synthetic corpus has no analogue for and must
+#: not be widened to fabricate (Ruling 67 §4 item 1 already forbids growing that committed
+#: fixture with more real-shaped legacy content; each addition buys a permanent
+#: `LEGACY_FORM_EXCLUDED_PATHS` entry). Deputy ruling (w37-maintainer, 2026-09-17): read
+#: this commit from git history instead, the same ref E1's independent migration-verify
+#: run uses, rather than fabricate its content a second time.
+_PRE_MIGRATION_SHA: Final = "fbb5555b45f9b22ef8bc5571865ee8d9a86b62e8"
+
+
+@pytest.fixture(scope="session")
+def pre_migration_root() -> Any:
+    """A `git worktree add --detach` checkout of `_PRE_MIGRATION_SHA`, real content the
+    migration has not yet touched -- session-scoped, one checkout shared by every test
+    that needs it, torn down (`git worktree remove --force`) once the session ends.
+
+    Fails loudly (`RuntimeError`, naming the SHA) if the ref cannot be resolved locally,
+    rather than falling back to a fetch or silently skipping every test that depends on
+    it: a test suite that goes quietly green because its own fixture could not find its
+    input is the exact failure class RL-949's `generated_from_tracked_corpus` refuses for
+    the same reason (`.claude/skills/close-workstream/SKILL.md`'s "cannot verify, so
+    allow it").
+    """
+    verify = subprocess.run(
+        ["git", "rev-parse", "--quiet", "--verify", f"{_PRE_MIGRATION_SHA}^{{commit}}"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    if verify.returncode != 0:
+        raise RuntimeError(
+            f"pre_migration_root: {_PRE_MIGRATION_SHA!r} does not resolve to a commit in "
+            f"this checkout's git history -- {verify.stderr.strip()}"
+        )
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="pre-migration-root-"))
+    worktree = tmp / "worktree"
+    subprocess.run(
+        ["git", "worktree", "add", "--detach", str(worktree), _PRE_MIGRATION_SHA],
+        cwd=ROOT, check=True, capture_output=True, text=True,
+    )
+    try:
+        yield worktree
+    finally:
+        subprocess.run(
+            ["git", "worktree", "remove", "--force", str(worktree)],
+            cwd=ROOT, check=False, capture_output=True, text=True,
+        )
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _tree_files(root: pathlib.Path) -> dict[str, bytes]:
@@ -534,7 +586,7 @@ def test_class6_keys_on_the_generated_set_not_reproducibility(
 
 
 # ---------------------------------------------------------------------------------------
-# W37-6: three declared exclusions from the sweep and from the (d)/(e)/(g) verification
+# W37-6: declared exclusions from the sweep and from the (d)/(e)/(g) verification
 # corpus (`scripts/_docid.py`'s `sweep_exclusion_reason`, read by `_iter_tree_files` here
 # and by `_docverify.py`'s `tracked_files`):
 #
@@ -549,6 +601,16 @@ def test_class6_keys_on_the_generated_set_not_reproducibility(
 #    `scripts/*.py` by path while it runs (`_load_module`, fixed separately below to stop
 #    writing it at all; this predicate is the second, independent layer for whatever it
 #    still misses).
+# 4. `file-census-<sha>.csv`'s own CONTENT, at either `docs/audit/` (pre-move) or
+#    `docs/research/` (post-move, RFC-937 §5.2 :328's `_RESEARCH_UNSTAMPABLE_MOVE`)
+#    (`_docid.GOVERNANCE_RECORD_EXCLUSIONS`, class F loop 2, deputy's corrected ruling
+#    2026-09-17 17:40 BST — the move itself stands, an RFC cannot be amended by a
+#    ruling). RFC-897 §2 (Stage 0) census evidence, named for the commit it describes; a
+#    tree-wide citation sweep reading its own per-file `path` column as prose rewrote
+#    168 of the real census's 1320 rows AFTER the move, so its content now sits in the
+#    same "quotes a legacy path as evidence, never a citation" class the W37-11 record
+#    already does. A regex predicate on the basename, not a literal path — the sha
+#    varies with the tree a future re-census would document.
 # ---------------------------------------------------------------------------------------
 
 
@@ -609,6 +671,100 @@ def test_lockfiles_survive_migration_byte_identical(
         == frontend_lock_text
     )
     assert (root / "pnpm-lock.yaml").read_text(encoding="utf-8") == root_pnpm_lock_text
+
+
+def test_file_census_moves_to_research_byte_identical(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Class F loop 2, deputy's corrected ruling 2026-09-17 17:40 BST: RFC-937 §5.2 :328
+    routes `docs/audit/file-census-<sha>.csv` to `docs/research/file-census-<sha>.csv`
+    (`_RESEARCH_UNSTAMPABLE_MOVE`) -- the move itself is correct and stands, a ruling
+    cannot amend an RFC. The actual defect (commit 1 rewrote 168 of the real census's
+    1320 rows) is narrower: the moved file's own `path` column is a full per-file dump of
+    the tree at the commit its name names, so a tree-wide citation sweep reading those
+    cells as prose citations corrupted it in place. Broken-input proof, positive half: a
+    legacy-form citation (`NT-0001`, this fixture corpus's own re-cited note — the same
+    token `test_lockfiles_survive_migration_byte_identical` uses) planted inside
+    `docs/audit/file-census-5ef559d.csv` (the exact sha `_RESEARCH_UNSTAMPABLE_MOVE`'s
+    one hardcoded entry keys on, so the move actually fires in this fixture) must survive
+    `migrate()` completely untouched -- moved to `docs/research/`, byte-identical, with
+    the old `docs/audit/` copy gone.
+    """
+    census_text = (
+        "path,area,name_pattern,size_bytes,mutability,referenced_by\n"
+        "docs/notes/NT-0001-example.md,notes,NT-DDDD-example,42,frozen,0\n"
+    )
+    root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
+    old_path = root / "docs" / "audit" / "file-census-5ef559d.csv"
+    old_path.parent.mkdir(parents=True, exist_ok=True)
+    old_path.write_text(census_text, encoding="utf-8")
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(
+        ["-c", "user.email=test@example.com", "-c", "user.name=Test",
+         "commit", "-q", "-m", "add file-census"],
+        cwd=root,
+    )
+
+    result = doc_id_cli.migrate(root)
+
+    assert ("NT-0001", "RFC-1") in result.assigned, (
+        "fixture assumption: this corpus's note must still be re-cited NT-0001 -> RFC-1, "
+        "or this proof no longer exercises a real rewrite and tests nothing"
+    )
+    new_path = root / "docs" / "research" / "file-census-5ef559d.csv"
+    assert new_path.is_file(), (
+        "docs/audit/file-census-5ef559d.csv must move to docs/research/ per RFC-937 "
+        "§5.2 -- the move step is correct and unaffected by this fix"
+    )
+    assert not old_path.exists(), "the old docs/audit/ copy must be gone after the move"
+    assert new_path.read_text(encoding="utf-8") == census_text, (
+        "the moved file's own content must survive byte-identical -- the citation sweep, "
+        "not the move, is what this fix excludes"
+    )
+
+
+def test_file_census_shaped_files_outside_the_predicate_are_still_rewritten(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Broken-input proof, negative half: the identical `NT-0001` citation, in a file
+    shaped like a census but that does not satisfy `GOVERNANCE_RECORD_EXCLUSIONS`'s
+    predicate at all — no sha (`file-census.csv`) — is unaffected by the exclusion and
+    still gets rewritten like any other tracked file, at either `docs/audit/` or
+    `docs/research/`. Proves the predicate is `file-census-<sha>.csv` specifically, not
+    "any file that looks like a census."
+    """
+    census_text = (
+        "path,area,name_pattern,size_bytes,mutability,referenced_by\n"
+        "docs/notes/NT-0001-example.md,notes,NT-DDDD-example,42,frozen,0\n"
+    )
+    root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
+    no_sha_audit = root / "docs" / "audit" / "file-census.csv"
+    no_sha_audit.parent.mkdir(parents=True, exist_ok=True)
+    no_sha_audit.write_text(census_text, encoding="utf-8")
+    no_sha_research = root / "docs" / "research" / "file-census.csv"
+    no_sha_research.parent.mkdir(parents=True, exist_ok=True)
+    no_sha_research.write_text(census_text, encoding="utf-8")
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(
+        ["-c", "user.email=test@example.com", "-c", "user.name=Test",
+         "commit", "-q", "-m", "add non-matching census-shaped files"],
+        cwd=root,
+    )
+
+    result = doc_id_cli.migrate(root)
+
+    assert ("NT-0001", "RFC-1") in result.assigned, (
+        "fixture assumption: this corpus's note must still be re-cited NT-0001 -> RFC-1, "
+        "or this proof no longer exercises a real rewrite and tests nothing"
+    )
+    assert "RFC-1" in no_sha_audit.read_text(encoding="utf-8"), (
+        "docs/audit/file-census.csv (no sha) does not match the predicate and must "
+        "still be swept"
+    )
+    assert "RFC-1" in no_sha_research.read_text(encoding="utf-8"), (
+        "docs/research/file-census.csv (no sha) does not match the predicate and must "
+        "still be swept"
+    )
 
 
 def test_fixture_corpus_roots_survive_migration_untouched(
@@ -1685,6 +1841,54 @@ def test_class6_deletion_a_stub_deleted_with_its_row_is_class6(
     ), classification.violations
 
 
+def test_legacy_form_spec_marker_protects_only_the_line_after_it(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """F103 companion finding, 2026-09-17: `_legacy_form_spec_spans` must return the span
+    of the line right after a standalone `# rfc-937: legacy-form-spec` marker, and nothing
+    else — proven directly on the pure function before the integration test below proves
+    `_rewrite_citations` actually respects it.
+    """
+    text = (
+        '_X: Final = {"W6": "old"}\n'
+        "# rfc-937: legacy-form-spec\n"
+        '_Y: Final = {"W6": "old"}\n'
+        '_Z: Final = {"W6": "old"}\n'
+    )
+    spans = doc_id_cli._legacy_form_spec_spans(text)
+    assert len(spans) == 1, spans
+    start, end = spans[0]
+    protected = text[start:end]
+    assert protected == "# rfc-937: legacy-form-spec\n_Y: Final = {\"W6\": \"old\"}\n"
+    assert '_X: Final = {"W6": "old"}' not in protected
+    assert '_Z: Final = {"W6": "old"}' not in protected
+
+
+def test_rewrite_citations_leaves_a_marked_line_untouched_and_rewrites_an_unmarked_one(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path,
+) -> None:
+    """The required broken-input proof for the F103 companion fix, verbatim: a marked
+    `W6` line must NOT be rewritten by `_rewrite_citations`, and an unmarked `W6` line in
+    the same file — the positive control, proving the marker is scoped to its one line
+    and the check has not gone vacuous — must still be rewritten, exactly like every
+    other citation `token_map` names.
+    """
+    docs_dir = tmp_path / "docs" / "sample"
+    docs_dir.mkdir(parents=True)
+    doc = docs_dir / "note.md"
+    doc.write_text(
+        "# rfc-937: legacy-form-spec\n"
+        "See W6 in the lookup table (must NOT be rewritten).\n"
+        "See W6 in ordinary prose (must be rewritten).\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._rewrite_citations(tmp_path, {"W6": "WK-662"})
+    after = doc.read_text(encoding="utf-8")
+    lines = after.splitlines()
+    assert "W6" in lines[1], f"the marked line must survive byte-identical: {lines[1]!r}"
+    assert "WK-662" in lines[2], f"the unmarked line must still be rewritten: {lines[2]!r}"
+
+
 def test_a_prose_wf0n_and_a_heading_wf0n_both_resolve_a_longer_number_does_not(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -1844,19 +2048,27 @@ def test_closure_records_ledger_disposition_reads_the_trailer_not_the_body(
 
 
 def test_closure_records_real_corpus_decomposes_into_ruling_84s_four_buckets(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 84 §4's positive control: "A test that runs `_discover_closure_records`
     against the real `docs/audit/closure-records.md` and asserts 21 drafts: 8 `CR- kind:
     work`, 1 `CR- kind: phase`, 2 `RS- kind: audit`, 10 `LG-`. ... It must fail today with
     the `NotImplementedError` of §1(b) — the positive control the corpus already
-    supplies." Run against `ROOT`, the real repository, not a fixture.
+    supplies." Run against `pre_migration_root` (deputy ruling, 2026-09-17): the real
+    pre-migration repository has the 21-record, four-bucket shape this test pins; `ROOT`
+    (post-migration) and `FIXTURE_CORPUS` (Ruling 67 §4 item 1 forbids widening it) both
+    lack it.
     """
-    drafts = doc_id_cli._discover_closure_records(ROOT)
+    drafts = doc_id_cli._discover_closure_records(pre_migration_root)
 
     assert len(drafts) == 21, [(d.prefix, d.kind, d.title) for d in drafts]
     counts = collections.Counter((d.prefix, d.kind) for d in drafts)
     assert counts == {
+        # Re-measured against pre_migration_root (fbb5555) 2026-09-17, after E1's
+        # _CLOSURE_AUDIT_TITLE_PREFIXES revert (commit 5f1cf68): total still 21, and this
+        # decomposition now matches Ruling 84 §4's own prose count exactly -- the earlier
+        # 9/1/1/10 reading was against the tool's own self-migrated (and therefore wrong)
+        # title-prefix constant, not the real corpus.
         ("CR", "work"): 8,
         ("CR", "phase"): 1,
         ("RS", "audit"): 2,
@@ -2364,15 +2576,17 @@ def test_plan_reviews_guards_are_silent_on_the_real_corpus(doc_id_cli: types.Mod
 
 
 def test_real_plan_reviews_container_is_the_one_ruling_88_bounded(
-    doc_id_cli: types.ModuleType
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 88 §1 verified the container's boundary as lines 1155-1232, with line 1233
     opening Plan review 9. Asserted against the real file so a corpus change that moved the
     boundary is caught here, not in the irreversible run.
     """
-    containers = [d for d in doc_id_cli._discover_plan_reviews(ROOT) if d.prefix == "RFC"]
+    containers = [
+        d for d in doc_id_cli._discover_plan_reviews(pre_migration_root) if d.prefix == "RFC"
+    ]
     assert len(containers) == 1
-    text = (ROOT / "docs" / "audit" / "plan-reviews.md").read_text(encoding="utf-8")
+    text = (pre_migration_root / "docs" / "audit" / "plan-reviews.md").read_text(encoding="utf-8")
     start_line = text.count("\n", 0, text.index(containers[0].body.splitlines()[0])) + 1
     assert start_line == 1155
     assert containers[0].body.count("\n") == 1232 - 1155 + 1 - 1  # 1155..1232 inclusive
@@ -2958,7 +3172,7 @@ def test_ruling_owner_departure_machinery_is_removed_not_left_inert() -> None:
 
 
 def test_ruling_file_owner_resolves_the_real_delegation_clause_to_decision_maker(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """`_ruling_file_owner`, run directly against the real A1-A3 source file's own text —
     the exact file and heading ("### 1.1 The delegation — ... delegated to the lead") that
@@ -2989,7 +3203,7 @@ def test_ruling_file_owner_resolves_the_real_delegation_clause_to_decision_maker
     *and* `_discover_lettered_rulings` returns 3, while `_discover_plain_plans` drops from
     1 to 0.
     """
-    path = ROOT / _A_SERIES_SOURCE
+    path = pre_migration_root / _A_SERIES_SOURCE
     text = path.read_text(encoding="utf-8")
 
     assert not list(doc_id_cli._RULING_HEADING_RE.finditer(text)), (
@@ -3005,14 +3219,14 @@ def test_ruling_file_owner_resolves_the_real_delegation_clause_to_decision_maker
 
 
 def test_ruling_file_owner_defaults_to_decision_maker_for_every_multi_ruling_file(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """The default (NT-0019 §1.6) holds for every real multi-ruling file, full stop — Ruling
     95 struck the one exception Ruling 86 §3 item 2 carved out, so there is no more
     "non-delegated" subset to filter to before asserting. Property over the whole real
     corpus, never a count, which grows as the corpus does.
     """
-    drafts = doc_id_cli._discover_multi_ruling_files(ROOT)
+    drafts = doc_id_cli._discover_multi_ruling_files(pre_migration_root)
     assert drafts, "fixture assumption: at least one real multi-ruling file exists"
     assert all(d.owner == "decision-maker" for d in drafts), collections.Counter(
         d.owner for d in drafts
@@ -3099,7 +3313,7 @@ _NON_DOCUMENT_DISCOVERY: Final = {
 
 
 def _document_discovery_union(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, root: pathlib.Path = ROOT,
 ) -> tuple[dict[str, list[Any]], set[str]]:
     """Every `_discover_*` that takes `root` alone and yields `_Draft`s, called on the
     real tree, plus the names introspection skipped.
@@ -3126,10 +3340,22 @@ def _document_discovery_union(
         if len(required) != 1:
             skipped.add(name)
             continue
-        out = fn(ROOT)
-        if not isinstance(out, list) or not all(
-            isinstance(d, doc_id_cli._Draft) for d in out
-        ):
+        out = fn(root)
+        if not isinstance(out, list):
+            skipped.add(name)
+            continue
+        # A vacuous `all(...)` over an empty `out` cannot distinguish "genuinely yields
+        # _Draft, produced none at this root" from "yields something else entirely,
+        # produced none here" -- `_discover_reference_moves` is exactly the second case:
+        # `list[_ReferenceMove]`, empty at some roots, non-empty at others. The element
+        # type is behaviour, not the function's own return annotation (declared type is
+        # not proof of runtime type), so it is observed from a sample: this call's own
+        # output when non-empty, else a probe against `ROOT` -- every real `_discover_*`
+        # that yields `_Draft` at all produces at least one on the live, fully-populated
+        # corpus, so an empty `ROOT` probe too is a reliable "yields nothing" signal, not
+        # an ambiguous one.
+        sample = out or fn(ROOT)
+        if sample and not all(isinstance(d, doc_id_cli._Draft) for d in sample):
             skipped.add(name)
             continue
         called[name] = out
@@ -3137,7 +3363,7 @@ def _document_discovery_union(
 
 
 def test_ruling_87_is_enforced_over_the_whole_discovery_union(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 95 §4 item 3's re-derived instrument (see the module comment above this
     constant), now asserting Ruling 87 §3 rather than the pre-widening placeholder.
@@ -3172,7 +3398,7 @@ def test_ruling_87_is_enforced_over_the_whole_discovery_union(
     `_RULING_HEADING_RE` from `^#{1,2}` to `^##` reds this test and two of that file's
     three.
     """
-    called, skipped = _document_discovery_union(doc_id_cli)
+    called, skipped = _document_discovery_union(doc_id_cli, pre_migration_root)
     assert skipped == set(_NON_DOCUMENT_DISCOVERY), (
         "the document-discovery union changed: classify each new/removed `_discover_*` in "
         f"`_NON_DOCUMENT_DISCOVERY`. skipped={sorted(skipped)} "
@@ -3201,12 +3427,44 @@ def test_ruling_87_is_enforced_over_the_whole_discovery_union(
             f"with owner {draft.owner!r}"
         )
 
-    plain = {d.was for d in doc_id_cli._discover_plain_plans(ROOT)}
+    plain = {d.was for d in doc_id_cli._discover_plain_plans(pre_migration_root)}
     assert not plain & set(_RULING_87_STANDALONE_SOURCES), (
         "Ruling 87 §3 item 1 makes 'not PL' mandatory, so none of the three may still be "
         f"discovered as a plain plan: {sorted(plain & set(_RULING_87_STANDALONE_SOURCES))}"
     )
 
+
+def test_discovery_union_classifies_a_draft_yielding_function_that_ran_empty_as_called(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path,
+) -> None:
+    """Positive control for `_document_discovery_union`'s empty-output branch: a function
+    that genuinely yields `_Draft` and simply found none at this particular root must be
+    classified `called` (with an empty list), never `skipped`.
+
+    Before the fix, `all(isinstance(d, doc_id_cli._Draft) for d in [])` is vacuously
+    `True` for *any* empty output, `_Draft`-yielding or not — so this positive case was
+    accidentally correct by the same vacuous logic that misclassified
+    `_discover_reference_moves` (`list[_ReferenceMove]`, non-empty at `ROOT`, empty at a
+    root with no reference moves) as `called`. This proves the fixed version — which
+    probes `ROOT` to determine element type when the primary call is empty — still gets
+    the `_Draft`-yielding, empty-at-this-root case right, not just the non-`_Draft` case.
+    An empty `docs/plans/` directory has no plain plans, multi-ruling files, or anything
+    else `_discover_plain_plans` yields, so it is empty by construction, not by accident.
+    """
+    empty_root = tmp_path / "empty"
+    (empty_root / "docs" / "plans").mkdir(parents=True)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=empty_root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=empty_root)
+    _run_git(["config", "user.name", "Test"], cwd=empty_root)
+    (empty_root / "docs" / "plans" / ".gitkeep").write_text("", encoding="utf-8")
+    _run_git(["add", "-A"], cwd=empty_root)
+    _run_git(["commit", "-m", "seed: empty plans dir", "--quiet"], cwd=empty_root)
+    called, skipped = _document_discovery_union(doc_id_cli, empty_root)
+    assert "_discover_plain_plans" in called, (
+        "a _Draft-yielding function that ran and found nothing must be `called`, not "
+        f"`skipped`: {sorted(skipped)}"
+    )
+    assert called["_discover_plain_plans"] == []
 
 
 # ---------------------------------------------------------------------------------------
@@ -3240,7 +3498,7 @@ def test_plain_plans_owner_is_derived_from_kind_not_hardcoded(
 
 
 def test_plain_plans_real_corpus_owner_always_matches_its_own_kind(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """Property over the whole real corpus, not a count (the corpus grows): every emitted
     `PL-` draft's `owner` is exactly `_PLAN_KIND_OWNER[kind]` — proves the derivation is
@@ -3251,8 +3509,12 @@ def test_plain_plans_real_corpus_owner_always_matches_its_own_kind(
     `owner: maintainer`), for which `_PLAN_KIND_OWNER` has no row and must not — the
     family carries no `kind:` at all (`docs/_templates/RL.md:8`). The `RL-` half has its
     own property test below; this one keeps saying exactly what its own docstring says.
+
+    Run against a git-tracked copy of `FIXTURE_CORPUS` (the frozen pre-migration shape),
+    not `ROOT`, which is now fully post-migration and has no plain plans left to discover.
     """
-    drafts = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "PL"]
+    root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
+    drafts = [d for d in doc_id_cli._discover_plain_plans(root) if d.prefix == "PL"]
     assert drafts, "fixture assumption: at least one plain plan exists in the real corpus"
     mismatched = [
         (d.was, d.kind, d.owner)
@@ -3300,7 +3562,7 @@ _RULING_98_HANDOVERS = (
 
 
 def test_ruling_98_the_seven_are_exactly_the_rl_drafts_plain_plans_emits(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance items 1 and 6, over the real corpus at `2ae31f7`.
 
@@ -3309,45 +3571,45 @@ def test_ruling_98_the_seven_are_exactly_the_rl_drafts_plain_plans_emits(
     third-level headings the `## Ruling N` splitter cannot reach, so the whole record
     leaves this function as a single draft, which is what §2.3 rules.
     """
-    rl = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "RL"]
+    rl = [d for d in doc_id_cli._discover_plain_plans(pre_migration_root) if d.prefix == "RL"]
     assert sorted(d.was for d in rl) == sorted(_RULING_98_MAINTAINER_DECISIONS)
     assert len([d for d in rl if d.was == _RULING_98_MAINTAINER_DECISIONS[6]]) == 1
 
 
 def test_ruling_98_every_such_draft_is_owner_maintainer_and_carries_no_kind(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance items 1 and 2, as a property over whatever the predicate selects rather
     than over the seven — so a later member cannot arrive with a `kind:` unnoticed.
     `docs/_templates/RL.md:8`: *"`kind:` and `plans:` do not apply to this family and must
     not appear here."*
     """
-    rl = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.prefix == "RL"]
+    rl = [d for d in doc_id_cli._discover_plain_plans(pre_migration_root) if d.prefix == "RL"]
     assert rl, "fixture assumption: the predicate selects at least one real document"
     assert [(d.was, d.owner, d.kind) for d in rl if d.owner != "maintainer" or d.kind] == []
 
 
 def test_ruling_98_the_two_handovers_are_not_reclassified(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance item 3. Both routes to the answer are asserted, because Ruling 98 §1
     records both precisely so a reader who checks one knows the other agrees: the suffix
     table still produces `kind: handover`/`owner: executor`, and the content predicate is
     independently false for each file's own title.
     """
-    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(ROOT)}
+    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(pre_migration_root)}
     for rel in _RULING_98_HANDOVERS:
         assert rel in by_was, f"fixture assumption: {rel} still exists"
         draft = by_was[rel]
         assert (draft.prefix, draft.kind, draft.owner) == ("PL", "handover", "executor")
-        text = (ROOT / rel).read_text(encoding="utf-8")
+        text = (pre_migration_root / rel).read_text(encoding="utf-8")
         assert not doc_id_cli._is_maintainer_decision_plan(
             doc_id_cli._plan_title(text) or "", text
         )
 
 
 def test_ruling_98_conditional_exclusion_holds_while_the_decision_lines_are_blank(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance item 4, first direction: `…-w37-6-maintainer-decisions.md` keeps the
     shipped `PL- kind: leaf, owner: planner` default while its `> **Decision:**` blocks
@@ -3358,19 +3620,19 @@ def test_ruling_98_conditional_exclusion_holds_while_the_decision_lines_are_blan
     at `e56d038`: if the maintainer has since filled a line in, this assertion is the
     thing that says so, instead of a stale expectation quietly passing.
     """
-    text = (ROOT / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
+    text = (pre_migration_root / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
     assert doc_id_cli._UNFILLED_DECISION_BLOCK_RE.search(text), (
         "this file's Decision: lines are no longer blank at this tree -- Ruling 98 "
         "§2.2 then routes it to RL-/owner: maintainer, and this expectation, not the "
         "predicate, is what has to change"
     )
-    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(ROOT)}
+    by_was = {d.was: d for d in doc_id_cli._discover_plain_plans(pre_migration_root)}
     draft = by_was[_RULING_98_CONDITIONAL_EXCLUSION]
     assert (draft.prefix, draft.kind, draft.owner) == ("PL", "leaf", "planner")
 
 
 def test_ruling_98_the_exclusion_lifts_the_moment_the_maintainer_fills_a_decision_in(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path,
 ) -> None:
     """Acceptance item 4, **second** direction — the one a reading frozen at `e56d038`
     gets wrong: *"stamped `owner: planner` after a dated correction has filled them in, on
@@ -3382,7 +3644,7 @@ def test_ruling_98_the_exclusion_lifts_the_moment_the_maintainer_fills_a_decisio
     """
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
-    source = (ROOT / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
+    source = (pre_migration_root / _RULING_98_CONDITIONAL_EXCLUSION).read_text(encoding="utf-8")
     filled = re.sub(
         r"^> \*\*Decision:\*\*[ \t]*$", "> **Decision:** (a), as asked.", source, flags=re.M
     )
@@ -3440,7 +3702,7 @@ _RULING_98_BRANCH_DISARMED = "prefix, kind, owner = prefix, kind, owner"
 
 
 def test_ruling_98_instrument_reds_when_the_branch_is_removed(
-    tmp_path: pathlib.Path,
+    tmp_path: pathlib.Path, pre_migration_root: pathlib.Path,
 ) -> None:
     """CLAUDE.md §13: *"enforcement is proven on deliberately broken input. A check that
     has never printed a failure has not been tested."*
@@ -3453,7 +3715,7 @@ def test_ruling_98_instrument_reds_when_the_branch_is_removed(
     mutated = _module_with_source_mutations(
         tmp_path, ((_RULING_98_BRANCH, _RULING_98_BRANCH_DISARMED),), name="ruling98"
     )
-    by_was = {d.was: d for d in mutated._discover_plain_plans(ROOT)}
+    by_was = {d.was: d for d in mutated._discover_plain_plans(pre_migration_root)}
     regressed = [
         (rel, by_was[rel].prefix, by_was[rel].kind, by_was[rel].owner)
         for rel in _RULING_98_MAINTAINER_DECISIONS
@@ -3461,7 +3723,7 @@ def test_ruling_98_instrument_reds_when_the_branch_is_removed(
     assert regressed == [
         (rel, "PL", "leaf", "planner") for rel in _RULING_98_MAINTAINER_DECISIONS
     ]
-    assert not [d for d in mutated._discover_plain_plans(ROOT) if d.prefix == "RL"]
+    assert not [d for d in mutated._discover_plain_plans(pre_migration_root) if d.prefix == "RL"]
 
 
 # ---------------------------------------------------------------------------------------
@@ -3480,10 +3742,10 @@ _WRAPPED_TITLE_FILES = (
 
 
 def test_plan_title_joins_a_wrapped_heading_on_the_real_files(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     for rel in _WRAPPED_TITLE_FILES:
-        text = (ROOT / rel).read_text(encoding="utf-8")
+        text = (pre_migration_root / rel).read_text(encoding="utf-8")
         title = doc_id_cli._plan_title(text)
         assert title is not None, rel
         first_line = text.splitlines()[0].removeprefix("# ")
@@ -3982,7 +4244,7 @@ def test_requirements_guard_is_silent_on_the_real_corpus(
 
 
 def test_real_corpus_dep_ids_split_into_discovered_and_already_canonical(
-    doc_id_cli: types.ModuleType
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """The four ids F82 names, against the real `docs/specs/00-overview.md`: `DEP-1`,
     `DEP-2` and `DEP-3` are already in the canonical form `compute_next` counts, and
@@ -3990,10 +4252,10 @@ def test_real_corpus_dep_ids_split_into_discovered_and_already_canonical(
     either the corpus or the classification is caught here rather than in the irreversible
     run.
     """
-    dep = [d for d in doc_id_cli._discover_requirements(ROOT) if d.prefix == "DEP"]
+    dep = [d for d in doc_id_cli._discover_requirements(pre_migration_root) if d.prefix == "DEP"]
     assert [d.old_token for d in dep] == ["DEP-1a"]
     assert dep[0].owner == "decision-maker"
-    text = (ROOT / "docs" / "specs" / "00-overview.md").read_text(encoding="utf-8")
+    text = (pre_migration_root / "docs" / "specs" / "00-overview.md").read_text(encoding="utf-8")
     canonical = {f"DEP-{m.group(2)}" for m in doc_id_cli._SPEC_BOLD_RE.finditer(text)
                  if m.group(1) == "DEP"}
     assert canonical == {"DEP-1", "DEP-2", "DEP-3"}
@@ -4146,7 +4408,7 @@ def test_migrate_still_raises_via_the_multi_ruling_guard_on_an_unnumbered_ruling
 
 
 def test_a_series_is_discovered_from_the_real_source_with_ruling_86s_fields(
-    doc_id_cli: types.ModuleType
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """F81's falsifiable discharge condition and Ruling 86 §2's field list, against the
     real `docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` rather than a fixture --
@@ -4156,8 +4418,12 @@ def test_a_series_is_discovered_from_the_real_source_with_ruling_86s_fields(
     each carrying `was:` the adoption file's path and its old token."* `owner:` is
     `decision-maker` per Ruling 95, which struck Ruling 86 §3 item 2's departure.
     """
-    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(ROOT)  # must not raise
-    drafts = [d for d in doc_id_cli._discover_lettered_rulings(ROOT) if d.was == _A_SERIES_SOURCE]
+    # must not raise
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(pre_migration_root)
+    drafts = [
+        d for d in doc_id_cli._discover_lettered_rulings(pre_migration_root)
+        if d.was == _A_SERIES_SOURCE
+    ]
     assert [d.old_token for d in drafts] == ["Ruling A1", "Ruling A2", "Ruling A3"]
     assert {d.prefix for d in drafts} == {"RL"}
     assert {d.status for d in drafts} == {"active"}
@@ -4202,7 +4468,7 @@ def test_migrate_stays_idempotent_with_all_three_new_discoveries_present(
 
 
 def test_a_series_extraction_leaves_the_residual_plan_ruling_86_requires(
-    doc_id_cli: types.ModuleType
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 86 §3 item 5 presupposes a surviving plan: *"The residual `PL-` is checked
     for sense: after §3's subsections leave, its §3 heading has nothing under it."* That is
@@ -4211,10 +4477,16 @@ def test_a_series_extraction_leaves_the_residual_plan_ruling_86_requires(
     `_RULING_HEADING_RE` -- the widening would have made `_discover_plain_plans` skip the
     file and produce no `PL-` at all. This is the assertion that pins that choice.
     """
-    plain = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.was == _A_SERIES_SOURCE]
+    plain = [
+        d for d in doc_id_cli._discover_plain_plans(pre_migration_root)
+        if d.was == _A_SERIES_SOURCE
+    ]
     assert len(plain) == 1
     assert (plain[0].prefix, plain[0].kind) == ("PL", "leaf")
-    multi = [d for d in doc_id_cli._discover_multi_ruling_files(ROOT) if d.was == _A_SERIES_SOURCE]
+    multi = [
+        d for d in doc_id_cli._discover_multi_ruling_files(pre_migration_root)
+        if d.was == _A_SERIES_SOURCE
+    ]
     assert multi == []  # not a whole-file split
 
 
@@ -4544,7 +4816,7 @@ def _naive_leading_work_ids(text: str) -> list[str]:
 
 
 def test_roadmap_census_matches_an_independently_derived_row_count_on_the_real_tree(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """The positive control the real corpus already supplies (W37-6 outstanding
     obligations row 2): before this fix, `_discover_roadmap` found nothing at all against
@@ -4553,14 +4825,14 @@ def test_roadmap_census_matches_an_independently_derived_row_count_on_the_real_t
     row a wholly independent re-derivation also finds — a property that holds regardless
     of how many rows the file carries on the day this runs, unlike a hard-coded count.
     """
-    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    text = (pre_migration_root / "docs" / "roadmap.md").read_text(encoding="utf-8")
     occurrences = doc_id_cli._scan_roadmap_rows(text)
     assert sorted(o.work_id for o in occurrences) == sorted(_naive_leading_work_ids(text))
     assert len(occurrences) > 1  # non-vacuous
 
 
 def test_discover_roadmap_converts_every_real_id_with_none_left_over(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Rulings 90-92: every distinct id the census finds becomes exactly one `WK-` draft
     — the property Ruling 90 acceptance states directly ("41 work ids in, 41 WK- rows
@@ -4568,26 +4840,26 @@ def test_discover_roadmap_converts_every_real_id_with_none_left_over(
     against the independently-derived id set above, never a hard-coded "41", so a future
     edit to `docs/roadmap.md` cannot make this test stale by adding or closing a work.
     """
-    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    text = (pre_migration_root / "docs" / "roadmap.md").read_text(encoding="utf-8")
     expected_ids = set(_naive_leading_work_ids(text))
-    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(ROOT)
+    drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(pre_migration_root)
     assert {d.old_token for d in drafts} == expected_ids
     assert len(drafts) == len(expected_ids)  # no id produced twice
     assert set(phase_titles) >= {d.phase[1:] for d in drafts if d.phase}
     assert occurrences  # the full census is returned too, for the restructure below
 
 
-def _copy_roadmap_and_templates(dest: pathlib.Path) -> None:
+def _copy_roadmap_and_templates(dest: pathlib.Path, root: pathlib.Path = ROOT) -> None:
     dest_docs = dest / "docs"
     dest_docs.mkdir(parents=True, exist_ok=True)
     (dest_docs / "roadmap.md").write_text(
-        (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8"), encoding="utf-8"
+        (root / "docs" / "roadmap.md").read_text(encoding="utf-8"), encoding="utf-8"
     )
     templates_dir = dest_docs / "_templates"
     templates_dir.mkdir()
     for name in ("WK.md", "SL.md"):
         (templates_dir / name).write_text(
-            (ROOT / "docs" / "_templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+            (root / "docs" / "_templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
         )
 
 
@@ -4632,7 +4904,7 @@ def test_restructure_roadmap_preserves_the_narrative_on_the_real_tree(
 
 
 def test_restructure_roadmap_is_readable_by_doc_index_on_the_real_tree(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path,
 ) -> None:
     """Round-trip validation against the real corpus, the same property
     `test_roadmap_restructure_is_readable_by_doc_index` proves on the fixture: the output
@@ -4640,7 +4912,7 @@ def test_restructure_roadmap_is_readable_by_doc_index_on_the_real_tree(
     work population `_discover_roadmap` computed — a property, so a future edit changing
     which ids exist does not make this assertion stale the way a hard-coded count would.
     """
-    _copy_roadmap_and_templates(tmp_path)
+    _copy_roadmap_and_templates(tmp_path, pre_migration_root)
     drafts, phase_titles, occurrences = doc_id_cli._discover_roadmap(tmp_path)
     for i, d in enumerate(drafts):
         d.number = 9000 + i
@@ -4659,13 +4931,13 @@ def test_restructure_roadmap_is_readable_by_doc_index_on_the_real_tree(
 
 
 def test_w6_retires_naming_its_successors_on_the_real_tree(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 92's acceptance items directly: `W6`'s migrated row is `status: retired`
     (never dropped — it is a live dependency target, `W7`'s `Depends on` cell names it)
     and its body names `W6a` and `W6b` as the works its scope was re-cut into.
     """
-    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(ROOT)
+    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(pre_migration_root)
     w6 = next(d for d in drafts if d.old_token == "W6")
     assert w6.status == "retired"
     assert "W6a" in w6.body
@@ -4673,7 +4945,7 @@ def test_w6_retires_naming_its_successors_on_the_real_tree(
 
 
 def test_w5s_three_source_rows_all_survive_the_merge_on_the_real_tree(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Ruling 91's own worked example, on the real tree rather than a reproduction of it:
     `W5` heads three rows — a status-table pointer, a delivery breakdown, and a
@@ -4681,7 +4953,7 @@ def test_w5s_three_source_rows_all_survive_the_merge_on_the_real_tree(
     drops the rest. Each fragment quoted here is frozen, dated, already-closed-workstream
     prose that does not change as the roadmap grows elsewhere.
     """
-    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(ROOT)
+    drafts, _phase_titles, _occurrences = doc_id_cli._discover_roadmap(pre_migration_root)
     w5 = next(d for d in drafts if d.old_token == "W5")
     assert w5.status == "closed"
     for fragment in (
@@ -4693,7 +4965,7 @@ def test_w5s_three_source_rows_all_survive_the_merge_on_the_real_tree(
 
 
 def test_register_discovery_matches_every_row_register_lint_itself_declares(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """The positive control the real corpus already supplies (W37-6 outstanding
     obligations row 3): before this fix, `_discover_register` matched none of the real
@@ -4701,9 +4973,18 @@ def test_register_discovery_matches_every_row_register_lint_itself_declares(
     real cell is compound). After it, every data row `register-lint.py`'s own
     `parse_register` returns must be recognised — a property immune to the register
     growing a 74th row tomorrow, unlike a hard-coded "73".
+
+    `_discover_register` only ever reads the legacy `docs/audit/register.md` path (its own
+    docstring: "a second run ... finds nothing there"), which the migration has since
+    moved to `docs/findings/register.md` -- so both the register file and the discovery
+    call are read from `pre_migration_root`, the last tree where that legacy path exists.
+    `register_lint.parse_register` itself is content-addressed by the `path` argument, not
+    by `register_lint.TARGETS` (fixed to *this* checkout's own `scripts/`, per
+    `_load_register_lint`'s docstring), so pointing `path` at the pre-migration file is
+    the only change needed.
     """
     register_lint = doc_id_cli._load_register_lint()
-    path = ROOT / "docs" / "audit" / "register.md"
+    path = pre_migration_root / "docs" / "audit" / "register.md"
     rows, problems = register_lint.parse_register(path)
     assert not problems  # no structurally malformed row on the real tree today
     assert len(rows) > 1  # non-vacuous
@@ -4714,7 +4995,7 @@ def test_register_discovery_matches_every_row_register_lint_itself_declares(
     ]
     assert not unmatched, f"finding-id cell(s) with no recognised id: {unmatched}"
 
-    drafts = doc_id_cli._discover_register(ROOT)
+    drafts = doc_id_cli._discover_register(pre_migration_root)
     assert len(drafts) == len(rows)
     old_tokens = [d.old_token for d in drafts]
     assert len(set(old_tokens)) == len(old_tokens)  # every id discovered exactly once
@@ -4791,7 +5072,11 @@ def _module_with_source_mutations(
 
 
 def _emit_the_real_w5_ledgers(
-    module: types.ModuleType, scratch: pathlib.Path, *, resolve_work: bool
+    module: types.ModuleType,
+    scratch: pathlib.Path,
+    *,
+    resolve_work: bool,
+    root: pathlib.Path = ROOT,
 ) -> list[Any]:
     """Write the real ten `W5 ... (in progress, not closed)` records of
     `docs/audit/closure-records.md` into `scratch` as `LG-` documents, exactly as
@@ -4806,9 +5091,9 @@ def _emit_the_real_w5_ledgers(
     Returns the ledger drafts so a caller states its expected counts in terms of the
     corpus it actually read, not a number retyped from this docstring.
     """
-    ledgers = [d for d in module._discover_closure_records(ROOT) if d.prefix == "LG"]
+    ledgers = [d for d in module._discover_closure_records(root) if d.prefix == "LG"]
     assert ledgers, "fixture assumption: the real closure-records file still yields LG- drafts"
-    roadmap_drafts, _phase_titles, _occurrences = module._discover_roadmap(ROOT)
+    roadmap_drafts, _phase_titles, _occurrences = module._discover_roadmap(root)
     works = [d for d in roadmap_drafts if d.old_token == "W5"] if resolve_work else []
     if resolve_work:
         assert len(works) == 1, works
@@ -4826,7 +5111,7 @@ def _emit_the_real_w5_ledgers(
 
 
 def test_ledger_slice_check_reports_the_zero_it_counted_on_the_real_ten(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 94: "The passing state today is a count of **zero**, and the check must
     **say so** rather than pass silently -- a boundary metric that reads zero by
@@ -4840,7 +5125,9 @@ def test_ledger_slice_check_reports_the_zero_it_counted_on_the_real_ten(
     rather than this test.
     """
     scratch = tmp_path / "control"
-    ledgers = _emit_the_real_w5_ledgers(doc_id_cli, scratch, resolve_work=True)
+    ledgers = _emit_the_real_w5_ledgers(
+        doc_id_cli, scratch, resolve_work=True, root=pre_migration_root
+    )
     assert len(ledgers) == 10, (
         "Ruling 84 §4 item 1's own number, over the real docs/audit/closure-records.md"
     )
@@ -4855,7 +5142,7 @@ def test_ledger_slice_check_reports_the_zero_it_counted_on_the_real_ten(
 
 
 def test_ledger_slice_check_reds_on_ruling_94s_stamp_header_mutation(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 94's named broken input, run against the real corpus: "The deliberately
     broken input is a one-line mutation of `_stamp_header` -- remove `slice` from the skip
@@ -4876,7 +5163,9 @@ def test_ledger_slice_check_reds_on_ruling_94s_stamp_header_mutation(
         tmp_path, ((_STAMP_SKIP_WITH_SLICE, _STAMP_SKIP_WITHOUT_SLICE),), name="stamp-skip"
     )
     mutated_tree = tmp_path / "mutated-tree"
-    ledgers = _emit_the_real_w5_ledgers(mutated, mutated_tree, resolve_work=True)
+    ledgers = _emit_the_real_w5_ledgers(
+        mutated, mutated_tree, resolve_work=True, root=pre_migration_root
+    )
     mutated_report = mutated._check_emitted_ledger_axes(mutated_tree)
 
     assert mutated_report.records == len(ledgers), mutated_report
@@ -4887,7 +5176,9 @@ def test_ledger_slice_check_reds_on_ruling_94s_stamp_header_mutation(
     )
 
     control_tree = tmp_path / "control-tree"
-    _emit_the_real_w5_ledgers(doc_id_cli, control_tree, resolve_work=True)
+    _emit_the_real_w5_ledgers(
+        doc_id_cli, control_tree, resolve_work=True, root=pre_migration_root
+    )
     control_report = doc_id_cli._check_emitted_ledger_axes(control_tree)
     assert control_report.records == len(ledgers), control_report
     assert control_report.slice_values == 0, control_report
@@ -4950,7 +5241,7 @@ def test_ledger_slice_check_separates_a_resolving_slice_from_a_dangling_one(
 
 
 def test_ruling_84_item_3_reds_on_an_emitted_ledger_with_neither_axis(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 84 §4's third acceptance item, which Ruling 94 §4 obliges to be exercised
     here rather than assumed: "Ruling 84 §4's third item is exercised too, since §1(a)
@@ -4969,11 +5260,13 @@ def test_ruling_84_item_3_reds_on_an_emitted_ledger_with_neither_axis(
     being silent: written without either axis is allowed, *ending* without either is not.
     """
     resolved = tmp_path / "resolved"
-    ledgers = _emit_the_real_w5_ledgers(doc_id_cli, resolved, resolve_work=True)
+    ledgers = _emit_the_real_w5_ledgers(
+        doc_id_cli, resolved, resolve_work=True, root=pre_migration_root
+    )
     assert doc_id_cli._check_emitted_ledger_axes(resolved).work_violations == ()
 
     orphaned = tmp_path / "orphaned"
-    _emit_the_real_w5_ledgers(doc_id_cli, orphaned, resolve_work=False)
+    _emit_the_real_w5_ledgers(doc_id_cli, orphaned, resolve_work=False, root=pre_migration_root)
     report = doc_id_cli._check_emitted_ledger_axes(orphaned)
 
     assert report.records == len(ledgers), report
@@ -5107,7 +5400,7 @@ _BODY_DROPPED = (
 )
 
 
-def _a_series_drafts(module: types.ModuleType) -> list[Any]:
+def _a_series_drafts(module: types.ModuleType, root: pathlib.Path = ROOT) -> list[Any]:
     """Every draft the migration derives from the A-series source, across *every* discovery
     function that can claim it — one `PL-` residual plus three `RL-` since F81.
 
@@ -5127,16 +5420,16 @@ def _a_series_drafts(module: types.ModuleType) -> list[Any]:
     return [
         d
         for d in (
-            *module._discover_plain_plans(ROOT),
-            *module._discover_multi_ruling_files(ROOT),
-            *module._discover_lettered_rulings(ROOT),
+            *module._discover_plain_plans(root),
+            *module._discover_multi_ruling_files(root),
+            *module._discover_lettered_rulings(root),
         )
         if d.was == _A_SERIES_SOURCE
     ]
 
 
 def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 86 §4 item 3's re-derived instrument (see the block comment above).
 
@@ -5173,7 +5466,7 @@ def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
     which is precisely the violation Ruling 86 §4 item 3 names. The trim is deliberately
     not done in F81; this paragraph is the handover note for it.
     """
-    drafts = _a_series_drafts(doc_id_cli)
+    drafts = _a_series_drafts(doc_id_cli, pre_migration_root)
     assert drafts, (
         f"fixture assumption: some discovery function still derives a draft from "
         f"{_A_SERIES_SOURCE} -- if neither does, the file has left the migration's reach "
@@ -5205,7 +5498,7 @@ def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
 
 
 def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
-    tmp_path: pathlib.Path,
+    tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """The non-vacuity proof for the instrument above: two mutations of the producer, each
     removing exactly one of the two carriers Ruling 95 §2 names, both run against the real
@@ -5227,13 +5520,13 @@ def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
     a writer is the writer.
     """
     without_was = _module_with_source_mutations(tmp_path, _WAS_DROPPED, name="plan-was")
-    assert not _a_series_drafts(without_was), (
+    assert not _a_series_drafts(without_was, pre_migration_root), (
         "dropping `was:` left an A-series draft still findable by its source path -- the "
         "instrument above is not testing the carrier it claims to test"
     )
 
     without_body = _module_with_source_mutations(tmp_path, _BODY_DROPPED, name="plan-body")
-    emptied = _a_series_drafts(without_body)
+    emptied = _a_series_drafts(without_body, pre_migration_root)
     assert emptied, "the body mutation must not also break `was:`"
     bodies = "\n".join(d.body for d in emptied)
     assert _A_SERIES_GRANT not in bodies, (
@@ -5267,7 +5560,11 @@ def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
 
 
 def _real_closure_dirs_copy(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, name: str
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    name: str,
+    *,
+    source: pathlib.Path = ROOT,
 ) -> pathlib.Path:
     """`docs/audit/work/` and `docs/audit/phases/` copied verbatim out of this checkout
     into a scratch root, so a mutation is applied to the real corpus's own shape rather
@@ -5278,7 +5575,7 @@ def _real_closure_dirs_copy(
 
     root = tmp_path / name
     for rel_dir in doc_id_cli._AUDIT_CLOSURE_README_DIRS:
-        shutil.copytree(ROOT / rel_dir, root / rel_dir)
+        shutil.copytree(source / rel_dir, root / rel_dir)
     return root
 
 
@@ -5307,7 +5604,7 @@ def _every_readme_under_the_closure_dirs(
 
 
 def test_audit_closure_discovery_claims_every_record_readme_on_the_real_corpus(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """F84's first limb, against the real tree: *"`migrate()` discovers all 17 as `CR-`
     drafts with `kind: work` / `kind: phase`"*.
@@ -5317,8 +5614,8 @@ def test_audit_closure_discovery_claims_every_record_readme_on_the_real_corpus(
     *"auditor (`work`, `phase`); lead (`review`)"* — and §1.2's `CR` row, whose whole
     status subset is `active`.
     """
-    drafts = doc_id_cli._discover_audit_closure_readmes(ROOT)
-    expected = _every_readme_under_the_closure_dirs(doc_id_cli, ROOT)
+    drafts = doc_id_cli._discover_audit_closure_readmes(pre_migration_root)
+    expected = _every_readme_under_the_closure_dirs(doc_id_cli, pre_migration_root)
 
     assert {d.was: d.kind for d in drafts} == expected
     assert len(expected) >= 17, "F84's population may grow, never shrink below its 17"
@@ -5338,18 +5635,18 @@ def test_audit_closure_census_is_silent_on_the_real_corpus(
 
 
 def test_audit_closure_declared_exceptions_are_exactly_the_unclaimed_real_files(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """F83's condition 2, applied here: the declared exception set must equal the
     in-scope-but-unclaimed set exactly, so the exemption list cannot grow silently. A file
     added under either directory and quietly declared, or a declaration left behind after
     its file moved, fails here rather than passing as "still a valid exception".
     """
-    claimed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
+    claimed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(pre_migration_root)}
     for rel_dir in doc_id_cli._AUDIT_CLOSURE_README_DIRS:
         on_disk = {
-            p.relative_to(ROOT / rel_dir).as_posix()
-            for p in (ROOT / rel_dir).rglob("*")
+            p.relative_to(pre_migration_root / rel_dir).as_posix()
+            for p in (pre_migration_root / rel_dir).rglob("*")
             if p.is_file()
         }
         claimed_here = {
@@ -5361,11 +5658,11 @@ def test_audit_closure_declared_exceptions_are_exactly_the_unclaimed_real_files(
 
 
 def test_audit_closure_census_names_an_unrecognised_file_on_the_real_corpus(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 83 §3 item 4: the refusal NAMES the unit. Broken input is a file appearing
     under a real work directory that nothing routes anywhere."""
-    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "unrecognised")
+    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "unrecognised", source=pre_migration_root)
     (root / "docs" / "audit" / "work" / "W8" / "notes.md").write_text(
         "# Some notes\n", encoding="utf-8"
     )
@@ -5374,7 +5671,7 @@ def test_audit_closure_census_names_an_unrecognised_file_on_the_real_corpus(
 
 
 def test_audit_closure_census_names_a_readme_whose_heading_discovery_cannot_title(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """The case the path-shaped alternative would have hidden. `_discover_audit_closure_
     readmes` claims a file on its **heading**, not on its path, precisely so a record whose
@@ -5382,7 +5679,7 @@ def test_audit_closure_census_names_a_readme_whose_heading_discovery_cannot_titl
     `title:` — the reading `_proposal_containers` already gives an undated container. This
     proves the second half of that bargain: the census does name it.
     """
-    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "untitled")
+    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "untitled", source=pre_migration_root)
     path = root / "docs" / "audit" / "work" / "W11" / "README.md"
     text = path.read_text(encoding="utf-8")
     heading = "# Work-item record — W11 (Scoring)"
@@ -5400,7 +5697,7 @@ def test_audit_closure_census_names_a_readme_whose_heading_discovery_cannot_titl
 
 
 def test_audit_closure_census_recursive_walk_is_load_bearing(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """The shipped call passes `recursive=True`; dropping it must leave the previous test's
     input GREEN, or that keyword is decoration.
@@ -5410,7 +5707,9 @@ def test_audit_closure_census_recursive_walk_is_load_bearing(
     empty unit list. A census that cannot fail is the "blinds the run" half of W37-5c's own
     criterion, in the guard written to discharge the "blinds the run" finding.
     """
-    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "loadbearing-walk")
+    root = _real_closure_dirs_copy(
+        doc_id_cli, tmp_path, "loadbearing-walk", source=pre_migration_root
+    )
     path = root / "docs" / "audit" / "work" / "W11" / "README.md"
     path.write_text(
         path.read_text(encoding="utf-8").replace(
@@ -5429,7 +5728,7 @@ def test_audit_closure_census_recursive_walk_is_load_bearing(
 
 
 def test_audit_closure_census_record_set_is_load_bearing(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """The shipped call reconciles against **what discovery produced** (`records=`), not
     against a re-run of `_AUDIT_CLOSURE_TITLE_RE`. Dropping that — reverting to the title
@@ -5442,7 +5741,9 @@ def test_audit_closure_census_record_set_is_load_bearing(
     pattern, but a pattern that agrees with it on everything except the population that
     matters.
     """
-    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "loadbearing-records")
+    root = _real_closure_dirs_copy(
+        doc_id_cli, tmp_path, "loadbearing-records", source=pre_migration_root
+    )
     stray = root / "docs" / "audit" / "work" / "W8" / "stray-record.md"
     stray.write_text(
         "# Work-item record — W8 (a stray copy nothing migrates)\n", encoding="utf-8"
@@ -5587,7 +5888,9 @@ _REAL_CLAUDE_FILES = ("README.md", "docs/README.md", "packages/README.md",
                       ".claude/settings.json")
 
 
-def _real_claude_copy(tmp_path: pathlib.Path, name: str) -> pathlib.Path:
+def _real_claude_copy(
+    tmp_path: pathlib.Path, name: str, *, source: pathlib.Path = ROOT
+) -> pathlib.Path:
     """The real `.claude/` charters, agents and skills plus three real READMEs, in a git
     repository — `git ls-files` is how the README scope reads "every `README.md` anywhere
     in the tree", so a plain directory would give it nothing to find and every assertion
@@ -5597,10 +5900,10 @@ def _real_claude_copy(tmp_path: pathlib.Path, name: str) -> pathlib.Path:
 
     root = tmp_path / name
     for rel in _REAL_CLAUDE_SUBTREES:
-        shutil.copytree(ROOT / rel, root / rel)
+        shutil.copytree(source / rel, root / rel)
     for rel in _REAL_CLAUDE_FILES:
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(ROOT / rel, root / rel)
+        shutil.copy(source / rel, root / rel)
     _run_git(["init", "--initial-branch=main", "--quiet"], cwd=root)
     _run_git(["config", "user.email", "test@example.com"], cwd=root)
     _run_git(["config", "user.name", "Test"], cwd=root)
@@ -5628,7 +5931,7 @@ def test_reference_stamp_census_is_silent_on_the_real_corpus(
 
 
 def test_reference_stamp_owners_are_only_the_two_values_their_cells_carry(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """`owner:` is read from a §1 cell, never from what a role ought to own — the
     constraint the gap-2 RFC exists to enforce, scoped by the maintainer on 2026-09-02 to
@@ -5639,8 +5942,8 @@ def test_reference_stamp_owners_are_only_the_two_values_their_cells_carry(
     per-file rule rather than as a pair of counts, so a charter that silently took `lead`
     fails here even if the totals still balanced.
     """
-    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
-    targets, _ = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(pre_migration_root)}
+    targets, _ = doc_id_cli._discover_reference_stamp_targets(pre_migration_root, routed=routed)
     for target in targets:
         expected = "maintainer" if target.rel.startswith(".claude/roles/") else "lead"
         assert target.owner == expected, target.rel
@@ -5649,7 +5952,7 @@ def test_reference_stamp_owners_are_only_the_two_values_their_cells_carry(
 
 
 def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §4, checked against the
     tree rather than restated: *"step 5's scope **gains six**; **one of the six** — the
@@ -5667,13 +5970,19 @@ def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
     # population the same way and for the same reason (§5.2 routes the file somewhere, and
     # the writer that moves it owns its header). Passing a different `routed` here would
     # measure a configuration nothing runs.
-    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)} | set(
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(pre_migration_root)} | set(
         doc_id_cli._README_FAMILY_MOVES
     )
-    targets, censuses = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
+    targets, censuses = doc_id_cli._discover_reference_stamp_targets(
+        pre_migration_root, routed=routed
+    )
     readme_census = next(c for c in censuses if c.scope.startswith("every tracked"))
 
-    tracked = {r for r in doc_id_cli.git_ls_files(ROOT, ".") if pathlib.Path(r).name == "README.md"}
+    tracked = {
+        r
+        for r in doc_id_cli.git_ls_files(pre_migration_root, ".")
+        if pathlib.Path(r).name == "README.md"
+    }
     stamped = {t.rel for t in targets if pathlib.Path(t.rel).name == "README.md"}
     # The identity: three disjoint buckets, and nothing outside them.
     assert stamped | set(readme_census.accounted) | set(readme_census.excepted) == tracked
@@ -5709,7 +6018,7 @@ def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
 
 
 def test_reference_declared_exceptions_all_carry_a_reason_and_name_a_real_file(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """F83's two conditions on an exemption list, applied here: every entry cites its
     reason, and the set is checked rather than trusted. A declaration left behind after
@@ -5722,11 +6031,13 @@ def test_reference_declared_exceptions_all_carry_a_reason_and_name_a_real_file(
     }
     for key, reason in declared.items():
         assert reason.strip(), key
-        assert (ROOT / key.rstrip("/")).exists(), f"{key}: declared, but nothing is there"
+        assert (pre_migration_root / key.rstrip("/")).exists(), (
+            f"{key}: declared, but nothing is there"
+        )
 
     fixture_readmes = sorted(
         rel
-        for rel in doc_id_cli.git_ls_files(ROOT, "tests/fixtures/docs-migration")
+        for rel in doc_id_cli.git_ls_files(pre_migration_root, "tests/fixtures/docs-migration")
         if pathlib.Path(rel).name == "README.md"
     )
     assert sorted(doc_id_cli._REFERENCE_FIXTURE_CORPUS_READMES) == fixture_readmes, (
@@ -5782,14 +6093,14 @@ def test_reference_census_names_what_no_scope_accounts_for(
 
 
 def test_reference_census_names_a_stamp_target_with_no_heading_to_title_it(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """`_reference_target` returns `None` — no bucket, no disposition string — for a file
     it cannot read a `title:` from, so the census names it. The alternative it refuses is
     stamping `title:` with the filename, which would be a value invented by the tool and
     then indistinguishable from one someone chose.
     """
-    root = _real_claude_copy(tmp_path, "untitled-charter")
+    root = _real_claude_copy(tmp_path, "untitled-charter", source=pre_migration_root)
     path = root / ".claude" / "roles" / "auditor.md"
     text = path.read_text(encoding="utf-8")
     assert text.startswith("# auditor\n"), "re-derive this mutation from the real file"
@@ -5814,7 +6125,7 @@ def test_reference_census_refuses_a_declared_exception_whose_reason_is_blank(
 
 
 def test_reference_stamp_targets_are_claimed_once_across_overlapping_scopes(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """`.claude/agents/README.md` sits inside two scopes at once — the README row and the
     `Reference — agents` cell — and the cell-extent rule (RFC §2: *"a cell governs what
@@ -5825,7 +6136,7 @@ def test_reference_stamp_targets_are_claimed_once_across_overlapping_scopes(
     claims would stamp two headers onto one file, and the second would land in front of
     the first.
     """
-    root = _real_claude_copy(tmp_path, "overlap")
+    root = _real_claude_copy(tmp_path, "overlap", source=pre_migration_root)
     targets = _reference_census(doc_id_cli, root)
     rels = [t.rel for t in targets]
     assert sorted(rels) == sorted(set(rels)), (
@@ -5900,7 +6211,7 @@ def test_cmd_migrate_prints_the_deferred_reference_stamps_by_name(
 
 
 def test_exactly_one_discovery_writer_claims_the_closure_readmes(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Every F84 test above selects with `_discover_audit_closure_readmes`. **That is a
     claim about scope wearing setup's clothes**, so it is derived here rather than assumed:
@@ -5930,9 +6241,9 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
     of surfacing for the first time inside the irreversible run.
     """
     in_scope = {
-        p.relative_to(ROOT).as_posix()
+        p.relative_to(pre_migration_root).as_posix()
         for rel_dir in doc_id_cli._AUDIT_CLOSURE_README_DIRS
-        for p in (ROOT / rel_dir).rglob("*")
+        for p in (pre_migration_root / rel_dir).rglob("*")
         if p.is_file()
     }
     assert in_scope, "no corpus to test against"
@@ -5945,7 +6256,7 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
         if name == "_discover_headed_split_file":
             continue  # a parameterised helper, called by the writers above, not one itself
         try:
-            produced = getattr(doc_id_cli, name)(ROOT)
+            produced = getattr(doc_id_cli, name)(pre_migration_root)
         except doc_id_cli._docid.HeaderError:
             raised.append(name)
             continue
@@ -6297,7 +6608,7 @@ def _emittable_document_prefixes_from_source() -> set[str]:
 
 
 def test_every_emittable_document_prefix_has_a_family_dir_and_a_template(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path,
 ) -> None:
     """Close the set, both directions, against **both** tables separately.
 
@@ -6321,7 +6632,7 @@ def test_every_emittable_document_prefix_has_a_family_dir_and_a_template(
             "_discover_reference_moves",            # returns `_ReferenceMove`, not `_Draft`
         ):
             continue
-        produced = getattr(doc_id_cli, name)(ROOT)
+        produced = getattr(doc_id_cli, name)(pre_migration_root)
         if name == "_discover_roadmap":
             produced = produced[0]
         empirical |= {x.prefix for x in produced if x.materialize == "document"}
@@ -6417,7 +6728,7 @@ def test_without_the_guard_the_same_input_is_a_mid_write_crash(
 
 
 def test_the_double_claim_guard_fires_when_its_precondition_is_removed(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path,
 ) -> None:
     """`_discover_reference_stamp_targets` refuses if any path is claimed by two scopes.
     Zero paths are, so the raise is unreachable from any real corpus — which is exactly
@@ -6428,7 +6739,7 @@ def test_the_double_claim_guard_fires_when_its_precondition_is_removed(
     by the `Reference — agents` cell, and the guard names it. The mutation is applied to
     the shipped source, so what is proven is the shipped raise, not a re-creation of it.
     """
-    root = _real_claude_copy(tmp_path, "double-claim")
+    root = _real_claude_copy(tmp_path, "double-claim", source=pre_migration_root)
     doc_id_cli._discover_reference_stamp_targets(root)  # control: the shipped code is fine
 
     disarmed = _module_with_source_mutations(
@@ -7099,7 +7410,10 @@ def test_cmd_migrate_prints_both_split_citation_counts_including_the_zero(
     doc_id_cli._cmd_migrate(argparse.Namespace(repo_root=pristine_a))
     err = capsys.readouterr().err
     assert "0 citation(s) of a split source left unrewritten" in err
-    assert "resolved to their family index section (Ruling 101 clause 1)" in err
+    # RL-1042 is the migrated id form of what was once cited as "Ruling 101" -- the
+    # shipped string at scripts/doc-id.py's `_cmd_migrate` (the print building
+    # `result.index_resolved_split_citations`'s summary line) names the clause this way.
+    assert "resolved to their family index section (RL-1042 clause 1)" in err
     assert "0 citation(s) resolved to a family index section that is missing" in err
 
 
