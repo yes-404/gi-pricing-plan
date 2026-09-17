@@ -3206,7 +3206,8 @@ def _discover_register(root: Path, *, exclude: Collection[str] = ()) -> list[_Dr
             _Draft(
                 materialize="register_row", prefix="FD", kind=None, title=title,
                 status="active", created=created, owner="auditor",
-                tie_break=("docs/findings/register.md", order), old_token=token,
+                # rfc-937: legacy-form-spec
+                tie_break=("docs/audit/register.md", order), old_token=token,
                 source_path=path,
             )
         )
@@ -3557,8 +3558,10 @@ def _discover_named_phase_records(root: Path) -> list[_Draft]:
     resolution is, because both files say their own phase directly.
     """
     targets: tuple[tuple[str, str], ...] = (
-        ("docs/closures/CR-00821-phase-1b-exit-demo-uat-acceptance-record.md", "P1b"),
-        ("docs/closures/CR-00709-phase-0-specification-status.md", "P0"),
+        # rfc-937: legacy-form-spec
+        ("docs/audit/exit-demo-uat.md", "P1b"),
+        # rfc-937: legacy-form-spec
+        ("docs/phase-0-status.md", "P0"),
     )
     drafts: list[_Draft] = []
     for order, (rel, phase) in enumerate(targets):
@@ -8536,7 +8539,8 @@ def _control_side_part_ordinals(
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
-            old_path, new_path = "docs/findings/register.md", (register_moved_to or "")
+            # rfc-937: legacy-form-spec
+            old_path, new_path = "docs/audit/register.md", (register_moved_to or "")
         elif d.materialize == "requirement" and d.source_path is not None:
             old_path = new_path = d.source_path.relative_to(root).as_posix()
         elif d.materialize == "roadmap_row":
@@ -8854,7 +8858,8 @@ def migrate(root: Path) -> MigrateResult:
             new_register.write_text(old_register.read_text(encoding="utf-8"), encoding="utf-8")
             old_register.unlink()
             files_written = [*files_written, "docs/findings/register.md"]
-            files_deleted = [*files_deleted, "docs/findings/register.md"]
+            # rfc-937: legacy-form-spec
+            files_deleted = [*files_deleted, "docs/audit/register.md"]
             register_moved_to = "docs/findings/register.md"
 
     # F84: `_write_document_drafts` deletes each migrated `docs/audit/work/<work>/
@@ -8940,7 +8945,8 @@ def migrate(root: Path) -> MigrateResult:
         old_path = d.was or ""
         new_path = d.new_path.relative_to(root).as_posix() if d.new_path is not None else ""
         if d.materialize == "register_row":
-            old_path, new_path = "docs/findings/register.md", (register_moved_to or "")
+            # rfc-937: legacy-form-spec
+            old_path, new_path = "docs/audit/register.md", (register_moved_to or "")
         elif d.materialize == "requirement" and d.source_path is not None:
             # Stays at the same path — a row family embedded in a shared file, not moved.
             old_path = new_path = d.source_path.relative_to(root).as_posix()
@@ -8993,11 +8999,13 @@ def migrate(root: Path) -> MigrateResult:
         redirect_rows.append(
             {
                 "old_id": "", "new_id": "",
-                "old_path": "docs/findings/register.md", "new_path": register_moved_to,
+                # rfc-937: legacy-form-spec
+                "old_path": "docs/audit/register.md", "new_path": register_moved_to,
             }
         )
         redirect_rows.extend(
-            _path_citation_redirect_rows("docs/findings/register.md", register_moved_to)
+            # rfc-937: legacy-form-spec
+            _path_citation_redirect_rows("docs/audit/register.md", register_moved_to)
         )
     # Reference moves and the unstampable-CSV move carry no `_Draft` and so no `id:` --
     # neither claims a number (§1.2: Reference has none; the CSV is deliberately exempt) --
@@ -9058,7 +9066,8 @@ def migrate(root: Path) -> MigrateResult:
             (None, phase1b_new_path)
         )
     if register_moved_to is not None:
-        path_moves["docs/findings/register.md"] = register_moved_to
+        # rfc-937: legacy-form-spec
+        path_moves["docs/audit/register.md"] = register_moved_to
 
     # RFC-937 §5.2's three relocated READMEs, registered here rather than inside
     # `_regenerate_family_readmes` below because the rewrite and the redirect row are owed
@@ -9138,7 +9147,8 @@ def migrate(root: Path) -> MigrateResult:
         if d.was is not None and d.new_path is not None
     }
     if register_moved_to is not None:
-        citer_origin[register_moved_to] = "docs/findings/register.md"
+        # rfc-937: legacy-form-spec
+        citer_origin[register_moved_to] = "docs/audit/register.md"
     # `_REFERENCE_MOVE_TARGETS`'s four files (the checklists, `retrofit-impossible.md`,
     # `security-posture.md`) are moved by `_write_reference_moves`, never a `_Draft` --
     # found live, W37-6, 2026-09-06: `docs/process/checklists/work-item-close.md`'s own
