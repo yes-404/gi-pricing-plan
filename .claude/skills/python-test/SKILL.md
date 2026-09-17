@@ -89,7 +89,7 @@ fixture.
 
 The paired habit: when a defect is found in a path like this, add the sparse fixture in the
 same commit as the finding, and hang the future behaviour off it with
-`@pytest.mark.xfail(strict=True)` rather than a `pytest.raises` around today's crash. Strict
+`@pytest.mark.xfail(strict=True)` rather than a `pytest.raises` around the crash at hand. Strict
 xfail turns the eventual fix into a *failing* run that forces the marker off; a
 characterisation test would instead have to be rewritten, and locks the defect in until
 someone chooses to.
@@ -139,8 +139,8 @@ from the first. A file crosses. **Any test that selects by family breaks on the 
 either merge order.**
 
 **The fix is the same move, one level up: select by *source* and take the union across every
-function that could claim it.** One draft from the first today, three from the second afterwards,
-no change needed either way. That is also *stronger* rather than merely tolerant: the union is
+function that could claim it.** One draft from the first function under the current regex,
+three from the second once it widens, no change needed either way. That is also *stronger* rather than merely tolerant: the union is
 where the split-output invariant and the attribution property meet, so the test now fires at the
 moment the property could actually be lost.
 

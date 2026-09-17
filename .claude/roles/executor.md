@@ -104,9 +104,11 @@ When a branch's tool produces different output than main's tool on the same inpu
 which is right before editing the tool. Run both on the same fixture (the pre-migration tree, 
 a test file, the same dataset) and compare.
 
-**Example from today (14:26 BST):** Test fails with branch tool, passes with main tool. 
-Before proposing a test rewrite, ran the test against both tools on `pre_migration_root`. 
-Main: pass. Branch: fail. Conclusion: the branch's tool changed — didn't edit the test, 
-edited the tool. Reference: to-lead.md 14:05:40 (escalation 2 measurement).
+**Example (2026-09-17, W37-6 run 2, #782):** Test fails with branch tool, passes with main
+tool. Before proposing a test rewrite, ran the test against both tools on
+`pre_migration_root`. Main: pass. Branch: fail. Conclusion: the branch's tool changed —
+didn't edit the test, edited the tool. Reference: #782,
+`docs/plans/PL-01058-w37-6-migration-run-ledger.md` (to-lead.md 14:05:40, escalation 2
+measurement).
 
 Verified: 589c6706e9befde1195d7311c1ebce4a01a27dba (origin/main at 2026-09-17 W37-6 closure)
