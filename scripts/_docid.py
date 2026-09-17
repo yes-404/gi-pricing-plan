@@ -327,6 +327,28 @@ def _generated_contract_relpaths() -> tuple[str, str]:
     return _generated_contract_relpaths_cache
 
 
+def generated_contract_tier_reason(rel_posix: str) -> str | None:
+    """Why `rel_posix` sits in the generated-contract tier (ADR-704/FR-451) —
+    `scripts/generate-contracts.py`'s own `OPENAPI_PATH`/`SCHEMA_DIR`, read by symbol
+    (`_generated_contract_relpaths`) — or `None` when it does not. Split out of
+    `sweep_exclusion_reason` (F103, 2026-09-17) so a caller that wants *only* this one
+    class — audit-docs.py's checks 32 and 36, which reach `tests/fixtures/docs-migration/`
+    files that `sweep_exclusion_reason`'s `FIXTURE_CORPUS_ROOTS` clause would also
+    swallow, defeating check 36's own per-file allowlist design
+    (`test_check_36_w37_5_fixture_exclusions_are_load_bearing`) — can ask this question
+    alone rather than pull in classes it does not mean to exempt.
+    """
+    openapi_rel, schema_dir_rel = _generated_contract_relpaths()
+    if rel_posix == openapi_rel or rel_posix.startswith(schema_dir_rel + "/"):
+        return (
+            "the generated-contract tier (ADR-704/FR-451) — "
+            "scripts/generate-contracts.py's own OPENAPI_PATH/SCHEMA_DIR, regenerated "
+            "by that script from the models, never migration input, and 'diff undetectable "
+            "by --check' if a migration wrote here between two generator runs"
+        )
+    return None
+
+
 def sweep_exclusion_reason(rel_posix: str) -> str | None:
     """Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the RFC-937
     migration sweep (`doc-id.py`'s `_iter_tree_files`) and from the (d)/(e)/(g)
@@ -338,10 +360,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     fixture-corpus root (`FIXTURE_CORPUS_ROOTS`), one of the instrument's own named test
     modules (`TEST_MODULE_EXCLUSIONS`), a governed record that quotes legacy forms as
     evidence rather than citing them (`GOVERNANCE_RECORD_EXCLUSIONS`), the generated-
-    contract tier read by symbol from `scripts/generate-contracts.py`
-    (`_generated_contract_relpaths`), and a Python bytecode-cache artifact
-    (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing `scripts/`
-    modules while it runs, never migration input and never real residue.
+    contract tier (`generated_contract_tier_reason` above), and a Python bytecode-cache
+    artifact (`__pycache__/` or `*.pyc`) — the instrument's own exhaust from importing
+    `scripts/` modules while it runs, never migration input and never real residue.
     """
     for name, reason in LOCKFILE_EXCLUSIONS:
         if rel_posix == name:
@@ -355,14 +376,9 @@ def sweep_exclusion_reason(rel_posix: str) -> str | None:
     for name, reason in GOVERNANCE_RECORD_EXCLUSIONS:
         if rel_posix == name:
             return reason
-    openapi_rel, schema_dir_rel = _generated_contract_relpaths()
-    if rel_posix == openapi_rel or rel_posix.startswith(schema_dir_rel + "/"):
-        return (
-            "the generated-contract tier (ADR-704/FR-451) — "
-            "scripts/generate-contracts.py's own OPENAPI_PATH/SCHEMA_DIR, regenerated "
-            "by that script from the models, never migration input, and 'diff undetectable "
-            "by --check' if a migration wrote here between two generator runs"
-        )
+    contract_reason = generated_contract_tier_reason(rel_posix)
+    if contract_reason is not None:
+        return contract_reason
     if "__pycache__" in rel_posix.split("/"):
         return (
             "a __pycache__ bytecode-cache directory created by importing this tooling's "

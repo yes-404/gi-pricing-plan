@@ -1971,6 +1971,17 @@ def check_citations() -> None:
     checked = 0
     for path in _id_scope_documents():
         rel = path.relative_to(REPO).as_posix()
+        # F103, 2026-09-17: the generated-contract tier
+        # (`_docid.generated_contract_tier_reason`) is written by `generate-contracts.py`
+        # from the models, never a citation a person wrote — `_id_scope_documents()`
+        # still reaches it for check 30's F83 exemption bookkeeping, but check 32's
+        # citation-resolution rule reads the identical narrow shared predicate the
+        # migration's own (d)/(e) corpus already excludes it by, rather than scanning a
+        # tier this check was never meant to police. The narrow predicate, not the full
+        # `_docid.sweep_exclusion_reason` — that also folds in `FIXTURE_CORPUS_ROOTS`,
+        # which reaches files check 32 has no reason to exempt.
+        if _docid.generated_contract_tier_reason(rel) is not None:
+            continue
         for problem in citation_problems_in_file(path, index_ids):
             fail(f"check 32: {rel}:{problem}")
         checked += 1
@@ -2926,9 +2937,17 @@ def _sweep_legacy_form_hits(
 ) -> list[_LegacyFormHit]:
     """Every legacy (pre-migration) id or path form found across `paths`, outside a
     `was:` line, outside a fenced code block, outside `excluded_paths`, outside the
-    instrument's own test-module fixture data (`_TEST_MODULE_EXCLUDED_PATHS`), and
-    outside a family's own split-source index (`_docid.is_split_source_index`,
-    2026-09-05, rows (d9)-(d12)'s Check-36 alignment) — RFC-937
+    instrument's own test-module fixture data (`_TEST_MODULE_EXCLUDED_PATHS`), outside
+    a family's own split-source index (`_docid.is_split_source_index`,
+    2026-09-05, rows (d9)-(d12)'s Check-36 alignment), and outside the generated-
+    contract tier (`_docid.generated_contract_tier_reason`, F103, 2026-09-17, the narrow
+    predicate rather than the full `_docid.sweep_exclusion_reason` — that also folds in
+    `FIXTURE_CORPUS_ROOTS`, which would swallow the per-file fixture allowlist below
+    whole): the same generated JSON/YAML `_docverify.tracked_files` already excludes from
+    the migration's own (d)/(e)
+    verification corpus, read by the identical shared predicate rather than a private
+    re-typing of `generate-contracts.py`'s paths — F103 named exactly this scope mismatch,
+    check 36 scanning a tier the migration instrument itself never treats as residue — RFC-937
     §7 acceptance item (d) and check 36's third clause are "one rule at two times"
     (RL-988 §2), so both read the identical `_docid` predicates: the fence
     (`_docid.fenced_line_numbers`, the same rule row (e)'s `padded_hits` and row (d)'s own
@@ -2962,6 +2981,7 @@ def _sweep_legacy_form_hits(
             rel in excluded
             or rel in _TEST_MODULE_EXCLUDED_PATHS
             or _docid.is_split_source_index(rel)
+            or _docid.generated_contract_tier_reason(rel) is not None
         ):
             continue
         try:
