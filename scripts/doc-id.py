@@ -2733,8 +2733,19 @@ def _tree_commit_date(root: Path) -> date:
 # never a silent pick of the first, the last, or the richest cell.
 # ---------------------------------------------------------------------------------------
 
+#: Matches the pre-migration legacy leading cell (`W<n>[<letter>]`) that the one real
+#: migration pass discovers, and also the post-migration canonical form (`WK-<n>`) a
+#: *later* in-place restructure can find already sitting in a leading row — `_restructure_
+#: roadmap` now edits an already-migrated tree too (RL-992 obligation 3), so a fresh
+#: draft's `old_token` can name either shape depending on how recently the row it
+#: supersedes was itself touched (`_work_id_sort_key`'s own docstring already documents
+#: this dual-form reality; this pattern was the one place still assuming only the first).
+#: Before this broadening, a canonical `**WK-657**` leading row matched nothing here, so
+#: `_scan_roadmap_rows` never reported it as an occurrence and `_restructure_roadmap`'s
+#: removal set — built only from reported occurrences — left it behind, duplicated
+#: alongside the new block that was meant to replace it.
 _ROADMAP_WORK_ROW_RE: Final = re.compile(
-    r"^\|\s*(~~)?\*\*(W\d+[a-z]?)\*\*(~~)?\s*(?:✔)?\s*\|(.*)$"
+    r"^\|\s*(~~)?\*\*(W\d+[a-z]?|WK-\d+)\*\*(~~)?\s*(?:✔)?\s*\|(.*)$"
 )
 _ROADMAP_PHASE_LABEL_RE: Final = re.compile(r"^#{2,4}\s+(?:\d+\.\s+)?Phase\s+(\S+)\b")
 _ROADMAP_PHASE_TITLE_RE: Final = re.compile(
