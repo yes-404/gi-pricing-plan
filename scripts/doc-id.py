@@ -6414,6 +6414,64 @@ def _dewrap_reference_tokens(text: str, tokens: Iterable[str]) -> str:
     return text
 
 
+#: W37-6 PR-C loop 1 (measure `4d63810`): `_dewrap_reference_tokens` above only reaches a
+#: wrap sitting inside a token that is BOTH `/`-shaped (`_wrapped_path_patterns`'s own
+#: `if "/" not in old_tok: continue`) AND a literal key in `inverse` -- i.e. a
+#: `REDIRECTS.csv` id-column-derived move token. Two residue causes `_docverify.py`'s own
+#: `_residue_cause` already names fail that test for a different reason each, never the
+#: `/`-shape one: `_RANGE_CITATION_RE`'s legacy range citation (`FR-PLAT-1..4`) has no `/`
+#: at all (cause2a); `_LEGACY_PATH_RES`'s prose citation to another document by its
+#: pre-migration literal path is never a key in `inverse` in the first place -- built only
+#: from `REDIRECTS.csv`'s id columns, never a citation's own literal path string (cause3,
+#: `_docverify.py`'s own comment on `_LEGACY_PATH_RES`); and `_SLASH_COMPOUND_RE`'s 3-or-
+#: more-id chain (`FR-RATE-56/57/58`) has no single whole-chain entry either -- only a
+#: *two*-id compound gets one `REDIRECTS.csv` row (`_docverify.py`'s own comment on
+#: `_SLASH_COMPOUND_RE`).
+_CITATION_SHAPE_PATTERNS: Final = (
+    _docverify._RANGE_CITATION_RE,
+    _docverify._SLASH_COMPOUND_RE,
+    *_docverify._LEGACY_PATH_RES,
+)
+
+
+def _collapse_wraps_within(text: str, shape: re.Pattern[str]) -> str:
+    """Remove a `_WRAP_MARKUP_RE` occurrence only where doing so completes a `shape`
+    match spanning the exact point removed -- checked on a bounded window around the
+    wrap, collapsed locally, never by collapsing every wrap in the file and hoping a
+    match turns up somewhere else. This touches only the wrap's own whitespace/newline/
+    comment-marker characters, never a character `shape` itself matched, so a genuine
+    content change inside or beside the citation (a different range bound, a changed
+    path segment, an extra word) is carried through unchanged into the retry; only the
+    reflow's own wrap is undone.
+    """
+
+    def _try_collapse(m: re.Match[str]) -> str:
+        start, end = m.span()
+        window_start = max(0, start - 200)
+        window_end = min(len(text), end + 200)
+        collapsed_window = text[window_start:start] + text[end:window_end]
+        removal_point = start - window_start
+        for shape_match in shape.finditer(collapsed_window):
+            if shape_match.start() < removal_point < shape_match.end():
+                return ""
+        return m.group(0)
+
+    return _WRAP_MARKUP_RE.sub(_try_collapse, text)
+
+
+def _dewrap_citation_shapes(text: str) -> str:
+    """The `inverse`-independent counterpart of `_dewrap_reference_tokens`: collapses a
+    migration-introduced wrap landing inside one of `_CITATION_SHAPE_PATTERNS`'s three
+    named shapes directly, off the same regexes `_docverify._residue_cause` already uses
+    to name these causes (Ruling 68 §2: reused, not re-derived) -- never gated on whether
+    the wrapped string happens to be a key in `inverse`, which is exactly what leaves
+    cause2a/cause3/slash-compound unreached by the existing fix.
+    """
+    for pattern in _CITATION_SHAPE_PATTERNS:
+        text = _collapse_wraps_within(text, pattern)
+    return text
+
+
 def _rewrite_wrapped_path_citations(
     text: str,
     patterns: Sequence[tuple[str, str, re.Pattern[str]]],
@@ -10390,6 +10448,21 @@ def classify_migration_diff(
             # exactly as before -- the control this fix's own tests name.
             bool(inverse) and audit_docs.frozen_file_matches_after_migration_stamp(
                 compare_against, _dewrap_reference_tokens(new_text, inverse),
+                inverse, allocated_ids=allocated_ids, old_rel=old_rel, new_rel=new_rel,
+                reference_stamp_paths=reference_stamp_paths,
+            )
+        ) or (
+            # W37-6 PR-C loop 1 (measure `4d63810`): cause2a/cause3/slash-compound --
+            # `_dewrap_reference_tokens` above cannot reach any of the three, for a
+            # different reason each (`_dewrap_citation_shapes`'s own docstring). This
+            # retries the identical, unmodified DP-7 predicate a second time, off a
+            # citation-shape-only dewrap that never depends on `inverse`'s contents. It
+            # only ever removes wrap markup, never a character either shape regex
+            # matched, so a genuine content change inside or beside the citation still
+            # fails this retry exactly as it fails the first two -- the negative-control
+            # tests this fix's own suite adds for each shape.
+            audit_docs.frozen_file_matches_after_migration_stamp(
+                compare_against, _dewrap_citation_shapes(new_text),
                 inverse, allocated_ids=allocated_ids, old_rel=old_rel, new_rel=new_rel,
                 reference_stamp_paths=reference_stamp_paths,
             )

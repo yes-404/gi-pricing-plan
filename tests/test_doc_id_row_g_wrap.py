@@ -161,3 +161,206 @@ def test_an_unrelated_wrap_still_falls_through_to_classified_by_none(
         classification.summary()
     )
     assert rel_posix not in classification.per_class["2-reference-token"]
+
+
+# ---------------------------------------------------------------------------------------
+# W37-6 PR-C loop 1 (measure `4d63810`): `_dewrap_reference_tokens` above only reaches a
+# wrap inside a token that is both `/`-shaped and a literal key in `inverse`
+# (`REDIRECTS.csv`-derived). Three residue causes `_docverify.py`'s own `_residue_cause`
+# already names miss that test for a different reason each -- none rewritten by
+# `REDIRECTS.csv` at all, so `inverse` never carries a matching key regardless of shape.
+# `_dewrap_citation_shapes` collapses a wrap inside one of these three shapes directly,
+# off the identical regexes `_residue_cause` uses, never gated on `inverse`. Each shape
+# gets one RED-before/GREEN-after positive test (the wrap alone must not block class 2)
+# and one negative-control test (a wrap AND a genuine content change together must still
+# fall through to `classified-by-none` -- collapsing wrap markup must never paper over a
+# real difference inside or beside the citation).
+# ---------------------------------------------------------------------------------------
+
+_EMPTY_REDIRECTS_CSV: Final = "old_id,new_id,old_path,new_path,citing_dir\n"
+
+
+def _write_pair(
+    old_root: pathlib.Path,
+    new_root: pathlib.Path,
+    rel: pathlib.Path,
+    old_text: str,
+    new_text: str,
+) -> None:
+    (old_root / rel.parent).mkdir(parents=True, exist_ok=True)
+    (new_root / rel.parent).mkdir(parents=True, exist_ok=True)
+    (old_root / rel).write_text(old_text, encoding="utf-8")
+    (new_root / rel).write_text(new_text, encoding="utf-8")
+    redirects = new_root / "docs" / "REDIRECTS.csv"
+    redirects.parent.mkdir(parents=True, exist_ok=True)
+    redirects.write_text(_EMPTY_REDIRECTS_CSV, encoding="utf-8")
+
+
+def test_range_citation_wrap_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A legacy range citation (`FR-PLAT-1..4`, cause2a's own shape) that
+    `_reflow_long_lines` wrapped mid-token, with no other change, must classify class 2 --
+    the citation is never rewritten by the migration (no `REDIRECTS.csv` row), so
+    `inverse` is empty and only `_dewrap_citation_shapes` can reach this wrap.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    rel = pathlib.Path("scripts") / "example_range.py"
+    _write_pair(
+        old_root,
+        new_root,
+        rel,
+        "# see FR-PLAT-1..4 for background\nX = 1\n",
+        "# see FR-PLAT-1..\n# 4 for background\nX = 1\n",
+    )
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel_posix = rel.as_posix()
+    assert rel_posix in classification.per_class["2-reference-token"], (
+        classification.summary()
+    )
+    assert rel_posix not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_range_citation_wrap_with_real_change_stays_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Negative control: the same wrap, but the range's own upper bound genuinely
+    changed (`..4` -> `..5`). Collapsing the wrap must not paper over that -- the retry
+    still fails and the hunk still falls through to `classified-by-none`.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    rel = pathlib.Path("scripts") / "example_range_changed.py"
+    _write_pair(
+        old_root,
+        new_root,
+        rel,
+        "# see FR-PLAT-1..4 for background\nX = 1\n",
+        "# see FR-PLAT-1..\n# 5 for background\nX = 1\n",
+    )
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel_posix = rel.as_posix()
+    assert rel_posix in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel_posix not in classification.per_class["2-reference-token"]
+
+
+def test_slash_compound_chain_wrap_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A 3-id slash-compound chain (`FR-RATE-56/57/58`, the slash-compound cause's own
+    shape) wrapped mid-token, with no other change, must classify class 2 -- no single
+    `REDIRECTS.csv` row covers a 3+-id chain, so `inverse` cannot reach this wrap either.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    rel = pathlib.Path("scripts") / "example_chain.py"
+    _write_pair(
+        old_root,
+        new_root,
+        rel,
+        "# see FR-RATE-56/57/58 for background\nX = 1\n",
+        "# see FR-RATE-56/\n# 57/58 for background\nX = 1\n",
+    )
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel_posix = rel.as_posix()
+    assert rel_posix in classification.per_class["2-reference-token"], (
+        classification.summary()
+    )
+    assert rel_posix not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_slash_compound_chain_wrap_with_real_change_stays_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Negative control: the same wrap, but the chain's last id genuinely changed
+    (`/58` -> `/59`). The retry still fails and the hunk still falls through to
+    `classified-by-none`.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    rel = pathlib.Path("scripts") / "example_chain_changed.py"
+    _write_pair(
+        old_root,
+        new_root,
+        rel,
+        "# see FR-RATE-56/57/58 for background\nX = 1\n",
+        "# see FR-RATE-56/\n# 57/59 for background\nX = 1\n",
+    )
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel_posix = rel.as_posix()
+    assert rel_posix in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel_posix not in classification.per_class["2-reference-token"]
+
+
+def test_legacy_path_citation_wrap_is_class2(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A prose citation by its pre-migration literal path (`docs/notes/...`, cause3's own
+    shape) wrapped mid-token, with no other change, must classify class 2 -- `inverse` is
+    built only from `REDIRECTS.csv`'s id columns, never a citation's own literal path
+    string, so it never carries a key for this wrap either.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    rel = pathlib.Path("scripts") / "example_legacypath.py"
+    _write_pair(
+        old_root,
+        new_root,
+        rel,
+        "# see docs/notes/0010-example.md for background\nX = 1\n",
+        "# see docs/\n# notes/0010-example.md for background\nX = 1\n",
+    )
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel_posix = rel.as_posix()
+    assert rel_posix in classification.per_class["2-reference-token"], (
+        classification.summary()
+    )
+    assert rel_posix not in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE]
+
+
+def test_legacy_path_citation_wrap_with_real_change_stays_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Negative control: the same wrap, but the cited note's own filename genuinely
+    changed (`0010-example.md` -> `0011-example.md`). The retry still fails and the hunk
+    still falls through to `classified-by-none`.
+    """
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+    rel = pathlib.Path("scripts") / "example_legacypath_changed.py"
+    _write_pair(
+        old_root,
+        new_root,
+        rel,
+        "# see docs/notes/0010-example.md for background\nX = 1\n",
+        "# see docs/\n# notes/0011-example.md for background\nX = 1\n",
+    )
+    _init_git(old_root)
+
+    classification = doc_id_cli.classify_migration_diff(old_root, new_root)
+
+    rel_posix = rel.as_posix()
+    assert rel_posix in classification.per_class[doc_id_cli.CLASSIFIED_BY_NONE], (
+        classification.summary()
+    )
+    assert rel_posix not in classification.per_class["2-reference-token"]
