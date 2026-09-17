@@ -5250,7 +5250,7 @@ _BODY_DROPPED = (
 )
 
 
-def _a_series_drafts(module: types.ModuleType) -> list[Any]:
+def _a_series_drafts(module: types.ModuleType, root: pathlib.Path = ROOT) -> list[Any]:
     """Every draft the migration derives from the A-series source, across *every* discovery
     function that can claim it — one `PL-` residual plus three `RL-` since F81.
 
@@ -5270,16 +5270,16 @@ def _a_series_drafts(module: types.ModuleType) -> list[Any]:
     return [
         d
         for d in (
-            *module._discover_plain_plans(ROOT),
-            *module._discover_multi_ruling_files(ROOT),
-            *module._discover_lettered_rulings(ROOT),
+            *module._discover_plain_plans(root),
+            *module._discover_multi_ruling_files(root),
+            *module._discover_lettered_rulings(root),
         )
         if d.was == _A_SERIES_SOURCE
     ]
 
 
 def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 86 §4 item 3's re-derived instrument (see the block comment above).
 
@@ -5316,7 +5316,7 @@ def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
     which is precisely the violation Ruling 86 §4 item 3 names. The trim is deliberately
     not done in F81; this paragraph is the handover note for it.
     """
-    drafts = _a_series_drafts(doc_id_cli)
+    drafts = _a_series_drafts(doc_id_cli, pre_migration_root)
     assert drafts, (
         f"fixture assumption: some discovery function still derives a draft from "
         f"{_A_SERIES_SOURCE} -- if neither does, the file has left the migration's reach "
@@ -5348,7 +5348,7 @@ def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
 
 
 def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
-    tmp_path: pathlib.Path,
+    tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """The non-vacuity proof for the instrument above: two mutations of the producer, each
     removing exactly one of the two carriers Ruling 95 §2 names, both run against the real
@@ -5370,13 +5370,13 @@ def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
     a writer is the writer.
     """
     without_was = _module_with_source_mutations(tmp_path, _WAS_DROPPED, name="plan-was")
-    assert not _a_series_drafts(without_was), (
+    assert not _a_series_drafts(without_was, pre_migration_root), (
         "dropping `was:` left an A-series draft still findable by its source path -- the "
         "instrument above is not testing the carrier it claims to test"
     )
 
     without_body = _module_with_source_mutations(tmp_path, _BODY_DROPPED, name="plan-body")
-    emptied = _a_series_drafts(without_body)
+    emptied = _a_series_drafts(without_body, pre_migration_root)
     assert emptied, "the body mutation must not also break `was:`"
     bodies = "\n".join(d.body for d in emptied)
     assert _A_SERIES_GRANT not in bodies, (
