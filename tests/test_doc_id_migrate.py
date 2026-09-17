@@ -5410,7 +5410,11 @@ def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
 
 
 def _real_closure_dirs_copy(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, name: str
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    name: str,
+    *,
+    source: pathlib.Path = ROOT,
 ) -> pathlib.Path:
     """`docs/audit/work/` and `docs/audit/phases/` copied verbatim out of this checkout
     into a scratch root, so a mutation is applied to the real corpus's own shape rather
@@ -5421,7 +5425,7 @@ def _real_closure_dirs_copy(
 
     root = tmp_path / name
     for rel_dir in doc_id_cli._AUDIT_CLOSURE_README_DIRS:
-        shutil.copytree(ROOT / rel_dir, root / rel_dir)
+        shutil.copytree(source / rel_dir, root / rel_dir)
     return root
 
 
@@ -5450,7 +5454,7 @@ def _every_readme_under_the_closure_dirs(
 
 
 def test_audit_closure_discovery_claims_every_record_readme_on_the_real_corpus(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """F84's first limb, against the real tree: *"`migrate()` discovers all 17 as `CR-`
     drafts with `kind: work` / `kind: phase`"*.
@@ -5460,8 +5464,8 @@ def test_audit_closure_discovery_claims_every_record_readme_on_the_real_corpus(
     *"auditor (`work`, `phase`); lead (`review`)"* — and §1.2's `CR` row, whose whole
     status subset is `active`.
     """
-    drafts = doc_id_cli._discover_audit_closure_readmes(ROOT)
-    expected = _every_readme_under_the_closure_dirs(doc_id_cli, ROOT)
+    drafts = doc_id_cli._discover_audit_closure_readmes(pre_migration_root)
+    expected = _every_readme_under_the_closure_dirs(doc_id_cli, pre_migration_root)
 
     assert {d.was: d.kind for d in drafts} == expected
     assert len(expected) >= 17, "F84's population may grow, never shrink below its 17"
@@ -5481,18 +5485,18 @@ def test_audit_closure_census_is_silent_on_the_real_corpus(
 
 
 def test_audit_closure_declared_exceptions_are_exactly_the_unclaimed_real_files(
-    doc_id_cli: types.ModuleType,
+    doc_id_cli: types.ModuleType, pre_migration_root: pathlib.Path
 ) -> None:
     """F83's condition 2, applied here: the declared exception set must equal the
     in-scope-but-unclaimed set exactly, so the exemption list cannot grow silently. A file
     added under either directory and quietly declared, or a declaration left behind after
     its file moved, fails here rather than passing as "still a valid exception".
     """
-    claimed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
+    claimed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(pre_migration_root)}
     for rel_dir in doc_id_cli._AUDIT_CLOSURE_README_DIRS:
         on_disk = {
-            p.relative_to(ROOT / rel_dir).as_posix()
-            for p in (ROOT / rel_dir).rglob("*")
+            p.relative_to(pre_migration_root / rel_dir).as_posix()
+            for p in (pre_migration_root / rel_dir).rglob("*")
             if p.is_file()
         }
         claimed_here = {
@@ -5504,11 +5508,11 @@ def test_audit_closure_declared_exceptions_are_exactly_the_unclaimed_real_files(
 
 
 def test_audit_closure_census_names_an_unrecognised_file_on_the_real_corpus(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """Ruling 83 §3 item 4: the refusal NAMES the unit. Broken input is a file appearing
     under a real work directory that nothing routes anywhere."""
-    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "unrecognised")
+    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "unrecognised", source=pre_migration_root)
     (root / "docs" / "audit" / "work" / "W8" / "notes.md").write_text(
         "# Some notes\n", encoding="utf-8"
     )
@@ -5517,7 +5521,7 @@ def test_audit_closure_census_names_an_unrecognised_file_on_the_real_corpus(
 
 
 def test_audit_closure_census_names_a_readme_whose_heading_discovery_cannot_title(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """The case the path-shaped alternative would have hidden. `_discover_audit_closure_
     readmes` claims a file on its **heading**, not on its path, precisely so a record whose
@@ -5525,7 +5529,7 @@ def test_audit_closure_census_names_a_readme_whose_heading_discovery_cannot_titl
     `title:` — the reading `_proposal_containers` already gives an undated container. This
     proves the second half of that bargain: the census does name it.
     """
-    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "untitled")
+    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "untitled", source=pre_migration_root)
     path = root / "docs" / "audit" / "work" / "W11" / "README.md"
     text = path.read_text(encoding="utf-8")
     heading = "# Work-item record — W11 (Scoring)"
@@ -5543,7 +5547,7 @@ def test_audit_closure_census_names_a_readme_whose_heading_discovery_cannot_titl
 
 
 def test_audit_closure_census_recursive_walk_is_load_bearing(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """The shipped call passes `recursive=True`; dropping it must leave the previous test's
     input GREEN, or that keyword is decoration.
@@ -5553,7 +5557,9 @@ def test_audit_closure_census_recursive_walk_is_load_bearing(
     empty unit list. A census that cannot fail is the "blinds the run" half of W37-5c's own
     criterion, in the guard written to discharge the "blinds the run" finding.
     """
-    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "loadbearing-walk")
+    root = _real_closure_dirs_copy(
+        doc_id_cli, tmp_path, "loadbearing-walk", source=pre_migration_root
+    )
     path = root / "docs" / "audit" / "work" / "W11" / "README.md"
     path.write_text(
         path.read_text(encoding="utf-8").replace(
@@ -5572,7 +5578,7 @@ def test_audit_closure_census_recursive_walk_is_load_bearing(
 
 
 def test_audit_closure_census_record_set_is_load_bearing(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, pre_migration_root: pathlib.Path
 ) -> None:
     """The shipped call reconciles against **what discovery produced** (`records=`), not
     against a re-run of `_AUDIT_CLOSURE_TITLE_RE`. Dropping that — reverting to the title
@@ -5585,7 +5591,9 @@ def test_audit_closure_census_record_set_is_load_bearing(
     pattern, but a pattern that agrees with it on everything except the population that
     matters.
     """
-    root = _real_closure_dirs_copy(doc_id_cli, tmp_path, "loadbearing-records")
+    root = _real_closure_dirs_copy(
+        doc_id_cli, tmp_path, "loadbearing-records", source=pre_migration_root
+    )
     stray = root / "docs" / "audit" / "work" / "W8" / "stray-record.md"
     stray.write_text(
         "# Work-item record — W8 (a stray copy nothing migrates)\n", encoding="utf-8"
