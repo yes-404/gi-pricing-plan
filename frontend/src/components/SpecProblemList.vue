@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Every reason a spec cannot be fitted, rendered as a list (`02` §5.1, FR-MODEL-44,
- * FR-MODEL-81).
+ * Every reason a spec cannot be fitted, rendered as a list (`02` §5.1, FR-153,
+ * FR-185).
  *
  * **All of them, never the first.** `SpecValidation`'s own docstring in the contract says
  * why: "Reported as a list rather than raised as the first failure. A spec builder that

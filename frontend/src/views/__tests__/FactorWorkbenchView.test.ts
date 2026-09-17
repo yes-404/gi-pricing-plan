@@ -111,7 +111,7 @@ function routeFor(url: string): unknown {
   if (url.includes("/groupings")) return { ...GROUPING, version: 2 };
   if (url.includes("/dataset-versions/")) return VERSION;
   // The model selector added by W6b-5b: the panel's candidates are a per-Model artifact
-  // reached from a Dataset-Version-scoped view (OQ-MODEL-40). Empty here — this file tests
+  // reached from a Dataset-Version-scoped view (OQ-611). Empty here — this file tests
   // the banding and grouping editors, and the selector has its own suite.
   if (url.includes("/models")) return { items: [], next_cursor: null, total_estimate: 0 };
   throw new Error(`the view asked for an endpoint the test does not stub: ${url}`);
@@ -177,7 +177,7 @@ describe("the factor workbench", () => {
     expect(healthy.className).not.toContain("amber");
   });
 
-  it("re-evaluates against the platform when a boundary moves (FR-MODEL-83)", async () => {
+  it("re-evaluates against the platform when a boundary moves (FR-102)", async () => {
     const user = userEvent.setup();
     render(FactorWorkbenchView, { props, ...mounted });
     await user.click(await screen.findByRole("button", { name: "Propose" }));
@@ -267,7 +267,7 @@ describe("the factor workbench", () => {
     expect(verdict.className).toContain("red");
   });
 
-  it("re-evaluates the evidence when a level is pointed elsewhere (FR-MODEL-83)", async () => {
+  it("re-evaluates the evidence when a level is pointed elsewhere (FR-102)", async () => {
     const user = userEvent.setup();
     render(FactorWorkbenchView, { props, ...mounted });
     await user.click(await screen.findByRole("tab", { name: "grouping" }));

@@ -3,14 +3,14 @@
 > **R1 — Separation of duties.** The submitter of an approval request can never be its
 > approver. This is enforced in the backend, not the UI, and cannot be configured away.
 
-The lifecycle is uniform across artifact types (FR-GOV-9), which is why it lives here
+The lifecycle is uniform across artifact types (FR-351), which is why it lives here
 rather than in each owning module: a model, a custom objective and a rating version are
 approved by the same machine, and the only thing that differs is the policy that machine
 reads.
 
 **Approval is pinned to a version, structurally.** An `ArtifactRef` carries `@version`
-(ID-3) and artifacts are immutable (FR-OVR-1), so "the approval does not carry over when a
-referenced artifact changes" (FR-GOV-14) needs no staleness check: a changed artifact is a
+(ID-3) and artifacts are immutable (FR-4), so "the approval does not carry over when a
+referenced artifact changes" (FR-356) needs no staleness check: a changed artifact is a
 different reference, and the approval was for the old one.
 """
 
@@ -39,7 +39,7 @@ __all__ = [
 
 
 class ApprovalStatus(enum.StrEnum):
-    """FR-GOV-9. Post-approval states (`live`, `superseded`, `retired`) belong to the
+    """FR-351. Post-approval states (`live`, `superseded`, `retired`) belong to the
     owning module — this machine stops at `approved`."""
 
     DRAFT = "draft"
@@ -56,7 +56,7 @@ class DecisionKind(enum.StrEnum):
     REQUEST_CHANGES = "request_changes"
 
 
-#: `changes_requested` returns to `draft` (FR-GOV-13) so a resubmission is a new review
+#: `changes_requested` returns to `draft` (FR-355) so a resubmission is a new review
 #: rather than a continuation of the old one — the reviewer's concerns and their resolution
 #: both being visible is the point.
 VALID_APPROVAL_TRANSITIONS: Final[dict[ApprovalStatus, frozenset[ApprovalStatus]]] = {
@@ -77,26 +77,26 @@ VALID_APPROVAL_TRANSITIONS: Final[dict[ApprovalStatus, frozenset[ApprovalStatus]
 
 
 #: `06` §3.3's per-artifact evidence table, as the **floor** a workspace policy may add to
-#: and may never remove from (FR-GOV-37, OQ-GOV-7 decided 2026-08-18).
+#: and may never remove from (FR-364, OQ-639 decided 2026-08-18).
 #:
 #: This is §3.3's **checkable projection**, not the whole table, and the difference is
 #: deliberate: submission fails closed on an evidence kind it cannot verify (`06` R4), so a
 #: floor naming `model_comparison_if_predecessor` — which lives inside a comparison's
 #: `payload` and cannot be queried — would refuse every model submission rather than raise
-#: the standard. The uncheckable remainder is named in FR-GOV-37 with an owner, which is
+#: the standard. The uncheckable remainder is named in FR-364 with an owner, which is
 #: the difference between a deferral and a silence.
 #:
 #: An artifact type absent here has an **empty** floor. `peril_structure` is that case.
 #:
-#: **Corrected 2026-08-22 (W5, the audit-remediation slice).** Until this date both this
-#: docstring and FR-GOV-37 justified that empty floor by saying `peril_structure` "has no
+#: **Corrected 2026-08-22 (WK-661, the audit-remediation slice).** Until this date both this
+#: docstring and FR-364 justified that empty floor by saying `peril_structure` "has no
 #: §3.3 row at all". It has had one since 2026-08-14 — four days *before* the claim was
 #: written, in the Phase 0 commit that created the document. The conclusion survives the
 #: premise, but only for one half of the row and for a different reason: the
 #: **reconciliation** is enforced structurally, since `review` is reachable only from
 #: `reconciled` and a `fail` verdict is refused at submission, so a floor entry here would
 #: restate a lifecycle edge. The row's other half — **per-peril model approvals** — is
-#: enforced nowhere, and is FR-GOV-37's uncheckable remainder rather than something this
+#: enforced nowhere, and is FR-364's uncheckable remainder rather than something this
 #: floor's silence permits.
 EVIDENCE_FLOOR: Final[dict[str, tuple[str, ...]]] = {
     "validation_rule": ("dry_run_result",),
@@ -123,7 +123,7 @@ class ApprovalPolicyEntry(BaseModel):
 
 
 class ApprovalPolicy(BaseModel):
-    """A workspace's approval policy (FR-GOV-12)."""
+    """A workspace's approval policy (FR-354)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -164,11 +164,11 @@ class ApprovalPolicy(BaseModel):
     def effective_evidence(
         self, artifact_type: str, environment: str | None = None
     ) -> tuple[str, ...]:
-        """What a submission of this artifact type must actually show (FR-GOV-37).
+        """What a submission of this artifact type must actually show (FR-364).
 
         The union of `EVIDENCE_FLOOR` and the matching entry's own `evidence`, floor first
         and order otherwise preserved. It is a union rather than a lookup because a policy
-        stored before FR-GOV-37 existed is still loaded by `policy_for`: refusing it at
+        stored before FR-364 existed is still loaded by `policy_for`: refusing it at
         read time would lock a workspace out of its own approvals, and trusting it would
         let the floor be dodged by being old.
         """
@@ -181,7 +181,7 @@ class ApprovalPolicy(BaseModel):
     def below_floor(self) -> dict[str, tuple[str, ...]]:
         """Entries whose `evidence` drops below `EVIDENCE_FLOOR`, by artifact type.
 
-        Empty for a policy that satisfies FR-GOV-37. `set_policy` refuses a non-empty
+        Empty for a policy that satisfies FR-364. `set_policy` refuses a non-empty
         result: `effective_evidence` would enforce the floor anyway, so this exists to stop
         a policy document from *saying* less than the platform enforces — an insurer
         reading its own policy is entitled to see what a submission will be held to.
@@ -213,7 +213,7 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             approver_roles=("approver",),
             evidence=("objective_certificate",),
         ),
-        # FR-MODEL-45: a Custom Metric follows the same lifecycle and grammar as an
+        # FR-154: a Custom Metric follows the same lifecycle and grammar as an
         # objective, and `platform.metrics._require_evidence` has expected this entry
         # (`metric_certificate`, mirroring `objective_certificate` above) since the slice
         # that added `submit`. Its absence was a self-documented gap, not a design choice:
@@ -227,7 +227,7 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             evidence=("metric_certificate",),
         ),
         # `transparency_artifact_if_non_glm` joined this entry on 2026-08-18 with
-        # FR-GOV-37. It was enforced before it was named — `02` §4.8 R3 is checked at
+        # FR-364. It was enforced before it was named — `02` §4.8 R3 is checked at
         # submission whatever the policy says — but a default that omits the kind teaches a
         # workspace editing its policy that the kind is optional, and it is not. The name is
         # `06` §4.2's, which the submission check had been spelling `transparency_artifact`:
@@ -239,11 +239,11 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             approver_roles=("approver",),
             evidence=("diagnostics", "transparency_artifact_if_non_glm"),
         ),
-        # Added 2026-08-18 (W5, peril structures). FR-MODEL-61 makes a Peril Structure
+        # Added 2026-08-18 (WK-661, peril structures). FR-191 makes a Peril Structure
         # approvable and `peril_structure` has been a valid artifact type since Phase 0 —
         # but with no entry here `submit` refuses with "no approval policy for this
         # artifact type", which is a correct refusal of an artifact nobody could ever
-        # approve. Its evidence is the reconciliation, because FR-MODEL-60 makes that the
+        # approve. Its evidence is the reconciliation, because FR-190 makes that the
         # coherence check the approver is being asked to accept.
         ApprovalPolicyEntry(
             artifact_type="peril_structure",

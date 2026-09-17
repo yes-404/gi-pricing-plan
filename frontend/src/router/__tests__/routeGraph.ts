@@ -1,5 +1,5 @@
 /**
- * The route graph for FR-OVR-22. The test builds the link graph from the router
+ * The route graph for FR-25. The test builds the link graph from the router
  * source and the view sources, then reports every route with no inbound path
  * from the application entry.
  *

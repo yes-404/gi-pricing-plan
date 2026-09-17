@@ -1,15 +1,15 @@
-"""NFR-MODEL-8's `eval`/`exec` clause, attempted rather than asserted.
+"""NFR-483's `eval`/`exec` clause, attempted rather than asserted.
 
 `02` §4.6 puts one grammar behind four callers — `expression` custom objectives
-(FR-MODEL-40), `expression` factors (FR-MODEL-6), preparation `derive_expression`
-(`01` FR-DATA-10) and `expression` validation checks (`01` §4.5). Only the third is built,
+(FR-144), `expression` factors (FR-95), preparation `derive_expression`
+(`01` FR-36) and `expression` validation checks (`01` §4.5). Only the third is built,
 so this is where the shared parser can be tried.
 
 **These are new tests rather than a second marker on `test_prepare.py`.** That file's
-hostile-input list (FR-DATA-10) asks *is this string refused*; it catches
+hostile-input list (FR-36) asks *is this string refused*; it catches
 `(ExpressionError, SyntaxError)` interchangeably, so it cannot say which parser did the
 refusing, and a blacklist that passes is silent about whether `eval` was reached on the way
-to the refusal. NFR-MODEL-8 asks the other question — **is `eval`/`exec` ever called** —
+to the refusal. NFR-483 asks the other question — **is `eval`/`exec` ever called** —
 and the only test that answers it is one that removes them and watches the accept path
 still work. So the two tests below are the clause, and the overlap in the input strings is
 incidental.
@@ -17,14 +17,14 @@ incidental.
 **The requirement's second clause was met on 2026-08-22.** `ExpressionError` was a bare
 `ValueError` with no `lineno` or `col_offset`, so "the parser rejects out-of-grammar input
 with a position-accurate error" was untrue; `test_out_of_grammar_input_carries_no_position`
-pinned that absence under FR-DATA-10 so the gap was visible in the suite rather than only
+pinned that absence under FR-36 so the gap was visible in the suite rather than only
 in a report. That test is now inverted rather than deleted — the two below assert the
 position instead, and the second exists because a position that merely repeats the
 expression's own start would satisfy the first without being accurate.
 
-Its third clause — compiled objectives bounded in memory and per-round time (FR-MODEL-48) —
+Its third clause — compiled objectives bounded in memory and per-round time (FR-165) —
 is **half built and owned elsewhere**. Template objectives *are* compiled, on fixed-size
-NumPy arrays with no unbounded intermediates, and FR-MODEL-48's NaN/inf abort naming the
+NumPy arrays with no unbounded intermediates, and FR-165's NaN/inf abort naming the
 round is implemented and carries four markers in `test_objectives.py`. The **per-round
 wall-clock budget** is not implemented anywhere; nothing here can test it, and a marker on
 this file would claim it.
@@ -46,11 +46,11 @@ from pricing_core.data.expressions import (
 FRAME = pl.DataFrame({"premium": [100.0, 250.0], "exposure": [1.0, 0.5]})
 
 
-@pytest.mark.req("NFR-MODEL-8")
+@pytest.mark.req("NFR-483")
 def test_a_valid_expression_compiles_with_eval_and_exec_removed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """NFR-MODEL-8: user-supplied expressions never reach `eval`/`exec`.
+    """NFR-483: user-supplied expressions never reach `eval`/`exec`.
 
     The property is not that hostile strings are refused — a sandbox that refuses ten
     known attacks and evaluates the eleventh passes that test. It is that the accept path
@@ -63,7 +63,7 @@ def test_a_valid_expression_compiles_with_eval_and_exec_removed(
 
     def refuse(*args: object, **kwargs: object) -> object:
         raise AssertionError(
-            "the expression grammar called eval/exec on user input (NFR-MODEL-8)"
+            "the expression grammar called eval/exec on user input (NFR-483)"
         )
 
     monkeypatch.setattr(builtins, "eval", refuse)
@@ -75,7 +75,7 @@ def test_a_valid_expression_compiles_with_eval_and_exec_removed(
     assert frame["derived"].to_list() == [100.0, 650.0]
 
 
-@pytest.mark.req("NFR-MODEL-8")
+@pytest.mark.req("NFR-483")
 @pytest.mark.parametrize(
     "expression",
     [
@@ -90,7 +90,7 @@ def test_a_valid_expression_compiles_with_eval_and_exec_removed(
     ],
 )
 def test_a_route_to_eval_is_refused_by_the_parser_not_by_python(expression: str) -> None:
-    """NFR-MODEL-8: every syntactically valid route to `eval` fails in *this* parser.
+    """NFR-483: every syntactically valid route to `eval` fails in *this* parser.
 
     `ExpressionError` specifically, never `SyntaxError`. The distinction is the point:
     a `SyntaxError` means CPython's parser refused the string and this grammar was never
@@ -102,10 +102,10 @@ def test_a_route_to_eval_is_refused_by_the_parser_not_by_python(expression: str)
         compile_expression(expression)
 
 
-@pytest.mark.req("FR-DATA-10")
-@pytest.mark.req("NFR-MODEL-8")
+@pytest.mark.req("FR-36")
+@pytest.mark.req("NFR-483")
 def test_out_of_grammar_input_carries_its_position() -> None:
-    """NFR-MODEL-8's position-accurate clause, which was unmet until 2026-08-22.
+    """NFR-483's position-accurate clause, which was unmet until 2026-08-22.
 
     This assertion is the inverse of the one it replaces. `ExpressionError` was a bare
     `ValueError`, so no caller could underline the offending token; the old test pinned
@@ -125,7 +125,7 @@ def test_out_of_grammar_input_carries_its_position() -> None:
     assert error.end_col_offset == 10
 
 
-@pytest.mark.req("NFR-MODEL-8")
+@pytest.mark.req("NFR-483")
 def test_the_position_names_the_offending_operator_not_the_whole_expression() -> None:
     """An operator node carries no position of its own, so the parent is what is threaded.
 

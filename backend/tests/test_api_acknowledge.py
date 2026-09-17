@@ -1,4 +1,4 @@
-"""The acknowledge route over HTTP (FR-DATA-17, FR-DATA-18).
+"""The acknowledge route over HTTP (FR-46, FR-47).
 
 `01` §1.3's sharpest write, and it had **no HTTP test at all**: the service beneath it was
 covered, the route wiring was not. Swapping its two path parameters — passing `rule_id`
@@ -73,7 +73,7 @@ def actuary(workspace_id, principal, grant) -> dict[str, str]:
     return _headers(principal.id, workspace_id)
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_an_actuary_acknowledges_a_warning_through_the_route(
     api_client: TestClient, workspace_id, principal, actuary, database
 ) -> None:
@@ -103,7 +103,7 @@ def test_an_actuary_acknowledges_a_warning_through_the_route(
     assert view["results"][0]["acknowledgement"] is not None
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_an_unknown_rule_on_a_real_report_is_refused(
     api_client: TestClient, workspace_id, principal, actuary, database
 ) -> None:
@@ -132,11 +132,11 @@ def test_an_unknown_rule_on_a_real_report_is_refused(
     assert swapped.status_code == 404, swapped.text
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_an_analyst_is_refused_by_the_route(
     api_client: TestClient, workspace_id, principal, grant, database
 ) -> None:
-    """FR-DATA-17 puts this with an actuary. An analyst who could acknowledge could clear
+    """FR-46 puts this with an actuary. An analyst who could acknowledge could clear
     the way to `validated` alone, which is the whole control."""
     asyncio.get_event_loop().run_until_complete(grant("analyst"))
     warn = _warn()
@@ -151,11 +151,11 @@ def test_an_analyst_is_refused_by_the_route(
     assert refused.status_code == 403, refused.text
 
 
-@pytest.mark.req("FR-DATA-18")
+@pytest.mark.req("FR-47")
 def test_a_justification_is_mandatory_and_a_second_acknowledgement_is_refused(
     api_client: TestClient, workspace_id, principal, actuary, database
 ) -> None:
-    """FR-DATA-18: one acknowledgement per `(report, rule)`, with a reason.
+    """FR-47: one acknowledgement per `(report, rule)`, with a reason.
 
     A blank justification is the one a hurried user would send, so the route must refuse
     it rather than storing an empty string that reads as a recorded decision.

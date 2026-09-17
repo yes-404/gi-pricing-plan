@@ -1,10 +1,10 @@
 """modelling: the comparison artifact
 
-`02` FR-MODEL-56's persisted comparison, and the first table in this repository whose shape
+`02` FR-186's persisted comparison, and the first table in this repository whose shape
 was **designed** rather than transcribed: `02` §5.2 named `ModelComparison` as a return type
 from Phase 0 and no document defined it.
 
-**Insert-only at the privilege layer** (FR-DATA-42), like `diagnostics` and validation
+**Insert-only at the privilege layer** (FR-43), like `diagnostics` and validation
 reports. `06` §3.3 makes a comparison required evidence for a Model approval where a
 predecessor exists, and evidence that can change after the approval is not evidence. The
 type refuses a rewrite too; this is the layer that survives a direct `UPDATE`.

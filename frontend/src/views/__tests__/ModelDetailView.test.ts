@@ -118,7 +118,7 @@ describe("the model detail view", () => {
   });
 
   it("shows the base level of a relativity table, at 1.000 and marked", async () => {
-    // FR-MODEL-21. Omitting it is how a reader ends up believing a factor has one fewer
+    // FR-113. Omitting it is how a reader ends up believing a factor has one fewer
     // level than it has.
     render(ModelDetailView, { props, ...mounted });
     const table = await screen.findByRole("table", { name: "area relativities" });
@@ -208,7 +208,7 @@ describe("the model detail view, on a model that is not a GLM", () => {
   });
 
   it("says on the page itself that a bound is a bound, and links to what it bounds", async () => {
-    // FR-MODEL-78. Nothing else on this page distinguishes a bound from the central estimate:
+    // FR-199. Nothing else on this page distinguishes a bound from the central estimate:
     // same family, same dataset version, same factors, same metadata block. The link text is
     // asserted rather than the anchor because `stubs: { RouterLink: true }` discards the slot,
     // and the assertion would then pass against an empty <a>.
@@ -242,7 +242,7 @@ describe("the model detail view, on a model that is not a GLM", () => {
   });
 
   it("asks for a transparency artifact for a booster, and not for a GLM", async () => {
-    // FR-MODEL-33 makes the artifact an obligation for a non-GLM Model and says nothing
+    // FR-132 makes the artifact an obligation for a non-GLM Model and says nothing
     // about a GLM. Fetching it anyway would 404 on every GLM page on the platform, which
     // reads as an outage in every log that counts 404s.
     const fetchMock = stubByUrl({
@@ -271,7 +271,7 @@ describe("the model detail view, on a model that is not a GLM", () => {
   });
 
   it("says a GLM surrogate is a surrogate, and what its diagnostics are against", async () => {
-    // FR-MODEL-96: a surrogate's diagnostics are against the source model's predictions,
+    // FR-137: a surrogate's diagnostics are against the source model's predictions,
     // never against observed claims. A page that omits it shows a fit statistic the reader
     // takes for fit to experience — and a surrogate is a GLM in every other visible respect,
     // so nothing else on the page distinguishes one.
@@ -279,7 +279,7 @@ describe("the model detail view, on a model that is not a GLM", () => {
       ...MODEL,
       spec: {
         ...MODEL.spec,
-        // Both halves, per FR-MODEL-102: the response column is what makes the id legal.
+        // Both halves, per FR-141: the response column is what makes the id legal.
         response_column: "__gbm_prediction__",
         approximates_model_id: GBM_MODEL.id,
       },

@@ -27,8 +27,8 @@ describe("the builder's option vocabularies", () => {
   });
 
   it("offers exactly the GLM links the contract declares", () => {
-    // FR-MODEL-18 names five; `power(k)` "remains declared and unbuilt — `GlmSpec` has no
-    // spelling for it and no slice has needed one", staged under FR-MODEL-87 rather than
+    // FR-110 names five; `power(k)` "remains declared and unbuilt — `GlmSpec` has no
+    // spelling for it and no slice has needed one", staged under FR-207 rather than
     // dropped (`02`:129-139). The picker binds to the four the contract has, and a fifth
     // arriving in the contract announces itself here.
     expectTypeOf<GlmSpec["link"]>().toEqualTypeOf<(typeof LINKS)[number]>();

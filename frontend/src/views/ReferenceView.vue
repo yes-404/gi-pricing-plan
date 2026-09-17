@@ -61,7 +61,7 @@ watch(selected, async (slug) => {
   try {
     versions.value = await listVersions(slug);
     // The newest **published** version, not merely the newest: a draft cannot be pinned by
-    // rating (FR-DATA-32), so opening on one would show a version no quote can have used.
+    // rating (FR-72), so opening on one would show a version no quote can have used.
     pinned.value = (versions.value.find((v) => v.status === "published")
       ?? versions.value[0])?.version ?? null;
   } catch (error) {
@@ -354,7 +354,7 @@ async function debug(): Promise<void> {
             Lookup debugger
           </h2>
           <p class="mt-1 text-xs text-slate-500">
-            For debugging (FR-DATA-31) — what does this table say about this key on this
+            For debugging (FR-71) — what does this table say about this key on this
             date? Rating resolves a reference through a pinned version id and never asks
             this question at scoring time.
           </p>

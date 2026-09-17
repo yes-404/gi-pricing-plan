@@ -1,6 +1,6 @@
 """Modelling maths: factors, bandings, groupings, GLM and GBM fitting (`02` §5.2).
 
-Importable without the platform, like every other `pricing-core` module — ADR-0001, and
+Importable without the platform, like every other `pricing-core` module — ADR-703, and
 the import-linter contract that enforces it.
 """
 

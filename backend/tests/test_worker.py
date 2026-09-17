@@ -1,4 +1,4 @@
-"""The worker side of a Job (FR-PLAT-7/8/9/13/16/51, `06` R2, R4).
+"""The worker side of a Job (FR-399/400/401/405/412/406, `06` R2, R4).
 
 `execute_job` is exercised directly rather than through a broker: the lifecycle is the
 behaviour worth testing, and routing a message through Redis to assert it proves Celery
@@ -56,7 +56,7 @@ async def _submit(database: Database, workspace_id, principal, **kw) -> Any:
         )
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_a_successful_job_reaches_succeeded_with_its_result(
     database: Database, workspace_id, principal
 ) -> None:
@@ -77,7 +77,7 @@ async def test_a_successful_job_reaches_succeeded_with_its_result(
     assert row.finished_at is not None
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_the_runner_tells_the_handler_which_job_it_is(
     database: Database, workspace_id, principal
 ) -> None:
@@ -106,7 +106,7 @@ async def test_the_runner_tells_the_handler_which_job_it_is(
     assert seen["job_id"] == str(job.id)
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_the_runners_job_id_overrides_one_supplied_in_the_payload(
     database: Database, workspace_id, principal
 ) -> None:
@@ -127,7 +127,7 @@ async def test_the_runners_job_id_overrides_one_supplied_in_the_payload(
     assert seen["job_id"] != impostor
 
 
-@pytest.mark.req("FR-GOV-20")
+@pytest.mark.req("FR-368")
 async def test_worker_transitions_are_audited_and_chained(
     database: Database, workspace_id, principal
 ) -> None:
@@ -153,7 +153,7 @@ async def test_worker_transitions_are_audited_and_chained(
     assert actions == ["job.submitted", "job.running", "job.succeeded"]
 
 
-@pytest.mark.req("FR-GOV-25")
+@pytest.mark.req("FR-374")
 async def test_the_worker_is_audited_as_the_system_not_the_submitter(
     database: Database, workspace_id, principal
 ) -> None:
@@ -176,7 +176,7 @@ async def test_the_worker_is_audited_as_the_system_not_the_submitter(
     assert running.actor["kind"] == ActorKind.SYSTEM
 
 
-@pytest.mark.req("FR-PLAT-11")
+@pytest.mark.req("FR-403")
 async def test_a_failing_handler_records_a_typed_error(
     database: Database, workspace_id, principal
 ) -> None:
@@ -196,7 +196,7 @@ async def test_a_failing_handler_records_a_typed_error(
     assert row.finished_at is not None
 
 
-@pytest.mark.req("FR-PLAT-13")
+@pytest.mark.req("FR-405")
 async def test_an_unregistered_kind_fails_the_job_rather_than_hanging(
     database: Database, workspace_id, principal
 ) -> None:
@@ -211,7 +211,7 @@ async def test_an_unregistered_kind_fails_the_job_rather_than_hanging(
     assert row.error["detail"]["kind"] == "optimisation.run"
 
 
-@pytest.mark.req("FR-PLAT-8")
+@pytest.mark.req("FR-400")
 async def test_progress_is_recorded(database: Database, workspace_id, principal) -> None:
     def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
         progress.update(0.5, "boosting round 500/1000", rounds=500)
@@ -229,7 +229,7 @@ async def test_progress_is_recorded(database: Database, workspace_id, principal)
     assert row.progress_at is not None
 
 
-@pytest.mark.req("FR-PLAT-9")
+@pytest.mark.req("FR-401")
 async def test_a_job_cancelled_before_pickup_never_starts(
     database: Database, workspace_id, principal
 ) -> None:
@@ -250,7 +250,7 @@ async def test_a_job_cancelled_before_pickup_never_starts(
     assert started is False
 
 
-@pytest.mark.req("FR-PLAT-9")
+@pytest.mark.req("FR-401")
 async def test_a_running_job_stops_at_its_next_checkpoint(
     database: Database, workspace_id, principal
 ) -> None:
@@ -285,11 +285,11 @@ async def test_a_running_job_stops_at_its_next_checkpoint(
     assert row.finished_at is not None
 
 
-@pytest.mark.req("FR-PLAT-16")
+@pytest.mark.req("FR-412")
 async def test_exceeding_the_wall_clock_budget_names_the_budget(
     database: Database, workspace_id, principal
 ) -> None:
-    """FR-PLAT-16: terminated with a typed error naming the budget, not silently killed."""
+    """FR-412: terminated with a typed error naming the budget, not silently killed."""
 
     def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
         for _ in range(200):
@@ -312,7 +312,7 @@ async def test_exceeding_the_wall_clock_budget_names_the_budget(
     assert "wall-clock budget" in row.error["message"]
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_a_redelivered_job_is_not_run_twice(
     database: Database, workspace_id, principal
 ) -> None:
@@ -332,13 +332,13 @@ async def test_a_redelivered_job_is_not_run_twice(
     assert runs == 1
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_a_delivery_for_an_unknown_job_is_ignored(database: Database) -> None:
     """Negative: a stale broker message must not raise and requeue for ever."""
     assert await execute_job(database, new_uuid7()) is JobStatus.FAILED
 
 
-@pytest.mark.req("FR-PLAT-8")
+@pytest.mark.req("FR-400")
 async def test_progress_writes_are_throttled(
     database: Database, workspace_id, principal
 ) -> None:
@@ -360,7 +360,7 @@ async def test_progress_writes_are_throttled(
     assert row.progress["fraction"] == 0.0
 
 
-@pytest.mark.req("FR-PLAT-16")
+@pytest.mark.req("FR-412")
 async def test_budget_check_is_independent_of_cancellation(database: Database) -> None:
     """A spent budget is a failure; a cancellation is not. They must not share a code path."""
     loop = asyncio.get_running_loop()
@@ -369,15 +369,15 @@ async def test_budget_check_is_independent_of_cancellation(database: Database) -
         progress.check_cancelled()
 
 
-@pytest.mark.req("FR-PLAT-9")
+@pytest.mark.req("FR-401")
 def test_job_progress_satisfies_the_pricing_core_protocol(database: Database) -> None:
-    """ADR-0001: the core owns the protocol and never imports this implementation."""
+    """ADR-703: the core owns the protocol and never imports this implementation."""
     progress = JobProgress(new_uuid7(), database, asyncio.new_event_loop())
     assert isinstance(progress, ProgressCallback)
     assert JobCancelled is not None
 
 
-@pytest.mark.req("FR-PLAT-13")
+@pytest.mark.req("FR-405")
 def test_celery_routes_every_kind_to_a_queue() -> None:
     """Routing is derived from the kind, so a caller cannot put a fit on the scoring pool."""
     from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
@@ -388,7 +388,7 @@ def test_celery_routes_every_kind_to_a_queue() -> None:
     assert DEFAULT_QUEUE_FOR_KIND[JobKind.SCORE_BATCH] is JobQueue.SCORING
 
 
-@pytest.mark.req("FR-PLAT-22")
+@pytest.mark.req("FR-422")
 def test_celery_refuses_pickle(settings) -> None:
     """Negative: pickle over a broker is arbitrary code execution in a worker."""
     celery = build_celery(settings)
@@ -396,7 +396,7 @@ def test_celery_refuses_pickle(settings) -> None:
     assert celery.conf.task_serializer == "json"
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 def test_worker_registers_both_tasks(settings) -> None:
     from app.worker.tasks import create_worker
 
@@ -405,7 +405,7 @@ def test_worker_registers_both_tasks(settings) -> None:
     assert TASK_RELAY_OUTBOX in celery.tasks
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 def test_handler_registration_refuses_a_duplicate() -> None:
     """Two handlers for one kind makes behaviour depend on import order."""
     handlers.register_handler(JobKind.MODEL_FIT, lambda p, pr: JobResult(kind="none"))
@@ -413,10 +413,10 @@ def test_handler_registration_refuses_a_duplicate() -> None:
         handlers.register_handler(JobKind.MODEL_FIT, lambda p, pr: JobResult(kind="none"))
 
 
-# -- NFR-PLAT-3: a running job that says nothing is flagged --------------------------------
+# -- NFR-528: a running job that says nothing is flagged --------------------------------
 
 
-@pytest.mark.req("NFR-PLAT-3")
+@pytest.mark.req("NFR-528")
 async def test_a_running_job_with_recent_progress_is_not_stalled(
     database: Database, workspace_id, principal
 ) -> None:
@@ -437,11 +437,11 @@ async def test_a_running_job_with_recent_progress_is_not_stalled(
     assert is_stalled(row, stall_seconds=30) is False
 
 
-@pytest.mark.req("NFR-PLAT-3")
+@pytest.mark.req("NFR-528")
 async def test_a_running_job_that_has_said_nothing_is_stalled(
     database: Database, workspace_id, principal
 ) -> None:
-    """NFR-PLAT-3: no progress within the window means the Job is treated as stalled."""
+    """NFR-528: no progress within the window means the Job is treated as stalled."""
     from datetime import UTC, datetime, timedelta
 
     from app.db.models import JobRow
@@ -460,7 +460,7 @@ async def test_a_running_job_that_has_said_nothing_is_stalled(
     assert to_schema(row, stall_seconds=30).stalled is True
 
 
-@pytest.mark.req("NFR-PLAT-3")
+@pytest.mark.req("NFR-528")
 async def test_only_running_jobs_can_stall(
     database: Database, workspace_id, principal
 ) -> None:
@@ -481,7 +481,7 @@ async def test_only_running_jobs_can_stall(
     assert is_stalled(row, stall_seconds=0) is False
 
 
-@pytest.mark.req("NFR-PLAT-3")
+@pytest.mark.req("NFR-528")
 async def test_progress_updates_arrive_within_the_budget(
     database: Database, workspace_id, principal
 ) -> None:
@@ -512,5 +512,5 @@ async def test_progress_updates_arrive_within_the_budget(
     assert row.progress_at is not None
     gap = (row.progress_at - started).total_seconds()
     # The last write landed within the run; the throttle guarantees at most 1 s between
-    # writes while a handler is reporting, comfortably inside NFR-PLAT-3's 5 s.
+    # writes while a handler is reporting, comfortably inside NFR-528's 5 s.
     assert 0 <= gap <= 5.0, gap

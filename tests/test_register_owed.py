@@ -1,4 +1,4 @@
-"""`scripts/register-owed.py` — NT-0015 P5's owed-list generator, Ruling 52's binding.
+"""`scripts/register-owed.py` — RFC-896 P5's owed-list generator, RL-912's binding.
 
 Proves, per `CLAUDE.md` §13 ("a check that has never printed a failure has not been
 tested"): the script finds a row genuinely owed, omits one that is resolved, and refuses a
@@ -58,11 +58,11 @@ def _row(finding: str, work: str, phase: str, decision: str) -> str:
 
 def test_finds_a_row_owned_via_the_work_item_column(tmp_path: pathlib.Path) -> None:
     content = _HEADER + _row(
-        "X (F999990)", "W11 Slice 2", "2",
+        "X (F999990)", "WK-671 Slice 2", "2",
         "carry forward with an owner — the frontend workstream",
     )
     rows = _parse(tmp_path, content)
-    matches = register_owed.select_matches(rows, "W11")
+    matches = register_owed.select_matches(rows, "WK-671")
     assert [m.row.finding_id for m in matches] == ["X (F999990)"]
     assert matches[0].excluded_resolved is False
 
@@ -74,9 +74,9 @@ def test_finds_a_row_owned_only_via_the_decision_column_not_work_item(
     slice that *filed* the row (`SL-99991`), and the Decision column names the actual
     *owner* of the carried work (`the WK-99990 scoring workstream`) — a search restricted
     to the Work item column would miss this row exactly as F41's hand-compiled list did
-    for the real NFR-RATE-13/14 row.
+    for the real NFR-502/501 row.
 
-    Synthetic ids respelled to NT-0019's post-migration shapes (2026-09-04, W37-6
+    Synthetic ids respelled to RFC-937's post-migration shapes (2026-09-04, W37-6
     exec-ids, class-1 fix per the deputy's ruling): `register-owed.py`'s own matching
     (`_word_boundary`/`select_matches`, this module) is form-agnostic — a generic
     word-boundary string search over whatever the Work item and Decision columns hold,
@@ -123,11 +123,11 @@ def test_word_boundary_does_not_false_positive_on_a_longer_token(
 
 def test_omits_a_row_that_opens_with_a_resolution_marker(tmp_path: pathlib.Path) -> None:
     content = _HEADER + _row(
-        "Y (F999993)", "W11", "2",
+        "Y (F999993)", "WK-671", "2",
         "*resolved 2026-08-28 (PR #302) — the fix landed, nothing further owed.*",
     )
     rows = _parse(tmp_path, content)
-    matches = register_owed.select_matches(rows, "W11")
+    matches = register_owed.select_matches(rows, "WK-671")
     assert len(matches) == 1
     assert matches[0].excluded_resolved is True
     owed = [m for m in matches if not m.excluded_resolved]
@@ -143,13 +143,13 @@ def test_a_resolved_row_is_named_in_the_rendered_output_not_silently_dropped(
     reader can catch a wrongly-excluded row.
     """
     content = _HEADER + _row(
-        "Z (F999994)", "W11", "2",
+        "Z (F999994)", "WK-671", "2",
         "**Fixed** — most of it. Still carried: one sub-item, unowned.",
     )
     rows = _parse(tmp_path, content)
-    matches = register_owed.select_matches(rows, "W11")
+    matches = register_owed.select_matches(rows, "WK-671")
     rendered = register_owed.render(
-        "W11", matches, "abc1234 (`main`)", "python3 scripts/register-owed.py W11"
+        "WK-671", matches, "abc1234 (`main`)", "python3 scripts/register-owed.py WK-671"
     )
     assert "Z (F999994)" in rendered
     assert "Excluded as opening with a resolution marker" in rendered
@@ -169,7 +169,7 @@ def test_phase_mode_matches_a_compound_phase_field(tmp_path: pathlib.Path) -> No
 
 def test_review_mode_matches_a_row_naming_the_14_review(tmp_path: pathlib.Path) -> None:
     content = _HEADER + _row(
-        "R (F999989)", "W11", "2",
+        "R (F999989)", "WK-671", "2",
         "carry forward — unowned, needs its own authorisation; absent a named event this "
         "decays to the next CLAUDE.md §14 phase review per this register's own header rule",
     )
@@ -180,13 +180,13 @@ def test_review_mode_matches_a_row_naming_the_14_review(tmp_path: pathlib.Path) 
 
 def test_review_mode_does_not_match_a_row_with_no_14_mention(tmp_path: pathlib.Path) -> None:
     content = _HEADER + _row(
-        "S (F999988)", "W11", "2", "carry forward with an owner — W14",
+        "S (F999988)", "WK-671", "2", "carry forward with an owner — WK-674",
     )
     rows = _parse(tmp_path, content)
     assert register_owed.select_matches(rows, "review") == []
 
 
-# --- Dirty-tree / uncommitted-revision refusal (Ruling 52 constraint 1, enforced) ----------
+# --- Dirty-tree / uncommitted-revision refusal (RL-912 constraint 1, enforced) ----------
 
 def _git(repo: pathlib.Path, *args: str) -> None:
     subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
@@ -237,7 +237,7 @@ def test_a_clean_committed_register_names_a_resolvable_revision(
 
 def test_live_register_parses_cleanly_for_owed_queries() -> None:
     """Control: without this, every test above could pass while the real register is
-    unparseable by this script (Ruling 50 §3's control, applied here).
+    unparseable by this script (RL-910 §3's control, applied here).
     """
     rows, problems = register_lint.parse_register(REGISTER)
     assert problems == []

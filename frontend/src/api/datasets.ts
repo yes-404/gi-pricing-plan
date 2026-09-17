@@ -7,7 +7,7 @@ export type DatasetStatus = components["schemas"]["DatasetStatus"];
 export type DatasetPage = components["schemas"]["Page_Dataset_"];
 export type VersionPage = components["schemas"]["Page_DatasetVersion_"];
 export type DataDictionaryEntry = components["schemas"]["DataDictionaryEntry"];
-// The dictionary **write** takes the permissive entry (OQ-PLAT-16 (c)): `description` and
+// The dictionary **write** takes the permissive entry (OQ-655 (c)): `description` and
 // `pii_class` carry defaults a request may omit. Reads keep the strict `DataDictionaryEntry`.
 export type RequestDataDictionaryEntry = requestComponents["schemas"]["DataDictionaryEntry"];
 export type PiiClass = components["schemas"]["PiiClass"];
@@ -48,10 +48,10 @@ export function listVersions(
 }
 
 /**
- * Replace the Data Dictionary (audited, before and after — NFR-DATA-8).
+ * Replace the Data Dictionary (audited, before and after — NFR-472).
  *
  * A **replace**, not a merge: the dictionary decides which columns may be modelled at all
- * (FR-OVR-9), so "who removed the special-category marking from this column?" must be
+ * (FR-12), so "who removed the special-category marking from this column?" must be
  * answerable — and a merge would make a removal indistinguishable from an omission.
  */
 export function putDictionary(
@@ -71,7 +71,7 @@ export function getLineage(versionId: string): Promise<DatasetLineage> {
 }
 
 /**
- * The classes FR-OVR-9 and FR-DATA-13 refuse for modelling.
+ * The classes FR-12 and FR-39 refuse for modelling.
  *
  * Shown as a refusal rather than a warning, because that is what the platform does: a
  * column marked either of these cannot be fitted on, and a UI that presented it as advice

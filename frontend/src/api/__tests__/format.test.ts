@@ -5,7 +5,7 @@ import { formatDecimalString, formatMinor } from "../versions";
 describe("formatting an exact decimal without parsing it", () => {
   it("keeps every digit the backend computed", () => {
     // The value the platform stores for freMTPL2's full exposure. `parseFloat` would be
-    // arithmetic on a number the backend already summed exactly (FR-OVR-7).
+    // arithmetic on a number the backend already summed exactly (FR-10).
     expect(formatDecimalString("339006.500000")).toBe("339,006.5");
     expect(formatDecimalString("21.000000")).toBe("21");
   });

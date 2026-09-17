@@ -14,13 +14,13 @@ use([LineChart, ScatterChart, GridComponent, TooltipComponent, LegendComponent, 
 const props = defineProps<{ crossValidation: CrossValidationDiagnostics }>();
 
 /**
- * Cross-validation with declared fold construction and a persisted seed (FR-MODEL-53).
+ * Cross-validation with declared fold construction and a persisted seed (FR-182).
  *
  * Unpartitioned: `CrossValidationDiagnostics` declares neither `train` nor `holdout`, because
  * the fold path is a property of one fitting procedure rather than a measurement against a
  * held-out population — each fold is its own holdout, which is the point of the method.
  *
- * The path plots the mean with a ±1 std band rather than the mean alone: FR-MODEL-53 requires
+ * The path plots the mean with a ±1 std band rather than the mean alone: FR-182 requires
  * dispersion to be persisted, and an alpha chosen off a mean whose neighbours are within one
  * standard error was not really chosen.
  */
@@ -37,7 +37,7 @@ const pathOption = computed(() => ({
       name: "Mean score",
       type: "line" as const,
       data: props.crossValidation.path.map((point) => point.mean_score),
-      // NFR-OVR-10: the three lines differ by dash pattern, not by hue alone.
+      // NFR-463: the three lines differ by dash pattern, not by hue alone.
       lineStyle: { type: "solid" as const, width: 2 },
     },
     {
@@ -160,7 +160,7 @@ const header = computed(() => [
 
     <ChartFigure
       title="Fold dispersion"
-      caption="One point per fold, not their mean — FR-MODEL-53 persists the dispersion because the spread is the reliability."
+      caption="One point per fold, not their mean — FR-182 persists the dispersion because the spread is the reliability."
       :columns="['Fold', 'Rows', 'Score']"
       :rows="foldRows"
     >

@@ -1,4 +1,4 @@
-"""FR-MODEL-22: the Tweedie series density, in log space, negative cases first.
+"""FR-114: the Tweedie series density, in log space, negative cases first.
 
 The density is the whole point of the mechanism: the estimated power is the argmax of
 the profile log-likelihood, and the profile is informative only because the density
@@ -16,7 +16,7 @@ import pytest
 from pricing_core.modelling.tweedie_density import tweedie_log_density
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 def test_the_density_at_zero_is_the_exact_mass() -> None:
     """Negative first: outside the support the density is not defined, and a number for
     an impossible input would let a broken book score as if it were fine — y < 0, mu <= 0,
@@ -47,7 +47,7 @@ def test_the_density_at_zero_is_the_exact_mass() -> None:
         assert np.exp(log_f[0]) == pytest.approx(np.exp(-lam))
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 @pytest.mark.parametrize(
     ("mu_val", "phi", "power"),
     [(4.48, 1.0, 1.5), (1.0, 1.0, 1.5), (400.0, 40.0, 1.5)],
@@ -66,7 +66,7 @@ def test_the_density_integrates_to_the_nonzero_mass(
     assert np.trapezoid(y * f, y) == pytest.approx(mu_val, rel=1e-2)
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 @pytest.mark.parametrize(
     ("mu_val", "phi", "power"),
     [(4.48, 1.0, 1.5), (1.0, 1.0, 1.5), (400.0, 40.0, 1.5)],

@@ -1,16 +1,16 @@
-# `_compiled_for` component delta: the content-hash shortcut vs. the full blob-read path — W11 Slice 3 Task 3B
+# `_compiled_for` component delta: the content-hash shortcut vs. the full blob-read path — WK-671 Slice 3 Task 3B
 
-**This is not an NFR-RATE-1 re-measurement, and no number in this note may be read as
-one** (Ruling 42 §6, `docs/plans/2026-08-30-w11-reopen-scope-and-batch-frame-contract-
-rulings.md`). It does not run at 200 rps, it does not run on a dedicated host, and it does
-not arm Ruling 41 §4's 15 ms trigger. **NFR-RATE-1 stays measured and FAILING** — that
-verdict is unchanged by anything in this note, and `docs/audit/work/W11/README.md` §4's row
-and §6's carry-forward row are not edited by it (Ruling 39 §2 keeps the closure record as at
+**This is not an NFR-489 re-measurement, and no number in this note may be read as
+one** (RL-922 §6, `docs/rulings/RL-00922-the-remediation-is-ruled-into-the-reopen-a
+nd-nfr-489-s-verdict-is-ruled-out-of-it-they-are-two-different-things-and-the-record-must-not-merge-them.md`). It does not run at 200 rps, it does not run on a dedicated host, and it does
+not arm RL-921 §4's 15 ms trigger. **NFR-489 stays measured and FAILING** — that
+verdict is unchanged by anything in this note, and `docs/closures/CR-00927-work-item-record-wk-671-scoring.md` §4's row
+and §6's carry-forward row are not edited by it (RL-919 §2 keeps the closure record as at
 the close; the remediation is recorded in the appended reopen section instead).
 
-What this note measures is Ruling 41 §2's own predicate: after the fix, does a slot hit on
+What this note measures is RL-921 §2's own predicate: after the fix, does a slot hit on
 the freshly-read content hash actually skip the blob primary-key lookup, the object-store
-read and `Bundle.model_validate_json` — the three terms Ruling 41 §1 found dominate the
+read and `Bundle.model_validate_json` — the three terms RL-921 §1 found dominate the
 pre-fix path?
 
 ## Method
@@ -22,7 +22,7 @@ pre-fix path?
   `uv run python scripts/bench-compiled-for.py --calls 200`.
 - **Fixture.** One compiled Rating Version (`_minimal_algorithm`'s single-step graph — no
   GBM, no rate table pin), one workspace, `bundle_slot_capacity` left at its shipped
-  default of 1 — **not raised**; Ruling 41 §4 left it unset and its own code comment
+  default of 1 — **not raised**; RL-921 §4 left it unset and its own code comment
   requires a latency-harness measurement to raise it, which this note does not attempt.
 - **Two conditions, same run, same tree, same host:**
   - **hit** — one `BundleSlot`, pre-warmed by a first call (excluded from both
@@ -30,16 +30,16 @@ pre-fix path?
     is a genuine slot hit on a hash re-read from the version row on *that* call — never
     served from `slot.hash_for(ref)`'s memo of an earlier one.
   - **full path** — a fresh `BundleSlot()` per call, forcing a cold miss every time: the
-    path every request paid before Ruling 41 §2, and what a first-ever request to a worker
+    path every request paid before RL-921 §2, and what a first-ever request to a worker
     still pays today.
 - **Machine.** `x86_64`, 4 cores — a shared development machine, not a dedicated benchmark
   host. 1-minute load 2.16 at the time of the run.
-- **Tree.** `feat/w11-3b-batch-handler`, branched from `main` at `59407f2` (W11 Task 3A,
+- **Tree.** `feat/w11-3b-batch-handler`, branched from `main` at `59407f2` (WK-671 Task 3A,
   merged) — measured against this task's own commit, carrying the `_fetch_bundle`/
   `_compiled_for` change this note is about; not self-citable by its own hash, so named by
   branch and base rather than by a commit this run necessarily predates.
 - **Pass count.** One run of the script; each condition is 200 sequential calls within it.
-- **Ref cardinality.** One. Ruling 41 §4's own warning applies directly: *"with capacity 1
+- **Ref cardinality.** One. RL-921 §4's own warning applies directly: *"with capacity 1
   and more than one ref in play the slot thrashes and every request pays the full path"* —
   these numbers describe the single-ref workload measured, not a multi-tenant one.
 
@@ -53,15 +53,15 @@ pre-fix path?
 **Mean delta: 7.979 ms.** The hit condition is a version-row `SELECT` plus a slot lookup;
 the full-path condition adds the blob primary-key lookup, the object-store read and
 `Bundle.model_validate_json` on top of the identical `SELECT` — so the delta is
-attributable to exactly the three terms Ruling 41 §2 orders removed from the hot path on a
+attributable to exactly the three terms RL-921 §2 orders removed from the hot path on a
 hit, and the fact that it is removed at all (not merely reduced) is the property being
 tested, not the millisecond figure itself.
 
-**What this does not show.** It does not show NFR-RATE-1 passing — the fixture here carries
-no GBM call and no ~200-step graph, so it is not comparable to Ruling 41 §1's `_fetch_bundle`
-figures or to NFR-RATE-1's own budget at all. It does not show the fix helping at scale —
+**What this does not show.** It does not show NFR-489 passing — the fixture here carries
+no GBM call and no ~200-step graph, so it is not comparable to RL-921 §1's `_fetch_bundle`
+figures or to NFR-489's own budget at all. It does not show the fix helping at scale —
 that needs `bundle_slot_capacity` raised with its own evidence, and more than one ref, both
-explicitly out of scope here. It is a proof that the mechanism Ruling 41 §2 describes is the
+explicitly out of scope here. It is a proof that the mechanism RL-921 §2 describes is the
 mechanism actually running, on real code against a real (if minimal) compiled bundle and a
 real Postgres row — not a proof of any requirement.
 
@@ -69,6 +69,6 @@ real Postgres row — not a proof of any requirement.
 
 Filed alongside the code change (`backend/src/app/api/score.py`) and the two register-row
 corrections (F50, `backend/src/app/platform/bundle_slot.py`'s docstring; F51, a dated
-annotation on `docs/research/w11-task-2d-nfr-rate-1-full-path.md`) that Ruling 42 §7 assigns
-to the same task. The requirement re-measurement Ruling 41 §4 names — a dedicated host, more
-than one pass, `bundle_slot_capacity` set from its own evidence — remains W14's.
+annotation on `docs/research/w11-task-2d-nfr-rate-1-full-path.md`) that RL-922 §7 assigns
+to the same task. The requirement re-measurement RL-921 §4 names — a dedicated host, more
+than one pass, `bundle_slot_capacity` set from its own evidence — remains WK-674's.

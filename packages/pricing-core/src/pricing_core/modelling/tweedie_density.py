@@ -1,6 +1,6 @@
 """The Tweedie series density for 1 < p < 2 (Dunn & Smyth 2005).
 
-FR-MODEL-22's estimate is the argmax of the profile log-likelihood
+FR-114's estimate is the argmax of the profile log-likelihood
 `L(p) = sum_i w_i log f(y_i; mu_i(p), phi_hat(p), p)`, so the density `f` is the whole
 point of the mechanism: the deviance `glum` reports is not a likelihood profile for
 Tweedie — the saturated-model term and the p-dependent normaliser do not cancel out of

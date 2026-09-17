@@ -1,4 +1,4 @@
-"""Persisting and reading model diagnostics (`02` FR-MODEL-49, §4, §5.1).
+"""Persisting and reading model diagnostics (`02` FR-170, §4, §5.1).
 
 Diagnostics are written **in the transaction that marks the model fitted**, not after it.
 `02` §4.8 makes `diagnostics_id` a condition of `status >= fitted`, so two transactions
@@ -44,7 +44,7 @@ def to_diagnostics(row: DiagnosticsRow) -> Diagnostics:
 async def load_diagnostics(
     session: AsyncSession, *, workspace_id: UUID, model_id: UUID
 ) -> Diagnostics:
-    """The diagnostics for one model, or a `404` that says which model (FR-MODEL-49)."""
+    """The diagnostics for one model, or a `404` that says which model (FR-170)."""
     row = (
         await session.execute(
             select(DiagnosticsRow).where(

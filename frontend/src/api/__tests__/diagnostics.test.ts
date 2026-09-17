@@ -59,7 +59,7 @@ describe("partitions", () => {
 });
 
 describe("weightingLabel", () => {
-  it("names each weighting in the words FR-MODEL-55 asks the UI to use", () => {
+  it("names each weighting in the words FR-184 asks the UI to use", () => {
     expect(weightingLabel("exposure")).toBe("exposure-weighted");
     expect(weightingLabel("claim_count")).toBe("claim-count-weighted");
     expect(weightingLabel("count")).toBe("unweighted (row count)");

@@ -1,10 +1,10 @@
 """modelling: custom objectives and their certificates
 
-`02` §4.5/§4.7, FR-MODEL-38..47. A Custom Objective is a named, versioned loss a Model Spec
+`02` §4.5/§4.7, FR-142, FR-143, FR-144, FR-145, FR-146, FR-152, FR-153, FR-154, FR-163, FR-164. A Custom Objective is a named, versioned loss a Model Spec
 references by name, so the row is shaped like `peril_structures` — slug, version, lifecycle,
 approval request — rather than like `diagnostics`, which is only ever reached by id.
 
-**The definition is frozen at insert, by trigger.** FR-MODEL-46 says editing an approved
+**The definition is frozen at insert, by trigger.** FR-163 says editing an approved
 objective creates a new version needing fresh certification; the trigger is what makes that
 true of the *database* rather than only of the service. A model fitted in March resolves
 `custom_objective:capped-gamma@2` and must get the loss it was fitted under — an `UPDATE`
@@ -13,7 +13,7 @@ model row would change to show it.
 
 Only the lifecycle columns move: `status`, `certificate_id`, `approval_request_id`.
 
-`objective_certificates` is **insert-only at the privilege layer** (FR-DATA-42), like
+`objective_certificates` is **insert-only at the privilege layer** (FR-43), like
 `transparency_artifacts`: `06` §4.2 makes it the required evidence for the approval, and
 evidence that can change after the decision is not evidence.
 
@@ -49,7 +49,7 @@ BEGIN
      OR NEW.hessian_strategy IS DISTINCT FROM OLD.hessian_strategy
      OR NEW.hessian_min IS DISTINCT FROM OLD.hessian_min THEN
     RAISE EXCEPTION
-      'a Custom Objective''s definition is immutable (02 FR-MODEL-46): % rejected', TG_OP
+      'a Custom Objective''s definition is immutable (02 FR-163): % rejected', TG_OP
       USING ERRCODE = 'insufficient_privilege',
             HINT = 'Create the next version and certify it. Every Model Spec citing '
                    'custom_objective:<slug>@<version> resolves to this row, so editing '
@@ -64,9 +64,9 @@ $fn$ LANGUAGE plpgsql;
 CERTIFIED_UNDELETABLE = """
 CREATE OR REPLACE FUNCTION custom_objectives_undeletable() RETURNS trigger AS $fn$
 BEGIN
-  RAISE EXCEPTION 'a Custom Objective cannot be deleted (02 FR-MODEL-47)'
+  RAISE EXCEPTION 'a Custom Objective cannot be deleted (02 FR-164)'
     USING ERRCODE = 'insufficient_privilege',
-          HINT = 'Deprecate it. FR-MODEL-47 is the blast-radius query, and it can only '
+          HINT = 'Deprecate it. FR-164 is the blast-radius query, and it can only '
                  'answer "which models used this loss?" while the row is still there.';
   RETURN OLD;
 END;

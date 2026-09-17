@@ -18,7 +18,7 @@
         "w_profit": {"type": "number", "minimum": 0, "maximum": 1},
         "w_volume": {"type": "number", "minimum": 0, "maximum": 1},
         "profit_definition": {"type": "string", "minLength": 1,
-          "description": "Declared explicitly per run, never assumed (FR-OPT-9)."}
+          "description": "Declared explicitly per run, never assumed (FR-285)."}
       }
     },
     "decision_variable": {
@@ -43,7 +43,7 @@
       "properties": {
         "conversion": {"$ref": "common/artifact-ref.schema.json"},
         "retention": {"$ref": "common/artifact-ref.schema.json"},
-        "price_term": {"type": "string", "description": "Required on every demand model (FR-OPT-1)."}
+        "price_term": {"type": "string", "description": "Required on every demand model (FR-277)."}
       }
     },
     "constraints": {
@@ -86,7 +86,7 @@
         "iterations": {"type": "integer", "minimum": 0},
         "seconds": {"type": "number", "minimum": 0}
       },
-      "description": "A non-converged run cannot be materialised without acknowledgement (FR-OPT-17)."
+      "description": "A non-converged run cannot be materialised without acknowledgement (FR-293)."
     },
     "result": {
       "type": ["object", "null"],
@@ -107,7 +107,7 @@
               "segments_at_bound": {"type": "integer", "minimum": 0}
             }
           },
-          "description": "Every constraint reports binding or slack (04 R2, FR-OPT-12)."
+          "description": "Every constraint reports binding or slack (04 R2, FR-288)."
         },
         "proposals": {"type": "array", "items": {"type": "object"}},
         "efficient_frontier": {"type": "array", "items": {"type": "object"}},

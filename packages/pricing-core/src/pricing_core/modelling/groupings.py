@@ -2,18 +2,18 @@
 
 A grouping is the most consequential edit an actuary makes to a factor and the easiest one
 to make invisibly — fifty vehicle groups become eight, every relativity moves, and the
-model still fits. FR-MODEL-15 is the counterweight: the artifact carries the **change in
+model still fits. FR-107 is the counterweight: the artifact carries the **change in
 fit** the merge implies, so the decision is defensible as a decision.
 
-* **FR-MODEL-13** — exhaustive over observed Levels, with `unseen_level_behaviour`
+* **FR-104** — exhaustive over observed Levels, with `unseen_level_behaviour`
   mandatory. The mandatory part is enforced at the type (`Grouping` has no default);
   exhaustiveness is enforced here, against the version being fitted.
-* **FR-MODEL-14** — `credibility_weighted`, `hierarchical_clustering` and `tree` are
-  implemented; `tree` since FR-MODEL-85 (OQ-MODEL-9, decided 2026-08-17).
+* **FR-105** — `credibility_weighted`, `hierarchical_clustering` and `tree` are
+  implemented; `tree` since FR-103 (OQ-583, decided 2026-08-17).
   `reference_hierarchy` is refused by name, for the reason the refusal gives.
-* **FR-MODEL-15** — the evidence: source and target level counts, Poisson deviance before
+* **FR-107** — the evidence: source and target level counts, Poisson deviance before
   and after, degrees of freedom saved, and the likelihood-ratio p-value.
-* **FR-MODEL-80** — both credibility theories OQ-MODEL-5 decided on (2026-08-15):
+* **FR-106** — both credibility theories OQ-579 decided on (2026-08-15):
   `limited_fluctuation` (the default) and `buhlmann_straub`, chosen per grouping in
   `method_params` and differing **only** in `Z`. Bühlmann-Straub persists its variance
   components — EVPV, VHM and `k` — in the evidence, so a reviewer re-derives `Z` rather
@@ -56,7 +56,7 @@ def _full_credibility_claims(p: float, k: float) -> float:
     """The claim count at which a Poisson estimate is within ±`k` with probability `p`.
 
     `(z_{(1+p)/2} / k)²` — 1 082 at the classical `p = 0.90, k = 0.05`. **Derived, not
-    tabulated**: FR-MODEL-80 stores the `(p, k)` pair beside the count precisely so a
+    tabulated**: FR-106 stores the `(p, k)` pair beside the count precisely so a
     reviewer can check one against the other, and a hard-coded 1 082 sitting next to a
     stored `(0.99, 0.01)` would be exactly the unattributable number the requirement
     objects to.
@@ -67,7 +67,7 @@ def _full_credibility_claims(p: float, k: float) -> float:
 def _buhlmann_straub_components(
     source: tuple[OneWayRow, ...], *, column: str
 ) -> dict[str, float]:
-    """EVPV, VHM and `k` for Buhlmann-Straub credibility on claim frequency (FR-MODEL-80).
+    """EVPV, VHM and `k` for Buhlmann-Straub credibility on claim frequency (FR-106).
 
     Each Level `i` is one risk, observed once: its weight `m_i` is exposure years and its
     observation `X_i` is the frequency `claim_count / m_i` — **the same rate limited
@@ -109,7 +109,7 @@ def _buhlmann_straub_components(
             f"Buhlmann-Straub separates within-level from between-level variance and needs "
             f"at least two levels of {column!r} carrying exposure to do it; this version "
             f"has {len(rows)}. `limited_fluctuation` estimates nothing between levels and "
-            "remains available (FR-MODEL-80).",
+            "remains available (FR-106).",
         )
 
     weights = np.asarray([float(row.exposure_years) for row in rows], dtype=np.float64)
@@ -121,7 +121,7 @@ def _buhlmann_straub_components(
             "CREDIBILITY_VARIANCE_NOT_ESTIMABLE",
             f"{column!r} carries no claims on this version, so the Poisson process variance "
             "E[lambda(Theta)] is zero and Buhlmann-Straub's `k = s²/a` is 0/0. That is an "
-            "absent credibility, not a small one (FR-MODEL-80).",
+            "absent credibility, not a small one (FR-106).",
         )
 
     between = float((weights * (observed - evpv) ** 2).sum())
@@ -131,7 +131,7 @@ def _buhlmann_straub_components(
             "CREDIBILITY_VARIANCE_NOT_ESTIMABLE",
             f"one level of {column!r} holds effectively all of the exposure, so the "
             "between-level estimator's scale `m_dot - Sum m_i²/m_dot` collapses to zero and "
-            "VHM is undefined. There is no second risk to be different from (FR-MODEL-80).",
+            "VHM is undefined. There is no second risk to be different from (FR-106).",
         )
 
     vhm = (between - (len(rows) - 1) * evpv) / scale
@@ -145,7 +145,7 @@ def _buhlmann_straub_components(
             "record a credibility nobody computed, and `grouping.schema.json` gives `k` "
             "`exclusiveMinimum: 0` for that reason. Re-run with `limited_fluctuation`, "
             "which needs no between-level estimate, or group a column that carries signal "
-            "(FR-MODEL-80).",
+            "(FR-106).",
         )
     return {"evpv": evpv, "vhm": vhm, "k": evpv / vhm}
 
@@ -157,10 +157,10 @@ def propose_grouping(
     dataset_id: UUID,
     slug: str,
 ) -> Grouping:
-    """Propose a mapping of source Levels to target Levels (FR-MODEL-14).
+    """Propose a mapping of source Levels to target Levels (FR-105).
 
     As with `propose_banding`, identity is the platform's to allocate, so `dataset_id` and
-    `slug` arrive as arguments. The mapping comes back **editable**: FR-MODEL-14 says
+    `slug` arrive as arguments. The mapping comes back **editable**: FR-105 says
     manual override is always available, which is only true if the proposal is a draft.
     """
     if proposal.method is GroupingMethod.MANUAL:
@@ -173,7 +173,7 @@ def propose_grouping(
         raise GroupingError(
             "GROUPING_NOT_EXHAUSTIVE",
             "`reference_hierarchy` rolls levels up through a Reference Table (`01` "
-            "FR-DATA-30), which `pricing-core` cannot read — ADR-0001 keeps the database "
+            "FR-70), which `pricing-core` cannot read — ADR-703 keeps the database "
             "out of this package. It arrives as a platform-side proposal that supplies the "
             "hierarchy as data.",
         )
@@ -181,7 +181,7 @@ def propose_grouping(
     if proposal.column not in frame.columns:
         raise FactorResolutionError(
             f"cannot group {proposal.column!r}: this dataset version does not have it "
-            "(FR-MODEL-2)."
+            "(FR-87)."
         )
 
     summary = one_way(
@@ -240,9 +240,9 @@ def propose_grouping(
             # The source summary is already in hand. Recomputing it cost **four seconds**
             # on a 10 000-level column — a `one_way` at that width spends its time in
             # per-level scipy interval quantiles, and doing it twice was most of the
-            # proposal's wall-clock (NFR-MODEL-3).
+            # proposal's wall-clock (NFR-477).
             source=source,
-            # Which theory ran, so the evidence can carry FR-MODEL-80's variance
+            # Which theory ran, so the evidence can carry FR-106's variance
             # components. `grouping_evidence` re-derives them from the same `source` rows
             # `_credibility_weighted` shrank on, so the recorded `k` is the one that
             # produced the mapping rather than a second estimate of it.
@@ -276,7 +276,7 @@ def _method_params(proposal: GroupingProposal) -> dict[str, object]:
         # to nothing else. Bühlmann-Straub derives no full-credibility standard, so writing
         # `(0.90, 0.05)` — the proposal's defaults, which it never reads — onto a
         # `buhlmann_straub` artifact would record a standard that did not run, which is the
-        # failure FR-MODEL-80 exists to prevent. Its variance components go in the evidence.
+        # failure FR-106 exists to prevent. Its variance components go in the evidence.
         if proposal.credibility_model is CredibilityModel.LIMITED_FLUCTUATION:
             params["credibility_pk"] = {
                 "p": proposal.credibility_p,
@@ -319,7 +319,7 @@ def _relativity(row: OneWayRow) -> float | None:
 def _credibility_weighted(
     source: tuple[OneWayRow, ...], proposal: GroupingProposal
 ) -> list[list[OneWayRow]]:
-    """Merge Levels whose credibility-adjusted rates are within a tolerance (FR-MODEL-14).
+    """Merge Levels whose credibility-adjusted rates are within a tolerance (FR-105).
 
     Each level's observed **frequency** — claim count per exposure year, `_relativity` — is
     shrunk toward the portfolio frequency, and the levels are then swept in shrunk-rate
@@ -329,8 +329,8 @@ def _credibility_weighted(
     Shrinkage before merging is the whole point: without it, a level with three claims has a
     rate estimated to ±60 % and is merged — or not — on noise.
 
-    Which `Z` does the shrinking is FR-MODEL-80's recorded choice, and the two theories
-    differ **only** there (OQ-MODEL-5, decided 2026-08-15):
+    Which `Z` does the shrinking is FR-106's recorded choice, and the two theories
+    differ **only** there (OQ-579, decided 2026-08-15):
 
     * `limited_fluctuation` (the default, and what a UK GI reviewer expects to see) —
       `Z = sqrt(min(n / n_full, 1))` on the level's **claim count**, against a
@@ -404,7 +404,7 @@ def _credibility_weighted(
 def _hierarchical(
     source: tuple[OneWayRow, ...], proposal: GroupingProposal
 ) -> list[list[OneWayRow]]:
-    """Ward clustering on the observed rate, exposure-weighted (FR-MODEL-14).
+    """Ward clustering on the observed rate, exposure-weighted (FR-105).
 
     The weighting is what makes it actuarial rather than merely geometric: a level holding
     0.1 % of the exposure should not pull a cluster boundary as hard as one holding 20 %.
@@ -457,7 +457,7 @@ def _hierarchical(
     if zero_exposure:
         # A level nobody was exposed to has no rate to cluster on. It joins the largest
         # cluster rather than forming one of its own, which would be a target level with no
-        # data behind it — FR-MODEL-11's objection, in the grouping direction.
+        # data behind it — FR-100's objection, in the grouping direction.
         clusters[_largest_cluster(clusters)].extend(zero_exposure)
     return clusters
 
@@ -465,7 +465,7 @@ def _hierarchical(
 def _tree(
     source: tuple[OneWayRow, ...], proposal: GroupingProposal
 ) -> list[list[OneWayRow]]:
-    """Merge Levels by a depth-limited regression tree on the observed rate (FR-MODEL-85).
+    """Merge Levels by a depth-limited regression tree on the observed rate (FR-103).
 
     Each Level is one observation, target-encoded by its own rate, weighted by its
     exposure; the tree's leaves become the target Levels. On a single sorted feature the
@@ -476,7 +476,7 @@ def _tree(
     It is a genuinely different method from Ward linkage rather than a second spelling of
     it: the tree partitions greedily to minimise weighted squared error under a leaf-count
     budget, where Ward merges agglomeratively. On the same column they routinely disagree,
-    which is why FR-MODEL-14 names both and why substituting one for the other was refused.
+    which is why FR-105 names both and why substituting one for the other was refused.
     """
     from sklearn.tree import DecisionTreeRegressor
 
@@ -517,13 +517,13 @@ def _tree(
 
     if zero_exposure:
         # Same rule as `_hierarchical`: a level nobody was exposed to has no rate to split
-        # on, and a target level with no data behind it is FR-MODEL-11's objection.
+        # on, and a target level with no data behind it is FR-100's objection.
         clusters[_largest_cluster(clusters)].extend(zero_exposure)
     return clusters
 
 
 def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
-    """Map a column's Levels onto their target Levels (FR-MODEL-13).
+    """Map a column's Levels onto their target Levels (FR-104).
 
     Unseen levels follow the declared behaviour, and `error` names them — the behaviour is
     mandatory precisely so that the silent case does not exist.
@@ -548,7 +548,7 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
             raise FactorResolutionError(
                 f"grouping {grouping.slug!r} met level(s) {unseen[:10]} in "
                 f"{grouping.column!r} that it does not map, and its unseen-level behaviour "
-                "is `error` (FR-MODEL-13). Re-derive the grouping on this version, or "
+                "is `error` (FR-104). Re-derive the grouping on this version, or "
                 "declare where an unknown level should go."
             )
         fallback = (
@@ -576,7 +576,7 @@ def grouping_evidence(
     source: tuple[OneWayRow, ...] | None = None,
     credibility_model: CredibilityModel | None = None,
 ) -> GroupingEvidence:
-    """What the merge cost, in deviance and degrees of freedom (FR-MODEL-15).
+    """What the merge cost, in deviance and degrees of freedom (FR-107).
 
     Poisson deviance of the observed claim counts against the fitted cell means, before
     (one mean per source level) and after (one per target level). The difference is a
@@ -591,7 +591,7 @@ def grouping_evidence(
     the only way this function can know: it receives a mapping, not a `Grouping`. Under
     `buhlmann_straub` the evidence gains `credibility_components` — EVPV, VHM and `k`,
     **re-derived here from the same source rows the merge shrank on**, so a reviewer can
-    recompute every `Z = m / (m + k)` rather than take it (FR-MODEL-80). It stays `None`
+    recompute every `Z = m / (m + k)` rather than take it (FR-106). It stays `None`
     under `limited_fluctuation`, which estimates no variance components, and `None` for a
     grouping that used no credibility model at all.
     """

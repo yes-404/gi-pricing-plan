@@ -1,14 +1,14 @@
-"""What `POST /models/{id}/predict` answers (`02` FR-MODEL-62/63/77/93, §5.1).
+"""What `POST /models/{id}/predict` answers (`02` FR-193/194/198/195, §5.1).
 
 Not a persisted artifact. `Diagnostics`, `Backtest` and `ModelComparison` are measurements
 the platform keeps and an approval cites; a prediction is a question asked and answered at
 dev/debug scale, and `03-rating-engine.md` owns the production path. It lives in
-`model-schema` all the same, because it crosses the API boundary and ADR-0002 admits no
+`model-schema` all the same, because it crosses the API boundary and ADR-704 admits no
 second definition of a shape that does.
 
 **The uncertainty block is the point of this module, and its name is load-bearing.**
 
-FR-MODEL-63 asks for "GLM prediction intervals from the covariance matrix". Those are two
+FR-194 asks for "GLM prediction intervals from the covariance matrix". Those are two
 different quantities and the covariance matrix yields only the first of them:
 
 * `x'Vx` is the sampling variance of the estimated linear predictor, so
@@ -21,13 +21,13 @@ different quantities and the covariance matrix yields only the first of them:
 
 Pricing reads the expectation, so the useful uncertainty is the one on the expectation, and
 this module reports it under that name: `UncertaintyKind.CONFIDENCE_INTERVAL_MEAN`, never
-`prediction_interval`. FR-MODEL-77 already refuses a GBM variance-model approximation on
+`prediction_interval`. FR-198 already refuses a GBM variance-model approximation on
 exactly this reasoning — *it renders as a predictive interval and is not one* — and a
 correctly-computed interval carrying the wrong name fails the same test one step later, in
 the reader rather than in the arithmetic.
 
-**Absence is typed, never implied by a null.** Three of `02`'s reasons are FR-MODEL-77's
-GBM vocabulary and one is FR-MODEL-93's, and a caller that receives no interval is told
+**Absence is typed, never implied by a null.** Three of `02`'s reasons are FR-198's
+GBM vocabulary and one is FR-195's, and a caller that receives no interval is told
 which of them applies rather than left to guess whether the model has no uncertainty or the
 platform declined to compute it.
 """
@@ -52,15 +52,15 @@ __all__ = [
 
 
 class UncertaintyBasis(enum.StrEnum):
-    """What the covariance matrix behind an interval actually is (FR-MODEL-99).
+    """What the covariance matrix behind an interval actually is (FR-197).
 
     `UncertaintyKind` says which *quantity* the interval covers; this says what the matrix
     it came from **is**, which for a penalised fit is not the matrix the estimate deserves.
 
-    One vocabulary for both halves of `02`'s uncertainty, deliberately: FR-MODEL-21's
-    coefficient standard errors and FR-MODEL-63's interval are read off the same `V`, so a
+    One vocabulary for both halves of `02`'s uncertainty, deliberately: FR-113's
+    coefficient standard errors and FR-194's interval are read off the same `V`, so a
     qualification that applied to one and not the other would be describing a matrix that
-    does not exist (OQ-MODEL-14, decided 2026-08-18).
+    does not exist (OQ-586, decided 2026-08-18).
     """
 
     #: An unpenalised fit (`alpha == 0`): the model-based information matrix, and the
@@ -73,7 +73,7 @@ class UncertaintyBasis(enum.StrEnum):
     #: the interval is the one an unpenalised fit of the same design would earn, so it is
     #: **wider** than the shrunk estimate warrants — which makes it conservative and still
     #: wrong. With `l1_ratio > 0` it additionally ignores that the penalty *selected* the
-    #: terms; the member is the same because the remedy is (FR-MODEL-99's bootstrap).
+    #: terms; the member is the same because the remedy is (FR-197's bootstrap).
     UNPENALISED_INFORMATION_MATRIX = "unpenalised_information_matrix"
 
 
@@ -84,59 +84,59 @@ class UncertaintyKind(enum.StrEnum):
     reads is the claim the platform is making about the number beside it.
     """
 
-    #: `g⁻¹(η̂ ± z·√(x'Vx))` — a confidence interval for `E[Y|x]` (FR-MODEL-63).
+    #: `g⁻¹(η̂ ± z·√(x'Vx))` — a confidence interval for `E[Y|x]` (FR-194).
     CONFIDENCE_INTERVAL_MEAN = "confidence_interval_mean"
     #: A paired-quantile interval on `Y` itself, from two Models fitted with the `quantile`
-    #: template (FR-MODEL-78, FR-MODEL-101; OQ-MODEL-16, decided 2026-08-19).
+    #: template (FR-199, FR-201; OQ-588, decided 2026-08-19).
     #:
     #: **Not** `confidence_interval_mean`, which covers `E[Y|x]` and is a much narrower
-    #: claim; **not** FR-MODEL-98's reserved `prediction_interval`, which names a `φ·V(μ)`
+    #: claim; **not** FR-196's reserved `prediction_interval`, which names a `φ·V(μ)`
     #: computation over aggregates and whose trigger would be left with no name to fire
     #: into if this took it. The value names the *estimator* as well as the quantity,
     #: because a reader comparing a GBM's bound with a GLM's must be able to see that they
     #: are not the same kind of claim.
     QUANTILE_PAIR_INTERVAL = "quantile_pair_interval"
-    #: No interval, with a `reason` (FR-MODEL-77, FR-MODEL-93). `02` R5 is satisfied by
+    #: No interval, with a `reason` (FR-198, FR-195). `02` R5 is satisfied by
     #: saying so, and only by saying so.
     UNAVAILABLE = "unavailable"
 
 
 class UnavailableReason(enum.StrEnum):
-    """Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's
-    and FR-MODEL-124's.
+    """Why a prediction carries no interval — FR-198's vocabulary, plus FR-195's
+    and FR-180's.
 
-    **All four of FR-MODEL-77's and FR-MODEL-93's are reachable from 2026-08-19**
-    (FR-MODEL-100, the paired-quantile slice); the fifth, `MODEL_TYPE_HAS_NO_INTERVAL`,
-    arrives with the EBM predict arm on 2026-08-23 (FR-MODEL-124).
+    **All four of FR-198's and FR-195's are reachable from 2026-08-19**
+    (FR-200, the paired-quantile slice); the fifth, `MODEL_TYPE_HAS_NO_INTERVAL`,
+    arrives with the EBM predict arm on 2026-08-23 (FR-180).
     Two of them — `INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` — were declared
-    here and returned by nothing until that slice, named in place under FR-MODEL-87's
+    here and returned by nothing until that slice, named in place under FR-207's
     staging rule. That note is removed with the state it described rather than left
     describing a platform which has moved on.
 
-    What those two *mean* was not decided by FR-MODEL-77, which named them and stopped.
-    FR-MODEL-100 decides both, as requirements rather than as implementation choices,
+    What those two *mean* was not decided by FR-198, which named them and stopped.
+    FR-200 decides both, as requirements rather than as implementation choices,
     because each had two defensible readings and the built one is the one a reader will
     assume was specified.
     """
 
-    #: FR-MODEL-77. No paired quantile models (FR-MODEL-78) exist for this model.
+    #: FR-198. No paired quantile models (FR-199) exist for this model.
     NO_INTERVAL_MODELS_FITTED = "no_interval_models_fitted"
-    #: FR-MODEL-77 / FR-MODEL-100(ii). The pair exists but is less reviewed than the model
+    #: FR-198 / FR-200(ii). The pair exists but is less reviewed than the model
     #: it bounds — an approved Model would otherwise quote an unreviewed number beside a
     #: reviewed one. Not "unapproved outright": that reading would make the feature unusable
     #: at exactly the point an actuary is deciding whether the bounds are any good.
     INTERVAL_MODELS_NOT_APPROVED = "interval_models_not_approved"
-    #: FR-MODEL-77 / FR-MODEL-100(iii). The central Model is `superseded`. It stays
+    #: FR-198 / FR-200(iii). The central Model is `superseded`. It stays
     #: scoreable, so its bounds are quotable — and quoting them without saying the family
-    #: has moved past this version is the silence FR-MODEL-77 exists to refuse.
+    #: has moved past this version is the silence FR-198 exists to refuse.
     INTERVAL_MODELS_STALE = "interval_models_stale"
-    #: FR-MODEL-93. A GLM whose fit predates the covariance blob. Distinct from the GBM
+    #: FR-195. A GLM whose fit predates the covariance blob. Distinct from the GBM
     #: reasons because nothing about this model makes an interval impossible — the inputs
     #: to one were not kept, and cannot be recovered from an artifact holding `p` numbers
     #: where the matrix is `p x p`. A blob that *should* exist and does not is a platform
     #: fault and surfaces as one; it is not this reason.
     COVARIANCE_NOT_STORED = "covariance_not_stored"
-    #: FR-MODEL-124. An EBM. Not "no pair was fitted" (FR-MODEL-77) — `interval_for` lives
+    #: FR-180. An EBM. Not "no pair was fitted" (FR-198) — `interval_for` lives
     #: on `GbmSpec` and an EBM cannot have one, so that reason would tell a reader to do
     #: something the schema forbids. Not `covariance_not_stored` either: there is no matrix
     #: that was not kept. An EBM is a sum of exported lookup tables and the tables are the
@@ -146,7 +146,7 @@ class UnavailableReason(enum.StrEnum):
 
 
 class IntervalModels(BaseModel):
-    """The two Models a quantile-pair interval was computed from (FR-MODEL-78).
+    """The two Models a quantile-pair interval was computed from (FR-199).
 
     Carried on the response because the bounds cost the actuary two extra fits and are
     Models in their own right — a reader who wants to know how the interval was made should
@@ -183,10 +183,10 @@ class Uncertainty(BaseModel):
     #: `Coefficient.ci_95`: an interval on a prediction and an interval on the coefficient
     #: it came from reported at different levels is a comparison nobody can make.
     level: float | None = Field(default=None, gt=0.0, lt=1.0)
-    #: What the matrix behind the interval is (FR-MODEL-99). Required alongside a `level`
+    #: What the matrix behind the interval is (FR-197). Required alongside a `level`
     #: and forbidden without one, by the same validator and for the same reason: an
     #: interval whose basis is unstated is one a reader will assume is exact, and for a
-    #: penalised fit that assumption is the defect OQ-MODEL-14 was raised about.
+    #: penalised fit that assumption is the defect OQ-586 was raised about.
     basis: UncertaintyBasis | None = None
     #: The two Models behind a quantile-pair interval. Required exactly when `kind` is
     #: `quantile_pair_interval` and forbidden otherwise, by the validator below.
@@ -245,13 +245,13 @@ class Uncertainty(BaseModel):
                     f"a quantile-pair interval carries basis={self.basis!r}. "
                     "`UncertaintyBasis` describes a covariance matrix, and a pair of "
                     "quantile fits has none — stating one would claim inference this "
-                    "interval did not do (FR-MODEL-101)."
+                    "interval did not do (FR-201)."
                 )
             if self.interval_models is None:
                 raise ValueError(
                     "a quantile-pair interval names no models. The bounds cost two extra "
                     "fits and are Models in their own right, so a reader must be able to "
-                    "reach them (FR-MODEL-78)."
+                    "reach them (FR-199)."
                 )
             spread = self.interval_models.upper_alpha - self.interval_models.lower_alpha
             if abs(spread - self.level) > 1e-9:
@@ -266,7 +266,7 @@ class Uncertainty(BaseModel):
 
         if self.basis is None:
             raise ValueError(
-                f"uncertainty is {self.kind!r} with no basis. FR-MODEL-99: an interval read "
+                f"uncertainty is {self.kind!r} with no basis. FR-197: an interval read "
                 "off a penalised fit's covariance matrix is not the interval that fit "
                 "deserves, and a response that does not say which matrix it used leaves the "
                 "reader to assume the flattering one."
@@ -289,7 +289,7 @@ class PredictedRow(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: `μ = g⁻¹(η)` on the response scale, offset included (FR-MODEL-62).
+    #: `μ = g⁻¹(η)` on the response scale, offset included (FR-193).
     expected: float
     lower: float | None = None
     upper: float | None = None
@@ -318,7 +318,7 @@ class PredictedRow(BaseModel):
 
 
 class Prediction(BaseModel):
-    """The response to `POST /models/{id}/predict` (FR-MODEL-62, §5.1).
+    """The response to `POST /models/{id}/predict` (FR-193, §5.1).
 
     Carries the model it came from by id *and* by family/version, because a prediction
     pasted into a review is unreadable without knowing which version produced it, and the

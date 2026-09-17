@@ -3,7 +3,7 @@
 A Model answers one question about one peril. A **Peril Structure** is the declarative
 composition that turns a set of them into a risk premium — and it is what
 `03-rating-engine.md` references, precisely so that a Rating Version cites one auditable
-object rather than a scatter of individual models (FR-MODEL-61).
+object rather than a scatter of individual models (FR-191).
 
 Four things §4.10's example does not say, decided here and recorded in the spec with the
 same date:
@@ -12,22 +12,22 @@ same date:
   beside the numbers they follow from. Two statements of one fact disagree eventually, and
   this one is the evidence an approval cites — the same correction §4.9's `kinds` already
   carries.
-* **The total is the sum of the per-peril figures, and that is checked.** FR-MODEL-58 sums
+* **The total is the sum of the per-peril figures, and that is checked.** FR-188 sums
   over perils; a total that is not the sum is a third number nobody can source. The
-  per-peril breakdown is also where FR-MODEL-74's treatment is stated, which is why it is
+  per-peril breakdown is also where FR-128's treatment is stated, which is why it is
   required rather than decorative.
-* **Every treatment but `none` carries its calibration evidence.** FR-MODEL-59 says
+* **Every treatment but `none` carries its calibration evidence.** FR-189 says
   "whatever is chosen is recorded with its calibration evidence"; a restoration loading of
   1.043 with nothing behind it asks an approver to accept a number because it is written
   down.
 * **A structure has a lifecycle of its own**, and `draft → review` is not an edge in it.
-  FR-MODEL-61 makes the structure approvable and FR-MODEL-60 makes the reconciliation its
+  FR-191 makes the structure approvable and FR-190 makes the reconciliation its
   evidence, so a structure reaching an approver without one is not a state to refuse later —
   it is a state with no edge into it. `VALID_MODEL_TRANSITIONS` reached the same shape from
   the same argument about diagnostics.
 
 **`separate_model` and `flat_loading` are contract-level from the start and computed by
-nothing yet** (`pricing_core.modelling.perils` refuses them by name). FR-MODEL-59 names all
+nothing yet** (`pricing_core.modelling.perils` refuses them by name). FR-189 names all
 four kinds, and an enum admitting two of them would be a second contract change the day an
 excess-layer model exists.
 """
@@ -71,14 +71,14 @@ PerilCode = Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{0,31}$")]
 
 
 class PerilMethod(enum.StrEnum):
-    """FR-MODEL-58's two routes to a peril's cost."""
+    """FR-188's two routes to a peril's cost."""
 
     FREQUENCY_SEVERITY = "frequency_severity"
     BURNING_COST = "burning_cost"
 
 
 class LargeLossKind(enum.StrEnum):
-    """FR-MODEL-59's four treatments."""
+    """FR-189's four treatments."""
 
     NONE = "none"
     CAPPED = "capped"
@@ -92,7 +92,7 @@ class ReconciliationStatus(enum.StrEnum):
 
 
 class PerilStructureStatus(enum.StrEnum):
-    """The structure's own lifecycle (FR-MODEL-61).
+    """The structure's own lifecycle (FR-191).
 
     `reconciled` is this artifact's `fitted`: the state in which its evidence exists.
     """
@@ -105,16 +105,16 @@ class PerilStructureStatus(enum.StrEnum):
     ARCHIVED = "archived"
 
 
-#: FR-MODEL-61's lifecycle, as data. Mirrors `VALID_MODEL_TRANSITIONS` deliberately — the
-#: two artifacts are approved by the same machine (`06` FR-GOV-9), and a lifecycle that
+#: FR-191's lifecycle, as data. Mirrors `VALID_MODEL_TRANSITIONS` deliberately — the
+#: two artifacts are approved by the same machine (`06` FR-351), and a lifecycle that
 #: differed without a reason would be a second set of rules to learn.
 #:
 #: * **`draft → review` does not exist** — see the module docstring.
-#: * **`review → reconciled`, never `review → draft`.** `06` FR-GOV-13 returns a
+#: * **`review → reconciled`, never `review → draft`.** `06` FR-355 returns a
 #:   `changes_requested` artifact to `draft`; here that would claim the reconciliation had
 #:   been withdrawn, when what was questioned is the composition it measured.
 #: * **`approved → archived` does not exist.** An approved structure is a Rating Version's
-#:   referent (FR-MODEL-61); archiving it removes the referent while naming no replacement.
+#:   referent (FR-191); archiving it removes the referent while naming no replacement.
 VALID_PERIL_STRUCTURE_TRANSITIONS: Final[
     dict[PerilStructureStatus, frozenset[PerilStructureStatus]]
 ] = {
@@ -139,7 +139,7 @@ TERMINAL_PERIL_STRUCTURE_STATUSES: Final[frozenset[PerilStructureStatus]] = froz
 
 
 class LargeLossTreatment(BaseModel):
-    """FR-MODEL-59 — how large losses are handled for one peril.
+    """FR-189 — how large losses are handled for one peril.
 
     Modelled as one type with a `kind` discriminator and per-kind requirements rather than
     four types in a union: the four share `evidence_blob`, every caller reads `kind` first,
@@ -154,7 +154,7 @@ class LargeLossTreatment(BaseModel):
     cap_minor: MoneyMinor | None = None
     restoration_loading: DecimalStr | None = Field(
         default=None,
-        description="Multiplier restoring the capped mean. Never below 1 (FR-MODEL-59).",
+        description="Multiplier restoring the capped mean. Never below 1 (FR-189).",
     )
 
     #: `separate_model`
@@ -164,7 +164,7 @@ class LargeLossTreatment(BaseModel):
     #: `flat_loading`
     loading_factor: DecimalStr | None = None
 
-    #: FR-MODEL-59's "recorded with its calibration evidence". Required for every kind that
+    #: FR-189's "recorded with its calibration evidence". Required for every kind that
     #: has something to calibrate.
     evidence_blob: BlobRef | None = None
 
@@ -193,7 +193,7 @@ class LargeLossTreatment(BaseModel):
             if getattr(self, name) is None:
                 raise ValueError(
                     f"a {self.kind.value!r} large-loss treatment requires {name!r} "
-                    "(FR-MODEL-59)"
+                    "(FR-189)"
                 )
         for name in parameters:
             if name not in needed and getattr(self, name) is not None:
@@ -204,18 +204,18 @@ class LargeLossTreatment(BaseModel):
         if self.restoration_loading is not None and self.restoration_loading < 1:
             raise ValueError(
                 f"restoration_loading {self.restoration_loading} is below 1. Restoration "
-                "puts the capped mean back (FR-MODEL-59); below 1 it caps a second time"
+                "puts the capped mean back (FR-189); below 1 it caps a second time"
             )
         if self.loading_factor is not None and self.loading_factor <= 0:
-            raise ValueError("loading_factor must be positive (FR-MODEL-59)")
+            raise ValueError("loading_factor must be positive (FR-189)")
         return self
 
 
 class PerilComponent(BaseModel):
-    """One peril's route to a cost (FR-MODEL-58).
+    """One peril's route to a cost (FR-188).
 
     Model references are pinned by version because `ArtifactRef` carries `@version` (ID-3)
-    and artifacts are immutable (FR-OVR-1) — which is what makes FR-MODEL-58's "pinned by
+    and artifacts are immutable (FR-4) — which is what makes FR-188's "pinned by
     version" structural rather than a rule someone has to remember.
     """
 
@@ -239,7 +239,7 @@ class PerilComponent(BaseModel):
             if getattr(self, name) is None:
                 raise ValueError(
                     f"peril {self.peril}: a {self.method.value!r} peril requires "
-                    f"{name!r} (FR-MODEL-58)"
+                    f"{name!r} (FR-188)"
                 )
         for name in ("frequency_model", "severity_model", "burning_cost_model"):
             if name not in needed and getattr(self, name) is not None:
@@ -258,7 +258,7 @@ class PerilComponent(BaseModel):
 
 
 class ExcludedPeril(BaseModel):
-    """A peril present in the data and deliberately not modelled (FR-MODEL-60).
+    """A peril present in the data and deliberately not modelled (FR-190).
 
     The reason is required and non-blank. "Every peril is either modelled or explicitly
     excluded with a reason" is the requirement; an exclusion with an empty reason satisfies
@@ -275,13 +275,13 @@ class ExcludedPeril(BaseModel):
         if not self.reason.strip():
             raise ValueError(
                 f"peril {self.peril}: an exclusion reason of whitespace is an exclusion "
-                "with no reason (FR-MODEL-60)"
+                "with no reason (FR-190)"
             )
         return self
 
 
 class ReconciledPeril(BaseModel):
-    """One peril's contribution to the modelled total, with its treatment (FR-MODEL-74)."""
+    """One peril's contribution to the modelled total, with its treatment (FR-128)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -291,11 +291,11 @@ class ReconciledPeril(BaseModel):
 
 
 class Reconciliation(BaseModel):
-    """FR-MODEL-60's persisted coherence check, FR-MODEL-74's treatment statement.
+    """FR-190's persisted coherence check, FR-128's treatment statement.
 
     The modelled figure is **after** restoration: a capped model reconciled against uncapped
     observed data without restoring its mean looks like a modelling error rather than an
-    intended adjustment, which is the whole of FR-MODEL-74.
+    intended adjustment, which is the whole of FR-128.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -306,7 +306,7 @@ class Reconciliation(BaseModel):
     observed_burning_cost: MoneyMinor
     modelled_burning_cost: MoneyMinor = Field(ge=0)
     tolerance: DecimalStr = Field(
-        description="Declared fractional tolerance on |ratio - 1| (FR-MODEL-60)."
+        description="Declared fractional tolerance on |ratio - 1| (FR-190)."
     )
     computed_at: _datetime.datetime
 
@@ -341,7 +341,7 @@ class Reconciliation(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def status(self) -> ReconciliationStatus:
-        """FR-MODEL-60's verdict, derived from the ratio and the *declared* tolerance."""
+        """FR-190's verdict, derived from the ratio and the *declared* tolerance."""
         return (
             ReconciliationStatus.PASS
             if abs(self.ratio - 1) <= self.tolerance
@@ -354,18 +354,18 @@ class Reconciliation(BaseModel):
             raise ValueError(
                 "observed_burning_cost must be positive: a ratio needs a "
                 "denominator, and a holdout with no observed cost reconciles nothing "
-                "(FR-MODEL-60)"
+                "(FR-190)"
             )
         if self.tolerance <= 0:
             raise ValueError(
                 "tolerance must be positive; a tolerance of zero passes only an exact "
-                "match, which no fitted model produces (FR-MODEL-60)"
+                "match, which no fitted model produces (FR-190)"
             )
         total = sum(p.modelled_burning_cost for p in self.perils)
         if total != self.modelled_burning_cost:
             raise ValueError(
                 f"modelled_burning_cost {self.modelled_burning_cost} is not "
-                f"the sum of the per-peril figures ({total}). FR-MODEL-58 sums over "
+                f"the sum of the per-peril figures ({total}). FR-188 sums over "
                 "perils; a total that is not the sum is a third number"
             )
         seen = {p.peril for p in self.perils}
@@ -375,7 +375,7 @@ class Reconciliation(BaseModel):
 
 
 class PerilStructure(BaseModel):
-    """FR-MODEL-58..61 — the composition, its coherence and its lifecycle."""
+    """FR-188, FR-189, FR-190, FR-191 — the composition, its coherence and its lifecycle."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -400,7 +400,7 @@ class PerilStructure(BaseModel):
         if duplicates:
             raise ValueError(
                 f"peril(s) {sorted(duplicates)} appear more than once. Each peril has one "
-                "route to its cost (FR-MODEL-58)"
+                "route to its cost (FR-188)"
             )
         excluded = [p.peril for p in self.excluded_perils]
         duplicate_exclusions = {p for p in excluded if excluded.count(p) > 1}
@@ -409,7 +409,7 @@ class PerilStructure(BaseModel):
         both = sorted(set(modelled) & set(excluded))
         if both:
             raise ValueError(
-                f"peril(s) {both} are both modelled and excluded. FR-MODEL-60 asks for "
+                f"peril(s) {both} are both modelled and excluded. FR-190 asks for "
                 "each peril to be one or the other; being both leaves the reader unable "
                 "to say whether its cost is in the total"
             )
@@ -424,7 +424,7 @@ class PerilStructure(BaseModel):
         ):
             raise ValueError(
                 f"a {self.status.value!r} structure carries its reconciliation "
-                "(FR-MODEL-60). It is the evidence the approval policy names, so a "
+                "(FR-190). It is the evidence the approval policy names, so a "
                 "structure in review without one is an approval with nothing to read"
             )
         return self

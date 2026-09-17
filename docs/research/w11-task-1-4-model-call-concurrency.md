@@ -1,12 +1,12 @@
-# W11 Task 1.4 — NFR-RATE-14 on the real `model_call` path, and Ruling 5's follow-up
+# WK-671 Task 1.4 — NFR-501 on the real `model_call` path, and RL-868's follow-up
 
-Two measurements Task 1.4 owes, both named in `docs/plans/2026-08-29-w11-1-evaluator-core.md`:
-NFR-RATE-14 re-measured on the shipped `score_one` path (register row `F-W9-1`, the
-`NFR-RATE-14` half), and Ruling 5's own named follow-up — "the same GIL-release
+Two measurements Task 1.4 owes, both named in `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`:
+NFR-501 re-measured on the shipped `score_one` path (register row `F-W9-1`, the
+`NFR-501` half), and RL-868's own named follow-up — "the same GIL-release
 measurement must be repeated once a `model_call` custom node exists ... not assumed to
-transfer automatically" (`docs/plans/2026-08-29-w11-prework-rulings.md:490-492`).
+transfer automatically" (`docs/rulings/RL-00868-score-one-s-real-time-path-async-evaluate-not-evaluate-executor-offload-and-whether-5-2-s-sync-convention-is-itself-the-defect.md:75-77`).
 
-## NFR-RATE-14 — `nthread=1`, including `DMatrix`, already-loaded booster
+## NFR-501 — `nthread=1`, including `DMatrix`, already-loaded booster
 
 Reproduces `docs/research/w8-spike-resolution.md`'s exact comparator shape (`:70-79`): the
 booster loaded once outside the loop, `DMatrix` construction inside it, `nthread=1`, 1000
@@ -19,16 +19,16 @@ booster`, 5 rows, `max_depth=2`, 3 rounds).
 |---|---|---|---|
 | `nthread=1` (incl. `DMatrix`, already-loaded) | 0.483 ms | **1.339 ms** | 7.741 ms |
 
-**PASS.** p99 1.339 ms is below the 1.626 ms figure `NFR-RATE-14` is checked against (W8's
+**PASS.** p99 1.339 ms is below the 1.626 ms figure `NFR-501` is checked against (WK-668's
 own 2026-08-27 re-measurement, `w8-spike-resolution.md:78`) — comparable rather than
 identical, since this is a different machine and a much smaller booster (5 rows / 3 rounds
-vs W8's 2000 rows / 500 rounds), but the same shape: `nthread=1`, `DMatrix` included,
-booster pre-loaded, never reconstructed per call. Ruling 8's seam is what makes "already
+vs WK-668's 2000 rows / 500 rounds), but the same shape: `nthread=1`, `DMatrix` included,
+booster pre-loaded, never reconstructed per call. RL-874's seam is what makes "already
 loaded" true here — `CompiledBundle.boosters` holds the live object; see this task's own
 finding on `predict_gbm`'s `nthread` handling, below, for why it is applied once at load
 time rather than on every call.
 
-## Ruling 5 follow-up — event-loop blocking and throughput, with a real `model_call`
+## RL-868 follow-up — event-loop blocking and throughput, with a real `model_call`
 
 `zen-evaluate-concurrency.md` measured a pure-`expressionNode` graph, because no
 `model_call` custom node existed yet, and named this gap explicitly rather than assuming
@@ -71,25 +71,25 @@ than assume away.**
 
 1. **The throughput gain measured here (1.12x) is far below the original expression-only
    figure (2.10–2.25x), and this is a real, measured difference — not noise.** The cause is
-   exactly what Ruling 5 named as the open risk: `predict_gbm`'s XGBoost call holds the GIL
+   exactly what RL-868 named as the open risk: `predict_gbm`'s XGBoost call holds the GIL
    for its native execution, and on *this* fixture the `model_call` step is 1 of only 5
    interior steps (table, model_call, expression, three constraints) — so a large fraction
    of each call's wall time is GIL-held work that cannot be parallelised by releasing the
-   GIL elsewhere in the graph. Ruling 5's own rationale anticipated this shape of caveat:
+   GIL elsewhere in the graph. RL-868's own rationale anticipated this shape of caveat:
    "a `model_call` step's own GIL-holding window is small and already separately budgeted
    ... against the other ~199 steps that would still benefit from the release" — a
-   real ~200-step production algorithm (`NFR-RATE-1`'s own "~200-step motor structure")
+   real ~200-step production algorithm (`NFR-489`'s own "~200-step motor structure")
    would have the GIL-released fraction dominate far more than this small test fixture
    does, so **1.12x on a 5-step graph is not evidence that a 200-step graph would also see
    only 1.12x** — but it is evidence that the *ratio* depends on how much of the graph is
    spent inside `model_call`, which is new information this measurement adds and the
    original spike could not have produced.
 2. **The offloaded-`evaluate()` case is worse than sequential here too (0.68x, comparable
-   to the original 0.90–0.93x)**, confirming Ruling 5's ruling is not weakened by this
+   to the original 0.90–0.93x)**, confirming RL-868's ruling is not weakened by this
    integration: option (a) (`evaluate()` + thread-pool offload) remains strictly worse
    than doing nothing, with or without a real booster call in the graph.
 
-**Disposition: Ruling 5 stands, and this follow-up is discharged, not reopened.** The
+**Disposition: RL-868 stands, and this follow-up is discharged, not reopened.** The
 ruling's own text named this as "an instrumented default, not a closed question" pending
 exactly this measurement; the measurement is now in, `async_evaluate()` is confirmed
 non-blocking with a real `model_call` present, and the throughput ratio's dependence on
@@ -124,6 +124,6 @@ did not recur in 5/5 runs after it.
 - Engine: `zen-engine` 0.53.0, as declared in `packages/pricing-core/pyproject.toml`.
 - Timing: `time.perf_counter`, this worktree's machine, one run per table above (not
   averaged across runs) — a component-level, single-machine measurement, not the
-  sustained-load/ASGI-embedded measurement `NFR-RATE-1` itself names (Slice 2's Task 2.1,
+  sustained-load/ASGI-embedded measurement `NFR-489` itself names (Slice 2's Task 2.1,
   per this task's own plan).
 - Tree: `w11-1-4-score-one` branch, off `origin/main` at `24b537d`.

@@ -1,4 +1,4 @@
-"""FR-PLAT-51 — a job is never published to a broker the database has not committed to."""
+"""FR-406 — a job is never published to a broker the database has not committed to."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ def _job(workspace_id, principal) -> JobRow:
     )
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_publishing_inside_a_transaction_is_refused(
     database: Database, workspace_id
 ) -> None:
@@ -59,7 +59,7 @@ async def test_publishing_inside_a_transaction_is_refused(
     assert publisher.published == []
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_publishing_outside_a_transaction_is_allowed(
     database: Database
 ) -> None:
@@ -71,7 +71,7 @@ async def test_publishing_outside_a_transaction_is_allowed(
     assert len(publisher.published) == 1
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_enqueue_requires_a_transaction(database: Database) -> None:
     """Negative: an intent written outside the change's transaction guarantees nothing."""
     async with database.session() as session:
@@ -81,7 +81,7 @@ async def test_enqueue_requires_a_transaction(database: Database) -> None:
             )
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_rollback_discards_the_job_and_its_publish_intent_together(
     database: Database, workspace_id, principal
 ) -> None:
@@ -121,7 +121,7 @@ async def _drain(database: Database) -> None:
         pass
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_relay_publishes_pending_intents_after_commit(
     database: Database, workspace_id, principal
 ) -> None:
@@ -147,7 +147,7 @@ async def test_relay_publishes_pending_intents_after_commit(
     assert stored.published_at is not None
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_a_published_intent_is_not_published_twice(
     database: Database, workspace_id, principal
 ) -> None:
@@ -165,7 +165,7 @@ async def test_a_published_intent_is_not_published_twice(
     assert all(p["payload"].get("job_id") != str(row.id) for p in second.published)
 
 
-@pytest.mark.req("FR-PLAT-51")
+@pytest.mark.req("FR-406")
 async def test_a_failing_publish_is_recorded_and_retried_not_lost(
     database: Database, workspace_id, principal
 ) -> None:

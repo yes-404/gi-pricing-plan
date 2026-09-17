@@ -77,7 +77,7 @@ const props = { slug: "fremtpl2" };
 const mounted = { global: { stubs: { RouterLink: { template: "<a><slot /></a>" } } } };
 
 describe("the rule set view", () => {
-  it("surfaces empty layers as FR-DATA-16's configuration warning", async () => {
+  it("surfaces empty layers as FR-45's configuration warning", async () => {
     render(RuleSetView, { props, ...mounted });
     expect(await screen.findByText(/have no enabled rule/)).toBeInTheDocument();
     expect(screen.getByText(/distributional, referential, structural/)).toBeInTheDocument();
@@ -130,14 +130,14 @@ describe("the rule set view", () => {
     expect(within(table).getByText("overridden")).toBeInTheDocument();
   });
 
-  it("offers the next version of a rule rather than a threshold edit (FR-DATA-54)", async () => {
+  it("offers the next version of a rule rather than a threshold edit (FR-56)", async () => {
     render(RuleSetView, { props, ...mounted });
     const row = (await screen.findByText("driv-age-range")).closest("tr")!;
 
     await userEvent.click(within(row).getByRole("button", { name: /new version/i }));
 
     // The builder opens carrying this rule, so the thresholds are already in the box. The
-    // set is untouched: a threshold is not a set-level override, and `FR-DATA-54` gives an
+    // set is untouched: a threshold is not a set-level override, and `FR-56` gives an
     // entry exactly `enabled` and `severity_override`.
     expect(await screen.findByDisplayValue("driv-age-range")).toBeInTheDocument();
     expect(putBodies).toHaveLength(0);
@@ -176,7 +176,7 @@ describe("the rule set view", () => {
   });
 
   it("carries every other entry through when one is disabled", async () => {
-    // A replace is the whole set (FR-DATA-22). Rebuilding the body from ids alone would
+    // A replace is the whole set (FR-51). Rebuilding the body from ids alone would
     // silently re-enable every other disabled entry and drop every other override — the
     // edit would do something nobody asked for and nothing would say so.
     stub(
@@ -253,7 +253,7 @@ describe("the rule set view", () => {
         status: 404,
         code: "NOT_FOUND",
         detail: "Dataset 'fremtpl2' has no Validation Rule Set. One must be defined "
-          + "before the version can be validated (FR-DATA-16).",
+          + "before the version can be validated (FR-45).",
         errors: [],
       },
       404,

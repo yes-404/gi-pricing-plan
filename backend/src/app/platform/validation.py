@@ -65,7 +65,7 @@ def overall_outcome(report: ValidationReport) -> OverallOutcome:
     this one followed the 2026-08-14 amendment and the property did not, so the row said
     `pass_with_warnings` while the handler — which reads the property through
     `permits_validation` — drove the version to `failed`. Any dataset version with a single
-    warning was then unpromotable for ever. Found by `wf-01`'s journey test, 2026-08-17.
+    warning was then unpromotable for ever. Found by `WF-698`'s journey test, 2026-08-17.
 
     Kept as a function rather than deleted: it is the name three call sites and two tests
     already use, and a re-export costs nothing while a rename touches files this change has
@@ -82,7 +82,7 @@ async def store_report(
     report: ValidationReport,
     job_id: UUID | None = None,
 ) -> ValidationReportRow:
-    """Persist one run's report against its version (FR-DATA-15, FR-DATA-20)."""
+    """Persist one run's report against its version (FR-42, FR-49)."""
     version = await session.get(DatasetVersionRow, report.dataset_version_id)
     if version is None or version.workspace_id != workspace_id:
         raise PlatformError(
@@ -107,7 +107,7 @@ async def store_report(
         warn_count=counts[RuleOutcome.WARN.value],
         error_count=counts[RuleOutcome.ERROR.value],
         # `mode="json"` because the body is read back through `model_validate_json` and
-        # compared byte-for-byte by NFR-DATA-5. A body stored with Python datetimes and
+        # compared byte-for-byte by NFR-469. A body stored with Python datetimes and
         # UUIDs round-trips through JSONB into strings anyway — doing it here means the
         # bytes that were compared are the bytes that were stored.
         body=report.model_dump(mode="json"),
@@ -144,7 +144,7 @@ async def store_report(
 async def load_report(
     session: AsyncSession, *, workspace_id: UUID, report_id: UUID
 ) -> ValidationReport:
-    """Read a stored report back as the artifact it was (FR-DATA-20)."""
+    """Read a stored report back as the artifact it was (FR-49)."""
     row = await session.get(ValidationReportRow, report_id)
     if row is None or row.workspace_id != workspace_id:
         raise PlatformError(
@@ -156,7 +156,7 @@ async def load_report(
 async def acknowledgements_for(
     session: AsyncSession, *, workspace_id: UUID, report_id: UUID
 ) -> dict[UUID, Acknowledgement]:
-    """The acknowledgements recorded against a report, by rule id (FR-DATA-18)."""
+    """The acknowledgements recorded against a report, by rule id (FR-47)."""
     result = await session.execute(
         select(AcknowledgementRow).where(
             AcknowledgementRow.workspace_id == workspace_id,
@@ -177,7 +177,7 @@ async def load_report_view(
     """The report **as presented**, with its acknowledgements merged in.
 
     Distinct from `load_report`, which returns the stored artifact verbatim and must keep
-    doing so — NFR-DATA-5 compares bodies byte for byte, and an accessor that folded in
+    doing so — NFR-469 compares bodies byte for byte, and an accessor that folded in
     rows written afterwards would make an immutable artifact appear to change.
 
     The merge belongs at the read edge because an acknowledgement is a fact *about* a
@@ -210,7 +210,7 @@ async def reports_for_version(
     """Report history, newest first (`01` §5.1).
 
     Summary rows, not bodies: a version validated fifty times should not load fifty full
-    reports to render a list of dates and verdicts (NFR-DATA-7).
+    reports to render a list of dates and verdicts (NFR-471).
     """
     result = await session.execute(
         select(ValidationReportRow)
@@ -232,7 +232,7 @@ async def acknowledge(
     rule_id: UUID,
     justification: str,
 ) -> AcknowledgementRow:
-    """Accept one `warn`, with a reason, audited (FR-DATA-17, FR-DATA-18).
+    """Accept one `warn`, with a reason, audited (FR-46, FR-47).
 
     Three refusals, and each exists because the alternative makes the gate decorative:
     only a `warn` can be acknowledged, only by a principal holding the permission, and
@@ -243,7 +243,7 @@ async def acknowledge(
             "VALIDATION_FAILED",
             "An acknowledgement requires a justification",
             422,
-            "FR-DATA-17: the justification is the audit record. An acknowledgement "
+            "FR-46: the justification is the audit record. An acknowledgement "
             "without one is an unexplained decision to model on data that raised a "
             "warning.",
         )
@@ -270,12 +270,12 @@ async def acknowledge(
         # `01` §5.1 owns a code for exactly this, so raise it rather than the generic
         # denial: the caller needs to know it is the *role* that is wrong, not the scope.
         # An analyst reading "permission denied" goes looking for a grant; reading this,
-        # they go and find an actuary, which is what FR-DATA-17 intends them to do.
+        # they go and find an actuary, which is what FR-46 intends them to do.
         raise PlatformError(
             "ACKNOWLEDGE_FORBIDDEN_ROLE",
             "Acknowledging a validation warning requires the Pricing Actuary role",
             403,
-            "FR-DATA-17 places this judgement with an actuary. Modelling on warned data "
+            "FR-46 places this judgement with an actuary. Modelling on warned data "
             "is an actuarial decision, and the acknowledgement is its record.",
         )
 
@@ -315,7 +315,7 @@ async def acknowledge(
             "This warning is already acknowledged",
             409,
             f"Rule {rule_id} on report {report_id} already carries an acknowledgement "
-            "(FR-DATA-18 scopes one to a report and rule).",
+            "(FR-47 scopes one to a report and rule).",
         ) from exc
 
     await audit.record(
@@ -335,7 +335,7 @@ async def acknowledge(
 async def unacknowledged_warnings(
     session: AsyncSession, *, workspace_id: UUID, report_id: UUID
 ) -> int:
-    """How many `warn` results still lack an acknowledgement (FR-DATA-17)."""
+    """How many `warn` results still lack an acknowledgement (FR-46)."""
     row = await session.get(ValidationReportRow, report_id)
     if row is None or row.workspace_id != workspace_id:
         raise PlatformError(
@@ -357,7 +357,7 @@ async def promote_using_report(
     version_id: UUID,
     report_id: UUID,
 ) -> DatasetVersionRow:
-    """Promote a version using its stored report (`01` §1.3, FR-DATA-17).
+    """Promote a version using its stored report (`01` §1.3, FR-46).
 
     The glue that was missing: `promote_to_validated` takes the verdict as arguments so
     that the rule and the storage stay separable, and this is the one place that supplies

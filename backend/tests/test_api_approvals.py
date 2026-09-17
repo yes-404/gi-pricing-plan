@@ -36,7 +36,7 @@ from model_schema import (
 MODEL_SLUG = "motor-ad-frequency"
 MODEL = f"model:{MODEL_SLUG}@7"
 
-#: Every artifact type a module in this build can resolve a reference for (FR-GOV-36).
+#: Every artifact type a module in this build can resolve a reference for (FR-386).
 #: `rating_version` is deliberately absent — it has a policy entry and no module, and
 #: `test_an_artifact_type_no_module_can_resolve_fails_closed` is what says so.
 RESOLVABLE = (
@@ -112,7 +112,7 @@ async def _create_artifact(
     """One row of `artifact_type` at `slug@version`, so a reference to it resolves.
 
     Written straight to the table rather than through each owning module's create path.
-    That is the point of the fixture: FR-GOV-36 asks only whether the version **exists**,
+    That is the point of the fixture: FR-386 asks only whether the version **exists**,
     and every row here is left `draft` — status is the owning module's own submit path's
     question, and `POST /approval-requests` is reached without it.
     """
@@ -194,7 +194,7 @@ async def _create_artifact(
                     version=version,
                     status=DatasetStatus.DRAFT.value,
                     kind=DatasetKind.INGESTED.value,
-                    # OQ-DATA-13 (c): a version names its own provenance (the row's
+                    # OQ-568 (c): a version names its own provenance (the row's
                     # envelope columns are non-null since 2057e7372a9a).
                     slug=slug,
                     created_by=new_uuid7(),
@@ -212,7 +212,7 @@ async def _allow_the_type(
 
     Not a workaround. `submit` refuses an unpolicied type *before* it resolves anything, on
     purpose, so a workspace that has never said how a dataset version gets approved does not
-    reach FR-GOV-36's check at all — and
+    reach FR-386's check at all — and
     `test_the_missing_policy_is_answered_before_the_missing_artifact` is what pins that
     order. Reaching the check means saying so first.
 
@@ -252,17 +252,17 @@ async def _allow_the_type(
 async def the_model_every_test_here_pins(database: Database, workspace_id) -> None:
     """`MODEL` and the two versions beside it, as rows a decision can actually move.
 
-    Autouse and unconditional since FR-GOV-36: submission now resolves the reference it is
+    Autouse and unconditional since FR-386: submission now resolves the reference it is
     asked to pin, so `model:motor-ad-frequency@7` naming nothing would make every test in
     this module a `404`. The module was written against a route that accepted any
-    well-formed string, which is the defect FR-GOV-36 records.
+    well-formed string, which is the defect FR-386 records.
 
     `review`, not `draft`, and on a `validated` dataset version with diagnostics — because
     a resolved reference is one `_carry_to_the_artifact` then follows through. A `draft`
-    model would refuse `draft → approved` (FR-MODEL-64) and a model on an unvalidated
-    version would refuse as `ARTIFACT_FLAGGED` (FR-MODEL-67), and the approval tests would
+    model would refuse `draft → approved` (FR-202) and a model on an unvalidated
+    version would refuse as `ARTIFACT_FLAGGED` (FR-205), and the approval tests would
     then be measuring the model lifecycle rather than the approval one. That the two are now
-    joined at all is the change: before FR-GOV-36 these requests pinned nothing, so the
+    joined at all is the change: before FR-386 these requests pinned nothing, so the
     decision moved nothing and no state on the other side had to be coherent.
     """
     async with database.unit_of_work() as session:
@@ -278,7 +278,7 @@ async def the_model_every_test_here_pins(database: Database, workspace_id) -> No
             status=DatasetStatus.VALIDATED.value,
             kind=DatasetKind.INGESTED.value,
             validation_report_id=new_uuid7(),
-            # OQ-DATA-13 (c): the envelope columns are non-null since 2057e7372a9a.
+            # OQ-568 (c): the envelope columns are non-null since 2057e7372a9a.
             slug=MODEL_SLUG,
             created_by=new_uuid7(),
             currency="GBP",
@@ -310,7 +310,7 @@ async def the_model_every_test_here_pins(database: Database, workspace_id) -> No
             await session.flush()
 
 
-@pytest.mark.req("FR-GOV-9")
+@pytest.mark.req("FR-351")
 def test_submitting_returns_a_request_in_review(
     client: TestClient, submitter_headers
 ) -> None:
@@ -326,7 +326,7 @@ def test_submitting_returns_a_request_in_review(
     assert body["approvers_required"] == 1
 
 
-@pytest.mark.req("FR-GOV-11")
+@pytest.mark.req("FR-353")
 async def test_the_submitter_cannot_approve_even_holding_the_approver_role(
     client: TestClient, workspace_id, principal, grant, submitter_headers
 ) -> None:
@@ -353,7 +353,7 @@ async def test_the_submitter_cannot_approve_even_holding_the_approver_role(
     assert response.json()["code"] == "SUBMITTER_CANNOT_APPROVE"
 
 
-@pytest.mark.req("FR-GOV-9")
+@pytest.mark.req("FR-351")
 def test_an_approver_approves(
     client: TestClient, submitter_headers, approver_headers
 ) -> None:
@@ -373,7 +373,7 @@ def test_an_approver_approves(
     assert body["decisions"][0]["comment"] == "Diagnostics clean."
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_deciding_requires_the_permission(
     client: TestClient, submitter_headers, workspace_id, membership
 ) -> None:
@@ -401,7 +401,7 @@ async def test_deciding_requires_the_permission(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-GOV-15")
+@pytest.mark.req("FR-357")
 def test_withdrawing_after_deployment_is_refused(
     client: TestClient, submitter_headers, approver_headers
 ) -> None:
@@ -424,7 +424,7 @@ def test_withdrawing_after_deployment_is_refused(
     assert response.json()["code"] == "WITHDRAW_AFTER_DEPLOY_FORBIDDEN"
 
 
-@pytest.mark.req("FR-GOV-9")
+@pytest.mark.req("FR-351")
 def test_a_malformed_artifact_reference_is_refused(
     client: TestClient, submitter_headers
 ) -> None:
@@ -438,15 +438,15 @@ def test_a_malformed_artifact_reference_is_refused(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-GOV-9")
+@pytest.mark.req("FR-351")
 def test_requests_are_listable_and_filterable(
     client: TestClient, submitter_headers, approver_headers
 ) -> None:
     """Listing and filtering, which the inbox will need.
 
-    Deliberately **not** marked FR-GOV-16: that requirement is about evidence rendered
+    Deliberately **not** marked FR-358: that requirement is about evidence rendered
     inline — diffs, diagnostics, dislocation, GIPP — and none of those artifacts exist
-    before W4 and W5. A marker here would claim the requirement in the traceability record
+    before WK-660 and WK-661. A marker here would claim the requirement in the traceability record
     while the closure record says it is deferred, and the two must not disagree.
     """
     for i in (7, 8, 9):
@@ -460,7 +460,7 @@ def test_requests_are_listable_and_filterable(
     assert all(i["status"] == "review" for i in body["items"])
 
 
-@pytest.mark.req("FR-GOV-12")
+@pytest.mark.req("FR-354")
 def test_the_default_policy_is_the_documented_one(
     client: TestClient, submitter_headers
 ) -> None:
@@ -472,7 +472,7 @@ def test_the_default_policy_is_the_documented_one(
     assert body["submitter_may_approve"] is False
 
 
-@pytest.mark.req("FR-GOV-12")
+@pytest.mark.req("FR-354")
 async def test_replacing_the_policy_requires_admin(
     client: TestClient, workspace_id, grant, submitter_headers
 ) -> None:
@@ -490,7 +490,7 @@ async def test_replacing_the_policy_requires_admin(
     assert allowed.status_code == 200
 
 
-@pytest.mark.req("FR-GOV-11")
+@pytest.mark.req("FR-353")
 async def test_a_policy_that_disables_separation_of_duties_is_refused(
     client: TestClient, workspace_id, grant
 ) -> None:
@@ -506,7 +506,7 @@ async def test_a_policy_that_disables_separation_of_duties_is_refused(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-OVR-13")
+@pytest.mark.req("FR-16")
 async def test_another_workspaces_request_is_404(
     client: TestClient, submitter_headers, principal, database
 ) -> None:
@@ -534,19 +534,19 @@ async def test_another_workspaces_request_is_404(
     assert response.json()["code"] == "NOT_FOUND"
 
 
-# -- resolution at submission (FR-GOV-36) --------------------------------------------------
+# -- resolution at submission (FR-386) --------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-36")
+@pytest.mark.req("FR-386")
 def test_a_reference_to_a_version_that_was_never_created_is_refused(
     client: TestClient, submitter_headers
 ) -> None:
-    """The defect FR-GOV-36 records, as a test.
+    """The defect FR-386 records, as a test.
 
     `motor-ad-frequency` exists at 7, 8 and 9; `@99` does not. Before this the request was
     created anyway, and it could then be *approved* — the owning module cannot move an
     artifact that does not exist, so the decision moved nothing and there was nothing for a
-    reader to reconcile it against. FR-GOV-14 makes an approval pinned to an exact version;
+    reader to reconcile it against. FR-356 makes an approval pinned to an exact version;
     a pin to a version that was never created is a pin to nothing.
     """
     response = client.post(
@@ -561,7 +561,7 @@ def test_a_reference_to_a_version_that_was_never_created_is_refused(
     assert response.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-GOV-36")
+@pytest.mark.req("FR-386")
 @pytest.mark.parametrize("artifact_type", RESOLVABLE)
 async def test_every_resolvable_type_refuses_a_version_that_does_not_exist(
     client: TestClient, workspace_id, grant, database, submitter_headers, artifact_type: str
@@ -584,7 +584,7 @@ async def test_every_resolvable_type_refuses_a_version_that_does_not_exist(
     assert response.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-GOV-36")
+@pytest.mark.req("FR-386")
 @pytest.mark.parametrize("artifact_type", RESOLVABLE)
 async def test_every_resolvable_type_still_accepts_the_version_that_exists(
     client: TestClient,
@@ -613,7 +613,7 @@ async def test_every_resolvable_type_still_accepts_the_version_that_exists(
     assert response.json()["status"] == "review"
 
 
-@pytest.mark.req("FR-GOV-36")
+@pytest.mark.req("FR-386")
 def test_an_artifact_type_no_module_can_resolve_fails_closed(
     client: TestClient, submitter_headers
 ) -> None:
@@ -623,7 +623,7 @@ def test_an_artifact_type_no_module_can_resolve_fails_closed(
     **Decided, not accidental.** `07`'s `JOB_HANDLER_NOT_REGISTERED` settles what a platform
     deployable before every kind has an implementation owes the caller: say the capability
     is absent, rather than accept the work and leave nothing to explain the silence.
-    Accepting the submission would recreate FR-GOV-36's own defect one level up — a request
+    Accepting the submission would recreate FR-386's own defect one level up — a request
     that can be decided and moves nothing.
 
     **The code is `ARTIFACT_TYPE_NOT_RESOLVABLE`**, registered in `GOVERNANCE_ERROR_CODES`
@@ -647,7 +647,7 @@ def test_an_artifact_type_no_module_can_resolve_fails_closed(
     assert body["code"] == "ARTIFACT_TYPE_NOT_RESOLVABLE"
 
 
-@pytest.mark.req("FR-GOV-36")
+@pytest.mark.req("FR-386")
 def test_the_missing_policy_is_answered_before_the_missing_artifact(
     client: TestClient, submitter_headers
 ) -> None:

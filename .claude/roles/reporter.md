@@ -1,3 +1,13 @@
+---
+family: reference
+title: reporter (support — mechanical first)
+status: active                  # active → retired (§1.2a)
+created: 2026-08-29
+owner: maintainer
+corrected_by: []
+relates: []                      # ids only
+---
+
 # reporter (support — mechanical first)
 
 - **Form:** routine summaries template-filled from state files by script; a reporter agent
@@ -29,9 +39,9 @@ The same liveness rule as `watcher.md`: a Monitor id is a handle, not a process.
 **What goes in:** (1) ETA headline from `eta.md`, verbatim; (2) open PRs with CI state from
 `gh pr list`; (3) commits merged to main since the last post, from `git ls-remote` and `git log`.
 
-*Ruling 106 (2026-09-04) constrains item (1)'s shape and the whole post's length — the
+*RL-1059 (2026-09-04) constrains item (1)'s shape and the whole post's length — the
 100-word cap, the mandatory BST clock time, and the `main:`-refresh staleness marker —
-see `docs/plans/2026-09-04-ruling-106-slack-routine-word-cap-bst-eta-and-head-refresh.md`
+see `docs/rulings/RL-01059-a-100-word-cap-a-bst-clock-time-in-the-eta-and-a-refresh-on-every-origin-main-move.md`
 and `.claude/skills/reporter-cycle/SKILL.md`'s `Verified` entry for the same date.*
 
 **Maintainer instruction, 2026-09-04:** "request the lead to rule for slack routine in long
@@ -40,7 +50,7 @@ ETA when git head changes."
 
 **What does NOT go in:** status characterization, phase judgment, rule application, or
 workstream inference. Examples of violations: "Peak-hours pause window…" (rule application —
-the lead puts rule applicability into eta.md), "W11 close audit in progress" (inference from
+the lead puts rule applicability into eta.md), "WK-671 close audit in progress" (inference from
 commit subjects — what is in flight is exactly what git says), "CI failing" (conclusion —
 post the run outcome and its duration; both matter, and only one is about the code).
 
@@ -93,5 +103,5 @@ them against other visible facts.
 - Does not manage other roles' work or dispatches
 - Does not duplicate the watcher's freshness checks (this mechanism is singular by design)
 
-- **Built:** not by `docs/plans/2026-08-29-nt-0010-0011-adoption.md` — same note as
+- **Built:** not by `docs/plans/PL-00844-rfc-840-rfc-841-adoption-implementation-plan.md` — same note as
   `watcher.md`'s Task 6 citation.

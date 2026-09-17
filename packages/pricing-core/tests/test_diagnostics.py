@@ -86,9 +86,9 @@ def _fitted(frame: pl.DataFrame, factors: list[Factor]):
     return fit_glm(frame, spec, factors).result, spec
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 def test_a_model_scores_from_its_artifact_alone() -> None:
-    """ADR-0003: a Model is data. `predict_glm` takes coefficients and a frame — nothing
+    """ADR-705: a Model is data. `predict_glm` takes coefficients and a frame — nothing
     that remembers the fitting session, and nothing that needs `glum`.
 
     The assertion is the Poisson identity: with a log link, an intercept and an exposure
@@ -106,7 +106,7 @@ def test_a_model_scores_from_its_artifact_alone() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-62")
+@pytest.mark.req("FR-193")
 def test_scoring_a_frame_without_the_offset_column_is_refused() -> None:
     """Negative: a frequency model scored with no exposure returns a rate as though it
     were a count. Silent, and wrong by whatever the exposure was."""
@@ -120,7 +120,7 @@ def test_scoring_a_frame_without_the_offset_column_is_refused() -> None:
         predict_glm(fit, frame.drop("exposure_years"), factors, spec)
 
 
-@pytest.mark.req("FR-MODEL-54")
+@pytest.mark.req("FR-183")
 def test_diagnostics_report_train_and_holdout_side_by_side() -> None:
     frame = _book()
     train, holdout = frame[:4500], frame[4500:]
@@ -136,9 +136,9 @@ def test_diagnostics_report_train_and_holdout_side_by_side() -> None:
     assert result.universal.holdout.ae_overall != pytest.approx(1.0, abs=1e-9)
 
 
-@pytest.mark.req("FR-MODEL-55")
+@pytest.mark.req("FR-184")
 def test_the_weighting_is_recorded_and_is_exposure_for_a_frequency_model() -> None:
-    """FR-MODEL-55: an unweighted metric on an exposure-weighted problem must be labelled.
+    """FR-184: an unweighted metric on an exposure-weighted problem must be labelled.
     It can only be labelled if the fit recorded which it was."""
     frame = _book()
     factors = [_factor("area")]
@@ -150,7 +150,7 @@ def test_the_weighting_is_recorded_and_is_exposure_for_a_frequency_model() -> No
     assert result.universal.holdout.weighting is Weighting.EXPOSURE
 
 
-@pytest.mark.req("FR-MODEL-50")
+@pytest.mark.req("FR-171")
 def test_actual_versus_expected_is_reported_for_every_level() -> None:
     """A/E by level is what an actuary reads first. Every level of every categorical
     factor must appear — a level missing from the table is a level nobody inspects."""
@@ -169,7 +169,7 @@ def test_actual_versus_expected_is_reported_for_every_level() -> None:
         assert cell.ci_95[0] < cell.ae < cell.ci_95[1]
 
 
-@pytest.mark.req("FR-MODEL-51")
+@pytest.mark.req("FR-172")
 def test_the_type_iii_test_separates_a_real_factor_from_noise() -> None:
     """The test that stops the p-value being decoration.
 
@@ -192,7 +192,7 @@ def test_the_type_iii_test_separates_a_real_factor_from_noise() -> None:
     assert tests["noise"].df == 1
 
 
-@pytest.mark.req("FR-MODEL-51")
+@pytest.mark.req("FR-172")
 def test_deviance_and_information_criteria_are_computed() -> None:
     """`GlmFitResult.deviance` was declared by the spine and never populated. These are the
     numbers that were missing."""
@@ -212,7 +212,7 @@ def test_deviance_and_information_criteria_are_computed() -> None:
     assert result.glm.degrees_of_freedom == 4000 - len(fit.coefficients)
 
 
-@pytest.mark.req("FR-MODEL-51")
+@pytest.mark.req("FR-172")
 def test_a_tweedie_fit_reports_no_aic_rather_than_a_wrong_one() -> None:
     """Tweedie's density has no closed form, so there is no exact log-likelihood to take an
     AIC from. `None` says that; a deviance-based stand-in would read as a measurement and
@@ -232,9 +232,9 @@ def test_a_tweedie_fit_reports_no_aic_rather_than_a_wrong_one() -> None:
     assert result.glm.bic is None
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 def test_complexity_records_the_counts_and_the_thresholds_in_force() -> None:
-    """FR-MODEL-81: a diagnostic always, a gate only where a workspace sets one. The
+    """FR-185: a diagnostic always, a gate only where a workspace sets one. The
     thresholds are stored beside the measurements so a later reader can see what the fit
     was judged against rather than inferring today's settings onto it."""
     frame = _book()
@@ -251,7 +251,7 @@ def test_complexity_records_the_counts_and_the_thresholds_in_force() -> None:
     assert result.complexity.exposure_per_parameter is not None
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 def test_complexity_thresholds_are_absent_when_the_workspace_sets_none() -> None:
     """The default is unset, not zero. Zero would be a limit nothing could satisfy."""
     frame = _book()
@@ -264,7 +264,7 @@ def test_complexity_thresholds_are_absent_when_the_workspace_sets_none() -> None
     assert result.complexity.min_exposure_per_parameter is None
 
 
-@pytest.mark.req("FR-MODEL-50")
+@pytest.mark.req("FR-171")
 def test_a_model_that_orders_risk_scores_a_higher_gini_than_one_that_does_not() -> None:
     """Gini is an ordering statistic, so the test compares two orderings rather than
     asserting a magnitude: the real factor must beat pure noise. A Gini that did not move
@@ -287,7 +287,7 @@ def test_a_model_that_orders_risk_scores_a_higher_gini_than_one_that_does_not() 
     assert signal_result.universal.holdout.gini > noise_result.universal.holdout.gini
 
 
-@pytest.mark.req("FR-MODEL-51")
+@pytest.mark.req("FR-172")
 def test_the_unit_deviance_sums_to_the_deviance() -> None:
     """The residual plots use the per-row quantity and the fit statistics use the total.
     Computing them by two routes is how they drift, so one is defined as the sum of the
@@ -299,7 +299,7 @@ def test_the_unit_deviance_sums_to_the_deviance() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-51")
+@pytest.mark.req("FR-172")
 def test_the_deviance_of_a_perfect_fit_is_zero() -> None:
     """The property that anchors the scale: deviance measures distance from the saturated
     model, so a prediction equal to the observation contributes nothing."""
@@ -309,7 +309,7 @@ def test_the_deviance_of_a_perfect_fit_is_zero() -> None:
     assert deviance(positive, positive.copy(), family="gamma") == pytest.approx(0.0, abs=1e-12)
 
 
-@pytest.mark.req("FR-MODEL-51")
+@pytest.mark.req("FR-172")
 def test_a_deviance_below_zero_by_more_than_rounding_is_refused() -> None:
     """Deviance is non-negative by construction, so a negative total means the unit
     deviance for that family is wrong. Clamping float noise is right; clamping a real sign
@@ -326,8 +326,8 @@ def test_a_deviance_below_zero_by_more_than_rounding_is_refused() -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-50/54/81 — the EBM arm. A book of its own: `EbmSpec` refuses an offset
-# (FR-MODEL-37) while `_book` above is a log-link frequency book, so the EBM arm gets
+# FR-171/183/185 — the EBM arm. A book of its own: `EbmSpec` refuses an offset
+# (FR-140) while `_book` above is a log-link frequency book, so the EBM arm gets
 # the `test_ebm.py` fixture — numeric `speed`, categorical `area`, banded `age` — with
 # `exposure_years` kept for the GBM comparison arm.
 # --------------------------------------------------------------------------------------
@@ -401,10 +401,10 @@ def _gbm_spec(factors: list[Factor]) -> GbmSpec:
     )
 
 
-@pytest.mark.req("FR-MODEL-50")
-@pytest.mark.req("FR-MODEL-54")
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-183")
 def test_an_ebm_reports_universal_diagnostics_and_no_glm_or_gbm_block() -> None:
-    """FR-MODEL-50's "all model types" and FR-MODEL-54's "both partitions", for the EBM.
+    """FR-171's "all model types" and FR-183's "both partitions", for the EBM.
 
     The EBM has no coefficient vector, no trees and no eval curve — its dependence
     structure *is* the transparency artifact — so `glm` and `gbm` are `None` rather
@@ -429,9 +429,9 @@ def test_an_ebm_reports_universal_diagnostics_and_no_glm_or_gbm_block() -> None:
     assert result.complexity.factor_count == len(EBM_FACTORS)
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 def test_ebm_complexity_counts_the_real_bins() -> None:
-    """FR-MODEL-81 on an EBM: parameters are real bins, not terms and not slots.
+    """FR-185 on an EBM: parameters are real bins, not terms and not slots.
 
     `bin_weights` zeroes the unused base slot, the trailing missing-value slot and any
     empty bins, so the nonzero count is what the model actually uses. The 2-D term
@@ -463,13 +463,13 @@ def test_ebm_complexity_counts_the_real_bins() -> None:
     assert result.complexity.parameter_count == expected
 
 
-@pytest.mark.req("FR-MODEL-50")
+@pytest.mark.req("FR-171")
 def test_the_ebm_arm_uses_the_same_partition_as_the_gbm_arm() -> None:
-    """FR-MODEL-50: the universal block is one function, so both arms report the same
+    """FR-171: the universal block is one function, so both arms report the same
     shape of diagnostics on one book — same fields, same levels, same bin counts — and
     differ only in the numbers.
 
-    That shape identity is what makes FR-MODEL-56's comparison a comparison rather than
+    That shape identity is what makes FR-186's comparison a comparison rather than
     two conventions placed side by side: an actuary weighing an EBM's lift against a
     GBM's is reading the same arithmetic."""
     data = _ebm_book()

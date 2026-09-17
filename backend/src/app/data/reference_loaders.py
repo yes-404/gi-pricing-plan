@@ -1,4 +1,4 @@
-"""Loaders for the common UK reference sets (FR-DATA-32, OQ-DATA-5).
+"""Loaders for the common UK reference sets (FR-72, OQ-561).
 
 > The platform ships **loaders** for … ONS postcode directory, ABI vehicle group tables,
 > occupation/industry code lists, and a bank-holiday calendar. **Actual rows are shipped
@@ -46,7 +46,7 @@ class ReferenceLoader:
 
     @property
     def may_ship_data(self) -> bool:
-        """OQ-DATA-5: rows travel only under an unambiguously permissive licence."""
+        """OQ-561: rows travel only under an unambiguously permissive licence."""
         return self.licence is Licence.OGL
 
 
@@ -78,13 +78,13 @@ LOADERS: Final[dict[str, ReferenceLoader]] = {
         ReferenceLoader(
             slug="abi-vehicle-groups",
             description="ABI vehicle group ratings by ABI code.",
-            # The reason this file exists. See OQ-DATA-5.
+            # The reason this file exists. See OQ-561.
             licence=Licence.PROPRIETARY,
             fetch_url="https://www.thatcham.org/",
             fetch_note=(
                 "NOT REDISTRIBUTABLE. The workspace must obtain this under its own licence "
                 "and load it; the platform ships the parser only. Bundling these rows would "
-                "put a licence breach in every clone of the repository (OQ-DATA-5)."
+                "put a licence breach in every clone of the repository (OQ-561)."
             ),
             key_columns=("abi_code",),
             payload_columns=("group_1_50", "group_1_20", "security_rating"),
@@ -105,11 +105,11 @@ LOADERS: Final[dict[str, ReferenceLoader]] = {
 def loader_for(slug: str) -> ReferenceLoader:
     if slug not in LOADERS:
         raise KeyError(
-            f"no loader for {slug!r}; shipped loaders are {sorted(LOADERS)} (FR-DATA-32)"
+            f"no loader for {slug!r}; shipped loaders are {sorted(LOADERS)} (FR-72)"
         )
     return LOADERS[slug]
 
 
 def shippable_loaders() -> tuple[ReferenceLoader, ...]:
-    """The sets whose rows may travel with the platform (OQ-DATA-5)."""
+    """The sets whose rows may travel with the platform (OQ-561)."""
     return tuple(loader for loader in LOADERS.values() if loader.may_ship_data)

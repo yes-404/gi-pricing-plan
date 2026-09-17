@@ -2,18 +2,18 @@
 
 What this module owes its caller, in the spec's own terms:
 
-* **FR-MODEL-49** — diagnostics are computed **once, at fit time**, and read thereafter.
+* **FR-170** — diagnostics are computed **once, at fit time**, and read thereafter.
   Nothing here recomputes; the UI reads what the fit recorded. A number the screen derives
   is a number nobody can cite in an approval.
-* **FR-MODEL-54** — every metric is reported for train **and** holdout, side by side. That
+* **FR-183** — every metric is reported for train **and** holdout, side by side. That
   is enforced at the type: `UniversalDiagnostics` requires both partitions, so a
   diagnostic without its holdout counterpart cannot be constructed, let alone persisted.
   The spec calls a one-sided diagnostic a defect, and a defect that can be represented
   eventually is.
-* **FR-MODEL-55** — a metric carries its weighting scheme. `weighting` has **no default**:
+* **FR-184** — a metric carries its weighting scheme. `weighting` has **no default**:
   an exposure-weighted A/E and an unweighted one are different numbers, and guessing which
   was meant is precisely the mistake the requirement names.
-* **FR-MODEL-81** — complexity is a diagnostic, always recorded, and a gate only where a
+* **FR-185** — complexity is a diagnostic, always recorded, and a gate only where a
   workspace sets one. The thresholds in force are stored *beside* the measurements, so a
   reader can see what the numbers were judged against rather than inferring today's
   settings onto a fit from six months ago.
@@ -58,7 +58,7 @@ __all__ = [
 
 
 class Weighting(enum.StrEnum):
-    """How a metric was weighted (FR-MODEL-55).
+    """How a metric was weighted (FR-184).
 
     `EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where
     the metric genuinely counts rows. The UI labels an unweighted metric on an
@@ -71,7 +71,7 @@ class Weighting(enum.StrEnum):
 
 
 class AeCell(BaseModel):
-    """Actual versus expected for one level of one factor (FR-MODEL-50).
+    """Actual versus expected for one level of one factor (FR-171).
 
     `ci_95` is on the **ratio**, not on the actual: an A/E of 1.19 whose interval excludes
     1.0 is a finding, and one whose interval spans it is noise. Without the interval the
@@ -99,7 +99,7 @@ class AeCell(BaseModel):
 
 
 class LiftBin(BaseModel):
-    """One predicted-decile bin of a lift/gains curve (FR-MODEL-50)."""
+    """One predicted-decile bin of a lift/gains curve (FR-171)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -111,7 +111,7 @@ class LiftBin(BaseModel):
 
 
 class CalibrationBin(BaseModel):
-    """Predicted against observed within a predicted-decile bin (FR-MODEL-50)."""
+    """Predicted against observed within a predicted-decile bin (FR-171)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -122,7 +122,7 @@ class CalibrationBin(BaseModel):
 
 
 class ResidualSummary(BaseModel):
-    """Distribution summary of the working residuals (FR-MODEL-50)."""
+    """Distribution summary of the working residuals (FR-171)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -135,31 +135,31 @@ class ResidualSummary(BaseModel):
 
 
 class PartitionDiagnostics(BaseModel):
-    """Every universal metric, for one partition (FR-MODEL-50).
+    """Every universal metric, for one partition (FR-171).
 
     At fit time one of these describes train and another describes holdout, and neither is
     meaningful without the other — which is why a *fit* only ever holds them together
     (`UniversalDiagnostics`).
 
-    A backtest holds exactly one (`backtests.BacktestSummary`, FR-MODEL-57), and that is not
+    A backtest holds exactly one (`backtests.BacktestSummary`, FR-187), and that is not
     the same defect: its population was never split, so there is no counterpart to withhold,
     and what it is read against is the model's own fit-time holdout on a different artifact.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: No default — FR-MODEL-55 makes this the metric's meaning, not its metadata.
+    #: No default — FR-184 makes this the metric's meaning, not its metadata.
     weighting: Weighting
     rows: int = Field(ge=0)
     ae_overall: float = Field(ge=0.0)
     ae_by_factor: tuple[AeCell, ...] = ()
     lift: tuple[LiftBin, ...] = ()
-    #: **`double_lift` was here and is gone (2026-08-17).** FR-MODEL-50 listed "double lift
+    #: **`double_lift` was here and is gone (2026-08-17).** FR-171 listed "double lift
     #: vs a comparison model" among *universal* diagnostics, and nothing ever populated the
     #: field — nothing could. Double lift is pairwise, the comparison model is unknown at fit
-    #: time, and FR-MODEL-49 makes diagnostics computed once and read thereafter, so the
+    #: time, and FR-170 makes diagnostics computed once and read thereafter, so the
     #: field could not be filled later either. It lives on the comparison artifact
-    #: (`comparison.DoubleLift`), and FR-MODEL-50 carries the amendment.
+    #: (`comparison.DoubleLift`), and FR-171 carries the amendment.
     gini: float
     gini_normalised: float
     calibration: tuple[CalibrationBin, ...] = ()
@@ -167,7 +167,7 @@ class PartitionDiagnostics(BaseModel):
 
 
 class UniversalDiagnostics(BaseModel):
-    """Train and holdout, side by side (FR-MODEL-54).
+    """Train and holdout, side by side (FR-183).
 
     Both fields are required. The requirement says a diagnostic reported without its
     holdout counterpart *is a defect*, and the cheapest way to honour that is to make the
@@ -191,13 +191,13 @@ class UniversalDiagnostics(BaseModel):
             raise ValueError(
                 f"train is weighted by {self.train.weighting.value} and holdout by "
                 f"{self.holdout.weighting.value}; side-by-side metrics must share a "
-                "weighting scheme (FR-MODEL-55)."
+                "weighting scheme (FR-184)."
             )
         return self
 
 
 class TypeIIITest(BaseModel):
-    """A factor's type-III deviance test (FR-MODEL-51).
+    """A factor's type-III deviance test (FR-172).
 
     `deviance_delta` is the increase in deviance when the factor is dropped, on `df`
     degrees of freedom — a likelihood-ratio statistic, so the p-value means what a reader
@@ -213,7 +213,7 @@ class TypeIIITest(BaseModel):
 
 
 class GlmDiagnostics(BaseModel):
-    """GLM-specific evidence (FR-MODEL-51)."""
+    """GLM-specific evidence (FR-172)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -237,7 +237,7 @@ class GlmDiagnostics(BaseModel):
 
 
 class ComplexityDiagnostic(BaseModel):
-    """Factor and parameter counts against whatever thresholds are in force (FR-MODEL-81).
+    """Factor and parameter counts against whatever thresholds are in force (FR-185).
 
     Recorded on **every** fit. The thresholds are stored with the measurements because they
     are workspace settings that change: a fit judged against no limit and a fit judged
@@ -251,14 +251,14 @@ class ComplexityDiagnostic(BaseModel):
     parameter_count: int = Field(ge=0)
     exposure_per_parameter: float | None = None
     claims_per_parameter: float | None = None
-    #: `None` means the workspace sets no limit — FR-MODEL-81's default. Distinct from 0,
+    #: `None` means the workspace sets no limit — FR-185's default. Distinct from 0,
     #: which would be a limit nothing could satisfy.
     max_factor_count: int | None = None
     min_exposure_per_parameter: float | None = None
 
 
 class GbmEvalPoint(BaseModel):
-    """One row of the evaluation curve FR-MODEL-52 requires (FR-MODEL-30 persists it).
+    """One row of the evaluation curve FR-174 requires (FR-124 persists it).
 
     Both partitions on one row rather than two series, because the pair is the point: a
     metric still improving on train while flat on holdout is the shape early stopping
@@ -301,7 +301,7 @@ class FeatureImportance(BaseModel):
 
 
 class PermutationImportance(BaseModel):
-    """How much the holdout metric degrades when one feature is shuffled (FR-MODEL-52).
+    """How much the holdout metric degrades when one feature is shuffled (FR-174).
 
     On the **holdout**, and stated as a degradation rather than a score, because that is
     the question an actuary is asking: what would this model lose if this variable were
@@ -331,25 +331,25 @@ class PartialDependencePoint(BaseModel):
 
 
 class PartialDependenceOmissionReason(enum.StrEnum):
-    """Why a partial-dependence curve does not cover its factor (FR-MODEL-118)."""
+    """Why a partial-dependence curve does not cover its factor (FR-175)."""
 
     #: The categorical grid was truncated to the most-exposed levels. The rest are not
     #: pooled into an "other" bar, because there is no such bar to compute: the held value
     #: has to be *scored*, and a synthetic level the model never saw is refused at encoding
-    #: (FR-MODEL-32). So they are named as missing rather than summarised.
+    #: (FR-131). So they are named as missing rather than summarised.
     LEVEL_CAP = "level_cap"
     #: The factor sources no column of its own, so there is nothing to hold at a value —
-    #: an `interaction`, whose columns are its operands' (FR-MODEL-119). **Interim, and
-    #: now with a decided replacement rather than an open question**: FR-MODEL-121 holds a
+    #: an `interaction`, whose columns are its operands' (FR-176). **Interim, and
+    #: now with a decided replacement rather than an open question**: FR-177 holds a
     #: cross's operands *together* at one observed cell, which is the only way to reach a
-    #: term `predict_gbm` re-derives from raw columns. Until W30 builds it, this reason is
-    #: also the marker for a gap that FR-MODEL-122 shows is wider than a missing curve —
+    #: term `predict_gbm` re-derives from raw columns. Until WK-690 builds it, this reason is
+    #: also the marker for a gap that FR-178 shows is wider than a missing curve —
     #: on a sparse cross the operands' own curves do not merely mislead, they raise.
     NO_SOURCE_COLUMN = "no_source_column"
 
 
 class PartialDependenceOmission(BaseModel):
-    """What a curve leaves out, and why (FR-MODEL-118).
+    """What a curve leaves out, and why (FR-175).
 
     Present **only** when the curve is incomplete. A complete curve carries `None`, so
     "omitted nothing" and "omitted something not worth recording" cannot be confused — the
@@ -377,14 +377,14 @@ class PartialDependenceOmission(BaseModel):
         ):
             raise ValueError(
                 "a level_cap omission must report the levels it dropped and the exposure "
-                "they hold (FR-MODEL-118) — an unquantified truncation is the silent one "
+                "they hold (FR-175) — an unquantified truncation is the silent one "
                 "the requirement forbids"
             )
         return self
 
 
 class PartialDependence(BaseModel):
-    """The fitted response to one factor, averaged over the book (FR-MODEL-52).
+    """The fitted response to one factor, averaged over the book (FR-174).
 
     `exposure_share` rides with every point because a partial dependence curve is most
     dramatic exactly where the book is thinnest, and a plot without it invites reading a
@@ -395,12 +395,12 @@ class PartialDependence(BaseModel):
 
     factor: str
     points: tuple[PartialDependencePoint, ...] = ()
-    #: FR-MODEL-118. `None` means the curve covers every level of its factor.
+    #: FR-175. `None` means the curve covers every level of its factor.
     omitted: PartialDependenceOmission | None = None
 
 
 class MonotonicityCheck(BaseModel):
-    """Whether the **fitted** response respects a declared constraint (FR-MODEL-52).
+    """Whether the **fitted** response respects a declared constraint (FR-174).
 
     Verified rather than assumed. A constraint is a parameter passed to a library, and the
     thing that makes it true of this model is that someone swept the factor and looked —
@@ -419,10 +419,10 @@ class MonotonicityCheck(BaseModel):
 
 
 class GbmDiagnostics(BaseModel):
-    """GBM-specific evidence (FR-MODEL-52), all six things the requirement names.
+    """GBM-specific evidence (FR-174), all six things the requirement names.
 
-    The evaluation curve is here rather than on `GbmFitResult` because FR-MODEL-52 calls it
-    a diagnostic and asks for **train and holdout** — which is FR-MODEL-54's shape, and the
+    The evaluation curve is here rather than on `GbmFitResult` because FR-174 calls it
+    a diagnostic and asks for **train and holdout** — which is FR-183's shape, and the
     shape `diagnostics.schema.json` has carried since Phase 0. `fit_gbm` produces it and
     hands it back for the caller to place here; only `best_iteration` stays on the fit,
     because scoring needs it and diagnostics are not loaded to score.
@@ -440,16 +440,16 @@ class GbmDiagnostics(BaseModel):
     #: deep tree and a forest of uniformly middling trees have the same mean.
     max_depth: int = Field(ge=0)
     mean_depth: float = Field(ge=0.0)
-    #: FR-MODEL-78. Set on the second bound of a paired-quantile interval and `None`
+    #: FR-199. Set on the second bound of a paired-quantile interval and `None`
     #: on every other model — including the first bound, which had nothing to cross.
     quantile_crossing: QuantileCrossing | None = None
 
 
 class QuantileCrossing(BaseModel):
-    """Whether this bound contradicts its counterpart, over the fit population (FR-MODEL-78).
+    """Whether this bound contradicts its counterpart, over the fit population (FR-199).
 
     On the **second** bound's diagnostics. The first has no counterpart to cross when it is
-    fitted, and FR-MODEL-49 computes diagnostics once at fit time and reads them thereafter
+    fitted, and FR-170 computes diagnostics once at fit time and reads them thereafter
     — so the moment both boosters exist is the moment the second one is fitted, and there is
     no later pass in which to fill this in.
 
@@ -458,7 +458,7 @@ class QuantileCrossing(BaseModel):
 
     **Crossing is reported, never repaired.** A pair whose lower bound exceeds its upper at
     some rows does not describe one distribution, and reordering the two would produce an
-    interval that looks well formed and means nothing (OQ-MODEL-2).
+    interval that looks well formed and means nothing (OQ-574).
 
     `None` on every model that is not the second bound of a pair.
     """
@@ -496,11 +496,11 @@ class QuantileCrossing(BaseModel):
 
 
 class CvPathPoint(BaseModel):
-    """One scanned alpha's aggregate cross-validated score (FR-MODEL-20).
+    """One scanned alpha's aggregate cross-validated score (FR-112).
 
-    `std_score` is this alpha's dispersion across every fold — the curve FR-MODEL-20's
+    `std_score` is this alpha's dispersion across every fold — the curve FR-112's
     "full path, not only the alpha selected" is. `CrossValidationDiagnostics.fold_metrics`
-    carries the *unaggregated* per-fold scores FR-MODEL-53 also asks for, but only at the
+    carries the *unaggregated* per-fold scores FR-182 also asks for, but only at the
     selected alpha: recording every fold at every alpha would multiply storage by
     `len(alphas)` for a curve this point's `std_score` already summarises.
     """
@@ -513,7 +513,7 @@ class CvPathPoint(BaseModel):
 
 
 class CvFoldMetric(BaseModel):
-    """One fold's held-out score at the selected alpha (FR-MODEL-53).
+    """One fold's held-out score at the selected alpha (FR-182).
 
     "Per-fold metrics and their dispersion... not the mean alone" is the requirement's own
     phrase — this is the *and*: `CrossValidationDiagnostics.path`'s `std_score` at the
@@ -529,17 +529,17 @@ class CvFoldMetric(BaseModel):
 
 
 class CrossValidationDiagnostics(BaseModel):
-    """The penalty path and the selected alpha's fold dispersion (FR-MODEL-20, FR-MODEL-53).
+    """The penalty path and the selected alpha's fold dispersion (FR-112, FR-182).
 
     Populated only when the fit's `GlmSpec.select_by == "cv"`; `Diagnostics.cross_validation`
     is `None` for every fixed-alpha GLM and every GBM — the honest reading of "this fit was
-    not cross-validated" rather than an empty path standing in for one (FR-MODEL-49: a
+    not cross-validated" rather than an empty path standing in for one (FR-170: a
     diagnostic is computed once, at fit time, from what the fit actually did).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: `01` FR-DATA-33's fold-construction method, generalised from two parts to `folds` by
+    #: `01` FR-73's fold-construction method, generalised from two parts to `folds` by
     #: `pricing_core.data.splits.assign_folds`.
     method: str
     #: The seed `assign_folds` was called with — `GlmSpec.seed`, copied here so the fold
@@ -584,22 +584,22 @@ class CrossValidationDiagnostics(BaseModel):
 class Diagnostics(BaseModel):
     """The persisted artifact (`02` §4, `diagnostics.schema.json`).
 
-    Immutable: computed at fit time and read thereafter (FR-MODEL-49).
+    Immutable: computed at fit time and read thereafter (FR-170).
 
-    `gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which
+    `gbm` is populated from the GBM slice on (FR-174) and is `None` for a GLM, which
     is the honest reading of "GBM-specific".
 
     `cross_validation` is populated iff the fit's `GlmSpec.select_by == "cv"`
-    (FR-MODEL-20, FR-MODEL-53, the regularisation-and-CV slice, 2026-08-21) and `None`
+    (FR-112, FR-182, the regularisation-and-CV slice, 2026-08-21) and `None`
     otherwise — a fixed-alpha GLM or a GBM was never cross-validated, and `None` is the
     honest reading of that.
 
     **`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed
-    `None`, and nothing could ever have populated it. FR-MODEL-49 makes these diagnostics
-    computed once at fit time and read thereafter, while FR-MODEL-57's backtest runs against
+    `None`, and nothing could ever have populated it. FR-170 makes these diagnostics
+    computed once at fit time and read thereafter, while FR-187's backtest runs against
     a *later* Dataset Version — after this artifact is written, and again for every period
     after that, which one field has no room for. It is its own artifact (`backtests.Backtest`,
-    `02` §4.12), and FR-MODEL-57 carries the amendment. The same removal, for the same
+    `02` §4.12), and FR-187 carries the amendment. The same removal, for the same
     reason, that `PartitionDiagnostics.double_lift` got.
     """
 

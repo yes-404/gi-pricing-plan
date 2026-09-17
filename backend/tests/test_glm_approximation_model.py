@@ -1,8 +1,8 @@
-"""FR-MODEL-96 — the GLM approximation of a GBM, persisted as a Model.
+"""FR-137 — the GLM approximation of a GBM, persisted as a Model.
 
 The artifact used to carry the table inline, which made it the only thing that could ever
-rate on the approximation — and a `TransparencyArtifact` has no status, so FR-OVR-14's pin
-could never resolve to one (`03` FR-RATE-60). These tests are about the Model that fixes
+rate on the approximation — and a `TransparencyArtifact` has no status, so FR-20's pin
+could never resolve to one (`03` FR-223). These tests are about the Model that fixes
 that: it exists, it is fitted, its diagnostics are against the booster's predictions rather
 than against observed claims, and rebuilding the artifact does not fit it a second time.
 """
@@ -172,7 +172,7 @@ async def _fitted_gbm_without_a_split(
     return model_id
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 async def test_the_artifact_names_a_fitted_model_that_holds_the_table(
     database: Database, blob_store: BlobStore, workspace_id: UUID
 ) -> None:
@@ -199,7 +199,7 @@ async def test_the_artifact_names_a_fitted_model_that_holds_the_table(
     assert surrogate.diagnostics_id is not None
     spec = MODEL_SPEC_ADAPTER.validate_python(surrogate.spec)
     assert spec.approximates_model_id == model_id
-    # FR-MODEL-129: the companion names the same model in the register a human reads.
+    # FR-169: the companion names the same model in the register a human reads.
     assert spec.approximates_model is not None
     assert spec.approximates_model.model_slug == source_row.model_family_slug
     assert spec.approximates_model.model_version == source_row.version
@@ -208,12 +208,12 @@ async def test_the_artifact_names_a_fitted_model_that_holds_the_table(
     assert surrogate.fit_result["coefficients"]
 
 
-@pytest.mark.req("FR-MODEL-102")
+@pytest.mark.req("FR-141")
 async def test_the_surrogate_carries_no_covariance_blob(
     database: Database, blob_store: BlobStore, workspace_id: UUID
 ) -> None:
     """An interval from a surrogate's coefficients describes the surrogate, and would be
-    read as the GBM's uncertainty — which FR-MODEL-77 refuses by name."""
+    read as the GBM's uncertainty — which FR-198 refuses by name."""
     model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
     actor = await _actuary(database, workspace_id)
     artifact = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
@@ -229,12 +229,12 @@ async def test_the_surrogate_carries_no_covariance_blob(
     assert surrogate.fit_result["covariance_blob"] is None
 
 
-@pytest.mark.req("FR-MODEL-110")
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-138")
+@pytest.mark.req("FR-137")
 async def test_rebuilding_the_artifact_reuses_the_surrogate_rather_than_refitting_it(
     database: Database, blob_store: BlobStore, workspace_id: UUID
 ) -> None:
-    """FR-MODEL-66: the specification is the same, so the model is the same one.
+    """FR-204: the specification is the same, so the model is the same one.
 
     Without this the second build raises `MODEL_IMMUTABLE` against a model it just found,
     and the Job fails on its own success.
@@ -245,20 +245,20 @@ async def test_rebuilding_the_artifact_reuses_the_surrogate_rather_than_refittin
     first = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
     second = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
 
-    assert second.id != first.id, "each build appends an artifact (FR-MODEL-33)"
+    assert second.id != first.id, "each build appends an artifact (FR-132)"
     assert first.glm_approximation is not None
     assert second.glm_approximation is not None
     assert (second.glm_approximation.approximating_model_id
             == first.glm_approximation.approximating_model_id)
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 async def test_the_surrogates_diagnostics_measure_it_against_the_booster(
     database: Database, blob_store: BlobStore, workspace_id: UUID
 ) -> None:
-    """FR-MODEL-96(iii). The A/E is the surrogate against the source model's predictions —
+    """FR-137(iii). The A/E is the surrogate against the source model's predictions —
     so it is close to 1 by construction on a well-fitting approximation, and the *spec* is
-    what says which target that is (FR-MODEL-102)."""
+    what says which target that is (FR-141)."""
     model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
     actor = await _actuary(database, workspace_id)
     artifact = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
@@ -278,7 +278,7 @@ async def test_the_surrogates_diagnostics_measure_it_against_the_booster(
     # **The surrogate's holdout is the source model's holdout.** Both are computed over the
     # partitions of the one split the two specs share, so this pins the semantics rather
     # than a number: without it a handler that passed the train frame as both partitions
-    # would satisfy FR-MODEL-54 by reporting the same population twice, and nothing here
+    # would satisfy FR-183 by reporting the same population twice, and nothing here
     # would say so. Compared against the GBM's own diagnostics and not against a row count
     # of its own, because a count only differs by the accident of a split that does not
     # divide evenly — a 50/50 fixture would turn that into a false red.
@@ -288,14 +288,14 @@ async def test_the_surrogates_diagnostics_measure_it_against_the_booster(
     assert 0.5 < surrogate.universal.train.ae_overall < 1.5
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 async def test_a_model_with_no_split_is_refused_before_a_frame_is_read(
     database: Database, blob_store: BlobStore, workspace_id: UUID
 ) -> None:
     """The surrogate is a Model, so it needs the evidence every Model needs.
 
-    FR-MODEL-96 gives the approximation a status, and `02` §4.8 makes diagnostics the
-    condition of `fitted`; FR-MODEL-54 makes a diagnostic reported without its holdout
+    FR-137 gives the approximation a status, and `02` §4.8 makes diagnostics the
+    condition of `fitted`; FR-183 makes a diagnostic reported without its holdout
     counterpart a defect. A source model with no split has no holdout to report, so there
     is no surrogate this Job could legitimately produce — and it says so instead of failing
     later inside `_split_frames`.
@@ -310,10 +310,10 @@ async def test_a_model_with_no_split_is_refused_before_a_frame_is_read(
     assert refusal.code == "MODEL_SPLIT_REQUIRED"
     assert refusal.status_code == 422
     assert refusal.detail is not None
-    assert "FR-MODEL-54" in refusal.detail
+    assert "FR-183" in refusal.detail
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 async def test_a_surrogate_slug_the_column_cannot_hold_is_refused_by_name(
     database: Database, blob_store: BlobStore, workspace_id: UUID
 ) -> None:
@@ -344,10 +344,10 @@ async def test_a_surrogate_slug_the_column_cannot_hold_is_refused_by_name(
     assert "65 characters" in refusal.detail, "and the length that crosses the boundary"
 
 
-# -- FR-MODEL-96: a pre-branch stored artifact still reads --------------------------------
+# -- FR-137: a pre-branch stored artifact still reads --------------------------------
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 def test_a_legacy_stored_artifact_still_reads() -> None:
     """The read-path half of the compatibility guarantee `test_glm_approximation.py`
     proves at the type.
@@ -402,10 +402,10 @@ def test_a_legacy_stored_artifact_still_reads() -> None:
     assert artifact.kinds == (TransparencyKind.GLM_APPROXIMATION,)
 
 
-# -- FR-MODEL-96: a hand-written surrogate spec is refused --------------------------------
+# -- FR-137: a hand-written surrogate spec is refused --------------------------------
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 async def test_a_surrogate_of_a_model_that_does_not_exist_is_a_404(
     database, blob_store, workspace_id
 ) -> None:
@@ -432,11 +432,11 @@ async def test_a_surrogate_of_a_model_that_does_not_exist_is_a_404(
     assert caught.value.code == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 async def test_a_surrogate_of_a_glm_is_refused(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-33 applies to non-GLM models: a GLM approximating a GLM reports 100 %
+    """FR-132 applies to non-GLM models: a GLM approximating a GLM reports 100 %
     fidelity, which looks like evidence and is not — the refusal `fitted_gbm_or_refuse`
     already makes at the endpoint, now made where a spec can arrive without one."""
     actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
@@ -461,7 +461,7 @@ async def test_a_surrogate_of_a_glm_is_refused(
     assert caught.value.status_code == 409
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 async def test_a_surrogate_on_a_different_dataset_version_is_refused(
     database, blob_store, workspace_id
 ) -> None:
@@ -497,11 +497,11 @@ async def test_a_surrogate_on_a_different_dataset_version_is_refused(
     assert "dataset_version_id" in str(caught.value.detail)
 
 
-@pytest.mark.req("FR-MODEL-129")
+@pytest.mark.req("FR-169")
 async def test_a_surrogate_whose_companion_names_the_wrong_model_is_refused(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-129: the companion is compared like the other three fields.
+    """FR-169: the companion is compared like the other three fields.
 
     A companion naming a slug or version different from the pinned model is a relation
     failure — the surrogate says it approximates `motor-ad-frequency@7` while the id pins
@@ -537,14 +537,14 @@ async def test_a_surrogate_whose_companion_names_the_wrong_model_is_refused(
     assert "model_slug" in str(caught.value.detail)
 
 
-# -- FR-MODEL-102: the surrogate's slug is derived at reservation --------------------------
+# -- FR-141: the surrogate's slug is derived at reservation --------------------------
 
 
-@pytest.mark.req("FR-MODEL-102")
+@pytest.mark.req("FR-141")
 async def test_an_over_long_source_slug_is_refused_by_name_at_reservation(
     database, blob_store, workspace_id
 ) -> None:
-    """OQ-MODEL-34 (c) moved the length refusal into `reserve_model`.
+    """OQ-604 (c) moved the length refusal into `reserve_model`.
 
     `models.model_family_slug` is a `String(64)` and the surrogate's is seven longer, so
     without the refusal here an over-long *source* slug would reach the column at the end
@@ -587,13 +587,13 @@ async def test_an_over_long_source_slug_is_refused_by_name_at_reservation(
     assert "65 characters" in caught.value.detail, "and the length that crosses the boundary"
 
 
-@pytest.mark.req("FR-MODEL-102")
+@pytest.mark.req("FR-141")
 async def test_a_surrogate_reserved_with_a_mismatched_caller_slug_stores_the_derived_one(
     database, blob_store, workspace_id
 ) -> None:
-    """OQ-MODEL-34 (c): the derived slug is stored, not the caller's.
+    """OQ-604 (c): the derived slug is stored, not the caller's.
 
-    FR-MODEL-102 says the surrogate's `model_family_slug` is the source model's own family
+    FR-141 says the surrogate's `model_family_slug` is the source model's own family
     slug with `-approx` appended, and the API path used to persist a caller-supplied slug
     verbatim — so the sentence was true of only the surrogates the transparency Job built.
     The row, its version slot and its audit event now all name the derived slug, whatever
@@ -645,18 +645,18 @@ async def test_a_surrogate_reserved_with_a_mismatched_caller_slug_stores_the_der
     assert reservations == 1, "the audit event names the derived slug too"
 
 
-@pytest.mark.req("FR-MODEL-110")
+@pytest.mark.req("FR-138")
 async def test_a_rebuild_does_not_refit_the_surrogate_it_reuses(
     database: Database,
     blob_store: BlobStore,
     workspace_id: UUID,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """FR-MODEL-110: on `should_fit=False` the numbers are loaded, not recomputed.
+    """FR-138: on `should_fit=False` the numbers are loaded, not recomputed.
 
     The rebuild test above proves the surrogate *Model row* is reused. It cannot see the
     cost, which is the whole point of the requirement: a full `glum` fit plus one type-III
-    refit per factor (FR-MODEL-51), paid for numbers the handler then discards. This
+    refit per factor (FR-172), paid for numbers the handler then discards. This
     counts the calls instead of trusting the ordering.
 
     Patched on `pricing_core.modelling` rather than on `app.worker.model_handlers`: the
@@ -684,7 +684,7 @@ async def test_a_rebuild_does_not_refit_the_surrogate_it_reuses(
 
     second = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
 
-    assert second.id != first.id, "each build appends an artifact (FR-MODEL-33)"
+    assert second.id != first.id, "each build appends an artifact (FR-132)"
     assert calls == [], "a rebuild must not refit the surrogate it is about to reuse"
     assert second.glm_approximation is not None
     assert first.glm_approximation is not None
@@ -700,14 +700,14 @@ async def test_a_rebuild_does_not_refit_the_surrogate_it_reuses(
     assert second.glm_approximation.worst_regions == first.glm_approximation.worst_regions
 
 
-@pytest.mark.req("FR-MODEL-110")
+@pytest.mark.req("FR-138")
 async def test_a_failed_build_leaves_no_reserved_surrogate_behind(
     database: Database,
     blob_store: BlobStore,
     workspace_id: UUID,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """FR-MODEL-110's branch asks `reserve_model` a second time, ahead of the compute, and
+    """FR-138's branch asks `reserve_model` a second time, ahead of the compute, and
     that question has to cost nothing.
 
     Asked inside a transaction that committed, a build that then failed would leave a draft

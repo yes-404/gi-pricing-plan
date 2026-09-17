@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/dislocation-run.schema.json",
   "title": "DislocationRun",
-  "description": "Premium change between two Rating Versions over a fixed portfolio. A persisted, citable artifact, not a transient screen (03 FR-RATE-46..49, §4.6).",
+  "description": "Premium change between two Rating Versions over a fixed portfolio. A persisted, citable artifact, not a transient screen (03 FR-263, FR-264, FR-265, FR-266, §4.6).",
   "type": "object",
   "required": ["baseline_ref", "candidate_ref", "portfolio_dataset_version_id",
                "policy_count", "exposure_years", "totals", "distribution"],
@@ -37,7 +37,7 @@
     },
     "by_segment": {
       "type": "array",
-      "description": "Sliceable by any factor available on the portfolio dataset (FR-RATE-47).",
+      "description": "Sliceable by any factor available on the portfolio dataset (FR-264).",
       "items": {
         "type": "object",
         "required": ["factor", "level", "policies", "mean_change_pct"],
@@ -52,7 +52,7 @@
     },
     "by_ladder_rung": {
       "type": "array",
-      "description": "Which part of the change caused this, not merely how much it changed (FR-RATE-47).",
+      "description": "Which part of the change caused this, not merely how much it changed (FR-264).",
       "items": {
         "type": "object",
         "required": ["rung", "contribution_pct"],
@@ -61,7 +61,7 @@
     },
     "attribution": {
       "type": "array",
-      "description": "Each change applied in isolation and cumulatively, decomposing the movement into its causes (FR-RATE-49).",
+      "description": "Each change applied in isolation and cumulatively, decomposing the movement into its causes (FR-266).",
       "items": {
         "type": "object",
         "required": ["change", "mean_change_pct"],

@@ -57,7 +57,7 @@
         "timing_ms": {"type": "object", "additionalProperties": {"type": "number"}}
       },
       "invariants": [
-        "applying every rung's recorded operation to risk_premium reproduces payable_premium exactly (FR-RATE-32)",
+        "applying every rung's recorded operation to risk_premium reproduces payable_premium exactly (FR-248)",
         "a traced call and an untraced call return identical premiums (03 R3)"
       ]
     },

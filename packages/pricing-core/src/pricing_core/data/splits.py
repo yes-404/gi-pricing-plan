@@ -1,4 +1,4 @@
-"""Deterministic train/test partitioning (`01` FR-DATA-33, FR-DATA-36).
+"""Deterministic train/test partitioning (`01` FR-73, FR-76).
 
 **The property this module exists for:** two independent calls, one asking for `train` and
 one asking for `test`, must produce complementary row sets — every row in exactly one part,
@@ -7,10 +7,10 @@ thing they share is the split artifact's `method`, `seed` and `fractions`.
 
 So the assignment is a **pure function of those three and the frame's row order**, computed
 identically by every caller, rather than a shuffle whose result is stored. That is what
-makes FR-DATA-36's "provably identical holdout rows" a fact about the arithmetic instead of
+makes FR-76's "provably identical holdout rows" a fact about the arithmetic instead of
 a promise about bookkeeping.
 
-The three methods `01` FR-DATA-33 names:
+The three methods `01` FR-73 names:
 
 * `random` — a seeded uniform draw per row.
 * `temporal` — before the cutoff trains, on or after it tests. Seedless by nature: a date
@@ -19,10 +19,10 @@ The three methods `01` FR-DATA-33 names:
   twelve monthly rows cannot appear in both. Assigning those rows independently is the
   standard leakage bug, and it flatters the holdout.
 * `assign_folds` generalises all three from two named parts to `folds` numbered ones, for
-  cross-validation (`02` FR-MODEL-53). K-fold `temporal` has no cutoff to inherit, so it is
+  cross-validation (`02` FR-182). K-fold `temporal` has no cutoff to inherit, so it is
   defined here as contiguous time-ordered blocks: sort ascending by `time_column`, cut the
-  sorted row order into `folds` equal-count blocks. Neither `01` FR-DATA-33 nor `02`
-  FR-MODEL-53 states this — it is this function's own design decision, not an inherited
+  sorted row order into `folds` equal-count blocks. Neither `01` FR-73 nor `02`
+  FR-182 states this — it is this function's own design decision, not an inherited
   fact, and is recorded here for that reason.
 """
 
@@ -36,7 +36,7 @@ import polars as pl
 
 __all__ = ["SplitError", "assign_folds", "assign_parts", "partition"]
 
-#: `01` FR-DATA-33's declared split methods.
+#: `01` FR-73's declared split methods.
 METHODS = ("random", "temporal", "grouped_by_key")
 
 
@@ -171,7 +171,7 @@ def assign_folds(
     so a caller already trusting `assign_parts`'s determinism gets the same guarantee here:
     two independent calls with the same `frame`, `method`, `seed` and `folds` produce the
     same assignment, which is what lets two Jobs, run minutes apart, agree on which rows
-    were held out for fold `i` (FR-MODEL-53).
+    were held out for fold `i` (FR-182).
     """
     if method not in METHODS:
         raise SplitError(f"unknown split method {method!r}; expected one of {METHODS}")

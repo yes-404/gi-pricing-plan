@@ -1,3 +1,13 @@
+---
+family: reference
+title: Filed plans
+status: active                  # active → retired (§1.2a)
+created: 2026-08-22
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # Filed plans
 
 The implementation plans this project has worked from, and the ledgers recording what
@@ -27,47 +37,21 @@ The one exception is a change that preserves the claim exactly while fixing how 
 the whole of it.
 
 **Appended 2026-09-04, `#25` ruled:** a padded citation of a real governed thing is
-normalised to its unpadded form, and a padded exhibit is fenced under Ruling 103 §5.1 —
+normalised to its unpadded form, and a padded exhibit is fenced under RL-1044 §5.1 —
 both are the exception applied, not widened: normalising a citation's form is what the
-migration's own citation rewrite already does to every frozen plan under NT-0019 §5.2, and
+migration's own citation rewrite already does to every frozen plan under RFC-937 §5.2, and
 fencing an exhibit changes how a value is *rendered*, never what is claimed.
 
-## The four kinds of file
+## Naming, and the kinds of plan
 
-| Suffix | Written by | Holds |
-|---|---|---|
-| *(none)* | `writing-plans` | The plan — goal, architecture, tasks, bite-sized steps |
-| `-ledger` | `subagent-driven-development` | What execution actually did, task by task |
-| `-final-review`, `-verified` | a review pass | Findings against a finished branch, and their verdicts |
-| `-handover` | a session ending mid-work | State a successor session needs to resume |
+The filename form, the `kind:` a plan carries, and the status vocabulary are all
+[`../process/document-ids.md`](../process/document-ids.md)'s — stated once, there, rather
+than restated here — a restated rule is how one of the two statements goes stale. A ledger
+is its own family in [`../ledgers/`](../ledgers/) and a ruling its own in
+[`../rulings/`](../rulings/); neither is a suffix on a plan's name any more.
 
-## Naming
-
-**Before the `NT-0019` id migration:** `YYYY-MM-DD-<slug>.md`, dated when the file was
-started, with the four kind-suffixes above.
-
-**From the migration commit onward:** `PL-<nnnnn>-<slug>.md` — the padded document id leads
-the filename (`NT-0019` §1.4), and the two things the old name encoded move into the front
-matter, where a parser reads a *field* instead of a substring:
-
-| What the filename used to carry | Where it lives after the migration |
-|---|---|
-| the filing date, as a `YYYY-MM-DD-` prefix | `created:` |
-| the kind, as one of four suffixes | `kind:` — `map` · `leaf` · `review` · `handover` |
-
-`-ledger` has no successor here: a ledger became its own `LG-` family under `docs/ledgers/`
-and is not a plan.
-
-**Check 28 reads whichever of the two is on disk** and reports which regime it used. Both
-halves matter: run against the migrated tree with the filename parser, it emitted 110
-"carries no `YYYY-MM-DD-` date prefix" failures *and* reported `0 plan(s) checked for an
-acceptance standard` — wrong in both directions at once, over the same 114 files it should
-have been checking.
-
-**`ls docs/plans/` is the index** before the migration; `docs/INDEX.md` is after it. There is
-deliberately no hand-maintained list of contents in this file: a list that nothing enforces
-goes stale — the lesson `CLAUDE.md` §0 records about counts and §9 records about restating
-the roadmap.
+**[`../INDEX.md`](../INDEX.md) is the index.** There is deliberately no hand-maintained list
+of contents in this file.
 
 ## Writing one so it passes the audit
 
@@ -78,10 +62,10 @@ Four conventions, each of them a check that will otherwise fail:
    `../roadmap.md`, the repository root is `../../`.
 2. **Every `FR-`/`NFR-` id you cite must already be defined in a spec.** The exception is
    the id a plan intends to *take*, which the audit accepts only after a `Next free:`
-   marker, as in — "Highest ids in use: FR-DATA-52. Next free: `FR-DATA-53`". The exemption
+   marker, as in — "Highest ids in use: FR-67. Next free: `FR-68`". The exemption
    covers the rest of that line only; an undefined id before the marker, or on any other
    line, still fails. Two consequences that have each cost a red gate, both on
-   [`2026-08-29-w11-slices-2-4-planning-readiness.md`](2026-08-29-w11-slices-2-4-planning-readiness.md)
+   [`PL-00855-wk-671-slices-2-4-planning-readiness-the-signals-that-release-each-and-what-a-leaf-plan-can-already-take-from-here-2026-08-29.md`](PL-00855-wk-671-slices-2-4-planning-readiness-the-signals-that-release-each-and-what-a-leaf-plan-can-already-take-from-here-2026-08-29.md)
    within one session:
    - **"Rest of that line" means the *physical* line, so the marker and the ids it exempts
      must not be separated by a wrap.** A paragraph that hard-wraps between `Next` and
@@ -95,7 +79,7 @@ Four conventions, each of them a check that will otherwise fail:
      gate this exact way. Describe what the message named; do not reproduce it.
 3. **Markdown table rows must match their header's cell count.** A literal `|` inside a cell
    shifts every column after it while still rendering, so escape it as `\|`.
-4. **Every `ADR-NNNN` you cite must have a file** in [`../adr/`](../adr/).
+4. **Every `ADR-NNNN` you cite must have a file** in [`../adrs/`](../adrs/).
 
 Run `python3 scripts/audit-docs.py` before handing a plan off.
 
@@ -131,7 +115,7 @@ has no context to check it against.
    faster than literals.** Rules 1–3 all guard against a *literal* aging — a fixture name, a
    route, an enum member. The premise a plan argues from ages too, and faster, because a
    decision-maker is ruling concurrently and a ruling is not a commit to the tree your sweep
-   pinned. The W11 Slice 1 plan was written against `7b8473a`, and six rulings landed in the
+   pinned. The WK-671 Slice 1 plan was written against `7b8473a`, and six rulings landed in the
    same hour: they unblocked one task, changed a ruled signature the plan had guessed a
    parameter onto, turned a recommendation into a decision with a sharper acceptance test,
    and corrected a defect the plan would otherwise have shipped — it told an executor to
@@ -144,7 +128,7 @@ has no context to check it against.
 
    **Reading it is not enough: name the commit you read.** The same session then reported
    "that PR does not cover it" after reading the ruling branch at `02699c3`, whose headings
-   stopped at Ruling 11. `dc4d980` appended Ruling 12 six minutes later and eleven seconds
+   stopped at RL-877. `dc4d980` appended RL-878 six minutes later and eleven seconds
    before the merge, so the report was true of the tree it was written against and false by
    the time it arrived. `../process/delivery-process.md` §15 already requires the fix —
    *"name the tree or SHA your claim is about"*, because *"a status claim with no named tree
@@ -159,10 +143,10 @@ has no context to check it against.
    against all keep saying what they said before. Those three are the half that gets
    implemented and the half that gets verified. **Check the four site classes separately** —
    narrative, Files, Steps, Acceptance — because a claim can be present in one and absent in
-   the next three. Six sites in one plan on 2026-08-29: Ruling 7's
+   the next three. Six sites in one plan on 2026-08-29: RL-873's
    *"the payload travels inside the `Bundle`, never as a reference"* landed in the task that
    summarised it, while the operative step one task earlier still said "the booster blob
-   reference" — and Ruling 8's site still told the executor to tune the per-call booster load
+   reference" — and RL-874's site still told the executor to tune the per-call booster load
    that ruling exists to delete. The two were mutually inconsistent and each looked fine in
    isolation. **Grep the ruling's own subject across the whole document; never re-read the
    section you just edited**, which agrees with itself by construction — rule 3, one level
@@ -190,13 +174,13 @@ detail and belongs in the plan's scope section rather than in its samples.
 The gate does reach one of these from the document side, and *how* it did is the useful part,
 because the obvious fix was the wrong one. `audit-docs.py` rejected a threshold copied
 byte-for-byte out of `pricing-core`: `min_severity_minor` written as `0.0`, a `_minor` field
-carrying a fraction, which FR-OVR-7 forbids because money is integer minor units. Rewriting
+carrying a fraction, which FR-10 forbids because money is integer minor units. Rewriting
 the plan's value as `0` satisfied the gate.
 
 It was the wrong half. Mean severity is a **ratio**, kept float deliberately — rounding a mean
 to whole minor units loses the precision the confidence interval beside it expresses — and
 `_minor` is reserved for integer minor units. The value was right; the **name** was the defect.
-FR-DATA-46 renamed the profile row's two mean fields for exactly that reason, and its own
+FR-64 renamed the profile row's two mean fields for exactly that reason, and its own
 **2026-08-19 correction is the same mistake a second time**: the rename "carried the *names*
 and left the *types*", so the published contract went on asserting the rounding the requirement
 forbids, and nothing caught it because every conformance test compared field names only.

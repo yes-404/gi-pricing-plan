@@ -31,7 +31,7 @@ function format(edge: number | undefined): string {
   return Number.isInteger(edge) ? String(edge) : edge.toFixed(2);
 }
 
-/** Bin labels from the edges: FR-DATA-48 stores one more edge than it stores counts. */
+/** Bin labels from the edges: FR-65 stores one more edge than it stores counts. */
 const labels = computed(() =>
   counts.value.map((_, i) => `${format(edges.value[i])}–${format(edges.value[i + 1])}`),
 );
@@ -39,7 +39,7 @@ const labels = computed(() =>
 /**
  * Rows as bars, and exposure beside them when the profile weighted the bins.
  *
- * Exposure is an exact decimal **string** (FR-OVR-7). `Number()` here is deliberate and
+ * Exposure is an exact decimal **string** (FR-10). `Number()` here is deliberate and
  * safe, for the reason `OneWayChart` gives: a chart coordinate is a float64 either way and
  * nothing computes with the plotted value.
  *
@@ -81,7 +81,7 @@ const option = computed(() => ({
 }));
 
 /**
- * The chart's accessible equivalent (NFR-OVR-10).
+ * The chart's accessible equivalent (NFR-463).
  *
  * The Exposure column is dropped rather than dashed when the profile weighted nothing,
  * matching the chart, which drops the series and the second axis in the same case. A column
@@ -94,7 +94,7 @@ const columns = computed(() =>
 );
 
 /**
- * Exposure is passed through as the exact decimal **string** it is stored as (FR-OVR-7).
+ * Exposure is passed through as the exact decimal **string** it is stored as (FR-10).
  * The chart widens it to a float because a coordinate is one either way; the table has no
  * such excuse, and `AeByFactorChart` set this precedent for the same reason.
  */

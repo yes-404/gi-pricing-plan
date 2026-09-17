@@ -1,4 +1,4 @@
-# NFR-RATE-1 (component) and NFR-RATE-2 — W11 Slice 1 Task 1.5, the bare-metal latency harness
+# NFR-489 (component) and NFR-490 — WK-671 Slice 1 Task 1.5, the bare-metal latency harness
 
 Measured 2026-08-29 on this branch's `packages/pricing-core/src/pricing_core/rating/score.py`
 (`score_one`), `runtime.py` (`load_bundle`/`CompiledBundle`) and `compile.py`
@@ -7,13 +7,13 @@ Measured 2026-08-29 on this branch's `packages/pricing-core/src/pricing_core/rat
 (`uv run python scripts/bench-rating.py`). `docs/specs/03-rating-engine.md` §9
 (`:797-798`):
 
-- **NFR-RATE-1** (`:797`): "Real-time scoring p99 < 50 ms server-side at 200 rps per
-  replica for a ~200-step motor structure with one `exact` GBM call (NFR-OVR-1). Without a
+- **NFR-489** (`:797`): "Real-time scoring p99 < 50 ms server-side at 200 rps per
+  replica for a ~200-step motor structure with one `exact` GBM call (NFR-454). Without a
   GBM call, p99 < 15 ms." — this note measures the **component** half only (`score_one`
   called directly, no HTTP, no FastAPI, no database); the sustained-200-rps and
   full-HTTP-path halves are Slice 2's Task 2.1 per this task's own plan
-  (`docs/plans/2026-08-29-w11-1-evaluator-core.md`).
-- **NFR-RATE-2** (`:798`): "Tracing adds ≤ 20 % to scoring latency and never changes the
+  (`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`).
+- **NFR-490** (`:798`): "Tracing adds ≤ 20 % to scoring latency and never changes the
   result (R3)."
 
 ## Method
@@ -22,7 +22,7 @@ Measured 2026-08-29 on this branch's `packages/pricing-core/src/pricing_core/rat
   imported from the test suite — see the script's own module docstring): 2 scalar inputs
   (`driver_age`, `channel`) + 8 numeric rating-factor inputs, one `table` lookup, one
   `exact` `model_call` against a real, trained XGBoost booster (8 features, 5,000
-  synthetic rows, 300 rounds — sized like Task 1.3's own NFR-RATE-4 "real large" fixture,
+  synthetic rows, 300 rounds — sized like Task 1.3's own NFR-492 "real large" fixture,
   not a toy 3-round one), 187 chained `expression` steps, and one `output` step — **200
   steps** with the GBM call, **199** without it (the model_call step is simply omitted).
 - Timing: `time.perf_counter()` around `await score_one(bundle, ctx, trace=...)`, one
@@ -36,7 +36,7 @@ Measured 2026-08-29 on this branch's `packages/pricing-core/src/pricing_core/rat
   1,000 samples).
 - Machine: Intel Xeon @ 2.20GHz, 4 cores, 16.4 GB RAM — a shared development machine, not
   a dedicated benchmark host (`CLAUDE.md` §11's load-contention trap). **The 1-minute load
-  average is reported per run in the NFR-RATE-1 table below, because on this machine it is
+  average is reported per run in the NFR-489 table below, because on this machine it is
   the variable that decides the verdict**; the first run's was 0.39, and `bench-rating.py`
   has since been changed to read the load either side of every timed block and print it
   beside the figure, so a future run records the condition it was taken under rather than
@@ -46,13 +46,13 @@ Measured 2026-08-29 on this branch's `packages/pricing-core/src/pricing_core/rat
   and the branch has since merged `origin/main` at `6e548f8`. Nothing on the scored path
   changed between them.
 
-## Result — NFR-RATE-1 (component)
+## Result — NFR-489 (component)
 
 *Verdict corrected 2026-08-30, after three independent re-runs during the audit of PR #416.
 This section first read **"Both halves PASS"** on the strength of a single run. The no-GBM
 half does not reproduce, and the correction is a verdict change rather than a wording fix.
 Every run is tabulated below with its load: the evidence for the corrected verdict is here,
-and the finding itself is **F38** in `docs/audit/register.md`, beside NFR-RATE-2's separate
+and the finding itself is **F38** in `docs/findings/register.md`, beside NFR-490's separate
 failure at **F35**.*
 
 - **Without a GBM call (p99 < 15 ms): measured; verdict unstable across runs — not
@@ -66,7 +66,7 @@ failure at **F35**.*
   figure it is **~1.8x**.
 
 Every run, with the 1-minute load average it was taken under — the condition is part of
-the measurement, not context for it, because NFR-RATE-1 states its budget *"at 200 rps per
+the measurement, not context for it, because NFR-489 states its budget *"at 200 rps per
 replica"*:
 
 | run | 1-min load | with-GBM p99 (< 50 ms) | | without-GBM p99 (< 15 ms) | | trace overhead at p99 (≤ 20 %) |
@@ -96,7 +96,7 @@ produces the most convincing-looking evidence.
 
 **The distribution — the acceptance criterion that was not met, and the one that explains
 the instability once you have it.** The leaf plan
-(`docs/plans/2026-08-29-w11-1-evaluator-core.md:1416`) requires *"the distribution, not
+(`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md:1416`) requires *"the distribution, not
 only the p99 against the bound. A single number comfortably inside a budget and a number
 sitting on it are different findings, and only the distribution distinguishes them."*
 `bench-rating.py` **already printed** stdev, p50 and p90 beside every p99. This note
@@ -149,9 +149,9 @@ This component measurement excludes the sustained-200-rps and ASGI-embedded over
 2's Task 2.1 adds. A full-path p99 at that point starts from the figures in this table, not
 from the 9.410 ms first reported here.
 
-## Result — NFR-RATE-2 (trace overhead)
+## Result — NFR-490 (trace overhead)
 
-From this note's original run (load 0.39); the other four are in the NFR-RATE-1 table
+From this note's original run (load 0.39); the other four are in the NFR-489 table
 above.
 
 | Metric | Measured | Budget | Verdict |
@@ -159,9 +159,9 @@ above.
 | p99, with GBM, 200 steps | 103.227 ms traced vs. 12.537 ms untraced = **+723 %** | ≤ 20 % | **OVER, by ~36x** |
 | mean, with GBM, 200 steps (informational) | 75.511 ms traced vs. 9.235 ms untraced = **+718 %** | — | — |
 
-**NFR-RATE-2 fails at this scale, by a wide margin, on both metrics — and unlike
-NFR-RATE-1's no-GBM half, this verdict is robust.** Every one of the five runs in the
-NFR-RATE-1 table above returned OVER, across loads 0.39 to 8.50 and a span of +497 % to
+**NFR-490 fails at this scale, by a wide margin, on both metrics — and unlike
+NFR-489's no-GBM half, this verdict is robust.** Every one of the five runs in the
+NFR-489 table above returned OVER, across loads 0.39 to 8.50 and a span of +497 % to
 +723 %. Nothing about the margin is close enough for contention to decide it.
 
 Nor is it a noisy tail: the trace-overhead percentage was measured at four graph sizes
@@ -177,7 +177,7 @@ smaller runs, a 20-call sample each — the 200-step figure above is the 1,000-c
 
 The overhead percentage **grows with step count** rather than holding roughly constant —
 at 18 steps it sits inside the 20 % budget; by 63 steps it is 10x over; at the ~200-step
-scale NFR-RATE-1 itself names, it is ~36x over. The *absolute* per-step overhead
+scale NFR-489 itself names, it is ~36x over. The *absolute* per-step overhead
 (`(traced − untraced) / steps`) is itself roughly proportional to the step count (≈0.0016
 ms × steps² across the three larger points), consistent with a cost that grows
 super-linearly in the node count rather than a fixed per-node tax — because `to_wire`'s
@@ -187,7 +187,7 @@ copy of that context **per node**, so the total trace payload grows faster than 
 in the step count.
 
 **That mechanism was offered here as the most likely one rather than a verified one. It is
-now verified**, and registered as **F35** (`docs/audit/register.md`). Two levers this note
+now verified**, and registered as **F35** (`docs/findings/register.md`). Two levers this note
 did not run establish it:
 
 - **Causation.** Adding **one** declared `string` input carrying 4 KB that **no step
@@ -246,7 +246,7 @@ upstream `zen-engine` change.
 
 ## Reading this, not just the numbers
 
-**This is a genuine NFR-RATE-2 failure at the scale NFR-RATE-1 itself specifies, not a
+**This is a genuine NFR-490 failure at the scale NFR-489 itself specifies, not a
 measurement artifact.** The scaling table above rules out both a fluke (four independent
 runs at four sizes, the same direction every time) and a bug specific to this harness (the
 same `score_one(bundle, ctx, trace=True)` call a real caller would make; `passThrough` is
@@ -256,7 +256,7 @@ a design question (sample tracing rather than capture every node's full context,
 `_build_trace` copies, revisit whether `passThrough` needs to carry the full context to
 every downstream node rather than only what a trace consumer needs, or amend the budget)
 outside a measurement task's remit, and is recorded here as a finding for whoever next
-triages `docs/audit/register.md` or reviews this slice, not resolved by this note.
+triages `docs/findings/register.md` or reviews this slice, not resolved by this note.
 
 **What this measurement does not cover.** No HTTP, no FastAPI, no ASGI, no sustained load,
 no concurrency (Slice 2's Task 2.1 and Task 1.4's own concurrency note respectively); **no
@@ -265,15 +265,15 @@ run once outside the timed region, so every figure here is a warm-slot, booster-
 one; one machine, five runs but a single machine and uncontrolled load; a
 synthetic fixture with a real but arbitrarily-sized booster (300 rounds/8 features/5,000
 rows) rather than a production model; the without-GBM structure reuses the same 187-step
-expression chain rather than an independently-designed no-GBM algorithm. NFR-RATE-1's
+expression chain rather than an independently-designed no-GBM algorithm. NFR-489's
 sustained-200-rps and full-path halves remain entirely unmeasured here, by design (Slice
 2's).
 
 ## Scope
 
-This measures NFR-RATE-1's *component* half and NFR-RATE-2, Task 1.5's own assignment in
-`docs/plans/2026-08-29-w11-1-evaluator-core.md`'s requirement coverage table. NFR-RATE-3,
+This measures NFR-489's *component* half and NFR-490, Task 1.5's own assignment in
+`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`'s requirement coverage table. NFR-491,
 7, 8 and 14 are Task 1.4's, already measured and recorded in
-`docs/research/w11-task-1-4-model-call-concurrency.md`; NFR-RATE-4 is Task 1.3's,
-`docs/research/w11-task-1-3-nfr-rate-4.md`. NFR-RATE-1's sustained-load and full-path
+`docs/research/w11-task-1-4-model-call-concurrency.md`; NFR-492 is Task 1.3's,
+`docs/research/w11-task-1-3-nfr-rate-4.md`. NFR-489's sustained-load and full-path
 halves are Slice 2's Task 2.1 — not claimed here.

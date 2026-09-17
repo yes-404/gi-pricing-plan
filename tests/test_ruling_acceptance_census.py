@@ -1,7 +1,7 @@
 """`scripts/ruling-acceptance-item-census.py` — the ruling-form flag-day's own proofs.
 
 The maintainer ruled the ruling-form flag-day 2026-09-02, at `#623`'s merge (`aab6327`):
-every ruling filed after it must carry a W37-form acceptance item, so the census script's
+every ruling filed after it must carry a WK-697-form acceptance item, so the census script's
 `none` bucket stops being an unconditional pass and starts failing on a **post**-flag-day
 ruling with none. `CLAUDE.md` §13: "a check that has never printed a failure has not been
 tested" — this is that proof, against a synthetic git repository (mirroring `tests/
@@ -15,7 +15,7 @@ Two things proven here, both required before the flag-day rule can be trusted:
      commit, not the file's, and not the ruling's number. Both synthetic rulings are
      shaped like one an author would actually write — a verification table, a Ruled
      section, an obligations section — not a one-line stub: the lead's own finding
-     against `docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md` Ruling 50's own broken-
+     against `docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md` RL-910's own broken-
      input fixture (a 24-character bare stop, easily caught, unlike the live population
      it was meant to stand in for) is the reason a trivial fixture here would prove
      nothing about a ruling that genuinely just forgot the section.
@@ -119,18 +119,18 @@ def synthetic_repo(tmp_path: pathlib.Path) -> pathlib.Path:
     plans.mkdir(parents=True)
     rulings = plans / "synthetic-rulings.md"
     rulings.write_text(
-        "## Ruling 1 — pre-flag-day, a fully-drafted ruling with no acceptance item\n\n"
+        "## RL-864 — pre-flag-day, a fully-drafted ruling with no acceptance item\n\n"
         + _REALISTIC_RULING_BODY.format(sha="0000000"),
         encoding="utf-8",
     )
-    _commit(root, "seed: Ruling 1, pre-flag-day", date="2026-01-01T00:00:00+00:00")
+    _commit(root, "seed: RL-864, pre-flag-day", date="2026-01-01T00:00:00+00:00")
 
     with rulings.open("a", encoding="utf-8") as f:
         f.write(
-            "\n## Ruling 2 — post-flag-day, a fully-drafted ruling with no acceptance "
+            "\n## RL-865 — post-flag-day, a fully-drafted ruling with no acceptance "
             "item\n\n" + _REALISTIC_RULING_BODY.format(sha="1111111")
         )
-    _commit(root, "add: Ruling 2, post-flag-day", date="2026-06-01T00:00:00+00:00")
+    _commit(root, "add: RL-865, post-flag-day", date="2026-06-01T00:00:00+00:00")
 
     return root
 
@@ -150,7 +150,7 @@ def test_flag_day_split_separates_pre_and_post_flag_day_none_rulings(
 
     assert {h.number for h in grandfathered} == {"1"}
     assert {h.number for h in violations} == {"2"}, (
-        "Ruling 2 was introduced after the flag-day and has no acceptance item -- this "
+        "RL-865 was introduced after the flag-day and has no acceptance item -- this "
         "is the violation the flag-day rule exists to catch"
     )
 
@@ -176,7 +176,7 @@ def test_flag_day_split_uses_the_headings_own_commit_not_the_files(
     ).stdout.splitlines()[0]
 
     assert introduced != file_first_commit, (
-        "Ruling 2's own introduction date must differ from the file's first-commit date "
+        "RL-865's own introduction date must differ from the file's first-commit date "
         "-- if they were ever equal by construction this test would not be exercising "
         "the per-heading resolution at all"
     )
