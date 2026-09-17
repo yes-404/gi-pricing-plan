@@ -5865,7 +5865,7 @@ def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
     # the writer that moves it owns its header). Passing a different `routed` here would
     # measure a configuration nothing runs.
     routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(pre_migration_root)} | set(
-        doc_id_cli._README_FAMILY_LEGACY_PATHS.values()
+        doc_id_cli._README_FAMILY_MOVES
     )
     targets, censuses = doc_id_cli._discover_reference_stamp_targets(
         pre_migration_root, routed=routed
@@ -6789,11 +6789,7 @@ def test_every_section_5_2_readme_row_lands_where_its_row_says(
     `findings/` and `closures/` READMEs"; `workflows/` and `plans/` keep theirs.
     """
     doc_id_cli.migrate(pristine_a)
-    # `_README_FAMILY_MOVES` is keyed identity-style by the NEW path alone (it doubles as
-    # the routed/stamped population, per its own module docstring) -- the true old-path ->
-    # new-path pairing for this row-by-row check is `_README_FAMILY_LEGACY_PATHS`, keyed
-    # new -> old.
-    for new_rel, old_rel in doc_id_cli._README_FAMILY_LEGACY_PATHS.items():
+    for old_rel, new_rel in doc_id_cli._README_FAMILY_MOVES.items():
         assert not (pristine_a / old_rel).exists(), old_rel
         assert (pristine_a / new_rel).is_file(), new_rel
     for rel in doc_id_cli._README_IN_PLACE:
