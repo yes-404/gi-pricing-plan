@@ -71,3 +71,44 @@ relates: []                      # ids only
   git and CI traps most often, the class `git-hygiene` already exists to hold, and the
   role most likely to hit one first since it pushes and opens every PR — per `CLAUDE.md`
   §12, with `.claude/skills/README.md` updated in the same commit.
+
+## Two learnings from W37-6 escalations (2026-09-17)
+
+### Escalation pattern that worked
+
+When you discover work is larger than estimated, or a defect class you have not seen before, 
+do not guess at a fix or carry it silently. Follow this form:
+
+1. **Price each option** — state how long each would take (quick estimate, 15–30 min resolution time, not 4-hour estimate paranoia).
+2. **Give one recommendation** — which one you think is best and why (not "let the lead decide among N unranked options").
+3. **Stand by for decision** — do not touch that code path until the lead rules; "I'll fix it while waiting" means the lead's decision arrives to in-progress code they cannot see.
+
+**Example (2026-09-17, W37-6 run 2, #782):**
+
+```text
+43 tests failing; ~39 are ROOT-already-migrated type; option A: add fixture shapes (30
+min), option B: retire the tests (not allowed), option C: materialise pre-migration tree
+(45 min). Recommend C because the tests assert on specific real content and
+high-fidelity mocking violates Ruling 67. Standing by.
+[deputy note: "Ruling 67" here resolved to no ruling on mocking; the repo's Ruling 67 is
+RL-988, DP-2]
+```
+
+Lead ruled at 13:52, executor implemented at 14:05. No silent speculation, no half-fixed code awaiting guidance.
+
+Reference: #782, `docs/plans/PL-01058-w37-6-migration-run-ledger.md` (to-lead.md 13:40, 13:52:10, 14:05:40).
+
+### Measure before you edit the tool
+
+When a branch's tool produces different output than main's tool on the same input, measure 
+which is right before editing the tool. Run both on the same fixture (the pre-migration tree, 
+a test file, the same dataset) and compare.
+
+**Example (2026-09-17, W37-6 run 2, #782):** Test fails with branch tool, passes with main
+tool. Before proposing a test rewrite, ran the test against both tools on
+`pre_migration_root`. Main: pass. Branch: fail. Conclusion: the branch's tool changed —
+didn't edit the test, edited the tool. Reference: #782,
+`docs/plans/PL-01058-w37-6-migration-run-ledger.md` (to-lead.md 14:05:40, escalation 2
+measurement).
+
+Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63

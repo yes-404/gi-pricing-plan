@@ -507,8 +507,10 @@ in the line most readers stop at.
 
 ### Never end a turn with a command still running — the suite, a benchmark, anything
 
-`uv run pytest -q` collects **2,347 tests** and routinely runs past the **10-minute
-foreground limit**, so the tool backgrounds it. That is fine for the main thread, which is
+`uv run pytest -q` collects a number of tests that drifts as tests are added — read it
+fresh with `uv run pytest --collect-only -q | tail -1` rather than trusting a pasted
+figure — and routinely runs past the **10-minute foreground limit**, so the tool
+backgrounds it. That is fine for the main thread, which is
 re-invoked when the command exits. **It is a trap for a subagent**: a backgrounded command
 does not notify an agent that has already ended its turn, so the agent stops "waiting for
 the completion notification" and waits forever. Seen 2026-08-30, WK-671 Task 3A — the executor
@@ -720,7 +722,78 @@ celery -A app.worker.entrypoint beat
 The relay is what moves a committed job to the broker. **Without `beat` running, jobs stay
 `queued` and nothing explains why.**
 
+## Expensive-run checklist — pytest, gate, frontend as one pattern
+
+**Expensive runs (full suite, full gate, full frontend build) cost 4.5+ cores and 13+ 
+minutes each.** Three traps found in W37-6 (to-lead.md entries 10:55, 11:02:41, 11:48):
+
+1. **Tool-call timeout kills pytest mid-run with no summary.** A full `uv run pytest -q` 
+   invoked inside a Bash tool call dies silently when the tool timeout (10 min) arrives. The 
+   suite's collected-test count drifts as tests are added — read it fresh with `uv run 
+   pytest --collect-only -q | tail -1` rather than pasting a figure here — and routinely 
+   runs 11+ minutes, so the timeout cuts it off mid-execution, mid-worker-pool, leaving no 
+   `N passed / M failed` summary. Never invoke the full suite directly from a Bash tool call. 
+   Use the `flock` gate wrapper (foreground blocking, returns when done) or background it 
+   with `run_in_background` for a notification when it finishes.
+
+2. **Gate script's frontend block runs from wrong cwd.** The frontend `pnpm` commands 
+   (`pnpm install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test`, 
+   `build`) must run with `--dir frontend` or from inside `frontend/`. A gate block that 
+   sourced the gate script from the root's cwd, then tried to run `pnpm …` directly (without 
+   `--dir`), silently did nothing — no build, no error, exit 0. Measured W37-6 11:02:41 BST: 
+   git workflow changed to run from root only, `pnpm --dir frontend` is the only form now.
+
+3. **`mktemp -d` result dirs measured with identical inodes under concurrency.** When three 
+   gate slots ran simultaneously, `ls -i` on two slots' `mktemp -d` results showed the same 
+   inode — two processes sharing one working directory and truncating each other's output. 
+   The symptom is measured; the cause is not established (`mktemp -d`'s own contract is an 
+   atomic, exclusive create, so a same-second collision on the random suffix is not a 
+   mechanism this note can stand behind — do not repeat it as an explanation). The rule 
+   holds regardless of cause: use `mktemp -d` once per gate slot, reuse the same dir inside 
+   the body, and delete it explicitly at the end (do not rely on auto-cleanup); or use 
+   `$TMPDIR` with a slot-specific prefix if the infrastructure already provides it 
+   (`$GIP_GATE_SLOT` for this project — its value is the flock path, convert 
+   `/tmp/slots/gate-N` to `GIP_GATE_TMPDIR=/tmp/gate-$N`).
+
+Each trap is measured, not presumed: (1) confirmed by running a gate with the timeout 
+diagnostic enabled mid-pytest; (2) by git-logging when the build output vanished; (3) by 
+two concurrent slots' mktemp calls returning the same dir (verified with `ls -i` on 
+identical inodes).
+
+## Fail-closed wrapper pattern
+
+A wrapper prints its own `<NAME>_EXIT=<n>` line; an empty inner exit or `collected != ran`
+is a named non-zero exit (91/92), never 0; strip ANSI before grepping pytest output.
+
+Verified: 2026-09-17
+
+## Shared-inode diagnosis — a PEM/TLS failure that is not a code change
+
+When a test fails on a certificate/PEM/TLS or "corrupted vendored file" error on a box
+where the tree did not change:
+
+1. `stat -c '%i %h %y' <file>` — links > 1 and a recent mtime mean a uv-cache inode
+   shared by every venv.
+2. Diff against `uv pip install --no-cache --no-deps <pkg>==<ver>` into a throwaway venv.
+3. Find the writer by the run's own log (`wrote <path>` lines) or the session
+   transcripts' `tool_use` Bash commands around the mtime — never by a directory's birth
+   time.
+4. Restore IN PLACE (`cp` over the same path so every link heals), recording sha256
+   before/after/pristine.
+
+Verified: 2026-09-17
+
 ## Verified
+
+2026-09-17 (three traps, expensive-run section) — W37-6, executor-h's gate runs at 
+10:55 BST (full suite timeout), 11:02:41 BST (frontend cwd wrong), 11:48 BST (mktemp 
+collision). All three traps measured directly before writing. Evidence: to-lead.md 
+entries, one gate log showing a tests-collected line but no final summary (timeout), one 
+build log showing no actual build (wrong cwd), one tmpdir ls -i showing identical inodes 
+(collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
+to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
+
+Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
 capturing its own exit code, ending in a per-stage table and a `GATE:` verdict line. Three
