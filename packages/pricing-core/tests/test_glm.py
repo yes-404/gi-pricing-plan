@@ -1,4 +1,5 @@
-"""GLM fitting against data whose answer is known (`02` FR-110, FR-111, FR-112, FR-113, FR-114, FR-115).
+"""GLM fitting against data whose answer is known (`02` FR-110, FR-111, FR-112, FR-113, FR-114,
+FR-115).
 
 The test that matters is not "does it return numbers" but **does it return the numbers
 that generated the data**. Everything else here is a refusal: `02` FR-115 says a

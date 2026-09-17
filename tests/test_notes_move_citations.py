@@ -16,17 +16,17 @@ match what §1a and RL-948 of `docs/rulings/RL-00948-q7-notes-half-only-cite-not
 describe: frozen plans (untouched, C4), and everything else (edited by the move).
 
 **Widened 2026-09-01 for RL-951** (`docs/rulings/RL-00951-rl-947-s-tombstone-gains-p
-er-file-stubs-watched-by-a-new-check-not-left.md`): the ruled tombstone gained 18 per-file redirect stubs at the vacated
-path plus a new check (30) that watches them, both landed after this test was first
-written. The check's own implementation and its test necessarily and permanently name the
-old path -- that is not a citation left behind by the move, it is the move's own watch
-mechanism -- so `EXEMPT_FILES` below names them explicitly rather than widening the
-`docs/plans/`-shaped carve-out to something looser. Two more exemptions came from a
-rebase-time interaction, not from this slice's own work: `docs/research/file-census-5ef559d.csv`
-and `docs/research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md` (landed on `main` under PRs #537/#545 while this
-branch was open) are provenance-locked snapshots of the tree as it stood at `4f95fb3`,
-*before* this move -- editing either to say `docs/notes/` would misrepresent what was true
-at the tree the filename itself pins, the same reason a frozen plan is not edited.
+er-file-stubs-watched-by-a-new-check-not-left.md`): the ruled tombstone gained 18 per-file redirect
+stubs at the vacated path plus a new check (30) that watches them, both landed after this test was
+first written. The check's own implementation and its test necessarily and permanently name the old
+path -- that is not a citation left behind by the move, it is the move's own watch mechanism -- so
+`EXEMPT_FILES` below names them explicitly rather than widening the `docs/plans/`-shaped carve-out
+to something looser. Two more exemptions came from a rebase-time interaction, not from this slice's
+own work: `docs/research/file-census-5ef559d.csv` and
+`docs/research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md` (landed on `main` under PRs
+#537/#545 while this branch was open) are provenance-locked snapshots of the tree as it stood at
+`4f95fb3`, *before* this move -- editing either to say `docs/notes/` would misrepresent what was
+true at the tree the filename itself pins, the same reason a frozen plan is not edited.
 
 No `@pytest.mark.req` marker: this is a check on the repository's own citation surface, not
 evidence for a numbered platform requirement -- the same reasoning
@@ -79,13 +79,13 @@ _PRE_MOVE_SNAPSHOTS = {
 # in this comment, for the same self-referential reason the module docstring gives below)
 # -- §4 step 4's migration instruction, and §7(d)'s acceptance grep, which must contain the
 # literal pattern among the tokens a *later* migration tree is checked to no longer
-# contain. `docs/research/RS-01002-rfc-937-verification-and-impact-sweep-audit-record.md` (PR #560, merged
-# 2026-09-02, the day after RFC-937 itself) names it once, in its own §5.3/§5.4 scope note,
-# listing the directories RFC-937's impact-map sweep covers. Confirmed by re-running this
-# test against the merged tip that added it: exactly one new offender, that file alone --
-# not RFC-937 itself, which the exemption below already covered; a claim from outside this
-# session that a second, different file was *also* newly implicated did not hold up against
-# a direct check of the actual failure at that tree and is not reflected here.
+# contain. `docs/research/RS-01002-rfc-937-verification-and-impact-sweep-audit-record.md` (PR #560,
+# merged 2026-09-02, the day after RFC-937 itself) names it once, in its own §5.3/§5.4 scope note,
+# listing the directories RFC-937's impact-map sweep covers. Confirmed by re-running this test
+# against the merged tip that added it: exactly one new offender, that file alone -- not RFC-937
+# itself, which the exemption below already covered; a claim from outside this session that a
+# second, different file was *also* newly implicated did not hold up against a direct check of the
+# actual failure at that tree and is not reflected here.
 #
 # Why an explicit set and not a structural rule (e.g. "exempt any file that also cites
 # `RFC-937`"): a content-marker match would let the exemption widen itself the moment any

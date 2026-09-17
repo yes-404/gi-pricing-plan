@@ -277,14 +277,14 @@ class BlobStore:
         )
 
     # -- scratch (RL-857 §4, `docs/rulings/RL-00857-d6-chunk-checkpointed-resume
-    # -built-in-the-job-handler-and-keyed-on-content-not-on-the-job.md`): a `score.batch` chunk part, and the manifest that keys it, share one
-    # object — the key's own existence is the manifest entry. Deliberately **not**
-    # content-addressed and never a `BlobRow`: a chunk part is reproducible from
-    # (bundle content hash, Dataset Version reference, chunk index) rather than identified
-    # by its bytes, so hashing it would buy nothing `blob_key` already buys for a real
-    # artifact, and putting it under `blob/` would make FR-420's GC hold it for the
-    # 30-day grace period after every crashed run. `staging/` above is the same idea for a
-    # different reason (bytes with no digest yet); this is bytes that never get one. ------
+    # -built-in-the-job-handler-and-keyed-on-content-not-on-the-job.md`): a `score.batch` chunk
+    # part, and the manifest that keys it, share one object — the key's own existence is the
+    # manifest entry. Deliberately **not** content-addressed and never a `BlobRow`: a chunk part is
+    # reproducible from (bundle content hash, Dataset Version reference, chunk index) rather than
+    # identified by its bytes, so hashing it would buy nothing `blob_key` already buys for a real
+    # artifact, and putting it under `blob/` would make FR-420's GC hold it for the 30-day grace
+    # period after every crashed run. `staging/` above is the same idea for a different reason
+    # (bytes with no digest yet); this is bytes that never get one. ------
 
     async def write_scratch(self, key: str, content: bytes) -> None:
         """Write (or overwrite) one scratch object at `scratch/{key}`.

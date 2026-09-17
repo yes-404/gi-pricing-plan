@@ -217,11 +217,12 @@ def test_map_plan_rolls_up_all_closed() -> None:
     assert doc_index.derive_execution(_header(corpus, "PL-1329"), corpus) == "closed"
 
 
-# --- RL-983 (docs/rulings/RL-00983-the-map-plan-roll-up-runs-through-the-slices-and-has-no-catch-all.md): the map-plan
-# roll-up runs through the slices, and has no catch-all. Four regression fixtures, one per
-# named defect, each pinning the WRONG value an earlier version of `_rollup_map_plan`
-# produced (a `work:`-proxy enumeration over leaf plans, completed with a trailing
-# `return "not started"`), per the ruling's own §4 acceptance items.
+# --- RL-983
+# (docs/rulings/RL-00983-the-map-plan-roll-up-runs-through-the-slices-and-has-no-catch-all.md): the
+# map-plan roll-up runs through the slices, and has no catch-all. Four regression fixtures, one per
+# named defect, each pinning the WRONG value an earlier version of `_rollup_map_plan` produced (a
+# `work:`-proxy enumeration over leaf plans, completed with a trailing `return "not started"`), per
+# the ruling's own §4 acceptance items.
 
 
 def test_ruling_72_item_1_the_invisible_slice() -> None:

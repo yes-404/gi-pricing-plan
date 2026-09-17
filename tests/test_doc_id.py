@@ -1504,13 +1504,13 @@ def test_main_requires_a_subcommand(doc_id_cli: types.ModuleType) -> None:
 # `_docid.sweep_exclusion_reason` — the declared exclusion list W37-6 adds beside
 # `LEGACY_FORM_PATTERNS`: three lockfiles (RL-988 Part 2), the two fixture-corpus roots
 # (extending the 2026-09-02 RFC §3 declared-exception mechanism —
-# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 — from the id-stamp
-# census to the migration sweep and the (d)/(e)/(g) verification corpus), the W37-11
-# residue ceiling record (PR #756's condition 4 — a governed table that quotes legacy
-# forms as evidence and must not itself become residue), and the instrument's own
-# bytecode-cache exhaust. One shared predicate `doc-id.py`'s `_iter_tree_files` and
-# `_docverify.py`'s `tracked_files` both read, so the two consumers can never disagree
-# about what is excluded (RL-988 §2's "one shared constant").
+# `docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §3 —
+# from the id-stamp census to the migration sweep and the (d)/(e)/(g) verification corpus), the
+# W37-11 residue ceiling record (PR #756's condition 4 — a governed table that quotes legacy forms
+# as evidence and must not itself become residue), and the instrument's own bytecode-cache exhaust.
+# One shared predicate `doc-id.py`'s `_iter_tree_files` and `_docverify.py`'s `tracked_files` both
+# read, so the two consumers can never disagree about what is excluded (RL-988 §2's "one shared
+# constant").
 # ---------------------------------------------------------------------------------------
 
 

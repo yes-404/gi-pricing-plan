@@ -1,4 +1,5 @@
-"""The Custom Objective catalogue and its certification (`02` §4.5/§4.7, FR-142, FR-143, FR-144, FR-145, FR-146, FR-152, FR-153, FR-154, FR-163, FR-164, FR-165).
+"""The Custom Objective catalogue and its certification (`02` §4.5/§4.7, FR-142, FR-143, FR-144,
+FR-145, FR-146, FR-152, FR-153, FR-154, FR-163, FR-164, FR-165).
 
 **The parametrised certification test is the test for the maths.** This module ships 12
 templates, each with an analytic gradient and an analytic hessian written out by hand — 24

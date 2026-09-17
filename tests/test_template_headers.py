@@ -574,9 +574,10 @@ def test_restructure_roadmap_writer_round_trips_through_doc_index_readers(
     doc_index: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """RL-977 (`docs/rulings/RL-00977-the-fix-is-inert-on-the-real-corpus-so-the-
-    boundary-is-free-it-lands-on-its-own-and-the-reader-and-the-writer-land-together.md`) §4: "take migrate's emitted row block and phase section, feed each to
-    scan_roadmap_rows and scan_phase_sections, and require the fields to survive ... This
-    must be a test in the branch that lands the fix, not a task carried into W37-6."
+    boundary-is-free-it-lands-on-its-own-and-the-reader-and-the-writer-land-together.md`) §4: "take
+    migrate's emitted row block and phase section, feed each to scan_roadmap_rows and
+    scan_phase_sections, and require the fields to survive ... This must be a test in the branch
+    that lands the fix, not a task carried into W37-6."
 
     Exercises `doc-id.py`'s `_restructure_roadmap` — the writer half of Rulings 79 §3 item
     4 and 80 §3 item 4 — directly against `doc-index.py`'s own readers, rather than through

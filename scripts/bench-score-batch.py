@@ -28,10 +28,10 @@ blob write), so a fixture with no I/O would not be measuring what NFR-493 asks a
     uv run python scripts/bench-score-batch.py [--rows N] [--chunk-rows N]
 
 Not a CI gate, RL-872's governance carried over unchanged (`docs/rulings/RL-00872-dp3-
-load-generation-tooling-for-the-sustained-200-rps-test.md`): a timing assertion on a shared runner fails for reasons that have
-nothing to do with the code. This prints numbers for a dated research note; a human reads
-them once against the budget, and a failing number is reported as failing, not tuned away
-(`CLAUDE.md` §13).
+load-generation-tooling-for-the-sustained-200-rps-test.md`): a timing assertion on a shared runner
+fails for reasons that have nothing to do with the code. This prints numbers for a dated research
+note; a human reads them once against the budget, and a failing number is reported as failing, not
+tuned away (`CLAUDE.md` §13).
 """
 
 from __future__ import annotations

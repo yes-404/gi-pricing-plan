@@ -1,14 +1,13 @@
 """RL-949's `generated_from_tracked_corpus` carve-out — the broken-input proof.
 
-`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md` §4: `CLAUDE.md` §13 requires a
-carve-out that has never printed a failure to be treated as untested, and the positive
-control must exercise the same predicate the guard fires on, not an easier case. These tests
-run against a synthetic git repository built in `tmp_path` — mirroring `tests/test_file_
+`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md` §4:
+`CLAUDE.md` §13 requires a carve-out that has never printed a failure to be treated as untested, and
+the positive control must exercise the same predicate the guard fires on, not an easier case. These
+tests run against a synthetic git repository built in `tmp_path` — mirroring `tests/test_file_
 census.py`'s own synthetic-tree pattern — never against this repository's own tree: the live
-`test_no_reference_rows_are_bundled_in_the_repository`
-(`backend/tests/test_lineage.py`) is an integration-style sweep over the real checkout and
-cannot host a deliberately-broken fixture inside itself, and the real repository's history
-must not be mutated to manufacture a bad commit.
+`test_no_reference_rows_are_bundled_in_the_repository` (`backend/tests/test_lineage.py`) is an
+integration-style sweep over the real checkout and cannot host a deliberately-broken fixture inside
+itself, and the real repository's history must not be mutated to manufacture a bad commit.
 
 Three cases, all required by §4:
 

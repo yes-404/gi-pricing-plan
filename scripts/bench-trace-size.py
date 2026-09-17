@@ -29,9 +29,10 @@ function with `trace=True`.
 
     uv run python scripts/bench-trace-size.py
 
-Not a CI gate — RL-872's governance (`docs/rulings/RL-00872-dp3-load-generation-tooling-for-the-sustained-200-rps-test.md`),
-inherited via `bench-rating.py`/`bench-score-batch.py`: a number for a workstream closure
-record, read once against the budget by a human.
+Not a CI gate — RL-872's governance
+(`docs/rulings/RL-00872-dp3-load-generation-tooling-for-the-sustained-200-rps-test.md`), inherited
+via `bench-rating.py`/`bench-score-batch.py`: a number for a workstream closure record, read once
+against the budget by a human.
 """
 
 from __future__ import annotations

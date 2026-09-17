@@ -569,12 +569,13 @@ async def test_a_purge_without_a_reason_is_refused(
 
 # -- FR-72: loaders, and the licence rule OQ-561 settled --------------------------------
 
-# RL-949 (`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) §3: a second,
-# conditional carve-out for a generated repository self-census, alongside
-# `licensed_vendored_skill` below. It is a closed, explicit registry of
-# (generator script, filename pattern the generator owns) — a filename match makes a file a
-# *candidate* only; it never itself grants the exemption (§3 point 1 and point 4). Everything
-# unregistered still goes through the unmodified whole-tree sweep.
+# RL-949
+# (`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) §3:
+# a second, conditional carve-out for a generated repository self-census, alongside
+# `licensed_vendored_skill` below. It is a closed, explicit registry of (generator script, filename
+# pattern the generator owns) — a filename match makes a file a *candidate* only; it never itself
+# grants the exemption (§3 point 1 and point 4). Everything unregistered still goes through the
+# unmodified whole-tree sweep.
 GENERATED_CORPUS_REGISTRY: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "scripts/file-census.py",
@@ -742,10 +743,10 @@ def test_no_reference_rows_are_bundled_in_the_repository() -> None:
     licence and this fails, which is the point.
 
     The second is `generated_from_tracked_corpus` (RL-949,
-    `docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) — a closed registry of
-    generated repository self-census artifacts, bought by provable reproducibility against
-    the tree their own filename names, never by location or filename alone. Delete a row
-    from the census, or point it at a tree it does not match, and this fails too.
+    `docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) — a
+    closed registry of generated repository self-census artifacts, bought by provable
+    reproducibility against the tree their own filename names, never by location or filename alone.
+    Delete a row from the census, or point it at a tree it does not match, and this fails too.
     """
     root = pathlib.Path(__file__).resolve().parents[2]
 

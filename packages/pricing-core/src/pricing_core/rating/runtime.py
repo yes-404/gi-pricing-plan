@@ -15,7 +15,8 @@ per-worker slot, bounded, keyed by `Bundle.content_hash`) is Slice 2's Task 2.1 
 keyed by `step_id`, with `produces`/`consumes` lists standing in for edges — pricing-core's
 own intermediate form. The ZEN engine's Python binding consumes a different shape entirely:
 a node **list** plus an explicit **edge list**, verified live against `zen.ZenEngine` rather
-than assumed from any binding's docstring (`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`,
+than assumed from any binding's docstring
+(`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`,
 *Verified facts*). `to_wire` is that translation.
 
 **What this module does not yet translate.** A `constraint` step's wire translation was
