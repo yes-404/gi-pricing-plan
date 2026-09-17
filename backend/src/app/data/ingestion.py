@@ -1,4 +1,4 @@
-"""Ingestion: file to Dataset Version (`01` §3.1, FR-DATA-2..8, FR-DATA-40).
+"""Ingestion: file to Dataset Version (`01` §3.1, FR-27, FR-28, FR-29, FR-30, FR-31, FR-32, FR-33, FR-34).
 
 The orchestration around `pricing_core.data.ingest`'s pure functions. This module owns the
 I/O and the bookkeeping; the decisions — how a name normalises, what the schema looks like,
@@ -6,11 +6,11 @@ which rows are unusable — are made by functions that run without a platform.
 
 Two properties carry the requirements:
 
-* **A run is idempotent on `(idempotency_key, source_fingerprint)`** (FR-DATA-8). The
+* **A run is idempotent on `(idempotency_key, source_fingerprint)`** (FR-33). The
   fingerprint is part of the identity, not a detail recorded beside it: the same key with
   *changed* source data is a different ingestion, and returning the old version for it
   would quietly serve stale data to a caller who believes they refreshed it.
-* **Ingestion never mutates an existing version** (FR-DATA-2). Every run either produces a
+* **Ingestion never mutates an existing version** (FR-27). Every run either produces a
   new version or produces none. There is no path that edits `@11`.
 """
 
@@ -47,14 +47,14 @@ _log = get_logger("app.data.ingestion")
 
 PARQUET_MEDIA_TYPE = "application/vnd.apache.parquet"
 
-#: Rows of the quarantine kept inline on the run record (FR-DATA-6 asks for "a sample").
+#: Rows of the quarantine kept inline on the run record (FR-31 asks for "a sample").
 #: The full quarantine is a table on the version; this is what a failure screen shows
 #: without loading a blob.
 REJECT_SAMPLE_ROWS = 5
 
 
 def library_versions() -> dict[str, str]:
-    """Which builds produced this version (FR-DATA-6, `01` §4.2).
+    """Which builds produced this version (FR-31, `01` §4.2).
 
     Recorded per version because a dtype inference or a parquet encoding can change between
     releases, and "why does the same file give different totals?" is otherwise unanswerable
@@ -88,7 +88,7 @@ class IngestionOutcome:
 
 
 def _fingerprint(data: bytes) -> str:
-    """`file_sha256` (FR-DATA-6). Content, not filename: the same bytes uploaded twice
+    """`file_sha256` (FR-31). Content, not filename: the same bytes uploaded twice
     under different names are the same extraction."""
     return hashlib.sha256(data).hexdigest()
 
@@ -109,10 +109,10 @@ async def ingest_upload(
     sheet: str | None = None,
     recipe: Sequence[Mapping[str, Any]] | None = None,
 ) -> IngestionOutcome:
-    """Ingest an uploaded file as a new Dataset Version (FR-DATA-2..8, FR-DATA-40).
+    """Ingest an uploaded file as a new Dataset Version (FR-27, FR-28, FR-29, FR-30, FR-31, FR-32, FR-33, FR-34).
 
-    The Preparation Recipe is applied **during** ingestion (FR-DATA-9) and stored with the
-    version (FR-DATA-14). Applying it afterwards would mean the parquet on the version is
+    The Preparation Recipe is applied **during** ingestion (FR-35) and stored with the
+    version (FR-41). Applying it afterwards would mean the parquet on the version is
     not what the version's totals, profile and validation report describe.
     """
     await rbac.require_permission(
@@ -124,7 +124,7 @@ async def ingest_upload(
 
     started = time.perf_counter()
     fingerprint = _fingerprint(data)
-    # The moment the source was read — what `extracted_at` means (OQ-DATA-13 (c)). It is
+    # The moment the source was read — what `extracted_at` means (OQ-568 (c)). It is
     # the fingerprint's own field, not a timestamp recorded beside it: a fingerprint
     # without one cannot answer "was this file re-ingested after its contents changed?".
     extracted_at = datetime.now(UTC)
@@ -138,7 +138,7 @@ async def ingest_upload(
             fingerprint=fingerprint,
         )
         if existing is not None and existing.dataset_version_id is not None:
-            # FR-DATA-8: same key, unchanged source — return the original rather than
+            # FR-33: same key, unchanged source — return the original rather than
             # creating another version of identical data.
             version = await session.get(DatasetVersionRow, existing.dataset_version_id)
             if version is not None:
@@ -173,7 +173,7 @@ async def ingest_upload(
                 "The preparation recipe could not be applied",
                 422,
                 f"{exc} No version was created — a partially prepared version is one "
-                "whose parquet does not match what its recipe says was done (FR-DATA-14).",
+                "whose parquet does not match what its recipe says was done (FR-41).",
             ) from exc
 
     await _refuse_direct_identifiers(
@@ -200,7 +200,7 @@ async def ingest_upload(
         )
     ]
     if partition.rejected.height:
-        # FR-DATA-7: the quarantine is a table on the version, not a log line.
+        # FR-32: the quarantine is a table on the version, not a log line.
         tables.append(
             await _store_table(
                 blob_store, session, partition.rejected, name="_rejected", schema=None,
@@ -216,7 +216,7 @@ async def ingest_upload(
         # which has no datetime encoder. The model parses the string back on read.
         "extracted_at": extracted_at.isoformat(),
     }
-    # FR-DATA-14: stored with the version and replayable. The steps themselves, not an id
+    # FR-41: stored with the version and replayable. The steps themselves, not an id
     # pointing at a mutable recipe row — a recipe edited later would rewrite the history of
     # every version that cites it.
     version.derived_from = (
@@ -323,7 +323,7 @@ _TOTAL_COLUMNS: Final = ("exposure_years", "claim_count", "claim_amount_minor")
 def _totals(frame: pl.DataFrame) -> dict[str, Any] | None:
     """`01` §4.2's headline numbers, computed once at ingestion.
 
-    Exposure is summed as `Decimal` through strings and stored as a string (FR-OVR-7):
+    Exposure is summed as `Decimal` through strings and stored as a string (FR-10):
     summing 678 013 floats and comparing the result to anything is the bug this discipline
     exists to prevent, and these are the numbers a validation report and a profile are both
     checked against.
@@ -344,7 +344,7 @@ def _totals(frame: pl.DataFrame) -> dict[str, Any] | None:
 
 
 def _reject_sample(rejected: pl.DataFrame) -> list[dict[str, Any]]:
-    """A few quarantined rows with their reason (FR-DATA-6).
+    """A few quarantined rows with their reason (FR-31).
 
     Values are stringified: a sample is for a human reading a failure screen, and preserving
     dtypes in a JSONB column buys nothing while risking a value JSON cannot represent.
@@ -368,7 +368,7 @@ async def correct_schema(
     table: str,
     columns: dict[str, str],
 ) -> DatasetVersionRow:
-    """Recast columns of a `draft` version's table (FR-DATA-4).
+    """Recast columns of a `draft` version's table (FR-29).
 
     Inference is a guess, and the guess this platform makes most often is reading a
     zero-padded policy id as an integer. Correcting it has to recast the **data**, not
@@ -481,8 +481,8 @@ async def _refuse_direct_identifiers(
     columns: Sequence[str],
     recipe: Sequence[Mapping[str, Any]] | None,
 ) -> None:
-    """FR-DATA-41: a column the dictionary classifies `direct_identifier` must be dropped
-    or pseudonymised, or ingestion fails (FR-DATA-13, FR-OVR-9).
+    """FR-40: a column the dictionary classifies `direct_identifier` must be dropped
+    or pseudonymised, or ingestion fails (FR-39, FR-12).
 
     **After the recipe, before the version.** After, because pseudonymising is one of the
     two remedies and the check must see the frame the remedy produced. Before, because a
@@ -492,7 +492,7 @@ async def _refuse_direct_identifiers(
     "Dropped" is a column absent from the frame — the recipe has no drop verb, so a source
     that must lose a column loses it upstream. "Pseudonymised" is a `pseudonymise` step
     naming that column: the values are then workspace-scoped tokens, which is what
-    FR-DATA-13 asks for and why the column may stay.
+    FR-39 asks for and why the column may stay.
 
     `special_category` is refused on the same terms. `MODELLING_FORBIDDEN_PII` holds both,
     and a special-category column sitting in a modelling dataset is the failure the
@@ -526,7 +526,7 @@ async def _refuse_direct_identifiers(
         "DIRECT_IDENTIFIER_PRESENT",
         "The upload carries a column the dictionary forbids for modelling",
         422,
-        f"{classes}. FR-DATA-13 requires such a column to be dropped before upload or "
+        f"{classes}. FR-39 requires such a column to be dropped before upload or "
         "pseudonymised by a recipe step; no version was created. For a join key, "
         "the audited route is declaring it `pseudonymous_key`.",
     )

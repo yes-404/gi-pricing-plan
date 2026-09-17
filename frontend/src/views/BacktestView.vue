@@ -33,7 +33,7 @@ const problem = ref<ProblemError | null>(null);
  * **Revisit if a second single-partition caller appears**, because two of them would have to
  * agree on the caption vocabulary and that is an invariant worth a helper.
  *
- * The caption is `"Backtest"` and may not be the period or the `slug@version`: FR-MODEL-57
+ * The caption is `"Backtest"` and may not be the period or the `slug@version`: FR-187
  * forbids a caption that asserts a relationship the artifact does not carry, and the
  * instruments interpolate it straight into a heading (`${label} A/E`).
  */
@@ -49,7 +49,7 @@ const weighting = computed(() =>
   backtest.value === null ? null : weightingLabel(backtest.value.summary.partition.weighting),
 );
 
-/** FR-MODEL-50's scalar metrics, one column because there is one partition. */
+/** FR-171's scalar metrics, one column because there is one partition. */
 const headline = computed(() => {
   const found = backtest.value;
   if (found === null) return [];
@@ -92,7 +92,7 @@ const residuals = computed(() => {
 
 onMounted(async () => {
   try {
-    // The backtest is addressed by its own id (FR-MODEL-92); the model is fetched only for
+    // The backtest is addressed by its own id (FR-94); the model is fetched only for
     // the breadcrumb and the link back to the fit, never to address the backtest.
     backtest.value = await getBacktest(props.backtestId);
     model.value = await getModel(props.slug);
@@ -118,7 +118,7 @@ onMounted(async () => {
         v-if="backtest"
         class="mt-1 text-sm text-slate-500"
       >
-        Measured against a version the model was not fitted on (FR-MODEL-57).
+        Measured against a version the model was not fitted on (FR-187).
         <span v-if="weighting"> Metrics are {{ weighting }}.</span>
       </p>
       <p

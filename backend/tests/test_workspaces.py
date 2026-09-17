@@ -1,4 +1,4 @@
-"""FR-PLAT-62: a Workspace is a named, addressable entity rather than a bare column."""
+"""FR-395: a Workspace is a named, addressable entity rather than a bare column."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from app.db.session import Database
 from model_schema import new_uuid7
 
 
-@pytest.mark.req("FR-PLAT-62")
+@pytest.mark.req("FR-395")
 async def test_a_workspace_row_carries_a_name_and_a_slug(database: Database) -> None:
     """Every surface that would show a workspace shows a UUID until this row exists."""
     workspace_id = new_uuid7()
@@ -26,7 +26,7 @@ async def test_a_workspace_row_carries_a_name_and_a_slug(database: Database) -> 
     assert row.created_at is not None
 
 
-@pytest.mark.req("FR-PLAT-62")
+@pytest.mark.req("FR-395")
 async def test_a_membership_cannot_name_a_workspace_that_does_not_exist(
     database: Database,
 ) -> None:

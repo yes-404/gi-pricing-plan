@@ -1,6 +1,6 @@
 """Permission resolution and enforcement (`06` §3.1).
 
-> **FR-GOV-2** — Permissions are checked in the backend on every request against
+> **FR-343** — Permissions are checked in the backend on every request against
 > `(principal, permission, resource, scope)`.
 
 The whole module answers one question: *may this principal do this thing to this
@@ -13,9 +13,9 @@ Three rules shape the design:
   resource: all mean no. There is no branch that returns "allowed" because nothing matched.
 * **Scope is part of the question.** A principal with `approval:decide` workspace-wide and
   one with it on a single Rating Algorithm are different answers to the same permission
-  (FR-GOV-4).
+  (FR-345).
 * **No self-elevation.** A principal cannot grant a permission it does not itself hold
-  (FR-GOV-7), which is checked here rather than in the route, so every future grant path
+  (FR-348), which is checked here rather than in the route, so every future grant path
   inherits it.
 """
 
@@ -55,7 +55,7 @@ __all__ = [
 
 _log = get_logger("app.rbac")
 
-#: FR-GOV-8 wants break-glass time-boxed. A grant measured in days is not an emergency
+#: FR-349 wants break-glass time-boxed. A grant measured in days is not an emergency
 #: measure, it is a role change with a shorter paper trail.
 MAX_BREAK_GLASS_HOURS = 8
 
@@ -76,7 +76,7 @@ class PermissionDeniedError(PlatformError):
     """403, with the distinction `06` §5.1 draws between two different refusals.
 
     `PERMISSION_DENIED` — the principal does not hold this permission anywhere.
-    `SCOPE_DENIED` — it holds it, but not on this resource (FR-GOV-4): the motor actuary
+    `SCOPE_DENIED` — it holds it, but not on this resource (FR-345): the motor actuary
     reaching for home pricing. Separating them is actionable, because the remedies differ:
     one needs a role, the other needs an assignment on this artifact.
 
@@ -94,7 +94,7 @@ class PermissionDeniedError(PlatformError):
                 "Out of scope",
                 403,
                 f"You hold {permission.value} but not{where}. It must be assigned on this "
-                "resource (FR-GOV-4).",
+                "resource (FR-345).",
             )
         else:
             super().__init__(
@@ -108,7 +108,7 @@ class PermissionDeniedError(PlatformError):
 
 
 async def seed_builtin_roles(session: AsyncSession, workspace_id: UUID) -> list[RoleRow]:
-    """Create the `00` §1.4 roles for a workspace if they are absent (FR-GOV-3).
+    """Create the `00` §1.4 roles for a workspace if they are absent (FR-344).
 
     Idempotent, and a copy rather than a reference: changing the shipped defaults must not
     silently change what an existing workspace's approvers can do, because that is a
@@ -149,14 +149,14 @@ async def effective_permissions(
 ) -> frozenset[Permission]:
     """Every permission the principal holds here, right now.
 
-    Used by the API to tell the frontend what to show (FR-GOV-2's second sentence). The
+    Used by the API to tell the frontend what to show (FR-343's second sentence). The
     frontend hides what a user cannot do; this is what it hides *by*, and it is the same
     computation the enforcement uses — a second implementation would let the UI offer a
     control the backend then refuses.
 
     **`credential_permissions` is the set the presented credential actually authenticated
-    with** (Ruling 38). A Service Account's grants live on its own record, not in a role —
-    `score:execute` and `score:batch` are held by no builtin role, deliberately (FR-GOV-6) —
+    with** (RL-924). A Service Account's grants live on its own record, not in a role —
+    `score:execute` and `score:batch` are held by no builtin role, deliberately (FR-347) —
     so a computation that reads only role assignments can never see them, and until this
     parameter existed `Caller.permissions` was populated and consulted by nothing.
 
@@ -188,7 +188,7 @@ async def effective_permissions(
     granted: set[Permission] = set()
     for assignment, role in rows:
         if assignment.expires_at is not None and assignment.expires_at <= now:
-            continue  # an expired grant is not a grant (FR-GOV-8)
+            continue  # an expired grant is not a grant (FR-349)
         if not _covers(assignment, resource):
             continue
         granted |= {Permission(p) for p in role.permissions}
@@ -197,13 +197,13 @@ async def effective_permissions(
     # environment and workspace, never to one dataset, and `ALLOWED_PERMISSIONS`
     # (`api/service_accounts.py`) admits only `score:execute` and `score:batch`, neither of
     # which is resource-scoped. If a resource-scoped permission is ever added there, this
-    # union has to learn `_covers`' question — Ruling 38 names that as its override.
+    # union has to learn `_covers`' question — RL-924 names that as its override.
     granted |= {Permission(p) for p in credential_permissions}
     return frozenset(granted)
 
 
 def _covers(assignment: RoleAssignmentRow, resource: ResourceRef | None) -> bool:
-    """Does this assignment's scope reach the resource being acted on (FR-GOV-4)?"""
+    """Does this assignment's scope reach the resource being acted on (FR-345)?"""
     if assignment.scope_type == ScopeType.WORKSPACE.value:
         return True
     if resource is None:
@@ -280,7 +280,7 @@ async def require_permission(
     resource: ResourceRef | None = None,
     credential_permissions: frozenset[str] = frozenset(),
 ) -> None:
-    """Raise `PermissionDeniedError` unless the principal holds it here (FR-GOV-2)."""
+    """Raise `PermissionDeniedError` unless the principal holds it here (FR-343)."""
     if not await has_permission(
         session,
         workspace_id=workspace_id,
@@ -315,7 +315,7 @@ async def grant_role(
     scope_type: ScopeType = ScopeType.WORKSPACE,
     scope_id: UUID | None = None,
 ) -> RoleAssignmentRow:
-    """Assign a role, refusing an escalation the granter could not perform (FR-GOV-7).
+    """Assign a role, refusing an escalation the granter could not perform (FR-348).
 
     The granter must hold `admin:manage_roles` **and** every permission the role confers.
     Without the second check an administrator could mint an Approver role and assign it to
@@ -351,7 +351,7 @@ async def grant_role(
             "Cannot grant a permission you do not hold",
             403,
             f"Granting {role_slug!r} would confer {sorted(p.value for p in escalation)}, "
-            "which you do not hold (FR-GOV-7).",
+            "which you do not hold (FR-348).",
         )
 
     assignment = RoleAssignmentRow(
@@ -393,7 +393,7 @@ async def grant_break_glass(
     reason: str,
     hours: int = 1,
 ) -> RoleAssignmentRow:
-    """Emergency elevation: time-boxed, reason-required, audited (FR-GOV-8).
+    """Emergency elevation: time-boxed, reason-required, audited (FR-349).
 
     Deliberately **not** subject to the no-self-elevation rule of `grant_role` — the point
     of break-glass is to exceed what the granter normally holds. What replaces that
@@ -405,7 +405,7 @@ async def grant_break_glass(
             "BREAK_GLASS_REASON_REQUIRED",
             "Break-glass requires a reason",
             422,
-            "FR-GOV-8: emergency elevation is reason-required. An unexplained grant is a "
+            "FR-349: emergency elevation is reason-required. An unexplained grant is a "
             "permission change wearing an emergency label.",
         )
     if not 0 < hours <= MAX_BREAK_GLASS_HOURS:

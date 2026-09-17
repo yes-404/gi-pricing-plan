@@ -41,7 +41,7 @@ __all__ = ["register_data_handlers"]
 
 _log = get_logger("app.worker.data")
 
-#: One-ways are chosen from the semantic types the profiler infers (FR-DATA-26), not from
+#: One-ways are chosen from the semantic types the profiler infers (FR-61), not from
 #: a list of column names. The list this replaced was four English defaults and matched
 #: exactly one of freMTPL2's five rating factors — `area`, `veh_power`, `veh_brand`,
 #: `veh_gas` and `region` — so twelve of thirteen columns had no one-way and `02`'s factor
@@ -53,7 +53,7 @@ def _bridge(progress: ProgressCallback) -> JobProgress:
     """Narrow the shared callback to the platform one these handlers need.
 
     `JobHandler` passes a `ProgressCallback` because that is `pricing-core`'s contract and
-    the great majority of handlers need nothing more (ADR-0001). These do — they read
+    the great majority of handlers need nothing more (ADR-703). These do — they read
     blobs and write rows — and the worker always passes a `JobProgress`. Checking rather
     than assuming turns a future harness change from an `AttributeError` deep inside a job
     into one sentence naming the cause.
@@ -106,9 +106,9 @@ async def _read_tables(
 
 
 def _ingest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`dataset.ingest` — bytes to a Dataset Version, then a Profile (FR-DATA-2, -25).
+    """`dataset.ingest` — bytes to a Dataset Version, then a Profile (FR-27, -25).
 
-    Profiling happens here rather than as a second Job because FR-DATA-25 says it runs
+    Profiling happens here rather than as a second Job because FR-60 says it runs
     *after successful ingestion*, and a separate Job could be cancelled, leaving a version
     with no profile and no record of why.
     """
@@ -188,7 +188,7 @@ def _profile_version(
 
 
 def _profile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`dataset.profile` — re-profile an existing version (FR-DATA-25)."""
+    """`dataset.profile` — re-profile an existing version (FR-60)."""
     progress = _bridge(callback)
     profile_id = _profile_version(
         progress,
@@ -200,10 +200,10 @@ def _profile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
 
 
 def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`dataset.validate` — run the rule set and persist the report (FR-DATA-15).
+    """`dataset.validate` — run the rule set and persist the report (FR-42).
 
     Does **not** promote the version. Promotion is a decision an actuary makes after
-    reading the report and acknowledging what it warns about (`01` §1.3, FR-DATA-17); a
+    reading the report and acknowledging what it warns about (`01` §1.3, FR-46); a
     job that promoted on a pass would make the gate automatic, which is the one thing it
     must not be.
     """
@@ -253,7 +253,7 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                         session, workspace_id=workspace_id, version_id=reference_id
                     )
                 except PlatformError:
-                    # FR-DATA-24 prefers the profile; a reference version without one is a
+                    # FR-54 prefers the profile; a reference version without one is a
                     # reason to skip the distributional rules, not to fail the run.
                     reference_profile = None
             return tables, rule_set, reference_profile
@@ -290,7 +290,7 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                     rule_id=UUID(dry_run_rule_id),
                     report_id=row.id,
                 )
-            # FR-DATA-43. The job still does **not** promote — that is an actuary's act
+            # FR-52. The job still does **not** promote — that is an actuary's act
             # after reading the report (`01` §1.3) — but a version whose report failed will
             # never be promoted, and leaving it in `validating` reads as "still running" on
             # every screen. A dry run concludes nothing: it validates a rule, not a version.
@@ -315,18 +315,18 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
 
 
 def _derive(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`dataset.derive` — a declared operation over a parent version (FR-DATA-33).
+    """`dataset.derive` — a declared operation over a parent version (FR-73).
 
     **`split` is materialised; every other operation is refused.** A derived version used
     to inherit its parent's `tables` wholesale, which made a "1 % sample" a version
     containing 100 % of the rows and a train/test split two versions each containing
-    everything. FR-DATA-34 says a derived version inherits schema, dictionary and rule set
+    everything. FR-74 says a derived version inherits schema, dictionary and rule set
     — the code was inheriting the *data*, and the two had been conflated.
 
     Fixed here for `split`, because the diagnostics slice needs an honest holdout and a
     holdout containing every training row is worse than none: it produces excellent numbers
     that mean nothing. The rest now fail the Job with `DERIVATION_NOT_MATERIALISED` in
-    `derive_version` (FR-DATA-45, OQ-DATA-8 decided 2026-08-17) rather than succeeding with
+    `derive_version` (FR-78, OQ-563 decided 2026-08-17) rather than succeeding with
     the parent's rows — the same failure, made loud.
     """
     progress = _bridge(callback)
@@ -362,7 +362,7 @@ async def _materialise_split(
     tables: list[dict[str, Any]],
     params: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Write the requested part's rows as their own blob (FR-DATA-33, FR-DATA-36).
+    """Write the requested part's rows as their own blob (FR-73, FR-76).
 
     The partition is `pricing_core.data.splits`', which computes it as a pure function of
     method, seed and fractions — so the `train` Job and the `test` Job, running minutes

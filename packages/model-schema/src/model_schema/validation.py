@@ -8,7 +8,7 @@ by whoever writes the report:
   caller could assign is a field a caller could assign wrongly, and this one decides whether
   a dataset may be modelled on.
 * **`severity_override` may only raise severity** (`warn → fail`), never lower it. Lowering
-  means editing the rule, which is a reviewed and audited change (FR-DATA-21). An override
+  means editing the rule, which is a reviewed and audited change (FR-50). An override
   that could weaken a rule set is a way to pass validation without changing anything a
   reviewer would see.
 """
@@ -44,7 +44,7 @@ __all__ = [
 
 
 class ValidationLayer(enum.StrEnum):
-    """The four layers of FR-DATA-16, all of which a Rule Set must cover."""
+    """The four layers of FR-45, all of which a Rule Set must cover."""
 
     STRUCTURAL = "structural"
     REFERENTIAL = "referential"
@@ -96,7 +96,7 @@ class ValidationRule(BaseModel):
     rationale: str = ""
     status: str = "approved"
     #: The `01` §4.4 catalogue entry this row was seeded from, or `None` for a workspace's
-    #: own rule (FR-DATA-53). Not a foreign key and not a slug: a workspace may version a
+    #: own rule (FR-68). Not a foreign key and not a slug: a workspace may version a
     #: seeded rule and change its slug, and the catalogue id is what survives that.
     catalogue_id: str | None = None
 
@@ -124,7 +124,7 @@ class RuleSetEntry(BaseModel):
 
         `warn → fail` is a workspace tightening a shipped rule, which needs no review.
         `fail → warn` is a workspace deciding a failure is acceptable, which is a change to
-        the rule and must go through the rule's own review (FR-DATA-21). Allowing it here
+        the rule and must go through the rule's own review (FR-50). Allowing it here
         would be a way to pass validation without changing anything a reviewer sees.
         """
         if (
@@ -134,7 +134,7 @@ class RuleSetEntry(BaseModel):
             raise ValueError(
                 f"severity_override on {self.rule.slug!r} would lower fail to warn. "
                 "Lowering severity means editing the rule, which is a reviewed change "
-                "(FR-DATA-21); an override may only raise."
+                "(FR-50); an override may only raise."
             )
         return self
 
@@ -144,7 +144,7 @@ class RuleSetEntry(BaseModel):
 
 
 class ValidationRuleSet(BaseModel):
-    """A versioned set of rules for a Dataset (`01` §4.3, FR-DATA-22)."""
+    """A versioned set of rules for a Dataset (`01` §4.3, FR-51)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -167,14 +167,14 @@ class ValidationRuleSet(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def empty_layers(self) -> tuple[ValidationLayer, ...]:
-        """FR-DATA-16: every layer must be present; an empty one is a configuration warning.
+        """FR-45: every layer must be present; an empty one is a configuration warning.
 
         A warning rather than an error because a dataset with no reference tables genuinely
         has nothing referential to check — but silence would let a rule set lose its whole
         distributional layer in an edit and look complete.
 
         **Computed, so it reaches the API.** A plain `@property` is not serialised, so the
-        contract carried no such field and the screen FR-DATA-16 names as the place to
+        contract carried no such field and the screen FR-45 names as the place to
         surface the warning had nothing to surface — while `ValidationReport` beside it
         carried the same list as an ordinary field. A client deriving it from `entries`
         would be a second implementation of the rule, which is what `CLAUDE.md` §2 forbids.
@@ -186,7 +186,7 @@ class ValidationRuleSet(BaseModel):
 
 
 #: The layer each catalogue-id prefix belongs to. Derived rather than listed per rule: the
-#: prefix *is* the layer (`01` §4.4's four tables are the four layers of FR-DATA-16), and a
+#: prefix *is* the layer (`01` §4.4's four tables are the four layers of FR-45), and a
 #: rule carrying both could carry them inconsistently.
 _LAYER_BY_PREFIX: Final[Mapping[str, ValidationLayer]] = MappingProxyType(
     {
@@ -199,14 +199,14 @@ _LAYER_BY_PREFIX: Final[Mapping[str, ValidationLayer]] = MappingProxyType(
 
 
 class BuiltinRule(BaseModel):
-    """One rule the platform ships, from `01` §4.4's catalogue (FR-DATA-53).
+    """One rule the platform ships, from `01` §4.4's catalogue (FR-68).
 
     Distinct from `ValidationRule`, which is a *stored* rule: it carries a workspace-scoped
     `id` and a `version`, and a built-in rule has neither until it is seeded into a
     workspace. Keeping them apart is what stops the catalogue needing a fabricated UUID at
     import time.
 
-    Thresholds live here (FR-DATA-54). `01` §4.4's 2026-08-23 correction struck the claim
+    Thresholds live here (FR-56). `01` §4.4's 2026-08-23 correction struck the claim
     that they are Rule Set configuration rather than code: before this field, every
     threshold in force was a literal inside `pricing_core.data.validate` that no caller
     could read, which left the frontend re-deriving bands it should be served. The literals
@@ -300,13 +300,13 @@ BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
             ),
             _rule(
                 "VR-STR-9", "reject-rate", "reject_rate", _F,
-                "Quarantined rows <= threshold (default 0.1 % of rows read) - FR-DATA-7",
+                "Quarantined rows <= threshold (default 0.1 % of rows read) - FR-32",
                 params={"max_reject_rate": 0.001},
             ),
             _rule(
                 "VR-REF-1", "reference-resolve", "reference_lookup", _F,
                 "Every value of a reference-backed column resolves in the pinned Reference "
-                "Table Version, evaluated as at the declared date column (FR-DATA-31)",
+                "Table Version, evaluated as at the declared date column (FR-71)",
             ),
             _rule(
                 "VR-REF-2", "reference-coverage", "reference_coverage", _W,
@@ -348,7 +348,7 @@ BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
             _rule(
                 "VR-ACT-5", "claim-date-in-exposure", "claim_date_in_exposure", _F,
                 "date_of_loss is in [exposure_start, exposure_end) for the linked row "
-                "(FR-DATA-12)",
+                "(FR-38)",
             ),
             _rule(
                 "VR-ACT-6", "claim-linkage-complete", "claim_linkage_complete", _F,
@@ -478,16 +478,16 @@ def builtin_rule(catalogue_id: str) -> BuiltinRule:
         ) from None
 
 
-#: One offending row, written out rather than implicit (OQ-DATA-12, decided 2026-08-26 (b)).
+#: One offending row, written out rather than implicit (OQ-567, decided 2026-08-26 (b)).
 #: Property keys are column names and values are the cell value as a string or null, so
 #: `None` is distinct from `""`. A composite key is one item with several properties; a
-#: column-level check emits `{"column": <name>}`. FR-DATA-20's 100-primary-key cap counts
+#: column-level check emits `{"column": <name>}`. FR-49's 100-primary-key cap counts
 #: items, so `min_length=1` refuses an empty object — an item with no keys names no row.
 OffendingSampleItem = Annotated[dict[str, str | None], Field(min_length=1)]
 
 
 class Acknowledgement(BaseModel):
-    """A Principal accepting a warning, on this report (FR-DATA-17, FR-DATA-18)."""
+    """A Principal accepting a warning, on this report (FR-46, FR-47)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -497,7 +497,7 @@ class Acknowledgement(BaseModel):
 
 
 class RuleResult(BaseModel):
-    """One rule's outcome (`01` §4.6, FR-DATA-20)."""
+    """One rule's outcome (`01` §4.6, FR-49)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -513,7 +513,7 @@ class RuleResult(BaseModel):
     affected_rows: int | None = None
     affected_exposure_fraction: float | None = None
     detail: str = ""
-    #: Up to 100 offending rows, keyed `{column: value}` (FR-DATA-20, OQ-DATA-12 (b)).
+    #: Up to 100 offending rows, keyed `{column: value}` (FR-49, OQ-567 (b)).
     #: Capped because a failing rule on five million rows would otherwise put five million
     #: keys in a report somebody has to open.
     offending_sample: tuple[OffendingSampleItem, ...] = ()
@@ -556,13 +556,13 @@ class ValidationReport(BaseModel):
     def overall(self) -> OverallOutcome:
         """Derived, never assigned, and **from the rule results alone** (`01` §4.6).
 
-        An `error` is not a pass: FR-DATA-19 is explicit that an unrun rule is never
+        An `error` is not a pass: FR-48 is explicit that an unrun rule is never
         treated as a pass, because "the rule that would have caught it timed out" and "the
         rule passed" must never look the same in a report an actuary relies on. `fail`
         outranks `error` when both are present — a definite failure is more actionable than
         "a rule could not tell", and both block promotion identically.
 
-        **Corrected 2026-08-17 (W5, the `wf-01` journey test).** This property had been
+        **Corrected 2026-08-17 (WK-661, the `WF-698` journey test).** This property had been
         wrong since `01` §4.6 was amended on 2026-08-14: it ranked `error` above `fail`, and
         it folded acknowledgements in, returning `fail` for a report whose warnings were not
         yet acknowledged. That is the *"pass_with_warnings iff every warn has an
@@ -575,11 +575,11 @@ class ValidationReport(BaseModel):
         afterwards, against a report whose version can no longer be promoted, and
         re-validating produces a new report whose warnings are unacknowledged again. **Any
         dataset version with a single warning could never reach `validated`.** Every fixture
-        in the suite produced all-pass or a hard fail; `wf-01` B8/B9 is the first thing that
+        in the suite produced all-pass or a hard fail; `WF-698` B8/B9 is the first thing that
         asked for a warning and an acknowledgement, which is what a journey test is for.
 
         Acknowledgement remains what it always was: a fact *about* a report, checked at
-        promotion (FR-DATA-17) through `unacknowledged_warnings`, never inside `overall`.
+        promotion (FR-46) through `unacknowledged_warnings`, never inside `overall`.
         """
         outcomes = {r.outcome for r in self.results}
         if RuleOutcome.FAIL in outcomes:

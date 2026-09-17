@@ -26,13 +26,13 @@ grep -o 'FR-MODEL-[0-9]*' docs/specs/02-modelling.md | sort -t- -k3 -n | tail -1
 
 To retire a requirement, mark it `SUPERSEDED BY <id>` in place. Do not delete it.
 
-**A bolded ID *is* a definition.** The audit treats `**FR-PLAT-51**` as declaring that
+**A bolded ID *is* a definition.** The audit treats `**FR-406**` as declaring that
 requirement, so bolding an ID when merely *referring* to it elsewhere creates a phantom
 second definition and fails the build. Reference IDs in backticks or plain text; reserve
 bold for the row that defines them.
 
 A new ID may sit anywhere in the document — position is free, the number is not. Placing
-FR-MODEL-68 next to FR-MODEL-42 because they are topically related is correct.
+FR-147 next to FR-146 because they are topically related is correct.
 
 **A `pricing-core` interface signature's `def` vs `async def` is a fact to verify, never a
 default to assume.** Declare a signature `async def` exactly when it directly awaits an
@@ -84,20 +84,20 @@ recommendation; do not resolve it in prose (`CLAUDE.md` §10).
 **A new `OQ-` also goes into `docs/roadmap.md` §10's decision-gate table, in the same
 commit.** `audit-docs.py` does not check this — it verifies the spec ↔ register mirror and
 stops there — so a question can be raised, mirrored, and still be invisible to the plan.
-Four were: OQ-DATA-7, OQ-OVR-6, OQ-PLAT-6 and OQ-MODEL-8 were all raised inside Phase 1a,
+Four were: OQ-562, OQ-543, OQ-644 and OQ-582 were all raised inside Phase 1a,
 all mirrored correctly, and none reached the gate table until 2026-08-15. The `docs-audit`
 skill carries the script that catches it; run it whenever you add or decide a question.
 
 **Deciding one edits that row too**, and its `N (M open)` count is hand-maintained — so a
 decision that strikes the id and leaves the count alone leaves the plan claiming an open
-question the register has closed. Recount the row rather than decrementing it: OQ-DATA-8 had
+question the register has closed. Recount the row rather than decrementing it: OQ-563 had
 been decided before it ever reached the table, so the row went 9 (3 open) → 10 (2 open) in
 one edit.
 
 **A decided question keeps its gate row** — the row is where the *revisit* is scheduled, not
-only where the answer was due. OQ-MODEL-11 and OQ-MODEL-12 were both decided on 2026-08-18 and
+only where the answer was due. OQ-576 and OQ-584 were both decided on 2026-08-18 and
 both sit at **Before Phase 2**, because each names something to re-examine against `03`'s rate
-table once it exists; OQ-MODEL-13 sits in *Deferred* holding the trigger its requirement names.
+table once it exists; OQ-585 sits in *Deferred* holding the trigger its requirement names.
 Striking the id and leaving it in place is the edit — deleting the row loses the appointment.
 
 **Deciding one is the same edit in three places**, and the register's own precedent shows
@@ -114,7 +114,7 @@ Custom objectives are a first-class capability of this platform (`CLAUDE.md` §3
 define user-defined objective and eval functions for XGBoost/LightGBM over the gradient +
 hessian interface, and custom loss specifications where the standard families do not fit —
 Tweedie variance-power tuning, capped or large-loss-adjusted losses, asymmetric pricing
-losses. `02-modelling.md` §4.4 catalogues the permitted forms; `wf-05` is the lifecycle.
+losses. `02-modelling.md` §4.4 catalogues the permitted forms; `WF-702` is the lifecycle.
 
 **An arbitrary-code objective is a governance risk**, so a spec that introduces one is not
 complete until it says four things:
@@ -148,8 +148,8 @@ encouraged; full implementations are not.
 
 2026-08-29 — the `def`/`async def` verification rule added after the second of two
 `03-rating-engine.md` §5.2 signatures was found declared wrong the same way in one day
-(`compile_bundle`, PR #315; `score_one`, `docs/plans/2026-08-29-w11-prework-rulings.md`
-Ruling 5). Diagnosed as a missing verification step, not a wrong default: sync-by-default is
+(`compile_bundle`, PR #315; `score_one`, `docs/rulings/INDEX.md#2026-08-29-w11-prework-rulingsmd`
+RL-868). Diagnosed as a missing verification step, not a wrong default: sync-by-default is
 still correct for the other nine `pricing-core` interface signatures in the same block, and
 none of them is amended.
 
@@ -158,30 +158,30 @@ from `CLAUDE.md` §5 and §10, and the custom-objective governance rules from §
 file was cut to its binding rules. No procedure changed; the standard is still §5's, this is
 the list it points at.
 
-2026-08-18 — Confirmed while recording five maintainer decisions (OQ-MODEL-10..13, OQ-GOV-7 →
-FR-MODEL-96/97/98, FR-RATE-61, FR-GOV-37; 456 → 461 requirements). Both halves of the
-"a decision appends a requirement" rule appeared again: FR-GOV-37 shipped with its code and its
-negative test, while FR-MODEL-96 and FR-RATE-61 are deliberately undelivered and each carries a
+2026-08-18 — Confirmed while recording five maintainer decisions (OQ-577, OQ-576, OQ-584, OQ-585, OQ-639 →
+FR-137/93/196, FR-224, FR-364; 456 → 461 requirements). Both halves of the
+"a decision appends a requirement" rule appeared again: FR-364 shipped with its code and its
+negative test, while FR-137 and FR-224 are deliberately undelivered and each carries a
 phase, an owner and a deadline in the requirement itself. Two of the five ratify behaviour that
-was **already built** (FR-MODEL-97, FR-MODEL-98) — those still append a requirement, and the
+was **already built** (FR-93, FR-196) — those still append a requirement, and the
 cheap way to keep them honest is a second `@pytest.mark.req` on the test that already proves the
 behaviour, so the decision is evidenced rather than merely stated.
 
-2026-08-17 — Confirmed while recording two maintainer decisions (OQ-OVR-7 → `01`
-FR-DATA-46, OQ-DATA-8 → FR-DATA-45). Both halves of "a decision appends a requirement"
-appeared in one commit: FR-DATA-45's refusal shipped with it, FR-DATA-46's rename is
+2026-08-17 — Confirmed while recording two maintainer decisions (OQ-544 → `01`
+FR-64, OQ-563 → FR-78). Both halves of "a decision appends a requirement"
+appeared in one commit: FR-78's refusal shipped with it, FR-64's rename is
 deliberately not delivered and the requirement says so with a trigger and an owner — which
 is what stops a deferred decision from decaying back into a recommendation. The gate-table
 count rule above was learnt here.
 
 2026-08-15 — Confirmed while recording six maintainer decisions (OQ-MODEL-1, 2, 4, 5, 6, 7)
-as FR-MODEL-75..82. The gate-table rule above was learnt from the failure, not from
+as FR-150, FR-151, FR-198, FR-199, FR-135, FR-106, FR-185, FR-91. The gate-table rule above was learnt from the failure, not from
 foresight: the invariant was already broken on `main` when this work started.
 
 2026-08-14 — Confirmed again while recording four maintainer decisions: bolding
-`**FR-PLAT-51**` in an open-questions row created a duplicate-definition failure, caught by
+`**FR-406**` in an open-questions row created a duplicate-definition failure, caught by
 the audit. Originally confirmed by applying Track A research findings across four specs: appended
-FR-MODEL-68..71, FR-RATE-56..58 and NFR-RATE-13 (400 → 408 requirements) with
+FR-147, FR-148, FR-149, FR-126, FR-273, FR-274, FR-275 and NFR-502 (400 → 408 requirements) with
 `scripts/audit-docs.py` passing before and after. The append-only rule was verified the
 hard way: an initial attempt used `FR-MODEL-42a/42b/42c`, which the audit's
 `(?:FR|NFR)-[A-Z]+-\d+` pattern silently does not match, so the requirements would not have

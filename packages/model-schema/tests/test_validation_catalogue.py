@@ -7,7 +7,7 @@ import pytest
 from model_schema import BUILTIN_RULES, Severity, ValidationLayer, builtin_rule
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_the_catalogue_holds_every_rule_01_section_4_4_names() -> None:
     """Counts per layer, from the four tables at `01` lines 361-413.
 
@@ -32,7 +32,7 @@ def test_the_catalogue_holds_every_rule_01_section_4_4_names() -> None:
         assert expected <= set(BUILTIN_RULES), sorted(expected - set(BUILTIN_RULES))
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_a_catalogue_id_is_its_own_key_and_its_layer() -> None:
     for key, rule in BUILTIN_RULES.items():
         assert key == rule.catalogue_id
@@ -43,7 +43,7 @@ def test_a_catalogue_id_is_its_own_key_and_its_layer() -> None:
         )
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_slugs_are_unique_and_match_the_rule_slug_pattern() -> None:
     """`ValidationRule.slug` is `^[a-z0-9][a-z0-9-]{1,62}$` and a seeded row uses it.
 
@@ -58,7 +58,7 @@ def test_slugs_are_unique_and_match_the_rule_slug_pattern() -> None:
         assert re.fullmatch(r"[a-z0-9][a-z0-9-]{1,62}", slug), slug
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_every_severity_is_warn_or_fail() -> None:
     """`Severity` has exactly two members; the committed JSON Schema claims three.
 
@@ -68,13 +68,13 @@ def test_every_severity_is_warn_or_fail() -> None:
     assert {r.severity for r in BUILTIN_RULES.values()} <= {Severity.WARN, Severity.FAIL}
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_an_unknown_catalogue_id_is_refused_by_name() -> None:
     with pytest.raises(ValueError, match="VR-STR-99"):
         builtin_rule("VR-STR-99")
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_a_known_catalogue_id_returns_its_rule() -> None:
     """Beside the refusal, because a refusal test alone passes if the accessor always raises."""
     rule = builtin_rule("VR-STR-1")
@@ -83,7 +83,7 @@ def test_a_known_catalogue_id_returns_its_rule() -> None:
     assert rule.severity is Severity.FAIL
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_a_stored_rule_can_name_the_catalogue_entry_it_came_from() -> None:
     """Without this the only link back is the slug, which a workspace may version away from.
 
@@ -116,7 +116,7 @@ def test_a_stored_rule_can_name_the_catalogue_entry_it_came_from() -> None:
     assert own.catalogue_id is None
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_a_catalogue_id_that_names_no_catalogue_entry_is_refused() -> None:
     """`extra="forbid"` catches a misspelled *field*; nothing caught a misspelled *value*."""
     from uuid import uuid4
@@ -137,9 +137,9 @@ def test_a_catalogue_id_that_names_no_catalogue_entry_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-DATA-54")
+@pytest.mark.req("FR-56")
 def test_a_catalogue_entry_carries_its_default_params() -> None:
-    """FR-DATA-54: a built-in's default thresholds belong in its catalogue entry.
+    """FR-56: a built-in's default thresholds belong in its catalogue entry.
 
     Empty for a rule whose check reads no defaulted parameter — that is not a gap, it is
     the accurate statement that the check has nothing to configure.

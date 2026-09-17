@@ -1,4 +1,4 @@
-"""data: the row trigger six artifact tables were missing (`01` FR-DATA-47)
+"""data: the row trigger six artifact tables were missing (`01` FR-44)
 
 `a1b2c3d4e5f6` established that an artifact needs **two** layers. Layer 1 is
 `GRANT SELECT, INSERT` / `REVOKE UPDATE, DELETE`, which stops the application role. Layer 2
@@ -6,7 +6,7 @@ is the trigger pair, which stops everything else — because revoking `UPDATE` f
 *owner* does nothing at all: ownership carries implicit privileges, and a migration, a
 `psql` session or a restored dump all connect as the owner.
 
-Six tables took layer 1 and part or none of layer 2. FR-DATA-47 was raised naming three of
+Six tables took layer 1 and part or none of layer 2. FR-44 was raised naming three of
 them; measuring the same invariant across every table rather than re-reading the three found
 three more:
 

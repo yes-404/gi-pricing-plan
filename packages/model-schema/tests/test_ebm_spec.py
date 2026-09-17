@@ -4,7 +4,7 @@ Every test here is a **prohibition**, for the reason `test_gbm_spec.py` gives: a
 that can represent a nonsense model eventually holds one, and a Model is what a Rating
 Version references.
 
-The refusals are the spec's own, by name (FR-MODEL-87's staging rule, dated note in
+The refusals are the spec's own, by name (FR-207's staging rule, dated note in
 `02` §4.4): `interpret`'s objectives are `rmse` and `mae`, so §7's families and binomial
 `log_loss` are refused rather than translated; `interactions=2` (triples) is
 declared-and-unbuilt, so it is refused rather than stored; and offsets stay GLM-only, so
@@ -102,13 +102,13 @@ def _fit(**over: object) -> EbmFitResult:
     return EbmFitResult(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_the_objective_vocabulary_is_rmse_and_mae() -> None:
     with pytest.raises(pydantic.ValidationError, match="poisson"):
         _spec(objective="poisson")
 
 
-@pytest.mark.req("FR-MODEL-87")
+@pytest.mark.req("FR-207")
 @pytest.mark.parametrize(
     "objective",
     ["poisson", "gamma", "tweedie", "inverse_gaussian", "negative_binomial", "log_loss"],
@@ -118,7 +118,7 @@ def test_the_families_and_binomial_log_loss_are_refused_by_name(objective: str) 
         _spec(objective=objective)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_max_bins_is_a_power_of_two_between_16_and_32768() -> None:
     assert _spec(max_bins=32).max_bins == 32
     for bad in (50, 8, 65536):
@@ -126,20 +126,20 @@ def test_max_bins_is_a_power_of_two_between_16_and_32768() -> None:
             _spec(max_bins=bad)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_the_interaction_grid_stays_in_the_jsonb_envelope() -> None:
     with pytest.raises(pydantic.ValidationError, match="interactions"):
         _spec(interactions=1, max_bins=512)
     assert _spec(interactions=1, max_bins=256).max_bins == 256
 
 
-@pytest.mark.req("FR-MODEL-87")
+@pytest.mark.req("FR-207")
 def test_interactions_are_zero_or_one() -> None:
     with pytest.raises(pydantic.ValidationError, match="interactions"):
         _spec(interactions=2)
 
 
-@pytest.mark.req("FR-MODEL-28")
+@pytest.mark.req("FR-122")
 def test_monotone_constraints_are_directions() -> None:
     with pytest.raises(pydantic.ValidationError, match="direction"):
         _spec(monotone_constraints={"age": 2})
@@ -150,13 +150,13 @@ def test_monotone_constraints_are_directions() -> None:
     assert _spec(monotone_constraints={}).monotone_constraints == {}
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_an_ebm_declares_no_offset() -> None:
     with pytest.raises(pydantic.ValidationError, match="GLM-only"):
         _spec(offset=OffsetSpec(kind="log_column", column="exposure_years"))
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_an_ebm_spec_round_trips_through_the_adapter() -> None:
     """`ebm` discriminates to `EbmSpec` — the sibling of the gbm test that used to name
     it as the unknown model type."""
@@ -164,7 +164,7 @@ def test_an_ebm_spec_round_trips_through_the_adapter() -> None:
     assert isinstance(MODEL_SPEC_ADAPTER.validate_python(payload), EbmSpec)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_the_common_block_flows_into_the_ebm_arm() -> None:
     spec = _spec(
         weight=WeightSpec(kind="column", column="n_claims"),
@@ -176,7 +176,7 @@ def test_the_common_block_flows_into_the_ebm_arm() -> None:
     assert spec.split_ref is not None
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_an_ebm_spec_cannot_hold_a_glm_fit() -> None:
     """Both unions are on one artifact, so the pairing has to be stated.
 
@@ -198,7 +198,7 @@ def test_an_ebm_spec_cannot_hold_a_glm_fit() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_the_bins_align_with_the_feature_order() -> None:
     """`bins` and `feature_order` are positional: a scoring frame reads bin `i` of
     feature `i`, so a list one short of the order is a model scored on the wrong
@@ -209,14 +209,14 @@ def test_the_bins_align_with_the_feature_order() -> None:
         _fit(feature_order=("speed", "age_band"))
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_a_term_names_only_existing_features() -> None:
     base = _fit()
     with pytest.raises(pydantic.ValidationError, match="feature index"):
         _fit(terms=(_term((7,), "ghost", 64), base.terms[1], base.terms[2]))
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_the_lookup_shapes_match_the_bins() -> None:
     """61 cuts → 64 slots, 3 levels → 5 slots (the pinned 0.7.8 layout). A term whose
     arrays are not one score per slot is a lookup that will be read off-by-one."""
@@ -227,7 +227,7 @@ def test_the_lookup_shapes_match_the_bins() -> None:
         _fit(terms=(base.terms[0], _term((1,), "age_band", 4), base.terms[2]))
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_an_interaction_grid_is_rectangular() -> None:
     """A pair term's scores are a grid with one row per bin of the first feature; a
     ragged grid, or one whose dims do not match the pair's slot counts, would mis-score
@@ -250,7 +250,7 @@ def test_an_interaction_grid_is_rectangular() -> None:
         _fit(terms=(ragged, base.terms[1], base.terms[2]))
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_the_base_slot_is_never_a_real_bin() -> None:
     """Slot 0 is the unused base slot — a nonzero weight on it would make the
     complexity count lie about the real bins."""
@@ -266,13 +266,13 @@ def test_the_base_slot_is_never_a_real_bin() -> None:
         _fit(terms=(bad, base.terms[1], base.terms[2]))
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_a_fit_result_discriminates_on_model_type() -> None:
     payload = _fit().model_dump(mode="json")
     assert isinstance(FIT_RESULT_ADAPTER.validate_python(payload), EbmFitResult)
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_a_model_cannot_hold_a_fit_from_another_model_type() -> None:
     """Both unions are on one artifact, so the pairing has to be stated.
 

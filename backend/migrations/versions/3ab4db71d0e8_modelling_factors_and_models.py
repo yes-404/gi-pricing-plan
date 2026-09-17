@@ -1,10 +1,10 @@
 """modelling: factors and models
 
-`02` FR-MODEL-1/7 versions a Factor independently of any Model, and `02` §4.8 makes a
+`02` FR-83/96 versions a Factor independently of any Model, and `02` §4.8 makes a
 Model immutable once fitted (R2). Two constraints carry rules the type system also states,
 because a type is a rule about one process and a constraint survives a direct `UPDATE`:
 
-* `uq_models_spec_hash` — FR-MODEL-66 returns the existing model rather than fitting the
+* `uq_models_spec_hash` — FR-204 returns the existing model rather than fitting the
   same specification twice. Uniqueness is what makes that a fact rather than a race.
 * `fitted_model_has_a_fit_result` — a model at `fitted` or beyond without its numbers
   would be a version something could reference and nothing could score

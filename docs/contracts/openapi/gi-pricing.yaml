@@ -5,7 +5,7 @@ info:
   summary: Open-source general insurance pricing platform
   description: |
     Draft OpenAPI stub for Phase 0. From Phase 1 this document is **generated** by FastAPI
-    from the `packages/model-schema` Pydantic models (ADR-0002, FR-OVR-6, FR-PLAT-48) and
+    from the `packages/model-schema` Pydantic models (ADR-704, FR-9, FR-451) and
     CI fails on drift against the committed copy.
 
     Conventions (see `docs/specs/00-overview.md` §5):
@@ -19,7 +19,7 @@ info:
   license:
     name: TBD
     identifier: Apache-2.0
-    # See open-questions.md OQ-OVR-2.
+    # See open-questions.md OQ-541.
 servers:
   - url: https://{host}/api/v1
     variables:
@@ -62,7 +62,7 @@ paths:
     post:
       tags: [datasets]
       summary: Start an ingestion run
-      description: FR-DATA-2. Returns a Job; the Dataset Version appears only on successful commit (NFR-DATA-10).
+      description: FR-27. Returns a Job; the Dataset Version appears only on successful commit (NFR-474).
       parameters: [{$ref: '#/components/parameters/slug'}, {$ref: '#/components/parameters/idempotencyKey'}]
       responses:
         '202': {$ref: '#/components/responses/JobAccepted'}
@@ -72,7 +72,7 @@ paths:
     post:
       tags: [datasets]
       summary: Run validation
-      description: FR-DATA-15. Executes all four layers and produces one immutable Validation Report.
+      description: FR-42. Executes all four layers and produces one immutable Validation Report.
       parameters: [{$ref: '#/components/parameters/id'}]
       responses:
         '202': {$ref: '#/components/responses/JobAccepted'}
@@ -96,7 +96,7 @@ paths:
       tags: [datasets]
       summary: Acknowledge a warning
       description: |
-        FR-DATA-17/18. Requires the Pricing Actuary role and a non-empty justification.
+        FR-46/47. Requires the Pricing Actuary role and a non-empty justification.
         Scoped to (dataset_version, rule, report) — it never carries forward.
       parameters:
         - {$ref: '#/components/parameters/id'}
@@ -118,7 +118,7 @@ paths:
     post:
       tags: [datasets]
       summary: Transition a dataset version
-      description: 'Enforces: zero fails, zero errors, every warn acknowledged (FR-DATA-17).'
+      description: 'Enforces: zero fails, zero errors, every warn acknowledged (FR-46).'
       parameters: [{$ref: '#/components/parameters/id'}, {$ref: '#/components/parameters/ifMatch'}]
       requestBody:
         required: true
@@ -138,7 +138,7 @@ paths:
     post:
       tags: [modelling]
       summary: Validate a model spec without fitting
-      description: FR-MODEL-44. Catches unresolvable factors, missing offsets, and inapplicable objectives before any compute is spent.
+      description: FR-153. Catches unresolvable factors, missing offsets, and inapplicable objectives before any compute is spent.
       responses:
         '200': {description: 'Valid, or a list of issues'}
         default: {$ref: '#/components/responses/Problem'}
@@ -147,7 +147,7 @@ paths:
     post:
       tags: [modelling]
       summary: Fit a model
-      description: FR-MODEL-66. Returns the existing model on a spec_hash match unless force_refit is set.
+      description: FR-204. Returns the existing model on a spec_hash match unless force_refit is set.
       parameters: [{$ref: '#/components/parameters/idempotencyKey'}]
       requestBody:
         required: true
@@ -163,7 +163,7 @@ paths:
     post:
       tags: [modelling]
       summary: Build a transparency artifact
-      description: FR-MODEL-33..36. Required before a non-GLM model can be referenced by a Rating Version.
+      description: FR-132, FR-133, FR-134, FR-136. Required before a non-GLM model can be referenced by a Rating Version.
       parameters: [{$ref: '#/components/parameters/id'}]
       responses:
         '202': {$ref: '#/components/responses/JobAccepted'}
@@ -189,7 +189,7 @@ paths:
       tags: [objectives]
       summary: Derive gradient and hessian symbolically
       description: |
-        FR-MODEL-40. The platform differentiates the user's loss expression and stores the
+        FR-144. The platform differentiates the user's loss expression and stores the
         derivatives as reviewable expressions. The user never writes a derivative, and
         their text is never executed.
       parameters: [{$ref: '#/components/parameters/id'}]
@@ -201,7 +201,7 @@ paths:
     post:
       tags: [objectives]
       summary: Run the certificate checks
-      description: FR-MODEL-42. A failed certificate blocks submission entirely.
+      description: FR-146. A failed certificate blocks submission entirely.
       parameters: [{$ref: '#/components/parameters/id'}]
       responses:
         '202': {$ref: '#/components/responses/JobAccepted'}
@@ -211,7 +211,7 @@ paths:
     get:
       tags: [objectives]
       summary: Blast radius
-      description: FR-MODEL-47. Models, peril structures, rating versions, and live deployments using this objective version.
+      description: FR-164. Models, peril structures, rating versions, and live deployments using this objective version.
       parameters: [{$ref: '#/components/parameters/id'}]
       responses:
         '200': {description: OK}
@@ -223,7 +223,7 @@ paths:
       tags: [rating]
       summary: Compile and validate the bundle
       description: |
-        FR-RATE-25. Validates DAG structure, reference resolvability, artifact maturity,
+        FR-240. Validates DAG structure, reference resolvability, artifact maturity,
         type compatibility, and that no control-intent factor or unapproved custom
         objective is transitively reachable.
       parameters: [{$ref: '#/components/parameters/id'}]
@@ -235,7 +235,7 @@ paths:
     post:
       tags: [rating]
       summary: Seed a rate table from a model's relativities
-      description: FR-RATE-16. Records the source model so the diff-vs-technical-seed stays answerable.
+      description: FR-230. Records the source model so the diff-vs-technical-seed stays answerable.
       parameters: [{$ref: '#/components/parameters/slug'}]
       responses:
         '201': {description: New rate table version created}
@@ -247,8 +247,8 @@ paths:
       tags: [scoring]
       summary: Score a single quote
       description: |
-        FR-RATE-34. Target p99 < 50 ms server-side (NFR-RATE-1). A declined quote is a
-        successful response with `outcome: declined`, not an HTTP error (FR-RATE-39).
+        FR-250. Target p99 < 50 ms server-side (NFR-489). A declined quote is a
+        successful response with `outcome: declined`, not an HTTP error (FR-256).
       requestBody:
         required: true
         content:
@@ -267,7 +267,7 @@ paths:
     post:
       tags: [scoring]
       summary: Batch re-rate a portfolio
-      description: FR-RATE-36/37. Uses the identical compiled bundle and evaluator as real-time scoring.
+      description: FR-253/254. Uses the identical compiled bundle and evaluator as real-time scoring.
       responses:
         '202': {$ref: '#/components/responses/JobAccepted'}
         default: {$ref: '#/components/responses/Problem'}
@@ -276,7 +276,7 @@ paths:
     post:
       tags: [rating]
       summary: Dislocation baseline vs candidate
-      description: FR-RATE-46..49, including attribution decomposing the change into its causes.
+      description: FR-263, FR-264, FR-265, FR-266, including attribution decomposing the change into its causes.
       responses:
         '202': {$ref: '#/components/responses/JobAccepted'}
         default: {$ref: '#/components/responses/Problem'}
@@ -285,7 +285,7 @@ paths:
     post:
       tags: [rating]
       summary: Deploy an approved rating version
-      description: FR-RATE-50/51. Atomic switchover after cache pre-warming; promotion order enforced (FR-PLAT-29).
+      description: FR-267/268. Atomic switchover after cache pre-warming; promotion order enforced (FR-429).
       parameters: [{name: env, in: path, required: true, schema: {type: string}}]
       responses:
         '201': {description: Deployed}
@@ -311,7 +311,7 @@ paths:
     post:
       tags: [optimisation]
       summary: Materialise proposals into rate table edits
-      description: FR-OPT-25/26. Returns a cell-level diff for confirmation; acceptance is per segment and audited.
+      description: FR-303/304. Returns a cell-level diff for confirmation; acceptance is per segment and audited.
       parameters: [{$ref: '#/components/parameters/id'}]
       responses:
         '200': {description: Diff preview or created rate table versions}
@@ -322,7 +322,7 @@ paths:
     post:
       tags: [optimisation]
       summary: Run a GIPP check
-      description: FR-OPT-18. Scores each renewal risk twice through the same production bundle.
+      description: FR-294. Scores each renewal risk twice through the same production bundle.
       responses:
         '202': {$ref: '#/components/responses/JobAccepted'}
         default: {$ref: '#/components/responses/Problem'}
@@ -345,7 +345,7 @@ paths:
     post:
       tags: [monitoring]
       summary: Rebaseline a monitor
-      description: FR-MON-3. Requires a reason; a silently moving baseline is how drift stops being detected.
+      description: FR-309. Requires a reason; a silently moving baseline is how drift stops being detected.
       parameters: [{$ref: '#/components/parameters/id'}]
       requestBody:
         required: true
@@ -382,7 +382,7 @@ paths:
     post:
       tags: [governance]
       summary: Submit an artifact for approval
-      description: FR-GOV-10. Evidence bundle and checklist completeness are validated at submission.
+      description: FR-352. Evidence bundle and checklist completeness are validated at submission.
       responses:
         '201': {description: Submitted}
         '422': {$ref: '#/components/responses/Problem', description: 'EVIDENCE_INCOMPLETE | CHECKLIST_INCOMPLETE | ARTIFACT_FLAGGED'}
@@ -392,7 +392,7 @@ paths:
     post:
       tags: [governance]
       summary: Approve, reject, or request changes
-      description: FR-GOV-11. The submitter can never approve; this is enforced in the backend and is not configurable.
+      description: FR-353. The submitter can never approve; this is enforced in the backend and is not configurable.
       parameters: [{$ref: '#/components/parameters/id'}]
       requestBody:
         required: true
@@ -440,7 +440,7 @@ paths:
     post:
       tags: [governance]
       summary: Generate a dossier
-      description: FR-GOV-27/30. Assembled from persisted artifacts only; regenerable as at any historical point.
+      description: FR-376/380. Assembled from persisted artifacts only; regenerable as at any historical point.
       responses:
         '202': {$ref: '#/components/responses/JobAccepted'}
         default: {$ref: '#/components/responses/Problem'}
@@ -463,7 +463,7 @@ paths:
     post:
       tags: [platform]
       summary: Cancel a job
-      description: FR-PLAT-9. Cooperative; a cancelled job leaves no partially-visible artifact.
+      description: FR-401. Cooperative; a cancelled job leaves no partially-visible artifact.
       parameters: [{$ref: '#/components/parameters/id'}]
       responses:
         '200': {description: Cancellation requested}
@@ -486,7 +486,7 @@ components:
     apiKey:
       type: http
       scheme: bearer
-      description: Service Account key. Scoring permissions only, scoped to named environments (FR-GOV-6).
+      description: Service Account key. Scoring permissions only, scoped to named environments (FR-347).
 
   parameters:
     id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}

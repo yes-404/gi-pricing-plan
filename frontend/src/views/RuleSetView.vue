@@ -31,7 +31,7 @@ const versioning = ref<ValidationRule | null>(null);
 
 const layers = computed(() => byLayer(ruleSet.value));
 /**
- * FR-DATA-16: every layer must be present, and an empty one is a **configuration warning
+ * FR-45: every layer must be present, and an empty one is a **configuration warning
  * surfaced here**. It comes from the API as a computed field rather than being re-derived
  * from the entries — a client that computed it would be a second implementation of the
  * rule, and the two would eventually disagree.
@@ -68,9 +68,9 @@ async function load(): Promise<void> {
   try {
     ruleSet.value = await getRuleSet(props.slug);
   } catch (error) {
-    // A dataset with no rule set is a state, not a failure: FR-DATA-16 says one must be
+    // A dataset with no rule set is a state, not a failure: FR-45 says one must be
     // defined before a version can be validated, which is advice rather than an error.
-    // The server already explains this one in FR-DATA-16's own words; repeating it here
+    // The server already explains this one in FR-45's own words; repeating it here
     // in different words would be a second copy that drifts.
     if (isProblem(error, "NOT_FOUND")) missing.value = error.problem.detail ?? error.problem.title;
     else if (error instanceof ProblemError) problem.value = error;
@@ -82,7 +82,7 @@ async function load(): Promise<void> {
 
 /**
  * Edit the membership of one entry — which **replaces the set**, creating a new version
- * (FR-DATA-22). Never an edit in place: a report cites the rule-set version it ran, so
+ * (FR-51). Never an edit in place: a report cites the rule-set version it ran, so
  * mutating a set would change what every past report was a report *of*.
  *
  * Built from `membersOf`, not from the ids: rebuilding the body from ids alone would
@@ -336,7 +336,7 @@ onMounted(() => void load());
                 >overridden</span>
                 <!-- Raise only. `warn → fail` tightens a shipped rule and needs no review;
                      the opposite is a decision that a failure is acceptable, and belongs
-                     in the rule's own review where somebody reads it (FR-DATA-21). -->
+                     in the rule's own review where somebody reads it (FR-50). -->
                 <button
                   v-if="entry.rule.severity === 'warn'"
                   type="button"
@@ -351,9 +351,9 @@ onMounted(() => void load());
               </td>
               <!-- A threshold belongs to the rule, not to the set (`01` §4.4, corrected
                    2026-08-23). Read-only here by design: changing one authors a new rule
-                   version through `FR-DATA-21`'s reviewed path, which is what the button
+                   version through `FR-50`'s reviewed path, which is what the button
                    below starts. A Rule Set entry gets `enabled` and `severity_override`
-                   and no third override (`FR-DATA-54`). -->
+                   and no third override (`FR-56`). -->
               <td class="py-2 font-mono text-xs text-slate-600">
                 {{ thresholds(entry) || "—" }}
                 <button

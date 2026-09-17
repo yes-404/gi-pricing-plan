@@ -1,4 +1,4 @@
-"""The transactional outbox (FR-PLAT-51).
+"""The transactional outbox (FR-406).
 
 > Celery does **not** enlist in the database transaction — a task can be published to
 > Redis and the surrounding transaction then roll back, leaving a worker acting on state
@@ -75,7 +75,7 @@ async def publish_directly(
     queue: JobQueue,
     payload: dict[str, Any],
 ) -> None:
-    """Publish straight to the broker — refused while a transaction is open (FR-PLAT-51).
+    """Publish straight to the broker — refused while a transaction is open (FR-406).
 
     Kept as a real function so the refusal is a mechanism rather than a convention. The
     failure mode it prevents is not hypothetical: a broker publish is invisible to the
@@ -83,7 +83,7 @@ async def publish_directly(
     """
     if session.in_transaction():
         raise RuntimeError(
-            "refusing to publish from inside a database transaction (FR-PLAT-51). "
+            "refusing to publish from inside a database transaction (FR-406). "
             "Celery does not enlist in the transaction, so a rollback would leave a "
             "worker acting on state that was never committed — and, because audit writes "
             "share that transaction, with no audit record. Use outbox.enqueue() instead."

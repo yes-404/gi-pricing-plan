@@ -1,6 +1,6 @@
-"""The Offending Sample item is a keyed object, its shape written out (OQ-DATA-12, (b)).
+"""The Offending Sample item is a keyed object, its shape written out (OQ-567, (b)).
 
-FR-DATA-20 persists an Offending Sample of up to 100 primary keys so an actuary can trace
+FR-49 persists an Offending Sample of up to 100 primary keys so an actuary can trace
 a non-pass outcome back to rows. The item is one object per offending row — property keys
 are column names, values are the cell value as a string or null — so a composite key is
 one item with several properties, and `None` is distinct from `""`. An item with no
@@ -30,7 +30,7 @@ def _result(**over: object) -> RuleResult:
     return RuleResult(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 def test_an_item_with_no_properties_names_no_row_and_is_refused() -> None:
     """A sample exists to be traced back to rows, and an empty object names none.
 
@@ -42,7 +42,7 @@ def test_an_item_with_no_properties_names_no_row_and_is_refused() -> None:
     assert "at least 1 item" in str(error.value) or "minProperties" in str(error.value)
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 def test_values_are_strings_or_null() -> None:
     """The cell value reaches the report as a string or `null` — never a number.
 
@@ -58,9 +58,9 @@ def test_values_are_strings_or_null() -> None:
         _result(offending_sample=({"claim_amount_minor": 12_500},))
 
 
-@pytest.mark.req("FR-DATA-20")
+@pytest.mark.req("FR-49")
 def test_a_composite_key_is_one_item_with_several_properties() -> None:
-    """FR-DATA-20's cap counts items; a composite key is one item, not several.
+    """FR-49's cap counts items; a composite key is one item, not several.
 
     The cap counts primary keys, and a composite key is one primary key — the shape makes
     that count read directly off the array length.

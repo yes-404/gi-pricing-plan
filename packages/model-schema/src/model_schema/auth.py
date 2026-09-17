@@ -1,7 +1,7 @@
-"""The values the browser OIDC login needs before it can start (`07` FR-PLAT-66).
+"""The values the browser OIDC login needs before it can start (`07` FR-394).
 
 Public by design: the issuer and the client_id are what a *public* client publishes
-(FR-PLAT-55, OQ-PLAT-6), and nothing here is a credential.
+(FR-393, OQ-644), and nothing here is a credential.
 """
 
 from __future__ import annotations

@@ -19,13 +19,13 @@ const SEEDED = {
       currency: "EUR",
       data_dictionary: {},
       latest_version: 2,
-      // The three derived fields FR-DATA-50 projects, plus FR-DATA-51's stored owner.
+      // The three derived fields FR-55 projects, plus FR-82's stored owner.
       // Here the latest version *is* the last validated one — Decision 3's agreement
       // branch, where the pair is one fact and no version is named.
       latest_version_status: "validated",
       last_validated_at: "2026-08-20T11:04:00Z",
       last_validated_version: 2,
-      // OQ-OVR-15 (a): the list resolves the owner to a display name when it can.
+      // OQ-552 (a): the list resolves the owner to a display name when it can.
       owner_id: OWNER,
       owner_name: "Demo Analyst",
       created_at: "2026-08-15T08:30:00Z",
@@ -36,7 +36,7 @@ const SEEDED = {
 };
 
 /**
- * FR-DATA-50's own worked example: "a Dataset whose v12 is a fresh `draft` above a
+ * FR-55's own worked example: "a Dataset whose v12 is a fresh `draft` above a
  * `validated` v11 would otherwise render as never validated". The badge describes v12; the
  * date describes v11; the requirement says the list must state which.
  */
@@ -98,7 +98,7 @@ describe("the dataset list", () => {
   });
 
   it("links a dataset name to its detail route", async () => {
-    // FR-OVR-22: the list is the only way into the /data/:slug subtree, so the
+    // FR-25: the list is the only way into the /data/:slug subtree, so the
     // name must be a link. The slug stays visible beside it, unchanged.
     const t = await table();
 
@@ -143,7 +143,7 @@ describe("the dataset list", () => {
   });
 });
 
-describe("the three columns W32-3 served and nothing read (FR-DATA-50, FR-DATA-51)", () => {
+describe("the three columns W32-3 served and nothing read (FR-55, FR-82)", () => {
   it("badges the status of the version `latest_version` names", async () => {
     const t = await table();
 
@@ -151,7 +151,7 @@ describe("the three columns W32-3 served and nothing read (FR-DATA-50, FR-DATA-5
   });
 
   it("does not name the version when it is the latest one", async () => {
-    // Decision 3's agreement branch. FR-DATA-50 requires disclosure only "where the two
+    // Decision 3's agreement branch. FR-55 requires disclosure only "where the two
     // refer to different versions"; here they are one fact and a version number would be
     // noise. Asserted as an absence so the always-name implementation fails here.
     const cell = cellUnder(await table(), /freMTPL2/, "Last validated");
@@ -161,7 +161,7 @@ describe("the three columns W32-3 served and nothing read (FR-DATA-50, FR-DATA-5
   });
 
   it("names the version when the last validated one is not the latest", async () => {
-    // FR-DATA-50's own example, and the branch the requirement was written for: v12 is a
+    // FR-55's own example, and the branch the requirement was written for: v12 is a
     // fresh draft above a validated v11. The date must not be readable as v12's.
     const t = await table(disagreeing());
 
@@ -198,7 +198,7 @@ describe("the three columns W32-3 served and nothing read (FR-DATA-50, FR-DATA-5
   });
 
   it("renders the resolved owner name when the list resolved one", async () => {
-    // OQ-OVR-15 (a): the list endpoint resolves `owner_id` to a display name, and the
+    // OQ-552 (a): the list endpoint resolves `owner_id` to a display name, and the
     // column renders the name — never the raw id the name stands in for.
     const cell = cellUnder(await table(), /freMTPL2/, "Owner");
 

@@ -13,7 +13,7 @@ type OneWayRow = components["schemas"]["OneWayRow"];
  */
 describe("money and exact decimals as they cross into TypeScript", () => {
   it("keeps exact decimals as strings", () => {
-    // A JS number is a float64. `0.1 + 0.2` is the reason this is a string (FR-OVR-7);
+    // A JS number is a float64. `0.1 + 0.2` is the reason this is a string (FR-10);
     // never `parseFloat` it — display it, or compute with a decimal library.
     expectTypeOf<OneWayRow["exposure_years"]>().toEqualTypeOf<string>();
   });
@@ -24,7 +24,7 @@ describe("money and exact decimals as they cross into TypeScript", () => {
 
   it("marks the two ratios that are means, not amounts", () => {
     // `mean_severity` and `mean_burning_cost` are **floats**: they are statistics
-    // (amount ÷ claims, amount ÷ exposure), not amounts — FR-DATA-46 renamed them off
+    // (amount ÷ claims, amount ÷ exposure), not amounts — FR-64 renamed them off
     // `_minor` for exactly this reason, so their names no longer look like money at all.
     expectTypeOf<OneWayRow["mean_severity"]>().toEqualTypeOf<number | null | undefined>();
     expectTypeOf<OneWayRow["mean_burning_cost"]>().toEqualTypeOf<number | null | undefined>();

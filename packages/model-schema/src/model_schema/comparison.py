@@ -1,6 +1,6 @@
-"""Model comparison (`02` FR-MODEL-56, §4.11 — `model-comparison.schema.json`).
+"""Model comparison (`02` FR-186, §4.11 — `model-comparison.schema.json`).
 
-The artifact `wf-01` E1 produces and E2 decides on, and what an approval request cites when
+The artifact `WF-698` E1 produces and E2 decides on, and what an approval request cites when
 a predecessor existed (`06` §3.3).
 
 **Designed here rather than transcribed.** `02` §5.2 named `ModelComparison` as a return type
@@ -9,13 +9,13 @@ invariant below is a choice, and the reason is stated where the choice was made.
 
 Three shape decisions carry most of the meaning:
 
-* **The shared holdout is a `SplitRef`, not a promise.** FR-MODEL-56 says "fitted on the same
-  holdout", and FR-DATA-36 recorded the split on the parent version precisely so that
+* **The shared holdout is a `SplitRef`, not a promise.** FR-186 says "fitted on the same
+  holdout", and FR-76 recorded the split on the parent version precisely so that
   "the same split" is *one artifact two models cite*. The comparison stores the ref it
   verified, so a reader can check the claim rather than take it.
-* **Double lift is pairwise, and says so.** FR-MODEL-50 listed it among universal diagnostics,
+* **Double lift is pairwise, and says so.** FR-171 listed it among universal diagnostics,
   where it could never be computed — the comparison model is unknown at fit time and
-  FR-MODEL-49 makes diagnostics computed once. Here it is one series per challenger against a
+  FR-170 makes diagnostics computed once. Here it is one series per challenger against a
   named baseline. Averaging several challengers into one curve would erase what the chart is
   for: where two specific models disagree, and which one the data supports there.
 * **A value may be absent without the model being absent.** `None` means "this metric does not
@@ -80,12 +80,12 @@ class ComparisonValue(BaseModel):
 
 
 class ComparisonMetric(BaseModel):
-    """One metric, aligned across every model in the comparison (FR-MODEL-56)."""
+    """One metric, aligned across every model in the comparison (FR-186)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     metric: str
-    #: FR-MODEL-55: a metric carries its weighting. No default, for the reason
+    #: FR-184: a metric carries its weighting. No default, for the reason
     #: `PartitionDiagnostics` gives — an exposure-weighted A/E and an unweighted one are
     #: different numbers and guessing which was meant is the mistake the requirement names.
     weighting: Weighting
@@ -137,7 +137,7 @@ class DoubleLiftBin(BaseModel):
 
 
 class DoubleLift(BaseModel):
-    """One challenger against the baseline (FR-MODEL-56, and FR-MODEL-50 as amended)."""
+    """One challenger against the baseline (FR-186, and FR-171 as amended)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -157,7 +157,7 @@ class DoubleLift(BaseModel):
 
 
 class RelativityDifference(BaseModel):
-    """How the models price one level of one factor differently (FR-MODEL-56).
+    """How the models price one level of one factor differently (FR-186).
 
     The comparison an actuary actually argues from: two models can score almost identically
     and disagree by 15 % on young drivers, and the aggregate metrics cannot show that.
@@ -178,12 +178,12 @@ class ComparisonSummary(BaseModel):
     """What a comparison found, before the platform gives it an identity.
 
     The `DiagnosticsResult` split, for the same reason: `pricing-core` computes and does not
-    allocate ids, know about rows, or read a clock (ADR-0001).
+    allocate ids, know about rows, or read a clock (ADR-703).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: In the order the caller asked for them. Two or more (FR-MODEL-56) — a comparison of
+    #: In the order the caller asked for them. Two or more (FR-186) — a comparison of
     #: one is a diagnostics read, and calling it a comparison would let an approval cite it
     #: as evidence that a candidate had been considered.
     model_refs: tuple[str, ...] = Field(min_length=2)
@@ -233,9 +233,9 @@ class ComparisonSummary(BaseModel):
 
 
 class ModelComparison(BaseModel):
-    """The persisted comparison artifact (`02` §4.11, FR-MODEL-56).
+    """The persisted comparison artifact (`02` §4.11, FR-186).
 
-    Immutable, and enforced at the privilege layer as well as here (FR-DATA-42): an approval
+    Immutable, and enforced at the privilege layer as well as here (FR-43): an approval
     cites this, and evidence that can change after the approval is not evidence.
 
     It has no slug and no version of its own, for the reason `Diagnostics` has none — it is

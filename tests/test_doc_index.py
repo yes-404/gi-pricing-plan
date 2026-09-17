@@ -1,7 +1,7 @@
-"""`scripts/doc-index.py` — NT-0019 §1.4's generated `INDEX.md`, its derived `execution`
+"""`scripts/doc-index.py` — RFC-937 §1.4's generated `INDEX.md`, its derived `execution`
 column (§1.7), its ownership matrix (§1.6) and its phase report (§1.10 (c)).
 
-`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`, Slice W37-3. This slice is
+`docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`, Slice W37-3. This slice is
 fixture-scoped on purpose (the slice's own text: "`doc-index.py` is built here but cannot be
 run against the live corpus until W37-6, because before the migration there are no ids to
 index") — every test here runs against the synthetic corpus at
@@ -156,7 +156,7 @@ def test_scan_bold_id_rows_rebases_a_link_embedded_in_a_requirement_cell(
     )
 
 
-# --- the execution column: NT-0019 §1.7's seven cases, derived not stored ---------------
+# --- the execution column: RFC-937 §1.7's seven cases, derived not stored ---------------
 
 
 def test_execution_not_started() -> None:
@@ -205,19 +205,19 @@ def test_execution_is_none_for_a_non_plan_family() -> None:
 def test_map_plan_rolls_up_any_in_progress_wins() -> None:
     corpus = _build(CORPUS)
     # PL-1320's slices route to PL-1300 ("not started"), PL-1302 ("in progress"),
-    # PL-1305 ("executed") and PL-1307 ("closed") — "in progress" must win (Ruling 72
+    # PL-1305 ("executed") and PL-1307 ("closed") — "in progress" must win (RL-983
     # row 3, §1.7's own rule).
     assert doc_index.derive_execution(_header(corpus, "PL-1320"), corpus) == "in progress"
 
 
 def test_map_plan_rolls_up_all_closed() -> None:
     corpus = _build(CORPUS)
-    # PL-1329's two slices both route to a "closed" leaf plan (Ruling 72 row 5, §1.7's
+    # PL-1329's two slices both route to a "closed" leaf plan (RL-983 row 5, §1.7's
     # own rule).
     assert doc_index.derive_execution(_header(corpus, "PL-1329"), corpus) == "closed"
 
 
-# --- Ruling 72 (docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md): the map-plan
+# --- RL-983 (docs/rulings/RL-00983-the-map-plan-roll-up-runs-through-the-slices-and-has-no-catch-all.md): the map-plan
 # roll-up runs through the slices, and has no catch-all. Four regression fixtures, one per
 # named defect, each pinning the WRONG value an earlier version of `_rollup_map_plan`
 # produced (a `work:`-proxy enumeration over leaf plans, completed with a trailing
@@ -264,7 +264,7 @@ def test_ruling_72_item_4_no_catch_all_every_slice_retired() -> None:
 
 
 def test_rollup_precedence_table_has_no_catch_all() -> None:
-    """Ruling 72's substance: an unenumerated combination of child states raises rather
+    """RL-983's substance: an unenumerated combination of child states raises rather
     than defaulting. No corpus fixture can legitimately produce this input — the four
     states `_slice_child_state` can return (`not started`, `in progress`, `executed`,
     `closed`) exhaust every row of the table in every non-empty combination — so this
@@ -277,7 +277,7 @@ def test_rollup_precedence_table_has_no_catch_all() -> None:
 
 
 def test_header_dataclass_has_no_execution_field() -> None:
-    """The column is derived, never stored — NT-0019 §1.7. If `Header` ever grew an
+    """The column is derived, never stored — RFC-937 §1.7. If `Header` ever grew an
     `execution` field, that would be the parser accepting a written value instead of this
     module computing one.
     """
@@ -295,7 +295,7 @@ def test_execution_derivation_reacts_to_a_changed_ledger(tmp_path: Path) -> None
     """`CLAUDE.md` §13: prove the derivation reads the corpus, not the plan id — a
     hardcoded per-id lookup table could not react to either mutation below.
 
-    NT-0019 §1.7's "in progress" row is an *or*: "that `LG-` is active, or the `SL-` is
+    RFC-937 §1.7's "in progress" row is an *or*: "that `LG-` is active, or the `SL-` is
     active." `PL-1302` satisfies both independently (its ledger is active and its slice is
     active), so clearing only one leaves "in progress" unchanged — itself a useful check of
     the *or*, done first below. Clearing both must turn it into "not started".
@@ -323,7 +323,7 @@ def test_execution_derivation_reacts_to_a_changed_ledger(tmp_path: Path) -> None
     assert doc_index.derive_execution(_header(corpus, "PL-1302"), corpus) == "not started"
 
 
-# --- the ownership matrix: NT-0019 §1.6, one row per role -------------------------------
+# --- the ownership matrix: RFC-937 §1.6, one row per role -------------------------------
 
 
 def test_reporter_and_watcher_rows_exist_and_are_empty() -> None:
@@ -359,7 +359,7 @@ def test_index_md_ownership_matrix_section_shows_reporter_and_watcher_as_empty()
     assert "| watcher |  |" in rendered
 
 
-# --- the phase report: NT-0019 §1.10 (c) / Acceptance Standard item 10 -----------------
+# --- the phase report: RFC-937 §1.10 (c) / Acceptance Standard item 10 -----------------
 
 
 def test_phase_report_contains_every_1_10_c_element() -> None:
@@ -399,9 +399,9 @@ def test_phase_report_plans_superseded_and_rulings_per_work() -> None:
     assert "WK-1210: 0" in report
 
 
-# --- Ruling 71 (docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md): the findings
+# --- RL-982 (docs/rulings/RL-00982-the-phase-report-s-findings-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-behaviour.md): the findings
 # element is phase-scoped from `findings/register.md`, never from an `FD-` essay's header
-# (which, after Ruling 70, does not even carry `decision:` any more). The fixture register
+# (which, after RL-981, does not even carry `decision:` any more). The fixture register
 # holds: FD-1450 (P9, unowned, active), FD-1451 (P9, resolved -> closed), FD-1452 (P9,
 # accept -> retired), FD-1453 (P8, unowned by design, active — the carry-in for P9).
 
@@ -438,7 +438,7 @@ def test_findings_register_status_derivation() -> None:
 
 
 def test_findings_register_unscoped_symptom_does_not_recur(tmp_path: Path) -> None:
-    """Ruling 71 acceptance item 1's named violation: "the opened count equals the
+    """RL-982 acceptance item 1's named violation: "the opened count equals the
     register's total row count." Build a register with rows in two phases and confirm
     `--phase P2` counts only P2's own rows, never the whole table.
     """
@@ -463,7 +463,7 @@ def test_findings_register_unscoped_symptom_does_not_recur(tmp_path: Path) -> No
 def test_findings_register_coverage_mismatch_raises_rather_than_undercounting(
     tmp_path: Path,
 ) -> None:
-    """Ruling 71 acceptance item 2: a register row the parser cannot read must break the
+    """RL-982 acceptance item 2: a register row the parser cannot read must break the
     report, never silently produce a smaller, plausible number. A five-cell row is
     well-formed; this one has four.
     """
@@ -518,7 +518,7 @@ def test_phase_report_reacts_to_a_changed_slice(tmp_path: Path) -> None:
     assert "5 planned, 2 delivered" in report
 
 
-# --- `--check`: byte-stable against regeneration (NT-0019 §7 (c)) ----------------------
+# --- `--check`: byte-stable against regeneration (RFC-937 §7 (c)) ----------------------
 
 
 def test_check_exits_0_on_a_freshly_generated_index(tmp_path: Path) -> None:
@@ -549,7 +549,7 @@ def test_check_exits_1_on_a_one_row_stale_index(tmp_path: Path) -> None:
 
 def test_check_exits_0_against_an_empty_pre_migration_corpus(tmp_path: Path) -> None:
     """Found while wiring `--check` into `.github/workflows/docs.yml` as a gate step
-    (W37-4, `docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`): before this fix,
+    (W37-4, `docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`): before this fix,
     `--check` treated a missing `docs/INDEX.md` as unconditionally stale, so running it
     against today's real, pre-migration `docs/` — no `INDEX.md`, zero governed records —
     exited 1. That would have red the docs workflow on every push until W37-6 migrates the
@@ -595,7 +595,7 @@ def test_regenerating_twice_produces_byte_identical_output(tmp_path: Path) -> No
 
 def test_default_action_refuses_to_write_an_empty_index(tmp_path: Path) -> None:
     """Found while building this slice: running the default (write) action against a tree
-    with none of NT-0019's family directories yet (today's pre-migration `docs/`, or any
+    with none of RFC-937's family directories yet (today's pre-migration `docs/`, or any
     empty directory) makes every file fail `parse_header`'s harmless "no front matter" case,
     so `build_corpus` returns zero records — and the write path must not then happily
     overwrite whatever `INDEX.md` is there with a near-empty file that looks like success.

@@ -8,7 +8,7 @@ import type { components as requestComponents } from "./generated/schema.request
  * `GbmFunctionRef`, `EbmSpec` the literal `"rmse" | "mae"`. Three shapes `model-schema`
  * keeps apart, so nothing here normalises them into a fourth (`CLAUDE.md` §2).
  *
- * Alias from the **permissive** generated set (OQ-PLAT-16 (c)): this type shapes a request
+ * Alias from the **permissive** generated set (OQ-655 (c)): this type shapes a request
  * body, where a server-defaulted property may be omitted. The strict set (the default
  * `--default-non-nullable`) shapes responses, whose defaults are always present.
  */
@@ -43,7 +43,7 @@ export const RESPONSES = ["claim_count", "claim_severity", "burning_cost",
   "conversion", "retention"] as const satisfies readonly ResponseKind[];
 
 /**
- * FR-MODEL-26's builtin GBM objectives, in XGBoost's vocabulary.
+ * FR-120's builtin GBM objectives, in XGBoost's vocabulary.
  *
  * **This is a second hand-written copy of a set the platform owns elsewhere**, and the
  * file that owns it says so: `SUPPORTED_GBM_OBJECTIVES` in
@@ -54,8 +54,8 @@ export const RESPONSES = ["claim_count", "claim_severity", "burning_cost",
  * It exists here because the set reaches no contract — `GbmFunctionRef.name` is
  * deliberately open, since the same type carries `eval_metrics` whose vocabulary is the
  * backend's own, and `model-schema` depends on pydantic alone so it cannot import the set.
- * That is **OQ-MODEL-37**, whose option (a) removes this constant rather than policing it,
- * and which has no owner because `W32` is closed.
+ * That is **OQ-607**, whose option (a) removes this constant rather than policing it,
+ * and which has no owner because `WK-692` is closed.
  *
  * Until then `builtinObjectives.test.ts` reads `gbm.py` as text and fails when the two
  * disagree, so the divergence the Python comment predicts is loud rather than silent.
@@ -69,7 +69,7 @@ export const BUILTIN_GBM_OBJECTIVES = [
 ] as const;
 
 /**
- * "May this be fitted?", without fitting it (`02` §5.1, FR-MODEL-44, FR-MODEL-81).
+ * "May this be fitted?", without fitting it (`02` §5.1, FR-153, FR-185).
  *
  * **A 200 carrying `ok: false` is a result, not a failure.** `02` §5.1's row is explicit:
  * "a spec that merely cannot be fitted is not a bad *request*, so it is not a 4xx". This

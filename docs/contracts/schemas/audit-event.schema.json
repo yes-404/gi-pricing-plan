@@ -31,7 +31,7 @@
   },
   "invariants": [
     "written in the same transaction as the change it records; if the audit write fails, the change fails (06 R2)",
-    "never updated or deleted; the application role holds INSERT and SELECT only (FR-GOV-22)",
-    "secrets and full quote inputs appear as references or hashes, never as values (FR-GOV-26)"
+    "never updated or deleted; the application role holds INSERT and SELECT only (FR-370)",
+    "secrets and full quote inputs appear as references or hashes, never as values (FR-375)"
   ]
 }

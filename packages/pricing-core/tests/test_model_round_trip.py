@@ -1,5 +1,5 @@
 """A stored Model round-trips: export, import into a clean instance, score identically
-(NFR-MODEL-7, verdict reversed 2026-08-27 by W7).
+(NFR-482, verdict reversed 2026-08-27 by WK-665).
 
 The requirement asks for export → import into a clean instance → predictions identical to
 the last representable digit. The model's artifact is the `GlmFitResult` (plus the spec and
@@ -32,7 +32,7 @@ from pricing_core.modelling.predict import predict_glm
 
 #: Run in the clean instance, where the fitting stack must not be reachable. Everything it
 #: needs arrives as JSON on argv — a scoring process receives artifacts, never a live
-#: fitting session (ADR-0003).
+#: fitting session (ADR-705).
 CHILD = r'''
 import json, sys
 
@@ -42,7 +42,7 @@ BLOCKED = {"glum", "sklearn", "celery", "dagster", "interpret"}
 class Blocker:
     def find_spec(self, name, path=None, target=None):
         if name.split(".")[0] in BLOCKED:
-            raise ImportError(f"{name} was imported while scoring — NFR-MODEL-7 forbids it")
+            raise ImportError(f"{name} was imported while scoring — NFR-482 forbids it")
         return None
 
 
@@ -81,7 +81,7 @@ def _book(n: int = 400) -> pl.DataFrame:
     )
 
 
-@pytest.mark.req("NFR-MODEL-7")
+@pytest.mark.req("NFR-482")
 def test_a_stored_glm_scores_identically_in_a_clean_instance() -> None:
     """Export → import → score reproduces the prediction to the last representable digit.
 
@@ -133,7 +133,7 @@ def test_a_stored_glm_scores_identically_in_a_clean_instance() -> None:
     assert child_totals[0] == pytest.approx(float(frame["claim_count"].sum()), rel=1e-6)
 
 
-@pytest.mark.req("NFR-MODEL-7")
+@pytest.mark.req("NFR-482")
 def test_the_clean_instance_cannot_import_the_fitting_stack() -> None:
     """The block above is only worth its runtime if the block actually blocks.
 
@@ -145,4 +145,4 @@ def test_the_clean_instance_cannot_import_the_fitting_stack() -> None:
         [sys.executable, "-c", child], capture_output=True, text=True, check=False
     )
     assert completed.returncode != 0
-    assert "NFR-MODEL-7 forbids it" in completed.stderr
+    assert "NFR-482 forbids it" in completed.stderr

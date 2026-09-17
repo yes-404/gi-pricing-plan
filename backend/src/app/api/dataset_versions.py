@@ -2,15 +2,15 @@
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/dataset-versions/{id}/validate` | **202** Run validation → Job (FR-DATA-15) |
+| `POST` | `/dataset-versions/{id}/validate` | **202** Run validation → Job (FR-42) |
 | `GET` | `/dataset-versions/{id}/validation-reports` | Report history |
 | `POST` | `/dataset-versions/{id}/transition` | Enforces `01` §4.2's invariants |
-| `GET` | `/dataset-versions/{id}/profile` | Profile artifact (FR-DATA-25) |
-| `GET` | `/dataset-versions/{id}/one-ways` | One-way summary (FR-DATA-26) |
-| `GET` | `/dataset-versions/{id}/compare` | Profile comparison / PSI (FR-DATA-28) |
+| `GET` | `/dataset-versions/{id}/profile` | Profile artifact (FR-60) |
+| `GET` | `/dataset-versions/{id}/one-ways` | One-way summary (FR-61) |
+| `GET` | `/dataset-versions/{id}/compare` | Profile comparison / PSI (FR-63) |
 | `POST` | `/dataset-versions/{id}/derive` | **202** Sample / split / filter → Job |
-| `GET` | `/dataset-versions/{id}/lineage` | Lineage graph (FR-DATA-35) |
-| `GET` | `/dataset-versions/{id}/rejected` | Quarantined rows, paged (FR-DATA-7) |
+| `GET` | `/dataset-versions/{id}/lineage` | Lineage graph (FR-75) |
+| `GET` | `/dataset-versions/{id}/rejected` | Quarantined rows, paged (FR-32) |
 
 `POST .../transition` is the only route that can reach `validated`, and it cannot do so on
 a caller's say-so: it reads the stored report and refuses unless the report passed and
@@ -103,7 +103,7 @@ class DeriveRequest(BaseModel):
 
 
 class ReportSummary(BaseModel):
-    """A report's headline, without its body (NFR-DATA-7).
+    """A report's headline, without its body (NFR-471).
 
     The history view renders dates and verdicts. Loading fifty full reports to do that is
     the difference between a 500 ms budget met and missed, so the list returns this and
@@ -141,7 +141,7 @@ async def run_validation(
     response: Response,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
-    """**202** with the Job (FR-DATA-15)."""
+    """**202** with the Job (FR-42)."""
     async with database.unit_of_work() as session:
         version = await _scoped(session, version_id, caller)
         job = await job_service.submit(
@@ -211,7 +211,7 @@ async def transition(
     caller: ValidateDatasets,
     database: DatabaseDep,
 ) -> DatasetVersion:
-    """`01` §4.2's invariants, enforced (FR-DATA-17).
+    """`01` §4.2's invariants, enforced (FR-46).
 
     Reaching `validated` requires a `report_id`, and the report is read here rather than
     trusted: the caller says which report, never whether it passed.
@@ -266,7 +266,7 @@ def _version_schema(row: DatasetVersionRow) -> DatasetVersion:
 async def get_profile(
     version_id: UUID, caller: ReadDatasets, database: DatabaseDep
 ) -> Profile:
-    """FR-DATA-25. Read, never recomputed (FR-DATA-27)."""
+    """FR-60. Read, never recomputed (FR-62)."""
     async with database.session() as session:
         await _scoped(session, version_id, caller)
         return await profile_service.latest_profile(
@@ -285,7 +285,7 @@ async def get_one_way(
     database: DatabaseDep,
     column: Annotated[str, Query(min_length=1)],
 ) -> OneWaySummary:
-    """FR-DATA-26, NFR-DATA-4: read from the stored Profile in a single lookup."""
+    """FR-61, NFR-468: read from the stored Profile in a single lookup."""
     async with database.session() as session:
         await _scoped(session, version_id, caller)
         return await profile_service.one_way_of(
@@ -304,7 +304,7 @@ async def compare(
     database: DatabaseDep,
     against: Annotated[UUID, Query()],
 ) -> ProfileComparison:
-    """FR-DATA-28. Computed from two stored Profiles, which is why it is cheap enough to
+    """FR-63. Computed from two stored Profiles, which is why it is cheap enough to
     be a `GET` — neither dataset is read."""
     from pricing_core.data.profile import compare_profiles
 
@@ -316,7 +316,7 @@ async def compare(
                 "VALIDATION_FAILED",
                 "Profiles can only be compared within one dataset",
                 422,
-                "FR-DATA-28 compares two versions *of the same Dataset*. A PSI between "
+                "FR-63 compares two versions *of the same Dataset*. A PSI between "
                 "unrelated datasets is a number with no interpretation.",
             )
         return compare_profiles(
@@ -343,10 +343,10 @@ async def derive(
     response: Response,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
-    """**202**. FR-DATA-33's declared operations.
+    """**202**. FR-73's declared operations.
 
     Only `split` can produce its own rows today; the Job fails with
-    `DERIVATION_NOT_MATERIALISED` for the others (FR-DATA-45), which is why this stays a
+    `DERIVATION_NOT_MATERIALISED` for the others (FR-78), which is why this stays a
     202 — the refusal is the worker's, on the same path as the unknown-operation and
     missing-seed refusals beside it.
     """
@@ -378,7 +378,7 @@ async def lineage(
     database: DatabaseDep,
     direction: Annotated[str, Query(pattern="^(up|down|both)$")] = "both",
 ) -> DatasetLineage:
-    """FR-DATA-35, shaped by `01` §4.9.
+    """FR-75, shaped by `01` §4.9.
 
     A direction filter empties the arm it excludes rather than omitting it: `up`
     returns `depends_on_this` with four empty arms, `down` returns `built_from: null`
@@ -418,7 +418,7 @@ async def lineage(
 async def rejected_rows(
     version_id: UUID, caller: ReadDatasets, database: DatabaseDep
 ) -> dict[str, Any]:
-    """FR-DATA-7: the rows ingestion could not accept, with the reason each was refused.
+    """FR-32: the rows ingestion could not accept, with the reason each was refused.
 
     A sample rather than the full quarantine. The reject file itself is a blob; this is the
     screen that answers "why is my row count short?", and a hundred examples answer it as
@@ -453,7 +453,7 @@ async def rejected_rows(
 
 
 class SplitRequest(BaseModel):
-    """Record a named split over parts that already exist (FR-DATA-36)."""
+    """Record a named split over parts that already exist (FR-76)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -476,13 +476,13 @@ async def record_split(
     caller: WriteDatasets,
     database: DatabaseDep,
 ) -> DatasetSplit:
-    """FR-DATA-36: the split is recorded on the **parent**, over parts already derived.
+    """FR-76: the split is recorded on the **parent**, over parts already derived.
 
     Synchronous, unlike `/derive`: this writes one row referencing versions that exist. The
     expensive half — partitioning the rows — happened in the `dataset.derive` Jobs that
     produced the parts.
 
-    The service function has existed since W4 and had no route, so a split could be created
+    The service function has existed since WK-660 and had no route, so a split could be created
     only from inside the platform. `02`'s `split_ref` needs one that a caller can name,
     which is what made the gap visible.
     """
@@ -512,7 +512,7 @@ async def list_splits(
     caller: ReadDatasets,
     database: DatabaseDep,
 ) -> list[DatasetSplit]:
-    """Every split on this version, so a Model Spec can cite one by id (FR-DATA-36)."""
+    """Every split on this version, so a Model Spec can cite one by id (FR-76)."""
     async with database.session() as session:
         version = await _scoped(session, version_id, caller)
         rows = await dataset_service.list_splits(

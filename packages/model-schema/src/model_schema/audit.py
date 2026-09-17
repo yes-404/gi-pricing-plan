@@ -1,4 +1,4 @@
-"""The Audit Event and its hash chain (`06` §4.5, FR-GOV-20..26).
+"""The Audit Event and its hash chain (`06` §4.5, FR-368, FR-369, FR-370, FR-371, FR-372, FR-374, FR-375).
 
 > **R2** — The audit log is append-only and complete. Every governed transition writes its
 > event in the same database transaction as the change — if the audit write fails, the
@@ -6,9 +6,9 @@
 
 Two things live here rather than in the backend.
 
-The **shape**, because every module emits one and the frontend renders it (ADR-0002).
+The **shape**, because every module emits one and the frontend renders it (ADR-704).
 
-The **hash computation**, because FR-GOV-24 makes the chain a tamper-detection mechanism,
+The **hash computation**, because FR-372 makes the chain a tamper-detection mechanism,
 and a mechanism that can only be checked by the software under suspicion is not one. An
 auditor with an exported CSV and this package must be able to recompute every hash and find
 the break. That requires the serialisation to be canonical and stable — so it is pinned
@@ -39,7 +39,7 @@ ACTION_PATTERN = r"^[a-z_]+\.[a-z_]+$"
 
 
 class AuditEventCore(BaseModel):
-    """Exactly the fields the hash covers (FR-GOV-24).
+    """Exactly the fields the hash covers (FR-372).
 
     Split out so there is **one** serialisation of the hashed content. The writer computes
     the hash from this model and the verifier recomputes it from this model; a second,
@@ -61,23 +61,23 @@ class AuditEventCore(BaseModel):
     justification: str | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
     job_id: UUID | None = Field(
-        default=None, description="The Job that caused this change, where one did (FR-GOV-25)."
+        default=None, description="The Job that caused this change, where one did (FR-374)."
     )
 
     @field_validator("at")
     @classmethod
     def _timestamp_is_utc(cls, v: datetime) -> datetime:
-        """FR-GOV-21 says UTC. A naive datetime is ambiguous the moment it is exported."""
+        """FR-369 says UTC. A naive datetime is ambiguous the moment it is exported."""
         if v.tzinfo is None:
             raise ValueError("audit timestamps must be timezone-aware and UTC")
         return v
 
 
 class AuditEvent(AuditEventCore):
-    """One immutable record of a governed change (FR-GOV-21).
+    """One immutable record of a governed change (FR-369).
 
     `before`/`after` hold the changed state, not the whole entity: an audit log that
-    duplicates every row is unreadable at the moment it is needed, and FR-GOV-26 forbids
+    duplicates every row is unreadable at the moment it is needed, and FR-375 forbids
     verbatim secrets and full quote inputs regardless.
     """
 
@@ -127,6 +127,6 @@ def canonical_payload(core: AuditEventCore, prev_event_hash: str | None) -> byte
 
 
 def compute_event_hash(core: AuditEventCore, *, prev_event_hash: str | None) -> str:
-    """`sha256:<hex>` over the canonical payload (FR-GOV-24)."""
+    """`sha256:<hex>` over the canonical payload (FR-372)."""
     digest = hashlib.sha256(canonical_payload(core, prev_event_hash)).hexdigest()
     return f"{HASH_PREFIX}{digest}"

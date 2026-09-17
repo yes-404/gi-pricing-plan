@@ -1,6 +1,6 @@
-"""`scripts/hooks/retry_cap_hook.py` -- NT-0014 script C2, the retry-cap hook.
+"""`scripts/hooks/retry_cap_hook.py` -- RFC-895 script C2, the retry-cap hook.
 
-`docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md`, Ruling 40 §5,
+`docs/rulings/RL-00920-q2-is-answered-differently-for-c2-and-c3-c3-is-dissolved-c2-gets-claude-settings-json-and-slice-g-is-re-cut-and-still-blocked.md`, RL-920 §5,
 states the standard this file exists to meet: a hook proven once by hand is "a check that
 has never printed a failure", and the harness must be a repository test that runs in the
 gate, drives the hook's entry point with a synthetic runtime state at the cap boundary,
@@ -85,7 +85,7 @@ def _record(
 
 
 # ---------------------------------------------------------------------------
-# Ruling 40 §5's own acceptance test: cap+1 refused, cap-1 (negative control) allowed.
+# RL-920 §5's own acceptance test: cap+1 refused, cap-1 (negative control) allowed.
 # ---------------------------------------------------------------------------
 
 
@@ -229,7 +229,7 @@ def test_a_direct_hand_edit_of_the_state_file_is_not_stopped_by_anything_here(
     """States plainly, as a passing test rather than only as prose, the limit the module
     docstring claims: nothing in this script stops an actor from hand-editing
     retry_counters directly, bypassing both `record` and `hook` entirely. This is not a
-    defect to fix in this slice -- Ruling 40 dissolved C3 for exactly this class of gap
+    defect to fix in this slice -- RL-920 dissolved C3 for exactly this class of gap
     in a git hook, and C2 inherits the same limit for the same reason (no in-repo
     mechanism can intercept a plain file write)."""
     state_file = tmp_path / "runtime-state.json"

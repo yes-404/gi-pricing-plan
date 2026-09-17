@@ -48,7 +48,7 @@ def api_settings() -> Settings:
 async def caller_headers(workspace_id, principal, grant) -> dict[str, str]:
     """An authenticated caller *with* the permissions these routes require.
 
-    Granted explicitly rather than implied by authentication: FR-GOV-2 is only tested if
+    Granted explicitly rather than implied by authentication: FR-343 is only tested if
     the test could fail when the grant is missing, and `test_a_caller_without_the_role_is
     _forbidden` asserts exactly that.
     """
@@ -95,7 +95,7 @@ async def _submit(database: Database, workspace_id, principal, **kw):
 # -- authentication ----------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-PLAT-1")
+@pytest.mark.req("FR-387")
 def test_routes_refuse_when_no_identity_provider_is_configured() -> None:
     """Negative, and the important one: the default build must fail closed.
 
@@ -116,7 +116,7 @@ def test_routes_refuse_when_no_identity_provider_is_configured() -> None:
             assert response.json()["code"] == "UNAUTHENTICATED"
 
 
-@pytest.mark.req("FR-PLAT-5")
+@pytest.mark.req("FR-391")
 @pytest.mark.parametrize("environment", [Environment.UAT, Environment.PROD])
 def test_development_identity_is_refused_outside_local(environment: Environment) -> None:
     """It trusts a header as identity — in uat or prod that is a total authorisation bypass."""
@@ -126,9 +126,9 @@ def test_development_identity_is_refused_outside_local(environment: Environment)
         )
 
 
-@pytest.mark.req("FR-PLAT-4")
+@pytest.mark.req("FR-390")
 def test_a_principal_without_membership_is_refused(client: TestClient) -> None:
-    """A dev principal with no membership is refused, not defaulted in (FR-PLAT-4).
+    """A dev principal with no membership is refused, not defaulted in (FR-390).
 
     W6b-11 removed `x-dev-workspace-id`: the dev caller now resolves exactly like a
     bearer caller, and the no-membership branch of the selection is what refuses.
@@ -142,7 +142,7 @@ def test_a_principal_without_membership_is_refused(client: TestClient) -> None:
 # -- listing -----------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_list_returns_the_workspace_jobs(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -155,7 +155,7 @@ async def test_list_returns_the_workspace_jobs(
     assert body["next_cursor"] is None
 
 
-@pytest.mark.req("FR-OVR-13")
+@pytest.mark.req("FR-16")
 async def test_another_workspaces_jobs_are_invisible(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -168,7 +168,7 @@ async def test_another_workspaces_jobs_are_invisible(
     assert body["total_estimate"] == 0
 
 
-@pytest.mark.req("FR-OVR-13")
+@pytest.mark.req("FR-16")
 async def test_a_job_in_another_workspace_is_404_not_403(
     client: TestClient, database: Database, principal, caller_headers
 ) -> None:
@@ -181,7 +181,7 @@ async def test_a_job_in_another_workspace_is_404_not_403(
     assert response.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_list_filters_by_status_and_kind(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -197,7 +197,7 @@ async def test_list_filters_by_status_and_kind(
     assert [item["kind"] for item in batches["items"]] == ["score.batch"]
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_list_filters_by_submitter(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -211,7 +211,7 @@ async def test_list_filters_by_submitter(
     assert [item["id"] for item in body["items"]] == [str(mine.id)]
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_cursor_pages_through_without_repeating_or_skipping(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -234,7 +234,7 @@ async def test_cursor_pages_through_without_repeating_or_skipping(
     assert set(seen) == {str(i) for i in submitted}
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_a_malformed_cursor_is_a_typed_400(client: TestClient, caller_headers) -> None:
     """Negative: an empty page would look like 'no more results' and truncate silently."""
     response = client.get("/api/v1/jobs?cursor=not-a-cursor", headers=caller_headers)
@@ -242,7 +242,7 @@ def test_a_malformed_cursor_is_a_typed_400(client: TestClient, caller_headers) -
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-PLAT-47")
+@pytest.mark.req("FR-450")
 def test_limit_is_bounded(client: TestClient, caller_headers) -> None:
     response = client.get("/api/v1/jobs?limit=100000", headers=caller_headers)
     assert response.status_code == 422
@@ -252,7 +252,7 @@ def test_limit_is_bounded(client: TestClient, caller_headers) -> None:
 # -- detail, cancel, logs, events ---------------------------------------------------------
 
 
-@pytest.mark.req("FR-PLAT-7")
+@pytest.mark.req("FR-399")
 async def test_detail_carries_progress_and_trace(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -263,7 +263,7 @@ async def test_detail_carries_progress_and_trace(
     assert body["status"] == "queued"
 
 
-@pytest.mark.req("FR-PLAT-9")
+@pytest.mark.req("FR-401")
 async def test_cancelling_a_queued_job(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -272,7 +272,7 @@ async def test_cancelling_a_queued_job(
     assert body["status"] == "cancelled"
 
 
-@pytest.mark.req("FR-PLAT-9")
+@pytest.mark.req("FR-401")
 async def test_cancelling_a_finished_job_is_a_typed_conflict(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -283,7 +283,7 @@ async def test_cancelling_a_finished_job_is_a_typed_conflict(
     assert response.json()["code"] == "JOB_NOT_CANCELLABLE"
 
 
-@pytest.mark.req("FR-PLAT-10")
+@pytest.mark.req("FR-402")
 async def test_logs_are_returned_oldest_first_with_the_trace(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -307,7 +307,7 @@ async def test_logs_are_returned_oldest_first_with_the_trace(
     assert body["items"][0]["trace_id"] == "4bf92f3577b34da6a3ce929d0e0e4736"
 
 
-@pytest.mark.req("FR-PLAT-10")
+@pytest.mark.req("FR-402")
 async def test_logs_of_another_workspaces_job_are_404(
     client: TestClient, database: Database, principal, caller_headers
 ) -> None:
@@ -315,7 +315,7 @@ async def test_logs_of_another_workspaces_job_are_404(
     assert client.get(f"/api/v1/jobs/{job.id}/logs", headers=caller_headers).status_code == 404
 
 
-@pytest.mark.req("FR-PLAT-8")
+@pytest.mark.req("FR-400")
 async def test_the_event_stream_ends_when_the_job_is_terminal(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
@@ -336,7 +336,7 @@ async def test_the_event_stream_ends_when_the_job_is_terminal(
     assert '"status": "cancelled"' in body
 
 
-@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-451")
 def test_the_routes_appear_in_the_generated_contract() -> None:
     import json
     import pathlib
@@ -354,7 +354,7 @@ def test_the_routes_appear_in_the_generated_contract() -> None:
     } <= set(paths)
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 def test_a_caller_without_the_role_is_forbidden(
     client: TestClient, unprivileged_headers
 ) -> None:
@@ -368,11 +368,11 @@ def test_a_caller_without_the_role_is_forbidden(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_read_permission_does_not_confer_cancel(
     client: TestClient, database, workspace_id, principal, grant, caller_headers
 ) -> None:
-    """`auditor` reads everything and writes nothing (FR-GOV-5)."""
+    """`auditor` reads everything and writes nothing (FR-346)."""
     job = await _submit(database, workspace_id, principal)
     other = new_uuid7()
     await grant("auditor", principal_id=other)

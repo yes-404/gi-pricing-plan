@@ -53,7 +53,7 @@ def _spec(**over: object) -> GbmSpec:
     return GbmSpec(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_a_gbm_offset_from_another_model_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="GLM specs only"):
         _spec(offset=OffsetSpec(kind="model", offset_model_ref="model:base@1"))
@@ -77,14 +77,14 @@ def _fit(**over: object) -> GbmFitResult:
     return GbmFitResult(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_one_contract_serves_both_backends() -> None:
-    """FR-MODEL-25: one `GbmSpec`, two backends, and the contract does not fork."""
+    """FR-119: one `GbmSpec`, two backends, and the contract does not fork."""
     assert _spec(model_type="xgboost").model_type == "xgboost"
     assert _spec(model_type="lightgbm").model_type == "lightgbm"
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_the_backend_is_not_stated_twice() -> None:
     """`02` §4.4 gave the GBM arm a `backend` field beside `model_type`, whose values are
     the same two strings.
@@ -98,9 +98,9 @@ def test_the_backend_is_not_stated_twice() -> None:
         _spec(backend="lightgbm")
 
 
-@pytest.mark.req("FR-MODEL-27")
+@pytest.mark.req("FR-121")
 def test_a_frequency_gbm_without_an_offset_is_refused() -> None:
-    """FR-MODEL-27: exposure rides in `base_margin`, never as a feature and never by
+    """FR-121: exposure rides in `base_margin`, never as a feature and never by
     weighting a count.
 
     The same defect `GlmSpec._frequency_declares_its_exposure` refuses: the fit succeeds,
@@ -110,31 +110,31 @@ def test_a_frequency_gbm_without_an_offset_is_refused() -> None:
         _spec(offset=OffsetSpec())
 
 
-@pytest.mark.req("FR-MODEL-27")
+@pytest.mark.req("FR-121")
 def test_a_frequency_gbm_may_decline_an_offset_only_in_writing() -> None:
-    """FR-MODEL-27's "explicit acknowledgement of why not" — the escape hatch is a
+    """FR-121's "explicit acknowledgement of why not" — the escape hatch is a
     sentence, so the reviewer sees a decision rather than an omission."""
     spec = _spec(offset=OffsetSpec(), offset_acknowledgement="rows are one policy-year each")
     assert spec.offset.kind == "none"
 
 
-@pytest.mark.req("FR-MODEL-27")
+@pytest.mark.req("FR-121")
 def test_the_offset_is_not_stated_twice() -> None:
     """§4.4's GBM arm carries `base_margin` beside the common block's `offset`, both of
     shape `{kind, column}`.
 
-    FR-MODEL-27 says the platform *constructs* `base_margin` from the declared offset, so
+    FR-121 says the platform *constructs* `base_margin` from the declared offset, so
     a second declaration is a second source of truth for one number — and the one the
     booster was actually built with is the one nobody can see afterwards. The fit result
-    records what was constructed (FR-MODEL-71); the spec declares it once.
+    records what was constructed (FR-126); the spec declares it once.
     """
     with pytest.raises(pydantic.ValidationError, match="base_margin"):
         _spec(base_margin=EXPOSURE)
 
 
-@pytest.mark.req("FR-MODEL-30")
+@pytest.mark.req("FR-124")
 def test_early_stopping_on_the_training_set_has_no_spelling() -> None:
-    """FR-MODEL-30: early stopping on the training set is refused.
+    """FR-124: early stopping on the training set is refused.
 
     Refused by *construction* rather than by a validator — there is no `train` value to
     write — because a stopping rule read off the data being fitted stops when the model
@@ -144,9 +144,9 @@ def test_early_stopping_on_the_training_set_has_no_spelling() -> None:
         EarlyStopping(on="train", metric="poisson-nloglik", rounds=50)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-26")
+@pytest.mark.req("FR-120")
 def test_an_objective_is_a_builtin_name_or_an_approved_reference_never_both() -> None:
-    """FR-MODEL-26. `kind` decides which field is meaningful; carrying both leaves the
+    """FR-120. `kind` decides which field is meaningful; carrying both leaves the
     fit path to choose, and two runs could choose differently."""
     with pytest.raises(pydantic.ValidationError, match="name"):
         GbmFunctionRef(kind="builtin", ref="custom_objective:capped-gamma@2")
@@ -157,9 +157,9 @@ def test_an_objective_is_a_builtin_name_or_an_approved_reference_never_both() ->
                        ref="custom_objective:capped-gamma@2")
 
 
-@pytest.mark.req("FR-MODEL-32")
+@pytest.mark.req("FR-131")
 def test_categorical_handling_has_no_default() -> None:
-    """FR-MODEL-32: silent label-encoding of an unordered categorical is refused.
+    """FR-131: silent label-encoding of an unordered categorical is refused.
 
     A default would be exactly that silence — the field would be satisfied by nobody
     having thought about it, which is the state the requirement exists to prevent.
@@ -177,9 +177,9 @@ def test_categorical_handling_has_no_default() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-29")
+@pytest.mark.req("FR-123")
 def test_an_interaction_group_of_one_constrains_nothing() -> None:
-    """FR-MODEL-29: interaction constraints permit interaction *within* declared groups.
+    """FR-123: interaction constraints permit interaction *within* declared groups.
 
     A group naming one feature permits nothing and forbids nothing. Written by hand it is
     almost always a truncated list, and read back it looks deliberate.
@@ -188,11 +188,11 @@ def test_an_interaction_group_of_one_constrains_nothing() -> None:
         _spec(interaction_constraints=(("driver_age_banded",),))
 
 
-@pytest.mark.req("FR-MODEL-73")
+@pytest.mark.req("FR-127")
 def test_a_cap_is_integer_minor_units_and_carries_its_restoration() -> None:
-    """FR-MODEL-73 plus `CLAUDE.md` §7: money is integer minor units, never float.
+    """FR-127 plus `CLAUDE.md` §7: money is integer minor units, never float.
 
-    The restoration loading is required with the cap because FR-MODEL-74 reconciles a
+    The restoration loading is required with the cap because FR-128 reconciles a
     capped model against uncapped experience — without it the reconciliation reports a
     modelling error where there was an intended adjustment.
     """
@@ -207,7 +207,7 @@ def test_a_cap_is_integer_minor_units_and_carries_its_restoration() -> None:
         LossTreatment(kind="capped", cap_minor=25_000.50, restoration_loading=1.043)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-73")
+@pytest.mark.req("FR-127")
 def test_an_untreated_response_carries_no_cap() -> None:
     """`kind='none'` with a cap beside it is a spec whose reader cannot tell whether the
     cap was applied. It is part of `spec_hash`, so the ambiguity would be permanent."""
@@ -215,9 +215,9 @@ def test_an_untreated_response_carries_no_cap() -> None:
         LossTreatment(kind="none", cap_minor=2_500_000)
 
 
-@pytest.mark.req("FR-MODEL-31")
+@pytest.mark.req("FR-125")
 def test_a_booster_is_never_a_pickle() -> None:
-    """FR-MODEL-31 / ADR-0003: the export format is the backend's JSON or text.
+    """FR-125 / ADR-705: the export format is the backend's JSON or text.
 
     `pickle` is not a refused value — it is not a value. A format enum that could spell it
     would make the persistence layer's refusal the only thing standing between a Model and
@@ -227,9 +227,9 @@ def test_a_booster_is_never_a_pickle() -> None:
         _fit(booster_format="pickle")
 
 
-@pytest.mark.req("FR-MODEL-71")
+@pytest.mark.req("FR-126")
 def test_a_booster_without_its_offset_construction_cannot_be_stored() -> None:
-    """FR-MODEL-71: omitting the offset at scoring time fails *silently* on both backends.
+    """FR-126: omitting the offset at scoring time fails *silently* on both backends.
 
     The construction is therefore required on the artifact rather than optional, so the
     load-time assertion has something to assert against. An optional field would make the
@@ -239,9 +239,9 @@ def test_a_booster_without_its_offset_construction_cannot_be_stored() -> None:
         _fit(base_margin=None)
 
 
-@pytest.mark.req("FR-MODEL-28")
+@pytest.mark.req("FR-122")
 def test_the_constraint_vector_is_aligned_with_the_feature_order() -> None:
-    """FR-MODEL-28: the constraint vector is persisted *alongside* the feature order.
+    """FR-122: the constraint vector is persisted *alongside* the feature order.
 
     Positional data whose length is not checked is positional data that will one day be
     off by one, and a monotone constraint applied to the wrong column is a model that is
@@ -251,7 +251,7 @@ def test_the_constraint_vector_is_aligned_with_the_feature_order() -> None:
         _fit(monotone_constraints=(1, 0, -1))
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_the_union_dispatches_on_model_type() -> None:
     """`02` §4.4 calls `ModelSpec` a tagged union. Until now the tag existed and the union
     did not, so `GlmSpec.model_validate` was the only reader and a GBM payload reaching it
@@ -264,7 +264,7 @@ def test_the_union_dispatches_on_model_type() -> None:
     assert isinstance(MODEL_SPEC_ADAPTER.validate_python(glm.model_dump(mode="json")), GlmSpec)
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_an_unknown_model_type_is_refused_by_the_discriminator() -> None:
     """The union is closed, not an open bag: a model type nobody declared is refused
     here rather than accepted-and-ignored, which is the difference between "not built
@@ -278,7 +278,7 @@ def test_an_unknown_model_type_is_refused_by_the_discriminator() -> None:
         MODEL_SPEC_ADAPTER.validate_python(payload)
 
 
-@pytest.mark.req("FR-MODEL-25")
+@pytest.mark.req("FR-119")
 def test_a_model_cannot_hold_a_fit_from_another_model_type() -> None:
     """Both arms of both unions are on one artifact, so the pairing has to be stated.
 
@@ -301,9 +301,9 @@ def test_a_model_cannot_hold_a_fit_from_another_model_type() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-30")
+@pytest.mark.req("FR-124")
 def test_early_stopping_on_a_holdout_that_was_never_declared_is_refused() -> None:
-    """FR-MODEL-30: early stopping requires a **declared** holdout or CV scheme.
+    """FR-124: early stopping requires a **declared** holdout or CV scheme.
 
     Without `split_ref` there is no holdout, so the backend would evaluate the stopping
     metric on the training rows — the training-set early stopping the requirement forbids,
@@ -313,12 +313,12 @@ def test_early_stopping_on_a_holdout_that_was_never_declared_is_refused() -> Non
         _spec(split_ref=None)
 
 
-@pytest.mark.req("FR-MODEL-87")
+@pytest.mark.req("FR-207")
 def test_the_glm_arm_refuses_the_nested_regularisation_block_the_spec_used_to_show() -> None:
     """`02` §4.4 showed a nested `regularisation` object; `GlmSpec` takes the two penalty
     parameters flat, as `glum` does.
 
-    OQ-MODEL-8 (decided 2026-08-17) separated the fields *awaiting a slice* from the ones
+    OQ-582 (decided 2026-08-17) separated the fields *awaiting a slice* from the ones
     *present under a different shape*, and this was the only member of the second kind: a
     caller copying the page would have sent a body the contract rejects. The page is
     corrected; this test is what stops it drifting back, because `extra="forbid"` is the
@@ -345,7 +345,7 @@ def test_the_glm_arm_refuses_the_nested_regularisation_block_the_spec_used_to_sh
     assert (flat.alpha, flat.l1_ratio, flat.max_iter, flat.tolerance) == (0.001, 0.0, 200, 1e-8)
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 def test_an_interval_bound_declares_a_two_sided_alpha() -> None:
     """`alpha` is a quantile, so 0 and 1 are not bounds — they are the whole distribution.
 
@@ -358,11 +358,11 @@ def test_an_interval_bound_declares_a_two_sided_alpha() -> None:
             IntervalFor(model_id=new_uuid7(), model_version=1, alpha=impossible)
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 def test_a_bound_at_the_median_is_not_a_bound() -> None:
     """`alpha = 0.5` is the median — a central estimate, not a side of an interval.
 
-    Refused at the type because FR-MODEL-100(iv) allocates exactly one bound per side and
+    Refused at the type because FR-200(iv) allocates exactly one bound per side and
     finds them by comparing `alpha` with 0.5. A median bound belongs to neither set, so
     admitting it would make "the lower bound of this model" a question with no answer at
     exactly the point the prediction path asks it.
@@ -371,7 +371,7 @@ def test_a_bound_at_the_median_is_not_a_bound() -> None:
         IntervalFor(model_id=new_uuid7(), model_version=1, alpha=0.5)
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 def test_a_bound_names_a_real_version_of_the_model_it_bounds() -> None:
     """Version 0 does not exist; `Model.version` is `ge=1` and this must agree with it.
 
@@ -382,9 +382,9 @@ def test_a_bound_names_a_real_version_of_the_model_it_bounds() -> None:
         IntervalFor(model_id=new_uuid7(), model_version=0, alpha=0.05)
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 def test_interval_for_is_absent_by_default_and_refused_on_a_glm() -> None:
-    """A GLM has a covariance matrix; FR-MODEL-78's route is the GBM's alone.
+    """A GLM has a covariance matrix; FR-199's route is the GBM's alone.
 
     Asserted in both directions. The default matters because almost no GBM is a bound and a
     non-`None` default would make every ordinary model look like one; the `GlmSpec` refusal
@@ -401,7 +401,7 @@ def test_interval_for_is_absent_by_default_and_refused_on_a_glm() -> None:
         )  # type: ignore[call-arg]
 
 
-@pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-200")
 def test_a_bound_round_trips_through_the_tagged_union() -> None:
     """`MODEL_SPEC_ADAPTER` is what the backend validates a stored spec with.
 

@@ -1,4 +1,4 @@
-"""Reading the formats FR-DATA-3 accepts.
+"""Reading the formats FR-28 accepts.
 
 > CSV, TSV, parquet, and Excel (`.xlsx`, first sheet or a named sheet) for
 > `upload`/`object_store` sources, and any query result for `sql`. Compressed variants
@@ -43,7 +43,7 @@ MAX_DECOMPRESSED_BYTES: Final = 2 * 1024**3
 
 
 def _decompress(data: bytes, name: str) -> tuple[bytes, str]:
-    """Transparently handle `.gz` and `.zst`, returning the inner name (FR-DATA-3)."""
+    """Transparently handle `.gz` and `.zst`, returning the inner name (FR-28)."""
     lowered = name.lower()
     if lowered.endswith(".gz"):
         expanded = gzip.decompress(data)
@@ -69,7 +69,7 @@ def _refuse_if_oversized(size: int) -> None:
 
 
 def read_tabular(data: bytes, filename: str, *, sheet: str | None = None) -> pl.DataFrame:
-    """Read an uploaded file into a frame, choosing the reader by suffix (FR-DATA-3)."""
+    """Read an uploaded file into a frame, choosing the reader by suffix (FR-28)."""
     payload, name = _decompress(data, filename)
     lowered = name.lower()
 
@@ -77,7 +77,7 @@ def read_tabular(data: bytes, filename: str, *, sheet: str | None = None) -> pl.
         if lowered.endswith((".parquet", ".pqt")):
             return pl.read_parquet(io.BytesIO(payload))
         if lowered.endswith(".xlsx"):
-            # `sheet_name=None` reads the first sheet, which is FR-DATA-3's default.
+            # `sheet_name=None` reads the first sheet, which is FR-28's default.
             return pl.read_excel(
                 io.BytesIO(payload), sheet_name=sheet, infer_schema_length=0
             )
@@ -100,14 +100,14 @@ def read_tabular(data: bytes, filename: str, *, sheet: str | None = None) -> pl.
         "SCHEMA_INFERENCE_CONFLICT",
         "Unsupported file type",
         422,
-        f"{filename!r} is not one of {list(SUPPORTED_SUFFIXES)} (FR-DATA-3).",
+        f"{filename!r} is not one of {list(SUPPORTED_SUFFIXES)} (FR-28).",
     )
 
 
 def _read_delimited(payload: bytes, *, separator: str) -> pl.DataFrame:
     """Read delimited text with **everything as a string**.
 
-    Type inference happens later, from the confirmed schema (FR-DATA-4). Letting the CSV
+    Type inference happens later, from the confirmed schema (FR-29). Letting the CSV
     reader guess means a policy id of `007` becomes `7`, and a column that is numeric in
     this extract and alphanumeric in the next changes type between versions of the same
     dataset — which is a schema change nobody made.

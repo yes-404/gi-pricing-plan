@@ -3,19 +3,19 @@
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/custom-metrics` | **201** Create or version a metric → `draft` (FR-MODEL-45, 103) |
-| `GET` | `/custom-metrics` | The library: paginated, filtered, counted (FR-MODEL-127) |
-| `GET` | `/custom-metrics/{id}` | The metric and its lifecycle (FR-MODEL-108) |
-| `POST` | `/custom-metrics/{id}/certify` | **202** Run §4.13's checks → Job (FR-MODEL-105) |
-| `GET` | `/custom-metrics/{id}/certificate` | The latest certificate (FR-MODEL-108) |
-| `POST` | `/custom-metrics/{id}/submit` | Submit for approval (FR-MODEL-45's lifecycle) |
-| `GET` | `/custom-metrics/{id}/usage` | Blast radius (FR-MODEL-108) |
+| `GET` | `/custom-metrics` | The library: paginated, filtered, counted (FR-167) |
+| `GET` | `/custom-metrics/{id}` | The metric and its lifecycle (FR-162) |
+| `POST` | `/custom-metrics/{id}/certify` | **202** Run §4.13's checks → Job (FR-157) |
+| `GET` | `/custom-metrics/{id}/certificate` | The latest certificate (FR-162) |
+| `POST` | `/custom-metrics/{id}/submit` | Submit for approval (FR-154's lifecycle) |
+| `GET` | `/custom-metrics/{id}/usage` | Blast radius (FR-162) |
 
 Seven routes, not `custom_objectives.py`'s eight: a metric has no `expression` path to
-refuse — FR-MODEL-103 admits `kind: template` only, the same as an objective in Phase 1,
-but `/derive` is `custom-objectives`' own declared refusal (FR-MODEL-75) and §5.1's table
+refuse — FR-155 admits `kind: template` only, the same as an objective in Phase 1,
+but `/derive` is `custom-objectives`' own declared refusal (FR-150) and §5.1's table
 carries no `/custom-metrics/{id}/derive` row to parallel it.
 
-**The collection `GET` is the newest of them** (FR-MODEL-127, 2026-08-23). Until it, this
+**The collection `GET` is the newest of them** (FR-167, 2026-08-23). Until it, this
 module had create, detail, certify, certificate, submit and usage and nothing that lists,
 so `02` §5.3's library screen had no endpoint to draw from and a `custom_metric:<slug>@<n>`
 address had nothing to resolve against a UUID-only detail route.
@@ -78,11 +78,11 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 
 
 class CreateCustomMetric(BaseModel):
-    """FR-MODEL-45's artifact. Every range and rule is `CustomMetric`'s, not this one's.
+    """FR-154's artifact. Every range and rule is `CustomMetric`'s, not this one's.
 
     `kind` is here for `CreateCustomObjective`'s reason: a caller asking for an
     `expression` metric is *answered* — refused by the contract's own
-    `_only_templates_are_built` validator with a 422 that names FR-MODEL-103, rather than
+    `_only_templates_are_built` validator with a 422 that names FR-155, rather than
     silently forbidding the field and leaving them reading a 422 about an unexpected key.
     """
 
@@ -99,7 +99,7 @@ class CreateCustomMetric(BaseModel):
     params: dict[str, int | float] = Field(default_factory=dict)
     #: Omitted means the template's own (§4.5). An author may narrow it and never widen it.
     applicability: Applicability | None = None
-    #: FR-MODEL-104: no default. A metric with no declared direction is not a metric an
+    #: FR-156: no default. A metric with no declared direction is not a metric an
     #: early-stopping loop or a comparison screen can use, and a silent default would pick
     #: one on the author's behalf for every template, most of which are not `lower_is_better`.
     direction: MetricDirection
@@ -111,7 +111,7 @@ class SubmitCustomMetric(BaseModel):
 
     Unlike `custom_objectives.SubmitCustomObjective`, `change_summary` is **not**
     `min_length=1`-required here, and the parameter default is an empty instance: a `draft`
-    metric's submit is refused by the lifecycle-transition check (FR-MODEL-105) before
+    metric's submit is refused by the lifecycle-transition check (FR-157) before
     `approvals.submit`'s own non-empty check is ever reached, so requiring a body at the
     FastAPI layer would turn that 409 into a 422 about a field the caller never gets to
     matter for. A `certified` metric's submit still needs a real summary — `approvals.submit`
@@ -129,12 +129,12 @@ _EMPTY_SUBMIT = SubmitCustomMetric()
 
 
 class MetricFilter(BaseModel):
-    """`GET /custom-metrics`' filters and cursor page (`00` §5.2, FR-MODEL-127).
+    """`GET /custom-metrics`' filters and cursor page (`00` §5.2, FR-167).
 
     `extra="forbid"` for `ModelFilter`'s reason: a misspelled query parameter that is
     silently ignored returns a full library where the caller asked for one artifact.
 
-    `slug` is an **exact** match. FR-MODEL-127 makes this filter what resolves §5.3's
+    `slug` is an **exact** match. FR-167 makes this filter what resolves §5.3's
     `slug@version` addresses against UUID-only detail routes, so a prefix or substring
     match would answer `capped-gamma` with `capped-gamma-tail` too — a wrong artifact
     rather than a wide result.
@@ -174,7 +174,7 @@ async def list_custom_metrics(
     database: DatabaseDep,
     filters: MetricFilterDep,
 ) -> Page[CustomMetric]:
-    """The library `02` §5.3 renders (FR-MODEL-127), cursor-paginated, newest first.
+    """The library `02` §5.3 renders (FR-167), cursor-paginated, newest first.
 
     Named `list_custom_metrics` rather than `list_metrics`: the platform function this
     calls is `metrics.list_metrics`, and two different things sharing one name in one
@@ -185,7 +185,7 @@ async def list_custom_metrics(
     this API did not issue is a 400.
 
     `usage_count` is **one grouped aggregate over the page's refs**, never one query per
-    row: FR-MODEL-127 makes that budget part of the requirement rather than an
+    row: FR-167 makes that budget part of the requirement rather than an
     optimisation. `metrics.usage_counts` expands `eval_metrics` laterally, so a model
     naming three metrics counts once against each, and it counts exactly what
     `GET /{id}/usage` counts — a row and the page opened from it cannot disagree.
@@ -249,7 +249,7 @@ async def create_custom_metric(
                 "VALIDATION_FAILED",
                 "A template metric names a template",
                 422,
-                "Phase 1 ships template metrics only (FR-MODEL-103), so `template` is "
+                "Phase 1 ships template metrics only (FR-155), so `template` is "
                 "required. §4.5 lists the twelve.",
             )
         row = await service.create(
@@ -291,7 +291,7 @@ async def certify_custom_metric(
     database: DatabaseDep,
     response: Response,
 ) -> Job:
-    """**202** with a Job (FR-MODEL-105).
+    """**202** with a Job (FR-157).
 
     202 because §4.13's checks end in a smoke evaluation over a sampled grid —
     `certify_custom_objective`'s reason, unchanged. Unlike the objective's route, there is
@@ -344,11 +344,11 @@ async def submit_custom_metric(
     # Defaulted, not a bare `SubmitCustomMetric`: every field of the model is itself
     # optional, but FastAPI still treats an un-defaulted Pydantic body parameter as a
     # required part of the request — a bodyless POST would 422 on "Field required"
-    # before the service ever got to answer the real question, which is FR-MODEL-105's
+    # before the service ever got to answer the real question, which is FR-157's
     # 409 for a `draft` metric.
     body: SubmitCustomMetric = _EMPTY_SUBMIT,
 ) -> CustomMetric:
-    """`certified → review` (FR-MODEL-45's lifecycle).
+    """`certified → review` (FR-154's lifecycle).
 
     Gated on `model:submit`, `submit_custom_objective`'s reason: putting an artifact in
     front of an approver starts a governed process, and the role that may author is not
@@ -373,7 +373,7 @@ async def submit_custom_metric(
 async def get_metric_usage(
     metric_id: UUID, caller: ReadModels, database: DatabaseDep
 ) -> MetricUsage:
-    """FR-MODEL-108's blast radius."""
+    """FR-162's blast radius."""
     async with database.session() as session:
         return await service.usage(
             session,

@@ -8,7 +8,7 @@ delete this comment.
 
 This is the one section §1 defines that is *not* built from the closed header field set
 of §1.5 — a phase section is plain fields under a heading, exactly as shown below, not
-YAML front matter and not a document with an `id:`. Field spelling matches NT-0019 §1.3's
+YAML front matter and not a document with an `id:`. Field spelling matches RFC-937 §1.3's
 own illustration verbatim ("exit criteria", two words, not `exit_criteria`).
 -->
 

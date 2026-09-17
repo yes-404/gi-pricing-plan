@@ -1,10 +1,10 @@
-"""Profiling and profile comparison (`01` §3.4, §5.2, FR-DATA-25..28).
+"""Profiling and profile comparison (`01` §3.4, §5.2, FR-60, FR-61, FR-62, FR-63).
 
 Computed once after ingestion and read many times — by the distributional validation layer,
-by `02`'s factor workbench, and by anyone asking what is in a dataset. FR-DATA-27 forbids
+by `02`'s factor workbench, and by anyone asking what is in a dataset. FR-62 forbids
 the UI recomputing one, because two answers to "what is the mean severity?" is one too many.
 
-**Confidence intervals are exact, not normal approximations** (FR-DATA-26). A Poisson
+**Confidence intervals are exact, not normal approximations** (FR-61). A Poisson
 interval from a normal approximation is wrong precisely where an actuary is most careful —
 the low-count cells, where a young-driver band with nine claims can look either significant
 or noise depending on the method. The exact interval costs a chi-square quantile.
@@ -52,11 +52,11 @@ __all__ = [
 
 DEFAULT_QUANTILES: Final[tuple[float, ...]] = (0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99)
 
-#: FR-DATA-25 caps categorical detail at the top 20 levels. A high-cardinality column would
+#: FR-60 caps categorical detail at the top 20 levels. A high-cardinality column would
 #: otherwise put its entire domain into a persisted artifact.
 TOP_LEVELS: Final = 20
 
-#: Bins in a column histogram (FR-DATA-48). Twenty is enough to show a mode and a tail on a
+#: Bins in a column histogram (FR-65). Twenty is enough to show a mode and a tail on a
 #: card-sized chart and few enough that an empty bin is visible rather than a hairline.
 HISTOGRAM_BINS: Final = 20
 
@@ -65,7 +65,7 @@ HISTOGRAM_BINS: Final = 20
 #: a column that is not really a rating factor.
 MAX_ONE_WAY_LEVELS: Final = 200
 
-#: The semantic types a one-way is meaningful for (FR-DATA-26, "candidate rating column").
+#: The semantic types a one-way is meaningful for (FR-61, "candidate rating column").
 #: A continuous column needs banding first, which is `02`'s factor workbench; an identifier
 #: has one row per level; money is a measure rather than a factor.
 RATEABLE_TYPES: Final[frozenset[SemanticType]] = frozenset(
@@ -91,7 +91,7 @@ _MONEY_SUFFIX: Final = "_minor"
 
 
 def infer_semantic_type(series: pl.Series, *, row_count: int) -> SemanticType:
-    """What a column *means*, which its dtype does not say (FR-DATA-25).
+    """What a column *means*, which its dtype does not say (FR-60).
 
     `int32` is a dtype; policy id, vehicle group and driver age are three different things
     to do with one, and only the third can be banded meaningfully.
@@ -146,7 +146,7 @@ def candidate_rating_columns(
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
 ) -> tuple[str, ...]:
-    """The columns a one-way is worth computing for (FR-DATA-26).
+    """The columns a one-way is worth computing for (FR-61).
 
     "Per candidate rating column", decided from what the profiler has already inferred
     rather than from a list of names. A hard-coded list is wrong for every dataset that
@@ -179,16 +179,16 @@ def profile_frame(
     claim_amount_column: str = "claim_amount_minor",
     job_id: UUID | None = None,
 ) -> Profile:
-    """Profile a frame (FR-DATA-25, FR-DATA-26).
+    """Profile a frame (FR-60, FR-61).
 
     `one_way_columns="auto"` picks the candidate rating columns from the semantic types
-    this function has just inferred — which is what FR-DATA-26 asks for, and what a caller
+    this function has just inferred — which is what FR-61 asks for, and what a caller
     naming columns by hand cannot do for a dataset it has not seen.
 
     The frame-based entry point exists so profiling is testable and notebook-runnable;
-    `profile_parquet` is the DuckDB path FR-DATA-27 requires for real versions.
+    `profile_parquet` is the DuckDB path FR-62 requires for real versions.
 
-    `job_id` is recorded on the returned artifact (FR-OVR-3) when the caller has one; a
+    `job_id` is recorded on the returned artifact (FR-6) when the caller has one; a
     frame profiled from a notebook or a test fixture has none.
     """
     columns: list[ColumnProfile] = []
@@ -325,7 +325,7 @@ def profile_frame(
 def poisson_frequency_interval(
     claim_count: int, exposure: float, *, confidence: float = 0.95
 ) -> tuple[float, float]:
-    """Exact Poisson interval for a frequency (FR-DATA-26).
+    """Exact Poisson interval for a frequency (FR-61).
 
     The Garwood interval, from chi-square quantiles. A normal approximation is wrong where
     it matters — with nine claims it can put the lower bound below zero, which is not a
@@ -342,7 +342,7 @@ def poisson_frequency_interval(
 def gamma_severity_interval(
     total_amount: float, claim_count: int, *, confidence: float = 0.95
 ) -> tuple[float, float] | None:
-    """Interval for a mean severity under a Gamma assumption (FR-DATA-26).
+    """Interval for a mean severity under a Gamma assumption (FR-61).
 
     Modelled as a Gamma with shape `n` and mean `total/n`: the sum of `n` Gamma severities
     is Gamma with shape `n`, so the interval on the mean follows directly. `None` below two
@@ -367,7 +367,7 @@ def one_way(
     claim_amount_column: str = "claim_amount_minor",
     confidence: float = 0.95,
 ) -> OneWaySummary:
-    """Exposure, claims, frequency, severity and burning cost by level (FR-DATA-26)."""
+    """Exposure, claims, frequency, severity and burning cost by level (FR-61)."""
     aggregations = [pl.len().alias("_rows")]
     if exposure_column in frame.columns:
         aggregations.append(pl.col(exposure_column).cast(pl.Float64).sum().alias("_exposure"))
@@ -401,7 +401,7 @@ def _identifier(name: str) -> str:
 
 def _as_level(value: Any) -> str | None:
     """A `top_levels` entry's level, without collapsing a null into the string `"None"`
-    (FR-DATA-49).
+    (FR-66).
 
     A SQL `NULL` / Polars null is a genuine category — a row where the column was not
     recorded — and stays `None` so it cannot be confused with a level someone actually
@@ -416,14 +416,14 @@ def _stored_exposure(value: float) -> Decimal:
 
     Six decimal places. Two engines summing the same column in different orders differ in
     the last bit, and a published figure that depends on which engine read the file is what
-    FR-DATA-27 exists to prevent. `_one_way_row` and the histogram share this so they cannot
+    FR-62 exists to prevent. `_one_way_row` and the histogram share this so they cannot
     drift apart.
     """
     return Decimal(str(round(value, 6)))
 
 
 def _histogram_edges(minimum: float, maximum: float) -> tuple[float, ...]:
-    """Equal-width bin edges over the observed range (FR-DATA-48).
+    """Equal-width bin edges over the observed range (FR-65).
 
     Computed here rather than by Polars' `hist` or DuckDB's `histogram`, so both engines bin
     against the same numbers. A constant column is one bin of unit width: zero width would
@@ -501,16 +501,16 @@ def profile_parquet(
     claim_amount_column: str = "claim_amount_minor",
     job_id: UUID | None = None,
 ) -> Profile:
-    """Profile parquet files with DuckDB (FR-DATA-27, NFR-DATA-3).
+    """Profile parquet files with DuckDB (FR-62, NFR-467).
 
     Every statistic is computed **in SQL**; nothing but aggregates crosses back into
     Python. This is the difference between profiling a dataset version and loading one —
     an earlier build ran `SELECT *` and handed the frame to `profile_frame`, which peaked
     at 2.1 GB on a 1.1 GB payload and would have needed ~11 GB at the 10M-row scale
-    NFR-DATA-3 is written against. Profiling is the one operation guaranteed to touch
+    NFR-467 is written against. Profiling is the one operation guaranteed to touch
     every row, so it is the one that must not hold them.
 
-    The paths are supplied by the caller, which is how ADR-0001 survives — this function
+    The paths are supplied by the caller, which is how ADR-703 survives — this function
     opens no object store and holds no credential.
     """
     import duckdb
@@ -609,7 +609,7 @@ def _profile_column(
     if numeric and row_count:
         # Linear interpolation, matching `profile_frame`. Left to their defaults the two
         # engines disagree — Polars rounds to the nearest observation, DuckDB's
-        # `quantile_disc` picks a different one — and FR-DATA-27 exists precisely so
+        # `quantile_disc` picks a different one — and FR-62 exists precisely so
         # there is one answer to "what is p99 of this column?".
         wanted = ", ".join(str(q) for q in DEFAULT_QUANTILES)
         row = connection.execute(
@@ -780,7 +780,7 @@ def _one_way_row(
 def compare_profiles(
     current: Profile, reference: Profile, *, buckets: int = 10
 ) -> ProfileComparison:
-    """PSI, mean shift, null-rate shift and level changes (FR-DATA-28).
+    """PSI, mean shift, null-rate shift and level changes (FR-63).
 
     The same computation the distributional validation layer consumes, so a `VR-DST-*`
     verdict and the comparison screen an actuary is reading cannot disagree.
@@ -836,7 +836,7 @@ def _psi(current: ColumnProfile, reference: ColumnProfile) -> float | None:
     """Population Stability Index over the profiled level shares.
 
     Computed from the top-level counts both profiles already hold, which is what makes the
-    distributional layer cheap enough to run on every validation (FR-DATA-24's intent). A
+    distributional layer cheap enough to run on every validation (FR-54's intent). A
     null level is excluded, the same as `new_levels`/`vanished_levels` above — there is no
     string key to weight it under now that it is not coerced to the literal text "None".
     """

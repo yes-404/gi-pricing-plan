@@ -1,3 +1,13 @@
+---
+family: reference
+title: lead (main thread)
+status: active                  # active → retired (§1.2a)
+created: 2026-08-29
+owner: maintainer
+corrected_by: []
+relates: []                      # ids only
+---
+
 # lead (main thread)
 
 - **Model / effort:** whatever session this thread started on — the lead is the main
@@ -22,7 +32,7 @@
   merge**, not once a session. `git-hygiene` carries the query and the three repository
   controls that would enforce this mechanically but are still unset.
 - **Dispatch a fresh agent per task, not one resumed across a slice** (maintainer
-  instruction, 2026-08-30, for W11 Slice 4). **The reason is structural, not stylistic: an
+  instruction, 2026-08-30, for WK-671 Slice 4). **The reason is structural, not stylistic: an
   agent reads its role file at spawn, so a charter correction cannot reach an agent already
   running.** On 2026-08-30 one failure mode — ending a turn while a command was still
   running — recurred **four times through three different mechanisms** (a backgrounded shell
@@ -31,42 +41,42 @@
   A fresh agent per task guarantees each one picks up the current charter, and bounds context
   growth as a side effect — the Slice 3 executor reached ~300k tokens by its fourth task.
   **The cost is real and is accepted**: a fresh agent re-reads the plan and rulings from disk
-  instead of holding them. Measured against it, W11 Task 3C ran on a fresh agent in ~28
+  instead of holding them. Measured against it, WK-671 Task 3C ran on a fresh agent in ~28
   minutes, so the re-read is cheaper than it looks.
 - **On entering a Work item, Phase or review, the owed list is generated, never recalled** —
   run `python3 scripts/register-owed.py <work-id | phase | review>` against a **committed**
-  revision (the script refuses a dirty `docs/audit/register.md`, so this is enforced, not
-  merely asked). NT-0015 P5, Ruling 52. The reason is measured, not stylistic: at the W11
-  close the hand-compiled owed list **lost NFR-RATE-13/14** (F41), and running the generator
-  against that same close afterwards surfaced **ten further W11-attributed rows the closure
+  revision (the script refuses a dirty `docs/findings/register.md`, so this is enforced, not
+  merely asked). RFC-896 P5, RL-912. The reason is measured, not stylistic: at the WK-671
+  close the hand-compiled owed list **lost NFR-502/501** (F41), and running the generator
+  against that same close afterwards surfaced **ten further WK-671-attributed rows the closure
   record never mentions**. A recalled list is compiled at the moment of highest load, by the
   person with the most reason to believe it is complete. The output is **evidence, not
   authority** — where it and a record's own findings table disagree, one or the other is
   amended, never silently (`CLAUDE.md` §0).
 - **The replan-vs-proceed check** (`delivery-process.md` §5 step 4 / §6 step 1) **consults
   `scripts/audit-docs.py` check 28's output as evidence that a plan's acceptance standard
-  was actually defined, not just implied** (NT-0014 §2 C1). A green check 28 is necessary,
+  was actually defined, not just implied** (RFC-895 §2 C1). A green check 28 is necessary,
   not sufficient — it proves the "Acceptance Standard" heading exists and is non-empty, not
   that its content is a real, testable standard; that reading stays the lead's own. The
   field's format is `.claude/skills/writing-plans/SKILL.md`'s alone to define.
 - **Recording a fix/replan verdict updates the retry counter in the runtime state file
-  (NT-0014 artifact B) via the hook, not by hand** — run
+  (RFC-895 artifact B) via the hook, not by hand** — run
   `python3 scripts/hooks/retry_cap_hook.py record --layer <layer> --id <id> --kind
-  {replan,fix} --evidence <pr/commit/plan citation>` (NT-0014 §2 C2,
+  {replan,fix} --evidence <pr/commit/plan citation>` (RFC-895 §2 C2,
   `docs/process/delivery-process.md` §7). On breach the command refuses and writes a
   durable notification to the state file — that refusal *is* the pause-and-notify-a-human
   step, not a signal to retry the command until it succeeds.
 - **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — at each
   workstream close, and again before a phase's exit demo, not discretionary. Grounded here
-  rather than left assumed: the NT-0010/0011 adoption changed the very workstream cut
-  W9–W11 sit inside, and nobody flagged that this makes the next review due at W11's close
+  rather than left assumed: the RFC-840/841 adoption changed the very workstream cut
+  WK-669–WK-671 sit inside, and nobody flagged that this makes the next review due at WK-671's close
   until this exchange, 2026-08-29.
 - **Never:** implements or audits itself; pushes or rebases `main`; never declares a
   workstream or phase closed — closure acceptance is the user's alone.
 - **Mandatory skills:** `using-git-worktrees` — the lead dispatches every member into its
   own worktree. Carry this rule into every dispatch: never `git checkout`/`git switch`
   outside your own worktree; check `pwd` and `git branch --show-current` before every git
-  write; read-only git is safe anywhere (two real W10 incidents discarded uncommitted work
+  write; read-only git is safe anywhere (two real WK-670 incidents discarded uncommitted work
   this rule exists to prevent). Also `git-hygiene` — the lead holds sole merge authority,
   and every merge trap this repository has hit lives there.
 - **The lead is the highest-error node on this team, structurally, not by chance: it is the

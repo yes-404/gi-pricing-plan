@@ -21,7 +21,7 @@
  * means something went wrong, which is the same shape as the `psiBand`-returns-"stable"
  * defect recorded in `01` §5.3's 2026-08-19 note.
  *
- * The text is always rendered, so colour is never the only channel (WCAG 2.2 AA, NFR-OVR-10).
+ * The text is always rendered, so colour is never the only channel (WCAG 2.2 AA, NFR-463).
  */
 import type { DatasetStatus } from "@/api/datasets";
 

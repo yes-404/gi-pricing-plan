@@ -9,7 +9,7 @@ const props = defineProps<{
 }>();
 
 /**
- * FR-MODEL-33's `monotonicity_verified` is boolean **or null**, and the third state is the one
+ * FR-132's `monotonicity_verified` is boolean **or null**, and the third state is the one
  * that matters: null is "nobody ran the check". Collapsed into a two-state badge it becomes
  * either a pass or a failure, and both assert a result that does not exist.
  */
@@ -37,19 +37,19 @@ const shapes = computed(() => props.artifact?.ebm_shape_functions ?? null);
       Loading…
     </p>
 
-    <!-- FR-MODEL-33 makes the artifact an obligation for a non-GLM Model, but not having one
+    <!-- FR-132 makes the artifact an obligation for a non-GLM Model, but not having one
          *yet* is a state rather than a failure. The red banner is for a call that went wrong;
          this is a model whose artifact has not been built. -->
     <p
       v-else-if="state === 'absent' || artifact === null"
       class="mt-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
     >
-      No transparency artifact has been built for this model yet. FR-MODEL-33 requires one
+      No transparency artifact has been built for this model yet. FR-132 requires one
       before a non-GLM model can be used in a rating version; it is produced by a Job.
     </p>
 
     <template v-else>
-      <!-- FR-MODEL-34: the fidelity statement is where the approximation says where it stops
+      <!-- FR-133: the fidelity statement is where the approximation says where it stops
            being one. It goes first, in prose, because a reader who reads one thing here reads
            the first thing. -->
       <p class="mt-2 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -85,7 +85,7 @@ const shapes = computed(() => props.artifact?.ebm_shape_functions ?? null);
             </dt>
             <!-- Against `target`, not against observed claims: the approximation is fitted to
                  the source model's predictions, and an R² read as fit to experience is the
-                 misreading FR-MODEL-96 exists to prevent. -->
+                 misreading FR-137 exists to prevent. -->
             <dd>
               R² {{ approximation.r_squared?.toFixed(3) }}, deviance explained
               {{ approximation.deviance_explained?.toFixed(3) }} — against
@@ -164,7 +164,7 @@ const shapes = computed(() => props.artifact?.ebm_shape_functions ?? null);
         </h3>
         <!-- A mean absolute contribution is a statistic of a sample. Without the sample size
              and the seed the ranking is one nobody can reproduce. `holdout_strength_ratio`
-             (FR-MODEL-128) has no column here: nothing publishes it yet, and an always-empty
+             (FR-168) has no column here: nothing publishes it yet, and an always-empty
              column reads as a computed zero. -->
         <p class="mt-1 text-xs text-slate-500">
           <span class="font-mono">{{ shap.algorithm }}</span> over

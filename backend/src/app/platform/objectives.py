@@ -111,7 +111,7 @@ def to_objective(
     `usage_count` is a keyword the way `datasets.to_schema` takes `latest_version`: a
     per-request aggregate the *caller* computed once for a whole page, passed in rather
     than queried here, because a query here would be one round trip per row — the N+1
-    FR-MODEL-127 names as part of its requirement. Defaulted to `None`, so every route
+    FR-167 names as part of its requirement. Defaulted to `None`, so every route
     that does not count says *not asked* rather than *nothing uses this*.
     """
     return CustomObjective.model_validate(
@@ -165,7 +165,7 @@ async def create_objective(
 ) -> CustomObjectiveRow:
     """Create the next version of a Custom Objective, as a `draft` (FR-MODEL-38, 46).
 
-    Versioning is by slug, exactly as a Peril Structure's is: FR-MODEL-46 makes editing an
+    Versioning is by slug, exactly as a Peril Structure's is: FR-163 makes editing an
     objective a new version requiring fresh certification, and a Model fitted last month
     must still resolve `custom_objective:<slug>@<version>` to the loss it was fitted under.
 
@@ -255,11 +255,11 @@ async def create_objective(
 async def refuse_expression_kind(
     session: AsyncSession, *, settings: Settings, workspace_id: UUID
 ) -> NoReturn:
-    """FR-MODEL-75: `expression` objectives are Phase 2, and the flag is how it is said.
+    """FR-150: `expression` objectives are Phase 2, and the flag is how it is said.
 
     Two refusals, and the second is the one that matters. With the flag **off** — its
     default, and its value for the whole of Phase 1 — this is the feature gate `07`
-    FR-PLAT-45/46 describes. With the flag **on**, it still refuses, because turning a flag
+    FR-448/449 describes. With the flag **on**, it still refuses, because turning a flag
     on cannot build the symbolic derivation, the second compilation target and the review
     path that an expression objective needs; accepting one then would persist an artifact
     nothing can evaluate and no certificate can describe.
@@ -276,7 +276,7 @@ async def refuse_expression_kind(
     enabled = bool(resolution.effective_value)
 
     detail = (
-        "`02` FR-MODEL-75 and OQ-MODEL-1 (decided 2026-08-15): Phase 1 ships `template` "
+        "`02` FR-150 and OQ-573 (decided 2026-08-15): Phase 1 ships `template` "
         "objectives only. §4.6's grammar is specified and its parser is built, but the "
         "symbolic derivation of gradient and hessian, the vectorised compilation target "
         "and the review path for a user-authored loss are not — so an expression objective "
@@ -314,7 +314,7 @@ async def list_objectives(
     slug: str | None = None,
     after: UUID | None = None,
 ) -> tuple[Sequence[CustomObjectiveRow], int]:
-    """One page of the workspace's objectives, newest first (FR-MODEL-127).
+    """One page of the workspace's objectives, newest first (FR-167).
 
     Here rather than in the router, which is where `GET /models` keeps its query: none of
     the three artifact modules' routers imports SQLAlchemy at all, and a router that
@@ -322,7 +322,7 @@ async def list_objectives(
 
     `ix_custom_objectives_slug_status` covers `(workspace_id, slug, status)`, so both
     filters are index-served and no migration accompanies this route. `slug` is an
-    **equality**: FR-MODEL-127 makes this filter what resolves §5.3's `slug@version`
+    **equality**: FR-167 makes this filter what resolves §5.3's `slug@version`
     addresses against UUID-only detail routes, and a prefix match would resolve
     `motor-ad` to `motor-ad-severity` as well — a wrong artifact, not a wide result.
 
@@ -392,7 +392,7 @@ async def load_certificate(
             "This objective has not been certified",
             404,
             f"No certificate for objective {objective_id}. POST "
-            "/api/v1/custom-objectives/{id}/certify produces one (FR-MODEL-42).",
+            "/api/v1/custom-objectives/{id}/certify produces one (FR-146).",
         )
     return to_certificate(row)
 
@@ -402,7 +402,7 @@ async def resolve_ref(
 ) -> CustomObjective:
     """`custom_objective:<slug>@<version>` → the artifact, for the fit path.
 
-    This is the resolution ADR-0001 keeps out of `pricing-core`: `fit_gbm` takes the
+    This is the resolution ADR-703 keeps out of `pricing-core`: `fit_gbm` takes the
     objective it is to compile and refuses one whose ref does not match the spec's, but it
     cannot read the store the objective lives in.
     """
@@ -429,7 +429,7 @@ async def resolve_ref(
 async def certifiable_or_refuse(
     session: AsyncSession, *, workspace_id: UUID, actor: Principal, objective_id: UUID
 ) -> CustomObjectiveRow:
-    """Answer "may this be certified?" before a Job exists (FR-MODEL-42).
+    """Answer "may this be certified?" before a Job exists (FR-146).
 
     Gated on `model:fit` rather than `model:read`: this queues a compute Job that samples a
     grid and trains a smoke booster.
@@ -454,7 +454,7 @@ async def certifiable_or_refuse(
             "This objective cannot be certified in its current status",
             409,
             f"{row.slug}@{row.version} is {row.status}. Certification is what `certified` "
-            "rests on (FR-MODEL-42), and re-running it under review or after approval "
+            "rests on (FR-146), and re-running it under review or after approval "
             "would change the evidence a decision was made against. Withdraw the "
             "submission, or create the next version.",
         )
@@ -462,7 +462,7 @@ async def certifiable_or_refuse(
 
 
 def default_sampling(objective: CustomObjective) -> SamplingSpec:
-    """§4.7's grid, derived from what the objective says it applies to (FR-MODEL-44).
+    """§4.7's grid, derived from what the objective says it applies to (FR-153).
 
     A single default grid would be wrong for most of the catalogue. `y` is a probability
     for `focal_binomial`, a small count for the Poisson family, and money in **minor
@@ -563,7 +563,7 @@ async def submit_for_review(
     objective_id: UUID,
     change_summary: str,
 ) -> tuple[CustomObjectiveRow, ApprovalRequestRow]:
-    """`certified → review` and the approval request it exists to create (FR-MODEL-46).
+    """`certified → review` and the approval request it exists to create (FR-163).
 
     The evidence check is `06` R4's, and it is enforced here for `_require_evidence`'s
     reason: the policy names `objective_certificate` for this artifact type, and a policy
@@ -582,8 +582,8 @@ async def submit_for_review(
             "VALIDATION_FAILED",
             "Invalid custom objective lifecycle transition",
             409,
-            f"{row.slug}@{row.version} is {row.status}; FR-MODEL-46 reaches `review` from "
-            "`certified` only. FR-MODEL-42 makes the certificate the evidence the "
+            f"{row.slug}@{row.version} is {row.status}; FR-163 reaches `review` from "
+            "`certified` only. FR-146 makes the certificate the evidence the "
             "approval reads.",
         )
     await _require_evidence(session, workspace_id=workspace_id, row=row)
@@ -625,7 +625,7 @@ async def apply_approval_decision(
     actor: Principal,
     request: ApprovalRequestRow,
 ) -> CustomObjectiveRow | None:
-    """Carry a governance decision into the objective (FR-MODEL-46, `06` FR-GOV-13).
+    """Carry a governance decision into the objective (FR-163, `06` FR-355).
 
     Returns `None` for a request about anything else, so `_carry_to_the_artifact` drives
     every artifact type through one call. Same transaction as the decision, for
@@ -634,7 +634,7 @@ async def apply_approval_decision(
     explain.
 
     `changes_requested` returns the objective to **`certified`**, not to `draft`. `06`
-    FR-GOV-13 returns the artifact to its pre-submission state, and for a certified
+    FR-355 returns the artifact to its pre-submission state, and for a certified
     objective that is `certified` — a review decision does not withdraw a certificate.
     """
     if request.artifact_type != "custom_objective":
@@ -655,7 +655,7 @@ async def apply_approval_decision(
     if row is None:
         # Tolerated for the reason a Model's is: `POST /approval-requests` accepts any
         # well-formed ref, and a request naming an objective that was never created must
-        # still be decidable rather than sitting open for ever (`06` FR-GOV-36).
+        # still be decidable rather than sitting open for ever (`06` FR-386).
         return None
 
     target = _target_status(ApprovalStatus(request.status))
@@ -670,7 +670,7 @@ async def apply_approval_decision(
             "Invalid custom objective lifecycle transition",
             409,
             f"{ref} is {before.value} and the decision would move it to {target.value}, "
-            "which FR-MODEL-46 does not allow.",
+            "which FR-163 does not allow.",
         )
     row.status = target.value
     await session.flush()
@@ -691,7 +691,7 @@ async def apply_approval_decision(
 async def usage(
     session: AsyncSession, *, workspace_id: UUID, actor: Principal, objective_id: UUID
 ) -> ObjectiveUsage:
-    """FR-MODEL-47's blast radius: everything fitted under this objective version.
+    """FR-164's blast radius: everything fitted under this objective version.
 
     Asked model→objective, which is the direction the reference runs: a Model Spec carries
     `custom_objective:<slug>@<version>` and the objective row carries no list anything
@@ -746,11 +746,11 @@ async def usage(
 async def usage_counts(
     session: AsyncSession, *, workspace_id: UUID, refs: Sequence[str]
 ) -> dict[str, int]:
-    """Count the Model Specs referencing each of `refs`, in **one** query (FR-MODEL-127).
+    """Count the Model Specs referencing each of `refs`, in **one** query (FR-167).
 
     The library row's count, not the detail route's blast radius: same question, page-sized
     answer. `usage` above answers it for one artifact and is deliberately not reused here —
-    calling it per row is the N+1 FR-MODEL-127 names as part of the requirement, and it
+    calling it per row is the N+1 FR-167 names as part of the requirement, and it
     would be indistinguishable from this until a workspace held a few hundred artifacts.
 
     **It counts exactly what `usage` counts**, because a row and its own detail route
@@ -797,7 +797,7 @@ def _validated(payload: dict[str, Any], *, template: ObjectiveTemplate) -> Custo
     """`CustomObjective` or a 422 that names what the template actually allows.
 
     The contract's validators carry the explanation — §4.5's parameter ranges, the
-    applicability rule, FR-MODEL-75 — so the refusal quotes them rather than restating
+    applicability rule, FR-150 — so the refusal quotes them rather than restating
     them differently.
     """
     if payload.get("applicability") is None:
@@ -830,7 +830,7 @@ async def _get_or_404(
 async def _require_evidence(
     session: AsyncSession, *, workspace_id: UUID, row: CustomObjectiveRow
 ) -> None:
-    """`06` R4 and FR-GOV-10 for this artifact type, failing closed on what it cannot check.
+    """`06` R4 and FR-352 for this artifact type, failing closed on what it cannot check.
 
     `_require_evidence` on a Model carries the reasoning; the shape is the same and the
     difference is only which kinds are verifiable here.
@@ -838,8 +838,8 @@ async def _require_evidence(
     policy = await approvals.policy_for(session, workspace_id)
 
     verifiable = {"objective_certificate": row.certificate_id is not None}
-    #: FR-GOV-37: `06` §3.3's floor unioned with the workspace entry, so an edited policy
-    #: cannot drop the certificate that `02` FR-MODEL-42 makes the thing an approver reads.
+    #: FR-364: `06` §3.3's floor unioned with the workspace entry, so an edited policy
+    #: cannot drop the certificate that `02` FR-146 makes the thing an approver reads.
     missing = [
         kind
         for kind in policy.effective_evidence("custom_objective")
@@ -849,8 +849,8 @@ async def _require_evidence(
         unknown = [kind for kind in missing if kind not in verifiable]
         detail = (
             f"{row.slug}@{row.version} is missing required evidence: {', '.join(missing)}. "
-            "`06` FR-GOV-19 defines it per artifact type and R4 makes it a condition of "
-            "submission. FR-MODEL-42: certification is what an approver reads."
+            "`06` FR-363 defines it per artifact type and R4 makes it a condition of "
+            "submission. FR-146: certification is what an approver reads."
         )
         if unknown:
             detail += (
@@ -864,8 +864,8 @@ def _target_status(request_status: ApprovalStatus) -> ObjectiveStatus | None:
     """What a request's status means for the objective behind it.
 
     The three non-approvals return it to **`certified`** rather than to `draft`, which is
-    the same amendment `06` FR-GOV-13 already carries for a Model (2026-08-17) and for the
-    same shape of reason: FR-GOV-13's `draft` is the pre-submission state, and for a
+    the same amendment `06` FR-355 already carries for a Model (2026-08-17) and for the
+    same shape of reason: FR-355's `draft` is the pre-submission state, and for a
     certified objective that is `certified`. Sending it to `draft` would say the
     certificate had been withdrawn, which no review decision does.
     """

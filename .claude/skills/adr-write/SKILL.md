@@ -19,7 +19,7 @@ Next number, never reused:
 ls docs/adr/ | grep -oE '^[0-9]{4}' | sort -n | tail -1
 ```
 
-File as `docs/adr/NNNN-kebab-title.md` with this shape:
+File as `docs/adrs/NNNN-kebab-title.md` with this shape:
 
 ```markdown
 # ADR-NNNN — Title in the imperative
@@ -34,7 +34,7 @@ File as `docs/adr/NNNN-kebab-title.md` with this shape:
 ## Consequences — **Positive / Negative / Neutral**, and the negative section must be real
 ```
 
-Then add the row to the table in `docs/adr/README.md`.
+Then add the row to the table in `docs/adrs/README.md`.
 
 ## The rule that matters most
 
@@ -56,7 +56,7 @@ It records that a named risk was tested, and where the risk moved to.
 
 | Residual risk | Now specified as |
 |---|---|
-| … | `03` FR-RATE-56 |
+| … | `03` FR-273 |
 
 Evidence: [`docs/research/...`](../research/...)
 ```
@@ -75,7 +75,7 @@ python3 scripts/audit-docs.py    # verifies every referenced ADR-NNNN exists
 
 ## Verified
 
-2026-08-14 — Confirmed by adding dated addenda to ADR-0004 (ZEN Engine, where research
-resolved OQ-RATE-1 and the decision survived) and ADR-0005 (Polars/DuckDB, where an open
+2026-08-14 — Confirmed by adding dated addenda to ADR-706 (ZEN Engine, where research
+resolved OQ-614 and the decision survived) and ADR-707 (Polars/DuckDB, where an open
 upstream regression validated the split for an unanticipated reason). Both addenda left
 the original Context/Decision/Consequences untouched; `scripts/audit-docs.py` passed.

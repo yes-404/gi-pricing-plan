@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/peril-structure.schema.json",
   "title": "PerilStructure",
-  "description": "Declarative composition of per-peril models into a Risk Premium. What a Rating Version references, rather than a scatter of individual models (02 FR-MODEL-58..61, §4.10).",
-  "$comment": "Amended 2026-08-22 (W5, the contract-reconciliation slice). Five resolutions, each the code's (CLAUDE.md §0): (1) every optional model reference and large-loss field is nullable, which they are on the type and were not here — the eight of them were invisible until the type comparison learned to read `null`; (2) `evidence_blob` is a BlobRef, not a string, the same defect `model.covariance_blob` and `transparency-artifact.relativity_table_blob` carried; (3) `flat_loading_minor` is deleted for `loading_factor` — a minor-unit amount and an exact-decimal multiplier are different quantities, and `LargeLossTreatment` has only ever had the second; (4) the reconciliation carries its per-peril breakdown and `computed_at`, which FR-MODEL-74 puts each treatment's number beside its treatment and §4.10's amendment records as new; (5) `excluded_perils` and `reconciliation` leave `required` — both are defaulted on the type, and `_coherent` requires the reconciliation only from `reconciled` onward. `ratio` and `status` stay declared and required here although the generated counterpart omits them: they are `computed_field`s, so they ARE on the wire, and `generate-contracts.py` emits the validation schema, which by construction cannot show them. NOT a divergence — see §4.10's 2026-08-18 note. Amended 2026-08-26 (W6b-15): `observed_burning_cost_minor` and `modelled_burning_cost_minor` drop the `_minor` suffix — `observed_burning_cost`, `modelled_burning_cost` — types unchanged, per OQ-OVR-12 (b) under FR-OVR-20; the names now match the generated side.",
+  "description": "Declarative composition of per-peril models into a Risk Premium. What a Rating Version references, rather than a scatter of individual models (02 FR-188, FR-189, FR-190, FR-191, §4.10).",
+  "$comment": "Amended 2026-08-22 (WK-661, the contract-reconciliation slice). Five resolutions, each the code's (CLAUDE.md §0): (1) every optional model reference and large-loss field is nullable, which they are on the type and were not here — the eight of them were invisible until the type comparison learned to read `null`; (2) `evidence_blob` is a BlobRef, not a string, the same defect `model.covariance_blob` and `transparency-artifact.relativity_table_blob` carried; (3) `flat_loading_minor` is deleted for `loading_factor` — a minor-unit amount and an exact-decimal multiplier are different quantities, and `LargeLossTreatment` has only ever had the second; (4) the reconciliation carries its per-peril breakdown and `computed_at`, which FR-128 puts each treatment's number beside its treatment and §4.10's amendment records as new; (5) `excluded_perils` and `reconciliation` leave `required` — both are defaulted on the type, and `_coherent` requires the reconciliation only from `reconciled` onward. `ratio` and `status` stay declared and required here although the generated counterpart omits them: they are `computed_field`s, so they ARE on the wire, and `generate-contracts.py` emits the validation schema, which by construction cannot show them. NOT a divergence — see §4.10's 2026-08-18 note. Amended 2026-08-26 (W6b-15): `observed_burning_cost_minor` and `modelled_burning_cost_minor` drop the `_minor` suffix — `observed_burning_cost`, `modelled_burning_cost` — types unchanged, per OQ-538 (b) under FR-23; the names now match the generated side.",
   "type": "object",
   "required": ["perils"],
   "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
@@ -22,7 +22,7 @@
           "large_loss": {
             "type": "object",
             "required": ["kind"],
-            "description": "Whatever is chosen is recorded with its calibration evidence (FR-MODEL-59).",
+            "description": "Whatever is chosen is recorded with its calibration evidence (FR-189).",
             "properties": {
               "kind": {"enum": ["none", "capped", "separate_model", "flat_loading"]},
               "cap_minor": {
@@ -44,7 +44,7 @@
               },
               "evidence_blob": {
                 "oneOf": [{"$ref": "common/blob-ref.schema.json"}, {"type": "null"}],
-                "description": "FR-MODEL-59's calibration evidence, required for every kind that has something to calibrate — which is every kind but `none`."
+                "description": "FR-189's calibration evidence, required for every kind that has something to calibrate — which is every kind but `none`."
               }
             }
           }
@@ -65,7 +65,7 @@
     },
     "excluded_perils": {
       "type": "array",
-      "description": "Every peril in the dataset is either modelled or explicitly excluded with a reason (FR-MODEL-60).",
+      "description": "Every peril in the dataset is either modelled or explicitly excluded with a reason (FR-190).",
       "items": {
         "type": "object",
         "required": ["peril", "reason"],
@@ -80,16 +80,16 @@
       "type": ["object", "null"],
       "required": ["dataset_version_id", "part", "perils", "observed_burning_cost",
                    "modelled_burning_cost", "ratio", "tolerance", "status", "computed_at"],
-      "description": "FR-MODEL-60's persisted coherence check and FR-MODEL-74's treatment statement. Null until the structure is reconciled; required from `reconciled` onward, where it is the evidence the approval policy names.",
+      "description": "FR-190's persisted coherence check and FR-128's treatment statement. Null until the structure is reconciled; required from `reconciled` onward, where it is the evidence the approval policy names.",
       "properties": {
         "dataset_version_id": {"type": "string", "format": "uuid"},
         "part": {
           "type": "string", "minLength": 1,
-          "description": "UNRECONCILED (W5, 2026-08-22): this contract has always declared `train | holdout | full` and `Reconciliation.part` is an unconstrained non-empty `str`. Widened here so the published contract does not promise a constraint nothing enforces; whether the type should close instead is a CLAUDE.md §0 question."
+          "description": "UNRECONCILED (WK-661, 2026-08-22): this contract has always declared `train | holdout | full` and `Reconciliation.part` is an unconstrained non-empty `str`. Widened here so the published contract does not promise a constraint nothing enforces; whether the type should close instead is a CLAUDE.md §0 question."
         },
         "perils": {
           "type": "array", "minItems": 1,
-          "description": "FR-MODEL-74's per-peril breakdown: each peril's contribution to the modelled total, beside the large-loss treatment that produced it. The total is checked to be the sum of these figures — a total that is not the sum is a third number nobody can source.",
+          "description": "FR-128's per-peril breakdown: each peril's contribution to the modelled total, beside the large-loss treatment that produced it. The total is checked to be the sum of these figures — a total that is not the sum is a third number nobody can source.",
           "items": {
             "type": "object",
             "required": ["peril", "large_loss_kind", "modelled_burning_cost"],
@@ -103,7 +103,7 @@
         "observed_burning_cost": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
         "modelled_burning_cost": {
           "$ref": "common/money.schema.json#/$defs/MoneyMinor",
-          "description": "After restoration: a capped model reconciled against uncapped observed data without restoring its mean looks like a modelling error rather than an intended adjustment (FR-MODEL-74)."
+          "description": "After restoration: a capped model reconciled against uncapped observed data without restoring its mean looks like a modelling error rather than an intended adjustment (FR-128)."
         },
         "ratio": {
           "$ref": "common/money.schema.json#/$defs/Decimal",
@@ -111,7 +111,7 @@
         },
         "tolerance": {
           "$ref": "common/money.schema.json#/$defs/Decimal",
-          "description": "Declared fractional tolerance on |ratio - 1| (FR-MODEL-60). Exact decimal string, > 0."
+          "description": "Declared fractional tolerance on |ratio - 1| (FR-190). Exact decimal string, > 0."
         },
         "status": {
           "enum": ["pass", "fail"],
@@ -129,9 +129,9 @@
     }
   },
   "invariants": [
-    "each peril appears at most once in perils, and at most once in excluded_perils (FR-MODEL-58)",
-    "no peril is both modelled and excluded — being both leaves the reader unable to say whether its cost is in the total (FR-MODEL-60)",
-    "status in {reconciled, review, approved} implies reconciliation is set (FR-MODEL-60/61)",
-    "modelled_burning_cost equals the sum of reconciliation.perils[].modelled_burning_cost, each rounded to minor units first (FR-MODEL-74)"
+    "each peril appears at most once in perils, and at most once in excluded_perils (FR-188)",
+    "no peril is both modelled and excluded — being both leaves the reader unable to say whether its cost is in the total (FR-190)",
+    "status in {reconciled, review, approved} implies reconciliation is set (FR-190/191)",
+    "modelled_burning_cost equals the sum of reconciliation.perils[].modelled_burning_cost, each rounded to minor units first (FR-128)"
   ]
 }

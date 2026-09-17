@@ -13,7 +13,7 @@ export type IntervalModels = components["schemas"]["IntervalModels"];
 export type PredictionInputRow = Record<string, string | number | boolean | null>;
 
 /**
- * Score one row (`02` §5.1, FR-MODEL-63).
+ * Score one row (`02` §5.1, FR-194).
  *
  * **200, not 202.** The §5.1 row for this endpoint states the code directly, and `07` §1.3 R1
  * explains why that is not an exception to "everything slow is a Job": the endpoint reads at
@@ -33,8 +33,8 @@ export function predict(modelId: string, row: PredictionInputRow): Promise<Predi
 /**
  * What an `unavailable` reason means, in the specification's own reading of it.
  *
- * `family` exists because FR-MODEL-93 is explicit that `covariance_not_stored` is "a fourth
- * reason beside FR-MODEL-77's three and it is **not** one of them", and FR-MODEL-124 is
+ * `family` exists because FR-195 is explicit that `covariance_not_stored` is "a fourth
+ * reason beside FR-198's three and it is **not** one of them", and FR-180 is
  * explicit that each of the other four "states something false of an EBM". Grouping them in
  * the UI would undo both statements.
  */
@@ -45,7 +45,7 @@ export function unavailableCopy(reason: UnavailableReason): {
 } {
   switch (reason) {
     case "no_interval_models_fitted":
-      // FR-MODEL-77: paired quantile models are opt-in, at 2-3x fit cost (FR-MODEL-78).
+      // FR-198: paired quantile models are opt-in, at 2-3x fit cost (FR-199).
       return {
         family: "gbm",
         headline: "No interval models were fitted",
@@ -55,7 +55,7 @@ export function unavailableCopy(reason: UnavailableReason): {
           + "report, and an approximation is not offered in their place.",
       };
     case "interval_models_not_approved":
-      // FR-MODEL-100(ii) — NOT "the bounds are unapproved".
+      // FR-200(ii) — NOT "the bounds are unapproved".
       return {
         family: "gbm",
         headline: "The bounds are less advanced than this model",
@@ -65,7 +65,7 @@ export function unavailableCopy(reason: UnavailableReason): {
           + "Advance the bounds to at least this model's status.",
       };
     case "interval_models_stale":
-      // FR-MODEL-100(iii) — the literal reading of FR-MODEL-77's "superseded version".
+      // FR-200(iii) — the literal reading of FR-198's "superseded version".
       return {
         family: "gbm",
         headline: "This model version has been superseded",
@@ -75,7 +75,7 @@ export function unavailableCopy(reason: UnavailableReason): {
           + "without saying so.",
       };
     case "covariance_not_stored":
-      // FR-MODEL-93. Note what this reason is NOT: a blob that should exist and does not is
+      // FR-195. Note what this reason is NOT: a blob that should exist and does not is
       // a platform fault and surfaces as one. This is reachable only when the artifact
       // itself records no blob.
       return {
@@ -87,7 +87,7 @@ export function unavailableCopy(reason: UnavailableReason): {
           + "get an interval.",
       };
     case "model_type_has_no_interval":
-      // FR-MODEL-124.
+      // FR-180.
       return {
         family: "ebm",
         headline: "This model type offers no interval",
@@ -102,7 +102,7 @@ export function unavailableCopy(reason: UnavailableReason): {
 /**
  * What kind of claim an interval on this page is making.
  *
- * FR-MODEL-101 is the whole reason this function exists: a paired-quantile interval covers
+ * FR-201 is the whole reason this function exists: a paired-quantile interval covers
  * `Y` itself while `confidence_interval_mean` covers `E[Y|x]`, and "a reader comparing a
  * GBM's bound with a GLM's must be able to see they are not the same kind of claim". The two
  * strings must stay visibly different.
@@ -110,11 +110,11 @@ export function unavailableCopy(reason: UnavailableReason): {
 export function intervalClaim(kind: Exclude<UncertaintyKind, "unavailable">): string {
   switch (kind) {
     case "confidence_interval_mean":
-      // FR-MODEL-98: exactly one confidence-side kind, and it is "never silently widened"
+      // FR-196: exactly one confidence-side kind, and it is "never silently widened"
       // into a process-variance prediction interval.
       return "the average outcome for rows like this one";
     case "quantile_pair_interval":
-      // FR-MODEL-101.
+      // FR-201.
       return "an individual outcome for a row like this one";
   }
 }

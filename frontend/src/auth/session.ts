@@ -5,7 +5,7 @@ import { clearAccessToken, setAccessToken } from "../api/client";
 import { loadAuthConfig } from "./config";
 import { buildManager, completeSignin } from "./oidc";
 
-/** The session is in memory only (FR-PLAT-2, load-bearing per OQ-PLAT-6): a hard reload
+/** The session is in memory only (FR-388, load-bearing per OQ-644): a hard reload
  *  clears it, and the boot sequence (Task 6) restores it through a silent provider check —
  *  an act of the provider session, not of storage. A module singleton, not a Pinia store:
  *  the filed W6b-11 plan owns the app's first store (Finding 5). */
@@ -34,12 +34,12 @@ export async function initSession(): Promise<User | null> {
   manager.events.addUserLoaded((user) => adopt(user));
   manager.events.addUserSignedOut(() => adopt(null));
   manager.events.addAccessTokenExpiring(() => {
-    // FR-PLAT-55: renewal is silent; a hard reload alone would look logged-out.
+    // FR-393: renewal is silent; a hard reload alone would look logged-out.
     void manager?.signinSilent();
   });
   manager.events.addSilentRenewError(() => {
     // An expired session that looks logged in is how a user comes to believe the
-    // platform lost their work — so failure logs out (FR-PLAT-55's sentence).
+    // platform lost their work — so failure logs out (FR-393's sentence).
     void manager?.signoutRedirect();
   });
   const user = await manager.getUser();

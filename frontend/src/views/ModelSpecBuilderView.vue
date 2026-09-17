@@ -6,7 +6,7 @@
  * before any compute is spent. `W6b-4a` covers the **builtin** objective arm; `W6b-4b`
  * adds custom objectives.
  *
- * **FR-MODEL-19's limb A is deliberately not implemented here.** The requirement sets
+ * **FR-111's limb A is deliberately not implemented here.** The requirement sets
  * actuarial defaults per response type — severity → Gamma, `weight = claim_count`, and so
  * on — and **nothing in `model-schema` exposes that mapping**: `response` is a flat
  * optional field, the only response-keyed table is the objective *applicability* one
@@ -86,8 +86,8 @@ const gbmBackend = ref<"xgboost" | "lightgbm">("xgboost");
  * a custom one `ref` and no `name`.
  */
 const gbmObjective = ref<GbmFunctionRef>({ kind: "builtin", name: "count:poisson" });
-// FR-MODEL-32: `categorical_handling` is **required with no default** — "a default would
-// be the silence the requirement exists to refuse". The permissive spec type (OQ-PLAT-16)
+// FR-131: `categorical_handling` is **required with no default** — "a default would
+// be the silence the requirement exists to refuse". The permissive spec type (OQ-655)
 // kept it required, so the GBM arm must name it; it is the only required field the three
 // arms leave to the form.
 const gbmCategoricalHandling = ref<"native" | "factor_encoding">("native");
@@ -123,7 +123,7 @@ const common = computed(() => ({
 /**
  * `null` until the three required fields are present — no point asking before then.
  *
- * `ModelSpec` aliases the **permissive** generated set (OQ-PLAT-16 (c)): a server-defaulted
+ * `ModelSpec` aliases the **permissive** generated set (OQ-655 (c)): a server-defaulted
  * property (`alpha`, `seed`, `loss_treatment`, …) is optional on the way out and the server
  * fills it in, so the three arm objects assign directly — no cast, and a misspelled field
  * is a compile error rather than a runtime one. The alternative — spelling out every
@@ -209,7 +209,7 @@ watch(spec, (current) => {
  * Measured against the running API: a spec the *type* refuses — Poisson with no offset —
  * comes back **422**, `title: "Request validation failed"`, `detail: "1 field(s) failed
  * validation."`, and the sentence that actually helps ("a Poisson model must declare an
- * offset (FR-MODEL-19 …)") **only** inside `errors[]`. The 404 for an absent dataset
+ * offset (FR-111 …)") **only** inside `errors[]`. The 404 for an absent dataset
  * version carries an empty `errors[]` and its meaning in `title`/`detail`.
  *
  * So the discriminator is the presence of field errors, not the status code and not the
@@ -557,7 +557,7 @@ onMounted(async () => {
       <FormField
         field-id="gbm-categorical-handling"
         label="Categorical handling"
-        help="FR-MODEL-32: native uses the backend's categorical support; factor_encoding takes the mapping from the Factor's grouping. No default, so the form must name it."
+        help="FR-131: native uses the backend's categorical support; factor_encoding takes the mapping from the Factor's grouping. No default, so the form must name it."
       >
         <select
           id="gbm-categorical-handling"
@@ -670,7 +670,7 @@ onMounted(async () => {
 
         <!--
           The complexity block, drawn whenever a validation response has arrived and
-          **independent of `ok`** (FR-MODEL-81). Complexity is "a diagnostic by default,
+          **independent of `ok`** (FR-185). Complexity is "a diagnostic by default,
           and a gate only where a workspace asks for one": both limits are unset unless a
           workspace sets them, so in a default workspace no `complexity_limit` problem is
           ever raised and `ok` stays true for a spec with 300 factors on 40 exposure-years.

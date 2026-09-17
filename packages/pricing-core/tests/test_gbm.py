@@ -1,7 +1,7 @@
 """GBM fitting and scoring, on both backends (`02` FR-MODEL-25..32, 71..73, §5.2).
 
 **Every test that can run on both backends does.** That is not thoroughness for its own
-sake: FR-MODEL-72 exists because the two libraries agree at fit time and disagree at
+sake: FR-129 exists because the two libraries agree at fit time and disagree at
 prediction time, and a suite that exercised only the primary backend would have reported
 the secondary one working while it under-predicted by exactly the offset. `parametrize`
 over `BACKENDS` is the mechanism, and a test that names one backend explicitly should say
@@ -120,7 +120,7 @@ def _severity_data(n: int = 4_000, seed: int = 20260822) -> pl.DataFrame:
 
     Within every region, the severities are 1.0 and 9.0 in equal numbers — an unweighted
     mean of 5.0 — and the claim counts are 9 on the 1.0 rows and 1 on the 9.0 rows, so
-    the claim-count-weighted mean is 1.8. FR-MODEL-19 makes claim-count weighting the
+    the claim-count-weighted mean is 1.8. FR-111 makes claim-count weighting the
     severity default, and the two numbers are far enough apart that no fitting noise can
     confuse them.
     """
@@ -138,9 +138,9 @@ def _severity_data(n: int = 4_000, seed: int = 20260822) -> pl.DataFrame:
 
 
 def _severity_spec(backend: str, **over: object) -> GbmSpec:
-    """FR-MODEL-19's severity defaults on a GBM: Gamma objective, claim-count weights.
+    """FR-111's severity defaults on a GBM: Gamma objective, claim-count weights.
 
-    `reg:gamma` on **both** backends: `_OBJECTIVES` is keyed on FR-MODEL-26's XGBoost
+    `reg:gamma` on **both** backends: `_OBJECTIVES` is keyed on FR-120's XGBoost
     spelling and translates to LightGBM's `gamma` itself, so naming the LightGBM spelling
     here would be refused as outside the requirement's set.
     """
@@ -155,14 +155,14 @@ def _severity_spec(backend: str, **over: object) -> GbmSpec:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-27 / FR-MODEL-72 — the offset, at fit time and at scoring time
+# FR-121 / FR-129 — the offset, at fit time and at scoring time
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-72")
+@pytest.mark.req("FR-129")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_prediction_scales_exactly_with_exposure(backend: str) -> None:
-    """The decisive test for FR-MODEL-72, and the reason it is parametrized.
+    """The decisive test for FR-129, and the reason it is parametrized.
 
     With `log(exposure)` as the offset, `μ = exposure · exp(f(x))`. Doubling exposure must
     therefore double the prediction *exactly* — it is arithmetic, not a fitted effect.
@@ -188,11 +188,11 @@ def test_a_prediction_scales_exactly_with_exposure(backend: str) -> None:
     assert np.allclose(ratio, 2.0, rtol=1e-5), f"{backend}: exposure is not in the score"
 
 
-@pytest.mark.req("NFR-RATE-14")
+@pytest.mark.req("NFR-501")
 def test_load_gbm_booster_applies_nthread_once_at_load_time(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-W11-1-2 / NFR-RATE-14: `nthread` must reach the booster as a live parameter, not
+    """F-W11-1-2 / NFR-501: `nthread` must reach the booster as a live parameter, not
     merely an accepted-and-silently-ignored keyword — `zen-evaluate-concurrency.md`'s own
     trap warns against exactly this class of mistake (verify the effect, not that the call
     was accepted). Verified against XGBoost's own `set_param`, called by `load_gbm_booster`
@@ -225,19 +225,19 @@ def test_load_gbm_booster_applies_nthread_once_at_load_time(
     assert {"nthread": 1} not in calls, "omitting nthread must not touch the thread parameter"
 
 
-@pytest.mark.req("NFR-RATE-14")
+@pytest.mark.req("NFR-501")
 def test_predict_gbm_never_reconfigures_an_already_loaded_booster(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The other half of the same fix, and the one that matters most: `predict_gbm` must
     **not** call `set_param` again on a booster it did not itself just load, no matter what
     `nthread` it is given. This is not a style preference — verified live (not in this
-    test, which cannot reproduce timing-dependent native crashes reliably, but in the W11
+    test, which cannot reproduce timing-dependent native crashes reliably, but in the WK-671
     Task 1.4 research note) that `set_param` racing a concurrent `predict()` on the *same*
     shared `Booster` crashes with `XGBoostError: Check failed:
     !this->need_configuration_`. `CompiledBundle.boosters` is exactly such a shared,
     concurrently-scored object, so this guard is what keeps `nthread` from reintroducing
-    the crash Ruling 8's loaded-booster seam was built to get away from in the first place.
+    the crash RL-874's loaded-booster seam was built to get away from in the first place.
     """
     import xgboost as xgb
 
@@ -264,7 +264,7 @@ def test_predict_gbm_never_reconfigures_an_already_loaded_booster(
     assert {"nthread": 1} in calls, "a freshly-loaded (unshared) booster must still take nthread"
 
 
-@pytest.mark.req("FR-MODEL-27")
+@pytest.mark.req("FR-121")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_fitted_model_reproduces_the_observed_claim_total(backend: str) -> None:
     """The offset on the *fit* side, in the units an actuary would check first.
@@ -286,10 +286,10 @@ def test_the_fitted_model_reproduces_the_observed_claim_total(backend: str) -> N
     assert predicted == pytest.approx(observed, rel=0.05)
 
 
-@pytest.mark.req("FR-MODEL-71")
+@pytest.mark.req("FR-126")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_scoring_frame_without_the_offset_column_is_refused(backend: str) -> None:
-    """FR-MODEL-71: a booster whose offset cannot be reconstructed is a **hard failure**.
+    """FR-126: a booster whose offset cannot be reconstructed is a **hard failure**.
 
     Never a warning and never a silent fallback to no offset, because that fallback is the
     thing that fails silently: the predictions come back, they are the right shape, and
@@ -301,7 +301,7 @@ def test_a_scoring_frame_without_the_offset_column_is_refused(backend: str) -> N
         predict_gbm(fit.result, fit.booster_bytes, data.drop("exposure_years"))
 
 
-@pytest.mark.req("FR-MODEL-27")
+@pytest.mark.req("FR-121")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_counting_objective_refuses_a_book_with_no_exposure(backend: str) -> None:
     """The spec refuses this at the type; this is the fit path refusing the *data*.
@@ -321,16 +321,16 @@ def test_a_counting_objective_refuses_a_book_with_no_exposure(backend: str) -> N
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-31 / NFR-MODEL-6 — what is persisted, and that it reproduces
+# FR-125 / NFR-481 — what is persisted, and that it reproduces
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-31")
+@pytest.mark.req("FR-125")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_booster_is_the_backends_own_text_format_and_addresses_itself(
     backend: str,
 ) -> None:
-    """FR-MODEL-31 / ADR-0003: JSON or text, content-addressed, never a pickle.
+    """FR-125 / ADR-705: JSON or text, content-addressed, never a pickle.
 
     The digest is checked against the bytes rather than trusted: a `BlobRef` whose sha256
     does not describe its payload is a reference that will resolve to something else after
@@ -346,13 +346,13 @@ def test_the_booster_is_the_backends_own_text_format_and_addresses_itself(
     assert text.lstrip().startswith("{" if backend == "xgboost" else "tree")
 
 
-@pytest.mark.req("NFR-MODEL-6")
+@pytest.mark.req("NFR-481")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_same_spec_and_seed_produce_the_same_booster(backend: str) -> None:
-    """NFR-MODEL-6: an identical `spec_hash` and seed reproduce an identical booster hash.
+    """NFR-481: an identical `spec_hash` and seed reproduce an identical booster hash.
 
     Stated over the **digest**, not over the predictions: two boosters that predict alike
-    on one frame are not the same model, and FR-OVR-8's reproducibility claim is about the
+    on one frame are not the same model, and FR-11's reproducibility claim is about the
     artifact.
     """
     data = _frequency_data()
@@ -362,14 +362,14 @@ def test_the_same_spec_and_seed_produce_the_same_booster(backend: str) -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-28 / FR-MODEL-30 / FR-MODEL-32 — the constraints and the vocabulary
+# FR-122 / FR-124 / FR-131 — the constraints and the vocabulary
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-28")
+@pytest.mark.req("FR-122")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_monotone_constraints_are_derived_from_the_factors_and_hold(backend: str) -> None:
-    """FR-MODEL-28: the direction is declared on the Factor and derived here.
+    """FR-122: the direction is declared on the Factor and derived here.
 
     Checked as *behaviour* as well as as a persisted vector, because a constraint vector
     that reached the backend in the wrong order would still be persisted correctly and
@@ -417,11 +417,11 @@ def _licence_data(n: int = 8_000, seed: int = 20260817) -> pl.DataFrame:
     })
 
 
-@pytest.mark.req("FR-MODEL-28")
+@pytest.mark.req("FR-122")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_monotone_direction_holds_on_a_banded_factor(backend: str) -> None:
-    """A banding is **ordered**, so FR-MODEL-28 applies to it — `02` §4.4's own example is a
-    monotone constraint on `driver_age_banded`, and `wf-01` C7 declares one.
+    """A banding is **ordered**, so FR-122 applies to it — `02` §4.4's own example is a
+    monotone constraint on `driver_age_banded`, and `WF-698` C7 declares one.
 
     The order has to come from the Banding artifact. Encoding the levels with a plain
     `sorted()` puts `"10-49"` second, between `"0-1"` and `"2-4"`, so a decreasing
@@ -430,7 +430,7 @@ def test_a_monotone_direction_holds_on_a_banded_factor(backend: str) -> None:
     chosen so the two orders differ; sweeping the bands in the artifact's order is the only
     check that notices.
 
-    Found by the `wf-01` journey test on 2026-08-17: the guard refused this constraint
+    Found by the `WF-698` journey test on 2026-08-17: the guard refused this constraint
     outright, because the encoding it was defending against was the module's own.
     """
     banded = _factor(
@@ -470,7 +470,7 @@ def test_a_monotone_direction_holds_on_a_banded_factor(backend: str) -> None:
     assert np.all(np.diff(predictions) <= 1e-12), f"{backend}: the constraint did not hold"
 
 
-@pytest.mark.req("FR-MODEL-28")
+@pytest.mark.req("FR-122")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_monotone_direction_on_an_unordered_categorical_is_refused(backend: str) -> None:
     """"Increasing in `area`" is not a claim that can be true.
@@ -488,10 +488,10 @@ def test_a_monotone_direction_on_an_unordered_categorical_is_refused(backend: st
         fit_gbm(_frequency_data(), _spec(backend, factors=tuple(f.id for f in factors)), factors)
 
 
-@pytest.mark.req("FR-MODEL-30")
+@pytest.mark.req("FR-124")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_early_stopping_without_the_holdout_frame_is_refused(backend: str) -> None:
-    """FR-MODEL-30: early stopping requires a declared holdout, and a declared holdout is
+    """FR-124: early stopping requires a declared holdout, and a declared holdout is
     not the same as one that arrived.
 
     `GbmSpec` refuses a stopping rule with no `split_ref`; this refuses a caller that
@@ -505,10 +505,10 @@ def test_early_stopping_without_the_holdout_frame_is_refused(backend: str) -> No
         fit_gbm(_frequency_data(), spec, FACTORS)
 
 
-@pytest.mark.req("FR-MODEL-30")
+@pytest.mark.req("FR-124")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_early_stopping_records_the_curve_and_the_iteration_it_chose(backend: str) -> None:
-    """FR-MODEL-30: the chosen iteration count, the full curve and the metric are persisted.
+    """FR-124: the chosen iteration count, the full curve and the metric are persisted.
 
     All three, because each answers a different question at review: which model this is,
     whether it had stopped improving, and against what.
@@ -520,17 +520,17 @@ def test_early_stopping_records_the_curve_and_the_iteration_it_chose(backend: st
     assert fit.eval_curve
     assert fit.result.best_iteration >= 1
     assert {point.metric for point in fit.eval_curve} == {"poisson-nloglik"}
-    # FR-MODEL-52 asks for **both** partitions, and FR-MODEL-54 calls one of them alone a
+    # FR-174 asks for **both** partitions, and FR-183 calls one of them alone a
     # defect. A curve on the holdout only cannot show the divergence early stopping exists
     # to catch, which is the whole reason the pair is one row rather than two series.
     assert all(point.holdout is not None for point in fit.eval_curve)
     assert all(point.train is not None for point in fit.eval_curve)
 
 
-@pytest.mark.req("FR-MODEL-32")
+@pytest.mark.req("FR-131")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_categorical_encoding_is_persisted_and_reused(backend: str) -> None:
-    """FR-MODEL-32: silent label-encoding is refused — so the map is part of the artifact.
+    """FR-131: silent label-encoding is refused — so the map is part of the artifact.
 
     Reused rather than recomputed at scoring time: a map derived from the scoring frame
     would renumber the levels whenever a level was absent from it, and every prediction
@@ -546,7 +546,7 @@ def test_the_categorical_encoding_is_persisted_and_reused(backend: str) -> None:
     assert np.allclose(subset.to_numpy(), both.filter(data["area"] == "rural").to_numpy())
 
 
-@pytest.mark.req("FR-MODEL-32")
+@pytest.mark.req("FR-131")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_level_the_model_never_saw_is_refused_at_scoring(backend: str) -> None:
     """A level absent from the persisted map has no code, and inventing one would score it
@@ -558,14 +558,14 @@ def test_a_level_the_model_never_saw_is_refused_at_scoring(backend: str) -> None
         predict_gbm(fit.result, fit.booster_bytes, unseen)
 
 
-@pytest.mark.req("FR-MODEL-26")
+@pytest.mark.req("FR-120")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_an_objective_outside_the_supported_set_is_named_not_passed_through(
     backend: str,
 ) -> None:
-    """FR-MODEL-26 names a closed set, and it is spelled in XGBoost's vocabulary.
+    """FR-120 names a closed set, and it is spelled in XGBoost's vocabulary.
 
-    Translating it per backend is what FR-MODEL-25's "one contract" means: `count:poisson`
+    Translating it per backend is what FR-119's "one contract" means: `count:poisson`
     is `poisson` to LightGBM, and a spec that fitted on one backend and failed on the other
     would be a forked contract wearing a shared name.
     """
@@ -574,13 +574,13 @@ def test_an_objective_outside_the_supported_set_is_named_not_passed_through(
         fit_gbm(_frequency_data(), spec, FACTORS)
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_custom_objective_reference_with_no_artifact_is_refused(backend: str) -> None:
     """The reference is not the loss, and `pricing-core` cannot fetch the difference.
 
     Until 2026-08-18 this refusal read "Custom Objectives are not built"; they are now, and
-    the refusal that remains is ADR-0001's. `pricing-core` does not read the objective
+    the refusal that remains is ADR-703's. `pricing-core` does not read the objective
     store, so a spec naming a reference with no artifact beside it is a caller that
     resolved nothing, and the message says so rather than failing deeper in.
     """
@@ -592,14 +592,14 @@ def test_a_custom_objective_reference_with_no_artifact_is_refused(backend: str) 
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-73 — the loss treatment, applied at fit time
+# FR-127 — the loss treatment, applied at fit time
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-73")
+@pytest.mark.req("FR-127")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_capped_response_is_capped_as_the_model_is_fitted(backend: str) -> None:
-    """FR-MODEL-73: the cap is applied to the response here, never to the dataset.
+    """FR-127: the cap is applied to the response here, never to the dataset.
 
     Asserted as an equivalence — fitting capped data with no treatment must give the same
     booster as fitting raw data with the treatment — because that is the property that
@@ -623,10 +623,10 @@ def test_a_capped_response_is_capped_as_the_model_is_fitted(backend: str) -> Non
     assert uncapped.result.booster_blob.sha256 != treated.result.booster_blob.sha256
 
 
-@pytest.mark.req("FR-MODEL-73")
+@pytest.mark.req("FR-127")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_treatment_this_slice_does_not_implement_is_refused_by_name(backend: str) -> None:
-    """`spliced` and `excess` are declared by FR-MODEL-73 and built by nothing.
+    """`spliced` and `excess` are declared by FR-127 and built by nothing.
 
     Refused with the requirement's name in the message rather than applied as `none`,
     which would silently fit an uncapped model under a spec that says otherwise — and the
@@ -637,10 +637,10 @@ def test_a_treatment_this_slice_does_not_implement_is_refused_by_name(backend: s
         fit_gbm(_frequency_data(), spec, FACTORS)
 
 
-@pytest.mark.req("FR-MODEL-29")
+@pytest.mark.req("FR-123")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_an_interaction_group_naming_an_unknown_feature_is_refused(backend: str) -> None:
-    """FR-MODEL-29's constraint is positional once it reaches either backend, and both
+    """FR-123's constraint is positional once it reaches either backend, and both
     **ignore** a name that matches no feature.
 
     Ignored means the group silently permits what it was written to forbid — the failure
@@ -652,7 +652,7 @@ def test_an_interaction_group_naming_an_unknown_feature_is_refused(backend: str)
         fit_gbm(_frequency_data(), spec, FACTORS)
 
 
-@pytest.mark.req("FR-MODEL-29")
+@pytest.mark.req("FR-123")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_declared_interaction_group_reaches_the_backend(backend: str) -> None:
     """The happy path, because the refusal above proves only the refusal.
@@ -668,7 +668,7 @@ def test_a_declared_interaction_group_reaches_the_backend(backend: str) -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-52 — GBM diagnostics
+# FR-174 — GBM diagnostics
 # --------------------------------------------------------------------------------------
 
 
@@ -723,15 +723,15 @@ def _curve_for(diagnostics, factor_slug: str):  # type: ignore[no-untyped-def]
     raise AssertionError(f"no curve for {factor_slug!r}; got {available}")
 
 
-@pytest.mark.req("FR-MODEL-54")
+@pytest.mark.req("FR-183")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_gbm_reports_both_partitions_through_the_same_code_as_a_glm(backend: str) -> None:
-    """FR-MODEL-50 says the universal diagnostics are for *all model types*, and
-    FR-MODEL-54 says both partitions or it is a defect.
+    """FR-171 says the universal diagnostics are for *all model types*, and
+    FR-183 says both partitions or it is a defect.
 
     Both hold here because `_partition` takes `mu` and knows nothing about how it was
     produced — the same function computes a GLM's A/E and a GBM's. Two implementations
-    would drift, and FR-MODEL-56's comparison would then be two conventions placed side by
+    would drift, and FR-186's comparison would then be two conventions placed side by
     side rather than a comparison.
     """
     _, diagnostics = _diagnose(backend)
@@ -742,10 +742,10 @@ def test_a_gbm_reports_both_partitions_through_the_same_code_as_a_glm(backend: s
     assert diagnostics.gbm is not None
 
 
-@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-174")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_three_split_importances_are_reported_and_cover_is_honest(backend: str) -> None:
-    """FR-MODEL-52 asks for gain, cover and frequency.
+    """FR-174 asks for gain, cover and frequency.
 
     LightGBM exposes `split` and `gain` and **no cover**, so `cover` is `None` there rather
     than zero. A zero would read as a measurement — "this feature covered no rows" — when
@@ -762,12 +762,12 @@ def test_the_three_split_importances_are_reported_and_cover_is_honest(backend: s
         assert all(i.cover is None for i in diagnostics.gbm.importances)
 
 
-@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-174")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_permutation_importance_degrades_the_holdout_when_signal_is_destroyed(
     backend: str,
 ) -> None:
-    """FR-MODEL-52's permutation importance answers a different question from split
+    """FR-174's permutation importance answers a different question from split
     importance: what would this model lose if the variable were noise.
 
     Asserted as a *degradation*, on the holdout, for a factor the data-generating process
@@ -781,8 +781,8 @@ def test_permutation_importance_degrades_the_holdout_when_signal_is_destroyed(
     assert by_feature["driv_age"].permuted > by_feature["driv_age"].baseline
 
 
-@pytest.mark.req("FR-MODEL-52")
-@pytest.mark.req("FR-MODEL-125")
+@pytest.mark.req("FR-174")
+@pytest.mark.req("FR-181")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_partial_dependence_shares_are_exposure_and_not_row_counts(backend: str) -> None:
     """A frame where the two definitions disagree by construction.
@@ -813,8 +813,8 @@ def test_partial_dependence_shares_are_exposure_and_not_row_counts(backend: str)
     assert sum(share.values()) == pytest.approx(1.0)
 
 
-@pytest.mark.req("FR-MODEL-52")
-@pytest.mark.req("FR-MODEL-125")
+@pytest.mark.req("FR-174")
+@pytest.mark.req("FR-181")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_numeric_partial_dependence_point_carries_the_exposure_at_that_value(
     backend: str,
@@ -869,7 +869,7 @@ def _region_grouping() -> Grouping:
     )
 
 
-@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.req("FR-175")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_banded_factor_has_one_partial_dependence_point_per_band(backend: str) -> None:
     """The curve's axis must be the axis the model was fitted on.
@@ -901,7 +901,7 @@ def test_a_banded_factor_has_one_partial_dependence_point_per_band(backend: str)
     assert sum(point.exposure_share for point in curve.points) == pytest.approx(1.0)
 
 
-@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.req("FR-175")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_grouped_factor_has_one_partial_dependence_point_per_group(backend: str) -> None:
     """Six regions behind two groups is two points, labelled with the groups.
@@ -935,10 +935,10 @@ def test_a_grouped_factor_has_one_partial_dependence_point_per_group(backend: st
     assert sum(point.exposure_share for point in curve.points) == pytest.approx(1.0)
 
 
-@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-174")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_monotonicity_is_verified_on_the_fitted_response_not_assumed(backend: str) -> None:
-    """FR-MODEL-52: *that the fitted response actually respects declared constraints*.
+    """FR-174: *that the fitted response actually respects declared constraints*.
 
     A constraint is a parameter handed to a library. What makes it true of this model is
     that something swept the factor and looked — which is also what
@@ -957,10 +957,10 @@ def test_monotonicity_is_verified_on_the_fitted_response_not_assumed(backend: st
     assert checks["driv_age"].declared == "increasing"
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_boosted_models_parameter_count_is_its_leaves(backend: str) -> None:
-    """FR-MODEL-81 records a fitted-parameter count on every fit, and a GBM has no
+    """FR-185 records a fitted-parameter count on every fit, and a GBM has no
     coefficient vector.
 
     Counting factors instead would report a stump and a thousand deep trees as equally
@@ -976,7 +976,7 @@ def test_a_boosted_models_parameter_count_is_its_leaves(backend: str) -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-39..46 — fitting under a Custom Objective
+# FR-143, FR-144, FR-145, FR-146, FR-152, FR-153, FR-154, FR-163 — fitting under a Custom Objective
 # --------------------------------------------------------------------------------------
 
 
@@ -991,7 +991,7 @@ def _custom(
     """A fittable Custom Objective, defaulting to the template's own applicability.
 
     `status` defaults past `draft` and so a `certificate_id` is required — the contract
-    refuses one without it, which is FR-MODEL-42 and is tested where it lives.
+    refuses one without it, which is FR-146 and is tested where it lives.
     """
     fields: dict[str, object] = {
         "id": uuid4(), "slug": slug, "version": version, "template": template,
@@ -1022,10 +1022,10 @@ def _custom_spec(backend: str, objective: CustomObjective, **over: object) -> Gb
     return _spec(backend, **fields)
 
 
-@pytest.mark.req("FR-MODEL-72")
+@pytest.mark.req("FR-129")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_custom_objective_prediction_scales_exactly_with_exposure(backend: str) -> None:
-    """FR-MODEL-72's test again, and it is not a duplicate of the builtin one.
+    """FR-129's test again, and it is not a duplicate of the builtin one.
 
     A custom objective changes *who applies the inverse link* on both backends at once:
     XGBoost's `predict` transforms under a builtin objective and cannot under a callable
@@ -1047,7 +1047,7 @@ def test_a_custom_objective_prediction_scales_exactly_with_exposure(backend: str
     assert np.allclose(ratio, 2.0, rtol=1e-5), f"{backend}: exposure is not in the score"
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_custom_poisson_reproduces_the_observed_claim_total(backend: str) -> None:
     """The `poisson` template *is* `count:poisson`, so the fit it produces must be one.
@@ -1065,7 +1065,7 @@ def test_a_custom_poisson_reproduces_the_observed_claim_total(backend: str) -> N
     assert predicted == pytest.approx(observed, rel=0.05), f"{backend}: {predicted} vs {observed}"
 
 
-@pytest.mark.req("FR-MODEL-94")
+@pytest.mark.req("FR-130")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_artifact_records_who_applies_the_inverse_link(backend: str) -> None:
     """`inverse_link` is a claim about the *library*, not about the model's link function.
@@ -1107,7 +1107,7 @@ def _conversion_data(n: int = 6_000, seed: int = 20260818) -> pl.DataFrame:
     )
 
 
-@pytest.mark.req("FR-MODEL-94")
+@pytest.mark.req("FR-130")
 @pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("custom", [False, True], ids=["builtin", "custom"])
 def test_a_binomial_model_is_scored_through_its_own_link(backend: str, custom: bool) -> None:
@@ -1154,10 +1154,10 @@ def test_a_binomial_model_is_scored_through_its_own_link(backend: str, custom: b
         assert predicted.mean() == pytest.approx(float(data["claim_count"].mean()), abs=0.05)
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_an_objective_outside_its_declared_applicability_is_refused(backend: str) -> None:
-    """FR-MODEL-44, on each of the three axes an author can narrow.
+    """FR-153, on each of the three axes an author can narrow.
 
     Refused before the fit rather than reported after it: every one of these produces a
     model that converges, and a Poisson loss fitted to severity converges to a number that
@@ -1194,12 +1194,12 @@ def test_an_objective_outside_its_declared_applicability_is_refused(backend: str
     assert raised.value.code == "OBJECTIVE_REQUIRES_OFFSET"
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_custom_objective_without_a_declared_response_is_refused(backend: str) -> None:
     """A builtin objective names its family; a custom one does not, and neither may guess.
 
-    `response` is what FR-MODEL-44's applicability check and the diagnostics deviance are
+    `response` is what FR-153's applicability check and the diagnostics deviance are
     both read from — see `objective_family`. Fitting with it unset would mean picking one
     of the five, and the fit would be reported under a family nobody chose.
     """
@@ -1210,7 +1210,7 @@ def test_a_custom_objective_without_a_declared_response_is_refused(backend: str)
     assert raised.value.code == "OBJECTIVE_RESPONSE_UNDECLARED"
 
 
-@pytest.mark.req("FR-MODEL-46")
+@pytest.mark.req("FR-163")
 @pytest.mark.parametrize(
     "status", [ObjectiveStatus.DRAFT, ObjectiveStatus.DEPRECATED], ids=lambda s: s.value
 )
@@ -1219,7 +1219,7 @@ def test_an_objective_that_is_not_fittable_is_refused_by_its_status(
 ) -> None:
     """`02` R4: a model may not be fitted under an uncertified or withdrawn loss.
 
-    Both ends of FR-MODEL-46's lifecycle, because they fail for opposite reasons — a draft
+    Both ends of FR-163's lifecycle, because they fail for opposite reasons — a draft
     has never been certified and a deprecated one has been withdrawn — and a check written
     as `status is not approved` would pass `deprecated` straight through if the enum ever
     gained a member.
@@ -1235,7 +1235,7 @@ def test_an_objective_that_is_not_fittable_is_refused_by_its_status(
     assert status.value in str(raised.value)
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_an_artifact_that_is_not_the_one_the_spec_names_is_refused() -> None:
     """The spec's reference and the artifact handed in must be the same objective.
 
@@ -1254,7 +1254,7 @@ def test_an_artifact_that_is_not_the_one_the_spec_names_is_refused() -> None:
     assert raised.value.code == "OBJECTIVE_REF_MISMATCH"
 
 
-@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.req("FR-143")
 def test_an_artifact_supplied_for_a_builtin_spec_is_refused() -> None:
     """Two objectives, one fit. Ignoring either silently is the failure this refuses.
 
@@ -1269,15 +1269,15 @@ def test_an_artifact_supplied_for_a_builtin_spec_is_refused() -> None:
     assert "count:poisson" in str(raised.value)
 
 
-@pytest.mark.req("FR-MODEL-45")
+@pytest.mark.req("FR-154")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_early_stopping_under_a_custom_objective_is_refused_by_name(backend: str) -> None:
-    """FR-MODEL-45 is not built, and this is the shape of its absence.
+    """FR-154 is not built, and this is the shape of its absence.
 
     Under a callable objective both backends hand a builtin metric the raw score rather
     than the transformed prediction, so the metric it stops on is not the metric it names —
     and stopping on the wrong metric produces a model that is merely worse, never one that
-    errors. Refused with FR-MODEL-45 named, so the message says which capability is
+    errors. Refused with FR-154 named, so the message says which capability is
     missing.
     """
     objective = _custom()
@@ -1285,13 +1285,13 @@ def test_early_stopping_under_a_custom_objective_is_refused_by_name(backend: str
         backend, objective,
         early_stopping=EarlyStopping(on="holdout", metric="poisson-nloglik", rounds=5),
     )
-    with pytest.raises(GbmFitError, match="FR-MODEL-45") as raised:
+    with pytest.raises(GbmFitError, match="FR-154") as raised:
         fit_gbm(_frequency_data(), spec, FACTORS, objective=objective)
     assert raised.value.code == "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED"
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-106 / FR-MODEL-107 — `eval_metrics` honoured, early stopping on a custom metric
+# FR-159 / FR-160 — `eval_metrics` honoured, early stopping on a custom metric
 # --------------------------------------------------------------------------------------
 
 _METRIC_REF = "custom_metric:poisson-nll@1"
@@ -1322,12 +1322,12 @@ def _metric(
     return CustomMetric(**fields)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.req("FR-160")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_early_stopping_on_a_custom_metric_is_allowed_under_a_custom_objective(
     backend: str,
 ) -> None:
-    """The refusal FR-MODEL-45 was deferred behind is retired for a metric the spec names.
+    """The refusal FR-154 was deferred behind is retired for a metric the spec names.
 
     `evaluate_metric` is written against the raw score by construction, so the reason the
     unconditional refusal gave — a builtin metric silently sees the wrong quantity under a
@@ -1351,7 +1351,7 @@ def test_early_stopping_on_a_custom_metric_is_allowed_under_a_custom_objective(
     assert all(point.train is not None for point in fit.eval_curve)
 
 
-@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.req("FR-160")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_early_stopping_on_a_builtin_metric_is_still_refused_under_a_custom_objective(
     backend: str,
@@ -1370,7 +1370,7 @@ def test_early_stopping_on_a_builtin_metric_is_still_refused_under_a_custom_obje
         eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
         early_stopping=EarlyStopping(on="holdout", metric="poisson-nloglik", rounds=5),
     )
-    with pytest.raises(GbmFitError, match="FR-MODEL-45") as raised:
+    with pytest.raises(GbmFitError, match="FR-154") as raised:
         fit_gbm(
             _frequency_data(), spec, FACTORS, objective=objective, metrics={_METRIC_REF: metric}
         )
@@ -1380,7 +1380,7 @@ def test_early_stopping_on_a_builtin_metric_is_still_refused_under_a_custom_obje
 _OTHER_METRIC_REF = "custom_metric:poisson-nll-other@1"
 
 
-@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.req("FR-160")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_second_custom_eval_metric_survives_early_stopping_on_the_first(
     backend: str,
@@ -1392,7 +1392,7 @@ def test_a_second_custom_eval_metric_survives_early_stopping_on_the_first(
     metric *drives the stop*, not which metrics are *reported*. Nothing before this test
     declared more than one custom eval metric on the same spec, so a version of this
     module that mistook the first for a license to drop the second passed every other
-    test in this file. `gbm.py`'s own module docstring commits to FR-MODEL-25's "one
+    test in this file. `gbm.py`'s own module docstring commits to FR-119's "one
     contract, two backends" — this pins that XGBoost and LightGBM agree here, and that
     stopping still lands on the iteration a single-metric fit would choose, not on
     whichever metric happens to be first in `metrics`' insertion order.
@@ -1427,9 +1427,9 @@ def test_a_second_custom_eval_metric_survives_early_stopping_on_the_first(
     assert fit.result.best_iteration == solo.result.best_iteration
 
 
-@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.req("FR-159")
 def test_a_custom_eval_metric_that_was_not_supplied_refuses_the_fit() -> None:
-    """ADR-0001: `pricing-core` does not resolve refs, so an unsupplied one is the
+    """ADR-703: `pricing-core` does not resolve refs, so an unsupplied one is the
     caller's bug, not a lookup failure to retry."""
     spec = _spec(
         "xgboost", response=ResponseKind.CLAIM_COUNT,
@@ -1440,7 +1440,7 @@ def test_a_custom_eval_metric_that_was_not_supplied_refuses_the_fit() -> None:
     assert raised.value.code == "METRIC_REF_UNRESOLVED"
 
 
-@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.req("FR-159")
 def test_a_metric_whose_applicability_excludes_the_backend_refuses_the_fit() -> None:
     lightgbm_only = _metric(
         applicability=Applicability(
@@ -1459,7 +1459,7 @@ def test_a_metric_whose_applicability_excludes_the_backend_refuses_the_fit() -> 
     assert raised.value.code == "METRIC_NOT_APPLICABLE"
 
 
-@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.req("FR-159")
 def test_a_draft_metric_cannot_be_fitted_with() -> None:
     """FITTABLE_METRIC_STATUSES excludes draft: an uncertified metric is unproven."""
     draft = _metric(status=MetricStatus.DRAFT)
@@ -1472,10 +1472,10 @@ def test_a_draft_metric_cannot_be_fitted_with() -> None:
     assert raised.value.code == "METRIC_NOT_FITTABLE"
 
 
-@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.req("FR-159")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_builtin_eval_metric_reaches_the_backend(backend: str) -> None:
-    """The half that needed no FR-MODEL-45 machinery and was ignored anyway."""
+    """The half that needed no FR-154 machinery and was ignored anyway."""
     spec = _spec(backend, eval_metrics=(GbmFunctionRef(kind="builtin", name="poisson-nloglik"),))
     fit = fit_gbm(
         _frequency_data(), spec, FACTORS, holdout=_frequency_data(n=3_000, seed=99)
@@ -1484,14 +1484,14 @@ def test_a_builtin_eval_metric_reaches_the_backend(backend: str) -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-106 / FR-MODEL-107 — early stopping binds to the metric the **spec** names
+# FR-159 / FR-160 — early stopping binds to the metric the **spec** names
 #
 # Every test above stops on the only metric its spec declares, so "stopped on the named
 # metric" and "stopped on whatever the backend picked" were the same observation. These
 # construct the combinations where the two come apart, and each asserts *which* metric
 # drove the stop — by comparing against the fit whose spec declares that metric alone —
 # rather than that the fit succeeded. A fit that stops on the wrong metric always succeeds;
-# that is FR-MODEL-104's whole point.
+# that is FR-156's whole point.
 # --------------------------------------------------------------------------------------
 
 #: Aggressive enough that the holdout genuinely overfits inside the round cap. Without
@@ -1499,7 +1499,7 @@ def test_a_builtin_eval_metric_reaches_the_backend(backend: str) -> None:
 _STOPPING_HYPERPARAMETERS = {"max_depth": 6, "eta": 0.3, "num_boost_round": 300}
 
 
-@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.req("FR-159")
 @pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("stopping_declared_first", [True, False], ids=["first", "last"])
 def test_a_second_declared_builtin_does_not_also_drive_early_stopping(
@@ -1507,7 +1507,7 @@ def test_a_second_declared_builtin_does_not_also_drive_early_stopping(
 ) -> None:
     """Neither backend bound the stop to the spec's metric once `eval_metrics` held two.
 
-    LightGBM: before FR-MODEL-106 `params["metric"]` held the stopping metric and nothing
+    LightGBM: before FR-159 `params["metric"]` held the stopping metric and nothing
     else, so `first_metric_only=False` was harmless. Once a declared `eval_metrics` entry
     joined it, the callback halted as soon as **any** registered metric stalled — a
     stricter rule than the spec states, arrived at by omission.
@@ -1546,7 +1546,7 @@ def test_a_second_declared_builtin_does_not_also_drive_early_stopping(
 
     assert reported.result.best_iteration == solo.result.best_iteration
     # …and the second metric is still *reported*: binding the stop is an ordering choice,
-    # not a licence to drop what the spec asked to see (FR-MODEL-106).
+    # not a licence to drop what the spec asked to see (FR-159).
     assert {point.metric for point in reported.eval_curve} == {"mae", "poisson-nloglik"}
 
 
@@ -1557,7 +1557,7 @@ def test_a_second_declared_builtin_does_not_also_drive_early_stopping(
 _QUANTILE_METRIC_REF = "custom_metric:quantile-90@1"
 
 
-@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.req("FR-160")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_declared_custom_metric_does_not_capture_stopping_from_a_named_builtin(
     backend: str,
@@ -1569,7 +1569,7 @@ def test_a_declared_custom_metric_does_not_capture_stopping_from_a_named_builtin
     `early_stopping_rounds=` shorthand, used here until 2026-08-20 whenever stopping named
     a builtin, silently retargeted the stop at the last custom metric declared, with
     `maximize` inferred from a name it had never seen. LightGBM meanwhile stopped on the
-    builtin: one spec, two backends, two answers, which FR-MODEL-25's "one contract, two
+    builtin: one spec, two backends, two answers, which FR-119's "one contract, two
     backends" forbids.
     """
     quantile = _metric(
@@ -1598,7 +1598,7 @@ def test_a_declared_custom_metric_does_not_capture_stopping_from_a_named_builtin
     assert _QUANTILE_METRIC_REF in {point.metric for point in reported.eval_curve}
 
 
-@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.req("FR-160")
 def test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it() -> None:
     """A pinned library limitation, stated rather than left to be discovered.
 
@@ -1632,9 +1632,9 @@ def test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it() -> None:
     assert curves["lightgbm"] == {_METRIC_REF}
 
 
-@pytest.mark.req("FR-MODEL-111")
+@pytest.mark.req("FR-161")
 def test_lightgbm_records_the_builtin_eval_metric_it_dropped() -> None:
-    """The drop was correct and silent; FR-MODEL-111 makes it correct and legible.
+    """The drop was correct and silent; FR-161 makes it correct and legible.
 
     LightGBM evaluates builtin metrics before `feval`'s, so a builtin declared alongside
     a custom stopping target would take position 0 and drive the stop — the defect the
@@ -1662,7 +1662,7 @@ def test_lightgbm_records_the_builtin_eval_metric_it_dropped() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-111")
+@pytest.mark.req("FR-161")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_fit_that_evaluated_everything_drops_nothing(backend: str) -> None:
     """The control. A non-empty tuple on an ordinary fit would make the field noise, and
@@ -1672,11 +1672,11 @@ def test_a_fit_that_evaluated_everything_drops_nothing(backend: str) -> None:
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-19 — `spec.weight` reaches the backend
+# FR-111 — `spec.weight` reaches the backend
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-111")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_weight_column_of_ones_fits_identically_to_no_weight(backend: str) -> None:
     """The control for the weighting plumbing.
@@ -1696,7 +1696,7 @@ def test_a_weight_column_of_ones_fits_identically_to_no_weight(backend: str) -> 
     )
 
 
-@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-111")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_non_uniform_weights_change_the_fit(backend: str) -> None:
     """`spec.weight` was accepted and ignored by both GBM backends until 2026-08-22.
@@ -1704,7 +1704,7 @@ def test_non_uniform_weights_change_the_fit(backend: str) -> None:
     `fit_glm` has honoured it since it was written and `fit_ebm` since the EBM slice, so
     the same spec meant one thing for a GLM and another for a GBM. The symptom is silent:
     the fit succeeds, and `compute_diagnostics` then labels its metrics claim-count-
-    weighted (FR-MODEL-55) on the strength of a `spec.weight` the fit never read.
+    weighted (FR-184) on the strength of a `spec.weight` the fit never read.
     """
     data = _frequency_data().with_columns(
         (pl.col("exposure_years") * 10.0 + 1.0).alias("claim_count")
@@ -1719,17 +1719,17 @@ def test_non_uniform_weights_change_the_fit(backend: str) -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-19")
-@pytest.mark.req("FR-MODEL-55")
+@pytest.mark.req("FR-111")
+@pytest.mark.req("FR-184")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_gamma_severity_fit_weighted_by_claim_count_predicts_the_weighted_mean(
     backend: str,
 ) -> None:
-    """FR-MODEL-19's severity default, end to end, on the number it changes.
+    """FR-111's severity default, end to end, on the number it changes.
 
     Unweighted the book's mean severity is 5.0; weighted by claim count it is 1.8. Before
     2026-08-22 a GBM declaring `weight = claim_count` produced the first number while
-    `compute_diagnostics` labelled its metrics claim-count-weighted (FR-MODEL-55) — the
+    `compute_diagnostics` labelled its metrics claim-count-weighted (FR-184) — the
     label true of the metric and false of the model that produced it.
     """
     data = _severity_data()
@@ -1745,8 +1745,8 @@ def test_a_gamma_severity_fit_weighted_by_claim_count_predicts_the_weighted_mean
     )
 
 
-@pytest.mark.req("FR-MODEL-19")
-@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.req("FR-111")
+@pytest.mark.req("FR-146")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_custom_objective_receives_the_declared_weights(
     backend: str, monkeypatch: pytest.MonkeyPatch
@@ -1790,13 +1790,13 @@ def test_a_custom_objective_receives_the_declared_weights(
     np.testing.assert_allclose(seen[0], expected)
 
 
-@pytest.mark.req("FR-MODEL-103")
-@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-155")
+@pytest.mark.req("FR-111")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_custom_eval_metric_receives_the_declared_weights(
     backend: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """FR-MODEL-103 calls the metric an exposure-weighted mean; it was an unweighted one.
+    """FR-155 calls the metric an exposure-weighted mean; it was an unweighted one.
 
     Both `_custom_feval` helpers read `get_weight()` and fall back to ones exactly as the
     objective wrappers do, so a declared weight column left the reported metric weighted
@@ -1840,8 +1840,8 @@ def test_a_custom_eval_metric_receives_the_declared_weights(
 
 
 # --------------------------------------------------------------------------------------
-# FR-MODEL-118 / FR-MODEL-119 — what the partial-dependence sweep costs, and what it skips
-# (OQ-MODEL-26, decided 2026-08-22)
+# FR-175 / FR-176 — what the partial-dependence sweep costs, and what it skips
+# (OQ-596, decided 2026-08-22)
 # --------------------------------------------------------------------------------------
 
 
@@ -1872,7 +1872,7 @@ def _wide_book(n: int = 4_000, levels: int = 60, seed: int = 20260822) -> pl.Dat
 def _crossable_book(n: int = 6_000, seed: int = 20260822) -> pl.DataFrame:
     """`_frequency_data` with a second *categorical* column, so a cross has two legal sides.
 
-    FR-MODEL-97 refuses an interaction over a continuous operand, and `driv_age` is the only
+    FR-93 refuses an interaction over a continuous operand, and `driv_age` is the only
     other column there — so a cross cannot be built on that frame at all.
     """
     rng = np.random.default_rng(seed)
@@ -1945,15 +1945,15 @@ def _capped_book() -> pl.DataFrame:
     )
 
 
-@pytest.mark.req("FR-MODEL-118")
-@pytest.mark.req("NFR-MODEL-14")
+@pytest.mark.req("FR-175")
+@pytest.mark.req("NFR-488")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_categorical_grid_is_capped_and_says_what_it_dropped(backend: str) -> None:
-    """FR-MODEL-118: 20 bars, and the other 40 levels named rather than silently absent.
+    """FR-175: 20 bars, and the other 40 levels named rather than silently absent.
 
     The count is the whole point. Before this, one 60-level column cost 60 full-population
     scoring passes and the artifact recorded it as one factor — which is what made
-    NFR-MODEL-14's per-pass budget unbounded in the level count of its worst column.
+    NFR-488's per-pass budget unbounded in the level count of its worst column.
     """
     diagnostics = _diagnose_wide(backend)
     assert diagnostics.gbm is not None
@@ -1974,11 +1974,11 @@ def test_a_categorical_grid_is_capped_and_says_what_it_dropped(backend: str) -> 
 
 
 
-@pytest.mark.req("FR-MODEL-118")
-@pytest.mark.req("FR-MODEL-125")
+@pytest.mark.req("FR-175")
+@pytest.mark.req("FR-181")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_omitted_share_is_exposure_and_not_row_count(backend: str) -> None:
-    """FR-MODEL-125: the share is **exposure**, which the existing assertion cannot check.
+    """FR-181: the share is **exposure**, which the existing assertion cannot check.
 
     `0.0 < share < 0.5` above passes under both definitions, so W32-5's change is untested
     — the fixture there has no disagreement between the two rankings for it to detect. This
@@ -2015,7 +2015,7 @@ def test_the_omitted_share_is_exposure_and_not_row_count(backend: str) -> None:
     assert curve.omitted.exposure_share != pytest.approx(2 / 404, rel=1e-6)
 
 
-@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.req("FR-175")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_cap_keeps_the_most_exposed_levels_and_is_what_bounds_the_grid(
     backend: str,
@@ -2044,17 +2044,17 @@ def test_the_cap_keeps_the_most_exposed_levels_and_is_what_bounds_the_grid(
     assert min(shares[v] for v in kept) >= max(shares[v] for v in dropped)
 
 
-@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.req("FR-175")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_pooled_other_bar_cannot_be_computed_which_is_why_the_cap_truncates(
     backend: str,
 ) -> None:
     """The refutation the decision rests on, made checkable.
 
-    OQ-MODEL-26's recommendation was to pool the dropped levels into an "other" bar. A
+    OQ-596's recommendation was to pool the dropped levels into an "other" bar. A
     partial-dependence bar requires the column to be *held at a value and scored*, and a
     synthetic level the fitted model never saw has no code in its persisted encoding map —
-    FR-MODEL-32 refuses to invent one, because it would score as whichever level happens
+    FR-131 refuses to invent one, because it would score as whichever level happens
     to share the number. So there is no value the column can be held at to represent the
     pooled remainder, and the cap names what it dropped instead of summarising it.
     """
@@ -2070,12 +2070,12 @@ def test_a_pooled_other_bar_cannot_be_computed_which_is_why_the_cap_truncates(
     assert excinfo.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
 
 
-@pytest.mark.req("FR-MODEL-119")
+@pytest.mark.req("FR-176")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_gbm_declaring_an_interaction_produces_diagnostics_instead_of_an_indexerror(
     backend: str,
 ) -> None:
-    """FR-MODEL-119: both per-factor blocks assumed one source column per factor.
+    """FR-176: both per-factor blocks assumed one source column per factor.
 
     An `interaction` names none — its columns are its operands' — so
     `factor.source_columns[0]` raised `IndexError` inside permutation importance, at 0.60
@@ -2085,7 +2085,7 @@ def test_a_gbm_declaring_an_interaction_produces_diagnostics_instead_of_an_index
     """
     from pricing_core.modelling import compute_gbm_diagnostics
 
-    # Both operands must resolve to levels: FR-MODEL-97 refuses crossing a continuous one,
+    # Both operands must resolve to levels: FR-93 refuses crossing a continuous one,
     # so `driv_age` cannot be a side here.
     left = _factor("area", "area")
     right = _factor("fuel", "fuel")
@@ -2118,10 +2118,10 @@ def test_a_gbm_declaring_an_interaction_produces_diagnostics_instead_of_an_index
     assert curves["area"].points
 
 
-@pytest.mark.req("FR-MODEL-119")
+@pytest.mark.req("FR-176")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_gbm_can_fit_an_interaction_and_designs_on_the_cross_alone(backend: str) -> None:
-    """FR-MODEL-91's interaction arm was delivered for the GLM path only.
+    """FR-92's interaction arm was delivered for the GLM path only.
 
     `resolve_factors` **requires** a cross's operands to be supplied — it refuses a cross
     missing a side — and then gives them no term of their own, because the cross already
@@ -2158,9 +2158,9 @@ def _sparse_crossable_book(n: int = 6_000, seed: int = 20260822) -> pl.DataFrame
     """A crossable book whose cross is **sparse** — 3 observed cells of 9.
 
     `_crossable_book` draws `area` and `fuel` independently, so every cell of the cross is
-    populated. That is not what a cross looks like: FR-MODEL-91 makes only *observed*
+    populated. That is not what a cross looks like: FR-92 makes only *observed*
     combinations levels precisely because "on any real cross most cells are empty", and a
-    dense fixture is what hid FR-MODEL-122 for as long as it hid FR-MODEL-119. Here the
+    dense fixture is what hid FR-178 for as long as it hid FR-176. Here the
     two sides move together, so the cross carries its diagonal and nothing else.
     """
     rng = np.random.default_rng(seed)
@@ -2177,19 +2177,19 @@ def _sparse_crossable_book(n: int = 6_000, seed: int = 20260822) -> pl.DataFrame
     )
 
 
-@pytest.mark.req("FR-MODEL-122")
+@pytest.mark.req("FR-178")
 @pytest.mark.xfail(
     strict=True,
-    reason="FR-MODEL-122: an operand is permuted and swept ALONE, which recombines the "
+    reason="FR-178: an operand is permuted and swept ALONE, which recombines the "
     "operands into cells the fit never saw, so a sparse cross raises "
-    "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED out of compute_gbm_diagnostics. FR-MODEL-121 is the "
-    "remedy and W30 owns the slice; strict=True so that building it turns this green and "
+    "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED out of compute_gbm_diagnostics. FR-177 is the "
+    "remedy and WK-690 owns the slice; strict=True so that building it turns this green and "
     "forces the marker off rather than leaving a stale xfail behind.",
 )
 def test_a_gbm_with_a_sparse_interaction_can_produce_diagnostics() -> None:
-    """FR-MODEL-122, the defect FR-MODEL-119's skip-and-record interim did not reach.
+    """FR-178, the defect FR-176's skip-and-record interim did not reach.
 
-    FR-MODEL-119 stopped the `IndexError` by skipping the **cross**, and left the cross's
+    FR-176 stopped the `IndexError` by skipping the **cross**, and left the cross's
     **operands** in the list — `load_factors` returns `ordered + operands`, so they are
     always there. Both per-factor blocks then permute and sweep an operand's raw column on
     its own, and `predict_gbm` re-resolves the cross from those raw columns, so shuffling
@@ -2217,7 +2217,7 @@ def test_a_gbm_with_a_sparse_interaction_can_produce_diagnostics() -> None:
 
     spec = _spec("xgboost", factors=tuple(f.id for f in factors))
     fit = fit_gbm(train, spec, factors)
-    # The fit itself is fine — FR-MODEL-119 made it so, and the cross is the only feature.
+    # The fit itself is fine — FR-176 made it so, and the cross is the only feature.
     assert list(fit.result.feature_order) == ["area_x_fuel"]
 
     compute_gbm_diagnostics(

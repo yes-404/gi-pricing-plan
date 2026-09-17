@@ -5,7 +5,7 @@ export type Backtest = components["schemas"]["Backtest"];
 export type BacktestSummary = components["schemas"]["BacktestSummary"];
 
 /**
- * One stored backtest, by its own id (FR-MODEL-92, `02` §5.1).
+ * One stored backtest, by its own id (FR-94, `02` §5.1).
  *
  * Not nested under the model: a model has many backtests — one per period it has been
  * measured against — so unlike `Diagnostics` there is no "the" backtest for a model to fetch.
@@ -23,7 +23,7 @@ export function getBacktest(backtestId: string): Promise<Backtest> {
  * window is a real state: `backtests.py`'s ordering validator only fires when both ends are
  * present.
  *
- * The caption is deliberately not built from this (FR-MODEL-57) — a period in a column
+ * The caption is deliberately not built from this (FR-187) — a period in a column
  * heading would assert a relationship the artifact does not carry.
  */
 export function periodLabel(summary: BacktestSummary): string | null {

@@ -1,6 +1,6 @@
-# Local full stack (NFR-OVR-9: no cloud dependency).
+# Local full stack (NFR-462: no cloud dependency).
 #
-# Phase 1a brings up only what W2/W4 need. Services arrive as the workstreams that use
+# Phase 1a brings up only what WK-658/WK-660 need. Services arrive as the workstreams that use
 # them do — an unused container in the compose file is a claim the platform does not yet
 # support, and it makes `docker compose up` slower for no benefit.
 
@@ -31,7 +31,7 @@ services:
       timeout: 3s
       retries: 20
 
-  # Content-addressed blob store (ID-4). MinIO keeps NFR-OVR-9 honest — the same S3 API
+  # Content-addressed blob store (ID-4). MinIO keeps NFR-462 honest — the same S3 API
   # locally as in production, so the storage path is never "works on my machine".
   minio:
     image: minio/minio:latest
@@ -47,7 +47,7 @@ services:
       timeout: 3s
       retries: 20
 
-  # The local identity provider (FR-PLAT-58), behind an opt-in profile.
+  # The local identity provider (FR-398), behind an opt-in profile.
   #
   # Not in the default `up`: this file's own rule is that an unused container is a claim the
   # platform does not support, and three of the four services are needed by every
@@ -56,7 +56,7 @@ services:
   #
   # `start-dev` is deliberate. It runs HTTP-only against a dev-mode database, which is right
   # for a provider whose entire purpose is local, and refuses to be mistaken for the
-  # production deployment FR-PLAT-59 says this project does not ship.
+  # production deployment FR-437 says this project does not ship.
   keycloak:
     profiles: ["auth"]
     image: quay.io/keycloak/keycloak:26.7
