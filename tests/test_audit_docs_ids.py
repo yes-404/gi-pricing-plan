@@ -1457,10 +1457,66 @@ def _register_without(audit: types.ModuleType, path: str) -> tuple[object, ...]:
 
 
 def _run_check_35(audit: types.ModuleType) -> list[str]:
+    """`check_owner()`'s failures on the real tree, **minus** what `_partition_by_w37_11_
+    record` discloses — never the raw list. W37-6 (2026-09-17, class A loop 1, deputy
+    amendment): the real tree carries 27 genuine, pre-existing check-35 residue lines
+    (root docs/specs/*.md and similar, none of them a migration-caused defect — see the
+    exec report's per-path table) that the real `python3 scripts/audit-docs.py` run
+    already treats as disclosed, governed residue via the W37-11 record; calling
+    `check_owner()` directly, as every test below does, bypasses that partition entirely
+    unless it is applied here too. `_partition_by_w37_11_record` is **read, never
+    modified** — it is the same instrument `main()` calls, so a file the record does not
+    (yet) cover stays counted here exactly as it would in the real gate.
+    """
     audit.failures.clear()
     audit.notes.clear()
     audit.check_owner()
-    return list(audit.failures)
+    counted, _disclosed = audit._partition_by_w37_11_record()
+    return list(counted)
+
+
+def test_a_bad_owner_fixture_still_reds_through_the_w37_11_partition(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
+) -> None:
+    """Broken-input proof, class A loop 1 (deputy amendment): the W37-11 partition must
+    never swallow a genuine violation. `tests/fixtures/docs-ids/w37-4-checks/check35-bad-
+    owner.md` is a fixture, not part of the real corpus the W37-11 record governs, so its
+    "some-random-person" failure must survive `_partition_by_w37_11_record` and land in
+    `counted`, never in `disclosed`.
+    """
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check35-bad-owner.md",), monkeypatch, tmp_path,
+    )
+    assert any("some-random-person" in f for f in failures), failures
+    counted, disclosed = audit._partition_by_w37_11_record()
+    assert any("some-random-person" in f for f in counted), counted
+    assert not any("some-random-person" in f for f in disclosed), disclosed
+
+
+def test_a_disclosed_check_35_line_is_disclosed_by_its_class_not_a_hard_coded_path(
+    audit: types.ModuleType,
+) -> None:
+    """Positive control for `_run_check_35`'s partition: on the real, unmutated tree,
+    every line `_partition_by_w37_11_record` discloses must resolve (via `_docid.
+    residue_key_for_failure`, then to its control path) to a `(path, cls)` pair the real
+    W37-11 record actually names at or under its ceiling — proven by resolving each
+    disclosed message through the record's own machinery, never by asserting a fixed list
+    of paths this test would otherwise have to keep in sync with the record by hand.
+    """
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_owner()
+    _counted, disclosed = audit._partition_by_w37_11_record()
+    assert disclosed, "nothing was disclosed — check the record still covers this residue"
+
+    record = audit._docid.load_w37_11_record(audit.REPO)
+    ceiling = audit._docid.build_ceiling(record)
+    known_files = frozenset(audit._file_census.git_ls_files(audit.REPO))
+    keys = {audit._docid.residue_key_for_failure(msg, known_files) for msg in disclosed}
+    assert None not in keys, "a disclosed message carried no check number to key on"
+    resolved = audit._docid.resolve_keys_to_control_paths(keys, audit.REPO)
+    for key in keys:
+        assert resolved[key] in ceiling, (key, resolved[key])
 
 
 # ---------------------------------------------------------------------------------------
@@ -1547,7 +1603,7 @@ def test_f83_register_reconciles_clean_against_the_real_tree(
     # reads identically whether it compared 65 entries against 415 files or nothing
     # against nothing — the invisible-zero condition checks 30-39 are pinned against.
     assert f"{len(audit.UNSTAMPABLE_EXEMPTIONS)} exemption(s)" in note
-    assert "file(s) in NT-0019's stamp set" in note
+    assert "file(s) in RFC-937's stamp set" in note
 
 
 def test_f83_register_reds_naming_an_unstampable_file_it_does_not_list(
@@ -1617,7 +1673,7 @@ def test_f83_register_reds_on_a_stale_entry_naming_no_tracked_file(
     setattr(audit, "UNSTAMPABLE_EXEMPTIONS", (*audit.UNSTAMPABLE_EXEMPTIONS, entry))  # noqa: B010
     failures = _run_check_35(audit)
     assert len(failures) == 1, failures
-    assert "not in NT-0019's stamp set" in failures[0]
+    assert "not in RFC-937's stamp set" in failures[0]
 
 
 def test_f83_register_reds_on_a_duplicated_entry(audit: types.ModuleType) -> None:
@@ -1738,7 +1794,7 @@ def test_f83_reconciliation_reds_when_the_corpus_cannot_be_read(
     setattr(audit, "nt0019_stamp_set", boom)  # noqa: B010
     failures = _run_check_35(audit)
     assert len(failures) == 1, failures
-    assert "cannot enumerate NT-0019's stamp set" in failures[0]
+    assert "cannot enumerate RFC-937's stamp set" in failures[0]
     assert "could not invoke git" in failures[0]
 
 
