@@ -168,7 +168,8 @@ async def _split_frames(
 
 
 def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`model.fit` — fit the reserved model and store its coefficients (FR-110, FR-111, FR-112, FR-113).
+    """`model.fit` — fit the reserved model and store its coefficients (FR-110, FR-111, FR-112,
+    FR-113).
 
     The fit result is **data** (ADR-705): coefficients, standard errors, intervals and
     relativity tables, stored as JSON on the model row. No estimator is pickled, and

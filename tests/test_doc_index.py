@@ -217,11 +217,12 @@ def test_map_plan_rolls_up_all_closed() -> None:
     assert doc_index.derive_execution(_header(corpus, "PL-1329"), corpus) == "closed"
 
 
-# --- RL-983 (docs/rulings/RL-00983-the-map-plan-roll-up-runs-through-the-slices-and-has-no-catch-all.md): the map-plan
-# roll-up runs through the slices, and has no catch-all. Four regression fixtures, one per
-# named defect, each pinning the WRONG value an earlier version of `_rollup_map_plan`
-# produced (a `work:`-proxy enumeration over leaf plans, completed with a trailing
-# `return "not started"`), per the ruling's own §4 acceptance items.
+# --- RL-983
+# (docs/rulings/RL-00983-the-map-plan-roll-up-runs-through-the-slices-and-has-no-catch-all.md): the
+# map-plan roll-up runs through the slices, and has no catch-all. Four regression fixtures, one per
+# named defect, each pinning the WRONG value an earlier version of `_rollup_map_plan` produced (a
+# `work:`-proxy enumeration over leaf plans, completed with a trailing `return "not started"`), per
+# the ruling's own §4 acceptance items.
 
 
 def test_ruling_72_item_1_the_invisible_slice() -> None:
@@ -399,7 +400,10 @@ def test_phase_report_plans_superseded_and_rulings_per_work() -> None:
     assert "WK-1210: 0" in report
 
 
-# --- RL-982 (docs/rulings/RL-00982-the-phase-report-s-findings-element-is-phase-scoped-from-the-register-project-wide-is-a-defect-not-correct-behaviour.md): the findings
+# --- RL-982 (
+# docs/rulings/RL-00982-the-phase-report-s-findings-element-is-phase-scoped-from-the-register-
+# project-wide-is-a-defect-not-correct-behaviour.md
+# ): the findings
 # element is phase-scoped from `findings/register.md`, never from an `FD-` essay's header
 # (which, after RL-981, does not even carry `decision:` any more). The fixture register
 # holds: FD-1450 (P9, unowned, active), FD-1451 (P9, resolved -> closed), FD-1452 (P9,

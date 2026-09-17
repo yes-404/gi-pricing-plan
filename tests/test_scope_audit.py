@@ -1,8 +1,8 @@
 """`scripts/scope-audit.py`'s `--extra` flag refuses a token matching no requirement.
 
 `--extra` used to be a literal `args.extra.split(",")` with no shared-prefix inheritance,
-so the natural-looking `--extra FR-RATE-40,41,42,NFR-RATE-1,13,14` silently resolved to six
-tokens — `FR-257`, `"41"`, `"42"`, `NFR-489`, `"13"`, `"14"` — four of which match no
+so the natural-looking `--extra FR-257,258,259,NFR-489,502,501` silently resolved to six
+tokens — `FR-257`, `"258"`, `"259"`, `NFR-489`, `"502"`, `"501"` — four of which match no
 requirement anywhere. `main` folded every extra token into scope regardless of whether it
 was real, and an unmatched one still printed a `NO EVIDENCE` row indistinguishable from a
 genuine, untested requirement. Worse: one bogus token simply replaced the id it silently
@@ -70,25 +70,25 @@ def test_a_token_with_no_id_shape_at_all_is_refused_the_same_way() -> None:
 
 
 def test_the_real_world_comma_split_shape_is_refused_not_half_accepted() -> None:
-    """The exact string that caused the incident, verbatim: `FR-RATE-40,41,42,NFR-RATE-1,13,14`.
+    """The incident shape, in the post-migration flat-id form: `FR-257,258,259,NFR-489,502,501`.
 
     Comma-splitting turns six intended ids into six literal tokens, four of which —
-    `"41"`, `"42"`, `"13"`, `"14"` — match no requirement. Each must get a targeted hint
+    `"258"`, `"259"`, `"502"`, `"501"` — match no requirement. Each must get a targeted hint
     naming the prefix a human reader assumes it inherited from the id before it, and the
     whole list must be refused together: accepting `FR-257` and `NFR-489` alone
     while rejecting the rest would be the same half-accepted shape as the original defect,
     one level down.
     """
     result = _run(
-        "RATE", "--sections", "3.7", "--extra", "FR-RATE-40,41,42,NFR-RATE-1,13,14"
+        "RATE", "--sections", "3.7", "--extra", "FR-257,258,259,NFR-489,502,501"
     )
     assert result.returncode != 0, result.stdout + result.stderr
     assert "--extra names 4 token(s) matching no requirement" in result.stdout
     for bad, guess in [
-        ("41", "FR-258"),
-        ("42", "FR-259"),
-        ("13", "NFR-502"),
-        ("14", "NFR-501"),
+        ("258", "FR-258"),
+        ("259", "FR-259"),
+        ("502", "NFR-502"),
+        ("501", "NFR-501"),
     ]:
         assert f"'{bad}'" in result.stdout, result.stdout
         assert f"did you mean '{guess}'?" in result.stdout, result.stdout

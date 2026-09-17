@@ -710,8 +710,9 @@ def test_a_repeat_request_does_not_re_read_the_blob_store(
 
 # --------------------------------------------------------------------------------------
 # WK-671 Task 4B — FR-259's sampling decision, wired into the route. RL-862
-# (`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`): the route
-# scores untraced and, on a sampled outcome, writes a pending `scoring_traces` row and
+# (`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-
+# score.md`):
+# the route scores untraced and, on a sampled outcome, writes a pending `scoring_traces` row and
 # submits a `score.trace_produce` Job — never captures a trace inline.
 # --------------------------------------------------------------------------------------
 

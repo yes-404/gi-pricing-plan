@@ -46,7 +46,8 @@ result whose type depends on the caller's own cardinality.
 
 ## Resolving a bundle reuses `app.api.score`'s resolver — never a second one
 
-RL-922 (`docs/rulings/RL-00922-the-remediation-is-ruled-into-the-reopen-and-nfr-489-s-verdict-is-ruled-out-of-it-they-are-two-different-things-and-the-record-must-not-merge-them.md`)
+RL-922
+(`docs/rulings/RL-00922-the-remediation-is-ruled-into-the-reopen-and-nfr-489-s-verdict-is-ruled-out-of-it-they-are-two-different-things-and-the-record-must-not-merge-them.md`)
 put RL-921's NFR-489 remediation here deliberately, because this is the **second**
 caller that needs a `rating_version_ref -> CompiledBundle` resolution, and
 `app.api.score._compiled_for` is the only one in the repository. `CLAUDE.md` §2: *"Nobody
@@ -65,11 +66,11 @@ structural half of FR-255 ("does not abort on individual failures"). What is lef
 this handler is the **policy** half: counting `error_code` per category, sampling a few
 messages, and comparing the running failure rate against the effective threshold
 (`rating.batch_abort_failure_rate`, RL-889, `docs/rulings/RL-00889-d3-the-batch-ab
-ort-threshold-is-a-workspace-setting-with-a-one-directional-per-run-argument.md`) after every chunk. A request's own `abort_failure_rate` argument may only
-*lower* the resolved workspace setting — `01` FR-56's `severity_override` precedent —
-refused with `BATCH_ABORT_THRESHOLD_ABOVE_SETTING` before a row is scored if it would
-raise it. A run that crosses the effective threshold raises `BATCH_ABORTED`, naming both
-numbers, rather than completing with a result that reads as clean.
+ort-threshold-is-a-workspace-setting-with-a-one-directional-per-run-argument.md`) after every chunk.
+A request's own `abort_failure_rate` argument may only *lower* the resolved workspace setting — `01`
+FR-56's `severity_override` precedent — refused with `BATCH_ABORT_THRESHOLD_ABOVE_SETTING` before a
+row is scored if it would raise it. A run that crosses the effective threshold raises
+`BATCH_ABORTED`, naming both numbers, rather than completing with a result that reads as clean.
 """
 
 from __future__ import annotations

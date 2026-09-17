@@ -3,8 +3,9 @@
 Built against `docs/contracts/schemas/scoring.schema.json`'s `$defs`, not the spec's own
 §4.4 JSON example — `CLAUDE.md` §2 forbids hand-writing a shape `model-schema` owns, and
 these are the first code for any of the three (`git grep -n QuoteContext` returned zero
-Python hits before this task; RL-878's addendum, `docs/rulings/RL-00878-quotecontex
-t-purpose-the-spec-is-right-and-the-hand-authored-contract-is-stale-and-the-fix-belongs-to-task-1-4.md`). Two traps the §4.4 example carries that the contract does not, named there
+Python hits before this task; RL-878's addendum,
+`docs/rulings/RL-00878-quotecontext-purpose-the-spec-is-right-and-the-hand-authored-contract-is-stale-and-the-fix-belongs-to-task-1-4.md`).
+Two traps the §4.4 example carries that the contract does not, named there
 and not repeated here: its numeric literals use `24_150`-style underscores (not valid
 JSON), and its ladder omits `instalment_loading`, which post-dates the example
 (FR-252). The contract's `LadderRung.rung` enum is the authority for both.

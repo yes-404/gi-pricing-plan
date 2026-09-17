@@ -1,14 +1,13 @@
 """RL-949's `generated_from_tracked_corpus` carve-out — the broken-input proof.
 
-`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md` §4: `CLAUDE.md` §13 requires a
-carve-out that has never printed a failure to be treated as untested, and the positive
-control must exercise the same predicate the guard fires on, not an easier case. These tests
-run against a synthetic git repository built in `tmp_path` — mirroring `tests/test_file_
+`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md` §4:
+`CLAUDE.md` §13 requires a carve-out that has never printed a failure to be treated as untested, and
+the positive control must exercise the same predicate the guard fires on, not an easier case. These
+tests run against a synthetic git repository built in `tmp_path` — mirroring `tests/test_file_
 census.py`'s own synthetic-tree pattern — never against this repository's own tree: the live
-`test_no_reference_rows_are_bundled_in_the_repository`
-(`backend/tests/test_lineage.py`) is an integration-style sweep over the real checkout and
-cannot host a deliberately-broken fixture inside itself, and the real repository's history
-must not be mutated to manufacture a bad commit.
+`test_no_reference_rows_are_bundled_in_the_repository` (`backend/tests/test_lineage.py`) is an
+integration-style sweep over the real checkout and cannot host a deliberately-broken fixture inside
+itself, and the real repository's history must not be mutated to manufacture a bad commit.
 
 Three cases, all required by §4:
 
@@ -56,9 +55,12 @@ def _init_repo(root: pathlib.Path, files: dict[str, str]) -> str:
 
 
 def _write_census(root: pathlib.Path, sha: str, rows: list[str]) -> pathlib.Path:
-    """Write `docs/audit/file-census-<short sha>.csv` at `root`, matching the registered
-    pattern (`backend/tests/test_lineage.py`'s `GENERATED_CORPUS_REGISTRY`)."""
-    census = root / "docs" / "audit" / f"file-census-{sha[:7]}.csv"
+    """Write `docs/research/file-census-<short sha>.csv` at `root`, matching the
+    registered pattern (`backend/tests/test_lineage.py`'s `GENERATED_CORPUS_REGISTRY`) --
+    RFC-937 §5.2 moves the committed census there; class F loop 2's own defect (a
+    tree-wide citation sweep rewriting the moved file's content) never touched where it
+    lives, only what it contained after arriving."""
+    census = root / "docs" / "research" / f"file-census-{sha[:7]}.csv"
     census.parent.mkdir(parents=True, exist_ok=True)
     lines = [CENSUS_CSV_HEADER, *rows]
     census.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -156,7 +158,7 @@ def test_a_registered_filename_pattern_alone_grants_nothing(
     sha = _init_repo(synthetic_repo, {"README.md": "root readme"})
     # Header itself is wrong (real reference-set data would not be file-census output) —
     # the exemption must not fire on filename alone even before the path column is checked.
-    census_dir = synthetic_repo / "docs" / "audit"
+    census_dir = synthetic_repo / "docs" / "research"
     census_dir.mkdir(parents=True, exist_ok=True)
     fake = census_dir / f"file-census-{sha[:7]}.csv"
     fake.write_text("group_code,make,model,rating_group\nA1,Ford,Fiesta,12\n", encoding="utf-8")

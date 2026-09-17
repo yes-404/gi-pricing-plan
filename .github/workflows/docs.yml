@@ -93,12 +93,34 @@ jobs:
       # 1). Exit 3 means the verdict set moved since the last recorded run — that is the
       # one this step fails on, because it is the only exit code that says something
       # about *this* change rather than about the standing backlog.
+      # WHICH REF IS THE PRE-MIGRATION INPUT. `--ref HEAD` denotes the un-migrated control
+      # only while the checkout itself is un-migrated. On a migrated checkout — the sentinel
+      # is `audit-docs.py`'s `migrated_tree()`: docs/INDEX.md and docs/REDIRECTS.csv, the two
+      # artifacts only the migration creates — HEAD already holds `migrate()`'s output, and
+      # verifying `--ref HEAD` migrates a migrated tree: every recorded row reads 0 (phantom
+      # PROGRESS) while the tool's own marked legacy-form literals read as residue. That is
+      # what docs run 35261236904 did on #782's head 323b523: GitHub's PR merge ref 2ee3cdd
+      # is the migrated tree, and the step exited 3 with (a)/(d1)/(d5)/(f) PASS -> FAIL and
+      # (d4)/(d8)/(d9)/(d10) DISCLOSE -> FAIL — none of it about the change. The base the
+      # migration ran from is recorded by the tool itself, in
+      # docs/process/delivery-process.core.json `meta.verified_against_tree`, written from the
+      # run ref (PL-00960: "the recorded merge-base SHA is load-bearing evidence, not a
+      # courtesy"), so after the migration RL-1043 §1's standing verify keeps proving THIS
+      # checkout's tool against that recorded base. The RL-1045 §1 exit-1 reading below is
+      # unchanged. Deputy ruling of 2026-09-17 (W37-6 run 2, channel to-lead.md).
       - name: doc-id migrate --verify
         id: docidverify
         continue-on-error: true
         run: |
+          ref=HEAD
+          if [ -f docs/INDEX.md ] && [ -f docs/REDIRECTS.csv ]; then
+            ref=$(python3 -c 'import json; print(json.load(open("docs/process/delivery-process.core.json"))["meta"]["verified_against_tree"])')
+            echo "::notice::migrated checkout (docs/INDEX.md + docs/REDIRECTS.csv present): --ref ${ref} = core.json meta.verified_against_tree, the pre-migration base the tool recorded"
+          else
+            echo "::notice::un-migrated checkout: --ref HEAD is the pre-migration input"
+          fi
           code=0
-          python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref HEAD || code=$?
+          python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref "$ref" || code=$?
           if [ "$code" -eq 1 ]; then
             echo "::notice::--verify exited 1 (standing red, verdict set unchanged) — RL-1045 §1 reads this as a pass"
             exit 0

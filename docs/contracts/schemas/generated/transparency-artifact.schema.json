@@ -106,7 +106,7 @@
     },
     "EbmShapeFunctions": {
       "additionalProperties": false,
-      "description": "FR-MODEL-37's export: the model itself, as tables.\n\nA JSON document, deliberately: the artifact row stores a JSONB payload and the\ntables ARE the model — this block is a pointer to the document rather than a\nnested copy that could drift from it. Built by `build_ebm_shape_functions`.",
+      "description": "FR-140's export: the model itself, as tables.\n\nA JSON document, deliberately: the artifact row stores a JSONB payload and the\ntables ARE the model — this block is a pointer to the document rather than a\nnested copy that could drift from it. Built by `build_ebm_shape_functions`.",
       "properties": {
         "terms_blob": {
           "minLength": 1,
@@ -122,7 +122,7 @@
     },
     "GlmApproximation": {
       "additionalProperties": false,
-      "description": "FR-MODEL-34 — a GLM fitted to the GBM's own predictions.\n\nWhat turns a GBM into something rateable as a table, so the coefficients and\nrelativities are *here*: a fidelity score with no table behind it says the\napproximation was good without saying what it was.",
+      "description": "FR-133 — a GLM fitted to the GBM's own predictions.\n\nWhat turns a GBM into something rateable as a table, so the coefficients and\nrelativities are *here*: a fidelity score with no table behind it says the\napproximation was good without saying what it was.",
       "properties": {
         "approximating_model_id": {
           "anyOf": [
@@ -209,7 +209,7 @@
     },
     "RelativityLevel": {
       "additionalProperties": false,
-      "description": "One level of a categorical factor, as an actuary reads it (FR-MODEL-21).",
+      "description": "One level of a categorical factor, as an actuary reads it (FR-113).",
       "properties": {
         "estimate": {
           "anyOf": [
@@ -285,7 +285,7 @@
     },
     "ShapInteraction": {
       "additionalProperties": false,
-      "description": "One candidate interaction pair, and what it is worth (FR-MODEL-79).\n\nA **suggestion**, never an addition. The platform never writes a Factor into a Model\nSpec: an interaction becomes rateable only as an explicit `interaction` Factor carrying\nan intent and a written rationale, and the model document names it as an authored\ndecision. Auto-detected structure entering a rating basis unreviewed is the overfitting\nroute FR-MODEL-79 refuses.",
+      "description": "One candidate interaction pair, and what it is worth (FR-135).\n\nA **suggestion**, never an addition. The platform never writes a Factor into a Model\nSpec: an interaction becomes rateable only as an explicit `interaction` Factor carrying\nan intent and a written rationale, and the model document names it as an authored\ndecision. Auto-detected structure entering a rating basis unreviewed is the overfitting\nroute FR-135 refuses.",
       "properties": {
         "holdout_strength_ratio": {
           "anyOf": [
@@ -329,7 +329,7 @@
     },
     "ShapSummary": {
       "additionalProperties": false,
-      "description": "FR-MODEL-35 — TreeSHAP over the booster, on a reproducible sample.",
+      "description": "FR-134 — TreeSHAP over the booster, on a reproducible sample.",
       "properties": {
         "algorithm": {
           "default": "tree_shap",
@@ -387,7 +387,7 @@
     },
     "WorstRegion": {
       "additionalProperties": false,
-      "description": "Where the approximation is worst, and over how much of the book (FR-MODEL-36).\n\nThe exposure share is required rather than optional. \"The approximation is 11 % out for\nyoung high-mileage drivers\" is a different sentence depending on whether that is 0.8 %\nof exposure or 8 %, and a fidelity statement without it invites the wrong one.",
+      "description": "Where the approximation is worst, and over how much of the book (FR-136).\n\nThe exposure share is required rather than optional. \"The approximation is 11 % out for\nyoung high-mileage drivers\" is a different sentence depending on whether that is 0.8 %\nof exposure or 8 %, and a fidelity statement without it invites the wrong one.",
       "properties": {
         "description": {
           "minLength": 1,
@@ -416,7 +416,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The persisted artifact (`02` §4.9, FR-MODEL-33..37).\n\nImmutable once written, like every other artifact here: it is the evidence a Rating\nVersion's approval was granted against (FR-MODEL-36), and evidence that can change\nafter the decision is not evidence.",
+  "description": "The persisted artifact (`02` §4.9, FR-132, FR-133, FR-134, FR-136, FR-140).\n\nImmutable once written, like every other artifact here: it is the evidence a Rating\nVersion's approval was granted against (FR-136), and evidence that can change\nafter the decision is not evidence.",
   "properties": {
     "created_at": {
       "format": "date-time",

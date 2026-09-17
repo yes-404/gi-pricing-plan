@@ -1,8 +1,8 @@
 """Trace persistence: the row-plus-blob write, the read, and the retention-floor guard.
 
 `03` §4.5's `Trace`, FR-258/259, `00` NFR-459, WK-671 Task 4A
-(`docs/plans/PL-00850-wk-671-slice-4-trace-sampling-the-row-plus-blob-store-and-the-retention-floor.md`, RL-888 in
-`docs/plans/2026-08-29-w11-slices-3-4-rulings.md`).
+(`docs/plans/PL-00850-wk-671-slice-4-trace-sampling-the-row-plus-blob-store-and-the-retention-floor.md`,
+RL-888 in `docs/plans/2026-08-29-w11-slices-3-4-rulings.md`).
 
 **One serialisation, two writes.** `write_trace` serialises the `Trace` exactly once and
 uses that same payload both for the blob body and for the row's three projected fields
@@ -22,8 +22,8 @@ itself, so it stays pure and the statistical boundary is testable with a fixed s
 caller (the scoring route) supplies the roll.
 
 **Trace production is decoupled from the serving request** (RL-862,
-`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`): always capturing a
-trace inline pinned the traced fraction at 1 and put every real-time request over
+`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`):
+always capturing a trace inline pinned the traced fraction at 1 and put every real-time request over
 NFR-489's budget. The quoting path scores untraced and, on a sampled outcome, calls
 `write_pending_trace` — a row with no body yet, carrying the Quote Context an off-path Job
 needs to reproduce it. `app.worker.trace_handlers` re-scores the *pinned* bundle and calls

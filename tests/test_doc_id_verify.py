@@ -1805,10 +1805,12 @@ def test_row_i_names_w37_10_as_its_owner(dv: Any, tmp_path: pathlib.Path) -> Non
 def test_row_i_verdict_is_disclose_not_fatal_when_h_rows_exist(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 105 D1: `(i)` is W37-10's and does not set the exit code. Before this ruling
-    the non-empty-population branch scored `NOT MEASURED` (fatal); it now scores `DISCLOSE`
-    (non-fatal). Red-then-green against the row above: an empty population still fails
-    (NT-0007), a real one now discloses rather than blocking the exit code."""
+    """RL-1046 D1 (docs/REDIRECTS.csv: `Ruling 105,RL-1046,...` — the old_id this ruling
+    was cited under pre-migration): `(i)` is W37-10's and does not set the exit code.
+    Before this ruling the non-empty-population branch scored `NOT MEASURED` (fatal); it
+    now scores `DISCLOSE` (non-fatal). Red-then-green against the row above: an empty
+    population still fails (NT-0007), a real one now discloses rather than blocking the
+    exit code."""
     body = "## 5. Impact\n| `x` | y | H |\n"
     tree = tmp_path / "t"
     (tree / "docs" / "notes").mkdir(parents=True)
@@ -1821,7 +1823,7 @@ def test_row_i_verdict_is_disclose_not_fatal_when_h_rows_exist(
     assert row.verdict == dv.DISCLOSE
     assert row.fatal is False
     assert row.owner == dv.OWNER_W37_10
-    assert "Ruling 105 D1" in row.note
+    assert "RL-1046 D1" in row.note
 
 
 def test_h_row_predicate_counts_the_notes_section_5_tables(dv: Any) -> None:
@@ -2568,7 +2570,15 @@ def test_framework_self_reference_predicate_yields_a_broad_class_on_the_real_cor
     *mechanism* generalizes rather than being tuned to one example.
     """
     root = pathlib.Path(__file__).resolve().parent.parent / "scripts"
-    id_pattern = re.compile(r"\b(?:FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+\b")
+    # NT-0019 flattened the live id shape from module-scoped (`FR-MODEL-19`) to bare
+    # (`FR-19`); the `-[A-Z]+-` segment is now optional, matching either. The old
+    # module-scoped-only pattern measured only 11 members here post-migration (self-
+    # reference examples were rewritten to the new bare shape along with the rest of the
+    # corpus) — a predicate-shape mismatch, not a shrunk class: re-measured on this tree,
+    # the broadened pattern finds 226. The threshold is re-measured to comfortably below
+    # that (the same margin philosophy as the original: proving broad membership, not
+    # tracking the exact count).
+    id_pattern = re.compile(r"\b(?:FR|NFR|OQ|DEP)-(?:[A-Z]+-)?[0-9]+\b")
     members: list[str] = []
     for path in sorted(root.glob("*.py")):
         rel = f"scripts/{path.name}"
@@ -2578,7 +2588,7 @@ def test_framework_self_reference_predicate_yields_a_broad_class_on_the_real_cor
         for i, line in enumerate(text.splitlines()):
             if i in self_ref_lines and id_pattern.search(line):
                 members.append(f"{rel}:{i + 1}")
-    assert len(members) >= 21, (
+    assert len(members) >= 50, (
         f"the framework self-reference class must be broad, not a one-token allowlist "
         f"in disguise: found only {len(members)} member(s): {members}"
     )
