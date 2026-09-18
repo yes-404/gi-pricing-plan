@@ -2020,3 +2020,23 @@ auto-merge but are the migration's own files and need review after the rebase. P
 deputy's ruling of 2026-09-17 (channel to-lead.md): first W37-11 item: rebase onto
 71f5a22, with its own gate and CI; not tonight's. Left as is by the lead (w37-team2).
 ```
+
+## 2026-09-18 — checkpoint 3 — evidence filed, lead verdicts issued, close record drafted
+
+Evidence filed: the auditor's report (`~/gi-pricing-plan.local/handover/
+auditor-w37-6-cp3-report.md`, tree `4d9fe1d`). Lead verdicts issued per `CLAUDE.md` §13's
+four-verdict rule, recorded in `docs/closures/CR-01065-w37-6-checkpoint-3-close.md`
+alongside this checkpoint's own re-measure of every item the lead marked
+delivered-but-untested (items 11, 13, 14, RFC-937 §7(i), and F87) — two of those re-measures
+(items 13 and 14) did not hold and moved to deferred-with-owner, lead/W37-11; item 11 and
+F87 held and are evidenced; §7(i)'s bounded walk found 5-6 of ~50-56 sampled H rows not
+closed and moved to deferred-with-owner as well. Register updated: F87 discharged, F90
+no-change, F92 reconciled (owner W37-11, count corrected 53→50), two new findings filed
+(F107 the idempotence gap, F108 check-35's output shape) plus, per the lead's extension to
+this checkpoint's brief after plan review 13's recommendation (`CR-1064`, PR #786), two
+more (F109 the pinned-base W37-11-record read, F110 the `(d → W37-11)` docstring
+mismatch) — all four owned lead/W37-11. `docs/roadmap.md:766`'s WK-697 row rewritten per
+`PL-939:863`. This entry, the close record, the register updates and the roadmap row are
+one PR (`w37-6-checkpoint-3-close`).
+
+**Ruled met:** pending the deputy's entry after the merge.
