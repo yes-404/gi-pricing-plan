@@ -55,7 +55,7 @@ This ledger's own tracked work is "done" per RL-1046's staged structure:
    re-measure moved to deferred-with-owner, dated, never silent; (2) the close record and
    the roadmap row (`PL-939:863`) are in one PR, gated, CI green, merged under the
    deputy's merge-ACK; (3) review 13 is filed as a proposal with its acceptance line
-   pending. The pending acceptance lines on reviews 9-13 are reported to the maintainer as
+   pending. The pending acceptance lines on reviews 12 and 13 are reported to the maintainer as
    open and binding nothing (`CLAUDE.md` §14: a review binds nothing until dated), and do
    not by themselves block Stage 3.
 
@@ -2040,3 +2040,36 @@ mismatch) — all four owned lead/W37-11. `docs/roadmap.md:766`'s WK-697 row rew
 one PR (`w37-6-checkpoint-3-close`).
 
 **Ruled met:** pending the deputy's entry after the merge.
+
+## 2026-09-18 — W37-11's first item lands (#757)
+
+`#757` merged as `29e7a9ce41459ff1f4b4b2658d177c6109d35a58` on `ce808d7` (deputy merge-ACK
+2026-09-18 01:45:03 BST), squash subject: "fix(scripts): row (g) g2 classifier — forward-
+citation check + bare finding-id exclusion (251 → 207 classified-by-none; (g) stays the
+standing FAIL) (#757)". W37-11's g2 baseline is now **207** (`classified-by-none`), per the
+squash body's per-class table — down from `CR-1063` §6's `251`. The 123-file record
+population dropped from that baseline was **unread at the pinned base**: 103 of 207 keys
+uncovered, re-derived on the tree it actually governs, carried into W37-11 under **F109**
+(the same pinned-base-read mechanism this checkpoint's register update files). Row (g)
+stays the standing, disclosed FAIL — the classifier fix narrows the residue, it does not
+close the row.
+
+## 2026-09-18 — checkpoint 3 vendored-corruption fix before close (#787, #788)
+
+Deputy review of `#787` (`to-lead.md`, 2026-09-18 01:38:16 BST): NOT READY as filed — a
+fix-before-close vendored-file corruption (two `.ps1` scripts beneath `planning-with-
+files/SKILL.md`, `::` split into `: :` by the migration's own sweep) plus five edits to the
+close record. Fix-before-close PR `#788` restores the two scripts byte-for-byte from
+`0651c1e` (== `fbb5555`); the three manifest files a first, wrongly-scoped restore attempt
+also touched (`secret-hygiene/SKILL.md`, `writing-plans/SKILL.md`,
+`requesting-code-review/SKILL.md`) are correctly left as the migration rewrote them — RL-990
+item 3 exempts only files beneath a manifest, never the manifest itself. `#788` merges
+first, on CI and the deputy's ACK; `#787` then rebases onto it. `#787`'s own amendment:
+§2.2's item-13 verdict becomes HELD for the beneath-manifest population once `#788` merges,
+with the two named §5.4 content edits reassigned to W37-7 and the sweep-reaches-vendored
+mechanism gap filed as **F111** (owner W37-11); §2.4's RFC-937 §7(i) gaps reassigned per
+file (W37-7/8/9/10, W37-11 owning the fuller walk); "reviews 9-13" corrected to "reviews 12
+and 13" (9-11 carry dated acceptance since 2026-09-01); item 8 / §5 cite the lead's full
+local gate on `03e1cb0` (13/13, 3436 passed, 3 skipped, 1 xfailed, collected 3440 == ran
+3440), superseding the "not re-run" reading; the roadmap row gains a clause pointing at
+`CR-1065`.

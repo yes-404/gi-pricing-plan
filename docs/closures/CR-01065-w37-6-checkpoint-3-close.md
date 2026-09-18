@@ -38,7 +38,7 @@ that, §1 and §2); (2) this PR (close record + roadmap row + ledger) is gated, 
 merged under the deputy's merge-ACK; (3) review 13 (`CR-1064`, PR #786) is filed as a
 proposal with its acceptance line pending (already merged to `main` as `ce808d7`, ahead of
 this record — not this PR's to do). The pending
-acceptance lines on reviews 9-13 are reported to the maintainer as open and binding nothing
+acceptance lines on reviews 12 and 13 are reported to the maintainer as open and binding nothing
 (`CLAUDE.md` §14).
 
 ## Scope
@@ -78,14 +78,14 @@ same disposition).
 | 5 (e) No padded id in prose | (e) | check 32 clean; `test_audit_docs_check_32_disposition.py` 5/5 | **EVIDENCED** (fresh run) | as above |
 | 6 (f) No product identifier moved | (f) | `EXPECTED_VERDICTS["f"]=PASS`, RL-1044 | **EVIDENCED** (standing verify + RL-1046 D5) | own `git grep -c 'VR-DST-1'` not re-run this record either; carried on the ruled table |
 | 7 (g) Script touched only headers/tokens | (g) | standing FAIL; g1 clean, g2 `classified-by-none`=251/971 | **DEFERRED WITH OWNER — W37-11**, `#757` first item | see §3 NFR table — unchanged, standing red, fully disclosed |
-| 8 (h) Full gate green | (h) | `audit-docs.py`/`req-coverage.py` clean; CI green on `71f5a22` (4 runs); mypy/pytest/pnpm not re-run this session | **EVIDENCED** — gate 13/13 on `f777159` (tree == `71f5a22`'s), `handover/gate-f777159/gate.log`, + main CI ×4 on `71f5a22` (run ids `35268549712`/`35268549550`/`35268549539`/`35268549620`) | Local re-run this checkpoint: `python3 scripts/audit-docs.py` exit 0, `uv run pytest -q tests/test_audit_docs*.py tests/test_doc_id.py` — see §4 |
+| 8 (h) Full gate green | (h) | `audit-docs.py`/`req-coverage.py` clean; CI green on `71f5a22` (4 runs); mypy/pytest/pnpm not re-run at that session's tree | **EVIDENCED** — gate 13/13 on `f777159` (tree == `71f5a22`'s), `handover/gate-f777159/gate.log`, + main CI ×4 on `71f5a22` (run ids `35268549712`/`35268549550`/`35268549539`/`35268549620`); **and the full local gate on `03e1cb0`** (tree == `ce808d7`, this PR's base, run 2026-09-18 01:26:49): 13/13, `3436 passed, 3 skipped, 1 xfailed` (collected 3440 == ran 3440) — mypy, pytest, pnpm and `generate-contracts.py --check` all included, superseding the "not re-run" reading below | Local re-run this checkpoint: `python3 scripts/audit-docs.py` exit 0, `uv run pytest -q tests/test_audit_docs*.py tests/test_doc_id.py` — see §4. **#787's own gate on its final head:** [to be pasted once run] |
 | 9 Scan-roots guard re-derived | — | `test_a_missing_notes_root_fails_the_audit` 1/1; 5-path mutation not re-run | **EVIDENCED** (fresh run) | as above |
 | 10 Widened scope = stamped set | — | check 30: 446/66 F83 skips, not cross-checked against §4 step 5 set | **EVIDENCED** (fresh run) | as above |
 | 11 Every derived instrument load-bearing | — | not re-run by either session | **re-measured before the cut** | **RE-MEASURED, HELD.** See §2.1 — fires exactly as the discriminating form requires |
 | 12 Requirement-facing proof (W37-7) | — | W37-7 not started | **not started — W37-7's, not W37-6's** | unchanged |
-| 13 Vendored exemption reaches only blanket passes | — | not re-run | **re-measured before the cut** | **RE-MEASURED, DID NOT HOLD.** See §2.2 — moved to **deferred with owner, lead/W37-11** |
+| 13 Vendored exemption reaches only blanket passes | — | not re-run | **re-measured before the cut** | **RE-MEASURED, HELD** for the files-beneath-a-manifest population, once the two corrupted `.ps1` scripts are fixed before close (PR #788); the manifests' own rewrites are by design (RL-990 item 3). See §2.2 — the two named §5.4 content edits **REASSIGNED to W37-7**; the sweep-reaches-vendored mechanism gap filed as **F111, owner W37-11** |
 | 14 Three W37-4 deferrals discharged | — | not independently re-confirmed | **re-measured before the cut** | **RE-MEASURED, PARTIALLY HELD.** See §2.3 — one confirmed by symbol, one discharge-mechanism mismatch found, one no in-tree fixture test found; moved to **deferred with owner, lead/W37-11** |
-| (i) Every H row in §5 closed by a named commit | (i) | not walked row-by-row | **re-measured before the cut** | **RE-MEASURED, PARTIALLY HELD.** See §2.4 — 56 H/H+M rows sampled; 49 closed within W37-6's own commit chain, 5 not closed (still carrying pre-migration content), 1 path does not exist, 1 correctly excluded by design. Moved to **deferred with owner, lead/W37-11** for the 5 gaps + 1 missing path |
+| (i) Every H row in §5 closed by a named commit | (i) | not walked row-by-row | **re-measured before the cut** | **RE-MEASURED, PARTIALLY HELD.** See §2.4 — 56 H/H+M rows sampled; 49 closed within W37-6's own commit chain, 6 not closed (still carrying pre-migration content), 1 path does not exist, 1 correctly excluded by design. Each of the 7 gaps **REASSIGNED per file** to the slice owning that area (W37-7/8/9/10); W37-11 owns the fuller (i) walk itself |
 
 Items 1-6, 9, 10: the lead's verdict of EVIDENCED stands; this record did not re-run every one
 of them a second time (the brief scoped fresh re-measurement to items 11, 13, 14, (i) and F87,
@@ -164,35 +164,41 @@ $ /usr/bin/git diff --stat 0651c1e 71f5a22 -- .claude/skills/brainstorming .clau
  5 files changed, 10 insertions(+), 11 deletions(-)
 ```
 
-**Did not hold.** Expected: byte-identical except `writing-plans` and
-`subagent-driven-development` differing by their own named §5.4 edits. Actual:
+**Corrected reading (this checkpoint, after the deputy's review of an earlier draft of this
+record).** RL-990 item 3 (`docs/rulings/RL-00990-...md:70-73`, quoted): *"A vendored skill's
+own `SKILL.md` is stamped like the other 45 ... The files **beneath** it are exempt from
+the blanket stamp, the tree-wide citation rewrite and check 37's shape check."* The tool
+encodes the identical boundary at `scripts/doc-id.py:3870-3876`, `_is_vendored_exempt`:
+*"exempt for a file beneath a vendored skill's boundary that is *not* the manifest itself
+... The manifest ... is never exempt: it is stamped and its own citations rewrite like any
+other file."* So `secret-hygiene/SKILL.md`, `writing-plans/SKILL.md` and
+`requesting-code-review/SKILL.md` — themselves manifests — being stamped and having their
+own citations rewritten (and, for `requesting-code-review`, a markdown reflow) **is by
+design**, not a violation of item 13's clause; the population item 13 actually governs is
+narrower: files **beneath** a manifest.
 
-- **`subagent-driven-development` has *zero* diff** — its own named §5.4 H edit (the `LG-`
-  ledger-append routing) never landed. Independently confirmed by
-  `/usr/bin/git log --oneline -1 -- .claude/skills/subagent-driven-development/SKILL.md` →
-  `ba76b3f` (#138), an old, pre-migration commit — the file has not been touched since.
-- **`writing-plans`'s diff is not the expected §5.4 edit.** Its own named H content — line 19,
-  `` Save plans to: `docs/plans/YYYY-MM-DD-<feature-name>.md` `` (the retired filename
-  grammar) — is **still present verbatim at `4d9fe1d`** (read directly). What actually
-  changed is citation rewrites (three pre-migration reference tokens rewritten to their `RFC-895`/`WK-671`/`RL-906` post-migration forms) —
-  ordinary M-step mechanical rewrites, which item 13's own rule says a vendored file should
-  not receive at all.
-- **`planning-with-files`'s two `.ps1` scripts are corrupted**, not edited: `[Console]::Out`
-  → `[Console]: :Out` and `[System.IO.File]::WriteAllText` → `[System.IO.File]: :WriteAllText`
-  — a `::` (PowerShell scope-resolution operator) split into `: :` by the sweep. Not a
-  citation rewrite of any kind; a defect in the migration's own text-rewrite pass reaching
-  into a vendored subtree it should never touch.
-- **`requesting-code-review/SKILL.md`** and **`secret-hygiene/SKILL.md`** were also touched —
-  the former by a markdown line-join (`[Subagent returns]:\n  Strengths:` →
-  `[Subagent returns]: Strengths:`), the latter by citation rewrites (two pre-migration
-  reference tokens rewritten to their `RFC-842`/`WK-670` post-migration forms). Neither is a "blanket pass" (header stamp only) and neither is one of the
-  two named §5.4 edits.
+- **`.claude/skills/planning-with-files/scripts/check-complete.ps1` and
+  `scripts/set-active-plan.ps1`** — both beneath `planning-with-files/SKILL.md`'s boundary
+  — had PowerShell's scope-resolution operator (`::`) split into `: :` by the migration's
+  sweep. A real violation: a file beneath a manifest is supposed to be untouched entirely.
+  **FIXED BEFORE CLOSE by PR #788** — restored byte-for-byte from `0651c1e` (== `fbb5555`
+  for these two paths), sha256 confirmed both ways.
+- **The two named §5.4 content edits** — `writing-plans`'s own H content (line 19, the
+  retired filename grammar, `` Save plans to: `docs/plans/YYYY-MM-DD-<feature-name>.md` ``,
+  still present verbatim at `4d9fe1d`) and `subagent-driven-development`'s own H content
+  (the `LG-` ledger-append routing; the file has zero diff `0651c1e`..`71f5a22` and its
+  last touching commit is `ba76b3f`, #138, an old pre-migration commit) — **did not land**.
+  These are edits the plan's own text (PL-960 §5.4, `:597-598`) requires as deliberate,
+  named content changes to the manifests themselves, separate from the beneath-manifest
+  exemption question. Their absence is a real violation of the plan's own clause.
 
-**Verdict: DEFERRED WITH OWNER — lead / W37-11.** Five vendored files carry unauthorised
-content changes (two corrupted, three receiving M-step rewrites the rule forbids), and one
-named §5.4 edit (`subagent-driven-development`) never landed while the other
-(`writing-plans`) landed as the wrong edit. This is a real gap in RL-990's acceptance items
-2-4, not a re-confirmation of them.
+**Verdict: item 13 HELD** for the files-beneath-a-manifest population, except the two
+corrupted scripts, now fixed before close (PR #788); the three manifests' own citation
+rewrites and reflow are by design and were never a violation. **The two named §5.4 content
+edits did not land — REASSIGNED to W37-7** (PL-939 `:735`, the slice that applies the
+conventions these two skills teach). **F111** (new, this checkpoint) — the mechanism gap
+that let the sweep reach files beneath a manifest at all (the `::` split) — **owner
+W37-11**, a `migrate()` change under the reproduction rule, not a content edit.
 
 ### 2.3 Item 14 — the three W37-4 deferrals
 
@@ -308,12 +314,29 @@ this worktree, against `main`'s reachable history.
 not closed (still carrying pre-migration content, contrary to RFC-937 §5's own H-row
 listing); 1 path does not exist; 1 correctly excluded by design.**
 
-**Verdict: DEFERRED WITH OWNER — lead / W37-11**, for the 5 not-closed rows
-(`CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.claude/agents/ci-watcher.md`,
-`.claude/skills/subagent-driven-development/SKILL.md`, `.claude/skills/brainstorming/SKILL.md`)
-and the 1 missing path (`docs/research/README.md`). This is a sample (56 of the roughly 90 H
-/ H+M rows RFC-937 §5 lists across the full corpus, not every individually-named file under a
-large aggregate row); it is not (i)'s exhaustive discharge, and is reported as such.
+**Verdict: REASSIGNED, per file** (the deputy's ruling on this record's earlier draft) —
+**W37-11 owns the walk itself** (a fuller RFC-937 §7(i) sweep of all ~90 H/H+M rows), not
+the individual files below, each reassigned to the slice whose leaf plan already owns that
+area:
+
+| File | Reassigned to | Basis |
+|---|---|---|
+| `CONTRIBUTING.md` | **W37-9** | PL-939 `:785`, root governance / public face |
+| `.github/PULL_REQUEST_TEMPLATE.md` | **W37-9** | PL-939 `:785`, root governance / public face |
+| `.claude/agents/ci-watcher.md` | **W37-8** | PL-939 `:760`, agents |
+| `.claude/skills/writing-plans/SKILL.md` | **W37-7** | PL-939 `:735`, instruments — the same content-edit gap §2.2 already reassigns there |
+| `.claude/skills/subagent-driven-development/SKILL.md` | **W37-7** | PL-939 `:735`, instruments — same basis |
+| `docs/research/README.md` (1 missing path) | **W37-10** | PL-939 `:815`, docs READMEs |
+
+`.claude/skills/brainstorming/SKILL.md` is not in the lead's named list above but carries
+the identical class as `subagent-driven-development`'s gap (a named §5.4 one-sentence edit
+that never landed on a vendored manifest — zero diff `0651c1e`..`71f5a22`, last touched by
+`#76`, pre-migration): reassigned to **W37-7** on the same basis, stated rather than picked
+silently, since no other slice's leaf plan claims it.
+
+This is a sample (56 of the roughly 90 H / H+M rows RFC-937 §5 lists across the full
+corpus, not every individually-named file under a large aggregate row); it is not (i)'s
+exhaustive discharge — that fuller walk is W37-11's, not any of the reassigned slices'.
 
 ### 3. NFRs and enforcement (unchanged from the auditor's measurement)
 
@@ -383,28 +406,40 @@ $ uv run pytest -q tests/test_register_lint.py
   docstring (`:428-430`) disagree about which population a sweep-excluded file's per-file
   attribution reaches. Filed as register finding **F110** (new, this checkpoint), owner
   lead/W37-11 — disclosed only, not fixed.
-- **Item 13's vendored exemption** — did not hold; 5 files carry unauthorised content
-  (§2.2). Deferred with owner, lead/W37-11.
+- **Item 13's vendored exemption** — held for the files-beneath-a-manifest population once
+  the two corrupted `.ps1` scripts are fixed before close (PR #788, §2.2); the two named
+  §5.4 content edits (`writing-plans`'s filename grammar, `subagent-driven-development`'s
+  `LG-` routing) did not land — reassigned to W37-7; the sweep-reaches-vendored mechanism
+  gap filed as F111, owner W37-11.
 - **Item 14's three W37-4 deferrals** — none of the three stated discharge mechanisms is
   confirmed as described (§2.3). Deferred with owner, lead/W37-11.
-- **RFC-937 §7(i)** — 5 of 56 sampled H rows not closed, 1 path missing (§2.4). Deferred with
-  owner, lead/W37-11.
+- **RFC-937 §7(i)** — 6 of 56 sampled H rows not closed plus 1 missing path, each
+  reassigned per file to W37-7/8/9/10 (§2.4's table); W37-11 owns the fuller (i) walk
+  itself, not the individual files.
 - **21 owed register rows** (`register-owed.py W37-6`, auditor report §2/§4) — by disposition:
   F87 discharged this checkpoint (§ register update); F90 no-change (CR-1050); F92
   reconciled this checkpoint (owner W37-11, count corrected); F103, F105, F106 carry forward
   with owner (W37-6 lead); F80-F82, F88 limb 2, F89, F94-F97, F99-F102 as the auditor report
   §4 states (not started / carry forward unowned / accept, per finding).
-- **Full local pnpm suite, mypy, `generate-contracts.py --check`** — not run this checkpoint
-  either (the auditor report's own residual gap, §2); this record's own local run (§4) covers
-  `audit-docs.py`, `doc-id.py check`, `doc-index.py --check`, `ruff`, and the two named pytest
-  targets, per this checkpoint's own required checks.
+- **Full local pnpm suite, mypy, `generate-contracts.py --check`** — this is **no longer
+  an open gap**: the lead's own full local gate ran on `03e1cb0` (tree == `ce808d7`, this
+  PR's base) at 2026-09-18 01:26:49, `handover/gate-03e1cb0/gate.log`: 13/13, `3436 passed,
+  3 skipped, 1 xfailed` (collected 3440 == ran 3440). This record's own local run (§4)
+  covers `audit-docs.py`, `doc-id.py check`, `doc-index.py --check`, `ruff`, and the two
+  named pytest targets, on this record's own head — not a second full gate run, since the
+  base tree's is already evidenced.
 
 ### 6. Roadmap and ledger
 
 `docs/roadmap.md:766`'s WK-697 row is rewritten in this same PR, per `PL-939:863`
 ("the roadmap row (the lead's to apply; not written by this plan)") — drafted by the executor
-here, for the lead's review before the PR leaves draft. `docs/plans/PL-01058-w37-6-migration-run-ledger.md`
+here, for the lead's review before the PR leaves draft; it now also cites this record
+(`CR-1065`) as checkpoint-3's own close record. `docs/plans/PL-01058-w37-6-migration-run-ledger.md`
 carries this checkpoint's ledger entry and the dated correction to `:37-38`, in the same PR.
+
+**Fix-before-close, separate PR:** PR #788 restores `.claude/skills/planning-with-files`'s
+two `.ps1` scripts to their upstream bytes (§2.2) — merges first, on CI and the deputy's
+ACK, before this PR rebases onto it.
 
 ## 7. Verdict
 
@@ -414,12 +449,14 @@ of 2026-09-18 00:55:09 BST (`to-lead.md`, quoted in §0 above): checkpoint 3 doe
 on a maintainer-dated acceptance line; that line belongs to review 13 (`CR-1064`, pending)
 and to the
 Work close (W37-11). Checkpoint 3 is met by (1) this record's clean checklist and the lead's
-four verdicts, with every delivered-but-untested item re-measured (§2, with two of four
-re-measures — items 13 and 14 — not holding and moved to deferred-with-owner, and RFC-937 §7
-(i) partially held, also moved to deferred-with-owner); (2) this PR, gated and CI green,
+four verdicts, with every delivered-but-untested item re-measured (§2: item 11 held; item 13
+held for the files-beneath-a-manifest population once PR #788 fixes the two corrupted
+scripts, with the two named §5.4 content edits reassigned to W37-7 and the mechanism gap
+filed as F111 for W37-11; item 14 not holding, deferred with owner; RFC-937 §7(i) partially
+held, its gaps reassigned per file to W37-7/8/9/10, the fuller walk owned by W37-11); (2) this PR, gated and CI green,
 merged under the deputy's merge-ACK; (3) review 13 (`CR-1064`, PR #786, merged `ce808d7`)
 already filed as a proposal with its acceptance line pending, and the pending acceptance
-lines on reviews 9-13 reported to the maintainer as open and binding nothing.
+lines on reviews 12 and 13 reported to the maintainer as open and binding nothing.
 
 **This record makes no close disposition of its own** — per `CLAUDE.md` §13 a Slice closes on
 a clean audit and the lead's merge, neither of which this record performs. The lead's merge of
