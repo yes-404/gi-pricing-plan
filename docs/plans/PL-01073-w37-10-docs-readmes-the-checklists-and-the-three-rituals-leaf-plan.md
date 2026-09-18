@@ -25,7 +25,7 @@ relates: []
 
 Close the `docs/`-scaffolding half of RFC-937 §5.2 — rewrite `docs/README.md` as the
 map of the migrated tree, give `docs/research/` the README it never got, retire the last two
-files under the dissolved `docs/audit/` as far as this slice's authority reaches, put the
+files under the dissolved audit directory as far as this slice's authority reaches, put the
 id-and-gate conditions into both close checklists, and land the three rituals RFC-937 §6
 adopted (fortnightly work-item status, dated per-phase freeze gates, the generated phase
 report as the body of every `kind: phase` closure record) as *text in the artifacts that
@@ -126,29 +126,34 @@ constraint.
 ### 1.1 The map plan's slice section, quoted
 
 From [`PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`](PL-00939-wk-697-one-id-per-governed-thing-map-plan.md)
-`:815-838`, verbatim:
+`:815-838`, verbatim. It is reproduced as a **fenced exhibit** rather than a blockquote
+because it contains the legacy audit path, which `audit-docs.py` check 36 fails on in
+unfenced prose — the fence clause (`scripts/_docid.py`'s `fenced_line_numbers`, RL-1044 §5.1
+extended to row (d)) is what keeps a byte-exact quotation from reading as a surviving citation:
 
-> ## Slice W37-10 — `docs/` READMEs, the checklists, and the three rituals
->
-> **Executor skill:** `docs-audit`.
->
-> **Scope:** §5.2's H rows. `docs/README.md` rewritten as the map — §1.4's tree, §1.2's family
-> table, the reading order and the check commands, and **nothing that goes stale**. New READMEs
-> for `closures/`, `findings/`, `rulings/` and `ledgers/`; the `plans/` README's naming and
-> four-kinds table replaced by a pointer, **the nine writing conventions kept verbatim** —
-> they are the accumulated cost of nine real failures and none of them is about naming. The
-> checklists move under `process/checklists/` and each gains *"a new record has an id;
-> `audit-docs` is green"*; the phase-close checklist additionally gains the freeze-gate and
-> generated-report lines.
->
-> **The three rituals** (§1.10, §6): the fortnightly work-item status entry driven by
-> `reporter-cycle`; the dated plan/code/docs freeze gates declared in each phase's milestone
-> section and checked by the phase-close checklist; and the generated phase report as the body
-> of every closure record of kind `phase` — **never a hand-kept table.**
->
-> **Acceptance:** every §5.2 H row is named by a commit; `docs/audit/` no longer exists and
-> nothing references it (Acceptance Standard item 4's sweep restricted to `docs/`); the phase
-> close checklist names the freeze gates; the gate's two halves are green.
+```text
+## Slice W37-10 — `docs/` READMEs, the checklists, and the three rituals
+
+**Executor skill:** `docs-audit`.
+
+**Scope:** §5.2's H rows. `docs/README.md` rewritten as the map — §1.4's tree, §1.2's family
+table, the reading order and the check commands, and **nothing that goes stale**. New READMEs
+for `closures/`, `findings/`, `rulings/` and `ledgers/`; the `plans/` README's naming and
+four-kinds table replaced by a pointer, **the nine writing conventions kept verbatim** —
+they are the accumulated cost of nine real failures and none of them is about naming. The
+checklists move under `process/checklists/` and each gains *"a new record has an id;
+`audit-docs` is green"*; the phase-close checklist additionally gains the freeze-gate and
+generated-report lines.
+
+**The three rituals** (§1.10, §6): the fortnightly work-item status entry driven by
+`reporter-cycle`; the dated plan/code/docs freeze gates declared in each phase's milestone
+section and checked by the phase-close checklist; and the generated phase report as the body
+of every closure record of kind `phase` — **never a hand-kept table.**
+
+**Acceptance:** every §5.2 H row is named by a commit; `docs/audit/` no longer exists and
+nothing references it (Acceptance Standard item 4's sweep restricted to `docs/`); the phase
+close checklist names the freeze gates; the gate's two halves are green.
+```
 
 This slice is **W37-10** of Work WK-697. It depends on W37-6 and may run beside W37-7, W37-8
 and W37-9 (map plan `:380`). Its slice id is cited in prose rather than in a `slice:` header
@@ -170,10 +175,10 @@ reconciliation item R-7 below.
 | `README.md` (i.e. `docs/README.md`) | rewritten as the map: §1.4 tree, §1.2 family table, reading order, check commands | **Open.** Header stamped, body unchanged in substance: it is still the Phase-0 map. Its `adr/` row names a directory that no longer exists (`adrs/` does), it carries no §1.4 tree and no §1.2 family table, and "Checking the suite" names only `audit-docs.py` — not `doc-id.py` or `doc-index.py` | **Task 1** |
 | `closures/README.md`, `findings/README.md`, `rulings/README.md`, `ledgers/README.md` — "new" | four new directory READMEs | **Landed** by `71f5a22`. All four present, headed, and carrying substantive conventions read in full at this tree | **Task 9a** — verify only, and record the verdict |
 | `plans/2026-*.md (125) + README` — the README limb | "naming and four-kinds table → pointer; the nine writing conventions kept verbatim" | **Landed.** `docs/plans/README.md:45-54` is the pointer to `document-ids.md`; the nine conventions survive intact as four "Writing one so it passes the audit" plus five "The conventions the audit cannot check" | **Task 9a** — verify only |
-| `findings/README.md` — "deleted; content to `findings/` and `closures/` READMEs" | the old audit README dissolved | **Landed.** `docs/findings/README.md` carries `was: docs/audit/README.md`, and its content is split between it and `closures/README.md` | **Task 9a** — verify only |
+| `findings/README.md` — "deleted; content to `findings/` and `closures/` READMEs" | the old audit README dissolved | **Landed.** `docs/findings/README.md` carries a `was:` field naming the old audit tree's own README, and its content is split between it and `closures/README.md` | **Task 9a** — verify only |
 | `closures/INDEX.md#closure-recordsmd`, `closures/INDEX.md#plan-reviewsmd` — "preambles → `closures/README.md`" | the two preambles rehoused | **Landed.** `closures/README.md`'s Conventions block carries them | **Task 9a** — verify only |
-| `audit/findings/F*.md (5) + README` — the README limb | "README rewritten" | **Open.** `docs/audit/findings/README.md` is still present and still pre-migration in content and in path. The essays migrated; the README did not | **Task 3**, under DP-2 |
-| `audit/checklists/*.md` | move to `process/checklists/`; each gains *"a new record has an id; `audit-docs` is green"*; *"No new id family is minted"* → *"no family outside `document-ids.md` §1.2"*; `phase-close.md` gains the freeze-gate and generated-report lines | **Half open.** The **move** landed in `71f5a22`. **None of the content edits did**: `work-item-close.md:22` still reads "No new id family is minted", both files still direct records to `docs/audit/work/<existing-id>/`, and neither carries an id-and-gate line | **Tasks 4 and 5** |
+| `audit/findings/F*.md (5) + README` — the README limb | "README rewritten" | **Open.** The audit tree's own `findings/README.md` is still present, and still pre-migration in both content and path — Task 3 names that path in a fenced block. The essays migrated; the README did not | **Task 3**, under DP-2 |
+| `audit/checklists/*.md` | move to `process/checklists/`; each gains *"a new record has an id; `audit-docs` is green"*; *"No new id family is minted"* → *"no family outside `document-ids.md` §1.2"*; `phase-close.md` gains the freeze-gate and generated-report lines | **Half open.** The **move** landed in `71f5a22`. **None of the content edits did**: `work-item-close.md:22` still reads "No new id family is minted", both files still direct records to a `work/<existing-id>/` path under the old audit tree, and neither carries an id-and-gate line | **Tasks 4 and 5** |
 | `process/delivery-process.md` | **H**: "the fortnightly status ritual and freeze gates added" | **Open.** `grep -i 'fortnight\|freeze' docs/process/delivery-process.md` at this tree returns nothing. The ritual text exists only in `document-ids.md` §1.10, which is the *standard*, not the process the team runs | **Task 6** |
 | `process/delivery-process.core.json` | **H**: regenerated digest | **Open, consequentially.** Not a defect today; it becomes one the moment Task 6 changes the markdown's bytes | **Task 6, same commit** |
 | `research/*.md (11)` — the README the row implies | `docs/research/README.md` | **Open — path does not exist.** Reassigned to this slice by [`CR-1065`](../closures/CR-01065-w37-6-checkpoint-3-close.md)`:330` | **Task 2** |
@@ -260,8 +265,8 @@ the PL template's mechanical freeze rule, not a judgement.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | The slice's acceptance says *"`docs/audit/` no longer exists and nothing references it"*. At `d63f765`, `git ls-files docs/audit \| wc -l` returns **2**: `docs/audit/findings/README.md` and `docs/audit/w37-11-record.md`. The second is pinned by a code constant — `scripts/_docid.py:259` `W37_11_RECORD_PATH: Final = "docs/audit/w37-11-record.md"`, read by `_docverify.py:3960` and given its own exemption at `audit-docs.py:1369` — and is W37-11's live residue-ceiling instrument, created *after* the migration by `ea3704d` (#756). Can this slice dissolve the directory? | **(A)** W37-10 retires only `audit/findings/README.md`; `w37-11-record.md` and its constant move with W37-11, which owns the instrument. **(B)** W37-10 does both, editing `scripts/_docid.py`, `_docverify.py`, `audit-docs.py` and four test modules. **(C)** Both deferred to W37-11 | **(A).** (B) puts a code edit to W37-11's own live gate inside a slice whose executor skill is `docs-audit` and whose scope contains no code — the identical boundary review 13 drew at `CR-1064:373-379` for check-35's owner literal, applied to a stronger case, because here the file is *read at runtime by the gate that would have to stay green through the edit*. (C) abandons a row this slice is the only owner of. Under (A) the acceptance clause is **partially discharged with a named carrier**, which is `CLAUDE.md` §13's "reassigned" verdict, not a silent miss | scope | **yes** | |
-| DP-2 | What happens to `docs/audit/findings/README.md`? It is cited by `.claude/roles/auditor.md` (**W37-8's file**) and by 5 frozen `FD-` essays | **(A)** Fold its live content into `docs/findings/README.md`, delete it, add a `docs/REDIRECTS.csv` row. **(B)** Rewrite it in place, keeping the path. **(C)** Delete with no redirect | **(A).** (B) keeps a file under a directory RFC-937 §1.4 dissolves. (C) breaks the `FD-` citations, which is what `REDIRECTS.csv` exists to prevent — and `RL-1048` §1(d) established that a cited file is not retired, it is *placed*. The `.claude/roles/auditor.md` citation is **W37-8's to rewrite**: this slice must notify the lead, not edit a charter | scope | **yes** | |
+| DP-1 | The slice's acceptance requires the audit directory to no longer exist, with nothing referencing it (§7.1 quotes the clause in a fenced exhibit). At `d63f765`, `git ls-files docs/audit \| wc -l` returns **2**: that tree's `findings/README.md` and its `w37-11-record.md`. The second is pinned by a code constant — `scripts/_docid.py:259` defines `W37_11_RECORD_PATH` as that file's path, `_docverify.py:3960` re-exports it, and `audit-docs.py:1369` gives it its own exemption — and is W37-11's live residue-ceiling instrument, created *after* the migration by `ea3704d` (#756). Can this slice dissolve the directory? | **(A)** W37-10 retires only the `findings/README.md`; `w37-11-record.md` and its constant move with W37-11, which owns the instrument. **(B)** W37-10 does both, editing `scripts/_docid.py`, `_docverify.py`, `audit-docs.py` and four test modules. **(C)** Both deferred to W37-11 | **(A).** (B) puts a code edit to W37-11's own live gate inside a slice whose executor skill is `docs-audit` and whose scope contains no code — the identical boundary review 13 drew at `CR-1064:373-379` for check-35's owner literal, applied to a stronger case, because here the file is *read at runtime by the gate that would have to stay green through the edit*. (C) abandons a row this slice is the only owner of. Under (A) the acceptance clause is **partially discharged with a named carrier**, which is `CLAUDE.md` §13's "reassigned" verdict, not a silent miss | scope | **yes** | |
+| DP-2 | What happens to the audit tree's `findings/README.md` (Task 3 names the path)? It is cited by `.claude/roles/auditor.md` (**W37-8's file**) and by 5 frozen `FD-` essays | **(A)** Fold its live content into `docs/findings/README.md`, delete it, add a `docs/REDIRECTS.csv` row. **(B)** Rewrite it in place, keeping the path. **(C)** Delete with no redirect | **(A).** (B) keeps a file under a directory RFC-937 §1.4 dissolves. (C) breaks the `FD-` citations, which is what `REDIRECTS.csv` exists to prevent — and `RL-1048` §1(d) established that a cited file is not retired, it is *placed*. The `.claude/roles/auditor.md` citation is **W37-8's to rewrite**: this slice must notify the lead, not edit a charter | scope | **yes** | |
 | DP-3 | R-1: do the checklists gain a register-currency line? | **(A)** Both checklists gain one, as a command. **(B)** `phase-close.md` only. **(C)** Decline | **(A)** — see R-1. **Default until resolved: (A) is applied**, since review 13 recommends it and it is additive | decision point | no | Task 4 step 4; default applied |
 | DP-4 | This plan carries no `slice:` header field, and no `SL-` id for W37-10 exists | **(A)** Omit `slice:`, cite the slice in prose, and cut the `SL-` rows in this slice (Task 8b). **(B)** Mint an `SL-` id first and block on it | **(A).** Three facts measured at `d63f765`: `grep -c 'SL-[0-9]' docs/roadmap.md` = **0**; `grep -rn '^slice:' docs/plans/ \| wc -l` = **0**; and `scripts/doc-id.py:7373` guards with `if header.slice_ is not None:`, so omitting the field is clean while a `slice:` value with no matching row fails the resolves-to-row check at `:7376`. `document-ids.md:148` puts the `SL` row's creation on the planner "cut in the map plan" and its dispatch on the lead — the maintainer is not in that path, so this is not an escalation | fact | no | Task 8b; default applied (omit) |
 | DP-5 | Where do rituals (a) and (b) land in `delivery-process.md`? | **(A)** (a) → §13 (monitoring & comms loop); (b) → §10 (required artifacts) plus a sentence in §5 (per-layer flow). **(B)** A new §16 holding both | **(A).** §13 already carries the reporter's duties, so (a) lands beside the mechanism that performs it; §10 already lists the roadmap as a required artifact, which is where a declared gate belongs. (B) creates a rituals section that duplicates `document-ids.md` §1.10 — the second-copy failure mode RFC-756 exists to prevent. **Constraint on either option:** §§1-15 are numbered and cited by `delivery-process.core.json`; appending a section is safe, renumbering is not | design unknown | no | Task 6 step 1; default applied |
@@ -361,19 +366,25 @@ python3 scripts/audit-docs.py; echo EXIT=$?      # expect EXIT=0
 
 - [ ] **Step 5: Commit.** `docs(research): add the docs/research README (W37-10, CR-1065 §2.4)`
 
-### Task 3: retire `docs/audit/findings/README.md`
+### Task 3: retire the audit tree's `findings/README.md`
 
 **Blocked on DP-2.** Do not start this task until DP-2 carries a resolver id.
 
-**Files:** Delete `docs/audit/findings/README.md` (126 lines); modify `docs/findings/README.md`;
-modify `docs/REDIRECTS.csv`.
+**Files** — the paths, as a fenced exhibit so they do not read as surviving citations:
+
+```text
+delete: docs/audit/findings/README.md      (126 lines at d63f765)
+modify: docs/findings/README.md
+modify: docs/REDIRECTS.csv
+```
 
 - [ ] **Step 1: Read the file in full**, then diff its substance against
       `docs/findings/README.md`. Only content the findings README does **not** already carry
       moves; duplicating a paragraph into the survivor is the failure this row exists to end.
 - [ ] **Step 2: Fold the surviving content** into `docs/findings/README.md` under its existing
-      structure. Its `was:` field already records `docs/audit/README.md`; folding a second
-      source in does **not** license a second `was:` — note the provenance in prose instead.
+      structure. Its `was:` field already records the old audit tree's own README; folding a
+      second source in does **not** license a second `was:` — note the provenance in prose
+      instead.
 - [ ] **Step 3: Add the `REDIRECTS.csv` row** for the retired path, in the file's existing
       column order (read the header row; do not assume it).
 - [ ] **Step 4: Delete the file, and confirm what still points at it.**
@@ -395,7 +406,7 @@ python3 scripts/audit-docs.py; echo EXIT=$?   # expect EXIT=0
 /usr/bin/git ls-files docs/audit | wc -l      # expect 1 under DP-1 option A
 ```
 
-- [ ] **Step 6: Commit.** `docs(findings): retire docs/audit/findings/README into findings/ (W37-10)`
+- [ ] **Step 6: Commit.** `docs(findings): retire the audit findings README into findings/ (W37-10)`
 
 ### Task 4: both checklists — the id line, the gate line, the family line, the paths
 
@@ -417,7 +428,8 @@ python3 scripts/audit-docs.py; echo EXIT=$?   # expect EXIT=0
       relative link resolves **from `docs/process/checklists/`** — one directory deeper than
       `docs/process/`, which is the trap: `../document-ids.md`, not `document-ids.md`.
 - [ ] **Step 3: Repoint the stale record destinations.** Both files direct records to
-      `docs/audit/work/<existing-id>/README.md` — `work-item-close.md:21,38`. That tree is gone;
+      a `work/<existing-id>/README.md` path under the old audit tree —
+      `work-item-close.md:21,38`. That tree is gone;
       records are `CR-` files in `docs/closures/`, one per close, `kind:` naming the layer
       (`docs/closures/README.md`). At `d63f765`, `audit-docs.py` check 36 reports **4** fatal
       `legacy audit path` hits in each of these two files; this step is what removes them.
@@ -526,7 +538,7 @@ python3 -c "import hashlib,pathlib; print('sha256:'+hashlib.sha256(pathlib.Path(
 
 Write that value into `meta.derived_from_digest`, and set `meta.verified_against_tree` to the
 commit this task lands on. **Then re-read the markdown against the extract's blocks**: check 27
-compares bytes, and nothing compares content — Ruling 45's finding, recorded in `CLAUDE.md` §15,
+compares bytes, and nothing compares content — RL-905's finding, recorded in `CLAUDE.md` §15,
 where the extract fell two commits behind its source with the gate green throughout. If a block
 now states less than its section does, say so in the ledger.
 
@@ -633,8 +645,8 @@ slice, and the plan says so rather than letting an executor discover it at the g
 74 files, the great majority are frozen `CR-`, `FD-`, `RL-`, `LG-` and filed `PL-` records whose
 evidence is write-once; four more are `scripts/` and `.claude/` files owned by W37-7 and W37-8.
 This slice removes the hits in the artifacts it owns — the 4+4 in the two checklists, the 3 in
-`docs/audit/findings/README.md`, and the 2 in `delivery-process.md` if they fall in edited
-text — and records the residual with its breakdown. The residual is **W37-11's**, which owns the
+the audit tree's own `findings/README.md`, and the 2 in `delivery-process.md` if they fall in
+edited text — and records the residual with its breakdown. The residual is **W37-11's**, which owns the
 fuller §7 (i) walk (`CR-1065:339-341`).
 - [ ] **Step 2: Regenerate the index.** This plan and `docs/research/README.md` are new
       documents, so `docs/INDEX.md` must be regenerated for check 31/32 id resolution:
@@ -676,19 +688,47 @@ which the frontend half gets skipped and the claim goes in unearned.
 code (`.claude/skills/dev-commands`). Every command above is written with its own `echo EXIT=$?`
 or as a bare `&&` chain for that reason.
 
-**A caution specific to this slice's own gate:** this plan itself contains the string
-`docs/audit/`, so filing it adds `legacy audit path` hits to check 36's count. Those hits are
-**warn-level** — at `d63f765`, check 36 reports 516 fatal hits and `audit-docs.py` still exits
-0 — so the plan does not red the gate, but the executor must not read a risen count as a
-regression it caused. Measure the delta against `origin/main`, not against a remembered number.
+**A caution specific to this slice's own documents, learned by this plan reding its own gate.**
+Check 36's `legacy audit path` hits are **not uniformly warn-level**. At `d63f765` the run
+prints `DISCLOSED (952, at or under the W37-11 residue ceiling)` and `audit-docs.py` exits 0 —
+but "disclosed" is a per-(file, class) ceiling in the record `W37_11_RECORD_PATH` names, and a **new**
+file has no row there, so every hit it contributes is **above** the ceiling and lands in the
+`FAILED` block. The first draft of this plan carried 21 such hits in unfenced prose and exited
+1 for that reason.
+
+The rule this slice must therefore keep, and the reason the quotations in §1.1 and §7.1 are
+fenced exhibits rather than blockquotes: **the legacy audit path appears in this plan only
+inside a fenced code block.** The exemption is `scripts/_docid.py`'s `fenced_line_numbers`
+(RL-1044 §5.1's fence clause, extended to row (d)) and it works **by line number**, over the
+two fence markers its `_FENCE_RE` accepts — an inline backtick span does **not** exempt, which
+is the trap, because the path looks quoted either way. Where a heading or a table cell makes a
+fence impossible, this plan names the directory in words and puts the literal path in a nearby
+fenced block instead.
+
+**A second trap, found by this plan reding its own gate a second time.** `_FENCE_RE` is
+`^\s{0,3}(` followed by the two markers, so **prose that begins a line with a fence marker
+opens a phantom fence** and inverts the parity of every fence after it. Writing this very
+paragraph broke §7.1's exhibit that way. Never start a line with a fence marker in prose;
+keep it mid-line, or name it as `_FENCE_RE`'s alternatives rather than reproducing it.
+
+An executor editing this plan, or writing any new document in this slice, inherits that rule.
+Check with:
+
+```bash
+python3 scripts/audit-docs.py 2>&1 | sed -n '/^FAILED/,$p'
+```
 
 ## 7. Exit criteria
 
 ### 7.1 From the map plan, verbatim (`:835-838`)
 
-> **Acceptance:** every §5.2 H row is named by a commit; `docs/audit/` no longer exists and
-> nothing references it (Acceptance Standard item 4's sweep restricted to `docs/`); the phase
-> close checklist names the freeze gates; the gate's two halves are green.
+A fenced exhibit, for the reason §6's caution gives:
+
+```text
+**Acceptance:** every §5.2 H row is named by a commit; `docs/audit/` no longer exists and
+nothing references it (Acceptance Standard item 4's sweep restricted to `docs/`); the phase
+close checklist names the freeze gates; the gate's two halves are green.
+```
 
 **Three notes an executor needs, each evidenced, not asserted:**
 
@@ -696,7 +736,8 @@ regression it caused. Measure the delta against `origin/main`, not against a rem
    Five are already landed and get a verification verdict (Task 9a) rather than a new commit; a
    commit that renames landed content to satisfy a word would be churn, and the verdict is what
    the acceptance is actually after.
-2. *"`docs/audit/` no longer exists and nothing references it"* — **not fully reachable inside
+2. The clause requiring the audit directory to no longer exist, with nothing referencing it
+   (quoted in the exhibit above) — **not fully reachable inside
    this slice**, and DP-1 is where that is decided rather than discovered. Under the
    recommendation, one file remains (W37-11's live instrument, pinned by a code constant) and
    220 references remain, 74 files' worth, overwhelmingly in write-once evidence. The item is
@@ -704,9 +745,15 @@ regression it caused. Measure the delta against `origin/main`, not against a rem
 3. *"Acceptance Standard item 4's sweep"* — the map plan's item 4 names a constant,
    `scripts/doc-id.py`'s `LEGACY_SWEEP_EXCLUSIONS`, and **`grep -rn 'LEGACY_SWEEP_EXCLUSIONS'
    scripts/ tests/` at `d63f765` returns nothing**. The sweep shipped instead as `audit-docs.py`
-   check 36 over `_docid.LEGACY_FORM_PATTERNS` (`scripts/_docid.py:130-144`, whose tenth
-   alternative is `("legacy audit path", re.compile(re.escape("docs/audit/")))`), with a
-   per-hit disclosure function rather than an exclusion constant. **The map plan's citation is
+   check 36 over `_docid.LEGACY_FORM_PATTERNS` (`scripts/_docid.py:130-144`), with a
+   per-hit disclosure function rather than an exclusion constant. Its tenth alternative, as
+   shipped:
+
+   ```python
+   ("legacy audit path", re.compile(re.escape("docs/audit/"))),
+   ```
+
+   **The map plan's citation is
    stale, not its intent**; the runnable form is the command in Task 9b step 1. Named here
    because an executor who greps for the constant finds nothing and has no way to tell a missing
    check from a renamed one.
@@ -724,11 +771,11 @@ regression it caused. Measure the delta against `origin/main`, not against a rem
 | # | Risk, and how this plan mitigates it |
 |---|---|
 | 1 | **DP-6 for the sibling slices, stated because an executor will see it in the shared window.** W37-8 (charters) and W37-9 (`CLAUDE.md` and the public face) are each gated on a **dated maintainer line** — one per charter edit for W37-8, one for the `CLAUDE.md` edit for W37-9 (map plan `:766-771`, `:810-813`). It is a gate, **not a blocker: drafting proceeds while the line is pending; merging waits.** This slice is not itself under DP-6 (DP-6 here is the narrower question of whether *its own* process-spec edit needs one; recommendation: no). The risk is a merge-order one — if W37-10 merges while W37-8's line is pending, the `.claude/roles/auditor.md` hand-off from Task 3 sits open across the boundary. Name it in the hand-off; do not fix it by editing the charter |
-| 2 | **Renumbering a `delivery-process.md` section breaks the core extract's citations silently-ish.** Task 6 step 4 forbids renumbering. The check resolves citations but *not content* (Ruling 45), so a renumber that happens to still resolve would pass — verify by reading, not only by the gate |
+| 2 | **Renumbering a `delivery-process.md` section breaks the core extract's citations silently-ish.** Task 6 step 4 forbids renumbering. The check resolves citations but *not content* (RL-905), so a renumber that happens to still resolve would pass — verify by reading, not only by the gate |
 | 3 | **`W37-10` survives as a literal in check 35's output after this slice closes.** It is a stamp-deferral population label in `scripts/audit-docs.py`, and review 13 routed the alignment to W37-7 (`CR-1064:373-379`). An auditor reading check 35's output as a scope statement about this slice will mis-scope it. Recorded in the ledger |
 | 4 | **The four sibling drafts allocate ids from one base.** This plan takes **PL-1073** by the lead's assignment (W37-7 = 1070, W37-8 = 1071, W37-9 = 1072, W37-10 = 1073), not by running `doc-id.py next`. Task 8b allocates eleven more for the `SL-` rows and must record its base and range; the lead reconciles collisions before any push |
 | 5 | **Relative-link depth in `docs/process/checklists/`.** Two directories down from `docs/`, so the roadmap is `../../roadmap.md`. Check 1 catches it; Tasks 4 and 5 call it out so it is caught before the gate rather than by it |
-| 6 | **Writing `docs/README.md`'s tree from `ls` rather than from §1.4.** The filesystem records today's accidents — including `docs/audit/`, which the standard dissolves. Task 1 step 1 forbids it |
+| 6 | **Writing `docs/README.md`'s tree from `ls` rather than from §1.4.** The filesystem records today's accidents — including the audit directory, which the standard dissolves. Task 1 step 1 forbids it |
 
 ## 9. ETA basis
 
