@@ -46,59 +46,64 @@ now state). Plan of record: `docs/plans/PL-00939-wk-697-one-id-per-governed-thin
 
 ## Status of this draft — it is not frozen
 
-**This plan is `status: draft` and is deliberately not frozen.** Per `docs/_templates/PL.md`'s
-freeze rule (`§1.7`: *"`status: active` is permitted only when every blocking row in the
-Decision points table below has a resolver id in its `Resolved by` cell"*), DP-7-1 below is
-blocking and carries no resolver. Two further conditions, from the deputy's ruling of
-2026-09-18 00:41:53 BST, hold independently of the freeze rule:
+**This plan is `status: draft`, and stays that way.** Per `docs/_templates/PL.md`'s freeze
+rule (`§1.7`: *"`status: active` is permitted only when every blocking row in the Decision
+points table below has a resolver id in its `Resolved by` cell"*), **DP-7-1 below is blocking
+and carries no resolver — that is the only thing holding this plan in `draft`.** The two
+further conditions this section named at drafting are both discharged by this correction pass,
+not waited on further:
 
-1. **Review 13 (`CR-1064`) has no dated maintainer acceptance line yet.** `CLAUDE.md` §14:
-   a review *"binds nothing until dated"*. Review 13's own §6 table is what the
-   `## Reconciled against plan review 13` section below answers; until it is accepted, that
-   section records a reconciliation against a proposal, not against a decision.
-2. **W37-6's checkpoint 3 is not yet on `main`.** The checkpoint-3 close record exists only on branch
-   `w37-6-checkpoint-3-close` (PR #787) at the time of drafting; three of this slice's file
-   rows are reassigned here by that record, and those reassignments are not in the tree.
+1. **Review 13 (`CR-1064`) still carries no dated maintainer acceptance line**, verified fresh
+   at this pass's own base tree: `docs/closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md:632`
+   reads `**Maintainer acceptance:** _pending_`. Per the deputy's ruling of **2026-09-18 09:19**
+   (`~/gi-pricing-plan.local/channel/to-lead.md`): review 13 is *"a FILED PROPOSAL — reconcile
+   against it now, do not wait for its acceptance line"*. The `## Reconciled against plan
+   review 13` section below does exactly that — reconciles against `CR-1064` as a filed
+   proposal — and this plan does not wait on the acceptance line landing. If that line, once
+   written, amends any of the three items this plan takes from review 13, the amendment
+   corrects this plan; that is the trigger, not a discretionary re-read.
+2. **W37-6's checkpoint 3 is now on `main`, as `CR-1065`.** `docs/closures/CR-01065-w37-6-checkpoint-3-close.md`
+   landed in `d63f765` (`git log --oneline -1 -- docs/closures/CR-01065-w37-6-checkpoint-3-close.md`
+   → `d63f765 docs(closures): W37-6 checkpoint 3 — slice close record, register, roadmap row,
+   ledger`), and is byte-identical to the branch revision this plan was drafted against
+   (`git diff origin/w37-6-checkpoint-3-close:docs/closures/CR-01065-w37-6-checkpoint-3-close.md
+   origin/main:docs/closures/CR-01065-w37-6-checkpoint-3-close.md` → empty). **Every "the CP3
+   record" citation below is therefore replaced with `CR-1065`, at the same line numbers** —
+   this is Task 0, named at drafting, now applied.
 
-**No executor is spawned and no branch beyond this plan draft exists** until both land and
-the deputy rules that checkpoint 3's evidence met its conditions. The plan is dated — that
-is, `status:` moves to `active` with `created:` unchanged — by the lead once DP-7-1 carries
-a resolver and those two conditions are discharged.
+**No executor is spawned and no branch beyond this plan draft exists** until DP-7-1 carries a
+resolver — the checkpoint-3 condition is discharged, and the deputy's ruling discharges the
+review-13-acceptance wait, but neither reaches DP-7-1, which is a genuine, unresolved
+disagreement between two governed records (see DP-7-1's own row). **The plan is dated —
+that is, `status:` moves to `active` with `created:` unchanged — by the lead once DP-7-1
+carries a resolver.** This correction pass discharges everything it can discharge and leaves
+`status: draft` in place, correctly, rather than flipping it without a resolver — a `PL-`
+`active` with an open blocking decision point fails `audit-docs.py` check 33.
 
-**Why the checkpoint-3 close record is cited as "the CP3 record" and not by its id.** Its id
-is not in `docs/INDEX.md`, because the record is on an unmerged branch; `scripts/audit-docs.py`
-check 32 resolves every id token against that index and reds an unresolvable one. Writing the
-id here would make this draft fail the gate for a reason that is a fact about merge order, not
-about the draft. **When PR #787 merges, the first correction to this plan replaces every "the
-CP3 record" with the record's id** — that is a step, not a hope, and it is Task 0 of whoever
-dates this plan. Its line numbers below are the branch revision's, read at
-`origin/w37-6-checkpoint-3-close`.
-
-**The gate on this draft, measured rather than asserted.** At the base tree with this file
-present and `docs/INDEX.md` regenerated:
+**The gate on this draft, re-measured after rebase onto `origin/main` = `d63f765085fe6eb1c594177c5779ecfc3caf7ae8`**
+(the tree this correction pass was written against), with `docs/INDEX.md` regenerated:
 
 ```
-python3 scripts/audit-docs.py        → EXIT=1, one row:
-                                       "check 31: gap in the full allocation between 1064 and 1070"
-python3 scripts/doc-id.py check      → EXIT=1, "[noncontiguous] docs/INDEX.md has a gap between 1064 and 1070"
-python3 scripts/doc-index.py --check → EXIT=0, "OK (byte-stable)"
+python3 scripts/audit-docs.py; echo EXIT=$?        → EXIT=0
+python3 scripts/doc-id.py check; echo EXIT=$?       → EXIT=0
+python3 scripts/doc-index.py --check; echo EXIT=$?  → EXIT=0
 ```
 
-The audit's failing row is **exactly one** against a baseline of the same tree without this
-file, which also exits 0 — `diff` of the two runs' failure rows returns that single line and
-nothing else. **The gap is 1065 through 1069, all five of which are on the CP3 branch**, so it
-closes when PR #787 merges and not before. That was proven, not predicted: with the CP3 branch's
-close record and its four finding records materialised into the worktree and `docs/INDEX.md`
-regenerated, `python3 scripts/audit-docs.py` exits **0** and `python3 scripts/doc-id.py check`
-exits **0** with this plan's id in place. The materialised copies were then removed and the
-index regenerated. **This draft is therefore not mergeable before #787 and is not meant to
-be** — the same condition the deputy's ruling already places on it.
+The 1065-1069 gap this section originally reported (`check 31: gap in the full allocation
+between 1064 and 1070`, `doc-id.py check`'s matching `[noncontiguous]` row) is closed by the
+rebase itself: those five ids — `CR-1065` and its four `FD-` findings — are now on `main`, so
+the workaround this section described (materialise the CP3 branch's records, prove the gate
+clean, then remove them again) is no longer needed. The gate is clean at the real, rebased
+tree, measured directly rather than by simulation.
 
-**Base tree for every measurement in this plan:**
-`a8b3c39a0cdd0a537b83b58d04aa0ea3c340aa15` —
-`/usr/bin/git rev-parse origin/main` in worktree `agent-a576ed4b6d959c619`, fetched this
-session. Clock: `TZ=Europe/London date '+%Y-%m-%d %H:%M:%S %Z'` → `2026-09-18 02:33:55 BST`.
-Every count and every quotation below was taken at that tree unless another is named.
+**Base tree for the plan's own body (everything below unless marked otherwise):**
+`a8b3c39a0cdd0a537b83b58d04aa0ea3c340aa15` — `/usr/bin/git rev-parse origin/main` in worktree
+`agent-a576ed4b6d959c619`, fetched that session. Clock at drafting:
+`TZ=Europe/London date '+%Y-%m-%d %H:%M:%S %Z'` → `2026-09-18 02:33:55 BST`.
+
+**Base tree for this correction pass:** `d63f765085fe6eb1c594177c5779ecfc3caf7ae8` — rebased
+in a scratch worktree from `origin/main`, fetched this session. Clock:
+`TZ=Europe/London date '+%Y-%m-%d %H:%M:%S %Z'` → `2026-09-18 09:26:50 BST`.
 
 ---
 
@@ -144,21 +149,21 @@ recalled.
 | 5 | `.claude/skills/repo-architecture/SKILL.md` | H + M | The annotated `docs/` tree replaced by `RFC-937` §1.4's | Not landed. `grep -n '§1.4\|document-ids' .claude/skills/repo-architecture/SKILL.md` → no output | 5 |
 | 6 | `.claude/skills/python-test/SKILL.md` | H + M | The marker form `@pytest.mark.req("FR-<n>")` | **Landed** in W37-6's own chain (`4d9fe1d`, #783): `grep -n 'mark.req' .claude/skills/python-test/SKILL.md` → `16:@pytest.mark.req("FR-10")`. Verify only; do not re-edit | 6 |
 | 7 | `.claude/skills/testing-strategy/SKILL.md` | H + M | The same marker form | Not landed: `grep -c 'mark.req' .claude/skills/testing-strategy/SKILL.md` → `0`. The skill teaches `pytest` markers generally and states no `req` form at all | 6 |
-| 8 | `.claude/skills/brainstorming/SKILL.md` | H | One sentence: scratch is not a family; the committed record is a plan or a ledger | Not landed. `grep -cn 'scratch' .claude/skills/brainstorming/SKILL.md` → `0`. the CP3 record `:301` records it: *"**NOT CLOSED — its own §5.4 one-sentence edit never landed**"*, reassigned here at `:335` | 7 |
-| 9 | `.claude/skills/planning-with-files/SKILL.md` | H | The same sentence | Not landed. the CP3 record `:302` calls it *"correctly excluded by design (RL-987/§6.3 — not a member)"* — that exclusion governs the **stamp**, not §5.4's content row. See DP-7-4 | 7 |
+| 8 | `.claude/skills/brainstorming/SKILL.md` | H | One sentence: scratch is not a family; the committed record is a plan or a ledger | Not landed. `grep -cn 'scratch' .claude/skills/brainstorming/SKILL.md` → `0`. `CR-1065` `:301` records it: *"**NOT CLOSED — its own §5.4 one-sentence edit never landed**"*, reassigned here at `:335` | 7 |
+| 9 | `.claude/skills/planning-with-files/SKILL.md` | H | The same sentence | Not landed. `CR-1065` `:302` calls it *"correctly excluded by design (RL-987/§6.3 — not a member)"* — that exclusion governs the **stamp**, not §5.4's content row. See DP-7-4 | 7 |
 | 10 | `.claude/skills/README.md` | H + M | A "creates" column per creating skill | Not landed. `grep -n 'creates' .claude/skills/README.md` → one hit, `:453`, inside `ui-ux-pro-max`'s `--persist` note; no column exists in any skill table | 8 |
 | 11 | `.claude/skills/close-workstream/SKILL.md` and `.claude/skills/docs-audit/SKILL.md` | H | The bespoke-audit rule, in both | Not landed in **either**, and `close-workstream`'s half was expected to be. `grep -rn 'bespoke' .claude/skills/close-workstream/SKILL.md .claude/skills/docs-audit/SKILL.md` → no output, while `PL-960:648` states the `close-workstream` half *"is in this commit, where the rule is **authored**"*. That is a plan-versus-tree disagreement, raised in Task 9 Step 1 | 9 |
-| 12 | `.claude/skills/writing-plans/SKILL.md` | H (reassigned) | The retired filename grammar at `:18` replaced by the `PL-<nnnnn>-<slug>.md` form | Not landed. `grep -n 'YYYY-MM-DD' .claude/skills/writing-plans/SKILL.md` → `18:**Save plans to:** \`docs/plans/YYYY-MM-DD-<feature-name>.md\``. the CP3 record `:187-194` and `:328` reassign it here | 10 |
-| 13 | `.claude/skills/subagent-driven-development/SKILL.md` | H (reassigned) | The `LG-` ledger-append routing: where a ledger lives, what its id is, and that the append is the only permitted mutation | Not landed. the CP3 record `:289` — *"**NOT CLOSED — still pre-migration content** (§2.2 confirms independently: zero diff 0651c1e..71f5a22)"*; reassigned at `:329` | 11 |
+| 12 | `.claude/skills/writing-plans/SKILL.md` | H (reassigned) | The retired filename grammar at `:18` replaced by the `PL-<nnnnn>-<slug>.md` form | Not landed. `grep -n 'YYYY-MM-DD' .claude/skills/writing-plans/SKILL.md` → `18:**Save plans to:** \`docs/plans/YYYY-MM-DD-<feature-name>.md\``. `CR-1065` `:187-194` and `:328` reassign it here | 10 |
+| 13 | `.claude/skills/subagent-driven-development/SKILL.md` | H (reassigned) | The `LG-` ledger-append routing: where a ledger lives, what its id is, and that the append is the only permitted mutation | Not landed. `CR-1065` `:289` — *"**NOT CLOSED — still pre-migration content** (§2.2 confirms independently: zero diff 0651c1e..71f5a22)"*; reassigned at `:329` | 11 |
 | 14 | `.claude/skills/watcher-runtime-state/` (SKILL.md + `scripts/write_runtime_state.py`) | added by review 13 §2c | The `read_from` locators the skill teaches must resolve | Not landed and actively wrong: `SKILL.md:84-85` teaches `--phase-source "docs/roadmap.md §7"`, and `grep -n '^## ' docs/roadmap.md` shows the headings run `## 6` → `## P1a` — **there is no `## 7`** | 12 |
 | 15 | `scripts/audit-docs.py` check 35's owner literal | added by review 13 §4c | The printed owner tag aligns with F92's owner of record | Not aligned. `scripts/audit-docs.py:2936` prints a deferred-count note naming `owner: W37-10`, with `RL-1046` §B cited as its authority (written there in the padded file form, which is why it is described rather than quoted here); the lead ruled the owner of record is W37-11. See DP-7-1 | 13 |
 
 **Not in this slice, stated so the silence is not read as an omission.** `CLAUDE.md` and the
 public face are W37-9's (`PL-939:785`). The charters, `.claude/agents/README.md` and
-`.claude/agents/ci-watcher.md` are W37-8's (`PL-939:760`; the CP3 record `:327`). `docs/` READMEs,
-the checklists and `docs/research/README.md` are W37-10's (`PL-939:815`; the CP3 record `:330`). The
+`.claude/agents/ci-watcher.md` are W37-8's (`PL-939:760`; `CR-1065` `:327`). `docs/` READMEs,
+the checklists and `docs/research/README.md` are W37-10's (`PL-939:815`; `CR-1065` `:330`). The
 fuller `RFC-937` §7 (i) walk across all roughly ninety H / H+M rows is W37-11's, not this
-slice's — the CP3 record `:315-318` is explicit that its 56-row table *"is not (i)'s exhaustive
+slice's — `CR-1065` `:315-318` is explicit that its 56-row table *"is not (i)'s exhaustive
 discharge"*. This slice closes the rows listed above and makes no claim about the rest.
 
 ---
@@ -276,18 +281,16 @@ right-sizing rule folds documentation into the task whose deliverable needs it.
 
 ### What the checkpoint-3 close record routes here
 
-**The CP3 record is on branch `w37-6-checkpoint-3-close` (PR #787) and not on `main`** at the
-base tree; it was read via `/usr/bin/git show
-origin/w37-6-checkpoint-3-close:docs/closures/<its filename>`. Three file rows come here, each
-with its source line:
+**`CR-1065` is now on `main` (`d63f765`)** — no longer read via a branch `git show`. Three file
+rows come here, each with its source line:
 
 | Item | Source | Disposition |
 |---|---|---|
-| `.claude/skills/writing-plans/SKILL.md` — the retired filename grammar at `:18` | the CP3 record `:187-190` (the H content edit *"did not land"*) and `:328` (*"**W37-7** — PL-939 `:735`, instruments — the same content-edit gap §2.2 already reassigns there"*) | **Taken. Task 10** |
-| `.claude/skills/subagent-driven-development/SKILL.md` — the `LG-` ledger-append routing | the CP3 record `:189-191` and `:329` (*"**W37-7** — PL-939 `:735`, instruments — same basis"*) | **Taken. Task 11** |
-| `.claude/skills/brainstorming/SKILL.md` — its §5.4 one-sentence edit | the CP3 record `:301` (*"**NOT CLOSED — its own §5.4 one-sentence edit never landed**"*) and `:333-335` (*"reassigned to **W37-7** on the same basis, stated rather than picked silently, since no other slice's leaf plan claims it"*) | **Taken. Task 7**, together with its §5.4 row-mate `planning-with-files` — see DP-7-4 |
+| `.claude/skills/writing-plans/SKILL.md` — the retired filename grammar at `:18` | `CR-1065` `:187-190` (the H content edit *"did not land"*) and `:328` (*"**W37-7** — PL-939 `:735`, instruments — the same content-edit gap §2.2 already reassigns there"*) | **Taken. Task 10** |
+| `.claude/skills/subagent-driven-development/SKILL.md` — the `LG-` ledger-append routing | `CR-1065` `:189-191` and `:329` (*"**W37-7** — PL-939 `:735`, instruments — same basis"*) | **Taken. Task 11** |
+| `.claude/skills/brainstorming/SKILL.md` — its §5.4 one-sentence edit | `CR-1065` `:301` (*"**NOT CLOSED — its own §5.4 one-sentence edit never landed**"*) and `:333-335` (*"reassigned to **W37-7** on the same basis, stated rather than picked silently, since no other slice's leaf plan claims it"*) | **Taken. Task 7**, together with its §5.4 row-mate `planning-with-files` — see DP-7-4 |
 
-the CP3 record `:85` also records item 12 of the auditor's checklist as *"**not started — W37-7's, not
+`CR-1065` `:85` also records item 12 of the auditor's checklist as *"**not started — W37-7's, not
 W37-6's**"* (requirement-facing proof). This plan reads that as a statement of ownership, not
 as an additional deliverable beyond the rows above: the proof that the instruments now teach
 the right forms **is** Acceptance Standard items 1-8 below.
@@ -300,19 +303,19 @@ gets done twice or not at all. Each is `CR-1064:542-546`.
 | Item | Routed to | Source |
 |---|---|---|
 | F97's disposition — remedy touches `.claude/roles/lead.md` | **W37-8** | `CR-1064:542` |
-| `.claude/agents/ci-watcher.md` (pre-migration content) | **W37-8** | the CP3 record `:327` |
-| `CONTRIBUTING.md` and `.github/PULL_REQUEST_TEMPLATE.md` | **W37-9** | the CP3 record `:325-326` |
+| `.claude/agents/ci-watcher.md` (pre-migration content) | **W37-8** | `CR-1065` `:327` |
+| `CONTRIBUTING.md` and `.github/PULL_REQUEST_TEMPLATE.md` | **W37-9** | `CR-1065` `:325-326` |
 | Nothing at all from review 13 bears on W37-9 | **W37-9** | `CR-1064:543` — *"'No item from review 13 bears on this slice' — stated, not omitted"* |
-| `docs/research/README.md` (the one missing path) and the F87/F90 register-currency line | **W37-10** | the CP3 record `:330`; `CR-1064:544` |
+| `docs/research/README.md` (the one missing path) and the F87/F90 register-currency line | **W37-10** | `CR-1065` `:330`; `CR-1064:544` |
 | The pinned-base decision, the idempotence item, and row (g) with g2 = `207` | **W37-11** | `CR-1064:545` and `:581`. The `207` is the merged figure: `29e7a9c fix(scripts): row (g) g2 classifier — forward-citation check + bare finding-id exclusion (251 → 207 classified-by-none; (g) stays the standing FAIL) (#757)`, `/usr/bin/git log --oneline -3 origin/main` at the base tree |
-| The mechanism gap behind the sweep reaching files beneath a vendored manifest | **W37-11** | the CP3 record `:199-202` — *"a `migrate()` change under the reproduction rule, not a content edit"* |
+| The mechanism gap behind the sweep reaching files beneath a vendored manifest | **W37-11** | `CR-1065` `:199-202` — *"a `migrate()` change under the reproduction rule, not a content edit"* |
 
 **Review 13's shape answer, quoted because it is the licence this plan operates under**
 (`CR-1064:581`): *"**The W37-7…11 cut holds. No slice moves, no id changes, no new slice.**"*
 The only scope addition it proposes anywhere is R13-1, to this slice (`CR-1064:307-308`:
 *"This is an **addition to W37-7's scope**, and it is the only scope addition this review
 proposes"*). This plan therefore adds nothing of its own invention to the slice; every row in
-the scope table traces to `RFC-937` §5.4, to `PL-939:740-751`, to `CR-1064` or to the CP3 record.
+the scope table traces to `RFC-937` §5.4, to `PL-939:740-751`, to `CR-1064` or to `CR-1065`.
 
 ---
 
@@ -327,7 +330,7 @@ the default applied until then.
 | DP-7-1 | Check 35's printed owner tag for F92's deferred population. The lead ruled the owner of record is **W37-11** (`CR-1064:372`); the ruling the line itself cites, `RL-1046` §B, says **W37-10** (`docs/rulings/` `RL-1046`'s file, line 113). The literal also appears as the identifier `_is_stamp_deferred_w37_10` and in three test files (`tests/test_audit_docs_ids.py:684`, `:1630`; `tests/test_register_lint.py:547`; `tests/test_doc_id_verify.py:1881`, `:1894`) | (a) print `owner: W37-11` and leave `RL-1046` §B cited as-is; (b) print `owner: W37-11 (deferred under RL-1046 §B, which named W37-10; owner of record reassigned)` and rename the helper to carry no slice tag — `_is_stamp_deferred_f92`; (c) leave `W37-10` and file the misalignment as a finding for W37-11 | **(b)**. (a) makes the sentence self-contradicting on its face — a reader following the citation lands on a ruling that says the other thing, which is exactly the class `RFC-779` names. (c) defers a one-line edit into the slice whose job is to *prove* the corpus consistent. (b) removes the slice tag from the identifier entirely, so the next reassignment cannot produce this row again — a naming that cannot go stale, not a corrected copy of one | decision point — it is a code edit whose content two governed records disagree on | **yes** | _open_ |
 | DP-7-2 | How far does the artifact B fix reach? The `read_from` values are arguments, not literals, and the live file is outside the repository (`~/gi-pricing-plan.local/handover/runtime-state.json`) | (a) repository-only: fix `SKILL.md`'s taught invocation and make `write_runtime_state.py` **refuse** a `--*-source` locator whose file path does not exist, so a dangling locator cannot be written again; (b) (a) plus a one-off rewrite of the live state file by the watcher, recorded in the slice ledger as an ops action; (c) documentation only | **(b)**, with (a) as the repository deliverable and the live rewrite handed to the watcher as a named ops step. (c) leaves the instrument able to mint the same defect tomorrow; (a) alone leaves a live file that three roles read as authoritative (`SKILL.md:75`: *"read `runtime-state.json`, not the roadmap"*) still carrying two dangling locators | design unknown — the mechanism is settled; the reach is not | no — default (a) applies, and Task 12 delivers it either way | Task 12's review, the lead |
 | DP-7-3 | Rows 8, 9, 12 and 13 are content edits to **vendored** manifests. `CLAUDE.md` §12: *"Vendored files stay as upstream wrote them … every deviation recorded in the README rather than made silently."* | (a) make the four edits and record each as a numbered deviation in `.claude/skills/README.md` in the same commit; (b) refuse them and mark the four §5.4 half-rows superseded with a dated note; (c) fork the four skills out of the vendored set | **(a)**. The README already carries three such recorded deviations for this exact set of files (`.claude/skills/README.md:159` — *"One deviation from upstream: where a plan is saved"*, which already changed `writing-plans`' save path once; `:178` — the `task-brief` script changes; `:277`). §12's rule is *record it*, not *never*; (b) would leave the instruments teaching retired forms, which is the whole point of the slice; (c) is an architecture change needing an ADR | scope — it decides whether four rows are delivered or superseded | no — default (a) applies | Task 7's review, the lead |
-| DP-7-4 | `planning-with-files` is half of §5.4's *"`brainstorming`, `planning-with-files` — one sentence each"* row, but the CP3 record `:302` records it as *"correctly excluded by design (RL-987/§6.3 — not a member)"* | (a) make the sentence edit anyway — §6.3's exclusion governs the **stamp**, and §5.4's row governs the **content**, which are two different obligations; (b) treat the exclusion as covering the content row too and mark that half superseded with a dated note | **(a)**. The two rules answer different questions: `RL-987`/§6.3 decided whether the migration *stamps and rewrites* the file; §5.4's row is about what the file *teaches*. the CP3 record `:302` itself keeps the row-mate alive in the same sentence (*"its row-mate `brainstorming` was the member, and see the row above"*), which only makes sense if the content row survived the membership decision | scope | no — default (a) applies | Task 7's review, the lead |
+| DP-7-4 | `planning-with-files` is half of §5.4's *"`brainstorming`, `planning-with-files` — one sentence each"* row, but `CR-1065` `:302` records it as *"correctly excluded by design (RL-987/§6.3 — not a member)"* | (a) make the sentence edit anyway — §6.3's exclusion governs the **stamp**, and §5.4's row governs the **content**, which are two different obligations; (b) treat the exclusion as covering the content row too and mark that half superseded with a dated note | **(a)**. The two rules answer different questions: `RL-987`/§6.3 decided whether the migration *stamps and rewrites* the file; §5.4's row is about what the file *teaches*. `CR-1065` `:302` itself keeps the row-mate alive in the same sentence (*"its row-mate `brainstorming` was the member, and see the row above"*), which only makes sense if the content row survived the membership decision | scope | no — default (a) applies | Task 7's review, the lead |
 | DP-7-5 | `docs/INDEX.md` is regenerated by `scripts/doc-index.py` and W37-7, W37-8, W37-9 and W37-10 may run beside each other (`PL-939:379-382`). Four concurrent branches each regenerating one generated file is a guaranteed conflict | (a) each slice regenerates `docs/INDEX.md` in its own final commit and resolves conflicts by **regenerating, never by hand-merging**; (b) no slice touches `docs/INDEX.md` and W37-11 regenerates it once; (c) serialise the four slices | **(a)**, with the rule stated in each slice's PR body: a generated file is never conflict-resolved by hand (`CLAUDE.md` §2's *"`docs/contracts/` is generated and never hand-edited"* is the same principle applied to the other generated artifact). (b) leaves `doc-index.py --check` red on every intermediate merge, which disarms the gate for the whole of Stage 3 | decision point — it affects three other slices, so it is the lead's, not this plan's | no — default (a) applies | The lead, before the first Stage 3 executor is spawned |
 
 ---
@@ -754,7 +757,7 @@ python3 scripts/audit-docs.py; echo EXIT=$?
 
 ---
 
-### Task 10: `writing-plans` — the retired filename grammar (reassigned by the CP3 record)
+### Task 10: `writing-plans` — the retired filename grammar (reassigned by `CR-1065`)
 
 **Files:**
 - Modify: `.claude/skills/writing-plans/SKILL.md:18`
@@ -767,7 +770,7 @@ grep -n 'YYYY-MM-DD' .claude/skills/writing-plans/SKILL.md
 ```
 
 Expected at the base tree: `18:**Save plans to:** \`docs/plans/YYYY-MM-DD-<feature-name>.md\``.
-the CP3 record `:187-189` records it as *"still present verbatim at `4d9fe1d`"*. If it is gone, another
+`CR-1065` `:187-189` records it as *"still present verbatim at `4d9fe1d`"*. If it is gone, another
 branch landed it — stop and tell the lead rather than assuming.
 
 - [ ] **Step 2: Replace with the `RFC-937` §1.3 form**
@@ -809,7 +812,7 @@ python3 scripts/audit-docs.py; echo EXIT=$?
 
 ---
 
-### Task 11: `subagent-driven-development` — the `LG-` ledger routing (reassigned by the CP3 record)
+### Task 11: `subagent-driven-development` — the `LG-` ledger routing (reassigned by `CR-1065`)
 
 **Files:**
 - Modify: `.claude/skills/subagent-driven-development/SKILL.md`
@@ -1057,12 +1060,12 @@ broken-input proof.
 - The `dev-commands` / `doc-id-migration-run` text says the venv fix is exclusion by
   construction and **not** a refusal guard (Task 2, Step 3).
 
-**Added by the W37-6 checkpoint-3 close record** (the CP3 record `:328-335`): the three reassigned
+**Added by the W37-6 checkpoint-3 close record** (`CR-1065` `:328-335`): the three reassigned
 files — `writing-plans`, `subagent-driven-development`, `brainstorming` — each carry their
 named §5.4 content edit, evidenced by a commit in this slice's ledger.
 
 **Not an exit criterion for this slice, stated so it is not attempted:** the fuller `RFC-937`
-§7 (i) walk across all H / H+M rows. the CP3 record `:315-318` gives it to W37-11.
+§7 (i) walk across all H / H+M rows. `CR-1065` `:315-318` gives it to W37-11.
 
 ---
 
@@ -1142,8 +1145,8 @@ is pushed. Task 2, Step 2 writes this trap into `dev-commands`, with the mechani
 reads `origin/main`, and a branch's ids are invisible to it — so the next drafter meets it as
 documentation rather than as a collision.
 
-**5. A "closed" row in the CP3 record's table does not mean the content edit landed.** The table's
-verdict column is computed from the **last-touching commit**, and the CP3 record `:328` records
+**5. A "closed" row in `CR-1065`'s table does not mean the content edit landed.** The table's
+verdict column is computed from the **last-touching commit**, and `CR-1065` `:328` records
 `writing-plans` as *"closed (but see §2.2 — its own named H edit did not land)"*. Every row in
 this plan's scope table was therefore re-measured by content at the base tree, with the
 predicate shown, rather than read off that column. An executor that re-derives scope from the
