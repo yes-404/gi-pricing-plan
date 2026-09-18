@@ -1,5 +1,5 @@
 ---
-id: PL-1070
+id: PL-1071
 family: plan
 kind: leaf
 title: W37-8 — Charters, agents, and their READMEs
@@ -15,36 +15,46 @@ corrected_by: []
 relates: [PL-939, CR-1064, RFC-937]
 ---
 
-# PL-1070 — W37-8: Charters, agents, and their READMEs
+# PL-1071 — W37-8: Charters, agents, and their READMEs
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking.
 
-**THIS PLAN IS A DRAFT AND IS UNDATED.** `status: draft`. It is filed under the deputy's
+**THIS PLAN IS A DRAFT, AND STAYS A DRAFT.** `status: draft`. It was filed under the deputy's
 ruling of 2026-09-18 00:41:53 BST (`~/gi-pricing-plan.local/channel/to-lead.md`, at or about
-line 5295), condition (a): **drafting only**. No executor is spawned, no implementation branch
-exists, and nothing in this plan may be executed until **both** of the two events below have
-landed and the lead has said so:
+line 5295), condition (a): **drafting only**; that condition named two events to wait for.
+**This correction pass, made under the deputy's later ruling of 2026-09-18 09:19, discharges
+both — one by reconciling now rather than waiting, one because the event itself landed:**
 
-1. **Plan review 13 carries a dated maintainer acceptance line.** At the tree this plan was
-   written against it does not: `grep -n 'Maintainer acceptance' docs/closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md`
-   → `632:**Maintainer acceptance:** _pending_` at `a8b3c39a0cdd0a537b83b58d04aa0ea3c340aa15`.
-2. **W37-6's checkpoint 3 is reported with its evidence and ruled to have met it**, and its
-   close record `CR-1065` is on `main`. At this tree it is not: `CR-1065` exists only on
-   `origin/w37-6-checkpoint-3-close` (PR #787), read here with
-   `/usr/bin/git show origin/w37-6-checkpoint-3-close:docs/closures/CR-01065-w37-6-checkpoint-3-close.md`.
+1. **Plan review 13 still carries no dated maintainer acceptance line**, re-verified at this
+   pass's own base tree: `grep -n 'Maintainer acceptance' docs/closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md`
+   → `632:**Maintainer acceptance:** _pending_` at `d63f765085fe6eb1c594177c5779ecfc3caf7ae8`. Per
+   the 09:19 ruling, review 13 is *"a FILED PROPOSAL — reconcile against it now, do not wait for
+   its acceptance line"* — §4 below does exactly that, and this plan no longer waits on
+   condition 1.
+2. **W37-6's checkpoint 3 landed.** Its close record, `CR-1065`, is now on `main`:
+   `git log --oneline -1 -- docs/closures/CR-01065-w37-6-checkpoint-3-close.md` →
+   `d63f765 docs(closures): W37-6 checkpoint 3 — slice close record, register, roadmap row,
+   ledger`, and it is byte-identical to the branch revision this plan was drafted against
+   (`git diff origin/w37-6-checkpoint-3-close:docs/closures/CR-01065-w37-6-checkpoint-3-close.md
+   origin/main:docs/closures/CR-01065-w37-6-checkpoint-3-close.md` → empty), so every line
+   number §4.2 cites against it still resolves. Condition 2 is discharged.
 
 **`created:` is the drafting date, not a freeze date.** The header field is mechanically
 required to be an ISO date (`scripts/_docid.py:836-846`, `` `created` is not an ISO date
 (YYYY-MM-DD) ``), so it cannot be left blank. **The freeze is carried by `status:` instead**,
 which is the mechanism `docs/_templates/PL.md`'s own freeze rule uses: *"`status: active` is
 permitted only when every blocking row in the Decision points table below has a resolver id in
-its `Resolved by` cell"*. This plan has two blocking rows with no resolver, so it stays
-`draft` by that rule alone, independently of the deputy's condition.
+its `Resolved by` cell"*. **DP-8.1 and DP-8.2 are still blocking and still carry no resolver**
+— that disagreement is the lead's/decision-maker's to rule, not discharged by either of the
+deputy's rulings above — so this plan stays `draft` by `§1.7`'s mechanical rule alone, and this
+correction pass does not flip it: a `PL-` `active` with an open blocking decision point fails
+`audit-docs.py` check 33.
 
 **Frozen / dated:** _pending — set `status: active` only when DP-8.1 and DP-8.2 carry resolver
-ids and both events above have landed._
+ids. Both waiting-on-an-event conditions above are now discharged; the remaining block is the
+two decision points, which is exactly what `§1.7`'s freeze rule is for._
 
 ## Goal
 
@@ -163,7 +173,7 @@ All run from a clean worktree at `a8b3c39a0cdd0a537b83b58d04aa0ea3c340aa15`
 
 **Read the disclosure count as a trend at its boundary, never as an absence** (`CLAUDE.md` §10,
 [`RFC-789`](../rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md),
-which is where the pre-migration note `NT-0007` now lives). `957` is the pooled
+which is where the retired pre-migration note now lives). `957` is the pooled
 figure at `a8b3c39`; this slice is expected to **lower** it by up to 7. A pooled ceiling row has
 a definition, so an executor who sees the number move reads the function that assigns hits to
 keys before concluding anything about it.
@@ -994,20 +1004,25 @@ answered 'declined' with a reason is discharged."*
 
 Two source records are reconciled against: **`CR-1064`** (plan review 13, read at
 `a8b3c39a0cdd0a537b83b58d04aa0ea3c340aa15` on `main`, base tree recorded in its own header as
-`4d9fe1d62328285ac0483b047c3959e39e0f5bd6`) and **`CR-1065`** (W37-6 checkpoint-3 close, read at
-`origin/w37-6-checkpoint-3-close`, PR #787, **not on `main` at this tree**; its header records
-`tree: a0dbd20a1b276028e9a84647fd17f2a28213627f`).
+`4d9fe1d62328285ac0483b047c3959e39e0f5bd6`) and **`CR-1065`** (W37-6 checkpoint-3 close; its
+header records `tree: a0dbd20a1b276028e9a84647fd17f2a28213627f`). **`CR-1065` was read on
+`origin/w37-6-checkpoint-3-close`, PR #787, not on `main`, while this plan was drafted; it is
+now on `main`** (`git log --oneline -1 -- docs/closures/CR-01065-w37-6-checkpoint-3-close.md`
+→ `d63f765`), **byte-identical to the branch revision cited below**
+(`git diff origin/w37-6-checkpoint-3-close:docs/closures/CR-01065-w37-6-checkpoint-3-close.md
+origin/main:docs/closures/CR-01065-w37-6-checkpoint-3-close.md` → empty), so every line number
+§4.2 cites still resolves without re-derivation.
 
 ### 4.1 Every item `CR-1064` routes to W37-8
 
 | Source line | Item | This plan's answer |
 |---|---|---|
 | `CR-1064:542` (the closed list's W37-8 row) and `CR-1064:154` (the F97 register row) and `CR-1064:576` (the proposal summary's Register row) | **F97's disposition.** *"A session ends leaving the shared checkout in a state its successor cannot fast-forward, and nothing announces it"* — the remedy touches `.claude/roles/lead.md`, a maintainer amendment under DP-6. The review asks: *"Whether F97 is drafted alongside the charter headers or explicitly declined with a date. **This review recommends disclosed candidate, not scope**"* | **Answered, and the review's recommendation is followed.** F97 is a **disclosed candidate, not scope**. It is carried as **DP-8.3** with both options written out and the recommendation *decline with a date*, and the mechanics are **T10 step 4**: nothing is added to `lead.md` for F97, and a dated decline line naming the carrying event goes on this slice's PR. The review's own reason is adopted verbatim as the reason: W37-8's acceptance is *charter headers and §1.6 role content*, and a new behavioural clause in `lead.md` is a different kind of change needing its own maintainer line. **The row is discharged as answered, not as declined** — the decision itself (draft vs. decline) is the maintainer's at the PR, and DP-8.3 records that |
-| `CR-1064:556` (the closed list's **All four** row) | **§2b** — *"four run disclosures are filed in no register row, and the idempotence label collides with the real F28. That each draft's scope was derived **after** the filing, or states that it was derived before and names the risk"* | **Stated: this plan's scope was derived BEFORE the four disclosures reached `main`, and here is the risk.** The four are filed on `origin/w37-6-checkpoint-3-close` as `FD-1066`, `FD-1067`, `FD-1068` and `FD-1069` (named in `CR-1065`'s `relates:` field and present in `/usr/bin/git ls-tree -r --name-only origin/w37-6-checkpoint-3-close docs/findings/`), and **none is on `main` at `a8b3c39`**. I read all four titles from that branch: `FD-1066` (idempotence — second `migrate` run zero-diff not proven), `FD-1067` (check 35 — two sub-clauses fire on one non-Markdown file after F87's widening), `FD-1068` (standing CI verify reads the W37-11 record from a pinned base forever), `FD-1069` (H1 residue by file and tracked-files docstrings disagree on population). **The named risk:** all four are instrument- or corpus-level and none names `.claude/roles/` or `.claude/agents/`, so on the evidence read they do not move this slice's scope — **but that is a judgement made against four titles and one `relates:` field, not against four merged records read in full.** The residual risk is that a body clause inside one of them routes an item here. **T1 step 1 is the control**: the slice does not start until `CR-1065` is on `main`, at which point the executor re-reads all four in full and reports any W37-8 routing to the lead before T2 |
+| `CR-1064:556` (the closed list's **All four** row) | **§2b** — *"four run disclosures are filed in no register row, and the idempotence label collides with the real F28. That each draft's scope was derived **after** the filing, or states that it was derived before and names the risk"* | **Stated: this plan's scope was derived BEFORE the four disclosures reached `main`, and here is the risk.** The four were filed on `origin/w37-6-checkpoint-3-close` as `FD-1066`, `FD-1067`, `FD-1068` and `FD-1069` (named in `CR-1065`'s `relates:` field), and at drafting **none was on `main` at `a8b3c39`**. I read all four titles from that branch: `FD-1066` (idempotence — second `migrate` run zero-diff not proven), `FD-1067` (check 35 — two sub-clauses fire on one non-Markdown file after F87's widening), `FD-1068` (standing CI verify reads the W37-11 record from a pinned base forever), `FD-1069` (H1 residue by file and tracked-files docstrings disagree on population). **The named risk:** all four are instrument- or corpus-level and none names `.claude/roles/` or `.claude/agents/`, so on the evidence read they do not move this slice's scope — **but that was a judgement made against four titles and one `relates:` field, not against four merged records read in full.** **All four are now on `main`** (`ls docs/findings/ \| grep -E '01066\|01067\|01068\|01069'` → all four present at `d63f765`), which discharges the wait but not the re-read: **T1 step 1 is still the control** — the executor re-reads all four in full at slice start and reports any W37-8 routing to the lead before T2, since this correction pass has confirmed presence, not content |
 | `CR-1064:444-470` (the lead's Decision 1) | The plan-of-record's BST windows — *"Recommendation: the plan absorbs nothing from it"* | **Absorbed nothing.** This plan states ETAs in **hours of executor work** and no clock time anywhere. §7's own note says why, citing this row |
 | `CR-1064:470-490` (the lead's Decision 2) | #757 → W37-11 | **Not this slice's.** The review routes it to W37-11's leaf plan. Recorded here so the silence is not read as a miss |
 | `CR-1064:558-568` (Verdict) | *"The plan survives its hardest slice. No slice moves, no id changes, no new slice"* | **Adopted as a constraint.** This plan changes no slice boundary, mints no requirement id and creates no slice. The one place it touches the cut is **DP-8.1**, which asks *where* a shared prerequisite lands (W37-7 or W37-8), not whether a slice moves |
-| `CR-1064:537-541` (the W37-7 rows) and `CR-1064:545-553` (W37-9, W37-10, W37-11 rows) | Items routed to sibling slices | **Not this slice's, and not silently.** §2c (artifact B's locators) → W37-7; check-35's `W37-10` literal for F92 → W37-7; the venv-fix wording → W37-7; `CONTRIBUTING.md` and the PR template → W37-9; `docs/research/README.md` → W37-10; the pinned-base decision, the idempotence item, and row (g) with its `classified-by-none = 251` exit measurement → W37-11. **None is taken here.** §1.4 records the same exclusions from the other direction |
+| `CR-1064:537-541` (the W37-7 rows) and `CR-1064:545-553` (W37-9, W37-10, W37-11 rows) | Items routed to sibling slices | **Not this slice's, and not silently.** §2c (artifact B's locators) → W37-7; check-35's `W37-10` literal for F92 → W37-7; the venv-fix wording → W37-7; `CONTRIBUTING.md` and the PR template → W37-9; `docs/research/README.md` → W37-10; the pinned-base decision, the idempotence item, and row (g) with its `classified-by-none = 251` exit measurement (**review 13's own figure, measured pre-#757; #757 merged as `29e7a9c` and the current measured value is `207`, per that commit's squash body's per-class table — W37-11 works from `207`, not `251`**) → W37-11. **None is taken here.** §1.4 records the same exclusions from the other direction |
 
 **The items the brief named and this plan could not confirm from `CR-1064`.** The dispatching
 brief lists *"ci-watcher.md → W37-8"* among review 13's routings. **It is not review 13's.**
@@ -1018,8 +1033,9 @@ change it.
 
 ### 4.2 Every item `CR-1065` (W37-6 checkpoint-3 close) routes to W37-8
 
-Read at `origin/w37-6-checkpoint-3-close`. **This record is not on `main`; every line number
-below is that branch's.**
+Read at `origin/w37-6-checkpoint-3-close` while drafting; **`CR-1065` is now on `main`
+(`d63f765`) and every line number below resolves identically there** — confirmed byte-identical
+above, not re-derived.
 
 | Source line | Item | This plan's answer |
 |---|---|---|
@@ -1146,8 +1162,8 @@ cross-slice dependency whose cost is a wait, not hours.
 | R3 | **A proxy predicate accepts what merely looks right.** `CR-1065` §2.4's *"closed"* column is `git log -1 -- <path>` — last touch, not content. Read as "done", it would empty this slice | Measured at `a8b3c39`: `spec-reconciler.md` is marked *closed* and has no `family:` key; `reporter.md`/`watcher.md` are marked *closed* and lack the map plan's required sentence | §1.2 derives scope from **§5.3's row text**, evidenced by the §1.3 predicates. §4.2 records the reasoning explicitly so a reviewer sees it was not an oversight |
 | R4 | **Editing an agent's front matter can break the harness that reads it.** | `name:`, `description:`, `tools:`, `model:` are consumed by Claude Code, not by this repository's checks. A merged block that satisfies `doc-id.py` and loses `tools:` disables the agent silently | T4 step 5 asserts all four keys survive in all seven files. **The failure mode is silent, so the check is positive (count the keys), never "nothing broke"** |
 | R5 | **The DISCLOSED pooled count is a ceiling with a definition, and this slice moves it.** | `DISCLOSED (957, at or under the W37-11 residue ceiling)` at `a8b3c39`; removing 7 check-30 rows changes it | T4 step 4 requires the delta to be **exactly 7** and forbids adjusting the number to fit: old ceiling minus this class's hits must equal the new count, or something else moved and must be found |
-| R6a | **This draft cannot be gate-green on `main` until PR #787 merges, and that is measured, not predicted.** | At `a8b3c39` with this file and a regenerated `docs/INDEX.md`: `python3 scripts/audit-docs.py; echo EXIT=$?` yields `EXIT=1` and `FAILED (45)`; `python3 scripts/doc-id.py check; echo EXIT=$?` yields `EXIT=1` and `[noncontiguous] docs/INDEX.md has a gap between 1064 and 1070`. **All 45 rows have one cause**: 1 contiguity gap over the unmerged `1065`-`1069`, and 44 `check 32: … does not resolve in docs/INDEX.md` rows for `CR-1065` and the four `FD-` ids. Filtering the FAILED block for lines mentioning neither `CR-1065` nor `FD-106` leaves only the gap row | **Proven by experiment, not argued.** The five records were checked out from `origin/w37-6-checkpoint-3-close` into this worktree, `python3 scripts/doc-index.py` re-run, and both gates re-run: `audit-docs.py` gave `EXIT=0` and `All checks passed.`; `doc-id.py check` gave `EXIT=0`. The files were then removed and the index restored. **The fix is the merge, plus a rebase and one `python3 scripts/doc-index.py` run — no edit to this plan.** Every Stage 3 leaf-plan draft citing `CR-1065` by id hits the same 44 rows |
-| R6 | **This plan's id may collide with a sibling draft's.** | `python3 scripts/doc-id.py next` → `1065` at `a8b3c39`, which is **stale**: `CR-1065` and `FD-1066`…`FD-1069` are allocated on `origin/w37-6-checkpoint-3-close` and unmerged. Three other leaf plans are being drafted against the same base tonight, and each will see the same `1065` | This plan takes **1070**, the first integer free of both `main` and that branch. **The lead reconciles before any of the four is pushed.** Renumbering an undated draft is cheap: check 31 computes contiguity over merged records only (`PL-939:355-365`, DP-8's disposition), so a draft above the merged maximum is not a hole |
+| R6a | **Superseded by this correction pass — kept as the record of what was true at drafting, corrected below rather than deleted.** At `a8b3c39`, before rebase: `audit-docs.py` gave `EXIT=1`/`FAILED (45)`, `doc-id.py check` gave `EXIT=1` with a gap between `1064` and `1070`, all 45 rows traced to the unmerged `1065`-`1069` block | **This correction pass rebased onto `origin/main` = `d63f765` and renumbered this plan from its drafting-time collision id (1070, shared with two sibling drafts) to **PL-1071**** (the lead's slice-order assignment: W37-7 keeps the first id in the freed block, W37-8 takes the second (this plan), W37-9 the third). Re-measured post-rebase, post-renumber, post-`doc-index.py`: `audit-docs.py` and `doc-id.py check` both give **exactly one** failure — `check 31: gap in the full allocation between 1069 and 1071` — because this branch, standing alone, carries this plan's own id without its slice-mate — W37-7's plan, one number lower — which is on a separate, not-yet-merged PR. **R6's original claim that "check 31 computes contiguity over merged records only" is corrected here: measured directly, it reads the current tree's regenerated `docs/INDEX.md`, whichever tree that is** — an unmerged local draft's own id shows up in the gap the moment `doc-index.py` is run over it, which `doc-id.py check`'s own gate step requires | **Proven by experiment: the renumbering itself is internally consistent, and the gap is purely merge order.** Copying W37-7's plan file (one id lower) and W37-9's plan file (one id higher) alongside this file and regenerating `docs/INDEX.md` gives `audit-docs.py` `EXIT=0`/`All checks passed.`, `doc-id.py check` `EXIT=0`, `doc-index.py --check` `EXIT=0` — then the copies were removed and this branch's own `docs/INDEX.md` restored to its standalone state. **The fix is the merge order**: once W37-7's plan lands on `main` and this branch is rebased, the gap closes without touching this plan's content |
+| R6 | **This plan's id may collide with a sibling draft's.** | `python3 scripts/doc-id.py next` → `1070` at `d63f765` (post-rebase), which the lead's slice-order ruling supersedes with an explicit assignment rather than first-come allocation | **This plan takes `PL-1071`, the lead's assignment for W37-8 by slice order** (W37-7 lowest, this plan the middle id, W37-9 highest). Renumbering an undated draft is cheap and was done in this correction pass: filename, header `id:`, and the one self-citation at the title line |
 | R7 | **`CONTRIBUTING.md` is W37-9's and unlanded, but T9 needs the branch/PR convention it will carry.** | `CR-1065:265-266`: both `CONTRIBUTING.md` and the PR template are *"NOT CLOSED — still pre-migration content"*, reassigned to W37-9 | T9's note: cite RFC-937 §5.1 for the convention and name `CONTRIBUTING.md` as the operative source **once W37-9 lands**. Do not restate the convention as an independent statement — two statements is how one goes stale |
 | R8 | **An absence verified tonight is not an absence next week.** | §4.2's *"nothing in `CR-1065` §5 names `.claude/roles/`"* was measured at one branch tip at one time | T1 re-reads `CR-1065` §5 and the four `FD-`s once they are on `main`, and the ledger records the result. Acceptance item 8 makes it checkable |
 
@@ -1185,9 +1201,12 @@ condition.
 
 ## 10. Execution handoff
 
-**Not yet.** Under the deputy's condition (a), no executor is spawned and no implementation
-branch exists until plan review 13 carries a dated acceptance line and W37-6's checkpoint 3 is
-reported, evidenced and ruled to have met it. When the lead releases this slice, the choice is:
+**Not yet — but for a narrower reason than at drafting.** The deputy's 09:19 ruling discharges
+the wait on plan review 13's acceptance line (reconciled against as a filed proposal instead,
+§4 above) and W37-6's checkpoint 3 has landed as `CR-1065` on `main`. **What still holds this
+plan in `draft` is DP-8.1 and DP-8.2**, both blocking with no resolver — no executor is spawned
+and no implementation branch exists until the decision-maker/lead rules them and this plan is
+dated. When the lead releases this slice, the choice is:
 
 1. **Subagent-driven (recommended)** — a fresh executor per task, reviewed between tasks. The
    per-charter task cut in §3 was drawn for exactly this, because DP-6 approves charters one at a
