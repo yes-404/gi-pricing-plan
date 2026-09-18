@@ -6,7 +6,7 @@ title: W37-6 (WK-697 slice 6) — checkpoint 3 close
 status: active                  # write-once; this is the only value this family ever takes
 created: 2026-09-18
 owner: auditor                  # work/phase kind; lead for `kind: review`
-tree: 4d9fe1d62328285ac0483b047c3959e39e0f5bd6
+tree: a0dbd20a1b276028e9a84647fd17f2a28213627f
 phase: P2
 work: WK-697
 corrected_by: []
@@ -83,7 +83,7 @@ same disposition).
 | 10 Widened scope = stamped set | — | check 30: 446/66 F83 skips, not cross-checked against §4 step 5 set | **EVIDENCED** (fresh run) | as above |
 | 11 Every derived instrument load-bearing | — | not re-run by either session | **re-measured before the cut** | **RE-MEASURED, HELD.** See §2.1 — fires exactly as the discriminating form requires |
 | 12 Requirement-facing proof (W37-7) | — | W37-7 not started | **not started — W37-7's, not W37-6's** | unchanged |
-| 13 Vendored exemption reaches only blanket passes | — | not re-run | **re-measured before the cut** | **RE-MEASURED, HELD** for the files-beneath-a-manifest population, once the two corrupted `.ps1` scripts are fixed before close (PR #788); the manifests' own rewrites are by design (RL-990 item 3). See §2.2 — the two named §5.4 content edits **REASSIGNED to W37-7**; the sweep-reaches-vendored mechanism gap filed as **F111, owner W37-11** |
+| 13 Vendored exemption reaches only blanket passes | — | not re-run | **re-measured before the cut** | **RE-MEASURED, HELD** for the files-beneath-a-manifest population — the two corrupted `.ps1` scripts are FIXED BEFORE CLOSE by PR #788 → main `a8b3c39`; the manifests' own rewrites are by design (RL-990 item 3). See §2.2 — the two named §5.4 content edits **REASSIGNED to W37-7**; the sweep-reaches-vendored mechanism gap filed as **F111, owner W37-11** |
 | 14 Three W37-4 deferrals discharged | — | not independently re-confirmed | **re-measured before the cut** | **RE-MEASURED, PARTIALLY HELD.** See §2.3 — one confirmed by symbol, one discharge-mechanism mismatch found, one no in-tree fixture test found; moved to **deferred with owner, lead/W37-11** |
 | (i) Every H row in §5 closed by a named commit | (i) | not walked row-by-row | **re-measured before the cut** | **RE-MEASURED, PARTIALLY HELD.** See §2.4 — 56 H/H+M rows sampled; 49 closed within W37-6's own commit chain, 6 not closed (still carrying pre-migration content), 1 path does not exist, 1 correctly excluded by design. Each of the 7 gaps **REASSIGNED per file** to the slice owning that area (W37-7/8/9/10); W37-11 owns the fuller (i) walk itself |
 
@@ -181,8 +181,9 @@ narrower: files **beneath** a manifest.
   `scripts/set-active-plan.ps1`** — both beneath `planning-with-files/SKILL.md`'s boundary
   — had PowerShell's scope-resolution operator (`::`) split into `: :` by the migration's
   sweep. A real violation: a file beneath a manifest is supposed to be untouched entirely.
-  **FIXED BEFORE CLOSE by PR #788** — restored byte-for-byte from `0651c1e` (== `fbb5555`
-  for these two paths), sha256 confirmed both ways.
+  **FIXED BEFORE CLOSE by PR #788 → merged to `main` as `a8b3c39`** (deputy merge-ACK
+  2026-09-18 01:43:02 BST) — restored byte-for-byte from `0651c1e` (== `fbb5555` for these
+  two paths), sha256s in #788's own body.
 - **The two named §5.4 content edits** — `writing-plans`'s own H content (line 19, the
   retired filename grammar, `` Save plans to: `docs/plans/YYYY-MM-DD-<feature-name>.md` ``,
   still present verbatim at `4d9fe1d`) and `subagent-driven-development`'s own H content
@@ -192,8 +193,8 @@ narrower: files **beneath** a manifest.
   named content changes to the manifests themselves, separate from the beneath-manifest
   exemption question. Their absence is a real violation of the plan's own clause.
 
-**Verdict: item 13 HELD** for the files-beneath-a-manifest population, except the two
-corrupted scripts, now fixed before close (PR #788); the three manifests' own citation
+**Verdict: item 13 HELD** for the files-beneath-a-manifest population — the two corrupted
+scripts are **FIXED BEFORE CLOSE by PR #788 → main `a8b3c39`**; the three manifests' own citation
 rewrites and reflow are by design and were never a violation. **The two named §5.4 content
 edits did not land — REASSIGNED to W37-7** (PL-939 `:735`, the slice that applies the
 conventions these two skills teach). **F111** (new, this checkpoint) — the mechanism gap
@@ -358,8 +359,9 @@ instrument load-bearing" row; item 13 = the vendored-exemption row):
 
 ### 4. Scripts run this checkpoint, exact commands and exit codes
 
-All at tree `4d9fe1d62328285ac0483b047c3959e39e0f5bd6` (this worktree, branch
-`w37-6-checkpoint-3-close`), after §2's reverts:
+All at tree `a0dbd20a1b276028e9a84647fd17f2a28213627f` (this branch, `w37-6-checkpoint-3-close`,
+rebased onto `origin/main` after PR #788 merged as `a8b3c39`, parent `29e7a9c` — `4d9fe1d` is
+kept only where cited above as the auditor's own evidence tree):
 
 ```
 $ python3 scripts/audit-docs.py; echo EXIT=$?
@@ -378,10 +380,23 @@ $ uv run ruff check .
 All checks passed!
 
 $ uv run pytest -q tests/test_audit_docs*.py tests/test_doc_id.py -p no:cacheprovider
-(see PR body / commit for the pass count — no failures)
+297 passed
 
 $ uv run pytest -q tests/test_register_lint.py
 68 passed in 0.42s
+
+$ python3 scripts/register-owed.py W37-6
+Generated by `python3 scripts/register-owed.py W37-6` against `a0dbd20 ("w37-6-checkpoint-3-close")`.
+21 owed row(s), 2 matched but excluded as opening with a resolution marker.
+
+$ python3 scripts/register-owed.py W37-11
+Generated by `python3 scripts/register-owed.py W37-11` against `a0dbd20 ("w37-6-checkpoint-3-close")`.
+7 owed row(s), 0 matched but excluded.
+
+$ uv run python scripts/req-coverage.py
+requirements specified : 533
+requirements marked    : 338  (63.4%)
+(repo-wide, unrelated to this slice — unchanged from the auditor's own measurement)
 ```
 
 ### 5. What was not delivered
@@ -406,11 +421,11 @@ $ uv run pytest -q tests/test_register_lint.py
   docstring (`:428-430`) disagree about which population a sweep-excluded file's per-file
   attribution reaches. Filed as register finding **F110** (new, this checkpoint), owner
   lead/W37-11 — disclosed only, not fixed.
-- **Item 13's vendored exemption** — held for the files-beneath-a-manifest population once
-  the two corrupted `.ps1` scripts are fixed before close (PR #788, §2.2); the two named
-  §5.4 content edits (`writing-plans`'s filename grammar, `subagent-driven-development`'s
-  `LG-` routing) did not land — reassigned to W37-7; the sweep-reaches-vendored mechanism
-  gap filed as F111, owner W37-11.
+- **Item 13's vendored exemption** — held for the files-beneath-a-manifest population; the
+  two corrupted `.ps1` scripts are FIXED BEFORE CLOSE by PR #788 → main `a8b3c39` (§2.2);
+  the two named §5.4 content edits (`writing-plans`'s filename grammar,
+  `subagent-driven-development`'s `LG-` routing) did not land — reassigned to W37-7; the
+  sweep-reaches-vendored mechanism gap filed as F111, owner W37-11.
 - **Item 14's three W37-4 deferrals** — none of the three stated discharge mechanisms is
   confirmed as described (§2.3). Deferred with owner, lead/W37-11.
 - **RFC-937 §7(i)** — 6 of 56 sampled H rows not closed plus 1 missing path, each
@@ -437,9 +452,10 @@ here, for the lead's review before the PR leaves draft; it now also cites this r
 (`CR-1065`) as checkpoint-3's own close record. `docs/plans/PL-01058-w37-6-migration-run-ledger.md`
 carries this checkpoint's ledger entry and the dated correction to `:37-38`, in the same PR.
 
-**Fix-before-close, separate PR:** PR #788 restores `.claude/skills/planning-with-files`'s
-two `.ps1` scripts to their upstream bytes (§2.2) — merges first, on CI and the deputy's
-ACK, before this PR rebases onto it.
+**Fix-before-close, separate PR:** PR #788 restored `.claude/skills/planning-with-files`'s
+two `.ps1` scripts to their upstream bytes (§2.2) — merged to `main` as `a8b3c39` (deputy
+merge-ACK 2026-09-18 01:43:02 BST), CI green (`docs` run `35292264867`, `history-policy`
+run `35292264778`); this PR is rebased onto it.
 
 ## 7. Verdict
 
@@ -450,9 +466,10 @@ on a maintainer-dated acceptance line; that line belongs to review 13 (`CR-1064`
 and to the
 Work close (W37-11). Checkpoint 3 is met by (1) this record's clean checklist and the lead's
 four verdicts, with every delivered-but-untested item re-measured (§2: item 11 held; item 13
-held for the files-beneath-a-manifest population once PR #788 fixes the two corrupted
-scripts, with the two named §5.4 content edits reassigned to W37-7 and the mechanism gap
-filed as F111 for W37-11; item 14 not holding, deferred with owner; RFC-937 §7(i) partially
+held for the files-beneath-a-manifest population, the two corrupted scripts FIXED BEFORE
+CLOSE by PR #788 → main `a8b3c39`, with the two named §5.4 content edits reassigned to
+W37-7 and the mechanism gap filed as F111 for W37-11; item 14 not holding, deferred with
+owner; RFC-937 §7(i) partially
 held, its gaps reassigned per file to W37-7/8/9/10, the fuller walk owned by W37-11); (2) this PR, gated and CI green,
 merged under the deputy's merge-ACK; (3) review 13 (`CR-1064`, PR #786, merged `ce808d7`)
 already filed as a proposal with its acceptance line pending, and the pending acceptance

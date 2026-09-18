@@ -2063,9 +2063,12 @@ close record. Fix-before-close PR `#788` restores the two scripts byte-for-byte 
 `0651c1e` (== `fbb5555`); the three manifest files a first, wrongly-scoped restore attempt
 also touched (`secret-hygiene/SKILL.md`, `writing-plans/SKILL.md`,
 `requesting-code-review/SKILL.md`) are correctly left as the migration rewrote them — RL-990
-item 3 exempts only files beneath a manifest, never the manifest itself. `#788` merges
-first, on CI and the deputy's ACK; `#787` then rebases onto it. `#787`'s own amendment:
-§2.2's item-13 verdict becomes HELD for the beneath-manifest population once `#788` merges,
+item 3 exempts only files beneath a manifest, never the manifest itself. **`#788` merged to
+`main` as `a8b3c39a0cdd0a537b83b58d04aa0ea3c340aa15`** (parent `29e7a9c`, deputy merge-ACK
+2026-09-18 01:43:02 BST, CI `docs` run `35292264867` + `history-policy` run `35292264778`
+both success); `#787` rebased onto it. `#787`'s own amendment:
+§2.2's item-13 verdict becomes HELD for the beneath-manifest population, the two corrupted
+scripts FIXED BEFORE CLOSE by `#788` → `a8b3c39`,
 with the two named §5.4 content edits reassigned to W37-7 and the sweep-reaches-vendored
 mechanism gap filed as **F111** (owner W37-11); §2.4's RFC-937 §7(i) gaps reassigned per
 file (W37-7/8/9/10, W37-11 owning the fuller walk); "reviews 9-13" corrected to "reviews 12
