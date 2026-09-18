@@ -1,5 +1,5 @@
 ---
-id: PL-1070
+id: PL-1072
 family: plan
 kind: leaf
 title: W37-9 — Root governance, CLAUDE.md and the public face: leaf plan
@@ -62,43 +62,58 @@ which one site is edited and the other is not is a project contract that contrad
 
 **It carries no filed date and it is not frozen.** `status: draft` per
 [`../process/document-ids.md`](../process/document-ids.md) §1.7: freeze is mechanical, and a
-plan with an open blocking row in its Decision points table stays `draft`. DP-1 and DP-3
-below are blocking and unresolved.
+plan with an open blocking row in its Decision points table stays `draft`. **DP-1 and DP-3
+below are blocking and unresolved — that is the only thing still holding this plan in
+`draft`.**
 
-It is drafted under the deputy's ruling of 2026-09-18 00:41:53 BST
+It was drafted under the deputy's ruling of 2026-09-18 00:41:53 BST
 (`~/gi-pricing-plan.local/channel/to-lead.md`, four conditions on Stage 3 leaf-plan
-drafting), which permits **drafting only**: no Stage 3 executor is spawned and no branch
-beyond this plan draft exists until W37-6's checkpoint 3 is reported with its evidence and
-the deputy rules it met.
+drafting), which permitted **drafting only**. **This correction pass, made under the
+deputy's later ruling of 2026-09-18 09:19, discharges the two record-landing conditions that
+ruling named — one by reconciling now rather than waiting, one because the event landed:**
 
-**Three events must land before this plan may be dated and moved to `active`:**
+1. **The maintainer's dated acceptance line on plan review 13 still does not exist**, verified
+   fresh at this pass's own base tree:
+   ([`../closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md`](../closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md):632,
+   `**Maintainer acceptance:** _pending_`, at `d63f765085fe6eb1c594177c5779ecfc3caf7ae8`). Per the
+   09:19 ruling, review 13 is *"a FILED PROPOSAL — reconcile against it now, do not wait for its
+   acceptance line"*. The section below does exactly that — reconciles against it **as a
+   proposal** — and this plan no longer waits on the acceptance line landing.
+2. **The W37-6 checkpoint-3 close has landed on `main`, as `CR-1065`.**
+   `git log --oneline -1 -- docs/closures/CR-01065-w37-6-checkpoint-3-close.md` → `d63f765
+   docs(closures): W37-6 checkpoint 3 — slice close record, register, roadmap row, ledger`,
+   byte-identical to the branch revision (`8774db4`, PR #787) this plan was drafted against
+   (`git diff origin/w37-6-checkpoint-3-close:docs/closures/CR-01065-w37-6-checkpoint-3-close.md
+   origin/main:docs/closures/CR-01065-w37-6-checkpoint-3-close.md` → empty), so every line
+   number the Reconciled section cites against it still resolves. W37-9 depends on W37-6 (map
+   plan `:381`); that dependency is now satisfied.
 
-1. The maintainer's dated acceptance line on plan review 13
-   ([`../closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md`](../closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md),
-   foot: `**Maintainer acceptance:** _pending_` at the tree this plan was written against).
-   Nothing in that review binds until then, which is why the section below reconciles against
-   it **as a proposal**.
-2. The W37-6 checkpoint-3 close landing on `main`
-   (the close record, named by path in the fenced block at the head of the Reconciled
-   section; PR #787, read for this plan at `origin/w37-6-checkpoint-3-close` = `8774db4`).
-   W37-9 depends on W37-6 (map plan `:381`).
-3. A resolver on DP-1 and DP-3.
+**What still blocks:** a resolver on DP-1 and DP-3, the lead's/decision-maker's to give — not
+discharged by either of the deputy's rulings above, and not this correction pass's to supply.
+This plan is dated (`status:` moves to `active`, `created:` unchanged) once both carry a
+resolver id; until then it correctly stays `draft` under §1.7's mechanical rule — a `PL-`
+`active` with an open blocking decision point fails `audit-docs.py` check 33.
 
 ---
 
 ## Reconciled against plan review 13
 
-**The two records this section answers to, by path.** The second is not on `main` at the
-tree this plan was written against, so it is named here in a fence and cited below by
-section and line rather than by id — an id that does not yet resolve in `docs/INDEX.md` is
-not a citation a reader can follow, and `audit-docs.py` check 32 says so:
+**The two records this section answers to, by path.** The second was not on `main` at the
+tree this plan was written against, so it was named there in a fence and cited below by
+section and line rather than by id — an id that does not resolve in `docs/INDEX.md` is not a
+citation a reader can follow, and `audit-docs.py` check 32 says so. **Both are now on `main`,
+`CR-1065` since this correction pass's rebase**, and every line-and-section citation below
+still resolves because the merged file is byte-identical to the branch revision cited
+(`git diff origin/w37-6-checkpoint-3-close:docs/closures/CR-01065-w37-6-checkpoint-3-close.md
+origin/main:docs/closures/CR-01065-w37-6-checkpoint-3-close.md` → empty):
 
 ```text
 docs/closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md
-    on main @ a8b3c39 — cited below as "review 13"
+    on main @ a8b3c39, still on main @ d63f765 — cited below as "review 13"
 docs/closures/CR-01065-w37-6-checkpoint-3-close.md
-    on origin/w37-6-checkpoint-3-close @ 8774db4, PR #787, NOT on main @ a8b3c39
-    — cited below as "the close record"
+    at drafting: on origin/w37-6-checkpoint-3-close @ 8774db4, PR #787, NOT on main @ a8b3c39
+    now: on main @ d63f765 (git log --oneline -1 -- docs/closures/CR-01065-w37-6-checkpoint-3-close.md)
+    — cited below as "the close record" / CR-1065
 ```
 
 Plan review 13 closes its own list: *"Here is the closed list that section must answer, one
@@ -119,15 +134,16 @@ than inferring it.
 | §4d — F87/F90 register cells stale; register-currency line in the checklists (`CR-1064:544`) | W37-10 | Not this slice. |
 | §5 row 3 — the pinned-base read, raised in `docs/open-questions.md` with two options (`CR-1064:545`) | W37-11 | Not this slice. |
 | §5 row 4 — the idempotence gap `PL-960:909`, `41 hit(s) … ceiling of 15 for 'd10'` (`CR-1064:546`) | W37-11 | Not this slice. |
-| §5 row 5 — row (g) as a first-class acceptance item, `classified-by-none = 251` at `4d9fe1d` (`CR-1064:547`) | W37-11 | Not this slice. |
+| §5 row 5 — row (g) as a first-class acceptance item, `classified-by-none = 251` at `4d9fe1d` (`CR-1064:547`) | W37-11 | Not this slice. **Note: `251` is review 13's own pre-#757 figure. `#757` merged as `29e7a9c` and the current measured value is `207` (that commit's squash body carries the per-class table); W37-11 works from `207`, not `251`.** |
 | §5's closing carry rule — `(j)`/`(k)`, synthesis, or a named acceptance item with its own exit measurement (`CR-1064:548`) | W37-11 | Not this slice. Noted as the rule W37-11 was cut against; it constrains nothing here. |
 
 ### And against the W37-6 checkpoint-3 close record
 
 The **W37-6 checkpoint-3 close record** is the second record this
-draft reconciles against, per the deputy's condition. Read at
-`origin/w37-6-checkpoint-3-close` = `8774db4` (not on `main` at `a8b3c39`). Its §2.4 walks
-56 of RFC-937 §5's H/H+M rows and **reassigns two files to W37-9 by name**:
+draft reconciles against, per the deputy's condition. Read while drafting at
+`origin/w37-6-checkpoint-3-close` = `8774db4` (not on `main` at `a8b3c39`); **now on `main` as
+`CR-1065`** (`d63f765`), byte-identical, so the line numbers below are unchanged. Its §2.4
+walks 56 of RFC-937 §5's H/H+M rows and **reassigns two files to W37-9 by name**:
 
 | Item, with its source line | What this plan does with it |
 |---|---|
@@ -849,13 +865,14 @@ merges. Six gates, and the sixth is not a command.
 | # | Risk | Why it is real here | Mitigation |
 |---|---|---|---|
 | R1 | **DP-6 — the `CLAUDE.md` change is PROPOSED by the executor and merges only on the maintainer's dated line.** `CLAUDE.md` §12 reserves *"an amendment to what this file requires"* to the maintainer, and DP-6 resolves to option (a): the executor drafts, the maintainer dates. G2's permanence yield is a **real amendment**, not a pointer edit, so DP-6's option (c) ("treat all of it as pointer-only") is false and cannot be fallen back on | This is the whole slice's merge condition. A green gate is not a merge here | **Drafting proceeds, merging waits.** Tasks 1–9 run to a pushed PR with a green gate; the PR then sits until the dated line exists. The executor does not chase it — the lead does. Gate 8 |
-| R2 | **The slice is drafted against two records that are not on `main`.** Review 13's acceptance is `_pending_`; the close record is on `origin/w37-6-checkpoint-3-close` (`8774db4`), not `main` (`a8b3c39`) | Either could change before this plan is dated, and a leaf plan frozen against a superseded premise is the *"premises age faster than literals"* failure `docs/plans/README.md` records | This plan is **`draft` and undated**. Before it moves to `active`, re-read both records at their then-current trees and re-run the Reconciled section's two substantive rows. The three-event list in the Status section is the checklist |
+| R2 | **Discharged, partially, by this correction pass — recorded rather than deleted, since the residual half is real.** At drafting the slice was against two records not on `main`: review 13's acceptance `_pending_`; the close record on `origin/w37-6-checkpoint-3-close` (`8774db4`), not `main` (`a8b3c39`) | The close record landing was a real risk and has resolved cleanly: `CR-1065` is now on `main` (`d63f765`), byte-identical to the branch revision, so nothing this plan cited from it moved. Review 13's acceptance line is still `_pending_` — under the deputy's 09:19 ruling this plan reconciles against it as a filed proposal rather than waiting, so the risk is now "the acceptance line amends something this plan took," not "the record doesn't exist yet" | **Residual risk, not closed.** If the maintainer's line, once written, amends any of review 13's three items for this slice, that amendment corrects this plan — the trigger is the line landing. This plan is still `draft`, now for DP-1/DP-3 alone (see Status section above), not for either record-landing reason |
 | R3 | **G2's line numbers have already moved** — `:107` → `:110` between `89dd2b1` and `a8b3c39` | An executor following the map plan's literal `:107` edits §5's *preceding* paragraph and the permanence sentence stays unyielded, satisfying "I edited line 107" while failing G2 | Task 2 Step 1 re-derives both numbers with `grep -n` and refuses to proceed on an unexpected shape. **Never navigate by a line number this plan or the map plan states** |
 | R4 | **One permanence site edited, not both** — G2 names this as the executor's likeliest failure, because *"the second site is the one an executor working from a §5 checklist never opens"* | The result is a project contract contradicting itself | Both sites are in **one commit** (Task 2 Step 6), and Acceptance item 3 is a single grep covering both |
 | R5 | **DP-3 publishes a convention citing an empty family.** Zero `SL-` ids exist (`grep -c 'SL-' docs/roadmap.md` → `0`) | The PR that introduces the required-slice-line rule cannot itself comply with it | Blocking DP; the lead rules before Task 1. Recommended (b) states the gap with a date and a removable marker |
 | R6 | **Scope creep into a neighbouring slice.** W37-7, W37-8 and W37-10 run beside this one (map plan `:381`) and share a corpus of stale references | A `CLAUDE.md` edit that "just fixes" a skill or charter reference collides with another executor's branch | The Scope section's explicit not-in-this-slice list. A §5.1 edit that needs a W37-7/8/10 file is a **finding to the lead**, not an absorption |
 | R7 | **A dated amendment dropped while rewriting a section.** §2 carries *"amended 2026-09-02 by the maintainer, with F49's CI enforcement"*; §13 carries the predicate clause's *"added 2026-09-02 … discharging register finding F85"*; §14 carries *"Raised as RFC-711"* | A rewrite that reads well can silently delete a dated maintainer amendment, and the record of what was believed is what a governed system cannot lose (`CLAUDE.md` §0) | Tasks 1 and 3 name each dated clause explicitly as carried verbatim. Before Task 9 Step 6: `git diff origin/main...HEAD -- CLAUDE.md` read in full, and every removed line that carries a date accounted for |
 | R8 | **The nine `M`-row/`H`-row verdicts asserted rather than measured** | An `M` row is easy to wave through, and the close record's §2.4 found two `H` rows that everyone had assumed were closed | Task 8 requires the command and its output per row; Acceptance item 13 requires the nine-row table in the PR body |
+| R9 | **This plan carries `PL-1072`, W37-9's assignment by the lead's slice order (W37-7 lowest, W37-8 the middle id, this plan highest), renumbered in this correction pass. Standing alone, this branch cannot be contiguity-clean.** Measured post-rebase (`origin/main` = `d63f765`) and post-renumber: `audit-docs.py` and `doc-id.py check` both give exactly one failure, `check 31: gap in the full allocation between 1069 and 1072` — because W37-7's and W37-8's plans (the two ids immediately below this one) are not in this branch's tree | A standalone leaf-plan PR that mints an id two past `main`'s current maximum is, by `check 31`'s own contiguity rule (reads the current tree's regenerated `docs/INDEX.md`), always going to show this gap until its slice-mates land | **Not a defect in this plan or its renumbering — proven by combining trees.** Copying W37-7's and W37-8's plan files alongside this file and regenerating `docs/INDEX.md` gives `audit-docs.py` `EXIT=0`, `doc-id.py check` `EXIT=0`, `doc-index.py --check` `EXIT=0`; the copies were then removed and this branch's own index restored. **The fix is merge order**: once W37-7's and W37-8's PRs land on `main` in slice order and this branch is rebased, the gap closes without touching this plan's content |
 
 ## ETA basis
 
