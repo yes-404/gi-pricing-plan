@@ -38,6 +38,27 @@ This ledger's own tracked work is "done" per RL-1046's staged structure:
    every requirement evidenced or verdicted, NFRs measured not asserted, the maintainer's
    dated acceptance line recorded.
 
+   **Corrected 2026-09-18 (deputy ruling, `to-lead.md` 2026-09-18 00:55:09 BST):** the words
+   above — *"the maintainer's dated acceptance line recorded"* — are superseded as this
+   checkpoint's own gate, kept quoted rather than edited (this file's annotated-in-place
+   rule). `CLAUDE.md:283` governs a Slice's close: *"A Slice is not [accepted by the
+   maintainer]: it closes on a clean audit and the lead's merge."* A ledger entry cannot add
+   a requirement `CLAUDE.md` does not impose (`CLAUDE.md` §12: an amendment to what
+   `CLAUDE.md` requires is the maintainer's, and pointing at something already ruled is not
+   an amendment). Read against the deputy's own 2026-09-04 instruction this line was
+   transcribing (*"§14 review with the maintainer's acceptance line pending"*), the
+   maintainer's dated line it names is **review 13's acceptance line**, which stays
+   `pending` for the maintainer, and belongs to **the Work close (W37-11)**, not to a gate
+   on this Slice. **Checkpoint 3 is therefore met when:** (1) the close-workstream checklist
+   is clean on the auditor's evidence and the lead's four verdicts, with every
+   delivered-but-untested item re-measured before the close record is cut — a failing
+   re-measure moved to deferred-with-owner, dated, never silent; (2) the close record and
+   the roadmap row (`PL-939:863`) are in one PR, gated, CI green, merged under the
+   deputy's merge-ACK; (3) review 13 is filed as a proposal with its acceptance line
+   pending. The pending acceptance lines on reviews 9-13 are reported to the maintainer as
+   open and binding nothing (`CLAUDE.md` §14: a review binds nothing until dated), and do
+   not by themselves block Stage 3.
+
 Nothing from a later checkpoint starts before the earlier one is reported and ruled met
 (the deputy's standing instruction, this file's own governing constraint throughout).
 
