@@ -482,3 +482,61 @@ this PR, under the deputy's merge-ACK, is checkpoint 3's own close event.
 **Ledger "ruled met" line:** pending the deputy's entry after this PR merges (see
 `docs/plans/PL-01058-w37-6-migration-run-ledger.md`'s checkpoint-3 entry, filed alongside this
 record).
+
+## 8. Correction — 2026-09-18 (lead's verdict, filed in the channel at 09:53:03 BST)
+
+**This record is write-once and merged; nothing above is edited.** This section is appended,
+in the same annotated-in-place form `PL-1058:37-38` uses: the omitted scope item is named,
+the words that framed the scope and the verdict are quoted as originally written, and the
+correction follows with its own date and authority.
+
+**The omission.** §1 above reads, quoted in full and unchanged: *"Scope is derived from
+`docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`, Slice W37-6 (`:667-733`);
+`docs/plans/PL-00960-w37-6-the-migration-run-leaf-plan.md`'s 14-item Acceptance Standard
+(`:71-162`); and RFC-937 (`docs/rfcs/RFC-00937-...md`) §7 (a)-(i)."* `PL-939:690-691` — inside
+that very `:667-733` range, Slice W37-6's own "What lands in this one commit" — reads:
+
+```
+…the process-core digest; the roadmap restructure into milestone sections with
+`WK-`/`SL-` rows; and `delivery-process.md`'s §3 vocabulary.
+```
+
+and `PL-939:907-908`, the map plan's self-review "Spec coverage" mapping, reads:
+
+```
+**Spec coverage.** Every §5 sub-section maps to a slice: §5.1 → W37-9; §5.2 → W37-6 (M rows,
+the roadmap restructure, the process vocabulary) and W37-10 (H rows); §5.3 → W37-8; §5.4 →
+```
+
+So the roadmap restructure, `SL-` rows included, is **W37-6's own declared deliverable, named
+twice** — inside the scope range §1 cites — and neither §1a's precondition table nor §1b's
+14-item/RFC-937 §7 table, both drawn from `PL-960`'s Acceptance Standard and RFC-937 §7 (a)-(i)
+rather than from the map plan's own slice section, gives it a verdict. Measured at
+`d63f765085fe6eb1c594177c5779ecfc3caf7ae8`: `docs/roadmap.md` has **5** `## P` milestone
+sections (P1a:188, P1b:386, P2:551, P3:844, P4:986), **41** `### WK-` rows with `### WK-697`
+at :754, and **0** `### SL-` rows. This record itself mentions none of it
+(`grep -icE 'roadmap restructure|milestone section|SL-'` against this file at that tree → `0`).
+
+**The verdict.** The milestone-section and `WK-`-row half of the roadmap restructure is
+**DELIVERED at `71f5a22`**. The `SL-` row half is **REASSIGNED from W37-6 to W37-10, dated
+2026-09-18** — W37-10 owns `docs/roadmap.md`'s H rows (`PL-939:908`) and its filed leaf plan
+already carries the row-cutting task; **W37-11 verifies at the Work close**. This is expressly
+**not** the claim that the gap predates W37.
+
+**Amendment to §7's "Verdict."** §7 above is not withdrawn: its "clean audit" reading **stands
+for everything the checklist actually examined** — the 6 preconditions, the 14-item/RFC-937 §7
+table, and the re-measures in §2. It did not examine the map plan's own slice-section prose
+outside that table, which is where the omitted deliverable was named. The checklist's
+disposition on every item it did examine is unchanged by this correction.
+
+**The cause.** The scope table at §1 was built from `PL-960`'s 14-item Acceptance Standard and
+RFC-937 §7 (a)-(i) — neither names the roadmap restructure — rather than from the map plan's
+own Slice W37-6 section (`PL-939:667-733`) directly, even though §1 cites that very range as
+part of scope. `CLAUDE.md` §13 requires: *"Scope is derived from the specification first, then
+evidenced — never from recollection of what was built. Reversed, an audit is silent about what
+is missing."* (`CLAUDE.md:255-256` at `origin/main` `d63f765`.) The scope table's route through
+the leaf plan's own acceptance list, rather than through the map plan's slice prose directly,
+is that reversal, and this omission is its consequence.
+
+Full evidence, register row and finding: `docs/findings/register.md` (`F112`) and
+[`FD-1074-no-sl-row-exists-for-any-slice-and-no-plan-carries-slice.md`](../findings/FD-01074-no-sl-row-exists-for-any-slice-and-no-plan-carries-slice.md).
