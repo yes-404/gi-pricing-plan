@@ -161,7 +161,23 @@ def test_no_file_level_updated_at(tmp_path: pathlib.Path) -> None:
 
 
 def test_position_fields_carry_their_source(tmp_path: pathlib.Path) -> None:
-    """RL-907(c): position fields name the artifact they were read from."""
+    """RL-907(c): position fields name the artifact they were read from.
+
+    **Its locators were updated 2026-09-19 (W37-7 Task 12) because the guard this slice
+    added refused them, and was right to.** The `--slice-source` named a plan by a
+    pre-migration dated filename that no longer exists — so the test written to prove
+    *"position fields name the artifact they were read from"* was itself naming an
+    artifact that was not there. (The retired spelling is not reproduced: check 36 forbids
+    a pre-migration path form surviving outside `docs/REDIRECTS.csv`. It does not currently
+    scan `tests/`, but being outside a checker's scope is an accident of scope, not a
+    permission.)
+
+    The assertion below is why it went unnoticed: it checks the field is **non-empty**,
+    never that it **resolves**. A locator that dangles satisfies it exactly as well as one
+    that works — which is the same shape as everything else this slice found, a check
+    answering a narrower question than the one it appears to ask. The new tests below cover
+    the half this one cannot, and this one is left asserting what it always asserted.
+    """
     state_file = tmp_path / "runtime-state.json"
     _run(
         state_file,
@@ -169,15 +185,15 @@ def test_position_fields_carry_their_source(tmp_path: pathlib.Path) -> None:
         "--phase",
         "2",
         "--phase-source",
-        "docs/roadmap.md §7",
+        "docs/roadmap.md §6",
         "--work",
-        "WK-671",
+        "WK-697",
         "--work-source",
-        "docs/roadmap.md §7",
+        "docs/roadmap.md §6",
         "--slice",
-        "WK-671-S3",
+        "W37-7",
         "--slice-source",
-        "docs/plans/2026-08-29-w11-map.md",
+        "docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md",
     )
     doc = json.loads(state_file.read_text())
     for field in ("phase", "work", "slice"):
@@ -259,3 +275,125 @@ def test_a_corrupt_state_file_is_refused_rather_than_silently_overwritten(
     result = _run(state_file, "cycle", "--phase", "2", "--phase-source", "docs/roadmap.md §7")
     assert result.returncode != 0
     assert state_file.read_text() == "{ not json"
+
+
+# =========================================================================================
+# R13-1 (plan review 13, `CR-1064:539`) -- a `read_from` locator whose file does not exist
+# is refused, and nothing is written.
+#
+# The review found artifact B's live `position` block carrying two dangling locators. The
+# values are not literals in this script: they arrive as `--*-source` arguments and are
+# stored verbatim, so a repository commit cannot fix the live file -- only the instrument
+# that writes it. Hence a fail-closed guard rather than a one-off correction.
+#
+# Validation stops at the **file path**. A `§n` suffix is prose and names no addressable
+# thing, so there is nothing to resolve; claiming to check it would be a guard that cannot
+# fail on its own stated subject.
+# =========================================================================================
+
+
+def test_a_dangling_source_path_is_refused_and_nothing_is_written(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Broken input: a `--*-source` whose file part does not resolve.
+
+    Asserts **both** halves -- a non-zero exit *and* that the state file is unchanged --
+    because a check that refuses and writes anyway is worse than one that does neither:
+    it reports a failure the caller may ignore while the bad value lands regardless.
+    """
+    state_file = tmp_path / "runtime-state.json"
+
+    seeded = _run(
+        state_file,
+        "cycle",
+        "--phase",
+        "2",
+        "--phase-source",
+        "docs/roadmap.md",
+    )
+    assert seeded.returncode == 0, seeded.stderr
+    before = state_file.read_bytes()
+
+    result = _run(
+        state_file,
+        "cycle",
+        "--phase",
+        "2",
+        "--phase-source",
+        "docs/this-file-does-not-exist.md §1",
+    )
+
+    assert result.returncode != 0, (
+        "a locator whose file does not exist must be refused, not stored verbatim"
+    )
+    assert "does-not-exist" in result.stderr, result.stderr
+    assert state_file.read_bytes() == before, (
+        "the state file moved despite the refusal -- refusing and writing anyway is the "
+        "worst of both"
+    )
+
+
+def test_a_resolvable_source_path_is_still_accepted(tmp_path: pathlib.Path) -> None:
+    """Positive control. Without it, "refuses dangling locators" is indistinguishable
+    from "refuses everything", and the guard above would pass while the instrument was
+    entirely broken."""
+    state_file = tmp_path / "runtime-state.json"
+
+    result = _run(
+        state_file,
+        "cycle",
+        "--phase",
+        "2",
+        "--phase-source",
+        "docs/roadmap.md §6",
+    )
+
+    assert result.returncode == 0, result.stderr
+    doc = json.loads(state_file.read_text(encoding="utf-8"))
+    assert doc["position"]["phase"]["read_from"] == "docs/roadmap.md §6"
+
+
+def test_the_suffix_is_not_what_is_validated(tmp_path: pathlib.Path) -> None:
+    """The guard stops at the path, and says so by behaviour rather than by comment.
+
+    `docs/roadmap.md` has no `## 99` heading, and this is still accepted: a `§n` suffix
+    names no addressable thing, so there is nothing for the script to resolve. Pinning
+    this stops a later reader "completing" the guard into a heading check that cannot be
+    made to work.
+    """
+    state_file = tmp_path / "runtime-state.json"
+
+    result = _run(
+        state_file,
+        "cycle",
+        "--phase",
+        "2",
+        "--phase-source",
+        "docs/roadmap.md §99",
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_every_source_argument_is_guarded_not_just_phase(tmp_path: pathlib.Path) -> None:
+    """All three `--*-source` arguments, each checked independently.
+
+    A guard wired into one argument's path and not the others passes any test that only
+    exercises `--phase-source` -- which is the one the review happened to name.
+    """
+    for value_flag, source_flag, value in (
+        ("--phase", "--phase-source", "2"),
+        ("--work", "--work-source", "WK-697"),
+        ("--slice", "--slice-source", "W37-7"),
+    ):
+        state_file = tmp_path / f"state{source_flag}.json"
+        result = _run(
+            state_file,
+            "cycle",
+            value_flag,
+            value,
+            source_flag,
+            "docs/this-file-does-not-exist.md",
+        )
+        assert result.returncode != 0, f"{source_flag} is not guarded"
+        assert not state_file.exists(), f"{source_flag} wrote a file despite refusing"

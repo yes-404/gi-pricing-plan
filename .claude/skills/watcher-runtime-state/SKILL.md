@@ -81,9 +81,14 @@ export RUNTIME_STATE_FILE=~/gi-pricing-plan.local/handover/runtime-state.json  #
 
 # Re-derive and write (only touches blocks whose content actually changed):
 python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py cycle \
-    --phase 2 --phase-source "docs/roadmap.md §7" \
-    --work WK-671 --work-source "docs/roadmap.md §7" \
-    --slice WK-671-S3 --slice-source "docs/plans/2026-08-29-w11-map.md"
+    --phase 2 --phase-source "docs/roadmap.md §6" \
+    --work WK-697 --work-source "docs/roadmap.md §6" \
+    --slice W37-7 --slice-source "docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md"
+
+# NOTE: every --*-source is validated before anything is written. If the file part does
+# not exist in the repository the command refuses, exits non-zero and writes nothing —
+# a dangling `read_from` cannot be minted. The `§n` suffix is prose and is NOT resolved:
+# it names no addressable thing, so a guard over it could not fail on its own subject.
 
 # A role announces an expensive verification before starting it (spec §8):
 python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py announce \
@@ -123,6 +128,50 @@ one-second-later timestamp as the only diff, at the same byte offset the real
   nothing here forecloses it.
 
 ## Verified
+
+2026-09-19 — **`write_runtime_state.py` now refuses a `read_from` locator whose file does
+not resolve, and the taught invocation no longer contains one.** W37-7 Task 12,
+`PL-1070`; plan review 13's R13-1 (`CR-1064:539`).
+
+Review 13 found artifact B's live `position` block carrying two dangling locators. The
+values are **arguments, not literals** — they arrive as `--*-source` and are stored
+verbatim — so a repository commit can only fix the instrument, never the live file. Hence a
+**fail-closed guard** rather than a one-off correction: validation runs before anything is
+loaded or written, and a refusal writes nothing. A guard that refuses and writes anyway is
+worse than neither, because it reports a failure the caller may ignore while the bad value
+lands regardless.
+
+**Validation stops at the file path.** A `§n` suffix is prose that addresses nothing a
+filesystem or parser resolves; a guard over it would have no failing case on its own stated
+subject. That boundary is pinned by a test rather than left to a comment, so a later reader
+cannot "complete" the guard into a heading check that cannot work.
+
+**Three things this found that were not in the review's scope:**
+
+- **The skill's own taught invocation was wrong**, which review 13 did not measure: its
+  `--slice-source` named a plan by a pre-migration dated filename that no longer exists. So
+  the skill was teaching a dangling locator to every future watcher, not only to the one
+  that ran. The module docstring carried the same defect independently. *(The retired
+  spelling is not reproduced here — check 36 fails on a pre-migration path form surviving
+  outside `docs/REDIRECTS.csv`, and cannot tell a form named in order to retire it from one
+  left behind. That fired on this very entry's first draft.)*
+- **The existing test `test_position_fields_carry_their_source` was itself passing a
+  dangling locator**, and the new guard refused it. The test asserts the field is
+  **non-empty**, never that it **resolves** — so a locator that dangles satisfied it exactly
+  as well as one that works. The test written to prove *"position fields name the artifact
+  they were read from"* was naming an artifact that was not there. Its locators are
+  corrected; its assertion is left as it was, and the new tests cover the half it cannot.
+- **The guard is wired to all three source arguments**, with a test that exercises each
+  independently — a guard on `--phase-source` alone passes any test that only exercises the
+  one the review happened to name.
+
+**DP-7-2's default (a) applies: repository-only.** The live
+`~/gi-pricing-plan.local/handover/runtime-state.json` is **not** touched by this slice — it
+is outside the repository by design (`delivery-process.md` §10), and rewriting it is an ops
+action for the watcher, not something an executor performs from a worktree. **It still
+carries its dangling locators until the watcher's next cycle**, which the guard now forces
+to supply resolvable ones. Recorded here and in the slice ledger as asked-for rather than
+done.
 
 2026-08-31 — corrected condition 2 and "Not built in this slice" now that RFC-895
 adoption slice G shipped `retry_counters` via a second writer
