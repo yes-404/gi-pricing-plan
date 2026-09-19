@@ -282,6 +282,23 @@ vendored file.
 |---|---|---|---|
 | `testing-strategy` | The "prove the guard fails" recipe reverts a fix with `git stash` | This repo runs parallel sessions in `.claude/worktrees/*`, and **the stash stack is shared by every worktree**. A bare `stash`/`stash pop` can pop a peer's entry into your tree. Upstream assumes one worktree, where the advice is sound | `git-hygiene`'s stash section — a WIP commit, or `stash push -m <tag>` and `apply <sha>`. The same sentence's *hand-edit* branch is also safe |
 
+**Additions this repository requires that upstream has no reason to carry** — the same
+§12 rule, applied the other way round: something missing rather than something wrong.
+
+| Skill | What it omits | What this repository requires | Follow instead |
+|---|---|---|---|
+| `testing-strategy` | The pytest technique it teaches states no requirement-traceability marker — upstream is a general-purpose library guide and has no numbered requirement suite to trace to | Every test here names the requirement it satisfies, and `scripts/req-coverage.py` turns those marks into a traceability report that **fails when a test claims a requirement that does not exist** — so the marker is checked, not decorative | [`python-test`](python-test/SKILL.md)'s "Every test names the requirement it satisfies" — the single source for the marker's form. Added 2026-09-19 for `RFC-937` §5.4's marker row (W37-7, `PL-1070` Task 6) |
+
+**Why this is a README row and not an edit to the vendored file.** `CLAUDE.md` §12:
+*"Vendored files stay as upstream wrote them"*, every deviation recorded here rather than
+made silently — and this set's own rule, two paragraphs above, says the same. `PL-1070`'s
+DP-7-3 defaults to edit-and-record for vendored manifests, but **it enumerates four files
+and `testing-strategy` is not among them**, so its default does not reach this file; a
+decision point cannot override the project contract for a file it never considered. Ruled
+by the lead, 2026-09-19. Recording the form here rather than in the skill also keeps the
+marker single-sourced: two copies of a form is how one goes stale
+([`RFC-756`](../../docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)).
+
 Not installed, worth revisiting when the phase needs them: `github-actions` (CI cost and
 trigger hygiene), `performance` (Phase 2, NFR-489), `api-design` and
 `web-app-architecture` (WK-658's FastAPI surface).
