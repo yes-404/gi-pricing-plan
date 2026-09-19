@@ -367,9 +367,43 @@ that docstring:
   literal paths rather than matched by a directory-and-extension rule precisely so the
   population cannot grow without someone deciding that it should.
 
+**The two the bullets above never name, so that all ten carry a describing clause here:**
+
+- **Check 31 — id, filename and directory in agreement.** The header's `id` prefix and
+  integer must equal the filename's; the directory must equal the family; numbers must be
+  unique and contiguous in scope; and `created` must not decrease as the number rises.
+  `docs/_templates/` is exempt by path. **Contiguity is the clause that surprises people**:
+  a gap is a failure, so ids held on an unmerged branch red this check on `main` until they
+  land — the same unmerged-branch fact that makes `doc-id.py next` under-allocate, arriving
+  through the other instrument.
+- **Check 38 — the loop signal, and it is warn-only: it never fails the gate.** Its four
+  sub-clauses watch for a record nothing cites outside `INDEX.md`, a plan still `draft` past
+  its phase's freeze gate, an active plan or slice citing a superseded requirement, and a
+  passed gate date with work still behind it. It reports and does not red, by design, so
+  **its proof is the opposite shape from the other nine**: there is no broken input that
+  makes it fail, and what is pinned instead is that it never calls `fail()`.
+
+**And the rule that keeps this section from growing back into a duplicate.** The ten-item
+enumeration lives in `scripts/audit-docs.py`'s module docstring and **is not copied here** —
+the clauses above describe what two checks catch, they do not restate the list. Two copies
+of a numbered list is how one goes stale
+([`RFC-756`](../../../docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)),
+and `.claude/skills/README.md`'s own row for this skill records that happening once already:
+the count there said 23 while the code had 24.
+
 Ten broken-input proofs (one per check) and every ruling-specific mechanism proof live
 in `tests/test_audit_docs_ids.py`, alongside the fixtures under
 `tests/fixtures/docs-ids/w37-4-checks/` and `tests/fixtures/docs-ids/w37-4-rollup-raise/`.
+
+### A bespoke audit is a research record, not a closure
+
+**A bespoke audit is a slice whose record is a research document of kind `audit`, owner the
+auditor, every finding its own finding record; never a plan, never a closure.** The rule is
+stated in full — with the id forms, why a `CR-` is the wrong shape, and why findings need
+their own records — in
+[`close-workstream`](../close-workstream/SKILL.md)'s *"A bespoke audit is not a closure"*
+section, which is the skill that files closures and therefore the one that gets this wrong.
+It is **not restated here**, for the reason the paragraph above gives.
 
 ### Validating a set of counts — a total validates the total, and nothing else
 
@@ -512,6 +546,35 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-19 (second entry, same day) — **checks 31 and 38 gained a describing clause, and
+the bespoke-audit rule gained a pointer.** W37-7 Tasks 1 (Step 3) and 9, `PL-1070`.
+
+Step 3 as written directed a paragraph per check for all ten. **Refused and replaced by
+`RL-1077`**, on the executor's escalation: three records forbid a second numbered list —
+this file's own `description:`, `.claude/skills/README.md`'s row for this skill (*"the
+numbered list lives in the script's own module docstring and nowhere else"*, which records
+the count there saying 23 while the code had 24), and `CLAUDE.md`'s index entry. `RFC-937`
+§5.4 asks only for *"checks 30–39 described"*; **"one paragraph each in the skill" was the
+plan's gloss, not the requirement's words** — the spec was right and the plan was wrong,
+which is the direction `CLAUDE.md` §0 says to check rather than assume.
+
+What was actually missing was measured, not assumed. Predicate, newline-tolerant because a
+line-scoped grep misses the wrapped mentions and under-reports by two:
+`tr '\n' ' ' < SKILL.md | tr -s ' ' | grep -oi "check <n>" | wc -l`. At `7d5d6e0`: eight of
+the ten carried a clause, **31 and 38 carried none** except inside a plural list that names
+them without saying what they do. Both now have one, and check 38's says it is **warn-only
+and never fails the gate** — so its proof is the opposite shape from the other nine.
+
+The pointer rule is restated where the new clauses land, which is what stops two clauses
+growing back into a tenth-item list at the next edit.
+
+The **bespoke-audit rule** (Task 9) is stated in full in `close-workstream` and pointed at
+from here. §5.4 asks for the rule to *belong in both*, which a pointer satisfies and a
+duplicate does not. **`PL-960:648` claimed the `close-workstream` half was already
+authored — it was not**: `grep -rn 'bespoke'` over both files returned nothing at
+`7d5d6e0`. Raised to the lead as a plan-versus-tree disagreement before writing, per Task 9
+Step 0, rather than quietly made true.
 
 2026-09-19 — **check 28's scope bullet corrected: it taught the retired pre-migration
 filing grammar as the live rule.** `RFC-937` §5.4's `docs-audit` row (`:368`) requires the
