@@ -317,6 +317,19 @@ The only scope addition it proposes anywhere is R13-1, to this slice (`CR-1064:3
 proposes"*). This plan therefore adds nothing of its own invention to the slice; every row in
 the scope table traces to `RFC-937` §5.4, to `PL-939:740-751`, to `CR-1064` or to `CR-1065`.
 
+**Corrected 2026-09-19 (planner, on the deputy's ruling of the same date).** The words above —
+*"This plan therefore adds nothing of its own invention to the slice; every row in the scope
+table traces to `RFC-937` §5.4, to `PL-939:740-751`, to `CR-1064` or to `CR-1065`."* — no longer
+hold, and are annotated rather than edited so the claim the plan made about itself at freeze
+survives beside the reason it stopped being true. **Task 15 adds a scope row that traces to none
+of those four.** It traces to the deputy's ruling of 2026-09-19, which is dated after this plan
+was written: reconcile two unmerged commits carrying ruled `audit-docs.py` check dispositions,
+salvaged from the root checkout's branch, against `main`. The provenance rule the sentence states
+is not being relaxed — a row still may not enter this table by a planner's invention, and no
+other row has. It is being **extended by one named authority**, recorded here rather than
+absorbed silently, because a plan that widens its own scope table while still asserting it
+invented nothing is making a claim its contents contradict. Every other row's trace is unchanged.
+
 ---
 
 ## Decision points
@@ -434,6 +447,39 @@ form wrong."* Two traps are already measured and must appear:
   present but did not parse as RFC-937's header):` followed by `1065`. A caller doing
   `ID=$(python3 scripts/doc-id.py next)` captures both lines, not the number. State the
   correct form (take the last line) and why.
+
+  **Corrected 2026-09-19 (planner, this plan's author).** The words above — *"A caller doing
+  `ID=$(python3 scripts/doc-id.py next)` captures both lines, not the number. State the correct
+  form (take the last line) and why."* — are **false**, and are annotated here rather than
+  edited (this slice's annotate-in-place rule), so the record of what was believed survives.
+  The two lines go to **different streams**: `_report_skipped()` writes the diagnostic with
+  `file=sys.stderr` (`scripts/doc-id.py:10253-10268` at the tree named below), and `_cmd_next()`
+  writes the integer with a bare `print(result.number)` to stdout (`scripts/doc-id.py:10278`,
+  same tree). Command substitution captures stdout only. The capture form this step calls
+  broken is therefore **correct as written**, and the remedy it prescribes — "take the last
+  line" — has nothing to strip.
+
+  Measured at tree `7d5d6e0a3730bfd790dace3a95c63a0ea71ec031`, worktree clean
+  (`/usr/bin/git status --porcelain` empty), three ways: `python3 scripts/doc-id.py next` at a
+  terminal prints the diagnostic and then the integer; `python3 scripts/doc-id.py next
+  2>/dev/null | od -c` prints the integer's digits, one `\n`, and nothing else;
+  `ID=$(python3 scripts/doc-id.py next)` leaves the diagnostic on the terminal, uncaptured,
+  with `ID` holding the bare integer. That third run is how the error was made — on screen the
+  two lines look like one captured pair, because only one of them was ever captured.
+
+  **What Step 2 requires instead:** write **one** trap for `next`, not two. The real one is
+  allocation, already stated in Risk 4 of this plan: `next` defaults to `--ref origin/main`
+  (`python3 scripts/doc-id.py next --help` → *"Git ref to read (default: origin/main)."*), so an
+  id already held by a record on an unmerged branch is invisible to it and concurrent drafters
+  are handed the same integer without either being wrong. Write no stream-capture trap; there
+  is none.
+
+  **And write no allocation number into the skill, or into this plan.** The integer in the
+  sentence above this annotation is a property of the tree it was run at, not a fact about the
+  command, and it had already changed by this annotation's tree. Record the command and the
+  rule — run `python3 scripts/doc-id.py next` at the head you branch from, then reconcile with
+  the lead before push — never a pasted value, which goes stale by exactly the
+  duplicated-constant mechanism of `RFC-756`.
 - `doc-id.py next` allocates against records reachable from `origin/main`, so **two planners
   drafting the same night both get the same integer** and neither is wrong. The reconciliation
   is the lead's before push. This plan is itself an instance — see the report.
@@ -976,6 +1022,100 @@ uv run mypy; echo EXIT=$?
 
 ---
 
+### Task 15: reconcile the salvaged `audit-docs.py` check work against `main`
+
+**Added 2026-09-19 (planner, on the deputy's ruling of the same date).** This task is numbered
+15 because task numbers in this plan are append-only — Tasks 3, 8 and 14 are cited by number
+elsewhere and a renumber would break those citations — but it is **sequenced before Task 14**,
+which is the slice sweep, ledger and gate and must remain last. Order: 13 → 15 → 14. It does
+not depend on DP-7-1 and is therefore not blocked while Task 13 is.
+
+**Provenance, stated because this plan asserts at `:318` that it invents no scope of its own:**
+this row traces to the deputy's ruling of 2026-09-19, not to `RFC-937` §5.4, `PL-939:740-751`,
+`CR-1064` or `CR-1065`. See the annotation on `:318`.
+
+**Why it exists.** The root checkout sits on branch `w37-6-h1-checks-31-32-36` carrying two
+commits that exist on no remote and are on no other branch. They implement ruled `audit-docs.py`
+check dispositions and were never merged. They were minutes from being destroyed by a checkout.
+
+| Commit | Subject |
+|---|---|
+| `abc0933` | Implement three ruled `audit-docs.py` check dispositions |
+| `ec31a5b` | Rewrite check-31 to read full allocation via `docs/INDEX.md`; drop check-32 hunk |
+
+**Durable evidence, cited by path, both to be re-checked at the start of this task:**
+`refs/salvage/2026-09-19/root-checkout-branch` in this repository's own object store, and
+`~/gi-pricing-plan.local/handover/unpushed-bundle-2026-09-19/root-branch.bundle`.
+
+**Files:**
+- Modify: `scripts/audit-docs.py`
+- Modify: this slice's `LG-` ledger (the per-hunk disposition table)
+
+**Interfaces:**
+- Consumes: nothing from other tasks.
+- Produces: the disposition table Task 14's ledger sweep cites rather than restates.
+
+- [ ] **Step 1: Confirm the salvaged work is still reachable, from both sources**
+
+```bash
+/usr/bin/git show-ref | grep 'refs/salvage/2026-09-19/root-checkout-branch'
+/usr/bin/git bundle verify ~/gi-pricing-plan.local/handover/unpushed-bundle-2026-09-19/root-branch.bundle
+```
+Expected: the ref resolves to `ec31a5b9355a477445bd4677029e571bc3af1c77`, and the bundle reports
+*"The bundle records a complete history."* If either fails, stop and report — do not proceed
+from one source alone.
+
+- [ ] **Step 2: Derive the net delta, not a replay of the two commits**
+
+```bash
+BASE=$(/usr/bin/git merge-base ec31a5b origin/main)
+/usr/bin/git diff "$BASE" ec31a5b -- scripts/audit-docs.py
+```
+`ec31a5b` partially reverts `abc0933` — it drops the check-32 hunk `abc0933` added. **Replaying
+the two commits in order would resurrect a hunk its own author withdrew.** The range diff above
+is the only correct starting point. Every surviving hunk lands inside
+`check_id_filename_directory()`, which exists on both sides.
+
+- [ ] **Step 3: For each hunk, read `main`'s current implementation of the same region**
+
+```bash
+/usr/bin/git show origin/main:scripts/audit-docs.py | grep -n 'def check_id_filename_directory'
+```
+Read from that line to the end of the function on `main`, and read the same function at
+`ec31a5b`. **Never re-apply blind.** `main` has moved substantially on this file since these
+commits were written — a clean-looking apply is not evidence the change is still wanted, only
+that the surrounding lines did not happen to collide. Reconcile against `main` at the head you
+branch from, re-deriving it with the command above rather than trusting any figure written here
+or elsewhere about how far it has moved.
+
+- [ ] **Step 4: Give every hunk one of two dispositions, in the ledger, with no third option**
+
+For each hunk in the Step 2 diff, write one row: either **land** — the change is still correct
+against `main`'s current code, with one sentence saying why — or **superseded**, naming the
+commit on `main` that superseded it. Silence is not a disposition. A hunk you cannot decide is
+reported to the lead, not skipped.
+
+- [ ] **Step 5: Prove the landed checks on deliberately broken input**
+
+`CLAUDE.md` §13: enforcement is proven on deliberately broken input, and a check that has never
+printed a failure has not been tested. For each hunk landed in Step 4, construct an input the
+check must reject, run the check, and record that it exits non-zero and names the right file:
+
+```bash
+python3 scripts/audit-docs.py; echo EXIT=$?
+```
+Expected on the clean tree: `EXIT=0`. Then, on a scratch copy carrying the deliberately broken
+input, expected: a non-zero exit naming the offending path. Both runs and both outputs go in the
+ledger. If nothing was landed in Step 4, record that fact and its consequence — that no new
+enforcement was added — rather than omitting this step.
+
+- [ ] **Step 6: Commit** — `fix(scripts): reconcile salvaged audit-docs check work against main`
+
+**ETA basis:** 2 h. Three hunks in one function, each needing `main`'s current code read before a
+disposition, plus a broken-input proof for whatever lands and the ledger table.
+
+---
+
 ### Task 14: the slice sweep, the ledger, and the full gate
 
 **Files:**
@@ -1078,6 +1218,22 @@ merge tree, with no context from this session.
    slice's `LG-` file; it has fifteen rows matching the scope table above; each carries either
    a commit SHA reachable from the merge tree or, for row 6, the verification command and its
    output. `/usr/bin/git log --oneline origin/main...<branch>` lists every SHA the ledger names.
+
+   **Corrected 2026-09-19 (planner, on the deputy's ruling of the same date).** The words above —
+   *"it has fifteen rows matching the scope table above"* — are superseded as this item's test,
+   kept quoted rather than edited. The defect is not that the figure is now wrong; it is that the
+   figure is **pasted**, inside the acceptance standard, which is the artifact the close is
+   checked against. Task 15 falsifies it, and replacing it with the next integer would fix
+   today's instance while rearming the trap for the task after that — the duplicated-constant
+   mechanism of `RFC-756`, in the one place it does the most damage. **Do not write a new
+   number.** The test is a comparison, and it is run in both directions: **every row of the scope
+   table is matched to a ledger row by the file or the subject that row names, and every ledger
+   row is matched back to a scope-table row.** A one-way check passes while an extra row sits in
+   either list, so both directions are required; neither list's length is counted, and no future
+   task can falsify the item by existing. The rest of item 1 is unchanged and still binds: each
+   matched ledger row carries either a commit SHA reachable from the merge tree or, for the
+   verification-only row, the verification command and its output, with
+   `/usr/bin/git log --oneline origin/main...<branch>` listing every SHA the ledger names.
 2. **`python3 scripts/audit-docs.py; echo EXIT=$?` prints `EXIT=0`** at the merge tree.
 3. **`python3 scripts/doc-id.py check; echo EXIT=$?` prints `EXIT=0`** at the merge tree.
 4. **`python3 scripts/doc-index.py --check; echo EXIT=$?` prints `EXIT=0`** at the merge tree,
@@ -1100,6 +1256,17 @@ merge tree, with no context from this session.
 10. **Every skill file this slice modified has a refreshed `Verified` date**, and no skill it
     did not modify has one changed: `/usr/bin/git diff --stat origin/main...<branch> --
     .claude/skills/` names exactly the files the ledger names.
+
+    **Corrected 2026-09-19 (planner, on the deputy's ruling of the same date).** The closing
+    words above — *"names exactly the files the ledger names"* — are corrected to **"names
+    exactly the skill files the ledger names."** Task 15 puts a non-skill file,
+    `scripts/audit-docs.py`, into this slice's ledger. The command in this item is already
+    scoped by its pathspec (`-- .claude/skills/`) and so continues to report correctly; it is
+    the sentence describing what that output should equal that goes false, because the ledger
+    now names a file the pathspec deliberately excludes. The item's substance is unchanged:
+    every skill file this slice modified carries a refreshed `Verified` date, no skill it did
+    not modify has one changed, and the diff under `.claude/skills/` must correspond exactly to
+    the skill files the ledger names — no more, no fewer.
 11. **The deputy's merge acknowledgement is recorded** on the PR before the lead merges, and
     the slice's clean audit is filed. Per `CLAUDE.md` §13 a Slice closes on a clean audit and
     the lead's merge — no maintainer acceptance line is required for this slice, and none is
