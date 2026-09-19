@@ -230,11 +230,27 @@ in the script** — durable and reproducible in any clone at any revision.
   rule applies to what a gate demands of it too. Legacy plans get **one aggregate note
   line** (count + cutoff date), not one warning per file — a hundred repeated warnings train
   every reader to skim past the check's output.
-- **Scope is the plan *kind* only** — the suffix-less file `writing-plans` produces,
-  discriminated by `docs/plans/README.md`'s four documented suffixes
-  (`-ledger`/`-final-review`/`-verified`/`-handover`), never by guessing at a file's
-  content. A filename with none of those suffixes and no `YYYY-MM-DD-` date prefix either
-  is refused outright rather than silently classified.
+- **Scope is the plan *kind* only**, and after the RFC-937 migration the kind and the
+  filing date are read from the **front matter**, never from the filename. A filed plan is
+  `docs/plans/PL-<nnnnn>-<slug>.md` (RFC-937 §1.3); `kind:` says what it is and `created:`
+  says when it was filed, and both are parsed fields rather than substrings of a name.
+  `_PLAN_TERMINAL_KINDS` — `review` and `handover` — are the kinds that declare no
+  acceptance standard of their own and are skipped; a plan with no header, or no
+  `created:`, is refused outright rather than silently classified. **A ledger is not a
+  plan at all**: it became its own `LG-` family under `docs/ledgers/`, so it is out of
+  check 28's population by directory, not by suffix.
+- **The `YYYY-MM-DD-` prefix and the four `-ledger`/`-final-review`/`-verified`/`-handover`
+  suffixes are the *retired* pre-migration grammar.** `check_plan_acceptance_standard`
+  still carries that branch, selected by `migrated_tree()` — `docs/INDEX.md` **and**
+  `docs/REDIRECTS.csv` both present — so the same script reads a tree on either side of the
+  one-way migration commit. Do not teach the retired form as a live filing rule, and do not
+  delete the branch either: a parser hard-coded to the post-migration shape reds `main` on
+  the day it merges, and one hard-coded to the pre-migration shape reports a **vacuous
+  pass**, every count zero and exit 0, the moment the migration lands. Reading the filename
+  regardless is not graceful degradation — on the migrated tree the un-fixed check emitted
+  110 failures **and** reported "0 plan(s) checked", both halves wrong at once, in opposite
+  directions. A reader holding an old dated path resolves it through `docs/REDIRECTS.csv`,
+  which check 36 keeps honest.
 - **"Defined" requires content**, not just the heading. A heading with nothing under it
   before the next heading is "implied," which §5 step 4 explicitly distinguishes from
   "defined" — that half is checked too, and reds.
@@ -496,6 +512,21 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-19 — **check 28's scope bullet corrected: it taught the retired pre-migration
+filing grammar as the live rule.** `RFC-937` §5.4's `docs-audit` row (`:368`) requires the
+`YYYY-MM-DD-` grammar and the four-kinds paragraph removed; at `7d5d6e0` the bullet
+described only `_PLAN_KIND_EXCLUDED_SUFFIXES` and `_PLAN_FILENAME_DATE`, which
+`check_plan_acceptance_standard` reaches **only** on an unmigrated tree — the branch is
+selected by `migrated_tree()` (`scripts/audit-docs.py:134-150`), true when `docs/INDEX.md`
+and `docs/REDIRECTS.csv` both exist. The post-migration branch, which is the one this
+repository takes, reads `kind:` and `created:` from the front matter and skips
+`_PLAN_TERMINAL_KINDS` (`review`, `handover`); a ledger is no longer a plan kind at all but
+its own `LG-` family under `docs/ledgers/`. Both branches are now described, the retired
+one named as retired rather than deleted — deleting it reds `main` on the migration's own
+merge day, and hard-coding the post-migration shape alone reports a vacuous pass. Measured
+at `7d5d6e0`, predicate `grep -n 'YYYY-MM-DD' .claude/skills/docs-audit/SKILL.md` → one hit
+at `:236` before, no live-form hit after. W37-7 Task 1, `PL-1070`.
 
 2026-09-02 (eighth entry, same day) — **the selector entry above is superseded: `F87` is
 fixed.** `_id_scope_documents` no longer expands a directory root with `rglob("*.md")`. It
