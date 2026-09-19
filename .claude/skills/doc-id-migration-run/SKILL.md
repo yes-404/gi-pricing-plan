@@ -218,7 +218,27 @@ lib` in an unrelated blob test. The tool now enumerates with `git ls-files -z --
 --others --exclude-standard` inside a work tree (`_enumerate_tree`, PR #782), but the
 wrapper rule stands for older tools.
 
-Verified: 2026-09-17
+**In the tool itself the fix is exclusion by construction, and no literal refusal guard
+exists — do not add one.** `_enumerate_tree` (`scripts/doc-id.py:3854`) shells out to
+`git -C <root> ls-files -z --cached --others --exclude-standard` (`_LS_FILES_ARGS`,
+`scripts/doc-id.py:3851`), so `--exclude-standard` applies the checkout's own `.gitignore`
+and a gitignored path is **never a candidate in the first place**. There is no
+`if ".venv" in path` test anywhere in `scripts/doc-id.py` or `scripts/_docverify.py`. A
+reader who comes here looking for that guard should stop looking rather than write one: a
+second, name-based exclusion list would drift from `.gitignore` and then disagree with it,
+and `sweep_exclusion_reason` cannot stand in for it either — it names paths the
+*repository* excludes and cannot know what a given checkout ignores.
+
+**The `[ -d "$RP/.venv" ] && exit 97` line above is not a contradiction of that**, and the
+two must not be collapsed. It is a rule for an **ad hoc wrapper script driving an older
+tool** — the shape the 2026-09-17 handover scripts had and lacked. It is not proposed for
+`doc-id.py`, which needs no guard because its enumeration cannot reach the path.
+
+Verified: 2026-09-19 (the exclusion-by-construction paragraph; W37-7 Task 2, `PL-1070`.
+Measured at `7d5d6e0`: `grep -n '\.venv' scripts/doc-id.py scripts/_docverify.py` returns
+**4 lines, all of them prose inside a comment or a docstring** — `scripts/doc-id.py:544`,
+`:3826`, `:5011`, `:5028`, and nothing in `scripts/_docverify.py` — and no conditional.)
+Previously verified: 2026-09-17
 
 ## CI verify ref resolution on a migrated checkout
 
