@@ -221,6 +221,27 @@ under it) on every plan-kind file filed on or after the check's cutoff date. See
 `docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-thereafter-rejected-as-the-mechanism.md` RL-906 for why the mechanism is a
 constant-cutoff filename check rather than a warn-then-red switch.
 
+**Fourth deviation, 2026-09-19: `brainstorming` gained one paragraph saying scratch is not
+a governed document.** `RFC-937` §5.4 requires one sentence each in `brainstorming` and
+`planning-with-files` — scratch is not a document; the committed record is a `PL-` or an
+`LG-`. Upstream has no id standard and no reason to carry it, so the sentence is an
+addition rather than a correction. Placed in *After the Design*, next to the existing
+instruction to commit the design document, because that is where a reader decides what the
+durable artifact is. Landed by W37-7 (`PL-1070` Task 7) under that plan's DP-7-3 default
+(a) — make the edit **and** record it here in the same commit — which enumerates this file
+by name.
+
+**Fifth deviation, 2026-09-19: `planning-with-files` gained the same paragraph**, naming
+its own scratch files (`task_plan.md`, `findings.md`, `progress.md`, `.planning/`)
+explicitly, since those are the ones a reader of *that* skill will be holding. Placed
+immediately after its own "what goes where" table. Same authority, same commit, same
+DP-7-3 default; this file is enumerated there too. It also points at `git-hygiene` for
+keeping the scratch files out of the repository, which upstream does not address because
+upstream assumes the scratch files are the project's own.
+
+Both paragraphs use the **same wording** deliberately: one form, stated twice, rather than
+two drifting descriptions of one rule.
+
 **Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
 into every session through `hooks/hooks.json`. That is plugin configuration rather than a
 skill, it would run a command at the start of every session for anyone who clones this
