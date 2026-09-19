@@ -1,5 +1,5 @@
 ---
-id: FD-1078
+id: FD-1079
 family: finding
 title: Two freeze-clause breaches on PL-1070, and the gap that nothing catches a spawn against a draft plan
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: []
 ---
 
-# FD-1078 — Two freeze-clause breaches on `PL-1070`, and the gap that nothing catches a spawn against a `draft` plan
+# FD-1079 — Two freeze-clause breaches on `PL-1070`, and the gap that nothing catches a spawn against a `draft` plan
 
 **This finding's content is the lead's**, filed against the lead's own conduct. It was
 landed in the repository by the W37-7 executor, which could write to the branch where the
@@ -21,17 +21,31 @@ lead could not; authorship and responsibility are the lead's.
 **Dated 2026-09-19. Taken knowingly and disclosed rather than silently, in the form
 `RL-1075` uses.**
 
-`FD-1078` was allocated by `python3 scripts/doc-id.py next`. That id is **already assigned**
+`FD-1079` was allocated by `python3 scripts/doc-id.py next`. That id is **already assigned**
 in `docs/REDIRECTS.csv`'s legacy block, to a rating requirement:
 
 ```
-F-W9-2,FD-1078,docs/audit/register.md,docs/findings/register.md,,title:FR-RATE-61
+F-W9-3,FD-1079,docs/audit/register.md,docs/findings/register.md,,title:FR-RATE-25
 ```
 
 So the commit filing a finding about **a resolver existing somewhere other than the row that
 names it** was handed an identifier that **resolves to something else, in a file the
 allocator does not read**. The finding's subject, enacted by its own identifier. It was
 found by the deputy, not by the author or the lead.
+
+**Renumbered 2026-09-19, and the renumber is a second instance of the same class.** This
+record was first allocated the 1078 mark. `RL-1078` — the ruling on the reserved block, and
+therefore on *this disclosure's own subject* — then merged to `main` carrying that same
+number, making the two a true duplicate that `doc-id.py check` and check 31 both reported.
+Under `RFC-937` §1.7, *"a collision at rebase is fixed by renumbering the unmerged item"*,
+and this record was the unmerged one, so it moved to the 1079 mark.
+
+**The mark it moved to is also reserved**, by the row quoted above: the block spans the 1063
+mark to the 1136 mark and every id inside it collides equally. So the renumber resolved a
+collision with a *materialised document* and left the collision with a *reservation* exactly
+where it was — which is the distinction `RL-1078` turns on, met here by accident rather than
+by design. A record about identifier collisions has now collided twice, for two different
+reasons, and been renumbered once.
 
 **The id stands.** Every id below the block's top collides equally, and hand-picking one
 above it is the hand-minting `RFC-937` forbids. The lead's policy of 2026-09-19 applies
@@ -194,7 +208,7 @@ The executor's response, quoted because it is the behaviour this finding exists 
 
 > I am not guessing which, and I have not treated anything as blocked on a decision point I
 > cannot find… if a sixteenth task is genuinely coming, it needs to reach the plan as a text
-> like Task 15 did, not as a name in a message — which is the defect `FD-1078` is about.
+> like Task 15 did, not as a name in a message — which is the defect `FD-1079` is about.
 
 *(The executor's message wrote that id in its padded filename form; it is rendered here in
 the citation form the standard requires, which is the same id. Check 32 red on the padded
