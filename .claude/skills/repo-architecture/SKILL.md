@@ -246,7 +246,8 @@ repository contains, so the row stays and the omission is filed. Ruled by the le
 have made this skill wrong in order to make it consistent**, which is the inversion
 `CLAUDE.md` §0 forbids.
 
-The `audit-docs.py` bullet also had `docs/notes/` in it and now says `docs/rfcs/`, with one
+The `audit-docs.py` bullet also named the retired working-notes directory and now says
+`docs/rfcs/` (the old spelling is not reproduced — see above), with one
 sentence on checks 30-39 that **points at the script's module docstring rather than listing
 them** — the numbered list lives there and nowhere else.
 
