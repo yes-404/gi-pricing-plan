@@ -175,6 +175,32 @@ three conventions the audit cannot check. Nothing else in the four skills change
 `.superpowers/sdd/` nor `.planning/` moved, both still hold live scratch and both stay
 git-ignored.
 
+**Amended 2026-09-19 (W37-7, `PL-1070` Task 10): the same deviation, moved to the `RFC-937`
+filing grammar.** This is an amendment to the entry above rather than a new numbered
+deviation, because it is the same deviation — *where a plan is saved* — under a new form,
+not a second departure from upstream. `writing-plans` now saves to
+`docs/plans/PL-<nnnnn>-<slug>.md`, `<nnnnn>` allocated by `python3 scripts/doc-id.py next`,
+with the filing date in the front matter's `created:` rather than in the filename. The
+handoff sentence that quotes the path back to the user is updated in the same pass — a
+`<filename>.md` placeholder teaches the old shape by example just as effectively as the
+grammar itself, which is why the sweep covered the whole file and not just the date form.
+Check 28's scope paragraph in that skill is corrected with it: the kind is read from
+`kind:`, not from a filename suffix, and a ledger is no longer a plan kind at all.
+
+**The "five lines across four skills" count above is superseded by its predicate, not
+updated.** A pasted count is what goes stale
+([`RFC-756`](../../docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)), and
+this is the second time that figure has needed attention. Measure it instead:
+
+```bash
+for f in writing-plans executing-plans subagent-driven-development requesting-code-review; do
+  grep -c 'docs/plans/' ".claude/skills/$f/SKILL.md"
+done
+```
+
+The three-line pointer to `docs/plans/README.md` recorded above as a deliberate widening is
+**kept** — a recorded deviation is not removed while landing a new one.
+
 **Second deviation, 2026-08-29: `subagent-driven-development/scripts/task-brief` could not
 read this repo's own plan format.** Confirmed empirically (exit 3 on every task) before
 touching anything: this repo's `writing-plans` house pattern numbers tasks as `### 1.1 —
