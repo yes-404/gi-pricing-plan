@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import dataclasses
 import importlib.util
+import itertools
 import shutil
 import subprocess
 import sys
@@ -657,3 +658,128 @@ def test_render_index_is_deterministic_across_calls() -> None:
     first = doc_index.render_index(corpus)
     second = doc_index.render_index(corpus)
     assert first == second
+
+
+# =========================================================================================
+# RL-1078 -- reserved allocations must be visible to `docs/INDEX.md`.
+#
+# `docs/REDIRECTS.csv` reserves a block of identifiers for legacy register rows that never
+# materialise as files. Before this change the index carried only materialised documents,
+# so `compute_next` -- which reads the index through `scan_index_ids` -- could not see a
+# reservation and minted straight over it. `RL-1078` ruled the remedy is option (a) **in
+# substance**: the emission belongs in `doc-index.py`, NOT as a fifth `compute_next`
+# scanner, because the source was never missing -- the index was incomplete.
+#
+# Both tests are pinned **by symbol**. A test asserting that `next` returns a particular
+# integer proves only that a number changed, and a pasted block bound is a tautology that
+# survives the block moving under it.
+# =========================================================================================
+
+
+def _reserved_numbers(redirects: Path) -> set[int]:
+    """The reserved allocation numbers, derived the way the emission derives them.
+
+    Parses each row's `new_id` through `doc_index.ID_RE` -- the one shared id grammar --
+    rather than matching a re-typed `FD-[0-9]+` literal, which would drift from
+    `canonical`'s own output the moment the shape changed. This is the same technique
+    `doc-id.py`'s `_is_fd_canonical` uses on the same column, for the same reason.
+    """
+    out: set[int] = set()
+    for row in doc_index._reserved_rows(redirects):
+        match = doc_index.ID_RE.fullmatch(row["new_id"])
+        assert match is not None
+        out.add(int(match.group(2)))
+    return out
+
+
+def test_every_reserved_allocation_appears_in_the_index() -> None:
+    """Derive-and-compare: the reserved set and the allocated set, from their own sources.
+
+    Neither side is pasted. A reserved number absent from the index is a number the
+    allocator cannot see, which is the whole defect `RL-1078` names.
+    """
+    root = ROOT / "docs"
+    reserved = _reserved_numbers(root / "REDIRECTS.csv")
+    assert reserved, "no reservations parsed -- the predicate found nothing to check"
+
+    indexed = {
+        int(m.group(2))
+        for record in _build(root).records
+        if record.header.id
+        and (m := doc_index.ID_RE.fullmatch(record.header.id)) is not None
+    }
+
+    missing = sorted(reserved - indexed)
+    assert not missing, (
+        f"{len(missing)} reserved allocation(s) absent from the index, so the allocator "
+        f"cannot see them: {missing[:10]}"
+    )
+
+
+def test_a_reserved_mark_the_index_omits_is_detected(tmp_path: Path) -> None:
+    """Broken input: a `REDIRECTS.csv` carrying a reservation the index does not emit.
+
+    Constructed in `tmp_path`, never by mutating the real tree. The row is appended with a
+    number above the live corpus so the omission is unambiguous, and the comparison above
+    must report it.
+    """
+    root = tmp_path / "docs"
+    shutil.copytree(ROOT / "docs", root)
+
+    reserved_before = _reserved_numbers(root / "REDIRECTS.csv")
+    unseen = max(reserved_before) + 1000
+    with (root / "REDIRECTS.csv").open("a", encoding="utf-8") as fh:
+        fh.write(f"F-W99-9,FD-{unseen},docs/audit/register.md,docs/findings/register.md,,title:Probe\n")
+
+    # The emission is deliberately bypassed here: the corpus is built from the ORIGINAL
+    # tree, so the appended reservation is one the index does not carry.
+    indexed = {
+        int(m.group(2))
+        for record in _build(ROOT / "docs").records
+        if record.header.id
+        and (m := doc_index.ID_RE.fullmatch(record.header.id)) is not None
+    }
+    reserved_after = _reserved_numbers(root / "REDIRECTS.csv")
+
+    assert unseen in reserved_after, "the probe row did not parse -- the proof is vacuous"
+    assert unseen not in indexed
+    assert sorted(reserved_after - indexed) == [unseen], (
+        "the comparison did not isolate the injected reservation"
+    )
+
+
+def test_an_index_skipping_a_reserved_block_breaks_contiguity(tmp_path: Path) -> None:
+    """Check 31's contiguity clause, armed against this specific hole.
+
+    This is the failure every option `RL-1078` refused would have shipped: `next` returning
+    past the block's top while the index still stops short. Built on a constructed index,
+    never by mutating the real tree.
+
+    **The predicate is check 31's own**, not a re-derivation: it reads `docs/INDEX.md`'s
+    text with `ID_RE.finditer` into a **set**, exactly as `check_id_filename_directory`
+    does. An earlier draft of this test walked `build_corpus`'s records instead and
+    collected them into a list -- a different population, with duplicates, which reported
+    gaps that were an artefact of the predicate rather than a property of the corpus. Two
+    counts over the same tree differing only by the predicate that produced them is the
+    `F85` class.
+    """
+    index_text = (ROOT / "docs" / "INDEX.md").read_text(encoding="utf-8")
+    numbers = sorted({int(m.group(2)) for m in doc_index.ID_RE.finditer(index_text)})
+    assert numbers, "no ids parsed -- the proof is vacuous"
+
+    live_gaps = [
+        (lo, hi) for lo, hi in itertools.pairwise(numbers) if hi != lo + 1
+    ]
+    assert not live_gaps, f"the live allocation is not contiguous: {live_gaps[:5]}"
+
+    # Broken input: drop one interior number -- exactly the hole a skipped reservation
+    # leaves -- and the same predicate must report it.
+    hole = numbers[len(numbers) // 2]
+    holed = [n for n in numbers if n != hole]
+    gaps = [
+        (lo, hi) for lo, hi in itertools.pairwise(holed) if hi != lo + 1
+    ]
+    assert gaps, "removing an interior id produced no gap -- the predicate is wrong"
+    assert (hole - 1, hole + 1) in gaps, (
+        f"the gap check did not name the hole at {hole}: {gaps[:5]}"
+    )

@@ -71,6 +71,7 @@ migration there are no ids to index."
 from __future__ import annotations
 
 import argparse
+import csv
 import importlib.util
 import posixpath
 import re
@@ -592,6 +593,134 @@ def scan_bold_id_rows(path: Path, root: Path) -> list[Record]:
     return out
 
 
+#: A `REDIRECTS.csv` row is a **reserved allocation** when its `part_ordinal` column opens
+#: with `title:`. That marker is what distinguishes the block's never-materialised legacy
+#: register rows from the migration's ordinary old-path/new-path pairs, and it is the
+#: predicate `RL-1078` was measured with. The optional leading quote matters: a title
+#: containing a comma is CSV-quoted, so the field begins `"title:` — a pattern anchored on
+#: comma-immediately-`title` misses exactly the rows whose titles were awkward enough to
+#: need escaping, which is a systematically biased sample rather than an unlucky one.
+_RESERVED_MARKER = "title:"
+
+#: Reserved rows redirect to the findings register rather than to a file of their own,
+#: which is the structural fact that they never materialise.
+_RESERVED_TARGET = "docs/findings/register.md"
+
+#: The emitted title cell: a **pointer to where the real title lives**, never the title
+#: itself and never blank (`RL-1078`'s amendment of 2026-09-19). It carries no id token of
+#: any kind, so it cannot reintroduce a legacy form into `docs/INDEX.md`.
+_RESERVED_TITLE = "(reserved — title in docs/REDIRECTS.csv)"
+
+
+def _reserved_rows(redirects: Path) -> list[dict[str, str]]:
+    """Every reserved-allocation row in `REDIRECTS.csv`, parsed with the `csv` module.
+
+    Parsed rather than pattern-matched so a quoted field is handled by the format's own
+    rules instead of by a regex that has to anticipate them.
+    """
+    if not redirects.is_file():
+        return []
+    with redirects.open(encoding="utf-8", newline="") as fh:
+        return [
+            row
+            for row in csv.DictReader(fh)
+            if (row.get("part_ordinal") or "").startswith(_RESERVED_MARKER)
+            and (row.get("new_path") or "") == _RESERVED_TARGET
+            and ID_RE.fullmatch((row.get("new_id") or "").strip()) is not None
+        ]
+
+
+def _materialised_numbers(records: Sequence[Record]) -> set[int]:
+    """The id numbers already carried by a real record."""
+    out: set[int] = set()
+    for record in records:
+        if not record.header.id:
+            continue
+        match = ID_RE.fullmatch(record.header.id)
+        if match is not None:
+            out.add(int(match.group(2)))
+    return out
+
+
+def scan_reserved_allocations(
+    redirects: Path, already: Sequence[Record] = ()
+) -> list[Record]:
+    """Reserved allocations, as `INDEX.md` rows (RL-1078).
+
+    **Why this is here and not a fifth `compute_next` scanner.** `docs/REDIRECTS.csv`
+    reserves a block of numbers for legacy register rows that never become files. Before
+    this, the index carried only materialised documents, so `compute_next` — which reads
+    the index through `scan_index_ids` — could not see a reservation and minted over it.
+    `RFC-937` §1.7's four sources were never missing one; **the index was incomplete**, so
+    the emission belongs here and §1.7 stays four sources.
+
+    A fifth scanner was the refused option, and refused on measurement rather than taste:
+    `docs/INDEX.md` is contiguous with no gaps, so check 31's contiguity clause is live.
+    Teaching `next` to skip past the block while the index still stopped short would open
+    a hole that check 31 fails on — the decision-maker reproduced that failure while
+    writing the ruling.
+
+    Synthesised the same way `scan_bold_id_rows` synthesises a requirement row: a `Record`
+    needs a `Header`, a path and a body, and a reservation has no file of its own, so the
+    path is the register it redirects to. Owner is W37-11, which holds the block as a
+    deferred allocation under a maintainer ruling of 2026-09-03 quoted at
+    `scripts/doc-id.py:9906`. **The block is not this slice's to move, re-point or blank.**
+
+    **A reservation whose number is already materialised emits nothing** — the document is
+    the row. `RFC-937` §1.4 states the index's shape as *"one row per id, rows and
+    documents alike"* (and `docs/process/document-ids.md` carries the same line), so two
+    rows for one id would break the artifact this emission exists to complete. Five
+    reservations in the live block are already real files; without this they produced a
+    duplicate row each.
+    """
+    seen = _materialised_numbers(already)
+    out: list[Record] = []
+    for row in _reserved_rows(redirects):
+        match = ID_RE.fullmatch(row["new_id"].strip())
+        assert match is not None  # _reserved_rows already required it
+        prefix, number = match.group(1), int(match.group(2))
+        if number in seen:
+            continue
+        header = Header(
+            id=canonical(prefix, number),
+            family=family_of(prefix),
+            kind=None,
+            # A **pointer, never the reservation's own title** (RL-1078's amendment
+            # of 2026-09-19). Those titles are legacy register rows' titles, so they
+            # carry legacy forms -- and emitting them moves a legacy form out of
+            # `docs/REDIRECTS.csv`, which check 36 excludes, into `docs/INDEX.md`,
+            # which it does not. The title cell is descriptive payload: the **number**
+            # and the **family** are what this emission publishes, and nothing
+            # consumes the title. A **blank** was refused for its own reason -- it
+            # reads as a generator bug and invites a later reader to "fix" it by
+            # restoring the verbatim title, reintroducing the defect. So the cell
+            # names where the real title lives.
+            title=_RESERVED_TITLE,
+            # Not a §1.2a status word: a reservation is not a document and has no
+            # lifecycle. Stating that in the cell is more honest than borrowing `draft`,
+            # which would claim a document exists in an early state.
+            status="reserved (not yet materialised)",
+            created=None,
+            owner="W37-11",
+            phase=None,
+            work=None,
+            slice_=None,
+            tree=None,
+            plans=(),
+            supersedes=(),
+            superseded_by=None,
+            corrected_by=(),
+            corrects=None,
+            relates=(),
+            was=row.get("old_id") or None,
+            vendored=False,
+            origin=None,
+            extra={},
+        )
+        out.append(Record(header=header, path=redirects, body=""))
+    return out
+
+
 def build_corpus(root: Path) -> Corpus:
     records: list[Record] = []
     for subdir in FAMILY_DIRS.values():
@@ -600,6 +729,9 @@ def build_corpus(root: Path) -> Corpus:
     records.extend(scan_bold_id_rows(root / "open-questions.md", root))
     for spec_path in sorted((root / "specs").glob("*.md")) if (root / "specs").is_dir() else []:
         records.extend(scan_bold_id_rows(spec_path, root))
+    # Last, and given what is already collected: a reservation only emits where no
+    # materialised record holds its number.
+    records.extend(scan_reserved_allocations(root / "REDIRECTS.csv", records))
     return Corpus(records)
 
 
