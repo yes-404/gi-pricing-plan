@@ -606,3 +606,75 @@ It also disposes of any residual appeal in option (c). If a ruling drafted *spec
 keep legacy tokens out of a file* could not keep one out of its own paragraph, a
 transformation applied to 58 titles by a generator will not be audited into correctness
 either. (a) is ruled partly because it is the only option with no per-title judgement in it.
+
+### Addendum to this amendment — 2026-09-19: figures at the implementation tree
+
+The corpus moved again while this amendment was being written. **Every figure below names
+its tree; none supersedes another, because none measures the same population.**
+
+| Tree | emitted rows | check 36 hits on emitted titles |
+|---|---|---|
+| pre-skip, all reservations emitting | 74 | **31** |
+| `73a40a6` (this amendment's base), skip applied | 58 | not run — 16 of 58 titles carry a legacy token under *my* predicate |
+| `8e43f598` (executor WIP), skip applied | 57 | **18**, `audit-docs.py` EXIT=1, all of them emitted titles |
+
+**The operative figure is 18 at `8e43f598`.** The 31 is from a population that no longer
+exists and must not be carried forward. The 58/57 difference between this amendment's base
+and the implementation tree is one further number minted in between, not a disagreement:
+same rule, later tree.
+
+**The ruling is unaffected.** It turns on what the title cell is *for*, not on how many
+titles carry a legacy token. 18 or 31, the structural point is identical.
+
+### The corroboration claim is refused: the two sets are identical by construction
+
+It was put to me that the skipped reservations *"are exactly the ones predicate (i)
+counts"*, and that this is **two independently derived measurements confirming each
+other** — offered as the strongest evidence yet that the collision problem is precisely the
+materialisation overlap.
+
+**They are not two measurements.** Predicate (i) is *reserved numbers that appear in
+`docs/INDEX.md`*. The skip rule is *reserved numbers that already carry a record*, and a
+record is exactly what an `docs/INDEX.md` row is. **Both are the same intersection of the
+same two inputs**, so they cannot disagree however the world is arranged. Verified at
+`73a40a6` rather than asserted: computing the set both ways — once with check 31's
+`ID_RE`-over-the-whole-text form, once with predicate (i)'s row-anchored four-digit form —
+gives 16 and 16, with empty difference in both directions.
+
+That identity is worth having, but for a different reason than the one offered: **it
+confirms the implementation matches its definition.** Had it come out unequal, the
+generator or the predicate would have a bug. What it cannot do is tell us anything about
+the corpus, because no possible corpus makes it fail. Treating it as evidence is the
+independent-agreement trap — one formulation evaluated twice reads as two witnesses
+agreeing.
+
+The substantive claim it was offered for — that the block's collision problem is the
+materialisation overlap and nothing else — **is already established**, by §2's measurement
+and its family decomposition, and it needs no second witness.
+
+### A predicate that changes meaning when its population changes
+
+The executor's reading trap is correct and I adopt it, with one addition. Predicate (i)
+reads **17 pre-emission and 74 post-emission** at the implementation tree, and that is not
+a regression: pre-emission it measured **reuse** — reserved numbers the allocator could not
+see — and post-emission it measures **visibility**, every reservation now having a row. Same
+command, same tree, opposite meaning, because the emission is what the predicate was
+counting the absence of.
+
+**The addition: after the emission, predicate (i) no longer measures the harm at all, and
+should not be left lying around reading 74.** A number that once meant "this much damage"
+and now means "this much of the fix landed" will be read as the former by the next person
+who runs it — this record's §2 is where they will find the command. Whoever finalises the
+emission should either retire predicate (i) with a dated line saying what replaced it, or
+redefine it as *reserved numbers carrying a record that is not their own reservation*,
+which measures the original harm across both regimes and reads 17 before and 17 after. That
+is a measurement question, not a ruling, so it is named here rather than decided.
+
+### Sequencing, confirmed
+
+`RFC-937` §1.7's amendment is deliberately **not** in the WIP commit, and that is right.
+`CLAUDE.md` §2 requires the spec and the code to land together; holding the spec back until
+the code shape settles is how that is achieved, not a departure from it. **§1.7 has not
+moved**, and nothing in this record should be read as assuming it has. My ruling, §1.7's
+amendment and the emission land in one commit, which is the executor's call and correctly
+made.
