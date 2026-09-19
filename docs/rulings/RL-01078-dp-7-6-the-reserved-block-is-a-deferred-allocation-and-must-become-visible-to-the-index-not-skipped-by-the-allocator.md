@@ -55,8 +55,9 @@ At this tree the first prints 74 numbers, 1063 through 1136 with no gap; the sec
 the legacy citation forms the block is supposed to replace — `register.md:48` reads
 *"WF-698 §4 surfaces (F9)"* and `:56` reads *"FR-12 (F19)"*, for the rows whose reserved
 `new_id`s are the 1066 and 1074 marks. No file under `docs/findings/` bears any number in
-the block: `ls docs/findings/` tops out at the `FD-01074` essay, and the five `FD-0106x` /
-`FD-01074` essays that do exist are **newer, unrelated findings**, not these legacy rows.
+the block: `ls docs/findings/` tops out at the essay filed at the 1074 mark, and the five
+essays that do exist inside the block's range — the 1066, 1067, 1068, 1069 and 1074 marks —
+are **newer, unrelated findings**, not these legacy rows.
 
 **But the block is not inert, and must not be read as spare.** Its deferral is a maintainer
 ruling of 2026-09-03, quoted verbatim inside the tool that implements it —
@@ -351,8 +352,11 @@ own mechanism proving itself against me.**
 
 2. **Against an unmerged sibling.** `next` reads a committed ref through
    `compute_next_at_ref`, so it is blind to sibling branches, and **`a800c57` already
-   carries `FD-1078`** — *"Two freeze-clause breaches on PL-1070, and the gap that nothing
-   catches a spawn against a draft plan"* — verified in that tree's `docs/INDEX.md`. That
+   carries a finding at the same mark** — the freeze-clause breach finding filed on the
+   W37-7 branch, *"Two freeze-clause breaches on PL-1070, and the gap that nothing catches
+   a spawn against a draft plan"*, numbered at the 1078 mark when this ruling was written
+   and to be renumbered when that branch merges after this one — verified in that tree's
+   `docs/INDEX.md`. That
    is `RFC-937` §1.7's own case and its own remedy is *"a collision at rebase is fixed by
    renumbering the unmerged item."* Both items are unmerged, so whichever merges second
    renumbers. **This record does not pre-empt that, because it cannot.**
@@ -374,6 +378,47 @@ own mechanism proving itself against me.**
    It is recorded here because a reader who takes only §4's conclusion would not predict it,
    and because the next person to try the same courtesy should find it already measured.
 
-**So: at merge, whichever of this record and `a800c57`'s `FD-1078` lands second renumbers,
-under §1.7, and it is the lead's call which that is.** Renumbering this record is cheap
-while it is unmerged and I will do it on request.
+**So: at merge, whichever of this record and the W37-7 branch's freeze-clause breach
+finding — the one described in point 2, at the same mark — lands second renumbers, under
+§1.7, and it is the lead's call which that is.** Renumbering this record is cheap while it
+is unmerged and I will do it on request.
+
+### Why this section names no id for the colliding sibling — 2026-09-19
+
+**The first push of this record spelled that finding's identifier as a token, twice, and
+check 32 reported it unresolvable at this tree**, because it exists only on the unmerged
+W37-7 branch. The same push also wrote two **padded** forms of an id in §1, which rule 2
+forbids in prose. Four failures, in the document whose whole subject is that identifiers
+are allocated wrongly.
+
+**A document about identifiers cannot spell the identifiers it is about.** That is the
+general form, and this record is its sixth observed face; the fifth landed the same
+afternoon on a closure append naming a legacy path as its subject. §1's block ends were
+already written bare for exactly this reason (`RFC-937:30`); the failure was not applying
+the same discipline to the two places where the *subject* was a document rather than a
+number.
+
+**Why a description rather than a fenced literal.** A fence exempts a literal kept
+byte-exact, which is right when the literal is the subject. Here the text **refers to a
+document**, and that reference must stay true after the renumber §1.7 requires. A
+description survives it; a fenced token would become a fenced falsehood. The check is not
+the reason — the reason is that the sentence would otherwise be made false by the very
+remedy this record endorses.
+
+**A second thing this exposed, and it is not a reporting failure.** Those four failures
+were measured as **exit 0** when this record was committed and as **exit 1**, stably, at
+the identical commit afterwards, with nothing in the worktree altered — no tracked change
+and no file with a modification time inside the intervening window. Diffing the two runs
+shows the four lines present in **both**: in the first they sit under
+`DISCLOSED (955, at or under the W37-11 residue ceiling)`, in the second under
+`FAILED (4)`. Alongside that move, check 35's stamp set reads 582 in the first run and 583
+in the second. **The hits did not appear; they crossed from disclosed to fatal.** What
+moved the corpus between the runs I did not identify, and I record the gap rather than
+close it with a guess.
+
+The consequence is worth stating plainly, because it is easy to file this as someone having
+forgotten to name a tree: **a gate result here is not a function of the tree alone.** It is
+a function of the tree *and* a pooled ceiling that other work consumes. "Exit 0 at commit
+X" is therefore not reproducible from X, and naming the tree — necessary as that is — would
+not have made the first measurement true. A gate result taken against a pooled ceiling
+carries the ceiling's own reading, not only the tree's.
