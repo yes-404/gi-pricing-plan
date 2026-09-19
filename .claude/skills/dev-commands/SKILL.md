@@ -643,18 +643,20 @@ across a contiguous block, and "the close record took N, so N+1 is mine" collide
 Before taking `next`'s answer, check the branches in flight; `--ref` lets you ask a
 different one.
 
-**What is *not* a trap, contrary to a widely-repeated description:** the `doc-id.py next: N
-file(s) skipped …` diagnostic goes to **stderr**, not stdout (`_report_skipped(...,
-file=sys.stderr)`, `scripts/doc-id.py:10253-10268`; the integer is a bare `print` at
-`:10278`). So `ID=$(python3 scripts/doc-id.py next)` captures **only the integer** and is
-correct as written — there is no "take the last line" remedy to apply, because there is
-nothing to strip. The shape that *does* break is `2>&1`: piping or capturing the merged
-streams puts the diagnostic ahead of the number. Measured at `7d5d6e0`: bare run printed
-the skipped line then `1075`; `2>/dev/null` printed `1075` alone; `ID=$(…)` held `1075`.
+**Run it at the head you branch from, then reconcile with the lead before push — and never
+paste the integer anywhere.** An allocation number is a property of the tree it was run at,
+not a fact about the command; written into a skill, a plan or a PR body it goes stale by
+exactly the duplicated-constant mechanism of `RFC-756`. Record the command and the rule,
+never a value.
 
-The count line prints **unconditionally, including zero** — by design, so "nothing was
-skipped" is a printed, falsifiable claim rather than the absence of a line. A zero there is
-the check reporting what it covered, not noise to suppress.
+**That allocation trap is the only trap `next` has.** In particular there is no
+stream-capture trap to work around: the `doc-id.py next: N file(s) skipped …` line and the
+integer go to different streams, so ordinary command substitution already captures the
+integer alone and needs no "take the last line" treatment.
+
+The skipped-count line prints **unconditionally, including zero** — by design, so "nothing
+was skipped" is a printed, falsifiable claim rather than the absence of a line. A zero
+there is the check reporting what it covered, not noise to suppress.
 
 ### `doc-id.py check` — and why `--classify` is not a quieter `check`
 
@@ -884,6 +886,31 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-09-19 — **the RFC-937 id instruments section added**: `doc-id.py next/check/widen` and
+`doc-index.py`/`--check`/`--phase`/`--show`, each with its trap, plus the
+exclusion-by-construction paragraph at the `migrate --verify` entry. W37-7 Task 2,
+`PL-1070`; the R13-3 half is `CR-1064:541`.
+
+Behaviour was read from each command's own `--help` and from the source at `7d5d6e0`, not
+recalled. Two things measured rather than assumed, both of which changed what was written:
+
+- **`next`'s trap is the ref, not the output stream.** `--ref` defaults to `origin/main`
+  (`python3 scripts/doc-id.py next --help`), so ids on unmerged branches are invisible to
+  it. The plan directed a *stream-capture* trap be written instead — that `ID=$(python3
+  scripts/doc-id.py next)` "captures both lines, not the number", remedied by "take the
+  last line". That is false: `_report_skipped()` writes the diagnostic with
+  `file=sys.stderr` (`scripts/doc-id.py:10253-10268`) and `_cmd_next()` writes the integer
+  with a bare `print(result.number)` (`:10278`), so command substitution already captures
+  the integer alone. The plan carries the planner's dated correction; this skill teaches
+  the one real trap and **no allocation integer**, a pasted value being `RFC-756` by
+  construction.
+- **The venv exclusion is by construction and has no refusal guard.** `_enumerate_tree`
+  (`:3854`) enumerates through `git ls-files -z --cached --others --exclude-standard`
+  (`_LS_FILES_ARGS`, `:3851`), so `.gitignore` applies before anything is a candidate.
+  Predicate `grep -n '\.venv' scripts/doc-id.py scripts/_docverify.py` at `7d5d6e0` → **4
+  lines, all prose in a comment or docstring** (`scripts/doc-id.py:544`, `:3826`, `:5011`,
+  `:5028`), no conditional anywhere.
 
 2026-09-17 (three traps, expensive-run section) — W37-6, executor-h's gate runs at 
 10:55 BST (full suite timeout), 11:02:41 BST (frontend cwd wrong), 11:48 BST (mktemp 
