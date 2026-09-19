@@ -171,6 +171,34 @@ lands verbatim when it reaches this executor; this ledger does not anticipate it
 - **A gate result scored against a pooled ceiling carries its tree *and the ceiling reading
   as that run printed it*.** At `3344de9c`: `DISCLOSED (890, at or under the W37-11 residue
   ceiling)`.
+- **`audit-docs.py` prints two different "disclosed" figures, and reading one as the other
+  manufactures a discrepancy that is not there.** Landing the reissued Annotation F and the
+  F114 register row was predicted to add **3** legacy-form hits. The top-level
+  `DISCLOSED (890, …)` came back **unchanged**, which looked like the prediction failing.
+  It was not: the two figures count different populations.
+  - `DISCLOSED (n, at or under the W37-11 residue ceiling)` counts **governed check
+    failures** the pooled ceiling absorbs. A fatal-capable hit moves it — which is why this
+    ledger's own two spelled path tokens moved it 890 → 892 earlier.
+  - check 36's own note counts **legacy-form hits**, split fatal versus disclosed. The three
+    added hits are **workstream ids**, an alias class that is non-fatal *by ruling*, so they
+    never reach the ceiling bucket at all.
+
+  Measured, rather than argued: check 36's note went **6438 → 6441** hits and **5923 → 5926**
+  disclosed, **fatal unchanged at 515**. The prediction was exact. **Unchanged fatal is the
+  safety check** — nothing was tipped and no other slice's hit flipped. Two counts over one
+  tree differing only by the population their predicate ranges over is `CLAUDE.md` §13's F85
+  class, and here it nearly produced a report of a discrepancy that did not exist.
+- **A second observed instance of the pooled-ceiling flip, on a different class.** Landing
+  the *first*, uncorrected Annotation F and F114 row tipped `docs/findings/register.md`'s
+  **check-32** class over its ceiling, and over the ceiling a class fails **in full** — so
+  **four pre-existing, previously-disclosed citations across three rows** turned fatal with
+  nothing about them changed, and the disclosed reading fell 890 → 888. *(The four ids are
+  not spelled here: they are citations that do not resolve, which is why check 32 reports
+  them, and writing them into this ledger reds check 32 against this file — it did, on this
+  paragraph's first draft. Read them from the audit output.)* Verified pre-existing:
+  `register.md:118` carries the first of them at `3344de9c`, where the audit exited 0.
+  The first instance was check 36 absorbing a hit silently; this one is check 32 flipping
+  other rows loudly. **Same mechanism, opposite visibility.**
 - **DP-7-3 reaches the four vendored manifests it enumerates and no others.** Hence
   `brainstorming`, `planning-with-files`, `writing-plans` and `subagent-driven-development`
   edited **and** recorded as deviations; `testing-strategy` recorded in the README with its

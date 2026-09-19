@@ -1400,71 +1400,281 @@ merge tree, with no context from this session.
    same sweep run against a scratch copy carrying one reinstated retired path **does** return a
    row. Both runs and both outputs are in the ledger.
 
-   **Verdict recorded 2026-09-19 (planner, on the lead's ruling of the same date): NOT
-   SATISFIED by this slice, deferred with owner W37-11 — because the instrument this item
-   names does not exist.** The words above — *"returns no rows"* — **stand unchanged and are
-   not lowered.**
+   **Verdict corrected 2026-09-19 (planner, on the lead's correction of the same date).** The
+   verdict annotation filed under this item earlier on 2026-09-19 is **superseded in place**. Its
+   operative sentence is quoted rather than deleted, because a correction that removes what it
+   replaces destroys the record of what was believed:
 
-   This item requires `PL-939`'s Acceptance Standard item 4 sweep to be run *"verbatim"*. That
-   item specifies its sweep **by its exclusion set**: *"under the exclusion set fixed in
-   Decision point DP-2 and recorded in `scripts/doc-id.py`'s `LEGACY_SWEEP_EXCLUSIONS` constant
-   with a one-line reason per entry."* At `38033319b2654072bb8825529fc6da09f99dc788` that symbol
-   appears in plan prose only — `PL-939`, `PL-960` and `PL-1073` — and **in no file under
-   `scripts/` or `tests/`**:
+   > **Verdict recorded 2026-09-19 (planner, on the lead's ruling of the same date): NOT
+   > SATISFIED by this slice, deferred with owner W37-11 — because the instrument this item
+   > names does not exist.**
+
+   **What is superseded is the ground, not the direction and not the discipline.** The item is
+   still not satisfied by this slice, its words *"returns no rows"* still stand unchanged and
+   unlowered, and the reasoning of the superseded block about why it must not be rewritten to fit
+   its own outcome survives this correction in full (see *"What survives"* below). What was false
+   is **why**.
+
+   ### The three positions, in the order they were held
+
+   | # | Position | Held by | Status now |
+   |---|---|---|---|
+   | 1 | *"The instrument this item names does not exist."* | The lead, 2026-09-19, recorded by the planner in the superseded block above | **Retired: false.** |
+   | 2 | *"It exists and is runnable, so item 4 should be run, not deferred."* | The deputy, on the auditor's first finding | **Retired: true as to runnability, and it does not reach item 5.** |
+   | 3 | **The instrument runs, and what this item asks it to show is not what the instrument is ruled to show.** | Established, and the ground of this corrected verdict | **Operative.** |
+
+   Both earlier positions are live in the record and are **explicitly retired here**, not quietly
+   replaced (`CLAUDE.md` §13, *"a correction must name what it supersedes"*).
+
+   **How position 1 was reached, stated because the mechanism is the point.** The measurement
+   behind it was:
 
    ```bash
-   /usr/bin/git grep -ln 'LEGACY_SWEEP_EXCLUSIONS' <tree>                      # docs/plans/ only
    /usr/bin/git grep -ln 'LEGACY_SWEEP_EXCLUSIONS' <tree> -- scripts/ tests/   # no output
    ```
 
-   ***"Run verbatim"* therefore has no implementation to be verbatim against.** The item was not
-   run and returned a bad number; it **cannot be run as specified**. Whether an
-   equivalently-purposed constant exists under another name is **unestablished, and is inherited
-   with this deferral** — W37-11 either finds the instrument, or supersedes `PL-939` item 4's
-   specification of it, before this item can be discharged by anyone.
+   That measurement is **true and reproduces today** — at `73a40a60efd43c3e6d2f744dbe1381171e54c4f8`
+   the symbol `LEGACY_SWEEP_EXCLUSIONS` appears in **three frozen plans and nowhere else in the
+   tree** (`PL-939`, `PL-960`, `PL-1073`; predicate: `/usr/bin/git grep -ln
+   'LEGACY_SWEEP_EXCLUSIONS' 73a40a60efd43c3e6d2f744dbe1381171e54c4f8`). **Re-run at the tree
+   this annotation lands on it returns four, and the fourth hit is this document** — `PL-1070`'s
+   own annotation quotes the constant. The extra hit is the record of the reading, not a fourth
+   plan asserting it. **It was true of the symbol and false of the question.** A constant-keyed search cannot falsify the existence of a
+   *function*: the exclusion layer shipped as one, and a grep for the name a frozen plan predicted
+   returns nothing whether the capability is absent or merely differently shaped. **An absence
+   reported by a single instrument closed an investigation that a second, differently-built check
+   would have re-opened at once.**
 
-   **The item is not defective in intent, and must not be rewritten to "no new hits."** Its
-   intent was always an absolute zero: `PL-939` item 4 reads *"returns nothing over `git
-   ls-files`"* as a **Work**-level condition, and its only relief mechanism is a named exclusion
-   set *"with a one-line reason per entry"* — a mechanism that would be pointless if
-   pre-existing hits were tolerated by default. Decisively, **this item's own positive control
-   presupposes a clean baseline**: a control carrying *one* reinstated path can only distinguish
-   nothing from something. It was written by someone who believed the restricted root was clean.
-   An acceptance item edited to fit its own outcome is the defect this work item exists to
-   remove.
+   ### The instrument exists, and is runnable
 
-   **What is defective is this plan's evidence.** The item asserted an outcome **never measured
-   before the plan was frozen** — its author restricted the sweep's root to `.claude/skills/`
-   and inferred that the restriction made it clean, and nobody ran it. Had anyone tried, the
-   missing symbol would have surfaced then rather than at the close.
+   - **`_docid.sweep_exclusion_reason`, `scripts/_docid.py:409-449`** — a **function composing six
+     declared classes**, not a constant. Its docstring, verbatim at the pinned tree:
 
-   **Separate evidence, belonging to a different instrument — recorded because it is real, and
-   labelled because it is not this item's.** A measurement does exist over `.claude/skills/` at
-   `origin/main`, taken through the **shipped pooled legacy-form sweep**: `sweep_legacy_forms` /
-   `_sweep_legacy_form_hits` with `LEGACY_FORM_PATTERNS` and `LEGACY_FORM_EXCLUDED_PATHS`, split
-   by `_legacy_form_disclosure_reason` — **check 36's population**. Over 400 tracked files it
-   reads **31 fatal and 118 disclosed**, all pre-existing, with this branch's net contribution
-   **zero**, attributed by line text at `origin/main` rather than by line number. **This is not
-   `PL-939` item 4's §7 (d) sweep and is not evidence about this item.** It is a different
-   instrument over a different population, and it is recorded here as context for W37-11, never
-   as a measurement of *"returns no rows"*.
+     > Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the RFC-937
+     > migration sweep (`doc-id.py`'s `_iter_tree_files`) and from the (d)/(e)/(g) verification
+     > corpus (`_docverify.py`'s `tracked_files`) — or `None` when it is not excluded. One
+     > predicate, read by both consumers, so they can never disagree about what is excluded
+     > (RL-988 §2's "one shared constant").
 
-   **The near-miss is recorded because it is this work item's own subject.** The check-36 figures
-   above were first offered as evidence about *this item's* sweep. Two instruments, two
-   populations, one presented as the other — the `F85` class named in `CLAUDE.md` §13, where two
-   counts at the same tree over the same corpus differ only by the predicate that produced them.
-   The figures were never wrong; the claim they were attached to was. It was caught for one
-   reason only: **the predicate was asked for and the numbers could not be reproduced from it.**
-   A count that travels without its predicate is indistinguishable from a count that travels
-   with the wrong one, which is why §13 requires the predicate verbatim and runnable.
+   - **Item 4 is executable.** `python3 scripts/doc-id.py migrate --verify` — `RL-1043` §1's
+     instrument — already runs in CI at `.github/workflows/docs.yml:111` (`- name: doc-id migrate
+     --verify`).
 
-   **A consequence for whoever discharges this.** The positive control in this item — *"the same
-   sweep run against a scratch copy carrying one reinstated retired path **does** return a
-   row"* — **is disarmed** wherever the standing population is non-zero. A one-row control can
-   only distinguish nothing from something; against a standing population it distinguishes
-   neither. It must be re-derived as a **row-identity** comparison: the reinstated path's row is
-   present in the after-set and absent from the before-set. A non-empty check passes here for
-   the wrong reason.
+   **So position 2 was right about runnability.** It does not save this item, for the three grounds
+   below.
+
+   ### Ground A — the criterion this item inherits was superseded by ruling
+
+   `EXPECTED_VERDICTS` (`scripts/_docverify.py:3557-3879`) has **no `"d"` key**. Row (d) is
+   recorded as a family of thirteen labels, `d1`…`d13`: **two `PASS`, eleven `DISCLOSE`, none
+   fatal.**
+
+   Predicate, runnable at the pinned tree (it counts the constant **by symbol**, never a paste):
+
+   ```bash
+   python3 - <<'EOF'
+   import re, subprocess
+   T = "73a40a60efd43c3e6d2f744dbe1381171e54c4f8"
+   src = subprocess.run(["/usr/bin/git", "show", f"{T}:scripts/_docverify.py"],
+                        capture_output=True, text=True).stdout.split("\n")
+   start = next(i for i, l in enumerate(src) if l.startswith("EXPECTED_VERDICTS: Final"))
+   end = next(i for i in range(start, len(src)) if src[i].rstrip() == "}")
+   rows = re.findall(r'^\s*"([^"]+)":\s*(\w+)', "\n".join(src[start:end + 1]), re.M)
+   d = [(k, v) for k, v in rows if re.fullmatch(r"d\d*", k)]
+   print(len(d), sorted(set(v for _, v in d)), [v for _, v in d].count("PASS"),
+         [v for _, v in d].count("DISCLOSE"), any(k == "d" for k, _ in rows))
+   EOF
+   # -> 13 ['DISCLOSE', 'PASS'] 2 11 False
+   ```
+
+   `DISCLOSE` is non-fatal **by ruling**, `scripts/_docverify.py:72-76` verbatim:
+
+   > Non-fatal by ruling, not by convenience: `\bF[0-9]{2}\b` is excluded from §7(d)'s zero
+   > requirement "with its count disclosed" (§8.5, re-affirmed by RL-1043 §4). A DISCLOSE row
+   > still prints its figure, its denominator and its control; it just does not set the exit code.
+
+   And `FATAL_VERDICTS: Final = frozenset({FAIL, UNDETERMINED, NOT_MEASURED, REGRESSION})`
+   (`:95`) — `DISCLOSE` is absent from it, and `PASS` is not required by it.
+
+   **For eleven of row (d)'s thirteen labels the shipped criterion is a disclosed non-zero count,
+   by ruling.** This item's *"returns no rows"* is the pre-`RL-1043`-§4 criterion. It is not a
+   lower bar that the instrument fails to clear; it is **a different question from the one the
+   instrument is ruled to answer**.
+
+   ### Ground B — no requirement encodes the criterion, so there is nothing to run it against
+
+   `EXPECTED_VERDICTS` is a **record, not a requirement**. `scripts/_docverify.py:3495`, verbatim:
+
+   > **Every row's verdict as recorded at the tree this constant was last reviewed at.**
+
+   and `:3517`:
+
+   > **This table is edited by hand, in the same commit as the change that moves a row.** That is
+   > the point: the edit is the reviewable record of a row moving, and it cannot be produced by
+   > re-running the instrument.
+
+   A record of what the rows currently read cannot be cited as the requirement that they read
+   zero. **Nothing in the shipped instrument asserts this item's zero**, which is why running the
+   instrument — position 2's remedy — produces evidence about row (d)'s disclosed state and no
+   evidence at all about *"returns no rows"*.
+
+   ### Ground C — the restriction this item applies is not expressible in the instrument
+
+   This item requires the sweep *"run verbatim with its root restricted to `.claude/skills/`"*.
+   **No function in the instrument takes a root, a prefix or a scope.** Signatures at the pinned
+   tree:
+
+   - `tracked_files(tree: Path) -> list[str]` — `scripts/_docverify.py:428`
+   - `load_corpus(tree: Path, *, exclude_basename: str | None = _D_EXCLUDED_BASENAME) -> Corpus` — `:574`
+   - `rows_d(docid, mig, ctl, record=())` — `:1717`
+   - `sweep_exclusion_reason(rel_posix: str) -> str | None` — `scripts/_docid.py:409`
+
+   `sweep_exclusion_reason` **subtracts from** a population; it cannot **restrict** one to a
+   subtree. The corpus itself is whole-tree by construction: `tracked_files` runs
+   `_LS_FILES_ARGS = ("ls-files", "--cached", "--others", "--exclude-standard")`
+   (`scripts/_docverify.py:422`) and filters it through `sweep_exclusion_reason`.
+
+   **And the five path-shaped labels in row (d) are not a scoping mechanism either.** `d9` (the
+   dated-plan-filename prefix), `d10` (the former audit root), `d11` (the former notes root), `d12`
+   (the former ADR root) and `d13` (the old `.claude` notes root) match path strings **appearing as
+   text inside a file**, not which files are read — and **none of the five names
+   `.claude/skills/`**. Each is described here rather than spelled, and read at its
+   `EXPECTED_VERDICTS` comment (`scripts/_docverify.py:3557-3879`) instead: spelling the five
+   retired roots on one line is itself a check-36 hit, and this annotation is not entitled to spend
+   a pooled ceiling other work shares in order to make a point about predicates. The restriction this
+   item specifies would have to be applied **outside** the instrument, by a reader, which is
+   precisely what *"run verbatim"* forbids.
+
+   ### Two layers, not two rival readings
+
+   Stated because the alternative reading has been offered and is wrong: `PL-939` item 4 specifies
+   the **outer** exclusion layer, not `_D_EXCLUDED_BASENAME`. §7 (d) already contains
+   `_D_EXCLUDED_BASENAME` in its own words — `scripts/_docverify.py:424` calls it *"§7(d)'s own
+   exclusion, verbatim: “excluding `REDIRECTS.csv`”"*, immediately above
+   `_D_EXCLUDED_BASENAME: Final = "REDIRECTS.csv"` (`:425`), and `load_corpus` takes it as a
+   keyword default (`:574`). So the row's own exclusion and the sweep-wide exclusion set are **two
+   layers of one instrument**, and item 4's clause names the outer one. Reading item 4 as already
+   satisfied by the inner one does not save it either.
+
+   ### Properties (iii) and (iv) of `PL-939` item 4, each given its own answer
+
+   `PL-939`'s Acceptance Standard item 4, quoted whole at the pinned tree (`PL-939:71-73`):
+
+   > 4. The legacy-form sweep of §7 (d) returns nothing over `git ls-files`, under the exclusion
+   >    set fixed in Decision point DP-2 and recorded in `scripts/doc-id.py`'s
+   >    `LEGACY_SWEEP_EXCLUSIONS` constant with a one-line reason per entry.
+
+   It carries four separable properties, and this annotation answers each rather than leaving the
+   reader to guess which one failed: **(i)** it is §7 (d)'s legacy-form sweep; **(ii)** it returns
+   nothing over `git ls-files`; **(iii)** the exclusion set carries *"a one-line reason per
+   entry"*; **(iv)** it is *"recorded in `scripts/doc-id.py`'s `LEGACY_SWEEP_EXCLUSIONS`
+   constant"*. (i) holds. (ii) is Ground A — superseded by ruling. (iii) and (iv):
+
+   **(iv) fails for a documented reason, and the document is in the code.** The exclusion layer
+   lives in `scripts/_docid.py`, not `scripts/doc-id.py`, and the comment at
+   `scripts/_docid.py:153-157` says why — verbatim:
+
+   > placed here, beside `LEGACY_FORM_PATTERNS`, so `doc-id.py`'s sweep (`_iter_tree_files`) and
+   > `_docverify.py`'s corpus (`tracked_files`) read the identical tuple through
+   > `sweep_exclusion_reason` below rather than two independently maintained copies that can
+   > diverge (RL-988 §2 / `CLAUDE.md` §2: "a shape defined twice will diverge").
+
+   So `PL-939`'s item 4 names a **location a later ruling deliberately moved away from**, for the
+   reason `CLAUDE.md` §2 gives. This is not a defect in the code.
+
+   **(iii) is satisfied in substance and not in shape — both halves stated, because only stating
+   one of them misleads.** Over the pinned tree's whole population: **1694 paths, 143 excluded,
+   143 carrying a non-empty reason, 9 distinct reasons, 0 reasonless exclusions.** Predicate,
+   runnable from the commit alone:
+
+   ```bash
+   mkdir -p /tmp/plscripts
+   for f in _docid.py generate-contracts.py; do
+     /usr/bin/git show 73a40a60efd43c3e6d2f744dbe1381171e54c4f8:scripts/$f > /tmp/plscripts/$f
+   done
+   python3 - <<'EOF'
+   import subprocess, sys
+   sys.path.insert(0, "/tmp/plscripts")
+   import _docid
+   T = "73a40a60efd43c3e6d2f744dbe1381171e54c4f8"
+   paths = subprocess.run(["/usr/bin/git", "ls-tree", "-r", "--name-only", T],
+                          capture_output=True, text=True).stdout.split()
+   ex = [(p, _docid.sweep_exclusion_reason(p)) for p in paths]
+   ex = [(p, r) for p, r in ex if r is not None]
+   print(len(paths), len(ex), sum(1 for _, r in ex if r.strip()),
+         len({r for _, r in ex}), sum(1 for _, r in ex if not r.strip()))
+   EOF
+   # -> 1694 143 143 9 0
+   ```
+
+   **The population here is `git ls-tree -r --name-only <commit>`, not the instrument's own
+   `ls-files --cached --others --exclude-standard`** — deliberately, so the figure is reproducible
+   from the commit id alone rather than from someone's working directory. Over a clean checkout
+   the two differ only by untracked-unignored files.
+
+   **But two of the six classes are computed predicates, not enumerated entries, so *"a one-line
+   reason per entry"* is not the shape that shipped.** Class 5 (`generated_contract_tier_reason`,
+   `scripts/_docid.py:387`) derives its paths **at call time**, by reading
+   `scripts/generate-contracts.py`'s own `OPENAPI_PATH`/`SCHEMA_DIR` by symbol — **28 of the 143
+   exclusions above come from it, and not one of them is written down as an entry anywhere**.
+   Class 6 (`__pycache__`/`*.pyc`, `scripts/_docid.py:439-448`) matches **0** paths in this
+   population and fires only on the instrument's own exhaust inside a working tree. **Every
+   exclusion carries a reason; they are not all *"recorded in a constant with a one-line reason per
+   entry"*.** One class has entries but no constant, the other has neither.
+
+   ### A figure that must never travel alone
+
+   The auditor's reconstruction of this item's sweep returned **5952 matching lines in 540 files**.
+   **The auditor disqualified it in the same breath, and the disqualification travels with the
+   figure wherever it is quoted:** it was run **undifferentiated** — no label split, no disclosure
+   classes, `git ls-tree` where the instrument uses `_LS_FILES_ARGS`, and one corpus where
+   `rows_d` takes two (`mig` and `ctl`). It is *"evidence that the item runs and that the exclusion
+   layer fires; it is not row (d)'s reading, and must not be cited as one."*
+
+   ### What survives from the superseded block, unchanged
+
+   - **The item is not defective in intent and must not be rewritten to fit its outcome.** *"An
+     acceptance item edited to fit its own outcome is the defect this work item exists to remove."*
+     That argument is untouched by this correction — **what changes is the ground, not the
+     discipline.**
+   - **The original's reasoning was right for a reason its author could not have known.** It argued
+     the item was unsatisfiable and must not be lowered. It was unsatisfiable — **but not for the
+     reason anyone then had.** Not because the instrument was missing, and not because the
+     restricted root was dirty: because the criterion the item inherits was superseded by ruling
+     (Ground A), is encoded in no requirement (Ground B), and applies a restriction the instrument
+     cannot express (Ground C).
+   - **The `F85` near-miss record stands**, and this correction is a second instance of the same
+     class at one remove: `CLAUDE.md` §13's *"a count carries … the predicate it counted with"*
+     was satisfied by the grep in position 1 and the ground drawn from it was still false, because
+     the predicate was reproducible and **the wrong one for the question asked**. Reproducibility
+     of a predicate is not fitness of a predicate.
+   - **The positive control in this item is disarmed** wherever the standing population is
+     non-zero, and must be re-derived as a **row-identity** comparison — the reinstated path's row
+     present in the after-set and absent from the before-set. Unchanged, and now doubly so: against
+     a population that is disclosed rather than zero by ruling, a one-row control distinguishes
+     nothing.
+   - **What is defective is this plan's evidence**, not the instrument. The item asserted an
+     outcome never measured before the plan was frozen. Unchanged.
+
+   **The `origin/main` check-36 measurement recorded in the superseded block — `31` fatal and `118`
+   disclosed over `.claude/skills/` through `sweep_legacy_forms` / `_sweep_legacy_form_hits` —
+   stands as recorded, with its label unchanged: it is a different instrument over a different
+   population, context for whoever discharges this, and never a measurement of *"returns no rows"*.**
+
+   ### The verdict
+
+   **NOT SATISFIED by this slice — deferred with owner: the maintainer, at the Work close.** One
+   of `CLAUDE.md` §13's four verdicts. **The bar is neither lowered nor pretended met, and item 5's
+   own words are not rewritten.**
+
+   **Why the maintainer and not W37-11** — the change of owner is the substantive part of this
+   correction. Discharging this item now requires **amending `PL-939`'s Acceptance Standard item
+   4**, a frozen Work-level plan's acceptance standard, so that it states the criterion `RL-1043`
+   §4 actually ruled. That is a plan change, and under `CLAUDE.md` §14 it is **a proposal with a
+   dated maintainer acceptance line**, not something a slice or a later slice can take on its own
+   authority. The proposal is filed for **plan review 14**. W37-11 continues to own the **record**
+   — verifying at the Work close that every clause inheriting the superseded criterion has been
+   brought into line — but it cannot discharge this item until the amendment is accepted.
 6. **Both gate halves are green**, each command from `CLAUDE.md` §11 with its own exit code
    recorded in the PR body — Python and docs half, and frontend half.
 7. **CI is green at a named head SHA**, recorded in the PR body, with the per-workflow state
