@@ -2430,17 +2430,31 @@ _PERMITTED_OWNERS_RE: Final = re.compile(r"^Permitted owners:\s*(.+)$", re.MULTI
 #: maps that number to this file, and after the migration the bare number resolves to a
 #: different ruling entirely, RL-01059): "`(h1)` passes when every `audit-docs.py` failure
 #: class on the migrated snapshot is zero except checks 29, 30 and 35, which the row prints
-#: by count, each labelled `owner: W37-10`, and which do not set the exit code." F92's own
-#: row (`docs/findings/register.md`) names the population precisely: 46 `.claude/skills/
-#: */SKILL.md` plus 7 `.claude/agents/*.md` — "which carry front matter a stamp must merge
-#: into" — deferred to W37-10 rather than hand-stamped here (that would be W37-10's own
-#: work, not this check's to do), and never exempted via `UNSTAMPABLE_EXEMPTIONS` either
-#: (these files CAN carry a header; they already do, just not an RFC-937 one).
+#: by count, each labelled `owner: W37-10`, and which do not set the exit code."
+#:
+#: **That quoted label ranges over §B's own class and not over F92's** (RL-1075). §B's
+#: class is the unstamped-scope population this check's note reports separately; F92's is
+#: the narrower set the helper below detects. Two populations share one note, and the
+#: `owner:` label belongs to the first. F92's own row (`docs/findings/register.md`) names
+#: its population precisely: `.claude/skills/*/SKILL.md` plus `.claude/agents/*.md` —
+#: "which carry front matter a stamp must merge into" — whose owner of record is **W37-11**
+#: per that row, reassigned from W37-6 on 2026-09-03. They are deferred rather than
+#: hand-stamped here (that would be the owning slice's work, not this check's to do), and
+#: never exempted via `UNSTAMPABLE_EXEMPTIONS` either (these files CAN carry a header; they
+#: already do, just not an RFC-937 one).
+#: F92's owner of record, as `docs/findings/register.md`'s F92 row states it in its
+#: Work-item cell. Named as a **symbol** rather than written inline in the note below, so
+#: that the test guarding the two against each other can pin one side by import instead of
+#: by a pasted literal — a literal on both sides is a tautology that survives the register
+#: changing underneath it (RL-1075's acceptance clause). If F92 is reassigned again, this
+#: constant and the register row move together or the guard test reds, which is the point.
+_F92_OWNER_OF_RECORD: Final = "W37-11"
+
 _AGENTS_README = ".claude/agents/README.md"
 _SKILL_MD_RE: Final = re.compile(r"\.claude/skills/[^/]+/SKILL\.md")
 
 
-def _is_stamp_deferred_w37_10(path: pathlib.Path, header: object) -> bool:
+def _is_stamp_deferred_f92(path: pathlib.Path, header: object) -> bool:
     """True when `path`/`header` is a member of F92's exact deferred population: a file
     under `.claude/agents/` (its own `README.md` excepted — that one carries a real
     RFC-937 stamp, `family: reference`) or a `.claude/skills/*/SKILL.md`, whose front
@@ -2895,9 +2909,12 @@ def check_owner() -> None:
     states a permitted-owner list (see `readme_owner_allowlist`) — neither of
     `_ID_SCOPE_ROOTS`'s two directories carries one today.
 
-    F92's 53 deferred files (`_is_stamp_deferred_w37_10`) are counted, never checked
-    against `_VALID_OWNERS` — RL-1046 §B, `owner: W37-10`, printed by count and non-fatal
-    here for the same reason it is non-fatal in `--verify`'s `(h1)` row.
+    F92's deferred population (`_is_stamp_deferred_f92`) is counted, never checked against
+    `_VALID_OWNERS`. Its **owner of record is W37-11**, per F92's row in
+    `docs/findings/register.md`; it is non-fatal here under RL-1046 §B, which ruled the
+    *disclosure* — that the class is reported by count and does not set the exit code — and
+    not the owner (RL-1075). The count is printed by the note below rather than stated
+    here, because a pasted count is what goes stale (`CLAUDE.md` §13).
     """
     checked = 0
     deferred = 0
@@ -2908,7 +2925,7 @@ def check_owner() -> None:
             continue
         if header is None:
             continue
-        if _is_stamp_deferred_w37_10(path, header):
+        if _is_stamp_deferred_f92(path, header):
             deferred += 1
             continue
         checked += 1
@@ -2933,7 +2950,9 @@ def check_owner() -> None:
     unstamped_in_scope = _check_scope_unstamped_are_registered()
     notes.append(
         f"check 35: {checked} owner(s) checked in scope; {deferred} owner check(s) "
-        "deferred (owner: W37-10, RL-01046 §B — F92's stamp-deferred population); "
+        f"deferred (F92's stamp-deferred population, owner {_F92_OWNER_OF_RECORD} per "
+        "docs/findings/register.md; non-fatal here under RL-1046 §B, which ruled the "
+        "disclosure and not the owner); "
         f"{len(UNSTAMPABLE_EXEMPTIONS)} exemption(s) in the F83 register reconciled "
         f"against {stamp_set_size} file(s) in RFC-937's stamp set; "
         f"{unstamped_in_scope} unstamped file(s) in the enforced checks-30-39 scope"
