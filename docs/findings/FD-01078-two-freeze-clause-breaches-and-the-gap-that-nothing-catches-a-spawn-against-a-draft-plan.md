@@ -174,6 +174,45 @@ The two breaches share one shape: **a resolver existing somewhere other than the
 plan names.** In the first it existed only in a chat message; in the second it existed as a
 merged record while the row it was supposed to fill was still empty.
 
+### Third instance — 2026-09-19, and it is this finding's own author
+
+**Added 2026-09-19, while this record was still unmerged on the executor's branch.**
+
+A **decision point, DP-7-6, and a sixteenth task existed only in the lead's scratch
+directory for roughly an hour.** The planner authored them and delivered them to the lead;
+the lead persisted them to a file outside the repository and never handed them to the
+executor to land. During that hour **three parties acted on a record that did not exist**:
+the decision-maker was ruling on it, the lead's schedule was scheduling against it, and the
+deputy was tracking it as a condition.
+
+It surfaced only because the lead referred to *"Task 16 stays blocked on DP-7-6"* in a
+message and the executor could not find either. Measured at `e8efe76`: the plan carried
+**fifteen** task headings — 1 through 13, 15, 14 — and **five** decision-point rows,
+DP-7-1 through DP-7-5. `grep -rn 'DP-7-6\|Task 16' docs/` returned **no output**.
+
+The executor's response, quoted because it is the behaviour this finding exists to produce:
+
+> I am not guessing which, and I have not treated anything as blocked on a decision point I
+> cannot find… if a sixteenth task is genuinely coming, it needs to reach the plan as a text
+> like Task 15 did, not as a name in a message — which is the defect `FD-1078` is about.
+
+*(The executor's message wrote that id in its padded filename form; it is rendered here in
+the citation form the standard requires, which is the same id. Check 32 red on the padded
+one — a record about identifiers, corrected by the check it is partly about.)*
+
+**This is the same defect as the first two instances, committed by the author of the finding
+about it, while the finding sat unmerged on the branch that cites it.** First a ruling that
+lived only in chat; then a resolver filed somewhere other than the row that names it; now a
+decision point that lived only in a scratch directory. **The shape is constant: a governed
+thing exists somewhere other than the record that is supposed to carry it.**
+
+**The counterfactual is the point.** Had the executor inferred a plausible DP-7-6 from the
+messages, Task 16 would have sat **correctly blocked on a decision point that did not
+exist** — a state unfalsifiable from the inside, because everything about it looks exactly
+like a task waiting properly on a pending ruling. Nothing would have detected it until
+someone thought to grep. That the finding changed behaviour **before it merged** is worth
+more than its being correct afterwards.
+
 ### The gap that outlives both
 
 `scripts/audit-docs.py` check 33 fails a `PL-` marked `active` that still carries an open
