@@ -100,6 +100,59 @@ the one that actually calls `SendMessage`. Do not add a `SendMessage`-shaped cal
 `nudge.py` itself — it would not run, since the script has no such tool, and it would
 misdescribe where the real send happens to the next person reading it.
 
+## The fortnightly `WK-` status entry — required, and NOT implemented here
+
+`RFC-937` §1.10 (a) requires *"a periodic status entry on every active `WK-`, nagged
+mechanically — the `reporter-cycle` skill pointed at active work rows, fortnightly, in the
+Rust goals bot's shape"*. **This skill is named as the mechanism and does not implement it.
+Nothing in these three scripts knows what a `WK-` is.** `reporter.py` posts a 15-minute
+Slack status, `nudge.py` detects lead staleness, `reporter-cycle.sh` runs both — none reads
+`docs/roadmap.md`, and there is no fortnightly path anywhere in the cycle.
+
+**Said plainly because the alternative is worse.** A reader who believes this ritual is
+running will not check that it is, and an unimplemented obligation that looks implemented
+is how a gap survives a review. It is not running.
+
+### Why it is not built yet, rather than merely not done
+
+**The destination is unspecified.** §1.10 (a) says the entry exists and how often; it never
+says *what is written or where it goes*. That clause and its copy in
+`docs/process/document-ids.md` §1.10 are the only substantive statements in the repository
+— no ruling, no template, no role file and no section of `docs/process/delivery-process.md`
+names a destination or a format. The obvious candidate is ruled out by its own definition:
+a ledger is **one slice's** execution record, opened by the executor, so it is per-`SL-` and
+not per-`WK-`, and the reporter owns no governed document at all.
+
+A mechanical nag cannot be built on that. **A detector needs to know what it is measuring
+the age of**, and a nag that fires with no correct response is worse than no nag — people
+learn to ignore it, and then ignore it when it matters.
+
+**The format cannot be implemented faithfully either.** *"In the Rust goals bot's shape"* is
+the whole specification of the format, and nothing in this repository describes that shape:
+a search for the phrase returns only the clause itself and its copy, with no link, no
+citation and no reproduction. It is a reference that resolves only in its writer's context,
+which is the failure `RFC-777` names. Even with a destination, the shape would be guessed.
+
+### The design that is ready when the destination is ruled
+
+Written down so the next person does not re-derive it. **Follow this file's existing split
+exactly** — detected by the script, sent by the agent, never by the script:
+
+- A new script beside `nudge.py`, same contract: read the active `WK-` rows from
+  `docs/roadmap.md`, compare each against a per-`WK-` marker in `REPORTER_HANDOVER_DIR`
+  (the pattern `.last_reported_main_sha` already uses), print a due-list or `OK`, return 0.
+- `reporter-cycle.sh` echoes the signal, as it already does for `NUDGE_SIGNAL`.
+- The agent writes the entry. **Do not put the write into the script** — for the same
+  reason a `SendMessage` call must not go into `nudge.py`.
+
+**The staleness half is destination-agnostic**, which is what makes the design safe to
+record now: *"when did the reporter last file an entry for this `WK-`"* is answerable from
+the reporter's own marker regardless of where the entry went. Only the writing half waits
+on the ruling.
+
+**The scripts are unchanged by this entry**, deliberately and not by omission: §1.10 (a)
+does require a script change, and it cannot be made correctly until the destination exists.
+
 ## Deliberately not carried forward from the handover copy
 
 The handover version's `format_routine_post` took `roster_text` and `lead_status`
@@ -132,6 +185,37 @@ their logs ever contains the token value; `get_token()` reads it once per call a
 it straight into a `curl` header, never printed, never logged, never echoed.
 
 ## Verified
+
+2026-09-19 — **`RFC-937` §1.10 (a)'s fortnightly `WK-` status entry documented as
+required and absent.** W37-7 Task 4, `PL-1070`; §5.4's `reporter-cycle` row. **The scripts
+are unchanged**, and that is the ruled disposition rather than an omission.
+
+§1.10 (a) was read in full at `7d5d6e0`, **including checking for a dated amendment under
+it — there is none**; the clause is one sentence, duplicated byte-identically in
+`docs/process/document-ids.md` §1.10.
+
+The plan gives this task 2.0 h, dropping to 1.0 h *"if §1.10 (a) turns out to need no script
+change"*. **It needs one** — "nagged mechanically" cannot be satisfied by prose, and no
+script here reads `docs/roadmap.md` or knows what a `WK-` is — **but the change cannot be
+made correctly yet**, because the destination is unspecified:
+
+- Neither the RFC, the standard, `delivery-process.md` (`grep -ic fortnight` → `0`), any
+  ruling (`docs/rulings/` → zero hits for `fortnight` or `status entry`), any template, nor
+  either of `.claude/roles/reporter.md` and `lead.md` names where the entry is written or in
+  what format.
+- The obvious destination is excluded by its own definition: `docs/_templates/LG.md` makes a
+  ledger *"one slice's execution record … opened by the executor"* — per-`SL-`,
+  executor-owned — and the reporter owns no governed document.
+- The format, *"in the Rust goals bot's shape"*, appears in exactly two files (the clause
+  and its copy) with no link, citation or reproduction anywhere in the tree. It could only
+  be guessed.
+
+**Option (A) — document the requirement, state the mechanism is absent, route the
+destination as an open question — was ruled by the lead on 2026-09-19, against the
+executor's own recommendation of building the destination-agnostic detector.** The
+executor's caveat decided it: a detector firing while the destination is undecided produces
+a nag with no correct response, and a signal people learn to ignore is worse than none.
+The detector's design is recorded above so it is not re-derived when the ruling lands.
 
 **2026-08-29 — filed and smoke-tested against a scratch handover directory, not merely
 read.** `nudge.py`: no marker file returns `OK`; a fresh marker returns `OK`; a marker
