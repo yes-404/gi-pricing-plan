@@ -282,3 +282,93 @@ changed.
   reds on deliberately broken input in Task 13 Step 3 and pastes the failing output into the
   slice ledger. A check that has never printed a failure has not been tested (`CLAUDE.md`
   §13).
+
+## Amendment — 2026-09-19 (decision-maker)
+
+**Append-only. This ruling is merged and frozen; nothing above is altered, struck or
+re-worded.** Two clauses, on how §6's occurrence table is to be *read*. Both were found by
+the W37-7 executor applying §6 in good faith, so neither is a hypothetical. Measured at
+`38033319b2654072bb8825529fc6da09f99dc788` (`origin/main`) and at `a800c57` (the unmerged
+W37-7 branch); each figure below names the tree it came from.
+
+### Clause 1 — the table classifies meanings, never the population
+
+**§6's table is a classification key, not a census.** Its rows enumerate the *meanings* the
+string `W37-10` carries; they do not enumerate the sites that carry them. The procedure §(v)
+sets — *"runs Step 1's `grep` as an enumeration, then classifies each hit against that
+table"* — is therefore binding in that order: **enumerate at your own tree, then classify
+each occurrence against the table.** Treating the table's rows as the set of sites to
+consider inverts it, and the inversion is silent, because every site it misses classifies
+under a meaning the table already marks *correct; must not change* — so nothing looks wrong.
+
+**Evidence.** Widening Step 1's sweep beyond the files §6 happens to name finds further
+sites that the table does not list:
+
+```bash
+grep -rnE 'W37-10([^0-9]|$)' scripts/ tests/ | grep -oE '^[^:]+' | sort | uniq -c
+```
+
+At `3803331` this returns **12** occurrences across the two files §6 names not at all —
+**8** in `scripts/_docverify.py` and **4** in `scripts/register-lint.py`. The regex carries
+its own boundary because `W37-10` is a prefix of `W37-101`; at this tree
+`grep -rn 'W37-10' scripts/ tests/ | grep -cE 'W37-10[0-9]'` returns 0, so the bare form
+happens to agree here — it is not relied on.
+
+Every one of the 12 classifies under a meaning §6 already marks **correct**: check 29's
+residue class (`register-lint.py:69`, `:414`, `:491`, `:517`, each reading *"RL-1046 check
+29, owner W37-10"*), and `RL-1043` §3's row `(i)` (`_docverify.py:39`, `:3020`, `:3051`,
+`:3273`, `:3396`, `:3477`, `:3877`). The twelfth, `_docverify.py:98`, is
+`OWNER_W37_10: Final = "W37-10"` — **the constant the other seven read**, and the single
+site at which a corpus-wide rename would corrupt all of them at once.
+
+**The defect this clause exists to prevent is live at `a800c57`.** The guard built there
+against §6 — `_CORRECT_W37_10_STATEMENTS` in `tests/test_audit_docs_ids.py:2403-2407` — has
+exactly three entries, one per *table row marked correct*, naming `scripts/audit-docs.py`,
+`tests/test_register_lint.py` and `tests/test_doc_id_verify.py`. Its own docstring says so:
+*"The three places `W37-10` is correct."* There are not three places; at that tree there are
+three **meanings** and materially more places. The 12 sites above are unguarded, and
+`OWNER_W37_10` most of all. The guard's *form* is right — it keys on text, per Clause 2 —
+and only its population is wrong, which is why the error survived review.
+
+**What follows:** a guard derived from this ruling enumerates its population from the corpus
+and classifies by the table, so a site added later is covered without the guard being
+edited. A guard that hard-codes the table's rows as its population is refused; it is a
+partial record class, and the first entry switches governance on corpus-wide while covering
+a fraction of it.
+
+### Clause 2 — a line number in a frozen ruling is a hint, never a locator
+
+**§6's table, §(iii) and §(i)–(ii) cite line numbers. Those numbers were true at this
+record's own `tree:` field, `7d5d6e0`, and they begin going stale the moment anything above
+them moves.** Match on the cited *text*; use the number only to start the search; never
+assert against the number. This applies to every line citation in this record, not only the
+two evidenced below.
+
+**Evidence, at `a800c57`:**
+
+| Citation as written | True at `7d5d6e0` | At `a800c57` |
+|---|---|---|
+| `tests/test_audit_docs_ids.py:684` | the *"Slice W37-10's to write"* docstring line | that text is at **`:686`**; `:684` is `) -> None:` |
+| `scripts/audit-docs.py:2443`, the helper | `def _is_stamp_deferred_w37_10(...)` | `:2443` is a **comment line**; the helper, renamed per §(ii), is at **`:2457`** |
+
+Both are the ordinary consequence of applying this very ruling: §(ii)'s rename and the
+edits around it shifted the file. **A guard keyed to those two numbers would assert against
+a blank-ish line and a fragment of a comment — green while protecting nothing.** That is
+worse than absent, because it reports coverage it does not have.
+
+Note that the numbers in the table above hold at `a800c57` and nowhere else. They are
+recorded to evidence the drift, not to replace one set of locators with another. The
+locator is the text.
+
+**Interaction with Clause 1.** `_CORRECT_W37_10_STATEMENTS` is already built as
+`(path, anchor substring)` pairs rather than `(path, line)` — Clause 2 satisfied in form,
+and correctly so. Clause 1 is the half still outstanding. Both clauses had to be stated
+because satisfying one says nothing about the other.
+
+### What this amendment does not change
+
+Nothing in §1–§6, nothing in **Ruled**, nothing in **Acceptance**. The four meanings, the
+dispositions and the refusal of a corpus-wide rename all stand exactly as ruled. What is
+added is how the table is to be *applied*, which §(v) stated in one sentence and which two
+independent misapplications have now shown needs its own clauses.
+
