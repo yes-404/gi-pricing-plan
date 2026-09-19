@@ -15,7 +15,14 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `docs/plans/PL-<nnnnn>-<slug>.md`
+- `<nnnnn>` is the zero-padded result of `python3 scripts/doc-id.py next`, and `<slug>` is
+  a short hyphenated form of the title. **Never invent the number** — allocate it.
+- **The allocator reads `origin/main`**, so an id already held by a record on an unmerged
+  branch is invisible to it and two drafters can be handed the same integer without either
+  being wrong. Reconcile with the lead before pushing; `dev-commands` carries the trap.
+- The filing date is **not** in the filename. It is `created:` in the front matter, and
+  that is where every check reads it from.
 - (User preferences for plan location override this default)
 - Plans here are **committed and audited**. `docs/plans/README.md` carries the conventions
   that keep one passing `scripts/audit-docs.py`, and the three the gate cannot check — read
@@ -107,13 +114,18 @@ C1) reads exactly this shape:
   conditions (the WK-671 slice plans' pattern) is what satisfies "testable"; the check itself
   only verifies the heading is not empty, not that its content is good — that judgement
   stays the lead's (`delivery-process.md` §5 step 4).
-- **Scope:** required on every plan-kind file (the suffix-less kind this skill produces)
-  filed under `docs/plans/` on or after check 28's cutoff date, written as a constant in the
-  script. **Never required retroactively** — a plan filed before the cutoff is exempt by
+- **Scope:** required on every plan filed under `docs/plans/` whose `created:` date is on or
+  after check 28's cutoff, written as a constant in the script. **Never required
+  retroactively** — a plan filed before the cutoff is exempt by
   design, per RL-906 (`docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-thereafter-rejected-as-the-mechanism.md`), because a
-  verdict must be a property of the plan, not of when the check happens to run. The
-  `-ledger`, `-final-review`/`-verified` and `-handover` file kinds (`docs/plans/README.md`)
-  are out of scope entirely — they declare no acceptance standard of their own.
+  verdict must be a property of the plan, not of when the check happens to run.
+- **The kind is read from the front matter, not from the filename.** A `PL-` whose `kind:`
+  is terminal — a review or a handover — declares no acceptance standard of its own and is
+  out of scope. A **ledger is not a plan at all**: it is its own `LG-` family under
+  `docs/ledgers/`, so it is out of scope by directory. Check 28 still carries a
+  pre-migration branch that reads a suffix and a date out of the filename, selected when
+  `docs/INDEX.md` and `docs/REDIRECTS.csv` are absent; on this tree that branch is not the
+  one taken, and you should not write filenames to satisfy it.
 
 ## Task Structure
 
@@ -190,7 +202,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+**"Plan complete and saved to `docs/plans/PL-<nnnnn>-<slug>.md`. Two execution options:**
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 
