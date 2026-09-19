@@ -25,8 +25,9 @@ else
   out="$dir/task-${n}-brief.md"
 fi
 
-# This repo's own `writing-plans` house pattern (docs/plans/2026-08-29-w11-scoring.md
-# and its cited precedent docs/plans/2026-08-22-w5-audit-remediation.md) numbers tasks as
+# This repo's own `writing-plans` house pattern (docs/plans/PL-00854-wk-671-scoring-
+# sequenced-slice-plan.md and its cited precedent docs/plans/PL-00748-wk-661-audit-
+# remediation-sequenced-slice-roadmap.md) numbers tasks as
 # "### 1.1 — Title" rather than upstream's "# Task 1" — a heading with no literal word
 # "Task" at all. The original single-pattern match below silently exits 3 on every such
 # plan (confirmed empirically, not assumed, 2026-08-29). Recognise both conventions.

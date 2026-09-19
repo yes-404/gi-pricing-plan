@@ -268,6 +268,33 @@ upstream assumes the scratch files are the project's own.
 Both paragraphs use the **same wording** deliberately: one form, stated twice, rather than
 two drifting descriptions of one rule.
 
+**Sixth deviation, 2026-09-19: `subagent-driven-development` gained the `LG-` ledger
+routing, and `scripts/task-brief`'s two cited plan paths were repaired.** W37-7
+(`PL-1070` Task 11), reassigned here by `CR-1065` `:189-191` and `:329` as a W37-6 content
+edit that never landed. DP-7-3's default (a) applies — this file is enumerated there.
+
+The skill said *"ledger the ruling"* throughout its worked flow and **never said what a
+ledger is**: no path, no id form, no mutation rule. It now states the three facts that
+make the instruction executable — a ledger is `docs/ledgers/LG-<nnnnn>-<slug>.md` with an
+allocated id, it is keyed to one slice by its `slice:` field with one `active` ledger per
+slice, and **the append is the only permitted mutation**, which is check 34's own
+allowance. Upstream has no id standard and no governed-document families, so this is an
+addition rather than a correction.
+
+**The script's two hardcoded paths were dangling and are now repaired.** Its header comment
+cited this repository's house-pattern plan and its precedent by their pre-migration dated
+filenames; both measured **MISSING** at this tree, while the entry above already cites the
+migrated names — so the migration updated the README and missed the script. Both comment
+paths now name the migrated files.
+
+**Proven on the control this entry describes, not on the case that motivated it** — the
+instruction that entry earned the hard way. The change is to comments, so the claim under
+test was *behaviour is unchanged*: `task-brief` was run against the house-pattern plan
+**before and after** the edit and the two briefs are **byte-identical** (`diff -q` silent),
+and the upstream `# Task N` H1 form — the control whose failure falsified this entry's
+original "both additive" claim — was re-run and exits `0`. A comment edit that could not
+plausibly change parsing was still checked against the case that has broken here before.
+
 **Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
 into every session through `hooks/hooks.json`. That is plugin configuration rather than a
 skill, it would run a command at the start of every session for anyone who clones this
