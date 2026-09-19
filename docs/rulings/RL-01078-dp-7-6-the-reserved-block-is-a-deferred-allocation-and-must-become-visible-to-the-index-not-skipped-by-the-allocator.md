@@ -422,3 +422,187 @@ a function of the tree *and* a pooled ceiling that other work consumes. "Exit 0 
 X" is therefore not reproducible from X, and naming the tree — necessary as that is — would
 not have made the first measurement true. A gate result taken against a pooled ceiling
 carries the ceiling's own reading, not only the tree's.
+
+## Amendment — 2026-09-19 (decision-maker): the title cell was never load-bearing
+
+**Append-only. This record is merged and frozen; nothing above is altered.** Read at
+`73a40a60efd43c3e6d2f744dbe1381171e54c4f8`, which carries this record's own merged text.
+
+The executor built §(i) exactly as ordered and reported that emitting each reservation's
+title **verbatim** reds check 36. The question put back to me is whether the title clause
+was load-bearing. **It was not, and this amendment says so in the durable form: cell by
+cell.**
+
+### The premise, verified rather than accepted
+
+`audit-docs.py`'s own header states check 36's scope: *"no pre-migration id or path form
+survives outside REDIRECTS.csv and `was:` lines (RL-988/DP-2)"*. A legacy form may live in
+the CSV; `docs/INDEX.md` is not excluded. **Emitting a reservation's title verbatim
+therefore carries legacy tokens across check 36's own exclusion boundary** — the check does
+not weaken, the content moves into its scope. The premise is sound.
+
+### Which corpus this is measured over — and why the 31 is not stable
+
+The **31** check-36 hits were measured on the **pre-skip** emission, when all 74
+reservations emitted. They are not the figure this amendment reasons over, because the
+corpus changed underneath them: a reservation whose number already carries a record does
+not emit (see consequence 1 below). **Do not carry the 31 forward.**
+
+Re-measured at `73a40a6`, the tree this amendment lands on, reading `docs/REDIRECTS.csv`
+with the `csv` module — never a delimiter-anchored pattern, since seven of these rows quote
+the field and a `,title:` anchor silently returns 67 for a block of 74:
+
+| Quantity at `73a40a6` | Value |
+|---|---|
+| reserved block | 74, the 1063 mark to the 1136 mark |
+| skipped — number already carries a record | **16**, consecutive, the 1063 to 1078 marks |
+| **emitted** | **58** |
+| emitted titles carrying a legacy token | **16 of 58** |
+| all 74 titles carrying a legacy token | 28 |
+
+The last two rows use **my** predicate —
+`\b(FR|NFR|DEP|OQ)-[A-Z]+-[0-9]+|\bwf-[0-9]+|\bF[0-9]+\b|\bW[0-9]+` over the extracted
+`title:` fields — which is **not** check 36's, and the two must not be reconciled into one
+number. It counts titles; check 36 counts hits, and a single title naming four consecutive
+rating-engine requirement clauses in one slash-separated run is one title and several hits.
+What the re-measurement establishes is only the direction and
+the order of magnitude: **the skip roughly halves the exposure, so check 36's post-skip
+figure will be materially below 31 and must be re-derived, not assumed.**
+
+The skip set being the 1063–1078 marks is itself worth noting: it is exactly this record's
+own §2 collision set, plus the 1078 mark, which became live when this record merged. The
+count differs from the 17 measured on the executor's branch for the ordinary reason — that
+branch is ahead of this tree and has minted further documents. Same predicate, different
+trees, both correct.
+
+**None of this changes the ruling below**, which turns on what the title cell is *for*, not
+on how many titles happen to contain a legacy token. It is recorded because a later reader
+who finds "31" in the thread and this amendment on `main` must be able to tell which corpus
+each was measured over.
+
+### Ruled: (a). It is an application of §(i)'s purpose, not a deviation from it
+
+**§(i) enumerated the row's cells so the executor would know what to put in each. It did
+not assert that every cell is consumed.** §(i)'s own reasoning names exactly what the
+remedy rests on, and the title is in none of it:
+
+| Cell | Load-bearing? | Which instrument consumes it |
+|---|---|---|
+| **number** | **yes** | `compute_next` via `scan_index_ids`; check 31's contiguity clause; check 32's resolution |
+| **family / prefix** | **yes** | check 32's prefix-must-match-the-family clause |
+| status | no — but must not read `active` | nothing; `active` would assert a document that does not exist |
+| owner | no | nothing; records where the 2026-09-03 deferral put it |
+| **title** | **no** | nothing. Pure payload for a human reader |
+
+So **(a) is ruled**, and the framing the lead asked for is the operative part: **emitting a
+neutral title is not a deviation from this ruling, it is what this ruling was for.** A
+reservation is in the index so the corpus knows the *number is taken*. Anything beyond the
+number and its family is courtesy to a reader.
+
+Two constraints on the neutral title, so (a) does not become a different defect:
+
+1. **It must be a pointer, not a blank.** It names where the real title lives —
+   `(reserved — title in docs/REDIRECTS.csv)` or equivalent. A blank cell reads as a
+   generator bug and invites someone to "fix" it by restoring the verbatim title.
+2. **It must itself carry no legacy token**, which a fixed literal trivially satisfies and
+   which is the whole point.
+
+Nothing is lost: the title stays one file away, in the artifact that is check 36's declared
+home for legacy forms.
+
+### Why (b) is refused
+
+(b) would extend check 36's exclusion to reserved rows in `docs/INDEX.md`. Refused, and the
+lead's instinct is right for a reason worth writing down. **The exclusion would be keyed on
+"rows `doc-index.py` emitted as reservations" — a predicate over the generator's own
+output.** A check that exempts whatever the generator produced cannot catch the generator
+producing the wrong thing; it would go green on a reservation emitted with a corrupted,
+duplicated or fabricated title exactly as readily as on a correct one. That is a check
+attesting to its own coverage, and a validator assuming the invariant it exists to test.
+
+The wider point, which this slice has spent the day earning: we have repeatedly found
+checks whose scope was narrower than anyone assumed. **Widening an exclusion to fit content
+we chose to generate is the same error running the other way**, and it is harder to detect,
+because a narrowed check at least fails loudly when someone finally looks.
+
+### Why (c) is refused
+
+(c) would neutralise the legacy tokens inside each emitted title. Refused on the executor's
+own ground, which I adopt: **a title that is neither the original nor obviously a
+placeholder is the worst of both** — a reader cannot tell whether they are seeing the legacy
+title or a mangling of it, and the mangling is silent. It also requires a transformation
+over legacy forms, which is a *second* predicate over the same class check 36 already owns,
+kept equal to it by discipline alone. That is the F85 shape, and this record should not mint
+a new instance of it while ruling on one.
+
+### Two consequences for what this record already says
+
+1. **§(vi)'s open contingency is closed, and not the way it anticipated.** §(vi) reserved a
+   question for "once they appear twice in the index", contemplating the precedented
+   disclosed-but-non-fatal mechanism. **They do not appear twice.** `RFC-937` §1.4 and
+   `docs/process/document-ids.md`, at line 88 of each, both read *"one row per id, rows and
+   documents alike"* — verified verbatim at the tree above — so a reservation whose number
+   already carries a record does not emit; the materialised document **is** the row.
+   **58 of the 74 emit at `73a40a6`. No disclosure mechanism is needed and none should be
+   built.** That derivation is the lead's, from the spec rather than from judgement, and I
+   record it here because it changes the corpus this amendment lands on.
+
+   **One refinement to how it was put to me, and it widens the skip.** It was described in
+   terms of the five reservations that are already **files** under `docs/findings/` — the
+   1066 to 1069 and 1074 marks. But *"one row per id"* is keyed on the **id**, not on the
+   family and not on whether the record is a file: the rule is that a number gets one row.
+   The skip is therefore every reserved number that already carries **any** record, which at
+   `73a40a6` is 16 — the five `FD` files, plus `CR`, `PL` and `RL` records at the 1063–1065,
+   1070–1073 and 1075–1078 marks. Emitting a reservation for a number already held by a
+   `PL-` would produce exactly the duplicate row the rule forbids, and the narrower reading
+   would have let eleven of them through. Derived from the same sentence, read at its own
+   scope.
+
+2. **The existing collisions therefore do not become loud, and §(vi)'s disposition is
+   unchanged and still correct.** They remain a closed set that cannot grow — which was
+   always the property that made deferring them safe — but the index will not surface them.
+   Whoever takes §(vi)'s residue class should know that the fix does not also advertise the
+   damage.
+
+### One method note, carried from the executor because it is this slice's own subject
+
+The executor's first contiguity test walked `build_corpus`'s records into a **list** and
+reported impossible gaps such as `(538, 538)` — duplicates, an artefact of its own
+predicate. Check 31 reads `docs/INDEX.md`'s text with `ID_RE.finditer` into a **set**. The
+test was rewritten to use **check 31's own predicate**, which is the correct repair and the
+one this record's Acceptance clause already required in the other direction ("pinned by
+symbol, never by a pasted constant").
+
+**Two counts over the same tree differing only by predicate, caught because a number looked
+impossible rather than because anything flagged it.** That is the F85 class arriving inside
+the work that was ruled to fix a different instance of it. It is recorded here so the next
+reader of this ruling sees that the class is live in the instruments, not only in the
+corpus — and so that "use the check's own predicate" is read as a standing method, not as
+one test's bug fix.
+
+### What this amendment does not change
+
+`Ruled` §(i)'s route — emission at `docs/INDEX.md`, no fifth `compute_next` scanner,
+`docs/REDIRECTS.csv` untouched — stands exactly as filed, and the executor's implementation
+of it is confirmed as the ruled route. §(ii), §(iii), §(iv), §(v) and the Acceptance clause
+are untouched, including the requirement that the check derive both sets and be pinned by
+symbol rather than by a pasted constant.
+
+### This amendment reproduced the defect it rules on, and that is the point
+
+The first draft of the corpus section above illustrated "one title, several hits" by
+**quoting a reservation title verbatim**. Check 36 failed it immediately — one hit, a
+scoped requirement id surviving in prose. The quotation was replaced by a description of
+the title's shape.
+
+That is the third time in one day, in this record's own lineage, that a document about
+identifiers spelled an identifier it was only referring to: twice in the original filing
+(an unmerged id as a token, and two padded forms), and now once in the amendment that rules
+the same question for the generated index. **The failure mode is not carelessness about a
+rule; it is that quoting feels like precision.** Naming the shape is the precise move here,
+and the check is the only thing that reliably catches the substitution.
+
+It also disposes of any residual appeal in option (c). If a ruling drafted *specifically to
+keep legacy tokens out of a file* could not keep one out of its own paragraph, a
+transformation applied to 58 titles by a generator will not be audited into correctness
+either. (a) is ruled partly because it is the only option with no per-title judgement in it.
