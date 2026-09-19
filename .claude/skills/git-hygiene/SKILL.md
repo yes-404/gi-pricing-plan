@@ -98,6 +98,56 @@ gh pr merge <n> --squash                      # CLAUDE.md §10
 
 **Always target `main`.** This is the rule that cost the most to learn.
 
+### The slice grammar: branch `sl-<n>-<slug>`, PR title `SL-<n>: <title>`
+
+Once a slice has an `SL-` id, its branch and its pull request are named from it:
+
+| Layer | GitHub-native object | Convention |
+|---|---|---|
+| `SL-<n>` | Issue of type `Task` / sub-issue | branch `sl-<n>-<slug>`; PR title `SL-<n>: <title>` |
+
+Lower-case in the branch, upper-case in the title, and the integer is the same one in both.
+The `<slug>` is the slice's own slug, not a description of the change.
+
+**The source is `docs/process/document-ids.md` §1.9**, whose own row is written against a
+worked example. Read the example there; do not copy it here or into any other file. Its
+number names no real slice, so a second copy of it is an id that resolves nowhere — and
+**check 32 reds on exactly that**, since it holds every `<PREFIX>-<n>` in prose to
+`docs/INDEX.md` and cannot tell an illustration from a citation. §1.9 is where the form is
+*defined*, which is the one place the unresolvable number is legitimate.
+
+**Nothing checks it. You are the only check.** §1.9 says *"Lint checks that a merged PR's
+title names the `SL-` it delivered and that the slice's ledger records the PR number"* — and
+at the time of writing no such lint exists. `grep -c 'SL-' .github/PULL_REQUEST_TEMPLATE.md`
+returns `0`, `grep -rn 'SL-' .github/workflows/` returns nothing, and check 39's own
+docstring in `scripts/audit-docs.py` says the PR-title half *"needs GitHub PR context this
+tree-snapshot tool does not have, so noted rather than checked here."* A skill that implies
+a lint will catch a mistake is worse than one that admits the author is the only check,
+because the first **quietly withdraws the author's attention from the thing nothing else is
+watching**. So: it is yours to hold. Get it right when you open the pull request, because
+nothing will red if you do not.
+
+**The grammar binds from the point `SL-` rows exist, which is a condition and not a date.**
+No `SL-` row has been minted anywhere in the tree yet and no `PL-` carries a `slice:` field
+— that is the whole subject of finding `FD-1074`. Until the map plan mints them, a branch
+here keeps the `<type>/<short-slug>` form in the block above. Do not invent an `SL-` number
+to satisfy the grammar early: a branch naming an id nobody minted is a dangling locator, and
+it is worse than a branch with no id at all because it looks resolvable.
+
+**A slice slug containing "git" collides with the worktree guard — and now does so by
+accident.** The next paragraph records the guard. What changes under this grammar is that a
+branch name is no longer chosen by its author: it is derived from the slice's slug, so a
+slice about anything `git`-related mints a branch name that is refused. The escape used
+below — rename around it — is not available when the name comes from an id. Run the
+`checkout` from a non-isolated session, or take the trip and name the branch by hand for
+that one slice, recording in the ledger that its branch departs from the grammar and why.
+
+**A branch and PR title named from an id are an *address*, not a record.** If a pull request
+has to move — wrong branch name, harness-generated name, anything — weigh it against what
+moving costs: the PR number and its whole review thread. A branch name nobody cites is not
+worth a new number. Put the identity in the **title and body**, which travel with the
+review, and leave the branch where it is.
+
 **A branch name containing the substring "git" can trip the worktree isolation guard.**
 The guard that keeps a worktree-isolated session's git commands inside its own tree counts
 occurrences of the literal text "git" across the whole command line, not just the leading
@@ -107,6 +157,18 @@ git invocation and the branch name is fine on its own. Recurs for anyone naming 
 after this skill specifically, since `git-hygiene` is the collision. Rename around it —
 `skills/hygiene-<slug>` passes, `skills/git-hygiene-<slug>` doesn't — rather than fight the
 guard; it has no override.
+
+**It is not only branch names: the guard reads the whole command line, including text that
+is not a command at all.** Measured 2026-09-19 in a worktree-isolated session: a
+`python3 - <<'EOF'` heredoc that merely *mentioned* the word in a string of prose was
+refused with *"this command feeds python text naming git in a plain command, which cannot be
+shown to stay inside the worktree"* — no `git` process was involved anywhere in it. The same
+session had a `for` loop refused for ending in a plain `rev-parse`, and a `sed -n "${n}p"`
+refused because the program was computed at runtime. **The workaround is to stop routing the
+text through a shell**: write the file with an editor tool, or put the script in a file and
+run the file. Splitting the command into smaller plain ones, which the refusal message
+suggests, works for the loop cases and does not work for the heredoc — the substring is
+still there however small the command gets.
 
 > **The stranding trap.** PRs #8 and #10 were merged into an intermediate branch
 > (`chore/skills-library`) *after* that branch had already merged to `main`. Both looked
@@ -841,6 +903,51 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+2026-09-19 — **the slice grammar added**: branch `sl-<n>-<slug>`, PR title
+`SL-<n>: <title>`. W37-7 Task 3, `PL-1070`; `RFC-937` §5.4's `git-hygiene` row (`:370`).
+Sourced from `docs/process/document-ids.md` §1.9, which carries the worked example
+(read it there — it is not reproduced here, see below), rather than from the map plan's
+summary of it.
+
+Three things measured at `7d5d6e0` rather than assumed, each of which changed what was
+written:
+
+- **No `SL-` id exists yet, so the grammar is written with its binding condition rather
+  than as a live rule.** `grep -n 'SL-' docs/INDEX.md` → a single row, `FD-1074` itself,
+  which is the finding that no `SL-` row has ever been minted and no `PL-` carries a
+  `slice:` field. The section says so and warns against inventing a number to satisfy the
+  grammar early, a branch naming an unminted id being worse than one with no id at all.
+- **§1.9 claims a lint that does not exist, so the skill says the author is the only
+  check.** §1.9: *"Lint checks that a merged PR's title names the `SL-` it delivered…"*.
+  `grep -c 'SL-' .github/PULL_REQUEST_TEMPLATE.md` → `0`;
+  `grep -rn 'SL-' .github/workflows/` → no output; and check 39's docstring in
+  `scripts/audit-docs.py` says the PR-title half is *"noted rather than checked here."*
+  **The gap is raised, not fixed here** — the template is W37-9's and `document-ids.md` is
+  W37-10's, and `PL-1070`'s Risk 1 is explicit that a file belonging to another slice is a
+  finding to the lead, never absorbed.
+- **The worktree guard's collision is wider than branch names.** The existing paragraph
+  recorded it for a branch containing `git`; measured today, the guard also refused a
+  `python3 - <<'EOF'` heredoc for *mentioning* the word in prose, with no `git` process
+  involved, plus a `for` loop ending in `rev-parse` and a `sed` with a runtime-computed
+  program. Recorded with the workaround that actually works (write the file with an editor
+  tool; do not route the text through a shell), and with the note that the refusal's own
+  advice to split into smaller commands does not help the heredoc case.
+
+Why this matters more under the new grammar than before: a branch name derived from a slice
+slug is not chosen by its author, so the "rename around it" escape stops being available.
+
+**A fourth thing, found by breaking the gate rather than by reasoning about it.** The first
+draft of the section above reproduced §1.9's worked example verbatim, as a good citation
+normally should. `python3 scripts/audit-docs.py` went from `EXIT=0` to `EXIT=1` with three
+check-32 failures — *"`SL-<example>` does not resolve in `docs/INDEX.md`"* — because the
+illustrative number names no real slice, and **check 32 cannot tell an illustration from a
+citation**. §1.9 may carry it because that is where the form is *defined*; a second copy
+anywhere else is an id that resolves nowhere. The section now points at the example instead
+of repeating it, and says why. This is also an unplanned broken-input proof that check 32
+fires: it printed a real failure, named the right file and the right line, and went back to
+`EXIT=0` when the last copy was removed — three failures, then one, then none, tracking the
+copies exactly.
 
 **2026-09-03 — the line-number derivation trap added** (in *the citation section above*),
 from four live mis-citations in one afternoon, every range re-derived here by numbering the
