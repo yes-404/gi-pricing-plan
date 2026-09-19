@@ -208,6 +208,12 @@ is the whole process.
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 - Commit the design document to git
 
+> **In this repository:** working notes and scratch files are **not governed documents** —
+> they carry no id, no header and no family, and nothing indexes them. The committed
+> record of this work is a plan under `docs/plans/` or a ledger under `docs/ledgers/`,
+> each with an id allocated by `python3 scripts/doc-id.py next`. Scratch is where you
+> think; the plan is what you filed.
+
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
 
