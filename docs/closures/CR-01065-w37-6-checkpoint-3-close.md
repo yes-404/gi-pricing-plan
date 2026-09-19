@@ -540,3 +540,135 @@ is that reversal, and this omission is its consequence.
 
 Full evidence, register row and finding: `docs/findings/register.md` (`F112`) and
 [`FD-1074-no-sl-row-exists-for-any-slice-and-no-plan-carries-slice.md`](../findings/FD-01074-no-sl-row-exists-for-any-slice-and-no-plan-carries-slice.md).
+
+## §8 — Second dated correction, 2026-09-19: deliverables asserted in `PL-960` prose
+
+**Why this append exists.** `PL-960` asserts, in several places, that a deliverable *"is in this
+commit"*. One such claim was checked during W37-7 and found false at the tree. A sweep of the class
+found five more claims of the same shape. **W37-6's close gave none of them a verdict**, and
+`CLAUDE.md` §13 permits four verdicts of which silence is not one.
+
+**The mechanism, and it is the second instance of one cause.** The close's scope table was derived
+from the plan's *"what lands"* list at `:691`, while these deliverables live in **sentences inside
+§6 and §7 table cells**. A scope derived from one list cannot see a deliverable asserted in prose
+elsewhere in the same document. **The first instance was the `SL-` rows** (this record's first
+dated correction). This is the second.
+
+### The six claims, each with its verdict
+
+| Line | Claim | Verdict |
+|---|---|---|
+| `:648` | the `close-workstream` half of §5.4's bespoke-audit rule *"is in this commit, where the rule is authored"* | **Delivered late.** `bespoke` measured 0 in `close-workstream/SKILL.md`, 0 in `docs-audit/SKILL.md` and 0 in this record, at `3803331`. Delivered by W37-7 Task 9 at `11ea5c0`: authored in full in `close-workstream` (`:609`), with `docs-audit` carrying its reading-instrument half at `:398` and a **pointer** at `:404`, not a second copy. Verified by W37-11 at the Work close |
+| `:620` | *"Every charter's **M** row — the mechanical citation rewrite — lands in this commit regardless"* | **Delivered in part; residue deferred with owner W37-8, gated on the maintainer's charter line.** See the proxy note below |
+| `:634` | *"Either way both are in this commit, so the risk is closed"* | **Not started.** See below |
+| `:693` | *"15 are already in this commit for another reason: all 13 `docs/_templates/` files and `document-ids.md` … and `delivery-process.md`"* | **Delivered.** `docs/_templates/` holds exactly 13 tracked files; both named paths present at `3803331` |
+| `:892` | the `REFERENCE.md` vendored-detection comment corrected, *"Violation: the template still names `LICENSE` presence as the decider after this commit"* | **Delivered.** Deciding sentence at `REFERENCE.md:45-52`: *"Which skills count is a hand-kept list, not a filesystem property … RL-990 rejected that detection rule."* The rejected wording is gone; `git grep` for it under `docs/_templates` returns nothing |
+| `:1034` | *"Two of the nine are §6.2 members … so they are in this commit for two independent reasons"*, inside §7.10's checklist | **Delivered in part; residue not started, owner W37-7, verified by W37-11.** `_VENDORED_SKILLS` and the ruff-exclude reconciliation landed (`scripts/_docid.py:982`, `:1072`). **Zero** `SKILL.md` files carry `vendored: true` or `origin:` — no skill carries any stamp — and `.claude/skills/README.md` has no class-covering-28 deviation record |
+
+### `:634` — why a count could not settle it
+
+The claim is a disjunction: if `close-workstream` carries the `FD-` essay's **header and shape** as
+well as the register row's, `auditor.md`'s adoption is belt-and-braces; if not, `auditor.md` carries
+that instruction alone — *"Either way both are in this commit, so the risk is closed."*
+
+Measured at `3803331`: `close-workstream/SKILL.md` has 0 `FD-`, 0 "essay", 7 "register row";
+`auditor.md` has 0 `FD-`, 1 "essay", 2 "register row". **The second limb obtains**, which the plan
+permits only if `auditor.md` carries the instruction alone.
+
+**A keyword count reports "essay: 1 hit" and settles nothing**, so the text was read whole by a
+named reader. `auditor.md:33-35`:
+
+```text
+Evidence essays live at `docs/audit/findings/<F-id>.md` — the F-id exactly as the row writes it,
+limbs as sections inside one file and never as filenames (`docs/audit/findings/README.md` has the
+rules and the migration constraints).
+```
+
+That is **a filename-and-location instruction plus a pointer**. It is silent on the essay's header
+and on its shape, and `FD-` never appears. **So the limb the plan relies on does not hold, and the
+sentence declaring the risk closed is not supported at this tree.**
+
+### `:620` — the proxy that passed it and the predicate that failed it
+
+**This row records its own measurement failure, because that is its value.**
+
+The claim was first checked with `grep -c 'docs/notes'` across the charters, which returned **0
+everywhere** and was read as "the rewrite landed". That predicate is **blind to the pre-migration
+audit path** — the literal is in the exhibit above, not spelled here, because this record is
+subject to the same check it is describing. Re-measured at `3803331` with the real predicate:
+
+| Charter | `docs/notes` (proxy) | `audit path` (predicate) |
+|---|---|---|
+| `auditor.md` | 0 | **3** |
+| `planner.md` | 0 | **2** |
+| the other five | 0 | 0 |
+
+**Five pre-migration path sites survive in two charters.** The residue is `:620`'s, not a separate
+finding: the same claim, unfinished.
+
+**Owner W37-8** (charters). Its charter edits are gated on the maintainer's dated line, so the
+verdict is **deferred with owner W37-8, gated on that line**.
+
+### New row — the audit scope is narrower than the migration's write set
+
+**Why did no check fire on five pre-migration paths in files the migration itself wrote?**
+`audit-docs.py`'s own header states checks 30–39 are *"path-scoped to `_ID_SCOPE_ROOTS` until the
+migration (Slice W37-6) widens it to the whole corpus"*, and `.claude/` is outside that scope.
+`71f5a22` touched **58 files under `.claude/`**.
+
+**So the instrument is structurally incapable of catching the migration's own misses in the largest
+directory it wrote.** This is the audit-scope disclosure carried unfiled since W37-6, now with its
+measured instance. **Owner W37-11.**
+
+### New row — `task-brief`'s dangling plan paths
+
+`task-brief`'s header comment cited two plan paths by their **pre-migration dated filenames**, both
+measuring `MISSING`, while `.claude/skills/README.md`'s entry for that same script already carried
+the **migrated** names. **The manifest was updated and the file beneath it was not.** That is
+`CR-1065:199-202`'s mechanism as a **live instance** rather than a described risk, which is stronger
+evidence for that row than its description. Fixed under W37-7 Task 11 Step 3; the row is
+**W37-11's**.
+
+### New row — the plan template's `Verified` step does not fit vendored skills
+
+Across W37-7 Tasks 6, 7, 10 and 11 — four vendored skills — the per-task *"refresh `Verified`"* step
+was **inapplicable every time**: none has a `Verified` section, and none of their README rows sits
+in a table with a date column. Each was recorded inapplicable with its reason rather than satisfied
+by an unrecorded edit to a vendored manifest, which `CLAUDE.md:214` forbids.
+
+**The template assumes a repo-local skill shape.** For the vendored population §12's mechanism is
+the README deviation record instead. **Not four coincidences — a template defect. Owner W37-10**,
+which owns `docs/` and `docs/_templates/`.
+
+### New row — the near-miss, recorded because the lesson is the reviewer's
+
+While verifying `:648`, the executor read `PL-960:648` through `cut -c1-200`, saw the row **without
+the quoted claim**, and concluded `PL-1070` had cited the wrong line. It had not: the quote is the
+**tail** of that same long row. **It was one message from filing a false finding against a correct
+citation**, and the only thing that caught it was re-reading the whole line before writing the
+report.
+
+In its words: **"a fragment read gets an invented frame, and a truncating pipe is a fragment read
+that does not announce itself."** The lead and the deputy both read plan rows through `cut`
+throughout the same session.
+
+### Proxy-predicate failures in this work, stated because the finding is about exactly this
+
+Five, across three people, while measuring findings about instruments that answer confidently and
+answer a different question:
+
+1. An intersection counting ids present in two files, when the question was ids naming two different
+   things.
+2. A delimiter-anchored pattern blind to CSV-quoted fields, undercounting a block by the seven rows
+   whose titles needed escaping.
+3. A `join` on a numerically sorted set returning **a confident zero** — no error, no warning, the
+   most reassuring answer available — caught only because a reader refused to believe an absence.
+4. A count of quote-bearing lines used as a count of entries; it happened to agree.
+5. `grep -c 'docs/notes'` as a proxy for "the citation rewrite landed", blind to the
+   pre-migration audit path. **The only one of the five that reached a verdict.**
+
+**A seventh instance, produced by this very record.** Naming the pre-migration audit path as this
+append's own subject matter turned check 36 red at five sites, all inside the appended text. The
+check cannot distinguish a path named **in order to record that it moved** from one left behind.
+The remedy taken was **a fenced exhibit plus descriptive prose**, never a ceiling row: raising a
+pooled ceiling to silence a record about pooled ceilings would be the defect performing itself.
