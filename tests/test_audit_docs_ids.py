@@ -35,9 +35,11 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import re
 import sys
 import types
 from datetime import date
+from typing import Final
 
 import pytest
 
@@ -1614,8 +1616,9 @@ def test_a_disclosed_check_35_line_is_disclosed_by_its_class_not_a_hard_coded_pa
 # W37-6 (2026-09-17): F92's stamp-deferred population (RL-01046 §B, `docs/rulings/
 # RL-01046-the-alias-class-the-disclosed-rows-and-the-run-s-conditional-window.md` — cited
 # by file path, never as "Ruling 105": `docs/REDIRECTS.csv` maps that number to this file,
-# and post-migration the bare number resolves to RL-01059 instead). `_is_stamp_deferred_
-# w37_10` is a pure function of `(path, header)`, so both directions are proven directly
+# and post-migration the bare number resolves to RL-01059 instead).
+# `_is_stamp_deferred_f92` is a pure function of `(path, header)`, so both directions are
+# proven directly
 # against it rather than through `check_owner`'s full loop plus its two unconditional F83
 # reconciliation sub-calls, which read the real corpus regardless of any fixture and would
 # make an exact `failures == [...]` assertion fragile to unrelated real-tree drift.
@@ -1627,7 +1630,9 @@ def test_a_harness_schema_file_at_a_deferred_location_is_stamp_deferred(
 ) -> None:
     """Broken input: a `.claude/agents/*.md` or `.claude/skills/*/SKILL.md`-shaped header
     (Claude Code's own harness schema, no `family:`) at one of the two locations F92
-    names is the population RL-01046 §B defers to W37-10.
+    names is the population whose stamp is deferred, owner of record W37-11 per F92's
+    register row. RL-01046 §B rules its disclosure — reported by count, not setting the
+    exit code — and not its owner (RL-1075).
     """
     header = audit._docid.parse_header_text(
         "---\nname: made-up\ndescription: x\n---\n"
@@ -1635,8 +1640,8 @@ def test_a_harness_schema_file_at_a_deferred_location_is_stamp_deferred(
     assert header is not None
     agent_path = audit.REPO / ".claude" / "agents" / "made-up-agent.md"
     skill_path = audit.REPO / ".claude" / "skills" / "made-up-skill" / "SKILL.md"
-    assert audit._is_stamp_deferred_w37_10(agent_path, header)
-    assert audit._is_stamp_deferred_w37_10(skill_path, header)
+    assert audit._is_stamp_deferred_f92(agent_path, header)
+    assert audit._is_stamp_deferred_f92(skill_path, header)
 
 
 def test_a_family_stamped_file_at_the_same_location_is_not_deferred(
@@ -1653,7 +1658,7 @@ def test_a_family_stamped_file_at_the_same_location_is_not_deferred(
     real_header = audit._docid.parse_header(audit.REPO / ".claude" / "agents" / "README.md")
     assert real_header is not None
     assert real_header.family
-    assert not audit._is_stamp_deferred_w37_10(
+    assert not audit._is_stamp_deferred_f92(
         audit.REPO / ".claude" / "agents" / "README.md", real_header
     )
 
@@ -1662,7 +1667,7 @@ def test_a_family_stamped_file_at_the_same_location_is_not_deferred(
     )
     assert synthetic_header is not None
     skill_path = audit.REPO / ".claude" / "skills" / "made-up-skill" / "SKILL.md"
-    assert not audit._is_stamp_deferred_w37_10(skill_path, synthetic_header)
+    assert not audit._is_stamp_deferred_f92(skill_path, synthetic_header)
 
 
 def test_a_harness_schema_file_outside_the_two_locations_is_not_deferred(
@@ -1678,7 +1683,7 @@ def test_a_harness_schema_file_outside_the_two_locations_is_not_deferred(
     )
     assert header is not None
     other_path = audit.REPO / "docs" / "plans" / "PL-99999-made-up.md"
-    assert not audit._is_stamp_deferred_w37_10(other_path, header)
+    assert not audit._is_stamp_deferred_f92(other_path, header)
 
 
 def test_f83_register_reconciles_clean_against_the_real_tree(
@@ -2298,3 +2303,136 @@ def test_id_scope_documents_excludes_the_w37_11_residue_ceiling_record(
     # Positive control: the widened scope really does reach `docs/audit/` — otherwise
     # the assertion above would be vacuous a second way.
     assert any(r.startswith("docs/audit/") for r in rels)
+
+
+# =========================================================================================
+# RL-1075's acceptance — check 35's printed owner tag against F92's register cell, and the
+# three `W37-10` statements that are correct and must survive.
+#
+# RL-1075 (`docs/rulings/RL-01075-check-35-s-owner-tag-for-f92-rl-1046-b-ruled-the-
+# disclosure-not-the-owner.md`) names the violation these guard: "check 35's printed owner
+# tag and F92's owner cell in `docs/findings/register.md` say different things, and nothing
+# reds." That is the *class*, not the instance — changing an assertion to match a new
+# string proves only that the string was changed.
+# =========================================================================================
+
+_F92_ROW_MARKER = "(F92)"
+_WORK_ITEM_CELL = 3
+
+
+def _f92_work_item_cell(register_path: pathlib.Path) -> str:
+    """The Work-item cell of `register.md`'s F92 row, parsed from whatever file is given.
+
+    Takes a path rather than reading the real register directly, so the same derivation
+    runs against a mutated copy in the broken-input proof below. A row is split on pipes
+    that are not backslash-escaped — the register's own rule, since a literal `|` inside a
+    cell is escaped there (check 22 exists because an unescaped one shifts every column
+    after it while still rendering).
+    """
+    for line in register_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("|") and _F92_ROW_MARKER in line:
+            return re.split(r"(?<!\\)\|", line)[_WORK_ITEM_CELL].strip()
+    raise AssertionError(f"no F92 row found in {register_path}")
+
+
+def _printed_owner_tag(note: str) -> str:
+    """The owner tag out of check 35's note text, by pattern rather than by slicing."""
+    match = re.search(r"owner (\S+) per docs/findings/register\.md", note)
+    assert match is not None, f"check 35's note does not carry an owner tag: {note!r}"
+    return match.group(1)
+
+
+def test_check_35_owner_tag_and_f92_register_cell_agree(audit: types.ModuleType) -> None:
+    """The two sides are *derived* and compared, never both pasted.
+
+    One side is `audit._F92_OWNER_OF_RECORD`, pinned **by symbol** — the same object the
+    note interpolates, so this cannot pass by two literals happening to match while the
+    register says something else. The other is parsed out of the live register row.
+    """
+    register = audit.ROOT / "findings" / "register.md"
+    assert _f92_work_item_cell(register) == audit._F92_OWNER_OF_RECORD
+
+
+def test_check_35_note_interpolates_the_symbol_not_a_literal(
+    audit: types.ModuleType,
+) -> None:
+    """The note must carry the constant's value, or the test above guards nothing.
+
+    Without this, `_F92_OWNER_OF_RECORD` could agree with the register while the note
+    printed something else entirely — the drift the ruling names, one level down.
+    """
+    audit.notes.clear()
+    audit.check_owner()
+    note = next(n for n in audit.notes if n.startswith("check 35:"))
+    assert _printed_owner_tag(note) == audit._F92_OWNER_OF_RECORD
+
+
+def test_a_disagreeing_register_cell_is_detected(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Broken input: F92's Work-item cell set to anything other than what the note prints.
+
+    Built on a constructed copy rather than by mutating the real tree (F89 limb 1,
+    declined rather than repeated). `W37-10` is used as the wrong value because it is the
+    exact value this ruling removed — the regression with a name.
+    """
+    register = audit.ROOT / "findings" / "register.md"
+    lines = register.read_text(encoding="utf-8").splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if line.startswith("|") and _F92_ROW_MARKER in line:
+            cells = re.split(r"(?<!\\)\|", line)
+            cells[_WORK_ITEM_CELL] = " W37-10 "
+            lines[i] = "|".join(cells)
+            break
+    else:  # pragma: no cover - the row exists; this guards a silent no-op edit
+        raise AssertionError("no F92 row to mutate")
+
+    mutated = tmp_path / "register.md"
+    mutated.write_text("".join(lines), encoding="utf-8")
+
+    assert _f92_work_item_cell(mutated) == "W37-10"
+    assert _f92_work_item_cell(mutated) != audit._F92_OWNER_OF_RECORD
+
+
+#: The three places `W37-10` is **correct** and a corpus-wide rename would corrupt it.
+#: Each is (path, an anchor substring that must still contain the literal). RL-1075 §6
+#: classifies these individually: they mean the `docs/` READMEs, check **29**'s residue
+#: class, and RL-1043 §3's row `(i)` — three different things from F92's population, which
+#: is why the ruling refused `PL-1070` Task 13 Step 1's corpus-wide rename.
+_CORRECT_W37_10_STATEMENTS: Final = (
+    ("scripts/audit-docs.py", "is Slice W37-10's to write"),
+    ("tests/test_register_lint.py", "RL-1046 check 29, owner W37-10"),
+    ("tests/test_doc_id_verify.py", "(i) is W37-10's"),
+)
+
+
+def test_the_three_correct_w37_10_statements_survive(audit: types.ModuleType) -> None:
+    """A corpus-wide rename of `W37-10` must not be possible without this redding.
+
+    This is the failure mode `PL-1070` Task 13 Step 1's own wording would have produced —
+    *"a partial rename leaves the corpus saying both things"* — which **inverts** here:
+    four distinct meanings share one string, so a total rename corrupts three true
+    statements. Arming the check against the instruction's own reasoning is the point.
+    """
+    for rel, anchor in _CORRECT_W37_10_STATEMENTS:
+        text = (audit.REPO / rel).read_text(encoding="utf-8")
+        assert anchor in text, f"{rel}: the correct W37-10 statement {anchor!r} is gone"
+
+
+def test_a_corpus_wide_rename_of_w37_10_is_detected(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Broken input: apply the rename this ruling refused, and the predicate above reds.
+
+    Each protected site is mutated independently, so a check that only ever noticed one of
+    them cannot pass by accident.
+    """
+    for rel, anchor in _CORRECT_W37_10_STATEMENTS:
+        renamed = (audit.REPO / rel).read_text(encoding="utf-8").replace(
+            "W37-10", "W37-11"
+        )
+        copy = tmp_path / pathlib.Path(rel).name
+        copy.write_text(renamed, encoding="utf-8")
+        assert anchor not in copy.read_text(encoding="utf-8"), (
+            f"{rel}: a corpus-wide rename left the anchor intact — this proof is vacuous"
+        )
