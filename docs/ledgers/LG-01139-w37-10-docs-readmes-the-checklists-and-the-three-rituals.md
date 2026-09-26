@@ -26,7 +26,7 @@ W37-10 yet (DP-4); the slice is cited in prose here, per that ruling.
 | 1 — `docs/README.md` as the map | `22ef73f5` | `audit-docs.py` EXIT=0; `adr/` grep empty; both check commands named |
 | 2 — `docs/research/README.md` | `e41ecab0` | `doc-id.py check` EXIT=0; `audit-docs.py` EXIT=0; `docs/INDEX.md` regenerated in the same commit |
 | 3 — retire the audit tree's `findings/README.md` | `73db1e3e` | `git ls-files docs/audit \| wc -l` = 1 (DP-1 option A); `audit-docs.py` EXIT=0; hand-off recorded below |
-| 4 — both checklists: id, gate, family, register, path lines | `167980cd` | Both files' verify commands (no `docs/audit/work\|phases`, no "No new id family", `has an id` present) all as expected; `audit-docs.py` EXIT=0 |
+| 4 — both checklists: id, gate, family, register, path lines | `167980cd` | Both files' verify commands (no reference to the old audit tree's work/phases destinations, no "No new id family", `has an id` present) all as expected; `audit-docs.py` EXIT=0 |
 | 5 — `phase-close.md` freeze-gate and generated-report lines | `4ff075ab` | Lines present, `audit-docs.py` EXIT=0. **Step 4's runtime proof is open** — see "Open items" below |
 | 6 — `delivery-process.md` rituals (a)/(b) + core extract digest | `02d9a22a` | `fortnight`/`freeze` greps hit; no section renumbered (`^## ` heading list unchanged in count and order); check 27 green at the new digest |
 | 7 — `CR.md` phase-report body rule | `7f45e426` | Line present; check 37 unaffected (91 shape-checked, 0 new failures) — the heading carries a placeholder marker so it is not required for `work`/`review` kind |
@@ -79,19 +79,24 @@ sequence first (the plan's own Risk 4).
 own Progress paragraph (`docs/roadmap.md:754` block) and the closure records it cites — not
 from memory:
 
-| Proposed id | Slice | Status | Basis |
-|---|---|---|---|
-| `SL-1140` | W37-1 — the standard and templates | `closed` | Progress paragraph: "S1 complete" |
-| `SL-1141` | W37-2 — `doc-id.py` | `closed` | Progress paragraph: "S1 complete" |
-| `SL-1142` | W37-3 — `doc-index.py` | `closed` | Progress paragraph: "S1 complete" |
-| `SL-1143` | W37-4 — `audit-docs.py` checks 30-39 | `closed` | Progress paragraph: "S1 complete" |
-| `SL-1144` | W37-5 — `migrate`, built and proven on a fixture corpus | `closed` | "W37-5 merged"; `CR-1004`, `CR-1005` (W37-5b/5c) |
-| `SL-1145` | W37-6 — the supervised migration run | `closed` | "the real migration — merged to `main` 2026-09-17", `CR-1065` (checkpoint 3 close) |
-| `SL-1146` | W37-7 — the remaining creating and reading instruments | `closed` | Squash-merged as #795 (`4ed1f88ee89deeddca04565cc1f07cdbaf02dba4`); this slice's own Task 11 lands its four-scope-row correction against it |
-| `SL-1147` | W37-8 — the charters | `draft` | No branch or PR found (`git ls-remote origin 'refs/heads/*'` has none matching); the deputy's D2 (`to-lead.md` 17:06:12 BST) "released to start now under the ruled order (after W37-10)" — queued, not begun |
-| `SL-1148` | W37-9 — `CLAUDE.md` and the public face | `draft` | Same basis as W37-8: D3, released to start, no branch found |
-| `SL-1149` | W37-10 — `docs/` READMEs, the checklists, the three rituals | `active` | This slice, in progress at the time of this ledger |
-| `SL-1150` | W37-11 — the residue, the census and the close | `active` | Roadmap prose names live, ongoing items owned by it (F107-F110, the check-35 shape, the pinned-base read, the docstring mismatch) and its first item (`#757`) already landed |
+**Fenced, because none of these ids is allocated yet** — a proposal id is a specimen of
+the form, not a citation, and check 32 would otherwise try (and fail) to resolve it in
+`docs/INDEX.md`:
+
+```text
+Proposed id | Slice                                                  | Status | Basis
+SL-1140     | W37-1 — the standard and templates                    | closed | Progress paragraph: "S1 complete"
+SL-1141     | W37-2 — doc-id.py                                      | closed | Progress paragraph: "S1 complete"
+SL-1142     | W37-3 — doc-index.py                                   | closed | Progress paragraph: "S1 complete"
+SL-1143     | W37-4 — audit-docs.py checks 30-39                     | closed | Progress paragraph: "S1 complete"
+SL-1144     | W37-5 — migrate, built and proven on a fixture corpus  | closed | "W37-5 merged"; CR-1004, CR-1005 (W37-5b/5c)
+SL-1145     | W37-6 — the supervised migration run                  | closed | "the real migration — merged to main 2026-09-17", CR-1065 (checkpoint 3 close)
+SL-1146     | W37-7 — the remaining creating and reading instruments| closed | Squash-merged as #795 (4ed1f88ee89deeddca04565cc1f07cdbaf02dba4); this slice's own Task 11 lands its four-scope-row correction against it
+SL-1147     | W37-8 — the charters                                   | draft  | No branch or PR found (git ls-remote origin 'refs/heads/*' has none matching); the deputy's D2 (to-lead.md 17:06:12 BST) "released to start now under the ruled order (after W37-10)" — queued, not begun
+SL-1148     | W37-9 — CLAUDE.md and the public face                  | draft  | Same basis as W37-8: D3, released to start, no branch found
+SL-1149     | W37-10 — docs/ READMEs, the checklists, the three rituals | active | This slice, in progress at the time of this ledger
+SL-1150     | W37-11 — the residue, the census and the close        | active | Roadmap prose names live, ongoing items owned by it (finding ids in the F1xx range, the check-35 shape, the pinned-base read, the docstring mismatch) and its first item (#757) already landed
+```
 
 **Step 4, the hand-off.** Once these rows exist on `main`, adding `slice:` fields to the
 Stage 3 leaf plans is **not this slice's** — a frozen plan is not edited to acquire a field.
@@ -106,7 +111,7 @@ its last-touching commit (R-7):
 |---|---|
 | `closures/README.md`, `findings/README.md`, `rulings/README.md`, `ledgers/README.md` (new) | **Confirmed landed.** All four present, headed with a valid `family: reference` header, each carrying substantive content in its own voice, not a stub |
 | `plans/README.md`'s README limb | **Confirmed landed.** `docs/plans/README.md`'s naming/kinds content is a pointer to `document-ids.md` (§"Naming, and the kinds of plan"); the nine writing conventions survive as "Writing one so it passes the audit" (4) and "The conventions the audit cannot check" (5) |
-| `docs/findings/README.md` — the old audit README dissolved | **Confirmed landed.** Carries `was: docs/audit/README.md` and its own substantive content, split with `closures/README.md` |
+| `docs/findings/README.md` — the old audit README dissolved | **Confirmed landed.** Carries a `was:` field naming the old audit tree's own top-level README, and its own substantive content, split with `closures/README.md` |
 | `closures/INDEX.md#closure-recordsmd` / `#plan-reviewsmd` preambles → `closures/README.md` | **Confirmed landed.** `closures/README.md`'s `## Conventions` block carries the register-currency, checklist-versioning, write-once-evidence, phase-tag and ISO-date rules these preambles held |
 
 No row required a verdict other than "delivered" — none needed reassignment.
@@ -146,9 +151,10 @@ push, per the executor charter and `dev-commands`' wrapped gate body.
 
 **Step 4 — hand-offs and open items, named rather than left silent:**
 
-1. **`.claude/roles/auditor.md:33,35`** name the retired `docs/audit/findings/README.md`
-   path. That charter is W37-8's to rewrite (`RL-1138` DP-2 condition 3). The interim
-   resolution is the `docs/REDIRECTS.csv` row added in Task 3's commit (`73db1e3e`).
+1. **`.claude/roles/auditor.md:33,35`** name the retired findings README's path (the old
+   audit tree's own, now deleted). That charter is W37-8's to rewrite (`RL-1138` DP-2
+   condition 3). The interim resolution is the `docs/REDIRECTS.csv` row added in Task 3's
+   commit (`73db1e3e`).
 2. **The 210/71 legacy-form residual** (Task 9b step 1) is W37-11's, which owns the fuller
    §7(i) walk (`CR-1065:339-341`).
 3. **§1.4 row S-5** — `RL-1046` §B's check-30 class (the §5.1/§5.3/§5.4 content rows) —
