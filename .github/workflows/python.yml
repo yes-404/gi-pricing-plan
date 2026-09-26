@@ -91,13 +91,27 @@ jobs:
   check:
     name: ruff · mypy · import-linter · pytest
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
     # The audit and outbox invariants are PostgreSQL behaviours — advisory locks, partial
     # unique indexes, FOR UPDATE SKIP LOCKED, privilege grants, triggers. Without a real
     # database those tests skip, and a skipped test for an invariant that cannot be
     # retrofitted is indistinguishable from no test at all.
     services:
+      # Pinned for reproducibility, not `:16-alpine` floating: the D8 hotfix surfaced
+      # seven `backend/tests/test_custom_metrics_table.py` failures (RuntimeError: Task
+      # attached to a different loop; asyncpg "unknown protocol state 3") and the
+      # floating tag had silently pulled a newer digest between the 2026-09-19 green
+      # run and 2026-09-26 without the pin. Pinning to the 19 Sep digest was an
+      # isolating attempt to rule postgres/redis in or out as the cause (ruling
+      # 2026-09-26 19:23:06 BST); the 26 Sep digest (`721873c3…`) and this 19 Sep one
+      # (`3c5c8892…`) reproduce the identical seven failures (ruling 2026-09-26 19:37:05
+      # BST comparing runs 36261604430 and 36262441649 — 28 sorted FAILED/ERROR lines,
+      # identical), so **this pin is not a fix** — it only rules the service images
+      # out. The test defect itself is W37-11's to fix.
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16-alpine@sha256:3c5c8892d184f738f4fe282d14ddaa613a38f00f4189d2d94725ebe6f2909ddb
         env:
           POSTGRES_USER: gipricing
           POSTGRES_PASSWORD: gipricing
@@ -111,8 +125,12 @@ jobs:
 
       # The outbox's guarantee is about the seam between a transaction and a broker, so
       # the broker in that test is a real one.
+      #
+      # Pinned for reproducibility, for the same reason as postgres above — this pin is
+      # not a fix, it rules the service image out (rulings 2026-09-26 19:23:06 BST and
+      # 19:37:05 BST). The test defect is W37-11's.
       redis:
-        image: redis:7-alpine
+        image: redis:7-alpine@sha256:520775a41a63e77e06c73e35d2fd9cc15921a609516818796b4ecbb813078bc7
         ports: ['6379:6379']
         options: >-
           --health-cmd "redis-cli ping"
@@ -204,30 +222,74 @@ jobs:
       # repository does not exist or may require 'docker login': denied: requested
       # access to the resource is denied` (exit 125) — the vendor withdrew anonymous
       # pulls of this image from Docker Hub; class is "repository access removed",
-      # not a rate limit or a moved tag. `quay.io/minio/minio` is the vendor's own
-      # mirror and still pulls anonymously (verified via `docker manifest inspect`),
-      # so the step is pinned to that registry by digest (the `latest` multi-arch
-      # manifest-list digest at the time of this fix) rather than a floating tag.
+      # not a rate limit or a moved tag. `quay.io/minio/minio` was the vendor's own
+      # mirror and pulled anonymously at the time (verified via `docker manifest
+      # inspect`), so the step was pinned to that registry by digest.
       #
-      # A stage rather than a setup step: it gates only `Tests`, and a MinIO that
-      # will not start must not also cost the run its ruff, mypy and contract
-      # results.
+      # 2026-09-26: the class is now total, not a moved registry — the vendor
+      # withdrew public distribution of this image everywhere. Six sources tested
+      # 2026-09-26 18:59 BST, all closed: `quay.io/minio/minio@sha256:14cea493…` and
+      # `quay.io/minio/minio:latest` (no such manifest), `docker.io/minio/minio:latest`
+      # (unauthorized, authentication required), `docker.io/bitnami/minio:latest` and
+      # `public.ecr.aws/bitnami/minio:latest` (no such manifest), `ghcr.io/minio/minio:latest`
+      # (denied), and the `dl.min.io` binary release (HTTP 410 Gone). The only surviving
+      # copy of this digest was this VM's Docker cache, preserved and published as a
+      # release asset on this repository under CI hotfix decision D8 (maintainer
+      # decision by delegation, deputy, on the maintainer's instruction of 2026-09-26
+      # 17:02:52 BST; filed 2026-09-26 19:00:22 BST) — see the release
+      # `ci-images-2026-09-26` and its `NOTICE` (MinIO is AGPL-3.0; the image is
+      # redistributed unmodified at this digest). The step now restores that asset
+      # rather than pulling from any registry.
+      #
+      # A stage rather than a setup step: it gates only `Migrate` and `Tests` (see the
+      # fail-fast note below), and a MinIO that will not start must not also cost the
+      # run its ruff, mypy and contract results.
       - name: Start MinIO
         id: minio
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          gh release download ci-images-2026-09-26 \
+            --repo "${{ github.repository }}" -p 'minio-*.tar.gz' -O minio-image.tar.gz
+          docker load -i minio-image.tar.gz
+          # `docker save`/`load` carries no registry, so a runner that has never pulled
+          # this image gets only the RepoTag baked into the tar (`minio/minio:latest`) —
+          # `docker run …minio/minio@sha256:14cea493…` then finds nothing local and tries
+          # (and fails) to pull that digest from the registry the vendor withdrew it
+          # from. The content-addressed guarantee that survives `save`/`load` is the
+          # image *config* Id, not the registry manifest digest, so that is what is
+          # verified here before the pinned tag is trusted.
+          loaded_id="$(docker image inspect minio/minio:latest --format '{{.Id}}')"
+          want_id="sha256:69b2ec208575b69597784255eec6fa6a2985ee9e1a47f4411a51f7f5fdd193a9"
+          if [ "$loaded_id" != "$want_id" ]; then
+            echo "::error::loaded minio/minio:latest has Id $loaded_id, expected $want_id" >&2
+            exit 1
+          fi
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=gipricing -e MINIO_ROOT_PASSWORD=gipricing \
-            quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
+            minio/minio:latest server /data
           for _ in $(seq 1 30); do
             curl -sf http://localhost:9000/minio/health/live && break
             sleep 2
           done
           curl -sf http://localhost:9000/minio/health/live
 
+      # Fail fast (D8, 2026-09-26 19:00:22 BST): MinIO backs the object-store client
+      # both Migrate's fixtures and Tests exercise, so once it has failed to start,
+      # Migrate and Tests cannot produce a meaningful result — only a slow, uniform S3
+      # timeout cascade (the E-cascade this decision's investigation traced starting at
+      # `test_api_acknowledge.py::test_an_actuary_acknowledges_a_warning_through_the_route`,
+      # ~7-8s per test). Gating each `if:` on the MinIO stage's own `outcome` (not the
+      # job's `continue-on-error`-masked `conclusion`, which always reads `success`)
+      # skips both steps instead of running them to a foregone failure. A skipped step's
+      # `outcome` is `skipped`, not `success`, so the Gate summary table below still
+      # rows it — as a failed stage, not silently dropped — without any change to that
+      # step's own logic.
       # FR-435: migrations are an explicit step, never run on application start.
       - name: Migrate
         id: migrate
+        if: steps.minio.outcome == 'success'
         continue-on-error: true
         run: uv run alembic upgrade head
         env:
@@ -235,6 +297,7 @@ jobs:
 
       - name: Tests
         id: pytest
+        if: steps.minio.outcome == 'success'
         continue-on-error: true
         run: uv run pytest -q
         env:
