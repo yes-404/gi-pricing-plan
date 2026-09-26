@@ -5,7 +5,7 @@ title: W37-10 — docs/ READMEs, the checklists, and the three rituals
 status: active
 created: 2026-09-26
 owner: executor
-tree: 4ff075aba2b90fffebd857c5b05059f21a4959e6
+tree: 8dd070066d554ebf51fcb52ead6dfbec9d1559e5
 phase: P2
 work: WK-697
 plans: [PL-1073]
@@ -19,23 +19,26 @@ Executed task by task from `PL-1073`. Commits are on branch `w37-10-docs`, cut f
 `origin/main` at `20d922dd3ac40678ecd003787fbc27360a77c688`. No `slice:` id exists for
 W37-10 yet (DP-4); the slice is cited in prose here, per that ruling.
 
+SHAs corrected 2026-09-26 to their on-branch equivalents after three rebases (lead ruling
+on the audit supplementary of 23:05:43).
+
 ## Tasks
 
 | Task | Commit | Verified |
 |---|---|---|
-| 1 — `docs/README.md` as the map | `22ef73f5` | `audit-docs.py` EXIT=0; `adr/` grep empty; both check commands named |
-| 2 — `docs/research/README.md` | `e41ecab0` | `doc-id.py check` EXIT=0; `audit-docs.py` EXIT=0; `docs/INDEX.md` regenerated in the same commit |
-| 3 — retire the audit tree's `findings/README.md` | `73db1e3e` | `git ls-files docs/audit \| wc -l` = 1 (DP-1 option A); `audit-docs.py` EXIT=0; hand-off recorded below. **Note (D10, deputy, 2026-09-26 19:50:59 BST):** this task's DP-1 retirement surfaced a coupling in `tests/test_audit_docs_ids.py::test_id_scope_documents_excludes_the_w37_11_residue_ceiling_record` — its own positive control assumed a second file survived under the old audit tree. **Discharged:** fixed by `#803` (`b82d0647dc6bcbb987eb1923b107d1c83fb6bdca`, merged 2026-09-26 21:08:57 BST) — the positive control now proves reach without a second live file under the old audit tree. `RL-1138` barred this executor from `tests/`; the fix was not this ledger's, and no file under `tests/` was touched here. |
-| 4 — both checklists: id, gate, family, register, path lines | `167980cd` | Both files' verify commands (no reference to the old audit tree's work/phases destinations, no "No new id family", `has an id` present) all as expected; `audit-docs.py` EXIT=0 |
-| 5 — `phase-close.md` freeze-gate and generated-report lines | `4ff075ab` | Lines present, `audit-docs.py` EXIT=0. **Step 4's runtime proof is open** — see "Open items" below |
-| 6 — `delivery-process.md` rituals (a)/(b) + core extract digest | `02d9a22a` | `fortnight`/`freeze` greps hit; no section renumbered (`^## ` heading list unchanged in count and order); check 27 green at the new digest |
-| 7 — `CR.md` phase-report body rule | `7f45e426` | Line present; check 37 unaffected (91 shape-checked, 0 new failures) — the heading carries a placeholder marker so it is not required for `work`/`review` kind |
+| 1 — `docs/README.md` as the map | `fccbbae2` | `audit-docs.py` EXIT=0; `adr/` grep empty; both check commands named |
+| 2 — `docs/research/README.md` | `3939764f` | `doc-id.py check` EXIT=0; `audit-docs.py` EXIT=0; `docs/INDEX.md` regenerated in the same commit |
+| 3 — retire the audit tree's `findings/README.md` | `473044dc` | `git ls-files docs/audit \| wc -l` = 1 (DP-1 option A); `audit-docs.py` EXIT=0; hand-off recorded below. **Note (D10, deputy, 2026-09-26 19:50:59 BST):** this task's DP-1 retirement surfaced a coupling in `tests/test_audit_docs_ids.py::test_id_scope_documents_excludes_the_w37_11_residue_ceiling_record` — its own positive control assumed a second file survived under the old audit tree. **Discharged:** fixed by `#803` (`b82d0647dc6bcbb987eb1923b107d1c83fb6bdca`, merged 2026-09-26 21:08:57 BST) — the positive control now proves reach without a second live file under the old audit tree. `RL-1138` barred this executor from `tests/`; the fix was not this ledger's, and no file under `tests/` was touched here. |
+| 4 — both checklists: id, gate, family, register, path lines | `38adb67e` | Both files' verify commands (no reference to the old audit tree's work/phases destinations, no "No new id family", `has an id` present) all as expected; `audit-docs.py` EXIT=0 |
+| 5 — `phase-close.md` freeze-gate and generated-report lines | `8dd07006` | Lines present, `audit-docs.py` EXIT=0. **Step 4's runtime proof is open** — see "Open items" below |
+| 6 — `delivery-process.md` rituals (a)/(b) + core extract digest | `81c54d2e` | `fortnight`/`freeze` greps hit; no section renumbered (`^## ` heading list unchanged in count and order); check 27 green at the new digest |
+| 7 — `CR.md` phase-report body rule | `ce3aef90` | Line present; check 37 unaffected (91 shape-checked, 0 new failures) — the heading carries a placeholder marker so it is not required for `work`/`review` kind |
 | 8 — the two roadmap proposals (below) | this file | Drafted, not applied |
 | 9a — verify the five "landed" rows | this file, §Task 9a | All five confirmed landed by direct read |
 | 9b — sweep, index, gate, this ledger | this file, §Task 9b | see below |
-| 10 — D4's two acceptance feet | `6c74b83c` | Both `_pending_` feet replaced; header/table rows untouched; `audit-docs.py` EXIT=0 |
-| 11 — `PL-1070`'s scope-table amendment | `1759b0b4` | Planner's text landed verbatim at the named anchor; all six SHAs verified ancestors of `refs/pull/795/head`; `audit-docs.py` EXIT=0 |
-| 12 — the correction at `LG-1137:20` | `ea9bcde4` | Original line unchanged; both salvage refs and both range-diff successors re-verified; `audit-docs.py` EXIT=0 |
+| 10 — D4's two acceptance feet | `bda9bc48` | Both `_pending_` feet replaced; header/table rows untouched; `audit-docs.py` EXIT=0 |
+| 11 — `PL-1070`'s scope-table amendment | `d4c3093a` | Planner's text landed verbatim at the named anchor; all six SHAs verified ancestors of `refs/pull/795/head`; `audit-docs.py` EXIT=0 |
+| 12 — the correction at `LG-1137:20` | `dd7a7074` | Original line unchanged; both salvage refs and both range-diff successors re-verified; `audit-docs.py` EXIT=0 |
 | 13 — the phase-1b register grammar rows | `b34a37cf` (#801) | Auditor's file, auditor instance's commit, not this ledger's own work. `#801` merged 2026-09-26 20:40:57 BST: all 120 register rows parse |
 | S-6 — `register.md`'s 8 raw-`\|` rows | `b34a37cf` (#801) | Found by the executor at Task 5 step 4 (`doc-index.py --phase` raised a coverage-mismatch `ValueError`). Lead ruling 2026-09-26 19:17 BST: fix landed in the auditor instance's own commit inside `#801`, `docs/findings/register.md` being the auditor's file. §1.4 scope row S-6 amended to cite `b34a37cf` and `#801`. **Discharged:** `python3 scripts/doc-index.py --phase P1b; echo EXIT=$?` now prints `EXIT=0` and a full report at this branch's rebased head — Task 5 step 4 and Acceptance Standard item 11 are both satisfied |
 
@@ -61,7 +64,7 @@ date for a plan already frozen in substance. **Code** and **docs** freeze are pr
 one and two weeks out from this slice's own filing, giving W37-8, W37-9 and W37-11 room to
 land; both are the executor's estimate, not a measurement, and the lead is the one with
 visibility into the actual remaining Stage 3 and W37-11 work. Hand to the lead with the
-`phase-close.md` freeze-gate line quoted (this slice's Task 5 commit `4ff075ab`), so the
+`phase-close.md` freeze-gate line quoted (this slice's Task 5 commit `8dd07006`), so the
 declaration and its check arrive together, per the plan's step 2.
 
 ### Task 8b — the `SL-` rows for WK-697's eleven slices (proposal)
@@ -119,7 +122,7 @@ No row required a verdict other than "delivered" — none needed reassignment.
 
 ## Task 9b — the sweep, the index, and the gate
 
-**Step 1 — the restricted sweep**, re-run at this tree (`4ff075ab` plus this ledger):
+**Step 1 — the restricted sweep**, re-run at this tree (`8dd07006` plus this ledger):
 
 ```bash
 python3 scripts/audit-docs.py 2>&1 | grep "legacy audit path" | grep -c "form survives"
@@ -155,7 +158,7 @@ push, per the executor charter and `dev-commands`' wrapped gate body.
 1. **`.claude/roles/auditor.md:33,35`** name the retired findings README's path (the old
    audit tree's own, now deleted). That charter is W37-8's to rewrite (`RL-1138` DP-2
    condition 3). The interim resolution is the `docs/REDIRECTS.csv` row added in Task 3's
-   commit (`73db1e3e`).
+   commit (`473044dc`).
 2. **The 210/71 legacy-form residual** (Task 9b step 1) is W37-11's, which owns the fuller
    §7(i) walk (`CR-1065:339-341`).
 3. **§1.4 row S-5** — `RL-1046` §B's check-30 class (the §5.1/§5.3/§5.4 content rows) —
