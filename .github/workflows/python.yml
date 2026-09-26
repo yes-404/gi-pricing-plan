@@ -238,9 +238,22 @@ jobs:
           gh release download ci-images-2026-09-26 \
             --repo "${{ github.repository }}" -p 'minio-*.tar.gz' -O minio-image.tar.gz
           docker load -i minio-image.tar.gz
+          # `docker save`/`load` carries no registry, so a runner that has never pulled
+          # this image gets only the RepoTag baked into the tar (`minio/minio:latest`) —
+          # `docker run …minio/minio@sha256:14cea493…` then finds nothing local and tries
+          # (and fails) to pull that digest from the registry the vendor withdrew it
+          # from. The content-addressed guarantee that survives `save`/`load` is the
+          # image *config* Id, not the registry manifest digest, so that is what is
+          # verified here before the pinned tag is trusted.
+          loaded_id="$(docker image inspect minio/minio:latest --format '{{.Id}}')"
+          want_id="sha256:69b2ec208575b69597784255eec6fa6a2985ee9e1a47f4411a51f7f5fdd193a9"
+          if [ "$loaded_id" != "$want_id" ]; then
+            echo "::error::loaded minio/minio:latest has Id $loaded_id, expected $want_id" >&2
+            exit 1
+          fi
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=gipricing -e MINIO_ROOT_PASSWORD=gipricing \
-            minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
+            minio/minio:latest server /data
           for _ in $(seq 1 30); do
             curl -sf http://localhost:9000/minio/health/live && break
             sleep 2
