@@ -36,6 +36,11 @@ named by the phase id in its title and `relates:` field. No family outside
 
 Write the `CR-` document with these sections.
 
+- [ ] The record's body is the generated phase report — `python3 scripts/doc-index.py --phase
+      P<n>` — pasted with the tree it was generated at. **Never a hand-kept table**
+      (`../document-ids.md` §1.10 (c)): a hand-kept one drifts from the corpus it summarises,
+      which is RFC-756 at scale.
+
 ### Scope reconciliation
 
 The phase's boundaries, workstream cuts and requirement set as filed, and how the actual
@@ -66,6 +71,11 @@ A finding with no verdict is silence, which §13 forbids.
 
 The checks that span workstreams — contract drift, money discipline, workflow coverage.
 Each names its measurement and the tree it was measured on.
+
+- [ ] The phase's three freeze gates — plan, code, docs — were declared with dates in the
+      phase's milestone section in `../../roadmap.md`, and each passed on or before its date.
+      A gate date that passed with a `draft` plan or an `active` slice behind it is a finding
+      against the phase, not a note (`../document-ids.md` §1.10 (b), check 38's loop signal).
 
 ### Retrospective
 
