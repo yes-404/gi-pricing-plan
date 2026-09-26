@@ -3,7 +3,7 @@ id: PL-1073
 family: plan
 kind: leaf
 title: W37-10 — docs/ READMEs, the checklists, and the three rituals: leaf plan
-status: draft
+status: active
 created: 2026-09-18
 owner: planner
 tree: d63f765085fe6eb1c594177c5779ecfc3caf7ae8
@@ -69,6 +69,15 @@ artifact they can read. None is satisfied by reading this plan.
 6. `git ls-files docs/audit | wc -l` returns the number DP-1's resolver fixes — `0` under
    option A's full form, `1` under the recommended split. Whichever number it is, it is
    *stated in the slice's ledger with the resolver id*, never left to the reader.
+
+   **Corrected 2026-09-26 (planner, on `RL-1138` DP-1 amendments 1 and 2).** The words above —
+   *"returns the number DP-1's resolver fixes — `0` under option A's full form, `1` under the
+   recommended split"* — are kept quoted rather than edited. DP-1 is resolved by `RL-1138`, (A)
+   adopted with amendments, so **this item reads `1`**, and the one file is W37-11's record, the
+   one `W37_11_RECORD_PATH` (`scripts/_docid.py`, by symbol) names. **W37-11 is the named carrier**
+   of that record and of the reference limb of §7.1's clause (that nothing references the
+   directory), because the constant is itself such a reference and cannot go before the file.
+   A reading of `0` or `2` at the merge tree is a violation (`RL-1138`, Acceptance).
 7. `grep -c 'has an id' docs/process/checklists/work-item-close.md` and the same over
    `docs/process/checklists/phase-close.md` each return at least 1, and
    `grep -n 'No new id family is minted' docs/process/checklists/work-item-close.md` returns
@@ -88,10 +97,23 @@ artifact they can read. None is satisfied by reading this plan.
 12. Every §5.2 row in this plan's Scope table is either closed by a commit named in the
     slice's ledger, or carries one of `CLAUDE.md` §13's four verdicts with its reason. No row
     is silent.
+
+    **Corrected 2026-09-26 (planner, under the deputy's standing rule of 2026-09-26 17:18:47
+    BST).** The words above — *"Every §5.2 row in this plan's Scope table"* — are widened, kept
+    quoted: the rows of §1.4 (added after filing) are held to the same test. And the test runs
+    **in both directions**, on PL-1070 item 1's corrected model: every scope row (§1.2 and §1.4)
+    is matched to a ledger row by the file or the subject it names, and every ledger row is
+    matched back to a scope row. Neither list's length is counted.
 13. The gate's two halves are green at the head SHA — the six command lines of `CLAUDE.md` §11,
     each with its exit code recorded in the ledger — and CI is green for that same SHA.
 14. Every blocking row in the Decision points table below carries a resolver id, and this
     plan's `status:` has moved `draft → active` as a consequence, not as a separate act.
+15. **The deputy's merge acknowledgement is recorded** on the PR before the lead merges each
+    PR of this slice, and the slice's clean audit is filed as a dated channel entry — the
+    auditor's proposal, then the lead's verdict line — cited by stamp in the closing PR's
+    request. Per `CLAUDE.md` §13 a Slice closes on a clean audit and the lead's merge; no
+    maintainer acceptance line is required for this slice. *(Added 2026-09-26 by the planner,
+    on PL-1070 item 11's model.)*
 
 ## Global Constraints
 
@@ -117,6 +139,15 @@ constraint.
 - **Evidence is write-once**, and "a correction after the fact is dated and says so"
   ([`../closures/README.md`](../closures/README.md)). This is why no task in this plan rewrites
   a filed `CR-`, `FD-`, `RL-`, `LG-` or frozen `PL-` record, and why DP-1 exists at all.
+
+  **Corrected 2026-09-26 (planner, on the deputy's rulings of 2026-09-26 17:06:12, 17:18:47
+  and 17:36:07 BST).** The words above — *"no task in this plan rewrites a filed `CR-`, `FD-`,
+  `RL-`, `LG-` or frozen `PL-` record"* — are kept quoted and narrowed. Tasks 10, 11 and 12
+  touch a filed `CR-`, a frozen `PL-` and a filed `LG-` record, **each by the one form those
+  records admit**: an acceptance foot filled with a dated line (Task 10), or a dated correction
+  that keeps the original words quoted beside it (Tasks 11 and 12). None of them rewrites a
+  record's original text. Task 13 edits the findings register, which is a living file rather
+  than write-once evidence. The rule still binds every other task.
 - **Every number in this plan is pasted from a command or a named artifact at
   `d63f765085fe6eb1c594177c5779ecfc3caf7ae8`** (`origin/main` at drafting), and an executor
   re-derives rather than quotes it.
@@ -211,6 +242,81 @@ A ritual is landed when the artifact that **enforces** it says so — not when a
   naming the same command (Task 5). The generator already exists: `scripts/doc-index.py:1167`
   registers `--phase`, and `phase_report()` is at `:981`.
 
+### 1.4 Rows added after filing — a dated correction to the scope
+
+**Corrected 2026-09-26 (planner).** §1.2's table was this plan's whole scope at filing. The
+rows below were added after it, each on a named authority, and each lands in the **same
+commit** as the task that carries it, per the deputy's standing rule of 2026-09-26 17:18:47
+BST, quoted verbatim: *"a task added to a slice after its plan is filed extends the scope
+table in the same commit that adds the ledger row, as a dated correction; item 1 is never
+carried again, and an executor who cannot extend the table stops and says so before the
+ledger row exists."* For this slice, "item 1" is Acceptance Standard item 12, as corrected.
+**An executor who adds a ledger row that matches no row here or in §1.2 stops and says so to
+the lead before that ledger row exists.**
+
+Every figure below was measured at `origin/main` =
+`4ed1f88ee89deeddca04565cc1f07cdbaf02dba4` on 2026-09-26, with its command beside it.
+
+| Row | Authority | Files | Ledger-matchable subject | Treatment | Hours |
+|---|---|---|---|---|---|
+| **S-1** — D4's two acceptance feet | the deputy's D4, 2026-09-26 17:06:12 BST, under the maintainer's delegation of 17:02:52 BST | `docs/closures/CR-01050-plan-review-12-the-w37-6-w37-11-boundary-mid-window.md` (foot, `:284` at `4ed1f88`); `docs/closures/CR-01064-plan-review-13-the-w37-6-close-the-w37-7-11-cut.md` (foot, `:632` at `4ed1f88`) | `docs(closures): reviews 12 and 13 — D4's delegated acceptance lines (W37-10)` | **Task 10** | 0.5 |
+| **S-2** — PL-1070's scope-table amendment | the deputy's 17:18:47 BST ruling, condition 2, and the 17:33:56 BST rider to it | `docs/plans/PL-01070-w37-7-the-remaining-creating-and-reading-instruments-leaf-plan.md` | `docs(plans): PL-1070 — the four scope rows #795 merged without (W37-10)` | **Task 11** | 1.0 |
+| **S-3** — the correction at `LG-1137:20` | the deputy's 17:36:07 BST ruling, disposition 2 | `docs/ledgers/LG-01137-w37-7-the-remaining-creating-and-reading-instruments.md` | `docs(ledgers): LG-1137 — the two measurement trees, by salvage ref and successor (W37-10)` | **Task 12** | 0.75 |
+| **S-4** — `RL-1046` §B's check-29 class: §5.2's register merge | `RL-1046` §B labels it `owner: W37-10`; disclosed unowned by `RL-1138` ("What it obliges") | `docs/findings/register.md` | `docs(findings): the phase-1b register rows meet the grammar (W37-10, RL-1046 check 29)` | **Task 13** — discharged inside this slice, docs only | 1.5 |
+| **S-5** — `RL-1046` §B's check-30 class: the §5.1/§5.3/§5.4 content rows | `RL-1046` §B labels it `owner: W37-10`; disclosed unowned by `RL-1138` ("What it obliges") | none in this slice | — | **Proposed verdict: reassigned, to W37-11.** A proposal for the lead's ruling, not a verdict (`CLAUDE.md` §12). The reason is below | — |
+
+**S-4, measured.** RL-1046 §B defines check 29's class as *"§5.2's register merge"*. Its
+instrument, and what it printed at `4ed1f88` (run in a detached worktree of that tree, whose
+path the first line shows):
+
+```text
+$ python3 scripts/register-lint.py; echo EXIT=$?
+/tmp/planner-w37-10-m4ed/docs/findings/register.md: OK (0 violations)
+register.md: residue — 85 of 120 row(s) exceed the 1000-character findings-file migration threshold (RL-911). Not a violation — opportunistic-on-amendment only; this line is what makes that claim falsifiable rather than assumed. residue class 2 — 11 of 20 phase-1b row(s) (RFC-937 §5.2 merge) fail a grammar rule (RL-1046 check 29, owner W37-10). Not a failure — a column predicate read from each row's own Phase cell, recomputed every run, never a hand-maintained finding-id list.
+EXIT=0
+```
+
+The 11 split by rule, from `phase1b_residue`'s own three checks
+(`check_decision_grammar`, `check_resolution_annotation`, `check_unowned_decay` in
+`scripts/register-lint.py`, by symbol): **4** fail rule 1, because the Decision cell opens with a
+word outside the vocabulary (`discharged —` three times, `re-seeded —` once); **7** fail rule 2,
+because a resolution marker has no date, or has no reference in a form the rule reads (a
+`PR #n`, a backtick-quoted SHA, or a backtick-quoted `docs/` or `.claude/` path — a bare
+`(#280)` is not one); **0** fail rule 3. Every fix is a Decision-cell edit in one Markdown file.
+No code changes: the residue line recomputes from the cells, so it reads `0 of 20` once the
+cells conform. The literal `owner W37-10` in that line is a string in `scripts/register-lint.py`
+and stays after this slice closes, as R-3 records for check 35's literal.
+
+**S-5, measured, and why it needs code.** RL-1046 §B's grounds describe check 30's class as
+*"RFC-937 §5.1/§5.3/§5.4 **content** rows (stamping charters, skills, root files)"*. Its
+instrument is `audit-docs.py` check 30. At `4ed1f88` it prints
+`check 30: 462 governed document(s) checked in scope, 66 skipped as registered unstampable`,
+and **77** `check 30:` lines, all inside the `DISCLOSED (890, at or under the W37-11 residue
+ceiling)` block, so none sets the exit code. Predicate:
+`python3 scripts/audit-docs.py 2>&1 | grep -c '^  - check 30'` → `77`. By message: 50 read
+*"family '' has no known template under docs/_templates"* (43 under `.claude/skills/`, 7 under
+`.claude/agents/`), and 27 read *"no `---` front-matter header found"* (12 under
+`docs/research/`, 8 under `docs/specs/`, 2 under `docs/process/`, and one each for
+`docs/INDEX.md`, the findings register, `docs/open-questions.md`, `docs/roadmap.md` and
+`docs/skills-map.md`). W37-11's record already carries this class per file, as `h1-check30`, with
+`W37-10` in its owner column. Discharging it inside this slice fails on four counts:
+
+1. **50 of the 77 are other slices' files.** Skills are W37-7's, whose slice has merged, and
+   agents and charters are W37-8's. `RL-1138` DP-2 condition 3 refuses this slice an edit to a
+   W37-8 file for the same reason.
+2. **Whether a file is stamped or registered unstampable is decided in code.** The register is
+   the constant `UNSTAMPABLE_EXEMPTIONS` in `scripts/audit-docs.py`, by symbol. `RL-1138`
+   DP-1 bars this slice from any file under `scripts/`.
+3. **`docs/INDEX.md` is generated**, so its header is a change to `scripts/doc-index.py`.
+4. **The owner column is in W37-11's record**, which `RL-1138` DP-2 condition 2 bars this slice
+   from editing.
+
+The docs-only remainder (the 12 research files, the 8 specs and the two `docs/process/`
+files) could be split out, but a split leaves the class with two owners and no single
+count. The proposal is therefore the whole class, reassigned to W37-11, which owns the record
+that already governs it per file. **The lead rules on it.** Until then, S-5 is an open row, and
+Acceptance Standard item 12 is not met while it is silent.
+
 ## 2. Reconciled against plan review 13
 
 This section is mandatory under the deputy's ruling of 2026-09-18 00:41:53 BST, condition (b),
@@ -253,6 +359,11 @@ scoped as a task (R-4). Nothing in either record bearing on this slice is left u
 | Planner | this file | Cuts the slice and the tasks. Does not implement, audit, merge, or rule a decision point |
 | Deputy / maintainer | — | The deputy's merge-ACK gates the merge (§6). Nothing in this slice needs a maintainer amendment line under the recommendation in DP-6 |
 
+**Corrected 2026-09-26 (planner).** The executor's row above says *"Implements Tasks 1-9"*.
+Tasks 10 to 13 were added later (§1.4), and each one names who writes it. Task 11 is the
+planner's, because PL-1070 is a plan. Tasks 10, 12 and 13 go to whoever the lead names in the
+task. The auditor's row now also covers the §1.4 rows.
+
 `docs-audit` is the binding procedure for every `docs/` edit in this slice, and
 `.claude/skills/spec-change` binds any task that touches a requirement — **no task here does**.
 
@@ -265,12 +376,42 @@ the PL template's mechanical freeze rule, not a judgement.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | The slice's acceptance requires the audit directory to no longer exist, with nothing referencing it (§7.1 quotes the clause in a fenced exhibit). At `d63f765`, `git ls-files docs/audit \| wc -l` returns **2**: that tree's `findings/README.md` and its `w37-11-record.md`. The second is pinned by a code constant — `scripts/_docid.py:259` defines `W37_11_RECORD_PATH` as that file's path, `_docverify.py:3960` re-exports it, and `audit-docs.py:1369` gives it its own exemption — and is W37-11's live residue-ceiling instrument, created *after* the migration by `ea3704d` (#756). Can this slice dissolve the directory? | **(A)** W37-10 retires only the `findings/README.md`; `w37-11-record.md` and its constant move with W37-11, which owns the instrument. **(B)** W37-10 does both, editing `scripts/_docid.py`, `_docverify.py`, `audit-docs.py` and four test modules. **(C)** Both deferred to W37-11 | **(A).** (B) puts a code edit to W37-11's own live gate inside a slice whose executor skill is `docs-audit` and whose scope contains no code — the identical boundary review 13 drew at `CR-1064:373-379` for check-35's owner literal, applied to a stronger case, because here the file is *read at runtime by the gate that would have to stay green through the edit*. (C) abandons a row this slice is the only owner of. Under (A) the acceptance clause is **partially discharged with a named carrier**, which is `CLAUDE.md` §13's "reassigned" verdict, not a silent miss | scope | **yes** | |
-| DP-2 | What happens to the audit tree's `findings/README.md` (Task 3 names the path)? It is cited by `.claude/roles/auditor.md` (**W37-8's file**) and by 5 frozen `FD-` essays | **(A)** Fold its live content into `docs/findings/README.md`, delete it, add a `docs/REDIRECTS.csv` row. **(B)** Rewrite it in place, keeping the path. **(C)** Delete with no redirect | **(A).** (B) keeps a file under a directory RFC-937 §1.4 dissolves. (C) breaks the `FD-` citations, which is what `REDIRECTS.csv` exists to prevent — and `RL-1048` §1(d) established that a cited file is not retired, it is *placed*. The `.claude/roles/auditor.md` citation is **W37-8's to rewrite**: this slice must notify the lead, not edit a charter | scope | **yes** | |
-| DP-3 | R-1: do the checklists gain a register-currency line? | **(A)** Both checklists gain one, as a command. **(B)** `phase-close.md` only. **(C)** Decline | **(A)** — see R-1. **Default until resolved: (A) is applied**, since review 13 recommends it and it is additive | decision point | no | Task 4 step 4; default applied |
-| DP-4 | This plan carries no `slice:` header field, and no `SL-` id for W37-10 exists | **(A)** Omit `slice:`, cite the slice in prose, and cut the `SL-` rows in this slice (Task 8b). **(B)** Mint an `SL-` id first and block on it | **(A).** Three facts measured at `d63f765`: `grep -c 'SL-[0-9]' docs/roadmap.md` = **0**; `grep -rn '^slice:' docs/plans/ \| wc -l` = **0**; and `scripts/doc-id.py:7373` guards with `if header.slice_ is not None:`, so omitting the field is clean while a `slice:` value with no matching row fails the resolves-to-row check at `:7376`. `document-ids.md:148` puts the `SL` row's creation on the planner "cut in the map plan" and its dispatch on the lead — the maintainer is not in that path, so this is not an escalation | fact | no | Task 8b; default applied (omit) |
-| DP-5 | Where do rituals (a) and (b) land in `delivery-process.md`? | **(A)** (a) → §13 (monitoring & comms loop); (b) → §10 (required artifacts) plus a sentence in §5 (per-layer flow). **(B)** A new §16 holding both | **(A).** §13 already carries the reporter's duties, so (a) lands beside the mechanism that performs it; §10 already lists the roadmap as a required artifact, which is where a declared gate belongs. (B) creates a rituals section that duplicates `document-ids.md` §1.10 — the second-copy failure mode RFC-756 exists to prevent. **Constraint on either option:** §§1-15 are numbered and cited by `delivery-process.core.json`; appending a section is safe, renumbering is not | design unknown | no | Task 6 step 1; default applied |
-| DP-6 | Do the ritual edits to `delivery-process.md` need a dated maintainer acceptance line? | **(A)** No — this implements RFC-937 §6, already accepted. **(B)** Yes, treat any process-spec edit as an amendment | **(A), with a stated limit.** RFC-937 arrived `accepted` and the maintainer ruled that status to be its acceptance line (`RL-940` §4, recorded on the WK-697 roadmap row). §6's rituals are therefore adopted, and writing them into the artifact that enforces them is implementation. **The limit:** if the executor finds it must write an obligation §6 and §1.10 do not state, that is an amendment and stops for the lead. `CLAUDE.md` §12's maintainer reservation is over **`CLAUDE.md`**, which this slice does not touch | decision point | no | Task 6 step 1; default applied, lead confirms at review |
+| DP-1 | The slice's acceptance requires the audit directory to no longer exist, with nothing referencing it (§7.1 quotes the clause in a fenced exhibit). At `d63f765`, `git ls-files docs/audit \| wc -l` returns **2**: that tree's `findings/README.md` and its `w37-11-record.md`. The second is pinned by a code constant — `scripts/_docid.py:259` defines `W37_11_RECORD_PATH` as that file's path, `_docverify.py:3960` re-exports it, and `audit-docs.py:1369` gives it its own exemption — and is W37-11's live residue-ceiling instrument, created *after* the migration by `ea3704d` (#756). Can this slice dissolve the directory? | **(A)** W37-10 retires only the `findings/README.md`; `w37-11-record.md` and its constant move with W37-11, which owns the instrument. **(B)** W37-10 does both, editing `scripts/_docid.py`, `_docverify.py`, `audit-docs.py` and four test modules. **(C)** Both deferred to W37-11 | **(A).** (B) puts a code edit to W37-11's own live gate inside a slice whose executor skill is `docs-audit` and whose scope contains no code — the identical boundary review 13 drew at `CR-1064:373-379` for check-35's owner literal, applied to a stronger case, because here the file is *read at runtime by the gate that would have to stay green through the edit*. (C) abandons a row this slice is the only owner of. Under (A) the acceptance clause is **partially discharged with a named carrier**, which is `CLAUDE.md` §13's "reassigned" verdict, not a silent miss | scope | **yes** | **RL-1138** — (A), amended: item 6 reads `1`; W37-11 carries the record and the reference limb |
+| DP-2 | What happens to the audit tree's `findings/README.md` (Task 3 names the path)? It is cited by `.claude/roles/auditor.md` (**W37-8's file**) and by 5 frozen `FD-` essays | **(A)** Fold its live content into `docs/findings/README.md`, delete it, add a `docs/REDIRECTS.csv` row. **(B)** Rewrite it in place, keeping the path. **(C)** Delete with no redirect | **(A).** (B) keeps a file under a directory RFC-937 §1.4 dissolves. (C) breaks the `FD-` citations, which is what `REDIRECTS.csv` exists to prevent — and `RL-1048` §1(d) established that a cited file is not retired, it is *placed*. The `.claude/roles/auditor.md` citation is **W37-8's to rewrite**: this slice must notify the lead, not edit a charter | scope | **yes** | **RL-1138** — (A), with four binding conditions |
+| DP-3 | R-1: do the checklists gain a register-currency line? | **(A)** Both checklists gain one, as a command. **(B)** `phase-close.md` only. **(C)** Decline | **(A)** — see R-1. **Default until resolved: (A) is applied**, since review 13 recommends it and it is additive | decision point | no | **RL-1138** — (A), amended: the argument is the `WK-` id or the phase id (Task 4 step 4). *Was: "Task 4 step 4; default applied"* |
+| DP-4 | This plan carries no `slice:` header field, and no `SL-` id for W37-10 exists | **(A)** Omit `slice:`, cite the slice in prose, and cut the `SL-` rows in this slice (Task 8b). **(B)** Mint an `SL-` id first and block on it | **(A).** Three facts measured at `d63f765`: `grep -c 'SL-[0-9]' docs/roadmap.md` = **0**; `grep -rn '^slice:' docs/plans/ \| wc -l` = **0**; and `scripts/doc-id.py:7373` guards with `if header.slice_ is not None:`, so omitting the field is clean while a `slice:` value with no matching row fails the resolves-to-row check at `:7376`. `document-ids.md:148` puts the `SL` row's creation on the planner "cut in the map plan" and its dispatch on the lead — the maintainer is not in that path, so this is not an escalation | fact | no | **RL-1138** — (A), citation corrected to `:7374`. *Was: "Task 8b; default applied (omit)"* |
+| DP-5 | Where do rituals (a) and (b) land in `delivery-process.md`? | **(A)** (a) → §13 (monitoring & comms loop); (b) → §10 (required artifacts) plus a sentence in §5 (per-layer flow). **(B)** A new §16 holding both | **(A).** §13 already carries the reporter's duties, so (a) lands beside the mechanism that performs it; §10 already lists the roadmap as a required artifact, which is where a declared gate belongs. (B) creates a rituals section that duplicates `document-ids.md` §1.10 — the second-copy failure mode RFC-756 exists to prevent. **Constraint on either option:** §§1-15 are numbered and cited by `delivery-process.core.json`; appending a section is safe, renumbering is not | design unknown | no | **RL-1138** — (A), with three binding constraints. *Was: "Task 6 step 1; default applied"* |
+| DP-6 | Do the ritual edits to `delivery-process.md` need a dated maintainer acceptance line? | **(A)** No — this implements RFC-937 §6, already accepted. **(B)** Yes, treat any process-spec edit as an amendment | **(A), with a stated limit.** RFC-937 arrived `accepted` and the maintainer ruled that status to be its acceptance line (`RL-940` §4, recorded on the WK-697 roadmap row). §6's rituals are therefore adopted, and writing them into the artifact that enforces them is implementation. **The limit:** if the executor finds it must write an obligation §6 and §1.10 do not state, that is an amendment and stops for the lead. `CLAUDE.md` §12's maintainer reservation is over **`CLAUDE.md`**, which this slice does not touch | decision point | no | **RL-1138** — (A), its limit binding. *Was: "Task 6 step 1; default applied, lead confirms at review"* |
+
+**Resolved 2026-09-26.** `RL-1138` rules DP-1 to DP-6. The lead adopted it unamended on
+2026-09-26 at 17:52 BST. This plan moves `draft → active` in the same commit that writes the
+six resolver cells above, as Acceptance Standard item 14 requires. The ruling's conditions and
+constraints bind the executor as written there. They are not restated here, so that one copy
+cannot go stale against the other.
+
+**Corrected 2026-09-26 (planner, on `RL-1138` §1).** Three figures in this plan did not
+reproduce. Each original is kept quoted, and the measured value is given beside it with its
+tree and predicate.
+
+1. **The `FD-` essays that cite the findings README** — DP-2's row above and Task 3 step 4
+   say *"5 frozen `FD-` essays"*. The count is **4**: `FD-934`, `FD-935`, `FD-936` and
+   `FD-954`. It is 4 at both `d63f765` and `4ed1f88`, by
+   `git grep -l 'audit/findings/README' <tree> -- 'docs/findings/FD-*' | wc -l`. The planner
+   re-ran this at `4ed1f88` and got 4. Nothing in DP-2 turns on the difference.
+2. **The `slice:` guard** — DP-4's row above and §10 say *"`scripts/doc-id.py:7373` guards
+   with `if header.slice_ is not None:`"*. The guard is at **`:7374`**. Line `:7373` is the
+   enclosing `for rel, header in emitted:`. The resolve check at `:7376` is correct. The
+   planner read this at `4ed1f88` with `git show <tree>:scripts/doc-id.py | sed -n '7373,7376p'`.
+   The substance holds.
+3. **"220 references remain, 74 files' worth"** — §7.1 note 2 and Task 9b step 1. **This
+   figure is not adopted**, per `RL-1138` DP-1 amendment 2. W37-11 re-measures it with a
+   stated predicate when it moves the record. For the record, and not as a figure this slice
+   relies on: §7.1 note 2 states no predicate at its own site. Task 9b step 1 does state one,
+   `python3 scripts/audit-docs.py 2>&1 | grep "legacy audit path" | grep -c "form survives"`.
+   The planner ran it at `4ed1f88` and got **220** hits in **73** distinct files (the file
+   count is the distinct path prefixes of those lines). `RL-1138` §1's 188 / 1065 used a
+   different predicate, a `git grep` over the whole tree, which fenced text also matches. The
+   two figures measure different things. Neither of them is a target for this slice.
 
 ## 5. Tasks
 
@@ -441,6 +582,13 @@ python3 scripts/audit-docs.py; echo EXIT=$?   # expect EXIT=0
       reconciled — a cell reading "fix before close" against landed evidence is a stale cell,
       not a finding.
 ```
+
+**Corrected 2026-09-26 (planner, on `RL-1138` DP-3's amendment).** The block above leaves
+`<id>` open. It is filled per checklist: **`work-item-close.md` passes the `WK-` id being
+closed, and `phase-close.md` passes the phase id.** `register-owed.py` takes one positional
+`target`, *"a work-item id, a phase id, or the literal 'review'"*, and nothing else. Each file's
+line therefore names its own placeholder, for example `python3 scripts/register-owed.py
+<WK-id>` in the first and `python3 scripts/register-owed.py <phase-id>` in the second.
 
 Rationale to carry in the commit body, not invented at review time: review 13 `CR-1064:390-394`
 — *"a register cell that no role's charter puts on a schedule goes stale by default"*, and it is
@@ -664,6 +812,194 @@ python3 scripts/doc-index.py --check; echo EXIT=$?   # expect EXIT=0
       W37-11's residual from step 1).
 - [ ] **Step 5: Commit.** `docs(ledgers): W37-10 slice ledger (W37-10)`
 
+### Tasks 10 to 13 — added 2026-09-26, each carried by a §1.4 row
+
+**Corrected 2026-09-26 (planner).** §5's opening sentence says *"Nine tasks."* Four tasks
+are added below, each with its scope row in §1.4. Tasks 10 to 13 are independent of each other
+and of Tasks 1 to 8. The ledger (Task 9b step 4) carries one row per task, matched to its §1.4
+row by the file and the subject named there. Each task keeps DP-2 condition 1's rule for its own
+file: **it adds no fatal legacy-form hit.** Describe a retired path; do not spell it. Write an id
+unpadded outside a link target (check 32). Run
+`python3 scripts/audit-docs.py 2>&1 | sed -n '/^FAILED/,$p'` after each task, and record in
+the ledger any change in check 36's `fatal` / `disclosed` counts, hit by hit.
+
+### Task 10: D4's two acceptance feet (§1.4 row S-1)
+
+**Files:** Modify the two `CR-` files named in S-1, the foot line only.
+
+**Who writes it.** The deputy's delegation record of 2026-09-26 17:02:52 BST says the lead
+copies each delegated line into the artifact that needs it, with the attribution, and never as
+the maintainer's own words. The lead does this on this branch, or tells the executor to do it
+and gives the deputy's text. Either way the words come from the deputy's D4 line (stamp
+2026-09-26 17:06:12 BST), not from this plan. The lines below give the form, not the wording.
+
+- [ ] **Step 1: Confirm both feet are still open.**
+
+```bash
+grep -n '^\*\*Maintainer acceptance:\*\* _pending_' docs/closures/CR-01050-*.md docs/closures/CR-01064-*.md
+```
+
+At `4ed1f88` this prints `CR-1050:284` and `CR-1064:632`. If either foot has changed, stop and
+tell the lead.
+- [ ] **Step 2: Fill review 12's foot** (CR-1050) as **dated superseded by CR-1064**, with the
+      D4 grounds in one clause: review 12's recommendations were about the W37-6 run, which
+      closed on 17 Sep, and review 13 re-derives what survives.
+- [ ] **Step 3: Fill review 13's foot** (CR-1064) as **accepted as filed**, 2026-09-26. The
+      acceptance includes its two scope recommendations: §2c's W37-7 addition and §5 row 3's
+      W37-11 requirement.
+- [ ] **Step 4: Attribute both lines** with the heading D4 requires, verbatim: *"Maintainer
+      decision by delegation (deputy, on the maintainer's instruction of 2026-09-26 17:02:52
+      BST)"*. Cite the decision by the stamp 17:06:12 BST. Do not cite it by a path: the
+      channel file is local and is not in the repository.
+- [ ] **Step 5: Leave the rest of both records alone.** CR-1064's own table rows at
+      `:501-502` also show `_pending_`. They record the state when the review was filed, so
+      they are not feet. The records' header fields (`status:`, `superseded_by:`) are also
+      unchanged. D4 rules the foot, and nothing in it rules the header. If the lead wants the
+      header to follow, the lead rules it separately.
+- [ ] **Step 6: Verify.**
+
+```bash
+grep -c '_pending_' docs/closures/CR-01050-*.md                       # expect 0
+tail -n 3 docs/closures/CR-01064-*.md | grep -c '_pending_'           # expect 0
+grep -c '17:02:52' docs/closures/CR-01050-*.md docs/closures/CR-01064-*.md   # expect >= 1 each
+python3 scripts/audit-docs.py; echo EXIT=$?                           # expect EXIT=0
+```
+
+- [ ] **Step 7: Commit.** `docs(closures): reviews 12 and 13 — D4's delegated acceptance lines (W37-10)`
+
+### Task 11: PL-1070's scope-table amendment (§1.4 row S-2)
+
+**Files:** Modify the PL-1070 file named in S-2, by a dated correction only.
+
+**Who writes it.** PL-1070 is a plan, and a plan is the planner's (`.claude/roles/planner.md`).
+The lead dispatches the planner to write this task. The executor does not edit it.
+
+- [ ] **Step 1: Read the ruling and the table.** The deputy's 17:18:47 BST ruling, condition 2,
+      and its 17:33:56 BST rider. Then PL-1070's section "Scope — the rows this slice owns",
+      to its last row, to get the column order. Do not assume the column order.
+- [ ] **Step 2: Append a dated correction block** below that table, headed *"Corrected
+      2026-09-26 (planner, on the deputy's ruling of 2026-09-26 17:18:47 BST, condition 2)"*. It
+      adds four rows, each **by subject and by file**. The planner checked these at
+      `16e816283b119ad2a7ad3a3251055ca9223d816d` with `git show --name-only --format='%h %s'`:
+
+| Row | Commit(s) | Subject | Files |
+|---|---|---|---|
+| Task 15 | `3d4dd7ae` | `docs(scripts): Task 15 — salvaged audit-docs check work reconciled; all three hunks superseded` | **none** — the commit is empty by design, and its body says so. The row is matched by subject only |
+| Task 16 | `3344de9c` | `fix(ids): emit reserved allocations into docs/INDEX.md (RL-1078)` | `docs/INDEX.md`, RFC-937, `scripts/doc-index.py`, `tests/test_doc_index.py` |
+| The plan-text landings | `5696c7b2`, `a7d7f99f`, `9e27d63e` | `docs(plans): PL-1070 — land the planner's five 2026-09-19 texts verbatim`; `… round-2 texts; [id] gains its third instance`; `… round-3 planner texts; DP-7-6 resolved by RL-1078; [id] renumbered`, where `[id]` elides a finding id that was later renumbered and no longer resolves | PL-1070; the freeze-clause `FD-` essay; `docs/findings/register.md`, `docs/INDEX.md` (`9e27d63e`) |
+| The freeze-clause commit | `9cffab69` | `docs(plans): PL-1070 — DP-7-1 resolved by RL-1075, plan dated active; lead's freeze-clause breach finding` | PL-1070; the freeze-clause `FD-` essay; `docs/findings/register.md`; `docs/INDEX.md` |
+
+- [ ] **Step 3: State the three facts the ruling requires.** The block names #795's merge commit
+      `4ed1f88ee89deeddca04565cc1f07cdbaf02dba4`. It says that the slice merged with the scope
+      table **four rows short**. And it says that item 1 was carried as "deferred with owner"
+      under the 17:18:47 ruling, condition 1.
+- [ ] **Step 4: State where the six SHAs resolve.** #795 was squash-merged, so **none of the
+      six commits is an ancestor of `origin/main`**. The planner checked this at `4ed1f88` with
+      `git merge-base --is-ancestor <sha> 4ed1f88; echo $?`, and each returned 1. Each one is
+      reachable from `refs/pull/795/head` = `16e816283b119ad2a7ad3a3251055ca9223d816d`, and its
+      content is inside the squash commit `4ed1f88`. Put this sentence in the correction so that
+      a reader can resolve the SHAs after the branch is deleted (`CLAUDE.md` §13's reference
+      test).
+- [ ] **Step 5: Verify.** For each SHA,
+      `git merge-base --is-ancestor <sha> 16e816283b119ad2a7ad3a3251055ca9223d816d; echo $?`
+      prints 0. `python3 scripts/audit-docs.py; echo EXIT=$?` prints `EXIT=0`.
+- [ ] **Step 6: Commit.** `docs(plans): PL-1070 — the four scope rows #795 merged without (W37-10)`
+
+### Task 12: the correction at `LG-1137:20` (§1.4 row S-3)
+
+**Files:** Modify the LG-1137 file named in S-3, by a dated correction only.
+
+**Who writes it.** A ledger is its slice's executor's record. W37-7's executor is not active,
+so the lead routes this task. The words are a correction, kept apart from the original line,
+which stays as written.
+
+- [ ] **Step 1: Read the line.** At `4ed1f88`, `LG-1137:20` reads *"fifteen consecutively at
+      `3803331`, sixteen by `a800c57`, seventeen by `a1241a8`."*
+- [ ] **Step 2: Append a dated correction** after that paragraph, headed *"Corrected
+      2026-09-26 (on the deputy's ruling of 2026-09-26 17:36:07 BST)"*. It states, per tree:
+
+| Tree cited at `:20` | Ancestor of `main`? | Origin ref that keeps it | Patch-identical successor in #795's range |
+|---|---|---|---|
+| `3803331` | **yes** | — (on `main`) | — |
+| `a800c57` | no | `refs/salvage/2026-09-26/lg-1137-measurement-trees/a800c57` | `36b339f4`, subject `fix(scripts): check 35 — …'s owner of record in the deferred-count note (RL-1075)` (a finding id elided) |
+| `a1241a8` | no | `refs/salvage/2026-09-26/lg-1137-measurement-trees/a1241a8` | `60698b0d`, `fix(skills): repo-architecture — stop spelling a retired path the pooled ceiling absorbed` |
+
+   The planner verified this table at 2026-09-26 on these commands and trees. Re-run them;
+   do not copy the table:
+
+```bash
+git merge-base --is-ancestor 3803331 4ed1f88ee89deeddca04565cc1f07cdbaf02dba4; echo $?   # 0
+git merge-base --is-ancestor a800c57 4ed1f88ee89deeddca04565cc1f07cdbaf02dba4; echo $?   # 1
+git merge-base --is-ancestor a1241a8 4ed1f88ee89deeddca04565cc1f07cdbaf02dba4; echo $?   # 1
+git ls-remote origin 'refs/salvage/2026-09-26/*'                                        # both refs
+git range-diff 3803331..a800c57 9f887b6..16e8162 | grep a800c57   # "8:  a800c57a =  8:  36b339f4"
+git range-diff 3803331..a1241a8 9f887b6..16e8162 | grep a1241a8   # "21:  a1241a8a = 19:  60698b0d"
+```
+
+   `a800c57` is not an ancestor of `a1241a8`. That is why each tree has its own range-diff. The
+   `=` in each line is the patch-identity claim. A matching subject is not enough.
+- [ ] **Step 3: Say where the successors resolve.** `36b339f4` and `60698b0d` are not ancestors
+      of `main` either, because #795 was squash-merged. They are reachable from
+      `refs/pull/795/head` (`16e8162`), and their content is inside `4ed1f88`. The correction
+      says so, for the reason Task 11 step 4 gives.
+- [ ] **Step 4: Verify.** `sed -n '18,22p'` on the file still shows the original `:20` line
+      unchanged. `python3 scripts/audit-docs.py; echo EXIT=$?` prints `EXIT=0`.
+- [ ] **Step 5: Commit.** `docs(ledgers): LG-1137 — the two measurement trees, by salvage ref and successor (W37-10)`
+
+### Task 13: the phase-1b register rows meet the grammar (§1.4 row S-4)
+
+**Files:** Modify `docs/findings/register.md`, the Decision cell of each defective phase-1b row
+only.
+
+**Who writes it.** `docs/findings/register.md` is the auditor's file, not the planner's
+(`.claude/roles/planner.md`, "Tools"). The lead decides whether the auditor makes this edit,
+or the executor makes it and the auditor reviews it. The rule is the same either way: **the
+disposition a cell records does not change. Only its form changes.**
+
+- [ ] **Step 1: List the rows from the instrument.** Do not list them from this plan. The
+      predicate is the Phase cell, so the list is recomputed from the file:
+
+```bash
+python3 - <<'PY'
+import importlib.util, pathlib
+s = importlib.util.spec_from_file_location("rl", "scripts/register-lint.py")
+m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+rows, _problems = m.parse_register(pathlib.Path("docs/findings/register.md"))
+for r in rows:
+    if m._is_phase1b_merge_row(r):
+        bad = [c.__name__ for c in (m.check_decision_grammar, m.check_resolution_annotation,
+                                    m.check_unowned_decay) if c(r) is not None]
+        if bad: print(r.fields[0].strip()[:60], bad)
+PY
+```
+
+   At `4ed1f88` it prints 11 rows: 4 fail `check_decision_grammar` and 7 fail
+   `check_resolution_annotation`.
+- [ ] **Step 2: Fix each rule-2 row** by adding what the rule reads. A missing date is the date
+      of the discharging commit, from `git log --format='%h %aI %s'`. A missing reference is
+      written as `PR #n` or a backtick-quoted SHA. A bare `(#n)` is not read as one. **Take each
+      date and reference from `git log`, not from the cell's prose.**
+- [ ] **Step 3: Fix each rule-1 row.** The cell opens with a word outside the vocabulary
+      (`discharged —`, `re-seeded —`). Open it with a resolution marker that has a date and a
+      reference, as in step 2. Keep the original words after it, quoted, so the record of what
+      was written survives. If the evidence does not show the row as resolved, stop and tell
+      the lead. That row then needs a disposition, which is not a form fix, and this task does
+      not decide it.
+- [ ] **Step 4: Add no legacy-form hit.** The register has W37-11 ceilings at `4ed1f88`
+      (`h1-check32` 4, `h1-check36` 12). A new backtick path under the retired audit tree, or a
+      padded id, can push one of them over. Write a SHA or `PR #n` as the reference, not a
+      retired path.
+- [ ] **Step 5: Verify.**
+
+```bash
+python3 scripts/register-lint.py; echo EXIT=$?   # expect EXIT=0 and "residue class 2 — 0 of 20"
+python3 scripts/audit-docs.py; echo EXIT=$?      # expect EXIT=0, check 36 fatal count unchanged
+```
+
+   `0 of 20` assumes that the denominator has not moved since `4ed1f88`. If it has moved, the
+   test is `0 of <denominator>`, and the ledger records both figures.
+- [ ] **Step 6: Commit.** `docs(findings): the phase-1b register rows meet the grammar (W37-10, RL-1046 check 29)`
+
 ## 6. Gates
 
 Every one of these must pass at the head SHA before the merge is asked for.
@@ -799,6 +1135,11 @@ Tasks 1, 2, 4, 5, 6 and 7 are independent of each other and of the blocked Task 
 worked in any order. Task 9 is last by construction. **Task 3 cannot start until DP-2 has a
 resolver id, and the slice cannot start at all until DP-1 does** — DP-1 decides whether the
 slice contains a code edit, which changes its executor skill.
+
+**Corrected 2026-09-26 (planner).** The table above totals *"**12.0**"* hours for Tasks 1 to 9.
+The tasks added in §5 bring the figure to **15.75**: Task 10 0.5, Task 11 1.0, Task 12 0.75
+and Task 13 1.5 (§1.4 gives the size of each row). DP-1 and DP-2 now have their resolver, so
+the waits the table excluded are over. Tasks 10 to 13 may run in any order, before Task 9.
 
 ## 10. Self-review
 
