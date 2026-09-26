@@ -219,13 +219,13 @@ adds only `RL-1140` and its `docs/INDEX.md` row), with its command beside it.
 |---|---|---|---|---|
 | **S-1** — check 30 tests an extra against the family's policy | `RL-1140` DP-8.1, amendment 2 (§2: *"the code is wrong"*) | `scripts/audit-docs.py` | T2's commit (below) | **T2**, folded in |
 | **S-2** — the three-case check-30 test | `RL-1140` DP-8.1, amendment 3 | `tests/test_audit_docs_ids.py` (its check-30 module) | T2's commit | **T2**, folded in |
-| **S-3** — rider (a): `auditor.md:35` names a retired file | `RL-1138` DP-2 condition 3; the deputy's rider list, 2026-09-26 23:54:10 BST | `.claude/roles/auditor.md` | T7's commit | **T7**, folded in (step 2a) |
+| **S-3** — rider (a): `auditor.md:35` names a retired file | `RL-1138` DP-2 condition 3; the deputy's rider list, 2026-09-26 23:54:10 BST | `.claude/roles/auditor.md` | T7's commit | **T7**, folded in (step 2a). Rewriting `:35` also discharges `RL-1138` DP-2 condition 3's notice; `:35` is one of S-7's five hits, so one edit closes both rows (the deputy, 2026-09-27 00:05:28 BST) |
 | **S-4** — rider (b): the slice audit names commit reachability | the deputy's 2026-09-26 23:06:30 BST finding (the W37-10 audit, where two ledger entries checked pairing only); rider list 23:54:10 BST | `.claude/roles/auditor.md` | T7's commit | **T7**, folded in (step 2b). A new charter obligation: `RL-1140` DP-8.3 limit 1 |
 | **S-5** — rider (c): `lead.md`'s copy-then-write rule for governed status files | the deputy's rulings of 2026-09-19 15:31:23 and 15:33:03 BST; rider list 23:54:10 BST | `.claude/roles/lead.md` | T10's commit | **T10**, folded in (step 3a). A new charter obligation: `RL-1140` DP-8.3 limit 1 |
 | **S-6** — rider (d): F97's behavioural clause in `lead.md` | `RL-1140` DP-8.3 (a); rider list 23:54:10 BST | `.claude/roles/lead.md` | T10's commit | **T10**, step 4 as corrected. A new charter obligation: `RL-1140` DP-8.3 limit 1 |
-| **S-7** — rider (e): the charter-path residue | `CR-1065` §8, the row labelled `` `:620` `` (`CR-1065:562`) and its section (`:591-611`): *"deferred with owner W37-8"*; rider list 23:54:10 BST | `.claude/roles/auditor.md` (`:26`, `:33`, `:35`), `.claude/roles/planner.md` (`:50`, `:53`) | T7's and T11's commits | **T7** and **T11**, folded in |
+| **S-7** — rider (e): the charter-path residue | the predicate `python3 scripts/audit-docs.py \| grep 'check 36: .claude/roles/'`, which prints exactly these five hits at `536d3cc3`, each "legacy audit path" (the deputy, 2026-09-27 00:05:28 BST); rider list 23:54:10 BST. `CR-1065` §8 records the residue as *"deferred with owner W37-8"* (`CR-1065:606-611`) | `.claude/roles/auditor.md` (`:26`, `:33`, `:35`), `.claude/roles/planner.md` (`:50`, `:53`) | T7's and T11's commits | **T7** and **T11**, folded in |
 
-**S-7, measured, and what `:620` is.** The population is the check-36 output, not a citation:
+**S-7, measured.** The population is the check-36 output, not a line citation:
 
 ```text
 $ python3 scripts/audit-docs.py 2>&1 | grep 'check 36: \.claude/roles'
@@ -237,15 +237,13 @@ $ python3 scripts/audit-docs.py 2>&1 | grep 'check 36: \.claude/roles'
 ```
 
 The quoted path is replaced here by a description, because this plan is subject to the check it
-quotes; the tool prints the literal. **`:620` is a line of `PL-960`** (the W37-6 migration-run
-plan): `CR-1065` §8 labels each of its six rows by the `PL-960` line that carries the claim, and
-`PL-960:620` at `536d3cc3` reads *"citation rewrite — lands in this commit regardless"*. It is
-not a line of `PL-1071`, `w37-11-record.md`, `CR-1064` or `CR-1065`, which is why `RL-1140` §1
-could not resolve it. The five hits match `w37-11-record.md:469` (auditor, ceiling 3) and `:470`
+quotes; the tool prints the literal. **Corrected 2026-09-27 (planner, on the deputy's answer of
+00:05:28 BST).** The rider list's `:620` locator is **withdrawn as a citation**: it was a row
+number at a tree that has since moved. The predicate is the citation; no line number is. The five hits match `w37-11-record.md:469` (auditor, ceiling 3) and `:470`
 (planner, ceiling 2). Rewriting them lowers those counts, which is the non-fatal
 `RESIDUE_PROGRESSED` outcome; **this slice does not edit `w37-11-record.md`** (`RL-1140`,
-"Interaction with the riders"). Rider (a)'s `:35` is one of the five: it names the retired
-findings README, whose destination is `docs/findings/README.md` (`docs/REDIRECTS.csv:4`,
+"Interaction with the riders"). Rider (a)'s `:35` is one of the five, so its rewrite also
+discharges `RL-1138` DP-2 condition 3's notice (row S-3): it names the retired findings README, whose destination is `docs/findings/README.md` (`docs/REDIRECTS.csv:4`,
 the row W37-10 added under `RL-1138` DP-2, in #804).
 
 **Standing constraints on the executor, verbatim.** Each binds every task of this slice:
