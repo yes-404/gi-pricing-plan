@@ -203,6 +203,49 @@ def test_check_30_positive_control_a_clean_finding_essay_passes(
     assert failures == [], failures
 
 
+def test_check_30_licenses_the_harness_keys_for_reference_only(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """`RL-1140` DP-8.1, case 1: a Reference file whose header carries the four Claude
+    Code harness keys (`name:`, `description:`, `tools:`, `model:`), declared in
+    `docs/_templates/REFERENCE.md`'s top-level block, must pass check 30 cleanly."""
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check30-reference-harness-keys-pass.md",),
+        monkeypatch, tmp_path,
+    )
+    assert failures == [], failures
+
+
+def test_check_30_still_reds_an_undeclared_key_on_a_reference_file(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """`RL-1140` DP-8.1, case 2: the harness-key licence is narrow — an undeclared key
+    (`colour: red`) on the same Reference file must still fail check 30, even though the
+    four harness keys are declared and pass (`CLAUDE.md` §13: a check that has never
+    printed a failure has not been tested)."""
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check30-reference-undeclared-key.md",),
+        monkeypatch, tmp_path,
+    )
+    assert _only_check(failures, 30), failures
+    assert any("colour" in f for f in failures), failures
+
+
+def test_check_30_reds_a_harness_key_on_a_non_reference_family(
+    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """`RL-1140` DP-8.1, case 3: the licence is per family, not global — a non-Reference
+    file (a fixture `RL-`) carrying `tools:` must still fail check 30, proving the four
+    harness-key names were not added to `scripts/_docid.py`'s `_KNOWN_KEYS` (which would
+    license them for every family through a hand-written constant)."""
+    failures = _run_all_ten(
+        audit, (CHECKS_FIXTURES / "check30-non-reference-harness-key.md",),
+        monkeypatch, tmp_path,
+    )
+    assert _only_check(failures, 30), failures
+    assert any("tools" in f for f in failures), failures
+
+
 def test_check_30_field_policy_changes_with_the_template(
     audit: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
