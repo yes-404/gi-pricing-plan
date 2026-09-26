@@ -614,6 +614,108 @@ this before writing it here).
 None of these are bugs — the script counts exactly what it says it counts. Read `N%
 claimed` as a floor on attention, not a measure of test quality.
 
+## The RFC-937 id instruments — `doc-id.py` and `doc-index.py`
+
+Five commands govern document ids and the generated index. `migrate` is the sixth and is
+**not** here: it is a one-way instrument, its run is done, and re-running it re-migrates
+already-migrated text — see *Migration run* below for the only form still permitted.
+
+```bash
+python3 scripts/doc-id.py next                    # the next free id integer
+python3 scripts/doc-id.py check                   # duplicates, agreement, contiguity
+python3 scripts/doc-id.py check --classify        # per-family file counts instead
+python3 scripts/doc-id.py widen --to <WIDTH>      # re-pad every id filename
+python3 scripts/doc-index.py                      # (re)generate docs/INDEX.md
+python3 scripts/doc-index.py --check              # exit 1 if regeneration would change it
+python3 scripts/doc-index.py --phase P<n>         # the RFC-937 §1.10 (c) phase report
+python3 scripts/doc-index.py --show <ID>          # one record's fields, incl. `execution`
+```
+
+### `doc-id.py next` — the trap is the *ref*, not the output stream
+
+**It allocates against `origin/main`, not against your branch.** `--ref` defaults to
+`origin/main` (`python3 scripts/doc-id.py next --help`), so **every id sitting on an
+unmerged branch is invisible to it**. Two planners drafting the same night are both told
+the same integer and **neither is wrong** — the reconciliation is the lead's, before push.
+This has already bitten by **five at once**, not by one: a close record plus the four `FD-`
+findings its `relates:` named were all on one unmerged branch, so `next` under-allocated
+across a contiguous block, and "the close record took N, so N+1 is mine" collided too.
+Before taking `next`'s answer, check the branches in flight; `--ref` lets you ask a
+different one.
+
+**Run it at the head you branch from, then reconcile with the lead before push — and never
+paste the integer anywhere.** An allocation number is a property of the tree it was run at,
+not a fact about the command; written into a skill, a plan or a PR body it goes stale by
+exactly the duplicated-constant mechanism of `RFC-756`. Record the command and the rule,
+never a value.
+
+**That allocation trap is the only trap `next` has.** In particular there is no
+stream-capture trap to work around: the `doc-id.py next: N file(s) skipped …` line and the
+integer go to different streams, so ordinary command substitution already captures the
+integer alone and needs no "take the last line" treatment.
+
+The skipped-count line prints **unconditionally, including zero** — by design, so "nothing
+was skipped" is a printed, falsifiable claim rather than the absence of a line. A zero
+there is the check reporting what it covered, not noise to suppress.
+
+### `doc-id.py check` — and why `--classify` is not a quieter `check`
+
+`check` verifies duplicate numbers, header-versus-filename agreement, and contiguity, and
+exits non-zero on a violation. `--classify` **does not check anything**: its own help says
+it prints a per-family file count *instead of* checking. A gate step that reaches for
+`--classify` because the output is tidier has stopped gating.
+
+Contiguity is the clause that surprises people: a gap in the allocation is a failure, so a
+branch holding ids N…N+k makes `check` red on `main` until it merges — the same
+unmerged-branch fact that makes `next` under-allocate, arriving through the other command.
+
+### `doc-id.py widen --to <WIDTH>` — `--to` is required and it is a rewrite
+
+`--to` has no default; `widen` without it exits on the argument parse. It re-pads every id
+filename and every reference to it, so it is a corpus-wide rewrite, not a formatting pass:
+run it on a clean tree, in its own commit, and regenerate `docs/INDEX.md` afterwards.
+
+### `doc-index.py` — the generated file, and the only legitimate conflict resolution
+
+`docs/INDEX.md` is **generated and never hand-edited**, the same rule `CLAUDE.md` §2 states
+for `docs/contracts/`. `--check` exits 1 when regeneration would change the file on disk;
+check 39 pins the same invariant inside `audit-docs.py`, and a CI step runs it too.
+
+**When two branches both regenerate it, resolve by regenerating — never by hand-merging.**
+A hand-merged generated file can satisfy a reviewer's eye and still differ from what its
+source produces, which is precisely the state `--check` exists to make impossible.
+
+`--root` defaults to `docs` and exists so the test suite can point the generator at
+`tests/fixtures/docs-ids/…` instead of the live corpus.
+
+### Migration run — `migrate --verify` only, and the sweep's exclusion is by construction
+
+`migrate` itself is not re-run. `migrate --verify` is the surviving form, it spawns its own
+disposable snapshot (never a real checkout), and its slot wrapper is the two-slot block
+above.
+
+**The venv is out of the sweep by construction, and no literal refusal guard exists — do
+not add one.** `_enumerate_tree` (`scripts/doc-id.py:3854`) enumerates through
+`git -C <root> ls-files -z --cached --others --exclude-standard`
+(`_LS_FILES_ARGS`, `scripts/doc-id.py:3851`), so `--exclude-standard` applies the
+checkout's own `.gitignore` and a gitignored path is never a candidate in the first place.
+There is no `if ".venv" in path` anywhere in `scripts/doc-id.py` or
+`scripts/_docverify.py`; a reader who goes looking for the guard should stop looking rather
+than write one, because a second, name-based exclusion would drift from `.gitignore` and
+then disagree with it.
+
+This replaced a working-tree walk, and the replacement was not theoretical: on 2026-09-17 a
+`migrate --repo-root <checkout>` over a checkout carrying a synced `.venv/` rewrote
+`certifi/cacert.pem`'s Buypass Class 2 Root CA base64 and two `hypothesis` URLs — and
+because uv hardlinks site-packages from its cache, that one in-place write corrupted the CA
+bundle of **40 venvs** on the box (inode 410131), surfacing hours later as
+`ssl.SSLError: [X509] PEM lib` in an unrelated gate. `sweep_exclusion_reason` names paths
+the *repository* excludes and cannot know what a given checkout's `.gitignore` excludes;
+`git ls-files` can, which is the whole reason the enumeration is git's. Untracked files are
+kept deliberately — `migrate`'s own new files (`docs/INDEX.md`, the split indexes,
+`REDIRECTS.csv`) are untracked until committed. The walk survives only for a `root` that is
+not inside a work tree at all.
+
 ## Closure audit — expected scope first, then evidence
 
 ```bash
@@ -784,6 +886,31 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-09-19 — **the RFC-937 id instruments section added**: `doc-id.py next/check/widen` and
+`doc-index.py`/`--check`/`--phase`/`--show`, each with its trap, plus the
+exclusion-by-construction paragraph at the `migrate --verify` entry. W37-7 Task 2,
+`PL-1070`; the R13-3 half is `CR-1064:541`.
+
+Behaviour was read from each command's own `--help` and from the source at `7d5d6e0`, not
+recalled. Two things measured rather than assumed, both of which changed what was written:
+
+- **`next`'s trap is the ref, not the output stream.** `--ref` defaults to `origin/main`
+  (`python3 scripts/doc-id.py next --help`), so ids on unmerged branches are invisible to
+  it. The plan directed a *stream-capture* trap be written instead — that `ID=$(python3
+  scripts/doc-id.py next)` "captures both lines, not the number", remedied by "take the
+  last line". That is false: `_report_skipped()` writes the diagnostic with
+  `file=sys.stderr` (`scripts/doc-id.py:10253-10268`) and `_cmd_next()` writes the integer
+  with a bare `print(result.number)` (`:10278`), so command substitution already captures
+  the integer alone. The plan carries the planner's dated correction; this skill teaches
+  the one real trap and **no allocation integer**, a pasted value being `RFC-756` by
+  construction.
+- **The venv exclusion is by construction and has no refusal guard.** `_enumerate_tree`
+  (`:3854`) enumerates through `git ls-files -z --cached --others --exclude-standard`
+  (`_LS_FILES_ARGS`, `:3851`), so `.gitignore` applies before anything is a candidate.
+  Predicate `grep -n '\.venv' scripts/doc-id.py scripts/_docverify.py` at `7d5d6e0` → **4
+  lines, all prose in a comment or docstring** (`scripts/doc-id.py:544`, `:3826`, `:5011`,
+  `:5028`), no conditional anywhere.
 
 2026-09-17 (three traps, expensive-run section) — W37-6, executor-h's gate runs at 
 10:55 BST (full suite timeout), 11:02:41 BST (frontend cwd wrong), 11:48 BST (mktemp 

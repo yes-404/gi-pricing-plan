@@ -230,11 +230,27 @@ in the script** — durable and reproducible in any clone at any revision.
   rule applies to what a gate demands of it too. Legacy plans get **one aggregate note
   line** (count + cutoff date), not one warning per file — a hundred repeated warnings train
   every reader to skim past the check's output.
-- **Scope is the plan *kind* only** — the suffix-less file `writing-plans` produces,
-  discriminated by `docs/plans/README.md`'s four documented suffixes
-  (`-ledger`/`-final-review`/`-verified`/`-handover`), never by guessing at a file's
-  content. A filename with none of those suffixes and no `YYYY-MM-DD-` date prefix either
-  is refused outright rather than silently classified.
+- **Scope is the plan *kind* only**, and after the RFC-937 migration the kind and the
+  filing date are read from the **front matter**, never from the filename. A filed plan is
+  `docs/plans/PL-<nnnnn>-<slug>.md` (RFC-937 §1.3); `kind:` says what it is and `created:`
+  says when it was filed, and both are parsed fields rather than substrings of a name.
+  `_PLAN_TERMINAL_KINDS` — `review` and `handover` — are the kinds that declare no
+  acceptance standard of their own and are skipped; a plan with no header, or no
+  `created:`, is refused outright rather than silently classified. **A ledger is not a
+  plan at all**: it became its own `LG-` family under `docs/ledgers/`, so it is out of
+  check 28's population by directory, not by suffix.
+- **The `YYYY-MM-DD-` prefix and the four `-ledger`/`-final-review`/`-verified`/`-handover`
+  suffixes are the *retired* pre-migration grammar.** `check_plan_acceptance_standard`
+  still carries that branch, selected by `migrated_tree()` — `docs/INDEX.md` **and**
+  `docs/REDIRECTS.csv` both present — so the same script reads a tree on either side of the
+  one-way migration commit. Do not teach the retired form as a live filing rule, and do not
+  delete the branch either: a parser hard-coded to the post-migration shape reds `main` on
+  the day it merges, and one hard-coded to the pre-migration shape reports a **vacuous
+  pass**, every count zero and exit 0, the moment the migration lands. Reading the filename
+  regardless is not graceful degradation — on the migrated tree the un-fixed check emitted
+  110 failures **and** reported "0 plan(s) checked", both halves wrong at once, in opposite
+  directions. A reader holding an old dated path resolves it through `docs/REDIRECTS.csv`,
+  which check 36 keeps honest.
 - **"Defined" requires content**, not just the heading. A heading with nothing under it
   before the next heading is "implied," which §5 step 4 explicitly distinguishes from
   "defined" — that half is checked too, and reds.
@@ -351,9 +367,43 @@ that docstring:
   literal paths rather than matched by a directory-and-extension rule precisely so the
   population cannot grow without someone deciding that it should.
 
+**The two the bullets above never name, so that all ten carry a describing clause here:**
+
+- **Check 31 — id, filename and directory in agreement.** The header's `id` prefix and
+  integer must equal the filename's; the directory must equal the family; numbers must be
+  unique and contiguous in scope; and `created` must not decrease as the number rises.
+  `docs/_templates/` is exempt by path. **Contiguity is the clause that surprises people**:
+  a gap is a failure, so ids held on an unmerged branch red this check on `main` until they
+  land — the same unmerged-branch fact that makes `doc-id.py next` under-allocate, arriving
+  through the other instrument.
+- **Check 38 — the loop signal, and it is warn-only: it never fails the gate.** Its four
+  sub-clauses watch for a record nothing cites outside `INDEX.md`, a plan still `draft` past
+  its phase's freeze gate, an active plan or slice citing a superseded requirement, and a
+  passed gate date with work still behind it. It reports and does not red, by design, so
+  **its proof is the opposite shape from the other nine**: there is no broken input that
+  makes it fail, and what is pinned instead is that it never calls `fail()`.
+
+**And the rule that keeps this section from growing back into a duplicate.** The ten-item
+enumeration lives in `scripts/audit-docs.py`'s module docstring and **is not copied here** —
+the clauses above describe what two checks catch, they do not restate the list. Two copies
+of a numbered list is how one goes stale
+([`RFC-756`](../../../docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)),
+and `.claude/skills/README.md`'s own row for this skill records that happening once already:
+the count there said 23 while the code had 24.
+
 Ten broken-input proofs (one per check) and every ruling-specific mechanism proof live
 in `tests/test_audit_docs_ids.py`, alongside the fixtures under
 `tests/fixtures/docs-ids/w37-4-checks/` and `tests/fixtures/docs-ids/w37-4-rollup-raise/`.
+
+### A bespoke audit is a research record, not a closure
+
+**A bespoke audit is a slice whose record is a research document of kind `audit`, owner the
+auditor, every finding its own finding record; never a plan, never a closure.** The rule is
+stated in full — with the id forms, why a `CR-` is the wrong shape, and why findings need
+their own records — in
+[`close-workstream`](../close-workstream/SKILL.md)'s *"A bespoke audit is not a closure"*
+section, which is the skill that files closures and therefore the one that gets this wrong.
+It is **not restated here**, for the reason the paragraph above gives.
 
 ### Validating a set of counts — a total validates the total, and nothing else
 
@@ -496,6 +546,50 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-19 (second entry, same day) — **checks 31 and 38 gained a describing clause, and
+the bespoke-audit rule gained a pointer.** W37-7 Tasks 1 (Step 3) and 9, `PL-1070`.
+
+Step 3 as written directed a paragraph per check for all ten. **Refused and replaced by
+`RL-1077`**, on the executor's escalation: three records forbid a second numbered list —
+this file's own `description:`, `.claude/skills/README.md`'s row for this skill (*"the
+numbered list lives in the script's own module docstring and nowhere else"*, which records
+the count there saying 23 while the code had 24), and `CLAUDE.md`'s index entry. `RFC-937`
+§5.4 asks only for *"checks 30–39 described"*; **"one paragraph each in the skill" was the
+plan's gloss, not the requirement's words** — the spec was right and the plan was wrong,
+which is the direction `CLAUDE.md` §0 says to check rather than assume.
+
+What was actually missing was measured, not assumed. Predicate, newline-tolerant because a
+line-scoped grep misses the wrapped mentions and under-reports by two:
+`tr '\n' ' ' < SKILL.md | tr -s ' ' | grep -oi "check <n>" | wc -l`. At `7d5d6e0`: eight of
+the ten carried a clause, **31 and 38 carried none** except inside a plural list that names
+them without saying what they do. Both now have one, and check 38's says it is **warn-only
+and never fails the gate** — so its proof is the opposite shape from the other nine.
+
+The pointer rule is restated where the new clauses land, which is what stops two clauses
+growing back into a tenth-item list at the next edit.
+
+The **bespoke-audit rule** (Task 9) is stated in full in `close-workstream` and pointed at
+from here. §5.4 asks for the rule to *belong in both*, which a pointer satisfies and a
+duplicate does not. **`PL-960:648` claimed the `close-workstream` half was already
+authored — it was not**: `grep -rn 'bespoke'` over both files returned nothing at
+`7d5d6e0`. Raised to the lead as a plan-versus-tree disagreement before writing, per Task 9
+Step 0, rather than quietly made true.
+
+2026-09-19 — **check 28's scope bullet corrected: it taught the retired pre-migration
+filing grammar as the live rule.** `RFC-937` §5.4's `docs-audit` row (`:368`) requires the
+`YYYY-MM-DD-` grammar and the four-kinds paragraph removed; at `7d5d6e0` the bullet
+described only `_PLAN_KIND_EXCLUDED_SUFFIXES` and `_PLAN_FILENAME_DATE`, which
+`check_plan_acceptance_standard` reaches **only** on an unmigrated tree — the branch is
+selected by `migrated_tree()` (`scripts/audit-docs.py:134-150`), true when `docs/INDEX.md`
+and `docs/REDIRECTS.csv` both exist. The post-migration branch, which is the one this
+repository takes, reads `kind:` and `created:` from the front matter and skips
+`_PLAN_TERMINAL_KINDS` (`review`, `handover`); a ledger is no longer a plan kind at all but
+its own `LG-` family under `docs/ledgers/`. Both branches are now described, the retired
+one named as retired rather than deleted — deleting it reds `main` on the migration's own
+merge day, and hard-coding the post-migration shape alone reports a vacuous pass. Measured
+at `7d5d6e0`, predicate `grep -n 'YYYY-MM-DD' .claude/skills/docs-audit/SKILL.md` → one hit
+at `:236` before, no live-form hit after. W37-7 Task 1, `PL-1070`.
 
 2026-09-02 (eighth entry, same day) — **the selector entry above is superseded: `F87` is
 fixed.** `_id_scope_documents` no longer expands a directory root with `rglob("*.md")`. It

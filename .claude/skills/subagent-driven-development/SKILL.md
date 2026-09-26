@@ -14,6 +14,28 @@ Execute plan by dispatching a fresh implementer subagent per task, a task review
 **Narration:** between tool calls, narrate at most one short line — the
 ledger and the tool results carry the record.
 
+> **In this repository, "the ledger" is a governed document — here is which one.**
+>
+> - **Where it lives:** `docs/ledgers/LG-<nnnnn>-<slug>.md`, `<nnnnn>` allocated by
+>   `python3 scripts/doc-id.py next`. It is a family of its own, **not** a file under
+>   `docs/plans/`.
+> - **What it is keyed to:** one slice. Its header carries `slice:`, and `status: active`
+>   while the slice runs. One live ledger per slice — two `active` ledgers sharing a slice
+>   is a check 33 failure.
+> - **The append is the only permitted mutation.** A ledger is **never rewritten**, only
+>   appended to. `check 34`, the freeze check, enforces exactly this: for a frozen family
+>   the diff against the merge-base may touch only `status:` (forward only),
+>   `superseded_by:`, an appended `corrected_by:` entry, or — **ledgers only** — an
+>   appended `plans:` entry. Editing an earlier entry to read better is a gate failure,
+>   and it is meant to be: the value of a ledger is that what it said at the time survives.
+> - **What gets appended, and when:** `plans:` gains an id on a replan; pull-request
+>   numbers are appended as they land; each task's completion and each ruling is its own
+>   entry. So "ledger the ruling" above means *append* the ruling, with its date.
+>
+> The ledger is the slice's execution record. The **plan** says what was intended, the
+> **ledger** says what happened, and a closure record says what it added up to — three
+> documents, three families, never one file doing two jobs.
+
 **Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. The only reasons to stop are the four named below, or all tasks complete. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it.
 
 **Rulings, not stalls.** A running plan does not wait on a human. Conflicts,

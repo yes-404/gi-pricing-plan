@@ -606,6 +606,42 @@ the history. Verify by content, not by what git says about ancestry — see `git
   that does not exist, so the marker is checked, not decorative.
 - A round-trip or property test wherever the workstream persists or transforms data.
 
+## A bespoke audit is not a closure — it is a slice with a research record
+
+**The rule, from `RFC-937` §5.4 via `PL-939`:**
+
+> A bespoke audit is a slice whose record is a research document of kind `audit`, owner the
+> auditor, every finding its own finding record; never a plan, never a closure.
+
+In this repository's own id vocabulary that is:
+
+| The audit is | Its record is | Its owner | Its findings are |
+|---|---|---|---|
+| an `SL-` slice | one `RS-` with `kind: audit` | `auditor` | one `FD-` each, plus a register row |
+
+**Never a `PL-` and never a `CR-`.** The id forms matter as much as the prose, because the
+checks read forms: check 30 validates the field set against the family's template, check 33
+validates `status:` against the family's own subset of the vocabulary, and check 37
+validates the sections a family's template declares. A bespoke audit filed as a `CR-` will
+be checked against the closure template's shape and pass while being the wrong kind of
+document — which is the failure this rule exists to prevent, not a hypothetical.
+
+**Why it is not a closure.** A `CR-` records that something *closed*, against scope derived
+from the specification, with the four verdicts and the maintainer's or lead's acceptance
+depending on what closed. A bespoke audit closes nothing: it reports what it found. Filing
+findings inside a closure record also buries them — a finding needs its own `FD-` so it can
+be cited, carry its own `status:`, and be discharged independently of whatever prompted the
+audit.
+
+**Why it is not a plan.** A `PL-` says what will be done and carries an acceptance standard
+(check 28). An audit's record says what was found. A plan-shaped audit invites an acceptance
+standard it cannot have.
+
+**One live consequence for this skill:** the checklist above closes a *workstream*. If what
+you are doing is a bespoke audit — a slice whose purpose is to examine rather than to
+deliver — you are in the wrong document, and the artifacts are an `RS- kind: audit` plus
+`FD-` records, not a closure record.
+
 ## Closure record template
 
 ```markdown
@@ -639,6 +675,29 @@ looking.
 ```
 
 ## Verified
+
+2026-09-19 — **the bespoke-audit rule added, in full, as `RFC-937` §5.4 requires.** W37-7
+Task 9, `PL-1070`. The rule is verbatim from `PL-939:750-751`, expanded with the id forms —
+an `SL-` slice, one `RS-` with `kind: audit`, owner `auditor`, findings as `FD-` — because
+**the checks read forms, not prose**: check 30 validates the field set against the family's
+template, check 33 the `status:` subset, check 37 the declared sections. A bespoke audit
+misfiled as a `CR-` is checked against the closure template's shape and **passes while being
+the wrong kind of document**, which is the failure the rule prevents.
+
+It is stated in full **here** rather than in `docs-audit`, which points at it: this is the
+skill that files closures and therefore the one that gets this wrong. §5.4 asks for the rule
+to *belong in both*, which a pointer satisfies and a duplicate does not — two copies is how
+one goes stale.
+
+**A plan-versus-tree disagreement was raised before this was written, not resolved by
+writing it.** `PL-960:648` states *"the `close-workstream` half is in this commit, where the
+rule is authored"* — of W37-6's commit. At `7d5d6e0`,
+`grep -rn 'bespoke' .claude/skills/close-workstream/SKILL.md .claude/skills/docs-audit/SKILL.md`
+returned **no output, exit 1**: the rule was in neither file. The claim is false and the
+tree is right. Raised to the lead per Task 9 Step 0 and `CLAUDE.md` §0, and routed as a
+finding against W37-6's close — a declared deliverable of a closed slice that never landed
+and was never given one of §13's four verdicts. Writing it silently would have erased the
+record of what W37-6 was believed to have delivered.
 
 2026-08-31 — §5b added, RFC-896 P5 (RL-912, `docs/rulings/RL-00912-q4-the-generated-output-lands-verbatim-and-it-is-not-the-closure-record-s-findings-table.md`):
 `scripts/register-owed.py` exists and its tests pass (`tests/test_register_owed.py`). Not

@@ -43,9 +43,14 @@ dropped otherwise".
 Usage:
     # Re-derive and write the state file (only touches blocks whose content changed):
     python3 write_runtime_state.py cycle \\
-        [--phase VALUE --phase-source "docs/roadmap.md §7"] \\
-        [--work VALUE --work-source "docs/roadmap.md §7"] \\
-        [--slice VALUE --slice-source "docs/plans/2026-08-30-some-plan.md"]
+        [--phase VALUE --phase-source "docs/roadmap.md §6"] \\
+        [--work VALUE --work-source "docs/roadmap.md §6"] \\
+        [--slice VALUE
+         --slice-source "docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md"]
+
+    Every `--*-source` is validated before anything is written: the file part must exist
+    in the repository or the command refuses and writes nothing. The `§n` suffix is prose
+    and is not resolved -- see `_source_path_part`.
 
     # A role announces an expensive verification it is about to start (spec §8):
     python3 write_runtime_state.py announce \\
@@ -89,6 +94,44 @@ def _state_file_path(explicit: str | None) -> Path:
         return Path(explicit)
     override = os.environ.get("RUNTIME_STATE_FILE")
     return Path(override) if override else DEFAULT_STATE_FILE
+
+
+#: This script lives at `.claude/skills/watcher-runtime-state/scripts/`, so the repository
+#: root is four parents up. Resolved from `__file__` rather than from the working
+#: directory: the watcher runs this from wherever it happens to be, and a cwd-relative
+#: root would make the guard below pass or fail depending on who invoked it.
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+
+
+def _source_path_part(source: str) -> str:
+    """The file-path part of a `read_from` locator, which is all of it up to any suffix.
+
+    A locator is written `<path> §<n>` — the `§n` names a section and is **prose**. It
+    addresses nothing a filesystem or a parser can resolve, so the guard below stops at
+    the path. Validating the suffix would mean inventing a heading grammar the standard
+    does not define, and a check that cannot fail on its own stated subject is worse than
+    no check.
+    """
+    return source.split()[0] if source.split() else source
+
+
+def _validate_sources(**sources: str | None) -> list[str]:
+    """Every `--*-source` whose file part does not resolve in the repository.
+
+    RL-907(c) requires a position field to name the artifact it was read from. A locator
+    naming an artifact that does not exist satisfies the letter of that and defeats its
+    purpose: three roles read this file as authoritative (`SKILL.md` — *"read
+    `runtime-state.json`, not the roadmap"*), and a dangling locator sends each of them to
+    a file that is not there. Plan review 13 found exactly that in the live state file.
+    """
+    problems = []
+    for flag, value in sorted(sources.items()):
+        if value is None:
+            continue
+        rel = _source_path_part(value)
+        if not (_REPO_ROOT / rel).exists():
+            problems.append(f"--{flag.replace('_', '-')} {value!r}: {rel} does not exist")
+    return problems
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -151,6 +194,24 @@ def _block_content(block: dict[str, Any]) -> dict[str, Any]:
 
 
 def cycle(args: argparse.Namespace) -> int:
+    # Fail closed, and fail **before** anything is loaded or written. A guard that refuses
+    # and writes anyway is worse than one that does neither: it reports a failure the
+    # caller may ignore while the bad value lands regardless.
+    problems = _validate_sources(
+        phase_source=args.phase_source,
+        work_source=args.work_source,
+        slice_source=args.slice_source,
+    )
+    if problems:
+        print(
+            "write_runtime_state.py: refusing to write — a read_from locator does not "
+            "resolve in the repository:",
+            file=sys.stderr,
+        )
+        for problem in problems:
+            print(f"  {problem}", file=sys.stderr)
+        return 2
+
     path = _state_file_path(args.state_file)
     existing = _load(path)
     now = _now()

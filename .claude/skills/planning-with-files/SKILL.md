@@ -70,6 +70,14 @@ If catchup report shows unsynced context:
 | Skill directory (`${CLAUDE_SKILL_DIR}/`) | Templates, scripts, reference docs |
 | Your project directory | `task_plan.md`, `findings.md`, `progress.md` |
 
+> **In this repository:** `task_plan.md`, `findings.md`, `progress.md` and anything under
+> `.planning/` are **scratch, not governed documents** — they carry no id, no header and
+> no family, and nothing indexes them. The committed record of the same work is a plan
+> under `docs/plans/` or a ledger under `docs/ledgers/`, each with an id allocated by
+> `python3 scripts/doc-id.py next`. Scratch is where you think; the plan is what you
+> filed. Keep the scratch files out of the repository — see `git-hygiene` for what must
+> not be committed.
+
 ## Quick Start
 
 Before ANY complex task:

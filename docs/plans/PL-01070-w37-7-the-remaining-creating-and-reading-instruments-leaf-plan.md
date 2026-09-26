@@ -3,7 +3,7 @@ id: PL-1070
 family: plan
 kind: leaf
 title: W37-7 — The remaining creating and reading instruments: leaf plan
-status: draft
+status: active
 created: 2026-09-18
 owner: planner
 tree: a8b3c39a0cdd0a537b83b58d04aa0ea3c340aa15
@@ -317,6 +317,31 @@ The only scope addition it proposes anywhere is R13-1, to this slice (`CR-1064:3
 proposes"*). This plan therefore adds nothing of its own invention to the slice; every row in
 the scope table traces to `RFC-937` §5.4, to `PL-939:740-751`, to `CR-1064` or to `CR-1065`.
 
+**Corrected 2026-09-19 (planner, on the deputy's ruling of the same date).** The words above —
+*"This plan therefore adds nothing of its own invention to the slice; every row in the scope
+table traces to `RFC-937` §5.4, to `PL-939:740-751`, to `CR-1064` or to `CR-1065`."* — no longer
+hold, and are annotated rather than edited so the claim the plan made about itself at freeze
+survives beside the reason it stopped being true. **Task 15 adds a scope row that traces to none
+of those four.** It traces to the deputy's ruling of 2026-09-19, which is dated after this plan
+was written: reconcile two unmerged commits carrying ruled `audit-docs.py` check dispositions,
+salvaged from the root checkout's branch, against `main`. The provenance rule the sentence states
+is not being relaxed — a row still may not enter this table by a planner's invention, and no
+other row has. It is being **extended by one named authority**, recorded here rather than
+absorbed silently, because a plan that widens its own scope table while still asserting it
+invented nothing is making a claim its contents contradict. Every other row's trace is unchanged.
+
+**Extended 2026-09-19 (planner, on the deputy's ruling of the same date).** The words above —
+*"It is being **extended by one named authority**"* — are corrected: the extension is **not
+limited to one**. Task 16 is a second row traceable to a ruling dated after this plan was
+written, and enumerating the exception where a rule was needed is the same defect as pasting a
+count into an acceptance item — the author of this annotation committed both on the same day,
+which is why the correction is recorded rather than quietly widened again. **The rule, stated so
+it does not need extending a third time:** a row may enter this plan's scope table only by
+tracing to `RFC-937` §5.4, to `PL-939:740-751`, to `CR-1064`, to `CR-1065`, **or to a dated
+ruling recorded in this plan's decision-points table**. Each such row names its ruling and its
+date in its own task header. No row enters by a planner's invention, which is the invariant the
+original sentence was written to protect and which is unchanged.
+
 ---
 
 ## Decision points
@@ -327,11 +352,20 @@ the default applied until then.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-7-1 | Check 35's printed owner tag for F92's deferred population. The lead ruled the owner of record is **W37-11** (`CR-1064:372`); the ruling the line itself cites, `RL-1046` §B, says **W37-10** (`docs/rulings/` `RL-1046`'s file, line 113). The literal also appears as the identifier `_is_stamp_deferred_w37_10` and in three test files (`tests/test_audit_docs_ids.py:684`, `:1630`; `tests/test_register_lint.py:547`; `tests/test_doc_id_verify.py:1881`, `:1894`) | (a) print `owner: W37-11` and leave `RL-1046` §B cited as-is; (b) print `owner: W37-11 (deferred under RL-1046 §B, which named W37-10; owner of record reassigned)` and rename the helper to carry no slice tag — `_is_stamp_deferred_f92`; (c) leave `W37-10` and file the misalignment as a finding for W37-11 | **(b)**. (a) makes the sentence self-contradicting on its face — a reader following the citation lands on a ruling that says the other thing, which is exactly the class `RFC-779` names. (c) defers a one-line edit into the slice whose job is to *prove* the corpus consistent. (b) removes the slice tag from the identifier entirely, so the next reassignment cannot produce this row again — a naming that cannot go stale, not a corrected copy of one | decision point — it is a code edit whose content two governed records disagree on | **yes** | _open_ |
+| DP-7-1 | Check 35's printed owner tag for F92's deferred population. The lead ruled the owner of record is **W37-11** (`CR-1064:372`); the ruling the line itself cites, `RL-1046` §B, says **W37-10** (`docs/rulings/` `RL-1046`'s file, line 113). The literal also appears as the identifier `_is_stamp_deferred_w37_10` and in three test files (`tests/test_audit_docs_ids.py:684`, `:1630`; `tests/test_register_lint.py:547`; `tests/test_doc_id_verify.py:1881`, `:1894`) | (a) print `owner: W37-11` and leave `RL-1046` §B cited as-is; (b) print `owner: W37-11 (deferred under RL-1046 §B, which named W37-10; owner of record reassigned)` and rename the helper to carry no slice tag — `_is_stamp_deferred_f92`; (c) leave `W37-10` and file the misalignment as a finding for W37-11 | **(b)**. (a) makes the sentence self-contradicting on its face — a reader following the citation lands on a ruling that says the other thing, which is exactly the class `RFC-779` names. (c) defers a one-line edit into the slice whose job is to *prove* the corpus consistent. (b) removes the slice tag from the identifier entirely, so the next reassignment cannot produce this row again — a naming that cannot go stale, not a corrected copy of one | decision point — it is a code edit whose content two governed records disagree on | **yes** | `RL-1075` |
 | DP-7-2 | How far does the artifact B fix reach? The `read_from` values are arguments, not literals, and the live file is outside the repository (`~/gi-pricing-plan.local/handover/runtime-state.json`) | (a) repository-only: fix `SKILL.md`'s taught invocation and make `write_runtime_state.py` **refuse** a `--*-source` locator whose file path does not exist, so a dangling locator cannot be written again; (b) (a) plus a one-off rewrite of the live state file by the watcher, recorded in the slice ledger as an ops action; (c) documentation only | **(b)**, with (a) as the repository deliverable and the live rewrite handed to the watcher as a named ops step. (c) leaves the instrument able to mint the same defect tomorrow; (a) alone leaves a live file that three roles read as authoritative (`SKILL.md:75`: *"read `runtime-state.json`, not the roadmap"*) still carrying two dangling locators | design unknown — the mechanism is settled; the reach is not | no — default (a) applies, and Task 12 delivers it either way | Task 12's review, the lead |
 | DP-7-3 | Rows 8, 9, 12 and 13 are content edits to **vendored** manifests. `CLAUDE.md` §12: *"Vendored files stay as upstream wrote them … every deviation recorded in the README rather than made silently."* | (a) make the four edits and record each as a numbered deviation in `.claude/skills/README.md` in the same commit; (b) refuse them and mark the four §5.4 half-rows superseded with a dated note; (c) fork the four skills out of the vendored set | **(a)**. The README already carries three such recorded deviations for this exact set of files (`.claude/skills/README.md:159` — *"One deviation from upstream: where a plan is saved"*, which already changed `writing-plans`' save path once; `:178` — the `task-brief` script changes; `:277`). §12's rule is *record it*, not *never*; (b) would leave the instruments teaching retired forms, which is the whole point of the slice; (c) is an architecture change needing an ADR | scope — it decides whether four rows are delivered or superseded | no — default (a) applies | Task 7's review, the lead |
 | DP-7-4 | `planning-with-files` is half of §5.4's *"`brainstorming`, `planning-with-files` — one sentence each"* row, but `CR-1065` `:302` records it as *"correctly excluded by design (RL-987/§6.3 — not a member)"* | (a) make the sentence edit anyway — §6.3's exclusion governs the **stamp**, and §5.4's row governs the **content**, which are two different obligations; (b) treat the exclusion as covering the content row too and mark that half superseded with a dated note | **(a)**. The two rules answer different questions: `RL-987`/§6.3 decided whether the migration *stamps and rewrites* the file; §5.4's row is about what the file *teaches*. `CR-1065` `:302` itself keeps the row-mate alive in the same sentence (*"its row-mate `brainstorming` was the member, and see the row above"*), which only makes sense if the content row survived the membership decision | scope | no — default (a) applies | Task 7's review, the lead |
 | DP-7-5 | `docs/INDEX.md` is regenerated by `scripts/doc-index.py` and W37-7, W37-8, W37-9 and W37-10 may run beside each other (`PL-939:379-382`). Four concurrent branches each regenerating one generated file is a guaranteed conflict | (a) each slice regenerates `docs/INDEX.md` in its own final commit and resolves conflicts by **regenerating, never by hand-merging**; (b) no slice touches `docs/INDEX.md` and W37-11 regenerates it once; (c) serialise the four slices | **(a)**, with the rule stated in each slice's PR body: a generated file is never conflict-resolved by hand (`CLAUDE.md` §2's *"`docs/contracts/` is generated and never hand-edited"* is the same principle applied to the other generated artifact). (b) leaves `doc-index.py --check` red on every intermediate merge, which disarms the gate for the whole of Stage 3 | decision point — it affects three other slices, so it is the lead's, not this plan's | no — default (a) applies | The lead, before the first Stage 3 executor is spawned |
+| DP-7-6 | `docs/REDIRECTS.csv` reserves a block of identifiers — the 1063 mark to the 1136 mark — for legacy register rows that never materialise as files and never reach `docs/INDEX.md`, so the allocator cannot see them. The marks are written bare, not as family-qualified id tokens, for the reason `RFC-937:30` gives: a literal specimen is indistinguishable from a citation, and check 32 would read one end as dangling and the other as resolving to an unrelated live document. Two harms, both re-derivable at any tree with the commands in Task 16 Step 1: **(i)** the block intersected with every `INDEX.md` id number, any family — **reuse of a reserved number**, breaking `RFC-937` rule 1's one-sequence-per-corpus invariant and check 31; **(ii)** the same filtered to `FD-` — **mis-resolution**, one id naming two governed things. Measured at `3803331`: (i) fifteen, consecutive, (ii) five. Measured again at `a800c57`: (i) sixteen. **It grows by one with every document this work item mints** | (a) **a fifth scanner** — teach `compute_next` to read `REDIRECTS.csv`'s reservations alongside its four existing sources; (b) **re-point the legacy block** so those rows no longer reserve numbers that are live; (c) **reserve above the block's top**, minting only above the 1136 mark | **(b) as the remedy, with (a) as the guard, in one commit.** The cross-cutting question — which side of the existing collisions moves — is already answered twice over, and not by this plan: `CLAUDE.md` §5 makes requirement and document ids permanent, and `RFC-937` §1.7 says *"a collision at rebase is fixed by renumbering the unmerged item"*. Every colliding document is merged. **The minted side cannot move**, so the legacy rows move or nothing does. (b) is the only option that both resolves the existing collisions and stops (i) growing; (a) alone stops the growth but leaves every current collision standing, and (c) stops the growth by converting the collision into a permanent hole in a sequence the standard requires to be one, while teaching the allocator nothing — the next reserved block reintroduces the identical defect. (a) is therefore not an alternative to (b) but its durable half: after (b) the allocator still cannot see a reservation, and the only reason it would not happen again is that nobody reserved anything. **A fix scoped only to (ii) is rejected outright**: it silences the mis-resolution while leaving the standard's invariant broken and the allocator still minting reused numbers on every document | decision point — `RFC-937` §1.7 names four sources and `compute_next` implements four, so **the standard and the tool are both wrong in the same place**. It is resolved in one commit changing both, never one side silently (`CLAUDE.md` §2) | **yes** — blocks Task 16 only; every other task proceeds. **No default applies**: the three options edit different files in incompatible ways, so a default would mean building the wrong one and reverting it | `RL-1078` |
+
+**Superseded 2026-09-19 by `RL-1078`.** This recommendation — (b) as remedy with (a) as guard
+— was **rejected on evidence it did not have**: `docs/INDEX.md` is contiguous with zero gaps, so
+check 31's contiguity clause is load-bearing, and all three drafted options open a hole in the
+allocation that reds it. The ruled remedy is (a) **in substance**, implemented at
+`scripts/doc-index.py` rather than as a fifth `compute_next` scanner, which leaves `RFC-937`
+§1.7's four sources correct as written. The recommendation is kept quoted because the ruling's
+reasoning is only legible beside what it refused. See Task 16.
 
 ---
 
@@ -434,6 +468,39 @@ form wrong."* Two traps are already measured and must appear:
   present but did not parse as RFC-937's header):` followed by `1065`. A caller doing
   `ID=$(python3 scripts/doc-id.py next)` captures both lines, not the number. State the
   correct form (take the last line) and why.
+
+  **Corrected 2026-09-19 (planner, this plan's author).** The words above — *"A caller doing
+  `ID=$(python3 scripts/doc-id.py next)` captures both lines, not the number. State the correct
+  form (take the last line) and why."* — are **false**, and are annotated here rather than
+  edited (this slice's annotate-in-place rule), so the record of what was believed survives.
+  The two lines go to **different streams**: `_report_skipped()` writes the diagnostic with
+  `file=sys.stderr` (`scripts/doc-id.py:10253-10268` at the tree named below), and `_cmd_next()`
+  writes the integer with a bare `print(result.number)` to stdout (`scripts/doc-id.py:10278`,
+  same tree). Command substitution captures stdout only. The capture form this step calls
+  broken is therefore **correct as written**, and the remedy it prescribes — "take the last
+  line" — has nothing to strip.
+
+  Measured at tree `7d5d6e0a3730bfd790dace3a95c63a0ea71ec031`, worktree clean
+  (`/usr/bin/git status --porcelain` empty), three ways: `python3 scripts/doc-id.py next` at a
+  terminal prints the diagnostic and then the integer; `python3 scripts/doc-id.py next
+  2>/dev/null | od -c` prints the integer's digits, one `\n`, and nothing else;
+  `ID=$(python3 scripts/doc-id.py next)` leaves the diagnostic on the terminal, uncaptured,
+  with `ID` holding the bare integer. That third run is how the error was made — on screen the
+  two lines look like one captured pair, because only one of them was ever captured.
+
+  **What Step 2 requires instead:** write **one** trap for `next`, not two. The real one is
+  allocation, already stated in Risk 4 of this plan: `next` defaults to `--ref origin/main`
+  (`python3 scripts/doc-id.py next --help` → *"Git ref to read (default: origin/main)."*), so an
+  id already held by a record on an unmerged branch is invisible to it and concurrent drafters
+  are handed the same integer without either being wrong. Write no stream-capture trap; there
+  is none.
+
+  **And write no allocation number into the skill, or into this plan.** The integer in the
+  sentence above this annotation is a property of the tree it was run at, not a fact about the
+  command, and it had already changed by this annotation's tree. Record the command and the
+  rule — run `python3 scripts/doc-id.py next` at the head you branch from, then reconcile with
+  the lead before push — never a pasted value, which goes stale by exactly the
+  duplicated-constant mechanism of `RFC-756`.
 - `doc-id.py next` allocates against records reachable from `origin/main`, so **two planners
   drafting the same night both get the same integer** and neither is wrong. The reconciliation
   is the lead's before push. This plan is itself an instance — see the report.
@@ -976,6 +1043,236 @@ uv run mypy; echo EXIT=$?
 
 ---
 
+### Task 15: reconcile the salvaged `audit-docs.py` check work against `main`
+
+**Added 2026-09-19 (planner, on the deputy's ruling of the same date).** This task is numbered
+15 because task numbers in this plan are append-only — Tasks 3, 8 and 14 are cited by number
+elsewhere and a renumber would break those citations — but it is **sequenced before Task 14**,
+which is the slice sweep, ledger and gate and must remain last. Order: 13 → 15 → 14. It does
+not depend on DP-7-1 and is therefore not blocked while Task 13 is.
+
+**Provenance, stated because this plan asserts at `:318` that it invents no scope of its own:**
+this row traces to the deputy's ruling of 2026-09-19, not to `RFC-937` §5.4, `PL-939:740-751`,
+`CR-1064` or `CR-1065`. See the annotation on `:318`.
+
+**Why it exists.** The root checkout sits on branch `w37-6-h1-checks-31-32-36` carrying two
+commits that exist on no remote and are on no other branch. They implement ruled `audit-docs.py`
+check dispositions and were never merged. They were minutes from being destroyed by a checkout.
+
+| Commit | Subject |
+|---|---|
+| `abc0933` | Implement three ruled `audit-docs.py` check dispositions |
+| `ec31a5b` | Rewrite check-31 to read full allocation via `docs/INDEX.md`; drop check-32 hunk |
+
+**Durable evidence, cited by path, both to be re-checked at the start of this task:**
+`refs/salvage/2026-09-19/root-checkout-branch` in this repository's own object store, and
+`~/gi-pricing-plan.local/handover/unpushed-bundle-2026-09-19/root-branch.bundle`.
+
+**Files:**
+- Modify: `scripts/audit-docs.py`
+- Modify: this slice's `LG-` ledger (the per-hunk disposition table)
+
+**Interfaces:**
+- Consumes: nothing from other tasks.
+- Produces: the disposition table Task 14's ledger sweep cites rather than restates.
+
+- [ ] **Step 1: Confirm the salvaged work is still reachable, from both sources**
+
+```bash
+/usr/bin/git show-ref | grep 'refs/salvage/2026-09-19/root-checkout-branch'
+/usr/bin/git bundle verify ~/gi-pricing-plan.local/handover/unpushed-bundle-2026-09-19/root-branch.bundle
+```
+Expected: the ref resolves to `ec31a5b9355a477445bd4677029e571bc3af1c77`, and the bundle reports
+*"The bundle records a complete history."* If either fails, stop and report — do not proceed
+from one source alone.
+
+- [ ] **Step 2: Derive the net delta, not a replay of the two commits**
+
+```bash
+BASE=$(/usr/bin/git merge-base ec31a5b origin/main)
+/usr/bin/git diff "$BASE" ec31a5b -- scripts/audit-docs.py
+```
+`ec31a5b` partially reverts `abc0933` — it drops the check-32 hunk `abc0933` added. **Replaying
+the two commits in order would resurrect a hunk its own author withdrew.** The range diff above
+is the only correct starting point. Every surviving hunk lands inside
+`check_id_filename_directory()`, which exists on both sides.
+
+- [ ] **Step 3: For each hunk, read `main`'s current implementation of the same region**
+
+```bash
+/usr/bin/git show origin/main:scripts/audit-docs.py | grep -n 'def check_id_filename_directory'
+```
+Read from that line to the end of the function on `main`, and read the same function at
+`ec31a5b`. **Never re-apply blind.** `main` has moved substantially on this file since these
+commits were written — a clean-looking apply is not evidence the change is still wanted, only
+that the surrounding lines did not happen to collide. Reconcile against `main` at the head you
+branch from, re-deriving it with the command above rather than trusting any figure written here
+or elsewhere about how far it has moved.
+
+- [ ] **Step 4: Give every hunk one of two dispositions, in the ledger, with no third option**
+
+For each hunk in the Step 2 diff, write one row: either **land** — the change is still correct
+against `main`'s current code, with one sentence saying why — or **superseded**, naming the
+commit on `main` that superseded it. Silence is not a disposition. A hunk you cannot decide is
+reported to the lead, not skipped.
+
+- [ ] **Step 5: Prove the landed checks on deliberately broken input**
+
+`CLAUDE.md` §13: enforcement is proven on deliberately broken input, and a check that has never
+printed a failure has not been tested. For each hunk landed in Step 4, construct an input the
+check must reject, run the check, and record that it exits non-zero and names the right file:
+
+```bash
+python3 scripts/audit-docs.py; echo EXIT=$?
+```
+Expected on the clean tree: `EXIT=0`. Then, on a scratch copy carrying the deliberately broken
+input, expected: a non-zero exit naming the offending path. Both runs and both outputs go in the
+ledger. If nothing was landed in Step 4, record that fact and its consequence — that no new
+enforcement was added — rather than omitting this step.
+
+- [ ] **Step 6: Commit** — `fix(scripts): reconcile salvaged audit-docs check work against main`
+
+**ETA basis:** 2 h. Three hunks in one function, each needing `main`'s current code read before a
+disposition, plus a broken-input proof for whatever lands and the ledger table.
+
+---
+
+
+### Task 16: make the reserved block visible to `docs/INDEX.md`, as ruled by `RL-1078`
+
+**Rewritten 2026-09-19 (planner, on `RL-1078`).** The previous text of this task offered the
+executor a choice between three options and expected a broken-input proof shaped to a refusal
+guard. **`RL-1078` ruled none of the three as drafted** and its acceptance clause is stronger
+than DP-7-6 asked for, so the task is rewritten rather than amended. The earlier ETA no longer
+applies. Numbered 16, append-only; order 13 → 15 → 16 → 14.
+
+**What was ruled, in one sentence:** the remedy is option (a) **in substance** — the allocator
+must see the reservation — but implemented at `scripts/doc-index.py`, **not** as a fifth
+`compute_next` scanner. `doc-index.py` emits each reserved allocation as an `INDEX.md` row;
+`compute_next` then sees it through `scan_index_ids`, **which it already calls**. `RFC-937`
+§1.7's four sources are therefore **correct as written** — the source was never missing, the
+index was incomplete.
+
+**The finding that disqualified all three drafted options, and the reason this task must not
+drift back to them:** `docs/INDEX.md` is contiguous with zero gaps at `3803331`, so check 31's
+contiguity clause is live and load-bearing. Every one of (a)-as-a-scanner, (b) and (c) makes
+`next` return past the block's top while the index still stops short, opening a hole check 31
+fails on. The decision-maker hit this while writing the ruling: it numbered its own record one
+past an unmerged sibling, got `check 31: gap in the full allocation between 1077 and 1079`, and
+moved it back. **Writing the fifth scanner is the change that reds the gate.**
+
+**Two corrections to this plan's earlier reasoning, carried here so they are not re-derived:**
+`RFC-937` §1.7's *"a collision at rebase is fixed by renumbering the unmerged item"* is **not** a
+second authority for "the minted side cannot move" — it governs a race between two *minted
+documents*, and one side here is a reservation. `CLAUDE.md` §5 carries that conclusion alone.
+And the block is a **deferred allocation, not a stale column**: a maintainer ruling of 2026-09-03
+is quoted at `scripts/doc-id.py:9906` and enforced at `:9927`. It is W37-11's input and must not
+be released, re-pointed, or blanked.
+
+**Files:**
+- Modify: `scripts/doc-index.py` — the reserved-allocation emission
+- Modify: `docs/rfcs/RFC-00937-…md` §1.7 — the clarifying amendment of (ii)
+- Modify: `tests/` — the two tests the acceptance clause requires
+- Regenerate: `docs/INDEX.md`
+- Modify: this slice's `LG-` ledger
+- **Do not modify `docs/REDIRECTS.csv`.** The ruling forbids it: the block is not W37-7's to move.
+
+**Interfaces:**
+- Consumes: `RL-1078`. Nothing from other tasks.
+- Produces: an `INDEX.md` carrying reserved allocations, which `compute_next` reads unchanged.
+
+- [ ] **Step 1: Re-derive both predicates at the tree you branch from**
+
+```bash
+TREE=$(/usr/bin/git rev-parse HEAD)
+/usr/bin/git show "$TREE":docs/REDIRECTS.csv > /tmp/red.csv
+/usr/bin/git show "$TREE":docs/INDEX.md      > /tmp/idx.md
+awk -F, '$6 ~ /^"?title:/ {print $2}' /tmp/red.csv | grep -oE '[0-9]{4}' | sort -u > /tmp/block.txt
+grep -oE '^\| [A-Z]+-[0-9]{4}' /tmp/idx.md | grep -oE '[0-9]{4}' | sort -u > /tmp/idxall.txt
+grep -oE '^\| FD-[0-9]{4}'     /tmp/idx.md | grep -oE '[0-9]{4}' | sort -u > /tmp/idxfd.txt
+comm -12 /tmp/block.txt /tmp/idxall.txt | wc -l    # (i) number reuse, any family
+comm -12 /tmp/block.txt /tmp/idxfd.txt  | wc -l    # (ii) mis-resolution, same family
+```
+Record both **with `$TREE` beside them** in the ledger. They will exceed any figure written in
+this plan or in `RL-1078`, because each document minted since grows (i) by one.
+
+- [ ] **Step 2: Write the two acceptance tests and show them RED first**
+
+`RL-1078`'s acceptance clause, which is the authority and is stronger than DP-7-6 asked for.
+**Both tests are pinned by symbol throughout — never a pasted `1136`, never a re-typed
+`FD-[0-9]+` literal.** `doc-id.py:9919`'s `_is_fd_canonical` already parses `new_id` through
+`_docid.ID_RE` and compares the captured family group; reuse that, because *"a test asserting
+that `next` returns 1137 proves only that a number was changed"* and a pasted bound is a
+tautology that survives the block moving under it.
+
+1. **Derive-and-compare.** Read the reserved set out of `REDIRECTS.csv` and the allocated set
+   out of `docs/INDEX.md`; fail when a reserved number is absent from the index. *Broken input:
+   a `REDIRECTS.csv` carrying a reserved mark the generated index omits — the test must red.*
+2. **Check 31's contiguity clause is armed against this specific hole.** *Broken input: an index
+   whose allocation skips a reserved block, constructed in a `tmp_path` copy — check 31 must
+   print `gap in the full allocation`.* Build it on constructed input, never by mutating the real
+   tree. This is the failure the earlier draft of this task would have shipped, which is exactly
+   why it is the one worth arming.
+
+**Paste both failing outputs into the slice ledger before applying the fix** (`CLAUDE.md` §13).
+
+- [ ] **Step 3: Implement the ruled remedy — spec and code in ONE commit**
+
+`scripts/doc-index.py` emits every `REDIRECTS.csv` reserved allocation — each row whose `new_id`
+parses through `_docid.ID_RE` and whose `new_path` is the findings register — as an `INDEX.md`
+row carrying its reserved number, its family, the title the redirect row's own `title:` field
+holds, a status marking it reserved-not-yet-applied, and `W37-11` as owner. In the same commit,
+amend `RFC-937` §1.7 to state that `docs/INDEX.md` carries **reserved allocations as well as
+materialised ones**, and that a reservation recorded in `docs/REDIRECTS.csv` is an allocation for
+the purposes of §1.1 rule 1. **The four-source sentence is not renumbered to five and not
+otherwise altered.**
+
+**Do not write the fifth `compute_next` scanner.** If the index route cannot be built — a
+`Record` needs a `Header`, a path and a body, and a register row has none of the first — the
+ruled answer is a **synthesised record sourced at `docs/REDIRECTS.csv`**, the same shape
+`scan_bold_id_rows` already uses for requirement rows that are not files. It is **not** a silent
+fallback to the scanner. **If that route genuinely fails, stop and return to `RL-1078`; do not
+choose at the keyboard.**
+
+- [ ] **Step 4: Run both tests green, then the gate**
+
+```bash
+python3 scripts/doc-id.py next 2>/dev/null     # stdout is the integer alone; diagnostic is stderr
+python3 scripts/doc-id.py check;   echo EXIT=$?
+python3 scripts/audit-docs.py;     echo EXIT=$?
+```
+Expected: `EXIT=0` from both, `next` returning a number outside the reserved block, and check 31
+seeing an unbroken allocation across the block. Note when reading a gate result here that
+`RL-1078` records a measured case of the **same commit** giving exit 0 then exit 1 with nothing
+altered, because part of this corpus is scored against a **pooled ceiling other work consumes**
+— so record the ceiling's reading beside the tree, not the tree alone.
+
+- [ ] **Step 5: Re-run Step 1 at the post-fix tree** and record both figures with that tree. The
+reserved block is now present in the index, so (i) and (ii) are measured against a corpus where
+the reservation is visible; state what each means rather than asserting the numbers improved.
+
+- [ ] **Step 6: Regenerate `docs/INDEX.md` — never hand-edit it** (DP-7-5 option (a))
+
+```bash
+python3 scripts/doc-index.py
+python3 scripts/doc-index.py --check; echo EXIT=$?
+```
+
+- [ ] **Step 7: The two identifier edits, in this task's own commit, only after #797 is on `main`**
+
+Write **`RL-1078`** into DP-7-6's `Resolved by` cell. And renumber this branch's freeze-clause
+breach finding from the 1078 mark to the 1079 mark, under `RFC-937` §1.7's *"a collision at
+rebase is fixed by renumbering the unmerged item"* — the lead has called which item renumbers.
+**Both edits wait for #797 to merge**, because `RL-1078` measured that renumbering ahead of a
+rebase reds check 31: the number being stepped over is not on the branch's own base.
+
+- [ ] **Step 8: Commit** — `fix(ids): emit reserved allocations into docs/INDEX.md (RL-1078)`,
+spec and code together.
+
+**ETA basis:** 4 h. The emission plus §1.7's amendment is small; the two tests, their red proofs
+on constructed input, and the before/after predicate runs are most of it.
+
+---
 ### Task 14: the slice sweep, the ledger, and the full gate
 
 **Files:**
@@ -1078,6 +1375,22 @@ merge tree, with no context from this session.
    slice's `LG-` file; it has fifteen rows matching the scope table above; each carries either
    a commit SHA reachable from the merge tree or, for row 6, the verification command and its
    output. `/usr/bin/git log --oneline origin/main...<branch>` lists every SHA the ledger names.
+
+   **Corrected 2026-09-19 (planner, on the deputy's ruling of the same date).** The words above —
+   *"it has fifteen rows matching the scope table above"* — are superseded as this item's test,
+   kept quoted rather than edited. The defect is not that the figure is now wrong; it is that the
+   figure is **pasted**, inside the acceptance standard, which is the artifact the close is
+   checked against. Task 15 falsifies it, and replacing it with the next integer would fix
+   today's instance while rearming the trap for the task after that — the duplicated-constant
+   mechanism of `RFC-756`, in the one place it does the most damage. **Do not write a new
+   number.** The test is a comparison, and it is run in both directions: **every row of the scope
+   table is matched to a ledger row by the file or the subject that row names, and every ledger
+   row is matched back to a scope-table row.** A one-way check passes while an extra row sits in
+   either list, so both directions are required; neither list's length is counted, and no future
+   task can falsify the item by existing. The rest of item 1 is unchanged and still binds: each
+   matched ledger row carries either a commit SHA reachable from the merge tree or, for the
+   verification-only row, the verification command and its output, with
+   `/usr/bin/git log --oneline origin/main...<branch>` listing every SHA the ledger names.
 2. **`python3 scripts/audit-docs.py; echo EXIT=$?` prints `EXIT=0`** at the merge tree.
 3. **`python3 scripts/doc-id.py check; echo EXIT=$?` prints `EXIT=0`** at the merge tree.
 4. **`python3 scripts/doc-index.py --check; echo EXIT=$?` prints `EXIT=0`** at the merge tree,
@@ -1086,6 +1399,282 @@ merge tree, with no context from this session.
    sweep, run verbatim with its root restricted to `.claude/skills/`, returns no rows; and the
    same sweep run against a scratch copy carrying one reinstated retired path **does** return a
    row. Both runs and both outputs are in the ledger.
+
+   **Verdict corrected 2026-09-19 (planner, on the lead's correction of the same date).** The
+   verdict annotation filed under this item earlier on 2026-09-19 is **superseded in place**. Its
+   operative sentence is quoted rather than deleted, because a correction that removes what it
+   replaces destroys the record of what was believed:
+
+   > **Verdict recorded 2026-09-19 (planner, on the lead's ruling of the same date): NOT
+   > SATISFIED by this slice, deferred with owner W37-11 — because the instrument this item
+   > names does not exist.**
+
+   **What is superseded is the ground, not the direction and not the discipline.** The item is
+   still not satisfied by this slice, its words *"returns no rows"* still stand unchanged and
+   unlowered, and the reasoning of the superseded block about why it must not be rewritten to fit
+   its own outcome survives this correction in full (see *"What survives"* below). What was false
+   is **why**.
+
+   ### The three positions, in the order they were held
+
+   | # | Position | Held by | Status now |
+   |---|---|---|---|
+   | 1 | *"The instrument this item names does not exist."* | The lead, 2026-09-19, recorded by the planner in the superseded block above | **Retired: false.** |
+   | 2 | *"It exists and is runnable, so item 4 should be run, not deferred."* | The deputy, on the auditor's first finding | **Retired: true as to runnability, and it does not reach item 5.** |
+   | 3 | **The instrument runs, and what this item asks it to show is not what the instrument is ruled to show.** | Established, and the ground of this corrected verdict | **Operative.** |
+
+   Both earlier positions are live in the record and are **explicitly retired here**, not quietly
+   replaced (`CLAUDE.md` §13, *"a correction must name what it supersedes"*).
+
+   **How position 1 was reached, stated because the mechanism is the point.** The measurement
+   behind it was:
+
+   ```bash
+   /usr/bin/git grep -ln 'LEGACY_SWEEP_EXCLUSIONS' <tree> -- scripts/ tests/   # no output
+   ```
+
+   That measurement is **true and reproduces today** — at `73a40a60efd43c3e6d2f744dbe1381171e54c4f8`
+   the symbol `LEGACY_SWEEP_EXCLUSIONS` appears in **three frozen plans and nowhere else in the
+   tree** (`PL-939`, `PL-960`, `PL-1073`; predicate: `/usr/bin/git grep -ln
+   'LEGACY_SWEEP_EXCLUSIONS' 73a40a60efd43c3e6d2f744dbe1381171e54c4f8`). **Re-run at the tree
+   this annotation lands on it returns four, and the fourth hit is this document** — `PL-1070`'s
+   own annotation quotes the constant. The extra hit is the record of the reading, not a fourth
+   plan asserting it. **It was true of the symbol and false of the question.** A constant-keyed search cannot falsify the existence of a
+   *function*: the exclusion layer shipped as one, and a grep for the name a frozen plan predicted
+   returns nothing whether the capability is absent or merely differently shaped. **An absence
+   reported by a single instrument closed an investigation that a second, differently-built check
+   would have re-opened at once.**
+
+   ### The instrument exists, and is runnable
+
+   - **`_docid.sweep_exclusion_reason`, `scripts/_docid.py:409-449`** — a **function composing six
+     declared classes**, not a constant. Its docstring, verbatim at the pinned tree:
+
+     > Why `rel_posix` (a tree-relative, forward-slash path) is excluded from the RFC-937
+     > migration sweep (`doc-id.py`'s `_iter_tree_files`) and from the (d)/(e)/(g) verification
+     > corpus (`_docverify.py`'s `tracked_files`) — or `None` when it is not excluded. One
+     > predicate, read by both consumers, so they can never disagree about what is excluded
+     > (RL-988 §2's "one shared constant").
+
+   - **Item 4 is executable.** `python3 scripts/doc-id.py migrate --verify` — `RL-1043` §1's
+     instrument — already runs in CI at `.github/workflows/docs.yml:111` (`- name: doc-id migrate
+     --verify`).
+
+   **So position 2 was right about runnability.** It does not save this item, for the three grounds
+   below.
+
+   ### Ground A — the criterion this item inherits was superseded by ruling
+
+   `EXPECTED_VERDICTS` (`scripts/_docverify.py:3557-3879`) has **no `"d"` key**. Row (d) is
+   recorded as a family of thirteen labels, `d1`…`d13`: **two `PASS`, eleven `DISCLOSE`, none
+   fatal.**
+
+   Predicate, runnable at the pinned tree (it counts the constant **by symbol**, never a paste):
+
+   ```bash
+   python3 - <<'EOF'
+   import re, subprocess
+   T = "73a40a60efd43c3e6d2f744dbe1381171e54c4f8"
+   src = subprocess.run(["/usr/bin/git", "show", f"{T}:scripts/_docverify.py"],
+                        capture_output=True, text=True).stdout.split("\n")
+   start = next(i for i, l in enumerate(src) if l.startswith("EXPECTED_VERDICTS: Final"))
+   end = next(i for i in range(start, len(src)) if src[i].rstrip() == "}")
+   rows = re.findall(r'^\s*"([^"]+)":\s*(\w+)', "\n".join(src[start:end + 1]), re.M)
+   d = [(k, v) for k, v in rows if re.fullmatch(r"d\d*", k)]
+   print(len(d), sorted(set(v for _, v in d)), [v for _, v in d].count("PASS"),
+         [v for _, v in d].count("DISCLOSE"), any(k == "d" for k, _ in rows))
+   EOF
+   # -> 13 ['DISCLOSE', 'PASS'] 2 11 False
+   ```
+
+   `DISCLOSE` is non-fatal **by ruling**, `scripts/_docverify.py:72-76` verbatim:
+
+   > Non-fatal by ruling, not by convenience: `\bF[0-9]{2}\b` is excluded from §7(d)'s zero
+   > requirement "with its count disclosed" (§8.5, re-affirmed by RL-1043 §4). A DISCLOSE row
+   > still prints its figure, its denominator and its control; it just does not set the exit code.
+
+   And `FATAL_VERDICTS: Final = frozenset({FAIL, UNDETERMINED, NOT_MEASURED, REGRESSION})`
+   (`:95`) — `DISCLOSE` is absent from it, and `PASS` is not required by it.
+
+   **For eleven of row (d)'s thirteen labels the shipped criterion is a disclosed non-zero count,
+   by ruling.** This item's *"returns no rows"* is the pre-`RL-1043`-§4 criterion. It is not a
+   lower bar that the instrument fails to clear; it is **a different question from the one the
+   instrument is ruled to answer**.
+
+   ### Ground B — no requirement encodes the criterion, so there is nothing to run it against
+
+   `EXPECTED_VERDICTS` is a **record, not a requirement**. `scripts/_docverify.py:3495`, verbatim:
+
+   > **Every row's verdict as recorded at the tree this constant was last reviewed at.**
+
+   and `:3517`:
+
+   > **This table is edited by hand, in the same commit as the change that moves a row.** That is
+   > the point: the edit is the reviewable record of a row moving, and it cannot be produced by
+   > re-running the instrument.
+
+   A record of what the rows currently read cannot be cited as the requirement that they read
+   zero. **Nothing in the shipped instrument asserts this item's zero**, which is why running the
+   instrument — position 2's remedy — produces evidence about row (d)'s disclosed state and no
+   evidence at all about *"returns no rows"*.
+
+   ### Ground C — the restriction this item applies is not expressible in the instrument
+
+   This item requires the sweep *"run verbatim with its root restricted to `.claude/skills/`"*.
+   **No function in the instrument takes a root, a prefix or a scope.** Signatures at the pinned
+   tree:
+
+   - `tracked_files(tree: Path) -> list[str]` — `scripts/_docverify.py:428`
+   - `load_corpus(tree: Path, *, exclude_basename: str | None = _D_EXCLUDED_BASENAME) -> Corpus` — `:574`
+   - `rows_d(docid, mig, ctl, record=())` — `:1717`
+   - `sweep_exclusion_reason(rel_posix: str) -> str | None` — `scripts/_docid.py:409`
+
+   `sweep_exclusion_reason` **subtracts from** a population; it cannot **restrict** one to a
+   subtree. The corpus itself is whole-tree by construction: `tracked_files` runs
+   `_LS_FILES_ARGS = ("ls-files", "--cached", "--others", "--exclude-standard")`
+   (`scripts/_docverify.py:422`) and filters it through `sweep_exclusion_reason`.
+
+   **And the five path-shaped labels in row (d) are not a scoping mechanism either.** `d9` (the
+   dated-plan-filename prefix), `d10` (the former audit root), `d11` (the former notes root), `d12`
+   (the former ADR root) and `d13` (the old `.claude` notes root) match path strings **appearing as
+   text inside a file**, not which files are read — and **none of the five names
+   `.claude/skills/`**. Each is described here rather than spelled, and read at its
+   `EXPECTED_VERDICTS` comment (`scripts/_docverify.py:3557-3879`) instead: spelling the five
+   retired roots on one line is itself a check-36 hit, and this annotation is not entitled to spend
+   a pooled ceiling other work shares in order to make a point about predicates. The restriction this
+   item specifies would have to be applied **outside** the instrument, by a reader, which is
+   precisely what *"run verbatim"* forbids.
+
+   ### Two layers, not two rival readings
+
+   Stated because the alternative reading has been offered and is wrong: `PL-939` item 4 specifies
+   the **outer** exclusion layer, not `_D_EXCLUDED_BASENAME`. §7 (d) already contains
+   `_D_EXCLUDED_BASENAME` in its own words — `scripts/_docverify.py:424` calls it *"§7(d)'s own
+   exclusion, verbatim: “excluding `REDIRECTS.csv`”"*, immediately above
+   `_D_EXCLUDED_BASENAME: Final = "REDIRECTS.csv"` (`:425`), and `load_corpus` takes it as a
+   keyword default (`:574`). So the row's own exclusion and the sweep-wide exclusion set are **two
+   layers of one instrument**, and item 4's clause names the outer one. Reading item 4 as already
+   satisfied by the inner one does not save it either.
+
+   ### Properties (iii) and (iv) of `PL-939` item 4, each given its own answer
+
+   `PL-939`'s Acceptance Standard item 4, quoted whole at the pinned tree (`PL-939:71-73`):
+
+   > 4. The legacy-form sweep of §7 (d) returns nothing over `git ls-files`, under the exclusion
+   >    set fixed in Decision point DP-2 and recorded in `scripts/doc-id.py`'s
+   >    `LEGACY_SWEEP_EXCLUSIONS` constant with a one-line reason per entry.
+
+   It carries four separable properties, and this annotation answers each rather than leaving the
+   reader to guess which one failed: **(i)** it is §7 (d)'s legacy-form sweep; **(ii)** it returns
+   nothing over `git ls-files`; **(iii)** the exclusion set carries *"a one-line reason per
+   entry"*; **(iv)** it is *"recorded in `scripts/doc-id.py`'s `LEGACY_SWEEP_EXCLUSIONS`
+   constant"*. (i) holds. (ii) is Ground A — superseded by ruling. (iii) and (iv):
+
+   **(iv) fails for a documented reason, and the document is in the code.** The exclusion layer
+   lives in `scripts/_docid.py`, not `scripts/doc-id.py`, and the comment at
+   `scripts/_docid.py:153-157` says why — verbatim:
+
+   > placed here, beside `LEGACY_FORM_PATTERNS`, so `doc-id.py`'s sweep (`_iter_tree_files`) and
+   > `_docverify.py`'s corpus (`tracked_files`) read the identical tuple through
+   > `sweep_exclusion_reason` below rather than two independently maintained copies that can
+   > diverge (RL-988 §2 / `CLAUDE.md` §2: "a shape defined twice will diverge").
+
+   So `PL-939`'s item 4 names a **location a later ruling deliberately moved away from**, for the
+   reason `CLAUDE.md` §2 gives. This is not a defect in the code.
+
+   **(iii) is satisfied in substance and not in shape — both halves stated, because only stating
+   one of them misleads.** Over the pinned tree's whole population: **1694 paths, 143 excluded,
+   143 carrying a non-empty reason, 9 distinct reasons, 0 reasonless exclusions.** Predicate,
+   runnable from the commit alone:
+
+   ```bash
+   mkdir -p /tmp/plscripts
+   for f in _docid.py generate-contracts.py; do
+     /usr/bin/git show 73a40a60efd43c3e6d2f744dbe1381171e54c4f8:scripts/$f > /tmp/plscripts/$f
+   done
+   python3 - <<'EOF'
+   import subprocess, sys
+   sys.path.insert(0, "/tmp/plscripts")
+   import _docid
+   T = "73a40a60efd43c3e6d2f744dbe1381171e54c4f8"
+   paths = subprocess.run(["/usr/bin/git", "ls-tree", "-r", "--name-only", T],
+                          capture_output=True, text=True).stdout.split()
+   ex = [(p, _docid.sweep_exclusion_reason(p)) for p in paths]
+   ex = [(p, r) for p, r in ex if r is not None]
+   print(len(paths), len(ex), sum(1 for _, r in ex if r.strip()),
+         len({r for _, r in ex}), sum(1 for _, r in ex if not r.strip()))
+   EOF
+   # -> 1694 143 143 9 0
+   ```
+
+   **The population here is `git ls-tree -r --name-only <commit>`, not the instrument's own
+   `ls-files --cached --others --exclude-standard`** — deliberately, so the figure is reproducible
+   from the commit id alone rather than from someone's working directory. Over a clean checkout
+   the two differ only by untracked-unignored files.
+
+   **But two of the six classes are computed predicates, not enumerated entries, so *"a one-line
+   reason per entry"* is not the shape that shipped.** Class 5 (`generated_contract_tier_reason`,
+   `scripts/_docid.py:387`) derives its paths **at call time**, by reading
+   `scripts/generate-contracts.py`'s own `OPENAPI_PATH`/`SCHEMA_DIR` by symbol — **28 of the 143
+   exclusions above come from it, and not one of them is written down as an entry anywhere**.
+   Class 6 (`__pycache__`/`*.pyc`, `scripts/_docid.py:439-448`) matches **0** paths in this
+   population and fires only on the instrument's own exhaust inside a working tree. **Every
+   exclusion carries a reason; they are not all *"recorded in a constant with a one-line reason per
+   entry"*.** One class has entries but no constant, the other has neither.
+
+   ### A figure that must never travel alone
+
+   The auditor's reconstruction of this item's sweep returned **5952 matching lines in 540 files**.
+   **The auditor disqualified it in the same breath, and the disqualification travels with the
+   figure wherever it is quoted:** it was run **undifferentiated** — no label split, no disclosure
+   classes, `git ls-tree` where the instrument uses `_LS_FILES_ARGS`, and one corpus where
+   `rows_d` takes two (`mig` and `ctl`). It is *"evidence that the item runs and that the exclusion
+   layer fires; it is not row (d)'s reading, and must not be cited as one."*
+
+   ### What survives from the superseded block, unchanged
+
+   - **The item is not defective in intent and must not be rewritten to fit its outcome.** *"An
+     acceptance item edited to fit its own outcome is the defect this work item exists to remove."*
+     That argument is untouched by this correction — **what changes is the ground, not the
+     discipline.**
+   - **The original's reasoning was right for a reason its author could not have known.** It argued
+     the item was unsatisfiable and must not be lowered. It was unsatisfiable — **but not for the
+     reason anyone then had.** Not because the instrument was missing, and not because the
+     restricted root was dirty: because the criterion the item inherits was superseded by ruling
+     (Ground A), is encoded in no requirement (Ground B), and applies a restriction the instrument
+     cannot express (Ground C).
+   - **The `F85` near-miss record stands**, and this correction is a second instance of the same
+     class at one remove: `CLAUDE.md` §13's *"a count carries … the predicate it counted with"*
+     was satisfied by the grep in position 1 and the ground drawn from it was still false, because
+     the predicate was reproducible and **the wrong one for the question asked**. Reproducibility
+     of a predicate is not fitness of a predicate.
+   - **The positive control in this item is disarmed** wherever the standing population is
+     non-zero, and must be re-derived as a **row-identity** comparison — the reinstated path's row
+     present in the after-set and absent from the before-set. Unchanged, and now doubly so: against
+     a population that is disclosed rather than zero by ruling, a one-row control distinguishes
+     nothing.
+   - **What is defective is this plan's evidence**, not the instrument. The item asserted an
+     outcome never measured before the plan was frozen. Unchanged.
+
+   **The `origin/main` check-36 measurement recorded in the superseded block — `31` fatal and `118`
+   disclosed over `.claude/skills/` through `sweep_legacy_forms` / `_sweep_legacy_form_hits` —
+   stands as recorded, with its label unchanged: it is a different instrument over a different
+   population, context for whoever discharges this, and never a measurement of *"returns no rows"*.**
+
+   ### The verdict
+
+   **NOT SATISFIED by this slice — deferred with owner: the maintainer, at the Work close.** One
+   of `CLAUDE.md` §13's four verdicts. **The bar is neither lowered nor pretended met, and item 5's
+   own words are not rewritten.**
+
+   **Why the maintainer and not W37-11** — the change of owner is the substantive part of this
+   correction. Discharging this item now requires **amending `PL-939`'s Acceptance Standard item
+   4**, a frozen Work-level plan's acceptance standard, so that it states the criterion `RL-1043`
+   §4 actually ruled. That is a plan change, and under `CLAUDE.md` §14 it is **a proposal with a
+   dated maintainer acceptance line**, not something a slice or a later slice can take on its own
+   authority. The proposal is filed for **plan review 14**. W37-11 continues to own the **record**
+   — verifying at the Work close that every clause inheriting the superseded criterion has been
+   brought into line — but it cannot discharge this item until the amendment is accepted.
 6. **Both gate halves are green**, each command from `CLAUDE.md` §11 with its own exit code
    recorded in the PR body — Python and docs half, and frontend half.
 7. **CI is green at a named head SHA**, recorded in the PR body, with the per-workflow state
@@ -1100,6 +1689,17 @@ merge tree, with no context from this session.
 10. **Every skill file this slice modified has a refreshed `Verified` date**, and no skill it
     did not modify has one changed: `/usr/bin/git diff --stat origin/main...<branch> --
     .claude/skills/` names exactly the files the ledger names.
+
+    **Corrected 2026-09-19 (planner, on the deputy's ruling of the same date).** The closing
+    words above — *"names exactly the files the ledger names"* — are corrected to **"names
+    exactly the skill files the ledger names."** Task 15 puts a non-skill file,
+    `scripts/audit-docs.py`, into this slice's ledger. The command in this item is already
+    scoped by its pathspec (`-- .claude/skills/`) and so continues to report correctly; it is
+    the sentence describing what that output should equal that goes false, because the ledger
+    now names a file the pathspec deliberately excludes. The item's substance is unchanged:
+    every skill file this slice modified carries a refreshed `Verified` date, no skill it did
+    not modify has one changed, and the diff under `.claude/skills/` must correspond exactly to
+    the skill files the ledger names — no more, no fewer.
 11. **The deputy's merge acknowledgement is recorded** on the PR before the lead merges, and
     the slice's clean audit is filed. Per `CLAUDE.md` §13 a Slice closes on a clean audit and
     the lead's merge — no maintainer acceptance line is required for this slice, and none is
