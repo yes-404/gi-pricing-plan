@@ -264,6 +264,21 @@ Every figure below was measured at `origin/main` =
 | **S-3** — the correction at `LG-1137:20` | the deputy's 17:36:07 BST ruling, disposition 2 | `docs/ledgers/LG-01137-w37-7-the-remaining-creating-and-reading-instruments.md` | `docs(ledgers): LG-1137 — the two measurement trees, by salvage ref and successor (W37-10)` | **Task 12** | 0.75 |
 | **S-4** — `RL-1046` §B's check-29 class: §5.2's register merge | `RL-1046` §B labels it `owner: W37-10`; disclosed unowned by `RL-1138` ("What it obliges") | `docs/findings/register.md` | `docs(findings): the phase-1b register rows meet the grammar (W37-10, RL-1046 check 29)` | **Task 13** — discharged inside this slice, docs only | 1.5 |
 | **S-5** — `RL-1046` §B's check-30 class: the §5.1/§5.3/§5.4 content rows | `RL-1046` §B labels it `owner: W37-10`; disclosed unowned by `RL-1138` ("What it obliges") | none in this slice | — | **Proposed verdict: reassigned, to W37-11.** A proposal for the lead's ruling, not a verdict (`CLAUDE.md` §12). The reason is below | — |
+| **S-6** — `register.md`'s 8 raw-`\|` rows | found by the executor at Task 5 step 4; lead ruling of 2026-09-26 19:17 BST | `docs/findings/register.md` | *pending the auditor-writer's commit SHA* | **register.md's 8 rows carrying a raw `\|` inside a cell are rewritten (entity or rewording) so `doc-index.py --phase` parses 120 of 120; writer: auditor instance (`register.md` is the auditor's); found by the executor at Task 5 step 4; lead ruling of 19:17 BST** | — |
+
+**Corrected 2026-09-26 (lead ruling, 19:17 BST).** S-6 is added, discharged **outside this
+slice's own commits**: `docs/findings/register.md` is the auditor's file
+(`.claude/roles/planner.md`, "Tools" — and, by the same reasoning, not this slice's
+executor's either), so the auditor instance `auditor-w37-10-t13` makes the 8-row fix as its
+own commit in its Task 13 PR, not on `w37-10-docs`. The defect: `_parse_register`
+(`scripts/doc-index.py:1061`) requires each data row to split into exactly five `|`-delimited
+cells; 8 rows carry a literal, unescaped `|` inside a cell and so silently drop out of
+`rows` while still counting toward `data_lines`, which is what makes
+`python3 scripts/doc-index.py --phase P1b` raise a coverage-mismatch `ValueError` rather
+than print a report — blocking this plan's Acceptance Standard item 11 and this slice's
+Task 5 step 4. An escaped `\|` does not fix it, because `_parse_register`'s own split is
+`line.strip().strip("|").split("|")`, which splits on an escaped pipe identically to a bare
+one; the fix is an HTML entity (`&#124;`) or a rewording, at the auditor's discretion.
 
 **S-4, measured.** RL-1046 §B defines check 29's class as *"§5.2's register merge"*. Its
 instrument, and what it printed at `4ed1f88` (run in a detached worktree of that tree, whose

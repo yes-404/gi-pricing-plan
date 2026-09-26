@@ -37,6 +37,7 @@ W37-10 yet (DP-4); the slice is cited in prose here, per that ruling.
 | 11 — `PL-1070`'s scope-table amendment | `1759b0b4` | Planner's text landed verbatim at the named anchor; all six SHAs verified ancestors of `refs/pull/795/head`; `audit-docs.py` EXIT=0 |
 | 12 — the correction at `LG-1137:20` | `ea9bcde4` | Original line unchanged; both salvage refs and both range-diff successors re-verified; `audit-docs.py` EXIT=0 |
 | 13 — the phase-1b register grammar rows | not this ledger's | Auditor's or lead's file per the plan's "who writes it" note; not executed here |
+| S-6 — `register.md`'s 8 raw-`\|` rows | *pending the auditor-writer's commit* | Found by the executor at Task 5 step 4 (`doc-index.py --phase` raised a coverage-mismatch `ValueError`). Lead ruling 2026-09-26 19:17 BST: fix lands in the auditor instance's (`auditor-w37-10-t13`) own commit inside its Task 13 PR, `docs/findings/register.md` being the auditor's file. §1.4 scope row S-6 added to `PL-1073` in the same commit as this row, per the standing rule. **This row is amended with the commit SHA once the lead relays it; Task 5 step 4 and Acceptance Standard item 11 stay pending until then.** |
 
 ## Task 8 — the two roadmap proposals (drafted here, applied by the lead)
 
@@ -160,16 +161,34 @@ push, per the executor charter and `dev-commands`' wrapped gate body.
 3. **§1.4 row S-5** — `RL-1046` §B's check-30 class (the §5.1/§5.3/§5.4 content rows) —
    is a **proposed verdict: reassigned, to W37-11**, per the plan's own §1.4 measurement.
    This ledger does not decide it; the lead rules it.
-4. **A gate-blocking defect found doing Task 5, reported to the lead 2026-09-26, not fixed
-   here:** `python3 scripts/doc-index.py --phase P1b` raises
-   `ValueError: findings/register.md: parsed 112 of 120 data row(s) — coverage mismatch
-   (RL-982 acceptance item 2)`, reproducing identically and unrelated to any edit in this
-   slice, at `origin/main` (`20d922dd`). Root cause: 8 register rows contain a literal,
-   unescaped `|` and so fail `_parse_register`'s five-cell shape check silently. This
-   blocks Acceptance Standard item 11's runtime proof and Task 5 step 4's own proof.
-   `docs/findings/register.md` is outside every task's named scope in this plan; the
-   executor is standing by on the lead's ruling (recommended: fold the fix into Task 13's
-   commit, same file, same "who writes it" routing) rather than editing it unscoped.
+4. **A gate-blocking defect found doing Task 5, reported to the lead 2026-09-26, ruled on
+   2026-09-26 19:17 BST as §1.4 row S-6 (above):** `python3 scripts/doc-index.py --phase
+   P1b` raises `ValueError: findings/register.md: parsed 112 of 120 data row(s) —
+   coverage mismatch (RL-982 acceptance item 2)`, reproducing identically and unrelated to
+   any edit in this slice, at `origin/main` (`20d922dd`). Root cause: 8 register rows
+   contain a literal, unescaped `|` and so fail `_parse_register`'s five-cell shape check
+   silently — a `\|` does not fix it, since `_parse_register`
+   (`scripts/doc-index.py:1061`) splits on an escaped pipe identically to a bare one; the
+   fix is an HTML entity or a rewording. **Ruled: the auditor instance
+   (`auditor-w37-10-t13`) makes the fix in its own commit inside its Task 13 PR** —
+   `docs/findings/register.md` is the auditor's file, not this ledger's executor's.
+   Acceptance Standard item 11 and Task 5 step 4's runtime proof stay pending until that
+   commit lands on `main`; this row is amended with its SHA once the lead relays it.
+5. **A second gate-blocking defect found running the full local gate, reported to the
+   lead 2026-09-26, escalated rather than fixed** (`RL-1138` bars this executor from any
+   file under `tests/`): `tests/test_audit_docs_ids.py::test_id_scope_documents_excludes_
+   the_w37_11_residue_ceiling_record`'s own positive control — a check, under the widened
+   scope roots, that some path in the resolved set still starts with the old audit tree's
+   own prefix:
+
+   ```text
+   any(r.startswith("docs/audit/") for r in rels)
+   ```
+
+   — depended on the old audit tree holding a file *other than* the W37-11 record. Task 3's
+   ruled deletion of the retired findings README (DP-1/DP-2) leaves exactly one file under
+   the old audit tree, and it is the excluded one, so the positive control now has nothing
+   left to be true of and fails. Standing by on the lead's disposition.
 
 ## PRs
 
