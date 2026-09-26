@@ -629,4 +629,9 @@ named.
   `.claude/roles/planner.md`, `docs/_templates/CR.md`, `CLAUDE.md` §§0, 5, 9, 10, 12, 13, 14 —
   read in full for this review.
 
-**Maintainer acceptance:** _pending_
+**Maintainer acceptance:** **Maintainer decision by delegation (deputy, on the
+maintainer's instruction of 2026-09-26 17:02:52 BST), 2026-09-26 17:06:12 BST.**
+**Accepted as filed**, including its two scope recommendations (§2c's W37-7 addition;
+§5 row 3's W37-11 requirement) that `PL-1070` through `PL-1073` were reconciled against
+and that W37-7 has now been built to; rejecting them after the fact would unsettle a
+landed slice. The withdrawal of the reviews 9–11 ask is noted, no action.
