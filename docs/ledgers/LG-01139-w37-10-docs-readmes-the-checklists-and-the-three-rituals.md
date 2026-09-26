@@ -22,6 +22,23 @@ W37-10 yet (DP-4); the slice is cited in prose here, per that ruling.
 SHAs corrected 2026-09-26 to their on-branch equivalents after three rebases (lead ruling
 on the audit supplementary of 23:05:43).
 
+### Correction 2026-09-26 — cited SHAs were pre-rebase (audit supplementary 23:05:43; deputy ruling 23:06:30)
+
+| cited (pre-rebase, not on the branch) | actual (on-branch) |
+|---|---|
+| `02d9a22a` | `81c54d2e` |
+| `167980cd` | `38adb67e` |
+| `1759b0b4` | `d4c3093a` |
+| `22ef73f5` | `fccbbae2` |
+| `4ff075ab` | `8dd07006` |
+| `6c74b83c` | `bda9bc48` |
+| `73db1e3e` | `473044dc` |
+| `7f45e426` | `ce3aef90` |
+| `e41ecab0` | `3939764f` |
+| `ea9bcde4` | `dd7a7074` |
+
+After #804 is squash-merged, these on-branch commits remain reachable via `refs/pull/804/head`.
+
 ## Tasks
 
 | Task | Commit | Verified |
