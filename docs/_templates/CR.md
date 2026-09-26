@@ -10,6 +10,11 @@ Full field set, status vocabulary and role assignments:
 `docs/process/document-ids.md` §1.5, §1.2a, §1.6. `slice:`, `plans:`, `supersedes:` and
 `superseded_by:` do not apply to this family and must not appear here — a closure has
 exactly one status, `active`, for its whole life.
+
+For `kind: phase` only, add the "Phase report" section below (§1.10 (c)). Its placeholder
+is not valid header content and is exempt from checks 30-39 by path (`_templates/` is a
+policy source, never validated as a document) — do not "fix" it to satisfy a check that
+does not run on it.
 -->
 
 ---
@@ -43,3 +48,13 @@ recollection of what was built.>
 <One of CLAUDE.md §13's four verdicts per unevidenced requirement — delivered but
 untested, deferred with an owner, reassigned, not started — plus the overall close
 decision this record makes durable.>
+
+## Phase report <kind: phase only>
+
+<The body of this section is the generated report — paste the output of
+`python3 scripts/doc-index.py --phase P<n>` with the tree it was generated at. Never a
+hand-kept table (`../process/document-ids.md` §1.10 (c)). File it as `## Phase report`
+(without this heading's own placeholder marker) — the marker exists only so check 37's
+`required_sections` (RL-1040's mechanism: a heading whose text is not a constant cannot be
+a required literal) does not make this section mandatory for the `work` and `review`
+kinds, which do not carry one.>

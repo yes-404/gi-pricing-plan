@@ -74,6 +74,10 @@ workstream is already sliced into.
 
 ## 5. Per-layer flow (Project / Phase / Work)
 
+A Phase's flow additionally passes its three dated freeze gates — plan, code, docs, each
+declared in the phase's own milestone section and checked by `phase-close.md` (ritual (b),
+`document-ids.md` §1.10).
+
 1. **Enter** — load context from the parent layer + relevant findings-register entries.
    (Project's "enter" step is a one-time **Explore**: read the whole project + handover
    files. It is not repeated on replan.)
@@ -207,7 +211,9 @@ rows relevant to it before finalizing (§11 obligation 7).
   (`docs/process/agent-settings.md`), kept distinct from `docs/workflows/` (domain vs.
   process, §4's own cross-reference above prevents conflating the two).
 - The **roadmap** (`docs/roadmap.md`): project-level acceptance standard + phase
-  breakdown + open questions — existing, unchanged.
+  breakdown + open questions — existing, unchanged. Each phase's milestone section
+  declares its three dated freeze gates (plan, code, docs — ritual (b), `document-ids.md`
+  §1.10), and `phase-close.md` checks that each passed on or before its date.
 - A work breakdown per phase, a slice breakdown per work item, and a plan per slice
   (`docs/plans/`) — existing, unchanged, following the frozen/dated-revision convention
   already in force.
@@ -296,6 +302,11 @@ plan's Task 6. This section describes the mechanism `.claude/roles/watcher.md` a
 - **Reporter (mechanical first):** routine summaries template-filled from the state
   files; the reporter agent is invoked only for critical relays and the stale-lead
   nudge. Watch-the-watcher: also flags when `roster-state.md` itself is stale.
+- **Fortnightly work-item status (ritual (a), `document-ids.md` §1.10).** The reporter
+  posts a status entry on every active `WK-` on a fortnightly cadence, driven by the
+  `.claude/skills/reporter-cycle` skill rather than recalled — the same mechanical-first
+  principle as the routine summaries above, so the cadence survives a lead who forgets to
+  ask.
 - **Derived status line:** mechanical facts (open PRs, last merge, slices done vs.
   planned, mechanical ETA) computed each cycle; the lead adds only interpretation and
   ETA judgment. Facts cannot go stale — only judgment can — so the nudge stays rare and

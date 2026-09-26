@@ -19,6 +19,25 @@ relates: []
 document this work item minted before it reused a number reserved in `docs/REDIRECTS.csv` —
 fifteen consecutively at `3803331`, sixteen by `a800c57`, seventeen by `a1241a8`.
 
+**Corrected 2026-09-26 (on the deputy's ruling of 2026-09-26 17:36:07 BST).** The three
+counts above are measurement-tree citations, not item-1 discharge SHAs, and item 1 is not
+further failed by them (the deputy's reading, declined the lead's literal one, with the
+reason stated at the stamp above). What does bite is the reference test itself — would each
+citation still resolve for a reader holding none of this session's open context:
+
+| Tree cited above | Ancestor of `main`? | Origin ref that keeps it | Patch-identical successor in #795's range |
+|---|---|---|---|
+| `3803331` | **yes** | — (on `main`) | — |
+| `a800c57` | no | `refs/salvage/2026-09-26/lg-1137-measurement-trees/a800c57` | `36b339f4`, subject `fix(scripts): check 35 — …'s owner of record in the deferred-count note (RL-1075)` (a finding id elided) |
+| `a1241a8` | no | `refs/salvage/2026-09-26/lg-1137-measurement-trees/a1241a8` | `60698b0d`, `fix(skills): repo-architecture — stop spelling a retired path the pooled ceiling absorbed` |
+
+`a800c57` is not an ancestor of `a1241a8`, hence one `git range-diff` per tree rather than one
+covering both. `36b339f4` and `60698b0d` are themselves not ancestors of `main` either — #795
+was squash-merged — but both are reachable from `refs/pull/795/head`
+(`16e816283b119ad2a7ad3a3251055ca9223d816d`), and their content is inside the squash commit
+`4ed1f88ee89deeddca04565cc1f07cdbaf02dba4`. A reader fetches `refs/pull/795/head` to resolve
+either successor SHA after the branch is deleted.
+
 **Stated with its predicate, because the number alone is not the evidence.** At `3344de9c`,
 with Task 16's emission landed:
 

@@ -13,14 +13,16 @@ was: docs/audit/checklists/work-item-close.md
 
 Follow the [`close-workstream`](../../../.claude/skills/close-workstream/SKILL.md) skill.
 That skill audits the work item; this checklist adds the record the close leaves in
-`docs/audit/`. Nothing here restates the skill's audit steps.
+[`../../closures/`](../../closures/README.md). Nothing here restates the skill's audit
+steps.
 
 ## When a record is written
 
-A work item is any buildable unit the repository names: a PR, a slice, or a workstream.
-Name the record directory by the item's existing id — `docs/audit/work/<existing-id>/`.
-A PR record is `pr-NNN`; a slice record is the slice id; a workstream record is the
-workstream id (for example `WK-661`). No new id family is minted.
+A work item is any buildable unit the repository names: a PR, a slice, or a workstream. The
+record is a `CR-` document under `../../closures/`, `kind: work`, named by the item's
+existing id in its title and `relates:` field — a PR record cites `pr-NNN`, a slice record
+cites the slice id, a workstream record cites the workstream id (for example `WK-661`).
+No family outside [`../document-ids.md`](../document-ids.md) §1.2.
 
 **Closing a workstream also raises the `CLAUDE.md` §14 phase review question** — its
 trigger is fixed, not discretionary: at each workstream close, and again before a phase's
@@ -33,9 +35,17 @@ signing off. A PR or slice close does not raise this question; only a workstream
 what the README's pointers resolve to (roadmap phase, process spec location)? If yes,
 update the pointer — never the copied content, which the README must not contain.
 
+- [ ] **A new record has an id**, from `python3 scripts/doc-id.py next`, and its header
+      validates: `python3 scripts/doc-id.py check` exits 0.
+- [ ] `python3 scripts/audit-docs.py` exits 0 at the tree the record is filed against.
+- [ ] Every register row this close touches is current: `python3 scripts/register-lint.py`
+      exits 0, and `python3 scripts/register-owed.py <WK-id>` has been run and its output
+      reconciled — a cell reading "fix before close" against landed evidence is a stale
+      cell, not a finding.
+
 ## The record
 
-Write `docs/audit/work/<existing-id>/README.md` with these sections.
+Write the `CR-` document with these sections.
 
 ### Scope
 
@@ -71,8 +81,9 @@ the decision, and states the status.
 |---|---|---|---|
 | The requirement or artifact id | What the finding is about | `fix before close` · `carry forward with an owner` · `accept` | `closed` · `closed-with-findings` |
 
-A carried finding is copied to the phase's register (`docs/audit/phases/<phase>/register.md`)
-and to the global register ([`../../findings/register.md`](../../findings/register.md)).
+A carried finding stays a row in the global register ([`../../findings/register.md`](../../findings/register.md));
+a per-phase view of it is generated (`python3 scripts/doc-index.py --phase <p>`), never a
+second hand-kept file.
 
 ### Sign-off
 

@@ -158,6 +158,35 @@ recalled.
 | 14 | `.claude/skills/watcher-runtime-state/` (SKILL.md + `scripts/write_runtime_state.py`) | added by review 13 §2c | The `read_from` locators the skill teaches must resolve | Not landed and actively wrong: `SKILL.md:84-85` teaches `--phase-source "docs/roadmap.md §7"`, and `grep -n '^## ' docs/roadmap.md` shows the headings run `## 6` → `## P1a` — **there is no `## 7`** | 12 |
 | 15 | `scripts/audit-docs.py` check 35's owner literal | added by review 13 §4c | The printed owner tag aligns with F92's owner of record | Not aligned. `scripts/audit-docs.py:2936` prints a deferred-count note naming `owner: W37-10`, with `RL-1046` §B cited as its authority (written there in the padded file form, which is why it is described rather than quoted here); the lead ruled the owner of record is W37-11. See DP-7-1 | 13 |
 
+**Corrected 2026-09-26 (planner, on the deputy's ruling of 2026-09-26 17:18:47 BST, condition
+2, and its 17:33:56 BST rider).** The table above is kept as it was, and four rows are appended
+below it. This slice merged as #795, squash commit `4ed1f88ee89deeddca04565cc1f07cdbaf02dba4`,
+**with this table four rows short**. The ledger carried four rows of accounted-for work that no
+row of this table named, which is the one-way-check failure Acceptance Standard item 1's
+correction of 2026-09-19 exists to catch. Item 1 was therefore carried at the merge as
+*deferred with owner* (the lead, via a planner), under condition 1 of the same ruling. It was
+never satisfied at the merge. The rows below discharge that carry. The four rows go below the
+table rather than in it, so that the table as the slice merged it stays readable. Each row is
+matched to its ledger row by the subject and the files it names.
+
+| # | Commit(s) | Subject | Files | Authority | Task |
+|---|---|---|---|---|---|
+| 16 | `3d4dd7ae` | `docs(scripts): Task 15 — salvaged audit-docs check work reconciled; all three hunks superseded` | **None.** The commit has no file changes by design, and its body says so. The row is matched by subject only | the deputy's ruling of 2026-09-19 (the correction under "Reconciled against plan review 13") | Task 15 |
+| 17 | `3344de9c` | `fix(ids): emit reserved allocations into docs/INDEX.md (RL-1078)` | `docs/INDEX.md`; RFC-937; `scripts/doc-index.py`; `tests/test_doc_index.py` | `RL-1078` | Task 16 |
+| 18 | `5696c7b2`, `a7d7f99f`, `9e27d63e` | `docs(plans): PL-1070 — land the planner's five 2026-09-19 texts verbatim`; `… round-2 texts; [id] gains its third instance`; `… round-3 planner texts; DP-7-6 resolved by RL-1078; [id] renumbered` | this plan (all three); the freeze-clause finding essay, now `FD-1079` (`a7d7f99f`, `9e27d63e`, and `9e27d63e` renames it to that id); `docs/findings/register.md` and `docs/INDEX.md` (`9e27d63e`) | the planner's texts of 2026-09-19, each landed as the lead instructed | the plan-text landings |
+| 19 | `9cffab69` | `docs(plans): PL-1070 — DP-7-1 resolved by RL-1075, plan dated active; lead's freeze-clause breach finding` | this plan; the freeze-clause finding essay, created here under the id that `9e27d63e` later renumbered to `FD-1079`; `docs/findings/register.md`; `docs/INDEX.md` | `RL-1075` (DP-7-1) and the lead's freeze-clause finding | the freeze-clause commit |
+
+In rows 18 and 19, `[id]` stands for the essay's first id, which `9e27d63e` renumbered. The
+first id no longer resolves, so it is left out and `FD-1079` is used.
+
+**Where the six SHAs resolve.** #795 was squash-merged. So **none of the six commits above is an
+ancestor of `main`**: `git merge-base --is-ancestor <sha> 4ed1f88ee89deeddca04565cc1f07cdbaf02dba4;
+echo $?` prints `1` for each. Each is reachable from `refs/pull/795/head` =
+`16e816283b119ad2a7ad3a3251055ca9223d816d` on origin (`git merge-base --is-ancestor <sha>
+16e816283b119ad2a7ad3a3251055ca9223d816d; echo $?` prints `0` for each). Each one's content is
+inside the squash commit `4ed1f88`. The planner checked both results on 2026-09-26. A reader
+fetches `refs/pull/795/head` to resolve a SHA after the branch is deleted.
+
 **Not in this slice, stated so the silence is not read as an omission.** `CLAUDE.md` and the
 public face are W37-9's (`PL-939:785`). The charters, `.claude/agents/README.md` and
 `.claude/agents/ci-watcher.md` are W37-8's (`PL-939:760`; `CR-1065` `:327`). `docs/` READMEs,

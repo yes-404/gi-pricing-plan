@@ -281,4 +281,8 @@ re-cited, not carried forward, once the two live worktrees' pending PRs land.
 - `git grep` for "class-6", "ratif", "nested-span", "lettered" across `docs/` — run this
   session, returning no ratification or nested-span-floor citation.
 
-**Maintainer acceptance:** _pending_
+**Maintainer acceptance:** **Maintainer decision by delegation (deputy, on the
+maintainer's instruction of 2026-09-26 17:02:52 BST), 2026-09-26 17:06:12 BST.** Dated as
+**superseded by `CR-1064`**, not accepted on its own: its recommendations were about the
+W37-6 run, that run closed on 17 Sep, and `CR-1064`'s "acceptance lines actually open"
+section already re-derives what survives.
