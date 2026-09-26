@@ -218,6 +218,11 @@ push, per the executor charter and `dev-commands`' wrapped gate body.
    left to be true of. **Discharged (D10, deputy, 2026-09-26 19:50:59 BST; fixed by `#803`,
    `b82d0647dc6bcbb987eb1923b107d1c83fb6bdca`, merged 21:08:57 BST):** the positive control
    now proves reach without a second live file under the old audit tree. See Task 3's row above.
+6. **A finding for W37-11, not this slice's to fix:** the core-extract generator restamps
+   `delivery-process.core.json`'s `meta.verified_against_tree` with the worktree HEAD on
+   every run, and nothing checks that the field resolves on `origin/main`. This slice's
+   docs run `36270534213` failed on it; fixed by `87965eb6`, which restored
+   `0651c1e265648cbd3918adfc729ad965b83b1e0b`. (Deputy ruling 21:46:32 BST.)
 
 ## PRs
 
