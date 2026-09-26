@@ -2294,15 +2294,44 @@ def test_id_scope_documents_excludes_the_w37_11_residue_ceiling_record(
     would pass whether or not the fix exists (NT-0007's vacuity). `_widened_roots` is the
     same simulation `test_widening_the_scope_roots_reaches_every_non_markdown_file...`
     above already uses for exactly this reason.
+
+    **The positive control no longer depends on a second live file under `docs/audit/`**
+    (deputy's ruling, 2026-09-26 19:50:59 BST): W37-10's ruled retirement of
+    `docs/audit/findings/README.md` (RL-1138 DP-1) left the excluded W37-11 record as the
+    only file `docs/audit/` still has, so `any(r.startswith("docs/audit/") for r in
+    rels)` would fail regardless of whether the exclusion in `_id_scope_documents`
+    (`scripts/audit-docs.py`, the `w37_11_record = REPO / _docid.W37_11_RECORD_PATH` /
+    `return [f for f in files if f != w37_11_record]` pair) still works — exactly
+    NT-0007's vacuity, the other way round. Reach is proven directly instead: point
+    `_docid.W37_11_RECORD_PATH` at a path nothing on disk matches, so the exclusion
+    filters out nothing, and assert the *record itself* is reached by the widened scope.
+    Restoring the real path and re-running then proves the exclusion, on the same
+    corpus, with the record confirmed reachable a moment before — enforcement proven on
+    deliberately broken input (the disabled exclusion), not just on the shipped one.
     """
     record_path = audit.REPO / audit._docid.W37_11_RECORD_PATH
     assert record_path.is_file(), "the W37-11 record itself is missing from the repo"
     setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
+    real_record_path = audit._docid.W37_11_RECORD_PATH
+
+    # Positive control: with the exclusion disabled, the widened scope really does reach
+    # the W37-11 record — proving reach without depending on any second file under
+    # `docs/audit/` existing.
+    setattr(audit._docid, "W37_11_RECORD_PATH", "docs/audit/__no-such-file-nt0007__.md")  # noqa: B010
+    try:
+        rels_unexcluded = {
+            p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()
+        }
+    finally:
+        setattr(audit._docid, "W37_11_RECORD_PATH", real_record_path)  # noqa: B010
+    assert real_record_path in rels_unexcluded, (
+        "the widened scope does not even reach the W37-11 record with its exclusion "
+        "disabled -- the exclusion assertion below would be vacuous"
+    )
+
+    # With the exclusion enabled (the real path restored above), the record is absent.
     rels = {p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()}
     assert audit._docid.W37_11_RECORD_PATH not in rels
-    # Positive control: the widened scope really does reach `docs/audit/` — otherwise
-    # the assertion above would be vacuous a second way.
-    assert any(r.startswith("docs/audit/") for r in rels)
 
 
 # =========================================================================================
