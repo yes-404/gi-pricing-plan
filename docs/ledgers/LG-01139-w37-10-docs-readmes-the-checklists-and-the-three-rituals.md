@@ -25,7 +25,7 @@ W37-10 yet (DP-4); the slice is cited in prose here, per that ruling.
 |---|---|---|
 | 1 — `docs/README.md` as the map | `22ef73f5` | `audit-docs.py` EXIT=0; `adr/` grep empty; both check commands named |
 | 2 — `docs/research/README.md` | `e41ecab0` | `doc-id.py check` EXIT=0; `audit-docs.py` EXIT=0; `docs/INDEX.md` regenerated in the same commit |
-| 3 — retire the audit tree's `findings/README.md` | `73db1e3e` | `git ls-files docs/audit \| wc -l` = 1 (DP-1 option A); `audit-docs.py` EXIT=0; hand-off recorded below |
+| 3 — retire the audit tree's `findings/README.md` | `73db1e3e` | `git ls-files docs/audit \| wc -l` = 1 (DP-1 option A); `audit-docs.py` EXIT=0; hand-off recorded below. **Note (D10, deputy, 2026-09-26 19:50:59 BST):** this task's DP-1 retirement surfaced a coupling in `tests/test_audit_docs_ids.py::test_id_scope_documents_excludes_the_w37_11_residue_ceiling_record` — its own positive control assumed a second file survived under the old audit tree. Routed to a separate tests-only PR outside every slice, written by `exec-ci-hotfix`, which merges before this slice's own PR is requested. `RL-1138` bars this executor from `tests/`; the fix is not this ledger's. *PR number pending — cite it here once it exists.* |
 | 4 — both checklists: id, gate, family, register, path lines | `167980cd` | Both files' verify commands (no reference to the old audit tree's work/phases destinations, no "No new id family", `has an id` present) all as expected; `audit-docs.py` EXIT=0 |
 | 5 — `phase-close.md` freeze-gate and generated-report lines | `4ff075ab` | Lines present, `audit-docs.py` EXIT=0. **Step 4's runtime proof is open** — see "Open items" below |
 | 6 — `delivery-process.md` rituals (a)/(b) + core extract digest | `02d9a22a` | `fortnight`/`freeze` greps hit; no section renumbered (`^## ` heading list unchanged in count and order); check 27 green at the new digest |
@@ -188,7 +188,10 @@ push, per the executor charter and `dev-commands`' wrapped gate body.
    — depended on the old audit tree holding a file *other than* the W37-11 record. Task 3's
    ruled deletion of the retired findings README (DP-1/DP-2) leaves exactly one file under
    the old audit tree, and it is the excluded one, so the positive control now has nothing
-   left to be true of and fails. Standing by on the lead's disposition.
+   left to be true of and fails. **Routed (D10, deputy, 2026-09-26 19:50:59 BST):** a
+   separate tests-only PR outside every slice, written by `exec-ci-hotfix`, fixes the
+   positive control; it merges before this slice's own PR is requested, and this branch
+   rebases onto the new `main` afterward. See Task 3's row above for the citation.
 
 ## PRs
 
