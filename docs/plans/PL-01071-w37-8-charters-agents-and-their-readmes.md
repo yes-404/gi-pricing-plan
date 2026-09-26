@@ -223,7 +223,7 @@ adds only `RL-1140` and its `docs/INDEX.md` row), with its command beside it.
 | **S-4** — rider (b): the slice audit names commit reachability | the deputy's 2026-09-26 23:06:30 BST finding (the W37-10 audit, where two ledger entries checked pairing only); rider list 23:54:10 BST | `.claude/roles/auditor.md` | T7's commit | **T7**, folded in (step 2b). A new charter obligation: `RL-1140` DP-8.3 limit 1 |
 | **S-5** — rider (c): `lead.md`'s copy-then-write rule for governed status files | the deputy's rulings of 2026-09-19 15:31:23 and 15:33:03 BST; rider list 23:54:10 BST | `.claude/roles/lead.md` | T10's commit | **T10**, folded in (step 3a). A new charter obligation: `RL-1140` DP-8.3 limit 1 |
 | **S-6** — rider (d): F97's behavioural clause in `lead.md` | `RL-1140` DP-8.3 (a); rider list 23:54:10 BST | `.claude/roles/lead.md` | T10's commit | **T10**, step 4 as corrected. A new charter obligation: `RL-1140` DP-8.3 limit 1 |
-| **S-7** — rider (e): the charter-path residue | the predicate `python3 scripts/audit-docs.py \| grep 'check 36: .claude/roles/'`, which prints exactly these five hits at `536d3cc3`, each "legacy audit path" (the deputy, 2026-09-27 00:05:28 BST); rider list 23:54:10 BST. `CR-1065` §8 records the residue as *"deferred with owner W37-8"* (`CR-1065:606-611`) | `.claude/roles/auditor.md` (`:26`, `:33`, `:35`), `.claude/roles/planner.md` (`:50`, `:53`) | T7's and T11's commits | **T7** and **T11**, folded in |
+| **S-7** — rider (e): the charter-path residue | the predicate `python3 scripts/audit-docs.py \| grep 'check 36: .claude/roles/'`, which prints exactly these five hits at `536d3cc3`, each "legacy audit path" (the deputy, 2026-09-27 00:05:28 BST); rider list 23:54:10 BST. `CR-1065` §8 (`:591-611`) records the residue as *"deferred with owner W37-8"* in the row labelled `` `:620` `` (`CR-1065:562`), which is `PL-960:620`: *"Every charter's **M** row — the mechanical citation rewrite — lands in this commit regardless"* (the deputy's correction, 2026-09-27 00:11:57 BST) | `.claude/roles/auditor.md` (`:26`, `:33`, `:35`), `.claude/roles/planner.md` (`:50`, `:53`) | T7's and T11's commits | **T7** and **T11**, folded in |
 
 **S-7, measured.** The population is the check-36 output, not a line citation:
 
@@ -239,8 +239,16 @@ $ python3 scripts/audit-docs.py 2>&1 | grep 'check 36: \.claude/roles'
 The quoted path is replaced here by a description, because this plan is subject to the check it
 quotes; the tool prints the literal. **Corrected 2026-09-27 (planner, on the deputy's answer of
 00:05:28 BST).** The rider list's `:620` locator is **withdrawn as a citation**: it was a row
-number at a tree that has since moved. The predicate is the citation; no line number is. The five hits match `w37-11-record.md:469` (auditor, ceiling 3) and `:470`
-(planner, ceiling 2). Rewriting them lowers those counts, which is the non-fatal
+number at a tree that has since moved. The predicate is the citation; no line number is.
+
+**Corrected again 2026-09-27 (planner, on the deputy's correction of 00:11:57 BST).** The
+00:05:28 withdrawal above was **false**: it rested on an untested negative rather than a check
+of where `:620` resolves. `:620` **does** resolve — it is `PL-960:620` (*"Every charter's **M**
+row — the mechanical citation rewrite — lands in this commit regardless"*), and it is the line
+`CR-1065` §8 (`:591-611`) labels its residue row with, at `CR-1065:562` (*"deferred with owner
+W37-8"*). The S-7 row (above) now carries both the citation and the predicate, per the deputy's
+00:11:57 BST correction. The five hits still match `w37-11-record.md:469` (auditor, ceiling 3)
+and `:470` (planner, ceiling 2). Rewriting them lowers those counts, which is the non-fatal
 `RESIDUE_PROGRESSED` outcome; **this slice does not edit `w37-11-record.md`** (`RL-1140`,
 "Interaction with the riders"). Rider (a)'s `:35` is one of the five, so its rewrite also
 discharges `RL-1138` DP-2 condition 3's notice (row S-3): it names the retired findings README, whose destination is `docs/findings/README.md` (`docs/REDIRECTS.csv:4`,
