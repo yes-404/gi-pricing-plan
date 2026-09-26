@@ -35,7 +35,7 @@ signing off. A PR or slice close does not raise this question; only a workstream
 what the README's pointers resolve to (roadmap phase, process spec location)? If yes,
 update the pointer — never the copied content, which the README must not contain.
 
-- [ ] The record carries an id from `python3 scripts/doc-id.py next`, and its header
+- [ ] **A new record has an id**, from `python3 scripts/doc-id.py next`, and its header
       validates: `python3 scripts/doc-id.py check` exits 0.
 - [ ] `python3 scripts/audit-docs.py` exits 0 at the tree the record is filed against.
 - [ ] Every register row this close touches is current: `python3 scripts/register-lint.py`

@@ -24,7 +24,7 @@ A phase is named by its existing id (`1a`, `1b`, `2`). "Phase" here is
 named by the phase id in its title and `relates:` field. No family outside
 [`../document-ids.md`](../document-ids.md) §1.2.
 
-- [ ] The record carries an id from `python3 scripts/doc-id.py next`, and its header
+- [ ] **A new record has an id**, from `python3 scripts/doc-id.py next`, and its header
       validates: `python3 scripts/doc-id.py check` exits 0.
 - [ ] `python3 scripts/audit-docs.py` exits 0 at the tree the record is filed against.
 - [ ] Every register row this close touches is current: `python3 scripts/register-lint.py`
