@@ -36,8 +36,8 @@ W37-10 yet (DP-4); the slice is cited in prose here, per that ruling.
 | 10 — D4's two acceptance feet | `6c74b83c` | Both `_pending_` feet replaced; header/table rows untouched; `audit-docs.py` EXIT=0 |
 | 11 — `PL-1070`'s scope-table amendment | `1759b0b4` | Planner's text landed verbatim at the named anchor; all six SHAs verified ancestors of `refs/pull/795/head`; `audit-docs.py` EXIT=0 |
 | 12 — the correction at `LG-1137:20` | `ea9bcde4` | Original line unchanged; both salvage refs and both range-diff successors re-verified; `audit-docs.py` EXIT=0 |
-| 13 — the phase-1b register grammar rows | not this ledger's | Auditor's or lead's file per the plan's "who writes it" note; not executed here |
-| S-6 — `register.md`'s 8 raw-`\|` rows | *pending the auditor-writer's commit* | Found by the executor at Task 5 step 4 (`doc-index.py --phase` raised a coverage-mismatch `ValueError`). Lead ruling 2026-09-26 19:17 BST: fix lands in the auditor instance's (`auditor-w37-10-t13`) own commit inside its Task 13 PR, `docs/findings/register.md` being the auditor's file. §1.4 scope row S-6 added to `PL-1073` in the same commit as this row, per the standing rule. **This row is amended with the commit SHA once the lead relays it; Task 5 step 4 and Acceptance Standard item 11 stay pending until then.** |
+| 13 — the phase-1b register grammar rows | `b34a37cf` (#801) | Auditor's file, auditor instance's commit, not this ledger's own work. `#801` merged 2026-09-26 20:40:57 BST: all 120 register rows parse |
+| S-6 — `register.md`'s 8 raw-`\|` rows | `b34a37cf` (#801) | Found by the executor at Task 5 step 4 (`doc-index.py --phase` raised a coverage-mismatch `ValueError`). Lead ruling 2026-09-26 19:17 BST: fix landed in the auditor instance's own commit inside `#801`, `docs/findings/register.md` being the auditor's file. §1.4 scope row S-6 amended to cite `b34a37cf` and `#801`. **Discharged:** `python3 scripts/doc-index.py --phase P1b; echo EXIT=$?` now prints `EXIT=0` and a full report at this branch's rebased head — Task 5 step 4 and Acceptance Standard item 11 are both satisfied |
 
 ## Task 8 — the two roadmap proposals (drafted here, applied by the lead)
 
@@ -169,11 +169,38 @@ push, per the executor charter and `dev-commands`' wrapped gate body.
    contain a literal, unescaped `|` and so fail `_parse_register`'s five-cell shape check
    silently — a `\|` does not fix it, since `_parse_register`
    (`scripts/doc-index.py:1061`) splits on an escaped pipe identically to a bare one; the
-   fix is an HTML entity or a rewording. **Ruled: the auditor instance
-   (`auditor-w37-10-t13`) makes the fix in its own commit inside its Task 13 PR** —
-   `docs/findings/register.md` is the auditor's file, not this ledger's executor's.
-   Acceptance Standard item 11 and Task 5 step 4's runtime proof stay pending until that
-   commit lands on `main`; this row is amended with its SHA once the lead relays it.
+   fix is an HTML entity or a rewording. **Ruled: the auditor instance made the fix in
+   its own commit inside `#801`** — `docs/findings/register.md` is the auditor's file,
+   not this ledger's executor's. **Discharged:** `#801` merged as `b34a37cf` (2026-09-26
+   20:40:57 BST); at this branch's rebased head, `python3 scripts/doc-index.py --phase
+   P1b; echo EXIT=$?` prints `EXIT=0` and the full report reproduced below. Acceptance
+   Standard item 11 and Task 5 step 4's runtime proof are both satisfied.
+
+   ```text
+   $ python3 scripts/doc-index.py --phase P1b; echo EXIT=$?
+   # Phase report — P1b
+
+   1. Works closed and retired: 4 closed (WK-661, WK-664, WK-665, WK-692), 1 retired (WK-662)
+   2. Slices planned versus delivered: 0 planned, 0 delivered
+   3. Plans superseded per Work:
+      - WK-661: 0
+      - WK-662: 0
+      - WK-664: 0
+      - WK-665: 0
+      - WK-692: 0
+   4. Rulings per Work:
+      - WK-661: 0
+      - WK-662: 0
+      - WK-664: 0
+      - WK-665: 0
+      - WK-692: 0
+   5. Findings opened versus discharged, from the register: 0 opened in P1b, 0 discharged,
+      0 unowned-decay in P1b, plus 0 unowned-decay carried in from an earlier phase
+   6. Documents with no inbound citation outside INDEX.md: —
+   7. Days from a plan reaching active to its closure record being filed:
+      - (none)
+   EXIT=0
+   ```
 5. **A second gate-blocking defect found running the full local gate, reported to the
    lead 2026-09-26, escalated rather than fixed** (`RL-1138` bars this executor from any
    file under `tests/`): `tests/test_audit_docs_ids.py::test_id_scope_documents_excludes_
