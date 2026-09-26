@@ -19,8 +19,25 @@ from sqlalchemy.exc import DBAPIError
 from app.db.models import CustomMetricRow
 from app.db.session import Database
 
-pytestmark = pytest.mark.anyio
-
+# No `pytestmark = pytest.mark.anyio` here (as this file carried until W37-11's fix,
+# 2026-09-26): this is the only module in the whole tree that ever set it
+# (`git log --follow -p` shows one add, never touched again), against every other async
+# test in this suite relying on `asyncio_mode = "auto"` (pyproject.toml). Both `anyio`
+# and `pytest-asyncio` register as pytest plugins here (`anyio` is a transitive dep, via
+# httpx/starlette), so this module's marker made the `anyio` plugin also claim these
+# coroutines and parametrize them over its own `anyio_backend` fixture — the `[asyncio]`
+# suffix on every id below, e.g. `test_a_metric_row_round_trips[asyncio]`, which no other
+# module in this suite carries. `database` (a `pytest_asyncio.fixture`, `conftest_db.py`)
+# is set up and torn down under pytest-asyncio's own event-loop management; with the
+# `anyio` marker present, the two plugins can each believe they own the loop for a given
+# test, and the CI failures (`RuntimeError: ... attached to a different loop`, then
+# asyncpg "unknown protocol state 3") are exactly that class. This was deterministic in
+# CI across two independent postgres/redis digest pairs and did not reproduce locally,
+# for this module alone or for the whole `backend/tests` directory (ruling 2026-09-26
+# 19:37:05 BST records the CI determinism; the no-repro-locally re-confirmed here).
+# Removing the marker leaves `asyncio_mode = "auto"` to detect and run every
+# `async def test_...` in this file exactly as it does everywhere else in the suite, so
+# there is only one plugin's event-loop management in play, matching every other module.
 _APPLICABILITY = {
     "responses": ["claim_severity"],
     "backends": ["xgboost"],
