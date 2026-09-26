@@ -3,7 +3,7 @@ id: PL-1071
 family: plan
 kind: leaf
 title: W37-8 — Charters, agents, and their READMEs
-status: draft
+status: active
 created: 2026-09-18
 owner: planner
 tree: a8b3c39a0cdd0a537b83b58d04aa0ea3c340aa15
@@ -55,6 +55,15 @@ correction pass does not flip it: a `PL-` `active` with an open blocking decisio
 **Frozen / dated:** _pending — set `status: active` only when DP-8.1 and DP-8.2 carry resolver
 ids. Both waiting-on-an-event conditions above are now discharged; the remaining block is the
 two decision points, which is exactly what `§1.7`'s freeze rule is for._
+
+**Corrected 2026-09-27 (planner, on `RL-1140`).** The two paragraphs above — *"THIS PLAN IS A
+DRAFT, AND STAYS A DRAFT"* and *"Frozen / dated: _pending_"* — are kept as the record of the
+state at drafting. **`RL-1140` rules DP-8.1 to DP-8.6**, and the lead adopted it unamended on
+2026-09-27 at about 00:00 BST. Every blocking row of §6 now carries a resolver id, so this plan
+moves `draft → active` in the same commit that writes those cells, as Acceptance Standard item 9
+requires. `created:` is unchanged. **Frozen / dated: 2026-09-27.** The ruling's amendments and
+limits bind the executor as written in `RL-1140`; the plan text below is amended to them by dated
+corrections, and where the two disagree, the ruling governs.
 
 ## Goal
 
@@ -190,6 +199,67 @@ keys before concluding anything about it.
 - It does not rule DP-6. DP-6 is *"Resolved by: maintainer"* (`PL-939:302`, DP-6 row) and is
   discharged by dated lines on this slice's PR.
 
+#### Rows added after filing — a dated correction to the scope
+
+**Corrected 2026-09-27 (planner).** §1.2's table was this plan's whole scope at filing, and the
+list above said what the slice does not do. The rows below were added after filing, each on a
+named authority. **Two of them narrow the list above:** at filing this slice touched no file
+under `scripts/` or `tests/`; under `RL-1140` DP-8.1 it now edits one file in each (rows S-1 and
+S-2). The words *"Nothing in this slice is generated; every edit is hand-authored prose"* and
+*"No runtime code"* in the Architecture section are kept and are narrowed the same way. Each row
+lands in the **same commit** as the task that carries it, per standing rule (i) below. **An
+executor who adds a ledger row that matches no row here or in §1.2 stops and tells the lead
+before that ledger row exists.**
+
+Every figure below was measured at `origin/main` = `536d3cc3bda9d1e709bf12118999ce5b09dce399`
+on 2026-09-27, in a worktree of PR #805's head `0bc1697d20530a0576c1245d85fc2ff696c39340` (which
+adds only `RL-1140` and its `docs/INDEX.md` row), with its command beside it.
+
+| Row | Authority | Files | Ledger-matchable subject | Treatment |
+|---|---|---|---|---|
+| **S-1** — check 30 tests an extra against the family's policy | `RL-1140` DP-8.1, amendment 2 (§2: *"the code is wrong"*) | `scripts/audit-docs.py` | T2's commit (below) | **T2**, folded in |
+| **S-2** — the three-case check-30 test | `RL-1140` DP-8.1, amendment 3 | `tests/test_audit_docs_ids.py` (its check-30 module) | T2's commit | **T2**, folded in |
+| **S-3** — rider (a): `auditor.md:35` names a retired file | `RL-1138` DP-2 condition 3; the deputy's rider list, 2026-09-26 23:54:10 BST | `.claude/roles/auditor.md` | T7's commit | **T7**, folded in (step 2a) |
+| **S-4** — rider (b): the slice audit names commit reachability | the deputy's 2026-09-26 23:06:30 BST finding (the W37-10 audit, where two ledger entries checked pairing only); rider list 23:54:10 BST | `.claude/roles/auditor.md` | T7's commit | **T7**, folded in (step 2b). A new charter obligation: `RL-1140` DP-8.3 limit 1 |
+| **S-5** — rider (c): `lead.md`'s copy-then-write rule for governed status files | the deputy's rulings of 2026-09-19 15:31:23 and 15:33:03 BST; rider list 23:54:10 BST | `.claude/roles/lead.md` | T10's commit | **T10**, folded in (step 3a). A new charter obligation: `RL-1140` DP-8.3 limit 1 |
+| **S-6** — rider (d): F97's behavioural clause in `lead.md` | `RL-1140` DP-8.3 (a); rider list 23:54:10 BST | `.claude/roles/lead.md` | T10's commit | **T10**, step 4 as corrected. A new charter obligation: `RL-1140` DP-8.3 limit 1 |
+| **S-7** — rider (e): the charter-path residue | `CR-1065` §8, the row labelled `` `:620` `` (`CR-1065:562`) and its section (`:591-611`): *"deferred with owner W37-8"*; rider list 23:54:10 BST | `.claude/roles/auditor.md` (`:26`, `:33`, `:35`), `.claude/roles/planner.md` (`:50`, `:53`) | T7's and T11's commits | **T7** and **T11**, folded in |
+
+**S-7, measured, and what `:620` is.** The population is the check-36 output, not a citation:
+
+```text
+$ python3 scripts/audit-docs.py 2>&1 | grep 'check 36: \.claude/roles'
+  - check 36: .claude/roles/auditor.md:26: legacy audit path '<the audit tree>' (legacy pre-migration form survives)
+  - check 36: .claude/roles/auditor.md:33: legacy audit path '<the audit tree>' (legacy pre-migration form survives)
+  - check 36: .claude/roles/auditor.md:35: legacy audit path '<the audit tree>' (legacy pre-migration form survives)
+  - check 36: .claude/roles/planner.md:50: legacy audit path '<the audit tree>' (legacy pre-migration form survives)
+  - check 36: .claude/roles/planner.md:53: legacy audit path '<the audit tree>' (legacy pre-migration form survives)
+```
+
+The quoted path is replaced here by a description, because this plan is subject to the check it
+quotes; the tool prints the literal. **`:620` is a line of `PL-960`** (the W37-6 migration-run
+plan): `CR-1065` §8 labels each of its six rows by the `PL-960` line that carries the claim, and
+`PL-960:620` at `536d3cc3` reads *"citation rewrite — lands in this commit regardless"*. It is
+not a line of `PL-1071`, `w37-11-record.md`, `CR-1064` or `CR-1065`, which is why `RL-1140` §1
+could not resolve it. The five hits match `w37-11-record.md:469` (auditor, ceiling 3) and `:470`
+(planner, ceiling 2). Rewriting them lowers those counts, which is the non-fatal
+`RESIDUE_PROGRESSED` outcome; **this slice does not edit `w37-11-record.md`** (`RL-1140`,
+"Interaction with the riders"). Rider (a)'s `:35` is one of the five: it names the retired
+findings README, whose destination is `docs/findings/README.md` (`docs/REDIRECTS.csv:4`,
+the row W37-10 added under `RL-1138` DP-2, in #804).
+
+**Standing constraints on the executor, verbatim.** Each binds every task of this slice:
+
+- (i) *"a task added to a slice after its plan is filed extends the scope table in the same
+  commit that adds the ledger row, as a dated correction"* (the deputy, 2026-09-26 17:18:47 BST,
+  restated 23:54:10 BST).
+- (ii) *"after any rebase and before pushing, the executor re-verifies every ledger SHA with
+  `git merge-base --is-ancestor` and rewrites the moved cells in the same push"* (the deputy,
+  2026-09-26 23:06:30 BST, restated 23:54:10 BST).
+- (iii) W37-8 now edits `scripts/` and `tests/`, **so each such PR's python CI must be fully
+  green** (`GATE: pass — 8 of 8`, 0 failed). The docs-only disclosure under which W37-10 merged
+  with a cancelled `python` run does not apply to a PR that changes code.
+
 ---
 
 ## 2. Executor skill and the roles
@@ -203,6 +273,23 @@ keys before concluding anything about it.
 | **Auditor** | one auditor, fresh context, per slice | `.claude/roles/auditor.md` | Audits the delivered slice against §5's Acceptance Standard; proposes verdicts, decides none |
 | **Lead** | w37-team2 lead | `.claude/roles/lead.md` | Adopts/amends/rejects the auditor's verdicts; sole merge authority; converts the ETAs in §7 to clock times |
 | **Maintainer** | — | not a spawned role (§5.3 row 11) | The dated DP-6 line per charter edit; nothing in this slice merges without them |
+
+**Corrected 2026-09-27 (planner, on `RL-1140` DP-8.1 amendment 3 and DP-8.3).** Three cells
+above are kept as filed and read as follows:
+
+- **Executor skills.** The row *"Executor skill | `writing-skills`"* stands, and **`python-test`
+  is added**: the executor loads it for T2, which now edits `scripts/audit-docs.py` and adds a
+  test to `tests/test_audit_docs_ids.py` (§1.4 rows S-1, S-2). `writing-skills` stays the skill
+  for every other task.
+- **Decision-maker.** DP-8.1 to DP-8.6 are ruled, all six, by `RL-1140`. The decision-maker
+  has nothing further to rule in this slice unless a stop condition in `RL-1140` fires.
+- **Maintainer.** The maintainer's per-file lines are written **by delegation**: the deputy, on
+  the maintainer's instruction of 2026-09-26 17:02:52 BST (D2). One line per edited file under
+  `.claude/roles/`. The `lead.md` line and the `auditor.md` line **name each new-obligation
+  clause and approve or reject it separately** (`RL-1140` DP-8.3 limit 2): in `lead.md`, the
+  F97 clause (S-6) and the copy-then-write clause (S-5); in `auditor.md`, the reachability step
+  (S-4). `docs/_templates/REFERENCE.md`, the agent files and the agents README get no line,
+  because none is a charter (`RL-1140` DP-8.1, "Consequence for D2").
 
 **Self-referential hazard, named because it bites here and nowhere else in WK-697.** This slice
 edits `.claude/roles/executor.md`, `.claude/roles/auditor.md` and `.claude/roles/planner.md` —
@@ -367,6 +454,77 @@ docs(templates): license the harness front-matter keys on Reference files (RFC-9
 
 **ETA:** 1.5 h — most of it in step 5, and in deciding the ordering rather than typing it.
 
+#### Task 2, corrected 2026-09-27 (planner, on `RL-1140` DP-8.1, adopted with five amendments)
+
+**The steps above are kept as filed and are superseded where this block differs.** `RL-1140` §2
+found DP-8.1's premise false: declaring the keys in the template is necessary but **not
+sufficient**. Three probes at `536d3cc3` put a merged header on `ci-watcher.md` and got
+`check 30: … unknown field` for each of the four keys, exit 1, **whether the template was
+unchanged, declared them in its commented foot, or declared them in its top-level block**. The
+cause is in code: check 30 fails every entry of `header.extra` unconditionally
+(`scripts/audit-docs.py:1701-1702` at `536d3cc3`, the loop `for extra_key in header.extra:`),
+and never consults the family's derived policy. Under `CLAUDE.md` §0 the ruling found **the code
+wrong** and the spec (`document-ids.md` §1.5, `RL-981` §2 item 1, `parse_header`'s docstring)
+right. The *"BLOCKED on DP-8.1"* line above is discharged: DP-8.1 carries `RL-1140`.
+
+**Files, as corrected** (§1.4 rows S-1 and S-2):
+- Modify: `docs/_templates/REFERENCE.md`
+- Modify: `scripts/audit-docs.py` (check 30's extras loop only)
+- Modify: `tests/test_audit_docs_ids.py` (its check-30 tests)
+
+**Skills:** `python-test` as well as `writing-skills` (§2, as corrected).
+
+**The steps, as corrected.** Each amendment is `RL-1140` DP-8.1's, by number:
+
+- [ ] **Step 1 (unchanged):** the red-before grep over the template.
+- [ ] **Step 2 (replaced): write the failing test first** (amendment 3), in
+      `tests/test_audit_docs_ids.py` beside the existing `test_check_30_*` tests, using the same
+      fixture pattern. Three cases:
+      1. a Reference file whose header carries the declared harness keys **passes**;
+      2. a Reference file with an undeclared key (`colour: red`) **still fails**;
+      3. a non-Reference file (for example an `RL-`) carrying `tools:` **still fails**, because
+         the licence is per family.
+      Run it and record the output: before the fix, case 1 is red. Cases 2 and 3 must also be
+      shown red against a deliberately broken check (for example with the policy test inverted
+      or removed), per `CLAUDE.md` §13, and the broken check is then restored.
+- [ ] **Step 3 (replaced): declare the keys in the template's top-level `---` block**
+      (amendment 1), **not** the commented foot, which `derive_field_policies()` does not read.
+      The template's leading comment gains one sentence: the four keys (`name:`,
+      `description:`, `tools:`, `model:`) are for files the Claude Code harness consumes
+      (`.claude/agents/*.md`, `.claude/skills/*/SKILL.md`), and are **permitted, never
+      required** (`required = _CORE_HEADER_FIELDS ∩ permitted`, and none of the four is core).
+- [ ] **Step 3a (new): fix check 30 in the same commit** (amendment 2). An extra fails only
+      when it is not in the file's family policy: `extra_key not in policy.permitted`. **Do not
+      add the four names to `_docid._KNOWN_KEYS`** — that licenses them for every family
+      through a hand-written constant, the second copy `RL-981` §2 item 1 refuses.
+- [ ] **Step 4 (replaced):** re-run the step-2 test: all three cases green. Then
+      `python3 scripts/audit-docs.py; echo EXIT=$?` → `EXIT=0`.
+- [ ] **Step 5 (kept, now covered by case 2):** the licence is narrow.
+- [ ] **Step 5a (new): the ordering** (amendment 4). **The harness keys stay first, unchanged,
+      and the governed keys follow them.** Each agent file's existing lines stay byte-identical,
+      so the merge in T3 and T4 is a pure insertion. Step 3's original *"pick one and say which"*
+      is decided by this.
+- [ ] **Step 5b (new): the owner** (amendment 5) is `lead` on every agent file
+      (`document-ids.md:164`, *"Reference — agents | lead"*).
+- [ ] **Step 5c (new): the stop condition.** If T2 needs any change to the **text** of
+      `document-ids.md` §1.5, stop and report: that is a `process/` amendment needing an `RFC-` +
+      `RL-` pair, outside W37-8 (`RL-1140` DP-8.1, "The limit").
+- [ ] **Step 6 (amended): run the Python half of the gate as well as the two cheap checks**,
+      because this commit changes code; then commit **spec, code and test in one commit**
+      (`CLAUDE.md` §2):
+
+```
+fix(ids): check 30 licenses a family's extras from its template; Reference declares the harness keys (RL-1140)
+```
+
+**The acceptance this commit must meet** (`RL-1140`, Acceptance, DP-8.1 (a)-(c)): at the merge
+tree `python3 scripts/audit-docs.py | grep -c 'check 30: \.claude/agents/'` prints `0` (after
+T3 and T4); test cases 2 and 3 red on broken input; and
+`grep -n '"tools"\|"model"\|"description"' scripts/_docid.py` has no hit inside `_KNOWN_KEYS`.
+
+**ETA, as corrected:** 3.0 h (was 1.5 h) — the code fix, the three-case test with its red half,
+and a Python gate run.
+
 ---
 
 ### Task 3: `.claude/agents/ci-watcher.md` — the one reassigned file
@@ -439,6 +597,21 @@ docs(agents): close ci-watcher.md's §7(i) row — header and post-migration cit
 ```
 
 **ETA:** 1.5 h.
+
+**Corrected 2026-09-27 (planner, on `RL-1140` DP-8.1 amendments 4 and 5, and its "Not verified
+here").** Step 3's words *"per the ordering T2 fixed"* now mean: **the four harness keys stay
+first, byte-identical, and the seven governed keys are inserted after them**, `owner: lead`. Two
+steps are added, before step 6:
+
+- [ ] **Step 4a: the merged header parses on this file.** `RL-1140`'s probe 1 showed
+      `parse_header` reads `ci-watcher.md`'s quoted, colon-bearing `description:` without a
+      `HeaderError`. It checked that one file only; T4 repeats this check on each of its files.
+- [ ] **Step 5a: the harness still loads the agent — shown once, here, before T4.** No probe has
+      shown that Claude Code still loads an agent whose front matter carries the governed keys.
+      Show it on `ci-watcher.md`: for example, a fresh session lists `ci-watcher` among its agent
+      types with its `description:` intact. Record the evidence in the ledger. **If the agent is
+      not listed, or its description is truncated or altered, stop and report to the lead;
+      T4 does not start.**
 
 ---
 
@@ -544,6 +717,14 @@ docs(agents): README names the family, the owner and the header source
 ```
 
 **ETA:** 1.0 h.
+
+**Corrected 2026-09-27 (planner, on `RL-1140` DP-8.5, adopted with an amendment).** Step 2's
+words *"their owner is the **lead**"* are narrowed: the body sentence **cites**
+`document-ids.md` §1.6's *"Reference — agents"* row as the authority for the owner, and does
+**not** state "the lead" as a free-standing value. The header's `owner:` then records what the
+cited row says, and the sentence is not a third copy that could fall out of step (`RFC-756`).
+Step 4 gains the ruling's check: `sed -n '9,$p' .claude/agents/README.md | grep -c 'Reference —
+agents'` prints at least `1`.
 
 ---
 
@@ -654,6 +835,38 @@ docs(roles): auditor charter names the families it owns (RFC-937 §1.6)
 ```
 
 **ETA:** 1.5 h.
+
+**Corrected 2026-09-27 (planner, on §1.4 rows S-3, S-4 and S-7).** Three edits are folded into
+this task and land in its one commit. Steps 2a to 2c run after step 2:
+
+- [ ] **Step 2a (S-3, rider (a)): `:35` names a retired file.** At `536d3cc3`, `auditor.md:35`
+      names the retired findings README. Its destination is `docs/findings/README.md`
+      (`docs/REDIRECTS.csv:4`). Rewrite the citation to the destination.
+- [ ] **Step 2b (S-4, rider (b)): the slice audit names commit reachability.** Add to the
+      per-slice audit bullet that a slice audit's ledger check is the two-way match between
+      scope rows and ledger rows **and** the reachability of every matched SHA:
+      `git merge-base --is-ancestor <sha> <the PR's head>` exits 0 for each, before the SHA is
+      accepted as evidence. The W37-10 audit checked pairing only for two entries, and ten of
+      thirteen ledger SHAs were then found unreachable (the deputy, 2026-09-26 23:06:30 BST).
+      **This is a new obligation**: the deputy's `auditor.md` line names it and approves or
+      rejects it separately (`RL-1140` DP-8.3 limit 2). If it is rejected, it comes out of the
+      diff.
+- [ ] **Step 2c (S-7, rider (e)): the three residue lines.** `auditor.md:26`, `:33` and `:35`
+      each spell the retired audit tree. Rewrite each to its post-migration destination, spelled
+      in full, and describe any retired path rather than spell it. The destinations are read
+      from `docs/REDIRECTS.csv`, never guessed.
+- [ ] **Step 4, amended: verify the residue.**
+
+```bash
+python3 scripts/audit-docs.py > /tmp/w37-8-t7.txt 2>&1; echo AUDIT_EXIT=$?   # expect 0: a residue regression is fatal
+grep -c 'check 36: \.claude/roles/auditor.md' /tmp/w37-8-t7.txt                # expect 0 (was 3)
+grep -o '([0-9]* fatal' /tmp/w37-8-t7.txt                                      # expect no higher than T1's baseline
+```
+
+The drop from 3 to 0 is the non-fatal `RESIDUE_PROGRESSED` outcome (`scripts/_docid.py`, by
+symbol); a hit in a charter the W37-11 record does not name is the fatal `RESIDUE_REGRESSION`,
+which sets the exit code. **Do not edit
+`w37-11-record.md`**; its shrink is W37-11's (`RL-1140`, "Interaction with the riders").
 
 ---
 
@@ -821,6 +1034,36 @@ docs(roles): lead charter names SL/WK/CR-review/agents; residual docs/ list → 
 
 **ETA:** 2.0 h — the residual-clause deletion needs the matrix output read first.
 
+**Corrected 2026-09-27 (planner, on `RL-1140` DP-8.3 and §1.4 rows S-5 and S-6).** Step 4's
+default — *"decline, with a date. Add nothing to `lead.md` for F97"* — is **superseded**:
+`RL-1140` rules DP-8.3 **(a)**, F97 drafted in W37-8 under the `lead.md` line. Step 5's
+expectation *"Under the default, `F97_GREP_EXIT=1`"* is superseded with it. Two new
+obligations are added to `lead.md` in this task's one commit, and each is a charter amendment
+under `RL-1140` DP-8.3 limit 1:
+
+- [ ] **Step 3a (S-5, rider (c)): the copy-then-write rule.** Add a clause: a governed status
+      file is updated by copying it and writing the copy, **never** by a truncating overwrite
+      (`cat >`), so that a failed write cannot empty the file of record. Authority: the deputy's
+      rulings of 2026-09-19 15:31:23 and 15:33:03 BST, which put the rule in `lead.md` under
+      W37-8. Cite them by stamp; the channel file is local and is not in the repository.
+- [ ] **Step 4 (replaced; S-6, rider (d)): draft the F97 clause.** Read F97's register row
+      (`docs/findings/register.md`, the row whose title ends `(F97)`) and draft **one** of its
+      two remedy shapes: a halt-protocol clause for the shared checkout, **or** a successor-side
+      precondition check. `RL-1140` DP-8.3 limit 4 does not choose; the choice is the content of
+      the amendment. **The PR body names which shape was drafted.** The clause must not restate
+      or amend `CLAUDE.md` (§1.4; that is W37-9's).
+- [ ] **Step 4a: the per-clause maintainer line.** The deputy's `lead.md` line names **each**
+      new-obligation clause — the F97 clause and the copy-then-write clause — and approves or
+      rejects each separately (`RL-1140` DP-8.3 limit 2). The count is still one line per file.
+      **If the line rejects the F97 clause,** remove it from the diff and put a dated decline on
+      the PR that names the event carrying F97 forward (limit 3; Acceptance Standard item 7's
+      second limb). The same holds for the copy-then-write clause, with its own named event.
+- [ ] **Step 5, amended: verify.** `grep -n "F97" .claude/roles/lead.md; echo F97_GREP_EXIT=$?`
+      prints the clause and `F97_GREP_EXIT=0` while the clause is approved. Drafting the clause
+      **does not close F97**: its register row's own condition (a zero-byte `.git/index.lock`
+      planted on a clean tree yields a named report) governs the auditor setting it `closed`,
+      and is not a W37-8 acceptance item (limit 5).
+
 ---
 
 ### Task 11: `.claude/roles/planner.md` — §1.6 role content
@@ -871,6 +1114,20 @@ docs(roles): planner charter names PL ids, SL row minting and supersedes-on-repl
 ```
 
 **ETA:** 1.5 h.
+
+**Corrected 2026-09-27 (planner, on §1.4 row S-7).** One edit is folded into this task and
+lands in its one commit:
+
+- [ ] **Step 3a (S-7, rider (e)): the two residue lines.** `planner.md:50` and `:53` (at
+      `536d3cc3`) spell the retired audit tree, in the `Tools:` bullet's clause about where the
+      §14 phase review is filed and what the rest of that tree holds. Rewrite each to its
+      post-migration destination, spelled in full, read from `docs/REDIRECTS.csv` and from where
+      `CR-` plan reviews now live (`docs/closures/INDEX.md`), never guessed. Describe any retired
+      path rather than spell it. This is `RFC-937` §5.3 implementation, not a new obligation, so
+      the deputy's `planner.md` line needs no per-clause naming for it.
+- [ ] **Step 5, amended.** Add
+      `python3 scripts/audit-docs.py 2>&1 | grep -c 'check 36: \.claude/roles/planner.md'` →
+      expect `0` (was `2`), with `AUDIT_EXIT=0`. **Do not edit `w37-11-record.md`.**
 
 ---
 
@@ -991,6 +1248,20 @@ reporter, watcher = 7, plus `docs/_templates/REFERENCE.md` if T2's template amen
 **ETA:** 2.0 h of executor work, excluding wall-clock waiting on CI and on the maintainer's
 lines.
 
+**Corrected 2026-09-27 (planner, on `RL-1140` DP-8.1 and DP-8.3, and the deputy's D2 of
+2026-09-26 17:06:12 BST).** Step 7's words *"eight charter-file edits … plus
+`docs/_templates/REFERENCE.md` if T2's template amendment is ruled a `process/` amendment"* are
+narrowed: `RL-1140` rules it is **not** one, so the count is the edited files under
+`.claude/roles/` only — seven if every charter task lands. Each line is the maintainer's **by
+delegation** (the deputy, on the maintainer's instruction of 2026-09-26 17:02:52 BST), quoted
+verbatim on the PR by the lead; the `lead.md` and `auditor.md` lines name their new-obligation
+clauses separately (§2, as corrected). Step 6 gains two conditions:
+
+- **A PR that changes `scripts/` or `tests/` needs the `python` CI workflow fully green** —
+  standing constraint (iii), §1.4.
+- **After any rebase and before pushing, every ledger SHA is re-verified** — standing
+  constraint (ii), §1.4. The ledger's §7 (i) table (step 4) names SHAs, so this binds it.
+
 ---
 
 ## 4. Reconciled against plan review 13
@@ -1101,6 +1372,17 @@ executable; items 5-8 are what plan review 13 and `CR-1065` added.
 10. **`python3 scripts/doc-index.py --check` exits 0 and `git status --porcelain docs/INDEX.md`
     is empty after a fresh `python3 scripts/doc-index.py` run.** (Map plan Acceptance Standard
     item 2, applied at this slice's tree per its item 7.)
+11. **The deputy's merge acknowledgement is recorded** on the PR before the lead merges each
+    PR of this slice, and the slice's clean audit is filed as a dated channel entry — the
+    auditor's proposal, then the lead's verdict line — cited by stamp in the closing PR's
+    request. Per `CLAUDE.md` §13 a Slice closes on a clean audit and the lead's merge. **Item
+    3's per-charter dated lines are the maintainer's, by delegation** (deputy, on the
+    maintainer's instruction of 2026-09-26 17:02:52 BST), one per edited file, quoted on each
+    PR; item 3 is otherwise unchanged. **The audit's ledger check is the two-way match between
+    scope rows (§1.2 and §1.4) and ledger rows, plus reachability:** for every matched SHA,
+    `git merge-base --is-ancestor <sha> <the PR's head>; echo $?` prints `0`. A pairing without
+    reachability does not pass. *(Added 2026-09-27 by the planner, on the deputy's ruling of
+    2026-09-26 23:55:47 BST, modelled on PL-1073 item 15.)*
 
 ---
 
@@ -1113,12 +1395,22 @@ planner never rules a decision point** (`.claude/roles/planner.md`, `Never:`).
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-8.1 | The seven `.claude/agents/*.md` and the 46 `.claude/skills/*/SKILL.md` share one unlanded prerequisite: the harness's `name:`/`description:`/`tools:`/`model:` keys must be **declared in `docs/_templates/REFERENCE.md`** before a merged governed header can parse (`scripts/doc-id.py:4718-4731`; `document-ids.md:136` *"Unknown field → lint failure"*). The template declares none of them at `a8b3c39`. Which slice lands that declaration — W37-8 (agents) or W37-7 (skills)? They run beside each other (`PL-939:377-380`), so neither can assume the other | (a) **W37-8 declares it** (T2) and W37-7 consumes it; (b) **W37-7 declares it** and W37-8 waits; (c) a third slice or a maintenance PR declares it before either starts; (d) each declares its own half — two blocks, two key lists | **(a).** W37-8's acceptance sentence says *"the agents files carry a valid header"*, and at `a8b3c39` no agent file can carry one — so W37-8 cannot pass its own acceptance without this, whereas W37-7's acceptance sentence (`PL-939:753-757`) names commits and a sweep, not skill headers. (d) is refused outright: a shape defined twice will diverge (`CLAUDE.md` §2). If the ruling is (b) or (c), **T2 is deleted from this plan and T3/T4 gain a dependency on the declaring PR** | scope — it moves one file's edit between two parallel slices | **yes** | decision-maker; **and the maintainer if amending `docs/_templates/` is an amendment to a `process/`-class artifact under `CLAUDE.md` §12 — that prior question is the first thing the ruling must answer** |
-| DP-8.2 | §5.3's table names **two** agent files (`ci-watcher.md`, `spec-reconciler.md`); RFC-937 §4 step 5's stamp set is **all of `.claude/agents/`**, which is seven files at `a8b3c39`. Which population does W37-8 take? | (a) all seven; (b) the two §5.3 names, the other five deferred with a named owner; (c) the two names plus an `FD-` filed for the five | **(a).** The five are the identical class and the identical edit; the marginal cost is five citation sweeps in a commit already doing two. (b) leaves `python3 scripts/audit-docs.py \| grep -c "check 30: \.claude/agents/"` printing `5` with no slice owning it — a standing disclosure is how a gap becomes permanent. (c) files paperwork instead of doing 2 h of work. **The plan is written to (a) as its default**: T4 covers six files and the acceptance item 1 predicate is `grep -L` over the whole directory | scope | **yes** — it changes T4's file list and acceptance item 1's predicate | decision-maker |
-| DP-8.3 | **F97's disposition** (`CR-1064:154`, `:542`) — the remedy is a new behavioural clause in `.claude/roles/lead.md`, a maintainer amendment under DP-6 | (a) draft it alongside the charter headers, with its own dated maintainer line; (b) **decline as W37-8 scope with a dated line naming the event that carries it forward** | **(b)** — this is plan review 13's own recommendation (*"disclosed candidate, not scope"*) and its reason is adopted: W37-8's acceptance is charter headers and §1.6 role content, and a behavioural clause is a different kind of change. **The decline must name its carrying event**; an unnamed carry is what made F97 a decayed row | scope | no — **T10 step 4 applies (b) as the default**, and the maintainer's line at the PR is the resolving step | lead at the PR; the maintainer if (a) |
-| DP-8.4 | This plan's header carries no `slice:` field. `docs/_templates/PL.md` says `slice: SL-NNNNN` applies to a `kind: leaf` plan — but **no `SL-` row exists for W37-8**: `grep -c 'SL-' docs/roadmap.md` returns `0` at `a8b3c39`, and the roadmap records W37-* slices as named clauses inside the `WK-697` row | (a) omit the field (the template's *"remove any field this plan does not use"*); (b) mint an `SL-` id now with `doc-id.py next`; (c) carry `slice: W37-8` as a non-`SL-` label | **(a).** `SL-` rows are *"planner, cut in the map plan"* (`document-ids.md` §1.6) and `PL-939` is a frozen dated file — minting a row into it now is a retro-edit to a frozen plan. (c) puts a value in a field whose vocabulary is `SL-<n>` and would be read as one. **(b) is the right answer at the Work level and the wrong one at this slice's level**; whoever re-cuts the `SL-` rows should do it for all eleven at once, not for the one being drafted tonight | scope | no — default (a) applied; resolved when the `SL-` rows are minted for WK-697 as a set | planner, on the lead's instruction — not in this plan |
-| DP-8.5 | Does `.claude/agents/README.md`'s **header** discharge §5.3's *"README names agents as Reference family owned by the lead"*, or must the **body** say it? The header already carries `family: reference` (`:2`) and `owner: lead` (`:6`); the body says neither | (a) body sentence required; (b) header suffices, row already closed | **(a).** §5.3's verb is *"names"* and its object is a README, which is a document a person reads; front matter is machine state. The cost is one paragraph. **If (b) is ruled, T5 reduces to its citation sweep** | design unknown — it is a reading of one word in a row | no — default (a) applied at T5 | lead, at the PR |
-| DP-8.6 | §5.3 contains two further rows — `.claude/settings.json` (hook `statusMessage` citation, M) and the `notes/` stub directory under `.claude/` (19 stubs + README deleted, H + M). The map plan's W37-8 **scope sentence** enumerates charters, agents and the maintainer row and names neither; its **self-review** (`PL-939:907-910`) maps *"§5.3 → W37-8"* as a whole | (a) both are out of W37-8 — the scope sentence governs, and both were discharged in W37-6; (b) both are in — the section pointer governs; (c) settings.json in, notes out | **(a)**, contingent on verification. The stub directory's removal is a deletion the migration performed, and the `statusMessage` row is a citation rewrite in a non-Markdown file the migration's citation pass covered. **T1 step 3 verifies both before the exclusion is relied on**, and reopens this row if either contradicts it | scope | no — default (a), verified at T1 step 3 | lead, on T1's evidence |
+| DP-8.1 | The seven `.claude/agents/*.md` and the 46 `.claude/skills/*/SKILL.md` share one unlanded prerequisite: the harness's `name:`/`description:`/`tools:`/`model:` keys must be **declared in `docs/_templates/REFERENCE.md`** before a merged governed header can parse (`scripts/doc-id.py:4718-4731`; `document-ids.md:136` *"Unknown field → lint failure"*). The template declares none of them at `a8b3c39`. Which slice lands that declaration — W37-8 (agents) or W37-7 (skills)? They run beside each other (`PL-939:377-380`), so neither can assume the other | (a) **W37-8 declares it** (T2) and W37-7 consumes it; (b) **W37-7 declares it** and W37-8 waits; (c) a third slice or a maintenance PR declares it before either starts; (d) each declares its own half — two blocks, two key lists | **(a).** W37-8's acceptance sentence says *"the agents files carry a valid header"*, and at `a8b3c39` no agent file can carry one — so W37-8 cannot pass its own acceptance without this, whereas W37-7's acceptance sentence (`PL-939:753-757`) names commits and a sweep, not skill headers. (d) is refused outright: a shape defined twice will diverge (`CLAUDE.md` §2). If the ruling is (b) or (c), **T2 is deleted from this plan and T3/T4 gain a dependency on the declaring PR** | scope — it moves one file's edit between two parallel slices | **yes** | **RL-1140** — (a), amended: not a maintainer amendment; keys in the template's top-level block; T2 also fixes check 30 and adds a three-case test. *Was: "decision-maker; and the maintainer if amending `docs/_templates/` is an amendment to a `process/`-class artifact under `CLAUDE.md` §12 — that prior question is the first thing the ruling must answer"* |
+| DP-8.2 | §5.3's table names **two** agent files (`ci-watcher.md`, `spec-reconciler.md`); RFC-937 §4 step 5's stamp set is **all of `.claude/agents/`**, which is seven files at `a8b3c39`. Which population does W37-8 take? | (a) all seven; (b) the two §5.3 names, the other five deferred with a named owner; (c) the two names plus an `FD-` filed for the five | **(a).** The five are the identical class and the identical edit; the marginal cost is five citation sweeps in a commit already doing two. (b) leaves `python3 scripts/audit-docs.py \| grep -c "check 30: \.claude/agents/"` printing `5` with no slice owning it — a standing disclosure is how a gap becomes permanent. (c) files paperwork instead of doing 2 h of work. **The plan is written to (a) as its default**: T4 covers six files and the acceptance item 1 predicate is `grep -L` over the whole directory | scope | **yes** — it changes T4's file list and acceptance item 1's predicate | **RL-1140** — (a), all seven. *Was: "decision-maker"* |
+| DP-8.3 | **F97's disposition** (`CR-1064:154`, `:542`) — the remedy is a new behavioural clause in `.claude/roles/lead.md`, a maintainer amendment under DP-6 | (a) draft it alongside the charter headers, with its own dated maintainer line; (b) **decline as W37-8 scope with a dated line naming the event that carries it forward** | **(b)** — this is plan review 13's own recommendation (*"disclosed candidate, not scope"*) and its reason is adopted: W37-8's acceptance is charter headers and §1.6 role content, and a behavioural clause is a different kind of change. **The decline must name its carrying event**; an unnamed carry is what made F97 a decayed row | scope | no — **T10 step 4 applies (b) as the default**, and the maintainer's line at the PR is the resolving step | **RL-1140** — (a), not the recommended (b): drafted in W37-8 under the `lead.md` line, with five limits (T10, as corrected). *Was: "lead at the PR; the maintainer if (a)"* |
+| DP-8.4 | This plan's header carries no `slice:` field. `docs/_templates/PL.md` says `slice: SL-NNNNN` applies to a `kind: leaf` plan — but **no `SL-` row exists for W37-8**: `grep -c 'SL-' docs/roadmap.md` returns `0` at `a8b3c39`, and the roadmap records W37-* slices as named clauses inside the `WK-697` row | (a) omit the field (the template's *"remove any field this plan does not use"*); (b) mint an `SL-` id now with `doc-id.py next`; (c) carry `slice: W37-8` as a non-`SL-` label | **(a).** `SL-` rows are *"planner, cut in the map plan"* (`document-ids.md` §1.6) and `PL-939` is a frozen dated file — minting a row into it now is a retro-edit to a frozen plan. (c) puts a value in a field whose vocabulary is `SL-<n>` and would be read as one. **(b) is the right answer at the Work level and the wrong one at this slice's level**; whoever re-cuts the `SL-` rows should do it for all eleven at once, not for the one being drafted tonight | scope | no — default (a) applied; resolved when the `SL-` rows are minted for WK-697 as a set | **RL-1140** — (a), omit `slice:`; guard at `scripts/doc-id.py:7374`. *Was: "planner, on the lead's instruction — not in this plan"* |
+| DP-8.5 | Does `.claude/agents/README.md`'s **header** discharge §5.3's *"README names agents as Reference family owned by the lead"*, or must the **body** say it? The header already carries `family: reference` (`:2`) and `owner: lead` (`:6`); the body says neither | (a) body sentence required; (b) header suffices, row already closed | **(a).** §5.3's verb is *"names"* and its object is a README, which is a document a person reads; front matter is machine state. The cost is one paragraph. **If (b) is ruled, T5 reduces to its citation sweep** | design unknown — it is a reading of one word in a row | no — default (a) applied at T5 | **RL-1140** — (a), amended: the body sentence cites the §1.6 row rather than stating the owner (T5, as corrected). *Was: "lead, at the PR"* |
+| DP-8.6 | §5.3 contains two further rows — `.claude/settings.json` (hook `statusMessage` citation, M) and the `notes/` stub directory under `.claude/` (19 stubs + README deleted, H + M). The map plan's W37-8 **scope sentence** enumerates charters, agents and the maintainer row and names neither; its **self-review** (`PL-939:907-910`) maps *"§5.3 → W37-8"* as a whole | (a) both are out of W37-8 — the scope sentence governs, and both were discharged in W37-6; (b) both are in — the section pointer governs; (c) settings.json in, notes out | **(a)**, contingent on verification. The stub directory's removal is a deletion the migration performed, and the `statusMessage` row is a citation rewrite in a non-Markdown file the migration's citation pass covered. **T1 step 3 verifies both before the exclusion is relied on**, and reopens this row if either contradicts it | scope | no — default (a), verified at T1 step 3 | **RL-1140** — (a), verified at `536d3cc3` (both rows discharged by `71f5a220`); T1 step 3 still runs. *Was: "lead, on T1's evidence"* |
+
+**Resolved 2026-09-27.** `RL-1140` rules DP-8.1 to DP-8.6. The lead adopted it unamended on
+2026-09-27 at about 00:00 BST. This plan moves `draft → active` in the same commit that writes
+the six resolver cells above, as Acceptance Standard item 9 requires. The ruling's amendments
+and limits bind the executor as written there; the tasks they change carry dated corrections
+(T2, T3, T5, T7, T10, T11, T13), and §1.4 carries the rows added after filing. **Two
+disclosures in `RL-1140` ("What it obliges") are the lead's, not this plan's:** the 46
+unheaded `SKILL.md` files are owned by no slice, and `vendored:` / `origin:` are licensed by
+`_KNOWN_KEYS` rather than by the template. This plan does not take either; §1.4's exclusion of
+`.claude/skills/` stands.
 
 ---
 
@@ -1215,3 +1507,9 @@ dated. When the lead releases this slice, the choice is:
 
 Either way the executor is spawned from `.claude/roles/executor.md`, never from an inline brief
 (`CLAUDE.md` §15).
+
+**Corrected 2026-09-27 (planner, on `RL-1140`).** The words above — *"Not yet"* and *"What
+still holds this plan in `draft` is DP-8.1 and DP-8.2"* — and §9 item 4's freeze check are kept
+as the record at drafting. Both blocking rows now carry `RL-1140`, and this plan is `active`.
+The executor is spawned only once this plan is `active` on `main` (the deputy, 2026-09-26
+23:54:10 BST, step 2), and loads `writing-skills` and, for T2, `python-test` (§2, as corrected).
