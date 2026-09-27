@@ -117,28 +117,27 @@ top-level `---` block (not the unread commented foot); adds a three-case test in
    (`uv run pytest tests/test_audit_docs_ids.py -k check_30 -q`).
 3. Restored the correct fix: all 11 check-30 tests green.
 
-**Gate, evidence for squash `35c954c1` (#806), run at branch commit `c6964a2`
-(pre-squash branch commit, reachable via `refs/pull/806/head`; both halves):**
+**Gate evidence for squash `35c954c1` (#806), covering S-11's code
+(`scripts/doc-id.py`, `tests/test_doc_id_migrate.py`) — cited at #806's own final
+head `1508cd25` (tree == `35c954c1`), not the earlier branch commit below:**
 
-| stage | result |
-|---|---|
-| ruff | pass |
-| mypy | pass |
-| import_linter | pass |
-| audit_docs | pass |
-| req_coverage | pass |
-| contracts | pass |
-| pytest | pass — 3456 passed, 3 skipped, 1 xfailed (baseline 3457 collected/3 skipped + 3 new tests = 3460 collected) |
-| frontend install | pass |
-| frontend generate:api | pass |
-| frontend lint | pass |
-| frontend type-check | pass |
-| frontend test | pass — 97 files / 602 tests |
-| frontend build | pass |
+- **Python CI**, run 36290763531: `GATE: pass — 8 of 8`, `3458 passed, 3 skipped, 1
+  xfailed`, collected 3462.
+- **Docs CI**, run 36290763538: `GATE: pass — 4 of 4`, `migrate --verify` exit 1 (RL-1045
+  §1 pass — the standing red with the verdict set unchanged), check 30 = 0.
 
-`GATE: pass — 7 of 7 stages passed` (Python half). Logs and rc files at
+Both runs are CI evidence at the PR's own final head, read by the deputy at merge ACK
+(`to-lead.md`, 2026-09-27 04:33:36 BST).
+
+**Narrative only — an earlier local gate, run at branch commit `c6964a2` (pre-squash
+branch commit, reachable via `refs/pull/806/head`), before the fix reached its final
+shape:** 7/7 Python stages pass, pytest 3456 passed / 3 skipped / 1 xfailed (baseline
+3457 collected/3 skipped + 3 new tests = 3460 collected); frontend 97 files / 602 tests,
+6 stages pass. This reading is superseded by the CI evidence above, which covers the
+code S-11 records; logs from this earlier run are at
 `~/gi-pricing-plan.local/handover/gate-c6964a2/{python,frontend}/` (local, not repo —
-`handover-files-are-local-not-repo`).
+`handover-files-are-local-not-repo`), kept as a historical record of the pre-fix branch
+state, not as evidence for the squash.
 
 `python3 scripts/audit-docs.py | grep -c 'check 30: \.claude/agents/'` still prints `7` at
 this tree (T3/T4 have not merged headers yet); `grep -n '"tools"\|"model"\|"description"'
@@ -265,30 +264,38 @@ pre-squash branch commit, reachable via `refs/pull/809/head`), pushed as a fast-
 reproduced below in the T6 ownership-matrix section, since that evidence belongs in this
 ledger regardless of which PR wrote it.
 
-**T6 ownership-matrix evidence (recovered from the reverted commit, verified fresh at
-this ledger's head rather than trusted from the old diff):**
+**T6 ownership-matrix evidence — the tool's own output, not a hand-typed
+reconstruction.** An earlier version of this section pasted a table that did not match
+the tool's real output (wrong row order for `planner`, `auditor` missing `research (RS
+audit)` and carrying a `kind:` split the tool does not produce, `reporter`/`watcher` shown
+with prose instead of the tool's literal blank cell). Corrected here by actually running
+the command and copying its output, at this ledger's own head:
 
 ```bash
-python3 scripts/doc-index.py   # regenerates docs/INDEX.md
-sed -n '/## Ownership matrix/,/^$/p' docs/INDEX.md
+python3 scripts/doc-index.py   # regenerates docs/INDEX.md; git status --porcelain empty (byte-stable)
+awk '/^## Ownership matrix/{f=1} f' docs/INDEX.md | sed -n '1,20p'
 ```
 
 ```text
+## Ownership matrix
+
 | role | owns |
 |---|---|
 | decision-maker | requirement (FR/NFR/DEP), open question (OQ), workflow (WF), decision (ADR), ruling (RL) |
 | maintainer | phase, work (WK), proposal (RFC), ruling (RL), reference: process/, reference: charters |
-| planner | plan (PL map/leaf), slice (SL) |
+| planner | work (WK), slice (SL), plan (PL map/leaf) |
 | executor | plan (PL handover), ledger (LG), research (RS spike/measurement), reference: contracts/ |
-| auditor | plan (PL review), finding (FD), closure (CR kind: work/phase) |
-| lead | phase, proposal (RFC), closure (CR kind: review), reference: skills, reference: agents |
-| reporter | *(declared empty — "owns no governed document")* |
-| watcher | *(declared empty — "owns no governed document")* |
+| auditor | plan (PL review), research (RS audit), closure (CR), finding (FD) |
+| lead | phase, proposal (RFC), closure (CR), reference: skills, reference: agents |
+| reporter |  |
+| watcher |  |
 ```
 
-Acceptance Standard item 2 satisfied: the reporter and watcher rows are present and
-**declared** empty (not merely uninverted, as at T1's baseline); every other role row is
-non-empty.
+The `reporter` and `watcher` rows print with **nothing** after the pipe — a blank cell,
+not prose — which is what "declared empty" means at the tool's own level: no role name
+is attached to any governed-thing family for either, the literal absence Acceptance
+Standard item 2 asks for, not a placeholder string. Every other role row is non-empty.
+Item 2 is satisfied by this real output, not by the corrected description of it.
 
 No residue introduced by T6 itself.
 
@@ -463,7 +470,42 @@ found**; nothing filed as an `FD-`.
 
 Gate, DP-6 lines and the CI evidence for this PR are below, under "H's gate".
 
+## H's gate
+
+**The full two-half gate, tree accepted by the transcript bracket (the deputy,
+2026-09-27 07:17:3x BST): `gate-60914ee/`** — `HEAD.txt` records the tree (`60914ee8...`)
+and the run time; Python 7/7 stages pass (`3458 passed, 3 skipped, 1 xfailed`, `uv run
+pytest --collect-only -q` → 3462 tests collected, exactly 3457 + 5 named, matching
+`main`'s own 3462 — no test added by this docs-only slice); frontend 6/6 stages pass
+(install, generate:api, lint, type-check — 97 files / 602 tests, `Errors: no errors` —
+build). Logs at `~/gi-pricing-plan.local/handover/gate-60914ee/{python,frontend}/`.
+
+**A second evidence pass, this commit's own final head, in
+`~/gi-pricing-plan.local/handover/gate-<final head short SHA>/`** — gathered after this
+ledger commit lands, per the deputy's ordering (evidence follows the fix, not the other
+way round): `HEAD.txt` written first (tree + date); `tests/` in full (collected count
+reconciled against `60914ee8`'s own `tests/`-only collected count, not the full-suite
+3462); the frontend half with one `.rc` file per command; `audit-docs.py` (rc + the
+DISCLOSED line), `doc-id.py check`, `doc-index.py --check`, each rc recorded; `git diff
+--stat 60914ee8..<final head>` (docs-only, `docs/ledgers/` and `docs/plans/`). Reported
+on the PR at that head, not repeated here, since the head is not yet known while this
+commit is being written.
+
+**D11 is closed by H** — the reduced per-PR evidence standard (audit-docs, doc-id check,
+doc-index --check, the reduced test subset, docs CI standing in for local verify)
+governed C–G only; H runs the full two-half gate over the cumulative tree instead, both
+passes above.
+
 ## PL-1071 §5 Acceptance Standard item 8 — the FD-1066…FD-1069 re-read
+
+**This item's own text names T1 step 1 as the control** — "the executor re-reads all
+four in full at slice start and reports any W37-8 routing to the lead before T2." That
+did not happen: T1's own ledger section (above) records the baseline measurement but no
+re-read of the four `FD-`s, and T2 landed without one. **The gap was missed at T1 and
+found at T3**, per the lead's own tracking — not run at slice start as the item
+requires, run later instead. The re-read below is that late re-read, not the on-time
+one; it discharges the item's substance (the four are re-read in full, the ledger
+records the result) but not its timing.
 
 Verified by this executor at `origin/main` post-#811:
 
@@ -517,9 +559,22 @@ F97_GREP_EXIT=$?` → clause printed at `:88`, exit 0. Drafting the clause does 
 F97 itself — its register row's own condition (a zero-byte `.git/index.lock` planted on
 a clean tree yields a named report) governs the auditor setting it `closed` separately.
 
-**Item 11 — the deputy's merge acknowledgement per PR, before the lead merges.** Recorded
-on each PR's comments, quoted verbatim, timestamped per the table under item 3 above (one
-ACK covers each charter file's clauses in the same comment as its item-3 line — the two
-are the same channel entry, not separate records). H's own ACK is requested alongside its
-item-3 line, since H is the PR under review when this ledger commit is written.
+**Item 11 — the deputy's merge acknowledgement per PR, before the lead merges.** A
+distinct record from item 3's D2 charter lines above — every one of #806–#813 got a
+MERGE ACK (including #806–#808, which touch no `.claude/roles/` file and so have no
+item-3 line at all), each in `~/gi-pricing-plan.local/channel/to-lead.md`:
+
+| PR | ACK stamp (BST) | Opening line, quoted |
+|---|---|---|
+| #806 | 2026-09-27 04:33:36 | "Deputy ruling: **ACK.**" — CI + pool reading agreed, T1+T2 |
+| #807 | 2026-09-27 05:22:47 | "Deputy ruling: **ACK.**" — T3+T4, agent headers |
+| #808 | 2026-09-27 05:41:34 | "Deputy ruling: **ACK.**" — T5, agents README, behind-by-disjoint-merge path |
+| #809 | 2026-09-27 06:11:46 | "Deputy ruling: **ACK.**" — T6, reporter/watcher + this executor's revert |
+| #810 | 2026-09-27 06:25:56 | "Deputy ruling: **ACK.**" — T7, auditor.md, arrived residue named |
+| #811 | 2026-09-27 06:31:32 | "Deputy ruling: **ACK.**" — T8, decision-maker.md |
+| #812 | 2026-09-27 06:50:29 | "Deputy ruling: **ACK.**" — T9, executor.md + S-8/S-9/S-10 |
+| #813 | 2026-09-27 06:53:34 | "Deputy ruling: **ACK.**" — T10, lead.md + S-5/S-6, arrived residue named |
+
+No row for #814/H: its ACK is recorded on the PR itself at merge, per the deputy's
+07:07-area instruction, not pre-recorded here.
 
