@@ -2,7 +2,7 @@
 id: LG-1143
 family: ledger
 title: W37-9 — root governance, CLAUDE.md and the public face
-status: active                 # active → closed (§1.2a) — set `closed` only at slice close
+status: closed
 created: 2026-09-27
 owner: executor
 tree: 823a75efb5da70d8c652c91fd6dc54e5ab966149
@@ -128,8 +128,11 @@ No commit — evidence recorded here and in the PR body's disposition table.
 
 This file. The §2b mitigation re-run (`FD-1066`…`FD-1069`, all filed, all owned by
 `W37-11`, none naming a §5.1 file this slice owns). `docs/INDEX.md` regenerated,
-byte-stable (`doc-index.py --check` → `EXIT=0`). The full two-half gate, run at this
-PR's final head, is recorded below.
+byte-stable (`doc-index.py --check` → `EXIT=0`). The full two-half gate is recorded
+below: it ran at `11e3cc2b`, a pre-squash branch commit of this PR, reachable via
+`refs/pull/817/head`. The final head differs from it only in this ledger. *(Corrected
+2026-09-27 by the auditor, at slice close, finding F-a of pass (a): this paragraph first
+said the gate ran at "this PR's final head", which it did not.)*
 
 Landed in: this PR — the ledger and gate-evidence commits, reachable via
 `refs/pull/817/head`; the PR's own squash SHA on `main` is recorded once, in the
@@ -139,12 +142,14 @@ closing record.
 
 | # | Branch | Squash SHA on `main` | Tasks | State |
 |---|---|---|---|---|
-| this PR | `w37-9-root-governance` | *recorded in the closing record* | 1–9 | open |
+| #817 | `w37-9-root-governance` | `49c06ad7fb9f1bccf648abb270c0b6df81d386cf` | 1–9 | merged 2026-09-27 10:18:45 BST |
 
 ## Gate evidence
 
-Full two-half gate, head `11e3cc2b73288a4617682e45caf3d737f2da3ea0`,
-`~/gi-pricing-plan.local/handover/gate-11e3cc2/`. `HEAD.txt` written before the run.
+Full two-half gate at head `11e3cc2b73288a4617682e45caf3d737f2da3ea0`, a pre-squash
+branch commit of this PR, reachable via `refs/pull/817/head`. Evidence is in
+`~/gi-pricing-plan.local/handover/gate-11e3cc2/` (local, not repo); `HEAD.txt` was
+written before the run.
 `uv run pytest --collect-only -q` → 3462 tests collected (matches `main`).
 
 Python/docs half, 7/7 `exit=0`: ruff, mypy, import_linter, audit_docs, req_coverage,
@@ -154,8 +159,74 @@ contracts, pytest (`3458 passed, 3 skipped, 1 xfailed`). `audit-docs.py` → `EX
 Frontend half, 6/6 `exit=0`: install, generate:api, lint, type-check, test (`97 files /
 602 tests passed`, `Type Errors: no errors`, exit code read directly), build.
 
-**An earlier run at head `e3542f83` genuinely failed** (`audit_docs`/`pytest`, 2 of 7) on
+**An earlier run at head `e3542f83`** (a pre-squash branch commit of this PR, reachable
+via `refs/pull/817/head`) **genuinely failed** (`audit_docs`/`pytest`, 2 of 7) on
 two real defects this executor introduced in the first cut of this file — a padded id
 outside a link target (twice, `LG-1141`/`FD-894` written padded) and one dead example id
 that did not resolve, plus one literal retired-path spelling. Fixed in `11e3cc2b`;
 the corrected head is the one gated above. Full PR body has the per-`.rc` table.
+
+**Final-head delta.** From `11e3cc2b` to the PR's final head `e46d3b18` (a pre-squash
+branch commit of this PR, reachable via `refs/pull/817/head`), the diff is this ledger
+only (+25/−11). That delta is carried by
+`~/gi-pricing-plan.local/handover/gate-e46d3b1/` (local, not repo; `HEAD.txt` =
+`e46d3b18`): `tests/` `1020 passed, 1 skipped`, rc 0; `audit-docs.py` rc 0,
+`All checks passed.`, `DISCLOSED (865, at or under the W37-11 residue ceiling)`;
+`doc-id.py check` rc 0; `doc-index.py --check` rc 0, `OK (byte-stable)`. The
+`CLAUDE.md` blob is `c7f4773f` at both heads, so the deputy's D3 dated line of
+2026-09-27 09:56:38 BST carries to the final head.
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor on 2026-09-27** (`document-ids.md` §1.6, SL row:
+*"auditor closes: sets the `LG-` `closed`, verifies acceptance"*). W37-9 closes when this
+closing PR merges: a Slice closes on a clean audit and the lead's merge, with no
+maintainer line (`CLAUDE.md` §13).
+
+**The merge.** #817 was squash-merged onto `main` on 2026-09-27 at 10:18:45 BST. Its squash
+SHA is in the PRs table above, and its parent is `823a75ef`, the cut base. The deputy's
+merge ACK is 2026-09-27 10:18:13 BST, in `~/gi-pricing-plan.local/channel/to-lead.md`
+(local, not repo).
+
+**Pass (a), at the final head, before the merge.** The auditor proposed CLEAN, with two
+minor findings. The lead adopted CLEAN at 2026-09-27 10:17:39 BST
+(`~/gi-pricing-plan.local/channel/to-deputy.md`):
+- **F-a:** this ledger claimed its gate ran at the final head. It is fixed above, in Task 9
+  and the gate evidence, by this closing record.
+- **F-b:** the PR body's disposition table used its own row numbers and cited a stale line
+  for DP-1's third site. The lead fixed it in the PR body before the squash, at 10:15 BST.
+
+Pass (a)'s results:
+- the two-way match between the nine §5.1 rows and this ledger has no gaps and no extras;
+- the SHA sweep found MAIN 1, BRANCH 10 commits, NEITHER 0;
+- acceptance items 2–10 and 12 were re-run at the final head, and all passed.
+
+**Pass (b), after the merge, run by the auditor.**
+- **Tree:** the squash commit's tree equals the final head's tree, `44c8470b`.
+- **Content:** the §5.1 content is therefore on `main` byte for byte.
+- **Predicate:** every hex token in this file at the squash was checked, first
+  `git merge-base --is-ancestor <t> <squash>` (MAIN), then the same against `e46d3b18`
+  (BRANCH).
+- **Result:** MAIN 1 (`823a75ef`); BRANCH 10 commits (the seven task commits, `67e2e8a3`,
+  `e3542f83` and `11e3cc2b`), each written above as a pre-squash branch commit of this PR,
+  reachable via `refs/pull/817/head`; NEITHER 0. This record adds `e46d3b18` (BRANCH, the
+  PR head, marked the same way), `823a75ef` (MAIN) and the squash SHA (MAIN).
+- **Rule:** no pre-squash SHA stands as evidence of landing. The squash SHA is the one
+  evidence SHA.
+
+**Acceptance** (`PL-1072` Acceptance Standard):
+
+| Item | Result |
+|---|---|
+| 1 | Pass. Covered by items 2, 3, 7, 10 and 11. |
+| 2 | Pass. The maintainer's line is given by delegation: the deputy's D3 line of 09:56:38 BST. The `CLAUDE.md` blob is unchanged to the final head. |
+| 3 | Pass. The dated RFC-937 lines are at the §0 bullet and §5's rule, and `grep -c RFC-937 CLAUDE.md` is 3. §12's mention is left as a citation (DP-1 (c)). |
+| 4 | Pass. The four `grep -c` counts are 1, 2, 1 and 7. |
+| 5 | Pass. The fenced dead-path sweep over eight files prints nothing, exit 1. |
+| 6 | Pass. `WF-698` to `WF-702` each resolve under `docs/workflows/`. |
+| 7–9 | Pass. `audit-docs.py`, `doc-id.py check` and `doc-index.py --check` each give rc 0, with `INDEX.md` byte-stable. |
+| 10 | Pass. `lint-imports` shows 3 contracts kept, 0 broken. |
+| 11 | Pass. The two-half gate is 13 × rc 0 at `11e3cc2b`. The final-head delta is carried as above. CI at the final head: docs 36307857511, python 36307857488 and history-policy 36307857569, all success. |
+| 12 | Pass. `docs/specs/` has no diff. |
+| 13 | Pass. All nine §5.1 rows are dispositioned. The PR body's numbering was corrected before the squash (F-b). |
+| 14 | Pass. The deputy's ACK was at 10:18:13 BST, and the lead's CLEAN verdict at 10:17:39 BST. The two-way match and ancestry are recorded above. |
