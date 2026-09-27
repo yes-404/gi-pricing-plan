@@ -10,6 +10,15 @@ relates: []                      # ids only
 
 # Project subagents
 
+**Every file here is a Reference document** (`docs/process/document-ids.md` §1.2): it
+carries no id and is cited by path, never by `<PREFIX>-<n>`. Their owner is the role
+`document-ids.md` §1.6's "Reference — agents" row names — recorded in each file's own
+`owner:` field, not restated here as a separate value, so this sentence cannot fall out of
+step with that row (`RFC-756`). Each agent file carries the governed Reference header
+merged with the Claude Code harness's own front-matter keys (`name:`, `description:`,
+`tools:`, `model:`), per `docs/_templates/REFERENCE.md` — the key list is not repeated
+here either.
+
 Delegable specialists for **this** repository, versioned with it. A subagent is not a skill:
 a skill loads *into* the current turn, a subagent runs in **its own context** and returns
 only a conclusion. That difference is the reason these exist — `CLAUDE.md` §10 measures the
