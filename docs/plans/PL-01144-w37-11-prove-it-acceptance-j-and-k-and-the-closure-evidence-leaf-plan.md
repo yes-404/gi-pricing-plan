@@ -3,7 +3,7 @@ id: PL-1144
 family: plan
 kind: leaf
 title: W37-11 — Prove it, acceptance (j) and (k), and the closure evidence: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-27
 owner: planner
 tree: 271088b0ef99c48156ad7e96e7043bb8a3f6b613
@@ -89,13 +89,45 @@ writes those resolver ids. `created:` does not change.
    unmet, and DP-2 names it as a precondition of freeze.** The planner may not write
    `docs/open-questions.md` (`.claude/roles/planner.md`, Tools).
 
+**Activated 2026-09-27 11:30:32 BST (planner, on RL-1145 and the deputy's rulings).** The paragraphs above
+are kept as the record of the state at drafting. What changed:
+
+- **Every blocking decision point now has a resolver.** DP-1 is the deputy's line of
+  2026-09-27 11:16:34 BST, a maintainer decision by delegation, quoted verbatim in RL-1145.
+  DP-2 to DP-5 are RL-1145: DP-2 (c), DP-3 (a), DP-4 (b) and DP-5 (b), each with amendments.
+  So this plan moves `draft → active` in this commit, under `document-ids.md` §1.7.
+  `created:` does not change. **Frozen / dated: 2026-09-27.** Where this text and RL-1145
+  disagree, the ruling governs.
+- **Fact 2 is resolved.** The decision-maker raised the open question as **OQ-1146**
+  (system level, mirrored in `docs/specs/00-overview.md` §10) and decided it in RL-1145. The
+  lead read `CR-1064:545` as **met**, because OQ-1146 lands before this plan freezes. RL-1145
+  records that reading as the lead's, not the ruling's.
+- **The deputy's rulings folded in** (the lead's local channel file, 2026-09-27): 11:16:34
+  (DP-1, the adoption of C1–C14 with four conditions, and the code PR's gate); 11:21:57
+  (F16); 11:27:20 (F17, F18); and 11:28:23 (C15, C16, F19, the OQ-1146 gate row, DP-3
+  amendment 5, and the activation assembly).
+
+**The activation PR** (`w37-11-activation`) is cut from `main` after #819 merges. It carries,
+in this order:
+1. the planner's and the decision-maker's commits, by `git cherry-pick`, never by rebase;
+2. the auditor's single commit filing C16's `FD-` register row and essay, so the finding is
+   on `main` before the code PR that fixes it;
+3. the lead's commit, which writes the `docs/roadmap.md` §10 decision-gate row for OQ-1146
+   as a pointer to a decided question ("decided, RL-1145 DP-2"), and regenerates
+   `docs/INDEX.md`.
+
+The docs checks run on the committed tree with the control pair. Then the deputy gives the
+ACK and the lead merges. The planner touches neither INDEX nor the roadmap.
+
 ## The successor rule this plan was cut against
 
 **From `CR-1064:433-438`, as one sentence: an item carried to W37-11 is either (j) or (k),
 synthesis, or a named acceptance item with its own exit measurement, and nothing else is
 carried there.** Under the deputy's ruling of 2026-09-27 11:00:45 BST, one more type is
 permitted: **deferred, with the lead as owner and a named event**. Each carried item's type
-below is the planner's proposal. The deputy gives the verdict in the `RL-`.
+below was the planner's proposal. **The deputy adopted the typing of C1–C14 as proposed on
+2026-09-27 at 11:16:34 BST, under four conditions** (Scope A, after the table). C15 and C16
+were adopted at 11:28:23 BST.
 
 ## Acceptance Standard
 
@@ -110,8 +142,13 @@ of the squash commit that lands this slice's last PR.
    verbatim. The clauses are: Works closed and retired; slices planned versus delivered;
    plans superseded per Work; rulings per Work; findings opened versus discharged, with the
    unowned-decay count; documents with no inbound citation outside `INDEX.md`; and days from
-   `active` to closure. **Under DP-5**, each reading that is zero or `—` also carries a
-   second count built a different way, or the reason it is zero by construction.
+   `active` to closure. **Under DP-5 (RL-1145)**, each reading that is zero, `—` or
+   `(none)` also carries a second count built a different way, or the reason it is zero by
+   construction. **Amendment:** the second count does not have to agree with the first.
+   Where the two disagree, the closure record reports both counts, the predicate of each and
+   the population each one counts, and it does not pick one. Element 4 is the first instance:
+   every P1b Work has 0 rulings with a `work:` header, but 9, 2, 5, 2 and 3 rulings name
+   WK-661, WK-664, WK-665, WK-692 and WK-662 in their text (RL-1145, facts table).
 2. **(j), family by family.** The closure record has a table with **thirteen** rows, one for
    each family in `document-ids.md` §1.2 (`:36-49`). The row families are Requirement, Open
    question, Work and Slice. The document families are Workflow, Decision, Proposal, Plan,
@@ -126,20 +163,38 @@ of the squash commit that lands this slice's last PR.
    pre-migration base, per Task 1 step 3>` at the merge tree. Its g2 `classified-by-none`
    figure is printed with a per-cause breakdown, and the parts sum to the whole. The closure
    record reports it against **207 at `29e7a9c`** and against 251 at `4d9fe1d`. The verdict on
-   (g) follows DP-4.
+   (g) follows DP-4 (RL-1145, (b)): it is the lead's §13 verdict, and the plan proposes
+   "deferred with an owner" with a named event. **DP-4 amendment 1:** with `--ref` pinned, g2
+   measures the invoking tool's classification of one historical migration. So the closure
+   record names every commit in `29e7a9ce..<merge tree>` that touches the g2 classifier
+   (`git log --format='%h %s' 29e7a9ce..<merge tree> -- scripts/doc-id.py
+   scripts/_docverify.py scripts/_docid.py`, each classified by reading its diff). If the
+   figure moved and no such commit exists, that is a defect in the instrument and is
+   reported. **Condition 4:** the baseline is re-measured, not inherited.
 4. **Idempotence, not determinism (F107, [essay](../findings/FD-01066-pl960-909-idempotence-second-migrate-run-zero-diff-not-proven.md)).**
    A second `python3 scripts/doc-id.py migrate` runs over an already-migrated throwaway
    snapshot, and `git status --porcelain` on that snapshot is empty afterwards. The closure
    record states that this proves **idempotence**, because the determinism of a first run was
    already proven (T⁗ = T⁵ = `6d058ba6`, `CR-1063` §5). It gives the starting figure verbatim
    from `CR-1064:414`: `41 hit(s) … ceiling of 15 for 'd10'`.
-5. **F109 resolved as DP-2 rules, with a broken-input proof.** The chosen read has a test that
-   fails when the chosen property is deliberately broken. The test is named in the closure
-   record with its failing message. The open-questions row that `CR-1064:545` requires exists
-   and is closed by DP-2's `RL-`.
+5. **F109 resolved as DP-2 rules (RL-1145, (c): `--record-ref`), with broken-input proofs.**
+   OQ-1146 is the open-questions row that `CR-1064:545` requires, and RL-1145 decides it.
+   Three tests, each shown failing on deliberately broken input and passing at the head of the
+   code PR, are named in the closure record with their failure messages:
+   (i) a ceiling changed at `--record-ref` is seen by the verify (the F109 property);
+   (ii) **a record missing from the `--record-ref` archive exits `2`**, with a message that
+   names the path it looked for (DP-2 amendment 1: it never degrades to `()`);
+   (iii) C16's two render tests (see item 16).
+   The input-provenance comment in `scripts/_docverify.py` (the table beside the F102 fix)
+   gains a HERMETIC row for `--record-ref` (DP-2 amendment 2).
 6. **The census-row shrink (`CR-1063` §3, `:213`).** The three per-file census rows of the
-   residue-ceiling record read `0`. The standing verify, under DP-2's read, prints no
-   `PROGRESSED (W37-11 record can shrink)` line for them.
+   residue-ceiling record read `0`. **DP-2 amendment 4:** before the edit,
+   `VerifyResult.measured_residue` for the three census keys is read directly at the pinned
+   base with the code PR's tool, and the three numbers are quoted. The shrink lands only if
+   all three read `0`. **The exit is read from `measured_residue`, or from the render after
+   C16's fix lands. It is never read from the render before that**, because until then the
+   render cannot print `PROGRESSED` on an unchanged verdict set (RL-1145, "A defect found
+   while verifying").
 7. **The residue-ceiling record has left the legacy audit directory, and the reference limb
    is measured (RL-1138 DP-1, amendments 1–2; `PL-1073:76-79`).** Derive the directory from
    the shipped pattern table by symbol, and never type it:
@@ -150,6 +205,19 @@ of the squash commit that lands this slice's last PR.
    ```
    The first command prints `0`. The second command's reading, and the predicate above
    verbatim, are in the closure record with DP-3's disposition of every remaining file.
+   **DP-3 amendment 4:** every referencing file falls into one of five classes, and the parts
+   sum to the whole. At `271088b0` the reading was **183 = 150 + 9 + 22 + 1 + 1**: frozen
+   governed records 150 (resolved by the redirect row, disclosed, not edited); living
+   documents 9 (edited by their owners, per §1.6); instruments and their tests 22 (each read,
+   never swept — a pattern that *defines* the legacy form stays, and a *path to the record*
+   moves with the constant); generated `INDEX.md` 1 (regenerated); and the record itself 1
+   (moved). The closure record repeats the table at the move tree, and names every file in the
+   "stays" part. **DP-3 amendment 1:** the constant is the only place in code that spells the
+   new path. **The writer (DP-3 amendment 2, and amendment 5 by the deputy's delegated ruling
+   of 11:28:23 BST):** after the move, the record's rows are written by the lead of the slice
+   that discharges or re-measures a residue, citing that slice's closure record or an `RL-`.
+   The document's frame (header, rules, columns) stays the maintainer's under
+   `document-ids.md` §1.6's `docs/process/` row.
 8. **F110 ([essay](../findings/FD-01069-h1-residue-by-file-and-tracked-files-docstrings-disagree-on-population.md)).**
    The docstring of `_h1_residue_by_file` and the docstring of `tracked_files` in
    `scripts/_docverify.py` name the same population. A test asserts that population on a
@@ -175,6 +243,21 @@ of the squash commit that lands this slice's last PR.
 14. **The Work close is accepted with a dated line**, under D7 by delegation. The deputy
     decides line 5 once the closure record exists (see Task 13). A Work close is the
     maintainer's (`CLAUDE.md` §12, §13). This slice's own close is not.
+15. **C15 — #757's g2 per-file entries are rebuilt at the DP-2 read location.** The exit is
+    the reading at the merge tree, with its predicate verbatim, next to 207 at `29e7a9c`
+    (#757's squash body: 103 of the 207 residue keys had no ceiling entry).
+16. **C16 — the verify-render defect is fixed (DP-2 amendment 3).** Two render tests: a
+    `PROGRESSED` change on an unchanged verdict set prints `RESIDUE CEILING`, and a
+    `REGRESSION` prints it and exits `3`, with text that no longer says the change *"moved no
+    row"*. Each test is shown **failing at `271088b0`** and **passing at the code PR's head**.
+    The `FD-` register row and essay are on `main` before the code PR (the activation PR).
+    The closure record types C16 as "fixed in W37-11 by <squash>".
+17. **Every deferred row meets the deputy's conditions 1–3.** C7, C9, C11, C14, F16 and F18
+    each have a register row on `main` before they are deferred (condition 1; for C9, F16 and
+    F18 that row is the first commit of the docs PR). Each one's named event is quoted
+    verbatim, and its reading is re-taken at the merge tree with the predicate printed
+    (condition 2). C14 is recorded as the lead's verdict with the disposition of the 15
+    already-minted ids (condition 3).
 
 ## Global Constraints
 
@@ -196,7 +279,7 @@ The map plan's G1–G5 apply (`PL-939:107-170`). These bind hardest here:
 
 ## Scope
 
-### A. The carried items, typed (proposal — the deputy gives the verdict in the `RL-`)
+### A. The carried items, typed (adopted by the deputy on 2026-09-27: C1–C14 at 11:16:34 BST, C15 and C16 at 11:28:23 BST)
 
 | # | Item | Source | Proposed type | Exit measurement, or owner and event | Task |
 |---|---|---|---|---|---|
@@ -214,6 +297,23 @@ The map plan's G1–G5 apply (`PL-939:107-170`). These bind hardest here:
 | C12 | The residue-ceiling record, and the reference limb | RL-1138 DP-1 amendments 1–2; `PL-1073:76-79`, `:1098-1100` | **named acceptance item**, with its destination at DP-3 | Acceptance item 7 | 3 |
 | C13 | The legacy-form residual and the full §7 (i) walk | LG-1139 `:179-180`; `CR-1065:339-341`; `PL-1073:817-820` | **synthesis** | The H-row table (acceptance item 9) and the residual's reading at the merge tree, with the predicate verbatim | 10 |
 | C14 | The 57 reserved legacy register rows, FD-1080 … FD-1136 | RL-1078 `:41-43`, `:73-74`, `:276-280` | **deferred, lead as owner** (proposal). RL-1078 `:278-280` makes this *"the lead's … a verdict, not a decision point"* | Reading at `271088b0`: `grep -c 'reserved (not yet materialised)' docs/INDEX.md` → **57**, first `FD-1080`, last `FD-1136`. Event: the create-read-retire audit's first slice. **Alternative for the lead:** a named acceptance item whose exit reading is `0`. That would need changes to `doc-id.py`'s resolver and to the register, which is the auditor's file | 10 |
+| C15 | #757's g2 per-file entries, rebuilt at the DP-2 read location | #757's squash body (the lead's decision, confirmed by the deputy: *"the g2 population is rebuilt in W37-11 once F109 decides the read location, with 207 as the baseline"*); RL-1145 DP-4 amendment 2 | **named acceptance item** (adopted 11:28:23) | Acceptance item 15 | 4 |
+| C16 | The verify-render defect: `render()` never prints the residue-ceiling block when the verdict set is unchanged, and a residue-only exit `3` says the change *"moved no row"* | RL-1145, "A defect found while verifying"; DP-2 amendment 3 | **named acceptance item** (adopted 11:28:23), under DP-2 obligation 2 (amendment 3) | Acceptance item 16. Its `FD-` row and essay are filed by the auditor as one commit in the activation PR | 2 |
+
+**The deputy's four conditions (11:16:34 BST)**, each a row in the closure record:
+1. **A deferred row carries a register row before it is deferred.** C9 has none at
+   `271088b0`: its `FD-` row and essay are filed first in the docs PR (Tasks 7–11), before
+   the closure record cites it. A deferral of an unfiled finding is a silent verdict.
+2. **A deferred row carries its named event verbatim, and its reading at the merge tree with
+   the predicate** (C11: the check-30 command and its count; C14: the `grep -c` and 57; C7:
+   the shape as printed). The reading is re-taken at the merge tree, never copied from
+   `271088b0`.
+3. **C14 is the lead's verdict, not a decision point** (RL-1078:278-280). It is recorded as
+   "deferred, owner lead, event: the first slice of the create-read-retire audit", and the
+   same row states RL-1078's disposition of the 15 ids already minted.
+4. **C3's baseline is re-measured, not inherited:** g2 at the merge tree next to 207 at
+   `29e7a9c`, both by the row's predicate. The roadmap correction at `:766` (the "first item
+   is #757" clause, already merged) lands in Task 11.
 
 ### B. The day's faces — inputs to the closure record, named by face
 
@@ -241,6 +341,7 @@ writes the record.
 | F16 | A determinism test whose child aborts at interpreter shutdown (the deputy's wording, 2026-09-27 11:21:57 BST). In #819's python run 36311605268, job 108598494214, at `0cbdbf4e`, one test failed: `packages/pricing-core/tests/test_rating_score.py::test_scoring_is_deterministic_across_a_subprocess`. Its child `python -c` returned −6 (SIGABRT) with `Fatal Python error: PyGILState_Release: …` at teardown. The result was `1 failed, 3457 passed, 3 skipped, 1 xfailed`, and `pytest` was the only one of 8 stages that failed. #819 is docs-only, so its code tree equals `271088b0`, where the test passed (run 36310860551). The job was re-run at the same head | No governed record; the deputy's ruling is in the lead's local channel file. The closure record writes the face. **An `FD-` register row, deferred with the lead as owner, lands FIRST in the docs PR (as condition 1 requires for C9).** Event: the first slice of the create-read-retire audit, or a named item if the failure recurs on 2026-09-27. No executor works on it (S-8), and the fix is outside this plan's scope | 10, 11 |
 | F17 | A state file re-derived from itself (the deputy's wording, 2026-09-27 11:27:20 BST). The watcher read `position` (phase, work, slice) from the handover's `runtime-state.json` and wrote it back through `write_runtime_state.py cycle`, with source strings naming the roadmap and PL-1072. So `position` stayed at W37-9 from 08:19:33 to 11:25:03 BST, across two slice closes, although W37-9 closed at 10:54:40. RL-907 (d)'s rule not to rewrite a byte-identical file froze the mtime. The lead's two corrections are carried: the roadmap does not record W37-9 as closed, and cycle 35 (10:54:03) came before the merge. **The interim derivation in force:** slice = the W37 leaf `PL-` rows in `origin/main:docs/INDEX.md` whose last column is not `executed`, else "none active on main"; phase and work come from the roadmap. The predicate is cited in every cycle's source string, and the file is rewritten only when the derived value changes | No governed record. The records are the lead's to-deputy entry of 11:26:13 BST and the deputy's ruling of 11:27:20 BST, both in local channel files. The closure record writes the face | 10 |
 | F18 | **A `CLAUDE.md` §15 finding against `.claude/roles/watcher.md:64-67`.** The clause says the file "re-derives, does not compare" but names no source for `position`, so the file proved insufficient. The fix is one clause naming the derivation's inputs: `INDEX.md` and the roadmap at `origin/main`, never the state file | The deputy's ruling of 11:27:20 BST. **Deferred, owner lead.** Event: the first slice of the charter investigation (RFC-937 §8), beside the reporter-cycle finding of 09:06. No charter edit in this Work, because charters were W37-8's. As condition 1 requires, its register row lands first in the docs PR. If the watcher drifts again today, the interim predicate in its cycle brief is the record, and it is not re-briefed | 10, 11 |
+| F19 | `next` cannot see an unmerged draft. OQ-1146 was derived as the next free value plus two: `doc-id.py next` printed 1144 while unmerged drafts held 1144 (PL-1144) and 1145 (RL-1145), and 1146 is the next free value by the collision rule, with `doc-id.py check` rc 0 on the tree. The deputy ruled (11:28:23 BST) that this meets the (j) event for Open question in substance | The deputy's ruling, in a local channel file. The closure record writes the face beside the 15 id collisions, and states the derivation in the (j) row for Open question | 9, 10 |
 
 ### C. The Work close
 
@@ -270,17 +371,24 @@ work.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | **(j) — which families are discharged now, and which are owed against a named downstream event?** The map plan's DP-4 (`PL-939:305`) recommended (a) and left the resolver as *"maintainer, at W37-11"*. Measured at `271088b0`: since the migration merge `71f5a22`, **five document families have a real item**, each allocated by `doc-id.py next`. They are Closure (CR-1063, first), Finding (F107's essay, filed at `d63f7650`), Plan (PL-1070), Ruling (RL-1075) and Ledger (LG-1137). The predicate was `git log --diff-filter=A --name-only 71f5a22..origin/main -- docs .claude`, grouped by prefix. **Eight families have no item.** Workflow, Decision, Proposal and Research have none. Requirement, Open question, Work and Slice have no new id: `docs/INDEX.md` lists the same 697 row ids at `71f5a22` and at `271088b0`, and Slice has no members at all ([the no-slice-row finding](../findings/FD-01074-no-sl-row-exists-for-any-slice-and-no-plan-carries-slice.md)) | (a) DP-4 (a) as written: all thirteen families are owed as a standing condition on the first slices of the two downstream Works (§8's charter investigation and create-read-retire audit). (b) A hybrid: the five evidenced families are **discharged now**, and each is verified in the closure record (id, commit, creating skill, `doc-id.py check` rc). The eight others are **owed**, each against its own named event: Work, at the minting of the charter investigation's `WK-` row; Slice, at the first `SL-` row cut in that Work's map plan; Open question, at the `OQ-` row that DP-2 requires, if it is raised through `spec-change` with a number from `next` before the close (otherwise at the audit's first slice); Requirement, Workflow, Decision, Proposal and Research, at the first slice of the create-read-retire audit. (c) One specimen for each family now | **(b).** It is DP-4 (a) applied to the families that still need it. It does not throw away real evidence that already exists. (a) would record five families as owed that have already been proven on real work. (c) is refused for the reason DP-4 gave: *"files thirteen artifacts nobody needed"*. Every owed row names an event, so `PL-939:850-851` is met | scope | **yes** — Task 9 | **maintainer (by delegation to the deputy, on the maintainer's instruction of 2026-09-26 17:02:52 BST)** |
-| DP-2 | **F109 — where does the standing CI verify read the residue-ceiling record from?** `.github/workflows/docs.yml:115-123` pins `--ref` to `core.json`'s `meta.verified_against_tree`. `scripts/_docverify.py:4366-4375` loads the record from `snap.control`, which is the pinned base. So an edit to the record on `main` is invisible to CI forever (F109). The F102 fix (`_docverify.py:4204-4223`) moved the read off the live checkout because that read was not hermetic. **Precondition (`CR-1064:545`):** the question is raised in `docs/open-questions.md` with these options and this recommendation before this plan goes active | (a) Keep the pinned read. Record edits are seen only by a local `--ref HEAD` run. C5 and C12 become invisible to CI, and this is recorded. (b) Read from the live checkout. **Refused**: it undoes F102. (c) Add a second archived ref for the record only: a `--record-ref`, archived through `git archive` in the same way as `--ref`, which defaults to `--ref`. CI passes the commit under test. The corpus stays at the pinned base. (d) Retire the standing verify at the Work close and let check 36, which already reads the record at the audited tree, be the standing check | **(c).** Each run stays hermetic, because both inputs are commit-keyed archives, and later edits become visible. It is the smallest change that makes C5 and C12 observable. (d) removes a gate, so it is a scope change and would go to the maintainer | mechanism — **a decision-maker point, not a maintainer one**. It changes how an instrument reads, not what is accepted. If (d) is chosen, it becomes a maintainer point | **yes** — Tasks 2–4 | decision-maker |
-| DP-3 | **Where does the residue-ceiling record go, and what happens to the references that remain?** RL-1138 makes W37-11 the carrier of the file and of the reference limb (amendments 1–2). It did not adopt the plan's "220 / 74" figure, because that figure did not reproduce | (a) Move the record to `docs/process/` as a living Reference document (RFC-937 §1.4 names `process/` as one of the places the audit directory dissolves into). Update the constant. Add a `docs/REDIRECTS.csv` row with the shape of the findings-README row. References in frozen records are resolved by that row, and are disclosed and not edited. (b) Move it out of `docs/` into instrument data under `scripts/`. (c) Leave it in place and record the directory as accepted residue | **(a).** The record is a living table that people edit, so a frozen family (RS, CR) would contradict it. `process/` is where §1.4 sends it. (b) hides a governed table from `doc-index`. (c) leaves §7.1's clause unmet with no event | mechanism | **yes** — Task 3 | decision-maker |
-| DP-4 | **What does the Work close require of row (g)?** g2 = 207 at `29e7a9c`, and the row is a standing FAIL | (a) g2 must reach `0` at the merge tree. (b) The exit measurement is the g2 figure at the merge tree, with every remaining file assigned to a cause and the parts summing to the total. (g) is recorded with the §13 verdict *"deferred with an owner"* and a named event, and the Work close accepts it explicitly. (c) Narrow (g) — **refused** by G3 | **(b).** It measures without lowering the bar. Whether a Work may close over an item that is still FAIL remains the delegate's, in the dated acceptance line. (a) has no bounded plan: the 207 are cause-attributed, but #757 showed that each cause needs its own classifier change | scope of an acceptance reading | **yes** — Task 7 | decision-maker |
-| DP-5 | **(k) — what counts as "containing" an element that reads zero or `—`?** At `271088b0` the report prints all seven elements. Six of them read zero or `—` (element 2: *"0 planned, 0 delivered"*, because Slice has no members; element 6: *"—"*) | (a) Presence of the seven elements is enough (the literal words of item 10). (b) Presence, plus a second count built a different way for each zero or `—` reading, or a statement that it is zero by construction with the reason. (c) Also run with `--phase P2` | **(b).** When an instrument reports a confident absence, a second instrument must check it. Element 2's zero comes from an empty family, and saying so is the evidence. (c) is useful but is outside (k)'s words | mechanism | no — Task 8 applies (b) until ruled | decision-maker |
+| DP-1 | **(j) — which families are discharged now, and which are owed against a named downstream event?** The map plan's DP-4 (`PL-939:305`) recommended (a) and left the resolver as *"maintainer, at W37-11"*. Measured at `271088b0`: since the migration merge `71f5a22`, **five document families have a real item**, each allocated by `doc-id.py next`. They are Closure (CR-1063, first), Finding (F107's essay, filed at `d63f7650`), Plan (PL-1070), Ruling (RL-1075) and Ledger (LG-1137). The predicate was `git log --diff-filter=A --name-only 71f5a22..origin/main -- docs .claude`, grouped by prefix. **Eight families have no item.** Workflow, Decision, Proposal and Research have none. Requirement, Open question, Work and Slice have no new id: `docs/INDEX.md` lists the same 697 row ids at `71f5a22` and at `271088b0`, and Slice has no members at all ([the no-slice-row finding](../findings/FD-01074-no-sl-row-exists-for-any-slice-and-no-plan-carries-slice.md)) | (a) DP-4 (a) as written: all thirteen families are owed as a standing condition on the first slices of the two downstream Works (§8's charter investigation and create-read-retire audit). (b) A hybrid: the five evidenced families are **discharged now**, and each is verified in the closure record (id, commit, creating skill, `doc-id.py check` rc). The eight others are **owed**, each against its own named event: Work, at the minting of the charter investigation's `WK-` row; Slice, at the first `SL-` row cut in that Work's map plan; Open question, at the `OQ-` row that DP-2 requires, if it is raised through `spec-change` with a number from `next` before the close (otherwise at the audit's first slice); Requirement, Workflow, Decision, Proposal and Research, at the first slice of the create-read-retire audit. (c) One specimen for each family now | **(b).** It is DP-4 (a) applied to the families that still need it. It does not throw away real evidence that already exists. (a) would record five families as owed that have already been proven on real work. (c) is refused for the reason DP-4 gave: *"files thirteen artifacts nobody needed"*. Every owed row names an event, so `PL-939:850-851` is met | scope | **yes** — Task 9 | **maintainer by delegation (deputy, 2026-09-27 11:16:34 BST)**, on the maintainer's instruction of 2026-09-26 17:02:52 BST; quoted verbatim in RL-1145. **(b) adopted.** Each owed row's verdict at the Work close is "deferred with an owner", the owner being the downstream Work's lead, accepted explicitly in the D7 line |
+| DP-2 | **F109 — where does the standing CI verify read the residue-ceiling record from?** `.github/workflows/docs.yml:115-123` pins `--ref` to `core.json`'s `meta.verified_against_tree`. `scripts/_docverify.py:4366-4375` loads the record from `snap.control`, which is the pinned base. So an edit to the record on `main` is invisible to CI forever (F109). The F102 fix (`_docverify.py:4204-4223`) moved the read off the live checkout because that read was not hermetic. **Precondition (`CR-1064:545`):** the question is raised in `docs/open-questions.md` with these options and this recommendation before this plan goes active | (a) Keep the pinned read. Record edits are seen only by a local `--ref HEAD` run. C5 and C12 become invisible to CI, and this is recorded. (b) Read from the live checkout. **Refused**: it undoes F102. (c) Add a second archived ref for the record only: a `--record-ref`, archived through `git archive` in the same way as `--ref`, which defaults to `--ref`. CI passes the commit under test. The corpus stays at the pinned base. (d) Retire the standing verify at the Work close and let check 36, which already reads the record at the audited tree, be the standing check | **(c).** Each run stays hermetic, because both inputs are commit-keyed archives, and later edits become visible. It is the smallest change that makes C5 and C12 observable. (d) removes a gate, so it is a scope change and would go to the maintainer | mechanism — **a decision-maker point, not a maintainer one**. It changes how an instrument reads, not what is accepted. If (d) is chosen, it becomes a maintainer point | **yes** — Tasks 2–4 | **RL-1145 — (c) adopted**, with four amendments: (1) a record missing at `--record-ref` exits `2` and never degrades to `()`; (2) the provenance table gains a HERMETIC `--record-ref` row; (3) the residue block renders whenever there are residue changes, even on an unchanged verdict set (C16); (4) the census rows are measured before they are shrunk, with a stop. (a) and (b) refused; (d) not ruled (the maintainer's). OQ-1146 decided |
+| DP-3 | **Where does the residue-ceiling record go, and what happens to the references that remain?** RL-1138 makes W37-11 the carrier of the file and of the reference limb (amendments 1–2). It did not adopt the plan's "220 / 74" figure, because that figure did not reproduce | (a) Move the record to `docs/process/` as a living Reference document (RFC-937 §1.4 names `process/` as one of the places the audit directory dissolves into). Update the constant. Add a `docs/REDIRECTS.csv` row with the shape of the findings-README row. References in frozen records are resolved by that row, and are disclosed and not edited. (b) Move it out of `docs/` into instrument data under `scripts/`. (c) Leave it in place and record the directory as accepted residue | **(a).** The record is a living table that people edit, so a frozen family (RS, CR) would contradict it. `process/` is where §1.4 sends it. (b) hides a governed table from `doc-index`. (c) leaves §7.1's clause unmet with no event | mechanism | **yes** — Task 3 | **RL-1145 — (a) adopted**, with amendments: (1) the constant is the only place in code that spells the path; (2) the writer is stated; (3) frozen records are resolved by the redirect row and never edited; (4) the five-class reference table, 183 = 150 + 9 + 22 + 1 + 1 at `271088b0`; (5) the writer of the record's rows (the deputy by delegation, 11:28:23 BST): the lead of the discharging slice, with the frame staying the maintainer's |
+| DP-4 | **What does the Work close require of row (g)?** g2 = 207 at `29e7a9c`, and the row is a standing FAIL | (a) g2 must reach `0` at the merge tree. (b) The exit measurement is the g2 figure at the merge tree, with every remaining file assigned to a cause and the parts summing to the total. (g) is recorded with the §13 verdict *"deferred with an owner"* and a named event, and the Work close accepts it explicitly. (c) Narrow (g) — **refused** by G3 | **(b).** It measures without lowering the bar. Whether a Work may close over an item that is still FAIL remains the delegate's, in the dated acceptance line. (a) has no bounded plan: the 207 are cause-attributed, but #757 showed that each cause needs its own classifier change | scope of an acceptance reading | **yes** — Task 7 | **RL-1145 — (b) adopted**, with amendments: (1) the closure record attributes any move from 207 to named classifier commits in `29e7a9ce..<merge tree>`; (2) #757's rebuild is typed (now C15). The §13 verdict is the lead's |
+| DP-5 | **(k) — what counts as "containing" an element that reads zero or `—`?** At `271088b0` the report prints all seven elements. Six of them read zero or `—` (element 2: *"0 planned, 0 delivered"*, because Slice has no members; element 6: *"—"*) | (a) Presence of the seven elements is enough (the literal words of item 10). (b) Presence, plus a second count built a different way for each zero or `—` reading, or a statement that it is zero by construction with the reason. (c) Also run with `--phase P2` | **(b).** When an instrument reports a confident absence, a second instrument must check it. Element 2's zero comes from an empty family, and saying so is the evidence. (c) is useful but is outside (k)'s words | mechanism | no — Task 8 | **RL-1145 — (b) adopted, amended**: where a second count disagrees, the closure record reports both counts, with each predicate and population |
 
 ## Tasks
 
 Conventional Commits. Branches come from `main` (`CLAUDE.md` §10). The instrument tasks
-(2–6) are one PR. The synthesis tasks (7–11) are a second PR, cut after the first merges,
-because the closure record must quote the merge tree of the instrument PR. **Before Task 1,
+(2–6) are one PR, **the code PR**. The synthesis tasks (7–11) are a second PR, **the docs
+PR**, cut from `main` after the code PR's squash, because the closure record must quote the
+code PR's merge tree. Both PRs regenerate INDEX, so they are never in flight together.
+
+**The code PR (the deputy, 11:16:34 BST):** the full two-half gate (`CLAUDE.md` §11), because
+the reduced gate expired with W37-8; executor rules S-8 to S-10 as in `executor.md`; an
+evidence directory with `HEAD.txt`; and broken-input proofs for `--record-ref` (acceptance
+items 5 and 16). The band is re-derived at the activation merge, and the code PR is stated as
+its own band. **Before Task 1,
 read `.claude/skills/close-workstream/SKILL.md` in full, then this plan's Decision points.
 If DP-1 to DP-4 do not carry a resolver id, stop and ask the lead.**
 
@@ -291,9 +399,10 @@ If DP-1 to DP-4 do not carry a resolver id, stop and ask the lead.**
 - [ ] **Step 1:** Print `readlink /proc/$$/cwd`, then `git rev-parse HEAD origin/main`. Record
   both.
 - [ ] **Step 2:** Confirm that the preconditions hold, and quote each one:
-  `the register carries a row for C9's vendored-sweep finding (read `CR-1065:200` for its alias, then `git grep` the register for it);
-  `grep -n -i 'pinned' docs/open-questions.md` returns DP-2's row; the `RL-` that rules DP-1
-  to DP-5 exists. If one fails, stop.
+  the register has C16's `FD-` row (filed in the activation PR);
+  `grep -n 'OQ-1146' docs/open-questions.md` returns the decided row; RL-1145 is on `main`.
+  If one fails, stop. (C9's register row is **not** a precondition of the code PR. It lands
+  first in the docs PR, under condition 1.)
 - [ ] **Step 3:** Record the baseline readings, each with its command verbatim:
   `python3 scripts/audit-docs.py` (rc, and the `All checks passed.`/`FAILED` and `DISCLOSED`
   lines); `python3 scripts/doc-id.py check`; the check-30 count (C11); the reserved count
@@ -323,7 +432,20 @@ call at `:4366-4375` and `build_snapshot`/`_materialise` at `:313-360`), `script
   `--record-ref "$GITHUB_SHA"`.
 - [ ] **Step 4:** Run the test and see it pass. **Broken-input proof:** revert Step 3's
   argument wiring only, and see the test fail with its message. Record the message.
-- [ ] **Step 5:** Commit. End the turn.
+- [ ] **Step 5 (DP-2 amendment 1):** Write a test that runs the verify with a
+  `--record-ref` whose archive lacks the record. Assert exit `2` and a message that names the
+  path it looked for. See it fail first (today the reader returns `()`), then make the verify
+  path refuse. `audit-docs.py`'s own reader keeps its degrade-to-empty behaviour.
+- [ ] **Step 6 (DP-2 amendment 2):** Add the HERMETIC `--record-ref` row to the
+  input-provenance comment, and state why the record's control-path keys still match a corpus
+  read at `--ref`.
+- [ ] **Step 7 (C16, DP-2 amendment 3):** Write the two render tests on the suite's own
+  `_result` pattern (`tests/test_doc_id_verify.py:3224`). First, an unchanged verdict set with
+  one `PROGRESSED` change asserts that `RESIDUE CEILING` is printed. Second, the same with one
+  fatal change asserts `RESIDUE CEILING`, exit `3`, and no *"moved no row"* text. Run both at
+  `271088b0` and record the failures. Make `render()` print the residue block whenever
+  `residue_changes` is non-empty. Run both again and record the passes.
+- [ ] **Step 8:** Commit. End the turn.
 
 ### Task 3: The record move and the reference limb, as DP-3 rules
 
@@ -332,13 +454,18 @@ call at `:4366-4375` and `build_snapshot`/`_materialise` at `:313-360`), `script
 `docs/INDEX.md` (regenerated, never edited by hand).
 
 - [ ] **Step 1:** Run acceptance item 7's two commands, and record both readings.
-- [ ] **Step 2:** Move the file, update the constant, and add the redirect row.
+- [ ] **Step 2:** Move the file, update the constant, and add the redirect row. Choose a
+  basename that says what the file is. Every reader (`_docid.py`, `_docverify.py`,
+  `audit-docs.py`, `doc-id.py:665`, and the four test modules that RL-1138 §1 lists) reaches
+  the path by symbol (DP-3 amendment 1).
 - [ ] **Step 3:** Run `python3 scripts/audit-docs.py`, `python3 scripts/doc-id.py check`,
   `python3 scripts/doc-index.py && python3 scripts/doc-index.py --check`, and
   `uv run pytest -q tests/test_doc_id_verify.py tests/test_doc_id_migrate.py`. The first
-  reading of acceptance item 7 is `0`. Classify every remaining file in the second reading as
-  a frozen record (resolved by the redirect) or a live file (edit it). The table goes to the
-  closure record.
+  reading of acceptance item 7 is `0`. Place every file in the second reading in one of DP-3
+  amendment 4's five classes, and show that the parts sum to the total. Edit only the
+  instrument class's *paths to the record*. Living documents in `.claude/skills` and
+  `docs/roadmap.md` are their owners' to edit, and frozen records are never edited. The table
+  goes to the closure record.
 - [ ] **Step 4:** Commit. End the turn.
 
 ### Task 4: The census-row shrink
@@ -346,12 +473,16 @@ call at `:4366-4375` and `build_snapshot`/`_materialise` at `:313-360`), `script
 **Files:** the residue-ceiling record (by symbol), the three per-file rows named at
 `CR-1063:236-238`.
 
-- [ ] **Step 1:** Run the standing verify as in Task 1 step 3, and quote the three
-  `PROGRESSED` lines.
+- [ ] **Step 1 (DP-2 amendment 4):** With this PR's tool, read
+  `VerifyResult.measured_residue` for the three census keys directly at the pinned base, and
+  quote the three numbers. **Stop and report to the lead unless all three read `0`.**
 - [ ] **Step 2:** Set the three ceilings to `0`.
-- [ ] **Step 3:** Run it again, and confirm that the three lines are gone and that no
-  `REGRESSION` appears.
-- [ ] **Step 4:** Commit. End the turn.
+- [ ] **Step 3:** Run the verify with `--record-ref` at this branch's commit. Confirm from
+  `measured_residue`, and from the render now that C16 is fixed, that there is no
+  `PROGRESSED` line for the three rows and no `REGRESSION`.
+- [ ] **Step 4 (C15):** Rebuild #757's g2 per-file entries at the DP-2 read location, with
+  207 as the baseline. Quote the reading and its predicate.
+- [ ] **Step 5:** Commit. End the turn.
 
 ### Task 5: Idempotence (F107)
 
@@ -383,6 +514,8 @@ call at `:4366-4375` and `build_snapshot`/`_materialise` at `:313-360`), `script
 - [ ] **Step 1:** At the merge tree of the instrument PR, run the standing verify, and quote
   the `g2` line and each cause count.
 - [ ] **Step 2:** Show that the parts sum to the whole, and compare with 207 at `29e7a9c`.
+  List the classifier commits in `29e7a9ce..<merge tree>` (DP-4 amendment 1). A move with no
+  such commit is an instrument defect, and it is reported.
 - [ ] **Step 3:** Discharge the condition from the lead's decision of 2026-09-18 00:42 BST.
   State whether any cause is a defect in corpus correctness. If one is, stop and report to
   the lead.
@@ -392,7 +525,9 @@ call at `:4366-4375` and `build_snapshot`/`_materialise` at `:313-360`), `script
 
 - [ ] **Step 1:** Run `python3 scripts/doc-index.py --phase P1b; echo EXIT=$?`.
 - [ ] **Step 2:** Build acceptance item 1's seven-row table.
-- [ ] **Step 3:** For each zero or `—`, apply DP-5: a second count built another way, or the
+- [ ] **Step 3:** For each zero, `—` or `(none)`, apply DP-5 as amended. Where the two
+  counts disagree, report both with their predicates, as for element 4. Otherwise give a
+  second count built another way, or the
   reason it is zero by construction.
 
 ### Task 9: (j), family by family (C2)
@@ -400,7 +535,9 @@ call at `:4366-4375` and `build_snapshot`/`_materialise` at `:313-360`), `script
 - [ ] **Step 1:** Build the thirteen-row table under DP-1's ruling. For each discharged row,
   run `git log --diff-filter=A --format='%h %aI' -- <path>` and `python3 scripts/doc-id.py
   check` at that commit. Name the creating skill from the commit or its ledger.
-- [ ] **Step 2:** For each owed row, give the named event verbatim from DP-1's `RL-`.
+- [ ] **Step 2:** For each owed row, give the named event verbatim from the deputy's DP-1
+  line (quoted in RL-1145). For Open question, state F19's derivation of OQ-1146, if OQ-1146 is
+  the item that discharges it.
 
 ### Task 10: The closure record
 
@@ -411,7 +548,8 @@ call at `:4366-4375` and `build_snapshot`/`_materialise` at `:313-360`), `script
   about the allocator reading `origin/main`, in `dev-commands`).
 - [ ] **Step 2:** Write, in order: the H-row table; the ten broken-input proofs (fixture path
   and failure message for each of checks 30–39); the §7 (a)–(h) evidence; Tasks 7–9's tables;
-  the carried-items table (Scope A) with the lead's verdict on each; the day's faces (Scope B),
+  the carried-items table (Scope A) with the lead's verdict on each, and the four conditions,
+  each as a row, with C16 typed "fixed in W37-11 by <squash>"; the day's faces (Scope B),
   each citing its record or writing it; C10's list of 53 files with its predicate; C13's
   residual; and a §13 verdict for every item without evidence.
 - [ ] **Step 3:** Spell no legacy path. Run `python3 scripts/audit-docs.py`, and confirm that
@@ -419,10 +557,15 @@ call at `:4366-4375` and `build_snapshot`/`_materialise` at `:313-360`), `script
 
 ### Task 11: Roadmap and register
 
+- [ ] **Step 0 (condition 1, first commit of the docs PR, the auditor):** File the `FD-`
+  register row and essay for C9, F16 and F18, before any commit that cites them as deferred.
+- [ ] **Step 0b (the lead, by the deputy's delegation of 11:28:23 BST):** Add a one-line
+  pointer at `docs/process/document-ids.md:161`, "rows of the residue record: RL-1145 DP-3
+  am. 5". This is not a new family and not a renumbering.
 - [ ] **Step 1:** Rewrite the WK-697 row in `docs/roadmap.md` to record the close. Correct the
   "#757 … rebase" clause, citing `29e7a9c`, and cite the closure record.
-- [ ] **Step 2 (the auditor):** Update the register rows for F92, F107, F108, F109, F110 and
-  C9's vendored-sweep finding with the dispositions in the closure record.
+- [ ] **Step 2 (the auditor):** Update the register rows for F92, F107, F108, F109, F110,
+  C9's vendored-sweep finding, C16, F16 and F18 with the dispositions in the closure record.
 - [ ] **Step 3:** Regenerate `docs/INDEX.md`.
 
 ### Task 12: Gate, PR, audit
