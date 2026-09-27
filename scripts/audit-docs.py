@@ -1699,7 +1699,14 @@ def check_header_fields() -> None:
             continue
 
         for extra_key in header.extra:
-            fail(f"check 30: {rel}: unknown field `{extra_key}:` — not in the closed grammar")
+            if extra_key in policy.permitted:
+                continue
+            fail(
+                f"check 30: {rel}: unknown field `{extra_key}:` — not in family "
+                f"{header.family!r}'s permitted set (docs/_templates/ does not declare "
+                "it for this family; RL-1140 DP-8.1: an extra is licensed per family, "
+                "never globally)"
+            )
 
         for field in _OPTIONAL_HEADER_FIELDS:
             if field in policy.permitted:

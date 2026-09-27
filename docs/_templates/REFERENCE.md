@@ -16,6 +16,15 @@ role §1.6 assigns it.
 
 A **generated** Reference document (a rendered contract, a generated index) carries
 `generated: true` instead of a hand-authored body and is never hand-edited.
+
+Four further keys — `name:`, `description:`, `tools:` and `model:` — are the Claude Code
+harness's own front matter for a file it consumes directly: `.claude/agents/*.md` and
+`.claude/skills/*/SKILL.md`. They are declared here, in this block, because RL-981 makes
+the template the licensing instrument for a family's permitted fields — a commented block
+elsewhere in this file is not read by `derive_field_policies` (RL-1140 DP-8.1 §2). They are
+**permitted, never required**: `required = _CORE_HEADER_FIELDS ∩ permitted`, and none of
+the four is core. A file merging them keeps them first, byte-identical, with the governed
+keys inserted after.
 -->
 
 ---
@@ -27,6 +36,10 @@ owner: maintainer                # whichever of §1.6's five roles the document 
 tree: <commit-sha this was written against>
 corrected_by: []
 relates: []                      # ids only
+name: <the Claude Code harness's own key — agent/skill files consumed by the harness only>
+description: <ditto — harness key>
+tools: <ditto — harness key, agent files only>
+model: <ditto — harness key, agent files only>
 ---
 
 # <Title>
