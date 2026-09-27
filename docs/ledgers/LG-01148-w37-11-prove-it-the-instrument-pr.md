@@ -706,6 +706,29 @@ acceptance item 4: NOT MET. Idempotence disproven at 03f61d83 (17 files). The fi
 be filed by the auditor in the docs PR; C4's re-typing is the deputy's verdict. No re-run
 defect is fixed in this PR.
 
+**C4 re-typed by the deputy, 2026-09-27 13:30:35 BST** (the lead's local channel file
+`to-lead.md`, the entry headed *"C4 (F107 idempotence) RE-TYPED: option (i) — deferred with
+the lead as owner; …"*). It was relayed by the lead, and written here 2026-09-27 13:31:08 BST:
+
+- **Verdict.** *"C4 re-typed by delegation: (i). Exit `status --porcelain` 0 is NOT MET at
+  `03f61d83` (17 files, +57/−51); the §13 verdict is **deferred with an owner** — the
+  lead — event: the create-read-retire audit's first slice."* The executor's (A),
+  record only, stands.
+- **The severity note, verbatim:** *"classes 3 and 4 make a second `migrate` over a
+  migrated tree actively harmful (a legacy-spec constant rewritten, PowerShell `::` split),
+  and the harm is latent because nothing in standing CI re-runs migrate on the live tree
+  (`--verify` migrates the pinned pre-migration base into a snapshot). A reader of the
+  register must not be able to take "idempotence disproven" for a cosmetic re-sort."*
+- **The recommended fix is the guard, not the four mechanisms:** *"`migrate` refuses, with
+  a non-zero exit and a named reason, to run over a tree that is already migrated … with a
+  broken-input test. That is bounded, prevents the harm, and leaves true idempotence to
+  the audit."* The guard may land in this PR only if it is one check plus one test with
+  the gate green (the ruling's condition 3). On the lead's instruction, it goes to the
+  lead as a proposal after Task 6, before any code is written.
+- **The other conditions:** the auditor files the `FD-` row and essay first in the docs
+  PR, typed *"disproven in W37-11, fix deferred"*. The D7 line names C4 among the items
+  the Work closes over.
+
 Landed in: this PR — the pre-squash branch commit that carries this section.
 
 ## PRs
