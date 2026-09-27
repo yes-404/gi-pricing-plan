@@ -248,4 +248,17 @@ predicate:
 | 13 | Pass. All nine §5.1 rows are dispositioned, none silent. The body's numbering was corrected before the squash (F-b). | #817 body |
 | 14 | Pass. The deputy's ACK is at 10:18:13 BST and the lead's CLEAN verdict at 10:17:39 BST. The two-way match and ancestry are recorded under pass (a) and pass (b) above. | above |
 
+**Check 36 movement against `main`** (at the squash SHA in the PRs table; the deputy's
+rulings of 2026-09-27 07:26:26 and 10:36:27 BST):
+- **Pool:** 497 fatal / 6104 disclosed → 497 fatal / 6109 disclosed at this closing
+  record's head. This is measured on the committed tree, including this block's own tokens.
+  Fatal is unchanged.
+- **Arrived:** 5 disclosed hits, all in this file: `W37-11`×3 and `W37-9`×2. They come
+  from the gate section's final-head paragraph, which quotes the `DISCLOSED` line; from
+  this section's sentence on when the slice closes; and from this block's own mentions.
+- **Classification:** these are ledger vocabulary under RL-1043 §4 / RL-1046 §A, not a
+  charter defect, with no owner beyond W37-11's alias-class row.
+- **Last word:** this block is the last word on its own vocabulary. No later commit
+  records the recording.
+
 **Residue carried, not fixed here:** none.
