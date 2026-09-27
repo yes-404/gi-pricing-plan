@@ -646,6 +646,68 @@ Every other character is verbatim, and the count follows each key.
 Landed in: this PR — the record commit `0a0effb9` (step 2) and the ledger commit that
 carries this section, both pre-squash branch commits.
 
+### Task 5 — F107, the idempotence proof: NOT MET (a finding, recorded and not fixed)
+
+**Method** (plan Task 5 steps 1–2, verbatim in effect):
+
+- `git archive 03f61d83437a9dd4138b7e7309b22c96148f3680 | tar -x -C <job dir>/t5-snap`.
+  That commit is this branch's head after Task 4, and its tree is already migrated.
+- Inside the snapshot: `git init -q -b snapshot`, `git add -A`, and one commit. The
+  snapshot holds 1709 files, `status --porcelain` read `0`, there is no `.venv`, and it
+  lies outside every worktree.
+- Then, with the branch's own tool and the `dev-commands` thread caps:
+  `python3 scripts/doc-id.py migrate --repo-root <job dir>/t5-snap`. It ran 13:28:26 →
+  13:28:32 BST, exited `rc 0`, printed `doc-id.py migrate: 0 id(s) assigned`, and wrote
+  17 files.
+
+**Reading (step 3):** `git -C <snapshot> status --porcelain | wc -l` → **`17`**, not the
+expected `0`. `git diff --stat`: **17 files changed, 57 insertions(+), 51 deletions(-)**.
+The files are:
+
+- the two `planning-with-files` PowerShell scripts, 2 lines each;
+- `.github/ISSUE_TEMPLATE/bug.yml` 2, `question.yml` 2, and `.github/workflows/docs.yml` 2;
+- `docs/REDIRECTS.csv` 9;
+- `CR-1063` 16, `CR-1065` 8, `docs/findings/register.md` 8, `LG-1141` 6, `PL-1071` 2 and
+  `PL-1072` 2;
+- `docs/process/delivery-process.core.json` 2 and `docs/roadmap.md` 2;
+- `scripts/_docverify.py` 2, `scripts/audit-docs.py` 6 and `scripts/doc-id.py` 35.
+
+**The six change classes,** each with one described example, taken from a word diff:
+
+1. **Padded ids are unpadded in prose and code.** In `bug.yml`, a five-digit zero-led
+   finding id becomes its unpadded form. In `docs.yml`, a padded plan-id citation does the
+   same.
+2. **Plain citations are wrapped into links.** `register.md` gains four link wraps of the
+   `CR-1063` citation, and `docs/roadmap.md` gains one of `CR-1065`.
+3. **A legacy-form SPEC constant is rewritten: a corpus-correctness defect of a re-run.**
+   In `scripts/_docverify.py`, a string constant naming the RFC's original note under the
+   legacy notes directory is rewritten to point under `rfcs/`. The constant must keep its
+   legacy form (`doc-id-migration-run`, "Legacy-form-spec constants").
+4. **Code is corrupted: a corpus-correctness defect of a re-run.** In
+   `planning-with-files/scripts/check-complete.ps1`, the PowerShell static-member operator
+   in `[Console]::Out.Write(` becomes `[Console]: :Out.Write(`, which breaks the script.
+   The sibling `set-active-plan.ps1` has the same defect on a different call:
+   `[System.IO.File]::WriteAllText(` becomes `[System.IO.File]: :WriteAllText(`. This was
+   checked from its own diff, not assumed.
+5. **`core.json`'s `meta.verified_against_tree` is overwritten,** from `0651c1e…` to
+   `75779691…`, the snapshot's own commit. **This is inherent:** a real run records its
+   run ref by design (`PL-960`), so a diff here is expected of any second run.
+6. **`docs/REDIRECTS.csv` is regenerated.** Rows are re-sorted, and one row is added: the
+   redirect for the file census CSV from the legacy audit directory to `docs/research/`.
+   The row added in Task 3 is kept, only moved. A first reading said it was dropped, and a
+   line-level re-check corrected that before the report.
+
+**Local evidence (not governed, not in the repository):**
+`~/gi-pricing-plan.local/handover/w37-11-t5-second-migrate-03f61d8/` holds `t5-status.log`,
+`t5-diffstat.log`, `t5-diff.patch` (476 lines) and `t5-migrate.log`.
+
+**Verdict (lead's ruling (A), record only; written 2026-09-27 13:29:48 BST):** F107 / C4 / PL-1144
+acceptance item 4: NOT MET. Idempotence disproven at 03f61d83 (17 files). The finding is to
+be filed by the auditor in the docs PR; C4's re-typing is the deputy's verdict. No re-run
+defect is fixed in this PR.
+
+Landed in: this PR — the pre-squash branch commit that carries this section.
+
 ## PRs
 
 | # | Branch | Squash SHA on `main` | Tasks | State |
