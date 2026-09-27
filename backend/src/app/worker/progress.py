@@ -1,6 +1,6 @@
 """`JobProgress` — the backend's implementation of pricing-core's callback (`07` §5.2).
 
-ADR-0001 keeps `pricing-core` free of I/O, so it reports progress through an injected
+ADR-703 keeps `pricing-core` free of I/O, so it reports progress through an injected
 callback whose protocol *it* owns. This is the implementation, and it has one awkward
 property to solve: the protocol is **synchronous** — a fitting loop calls
 `progress.update(...)` between boosting rounds — while the data layer is async.
@@ -11,7 +11,7 @@ The bridge is deliberate. The computation runs in a worker thread
 creates a fresh loop per tick and detaches the engine's connections from it, and a second
 synchronous SQLAlchemy stack would mean two implementations of the audit write — which is
 exactly the split that produced a self-consistent, externally-invalid hash chain earlier in
-W2.
+WK-658.
 
 Both writes are throttled. Without that, a tight loop calling `update()` a thousand times a
 second turns a fit into a database benchmark.
@@ -38,11 +38,11 @@ __all__ = ["JobBudgetExceededError", "JobProgress"]
 
 _log = get_logger("app.worker.progress")
 
-#: NFR-PLAT-3 wants an update at least every 5 s. Writing more often than this buys
+#: NFR-528 wants an update at least every 5 s. Writing more often than this buys
 #: nothing a human can see, and the cost lands on the database the whole platform shares.
 _MIN_WRITE_INTERVAL_S: Final = 1.0
 
-#: How often a cancellation request is actually looked up. FR-PLAT-9 is cooperative, so
+#: How often a cancellation request is actually looked up. FR-401 is cooperative, so
 #: latency here is the delay between pressing cancel and the job stopping.
 _MIN_CANCEL_POLL_S: Final = 2.0
 
@@ -52,7 +52,7 @@ _WRITE_TIMEOUT_S: Final = 30.0
 
 
 class JobBudgetExceededError(Exception):
-    """The job exceeded its wall-clock budget (FR-PLAT-16).
+    """The job exceeded its wall-clock budget (FR-412).
 
     Distinct from `JobCancelled`: a cancelled job was stopped by a person and is not a
     failure, while a job that outran its budget is one, and the error must name the budget
@@ -97,7 +97,7 @@ class JobProgress:
     # -- ProgressCallback ---------------------------------------------------------------
 
     def update(self, fraction: float, stage: str, **counters: int) -> None:
-        """Record progress (FR-PLAT-8). Throttled; the final call is not the caller's job."""
+        """Record progress (FR-400). Throttled; the final call is not the caller's job."""
         now = time.monotonic()
         if now - self._last_write < _MIN_WRITE_INTERVAL_S:
             return
@@ -127,7 +127,7 @@ class JobProgress:
 
     @property
     def job_id(self) -> UUID:
-        """The Job this progress reports for — a handler's provenance source (FR-OVR-3).
+        """The Job this progress reports for — a handler's provenance source (FR-6).
 
         A platform handler that builds an artifact carrying its own `job_id` field (`01`
         §4.7's `Profile`, `02`'s `Diagnostics`) reads it from here rather than threading it
@@ -140,7 +140,7 @@ class JobProgress:
     def database(self) -> Database:
         """The data layer, for a handler that needs to read or write.
 
-        A `pricing-core` handler needs neither and must not have either (ADR-0001). A
+        A `pricing-core` handler needs neither and must not have either (ADR-703). A
         *platform* handler — one that loads a version's parquet, stores a report — needs
         both, and giving it this rather than letting it build its own engine is what keeps
         one connection pool and one audit path.

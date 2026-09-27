@@ -1,11 +1,11 @@
-"""Blob upload and download (`07` §5.1, FR-PLAT-21).
+"""Blob upload and download (`07` §5.1, FR-421).
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/blobs/upload-url` | Presigned upload so large files bypass the API process |
 | `GET` | `/blobs/{sha256}` | Download, permission-checked, as a presigned redirect |
 
-Declared by `07` §5.1 and reassigned to W4 by the endpoint audit: a dataset version's
+Declared by `07` §5.1 and reassigned to WK-660 by the endpoint audit: a dataset version's
 parquet tables are blobs, so "download this version's data" needs them.
 
 **Download is a 307 to a short-lived presigned URL, not a proxy.** A parquet table is
@@ -78,7 +78,7 @@ class UploadUrlResponse(BaseModel):
 async def upload_url(
     body: UploadUrlRequest, caller: WriteDatasets, blob_store: BlobStoreDep
 ) -> UploadUrlResponse:
-    """FR-PLAT-21.
+    """FR-421.
 
     The digest is not known until the bytes exist, so the object lands on a staging key and
     is promoted to its content address on completion. Asking the client for the digest up

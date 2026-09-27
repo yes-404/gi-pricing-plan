@@ -1,4 +1,4 @@
-"""What the `rate_table.diff` Job actually does (03 §5.1, FR-RATE-62).
+"""What the `rate_table.diff` Job actually does (03 §5.1, FR-232).
 
 The 202 endpoint submits these. The Job exists only because one or both versions is
 `storage: parquet` — the row-backed read path stays synchronous. The handler does not

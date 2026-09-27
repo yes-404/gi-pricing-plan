@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/common/provenance.schema.json",
   "title": "Provenance",
-  "description": "Traceability stamp for any displayed figure (FR-OVR-3).",
+  "description": "Traceability stamp for any displayed figure (FR-6).",
   "type": "object",
   "required": ["entity_type", "entity_id"],
   "properties": {

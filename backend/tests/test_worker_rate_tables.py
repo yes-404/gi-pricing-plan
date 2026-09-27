@@ -1,4 +1,4 @@
-"""The `rate_table.diff` job handler (03 §5.1, FR-RATE-62).
+"""The `rate_table.diff` job handler (03 §5.1, FR-232).
 
 The diff Job exists only because the endpoint answered 202 — one or both versions is
 `storage: parquet`. The handler therefore does not re-decide anything: it computes the
@@ -40,7 +40,7 @@ async def _seed_parquet_diff(
     """A table with version 1 in rows and version 2 in parquet, diffing to 1 cell.
 
     The threshold is set to 2 before the import so the 3-cell version spills to
-    parquet — the only shape the endpoint answers 202 for (FR-RATE-62).
+    parquet — the only shape the endpoint answers 202 for (FR-232).
     """
     family = f"mf-{uuid4().hex[:8]}"
     slug = _table_slug()
@@ -96,7 +96,7 @@ async def _read_result_blob(database: Database, blob_store: BlobStore, sha256: s
         return await blob_store.read(to_ref(row))
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_a_rate_table_diff_job_stores_the_diff_artifact_as_a_blob(
     database: Database, workspace_id, principal, blob_store
 ) -> None:
@@ -123,7 +123,7 @@ async def test_a_rate_table_diff_job_stores_the_diff_artifact_as_a_blob(
     assert diff.changed_cells == 1
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_an_explicit_version_number_in_against_is_reparsed(
     database: Database, workspace_id, principal, blob_store
 ) -> None:
@@ -144,7 +144,7 @@ async def test_an_explicit_version_number_in_against_is_reparsed(
     assert RateTableDiff.model_validate_json(payload).changed_cells == 1
 
 
-@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-232")
 async def test_a_rate_table_diff_job_on_a_missing_table_fails_with_the_refusal(
     database: Database, workspace_id, principal
 ) -> None:

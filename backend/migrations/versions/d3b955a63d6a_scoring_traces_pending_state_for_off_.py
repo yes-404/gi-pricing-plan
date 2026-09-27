@@ -1,7 +1,7 @@
-"""scoring traces: pending state for off-path re-score (W11 Task 4B)
+"""scoring traces: pending state for off-path re-score (WK-671 Task 4B)
 
-`03` FR-RATE-42, NFR-RATE-1. Ruling 35
-(`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`) moves trace
+`03` FR-259, NFR-489. RL-862
+(`docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`) moves trace
 *production* off the serving request: the quoting path scores untraced, and a sampled
 outcome is recorded as a **pending** row at serve time, then completed by an off-path
 re-score Job that fills in the blob body. This adds the columns that phase needs.
@@ -12,7 +12,7 @@ is `NULL`, which `CHECK` treats as satisfied), so it needs no change.
 
 **`status` distinguishes the three states a row can be in**: `pending` (written at serve
 time, no body), `complete` (the off-path re-score reproduced the served quote and the body
-is written), `mismatch` (Ruling 35 §8.2's two safety conditions, either of which lands
+is written), `mismatch` (RL-862 §8.2's two safety conditions, either of which lands
 here: (b) the re-score ran and did not reproduce the served result — the body is kept, as
 evidence of what actually happened; or (a) the pinned bundle no longer resolves at all, so
 no re-score was attempted and there is no body to keep). **So `blob_sha256` is required
@@ -20,7 +20,7 @@ only when `status = 'complete'`, and forbidden only when `status = 'pending'`** 
 `mismatch` row may carry a body (condition (b)) or not (condition (a)).
 
 **`pending_quote_context` and `served_summary` carry what the off-path Job needs and what
-the reproduction check compares against** (Ruling 35 §8.4's access-controlled carrier: the
+the reproduction check compares against** (RL-862 §8.4's access-controlled carrier: the
 Quote Context travels in this row, never in `JobRow.parameters`, which a workspace member
 holding no scoring permission can read). `served_summary` is `outcome`/`decline_reasons`/
 `premium_ladder`/`outputs` only — never raw quote inputs — so it carries no exposure
@@ -34,7 +34,7 @@ outright and that stands unchanged here: *"a trace, once written, is never edite
 existing `REVOKE` needs no loosening.
 
 **Also registers the `score.trace_produce` `job_kind` enum value** — the off-path re-score
-Job Ruling 35 introduces. `job_kind` is a Postgres `ENUM`, not a check constraint
+Job RL-862 introduces. `job_kind` is a Postgres `ENUM`, not a check constraint
 (`df53696a2682`), and every prior addition to `model_schema.JobKind` needed its own `ALTER
 TYPE ... ADD VALUE` (`2b2e2a481fb1`, `d5e6f7a8b9c0`, `b1c2d3e4f5a6`, `d0e1f2a3b4c5`) or
 `job_service.submit` fails with `invalid input value for enum job_kind` the first time

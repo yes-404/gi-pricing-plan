@@ -1,3 +1,13 @@
+---
+family: reference
+title: watcher (support — mechanical first)
+status: active                  # active → retired (§1.2a)
+created: 2026-08-29
+owner: maintainer
+corrected_by: []
+relates: []                      # ids only
+---
+
 # watcher (support — mechanical first)
 
 - **Form:** a script (no LLM in steady state) plus event hooks; a watcher agent (Haiku 4.5,
@@ -46,12 +56,12 @@
   - Hygiene checks (uncommitted changes, lock files, status failures); anomaly-only
     output.
   - Does NOT nudge on staleness — that is the reporter's freshness mechanism alone.
-  - **Runtime state file (NT-0014 artifact B)**: writes `position` and
+  - **Runtime state file (RFC-895 artifact B)**: writes `position` and
     `in_flight_expensive_verifications` to `$RUNTIME_STATE_FILE` (default
     `~/gi-pricing-plan.local/handover/runtime-state.json`) each cycle. **Re-derives, does
-    not compare** — `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md` Ruling 47: a
+    not compare** — `docs/rulings/RL-00907-q4-artifacts-win-where-an-artifact-exists-and-nothing-that-blocks-an-action-may-be-counted-in-b-without-one.md` RL-907: a
     mismatch detector cannot detect a dead writer, since a dead writer and a healthy zero
-    read the same. `retry_counters` is not part of this file yet (ships with NT-0014
+    read the same. `retry_counters` is not part of this file yet (ships with RFC-895
     script C2, not built) and is never written as an empty or zero placeholder in the
     meantime — absent, not zero. Stays **report-only**: this bullet writes descriptive
     state, the same class as roster/balance/hygiene above; it enforces nothing and blocks
@@ -75,6 +85,6 @@ hours after the skill was filed to end exactly that. The pointer above already e
 was missing was this sentence. A pointer tells you where a thing is; only a precedence rule
 tells you which one to obey.)*
 
-- **Built:** not by `docs/plans/2026-08-29-nt-0010-0011-adoption.md` — see
+- **Built:** not by `docs/plans/PL-00844-rfc-840-rfc-841-adoption-implementation-plan.md` — see
   `docs/process/delivery-process.md` §13 for the mechanism this file describes, and that
   plan's Task 6 for why the script itself is deliberately deferred.

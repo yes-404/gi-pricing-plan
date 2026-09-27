@@ -1,11 +1,11 @@
-"""Capturing a Job's log lines so they can be read with the Job (FR-PLAT-10).
+"""Capturing a Job's log lines so they can be read with the Job (FR-402).
 
 A `logging.Handler` attached for the duration of one Job, buffering records and flushing
 them to `job_logs`. Buffered rather than written per line: a fitting loop can emit
 thousands of lines, and a synchronous insert per line would make logging the slowest part
 of the job.
 
-**Only the formatted message is stored** (R3, FR-GOV-26). A `LogRecord` carries arbitrary
+**Only the formatted message is stored** (R3, FR-375). A `LogRecord` carries arbitrary
 attributes, and sweeping those into the database is how a credential someone attached to a
 log call ends up in a table the UI renders. What is not captured cannot leak.
 """

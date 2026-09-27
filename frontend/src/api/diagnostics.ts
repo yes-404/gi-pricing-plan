@@ -25,7 +25,7 @@ export type CvPathPoint = components["schemas"]["CvPathPoint"];
 export type CvFoldMetric = components["schemas"]["CvFoldMetric"];
 
 /**
- * The evidence behind a fitted model (FR-MODEL-49, `02` §5.1).
+ * The evidence behind a fitted model (FR-170, `02` §5.1).
  *
  * Read, never recomputed — the endpoint returns what the fit recorded, and a screen that
  * recalculated a diagnostic would be showing a number no approval could cite. `?version=`
@@ -43,11 +43,11 @@ export type PartitionLabel = "Train" | "Holdout";
  * What a shared instrument may caption a column.
  *
  * `PartitionLabel` is the *fit's* two partitions and keeps that exact meaning — a backtest's
- * single partition is neither of them (FR-MODEL-57), and the instruments interpolate whatever
+ * single partition is neither of them (FR-187), and the instruments interpolate whatever
  * they are given straight into a heading. Widening `PartitionLabel` itself would make
  * `partitions()` advertise a member it can never produce.
  *
- * Closed rather than `string`: FR-MODEL-57 forbids a caption that "asserts a relationship the
+ * Closed rather than `string`: FR-187 forbids a caption that "asserts a relationship the
  * artifact does not carry", so a new member is a spec question, not a type change.
  */
 export type PartitionCaption = PartitionLabel | "Backtest";
@@ -55,7 +55,7 @@ export type PartitionCaption = PartitionLabel | "Backtest";
 /**
  * The two partitions, in the order they are read.
  *
- * FR-MODEL-54: `UniversalDiagnostics` requires `train` and `holdout` as separate
+ * FR-183: `UniversalDiagnostics` requires `train` and `holdout` as separate
  * `PartitionDiagnostics`, so a one-sided universal diagnostic is unrepresentable and this
  * helper cannot return fewer than two. It exists so that every universal instrument iterates
  * the same pair in the same order rather than each writing `[['Train', u.train], …]` again —
@@ -74,7 +74,7 @@ export function partitions(
 }
 
 /**
- * FR-MODEL-55: an unweighted metric on an exposure-weighted problem is labelled as such,
+ * FR-184: an unweighted metric on an exposure-weighted problem is labelled as such,
  * which the UI can only do if the fit said which. The words matter — "count" is the enum
  * value and "unweighted (row count)" is what an actuary needs to read next to a Gini.
  *

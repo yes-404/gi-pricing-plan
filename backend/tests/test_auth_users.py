@@ -1,4 +1,4 @@
-"""User provisioning from identity-provider claims (FR-PLAT-4)."""
+"""User provisioning from identity-provider claims (FR-390)."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def _claims(subject: str, email: str | None = "a.actuary@insurer.example") -> To
     )
 
 
-@pytest.mark.req("FR-PLAT-4")
+@pytest.mark.req("FR-390")
 async def test_a_user_is_created_on_first_login(database: Database) -> None:
     subject = f"user-{new_uuid7().hex[-12:]}"
     async with database.unit_of_work() as session:
@@ -57,7 +57,7 @@ async def test_a_user_is_created_on_first_login(database: Database) -> None:
     assert user.last_login_at is not None
 
 
-@pytest.mark.req("FR-PLAT-4")
+@pytest.mark.req("FR-390")
 async def test_a_second_login_updates_rather_than_duplicates(database: Database) -> None:
     """Keyed on (issuer, subject), never email — an email change must not orphan history."""
     subject = f"user-{new_uuid7().hex[-12:]}"
@@ -78,12 +78,12 @@ async def test_a_second_login_updates_rather_than_duplicates(database: Database)
     assert users[0].email == "new.name@insurer.example"
 
 
-@pytest.mark.req("FR-PLAT-4")
+@pytest.mark.req("FR-390")
 async def test_a_user_with_no_membership_reaches_no_workspace(database: Database) -> None:
-    """FR-PLAT-4: no mapped access means *no* access, not default access.
+    """FR-390: no mapped access means *no* access, not default access.
 
     A real, authenticated, known user who may act nowhere is the correct state until
-    governance grants them something (W3).
+    governance grants them something (WK-659).
     """
     subject = f"user-{new_uuid7().hex[-12:]}"
     async with database.unit_of_work() as session:
@@ -98,14 +98,14 @@ async def test_a_user_with_no_membership_reaches_no_workspace(database: Database
     assert "never the default" in (exc.value.detail or "")
 
 
-@pytest.mark.req("FR-PLAT-4")
+@pytest.mark.req("FR-390")
 async def test_membership_grants_exactly_one_workspace(
     database: Database, workspace_id
 ) -> None:
     subject = f"user-{new_uuid7().hex[-12:]}"
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
-        # A membership names a workspace that exists (FR-PLAT-62's foreign key).
+        # A membership names a workspace that exists (FR-395's foreign key).
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         session.add(
             WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=workspace_id)
@@ -120,7 +120,7 @@ async def test_membership_grants_exactly_one_workspace(
     assert caller.workspace_id == workspace_id
 
 
-@pytest.mark.req("FR-PLAT-4")
+@pytest.mark.req("FR-390")
 async def test_membership_of_several_workspaces_requires_a_choice(
     database: Database,
 ) -> None:
@@ -142,14 +142,14 @@ async def test_membership_of_several_workspaces_requires_a_choice(
         _select_workspace(identity, None)
     assert exc.value.status_code == 403
     # The code, not only the status. This refusal used to be `UNAUTHENTICATED` because the
-    # API could not read a selection; FR-PLAT-65 gave it one of its own, and an assertion
+    # API could not read a selection; FR-397 gave it one of its own, and an assertion
     # on the status alone would go on passing if it regressed.
     assert exc.value.code == "WORKSPACE_SELECTION_REQUIRED"
 
 
-@pytest.mark.req("FR-PLAT-1")
+@pytest.mark.req("FR-387")
 def test_the_user_table_has_no_password_column() -> None:
-    """FR-PLAT-1: the platform stores no user passwords, and cannot start to."""
+    """FR-387: the platform stores no user passwords, and cannot start to."""
     columns = {c.name for c in UserRow.__table__.columns}
     assert not any(
         term in name for name in columns for term in ("password", "secret", "hash")

@@ -1,11 +1,11 @@
-"""Turning failures into the one error shape the API promises (`00` §5.3, FR-PLAT-47).
+"""Turning failures into the one error shape the API promises (`00` §5.3, FR-450).
 
 Two rules hold this together:
 
 * Every non-2xx response is a `ProblemDetail`, including the ones FastAPI and Starlette
   raise on their own. A framework default that leaks `{"detail": "..."}` is a second error
   shape, and a client cannot branch on a shape it was not told about.
-* Every problem carries the request's `trace_id` (R4, FR-PLAT-42), so a support
+* Every problem carries the request's `trace_id` (R4, FR-445), so a support
   conversation starts with an identifier rather than a screenshot.
 """
 
@@ -45,7 +45,7 @@ PLATFORM_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "API_KEY_INVALID",
         "API_KEY_EXPIRED",
         "ENVIRONMENT_SCOPE_DENIED",
-        # FR-PLAT-63's workspace selection, and FR-PLAT-65 (OQ-PLAT-9, 2026-08-23) the
+        # FR-396's workspace selection, and FR-397 (OQ-648, 2026-08-23) the
         # verified `Workspace-Id` header that carries it. Raised by
         # `api.deps._select_workspace`.
         "WORKSPACE_SCOPE_DENIED",
@@ -61,10 +61,10 @@ PLATFORM_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "SETTING_INVALID",
         "PROMOTION_ORDER_VIOLATION",
         "MIGRATION_REQUIRED",
-        # `00` §5.4's optimistic concurrency, owned by `07` because FR-PLAT-47 owns "the API
+        # `00` §5.4's optimistic concurrency, owned by `07` because FR-450 owns "the API
         # implements `00` §5 exactly". Registered with the first routes that require the
-        # header (the model lifecycle, W5) rather than when the convention was written —
-        # W2 and W4 both recorded it as still absent, which is what made it findable.
+        # header (the model lifecycle, WK-661) rather than when the convention was written —
+        # WK-658 and WK-660 both recorded it as still absent, which is what made it findable.
         "CONFLICT_STALE_WRITE",
     }
 )
@@ -88,8 +88,8 @@ DATA_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "REFERENCE_VERSION_NOT_PINNED",
         "SOURCE_UNREACHABLE",
         "REJECT_RATE_EXCEEDED",
-        # OQ-DATA-8, decided 2026-08-17. Every declared derivation except `split` is
-        # refused until it is materialised (FR-DATA-45), and the refusal needs its own
+        # OQ-563, decided 2026-08-17. Every declared derivation except `split` is
+        # refused until it is materialised (FR-78), and the refusal needs its own
         # code rather than `VALIDATION_FAILED`: the request is well formed and will be
         # valid unchanged once the operation is built, which is the opposite of what a
         # validation failure tells a caller.
@@ -110,7 +110,7 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "BAND_EMPTY",
         "BAND_BELOW_MIN_EXPOSURE",
         "GROUPING_NOT_EXHAUSTIVE",
-        # FR-MODEL-80's Bühlmann-Straub arm, 2026-08-22. `GROUPING_NOT_EXHAUSTIVE` is about
+        # FR-106's Bühlmann-Straub arm, 2026-08-22. `GROUPING_NOT_EXHAUSTIVE` is about
         # a mapping that misses an observed level and says nothing a caller of
         # `/groupings/propose` could act on here: the mapping is fine, the *book* cannot
         # support a between-level variance estimate. The two answers are different actions —
@@ -122,15 +122,15 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # Raised by `pricing-core` since the spine and **registered only now**: the fit
         # handler maps a `GlmFitError`'s code straight into a `PlatformError`, so a
         # perfectly separated fit raised `ValueError: unknown error code` from inside the
-        # error path instead of the named refusal FR-MODEL-23 promises.
+        # error path instead of the named refusal FR-115 promises.
         "GLM_SEPARATION_DETECTED",
         "OFFSET_REQUIRED_FOR_FREQUENCY",
         "MODEL_IMMUTABLE",
         # The diagnostics slice. A spec with no `split_ref` has no holdout, so it can
-        # produce no diagnostics (FR-MODEL-54) and therefore cannot reach `fitted`
+        # produce no diagnostics (FR-183) and therefore cannot reach `fitted`
         # (`02` §4.8) — refused before the fit rather than after it.
         "MODEL_SPLIT_REQUIRED",
-        # FR-MODEL-81's gate half, 2026-08-16. The diagnostic half shipped with the
+        # FR-185's gate half, 2026-08-16. The diagnostic half shipped with the
         # diagnostics slice and this did not — a requirement counted as evidenced because
         # a test marked it, which is the "a marker is a claim, not a proof" trap
         # `CLAUDE.md` §13 names.
@@ -151,7 +151,7 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "OBJECTIVE_NOT_APPLICABLE",
         "OBJECTIVE_NOT_APPROVED",
         "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
-        # FR-MODEL-71's own code, and it earns one: "the offset cannot be reconstructed" is
+        # FR-126's own code, and it earns one: "the offset cannot be reconstructed" is
         # a distinct failure from "this frame is missing a feature", and it is the one that
         # would otherwise score silently wrong on both backends.
         "OFFSET_NOT_RECONSTRUCTABLE",
@@ -183,7 +183,7 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "MODEL_TERM_UNRESOLVED",
         "MODEL_LINK_UNSUPPORTED",
         "MODEL_OFFSET_MISSING",
-        # FR-MODEL-24, 2026-08-21, the offset-from-another-model slice. The fit job's
+        # FR-116, 2026-08-21, the offset-from-another-model slice. The fit job's
         # resolver raises it when `offset_model_ref` names a model that cannot serve as
         # the offset — not fitted, not a GLM, or fitted with a link that is not the new
         # spec's. A ref that names no model at all is `NOT_FOUND`: this code is for the
@@ -191,7 +191,7 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "MODEL_OFFSET_REF_INVALID",
         "MODEL_INTERVAL_UNAVAILABLE",
         "MODEL_INTERVAL_PAIR_INVALID",
-        # FR-MODEL-96, 2026-08-19. The surrogate the transparency Job reserves is an
+        # FR-137, 2026-08-19. The surrogate the transparency Job reserves is an
         # ordinary Model, so `POST /api/v1/models` can be handed a spec claiming to
         # approximate anything at all.
         "MODEL_APPROXIMATION_INVALID",
@@ -200,42 +200,42 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # registered by the GBM slice for the same reason and is raised for the first time
         # here, by `separate_model`.
         "PERIL_STRUCTURE_RECONCILIATION_FAILED",
-        # The custom-metrics slice, 2026-08-19 (FR-MODEL-108). `METRIC_REF_UNRESOLVED` is
+        # The custom-metrics slice, 2026-08-19 (FR-162). `METRIC_REF_UNRESOLVED` is
         # raised by this slice's `resolve_ref`; `METRIC_NOT_APPLICABLE` and
-        # `METRIC_NOT_FITTABLE` are FR-MODEL-106's refusals from the GBM fit path (the
+        # `METRIC_NOT_FITTABLE` are FR-159's refusals from the GBM fit path (the
         # slice that wires `GbmSpec.eval_metrics`) and are registered here, with the
         # artifact they belong to, rather than left for that slice to discover unregistered
         # the way `GLM_SEPARATION_DETECTED` was.
         "METRIC_REF_UNRESOLVED",
         "METRIC_NOT_APPLICABLE",
         "METRIC_NOT_FITTABLE",
-        # The regularisation-and-CV slice, 2026-08-21 (FR-MODEL-20, FR-MODEL-53). Raised
+        # The regularisation-and-CV slice, 2026-08-21 (FR-112, FR-182). Raised
         # by `_fit_cv_path` when a fold has no held-out rows (or no training rows) at some
         # alpha on the scanned path — `key_column`/`time_column` skew that a fold count
         # chosen against the whole book does not guarantee against, per fold.
         "GLM_CV_FOLD_EMPTY",
-        # GLM_TWEEDIE_POWER_GRID_EDGE (2026-08-21, FR-MODEL-22): the profile over
+        # GLM_TWEEDIE_POWER_GRID_EDGE (2026-08-21, FR-114): the profile over
         # tweedie.p_grid is maximised at a scan edge, so the estimate would report the
         # scan's boundary as the answer.
         "GLM_TWEEDIE_POWER_GRID_EDGE",
-        # The EBM fit slice, 2026-08-21 (FR-MODEL-37). Raised by `fit_ebm` in two
+        # The EBM fit slice, 2026-08-21 (FR-140). Raised by `fit_ebm` in two
         # places: its monotone pre-check — a constraint naming an unknown slug, or
         # declaring a direction on a categorical (non-ordinal) feature, is refused
         # as a named code because `interpret` 0.7.8 would silently zero the term
         # instead (dated note in `02` §5.1) — and the fit-backstop, which translates
         # any residual library `ValueError` from the fit into the same named code
-        # rather than a stack trace (the FR-MODEL-23 lesson).
+        # rather than a stack trace (the FR-115 lesson).
         "EBM_MONOTONE_CONSTRAINT_INCOMPLETE",
-        # The EBM transparency slice, 2026-08-22 (FR-MODEL-52). Raised by
+        # The EBM transparency slice, 2026-08-22 (FR-174). Raised by
         # `ebm_monotonicity_verified` when a constraint names a feature absent from the
         # fitted tables' `feature_order`: reporting `True`/`False` for a constraint
         # nothing in the tables can evidence would be a made-up monotonicity verdict.
         "EBM_MONOTONE_CONSTRAINT_UNKNOWN",
-        # FR-MODEL-23's remainder, 2026-08-22 (W5). `fit_glm` caught only
+        # FR-115's remainder, 2026-08-22 (WK-661). `fit_glm` caught only
         # `np.linalg.LinAlgError` around `estimator.fit`, so every other refusal `glum`
         # raises — a Gamma response containing a zero, a negative weight column, an
         # all-zero response — left the worker as a bare `ValueError` and the job stored a
-        # stack trace where FR-MODEL-23 promises a named error. Not folded into
+        # stack trace where FR-115 promises a named error. Not folded into
         # `GLM_RANK_DEFICIENT`: that code's message names collinear terms, which is a lie
         # for a response outside the family's domain. The general code alongside the three
         # specific `GLM_*` conditions, the way `VALIDATION_FAILED` sits alongside `01`'s
@@ -261,7 +261,7 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "BREAK_GLASS_REASON_REQUIRED",
         "AUDIT_CHAIN_BROKEN",
         "ATTESTATION_OVERDUE",
-        # FR-GOV-36. A well-formed reference to an artifact type no module in this
+        # FR-386. A well-formed reference to an artifact type no module in this
         # build can resolve — `rating_version` has a policy entry and no module
         # because `03` is unbuilt. `07`'s JOB_HANDLER_NOT_REGISTERED settles what is
         # owed: a platform deployable before every kind has an implementation says
@@ -278,7 +278,7 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATING_GRAPH_UNRESOLVED_REF",
         "RATING_TYPE_MISMATCH",
         "MONETARY_FLOAT_REFUSED",
-        # The four W8-confirmed boundary guards, surfaced at save time (W9-2).
+        # The four WK-668-confirmed boundary guards, surfaced at save time (W9-2).
         "EXPRESSION_UNGUARDED_DIVISION",
         "EXPRESSION_SCALE_OVERFLOW",
         "EXPRESSION_INVALID_VOCABULARY",
@@ -291,7 +291,7 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATE_TABLE_INCOMPLETE",
         "RATE_TABLE_KEY_DUPLICATE",
         "PIN_NOT_APPROVED",
-        # W10-3C: the save-time seed-lineage equality proof (03 §4.2, FR-RATE-19) and
+        # W10-3C: the save-time seed-lineage equality proof (03 §4.2, FR-234) and
         # the named refusals of the bulk-operation and import operations (03 §5.1).
         "RATE_TABLE_SEED_MISMATCH",
         "NO_RELATIVITIES",
@@ -303,9 +303,9 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "IMPORT_KEY_MISMATCH",
         "IMPORT_TYPE_MISMATCH",
         "IMPORT_PARSE_ERROR",
-        # Scoring (W11 Task 1.4). All four already owned by `03` §5.1 before this
-        # commit — `MODEL_CALL_FAILED` added by Ruling 11 (PR #368); the other three were
-        # already in the spec's owned-code block but never registered here (Ruling 11's
+        # Scoring (WK-671 Task 1.4). All four already owned by `03` §5.1 before this
+        # commit — `MODEL_CALL_FAILED` added by RL-877 (PR #368); the other three were
+        # already in the spec's owned-code block but never registered here (RL-877's
         # own finding). `score_one` (`pricing_core`) never raises these directly — it
         # cannot import `PlatformError` (`.importlinter`'s `core-has-no-infrastructure`) —
         # it raises a code-named `ValueError`; the mapping to `PlatformError` is Slice 2's.
@@ -313,24 +313,24 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "REFERENCE_LOOKUP_MISS",
         "MODEL_CALL_FAILED",
         "LADDER_RECONCILIATION_FAILED",
-        # Scoring (W11 Slice 2, Ruling 14). 409: `POST /api/v1/score` with no
+        # Scoring (WK-671 Slice 2, RL-880). 409: `POST /api/v1/score` with no
         # `options.rating_version_ref` refuses rather than guessing which version is
-        # live, because `live` is a property of a Deployment (FR-RATE-23) and that is
-        # W14's. The branch is permanent, not a stub — after W14 it is what an
+        # live, because `live` is a property of a Deployment (FR-238) and that is
+        # WK-674's. The branch is permanent, not a stub — after WK-674 it is what an
         # environment holding no Deployment answers. Owned by `03` §5.1.
         "NO_LIVE_RATING_VERSION",
-        # Scoring (W11 Slice 3 Task 3B, FR-RATE-38, Ruling 24). A `score.batch` Job
+        # Scoring (WK-671 Slice 3 Task 3B, FR-255, RL-889). A `score.batch` Job
         # argument may only lower `rating.batch_abort_failure_rate`'s resolved effective
         # threshold, never raise it; a run whose observed failure rate crosses the
         # effective threshold aborts. Owned by `03` §5.1.
         "BATCH_ABORT_THRESHOLD_ABOVE_SETTING",
         "BATCH_ABORTED",
-        # Trace persistence (W11 Task 4A, `00` NFR-OVR-6, Ruling 23). Deleting a sampled
+        # Trace persistence (WK-671 Task 4A, `00` NFR-459, RL-888). Deleting a sampled
         # trace row while it is still inside the ≥ 13-month retention floor is refused;
         # outside the floor it is permitted. `app.platform.traces.delete_trace` is the
         # only raiser.
         "TRACE_RETENTION_FLOOR",
-        # Trace persistence (W11 Task 4B, Ruling 35 — trace production moved off the
+        # Trace persistence (WK-671 Task 4B, RL-862 — trace production moved off the
         # serving request). `app.platform.traces.complete_pending_trace` refuses to fill
         # in a row that is not `pending` — already completed, or never a pending row at
         # all — rather than silently re-running the re-score and orphaning a blob. The
@@ -418,7 +418,7 @@ async def _handle_validation_error(
 ) -> JSONResponse:
     """Render FastAPI's request-validation failure as a problem with field-level errors.
 
-    FR-PLAT-11's principle applies to synchronous rejections too: a deterministic failure
+    FR-403's principle applies to synchronous rejections too: a deterministic failure
     should name the field, so the UI can mark it rather than showing a banner.
     """
     field_errors = tuple(

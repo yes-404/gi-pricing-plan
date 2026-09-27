@@ -3,14 +3,14 @@
 `pricing-core` proposes the boundaries and the mapping; this decides who may, against
 which version, and what the act leaves behind. Three rules carry the weight:
 
-* **FR-MODEL-12 / FR-MODEL-16** — both artifacts are **versioned, never edited**, and
+* **FR-101 / FR-108** — both artifacts are **versioned, never edited**, and
   creation is audited. A Model pins the version it was fitted with, so an edited banding
   would silently change what every model fitted on it was fitted on. Allocating the next
   version is the only write this module performs.
 * **`02` R1** — a proposal is derived against a *validated* Dataset Version, through `01`'s
   own `fittable_or_refuse`. Proposing bands from data the platform has refused to fit on
-  would produce evidence (FR-MODEL-10) for a fit that cannot happen.
-* **FR-MODEL-9 / FR-MODEL-14** — the platform *proposes*; the actuary edits; what is stored
+  would produce evidence (FR-99) for a fit that cannot happen.
+* **FR-98 / FR-105** — the platform *proposes*; the actuary edits; what is stored
   is what was accepted. So proposing writes nothing at all, and `create_*` takes whatever
   the caller sends back.
 
@@ -88,7 +88,7 @@ async def propose_banding_for_version(
     proposal: BandingProposal,
     slug: str,
 ) -> Banding:
-    """Derive boundaries and their evidence, and persist nothing (FR-MODEL-9)."""
+    """Derive boundaries and their evidence, and persist nothing (FR-98)."""
     await rbac.require_permission(
         session, workspace_id=workspace_id, principal=actor, permission=Permission.MODEL_FIT
     )
@@ -121,7 +121,7 @@ async def propose_grouping_for_version(
     proposal: GroupingProposal,
     slug: str,
 ) -> Grouping:
-    """Derive a mapping and its evidence, and persist nothing (FR-MODEL-14)."""
+    """Derive a mapping and its evidence, and persist nothing (FR-105)."""
     await rbac.require_permission(
         session, workspace_id=workspace_id, principal=actor, permission=Permission.MODEL_FIT
     )
@@ -153,7 +153,7 @@ async def evaluate_banding_for_version(
     blob_store: BlobStore,
     evaluation: BandingEvaluation,
 ) -> Banding:
-    """Recompute FR-MODEL-10's statistics for boundaries the actuary edited (FR-MODEL-83).
+    """Recompute FR-99's statistics for boundaries the actuary edited (FR-102).
 
     `/propose` derives boundaries from a **method** and cannot accept one, so without this
     "the proposal is always editable" means editable but unmeasurable — and an actuary who
@@ -206,7 +206,7 @@ async def evaluate_grouping_for_version(
     blob_store: BlobStore,
     evaluation: GroupingEvaluation,
 ) -> Grouping:
-    """Recompute FR-MODEL-15's evidence for a mapping the actuary edited (FR-MODEL-83).
+    """Recompute FR-107's evidence for a mapping the actuary edited (FR-102).
 
     This is the half §5.3 names explicitly: merging levels shows the deviance/df trade-off
     *before* the grouping is saved. The p-value is the whole answer to "could these levels
@@ -238,7 +238,7 @@ async def evaluate_grouping_for_version(
             exposure_column=evaluation.exposure_column,
             claim_count_column=evaluation.claim_count_column,
             claim_amount_column=evaluation.claim_amount_column,
-            # FR-MODEL-80: re-evaluating a `buhlmann_straub` grouping must re-derive its
+            # FR-106: re-evaluating a `buhlmann_straub` grouping must re-derive its
             # variance components on **this** version, not drop them. Without this the
             # evidence comes back with `credibility_components: null` under a
             # `buhlmann_straub` `method_params` — the exact contradiction the requirement
@@ -262,7 +262,7 @@ async def create_banding(
     actor: Principal,
     banding: Banding,
 ) -> BandingRow:
-    """Persist a Banding, or allocate the next version of an existing slug (FR-MODEL-12).
+    """Persist a Banding, or allocate the next version of an existing slug (FR-101).
 
     Versioned rather than edited, for the reason a Model Spec pins a version: re-cutting a
     boundary in place would silently change what every model fitted on it was fitted on.
@@ -319,9 +319,9 @@ async def create_grouping(
     actor: Principal,
     grouping: Grouping,
 ) -> GroupingRow:
-    """Persist a Grouping, or allocate the next version of an existing slug (FR-MODEL-16).
+    """Persist a Grouping, or allocate the next version of an existing slug (FR-108).
 
-    FR-MODEL-16 makes creation an audited event in its own right: grouping is a modelling
+    FR-108 makes creation an audited event in its own right: grouping is a modelling
     decision, and the generated model document lists every one with its method.
     """
     await rbac.require_permission(

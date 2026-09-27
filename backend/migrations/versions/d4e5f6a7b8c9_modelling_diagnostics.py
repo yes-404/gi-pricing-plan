@@ -3,7 +3,7 @@
 Three changes, one slice (`02` §3.8, §4.8).
 
 * **`diagnostics`** — one artifact per fitted model, insert-only at the privilege layer
-  like every other artifact (FR-DATA-42). FR-MODEL-49 makes diagnostics computed once at
+  like every other artifact (FR-43). FR-170 makes diagnostics computed once at
   fit time and read thereafter, so a diagnostics row that could be updated would let the
   evidence behind an approval change after the approval. Unique on `model_id`: a second
   set of diagnostics for one model is either a recomputation the requirement forbids or a
@@ -80,7 +80,7 @@ def upgrade() -> None:
         "status IN ('draft', 'archived') OR diagnostics_id IS NOT NULL",
     )
 
-    # FR-DATA-42's artifact discipline: insert and read, never rewrite.
+    # FR-43's artifact discipline: insert and read, never rewrite.
     op.execute(f"GRANT SELECT, INSERT ON diagnostics TO {APP_ROLE}")
     op.execute(f"REVOKE UPDATE, DELETE ON diagnostics FROM {APP_ROLE}")
     op.execute("REVOKE UPDATE, DELETE ON diagnostics FROM PUBLIC")

@@ -46,7 +46,7 @@ describe("the workspace selector", () => {
       (option) => option.textContent,
     );
     expect(names).toEqual(["Alpha", "Beta"]);
-    // The current workspace is named alongside the control (FR-PLAT-62's name).
+    // The current workspace is named alongside the control (FR-395's name).
     expect(selector.querySelector("span")?.textContent).toBe("Alpha");
     expect(selector.querySelector("select")?.value).toBe(FIRST);
   });

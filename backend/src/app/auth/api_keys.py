@@ -1,4 +1,4 @@
-"""Service Account API keys (FR-PLAT-3).
+"""Service Account API keys (FR-389).
 
 > Keys are prefix-identifiable, **hashed at rest, never retrievable after creation**.
 > They carry an expiry, are rotatable with an overlap window, and are scoped to named
@@ -21,7 +21,7 @@ secret expensive. These secrets are 256 bits from `secrets.token_urlsafe` — gu
 infeasible by construction, so stretching adds latency to every scoring request and buys
 nothing. The threat model is database disclosure, and SHA-256 of 256 random bits is not
 invertible. A user password would need Argon2; this is not one, and the platform stores no
-passwords at all (FR-PLAT-1).
+passwords at all (FR-387).
 """
 
 from __future__ import annotations

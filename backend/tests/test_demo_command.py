@@ -1,4 +1,4 @@
-"""The demo command's refusals and its seed handshake (FR-PLAT-53).
+"""The demo command's refusals and its seed handshake (FR-408).
 
 The orchestration itself — compose, uvicorn, vite — is not unit-testable and is not worth
 faking; it is proven by running it. What *is* worth testing is everything that decides
@@ -23,7 +23,7 @@ demo_script = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(demo_script)
 
 
-@pytest.mark.req("FR-PLAT-53")
+@pytest.mark.req("FR-408")
 @pytest.mark.parametrize("environment", ["prod", "staging", "PROD", "production"])
 def test_the_demo_refuses_outside_local_and_dev(environment: str) -> None:
     """Before anything is started, not after.
@@ -37,14 +37,14 @@ def test_the_demo_refuses_outside_local_and_dev(environment: str) -> None:
     assert "development identity" in str(refusal.value)
 
 
-@pytest.mark.req("FR-PLAT-53")
+@pytest.mark.req("FR-408")
 @pytest.mark.parametrize("environment", ["local", "dev", "", "  LOCAL  "])
 def test_the_demo_runs_where_development_identity_does(environment: str) -> None:
     """The negative of the above: if it refused here it would refuse everywhere."""
     demo_script.check_environment({"GIP_ENVIRONMENT": environment})
 
 
-@pytest.mark.req("FR-PLAT-58")
+@pytest.mark.req("FR-398")
 def test_the_demo_env_points_the_browser_at_the_local_provider() -> None:
     """The one-command demo starts the auth profile and sets the OIDC variables.
 
@@ -63,7 +63,7 @@ def test_the_demo_env_points_the_browser_at_the_local_provider() -> None:
     )
 
 
-@pytest.mark.req("FR-PLAT-53")
+@pytest.mark.req("FR-408")
 def test_the_seed_record_is_read_rather_than_scraped_from_output(tmp_path: Path) -> None:
     """The seed writes ids to a file; the demo reads that file.
 
@@ -79,7 +79,7 @@ def test_the_seed_record_is_read_rather_than_scraped_from_output(tmp_path: Path)
     assert demo_script.read_seed_record(record)["analyst_id"] == "p-1"
 
 
-@pytest.mark.req("FR-PLAT-53")
+@pytest.mark.req("FR-408")
 def test_a_missing_or_partial_seed_record_says_which_command_writes_it(
     tmp_path: Path,
 ) -> None:
@@ -95,7 +95,7 @@ def test_a_missing_or_partial_seed_record_says_which_command_writes_it(
     assert "analyst_id" in str(incomplete.value)
 
 
-@pytest.mark.req("FR-PLAT-53")
+@pytest.mark.req("FR-408")
 def test_waiting_for_a_server_accepts_any_answer_at_all() -> None:
     """A 401 proves the server is up as surely as a 200 does.
 
@@ -108,7 +108,7 @@ def test_waiting_for_a_server_accepts_any_answer_at_all() -> None:
     assert "did not answer" in str(timed_out.value)
 
 
-@pytest.mark.req("FR-PLAT-53")
+@pytest.mark.req("FR-408")
 def test_a_held_port_is_refused_before_anything_starts() -> None:
     """The command reports only servers it started.
 

@@ -16,7 +16,7 @@ const BASE = "/api/v1";
 
 let currentAccessToken: string | null = null;
 
-/** The bearer token subsequent requests carry (07 FR-PLAT-55). Set by the auth session;
+/** The bearer token subsequent requests carry (07 FR-393). Set by the auth session;
  *  null sends no Authorization header and lets the platform refuse (07 §3.7). */
 export function setAccessToken(token: string | null): void {
   currentAccessToken = token;
@@ -28,8 +28,8 @@ export function clearAccessToken(): void {
 
 let currentWorkspaceId: string | null = null;
 
-/** The workspace subsequent requests act in (07 FR-PLAT-65). Set by the workspace store;
- *  null sends no header and lets the platform refuse or default (07 FR-PLAT-63). */
+/** The workspace subsequent requests act in (07 FR-397). Set by the workspace store;
+ *  null sends no header and lets the platform refuse or default (07 FR-396). */
 export function setWorkspaceId(id: string | null): void {
   currentWorkspaceId = id;
 }

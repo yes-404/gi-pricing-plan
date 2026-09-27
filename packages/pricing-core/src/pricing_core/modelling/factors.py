@@ -1,31 +1,31 @@
-"""Resolving Factors against a Dataset Version (`02` FR-MODEL-1, FR-MODEL-2).
+"""Resolving Factors against a Dataset Version (`02` FR-83, FR-87).
 
 A Factor is defined against a **Dataset** and resolved against a **version**, so this is
-where "the column moved or changed type" is discovered. `02` FR-MODEL-2 says resolution
+where "the column moved or changed type" is discovered. `02` FR-87 says resolution
 fails loudly, and the reason is that the alternative is a model fitted on a column that is
 no longer the column the factor meant.
 
-**Four** of FR-MODEL-1's eight types resolve today: `identity`, `banding`, `grouping` and
-`interaction` — the last since FR-MODEL-91 on 2026-08-18, which this docstring did not
+**Four** of FR-83's eight types resolve today: `identity`, `banding`, `grouping` and
+`interaction` — the last since FR-92 on 2026-08-18, which this docstring did not
 record until 2026-08-22. A resolver that silently returned the raw column for a `spline`
 would produce a fit nobody could tell from a correct one, so the other four are refused by
-name (FR-MODEL-88).
+name (FR-208).
 
-The four refused do not share a reason, and the message says which applies (OQ-MODEL-23,
+The four refused do not share a reason, and the message says which applies (OQ-571,
 decided 2026-08-22):
 
-- `spline` and `polynomial` are **not built**. Both stay in FR-MODEL-1's declared set and
-  are gated on FR-MODEL-115, because no continuous Factor can be rated or reviewed yet —
-  FR-MODEL-21's relativity table is categorical-only and `03` FR-RATE-16 seeds from it.
-- `expression` is **not built**, owned by W30 with the rest of §4.6's grammar.
-- `offset` is **superseded** (FR-MODEL-114). Its refusal is permanent, not pending: an
+- `spline` and `polynomial` are **not built**. Both stay in FR-83's declared set and
+  are gated on FR-210, because no continuous Factor can be rated or reviewed yet —
+  FR-113's relativity table is categorical-only and `03` FR-230 seeds from it.
+- `expression` is **not built**, owned by WK-690 with the rest of §4.6's grammar.
+- `offset` is **superseded** (FR-209). Its refusal is permanent, not pending: an
   offset is declared on the spec through `OffsetSpec`, and a Factor type meaning the same
   thing was a second mechanism for a solved problem. The arm stays in the enum and in the
   published contract because artifacts are immutable and a stored row must stay loadable.
 
 A factor is refused on a second axis too, since 2026-08-22. `Factor.intent` declares
-what a factor is *for* (FR-MODEL-3), and until OQ-MODEL-25 was decided **no fit path
-read it at all** — so `offset` and `diagnostic`, the two arms FR-MODEL-3 never
+what a factor is *for* (FR-88), and until OQ-595 was decided **no fit path
+read it at all** — so `offset` and `diagnostic`, the two arms FR-88 never
 glossed, were accepted through the API and fitted with a free coefficient. That is a
 silent mis-fit rather than a refusal, and it is the one outcome worse than either.
 `risk` and `control` are unaffected: being fitted freely is what both *mean*, and they
@@ -46,31 +46,31 @@ from pricing_core.modelling.bandings import apply_banding
 from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.groupings import apply_grouping
 
-#: FR-MODEL-1 arms refused **permanently** rather than pending a slice, so the refusal must
-#: not say "yet" (FR-MODEL-114, OQ-MODEL-23 decided 2026-08-22). A set rather than a single
+#: FR-83 arms refused **permanently** rather than pending a slice, so the refusal must
+#: not say "yet" (FR-209, OQ-571 decided 2026-08-22). A set rather than a single
 #: comparison because superseding an arm is a spec decision that may recur, and this is
 #: where such a decision becomes behaviour.
 SUPERSEDED_FACTOR_TYPES = frozenset({FactorType.OFFSET})
 
-#: FR-MODEL-116 and FR-MODEL-120: the `FactorIntent` arms no fit path honours, mapped
-#: to the reason the refusal gives. Both are now **permanent**: FR-MODEL-117 refused
-#: `diagnostic` pending OQ-MODEL-27, and OQ-MODEL-27 superseded it a day later on the same
+#: FR-84 and FR-86: the `FactorIntent` arms no fit path honours, mapped
+#: to the reason the refusal gives. Both are now **permanent**: FR-85 refused
+#: `diagnostic` pending OQ-597, and OQ-597 superseded it a day later on the same
 #: layer argument as `offset` — hold-out-ness is a property of *one fit*, while an intent
 #: is a property of a Factor every spec reuses. The mapping keeps a reason per arm rather
 #: than collapsing to one string because the two are superseded for arguments that differ
 #: in what they point at, and a reader of the refusal should get the one that applies —
-#: exactly as FR-MODEL-88's type refusals do (OQ-MODEL-25 and OQ-MODEL-27, 2026-08-22).
+#: exactly as FR-208's type refusals do (OQ-595 and OQ-597, 2026-08-22).
 REFUSED_FACTOR_INTENTS: Mapping[FactorIntent, str] = MappingProxyType(
     {
         FactorIntent.OFFSET: (
-            "is **superseded** and will never be honoured (`02` FR-MODEL-116). Offsetness "
+            "is **superseded** and will never be honoured (`02` FR-84). Offsetness "
             "is a property of one fit, while a Factor is reused by every Model Spec that "
             "names it, so an offset is declared on the spec through `OffsetSpec` — not "
             "on the Factor."
         ),
         FactorIntent.DIAGNOSTIC: (
-            "is **superseded** and will never be honoured (`02` FR-MODEL-120). `02` "
-            "FR-MODEL-3 never said what the arm means, and both readings of it fail: "
+            "is **superseded** and will never be honoured (`02` FR-86). `02` "
+            "FR-88 never said what the arm means, and both readings of it fail: "
             "'resolved and reported but held out of the linear predictor' is a property "
             "of one fit, mis-sited on a Factor every Model Spec reuses, and anything "
             "weaker is `control` already. Holding a term out of one model's predictor is "
@@ -114,13 +114,13 @@ def resolve_factors(
 
     `bandings` and `groupings` are the artifacts the factors pin, passed in by id for the
     same reason `fit_glm` takes its factors explicitly: resolving an id needs a database,
-    which ADR-0001 forbids this package. A factor whose artifact is missing from the map is
+    which ADR-703 forbids this package. A factor whose artifact is missing from the map is
     a refusal, not a fallback to the raw column.
 
     Refuses rather than warns on:
 
-    * a **prohibited** factor (FR-MODEL-5) — the refusal is the point of the flag;
-    * a missing source column (FR-MODEL-2);
+    * a **prohibited** factor (FR-90) — the refusal is the point of the flag;
+    * a missing source column (FR-87);
     * a banding or grouping whose artifact was not supplied, or which describes a different
       column from the one the factor sources;
     * a factor type not yet implemented, named explicitly rather than skipped.
@@ -134,7 +134,7 @@ def resolve_factors(
     by_id = {factor.id: factor for factor in factors}
     #: Every factor named as an operand of some interaction in this call. Such a factor is
     #: resolved — the cross needs its levels — but contributes **no term of its own**
-    #: (FR-MODEL-91). The cross is a *combined* factor spanning every cell, so its operands'
+    #: (FR-92). The cross is a *combined* factor spanning every cell, so its operands'
     #: main effects are collinear with it; designing on both is a rank deficiency dressed up
     #: as a richer model. A caller wanting `age` on its own asks for a model without the
     #: cross, which is a different Model Spec and a comparison between the two.
@@ -150,7 +150,7 @@ def resolve_factors(
         if factor.prohibited:
             raise FactorResolutionError(
                 f"factor {factor.slug!r} is prohibited ({factor.prohibited_reason}). "
-                "FR-MODEL-5: a prohibited factor cannot enter a Model Spec."
+                "FR-90: a prohibited factor cannot enter a Model Spec."
             )
         # Before the type dispatch, and before any check against the frame: a refused
         # intent is wrong about the *declaration*, so it does not depend on which
@@ -171,7 +171,7 @@ def resolve_factors(
         if missing:
             raise FactorResolutionError(
                 f"factor {factor.slug!r} needs {missing}, which this dataset version does "
-                "not have (FR-MODEL-2). A factor is defined against a Dataset and resolved "
+                "not have (FR-87). A factor is defined against a Dataset and resolved "
                 "against a version; this is that resolution failing."
             )
 
@@ -195,7 +195,7 @@ def resolve_factors(
         elif factor.type in SUPERSEDED_FACTOR_TYPES:
             raise FactorResolutionError(
                 f"factor {factor.slug!r} is of type {factor.type.value!r}, which is "
-                "**superseded** and will never resolve (`02` FR-MODEL-114). An offset is "
+                "**superseded** and will never resolve (`02` FR-209). An offset is "
                 "declared on the fit spec through `OffsetSpec`, not as a Factor. Returning "
                 "the raw column instead would produce a fit nobody could tell from a "
                 "correct one."
@@ -246,7 +246,7 @@ CROSS_SEPARATOR = " | "
 def _cross(
     factor: Factor, by_id: Mapping[UUID, Factor], resolved: Mapping[UUID, pl.Series]
 ) -> pl.Series:
-    """One interaction's design column: its operands' levels, crossed (FR-MODEL-91).
+    """One interaction's design column: its operands' levels, crossed (FR-92).
 
     Only **observed** combinations become levels, which is what string concatenation gives
     for free. A full Cartesian product would put a coefficient on cells with no exposure —
@@ -274,7 +274,7 @@ def _cross(
                 f"factor {factor.slug!r} crosses {operand.slug!r}, which resolves to "
                 f"{series.dtype} rather than to levels. Crossing a continuous factor is a "
                 "varying slope, and a rate table has no cell for one — band or group it "
-                "first, then cross the result (OQ-MODEL-12)."
+                "first, then cross the result (OQ-584)."
             )
         parts.append(series.cast(pl.String))
 
@@ -321,7 +321,7 @@ def _column_matches(declared: str, source: str, factor: Factor, *, kind: str) ->
 
 
 def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
-    """The factors a Rating Version may use (FR-MODEL-3).
+    """The factors a Rating Version may use (FR-88).
 
     `control` factors are fitted and never rated on — year of account being the standard
     case. Selecting them here rather than in `03` keeps the intent with the definition.

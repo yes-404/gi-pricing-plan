@@ -4,8 +4,8 @@
 |---|---|---|
 | `GET` | `/validation-reports/{id}` | Full report |
 | `POST` | `/validation-reports/{id}/results/{rule_id}/acknowledge` | Acknowledge a warn |
-| `GET` | `/validation-rules` | The workspace's rules, built-in first (FR-DATA-53) |
-| `POST` | `/validation-rules` | Create a custom rule → `draft` (FR-DATA-21) |
+| `GET` | `/validation-rules` | The workspace's rules, built-in first (FR-68) |
+| `POST` | `/validation-rules` | Create a custom rule → `draft` (FR-50) |
 | `POST` | `/validation-rules/{id}/dry-run` | **202** Execute against a chosen version |
 | `POST` | `/validation-rules/{id}/submit` | Submit for approval |
 | `GET`/`PUT` | `/datasets/{slug}/rule-set` | Read / replace the Rule Set |
@@ -88,7 +88,7 @@ class RuleCreate(BaseModel):
     severity: Severity
     target: dict[str, Any] = Field(default_factory=dict)
     params: dict[str, Any] = Field(default_factory=dict)
-    #: The `01` §4.4 entry this rule derives from (FR-DATA-53). A workspace authoring
+    #: The `01` §4.4 entry this rule derives from (FR-68). A workspace authoring
     #: its own version of a built-in records the lineage here; a rule that derives from
     #: nothing leaves it unset.
     catalogue_id: str | None = None
@@ -113,7 +113,7 @@ class RuleSetMemberWrite(BaseModel):
 
 
 class RuleSetReplace(BaseModel):
-    """FR-DATA-22's replace body.
+    """FR-51's replace body.
 
     `rules` rather than a bare id list: `01` §4.3 gives an entry an `enabled` flag and a
     `severity_override`, and a body carrying only ids could express neither — so a rule
@@ -156,7 +156,7 @@ async def acknowledge(
     caller: AcknowledgeWarnings,
     database: DatabaseDep,
 ) -> dict[str, Any]:
-    """FR-DATA-17. Actuary only, justified, audited, once per `(report, rule)`."""
+    """FR-46. Actuary only, justified, audited, once per `(report, rule)`."""
     async with database.unit_of_work() as session:
         row = await service.acknowledge(
             session,
@@ -209,7 +209,7 @@ RuleFilterDep = Annotated[RuleFilter, Query()]
 async def list_rules(
     caller: ReadDatasets, database: DatabaseDep, filters: RuleFilterDep
 ) -> Page[ValidationRule]:
-    """FR-DATA-53. The workspace's rules, cursor-paginated (`00` §5.2).
+    """FR-68. The workspace's rules, cursor-paginated (`00` §5.2).
 
     Until the catalogue was seeded there was nothing to list: `validation_rules` held only
     what a workspace had authored, and `01` §4.4's 38 rules existed as prose. A catalogue
@@ -267,7 +267,7 @@ async def list_rules(
 async def create_rule(
     body: RuleCreate, caller: AuthenticatedCaller, database: DatabaseDep, request: Request
 ) -> ValidationRule:
-    """FR-DATA-21 step 1: authored → `draft`.
+    """FR-50 step 1: authored → `draft`.
 
     The permission depends on the *check*, which is why it is not on the route: a
     declarative rule needs `dataset:write`, and a `sql` rule needs `admin:manage_settings`
@@ -307,7 +307,7 @@ async def dry_run(
     response: Response,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
-    """**202**. FR-DATA-21 step 2: a rule cannot be approved until it has run somewhere.
+    """**202**. FR-50 step 2: a rule cannot be approved until it has run somewhere.
 
     The dry run is what makes the approval a decision rather than a signature — an approver
     reading a rule's JSON cannot tell whether it selects three rows or three million.
@@ -340,7 +340,7 @@ async def dry_run(
 async def submit_rule(
     rule_id: UUID, caller: WriteDatasets, database: DatabaseDep
 ) -> ValidationRule:
-    """FR-DATA-21 step 3: `draft` → `review`, and only with a dry run attached."""
+    """FR-50 step 3: `draft` → `review`, and only with a dry run attached."""
     async with database.unit_of_work() as session:
         row = await rule_service.submit_for_review(
             session,
@@ -359,7 +359,7 @@ async def submit_rule(
 async def approve_rule(
     rule_id: UUID, caller: DecideApprovals, database: DatabaseDep
 ) -> ValidationRule:
-    """FR-DATA-21 step 3: `review` → `approved`, by someone other than the author.
+    """FR-50 step 3: `review` → `approved`, by someone other than the author.
 
     The separation is the control, and it is enforced in three places rather than trusted
     here: this route requires `approval:decide`, the service refuses when the approver is
@@ -367,7 +367,7 @@ async def approve_rule(
     matches. A rule decides whether data may be modelled on — one person deciding both what
     it says and that it is right is not a review.
 
-    Approval **policies** — quorum, escalation, evidence bundles — are `06`'s (W17). This is
+    Approval **policies** — quorum, escalation, evidence bundles — are `06`'s (WK-677). This is
     the module's own step, in the terms `01` §4.5 states it.
     """
     async with database.unit_of_work() as session:
@@ -405,7 +405,7 @@ async def get_rule_set(
 async def put_rule_set(
     slug: str, body: RuleSetReplace, caller: WriteDatasets, database: DatabaseDep
 ) -> ValidationRuleSet:
-    """FR-DATA-22: a replace creates a **new rule-set version**.
+    """FR-51: a replace creates a **new rule-set version**.
 
     Never an edit in place. A Validation Report records the exact `rule_set_version` it
     ran, so mutating a rule set would change what every past report was a report *of*.

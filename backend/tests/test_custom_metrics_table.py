@@ -1,4 +1,4 @@
-"""FR-MODEL-103 — the custom_metrics table and its immutability guarantee.
+"""FR-155 — the custom_metrics table and its immutability guarantee.
 
 Parallel to `test_custom_objectives.py`'s database-layer coverage: this proves the two
 invariants only the platform can be wrong about — the definition cannot be edited once the
@@ -46,7 +46,7 @@ def _row(workspace_id: UUID, **kw: object) -> CustomMetricRow:
     return CustomMetricRow(**fields)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 async def test_a_metric_row_round_trips(database: Database, workspace_id: UUID) -> None:
     row = _row(workspace_id)
     async with database.unit_of_work() as session:
@@ -61,7 +61,7 @@ async def test_a_metric_row_round_trips(database: Database, workspace_id: UUID) 
     assert fetched.direction == "lower_is_better"
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 async def test_the_definition_cannot_be_edited(database: Database, workspace_id: UUID) -> None:
     """A Model fitted under version 1 must keep meaning version 1's arithmetic."""
     row = _row(workspace_id, slug="poisson-nll", template="poisson", params={})
@@ -85,7 +85,7 @@ async def test_the_definition_cannot_be_edited(database: Database, workspace_id:
     assert unchanged.params == {}
 
 
-@pytest.mark.req("FR-MODEL-45")
+@pytest.mark.req("FR-154")
 async def test_the_lifecycle_columns_stay_mutable(database: Database, workspace_id: UUID) -> None:
     """The trigger must not freeze the status, or nothing could ever be certified."""
     row = _row(workspace_id, slug="gamma-nll", template="gamma", params={})
@@ -109,7 +109,7 @@ async def test_the_lifecycle_columns_stay_mutable(database: Database, workspace_
     assert updated.certificate_id == certificate_id
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 async def test_a_slug_and_version_pair_is_unique(database: Database, workspace_id: UUID) -> None:
     async with database.unit_of_work() as session:
         session.add(_row(workspace_id, slug="duplicate"))
@@ -119,11 +119,11 @@ async def test_a_slug_and_version_pair_is_unique(database: Database, workspace_i
             session.add(_row(workspace_id, slug="duplicate"))
 
 
-@pytest.mark.req("FR-MODEL-108")
+@pytest.mark.req("FR-162")
 async def test_a_metric_cannot_be_deleted_or_truncated(
     database: Database, workspace_id: UUID
 ) -> None:
-    """FR-MODEL-108 asks which models early-stopped under a metric. A deleted row answers
+    """FR-162 asks which models early-stopped under a metric. A deleted row answers
     nothing — and every GbmSpec.eval_metrics ref citing it by slug would keep citing a name
     that resolves to nobody."""
     row = _row(workspace_id, slug="deletable-check", template="gamma", params={})
@@ -148,11 +148,11 @@ async def test_a_metric_cannot_be_deleted_or_truncated(
     assert still_there is not None
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 async def test_an_expression_metric_is_refused_in_phase_1(
     database: Database, workspace_id: UUID
 ) -> None:
-    """FR-MODEL-103/FR-MODEL-75: Phase 1 admits no `expression` metric — a row with
+    """FR-155/FR-150: Phase 1 admits no `expression` metric — a row with
     `kind = 'expression'` would carry no loss at all."""
     with pytest.raises(DBAPIError) as refused:
         async with database.unit_of_work() as session:
@@ -160,11 +160,11 @@ async def test_an_expression_metric_is_refused_in_phase_1(
     assert "custom_metric_is_a_template_in_phase_1" in str(refused.value)
 
 
-@pytest.mark.req("FR-MODEL-105")
+@pytest.mark.req("FR-157")
 async def test_a_status_past_draft_needs_a_certificate(
     database: Database, workspace_id: UUID
 ) -> None:
-    """FR-MODEL-105, mirroring `CustomMetric._a_status_past_draft_rests_on_a_certificate`
+    """FR-157, mirroring `CustomMetric._a_status_past_draft_rests_on_a_certificate`
     as corrected in `30b6388`: `certified` needs a certificate, but `deprecated` — reachable
     directly from `draft` — does not, because a metric abandoned before certification was
     withdrawn, not certified."""

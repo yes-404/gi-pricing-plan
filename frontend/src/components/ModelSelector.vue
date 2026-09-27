@@ -4,7 +4,7 @@
  *
  * The workbench is addressed by **Dataset Version**; interaction candidates live on a
  * per-**Model** transparency artifact, and a version may carry many models. `GET /models`
- * cannot filter by dataset version, so the filtering happens here — `OQ-MODEL-40`.
+ * cannot filter by dataset version, so the filtering happens here — `OQ-611`.
  *
  * **The default is the first row, and that means "most recent" only because the route says
  * so.** `Model` carries no timestamp; `list_models` orders by a UUIDv7 id. So nothing here
@@ -14,7 +14,7 @@
  *
  * **A truncated walk says so.** An empty selector must not be readable as "this version has
  * no models" when the walk simply stopped early; that conflation is the defect
- * `OQ-MODEL-40` records, and the same one `OQ-MODEL-35` records one route over.
+ * `OQ-611` records, and the same one `OQ-605` records one route over.
  */
 import { computed, onMounted, ref, watch } from "vue";
 

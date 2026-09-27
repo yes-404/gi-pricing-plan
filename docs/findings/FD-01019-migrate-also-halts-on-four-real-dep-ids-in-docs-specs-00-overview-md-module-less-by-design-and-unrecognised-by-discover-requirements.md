@@ -1,0 +1,63 @@
+---
+id: FD-1019
+family: finding
+title: `migrate()` also halts on four real `DEP-` ids in `docs/specs/00-overview.md`, module-less by design and unrecognised by `_discover_requirements`
+status: active                  # active → closed | retired (§1.2a)
+created: 2026-09-02
+owner: auditor
+corrected_by: []
+relates: []                     # ids only — the SL-/WK- this discharges through, once known
+was: docs/audit/findings/F82.md
+---
+
+# F82 — `migrate()` also halts on four real `DEP-` ids in `docs/specs/00-overview.md`, module-less by design and unrecognised by `_discover_requirements`
+
+Evidence essay for the register row self-named `(F82)` in `docs/findings/register.md`. Same
+class as F80 and F81 — row 30's new census guard correctly catches a real, pre-existing
+gap in `_discover_requirements` itself, found running the code against the real tree.
+
+## The defect, verified directly at `3f41d60`
+
+`docs/specs/00-overview.md` defines `DEP-1`, `DEP-537`, `DEP-2` and `DEP-3` — real,
+module-spec-defined dependency rules that (per `_check_requirements_not_silently_
+unrecognised`'s own docstring) never carry a module code between the prefix and the number,
+unlike every other legacy requirement id (`**FR-38**`). `_discover_requirements`'s
+matcher assumes the module-code form, so these four are invisible to it — a gap that
+predates this slice and is not one of the sixteen rows W37-5b built code for. Row 30's new
+guard (`d7c9b08`) is scoped, by design, to exactly this one prefix (`DEP` only, not
+`FR`/`NFR`/`OQ`, to avoid firing on `migrate()`'s own post-migration output — see the
+guard's own docstring), and it correctly finds and names all four:
+
+```
+_check_requirements_not_silently_unrecognised(ROOT)
+→ NotImplementedError: migrate: docs/specs/00-overview.md (requirement ids) -- 4 unit(s)
+  an independent census found are neither a produced record, a derived body line, nor a
+  declared exception (RL-985):
+    docs/specs/00-overview.md:467: **DEP-1**
+    docs/specs/00-overview.md:469: **DEP-537**
+    docs/specs/00-overview.md:479: **DEP-2**
+    docs/specs/00-overview.md:482: **DEP-3**
+```
+
+The call is unconditional inside `migrate()` (`scripts/doc-id.py:3008-3009`, immediately
+after `_discover_requirements` runs) — a real run would halt here too, on none of the
+three files F80/F81 name.
+
+## Scope of this finding
+
+- **Not fix-before-close for W37-5b.** Row 30's discharge criterion was building the
+  census guard itself ("RL-985's census applied to it too... On none of the known
+  sources"), which it does — correctly, on a corpus this guard had never met before. The
+  guard finding a real gap it was built to find is the guard working, not the guard
+  failing.
+- **It blocks W37-6's go-ahead as things stand, the same shape as F80 and F81**: three
+  independent, unrelated guards would each abort a real `migrate()` run today, and no
+  group-A row promised to resolve any of the three underlying data gaps — only to stop
+  them passing silently, which they no longer do.
+- **Proposed disposition** (a proposal; the verdict is the lead's): **not started** — a
+  named data-source decision for the four `DEP` ids (renumber them into the module-coded
+  form the rest of the corpus uses, or declare them a permanent exception the census
+  accepts by name) before W37-6 runs. Owner not named here.
+- **Falsifiable**: discharged when that decision lands and
+  `_check_requirements_not_silently_unrecognised(ROOT)` returns cleanly against the real
+  tree, or by a corrected reading showing these four ids resolve some other way already.

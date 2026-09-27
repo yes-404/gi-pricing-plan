@@ -9,8 +9,8 @@ nothing would have caught it before the second merge overwrote the first's file.
 `git merge-tree` against the two real commits, git reports the file collision itself:
 
     added in both
-      our    100644 4edba56... docs/audit/findings/F87.md
-      their  100644 4278a53... docs/audit/findings/F87.md
+      our    100644 4edba56... docs/findings/FD-01024-widening-id-scope-roots-reaches-no-non-markdown-file-so-62-of-the-65-exempt-files-stay-invisible-to-checks-30-39.md
+      their  100644 4278a53... docs/findings/FD-01024-widening-id-scope-roots-reaches-no-non-markdown-file-so-62-of-the-65-exempt-files-stay-invisible-to-checks-30-39.md
 
 An add/add conflict blocks the merge; the *file* was never going to be overwritten
 silently. **What nothing catches is the register.** Two rows citing one id are inserted at

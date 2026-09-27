@@ -1,4 +1,4 @@
-"""FR-PLAT-58: a realm login resolves into the seeded workspace, as that principal."""
+"""FR-398: a realm login resolves into the seeded workspace, as that principal."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ def _claims(subject: str) -> TokenClaims:
     )
 
 
-@pytest.mark.req("FR-PLAT-58")
+@pytest.mark.req("FR-398")
 async def test_a_realm_login_resolves_to_the_seeded_principal(database: Database) -> None:
     """The seeded user's id IS the principal id, not a fresh one.
 
@@ -80,7 +80,7 @@ async def test_a_realm_login_resolves_to_the_seeded_principal(database: Database
     assert workspace_id in identity.workspaces
 
 
-@pytest.mark.req("FR-PLAT-58")
+@pytest.mark.req("FR-398")
 async def test_ensuring_a_member_twice_does_not_raise(database: Database) -> None:
     """The seed is re-run against an existing database more often than not.
 

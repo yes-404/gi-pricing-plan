@@ -1,9 +1,9 @@
-"""modelling: the backtest artifact (`02` §4.12, FR-MODEL-57)
+"""modelling: the backtest artifact (`02` §4.12, FR-187)
 
 A model measured on a Dataset Version it was **not** fitted on. Two things about the shape
 are decisions rather than transcription, and both are stated in `02` §4.12 with this date.
 
-**Not one per model.** `diagnostics` is one artifact per fitted model because FR-MODEL-49
+**Not one per model.** `diagnostics` is one artifact per fitted model because FR-170
 computes it once; a backtest is per *version*, and a model measured against four successive
 quarters has four rows. Uniqueness is on `(model_id, dataset_version_id)` instead: re-running
 one pair would produce a second answer to one question, with nothing to say which of the two
@@ -15,7 +15,7 @@ ownership carries implicit privileges. `diagnostics`, `model_comparisons` and
 `transparency_artifacts` each took the privileges alone, so each is protected against the
 application role and not against a direct connection. This table takes both; those three are
 recorded as an open thread rather than migrated here, because they are a different
-requirement's scope (FR-DATA-42) and not this slice's.
+requirement's scope (FR-43) and not this slice's.
 
 Revision ID: c9d0e1f2a3b4
 Revises: b1c2d3e4f5a6

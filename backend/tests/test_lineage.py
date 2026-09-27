@@ -85,14 +85,14 @@ def actuary(workspace_id, principal, grant) -> dict[str, str]:
     return _headers(principal.id, workspace_id)
 
 
-# -- FR-DATA-29: effective-dated intervals, enforced by the database -------------------------
+# -- FR-69: effective-dated intervals, enforced by the database -------------------------
 
 
-@pytest.mark.req("FR-DATA-29")
+@pytest.mark.req("FR-69")
 async def test_overlapping_reference_intervals_are_rejected_by_the_database(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-29, enforced by an exclusion constraint rather than application code.
+    """FR-69, enforced by an exclusion constraint rather than application code.
 
     Overlapping intervals mean an "as at" lookup has two answers, and which one a quote
     receives would depend on row order — a rating difference nobody could reproduce.
@@ -122,7 +122,7 @@ async def test_overlapping_reference_intervals_are_rejected_by_the_database(
             )
 
 
-@pytest.mark.req("FR-DATA-29")
+@pytest.mark.req("FR-69")
 async def test_adjacent_intervals_are_permitted(
     database: Database, workspace_id
 ) -> None:
@@ -159,11 +159,11 @@ async def test_adjacent_intervals_are_permitted(
     assert len(rows) == 2
 
 
-@pytest.mark.req("FR-DATA-30")
+@pytest.mark.req("FR-70")
 async def test_a_reference_version_number_is_unique_per_table(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-30: versions are immutable and pinned explicitly — never "latest"."""
+    """FR-70: versions are immutable and pinned explicitly — never "latest"."""
     table_id = new_uuid7()
     async with database.unit_of_work() as session:
         session.add(
@@ -180,10 +180,10 @@ async def test_a_reference_version_number_is_unique_per_table(
             )
 
 
-# -- FR-DATA-33/34: derived versions ------------------------------------------------------------
+# -- FR-73/74: derived versions ------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 async def test_a_derived_version_records_its_operation_and_parent(
     database: Database, workspace_id
 ) -> None:
@@ -201,7 +201,7 @@ async def test_a_derived_version_records_its_operation_and_parent(
     assert child.derived_from["operation"] == "split"
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 async def test_an_undeclared_derivation_is_refused(
     database: Database, workspace_id
 ) -> None:
@@ -218,15 +218,15 @@ async def test_an_undeclared_derivation_is_refused(
     assert exc.value.code == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-OVR-8")
+@pytest.mark.req("FR-11")
 async def test_a_stochastic_derivation_without_a_seed_is_refused(
     database: Database, workspace_id
 ) -> None:
-    """FR-OVR-8: identical inputs must give identical outputs. Without a recorded seed the
+    """FR-11: identical inputs must give identical outputs. Without a recorded seed the
     version cannot be reproduced.
 
     Exercised on `split` because it is the only stochastic operation that gets as far as
-    the seed check — `sample` is refused a line earlier as unmaterialised (FR-DATA-45).
+    the seed check — `sample` is refused a line earlier as unmaterialised (FR-78).
     """
     actor = await _with_role(database, workspace_id, "analyst")
     _, parent_id = await _version(database, workspace_id, actor)
@@ -240,16 +240,16 @@ async def test_a_stochastic_derivation_without_a_seed_is_refused(
     assert seed_exc.value.title == "This derivation needs a seed"
 
 
-@pytest.mark.req("FR-DATA-45")
+@pytest.mark.req("FR-78")
 @pytest.mark.parametrize("operation", ["sample", "filter", "join", "aggregate"])
 async def test_a_derivation_that_cannot_produce_its_rows_is_refused(
     database: Database, workspace_id, operation: str
 ) -> None:
-    """Negative, FR-DATA-45 (OQ-DATA-8, decided 2026-08-17): refusing beats succeeding.
+    """Negative, FR-78 (OQ-563, decided 2026-08-17): refusing beats succeeding.
 
     Each of these used to return a version that recorded the operation and pointed at the
     parent's blob, so a 1 % sample held 100 % of the rows and said nothing about it. A
-    derivation nobody performed cannot be reproduced or defended (FR-DATA-33), and the
+    derivation nobody performed cannot be reproduced or defended (FR-73), and the
     failure is silent — the version validates, profiles and fits, and every number it
     produces is the parent's.
     """
@@ -266,7 +266,7 @@ async def test_a_derivation_that_cannot_produce_its_rows_is_refused(
     assert exc.value.status_code == 501
 
 
-@pytest.mark.req("FR-DATA-44")
+@pytest.mark.req("FR-77")
 async def test_split_is_the_one_derivation_that_is_not_refused(
     database: Database, workspace_id
 ) -> None:
@@ -285,11 +285,11 @@ async def test_split_is_the_one_derivation_that_is_not_refused(
     assert child.derived_from["operation"] == "split"
 
 
-@pytest.mark.req("FR-DATA-34")
+@pytest.mark.req("FR-74")
 async def test_a_derived_version_starts_in_draft_and_must_be_validated_itself(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-34: it inherits schema and rule set, never validity.
+    """FR-74: it inherits schema and rule set, never validity.
 
     A stratified sample of a validated dataset can break rules the parent passed — an
     exposure band with two claims in the sample and two thousand in the parent fails a
@@ -323,10 +323,10 @@ async def test_a_derived_version_starts_in_draft_and_must_be_validated_itself(
     assert exc.value.code == "DATASET_NOT_VALIDATED"
 
 
-# -- FR-DATA-35/36: lineage -----------------------------------------------------------------------
+# -- FR-75/76: lineage -----------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-35")
+@pytest.mark.req("FR-75")
 async def test_lineage_answers_both_directions(
     database: Database, workspace_id
 ) -> None:
@@ -361,12 +361,12 @@ async def test_lineage_answers_both_directions(
     assert downstream.built_from is None
 
 
-@pytest.mark.req("FR-DATA-35")
+@pytest.mark.req("FR-75")
 async def test_the_models_arm_lists_every_model_on_the_version(
     database: Database, workspace_id
 ) -> None:
     """`01` §4.9's `models` arm: every Model whose `dataset_version_id` is this
-    version, any status, deterministic order. The blast radius FR-DATA-23 computes
+    version, any status, deterministic order. The blast radius FR-53 computes
     does not stop at approval."""
     actor = await _with_role(database, workspace_id, "analyst")
     _, version_id = await _version(database, workspace_id, actor)
@@ -446,14 +446,14 @@ def test_the_direction_filter_empties_the_excluded_arm(
     assert both["depends_on_this"]["models"] == []
 
 
-# -- FR-DATA-37/38/39: access, archival, erasure --------------------------------------
+# -- FR-79/80/81: access, archival, erasure --------------------------------------
 
 
-@pytest.mark.req("FR-DATA-37")
+@pytest.mark.req("FR-79")
 async def test_reading_a_dataset_requires_access(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-37: a user without read access cannot see it — not in lineage either."""
+    """FR-79: a user without read access cannot see it — not in lineage either."""
     stranger = Principal(kind=ActorKind.USER, id=new_uuid7(), display="x")
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:
@@ -463,11 +463,11 @@ async def test_reading_a_dataset_requires_access(
     assert exc.value.code == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-DATA-38")
+@pytest.mark.req("FR-80")
 async def test_an_archived_version_stays_readable_and_referenceable(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-38: archived versions remain readable and referenceable by existing Models.
+    """FR-80: archived versions remain readable and referenceable by existing Models.
 
     ID-5 is soft-delete only — nothing is removed from the database, because a Model fitted
     on a version must still be able to say what it was fitted on.
@@ -487,7 +487,7 @@ async def test_an_archived_version_stays_readable_and_referenceable(
     assert row.status == DatasetStatus.ARCHIVED
 
 
-@pytest.mark.req("FR-DATA-38")
+@pytest.mark.req("FR-80")
 async def test_an_archived_version_cannot_be_fitted_on(
     database: Database, workspace_id
 ) -> None:
@@ -507,11 +507,11 @@ async def test_an_archived_version_cannot_be_fitted_on(
     assert exc.value.code == "DATASET_NOT_VALIDATED"
 
 
-@pytest.mark.req("FR-DATA-39")
+@pytest.mark.req("FR-81")
 async def test_a_subject_purge_is_admin_only_and_recorded(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-39: the purge is recorded even though the data is gone — especially because
+    """FR-81: the purge is recorded even though the data is gone — especially because
     it is. An erasure with no record is indistinguishable from data that was never there."""
     analyst = await _with_role(database, workspace_id, "analyst")
     dataset_id, _ = await _version(database, workspace_id, analyst)
@@ -553,7 +553,7 @@ async def test_a_subject_purge_is_admin_only_and_recorded(
     assert "dataset.subject_purged" in actions
 
 
-@pytest.mark.req("FR-DATA-39")
+@pytest.mark.req("FR-81")
 async def test_a_purge_without_a_reason_is_refused(
     database: Database, workspace_id
 ) -> None:
@@ -567,9 +567,9 @@ async def test_a_purge_without_a_reason_is_refused(
     assert exc.value.title == "A purge requires a reason"
 
 
-# -- FR-DATA-32: loaders, and the licence rule OQ-DATA-5 settled --------------------------------
+# -- FR-72: loaders, and the licence rule OQ-561 settled --------------------------------
 
-# Ruling 59 (`docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md`) §3: a second,
+# RL-949 (`docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) §3: a second,
 # conditional carve-out for a generated repository self-census, alongside
 # `licensed_vendored_skill` below. It is a closed, explicit registry of
 # (generator script, filename pattern the generator owns) — a filename match makes a file a
@@ -590,7 +590,7 @@ CENSUS_CSV_HEADER = "path,area,name_pattern,size_bytes,mutability,referenced_by"
 def resolve_commit(root: pathlib.Path, sha: str) -> str | None:
     """Resolve `sha` to a commit reachable from `root`'s git history.
 
-    Ruling 59 §3 point 2: tries local resolution first, then a shallow
+    RL-949 §3 point 2: tries local resolution first, then a shallow
     `git fetch --depth 1 origin <sha>` and retries against `FETCH_HEAD` — the shape
     `.github/workflows/python.yml`'s undeclared (so depth-1) `actions/checkout@v4` needs.
     Returns `None`, never raises, when both attempts fail; the caller decides what that
@@ -621,7 +621,7 @@ def resolve_commit(root: pathlib.Path, sha: str) -> str | None:
 
 
 def generated_from_tracked_corpus(path: pathlib.Path, root: pathlib.Path) -> bool:
-    """Ruling 59 §3's `generated_from_tracked_corpus` carve-out predicate.
+    """RL-949 §3's `generated_from_tracked_corpus` carve-out predicate.
 
     Returns `False` — not exempted, falls through to the unmodified whole-tree sweep — when
     `path` does not match a registered pattern, when its header does not match
@@ -655,7 +655,7 @@ def generated_from_tracked_corpus(path: pathlib.Path, root: pathlib.Path) -> boo
             f"{rel}: names commit {sha!r} as the tree it documents, but that commit could "
             "not be resolved (local resolution and `git fetch --depth 1 origin <sha>` both "
             "failed) — refusing to exempt a file whose provenance cannot be verified "
-            "(Ruling 59 §3 point 2)"
+            "(RL-949 §3 point 2)"
         )
 
     try:
@@ -693,7 +693,7 @@ def licensed_vendored_skill(path: pathlib.Path) -> bool:
     return False
 
 
-@pytest.mark.req("FR-DATA-32")
+@pytest.mark.req("FR-72")
 def test_loaders_ship_for_every_reference_set_the_requirement_names() -> None:
     from app.data.reference_loaders import LOADERS
 
@@ -701,9 +701,9 @@ def test_loaders_ship_for_every_reference_set_the_requirement_names() -> None:
             "uk-bank-holidays"} <= set(LOADERS)
 
 
-@pytest.mark.req("FR-DATA-32")
+@pytest.mark.req("FR-72")
 def test_abi_vehicle_group_data_is_never_shippable() -> None:
-    """OQ-DATA-5, decided 2026-08-14. The negative test that keeps the decision true.
+    """OQ-561, decided 2026-08-14. The negative test that keeps the decision true.
 
     ABI group tables are not freely redistributable; bundling them would put a licence
     breach in every clone of this repository. The loader ships, the rows never do.
@@ -717,14 +717,14 @@ def test_abi_vehicle_group_data_is_never_shippable() -> None:
     assert "NOT REDISTRIBUTABLE" in abi.fetch_note
 
 
-@pytest.mark.req("FR-DATA-32")
+@pytest.mark.req("FR-72")
 def test_only_ogl_sources_may_ship_their_rows() -> None:
     from app.data.reference_loaders import Licence, shippable_loaders
 
     assert all(loader.licence is Licence.OGL for loader in shippable_loaders())
 
 
-@pytest.mark.req("FR-DATA-32")
+@pytest.mark.req("FR-72")
 def test_no_reference_rows_are_bundled_in_the_repository() -> None:
     """The decision, checked against the tree rather than against intent.
 
@@ -734,15 +734,15 @@ def test_no_reference_rows_are_bundled_in_the_repository() -> None:
 
     Two carve-outs, both conditional rather than blanket. Vendored skills under
     `.claude/skills/` are the first: `ui-ux-pro-max` (2026-08-17) is the first vendored
-    skill to ship data files — 18 CSVs of font, colour and UX guidance — and FR-DATA-32 is
+    skill to ship data files — 18 CSVs of font, colour and UX guidance — and FR-72 is
     about UK *reference* sets whose rows are not ours to redistribute, not about a
     third-party payload committed under its own licence. So the exemption is bought by that
     licence: a skill may carry data only while its LICENSE travels with it in the same
     directory, which is precisely the exposure this test exists to prevent. Delete the
     licence and this fails, which is the point.
 
-    The second is `generated_from_tracked_corpus` (Ruling 59,
-    `docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md`) — a closed registry of
+    The second is `generated_from_tracked_corpus` (RL-949,
+    `docs/rulings/RL-00949-rfc-897-slice-2-s-census-csv-and-fr-72-the-test-is-overbroad-the.md`) — a closed registry of
     generated repository self-census artifacts, bought by provable reproducibility against
     the tree their own filename names, never by location or filename alone. Delete a row
     from the census, or point it at a tree it does not match, and this fails too.
@@ -761,14 +761,14 @@ def test_no_reference_rows_are_bundled_in_the_repository() -> None:
     assert data_files == [], f"unexpected bundled data: {data_files}"
 
 
-# -- FR-DATA-36: splits recorded on the parent ----------------------------------------
+# -- FR-76: splits recorded on the parent ----------------------------------------
 
 
-@pytest.mark.req("FR-DATA-36")
+@pytest.mark.req("FR-76")
 async def test_a_split_is_recorded_on_the_parent_so_two_models_can_be_compared(
     database: Database, workspace_id
 ) -> None:
-    """FR-DATA-36: "trained on the same split" becomes a single reference both models cite,
+    """FR-76: "trained on the same split" becomes a single reference both models cite,
     rather than two derivations that were *believed* to match."""
     actor = await _with_role(database, workspace_id, "analyst")
     _, parent_id = await _version(database, workspace_id, actor)
@@ -792,7 +792,7 @@ async def test_a_split_is_recorded_on_the_parent_so_two_models_can_be_compared(
         assert set(split.parts) == {"train", "test"}
 
 
-@pytest.mark.req("FR-DATA-36")
+@pytest.mark.req("FR-76")
 async def test_a_one_part_split_is_refused(database: Database, workspace_id) -> None:
     """Negative: a one-part split is a filter, and recording it as a split would let a
     model claim a holdout it never had."""
@@ -808,7 +808,7 @@ async def test_a_one_part_split_is_refused(database: Database, workspace_id) -> 
     assert exc.value.title == "A split needs at least two parts"
 
 
-@pytest.mark.req("FR-DATA-36")
+@pytest.mark.req("FR-76")
 async def test_a_split_name_cannot_be_reused_on_one_version(
     database: Database, workspace_id
 ) -> None:

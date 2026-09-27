@@ -1,4 +1,4 @@
-"""Turning a credential into a Caller (FR-PLAT-1..4, FR-PLAT-6).
+"""Turning a credential into a Caller (FR-387, FR-388, FR-389, FR-390, FR-392).
 
 Two credential types, one outcome:
 
@@ -6,7 +6,7 @@ Two credential types, one outcome:
 * an **API key** — a Service Account, scoped to named environments and to scoring.
 
 Everything that fails here fails the same way: `401` with a code, and an audit event
-(FR-PLAT-6). The response never says *which* check failed. "Expired" versus "unknown key"
+(FR-392). The response never says *which* check failed. "Expired" versus "unknown key"
 versus "wrong signature" tells an attacker what to change next, and tells a legitimate
 caller nothing they can act on that the trace id does not already give them.
 """
@@ -54,7 +54,7 @@ class AuthenticatedIdentity:
         self.principal = principal
         self.workspaces = workspaces
         self.environments = environments
-        #: The environment the *presented credential* was scoped to (Ruling 44) — never a
+        #: The environment the *presented credential* was scoped to (RL-916) — never a
         #: derivation from `environments`, the account's granted set. `None` for a bearer or
         #: development caller, and for any credential type minted before this field existed.
         self.environment = environment
@@ -73,7 +73,7 @@ def _unauthenticated(code: str = "UNAUTHENTICATED") -> PlatformError:
 async def _audit_auth_failure(
     session: AsyncSession, *, workspace_id: UUID | None, action: str, detail: str
 ) -> None:
-    """Record a failed authentication (FR-PLAT-6, `06` FR-GOV-20).
+    """Record a failed authentication (FR-392, `06` FR-368).
 
     Skipped when no workspace can be determined: the audit log is chained per workspace,
     and inventing one to hold an event would corrupt a real chain. Those failures are
@@ -97,7 +97,7 @@ async def _audit_auth_failure(
 async def authenticate_bearer(
     session: AsyncSession, verifier: OidcVerifier, token: str
 ) -> AuthenticatedIdentity:
-    """Verify an OIDC access token and resolve the user (FR-PLAT-1, FR-PLAT-4)."""
+    """Verify an OIDC access token and resolve the user (FR-387, FR-390)."""
     try:
         claims = verifier.verify(token)
     except TokenRejectedError as exc:
@@ -115,9 +115,9 @@ async def authenticate_bearer(
         )
     ).scalars().all()
 
-    # FR-PLAT-4: no mapped access means *no* access. An authenticated user with no
+    # FR-390: no mapped access means *no* access. An authenticated user with no
     # membership is a real, known user who may act nowhere — which is the correct state
-    # until governance grants them something (W3).
+    # until governance grants them something (WK-659).
     return AuthenticatedIdentity(
         principal=Principal(
             kind=ActorKind.USER, id=user.id, display=user.email or claims.subject
@@ -129,7 +129,7 @@ async def authenticate_bearer(
 async def _upsert_user(
     session: AsyncSession, claims: TokenClaims, *, issuer: str
 ) -> UserRow:
-    """Create the user on first login, then keep the display fields current (FR-PLAT-4).
+    """Create the user on first login, then keep the display fields current (FR-390).
 
     Keyed on `(issuer, subject)`, never on email: an email change would otherwise create a
     second user and orphan everything the first one did.
@@ -163,7 +163,7 @@ async def _upsert_user(
 async def authenticate_api_key(
     session: AsyncSession, presented: str
 ) -> AuthenticatedIdentity:
-    """Verify a Service Account key (FR-PLAT-3, FR-PLAT-30)."""
+    """Verify a Service Account key (FR-389, FR-430)."""
     parsed = parse_key(presented)
     if parsed is None:
         await _audit_auth_failure(
@@ -211,7 +211,7 @@ async def authenticate_api_key(
         )
         raise _unauthenticated("API_KEY_EXPIRED")
 
-    # FR-PLAT-30: a `uat` key can never score against `prod`. Checked against the account's
+    # FR-430: a `uat` key can never score against `prod`. Checked against the account's
     # granted environments, not the string inside the key — the key is attacker-supplied
     # and its environment field is a label, not an authorisation.
     if parsed.environment not in set(account.environments):
@@ -232,7 +232,7 @@ async def authenticate_api_key(
         ),
         workspaces=frozenset({account.workspace_id}),
         environments=frozenset(account.environments),
-        # Ruling 44: the environment *this key was presented for* (already verified above,
+        # RL-916: the environment *this key was presented for* (already verified above,
         # `:212`), not a tie-break over the granted set — `environments` keeps its existing
         # meaning and use in authorisation; this is a separate, single-valued fact.
         environment=parsed.environment,

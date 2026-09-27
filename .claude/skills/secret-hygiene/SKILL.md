@@ -32,14 +32,14 @@ git commit -m "Stop tracking <file>; add to .gitignore"
 
 `--cached` is the important flag — plain `git rm` deletes the working copy too.
 
-## A credential in a job directory is borrowed, not stored (NT-0012)
+## A credential in a job directory is borrowed, not stored (RFC-842)
 
 **A value a later session must reuse is not "stored" by putting it in a job directory, a
 handover file, or a session's own memory.** All three are ephemeral *relative to the
 credential's lifetime*: the container is cleaned on its own schedule, not the credential's,
 and the loss is silent — nothing fails at the moment it goes.
 
-The instance: a Slack posting token lived only inside a W10 job directory. When that job was
+The instance: a Slack posting token lived only inside a WK-670 job directory. When that job was
 cleaned the token was gone, and nothing reported it — the reporter simply stopped posting.
 
 **So:** a credential that must outlive one job goes to a durable path **outside the

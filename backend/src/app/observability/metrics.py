@@ -1,4 +1,4 @@
-"""Prometheus metrics (`07` §5.1, FR-PLAT-40).
+"""Prometheus metrics (`07` §5.1, FR-443).
 
 Four families, and the one design decision that matters is what may become a **label**.
 
@@ -8,8 +8,8 @@ counter. Every label here is drawn from a bounded set: the *route template* rath
 path, the method, the status class, the Job kind. There is no label anywhere carrying a
 UUID, and there must not be.
 
-FR-PLAT-40 also names scoring latency by environment and rating version, and cache hit
-rate. Neither is emitted: the scoring path arrives with W11 and there is no cache yet. They
+FR-443 also names scoring latency by environment and rating version, and cache hit
+rate. Neither is emitted: the scoring path arrives with WK-671 and there is no cache yet. They
 are recorded as not delivered rather than exposed as a metric that is always zero — a
 dashboard panel that reads zero because nothing reports is indistinguishable from one
 reading zero because nothing is wrong.
@@ -38,8 +38,8 @@ __all__ = [
 #: reason `create_app` takes its settings instead of reading globals.
 REGISTRY: Final = CollectorRegistry()
 
-#: Buckets chosen around the budgets the platform is actually held to: NFR-GOV-1's 5 ms
-#: permission check, NFR-DATA-4's 300 ms one-way read, NFR-DATA-7's 500 ms report summary,
+#: Buckets chosen around the budgets the platform is actually held to: NFR-518's 5 ms
+#: permission check, NFR-468's 300 ms one-way read, NFR-471's 500 ms report summary,
 #: and `03`'s 50 ms p99 quote. Default buckets would put 300 ms and 500 ms in one bin and
 #: make two different budgets indistinguishable on a graph.
 _LATENCY_BUCKETS: Final = (

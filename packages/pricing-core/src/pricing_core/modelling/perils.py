@@ -1,8 +1,8 @@
 """Composing per-peril models into a risk premium, and reconciling it (`02` §3.9, §5.2).
 
-`wf-01` E4 and E5. FR-MODEL-58's sum of `frequency x severity` (or burning cost) over
-perils, FR-MODEL-59's large-loss restoration, FR-MODEL-60's coherence check against the
-observed data, and FR-MODEL-74's requirement that the two be compared *on the same basis*.
+`WF-698` E4 and E5. FR-188's sum of `frequency x severity` (or burning cost) over
+perils, FR-189's large-loss restoration, FR-190's coherence check against the
+observed data, and FR-128's requirement that the two be compared *on the same basis*.
 
 **The declared signatures could not be written.** `02` §5.2 said:
 
@@ -10,7 +10,7 @@ observed data, and FR-MODEL-74's requirement that the two be compared *on the sa
     def reconcile(structure: PerilStructure, data: pl.DataFrame) -> Reconciliation
 
 A `PerilStructure` carries model *references* — `model:motor-ad-frequency@7` — and turning
-one into predictions needs the database ADR-0001 forbids this package. That is the fifth
+one into predictions needs the database ADR-703 forbids this package. That is the fifth
 instance of one defect: `fit_glm`, `predict_glm`, `compute_diagnostics` and `compare_models`
 were each corrected the same way. The caller resolves; this module computes. `02` §5.2 is
 amended with the same date.
@@ -19,7 +19,7 @@ amended with the same date.
 which carries a `dataset_version_id`, a `part` and a `computed_at` only the platform can
 supply — `compute_diagnostics`/`DiagnosticsResult` set that precedent.
 
-**Three of FR-MODEL-59's four treatments are computed here.** `separate_model` is refused by
+**Three of FR-189's four treatments are computed here.** `separate_model` is refused by
 name with `LOSS_TREATMENT_UNIMPLEMENTED`: it needs an excess-layer model's own predictions,
 and treating it as `none` would under-state the premium by exactly the excess layer, in
 silence. `flat_loading` and `capped` are both a multiplication — different provenance, same
@@ -27,7 +27,7 @@ arithmetic — so refusing one and computing the other would be an arbitrary lin
 
 **Burning cost is an exposure-weighted mean, not a portfolio total.** The reconciliation
 compares like with like, so the choice only has to be consistent; it is stated because
-"total modelled burning cost" in FR-MODEL-60 could be read either way, and a per-policy mean
+"total modelled burning cost" in FR-190 could be read either way, and a per-policy mean
 is what the term means and what §4.10's example shows.
 """
 
@@ -60,7 +60,7 @@ _NO_TREATMENT = LargeLossTreatment(kind=LargeLossKind.NONE)
 
 @dataclass(frozen=True)
 class PerilPrediction:
-    """One peril, resolved to the arrays that price it (ADR-0001).
+    """One peril, resolved to the arrays that price it (ADR-703).
 
     `peril` labels the output column and is never resolved to anything. The arrays are
     per-row expectations for that row's own exposure — a frequency model fitted with a
@@ -78,7 +78,7 @@ class PerilPrediction:
 
 @dataclass(frozen=True)
 class ReconciledPerilResult:
-    """One peril's contribution, with the treatment that produced it (FR-MODEL-74)."""
+    """One peril's contribution, with the treatment that produced it (FR-128)."""
 
     peril: str
     large_loss_kind: LargeLossKind
@@ -87,7 +87,7 @@ class ReconciledPerilResult:
 
 @dataclass(frozen=True)
 class ReconciliationResult:
-    """FR-MODEL-60's numbers. The platform stamps identity onto these and persists them."""
+    """FR-190's numbers. The platform stamps identity onto these and persists them."""
 
     perils: tuple[ReconciledPerilResult, ...]
     observed_burning_cost: int
@@ -104,16 +104,16 @@ class ReconciliationResult:
 def assemble_risk_premium(
     predictions: Sequence[PerilPrediction],
 ) -> pl.DataFrame:
-    """FR-MODEL-58 — per-peril cost and the summed risk premium, one row per risk.
+    """FR-188 — per-peril cost and the summed risk premium, one row per risk.
 
-    Large-loss restoration is applied **per peril, before the sum** (FR-MODEL-59,
-    FR-MODEL-74). Restoring the total instead would apply one peril's loading to every
+    Large-loss restoration is applied **per peril, before the sum** (FR-189,
+    FR-128). Restoring the total instead would apply one peril's loading to every
     peril, which is the arithmetic the per-peril declaration exists to avoid.
     """
     if not predictions:
         raise ModellingError(
             "PERIL_STRUCTURE_RECONCILIATION_FAILED",
-            "a structure with no perils assembles no risk premium (FR-MODEL-58)",
+            "a structure with no perils assembles no risk premium (FR-188)",
         )
 
     seen = [p.peril for p in predictions]
@@ -122,7 +122,7 @@ def assemble_risk_premium(
         raise ModellingError(
             "PERIL_STRUCTURE_RECONCILIATION_FAILED",
             f"peril(s) {duplicates} appear more than once; each peril has one route to "
-            "its cost (FR-MODEL-58)",
+            "its cost (FR-188)",
         )
 
     columns: dict[str, npt.NDArray[np.float64]] = {}
@@ -158,10 +158,10 @@ def reconcile(
     tolerance: Decimal,
     treatments: Mapping[str, LargeLossKind],
 ) -> ReconciliationResult:
-    """FR-MODEL-60 — modelled against observed burning cost, within a declared tolerance.
+    """FR-190 — modelled against observed burning cost, within a declared tolerance.
 
     `assembled` comes from `assemble_risk_premium`, so its per-peril columns are **already
-    restored** — which is FR-MODEL-74: the comparison is between restored modelled cost and
+    restored** — which is FR-128: the comparison is between restored modelled cost and
     uncapped observed cost, and a capped model compared before restoration reads as a
     modelling error rather than an intended adjustment.
 
@@ -173,14 +173,14 @@ def reconcile(
         raise ModellingError(
             "PERIL_STRUCTURE_RECONCILIATION_FAILED",
             "tolerance must be positive; a tolerance of zero passes only an exact match, "
-            "which no fitted model produces (FR-MODEL-60)",
+            "which no fitted model produces (FR-190)",
         )
 
     exposure_total = float(np.sum(exposure))
     if exposure_total <= 0:
         raise ModellingError(
             "PERIL_STRUCTURE_RECONCILIATION_FAILED",
-            "total exposure is zero, so a burning cost has no denominator (FR-MODEL-60)",
+            "total exposure is zero, so a burning cost has no denominator (FR-190)",
         )
     if observed.size != assembled.height or exposure.size != assembled.height:
         raise ModellingError(
@@ -194,7 +194,7 @@ def reconcile(
         raise ModellingError(
             "PERIL_STRUCTURE_RECONCILIATION_FAILED",
             "observed burning cost is zero; a ratio needs a denominator, and a holdout "
-            "with no observed cost reconciles nothing (FR-MODEL-60)",
+            "with no observed cost reconciles nothing (FR-190)",
         )
 
     perils: list[ReconciledPerilResult] = []
@@ -205,7 +205,7 @@ def reconcile(
         if peril not in treatments:
             raise ModellingError(
                 "PERIL_STRUCTURE_RECONCILIATION_FAILED",
-                f"no large-loss treatment supplied for peril {peril}. FR-MODEL-74 states "
+                f"no large-loss treatment supplied for peril {peril}. FR-128 states "
                 "the treatment beside the number; defaulting it to 'none' would be a "
                 "claim about how the number was produced",
             )
@@ -238,20 +238,20 @@ def reconcile(
 
 
 def _cost(prediction: PerilPrediction) -> npt.NDArray[np.float64]:
-    """The peril's expected cost before its large-loss treatment (FR-MODEL-58)."""
+    """The peril's expected cost before its large-loss treatment (FR-188)."""
     if prediction.method is PerilMethod.FREQUENCY_SEVERITY:
         if prediction.frequency is None:
             raise ModellingError(
                 "PERIL_STRUCTURE_RECONCILIATION_FAILED",
                 f"peril {prediction.peril}: a frequency_severity peril needs frequency "
-                "predictions (FR-MODEL-58)",
+                "predictions (FR-188)",
             )
         if prediction.severity is None:
             raise ModellingError(
                 "PERIL_STRUCTURE_RECONCILIATION_FAILED",
                 f"peril {prediction.peril}: a frequency_severity peril needs severity "
                 "predictions. A frequency alone would sum into the premium as a cost "
-                "three orders of magnitude too small (FR-MODEL-58)",
+                "three orders of magnitude too small (FR-188)",
             )
         if prediction.frequency.size != prediction.severity.size:
             raise ModellingError(
@@ -265,7 +265,7 @@ def _cost(prediction: PerilPrediction) -> npt.NDArray[np.float64]:
         raise ModellingError(
             "PERIL_STRUCTURE_RECONCILIATION_FAILED",
             f"peril {prediction.peril}: a burning_cost peril needs burning cost "
-            "predictions (FR-MODEL-58)",
+            "predictions (FR-188)",
         )
     return np.asarray(prediction.burning_cost, dtype=np.float64)
 
@@ -273,7 +273,7 @@ def _cost(prediction: PerilPrediction) -> npt.NDArray[np.float64]:
 def _restore(
     cost: npt.NDArray[np.float64], prediction: PerilPrediction
 ) -> npt.NDArray[np.float64]:
-    """FR-MODEL-59's treatment, applied to one peril's cost."""
+    """FR-189's treatment, applied to one peril's cost."""
     treatment = prediction.large_loss
     match treatment.kind:
         case LargeLossKind.NONE:
@@ -288,7 +288,7 @@ def _restore(
             raise ModellingError(
                 "LOSS_TREATMENT_UNIMPLEMENTED",
                 f"peril {prediction.peril}: the 'separate_model' large-loss treatment is "
-                "declared by FR-MODEL-59 and computed by nothing yet — it needs the "
+                "declared by FR-189 and computed by nothing yet — it needs the "
                 "excess-layer model's own predictions. Reconciling it as though it were "
                 "'none' would under-state the premium by exactly the excess layer",
             )
