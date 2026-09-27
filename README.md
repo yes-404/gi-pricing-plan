@@ -32,7 +32,16 @@ documented delivery process
 maintainer approving work at fixed checkpoints. The team's decisions, findings, and audits
 are public: the open-findings register
 ([`docs/findings/register.md`](docs/findings/register.md)) and the closure records under
-[`docs/audit/`](docs/audit/) are not curated after the fact.
+[`docs/closures/`](docs/closures/) are not curated after the fact.
+
+How things are named: every governed document — a spec, a plan, a ruling, a closure record —
+carries one integer from a single sequence, padded into its filename, per
+[`docs/process/document-ids.md`](docs/process/document-ids.md); the directory it lives in
+names its family, and [`docs/INDEX.md`](docs/INDEX.md) is the generated index of all of them.
+
+Branches and PRs name the slice they deliver: `sl-<n>-<slug>` and `SL-<n>: <title>`. **Not
+yet in force as of 2026-09-27** — no `SL-` row has been minted; a PR today names its `WK-`/
+`W37-n` slice instead, per `CONTRIBUTING.md`.
 
 ## Explore the project
 
@@ -45,6 +54,9 @@ are public: the open-findings register
   implement.
 - [`docs/findings/register.md`](docs/findings/register.md) — the open-findings ledger.
 - [`docs/roadmap.md`](docs/roadmap.md) — build order and current status.
+- [`docs/plans/`](docs/plans/) — filed implementation plans, frozen at their date.
+- [`docs/rulings/`](docs/rulings/) — decisions already made on a plan's open decision points.
+- [`docs/closures/`](docs/closures/) — workstream and slice closure records.
 
 ## Engage
 

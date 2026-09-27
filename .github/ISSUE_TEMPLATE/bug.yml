@@ -41,3 +41,10 @@ body:
       description: Logs, spec section references, or anything else relevant.
     validations:
       required: false
+  - type: input
+    id: related
+    attributes:
+      label: Related id (optional)
+      description: A governed id this relates to, if you know one — e.g. FR-451, ADR-703, FD-00894.
+    validations:
+      required: false

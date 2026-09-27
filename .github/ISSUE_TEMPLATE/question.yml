@@ -21,3 +21,10 @@ body:
         spec section, requirement id, or file where you can.
     validations:
       required: true
+  - type: input
+    id: related
+    attributes:
+      label: Related id (optional)
+      description: A governed id this relates to, if you know one — e.g. FR-451, ADR-703, FD-00894.
+    validations:
+      required: false

@@ -25,7 +25,11 @@ cannot afford to lose.
 Three rules survive every phase change:
 
 - **Requirement IDs and section numbers are permanent** (§5). Never renumber; append, mark
-  superseded, or leave a tombstone.
+  superseded, or leave a tombstone. **Amended 2026-09-27 by the maintainer (dated line by
+  delegation, D3), on RFC-937 D2** — ids were renumbered once, by the W37-6 migration run,
+  onto the single global sequence §5 now names; permanence holds from that sequence
+  onward, and a product identifier (a `VR-`, artifact id or job kind) is the spec's, not
+  this sequence's, and was not touched.
 - **Counts and status that change are not written in this file.** `req-coverage.py` prints
   requirement counts; `docs/roadmap.md` holds workstream and component status. Four
   incidents of the copy here going stale:
@@ -50,7 +54,9 @@ date**. **It is a polyglot monorepo and neither language is the "main" one** —
 `pyproject.toml` configures Python tooling only, and **CI is three path-filtered component
 workflows and one unfiltered `history-policy` workflow; the fourth checks commit messages,
 not files, so path filtering would let it pass by not running** (amended 2026-09-02 by the
-maintainer, with F49's CI enforcement).
+maintainer, with F49's CI enforcement). [`docs/process/document-ids.md`](docs/process/document-ids.md)
+§1.4 is the authority for the `docs/` layout: **the directory is the family** — which
+directory a governed document lives under is what names the family it belongs to.
 
 **One contract joins backend and frontend, and it flows one way.** ADR-704's
 `model-schema`, the single source of truth, generates `docs/contracts/` — JSON Schema +
@@ -95,10 +101,12 @@ arbitrary code — declaration, validation, versioning, audit.
 overview and glossary · `01` data management · `02` modelling · `03` rating engine · `04`
 optimisation · `05` monitoring · `06` governance · `07` platform.
 
-`workflows/WF-698…05` are the **cross-module journeys** — dataset-to-model,
-model-to-rating-version, rate-change impact, deploy-and-monitor, custom-objective lifecycle.
-A module spec says what one module does; a workflow says what actually happens across all
-of them.
+`workflows/WF-698`, `WF-699`, `WF-700`, `WF-701` and `WF-702` are the **cross-module
+journeys** — dataset-to-model, model-to-rating-version, rate-change impact,
+deploy-and-monitor, custom-objective lifecycle. A module spec says what one module does; a
+workflow says what actually happens across all of them. `docs/INDEX.md` is the generated
+index of every governed document in the suite; `docs/process/document-ids.md` defines the
+document families and how their ids are assigned.
 
 ## 5. Spec Document Standard
 
@@ -107,9 +115,16 @@ requirements, data contracts, interfaces, workflows, cross-module dependencies, 
 dependencies, non-functional requirements, open questions. What each must contain is in
 `.claude/skills/spec-change`: **the procedure for touching `docs/`, read it first**.
 
-**Requirement IDs are permanent: never renumber, only append or mark superseded.** Section
-numbers here obey it too: §6 and §8 are tombstones, §2, §11, §13 and §14 keep their rules
-and point at the skill with the procedure, and no number is ever reused.
+**Requirement IDs are permanent: never renumber, only append or mark superseded.**
+**Amended 2026-09-27 by the maintainer (dated line by delegation, D3), on RFC-937 D2.**
+Requirement ids were renumbered once, by the W37-6 migration run, onto the single global
+sequence [`document-ids.md`](docs/process/document-ids.md) defines; the permanence rule
+holds from that sequence onward — append or mark superseded,
+never renumber. **Document and row ids are `document-ids.md`'s; product identifiers stay
+the spec's** — a `VR-`, artifact id or job kind is governed by `docs/specs/` and was not
+touched (RFC-937 D5). Section numbers here obey it too: §6 and §8 are tombstones, §2, §11,
+§13 and §14 keep their rules and point at the skill with the procedure, and no number is
+ever reused.
 
 ## 6. Dataset Validation — *superseded by `01-data-management.md`*
 
@@ -140,7 +155,9 @@ The phase list, workstream rows, closure records, decision gates, the current ph
 exit criteria, which workstreams are open, and the retrofit-impossible list are written
 **only** there
 ([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md) records this mechanism —
-this file restating phase or status content and the restatement going stale). Two things
+this file restating phase or status content and the restatement going stale). A phase is a
+**milestone** section ([`document-ids.md`](docs/process/document-ids.md) §1.3); the rows
+inside it are `WK-` (work) and `SL-` (slice) — the families, not their contents. Two things
 change how you work rather than what is planned:
 
 - **The retrofit-impossible foundations of `docs/roadmap.md` §5 landed in Phase 1a.** They
@@ -203,6 +220,9 @@ Project procedures live in `.claude/skills/`, versioned with the repo. **Its `RE
 the index**, `.claude/agents/README.md` the same for the delegable specialists; team roles
 are the `.md` files directly under `.claude/roles/`. **This section keeps no second list**
 ([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)).
+[`document-ids.md`](docs/process/document-ids.md) §1.6 — the roles-per-family owner table —
+is the authority on which role may write which document family, complementing this
+section's own rule that a role writes what its charter names.
 
 - **Discovered a non-obvious procedure** (build quirk, test setup, data format rule, deploy
   step)? Write or update a skill, update the README, commit both with the work.
@@ -249,8 +269,12 @@ a repo fact outranks a superpowers procedure. **Nothing in superpowers overrides
 
 **A workstream is closed only when that skill's checklist passes and the result is recorded
 in `docs/roadmap.md`** — closing without it produces a roadmap reporting progress the
-repository does not have, which the next workstream is then planned against. Three rules
-bind wherever anything here is audited, not only at a close:
+repository does not have, which the next workstream is then planned against. **Record
+destinations, per `document-ids.md` §1.4:** a closure record or a plan review is a `CR-`
+under `docs/closures/`; a finding is an `FD-` under `docs/findings/`, with a row in
+`docs/findings/register.md`; a decision already made is an `RL-` under `docs/rulings/`; a
+slice ledger is an `LG-` under `docs/ledgers/`. Three rules bind wherever anything here is
+audited, not only at a close:
 
 - **Scope is derived from the specification first, then evidenced** — never from
   recollection of what was built. Reversed, an audit is silent about what is missing.
@@ -319,5 +343,5 @@ restated enforcement is how one of the two statements goes stale
 here. Read the markdown to know the process; the extract exists so a rule that can be checked
 mechanically is not left to prose.
 
-Distinct from `docs/workflows/WF-698…05`, the domain journeys (§4): one is how the team
-works, the other what the platform does.
+Distinct from `docs/workflows/WF-698`…`WF-702`, the domain journeys (§4): one is how the
+team works, the other what the platform does.
