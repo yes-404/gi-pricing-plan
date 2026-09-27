@@ -14,8 +14,16 @@ relates: []                      # ids only
   maximum quality at write time.
 - **Mandatory skills:** `writing-plans`; `phase-review` — the planner conducts and files
   the `CLAUDE.md` §14 phase review (see `Owns`).
-- **Owns:** the plan: frozen dated files in `docs/plans/`; new dated revisions on a replan
-  trigger; scope + requirement coverage cited by spec **section**, every id in it listed
+- **Owns:** the plan — a `PL-` file with an id from `python3 scripts/doc-id.py next`,
+  `draft` while a blocking decision point is open, `active` on freeze (`document-ids.md`
+  §1.6, PL map/leaf row). **A replan is a new `PL-` carrying `supersedes: [<old id>]`**,
+  never a new dated revision of the same file — the superseded plan gets
+  `superseded_by:` in return, and those two fields are among the only ones a frozen file
+  may still take after it freezes (`document-ids.md` §1.5). **The planner also cuts the
+  `SL-` rows in the map plan**, each `draft` at minting (§1.6 SL row: *"planner, cut in the
+  map plan (`draft`)"*), and **re-cuts them on a replan** (§1.6 SL row, Supersedes column:
+  *"planner re-cuts on replan"*). Scope + requirement coverage cited by spec **section**,
+  every id in it listed
   individually — never a bare numeric range (`34-42`), which silently drops an append-only
   id landed inside it (`docs/closures/INDEX.md#plan-reviewsmd` review 8 Q4, the same mechanism found
   twice on roadmap rows); **slice design** — how the work is cut into slices, their
@@ -47,12 +55,13 @@ relates: []                      # ids only
   every git write; read-only git is safe anywhere** (two real WK-670 incidents — one the
   decision-maker's, one the auditor's — discarded another member's uncommitted work this
   rule exists to prevent).
-- **Tools:** Read, Grep, Glob; write to `docs/plans/` files, and to `docs/audit/
-  plan-reviews.md` for the §14 phase review this charter now names. `CLAUDE.md` §12's rule
-  is that a role writes what its own charter names and nothing else, which is why this does
-  not extend to the rest of `docs/audit/` — `register.md`, `closure-records.md`, and the
-  `checklists/`/`work/`/`phases/` trees are the auditor's or close-workstream's, not named
-  here. A roadmap-row correction or other `docs/` edit surfaced inside a plan review is a
+- **Tools:** Read, Grep, Glob; write to `docs/plans/` files, and to `docs/closures/` — each
+  `CLAUDE.md` §14 phase review this charter now names is filed as its own `CR- kind: review`
+  record there, indexed at `docs/closures/INDEX.md`. `CLAUDE.md` §12's rule is that a role
+  writes what its own charter names and nothing else, which is why this does not extend to
+  the rest of the auditor's own records — `docs/findings/register.md`, a `CR-` of kind
+  `work` or `phase`, and `docs/process/checklists/` are the auditor's or close-workstream's,
+  not named here. A roadmap-row correction or other `docs/` edit surfaced inside a plan review is a
   proposal in the review document, applied by the lead or decision-maker. **May create or
   update a skill under `.claude/skills/`** — plan-writing and citation conventions most
   often, the class `writing-plans` already exists to hold — per `CLAUDE.md` §12, with

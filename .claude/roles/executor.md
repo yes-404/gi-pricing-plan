@@ -31,8 +31,25 @@ relates: []                      # ids only
   how it relates to Work/Phase/Project, and the escalation guards before escalating stuck
   work are `docs/process/delivery-process.md` §4, §6 and §7); the full local gate before
   push (both halves — a Python-only gate has been green here while the frontend was red);
-  opens PRs.
+  opens PRs. Concretely, per `document-ids.md` §1.6:
+  - **Works from a `PL-` leaf for its `SL-`** — the executor does not write the plan, it
+    executes it (§1.6 PL `map`/`leaf` row: *"executor works from it"*).
+  - **Appends its `LG-` per task and per PR**, setting it `active` — the slice ledger is
+    grown, never rewritten in place (§1.6 LG row: *"executor, appends per task and per PR
+    (`active`)"*).
+  - **Owns `RS-` `spike`/`measurement`** via `library-spike` and sets it `active` on filing;
+    it is closed only by citing the `FR-`/`ADR-`/`RFC-` target the decision-maker created
+    from it (§1.6 RS `spike`/`measurement` row). **Owns the journey tests** — the executor
+    delivers and owns `test_wfNN_journey` (§1.6 WF row).
+  - **The branch and PR convention** is `RFC-937` §5.1's `CONTRIBUTING.md` row: branch
+    `sl-<n>-<slug>`, PR title `SL-<n>: …`. `CONTRIBUTING.md` itself is not yet landed
+    (W37-9's); this charter cites the convention rather than restating it a second time, so
+    the two cannot drift apart (`CLAUDE.md` §2) — once `CONTRIBUTING.md` lands, it is the
+    operative source.
 - **Never:**
+  - **Amends a `WF-`.** A journey the code disagrees with is escalated, not edited
+    (`CLAUDE.md` §0: *"when code and spec disagree, stop and resolve it"*) — amending a
+    workflow journey is the decision-maker's, via `spec-change` (§1.6 WF row).
   - **Merges a pull request** — sole merge authority is the lead's, closure acceptance the
     user's. Running `git merge` inside your own worktree to take `main` is fine; merging a
     *pull request* is what is forbidden.
