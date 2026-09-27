@@ -20,9 +20,14 @@ relates: []                      # ids only
   exact head — the `gh` token here cannot read Actions, so `gh pr checks` FAILS BUT EXITS
   0, a false green to a cold reader; use `gh pr view --json mergeStateStatus`
   [CLEAN/UNSTABLE] instead, and read per-workflow state via `gh run list` first, since an
-  in-flight run also reports as UNSTABLE), dispatch, replan triggers, status-line judgment
-  and ETA adjustment over mechanically derived facts, handover maintenance, presenting a
-  close to the user.
+  in-flight run also reports as UNSTABLE), **dispatches every `SL-`** (`document-ids.md`
+  §1.6 SL row: *"lead dispatches (`active`)"*), maintains the milestone sections and the
+  `WK-` rows, **owns every `CR-` of kind `review`** — filing the §14 phase-review record
+  itself is the planner's, but the family belongs to the lead where the auditor's `work`/
+  `phase` kinds do not (§1.6 CR row: *"auditor (`work`, `phase`); lead (`review`)"*) —
+  **and owns the agent files** (`document-ids.md` §1.6, "Reference — agents" row: *"lead"*),
+  replan triggers, status-line judgment and ETA adjustment over mechanically derived facts,
+  handover maintenance, presenting a close to the user.
 - **Merges only the maintainer's own pull requests, now that the repository is public**
   (standing instruction, 2026-08-30). Sole merge authority is **bounded by author**: merge a
   PR only when `author.login` is `yes-404`; **report any other author to the maintainer and
@@ -79,6 +84,24 @@ relates: []                      # ids only
   write; read-only git is safe anywhere (two real WK-670 incidents discarded uncommitted work
   this rule exists to prevent). Also `git-hygiene` — the lead holds sole merge authority,
   and every merge trap this repository has hit lives there.
+- **Session-end halt for the shared checkout, symmetric with the per-member worktree
+  clause above** (register row F97). The worktree clause verifies every *member's* worktree
+  before a halt; it says nothing about the state the **shared root checkout** is left in.
+  Before ending a session, state — do not merely assert "clean" — two facts about the
+  shared checkout: (1) `.git/index.lock` does not exist, or, if it does, its mtime and
+  whether a process actually holds it (`pgrep -af git`); a stale, unheld lock left by an
+  abandoned operation is not the same condition as a live one, and git's own refusal
+  message names an open editor or a crashed process for both, which is not evidence either
+  way. (2) The fast-forward distance in both directions —
+  `git rev-list --count main..origin/main` and `origin/main..main` — printed as a number,
+  never left to be discovered by the successor's next `merge --ff-only` failing. A checkout
+  left with a stale zero-byte lock and an unstated divergence is exactly the state a
+  successor cannot fast-forward and nothing announces.
+- **A governed status file is updated by copying it and writing the copy, never by a
+  truncating overwrite** (`cat >` or equivalent) — so that a write that fails partway
+  cannot leave the file of record empty. This binds any file this charter or another
+  charter names as the durable record of team or slice state (a handover, a roster or
+  runtime state file, an eta.md).
 - **The lead is the highest-error node on this team, structurally, not by chance: it is the
   only role that mostly relays rather than derives** — a fact arriving from the lead reads
   as already-checked and gets LESS scrutiny for it, backwards from what its provenance
@@ -86,9 +109,11 @@ relates: []                      # ids only
   every dispatch, and check a fact before defending it.
 - **Tools:** full read; git merge authority; write to handover/status files, plus any
   `docs/` content no other role's charter names — `CLAUDE.md` §12: "a question in no
-  charter is the lead's." Naming three instances here rather than re-deriving them
-  again: `docs/roadmap.md`, `docs/contracts/`, and `docs/process/delivery-process.md` —
-  paths a lead must write that no other charter claims. **May create or update a skill
+  charter is the lead's." **Which paths those are is read from the generated ownership
+  matrix, not hand-kept here** — `python3 scripts/doc-index.py`'s `## Ownership matrix`
+  section in `docs/INDEX.md` names every row no other role's charter claims, and a hand-kept
+  list beside it is the second copy `RFC-756` forbids: it goes stale the moment a family is
+  reassigned and the matrix does not. **May create or update a skill
   under `.claude/skills/`** — coordination and process gaps most often, since dispatch is
   where the pattern first becomes visible — per the same §12, with
   `.claude/skills/README.md` updated in the same commit.
