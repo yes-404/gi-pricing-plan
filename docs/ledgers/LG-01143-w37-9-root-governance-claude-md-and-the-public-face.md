@@ -180,7 +180,7 @@ only (+25/−11). That delta is carried by
 
 **Status set `closed` by the auditor on 2026-09-27** (`document-ids.md` §1.6, SL row:
 *"auditor closes: sets the `LG-` `closed`, verifies acceptance"*). The lead ruled at
-2026-09-27 10:19 BST (as amended at 10:21 BST) that the close lands in one post-merge,
+2026-09-27 10:19 BST (as amended at 10:20 BST) that the close lands in one post-merge,
 docs-only PR authored by the auditor, built on `LG-1141`'s closing record and touching
 exactly two paths: this file and `docs/INDEX.md`. W37-9 closes when this PR merges. A
 Slice closes on a clean audit and the lead's merge, with no maintainer line (`CLAUDE.md`
