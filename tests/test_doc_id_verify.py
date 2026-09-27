@@ -2905,10 +2905,12 @@ _FAILED_BLOCK = (
 def _files_corpus(dv: Any, tmp_path: pathlib.Path, *files: str) -> Any:
     """A minimal `Corpus` whose only property `_h1_residue_by_file` reads is `.tree` —
     resolution re-reads the tree's own tracked-file set via `tracked_files(corpus.tree)`
-    (team-lead's ruling: the *unfiltered* tracked set, never `Corpus.files`, which has a
+    (team-lead's ruling: `tracked_files`'s own set, never `Corpus.files`, which has a
     row-(d)/(e)/(g)-specific exclusion baked in that has nothing to do with h1's own
-    question). A real git repo, not a fake path, because `tracked_files` shells out to
-    `git ls-files` and a nonexistent tree would simply error rather than resolve nothing.
+    question). `tracked_files` is itself filtered by `sweep_exclusion_reason`; this used to
+    say "unfiltered" (F110, FD-1069). A real git repo, not a fake path, because
+    `tracked_files` shells out to `git ls-files` and a nonexistent tree would simply error
+    rather than resolve nothing.
     """
     # `_mkrepo` commits whatever it is given; a repo with nothing to commit would error,
     # so an always-present placeholder keeps `_mkrepo` valid even when a test wants a
@@ -4061,3 +4063,37 @@ def test_a_residue_regression_on_an_unchanged_verdict_set_is_rendered_and_exits_
     assert "RESIDUE CEILING" in out
     assert dv.RESIDUE_REGRESSION in out
     assert "moved no row" not in out
+
+
+def test_h1_residue_by_file_resolves_against_the_sweep_filtered_population(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """F110 (FD-1069; PL-1144 Task 6): the behaviour, not a docstring, decides which
+    population `_h1_residue_by_file` resolves a failure's file token against.
+
+    The corpus holds one sweep-excluded file, `uv.lock` (`_docid.LOCKFILE_EXCLUSIONS`),
+    beside an ordinary `docs/a.md`, both tracked. Each file is named by one check-36
+    failure line. The ordinary file resolves and is keyed per file. The lockfile does NOT
+    resolve: it falls to the class-level `_H1_UNLOCATED_PATH` key. So the population is
+    `tracked_files`'s own, **filtered** by `sweep_exclusion_reason`, and not the unfiltered
+    tracked-file set the function's docstring used to name.
+    """
+    assert dv._docid.sweep_exclusion_reason("uv.lock") is not None, (
+        "this test's premise: the lockfile is sweep-excluded"
+    )
+    corpus = _files_corpus(dv, tmp_path, "uv.lock", "docs/a.md")
+    out = subprocess.run(
+        ["git", "-C", str(corpus.tree), "ls-files"], capture_output=True, text=True,
+        check=True,
+    ).stdout.split()
+    assert "uv.lock" in out, "the lockfile is tracked, so only the sweep filter can drop it"
+    assert "uv.lock" not in dv.tracked_files(corpus.tree)
+    failures = (
+        "FAILED (2):\n"
+        "  - check 36: uv.lock: legacy pre-migration form survives\n"
+        "  - check 36: docs/a.md: legacy pre-migration form survives\n"
+    )
+    assert dict(dv._h1_residue_by_file(failures, corpus)) == {
+        ("docs/a.md", "h1-check36"): 1,
+        (dv._H1_UNLOCATED_PATH, "h1-check36"): 1,
+    }

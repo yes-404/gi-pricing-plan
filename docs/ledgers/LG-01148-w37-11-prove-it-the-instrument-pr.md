@@ -731,6 +731,43 @@ the lead as owner; …"*). It was relayed by the lead, and written here 2026-09-
 
 Landed in: this PR — the pre-squash branch commit that carries this section.
 
+### Task 6 — F110: one population, one docstring (FD-1069)
+
+**Step 1: the behaviour test comes first.**
+`tests/test_doc_id_verify.py::test_h1_residue_by_file_resolves_against_the_sweep_filtered_population`
+builds a real git corpus that tracks one sweep-excluded file, `uv.lock`
+(`_docid.LOCKFILE_EXCLUSIONS`), beside `docs/a.md`. It feeds `_h1_residue_by_file` one
+check-36 failure line naming each file. The test asserts three things:
+
+- `uv.lock` is tracked (`git ls-files`) but absent from `tracked_files`;
+- `docs/a.md` is keyed per file, `('docs/a.md', 'h1-check36'): 1`;
+- the lockfile falls to `(_H1_UNLOCATED_PATH, 'h1-check36'): 1`.
+
+It **passed on the unchanged code** (`1 passed`). So the behaviour says the population is
+`tracked_files`'s own, **filtered** by `sweep_exclusion_reason`. `tracked_files`'s
+docstring was right. `_h1_residue_by_file`'s docstring ("the unfiltered tracked-file set")
+was wrong.
+
+**Proof 6, that the test discriminates** (made in a copy and restored, `RESTORED-OK`). With
+`tracked_files`' filter replaced by `if True`, the test failed:
+`AssertionError: assert 'uv.lock' not in ['___placeholder___.md', 'docs/a.md', 'uv.lock']`.
+
+**Step 2: the docstring is fixed, and the code does not change.** The word "unfiltered"
+was corrected at four sites that made the same claim about this one population:
+
+- `_h1_residue_by_file`'s docstring;
+- its in-body comment above `known_files`;
+- `rows_h`'s docstring, which said the same thing about `tracked_files(mig.tree)`;
+- the test helper `_files_corpus`'s docstring.
+
+Each now says the set is filtered by `sweep_exclusion_reason`, and names F110. Afterwards,
+`grep -rn -i 'unfiltered tracked' scripts tests` returns nothing.
+
+**Step 3.** `tests/test_doc_id_verify.py` gave `164 passed, 1 skipped`. `ruff check .` was
+clean. `mypy` gave `no issues found in 196 source files`.
+
+Landed in: this PR — the pre-squash branch commit that carries Task 6.
+
 ## PRs
 
 | # | Branch | Squash SHA on `main` | Tasks | State |

@@ -3109,7 +3109,13 @@ def _h1_residue_by_file(out: str, corpus: Corpus) -> Mapping[tuple[str, str], in
 
     A failure message shaped `check N: <token>: ...` (`_H1_FAILURE_LOCATION_RE`) names a
     file only if `token` **resolves** — is a member of `tracked_files(corpus.tree)`, the
-    unfiltered tracked-file set of the migrated snapshot (`corpus` only for its `.tree`;
+    migrated snapshot's tracked-file set **filtered by `_docid.sweep_exclusion_reason`**,
+    exactly as `tracked_files`'s own docstring states. So a failure naming a
+    sweep-excluded file (a lockfile, a fixture corpus, a governance record) does not
+    resolve and falls to `_H1_UNLOCATED_PATH` below. This docstring used to say
+    "unfiltered", which the code never was (F110, FD-1069;
+    `test_h1_residue_by_file_resolves_against_the_sweep_filtered_population`). (`corpus`
+    only for its `.tree`;
     never the repo working tree, since the snapshot's filenames deliberately differ from
     the current checkout, and never `corpus.files`, which is `Corpus`'s own row-(d)/(e)/
     (g)-scoped set with `_D_EXCLUDED_BASENAME` already applied — see the comment above
@@ -3142,7 +3148,8 @@ def _h1_residue_by_file(out: str, corpus: Corpus) -> Mapping[tuple[str, str], in
     rather than the bare check number, so a future (d)-row and an h1 check can never
     collide on the same key by coincidence.
     """
-    # The unfiltered tracked-file set of the migrated snapshot, not `corpus.files`:
+    # The migrated snapshot's tracked-file set (`tracked_files`, filtered by
+    # `sweep_exclusion_reason` — F110), not `corpus.files`:
     # `Corpus.files` already has `_D_EXCLUDED_BASENAME` (`docs/REDIRECTS.csv`) applied,
     # a row-(d)/(e)/(g) citation-sweep exclusion for a reason that has nothing to do with
     # h1's own question ("does this token name a real file in the migrated tree?").
@@ -3229,7 +3236,8 @@ def rows_h(
     """`mig` is the migrated snapshot's own `Corpus` (`compute_rows`' own `load_corpus(
     snap.migrated)`, never re-derived here) — passed on for its `.tree` alone: h1's
     per-file residue extraction resolves a captured token against
-    `tracked_files(mig.tree)`, the unfiltered tracked-file set, never `mig.files` itself
+    `tracked_files(mig.tree)`, the tracked-file set filtered by `sweep_exclusion_reason`
+    (F110: "unfiltered" here was wrong), never `mig.files` itself
     (`Corpus`'s own row-(d)/(e)/(g)-scoped set) and never the repo working tree, since
     the migrated snapshot's filenames deliberately differ from the current checkout.
     """
