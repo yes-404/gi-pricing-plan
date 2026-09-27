@@ -166,13 +166,10 @@ SKILL.md` under `_id_scope_documents()`'s scope roots) — 27 files × 4 keys = 
 snapshot's h1 `check 30=108`; the same +4-line mismatch is (g)'s provenance mismatch and
 (d)'s +124.
 
-**Condition C3 — the 4 stamped-but-not-flagged Reference files (31 stamp targets, 27
-flagged):** `README.md`, `deploy/README.md`, `packages/README.md`,
-`examples/fremtpl2/README.md` — verified present at this tree, each `family: reference`.
-Not flagged because none is under `_id_scope_roots()`'s four post-migration roots
-(`scripts/audit-docs.py:1288-1294`: `ROOT` (=`docs/`), `.claude/roles`, `.claude/skills`,
-`.claude/agents`) — a repo-root or `deploy`/`packages`/`examples` README is outside every
-one, so check 30 never walks it, stamped placeholder keys and all.
+Of the 31 Reference files `migrate()` stamped, four were not flagged by check 30 — root
+`README.md`, `deploy/README.md`, `packages/README.md`, `examples/fremtpl2/README.md` —
+because they lie outside the four post-migration scope roots (`docs/`, `.claude/roles`,
+`.claude/skills`, `.claude/agents`); the other 27 each drew 4 hits (108).
 
 **The fix (commit below):** one module-level constant in `scripts/doc-id.py`,
 `_HARNESS_ONLY_TEMPLATE_KEYS`, naming the same four keys; `_stamp_header` skips them
