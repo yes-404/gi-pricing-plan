@@ -6971,6 +6971,153 @@ def _reflow_line(line: str, proof: str, limit: int) -> tuple[list[str] | None, s
     return (wrapped, "") if wrapped else (None, _REFUSAL_NO_BREAK_POINT)
 
 
+#: A line inside a doctest example block is never reflowed. The docstring limb changes the
+#: string's value — the inserted newline and indentation become part of it — which is
+#: cosmetic for prose and is not cosmetic where the value is *executable*. Verified at
+#: `cfbc0390`: doctests are not collected (no `doctest` configuration), `__doc__` is read at
+#: run time only as an `argparse` description in five scripts, and `>>>` example lines exist
+#: in four `packages/` modules. That makes the risk small and the rule cheap, which is the
+#: reason to have it rather than a reason to skip it. A per-line suppression marker cannot
+#: live inside a string literal either, so such a line has no marker limb available and is
+#: refused outright. (The marker is named indirectly throughout this file: a comment that
+#: spells it out is read by the linter as *being* one.)
+_DOCTEST_PROMPT: Final = ">>>"
+_DOCTEST_CONTINUATION: Final = "..."
+
+#: The literal-split limb. A string literal is split into adjacent implicitly-concatenated
+#: parts, which Python folds **at compile time**, so the module's constants are unchanged
+#: and `ast.dump` equality before and after proves it exactly. This is a stronger proof than
+#: the docstring limb can offer, not a weaker one — the reflow genuinely alters a docstring's
+#: value, while this alters nothing but the source layout (2026-09-06, the deputy's 08:30
+#: correction as ruled at 08:42: the 13 code literals are rewritten, not refused, because a
+#: refused rewrite leaves the program naming a path this same migration has just moved,
+#: which is wrong semantics rather than preserved semantics).
+_SPLIT_PROVEN: Final = "literal-split-proven"
+
+#: The fallback the ruling names when the split cannot be proven: the tool appends the
+#: project's own long-line suppression to that line, itself, reproducibly, as part of its
+#: declared output. That is what separates it from the hand edit the earlier disposition
+#: forbade — the tree and the tool that produced it stay in agreement, and a second run
+#: produces the same bytes. Disclosed by name, one W37-11 record row per file.
+_MARKER_SUPPRESSION: Final = "lint-suppression-marker-emitted"
+_SUPPRESSION_MARKER: Final = "  # " + "noqa: E501"
+
+_REFUSAL_DOCTEST: Final = "doctest-example-line"
+
+
+def _doctest_lines(text: str, docstring_rows: Iterable[int]) -> frozenset[int]:
+    """Rows within docstrings that belong to a doctest example block.
+
+    A block opens at a `>>>` prompt and runs through its `...` continuations and its
+    expected-output lines, ending at the first blank line or at the next prompt — the
+    structure `doctest` itself parses. Only rows already known to be inside a docstring are
+    considered, so a `>>>` in ordinary code text cannot start a phantom block.
+    """
+    rows = set(docstring_rows)
+    lines = text.splitlines()
+    found: set[int] = set()
+    in_block = False
+    for row in sorted(rows):
+        if row < 1 or row > len(lines):
+            continue
+        stripped = lines[row - 1].strip()
+        if stripped.startswith(_DOCTEST_PROMPT):
+            in_block = True
+        elif in_block and not stripped:
+            in_block = False
+        if in_block:
+            found.add(row)
+    return frozenset(found)
+
+
+#: A string literal with its optional prefix. `f` is excluded deliberately: an f-string's
+#: parts are not a plain `Constant`, so the equality proof below would be reasoning about a
+#: different node shape, and the ruling's instruction for an edge case that cannot be proven
+#: is to refuse it rather than work around it. `r` and `b` are fine — the prefix is repeated
+#: on each part and the fold is the same.
+_SPLITTABLE_STRING_RE: Final = re.compile(
+    r"(?<![A-Za-z0-9_])([rRbB]{0,2})(\"|')((?:\\.|(?!\2).)*)\2"
+)
+
+
+def _bracket_depth_by_row(text: str) -> dict[int, int]:
+    """Bracket nesting depth at the START of each 1-based row.
+
+    A literal already inside brackets can be split across lines with no other change; one at
+    depth zero would need parentheses added around it, which is a structural edit this pass
+    does not make. Depth is taken from `tokenize`, never from counting characters, so a
+    bracket inside a string or a comment cannot shift it.
+    """
+    depth = 0
+    by_row: dict[int, int] = {}
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+            by_row.setdefault(tok.start[0], depth)
+            if tok.type == tokenize.OP:
+                if tok.string in "([{":
+                    depth += 1
+                elif tok.string in ")]}":
+                    depth = max(0, depth - 1)
+    except (SyntaxError, tokenize.TokenError, IndentationError):
+        return {}
+    return by_row
+
+
+def _split_literal_line(line: str, limit: int) -> list[str] | None:
+    """`line` rewritten with its longest string literal split into implicitly-concatenated
+    parts, each output line within `limit`, or `None` when no such split is available.
+
+    Breaks are taken inside the literal's own content, never immediately after a backslash,
+    so an escape sequence is never cut in half. The caller still has to prove the result:
+    this function proposes, `_reflow_long_lines` disproves.
+    """
+    candidates = [m for m in _SPLITTABLE_STRING_RE.finditer(line) if len(m.group(3)) > 8]
+    if not candidates:
+        return None
+    match = max(candidates, key=lambda m: len(m.group(3)))
+    prefix, quote, body = match.group(1), match.group(2), match.group(3)
+    head, tail = line[: match.start()], line[match.end() :]
+    indent = " " * (len(line) - len(line.lstrip()))
+    part_indent = f"{indent}    "
+    # Room for one literal part on a continuation line, less its quotes and prefix.
+    room = limit - len(part_indent) - len(prefix) - 2
+    if room < 8:
+        return None
+    chunks: list[str] = []
+    rest = body
+    while len(rest) > room:
+        cut = room
+        while cut > 0 and rest[cut - 1] == "\\":
+            cut -= 1
+        if cut <= 0:
+            return None
+        chunks.append(rest[:cut])
+        rest = rest[cut:]
+    chunks.append(rest)
+    if len(chunks) < 2:
+        return None
+    out = [f"{head}{prefix}{quote}{chunks[0]}{quote}"]
+    out.extend(f"{part_indent}{prefix}{quote}{c}{quote}" for c in chunks[1:-1])
+    out.append(f"{part_indent}{prefix}{quote}{chunks[-1]}{quote}{tail}")
+    if any(len(o) > limit for o in out):
+        return None
+    return out
+
+
+def _constants_unchanged(before: str, after: str) -> bool:
+    """True iff `after` is the same program as `before`, by `ast.dump` equality.
+
+    The whole justification for the split limb. Adjacent string literals are folded by the
+    compiler, so a correctly split literal produces an identical `Constant` node and an
+    identical dump; `ast.dump` omits line and column attributes by default, so the added
+    lines do not perturb it. A file that merely parses is NOT evidence — the comparison is
+    against the module's own constants before the edit, which is why both texts are parsed
+    here rather than only the second.
+    """
+    try:
+        return ast.dump(ast.parse(before)) == ast.dump(ast.parse(after))
+    except SyntaxError:
+        return False
 def _reflow_long_lines(root: Path) -> tuple[list[str], list[_RefusedLongLine]]:
     """Reflow every Python line this migration pushed past the project's line limit, and
     return `(changed_files, refused)`.
@@ -7017,7 +7164,16 @@ def _reflow_long_lines(root: Path) -> tuple[list[str], list[_RefusedLongLine]]:
             continue
         if not any(_over_limit(line, limit) for line in text.splitlines()):
             continue
+        # A file the parser cannot read gets NO edit of any kind — not a reflow, not a
+        # split, not a suppression marker. It is the one place a guess would be most
+        # confident and least safe, and a marker appended to a file that does not compile
+        # would suppress a long-line report while the real fault stayed invisible.
+        parses = _constants_unchanged(text, text)
         proofs = _reflowable_lines(text)
+        doctest_rows = _doctest_lines(
+            text, (r for r, p in proofs.items() if p == _REFLOW_DOCSTRING)
+        )
+        depths = _bracket_depth_by_row(text)
         out: list[str] = []
         touched = False
         for number, line in enumerate(text.splitlines(), start=1):
@@ -7031,12 +7187,51 @@ def _reflow_long_lines(root: Path) -> tuple[list[str], list[_RefusedLongLine]]:
             if not _over_limit(line, limit):
                 out.append(line)
                 continue
+            if number in doctest_rows:
+                # No limb is available here: a reflow would rewrite an executable example,
+                # and a suppression marker cannot live inside a string literal.
+                refused.append(_RefusedLongLine(
+                    rel, written, _REFUSAL_DOCTEST, line.strip(),
+                ))
+                out.append(line)
+                continue
             proof = proofs.get(number)
-            if proof is None:
+            if proof is None and not parses:
                 refused.append(_RefusedLongLine(
                     rel, written, _REFUSAL_NOT_PROVABLY_SAFE, line.strip(),
                 ))
                 out.append(line)
+                continue
+            if proof is None:
+                # Code. The token has already been rewritten by the citation sweep — this
+                # line names a real, moved file — so the only question left is the layout.
+                # Split the literal if the split can be PROVEN to change nothing; otherwise
+                # emit the project's own suppression and disclose it.
+                split = (
+                    _split_literal_line(line, limit) if depths.get(number, 0) > 0 else None
+                )
+                if split is not None:
+                    # The candidate is built from the ORIGINAL text with only this one
+                    # line replaced — never from `out`, which already carries this run's
+                    # docstring reflows. A docstring reflow legitimately changes the
+                    # module's constants (the newline joins the string), so comparing a
+                    # candidate that contains one would fail the proof for a reason that
+                    # has nothing to do with the split. That is not hypothetical: it is
+                    # what rejected all 13 on the first run of this limb.
+                    source = text.splitlines()
+                    candidate = "\n".join(
+                        [*source[: number - 1], *split, *source[number:]]
+                    )
+                    if _constants_unchanged(text, candidate):
+                        out.extend(split)
+                        touched = True
+                        continue
+                marked = f"{line}{_SUPPRESSION_MARKER}"
+                refused.append(_RefusedLongLine(
+                    rel, written, _MARKER_SUPPRESSION, line.strip(),
+                ))
+                out.append(marked)
+                touched = True
                 continue
             wrapped, refusal = _reflow_line(line, proof, limit)
             if wrapped is None:
@@ -9998,10 +10193,24 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     # the disposition for each is a per-file row in the governed W37-11 record. A count
     # alone is not something a reader can disposition.
     print(
-        f"doc-id.py migrate: {len(result.refused_long_lines)} over-long line(s) refused "
-        "rather than reflowed (no proof a newline there is semantics-free):",
+        f"doc-id.py migrate: {len(result.refused_long_lines)} over-long line(s) not "
+        "reflowed, by class:",
         file=sys.stderr,
     )
+    # By class and including every zero — the doctest class especially. Its expected value
+    # is 0, and the deputy's 08:42 instruction is to PRINT it rather than assert it: a
+    # count nobody prints is a count nobody can notice moving.
+    by_class: dict[str, int] = {
+        _REFUSAL_DOCTEST: 0,
+        _MARKER_SUPPRESSION: 0,
+        _REFUSAL_NOT_PROVABLY_SAFE: 0,
+        _REFUSAL_NO_BREAK_POINT: 0,
+        _REFUSAL_TOOL_DIRECTIVE: 0,
+    }
+    for refused in result.refused_long_lines:
+        by_class[refused.cls] = by_class.get(refused.cls, 0) + 1
+    for cls, count in by_class.items():
+        print(f"  {cls} = {count}", file=sys.stderr)
     for refused in result.refused_long_lines:
         print(
             f"  {refused.path}:{refused.line} [{refused.cls}] {refused.text[:80]}",

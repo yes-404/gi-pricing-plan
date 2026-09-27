@@ -138,33 +138,121 @@ def test_a_docstring_line_over_the_limit_is_reflowed(
     assert "Y = 2" in after
 
 
-def test_a_string_literal_over_the_limit_is_refused_and_left_byte_for_byte(
+def test_a_lengthened_code_literal_is_split_and_the_constants_are_unchanged(
     doc_id: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Positive control, limb two — the limb that makes the first one mean something.
+    """Positive control for the ruled code-literal limb: rewritten, not refused.
 
-    A newline inside a string literal changes the value, so no proof covers it and the
-    line is refused: unchanged on disk, and reported under a named class so it can be
-    disclosed per file into the governed record. If this ever starts passing by the line
-    being reflowed instead, the migration has begun rewriting values.
+    The 08:30 correction, ruled at 08:42: a code literal naming a path this same migration
+    has just moved must carry the NEW path, so refusing the rewrite would leave the program
+    pointing at a file that no longer exists — wrong semantics, not preserved semantics. It
+    is split into adjacent implicitly-concatenated parts, which Python folds at compile
+    time, and `ast.dump` equality proves the module's constants are identical.
+
+    The assertion that matters is the last one: the constant still equals `LONG_PATH`. A
+    split that dropped or duplicated a character would satisfy every other assertion here.
     """
-    body = f'PATH = "{LONG_PATH}"  # a value, not prose\n'
+    # A dict entry, the shape three of the real thirteen actually have: the literal is
+    # inside brackets AND the line carries whitespace, so the linter does report it. A bare
+    # list element would not — a line with nothing to break at is exempt, which is why the
+    # first version of this fixture measured nothing at all.
+    body = f'OWNERS = {{\n    "{LONG_PATH}": ("audit", "auditor"),\n}}\n'
+    target = _tree(tmp_path, "mod.py", body)
+    before = target.read_text(encoding="utf-8")
+
+    changed, refused = doc_id._reflow_long_lines(tmp_path)
+
+    after = target.read_text(encoding="utf-8")
+    assert changed == ["mod.py"]
+    assert refused == [], "a proven split leaves no residue, so nothing is disclosed"
+    assert all(len(line) <= _limit(doc_id, tmp_path) for line in after.splitlines())
+    assert ast.dump(ast.parse(after)) == ast.dump(ast.parse(before))
+    module = ast.parse(after)
+    assigned = module.body[0]
+    assert isinstance(assigned, ast.Assign)
+    assert isinstance(assigned.value, ast.Dict)
+    key = assigned.value.keys[0]
+    assert isinstance(key, ast.Constant)
+    assert key.value == LONG_PATH
+
+
+def test_a_code_literal_that_cannot_be_split_gets_the_marker_and_is_disclosed(
+    doc_id: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The fallback limb the ruling names, for a literal at bracket depth zero.
+
+    Splitting `NAME = "…"` across lines needs parentheses added around the value, which is
+    a structural edit this pass does not make. The ruled fallback is that the tool itself
+    emits the project's own long-line suppression — reproducibly, as part of its declared
+    output, so tree and tool stay in agreement — and discloses the site by name.
+    """
+    body = f'PATH = "{LONG_PATH}"\n'
+    target = _tree(tmp_path, "mod.py", body)
+
+    changed, refused = doc_id._reflow_long_lines(tmp_path)
+
+    after = target.read_text(encoding="utf-8")
+    assert changed == ["mod.py"]
+    assert [(r.path, r.cls) for r in refused] == [
+        ("mod.py", doc_id._MARKER_SUPPRESSION)
+    ]
+    assert doc_id._SUPPRESSION_MARKER.strip() in after
+    # The token is REWRITTEN and intact — the whole point of not refusing it.
+    module = ast.parse(after)
+    assigned = module.body[0]
+    assert isinstance(assigned, ast.Assign)
+    assert isinstance(assigned.value, ast.Constant)
+    assert assigned.value.value == LONG_PATH
+
+
+def test_a_code_literal_under_the_limit_gets_neither_marker_nor_disclosure(
+    doc_id: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The control that catches a fix which sprays the suppression at every literal it sees.
+
+    Required by the ruling as the second limb: a literal that is already within the limit
+    must come back with no marker, no split and no record row.
+    """
+    body = 'SHORT = "docs/rulings/RL-00001-a-short-one.md"\nOTHER = 2\n'
     target = _tree(tmp_path, "mod.py", body)
     before = target.read_text(encoding="utf-8")
 
     changed, refused = doc_id._reflow_long_lines(tmp_path)
 
     assert changed == []
-    assert target.read_text(encoding="utf-8") == before, "a refused line must not be touched"
-    assert [(r.path, r.cls) for r in refused] == [
-        ("mod.py", doc_id._REFUSAL_NOT_PROVABLY_SAFE)
-    ]
-    # The value is intact — the property a reflow here would have destroyed.
-    module = ast.parse(target.read_text(encoding="utf-8"))
-    assigned = module.body[0]
-    assert isinstance(assigned, ast.Assign)
-    assert isinstance(assigned.value, ast.Constant)
-    assert assigned.value.value == LONG_PATH
+    assert refused == []
+    after = target.read_text(encoding="utf-8")
+    assert after == before
+    assert doc_id._SUPPRESSION_MARKER.strip() not in after
+
+
+def test_a_doctest_example_line_is_never_reflowed(
+    doc_id: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The doctest carve-out: where a docstring's value is executable, changing it is not
+    cosmetic.
+
+    A reflow inside an example block would rewrite the example. A suppression marker cannot
+    live inside a string literal either, so such a line has no limb available and is refused
+    outright — left exactly as it is and disclosed under its own class.
+    """
+    body = (
+        '"""Summary.\n'
+        "\n"
+        f'    >>> resolve("{LONG_PATH}")\n'
+        "    True\n"
+        '"""\n'
+    )
+    target = _tree(tmp_path, "mod.py", body)
+    before = target.read_text(encoding="utf-8")
+
+    changed, refused = doc_id._reflow_long_lines(tmp_path)
+
+    after = target.read_text(encoding="utf-8")
+    assert changed == [], "a doctest example must come back untouched"
+    assert after == before
+    assert [r.cls for r in refused] == [doc_id._REFUSAL_DOCTEST]
+    assert f'>>> resolve("{LONG_PATH}")' in after
 
 
 def test_a_refusal_names_the_line_number_in_the_file_that_was_written(
