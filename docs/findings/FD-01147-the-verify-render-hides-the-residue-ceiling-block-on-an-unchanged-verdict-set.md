@@ -2,7 +2,7 @@
 id: FD-1147
 family: finding
 title: The verify render hides the residue-ceiling block on an unchanged verdict set, so a residue-only exit 3 says the change moved no row
-status: active
+status: closed
 created: 2026-09-27
 owner: auditor
 tree: b5fa806241ac9955f276125cdde2d61f39f05b69
