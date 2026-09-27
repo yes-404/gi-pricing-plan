@@ -118,6 +118,13 @@ it: `next` printed 1144 at `271088b0`, 1144 was held by the unmerged `PL-1144`, 
 this ruling (§ Verified first). Whether that meets the event's wording is the deputy's
 reading, and the closure record states it.
 
+**Disposition — Maintainer decision by delegation (deputy, on the maintainer's instruction
+of 2026-09-26 17:02:52 BST), 2026-09-27 11:28:23 BST: MET in substance.** The deputy's
+entry, item 5, quoted verbatim: *"The event's 'a number from `next`' means the sequence's
+next free value; `next` printed 1144 because it cannot see unmerged drafts holding 1144 and
+1145, and 1146 is that value by your collision rule, with `doc-id.py check` rc 0 on the
+tree."* The closure record states that derivation in the (j) row for Open question.
+
 **Context, not ruled here.** In the same entry the deputy adopted the C1-C14 typing as the
 plan proposes it, with four conditions. Two of them bear on this ruling. Condition 1 files
 C9's register row and essay before the deferral. Condition 4 re-measures C3's g2 at the merge
@@ -186,7 +193,7 @@ in the team channel, in these words: *"A draft plan's acceptance is a proposal; 
 acceptance is 'written' when activation freezes the plan, and OQ-1146 lands before that, in
 the same activation PR."* This is the lead's reading, not this ruling's.
 
-### DP-3 — where the record goes, and the remaining references: **(a) adopted, with four amendments**
+### DP-3 — where the record goes, and the remaining references: **(a) adopted, with four amendments; a fifth, by delegation**
 
 The record moves to `docs/process/` as a living Reference document, and
 `_docid.W37_11_RECORD_PATH` is updated. A `docs/REDIRECTS.csv` row is added in the shape of
@@ -208,7 +215,7 @@ unmet, with no event to meet it.
    deputy writes as the maintainer's delegate. **This ruling does not decide** whether each
    row edit after the Work close needs its own `RFC-` + `RL-` pair under that owner row, or
    needs a carve-out. That is a question about the owner table, which is the maintainer's.
-   It is reported to the lead as an open consequence of (a).
+   It is reported to the lead as an open consequence of (a). **Ruled since, by delegation: amendment 5.**
 3. **The redirect row resolves frozen citations, and frozen records are not edited.**
 4. **Every referencing file is placed in one class, and the parts sum to the whole.** At
    `271088b0`, the plan's predicate returns 183 files, and they fall into five classes:
@@ -224,6 +231,26 @@ unmet, with no event to meet it.
 
    The closure record repeats this table at the move tree, with the predicate verbatim, and
    names every file in the "stays" part of the instrument class.
+
+5. **The writer of the rows — Maintainer decision by delegation (deputy, on the
+   maintainer's instruction of 2026-09-26 17:02:52 BST), 2026-09-27 11:28:23 BST.** This
+   is not the decision-maker's ruling. It answers amendment 2's open question. It is quoted
+   verbatim from the lead's channel file (`to-lead.md`, a local handover file that is not in
+   the repository), item 4 of the entry headed *"2026-09-27 11:28:23 BST · deputy · your five
+   items: …"*:
+
+   > after the move, **the residue record's rows are written by the lead of the slice that
+   > discharges or re-measures a residue, citing that slice's closure record or an `RL-`;
+   > the document's frame (header, rules, columns) stays the maintainer's under
+   > `document-ids.md` §1.6's `docs/process/` row.** "The deputy's rows" was true while
+   > the deputy was the only reader of the ceilings; a living table edited on every
+   > discharge cannot wait on a maintainer line.
+
+   The same item names two edits. The first is this amendment, in this file. The second is a
+   one-line pointer at `document-ids.md:161`, *"rows of the residue record: RL-1145 DP-3
+   am. 5"*, which the lead writes in the W37-11 docs PR under the deputy's authorisation by
+   delegation. The decision-maker does not edit `document-ids.md`. (Added 2026-09-27 11:29:20 BST, with the
+   clock read by `TZ=Europe/London date` in the command that wrote this amendment.)
 
 ### DP-4 — what the Work close requires of row (g): **(b) adopted, with two amendments**
 
@@ -290,12 +317,16 @@ population each one counts. It does not choose one of them as "the" reading.
      (DP-4 amendment 2).
   7. **Acceptance item 1 / Task 8** applies DP-5 with its amendment. Element 4's two
      counts are the first instance.
-- **Owed by someone other than this role, and reported to the lead:**
+- **Owed by someone other than this role.** These were reported to the lead, and the deputy
+  gave their dispositions at 2026-09-27 11:28:23 BST (maintainer decision by delegation):
   - the `docs/roadmap.md` §10 decision-gate row for OQ-1146. The `spec-change` skill puts
-    it in the same commit, but the roadmap is not in this role's Tools line;
-  - the register row, and an essay if the auditor judges one is needed, for the render
-    defect found above;
-  - DP-3 amendment 2's owner-table question, which is the maintainer's.
+    it in the same commit, but the roadmap is not in this role's Tools line. **Disposition:**
+    the lead writes it in the activation PR, as a one-line pointer (*"decided, RL-1145
+    DP-2"*);
+  - the register row for the render defect found above. **Disposition:** it becomes carried
+    item **C16**, a named acceptance item. The auditor files its `FD-` register row and
+    essay as one commit in the activation PR, before the code PR that fixes it;
+  - DP-3 amendment 2's owner-table question. **Disposition:** ruled by DP-3 amendment 5.
 
 ## Acceptance — the violation that must become detectable
 
