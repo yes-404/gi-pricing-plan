@@ -36,8 +36,8 @@ const problem = ref<ProblemError | null>(null);
  * consumer below keeps its GLM types, and a non-GLM model renders the header and nothing
  * that would be a lie.
  *
- * The GBM detail view is W6b's (`02` §5.3), together with the transparency artifact that
- * is a GBM's answer to a relativity table (FR-MODEL-34).
+ * The GBM detail view is WK-664's (`02` §5.3), together with the transparency artifact that
+ * is a GBM's answer to a relativity table (FR-133).
  */
 const glmSpec = computed(() => {
   const spec = model.value?.spec ?? null;
@@ -81,7 +81,7 @@ const artifact = ref<TransparencyArtifact | null>(null);
 const transparencyState = ref<"loading" | "ready" | "absent">("loading");
 
 /**
- * FR-MODEL-33 makes the transparency artifact an obligation for a non-GLM Model, so this is
+ * FR-132 makes the transparency artifact an obligation for a non-GLM Model, so this is
  * not asked for a GLM — including a GLM surrogate, which is a GLM. A missing artifact is a
  * state and not a failure: the model simply has none built yet, and this is the only call on
  * the page allowed to fail without reaching the error banner.
@@ -154,7 +154,7 @@ onMounted(async () => {
         response <span class="font-mono">{{ model.spec.response_column }}</span>
       </p>
 
-      <!-- FR-MODEL-96/102. Shared with the diagnostics view, where the same warning has to
+      <!-- FR-137/141. Shared with the diagnostics view, where the same warning has to
            carry more weight: there a surrogate's A/E, residuals and lift are all read as fit
            to experience unless the page says otherwise. -->
       <SurrogateNotice :approximates-model-id="glmSpec?.approximates_model_id ?? null" />
@@ -441,7 +441,7 @@ onMounted(async () => {
         />
       </template>
 
-      <!-- Not for a GLM: FR-MODEL-33 makes the artifact an obligation for the non-GLM arms,
+      <!-- Not for a GLM: FR-132 makes the artifact an obligation for the non-GLM arms,
            and a GLM surrogate is a GLM. -->
       <TransparencyPanel
         v-if="model.spec.model_type !== 'glm'"

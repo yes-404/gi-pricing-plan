@@ -23,7 +23,7 @@ export function listFactors(datasetId?: string): Promise<Factor[]> {
 /**
  * How many pages `listModels` walks before it stops and says so.
  *
- * **OQ-MODEL-40**, and the same shape as `OQ-MODEL-35` one route over: `GET /models`
+ * **OQ-611**, and the same shape as `OQ-605` one route over: `GET /models`
  * filters by `family`, `status`, `cursor` and `limit` — **not** by dataset version — so a
  * view scoped to a Dataset Version must filter in the client, over a paginated list. A
  * filter applied to one page renders "no models" while matches sit on a later page, and an
@@ -86,7 +86,7 @@ export const FACTOR_INTENT_LABELS: Record<FactorIntent, string> = {
 /**
  * The intents the platform will not honour, and **the only fact hand-written here**.
  *
- * `offset` is superseded by FR-MODEL-116 and `diagnostic` by FR-MODEL-120, both on a layer
+ * `offset` is superseded by FR-84 and `diagnostic` by FR-86, both on a layer
  * argument: offsetness and diagnosis are properties of *one fit*, while `Factor.intent`
  * belongs to a Factor defined against a Dataset and reused by every Model Spec naming it.
  * **Both keep their arm in the published contract deliberately**, for artifacts already
@@ -120,7 +120,7 @@ export const MONOTONIC_DIRECTION_LABELS: Record<MonotonicDirection, string> = {
   decreasing: "Decreasing",
 };
 
-/** Create a Factor, or a new version of one (FR-MODEL-7 — a slug that exists versions). */
+/** Create a Factor, or a new version of one (FR-96 — a slug that exists versions). */
 export function createFactor(body: {
   slug: string;
   dataset_id: string;
@@ -201,7 +201,7 @@ export function ebmFit(model: Model): EbmFitResult | null {
 /**
  * Where the model a bound bounds lives, or `null` if this model is not a bound.
  *
- * FR-MODEL-78 requires a bound to share its central model's Model Family, and the platform
+ * FR-199 requires a bound to share its central model's Model Family, and the platform
  * refuses a mismatch before a Job exists (`MODEL_INTERVAL_PAIR_INVALID`, compared on family
  * slug, dataset version, split ref and the factor set). The slug on this model is therefore
  * the central model's slug, and `interval_for.model_version` is its version — both read off
@@ -217,10 +217,10 @@ export function boundCentral(
 }
 
 /**
- * The model's most recent transparency artifact (FR-MODEL-84).
+ * The model's most recent transparency artifact (FR-139).
  *
  * Addressed by **id**, not slug — `02` §5.1 declares `/models/{id}/transparency` — and it is
- * a 404 for a model that has never had one built. FR-MODEL-33 makes the artifact an
+ * a 404 for a model that has never had one built. FR-132 makes the artifact an
  * obligation for a non-GLM model only, so a GLM's 404 is not a state worth rendering and
  * this is not called for one.
  */

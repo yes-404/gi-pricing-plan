@@ -1,3 +1,13 @@
+---
+family: reference
+title: docs/audit/findings — evidence essays for register rows too long to carry inline
+status: active                  # active → retired (§1.2a)
+created: 2026-08-31
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # docs/audit/findings — evidence essays for register rows too long to carry inline
 
 `docs/audit/register.md` is the ledger: one row per open finding, and the row is the
@@ -5,14 +15,14 @@ authority for its **status** (Work item, Phase, Decision — the fields `registe
 and `register-owed.py` parse). This directory is not a second ledger. It holds the
 **evidence essay** — the Concerns-column prose that established a finding — for the rows
 where that essay has grown too long to serve as an index entry at the same time it serves
-as the record of how the finding was established. NT-0015 P4 (`docs/notes/0015-the-
-register-is-a-ledger-evidence-is-a-file.md` §2) is why this directory exists; Ruling 51 and
-Ruling 53 (`docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`) are what bind its shape below.
+as the record of how the finding was established. RFC-894 P4 (`docs/rfcs/RFC-00894-
+the-register-is-a-ledger-evidence-is-a-file.md` §2) is why this directory exists; RL-909 and
+RL-911 (`docs/rulings/RL-00911-q5-file-by-the-f-id-verbatim-the-requirement-id-cannot-name-a-file-and-is-cross-linked-from-inside-it.md`) are what bind its shape below.
 
 ## Naming — the F-id, verbatim, nothing else
 
 A file is named `<F-id>.md`, exactly as `docs/audit/register.md` writes the id in a row's
-own Finding-id cell: `F27.md`, `F-W9-3.md`, `F-W10-1-1.md`. **No suffix, no slug, no
+own Finding-id cell: `../../findings/FD-00932-03-rating-shapes-vs-hand-authored-contracts.md`, `F-W9-3.md`, `F-W10-1-1.md`. **No suffix, no slug, no
 description.** A filename carrying the concerns phrase (`F27-rating-shapes.md`) would go
 stale the first time that phrase is amended, and the register amends daily.
 
@@ -43,8 +53,8 @@ entry rather than an essay.
 
 ## What moves, what stays, and which way the link points
 
-**Every field is reduced to an index-level value; both essays move** (NT-0015 P4, `.claude/
-notes/0015-the-register-is-a-ledger-evidence-is-a-file.md` §2 — *"The register row becomes
+**Every field is reduced to an index-level value; both essays move** (RFC-894 P4, `.claude/
+rfcs/RFC-00894-the-register-is-a-ledger-evidence-is-a-file.md` §2 — *"The register row becomes
 the index entry: id, concerns, work item, phase, decision, owner, status, link"*). Concerns
 is not the only cell that can be an essay: a Decision cell that argues its own reasoning at
 length (F27's is the case that surfaced this) migrates exactly the same way.
@@ -104,7 +114,7 @@ so; the essay is not quietly removed.
 ## When a row migrates
 
 **Existing over-threshold rows migrate opportunistically, at their next substantive
-amendment — never in a bulk sweep, never on a schedule** (Ruling 51). `register-lint.py`
+amendment — never in a bulk sweep, never on a schedule** (RL-909). `register-lint.py`
 prints the residue — the count of unmigrated rows still over the threshold, against the
 corpus size — on every run, as a single aggregate line; that line is what makes "incremental
 migration" a checkable claim rather than an assertion nobody can falsify. A row does not

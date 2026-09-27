@@ -1,6 +1,6 @@
 """data: reference tables and subject purges
 
-FR-DATA-29 requires half-open effective-dated intervals with no overlap per key. That is
+FR-69 requires half-open effective-dated intervals with no overlap per key. That is
 enforced by a PostgreSQL **exclusion constraint** over a daterange, not by application
 code: overlapping intervals mean an "as at" lookup has two answers, and which one a quote
 receives would depend on row order — a rating difference nobody could reproduce.

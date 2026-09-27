@@ -61,7 +61,7 @@ def test_a_dangling_finding_id_is_refused() -> None:
 
 
 def test_a_finding_resolved_only_by_a_closure_record_is_not_flagged() -> None:
-    """`F-W9-3-2`: real, resolved 2026-08-27, recorded in `docs/audit/work/W9-3/README.md`'s
+    """`F-W9-3-2`: real, resolved 2026-08-27, recorded in `docs/closures/CR-00835-work-item-record-w9-3-bundle-compilation.md`'s
     Findings table, never filed to `register.md` (the register holds only open findings), and
     cited from `docs/plans/2026-08-29-w11-slice1-rulings.md`. The check's first version, before
     this fix, flagged this exact citation as dangling -- the incident that forced the redesign.

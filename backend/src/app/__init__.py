@@ -4,5 +4,5 @@
 the `src/` layer is this repo's packaging convention and does not change the import path.
 
 This package may import anything, including both workspace packages. The dependency runs
-one way only: `pricing_core` and `model_schema` never import `app` (ADR-0001, DEP-3).
+one way only: `pricing_core` and `model_schema` never import `app` (ADR-703, DEP-3).
 """

@@ -48,7 +48,7 @@ describe("the interaction suggestion panel", () => {
 
   it("keeps the artifact's order and does not re-rank by ratio", () => {
     // The ratio is evidence beside a candidate, not a competing score. Sorting by it would
-    // make it the admission test FR-MODEL-128 forbids — the ranking is by strength, which
+    // make it the admission test FR-168 forbids — the ranking is by strength, which
     // is the order the artifact stores.
     panel([
       pair("strong", "pair", 0.9, 0.20),
@@ -62,19 +62,19 @@ describe("the interaction suggestion panel", () => {
   });
 
   it("implies no threshold — no cutoff, no verdict, no recommendation", () => {
-    // FR-MODEL-128: ranked evidence, never an admission test. A "recommended" marker or a
+    // FR-168: ranked evidence, never an admission test. A "recommended" marker or a
     // pass/fail colour would be a threshold wearing a different hat, and would undo
-    // FR-MODEL-79's refusal to write a Factor by having the UI effectively do it.
+    // FR-135's refusal to write a Factor by having the UI effectively do it.
     panel([pair("a", "b", 0.9, 0.99), pair("c", "d", 0.1, 0.10)]);
 
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/recommend|significant|passes|fails|threshold|strong enough/i);
-    // And nothing compares a ratio to 1, which OQ-MODEL-38 shows is not the neutral point.
+    // And nothing compares a ratio to 1, which OQ-608 shows is not the neutral point.
     expect(text).not.toMatch(/close to 1|near 1|above 1|below 1/i);
   });
 
   it("says an interaction is authored, never added", () => {
-    // FR-MODEL-79: the platform never writes a Factor into a Model Spec.
+    // FR-135: the platform never writes a Factor into a Model Spec.
     panel([pair("a", "b", 0.5, 0.9)]);
 
     expect(screen.getByText(/authored decision/i)).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe("the interaction suggestion panel", () => {
   });
 
   it("words an all-absent set so it is true of both causes", async () => {
-    // OQ-MODEL-39: a pre-W6b-5a artifact and a genuinely zero-strength one are
+    // OQ-612: a pre-W6b-5a artifact and a genuinely zero-strength one are
     // indistinguishable here. "No structure found" would be a claim about the data that
     // the panel cannot support.
     panel([pair("a", "b", 0.0, null), pair("c", "d", 0.0, null)]);

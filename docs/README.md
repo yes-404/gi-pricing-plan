@@ -1,3 +1,13 @@
+---
+family: reference
+title: Documentation Suite
+status: active                  # active → retired (§1.2a)
+created: 2026-08-14
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # Documentation Suite
 
 This directory is the **primary deliverable of Phase 0** (see `CLAUDE.md` §0 and §9).
@@ -15,7 +25,7 @@ The exit criterion is: *an engineer could start Phase 1 from these documents alo
 | `specs/05-monitoring.md` | Drift, PSI, A/E monitoring, dashboards |
 | `specs/06-governance.md` | RBAC, approvals, audit, model documentation |
 | `specs/07-platform.md` | Auth, jobs, storage, deployment, environments |
-| `workflows/` | Cross-module end-to-end user journeys (wf-01 … wf-05) |
+| `workflows/` | Cross-module end-to-end user journeys (WF-698 … WF-702) |
 | `contracts/` | JSON Schema for artifacts + OpenAPI stubs |
 | `adr/` | Architecture decision records (numbered, immutable once accepted) |
 | `process/` | Team execution process: layered workflow (Project→Phase→Work→Slice), roles, escalation, monitoring loop; `document-ids.md` — the document id standard, one id per governed thing |
@@ -28,7 +38,7 @@ The exit criterion is: *an engineer could start Phase 1 from these documents alo
 ## Reading order for a newcomer
 
 1. `specs/00-overview.md` — context, module map, glossary.
-2. `workflows/wf-01-dataset-to-model.md` — the shortest end-to-end story.
+2. `workflows/WF-00698-dataset-to-approved-model.md` — the shortest end-to-end story.
 3. The module spec you are about to work on.
 4. `contracts/` for the exact shapes referenced by that spec.
 

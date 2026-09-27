@@ -16,12 +16,12 @@ __all__ = ["ArtifactEnvelope"]
 class ArtifactEnvelope(BaseModel):
     """Common fields for every artifact.
 
-    `frozen=True` is the type-level expression of FR-OVR-1: an artifact is immutable once
+    `frozen=True` is the type-level expression of FR-4: an artifact is immutable once
     it leaves `draft`, and corrections create a new version rather than editing in place.
     Making the model mutable "for convenience" would put that invariant back into review
     comments, where it does not survive.
 
-    `extra="forbid"` is deliberate too — ADR-0002 makes this package the single source of
+    `extra="forbid"` is deliberate too — ADR-704 makes this package the single source of
     truth, so a field that is not declared here does not exist, and silently accepting one
     would let a shape drift into being without a contract change.
     """
@@ -35,13 +35,13 @@ class ArtifactEnvelope(BaseModel):
     status: str
     created_at: datetime
     created_by: UUID
-    #: Non-null (OQ-OVR-16, resolved 2026-08-26): an artifact is created and updated in
+    #: Non-null (OQ-553, resolved 2026-08-26): an artifact is created and updated in
     #: the same moment, and a nullable timestamp made the two moments indistinguishable
     #: from "never updated".
     updated_at: datetime
     archived_at: datetime | None = None
     parent_id: UUID | None = None
-    #: The workspace's single currency (OQ-OVR-3, decided 2026-08-14). Recorded on every
+    #: The workspace's single currency (OQ-542, decided 2026-08-14). Recorded on every
     #: artifact even where no money is stored: multi-currency arrives in Phase 4, and
     #: carrying the code from the start makes that an addition of FX effective-dating
     #: rather than a migration of every monetary column in the platform. An artifact that

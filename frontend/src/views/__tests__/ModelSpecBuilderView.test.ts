@@ -113,8 +113,8 @@ describe("the model spec builder", () => {
     const gbm = validateSpec.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(gbm.objective).toEqual({ kind: "builtin", name: "count:poisson" });
     expect(gbm.family).toBeUndefined();
-    // FR-MODEL-32: `categorical_handling` is required with no default — the GBM arm must
-    // name it, and the permissive spec type (OQ-PLAT-16) refuses a body that omits it.
+    // FR-131: `categorical_handling` is required with no default — the GBM arm must
+    // name it, and the permissive spec type (OQ-655) refuses a body that omits it.
     expect(gbm.categorical_handling).toBe("native");
 
     await user.click(screen.getByRole("tab", { name: "EBM" }));
@@ -157,7 +157,7 @@ describe("the model spec builder", () => {
       errors: [{
         field: "spec.glm",
         code: "VALUE_ERROR",
-        message: "Value error, a Poisson model must declare an offset (FR-MODEL-19).",
+        message: "Value error, a Poisson model must declare an offset (FR-111).",
       }],
       trace_id: "abc123",
     }));
@@ -194,7 +194,7 @@ describe("the model spec builder", () => {
   });
 
   it("shows the complexity diagnostic even when the spec is fine", async () => {
-    // FR-MODEL-81: complexity is "a diagnostic by default, and a gate only where a
+    // FR-185: complexity is "a diagnostic by default, and a gate only where a
     // workspace asks for one". Both limits are unset unless a workspace sets them, so in
     // a default workspace no `complexity_limit` problem is raised and `ok` stays true —
     // a block drawn only when `ok` is false would show this never, in exactly the

@@ -1,3 +1,13 @@
+---
+family: reference
+title: Project subagents
+status: active                  # active → retired (§1.2a)
+created: 2026-08-21
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # Project subagents
 
 Delegable specialists for **this** repository, versioned with it. A subagent is not a skill:
@@ -69,7 +79,7 @@ Deliberately unfilled. Half of a work breakdown is naming what must **not** be h
 | **Slice design** — which requirement, what the failing test asserts | `test-driven-development` and `python-test`; the `@pytest.mark.req` marker is a traceability claim, not a formality |
 | **Spec and roadmap edits** | `spec-change`, `adr-write`, `git-hygiene`. No agent here holds `Write` on `docs/` |
 
-## Where they fit in a W5 slice
+## Where they fit in a WK-661 slice
 
 The working rhythm is a slice: one requirement (or a small set) from spec to merged PR.
 Delegation points are steps 4, 5 and 8.
@@ -140,7 +150,7 @@ skills that are deeper and repo-specific.
   Tweedie burning cost, exposure offsets (§7). `risk-manager` is enterprise VaR;
   `fintech-engineer` is payments and PCI. None of the three touches actuarial work.
 - **Ahead of the phase** (`CLAUDE.md` §0). `data-engineer` is Airflow/Spark/dbt and
-  `pipelines/` is deferred to W7; `ml-engineer` and `mlops-engineer` are model serving, which
+  `pipelines/` is deferred to WK-665; `ml-engineer` and `mlops-engineer` are model serving, which
   is Phase 2+. A later phase's capability is a spec change, not an installed agent.
 
 The actuarial gap upstream cannot fill — GLM families, link functions, banding and grouping

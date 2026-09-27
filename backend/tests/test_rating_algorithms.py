@@ -2,7 +2,7 @@
 
 `POST /rating-algorithms` refuses an invalid graph and a broken boundary guard with the
 named error; `GET /rating-algorithms/{slug}@{version}/diff` returns the structural diff
-(FR-RATE-7).
+(FR-219).
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ def _headers(principal, workspace_id) -> dict[str, str]:
     }
 
 
-@pytest.mark.req("FR-RATE-1")
+@pytest.mark.req("FR-212")
 def test_a_valid_algorithm_saves(api_client, workspace_id, principal, grant) -> None:
     asyncio.get_event_loop().run_until_complete(grant("analyst"))
     response = api_client.post(
@@ -82,7 +82,7 @@ def test_a_valid_algorithm_saves(api_client, workspace_id, principal, grant) -> 
     assert response.json()["version"] == 1
 
 
-@pytest.mark.req("FR-RATE-1")
+@pytest.mark.req("FR-212")
 def test_a_cyclic_algorithm_is_refused_at_save_time(
     api_client, workspace_id, principal, grant
 ) -> None:
@@ -101,7 +101,7 @@ def test_a_cyclic_algorithm_is_refused_at_save_time(
     assert response.json()["code"] == "RATING_GRAPH_CYCLIC"
 
 
-@pytest.mark.req("FR-RATE-57")
+@pytest.mark.req("FR-274")
 def test_an_unguarded_division_is_refused_at_save_time(
     api_client, workspace_id, principal, grant
 ) -> None:
@@ -117,7 +117,7 @@ def test_an_unguarded_division_is_refused_at_save_time(
     assert response.json()["code"] == "EXPRESSION_UNGUARDED_DIVISION"
 
 
-@pytest.mark.req("FR-RATE-7")
+@pytest.mark.req("FR-219")
 def test_the_diff_route_names_the_changes(
     api_client, workspace_id, principal, grant
 ) -> None:

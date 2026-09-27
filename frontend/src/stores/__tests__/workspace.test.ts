@@ -48,7 +48,7 @@ describe("the workspace store", () => {
 
     // A stale remembered id (membership revoked) is never sent: with one membership it
     // falls back to that member; with several it falls back to null — the platform
-    // refuses until the user picks (FR-PLAT-65), never someone else's data.
+    // refuses until the user picks (FR-397), never someone else's data.
     sessionStorage.setItem("gi.workspaceId", OTHER);
     respond(200, [membership(FIRST, "Alpha")]);
     await store.load();

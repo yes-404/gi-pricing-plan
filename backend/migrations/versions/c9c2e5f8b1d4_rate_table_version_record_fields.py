@@ -2,7 +2,7 @@
 
 Adds the creation-record columns a `RateTableVersion` needs beyond its declarative
 definition (slice W10-3C): `cells` holds the `BlobRef` of a `storage: parquet`
-version's cells (FR-RATE-62 — above the threshold the cells are addressed by a
+version's cells (FR-232 — above the threshold the cells are addressed by a
 content-addressed blob rather than the `rate_table_cells` rows), and
 `created_by_operation` / `created_by_import` hold the `BulkOperation` (04 §4.4) /
 `ImportVerdict` (03 §4.2) records that name the operation or import which created the
@@ -36,7 +36,7 @@ def upgrade() -> None:
             "cells",
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=True,
-            comment="BlobRef of the cells of a storage:parquet version (FR-RATE-62)",
+            comment="BlobRef of the cells of a storage:parquet version (FR-232)",
         ),
     )
     op.add_column(

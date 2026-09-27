@@ -1,19 +1,19 @@
-"""The approval state machine (`06` §3.2, FR-GOV-9/11/12/13/14/15).
+"""The approval state machine (`06` §3.2, FR-351/353/354/355/356/357).
 
 > **R1 — Separation of duties.** The submitter of an approval request can never be its
 > approver. This is enforced in the backend, not the UI, and cannot be configured away.
 
-One machine for every artifact type (FR-GOV-9). What differs between a custom objective and
+One machine for every artifact type (FR-351). What differs between a custom objective and
 a rating version is the *policy* the machine reads — how many approvers, which roles — not
 the transitions, and certainly not whether the submitter may approve their own work.
 
 Three of the six requirements here are enforced structurally rather than by a check the
 service could forget:
 
-* **Pinning** (FR-GOV-14) — the request names `{type}:{slug}@{version}`, artifacts are
+* **Pinning** (FR-356) — the request names `{type}:{slug}@{version}`, artifacts are
   immutable, so a changed artifact is a different reference and this request does not
   describe it.
-* **Distinct approvers** (FR-GOV-11) — a unique constraint on `(request, approver)`.
+* **Distinct approvers** (FR-353) — a unique constraint on `(request, approver)`.
 * **One open request per artifact version** — a partial unique index. Two open reviews of
   the same thing could reach different answers with nothing to say which one deployment
   obeys.
@@ -62,7 +62,7 @@ __all__ = [
 
 
 class ArtifactResolver(Protocol):
-    """How `submit` learns whether the version a request pins actually exists (FR-GOV-36).
+    """How `submit` learns whether the version a request pins actually exists (FR-386).
 
     A callable the caller supplies rather than a lookup performed here, because resolution
     needs one query per artifact type and DEP-1 forbids `GOV` importing `DATA` through
@@ -81,7 +81,7 @@ class ArtifactResolver(Protocol):
 
 
 async def policy_for(session: AsyncSession, workspace_id: UUID) -> ApprovalPolicy:
-    """The workspace's policy, or the documented defaults (`06` §4.2, FR-GOV-12)."""
+    """The workspace's policy, or the documented defaults (`06` §4.2, FR-354)."""
     row = await session.get(ApprovalPolicyRow, workspace_id)
     if row is None:
         return DEFAULT_POLICY
@@ -113,7 +113,7 @@ async def set_policy(
             "POLICY_BELOW_EVIDENCE_FLOOR",
             "The policy drops below the required evidence floor",
             422,
-            f"`06` §3.3 is a floor and §4.2 may only add to it (FR-GOV-37): {named}. "
+            f"`06` §3.3 is a floor and §4.2 may only add to it (FR-364): {named}. "
             "Submission enforces the union either way, so a policy saved below the floor "
             "would say less than the platform requires — which is the reader of the policy "
             "being misled rather than a gate being opened.",
@@ -153,9 +153,9 @@ async def submit(
     environment: str | None = None,
     resolve: ArtifactResolver | None = None,
 ) -> ApprovalRequestRow:
-    """Submit an artifact for approval: `draft → review` (FR-GOV-9).
+    """Submit an artifact for approval: `draft → review` (FR-351).
 
-    `resolve` closes FR-GOV-36. Omitting it asserts that the caller already **holds** the
+    `resolve` closes FR-386. Omitting it asserts that the caller already **holds** the
     row it names, which is true of the four module submit paths — `modelling`,
     `objectives`, `metrics` and `perils` each load the artifact, check its status, and build
     the reference out of that row's own slug and version, so a lookup here would re-read a
@@ -172,7 +172,7 @@ async def submit(
             "VALIDATION_FAILED",
             "A change summary is required",
             422,
-            "FR-GOV-10: submission requires a change summary. An approval with no "
+            "FR-352: submission requires a change summary. An approval with no "
             "statement of what changed asks the approver to derive it from a diff.",
         )
 
@@ -187,7 +187,7 @@ async def submit(
             "against no policy would be approving against no requirement.",
         )
 
-    # FR-GOV-36, and **after** the policy check on purpose. A `dataset:motor-gb@3` in a
+    # FR-386, and **after** the policy check on purpose. A `dataset:motor-gb@3` in a
     # workspace whose policy says nothing about datasets earns two correct refusals, and
     # "no approval policy for this artifact type" is the one the submitter can act on;
     # answering "no such version" first would send them off to create a version that still
@@ -243,7 +243,7 @@ async def decide(
     decision: DecisionKind,
     comment: str | None = None,
 ) -> ApprovalRequestRow:
-    """Record a decision, enforcing separation of duties (FR-GOV-11, FR-GOV-13)."""
+    """Record a decision, enforcing separation of duties (FR-353, FR-355)."""
     row = await _load(session, workspace_id, request_id)
 
     if row.status != ApprovalStatus.REVIEW.value:
@@ -279,7 +279,7 @@ async def decide(
             "VALIDATION_FAILED",
             "Requesting changes requires a comment",
             422,
-            "FR-GOV-13: the request and the resubmission are both audited, so the "
+            "FR-355: the request and the resubmission are both audited, so the "
             "reviewer's concerns and their resolution are traceable. A bare rejection "
             "leaves the submitter guessing.",
         )
@@ -295,7 +295,7 @@ async def decide(
     try:
         await session.flush()
     except IntegrityError:
-        # FR-GOV-11: "where two approvals are required they must be distinct Principals".
+        # FR-353: "where two approvals are required they must be distinct Principals".
         raise PlatformError(
             "DUPLICATE_APPROVER",
             "You have already decided on this request",
@@ -334,7 +334,7 @@ async def withdraw(
     reason: str,
     artifact_is_live: bool = False,
 ) -> ApprovalRequestRow:
-    """Withdraw before deployment (FR-GOV-15).
+    """Withdraw before deployment (FR-357).
 
     `artifact_is_live` is supplied by the caller because liveness belongs to the owning
     module (`03` for a Rating Version), not here. Governance owns the rule; the deployment
@@ -349,11 +349,11 @@ async def withdraw(
             409,
             "The artifact is live. The correct action is a rollback or a new version — "
             "withdrawing the approval would leave live behaviour with no approval behind "
-            "it (FR-GOV-15).",
+            "it (FR-357).",
         )
     if not reason.strip():
         raise PlatformError(
-            "VALIDATION_FAILED", "Withdrawal requires a reason", 422, "FR-GOV-15."
+            "VALIDATION_FAILED", "Withdrawal requires a reason", 422, "FR-357."
         )
 
     await rbac.require_permission(
@@ -428,7 +428,7 @@ def _require_transition(current: ApprovalStatus, target: ApprovalStatus) -> None
             "APPROVAL_ALREADY_DECIDED",
             "Invalid approval transition",
             409,
-            f"A request in {current.value!r} cannot move to {target.value!r} (FR-GOV-9).",
+            f"A request in {current.value!r} cannot move to {target.value!r} (FR-351).",
         )
 
 
@@ -438,7 +438,7 @@ async def _check_approver_role(
     approver: Principal,
     row: ApprovalRequestRow,
 ) -> None:
-    """FR-GOV-12: the policy names which roles may approve this artifact type."""
+    """FR-354: the policy names which roles may approve this artifact type."""
     policy = await policy_for(session, workspace_id)
     entry = policy.entry_for(row.artifact_type, row.environment)
     if entry is None:
@@ -451,7 +451,7 @@ async def _check_approver_role(
             "Your role may not approve this artifact type",
             403,
             f"{row.artifact_type!r} requires one of {list(entry.approver_roles)} "
-            "(FR-GOV-12).",
+            "(FR-354).",
         )
 
 

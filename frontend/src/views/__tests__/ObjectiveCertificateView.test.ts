@@ -50,7 +50,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("ObjectiveCertificateView", () => {
   /**
-   * FR-MODEL-43 as amended 2026-08-25, and the discharge of FR-OVR-21's fourth carve-out.
+   * FR-152 as amended 2026-08-25, and the discharge of FR-24's fourth carve-out.
    *
    * The amendment binds a surface: a view given `certified_with_findings` must not style,
    * label, group or order a `violated` check as a failure. This asserts all four limbs on a
@@ -75,7 +75,7 @@ describe("ObjectiveCertificateView", () => {
     expect(violated?.className).not.toContain("rose");
   });
 
-  it("shows each check's detail, which FR-MODEL-69 makes a reported finding", async () => {
+  it("shows each check's detail, which FR-148 makes a reported finding", async () => {
     vi.spyOn(api, "getObjectiveCertificate").mockResolvedValue(CERTIFICATE);
     vi.spyOn(api, "getObjective").mockResolvedValue(OBJECTIVE);
     mountView();
@@ -95,7 +95,7 @@ describe("ObjectiveCertificateView", () => {
   });
 
   it("says a certificate short of nine checks is incomplete", async () => {
-    // FR-MODEL-126: nine checks always. Fewer is a failure of the run, not a smaller
+    // FR-158: nine checks always. Fewer is a failure of the run, not a smaller
     // certificate, so the count is stated rather than quietly rendered.
     vi.spyOn(api, "getObjectiveCertificate").mockResolvedValue(CERTIFICATE);
     vi.spyOn(api, "getObjective").mockResolvedValue(OBJECTIVE);
@@ -145,7 +145,7 @@ describe("ObjectiveCertificateView", () => {
   });
 
   it("renders the checks in the artifact's order, never grouped or sorted by status", () => {
-    // The **group** and **order** limbs of the amended FR-MODEL-43. The other two limbs are
+    // The **group** and **order** limbs of the amended FR-152. The other two limbs are
     // covered by the tone and label assertions; these two hold only because the template
     // iterates `checks` directly, and "enforced by construction" is not enforced — a `sort`
     // added later would pass every other test in this file.

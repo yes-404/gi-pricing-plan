@@ -1,7 +1,7 @@
 """Custom Metrics — authoring, certification, submission and blast radius.
 
 `02` §4.13 (FR-MODEL-45, 103, 104, 105, 108). Parallel to `platform.objectives` on
-purpose — FR-MODEL-45 makes a Custom Metric follow "the same lifecycle and grammar as
+purpose — FR-154 makes a Custom Metric follow "the same lifecycle and grammar as
 objectives" — and deliberately not a thin wrapper over it: a metric carries no
 `hessian_strategy`/`hessian_min`, its certificate has no derivative or convexity checks
 (§4.13's four are finiteness, direction_holds, scale_behaviour, smoke_evaluation), and its
@@ -108,7 +108,7 @@ class MetricUsageModel(BaseModel):
 
 
 class MetricUsage(BaseModel):
-    """FR-MODEL-108's blast radius: everything fitted under this metric version."""
+    """FR-162's blast radius: everything fitted under this metric version."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -125,7 +125,7 @@ def to_metric(row: CustomMetricRow, *, usage_count: int | None = None) -> Custom
 
     `usage_count` is a keyword for `to_objective`'s reason: a per-request aggregate the
     *caller* computed once for a whole page, passed in rather than queried here, because a
-    query here would be one round trip per row — the N+1 FR-MODEL-127 names as part of its
+    query here would be one round trip per row — the N+1 FR-167 names as part of its
     requirement. Defaulted to `None`, so every route that does not count says *not asked*
     rather than *nothing uses this*.
     """
@@ -178,7 +178,7 @@ async def create(
 ) -> CustomMetricRow:
     """Create the next version of a Custom Metric, as a `draft` (FR-MODEL-45, 103).
 
-    Versioning is by slug, exactly as an objective's is: FR-MODEL-103 makes editing a
+    Versioning is by slug, exactly as an objective's is: FR-155 makes editing a
     metric a new version requiring fresh certification, and a `GbmSpec.eval_metrics` entry
     fitted last month must still resolve `custom_metric:<slug>@<version>` to the loss it
     early-stopped under.
@@ -283,7 +283,7 @@ async def list_metrics(
     slug: str | None = None,
     after: UUID | None = None,
 ) -> tuple[Sequence[CustomMetricRow], int]:
-    """One page of the workspace's metrics, newest first (FR-MODEL-127).
+    """One page of the workspace's metrics, newest first (FR-167).
 
     Here rather than in the router, `objectives.list_objectives`' reason: none of the three
     artifact modules' routers imports SQLAlchemy at all, and a router that reached for it
@@ -295,7 +295,7 @@ async def list_metrics(
 
     `ix_custom_metrics_slug_status` covers `(workspace_id, slug, status)`, so both filters
     are index-served and no migration accompanies this route. `slug` is an **equality**:
-    FR-MODEL-127 makes this filter what resolves §5.3's `slug@version` addresses against
+    FR-167 makes this filter what resolves §5.3's `slug@version` addresses against
     UUID-only detail routes, and a prefix match would resolve `capped-gamma` to
     `capped-gamma-tail` as well — a wrong artifact, not a wide result.
 
@@ -364,7 +364,7 @@ async def load_certificate(
             "This metric has not been certified",
             404,
             f"No certificate for metric {metric_id}. POST "
-            "/api/v1/custom-metrics/{id}/certify produces one (FR-MODEL-105).",
+            "/api/v1/custom-metrics/{id}/certify produces one (FR-157).",
         )
     return to_certificate(row)
 
@@ -399,7 +399,7 @@ async def resolve_ref(session: AsyncSession, *, workspace_id: UUID, ref: str) ->
 async def certifiable_or_refuse(
     session: AsyncSession, *, workspace_id: UUID, actor: Principal, metric_id: UUID
 ) -> CustomMetricRow:
-    """Answer "may this be certified?" before a Job exists (FR-MODEL-105).
+    """Answer "may this be certified?" before a Job exists (FR-157).
 
     Gated on `model:fit` rather than `model:read`, for `objectives.certifiable_or_refuse`'s
     reason: this queues a compute Job. Refused past `certified` for the same reason too —
@@ -420,7 +420,7 @@ async def certifiable_or_refuse(
             "This metric cannot be certified in its current status",
             409,
             f"{row.slug}@{row.version} is {row.status}. Certification is what `certified` "
-            "rests on (FR-MODEL-105), and re-running it under review or after approval "
+            "rests on (FR-157), and re-running it under review or after approval "
             "would change the evidence a decision was made against. Withdraw the "
             "submission, or create the next version.",
         )
@@ -436,7 +436,7 @@ async def record_certificate(
     result: CertificateResult,
     job_id: UUID | None = None,
 ) -> tuple[CustomMetricRow, MetricCertificateRow]:
-    """Persist a certificate and move the metric's status (FR-MODEL-105).
+    """Persist a certificate and move the metric's status (FR-157).
 
     A `failed` certificate is **recorded and leaves the metric in `draft`**, and a
     re-certification that fails also **clears `certificate_id`** —
@@ -490,7 +490,7 @@ async def submit(
     metric_id: UUID,
     change_summary: str,
 ) -> tuple[CustomMetricRow, ApprovalRequestRow]:
-    """`certified → review` and the approval request it exists to create (FR-MODEL-105).
+    """`certified → review` and the approval request it exists to create (FR-157).
 
     The lifecycle-transition check runs **before** the evidence check, exactly as
     `objectives.submit_for_review`'s does: a `draft` metric is refused here with
@@ -511,7 +511,7 @@ async def submit(
             "VALIDATION_FAILED",
             "Invalid custom metric lifecycle transition",
             409,
-            f"{row.slug}@{row.version} is {row.status}; FR-MODEL-105 reaches `review` "
+            f"{row.slug}@{row.version} is {row.status}; FR-157 reaches `review` "
             "from `certified` only. Certification is the evidence the approval reads.",
         )
     await _require_evidence(session, workspace_id=workspace_id, row=row)
@@ -552,7 +552,7 @@ async def apply_approval_decision(
     actor: Principal,
     request: ApprovalRequestRow,
 ) -> CustomMetricRow | None:
-    """Carry a governance decision into the metric (FR-MODEL-45, `06` FR-GOV-13).
+    """Carry a governance decision into the metric (FR-154, `06` FR-355).
 
     Mirrors `objectives.apply_approval_decision` exactly, including its reason: returns
     `None` for a request about anything else, so `_carry_to_the_artifact` drives every
@@ -561,7 +561,7 @@ async def apply_approval_decision(
     approved under and no screen can explain.
 
     `changes_requested` returns the metric to **`certified`**, not to `draft` — `06`
-    FR-GOV-13's pre-submission state for a certified artifact is `certified`, and a review
+    FR-355's pre-submission state for a certified artifact is `certified`, and a review
     decision does not withdraw a certificate.
     """
     if request.artifact_type != "custom_metric":
@@ -583,7 +583,7 @@ async def apply_approval_decision(
         # Tolerated for the reason a Model's and an objective's are: `POST
         # /approval-requests` accepts any well-formed ref, and a request naming a metric
         # that was never created must still be decidable rather than sitting open forever
-        # (`06` FR-GOV-36).
+        # (`06` FR-386).
         return None
 
     target = _target_status(ApprovalStatus(request.status))
@@ -598,7 +598,7 @@ async def apply_approval_decision(
             "Invalid custom metric lifecycle transition",
             409,
             f"{ref} is {before.value} and the decision would move it to {target.value}, "
-            "which FR-MODEL-45 does not allow.",
+            "which FR-154 does not allow.",
         )
     row.status = target.value
     await session.flush()
@@ -619,7 +619,7 @@ async def apply_approval_decision(
 async def usage(
     session: AsyncSession, *, workspace_id: UUID, actor: Principal, metric_id: UUID
 ) -> MetricUsage:
-    """FR-MODEL-108's blast radius: everything fitted (or early-stopped) under this metric.
+    """FR-162's blast radius: everything fitted (or early-stopped) under this metric.
 
     Asked model→metric, `objectives.usage`'s direction and reason: a Model Spec carries the
     reference, not the other way round.
@@ -675,7 +675,7 @@ async def usage(
 async def usage_counts(
     session: AsyncSession, *, workspace_id: UUID, refs: Sequence[str]
 ) -> dict[str, int]:
-    """Count the Model Specs referencing each metric ref, in one query (FR-MODEL-127).
+    """Count the Model Specs referencing each metric ref, in one query (FR-167).
 
     `eval_metrics` is a JSONB **array**, not a scalar, so a model may name several metrics
     and must be counted once against each. The single-artifact query above uses containment
@@ -726,7 +726,7 @@ def _validated(payload: dict[str, Any], *, template: ObjectiveTemplate) -> Custo
     """`CustomMetric` or a 422 that names what the template actually allows.
 
     The contract's validators carry the explanation — the template's parameter ranges, the
-    applicability rule, FR-MODEL-104's direction — so the refusal quotes them rather than
+    applicability rule, FR-156's direction — so the refusal quotes them rather than
     restating them differently.
     """
     if payload.get("applicability") is None:
@@ -759,14 +759,14 @@ async def _get_or_404(
 async def _require_evidence(
     session: AsyncSession, *, workspace_id: UUID, row: CustomMetricRow
 ) -> None:
-    """`06` R4 and FR-GOV-10 for this artifact type, failing closed on what it cannot check.
+    """`06` R4 and FR-352 for this artifact type, failing closed on what it cannot check.
 
     `objectives._require_evidence` carries the reasoning; the shape is the same and the
     difference is only which kinds are verifiable here. The workspace policy names
     `metric_certificate` for `custom_metric`, the way it names `objective_certificate` for
     `custom_objective` (`model_schema.approvals.DEFAULT_POLICY`).
 
-    **The gap this docstring recorded is closed (2026-08-22, W5's audit-remediation
+    **The gap this docstring recorded is closed (2026-08-22, WK-661's audit-remediation
     slice).** `06` §3.3 gained a Custom Metric row and `EVIDENCE_FLOOR` gained the matching
     `("metric_certificate",)` entry — **in that order**, because adding the entry alone
     would have put the code above its own specification. `below_floor()` now reports a
@@ -801,8 +801,8 @@ async def _require_evidence(
         unknown = [kind for kind in missing if kind not in verifiable]
         detail = (
             f"{row.slug}@{row.version} is missing required evidence: {', '.join(missing)}. "
-            "`06` FR-GOV-19 defines it per artifact type and R4 makes it a condition of "
-            "submission. FR-MODEL-105: certification is what an approver reads."
+            "`06` FR-363 defines it per artifact type and R4 makes it a condition of "
+            "submission. FR-157: certification is what an approver reads."
         )
         if unknown:
             detail += (
@@ -817,7 +817,7 @@ def _target_status(request_status: ApprovalStatus) -> MetricStatus | None:
 
     Mirrors `objectives._target_status` exactly, including its reason: the three
     non-approvals return the metric to **`certified`** rather than to `draft`, the same
-    amendment `06` FR-GOV-13 carries for a Model and for an objective — `draft` is the
+    amendment `06` FR-355 carries for a Model and for an objective — `draft` is the
     pre-submission state, and for a certified metric that is `certified`. Sending it to
     `draft` would say the certificate had been withdrawn, which no review decision does.
     """

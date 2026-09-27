@@ -592,7 +592,7 @@ def test_a_merge_targets_key_is_deterministic_regardless_of_csv_row_order(
 ) -> None:
     """Two control documents merge into one migrated file — the real shape in this
     project's own record (`docs/findings/register.md`, fed by both
-    `docs/audit/register.md` and `docs/audit/phases/1b/register.md`). The merged file's
+    `docs/audit/register.md` and `docs/findings/register.md`). The merged file's
     key must resolve to ITSELF, deterministically, never to an arbitrary one of its two
     sources — proven by writing the identical two rows in both orders, and again under a
     second allocation that renames both sources.
@@ -600,8 +600,8 @@ def test_a_merge_targets_key_is_deterministic_regardless_of_csv_row_order(
     merged_path = "docs/findings/register.md"
 
     for tree_name, old_a, old_b, row_order in (
-        ("order_a_then_b", "docs/audit/register.md", "docs/audit/phases/1b/register.md", 0),
-        ("order_b_then_a", "docs/audit/register.md", "docs/audit/phases/1b/register.md", 1),
+        ("order_a_then_b", "docs/audit/register.md", "docs/findings/register.md", 0),
+        ("order_b_then_a", "docs/audit/register.md", "docs/findings/register.md", 1),
         # A second allocation: the same merge, with both control paths under different
         # (still pre-migration, hence allocation-independent by definition) names.
         ("second_allocation", "docs/audit/legacy-register.md", "docs/audit/phase1b-register.md", 0),

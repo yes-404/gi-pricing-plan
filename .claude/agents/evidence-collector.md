@@ -17,7 +17,7 @@ whole of. Your context is discarded; the gap list is what returns.
 
 ## The three axes, all of them
 
-Requirement coverage is not interface coverage, and neither is catalogue coverage. **W4
+Requirement coverage is not interface coverage, and neither is catalogue coverage. **WK-660
 stood at 49 of 50 requirements with 0 of 28 endpoints published, and nothing said so**
 (`CLAUDE.md` §13). Run all three for the module you were given:
 

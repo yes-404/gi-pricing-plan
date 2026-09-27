@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/regression-suite.schema.json",
   "title": "RegressionSuite and RegressionRun",
-  "description": "Golden quotes plus generated property assertions, run as a promotion gate (03 FR-RATE-43..45, §4.7).",
+  "description": "Golden quotes plus generated property assertions, run as a promotion gate (03 FR-260, FR-261, FR-262, §4.7).",
   "$defs": {
     "RegressionSuite": {
       "type": "object",
@@ -29,7 +29,7 @@
               "tolerance": {
                 "type": "object",
                 "properties": {"money_minor": {"type": "integer", "minimum": 0, "default": 0}},
-                "description": "Default exact for money (FR-RATE-43)."
+                "description": "Default exact for money (FR-260)."
               },
               "note": {"type": ["string", "null"],
                 "description": "Why an expected value was last changed; a golden quote is only updated deliberately."}
@@ -38,7 +38,7 @@
         },
         "properties": {
           "type": "array",
-          "description": "Evaluated over generated contexts (FR-RATE-44).",
+          "description": "Evaluated over generated contexts (FR-261).",
           "items": {
             "type": "object",
             "required": ["name", "assertion"],
@@ -96,14 +96,14 @@
               "cases_run": {"type": "integer", "minimum": 0},
               "counterexample": {
                 "type": ["object", "null"],
-                "description": "Shrunk to a minimal case an actuary can read (FR-RATE-44)."
+                "description": "Shrunk to a minimal case an actuary can read (FR-261)."
               }
             }
           }
         }
       },
       "invariants": [
-        "overall == 'fail' blocks promotion (FR-RATE-43)"
+        "overall == 'fail' blocks promotion (FR-260)"
       ]
     }
   }

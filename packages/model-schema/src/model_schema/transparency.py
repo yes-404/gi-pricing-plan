@@ -2,16 +2,16 @@
 
 Fitting a black box is allowed; pricing with an unexplained one is not. This is the shape
 that makes the second half enforceable: a non-GLM Model carries at least one of these
-before a Rating Version may reference it (FR-MODEL-33).
+before a Rating Version may reference it (FR-132).
 
 **Three corrections to §4.9, made by building it** and recorded in the spec with the same
 date:
 
 * the artifact has an `id`, a `model_id` and a `created_at`. As printed it was a payload,
   not a stored artifact — the same gap `#81` found in the comparison artifact;
-* `approximating_model_id` is populated from 2026-08-19 (FR-MODEL-96, resolving
-  OQ-MODEL-10): the GLM approximation is a first-class Model, with its own spec
-  (`GlmSpec.approximates_model_id`, FR-MODEL-102), `spec_hash`, version and diagnostics.
+* `approximating_model_id` is populated from 2026-08-19 (FR-137, resolving
+  OQ-577): the GLM approximation is a first-class Model, with its own spec
+  (`GlmSpec.approximates_model_id`, FR-141), `spec_hash`, version and diagnostics.
   Artifacts written before that date carry the coefficients and relativities inline
   instead, because the approximation had nowhere else to live — the two eras are
   mutually exclusive, enforced below;
@@ -45,11 +45,11 @@ __all__ = [
 
 
 class TransparencyKind(enum.StrEnum):
-    """FR-MODEL-33's two forms, plus FR-MODEL-37's EBM export.
+    """FR-132's two forms, plus FR-140's EBM export.
 
-    `ebm_shape_functions` is produced by `build_ebm_shape_functions` (2026-08-21, W5,
+    `ebm_shape_functions` is produced by `build_ebm_shape_functions` (2026-08-21, WK-661,
     the EBM slice): an EBM needs no approximation — its shape functions ARE the rateable
-    model, so this kind alone satisfies FR-MODEL-33. Declared before any slice produced
+    model, so this kind alone satisfies FR-132. Declared before any slice produced
     one because the kind is what a reader of an artifact would look for, and adding it
     later would change the meaning of an artifact that listed only two.
     """
@@ -60,7 +60,7 @@ class TransparencyKind(enum.StrEnum):
 
 
 class WorstRegion(BaseModel):
-    """Where the approximation is worst, and over how much of the book (FR-MODEL-36).
+    """Where the approximation is worst, and over how much of the book (FR-136).
 
     The exposure share is required rather than optional. "The approximation is 11 % out for
     young high-mileage drivers" is a different sentence depending on whether that is 0.8 %
@@ -75,7 +75,7 @@ class WorstRegion(BaseModel):
 
 
 class GlmApproximation(BaseModel):
-    """FR-MODEL-34 — a GLM fitted to the GBM's own predictions.
+    """FR-133 — a GLM fitted to the GBM's own predictions.
 
     What turns a GBM into something rateable as a table, so the coefficients and
     relativities are *here*: a fidelity score with no table behind it says the
@@ -85,7 +85,7 @@ class GlmApproximation(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     target: str = "gbm_prediction"
-    #: FR-MODEL-96 — the Model that holds the approximation's table. Set on every artifact
+    #: FR-137 — the Model that holds the approximation's table. Set on every artifact
     #: written from 2026-08-19; `None` on artifacts written before, which carry the table
     #: inline instead.
     approximating_model_id: UUID | None = None
@@ -95,7 +95,7 @@ class GlmApproximation(BaseModel):
     #: clamping a negative R² to zero would report a useless approximation as a mediocre one.
     r_squared: float = Field(le=1.0)
     deviance_explained: float = Field(le=1.0)
-    #: **Legacy era.** Populated only on artifacts written before FR-MODEL-96 was built
+    #: **Legacy era.** Populated only on artifacts written before FR-137 was built
     #: (2026-08-19), where the table had nowhere else to live. New artifacts name a Model
     #: and leave these empty; the validator below refuses the mixture.
     coefficients: tuple[Coefficient, ...] = ()
@@ -105,7 +105,7 @@ class GlmApproximation(BaseModel):
 
     @model_validator(mode="after")
     def _the_table_is_in_exactly_one_place(self) -> Self:
-        """FR-MODEL-96: a model reference, or an inline table, never both and never neither.
+        """FR-137: a model reference, or an inline table, never both and never neither.
 
         Both is two answers to "where are the coefficients?", and the reader who takes the
         wrong one is reading a table that was not approved. Neither is a fidelity score with
@@ -115,7 +115,7 @@ class GlmApproximation(BaseModel):
         if inline == (self.approximating_model_id is not None):
             raise ValueError(
                 "a GLM approximation carries exactly one table: `approximating_model_id` "
-                "naming the Model that holds it (FR-MODEL-96), or the inline "
+                "naming the Model that holds it (FR-137), or the inline "
                 "`coefficients`/`relativities` of an artifact written before 2026-08-19."
             )
         return self
@@ -125,25 +125,25 @@ class ShapContribution(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     factor: str
-    #: Mean |contribution| on the raw score scale, exposure-weighted (FR-MODEL-35).
+    #: Mean |contribution| on the raw score scale, exposure-weighted (FR-134).
     value: float = Field(ge=0.0)
 
 
 class ShapInteraction(BaseModel):
-    """One candidate interaction pair, and what it is worth (FR-MODEL-79).
+    """One candidate interaction pair, and what it is worth (FR-135).
 
     A **suggestion**, never an addition. The platform never writes a Factor into a Model
     Spec: an interaction becomes rateable only as an explicit `interaction` Factor carrying
     an intent and a written rationale, and the model document names it as an authored
     decision. Auto-detected structure entering a rating basis unreviewed is the overfitting
-    route FR-MODEL-79 refuses.
+    route FR-135 refuses.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     pair: tuple[str, str]
     strength: float = Field(ge=0.0)
-    #: FR-MODEL-128 — `strength` recomputed on the holdout partition, over the in-sample
+    #: FR-168 — `strength` recomputed on the holdout partition, over the in-sample
     #: value. Near `1` the structure survives out of sample; a collapse toward `0` says the
     #: pair is a fitting artefact, which is the one thing an actuary needs before spending a
     #: Factor on it.
@@ -157,13 +157,13 @@ class ShapInteraction(BaseModel):
     #: and a per-site setting holds at one and not another.
     #:
     #: **Not a threshold.** The requirement is explicit that this is ranked evidence and
-    #: never an admission test, so FR-MODEL-79's refusal to write a Factor is untouched by
-    #: it. `OQ-MODEL-38` records why `1` is not the unbiased null it reads as.
+    #: never an admission test, so FR-135's refusal to write a Factor is untouched by
+    #: it. `OQ-608` records why `1` is not the unbiased null it reads as.
     holdout_strength_ratio: float | None = Field(default=None, ge=0.0)
 
 
 class ShapSummary(BaseModel):
-    """FR-MODEL-35 — TreeSHAP over the booster, on a reproducible sample."""
+    """FR-134 — TreeSHAP over the booster, on a reproducible sample."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -180,7 +180,7 @@ class ShapSummary(BaseModel):
 
 
 class EbmShapeFunctions(BaseModel):
-    """FR-MODEL-37's export: the model itself, as tables.
+    """FR-140's export: the model itself, as tables.
 
     A JSON document, deliberately: the artifact row stores a JSONB payload and the
     tables ARE the model — this block is a pointer to the document rather than a
@@ -192,10 +192,10 @@ class EbmShapeFunctions(BaseModel):
 
 
 class TransparencyArtifact(BaseModel):
-    """The persisted artifact (`02` §4.9, FR-MODEL-33..37).
+    """The persisted artifact (`02` §4.9, FR-132, FR-133, FR-134, FR-136, FR-140).
 
     Immutable once written, like every other artifact here: it is the evidence a Rating
-    Version's approval was granted against (FR-MODEL-36), and evidence that can change
+    Version's approval was granted against (FR-136), and evidence that can change
     after the decision is not evidence.
     """
 
@@ -208,11 +208,11 @@ class TransparencyArtifact(BaseModel):
     glm_approximation: GlmApproximation | None = None
     shap_summary: ShapSummary | None = None
     ebm_shape_functions: EbmShapeFunctions | None = None
-    #: FR-MODEL-36. Prose, deliberately: how well the approximation reproduces the model,
+    #: FR-136. Prose, deliberately: how well the approximation reproduces the model,
     #: **where it does not**, and the exposure share of that region. A number cannot say
     #: the second thing, and the second thing is what an approver needs.
     fidelity_statement: str = Field(min_length=1)
-    #: FR-MODEL-52's monotonicity check, carried upward. `None` where the model declared no
+    #: FR-174's monotonicity check, carried upward. `None` where the model declared no
     #: constrained factor — distinct from `False`, which would say a constraint was checked
     #: and failed.
     monotonicity_verified: bool | None = None
@@ -231,12 +231,12 @@ class TransparencyArtifact(BaseModel):
 
     @model_validator(mode="after")
     def _an_artifact_explains_something(self) -> Self:
-        """FR-MODEL-33: *at least one* form. An artifact with no block is a
+        """FR-132: *at least one* form. An artifact with no block is a
         fidelity statement about nothing — and it would satisfy R3."""
         if not self.kinds:
             raise ValueError(
                 "a transparency artifact carries neither a GLM approximation, a SHAP "
-                "summary nor an EBM shape-functions export (FR-MODEL-33). It would "
+                "summary nor an EBM shape-functions export (FR-132). It would "
                 "satisfy R3 while explaining nothing."
             )
         return self

@@ -3,7 +3,7 @@
 The URL comes from `Settings`, never from `alembic.ini` — a committed connection string is
 both a secret-handling problem (R3) and a way to migrate the wrong database.
 
-FR-PLAT-35: migrations run as an explicit pre-deploy step, never automatically on
+FR-435: migrations run as an explicit pre-deploy step, never automatically on
 application start. Nothing here is invoked by `create_app`.
 """
 

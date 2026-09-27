@@ -71,7 +71,7 @@ the reverse of what it was asked.
    docstring. That test compares field *names*; where a field exists on both sides and only one
    side bounds it, the names agree and it sees nothing. Measured 2026-08-24: 70 dotted paths
    carry a compared keyword on exactly one side, **18 of them at paths where the field exists on
-   both sides**. Nothing reports those. `OQ-PLAT-10` owns the general question — every layer of
+   both sides**. Nothing reports those. `OQ-649` owns the general question — every layer of
    the guard is scoped to the intersection of its two sides — so a new comparison should state
    which half of its axis it can and cannot see rather than inherit this sentence's old promise.
 4. **Resolve every disagreement it finds** before the slice ends. A red guard at the end of a
@@ -246,7 +246,7 @@ to carry — that those three were a genuine gap — is retired rather than rewo
 set it named is empty.
 
 **What replaced it is a harder finding, and it is a design question rather than a gap
-(`OQ-PLAT-10`).** Every layer of this guard is scoped to the **intersection** of its two
+(`OQ-649`).** Every layer of this guard is scoped to the **intersection** of its two
 sides: `test_generated_and_authored_agree_on_scalar_types` intersects paths,
 `test_generated_and_authored_agree_on_scalar_constraints` intersects paths and then keywords,
 and `test_every_eligible_schema_is_compared` — the completeness check — defines an eligible
@@ -276,7 +276,7 @@ hold the cases.
 **What arm attribution did *not* close is arm-level *existence*.** W32-1b delivers type and bound
 disagreement on paths shared by both sides *within an arm*; a field that leaves the shared set
 entirely — moved between arms so that no arm holds it on both sides — is still reported by
-nothing, because every layer intersects. That is `OQ-PLAT-10`, which names the boundary
+nothing, because every layer intersects. That is `OQ-649`, which names the boundary
 explicitly, and it is open.
 
 ## Verified
@@ -300,7 +300,7 @@ existed to compare against — the same shape of failure as `source_level_stats`
 same way. **Second, the guard's reach is narrower than "what it does not reach" made it sound.**
 Every layer intersects its two sides, so one-sidedness is not something the guard is quiet about
 by omission; it is outside the guard's scope by construction, and no test can distinguish a
-deliberate one-sided shape from an accidental one. That is `OQ-PLAT-10`. The lesson to carry is
+deliberate one-sided shape from an accidental one. That is `OQ-649`. The lesson to carry is
 the same one this file already learned, applied one level up: a guard's *scope* is a claim like
 any other, and "every eligible schema is compared" is only as strong as the definition of
 eligible — which here is the intersection, so the completeness check cannot see the gap it

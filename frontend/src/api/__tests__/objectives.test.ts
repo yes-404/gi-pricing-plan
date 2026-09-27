@@ -28,7 +28,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("listObjectives", () => {
   it("follows the cursor and returns every page's objectives", () => {
-    // The case OQ-MODEL-35 is about: applicability is filtered client-side, so an
+    // The case OQ-605 is about: applicability is filtered client-side, so an
     // objective on page two is one the picker would otherwise never see.
     stubPages([
       { items: [objective("a")], next_cursor: "c1" },

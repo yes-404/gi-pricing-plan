@@ -1,3 +1,13 @@
+---
+family: reference
+title: GI Pricing Plan
+status: active                  # active → retired (§1.2a)
+created: 2026-08-30
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # GI Pricing Plan
 
 An open-source general insurance pricing platform for the UK/EU market — an open
@@ -29,7 +39,7 @@ are public: the open-findings register
 - [`docs/specs/`](docs/specs/) — the specification suite the code is written against,
   starting with [`docs/specs/00-overview.md`](docs/specs/00-overview.md) for the system
   context, module map, and glossary.
-- [`docs/adr/`](docs/adr/) — architecture decision records for choices that constrain
+- [`docs/adrs/`](docs/adrs/) — architecture decision records for choices that constrain
   more than one module.
 - [`docs/workflows/`](docs/workflows/) — the cross-module user journeys the specs
   implement.

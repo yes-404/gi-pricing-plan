@@ -1,8 +1,8 @@
 """The named failures modelling raises, and the platform error codes they carry.
 
 `02` §5.1 owns a catalogue of error codes; `pricing-core` cannot import the backend's
-registry (ADR-0001), so each exception carries its code as data and the backend maps it to
-an HTTP problem. FR-MODEL-23's principle generalises beyond fitting: a failure a caller can
+registry (ADR-703), so each exception carries its code as data and the backend maps it to
+an HTTP problem. FR-115's principle generalises beyond fitting: a failure a caller can
 act on is a **named** one, never a library traceback and never a silently degraded result.
 
 They live here rather than beside the code that raises them because a banding is applied
@@ -62,7 +62,7 @@ class ObjectiveError(ModellingError):
 class NonFiniteDerivativeError(ObjectiveError):
     """A gradient or hessian went NaN/inf during a fit (`OBJECTIVE_NONFINITE_DERIVATIVE`).
 
-    FR-MODEL-48 requires the abort to name the boosting **round** and the **offending input
+    FR-165 requires the abort to name the boosting **round** and the **offending input
     range**, because "the objective produced NaN" is the one diagnosis that tells an author
     nothing: every non-finite derivative looks alike, and the input that produced it is the
     only thing that distinguishes a bad parameter from a bad domain from a bad y.

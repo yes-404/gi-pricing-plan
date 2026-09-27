@@ -1,4 +1,4 @@
-"""Custom validation rules and rule sets, and their governance (`01` §4.5, FR-DATA-21/22).
+"""Custom validation rules and rule sets, and their governance (`01` §4.5, FR-50/51).
 
 A rule is what a report's verdict *means*. So the governance here is not ceremony: a rule
 edited after the fact silently rewrites the meaning of every report that cites it, and a
@@ -89,7 +89,7 @@ def to_schema(row: ValidationRuleRow) -> ValidationRule:
 async def seed_builtin_rules(
     session: AsyncSession, workspace_id: UUID, *, authored_by: UUID
 ) -> list[ValidationRuleRow]:
-    """Create `01` §4.4's catalogue in a workspace if it is absent (FR-DATA-53).
+    """Create `01` §4.4's catalogue in a workspace if it is absent (FR-68).
 
     `rbac.seed_builtin_roles`' sibling, idempotent for the same reason: it runs on paths
     that may be retried, and `uq_validation_rule_version` turns a second run into an
@@ -111,7 +111,7 @@ async def seed_builtin_rules(
     this workspace's governance, it is the workspace arriving with the catalogue every
     workspace has. `validation_rule.created` records the decisions.
 
-    Writes with `flush()`, never `commit()` — FR-GOV-22's rule that a platform write shares
+    Writes with `flush()`, never `commit()` — FR-370's rule that a platform write shares
     the caller's transaction.
     """
     existing = {
@@ -138,7 +138,7 @@ async def seed_builtin_rules(
             severity=rule.severity.value,
             body={
                 "target": {},
-                # FR-DATA-54: the catalogue carries a built-in's default thresholds, so the
+                # FR-56: the catalogue carries a built-in's default thresholds, so the
                 # seeded row publishes them rather than leaving every threshold a literal in
                 # `pricing-core` that no caller can read. Copied, not aliased — the catalogue
                 # is a process-wide constant and this dict is about to be handed to the ORM.
@@ -178,14 +178,14 @@ async def create_rule(
     rationale: str = "",
     settings: Any = None,
 ) -> ValidationRuleRow:
-    """Author a rule into `draft` (FR-DATA-21 step 1).
+    """Author a rule into `draft` (FR-50 step 1).
 
     Editing an approved rule is not an update — it allocates the next version, leaving the
     approved one exactly as the reports that cite it described.
     """
     if check == SQL_CHECK:
         await _refuse_sql_unless_enabled(session, workspace_id=workspace_id, settings=settings)
-        # OQ-DATA-3, decided 2026-08-14: Admin-authored, **instead of** the Analyst or
+        # OQ-559, decided 2026-08-14: Admin-authored, **instead of** the Analyst or
         # Actuary who authors every other rule (`01` §4.5 step 5) — not in addition to
         # them. Requiring both would leave no built-in role able to author one, which
         # makes a decided capability unreachable rather than restricted.
@@ -269,7 +269,7 @@ async def create_rule(
 async def _refuse_sql_unless_enabled(
     session: AsyncSession, *, workspace_id: UUID, settings: Any
 ) -> None:
-    """`features.sql_validation_check_enabled`, which defaults to off (OQ-DATA-3).
+    """`features.sql_validation_check_enabled`, which defaults to off (OQ-559).
 
     A workspace that never needs the escape hatch never carries its risk. Checked when the
     rule is *authored* rather than only when it runs: a draft `sql` rule sitting in a
@@ -289,7 +289,7 @@ async def _refuse_sql_unless_enabled(
             "The sql validation check is disabled in this workspace",
             409,
             "`01` §4.5 gates the sql escape hatch behind "
-            "`features.sql_validation_check_enabled`, which defaults to off (OQ-DATA-3). "
+            "`features.sql_validation_check_enabled`, which defaults to off (OQ-559). "
             "The declarative checks cover the great majority of real rules; this one is "
             "deliberately expensive to reach for.",
         )
@@ -309,7 +309,7 @@ async def load_rule(
 async def resolve_artifact_ref(
     session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
 ) -> bool:
-    """`validation_rule:<slug>@<version>` → does that version exist? (`06` FR-GOV-36.)
+    """`validation_rule:<slug>@<version>` → does that version exist? (`06` FR-386.)
 
     `False`, having done nothing, for a reference that is not this module's — the contract
     `api/approvals.py`'s fan-out is built on.
@@ -347,7 +347,7 @@ async def attach_dry_run(
     rule_id: UUID,
     report_id: UUID,
 ) -> ValidationRuleRow:
-    """Record that this rule executed against a real version (FR-DATA-21 step 2)."""
+    """Record that this rule executed against a real version (FR-50 step 2)."""
     row = await load_rule(session, workspace_id=workspace_id, rule_id=rule_id)
     row.dry_run_report_id = report_id
     await session.flush()
@@ -357,7 +357,7 @@ async def attach_dry_run(
 async def submit_for_review(
     session: AsyncSession, *, workspace_id: UUID, actor: Principal, rule_id: UUID
 ) -> ValidationRuleRow:
-    """`draft` → `review`, and only with a dry run attached (FR-DATA-21 steps 2 and 3)."""
+    """`draft` → `review`, and only with a dry run attached (FR-50 steps 2 and 3)."""
     row = await load_rule(session, workspace_id=workspace_id, rule_id=rule_id)
     if row.status != DRAFT:
         raise PlatformError(
@@ -372,7 +372,7 @@ async def submit_for_review(
             "RULE_NOT_APPROVED",
             "A rule must be dry-run before it can be submitted",
             409,
-            "FR-DATA-21 step 2 attaches the dry-run result to the approval request. "
+            "FR-50 step 2 attaches the dry-run result to the approval request. "
             "Without it the approver is reading JSON and guessing what it selects.",
         )
 
@@ -394,7 +394,7 @@ async def submit_for_review(
 async def approve_rule(
     session: AsyncSession, *, workspace_id: UUID, actor: Principal, rule_id: UUID
 ) -> ValidationRuleRow:
-    """`review` → `approved`, by someone other than the author (FR-DATA-21 step 3)."""
+    """`review` → `approved`, by someone other than the author (FR-50 step 3)."""
     row = await load_rule(session, workspace_id=workspace_id, rule_id=rule_id)
     await rbac.require_permission(
         session,
@@ -414,7 +414,7 @@ async def approve_rule(
             "SUBMITTER_CANNOT_APPROVE",
             "A rule cannot be approved by its author",
             409,
-            "`01` §4.5 step 3 and FR-GOV-11. A rule decides whether data may be modelled "
+            "`01` §4.5 step 3 and FR-353. A rule decides whether data may be modelled "
             "on; one person deciding both what it says and that it is right is not a "
             "review.",
         )
@@ -438,7 +438,7 @@ async def approve_rule(
 async def rule_set_for(
     session: AsyncSession, *, workspace_id: UUID, dataset_id: UUID, slug: str
 ) -> ValidationRuleSet:
-    """The dataset's current rule set (FR-DATA-22)."""
+    """The dataset's current rule set (FR-51)."""
     row = (
         await session.execute(
             select(ValidationRuleSetRow)
@@ -456,7 +456,7 @@ async def rule_set_for(
             "This dataset has no rule set",
             404,
             f"Dataset {slug!r} has no Validation Rule Set. One must be defined before the "
-            "version can be validated (FR-DATA-16).",
+            "version can be validated (FR-45).",
         )
     return await _to_rule_set(session, row, workspace_id=workspace_id)
 
@@ -544,7 +544,7 @@ async def replace_rule_set(
     members: Sequence[RuleSetMember],
     reference_dataset_version_id: UUID | None = None,
 ) -> ValidationRuleSet:
-    """Create the next rule-set version (FR-DATA-22).
+    """Create the next rule-set version (FR-51).
 
     Never an in-place edit. A Validation Report records the exact `rule_set_version` it
     ran; mutating a set would change what every past report was a report *of*, and "it
@@ -586,7 +586,7 @@ async def replace_rule_set(
             409,
             f"Not approved: {', '.join(unapproved)}. A rule set is what a version is "
             "validated against, so a draft rule in one would gate modelling on something "
-            "nobody reviewed (FR-DATA-21).",
+            "nobody reviewed (FR-50).",
         )
 
     # `01` §4.3: an override may only *raise*. `RuleSetEntry` enforces it too, but that
@@ -605,7 +605,7 @@ async def replace_rule_set(
             409,
             f"Would lower fail to warn: {', '.join(lowered)}. Deciding a failure is "
             "acceptable is a change to the rule, and goes through the rule's own review "
-            "(FR-DATA-21) where someone sees it.",
+            "(FR-50) where someone sees it.",
         )
 
     version = 1 + (

@@ -11,19 +11,19 @@ description: Write Python in this repo's uv workspace — where code belongs, th
 |---|---|---|
 | `packages/model-schema` | Every shape crossing a module boundary or persisted as an artifact | **Pydantic only** |
 | `packages/pricing-core` | All actuarial computation | Polars, NumPy/SciPy, glum, XGBoost, LightGBM, ZEN bindings, `model_schema` — **no** web/DB/queue client |
-| `backend/` *(from W2)* | Orchestration, persistence, API | Anything, including both packages |
+| `backend/` *(from WK-658)* | Orchestration, persistence, API | Anything, including both packages |
 
 `.importlinter` enforces the boundaries and CI runs `lint-imports`. **Do not work around a
 contract failure by adding the module to the allow-list** — the failure means the code is
-in the wrong package. ADR-0001's value is that a reviewer can reproduce a number without
+in the wrong package. ADR-703's value is that a reviewer can reproduce a number without
 the platform, and one convenience import ends that.
 
 ### Proving that promise — how a reviewer actually runs `pricing-core` standalone
 
-OQ-OVR-4, decided 2026-08-14: `pricing-core` is **not published to PyPI in Phase 1**, since
+OQ-545, decided 2026-08-14: `pricing-core` is **not published to PyPI in Phase 1**, since
 publishing would force semver stability on an API still being discovered. From Phase 2 it
 publishes as `0.x` with an explicit no-stability-guarantee notice. Until then this is the
-only way to exercise ADR-0001's promise, and it is worth running whenever a contract is
+only way to exercise ADR-703's promise, and it is worth running whenever a contract is
 edited — a boundary that holds under `lint-imports` can still fail at import time.
 
 ```bash
@@ -108,7 +108,7 @@ Add it to the *package's* `pyproject.toml`, not the root. Then check it against
 `.importlinter` — if `pricing-core` needs something the contract forbids, the answer is
 almost always that the code belongs in `backend/`.
 
-Every runtime dependency must be **Apache-2.0 compatible** (OQ-OVR-2 decided; NFR-OVR-11).
+Every runtime dependency must be **Apache-2.0 compatible** (OQ-541 decided; NFR-464).
 AGPL and SSPL are out, transitively.
 
 **A wheel that installs is not a wheel that imports.** `uv sync` resolves and unpacks; it
@@ -157,12 +157,12 @@ number of pence, so accepting it would teach callers that floats are fine here.
 
 **`Decimal` needs help to be safe.** A bare `Decimal` field generates
 `anyOf: [{"type":"number"}, {"type":"string"}]`, and the number branch admits the lossy
-binary form FR-OVR-7 forbids — a payload could satisfy the generated contract while
+binary form FR-10 forbids — a payload could satisfy the generated contract while
 violating the spec. Use `DecimalStr`, which pins a `PlainSerializer` to `str` **and**
 overrides `__get_pydantic_json_schema__` to declare `type: string`. Verified: research F7.
 
 **Artifacts are frozen.** `model_config = ConfigDict(frozen=True, extra="forbid")` is
-FR-OVR-1 as a type. `extra="forbid"` matters just as much — ADR-0002 makes this package the
+FR-4 as a type. `extra="forbid"` matters just as much — ADR-704 makes this package the
 single source of truth, so an undeclared field does not exist.
 
 **Discriminated unions** survive to JSON Schema as `oneOf` + `discriminator`, and a
@@ -188,7 +188,7 @@ would turn a tampered row into a validation error at read time rather than a cor
 
 **`model_copy(update=...)` does not re-run validators.** It is a shallow copy with a dict
 merge, not `model_validate`, so a cross-field `model_validator(mode="after")` never sees the
-updated object. `GlmSpec._a_surrogate_says_so_in_both_places` (FR-MODEL-102) refuses a spec
+updated object. `GlmSpec._a_surrogate_says_so_in_both_places` (FR-141) refuses a spec
 where `approximates_model_id` is set without `response_column == SURROGATE_RESPONSE_COLUMN`,
 or the reverse — an **iff** across two fields. Building a surrogate's spec by copying the
 source GBM's spec and patching both fields with `model_copy(update={...})` would produce an
@@ -203,7 +203,7 @@ invariant: **`model_copy` is safe only for fields the invariant does not touch.*
 
 `mypy --strict` over `packages/`. Prefer `Protocol` over ABCs for injected collaborators —
 `ProgressCallback` is defined in `pricing-core` and *implemented* by the backend, so the
-dependency points inward and ADR-0001 holds while FR-PLAT-8/9 are still satisfied.
+dependency points inward and ADR-703 holds while FR-400/401 are still satisfied.
 
 `from __future__ import annotations` at the top of every module.
 
@@ -214,33 +214,33 @@ the spec, and a comment restating the code is noise that rots.
 
 ## Verified
 
-2026-08-19 — W5, the GLM approximation as a Model. The `model_copy(update=...)` rule above,
+2026-08-19 — WK-661, the GLM approximation as a Model. The `model_copy(update=...)` rule above,
 found while writing `approximation_spec()`: an earlier draft built the surrogate's `GlmSpec`
 by copying the GBM's spec and patching `approximates_model_id` and `response_column` with
 `model_copy(update={...})`, which produced an object satisfying neither iff-branch of
 `_a_surrogate_says_so_in_both_places` and raised nothing, because the validator never re-ran.
 Rewritten as a plain constructor call.
 
-2026-08-18 — W5, peril structures. The `computed_field` round-trip rule, found when
+2026-08-18 — WK-661, peril structures. The `computed_field` round-trip rule, found when
 `load_structure` re-validated a stored `Reconciliation` and `extra="forbid"` rejected the
 artifact's own `ratio` and `status`. The round-trip test that would have caught it is now
 in `packages/model-schema/tests/test_perils.py`.
 
-2026-08-17 — W5's `wf-01` journey slice: the LightGBM abort above, found when a monotone
+2026-08-17 — WK-661's `WF-698` journey slice: the LightGBM abort above, found when a monotone
 constraint on a banded factor met `categorical_handling: "native"` for the first time. The
 procedure that found it is the one written above — the pair alone, in a throwaway script.
 
 2026-08-14 — re-verified on the rebuilt instance. Full gate green after
 `uv sync --all-packages --dev`: ruff clean, mypy 7 files clean, import-linter 3 kept /
-0 broken, 21 tests pass. The ADR-0001 contract was re-proven non-trivial by injecting
+0 broken, 21 tests pass. The ADR-703 contract was re-proven non-trivial by injecting
 `import fastapi` into `pricing_core.money` (2 kept, 1 broken) and reverting.
 
-2026-08-14 — W1. `MoneyMinor` strictness, `DecimalStr` schema pinning, and envelope
+2026-08-14 — WK-657. `MoneyMinor` strictness, `DecimalStr` schema pinning, and envelope
 freezing are all covered by passing tests, including negative ones asserting a float is
 refused and that the generated schema carries no `anyOf`. The `DecimalStr` rule exists
 because research F7 measured the permissive union on a bare `Decimal`; without it the
-contract would have admitted exactly what FR-OVR-7 forbids.
+contract would have admitted exactly what FR-10 forbids.
 
-2026-08-17 — W5, the GBM arm. The `libgomp1` rule and the `int | float` coercion rule are
+2026-08-17 — WK-661, the GBM arm. The `libgomp1` rule and the `int | float` coercion rule are
 both from building `fit_gbm`: the first stopped `import lightgbm` outright on this machine,
 the second failed inside both backends with two different error messages for one cause.

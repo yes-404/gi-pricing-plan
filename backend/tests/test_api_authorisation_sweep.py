@@ -1,4 +1,4 @@
-"""Every published operation refuses an anonymous caller and a role-less one (FR-GOV-2).
+"""Every published operation refuses an anonymous caller and a role-less one (FR-343).
 
 `00` §5.1 makes authorisation per-route: each handler declares
 `Annotated[Caller, Depends(requires(Perm.X))]`. A route that omits it, or downgrades it to
@@ -22,7 +22,7 @@ from model_schema import new_uuid7
 #: scrapers that hold no identity: a liveness check that needed a credential could not run
 #: before authentication was working, which is when it matters most.
 #:
-#: `07` §5.1 also publishes the OIDC bootstrap values unauthenticated (FR-PLAT-66): the
+#: `07` §5.1 also publishes the OIDC bootstrap values unauthenticated (FR-394): the
 #: browser cannot start the login it needs a credential for without first learning the
 #: issuer and `client_id` — the endpoint is the channel, not a second identity.
 OPEN_BY_DESIGN = {
@@ -44,12 +44,12 @@ NO_PERMISSION_REQUIRED = {
     # "Who am I and what may I do" — a caller with no roles must be able to ask, and the
     # answer is the empty permission set.
     "/api/v1/me",
-    # FR-PLAT-63's second amendment (PR #237): the list a first selection is made from is
+    # FR-396's second amendment (PR #237): the list a first selection is made from is
     # deliberately unscoped — a principal that needs to choose has no selection yet, so no
     # workspace exists to hold a role check. A role is always role-in-a-workspace.
     "/api/v1/me/workspaces",
     # Facts about the repository, no workspace data, and only where development identity
-    # exists at all (FR-PLAT-53).
+    # exists at all (FR-408).
     "/api/v1/demo/guide",
     # `06`'s deliberate choice, stated at `app/api/approvals.py`: submitting is *asking*,
     # and the module owning the artifact already decided whether this principal could
@@ -89,7 +89,7 @@ def _concrete(path: str) -> str:
     return filled
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 def test_every_operation_refuses_an_anonymous_caller(api_client: TestClient) -> None:
     unauthenticated: list[str] = []
     for method, path in _operations(api_client):
@@ -99,11 +99,11 @@ def test_every_operation_refuses_an_anonymous_caller(api_client: TestClient) -> 
     assert not unauthenticated, "reachable without a credential:\n" + "\n".join(unauthenticated)
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_every_operation_refuses_a_caller_holding_no_roles(
     api_client: TestClient, membership, workspace_id
 ) -> None:
-    """A principal with no grants is authenticated and entitled to nothing (FR-PLAT-4).
+    """A principal with no grants is authenticated and entitled to nothing (FR-390).
 
     `403`, not `404` and not `422`: the permission check must resolve before the handler
     touches an id or a body, or the refusal leaks whether the id exists.
@@ -144,7 +144,7 @@ async def test_every_operation_refuses_a_caller_holding_no_roles(
     assert not wrong_refusal, "refused for the wrong reason:\n" + "\n".join(wrong_refusal)
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_the_permission_free_routes_really_are_permission_free(
     api_client: TestClient, membership, workspace_id
 ) -> None:
@@ -171,7 +171,7 @@ async def test_the_permission_free_routes_really_are_permission_free(
         assert api_client.get(_concrete(path)).status_code == 401, path
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 def test_every_operation_declares_the_permission_it_enforces(api_client: TestClient) -> None:
     """The static half, and the stronger one.
 
@@ -201,7 +201,7 @@ def test_every_operation_declares_the_permission_it_enforces(api_client: TestCli
     assert not unguarded, "no permission declared:\n" + "\n".join(unguarded)
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 def test_the_sweep_covers_the_whole_published_surface(api_client: TestClient) -> None:
     """A sweep that silently enumerated nothing would pass every assertion above."""
     operations = _operations(api_client)

@@ -46,7 +46,7 @@ These specs are long, and a whole-file read is the failure mode this agent exist
 
 ## Two rules that shape what counts
 
-- **`model-schema` is the single source of truth** (`CLAUDE.md` §2, ADR-0002). A shape
+- **`model-schema` is the single source of truth** (`CLAUDE.md` §2, ADR-704). A shape
   hand-written anywhere else — backend, frontend, a test fixture, a spec's §4 — is a finding
   in its own right, separately from whether it currently matches.
 - **Money is integer minor units, or Decimal in the rating path — never float** (§7). A

@@ -8,7 +8,7 @@ export type DemoWorkstream = components["schemas"]["DemoWorkstream"];
 export type DemoEndpoint = components["schemas"]["DemoEndpoint"];
 
 /**
- * What is worth driving by hand (FR-PLAT-54).
+ * What is worth driving by hand (FR-409).
  *
  * **404 where the demo entrance is not enabled** — the surface does not exist outside a
  * development identity, which is a different thing from a request that failed, and the

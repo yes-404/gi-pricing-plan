@@ -17,14 +17,14 @@ of how it was reached and as the entry point for planning 1a/1b.
 | Criterion | Status | Note |
 |---|---|---|
 | Every module spec meets the §5 ten-section standard | **done** | All 8 specs verified by the audit script |
-| All five workflow documents complete | **done** | wf-01 … wf-05, each with failure paths and traceability |
+| All five workflow documents complete | **done** | WF-698 … WF-702, each with failure paths and traceability |
 | Contracts drafted | **done** | 31 JSON Schemas covering every persisted artifact, + OpenAPI stub |
 | `open-questions.md` **gated** (criterion amended 2026-08-14) | **done** | 46 questions, every one assigned to the phase that needs it (`roadmap.md` §10): 7 `decided`, 6 `deferred`, 33 `open` but none gating Phase 1a. Each has options, trade-offs, and a recommendation |
 | `skills-map.md` covers every tech dependency | **done** | Every stack component cited by a spec has a row |
 
 **Remaining before Phase 1a can start: nothing.** Licence (Apache-2.0), job queue (Celery),
 large-loss treatment (fit time) and ingestion mode (full snapshots) are all decided. Three
-decisions remain before Phase 1b: OQ-MODEL-1, OQ-MODEL-5, OQ-OVR-5.
+decisions remain before Phase 1b: OQ-573, OQ-579, OQ-546.
 
 ---
 
@@ -67,7 +67,7 @@ the specs define, plus a 32-path OpenAPI 3.1 stub.
 Where a rule can be expressed in schema it is (`if`/`then`, `required`, `pattern`); the
 rest sit in an `invariants` annotation citing their requirement ID. From Phase 1 all of
 these become generated output from `packages/model-schema`
-([ADR-0002](adr/0002-model-schema-single-source-of-truth.md)), with CI failing on drift.
+([ADR-704](adrs/ADR-00704-model-schema-is-the-single-source-of-truth-for-shared-shapes.md)), with CI failing on drift.
 
 ---
 
@@ -78,14 +78,14 @@ bare question.
 
 | Module | Open | Deferred | Highest-consequence |
 |---|---|---|---|
-| OVR | 5 | 0 | OQ-OVR-2 licence choice — blocks nothing technically, blocks contribution socially |
-| DATA | 6 | 0 | OQ-DATA-1 where large-loss capping lives |
-| MODEL | 6 | 1 | OQ-MODEL-1 whether expression objectives ship in Phase 1 |
-| RATE | 4 (+1 decided) | 1 | ~~OQ-RATE-1~~ resolved; now **OQ-RATE-2 `exact`-mode GBM latency** — see §5 |
-| OPT | 4 | 2 | OQ-OPT-4 demand-model endogeneity |
-| MON | 4 | 1 | OQ-MON-1 whether A/E comes from traces or a full re-score |
-| GOV | 5 | 1 | OQ-GOV-3 whether Admin can override a flag |
-| PLAT | 5 | 0 | OQ-PLAT-1 Celery vs a transactional Postgres queue |
+| OVR | 5 | 0 | OQ-541 licence choice — blocks nothing technically, blocks contribution socially |
+| DATA | 6 | 0 | OQ-557 where large-loss capping lives |
+| MODEL | 6 | 1 | OQ-573 whether expression objectives ship in Phase 1 |
+| RATE | 4 (+1 decided) | 1 | ~~OQ-614~~ resolved; now **OQ-615 `exact`-mode GBM latency** — see §5 |
+| OPT | 4 | 2 | OQ-624 demand-model endogeneity |
+| MON | 4 | 1 | OQ-627 whether A/E comes from traces or a full re-score |
+| GOV | 5 | 1 | OQ-635 whether Admin can override a flag |
+| PLAT | 5 | 0 | OQ-640 Celery vs a transactional Postgres queue |
 
 Deferred items name their target phase.
 
@@ -100,21 +100,21 @@ unchanged, which is the case for having run them rather than reasoned about them
 1. **~~S1 — ZEN boundary.~~ CLOSED 2026-08-14.** Engine arithmetic is exact, but the
    **Python binding has no decimal type** — a `Decimal` is rejected and everything returns
    as `float`. F1's "workaround not required" was wrong; money now crosses as integer minor
-   units (FR-RATE-56). Also found `log`/`sqrt` don't exist in ZEN, so the old FR-RATE-57
+   units (FR-273). Also found `log`/`sqrt` don't exist in ZEN, so the old FR-274
    guarded nothing, while **division by zero returns `null` silently** — rewritten.
 
 
 2. **~~S2 — `exact`-mode GBM latency.~~ CLOSED 2026-08-14.** **Comfortably viable**: p99
-   1.09 ms for 500 trees × 60 features, ~2 % of the 50 ms budget. OQ-MODEL-3 stays a real
-   design choice. `nthread=1` per request beats all-cores at the tail (NFR-RATE-14). A
-   sustained-load test moves to Phase 2 W11.
+   1.09 ms for 500 trees × 60 features, ~2 % of the 50 ms budget. OQ-575 stays a real
+   design choice. `nthread=1` per request beats all-cores at the tail (NFR-501). A
+   sustained-load test moves to Phase 2 WK-671.
 
 
 3. **~~S3 — LightGBM `init_score`.~~ CLOSED 2026-08-14.** The assumption was **half wrong**.
    Symmetric at fit time — both backends include the offset in the raw score handed to a
    custom objective. **Asymmetric at scoring time**: `Booster.predict()` has no offset
    parameter at all, so a scoring path ported from XGBoost's API silently omits the offset
-   and under-predicts by exactly `log(exposure)`. Fixed as FR-MODEL-72 (F13).
+   and under-predicts by exactly `log(exposure)`. Fixed as FR-129 (F13).
 
 ---
 
@@ -126,11 +126,11 @@ Track A ran on 2026-08-14 with seven executable spikes against real library vers
 
 | Outcome | Count | Detail |
 |---|---|---|
-| Open questions closed | 3 | OQ-RATE-1, OQ-RATE-2, OQ-OPT-6 |
-| **Spec defects found and fixed** | **5** | Certification would have rejected every valid piecewise objective (F3); a silent GBM scoring failure was unspecified (F5); the dual-backend scoring path assumed a symmetry that does not hold (F13); the ZEN binding cannot carry decimals, contradicting an earlier conclusion (F14); FR-RATE-57 guarded functions that do not exist while real division-by-zero returned null silently (F14) |
+| Open questions closed | 3 | OQ-614, OQ-615, OQ-626 |
+| **Spec defects found and fixed** | **5** | Certification would have rejected every valid piecewise objective (F3); a silent GBM scoring failure was unspecified (F5); the dual-backend scoring path assumed a symmetry that does not hold (F13); the ZEN binding cannot carry decimals, contradicting an earlier conclusion (F14); FR-274 guarded functions that do not exist while real division-by-zero returned null silently (F14) |
 | **Fabricated figure corrected** | **1** | An invented convexity percentage presented as a measurement (F4) |
 | Designs confirmed | 5 | SymPy derivation, `base_margin` semantics, glum standard errors, pandera Polars, Pydantic discriminated unions |
-| New requirements | 11 | FR-MODEL-68..72, FR-RATE-56..59, NFR-RATE-13/14 |
+| New requirements | 11 | FR-147, FR-148, FR-149, FR-126, FR-129, FR-273, FR-274, FR-275, FR-276, NFR-502/501 |
 
 The two defects are the return on this work: both would have surfaced in Phase 1 as
 confusing failures rather than as design decisions.
@@ -139,9 +139,9 @@ confusing failures rather than as design decisions.
 
 | If you are… | Read |
 |---|---|
-| New to the project | `specs/00-overview.md` → `workflows/wf-01` → the spec you will work on |
+| New to the project | `specs/00-overview.md` → `workflows/WF-698` → the spec you will work on |
 | Researching the stack (the maintainer's next step) | `skills-map.md` §7 research priority, then each component's row |
-| Planning Phase 1a/1b | `workflows/wf-01`, `specs/01` (1a), `specs/02` (1b), and the timing tables at the end of each workflow |
+| Planning Phase 1a/1b | `workflows/WF-698`, `specs/01` (1a), `specs/02` (1b), and the timing tables at the end of each workflow |
 | Assessing risk | This page §5, then `open-questions.md` |
 | Implementing a module | That module's spec end to end, plus `docs/contracts/` for the shapes |
 
@@ -163,7 +163,7 @@ duplicate keys; every `$ref` resolves including cross-file `$defs` pointers.
 **Structural checks (9–14)**, added 2026-08-14 because bookkeeping passing is not the same
 as the suite hanging together: cross-spec section references resolve; no error code is
 claimed by two modules unless annotated as re-raised; module dependencies respect DEP-1 and
-its DEP-1a carve-out; `*_minor` money fields are never fractional; no module glossary
+its DEP-537 carve-out; `*_minor` money fields are never fractional; no module glossary
 redefines a term `00-overview.md` already owns; and every module is exercised by at least
 one workflow above a coverage floor.
 

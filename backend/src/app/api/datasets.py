@@ -2,7 +2,7 @@
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/sources` | Register a Source (FR-DATA-1) |
+| `POST` | `/sources` | Register a Source (FR-26) |
 | `GET` | `/sources` | List sources, credentials redacted |
 | `POST` | `/datasets` | Create a Dataset with its Data Dictionary |
 | `GET` | `/datasets` | List / filter |
@@ -13,7 +13,7 @@
 | `GET` | `/datasets/{slug}/versions/{version}` | Version detail |
 | `PATCH` | `/datasets/{slug}/versions/{version}/schema` | Correct inferred schema while `draft` |
 
-**A Source never returns its credentials** (FR-DATA-1, `07` FR-PLAT-25). The row holds a
+**A Source never returns its credentials** (FR-26, `07` FR-425). The row holds a
 reference to a platform secret and nothing else, so there is no redaction step that could
 be forgotten — the response shape simply has nowhere to put one.
 """
@@ -103,7 +103,7 @@ class SourceCreate(BaseModel):
     slug: Annotated[str, Field(pattern=_SLUG)]
     kind: SourceKind
     config: dict[str, Any] = Field(default_factory=dict)
-    #: A *reference* to a platform secret, never the secret (FR-DATA-1, FR-PLAT-25). The
+    #: A *reference* to a platform secret, never the secret (FR-26, FR-425). The
     #: field is a string key into the secret store; a caller who posts an actual password
     #: here has stored a password in a database column, which is why the name says `_ref`.
     credentials_secret_ref: str | None = None
@@ -176,7 +176,7 @@ class SchemaCorrection(BaseModel):
 async def create_source(
     body: SourceCreate, caller: WriteDatasets, database: DatabaseDep
 ) -> SourceView:
-    """FR-DATA-1."""
+    """FR-26."""
     async with database.unit_of_work() as session:
         row = await service.create_source(
             session,
@@ -356,7 +356,7 @@ async def _latest_versions(
 
     `DISTINCT ON` rather than `max(version)`: the status must be the status *of that
     version*, and an aggregate over `version` cannot carry a correlated column. Still one
-    query — FR-DATA-50 budgets one *further* aggregate for the whole change, and the
+    query — FR-55 budgets one *further* aggregate for the whole change, and the
     status rides on the query that was already here.
 
     The list rendered an empty "latest version" column for every row: it called
@@ -387,7 +387,7 @@ async def _latest_versions(
 async def _last_validated(
     session: AsyncSession, dataset_ids: list[UUID]
 ) -> dict[UUID, tuple[int, datetime]]:
-    """The most recently validated version of each dataset, and when (FR-DATA-50).
+    """The most recently validated version of each dataset, and when (FR-55).
 
     Not necessarily the latest version, which is the whole point of the field: a Dataset
     whose v12 is a fresh draft above a validated v11 was last usable at v11's validation,
@@ -438,7 +438,7 @@ async def get_dataset(slug: str, caller: ReadDatasets, database: DatabaseDep) ->
             session, workspace_id=caller.workspace_id, slug=slug
         )
         # The same two aggregates the list runs, over one id: a detail page that showed
-        # nothing where the list showed a date would be its own defect (FR-DATA-50).
+        # nothing where the list showed a date would be its own defect (FR-55).
         latest = await _latest_versions(session, [row.id])
         validated = await _last_validated(session, [row.id])
         owner_names = await service.resolve_owner_names(session, {row.owner_id})
@@ -458,7 +458,7 @@ async def get_dataset(slug: str, caller: ReadDatasets, database: DatabaseDep) ->
 async def patch_dataset_owner(
     dataset_id: UUID, body: OwnerUpdate, caller: ReadDatasets, database: DatabaseDep
 ) -> Dataset:
-    """FR-DATA-51's change path: Admin or the current owner, audited.
+    """FR-82's change path: Admin or the current owner, audited.
 
     A PATCH with one settable field rather than a bespoke `/owner` sub-resource, so the
     next Dataset metadata field has somewhere to go.
@@ -466,7 +466,7 @@ async def patch_dataset_owner(
     Gated on `dataset:read`, which is weaker than it looks: `set_owner` applies the real
     rule. `dataset:write` would be **wrong** here — the `admin` role does not hold it
     (`BUILTIN_ROLES` gives admin the read set plus the five `admin:*` permissions), so
-    gating on write would refuse FR-DATA-51's Admin arm before the service ever ran.
+    gating on write would refuse FR-82's Admin arm before the service ever ran.
 
     By id and not by slug, unlike the neighbouring routes: ownership is a fact about the
     Dataset rather than about a name, and a slug is the one piece of a Dataset a future
@@ -498,7 +498,7 @@ async def patch_dataset_owner(
 async def put_dictionary(
     slug: str, body: DictionaryUpdate, caller: WriteDatasets, database: DatabaseDep
 ) -> Dataset:
-    """A replace, audited with before and after (NFR-DATA-8)."""
+    """A replace, audited with before and after (NFR-472)."""
     async with database.unit_of_work() as session:
         row = await service.update_dictionary(
             session,
@@ -525,7 +525,7 @@ async def start_ingestion(
     response: Response,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
-    """**202** with the Job (`00` §5.1 R1, FR-DATA-2).
+    """**202** with the Job (`00` §5.1 R1, FR-27).
 
     The version row is created by the worker, not here: a version that exists before its
     data does is a version something can be fitted on. What this returns is the Job, and
@@ -667,7 +667,7 @@ async def get_version_by_id(
     position `02` §5.3's factor workbench is in: its route is `/factors/:datasetVersionId`
     and it needs the `dataset_id` a Banding is keyed to.
 
-    Added 2026-08-15 (W5), by building the view that needed it.
+    Added 2026-08-15 (WK-661), by building the view that needed it.
     """
     async with database.session() as session:
         row = await session.get(DatasetVersionRow, version_id)
@@ -682,7 +682,7 @@ async def get_version_by_id(
 
 
 def _version_schema(row: DatasetVersionRow) -> DatasetVersion:
-    """The row as its published contract — OQ-DATA-13 (c) made the object forms typed.
+    """The row as its published contract — OQ-568 (c) made the object forms typed.
 
     The row's columns are the flat envelope plus a `period_from`/`period_to` pair and a
     `derived_from` JSON that also carries the ingestion `recipe`; the model's `period_covered`
@@ -752,7 +752,7 @@ async def patch_schema(
     database: DatabaseDep,
     request: Request,
 ) -> DatasetVersion:
-    """FR-DATA-4: correctable **while `draft` only**.
+    """FR-29: correctable **while `draft` only**.
 
     Once a version leaves `draft` its schema is part of what was validated and what a model
     may be fitted on. Editing it afterwards would silently change the meaning of a report
@@ -767,7 +767,7 @@ async def patch_schema(
                 "DATASET_VERSION_IMMUTABLE",
                 "The schema can only be corrected while the version is draft",
                 409,
-                f"This version is {row.status!r}. FR-DATA-4 allows schema correction in "
+                f"This version is {row.status!r}. FR-29 allows schema correction in "
                 "`draft` only — a later edit would change what an existing validation "
                 "report was about.",
             )

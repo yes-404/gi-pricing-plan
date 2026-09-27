@@ -1,14 +1,14 @@
 """Custom objectives — the artifact, its template catalogue, and its certificate.
 
-`02` §3.7 (FR-MODEL-38…48, 68…70, 75/76), §4.5 the catalogue, §4.7 the certificate.
+`02` §3.7 (FR-142…48, 68…70, 75/76), §4.5 the catalogue, §4.7 the certificate.
 
-**Phase 1 ships `template` objectives only** (FR-MODEL-75, OQ-MODEL-1 decided 2026-08-15).
+**Phase 1 ships `template` objectives only** (FR-150, OQ-573 decided 2026-08-15).
 A template is a parameterised standard loss whose gradient and hessian `pricing-core`
 implements analytically; it carries no user code, and the artifact carries no expression.
 `ObjectiveKind.EXPRESSION` exists here because `POST /custom-objectives` must be able to
 *name* what it is refusing (`OBJECTIVE_KIND_NOT_ENABLED`) — but `CustomObjective` refuses to
 be constructed with it, because the fields an expression objective needs (`loss`, the
-derived gradient and hessian, the parameter declarations of §4.6) are not built. FR-MODEL-87
+derived gradient and hessian, the parameter declarations of §4.6) are not built. FR-207
 forbids declaring a shape and leaving it structurally empty: a null that can never be
 anything else teaches that null means *nothing* rather than *not yet*.
 
@@ -19,7 +19,7 @@ Three shapes here are worth reading before using them.
   template whose valid `p` range lived in the fitting code could be persisted invalid and
   fail a phase later, at the fit, where the message is about NumPy.
 
-* **Applicability may be narrowed by the author and never widened.** FR-MODEL-44 makes
+* **Applicability may be narrowed by the author and never widened.** FR-153 makes
   applicability the artifact's declaration, and §4.5 makes it the *template's*. Both are
   true: the template states where its derivatives are valid, and an author may restrict a
   particular objective further. Widening would claim validity `pricing-core` never
@@ -28,7 +28,7 @@ Three shapes here are worth reading before using them.
 * **The certificate splits the way every other computed artifact here splits.**
   `pricing-core` computes a `CertificateResult`; the platform gives it an identity and
   attaches it to an objective version as an `ObjectiveCertificate`. `BacktestSummary` /
-  `Backtest` and `ComparisonSummary` / `ModelComparison` are the same split, for ADR-0001's
+  `Backtest` and `ComparisonSummary` / `ModelComparison` are the same split, for ADR-703's
   reason: `pricing-core` does not allocate ids, read a clock, or know about database rows.
   §4.7 shows the certificate flat, with `custom_objective_id` beside `checks`; it is
   composed here instead, and §4.7 carries a dated note saying so.
@@ -75,10 +75,10 @@ __all__ = [
 
 
 class ObjectiveKind(enum.StrEnum):
-    """FR-MODEL-38's two kinds. Only `template` is constructible in Phase 1."""
+    """FR-142's two kinds. Only `template` is constructible in Phase 1."""
 
     TEMPLATE = "template"
-    #: FR-MODEL-75: Phase 2, behind `expression_objectives_enabled`. Declared so the API can
+    #: FR-150: Phase 2, behind `expression_objectives_enabled`. Declared so the API can
     #: refuse it by name rather than as a malformed body.
     EXPRESSION = "expression"
 
@@ -101,13 +101,13 @@ class ObjectiveTemplate(enum.StrEnum):
 
 
 class ObjectiveBackend(enum.StrEnum):
-    """FR-MODEL-44's backend vocabulary.
+    """FR-153's backend vocabulary.
 
     `glm` is declared and no shipped template names it: a custom objective on the GLM arm
-    needs `GlmSpec.custom_objective_ref`, which FR-MODEL-87 records as absent entirely
-    and owned by W30 — Phase 2, not this one. The owner was reassigned on 2026-08-22 and
+    needs `GlmSpec.custom_objective_ref`, which FR-207 records as absent entirely
+    and owned by WK-690 — Phase 2, not this one. The owner was reassigned on 2026-08-22 and
     confirmed on 2026-08-25 to cover this field as well as its `Model` twin, which
-    records what it declares. The member exists because FR-MODEL-44 names it and an author
+    records what it declares. The member exists because FR-153 names it and an author
     narrowing applicability should not be able to name a backend the enum has never heard
     of — not because anything reaches it today.
     """
@@ -118,7 +118,7 @@ class ObjectiveBackend(enum.StrEnum):
 
 
 class HessianStrategy(enum.StrEnum):
-    """FR-MODEL-43's three declared treatments of a negative hessian.
+    """FR-152's three declared treatments of a negative hessian.
 
     Always declared, never inferred: boosting divides by the hessian, so what happens where
     it is negative decides what the fit *is*, and a default chosen inside the fitting code
@@ -135,7 +135,7 @@ class HessianStrategy(enum.StrEnum):
 
 
 class ObjectiveStatus(enum.StrEnum):
-    """FR-MODEL-46's lifecycle."""
+    """FR-163's lifecycle."""
 
     DRAFT = "draft"
     CERTIFIED = "certified"
@@ -144,13 +144,13 @@ class ObjectiveStatus(enum.StrEnum):
     DEPRECATED = "deprecated"
 
 
-#: FR-MODEL-46's lifecycle as data, following `VALID_MODEL_TRANSITIONS`. Two edges are not
+#: FR-163's lifecycle as data, following `VALID_MODEL_TRANSITIONS`. Two edges are not
 #: in the requirement's arrow chain and are here for stated reasons:
 #:
 #: * **`certified → draft`.** `POST /{id}/certify` may be run again — after a library
 #:   upgrade, or on a wider sampling grid — and a re-run that comes back `failed` must not
 #:   leave the objective claiming a certification it no longer has.
-#: * **`review → certified`, never `review → draft`.** `06` FR-GOV-13 returns a
+#: * **`review → certified`, never `review → draft`.** `06` FR-355 returns a
 #:   `changes_requested` artifact to `draft`; here that would claim the certificate had been
 #:   withdrawn, which a review decision does not do. The pre-submission state of a
 #:   certified objective is `certified`, exactly as a Model's is `fitted`.
@@ -170,7 +170,7 @@ TERMINAL_OBJECTIVE_STATUSES: Final[frozenset[ObjectiveStatus]] = frozenset(
 
 #: The statuses a Model Spec may *fit* with. Not the same set as the one R4 requires for the
 #: model to reach `approved` — that is `approved` alone. A `draft` objective has no
-#: certificate, so its derivatives are unproven and FR-MODEL-42 has not been satisfied; a
+#: certificate, so its derivatives are unproven and FR-146 has not been satisfied; a
 #: `deprecated` one has been withdrawn. Everything between is fittable, and the model that
 #: results simply cannot be approved until the objective is.
 FITTABLE_OBJECTIVE_STATUSES: Final[frozenset[ObjectiveStatus]] = frozenset(
@@ -224,7 +224,7 @@ class TemplateParameter(BaseModel):
 
 
 class YDomain(BaseModel):
-    """The valid range of the response for an objective (FR-MODEL-44).
+    """The valid range of the response for an objective (FR-153).
 
     §4.6's example writes `{"min_inclusive": 0}`; the exclusive bounds are added here
     because the Gamma family needs `y > 0` and an inclusive zero is the one value at which
@@ -289,7 +289,7 @@ class YDomain(BaseModel):
 
 
 class Applicability(BaseModel):
-    """Where an objective may be used (FR-MODEL-44).
+    """Where an objective may be used (FR-153).
 
     A Model Spec pairing an objective with a response outside `responses`, a backend outside
     `backends`, or no offset where one is required, is refused **at spec validation** —
@@ -436,9 +436,9 @@ TEMPLATE_APPLICABILITY: Final[dict[ObjectiveTemplate, Applicability]] = {
 
 
 class CustomObjective(BaseModel):
-    """A named, versioned, reusable objective (FR-MODEL-38, §4.5).
+    """A named, versioned, reusable objective (FR-142, §4.5).
 
-    Versioned rather than edited: FR-MODEL-46 makes editing an approved objective a new
+    Versioned rather than edited: FR-163 makes editing an approved objective a new
     version requiring fresh certification, and a Model referencing
     `custom_objective:<slug>@<version>` must keep meaning the loss it was fitted under.
     """
@@ -458,7 +458,7 @@ class CustomObjective(BaseModel):
     hessian_min: float = Field(default=1e-6, gt=0.0)
     status: ObjectiveStatus = ObjectiveStatus.DRAFT
     description: str | None = None
-    #: The certificate this objective's current status rests on (FR-MODEL-42). Set when a
+    #: The certificate this objective's current status rests on (FR-146). Set when a
     #: certification run comes back anything but `failed`, and enforced below: a status past
     #: `draft` without one would be a claim with no evidence behind it.
     certificate_id: UUID | None = None
@@ -466,10 +466,10 @@ class CustomObjective(BaseModel):
     #: afterwards — the trail from an approved objective to the decision behind it.
     approval_request_id: UUID | None = None
 
-    #: How many Model Specs reference this objective version (FR-MODEL-127) — the library
+    #: How many Model Specs reference this objective version (FR-167) — the library
     #: row's count, and `Dataset.latest_version_status`'s kind of field: **derived per
     #: request and stored on no row**. A stored counter would be a second answer to
-    #: FR-MODEL-47's blast radius, free to disagree with the query that derives it.
+    #: FR-164's blast radius, free to disagree with the query that derives it.
     #:
     #: `None` and `0` are different facts and are reported differently. The list route
     #: computes one aggregate per page and supplies `0` for an artifact nothing references;
@@ -479,7 +479,7 @@ class CustomObjective(BaseModel):
 
     @model_validator(mode="after")
     def _only_templates_are_built(self) -> Self:
-        """FR-MODEL-75, at the type.
+        """FR-150, at the type.
 
         The API refuses `kind: expression` with `OBJECTIVE_KIND_NOT_ENABLED` before it gets
         here; this is the second door, so that no other caller — a fixture, a migration, a
@@ -489,7 +489,7 @@ class CustomObjective(BaseModel):
         if self.kind is not ObjectiveKind.TEMPLATE:
             raise ValueError(
                 f"custom objective {self.slug}@{self.version} is kind {self.kind.value!r}. "
-                "Phase 1 ships templates only (FR-MODEL-75); the fields an expression "
+                "Phase 1 ships templates only (FR-150); the fields an expression "
                 "objective needs are not built, so the artifact would carry no loss."
             )
         if self.template is None:
@@ -541,7 +541,7 @@ class CustomObjective(BaseModel):
         if not self.applicability.is_within(TEMPLATE_APPLICABILITY[self.template]):
             raise ValueError(
                 f"custom objective {self.slug}@{self.version} declares an applicability "
-                f"wider than template {self.template.value!r}'s (§4.5, FR-MODEL-44). An "
+                f"wider than template {self.template.value!r}'s (§4.5, FR-153). An "
                 "objective may be restricted further than its template and never extended "
                 "beyond it."
             )
@@ -549,7 +549,7 @@ class CustomObjective(BaseModel):
 
     @model_validator(mode="after")
     def _a_status_past_draft_rests_on_a_certificate(self) -> Self:
-        """FR-MODEL-42: certification is the condition of leaving `draft`.
+        """FR-146: certification is the condition of leaving `draft`.
 
         `deprecated` is excluded with `draft` because it is reachable from `draft` — an
         objective abandoned before it was ever certified is withdrawn, not certified.
@@ -558,7 +558,7 @@ class CustomObjective(BaseModel):
         if past_draft and self.certificate_id is None:
             raise ValueError(
                 f"custom objective {self.slug}@{self.version} is {self.status.value} with no "
-                "certificate (FR-MODEL-42). Certification is what `certified` means, and "
+                "certificate (FR-146). Certification is what `certified` means, and "
                 "submission requires it."
             )
         return self
@@ -568,7 +568,7 @@ class CheckStatus(enum.StrEnum):
     """One certificate check's verdict.
 
     §4.7's example shows `pass`, `warn` and `violated`. `failed` is the fourth, and the
-    distinction it draws is the one FR-MODEL-43 turns on: `violated` is a *stated property
+    distinction it draws is the one FR-152 turns on: `violated` is a *stated property
     breach the platform tolerates with a declared mitigation* — a non-convex loss is a
     legitimate pricing loss — where `failed` is a check that cannot pass at all, and an
     objective whose derivatives disagree with the numeric ones is not usable at any
@@ -582,7 +582,7 @@ class CheckStatus(enum.StrEnum):
 
 
 class CertificateOutcome(enum.StrEnum):
-    """§4.7's `overall`. A `failed` certificate blocks submission entirely (FR-MODEL-42)."""
+    """§4.7's `overall`. A `failed` certificate blocks submission entirely (FR-146)."""
 
     CERTIFIED = "certified"
     CERTIFIED_WITH_FINDINGS = "certified_with_findings"
@@ -592,7 +592,7 @@ class CertificateOutcome(enum.StrEnum):
 class CertificateCheck(BaseModel):
     """One named check and what it found.
 
-    `detail` is prose and is required — FR-MODEL-69 makes a branch discontinuity a
+    `detail` is prose and is required — FR-148 makes a branch discontinuity a
     *reported finding* rather than an exclusion, and a `warn` with no sentence beside it is
     exactly the finding nobody acts on.
     """
@@ -608,7 +608,7 @@ class CertificateCheck(BaseModel):
 #: *"All nine checks are emitted for every template, always"*. The names are the vocabulary
 #: `pricing_core.modelling.objectives.certify_objective` emits and the authored contract's
 #: `name` enum publishes; this is where an `ObjectiveCertificate` is held to all nine
-#: (FR-MODEL-126).
+#: (FR-158).
 OBJECTIVE_CERTIFICATE_CHECKS: Final[tuple[str, ...]] = (
     "analytic_vs_numeric_gradient",
     "analytic_vs_numeric_hessian",
@@ -630,7 +630,7 @@ def battery_is_exactly(
     The **set** of names, not the count: a battery of the right length with
     `branch_discontinuity` missing and `finiteness` run twice is the failure a count-only
     floor waves through, and it is the one that reads as a full certificate to an approver.
-    Shared by the two certificate types because the rule is one rule (FR-MODEL-126); the
+    Shared by the two certificate types because the rule is one rule (FR-158); the
     *names* differ and the obligation does not.
     """
     present = [check.name for check in checks]
@@ -640,7 +640,7 @@ def battery_is_exactly(
     if missing or unexpected or duplicated:
         raise ValueError(
             f"{artifact} carries {len(checks)} checks against the {len(required)} required "
-            f"(FR-MODEL-126): missing {missing or 'nothing'}, unexpected "
+            f"(FR-158): missing {missing or 'nothing'}, unexpected "
             f"{unexpected or 'nothing'}, duplicated {duplicated or 'nothing'}. A short "
             "battery is a failure of the run, never a silently smaller certificate."
         )
@@ -686,7 +686,7 @@ class SamplingSpec(BaseModel):
 
 
 class CertificateResult(BaseModel):
-    """What certification found, before the platform gives it an identity (ADR-0001).
+    """What certification found, before the platform gives it an identity (ADR-703).
 
     `overall` is **derived from the checks and enforced**, not asserted: a certificate whose
     verdict its own checks contradict is the one artifact in this module that must be
@@ -695,7 +695,7 @@ class CertificateResult(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: **Unbounded, deliberately** (FR-MODEL-126, 2026-08-23, OQ-MODEL-30). This type is
+    #: **Unbounded, deliberately** (FR-158, 2026-08-23, OQ-600). This type is
     #: shared by `ObjectiveCertificate` and `MetricCertificate`, whose batteries are nine
     #: and four checks; any floor here is wrong for one of them or for both. The count is
     #: the artifact's obligation and is enforced on each of those two types.
@@ -711,7 +711,7 @@ class CertificateResult(BaseModel):
         """The verdict these checks imply — the one place the rule is written.
 
         Any `failed` fails the certificate. Any `warn` or `violated` is a finding, and
-        FR-MODEL-43 makes a `violated` convexity check something an approver must see rather
+        FR-152 makes a `violated` convexity check something an approver must see rather
         than something that blocks: `certified_with_findings` is what carries it to them.
         """
         statuses = {check.status for check in checks}
@@ -734,7 +734,7 @@ class CertificateResult(BaseModel):
 
 
 class ObjectiveCertificate(BaseModel):
-    """The persisted certificate (§4.7, FR-MODEL-42).
+    """The persisted certificate (§4.7, FR-146).
 
     Immutable, for the reason `Backtest` is: it is what an approval argues from, and
     evidence that can change after the decision is not evidence. Attached to one objective
@@ -753,7 +753,7 @@ class ObjectiveCertificate(BaseModel):
 
     @model_validator(mode="after")
     def _the_battery_is_all_nine_named_checks(self) -> Self:
-        """FR-MODEL-126 — the count is enforced here, not on the shared `CertificateResult`.
+        """FR-158 — the count is enforced here, not on the shared `CertificateResult`.
 
         §4.7 emits all nine for every template, `branch_discontinuity` included: a check
         omitted because it had nothing to report is indistinguishable from one that was
@@ -766,7 +766,7 @@ class ObjectiveCertificate(BaseModel):
 
 
 class ObjectiveUsageModel(BaseModel):
-    """One Model fitted under an objective version (FR-MODEL-47).
+    """One Model fitted under an objective version (FR-164).
 
     Slug, version and status rather than the whole Model: the blast-radius question is
     "what does a defect in this loss reach, and how far has each of them got?" — a `draft`
@@ -784,10 +784,10 @@ class ObjectiveUsageModel(BaseModel):
 
 
 class ObjectiveUsage(BaseModel):
-    """FR-MODEL-47's blast radius for one Custom Objective version.
+    """FR-164's blast radius for one Custom Objective version.
 
     **`rating_versions` and `deployments` are named and always empty in Phase 1**, and this
-    is FR-MODEL-87's staging rule rather than an oversight: `03 — Rating Engine` is not
+    is FR-207's staging rule rather than an oversight: `03 — Rating Engine` is not
     built, so there is no table to query and no row that could appear. Naming them here
     means the slice that builds `03` fills a field the frontend already renders, instead of
     changing a response shape that clients have learned. The field's emptiness is stated in
