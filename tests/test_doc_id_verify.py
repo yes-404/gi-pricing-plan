@@ -3882,3 +3882,182 @@ def test_rows_d_populate_residue_keyed_by_their_own_row(dv: Any, doc_id_cli: Any
     assert wf_labels, "D_ALTERNATIVES no longer carries a wf-0[0-9] alternative"
     row = next(r for r in rows if r.key == f"d{wf_labels[0]}")
     assert dict(row.residue) == {("docs/plans/foo.md", row.key): 1}
+
+
+# =========================================================================================
+# F109 — the record is read from its own archived ref (`--record-ref`), and fails closed
+# (PL-1144 Task 2; RL-1145 DP-2 (c), amendments 1-3)
+# =========================================================================================
+
+
+def _record_text(count: int) -> str:
+    return (
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        f"| docs/a.md | d4 | {count} | historical citation | W37-11 |\n"
+    )
+
+
+def _commit_all(repo: pathlib.Path, message: str) -> str:
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+         "commit", "-q", "-m", message],
+        check=True,
+    )
+    return subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def _ceilings(result: Any) -> list[tuple[str, str, int]]:
+    return [(e.path, e.cls, e.count) for e in result.w37_11_record]
+
+
+def test_record_ref_reads_the_record_from_its_own_archived_ref(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """F109's property. The corpus is pinned at commit A, and a later commit B changes one
+    ceiling in the record. With `record_ref=B` the run must carry B's ceiling. Before this
+    change, the record was read from `--ref`'s own archive only, so an edit to the record
+    after the pinned base was invisible to CI forever.
+
+    The second case keeps F102's property. The live checkout's record is dirtied to a
+    third value, and the run must still carry B's ceiling: never A's, and never the dirty
+    one. `record_ref` is a commit-keyed archive, exactly as `ref` is.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: _record_text(1),
+    })
+    sha_a = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    (repo / dv.W37_11_RECORD_PATH).write_text(_record_text(5), encoding="utf-8")
+    sha_b = _commit_all(repo, "raise the ceiling")
+    docid = _NoOpMigrateDocid(doc_id_cli)
+
+    result = dv.verify(
+        docid, repo_root=repo, ref=sha_a, record_ref=sha_b,
+        workdir=tmp_path / "wd-b", keep=True, with_baseline=False,
+    )
+    assert _ceilings(result) == [("docs/a.md", "d4", 5)], (
+        "the record must be read at --record-ref (B), not at --ref (A)"
+    )
+    assert result.record_ref_sha == sha_b
+    assert result.snapshot.ref_sha == sha_a, "the corpus stays at --ref"
+
+    (repo / dv.W37_11_RECORD_PATH).write_text(_record_text(9), encoding="utf-8")
+    dirty = dv.verify(
+        docid, repo_root=repo, ref=sha_a, record_ref=sha_b,
+        workdir=tmp_path / "wd-dirty", keep=True, with_baseline=False,
+    )
+    assert _ceilings(dirty) == [("docs/a.md", "d4", 5)], (
+        "a live, uncommitted record edit must never reach the run (F102)"
+    )
+
+    default = dv.verify(
+        docid, repo_root=repo, ref=sha_a,
+        workdir=tmp_path / "wd-default", keep=True, with_baseline=False,
+    )
+    assert _ceilings(default) == [("docs/a.md", "d4", 1)], (
+        "--record-ref defaults to --ref"
+    )
+
+
+def test_record_missing_at_record_ref_refuses_with_exit_2_and_names_the_path(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """RL-1145 DP-2 amendment 1, as its broken-input proof. A record that is missing from
+    the `--record-ref` archive is a refusal (exit 2), never an empty record. An empty
+    record turns every ceiling off with no message, which is the failure this prevents.
+    The message must name the path it looked for.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: _record_text(1),
+    })
+    sha_a = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    (repo / dv.W37_11_RECORD_PATH).unlink()
+    sha_gone = _commit_all(repo, "the record is gone")
+
+    with pytest.raises(dv.ResidueRecordMissingError) as excinfo:
+        dv.verify(
+            _NoOpMigrateDocid(doc_id_cli), repo_root=repo, ref=sha_a,
+            record_ref=sha_gone, workdir=tmp_path / "wd", with_baseline=False,
+        )
+    assert dv.W37_11_RECORD_PATH in str(excinfo.value)
+
+    code = doc_id_cli.main([
+        "migrate", "--verify", str(tmp_path / "snap"), "--ref", sha_a,
+        "--record-ref", sha_gone, "--no-baseline", "--repo-root", str(repo),
+    ])
+    err = capsys.readouterr().err
+    assert code == 2, "a missing record is a refusal to run, not a corpus verdict"
+    assert dv.W37_11_RECORD_PATH in err, err
+
+
+def _residue_result(
+    dv: Any, residue: dict[tuple[str, str], int], record: list[tuple[str, str, int]]
+) -> Any:
+    """`_result`'s pattern with the verdict set unchanged (`EXPECTED_VERDICTS` verbatim),
+    one row carrying `residue`, and the given record entries."""
+    rows = []
+    for key, verdict in dv.EXPECTED_VERDICTS.items():
+        row = _row(dv, key, verdict)
+        if key == "d4":
+            row = dv.Row(
+                key=key, title="t", owner="W37-6", predicate="p", denominator="d",
+                migrated="m", control="c", verdict=verdict, residue=residue,
+            )
+        rows.append(row)
+    base = _result(dv, {})
+    return dv.VerifyResult(
+        snapshot=base.snapshot,
+        rows=tuple(rows),
+        w37_11_record=tuple(
+            dv.ResidueEntry(path=p, cls=c, count=n, reason="r", owner="W37-11")
+            for p, c, n in record
+        ),
+    )
+
+
+def test_a_residue_progress_on_an_unchanged_verdict_set_is_rendered(dv: Any) -> None:
+    """C16 (FD-1147; RL-1145 DP-2 amendment 3), first render test. A recorded ceiling
+    that now measures 0, on an unchanged verdict set, must print the residue-ceiling block.
+    Before the fix `_set_change_block` returned early with the UNCHANGED line, so the block
+    was unreachable and `PL-1144` acceptance item 6 could not fail.
+    """
+    result = _residue_result(dv, {}, [("docs/a.md", "d4", 2)])
+    assert result.set_changes == ()
+    assert [c.kind for c in result.residue_changes] == [dv.RESIDUE_PROGRESSED]
+    assert result.exit_code == 1
+    out = dv.render(result)
+    assert "RESIDUE CEILING" in out
+    assert dv.RESIDUE_PROGRESSED in out
+
+
+def test_a_residue_regression_on_an_unchanged_verdict_set_is_rendered_and_exits_3(
+    dv: Any,
+) -> None:
+    """C16, second render test. A residue that grows into a file the record does not
+    name is a fatal change and exits 3. Before the fix, the render printed no
+    residue-ceiling block, and said the change "moved no row" on an exit-3 run.
+    """
+    result = _residue_result(
+        dv,
+        {("docs/a.md", "d4"): 1, ("docs/b.md", "d4"): 3},
+        [("docs/a.md", "d4", 1)],
+    )
+    assert result.set_changes == ()
+    assert [c.kind for c in result.residue_changes] == [dv.RESIDUE_REGRESSION]
+    assert result.exit_code == 3
+    out = dv.render(result)
+    assert "RESIDUE CEILING" in out
+    assert dv.RESIDUE_REGRESSION in out
+    assert "moved no row" not in out

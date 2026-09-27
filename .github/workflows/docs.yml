@@ -120,7 +120,11 @@ jobs:
             echo "::notice::un-migrated checkout: --ref HEAD is the pre-migration input"
           fi
           code=0
-          python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref "$ref" || code=$?
+          # --record-ref HEAD: the corpus stays at the pinned base, but the W37-11 residue-
+          # ceiling record is read from the commit under test, its own git archive, so a
+          # record edit on a PR is seen by this step (F109; RL-1145 DP-2 (c)). A record
+          # missing at HEAD is a refusal, exit 2.
+          python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref "$ref" --record-ref HEAD || code=$?
           if [ "$code" -eq 1 ]; then
             echo "::notice::--verify exited 1 (standing red, verdict set unchanged) — RL-1045 §1 reads this as a pass"
             exit 0

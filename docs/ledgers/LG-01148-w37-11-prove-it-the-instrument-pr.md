@@ -108,6 +108,72 @@ is consistent with C16 (`FD-1147`). It is not evidence about the ceilings.
 
 Landed in: this PR — the pre-squash branch commit that creates this file.
 
+### Task 2 — F109, `--record-ref`, fail-closed, and C16 (RL-1145 DP-2 (c), amendments 1–3)
+
+**What changed:**
+
+- `scripts/_docverify.py` has a new `load_w37_11_record_at_ref`. It reads the record from
+  its own `git archive` of the commit that `--record-ref` resolves to (default `--ref`),
+  and extracts it to a throwaway directory. `verify()` calls it before the slot lock,
+  because a refusal is meant to be instant.
+- A record that is absent at that commit raises the new `ResidueRecordMissingError`, and
+  so does a `--record-ref` that does not resolve. `doc-id.py migrate --verify` maps the
+  error to exit `2`, and the message names the path it looked for (`W37_11_RECORD_PATH`,
+  by symbol). `load_w37_11_record` keeps its degrade-to-`()` behaviour for
+  `audit-docs.py`.
+- `VerifyResult` gains `record_ref` and `record_ref_sha`. The render header prints a
+  `record ref` line.
+- The input-provenance table marks the old `load_w37_11_record(snap.control)` row
+  superseded. It gains the HERMETIC `--record-ref` row, which states why the record's
+  control-path keys still meet a corpus read at `--ref`.
+- `.github/workflows/docs.yml` passes `--record-ref HEAD`, the commit under test.
+- **C16:** `_set_change_block` no longer returns the bare `UNCHANGED` line when there are
+  residue changes. It prints `UNCHANGED VERDICT SET: … no row verdict moved, but the W37-11
+  residue ceiling did: <consequence>.`, followed by the residue-ceiling block.
+
+**Red at main's code.** Stamp 12:27:57 BST, HEAD `1eb12bab`, `_docverify.py` blob
+`6fc405017e50` (the same blob as at `271088b0` and `9fe726b2`), `doc-id.py` blob
+`8053a06bb7b8`. The four new tests in `tests/test_doc_id_verify.py` all failed:
+
+| Test | Failure at main's code |
+|---|---|
+| `test_record_ref_reads_the_record_from_its_own_archived_ref` | `TypeError: verify() got an unexpected keyword argument 'record_ref'` |
+| `test_record_missing_at_record_ref_refuses_with_exit_2_and_names_the_path` | `AttributeError: … has no attribute 'ResidueRecordMissingError'` |
+| `test_a_residue_progress_on_an_unchanged_verdict_set_is_rendered` (C16) | `AssertionError: assert 'RESIDUE CEILING' in '…the standing red, and this change moved no row.'` |
+| `test_a_residue_regression_on_an_unchanged_verdict_set_is_rendered_and_exits_3` (C16) | `AssertionError: assert 'RESIDUE CEILING' in '…the standing red, and this change moved no row.'` |
+
+The two C16 tests fail on the defect itself. Each builds a residue change on an unchanged
+verdict set, and main's render prints the "moved no row" line with no residue block. The
+regression case has `exit_code == 3` at that point.
+
+**Green at the head.** All four passed (`4 passed, 160 deselected`). Then
+`tests/test_doc_id_verify.py`, `tests/test_doc_id_migrate.py` and
+`tests/test_audit_docs_w37_11_ceiling.py` together gave `490 passed, 1 skipped`.
+`ruff check` and `mypy` were both clean (`no issues found in 196 source files`).
+
+**Broken-input proofs.** Each file was copied aside, sabotaged, run, and restored by copy,
+with a hash check (`RESTORED-OK`):
+
+1. **The wiring reverted.** In `verify()`, `effective_record_ref = ref`. The F109 test
+   failed with `the record must be read at --record-ref (B), not at --ref (A)`,
+   `assert [('docs/a.md', 'd4', 1)] == [('docs/a.md', 'd4', 5)]`.
+2. **Fail-closed reverted.** A missing record returns `()`. The exit-2 test failed with
+   `Failed: DID NOT RAISE ResidueRecordMissingError`.
+3. **The CLI's exit-2 mapping reverted.** The exit-2 test failed with the uncaught
+   `ResidueRecordMissingError: the W37-11 record is missing at --record-ref '<sha>' (<sha>):
+   looked for <the record path> — an absent record would turn every ceiling off, so the
+   verify refuses rather than read it as empty (RL-1145 DP-2 amendment 1)`. The message
+   names the record's path from the constant. It is described here, not spelled, per
+   RL-1140.
+
+**On the real repository** (12:29:49 BST), the command was
+`python3 scripts/doc-id.py migrate --verify <dir> --ref HEAD --record-ref 726ec98f --no-baseline`.
+`726ec98f` is the parent of `ea3704dd`, the commit that first added the record. The run
+printed `refused: the W37-11 record is missing at --record-ref …` and exited `rc=2` at
+once. No snapshot directory was created.
+
+Landed in: this PR — the pre-squash branch commit that carries Task 2.
+
 ## PRs
 
 | # | Branch | Squash SHA on `main` | Tasks | State |

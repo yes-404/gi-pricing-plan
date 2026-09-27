@@ -10440,7 +10440,13 @@ def _cmd_migrate_verify(args: argparse.Namespace) -> int:
             workdir=workdir,
             keep=args.keep,
             with_baseline=not args.no_baseline,
+            record_ref=args.record_ref,
         )
+    except _docverify.ResidueRecordMissingError as exc:
+        print(f"doc-id.py migrate --verify: refused: {exc}", file=sys.stderr)
+        # RL-1145 DP-2 amendment 1: a record missing at --record-ref is a refusal, never
+        # an empty record — an empty record turns every ceiling off with no message.
+        return 2
     except _docverify.WorkingCheckoutRefusedError as exc:
         print(f"doc-id.py migrate --verify: refused: {exc}", file=sys.stderr)
         # A distinct code from a failing row: "I would not run" and "I ran and it is red"
@@ -10524,6 +10530,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--ref",
         default="HEAD",
         help="--verify only: the ref to snapshot (default: HEAD).",
+    )
+    migrate_parser.add_argument(
+        "--record-ref",
+        default=None,
+        help="--verify only: the ref the W37-11 residue-ceiling record is read at, from "
+        "its own git archive (default: --ref). The corpus stays at --ref. A record missing "
+        "at this ref is a refusal, exit 2 (RL-1145 DP-2).",
     )
     migrate_parser.add_argument(
         "--keep",

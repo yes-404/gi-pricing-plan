@@ -48,11 +48,13 @@ from __future__ import annotations
 
 import csv
 import fcntl
+import io
 import json
 import os
 import re
 import subprocess
 import sys
+import tarfile
 import tempfile
 import uuid
 from collections import Counter
@@ -110,6 +112,19 @@ class WorkingCheckoutRefusedError(RuntimeError):
     real checkout"* — is enforced here as a guarded refusal rather than left to convention,
     because `migrate()` rewrites, moves and deletes ~1400 files in place and a working
     checkout has no undo for the untracked half of that.
+    """
+
+
+class ResidueRecordMissingError(RuntimeError):
+    """The W37-11 record is absent from the `--record-ref` archive — a refusal (exit 2).
+
+    RL-1145 DP-2 amendment 1: on the verify path the record read **fails closed**. An
+    absent record read as `()` turns every ceiling off with no message
+    (`check_residue_ceiling` treats a `cls` the record never names as ungoverned), so a
+    run against a ref where the record is not at `_docid.W37_11_RECORD_PATH` — a moved
+    constant read at an older ref is the case the ruling names — would pass as if every
+    residue were governed. `load_w37_11_record`'s own degrade-to-empty behaviour is kept
+    for `audit-docs.py`'s reader, which that ruling does not cover.
     """
 
 
@@ -4052,6 +4067,50 @@ AmbiguousResidueKeyError = _docid.AmbiguousResidueKeyError
 build_ceiling = _docid.build_ceiling
 
 
+def load_w37_11_record_at_ref(
+    repo_root: Path, record_ref: str
+) -> tuple[str, tuple[ResidueEntry, ...]]:
+    """Read the W37-11 record from its own commit-keyed archive of `record_ref` (F109).
+
+    Returns `(sha, record)`. The record is extracted with `git archive` of that one path,
+    at the commit `record_ref` resolves to, into a throwaway directory, and read there
+    with `load_w37_11_record` — never from `repo_root`'s working tree (F102), and never
+    from `--ref`'s archive unless `record_ref` names the same commit (RL-1145 DP-2 (c)).
+
+    Refuses with `ResidueRecordMissingError` when the path is absent at that commit
+    (DP-2 amendment 1), or when `record_ref` does not resolve to a commit at all: both
+    are "I would not run", exit 2, and the message names the path it looked for.
+    """
+    path = W37_11_RECORD_PATH
+    resolved = _git(repo_root, "rev-parse", "--verify", "--quiet",
+                    f"{record_ref}^{{commit}}", check=False)
+    sha = resolved.stdout.strip()
+    if resolved.returncode != 0 or not sha:
+        raise ResidueRecordMissingError(
+            f"--record-ref {record_ref!r} does not resolve to a commit in {repo_root}, so "
+            f"the W37-11 record ({path}) cannot be read"
+        )
+    if _git(repo_root, "cat-file", "-e", f"{sha}:{path}", check=False).returncode != 0:
+        raise ResidueRecordMissingError(
+            f"the W37-11 record is missing at --record-ref {record_ref!r} ({sha}): looked "
+            f"for {path} — an absent record would turn every ceiling off, so the verify "
+            "refuses rather than read it as empty (RL-1145 DP-2 amendment 1)"
+        )
+    archive = subprocess.run(
+        ["git", "-C", str(repo_root), "archive", "--format=tar", sha, "--", path],
+        capture_output=True, check=False,
+    )
+    if archive.returncode != 0:
+        raise ResidueRecordMissingError(
+            f"`git archive {sha} -- {path}` exited {archive.returncode}: "
+            f"{archive.stderr.decode('utf-8', errors='replace').strip() or '(no stderr)'}"
+        )
+    with tempfile.TemporaryDirectory(prefix="doc-id-verify-record-") as tmp:
+        with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tar:
+            tar.extractall(tmp, filter="data")
+        return sha, load_w37_11_record(Path(tmp))
+
+
 @dataclass(frozen=True)
 class VerifyResult:
     snapshot: Snapshot
@@ -4060,6 +4119,10 @@ class VerifyResult:
     #: no rows yet, in which case `residue_changes` is always empty (every `cls` is
     #: ungoverned).
     w37_11_record: tuple[ResidueEntry, ...] = ()
+    #: The ref the record was read at (`--record-ref`, default `--ref`), and its commit
+    #: (RL-1145 DP-2 (c)). Empty only for a result built without a verify run (tests).
+    record_ref: str = ""
+    record_ref_sha: str = ""
 
     @property
     def failed(self) -> tuple[Row, ...]:
@@ -4221,6 +4284,21 @@ def _release_verify_slot(handle: IO[Any] | None) -> None:
 #   - row_g: `docid.classify_migration_diff(snap.control, snap.migrated)` — the trees
 #     passed in are hermetic; see the documented exception below for what it loads inside.
 #   - `load_w37_11_record(snap.control)` — the F102 fix this table was written beside.
+#     SUPERSEDED 2026-09-27 by the row below (F109): the read left `repo_root` and was
+#     hermetic, but it was pinned to `--ref`, so a record edit after the pinned base was
+#     never seen.
+#   - `--record-ref` (RL-1145 DP-2 (c), amendment 2): `load_w37_11_record_at_ref`, which
+#     reads the record from its OWN `git archive` of the commit `--record-ref` resolves to
+#     (default `--ref`), extracted to a throwaway directory. HERMETIC, keyed on that
+#     archive alone: a function of the commit it names, never of `repo_root`'s working
+#     tree. A record absent from that archive is a refusal (`ResidueRecordMissingError`,
+#     exit 2), never `()`. **Why the record's keys still match a corpus read at `--ref`:**
+#     the record's `path` cells are keyed by the CONTROL (pre-migration) path (its own
+#     header, "Re-keyed 2026-09-16"), and every row's `residue` is keyed the same way,
+#     measured on `snap.control`/`snap.migrated` built from `--ref` and resolved to control
+#     paths by `_docid.resolve_to_control_paths`. So the two inputs meet on the control
+#     path space of `--ref`, whichever commit the record was read at. What `--record-ref`
+#     changes is only WHICH ceilings apply, never how a residue is keyed.
 #     `check_residue_ceiling`, `_residue_fully_governed`, `VerifyResult.exit_code`/
 #     `.residue_changes`/`.set_changes` are pure functions of the rows and the record
 #     above; nothing in that chain reads a tree or the environment directly.
@@ -4282,8 +4360,13 @@ def verify(
     workdir: Path | None,
     keep: bool = False,
     with_baseline: bool = True,
+    record_ref: str | None = None,
 ) -> VerifyResult:
-    """Build a snapshot, migrate it, and compute every row. Never touches `repo_root`."""
+    """Build a snapshot, migrate it, and compute every row. Never touches `repo_root`.
+
+    `record_ref` is where the W37-11 record is read (RL-1145 DP-2 (c)); `None` means
+    `ref`. The corpus is always `ref`'s.
+    """
     # The refusal check runs BEFORE the slot lock, deliberately: `_cmd_migrate_verify`'s
     # own contract is "'I would not run' and 'I ran and it is red' must not share an exit
     # code" (`tests/test_doc_id_verify.py::test_cli_refusal_exits_2_not_1`), and a refusal
@@ -4293,11 +4376,17 @@ def verify(
     # stays inside `_verify_body`, which builds it.
     if workdir is not None:
         assert_workdir_disposable(workdir.expanduser().resolve())
+    # The record read is a refusal check too (RL-1145 DP-2 amendment 1), so it also runs
+    # before the slot lock: a missing record must refuse at once, not after a queue wait
+    # and a full migration.
+    effective_record_ref = ref if record_ref is None else record_ref
+    record_sha, record = load_w37_11_record_at_ref(repo_root, effective_record_ref)
     slot_handle = _acquire_verify_slot()
     try:
         return _verify_body(
             docid, repo_root=repo_root, ref=ref, workdir=workdir, keep=keep,
-            with_baseline=with_baseline,
+            with_baseline=with_baseline, record=record,
+            record_ref=effective_record_ref, record_ref_sha=record_sha,
         )
     finally:
         _release_verify_slot(slot_handle)
@@ -4311,10 +4400,14 @@ def _verify_body(
     workdir: Path | None,
     keep: bool,
     with_baseline: bool,
+    record: tuple[ResidueEntry, ...],
+    record_ref: str,
+    record_ref_sha: str,
 ) -> VerifyResult:
     """`verify()`'s own work, unchanged except that the `workdir`-given disposability
-    check now runs in `verify()` itself (before the slot lock) — factored out so that
-    lock wraps everything else without this function needing to know it exists.
+    check and the record read now run in `verify()` itself (before the slot lock) —
+    factored out so that lock wraps everything else without this function needing to
+    know it exists. `record` is the W37-11 record `verify()` read at `--record-ref`.
     """
     tmp: tempfile.TemporaryDirectory[str] | None = None
     if workdir is None:
@@ -4358,23 +4451,21 @@ def _verify_body(
                 "every row reading `git ls-files` would measure the pre-migration "
                 "population"
             )
-        # Loaded before `compute_rows` (not after, as before this change): (d)'s and
-        # (h1)'s own verdicts now read the record to decide FAIL-vs-DISCLOSE
-        # (`_residue_fully_governed`), so it must exist before those rows are computed,
-        # not only afterward for the exit-code-level residue-ceiling comparison.
-        #
-        # `snap.control`, never `repo_root` (2026-09-06 fix, F102): `repo_root` is the
-        # live, mutable checkout — reading the record from it made `--ref` non-hermetic,
-        # since the record on disk in the invoking executor's own worktree need not match
-        # (and during active editing, will not match) the commit `--ref` names.
-        # `snap.control` is the `git archive` of `--ref` this run already built, the
-        # record's own committed home (`docs/audit/` is the legacy path row (d10) proves
-        # absent from `snap.migrated`, never where the record lives post-migration), and
-        # reading it costs no new git call. See `load_w37_11_record`'s own docstring and
-        # `test_verify_reads_the_w37_11_record_from_the_ref_never_the_live_checkout`.
-        record = load_w37_11_record(snap.control)
+        # The record is read before `compute_rows`: (d)'s and (h1)'s own verdicts read it
+        # to decide FAIL-vs-DISCLOSE (`_residue_fully_governed`), not only the exit-code-
+        # level residue-ceiling comparison afterwards. It is no longer read here.
+        # `verify()` reads it, before the slot lock, from its own `git archive` of
+        # `--record-ref` (RL-1145 DP-2 (c); `load_w37_11_record_at_ref`). Until then it
+        # was `load_w37_11_record(snap.control)` — the F102 fix off `repo_root`, which was
+        # hermetic but pinned the record to `--ref` itself, so a record edit made after
+        # the pinned base was invisible to CI (F109). F102's property is kept: see
+        # `test_verify_reads_the_w37_11_record_from_the_ref_never_the_live_checkout` and
+        # `test_record_ref_reads_the_record_from_its_own_archived_ref`.
         rows = compute_rows(docid, snap, mig_result.generated_paths, record)
-        return VerifyResult(snapshot=snap, rows=tuple(rows), w37_11_record=record)
+        return VerifyResult(
+            snapshot=snap, rows=tuple(rows), w37_11_record=record,
+            record_ref=record_ref, record_ref_sha=record_ref_sha,
+        )
     finally:
         if tmp is not None and not keep:
             tmp.cleanup()
@@ -4399,6 +4490,11 @@ def render(result: VerifyResult) -> str:
         out.append(f"  baseline tree  {snap.baseline} ({BASELINE_REF} = {snap.baseline_ref})")
     else:
         out.append(f"  baseline tree  absent — {BASELINE_REF} does not resolve in this clone")
+    if result.record_ref:
+        out.append(
+            f"  record ref     {result.record_ref} = {result.record_ref_sha} (the W37-11 "
+            "record only; the corpus is --ref's — RL-1145 DP-2)"
+        )
     out.append("")
     # The set-change block is printed FIRST and again LAST. A CI log is read from the end,
     # and a long table is skimmed from the top; a reader should not have to reach either.
@@ -4447,10 +4543,28 @@ def _set_change_block(result: VerifyResult) -> list[str]:
     n_fail = sum(1 for r in result.rows if r.fatal)
     n_expected = sum(1 for v in EXPECTED_VERDICTS.values() if v in FATAL_VERDICTS)
     if not changes:
+        # The residue block is printed whenever there are residue changes, whether or not
+        # the verdict set moved (C16, FD-1147; RL-1145 DP-2 amendment 3). Until then this
+        # branch returned the line below alone, so on an unchanged verdict set — every CI
+        # run on `main` — a `PROGRESSED` could never print, and a residue-only exit 3 said
+        # that the change "moved no row".
+        residue = _residue_change_block(result)
+        if not residue:
+            return [
+                f"UNCHANGED: {n_fail} fatal row(s), matching the recorded set of "
+                f"{n_expected} in `_docverify.EXPECTED_VERDICTS` — the standing red, and "
+                "this change moved no row."
+            ]
+        consequence = (
+            "a residue REGRESSION, so this run exits 3"
+            if any(c.fatal for c in result.residue_changes)
+            else "progress only, so the record can shrink and the exit code is unaffected"
+        )
         return [
-            f"UNCHANGED: {n_fail} fatal row(s), matching the recorded set of {n_expected} "
-            f"in `_docverify.EXPECTED_VERDICTS` — the standing red, and this change moved "
-            "no row."
+            f"UNCHANGED VERDICT SET: {n_fail} fatal row(s), matching the recorded set of "
+            f"{n_expected} in `_docverify.EXPECTED_VERDICTS` — no row verdict moved, but "
+            f"the W37-11 residue ceiling did: {consequence}.",
+            *residue,
         ]
     out = [
         f"SET CHANGE ({len(changes)}): {n_fail} fatal row(s) against a recorded "
