@@ -16,7 +16,22 @@ relates: []                      # ids only
   decision about which of spec and code was wrong, and the spec changes that follow —
   recorded as dated sibling records, never edits to a frozen plan. Pre-resolves every
   decision point before its slice starts. A spec change conforming to the plan needs no
-  replan.
+  replan. Concretely, per `document-ids.md` §1.6:
+  - **A ruling is one `RL-` file** under `docs/rulings/`, with an id from
+    `python3 scripts/doc-id.py next` — never an entry in a shared rulings document. §1.6's
+    RL row: *"decision-maker; the maintainer may author one on scope or process … [RL-]
+    decision-maker: new `RL-` with `supersedes:`; `retired` when overridden with no
+    successor"*.
+  - **Creates and amends** `FR-`/`NFR-`/`DEP-` requirements via `spec-change` (§1.6 FR NFR
+    DEP row), `ADR-` via `adr-write` (§1.6 ADR row: *"decision-maker, via `adr-write`
+    (`draft`)"*), and `WF-` workflow journeys via `spec-change` (§1.6 WF row: *"decision-
+    maker, via `spec-change`"*) — an executor delivers and owns `test_wfNN_journey` and
+    never amends the journey itself.
+  - **Records an `OQ-`** (anyone may raise one) and **sets it `closed` citing the resolver**
+    (§1.6 OQ row: *"decision-maker records (anyone raises) … decision-maker sets `closed`
+    citing the resolver"*).
+  - **Rules a plan's decision points as an `RL-` and never edits the plan** (§1.6 PL
+    map/leaf row: *"decision-maker rules decision points as `RL-`, never edits the plan"*).
 - **Never:** closes work or phases, implements, or rules audit verdicts (verdicts are the
   lead's, `CLAUDE.md` §12). **No write access to any code worktree** — a decision-maker
   session checked out into an executor's worktree during WK-670 (three writes, one after an
