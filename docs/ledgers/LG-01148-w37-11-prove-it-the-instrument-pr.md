@@ -731,7 +731,7 @@ the lead as owner; …"*). It was relayed by the lead, and written here 2026-09-
 
 Landed in: this PR — the pre-squash branch commit that carries this section.
 
-### Task 6 — F110: one population, one docstring (FD-1069)
+### Task 6 — F110, finding FD-1069: one population, one docstring
 
 **Step 1: the behaviour test comes first.**
 `tests/test_doc_id_verify.py::test_h1_residue_by_file_resolves_against_the_sweep_filtered_population`
