@@ -50,7 +50,9 @@ date**. **It is a polyglot monorepo and neither language is the "main" one** —
 `pyproject.toml` configures Python tooling only, and **CI is three path-filtered component
 workflows and one unfiltered `history-policy` workflow; the fourth checks commit messages,
 not files, so path filtering would let it pass by not running** (amended 2026-09-02 by the
-maintainer, with F49's CI enforcement).
+maintainer, with F49's CI enforcement). [`docs/process/document-ids.md`](docs/process/document-ids.md)
+§1.4 is the authority for the `docs/` layout: **the directory is the family** — which
+directory a governed document lives under is what names the family it belongs to.
 
 **One contract joins backend and frontend, and it flows one way.** ADR-704's
 `model-schema`, the single source of truth, generates `docs/contracts/` — JSON Schema +
@@ -95,10 +97,12 @@ arbitrary code — declaration, validation, versioning, audit.
 overview and glossary · `01` data management · `02` modelling · `03` rating engine · `04`
 optimisation · `05` monitoring · `06` governance · `07` platform.
 
-`workflows/WF-698…05` are the **cross-module journeys** — dataset-to-model,
-model-to-rating-version, rate-change impact, deploy-and-monitor, custom-objective lifecycle.
-A module spec says what one module does; a workflow says what actually happens across all
-of them.
+`workflows/WF-698`, `WF-699`, `WF-700`, `WF-701` and `WF-702` are the **cross-module
+journeys** — dataset-to-model, model-to-rating-version, rate-change impact,
+deploy-and-monitor, custom-objective lifecycle. A module spec says what one module does; a
+workflow says what actually happens across all of them. `docs/INDEX.md` is the generated
+index of every governed document in the suite; `docs/process/document-ids.md` defines the
+document families and how their ids are assigned.
 
 ## 5. Spec Document Standard
 
