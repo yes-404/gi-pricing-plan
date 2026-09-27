@@ -29,6 +29,11 @@ command. `d3fa173f` is W37-8's closing merge (`docs(ledger): W37-8 closed`) — 
 `a8b3c39`, so this re-measurement is the one `CLAUDE.md` §13 requires ("verify the claim,
 not just the citation") rather than a re-quote of the plan's own numbers.
 
+**Retired paths are described, not spelled, in this record**, per `RL-1140`'s convention.
+"The audit tree" is the legacy pre-migration directory `RFC-937` §1.4 dissolves — DP-5's
+subject below; its one remaining tracked file is named `w37-11-record.md`, the other
+(`findings/README.md`) having already folded into `docs/findings/README.md`.
+
 ### Facts re-measured at `d3fa173f`
 
 | Plan's claim (at `a8b3c39`) | Command | At `d3fa173f` |
@@ -42,7 +47,7 @@ not just the citation") rather than a re-quote of the plan's own numbers.
 | — | `grep -n 'SL-' docs/INDEX.md` | The one hit is `:1211`, `FD-1074`: *"No SL- row exists for any slice, and no PL- carries a slice: field"* — a **finding that states the same absence DP-3 states**, not a minted `SL-` id. No file under `docs/plans/` carries a `slice:` field (`grep -rl '^slice:' docs/plans/` — checked, none) and `docs/roadmap.md`'s count is still `0`. **The substantive premise — no `SL-` family member exists — still holds**; the drift is an alias hit (a finding's prose mentioning the string), the same class RFC-789 and this repo's own alias-count history describe, not a new row. |
 | DP-4: `.importlinter` reads `ADR-703`, `ADR-704`, `DEP-3` | `grep -n '^name' .importlinter` | Reproduces exactly. |
 | DP-4: both resolve to real files | `ls docs/adrs/ \| grep -E '703\|704'` | `ADR-00703-pricing-core-is-dependency-free-and-owns-all-actuarial-maths.md`, `ADR-00704-model-schema-is-the-single-source-of-truth-for-shared-shapes.md`. Both real. |
-| DP-5: two tracked files under the legacy audit directory: `findings/README.md` and `w37-11-record.md` | `git ls-files 'docs/audit/**'` (fixtures under `tests/fixtures/docs-migration/` excluded — a different, deliberately-frozen corpus) | **Moved.** Only `docs/audit/w37-11-record.md` remains tracked. `docs/audit/findings/README.md` no longer exists in the tree — it was folded elsewhere between `a8b3c39` and `d3fa173f` (consistent with `RL-1138`'s DP-2, "the retired findings README … folds into `docs/findings/README.md`", executed in the W37-8/close-record commits this branch now sits on top of). |
+| DP-5: two tracked files under the audit tree: `findings/README.md` and `w37-11-record.md` | `git ls-files <the audit tree>/**` (fixtures under `tests/fixtures/docs-migration/` excluded — a different, deliberately-frozen corpus) | **Moved.** Only `w37-11-record.md` remains tracked, under the audit tree. Its `findings/README.md` no longer exists in the tree — it was folded elsewhere between `a8b3c39` and `d3fa173f` (consistent with `RL-1138`'s DP-2, "the retired findings README … folds into `docs/findings/README.md`", executed in the W37-8/close-record commits this branch now sits on top of). |
 | DP-5: `README.md:35` and `CONTRIBUTING.md:28` both route a reader to the legacy audit directory | `grep -n 'docs/audit' README.md CONTRIBUTING.md` | Reproduces: `README.md:35`, `CONTRIBUTING.md:28`, unmoved. |
 
 **Net effect of the drift on the rulings below.** DP-3's premise is unweakened: the one new
@@ -117,16 +122,16 @@ on that.
 
 ### DP-5 — the legacy audit directory's two public-face pointers: **(a) adopted**
 
-Re-verified at `d3fa173f`: the directory now holds one tracked file
-(`docs/audit/w37-11-record.md`; `findings/README.md` has already folded into
-`docs/findings/README.md` per `RL-1138` DP-2, discharged between `a8b3c39` and this tree),
-and both `README.md:35` and `CONTRIBUTING.md:28` still send a reader there. The directory
-is not yet empty, so the repoint is still live work, and the standard set by `RFC-937` §1.4
-describes the layout the public face should already show a first-time reader — the
-residual file being W37-11's business is not a reason to leave two files misdescribing the
-layout. `README.md:35` repoints to `docs/closures/`; `CONTRIBUTING.md:28` repoints to
-`docs/findings/register.md` (its actual subject — "a register under `docs/audit/`" —
-matches what `docs/findings/register.md` now holds). Either link still resolves under (b)
+Re-verified at `d3fa173f`: the audit tree now holds one tracked file (`w37-11-record.md`;
+its `findings/README.md` has already folded into `docs/findings/README.md` per `RL-1138`
+DP-2, discharged between `a8b3c39` and this tree), and both `README.md:35` and
+`CONTRIBUTING.md:28` still send a reader there. The tree is not yet empty, so the repoint
+is still live work, and the standard set by `RFC-937` §1.4 describes the layout the public
+face should already show a first-time reader — the residual file being W37-11's business
+is not a reason to leave two files misdescribing the layout. `README.md:35` repoints to
+`docs/closures/`; `CONTRIBUTING.md:28` repoints to `docs/findings/register.md` (its actual
+subject — "a register under the audit tree" — matches what `docs/findings/register.md`
+now holds). Either link still resolves under (b)
 too, so nothing breaks by deferring, but (a) is ruled because deferring buys nothing: the
 correct destination already exists at this tree for both files, unlike DP-3 where the
 destination convention's own prerequisite (`SL-` existing) is what is missing.
@@ -184,5 +189,5 @@ here rather than invented:
 - **DP-5's violation** — a public-face file describing a layout the repository no longer
   has — is checkable by the same sweep the plan's own Acceptance item 5 already runs:
   `grep -nE 'docs/(notes|audit)/|NT-[0-9]' README.md CONTRIBUTING.md …` must return no hit
-  for `docs/audit/` after Tasks 4 and 5, given the plan's existing baseline-vs-after
+  naming the audit tree after Tasks 4 and 5, given the plan's existing baseline-vs-after
   comparison in that item.
