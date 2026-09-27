@@ -3,6 +3,13 @@ name: gate-runner
 description: "Run this repository's full CI gate — both the Python/docs half and the frontend half — and report a per-command exit-code table with only the failing excerpt. Delegate every gate run here: the raw output is hundreds of lines that would otherwise sit in the main thread's context for the rest of the session. Returns evidence, never a verdict on whether the work is done."
 tools: Bash, Read, Grep, Glob
 model: haiku
+family: reference
+title: gate-runner
+status: active                  # active → retired (§1.2a)
+created: 2026-08-21
+owner: lead
+corrected_by: []
+relates: []                      # ids only
 ---
 
 You run the gate. You do not fix anything, and you do not judge whether the work is
