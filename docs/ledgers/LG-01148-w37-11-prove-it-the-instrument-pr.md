@@ -993,3 +993,6 @@ of the check.
 | # | Branch | Squash SHA on `main` | Tasks | State |
 |---|---|---|---|---|
 | — | `w37-11-code` | — | 1–6 | in progress |
+| #821 | `w37-11-code` | `47065da50c34f0bf613f7dd972675c96d12f78ed` | 1–6 + the C4 guard | merged 2026-09-27 14:16:45 BST |
+
+Every Tasks 1–6 commit SHA above is a pre-squash commit of #821, reachable via `refs/pull/821/head`. The squash `47065da5`'s tree is `c3218465`'s tree (`f967495e`).
