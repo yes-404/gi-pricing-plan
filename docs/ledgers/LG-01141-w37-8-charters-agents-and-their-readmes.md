@@ -178,16 +178,24 @@ Of the 31 Reference files `migrate()` stamped, four were not flagged by check 30
 because they lie outside the four post-migration scope roots (`docs/`, `.claude/roles`,
 `.claude/skills`, `.claude/agents`); the other 27 each drew 4 hits (108).
 
-**The fix (commit below):** one module-level constant in `scripts/doc-id.py`,
+**The fix (S-11, `scripts/doc-id.py`, `tests/test_doc_id_migrate.py`; landed in
+`35c954c1`):** one module-level constant in `scripts/doc-id.py`,
 `_HARNESS_ONLY_TEMPLATE_KEYS`, naming the same four keys; `_stamp_header` skips them
-(next to the existing `slice`/`deliverable`/`lands_in`/`trigger` skip); the new test
-`test_reference_stamp_emits_none_of_the_four_harness_only_keys` in
-`tests/test_doc_id_migrate.py` asserts none of the four are ever emitted, read against the
-real `docs/_templates/REFERENCE.md`.
+(next to the existing `slice`/`deliverable`/`lands_in`/`trigger` skip); two new tests
+in `tests/test_doc_id_migrate.py` — **correcting the name this section previously gave,
+which does not exist in the tree** —
+`test_reference_stamp_harness_keys_are_skipped_only_while_the_constant_names_them`
+("Test A": asserts none of the four keys are ever emitted with the constant active, AND
+that emptying the constant (monkeypatched) makes all four re-appear — the broken-input
+proof itself, as an assertion rather than a manual step) and
+`test_reference_stamp_harness_key_constant_is_not_a_vacuous_skip` ("Test B": non-vacuity —
+the constant is non-empty and every name in it is a real key `docs/_templates/
+REFERENCE.md`'s own block declares, so Test A's "not emitted" cannot be trivially true for
+the wrong reason).
 
 **Broken-input proof:** removed only the new `elif key in _HARNESS_ONLY_TEMPLATE_KEYS:
-continue` skip clause (the constant declaration untouched) — the new test failed, all four
-keys present in the rendered stamp. Restored the clause — the new test, and the full
+continue` skip clause (the constant declaration untouched) — the new tests failed, all four
+keys present in the rendered stamp. Restored the clause — the new tests, and the full
 `tests/test_doc_id_migrate.py` (303 tests) and `tests/test_audit_docs_ids.py -k check_30`
 (11 tests), all passed.
 
