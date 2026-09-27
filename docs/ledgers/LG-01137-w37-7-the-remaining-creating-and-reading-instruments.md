@@ -2,7 +2,7 @@
 id: LG-1137
 family: ledger
 title: W37-7 — the remaining creating and reading instruments
-status: active
+status: closed
 created: 2026-09-19
 owner: executor
 tree: 3344de9c8a4d1e0f5b7c2a9e6d4f8b3c1a5e7d92
@@ -271,4 +271,87 @@ supply resolvable ones, so the defect cannot be re-minted.
 
 | PR | Title | Merge commit |
 |---|---|---|
-| #795 | W37-7 — the remaining creating and reading instruments | _open, draft_ |
+| #795 | W37-7 — the remaining creating and reading instruments | `4ed1f88ee89deeddca04565cc1f07cdbaf02dba4`, squash, merged 2026-09-26 17:43:44 BST |
+
+*(Corrected 2026-09-27 by the auditor, at slice close, finding F-a below: this cell first
+read "_open, draft_". It was stale from the moment #795 merged on 2026-09-26 at 17:43:44
+BST, and stayed stale on `main` until this correction.)*
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor on 2026-09-27** (`document-ids.md` §1.6, SL row:
+*"auditor closes: sets the `LG-` `closed`, verifies acceptance"*). The deputy ruled at
+2026-09-27 11:00:45 BST that the close lands in one post-merge, docs-only PR authored by
+the auditor, in `LG-1143`'s form, touching exactly three paths: this file, `LG-1139` and
+`docs/INDEX.md`.
+
+**The recording rule: a retroactive application, not a defect of this slice.** The
+closing-record convention (a two-pass audit, plus a closing PR that flips the ledger to
+`closed`) was minted by the deputy at 2026-09-27 06:55:24 BST. This slice closed before
+that, on 2026-09-26, on the rule then standing: a clean audit plus the lead's merge
+(`CLAUDE.md` §12, §13). The deputy recorded it closed on those terms at 2026-09-26
+17:44:51 BST. So this section applies the closing-record convention retroactively. It does
+not record a defect of this slice, and the W37-11 closure record carries it as one face.
+
+**The work PR, #795.** It was squash-merged onto `main` as the SHA in the PRs table above,
+on 2026-09-26 at 17:43:44 BST (`gh pr view 795 --json mergedAt` → `2026-09-26T16:43:44Z`).
+Its parent on `main` is `9f887b68`. Its PR head was `16e81628`, a pre-squash branch commit
+of this PR, reachable via `refs/pull/795/head`. The squash's tree equals the head's tree,
+`1ab3102e`, so the slice's content is on `main` byte for byte. The deputy's MERGE ACK for
+#795 is 2026-09-26 17:43:05 BST, in `~/gi-pricing-plan.local/channel/to-lead.md` (local,
+not repo).
+
+**Pass (a), the audit of #795 before the merge: cited, not re-run.** This record does not
+re-audit the slice. The auditor wrote three entries, at 17:31:25, 17:32:33 and 17:34:03
+BST on 2026-09-26; the first two carry the headings "16:31:25" and "16:32:33", UTC readings
+labelled BST. The lead's verdict at 2026-09-26 17:41:41 BST adopted them: *"the audit is
+adopted, and the slice audit is CLEAN with the carried items below"*, at head `16e81628`.
+All four entries are in `~/gi-pricing-plan.local/channel/to-deputy.md` (local, not repo).
+Acceptance is verified by that verdict.
+
+**Pass (b), the reachability sweep after the merge, run by the auditor, stamped
+2026-09-27 11:07:17 BST.**
+- **Predicate, verbatim:** `git show 271088b0:docs/ledgers/LG-01137-w37-7-the-remaining-creating-and-reading-instruments.md | grep -oE '\b[0-9a-f]{7,40}\b' | sort -u`.
+  Each token is classified in order: `git cat-file -t <t>` not `commit` gives NOTCOMMIT;
+  `git merge-base --is-ancestor <t> 271088b0` exit 0 gives MAIN; the same check against
+  `refs/pull/795/head`, fetched read-only with `git fetch origin pull/795/head` and no ref
+  created, exit 0 gives BRANCH; otherwise NEITHER.
+- **MAIN ×2:** `3803331` and the squash SHA.
+- **BRANCH ×22 tokens (22 commits):** `e87b02d4`, `1271ed52`, `26f3e8cb`, `d72de42a`,
+  `52b7c5a4`, `ced41783`, `c54cca48`, `60698b0d`, `9304a7ee`, `db01af33`, `d933cd5f`,
+  `553744d1`, `cedbf713`, `d7bb0aff`, `36b339f4`, `3d4dd7ae`, `3344de9c`, `5696c7b2`,
+  `a7d7f99f`, `9e27d63e`, `9cffab69`, and the PR head `16e81628`. **Each is a pre-squash
+  branch commit of #795, reachable via `refs/pull/795/head`.** This marking applies to
+  every cell above that cites one of them (finding F-d).
+- **NEITHER ×2:** `a800c57` and `a1241a8` (finding F-c).
+- **NOTCOMMIT ×1:** the header's `tree:` value, which resolves to no object (finding F-b).
+
+**Tokens this section adds, which the pass (b) predicate did not cover, are swept here** with
+the same classification: `9f887b68` and `271088b0` are MAIN; `16e81628` is BRANCH; the tree
+id `1ab3102e` is NOTCOMMIT; Task 16's full SHA in F-b is BRANCH; the two salvage-ref SHAs,
+spelled in full in F-c, are NEITHER, as their short forms are.
+
+**Findings, with owner and resolution:**
+
+| Finding | Raised | What | Owner | Resolution |
+|---|---|---|---|---|
+| F-a | pass (b), at `271088b0` | The PRs table's merge-commit cell read "_open, draft_", stale since #795 merged on 2026-09-26 at 17:43:44 BST. | auditor | **Fixed in this closing record.** The cell now carries the squash SHA and the merge time, with a dated correction line. |
+| F-b | pass (b), at `271088b0` | The header's `tree:` value is a 40-hex string that resolves to no object (`git cat-file -t` fails). Its first eight hex digits resolve to Task 16's commit `3344de9c5d7e837166a2a5b34418f501af2d24a9` (a pre-squash branch commit of #795, reachable via `refs/pull/795/head`), whose other 32 digits differ. | lead | **Not corrected in place.** The header is the executor's record of what was written, and this record does not re-audit the slice. Proposed: carried to the W37-11 closure record as an instance of the fabricated-SHA-tail face, which the lead's verdict of 2026-09-26 23:51:23 BST already carries. The lead rules. |
+| F-c | pass (b), at `271088b0` | `a800c57` and `a1241a8` (`:20`, `:31`–`:34`) are neither ancestors of `main` nor reachable from `refs/pull/795/head`. | auditor | **Already disclosed by this ledger's own correction at `:22`–`:39`**, which names the origin ref that keeps each. `git ls-remote origin 'refs/salvage/*'`, read for this record, lists both refs, at `a800c57ae86c002a9de388eec865f5936b959cf6` and `a1241a8a3b02898d21839bcf471a3de6bf6cd0dc`. They are measurement-tree citations, not task evidence (the deputy's reading of 2026-09-26 17:36:07 BST, quoted at `:22`). No change proposed. |
+| F-d | pass (b), at `271088b0` | 19 of the 22 BRANCH commits sit in evidence cells without the pre-squash marking: the Tasks table (`:70`–`:87`), and `3344de9c` at `:41`, `:191` and `:218`. Only `36b339f4`, `60698b0d` and the PR head carry it, at `:34`–`:39`. | auditor | **Marked in this closing record**, in pass (b) above. The cells are left as the executor wrote them. |
+
+**Check 36 movement against `main`** (at `271088b0`; the deputy's rulings of 2026-09-27
+07:26:26 and 11:00:45 BST). **One block covers both closing sections**, this one and
+`LG-1139`'s, which points here. It counts the hits both files add.
+- **Pool:** 497 fatal / 6109 disclosed → 497 fatal / 6116 disclosed at this closing
+  record's head. This is measured on the committed tree, including this block's own tokens.
+  Fatal is unchanged.
+- **Arrived:** 7 disclosed alias-class hits, `W37-11`×5 and `W37-10`×2: 4 and 1 in this
+  file, from the recording rule, F-b's resolution, the classification below and this line;
+  1 and 1 in `LG-1139`, from its recording rule and the lead's verdict quoted in pass (a).
+- **Classification:** these are ledger vocabulary under RL-1043 §4 / RL-1046 §A, not a
+  charter defect, with no owner beyond W37-11's alias-class row.
+- **Last word:** this block is the last word on its own vocabulary. No later commit
+  records the recording.
+
+**Residue carried, not fixed here:** F-b, to the lead.
