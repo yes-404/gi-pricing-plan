@@ -818,6 +818,33 @@ one-time run over a pre-migration root. So the guard breaks nothing.
 
 Landed in: this PR — the pre-squash branch commit that carries the guard.
 
+### A face found after the gate: an empty untracked directory masked a broken link
+
+**The face, as the lead named it:** a gate run in a worktree holding an empty untracked
+directory passed a link check that fails in any fresh checkout.
+
+- **What happened.** Task 3's `git mv` emptied the legacy audit directory in this worktree
+  but left it on disk: git tracks no empty directory. `docs/roadmap.md:384` linked that
+  directory with a relative target. In this worktree the target existed, so
+  `audit-docs.py` check 1 passed, and the full gate at `ed588f8d` passed
+  (`gate-ed588f8/`). In any fresh checkout the directory does not exist.
+- **Measured by the lead, at a fresh detached worktree at `ed588f8d`:** audit-docs rc `1`,
+  `FAILED (1)`, `check 1: docs/roadmap.md: broken link to audit/`. The `docs` CI job at
+  that head would red on the same line.
+- **The executor's positive control, in this worktree, recorded 2026-09-27 13:57:04 BST.** After `rmdir` of
+  the empty directory, the unchanged `ed588f8d` read rc `1` with the same `FAILED (1)`
+  line. That is the lead's reading, reproduced. `find docs -type d -empty` then returned
+  nothing, and a repo-wide sweep for empty directories outside caches, virtualenvs and
+  `node_modules` also returned nothing.
+- **The fix, written under the W37-11 lead's authority** (`roadmap.md` is not in this PR's
+  Q2 edit set). Commit `edb720eb` removes only the link wrapper at `roadmap.md:384`: the
+  directory's name stays as inline code, with no new text and no new legacy token. After
+  it, audit-docs gives rc `0`, `All checks passed.`,
+  `DISCLOSED (865, at or under the W37-11 residue ceiling):`.
+- **The evidence carry** follows the deputy's identity rule. The full gate stays
+  `gate-ed588f8/`. The delta readings at the final head are in `gate-<final head>/`, in
+  a tree verified to hold no empty directory.
+
 ## PRs
 
 | # | Branch | Squash SHA on `main` | Tasks | State |
