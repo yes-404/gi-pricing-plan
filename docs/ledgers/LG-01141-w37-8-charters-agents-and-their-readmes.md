@@ -98,7 +98,8 @@ governed document"). T6's acceptance is read against a re-run of this same invoc
 
 ### Task 2
 
-Landed in `c6964a2` (fix commit), on branch `w37-8-t1-t2`. Fixes check 30
+Landed in squash `35c954c1` (#806) — branch commit `c6964a2` (pre-squash branch commit,
+reachable via `refs/pull/806/head`) is the fix commit, on branch `w37-8-t1-t2`. Fixes check 30
 (`scripts/audit-docs.py`) to consult the family's derived policy for an extra rather than
 failing every one unconditionally; declares the four Claude Code harness keys
 (`name:`, `description:`, `tools:`, `model:`) in `docs/_templates/REFERENCE.md`'s
@@ -116,7 +117,8 @@ top-level `---` block (not the unread commented foot); adds a three-case test in
    (`uv run pytest tests/test_audit_docs_ids.py -k check_30 -q`).
 3. Restored the correct fix: all 11 check-30 tests green.
 
-**Gate, at `c6964a2` (both halves):**
+**Gate, evidence for squash `35c954c1` (#806), run at branch commit `c6964a2`
+(pre-squash branch commit, reachable via `refs/pull/806/head`; both halves):**
 
 | stage | result |
 |---|---|
@@ -142,16 +144,21 @@ top-level `---` block (not the unread commented foot); adds a three-case test in
 this tree (T3/T4 have not merged headers yet); `grep -n '"tools"\|"model"\|"description"'
 scripts/_docid.py` has no hit inside `_KNOWN_KEYS`.
 
-**Gate-table note (supersedes the 01:16:48 diagnosis below):** docs run 36281191974 at
-414a9335: `doc_id_verify` exited 3. The 01:16:48 BST diagnosis — that check 30's headerless
-`.claude/` lookup was the regression — was **withdrawn**: a direct comparison of
-`python3 scripts/audit-docs.py`'s output between `main` and 414a9335, run in this
-worktree, was byte-identical, and `_docverify`'s own snapshot metadata showed
-`doc_id_verify`'s (h1) row shells the `--ref` tree's *own* frozen copy of
+**Gate-table note (supersedes the 01:16:48 diagnosis below):** docs run 36281191974 ran at
+branch commit `414a9335` (pre-squash branch commit, reachable via `refs/pull/806/head`;
+squashed as `35c954c1`): `doc_id_verify` exited 3. The 01:16:48 BST diagnosis — that check
+30's headerless `.claude/` lookup was the regression — was **withdrawn**: a direct
+comparison of `python3 scripts/audit-docs.py`'s output between `main` and that branch
+commit, run in this worktree, was byte-identical, and `_docverify`'s own snapshot metadata
+showed `doc_id_verify`'s (h1) row shells the `--ref` tree's *own* frozen copy of
 `scripts/audit-docs.py`, never this branch's — so no check-30 edit on this branch could
-ever have moved that row. That fix — a local commit on top of `414a9335` — was reset away
-(`git reset --hard 414a93353bd5252820fee1c3b4b2ae3b8fd1a5c1`) before pushing; its SHA is
-not an ancestor of this ledger's own tree and is not cited by number for that reason.
+ever have moved that row. That fix — a local commit on top of that branch commit — was
+reset away (`git reset --hard 414a93353bd5252820fee1c3b4b2ae3b8fd1a5c1`; the full SHA of
+the same branch commit, `414a9335`, confirmed identical via `gh api
+repos/yes-404/gi-pricing-plan/commits/414a93353bd5252820fee1c3b4b2ae3b8fd1a5c1`) before
+pushing — the local-only fix attempt itself left no commit of its own to cite; only the
+branch commit it was reset back to (`414a9335`, reachable via `refs/pull/806/head`,
+squashed as `35c954c1`) is a real commit.
 
 **The re-diagnosed cause, ruled by the deputy (03:00:11, 03:01:09, 03:21:39 BST), proven
 by a control pair** (the branch as-is: 27 fatal residue changes; with only
@@ -188,7 +195,7 @@ keys present in the rendered stamp. Restored the clause — the new test, and th
 
 | # | Branch | Squash SHA on `main` | Tasks | State |
 |---|---|---|---|---|
-| #806 | `w37-8-t1-t2` | `35c954c1` | T1, T2 (check 30 fix + the harness-only-key stamp fix) | merged |
+| #806 | `w37-8-t1-t2` | `35c954c1` | T1, T2 (check 30 fix + S-11's harness-only-key stamp fix, `scripts/doc-id.py` + `tests/test_doc_id_migrate.py`) | merged |
 | A (#807) | `w37-8-t3-t4` | `6cad8e4d` | T3, T4 | merged |
 | B (#808) | `w37-8-t5-agents-readme` | `ff70de2f` | T5 | merged |
 | C (#809) | `w37-8-t6-reporter-watcher` | `99355ab0` | T6 | merged |
@@ -221,7 +228,9 @@ survive intact).
 DISCLOSED: 878 → 870 (−8: 7 from the agent-file class closing check 30, 1 from
 ci-watcher.md's legacy-notes-path fix clearing one check-36 legacy-path hit).
 
-Gate (both halves, head `d5ec4aad`): 7/7 Python stages pass, pytest 3458 passed / 3
+Gate, evidence for squash `6cad8e4d` (#807), run at branch commit `d5ec4aad`
+(pre-squash branch commit, reachable via `refs/pull/807/head`; both halves): 7/7 Python
+stages pass, pytest 3458 passed / 3
 skipped / 1 xfailed (3462 collected, matches main's 3462). No residue introduced.
 
 ### PR-B (#808) — squash `ff70de2f` — Task 5
@@ -237,11 +246,13 @@ governed document"). Verification: `grep -n "owns no governed document"
 .claude/roles/reporter.md .claude/roles/watcher.md; echo GREP_EXIT=$?` → two lines,
 `GREP_EXIT=0`.
 
-**This executor's fix, same PR, same head, before it merged:** #809's second commit
-(`d8d6db8f`) had drifted into editing `docs/ledgers/LG-01141-…` directly — breaking the
-ruled mechanics (no PR C–G edits the ledger). Reverted with `git revert --no-edit
-d8d6db8f` → `3d9758eb`, pushed as a fast-forward (no force). The reverted text (T6's
-ownership-matrix evidence) is saved at
+**This executor's fix, same PR, before it merged:** #809's second branch commit
+(`d8d6db8f`, pre-squash branch commit, reachable via `refs/pull/809/head`) had drifted
+into editing `docs/ledgers/LG-01141-…` directly — breaking the ruled mechanics (no PR C–G
+edits the ledger). Reverted with `git revert --no-edit d8d6db8f` → `3d9758eb` (also a
+pre-squash branch commit, reachable via `refs/pull/809/head`), pushed as a fast-forward
+(no force); both are superseded by the PR's own squash, `99355ab0`. The reverted text
+(T6's ownership-matrix evidence) is saved at
 `~/gi-pricing-plan.local/handover/w37-8-ledger-notes/d8d6db8f-pr809-ledger.diff` and
 reproduced below in the T6 ownership-matrix section, since that evidence belongs in this
 ledger regardless of which PR wrote it.
@@ -330,8 +341,9 @@ turn after every report it files and after every commit, so that the lead's mess
 read before the next action; one turn spans one task, never a sequence of them"*).
 **Scope rows S-8/S-9/S-10 landed in `a24c0a28`; evidence here.**
 
-One correction commit inside the same PR (`63bc0eda`, no amend): the S-8/S-9 rider rows
-in `PL-1071-…md` initially misattributed both rulings to the lead; corrected to the
+One correction commit inside the same PR (`63bc0eda`, pre-squash branch commit,
+reachable via `refs/pull/812/head`, superseded by squash `a24c0a28`; no amend): the
+S-8/S-9 rider rows in `PL-1071-…md` initially misattributed both rulings to the lead; corrected to the
 deputy, and re-verified (audit-docs/doc-id/doc-index all rc 0 unchanged) before the
 fast-forward push.
 
@@ -458,4 +470,48 @@ check-35 two-sub-clause, `FD-1068` standing-CI-verify pinned base, `FD-1069` H1 
 population disagreement). All four are instrument- or corpus-level and none names
 `.claude/roles/` or `.claude/agents/` — the plan's own pre-filing risk assessment holds.
 Item 8 is satisfied by this negative result, quoted verbatim, not by a broader claim.
+
+## Acceptance Standard items 3, 5, 7, 11 — evidenced
+
+**Item 5 — `ci-watcher.md` is closed by a named commit.**
+
+```
+$ /usr/bin/git log --oneline -1 -- .claude/agents/ci-watcher.md
+6cad8e4d docs(agents): W37-8 T3+T4 — the seven agent files carry the governed Reference header (#807)
+```
+
+Names `6cad8e4d`, a commit in this slice's chain — not `3f41d60`. The commit and the
+file appear as row 9 of T13's §7(i) table above.
+
+**Item 3 — a dated maintainer line exists for every charter edit.** Per delegation (the
+deputy, D2, on the maintainer's instruction of 2026-09-26 17:02:52 BST), quoted verbatim
+on each PR's comments:
+
+| File | Line date (BST) | PR |
+|---|---|---|
+| `.claude/roles/reporter.md` | 2026-09-27 05:54:22 | #809 |
+| `.claude/roles/watcher.md` | 2026-09-27 05:54:22 | #809 |
+| `.claude/roles/auditor.md` | 2026-09-27 06:13:29 | #810 |
+| `.claude/roles/decision-maker.md` | 2026-09-27 06:27:26 | #811 |
+| `.claude/roles/executor.md` | 2026-09-27 06:33:34 | #812 |
+| `.claude/roles/lead.md` | 2026-09-27 06:52:13 | #813 |
+| `.claude/roles/planner.md` | *pending — H is still under review* | #814 |
+
+Six of seven lines are in hand; `planner.md`'s is requested alongside this PR's own
+merge acknowledgement (item 11, below) — H is the PR carrying it, so the line cannot
+predate the PR that names the file.
+
+**Item 7 — F97 has a disposition with a date.** Drafted, not declined: `.claude/roles/
+lead.md`'s S-6 clause (PR-G, `#813`, squash `d5501e99`) is the halt-protocol-for-the-
+shared-checkout remedy shape, with its own dated maintainer line (item 3's row above,
+2026-09-27 06:52:13 BST). `grep -n "F97" .claude/roles/lead.md; echo
+F97_GREP_EXIT=$?` → clause printed at `:88`, exit 0. Drafting the clause does not close
+F97 itself — its register row's own condition (a zero-byte `.git/index.lock` planted on
+a clean tree yields a named report) governs the auditor setting it `closed` separately.
+
+**Item 11 — the deputy's merge acknowledgement per PR, before the lead merges.** Recorded
+on each PR's comments, quoted verbatim, timestamped per the table under item 3 above (one
+ACK covers each charter file's clauses in the same comment as its item-3 line — the two
+are the same channel entry, not separate records). H's own ACK is requested alongside its
+item-3 line, since H is the PR under review when this ledger commit is written.
 
