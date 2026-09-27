@@ -55,7 +55,8 @@ def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
 def _migrated_tree() -> bool:
     """Same predicate `scripts/audit-docs.py`'s own `migrated_tree()` uses: the two
     artifacts only the RFC-937 migration creates. Not directory existence — `docs/audit/`
-    survives the migration as a tombstone (it still holds `w37-11-record.md`), and its
+    survived the migration as a tombstone (it held the W37-11 record until W37-11 moved it
+    to `_docid.W37_11_RECORD_PATH`), and its
     `findings/` child survives too, holding only a `README.md`, so `.is_dir()` alone picks
     the empty pre-migration directory over the real, populated post-migration one.
     """

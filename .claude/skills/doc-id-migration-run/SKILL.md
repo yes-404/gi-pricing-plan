@@ -90,6 +90,8 @@ T_PRIME=$(git write-tree)
 echo "T′ = $T_PRIME"
 ```
 
+**Since W37-11 the CLI refuses a tree that is already migrated:** `doc-id.py migrate --repo-root <root>` exits 2, naming the sentinel (`docs/INDEX.md` and `docs/REDIRECTS.csv` both present; `_docid.is_migrated_tree`), because a second run is not idempotent (LG-1148 Task 5; C4). Run it only over a pre-migration root, as above.
+
 `migrate`'s real flags (`python3 scripts/doc-id.py migrate --help` on `main`): `--verify
 [SNAPSHOT]`, `--ref REF`, `--keep`, `--no-baseline`, `--repo-root REPO_ROOT`. `--what`,
 `--by`, `--tree` and `--ttl-seconds` are `write_runtime_state.py announce`'s flags (the
@@ -308,7 +310,7 @@ form: use one of the two proven forms above instead of `cd`ing into a real check
 
 ## Verified
 
-Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
+Verified: 2026-09-27 against `w37-11-code` at 9422776b9bd6ddfa89de83b54f7b4a872d208e33 plus the guard commit (the migrate-refusal line: rc 2 on a migrated snapshot, measured); previously 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 Tested in production: W37-6 executive summary at 14:31:04 BST, all measurements run with the 
 forms above, result is the leading basis for commit-1 re-derivation and the 103-node 

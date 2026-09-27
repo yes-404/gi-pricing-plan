@@ -2206,9 +2206,9 @@ def test_w37_11_record_parses_a_path_governed_under_two_distinct_classes(
     draft rows -- one path, two rows, distinguished only by `cls`. The loader must keep
     both as distinct `ResidueEntry` rows (the pair `(path, cls)` is the key, per
     `ResidueEntry`'s own docstring), never collapse or overwrite one with the other."""
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
         "| scripts/doc-id.py | d9 | 6 | refused split-source citation, decision (A) |"
@@ -2905,10 +2905,12 @@ _FAILED_BLOCK = (
 def _files_corpus(dv: Any, tmp_path: pathlib.Path, *files: str) -> Any:
     """A minimal `Corpus` whose only property `_h1_residue_by_file` reads is `.tree` —
     resolution re-reads the tree's own tracked-file set via `tracked_files(corpus.tree)`
-    (team-lead's ruling: the *unfiltered* tracked set, never `Corpus.files`, which has a
+    (team-lead's ruling: `tracked_files`'s own set, never `Corpus.files`, which has a
     row-(d)/(e)/(g)-specific exclusion baked in that has nothing to do with h1's own
-    question). A real git repo, not a fake path, because `tracked_files` shells out to
-    `git ls-files` and a nonexistent tree would simply error rather than resolve nothing.
+    question). `tracked_files` is itself filtered by `sweep_exclusion_reason`; this used to
+    say "unfiltered" (F110, FD-1069). A real git repo, not a fake path, because
+    `tracked_files` shells out to `git ls-files` and a nonexistent tree would simply error
+    rather than resolve nothing.
     """
     # `_mkrepo` commits whatever it is given; a repo with nothing to commit would error,
     # so an always-present placeholder keeps `_mkrepo` valid even when a test wants a
@@ -3457,13 +3459,13 @@ def test_residue_ceiling_with_no_record_flags_nothing(dv: Any) -> None:
 
 
 def test_load_w37_11_record_reads_the_governed_table(dv: Any, tmp_path: pathlib.Path) -> None:
-    """The loader reads `docs/audit/w37-11-record.md`'s table — markdown, not `.csv`,
+    """The loader reads the W37-11 record's table (`dv.W37_11_RECORD_PATH`) — markdown, not `.csv`,
     because a bare `.csv` trips `test_no_reference_rows_are_bundled_in_the_repository`
     (FR-DATA-32); the same repo-wide `| ... |` table convention `audit-docs.py` reads. No
     name from this record is ever written into the loader itself."""
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "# W37-11 residue record\n\n"
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
@@ -3483,9 +3485,9 @@ def test_load_w37_11_record_skips_a_malformed_row_rather_than_raising(
 ) -> None:
     """A record this module cannot parse degrades to "not yet governed" for that row
     rather than crashing the run that reads it."""
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
         "| docs/x.md | d1 | not-a-number | because | W37-11 |\n"
@@ -3508,7 +3510,7 @@ def test_a_real_d7_record_entry_round_trips_through_the_ceiling(dv: Any) -> None
     """Ruling (W37-6, 2026-09-06): the (d7) box-end entries this PR adds must do real
     mechanical work, not merely exist as documentation -- `check_residue_ceiling` is the
     SEPARATE mechanism (from `_d7_disclosed_or_fail`'s own verdict) that reads them. Proof
-    against the REAL, currently-committed `docs/audit/w37-11-record.md`, not a synthetic
+    against the REAL, currently-committed record (`_docid.W37_11_RECORD_PATH`), not a synthetic
     fixture: take one real `d7` entry, confirm it is silent at its own recorded ceiling,
     confirm lowering that ceiling by one produces a fatal REGRESSION, and confirm
     restoring it clears the regression again -- the round-trip, not just one direction."""
@@ -3545,7 +3547,7 @@ def test_the_d6_record_entry_round_trips_through_the_ceiling(dv: Any) -> None:
     """The (d6) twin of the (d7) round-trip test above (Ruling, lead, 2026-09-06,
     condition 6): the ONE `d6` entry this PR adds must do real mechanical work too, not
     merely exist as documentation. Proof against the REAL, currently-committed
-    `docs/audit/w37-11-record.md`, not a synthetic fixture."""
+    record (`_docid.W37_11_RECORD_PATH`), not a synthetic fixture."""
     record = dv.load_w37_11_record(pathlib.Path("."))
     d6_entries = [e for e in record if e.cls == "d6"]
     assert d6_entries, "the real record must carry at least one d6 entry"
@@ -3587,9 +3589,9 @@ def test_the_d6_record_entry_round_trips_through_the_ceiling(dv: Any) -> None:
 def test_load_w37_11_record_rejects_a_class_no_extractor_produces(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
         "| docs/x.md | comma-continuation-left-whole | 1 | because | W37-11 |\n",
@@ -3612,9 +3614,9 @@ def test_load_w37_11_record_accepts_every_real_extractor_class(
     is `D_ALTERNATIVES`'s last-numbered alternative as of this commit, and "h1-check999"
     is a check number nothing has assigned yet, deliberately, since the h1 predicate is a
     shape, not an enumerated set."""
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
         f"| docs/x.md | {cls} | 1 | because | W37-11 |\n",
@@ -3738,7 +3740,7 @@ def test_verify_is_unaffected_by_every_live_checkout_perturbation_the_table_name
     Three perturbations, one per accident that found this class tonight:
 
     1. **Modify the governed record** (the fixed defect itself, #762/#764) — an
-       uncommitted edit to `docs/audit/w37-11-record.md`.
+       uncommitted edit to the record (`_docid.W37_11_RECORD_PATH`).
     2. **Add a stray untracked file** (the reused-directory hypothesis's own shape, ruled
        out for `--verify`'s *target* directory by `assert_workdir_disposable`, but never
        tested against `repo_root` itself — nothing stops a stray file appearing in the
@@ -3882,3 +3884,216 @@ def test_rows_d_populate_residue_keyed_by_their_own_row(dv: Any, doc_id_cli: Any
     assert wf_labels, "D_ALTERNATIVES no longer carries a wf-0[0-9] alternative"
     row = next(r for r in rows if r.key == f"d{wf_labels[0]}")
     assert dict(row.residue) == {("docs/plans/foo.md", row.key): 1}
+
+
+# =========================================================================================
+# F109 — the record is read from its own archived ref (`--record-ref`), and fails closed
+# (PL-1144 Task 2; RL-1145 DP-2 (c), amendments 1-3)
+# =========================================================================================
+
+
+def _record_text(count: int) -> str:
+    return (
+        "| path | cls | count | reason | owner |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        f"| docs/a.md | d4 | {count} | historical citation | W37-11 |\n"
+    )
+
+
+def _commit_all(repo: pathlib.Path, message: str) -> str:
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+         "commit", "-q", "-m", message],
+        check=True,
+    )
+    return subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def _ceilings(result: Any) -> list[tuple[str, str, int]]:
+    return [(e.path, e.cls, e.count) for e in result.w37_11_record]
+
+
+def test_record_ref_reads_the_record_from_its_own_archived_ref(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path
+) -> None:
+    """F109's property. The corpus is pinned at commit A, and a later commit B changes one
+    ceiling in the record. With `record_ref=B` the run must carry B's ceiling. Before this
+    change, the record was read from `--ref`'s own archive only, so an edit to the record
+    after the pinned base was invisible to CI forever.
+
+    The second case keeps F102's property. The live checkout's record is dirtied to a
+    third value, and the run must still carry B's ceiling: never A's, and never the dirty
+    one. `record_ref` is a commit-keyed archive, exactly as `ref` is.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: _record_text(1),
+    })
+    sha_a = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    (repo / dv.W37_11_RECORD_PATH).write_text(_record_text(5), encoding="utf-8")
+    sha_b = _commit_all(repo, "raise the ceiling")
+    docid = _NoOpMigrateDocid(doc_id_cli)
+
+    result = dv.verify(
+        docid, repo_root=repo, ref=sha_a, record_ref=sha_b,
+        workdir=tmp_path / "wd-b", keep=True, with_baseline=False,
+    )
+    assert _ceilings(result) == [("docs/a.md", "d4", 5)], (
+        "the record must be read at --record-ref (B), not at --ref (A)"
+    )
+    assert result.record_ref_sha == sha_b
+    assert result.snapshot.ref_sha == sha_a, "the corpus stays at --ref"
+
+    (repo / dv.W37_11_RECORD_PATH).write_text(_record_text(9), encoding="utf-8")
+    dirty = dv.verify(
+        docid, repo_root=repo, ref=sha_a, record_ref=sha_b,
+        workdir=tmp_path / "wd-dirty", keep=True, with_baseline=False,
+    )
+    assert _ceilings(dirty) == [("docs/a.md", "d4", 5)], (
+        "a live, uncommitted record edit must never reach the run (F102)"
+    )
+
+    default = dv.verify(
+        docid, repo_root=repo, ref=sha_a,
+        workdir=tmp_path / "wd-default", keep=True, with_baseline=False,
+    )
+    assert _ceilings(default) == [("docs/a.md", "d4", 1)], (
+        "--record-ref defaults to --ref"
+    )
+
+
+def test_record_missing_at_record_ref_refuses_with_exit_2_and_names_the_path(
+    dv: Any, doc_id_cli: Any, tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """RL-1145 DP-2 amendment 1, as its broken-input proof. A record that is missing from
+    the `--record-ref` archive is a refusal (exit 2), never an empty record. An empty
+    record turns every ceiling off with no message, which is the failure this prevents.
+    The message must name the path it looked for.
+    """
+    repo = _mkrepo(tmp_path / "repo", {
+        "docs/a.md": "cites wf-01 historically\n",
+        dv.W37_11_RECORD_PATH: _record_text(1),
+    })
+    sha_a = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    (repo / dv.W37_11_RECORD_PATH).unlink()
+    sha_gone = _commit_all(repo, "the record is gone")
+
+    with pytest.raises(dv.ResidueRecordMissingError) as excinfo:
+        dv.verify(
+            _NoOpMigrateDocid(doc_id_cli), repo_root=repo, ref=sha_a,
+            record_ref=sha_gone, workdir=tmp_path / "wd", with_baseline=False,
+        )
+    assert dv.W37_11_RECORD_PATH in str(excinfo.value)
+
+    code = doc_id_cli.main([
+        "migrate", "--verify", str(tmp_path / "snap"), "--ref", sha_a,
+        "--record-ref", sha_gone, "--no-baseline", "--repo-root", str(repo),
+    ])
+    err = capsys.readouterr().err
+    assert code == 2, "a missing record is a refusal to run, not a corpus verdict"
+    assert dv.W37_11_RECORD_PATH in err, err
+
+
+def _residue_result(
+    dv: Any, residue: dict[tuple[str, str], int], record: list[tuple[str, str, int]]
+) -> Any:
+    """`_result`'s pattern with the verdict set unchanged (`EXPECTED_VERDICTS` verbatim),
+    one row carrying `residue`, and the given record entries."""
+    rows = []
+    for key, verdict in dv.EXPECTED_VERDICTS.items():
+        row = _row(dv, key, verdict)
+        if key == "d4":
+            row = dv.Row(
+                key=key, title="t", owner="W37-6", predicate="p", denominator="d",
+                migrated="m", control="c", verdict=verdict, residue=residue,
+            )
+        rows.append(row)
+    base = _result(dv, {})
+    return dv.VerifyResult(
+        snapshot=base.snapshot,
+        rows=tuple(rows),
+        w37_11_record=tuple(
+            dv.ResidueEntry(path=p, cls=c, count=n, reason="r", owner="W37-11")
+            for p, c, n in record
+        ),
+    )
+
+
+def test_a_residue_progress_on_an_unchanged_verdict_set_is_rendered(dv: Any) -> None:
+    """C16 (FD-1147; RL-1145 DP-2 amendment 3), first render test. A recorded ceiling
+    that now measures 0, on an unchanged verdict set, must print the residue-ceiling block.
+    Before the fix `_set_change_block` returned early with the UNCHANGED line, so the block
+    was unreachable and `PL-1144` acceptance item 6 could not fail.
+    """
+    result = _residue_result(dv, {}, [("docs/a.md", "d4", 2)])
+    assert result.set_changes == ()
+    assert [c.kind for c in result.residue_changes] == [dv.RESIDUE_PROGRESSED]
+    assert result.exit_code == 1
+    out = dv.render(result)
+    assert "RESIDUE CEILING" in out
+    assert dv.RESIDUE_PROGRESSED in out
+
+
+def test_a_residue_regression_on_an_unchanged_verdict_set_is_rendered_and_exits_3(
+    dv: Any,
+) -> None:
+    """C16, second render test. A residue that grows into a file the record does not
+    name is a fatal change and exits 3. Before the fix, the render printed no
+    residue-ceiling block, and said the change "moved no row" on an exit-3 run.
+    """
+    result = _residue_result(
+        dv,
+        {("docs/a.md", "d4"): 1, ("docs/b.md", "d4"): 3},
+        [("docs/a.md", "d4", 1)],
+    )
+    assert result.set_changes == ()
+    assert [c.kind for c in result.residue_changes] == [dv.RESIDUE_REGRESSION]
+    assert result.exit_code == 3
+    out = dv.render(result)
+    assert "RESIDUE CEILING" in out
+    assert dv.RESIDUE_REGRESSION in out
+    assert "moved no row" not in out
+
+
+def test_h1_residue_by_file_resolves_against_the_sweep_filtered_population(
+    dv: Any, tmp_path: pathlib.Path
+) -> None:
+    """F110 (FD-1069; PL-1144 Task 6): the behaviour, not a docstring, decides which
+    population `_h1_residue_by_file` resolves a failure's file token against.
+
+    The corpus holds one sweep-excluded file, `uv.lock` (`_docid.LOCKFILE_EXCLUSIONS`),
+    beside an ordinary `docs/a.md`, both tracked. Each file is named by one check-36
+    failure line. The ordinary file resolves and is keyed per file. The lockfile does NOT
+    resolve: it falls to the class-level `_H1_UNLOCATED_PATH` key. So the population is
+    `tracked_files`'s own, **filtered** by `sweep_exclusion_reason`, and not the unfiltered
+    tracked-file set the function's docstring used to name.
+    """
+    assert dv._docid.sweep_exclusion_reason("uv.lock") is not None, (
+        "this test's premise: the lockfile is sweep-excluded"
+    )
+    corpus = _files_corpus(dv, tmp_path, "uv.lock", "docs/a.md")
+    out = subprocess.run(
+        ["git", "-C", str(corpus.tree), "ls-files"], capture_output=True, text=True,
+        check=True,
+    ).stdout.split()
+    assert "uv.lock" in out, "the lockfile is tracked, so only the sweep filter can drop it"
+    assert "uv.lock" not in dv.tracked_files(corpus.tree)
+    failures = (
+        "FAILED (2):\n"
+        "  - check 36: uv.lock: legacy pre-migration form survives\n"
+        "  - check 36: docs/a.md: legacy pre-migration form survives\n"
+    )
+    assert dict(dv._h1_residue_by_file(failures, corpus)) == {
+        ("docs/a.md", "h1-check36"): 1,
+        (dv._H1_UNLOCATED_PATH, "h1-check36"): 1,
+    }

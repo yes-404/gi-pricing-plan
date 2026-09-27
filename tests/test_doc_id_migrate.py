@@ -9277,3 +9277,41 @@ def test_sweep_still_reaches_an_untracked_unignored_path(
     after = stray.read_text(encoding="utf-8")
     assert after != planted
     assert new in after
+
+
+def test_cli_migrate_refuses_an_already_migrated_tree(
+    doc_id_cli: types.ModuleType,
+    pristine_a: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """F107 / C4's recommended fix (the deputy's ruling of 2026-09-27 13:30:35 BST, condition
+    3; adopted by the W37-11 lead). A second `migrate` over a migrated tree is not
+    idempotent: LG-1148 Task 5 measured 17 files rewritten, among them a legacy-form spec
+    constant and a PowerShell `::` split. So the CLI refuses a tree that is already
+    migrated, with exit 2 and a named reason, before anything is written.
+
+    "Already migrated" is the sentinel `audit-docs.py`'s `migrated_tree()` and `docs.yml`
+    already use: `docs/INDEX.md` and `docs/REDIRECTS.csv` both present. The negative side,
+    a pristine tree not refused, is carried by the existing CLI runs over `pristine_a`
+    without the markers (`test_cmd_migrate_prints_the_deferred_reference_stamps_by_name`
+    and its siblings), which expect exit 0.
+    """
+    (pristine_a / "docs" / "INDEX.md").write_text("# Index\n", encoding="utf-8")
+    (pristine_a / "docs" / "REDIRECTS.csv").write_text(
+        "old_id,new_id,old_path,new_path,citing_dir,part_ordinal\n", encoding="utf-8"
+    )
+    _run_git(["add", "-A"], cwd=pristine_a)
+    _run_git(["commit", "-m", "the migration's two artifacts", "--quiet"], cwd=pristine_a)
+
+    exit_code = doc_id_cli.main(["migrate", "--repo-root", str(pristine_a)])
+
+    err = capsys.readouterr().err
+    assert exit_code == 2, "an already-migrated tree is a refusal, not a run"
+    assert "already migrated" in err, err
+    assert "docs/INDEX.md" in err, err
+    assert "docs/REDIRECTS.csv" in err, err
+    status = subprocess.run(
+        ["git", "-C", str(pristine_a), "status", "--porcelain"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert status == "", f"the refusal must come before any write:\n{status}"

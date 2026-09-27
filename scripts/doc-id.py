@@ -662,7 +662,7 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
         parts = Path(rel).parts  # ("docs", ...) always, since the pathspec was "docs"
         if len(parts) < 2:
             continue  # defensive: git ls-files -- "docs" cannot itself return "docs"
-        if rel == _docid.W37_11_RECORD_PATH:
+        if rel in (_docid.W37_11_RECORD_PATH, _docid.W37_11_RECORD_PRE_MOVE_PATH):
             # F102's own shape, caught before it repeated: an ordinary-named file added
             # under `docs/audit/` (not `_CLASSIFY_FAMILY_BY_DIR`'s "audit" -> anything,
             # since that subdir holds no document family of its own) falls to `"none"` by
@@ -674,7 +674,9 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
             # same reading `process/`/`contracts/` and every `README.md`/`INDEX.md` already
             # get, declared by this one file's own path rather than by widening the
             # `"audit"` subdir wholesale (which would blind row (a) to a real stray file
-            # landing there next).
+            # landing there next). Both locations since W37-11's move: the current one,
+            # and the pre-move one a pre-migration tree still holds
+            # (`_docid.W37_11_RECORD_PRE_MOVE_PATH`'s own comment).
             family = "reference"
         elif parts[-1] in ("README.md", "INDEX.md"):
             family = "reference"
@@ -10333,6 +10335,15 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     # behaviour every such caller expects.
     if getattr(args, "verify", _VERIFY_OFF) is not _VERIFY_OFF:
         return _cmd_migrate_verify(args)
+    if _docid.is_migrated_tree(Path(args.repo_root)):
+        print(
+            f"doc-id.py migrate: refused: {args.repo_root} is already migrated "
+            "(docs/INDEX.md and docs/REDIRECTS.csv are both present). A second migrate is "
+            "not idempotent: it rewrites legacy-form spec constants and corrupts PowerShell "
+            "'::' (F107 / C4, LG-1148 Task 5). Nothing was written.",
+            file=sys.stderr,
+        )
+        return 2
     result = migrate(args.repo_root)
     for path in result.files_written:
         print(f"wrote {path}")
@@ -10440,7 +10451,13 @@ def _cmd_migrate_verify(args: argparse.Namespace) -> int:
             workdir=workdir,
             keep=args.keep,
             with_baseline=not args.no_baseline,
+            record_ref=args.record_ref,
         )
+    except _docverify.ResidueRecordMissingError as exc:
+        print(f"doc-id.py migrate --verify: refused: {exc}", file=sys.stderr)
+        # RL-1145 DP-2 amendment 1: a record missing at --record-ref is a refusal, never
+        # an empty record — an empty record turns every ceiling off with no message.
+        return 2
     except _docverify.WorkingCheckoutRefusedError as exc:
         print(f"doc-id.py migrate --verify: refused: {exc}", file=sys.stderr)
         # A distinct code from a failing row: "I would not run" and "I ran and it is red"
@@ -10524,6 +10541,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--ref",
         default="HEAD",
         help="--verify only: the ref to snapshot (default: HEAD).",
+    )
+    migrate_parser.add_argument(
+        "--record-ref",
+        default=None,
+        help="--verify only: the ref the W37-11 residue-ceiling record is read at, from "
+        "its own git archive (default: --ref). The corpus stays at --ref. A record missing "
+        "at this ref is a refusal, exit 2 (RL-1145 DP-2).",
     )
     migrate_parser.add_argument(
         "--keep",

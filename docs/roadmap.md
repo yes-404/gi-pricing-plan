@@ -381,7 +381,7 @@ exactly what §13 rule 2 is about — "exists" and "works" are different claims,
 
 ## Historical record
 
-The closure records, plan reviews and the retrofit-impossible list moved to [`docs/audit/`](audit/) on 2026-08-27 (RFC-813). This page is the forward-looking plan; the archive is at [`docs/findings/README.md`](findings/README.md).
+The closure records, plan reviews and the retrofit-impossible list moved to `docs/audit/` on 2026-08-27 (RFC-813). This page is the forward-looking plan; the archive is at [`docs/findings/README.md`](findings/README.md).
 
 ## P1b — Modelling Workbench
 status: active

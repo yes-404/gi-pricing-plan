@@ -1129,15 +1129,24 @@ def test_classify_the_w37_11_record_is_reference_not_none(
     ordinary-named file added under it — exactly what the W37-11 residue ceiling record
     is — falls to `"none"` by default and moves row (a) off PASS the moment it exists.
     Measured directly against a real `migrate --verify` snapshot before this fix landed:
-    `none: 1`, named as `docs/audit/w37-11-record.md`; after, the family disappears from
-    the count entirely rather than merely dropping to 0 among others."""
-    repo = _classify_repo(tmp_path)
-    _write(
-        repo / doc_id_cli._docid.W37_11_RECORD_PATH,
-        "| path | cls | count | reason | owner |\n",
-    )
-    _commit_all(repo)
-    assert doc_id_cli.classify_docs_files(repo) == {"reference": 1}
+    `none: 1`, named as the record's then-path (`_docid.W37_11_RECORD_PRE_MOVE_PATH`); after,
+    the family disappears from the count entirely rather than merely dropping to 0 among
+    others.
+
+    W37-11 moved the record into `process/` (RL-1145 DP-3 (a)). The pre-move location is
+    the case this carve-out exists for, and a pre-migration tree (the pinned base
+    `--verify` migrates) still holds the record there, so both locations are exercised.
+    The current one alone would pass without the carve-out, by `process/`'s own bucket."""
+    for rel in (
+        doc_id_cli._docid.W37_11_RECORD_PATH,
+        doc_id_cli._docid.W37_11_RECORD_PRE_MOVE_PATH,
+    ):
+        case_dir = tmp_path / rel.replace("/", "_")
+        case_dir.mkdir()
+        repo = _classify_repo(case_dir)
+        _write(repo / rel, "| path | cls | count | reason | owner |\n")
+        _commit_all(repo)
+        assert doc_id_cli.classify_docs_files(repo) == {"reference": 1}, rel
 
 
 def test_classify_a_similarly_named_docs_audit_file_still_reports_none(
@@ -1584,9 +1593,12 @@ def test_sweep_exclusion_reason_excludes_the_w37_11_residue_ceiling_record(
 ) -> None:
     """The fifth declared class: `_docid.W37_11_RECORD_PATH` (PR #756's condition 4) —
     the record quotes legacy paths/tokens as evidence, and populating it must not itself
-    become residue for the rows it governs. Without this exclusion, `docs/audit/
-    w37-11-record.md` would be swept like any other document once the deputy fills it."""
+    become residue for the rows it governs. Without this exclusion, the record would be
+    swept like any other document once the deputy fills it. Both locations: the current
+    one, and the pre-move one a pre-migration tree still holds
+    (`W37_11_RECORD_PRE_MOVE_PATH`, W37-11)."""
     assert docid.sweep_exclusion_reason(docid.W37_11_RECORD_PATH) is not None
+    assert docid.sweep_exclusion_reason(docid.W37_11_RECORD_PRE_MOVE_PATH) is not None
 
 
 def test_sweep_exclusion_reason_leaves_a_similarly_named_docs_audit_file_alone(
@@ -1595,7 +1607,8 @@ def test_sweep_exclusion_reason_leaves_a_similarly_named_docs_audit_file_alone(
     """The negative control: only the exact declared path is excluded, not every file
     under `docs/audit/`."""
     assert docid.sweep_exclusion_reason("docs/findings/register.md") is None
-    assert docid.sweep_exclusion_reason("docs/audit/w37-11-record.md.bak") is None
+    assert docid.sweep_exclusion_reason(f"{docid.W37_11_RECORD_PATH}.bak") is None
+    assert docid.sweep_exclusion_reason(f"{docid.W37_11_RECORD_PRE_MOVE_PATH}.bak") is None
 
 
 # W37-6 PR-B, defect 3 (2026-09-16): the generated-contract tier (ADR-704/FR-451) --

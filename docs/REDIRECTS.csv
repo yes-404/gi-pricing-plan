@@ -4,6 +4,7 @@ old_id,new_id,old_path,new_path,citing_dir,part_ordinal
 ,,docs/audit/findings/README.md,docs/findings/README.md,,
 ,,docs/audit/checklists/phase-close.md,docs/process/checklists/phase-close.md,,
 ,,docs/audit/checklists/work-item-close.md,docs/process/checklists/work-item-close.md,,
+,,docs/audit/w37-11-record.md,docs/process/residue-ceiling-record.md,,
 ,CR-717,docs/audit/closure-records.md,docs/closures/CR-00717-phase-1a-exit-demo.md,,0
 ,CR-718,docs/audit/closure-records.md,docs/closures/CR-00718-wk-667-the-demo-entrance-closed.md,,6
 ,CR-719,docs/audit/closure-records.md,docs/closures/CR-00719-wk-663-frontend-data-workbench-closed.md,,7

@@ -256,7 +256,21 @@ TEST_MODULE_EXCLUSIONS: Final[tuple[tuple[str, str], ...]] = (
 #: govern — the record of residue counted as residue. One entry, declared here rather than
 #: guessed at from a basename, because the file's own path is the whole of what identifies
 #: it (2026-09-05, W37-6, deputy's condition on PR #756).
-W37_11_RECORD_PATH: Final = "docs/audit/w37-11-record.md"
+W37_11_RECORD_PATH: Final = "docs/process/residue-ceiling-record.md"
+
+#: Where the same record lived before W37-11 moved it into `process/` (RL-1145 DP-3 (a);
+#: `docs/REDIRECTS.csv` carries the old -> new row). `W37_11_RECORD_PATH` above is the
+#: record's home for every reader of a CURRENT tree. This constant is for the one thing
+#: that still reads a PRE-MIGRATION tree: `migrate`/`--verify` over the pinned base
+#: (`core.json`'s `meta.verified_against_tree`), where the record sits at this path. There
+#: it must stay out of the sweep and out of the (d)/(e)/(g) corpus
+#: (`GOVERNANCE_RECORD_EXCLUSIONS` below), and row (a) must bucket it as `reference`
+#: (`doc-id.py`'s `classify_docs_files`), exactly as before the move. Without it, a verify
+#: of the pinned base would sweep the record, count its quoted legacy forms as residue,
+#: and score row (a)'s `none` — measured 2026-09-27: `sweep_exclusion_reason` returned
+#: `None` for this path once the constant above had moved. Code and tests name the old
+#: location by this symbol, never by a literal.
+W37_11_RECORD_PRE_MOVE_PATH: Final = "docs/audit/w37-11-record.md"
 
 #: Each entry's own case tests whether it matches `rel_posix` **exactly as this repository
 #: names that one governed record today** (`re.escape`'d, so a regex-special character in
@@ -270,6 +284,12 @@ GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
         re.compile(re.escape(W37_11_RECORD_PATH)),
         "the W37-11 residue ceiling record — quotes legacy paths/tokens as evidence of "
         "the residue they name, never a citation for the migration to rewrite",
+    ),
+    (
+        re.compile(re.escape(W37_11_RECORD_PRE_MOVE_PATH)),
+        "the W37-11 residue ceiling record at its pre-move location, as a pre-migration "
+        "tree (the pinned base `--verify` migrates) still holds it — the same record, "
+        "the same reason",
     ),
     (
         # RFC-937 §5.2 :328 routes `docs/audit/file-census-<sha>.csv` to
@@ -297,6 +317,17 @@ GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
         "citation for the migration to rewrite",
     ),
 )
+
+
+def is_migrated_tree(root: Path) -> bool:
+    """True when `root` holds the two artifacts only the RFC-937 migration creates:
+    `docs/INDEX.md` and `docs/REDIRECTS.csv`. This is the same sentinel as
+    `audit-docs.py`'s `migrated_tree()` and `.github/workflows/docs.yml`'s verify step.
+    `doc-id.py migrate` refuses such a tree, because a second run is not idempotent
+    (F107 / C4, LG-1148 Task 5).
+    """
+    docs = root / "docs"
+    return (docs / "INDEX.md").is_file() and (docs / "REDIRECTS.csv").is_file()
 
 
 def governance_record_reason(rel_posix: str) -> str | None:
