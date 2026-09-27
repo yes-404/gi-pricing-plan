@@ -86,7 +86,7 @@ the lead for filing, and DP-2 amendment 3 makes the fix part of W37-11's instrum
 
 ## Ruled
 
-### DP-1 — (j), which families are discharged now: **option (b) — Maintainer decision by delegation (deputy, 2026-09-27 11:16:34 BST)**
+### DP-1 — (j), which families are discharged now: **option (b) — Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-26 17:02:52 BST), 2026-09-27 11:16:34 BST**
 
 **This is not the decision-maker's ruling.** The resolver is the maintainer, by delegation
 to the deputy, on the maintainer's instruction of 2026-09-26 17:02:52 BST. The deputy's
@@ -179,6 +179,12 @@ Read literally, `CR-1064:545` asks for the row *"before W37-11's acceptance is w
 does exist before the plan goes active, and that is the earliest moment the acceptance binds
 anything. Whether that meets `CR-1064:545`, or is a finding against the draft's order of
 work, is the lead's reading and not this ruling's.
+
+**The lead's reading, recorded 2026-09-27 11:27:20 BST (clock read by `TZ=Europe/London date` in the command
+that wrote this paragraph): the condition is MET.** Relayed by the lead to the decision-maker
+in the team channel, in these words: *"A draft plan's acceptance is a proposal; the
+acceptance is 'written' when activation freezes the plan, and OQ-1146 lands before that, in
+the same activation PR."* This is the lead's reading, not this ruling's.
 
 ### DP-3 — where the record goes, and the remaining references: **(a) adopted, with four amendments**
 
