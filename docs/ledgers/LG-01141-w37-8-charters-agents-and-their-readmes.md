@@ -98,12 +98,52 @@ governed document"). T6's acceptance is read against a re-run of this same invoc
 
 ### Task 2
 
-Folded into the same commit/PR as Task 1's ledger entry, per the lead's mechanics: "T1 then
-T2 first, the code PR". Details recorded in this ledger's PR-1 row and in the PR body's
-broken-input proof.
+Landed in `c6964a2` (fix commit), on branch `w37-8-t1-t2`. Fixes check 30
+(`scripts/audit-docs.py`) to consult the family's derived policy for an extra rather than
+failing every one unconditionally; declares the four Claude Code harness keys
+(`name:`, `description:`, `tools:`, `model:`) in `docs/_templates/REFERENCE.md`'s
+top-level `---` block (not the unread commented foot); adds a three-case test in
+`tests/test_audit_docs_ids.py` with three new fixtures under
+`tests/fixtures/docs-ids/w37-4-checks/`. `scripts/_docid.py`'s `_KNOWN_KEYS` is untouched.
+
+**Broken-input proof (`CLAUDE.md` §13), run at this tree:**
+
+1. Reverted the fix (restored the old unconditional `fail(...)` loop): the new case-1
+   fixture (declared harness keys) fails all four, reproducing `RL-1140`'s own probes 1–3.
+2. Restored the fix, then inverted the new conditional
+   (`if extra_key not in policy.permitted: continue`): the pre-existing unknown-field
+   test and all three new tests turn red — 4 failed, 7 passed
+   (`uv run pytest tests/test_audit_docs_ids.py -k check_30 -q`).
+3. Restored the correct fix: all 11 check-30 tests green.
+
+**Gate, at `c6964a2` (both halves):**
+
+| stage | result |
+|---|---|
+| ruff | pass |
+| mypy | pass |
+| import_linter | pass |
+| audit_docs | pass |
+| req_coverage | pass |
+| contracts | pass |
+| pytest | pass — 3456 passed, 3 skipped, 1 xfailed (baseline 3457 collected/3 skipped + 3 new tests = 3460 collected) |
+| frontend install | pass |
+| frontend generate:api | pass |
+| frontend lint | pass |
+| frontend type-check | pass |
+| frontend test | pass — 97 files / 602 tests |
+| frontend build | pass |
+
+`GATE: pass — 7 of 7 stages passed` (Python half). Logs and rc files at
+`~/gi-pricing-plan.local/handover/gate-c6964a2/{python,frontend}/` (local, not repo —
+`handover-files-are-local-not-repo`).
+
+`python3 scripts/audit-docs.py | grep -c 'check 30: \.claude/agents/'` still prints `7` at
+this tree (T3/T4 have not merged headers yet); `grep -n '"tools"\|"model"\|"description"'
+scripts/_docid.py` has no hit inside `_KNOWN_KEYS`.
 
 ## PRs
 
 | # | Branch | Head | Tasks | State |
 |---|---|---|---|---|
-| 1 | `w37-8-t1-t2` | _pending — recorded after push_ | T1, T2 | draft, open |
+| 1 | `w37-8-t1-t2` | `c6964a2` | T1, T2 | draft, open |
