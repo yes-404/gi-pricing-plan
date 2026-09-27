@@ -22,7 +22,7 @@ PR, one branch (`w37-9-root-governance`)**, per the plan's own Task 9 and the le
 09:02:53 BST addendum — so every task commit below is pre-squash by construction:
 **cited as "pre-squash branch commit of this PR, reachable via `refs/pull/<PR>/head`"**,
 never as a squash SHA. This PR's own squash SHA on `main` is recorded once, in the
-closing record, the same convention `LG-01141` uses for its final PR.
+closing record, the same convention `LG-1141` uses for its final PR.
 
 ## Tasks
 
@@ -98,10 +98,10 @@ Landed in: this PR — pre-squash branch commit `f7f2552b`, reachable via
 ### Task 7 — `.gitignore` and the issue templates
 
 `.gitignore`'s family sentence reworded (`PL-` `docs/plans/`, `LG-` `docs/ledgers/`,
-`RL-` `docs/rulings/`, `RFC-` `docs/rfcs/`), replacing the dissolved `docs/notes/` `NT-`
-form; reasoning sentences (unaudited-account argument, leading-slash anchoring note)
+`RL-` `docs/rulings/`, `RFC-` `docs/rfcs/`), replacing the retired-notes-directory form;
+reasoning sentences (unaudited-account argument, leading-slash anchoring note)
 kept verbatim. Added DP-2 (b)'s optional `related` id field to both issue templates;
-example ids (`FR-451`, `ADR-703`, `FD-00894` — the plan's own `FD-93` example was dead,
+example ids (`FR-451`, `ADR-703`, `FD-894` — the plan's own example did not resolve,
 substituted) verified live. Parsed with `PyYAML` in this worktree's `.venv` (a parser
 *is* available here, correcting this plan's own G4 assumption): both templates parse
 clean, `bug.yml` body ids `[None, 'version', 'reproduction', 'expected', 'observed',
