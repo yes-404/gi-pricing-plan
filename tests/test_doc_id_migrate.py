@@ -6070,26 +6070,69 @@ def _reference_census(module: types.ModuleType, root: pathlib.Path) -> list[Any]
     return list(targets)
 
 
-def test_reference_stamp_emits_none_of_the_four_harness_only_keys(
-    doc_id_cli: types.ModuleType,
-) -> None:
-    """W37-8 T2 re-diagnosis (03:21:39 BST): `docs/_templates/REFERENCE.md`'s top-level
-    block declares `name:`, `description:`, `tools:` and `model:` as *permitted*
-    (RL-1140 DP-8.1) so `.claude/agents/*.md` and `.claude/skills/*/SKILL.md` files'
-    own front matter is licensed under check 30 -- but migration has no data source for
-    any of the four on a real Reference document (a README, a generated index), so
-    `_stamp_header("REFERENCE", ...)` must never write them. Read against the real
-    template on this checkout, the same one `docs/_templates/REFERENCE.md`'s DP-8.1
-    widening landed in.
+def _stamped_reference_header_keys(doc_id_cli: types.ModuleType) -> set[str]:
+    """Every `key:` line `_stamp_header("REFERENCE", ...)` renders, read against the
+    real, on-checkout `docs/_templates/REFERENCE.md` -- factored out so both halves of
+    `test_reference_stamp_harness_keys_are_skipped_only_while_the_constant_names_them`
+    stamp identically, the constant's own state (active or monkeypatched) being the only
+    thing that can differ between the two calls.
     """
     rendered = doc_id_cli._stamp_header(
         "REFERENCE", None, kind=None, title="A Title", status="active",
         created=date(2026, 9, 27), owner="maintainer", was=None,
     )
-    emitted_keys = {
-        m.group(1) for m in re.finditer(r"^([A-Za-z_]+):", rendered, re.MULTILINE)
+    return {m.group(1) for m in re.finditer(r"^([A-Za-z_]+):", rendered, re.MULTILINE)}
+
+
+def test_reference_stamp_harness_keys_are_skipped_only_while_the_constant_names_them(
+    doc_id_cli: types.ModuleType, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """W37-8 T2 re-diagnosis (03:21:39 BST, deputy 03:30:04 BST refinement): a real
+    Reference document (a README, a generated index) has no data source for
+    `docs/_templates/REFERENCE.md`'s four Claude Code harness keys (RL-1140 DP-8.1), so
+    `_stamp_header` must skip them -- but the skip itself must be conditioned on the one
+    named constant, `_HARNESS_ONLY_TEMPLATE_KEYS`, never on an independent hand-written
+    list that could drift from it.
+
+    `expected` is captured ONCE, before either stamp, so both halves below check the
+    identical four names -- the proof this test exists for is precisely that patching the
+    *production* constant (never a second copy of the four names) moves the *stamped*
+    result:
+
+    * (a) the constant active (its ordinary, committed state): none of `expected` is
+      emitted -- `_stamp_header`'s skip is doing its job.
+    * (b) the constant monkeypatched to `frozenset()` (C2's named broken input): every one
+      of `expected` IS emitted -- with nothing left in the constant to skip against, the
+      four keys pass straight through, proving (a) is not a vacuous truth of the render
+      (e.g. the template never declaring them in the first place).
+    """
+    expected = frozenset(doc_id_cli._HARNESS_ONLY_TEMPLATE_KEYS)
+
+    emitted_with_constant_active = _stamped_reference_header_keys(doc_id_cli)
+    assert not (expected & emitted_with_constant_active), emitted_with_constant_active
+
+    monkeypatch.setattr(doc_id_cli, "_HARNESS_ONLY_TEMPLATE_KEYS", frozenset())
+    emitted_with_constant_emptied = _stamped_reference_header_keys(doc_id_cli)
+    assert expected <= emitted_with_constant_emptied, emitted_with_constant_emptied
+
+
+def test_reference_stamp_harness_key_constant_is_not_a_vacuous_skip(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Non-vacuity, kept separate from the proof above (a false pass here must never read
+    as that proof failing): `_HARNESS_ONLY_TEMPLATE_KEYS` is non-empty, and every name in
+    it is a real `key:` line of `docs/_templates/REFERENCE.md`'s own top-level block
+    (`_template_header_lines`, the same reader `_stamp_header` itself uses) -- so the
+    constant names keys the template actually declares, never a stricter, arbitrary
+    subset that would make the "not emitted" proof trivially true for the wrong reason.
+    """
+    assert doc_id_cli._HARNESS_ONLY_TEMPLATE_KEYS
+    template_keys = {
+        m.group(1)
+        for line in doc_id_cli._template_header_lines("REFERENCE")
+        if (m := re.match(r"^([A-Za-z_]+):", line))
     }
-    assert not (emitted_keys & doc_id_cli._HARNESS_ONLY_TEMPLATE_KEYS), rendered
+    assert template_keys >= doc_id_cli._HARNESS_ONLY_TEMPLATE_KEYS, template_keys
 
 
 def test_reference_stamp_census_is_silent_on_the_real_corpus(
