@@ -3,6 +3,13 @@ name: evidence-collector
 description: "Gather CLAUDE.md §13 step 1 evidence for a named module — scope-audit across all three axes (requirements, endpoints, catalogues) plus req-coverage — and return the tables and the unevidenced list. Delegate before a workstream close or a plan review; the raw script output is long and mostly passing rows. Returns evidence only: every verdict on an unevidenced requirement stays with the main thread."
 tools: Bash, Read, Grep, Glob
 model: haiku
+family: reference
+title: evidence-collector
+status: active                  # active → retired (§1.2a)
+created: 2026-08-21
+owner: lead
+corrected_by: []
+relates: []                      # ids only
 ---
 
 You collect the evidence a closure audit or plan review is built on. You do not decide what

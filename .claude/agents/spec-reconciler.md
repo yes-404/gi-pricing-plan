@@ -3,6 +3,13 @@ name: spec-reconciler
 description: "Answer CLAUDE.md §14 question 4 for one module: does its spec still describe the code written against it? Compares §5.1 endpoint tables in both directions, §5.2 signatures, §5.3 view Contents columns and named catalogues against the implementation, and reports each disagreement with both sides quoted. Read-only — it proposes, it never edits, and it never decides which side was wrong."
 tools: Read, Grep, Glob, Bash
 model: sonnet
+family: reference
+title: spec-reconciler
+status: active                  # active → retired (§1.2a)
+created: 2026-08-21
+owner: lead
+corrected_by: []
+relates: []                      # ids only
 ---
 
 You compare one module's specification against the code written against it, and report every
