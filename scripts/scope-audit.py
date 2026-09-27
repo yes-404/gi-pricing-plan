@@ -11,11 +11,11 @@ Both inputs are documents. Requirements come from `docs/specs/`, evidence comes 
 written, which is what makes the result independent of whoever runs it.
 
     scripts/scope-audit.py PLAT                    # every PLAT requirement, by section
-    scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 --extra FR-PLAT-47,FR-PLAT-48
+    scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 --extra FR-450,FR-451
     scripts/scope-audit.py DATA --endpoints        # also check the §5.1 endpoint table
     scripts/scope-audit.py DATA --catalogue VR     # also check a declared catalogue
 
-**A requirement can also summarise a catalogue it does not enumerate.** `01` FR-DATA-16
+**A requirement can also summarise a catalogue it does not enumerate.** `01` FR-45
 says "validation covers four layers", which one test can evidence — while §4.4's catalogue
 of 38 named rules behind it was 12 implemented. `--catalogue VR` compares the ids a spec
 declares against the ids the code names, which is the difference between "the layers work"
@@ -23,13 +23,13 @@ and "the rules exist".
 
 **A requirement can be fully evidenced while the module is unreachable.** Requirement
 markers live on unit and service tests, so a module can pass every one of them and expose
-not a single HTTP route — which is exactly what `--endpoints` found for W4: 49 of 50
+not a single HTTP route — which is exactly what `--endpoints` found for WK-660: 49 of 50
 `DATA` requirements evidenced, and 0 of the 28 endpoints `01` §5.1 declares. Coverage of
 the requirement list is not coverage of the interface.
 
 `--sections` restricts to the spec sections a workstream's named areas cover; `--extra`
 adds individual requirements it also owns. The resulting count is the number to reconcile
-against the roadmap's claim — **a disagreement is itself a finding**, and was one for W2.
+against the roadmap's claim — **a disagreement is itself a finding**, and was one for WK-658.
 
 Exit code is 1 when any in-scope requirement has no evidence, so a closure procedure can
 run this and stop.
@@ -263,7 +263,7 @@ def implemented_endpoints() -> set[tuple[str, str]]:
     """The (method, path) pairs the committed OpenAPI contract publishes.
 
     Read from `docs/contracts/`, not from the running app: the contract is the published
-    artifact (FR-PLAT-48), and CI already fails when the app drifts from it. Auditing the
+    artifact (FR-451), and CI already fails when the app drifts from it. Auditing the
     app instead would make this check pass on a route that was never published.
     """
     contract = ROOT / "docs" / "contracts" / "openapi" / "generated.json"
@@ -313,7 +313,7 @@ def _extra_ids(raw: str, known: set[str], module: str) -> set[str] | None:
     The parser is a literal `raw.split(",")` with no shared-prefix inheritance: a comma
     reads to a human as "and repeat the prefix", but the parser reads it as a plain
     separator. `--extra FR-RATE-40,41,42` is not three requirement ids, it is
-    `FR-RATE-40`, `"41"` and `"42"`. Before this check existed, `main` folded every token
+    `FR-257`, `"41"` and `"42"`. Before this check existed, `main` folded every token
     straight into scope regardless, and an unmatched one still got a `NO EVIDENCE` row
     printed for it — indistinguishable from a real requirement lacking a test, and with one
     bogus token swapped in for the id it silently replaced, the in-scope *count* still came
@@ -364,7 +364,7 @@ def main() -> int:
     parser.add_argument(
         "--extra",
         help="Comma-separated requirement ids also in scope, each written out in full, "
-        "e.g. FR-PLAT-47,FR-PLAT-48 (NOT FR-PLAT-47,48 — the comma does not repeat "
+        "e.g. FR-450,FR-451 (NOT FR-PLAT-47,48 — the comma does not repeat "
         "the prefix)",
     )
     parser.add_argument(

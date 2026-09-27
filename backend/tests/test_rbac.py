@@ -1,4 +1,4 @@
-"""Roles, scopes and enforcement (`06` §3.1, FR-GOV-1..8)."""
+"""Roles, scopes and enforcement (`06` §3.1, FR-342, FR-343, FR-344, FR-345, FR-346, FR-347, FR-348, FR-349)."""
 
 from __future__ import annotations
 
@@ -58,9 +58,9 @@ async def _assign(
 # -- the role catalogue ---------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-3")
+@pytest.mark.req("FR-344")
 def test_the_platform_ships_the_roles_the_overview_names() -> None:
-    """`00` §1.4 names six actors; FR-GOV-3 says the platform ships them."""
+    """`00` §1.4 names six actors; FR-344 says the platform ships them."""
     assert set(BUILTIN_ROLES) == {
         "analyst",
         "pricing_actuary",
@@ -71,9 +71,9 @@ def test_the_platform_ships_the_roles_the_overview_names() -> None:
     }
 
 
-@pytest.mark.req("FR-GOV-5")
+@pytest.mark.req("FR-346")
 def test_the_auditor_reads_everything_and_writes_nothing() -> None:
-    """FR-GOV-5, asserted as a set identity rather than a list.
+    """FR-346, asserted as a set identity rather than a list.
 
     Derived from READ_PERMISSIONS so a read permission added later reaches the Auditor
     automatically — the failure otherwise being an artifact type an auditor cannot see,
@@ -91,16 +91,16 @@ def test_the_auditor_reads_everything_and_writes_nothing() -> None:
         assert write not in auditor
 
 
-@pytest.mark.req("FR-GOV-11")
+@pytest.mark.req("FR-353")
 def test_an_administrator_cannot_approve() -> None:
     """Negative: an admin who could approve could grant itself the right and use it."""
     assert Permission.APPROVAL_DECIDE not in BUILTIN_ROLES["admin"]
     assert Permission.DEPLOYMENT_PROMOTE not in BUILTIN_ROLES["admin"]
 
 
-@pytest.mark.req("FR-GOV-6")
+@pytest.mark.req("FR-347")
 def test_no_builtin_role_grants_a_service_account_permission_to_a_human() -> None:
-    """FR-GOV-6 scopes Service Accounts to scoring; the converse also holds — scoring is
+    """FR-347 scopes Service Accounts to scoring; the converse also holds — scoring is
     not something a human role needs, and granting it would blur the audit trail."""
     for slug, permissions in BUILTIN_ROLES.items():
         assert Permission.SCORE_EXECUTE not in permissions, slug
@@ -110,7 +110,7 @@ def test_no_builtin_role_grants_a_service_account_permission_to_a_human() -> Non
 # -- enforcement -----------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_a_principal_with_no_assignment_holds_nothing(
     database: Database, workspace_id
 ) -> None:
@@ -122,7 +122,7 @@ async def test_a_principal_with_no_assignment_holds_nothing(
     assert held == frozenset()
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_a_workspace_assignment_confers_the_roles_permissions(
     database: Database, workspace_id
 ) -> None:
@@ -136,7 +136,7 @@ async def test_a_workspace_assignment_confers_the_roles_permissions(
     assert Permission.APPROVAL_DECIDE not in held
 
 
-@pytest.mark.req("FR-GOV-4")
+@pytest.mark.req("FR-345")
 async def test_a_scoped_assignment_does_not_reach_another_resource(
     database: Database, workspace_id
 ) -> None:
@@ -171,7 +171,7 @@ async def test_a_scoped_assignment_does_not_reach_another_resource(
     assert on_home is False
 
 
-@pytest.mark.req("FR-GOV-4")
+@pytest.mark.req("FR-345")
 async def test_a_scoped_assignment_does_not_answer_an_unscoped_question(
     database: Database, workspace_id
 ) -> None:
@@ -195,7 +195,7 @@ async def test_a_scoped_assignment_does_not_answer_an_unscoped_question(
     assert held is False
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_scope_denied_is_distinguished_from_permission_denied(
     database: Database, workspace_id
 ) -> None:
@@ -228,7 +228,7 @@ async def test_scope_denied_is_distinguished_from_permission_denied(
     assert absent.value.code == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 async def test_a_denial_does_not_enumerate_what_the_principal_holds(
     database: Database, workspace_id
 ) -> None:
@@ -251,7 +251,7 @@ async def test_a_denial_does_not_enumerate_what_the_principal_holds(
 # -- granting --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-7")
+@pytest.mark.req("FR-348")
 async def test_granting_requires_the_manage_roles_permission(
     database: Database, workspace_id
 ) -> None:
@@ -269,11 +269,11 @@ async def test_granting_requires_the_manage_roles_permission(
             )
 
 
-@pytest.mark.req("FR-GOV-7")
+@pytest.mark.req("FR-348")
 async def test_a_user_cannot_grant_a_permission_they_do_not_hold(
     database: Database, workspace_id
 ) -> None:
-    """The escalation FR-GOV-7 forbids: an admin minting an Approver and using it."""
+    """The escalation FR-348 forbids: an admin minting an Approver and using it."""
     admin, target = _user(), _user()
     await _assign(database, workspace_id, admin, "admin")
 
@@ -291,7 +291,7 @@ async def test_a_user_cannot_grant_a_permission_they_do_not_hold(
     assert "approval:decide" in (exc.value.detail or "")
 
 
-@pytest.mark.req("FR-GOV-7")
+@pytest.mark.req("FR-348")
 async def test_a_grant_within_what_the_granter_holds_succeeds_and_is_audited(
     database: Database, workspace_id
 ) -> None:
@@ -332,7 +332,7 @@ async def test_a_grant_within_what_the_granter_holds_succeeds_and_is_audited(
 # -- break-glass -----------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-8")
+@pytest.mark.req("FR-349")
 async def test_break_glass_is_time_boxed_and_expires(
     database: Database, workspace_id
 ) -> None:
@@ -372,7 +372,7 @@ async def test_break_glass_is_time_boxed_and_expires(
     assert Permission.APPROVAL_DECIDE not in held
 
 
-@pytest.mark.req("FR-GOV-8")
+@pytest.mark.req("FR-349")
 async def test_break_glass_requires_a_reason(database: Database, workspace_id) -> None:
     admin, target = _user(), _user()
     await _assign(database, workspace_id, admin, "admin")
@@ -389,7 +389,7 @@ async def test_break_glass_requires_a_reason(database: Database, workspace_id) -
     assert exc.value.code == "BREAK_GLASS_REASON_REQUIRED"
 
 
-@pytest.mark.req("FR-GOV-8")
+@pytest.mark.req("FR-349")
 async def test_break_glass_cannot_be_open_ended(database: Database, workspace_id) -> None:
     """Negative: a grant measured in days is a role change with a shorter paper trail."""
     admin, target = _user(), _user()
@@ -407,7 +407,7 @@ async def test_break_glass_cannot_be_open_ended(database: Database, workspace_id
             )
 
 
-@pytest.mark.req("FR-GOV-8")
+@pytest.mark.req("FR-349")
 async def test_break_glass_is_audited_and_flagged(
     database: Database, workspace_id
 ) -> None:
@@ -438,7 +438,7 @@ async def test_break_glass_is_audited_and_flagged(
     assert event.after["break_glass"] is True
 
 
-@pytest.mark.req("FR-GOV-3")
+@pytest.mark.req("FR-344")
 async def test_seeding_roles_is_idempotent(database: Database, workspace_id) -> None:
     async with database.unit_of_work() as session:
         first = await rbac.seed_builtin_roles(session, workspace_id)
@@ -448,13 +448,13 @@ async def test_seeding_roles_is_idempotent(database: Database, workspace_id) -> 
     assert second == []
 
 
-@pytest.mark.req("FR-GOV-6")
+@pytest.mark.req("FR-347")
 async def test_a_credentials_own_permissions_are_enforced(
     database: Database, workspace_id, principal
 ) -> None:
-    """Ruling 38: a permission no role can carry is still enforceable.
+    """RL-924: a permission no role can carry is still enforceable.
 
-    `score:execute` is held by no builtin role, deliberately (FR-GOV-6, asserted above), so
+    `score:execute` is held by no builtin role, deliberately (FR-347, asserted above), so
     before this the only enforcement path could never satisfy it and `Caller.permissions`
     was populated and read by nothing.
     """
@@ -475,11 +475,11 @@ async def test_a_credentials_own_permissions_are_enforced(
         )
 
 
-@pytest.mark.req("FR-GOV-6")
+@pytest.mark.req("FR-347")
 async def test_enforcement_follows_the_credential_not_the_account_row(
     database: Database, workspace_id, principal
 ) -> None:
-    """Ruling 38's acceptance limb 2, and the whole reason the set is **passed**.
+    """RL-924's acceptance limb 2, and the whole reason the set is **passed**.
 
     The account row here would say one thing and the presented credential another. What is
     enforced must be the credential's set, because that is what was actually authenticated

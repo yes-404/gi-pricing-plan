@@ -102,7 +102,7 @@ def test_version_content_hash_is_canonical_and_content_addressed() -> None:
     assert version_content_hash(changed) != version_content_hash(cells)
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 async def test_the_cache_round_trips_through_real_redis(settings) -> None:
     """The wire form is bytes of JSON — proven against the compose Redis; skipped
     when Redis is not reachable (the `test_celery_broker` convention)."""
@@ -125,7 +125,7 @@ async def test_the_cache_round_trips_through_real_redis(settings) -> None:
         await client.delete(key)
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 async def test_diff_is_computed_on_miss_and_served_from_the_cache_on_hit(
     database, workspace_id, principal, blob_store
 ) -> None:

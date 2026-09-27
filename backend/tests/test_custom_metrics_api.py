@@ -1,4 +1,4 @@
-"""Custom Metrics over HTTP (`02` FR-MODEL-108).
+"""Custom Metrics over HTTP (`02` FR-162).
 
 Parallel to `test_custom_objectives.py`'s one HTTP test, but this is the file that owns the
 Custom Metric endpoints — the service and the database-layer invariants
@@ -213,7 +213,7 @@ def _seed_model_referencing(
     return _run(_insert)
 
 
-@pytest.mark.req("FR-MODEL-45")
+@pytest.mark.req("FR-154")
 def test_create_returns_201_and_a_draft(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -225,7 +225,7 @@ def test_create_returns_201_and_a_draft(
     assert body["certificate_id"] is None
 
 
-@pytest.mark.req("FR-MODEL-108")
+@pytest.mark.req("FR-162")
 def test_the_created_metric_is_readable(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -235,7 +235,7 @@ def test_the_created_metric_is_readable(
     assert response.json()["slug"] == "capped-gamma-nll"
 
 
-@pytest.mark.req("FR-MODEL-108")
+@pytest.mark.req("FR-162")
 def test_the_certificate_404s_before_certification_and_names_the_metric(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -247,7 +247,7 @@ def test_the_certificate_404s_before_certification_and_names_the_metric(
     assert created["id"] in response.text
 
 
-@pytest.mark.req("FR-MODEL-105")
+@pytest.mark.req("FR-157")
 def test_an_uncertified_metric_cannot_be_submitted(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -266,7 +266,7 @@ def test_an_uncertified_metric_cannot_be_submitted(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-MODEL-104")
+@pytest.mark.req("FR-156")
 def test_a_metric_without_a_direction_is_refused(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -275,7 +275,7 @@ def test_a_metric_without_a_direction_is_refused(
     assert response.status_code == 422
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 def test_a_metric_missing_a_parameter_with_no_default_is_refused(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -296,7 +296,7 @@ def test_a_metric_missing_a_parameter_with_no_default_is_refused(
     assert "'cap'" in problem["detail"]
 
 
-@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-155")
 def test_creating_the_same_slug_twice_makes_a_second_version(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -308,7 +308,7 @@ def test_creating_the_same_slug_twice_makes_a_second_version(
 # -- The library list ------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_library_lists_the_workspace_metrics(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -320,13 +320,13 @@ def test_the_library_lists_the_workspace_metrics(
     assert {first["id"], second["id"]} <= ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_slug_filter_is_an_exact_match(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
     """**Exact**, not a prefix.
 
-    FR-MODEL-127 makes this filter the thing that resolves §5.3's `slug@version` addresses
+    FR-167 makes this filter the thing that resolves §5.3's `slug@version` addresses
     against UUID-only detail routes. A prefix match would resolve `capped-gamma` to
     `capped-gamma` and `capped-gamma-tail` alike, which is a wrong artifact rather than a
     wide result.
@@ -338,7 +338,7 @@ def test_the_slug_filter_is_an_exact_match(
     assert [row["id"] for row in response.json()["items"]] == [target["id"]]
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_status_filter_selects_one_lifecycle_state(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -352,7 +352,7 @@ def test_the_status_filter_selects_one_lifecycle_state(
     assert draft["id"] not in ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_each_row_carries_its_usage_count(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -375,7 +375,7 @@ def test_each_row_carries_its_usage_count(
     assert detail.json()["usage_count"] is None
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_a_model_naming_several_metrics_counts_against_each(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -400,13 +400,13 @@ def test_a_model_naming_several_metrics_counts_against_each(
     ]
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_row_count_agrees_with_the_detail_blast_radius(
     client: TestClient, actuary: dict[str, str], workspace_id: UUID
 ) -> None:
     """The row and `GET /{id}/usage` answer the same question about the same artifact.
 
-    FR-MODEL-127's count is the library's summary of FR-MODEL-108's blast radius. Were the
+    FR-167's count is the library's summary of FR-162's blast radius. Were the
     aggregate to filter on model status where `usage` does not, the row would quietly
     disagree with the page an actuary opens from it — which is worse than either absent.
     """
@@ -421,7 +421,7 @@ def test_the_row_count_agrees_with_the_detail_blast_radius(
     assert listed.json()["items"][0]["usage_count"] == len(detail.json()["models"]) == 3
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_library_stops_at_the_workspace_boundary(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -435,7 +435,7 @@ def test_the_library_stops_at_the_workspace_boundary(
     assert str(elsewhere) not in ids
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_listing_without_model_read_is_refused(
     client: TestClient, actuary: dict[str, str], stranger: dict[str, str]
 ) -> None:
@@ -450,7 +450,7 @@ def test_listing_without_model_read_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-167")
 def test_the_page_is_cursor_paginated(
     client: TestClient, actuary: dict[str, str]
 ) -> None:
@@ -476,8 +476,8 @@ def test_the_page_is_cursor_paginated(
 # -- the published contract ----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-127")
-@pytest.mark.req("FR-MODEL-108")
+@pytest.mark.req("FR-167")
+@pytest.mark.req("FR-162")
 def test_every_custom_metric_route_is_in_the_published_contract() -> None:
     """The sibling guard `test_custom_objectives.py` and `test_peril_structures.py` already
     carry. It is the one assertion that fails when a route ships but the contract is not

@@ -2,7 +2,7 @@
 
 `02` §3.7 (FR-MODEL-38..48, 68/69/70, 75/76), §4.5's catalogue, §4.7's certificate, §5.2.
 
-**Phase 1 is templates only** (FR-MODEL-75). `model_schema.CustomObjective` refuses to be
+**Phase 1 is templates only** (FR-150). `model_schema.CustomObjective` refuses to be
 constructed with `kind: expression` at all, so nothing here has to guard against one — the
 two Phase-2 entry points `parse_expression` and `derive_derivatives` are *not* stubbed here
 either. A stub is a shape a caller can import and a test can pretend to exercise; their
@@ -12,23 +12,23 @@ absence is the same statement the flag makes, in the one place a Phase-2 author 
 gradient and hessian with respect to the raw score `f` — plus, where the loss is piecewise,
 the `f` at which its branch flips. `w` never enters them: every template's loss is linear
 in the case weight, so `compile_objective` multiplies once and the templates stay readable.
-That is not a convenience, it is the property FR-MODEL-48's fit path depends on — a weight
+That is not a convenience, it is the property FR-165's fit path depends on — a weight
 that entered the arithmetic could change the *sign* of a hessian, and the clipping strategy
 is chosen against the unweighted shape.
 
 **Every template is log-link except `focal_binomial`**, which is logistic. `μ = exp(f)`
-throughout, so the offset (`base_margin`, FR-MODEL-72) is additive in `f` and multiplicative
+throughout, so the offset (`base_margin`, FR-129) is additive in `f` and multiplicative
 in `μ` — the same arithmetic the built-in objectives use, which is what lets a custom
 objective be swapped for `count:poisson` without touching anything else in `GbmSpec`.
 
-**Certification is the point of the module** (FR-MODEL-76). `certify_objective` is not a
+**Certification is the point of the module** (FR-151). `certify_objective` is not a
 test helper: it is the machinery §4.7 requires, run on templates in Phase 1 so that the
 first user-authored loss in Phase 2 meets a path that has been running for a phase. It is
 also, incidentally, the best test these 24 analytic derivatives could have — every one of
 them is checked against a Richardson-extrapolated numeric derivative of its own loss, so a
 sign error anywhere in this file fails a check with the template's name on it.
 
-ADR-0001 holds. Nothing here allocates an id or reads a clock: `certify_objective` returns
+ADR-703 holds. Nothing here allocates an id or reads a clock: `certify_objective` returns
 a `CertificateResult`, and the platform wraps it in the `ObjectiveCertificate` that carries
 the id, the job and the timestamp — exactly the `compute_diagnostics`/`DiagnosticsResult`
 split, and a divergence from §5.2's declared return type recorded there with its date.
@@ -75,7 +75,7 @@ _Arr = npt.NDArray[np.float64]
 #: A boolean selection over one of them.
 _Mask = npt.NDArray[np.bool_]
 
-#: The finite-difference step. `1e-6` is what §4.7's example records, and FR-MODEL-70 is
+#: The finite-difference step. `1e-6` is what §4.7's example records, and FR-149 is
 #: the requirement that says why it is not used: truncation error alone reaches ~4e-4 there
 #: on a steeply-curved loss. With Richardson extrapolation the error scales as `h**4`, so a
 #: *larger* step is strictly better — it moves the comparison away from the cancellation
@@ -84,14 +84,14 @@ _STEP: Final = 1e-4
 
 #: Where a Richardson-extrapolated central difference lands on a smooth loss. Anything
 #: above this and below `_TOLERANCE_WARN` is a finding rather than a failure: a genuinely
-#: stiff loss can miss the tight figure without being wrong, and FR-MODEL-70's whole point
+#: stiff loss can miss the tight figure without being wrong, and FR-149's whole point
 #: is that a fixed tight tolerance is not meaningful.
 _TOLERANCE_PASS: Final = 1e-6
 _TOLERANCE_WARN: Final = 1e-3
 
 
 # --------------------------------------------------------------------------------------
-# The catalogue (§4.5, FR-MODEL-39)
+# The catalogue (§4.5, FR-143)
 # --------------------------------------------------------------------------------------
 
 _P = Mapping[str, float]
@@ -116,7 +116,7 @@ class _Template:
     gauss_newton: _Fn | None = None
     f_boundaries: _Boundaries | None = None
     #: `y` values where the loss changes form. Not excluded from the derivative check — a
-    #: central difference in `f` never straddles one — but reported under FR-MODEL-69, and
+    #: central difference in `f` never straddles one — but reported under FR-148, and
     #: sampled at deliberately, since a uniform grid over `[0, 1e7]` hits `y = 0` never.
     y_anchors: Callable[[_P], tuple[float, ...]] | None = None
     #: What the branch *is*, for the certificate's prose. `None` where the loss is smooth.
@@ -189,7 +189,7 @@ def _tweedie_hess(y: _Arr, f: _Arr, p: _P) -> _Arr:
 # §4.5 reads "Gamma loss on `min(y, cap)`, plus a recorded loading to restore the uncapped
 # mean". Only the first half is an objective: the loading is a ratio of two sample means
 # and cannot be computed from `(y, f)` one row at a time. It is `LossTreatment`'s
-# `flat_loading` (FR-MODEL-73), which `apply_loss_treatment` already computes and
+# `flat_loading` (FR-127), which `apply_loss_treatment` already computes and
 # `reconcile` already reports — so capping here and loading there is the same arithmetic
 # the built-in path performs, not a gap. Recorded as a §4.5 note dated 2026-08-18.
 
@@ -394,7 +394,7 @@ def _quantile_grad(y: _Arr, f: _Arr, p: _P) -> _Arr:
 def _quantile_hess(y: _Arr, f: _Arr, p: _P) -> _Arr:
     # The pinball loss is piecewise **linear** in `μ`, so its exact second derivative is
     # its first — negative on the under-prediction side. That is not an approximation to
-    # improve on: it is why FR-MODEL-43 exists, and why this template certifies
+    # improve on: it is why FR-152 exists, and why this template certifies
     # `convexity: violated` and needs a declared strategy and a second Approver.
     return -_pinball_weight(y, f, p) * _mu(f)
 
@@ -555,7 +555,7 @@ _TEMPLATES: Final[dict[ObjectiveTemplate, _Template]] = {
 
 
 # --------------------------------------------------------------------------------------
-# Compilation (FR-MODEL-39, FR-MODEL-43, §5.2)
+# Compilation (FR-143, FR-152, §5.2)
 # --------------------------------------------------------------------------------------
 
 
@@ -567,7 +567,7 @@ class ObjectiveFns:
     a separate step (`stabilise`) because the two are read by different audiences: the
     certificate's `convexity` check must see the hessian the maths produces, and the
     booster must see one that is positive. Returning the clipped hessian from `hess` would
-    certify every objective as convex, which is FR-MODEL-43's failure written as a helper.
+    certify every objective as convex, which is FR-152's failure written as a helper.
     """
 
     ref: str
@@ -599,7 +599,7 @@ class ObjectiveFns:
         return w * self._template.hess(y, f, self.params)
 
     def stabilise(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
-        """The hessian the booster is given — FR-MODEL-43's declared strategy, applied.
+        """The hessian the booster is given — FR-152's declared strategy, applied.
 
         §5.2's sketch shows `np.maximum(h, fns.hessian_min)`, which is `clip_to_min` and
         only that. The other two strategies are not a clip of the same number: `abs`
@@ -661,7 +661,7 @@ def compile_objective(objective: CustomObjective) -> ObjectiveFns:
         raise ObjectiveError(
             "OBJECTIVE_KIND_NOT_ENABLED",
             f"objective {objective.slug}@{objective.version} is not a template objective. "
-            "Phase 1 compiles templates only (FR-MODEL-75).",
+            "Phase 1 compiles templates only (FR-150).",
             terms=[objective.slug],
         )
     template = _TEMPLATES[objective.template]
@@ -686,7 +686,7 @@ def compile_objective(objective: CustomObjective) -> ObjectiveFns:
 
 
 def template_loss(template: ObjectiveTemplate) -> _Fn:
-    """The catalogue's loss for one template — the metric path's single source (FR-MODEL-103).
+    """The catalogue's loss for one template — the metric path's single source (FR-155).
 
     Public so `metrics.py` reuses this arithmetic rather than copying it. Nothing else about
     `_TEMPLATES` is exported: the gradient and hessian are the fitting path's business, and a
@@ -698,7 +698,7 @@ def template_loss(template: ObjectiveTemplate) -> _Fn:
 def _finite_or_abort(
     fns: ObjectiveFns, g: _Arr, h: _Arr, y: _Arr, f: _Arr, round_index: int
 ) -> None:
-    """FR-MODEL-48: abort naming the round and the offending input range."""
+    """FR-165: abort naming the round and the offending input range."""
     bad = ~(np.isfinite(g) & np.isfinite(h))
     if not bad.any():
         return
@@ -714,7 +714,7 @@ def _finite_or_abort(
 
 
 def make_xgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
-    """The `obj=` callable for `xgboost.train` (§5.2's sketch, FR-MODEL-48).
+    """The `obj=` callable for `xgboost.train` (§5.2's sketch, FR-165).
 
     `base_margin` is not a parameter, unlike the sketch: XGBoost has already added it into
     `preds` by the time the objective is called, so accepting one would invite a caller to
@@ -746,7 +746,7 @@ def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
     positional argument` on the first boosting round, which is how this was found.
 
     LightGBM's objective signature carries no weight argument, so the weights are read off
-    the dataset (`get_weight()`) rather than handed in. *(Corrected 2026-08-22, W5: this
+    the dataset (`get_weight()`) rather than handed in. *(Corrected 2026-08-22, WK-661: this
     docstring previously said "so nothing is dropped", which was false from the day it was
     written — `fit_gbm` never set the weights on either backend's dataset, so the fallback
     to `np.ones_like(y)` below fired on every custom-objective fit the platform had ever
@@ -754,7 +754,7 @@ def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
     means "the spec declared no weight" rather than "nobody supplied one".)*
 
     `preds` is the raw score with `init_score` already added, exactly as XGBoost's `preds`
-    carries `base_margin` — so neither adapter adds the offset, and FR-MODEL-72's
+    carries `base_margin` — so neither adapter adds the offset, and FR-129's
     asymmetry is a *scoring*-time one only.
     """
     counter = {"round": 0}
@@ -773,7 +773,7 @@ def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
 
 
 # --------------------------------------------------------------------------------------
-# Certification (§4.7, FR-MODEL-42/43/68/69/70/76)
+# Certification (§4.7, FR-146/152/147/148/149/151)
 # --------------------------------------------------------------------------------------
 
 _EPS: Final = float(np.finfo(np.float64).eps)
@@ -855,7 +855,7 @@ def _central(fn: Callable[[_Arr], _Arr], f: _Arr, h: float) -> _Arr:
 def _richardson(fn: Callable[[_Arr], _Arr], f: _Arr, h: float) -> _Arr:
     """Central differences at `h` and `h/2`, extrapolated — `O(h**2)` error becomes `O(h**4)`.
 
-    FR-MODEL-70 requires the method to be recorded because it is what makes the tolerance
+    FR-149 requires the method to be recorded because it is what makes the tolerance
     meaningful: at `h = 1e-6` a plain central difference cannot do better than ~4e-4 on a
     steeply-curved loss, so a certificate quoting a tight tolerance without naming the
     method is quoting a number nothing could have achieved.
@@ -872,7 +872,7 @@ def _agreement(
     numeric estimate there is cancellation noise of size `eps * |value| / h`, and dividing
     a noise-sized difference by a noise-sized derivative reports `O(1)` disagreement for an
     exactly correct formula. `magnitude` is the quantity being differenced, so the noise is
-    the one *at that point* — which is what makes the tolerance step-aware (FR-MODEL-70)
+    the one *at that point* — which is what makes the tolerance step-aware (FR-149)
     rather than a constant chosen to make the check pass.
 
     The noise enters **twice**, and it has to: as a floor under the denominator, and
@@ -905,7 +905,7 @@ def _status_for(error: float) -> CheckStatus:
 
 
 def _branch_mask(fns: ObjectiveFns, y: _Arr, f: _Arr) -> tuple[_Mask, int]:
-    """FR-MODEL-68: drop the points a central difference would straddle a kink at."""
+    """FR-147: drop the points a central difference would straddle a kink at."""
     boundaries = fns._template.f_boundaries
     if boundaries is None:
         return np.ones_like(f, dtype=bool), 0
@@ -921,7 +921,7 @@ def _branch_mask(fns: ObjectiveFns, y: _Arr, f: _Arr) -> tuple[_Mask, int]:
 def _derivative_checks(
     fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr
 ) -> tuple[CertificateCheck, CertificateCheck]:
-    """FR-MODEL-76's `analytic_vs_numeric` pair — the check the 24 derivatives answer to."""
+    """FR-151's `analytic_vs_numeric` pair — the check the 24 derivatives answer to."""
     keep, excluded = _branch_mask(fns, y, f)
     loss, grad = fns.loss(y, f, w), fns.grad(y, f, w)
     finite = np.isfinite(loss) & np.isfinite(grad)
@@ -932,7 +932,7 @@ def _derivative_checks(
     numeric_h = _richardson(lambda fs: fns.grad(y, fs, w), f, _STEP)
     h_error, _ = _agreement(fns.hess(y, f, w), numeric_h, grad, _STEP, mask)
 
-    # FR-MODEL-68 asks for the excluded count, and a count reported only when it is
+    # FR-147 asks for the excluded count, and a count reported only when it is
     # non-zero is a count the reader cannot distinguish from an unreported one.
     branch = fns._template.branch_description
     where = (
@@ -947,7 +947,7 @@ def _derivative_checks(
             detail=(
                 f"max relative error {g_error:.3g} over {compared:,} sampled (y,f,w) "
                 f"points{where}; h={_STEP:g}, Richardson-extrapolated, tolerance floored "
-                f"at the finite-difference noise of each point (FR-MODEL-68/70)"
+                f"at the finite-difference noise of each point (FR-147/149)"
             ),
         ),
         CertificateCheck(
@@ -956,7 +956,7 @@ def _derivative_checks(
             detail=(
                 f"max relative error {h_error:.3g} against the numeric derivative of the "
                 f"analytic gradient over the same {compared:,} points; h={_STEP:g}, "
-                f"Richardson-extrapolated (FR-MODEL-70)"
+                f"Richardson-extrapolated (FR-149)"
             ),
         ),
     )
@@ -992,7 +992,7 @@ def _finiteness_check(
 
 
 def _convexity_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCheck:
-    """FR-MODEL-43: non-convex is a finding with a declared mitigation, never a refusal."""
+    """FR-152: non-convex is a finding with a declared mitigation, never a refusal."""
     hess = fns.hess(y, f, w)
     negative = hess[np.isfinite(hess)] < 0.0
     share = float(negative.mean()) if negative.size else 0.0
@@ -1009,13 +1009,13 @@ def _convexity_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> Certificat
             f"hessian < 0 at {share:.1%} of this sampling grid. The share is strongly "
             f"dependent on y_range/f_range and is only meaningful alongside the sampling "
             f"block. Mitigated by hessian_strategy={fns.hessian_strategy.value}, "
-            f"hessian_min={fns.hessian_min:g}; FR-MODEL-43 requires an additional Approver"
+            f"hessian_min={fns.hessian_min:g}; FR-152 requires an additional Approver"
         ),
     )
 
 
 def _branch_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCheck:
-    """FR-MODEL-69: where the derivatives are discontinuous, and over how much of the grid.
+    """FR-148: where the derivatives are discontinuous, and over how much of the grid.
 
     A branch in `y` is reported as well as a branch in `f`, and named as such. Only the
     latter invalidates a central difference, but an approver reading "smooth" about
@@ -1037,7 +1037,7 @@ def _branch_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCh
             detail=(
                 f"gradient and hessian are discontinuous at {description}; "
                 f"{excluded:,} of {f.size:,} sampled points fell within h of it and were "
-                f"excluded from the derivative comparison (FR-MODEL-68/69). A "
+                f"excluded from the derivative comparison (FR-147/148). A "
                 f"discontinuous hessian affects boosting stability"
             ),
         )
@@ -1050,8 +1050,8 @@ def _branch_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCh
         detail=(
             f"the loss changes form at {description}; {above:.1%} of the sampled y lie "
             f"above it. A central difference in f never straddles this branch, so no "
-            f"point was excluded (FR-MODEL-68), but the two sides have different "
-            f"curvature and an approver must see that (FR-MODEL-69)"
+            f"point was excluded (FR-147), but the two sides have different "
+            f"curvature and an approver must see that (FR-148)"
         ),
     )
 
@@ -1318,7 +1318,7 @@ def certify_objective(
 
     * **Returns `CertificateResult`, not `ObjectiveCertificate`.** The certificate carries
       an id, a job and a `certified_at`, none of which `pricing-core` may allocate
-      (ADR-0001). The same split as `compute_diagnostics`/`DiagnosticsResult`.
+      (ADR-703). The same split as `compute_diagnostics`/`DiagnosticsResult`.
     * **No `seed` parameter.** `SamplingSpec` already carries the seed that makes the grid
       reproducible, and a second one would let a caller record a certificate whose stated
       sampling does not reproduce it.

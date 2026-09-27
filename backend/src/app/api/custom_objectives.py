@@ -2,28 +2,28 @@
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/custom-objectives` | **201** Create or version an objective → `draft` (FR-MODEL-38) |
-| `GET` | `/custom-objectives` | The library: paginated, filtered, counted (FR-MODEL-127) |
-| `GET` | `/custom-objectives/{id}` | The objective and its lifecycle (FR-MODEL-95) |
+| `POST` | `/custom-objectives` | **201** Create or version an objective → `draft` (FR-142) |
+| `GET` | `/custom-objectives` | The library: paginated, filtered, counted (FR-167) |
+| `GET` | `/custom-objectives/{id}` | The objective and its lifecycle (FR-166) |
 | `POST` | `/custom-objectives/{id}/derive` | Refused: `expression` is Phase 2 (FR-MODEL-40, 75) |
-| `POST` | `/custom-objectives/{id}/certify` | **202** Run §4.7's checks → Job (FR-MODEL-42) |
-| `GET` | `/custom-objectives/{id}/certificate` | The latest certificate (FR-MODEL-95) |
-| `POST` | `/custom-objectives/{id}/submit` | Submit for approval (FR-MODEL-46) |
-| `GET` | `/custom-objectives/{id}/usage` | Blast radius (FR-MODEL-47) |
+| `POST` | `/custom-objectives/{id}/certify` | **202** Run §4.7's checks → Job (FR-146) |
+| `GET` | `/custom-objectives/{id}/certificate` | The latest certificate (FR-166) |
+| `POST` | `/custom-objectives/{id}/submit` | Submit for approval (FR-163) |
+| `GET` | `/custom-objectives/{id}/usage` | Blast radius (FR-164) |
 
 **The `GET`s are additions to §5.1's table**, which declared five writes and no read — a
 create whose artifact nothing can fetch, and a certificate produced by a Job that no
-endpoint returns. The same omission FR-MODEL-90 repaired for the Peril Structure, and
+endpoint returns. The same omission FR-192 repaired for the Peril Structure, and
 invisible to the endpoint audit for the same reason: it compares the spec against the
-contract, and an endpoint missing from both is in neither. FR-MODEL-95 declares them.
+contract, and an endpoint missing from both is in neither. FR-166 declares them.
 
 **The collection `GET` is the eighth route and the latest of those additions**
-(FR-MODEL-127, 2026-08-23). For five days this module was seven routes none of which
-listed, which FR-MODEL-95's amendment recorded as an observation and cured nothing: `02`
+(FR-167, 2026-08-23). For five days this module was seven routes none of which
+listed, which FR-166's amendment recorded as an observation and cured nothing: `02`
 §5.3 asked for a library screen no endpoint could supply, and a `slug@version` address had
 nothing to resolve against a UUID-only detail route.
 
-`/derive` **is** built, as a refusal. FR-MODEL-75 names it explicitly as one of the two
+`/derive` **is** built, as a refusal. FR-150 names it explicitly as one of the two
 paths that answer `OBJECTIVE_KIND_NOT_ENABLED`, and a declared endpoint that 404s says
 "this platform has no such concept" where the truth is "not until Phase 2".
 """
@@ -86,10 +86,10 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 
 
 class CreateCustomObjective(BaseModel):
-    """FR-MODEL-38's artifact. Every range and rule is `CustomObjective`'s, not this one's.
+    """FR-142's artifact. Every range and rule is `CustomObjective`'s, not this one's.
 
     `kind` is here rather than assumed so that a caller asking for an `expression`
-    objective is *answered* — FR-MODEL-75 makes that a named refusal, and a body that
+    objective is *answered* — FR-150 makes that a named refusal, and a body that
     silently forbade the field would leave them reading a 422 about an unexpected key.
     """
 
@@ -132,12 +132,12 @@ class SubmitCustomObjective(BaseModel):
 
 
 class ObjectiveFilter(BaseModel):
-    """`GET /custom-objectives`' filters and cursor page (`00` §5.2, FR-MODEL-127).
+    """`GET /custom-objectives`' filters and cursor page (`00` §5.2, FR-167).
 
     `extra="forbid"` for `ModelFilter`'s reason: a misspelled query parameter that is
     silently ignored returns a full library where the caller asked for one artifact.
 
-    `slug` is an **exact** match. FR-MODEL-127 makes this filter what resolves §5.3's
+    `slug` is an **exact** match. FR-167 makes this filter what resolves §5.3's
     `slug@version` addresses against UUID-only detail routes, so a prefix or substring
     match would answer `motor-ad` with `motor-ad-severity` too — a wrong artifact rather
     than a wide result.
@@ -173,7 +173,7 @@ async def list_custom_objectives(
     database: DatabaseDep,
     filters: ObjectiveFilterDep,
 ) -> Page[CustomObjective]:
-    """The library `02` §5.3 renders (FR-MODEL-127), cursor-paginated, newest first.
+    """The library `02` §5.3 renders (FR-167), cursor-paginated, newest first.
 
     Until this route the module had create, detail, certify, submit and usage and nothing
     that lists, so §5.3 asked for a screen no endpoint could supply and a `slug@version`
@@ -184,7 +184,7 @@ async def list_custom_objectives(
     this API did not issue is a 400.
 
     `usage_count` is **one grouped aggregate over the page's refs**, never one query per
-    row: FR-MODEL-127 makes that budget part of the requirement rather than an
+    row: FR-167 makes that budget part of the requirement rather than an
     optimisation, because the query reads an unindexed JSONB column and an N+1 here would
     be indistinguishable from this until a workspace held a few hundred artifacts. It
     counts exactly what `GET /{id}/usage` counts, so a row and the page opened from it
@@ -238,12 +238,12 @@ async def create_custom_objective(
     database: DatabaseDep,
     settings: SettingsDep,
 ) -> CustomObjective:
-    """**201** with the objective, as a `draft` (`wf-05` A1, FR-MODEL-38).
+    """**201** with the objective, as a `draft` (`WF-702` A1, FR-142).
 
     201 rather than 202: authoring is not work. The parameters are checked against §4.5's
     ranges and the applicability against the template's, both by the contract, and what is
     written is a declaration. The *certification* is the work, and it is a separate call for
-    exactly that reason — FR-MODEL-42 makes it the evidence, not a side effect of authoring.
+    exactly that reason — FR-146 makes it the evidence, not a side effect of authoring.
     """
     async with database.unit_of_work() as session:
         if body.kind is not ObjectiveKind.TEMPLATE:
@@ -255,7 +255,7 @@ async def create_custom_objective(
                 "VALIDATION_FAILED",
                 "A template objective names a template",
                 422,
-                "Phase 1 ships template objectives only (FR-MODEL-75), so `template` is "
+                "Phase 1 ships template objectives only (FR-150), so `template` is "
                 "required. §4.5 lists the twelve.",
             )
         row = await service.create_objective(
@@ -281,7 +281,7 @@ async def create_custom_objective(
 async def get_custom_objective(
     objective_id: UUID, caller: ReadModels, database: DatabaseDep
 ) -> CustomObjective:
-    """**Added to `02` §5.1 with this slice** (FR-MODEL-95) — see the module docstring."""
+    """**Added to `02` §5.1 with this slice** (FR-166) — see the module docstring."""
     async with database.session() as session:
         return await service.load_objective(
             session, workspace_id=caller.workspace_id, objective_id=objective_id
@@ -301,7 +301,7 @@ async def derive_custom_objective(
 ) -> CustomObjective:
     """Always refused in Phase 1 with `OBJECTIVE_KIND_NOT_ENABLED` (FR-MODEL-40, 75).
 
-    Built as a refusal rather than left out: FR-MODEL-75 names this endpoint as one of the
+    Built as a refusal rather than left out: FR-150 names this endpoint as one of the
     two that answer that code, and the distinction between "no such concept" and "not until
     Phase 2" is exactly what a 404 would destroy. The return type is the one Phase 2 will
     answer with; nothing reaches it yet.
@@ -324,7 +324,7 @@ async def certify_custom_objective(
     database: DatabaseDep,
     response: Response,
 ) -> Job:
-    """**202** with a Job (`wf-05` A2, FR-MODEL-42).
+    """**202** with a Job (`WF-702` A2, FR-146).
 
     202 because §4.7's checks end in a smoke fit: a booster is trained, over a sampled grid,
     and a synchronous endpoint would hold the request open across it. What is answered
@@ -367,7 +367,7 @@ async def certify_custom_objective(
 async def get_certificate(
     objective_id: UUID, caller: ReadModels, database: DatabaseDep
 ) -> ObjectiveCertificate:
-    """**Added to `02` §5.1 with this slice** (FR-MODEL-95).
+    """**Added to `02` §5.1 with this slice** (FR-166).
 
     Without it the certificate is produced by a Job and readable nowhere — and it is what
     an approver is asked to read (`06` §4.2 names `objective_certificate` as the evidence).
@@ -389,7 +389,7 @@ async def submit_custom_objective(
     caller: SubmitModels,
     database: DatabaseDep,
 ) -> CustomObjective:
-    """`certified → review` (`wf-05` A3, FR-MODEL-46).
+    """`certified → review` (`WF-702` A3, FR-163).
 
     Gated on `model:submit` for the reason a Model's submission is: putting an artifact in
     front of an approver starts a governed process, and the role that may author is not
@@ -414,10 +414,10 @@ async def submit_custom_objective(
 async def get_usage(
     objective_id: UUID, caller: ReadModels, database: DatabaseDep
 ) -> ObjectiveUsage:
-    """FR-MODEL-47's blast radius.
+    """FR-164's blast radius.
 
     `rating_versions` and `deployments` are named and always empty in Phase 1 — `03` is not
-    built — which is FR-MODEL-87's staging rule rather than an oversight. The models are
+    built — which is FR-207's staging rule rather than an oversight. The models are
     real, and they are the half that exists to be found.
     """
     async with database.session() as session:

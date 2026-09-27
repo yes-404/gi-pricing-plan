@@ -46,7 +46,7 @@ function idsFromQuery(): string[] {
 
 onMounted(async () => {
   const ids = idsFromQuery();
-  // FR-MODEL-56 compares two or more; "one model measured against nothing is a diagnostics
+  // FR-186 compares two or more; "one model measured against nothing is a diagnostics
   // read" (§4.11). Refusing here turns a 422 into a sentence.
   if (ids.length < 2) {
     stage.value = "refused";

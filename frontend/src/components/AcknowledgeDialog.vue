@@ -16,7 +16,7 @@ watch(
 );
 
 /**
- * FR-DATA-17: the justification is mandatory, and the platform refuses an empty one with
+ * FR-46: the justification is mandatory, and the platform refuses an empty one with
  * `VALIDATION_FAILED`. Disabling the button is a courtesy, not the control — the check
  * that matters is the server's, and this only avoids a round trip to be told so.
  */

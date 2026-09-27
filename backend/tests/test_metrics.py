@@ -1,4 +1,4 @@
-"""Prometheus metrics (`07` §5.1, FR-PLAT-40)."""
+"""Prometheus metrics (`07` §5.1, FR-443)."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def client(api_settings: Settings) -> TestClient:
         yield c
 
 
-@pytest.mark.req("FR-PLAT-40")
+@pytest.mark.req("FR-443")
 def test_metrics_are_exposed_in_prometheus_format(client: TestClient) -> None:
     client.get("/healthz")
     response = client.get("/metrics")
@@ -50,7 +50,7 @@ def test_metrics_are_exposed_in_prometheus_format(client: TestClient) -> None:
     assert "gip_job_queue_depth" in body
 
 
-@pytest.mark.req("FR-PLAT-52")
+@pytest.mark.req("FR-407")
 async def test_the_route_label_is_the_template_not_the_path(
     client: TestClient, principal, workspace_id, membership
 ) -> None:
@@ -109,7 +109,7 @@ async def test_the_route_label_is_the_template_not_the_path(
     assert route in labels
 
 
-@pytest.mark.req("FR-PLAT-52")
+@pytest.mark.req("FR-407")
 def test_an_unmatched_path_cannot_grow_the_cardinality(client: TestClient) -> None:
     """A 404 on an undefined path has no route template. Recording the path would let
     anyone probing random URLs add a time series per probe."""
@@ -121,7 +121,7 @@ def test_an_unmatched_path_cannot_grow_the_cardinality(client: TestClient) -> No
     assert "/no/such/endpoint/0" not in body
 
 
-@pytest.mark.req("FR-PLAT-52")
+@pytest.mark.req("FR-407")
 def test_status_is_recorded_as_a_class_not_a_code(client: TestClient) -> None:
     """The alert anyone writes is "the error rate rose". Forty-seven status labels per
     route make that a sum over a guess about which codes count."""
@@ -131,7 +131,7 @@ def test_status_is_recorded_as_a_class_not_a_code(client: TestClient) -> None:
     assert 'status="401"' not in body
 
 
-@pytest.mark.req("FR-PLAT-40")
+@pytest.mark.req("FR-443")
 async def test_queue_depth_clears_when_a_kind_drains(database, workspace_id) -> None:
     """A kind that drained to zero must stop reporting its last non-zero depth — the
     failure mode that makes a queue alert useless, because it never recovers."""
@@ -159,7 +159,7 @@ async def test_queue_depth_clears_when_a_kind_drains(database, workspace_id) -> 
     assert after == 0
 
 
-@pytest.mark.req("FR-PLAT-40")
+@pytest.mark.req("FR-443")
 def test_the_registry_is_not_the_process_global_one() -> None:
     """Two apps in one test session would otherwise share counters and each see the
     other's traffic — the same reason `create_app` takes its settings."""

@@ -4,8 +4,8 @@
 |---|---|---|
 | `GET` | `/api/v1/jobs` | List, filtered, cursor-paginated |
 | `GET` | `/api/v1/jobs/{id}` | Detail with progress and result |
-| `GET` | `/api/v1/jobs/{id}/logs` | Captured log lines (FR-PLAT-10) |
-| `POST` | `/api/v1/jobs/{id}/cancel` | Cooperative cancellation (FR-PLAT-9) |
+| `GET` | `/api/v1/jobs/{id}/logs` | Captured log lines (FR-402) |
+| `POST` | `/api/v1/jobs/{id}/cancel` | Cooperative cancellation (FR-401) |
 | `GET` | `/api/v1/jobs/{id}/events` | SSE stream of progress updates |
 
 There is deliberately **no `POST /api/v1/jobs`**. The spec does not define one: Jobs are
@@ -15,7 +15,7 @@ A generic "submit any job kind" endpoint would let a caller construct work the o
 module never sanctioned, and would have to duplicate that module's validation to be safe.
 
 Every route is workspace-scoped through `require_caller`. A Job belongs to exactly one
-workspace (FR-OVR-13), and an id from another one must be indistinguishable from an id
+workspace (FR-16), and an id from another one must be indistinguishable from an id
 that does not exist — otherwise the 404/403 difference confirms the Job exists.
 """
 
@@ -58,7 +58,7 @@ _log = get_logger("app.api.jobs")
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
-#: FR-GOV-2: the permission is part of the route definition, not buried in a handler.
+#: FR-343: the permission is part of the route definition, not buried in a handler.
 ReadJobs = Annotated[Caller, Depends(requires(Perm.JOB_READ))]
 CancelJobs = Annotated[Caller, Depends(requires(Perm.JOB_CANCEL))]
 
@@ -69,7 +69,7 @@ def _database(request: Request) -> Database:
 
 
 def _stall_seconds(request: Request) -> int:
-    """The window after which a silent running Job is reported as stalled (NFR-PLAT-3)."""
+    """The window after which a silent running Job is reported as stalled (NFR-528)."""
     seconds: int = request.app.state.settings.job_stall_seconds
     return seconds
 
@@ -171,7 +171,7 @@ async def get_job(
 
 @router.get(
     "/{job_id}/logs",
-    summary="Captured log lines (FR-PLAT-10)",
+    summary="Captured log lines (FR-402)",
     responses=problems(400, 401, 403, 404, 422),
 )
 async def get_job_logs(
@@ -232,7 +232,7 @@ async def get_job_logs(
 
 @router.post(
     "/{job_id}/cancel",
-    summary="Request cooperative cancellation (FR-PLAT-9)",
+    summary="Request cooperative cancellation (FR-401)",
     status_code=status.HTTP_200_OK,
     responses=problems(401, 403, 404, 409, 422),
 )

@@ -48,11 +48,11 @@ proves the result is defensible:
 > optimum" is an answer that requires evidence, not an assumption.
 >
 > **R3 — Demand model uncertainty propagates.** An optimised price presented without an
-> uncertainty range around its expected volume and profit is incomplete (FR-OVR-5 spirit,
+> uncertainty range around its expected volume and profit is incomplete (FR-8 spirit,
 > `02` R5).
 >
 > **R4 — GIPP compliance is a gate, not a report.** Where the workspace enables it, a
-> Rating Version cannot be approved without a passing GIPP check (`03` FR-RATE-40).
+> Rating Version cannot be approved without a passing GIPP check (`03` FR-257).
 
 ---
 
@@ -80,51 +80,51 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 | ID | Requirement |
 |---|---|
-| **FR-OPT-1** | A **Demand Model** is a Model (`02`) with response `conversion` or `retention`, whose factor set **must** include a price term — either the quoted premium, the price relative to a reference (e.g. price/technical premium), or the price relative to a market position. The price term is declared explicitly so the optimiser knows what to vary. *(Recorded 2026-08-26, OQ-OPT-2: competitor position is a plain portfolio-dataset column in Phases 1–4 — the convention is the column name `competitive_position` and the semantic type `competitive_position` — so a promotion to a first-class concept later needs no migration.)* |
-| **FR-OPT-2** | Demand models must be fitted on data containing genuine price variation. The platform computes and reports the effective price variation available (coefficient of variation of the price term within segment) and **warns loudly** where it is too low for the elasticity estimate to be identified. **Amended 2026-08-26 (OQ-OPT-4): the price-variation report is the honest surface for the endogeneity caveat — it is stated prominently and quantified. Every Demand Model carries an `identification_note` stating how elasticity is identified and the caveat that remains, required before the model is used in optimisation.** |
-| **FR-OPT-3** | Elasticity is derived from the demand model by analytic differentiation where the model form permits (GLM with a log-price term) and by finite difference otherwise, with the method recorded. |
-| **FR-OPT-4** | Elasticity is reported **with a confidence interval** derived from the demand model's parameter covariance (GLM) or from bootstrap/quantile methods (GBM), and never as a bare point estimate (R3). |
-| **FR-OPT-5** | Elasticity is computed at declared segment granularity and at the current price point; the platform surfaces how far the optimiser is extrapolating beyond observed price range and refuses to extrapolate beyond a configurable limit (default: ±20 % of the observed range). |
-| **FR-OPT-6** | A positive point elasticity (demand rising with price) in any segment is flagged as a **model defect** and blocks that segment from optimisation until resolved or explicitly overridden with a justification. |
-| **FR-OPT-7** | Where new-business conversion and renewal retention behave differently (they always do), they are separate Demand Models and the optimiser uses the correct one per `purpose`. |
+| **FR-277** | A **Demand Model** is a Model (`02`) with response `conversion` or `retention`, whose factor set **must** include a price term — either the quoted premium, the price relative to a reference (e.g. price/technical premium), or the price relative to a market position. The price term is declared explicitly so the optimiser knows what to vary. *(Recorded 2026-08-26, OQ-622: competitor position is a plain portfolio-dataset column in Phases 1–4 — the convention is the column name `competitive_position` and the semantic type `competitive_position` — so a promotion to a first-class concept later needs no migration.)* |
+| **FR-278** | Demand models must be fitted on data containing genuine price variation. The platform computes and reports the effective price variation available (coefficient of variation of the price term within segment) and **warns loudly** where it is too low for the elasticity estimate to be identified. **Amended 2026-08-26 (OQ-624): the price-variation report is the honest surface for the endogeneity caveat — it is stated prominently and quantified. Every Demand Model carries an `identification_note` stating how elasticity is identified and the caveat that remains, required before the model is used in optimisation.** |
+| **FR-279** | Elasticity is derived from the demand model by analytic differentiation where the model form permits (GLM with a log-price term) and by finite difference otherwise, with the method recorded. |
+| **FR-280** | Elasticity is reported **with a confidence interval** derived from the demand model's parameter covariance (GLM) or from bootstrap/quantile methods (GBM), and never as a bare point estimate (R3). |
+| **FR-281** | Elasticity is computed at declared segment granularity and at the current price point; the platform surfaces how far the optimiser is extrapolating beyond observed price range and refuses to extrapolate beyond a configurable limit (default: ±20 % of the observed range). |
+| **FR-282** | A positive point elasticity (demand rising with price) in any segment is flagged as a **model defect** and blocks that segment from optimisation until resolved or explicitly overridden with a justification. |
+| **FR-283** | Where new-business conversion and renewal retention behave differently (they always do), they are separate Demand Models and the optimiser uses the correct one per `purpose`. |
 
 ### 3.2 Optimisation runs
 
 | ID | Requirement |
 |---|---|
-| **FR-OPT-8** | An **Optimisation Run** declares: the portfolio Dataset Version, the baseline Rating Version, the objective, decision variables and their granularity, the demand models to use, the constraint set, and a seed. It executes as a Job and produces an immutable artifact. |
-| **FR-OPT-9** | Supported objectives: `expected_profit`, `expected_volume`, `expected_premium`, and `blend(w_profit, w_volume)` with declared weights. The profit definition (premium − expected claims − expenses − commission) is declared explicitly per run, not assumed. **Amended 2026-08-26 (OQ-OPT-3): the profit definition's expected-claims source is named — a Peril Structure or a supplied column on the portfolio dataset — and the choice is explicit, never defaulted.** |
-| **FR-OPT-10** | Decision variables are one of: `segment_factor` (a multiplicative adjustment per segment), `rate_table_cells` (direct adjustment to named cells of named rate tables), or `global_levers` (a small declared set, e.g. overall uplift + young-driver uplift). The choice determines how the proposal materialises in `03`. |
-| **FR-OPT-11** | Supported constraint types, each with a declared bound and each recorded as binding or slack in the result: max/min adjustment per segment; max/min portfolio premium change; minimum expected volume; maximum expected volume; minimum expected loss ratio; maximum expected loss ratio; minimum premium; smoothness (adjacent segments' adjustments differ by ≤ x); monotonicity (adjustment monotone in a declared factor); GIPP; and custom linear constraints over segment adjustments. |
-| **FR-OPT-12** | The optimiser reports, for every constraint, whether it is **binding** at the optimum and the shadow price / sensitivity where meaningful — because "the optimiser said +3 %" is useless without "and it would have said +7 % if the movement cap allowed" (R2). |
-| **FR-OPT-13** | Expected outcomes are reported with uncertainty ranges derived from demand model uncertainty, propagated by Monte Carlo over the demand parameter distribution with a persisted seed and sample count (R3). |
-| **FR-OPT-14** | A run produces an **Efficient Frontier** when configured to sweep objective weights, showing the volume/profit trade-off with the chosen point marked. |
-| **FR-OPT-15** | Runs are comparable: two runs over the same portfolio and baseline can be diffed segment-by-segment, so an actuary can see what changing a constraint actually did. |
-| **FR-OPT-16** | Optimisation never modifies any artifact. Its output is a set of Price Adjustment Proposals plus evidence (R1). |
-| **FR-OPT-17** | The optimiser is deterministic given its seed; the solver, its version, its tolerance, and its termination reason are recorded. A run that terminated on iteration limit rather than convergence is marked as such and cannot be materialised without acknowledgement. |
+| **FR-284** | An **Optimisation Run** declares: the portfolio Dataset Version, the baseline Rating Version, the objective, decision variables and their granularity, the demand models to use, the constraint set, and a seed. It executes as a Job and produces an immutable artifact. |
+| **FR-285** | Supported objectives: `expected_profit`, `expected_volume`, `expected_premium`, and `blend(w_profit, w_volume)` with declared weights. The profit definition (premium − expected claims − expenses − commission) is declared explicitly per run, not assumed. **Amended 2026-08-26 (OQ-623): the profit definition's expected-claims source is named — a Peril Structure or a supplied column on the portfolio dataset — and the choice is explicit, never defaulted.** |
+| **FR-286** | Decision variables are one of: `segment_factor` (a multiplicative adjustment per segment), `rate_table_cells` (direct adjustment to named cells of named rate tables), or `global_levers` (a small declared set, e.g. overall uplift + young-driver uplift). The choice determines how the proposal materialises in `03`. |
+| **FR-287** | Supported constraint types, each with a declared bound and each recorded as binding or slack in the result: max/min adjustment per segment; max/min portfolio premium change; minimum expected volume; maximum expected volume; minimum expected loss ratio; maximum expected loss ratio; minimum premium; smoothness (adjacent segments' adjustments differ by ≤ x); monotonicity (adjustment monotone in a declared factor); GIPP; and custom linear constraints over segment adjustments. |
+| **FR-288** | The optimiser reports, for every constraint, whether it is **binding** at the optimum and the shadow price / sensitivity where meaningful — because "the optimiser said +3 %" is useless without "and it would have said +7 % if the movement cap allowed" (R2). |
+| **FR-289** | Expected outcomes are reported with uncertainty ranges derived from demand model uncertainty, propagated by Monte Carlo over the demand parameter distribution with a persisted seed and sample count (R3). |
+| **FR-290** | A run produces an **Efficient Frontier** when configured to sweep objective weights, showing the volume/profit trade-off with the chosen point marked. |
+| **FR-291** | Runs are comparable: two runs over the same portfolio and baseline can be diffed segment-by-segment, so an actuary can see what changing a constraint actually did. |
+| **FR-292** | Optimisation never modifies any artifact. Its output is a set of Price Adjustment Proposals plus evidence (R1). |
+| **FR-293** | The optimiser is deterministic given its seed; the solver, its version, its tolerance, and its termination reason are recorded. A run that terminated on iteration limit rather than convergence is marked as such and cannot be materialised without acknowledgement. |
 
 ### 3.3 Fairness and regulatory constraints
 
 | ID | Requirement |
 |---|---|
-| **FR-OPT-18** | **GIPP check**: for a declared renewal population, the platform computes each risk's actual renewal price and its **Equivalent New Business Price**, and reports the distribution of `renewal_price / ENBP`. ENBP is obtained by re-scoring with `purpose = new_business` through **the channel the customer used when they first purchased the policy** — not the channel they are renewing through (ICOBS 6B.2.5R(1)). |
-| **FR-OPT-29** | Where the original purchase channel is **no longer available or not identifiable**, ENBP is computed through **the channel most commonly used by new-business customers** (ICOBS 6B.2.5R(2)). Which limb was applied is recorded per policy, and the check reports how many policies fell to the fallback — a large fallback share is a data-quality finding, not a compliance result. |
-| **FR-OPT-30** | The GIPP check records the **product scope** it was run for. ICOBS 6B applies to home and motor insurance, including combined packages and connected add-ons; running the check outside that scope is permitted as voluntary good practice but is labelled as such, so evidence is never presented as discharging a rule that does not apply. |
-| **FR-OPT-19** | The GIPP verdict is `pass` when no renewing customer's price exceeds their ENBP beyond a declared tolerance (default: zero tolerance, i.e. renewal ≤ ENBP), and `fail` otherwise, with the failing population quantified by count, exposure, and worst-case ratio. |
-| **FR-OPT-20** | GIPP evidence is a persisted artifact attached to the Rating Version's approval request and retained for the audit period (NFR-OVR-6) — the platform's answer to "show me how you evidenced compliance in October 2026" (R4). |
-| **FR-OPT-21** | The optimiser can take GIPP as a **hard constraint**, so proposals that would breach it are never generated, rather than generated and then rejected. |
-| **FR-OPT-22** | **Price walking detection**: the platform reports, per renewal cohort by tenure, the trend in `price / technical_premium`. A systematically increasing margin with tenure is surfaced as a finding regardless of whether the point-in-time GIPP check passes. |
-| **FR-OPT-23** | Fairness constraints are supported as first-class declared constraints (e.g. "no segment's adjustment exceeds +10 %", "the adjustment must be monotone in the technical loss ratio"), each carrying a written rationale that appears in the generated documentation. |
-| **FR-OPT-24** | Where an insurer supplies a reference dataset containing protected characteristics (which the platform never stores as modelling data — FR-OVR-9), an optional **outcome disparity report** compares proposed price changes across groups. It produces evidence for human judgement and never an automated block — the same principle `02` FR-MODEL-82 applies to Factors. |
+| **FR-294** | **GIPP check**: for a declared renewal population, the platform computes each risk's actual renewal price and its **Equivalent New Business Price**, and reports the distribution of `renewal_price / ENBP`. ENBP is obtained by re-scoring with `purpose = new_business` through **the channel the customer used when they first purchased the policy** — not the channel they are renewing through (ICOBS 6B.2.5R(1)). |
+| **FR-295** | Where the original purchase channel is **no longer available or not identifiable**, ENBP is computed through **the channel most commonly used by new-business customers** (ICOBS 6B.2.5R(2)). Which limb was applied is recorded per policy, and the check reports how many policies fell to the fallback — a large fallback share is a data-quality finding, not a compliance result. |
+| **FR-296** | The GIPP check records the **product scope** it was run for. ICOBS 6B applies to home and motor insurance, including combined packages and connected add-ons; running the check outside that scope is permitted as voluntary good practice but is labelled as such, so evidence is never presented as discharging a rule that does not apply. |
+| **FR-297** | The GIPP verdict is `pass` when no renewing customer's price exceeds their ENBP beyond a declared tolerance (default: zero tolerance, i.e. renewal ≤ ENBP), and `fail` otherwise, with the failing population quantified by count, exposure, and worst-case ratio. |
+| **FR-298** | GIPP evidence is a persisted artifact attached to the Rating Version's approval request and retained for the audit period (NFR-459) — the platform's answer to "show me how you evidenced compliance in October 2026" (R4). |
+| **FR-299** | The optimiser can take GIPP as a **hard constraint**, so proposals that would breach it are never generated, rather than generated and then rejected. |
+| **FR-300** | **Price walking detection**: the platform reports, per renewal cohort by tenure, the trend in `price / technical_premium`. A systematically increasing margin with tenure is surfaced as a finding regardless of whether the point-in-time GIPP check passes. |
+| **FR-301** | Fairness constraints are supported as first-class declared constraints (e.g. "no segment's adjustment exceeds +10 %", "the adjustment must be monotone in the technical loss ratio"), each carrying a written rationale that appears in the generated documentation. |
+| **FR-302** | Where an insurer supplies a reference dataset containing protected characteristics (which the platform never stores as modelling data — FR-12), an optional **outcome disparity report** compares proposed price changes across groups. It produces evidence for human judgement and never an automated block — the same principle `02` FR-91 applies to Factors. |
 
 ### 3.4 Materialisation
 
 | ID | Requirement |
 |---|---|
-| **FR-OPT-25** | An accepted Optimisation Run materialises into `03` in exactly one of two forms, declared on the run: **rate table edits** (proposals applied as a new Rate Table Version with the run cited in the change note), or an **adjustment step** (a dedicated rate table consumed by an `optimisation_adjustment` ladder rung). |
-| **FR-OPT-26** | Materialisation is a proposal-review step: the actuary sees the exact cell-level diff before it creates any version, and may accept per segment rather than wholesale. |
-| **FR-OPT-27** | The resulting Rating Version records `optimisation_run_id` in its evidence, so any deployed price traces back to the run, the demand models, the constraints, and the elasticities behind it. |
-| **FR-OPT-28** | After deployment, `05-monitoring.md` compares realised conversion/retention against the optimisation's expectations, and that comparison is linked back to the run — closing the loop that makes the next run better. |
+| **FR-303** | An accepted Optimisation Run materialises into `03` in exactly one of two forms, declared on the run: **rate table edits** (proposals applied as a new Rate Table Version with the run cited in the change note), or an **adjustment step** (a dedicated rate table consumed by an `optimisation_adjustment` ladder rung). |
+| **FR-304** | Materialisation is a proposal-review step: the actuary sees the exact cell-level diff before it creates any version, and may accept per segment rather than wholesale. |
+| **FR-305** | The resulting Rating Version records `optimisation_run_id` in its evidence, so any deployed price traces back to the run, the demand models, the constraints, and the elasticities behind it. |
+| **FR-306** | After deployment, `05-monitoring.md` compares realised conversion/retention against the optimisation's expectations, and that comparison is linked back to the run — closing the loop that makes the next run better. |
 
 ---
 
@@ -248,7 +248,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 ### 4.4 `BulkOperation`
 
 The record of a bulk operation on a rate table, carried by the version it creates
-(`03` §4.2 `created_by_operation`). FR-RATE-18 requires the parameters, not just the
+(`03` §4.2 `created_by_operation`). FR-233 requires the parameters, not just the
 resulting cells, to be recorded; this record is what "recorded" means.
 
 ```json
@@ -266,7 +266,7 @@ resulting cells, to be recorded; this record is what "recorded" means.
 }
 ```
 
-Each `kind` uses the parameters FR-RATE-18 names:
+Each `kind` uses the parameters FR-233 names:
 
 - `uplift_table` — `percentage` only; applies to every cell of the table.
 - `uplift_by_filter` — `percentage` plus `filter`; applies to the selected cells.
@@ -277,19 +277,19 @@ Each `kind` uses the parameters FR-RATE-18 names:
 
 `percentage`, `floor`, `cap` and `base_level` are decimal strings, never floats (R2).
 `filter` and `base_level` use exact-value matching over the table's declared keys (`03`
-§4.2 `keys`) — the "key filter" FR-RATE-18 names; richer filter syntax (ranges,
+§4.2 `keys`) — the "key filter" FR-233 names; richer filter syntax (ranges,
 expressions) is an append-only extension of the `parameters` shape. `applied_to` names
 the baseline version the operation transformed; `result.new_version` names the immutable
 version it created (`03` §4.3 `pins` reference syntax). The full audit trail — before and
-after cells, actor — is the `03` NFR-RATE-10 Audit Event, not part of this record.
+after cells, actor — is the `03` NFR-498 Audit Event, not part of this record.
 
-> *(`BulkOperation` added 2026-08-28, W10-3 readiness — the W10 plan's Sources note
-> deferred this contract to the spec "if W10 requires it", and W10-3 T1/T4 require it:
+> *(`BulkOperation` added 2026-08-28, W10-3 readiness — the WK-670 plan's Sources note
+> deferred this contract to the spec "if WK-670 requires it", and W10-3 T1/T4 require it:
 > the operation and its parameters are recorded on the new version. The four kinds and
-> their parameters are FR-RATE-18's, lifted from the optimisation toolset (FR-OPT-10's
-> `segment_factor` and `global_levers` materialise through them, FR-OPT-25). A version
+> their parameters are FR-233's, lifted from the optimisation toolset (FR-286's
+> `segment_factor` and `global_levers` materialise through them, FR-303). A version
 > created by an optimisation materialisation cites the run in its change note per
-> FR-OPT-25 and does not need this record.)*
+> FR-303 and does not need this record.)*
 
 > The version the operation creates inherits the baseline's `seeded_from` unchanged
 > (`03` §4.2) — `applied_to` is what makes that inheritance checkable at save time and
@@ -303,16 +303,16 @@ after cells, actor — is the `03` NFR-RATE-10 Audit Event, not part of this rec
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/v1/demand-models/{id}/elasticity` | **202** Compute elasticity surface with CIs (FR-OPT-3/4) |
-| `GET` | `/api/v1/demand-models/{id}/price-variation` | Identifiability report per segment (FR-OPT-2) |
-| `POST` | `/api/v1/optimisation-runs` | **202** Launch a run → Job (FR-OPT-8) |
+| `POST` | `/api/v1/demand-models/{id}/elasticity` | **202** Compute elasticity surface with CIs (FR-279/280) |
+| `GET` | `/api/v1/demand-models/{id}/price-variation` | Identifiability report per segment (FR-278) |
+| `POST` | `/api/v1/optimisation-runs` | **202** Launch a run → Job (FR-284) |
 | `GET` | `/api/v1/optimisation-runs/{id}` | Run + result artifact |
-| `GET` | `/api/v1/optimisation-runs/{id}/frontier` | Efficient frontier points (FR-OPT-14) |
-| `GET` | `/api/v1/optimisation-runs/compare?ids=` | Segment-level diff between runs (FR-OPT-15) |
-| `POST` | `/api/v1/optimisation-runs/{id}/materialise` | Preview cell-level diff; accept per segment (FR-OPT-25/26) |
-| `POST` | `/api/v1/gipp-checks` | **202** Run a GIPP check → Job (FR-OPT-18) |
+| `GET` | `/api/v1/optimisation-runs/{id}/frontier` | Efficient frontier points (FR-290) |
+| `GET` | `/api/v1/optimisation-runs/compare?ids=` | Segment-level diff between runs (FR-291) |
+| `POST` | `/api/v1/optimisation-runs/{id}/materialise` | Preview cell-level diff; accept per segment (FR-303/304) |
+| `POST` | `/api/v1/gipp-checks` | **202** Run a GIPP check → Job (FR-294) |
 | `GET` | `/api/v1/gipp-checks/{id}` | GIPP evidence artifact |
-| `POST` | `/api/v1/disparity-reports` | **202** Outcome disparity report against a supplied reference (FR-OPT-24) |
+| `POST` | `/api/v1/disparity-reports` | **202** Outcome disparity report against a supplied reference (FR-302) |
 
 **Error codes owned by this module:** `DEMAND_MODEL_MISSING_PRICE_TERM`,
 `PRICE_VARIATION_INSUFFICIENT`, `POSITIVE_ELASTICITY_DETECTED`, `EXTRAPOLATION_REFUSED`,
@@ -345,7 +345,7 @@ def price_walking(renewal_population: pl.LazyFrame,
 `gipp_check` scores each renewal risk twice through the same compiled bundle from `03`
 (once with `purpose = renewal`, once with `purpose = new_business`) — it does not
 approximate the ENBP with a formula. The new-business pass uses the **original purchase
-channel** per policy (FR-OPT-18), falling back per FR-OPT-29 where that is unavailable, so
+channel** per policy (FR-294), falling back per FR-295 where that is unavailable, so
 the renewal population dataset must carry that column.
 
 ### 5.3 Frontend views
@@ -361,7 +361,7 @@ the renewal population dataset must carry that column.
 
 **Interaction requirement:** the binding-constraint panel is the screen that stops an
 optimiser being a black box. Every headline number must be one click from "which
-constraint held this back, and by how much" (FR-OPT-12).
+constraint held this back, and by how much" (FR-288).
 
 ---
 
@@ -369,17 +369,17 @@ constraint held this back, and by how much" (FR-OPT-12).
 
 | Step | Actor | Action |
 |---|---|---|
-| 1 | Pricing Actuary | Confirms demand models exist and are `approved`; reviews the price-variation report (FR-OPT-2) |
-| 2 | Pricing Actuary | Reviews the elasticity surface; investigates any positive elasticity (FR-OPT-6) |
+| 1 | Pricing Actuary | Confirms demand models exist and are `approved`; reviews the price-variation report (FR-278) |
+| 2 | Pricing Actuary | Reviews the elasticity surface; investigates any positive elasticity (FR-282) |
 | 3 | Pricing Actuary | Configures the run: objective, segment granularity, constraints (incl. GIPP as hard) |
 | 4 | Worker → pricing-core | `optimise` over the portfolio against the baseline bundle |
 | 5 | Pricing Actuary | Reviews expected outcomes with CIs, binding constraints, frontier |
-| 6 | Pricing Actuary | Re-runs with adjusted constraints; compares runs (FR-OPT-15) |
-| 7 | Pricing Actuary | Materialises accepted proposals into rate table edits (FR-OPT-25/26) |
+| 6 | Pricing Actuary | Re-runs with adjusted constraints; compares runs (FR-291) |
+| 7 | Pricing Actuary | Materialises accepted proposals into rate table edits (FR-303/304) |
 | 8 | — | `03` takes over: new Rating Version, dislocation, regression, GIPP check, approval |
-| 9 | `05-monitoring` | Post-deployment, realised conversion/retention is compared against the run's expectations (FR-OPT-28) |
+| 9 | `05-monitoring` | Post-deployment, realised conversion/retention is compared against the run's expectations (FR-306) |
 
-Full journey: [`wf-03-rate-change-impact.md`](../workflows/wf-03-rate-change-impact.md).
+Full journey: [`WF-700-rate-change-impact.md`](../workflows/WF-00700-rate-change-impact-optimisation-dislocation-gipp-decision.md).
 
 ---
 
@@ -427,13 +427,13 @@ announcing them) and what evidence a reviewer expects.
 
 | ID | Requirement |
 |---|---|
-| **NFR-OPT-1** | An optimisation run over a 1.3 M-policy portfolio at 400 segments completes in < 15 min including Monte Carlo uncertainty. |
-| **NFR-OPT-2** | A GIPP check over an 850 k renewal population completes in < 20 min (it is two full batch scoring passes — NFR-RATE-5). |
-| **NFR-OPT-3** | Determinism: identical run spec + seed reproduces identical proposals to 1e-9 (FR-OVR-8). |
-| **NFR-OPT-4** | Infeasible constraint sets are detected and explained — naming the mutually exclusive constraints — within 60 s, not after a full failed solve. |
-| **NFR-OPT-5** | Audit: run creation, materialisation acceptance (per segment), and GIPP check results emit Audit Events. Materialisation records exactly which proposals were accepted and which rejected, and by whom. |
-| **NFR-OPT-6** | GIPP evidence is retained for ≥ 7 years and is exportable as a self-contained document (NFR-OVR-6). |
-| **NFR-OPT-7** | No optimisation output can reach a live price without passing through `03`'s approval path; enforced by the absence of any write path from this module to a Deployment (R1). |
+| **NFR-503** | An optimisation run over a 1.3 M-policy portfolio at 400 segments completes in < 15 min including Monte Carlo uncertainty. |
+| **NFR-504** | A GIPP check over an 850 k renewal population completes in < 20 min (it is two full batch scoring passes — NFR-493). |
+| **NFR-505** | Determinism: identical run spec + seed reproduces identical proposals to 1e-9 (FR-11). |
+| **NFR-506** | Infeasible constraint sets are detected and explained — naming the mutually exclusive constraints — within 60 s, not after a full failed solve. |
+| **NFR-507** | Audit: run creation, materialisation acceptance (per segment), and GIPP check results emit Audit Events. Materialisation records exactly which proposals were accepted and which rejected, and by whom. |
+| **NFR-508** | GIPP evidence is retained for ≥ 7 years and is exportable as a self-contained document (NFR-459). |
+| **NFR-509** | No optimisation output can reach a live price without passing through `03`'s approval path; enforced by the absence of any write path from this module to a Deployment (R1). |
 
 ---
 
@@ -443,9 +443,9 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 
 | ID | Question |
 |---|---|
-| ~~**OQ-OPT-1**~~ | ~~Which solver family? SLSQP is simple and adequate for smooth segment-factor problems but struggles at scale and with non-smooth constraints; a dedicated conic/LP formulation (via `cvxpy`) is far more robust for linear constraints but restricts the objective forms we can express.~~ **Deferred to Phase 4**: start with SLSQP for the segment-factor formulation and revisit `cvxpy` if segment counts exceed ~1 000 or infeasibility diagnosis (NFR-OPT-4) proves unreliable. **DECIDED 2026-08-26: deferral confirmed — SLSQP in Phase 4; the cvxpy revisit trigger stands** |
-| ~~**OQ-OPT-2**~~ | ~~Does the platform ship a competitor-position capability (rank in market, price vs cheapest) as a first-class concept, or is it just another dataset column? First-class means modelling market response; a column means the user does the work.~~ **Open** — the recommendation is a documented dataset column in Phases 1–4, promotable to first-class later without a migration; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: dataset column in Phases 1-4, the convention documented** |
-| ~~**OQ-OPT-3**~~ | ~~Is `expected_profit` computed with the platform's own risk models, or should it accept an externally-supplied expected loss cost? Insurers often have a separate reserving-derived view that will not match our models, and the mismatch will be noticed.~~ **Open** — the recommendation is to support both, with the profit definition (FR-OPT-9) naming its expected-claims source; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: support both — the profit definition names its expected-claims source, never a default** |
-| ~~**OQ-OPT-4**~~ | ~~How is the demand model's endogeneity problem handled? Historic prices were set by a rating structure that already conditioned on risk, so a naive elasticity estimate is biased. Do we specify instrumental variables, a randomised price-test capability, or simply document the caveat prominently?~~ **Open** — the recommendation is to document and quantify via FR-OPT-2's price-variation report, with an `identification_note` required on every Demand Model; real identification needs OQ-OPT-5. Options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: document prominently and quantify; identification_note required on every Demand Model** |
-| ~~**OQ-OPT-5**~~ | ~~Should the platform support~~ **price testing** (randomised price variation on a slice of live traffic) to generate the variation FR-OPT-2 needs? It is the correct answer to OQ-OPT-4 and is operationally and ethically loaded. **Deferred (post-Phase 4)**: not built in Phases 1–4 — deliberately quoting some customers a different price to learn from it has FCA fair-value implications — but the capability boundary (a `price_test` purpose the platform refuses to serve) is specified now, so an eventual addition is deliberate and governed rather than emergent. **DECIDED 2026-08-26: deferral confirmed — post-Phase 4, with the price_test capability boundary specified now** |
-| **OQ-OPT-6** | ~~For GIPP, what is the correct treatment of channel differences?~~ **RESOLVED 2026-08-14 — the rule prescribes it.** ICOBS 6B.2.5R(1) requires the channel the customer used when they *first purchased* the policy, with 6B.2.5R(2) falling back to the channel most commonly used by new-business customers. This is now FR-OPT-18/29, and it corrected a design that keyed off the *renewal* channel. |
+| ~~**OQ-621**~~ | ~~Which solver family? SLSQP is simple and adequate for smooth segment-factor problems but struggles at scale and with non-smooth constraints; a dedicated conic/LP formulation (via `cvxpy`) is far more robust for linear constraints but restricts the objective forms we can express.~~ **Deferred to Phase 4**: start with SLSQP for the segment-factor formulation and revisit `cvxpy` if segment counts exceed ~1 000 or infeasibility diagnosis (NFR-506) proves unreliable. **DECIDED 2026-08-26: deferral confirmed — SLSQP in Phase 4; the cvxpy revisit trigger stands** |
+| ~~**OQ-622**~~ | ~~Does the platform ship a competitor-position capability (rank in market, price vs cheapest) as a first-class concept, or is it just another dataset column? First-class means modelling market response; a column means the user does the work.~~ **Open** — the recommendation is a documented dataset column in Phases 1–4, promotable to first-class later without a migration; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: dataset column in Phases 1-4, the convention documented** |
+| ~~**OQ-623**~~ | ~~Is `expected_profit` computed with the platform's own risk models, or should it accept an externally-supplied expected loss cost? Insurers often have a separate reserving-derived view that will not match our models, and the mismatch will be noticed.~~ **Open** — the recommendation is to support both, with the profit definition (FR-285) naming its expected-claims source; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: support both — the profit definition names its expected-claims source, never a default** |
+| ~~**OQ-624**~~ | ~~How is the demand model's endogeneity problem handled? Historic prices were set by a rating structure that already conditioned on risk, so a naive elasticity estimate is biased. Do we specify instrumental variables, a randomised price-test capability, or simply document the caveat prominently?~~ **Open** — the recommendation is to document and quantify via FR-278's price-variation report, with an `identification_note` required on every Demand Model; real identification needs OQ-625. Options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: document prominently and quantify; identification_note required on every Demand Model** |
+| ~~**OQ-625**~~ | ~~Should the platform support~~ **price testing** (randomised price variation on a slice of live traffic) to generate the variation FR-278 needs? It is the correct answer to OQ-624 and is operationally and ethically loaded. **Deferred (post-Phase 4)**: not built in Phases 1–4 — deliberately quoting some customers a different price to learn from it has FCA fair-value implications — but the capability boundary (a `price_test` purpose the platform refuses to serve) is specified now, so an eventual addition is deliberate and governed rather than emergent. **DECIDED 2026-08-26: deferral confirmed — post-Phase 4, with the price_test capability boundary specified now** |
+| **OQ-626** | ~~For GIPP, what is the correct treatment of channel differences?~~ **RESOLVED 2026-08-14 — the rule prescribes it.** ICOBS 6B.2.5R(1) requires the channel the customer used when they *first purchased* the policy, with 6B.2.5R(2) falling back to the channel most commonly used by new-business customers. This is now FR-294/295, and it corrected a design that keyed off the *renewal* channel. |

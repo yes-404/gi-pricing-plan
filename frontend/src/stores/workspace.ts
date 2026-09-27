@@ -4,8 +4,8 @@ import { setWorkspaceId } from "../api/client";
 import { listWorkspaces, switchWorkspace, type WorkspaceMembership } from "../api/me";
 
 /** Per-tab, survives a reload, never shared across tabs (sessionStorage): two tabs may
- *  hold two workspaces — the case FR-PLAT-65's per-request transport exists for — and a
- *  reload restores the selection without a new POST, which is correct under OQ-PLAT-12:
+ *  hold two workspaces — the case FR-397's per-request transport exists for — and a
+ *  reload restores the selection without a new POST, which is correct under OQ-652:
  *  a switch is a human act, and a reload is not one. */
 const STORAGE_KEY = "gi.workspaceId";
 

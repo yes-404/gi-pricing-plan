@@ -118,7 +118,7 @@ describe("the model selector", () => {
   });
 
   it("says the list may be incomplete rather than showing an honest-looking empty one", async () => {
-    // OQ-MODEL-40. An empty selector must be distinguishable from a walk that stopped.
+    // OQ-611. An empty selector must be distinguishable from a walk that stopped.
     listModels.mockResolvedValue({ items: [], truncated: true });
     selector();
 

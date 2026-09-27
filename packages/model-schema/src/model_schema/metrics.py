@@ -1,11 +1,11 @@
-"""Custom eval metrics — FR-MODEL-45, FR-MODEL-103/104/105, `02` §4.13.
+"""Custom eval metrics — FR-154, FR-155/156/157, `02` §4.13.
 
 Parallel to `CustomObjective` and deliberately not the same class: the two share a
 catalogue and a lifecycle, but a metric is never differentiated, so `hessian_strategy` and
 `hessian_min` would be fields meaningful for only one of two uses.
 
 `direction` reuses `model_schema.comparison.MetricDirection` rather than a second enum with
-the same two members: that enum's own docstring already declares the concept FR-MODEL-104
+the same two members: that enum's own docstring already declares the concept FR-156
 needs — "which way is better, declared with the metric rather than assumed by the reader" —
 and duplicating it under a second name would only reintroduce the ambiguity `CLAUDE.md` §2
 warns a shape defined twice creates. `CustomMetric` refuses the two members comparison
@@ -46,7 +46,7 @@ __all__ = [
 
 
 class MetricStatus(enum.StrEnum):
-    """FR-MODEL-45's "same lifecycle as objectives"."""
+    """FR-154's "same lifecycle as objectives"."""
 
     DRAFT = "draft"
     CERTIFIED = "certified"
@@ -78,7 +78,7 @@ FITTABLE_METRIC_STATUSES: Final[frozenset[MetricStatus]] = frozenset(
 
 
 class CustomMetric(BaseModel):
-    """A named, versioned, reusable eval metric (FR-MODEL-45, §4.13)."""
+    """A named, versioned, reusable eval metric (FR-154, §4.13)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -89,7 +89,7 @@ class CustomMetric(BaseModel):
     template: ObjectiveTemplate | None = None
     params: dict[str, int | float] = Field(default_factory=dict)
     applicability: Applicability
-    #: FR-MODEL-104: required, because there is no safe default. `comparison.MetricDirection`
+    #: FR-156: required, because there is no safe default. `comparison.MetricDirection`
     #: is reused rather than restated; `_direction_is_usable_for_stopping` refuses the two
     #: members (`closer_to_one_is_better`, `not_ordered`) an early-stopping loop cannot use.
     direction: MetricDirection
@@ -98,9 +98,9 @@ class CustomMetric(BaseModel):
     certificate_id: UUID | None = None
     approval_request_id: UUID | None = None
 
-    #: How many Model Specs reference this metric version (FR-MODEL-127) — the library
+    #: How many Model Specs reference this metric version (FR-167) — the library
     #: row's count, and `CustomObjective.usage_count`'s field exactly: **derived per request
-    #: and stored on no row**. A stored counter would be a second answer to FR-MODEL-108's
+    #: and stored on no row**. A stored counter would be a second answer to FR-162's
     #: blast radius, free to disagree with the query that derives it.
     #:
     #: `None` and `0` are different facts and are reported differently. The list route
@@ -111,11 +111,11 @@ class CustomMetric(BaseModel):
 
     @model_validator(mode="after")
     def _only_templates_are_built(self) -> Self:
-        """FR-MODEL-75's rule, at the type — the second door behind the API's refusal."""
+        """FR-150's rule, at the type — the second door behind the API's refusal."""
         if self.kind is not ObjectiveKind.TEMPLATE or self.template is None:
             raise ValueError(
                 "Phase 1 admits only `kind: template` metrics, and a template metric needs "
-                "a `template` (FR-MODEL-103)."
+                "a `template` (FR-155)."
             )
         return self
 
@@ -138,14 +138,14 @@ class CustomMetric(BaseModel):
         if unknown:
             raise ValueError(
                 f"metric params {unknown} are not parameters of template "
-                f"{self.template.value!r}; it declares {sorted(declared)} (FR-MODEL-103)."
+                f"{self.template.value!r}; it declares {sorted(declared)} (FR-155)."
             )
         for name, parameter in declared.items():
             if name not in self.params:
                 if parameter.default is None:
                     raise ValueError(
                         f"template {self.template.value!r} requires {name!r} and it is "
-                        "missing; §4.5 gives it no default (FR-MODEL-103)."
+                        "missing; §4.5 gives it no default (FR-155)."
                     )
                 continue
             parameter.check(self.params[name])
@@ -168,14 +168,14 @@ class CustomMetric(BaseModel):
         if not self.applicability.is_within(TEMPLATE_APPLICABILITY[self.template]):
             raise ValueError(
                 f"metric {self.slug}@{self.version} declares an applicability wider than "
-                f"template {self.template.value!r}'s (§4.5, FR-MODEL-103). A metric may be "
+                f"template {self.template.value!r}'s (§4.5, FR-155). A metric may be "
                 "restricted further than its template and never extended beyond it."
             )
         return self
 
     @model_validator(mode="after")
     def _direction_is_usable_for_stopping(self) -> Self:
-        """FR-MODEL-104 — only the two members an early-stopping loop can compare.
+        """FR-156 — only the two members an early-stopping loop can compare.
 
         Early stopping compares successive values and halts when they stop improving.
         `not_ordered` has no "better" to compare at all — it exists for context values like
@@ -188,14 +188,14 @@ class CustomMetric(BaseModel):
         if self.direction in refused:
             raise ValueError(
                 f"metric direction {self.direction.value!r} is not usable for early "
-                "stopping (FR-MODEL-104); only lower_is_better and higher_is_better compare "
+                "stopping (FR-156); only lower_is_better and higher_is_better compare "
                 "successive values monotonically."
             )
         return self
 
     @model_validator(mode="after")
     def _a_status_past_draft_rests_on_a_certificate(self) -> Self:
-        """FR-MODEL-105 — a claim with no evidence behind it is refused at the type.
+        """FR-157 — a claim with no evidence behind it is refused at the type.
 
         `deprecated` is excluded alongside `draft` because it is reachable from `draft`
         (`VALID_METRIC_TRANSITIONS[MetricStatus.DRAFT]` includes it): a metric abandoned
@@ -208,15 +208,15 @@ class CustomMetric(BaseModel):
             raise ValueError(
                 f"metric status {self.status.value!r} without a certificate_id; every "
                 "status past `draft` (other than `deprecated` reached directly from it) "
-                "rests on one (FR-MODEL-105)."
+                "rests on one (FR-157)."
             )
         return self
 
 
-#: FR-MODEL-105's four metric checks, sharing §4.7's vocabulary unchanged and in the order
+#: FR-157's four metric checks, sharing §4.7's vocabulary unchanged and in the order
 #: `pricing_core.modelling.metrics.certify_metric` emits them. Four, not §4.7's nine: a
 #: metric is never differentiated, so the two derivative checks, convexity, the branch scan
-#: and the shape pair have nothing to run against — which is why FR-MODEL-126 puts the count
+#: and the shape pair have nothing to run against — which is why FR-158 puts the count
 #: on the artifact rather than on the shared `CertificateResult`.
 METRIC_CERTIFICATE_CHECKS: Final[tuple[str, ...]] = (
     "finiteness",
@@ -227,7 +227,7 @@ METRIC_CERTIFICATE_CHECKS: Final[tuple[str, ...]] = (
 
 
 class MetricCertificate(BaseModel):
-    """The identity around `CertificateResult` — the ADR-0001 split §4.7 already uses."""
+    """The identity around `CertificateResult` — the ADR-703 split §4.7 already uses."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -240,7 +240,7 @@ class MetricCertificate(BaseModel):
 
     @model_validator(mode="after")
     def _the_battery_is_all_four_named_checks(self) -> Self:
-        """FR-MODEL-105's four, enforced here for FR-MODEL-126's reason.
+        """FR-157's four, enforced here for FR-158's reason.
 
         The names are asserted rather than the count: `direction_holds` is the check that
         catches a `direction` declared backwards, and a certificate missing it while

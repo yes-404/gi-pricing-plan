@@ -80,7 +80,7 @@ Reports to stdout (relayed by Monitor). Also appends to LOG_FILE for lead to rea
 (`/home/puzhenhao1989/.claude/jobs/4e4ed21d/tmp/balance_watch_w11.py`) with no durable
 home of its own — found by inventorying running processes, not by reading documents,
 since a fully-documented ephemeral path reads as durable until something actually looks
-for the file. The token survived the equivalent W10 event (job dir `58b9ba0c`) only
+for the file. The token survived the equivalent WK-670 event (job dir `58b9ba0c`) only
 because it already had a durable source file; the script never did, until this filing.
 Landed with two fixes made while verifying against the delivered source: the script
 failed `ruff check` (missing return/argument annotations, `datetime.timezone.utc` instead

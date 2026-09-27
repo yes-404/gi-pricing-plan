@@ -13,7 +13,7 @@ uv run python scripts/req-coverage.py     # which requirements the suite claims
 ## Every test names the requirement it satisfies
 
 ```python
-@pytest.mark.req("FR-OVR-7")
+@pytest.mark.req("FR-10")
 def test_money_minor_refuses_floats(): ...
 ```
 
@@ -33,7 +33,7 @@ wrong thing **cannot** happen, not merely that the right thing can:
 - a float is **refused** in the money path, not coerced
 - an artifact envelope **cannot** be mutated
 - the generated JSON Schema **does not admit** a payload the spec forbids
-- a submitter **cannot** approve their own request (`06` NFR-GOV-8)
+- a submitter **cannot** approve their own request (`06` NFR-525)
 
 A suite that only demonstrates the happy path will pass while the invariant it exists to
 protect is quietly broken.
@@ -52,7 +52,7 @@ pair is the claim: *this* is rejected, *that* is accepted.
 
 ### A feature four sites agree on can still not work
 
-`inverse` was declared in FR-MODEL-18, accepted by `GlmSpec`'s literal, implemented in
+`inverse` was declared in FR-110, accepted by `GlmSpec`'s literal, implemented in
 `predict._inverse_link`, and tested at the scorer. It could not be fitted: `glum` has no
 such link name, and the string reached the library and raised a bare `ValueError`. The
 translation between the spec's vocabulary and the library's was the fifth site, and nothing
@@ -68,11 +68,11 @@ over the whole literal.
 
 `_crossable_book()` draws `area` and `fuel` **independently**, so all six cells of the cross
 it feeds are populated. Every `interaction` test in the suite uses it, and the cross it
-builds is therefore dense — which is the one shape FR-MODEL-91 says a real cross never has:
+builds is therefore dense — which is the one shape FR-92 says a real cross never has:
 "only *observed* combinations become levels … on any real cross most cells are empty".
 
-That single fixture hid two defects in a row, four days apart. FR-MODEL-119 (no GBM could
-fit a cross at all) went unseen because no GBM test fitted one; FR-MODEL-122 went unseen
+That single fixture hid two defects in a row, four days apart. FR-176 (no GBM could
+fit a cross at all) went unseen because no GBM test fitted one; FR-178 went unseen
 *after* that was fixed, because permutation importance and the partial-dependence sweep
 shuffle an operand's raw column **alone**, and on a dense cross every recombination happens
 to be a level the model already knows. Make the cross sparse — 3 observed cells of 9, one
@@ -98,7 +98,7 @@ someone chooses to.
 
 Two libraries behind one interface will agree at the point you looked and disagree
 somewhere else. XGBoost and LightGBM agree at fit time and diverge at prediction time,
-which is why FR-MODEL-72 exists as a round-trip requirement rather than a fit-time one. A
+which is why FR-129 exists as a round-trip requirement rather than a fit-time one. A
 test that exercises only the primary backend reports the pair healthy — and `libgomp1`
 showed the same shape from the other side, where the secondary could not even import while
 the suite stayed green.
@@ -113,7 +113,7 @@ the specific failure that raises it.
 
 The instrument is an **AST scan over the source** asserting every code a `raise
 PlatformError(...)` mentions is in the registry — `tests/test_repository_invariants.py`.
-Same class of blindness as W1's invisible enforcement: a check nothing exercises is
+Same class of blindness as WK-657's invisible enforcement: a check nothing exercises is
 indistinguishable from a check that passes.
 
 ## A discovery call in a test is a claim about scope wearing setup's clothes
@@ -179,7 +179,7 @@ assert apply_factor(24150, Decimal("1.15"), "half_up")   == 27773
 ```
 
 That pair is worth more than either line alone: it shows the mode changes the answer, which
-is *why* FR-RATE-12 makes rounding an explicit per-step declaration. (The half-even value
+is *why* FR-226 makes rounding an explicit per-step declaration. (The half-even value
 is also the one intuition gets wrong.)
 
 ## Loosening a tolerance? Pin the other side of it in the same commit
@@ -307,12 +307,12 @@ had no cleanup at all until 2026-08-22, and six days of runs had left **766 MB**
 share one. Re-seed with `uv run python scripts/demo.py`.
 
 **Why a plain `TRUNCATE` cannot do it.** Seventeen tables refuse it, not one. `audit_events`
-is the famous case (FR-GOV-22), but artifact immutability is enforced identically on
-`validation_reports` (`01` FR-DATA-15/42), `models`, `diagnostics`, `blobs`,
+is the famous case (FR-370), but artifact immutability is enforced identically on
+`validation_reports` (`01` FR-42/43), `models`, `diagnostics`, `blobs`,
 `transparency_artifacts` and a dozen more:
 
 ```
-ERROR: ... validation_reports is append-only: TRUNCATE rejected (01 FR-DATA-15, FR-DATA-42)
+ERROR: ... validation_reports is append-only: TRUNCATE rejected (01 FR-42, FR-43)
 ```
 
 One `DO` block truncating every table is a single transaction, so **one** refusal rolls back
@@ -493,7 +493,7 @@ A boosted model with too few rounds is not a weaker model — it is a model that
 left its base rate, and every calibration figure you read off it is shrinkage wearing the
 costume of a finding.
 
-Concretely, W5's backtest slice: 30 rounds at `eta=0.1` gave the booster a **train A/E of
+Concretely, WK-661's backtest slice: 30 rounds at `eta=0.1` gave the booster a **train A/E of
 0.53** on its own training frame. Scored against a book carrying 30 % more claims, it read
 0.65 — so a test written to assert "deterioration shows up as A/E > 1" failed, and the
 tempting fix is to widen the bound until it passes. That bound would then have been
@@ -515,7 +515,7 @@ the Poisson identity holds at the first iteration.
 
 `_weighting` reads the spec: an exposure offset means `exposure`, a weight column means
 `claim_count`, neither means `count`. Building a second scheme is not as simple as dropping the
-offset, because `GlmSpec` refuses a Poisson model without one (FR-MODEL-19) — the only route
+offset, because `GlmSpec` refuses a Poisson model without one (FR-111) — the only route
 the contract allows is a genuine severity model:
 
 ```python
@@ -623,9 +623,9 @@ first (`cp file /tmp/file.bak`) and restore from the copy.
 
 ## A journey test pins the steps it cannot drive, inverted
 
-An end-to-end journey (FR-OVR-17(ii)) will always reach steps the platform cannot execute yet.
+An end-to-end journey (FR-19(ii)) will always reach steps the platform cannot execute yet.
 Skipping them, or naming them in a comment, leaves nothing that notices when they arrive —
-`wf-01`'s D7 and E4/E5 would have stayed absent from the journey long after the slices landed.
+`WF-698`'s D7 and E4/E5 would have stayed absent from the journey long after the slices landed.
 
 Write each as an assertion that **passes while the capability is absent and fails the day it
 lands**:
@@ -641,9 +641,9 @@ assert not hasattr(model_schema, "PerilStructure"), (      # E4/E5 — no contra
 ```
 
 The failure message is the handover: it tells the slice that broke it what to do. This is what
-makes "FR-OVR-17(ii) partial" a claim with an expiry rather than a permanent excuse.
+makes "FR-19(ii) partial" a claim with an expiry rather than a permanent excuse.
 
-**And a journey test earns its cost by producing states no fixture does.** `wf-01`'s B8/B9 —
+**And a journey test earns its cost by producing states no fixture does.** `WF-698`'s B8/B9 —
 a warning, acknowledged, then promoted — was the first thing in the suite to ask for that
 sequence, and it found a deadlock that had made *every* dataset version with one warning
 unpromotable since the spec was amended three days earlier. Fixtures produced all-pass or a
@@ -713,14 +713,14 @@ monkeypatch.setattr("pricing_core.modelling.build_glm_approximation", spy)
 Check the import site before writing the patch: `grep -n "^ *from pricing_core" <handler file>`
 tells you immediately whether an import is module-level or function-local.
 
-*Found 2026-08-22 building FR-MODEL-110's rebuild test. The drafted test patched the handler
+*Found 2026-08-22 building FR-138's rebuild test. The drafted test patched the handler
 module and would have passed for the wrong reason.*
 
 ## Pinning a refusal code through a Job: check the code survives `execute_job` first
 
 `pricing-core` raises named refusals — `ModellingError` and `PredictionError`, both bare
 `RuntimeError` subclasses carrying a `.code`. `execute_job` preserves a code only for
-`app.errors.PlatformError` (its OQ-PLAT-7 clause); everything else lands in the generic
+`app.errors.PlatformError` (its OQ-646 clause); everything else lands in the generic
 handler and is stored as `code="JOB_HANDLER_FAILED"`, with the real code absent **even from
 the message**. So an assertion like
 
@@ -739,7 +739,7 @@ refusal as indistinguishable from a crash. Either fix the handler to catch
 code at the handler layer via `handler_for(JobKind.…)` and say in the test which instrument
 you used and why.
 
-*Found 2026-08-22 pinning FR-MODEL-24's `MODEL_OFFSET_MISSING` on the peril-reconciliation
+*Found 2026-08-22 pinning FR-116's `MODEL_OFFSET_MISSING` on the peril-reconciliation
 path. `_reconcile` wrapped only `assemble_risk_premium`/`reconcile`; the scoring pass sat
 above that `try`, outside any handler. `_quantile_crossing` and `_compare` still have the
 same gap.*
@@ -792,7 +792,7 @@ it twice) but by **simulating** the pending change against the shipped source, w
 the blast radius to one further test. Both rules are stated as procedure rather than as the
 incident. Tree `aab6327`.
 
-2026-08-30 — W11 correction batch (PR #438). The concurrent-run section's own guard was
+2026-08-30 — WK-671 correction batch (PR #438). The concurrent-run section's own guard was
 inert: it prescribed `pgrep -af 'pytest'`, which matches its own wrapper and so can never
 return empty — measured live at four hits, two of them the `pgrep`. All three occurrences
 replaced with `ps -eo pid,etimes,args | grep -E '[b]in/pytest'`, and the criterion restated
@@ -802,7 +802,7 @@ never enters test setup, so the session-scoped teardown never fires. The section
 right since 2026-08-24 and was breached again on 2026-08-30 between two live sessions, which
 is what sent someone to read the guard it recommends.
 
-2026-08-24 — W6b. The concurrent-run section, from a live incident rather than a thought
+2026-08-24 — WK-664. The concurrent-run section, from a live incident rather than a thought
 experiment: three overlapping runs from two sessions, three disjoint failure sets, every
 failure passing in isolation. Diagnosed independently by both sessions and reconciled — one
 from the failure shape and an empty `git diff --stat … -- '*.py'`, one from
@@ -810,18 +810,18 @@ from the failure shape and an empty `git diff --stat … -- '*.py'`, one from
 covered it: the first frames the fixture's purpose as bounding *accumulation*, the second
 asks who is editing the tree, and a peer running the suite is neither.
 
-2026-08-22 — W5's closure slice. The two handler-testing sections above, both found by writing tests that would have passed for the wrong reason: a `monkeypatch` that never intercepted a function-local import, and a refusal whose code `execute_job` discarded. Reproduced both ways in each case — see each section's note.
+2026-08-22 — WK-661's closure slice. The two handler-testing sections above, both found by writing tests that would have passed for the wrong reason: a `monkeypatch` that never intercepted a function-local import, and a refusal whose code `execute_job` discarded. Reproduced both ways in each case — see each section's note.
 
-2026-08-22 — deciding OQ-MODEL-28. The degenerate-fixture section above, added after the
+2026-08-22 — deciding OQ-598. The degenerate-fixture section above, added after the
 same dense `_crossable_book()` hid two `interaction` defects four days apart — the second
-of them (FR-MODEL-122) *after* the first was fixed and believed to have cleared the path.
+of them (FR-178) *after* the first was fixed and believed to have cleared the path.
 Reproduced both ways: the dense fixture returns diagnostics, and a 3-of-9 sparse one raises
 `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` out of `compute_gbm_diagnostics`.
 
-2026-08-22 — W5 audit remediation. The shared-machine load caveat above, found
+2026-08-22 — WK-661 audit remediation. The shared-machine load caveat above, found
 while measuring `02` §9's twelve NFRs.
 
-2026-08-22 — W5, giving the database fixture a session teardown. Supersedes the same day's
+2026-08-22 — WK-661, giving the database fixture a session teardown. Supersedes the same day's
 earlier entry, which said `audit_events` was what refused `TRUNCATE`: **seventeen** tables do,
 and the first teardown written against that belief failed on `validation_reports`. Two further
 corrections the run produced, both from shipping the bug first: `db.session()` does no
@@ -831,7 +831,7 @@ The guard test was itself wrong at first, calling the helper (own engine, own co
 passing with the safety boolean deliberately inverted; it now drives the same SQL through the
 test's connection and fails on that input.
 
-2026-08-19 — W5, the GLM approximation as a Model. The `git checkout --` rule above cost a
+2026-08-19 — WK-661, the GLM approximation as a Model. The `git checkout --` rule above cost a
 whole task's rewrite: reverting a deliberately-broken file with `git checkout -- <file>` to
 prove an enforcement path fails on bad input restored **HEAD**, discarding every uncommitted
 edit written earlier in the same task rather than only the injected defect. The implementer
@@ -840,29 +840,29 @@ re-spliced the rewrite from scratch; every later task in the plan was told to `c
 second, costlier confirmation that it is not optional even when the file being restored is
 not the one the rule's own example names.
 
-2026-08-19 — W5, paired quantile models. The nesting rule above cost six minutes and a killed
+2026-08-19 — WK-661, paired quantile models. The nesting rule above cost six minutes and a killed
 run: a fixture called an objective-building helper from inside the transaction that reserved
 a model, and the suite hung with no output. Three further fixture defects were the platform
 catching the test rather than the reverse — a `custom_objectives` CHECK refusing a status
 stamped past `draft` with no certificate, a factor naming a column the dataset lacks, and
-FR-MODEL-44 requiring a spec with a custom objective to declare its `response`. Suite at 1339,
+FR-153 requiring a spec with a custom objective to declare its `response`. Suite at 1339,
 zero skipped.
 
-2026-08-18 — W5, custom objectives. The tolerance rule above came from raising a certification grid's floor from 600 to 1 000 points: three of twelve templates then warned on derivatives that were exactly correct, the fix loosened the agreement check, and nothing in the suite would have noticed that it had stopped catching a wrong one. Suite at 1213.
+2026-08-18 — WK-661, custom objectives. The tolerance rule above came from raising a certification grid's floor from 600 to 1 000 points: three of twelve templates then warned on derivatives that were exactly correct, the fix loosened the agreement check, and nothing in the suite would have noticed that it had stopped catching a wrong one. Suite at 1213.
 
-2026-08-18 — W5, prediction. The two rules above came from this slice: the `inverse` link
+2026-08-18 — WK-661, prediction. The two rules above came from this slice: the `inverse` link
 was declared in four places and fitted in none, and a legacy-model fixture was refused by the
 immutability trigger until it was built on a reserved draft. Suite at 1093.
 
-2026-08-18 — W5, backtests. The GBM-convergence rule above was found by a test that failed for a reason that looked like a broken scoring path and was an unconverged fixture: train A/E 0.53 at 30 rounds, 1.000 at 300. Suite at 1073.
+2026-08-18 — WK-661, backtests. The GBM-convergence rule above was found by a test that failed for a reason that looked like a broken scoring path and was an unconverged fixture: train A/E 0.53 at 30 rounds, 1.000 at 300. Suite at 1073.
 
 2026-08-18 — the three rules above (happy path after the refusal, parametrise over
 backends, AST-scan a registry) were carried out of a local handover note that was being
-deleted. Each was learned in W5 and each had been recorded only in an untracked file, so
+deleted. Each was learned in WK-661 and each had been recorded only in an untracked file, so
 none of them would have survived it — which is the argument for `.claude/skills/` over a
 scratch file, made concrete.
 
-2026-08-18 — W5, peril structures. The migration-skip rule above was found in a worktree:
+2026-08-18 — WK-661, peril structures. The migration-skip rule above was found in a worktree:
 eleven DB-backed tests failed with `UndefinedTableError` and no skip, because the guard
 only asks whether *any* migration has run. Suite at 1026 with the stack up.
 
@@ -871,18 +871,18 @@ gate run began at one revision and ended at another, and after a `checkout` in t
 directory silently discarded an edit made between two commands. Both were found by
 comparing SHAs, not by any command reporting an error.
 
-2026-08-17 — W5's `wf-01` journey slice, compose stack up: **961 Python tests** and the
-frontend's 105. The inverted-assertion procedure above came from the three steps `wf-01`
+2026-08-17 — WK-661's `WF-698` journey slice, compose stack up: **961 Python tests** and the
+frontend's 105. The inverted-assertion procedure above came from the three steps `WF-698`
 cannot drive; the paragraph after it from the defect the journey found on its first run.
 
-2026-08-17 — W5's comparison slice, compose stack up: **855 Python tests** and the frontend's
+2026-08-17 — WK-661's comparison slice, compose stack up: **855 Python tests** and the frontend's
 105, plus both alembic directions. Two new checks proved by injection (the shared-split refusal
 and the runner's `job_id` injection), each failing exactly the tests that name it. The two
 procedures added above both came from a test that failed for the *right* reason and the wrong
 one: a Gini assertion that could never hold, and a weighting fixture the `GlmSpec` contract
 refuses.
 
-2026-08-17 — W5's model-lifecycle slice, compose stack up: **823 Python tests** and the
+2026-08-17 — WK-661's model-lifecycle slice, compose stack up: **823 Python tests** and the
 frontend's 105. Two new checks proved by injection — skipping `require_if_match` and skipping
 supersession each failed exactly the tests that name them, and nothing else. Four procedures
 added above, all of them found by a test failing for the *right* reason and the wrong one:
@@ -890,7 +890,7 @@ a status-CHECK test that passed against a table with no such constraint (the oth
 refused the row first), a `pg_constraint` lookup that found nothing, an attempt to un-fit a
 model, and an insert straight to `fitted`.
 
-2026-08-15 — W5's banding and grouping slice, run with the compose stack up: 740 Python
+2026-08-15 — WK-661's banding and grouping slice, run with the compose stack up: 740 Python
 tests and both alembic directions. **Corrects this skill's previous claim that
 `docker compose` is unavailable** — it runs here, and the DB-backed tests it enables are
 the ones that catch migrations and privileges. Four defects surfaced by running rather than
@@ -898,7 +898,7 @@ assuming, three of them by injection: a `banding` factor that silently resolved 
 column broke no test, `GLM_SEPARATION_DETECTED` was raised and registered nowhere,
 `POST /factors` turned an invariant into a 500, and `git checkout --` ate a file mid-task.
 
-2026-08-14 — W1's 21 tests, run without a database. Two defects surfaced by *running*
+2026-08-14 — WK-657's 21 tests, run without a database. Two defects surfaced by *running*
 rather than assuming: the `test_money.py` basename collision (fixed by `importlib` mode),
 and an expected value of mine that was simply wrong — 24150 × 1.15 is exactly 27772.5, so
 half-even gives 27772 and my intuition had defaulted to half-up.

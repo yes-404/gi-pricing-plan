@@ -1,20 +1,20 @@
-"""A model measured on a Dataset Version it was not fitted on (`02` FR-MODEL-57, §4.12).
+"""A model measured on a Dataset Version it was not fitted on (`02` FR-187, §4.12).
 
 The glossary defines a backtest as *evaluation of a Model on a Dataset Version other than
-the one it was fitted on — typically a later period*, and FR-MODEL-57 asks for "the same
+the one it was fitted on — typically a later period*, and FR-187 asks for "the same
 diagnostic shapes, marked with the version it ran against". Three shape decisions follow,
 each made here because no §4 subsection defined this artifact before the slice that built
 it.
 
 * **A backtest is its own artifact, not a field on `Diagnostics`.** `Diagnostics.backtest`
   was declared from Phase 0 and typed `None`, and nothing could ever have populated it:
-  FR-MODEL-49 makes diagnostics computed once at fit time and read thereafter, while a
+  FR-170 makes diagnostics computed once at fit time and read thereafter, while a
   backtest runs later — and runs again for every subsequent period, which one field on one
   immutable artifact has no room for. That field is removed with this slice, for the reason
   `PartitionDiagnostics.double_lift` was removed before it: a field that is structurally
   always null reads as a measurement that came out empty.
 
-* **One `PartitionDiagnostics`, not a `UniversalDiagnostics`.** FR-MODEL-54's "train and
+* **One `PartitionDiagnostics`, not a `UniversalDiagnostics`.** FR-183's "train and
   holdout, side by side" is a statement about a *fit*. A backtest population was never
   split, and calling its single partition a holdout would claim a split nobody made. The
   fit-time counterpart is not copied in either: it lives on the model's own diagnostics,
@@ -47,10 +47,10 @@ class BacktestSummary(BaseModel):
 
     The `DiagnosticsResult` and `ComparisonSummary` split, for the same reason:
     `pricing-core` computes, and does not allocate ids, know about rows in a database, or
-    read a clock (ADR-0001).
+    read a clock (ADR-703).
 
     The weighting scheme is inside `partition` and is not restated: it is a function of the
-    model's spec (FR-MODEL-55), and a backtest scores its own model's spec, so it cannot
+    model's spec (FR-184), and a backtest scores its own model's spec, so it cannot
     differ from the fit-time scheme the reader will compare against.
     """
 
@@ -58,13 +58,13 @@ class BacktestSummary(BaseModel):
 
     #: `model:{family}@{version}` — the model measured, pinned by version.
     model_ref: str
-    #: `dataset_version:{slug}@{version}` — FR-MODEL-57's "marked with the version it ran
+    #: `dataset_version:{slug}@{version}` — FR-187's "marked with the version it ran
     #: against", in the reference form `00` ID-3 makes canonical.
     dataset_version_ref: str
     #: The version the model was fitted on. Stored so "other than" is checkable from the
     #: artifact alone, and enforced below.
     fitted_on_ref: str
-    #: The period the backtested version covers, where it declares one. FR-MODEL-57 calls a
+    #: The period the backtested version covers, where it declares one. FR-187 calls a
     #: backtest the evidence bridge into `05-monitoring.md`, and a deterioration nobody can
     #: date is not evidence of drift.
     period_from: _datetime.date | None = None
@@ -96,9 +96,9 @@ class BacktestSummary(BaseModel):
 
 
 class Backtest(BaseModel):
-    """The persisted artifact (`02` §4.12, FR-MODEL-57).
+    """The persisted artifact (`02` §4.12, FR-187).
 
-    Immutable, and enforced at the privilege layer as well as here (FR-DATA-42): a backtest
+    Immutable, and enforced at the privilege layer as well as here (FR-43): a backtest
     is what a monitoring review and a re-approval argue from, and evidence that can change
     after the decision is not evidence.
 

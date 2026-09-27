@@ -1,21 +1,21 @@
-"""`CompiledBundle`, `load_bundle`, and the JDM wire translation (03 §5.2, FR-RATE-65,
-W11 Task 1.3).
+"""`CompiledBundle`, `load_bundle`, and the JDM wire translation (03 §5.2, FR-243,
+WK-671 Task 1.3).
 
-**Two types, deliberately not one** (Ruling 4, `docs/plans/2026-08-29-w11-prework-rulings.md`).
+**Two types, deliberately not one** (RL-867, `docs/rulings/RL-00867-compiledbundle-is-spec-only-bundle-is-the-only-thing-that-exists-and-they-are-not-the-same-type.md`).
 `Bundle` (`pricing_core.rating.compile`) is the record: a frozen, JSON-shaped, hashable,
 Redis-cacheable `BaseModel`. `CompiledBundle` is what a warm worker holds after loading
 one — a live `zen.ZenDecision` handle plus any GBM boosters deserialised into objects — and
 it is never itself serialised. `load_bundle` is the hydration step between them, and per
-Ruling 10 it is pure with respect to any cache: it consults none, registers itself in no
+RL-876 it is pure with respect to any cache: it consults none, registers itself in no
 global, and starts no background task. Where a `CompiledBundle` is held across calls (a
-per-worker slot, bounded, keyed by `Bundle.content_hash`) is Slice 2's Task 2.1 (Ruling 16)
+per-worker slot, bounded, keyed by `Bundle.content_hash`) is Slice 2's Task 2.1 (RL-882)
 — outside this module.
 
 **The translation gap this module closes.** `to_jdm` (`compile.py`) produces a `JdmGraph`
 keyed by `step_id`, with `produces`/`consumes` lists standing in for edges — pricing-core's
 own intermediate form. The ZEN engine's Python binding consumes a different shape entirely:
 a node **list** plus an explicit **edge list**, verified live against `zen.ZenEngine` rather
-than assumed from any binding's docstring (`docs/plans/2026-08-29-w11-1-evaluator-core.md`,
+than assumed from any binding's docstring (`docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`,
 *Verified facts*). `to_wire` is that translation.
 
 **What this module does not yet translate.** A `constraint` step's wire translation was
@@ -53,7 +53,7 @@ _INPUT_ID = "input"
 _OUTPUT_ID = "output"
 
 #: Reserved key a `model_call` handler uses to report a failure through normal engine data
-#: flow rather than an exception (W11 Task 1.4, resolving the finding below). `$`-prefixed
+#: flow rather than an exception (WK-671 Task 1.4, resolving the finding below). `$`-prefixed
 #: to match the engine's own reserved `$nodes` key and stay clear of any user-declared
 #: `produces` name.
 MODEL_CALL_ERROR_KEY = "$model_call_error"
@@ -92,7 +92,7 @@ def _model_call_failure(step: RatingModelCallStep, message: str) -> dict[str, An
     two candidate channels, this one and a mutable side-channel the handler and `score_one`
     would share. **The side-channel is rejected, not merely left aside.** `CompiledBundle`
     is held once and scored many times, including *concurrently* — `async_evaluate`'s own
-    throughput gain (Ruling 5) comes from releasing the GIL during native execution, and
+    throughput gain (RL-868) comes from releasing the GIL during native execution, and
     Task 1.4's own concurrency smoke test runs many `score_one` calls against one shared
     `CompiledBundle` via `asyncio.gather`. A mutable slot captured in this closure would be
     shared by every one of those calls; nothing in this codebase has verified which OS
@@ -259,11 +259,11 @@ def _decision_table_node(
 
 
 def _constraint_node(step_id: str, node: dict[str, Any]) -> dict[str, Any]:
-    """A `constraint` step becomes an `expressionNode` (W11 Task 1.4, Ruling 9).
+    """A `constraint` step becomes an `expressionNode` (WK-671 Task 1.4, RL-875).
 
     Resolves the scope cut this module's own docstring named: `on_violation`'s three modes
     and `clamp_bounds`' semantics were left untranslated pending `score_one`'s design
-    (Ruling 9's decline representation). Two things are computed here, and nothing more —
+    (RL-875's decline representation). Two things are computed here, and nothing more —
     the *disposition* (decline vs. clamp vs. error, and collecting reason codes) is
     `score_one`'s, read from these values after one full evaluation, never decided inside
     the graph:
@@ -283,7 +283,7 @@ def _constraint_node(step_id: str, node: dict[str, Any]) -> dict[str, Any]:
 
     A `decline`/`error` step (or a `clamp` step declaring no `produces`) emits only the
     `__violated` flag; the pre-existing value it `consumes` is left untouched, which is
-    exactly FR-RATE-39's "the ladder stays fully populated" for a declined quote.
+    exactly FR-256's "the ladder stays fully populated" for a declined quote.
     """
     violated_key = f"{step_id}__violated"
     expressions: list[dict[str, Any]] = [
@@ -345,7 +345,7 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
     `produces`/`consumes` lists standing in for edges. The engine wants a node *list* plus
     an explicit edge list — verified against a live `ZenEngine().create_decision(...)`
     call, never a docstring (see this module's own docstring and
-    `docs/plans/2026-08-29-w11-1-evaluator-core.md`'s *Verified facts*).
+    `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`'s *Verified facts*).
 
     `input`/`output`-typed steps are **not** translated 1:1 — the engine wants exactly one
     `inputNode` and one `outputNode` (Step 3, rule 2), so every input step collapses into
@@ -435,13 +435,13 @@ def _model_call_handler(
 ) -> Callable[[Any], dict[str, Any]]:
     """Build the `customHandler` `load_bundle` wires into the `ZenEngine` it constructs.
 
-    Ruling 7: the handler routes on `request.node["id"]` (the step id) against the
+    RL-873: the handler routes on `request.node["id"]` (the step id) against the
     algorithm and the resolved payloads already inside the `Bundle` — no I/O, no resolver.
-    Ruling 8: a GBM pin scores through the pre-loaded `boosters[ref]` object, never through
+    RL-874: a GBM pin scores through the pre-loaded `boosters[ref]` object, never through
     raw bytes, so N quotes against one `CompiledBundle` deserialise the booster once, not N
     times. Money-minor rounding here is a documented, provisional convention (`round()` to
     the nearest whole unit, on the assumption the pinned model was itself fitted to predict
-    on the money-minor scale already) — Task 1.4's FR-RATE-34 golden test is where the
+    on the money-minor scale already) — Task 1.4's FR-250 golden test is where the
     actual monetary contract for a `model_call` output gets fixed; flagged in the PR
     description rather than asserted here as settled.
     """
@@ -454,7 +454,7 @@ def _model_call_handler(
     def handler(request: Any) -> dict[str, Any]:
         step = steps_by_id[request.node["id"]]
         ref = step.model_ref if step.model_ref is not None else step.peril_structure_ref
-        if ref is None:  # pragma: no cover — schema-refused (FR-RATE-10)
+        if ref is None:  # pragma: no cover — schema-refused (FR-222)
             return _model_call_failure(step, f"model_call step {step.step_id!r} pins nothing.")
         ref_str = str(ref)
         payload = payloads[ref_str]
@@ -474,9 +474,9 @@ def _model_call_handler(
             frame = pl.DataFrame([feature_row]) if feature_row else pl.DataFrame(
                 {slug: [context.get(slug)] for slug in gbm_result.feature_order}
             )
-            # NFR-RATE-14: nthread=1 per request (F-W11-1-2). For LightGBM this is a
+            # NFR-501: nthread=1 per request (F-W11-1-2). For LightGBM this is a
             # genuine per-call argument (safe under concurrency). For XGBoost this call is
-            # a no-op by design — `booster` is already loaded (Ruling 8), and
+            # a no-op by design — `booster` is already loaded (RL-874), and
             # `predict_gbm` refuses to `set_param` a shared, already-loaded `Booster` on
             # every call because that races a concurrent `predict()` on the same object
             # and crashes (verified live — see `predict_gbm`'s own docstring).
@@ -507,10 +507,10 @@ def _model_call_handler(
 def _load_boosters(
     algorithm: RatingAlgorithm, payloads: Mapping[str, Any]
 ) -> dict[str, object]:
-    """Deserialise every pinned GBM's booster once (Ruling 8). Not a cache: this runs once
-    per `load_bundle` call, and `load_bundle` itself consults no cache (Ruling 10).
+    """Deserialise every pinned GBM's booster once (RL-874). Not a cache: this runs once
+    per `load_bundle` call, and `load_bundle` itself consults no cache (RL-876).
 
-    **`nthread=1` (NFR-RATE-14, F-W11-1-2) is baked in here, once, and nowhere else for
+    **`nthread=1` (NFR-501, F-W11-1-2) is baked in here, once, and nowhere else for
     XGBoost.** This runs synchronously, before `load_bundle` returns and before any
     concurrent scoring against the resulting `CompiledBundle` can begin — the only point in
     this object's life where mutating it (`Booster.set_param`) is safe. `predict_gbm`
@@ -539,17 +539,17 @@ def _load_boosters(
 
 @dataclass(frozen=True)
 class CompiledBundle:
-    """A loaded, executable bundle (FR-RATE-65). Never serialised (Ruling 4).
+    """A loaded, executable bundle (FR-243). Never serialised (RL-867).
 
     `Bundle` is the record: hashable, distributable, cacheable. This is what a warm worker
     holds after loading one, and it owns an engine handle and live booster objects that
     have no serialised form at all — a `dataclass`, deliberately not a `BaseModel`, because
     a Pydantic model would give it a `model_dump_json()` that appears to work and silently
-    drops the engine handle (Ruling 4's option (c), rejected for exactly this confusion).
+    drops the engine handle (RL-867's option (c), rejected for exactly this confusion).
 
-    `content_hash` is the `Bundle.content_hash` this was loaded from (Ruling 10, clause i):
+    `content_hash` is the `Bundle.content_hash` this was loaded from (RL-876, clause i):
     every candidate deployment-switch mechanism compares a held hash against a current one,
-    and a `CompiledBundle` that forgot its provenance would make FR-RATE-51's "either the
+    and a `CompiledBundle` that forgot its provenance would make FR-268's "either the
     old or the new bundle, never a mix" unverifiable at runtime.
     """
 
@@ -560,17 +560,17 @@ class CompiledBundle:
 
 
 def load_bundle(bundle: Bundle) -> CompiledBundle:
-    """Hydrate a `Bundle` into a `CompiledBundle` (FR-RATE-65, Ruling 7).
+    """Hydrate a `Bundle` into a `CompiledBundle` (FR-243, RL-873).
 
-    **Pure with respect to any cache** (Ruling 10, clause ii): consults no cache, registers
+    **Pure with respect to any cache** (RL-876, clause ii): consults no cache, registers
     itself in no global, starts no background task. Calling this twice on the same `Bundle`
     returns two independent `CompiledBundle`s holding two independent engine handles — the
-    per-worker holding tier above this (Slice 2, Ruling 16) is what makes repeated calls
+    per-worker holding tier above this (Slice 2, RL-882) is what makes repeated calls
     unnecessary; it is not this function's job to notice that on its own.
 
     Performs no I/O: every pinned artifact's content already travels *inside* `bundle`
-    (Ruling 7) — `resolved_payloads`, never a blob reference — so nothing here reaches a
-    database, a blob store, or the network (NFR-RATE-3).
+    (RL-873) — `resolved_payloads`, never a blob reference — so nothing here reaches a
+    database, a blob store, or the network (NFR-491).
     """
     algorithm = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
     boosters = _load_boosters(algorithm, bundle.resolved_payloads)

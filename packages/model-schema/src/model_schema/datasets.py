@@ -9,7 +9,7 @@ Everything here exists to make that sentence enforceable rather than aspirationa
 status enum is closed, the transitions are data, and `validated` is reachable only through
 a transition that demands a passing report with every warning acknowledged.
 
-A Dataset Version is a **full snapshot** (FR-DATA-40, OQ-DATA-2 decided 2026-08-14): a
+A Dataset Version is a **full snapshot** (FR-34, OQ-558 decided 2026-08-14): a
 complete, independently validatable body of data, never a delta against its predecessor.
 That is what lets a version be validated on its own terms years later.
 """
@@ -53,8 +53,8 @@ __all__ = [
 
 
 class SourceKind(enum.StrEnum):
-    """Where data comes from (FR-DATA-1). Credentials are always a `secret:<slug>`
-    reference, never a value (`07` FR-PLAT-25)."""
+    """Where data comes from (FR-26). Credentials are always a `secret:<slug>`
+    reference, never a value (`07` FR-425)."""
 
     UPLOAD = "upload"
     OBJECT_STORE = "object_store"
@@ -77,7 +77,7 @@ class DatasetKind(enum.StrEnum):
 
 #: The lifecycle, as data rather than as scattered conditionals.
 #:
-#: `validated → validating` is the unusual edge and it is deliberate: FR-DATA-23 makes
+#: `validated → validating` is the unusual edge and it is deliberate: FR-53 makes
 #: validation re-runnable on an already-validated version, because a Rule Set can change
 #: after the fact. If the new report fails, the version goes to `failed` — a dataset that
 #: *was* good under an older rule set is not good now, and models fitted on it are the
@@ -95,14 +95,14 @@ VALID_DATASET_TRANSITIONS: Final[dict[DatasetStatus, frozenset[DatasetStatus]]] 
 }
 
 #: `archived` is the only end state. A `failed` version can be re-validated after the rule
-#: set is corrected, which is the whole point of FR-DATA-23.
+#: set is corrected, which is the whole point of FR-53.
 TERMINAL_DATASET_STATUSES: Final[frozenset[DatasetStatus]] = frozenset(
     {DatasetStatus.ARCHIVED}
 )
 
 
 class PiiClass(enum.StrEnum):
-    """How sensitive a column is (`01` §4.1, FR-OVR-9, FR-DATA-13).
+    """How sensitive a column is (`01` §4.1, FR-12, FR-39).
 
     The two strongest classes are not a warning label. A `direct_identifier` or
     `special_category` column is **refused for modelling use** — rating on a special
@@ -117,7 +117,7 @@ class PiiClass(enum.StrEnum):
     SPECIAL_CATEGORY = "special_category"
 
 
-#: The classes FR-OVR-9 and FR-DATA-13 refuse for modelling.
+#: The classes FR-12 and FR-39 refuse for modelling.
 MODELLING_FORBIDDEN_PII: Final[frozenset[PiiClass]] = frozenset(
     {PiiClass.DIRECT_IDENTIFIER, PiiClass.SPECIAL_CATEGORY}
 )
@@ -162,13 +162,13 @@ class Dataset(BaseModel):
     workspace_id: UUID
     slug: Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")]
 
-    #: The accountable party (FR-DATA-51). Non-null and with no default, so a projection
+    #: The accountable party (FR-82). Non-null and with no default, so a projection
     #: that forgets it fails loudly rather than reporting a plausible null — and **not**
     #: derived from `workspace_id`, which would make every Dataset in a workspace equally
     #: owned and leave `06`'s review trails with no named subject to address.
     owner_id: UUID
 
-    #: The owner's resolved display name (OQ-OVR-15 (a)). Derived per request from `users`
+    #: The owner's resolved display name (OQ-552 (a)). Derived per request from `users`
     #: and `service_accounts` and stored on no row; `None` means the id did not resolve,
     #: which is an honest answer — the owner column then falls back to the id, never to a
     #: fabricated name.
@@ -186,7 +186,7 @@ class Dataset(BaseModel):
     validation_rule_set_id: UUID | None = None
     latest_version: int | None = None
 
-    #: The status of the version `latest_version` names (FR-DATA-50). Derived per request
+    #: The status of the version `latest_version` names (FR-55). Derived per request
     #: and stored on no row: a status column on `datasets` would be a second answer to
     #: "can I fit on this?", free to disagree with `DatasetVersion.status`, which §1.3
     #: makes the only one.
@@ -194,11 +194,11 @@ class Dataset(BaseModel):
 
     #: When the most recently `validated` version finished validating — **not necessarily
     #: `latest_version`**. The badge answers *what state is the newest version in*; this
-    #: answers *when was this Dataset last usable*, and FR-DATA-50 scopes them differently
+    #: answers *when was this Dataset last usable*, and FR-55 scopes them differently
     #: on purpose.
     last_validated_at: datetime | None = None
 
-    #: Which version `last_validated_at` describes. FR-DATA-50: "where the two refer to
+    #: Which version `last_validated_at` describes. FR-55: "where the two refer to
     #: different versions the list states which, so the pair cannot be read as one fact".
     last_validated_version: int | None = None
 
@@ -207,7 +207,7 @@ class Dataset(BaseModel):
 
     @property
     def modelling_forbidden_columns(self) -> tuple[str, ...]:
-        """Columns FR-OVR-9 / FR-DATA-13 refuse to model on, in declaration order.
+        """Columns FR-12 / FR-39 refuse to model on, in declaration order.
 
         A property rather than a stored field: it is a *consequence* of the dictionary,
         and storing it would let the two disagree after an edit.
@@ -232,7 +232,7 @@ class Dataset(BaseModel):
     def _the_validation_date_and_its_version_travel_together(self) -> Dataset:
         if (self.last_validated_at is None) != (self.last_validated_version is None):
             raise ValueError(
-                "last_validated_at and last_validated_version are one fact (FR-DATA-50): a "
+                "last_validated_at and last_validated_version are one fact (FR-55): a "
                 "date with no version cannot be distinguished from the latest version's"
             )
         return self
@@ -242,7 +242,7 @@ class Dataset(BaseModel):
 class DatasetTable(BaseModel):
     """One table within a version (`01` §4.2).
 
-    `_rejected` is a table like any other — the quarantine FR-DATA-7 requires, stored with
+    `_rejected` is a table like any other — the quarantine FR-32 requires, stored with
     the version rather than discarded. A row that could not be parsed is evidence about the
     feed, and throwing it away is how a broken upstream export goes unnoticed for a quarter.
     """
@@ -259,7 +259,7 @@ class DatasetTable(BaseModel):
     source_names: dict[str, str] = Field(
         default_factory=dict,
         description=(
-            "Normalised column name to the header it came from (FR-DATA-5). Kept because "
+            "Normalised column name to the header it came from (FR-30). Kept because "
             "normalisation is lossy and occasionally surprising: freMTPL2's `IDpol` "
             "becomes `i_dpol`, since the splitter reads it as `I` + `Dpol` — the same rule "
             "that correctly gives `HTTPServer` → `http_server`. Without the original, a "
@@ -271,7 +271,7 @@ class DatasetTable(BaseModel):
 class VersionTotals(BaseModel):
     """The headline numbers, checked by validation and shown everywhere.
 
-    Money is integer minor units and exposure is a decimal string (FR-OVR-7): a float
+    Money is integer minor units and exposure is a decimal string (FR-10): a float
     exposure total silently disagrees with the sum of its parts, and the disagreement is
     exactly the kind of thing an actuary is asked to explain.
     """
@@ -287,7 +287,7 @@ class PeriodCovered(BaseModel):
     """The policy period the data covers (`01` §4.2).
 
     Both ends are required and ordered — a version whose exposure window has no known
-    end is one whose totals cannot be re-read against a calendar later. OQ-DATA-13,
+    end is one whose totals cannot be re-read against a calendar later. OQ-568,
     decided 2026-08-26 (c): the object form replaces the model's scalar
     `period_from`/`period_to`, which could not carry an ordered pair as one fact.
     """
@@ -301,7 +301,7 @@ class PeriodCovered(BaseModel):
 class SourceFingerprint(BaseModel):
     """Provenance of the file or query the version was ingested from (`01` §4.2).
 
-    OQ-DATA-13, decided 2026-08-26 (c): the object form replaces a bare `dict[str, str]`
+    OQ-568, decided 2026-08-26 (c): the object form replaces a bare `dict[str, str]`
     so `extracted_at` is required — a fingerprint without the moment it was taken cannot
     answer "was this file re-ingested after its contents changed?".
     """
@@ -314,9 +314,9 @@ class SourceFingerprint(BaseModel):
 
 
 class DerivedFrom(BaseModel):
-    """How a derived version was produced from its parent (`01` §4.2, FR-DATA-33).
+    """How a derived version was produced from its parent (`01` §4.2, FR-73).
 
-    OQ-DATA-13, decided 2026-08-26 (c): the object form replaces a bare dict so the
+    OQ-568, decided 2026-08-26 (c): the object form replaces a bare dict so the
     declared operation's parameters are distinguishable from the identity of the parent —
     the split that made version 7 from version 6 is not the same fact as which version
     that was.
@@ -334,13 +334,13 @@ class DatasetVersion(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    #: The envelope, inline (00 §4.3). OQ-DATA-13, decided 2026-08-26 (c): a version
+    #: The envelope, inline (00 §4.3). OQ-568, decided 2026-08-26 (c): a version
     #: carries every envelope field, so one document answers both "which artifact is
     #: this?" and "what is its provenance?". `slug` is the dataset's slug, never unique
     #: across versions of one dataset — a version is addressed as `dataset-slug@version`.
     #: `parent_id` is the previous version id in the same dataset (the
     #: `Model.parent_model_id` precedent), null on version 1. `updated_at` is non-null
-    #: (OQ-OVR-16, resolved 2026-08-26): a version is created and updated in the same
+    #: (OQ-553, resolved 2026-08-26): a version is created and updated in the same
     #: moment, and a nullable timestamp made the two moments indistinguishable from
     #: "never updated".
     id: UUID
@@ -387,7 +387,7 @@ class DatasetVersion(BaseModel):
         if self.status is DatasetStatus.VALIDATED and self.validation_report_id is None:
             raise ValueError(
                 "a validated dataset version must name its validation report "
-                "(`01` §4.2, FR-DATA-17)"
+                "(`01` §4.2, FR-46)"
             )
         return self
 
@@ -443,7 +443,7 @@ class LineageModel(BaseModel):
     """A Model fitted on this version (`01` §4.9's `models` arm).
 
     Any status: a draft Model still references the version it was fitted on, and the
-    blast radius FR-DATA-35 exists to compute (FR-DATA-23) does not stop at approval.
+    blast radius FR-75 exists to compute (FR-53) does not stop at approval.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -456,9 +456,9 @@ class LineageModel(BaseModel):
 class LineageDependsOn(BaseModel):
     """What depends on this version (`01` §4.9).
 
-    `rating_versions` and `monitoring_baselines` are declared and always empty — W9's
-    and W27's arms, kept on the wire so a blast radius that silently omits two of the
-    three downstream kinds cannot read as a blast radius of one (FR-DATA-35).
+    `rating_versions` and `monitoring_baselines` are declared and always empty — WK-669's
+    and WK-687's arms, kept on the wire so a blast radius that silently omits two of the
+    three downstream kinds cannot read as a blast radius of one (FR-75).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -470,7 +470,7 @@ class LineageDependsOn(BaseModel):
 
 
 class DatasetLineage(BaseModel):
-    """The lineage graph for one Dataset Version (`01` §4.9, FR-DATA-35)."""
+    """The lineage graph for one Dataset Version (`01` §4.9, FR-75)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -480,7 +480,7 @@ class DatasetLineage(BaseModel):
 
 
 class DatasetSplit(BaseModel):
-    """A named train/test split, recorded on the parent version (`01` FR-DATA-36).
+    """A named train/test split, recorded on the parent version (`01` FR-76).
 
     On the **parent**, not the parts, so that "trained on the same split" is one artifact
     two models cite rather than two derivations believed to match. `parts` maps a part name
@@ -507,6 +507,6 @@ class DatasetSplit(BaseModel):
             raise ValueError(
                 f"split {self.name!r} has {len(self.parts)} part(s). A one-part split is a "
                 "filter; recorded as a split it would let a model claim a holdout it never "
-                "had (FR-DATA-36)."
+                "had (FR-76)."
             )
         return self

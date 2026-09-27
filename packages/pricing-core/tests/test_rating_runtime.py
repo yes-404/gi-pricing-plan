@@ -1,9 +1,9 @@
-"""`CompiledBundle`, `load_bundle`, and the JDM wire translation (W11 Task 1.3, FR-RATE-65).
+"""`CompiledBundle`, `load_bundle`, and the JDM wire translation (WK-671 Task 1.3, FR-243).
 
 Covers: the round trip from a real `compile_bundle()` output through `load_bundle` to a
 live `zen.ZenDecision` that actually evaluates (Task 1.3 Step 1); the boundary that
-`CompiledBundle` is never serialised (Step 5); Ruling 8's one-deserialisation property;
-Ruling 10's two properties (`content_hash` exposure, cache purity); the `constraint` and
+`CompiledBundle` is never serialised (Step 5); RL-874's one-deserialisation property;
+RL-876's two properties (`content_hash` exposure, cache purity); the `constraint` and
 `interpolation="linear"` scope cuts this module's own docstring names; and a focused
 `to_wire`-only test for a `lookup` step's decision-table translation.
 """
@@ -28,7 +28,7 @@ from pricing_core.rating.runtime import CompiledBundle, load_bundle, to_wire
 
 
 def _train_tiny_booster() -> bytes:
-    """A real, tiny, fitted XGBoost booster — one feature, `age_years` (W11 Task 1.3's own
+    """A real, tiny, fitted XGBoost booster — one feature, `age_years` (WK-671 Task 1.3's own
     fixture; not `fit_gbm`'s output, since this test is about the runtime seam, not
     fitting)."""
     x = [[20.0], [30.0], [40.0], [50.0], [60.0]]
@@ -42,7 +42,7 @@ def _train_tiny_booster() -> bytes:
 def _gbm_model_payload(booster_bytes: bytes, *, model_type: str = "xgboost") -> dict[str, Any]:
     """A `model:...` resolved payload shaped like Task 1.2's `_Resolver` produces it:
     the `Model` dump's `fit_result`, plus `booster_content` — the booster's own JSON/text
-    form carried *inside* the payload rather than as a blob reference (Ruling 7)."""
+    form carried *inside* the payload rather than as a blob reference (RL-873)."""
     return {
         "model_family_slug": "motor-freq",
         "version": 1,
@@ -199,7 +199,7 @@ async def _compiled(*, glm: bool = False, with_constraint: bool = False) -> Comp
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 async def test_a_real_bundle_loads_and_evaluates() -> None:
     """The Bundle today's compile path produces evaluates through a real engine handle."""
     compiled = await _compiled()
@@ -207,9 +207,9 @@ async def test_a_real_bundle_loads_and_evaluates() -> None:
     assert out["result"], "the engine returned no outputs"
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 async def test_the_premium_ladder_reconciles_end_to_end() -> None:
-    """NFR-RATE-8's shape, on this task's own scoring path: every rung the DAG computes
+    """NFR-496's shape, on this task's own scoring path: every rung the DAG computes
     (not only the terminal output) survives into the result, and applying the table
     factor to the model's prediction reproduces the declared output exactly."""
     compiled = await _compiled()
@@ -217,12 +217,12 @@ async def test_the_premium_ladder_reconciles_end_to_end() -> None:
     result = out["result"]
     assert "risk_premium_minor" in result, "the model_call's own output did not survive"
     assert "expense_factor" in result, "the table lookup's own output did not survive"
-    # The engine's own arithmetic is plain float64 (FR-RATE-56) — nothing here rounds an
+    # The engine's own arithmetic is plain float64 (FR-273) — nothing here rounds an
     # intermediate rung, that is Task 1.4's job when it builds the actual premium ladder.
     # `==` is not used: the engine's internal float64 multiplication and this same
     # multiplication redone in Python are not bit-identical (verified: they differ by
     # ~2e-13 on this fixture) — a cross-implementation float comparison, not a reconciliation
-    # failure, which is exactly why NFR-RATE-8's real check (Task 1.4) is a tolerance.
+    # failure, which is exactly why NFR-496's real check (Task 1.4) is a tolerance.
     expected = result["risk_premium_minor"] * float(result["expense_factor"])
     assert result["office_premium_minor"] == pytest.approx(expected)
 
@@ -232,9 +232,9 @@ async def test_the_premium_ladder_reconciles_end_to_end() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 async def test_a_compiled_bundle_cannot_be_serialised() -> None:
-    """FR-RATE-65: never itself serialised. Assert the boundary rather than assume it."""
+    """FR-243: never itself serialised. Assert the boundary rather than assume it."""
     compiled = await _compiled()
     with pytest.raises(TypeError):
         json.dumps(dataclasses.asdict(compiled))
@@ -242,22 +242,22 @@ async def test_a_compiled_bundle_cannot_be_serialised() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Ruling 10: content_hash exposure and cache purity.
+# RL-876: content_hash exposure and cache purity.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 async def test_compiled_bundle_exposes_its_source_content_hash() -> None:
-    """Ruling 10 clause (i): without this, FR-RATE-51's "never a mix" is unverifiable."""
+    """RL-876 clause (i): without this, FR-268's "never a mix" is unverifiable."""
     resolver: ArtifactResolver = _FakeResolver()
     bundle = await compile_bundle(_version(), resolver)
     compiled = load_bundle(bundle)
     assert compiled.content_hash == bundle.content_hash
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 async def test_load_bundle_is_pure_with_respect_to_any_cache() -> None:
-    """Ruling 10 clause (ii), and Ruling 16's own acceptance test for it: called twice on
+    """RL-876 clause (ii), and RL-882's own acceptance test for it: called twice on
     the same Bundle, load_bundle returns two distinct objects. Identical objects would
     mean a cache had been put inside pricing_core, which .importlinter's
     core-has-no-infrastructure contract already forbids at the import level — this is the
@@ -274,15 +274,15 @@ async def test_load_bundle_is_pure_with_respect_to_any_cache() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Ruling 8: exactly one booster deserialisation across N scorings.
+# RL-874: exactly one booster deserialisation across N scorings.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 async def test_scoring_n_quotes_deserialises_the_booster_once_not_n(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ruling 8's acceptance test, stated as the violation: written to fail against a
+    """RL-874's acceptance test, stated as the violation: written to fail against a
     handler that re-loads the booster from bytes on every call (the pre-Task-1.3
     behaviour) and to pass against one that scores through `CompiledBundle.boosters`'s
     already-loaded object. Verified by making the failure happen first: temporarily
@@ -317,7 +317,7 @@ async def test_scoring_n_quotes_deserialises_the_booster_once_not_n(
 
     assert calls == 1, (
         "scoring 5 quotes against one CompiledBundle deserialised the booster "
-        f"{calls} times, not once — Ruling 8's seam was bypassed"
+        f"{calls} times, not once — RL-874's seam was bypassed"
     )
 
 
@@ -326,9 +326,9 @@ async def test_scoring_n_quotes_deserialises_the_booster_once_not_n(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 def test_to_wire_translates_a_constraint_step() -> None:
-    """W11 Task 1.4 resolves the scope cut this test used to assert: a `constraint` step
+    """WK-671 Task 1.4 resolves the scope cut this test used to assert: a `constraint` step
     now translates (`_constraint_node`) rather than raising. Both an `on_violation="decline"`
     step (Task 1.3's own fixture) and an `on_violation="clamp"` step that re-produces the
     name it consumes (`RatingAlgorithm._graph_invariants`'s own "clamp in place" pattern,
@@ -351,7 +351,7 @@ def test_to_wire_translates_a_constraint_step() -> None:
     assert result["s_guard__violated"] is False, "a positive office_premium should not decline"
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 def test_to_wire_refuses_a_clamp_constraint_with_nothing_to_clamp() -> None:
     """`on_violation="clamp"` needs a source value (`consumes`) and a bound
     (`clamp_bounds`) to clamp towards — `_constraint_node` raises naming the gap rather
@@ -373,13 +373,13 @@ def test_to_wire_refuses_a_clamp_constraint_with_nothing_to_clamp() -> None:
         to_wire(graph, {"rate_table:motor-expense@1": _rate_table_payload()})
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
     """`predict_glm` needs real Factor objects the Bundle does not carry (see
     `runtime.py`'s `_model_call_failure` docstring) — refused loudly, not silently
     mis-scored.
 
-    **Behaviour corrected by W11 Task 1.4.** Task 1.3 verified that a `customHandler`'s
+    **Behaviour corrected by WK-671 Task 1.4.** Task 1.3 verified that a `customHandler`'s
     raised exception is swallowed by the `zen` binding (the finding `_model_call_failure`'s
     docstring records) and had this handler raise anyway, matching-but-losing that
     exception. Task 1.4 replaced the raise with a sentinel in the handler's own returned
@@ -408,7 +408,7 @@ async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
     assert "MODEL_CALL_FAILED" in direct["output"][MODEL_CALL_ERROR_KEY]
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 def test_to_wire_refuses_table_interpolation() -> None:
     """Exact-match rows only — see the module docstring's `interpolation` gap."""
     from model_schema.rating import RatingAlgorithm

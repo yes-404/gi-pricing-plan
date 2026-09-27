@@ -1,8 +1,8 @@
 """modelling: custom metrics and their certificates
 
-`02` §4.13, FR-MODEL-45, FR-MODEL-103/104/105. A Custom Metric is `CustomObjectiveRow`'s
+`02` §4.13, FR-154, FR-155/156/157. A Custom Metric is `CustomObjectiveRow`'s
 sibling — versioned, referenced by name (`custom_metric:<slug>@<version>`), and its
-definition frozen at insert by the same kind of trigger — because FR-MODEL-45 makes a
+definition frozen at insert by the same kind of trigger — because FR-154 makes a
 metric follow "the same lifecycle and grammar as objectives" and a `GbmSpec.eval_metrics`
 ref resolved for early stopping must keep meaning what it meant when the fit ran under it.
 
@@ -13,18 +13,18 @@ never differentiated (§4.13). Only the lifecycle columns move: `status`, `certi
 `approval_request_id`.
 
 `direction` is constrained to **two** values, not `model_schema.comparison.MetricDirection`'s
-four: `CustomMetric._direction_is_usable_for_stopping` (FR-MODEL-104) refuses
+four: `CustomMetric._direction_is_usable_for_stopping` (FR-156) refuses
 `closer_to_one_is_better` and `not_ordered` because early stopping compares successive
 values and needs a monotone "better". `custom_metric_direction_is_usable_for_stopping`
 mirrors that validator at the layer a direct `UPDATE` cannot walk past.
 
 **Row is undeletable, mirroring `custom_objectives_undeletable`.** A Model Spec resolves
 `custom_metric:<slug>@<version>`; if the row can be deleted, a model that early-stopped
-under it can no longer say what it was evaluated against — the same argument FR-MODEL-47
-makes for objectives, extended to metrics by FR-MODEL-45/108.
+under it can no longer say what it was evaluated against — the same argument FR-164
+makes for objectives, extended to metrics by FR-154/162.
 
 **`kind = 'template' AND template IS NOT NULL`**, mirroring
-`CustomMetric._only_templates_are_built` (FR-MODEL-103/FR-MODEL-75): Phase 1 admits no
+`CustomMetric._only_templates_are_built` (FR-155/FR-150): Phase 1 admits no
 `expression` metric, and a row with `kind = 'expression'` would carry no loss at all.
 
 **A status past `draft` rests on a certificate, except `deprecated`**, mirroring
@@ -35,7 +35,7 @@ certified is withdrawn, not certified, and withdrawing it must not require inven
 certificate for a metric nobody ran.
 
 `metric_certificates` is insert-only, both at the privilege layer and by the row/statement
-trigger pair `e1f2a3b4c5d6` established as the corrected pattern (FR-DATA-47) — `06` §4.2
+trigger pair `e1f2a3b4c5d6` established as the corrected pattern (FR-44) — `06` §4.2
 makes it the required evidence for the approval, and evidence that can change after the
 decision is not evidence.
 
@@ -70,7 +70,7 @@ BEGIN
      OR NEW.applicability IS DISTINCT FROM OLD.applicability
      OR NEW.direction IS DISTINCT FROM OLD.direction THEN
     RAISE EXCEPTION
-      'a Custom Metric''s definition is immutable (02 FR-MODEL-45/103/104): % rejected', TG_OP
+      'a Custom Metric''s definition is immutable (02 FR-154/155/156): % rejected', TG_OP
       USING ERRCODE = 'insufficient_privilege',
             HINT = 'Create the next version and certify it. Every GbmSpec.eval_metrics ref '
                    'citing custom_metric:<slug>@<version> resolves to this row, so editing '
@@ -85,9 +85,9 @@ $fn$ LANGUAGE plpgsql;
 UNDELETABLE = """
 CREATE OR REPLACE FUNCTION custom_metrics_undeletable() RETURNS trigger AS $fn$
 BEGIN
-  RAISE EXCEPTION 'a Custom Metric cannot be deleted (02 FR-MODEL-45/108)'
+  RAISE EXCEPTION 'a Custom Metric cannot be deleted (02 FR-154/162)'
     USING ERRCODE = 'insufficient_privilege',
-          HINT = 'Deprecate it. FR-MODEL-108''s usage query is the blast-radius answer, '
+          HINT = 'Deprecate it. FR-162''s usage query is the blast-radius answer, '
                  'and it can only answer "which models used this metric?" while the row '
                  'is still there.';
   RETURN OLD;
@@ -126,18 +126,18 @@ def upgrade() -> None:
             "status IN ('draft', 'certified', 'review', 'approved', 'deprecated')",
             name="custom_metric_status_is_in_the_lifecycle",
         ),
-        # FR-MODEL-104, mirroring `CustomMetric._direction_is_usable_for_stopping`: only the
+        # FR-156, mirroring `CustomMetric._direction_is_usable_for_stopping`: only the
         # two `MetricDirection` members an early-stopping loop can compare, not all four.
         sa.CheckConstraint(
             "direction IN ('lower_is_better', 'higher_is_better')",
             name="custom_metric_direction_is_usable_for_stopping",
         ),
-        # FR-MODEL-103/FR-MODEL-75, mirroring `CustomMetric._only_templates_are_built`.
+        # FR-155/FR-150, mirroring `CustomMetric._only_templates_are_built`.
         sa.CheckConstraint(
             "kind = 'template' AND template IS NOT NULL",
             name="custom_metric_is_a_template_in_phase_1",
         ),
-        # FR-MODEL-105, mirroring `CustomMetric._a_status_past_draft_rests_on_a_certificate`
+        # FR-157, mirroring `CustomMetric._a_status_past_draft_rests_on_a_certificate`
         # as corrected in `30b6388`: `deprecated` joins `draft` because it is reachable
         # directly from `draft` in `VALID_METRIC_TRANSITIONS`.
         sa.CheckConstraint(

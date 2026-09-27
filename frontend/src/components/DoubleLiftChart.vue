@@ -25,7 +25,7 @@ const labels = computed(() => bins.value.map((b) => String(b.bin)));
 /**
  * `exposure_years` is a `DecimalStr` — exact decimal carried as a string, so a float never
  * silently rounds it. Converting it here is safe because **exposure-years denominates
- * exposure and not money**, which is FR-OVR-7's own test as amended 2026-08-24: "what a
+ * exposure and not money**, which is FR-10's own test as amended 2026-08-24: "what a
  * quantity denominates, not how it was computed". Being a diagnostic read is not what makes
  * it safe — the same amendment says a quantity that denominates money stays integer minor
  * units "wherever it appears: inside a diagnostic payload" included.
@@ -81,7 +81,7 @@ const option = computed(() => ({
         ]
       : []),
     // Actual is the reference truth, so it takes the neutral darkest and a solid line. The
-    // three lines differ by line type as well as by hue, which is what NFR-OVR-10's WCAG
+    // three lines differ by line type as well as by hue, which is what NFR-463's WCAG
     // obligation needs.
     {
       name: "Actual",
@@ -108,7 +108,7 @@ const option = computed(() => ({
 }));
 
 /**
- * The chart's accessible equivalent (NFR-OVR-10). Each plotted series gets its own column,
+ * The chart's accessible equivalent (NFR-463). Each plotted series gets its own column,
  * named exactly as the legend names it, so a reader moving between the two is not asked to
  * match "Baseline predicted" against some shortened heading.
  *
@@ -129,7 +129,7 @@ const columns = computed(() => [
 ]);
 
 /**
- * Exposure reaches the table as the exact decimal **string** it was recorded as (FR-OVR-7).
+ * Exposure reaches the table as the exact decimal **string** it was recorded as (FR-10).
  * The chart widens it because a coordinate is a float64 either way and nothing computes with
  * it; a table cell has no such excuse, and a trailing zero lost there is a value the reader
  * cannot tell apart from a rounded one. `AeByFactorChart` set this precedent.

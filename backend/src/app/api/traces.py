@@ -1,11 +1,11 @@
-"""`GET /api/v1/traces` — sampled production traces (`03` §5.1:603, FR-RATE-42; W11 Task 4C).
+"""`GET /api/v1/traces` — sampled production traces (`03` §5.1:603, FR-259; WK-671 Task 4C).
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/v1/traces?rating_version=&from=&to=` | Sampled **production** traces (FR-RATE-42) |
+| `GET` | `/api/v1/traces?rating_version=&from=&to=` | Sampled **production** traces (FR-259) |
 
 **Gated on `Permission.RATING_READ`, not a Service Account scoring permission — a
-deliberate departure from `/score` and `/score/batch`'s pattern.** FR-GOV-6 (`06`:83)
+deliberate departure from `/score` and `/score/batch`'s pattern.** FR-347 (`06`:83)
 confines Service Accounts to *scoring* permissions — `SCORE_EXECUTE`/`SCORE_BATCH` — and
 forbids them holding anything else, `RATING_READ` included
 (`backend/tests/test_rbac.py:102-107`). This route does not execute a quote; it reads what
@@ -13,8 +13,8 @@ scoring already produced, which is the same shape of operation as `/api/v1/rate-
 `/api/v1/rating-versions` — both `RATING_READ`-gated, both readable by every human role that
 touches rating (`analyst`, `pricing_actuary`, `approver`, `deployer`, `auditor`, `admin` all
 hold it, the last four via `READ_PERMISSIONS`). Gating this route on `RATING_READ` also
-means a Service Account structurally cannot reach it at all: FR-GOV-6 forbids granting one
-`RATING_READ`, so there is no key-relabelling case to test here the way Ruling 18 established
+means a Service Account structurally cannot reach it at all: FR-347 forbids granting one
+`RATING_READ`, so there is no key-relabelling case to test here the way RL-884 established
 for `/score` — that pattern is a Service-Account-authentication concern (an environment-scoped
 API key), and this route authenticates human/dev principals against workspace role
 assignments, never a scoped key. The two cases that apply are the ones every other
@@ -23,23 +23,23 @@ assignments, never a scoped key. The two cases that apply are the ones every oth
 workspace member holding no role is refused **403** at the permission dependency, before the
 route body runs.
 
-**NFR-RATE-11's access-control obligation is why a permission gates this at all**, not an
+**NFR-499's access-control obligation is why a permission gates this at all**, not an
 afterthought: a trace's `TraceStep.consumed`/`produced` carry the same rating-factor detail a
 raw quote input would (postcode, vehicle detail, whatever the bundle's steps evaluate) — the
-"full quote input" `06` NFR-RATE-11 (Ruling 36) permits storing only inside an
+"full quote input" `06` NFR-499 (RL-917) permits storing only inside an
 access-controlled artifact, and a sampled trace is one of the two named. Access control here
 is the RBAC gate on the route, exactly as the requirement's own text reads ("which are
 access-controlled").
 
 **The exclusion signal is a null `environment`, not a batch parent (Corrected 2026-08-30,
 Task 4C — the plan's own Correction 2).** `ScoringTraceRow` carries no Job reference at all;
-Ruling 25 rules that a `score.batch` Job's on-request trace (FR-RATE-41) must never appear
+RL-890 rules that a `score.batch` Job's on-request trace (FR-258) must never appear
 in this **production** stream, and `write_trace` (`app/platform/traces.py`) already leaves
-`environment` unset for exactly that trace (Ruling 44). This route reads that absence as its
+`environment` unset for exactly that trace (RL-916). This route reads that absence as its
 exclusion condition — `environment IS NOT NULL` — rather than looking for a parent that does
 not exist on the row.
 
-**A `pending` row (Ruling 35) is excluded the same way its lack of a body excludes it**: it
+**A `pending` row (RL-862) is excluded the same way its lack of a body excludes it**: it
 has an `environment` (the real-time path sets it before the off-path re-score runs) but no
 `blob_sha256` yet, so `blob_sha256 IS NOT NULL` is a second, independent condition — without
 it this route would try to fetch a body that does not exist yet for every row still awaiting
@@ -78,8 +78,8 @@ __all__ = ["router"]
 
 router = APIRouter(prefix="/traces", tags=["rating"])
 
-#: FR-GOV-2: the permission is part of the route definition. Not a scoring permission
-#: (see module docstring) — a Service Account can never be granted this (FR-GOV-6).
+#: FR-343: the permission is part of the route definition. Not a scoring permission
+#: (see module docstring) — a Service Account can never be granted this (FR-347).
 ReadTraces = Annotated[Caller, Depends(requires(Permission.RATING_READ))]
 
 
@@ -127,10 +127,10 @@ def _filtered(
     always matches what the page could return."""
     conditions: list[Any] = [
         ScoringTraceRow.workspace_id == workspace_id,
-        # Ruling 25's exclusion, via Correction 2's real signal: a batch-produced trace
-        # (FR-RATE-41, written on request) carries no environment.
+        # RL-890's exclusion, via Correction 2's real signal: a batch-produced trace
+        # (FR-258, written on request) carries no environment.
         ScoringTraceRow.environment.is_not(None),
-        # A pending row (Ruling 35) has an environment but no body yet — nothing to read.
+        # A pending row (RL-862) has an environment but no body yet — nothing to read.
         ScoringTraceRow.blob_sha256.is_not(None),
     ]
     if rating_version is not None:

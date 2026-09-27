@@ -19,8 +19,8 @@ import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
-#: A requirement id defined in a spec, in either form: `**FR-MODEL-45**` before the NT-0019
-#: id migration, `**FR-1187**` after it (NT-0019 D2). Both are accepted here rather than
+#: A requirement id defined in a spec, in either form: `**FR-154**` before the RFC-937
+#: id migration, `**FR-1187**` after it (RFC-937 D2). Both are accepted here rather than
 #: selected by tree, because this script's other input -- `@pytest.mark.req("...")` markers
 #: across ~1 988 sites -- is rewritten by the same migration commit and a marker in the old
 #: form on a migrated tree must still be reported as unknown, not silently unparsed.
@@ -30,7 +30,7 @@ _REQ_DEFINED = re.compile(r"\*\*((?:FR|NFR)-(?:[A-Z]+-)?\d+)\*\*")
 def _test_roots() -> list[pathlib.Path]:
     """The directories pytest collects from, read from pyproject rather than hardcoded.
 
-    This was `packages/` alone until W2 added `backend/`. A second code root did not make
+    This was `packages/` alone until WK-658 added `backend/`. A second code root did not make
     the script fail — it made it silently under-report, and quietly stopped applying the
     "claims a requirement that does not exist" check to every test in the new component.
     Sourcing the list from pytest's own `testpaths` means a new component is covered by
@@ -63,7 +63,7 @@ def main() -> int:
     if not specified:
         # Zero specified requirements is never a real tree state: `docs/specs/` is eight
         # files of numbered clauses. It means this script's id pattern stopped matching the
-        # corpus -- which is what happened at the NT-0019 migration, where the module-scoped
+        # corpus -- which is what happened at the RFC-937 migration, where the module-scoped
         # pattern above met `**FR-1187**` and matched nothing. Say so; do not divide by it.
         print(
             "\n  FAIL: no requirement ids parsed from docs/specs/ -- the id pattern does "

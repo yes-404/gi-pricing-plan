@@ -2,17 +2,17 @@
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/factors` | Create or version a Factor (FR-MODEL-1, FR-MODEL-7) |
+| `POST` | `/factors` | Create or version a Factor (FR-83, FR-96) |
 | `GET` | `/factors` | List factors, with intent and prohibition visible |
-| `POST` | `/bandings/propose` | Propose boundaries by method (FR-MODEL-9) — persists nothing |
-| `POST` | `/bandings/evaluate` | Recompute band stats for **edited** boundaries (FR-MODEL-83) |
-| `POST` | `/bandings` | Persist a Banding, editable boundaries and all (FR-MODEL-12) |
+| `POST` | `/bandings/propose` | Propose boundaries by method (FR-98) — persists nothing |
+| `POST` | `/bandings/evaluate` | Recompute band stats for **edited** boundaries (FR-102) |
+| `POST` | `/bandings` | Persist a Banding, editable boundaries and all (FR-101) |
 | `GET` | `/bandings` | List bandings |
-| `POST` | `/groupings/propose` | Propose a mapping by method (FR-MODEL-14) |
-| `POST` | `/groupings/evaluate` | Change in fit for an **edited** mapping (FR-MODEL-83) |
-| `POST` | `/groupings` | Persist a Grouping (FR-MODEL-16) |
+| `POST` | `/groupings/propose` | Propose a mapping by method (FR-105) |
+| `POST` | `/groupings/evaluate` | Change in fit for an **edited** mapping (FR-102) |
+| `POST` | `/groupings` | Persist a Grouping (FR-108) |
 | `GET` | `/groupings` | List groupings |
-| `POST` | `/model-specs/validate` | Check a spec without fitting (FR-MODEL-64) |
+| `POST` | `/model-specs/validate` | Check a spec without fitting (FR-202) |
 | `POST` | `/models` | **202** Fit → Job; returns the existing model on `spec_hash` match |
 | `GET` | `/models` | List models, filtered and cursor-paginated (`00` §5.2) |
 | `GET` | `/models/{slug}` | The model artifact, latest or a named version |
@@ -24,11 +24,11 @@
 | `POST` | `/models/{id}/backtest` | **202** Backtest against another dataset version → Job |
 | `GET` | `/models/backtests/{id}` | A stored backtest |
 | `POST` | `/models/{id}/transparency` | **202** Build a GBM transparency artifact → Job |
-| `GET` | `/models/{id}/transparency` | A model's transparency artifact (FR-MODEL-40) |
+| `GET` | `/models/{id}/transparency` | A model's transparency artifact (FR-144) |
 | `POST` | `/models/{id}/predict` | Score rows, with the interval where there is one |
 
 `POST /models` answers **202 with a Job** for a new fit and **200 with the model** when the
-specification has already been fitted (FR-MODEL-66). Two status codes for one route because
+specification has already been fitted (FR-204). Two status codes for one route because
 they are two different facts: work has started, or the answer already exists.
 
 `POST /models/{id}/predict` is the one write-shaped route that answers **200**, because it
@@ -285,7 +285,7 @@ class RatingVersionSubmit(BaseModel):
 async def create_factor(
     body: FactorCreate, caller: FitModels, database: DatabaseDep
 ) -> Factor:
-    """FR-MODEL-7: an existing slug allocates the next version rather than editing.
+    """FR-96: an existing slug allocates the next version rather than editing.
 
     A Model Spec pins a factor *version*, so editing one in place would silently change
     what every model fitted on it was fitted on.
@@ -310,7 +310,7 @@ async def list_factors(
     database: DatabaseDep,
     filters: DatasetFilterDep,
 ) -> list[Factor]:
-    """Filtered by Dataset (FR-MODEL-2), or the workspace's factors when unfiltered.
+    """Filtered by Dataset (FR-87), or the workspace's factors when unfiltered.
 
     `?dataset_id=` and nothing else: an unrecognised parameter is a `422`, not a silently
     unfiltered list — see `DatasetFilter`.
@@ -333,7 +333,7 @@ async def propose_banding(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
 ) -> Banding:
-    """FR-MODEL-9: the platform proposes, the actuary edits, and **nothing is stored**.
+    """FR-98: the platform proposes, the actuary edits, and **nothing is stored**.
 
     The returned `Banding` carries a fresh id it does not own yet — `POST /bandings` is
     what allocates a version. Returning the whole artifact rather than a list of numbers is
@@ -364,7 +364,7 @@ async def evaluate_banding(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
 ) -> Banding:
-    """FR-MODEL-83: what an edited boundary *did*, before the banding is saved.
+    """FR-102: what an edited boundary *did*, before the banding is saved.
 
     `/propose` derives boundaries from a method and cannot accept one, so this is the only
     route by which §5.3's interaction requirement can hold — band stats and CI widths that
@@ -389,7 +389,7 @@ async def evaluate_banding(
 async def create_banding(
     body: Banding, caller: FitModels, database: DatabaseDep
 ) -> Banding:
-    """FR-MODEL-12: an existing slug allocates the next version rather than editing.
+    """FR-101: an existing slug allocates the next version rather than editing.
 
     The whole artifact is the request body — boundaries the caller may have moved, labels
     they may have renamed, and the evidence the proposal came back with. `id` and `version`
@@ -429,7 +429,7 @@ async def propose_grouping(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
 ) -> Grouping:
-    """FR-MODEL-14, with FR-MODEL-15's evidence attached and nothing persisted."""
+    """FR-105, with FR-107's evidence attached and nothing persisted."""
     async with database.session() as session:
         return await transform_service.propose_grouping_for_version(
             session,
@@ -454,7 +454,7 @@ async def evaluate_grouping(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
 ) -> Grouping:
-    """FR-MODEL-83, and the half `02` §5.3 names outright.
+    """FR-102, and the half `02` §5.3 names outright.
 
     Merging two levels shows the deviance/df trade-off *before* the grouping is saved. An
     actuary should never have to fit a model to find out whether a grouping was sensible,
@@ -479,7 +479,7 @@ async def evaluate_grouping(
 async def create_grouping(
     body: Grouping, caller: FitModels, database: DatabaseDep
 ) -> Grouping:
-    """FR-MODEL-16: creation is an audited event, because grouping is a modelling decision."""
+    """FR-108: creation is an audited event, because grouping is a modelling decision."""
     async with database.unit_of_work() as session:
         row = await transform_service.create_grouping(
             session,
@@ -522,7 +522,7 @@ async def fit_model(
     failed job twenty seconds later is a worse answer to the same question.
     """
     async with database.unit_of_work() as session:
-        # FR-MODEL-81's gate, before a Job exists. `reserve_model` answers R1 and the
+        # FR-185's gate, before a Job exists. `reserve_model` answers R1 and the
         # prohibited-factor rule with their own codes; this adds the complexity limits and
         # nothing else, so a caller's existing refusals do not change shape.
         await spec_service.enforce_complexity(
@@ -540,7 +540,7 @@ async def fit_model(
             change_reason=body.change_reason,
         )
         if not should_fit:
-            # FR-MODEL-66. The caller asked for a model with this specification and it is
+            # FR-204. The caller asked for a model with this specification and it is
             # fitted; fitting it again would produce the same numbers under a new id.
             response.status_code = status.HTTP_200_OK
             return service.to_model(row)
@@ -576,7 +576,7 @@ async def list_models(
     the specification against the contract and a route in neither is invisible to it —
     the same blind spot `01`'s reference lifecycle fell into.
 
-    **`flags` are not computed here.** FR-MODEL-67's flag is a read of the dataset
+    **`flags` are not computed here.** FR-205's flag is a read of the dataset
     version's *current* status, one query per model (`flags_for`), so a page of 50 would be
     51 round trips to decorate rows a caller is about to narrow down. Every listed model
     therefore reports `[]`, and `GET /models/{slug}` is where the flag is answered — which
@@ -637,7 +637,7 @@ async def get_model(
 ) -> Model:
     """The artifact, with the `ETag` a lifecycle transition requires (`00` §5.4).
 
-    `flags` are computed here rather than read from a column (FR-MODEL-67): the flag tracks
+    `flags` are computed here rather than read from a column (FR-205): the flag tracks
     the dataset version's *current* standing, and a model fitted this morning on a version
     invalidated this afternoon must not answer `[]`.
     """
@@ -663,9 +663,9 @@ async def get_model_diagnostics(
     database: DatabaseDep,
     version: Annotated[int | None, Query(ge=1)] = None,
 ) -> Diagnostics:
-    """The evidence behind a fitted model (FR-MODEL-49, `02` §5.1).
+    """The evidence behind a fitted model (FR-170, `02` §5.1).
 
-    Read, never recomputed. FR-MODEL-49 makes diagnostics a product of the fit, so this
+    Read, never recomputed. FR-170 makes diagnostics a product of the fit, so this
     endpoint returns what that fit recorded — a screen that recalculated them would be
     showing numbers no approval could cite.
 
@@ -691,7 +691,7 @@ async def validate_model_spec(
     database: DatabaseDep,
     settings: SettingsDep,
 ) -> SpecValidation:
-    """`wf-01` D2: catch the errors before any compute is spent (FR-MODEL-44).
+    """`WF-698` D2: catch the errors before any compute is spent (FR-153).
 
     **200 with `ok: false`**, not a 4xx, when the spec is merely unfittable. The caller
     asked whether this spec is valid and got a complete answer; a 422 would say the
@@ -716,7 +716,7 @@ class SubmitModel(BaseModel):
 
     change_summary: str = Field(
         min_length=1,
-        description="What changed and why (`06` FR-GOV-10). An approval with no statement "
+        description="What changed and why (`06` FR-352). An approval with no statement "
         "of what changed asks the approver to derive it from a diff.",
     )
 
@@ -736,7 +736,7 @@ async def submit_model(
         str | None, Header(alias="If-Match", description=IF_MATCH_DESCRIPTION)
     ] = None,
 ) -> Model:
-    """`fitted → review`, and the approval request that goes with it (`wf-01` E6/E7).
+    """`fitted → review`, and the approval request that goes with it (`WF-698` E6/E7).
 
     **Addressed by id, not by `{slug}?version=`.** Every read route in this module defaults
     the version to the latest, which is right for a read and wrong for a mutation: "submit
@@ -807,7 +807,7 @@ class CompareModels(BaseModel):
 
     model_ids: tuple[UUID, ...] = Field(
         min_length=2,
-        description="Two or more models fitted on the same holdout (FR-MODEL-56), in the "
+        description="Two or more models fitted on the same holdout (FR-186), in the "
         "order the table should present them.",
     )
     baseline_id: UUID | None = Field(
@@ -827,7 +827,7 @@ async def compare_models_route(
     database: DatabaseDep,
     response: Response,
 ) -> Job:
-    """**202** with a Job (`wf-01` E1, FR-MODEL-56).
+    """**202** with a Job (`WF-698` E1, FR-186).
 
     202 rather than 200 because the comparison is work: it reads the holdout and scores every
     candidate over it. `POST /models` draws the same line for the same reason — 202 when work
@@ -889,7 +889,7 @@ class RunBacktest(BaseModel):
     dataset_version_id: UUID = Field(
         description="The Dataset Version to measure the model on. Must be validated, and "
         "must not be the version the model was fitted on nor a part of its split "
-        "(FR-MODEL-57) — typically a later period.",
+        "(FR-187) — typically a later period.",
     )
 
 
@@ -905,7 +905,7 @@ async def run_backtest(
     database: DatabaseDep,
     response: Response,
 ) -> Job:
-    """**202** with a Job (FR-MODEL-57).
+    """**202** with a Job (FR-187).
 
     Work, not a lookup: it reads the whole target version and scores every row.
 
@@ -953,13 +953,13 @@ async def run_backtest(
 async def get_backtest(
     backtest_id: UUID, caller: ReadModels, database: DatabaseDep
 ) -> Backtest:
-    """**Added to `02` §5.1 with this slice** (FR-MODEL-92).
+    """**Added to `02` §5.1 with this slice** (FR-94).
 
     The table declared the `POST` and no `GET`, which is a 202 whose artifact nothing can
     fetch — complete to the endpoint audit, since that compares the spec against the
     contract and an endpoint missing from both is in neither, and unusable to every caller.
-    The fourth time: FR-MODEL-84 repaired it for the transparency artifact, FR-MODEL-56 for
-    the comparison, FR-MODEL-90 for the peril structure.
+    The fourth time: FR-139 repaired it for the transparency artifact, FR-186 for
+    the comparison, FR-192 for the peril structure.
 
     By backtest id rather than by model, because unlike `Diagnostics` a model has many —
     one per period it has been measured against. The Job's result carries the id
@@ -978,7 +978,7 @@ class BuildTransparency(BaseModel):
 
     sample: int = Field(
         default=200_000, ge=1,
-        description="Rows the SHAP summary is computed on (FR-MODEL-35). Persisted on the "
+        description="Rows the SHAP summary is computed on (FR-134). Persisted on the "
         "artifact with the seed, because a summary computed on a different sample is a "
         "different summary.",
     )
@@ -996,7 +996,7 @@ async def build_transparency(
     database: DatabaseDep,
     response: Response,
 ) -> Job:
-    """**202** with a Job (FR-MODEL-33, R3).
+    """**202** with a Job (FR-132, R3).
 
     Work, not a lookup: it scores the booster over the modelling population, fits a GLM to
     those predictions and walks every tree for TreeSHAP.
@@ -1031,14 +1031,14 @@ async def build_transparency(
 async def get_transparency(
     model_id: UUID, caller: ReadModels, database: DatabaseDep
 ) -> TransparencyArtifact:
-    """**Added to `02` §5.1 with this slice** (FR-MODEL-84).
+    """**Added to `02` §5.1 with this slice** (FR-139).
 
     The table declared the `POST` and no `GET` — a 202 whose artifact nothing can read,
     which is complete to the endpoint audit and unusable to a caller. The same omission
     `01`'s reference publish lifecycle made, and the same one the comparison artifact had
     until `#81`.
 
-    The **latest** artifact: FR-MODEL-33 allows several, and a SHAP summary recomputed on a
+    The **latest** artifact: FR-132 allows several, and a SHAP summary recomputed on a
     larger sample is a second artifact rather than a correction. An approval cites one by
     id, and that path resolves the row directly.
 
@@ -1076,7 +1076,7 @@ async def predict(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
 ) -> Prediction:
-    """**200**, synchronously (FR-MODEL-62, FR-MODEL-63).
+    """**200**, synchronously (FR-193, FR-194).
 
     The only compute route in this module that is not a 202. `02` §5.1 marks the others with
     a status code and this one with none, and the distinction is real rather than
@@ -1087,8 +1087,8 @@ async def predict(
     have had before the Job row committed.
 
     Nothing is persisted, so there is nothing to `GET` afterwards — the omission every
-    other 202 in this module has had to repair (FR-MODEL-56, FR-MODEL-84, FR-MODEL-90,
-    FR-MODEL-92) does not arise for a route whose answer *is* its response.
+    other 202 in this module has had to repair (FR-186, FR-139, FR-192,
+    FR-94) does not arise for a route whose answer *is* its response.
 
     `model:read`: see `prediction_service.predict_rows` for why this one is not `model:fit`.
     """
@@ -1112,7 +1112,7 @@ async def list_rating_versions(
     caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
     database: DatabaseDep,
 ) -> list[RatingVersion]:
-    """The Phase 1b rating versions the demo seeds (FR-PLAT-67, W7-5).
+    """The Phase 1b rating versions the demo seeds (FR-440, W7-5).
 
     A list for the exit demo's guide — the frontend cannot know a rating version's id to
     call the by-id read, and a demo that cannot discover its own seeded artifact is not a
@@ -1139,7 +1139,7 @@ async def get_rating_version(
     caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
     database: DatabaseDep,
 ) -> RatingVersion:
-    """The Phase 1b rating version the demo seeds (FR-PLAT-67, OD1).
+    """The Phase 1b rating version the demo seeds (FR-440, OD1).
 
     One read route for the exit demo: the demo guide links the approved rating version, and
     the full `03` surface stays Phase 2.
@@ -1162,7 +1162,7 @@ async def create_rating_version(
     caller: Annotated[Caller, Depends(requires(Perm.RATING_WRITE))],
     database: DatabaseDep,
 ) -> RatingVersion:
-    """Create a draft rating version with pins to a model (FR-RATE-22).
+    """Create a draft rating version with pins to a model (FR-237).
 
     The draft version is editable until submitted for approval. It pins an approved
     model for rating use.
@@ -1184,7 +1184,7 @@ async def create_rating_version(
     summary="Submit a rating version for approval",
     # 422 is the eighth instance of the class `api/responses.py`'s `problems` docstring
     # names. This route returns one for two independent reasons — a `rating_version_id`
-    # that is not a UUID, and `approvals.submit`'s blank-change-summary guard (FR-GOV-10),
+    # that is not a UUID, and `approvals.submit`'s blank-change-summary guard (FR-352),
     # which `test_a_blank_change_summary_cannot_submit_a_rating_version` exercises — and
     # published neither, so a client saw FastAPI's `HTTPValidationError` instead of ours.
     responses=problems(401, 403, 404, 409, 422),
@@ -1223,7 +1223,7 @@ async def compile_rating_version(
     database: DatabaseDep,
     response: Response,
 ) -> Job:
-    """**202** with a Job (`03` §5.1:514, FR-RATE-24/25, W11 Task 1.2).
+    """**202** with a Job (`03` §5.1:514, FR-239/240, WK-671 Task 1.2).
 
     Compilation resolves the pinned algorithm, rate tables, reference tables, custom
     objectives and model to their real content and persists the compiled Bundle as a

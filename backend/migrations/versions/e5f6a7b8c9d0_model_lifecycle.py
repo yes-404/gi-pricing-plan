@@ -1,6 +1,6 @@
 """modelling: the model lifecycle, and the status column that never enumerated it
 
-Two changes, one slice (`02` FR-MODEL-64, §4.8).
+Two changes, one slice (`02` FR-202, §4.8).
 
 * **`model_status_is_in_the_lifecycle`.** `models.status` is a `String(16)` with a default
   of `'draft'` and, until now, no constraint on its contents. The type enumerated the six
@@ -11,7 +11,7 @@ Two changes, one slice (`02` FR-MODEL-64, §4.8).
   not `draft` or `archived` was already refused *if* it had no `fit_result`. A fitted model
   moved to a bogus status was not.
 
-* **`models.approval_request_id`.** `02` §4.8 has declared it since Phase 0 and OQ-MODEL-8
+* **`models.approval_request_id`.** `02` §4.8 has declared it since Phase 0 and OQ-582
   listed it among the fields declared and dead. It goes live here because the slice that
   creates the request is this one — "re-widen it as the slices land", which is that
   question's own recommendation rather than a decision taken ahead of the maintainer.
@@ -43,7 +43,7 @@ down_revision: str | None = "d4e5f6a7b8c9"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-#: The six states of FR-MODEL-64, in lifecycle order. Kept as a list here rather than
+#: The six states of FR-202, in lifecycle order. Kept as a list here rather than
 #: imported from `model_schema.ModelStatus`: a migration is a historical record of the
 #: schema at a point in time, and one that imported a live enum would silently rewrite its
 #: own history the next time a state was added.

@@ -18,7 +18,7 @@ const props = defineProps<{ slug: string; seed?: ValidationRule | null }>();
 const emit = defineEmits<{ (event: "authored"): void }>();
 
 /**
- * FR-DATA-21's chain, in the order the platform enforces it. A rule cannot skip a step:
+ * FR-50's chain, in the order the platform enforces it. A rule cannot skip a step:
  * an approver reading a rule's JSON cannot tell whether it selects three rows or three
  * million, which is why the dry run is a precondition of submission rather than advice.
  */
@@ -27,9 +27,9 @@ const error = ref<string | null>(null);
 const versions = ref<DatasetVersion[]>([]);
 
 /**
- * `FR-DATA-54`: changing a threshold authors a new version, so the honest starting point
+ * `FR-56`: changing a threshold authors a new version, so the honest starting point
  * for that edit is the current rule rather than an empty form. Reusing the slug is what
- * makes the platform allocate the next version (`FR-DATA-54`).
+ * makes the platform allocate the next version (`FR-56`).
  *
  * `scope` and `tolerance` are not seeded because they cannot be authored at all —
  * `create_rule` writes both as literal `{}` — so carrying them would imply a round-trip
@@ -84,7 +84,7 @@ async function author(): Promise<void> {
       target: { table: form.value.table, column: form.value.column },
       params,
       rationale: form.value.rationale,
-      // `FR-DATA-53`: what survives a workspace versioning a seeded rule. `null` for a
+      // `FR-68`: what survives a workspace versioning a seeded rule. `null` for a
       // rule authored from scratch — the backend refuses a `catalogue_id` naming no
       // catalogue entry, so inventing one here is rejected on the way in.
       catalogue_id: props.seed?.catalogue_id ?? null,
@@ -130,7 +130,7 @@ async function author(): Promise<void> {
     </h2>
     <p class="mt-1 text-xs text-slate-500">
       Authored as a <strong>draft</strong>, dry-run against a real version, then submitted
-      for someone else to approve (FR-DATA-21). Editing an approved rule is not an update —
+      for someone else to approve (FR-50). Editing an approved rule is not an update —
       reuse its slug and the platform allocates the next version.
     </p>
 

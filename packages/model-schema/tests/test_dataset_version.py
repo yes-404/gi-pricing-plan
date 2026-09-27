@@ -1,4 +1,4 @@
-"""`DatasetVersion`'s envelope fields and object forms (OQ-DATA-13, decided (c))."""
+"""`DatasetVersion`'s envelope fields and object forms (OQ-568, decided (c))."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def _version(**kwargs: object) -> DatasetVersion:
     return DatasetVersion(**values)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 def test_the_version_carries_its_envelope_inline() -> None:
     version = _version(
         description="Q3 exposure",
@@ -55,15 +55,15 @@ def test_a_malformed_slug_is_refused() -> None:
         _version(slug="Motor_GB")
 
 
-@pytest.mark.req("FR-OVR-1")
+@pytest.mark.req("FR-4")
 def test_updated_at_is_required() -> None:
-    """OQ-OVR-16, resolved (a): an artifact is created and updated in the same moment,
+    """OQ-553, resolved (a): an artifact is created and updated in the same moment,
     so a missing `updated_at` is a malformed version, not a never-updated one."""
     with pytest.raises(pydantic.ValidationError, match="updated_at"):
         _version(updated_at=None)
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_period_covered_is_an_ordered_pair() -> None:
     version = _version(
         period_covered={"from": date(2023, 1, 1), "to": date(2026, 6, 30)}
@@ -72,13 +72,13 @@ def test_period_covered_is_an_ordered_pair() -> None:
     assert version.period_covered.from_ == date(2023, 1, 1)
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_an_inverted_period_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="precedes"):
         _version(period_covered={"from": date(2026, 6, 30), "to": date(2023, 1, 1)})
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_a_period_without_an_end_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="to"):
         _version(period_covered={"from": date(2023, 1, 1)})
@@ -86,7 +86,7 @@ def test_a_period_without_an_end_is_refused() -> None:
 
 def test_source_fingerprint_requires_the_extraction_moment() -> None:
     """A fingerprint without `extracted_at` cannot answer "was this file re-ingested
-    after its contents changed?" — OQ-DATA-13 (c) made the object form carry it."""
+    after its contents changed?" — OQ-568 (c) made the object form carry it."""
     with pytest.raises(pydantic.ValidationError, match="extracted_at"):
         _version(source_fingerprint={"kind": "file_sha256", "value": "a" * 64})
     ok = _version(
@@ -111,7 +111,7 @@ def test_the_fingerprint_kind_is_closed() -> None:
         )
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_a_derived_version_names_its_parent_and_operation() -> None:
     version = _version(
         kind=DatasetKind.DERIVED,
@@ -126,7 +126,7 @@ def test_a_derived_version_names_its_parent_and_operation() -> None:
     assert version.derived_from.params == {"method": "temporal", "part": "train"}
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_a_derived_version_without_derived_from_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="derived_from"):
         _version(kind=DatasetKind.DERIVED)
@@ -140,7 +140,7 @@ def test_the_derivation_operation_is_closed() -> None:
         )
 
 
-@pytest.mark.req("FR-DATA-17")
+@pytest.mark.req("FR-46")
 def test_a_validated_version_must_name_its_report() -> None:
     with pytest.raises(pydantic.ValidationError, match="validation report"):
         _version(status=DatasetStatus.VALIDATED)

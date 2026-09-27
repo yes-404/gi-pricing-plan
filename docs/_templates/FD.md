@@ -10,11 +10,11 @@ Full field set, status vocabulary and role assignments:
 `plans:`, `supersedes:` and `superseded_by:` do not apply to this family and must not
 appear here. `decision:` is **not** a field of this essay's header: it is the `FD-`
 register row's own field, in `docs/findings/register.md`, never this frozen essay's
-(Ruling 70, `docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`; NT-0019 §5.2
+(RL-981, `docs/rulings/RL-00981-decision-is-a-register-row-field-not-an-essay-header-field-the-contradiction-dissolves-rather-than-needing-a-widened-field-set.md`; RFC-937 §5.2
 migrates the register's existing Decision cell into that row's `decision:`). Putting a
 value that changes on a frozen file is unmaintainable under check 34's freeze rule, which
 is why the essay never carried it correctly. `decision:` still carries the register's
-disposition and is never confused with the essay's own `status:` (NT-0015 P4) — they are
+disposition and is never confused with the essay's own `status:` (RFC-896 P4) — they are
 on different artifacts, which is how that rule is satisfied without widening this
 header's closed field set.
 -->

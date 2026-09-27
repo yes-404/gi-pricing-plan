@@ -4,11 +4,11 @@ Every submission does exactly one transaction's worth of work:
 
     job row  +  audit event  +  outbox intent
 
-all three or none. That is `06` R2 and FR-PLAT-51 combined, and it is the reason this
+all three or none. That is `06` R2 and FR-406 combined, and it is the reason this
 module has no `commit()` in it — the unit of work owns the boundary, so there is no way to
 write two of the three and return success.
 
-The `submit` signature follows `07` §5.2, with `workspace_id` added: FR-OVR-13 puts every
+The `submit` signature follows `07` §5.2, with `workspace_id` added: FR-16 puts every
 artifact in exactly one workspace, and a Job that does not name its own cannot be
 authorised, listed, or audited into the right chain.
 """
@@ -52,7 +52,7 @@ __all__ = [
     "transition",
 ]
 
-#: Which worker pool runs each kind (FR-PLAT-13). `compute` is few and fat, `scoring` is
+#: Which worker pool runs each kind (FR-405). `compute` is few and fat, `scoring` is
 #: many and thin, `io` is network-bound; putting a model fit on the scoring pool starves
 #: the quote path, which is the one with a 50 ms budget.
 DEFAULT_QUEUE_FOR_KIND: dict[JobKind, JobQueue] = {
@@ -74,7 +74,7 @@ DEFAULT_QUEUE_FOR_KIND: dict[JobKind, JobQueue] = {
     JobKind.RATE_TABLE_DIFF: JobQueue.COMPUTE,
     JobKind.SCORE_BATCH: JobQueue.SCORING,
     # `scoring`, same as `score.batch`: many, thin, and off the request path (Task 4B,
-    # Ruling 35) but still part of the quoting pipeline's own pool, not `compute`'s.
+    # RL-862) but still part of the quoting pipeline's own pool, not `compute`'s.
     JobKind.SCORE_TRACE_PRODUCE: JobQueue.SCORING,
     JobKind.DISLOCATION_RUN: JobQueue.COMPUTE,
     JobKind.OPTIMISATION_RUN: JobQueue.COMPUTE,
@@ -104,7 +104,7 @@ async def submit(
     """Create a queued Job, its audit event and its publish intent, in one transaction.
 
     Returns the *existing* Job when `idempotency_key` matches a recent submission
-    (FR-PLAT-12) — a retried request must not start the work twice.
+    (FR-404) — a retried request must not start the work twice.
     """
     if idempotency_key is not None:
         existing = await _find_by_idempotency_key(
@@ -204,7 +204,7 @@ async def transition(
     result: JobResult | None = None,
     error: JobError | None = None,
 ) -> Job:
-    """Move a Job along its lifecycle, refusing transitions FR-PLAT-7 does not allow.
+    """Move a Job along its lifecycle, refusing transitions FR-399 does not allow.
 
     The audit event is written in the same transaction (`06` R2), so a status change that
     cannot be audited does not happen.
@@ -228,7 +228,7 @@ async def transition(
     if to_status in TERMINAL_STATUSES:
         row.finished_at = datetime.now(UTC)
         if row.started_at is not None:
-            # FR-PLAT-40. Observed here rather than in the worker so a Job that reaches a
+            # FR-443. Observed here rather than in the worker so a Job that reaches a
             # terminal state by any route — cancelled, failed, expired by the reaper — is
             # counted. A histogram fed only by the happy path measures the runs that
             # worked, which is the population least worth alerting on.
@@ -261,7 +261,7 @@ async def transition(
 async def request_cancellation(
     session: AsyncSession, job_id: UUID, *, actor: Principal
 ) -> Job:
-    """Ask a Job to stop (FR-PLAT-9). Cancellation is cooperative.
+    """Ask a Job to stop (FR-401). Cancellation is cooperative.
 
     A `queued` Job is cancelled outright — no worker has it. A `running` Job is *marked*:
     it stays `running` until `pricing-core` reaches its next checkpoint and returns.
@@ -300,7 +300,7 @@ async def request_cancellation(
 
 
 def is_stalled(row: JobRow, *, stall_seconds: int) -> bool:
-    """A running Job that has said nothing for longer than the window (NFR-PLAT-3).
+    """A running Job that has said nothing for longer than the window (NFR-528).
 
     Only `running` jobs can stall. A queued Job is waiting for a worker, which is a queue
     depth problem with its own signal; a finished one has stopped on purpose.

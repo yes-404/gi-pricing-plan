@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
- * `02` §5.3's Custom metric library, `/metrics` (FR-MODEL-127) — "the mirror of the objective
+ * `02` §5.3's Custom metric library, `/metrics` (FR-167) — "the mirror of the objective
  * library above".
  *
- * **No link to a metric certificate.** The cell promises one and cites FR-MODEL-108, which is
+ * **No link to a metric certificate.** The cell promises one and cites FR-162, which is
  * an API requirement carrying no link obligation, and §5.3 registers no metric-certificate
- * view to link to. Under FR-OVR-21 that cell binds nothing, so no link is owed. Building one
+ * view to link to. Under FR-24 that cell binds nothing, so no link is owed. Building one
  * would build a view the specification has not declared.
  */
 import { onMounted, ref } from "vue";
@@ -15,8 +15,8 @@ import ArtifactLibraryTable, { type ArtifactRow } from "@/components/ArtifactLib
 
 /**
  * The columns this library declares. Both objective and metric libraries have all five;
- * the peril-structure library declares three, because FR-MODEL-127 gives a Peril Structure no
- * usage count and FR-MODEL-44's applicability is not its concept.
+ * the peril-structure library declares three, because FR-167 gives a Peril Structure no
+ * usage count and FR-153's applicability is not its concept.
  */
 const LIBRARY_COLUMNS = ["slug", "version", "status", "applicability", "usageCount"] as const;
 
