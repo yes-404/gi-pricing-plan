@@ -158,7 +158,7 @@ Principles: the role that writes code never amends the document the code is chec
 | **RS** `audit` | auditor — a bespoke audit's method, evidence and verdicts; files every finding as `FD-` | lead gives each `FD-` its disposition | maintainer requests it as an `SL-`; planner freezes scope in a `PL-` | the Work's `CR-` cites the record and every `FD-` it raised | lead: `closed` once every `FD-` is closed |
 | **CR** | auditor (`work`, `phase`); lead (`review`) | maintainer accepts a Work or Phase close | reporter reports it | terminal | — |
 | **FD** | auditor (register row + essay) | lead sets `decision:`; decision-maker when contested | executor discharges it through an `SL-` (under the owning Work, or `WK- maintenance`) that names the `FD-` | auditor sets `closed` in place citing the PR; `retired` for `accept`; unowned rows decay to the phase review | never removed |
-| Reference — `process/` | maintainer; amendments arrive as `RFC-` + `RL-` | — | everyone | `audit-docs` core-JSON drift | — |
+| Reference — `process/` | maintainer; amendments arrive as `RFC-` + `RL-`; rows of the residue record: RL-1145 DP-3 am. 5 | — | everyone | `audit-docs` core-JSON drift | — |
 | Reference — charters | maintainer; "a role file that proves insufficient" → `FD-` → maintainer amends | — | the role at spawn | — | — |
 | Reference — skills | the five roles already permitted; lead approves | — | tooling | — | lead: `retired` + a `REDIRECTS.csv` row to the successor or the `RL-` that retired it |
 | Reference — agents | lead | — | dispatching roles | — | lead |

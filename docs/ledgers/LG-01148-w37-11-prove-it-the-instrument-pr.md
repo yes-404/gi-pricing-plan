@@ -845,8 +845,154 @@ directory passed a link check that fails in any fresh checkout.
   `gate-ed588f8/`. The delta readings at the final head are in `gate-<final head>/`, in
   a tree verified to hold no empty directory.
 
+### The docs PR, Tasks 7–9 — the evidence tables (written 2026-09-27 14:45:49 BST by the executor)
+
+Measured at `47065da50c34f0bf613f7dd972675c96d12f78ed` (#821), in detached worktrees, before the
+docs branch existed. Written on `w37-11-docs` at `734e12fe6d0e993eae76efe0270ae283bf804ea7`. Under
+the deputy's ruling of 2026-09-27 14:23:04 BST, the executor gathers these tables and the
+auditor writes the closure record from them. The §13 verdicts below are drafts for the lead.
+
+### Task 7 — row (g), the re-measure at `47065da5` (C3; RL-1145 DP-4 (b), amendments 1 and 2)
+
+**The run.** The standing verify, run as `.github/workflows/docs.yml`'s `doc-id migrate --verify`
+step runs it, at `47065da50c34f0bf613f7dd972675c96d12f78ed` (#821, the instrument PR's merge
+tree), in a detached worktree of that commit. `--ref` was read from
+`docs/process/delivery-process.core.json` `meta.verified_against_tree`
+(= `0651c1e265648cbd3918adfc729ad965b83b1e0b`), and `--record-ref HEAD` resolved to
+`47065da5…`. The command ran inside the `dev-commands` verify-slot wrapper (slot 1), with the
+thread caps: `python3 scripts/doc-id.py migrate --verify <throwaway dir> --ref
+0651c1e265648cbd3918adfc729ad965b83b1e0b --record-ref HEAD`. It ran from 14:24:15 to 14:42:03 BST
+on 2026-09-27 and exited `1`. The render's header line reads *"record ref HEAD =
+47065da50c34f0bf613f7dd972675c96d12f78ed (the W37-11 record only; the corpus is --ref's —
+RL-1145 DP-2)"*. The render opens with *"UNCHANGED: 1 fatal row(s), matching the recorded set of 1
+in `_docverify.EXPECTED_VERDICTS` — the standing red, and this change moved no row."* The one
+`[FAIL]` row is (g). The render prints no `RESIDUE CEILING`, `PROGRESSED` or `REGRESSION` line.
+
+**Step 1, the g2 line, verbatim:**
+`g2 1-front-matter-stamp=0, 2-reference-token=605, 3-move=124, 4-split=1, 5-roadmap-restructure=1, 6-generated-artifact=33, classified-by-none=207`.
+g1 on the same line: `WK-shape mangled = 0 in 0 file(s), provenance mismatch(es) = 0,
+bare-comma-after-rewrite violation(s) = 0`.
+
+**The residue by cause**, from the row's `note` line (`residue by cause: …`):
+
+| Cause | Count |
+|---|---|
+| `cause3-legacy-path-citation` | 103 |
+| `slash-compound-citation` (unassigned — reported, not investigated) | 29 |
+| `unmapped-work-slice-key` (named elsewhere, reported here by shape) | 28 |
+| `cause2a-range-citation` | 15 |
+| `other` | 12 |
+| `cause1-foreign-frontmatter` | 11 |
+| `cause4-compound-token-adjacent-uppercase` | 5 |
+| `new-frontmatter-stamp-no-move` (unassigned — reported, not investigated) | 4 |
+| **Sum** | **207** |
+
+**Step 2, the sum and the comparison.** 103 + 29 + 28 + 15 + 12 + 11 + 5 + 4 = 207, which
+equals `classified-by-none=207`. The figure equals **207 at `29e7a9c`** (#757's squash body,
+section "g2 classified-by-none: 251 → 207"), and each of the eight cause counts equals #757's
+own `_residue_cause` table, cause by cause. Against **251 at `4d9fe1d`** (`CR-1063` §6,
+`251 = 136/34/28/16/13/11/7/6`) the drop is 44, and #757's squash body attributes all 44 to its
+forward-citation check. The 251 is quoted, not re-measured here.
+
+**The classifier commits in `29e7a9ce..47065da5` (DP-4 amendment 1).** Predicate, verbatim:
+`git log --format='%h %s' 29e7a9ce..47065da5 -- scripts/doc-id.py scripts/_docverify.py scripts/_docid.py`.
+It returns two commits. Each is classified by reading its diff:
+
+| Commit | Subject | What it changes in the g2 path | Classification |
+|---|---|---|---|
+| `35c954c1` (#806) | W37-8 T1+T2 — check 30 licenses the harness keys; migrate stamps no harness-only key | `doc-id.py` `_stamp_header` skips four harness-only template keys (`_HARNESS_ONLY_TEMPLATE_KEYS`). This is the migration's header writer. `classify_migration_diff` and `_residue_cause` are not touched | Not a g2 classifier change. It can move only class 1 (front-matter stamp), which reads 0 |
+| `47065da5` (#821) | the W37-11 code PR | `_docverify.py`: the record read from `--record-ref` (F109), the fail-closed refusal, the C16 render, the record-path constant by symbol, the F110 docstring. `_docid.py`: the record constant moves to `process/`, and a pre-move constant keeps the record's old location in `GOVERNANCE_RECORD_EXCLUSIONS`, so the pinned base's copy stays out of the (d)/(e)/(g) corpus as before; `is_migrated_tree`. `doc-id.py`: `classify_docs_files`, the migrate guard, `--record-ref`. No changed line names `classify_migration_diff`, `_classify_content`, `_forward_citation_check` or `_residue_cause` | Touches the g2 corpus boundary, by design neutral. Measured neutral: 207 → 207 |
+
+The figure did not move, so no move needs a commit to explain it, and no instrument defect is
+reported.
+
+**Step 3, the condition of the lead's decision of 2026-09-18 00:42 BST** (`CR-1064:464-470`:
+*"the decision stands unless that re-measure shows a corpus-correctness defect"*). The
+re-measure shows none. g1, the row's corpus-correctness conjunct, is 0 / 0 / 0. The g2 figure
+and all eight cause counts are those the decision was taken against. Every named cause is a
+classifier attribution gap: the classifier cannot attribute a hunk to one of its six lawful
+classes. **The limit of this reading:** three buckets, 45 files in all (`slash-compound-citation`
+29, `new-frontmatter-stamp-no-move` 4, `other` 12), are printed by the instrument as
+*"unassigned — reported, not investigated"* or as `other`. This run does not investigate them,
+so it shows no corpus-correctness defect in them. It does not prove there is none.
+
+**Step 4, the §13 verdict, drafted for the lead under DP-4 (b).** Row (g): **deferred with an
+owner.** The exit measurement is `classified-by-none=207` at `47065da5`, with all 207 files
+assigned to a cause and the parts summing to the whole. Owner: the lead. Named event: the first
+slice of the create-read-retire audit, the event the deputy's Q4 ruling of 2026-09-27
+12:06:57 BST gives for C15's g2 rows. (g) stays the standing FAIL in
+`_docverify.EXPECTED_VERDICTS`. The Work close accepts it explicitly, in the D7 line. Whether a
+Work may close over an item that is still FAIL is the delegate's, in that line (RL-1145 DP-4).
+
+### Task 8 — (k), element by element (C1; RL-1145 DP-5 (b), amended)
+
+**The run.** At `47065da5`, in the same detached worktree:
+`python3 scripts/doc-index.py --phase P1b; echo EXIT=$?` printed seven numbered elements and
+`EXIT=0`. Acceptance item 1's table follows. The clauses are map-plan item 10's
+(`PL-939:89-92`). "Second count" follows DP-5 (b) as amended: where it disagrees with the
+first, both are given with their predicates and populations, and neither is picked.
+
+| Clause | Element | Printed line, verbatim | Second count (DP-5 (b)) |
+|---|---|---|---|
+| Works closed and retired | 1 | `1. Works closed and retired: 4 closed (WK-661, WK-664, WK-665, WK-692), 1 retired (WK-662)` | Not a zero. No second count is required |
+| Slices planned versus delivered | 2 | `2. Slices planned versus delivered: 0 planned, 0 delivered` | **Zero by construction: the Slice family has no members.** `git grep -n -E '^#+ .*SL-[0-9]+' -- docs` returns 0 lines, and `git grep -l -E '^family: slice' -- docs` returns one file, the template `docs/_templates/SL.md`. `FD-1074` records that no `SL-` row exists. The `SL-` ids in `LG-1139`'s table are candidate ids in a ledger, not rows |
+| Plans superseded per Work | 3 | `3. Plans superseded per Work:` then `- WK-661: 0`, `- WK-662: 0`, `- WK-664: 0`, `- WK-665: 0`, `- WK-692: 0` | **Agrees, and is a zero of header coverage.** Over all 125 files `docs/plans/PL-*.md`: `git grep -l -E '^status: superseded'` returns 0, and every `superseded_by:` reads `~`. `git grep -h -E '^work: '` finds `work: WK-697` in 5 plans and no plan whose `work:` names a P1b Work. The instrument's predicate (`status == superseded` and `work:` equal to the Work) therefore has an empty population for each P1b Work |
+| Rulings per Work | 4 | `4. Rulings per Work:` then `- WK-661: 0`, `- WK-662: 0`, `- WK-664: 0`, `- WK-665: 0`, `- WK-692: 0` | **Disagrees; both reported.** First count, the instrument: rulings whose `work:` header names the Work, which RL-1145's facts table writes as `grep -l "^work: $w" docs/rulings/*.md`. It reads 0 for each Work, and all 8 `work:` headers under `docs/rulings/` name `WK-697`. Second count, text: `grep -l "$w\b" docs/rulings/*.md`, at `47065da5`: WK-661 10, WK-662 4, WK-664 3, WK-665 6, WK-692 3. The same predicate at `271088b0` gives 9, 3, 2, 5, 2, which is RL-1145's 9, 2, 5, 2, 3 in its own order (661, 664, 665, 692, 662). The difference is `RL-1145` itself, created at `9fe726b2`, which names all five Works. The glob also takes in `docs/rulings/INDEX.md`, which names WK-661 and WK-662. Over the `RL-*.md` files only, the counts are 9, 3, 3, 6, 3. Element 4's zero is a zero of header coverage, not a proven absence of rulings |
+| Findings opened versus discharged, with the unowned-decay count | 5 | `5. Findings opened versus discharged, from the register: 0 opened in P1b, 0 discharged, 0 unowned-decay in P1b, plus 0 unowned-decay carried in from an earlier phase` | **Disagrees; both reported.** First count, the instrument: register rows whose `Phase` cell equals the string `P1b` (`doc-index.py` `_findings_figures`, `r.phase == phase_id`). Its population is empty. Second count: `awk -F'\|'` over `docs/findings/register.md`'s data rows (after the table's delimiter row), on the fourth cell. It finds 121 data rows, and their `Phase` cells read `1b` 20, `2` 100, `2/3/4` 1. No cell reads `P1b`. Over the 20 rows whose cell is `1b`, with the instrument's own status rules (`resolved` anywhere → closed; a cell opening `accept` → retired; `unowned` on an active row → unowned-decay): 20 opened, 9 + 7 = 16 discharged, 0 unowned-decay. The two counts count different populations, because the register spells the phase `1b` and the report asks for `P1b`. Carry-in: `_phase_rank` cannot parse `1b` or `2`, so every row sorts last and none is "earlier" than P1b |
+| Documents with no inbound citation outside `INDEX.md` | 6 | `6. Documents with no inbound citation outside INDEX.md: —` | **Disagrees; both reported.** Population, both counts: the 16 ids with `phase: P1b` in their own header or listed as the phase's Works: `CR-821`, `LG-713`, `LG-714`, `LG-715`, `LG-724` to `LG-729`, `LG-730`, and the five Works. First count, the instrument: ids cited by any corpus record's text or by `roadmap.md`, excluding self-citation. The generated `docs/INDEX.md` is not in its corpus. Every id is cited, so it prints `—`. Second count: `git grep -l -E "\b<prefix>-0*<n>\b" -- .`, excluding every `INDEX.md` in the tree, `docs/REDIRECTS.csv` and the record's own file. **9 of the 16 have no citing file**: `LG-713`, `LG-714`, `LG-715`, `LG-724`, `LG-725`, `LG-726`, `LG-727`, `LG-728`, `LG-729`. Each is cited only by `docs/closures/INDEX.md` (a Reference-family record, so in the instrument's corpus) and `docs/REDIRECTS.csv`. `CR-821`, `LG-730` and the five Works each have one or more citing files under the second count too. The difference is whether a per-directory `INDEX.md` counts as "outside `INDEX.md`" |
+| Days from `active` to closure | 7 | `7. Days from a plan reaching active to its closure record being filed:` then `- (none)` | **Disagrees in kind; both reported.** First count, the instrument: plans whose header carries `phase: P1b` and whose derived execution is `closed`, paired with `CR-` records whose `work:` names the same Work. Its population is empty: of the 125 plans, 120 carry no `phase:` key and 5 carry `phase: P2`, and no `CR-` header carries a P1b Work in `work:` (the two `work:` headers under `docs/closures/` name `WK-697`). Second count, by filename: `ls docs/closures \| grep -E 'wk-6(61\|62\|64\|65\|92)'` lists 8 records, 4 of them Work closure records (`CR-754` WK-661, `CR-787` WK-692, `CR-819` WK-664, `CR-820` WK-665) and 4 plan reviews. So element 7's `(none)` is a zero of header coverage. P1b Works were closed by a record. No plan-to-closure day count is derived here, because the pre-migration plans carry no `active` date in a header |
+
+### Task 9 — (j), family by family (C2; the deputy's DP-1 line of 2026-09-27 11:16:34 BST)
+
+**The ruling, quoted from RL-1145.** *"DP-1: option (b) ADOPTED. The five families with a real
+item since the migration merge `71f5a22` — Closure, Finding, Plan, Ruling, Ledger — are
+**discharged now**, each verified in the W37-11 closure record by id, creating commit, creating
+skill and `doc-id.py check` rc at that commit. The eight without one are **owed**, each against
+the named event the row gives."*
+
+**The population, re-taken at `47065da5`.** The DP-1 predicate,
+`git log --diff-filter=A --name-only --format= 71f5a22..47065da5 -- docs .claude`, grouped by
+id prefix, gives CR 3, FD 7, LG 5, PL 5, RL 8. It gives no WF, DC, PR or RS file. The row
+families, counted by `docs/INDEX.md`'s family column at `71f5a22` and at `47065da5`: requirement
+537 and 537, work 41 and 41, open question 238 and 240. The two new open-question rows are
+both `OQ-1146`, once for `docs/open-questions.md` and once for its mirror in
+`docs/specs/00-overview.md` §10, as every OQ id is listed. No `SL-` row exists at either tree.
+
+**How each discharged row was checked.** `git log --diff-filter=A --format='%h %aI' -- <path>`
+on `main` gives the creating commit. `git merge-base --is-ancestor` confirms that each commit is
+on `main` and after `71f5a22`. Then `python3 scripts/doc-id.py check` ran at that commit, in a
+detached worktree, with the commit's own tool. The creating skill is taken from the commit or
+the ledger when either names it. Otherwise it is taken from the `Creates` column of
+`.claude/skills/README.md` at `47065da5`, and the row says so.
+
+| # | Family | State | Item | Creating commit (`%h %aI`) | Creating skill | `doc-id.py check` at that commit | Named event (owed rows, verbatim from the DP-1 line) |
+|---|---|---|---|---|---|---|---|
+| 1 | Requirement | owed | — | — | — | — | *"Requirement, Workflow, Decision, Proposal and Research at the first slice of the create-read-retire audit"* |
+| 2 | Open question | **discharged**, option (a), by the deputy's DP-1 line of 2026-09-27 14:47:04 BST: *"Open question (OQ-1146, `9fe726b2`, 12:02:31): DISCHARGED, option (a)."* The event occurred: the row was raised through `spec-change` before the close, and its number was ruled MET in substance in the 11:28:23 BST ruling, item 5. *Was: "owed; the event has occurred" (at `3749db65`); amended 2026-09-27 14:52:46 BST.* | `OQ-1146`, raised and decided under RL-1145 DP-2 | `9fe726b2 2026-09-27T12:02:31+01:00` (#820) | `spec-change` by the README's `Creates` column (`OQ-` rows). The commit says it was raised by the decision-maker, *"mirrored in OQ-555's form"*, and does not name a skill | rc `0` | *"Open question at DP-2's `OQ-` row if raised through `spec-change` with a number from `next` before the close, else at the audit's first slice"*. **The derivation, as the face in PL-1144 Scope B states it** (*"`next` cannot see an unmerged draft"*; that face's label is not the register's P1b finding on `FR-12`, which carries the same label): `doc-id.py next` defaults to `--ref origin/main`, so it cannot see ids held on an unmerged branch. Re-run here at `724409bf`, the parent of `9fe726b2`: `python3 scripts/doc-id.py next --ref HEAD` printed `1144`, rc `0`. The unmerged drafts held 1144 (`PL-1144`) and 1145 (`RL-1145`), so `OQ-1146` is next + 2. #820's body: *"RL-1145 and OQ-1146 were therefore derived as next+1 and next+2."* The deputy ruled at 11:28:23 BST: *"OQ-1146's number MET in substance."* |
+| 3 | Work | owed | — | — | — | — | *"Work at the minting of the charter investigation's `WK-` row"* |
+| 4 | Slice | owed | — | — | — | — | *"Slice at the first `SL-` row cut in that Work's map plan"* |
+| 5 | Workflow | owed | — | — | — | — | As row 1 |
+| 6 | Decision | owed | — | — | — | — | As row 1 |
+| 7 | Proposal | owed | — | — | — | — | As row 1 |
+| 8 | Plan | discharged | `PL-1070` (W37-7 leaf plan) | `454ff41d 2026-09-18T09:57:15+01:00` | `writing-plans`, by the README's `Creates` column (`PL-`). The commit files it as a leaf plan and does not name the skill | rc `0` | — |
+| 9 | Ledger | discharged | `LG-1137` (W37-7 ledger) | `4ed1f88e 2026-09-26T17:43:43+01:00` (#795) | `subagent-driven-development`, by the README's `Creates` column (`LG-`). `LG-1137:81` lists the W37-7 commit `cedbf713` for that skill's `LG-` routing | rc `0` | — |
+| 10 | Ruling | **discharged, option (b)**, by the deputy's DP-1 line of 2026-09-27 14:47:04 BST: *"Ruling (RL-1075, `38033319`, 2026-09-19): DISCHARGED, option (b)."* The creating instrument is the decision-maker role file, because no RL- creating skill exists in the README's `Creates` column. That missing skill is finding FD-1156, owner the lead, event: the charter investigation's first slice. *Was: "discharged" (at `3749db65`); amended 2026-09-27 14:52:46 BST.* | `RL-1075` | `38033319 2026-09-19T14:18:28+01:00` | **No creating skill.** The README's `Creates` column names no skill for `RL-`. The commit says the rulings were *"filed by the decision-maker from its role file"*, and `RL-1075` records that it took its id from `doc-id.py next`. The creating instrument is the decision-maker's role file, not a skill | rc `0` | — |
+| 11 | Research | owed | — | — | — | — | As row 1 |
+| 12 | Closure | discharged | `CR-1063` (`kind: work`, the W37-6 run 2 closure/(g) record) | `1cd489c8 2026-09-17T21:54:37+01:00` (#785) | `close-workstream`, by the README's `Creates` column (`CR- kind: work`). The commit does not name the skill | rc `0` | — |
+| 13 | Finding | discharged | `FD-1066` (F107's essay) | `d63f7650 2026-09-18T09:17:52+01:00` | `close-workstream`: the commit calls itself the *"checkpoint 3 close-workstream evidence record"*, and the README's `Creates` column gives that skill *"files `FD-`"* | rc `0` | — |
+
+**Totals, amended 2026-09-27 14:52:46 BST, under the deputy's DP-1 line of 14:47:04 BST:** 6 discharged (Closure, Finding, Plan, Ledger, Ruling, Open question) and 7 owed (Work, Slice, Requirement, Workflow, Decision, Proposal, Research). Each owed row names its event verbatim. *Was: at `3749db65` the table read 5 discharged and 8 owed, with Open question owed.*
+
+Each `doc-id.py check` run printed only
+`doc-id.py check: 0 file(s) skipped (front matter present but did not parse as RFC-937's header):`
+and exited `0`. No run printed a failure, so the rc is a reading at that commit and not a test
+of the check.
+
 ## PRs
 
 | # | Branch | Squash SHA on `main` | Tasks | State |
 |---|---|---|---|---|
 | — | `w37-11-code` | — | 1–6 | in progress |
+| #821 | `w37-11-code` | `47065da50c34f0bf613f7dd972675c96d12f78ed` | 1–6 + the C4 guard | merged 2026-09-27 14:16:45 BST |
+
+Every Tasks 1–6 commit SHA above is a pre-squash commit of #821, reachable via `refs/pull/821/head`. The squash `47065da5`'s tree is `c3218465`'s tree (`f967495e`).
