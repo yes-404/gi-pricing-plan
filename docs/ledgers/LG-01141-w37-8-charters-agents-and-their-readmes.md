@@ -203,8 +203,8 @@ keys present in the rendered stamp. Restored the clause — the new tests, and t
 | # | Branch | Squash SHA on `main` | Tasks | State |
 |---|---|---|---|---|
 | #806 | `w37-8-t1-t2` | `35c954c1` | T1, T2 (check 30 fix + S-11's harness-only-key stamp fix, `scripts/doc-id.py` + `tests/test_doc_id_migrate.py`) | merged |
-| A (#807) | `w37-8-t3-t4` | `6cad8e4d` | T3, T4 | merged |
-| B (#808) | `w37-8-t5-agents-readme` | `ff70de2f` | T5 | merged |
+| A (#807) | `w37-8-charters` | `6cad8e4d` | T3, T4 | merged |
+| B (#808) | `w37-8-t5-readme` | `ff70de2f` | T5 | merged |
 | C (#809) | `w37-8-t6-reporter-watcher` | `99355ab0` | T6 | merged |
 | D (#810) | `w37-8-t7-auditor` | `954008f8` | T7 | merged |
 | E (#811) | `w37-8-t8-decision-maker` | `3ede6495` | T8 | merged |
@@ -472,29 +472,32 @@ Gate, DP-6 lines and the CI evidence for this PR are below, under "H's gate".
 
 ## H's gate
 
-**The full two-half gate, tree accepted by the transcript bracket (the deputy,
-2026-09-27 07:17:3x BST): `gate-60914ee/`** — `HEAD.txt` records the tree (`60914ee8...`)
-and the run time; Python 7/7 stages pass (`3458 passed, 3 skipped, 1 xfailed`, `uv run
-pytest --collect-only -q` → 3462 tests collected, exactly 3457 + 5 named, matching
-`main`'s own 3462 — no test added by this docs-only slice); frontend 6/6 stages pass
-(install, generate:api, lint, type-check — 97 files / 602 tests, `Errors: no errors` —
-build). Logs at `~/gi-pricing-plan.local/handover/gate-60914ee/{python,frontend}/`.
+**The full two-half gate, first run at head `60914ee8`, tree `gate-60914ee/`.** This
+directory carries **no `HEAD.txt` and no `--collect-only` output** — corrected here
+after this section previously claimed both. Its tree is established instead by the
+executor-transcript bracket (the deputy, 2026-09-27 07:17:3x BST): the commands were run
+against the worktree at `60914ee8` before the next commit changed it, read from the
+session's own tool-call sequence, not from a file inside the directory. Python 7/7
+stages pass (`3458 passed, 3 skipped, 1 xfailed` — **3462 is the full-suite sum, 3458 +
+3 + 1**, matching `main`'s own collected count, no test added by this docs-only slice);
+frontend 6/6 stages pass (install, generate:api, lint, type-check — 97 files / 602
+tests, `Errors: no errors` — build). Logs at
+`~/gi-pricing-plan.local/handover/gate-60914ee/{python,frontend}/`.
 
-**A second evidence pass, this commit's own final head, in
-`~/gi-pricing-plan.local/handover/gate-<final head short SHA>/`** — gathered after this
-ledger commit lands, per the deputy's ordering (evidence follows the fix, not the other
-way round): `HEAD.txt` written first (tree + date); `tests/` in full (collected count
-reconciled against `60914ee8`'s own `tests/`-only collected count, not the full-suite
-3462); the frontend half with one `.rc` file per command; `audit-docs.py` (rc + the
-DISCLOSED line), `doc-id.py check`, `doc-index.py --check`, each rc recorded; `git diff
---stat 60914ee8..<final head>` (docs-only, `docs/ledgers/` and `docs/plans/`). Reported
-on the PR at that head, not repeated here, since the head is not yet known while this
-commit is being written.
+**`HEAD.txt` and `tests/`-only `--collect-only` (1021) live in the later evidence
+passes, not here**: `gate-da99181/` (head `da99181e`) and `gate-0a3451c/` (head
+`0a3451c5`) each carry their own `HEAD.txt` (tree + UTC date, written first) and their
+own `uv run pytest --collect-only -q tests` output — 1021 at both, and also 1021 at
+`60914ee8` itself when it was separately measured in an isolated detached worktree for
+that comparison (`gate-da99181/python/collect_tests_at_60914ee8.log`). Frontend was re-run in full, with one `.rc` per command, at **both** `da99181e`
+(`gate-da99181/frontend/`, the G2 request's own answer) and `0a3451c5`
+(`gate-0a3451c/frontend/`) — per the auditor's finding that `60914ee8`'s frontend logs
+carried no `.rc` files. Both re-runs are six-stage passes, all rc 0.
 
 **D11 is closed by H** — the reduced per-PR evidence standard (audit-docs, doc-id check,
 doc-index --check, the reduced test subset, docs CI standing in for local verify)
-governed C–G only; H runs the full two-half gate over the cumulative tree instead, both
-passes above.
+governed C–G only; H runs the full two-half gate over the cumulative tree instead, the
+passes named above.
 
 ## PL-1071 §5 Acceptance Standard item 8 — the FD-1066…FD-1069 re-read
 
