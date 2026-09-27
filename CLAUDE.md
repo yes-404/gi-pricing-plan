@@ -153,7 +153,9 @@ The phase list, workstream rows, closure records, decision gates, the current ph
 exit criteria, which workstreams are open, and the retrofit-impossible list are written
 **only** there
 ([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md) records this mechanism —
-this file restating phase or status content and the restatement going stale). Two things
+this file restating phase or status content and the restatement going stale). A phase is a
+**milestone** section ([`document-ids.md`](docs/process/document-ids.md) §1.3); the rows
+inside it are `WK-` (work) and `SL-` (slice) — the families, not their contents. Two things
 change how you work rather than what is planned:
 
 - **The retrofit-impossible foundations of `docs/roadmap.md` §5 landed in Phase 1a.** They
@@ -216,6 +218,9 @@ Project procedures live in `.claude/skills/`, versioned with the repo. **Its `RE
 the index**, `.claude/agents/README.md` the same for the delegable specialists; team roles
 are the `.md` files directly under `.claude/roles/`. **This section keeps no second list**
 ([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)).
+[`document-ids.md`](docs/process/document-ids.md) §1.6 — the roles-per-family owner table —
+is the authority on which role may write which document family, complementing this
+section's own rule that a role writes what its charter names.
 
 - **Discovered a non-obvious procedure** (build quirk, test setup, data format rule, deploy
   step)? Write or update a skill, update the README, commit both with the work.
@@ -262,8 +267,12 @@ a repo fact outranks a superpowers procedure. **Nothing in superpowers overrides
 
 **A workstream is closed only when that skill's checklist passes and the result is recorded
 in `docs/roadmap.md`** — closing without it produces a roadmap reporting progress the
-repository does not have, which the next workstream is then planned against. Three rules
-bind wherever anything here is audited, not only at a close:
+repository does not have, which the next workstream is then planned against. **Record
+destinations, per `document-ids.md` §1.4:** a closure record or a plan review is a `CR-`
+under `docs/closures/`; a finding is an `FD-` under `docs/findings/`, with a row in
+`docs/findings/register.md`; a decision already made is an `RL-` under `docs/rulings/`; a
+slice ledger is an `LG-` under `docs/ledgers/`. Three rules bind wherever anything here is
+audited, not only at a close:
 
 - **Scope is derived from the specification first, then evidenced** — never from
   recollection of what was built. Reversed, an audit is silent about what is missing.
@@ -332,5 +341,5 @@ restated enforcement is how one of the two statements goes stale
 here. Read the markdown to know the process; the extract exists so a rule that can be checked
 mechanically is not left to prose.
 
-Distinct from `docs/workflows/WF-698…05`, the domain journeys (§4): one is how the team
-works, the other what the platform does.
+Distinct from `docs/workflows/WF-698`…`WF-702`, the domain journeys (§4): one is how the
+team works, the other what the platform does.
