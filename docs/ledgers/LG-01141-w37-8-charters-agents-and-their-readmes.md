@@ -2,7 +2,7 @@
 id: LG-1141
 family: ledger
 title: W37-8 — charters, agents and their READMEs
-status: active
+status: closed
 created: 2026-09-27
 owner: executor
 tree: 7a519fce5673f7b494ed0304daf27ee013da58c9
@@ -581,3 +581,69 @@ item-3 line at all), each in `~/gi-pricing-plan.local/channel/to-lead.md`:
 No row for #814/H: its ACK is recorded on the PR itself at merge, per the deputy's
 07:07-area instruction, not pre-recorded here.
 
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor** (`document-ids.md` §1.6, SL row: *"auditor closes: sets
+the `LG-` `closed`, verifies acceptance"*). This follows the deputy's ruling of 2026-09-27
+07:51:16 BST that the close lands in one post-merge, docs-only PR authored by the auditor. W37-8
+closes when this PR merges. A Slice closes on a clean audit and the lead's merge, with no
+maintainer line (`CLAUDE.md` §12, §13).
+
+**The closing PR, H.** #814 was squash-merged as `5429c397d2ad5672ed31734bc07b946ea5a9b8df` (merged 2026-09-27 08:01:02 BST) onto `main`. Its PR head was
+`33138af6d221c8ff1127096ec09db465c3ade575`. The deputy's merge ACK for #814 is
+2026-09-27 08:00:40 BST, in `~/gi-pricing-plan.local/channel/to-lead.md` (local, not repo).
+
+**Pass (a), the audit of #814 before the merge.** The auditor proposed findings, and the lead
+adopted them as verdicts:
+- at `c124f19c`: not clean, F4–F8 (lead's verdict, 07:28 BST);
+- at `0a3451c5`: clean except F9 and F10 (lead's verdict, 07:47 BST);
+- at `33138af6`: F9 and F10 corrected, confirmed.
+
+The findings are recorded in the blocks above, as corrected.
+
+**Pass (b), the reachability sweep after the merge — run and filed by the lead** (the deputy's
+06:55:24 BST ruling). Quoted verbatim, not re-derived here:
+
+> - **All nine W37-8 PRs have landed:** #806 `35c954c1`, #807 `6cad8e4d`, #808 `ff70de2f`, #809 `99355ab0`, #810 `954008f8`, #811 `3ede6495`, #812 `a24c0a28`, #813 `d5501e99`, **#814 `5429c397`**.
+>
+> ## 2026-09-27 08:01:38 BST · lead · **PASS (b)** — LG-1141's SHA tokens re-checked against the post-merge origin/main `5429c397`: **PASS**
+> - **Predicate, verbatim:** `git show 5429c397:docs/ledgers/LG-01141-w37-8-charters-agents-and-their-readmes.md | grep -o -E '\b[0-9a-f]{7,40}\b' | sort -u`; per token, `git cat-file -e <t>^{commit}` (else NOTCOMMIT), then `git merge-base --is-ancestor <t> 5429c397` (exit 0 → MAIN); else each `gh api …/pulls/<n> --jq .head.sha` for n = 806…814, where `--is-ancestor <t> <pull head>` gives BRANCH via the first reaching head.
+> - **MAIN ×11:** `7a519fce5673f7b494ed0304daf27ee013da58c9`, `a8b3c39`, `35c954c1`, `6cad8e4d`, `ff70de2f`, `99355ab0`, `954008f8`, `3ede6495`, `a24c0a28`, `d5501e99`, `3f41d60`.
+> - **BRANCH ×14, each reachable from the pull head named; 0 UNREACHABLE:**
+>   - pull/806: `c6964a2`, `414a9335`, `414a93353bd5252820fee1c3b4b2ae3b8fd1a5c1`, `1508cd25`;
+>   - pull/807: `d5ec4aad`;
+>   - pull/809: `d8d6db8f`, `3d9758eb`;
+>   - pull/812: `63bc0eda`;
+>   - **pull/814 (H's own pre-squash commits, now not on main): `60914ee8`/`60914ee`, `da99181e`/`da99181`, `0a3451c5`/`0a3451c`.** These read "reachable via `refs/pull/814/head`", as your 07:44:14 / 07:50:29 anticipated.
+
+The quoted line's *"(above)"* refers to the lead's entry of the same stamp, *"MERGED #814"*:
+`5429c397^{tree}` = `8764d3cc784f53668a939943a92dbc7540b89ee6` = `33138af6^{tree}`.
+
+**Tokens this section adds, which pass (b) did not cover, are swept here** with the same
+predicate: `5429c397` (MAIN); `33138af6` and `c124f19c` (BRANCH, pull/814); the tree id
+`8764d3cc…` and the ACK comment id `5853534394` (NOTCOMMIT). Each result is in this PR's body.
+
+**Acceptance, verified by the auditor** (`PL-1071` §5):
+
+| Item | Result | Where evidenced |
+|---|---|---|
+| 1 | Pass. `grep -L "^family: reference" .claude/roles/*.md .claude/agents/*.md` prints nothing. `doc-id.py check` gives 0, with 0 skipped. The check-30 count for `.claude/agents/` is `0`. | re-run at `5429c397` |
+| 2 | Pass. The reporter and watcher rows are empty in the tool's own output, and every other row is non-empty. | T6 block, `diff` exit 0 against `docs/INDEX.md` at `0a3451c5` |
+| 3 | Seven D2 lines, one per edited charter. `planner.md`'s line is 2026-09-27 07:51:16 BST, on #814 (comment 5853534394). | item 3 table above |
+| 4 | Pass. The Python half at `60914ee8` is 7/7, rc 0. The frontend half is 6×rc 0 at `da99181e` and `0a3451c5`. `tests/` collects 1021 at every head. Docs checks give rc 0 at `33138af6`. | "H's gate" |
+| 5 | Pass. `ci-watcher.md` → `6cad8e4d`. | item 5 above |
+| 6 | Pass. Two lines, `GREP_EXIT=0`. | T6 block |
+| 7 | Pass. The F97 clause is drafted at `lead.md:88`, with the D2 line of 06:52:13 BST. | item 7 above |
+| 8 | Pass, but late. The item was missed at T1 and found at T3. The re-read found no W37-8 routing. | item 8 section |
+| 9 | Pass. Every DP-8.1 to DP-8.6 row names `RL-1140` as its resolver. `RL-1140` landed in `7a519fce`, the cut base, before T2's `35c954c1`. `PL-1071` has `status: active`. | `PL-1071` §6 |
+| 10 | Pass. `doc-index.py --check` gives rc 0 at `5429c397`, and after this PR's regeneration. | re-run |
+| 11 | Pass. #806 to #813 have ACKs in the item 11 table, and #814's ACK is above. The clean audit is filed as the lead's verdicts of 07:28 and 07:47 BST. | above |
+
+**T7 and T9 were audited against `RFC-937` §5.3's row text**, not against the auditor's own view
+of its charter (`PL-1071` §2, self-referential hazard).
+
+**Residue carried, not fixed here:**
+- check-36 alias hits at `.claude/roles/auditor.md:40` (`W37-10`), `executor.md:48` (`W37-9`)
+  and `lead.md:88` (`F97`), accepted per PR;
+- the late item-8 re-read.
