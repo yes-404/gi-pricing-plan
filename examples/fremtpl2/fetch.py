@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch the freMTPL2 dataset from OpenML (`07` FR-PLAT-37).
+"""Fetch the freMTPL2 dataset from OpenML (`07` FR-439).
 
     uv run python examples/fremtpl2/fetch.py
 
@@ -56,7 +56,7 @@ def fetch(name: str, url: str, expected: str) -> Path:
             f"{name}: sha256 {actual}\n"
             f"{'':>{len(name) + 2}}expected {expected}\n"
             "The upstream file changed. Verify what changed before updating the pin — the "
-            "numbers in the W7a seed record were measured against the pinned bytes."
+            "numbers in the WK-666 seed record were measured against the pinned bytes."
         )
     staging.replace(target)
     print(f"  {name:<20} {target.stat().st_size / 1e6:.1f} MB, digest verified")

@@ -1,4 +1,4 @@
-"""The approval state machine (`06` §3.2, R1, FR-GOV-9/11/12/13/14/15)."""
+"""The approval state machine (`06` §3.2, R1, FR-351/353/354/355/356/357)."""
 
 from __future__ import annotations
 
@@ -61,10 +61,10 @@ async def _submit(database: Database, workspace_id, submitter: Principal, ref=MO
         return row.id
 
 
-# -- separation of duties (R1, FR-GOV-11) ------------------------------------------------
+# -- separation of duties (R1, FR-353) ------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-11")
+@pytest.mark.req("FR-353")
 async def test_the_submitter_cannot_approve_their_own_work(
     database: Database, workspace_id
 ) -> None:
@@ -87,7 +87,7 @@ async def test_the_submitter_cannot_approve_their_own_work(
     assert exc.value.status_code == 403
 
 
-@pytest.mark.req("FR-GOV-11")
+@pytest.mark.req("FR-353")
 async def test_two_approvals_must_come_from_distinct_principals(
     database: Database, workspace_id
 ) -> None:
@@ -117,7 +117,7 @@ async def test_two_approvals_must_come_from_distinct_principals(
     assert exc.value.code == "DUPLICATE_APPROVER"
 
 
-@pytest.mark.req("FR-GOV-11")
+@pytest.mark.req("FR-353")
 def test_separation_of_duties_cannot_be_configured_away() -> None:
     """`06` §4.2 marks it `configurable: false`; a rule configuration can disable is not one."""
     from model_schema import ApprovalPolicy
@@ -126,10 +126,10 @@ def test_separation_of_duties_cannot_be_configured_away() -> None:
         ApprovalPolicy(submitter_may_approve=True)
 
 
-# -- the lifecycle (FR-GOV-9) -------------------------------------------------------------
+# -- the lifecycle (FR-351) -------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-9")
+@pytest.mark.req("FR-351")
 async def test_one_approval_approves_a_model(database: Database, workspace_id) -> None:
     submitter, approver = _user("s"), _user("a")
     await _with_role(database, workspace_id, approver, "approver")
@@ -148,7 +148,7 @@ async def test_one_approval_approves_a_model(database: Database, workspace_id) -
     assert row.decided_at is not None
 
 
-@pytest.mark.req("FR-GOV-12")
+@pytest.mark.req("FR-354")
 async def test_a_rating_version_needs_two_approvals(
     database: Database, workspace_id
 ) -> None:
@@ -173,7 +173,7 @@ async def test_a_rating_version_needs_two_approvals(
     assert row.status == ApprovalStatus.APPROVED
 
 
-@pytest.mark.req("FR-GOV-13")
+@pytest.mark.req("FR-355")
 async def test_requesting_changes_needs_a_comment_and_returns_to_draft(
     database: Database, workspace_id
 ) -> None:
@@ -198,7 +198,7 @@ async def test_requesting_changes_needs_a_comment_and_returns_to_draft(
     assert row.status == ApprovalStatus.CHANGES_REQUESTED
 
 
-@pytest.mark.req("FR-GOV-9")
+@pytest.mark.req("FR-351")
 async def test_a_decided_request_cannot_be_decided_again(
     database: Database, workspace_id
 ) -> None:
@@ -222,14 +222,14 @@ async def test_a_decided_request_cannot_be_decided_again(
     assert exc.value.code == "APPROVAL_ALREADY_DECIDED"
 
 
-# -- pinning (FR-GOV-14) -----------------------------------------------------------------
+# -- pinning (FR-356) -----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-14")
+@pytest.mark.req("FR-356")
 async def test_an_approval_does_not_carry_over_to_a_new_version(
     database: Database, workspace_id
 ) -> None:
-    """FR-GOV-14, structural rather than checked.
+    """FR-356, structural rather than checked.
 
     The request names `model:…@7`; a changed artifact is `@8` and a different reference, so
     there is no staleness check to forget. The proof is that `@8` can be submitted while
@@ -257,7 +257,7 @@ async def test_an_approval_does_not_carry_over_to_a_new_version(
     assert row.artifact_ref == "model:motor-ad-frequency@8"
 
 
-@pytest.mark.req("FR-GOV-9")
+@pytest.mark.req("FR-351")
 async def test_one_artifact_version_cannot_have_two_open_requests(
     database: Database, workspace_id
 ) -> None:
@@ -277,10 +277,10 @@ async def test_one_artifact_version_cannot_have_two_open_requests(
     assert exc.value.title == "This artifact version is already under review"
 
 
-# -- withdrawal (FR-GOV-15) ---------------------------------------------------------------
+# -- withdrawal (FR-357) ---------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-15")
+@pytest.mark.req("FR-357")
 async def test_an_approval_can_be_withdrawn_before_deployment(
     database: Database, workspace_id
 ) -> None:
@@ -302,7 +302,7 @@ async def test_an_approval_can_be_withdrawn_before_deployment(
     assert row.withdrawn_reason.startswith("Superseded")
 
 
-@pytest.mark.req("FR-GOV-15")
+@pytest.mark.req("FR-357")
 async def test_an_approval_cannot_be_withdrawn_once_the_artifact_is_live(
     database: Database, workspace_id
 ) -> None:
@@ -325,7 +325,7 @@ async def test_an_approval_cannot_be_withdrawn_once_the_artifact_is_live(
     assert exc.value.code == "WITHDRAW_AFTER_DEPLOY_FORBIDDEN"
 
 
-@pytest.mark.req("FR-GOV-15")
+@pytest.mark.req("FR-357")
 async def test_withdrawal_requires_a_reason(database: Database, workspace_id) -> None:
     submitter, approver = _user("s"), _user("a")
     await _with_role(database, workspace_id, approver, "approver")
@@ -339,10 +339,10 @@ async def test_withdrawal_requires_a_reason(database: Database, workspace_id) ->
     assert exc.value.title == "Withdrawal requires a reason"
 
 
-# -- policy (FR-GOV-12) --------------------------------------------------------------------
+# -- policy (FR-354) --------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-12")
+@pytest.mark.req("FR-354")
 async def test_a_role_the_policy_does_not_name_cannot_approve(
     database: Database, workspace_id
 ) -> None:
@@ -384,7 +384,7 @@ async def test_a_role_the_policy_does_not_name_cannot_approve(
     assert "admin" in (exc.value.detail or "")
 
 
-@pytest.mark.req("FR-GOV-12")
+@pytest.mark.req("FR-354")
 async def test_an_artifact_type_with_no_policy_cannot_be_submitted(
     database: Database, workspace_id
 ) -> None:
@@ -401,10 +401,10 @@ async def test_an_artifact_type_with_no_policy_cannot_be_submitted(
     assert exc.value.title == "No approval policy for this artifact type"
 
 
-# -- auditing (FR-GOV-20) --------------------------------------------------------------------
+# -- auditing (FR-368) --------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-GOV-20")
+@pytest.mark.req("FR-368")
 async def test_every_step_is_audited_and_the_chain_verifies(
     database: Database, workspace_id
 ) -> None:
@@ -443,7 +443,7 @@ async def test_every_step_is_audited_and_the_chain_verifies(
     assert checked == len(actions)
 
 
-@pytest.mark.req("FR-GOV-11")
+@pytest.mark.req("FR-353")
 async def test_a_decision_is_recorded_against_its_approver(
     database: Database, workspace_id
 ) -> None:
@@ -466,11 +466,11 @@ async def test_a_decision_is_recorded_against_its_approver(
     assert decision.approver_id == approver.id
     assert decision.comment == "ok"
 
-@pytest.mark.req("FR-GOV-37")
+@pytest.mark.req("FR-364")
 async def test_a_policy_below_the_evidence_floor_is_refused(
     database: Database, workspace_id
 ) -> None:
-    """Negative: `06` §3.3 is a floor and §4.2 may only add to it (OQ-GOV-7).
+    """Negative: `06` §3.3 is a floor and §4.2 may only add to it (OQ-639).
 
     The deciding case, run as written: an admin editing the transparency kind out of the
     model policy. Submission would enforce the union regardless, so what this refusal
@@ -509,11 +509,11 @@ async def test_a_policy_below_the_evidence_floor_is_refused(
         assert await approvals.policy_for(session, workspace_id) == DEFAULT_POLICY
 
 
-@pytest.mark.req("FR-GOV-37")
+@pytest.mark.req("FR-364")
 async def test_a_policy_stored_below_the_floor_is_still_submitted_against_the_floor(
     database: Database, workspace_id
 ) -> None:
-    """A policy written before FR-GOV-37 cannot dodge the floor by being old.
+    """A policy written before FR-364 cannot dodge the floor by being old.
 
     Written straight into the table, which is how a pre-2026-08-18 row got there: `set_policy`
     would refuse it now. Loading it is deliberate — refusing at read time would lock a
@@ -546,7 +546,7 @@ async def test_a_policy_stored_below_the_floor_is_still_submitted_against_the_fl
     )
 
 
-@pytest.mark.req("FR-GOV-19")
+@pytest.mark.req("FR-363")
 async def test_a_policy_dropping_the_metric_certificate_is_refused(
     database: Database, workspace_id
 ) -> None:

@@ -1,7 +1,7 @@
 """Rate-table operations (03 §3.3, slice W10-2): seeding, validation, diffs.
 
-FR-RATE-16 (seeding from an approved model), FR-RATE-19 (validation on save with named
-failures) and FR-RATE-17 (cell-level diffs with exposure weighting). The operations are
+FR-230 (seeding from an approved model), FR-234 (validation on save with named
+failures) and FR-231 (cell-level diffs with exposure weighting). The operations are
 pure: cells are rows of decimal strings (R2), weights are supplied by the caller, and
 nothing here touches a database.
 """
@@ -83,9 +83,9 @@ def _domain() -> dict[str, frozenset[str]]:
     return {"driver_age_band": frozenset({"17-20", "21-24", "25-29"})}
 
 
-@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-230")
 class TestExtractRelativityTable:
-    """A GLM's relativity table is the seed source (FR-RATE-16)."""
+    """A GLM's relativity table is the seed source (FR-230)."""
 
     def test_extracts_relativities_to_rows(self) -> None:
         """Each factor level becomes a row with the value column."""
@@ -117,9 +117,9 @@ class TestExtractRelativityTable:
             assert isinstance(row["relativity"], str)
 
 
-@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-230")
 class TestCheckModelApproved:
-    """FR-OVR-14: seeding references only approved models."""
+    """FR-20: seeding references only approved models."""
 
     def test_an_approved_model_passes(self) -> None:
         check_model_approved(_glm_model(ModelStatus.APPROVED))
@@ -132,9 +132,9 @@ class TestCheckModelApproved:
             check_model_approved(_glm_model(status))
 
 
-@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-230")
 class TestSeedFromModel:
-    """Seeding creates the table definition, cells and seed origin (FR-RATE-16)."""
+    """Seeding creates the table definition, cells and seed origin (FR-230)."""
 
     def test_seed_returns_table_cells_and_origin(self) -> None:
         result = seed_from_model(
@@ -163,9 +163,9 @@ class TestSeedFromModel:
             )
 
 
-@pytest.mark.req("FR-RATE-19")
+@pytest.mark.req("FR-234")
 class TestValidateRateTable:
-    """Validation on save, with a named failure for each mode (FR-RATE-19)."""
+    """Validation on save, with a named failure for each mode (FR-234)."""
 
     def test_complete_coverage_passes(self) -> None:
         cells = [
@@ -220,7 +220,7 @@ class TestValidateRateTable:
         assert any(i.code == "DUPLICATE_KEY" for i in issues)
 
     def test_default_row_waives_coverage(self) -> None:
-        """An explicit default_row satisfies the key-domain coverage (FR-RATE-19)."""
+        """An explicit default_row satisfies the key-domain coverage (FR-234)."""
         cells = [
             {"driver_age_band": "17-20", "relativity": "1.92"},
         ]
@@ -249,7 +249,7 @@ class TestValidateRateTable:
         assert issues[0].code == "INCOMPLETE_KEY_DOMAIN"
 
 
-@pytest.mark.req("FR-RATE-17")
+@pytest.mark.req("FR-231")
 class TestDiff:
     """Cell-level diffs: counts, max absolute change, exposure-weighted mean."""
 
@@ -276,7 +276,7 @@ class TestDiff:
         assert diff.max_abs_change_pct == Decimal("10")
 
     def test_exposure_weighted_mean_change(self) -> None:
-        """The weighted mean uses the supplied weights, signed per cell (FR-RATE-17)."""
+        """The weighted mean uses the supplied weights, signed per cell (FR-231)."""
         after = [
             {"driver_age_band": "17-20", "relativity": "1.10"},
             {"driver_age_band": "21-24", "relativity": "2.00"},

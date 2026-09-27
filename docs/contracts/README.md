@@ -1,3 +1,13 @@
+---
+family: reference
+title: Contracts
+status: active                  # active → retired (§1.2a)
+created: 2026-08-14
+owner: lead
+corrected_by: []
+relates: []                      # ids only
+---
+
 # Contracts
 
 Draft machine-readable contracts for the specification suite.
@@ -10,7 +20,7 @@ Draft machine-readable contracts for the specification suite.
 | `openapi/gi-pricing.yaml` | Phase 0 design stub for the whole `/api/v1` surface | **hand-authored** |
 
 Regenerate with `uv run python scripts/generate-contracts.py`; CI runs it with `--check`
-and fails on drift (FR-PLAT-48).
+and fails on drift (FR-451).
 
 ### Why the design stub is not overwritten
 
@@ -24,15 +34,15 @@ the stub as routes land, and the stub retires when it is reached — not before.
 Research F7 below is only visible in validation mode: a bare `Decimal` renders as
 `anyOf: [number, string]` there, and as a plain string in serialization mode. A contract
 generated from the serialization schema would look compliant while the *request* side still
-accepted the lossy JSON number FR-OVR-7 forbids. The request side is where the hazard
+accepted the lossy JSON number FR-10 forbids. The request side is where the hazard
 lives, so that is the schema that is committed.
 
 ## Status and authority
 
-Generation began in **W2 (2026-08-14)** and is partial by design: `schemas/generated/` and
+Generation began in **WK-658 (2026-08-14)** and is partial by design: `schemas/generated/` and
 `openapi/generated.json` are produced from the code, and the rest remain the Phase 0
 hand-authored drafts until the shapes they describe exist in `packages/model-schema`
-([ADR-0002](../adr/0002-model-schema-single-source-of-truth.md), FR-OVR-6, FR-PLAT-48).
+([ADR-704](../adrs/ADR-00704-model-schema-is-the-single-source-of-truth-for-shared-shapes.md), FR-9, FR-451).
 
 For a shape with **both** an authored and a generated schema, the generated one is
 authoritative — the model is the source of truth — and `backend/tests/test_contracts.py`
@@ -46,7 +56,7 @@ disagree, fix the schema.
 
 ## Changelog
 
-**2026-08-14 (W2).** Generation wired up. The comparison immediately found:
+**2026-08-14 (WK-658).** Generation wired up. The comparison immediately found:
 
 1. `ArtifactRef` serialised as a **JSON object**, while ID-3 makes
    `{type}:{slug}@{version}` the canonical external string. A frontend generated from the
@@ -65,7 +75,7 @@ disagree, fix the schema.
   relative `$ref`.
 - Every artifact composes `common/artifact-envelope.schema.json` (`00-overview.md` §4.3).
 - Monetary values are **integer minor units** (field suffix `_minor`) or decimal **strings**
-  — never JSON numbers with a fractional part (FR-OVR-7, `03` R2).
+  — never JSON numbers with a fractional part (FR-10, `03` R2).
 - Exposure and relativities are decimal strings for the same reason.
 - Artifact cross-references use the canonical string form `{type}:{slug}@{version}`
   (`00-overview.md` ID-3), validated by `common/artifact-ref.schema.json`.
@@ -87,7 +97,7 @@ not the target** — when generation replaces these files in Phase 1, expect the
 change and do not "fix" it back. A `Literal` covering two tags maps both onto one branch,
 which is exactly what `model-spec.schema.json` needs for `xgboost`/`lightgbm`.
 
-**2 — `Decimal` generates a permissive union, and that breaks FR-OVR-7.** Pydantic renders
+**2 — `Decimal` generates a permissive union, and that breaks FR-10.** Pydantic renders
 a `Decimal` field as `anyOf: [{"type": "number"}, {"type": "string", "pattern": ...}]`.
 Serialisation is safe — `model_dump_json()` emits an exact string — but the *schema* also
 admits `{"type": "number"}`, the lossy binary-float form the specification forbids. A

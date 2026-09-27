@@ -95,7 +95,7 @@ keep the fetch script alongside the spike.
 2026-08-14 — Used for six spikes: SymPy 1.14.0 (Piecewise differentiation), XGBoost 3.4.0
 (`base_margin` inclusion in `predt`), Pydantic 2.13.4 (discriminated unions and `Decimal`
 to JSON Schema), a kink-isolation follow-up, and **spike S3** (LightGBM 4.7.0 `init_score`
-symmetry, which found a real asymmetry → FR-MODEL-72). **Three produced specification
+symmetry, which found a real asymmetry → FR-129). **Three produced specification
 changes.**
 
 Every trap documented above was hit for real in those runs: the `pydantic-core` version

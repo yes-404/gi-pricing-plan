@@ -1,11 +1,11 @@
-"""Spec validation, and FR-MODEL-81's gate (`02` FR-MODEL-44, FR-MODEL-81, `wf-01` D2).
+"""Spec validation, and FR-185's gate (`02` FR-153, FR-185, `WF-698` D2).
 
 Two things are being proved, and the second is the one that was missing:
 
 * a spec that cannot be fitted is refused **before any compute**, reporting every reason at
   once rather than the first;
 * the complexity limits are a **gate**, not only a diagnostic. The diagnostics slice
-  recorded the counts and shipped no gate, and FR-MODEL-81 counted as evidenced anyway
+  recorded the counts and shipped no gate, and FR-185 counted as evidenced anyway
   because a test marked it — `CLAUDE.md` §13's "a marker is a claim, not a proof".
 """
 
@@ -44,7 +44,7 @@ from model_schema import (
 
 async def _set(database, workspace_id, actor, key, value) -> None:
     async with database.unit_of_work() as session:
-        # `workspace_settings` references `workspaces` (FR-PLAT-62) and this helper does
+        # `workspace_settings` references `workspaces` (FR-395) and this helper does
         # not go through `grant`, so the workspace row arrives here.
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await settings_service.set_workspace_setting(session, workspace_id, key, value)
@@ -68,7 +68,7 @@ async def _validate(database, workspace_id, actor, spec):
         )
 
 
-@pytest.mark.req("FR-MODEL-102")
+@pytest.mark.req("FR-141")
 async def test_a_surrogate_spec_is_not_reported_as_missing_its_response(
     database, blob_store, workspace_id
 ) -> None:
@@ -89,7 +89,7 @@ async def test_a_surrogate_spec_is_not_reported_as_missing_its_response(
     assert not [p for p in result.problems if p.kind is SpecProblemKind.RESPONSE_MISSING]
 
 
-@pytest.mark.req("FR-MODEL-102")
+@pytest.mark.req("FR-141")
 async def test_an_ordinary_spec_still_reports_a_response_column_it_does_not_have(
     database, blob_store, workspace_id
 ) -> None:
@@ -102,7 +102,7 @@ async def test_an_ordinary_spec_still_reports_a_response_column_it_does_not_have
     assert [p for p in result.problems if p.kind is SpecProblemKind.RESPONSE_MISSING]
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_a_sound_spec_validates(database, blob_store, workspace_id) -> None:
     actor, _, version_id, area, split = await _ready(database, blob_store, workspace_id)
     result = await _validate(
@@ -114,7 +114,7 @@ async def test_a_sound_spec_validates(database, blob_store, workspace_id) -> Non
     assert result.estimated_parameter_count >= 2  # intercept + at least one level
 
 
-@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.req("FR-153")
 async def test_every_problem_is_reported_not_only_the_first(
     database, blob_store, workspace_id
 ) -> None:
@@ -138,7 +138,7 @@ async def test_every_problem_is_reported_not_only_the_first(
     assert SpecProblemKind.RESPONSE_MISSING in kinds
 
 
-@pytest.mark.req("FR-MODEL-5")
+@pytest.mark.req("FR-90")
 async def test_a_prohibited_factor_is_named_in_the_problems(
     database, blob_store, workspace_id
 ) -> None:
@@ -166,7 +166,7 @@ async def test_a_prohibited_factor_is_named_in_the_problems(
     assert problem.subject == "postcode"
 
 
-@pytest.mark.req("FR-MODEL-54")
+@pytest.mark.req("FR-183")
 async def test_a_spec_with_no_split_is_reported_before_the_job(
     database, blob_store, workspace_id
 ) -> None:
@@ -178,12 +178,12 @@ async def test_a_spec_with_no_split_is_reported_before_the_job(
     assert {p.kind for p in result.problems} == {SpecProblemKind.SPLIT_MISSING}
 
 
-# -- FR-MODEL-81: the gate, not only the diagnostic -----------------------------------------
+# -- FR-185: the gate, not only the diagnostic -----------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 async def test_no_limit_is_set_by_default(database, blob_store, workspace_id) -> None:
-    """OQ-MODEL-6 refused a platform-wide constant. Unset means no gate — not a gate at
+    """OQ-580 refused a platform-wide constant. Unset means no gate — not a gate at
     zero, which nothing could satisfy."""
     actor, _, version_id, area, split = await _ready(database, blob_store, workspace_id)
     result = await _validate(
@@ -194,7 +194,7 @@ async def test_no_limit_is_set_by_default(database, blob_store, workspace_id) ->
     assert result.ok is True
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 async def test_a_workspace_factor_limit_refuses_a_breaching_spec(
     database, blob_store, workspace_id
 ) -> None:
@@ -223,11 +223,11 @@ async def test_a_workspace_factor_limit_refuses_a_breaching_spec(
     assert refused.max_factor_count == 1
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 async def test_an_exposure_per_parameter_limit_refuses_and_is_audited(
     database, blob_store, workspace_id
 ) -> None:
-    """The gate half of FR-MODEL-81, which the diagnostics slice did not deliver.
+    """The gate half of FR-185, which the diagnostics slice did not deliver.
 
     The threshold is set absurdly high rather than the spec made absurdly complex, because
     what is under test is that the limit *fires*, not that a large spec can be built."""
@@ -248,7 +248,7 @@ async def test_an_exposure_per_parameter_limit_refuses_and_is_audited(
     assert problem.subject == "modelling.min_exposure_per_parameter"
     assert refused.exposure_per_parameter is not None
 
-    # FR-MODEL-81 requires the refusal to be audited.
+    # FR-185 requires the refusal to be audited.
     async with database.session() as session:
         actions = (
             await session.execute(
@@ -261,7 +261,7 @@ async def test_an_exposure_per_parameter_limit_refuses_and_is_audited(
     assert actions, "the complexity refusal is audited"
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 async def test_the_gate_also_refuses_at_post_models(
     database, blob_store, workspace_id
 ) -> None:
@@ -281,7 +281,7 @@ async def test_the_gate_also_refuses_at_post_models(
     assert refused.value.status_code == 422
 
 
-@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.req("FR-185")
 async def test_the_gate_costs_nothing_when_no_limit_is_set(
     database, blob_store, workspace_id
 ) -> None:
@@ -295,12 +295,12 @@ async def test_the_gate_costs_nothing_when_no_limit_is_set(
         )
 
 
-# -- FR-MODEL-24: a `kind="model"` offset's ref resolves before a job is queued ------------
+# -- FR-116: a `kind="model"` offset's ref resolves before a job is queued ------------
 
 
 async def _residual_ready(database, blob_store, workspace_id):
     """`_ready` for a model-offset spec: the residual book's validated version, its
-    `resid_flag` factor and its split (FR-MODEL-24)."""
+    `resid_flag` factor and its split (FR-116)."""
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
     version_id = await _residual_version(
@@ -313,12 +313,12 @@ async def _residual_ready(database, blob_store, workspace_id):
     return actor, dataset_id, version_id, resid_flag, split
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_ref_naming_no_model_is_reported_before_the_job(
     database, blob_store, workspace_id
 ) -> None:
     """`model:ghost@1` resolves to nothing. The problem is reported here, before a Job is
-    queued — the fit handler's refusal would arrive after a 202 (`wf-01` D2, FR-MODEL-44)."""
+    queued — the fit handler's refusal would arrive after a 202 (`WF-698` D2, FR-153)."""
     actor, _, version_id, resid_flag, split = await _residual_ready(
         database, blob_store, workspace_id
     )
@@ -334,7 +334,7 @@ async def test_a_ref_naming_no_model_is_reported_before_the_job(
     assert problem.subject == "model:ghost@1"
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_ref_naming_an_unfitted_model_is_reported_before_the_job(
     database, blob_store, workspace_id
 ) -> None:
@@ -362,7 +362,7 @@ async def test_a_ref_naming_an_unfitted_model_is_reported_before_the_job(
     assert problem.subject == unfitted_ref
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_link_mismatch_is_reported_before_the_job(
     database, blob_store, workspace_id
 ) -> None:
@@ -383,7 +383,7 @@ async def test_a_link_mismatch_is_reported_before_the_job(
     assert problem.subject == pair.ref
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_valid_offset_ref_is_not_reported_as_unresolvable(
     database, blob_store, workspace_id
 ) -> None:

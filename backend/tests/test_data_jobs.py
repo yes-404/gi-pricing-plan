@@ -4,7 +4,7 @@ Phase 1a's exit criterion is *a dataset version reaches `validated`, having been
 the failure loop at least once*. This file is that criterion as a test: ingest, validate,
 fail, fix the data, re-validate, acknowledge, promote.
 
-`execute_job` is driven directly rather than through a broker — the broker hop is W2's
+`execute_job` is driven directly rather than through a broker — the broker hop is WK-658's
 test, and what these need to prove is what the handlers do.
 """
 
@@ -50,7 +50,7 @@ from model_schema import (
 )
 
 #: `read_tabular` reads every column as a string on purpose — inference happens from the
-#: confirmed schema (FR-DATA-4), so a policy id of `007` does not become `7`. The
+#: confirmed schema (FR-29), so a policy id of `007` does not become `7`. The
 #: consequence is that a realistic ingestion **always** carries a cast recipe: without one
 #: every numeric validation rule compares a string to a number and errors.
 CAST_RECIPE = [
@@ -69,7 +69,7 @@ CAST_RECIPE = [
 
 #: `0.07` rather than a round number on purpose. Summed as binary floats, 300 of them give
 #: 21.000000000000004; summed as `Decimal`, exactly 21.00. A totals test over `1.0` cannot
-#: tell the two apart, and FR-OVR-7 is the difference.
+#: tell the two apart, and FR-10 is the difference.
 CLEAN = (
     b"Policy ID,Exposure Years,Claim Count,Claim Amount Minor,Vehicle Group\n"
     + b"".join(
@@ -89,7 +89,7 @@ def _handlers() -> None:
 async def actuary(database: Database, workspace_id) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
     async with database.unit_of_work() as session:
-        # The workspace row must exist for the membership FK (FR-PLAT-62).
+        # The workspace row must exist for the membership FK (FR-395).
         from app.platform import workspaces
 
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
@@ -222,13 +222,13 @@ async def _validate(
     return reports[0].id
 
 
-@pytest.mark.req("FR-DATA-25")
-@pytest.mark.req("FR-OVR-3")
-@pytest.mark.req("FR-DATA-26")
+@pytest.mark.req("FR-60")
+@pytest.mark.req("FR-6")
+@pytest.mark.req("FR-61")
 async def test_ingestion_produces_a_version_and_its_profile(
     database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
 ) -> None:
-    """FR-DATA-25: profiling runs after a successful ingestion.
+    """FR-60: profiling runs after a successful ingestion.
 
     In the same Job, not a second one — a separate profiling Job could be cancelled,
     leaving a version with no profile and nothing recording why.
@@ -237,7 +237,7 @@ async def test_ingestion_produces_a_version_and_its_profile(
     decorative" is true of `job_id` and `weight_column`. Both fields default — `None` and
     `"exposure_years"` — so a profile built by a handler that never passes them validates
     and stores exactly as one that does. Nothing but this test distinguishes the two, and
-    `produced_by_job_id` (FR-OVR-3) is what makes a displayed number traceable to the
+    `produced_by_job_id` (FR-6) is what makes a displayed number traceable to the
     computation behind it.
     """
     dataset_id = await _seed_dataset_and_rules(database, blob_store, workspace_id, actuary)
@@ -253,7 +253,7 @@ async def test_ingestion_produces_a_version_and_its_profile(
     assert {summary.column for summary in profile.one_ways} == {"vehicle_group"}
     assert profile.one_ways[0].rows[0].frequency is not None
 
-    # FR-OVR-3 — and specifically *this* Job's id, not merely some id. `is not None` would
+    # FR-6 — and specifically *this* Job's id, not merely some id. `is not None` would
     # pass on a handler that invented one; the profile has to carry the ingestion Job that
     # produced it, because that is the provenance link a reader follows back.
     async with database.session() as session:
@@ -278,7 +278,7 @@ async def test_ingestion_produces_a_version_and_its_profile(
             )
         ).scalar_one()
     assert stored_job_id == ingest_job_id
-    # FR-DATA-26. This one is a round-trip check, not a wiring check: `weight_column`
+    # FR-61. This one is a round-trip check, not a wiring check: `weight_column`
     # defaults to "exposure_years" and this fixture's exposure column is named that too, so
     # it would pass even if nothing recorded the argument. The wiring itself is proven in
     # pricing-core, by a test that profiles a frame whose exposure column is named
@@ -286,12 +286,12 @@ async def test_ingestion_produces_a_version_and_its_profile(
     assert profile.weight_column == "exposure_years"
 
 
-@pytest.mark.req("FR-DATA-15")
-@pytest.mark.req("FR-DATA-43")
+@pytest.mark.req("FR-42")
+@pytest.mark.req("FR-52")
 async def test_the_failure_loop_then_validated(
     database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
 ) -> None:
-    """Phase 1a's exit criterion, end to end (`01` §1.3, FR-DATA-15, FR-DATA-17).
+    """Phase 1a's exit criterion, end to end (`01` §1.3, FR-42, FR-46).
 
     A version with a negative exposure fails validation and **cannot** be promoted — no
     override, no force-fit. The fix is to the data, not to the verdict.
@@ -313,7 +313,7 @@ async def test_the_failure_loop_then_validated(
     from app.errors import PlatformError
 
     # No manual transition: `dataset.validate` opens `validating` and closes it. A failing
-    # report now leaves the version `failed` (FR-DATA-43) rather than resting in a
+    # report now leaves the version `failed` (FR-52) rather than resting in a
     # transient state that reads as "still running".
     async with database.session() as session:
         row = await session.get(DatasetVersionRow, bad_version)
@@ -359,11 +359,11 @@ async def test_the_failure_loop_then_validated(
     assert refused.value.code == "DATASET_NOT_VALIDATED"
 
 
-@pytest.mark.req("FR-DATA-9")
+@pytest.mark.req("FR-35")
 async def test_a_preparation_recipe_is_applied_during_ingestion(
     database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
 ) -> None:
-    """FR-DATA-9 and FR-DATA-14: applied *during* ingestion and stored with the version.
+    """FR-35 and FR-41: applied *during* ingestion and stored with the version.
 
     Applying it afterwards would leave the parquet on the version disagreeing with the
     totals, profile and validation report that describe it.
@@ -417,7 +417,7 @@ async def test_a_preparation_recipe_is_applied_during_ingestion(
     ]
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 async def test_an_ingested_version_reads_back_over_http(
     database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
 ) -> None:
@@ -425,7 +425,7 @@ async def test_an_ingested_version_reads_back_over_http(
     version back **through the API**.
 
     `GET /datasets/{slug}/versions/{version}` returned **500 on every ingested version**.
-    `_store_table` writes `source_names` per table (FR-DATA-5), `DatasetTable` is
+    `_store_table` writes `source_names` per table (FR-30), `DatasetTable` is
     `extra="forbid"` and did not declare it, so `DatasetVersion.model_validate` refused the
     row the platform had itself written.
 
@@ -469,17 +469,17 @@ async def test_an_ingested_version_reads_back_over_http(
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["version"] == version.version
-    # The header the column came from, which normalisation is lossy about (FR-DATA-5).
+    # The header the column came from, which normalisation is lossy about (FR-30).
     table = body["tables"][0]
     assert table["source_names"], "the source headers did not survive the round trip"
     assert table["row_count"] > 0
 
 
-@pytest.mark.req("FR-DATA-6")
+@pytest.mark.req("FR-31")
 async def test_a_version_links_to_the_ingestion_run_that_made_it(
     database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
 ) -> None:
-    """FR-DATA-6 keeps the run whether it succeeded or failed — and the version must point
+    """FR-31 keeps the run whether it succeeded or failed — and the version must point
     at it, or "why is my row count short?" has no answer.
 
     `IngestionRunRow.id` carries a Python-side `default=new_uuid7`, which SQLAlchemy
@@ -505,13 +505,13 @@ async def test_a_version_links_to_the_ingestion_run_that_made_it(
     assert run.rows_read == run.rows_written + run.rows_rejected
 
 
-@pytest.mark.req("FR-DATA-40")
+@pytest.mark.req("FR-34")
 async def test_ingestion_computes_the_version_totals_exactly(
     database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
 ) -> None:
     """`01` §4.2's headline numbers, computed once and stored with the version.
 
-    Exposure is summed as `Decimal` and stored as a string (FR-OVR-7). The fixture is 300
+    Exposure is summed as `Decimal` and stored as a string (FR-10). The fixture is 300
     rows at 0.07 years, chosen because binary floats sum them to 21.000000000000004 while
     `Decimal` gives exactly 21.00 — a totals test over round numbers cannot tell the two
     apart, and this one is the difference between the discipline holding and being decorative.

@@ -1,4 +1,4 @@
-"""Service Account management (`07` §5.1, FR-PLAT-3, FR-PLAT-6).
+"""Service Account management (`07` §5.1, FR-389, FR-392).
 
 | Method | Path |
 |---|---|
@@ -39,7 +39,7 @@ router = APIRouter(prefix="/service-accounts", tags=["platform"])
 
 ManageAccounts = Annotated[Caller, Depends(requires(Perm.ADMIN_MANAGE_SERVICE_ACCOUNTS))]
 
-#: FR-PLAT-3 scopes service accounts to scoring. A key that could fit a model or approve a
+#: FR-389 scopes service accounts to scoring. A key that could fit a model or approve a
 #: rating version would be a standing credential with an actuary's authority.
 ALLOWED_PERMISSIONS = frozenset({"score:execute", "score:batch"})
 
@@ -92,7 +92,7 @@ class ServiceAccountView(BaseModel):
 
 
 class CreatedServiceAccount(BaseModel):
-    """The one response that carries a key value (FR-PLAT-3)."""
+    """The one response that carries a key value (FR-389)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -132,7 +132,7 @@ def _check_permissions(requested: list[str]) -> None:
             "VALIDATION_FAILED",
             "Unsupported permission for a service account",
             422,
-            f"{sorted(unknown)} is not in {sorted(ALLOWED_PERMISSIONS)}. FR-PLAT-3 scopes "
+            f"{sorted(unknown)} is not in {sorted(ALLOWED_PERMISSIONS)}. FR-389 scopes "
             "service accounts to the scoring permission set.",
         )
 
@@ -188,7 +188,7 @@ async def create_service_account(
         session.add(key)
         await session.flush()
 
-        # FR-PLAT-6 / FR-PLAT-27: the *prefix* is audited, never the secret. An audit log
+        # FR-392 / FR-427: the *prefix* is audited, never the secret. An audit log
         # that recorded the value would be a credential store with a retention policy.
         await audit.record(
             session,
@@ -220,7 +220,7 @@ async def rotate_key(
     database: DatabaseDep,
     overlap_days: Annotated[int, Field(ge=0, le=90)] = DEFAULT_ROTATION_OVERLAP_DAYS,
 ) -> CreatedServiceAccount:
-    """Issue a new key and give the old one a deadline (FR-PLAT-3).
+    """Issue a new key and give the old one a deadline (FR-389).
 
     The old key keeps working for the overlap window rather than dying immediately. A
     rotation that breaks production the instant it is requested is a rotation nobody

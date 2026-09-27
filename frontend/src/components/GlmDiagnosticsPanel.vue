@@ -6,11 +6,11 @@ import type { GlmDiagnostics } from "@/api/diagnostics";
 const props = defineProps<{ glm: GlmDiagnostics }>();
 
 /**
- * GLM-specific diagnostics (FR-MODEL-51).
+ * GLM-specific diagnostics (FR-172).
  *
  * None of it is partitioned: `GlmDiagnostics` declares neither `train` nor `holdout`, because
  * a deviance, a variance inflation factor and a type-III test are properties of one fit
- * rather than measurements against a population of rows (FR-MODEL-54, as scoped 2026-08-24).
+ * rather than measurements against a population of rows (FR-183, as scoped 2026-08-24).
  *
  * `aic` and `bic` are nullable and rendered as an em dash when absent. The contract says why:
  * a family with no closed-form likelihood this platform evaluates — Tweedie's density needs a
@@ -31,12 +31,12 @@ const statistics = computed(() => [
  * real and comes from the schema: `Field(default_factory=dict)` emits no `default`, so
  * openapi-typescript marks the property optional, whereas `= ()` emits `default: []` and it
  * stays required. Not a shape to hand-correct — the generator is the source of truth
- * (ADR-0002), so the reader absorbs it here.
+ * (ADR-704), so the reader absorbs it here.
  */
 const vif = computed(() => Object.entries(props.glm.vif ?? {}));
 
 /**
- * FR-MODEL-109: an `aliasing` entry is the **bare name** of a collinear term, and the
+ * FR-173: an `aliasing` entry is the **bare name** of a collinear term, and the
  * contract says so — the field is read by a human deciding which factor to drop, and a name
  * is what they act on. The object form `{term, aliased_with, reason}` is not shipped; if this
  * view needs those fields, that is a new requirement raised at that point.
@@ -44,7 +44,7 @@ const vif = computed(() => Object.entries(props.glm.vif ?? {}));
 const aliasing = computed(() => props.glm.aliasing);
 
 /**
- * FR-MODEL-51 also names standardised deviance and Pearson residual plots and leverage on a
+ * FR-172 also names standardised deviance and Pearson residual plots and leverage on a
  * sample. The contract carries only blob **references** for those, and no endpoint resolves
  * one — `02`'s NFR note names the owner as the slice that first stores a per-row residual
  * series, which is not this one. So the presence of a reference is reported and the series is
@@ -252,7 +252,7 @@ const blobs = computed(() =>
         </li>
       </ul>
       <p class="mt-1 text-xs text-slate-500">
-        FR-MODEL-51 names residual and leverage plots. The artifact carries a reference rather
+        FR-172 names residual and leverage plots. The artifact carries a reference rather
         than the series, and no read resolves one yet, so they are named here rather than
         drawn empty.
       </p>

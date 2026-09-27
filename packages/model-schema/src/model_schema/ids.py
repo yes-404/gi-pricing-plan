@@ -10,7 +10,7 @@ difference between an index that stays in cache and one that does not.
 
 `uuid7` is not in the standard library until 3.14, so it is implemented here rather than
 taken as a dependency: it is thirty lines of bit-packing, and `model-schema` is the one
-package whose dependency list is a contract (ADR-0002).
+package whose dependency list is a contract (ADR-704).
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ def new_uuid7(*, timestamp_ms: int | None = None) -> UUID:
 def uuid7_timestamp_ms(value: UUID) -> int:
     """Recover the embedded millisecond timestamp from a UUIDv7.
 
-    Useful for retention sweeps (FR-PLAT-14 keeps job history ≥ 13 months): the age of a
+    Useful for retention sweeps (FR-410 keeps job history ≥ 13 months): the age of a
     row is readable from its key without a column or an index.
     """
     if value.version != _VERSION:

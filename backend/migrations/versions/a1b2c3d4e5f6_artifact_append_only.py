@@ -1,11 +1,11 @@
-"""artifacts are immutable in the database, not by convention (FR-DATA-42)
+"""artifacts are immutable in the database, not by convention (FR-43)
 
-`01` FR-DATA-15 says a Validation Report is immutable and re-validation creates a new one.
+`01` FR-42 says a Validation Report is immutable and re-validation creates a new one.
 Until this migration that was `frozen=True` on a Pydantic model — a rule about one process.
 An independent audit rewrote **190 stored reports** from `fail` to `pass` in a single
 statement, which is the whole gate `01` §1.3 describes, undone by one `UPDATE`.
 
-Three tables become append-only on the pattern `audit_events` already uses (FR-GOV-22): a
+Three tables become append-only on the pattern `audit_events` already uses (FR-370): a
 row trigger for `UPDATE`/`DELETE`, a **statement** trigger for `TRUNCATE` because row
 triggers do not fire on it, and privileges narrowed to `SELECT, INSERT` for the application
 role.
@@ -35,7 +35,7 @@ depends_on: str | Sequence[str] | None = None
 
 APP_ROLE = "gip_app"
 
-#: The tables `01` FR-DATA-42 names. Each holds an artifact something else cites as
+#: The tables `01` FR-43 names. Each holds an artifact something else cites as
 #: evidence: a report a version's `validated` status depends on, a profile a factor
 #: workbench reads, an acknowledgement that let a warning through.
 APPEND_ONLY = ("validation_reports", "profiles", "validation_acknowledgements")
@@ -44,7 +44,7 @@ APPEND_ONLY_FUNCTION = """
 CREATE OR REPLACE FUNCTION artifact_append_only() RETURNS trigger AS $fn$
 BEGIN
   RAISE EXCEPTION
-    '% is append-only: % rejected (01 FR-DATA-15, FR-DATA-42)', TG_TABLE_NAME, TG_OP
+    '% is append-only: % rejected (01 FR-42, FR-43)', TG_TABLE_NAME, TG_OP
     USING ERRCODE = 'insufficient_privilege',
           HINT = 'Artifacts are never rewritten. Produce a new one; the old one is evidence.';
 END;
@@ -84,7 +84,7 @@ def upgrade() -> None:
               BEFORE TRUNCATE ON {table}
               FOR EACH STATEMENT EXECUTE FUNCTION artifact_append_only();
         """)
-        # Layer 1, as FR-GOV-22 does it: the application cannot even attempt the write.
+        # Layer 1, as FR-370 does it: the application cannot even attempt the write.
         # Revoking from the *owner* does not work — ownership carries implicit privileges,
         # which is why the triggers above exist as well.
         op.execute(f"GRANT SELECT, INSERT ON {table} TO {APP_ROLE}")

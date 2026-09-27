@@ -1,8 +1,8 @@
 """The `01` non-functional requirements that are assertions rather than timings.
 
-NFR-DATA-1/2/3 are throughput budgets and are *measured* rather than tested — a timing
+NFR-465/466/467 are throughput budgets and are *measured* rather than tested — a timing
 assertion in CI fails on a busy runner and teaches everyone to re-run it, which is worse
-than no check. Their measurements are recorded in the W4 closure evidence.
+than no check. Their measurements are recorded in the WK-660 closure evidence.
 """
 
 from __future__ import annotations
@@ -41,9 +41,9 @@ async def _analyst(database: Database, workspace_id) -> Principal:
     return user
 
 
-@pytest.mark.req("NFR-DATA-5")
+@pytest.mark.req("NFR-469")
 def test_validation_is_deterministic() -> None:
-    """NFR-DATA-5: the same version and rule set version produce byte-identical report
+    """NFR-469: the same version and rule set version produce byte-identical report
     bodies apart from timestamps and ids.
 
     Determinism is what makes a report evidence. If two runs over identical data could
@@ -107,11 +107,11 @@ def test_validation_is_deterministic() -> None:
     assert [r.rule_slug for r in second.results] == [r.slug for r in rules]
 
 
-@pytest.mark.req("NFR-DATA-6")
+@pytest.mark.req("NFR-470")
 async def test_identical_tables_across_versions_are_stored_once(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """NFR-DATA-6: identical tables across versions are deduplicated by content hash.
+    """NFR-470: identical tables across versions are deduplicated by content hash.
 
     Two versions of a dataset usually share most of their tables — a re-ingest that only
     corrects the claims file should not double the storage of the exposure file. Content
@@ -144,11 +144,11 @@ async def test_identical_tables_across_versions_are_stored_once(
     assert len(rows) == 1
 
 
-@pytest.mark.req("NFR-DATA-8")
+@pytest.mark.req("NFR-472")
 async def test_every_dataset_transition_emits_an_audit_event_with_before_and_after(
     database: Database, workspace_id
 ) -> None:
-    """NFR-DATA-8: transitions, acknowledgements, dictionary edits, rule-set changes and
+    """NFR-472: transitions, acknowledgements, dictionary edits, rule-set changes and
     purges each emit an Audit Event with before and after state."""
     actor = await _analyst(database, workspace_id)
     async with database.unit_of_work() as session:
@@ -180,11 +180,11 @@ async def test_every_dataset_transition_emits_an_audit_event_with_before_and_aft
     assert events[0].after["status"] == "validating"
 
 
-@pytest.mark.req("NFR-DATA-10")
+@pytest.mark.req("NFR-474")
 async def test_a_failed_ingestion_leaves_no_partially_visible_version(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """NFR-DATA-10: version rows become visible only on successful commit.
+    """NFR-474: version rows become visible only on successful commit.
 
     A half-written version is worse than none: it looks like a dataset, and the first thing
     anyone does with a dataset is fit on it. The unit of work is what makes this true —
@@ -217,9 +217,9 @@ async def test_a_failed_ingestion_leaves_no_partially_visible_version(
     assert versions == []
 
 
-@pytest.mark.req("NFR-DATA-4")
+@pytest.mark.req("NFR-468")
 def test_a_one_way_is_read_from_the_profile_not_recomputed() -> None:
-    """NFR-DATA-4: a one-way read from a stored Profile is never computed on request.
+    """NFR-468: a one-way read from a stored Profile is never computed on request.
 
     Asserted structurally — the summaries are a field on the artifact, so reading one is a
     lookup rather than a scan. A property that recomputed would meet the latency budget

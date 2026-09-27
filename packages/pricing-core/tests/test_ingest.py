@@ -1,7 +1,7 @@
-"""Deterministic ingestion helpers (FR-DATA-4, FR-DATA-5, FR-DATA-7).
+"""Deterministic ingestion helpers (FR-29, FR-30, FR-32).
 
 Pure functions, so these run without a database, a broker or a platform — which is
-ADR-0001's promise and the reason they are here rather than in the backend.
+ADR-703's promise and the reason they are here rather than in the backend.
 """
 
 from __future__ import annotations
@@ -18,10 +18,10 @@ from pricing_core.data.ingest import (
     partition_rejects,
 )
 
-# -- FR-DATA-5: normalisation --------------------------------------------------------------
+# -- FR-30: normalisation --------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -41,9 +41,9 @@ def test_names_normalise_to_snake_case(raw: str, expected: str) -> None:
     assert normalise_column_name(raw) == expected
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 def test_normalisation_is_deterministic() -> None:
-    """FR-DATA-5 says deterministic, so the same input gives the same output every time —
+    """FR-30 says deterministic, so the same input gives the same output every time —
     including across processes, which rules out anything hash-ordered."""
     names = ["Policy ID", "Vehicle Group", "Gross Premium £"]
     assert [normalise_column_name(n) for n in names] == [
@@ -51,9 +51,9 @@ def test_normalisation_is_deterministic() -> None:
     ]
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 def test_a_collision_is_an_error_not_a_silent_rename() -> None:
-    """The negative test FR-DATA-5 exists for.
+    """The negative test FR-30 exists for.
 
     Without it the second column overwrites the first and an actuary fits on data that
     silently lost a field.
@@ -64,9 +64,9 @@ def test_a_collision_is_an_error_not_a_silent_rename() -> None:
     assert {exc.value.first, exc.value.second} == {"Policy ID", "policy id"}
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 def test_the_source_name_is_retained() -> None:
-    """FR-DATA-5: the original goes in the Data Dictionary as `source_name`."""
+    """FR-30: the original goes in the Data Dictionary as `source_name`."""
     mapping = normalise_columns(["Policy ID", "Gross Premium £"])
     assert mapping.source_names == {
         "policy_id": "Policy ID",
@@ -78,16 +78,16 @@ def test_the_source_name_is_retained() -> None:
     }
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 def test_a_name_that_normalises_to_nothing_is_refused() -> None:
     with pytest.raises(ValueError, match="normalises to nothing"):
         normalise_column_name("£$%")
 
 
-# -- FR-DATA-4: schema inference -----------------------------------------------------------
+# -- FR-29: schema inference -----------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-4")
+@pytest.mark.req("FR-29")
 def test_inference_reports_dtype_nullability_and_cardinality() -> None:
     frame = pl.DataFrame(
         {
@@ -107,14 +107,14 @@ def test_inference_reports_dtype_nullability_and_cardinality() -> None:
     assert "Int" in by_name["vehicle_group"].dtype
 
 
-@pytest.mark.req("FR-DATA-4")
+@pytest.mark.req("FR-29")
 def test_a_unique_non_null_column_is_a_candidate_key() -> None:
     frame = pl.DataFrame({"policy_id": ["P1", "P2"], "peril": ["AD", "AD"]})
     schema = infer_schema(frame)
     assert schema.candidate_keys == ("policy_id",)
 
 
-@pytest.mark.req("FR-DATA-4")
+@pytest.mark.req("FR-29")
 def test_a_single_row_frame_proposes_no_keys() -> None:
     """Negative: every column of a one-row sample is 'unique'. Proposing all of them as
     keys would make the first upload of a sample file suggest nonsense."""
@@ -122,13 +122,13 @@ def test_a_single_row_frame_proposes_no_keys() -> None:
     assert schema.candidate_keys == ()
 
 
-@pytest.mark.req("FR-DATA-4")
+@pytest.mark.req("FR-29")
 def test_a_nullable_column_is_not_a_candidate_key() -> None:
     frame = pl.DataFrame({"maybe_id": ["A", None, "C"]})
     assert infer_schema(frame).candidate_keys == ()
 
 
-@pytest.mark.req("FR-DATA-4")
+@pytest.mark.req("FR-29")
 @pytest.mark.parametrize(
     ("values", "expected"),
     [
@@ -143,11 +143,11 @@ def test_date_formats_are_sniffed(values: list[str], expected: str | None) -> No
     assert infer_schema(frame).columns[0].date_format == expected
 
 
-@pytest.mark.req("FR-DATA-4")
+@pytest.mark.req("FR-29")
 def test_an_ambiguous_date_resolves_to_the_british_form() -> None:
     """`03/04/2026` is both `%d/%m/%Y` and `%m/%d/%Y`, and data cannot say which.
 
-    The order is a documented default for a UK/EU platform, and FR-DATA-4 makes the user
+    The order is a documented default for a UK/EU platform, and FR-29 makes the user
     confirm — which is the only honest resolution. Asserted so the default cannot change
     silently.
     """
@@ -155,19 +155,19 @@ def test_an_ambiguous_date_resolves_to_the_british_form() -> None:
     assert infer_schema(frame).columns[0].date_format == "%d/%m/%Y"
 
 
-@pytest.mark.req("FR-DATA-4")
+@pytest.mark.req("FR-29")
 def test_inference_carries_a_sample_for_the_confirmation_screen() -> None:
     frame = pl.DataFrame({"peril": ["AD", "TP", "FT", "WS"]})
     column = infer_schema(frame, sample_values=2).columns[0]
     assert column.sample == ("AD", "TP")
 
 
-# -- FR-DATA-7: quarantine -----------------------------------------------------------------
+# -- FR-32: quarantine -----------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-7")
+@pytest.mark.req("FR-32")
 def test_rows_missing_a_required_value_are_quarantined_not_dropped() -> None:
-    """The point of FR-DATA-7: an unparseable row is evidence about the feed."""
+    """The point of FR-32: an unparseable row is evidence about the feed."""
     frame = pl.DataFrame(
         {
             "policy_id": ["P1", "P2", "P3"],
@@ -185,7 +185,7 @@ def test_rows_missing_a_required_value_are_quarantined_not_dropped() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-7")
+@pytest.mark.req("FR-32")
 def test_no_rows_are_lost_between_clean_and_rejected() -> None:
     """Negative: the whole requirement is that nothing disappears silently."""
     frame = pl.DataFrame(
@@ -195,7 +195,7 @@ def test_no_rows_are_lost_between_clean_and_rejected() -> None:
     assert partition.clean.height + partition.rejected.height == frame.height
 
 
-@pytest.mark.req("FR-DATA-7")
+@pytest.mark.req("FR-32")
 def test_the_reject_rate_is_reported_for_the_threshold_rule() -> None:
     """`ingest.reject_rate` is a rule; this function reports, it does not decide."""
     frame = pl.DataFrame({"a": [1, 2, 3, 4], "b": [None, None, 3, 4]})
@@ -203,14 +203,14 @@ def test_the_reject_rate_is_reported_for_the_threshold_rule() -> None:
     assert partition.reject_rate == 0.5
 
 
-@pytest.mark.req("FR-DATA-7")
+@pytest.mark.req("FR-32")
 def test_the_reason_names_the_first_failing_column() -> None:
     frame = pl.DataFrame({"a": [None], "b": [None]})
     partition = partition_rejects(frame, required_non_null=["a", "b"])
     assert partition.rejected.get_column(REJECT_REASON_COLUMN).to_list() == ["a is null"]
 
 
-@pytest.mark.req("FR-DATA-7")
+@pytest.mark.req("FR-32")
 def test_a_frame_with_no_required_columns_rejects_nothing() -> None:
     frame = pl.DataFrame({"a": [1, None]})
     partition = partition_rejects(frame)
@@ -219,7 +219,7 @@ def test_a_frame_with_no_required_columns_rejects_nothing() -> None:
     assert partition.reject_rate == 0.0
 
 
-@pytest.mark.req("FR-DATA-7")
+@pytest.mark.req("FR-32")
 def test_a_missing_required_column_is_an_error() -> None:
     """Negative: silently rejecting every row because a column is absent would look like
     a catastrophic data problem rather than a configuration mistake."""

@@ -1,6 +1,6 @@
 """Git history is a **declared input** to id allocation — the proofs for W37-6 PR-A.
 
-`docs/notes/0019-one-id-per-document.md` item 1 keys a requirement's `created` on "the
+`docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md` item 1 keys a requirement's `created` on "the
 module's first-commit date; git first-commit date otherwise", and D1 at `:247` holds that
 numbers carry chronology. `created` is `_sort_key`'s primary component and `_assign_numbers`
 consumes that order, so git history is not context the migration happens to run in: it is

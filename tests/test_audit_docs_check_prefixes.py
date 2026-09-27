@@ -1,7 +1,7 @@
 """`scripts/audit-docs.py`: every numbered check's own `fail()` message begins `check N: `.
 
 Found by exec-h1 auditing row (h1) of `scripts/_docverify.py`'s `EXPECTED_VERDICTS`: h1's
-own per-class breakdown (`_docverify._classify_failures`, ported from Ruling 105 §B's shell
+own per-class breakdown (`_docverify._classify_failures`, ported from RL-1046 §B's shell
 one-liner) attributes a failure to a check number by matching `^check (\\d+):` at the start
 of its message — a convention checks 29-39 already followed, but checks 1-28 mostly did not.
 Two of those gaps (check 1's `broken link in ...` shape, check 27's `process core ...`

@@ -8,7 +8,7 @@ this module goes through `app.platform.jobs` rather than writing job rows itself
 
 Two properties are load-bearing:
 
-* **The task is idempotent.** The outbox delivers at least once (FR-PLAT-51), and
+* **The task is idempotent.** The outbox delivers at least once (FR-406), and
   `task_acks_late` means a worker killed mid-job leaves the message for redelivery. A
   second delivery for a Job that is no longer `queued` is a no-op, not a second run.
 * **The trace continues.** The `trace_id` travels in the payload and is bound before any
@@ -51,7 +51,7 @@ __all__ = ["CeleryPublisher", "create_worker", "execute_job"]
 
 _log = get_logger("app.worker")
 
-#: The worker acts as the platform, not as the person who submitted the Job. FR-GOV-25
+#: The worker acts as the platform, not as the person who submitted the Job. FR-374
 #: audits automated actions identically to human ones, and attributing a worker's
 #: transition to the submitter would put words in their mouth.
 SYSTEM = Principal(kind=ActorKind.SYSTEM, display="worker")
@@ -61,7 +61,7 @@ class CeleryPublisher:
     """Publishes an outbox row to Celery. The only place the broker is touched.
 
     Lives here rather than in `app.platform.outbox` so the outbox stays broker-agnostic:
-    the relay's guarantee is about transactions, not about Celery, and OQ-PLAT-1 could be
+    the relay's guarantee is about transactions, not about Celery, and OQ-640 could be
     revisited without rewriting it.
     """
 
@@ -152,7 +152,7 @@ async def execute_job(
     # stamping an artifact with somebody else's Job id is worse than one stamping nothing.
     parameters = dict(row.parameters) | {"job_id": str(job_id)}
 
-    # FR-PLAT-10: captured for the duration of this Job only. Attached to the root logger
+    # FR-402: captured for the duration of this Job only. Attached to the root logger
     # so a handler's own log calls are collected without it knowing it is being watched.
     capture = JobLogCapture(job_id, database)
     logging.getLogger().addHandler(capture)
@@ -180,7 +180,7 @@ async def execute_job(
             )
             return JobStatus.FAILED
         except PlatformError as exc:
-            # **Before the generic clause, and that order is load-bearing** (OQ-PLAT-7,
+            # **Before the generic clause, and that order is load-bearing** (OQ-646,
             # decided 2026-08-22). `PlatformError`, `JobCancelled` and
             # `JobBudgetExceededError` are three independent direct subclasses of
             # `Exception` — none is a subclass of another, so the two clauses above are
@@ -188,15 +188,15 @@ async def execute_job(
             # a base of `PlatformError`, so placing this clause after it would never run,
             # and every named handler error would keep arriving as `JOB_HANDLER_FAILED`.
             #
-            # Why it exists at all: FR-PLAT-11 makes the *code* the contract, and
+            # Why it exists at all: FR-403 makes the *code* the contract, and
             # `PlatformError.__init__` calls `super().__init__(detail or title)`, so
             # `str(exc)` is the prose and never the code. Falling through stored
             # `JOB_HANDLER_FAILED` with a message that is not even a substring match for
             # the code the handler raised, and no caller could branch on the refusal —
-            # two W5 refusal tests had to bypass `execute_job` entirely to assert one.
+            # two WK-661 refusal tests had to bypass `execute_job` entirely to assert one.
             #
             # `retryable` stays `False`, exactly as the generic clause sets it: a
-            # `PlatformError` is a deterministic refusal, and FR-PLAT-11 does not retry
+            # `PlatformError` is a deterministic refusal, and FR-403 does not retry
             # those. Nothing here infers retryability from `status_code` — a 429 or a 503
             # raised by a handler is still a deterministic refusal of *this* job.
             _log.exception(
@@ -217,7 +217,7 @@ async def execute_job(
         except Exception as exc:
             # Reached only by a genuinely unexpected exception now — a handler bug rather
             # than a refusal the handler named. The message is the exception's, not the
-            # caller's input: FR-PLAT-11 wants a human message, and R3 keeps secrets out —
+            # caller's input: FR-403 wants a human message, and R3 keeps secrets out —
             # a handler that puts a credential in an exception string is a bug in the
             # handler, and the type name alone would leave an operator with nothing to act
             # on.
@@ -290,7 +290,7 @@ def create_worker(settings: Settings | None = None) -> Celery:
 
     @celery.task(name=TASK_RELAY_OUTBOX)
     def relay_outbox() -> int:
-        """Publish committed outbox rows (FR-PLAT-51).
+        """Publish committed outbox rows (FR-406).
 
         Runs on a schedule rather than being triggered by the writer: the writer is inside
         a transaction and must not touch the broker, which is the whole point.

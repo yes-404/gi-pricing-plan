@@ -1,19 +1,19 @@
-"""Peril structures over HTTP (`02` §5.1, FR-MODEL-58..61).
+"""Peril structures over HTTP (`02` §5.1, FR-188, FR-189, FR-190, FR-191).
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/peril-structures` | **201** Create or version a Peril Structure (FR-MODEL-58) |
-| `GET` | `/peril-structures` | One page of the workspace's structures (FR-MODEL-127) |
-| `GET` | `/peril-structures/{id}` | The structure and its reconciliation (FR-MODEL-90) |
-| `POST` | `/peril-structures/{id}/reconcile` | **202** Reconcile → Job (FR-MODEL-60) |
-| `POST` | `/peril-structures/{id}/submit` | Submit for approval (FR-MODEL-61) |
+| `POST` | `/peril-structures` | **201** Create or version a Peril Structure (FR-188) |
+| `GET` | `/peril-structures` | One page of the workspace's structures (FR-167) |
+| `GET` | `/peril-structures/{id}` | The structure and its reconciliation (FR-192) |
+| `POST` | `/peril-structures/{id}/reconcile` | **202** Reconcile → Job (FR-190) |
+| `POST` | `/peril-structures/{id}/submit` | Submit for approval (FR-191) |
 
 **The `GET` and the submit are additions to §5.1's table**, which declared the create and
 the reconcile and nothing else. That is a create whose artifact nothing can fetch and an
-approvable artifact with no way to submit it — the same omission FR-MODEL-84 repaired for
-the transparency artifact and FR-MODEL-56 for the comparison, and invisible to the endpoint
+approvable artifact with no way to submit it — the same omission FR-139 repaired for
+the transparency artifact and FR-186 for the comparison, and invisible to the endpoint
 audit for the same reason: it compares the spec against the contract, and an endpoint
-missing from both is in neither. FR-MODEL-90 declares them.
+missing from both is in neither. FR-192 declares them.
 
 A separate module rather than more of `models.py`: a Peril Structure is a different artifact
 with its own lifecycle, and `models.py` is already the longest router in the service.
@@ -73,7 +73,7 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 
 
 class CreatePerilStructure(BaseModel):
-    """FR-MODEL-58's composition. Every invariant is the contract type's, not this one's."""
+    """FR-188's composition. Every invariant is the contract type's, not this one's."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -83,9 +83,9 @@ class CreatePerilStructure(BaseModel):
 
 
 class ReconcileRequest(BaseModel):
-    """FR-MODEL-60's inputs.
+    """FR-190's inputs.
 
-    **The two column names have no defaults, deliberately.** FR-MODEL-60 says the modelled
+    **The two column names have no defaults, deliberately.** FR-190 says the modelled
     burning cost reconciles to the *observed* burning cost and does not say where the
     observed figure comes from — and it cannot be derived: a peril's severity model responds
     to its own peril's cost, not to the total, and the exposure a frequency model offsets by
@@ -104,22 +104,22 @@ class ReconcileRequest(BaseModel):
         min_length=1, description="Holdout column holding exposure, in the same unit the "
         "models were fitted against.",
     )
-    #: `DecimalStr`, not a bare `Decimal` — **corrected 2026-08-22 (W5, the
-    #: audit-remediation slice).** A bare `Decimal` is the hole FR-OVR-18 closed one layer
+    #: `DecimalStr`, not a bare `Decimal` — **corrected 2026-08-22 (WK-661, the
+    #: audit-remediation slice).** A bare `Decimal` is the hole FR-21 closed one layer
     #: up and this field reopened at the wire: Pydantic renders it as
     #: `anyOf: [{"type": "number"}, {"type": "string"}]`, so the *published contract*
     #: admitted a binary float, and `{"tolerance": 0.1 + 0.2}` validated to
     #: `Decimal('0.30000000000000004')` — the float's error preserved verbatim inside the
-    #: value that decides whether a reconciliation passes (FR-MODEL-60's `|ratio - 1| <=
+    #: value that decides whether a reconciliation passes (FR-190's `|ratio - 1| <=
     #: tolerance`). Measured, not assumed: research finding F7 is what `money.py` records,
     #: and the behaviour was re-checked against this exact model before the change.
     #:
     #: This is a **breaking wire change**: a caller sending a JSON number now gets a 422
-    #: naming the reason. That is the same trade FR-OVR-7 has already been paid everywhere
+    #: naming the reason. That is the same trade FR-10 has already been paid everywhere
     #: else in the exact-decimal path, and a tolerance is squarely in it.
     tolerance: DecimalStr = Field(
         default=Decimal("0.02"),
-        description="Fractional tolerance on |modelled/observed - 1| (FR-MODEL-60).",
+        description="Fractional tolerance on |modelled/observed - 1| (FR-190).",
     )
 
 
@@ -166,7 +166,7 @@ PerilStructureFilterDep = Annotated[PerilStructureFilter, Query()]
 async def create_peril_structure(
     body: CreatePerilStructure, caller: FitModels, database: DatabaseDep
 ) -> PerilStructure:
-    """**201** with the structure (`wf-01` E4, FR-MODEL-58).
+    """**201** with the structure (`WF-698` E4, FR-188).
 
     201 rather than 202: composing is not work. The models are already fitted, and what this
     writes is the declaration of how they combine. The *reconciliation* is the work, and it
@@ -198,11 +198,11 @@ async def list_peril_structures_route(
     database: DatabaseDep,
     filters: PerilStructureFilterDep,
 ) -> Page[PerilStructure]:
-    """One page of the library (FR-MODEL-127), newest first.
+    """One page of the library (FR-167), newest first.
 
     **No `usage_count`, deliberately.** `02` §5.1:1712 asks this row for pagination and the
     two filters and stops, where :1697 and :1705 name the count for objectives and metrics —
-    and FR-MODEL-127's prose says "`usage_count` is on the row" without saying which rows.
+    and FR-167's prose says "`usage_count` is on the row" without saying which rows.
     This route builds the endpoint table's reading and `test_the_row_carries_no_usage_count`
     asserts the absence, so the field cannot appear here by accident. The disagreement
     between the table and the prose is raised as an open question in `open-questions.md` and
@@ -246,7 +246,7 @@ async def list_peril_structures_route(
 async def get_peril_structure(
     structure_id: UUID, caller: ReadModels, database: DatabaseDep
 ) -> PerilStructure:
-    """**Added to `02` §5.1 with this slice** (FR-MODEL-90) — see the module docstring."""
+    """**Added to `02` §5.1 with this slice** (FR-192) — see the module docstring."""
     async with database.unit_of_work() as session:
         return await service.load_structure(
             session, workspace_id=caller.workspace_id, structure_id=structure_id
@@ -265,7 +265,7 @@ async def reconcile_peril_structure(
     database: DatabaseDep,
     response: Response,
 ) -> Job:
-    """**202** with a Job (`wf-01` E5, FR-MODEL-60).
+    """**202** with a Job (`WF-698` E5, FR-190).
 
     202 because it is work: every peril's models are scored over the holdout before anything
     can be compared. The refusals a caller can be told about now — a tolerance of zero, a
@@ -313,7 +313,7 @@ async def submit_peril_structure(
     caller: SubmitModels,
     database: DatabaseDep,
 ) -> PerilStructure:
-    """`reconciled → review` (FR-MODEL-61, FR-MODEL-90).
+    """`reconciled → review` (FR-191, FR-192).
 
     Gated on `model:submit` for the reason a Model's submission is: putting an artifact in
     front of an approver starts a governed process, and the role that may compose is not

@@ -56,7 +56,7 @@ def run(
 # -- Layer 1: structural ---------------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_str_2_dtype_match() -> None:
     """VR-STR-2. Counts columns, because a dtype is a property of a column — reporting
     "3 400 000 rows are Int64" would be true and useless."""
@@ -71,20 +71,20 @@ def test_vr_str_2_dtype_match() -> None:
     assert good.violating_rows == 0
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_str_5_date_parsed() -> None:
     """VR-STR-5. A date left as a string sorts lexically, so `10/01/2024` precedes
     `02/01/2025` and every period comparison downstream is silently wrong."""
     frame = pl.DataFrame({"start": ["2024-01-01"], "end": [date(2024, 12, 31)]})
     outcome = run("date_parsed", {"t": frame}, params={"columns": ["start", "end"]})
     assert outcome.violating_rows == 1
-    # A column-level check emits `{"column": name}` (OQ-DATA-12 (b)).
+    # A column-level check emits `{"column": name}` (OQ-567 (b)).
     assert outcome.offending_sample == ({"column": "start"},)
 
     assert run("date_parsed", {"t": frame}, params={"columns": ["end"]}).violating_rows == 0
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_str_6_encoding() -> None:
     """VR-STR-6. A broker feed in the wrong codec produces new "levels" that look like
     genuine categories and quietly split a factor.
@@ -102,14 +102,14 @@ def test_vr_str_6_encoding() -> None:
     assert run("encoding", {"t": clean}, params={"columns": ["name"]}).violating_rows == 0
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_str_8_no_unexpected_columns() -> None:
     """VR-STR-8. An extra column breaks nothing by itself; it is the clearest sign the
     upstream extract changed, and that change usually changed something else too."""
     frame = pl.DataFrame({"a": [1], "b": [2], "surprise": [3]})
     outcome = run("no_unexpected_columns", {"t": frame}, params={"columns": ["a", "b"]})
     assert outcome.violating_rows == 1
-    # A column-level check emits `{"column": name}` (OQ-DATA-12 (b)).
+    # A column-level check emits `{"column": name}` (OQ-567 (b)).
     assert outcome.offending_sample == ({"column": "surprise"},)
 
     assert (
@@ -122,9 +122,9 @@ def test_vr_str_8_no_unexpected_columns() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-7")
+@pytest.mark.req("FR-32")
 def test_vr_str_9_reject_rate() -> None:
-    """VR-STR-9 / FR-DATA-7. The default 0.1 % is deliberately tight: a threshold loose
+    """VR-STR-9 / FR-32. The default 0.1 % is deliberately tight: a threshold loose
     enough never to fire is one nobody would notice going wrong."""
     clean = pl.DataFrame({"policy_id": [f"P{i}" for i in range(1000)]})
     rejected = pl.DataFrame({"policy_id": ["X1", "X2", "X3", "X4", "X5"]})
@@ -155,7 +155,7 @@ def _with_reference(**frames: pl.DataFrame) -> ValidationContext:
     )
 
 
-@pytest.mark.req("FR-DATA-31")
+@pytest.mark.req("FR-71")
 def test_vr_ref_1_reference_resolve_is_effective_dated() -> None:
     """VR-REF-1. A postcode that resolves today may not have existed at inception, and a
     lookup ignoring the date silently rates a 2019 risk on a 2025 territory map."""
@@ -190,7 +190,7 @@ def test_vr_ref_1_reference_resolve_is_effective_dated() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-31")
+@pytest.mark.req("FR-71")
 def test_vr_ref_2_reference_coverage() -> None:
     """VR-REF-2 catches what VR-REF-1 cannot: every value resolving while only a fraction
     of the table is used means the *wrong* reference version is pinned."""
@@ -218,7 +218,7 @@ def test_vr_ref_2_reference_coverage() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-31")
+@pytest.mark.req("FR-71")
 def test_vr_ref_3_effective_date_in_range() -> None:
     """VR-REF-3. A date after the covered period resolves to the last row for ever, which
     is worse than resolving to nothing — it looks like an answer."""
@@ -247,7 +247,7 @@ def test_vr_ref_3_effective_date_in_range() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-31")
+@pytest.mark.req("FR-71")
 def test_vr_ref_5_code_list_drift() -> None:
     """VR-REF-5 means the *taxonomy* changed; VR-DST-2 means the *book* did. The remedies
     differ — a mapping update, versus a conversation about mix."""
@@ -289,7 +289,7 @@ EXPOSURE = pl.DataFrame(
 )
 
 
-@pytest.mark.req("FR-DATA-12")
+@pytest.mark.req("FR-38")
 def test_vr_act_5_claim_date_in_exposure() -> None:
     """VR-ACT-5. Half-open, so a loss on the renewal date belongs to the new term —
     counting it against both would inflate one frequency and deflate the other."""
@@ -313,7 +313,7 @@ def test_vr_act_5_claim_date_in_exposure() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-12")
+@pytest.mark.req("FR-38")
 def test_vr_act_6_claim_linkage_complete() -> None:
     """VR-ACT-6. An unlinked claim contributes to a frequency computed over a denominator
     that excludes its own exposure."""
@@ -333,7 +333,7 @@ def test_vr_act_6_claim_linkage_complete() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-12")
+@pytest.mark.req("FR-38")
 def test_vr_act_7_claim_not_multi_linked() -> None:
     """VR-ACT-7 is the more dangerous half: a doubly-linked claim is counted twice and,
     unlike an unlinked one, leaves no missing total anywhere to notice."""
@@ -364,7 +364,7 @@ def test_vr_act_7_claim_not_multi_linked() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_9_claim_amount_sign_counts_rather_than_removes() -> None:
     """VR-ACT-9. Negative incurred is legitimate for recoveries; a platform that deleted
     them would understate recoveries and overstate severity. It must not pass unremarked
@@ -389,9 +389,9 @@ def test_vr_act_9_claim_amount_sign_counts_rather_than_removes() -> None:
     assert tolerant.violating_rows == 0
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_10_severity_outlier_flags_and_never_removes() -> None:
-    """VR-ACT-10. Capping is a modelling decision (OQ-DATA-1), made where its effect on the
+    """VR-ACT-10. Capping is a modelling decision (OQ-557), made where its effect on the
     fitted result is visible — not a cleaning step applied silently at ingestion."""
     frame = pl.DataFrame({"claim_amount_minor": [100_00] * 99 + [50_000_00]})
     outcome = run(
@@ -413,7 +413,7 @@ def test_vr_act_10_severity_outlier_flags_and_never_removes() -> None:
     assert by_percentile.violating_rows > 1
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_11_frequency_plausible_catches_a_units_error() -> None:
     """VR-ACT-11. Exposure in months where the model expects years shifts frequency by a
     factor of twelve, and every individual value looks entirely reasonable."""
@@ -438,7 +438,7 @@ def test_vr_act_11_frequency_plausible_catches_a_units_error() -> None:
     assert bad.measured["frequency"] == pytest.approx(1.2)
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_12_severity_plausible_catches_a_units_error() -> None:
     """VR-ACT-12. Amounts loaded in pounds where the platform stores minor units are out by
     a hundred, and every row still looks like money."""
@@ -459,7 +459,7 @@ def test_vr_act_12_severity_plausible_catches_a_units_error() -> None:
     assert run("severity_plausible", {"t": pounds}, params=bounds).violating_rows == 1
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_13_zero_claim_cohort() -> None:
     """VR-ACT-13. A level with material exposure that had claims and now has none is almost
     always a join that stopped matching — and the portfolio totals barely move."""
@@ -497,9 +497,9 @@ def test_vr_act_13_zero_claim_cohort() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_14_development_maturity_warns_and_never_adjusts() -> None:
-    """VR-ACT-14 is the platform's *only* treatment of development (§1.2, OQ-DATA-4).
+    """VR-ACT-14 is the platform's *only* treatment of development (§1.2, OQ-560).
 
     It flags. A frequency model fitted through the last three months reads IBNR as a
     genuine improvement in claims experience; the warning makes that a visible choice.
@@ -527,7 +527,7 @@ def test_vr_act_14_development_maturity_warns_and_never_adjusts() -> None:
     assert tolerant.violating_rows == 0
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_14_declines_to_guess_on_an_unparsed_period() -> None:
     """A period column still held as a string sorts lexically, so "the most recent three
     months" would select whatever sorts last. VR-STR-5 catches the parse; this declines."""
@@ -537,7 +537,7 @@ def test_vr_act_14_declines_to_guess_on_an_unparsed_period() -> None:
     assert "VR-STR-5" in outcome.skip_reason
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_15_currency_consistency() -> None:
     """VR-ACT-15 fails rather than warns: mixed currency makes every sum in the dataset
     meaningless, and the sums are what the model is fitted on."""
@@ -557,7 +557,7 @@ def test_vr_act_15_currency_consistency() -> None:
     assert run("currency_consistency", {"t": mixed}).violating_rows == 3
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_vr_act_16_duplicate_claim() -> None:
     """VR-ACT-16. The double-load signature: a file ingested twice inflates frequency by
     exactly the proportion re-loaded, while every individual row stays valid."""
@@ -583,7 +583,7 @@ def _profiled(frame: pl.DataFrame, one_ways: list[str] | None = None) -> Profile
     return profile_frame(frame, dataset_version_id=uuid4(), one_way_columns=one_ways or [])
 
 
-@pytest.mark.req("FR-DATA-24")
+@pytest.mark.req("FR-54")
 def test_vr_dst_1_psi_column() -> None:
     """VR-DST-1, computed with the same `psi_from_weights` the comparison screen uses — so
     a verdict and the screen an actuary is reading cannot disagree."""
@@ -611,7 +611,7 @@ def test_vr_dst_1_psi_column() -> None:
     assert steady.measured["psi"] == pytest.approx(0.0, abs=1e-9)
 
 
-@pytest.mark.req("FR-DATA-24")
+@pytest.mark.req("FR-54")
 def test_vr_dst_2_new_level_and_vr_dst_3_vanished_level() -> None:
     """VR-DST-2 and VR-DST-3. Material weight for the vanished one, because a rare level
     disappearing is noise while a level holding real exposure is a broken join."""
@@ -663,7 +663,7 @@ def test_vr_dst_2_new_level_and_vr_dst_3_vanished_level() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_vr_dst_1_psi_column_excludes_nulls_on_both_sides() -> None:
     """The trap: the reference side (`top_levels`) excludes a null level, the same as
     `_psi` in `profile.py`. If the current side (`_level_counts`) kept it under the key
@@ -685,7 +685,7 @@ def test_vr_dst_1_psi_column_excludes_nulls_on_both_sides() -> None:
     assert outcome.measured["psi"] == pytest.approx(0.0, abs=1e-9)
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_vr_dst_3_vanished_level_top_levels_fallback_is_judged_on_exposure() -> None:
     """Ruling 2c: once a version's profile carries per-level `exposure_years`, the
     `top_levels` fallback in `_vanished_level` must judge materiality on exposure, not on
@@ -719,10 +719,10 @@ def test_vr_dst_3_vanished_level_top_levels_fallback_is_judged_on_exposure() -> 
     )
 
 
-@pytest.mark.req("FR-DATA-49")
+@pytest.mark.req("FR-66")
 def test_vr_dst_3_vanished_level_primary_branch_does_not_report_a_phantom_null() -> None:
     """The regression: `OneWayRow.level` still coerces a null level to the string "None"
-    (unchanged by FR-DATA-49), so the primary `one_ways`-derived branch of
+    (unchanged by FR-66), so the primary `one_ways`-derived branch of
     `_vanished_level` used to carry a `"None"` key that the present side — built by
     `_level_counts`, which now drops nulls — could never match. On a byte-identical
     current frame with a material null share, that made `"None"` report as vanished on
@@ -751,7 +751,7 @@ def test_vr_dst_3_vanished_level_primary_branch_does_not_report_a_phantom_null()
     assert outcome.offending_sample == ()
 
 
-@pytest.mark.req("FR-DATA-24")
+@pytest.mark.req("FR-54")
 def test_vr_dst_6_mean_shift_is_measured_in_standard_errors() -> None:
     """VR-DST-6. The same 2 % move means different things on ten million observations and
     on four hundred; expressing the threshold in sampling noise makes one setting right for
@@ -781,7 +781,7 @@ def test_vr_dst_6_mean_shift_is_measured_in_standard_errors() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-24")
+@pytest.mark.req("FR-54")
 def test_vr_dst_7_target_rate_shift() -> None:
     """VR-DST-7 — the rule an actuary looks at first, and the one most likely to be a real
     finding rather than a data fault."""
@@ -820,7 +820,7 @@ def test_vr_dst_7_target_rate_shift() -> None:
     )
 
 
-@pytest.mark.req("FR-DATA-24")
+@pytest.mark.req("FR-54")
 def test_vr_dst_8_mix_shift_is_on_exposure_not_row_counts() -> None:
     """VR-DST-8, and the distinction is the whole rule.
 
@@ -869,9 +869,9 @@ def test_vr_dst_8_mix_shift_is_on_exposure_not_row_counts() -> None:
 # -- the catalogue as a whole ----------------------------------------------------------
 
 
-@pytest.mark.req("FR-DATA-19")
+@pytest.mark.req("FR-48")
 def test_no_check_passes_when_it_has_nothing_to_check() -> None:
-    """FR-DATA-19: a rule that cannot run is an `error` or a `skip`, never a `pass`.
+    """FR-48: a rule that cannot run is an `error` or a `skip`, never a `pass`.
 
     Every registered check, run against a frame holding none of what it needs. A check that
     silently passes when its column is absent is worse than no check, because it is
@@ -888,7 +888,7 @@ def test_no_check_passes_when_it_has_nothing_to_check() -> None:
     assert not passed, f"these checks passed with nothing to check: {passed}"
 
 
-@pytest.mark.req("FR-DATA-19")
+@pytest.mark.req("FR-48")
 def test_no_check_condemns_the_data_when_it_has_no_configuration() -> None:
     """The other direction, and the one that went unnoticed for longer.
 

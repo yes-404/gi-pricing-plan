@@ -1,9 +1,9 @@
-"""The `model.*` Job handlers (`02` §3.4, `07` FR-PLAT-7).
+"""The `model.*` Job handlers (`02` §3.4, `07` FR-399).
 
 Two handlers: `model.fit` reads the version's parquet, resolves the spec's factors against
 it, fits with `pricing-core`, and records the numbers on the model row that `reserve_model`
 already allocated. `model.compare` scores two or more fitted models over the holdout they
-share and records the comparison artifact (FR-MODEL-56).
+share and records the comparison artifact (FR-186).
 
 **The reservation happens in the request, not here**, so `02` R1 — fitting requires a
 `validated` Dataset Version — is answered before a Job exists. A caller who is refused
@@ -105,12 +105,12 @@ async def _split_frames(
     spec: ModelSpec,
     parent: pl.DataFrame,
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
-    """The train and holdout frames the spec's `split_ref` names (`01` FR-DATA-36).
+    """The train and holdout frames the spec's `split_ref` names (`01` FR-76).
 
     Read from the **part versions** the split artifact records, not re-derived here. The
     whole point of recording the split on the parent is that the partition is one artifact
     two models cite; a fit that recomputed it would be trusting that its arithmetic still
-    matched the arithmetic that produced the versions, which is the belief FR-DATA-36
+    matched the arithmetic that produced the versions, which is the belief FR-76
     exists to remove.
     """
     ref = spec.split_ref
@@ -168,9 +168,9 @@ async def _split_frames(
 
 
 def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`model.fit` — fit the reserved model and store its coefficients (FR-MODEL-18..21).
+    """`model.fit` — fit the reserved model and store its coefficients (FR-110, FR-111, FR-112, FR-113).
 
-    The fit result is **data** (ADR-0003): coefficients, standard errors, intervals and
+    The fit result is **data** (ADR-705): coefficients, standard errors, intervals and
     relativity tables, stored as JSON on the model row. No estimator is pickled, and
     nothing that scores this model later needs `glum` installed.
     """
@@ -201,7 +201,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 session, workspace_id=workspace_id, factor_ids=list(spec.factors)
             )
             # The bandings and groupings the factors pin. Loaded here rather than inside
-            # `pricing-core`, which cannot reach a database (ADR-0001) — and eagerly rather
+            # `pricing-core`, which cannot reach a database (ADR-703) — and eagerly rather
             # than lazily, because a dangling reference should be a `404` naming the id,
             # not a resolution failure naming the factor.
             transformations = _Transformations(
@@ -227,12 +227,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 session, workspace_id=workspace_id, version_id=spec.dataset_version_id
             )
             # One table for the spine: `02` §4.4 fits over a single record grain, and a
-            # join across tables is a Preparation Recipe's job (`01` FR-DATA-12), done
+            # join across tables is a Preparation Recipe's job (`01` FR-38), done
             # before the version exists.
             frame = await _frame_of(session, blob_store, version)
 
-            # The holdout, from the split the spec cites (`01` FR-DATA-36). Required, not
-            # optional: FR-MODEL-49 makes diagnostics a product of every fit, FR-MODEL-54
+            # The holdout, from the split the spec cites (`01` FR-76). Required, not
+            # optional: FR-170 makes diagnostics a product of every fit, FR-183
             # makes a diagnostic without its holdout counterpart a defect, and `02` §4.8
             # makes diagnostics the condition of `fitted`. A fit with no split therefore
             # has nowhere to go, and refusing it here is cheaper than a Job that runs for
@@ -243,8 +243,8 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                     "This model spec declares no split",
                     422,
                     "`split_ref` names the train/test split this model is fitted and "
-                    "judged on (`01` FR-DATA-36). Without it there is no holdout, and "
-                    "FR-MODEL-54 makes a diagnostic reported without its holdout "
+                    "judged on (`01` FR-76). Without it there is no holdout, and "
+                    "FR-183 makes a diagnostic reported without its holdout "
                     "counterpart a defect.",
                 )
             train, holdout = await _split_frames(
@@ -252,7 +252,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             )
             # The Custom Objective the spec names, resolved here for the reason the
             # bandings are: `pricing-core` computes and does not resolve a reference
-            # (ADR-0001). `fit_gbm` refuses a `custom` objective that arrives without its
+            # (ADR-703). `fit_gbm` refuses a `custom` objective that arrives without its
             # artifact, one whose ref does not match, and one whose status is not
             # fittable — so this loads it and lets the maths keep the invariants.
             objective = (
@@ -264,7 +264,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             )
             # Every `kind: custom` eval metric the spec names, resolved for the same
             # reason the objective above is: `fit_gbm` takes `metrics` as already-resolved
-            # artifacts (ADR-0001) and refuses a ref that arrives unsupplied
+            # artifacts (ADR-703) and refuses a ref that arrives unsupplied
             # (`METRIC_REF_UNRESOLVED`), one outside its applicability
             # (`METRIC_NOT_APPLICABLE`) or one not fittable (`METRIC_NOT_FITTABLE`) —
             # `_resolve_metrics` needs the artifact in hand to say which. Same session,
@@ -280,9 +280,9 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                     metrics[ref] = await metric_service.resolve_ref(
                         session, workspace_id=workspace_id, ref=ref
                     )
-            # FR-MODEL-24: the offset-from-another-model ref, resolved here for the
+            # FR-116: the offset-from-another-model ref, resolved here for the
             # reason the objective and metrics are — `pricing-core` computes and does not
-            # resolve a reference (ADR-0001). This is the artifacts whose η becomes the
+            # resolve a reference (ADR-703). This is the artifacts whose η becomes the
             # offset; the η array itself is computed on the worker thread below.
             offset_source = None
             if isinstance(spec, GlmSpec) and spec.offset.kind == "model":
@@ -311,9 +311,9 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     )
     from pricing_core.modelling.factors import FactorResolutionError
 
-    # The offset-from-another-model arrays (FR-MODEL-24): the referenced fit's linear
+    # The offset-from-another-model arrays (FR-116): the referenced fit's linear
     # predictor on this frame and its holdout. Resolved on the loop, computed here on the
-    # worker thread, because the maths is pricing-core's (ADR-0001).
+    # worker thread, because the maths is pricing-core's (ADR-703).
     model_offset = None
     model_offset_holdout = None
     if offset_source is not None:
@@ -328,14 +328,14 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
 
     # The fit owns the middle of the bar and reports its own `0..1` inside it. Before this
     # it reported nothing, and a long fit sat at 0.35 for its whole duration — which
-    # FR-PLAT-8 exists to prevent and `00` §5.5 already required.
+    # FR-400 exists to prevent and `00` §5.5 already required.
     fitting = ScaledProgress(progress, start=0.10, end=0.85)
     booster: bytes | None = None
     covariance: bytes | None = None
     glm_cv: CrossValidationDiagnostics | None = None
     eval_curve: tuple[GbmEvalPoint, ...] = ()
     result: FitResult
-    # NFR-MODEL-4's denominator, settled by OQ-MODEL-24 on 2026-08-22 as **fit wall-clock**:
+    # NFR-479's denominator, settled by OQ-572 on 2026-08-22 as **fit wall-clock**:
     # the elapsed fit call including factor resolution and design-matrix construction, which
     # `FitResult.fit_seconds` excludes because it starts after the design matrix is built.
     # The two disagree by enough to change a verdict - 32.1 % against wall-clock is 55.2 %
@@ -346,7 +346,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         if isinstance(spec, GbmSpec):
             fit = fit_gbm(
                 frame, spec, factors,
-                # FR-MODEL-30: the holdout rows, not merely the declared split. `fit_gbm`
+                # FR-124: the holdout rows, not merely the declared split. `fit_gbm`
                 # refuses early stopping without them rather than letting either backend
                 # fall back to the training set.
                 holdout=holdout,
@@ -377,13 +377,13 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             )
             # The same split the GBM arm makes above, and for the same reason: the artifact
             # carries a `BlobRef` and the bytes travel beside it, because `pricing-core`
-            # cannot store a blob (ADR-0001). FR-MODEL-63's interval is computed from these
+            # cannot store a blob (ADR-703). FR-194's interval is computed from these
             # bytes at predict time.
             result, covariance = glm_fit.result, glm_fit.covariance_bytes
             glm_cv = glm_fit.cv
             if offset_source is not None:
-                # FR-MODEL-24: the fit records what it was actually constructed against —
-                # the resolved, pinned ref (FR-MODEL-71's rule, applied to GLM). It is the
+                # FR-116: the fit records what it was actually constructed against —
+                # the resolved, pinned ref (FR-126's rule, applied to GLM). It is the
                 # spec's own string here: the resolver refused any ref that was not this
                 # one.
                 result = result.model_copy(
@@ -401,12 +401,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             "FACTOR_RESOLUTION_FAILED",
             "A factor could not be resolved against this dataset version",
             409,
-            f"{exc} FR-MODEL-2: a Factor is defined against a Dataset and resolved against "
+            f"{exc} FR-87: a Factor is defined against a Dataset and resolved against "
             "a version; this is that resolution failing.",
         ) from exc
     fit_wall_seconds = time.perf_counter() - fit_wall_started
     progress.update(0.85, "diagnostics")
-    # NFR-MODEL-4's other half. Every fit result already carries `fit_seconds`; nothing
+    # NFR-479's other half. Every fit result already carries `fit_seconds`; nothing
     # timed the diagnostics, so the 30 % budget could only be asserted. This is a
     # *measurement*, emitted as a log field rather than persisted on the artifact: a
     # wall-clock reading is a fact about one worker on one day, and the Diagnostics
@@ -458,12 +458,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             "fit_seconds": result.fit_seconds,
             "fit_wall_seconds": round(fit_wall_seconds, 4),
             "diagnostics_seconds": round(diagnostics_seconds, 4),
-            # NFR-MODEL-4's ratio, computed here rather than by whoever reads the two
+            # NFR-479's ratio, computed here rather than by whoever reads the two
             # numbers. `None` when the fit was too fast to time: a ratio over a zero
             # denominator is not "infinitely over budget", it is unmeasured.
             #
             # **Two fields, deliberately.** `diagnostics_over_fit` has been emitted against
-            # `fit_seconds` since the block was built, and OQ-MODEL-24 settled the budget's
+            # `fit_seconds` since the block was built, and OQ-572 settled the budget's
             # denominator on the *other* reading. Re-pointing the existing field would make
             # every historical line silently uncomparable and unlabelled, so the budgeted
             # ratio arrives under its own name and the old one keeps its meaning.
@@ -479,8 +479,8 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             ),
         },
     )
-    # FR-MODEL-78. Only the **second** bound of a pair has a counterpart to cross: the
-    # first is fitted against nothing, and FR-MODEL-49 computes diagnostics once at fit
+    # FR-199. Only the **second** bound of a pair has a counterpart to cross: the
+    # first is fitted against nothing, and FR-170 computes diagnostics once at fit
     # time, so there is no later pass in which to fill this in. Scoring the counterpart
     # costs one extra pass over the fit frame, which is cheap beside the fit that just
     # produced it — and this is the only moment both boosters and the population are
@@ -527,7 +527,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             # `BlobRef` inside `fit_result` was computed by `pricing-core` from the bytes,
             # so it is already correct — what this guarantees is that a committed model
             # never references an object that was never written. `put` is idempotent on the
-            # digest (FR-PLAT-19), so a retried job stores nothing twice.
+            # digest (FR-419), so a retried job stores nothing twice.
             if booster is not None:
                 assert isinstance(result, GbmFitResult)
                 await progress.blob_store.put(
@@ -576,7 +576,7 @@ async def _quantile_crossing(
     The counterpart's spec, factors, bandings, groupings and booster are resolved here for
     the reason `_resolve_candidate` resolves them here: `pricing-core` is handed dataframes
     and artifacts, never ids, because resolving an id needs a database it may not import
-    (ADR-0001).
+    (ADR-703).
     """
     from pricing_core.modelling.predict import detect_quantile_crossing, score_fitted
 
@@ -594,7 +594,7 @@ async def _quantile_crossing(
         ]
         if not siblings:
             return None
-        # At most one: FR-MODEL-100(iv) allows one bound per side, and this model holds the
+        # At most one: FR-200(iv) allows one bound per side, and this model holds the
         # other side. A second would have been refused at `reserve_model`.
         counterpart = siblings[0]
         other_spec = MODEL_SPEC_ADAPTER.validate_python(counterpart.spec)
@@ -636,7 +636,7 @@ async def _quantile_crossing(
     )
     # Which array is the lower bound is decided by the declared alpha, never by which
     # number happens to be smaller — sorting them here would be the silent reordering
-    # FR-MODEL-78 forbids, dressed as a convenience.
+    # FR-199 forbids, dressed as a convenience.
     lower, upper = (mine, theirs) if spec.interval_for.alpha < 0.5 else (theirs, mine)
     rows_crossing, worst_gap = detect_quantile_crossing(lower, upper)
     return QuantileCrossing(
@@ -650,7 +650,7 @@ async def _quantile_crossing(
 async def _resolve_candidate(
     session: Any, blob_store: Any, *, workspace_id: UUID, row: ModelRow
 ) -> Any:
-    """One model, resolved to everything `compare_models` needs (ADR-0001).
+    """One model, resolved to everything `compare_models` needs (ADR-703).
 
     The same resolution `_fit` does, for the same reason: `pricing-core` is handed
     dataframes and artifacts, never ids, because resolving an id needs a database it may not
@@ -675,13 +675,13 @@ async def _resolve_candidate(
             "MODELS_NOT_COMPARABLE",
             "An EBM has no surrogate to compare",
             409,
-            f"{row.model_family_slug}@{row.version} is an EBM: comparison (wf-01 E1) is "
+            f"{row.model_family_slug}@{row.version} is an EBM: comparison (WF-698 E1) is "
             "GLM-vs-GBM surrogate validation, and an EBM is transparent by construction "
-            "(FR-MODEL-37) with no approximation to compare (2026-08-21, the W5 EBM slice).",
+            "(FR-140) with no approximation to compare (2026-08-21, the WK-661 EBM slice).",
         )
-    # `wf-01` E1 compares the GLM against the GBM. A GLM's fit result *is* its model; a
+    # `WF-698` E1 compares the GLM against the GBM. A GLM's fit result *is* its model; a
     # GBM's is a reference to the booster, so the bytes are fetched here — the resolution
-    # ADR-0001 keeps out of `pricing-core`, exactly like the factors and the frames.
+    # ADR-703 keeps out of `pricing-core`, exactly like the factors and the frames.
     booster = (
         await blob_store.read(fit.booster_blob) if isinstance(fit, GbmFitResult) else None
     )
@@ -705,7 +705,7 @@ async def _resolve_candidate(
 
 
 def _compare(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`model.compare` — align two or more models on the holdout they share (FR-MODEL-56).
+    """`model.compare` — align two or more models on the holdout they share (FR-186).
 
     The comparability rules are checked in `request_comparison` before this Job exists, and
     **again** here through `compare_models`. Both are needed: the first so a caller gets a
@@ -790,14 +790,14 @@ def _compare(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
 def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     """`model.transparency` — explain a fitted non-GLM model (FR-MODEL-33..37, 96, R3).
 
-    Both forms are built when both can be: FR-MODEL-33 allows either and this produces
+    Both forms are built when both can be: FR-132 allows either and this produces
     both, because they answer different questions. The GLM approximation says what the
     model would look like as a rate table and where that table would misprice; the SHAP
     summary says which factors the booster is actually using and, on XGBoost, which pairs
-    are worth an actuary authoring an `interaction` Factor for (FR-MODEL-79).
+    are worth an actuary authoring an `interaction` Factor for (FR-135).
 
     An EBM takes neither arm: its exported shape functions ARE the rateable model
-    (FR-MODEL-37), so the artifact is built directly from the fit result — no sample, no
+    (FR-140), so the artifact is built directly from the fit result — no sample, no
     split frames, no booster, no approximation — and `kinds` carries only
     `ebm_shape_functions`.
 
@@ -806,14 +806,14 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     holdout would report how well a surrogate generalises, which is a different question
     and not the one R3 asks.
 
-    FR-MODEL-96 makes the approximation a Model rather than a table inside the artifact, so
+    FR-137 makes the approximation a Model rather than a table inside the artifact, so
     this Job now *fits and persists* one: reserved on its own `spec_hash`, given diagnostics
     against the booster's predictions on both partitions, and named by the artifact. The
     holdout is loaded beside the train frame for that reason alone — the approximation is
     still built on train (above), and the holdout only ever reaches `compute_diagnostics`,
-    which FR-MODEL-54 refuses to run one-sided.
+    which FR-183 refuses to run one-sided.
 
-    FR-MODEL-110 then makes the **rebuild** cheap: the reservation is probed before either
+    FR-138 then makes the **rebuild** cheap: the reservation is probed before either
     expensive call, and a surrogate that is already fitted has its stored block read back
     instead of refitted. The SHAP summary is not part of that bargain — it is rebuilt every
     time, because no Model holds it and nothing makes a stored one findable.
@@ -854,8 +854,8 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                         "MODEL_SPLIT_REQUIRED",
                         "This model spec declares no split",
                         422,
-                        "The approximation is a Model in its own right (FR-MODEL-96), and "
-                        "FR-MODEL-54 makes a diagnostic reported without its holdout "
+                        "The approximation is a Model in its own right (FR-137), and "
+                        "FR-183 makes a diagnostic reported without its holdout "
                         "counterpart a defect. Without a split there is no holdout to report.",
                     )
                 factors = await model_service.load_factors(
@@ -904,7 +904,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
 
     if isinstance(spec, EbmSpec) and isinstance(result, EbmFitResult):
         # The EBM arm, before any of the GBM machinery: the exported tables ARE the model
-        # (FR-MODEL-37), so the artifact needs nothing but the fit result and the spec —
+        # (FR-140), so the artifact needs nothing but the fit result and the spec —
         # no sample, no split frames, no booster, no approximation (Task 0.7).
         from pricing_core.modelling.transparency import (
             build_ebm_shape_functions,
@@ -980,23 +980,23 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             422,
             f"{spec.model_family_slug!r} plus the '-approx' suffix is "
             f"{len(surrogate_spec.model_family_slug)} characters, and a model family slug "
-            "is 64. Rename the model family, or the approximation FR-MODEL-96 requires "
+            "is 64. Rename the model family, or the approximation FR-137 requires "
             "cannot be stored.",
         )
 
     reservation_reason = (
-        f"glm approximation of {source_slug}@{source_version} (FR-MODEL-34)"
+        f"glm approximation of {source_slug}@{source_version} (FR-133)"
     )
 
     async def reusable_numbers() -> GlmApproximation | None:
-        """FR-MODEL-110 — the stored block to reuse, or `None` meaning "fit it".
+        """FR-138 — the stored block to reuse, or `None` meaning "fit it".
 
         The branch belongs **before** `build_glm_approximation` and `compute_diagnostics`,
         not after: `reserve_model` already knows whether the surrogate is fitted, and a
         rebuild that pays a full `glum` fit plus one type-III refit per factor
-        (FR-MODEL-51) for numbers `store()` then discards is buying the same answer twice.
+        (FR-172) for numbers `store()` then discards is buying the same answer twice.
         Nothing new has to be proved to reuse them — the source Model and the surrogate's
-        own spec are both immutable once fitted, so `spec_hash` (FR-MODEL-66) already says
+        own spec are both immutable once fitted, so `spec_hash` (FR-204) already says
         a recompute would land on the numbers stored at the first build.
 
         Reserved in a **read** session, which never commits. The reservation that counts is
@@ -1053,11 +1053,11 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             progress=ScaledProgress(progress, start=0.20, end=0.50),
         )
         progress.update(0.50, "diagnostics of the approximation")
-        # FR-MODEL-96(iii): the surrogate reaches `fitted` on diagnostics of itself against
-        # the source model's predictions — FR-MODEL-36's quantity, on both partitions. The
+        # FR-137(iii): the surrogate reaches `fitted` on diagnostics of itself against
+        # the source model's predictions — FR-136's quantity, on both partitions. The
         # frames carry the booster's predictions in `SURROGATE_RESPONSE_COLUMN`, so this is
         # the ordinary GLM diagnostics path measuring an extraordinary target, and
-        # FR-MODEL-102's spec invariant is what says so to every later reader.
+        # FR-141's spec invariant is what says so to every later reader.
         surrogate_diagnostics = compute_diagnostics(
             approximation.result, approximation.spec, factors,
             train=approximation.train, holdout=approximation.holdout,
@@ -1081,7 +1081,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
         # inner `unit_of_work` would take a second connection from the pool and deadlock
         # against it with no output and no traceback.
         async with progress.database.unit_of_work() as session:
-            # FR-MODEL-52's monotonicity check, carried up to the artifact R3 reads. Taken
+            # FR-174's monotonicity check, carried up to the artifact R3 reads. Taken
             # from the diagnostics rather than recomputed: the diagnostics swept the factors
             # at fit time, and a second sweep here could disagree with the evidence the
             # model was approved against.
@@ -1090,8 +1090,8 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             )
             checks = diagnostics.gbm.monotonicity if diagnostics.gbm else ()
 
-            # FR-MODEL-96. Reserved rather than created: `spec_hash` makes a rebuilt
-            # artifact find the surrogate it already fitted (FR-MODEL-66), and calling
+            # FR-137. Reserved rather than created: `spec_hash` makes a rebuilt
+            # artifact find the surrogate it already fitted (FR-204), and calling
             # `record_fit` on it a second time would raise `MODEL_IMMUTABLE` and fail a Job
             # that had done nothing wrong.
             surrogate, should_fit = await model_service.reserve_model(
@@ -1115,8 +1115,8 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                     actor=actor,
                     model_id=surrogate.id,
                     # The covariance reference is dropped, not stored: the bytes were never
-                    # kept, and FR-MODEL-63's interval belongs to the model that priced the
-                    # row rather than to a description of it (FR-MODEL-102).
+                    # kept, and FR-194's interval belongs to the model that priced the
+                    # row rather than to a description of it (FR-141).
                     fit_result=approximation.result.model_copy(
                         update={"covariance_blob": None}
                     ),
@@ -1132,7 +1132,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                     job_id=job_id,
                 )
 
-            # FR-MODEL-110. The block is the fit's own summary when one was computed, and
+            # FR-138. The block is the fit's own summary when one was computed, and
             # otherwise the numbers the first build stored against this same Model — read
             # back rather than recomputed, so the artifact cannot disagree with the Model
             # it cites. Rebuilt around `surrogate.id` rather than copied whole: the id is
@@ -1176,7 +1176,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
 
 
 def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`model.backtest` — FR-MODEL-57, one model measured on data it never saw.
+    """`model.backtest` — FR-187, one model measured on data it never saw.
 
     Every rule that makes this a backtest rather than a re-score is answered in
     `request_backtest`, before the Job exists: the model carries a fit result, the version is
@@ -1185,7 +1185,7 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
 
     Both arms, through `backtest_model`'s `score_fitted` dispatch. A GBM's booster bytes are
     fetched here for the reason `_resolve_candidate` fetches them — resolving a blob needs a
-    store `pricing-core` may not import (ADR-0001).
+    store `pricing-core` may not import (ADR-703).
     """
     progress = _bridge(callback)
     blob_store = progress.blob_store
@@ -1241,9 +1241,9 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                 if isinstance(fit, GbmFitResult)
                 else None
             )
-            # FR-MODEL-24: the offset-from-another-model ref, resolved here for the
+            # FR-116: the offset-from-another-model ref, resolved here for the
             # reason `_fit` resolves it — `pricing-core` computes and does not resolve a
-            # reference (ADR-0001). The η array itself is computed on the worker thread
+            # reference (ADR-703). The η array itself is computed on the worker thread
             # below, the booster-bytes pattern.
             offset_source = None
             if isinstance(spec, GlmSpec) and spec.offset.kind == "model":
@@ -1272,9 +1272,9 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
 
     from pricing_core.modelling import backtest_model, linear_predictor
 
-    # The offset-from-another-model array (FR-MODEL-24): the referenced fit's linear
+    # The offset-from-another-model array (FR-116): the referenced fit's linear
     # predictor on the backtest frame. Resolved on the loop, computed here on the worker
-    # thread, because the maths is pricing-core's (ADR-0001).
+    # thread, because the maths is pricing-core's (ADR-703).
     model_offset = None
     if offset_source is not None:
         model_offset = linear_predictor(
@@ -1336,14 +1336,14 @@ def register_model_handlers() -> None:
 
 
 def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`peril_structure.reconcile` — FR-MODEL-60's coherence check, FR-MODEL-74's basis.
+    """`peril_structure.reconcile` — FR-190's coherence check, FR-128's basis.
 
     Every peril's models are scored on the **one** holdout they all cite —
     `_refuse_unshared_holdout` guarantees there is exactly one before this Job exists, which
     is what makes the reconciliation's `dataset_version_id` and `part` derivable rather than
     a caller's third answer.
 
-    A **failing** reconciliation is a successful Job. FR-MODEL-60 asks for the check to be
+    A **failing** reconciliation is a successful Job. FR-190 asks for the check to be
     persisted, and the finding that a structure does not reconcile is the finding; a job
     that failed would leave an actuary re-running it to see the same number. What a `fail`
     blocks is `review`, and that is `submit_for_review`'s answer.
@@ -1419,7 +1419,7 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
                 "PERIL_STRUCTURE_RECONCILIATION_FAILED",
                 "The declared column is not in the holdout",
                 422,
-                f"Column {column!r} is not among the holdout's columns. FR-MODEL-60's "
+                f"Column {column!r} is not among the holdout's columns. FR-190's "
                 "observed burning cost is declared by the caller precisely because it "
                 "cannot be derived, so a name that does not resolve is refused rather "
                 "than substituted.",
@@ -1456,17 +1456,17 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
     except (ModellingError, PredictionError) as exc:
         # Without this the refusal loses its name. `PredictionError` is a sibling of
         # `ModellingError` — both bare `RuntimeError`s from `pricing-core` — and neither is
-        # a `PlatformError`, so `execute_job`'s OQ-PLAT-7 clause does not catch it. The Job
+        # a `PlatformError`, so `execute_job`'s OQ-646 clause does not catch it. The Job
         # would store `JOB_HANDLER_FAILED` with the code absent even from the message,
         # leaving a named refusal indistinguishable from a handler crash, which is the exact
-        # failure OQ-PLAT-7 exists to remove. `platform/prediction.py` catches the pair
+        # failure OQ-646 exists to remove. `platform/prediction.py` catches the pair
         # together for the synchronous path; this is the worker path saying the same thing.
         #
-        # It bites hardest on FR-MODEL-24's model-referenced offset: `_score` calls
+        # It bites hardest on FR-116's model-referenced offset: `_score` calls
         # `score_fitted` with no `model_offset=`, so a GLM whose `offset.kind == "model"`
         # reaches `predict._offset` without its resolved array and is refused
         # `MODEL_OFFSET_MISSING` — never scored on a silently-absent offset, which would
-        # misprice the whole reconciliation. FR-MODEL-112(c) wires the resolver in; until it
+        # misprice the whole reconciliation. FR-117(c) wires the resolver in; until it
         # does, the named refusal *is* the deliverable, and a caller must be able to see it.
         raise PlatformError(
             exc.code, "A peril component could not be scored", 409, str(exc)
@@ -1525,7 +1525,7 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
 
 
 def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`objective.certify` — §4.7's checks over a Custom Objective (FR-MODEL-42).
+    """`objective.certify` — §4.7's checks over a Custom Objective (FR-146).
 
     A **failing** certificate is a successful Job, for `_reconcile`'s reason: the finding
     that an objective's analytic hessian disagrees with the numeric one *is* the answer the
@@ -1577,7 +1577,7 @@ def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
 
 
 def _certify_metric(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`metric.certify` — §4.13's checks over a Custom Metric (FR-MODEL-105).
+    """`metric.certify` — §4.13's checks over a Custom Metric (FR-157).
 
     A **failing** certificate is a successful Job, `_certify`'s reason unchanged: the
     finding that a metric is non-finite or scale-sensitive over the sampled grid *is* the

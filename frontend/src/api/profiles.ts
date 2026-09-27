@@ -10,13 +10,13 @@ export type OneWayRow = components["schemas"]["OneWayRow"];
 export type ProfileComparison = components["schemas"]["ProfileComparison"];
 export type ColumnComparison = components["schemas"]["ColumnComparison"];
 
-/** FR-DATA-25. Read, never recomputed — FR-DATA-27 forbids the UI computing one. */
+/** FR-60. Read, never recomputed — FR-62 forbids the UI computing one. */
 export function getProfile(versionId: string): Promise<Profile> {
   return request<Profile>(`/dataset-versions/${versionId}/profile`);
 }
 
 /**
- * FR-DATA-26, NFR-DATA-4: a single lookup into the stored Profile, budgeted at 300 ms.
+ * FR-61, NFR-468: a single lookup into the stored Profile, budgeted at 300 ms.
  *
  * A 404 means the column has no *stored* one-way, which is an answer rather than a
  * failure — the platform refuses to compute one on request, because a fallback that did
@@ -28,7 +28,7 @@ export function getOneWay(versionId: string, column: string): Promise<OneWaySumm
   });
 }
 
-/** FR-DATA-28. Computed from two stored Profiles, which is why it is cheap enough to GET. */
+/** FR-63. Computed from two stored Profiles, which is why it is cheap enough to GET. */
 export function compareProfiles(
   versionId: string,
   against: string,
@@ -43,7 +43,7 @@ export function compareProfiles(
  *
  * **Two bands, not three.** The removed `"broken"` band asserted a `fail` severity VR-DST-1
  * cannot emit: the rule carries `warn_above` only, and the `fail_above` band is a second
- * catalogue rule that does not exist yet (`FR-DATA-54`, built note 2026-08-24). Banding
+ * catalogue rule that does not exist yet (`FR-56`, built note 2026-08-24). Banding
  * exists so the screen and the rule cannot disagree about one number (`01` §5.3, note of
  * 2026-08-19) — inventing the severe band was that exact disagreement, in the direction that
  * alarms an actuary about a verdict no report will ever carry.

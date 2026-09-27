@@ -16,7 +16,7 @@ const props = defineProps<{
 }>();
 
 /**
- * Calibration by predicted decile (FR-MODEL-50): predicted on x, actual on y, so a
+ * Calibration by predicted decile (FR-171): predicted on x, actual on y, so a
  * well-calibrated model lies on the diagonal.
  *
  * Plotted against the bin index instead, the same numbers make a rising line for every model
@@ -29,7 +29,7 @@ const points = computed(() =>
   props.partitions.map(([label, partition], index) => ({
     name: label,
     type: "scatter" as const,
-    // NFR-OVR-10: symbol shape carries the partition where hue cannot.
+    // NFR-463: symbol shape carries the partition where hue cannot.
     symbol: SYMBOLS[index] ?? "circle",
     symbolSize: 10,
     data: partition.calibration.map((bin) => [bin.predicted, bin.actual]),

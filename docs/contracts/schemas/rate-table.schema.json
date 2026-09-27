@@ -7,7 +7,7 @@
   "type": "object",
   "required": ["rateable", "keys", "value", "rows", "change_note"],
   "properties": {
-    "rateable": {"type": "boolean", "description": "Only rateable tables may feed the premium ladder (FR-RATE-21)."},
+    "rateable": {"type": "boolean", "description": "Only rateable tables may feed the premium ladder (FR-236)."},
     "keys": {
       "type": "array", "minItems": 1,
       "items": {
@@ -56,7 +56,7 @@
           "applied_at": {"type": "string", "format": "date-time"}
         }
       },
-      "description": "Recorded as parameterised operations, not as anonymous cell edits (FR-RATE-18)."
+      "description": "Recorded as parameterised operations, not as anonymous cell edits (FR-233)."
     },
     "diff_vs_previous": {"type": ["object", "null"]},
     "diff_vs_seed": {"type": ["object", "null"]}

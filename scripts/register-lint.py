@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Register grammar linter — enforces `docs/audit/register.md`'s own Decision-cell grammar.
+"""Register grammar linter — enforces `docs/findings/register.md`'s own Decision-cell grammar.
 
-Ordered by Ruling 50 (`docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`), which found that
-Ruling 46's mechanism (a filename-date cutoff) has no analogue for a register row — a row
+Ordered by RL-910 (`docs/rulings/RL-00910-q2-rl-906-s-mechanism-does-not-transfer-its-principle-does-and-the-answer-here-is-to-conform-the-corpus-and-red-gate-from-day-one.md`), which found that
+RL-906's mechanism (a filename-date cutoff) has no analogue for a register row — a row
 carries no date and is edited in place as its normal operation — so the answer here is not
-a flag day or a legacy class but conforming the corpus once (Ruling 49's PR) and red-gating
+a flag day or a legacy class but conforming the corpus once (RL-909's PR) and red-gating
 every row from day one. **No cutoff constant, no warn level, no per-row exemption**: this
 file must not grow one, ever — a check whose verdict depends on the calendar or on a hand-
-maintained finding-id allowlist cannot be reproduced in a fresh clone (Ruling 50 §2).
+maintained finding-id allowlist cannot be reproduced in a fresh clone (RL-910 §2).
 
-Three rules, each an obligation the register's own header (`docs/audit/register.md`,
-corrected by Ruling 49's Text A/B/C) states in prose:
+Three rules, each an obligation the register's own header (`docs/findings/register.md`,
+corrected by RL-909's Text A/B/C) states in prose:
 
   1. **Decision-cell grammar.** A Decision cell opens with one of: the register's own
      disposition vocabulary (`fix before close`, `accept`, `carry forward`,
@@ -19,7 +19,7 @@ corrected by Ruling 49's Text A/B/C) states in prose:
      away), or the negated form F37/F40 need (`fix before close is not available` /
      `is not required` — already a `fix before close` prefix, so no separate branch is
      needed). A cell whose *opening* — emphasis stripped — is a bare status marker
-     (`resolved …`, `Fixed —`) is a documented, separate case — Ruling 50 §1 classifies it
+     (`resolved …`, `Fixed —`) is a documented, separate case — RL-910 §1 classifies it
      "not a grammar gap" and defers the actual fix to a future status field (P4) — so it is
      excluded from *this* rule and checked instead by rule 2. Anything else is a grammar
      violation.
@@ -33,17 +33,17 @@ corrected by Ruling 49's Text A/B/C) states in prose:
      with a disposition and is discharged later, appended in place, e.g. F50/F51's "carry
      forward, unowned. … `***Resolved 2026-08-30***` — …", which (a) alone cannot see because
      it only looks at the opening). Either way, the cell must carry a date (`YYYY-MM-DD`) and
-     a PR/commit/doc reference — the content Ruling 49's Text A requires ("naming the PR or
+     a PR/commit/doc reference — the content RL-909's Text A requires ("naming the PR or
      commit that discharged it").
   3. **Unowned-row decay.** Wherever a Decision cell says `unowned` (bare, `unowned by
      design`, or `unowned-pending-authorisation`), the cell must say more than the bare
-     disposition — Ruling 49's Text B requires it to "name the event that next confirms or
+     disposition — RL-909's Text B requires it to "name the event that next confirms or
      assigns its owner," and a cell that stops right after the word names nothing. This is
      a length proxy for "says something," not a semantic parse of what was said.
 
 Plus two structural rules the parser needs to keep working at all. **Every data row must
 split into exactly 5 fields** (Finding id, Concerns, Work item, Phase, Decision). Two rows
-failed this before Ruling 49's PR (F27, F49 — an unescaped literal `|`); nothing prevented a
+failed this before RL-909's PR (F27, F49 — an unescaped literal `|`); nothing prevented a
 new one until this check existed. **The header row is found by position** — the `|`-led
 line immediately before the delimiter row, never by matching column-name text — because a
 text match silently drops any data row whose own prose names both columns; see
@@ -51,10 +51,10 @@ text match silently drops any data row whose own prose names both columns; see
 
 **P4's addition is not a fourth grammar rule.** `ROW_LENGTH_THRESHOLD` and `residue_line()`
 below print one aggregate line, every run, counting rows whose evidence has outgrown the
-table and not yet migrated to `docs/audit/findings/<F-id>.md` (Ruling 51) — never a per-row
+table and not yet migrated to `docs/audit/findings/<F-id>.md` (RL-911) — never a per-row
 failure, and no row is ever red-gated for being long.
 
-**Scope.** `docs/audit/phases/1b/register.md` is excluded **by name**, not by date (Ruling
+**Scope.** `docs/findings/register.md` is excluded **by name**, not by date (Ruling
 50 §2: it is a closed-phase record, out of scope regardless of when this check runs). A
 future phase-2 register is in scope from the commit that creates it, which means adding its
 path to `TARGETS` below by hand when that day comes — never inferring it from a glob, which
@@ -74,12 +74,12 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
-# Deliberately explicit, never a glob — see "Scope" above. `docs/audit/phases/1b/register.md`
-# is NOT here, by name, per Ruling 50 §2.
+# Deliberately explicit, never a glob — see "Scope" above. `docs/findings/register.md`
+# is NOT here, by name, per RL-910 §2.
 TARGETS = [REPO / "docs" / "audit" / "register.md"]
 
 DISPOSITIONS = ("fix before close", "accept", "carry forward", "split verdict")
-# CLAUDE.md §13's four verdicts — binding, may not be linted away (Ruling 50 §2).
+# CLAUDE.md §13's four verdicts — binding, may not be linted away (RL-910 §2).
 VERDICTS = ("delivered but untested", "deferred with an owner", "reassigned", "not started")
 STATUS_PREFIXES = ("resolved", "fixed")
 
@@ -127,7 +127,7 @@ def parse_register(path: pathlib.Path) -> tuple[list[Row], list[str]]:
     """Parse the register's data rows. Returns (rows, structural-problems).
 
     A structural problem is a row that does not split into exactly 5 fields — the pipe
-    defect Ruling 49's PR fixed by hand (F27, F49) and nothing prevented from recurring
+    defect RL-909's PR fixed by hand (F27, F49) and nothing prevented from recurring
     until this parser existed.
     """
     rows: list[Row] = []
@@ -290,7 +290,7 @@ def check_decision_grammar(row: Row) -> str | None:
         return None
     if _opens_with_status(decision):
         # Rule 1 does not judge this cell — rule 2 does (same predicate, see
-        # `_opens_with_status`). Ruling 50 §1 classifies this class "not a grammar gap";
+        # `_opens_with_status`). RL-910 §1 classifies this class "not a grammar gap";
         # the actual fix is a future status field (P4).
         return None
     return (
@@ -323,7 +323,7 @@ def check_resolution_annotation(row: Row) -> str | None:
                         "backtick-quoted docs/ or .claude/ path)")
     return (
         f"{row.finding_id}: carries a resolution marker but no {' and no '.join(missing)} "
-        "(Ruling 49 Text A: a resolution annotation must name the PR or commit that "
+        "(RL-909 Text A: a resolution annotation must name the PR or commit that "
         "discharged it)"
     )
 
@@ -336,7 +336,7 @@ def check_unowned_decay(row: Row) -> str | None:
         return None
     return (
         f"{row.finding_id}: Decision cell says 'unowned' and stops ({decision.strip()!r}) "
-        "— Ruling 49 Text B requires it to name the event that next confirms or assigns "
+        "— RL-909 Text B requires it to name the event that next confirms or assigns "
         "its owner, or it decays to the next CLAUDE.md §14 plan review"
     )
 
@@ -352,30 +352,30 @@ def lint_register(path: pathlib.Path) -> list[str]:
     return failures
 
 
-# --- P4: findings-file migration residue (Ruling 51, NT-0015) --------------------------
+# --- P4: findings-file migration residue (RL-911, RFC-896) --------------------------
 #
-# A row's evidence belongs in `docs/audit/findings/<F-id>.md`, per Ruling 53, once it is
+# A row's evidence belongs in `docs/audit/findings/<F-id>.md`, per RL-913, once it is
 # long enough that the table cell is destroying scannability rather than serving as an
-# index (NT-0015 motivation item 4). Migration is **never** mandatory outside an
-# amendment — Ruling 51 rejects both a bulk sweep (51 rows of judgement-heavy edits is
+# index (RFC-896 motivation item 4). Migration is **never** mandatory outside an
+# amendment — RL-911 rejects both a bulk sweep (51 rows of judgement-heavy edits is
 # the unreviewable diff the register's own F47 row declines for itself) and a "worst
 # offenders" slice (measured a class of 23-29 rows, not the two named in the note). So an
 # over-threshold row is never a *violation* — no row is ever failed here for being long —
 # and this is not a fourth grammar rule. It is one **aggregate** line, printed every run,
 # because "incremental migration" is unfalsifiable without it: with no residue count,
 # nothing distinguishes an opportunistic rule actually in force from no rule at all
-# (Ruling 51 §2). This is the one device that transfers from Ruling 46, which replaced
+# (RL-911 §2). This is the one device that transfers from RL-906, which replaced
 # 114 per-row warnings with a single aggregate line for the identical reason.
 #
 # **The threshold is a constant, fixed once from the distribution measured when it was
-# written — never a per-row judgement, never a date** (Ruling 51, which forbids exactly
+# written — never a per-row judgement, never a date** (RL-911, which forbids exactly
 # those two shapes for this constant, the same two `register-lint.py`'s own module
 # docstring forbids for the grammar rules above). Measured at the tree this constant was
-# added on (`docs/audit/register.md`, 61 data rows as of F63/F64 — up from the 51 Ruling 51
+# added on (`docs/findings/register.md`, 61 data rows as of F63/F64 — up from the 51 RL-911
 # itself measured at `01ba0bd`, because the register has grown **and** because the count
-# Ruling 51 used came from the parser this same file's header-detection fix corrects: the
+# RL-911 used came from the parser this same file's header-detection fix corrects: the
 # 51-row figure and this 61-row one are not directly comparable measurements of the same
-# thing. `len(row.raw)` — the full markdown table row, matching how Ruling 51 itself
+# thing. `len(row.raw)` — the full markdown table row, matching how RL-911 itself
 # measured F27 and F-W9-3): the corpus is sharply bimodal, not smoothly distributed — 22
 # rows sit at or under 472 characters, then every one of the remaining 39 sits at or over
 # 1017, with **nothing at all between 473 and 1016**. 1000 falls inside that empty gap, so
@@ -387,7 +387,7 @@ def lint_register(path: pathlib.Path) -> list[str]:
 # second "is this migrated" field to define, maintain, or let drift from the row itself.
 #
 # **39 of 61 rows over threshold today is a long migration, and that is the accepted
-# design, not a defect** (Ruling 51 §2): the alternative it rejected was a bulk sweep (an
+# design, not a defect** (RL-911 §2): the alternative it rejected was a bulk sweep (an
 # unreviewable diff) or a two-row token migration that would discharge under a tenth of the
 # problem while reading as having discharged it. This aggregate line is what keeps a long,
 # opportunistic migration honest rather than lapsed.
@@ -395,7 +395,7 @@ ROW_LENGTH_THRESHOLD = 1000
 
 
 def residue(rows: list[Row]) -> tuple[int, int]:
-    """(rows over `ROW_LENGTH_THRESHOLD`, total rows) — the two figures Ruling 51 requires
+    """(rows over `ROW_LENGTH_THRESHOLD`, total rows) — the two figures RL-911 requires
     the aggregate residue line to report, alongside the threshold itself. Never per-row.
     """
     over = sum(1 for r in rows if len(r.raw) > ROW_LENGTH_THRESHOLD)
@@ -406,7 +406,7 @@ def residue_line(path: pathlib.Path, rows: list[Row]) -> str:
     over, total = residue(rows)
     return (
         f"{path.name}: residue — {over} of {total} row(s) exceed the "
-        f"{ROW_LENGTH_THRESHOLD}-character findings-file migration threshold (Ruling 51). "
+        f"{ROW_LENGTH_THRESHOLD}-character findings-file migration threshold (RL-911). "
         "Not a violation — opportunistic-on-amendment only; this line is what makes that "
         "claim falsifiable rather than assumed."
     )

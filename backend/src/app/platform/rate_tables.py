@@ -3,7 +3,7 @@ bulk operations, and the parquet write path.
 
 Thin over the pure operations in `pricing_core.rate_tables.operations`: load the
 model artifact, run the operation, persist rows (or a parquet blob above the
-workspace's cell-count threshold, FR-RATE-62). Named failures from pricing-core are
+workspace's cell-count threshold, FR-232). Named failures from pricing-core are
 mapped onto the module's API error codes (03 §5.2): the four validation codes become
 `RATE_TABLE_INCOMPLETE` / `RATE_TABLE_KEY_DUPLICATE`, the approval gate stays
 `PIN_NOT_APPROVED`, and the bulk-operation/import refusals keep their own names.
@@ -104,12 +104,12 @@ async def seed_from_model(
     change_note: str,
     rateable: bool = True,
 ) -> RateTableVersion:
-    """Seed a new rate table version from an approved model (FR-RATE-16, spec §5.1).
+    """Seed a new rate table version from an approved model (FR-230, spec §5.1).
 
     The seed is the origin of a lineage: it creates the table (version 1) or appends
     the next version of an existing table, pins `seeded_from` so "how far from the
-    technical rate?" is answerable (FR-RATE-16), and its storage is decided against
-    the workspace threshold like every new version (FR-RATE-62, DP2).
+    technical rate?" is answerable (FR-230), and its storage is decided against
+    the workspace threshold like every new version (FR-232, DP2).
     """
     async with database.unit_of_work() as session:
         model_row = await load_model(
@@ -212,7 +212,7 @@ async def diff_needs_job(
     version: int,
     against: str | int,
 ) -> bool:
-    """Whether the diff must answer 202 with a Job (03 §5.1, FR-RATE-62).
+    """Whether the diff must answer 202 with a Job (03 §5.1, FR-232).
 
     Either version `storage: parquet` routes the request to a `rate_table.diff` Job;
     a rows-only pair stays on the synchronous 200 path. Raises the same refusals as
@@ -245,15 +245,15 @@ async def diff(
     cache: DiffCache | None = None,
     portfolio_dataset_version_id: UUID | None = None,
 ) -> RateTableDiff:
-    """Cell-level diff of one version against a baseline (FR-RATE-17, spec §5.1).
+    """Cell-level diff of one version against a baseline (FR-231, spec §5.1).
 
     `against` names the baseline: `previous` (the prior version), `seed` (the version
-    that seeded the table — the technical-rate origin, FR-RATE-16), or an explicit
+    that seeded the table — the technical-rate origin, FR-230), or an explicit
     version number. Diffed on read (DP3: compute on read, nothing materialised at
     version creation). Exposure weights are supplied by the caller at fetch time
     (DP1); this slice passes none — the portfolio-dataset join is not yet built.
 
-    One compute path for both storages (FR-RATE-62): a `parquet` version's cells are
+    One compute path for both storages (FR-232): a `parquet` version's cells are
     materialised from its blob the way every bounded table transform does; storage
     decides whether the API answers 200 or 202 with a Job (`diff_needs_job`), never
     what the artifact contains.
@@ -307,7 +307,7 @@ async def export_csv(
     version: int,
     blob_store: BlobStore,
 ) -> bytes:
-    """The version's cells as CSV, decimal strings only (FR-RATE-20).
+    """The version's cells as CSV, decimal strings only (FR-235).
 
     Reads parquet-stored versions inline from their blob — a bounded table transform
     (03 §3.3, W10-3D), the same materialisation `_to_version` does for operations.
@@ -326,7 +326,7 @@ async def export_xlsx(
     version: int,
     blob_store: BlobStore,
 ) -> bytes:
-    """The version's cells as XLSX, every cell written as text (FR-RATE-20)."""
+    """The version's cells as XLSX, every cell written as text (FR-235)."""
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
         version_row = await _load_version(session, table_row.id, version, slug)
@@ -344,7 +344,7 @@ async def import_preview(
     filename: str,
     content: bytes,
 ) -> ImportPreview:
-    """The would-be version as a diff against the addressed one (FR-RATE-20, 03 §5.1).
+    """The would-be version as a diff against the addressed one (FR-235, 03 §5.1).
 
     Strict round-trip preview only: nothing is created. The file's extension routes
     CSV vs XLSX (the core dispatches the same way); the verdict's canonical filename
@@ -374,12 +374,12 @@ async def import_confirmed(
     filename: str,
     content: bytes,
 ) -> RateTableVersion:
-    """Create the version the preview showed (FR-RATE-20, 03 §5.1, DP6).
+    """Create the version the preview showed (FR-235, 03 §5.1, DP6).
 
     The upload is parsed again through the same strict pipeline the preview ran —
     the created version cannot diverge from the preview (same bytes, same immutable
     baseline). The verdict is recorded on the version as `created_by_import` (DP5),
-    the seed anchor is inherited from the baseline (DP4, FR-RATE-19), and the
+    the seed anchor is inherited from the baseline (DP4, FR-234), and the
     storage decision follows the workspace threshold like any other version (DP2).
     """
     async with database.unit_of_work() as session:
@@ -512,9 +512,9 @@ async def _resolve_threshold(
 def _cells_to_parquet(
     cells: Sequence[dict[str, str]], keys: Sequence[RateTableKey], value_name: str
 ) -> bytes:
-    """Cells → parquet bytes (FR-RATE-62). Every column is UTF-8: keys and values are
+    """Cells → parquet bytes (FR-232). Every column is UTF-8: keys and values are
     level names and decimal strings, and a numeric inference would silently re-type
-    them — the strict round-trip FR-RATE-20's verdict is about."""
+    them — the strict round-trip FR-235's verdict is about."""
     columns: dict[str, list[str]] = {
         key.name: [row[key.name] for row in cells] for key in keys
     }
@@ -536,7 +536,7 @@ async def _load_cells_of(
     table: RateTable,
     blob_store: BlobStore,
 ) -> list[dict[str, str]]:
-    """The version's cells, wherever storage keeps them (FR-RATE-62)."""
+    """The version's cells, wherever storage keeps them (FR-232)."""
     if version_row.storage == "parquet":
         ref = BlobRef.model_validate(version_row.cells)
         return _cells_from_parquet(await blob_store.read(ref))
@@ -577,7 +577,7 @@ async def _to_version(
 def _guard_seed_lineage(
     derived: RateTableVersion, baseline: RateTableVersionRow
 ) -> None:
-    """Save-time equality proof (03 §4.2, FR-RATE-19, DP4): a derived version's seed
+    """Save-time equality proof (03 §4.2, FR-234, DP4): a derived version's seed
     anchor must equal its resolved baseline's — never invented, dropped or swapped.
 
     pricing-core builds the derived version from the same baseline, so through the
@@ -614,7 +614,7 @@ async def _persist_new_version(
     """Write the derived version, deciding its storage against the resolved threshold.
 
     DP2: the threshold is read at version-creation time only; storage is decided here
-    from the cell count and frozen with the version (FR-RATE-62). At or below the
+    from the cell count and frozen with the version (FR-232). At or below the
     threshold the cells keep the `rate_table_cells` rows; above it they are written
     to a content-addressed parquet blob addressed by `cells`. Returns the version in
     its §4.2 wire form.
@@ -739,12 +739,12 @@ async def bulk_operation(
     kind: str,
     parameters: dict[str, Any],
 ) -> RateTableVersion:
-    """Apply a bulk operation and persist the new version (FR-RATE-18, 03 §5.1).
+    """Apply a bulk operation and persist the new version (FR-233, 03 §5.1).
 
     The operation addresses a specific version (`{slug}@{version}`): the baseline is
     loaded from the addressed version, its seed lineage is proven equal at save time
-    (FR-RATE-19, 03 §4.2, DP4), and the new version's storage is decided against the
-    workspace threshold (FR-RATE-62, DP2).
+    (FR-234, 03 §4.2, DP4), and the new version's storage is decided against the
+    workspace threshold (FR-232, DP2).
     """
     async with database.unit_of_work() as session:
         table_row = await session.scalar(

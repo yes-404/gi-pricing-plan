@@ -1,13 +1,13 @@
-"""`score_batch` (W11 Task 3A, FR-RATE-36/37, FR-PLAT-9).
+"""`score_batch` (WK-671 Task 3A, FR-253/254, FR-401).
 
 Fixture shape: reuses Task 1.4's own fixtures (`_compiled`, `_ctx`) from `test_rating_
 score.py` rather than duplicating them — the established convention in this test suite.
-Task 3A's own acceptance standard (`docs/plans/2026-08-29-w11-3-batch-scoring.md`, Task
+Task 3A's own acceptance standard (`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`, Task
 3A Steps 1-5) is exactly four properties: byte-identity with `score_one` through the
 shared `build_scoring_result` tail, chunked progress reporting, cooperative cancellation
 at a chunk boundary, and purity (no I/O, no state across calls). A fifth test (per-row
 error isolation) is added because it is what makes "chunked" safe to call on real data —
-FR-RATE-38's structural half, not its threshold policy (3B's) — and Task 3A's own module
+FR-255's structural half, not its threshold policy (3B's) — and Task 3A's own module
 docstring states it as an invariant `score_batch` introduces.
 """
 
@@ -75,8 +75,8 @@ def _decimal_output_algorithm_payload() -> dict[str, Any]:
     matches a ladder rung name nor consumes anything the ladder does (module docstring's
     "Ladder construction" note: only an `output` step named `f"{rung}_minor"` is a rung, and
     `_build_outputs` reads every declared output independently of the ladder). Exists to
-    prove `_outputs_json` handles a genuine `Decimal`-typed output (Ruling 43 §5(i)) —
-    nothing in Task 1.4's own fixture declares one, `03` FR-RATE-13's *"decimal or
+    prove `_outputs_json` handles a genuine `Decimal`-typed output (RL-923 §5(i)) —
+    nothing in Task 1.4's own fixture declares one, `03` FR-227's *"decimal or
     money_minor"* being the only two monetary result types and `payable_premium_minor`
     already covering the second."""
     payload = copy.deepcopy(_algorithm_payload())
@@ -149,14 +149,14 @@ class _CancelAfter:
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-37: byte-identity through the shared `build_scoring_result` tail.
+# FR-254: byte-identity through the shared `build_scoring_result` tail.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-37")
+@pytest.mark.req("FR-254")
 async def test_score_batch_and_score_one_produce_byte_identical_ladders() -> None:
     # `_compiled_with_decimal_output` (Task 1.4's fixture plus one non-money `decimal`
-    # output — see its own docstring) so this test also covers Ruling 43 §5(i): a
+    # output — see its own docstring) so this test also covers RL-923 §5(i): a
     # money-minor output and a genuinely `Decimal`-typed one must both round-trip through
     # `outputs_json` losslessly, which the plain fixture cannot exercise on its own since
     # its only declared output is `payable_premium_minor` (money-minor).
@@ -177,7 +177,7 @@ async def test_score_batch_and_score_one_produce_byte_identical_ladders() -> Non
         assert batch_row["decline_reasons"] == one_result.decline_reasons
         assert batch_row["error_code"] is None
 
-        # Ruling 43 §5(i): `outputs_json` was asserted nowhere before this. Both output
+        # RL-923 §5(i): `outputs_json` was asserted nowhere before this. Both output
         # types this fixture declares are checked, not just that the column is non-null.
         assert one_result.outcome == "quoted", "a decline skips the outputs this asserts"
         outputs = json.loads(batch_row["outputs_json"])
@@ -196,11 +196,11 @@ async def test_score_batch_and_score_one_produce_byte_identical_ladders() -> Non
 
 
 # ---------------------------------------------------------------------------
-# FR-RATE-37: chunked and progress-reporting.
+# FR-254: chunked and progress-reporting.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-37")
+@pytest.mark.req("FR-254")
 async def test_chunk_rows_smaller_than_input_invokes_progress_more_than_once() -> None:
     compiled = await _compiled()
     contexts = _contexts(10)
@@ -231,11 +231,11 @@ async def test_chunk_rows_does_not_change_the_row_count_or_the_row_set() -> None
 
 
 # ---------------------------------------------------------------------------
-# FR-PLAT-9: cooperative cancellation at a chunk boundary.
+# FR-401: cooperative cancellation at a chunk boundary.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-PLAT-9")
+@pytest.mark.req("FR-401")
 async def test_cancellation_stops_before_the_next_chunk_and_scores_nothing_after() -> None:
     compiled = await _compiled()
     contexts = _contexts(9)
@@ -250,7 +250,7 @@ async def test_cancellation_stops_before_the_next_chunk_and_scores_nothing_after
     assert canceller.checks == 2
 
 
-@pytest.mark.req("FR-PLAT-9")
+@pytest.mark.req("FR-401")
 async def test_no_cancellation_scores_every_row() -> None:
     compiled = await _compiled()
     contexts = _contexts(5)
@@ -287,7 +287,7 @@ async def test_score_batch_is_pure_across_repeated_calls(tmp_path: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
-# The structural half of FR-RATE-38: one bad row does not abort the chunk it is in, or
+# The structural half of FR-255: one bad row does not abort the chunk it is in, or
 # any chunk after it. The threshold policy that decides whether the *run* aborts is 3B's.
 # ---------------------------------------------------------------------------
 
@@ -339,7 +339,7 @@ async def test_empty_frame_scores_nothing_and_calls_no_progress() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Ruling 43 §4: the drift guard. `CLAUDE.md` §2's "a shape defined twice will diverge"
+# RL-923 §4: the drift guard. `CLAUDE.md` §2's "a shape defined twice will diverge"
 # only holds if something notices when it does — a field added to `ScoringResult` with no
 # batch column and no exclusion must fail the build, not be silently dropped.
 # ---------------------------------------------------------------------------

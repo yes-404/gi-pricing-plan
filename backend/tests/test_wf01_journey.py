@@ -1,8 +1,8 @@
-"""WF-01 — dataset to approved Model, driven end to end (FR-OVR-17(ii)).
+"""WF-698 — dataset to approved Model, driven end to end (FR-19(ii)).
 
-**One test, one journey.** FR-OVR-17 refuses the cheap version explicitly — "marking an
+**One test, one journey.** FR-19 refuses the cheap version explicitly — "marking an
 existing test with a journey id claims a journey where one slice is covered" — so this walks
-`wf-01`'s own phases in order, through the same Jobs and services a caller would reach, and
+`WF-698`'s own phases in order, through the same Jobs and services a caller would reach, and
 each block below names the steps it is executing.
 
 It is deliberately long. A journey test that read like unit tests would be unit tests, and
@@ -10,21 +10,21 @@ what this exists to catch is the seam between phases: a version that validates b
 fitted on, a split both candidates claim to share, a model that reaches an approver with no
 evidence. Those failures live between the slices, which is where nothing else looks.
 
-**Every step of `wf-01` now runs.** For most of this file's life three did not — D7's
+**Every step of `WF-698` now runs.** For most of this file's life three did not — D7's
 interaction factor, and E4/E5's Peril Structure and reconciliation — and each was pinned at
 the bottom as an **inverted assertion**: one that passes while the capability is absent and
 fails the day it lands. All three fired exactly as designed and were driven by the slice
 that broke them: E4/E5 on 2026-08-18 with `PerilStructure`, D7 the same day with
-`interaction`. The pinned test is gone because its list is empty, and FR-OVR-17(ii) for
-`wf-01` is **delivered** rather than partial.
+`interaction`. The pinned test is gone because its list is empty, and FR-19(ii) for
+`WF-698` is **delivered** rather than partial.
 
 Two divergences from the journey's own wording are recorded rather than pinned, because both
 are limits of this fixture and not of the platform:
 
-* **E4 composes AD as burning cost**, where `wf-01` composes it as frequency x severity —
+* **E4 composes AD as burning cost**, where `WF-698` composes it as frequency x severity —
   severity responds to cost *per claim*, and every claim-free row in this book carries a zero
   a Gamma refuses.
-* **D7 crosses banded age with vehicle group**, where `wf-01` names
+* **D7 crosses banded age with vehicle group**, where `WF-698` names
   `annual_mileage x driver_age` — this book has no mileage column.
 
 `packages/pricing-core/tests/test_perils.py` and `test_interactions.py` drive both shapes
@@ -178,7 +178,7 @@ async def _principal(database: Database, workspace_id: UUID, role: str) -> Princ
 async def _dataset_with_rules(
     database: Database, workspace_id: UUID, actor: Principal
 ) -> UUID:
-    """A Dataset with a Rule Set carrying **both** severities `wf-01` phase B needs.
+    """A Dataset with a Rule Set carrying **both** severities `WF-698` phase B needs.
 
     A `fail` on non-positive exposure — B4's failing rule, the one no acknowledgement can
     talk past (`01` §1.3) — and a `warn` on claim counts above one, which B8 reviews and B9
@@ -220,7 +220,7 @@ async def _dataset_with_rules(
                     "scope": {},
                     "tolerance": {},
                     "message": message,
-                    "rationale": "wf-01 phase B needs one of each severity",
+                    "rationale": "WF-698 phase B needs one of each severity",
                 },
                 status="approved",
                 authored_by=actor.id,
@@ -258,11 +258,11 @@ async def _run(
     return await execute_job(database, job.id, blob_store)
 
 
-@pytest.mark.req("FR-OVR-17")
+@pytest.mark.req("FR-19")
 async def test_wf01_dataset_to_approved_model(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
-    """`wf-01` phases A → E, every step the platform can execute.
+    """`WF-698` phases A → E, every step the platform can execute.
 
     The actors are distinct principals with distinct roles, because several of the journey's
     steps are refusals that only mean something across a role boundary: B9's acknowledgement,
@@ -371,7 +371,7 @@ async def test_wf01_dataset_to_approved_model(
         banding_id = banding.id
 
     # C7: Factors with intent and a declared monotonic direction. The rationale is required
-    # with the direction (FR-MODEL-4) — a judgement with no author is what that refuses.
+    # with the direction (FR-89) — a judgement with no author is what that refuses.
     age_factor = await _create_factor(
         database, workspace_id, analyst, dataset_id, "driver_age_banded", "driver_age",
         type=FactorType.BANDING, banding_id=banding_id,
@@ -408,7 +408,7 @@ async def test_wf01_dataset_to_approved_model(
         )
     assert clean.ok is True
 
-    # D3-D5: the fit, and diagnostics on train **and** holdout (FR-MODEL-54).
+    # D3-D5: the fit, and diagnostics on train **and** holdout (FR-183).
     glm_id = await _fit_model(database, blob_store, workspace_id, analyst, glm_spec)
     async with database.session() as session:
         glm = model_service.to_model(await session.get(ModelRow, glm_id))
@@ -422,7 +422,7 @@ async def test_wf01_dataset_to_approved_model(
     assert glm_diagnostics.universal.holdout.ae_overall > 0
     assert glm_diagnostics.glm is not None
 
-    # D7: the interaction factor. `wf-01` names `annual_mileage x driver_age`; this book has
+    # D7: the interaction factor. `WF-698` names `annual_mileage x driver_age`; this book has
     # no mileage column, so the cross is **banded age x vehicle group** — a divergence in the
     # variables rather than in the step, and the one the fixture allows. Crossing the *banded*
     # age is the point either way: crossing raw ages would give one cell per age-year.
@@ -480,7 +480,7 @@ async def test_wf01_dataset_to_approved_model(
         )
     assert artifact.glm_approximation is not None
     assert artifact.shap_summary is not None
-    assert "%" in artifact.fidelity_statement, "FR-MODEL-36 says *where*, with a number"
+    assert "%" in artifact.fidelity_statement, "FR-136 says *where*, with a number"
 
     # -- Phase E — selection and approval -------------------------------------------------
     # E1: the comparison, on the shared holdout the split guarantees.
@@ -498,7 +498,7 @@ async def test_wf01_dataset_to_approved_model(
         compare_job = job.id
     assert await execute_job(database, compare_job, blob_store) is JobStatus.SUCCEEDED
 
-    # The job succeeding is not the assertion. `wf-01` E1 compares *the two candidates*, and
+    # The job succeeding is not the assertion. `WF-698` E1 compares *the two candidates*, and
     # a comparison that quietly dropped one — or scored the GBM as though its booster were a
     # set of coefficients — would still succeed. So the artifact is read back the way the
     # screen reads it, and asked whether both models are in it.
@@ -533,7 +533,7 @@ async def test_wf01_dataset_to_approved_model(
     # the model selected at E2 is a **frequency** model, and composing it as a peril's cost
     # would reconcile expected claim counts against observed claim amounts.
     #
-    # **`wf-01` E4 composes AD as frequency x severity and this composes it as burning
+    # **`WF-698` E4 composes AD as frequency x severity and this composes it as burning
     # cost**, which is a fixture limit rather than a platform one: severity responds to cost
     # *per claim*, and every claim-free row in this book carries a zero a Gamma refuses.
     # `packages/pricing-core/tests/test_perils.py` drives the frequency x severity arm
@@ -554,8 +554,8 @@ async def test_wf01_dataset_to_approved_model(
         ),
     )
 
-    # E4: the Peril Structure. `wf-01`'s own has three perils; this book has one modelled
-    # peril, so the other two are **excluded with reasons** — which is FR-MODEL-60's actual
+    # E4: the Peril Structure. `WF-698`'s own has three perils; this book has one modelled
+    # peril, so the other two are **excluded with reasons** — which is FR-190's actual
     # demand, that every peril be one or the other, rather than a demand for three models.
     async with database.session() as session:
         selected_row = await session.get(ModelRow, burning_cost_id)
@@ -588,7 +588,7 @@ async def test_wf01_dataset_to_approved_model(
         structure_version = structure_row.version
 
     # E5: the reconciliation, through the real worker. The tolerance is the actuary's own
-    # declaration — `wf-01` E5 declares 0.02 against a book of hundreds of thousands of
+    # declaration — `WF-698` E5 declares 0.02 against a book of hundreds of thousands of
     # policy-years; this fixture is twenty-one, so the number is wider and the *mechanism*
     # is what the journey is asserting.
     async with database.unit_of_work() as session:
@@ -614,12 +614,12 @@ async def test_wf01_dataset_to_approved_model(
     assert reconciled.status is PerilStructureStatus.RECONCILED
     assert reconciled.reconciliation is not None
     assert reconciled.reconciliation.status is ReconciliationStatus.PASS
-    # FR-MODEL-74: the treatment is stated beside the number it produced, per peril — so a
+    # FR-128: the treatment is stated beside the number it produced, per peril — so a
     # capped model reconciling to uncapped data cannot read as a modelling error.
     assert [p.large_loss_kind for p in reconciled.reconciliation.perils] == [
         LargeLossKind.NONE
     ]
-    # FR-MODEL-58's sum, checked rather than assumed.
+    # FR-188's sum, checked rather than assumed.
     assert (
         sum(p.modelled_burning_cost for p in reconciled.reconciliation.perils)
         == reconciled.reconciliation.modelled_burning_cost
@@ -663,7 +663,7 @@ async def test_wf01_dataset_to_approved_model(
     assert approved_row.status == ModelStatus.APPROVED.value
 
     # E6/E10 for the **structure**, which the journey submits and approves alongside the
-    # models. It needed no new approval machinery — `06` FR-GOV-9's machine takes an
+    # models. It needed no new approval machinery — `06` FR-351's machine takes an
     # `ArtifactRef` — but it did need a `peril_structure` entry in the policy, without which
     # a submission is refused for an artifact nobody could ever approve.
     async with database.unit_of_work() as session:
@@ -742,7 +742,7 @@ async def _split_for(
 
     The parts are **materialised**, not asserted: a split whose parts were faked would give
     every fit a holdout identical to its training set, and every diagnostic downstream would
-    report the model's own memory (`01` FR-DATA-36).
+    report the model's own memory (`01` FR-76).
     """
     parts: dict[str, UUID] = {}
     for part in ("train", "test"):
@@ -819,7 +819,7 @@ async def _fit_model(
         row, should_fit = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor, spec=spec
         )
-        assert should_fit is True, "FR-MODEL-66 would return the existing model instead"
+        assert should_fit is True, "FR-204 would return the existing model instead"
         model_id = row.id
     assert await _run(
         database, blob_store, workspace_id, actor, JobKind.MODEL_FIT,
@@ -828,7 +828,7 @@ async def _fit_model(
     return model_id
 
 
-# -- Every step of `wf-01` now runs ---------------------------------------------------------
+# -- Every step of `WF-698` now runs ---------------------------------------------------------
 #
 # **The pinned list is empty, and the test that held it is gone** (2026-08-18, the
 # interaction slice). It carried D7, E4 and E5 as *inverted* assertions — each passing while
@@ -841,9 +841,9 @@ async def _fit_model(
 # an empty pin would be a test asserting that nothing is missing, which is what the walk
 # above already says, at length and with data.
 #
-# FR-OVR-17(ii) for `wf-01` is therefore **delivered**, not partial. One divergence remains
+# FR-19(ii) for `WF-698` is therefore **delivered**, not partial. One divergence remains
 # recorded rather than pinned, because both halves are fixture limits and not platform ones:
-# `wf-01` E4 composes AD as frequency x severity and the journey composes it as burning cost
+# `WF-698` E4 composes AD as frequency x severity and the journey composes it as burning cost
 # (severity responds to cost per claim, and every claim-free row here carries a zero a Gamma
 # refuses), and D7 names `annual_mileage x driver_age` where this book has no mileage column,
 # so the cross is banded age x vehicle group. `packages/pricing-core/tests/` drives both

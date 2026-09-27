@@ -20,7 +20,7 @@ describe("the quantile-bound notice", () => {
   });
 
   it("says a bound estimates a quantile and not a mean", () => {
-    // FR-MODEL-78. A page that shows a bound's numbers without this sentence is a page whose
+    // FR-199. A page that shows a bound's numbers without this sentence is a page whose
     // reader takes them for the family's central estimate.
     render(QuantileBoundNotice, { props: { model: BOUND_MODEL }, ...stubs });
     expect(screen.getByText(/quantile, not the mean/i)).toBeInTheDocument();

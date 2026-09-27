@@ -1,7 +1,7 @@
-# W8 spike resolution — zen-engine 0.53.0, S1/S2 re-verification
+# WK-668 spike resolution — zen-engine 0.53.0, S1/S2 re-verification
 
 Re-run of the S1 and S2 verification suites against the installed engine, per
-`docs/plans/2026-08-27-w8-spike-resolution.md` T1-T4. Version pinned: `zen-engine` 0.53.0
+`docs/plans/PL-00817-wk-668-implementation-plan-spike-s1-s2-resolution-and-adr-706-confirmation.md` T1-T4. Version pinned: `zen-engine` 0.53.0
 (cp312 manylinux wheel), fetched without pip per the `library-spike` procedure. The wheel
 has no runtime dependencies; the importable package is `zen`.
 
@@ -12,12 +12,12 @@ has no runtime dependencies; the importable package is `zen`.
 - Import verified: `import zen` succeeds; `ZenEngine`, `evaluate_expression`,
   `compile_expression`, `validate_expression` present.
 
-## T2 — S1 verification (FR-RATE-56/57/58/59)
+## T2 — S1 verification (FR-273/274/275/276)
 
 All checks run through `zen.evaluate_expression` / `zen.compile_expression` on the
 installed engine. 21 checks, 0 failed.
 
-### Exactness — confirms FR-RATE-56's premise (engine arithmetic is exact)
+### Exactness — confirms FR-273's premise (engine arithmetic is exact)
 
 | Check | Measured | Result |
 |---|---|---|
@@ -25,7 +25,7 @@ installed engine. 21 checks, 0 failed.
 | `1.005 * 100 == 100.5` | `100.5` | PASS |
 | `2.675 * 100 == 267.5` | `267.5` | PASS |
 
-### Binding — confirms FR-RATE-56 (no decimal type at the boundary)
+### Binding — confirms FR-273 (no decimal type at the boundary)
 
 | Check | Measured | Result |
 |---|---|---|
@@ -34,7 +34,7 @@ installed engine. 21 checks, 0 failed.
 | `1/3` returns a Python float | `0.33333333333333337` (float) | PASS |
 | `36120 + 7` returns a Python float | `36127.0` (float) | PASS |
 
-### Division — confirms FR-RATE-57 (division by zero returns null, raises only on use)
+### Division — confirms FR-274 (division by zero returns null, raises only on use)
 
 | Check | Measured | Result |
 |---|---|---|
@@ -43,7 +43,7 @@ installed engine. 21 checks, 0 failed.
 | `premium/0` | `None` | PASS |
 | `(1/0) + 5` (used null) | `RuntimeError: vmError — Opcode Add: Unsupported type` | PASS |
 
-### Vocabulary — confirms FR-RATE-59 (validated against the engine)
+### Vocabulary — confirms FR-276 (validated against the engine)
 
 | Check | Measured | Result |
 |---|---|---|
@@ -57,21 +57,21 @@ installed engine. 21 checks, 0 failed.
 | `ceil(1.2)` | `2.0` | PASS (accepted) |
 | `sum([1, 2, 3])` | `6.0` | PASS (accepted) |
 
-### Scale cap — confirms FR-RATE-58 (decimal scale capped at 28)
+### Scale cap — confirms FR-275 (decimal scale capped at 28)
 
 | Check | Measured | Result |
 |---|---|---|
 | `(1/3) * 3 == 1` | `False` | PASS (repeated division loses exactness inside the engine) |
 
-**FR-RATE-56/57/58/59: all confirmed by the re-run.**
+**FR-273/274/275/276: all confirmed by the re-run.**
 
-## T4 — S2 latency verification (NFR-RATE-13/14)
+## T4 — S2 latency verification (NFR-502/501)
 
 Measurement: a 500-tree x 60-feature XGBoost booster (3.4.1) scoring a single row,
 1000 iterations, `perf_counter`, p99 at the tail. The booster's `nthread` parameter was
 switched between 1 and all-cores (-1).
 
-### NFR-RATE-14 — `nthread=1` per request — CONFIRMED
+### NFR-501 — `nthread=1` per request — CONFIRMED
 
 | Case | p99 | max | median |
 |---|---|---|---|
@@ -80,11 +80,11 @@ switched between 1 and all-cores (-1).
 | predict-only (nthread=1) | 0.308 ms | 0.572 ms | 0.075 ms |
 
 - nthread=1 p99 is **0.34x** of all-cores at the tail (single-threading beats all-cores).
-- p99 1.626 ms is **3.3 %** of the 50 ms budget (NFR-RATE-14 / OQ-RATE-2) — PASS.
+- p99 1.626 ms is **3.3 %** of the 50 ms budget (NFR-501 / OQ-615) — PASS.
 - Matches the original S2 order (1.09 ms p99); the machine this run measured is slightly
   slower on DMatrix construction.
 
-### NFR-RATE-13 — no `response_model` on the hot path — rule confirmed, premise not reproduced
+### NFR-502 — no `response_model` on the hot path — rule confirmed, premise not reproduced
 
 The scoring endpoint is Phase 2 and not yet built, so no code applies `response_model` to
 it today; the rule is confirmed as stated for the Phase 2 slice. The requirement's

@@ -14,7 +14,7 @@ name: history-policy
 # check would pass by not running — the failure mode F49 already had.
 #
 # **Commit messages only, never tracked files.** The literal string appears legitimately in
-# `docs/audit/register.md` (F49's own row) and `docs/process/delivery-process.md` §15 — the
+# `docs/findings/register.md` (F49's own row) and `docs/process/delivery-process.md` §15 — the
 # two documents that define the ban. A file scan would red on its own specification. A
 # session URL inside a document explaining why session URLs are banned is not the defect;
 # one in a commit message always is.

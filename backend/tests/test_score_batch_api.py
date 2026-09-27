@@ -1,12 +1,12 @@
-"""`POST /api/v1/score/batch` — the batch scoring route (W11 Task 3C, `03` §5.1:517,
-FR-RATE-36/37/38).
+"""`POST /api/v1/score/batch` — the batch scoring route (WK-671 Task 3C, `03` §5.1:517,
+FR-253/254/255).
 
 **The route submits a Job and nothing else.** Everything durable — the manifest, the
 scratch parts, the abort threshold, the output — is `app.worker.scoring_handlers`'s (Task
 3B, `backend/tests/test_scoring_handlers.py`). This file tests two things only: that the
 route answers 202 with a pollable Job whose completion yields a retrievable parquet
 (acceptance standard item 1 for this task), and that `Permission.SCORE_BATCH` gates it the
-same way Ruling 18 established for `Permission.SCORE_EXECUTE` on `/score`
+same way RL-884 established for `Permission.SCORE_EXECUTE` on `/score`
 (`backend/tests/test_score.py`) — a scoped account holding it may call, an account without
 it is refused at the permission dependency, and a key relabelled to another environment is
 refused at authentication, before either.
@@ -53,7 +53,7 @@ async def headers(
 ) -> dict[str, str]:
     """Dev-auth headers for a principal granted `admin` and `analyst` — enough to create a
     Service Account and a compiled Rating Version, never to call `/score/batch` itself:
-    `Permission.SCORE_BATCH` is granted by no builtin role (FR-GOV-6), so this principal can
+    `Permission.SCORE_BATCH` is granted by no builtin role (FR-347), so this principal can
     build the fixture but never use it (mirrors `test_score.py`'s `admin_headers`)."""
     await grant("admin")
     await grant("analyst")
@@ -140,7 +140,7 @@ def _body(dataset_version_id: UUID, **overrides: Any) -> dict[str, Any]:
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-36")
+@pytest.mark.req("FR-253")
 async def test_the_route_answers_202_and_the_completed_job_yields_a_retrievable_parquet(
     api_client: TestClient,
     batch_headers: dict[str, str],
@@ -193,11 +193,11 @@ async def test_the_route_answers_202_and_the_completed_job_yields_a_retrievable_
 
 
 # --------------------------------------------------------------------------------------
-# Step 2: RBAC, three cases (Ruling 18's pattern, mirrored from `test_score.py`).
+# Step 2: RBAC, three cases (RL-884's pattern, mirrored from `test_score.py`).
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("NFR-RATE-11")
+@pytest.mark.req("NFR-499")
 async def test_a_scoped_account_holding_score_batch_may_call_the_route(
     api_client: TestClient,
     batch_headers: dict[str, str],
@@ -205,7 +205,7 @@ async def test_a_scoped_account_holding_score_batch_may_call_the_route(
     scoring_table: UUID,
     compiled_rating_version: None,
 ) -> None:
-    """Ruling 18's first two cases, paired in one test on purpose (`test_score.py`'s own
+    """RL-884's first two cases, paired in one test on purpose (`test_score.py`'s own
     reasoning): asserting only the permitted case would pass against a route with no
     permission check at all, and asserting only the refusal would pass against a route
     refusing everyone."""
@@ -218,11 +218,11 @@ async def test_a_scoped_account_holding_score_batch_may_call_the_route(
     assert refused.status_code == 403, refused.text
 
 
-@pytest.mark.req("NFR-RATE-11")
+@pytest.mark.req("NFR-499")
 def test_a_key_relabelled_to_another_environment_is_refused_at_authentication(
     api_client: TestClient, headers: dict[str, str], workspace_id: UUID
 ) -> None:
-    """FR-PLAT-30: the environment segment of a key is a label, not an authorisation. Only
+    """FR-430: the environment segment of a key is a label, not an authorisation. Only
     the secret is hashed, so relabelling `uat` to `prod` still verifies and must still be
     refused, because `prod` is not among the environments the account was granted."""
     created = api_client.post(

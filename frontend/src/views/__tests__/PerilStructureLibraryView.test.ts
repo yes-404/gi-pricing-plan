@@ -37,14 +37,14 @@ describe("PerilStructureLibraryView", () => {
     const headers = Array.from(container.querySelectorAll("th")).map((h) =>
       (h.textContent ?? "").toLowerCase(),
     );
-    // FR-MODEL-127 gives a Peril Structure no usage count, and FR-MODEL-44's applicability is
+    // FR-167 gives a Peril Structure no usage count, and FR-153's applicability is
     // not its concept. Absent, not blank — asserted on the header.
     expect(headers.some((h) => h.includes("usage") || h.includes("used by"))).toBe(false);
     expect(headers.some((h) => h.includes("applicab"))).toBe(false);
     expect(headers).toEqual(["slug", "version", "status"]);
 
     // Not a defaulted zero either: `usage_count ?? 0` is the idiom the other two libraries
-    // use, and copied here it would render `0` in a column FR-MODEL-127 says cannot exist.
+    // use, and copied here it would render `0` in a column FR-167 says cannot exist.
     const cells = Array.from(container.querySelectorAll("tbody td")).map((c) =>
       (c.textContent ?? "").trim(),
     );

@@ -1,6 +1,6 @@
 """W7-3: the Phase 1b rating version table.
 
-The artifact `FR-PLAT-67` asks the demo to seed: a slugged, versioned,
+The artifact `FR-440` asks the demo to seed: a slugged, versioned,
 `draft → review → approved` rating version pinning an approved Model. Minimal on purpose —
 compile, score, rate tables and deployment stay Phase 2 (`03` §4.3's scoping note, OD1).
 

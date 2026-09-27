@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/grouping.schema.json",
   "title": "Grouping",
-  "description": "Versioned mapping of many source levels onto fewer target levels. A first-class auditable modelling decision, not a convenience (02 FR-MODEL-13..17, §4.3).",
+  "description": "Versioned mapping of many source levels onto fewer target levels. A first-class auditable modelling decision, not a convenience (02 FR-104, FR-105, FR-107, FR-108, FR-109, §4.3).",
   "type": "object",
   "required": ["column", "method", "method_params", "derived_on_dataset_version_id",
                "mapping", "unseen_level_behaviour"],
@@ -16,13 +16,13 @@
         "credibility_standard_claims": {"type": "integer", "minimum": 1},
         "credibility_model": {"enum": ["limited_fluctuation", "buhlmann_straub"],
           "default": "limited_fluctuation",
-          "description": "Recorded per grouping; it is a modelling judgement, not a platform constant (FR-MODEL-80; OQ-MODEL-5 decided 2026-08-15)."},
+          "description": "Recorded per grouping; it is a modelling judgement, not a platform constant (FR-106; OQ-579 decided 2026-08-15)."},
         "credibility_pk": {
           "type": "object",
           "required": ["p", "k"],
           "properties": {"p": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
                          "k": {"type": "number", "exclusiveMinimum": 0}},
-          "description": "The (p, k) pair credibility_standard_claims was derived from — p=0.90, k=0.05 gives 1082 claims. Without it the standard is an unattributable number (FR-MODEL-80)."},
+          "description": "The (p, k) pair credibility_standard_claims was derived from — p=0.90, k=0.05 gives 1082 claims. Without it the standard is an unattributable number (FR-106)."},
         "merge_tolerance_relativity": {"type": "number", "exclusiveMinimum": 0},
         "reference_table_ref": {"$ref": "common/artifact-ref.schema.json"}
       }
@@ -31,21 +31,21 @@
     "mapping": {
       "type": "object",
       "additionalProperties": {"type": "string"},
-      "description": "Exhaustive over observed source levels (FR-MODEL-13)."
+      "description": "Exhaustive over observed source levels (FR-104)."
     },
     "unseen_level_behaviour": {
       "enum": ["error", "map_to_default", "map_to_base"],
-      "description": "Mandatory; there is no implicit default (FR-MODEL-13)."
+      "description": "Mandatory; there is no implicit default (FR-104)."
     },
     "default_target_level": {"type": ["string", "null"]},
     "parent_grouping_id": {
       "type": ["string", "null"], "format": "uuid",
-      "description": "Set for a hierarchical chain, e.g. outcode -> area -> region (FR-MODEL-17)."
+      "description": "Set for a hierarchical chain, e.g. outcode -> area -> region (FR-109)."
     },
     "evidence": {
       "type": "object",
       "required": ["source_level_count", "target_level_count"],
-      "description": "Grouping must be defensible as a modelling decision (FR-MODEL-15).",
+      "description": "Grouping must be defensible as a modelling decision (FR-107).",
       "properties": {
         "source_level_count": {"type": "integer", "minimum": 1},
         "target_level_count": {"type": "integer", "minimum": 1},
@@ -55,14 +55,14 @@
           "properties": {"evpv": {"type": "number", "exclusiveMinimum": 0},
                          "vhm": {"type": "number", "exclusiveMinimum": 0},
                          "k": {"type": "number", "exclusiveMinimum": 0}},
-          "description": "Buhlmann-Straub variance components, so a reviewer can re-derive Z rather than take it. Null under limited fluctuation (FR-MODEL-80). All three are strictly positive because a non-positive EVPV or VHM is refused with CREDIBILITY_VARIANCE_NOT_ESTIMABLE rather than clamped (FR-MODEL-113) - only k carried the bound until 2026-08-22, so a zero or negative variance component validated against a contract the platform would never emit. NOTE: this k is EVPV/VHM, Buhlmann-Straub's credibility constant. It is NOT method_params.credibility_pk.k, which is limited fluctuation's tolerance (0.05). Two different quantities, one letter, one artifact."},
+          "description": "Buhlmann-Straub variance components, so a reviewer can re-derive Z rather than take it. Null under limited fluctuation (FR-106). All three are strictly positive because a non-positive EVPV or VHM is refused with CREDIBILITY_VARIANCE_NOT_ESTIMABLE rather than clamped (FR-118) - only k carried the bound until 2026-08-22, so a zero or negative variance component validated against a contract the platform would never emit. NOTE: this k is EVPV/VHM, Buhlmann-Straub's credibility constant. It is NOT method_params.credibility_pk.k, which is limited fluctuation's tolerance (0.05). Two different quantities, one letter, one artifact."},
         "deviance_before": {"type": "number"},
         "deviance_after": {"type": "number"},
         "df_saved": {"type": "integer"},
         "chi2_p_value": {"type": "number", "minimum": 0, "maximum": 1},
         "source_level_stats": {
           "$ref": "#/$defs/OneWayRows",
-          "description": "The source levels this grouping collapsed (FR-MODEL-15). Added to the model 2026-08-22 having been declared here since Phase 0 and absent from GroupingEvidence throughout - nothing caught it because the field is nested under evidence and the field-name comparison reads top-level names only."
+          "description": "The source levels this grouping collapsed (FR-107). Added to the model 2026-08-22 having been declared here since Phase 0 and absent from GroupingEvidence throughout - nothing caught it because the field is nested under evidence and the field-name comparison reads top-level names only."
         },
         "target_level_stats": {
           "$ref": "#/$defs/OneWayRows",
@@ -75,7 +75,7 @@
   "$defs": {
     "OneWayRows": {
       "type": "array",
-      "description": "OneWayRow as model_schema.profiles defines it (FR-DATA-26). Stated once here because both halves of the evidence are the same shape. Corrected 2026-08-22: this block hand-copied a four-field subset and declared a 'relativity' OneWayRow has never carried, while source_level_stats was an untyped array of objects. The model was right and the contract was wrong - OneWayRow is computed once and shared by 01's profile and 02's factor workbench so both see the same numbers, and a third hand-copy of it is the shape-defined-twice CLAUDE.md 2 forbids.",
+      "description": "OneWayRow as model_schema.profiles defines it (FR-61). Stated once here because both halves of the evidence are the same shape. Corrected 2026-08-22: this block hand-copied a four-field subset and declared a 'relativity' OneWayRow has never carried, while source_level_stats was an untyped array of objects. The model was right and the contract was wrong - OneWayRow is computed once and shared by 01's profile and 02's factor workbench so both see the same numbers, and a third hand-copy of it is the shape-defined-twice CLAUDE.md 2 forbids.",
       "items": {
         "type": "object",
         "required": ["level", "exposure_years"],

@@ -1,4 +1,4 @@
-"""Request dependencies: who is calling, and on whose behalf (FR-PLAT-1..4).
+"""Request dependencies: who is calling, and on whose behalf (FR-387, FR-388, FR-389, FR-390).
 
 Three credential paths, tried in order, and every one of them can only *fail closed*:
 
@@ -14,8 +14,8 @@ it is acting in; the platform derives it from membership (users) or from the acc
 workspace (service accounts). An *unverified* header-supplied workspace would make the
 scope a claim rather than a fact.
 
-That is what stays refused, and it is narrower than it reads. OQ-PLAT-9, decided
-2026-08-23 (`07` FR-PLAT-65), settled that a principal with several memberships names one
+That is what stays refused, and it is narrower than it reads. OQ-648, decided
+2026-08-23 (`07` FR-397), settled that a principal with several memberships names one
 in a `Workspace-Id` header and the platform checks it against the memberships it already
 holds: a choice among facts is not a claim. That check is built (W32-7): `require_caller`
 declares the header and `_select_workspace` verifies it against the memberships the
@@ -23,7 +23,7 @@ platform holds, denying a workspace the principal does not belong to. What has n
 is the rule the header serves — an *unverified* scope is still refused, and a caller with
 several memberships and no selection is still refused rather than defaulted into one.
 
-A workspace is *not* the tenant boundary — ADR-0006 makes that the deployment, and one
+A workspace is *not* the tenant boundary — ADR-710 makes that the deployment, and one
 deployment serves one tenant. What this scoping buys is that a home-pricing team cannot
 read the motor book, which is worth having on its own; it is not what keeps two insurers
 apart, and describing it that way would put weight on a check that was never load-bearing
@@ -58,12 +58,12 @@ DEV_PRINCIPAL_HEADER = "x-dev-principal-id"
 
 @dataclass(frozen=True)
 class Caller:
-    """The authenticated principal and the workspace it is acting in (FR-OVR-13)."""
+    """The authenticated principal and the workspace it is acting in (FR-16)."""
 
     principal: Principal
     workspace_id: UUID
     environments: frozenset[str] = frozenset()
-    #: The environment the presented credential was scoped to (Ruling 44) — `None` for a
+    #: The environment the presented credential was scoped to (RL-916) — `None` for a
     #: bearer or development caller. `environments` above is unchanged: the account's
     #: granted set, still the field authorisation reads.
     environment: str | None = None
@@ -91,7 +91,7 @@ class Identity:
     """An authenticated principal with no workspace selection made.
 
     `require_caller` resolves a selection and refuses rather than defaulting
-    (`FR-PLAT-65`); this does neither. It exists for the one surface a principal must
+    (`FR-397`); this does neither. It exists for the one surface a principal must
     reach before it has a selection — the switch endpoints in `me.py`.
     """
 
@@ -191,7 +191,7 @@ IdentityDep = Annotated[Identity, Depends(require_identity)]
 #: says the same thing in each place. A generated client is written against this text.
 WORKSPACE_ID_DESCRIPTION = (
     "The workspace to act in, as a UUID. Required when the principal is a member of more "
-    "than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send "
+    "than one (`07` FR-397); a principal with exactly one, and a Service Account, send "
     "nothing. Checked against the principal's own memberships: a workspace it does not "
     "belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several "
     "memberships yields `403 WORKSPACE_SELECTION_REQUIRED`."
@@ -208,7 +208,7 @@ async def require_caller(
     """Resolve the caller, or refuse."""
     # Taken as `str | None` and parsed here rather than annotated `UUID | None`: FastAPI
     # would answer a malformed UUID with a bare `422` outside the platform error
-    # catalogue, and FR-PLAT-65 requires the refusal to be a typed platform error.
+    # catalogue, and FR-397 requires the refusal to be a typed platform error.
     selected: UUID | None = None
     if workspace_id is not None:
         try:
@@ -256,21 +256,21 @@ def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) ->
     that declared parameter unused — which is how a documented header stops being the one the
     server actually reads.
 
-    The selection is **checked, never trusted** (FR-PLAT-63, FR-PLAT-65). The invariant this
-    module has carried since W2 — that a header-supplied workspace would make the scope a
+    The selection is **checked, never trusted** (FR-396, FR-397). The invariant this
+    module has carried since WK-658 — that a header-supplied workspace would make the scope a
     claim rather than a fact — refuses *trusting* the caller. A choice among memberships the
     platform already holds is not a claim; defaulting would be, which is why an absent
     selection is refused rather than resolved.
     """
     if not identity.workspaces:
-        # FR-PLAT-4 owns this branch and FR-PLAT-63 does not touch it: no membership is a
+        # FR-390 owns this branch and FR-396 does not touch it: no membership is a
         # different fact from an unmade choice, and it keeps its original code.
         raise PlatformError(
             "UNAUTHENTICATED",
             "No workspace access",
             403,
             "This principal is authenticated but is a member of no workspace. Access is "
-            "granted explicitly (FR-PLAT-4); it is never the default.",
+            "granted explicitly (FR-390); it is never the default.",
         )
     if selected is not None:
         if selected not in identity.workspaces:
@@ -280,7 +280,7 @@ def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) ->
                 403,
                 "The Workspace-Id header names a workspace this principal is not a member "
                 "of. The selection is checked against the memberships the platform holds "
-                "(07 FR-PLAT-65); it is never taken on trust.",
+                "(07 FR-397); it is never taken on trust.",
             )
         chosen = selected
     elif len(identity.workspaces) > 1:
@@ -289,7 +289,7 @@ def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) ->
             "Workspace selection required",
             403,
             "This principal belongs to more than one workspace. Name one in the "
-            "Workspace-Id header (07 FR-PLAT-65); the platform will not choose for you.",
+            "Workspace-Id header (07 FR-397); the platform will not choose for you.",
         )
     else:
         chosen = next(iter(identity.workspaces))

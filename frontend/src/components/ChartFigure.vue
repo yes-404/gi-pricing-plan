@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * A chart and a table that says at least what the chart says (NFR-OVR-10).
+ * A chart and a table that says at least what the chart says (NFR-463).
  *
  * The contract is a **superset**, not a transcription, and it was widened deliberately once
  * three charts had been wrapped. "The table that says the same thing" is the floor: every

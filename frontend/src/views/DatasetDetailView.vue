@@ -163,7 +163,7 @@ onMounted(() => void load());
       >
         <strong>{{ forbidden.length }}</strong>
         column{{ forbidden.length === 1 ? "" : "s" }} may not be modelled on
-        (FR-OVR-9): <span class="font-mono">{{ forbidden.join(", ") }}</span>.
+        (FR-12): <span class="font-mono">{{ forbidden.join(", ") }}</span>.
       </p>
 
       <section class="mt-6">

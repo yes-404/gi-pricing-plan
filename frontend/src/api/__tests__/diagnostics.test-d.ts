@@ -14,7 +14,7 @@ import { partitions } from "@/api/diagnostics";
 type ProducedCaption = NonNullable<ReturnType<typeof partitions>[number]>[0];
 
 describe("PartitionCaption widens the presentation seam without widening the fit", () => {
-  // FR-MODEL-57: a backtest's single partition is neither of the fit's two, and calling it
+  // FR-187: a backtest's single partition is neither of the fit's two, and calling it
   // a holdout "would claim a split nobody made". The instruments must accept a third
   // caption; the fit's own vocabulary must not gain one.
   it("admits every fit label, so no existing caller has to change", () => {
@@ -39,7 +39,7 @@ describe("PartitionCaption widens the presentation seam without widening the fit
     expectTypeOf<ProducedCaption>().toEqualTypeOf<"Train" | "Holdout">();
   });
 
-  // Closed, not `string`. A caption nobody specified is the defect FR-MODEL-57 guards.
+  // Closed, not `string`. A caption nobody specified is the defect FR-187 guards.
   it("stays a closed union", () => {
     expectTypeOf<PartitionCaption>().not.toEqualTypeOf<string>();
     expectTypeOf<"Out-of-time">().not.toExtend<PartitionCaption>();

@@ -1,4 +1,4 @@
-"""The FR-DATA-51 owner backfill resolves an owner, and refuses when it cannot.
+"""The FR-82 owner backfill resolves an owner, and refuses when it cannot.
 
 `82edffbe1dce` gives a Dataset a non-null `owner_id`. For a Dataset that already existed
 the only record of who created it is the audit chain, so the migration reads it back out
@@ -20,7 +20,7 @@ Two shapes are used, deliberately:
   for a governed field is worse than a migration that stops.
 
 Everything the shadow tests write lives inside one transaction that is never committed,
-including the `audit_events` rows: FR-GOV-22 forbids deleting them, and a rollback is not
+including the `audit_events` rows: FR-370 forbids deleting them, and a rollback is not
 a delete.
 """
 
@@ -166,7 +166,7 @@ async def _owner_of(session: AsyncSession, slug: str) -> UUID | None:
     return owner
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_the_backfill_resolves_an_owner_from_the_creation_event(
     shadow_datasets: AsyncSession,
 ) -> None:
@@ -180,7 +180,7 @@ async def test_the_backfill_resolves_an_owner_from_the_creation_event(
     assert await _owner_of(shadow_datasets, "motor-ad") == actor
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_the_earliest_creation_event_wins_by_sequence(
     shadow_datasets: AsyncSession,
 ) -> None:
@@ -221,7 +221,7 @@ async def test_the_earliest_creation_event_wins_by_sequence(
     assert await _owner_of(shadow_datasets, "motor-ad") == first_by_sequence
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_a_slug_that_prefixes_another_does_not_borrow_its_owner(
     shadow_datasets: AsyncSession,
 ) -> None:
@@ -243,7 +243,7 @@ async def test_a_slug_that_prefixes_another_does_not_borrow_its_owner(
     assert await _owner_of(shadow_datasets, "motor-ad") == actor
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_any_version_in_the_ref_resolves(shadow_datasets: AsyncSession) -> None:
     """`@%`, deliberately, and the migration's comment at :31-36 says why.
 
@@ -262,7 +262,7 @@ async def test_any_version_in_the_ref_resolves(shadow_datasets: AsyncSession) ->
     assert await _owner_of(shadow_datasets, "motor-ad") == actor
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_the_inconsistent_refs_are_not_picked_up(shadow_datasets: AsyncSession) -> None:
     """**Negative**, and the only way those two inconsistencies are reachable at all.
 
@@ -306,7 +306,7 @@ async def test_the_inconsistent_refs_are_not_picked_up(shadow_datasets: AsyncSes
 # not been tested.
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_a_prefix_matching_backfill_would_be_caught(shadow_datasets: AsyncSession) -> None:
     """The `@` guard, proven to bite: widen the `LIKE` and `motor` borrows `motor-ad`'s owner."""
     widened = _backfill_sql().replace("|| '@%'", "|| '%'")
@@ -323,7 +323,7 @@ async def test_a_prefix_matching_backfill_would_be_caught(shadow_datasets: Async
     assert await _owner_of(shadow_datasets, "motor") == actor
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_an_unfiltered_backfill_would_be_caught(shadow_datasets: AsyncSession) -> None:
     """The action filter, proven to bite.
 
@@ -409,7 +409,7 @@ async def _upgrade(cfg: Config, revision: str) -> None:
     await asyncio.to_thread(command.upgrade, cfg, revision)
 
 
-@pytest.mark.req("FR-DATA-51")
+@pytest.mark.req("FR-82")
 async def test_an_unresolvable_dataset_stops_the_migration(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
