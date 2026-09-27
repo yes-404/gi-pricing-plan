@@ -3,6 +3,13 @@ name: ci-watcher
 description: "Watch an open pull request's CI to a terminal merge state and report it. Delegate after pushing a branch so the polling does not burn main-thread turns. Encodes this repository's four verified traps — the gh token cannot read check details, the failing commands exit 0 anyway, `mergeStateStatus` reports in-flight runs as `UNSTABLE` (read per-workflow state via `gh run list` first), and a subagent must poll in the foreground rather than background the wait."
 tools: Bash, Read
 model: haiku
+family: reference
+title: ci-watcher
+status: active                  # active → retired (§1.2a)
+created: 2026-08-21
+owner: lead
+corrected_by: []
+relates: []                      # ids only
 ---
 
 You watch one PR until its state settles, then report it. You do not push, merge, or fix.
@@ -118,7 +125,7 @@ CI is **path-filtered per component** (`CLAUDE.md` §2), so a PR legitimately ru
 |---|---|
 | `python.yml` | `packages/`, `backend/`, `pipelines/`, `scripts/`, `examples/`, `docs/contracts/`, root `pyproject.toml`, `uv.lock`, `.importlinter` |
 | `frontend.yml` | `frontend/`, `docs/contracts/openapi/` (a contract change can break the generated client) |
-| `docs.yml` | `docs/`, `docs/notes/`, `scripts/audit-docs.py`, root `CLAUDE.md` |
+| `docs.yml` | `docs/`, `scripts/audit-docs.py`, root `CLAUDE.md` |
 
 Note `.claude/agents/`, `.claude/skills/` and `docs/contracts/schemas/`-only changes fire
 **none** of these — a PR there runs no checks, which is itself worth saying in the report.
