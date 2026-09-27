@@ -1,6 +1,6 @@
-"""peril structures and their reconciliation (`02` §4.10, FR-MODEL-58..61)
+"""peril structures and their reconciliation (`02` §4.10, FR-188, FR-189, FR-190, FR-191)
 
-The table `03-rating-engine.md` will reference: FR-MODEL-61 makes a Rating Version cite one
+The table `03-rating-engine.md` will reference: FR-191 makes a Rating Version cite one
 Peril Structure rather than a scatter of individual models.
 
 Two guards, both the shape `models` uses one table over:
@@ -11,7 +11,7 @@ Two guards, both the shape `models` uses one table over:
   `record_reconciliation` legitimately updates the row once — exactly why
   `models_fit_immutable` is conditional too;
 * **a reconciled structure cannot be deleted.** It is the evidence an approval was granted
-  against, and `06` FR-GOV-14 resolves an approval to the artifact version it cited.
+  against, and `06` FR-356 resolves an approval to the artifact version it cited.
 
 Revision ID: b1c2d3e4f5a6
 Revises: a1b2c3d4e5f7
@@ -40,7 +40,7 @@ BEGIN
     IF NEW.perils IS DISTINCT FROM OLD.perils
        OR NEW.excluded_perils IS DISTINCT FROM OLD.excluded_perils THEN
       RAISE EXCEPTION
-        'a reconciled Peril Structure''s composition is immutable (02 FR-MODEL-60): % rejected',
+        'a reconciled Peril Structure''s composition is immutable (02 FR-190): % rejected',
         TG_OP
         USING ERRCODE = 'insufficient_privilege',
               HINT = 'Create the next version. The reconciliation measured this set of '
@@ -58,7 +58,7 @@ CREATE OR REPLACE FUNCTION peril_structures_reconciled_undeletable() RETURNS tri
 BEGIN
   IF OLD.reconciliation IS NOT NULL THEN
     RAISE EXCEPTION
-      'a reconciled Peril Structure cannot be deleted (02 FR-MODEL-60)'
+      'a reconciled Peril Structure cannot be deleted (02 FR-190)'
       USING ERRCODE = 'insufficient_privilege',
             HINT = 'Archive it. An approval resolves to the artifact version it cited.';
   END IF;

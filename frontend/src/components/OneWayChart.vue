@@ -40,7 +40,7 @@ const levels = computed(() => rows.value.map((row) => row.level));
  * exposure is noise, and the chart has to make that visible at a glance rather than invite
  * an actuary to rate on four policies.
  *
- * `exposure_years` is an exact decimal **string** (FR-OVR-7). `Number()` here is
+ * `exposure_years` is an exact decimal **string** (FR-10). `Number()` here is
  * deliberate and safe: a chart coordinate is a float64 either way, and the value being
  * plotted is not the value being stored. Nothing computes with it.
  */
@@ -71,7 +71,7 @@ const option = computed(() => ({
       itemStyle: { color: "#0f766e" },
     },
     {
-      // The exact Poisson interval (FR-DATA-26), drawn as a whisker per level. A
+      // The exact Poisson interval (FR-61), drawn as a whisker per level. A
       // frequency without one invites a decision the count cannot support — nine claims
       // in a young-driver band look either significant or like noise depending entirely
       // on this.
@@ -116,7 +116,7 @@ function renderInterval(params: unknown, api: unknown): unknown {
 }
 
 /**
- * The chart's accessible equivalent (NFR-OVR-10), and until now the only chart on the
+ * The chart's accessible equivalent (NFR-463), and until now the only chart on the
  * Profile page that had one — hand-written in `ProfileView`, beside the chart rather than
  * bound to it, and therefore attached to that one call site instead of to the component
  * that draws the canvas. It moves here so that any view rendering a one-way gets the table
@@ -131,7 +131,7 @@ function renderInterval(params: unknown, api: unknown): unknown {
  *   interval invites a decision the claim count cannot support.
  * - **Severity CI** is plotted by nothing and is tabled anyway. Tabling the frequency's
  *   interval and withholding the severity's would tell the reader that the frequency needs
- *   one and the mean severity does not, which is not what FR-DATA-26 says; severity from
+ *   one and the mean severity does not, which is not what FR-61 says; severity from
  *   nine claims is the less stable of the two, not the more.
  */
 const columns = [
@@ -156,7 +156,7 @@ function interval(ci: readonly [number, number] | null | undefined, digits: numb
  * `mean_severity`, `mean_burning_cost` and `severity_ci` are **float ratios**, not amounts:
  * amount ÷ claims and amount ÷ exposure. Formatting them as currency would imply an
  * exactness they do not have, so they are shown as the statistics they are. Still expressed
- * in minor units — only the name changed (FR-DATA-46) — so the `/ 100` scaling stays.
+ * in minor units — only the name changed (FR-64) — so the `/ 100` scaling stays.
  *
  * `severity_ci` shares that scale because it is computed from the same `claim_amount_minor`
  * sum `mean_severity` is (`pricing_core.data.profile._one_way_row`), so it is divided the

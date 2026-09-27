@@ -12,7 +12,7 @@ function summaryWith(period: Partial<BacktestSummary>): BacktestSummary {
 }
 
 describe("periodLabel", () => {
-  // FR-MODEL-57 calls a backtest "the evidence bridge into 05-monitoring.md", and
+  // FR-187 calls a backtest "the evidence bridge into 05-monitoring.md", and
   // `backtests.py` adds that "a deterioration nobody can date is not evidence of drift".
   // So the window is shown whenever the artifact carries one.
   it("reads a closed window as a range", () => {

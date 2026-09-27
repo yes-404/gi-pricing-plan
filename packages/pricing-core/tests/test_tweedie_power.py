@@ -1,4 +1,4 @@
-"""FR-MODEL-22: the Tweedie power estimated by profile likelihood over a grid, end to end.
+"""FR-114: the Tweedie power estimated by profile likelihood over a grid, end to end.
 
 Not a type-level test — a feature four sites agreeing on a shape can still not work
 (`.claude/skills/python-test`), and the site that matters here is the actual refit against
@@ -33,7 +33,7 @@ def _factor(slug: str, column: str) -> Factor:
 
 
 def _tweedie_data(n: int = 60_000, power: float = 1.5, seed: int = 20260821) -> pl.DataFrame:
-    """A compound-Poisson-Gamma book with a known power (FR-MODEL-22's target).
+    """A compound-Poisson-Gamma book with a known power (FR-114's target).
 
     Drawn directly from the Tweedie distribution: N ~ Pois(mu^(2-p) / ((2-p)*phi)) and Y
     is the sum of N Gamma(shape=(2-p)/(p-1), scale=(p-1)*phi*mu^(p-1)) draws — the
@@ -76,7 +76,7 @@ def _spec(**over: object) -> GlmSpec:
     return GlmSpec(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 @pytest.mark.parametrize(
     ("power", "grid"),
     [
@@ -89,7 +89,7 @@ def test_a_profile_minimum_at_the_grid_edge_is_refused(
 ) -> None:
     """Negative, first: an estimate at the boundary of the scan is not an estimate. The
     truth is far outside the scan, the deviance gaps are huge, and the argmin lands at the
-    edge — returning it would report the scan's edge as the fit's answer (FR-MODEL-22:
+    edge — returning it would report the scan's edge as the fit's answer (FR-114:
     a named error, not a silently degenerate result)."""
     data = _tweedie_data(power=power, n=20_000)
     with pytest.raises(GlmFitError) as refused:
@@ -98,7 +98,7 @@ def test_a_profile_minimum_at_the_grid_edge_is_refused(
     assert "tweedie.p_grid" in str(refused.value)
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 def test_a_fixed_power_spec_records_no_estimate() -> None:
     """Negative, the other direction: no estimation block, no estimate — the unchanged
     fixed-power path, proven not to regress."""
@@ -108,10 +108,10 @@ def test_a_fixed_power_spec_records_no_estimate() -> None:
     assert fit.result.converged is True
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 def test_the_profile_recovers_the_power_the_data_was_drawn_from() -> None:
     """The profile-likelihood estimate lands on the power the data was drawn from, and the
-    curve and interval are persisted on the fit result — FR-MODEL-22's three obligations:
+    curve and interval are persisted on the fit result — FR-114's three obligations:
     the grid, the persisted curve, the estimate with its own uncertainty.
 
     The grid brackets the truth exactly (1.25, 1.5, 1.75), so the profile log-likelihood
@@ -138,9 +138,9 @@ def test_the_profile_recovers_the_power_the_data_was_drawn_from() -> None:
     assert fit.result.converged is True
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 def test_diagnostics_are_computed_under_the_estimated_power() -> None:
-    """FR-MODEL-22's 'not silently baked in as a constant': the diagnostics' deviance is
+    """FR-114's 'not silently baked in as a constant': the diagnostics' deviance is
     the deviance under the fitted estimate, not under the spec's 1.5 default — and the
     type-III sweep refits with p held at the estimate."""
     data = _tweedie_data(power=1.7)
@@ -158,7 +158,7 @@ def test_diagnostics_are_computed_under_the_estimated_power() -> None:
     assert computed.glm.type_iii_tests
 
 
-@pytest.mark.req("FR-MODEL-22")
+@pytest.mark.req("FR-114")
 def test_a_backtest_of_an_estimated_power_model_uses_the_estimate() -> None:
     """The backtest's residuals are the deviance residuals under the fitted estimate —
     the value the fit used, read from the fit result rather than the spec's constant."""

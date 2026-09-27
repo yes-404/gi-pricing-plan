@@ -1,6 +1,6 @@
 ---
 family: reference
-title: The document-id standard (NT-0019 §1, lifted verbatim)
+title: The document-id standard (RFC-937 §1, lifted verbatim)
 status: active                  # active → retired (§1.2a)
 created: 2026-09-01
 owner: maintainer                # amendments arrive as an RFC- + RL- pair (§1.6)
@@ -11,12 +11,12 @@ relates: []                      # ids only
 
 # Document IDs — one id per governed thing, one sequence, roles per family
 
-Lifted verbatim from [`NT-0019`](../notes/0019-one-id-per-document.md) §1.1 through §1.13,
+Lifted verbatim from [`RFC-937`](../rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md) §1.1 through §1.13,
 accepted by the maintainer 2026-09-01 — every rule and decision below is the maintainer's,
 not reworded, reordered or improved on the way in. The note also carries what argued for
 this standard and is not reproduced here: the decisions (§2), an illustrative numbering
 walkthrough (§3), the migration procedure (§4), the impact map (§5), the rituals adopted
-(§6), the acceptance items (§7), the sequencing (§8), the relation to NT-0016 and Rulings
+(§6), the acceptance items (§7), the sequencing (§8), the relation to RFC-897 and Rulings
 55-65 (§9), and the evidence it was measured against (§10). A cross-reference below to one
 of those numbers — `§4`, `§10` and so on — points into the note, not into this file.
 
@@ -27,7 +27,7 @@ of those numbers — `§4`, `§10` and so on — points into the note, not into 
 3. **Filenames pad the integer to the standard's width, currently five:** `PL-<nnnnn>-<slug>.md`. Padding exists so `ls` sorts; it is not identity. The resolver treats `PL-<n>`, `PL-0<n>` and `PL-00<n>` as one id. Widening is a rename of files and a rewrite of link targets — one mechanical PR that touches no citation, number, header or body line (§1.8).
 4. **Two things are outside the standard, on principle:** a **phase**, which is a milestone label (`P2`), cited as a placement (`phase: P2`), never as a document (§1.3); and a **product identifier** — any id that is stored, transmitted or asserted by an API contract (`VR-DST-1`, artifact ids, job kinds) — which is product data governed by `docs/specs/`, and which this standard never touches.
 
-**Amended 2026-09-03 — Ruling 105 D6, closing `OQ-OVR-18` on Ruling 103 §1.7's option (a)** (`docs/plans/2026-09-03-w37-6-ruling-105-alias-class-h-breakdown-and-run-window.md`, D6). Rule 3's specimens are written as placeholders — `PL-<nnnnn>-<slug>.md` for the filename, and `PL-<n>` / `PL-0<n>` / `PL-00<n>` for the three spellings the resolver treats as one id — in the shape §1.4's ADR filename example already uses. The rule is unchanged; only its specimens are. A literal specimen is indistinguishable from a citation: once the generated `docs/INDEX.md` exists, `audit-docs.py` check 32 reads each spelling as a citation and reports it dangling or padded, and a specimen whose number is later allocated to a real document resolves instead — a padded id in prose naming a real governed thing, which is what §7(e) forbids. Three placeholder spellings still say what rule 3 exists to say, which the single `PL-<nnnnn>` first proposed could not. No exemption list is added and no check is narrowed, so nothing is keyed on a document's path. Leaving any specimen resolvable is the violation this amendment exists to make detectable.
+**Amended 2026-09-03 — RL-1046 D6, closing `OQ-555` on RL-1044 §1.7's option (a)** (`docs/rulings/RL-01046-the-alias-class-the-disclosed-rows-and-the-run-s-conditional-window.md`, D6). Rule 3's specimens are written as placeholders — `PL-<nnnnn>-<slug>.md` for the filename, and `PL-<n>` / `PL-0<n>` / `PL-00<n>` for the three spellings the resolver treats as one id — in the shape §1.4's ADR filename example already uses. The rule is unchanged; only its specimens are. A literal specimen is indistinguishable from a citation: once the generated `docs/INDEX.md` exists, `audit-docs.py` check 32 reads each spelling as a citation and reports it dangling or padded, and a specimen whose number is later allocated to a real document resolves instead — a padded id in prose naming a real governed thing, which is what §7(e) forbids. Three placeholder spellings still say what rule 3 exists to say, which the single `PL-<nnnnn>` first proposed could not. No exemption list is added and no check is narrowed, so nothing is keyed on a document's path. Leaving any specimen resolvable is the violation this amendment exists to make detectable.
 
 ## 1.2 Families — rows and documents, one sequence
 
@@ -60,7 +60,7 @@ Five words, with identical meaning in every family; a family uses a subset and n
 | `retired` | ended without completing — withdrawn, dropped, rejected, deprecated, archived; the reason is in the body | withdrawn, dropped, archived, deprecated |
 | `superseded` | replaced by a named successor in `superseded_by:` | — |
 
-Transitions run forward only; `closed`, `retired` and `superseded` are terminal. **Mutability is a family property, not a status** (living · frozen · append-only · write-once · generated), stated once in the table above. A plan's *execution* (§1.7) is a separate, computed axis and is never written in `status:`. A finding's register disposition (`fix before close`, `accept`, `carry forward`, `split verdict`, with qualifiers) lives in its own `decision:` field, so `status:` and `decision:` cannot be confused — NT-0015 P4.
+Transitions run forward only; `closed`, `retired` and `superseded` are terminal. **Mutability is a family property, not a status** (living · frozen · append-only · write-once · generated), stated once in the table above. A plan's *execution* (§1.7) is a separate, computed axis and is never written in `status:`. A finding's register disposition (`fix before close`, `accept`, `carry forward`, `split verdict`, with qualifiers) lives in its own `decision:` field, so `status:` and `decision:` cannot be confused — RFC-896 P4.
 
 A row family's id resolves to a file *and an anchor* (`docs/specs/02-modelling.md#fr-1187`, `docs/roadmap.md#wk-1201`); a document family's id resolves to a file. Roadmap rows are headings, so their anchors exist; requirement rows are bold ids in tables, so `spec-change` emits `<a id="fr-1187"></a>` before each definition and the migration adds one for every existing clause. `INDEX.md` has one row per number for both.
 
@@ -137,7 +137,7 @@ A vendored skill (`planning-with-files`, `ui-ux-pro-max`, `graphify`, `systemati
 
 ## 1.6 Roles per family
 
-Principles: the role that writes code never amends the document the code is checked against (`CLAUDE.md` §0); the role that creates a record never accepts its own close; a status is set by the step that causes it, never by hand later (NT-0003); the maintainer is the scope authority and the acceptor, not a routine author.
+Principles: the role that writes code never amends the document the code is checked against (`CLAUDE.md` §0); the role that creates a record never accepts its own close; a status is set by the step that causes it, never by hand later (RFC-756); the maintainer is the scope authority and the acceptor, not a routine author.
 
 | Family | Owner — creates & amends | Accepts / decides | Reads & acts | Verifies & closes | Supersedes / retires |
 |---|---|---|---|---|---|
@@ -172,7 +172,7 @@ Prose cites `<PREFIX>-<n>`; a link carries the padded path as its target and the
 
 `python3 scripts/doc-id.py next` fetches `origin/main`, reads the maximum across every header, every spec bold-id, every roadmap row and `INDEX.md`, prints max + 1. The number is taken by the commit that adds it; a collision at rebase is fixed by renumbering the unmerged item. `doc-id.py check` fails the gate on any duplicate or header/filename mismatch. Switching to GitHub-issue-number allocation later is a policy change inside `doc-id.py`, not a renumbering.
 
-**Reading a plan's state.** A `PL-` file carries only its document lifecycle (`draft → active → superseded | retired`). Whether it was *executed* or *completed* is never written on the file — that would duplicate what the ledger and the closure hold (NT-0003). `doc-index.py` derives it into an `execution` column in `INDEX.md`, and `doc-index.py --show PL-<n>` prints it:
+**Reading a plan's state.** A `PL-` file carries only its document lifecycle (`draft → active → superseded | retired`). Whether it was *executed* or *completed* is never written on the file — that would duplicate what the ledger and the closure hold (RFC-756). `doc-index.py` derives it into an `execution` column in `INDEX.md`, and `doc-index.py --show PL-<n>` prints it:
 
 | `execution` | Derived from |
 |---|---|
@@ -209,7 +209,7 @@ Lint checks that a merged PR's title names the `SL-` it delivered and that the s
 
 ## 1.10 Rituals and metrics
 
-Three practices every mature programme runs and this process has only partly: **(a)** a periodic status entry on every active `WK-`, nagged mechanically — the `reporter-cycle` skill pointed at active work rows, fortnightly, in the Rust goals bot's shape; **(b)** dated freeze gates inside a phase (plan → code → docs, as Kubernetes runs enhancements → code → docs), declared in the phase section and checked by `phase-close.md`; **(c)** a phase report generated by `doc-index.py` over every record carrying `phase: P<n>` — Works closed/retired, slices planned vs delivered, plans superseded per Work (replan rate), rulings per Work, findings opened vs discharged and the unowned-decay count, documents with no inbound citation outside `INDEX.md`, days from `PL` `active` to `CR` filed. Never a hand-kept table — Kubernetes' own audit found its per-KEP metadata drifting from the board, which is NT-0003 at scale.
+Three practices every mature programme runs and this process has only partly: **(a)** a periodic status entry on every active `WK-`, nagged mechanically — the `reporter-cycle` skill pointed at active work rows, fortnightly, in the Rust goals bot's shape; **(b)** dated freeze gates inside a phase (plan → code → docs, as Kubernetes runs enhancements → code → docs), declared in the phase section and checked by `phase-close.md`; **(c)** a phase report generated by `doc-index.py` over every record carrying `phase: P<n>` — Works closed/retired, slices planned vs delivered, plans superseded per Work (replan rate), rulings per Work, findings opened vs discharged and the unowned-decay count, documents with no inbound citation outside `INDEX.md`, days from `PL` `active` to `CR` filed. Never a hand-kept table — Kubernetes' own audit found its per-KEP metadata drifting from the board, which is RFC-756 at scale.
 
 ## 1.11 Audit — the id checks fold into `audit-docs.py`
 
@@ -225,7 +225,7 @@ Three practices every mature programme runs and this process has only partly: **
 | 35 | `owner:` is a role filename or `maintainer`, and one the directory's `README.md` permits |
 | 36 | Redirects: every `was:` has a `REDIRECTS.csv` row; every row's target exists; no pre-migration form survives outside the CSV and `was:` lines |
 | 37 | Shape: required sections per family template (the ten-section spec rule, generalised) |
-| 38 | Loop signal, warn-only: a `PL-`/`RS-`/`RFC-` cited by nothing outside `INDEX.md`, exempting those a `CR-` covers by `work:` (Ruling 64 as code); a `PL-` still `draft` past its phase's plan-freeze gate; an `active` plan or slice citing a `superseded` or `retired` requirement; a phase gate date passed with a `draft` plan or an `active` slice behind it (the auditor raises an `FD-` against the phase) |
+| 38 | Loop signal, warn-only: a `PL-`/`RS-`/`RFC-` cited by nothing outside `INDEX.md`, exempting those a `CR-` covers by `work:` (RL-943 as code); a `PL-` still `draft` past its phase's plan-freeze gate; an `active` plan or slice citing a `superseded` or `retired` requirement; a phase gate date passed with a `draft` plan or an `active` slice behind it (the auditor raises an `FD-` against the phase) |
 | 39 | `INDEX.md` byte-stable against a fresh run; a merged PR's title names its `SL-`; the slice's ledger records the PR |
 
 ## 1.12 Extending the frame
@@ -242,4 +242,4 @@ What never changes on extension: the five status words, the header field set (a 
 
 ## 1.13 Past practice, mapped
 
-Every governance file at `8f5d57d` classifies under §4's rules (0 unmapped, §10), and every practice named in the plans, process text, skills and charters has a home: `-verified`/`-final-review` → `PL- kind: review`; corrections and ruling addenda → `corrected_by:` + a correcting `RL-`/`RFC-`; reconciliation rulings → one `RL-` each; census and taxonomy draft → `RS- kind: measurement`/`audit`; adoption plans → a `WK-` each; handover → `PL- kind: handover`; slice-map/map-plan → `PL- kind: map`; spike → `RS- kind: spike`; planning readiness → the map plan's `Decision points` table; audit remediation → an `SL-` naming its `FD-`s; plan reviews → `CR- kind: review`; closure proposals → `PL- kind: leaf` with `RL-`s; maintainer decisions and phase pre-decisions → `RL-` with `owner: maintainer`; exit-demo UAT and `phase-0-status.md` → `CR- kind: phase`; retrofit-impossible and security-posture → Reference; nudge, reporter-cycle and runtime state → rituals and watcher state, not documents.
+Every governance file at `8f5d57d` classifies under §4's rules (0 unmapped, §10), and every practice named in the plans, process text, skills and charters has a home: `-verified`/`-final-review` → `PL- kind: review`; corrections and ruling addenda → `corrected_by:` + a correcting `RL-`/`RFC-`; reconciliation rulings → one `RL-` each; census and taxonomy draft → `RS- kind: measurement`/`audit`; adoption plans → a `WK-` each; handover → `PL- kind: handover`; slice-map/map-plan → `PL- kind: map`; spike → `RS- kind: spike`; planning readiness → the map plan's `Decision points` table; audit remediation → an `SL-` naming its `FD-`s; plan reviews → `CR- kind: review`; closure proposals → `PL- kind: leaf` with `RL-`s; maintainer decisions and phase pre-decisions → `RL-` with `owner: maintainer`; exit-demo UAT and `closures/CR-00709-phase-0-specification-status.md` → `CR- kind: phase`; retrofit-impossible and security-posture → Reference; nudge, reporter-cycle and runtime state → rituals and watcher state, not documents.

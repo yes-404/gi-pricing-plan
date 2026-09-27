@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Write and maintain the NT-0014 runtime state file (artifact B), per Ruling 47.
+"""Write and maintain the RFC-895 runtime state file (artifact B), per RL-907.
 
-`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`, Ruling 47, rejected the note's
+`docs/rulings/RL-00907-q4-artifacts-win-where-an-artifact-exists-and-nothing-that-blocks-an-action-may-be-counted-in-b-without-one.md`, RL-907, rejected the note's
 original design (a state file the watcher writes and a mismatch detector compares
 against artifact history) because that shape fails silently: if the writer dies or is
 never wired up, the state file reads zero, the artifacts read zero, a mismatch detector
@@ -18,9 +18,9 @@ timestamp updating):
    makes the acceptance test possible: a cycle in which nothing changed must produce a
    byte-identical file (see `tests/test_watcher_runtime_state.py`,
    `test_a_cycle_with_no_change_is_byte_identical`).
-2. **No `retry_counters` block at all.** Ruling 47(c): a `0` from a counter nothing
+2. **No `retry_counters` block at all.** RL-907(c): a `0` from a counter nothing
    increments is indistinguishable from a true zero, and the hook that increments it
-   (NT-0014 script C2) does not exist yet (adoption slice G). Absent, never zero.
+   (RFC-895 script C2) does not exist yet (adoption slice G). Absent, never zero.
 3. **`in_flight_expensive_verifications` entries expire.** This block is genuinely
    underivable from any durable artifact -- it is ephemeral coordination state a role
    announces about itself (spec `docs/process/delivery-process.md` §8). Made
@@ -30,9 +30,9 @@ timestamp updating):
 
 `position.phase` / `.work` / `.slice` are **not auto-parsed from `docs/roadmap.md`**.
 That file's "closed" convention (a struck-through `#` cell) is not applied consistently
-across it -- W5, W6b and W11 are all closed in prose while their `#` cells are never
+across it -- WK-661, WK-664 and WK-671 are all closed in prose while their `#` cells are never
 struck -- so a mechanical parser would confidently write a wrong answer some of the
-time, which Ruling 47's own governing principle (a wrong derived value is worse than an
+time, which RL-907's own governing principle (a wrong derived value is worse than an
 absent one) rules out. Instead the caller (the watcher cycle invocation) supplies the
 value **and** the source it read it from; the field is written only when both are given,
 and is otherwise left exactly as it was. `flow_step` is not supported at all -- Ruling

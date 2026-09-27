@@ -19,7 +19,7 @@ const detail = ref<DatasetVersion | null>(null);
 /** The dataset this version belongs to — its currency is what amounts are denominated
  *  in. The empty string is unreachable at render: the value is read only inside the
  *  loaded branch, where `getDataset` has set it. It exists to keep `formatMinor`'s
- *  required-`string` signature honest, not as a money default (OQ-OVR-14 (b)). */
+ *  required-`string` signature honest, not as a money default (OQ-551 (b)). */
 const dataset = ref<Dataset | null>(null);
 const rejected = ref<RejectedRows | null>(null);
 /** Distinct from "not loaded": a derived version has no run of its own, and that is an
@@ -48,7 +48,7 @@ async function load(): Promise<void> {
     try {
       rejected.value = await getRejected(loaded.id);
     } catch (error) {
-      // FR-DATA-7: a derived version has no ingestion run. Not an error to show.
+      // FR-32: a derived version has no ingestion run. Not an error to show.
       if (isProblem(error, "NOT_FOUND")) hasNoRun.value = true;
       else throw error;
     }
@@ -157,7 +157,7 @@ onMounted(() => void load());
               Exposure
             </dt>
             <!-- Formatted from the string, never parsed: a JS number is a float64 and the
-                 backend already summed this exactly (FR-OVR-7). -->
+                 backend already summed this exactly (FR-10). -->
             <dd class="text-lg font-medium tabular-nums">
               {{ formatDecimalString(detail.totals.exposure_years) }}
               <span class="text-sm font-normal text-slate-500">years</span>
@@ -251,7 +251,7 @@ onMounted(() => void load());
                   <td class="py-1 text-slate-600">
                     {{ dtype }}
                   </td>
-                  <!-- FR-DATA-5. Normalisation is lossy: freMTPL2's `IDpol` becomes
+                  <!-- FR-30. Normalisation is lossy: freMTPL2's `IDpol` becomes
                        `i_dpol`, and without the original a user cannot tell which of their
                        columns a rule is talking about. -->
                   <td class="py-1 text-slate-500">

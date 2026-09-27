@@ -59,13 +59,13 @@ def _interaction(**over: object) -> Factor:
 # -- the interaction arm -------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_an_interaction_round_trips() -> None:
     factor = _interaction()
     assert Factor.model_validate(factor.model_dump(mode="json")) == factor
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_an_interaction_naming_no_operands_is_refused() -> None:
     """The same argument as a `banding` factor with no Banding: without them the factor is
     a name with no transformation behind it."""
@@ -73,7 +73,7 @@ def test_an_interaction_naming_no_operands_is_refused() -> None:
         _interaction(operand_factor_ids=())
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_an_interaction_of_one_factor_is_refused() -> None:
     """A cross of one is that factor. Allowing it would put two names in every model
     document for one design column, and the relativity table could not say which."""
@@ -81,21 +81,21 @@ def test_an_interaction_of_one_factor_is_refused() -> None:
         _interaction(operand_factor_ids=(AGE,))
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_an_interaction_with_a_repeated_operand_is_refused() -> None:
     """`age x age` is `age`, with every off-diagonal cell empty by construction."""
     with pytest.raises(pydantic.ValidationError, match="more than once"):
         _interaction(operand_factor_ids=(AGE, AGE))
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_an_interaction_cannot_cross_itself() -> None:
     me = uuid4()
     with pytest.raises(pydantic.ValidationError, match="itself"):
         _interaction(id=me, operand_factor_ids=(AGE, me))
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_an_interaction_sources_no_columns_of_its_own() -> None:
     """Its columns are its operands'. Naming them again is a second statement of one fact,
     and the two disagree the first time an operand is re-versioned onto another column."""
@@ -103,7 +103,7 @@ def test_an_interaction_sources_no_columns_of_its_own() -> None:
         _interaction(source_columns=("driver_age", "vehicle_group"))
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_operands_on_a_non_interaction_factor_are_refused() -> None:
     """The other half of the invariant, which the banding and grouping arms already have:
     a field nothing applies reads as a transformation the model used."""
@@ -114,19 +114,19 @@ def test_operands_on_a_non_interaction_factor_are_refused() -> None:
 # -- the arms that already existed, now tested directly ------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_a_banding_factor_without_its_banding_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="banding_id"):
         _factor(type=FactorType.BANDING)
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_a_grouping_id_on_an_identity_factor_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="grouping_id"):
         _factor(grouping_id=uuid4())
 
 
-@pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-83")
 def test_every_other_type_still_requires_a_source_column() -> None:
     """Relaxing the field-level `min_length=1` for the interaction arm must not relax it
     for anything else — so the rule moved into the validator rather than being dropped."""
@@ -135,13 +135,13 @@ def test_every_other_type_still_requires_a_source_column() -> None:
             _factor(type=kind, source_columns=())
 
 
-@pytest.mark.req("FR-MODEL-5")
+@pytest.mark.req("FR-90")
 def test_a_prohibition_still_needs_its_reason() -> None:
     with pytest.raises(pydantic.ValidationError, match="reason"):
         _factor(prohibited=True)
 
 
-@pytest.mark.req("FR-MODEL-4")
+@pytest.mark.req("FR-89")
 def test_a_monotonic_direction_still_needs_its_rationale() -> None:
     with pytest.raises(pydantic.ValidationError, match="rationale"):
         _factor(monotonic_direction=MonotonicDirection.DECREASING)

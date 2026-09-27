@@ -1,4 +1,4 @@
-"""FR-MODEL-24: `kind="model"` offsets — supplied, validated, honoured. The array is the
+"""FR-116: `kind="model"` offsets — supplied, validated, honoured. The array is the
 referenced model's linear predictor; pricing-core cannot resolve the ref itself and must
 refuse to fit without the array rather than fit with no offset."""
 
@@ -86,7 +86,7 @@ def _model_offset_spec() -> GlmSpec:
     return _spec(offset=OffsetSpec(kind="model", offset_model_ref="model:base@1"))
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_a_model_offset_without_the_array_is_refused() -> None:
     data, _ = _residual_data()
     with pytest.raises(GlmFitError) as refused:
@@ -94,7 +94,7 @@ def test_a_model_offset_without_the_array_is_refused() -> None:
     assert refused.value.code == "MODEL_OFFSET_MISSING"
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_a_model_offset_of_the_wrong_length_is_refused() -> None:
     data, eta_base = _residual_data()
     with pytest.raises(GlmFitError, match="rows"):
@@ -104,7 +104,7 @@ def test_a_model_offset_of_the_wrong_length_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_a_model_offset_with_non_finite_values_is_refused() -> None:
     data, eta_base = _residual_data()
     eta_base[0] = np.inf
@@ -115,7 +115,7 @@ def test_a_model_offset_with_non_finite_values_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_the_residual_fit_recovers_the_signal_on_top_of_the_offset() -> None:
     data, eta_base = _residual_data()
     result = fit_glm(
@@ -127,7 +127,7 @@ def test_the_residual_fit_recovers_the_signal_on_top_of_the_offset() -> None:
     assert by_term["resid_flag"].estimate == pytest.approx(0.2, abs=0.05)
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_prediction_without_the_array_is_refused_and_with_it_reproduces_the_fit() -> None:
     data, eta_base = _residual_data()
     spec = _model_offset_spec()
@@ -148,7 +148,7 @@ def test_prediction_without_the_array_is_refused_and_with_it_reproduces_the_fit(
     assert np.exp(eta) == pytest.approx(manual_mu, rel=1e-9)
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_diagnostics_require_the_arrays_for_a_model_offset_fit() -> None:
     data, eta_base = _residual_data()
     spec = _model_offset_spec()
@@ -165,7 +165,7 @@ def test_diagnostics_require_the_arrays_for_a_model_offset_fit() -> None:
     assert result.glm.deviance > 0
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_backtest_requires_and_honours_the_array() -> None:
     data, eta_base = _residual_data()
     spec = _model_offset_spec()
@@ -190,13 +190,13 @@ def test_backtest_requires_and_honours_the_array() -> None:
     assert summary.partition.rows == data.height
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 def test_type_iii_reduced_fits_keep_the_offset() -> None:
     """A type-III reduced fit is the same fit with one term dropped — the offset must
     stay in the reduced design. Without it every reduced fit refuses (its spec still
     declares `kind="model"`), the refusal is swallowed by the reduced-fit guard, and the
     type-III table comes back silently empty — exactly the silent-defect class
-    FR-MODEL-24 exists to replace with named failures."""
+    FR-116 exists to replace with named failures."""
     data, eta_base = _residual_data()
     spec = _model_offset_spec()
     factors = [

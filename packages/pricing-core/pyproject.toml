@@ -1,38 +1,38 @@
 [project]
 name = "pricing-core"
 version = "0.1.0"
-description = "Pure actuarial engine — no web, no database, no I/O (ADR-0001)"
+description = "Pure actuarial engine — no web, no database, no I/O (ADR-703)"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [
     "model-schema",
-    # ADR-0005: Polars for dataframes. No web, database or queue client — the
+    # ADR-707: Polars for dataframes. No web, database or queue client — the
     # import-linter contract enforces that, and `01` §5.2 requires these functions to be
     # callable without the platform.
     "polars>=1.9",
-    # FR-DATA-27: profiles are computed with DuckDB directly over the version's parquet.
+    # FR-62: profiles are computed with DuckDB directly over the version's parquet.
     "duckdb>=1.1",
-    # Polars needs it for the parquet interchange DuckDB reads back (FR-DATA-27).
+    # Polars needs it for the parquet interchange DuckDB reads back (FR-62).
     "pyarrow>=17",
-    # FR-DATA-26 wants Poisson and Gamma confidence intervals. Exact intervals need the
+    # FR-61 wants Poisson and Gamma confidence intervals. Exact intervals need the
     # chi-square and gamma quantiles; a normal approximation is wrong exactly where it
     # matters, on the low-count cells an actuary is most cautious about.
     "scipy>=1.14",
-    # FR-MODEL-18: GLMs are fitted with `glum`. Chosen in `02` §8 over statsmodels for
+    # FR-110: GLMs are fitted with `glum`. Chosen in `02` §8 over statsmodels for
     # scale — it takes the exposure offset and sample weights an actuarial GLM needs, and
     # fits a 10 M-row Poisson without materialising a dense design matrix.
     "glum>=3.0",
-    # FR-MODEL-25: XGBoost is the primary GBM backend, LightGBM the secondary, and both
+    # FR-119: XGBoost is the primary GBM backend, LightGBM the secondary, and both
     # are declared here because `02` §3.5 requires the same `GbmSpec` to fit on either —
     # a secondary backend that is an optional extra is one nobody ever runs.
     #
     # Both are pinned to the majors the offset findings were verified against: research
     # F5 (XGBoost `base_margin`) and F13 (LightGBM `init_score`, and the asymmetry at
-    # prediction time that FR-MODEL-72 exists for). A major bump re-opens both questions.
+    # prediction time that FR-129 exists for). A major bump re-opens both questions.
     "xgboost>=3.4,<4",
     "lightgbm>=4.5,<5",
-    # FR-MODEL-85 (OQ-MODEL-9, decided 2026-08-17): `tree` banding (FR-MODEL-9) and
-    # `tree` grouping (FR-MODEL-14) fit a single depth-limited `DecisionTreeRegressor`.
+    # FR-103 (OQ-583, decided 2026-08-17): `tree` banding (FR-98) and
+    # `tree` grouping (FR-105) fit a single depth-limited `DecisionTreeRegressor`.
     #
     # This declaration installs nothing new — `glum` 3.4.1 already requires scikit-learn,
     # so 1.9.0 is in every environment this package has ever had. It is declared because
@@ -44,14 +44,14 @@ dependencies = [
     # not the CART cut points the method is named for, and shipping them as `tree` is the
     # same mislabelling the quantile substitution was refused for.
     "scikit-learn>=1.5,<2",
-    # FR-MODEL-37: EBMs are fitted with `interpret-core`, pinned exact — one requirement,
+    # FR-140: EBMs are fitted with `interpret-core`, pinned exact — one requirement,
     # one model type (the metapackage `interpret` pulls notebooks/visualisation extras and
     # is deliberately not used). Pinning the exact version pins the slot layout and index
     # rule the fit exports verbatim (spike-verified against 0.7.8; ~115 MB incremental;
     # the workspace's sklearn 1.9.0 satisfies its requirement).
     "interpret-core==0.7.8",
     "zen-engine==0.53.0",
-    # FR-RATE-20: CSV/XLSX import/export with strict round-trip (`03` §8). XLSX read +
+    # FR-235: CSV/XLSX import/export with strict round-trip (`03` §8). XLSX read +
     # write in one library; CSV is stdlib. The round-trip keeps decimal strings — never
     # float through the file — so openpyxl cells are written as text.
     "openpyxl>=3.1",

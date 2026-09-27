@@ -4,7 +4,7 @@ import { computed } from "vue";
 import { psiBand, type ColumnComparison } from "@/api/profiles";
 
 /**
- * One column's drift against a reference version (FR-DATA-28).
+ * One column's drift against a reference version (FR-63).
  *
  * `drift` carries three states, not two. `undefined` means no comparison has been loaded;
  * `null` means one has, and this column is **not in it** — `compare_profiles` skips a

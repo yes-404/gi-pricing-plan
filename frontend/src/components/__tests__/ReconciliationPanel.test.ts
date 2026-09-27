@@ -29,7 +29,7 @@ function panel(reconciliation: Reconciliation = RECONCILIATION): string {
 }
 
 describe("ReconciliationPanel", () => {
-  it("shows FR-MODEL-60's verdict as it arrived, not as recomputed", () => {
+  it("shows FR-190's verdict as it arrived, not as recomputed", () => {
     // `ratio` and `status` are `computed_field`s: derived server-side and discarded by the
     // model's own validator on the way in. Rendering a second, client-side computation is the
     // "two statements of one fact disagree eventually" defect.
@@ -39,11 +39,11 @@ describe("ReconciliationPanel", () => {
     expect(text).toContain("0.05");
   });
 
-  it("says which part the verdict is over (FR-MODEL-60's holdout)", () => {
+  it("says which part the verdict is over (FR-190's holdout)", () => {
     expect(panel()).toContain("holdout");
   });
 
-  it("states each peril's treatment beside its share (FR-MODEL-74)", () => {
+  it("states each peril's treatment beside its share (FR-128)", () => {
     const text = panel();
     expect(text).toContain("TP_BI");
     expect(text).toContain("separate_model");

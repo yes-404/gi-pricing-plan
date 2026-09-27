@@ -97,7 +97,7 @@ async def _certified(
     return certified
 
 
-@pytest.mark.req("FR-MODEL-45")
+@pytest.mark.req("FR-154")
 async def test_the_approval_decision_reaches_the_metric(
     database: Database, workspace_id
 ) -> None:
@@ -133,7 +133,7 @@ async def test_the_approval_decision_reaches_the_metric(
     assert applied.status == MetricStatus.APPROVED.value
 
 
-@pytest.mark.req("FR-MODEL-45")
+@pytest.mark.req("FR-154")
 async def test_a_decision_about_another_artifact_type_leaves_the_metric_alone(
     database: Database, workspace_id
 ) -> None:

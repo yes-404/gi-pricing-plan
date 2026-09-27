@@ -1,4 +1,4 @@
-# NFR-RATE-12 — trace storage capacity projection (W11 Slice 4, Task 4D)
+# NFR-500 — trace storage capacity projection (WK-671 Slice 4, Task 4D)
 
 `docs/specs/03-rating-engine.md` §9 (`:906`): *"Trace storage: 1 % sampling of 50 M annual
 quotes stays under 200 GB/year with the sampled-trace schema."*
@@ -9,12 +9,12 @@ measured directly, with real code and no estimate, is the **actual serialised by
 of a real `Trace` produced by `score_one(bundle, ctx, trace=True)` — the exact call
 `app.platform.traces.write_trace` serialises with `trace.model_dump_json().encode()`
 (`backend/src/app/platform/traces.py:112`). That measured size is then multiplied out
-against NFR-RATE-12's own stated volume (50 M quotes/year, 1 % sampling). The multiplication
+against NFR-500's own stated volume (50 M quotes/year, 1 % sampling). The multiplication
 is the projection; the byte count feeding it is the measurement.
 
 **Verdict: OVER budget — 2.58× the 200 GB/year figure, at the actual ~200-step reference
 structure.** Not tuned to pass; reported as measured. **This is a lower bound, not a worst
-case**: it excludes FR-RATE-42's 100 % decline/error sampling floor, so real persisted
+case**: it excludes FR-259's 100 % decline/error sampling floor, so real persisted
 volume is higher than this figure — see §5. See §5 for the rest of what this projection
 does and does not show.
 
@@ -40,7 +40,7 @@ not one. No figure in this note changes — only where the qualification is stat
 - **Script.** `scripts/bench-trace-size.py`, run as `uv run python
   scripts/bench-trace-size.py`. Fixtures (the compiled `RatingAlgorithm`, the trained
   booster, the `QuoteContext`) are reused from `scripts/bench-rating.py` via `importlib`
-  rather than rebuilt — the same ~200-step "motor structure" NFR-RATE-1/2 are measured
+  rather than rebuilt — the same ~200-step "motor structure" NFR-489/490 are measured
   against, so this note's headline figure is read off the reference structure those
   requirements already use, not an arbitrary one.
 - **Sweep.** Five step counts, `with_gbm=True` throughout (every structure includes the one
@@ -114,14 +114,14 @@ figure below is measured *at* 189 steps, not scaled up to it from a smaller samp
 | **187** | **189** | **1,032,137** | **5,461.0** |
 
 The `187`/`189` row is the reference structure: `bench-rating.py`'s own "~200-step motor
-structure", `with_gbm=True`, the same structure NFR-RATE-1/2 measure latency against.
+structure", `with_gbm=True`, the same structure NFR-489/490 measure latency against.
 
-## 4. Projection over NFR-RATE-12's stated volume
+## 4. Projection over NFR-500's stated volume
 
-**Scope, per the task's own acceptance standard and Ruling 25:** quotes only. Batch rows
-contribute nothing to the sampled production stream (Ruling 25,
-`docs/plans/2026-08-29-w11-slices-3-4-rulings.md`), so batch volume is not added. No
-deduplication benefit is assumed (Ruling 23): `elapsed_us` on every step makes two traces
+**Scope, per the task's own acceptance standard and RL-890:** quotes only. Batch rows
+contribute nothing to the sampled production stream (RL-890,
+`docs/rulings/INDEX.md#2026-08-29-w11-slices-3-4-rulingsmd`), so batch volume is not added. No
+deduplication benefit is assumed (RL-888): `elapsed_us` on every step makes two traces
 of identical inputs byte-distinct, so there is no basis for a dedup discount.
 
 ```
@@ -131,14 +131,14 @@ blob bytes/year      = 500,000 x 1,032,137 bytes        = 516,068,500,000 bytes
 row bytes/year (upper bound, ScoringTraceRow text columns, JSONB columns NULL on a
                 `complete` row, `backend/src/app/db/models.py:2033`)
                      = 500,000 x 459 bytes               = 0.23 GB
-budget (NFR-RATE-12)                                     = 200 GB/year
+budget (NFR-500)                                     = 200 GB/year
 ```
 
 | clause | verdict |
 |---|---|
 | Blob storage at the ~200-step reference structure | **OVER — 2.580× budget** (516.07 GB vs. 200 GB) |
 | Row storage (negligible, upper-bounded) | adds 0.001× budget — does not change the verdict |
-| **NFR-RATE-12, overall** | **PROJECTED OVER BUDGET, at ~2.58×** |
+| **NFR-500, overall** | **PROJECTED OVER BUDGET, at ~2.58×** |
 
 Read as decimal GB (10⁹ bytes), matching how a storage budget is conventionally stated;
 the spec does not disambiguate GiB vs. GB, so this is a stated reading rather than a
@@ -147,8 +147,8 @@ resolved ambiguity.
 ## 5. What this does and does not show
 
 **Shows:** at the actual reference motor structure (~200 steps, one GBM `model_call`, the
-same structure NFR-RATE-1/2 use), one sampled trace's real serialised size is ~1.03 MB, and
-multiplying that by NFR-RATE-12's own stated annual sampled-quote volume (500,000)
+same structure NFR-489/490 use), one sampled trace's real serialised size is ~1.03 MB, and
+multiplying that by NFR-500's own stated annual sampled-quote volume (500,000)
 projects to ~516 GB/year — over the 200 GB/year budget by roughly 2.58×. The row is
 negligible next to the blob (< 0.001× the budget) and does not change the verdict either
 way.
@@ -159,15 +159,15 @@ way.
   measured size times the requirement's own stated volume, not an observation of traffic.
   If the real deployed algorithm has materially fewer or more steps than the ~200-step
   reference, or a different `model_call` count, the real figure moves — this note
-  measures the reference structure NFR-RATE-1/2 already use, not a survey of every
+  measures the reference structure NFR-489/490 already use, not a survey of every
   algorithm shape this platform could run.
-- **FR-RATE-42's 100 % decline/error sampling floor.** NFR-RATE-12's own text is read
+- **FR-259's 100 % decline/error sampling floor.** NFR-500's own text is read
   literally — "1 % sampling of 50 M annual quotes" — and this projection does not add a
   decline/error rate assumption the requirement does not itself state. In production the
   persisted volume would be **higher** than this projection once declines and errors (each
   sampled at 100 % regardless of the 1 % rate) are included, so this projection is not a
   worst case.
-- **The always-capture-then-discard cost.** Ruling 35 already moved trace *production* off
+- **The always-capture-then-discard cost.** RL-862 already moved trace *production* off
   the serving request onto an off-path worker Job — a latency/worker-cost question,
   unrelated to what gets stored once a trace is written, so it does not change this note's
   figures.
@@ -181,9 +181,9 @@ way.
 
 ## 6. Disposition
 
-**NFR-RATE-12 is projected — the task's own word — from a real measurement, and the
+**NFR-500 is projected — the task's own word — from a real measurement, and the
 projection reads OVER budget by ~2.58×.** Per this task's own instruction and the pattern
-already set by NFR-RATE-1 in this workstream (measured and recorded FAILING rather than
+already set by NFR-489 in this workstream (measured and recorded FAILING rather than
 the fixture tuned until it passed): this figure is recorded as measured, not adjusted. The
 remedy, if one is wanted — a smaller sampling rate, a slimmer trace-step shape that does
 not carry the full accumulated context per step (§2), a lower sample rate for very long

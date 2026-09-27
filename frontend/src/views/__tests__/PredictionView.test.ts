@@ -139,7 +139,7 @@ describe("the refusal taxonomy", () => {
     });
   }
 
-  it("does not reorder crossed bounds into a displayable interval (FR-MODEL-78)", async () => {
+  it("does not reorder crossed bounds into a displayable interval (FR-199)", async () => {
     // "detected, reported in the diagnostics, and never silently reordered". A view that
     // swapped them would show a plausible interval built from a refusal.
     stubByUrl({

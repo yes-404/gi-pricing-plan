@@ -1,11 +1,11 @@
 """workspaces table
 
-A Workspace becomes a named row (`07` FR-PLAT-62), and `workspace_members` and
+A Workspace becomes a named row (`07` FR-395), and `workspace_members` and
 `workspace_settings` reference it.
 
 The backfill covers **every table carrying a `workspace_id`**, not only the two that gain
 the foreign key: an id stored anywhere and described nowhere is exactly the orphan the
-`ALTER TABLE` must not discover, and FR-PLAT-62 says "anywhere" rather than "with a
+`ALTER TABLE` must not discover, and FR-395 says "anywhere" rather than "with a
 membership". The union below was enumerated from `app.db.models` rather than recalled —
 every table whose columns include `workspace_id`, 35 of them — and all are listed. Adding
 a workspace-scoped table without adding it here leaves that orphan possible again.

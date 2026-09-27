@@ -1,7 +1,7 @@
-"""Bandings against data whose bands are known (`02` FR-MODEL-8..12).
+"""Bandings against data whose bands are known (`02` FR-97, FR-98, FR-99, FR-100, FR-101).
 
 The proposals are checked against what the method *means* — an exposure quantile puts equal
-exposure in each band, not equal rows — and the rest is refusal. `02` FR-MODEL-8 makes the
+exposure in each band, not equal rows — and the rest is refusal. `02` FR-97 makes the
 handling of nulls and out-of-range values explicit precisely so that the silent case cannot
 exist, and a test suite that only exercises the happy path would not notice it had come
 back.
@@ -84,7 +84,7 @@ def _manual(**over: object) -> Banding:
 # --- the shape of a Banding -------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_boundaries_must_strictly_increase() -> None:
     """Equal cut points make an empty band; a decreasing pair makes an overlapping one."""
     with pytest.raises(ValueError, match="strictly increase"):
@@ -93,20 +93,20 @@ def test_boundaries_must_strictly_increase() -> None:
         _manual(boundaries=(18.0, 50.0, 30.0, 80.0), labels=("a", "b", "c"))
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_a_label_list_one_short_is_refused() -> None:
     """It does not drop the last band — it renames every band after the gap."""
     with pytest.raises(ValueError, match="labels for 3 bands"):
         _manual(labels=("18-29", "30-49"))
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_two_bands_cannot_share_a_label() -> None:
     with pytest.raises(ValueError, match="repeats a label"):
         _manual(labels=("same", "same", "50+"))
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_the_null_level_cannot_also_be_a_band() -> None:
     with pytest.raises(ValueError, match="also a"):
         _manual(null_level="30-49")
@@ -115,7 +115,7 @@ def test_the_null_level_cannot_also_be_a_band() -> None:
 # --- proposing --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 def test_exposure_quantiles_split_exposure_not_rows() -> None:
     """The actuarial default, and the one a row quantile silently substitutes for.
 
@@ -132,7 +132,7 @@ def test_exposure_quantiles_split_exposure_not_rows() -> None:
         assert abs(share / total - 0.2) < 0.05, shares
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 def test_row_quantiles_and_exposure_quantiles_disagree_on_a_skewed_book() -> None:
     """If they agreed the previous test would prove nothing about which one ran."""
     frame = _book()
@@ -143,7 +143,7 @@ def test_row_quantiles_and_exposure_quantiles_disagree_on_a_skewed_book() -> Non
     assert by_rows.boundaries != by_exposure.boundaries
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 def test_equal_width_bands_are_equally_wide() -> None:
     frame = _book()
     banding = propose_banding(
@@ -154,9 +154,9 @@ def test_equal_width_bands_are_equally_wide() -> None:
     assert max(widths) - min(widths) < 1e-9
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 def test_credibility_merges_until_every_band_meets_the_minimum() -> None:
-    """FR-MODEL-9's `credibility`: merge until each band carries enough claims.
+    """FR-98's `credibility`: merge until each band carries enough claims.
 
     Asked for twenty bands with a floor no twentieth of this book can meet, it must come
     back with fewer — and every one of them at or above the floor.
@@ -176,9 +176,9 @@ def test_credibility_merges_until_every_band_meets_the_minimum() -> None:
     assert all(row.claim_count >= 150 for row in banding.band_stats[:-1])
 
 
-@pytest.mark.req("FR-MODEL-10")
+@pytest.mark.req("FR-99")
 def test_a_proposal_carries_its_evidence() -> None:
-    """FR-MODEL-10: exposure, claims, frequency and an interval, as of derivation.
+    """FR-99: exposure, claims, frequency and an interval, as of derivation.
 
     Without it a reviewer has to re-run the derivation to see whether a band is thin, which
     is the work the requirement exists to avoid.
@@ -193,7 +193,7 @@ def test_a_proposal_carries_its_evidence() -> None:
         assert low < row.frequency < high
 
 
-@pytest.mark.req("FR-MODEL-10")
+@pytest.mark.req("FR-99")
 def test_band_statistics_come_back_in_band_order() -> None:
     """`10-14` sorts before `5-9` as text, and a shuffled relativity chart reads as noise."""
     frame = pl.DataFrame(
@@ -212,7 +212,7 @@ def test_band_statistics_come_back_in_band_order() -> None:
     assert [row.level for row in band_statistics(frame, banding)] == list(banding.labels)
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 def test_a_manual_banding_has_nothing_to_propose() -> None:
     """Inventing boundaries to be edited would put the platform's name on the actuary's."""
     with pytest.raises(BandingError, match="nothing to propose"):
@@ -221,7 +221,7 @@ def test_a_manual_banding_has_nothing_to_propose() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-85")
+@pytest.mark.req("FR-103")
 def test_tree_boundaries_split_on_the_response_not_on_the_quantiles() -> None:
     """The reason the quantile substitution was refused: the two do not agree.
 
@@ -243,7 +243,7 @@ def test_tree_boundaries_split_on_the_response_not_on_the_quantiles() -> None:
     assert any(25.0 < cut < 27.0 for cut in tree.boundaries)
 
 
-@pytest.mark.req("FR-MODEL-85")
+@pytest.mark.req("FR-103")
 def test_a_tree_banding_records_enough_to_reproduce_itself() -> None:
     """`n_bands` alone does not reproduce a fit — `random_state` is part of the method."""
     first = propose_banding(
@@ -257,7 +257,7 @@ def test_a_tree_banding_records_enough_to_reproduce_itself() -> None:
     assert first.method_params["n_bands"] == len(first.boundaries) - 1
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 def test_a_tree_banding_refuses_a_book_it_cannot_weight_or_split_on() -> None:
     """An unweighted tree, or one fitted on the banded column alone, is another method.
 
@@ -280,7 +280,7 @@ def test_a_tree_banding_refuses_a_book_it_cannot_weight_or_split_on() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-9")
+@pytest.mark.req("FR-98")
 def test_exposure_quantiles_refuse_a_book_with_no_exposure_column() -> None:
     frame = _book().drop("exposure_years")
     with pytest.raises(BandingError, match="exposure_quantile"):
@@ -290,7 +290,7 @@ def test_exposure_quantiles_refuse_a_book_with_no_exposure_column() -> None:
 # --- applying ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_the_outermost_bands_are_closed_at_both_ends() -> None:
     """Otherwise a banding derived from the observed range rejects its own maximum."""
     frame = _book()
@@ -300,21 +300,21 @@ def test_the_outermost_bands_are_closed_at_both_ends() -> None:
     assert set(labels.unique().to_list()) <= set(banding.labels)
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_a_value_below_the_range_is_refused_when_the_policy_says_error() -> None:
     banding = _manual()
     with pytest.raises(FactorResolutionError, match="below the banded range"):
         apply_banding(pl.Series("driver_age", [3.0, 40.0]), banding)
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_a_value_above_the_range_can_be_clamped_when_the_policy_says_so() -> None:
     banding = _manual(above_range=AboveRangePolicy.CLAMP_TO_LAST)
     labels = apply_banding(pl.Series("driver_age", [95.0, 40.0]), banding)
     assert labels.to_list() == ["50+", "30-49"]
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_a_null_is_not_a_band_unless_the_banding_says_it_is() -> None:
     """A missing driver age is a missing value; mapping it to a band prices it as known."""
     with pytest.raises(FactorResolutionError, match="null value"):
@@ -325,7 +325,7 @@ def test_a_null_is_not_a_band_unless_the_banding_says_it_is() -> None:
     assert labels.to_list() == ["unknown", "30-49"]
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_a_right_closed_banding_puts_a_boundary_in_the_lower_band() -> None:
     """`closed` is a real choice, not decoration: 30 belongs to `(18,30]` on the right."""
     left = _manual()
@@ -338,7 +338,7 @@ def test_a_right_closed_banding_puts_a_boundary_in_the_lower_band() -> None:
 # --- validating against a version -------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-11")
+@pytest.mark.req("FR-100")
 def test_an_empty_band_always_fails() -> None:
     """A level no row reaches still gets a coefficient — estimated from nothing."""
     frame = pl.DataFrame(
@@ -354,9 +354,9 @@ def test_an_empty_band_always_fails() -> None:
     assert caught.value.code == "BAND_EMPTY"
 
 
-@pytest.mark.req("FR-MODEL-11")
+@pytest.mark.req("FR-100")
 def test_a_thin_band_warns_by_default_and_fails_when_configured() -> None:
-    """FR-MODEL-11's own wording: warns (default) or fails (if configured)."""
+    """FR-100's own wording: warns (default) or fails (if configured)."""
     frame = _book()
     banding = propose_banding(frame, _proposal(), dataset_id=DATASET, slug="age-5")
 
@@ -369,7 +369,7 @@ def test_a_thin_band_warns_by_default_and_fails_when_configured() -> None:
     assert caught.value.code == "BAND_BELOW_MIN_EXPOSURE"
 
 
-@pytest.mark.req("FR-MODEL-11")
+@pytest.mark.req("FR-100")
 def test_the_banding_carries_its_own_minimums() -> None:
     """`banding.schema.json`'s `minimums`, read from the artifact rather than the call.
 
@@ -404,14 +404,14 @@ def test_the_banding_carries_its_own_minimums() -> None:
     assert check_banding(frame, strict, min_claims=0, fail_on_thin=False) == ()
 
 
-@pytest.mark.req("FR-MODEL-11")
+@pytest.mark.req("FR-100")
 def test_a_banding_that_fits_the_version_reports_nothing() -> None:
     frame = _book()
     banding = propose_banding(frame, _proposal(), dataset_id=DATASET, slug="age-5")
     assert check_banding(frame, banding) == ()
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_a_column_of_one_value_cannot_be_banded() -> None:
     """Every proposed boundary collapses onto the same point; the honest answer is no."""
     frame = pl.DataFrame(
@@ -426,21 +426,21 @@ def test_a_column_of_one_value_cannot_be_banded() -> None:
         propose_banding(frame, _proposal(), dataset_id=DATASET, slug="flat")
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_the_below_range_policy_can_send_a_value_to_the_null_level() -> None:
     banding = _manual(below_range=BelowRangePolicy.NULL_LEVEL, null_level="unknown")
     labels = apply_banding(pl.Series("driver_age", [3.0, 40.0]), banding)
     assert labels.to_list() == ["unknown", "30-49"]
 
 
-@pytest.mark.req("FR-MODEL-8")
+@pytest.mark.req("FR-97")
 def test_a_policy_pointing_at_a_null_level_that_does_not_exist_is_refused() -> None:
     banding = _manual(below_range=BelowRangePolicy.NULL_LEVEL)
     with pytest.raises(FactorResolutionError, match="declares none"):
         apply_banding(pl.Series("driver_age", [3.0, 40.0]), banding)
 
 
-@pytest.mark.req("FR-MODEL-10")
+@pytest.mark.req("FR-99")
 def test_the_published_frequency_reconciles_with_the_published_counts() -> None:
     """A reader dividing the printed claims by the printed exposure gets the printed rate."""
     banding = propose_banding(_book(), _proposal(), dataset_id=DATASET, slug="age-5")

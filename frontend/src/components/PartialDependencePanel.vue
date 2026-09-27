@@ -13,7 +13,7 @@ use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 defineProps<{ partialDependence: readonly PartialDependence[] }>();
 
 /**
- * Partial dependence for the declared factors (FR-MODEL-52), one figure per factor.
+ * Partial dependence for the declared factors (FR-174), one figure per factor.
  *
  * Unpartitioned: a curve is the fitted response held at a value, a property of the fit rather
  * than a measurement against a population of rows.
@@ -49,7 +49,7 @@ function rows(entry: PartialDependence) {
 }
 
 /**
- * FR-MODEL-118's reasons, in words. The enum value is an identifier and says nothing to a
+ * FR-175's reasons, in words. The enum value is an identifier and says nothing to a
  * reader; an unrecognised one is passed through rather than mapped to a default, because a
  * new reason shown under the wrong English is worse than one shown under its own name.
  *

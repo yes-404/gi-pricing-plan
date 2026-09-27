@@ -198,7 +198,7 @@ whenever the touched ranges don't textually conflict with the branch's own unrel
 changes.
 
 **2026-08-29, caught before it shipped.** A PR description drafted six citations into
-`docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` by line range, correct
+`docs/plans/PL-00845-rfc-840-rfc-841-adoption-reconciliation-and-rulings-2026-08-29.md` by line range, correct
 against the commit the branch had forked from (`86ff7c1`). Before pushing, `origin/main`
 had moved to `625fe8c` — two of the three new commits touched that exact file (+71/-3, then
 +6/-2), both inserting content *above* the cited ranges. Rebasing without re-deriving the
@@ -220,14 +220,14 @@ count at 1, so every number is short by exactly `A-1` — a constant offset, whi
 makes it look consistent and therefore right. **Selecting by position out of a filtered
 stream is worse, because the error is not constant**: `grep -n '.' | sed -n 'A,Bp'` returns
 the `A`-th and `B`-th *non-blank* lines, so the discrepancy grows with every blank line
-passed. Measured on `docs/plans/2026-09-03-w37-6-ruling-104-ci-signal-and-class-6.md` at
+passed. Measured on `docs/rulings/RL-01045-exit-1-is-the-recorded-standing-red-not-a-failing-check-class-6-is-defined-by-its-property-index-md-means-every-one.md` at
 `3dbee20`, `112,113p` over that pipeline returns true lines **139 and 141**. Note what that pipeline actually printed: `grep -n` reports **true** line
 numbers, so the right answer was in its own `139:` prefix and was passed over in favour of
 the position. Neither form errors, and both look exactly like a line number.
 
 **2026-09-03, three ranges for one list, then two wrong verifications of one range.** A
-six-item enumeration in `docs/plans/2026-09-02-w37-migration-preconditions-rulings.md`
-(Ruling 68 §2, read at `a92d4e8`) was cited `:256-262` — a range that opens on the
+six-item enumeration in `docs/rulings/INDEX.md#2026-09-02-w37-migration-preconditions-rulingsmd`
+(RL-989 §2, read at `a92d4e8`) was cited `:256-262` — a range that opens on the
 introducing sentence and closes inside item 4, so a reader meets four of six classes and no
 statement that there are six. Its true extent is the intro at `:255-256` and the six items at
 `:258-266`, three items wrapping onto continuation lines. A second reader produced
@@ -487,7 +487,7 @@ git merge --ff-only origin/main
 ## A worktree-pinned session cannot read a sibling's — or the primary checkout's — working directory, by design
 
 Both obvious routes are blocked, confirmed 6/6 across a real fanout (five sibling
-worktrees plus the primary checkout, W11 pre-stand-down audit, 2026-08-29): in every case
+worktrees plus the primary checkout, WK-671 pre-stand-down audit, 2026-08-29): in every case
 zero commands executed against the target's actual files.
 
 - **`git -C <other-path>` or a bare `cd` into another worktree** — refused before running
@@ -523,7 +523,7 @@ It does not cover **uncommitted tracked edits or untracked files** — those exi
 the other worktree's disk with no ref, so nothing short of a session physically rooted
 there can see them.
 
-**The consequence for a cross-worktree audit** (ruled here, W11, 2026-08-29): gathering
+**The consequence for a cross-worktree audit** (ruled here, WK-671, 2026-08-29): gathering
 the working-directory half for every worktree but your own is structurally not a
 worktree-pinned member's job — the guard blocks both routes on purpose, to stop one
 session reaching into another's live files. That half belongs to a session actually
@@ -563,7 +563,7 @@ session's own tool-call history: the *first* commit in the affected worktree was
 plain `Bash`/`Edit` calls this session issued directly and can point to line by line, not by
 the nested fork — the fork's unsupervised edits were **later, additive** ones layered on top
 of an already-good, already-committed baseline. A provenance claim assembled from a
-relayed account is a citation like any other (`NT-0006`): trace it against the artifact —
+relayed account is a citation like any other (`RFC-779`): trace it against the artifact —
 here, the actual tool-call sequence — before it goes into a durable note, not just against
 how plausible the story sounds.
 
@@ -582,10 +582,10 @@ Ignore build output, caches, environments and editor state. **Do not ignore:**
 
 | Not ignored | Why |
 |---|---|
-| **`uv.lock`** | It is a *lockfile*, not an environment. Committing it is what makes builds reproducible (FR-OVR-8 determinism). The instinct to lump it with `.venv/` is the single most common uv mistake |
+| **`uv.lock`** | It is a *lockfile*, not an environment. Committing it is what makes builds reproducible (FR-11 determinism). The instinct to lump it with `.venv/` is the single most common uv mistake |
 | `.claude/skills/` | Project knowledge travels with the repo (`CLAUDE.md` §12) |
 | `docs/contracts/**/*.json` | Drafted contracts are a deliverable this phase |
-| `deploy/docker-compose.yml` | The local stack is part of NFR-OVR-9 |
+| `deploy/docker-compose.yml` | The local stack is part of NFR-462 |
 
 Adding a tool that generates files? **Update `.gitignore` in the same commit.** Otherwise
 the first `git add -A` sweeps its cache in.
@@ -610,7 +610,7 @@ Check for this whenever `.gitignore` is added *after* the code it should have co
 
 ## Never commit
 
-Secrets or credentials of any kind (`07` FR-PLAT-26 — they are referenced, never stored),
+Secrets or credentials of any kind (`07` FR-426 — they are referenced, never stored),
 real customer data, `.venv/`, `__pycache__/`, or large binaries. A dataset belongs in the
 blob store (ID-4), not in git.
 
@@ -872,7 +872,7 @@ the tree named in its own section rather than described from memory.
   and never completed once, `docs` green throughout. Written by the author of those four
   pushes; the cadence was the defect, not any single push.
 
-**2026-08-30 — the nested-fork section above added**, from a live incident during W11
+**2026-08-30 — the nested-fork section above added**, from a live incident during WK-671
 tooling work: a dispatched fork's own nested `Agent(subagent_type:"fork")` call started
 before its second attempt errored on the unsupported-nesting message, and its unsupervised
 descendant's edits in a sibling worktree were mistaken, briefly and reasonably, for a
@@ -880,7 +880,7 @@ cross-session isolation breach. Corrected once against the actual tool-call hist
 provenance for the *first* commit in that worktree traced to this session's own direct
 `Bash`/`Edit` calls, not to the nested fork, whose real edits were later and additive —
 caught only by checking a relayed account against the primary source rather than accepting
-a plausible story (`NT-0006`, applied to agent provenance rather than a document citation).
+a plausible story (`RFC-779`, applied to agent provenance rather than a document citation).
 
 **2026-08-29 — the worktree-isolation section above added, from a live pre-stand-down
 audit.** The lead ordered a read-only inventory of every worktree after a prior cleanup
@@ -942,7 +942,7 @@ one worth carrying forward, not this specific safe outcome.
 
 **2026-08-29 — the UTC-offset date-rendering entry added.** A wrong calendar date, read from
 a rendering whose offset was never checked, reached a filed plan review this same day.
-Verified rather than narrated: two real commits from this repository's own W9 history
+Verified rather than narrated: two real commits from this repository's own WK-669 history
 (`eb9b6a1`, `3a4958a`) are recorded at `+01:00` and land within an hour of the UTC day
 boundary, so both `git log`'s default format and `--date=iso-strict` render them a full
 calendar day later than their UTC date. Checked that `--date=iso-strict` does not correct
@@ -981,7 +981,7 @@ pusher does not stop the merger from repeating their half.
 **2026-08-29 — the `gh pr edit` warning above widened from `--base` alone to the whole
 command, and generalised into the "re-read the artifact" rule.** First recorded 2026-08-24
 (PR #173) for `--base` only; rediscovered independently on 2026-08-29 hitting `--title` and
-`--body` on the NT-0010/0011 adoption's own reconciliation record, an hour before this
+`--body` on the RFC-840/841 adoption's own reconciliation record, an hour before this
 adoption's own §15 step 5 audit — because the 2026-08-24 finding lived only in the diagnosing
 session's own memory, not in this file, and the role that needed it next had no way to reach
 it. The correction here is of reach, not of fact: nothing in the original `--base` warning
@@ -1022,15 +1022,15 @@ correctly identified `chore/skills-library` and `spike/s3-…` as fully supersed
 deletion, where `git branch -d` refused both because of squash-merge. The `.gitignore`
 generated from the rules above stops `__pycache__` entering the tree.
 
-**And it caught a live instance immediately.** W1 was committed before `.gitignore`
+**And it caught a live instance immediately.** WK-657 was committed before `.gitignore`
 existed, so 12 `.pyc` files were already tracked; the new patterns did not untrack them,
 and `git status` reported them as *modified*. `git rm -r --cached` cleared them. The
 failure landed in the gap between writing this skill and committing it, which is a fair
 demonstration that the same-commit rule above is a rule and not a preference.
 
-2026-08-17 — W5's three-PR stack. The retarget-first order above was learned by not following it: merging #83 with `--delete-branch` closed #84, which then refused both reopening and a base change, and that slice landed as #90 instead. #88 survived the same event only because its base was moved to `main` first.
+2026-08-17 — WK-661's three-PR stack. The retarget-first order above was learned by not following it: merging #83 with `--delete-branch` closed #84, which then refused both reopening and a base change, and that slice landed as #90 instead. #88 survived the same event only because its base was moved to `main` first.
 
-2026-08-15 — W6a close. The `pull_request` `paths:` behaviour above was learned by
+2026-08-15 — WK-663 close. The `pull_request` `paths:` behaviour above was learned by
 pushing a commit as a proof it could not be.
 
 **2026-08-17 — the worktree case, found by hitting all four steps.** `oq-model-3-8-9-revise`

@@ -1,6 +1,6 @@
-"""`scripts/file-census.py` — Stage 0 evidence for NT-0016 (Q1, Q2, Q3).
+"""`scripts/file-census.py` — Stage 0 evidence for RFC-897 (Q1, Q2, Q3).
 
-`docs/plans/2026-08-31-nt-0016-investigation.md` §7 (Slice 2). These tests run against a
+`docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md` §7 (Slice 2). These tests run against a
 synthetic git repository built in `tmp_path`, never against this repository's own tree — the
 repository's numbers move (the next merge adds or removes files), and a test pinned to a
 live count fails for a reason unrelated to the code under test.
@@ -126,14 +126,14 @@ def test_area_is_first_path_segment() -> None:
 @pytest.mark.parametrize(
     ("rel_path", "expected"),
     [
-        ("docs/plans/2026-08-31-nt-0016-investigation.md", "frozen"),
+        ("docs/plans/PL-00929-rfc-897-file-taxonomy-reference-coding-and-custody-research-and-the-slice-cut.md", "frozen"),
         ("docs/audit/work/some-task.md", "frozen"),
         ("docs/contracts/openapi/generated.json", "generated"),
         ("docs/specs/00-overview.md", "living"),
         ("docs/process/delivery-process.md", "living"),
         ("scripts/file-census.py", "unknown"),
         (".claude/skills/README.md", "unknown"),
-        ("docs/audit/register.md", "unknown"),  # docs/audit/ itself, not docs/audit/work/
+        ("docs/findings/register.md", "unknown"),  # docs/audit/ itself, not docs/audit/work/
     ],
 )
 def test_mutability_directory_prefix_rules(rel_path: str, expected: str) -> None:

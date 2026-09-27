@@ -1,4 +1,4 @@
-"""Route-level permission enforcement (`06` FR-GOV-1, FR-GOV-2).
+"""Route-level permission enforcement (`06` FR-342, FR-343).
 
     @router.get("", dependencies=[Depends(requires(Permission.JOB_READ))])
 
@@ -12,7 +12,7 @@ alternative — treating the dev principal as an administrator — would make ev
 pass without exercising a single permission check, which is the shape of test that reports
 coverage it does not have. Tests grant roles explicitly, as a deployment would.
 
-Resource-scoped checks (FR-GOV-4) stay inside handlers, because the resource id is not
+Resource-scoped checks (FR-345) stay inside handlers, because the resource id is not
 known until the path parameter is resolved and often not until a row is loaded.
 """
 
@@ -65,10 +65,10 @@ def requires(permission: Permission) -> Callable[..., Awaitable[Caller]]:
                 workspace_id=caller.workspace_id,
                 principal=caller.principal,
                 permission=permission,
-                # Ruling 38: the set this credential actually authenticated with, passed
+                # RL-924: the set this credential actually authenticated with, passed
                 # rather than re-derived. A Service Account's grants live on its own record
                 # and reach no role, so without this a permission only a Service Account may
-                # hold (FR-GOV-6) can never be satisfied.
+                # hold (FR-347) can never be satisfied.
                 credential_permissions=caller.permissions,
             )
         return caller

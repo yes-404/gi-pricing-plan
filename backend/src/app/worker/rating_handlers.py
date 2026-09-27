@@ -1,4 +1,4 @@
-"""What the `rating.compile` Job actually does (`03` §5.1:514, FR-RATE-24/25, W11 Task 1.2).
+"""What the `rating.compile` Job actually does (`03` §5.1:514, FR-239/240, WK-671 Task 1.2).
 
 The 202 endpoint submits these. `compile_rating_version` resolves the pinned algorithm
 and every pin to real content and returns the full, self-contained `Bundle`; this handler
@@ -28,7 +28,7 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
     `job_identity` supplies `workspace_id`/`actor`; the 202 endpoint adds
     `rating_version_id`. The resolution itself may do real I/O (a rate table's cells, a
     reference table's rows, a GBM's booster blob), which is why this runs as a Job rather
-    than inline on the request (Ruling 2).
+    than inline on the request (RL-865).
     """
     progress = _bridge(callback)
     workspace_id = _workspace(parameters)
@@ -56,7 +56,7 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
             )
             payload = bundle.model_dump_json().encode()
             ref = await progress.blob_store.put(session, payload, "application/json")
-            # Ruling 37: the key goes on the version's own metadata, in this same
+            # RL-915: the key goes on the version's own metadata, in this same
             # transaction. Without it the only record of where the bundle lives is this
             # Job's result — an operational row with its own pruning, so a trimmed Job
             # history would leave a compiled version unresolvable.
@@ -78,7 +78,7 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
                 blob_sha256=ref.sha256,
             )
 
-            # NFR-RATE-10: compilations emit an Audit Event with before/after state.
+            # NFR-498: compilations emit an Audit Event with before/after state.
             # Inside this `unit_of_work`, never its own: `06` R2 makes the audit write
             # share the caller's transaction, and `audit.record` refuses outright if there
             # is none — an event that committed independently could outlive a compile that
@@ -96,7 +96,7 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
                 action="rating_version.compiled",
                 entity_ref=entity_ref,
                 before={"bundle_hash": prior_hash},
-                # `blob_sha256` joins the after-state because Ruling 37 put it on the row
+                # `blob_sha256` joins the after-state because RL-915 put it on the row
                 # this event describes: without it the trail can say a compile happened and
                 # what it hashed to, but not *which stored artifact* it produced — and
                 # "which blob did this compile write" is exactly the question an audit of a

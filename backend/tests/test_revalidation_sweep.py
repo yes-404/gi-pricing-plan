@@ -1,4 +1,4 @@
-"""The revalidation sweep's parse path fails on deliberately broken input (OQ-PLAT-11 (c)).
+"""The revalidation sweep's parse path fails on deliberately broken input (OQ-650 (c)).
 
 The sweep (`scripts/revalidate-artifacts.py`) parses every stored artifact against today's
 models and reports what no longer reads. The mechanism is the parse path — the same
@@ -41,7 +41,7 @@ def _valid_report() -> dict:
 def test_the_sweep_reports_a_stored_artifact_that_no_longer_reads() -> None:
     """A body written under a looser model — a required field absent — must be reported.
 
-    This is the OQ-PLAT-11 failure mode: a stored payload parsed on write against whatever
+    This is the OQ-650 failure mode: a stored payload parsed on write against whatever
     the model said that day, then parsed on read against whatever it says now. The sweep
     must surface the row the read path would refuse, not stay silent.
     """

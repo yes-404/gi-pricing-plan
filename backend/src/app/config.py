@@ -1,8 +1,8 @@
 """Typed configuration (07 §3.8).
 
-FR-PLAT-43 gives settings a three-layer precedence: **environment variable → workspace
+FR-446 gives settings a three-layer precedence: **environment variable → workspace
 setting → platform default**, and requires the effective value *and its source* to be
-visible. FR-PLAT-44 requires validation at startup — an invalid setting must prevent
+visible. FR-447 requires validation at startup — an invalid setting must prevent
 startup with a clear message rather than failing at first use, halfway through a job.
 
 The workspace layer is a database read and arrives with the settings table; `SettingSource`
@@ -29,7 +29,7 @@ __all__ = [
 
 
 class Environment(enum.StrEnum):
-    """Deployment environment. `prod` carries the strict rules (FR-PLAT-5)."""
+    """Deployment environment. `prod` carries the strict rules (FR-391)."""
 
     LOCAL = "local"
     DEV = "dev"
@@ -38,7 +38,7 @@ class Environment(enum.StrEnum):
 
 
 class SettingSource(enum.StrEnum):
-    """Which layer supplied the effective value (FR-PLAT-43)."""
+    """Which layer supplied the effective value (FR-446)."""
 
     ENVIRONMENT = "environment"
     WORKSPACE = "workspace"
@@ -73,7 +73,7 @@ class SettingResolution[T]:
 
 
 class ConfigInvalidError(RuntimeError):
-    """Configuration is unusable. Raised at startup, never at first use (FR-PLAT-44).
+    """Configuration is unusable. Raised at startup, never at first use (FR-447).
 
     Carries the `SETTING_INVALID` code that 07 §5.1 assigns to this module.
     """
@@ -99,18 +99,18 @@ class Settings(BaseSettings):
     service_name: str = "gi-pricing-api"
     version: str = "0.1.0"
 
-    # Postgres holds all metadata, artifacts, the audit log and job records (FR-PLAT-17).
+    # Postgres holds all metadata, artifacts, the audit log and job records (FR-416).
     #
     # SecretStr because a DSN embeds a password. As a plain `str` it appeared verbatim in
     # `model_dump()`, so any structured log line carrying settings would have published the
-    # database credentials — which is exactly what NFR-PLAT-7 forbids.
+    # database credentials — which is exactly what NFR-532 forbids.
     database_url: SecretStr = SecretStr("postgresql+asyncpg://gip:gip@localhost:5432/gip")
 
-    # Redis is the Celery broker and a cache; nothing durable lives here (FR-PLAT-22).
+    # Redis is the Celery broker and a cache; nothing durable lives here (FR-422).
     # SecretStr for the same reason as `database_url` — a Redis URL can carry a password.
     redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
 
-    # S3-compatible blob store: MinIO locally, any S3 in production (FR-PLAT-18).
+    # S3-compatible blob store: MinIO locally, any S3 in production (FR-418).
     blob_endpoint_url: str = "http://localhost:9000"
     blob_bucket: str = "gip-blobs"
     blob_region: str = "us-east-1"
@@ -122,25 +122,25 @@ class Settings(BaseSettings):
     blob_access_key: SecretStr = SecretStr("gipricing")
     blob_secret_key: SecretStr = SecretStr("gipricing")
 
-    # FR-PLAT-20: a blob is deletable only when nothing references it *and* it is older
+    # FR-420: a blob is deletable only when nothing references it *and* it is older
     # than this. Conservative by default — an over-eager GC deletes a dataset.
     blob_gc_grace_days: Annotated[int, Field(ge=1, le=3650)] = 30
 
-    # FR-PLAT-21: uploads above this size use presigned multipart, so dataset files do not
+    # FR-421: uploads above this size use presigned multipart, so dataset files do not
     # transit the API process.
     blob_multipart_threshold_mb: Annotated[int, Field(ge=1, le=1024)] = 64
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
-    # FR-PLAT-5 / NFR-OVR-8: the platform refuses to start in prod without TLS termination.
+    # FR-391 / NFR-461: the platform refuses to start in prod without TLS termination.
     tls_terminated: bool = False
 
-    # OIDC (FR-PLAT-1). Empty issuer means no identity provider is configured, and every
+    # OIDC (FR-387). Empty issuer means no identity provider is configured, and every
     # authenticated route then refuses rather than falling back to anything.
     oidc_issuer: str = ""
     oidc_audience: str = ""
     oidc_jwks_url: str = ""
-    # The browser flow's client id (FR-PLAT-66). The API's own verification does not
+    # The browser flow's client id (FR-394). The API's own verification does not
     # need it, so it is not part of `oidc_configured` — joining it there would refuse
     # an API-only deployment over a value only the SPA uses.
     oidc_client_id: str = ""
@@ -148,7 +148,7 @@ class Settings(BaseSettings):
     #: picked up without a restart; long enough that the IdP is not fetched per request.
     oidc_jwks_ttl_s: Annotated[int, Field(ge=30, le=86400)] = 300
 
-    # Development-only identity, an alternative to OIDC for local work (FR-PLAT-1..4).
+    # Development-only identity, an alternative to OIDC for local work (FR-387, FR-388, FR-389, FR-390).
     #
     # Defaults to False and is refused outright in `uat` and `prod` — see
     # `require_startable`. An endpoint that is open because a flag defaulted the wrong way
@@ -156,11 +156,11 @@ class Settings(BaseSettings):
     # returns 401 rather than silently trusting a header.
     dev_auth_enabled: bool = False
 
-    # NFR-PLAT-3 treats a running job with no progress for this long as stalled.
+    # NFR-528 treats a running job with no progress for this long as stalled.
     job_stall_seconds: Annotated[int, Field(gt=0, le=3600)] = 30
 
-    # How many hydrated bundles one worker holds (`platform.bundle_slot`, Ruling 16
-    # clause 3). A **count**, never a byte budget: NFR-RATE-4 permits a bundle of up to
+    # How many hydrated bundles one worker holds (`platform.bundle_slot`, RL-882
+    # clause 3). A **count**, never a byte budget: NFR-492 permits a bundle of up to
     # 500 MB including boosters and nothing here measures a hydrated `CompiledBundle`'s
     # footprint, so a byte bound would be an estimate wearing a number's clothes.
     #
@@ -188,7 +188,7 @@ class Settings(BaseSettings):
         return v
 
     def require_startable(self) -> None:
-        """Refuse to start when the environment's hard rules are unmet (FR-PLAT-5)."""
+        """Refuse to start when the environment's hard rules are unmet (FR-391)."""
         if self.dev_auth_enabled and self.environment in {
             Environment.UAT,
             Environment.PROD,
@@ -196,17 +196,17 @@ class Settings(BaseSettings):
             raise ConfigInvalidError(
                 f"dev_auth_enabled must not be set in {self.environment.value}. It trusts "
                 "a request header as identity, which would let any caller act as any "
-                "principal in any workspace. Configure OIDC (FR-PLAT-1) instead."
+                "principal in any workspace. Configure OIDC (FR-387) instead."
             )
         if self.environment is Environment.PROD and not self.tls_terminated:
             raise ConfigInvalidError(
                 "environment=prod requires TLS termination to be configured "
                 "(set GIP_TLS_TERMINATED=true once the terminating proxy is in place). "
-                "FR-PLAT-5 / NFR-OVR-8: all API traffic is TLS 1.3."
+                "FR-391 / NFR-461: all API traffic is TLS 1.3."
             )
         if self.environment is Environment.PROD and not self.oidc_issuer:
             raise ConfigInvalidError(
-                "environment=prod requires an OIDC issuer (FR-PLAT-1). Without one no "
+                "environment=prod requires an OIDC issuer (FR-387). Without one no "
                 "user can authenticate, and starting anyway would present a service that "
                 "rejects every request as though it were broken."
             )
@@ -243,7 +243,7 @@ class Settings(BaseSettings):
 def load_settings(**overrides: Any) -> Settings:
     """Build and validate settings, converting Pydantic's error into a startup failure.
 
-    FR-PLAT-44 asks for "a clear message rather than failing at first use". A raw
+    FR-447 asks for "a clear message rather than failing at first use". A raw
     `ValidationError` names the field but not what the operator should do, so it is
     re-raised as `ConfigInvalidError` with the environment-variable name attached.
     """

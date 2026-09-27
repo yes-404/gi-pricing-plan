@@ -1,4 +1,4 @@
-"""The settings endpoints (`07` §5.1, FR-PLAT-43..46)."""
+"""The settings endpoints (`07` §5.1, FR-446, FR-447, FR-448, FR-449)."""
 
 from __future__ import annotations
 
@@ -57,9 +57,9 @@ async def unprivileged_headers(workspace_id, principal, membership) -> dict[str,
     }
 
 
-@pytest.mark.req("FR-PLAT-43")
+@pytest.mark.req("FR-446")
 def test_reads_show_the_source_not_only_the_value(client: TestClient, headers) -> None:
-    """FR-PLAT-43: the effective value *and its source* are inspectable."""
+    """FR-446: the effective value *and its source* are inspectable."""
     body = client.get("/api/v1/settings", headers=headers).json()
     psi = next(s for s in body if s["key"] == "validation.psi_warn_threshold")
     assert psi["effective_value"] == 0.10
@@ -68,7 +68,7 @@ def test_reads_show_the_source_not_only_the_value(client: TestClient, headers) -
     assert psi["constraints"] == {"min": 0.0, "max": 1.0}
 
 
-@pytest.mark.req("FR-PLAT-45")
+@pytest.mark.req("FR-448")
 def test_updating_a_setting_changes_the_effective_value(
     client: TestClient, headers
 ) -> None:
@@ -85,7 +85,7 @@ def test_updating_a_setting_changes_the_effective_value(
     assert psi["resolved_from"] == "workspace"
 
 
-@pytest.mark.req("FR-PLAT-44")
+@pytest.mark.req("FR-447")
 def test_an_invalid_value_is_refused_with_a_typed_problem(
     client: TestClient, headers
 ) -> None:
@@ -98,7 +98,7 @@ def test_an_invalid_value_is_refused_with_a_typed_problem(
     assert response.json()["code"] == "SETTING_INVALID"
 
 
-@pytest.mark.req("FR-PLAT-44")
+@pytest.mark.req("FR-447")
 def test_an_unknown_setting_is_a_404(client: TestClient, headers) -> None:
     response = client.put(
         "/api/v1/settings", json={"values": {"nope.nope": 1}}, headers=headers
@@ -106,7 +106,7 @@ def test_an_unknown_setting_is_a_404(client: TestClient, headers) -> None:
     assert response.status_code == 404
 
 
-@pytest.mark.req("FR-PLAT-46")
+@pytest.mark.req("FR-449")
 def test_flags_are_reported_as_flags(client: TestClient, headers) -> None:
     body = client.get("/api/v1/settings", headers=headers).json()
     flags = {s["key"]: s for s in body if s["feature_flag"]}
@@ -114,14 +114,14 @@ def test_flags_are_reported_as_flags(client: TestClient, headers) -> None:
     assert all(f["effective_value"] is False for f in flags.values())
 
 
-@pytest.mark.req("FR-PLAT-1")
+@pytest.mark.req("FR-387")
 def test_settings_require_authentication() -> None:
     settings = Settings(environment=Environment.LOCAL, version="test")
     with TestClient(create_app(settings), raise_server_exceptions=False) as client:
         assert client.get("/api/v1/settings").status_code == 401
 
 
-@pytest.mark.req("FR-OVR-13")
+@pytest.mark.req("FR-16")
 async def test_settings_are_scoped_to_the_callers_workspace(
     client: TestClient, headers, workspace_id, principal, database
 ) -> None:
@@ -145,7 +145,7 @@ async def test_settings_are_scoped_to_the_callers_workspace(
 
     other_workspace = new_uuid7()
     async with database.unit_of_work() as session:
-        # The workspace row must exist for the membership FK (FR-PLAT-62), and the caller
+        # The workspace row must exist for the membership FK (FR-395), and the caller
         # must *be* a member here (W6b-11): the `Workspace-Id` header is checked against
         # the memberships the database holds, so a role without membership would now
         # refuse with `WORKSPACE_SCOPE_DENIED` instead of answering from the second
@@ -182,18 +182,18 @@ async def test_settings_are_scoped_to_the_callers_workspace(
     assert psi["resolved_from"] == "default"
 
 
-@pytest.mark.req("FR-GOV-2")
+@pytest.mark.req("FR-343")
 def test_reading_settings_needs_a_role(client: TestClient, unprivileged_headers) -> None:
     response = client.get("/api/v1/settings", headers=unprivileged_headers)
     assert response.status_code == 403
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-GOV-5")
+@pytest.mark.req("FR-346")
 async def test_an_auditor_can_read_settings_but_not_change_them(
     client: TestClient, workspace_id, grant
 ) -> None:
-    """FR-GOV-5: read everything, write nothing — including here."""
+    """FR-346: read everything, write nothing — including here."""
     from model_schema import new_uuid7
 
     auditor = new_uuid7()

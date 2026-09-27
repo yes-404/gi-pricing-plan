@@ -14,7 +14,7 @@ import { isProblem, ProblemError } from "@/api/problem";
 import { listRatingVersions, type RatingVersion } from "@/api/ratingVersions";
 
 /**
- * The demo entrance (FR-PLAT-53) and its guide (FR-PLAT-54).
+ * The demo entrance (FR-408) and its guide (FR-409).
  *
  * Everything on this page is **derived** — the views from each spec's §5.3 table checked
  * against the frontend router, the API surface from the published contract, the state from
@@ -201,7 +201,7 @@ onMounted(async () => {
         </h2>
         <p class="mt-1 text-sm text-slate-600">
           The freMTPL2 seed fits a GLM and a GBM, compares them, and approves one — the
-          Phase 1b modelling half (W7). The approved model is what the rating version pins.
+          Phase 1b modelling half (WK-665). The approved model is what the rating version pins.
         </p>
         <ul class="mt-3 flex flex-wrap gap-2">
           <li

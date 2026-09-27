@@ -1,13 +1,13 @@
-"""The per-worker bundle slot (W11 Slice 2 Task 2A, Ruling 16).
+"""The per-worker bundle slot (WK-671 Slice 2 Task 2A, RL-882).
 
 The slot is the first in-process cache in this backend, so these tests pin the four
 properties the ruling names and nothing else: it holds a hydrated `CompiledBundle` so a
 second request for the same bundle does not re-hydrate; the **held index** is bounded by a
 **count**, evicting least-recently-used — the memo is bounded differently, and
 `test_evicting_a_bundle_forgets_the_refs_that_pointed_at_it` says how; it memoises the
-ref → hash resolution this worker itself performed, which is what makes NFR-RATE-9's
+ref → hash resolution this worker itself performed, which is what makes NFR-497's
 degraded read reachable at all; and it
-acquires none of the four mechanisms Ruling 16 clause 4 reserves for W14.
+acquires none of the four mechanisms RL-882 clause 4 reserves for WK-674.
 
 The end-to-end degraded read — a second request for an already-served ref answered 200
 with the rating-version load patched to raise — is Task 2B's, over HTTP. What is provable
@@ -95,7 +95,7 @@ def _ref(version: int) -> ArtifactRef:
 class _Hydrations:
     """Counts how often the caller had to hydrate — the miss path of Task 2B step 5.
 
-    The slot itself never hydrates (`load_bundle` stays the caller's, and Ruling 10 keeps
+    The slot itself never hydrates (`load_bundle` stays the caller's, and RL-876 keeps
     it pure), so "returned without re-hydrating" is only observable from the outside, in
     the shape the route will actually use it.
     """
@@ -114,16 +114,16 @@ class _Hydrations:
 
 
 # --------------------------------------------------------------------------------------
-# Holding and reuse (FR-RATE-65: a `CompiledBundle` is held per worker process).
+# Holding and reuse (FR-243: a `CompiledBundle` is held per worker process).
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 def test_a_held_bundle_is_returned_without_rehydrating() -> None:
     """The point of the slot: hydration happens once per bundle per worker.
 
     `predict_gbm` deserialises a fresh booster handle on every call, so without this the
-    50 ms of NFR-RATE-1 pays for a deserialise it did not need.
+    50 ms of NFR-489 pays for a deserialise it did not need.
     """
     hydrations = _Hydrations(BundleSlot(capacity=1))
 
@@ -134,7 +134,7 @@ def test_a_held_bundle_is_returned_without_rehydrating() -> None:
     assert hydrations.count == 1
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 def test_at_capacity_one_a_second_hash_evicts_the_first() -> None:
     """Bounded by a count, and at the default capacity of 1 that bound is replacement."""
     slot = BundleSlot(capacity=1)
@@ -146,7 +146,7 @@ def test_at_capacity_one_a_second_hash_evicts_the_first() -> None:
     assert slot.get("hash-a") is None
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 def test_eviction_is_least_recently_used_not_insertion_order() -> None:
     """LRU, not FIFO — a first-in-first-out slot passes the capacity-1 test above.
 
@@ -167,13 +167,13 @@ def test_eviction_is_least_recently_used_not_insertion_order() -> None:
 
 
 # --------------------------------------------------------------------------------------
-# The ref -> hash memo (Ruling 16 clause 5; NFR-RATE-9's degraded read).
+# The ref -> hash memo (RL-882 clause 5; NFR-497's degraded read).
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("NFR-RATE-9")
+@pytest.mark.req("NFR-497")
 def test_a_served_ref_resolves_to_its_hash_without_a_metadata_read() -> None:
-    """Ruling 16 clause 5's second index, and why the slot needs one.
+    """RL-882 clause 5's second index, and why the slot needs one.
 
     A slot keyed only by `content_hash` cannot be reached when metadata storage is down,
     because the request carries a `rating_version_ref` and ref -> `Bundle` -> hash *is*
@@ -187,11 +187,11 @@ def test_a_served_ref_resolves_to_its_hash_without_a_metadata_read() -> None:
     assert slot.get("hash-a") is not None
 
 
-@pytest.mark.req("NFR-RATE-9")
+@pytest.mark.req("NFR-497")
 def test_an_unserved_ref_resolves_to_nothing() -> None:
     """Negative: the slot never invents a resolution.
 
-    Ruling 16's acceptance item 2 is overridden by any build that serves a ref it has
+    RL-882's acceptance item 2 is overridden by any build that serves a ref it has
     never resolved while metadata storage is down — "that is not degradation, it is
     invention". A worker that has served version 1 knows nothing about version 2, even
     though it holds a bundle.
@@ -202,7 +202,7 @@ def test_an_unserved_ref_resolves_to_nothing() -> None:
     assert slot.hash_for(_ref(2)) is None
 
 
-@pytest.mark.req("NFR-RATE-9")
+@pytest.mark.req("NFR-497")
 def test_evicting_a_bundle_forgets_the_refs_that_pointed_at_it() -> None:
     """A resolvable ref always has its bundle: `hash_for` and `get` never disagree.
 
@@ -212,7 +212,7 @@ def test_evicting_a_bundle_forgets_the_refs_that_pointed_at_it() -> None:
     **The two indices are not bounded the same way, and an earlier version of this
     docstring claimed they were.** `_held` is capped at `capacity`; `_resolved` is not.
     Several refs can point at one held hash — identical content compiles to one hash
-    (FR-RATE-24) — so at capacity 1 the memo can hold many entries at once: 50,000
+    (FR-239) — so at capacity 1 the memo can hold many entries at once: 50,000
     distinct refs resolving to one held bundle keeps 50,000 memo entries, every one of
     them valid and none of them capped. What this test pins is the property that does
     hold — every entry dies with its bundle — not a symmetry that does not.
@@ -225,9 +225,9 @@ def test_evicting_a_bundle_forgets_the_refs_that_pointed_at_it() -> None:
     assert slot.hash_for(_ref(2)) == "hash-b"
 
 
-@pytest.mark.req("NFR-RATE-9")
+@pytest.mark.req("NFR-497")
 def test_two_refs_may_memo_the_same_bundle() -> None:
-    """Two Rating Versions with identical content compile to one hash (FR-RATE-24).
+    """Two Rating Versions with identical content compile to one hash (FR-239).
 
     Both refs must resolve, and evicting the bundle must forget both — a per-hash memo
     that held only the last ref would silently drop the first caller's degraded read.
@@ -247,15 +247,15 @@ def test_two_refs_may_memo_the_same_bundle() -> None:
 
 
 # --------------------------------------------------------------------------------------
-# Ruling 16 clause 3 (capacity is a count, default 1) and clause 4 (four exclusions).
+# RL-882 clause 3 (capacity is a count, default 1) and clause 4 (four exclusions).
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 def test_capacity_is_a_count_defaulting_to_one() -> None:
     """Clause 3: a count, not a byte budget, and 1 until a measurement raises it.
 
-    Nothing in this repository measures a hydrated `CompiledBundle`'s footprint — NFR-RATE-4
+    Nothing in this repository measures a hydrated `CompiledBundle`'s footprint — NFR-492
     permits 500 MB including boosters — so a byte bound would be an estimate wearing a
     number's clothes, and 1 is the only default that cannot regress a worker's memory
     against holding none at all.
@@ -263,7 +263,7 @@ def test_capacity_is_a_count_defaulting_to_one() -> None:
     assert Settings().bundle_slot_capacity == 1
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 @pytest.mark.parametrize("capacity", [0, -1])
 def test_a_slot_that_can_hold_nothing_is_refused(capacity: int) -> None:
     """Negative: capacity 0 would be a slot that silently holds nothing.
@@ -296,7 +296,7 @@ def _imported_roots(source: str) -> set[str]:
     return roots
 
 
-#: Everything the slot may reach. Each of Ruling 16 clause 4's four reserved mechanisms
+#: Everything the slot may reach. Each of RL-882 clause 4's four reserved mechanisms
 #: needs something outside it: a poll needs a clock and a task or thread (`asyncio`,
 #: `threading`, `time`), a pub/sub subscription needs a broker client (`redis`), an
 #: environment pointer needs the metadata store (`sqlalchemy`, `app.db`), and a refresh
@@ -316,11 +316,11 @@ def _module_source() -> str:
     return Path(bundle_slot_module.__file__).read_text()
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 def test_the_slot_reaches_no_broker_scheduler_or_metadata_store() -> None:
-    """Ruling 16 clause 4: no refresh, no poll, no pub/sub, no environment pointer.
+    """RL-882 clause 4: no refresh, no poll, no pub/sub, no environment pointer.
 
-    All four are W14's, and a slot that acquires any of them has overridden the ruling.
+    All four are WK-674's, and a slot that acquires any of them has overridden the ruling.
     None can be built out of nothing, so this checks for the dependency each would need
     rather than for a method named `refresh` — a name the violating code is free not to
     use.
@@ -338,7 +338,7 @@ def _violations() -> Iterable[str]:
     yield "from .diff_cache import DiffCache"
 
 
-@pytest.mark.req("FR-RATE-65")
+@pytest.mark.req("FR-243")
 @pytest.mark.parametrize("statement", list(_violations()))
 def test_the_clause_four_check_fails_on_a_broken_module(statement: str) -> None:
     """Positive control, run through the check's own extraction rather than a lookalike.

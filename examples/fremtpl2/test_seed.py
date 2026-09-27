@@ -1,8 +1,8 @@
-"""The seed's pure parts, testable without the 36 MB (`07` FR-PLAT-37).
+"""The seed's pure parts, testable without the 36 MB (`07` FR-439).
 
 The data is fetched, not committed, so CI cannot run the seed end to end. What it *can*
 run is everything that decides whether the seed still works: the ARFF reader, the recipe
-shape, and the rule set's conformance to FR-DATA-16.
+shape, and the rule set's conformance to FR-45.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ SAMPLE = """% a comment, ignored
 """
 
 
-@pytest.mark.req("FR-PLAT-37")
+@pytest.mark.req("FR-439")
 def test_arff_strips_the_quotes_around_nominal_values(tmp_path: Path) -> None:
     """Left in place, `'B12'` and `B12` are two categories and every one-way over the
     column is wrong. ARFF quotes nominal values; CSV does not."""
@@ -44,7 +44,7 @@ def test_arff_strips_the_quotes_around_nominal_values(tmp_path: Path) -> None:
     assert lines[2] == "3,0.77,B,Diesel"
 
 
-@pytest.mark.req("FR-PLAT-37")
+@pytest.mark.req("FR-439")
 def test_the_arff_reader_refuses_a_file_with_no_attributes(tmp_path: Path) -> None:
     path = tmp_path / "empty.arff"
     path.write_text("@relation nothing\n@data\n1,2\n", encoding="utf-8")
@@ -52,7 +52,7 @@ def test_the_arff_reader_refuses_a_file_with_no_attributes(tmp_path: Path) -> No
         to_csv(path)
 
 
-@pytest.mark.req("FR-DATA-9")
+@pytest.mark.req("FR-35")
 def test_the_recipe_renames_before_it_casts() -> None:
     """Order is the recipe's meaning. `cast` names `exposure_years`, which does not exist
     until `rename` has run — reversing the two makes the cast silently target nothing."""
@@ -66,7 +66,7 @@ def test_the_recipe_renames_before_it_casts() -> None:
     assert cast & renamed, "the cast targets no renamed column — check the order"
 
 
-@pytest.mark.req("FR-DATA-9")
+@pytest.mark.req("FR-35")
 def test_the_cleaned_recipe_adds_exactly_one_step() -> None:
     """The loop's whole point: one preparation step is the difference between a version
     that fails validation and one that reaches `validated`."""
@@ -77,9 +77,9 @@ def test_the_cleaned_recipe_adds_exactly_one_step() -> None:
     assert "exposure_years" in cleaned[-1]["params"]["expression"]
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-45")
 def test_the_rule_set_covers_all_four_layers() -> None:
-    """FR-DATA-16: a Rule Set with an empty layer is a configuration warning. The seed is
+    """FR-45: a Rule Set with an empty layer is a configuration warning. The seed is
     the platform's worked example, so it must not ship one."""
     assert {rule["layer"] for rule in RULES} == {
         "structural",
@@ -89,7 +89,7 @@ def test_the_rule_set_covers_all_four_layers() -> None:
     }
 
 
-@pytest.mark.req("FR-DATA-21")
+@pytest.mark.req("FR-50")
 def test_every_seeded_rule_names_a_registered_check() -> None:
     """A rule citing an unregistered check becomes an `error`, never a pass — so a typo
     here would quietly weaken the example rule set rather than break it."""
@@ -99,9 +99,9 @@ def test_every_seeded_rule_names_a_registered_check() -> None:
     assert not unknown, f"unregistered checks in the seed: {unknown}"
 
 
-@pytest.mark.req("FR-DATA-5")
+@pytest.mark.req("FR-30")
 def test_the_dictionary_covers_every_column_the_seed_produces() -> None:
-    """FR-DATA-5 keeps the source name against the normalised one. A column with no
+    """FR-30 keeps the source name against the normalised one. A column with no
     dictionary entry is a column nobody has said the meaning of."""
     described = set(DICTIONARY)
     assert set(RENAMES.values()) <= described

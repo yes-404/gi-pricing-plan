@@ -1,11 +1,11 @@
-"""Dataset versions and the gate (`01` §1.3, §3.1, FR-DATA-2, FR-DATA-17, FR-DATA-40).
+"""Dataset versions and the gate (`01` §1.3, §3.1, FR-27, FR-46, FR-34).
 
 > A Model may only be fitted on a Dataset Version whose status is `validated`. There is no
 > override, no "force fit", and no admin bypass.
 
 This module is where that is true or not. Three things make it true:
 
-* **Version allocation is serialised** (FR-DATA-2, ID-2). `version = max + 1` computed
+* **Version allocation is serialised** (FR-27, ID-2). `version = max + 1` computed
   under a lock, with a unique constraint behind it — two concurrent ingestions must not
   both become `@12`, because a reference to `@12` has to mean one body of data for ever.
 * **`validated` is reachable only through `promote`**, which reads the report and refuses
@@ -95,7 +95,7 @@ async def create_source(
     config: dict[str, Any] | None = None,
     credentials_secret_ref: str | None = None,
 ) -> SourceRow:
-    """Register a Source (FR-DATA-1).
+    """Register a Source (FR-26).
 
     `credentials_secret_ref` must be a `secret:<slug>` reference. A value here would be a
     credential in a table the API returns, which `07` R3 forbids — and the check is a
@@ -115,7 +115,7 @@ async def create_source(
             "VALIDATION_FAILED",
             "Credentials must be a secret reference",
             422,
-            "`07` FR-PLAT-25: credentials are referenced as `secret:<slug>` and resolved "
+            "`07` FR-425: credentials are referenced as `secret:<slug>` and resolved "
             "at the point of use. A value here would be stored, returned and logged.",
         )
 
@@ -163,14 +163,14 @@ async def create_dataset(
     """Create a Dataset — the named container its versions belong to (`01` §4.1)."""
     # Before the permission check, not after. A `system` principal fails both — it holds no
     # role, so `effective_permissions` returns the empty set — but `PERMISSION_DENIED`
-    # sends the caller looking for a grant, and no grant would fix this: FR-DATA-51 makes
+    # sends the caller looking for a grant, and no grant would fix this: FR-82 makes
     # `owner_id` non-null and `Principal.id` is null for `system` by construction.
     if actor.id is None:
         raise PlatformError(
             "VALIDATION_FAILED",
             "A dataset needs an owner",
             422,
-            "FR-DATA-51 makes owner_id non-null and set at ingestion; the system principal "
+            "FR-82 makes owner_id non-null and set at ingestion; the system principal "
             "has no id and cannot own one. Create it as the user or service account "
             "responsible for it.",
         )
@@ -213,7 +213,7 @@ async def create_dataset(
             "slug": slug,
             "name": row.name,
             "currency": row.currency,
-            # Ownership is part of what creating a Dataset established (FR-DATA-51), and
+            # Ownership is part of what creating a Dataset established (FR-82), and
             # the `after` should say so — otherwise the chain records who acted but not
             # what the act made them responsible for.
             "owner_id": str(row.owner_id),
@@ -270,10 +270,10 @@ async def update_dictionary(
     slug: str,
     entries: Mapping[str, DataDictionaryEntry],
 ) -> DatasetRow:
-    """Replace the Data Dictionary, audited with before and after (`01` §5.1, NFR-DATA-8).
+    """Replace the Data Dictionary, audited with before and after (`01` §5.1, NFR-472).
 
     A **replace**, not a merge, and the audit event carries both states. The dictionary
-    decides which columns may be modelled at all (FR-OVR-9), so "who removed the
+    decides which columns may be modelled at all (FR-12), so "who removed the
     `special_category` marking from this column, and when?" has to be answerable — and a
     merge would make a removal indistinguishable from an omission.
     """
@@ -311,18 +311,18 @@ async def set_owner(
     dataset_id: UUID,
     owner_id: UUID,
 ) -> DatasetRow:
-    """Hand a Dataset to a new owner (FR-DATA-51).
+    """Hand a Dataset to a new owner (FR-82).
 
     Two conditions, not one: **Admin, or the current owner**. Both live here rather than in
     the route so the rule is written once, and so the refusal can name which condition
     failed — a caller who holds `DATASET_WRITE` and is refused would otherwise have no way
     to tell this from a missing permission.
 
-    `ADMIN_MANAGE_ROLES` stands for "an Admin" (FR-DATA-51 names the actor, not a
+    `ADMIN_MANAGE_ROLES` stands for "an Admin" (FR-82 names the actor, not a
     permission). It is held by the `admin` role and by no other built-in role, and of the
     five admin permissions it is the one about *who is accountable for what* rather than
     about settings, environments or service accounts — which is exactly what an owner is.
-    No new permission was added: FR-GOV-3's set is closed, and a permission invented for
+    No new permission was added: FR-344's set is closed, and a permission invented for
     one route is a permission no role grants.
 
     `load_dataset_by_id` folds `workspace_id` into its predicate, which is what makes a
@@ -342,7 +342,7 @@ async def set_owner(
             "PERMISSION_DENIED",
             "Not permitted",
             403,
-            "FR-DATA-51 lets a Dataset's owner be changed by an Admin or by the current "
+            "FR-82 lets a Dataset's owner be changed by an Admin or by the current "
             "owner, and you are neither. `dataset:write` is not enough — it permits "
             "editing the data dictionary, not reassigning accountability.",
         )
@@ -366,7 +366,7 @@ async def set_owner(
 async def resolve_owner_names(
     session: AsyncSession, owner_ids: set[UUID]
 ) -> dict[UUID, str]:
-    """Resolve principal ids to display names, for `Dataset.owner_name` (OQ-OVR-15 (a)).
+    """Resolve principal ids to display names, for `Dataset.owner_name` (OQ-552 (a)).
 
     A principal id is a `users.id` or a `service_accounts.id` — two tables, one query each,
     independent of page size, which is the property that lets the list batch a whole page
@@ -412,10 +412,10 @@ def to_schema(
 
     `latest_version` is a `(version, status)` pair rather than two parameters so a caller
     cannot supply one without the other — the schema refuses that combination anyway
-    (FR-DATA-50), and a pair turns a runtime `ValidationError` into a type error.
+    (FR-55), and a pair turns a runtime `ValidationError` into a type error.
 
     `owner_name` is derived per request and stored on no row; a caller that does not
-    resolve it yields `None` and the frontend falls back to the id (OQ-OVR-15 (a)).
+    resolve it yields `None` and the frontend falls back to the id (OQ-552 (a)).
     """
     return Dataset(
         id=row.id,
@@ -457,7 +457,7 @@ async def new_version(
     source_id: UUID | None = None,
     derived_from: dict[str, Any] | None = None,
 ) -> DatasetVersionRow:
-    """Allocate the next version at `max + 1`, in `draft` (FR-DATA-2, ID-2).
+    """Allocate the next version at `max + 1`, in `draft` (FR-27, ID-2).
 
     Serialised by an advisory lock per dataset. Without it two concurrent ingestions both
     read `max = 11` and both try `@12`; the unique constraint then fails one of them, which
@@ -492,7 +492,7 @@ async def new_version(
         kind=kind.value,
         source_id=source_id,
         derived_from=derived_from,
-        # OQ-DATA-13 (c): a version names its own provenance — the slug is its dataset's
+        # OQ-568 (c): a version names its own provenance — the slug is its dataset's
         # (a version is addressed as `dataset-slug@version`), the creator is the caller,
         # the currency is its dataset's, and the parent is the previous version's row
         # (null on version 1).
@@ -606,7 +606,7 @@ async def promote_to_validated(
     report_passed: bool,
     unacknowledged_warnings: int,
 ) -> DatasetVersionRow:
-    """The only way to `validated` (FR-DATA-17, `01` §1.3).
+    """The only way to `validated` (FR-46, `01` §1.3).
 
     `report_passed` and `unacknowledged_warnings` are passed in rather than read here
     because the report belongs to the validation slice; what this function owns is the
@@ -630,7 +630,7 @@ async def promote_to_validated(
             409,
             f"{unacknowledged_warnings} warning(s) require an explicit, audited "
             "acknowledgement by a Principal before this version can be validated "
-            "(FR-DATA-17).",
+            "(FR-46).",
         )
 
     return await _transition(
@@ -677,7 +677,7 @@ async def conclude_failed_validation(
     actor: Principal,
     version_id: UUID,
 ) -> DatasetVersionRow:
-    """Where a version goes when its report does not pass (FR-DATA-43, FR-DATA-23).
+    """Where a version goes when its report does not pass (FR-52, FR-53).
 
     Two destinations, and which one depends on what the version *was*:
 
@@ -685,14 +685,14 @@ async def conclude_failed_validation(
       any standing, and `FAILED → VALIDATING` exists so it can be re-validated once the
       data or the rule set is corrected — which is the loop `01` §1.3 describes.
     * A version that was already `validated` and is being re-validated goes back to
-      **`draft`**, which is FR-DATA-23 exactly: it *was* good, and returning it to `draft`
+      **`draft`**, which is FR-53 exactly: it *was* good, and returning it to `draft`
       says so, while every Model fitted on it is flagged.
 
     Until this existed nothing set `failed` at all — the enum and the transition map both
     carried it and no code path reached it — so a failing version rested in `validating`,
     which every screen showing a status reads as "still running". Found by exercising the
     exit demo, where version 1 is the deliberate failure the whole criterion is about
-    (OQ-DATA-7, decided 2026-08-15).
+    (OQ-562, decided 2026-08-15).
     """
     row = await load_version(session, workspace_id=workspace_id, version_id=version_id)
     was_validated = row.validation_report_id is not None
@@ -703,7 +703,7 @@ async def conclude_failed_validation(
             to_status=DatasetStatus.FAILED,
         )
 
-    # FR-DATA-23. The report reference is cleared with the status: left in place it names
+    # FR-53. The report reference is cleared with the status: left in place it names
     # a *passing* report on a version that has just failed, and the
     # `validated_names_its_report` constraint then stops biting on a forced `UPDATE` back
     # to `validated` — a stale pointer that made a database-level guard decorative.
@@ -726,7 +726,7 @@ async def archive_version(
     """Soft-delete only (ID-5): nothing is removed from the database."""
     if not reason.strip():
         raise PlatformError(
-            "VALIDATION_FAILED", "Archiving requires a reason", 422, "ID-5 / FR-DATA-38."
+            "VALIDATION_FAILED", "Archiving requires a reason", 422, "ID-5 / FR-80."
         )
     return await _transition(
         session,
@@ -735,7 +735,7 @@ async def archive_version(
         version_id=version_id,
         to_status=DatasetStatus.ARCHIVED,
         justification=reason,
-        # OQ-DATA-13 (c): `archived_at` is set only by archiving (FR-DATA-21).
+        # OQ-568 (c): `archived_at` is set only by archiving (FR-50).
         also_set={"archived_at": datetime.now(UTC)},
     )
 
@@ -765,7 +765,7 @@ async def load_version(
 ) -> DatasetVersionRow:
     """A version, or a `404` naming it — **without** `01` §1.3's validated gate.
 
-    Public since 2026-08-18 (W5, backtests), which needs to answer a question *before* the
+    Public since 2026-08-18 (WK-661, backtests), which needs to answer a question *before* the
     gate: a request to backtest the model's own holdout must be refused as "that is the data
     it learned on", not as "that version is not validated". A split's parts are derived
     versions and stay `draft`, so the gate answers first — and its answer invites the caller
@@ -785,7 +785,7 @@ async def load_version(
 async def resolve_artifact_ref(
     session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
 ) -> bool:
-    """`dataset_version:<slug>@<version>` → does that version exist? (`06` FR-GOV-36.)
+    """`dataset_version:<slug>@<version>` → does that version exist? (`06` FR-386.)
 
     `False`, having done nothing, for a reference that is not this module's — the contract
     `api/approvals.py`'s fan-out is built on.
@@ -795,7 +795,7 @@ async def resolve_artifact_ref(
     (`uq_dataset_versions_dataset_version`), so neither table holds the whole key on its own.
     Together they do, and `load_version`'s by-id lookup cannot be reused for it.
 
-    Neither status nor `01` §1.3's validated gate is consulted. FR-GOV-36 asks whether the
+    Neither status nor `01` §1.3's validated gate is consulted. FR-386 asks whether the
     version exists; `fittable_or_refuse` asks whether it may be fitted on, and answering that
     question here would refuse a submission whose whole purpose might be to get the version
     validated.
@@ -832,16 +832,16 @@ async def derive_version(
     operation: str,
     params: dict[str, Any],
 ) -> DatasetVersionRow:
-    """Create a Derived Dataset Version from a declared operation (FR-DATA-33, FR-DATA-34).
+    """Create a Derived Dataset Version from a declared operation (FR-73, FR-74).
 
-    A derived version **inherits nothing about its validity**. FR-DATA-34 is explicit that
+    A derived version **inherits nothing about its validity**. FR-74 is explicit that
     it must be validated in its own right: a stratified sample of a validated dataset can
     break rules the parent passed — an exposure band with two claims in the sample and two
     thousand in the parent fails a plausibility rule the parent never came near.
 
     It inherits nothing about its **rows** either, and only `split` can currently produce
-    its own (FR-DATA-44). The rest are refused here — FR-DATA-45, the decided half of
-    OQ-DATA-8 — because a version recording an operation nobody performed is a derivation
+    its own (FR-77). The rest are refused here — FR-78, the decided half of
+    OQ-563 — because a version recording an operation nobody performed is a derivation
     that cannot be reproduced or defended, and it fails silently: the numbers look right.
     """
     if operation not in DERIVED_OPERATIONS:
@@ -849,7 +849,7 @@ async def derive_version(
             "VALIDATION_FAILED",
             "Unknown derivation operation",
             422,
-            f"{operation!r} is not one of {sorted(DERIVED_OPERATIONS)} (FR-DATA-33). "
+            f"{operation!r} is not one of {sorted(DERIVED_OPERATIONS)} (FR-73). "
             "A derivation the platform cannot describe is one it cannot reproduce.",
         )
     if operation in UNMATERIALISED_OPERATIONS:
@@ -857,10 +857,10 @@ async def derive_version(
             "DERIVATION_NOT_MATERIALISED",
             "This derivation is not built yet",
             501,
-            f"{operation!r} is declared by FR-DATA-33 but the platform cannot yet produce "
+            f"{operation!r} is declared by FR-73 but the platform cannot yet produce "
             "its rows, so it is refused rather than returning a version that claims the "
-            "operation and holds the parent's data unchanged (FR-DATA-45, OQ-DATA-8). "
-            "`split` is materialised (FR-DATA-44).",
+            "operation and holds the parent's data unchanged (FR-78, OQ-563). "
+            "`split` is materialised (FR-77).",
         )
     if operation in _SEEDED_OPERATIONS and "seed" not in params:
         raise PlatformError(
@@ -868,7 +868,7 @@ async def derive_version(
             "This derivation needs a seed",
             422,
             f"{operation!r} is stochastic; without a recorded seed the version cannot be "
-            "reproduced, and FR-OVR-8 requires identical inputs to give identical outputs.",
+            "reproduced, and FR-11 requires identical inputs to give identical outputs.",
         )
 
     parent = await load_version(session, workspace_id=workspace_id, version_id= parent_version_id)
@@ -884,26 +884,26 @@ async def derive_version(
             "params": params,
         },
     )
-    # Inherited from the parent (FR-DATA-34) — schema and rule set, never validity. The
-    # rows are the caller's to materialise: `split` replaces this wholesale (FR-DATA-44),
-    # and every other operation was refused above (FR-DATA-45).
+    # Inherited from the parent (FR-74) — schema and rule set, never validity. The
+    # rows are the caller's to materialise: `split` replaces this wholesale (FR-77),
+    # and every other operation was refused above (FR-78).
     child.tables = parent.tables
     await session.flush()
     return child
 
 
-#: FR-DATA-33's declared operations. Anything else is refused: a derivation the platform
+#: FR-73's declared operations. Anything else is refused: a derivation the platform
 #: cannot describe is one it cannot reproduce, and a derived dataset nobody can rebuild is
 #: a dataset whose model cannot be defended.
 DERIVED_OPERATIONS: frozenset[str] = frozenset(
     {"sample", "split", "filter", "join", "aggregate"}
 )
 
-#: The stochastic ones. FR-OVR-8 requires a seed on anything that could vary.
+#: The stochastic ones. FR-11 requires a seed on anything that could vary.
 _SEEDED_OPERATIONS: frozenset[str] = frozenset({"sample", "split"})
 
-#: Declared, but unable to produce their own rows — refused until they can (FR-DATA-45,
-#: OQ-DATA-8 decided 2026-08-17). Derived by subtraction from `DERIVED_OPERATIONS` rather
+#: Declared, but unable to produce their own rows — refused until they can (FR-78,
+#: OQ-563 decided 2026-08-17). Derived by subtraction from `DERIVED_OPERATIONS` rather
 #: than listed, so materialising one is a single edit in one place and cannot leave a
 #: refusal behind for an operation that now works.
 UNMATERIALISED_OPERATIONS: frozenset[str] = DERIVED_OPERATIONS - {"split"}
@@ -912,7 +912,7 @@ UNMATERIALISED_OPERATIONS: frozenset[str] = DERIVED_OPERATIONS - {"split"}
 async def lineage_of(
     session: AsyncSession, *, workspace_id: UUID, version_id: UUID
 ) -> DatasetLineage:
-    """What this was built from, and what was built from it (FR-DATA-35).
+    """What this was built from, and what was built from it (FR-75).
 
     Both directions, because they answer different questions. "What was this built from?"
     defends a model; "what depends on this?" is what someone asks before archiving a
@@ -922,7 +922,7 @@ async def lineage_of(
     Returns the `01` §4.9 shape with the arms this service owns populated — `built_from`
     and `derived_versions`. The `models` arm is the modelling module's and is filled by
     the router, where the modules meet (DEP-1); `rating_versions` and
-    `monitoring_baselines` are W9's and W27's and stay empty. A version with no parent
+    `monitoring_baselines` are WK-669's and WK-687's and stay empty. A version with no parent
     has `built_from: null` in every direction (§4.9's invariants).
     """
     row = await load_version(session, workspace_id=workspace_id, version_id=version_id)
@@ -977,14 +977,14 @@ async def purge_subject(
     subject_token: str,
     reason: str,
 ) -> SubjectPurgeRow:
-    """GDPR erasure of one pseudonymous subject across a Dataset's versions (FR-DATA-39).
+    """GDPR erasure of one pseudonymous subject across a Dataset's versions (FR-81).
 
     Admin-only and audited. The purge is *recorded* even though the data is gone —
     especially because it is: an erasure with no record is indistinguishable from data that
     was never there, and a regulator asking "did you action this request?" needs an answer
     that is not a shrug.
 
-    Erasure works on the pseudonymous token rather than an identifier, because FR-DATA-13
+    Erasure works on the pseudonymous token rather than an identifier, because FR-39
     means the platform never held the identity. The requester maps subject to token; the
     platform erases the token.
     """
@@ -999,7 +999,7 @@ async def purge_subject(
             "VALIDATION_FAILED",
             "A purge requires a reason",
             422,
-            "FR-DATA-39: the erasure is audited, and an unexplained purge is a deletion "
+            "FR-81: the erasure is audited, and an unexplained purge is a deletion "
             "nobody can account for.",
         )
 
@@ -1048,7 +1048,7 @@ async def record_split(
     parts: dict[str, UUID],
     params: dict[str, Any] | None = None,
 ) -> DatasetSplitRow:
-    """Record a named split on the parent version (FR-DATA-36).
+    """Record a named split on the parent version (FR-76).
 
     On the parent so that "trained on the same split" is a single reference both models
     cite, rather than two derivations that were *believed* to match. Recorded on the parts
@@ -1097,7 +1097,7 @@ async def record_split(
     return row
 
 def to_split(row: DatasetSplitRow) -> DatasetSplit:
-    """The stored split as its artifact shape (FR-DATA-36)."""
+    """The stored split as its artifact shape (FR-76)."""
     return DatasetSplit(
         id=row.id,
         parent_version_id=row.parent_version_id,

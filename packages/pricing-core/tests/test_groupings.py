@@ -1,10 +1,10 @@
-"""Groupings against levels whose true structure is known (`02` FR-MODEL-13..17).
+"""Groupings against levels whose true structure is known (`02` FR-104, FR-105, FR-107, FR-108, FR-109).
 
 The book below has twenty observed levels drawn from **four** distinct underlying rates, so
 a proposal asked for four groups has a right answer and the evidence has a right shape: the
 merge should cost almost no deviance, because there was almost nothing there to lose.
 
-The rest is refusal. FR-MODEL-13 makes unseen-level behaviour mandatory, and the reason a
+The rest is refusal. FR-104 makes unseen-level behaviour mandatory, and the reason a
 default is forbidden is that the wrong one prices an unknown vehicle group as the cheapest
 cell in the book.
 """
@@ -116,7 +116,7 @@ def _manual(**over: object) -> Grouping:
 # --- the shape of a Grouping ------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_unseen_level_behaviour_has_no_default() -> None:
     """The field is mandatory, so a caller cannot omit the decision and get one anyway."""
     with pytest.raises(ValueError, match="unseen_level_behaviour"):
@@ -126,7 +126,7 @@ def test_unseen_level_behaviour_has_no_default() -> None:
         )  # type: ignore[call-arg]
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_map_to_default_must_name_a_default_that_exists() -> None:
     with pytest.raises(ValueError, match="names no default"):
         _manual(unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_DEFAULT)
@@ -137,21 +137,21 @@ def test_map_to_default_must_name_a_default_that_exists() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_a_default_nobody_consults_is_refused() -> None:
     """It reads as protection that is not there."""
     with pytest.raises(ValueError, match="reads as protection"):
         _manual(default_target_level="A")
 
 
-@pytest.mark.req("FR-MODEL-80")
+@pytest.mark.req("FR-106")
 def test_a_credibility_model_belongs_only_to_the_method_that_uses_one() -> None:
     """It lives in `method_params`, which is where `grouping.schema.json` has always had it."""
     with pytest.raises(ValueError, match="does not use one"):
         _manual(method_params={"credibility_model": "limited_fluctuation"})
 
 
-@pytest.mark.req("FR-MODEL-80")
+@pytest.mark.req("FR-106")
 def test_an_unknown_credibility_model_is_refused() -> None:
     """`method_params` is loosely typed by the contract; the enum is still closed."""
     with pytest.raises(ValueError, match="not one of"):
@@ -164,7 +164,7 @@ def test_an_unknown_credibility_model_is_refused() -> None:
 # --- proposing --------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-14")
+@pytest.mark.req("FR-105")
 def test_clustering_recovers_the_levels_that_share_a_rate() -> None:
     """Twenty levels, four true rates: the proposal must not split a true group."""
     grouping = propose_grouping(_book(), _proposal(), dataset_id=DATASET, slug="vg-4")
@@ -176,7 +176,7 @@ def test_clustering_recovers_the_levels_that_share_a_rate() -> None:
     assert all(len(targets) == 1 for targets in by_truth.values()), grouping.mapping
 
 
-@pytest.mark.req("FR-MODEL-85")
+@pytest.mark.req("FR-103")
 def test_a_tree_grouping_partitions_the_rate_order_and_separates_the_signal() -> None:
     """What a greedy weighted-SSE partition guarantees, and what it recovers.
 
@@ -208,9 +208,9 @@ def test_a_tree_grouping_partitions_the_rate_order_and_separates_the_signal() ->
     assert rates == sorted(rates), "leaves of a tree on one feature are contiguous in it"
 
 
-@pytest.mark.req("FR-MODEL-14")
+@pytest.mark.req("FR-105")
 def test_a_tree_grouping_is_not_ward_linkage_under_another_name() -> None:
-    """FR-MODEL-14 names both, and substituting one for the other was refused.
+    """FR-105 names both, and substituting one for the other was refused.
 
     A test that only checked the tree finds the right groups would pass just as well if
     `tree` dispatched to `_hierarchical`, which is the substitution the refusal existed to
@@ -225,7 +225,7 @@ def test_a_tree_grouping_is_not_ward_linkage_under_another_name() -> None:
     assert mappings[GroupingMethod.TREE] != mappings[GroupingMethod.HIERARCHICAL_CLUSTERING]
 
 
-@pytest.mark.req("FR-MODEL-85")
+@pytest.mark.req("FR-103")
 def test_a_tree_grouping_records_enough_to_reproduce_itself() -> None:
     """`n_groups` is on the proposal; `random_state` is only on the artifact if put there."""
     first = propose_grouping(
@@ -239,12 +239,12 @@ def test_a_tree_grouping_records_enough_to_reproduce_itself() -> None:
     assert first.method_params["min_samples_leaf"] == 1
 
 
-@pytest.mark.req("FR-MODEL-11")
+@pytest.mark.req("FR-100")
 def test_a_tree_grouping_still_places_every_level_it_cannot_rate() -> None:
     """A level with no exposure has no rate to split on, and no target level of its own.
 
     It goes to the largest cluster, as `hierarchical_clustering` already does — never to a
-    group of its own, which would be FR-MODEL-11's target level with no data behind it.
+    group of its own, which would be FR-100's target level with no data behind it.
     """
     frame = pl.concat(
         [
@@ -267,9 +267,9 @@ def test_a_tree_grouping_still_places_every_level_it_cannot_rate() -> None:
     assert grouping.mapping["L99"] in grouping.target_levels
 
 
-@pytest.mark.req("FR-MODEL-15")
+@pytest.mark.req("FR-107")
 def test_the_evidence_says_what_the_merge_cost() -> None:
-    """FR-MODEL-15: a grouping is a modelling decision and must be defensible as one.
+    """FR-107: a grouping is a modelling decision and must be defensible as one.
 
     Collapsing twenty levels that are really four should give up almost no deviance, so the
     likelihood-ratio p-value is high — "these could be the same" is the honest reading.
@@ -289,7 +289,7 @@ def test_the_evidence_says_what_the_merge_cost() -> None:
     assert len(evidence.target_level_stats) == 4
 
 
-@pytest.mark.req("FR-MODEL-15")
+@pytest.mark.req("FR-107")
 def test_a_merge_that_destroys_real_signal_is_reported_as_one() -> None:
     """The p-value has to move, or it is decoration.
 
@@ -303,9 +303,9 @@ def test_a_merge_that_destroys_real_signal_is_reported_as_one() -> None:
     assert evidence.chi2_p_value < 1e-6
 
 
-@pytest.mark.req("FR-MODEL-15")
+@pytest.mark.req("FR-107")
 def test_the_evidence_carries_the_source_levels_it_collapsed() -> None:
-    """FR-MODEL-15 asks for source Level statistics, and the artifact carried none.
+    """FR-107 asks for source Level statistics, and the artifact carried none.
 
     `source_level_count` said twenty and nothing said *which* twenty, so "what were the
     cells we merged worth?" needed the one-way re-run against the dataset version the
@@ -329,12 +329,12 @@ def test_the_evidence_carries_the_source_levels_it_collapsed() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-80")
+@pytest.mark.req("FR-106")
 def test_credibility_weighted_merges_on_shrunk_rates() -> None:
     """Limited fluctuation, named on the artifact so a reviewer knows which theory ran.
 
-    Marked FR-MODEL-14 until 2026-08-22. FR-MODEL-14 names the *method*; the recorded
-    model, the `(p, k)` pair and the standard it implies are all FR-MODEL-80's, so
+    Marked FR-105 until 2026-08-22. FR-105 names the *method*; the recorded
+    model, the `(p, k)` pair and the standard it implies are all FR-106's, so
     `scope-audit.py` was crediting a requirement this test does not test.
     """
     grouping = propose_grouping(
@@ -344,7 +344,7 @@ def test_credibility_weighted_merges_on_shrunk_rates() -> None:
         slug="vg-cred",
     )
     assert grouping.credibility_model is CredibilityModel.LIMITED_FLUCTUATION
-    # FR-MODEL-80: the (p, k) pair is stored beside the count it implies, so a reviewer can
+    # FR-106: the (p, k) pair is stored beside the count it implies, so a reviewer can
     # check one against the other rather than take 1 082 on faith.
     assert grouping.method_params["credibility_pk"] == {"p": 0.90, "k": 0.05}
     assert grouping.method_params["credibility_standard_claims"] == 1082
@@ -356,12 +356,12 @@ def test_credibility_weighted_merges_on_shrunk_rates() -> None:
     assert grouping.evidence.credibility_components is None
 
 
-@pytest.mark.req("FR-MODEL-80")
+@pytest.mark.req("FR-106")
 def test_buhlmann_straub_is_selectable_and_persists_its_variance_components() -> None:
-    """The second of OQ-MODEL-5's two methods, built 2026-08-22.
+    """The second of OQ-579's two methods, built 2026-08-22.
 
     **This test previously asserted the opposite.** From 2026-08-15 until 2026-08-22 it was
-    `test_buhlmann_straub_is_refused_rather_than_silently_substituted`: OQ-MODEL-5 had
+    `test_buhlmann_straub_is_refused_rather_than_silently_substituted`: OQ-579 had
     decided *both* methods, one shipped, and the other raised rather than return limited
     fluctuation's answer under Bühlmann-Straub's name. The refusal was right while the
     variance components did not exist; the record of it stays here rather than being deleted,
@@ -400,12 +400,12 @@ def test_buhlmann_straub_is_selectable_and_persists_its_variance_components() ->
     assert set(grouping.mapping) == set(_TRUE_EFFECT)
 
 
-@pytest.mark.req("FR-MODEL-80")
+@pytest.mark.req("FR-106")
 def test_the_two_credibility_models_disagree_on_thin_cells() -> None:
     """Two methods, not the same method under another name.
 
     The same objection `_tree` had to answer against Ward linkage (`groupings.py`'s
-    "not the same method under another name"): OQ-MODEL-5 decided *both* methods, so the
+    "not the same method under another name"): OQ-579 decided *both* methods, so the
     second one has to be shown doing something the first does not.
 
     On a thin book each level carries ~6 claims, so limited fluctuation reads
@@ -444,9 +444,9 @@ def test_the_two_credibility_models_disagree_on_thin_cells() -> None:
     assert z_limited < 0.15 < z_buhlmann
 
 
-@pytest.mark.req("FR-MODEL-80")
+@pytest.mark.req("FR-106")
 def test_a_reviewer_can_rederive_the_merge_from_the_stored_components() -> None:
-    """FR-MODEL-80's actual promise: re-derive `Z`, do not take it.
+    """FR-106's actual promise: re-derive `Z`, do not take it.
 
     The stored `(evpv, vhm, k)` plus the dataset version is enough to reproduce every
     level's credibility, its shrunk rate and therefore the whole mapping. Re-implemented
@@ -492,8 +492,8 @@ def test_a_reviewer_can_rederive_the_merge_from_the_stored_components() -> None:
     assert rederived == grouping.mapping
 
 
-@pytest.mark.req("FR-MODEL-80")
-@pytest.mark.req("FR-MODEL-113")
+@pytest.mark.req("FR-106")
+@pytest.mark.req("FR-118")
 @pytest.mark.parametrize(
     ("frame", "fragment"),
     [
@@ -526,7 +526,7 @@ def test_buhlmann_straub_refuses_a_book_it_cannot_estimate_on(
     assert raised.value.code == "CREDIBILITY_VARIANCE_NOT_ESTIMABLE"
 
 
-@pytest.mark.req("FR-MODEL-80")
+@pytest.mark.req("FR-106")
 def test_limited_fluctuation_still_groups_the_book_buhlmann_straub_refuses() -> None:
     """The refusal above is Bühlmann-Straub's, not the platform giving up on the column."""
     grouping = propose_grouping(
@@ -540,7 +540,7 @@ def test_limited_fluctuation_still_groups_the_book_buhlmann_straub_refuses() -> 
     assert grouping.evidence.credibility_components is None
 
 
-@pytest.mark.req("FR-MODEL-14")
+@pytest.mark.req("FR-105")
 @pytest.mark.parametrize(
     ("method", "fragment"),
     [
@@ -555,7 +555,7 @@ def test_unimplemented_methods_are_refused_by_name(
         propose_grouping(_book(), _proposal(method=method), dataset_id=DATASET, slug="x")
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_a_proposal_defaults_unseen_levels_to_the_largest_group() -> None:
     """Where it is least wrong: a thin cell would hand it that cell's standard error."""
     grouping = propose_grouping(
@@ -573,13 +573,13 @@ def test_a_proposal_defaults_unseen_levels_to_the_largest_group() -> None:
 # --- applying ---------------------------------------------------------------------------
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_an_unseen_level_is_named_when_the_behaviour_is_error() -> None:
     with pytest.raises(FactorResolutionError, match="L99"):
         apply_grouping(pl.Series("vehicle_group", ["L00", "L99"]), _manual())
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_an_unseen_level_reaches_the_declared_default() -> None:
     grouping = _manual(
         unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_DEFAULT,
@@ -589,23 +589,23 @@ def test_an_unseen_level_reaches_the_declared_default() -> None:
     assert mapped.to_list() == ["A", "B"]
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_map_to_base_sends_an_unseen_level_to_the_first_target() -> None:
     grouping = _manual(unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_BASE)
     mapped = apply_grouping(pl.Series("vehicle_group", ["L02", "L99"]), grouping)
     assert mapped.to_list() == ["B", "A"]
 
 
-@pytest.mark.req("FR-MODEL-13")
+@pytest.mark.req("FR-104")
 def test_a_null_level_is_not_a_group() -> None:
     """`02` §4.3 gives a Grouping no null level, so a missing value cannot be mapped to one."""
     with pytest.raises(FactorResolutionError, match="null value"):
         apply_grouping(pl.Series("vehicle_group", ["L00", None]), _manual())
 
 
-@pytest.mark.req("FR-MODEL-17")
+@pytest.mark.req("FR-109")
 def test_a_grouping_can_name_its_parent_in_a_chain() -> None:
-    """FR-MODEL-17: outcode rolls to area rolls to region, and the chain is recorded."""
+    """FR-109: outcode rolls to area rolls to region, and the chain is recorded."""
     area = _manual(slug="area", mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"})
     region = _manual(
         slug="region", mapping={"AB": "NORTH", "CD": "SOUTH"}, parent_grouping_id=area.id

@@ -1,6 +1,6 @@
 """The approximating Model's spec and the artifact block that references it.
 
-FR-MODEL-96 makes the GLM approximation a Model; FR-MODEL-102 makes it one a reader can
+FR-137 makes the GLM approximation a Model; FR-141 makes it one a reader can
 recognise without holding anything else. Every test here is a prohibition, for the reason
 `test_gbm_spec.py` gives: a shape that can represent a nonsense model eventually holds one.
 """
@@ -45,7 +45,7 @@ def _surrogate(**over: object) -> GlmSpec:
     return GlmSpec.model_validate(base | over)
 
 
-@pytest.mark.req("FR-MODEL-102")
+@pytest.mark.req("FR-141")
 def test_a_surrogate_declares_both_halves() -> None:
     """The pair is what makes a surrogate recognisable — neither half alone does."""
     spec = _surrogate()
@@ -53,21 +53,21 @@ def test_a_surrogate_declares_both_halves() -> None:
     assert spec.response_column == SURROGATE_RESPONSE_COLUMN
 
 
-@pytest.mark.req("FR-MODEL-102")
+@pytest.mark.req("FR-141")
 def test_a_spec_naming_a_source_model_over_an_observed_response_is_refused() -> None:
     """It would be a model fitted on claims that every reader takes for a surrogate."""
     with pytest.raises(pydantic.ValidationError, match=SURROGATE_RESPONSE_COLUMN):
         _surrogate(response_column="claim_count")
 
 
-@pytest.mark.req("FR-MODEL-102")
+@pytest.mark.req("FR-141")
 def test_a_spec_fitting_the_surrogate_column_with_no_source_model_is_refused() -> None:
     """A model of a prediction, with nothing saying whose prediction it is."""
     with pytest.raises(pydantic.ValidationError, match="approximates_model_id"):
         _surrogate(approximates_model_id=None)
 
 
-@pytest.mark.req("FR-MODEL-129")
+@pytest.mark.req("FR-169")
 def test_the_companion_addresses_the_pinned_model() -> None:
     """The block is the id's slug@version address — both registers, one pin."""
     spec = _surrogate()
@@ -76,25 +76,25 @@ def test_the_companion_addresses_the_pinned_model() -> None:
     assert spec.approximates_model.model_version == 7
 
 
-@pytest.mark.req("FR-MODEL-129")
+@pytest.mark.req("FR-169")
 def test_a_companion_with_no_id_is_refused() -> None:
     """A companion without an id addresses a model nothing pins.
 
-    An observed response column keeps FR-MODEL-102's own refusal quiet, so the
+    An observed response column keeps FR-141's own refusal quiet, so the
     companion's half of the iff is what fires.
     """
     with pytest.raises(pydantic.ValidationError, match="both or neither"):
         _surrogate(approximates_model_id=None, response_column="claim_count")
 
 
-@pytest.mark.req("FR-MODEL-129")
+@pytest.mark.req("FR-169")
 def test_an_id_with_no_companion_is_refused() -> None:
     """An id without a companion sends a reviewer back to resolving one id."""
     with pytest.raises(pydantic.ValidationError, match="both or neither"):
         _surrogate(approximates_model=None)
 
 
-@pytest.mark.req("FR-MODEL-129")
+@pytest.mark.req("FR-169")
 def test_a_companion_block_rejects_a_bad_slug_or_version() -> None:
     """The block itself is typed: a slug that is not a slug, a version below one."""
     with pytest.raises(pydantic.ValidationError, match="model_slug"):
@@ -103,7 +103,7 @@ def test_a_companion_block_rejects_a_bad_slug_or_version() -> None:
         _surrogate(approximates_model={"model_slug": "motor-ad-frequency", "model_version": 0})
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 def test_the_artifact_block_references_the_model_that_holds_the_table() -> None:
     block = GlmApproximation(
         approximating_model_id=new_uuid7(), r_squared=0.97, deviance_explained=0.96
@@ -111,7 +111,7 @@ def test_the_artifact_block_references_the_model_that_holds_the_table() -> None:
     assert block.coefficients == ()
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 def test_a_legacy_artifact_block_still_validates() -> None:
     """The other half of the compatibility guarantee the option-A decision rests on.
 
@@ -140,7 +140,7 @@ def test_a_legacy_artifact_block_still_validates() -> None:
     assert block.relativities
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 def test_an_artifact_block_carrying_both_eras_is_refused() -> None:
     """A reference *and* an inline table are two answers to "where is the table?"."""
     with pytest.raises(pydantic.ValidationError, match="exactly one"):
@@ -157,7 +157,7 @@ def test_an_artifact_block_carrying_both_eras_is_refused() -> None:
         )
 
 
-@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.req("FR-137")
 def test_an_artifact_block_carrying_neither_era_is_refused() -> None:
     """A fidelity score with no table behind it says the approximation was good without
     saying what it was — the module docstring's own reason for holding the table."""
@@ -165,7 +165,7 @@ def test_an_artifact_block_carrying_neither_era_is_refused() -> None:
         GlmApproximation(r_squared=0.97, deviance_explained=0.96)
 
 
-@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-140")
 def test_an_ebm_artifact_names_the_kind() -> None:
     """`kinds` is derived from which blocks are present, never stored beside them.
 
@@ -198,9 +198,9 @@ def test_an_ebm_artifact_names_the_kind() -> None:
     )
 
 
-@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-132")
 def test_an_ebm_artifact_needs_no_approximation_or_shap() -> None:
-    """The EBM export alone is FR-MODEL-33's "at least one form".
+    """The EBM export alone is FR-132's "at least one form".
 
     This is the whole of "transparent by construction": an EBM's shape functions ARE
     the model, exported directly as rateable tables — there is nothing to approximate,
@@ -216,7 +216,7 @@ def test_an_ebm_artifact_needs_no_approximation_or_shap() -> None:
     assert artifact.kinds == (TransparencyKind.EBM_SHAPE_FUNCTIONS,)
 
 
-@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-132")
 def test_an_artifact_with_no_block_is_still_refused() -> None:
     """The third kind does not weaken "at least one": no block is still no explanation.
 
