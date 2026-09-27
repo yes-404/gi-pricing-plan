@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/dossier.schema.json",
   "title": "Dossier",
-  "description": "Generated documentation for a Model, Peril Structure, or Rating Version. Assembled from persisted artifacts only; human commentary is separate, attributed, and versioned (06 R3, FR-GOV-27..32, §4.4).",
+  "description": "Generated documentation for a Model, Peril Structure, or Rating Version. Assembled from persisted artifacts only; human commentary is separate, attributed, and versioned (06 R3, FR-376, FR-377, FR-379, FR-380, FR-381, FR-382, §4.4).",
   "type": "object",
   "required": ["subject_ref", "generated_at", "as_at", "template_version", "sections", "artifact_references"],
   "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
@@ -11,7 +11,7 @@
     "generated_at": {"type": "string", "format": "date-time"},
     "as_at": {
       "type": "string", "format": "date-time",
-      "description": "The point in time the dossier describes. Any historical state can be regenerated (FR-GOV-30)."
+      "description": "The point in time the dossier describes. Any historical state can be regenerated (FR-380)."
     },
     "template_version": {"type": "string"},
     "sections": {
@@ -31,7 +31,7 @@
           },
           "origin": {
             "enum": ["generated", "commentary"],
-            "description": "Rendered output distinguishes the two; numbers are never retyped into commentary (06 R3, FR-GOV-28)."
+            "description": "Rendered output distinguishes the two; numbers are never retyped into commentary (06 R3, FR-377)."
           },
           "source_module": {"enum": ["01", "02", "03", "04", "05", "06", "all", null]},
           "content_blob": {"type": ["string", "null"]},
@@ -50,7 +50,7 @@
     },
     "artifact_references": {
       "type": "array",
-      "description": "Section 17: every artifact drawn on, with its content hash, so an external reviewer can verify a figure without platform access (FR-GOV-29).",
+      "description": "Section 17: every artifact drawn on, with its content hash, so an external reviewer can verify a figure without platform access (FR-379).",
       "items": {
         "type": "object",
         "required": ["ref"],
@@ -74,12 +74,12 @@
     },
     "submitted_with_approval_request_id": {
       "type": ["string", "null"], "format": "uuid",
-      "description": "The version submitted with an approval is retained exactly as reviewed (FR-GOV-31)."
+      "description": "The version submitted with an approval is retained exactly as reviewed (FR-381)."
     }
   },
   "invariants": [
-    "sections 1 and 15 require a commentary block before an approval can be submitted (OQ-GOV-5 recommendation)",
+    "sections 1 and 15 require a commentary block before an approval can be submitted (OQ-637 recommendation)",
     "every figure in a generated section traces to an entry in artifact_references (06 R3)",
-    "regenerating for the same as_at and template_version is byte-reproducible (NFR-GOV-5)"
+    "regenerating for the same as_at and template_version is byte-reproducible (NFR-522)"
   ]
 }

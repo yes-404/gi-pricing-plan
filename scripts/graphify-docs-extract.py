@@ -36,7 +36,7 @@ REQ_DEF = re.compile(r"^\|\s*\*\*((?:FR|NFR)-[A-Z]+-\d+)\*\*\s*\|\s*(.*?)\s*\|?\
 REQ_REF = re.compile(r"\b((?:FR|NFR)-[A-Z]+-\d+)\b")
 ADR_REF = re.compile(r"\bADR-(\d{4})\b")
 OQ_REF = re.compile(r"\b(OQ-[A-Z]+-\d+)\b")
-# A decided question is struck through and ticked — `| ~~**OQ-DATA-7**~~ ✔ |` — so the
+# A decided question is struck through and ticked — `| ~~**OQ-562**~~ ✔ |` — so the
 # leading `~~` and any trailing marker are optional, not part of the id.
 OQ_DEF = re.compile(r"^\|\s*~{0,2}\*\*(OQ-[A-Z]+-\d+)\*\*~{0,2}\s*[^|]*\|\s*(.*?)\s*\|?\s*$")
 SPEC_REF = re.compile(r"`(\d{2}-[a-z-]+)\.md`")
@@ -196,13 +196,13 @@ for path in files:
                 add_edge(owner, tgt, "references", source_file=rel, loc=f"L{i}")
 
 # ------------------------------------------------- pass 3: requirement -> evidence
-# `@pytest.mark.req("FR-DATA-16")` is this repo's traceability spine (CLAUDE.md §13).
+# `@pytest.mark.req("FR-45")` is this repo's traceability spine (CLAUDE.md §13).
 # It is an explicit, machine-checked citation of a requirement id from inside code, so
 # the edge is EXTRACTED — the one link that turns the spec half of this graph and the
 # code half into a single traversable object.
 marker_edges = 0
 unknown_reqs: set[str] = set()
-# `examples/` carries markers too — the freMTPL2 seed evidences FR-PLAT-37, and leaving
+# `examples/` carries markers too — the freMTPL2 seed evidences FR-439, and leaving
 # the directory out silently lost that one edge (caught by diffing against req-coverage.py).
 code_roots = [Path("backend"), Path("packages"), Path("tests"), Path("scripts"), Path("examples")]
 

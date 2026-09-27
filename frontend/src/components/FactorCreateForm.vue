@@ -5,20 +5,20 @@
  *
  * **Creation only, and there is no edit.** A Factor's intent is immutable: `Factor` is
  * `frozen=True`, `/factors` carries GET and POST alone with no `PATCH` or `PUT`, and a POST
- * with an existing slug allocates version N+1 rather than mutating (FR-MODEL-7). So this
+ * with an existing slug allocates version N+1 rather than mutating (FR-96). So this
  * form sets intent once. There is deliberately **no "re-version to change intent"
  * affordance** — re-versioning changes what every future Model Spec naming that slug fits
  * on, which is a separate capability and not this slice's to invent.
  *
  * **Only two of the contract's four intents are offered.** `offset` and `diagnostic` are
- * superseded (FR-MODEL-116, FR-MODEL-120) and keep their arm in the published contract
+ * superseded (FR-84, FR-86) and keep their arm in the published contract
  * deliberately, so the union will never narrow. The refused pair is pinned against
  * `pricing-core`'s own `REFUSED_FACTOR_INTENTS` rather than against prose — see
  * `@/api/models`. This is the guard, not a convenience: `POST /factors` accepts all four,
  * so an unoffered intent would be accepted, stored and audited, then fail at fit.
  *
  * **A direction requires a rationale**, because `Factor`'s own validator requires it
- * (FR-MODEL-4: "the direction is an actuarial judgement, and the next person needs to know
+ * (FR-89: "the direction is an actuarial judgement, and the next person needs to know
  * whose and why"). Enforced here so the answer is a disabled button rather than a 422.
  */
 import { computed, ref } from "vue";
@@ -47,7 +47,7 @@ const busy = ref(false);
 const problem = ref<ProblemError | null>(null);
 const created = ref<Factor | null>(null);
 
-/** FR-MODEL-4's rule, enforced before the request rather than discovered in its refusal. */
+/** FR-89's rule, enforced before the request rather than discovered in its refusal. */
 const rationaleRequired = computed(() => direction.value !== "none");
 const ready = computed(
   () =>

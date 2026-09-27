@@ -76,7 +76,7 @@ def audit_docs() -> types.ModuleType:
 
 
 ENTRY: Final = _docid.ResidueEntry(
-    path="docs/audit/register.md",
+    path="docs/findings/register.md",
     cls=_docid.h1_class(30),
     count=2,
     reason="a disclosed residue, for this test only",
@@ -120,10 +120,10 @@ def test_an_empty_record_discloses_nothing() -> None:
 
 def test_both_readers_key_a_failure_message_identically() -> None:
     """One keying rule, or the record ceilings one key while the gate counts another."""
-    msg = "check 30: docs/audit/register.md: owner: names no role file"
-    known = frozenset({"docs/audit/register.md"})
+    msg = "check 30: docs/findings/register.md: owner: names no role file"
+    known = frozenset({"docs/findings/register.md"})
     assert _docid.residue_key_for_failure(msg, known) == (
-        "docs/audit/register.md", _docid.h1_class(30)
+        "docs/findings/register.md", _docid.h1_class(30)
     )
     # Resolution, not shape: a token that looks like a path but names no file in the
     # corpus falls to the class-level sentinel rather than inventing a per-file ceiling.
@@ -144,12 +144,12 @@ def test_the_partition_discloses_at_the_ceiling_and_fails_over_it(
     counted — every one of them, and by name — under a ceiling of 1.
     """
     messages = [
-        "check 30: docs/audit/register.md: owner: names no role file",
-        "check 30: docs/audit/register.md: a second failure in the same file",
+        "check 30: docs/findings/register.md: owner: names no role file",
+        "check 30: docs/findings/register.md: a second failure in the same file",
     ]
     monkeypatch.setattr(audit_docs, "failures", list(messages))
     monkeypatch.setattr(
-        audit_docs._file_census, "git_ls_files", lambda _root: ["docs/audit/register.md"]
+        audit_docs._file_census, "git_ls_files", lambda _root: ["docs/findings/register.md"]
     )
     # No `docs/REDIRECTS.csv` on this (unmigrated) repo, so the control-path resolver this
     # partition also runs is the identity — the injected paths are their own control paths.
@@ -174,7 +174,7 @@ def test_the_partition_discloses_at_the_ceiling_and_fails_over_it(
     counted, disclosed = audit_docs._partition_by_w37_11_record()
     assert disclosed == []
     assert counted == messages
-    assert all("docs/audit/register.md" in msg for msg in counted)
+    assert all("docs/findings/register.md" in msg for msg in counted)
 
 
 def test_a_record_naming_an_unproducible_class_fails_loudly(
@@ -368,7 +368,7 @@ def test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue(
     assert "All checks passed" in baseline.stdout
 
     audit_docs = _load_audit_docs()
-    injected_path = "docs/audit/register.md"
+    injected_path = "docs/findings/register.md"
     injected_cls = audit_docs._docid.h1_class(30)
     # The record does not govern this (path, cls) at all today (checked against the real,
     # on-disk record — never written to), so any hit is a REGRESSION: "a hit in a file the
@@ -592,7 +592,7 @@ def test_a_merge_targets_key_is_deterministic_regardless_of_csv_row_order(
 ) -> None:
     """Two control documents merge into one migrated file — the real shape in this
     project's own record (`docs/findings/register.md`, fed by both
-    `docs/audit/register.md` and `docs/audit/phases/1b/register.md`). The merged file's
+    `docs/findings/register.md` and `docs/findings/register.md`). The merged file's
     key must resolve to ITSELF, deterministically, never to an arbitrary one of its two
     sources — proven by writing the identical two rows in both orders, and again under a
     second allocation that renames both sources.
@@ -600,8 +600,8 @@ def test_a_merge_targets_key_is_deterministic_regardless_of_csv_row_order(
     merged_path = "docs/findings/register.md"
 
     for tree_name, old_a, old_b, row_order in (
-        ("order_a_then_b", "docs/audit/register.md", "docs/audit/phases/1b/register.md", 0),
-        ("order_b_then_a", "docs/audit/register.md", "docs/audit/phases/1b/register.md", 1),
+        ("order_a_then_b", "docs/findings/register.md", "docs/findings/register.md", 0),
+        ("order_b_then_a", "docs/findings/register.md", "docs/findings/register.md", 1),
         # A second allocation: the same merge, with both control paths under different
         # (still pre-migration, hence allocation-independent by definition) names.
         ("second_allocation", "docs/audit/legacy-register.md", "docs/audit/phase1b-register.md", 0),

@@ -8,7 +8,7 @@ description: Run the team's 15-minute Slack status cycle and lead-staleness nudg
 Three scripts, ~250 lines, stdlib-only Python plus one bash loop: `reporter.py` posts a
 routine status update to Slack every 15 minutes; `nudge.py` detects a stale lead status
 line; `reporter-cycle.sh` is the loop that calls both on schedule. Filed here per
-`docs/plans/2026-08-29-w11-prework-rulings.md`'s reporter-scripts ruling (task #28) —
+`docs/rulings/INDEX.md#2026-08-29-w11-prework-rulingsmd`'s reporter-scripts ruling (task #28) —
 `CLAUDE.md` §12 names `.claude/skills/` as the home for a discovered non-obvious procedure,
 and these three scripts' mechanism (below) is exactly that.
 
@@ -22,9 +22,9 @@ escalation rule, what the reporter does not do); this skill keeps the HOW.
 
 ## Configuration — everything is an environment variable, nothing is hardcoded
 
-The version of these scripts that ran in the W11 handover directory hardcoded that
+The version of these scripts that ran in the WK-671 handover directory hardcoded that
 directory's literal path. That is exactly the mistake
-[`NT-0012`](../../notes/0012-a-credential-is-borrowed-not-stored.md) names: operational,
+[`RFC-842`](../../../docs/rfcs/RFC-00842-a-credential-in-an-ephemeral-job-directory-is-borrowed-not-stored-and-is-found-by-its-shape-not-its-container-s-name.md) names: operational,
 session-specific state living inside checked-in, supposedly-reusable code. Refiled with
 every path read from the environment instead:
 
@@ -127,7 +127,7 @@ work, not regression — nothing here has ever actually surfaced roster content.
 ## No credential values live here, or anywhere the scripts write
 
 The token itself is read from a path outside `.claude/jobs/`, the repository, and the
-handover directory — `NT-0012`'s rule, applied. Nothing in these scripts, this file, or
+handover directory — `RFC-842`'s rule, applied. Nothing in these scripts, this file, or
 their logs ever contains the token value; `get_token()` reads it once per call and passes
 it straight into a `curl` header, never printed, never logged, never echoed.
 
@@ -159,7 +159,7 @@ unchanged. `uv run ruff check .` passes repo-wide; `uv run mypy --strict` on thi
 passes — the bare `uv run mypy` does not examine `.claude/skills/` at all (its configured
 `files` list is `packages/*/src` and `backend/src` only), so that command alone would have
 proven nothing about this file. There is no CI workflow for `.claude/**`
-(`docs/audit/register.md` F26), so these local runs are the only gate this change has.
+(`docs/findings/register.md` F26), so these local runs are the only gate this change has.
 
 **2026-08-31 — two `get_eta` defects found and fixed, TDD, against a new regression suite
 (not merely re-smoke-tested).** (1) The `**Updated:**` regex required a literal `Z`
@@ -307,9 +307,9 @@ above exercised every line this change touches; a prior full attempt on this mac
 same day was abandoned as stalled by another session for the same load-contention reason
 `.claude/skills/dev-commands` already documents.
 
-**2026-09-04 — Ruling 106: a 100-word cap on the whole routine post, a mandatory BST clock
+**2026-09-04 — RL-1059: a 100-word cap on the whole routine post, a mandatory BST clock
 time in the ETA headline, and a stale-ETA marker when `origin/main` has moved without a
-refresh** (`docs/plans/2026-09-04-ruling-106-slack-routine-word-cap-bst-eta-and-head-refresh.md`).
+refresh** (`docs/rulings/RL-01059-a-100-word-cap-a-bst-clock-time-in-the-eta-and-a-refresh-on-every-origin-main-move.md`).
 Three rules, implemented in `reporter.py`, each with its own broken-input proof named
 verbatim in the ruling's own "Acceptance" section:
 

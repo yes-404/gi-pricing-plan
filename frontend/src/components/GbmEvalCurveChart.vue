@@ -14,11 +14,11 @@ use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer
 const props = defineProps<{ evalCurve: readonly GbmEvalPoint[] }>();
 
 /**
- * The evaluation metric per boosting iteration, train against holdout (FR-MODEL-52).
+ * The evaluation metric per boosting iteration, train against holdout (FR-174).
  *
  * This is the second of the two partitioned surfaces in the whole contract — `GbmEvalPoint`
  * declares `train` and `holdout` per iteration while the importances beside it declare
- * neither (FR-MODEL-54, as scoped 2026-08-24). It is the overfitting chart: the iteration
+ * neither (FR-183, as scoped 2026-08-24). It is the overfitting chart: the iteration
  * where holdout turns while train keeps falling is the answer a reader comes here for, and it
  * exists only because both series share one axis.
  *
@@ -41,7 +41,7 @@ const series = computed(() => [
     type: "line" as const,
     symbol: "none",
     data: props.evalCurve.map((point) => point.train ?? null),
-    // NFR-OVR-10: line type carries the partition where hue alone cannot.
+    // NFR-463: line type carries the partition where hue alone cannot.
     lineStyle: { type: "solid" as const, width: 2 },
   },
   {

@@ -1,4 +1,4 @@
-"""The content-addressed blob store (FR-PLAT-18..21, ID-4).
+"""The content-addressed blob store (FR-418, FR-419, FR-420, FR-421, ID-4).
 
 Two stores, one object. The **body** lives in S3 at `blob/{sha256[:2]}/{sha256}`; the
 **size, media type and reference count** live in PostgreSQL, because a reference count is
@@ -61,7 +61,7 @@ _CHUNK_SIZE: Final = 1024 * 1024  # 1 MiB
 
 
 def blob_key(sha256: str) -> str:
-    """`blob/{sha256[:2]}/{sha256}` (FR-PLAT-18).
+    """`blob/{sha256[:2]}/{sha256}` (FR-418).
 
     The two-character prefix exists because some object stores and every filesystem-backed
     one degrade badly with millions of siblings in a single directory. It is derived, never
@@ -71,7 +71,7 @@ def blob_key(sha256: str) -> str:
 
 
 class PresignedUpload(BaseModel):
-    """A presigned URL set for a large upload (FR-PLAT-21)."""
+    """A presigned URL set for a large upload (FR-421)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -84,7 +84,7 @@ class PresignedUpload(BaseModel):
 
 
 class GarbageCollectionReport(BaseModel):
-    """What a GC run did, or would do when `dry_run` (FR-PLAT-20)."""
+    """What a GC run did, or would do when `dry_run` (FR-420)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -133,7 +133,7 @@ class BlobStore:
         content: bytes | Iterable[bytes],
         media_type: str,
     ) -> BlobRef:
-        """Store content and return its reference. Identical content is a no-op (FR-PLAT-19).
+        """Store content and return its reference. Identical content is a no-op (FR-419).
 
         Requires the caller's transaction: the row is accounting, and accounting that
         commits independently of the change it belongs to is how a reference count drifts.
@@ -149,7 +149,7 @@ class BlobStore:
 
         existing = await session.get(BlobRow, digest)
         if existing is not None:
-            # FR-PLAT-19 / ID-4: same content, same reference, no second object. Media type
+            # FR-419 / ID-4: same content, same reference, no second object. Media type
             # is not part of the identity — the bytes are — so a mismatch is reported
             # rather than silently overwriting what another artifact already relies on.
             if existing.media_type != media_type:
@@ -210,7 +210,7 @@ class BlobStore:
         return b"".join([chunk async for chunk in self.open(ref)])
 
     async def presign_download(self, ref: BlobRef, *, expires_in_s: int = 300) -> str:
-        """A short-lived URL the client fetches directly (`07` §5.1, FR-PLAT-21).
+        """A short-lived URL the client fetches directly (`07` §5.1, FR-421).
 
         Short-lived on purpose. The URL carries its own authorisation, so it is a bearer
         credential for those bytes — one pasted into a ticket should stop working before
@@ -228,7 +228,7 @@ class BlobStore:
     async def presign_upload(
         self, media_type: str, parts: int = 1, *, expires_in_s: int = 3600
     ) -> PresignedUpload:
-        """Presigned URLs so large files never transit the API process (FR-PLAT-21).
+        """Presigned URLs so large files never transit the API process (FR-421).
 
         The digest is not known until the client has uploaded, so the object lands under a
         staging key and is promoted to its content address on completion. Presigning
@@ -276,13 +276,13 @@ class BlobStore:
             upload_id=upload_id, key=staging_key, urls=tuple(urls), expires_in_s=expires_in_s
         )
 
-    # -- scratch (Ruling 31 §4, `docs/plans/2026-08-29-w11-3-d6-batch-resumability-
-    # ruling.md`): a `score.batch` chunk part, and the manifest that keys it, share one
+    # -- scratch (RL-857 §4, `docs/rulings/RL-00857-d6-chunk-checkpointed-resume
+    # -built-in-the-job-handler-and-keyed-on-content-not-on-the-job.md`): a `score.batch` chunk part, and the manifest that keys it, share one
     # object — the key's own existence is the manifest entry. Deliberately **not**
     # content-addressed and never a `BlobRow`: a chunk part is reproducible from
     # (bundle content hash, Dataset Version reference, chunk index) rather than identified
     # by its bytes, so hashing it would buy nothing `blob_key` already buys for a real
-    # artifact, and putting it under `blob/` would make FR-PLAT-20's GC hold it for the
+    # artifact, and putting it under `blob/` would make FR-420's GC hold it for the
     # 30-day grace period after every crashed run. `staging/` above is the same idea for a
     # different reason (bytes with no digest yet); this is bytes that never get one. ------
 
@@ -359,7 +359,7 @@ class BlobStore:
         dry_run: bool = True,
         grace_days: int | None = None,
     ) -> GarbageCollectionReport:
-        """Reclaim unreferenced blobs, conservatively (FR-PLAT-20).
+        """Reclaim unreferenced blobs, conservatively (FR-420).
 
         A blob is deletable only when **both** hold: nothing references it, and it is older
         than the grace period. The age check is what makes it conservative — a blob is
@@ -396,7 +396,7 @@ class BlobStore:
                 await session.delete(blob)
             await session.flush()
 
-        # Audited either way (FR-PLAT-20): a dry run is evidence about what the platform
+        # Audited either way (FR-420): a dry run is evidence about what the platform
         # believes is unreferenced, which is worth as much as the deletion itself.
         await audit.record(
             session,
@@ -411,7 +411,7 @@ class BlobStore:
 
 
 async def retain(session: AsyncSession, sha256: str) -> int:
-    """Take a reference to a blob. Returns the new count (FR-PLAT-20)."""
+    """Take a reference to a blob. Returns the new count (FR-420)."""
     return await _adjust_ref_count(session, sha256, +1)
 
 
@@ -449,7 +449,7 @@ def to_ref(row: BlobRow) -> BlobRef:
 
 
 def blob_probe(store: BlobStore) -> Any:
-    """Build the `/readyz` probe for the blob store (FR-PLAT-41)."""
+    """Build the `/readyz` probe for the blob store (FR-444)."""
 
     async def probe() -> str | None:
         try:

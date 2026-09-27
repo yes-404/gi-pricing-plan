@@ -13,7 +13,7 @@ export function getVersion(slug: string, version: number): Promise<DatasetVersio
   return request<DatasetVersion>(`/datasets/${encodeURIComponent(slug)}/versions/${version}`);
 }
 
-/** Report history, newest first. Summaries only — no bodies (NFR-DATA-7). */
+/** Report history, newest first. Summaries only — no bodies (NFR-471). */
 export function listReports(versionId: string): Promise<ReportSummary[]> {
   return request<ReportSummary[]>(`/dataset-versions/${versionId}/validation-reports`);
 }
@@ -24,7 +24,7 @@ export function getReport(reportId: string): Promise<ValidationReport> {
 }
 
 /**
- * Acknowledge one warning (FR-DATA-17).
+ * Acknowledge one warning (FR-46).
  *
  * The justification is not optional and not a formality — it is the audit record, and the
  * platform refuses an empty one. Pricing Actuary role only; anything else comes back
@@ -74,7 +74,7 @@ export function groupIntoBands(report: ValidationReport): Record<Band, RuleResul
 }
 
 /**
- * Whether this report permits promotion to `validated` (`01` §1.3, FR-DATA-17).
+ * Whether this report permits promotion to `validated` (`01` §1.3, FR-46).
  *
  * Computed from the same two facts the backend uses — no fails or errors, and every
  * warning acknowledged — so the banner cannot claim a version is ready when the platform

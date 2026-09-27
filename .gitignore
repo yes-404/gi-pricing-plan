@@ -1,7 +1,7 @@
 # Generated per .claude/skills/git-hygiene.
 #
 # The rule that catches people out: uv.lock is NOT ignored. It is a lockfile, not an
-# environment, and committing it is what makes builds reproducible (FR-OVR-8). Ignoring it
+# environment, and committing it is what makes builds reproducible (FR-11). Ignoring it
 # alongside .venv/ is the most common uv mistake.
 
 # ---- Python ----
@@ -34,7 +34,7 @@ coverage.xml
 .tox/
 .nox/
 
-# ---- Generated API client types (FR-OVR-6: generated, never hand-written) ----
+# ---- Generated API client types (FR-9: generated, never hand-written) ----
 frontend/src/api/generated/
 frontend/node_modules/
 frontend/dist/
@@ -60,7 +60,7 @@ examples/data/
 # not belong in a git history, and the checksums are pinned so re-fetching is exact.
 examples/fremtpl2/data/
 
-# ---- Secrets: referenced, never stored (07 FR-PLAT-25/26) ----
+# ---- Secrets: referenced, never stored (07 FR-425/426) ----
 .env
 .env.*
 !.env.example

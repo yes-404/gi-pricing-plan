@@ -1,6 +1,6 @@
 """The freMTPL2 demo models: factors, a GLM and a GBM, through the real Job path (W7-1).
 
-The W7a seed ends with a validated freMTPL2 version. This module extends it: it derives a
+The WK-666 seed ends with a validated freMTPL2 version. This module extends it: it derives a
 named split, authors a small factor set, builds a GLM spec and a GBM spec, and runs both
 through `reserve_model` → `model.fit` → `execute_job` — the exact path `POST /models` takes
 in production. The two models are the subjects of W7-2's comparison and approval, W7-3's
@@ -45,7 +45,7 @@ from model_schema import (
 )
 
 #: The demo factor set (OD4's "reduced factor set"): three continuous, four categorical.
-#: Each names a column the W7a dictionary declares. The continuous columns carry the
+#: Each names a column the WK-666 dictionary declares. The continuous columns carry the
 #: largest exposure mass; the categorical ones are the ones the freMTPL2 literature fits.
 CONTINUOUS_FACTORS: tuple[tuple[str, str], ...] = (
     ("driv_age", "driv_age"),
@@ -93,7 +93,7 @@ async def _split_for(
     actor: Principal,
     version_id: UUID,
 ) -> SplitRef:
-    """Derive train/test parts and record the split (FR-DATA-36), the W7a pattern.
+    """Derive train/test parts and record the split (FR-76), the WK-666 pattern.
 
     The parts are materialised through real `dataset.derive` Jobs — a split whose parts
     were faked would give every fit a holdout identical to its training set.
@@ -138,7 +138,7 @@ async def _create_factor(
     slug: str,
     column: str,
 ) -> UUID:
-    """Author one factor through the platform service (FR-MODEL-7)."""
+    """Author one factor through the platform service (FR-96)."""
     async with database.unit_of_work() as session:
         row = await model_service.create_factor(
             session, workspace_id=workspace_id, actor=actor,
@@ -170,7 +170,7 @@ async def _fit(
             session, workspace_id=workspace_id, actor=actor, spec=spec
         )
         if not should_fit:
-            raise SystemExit(f"{label}: FR-MODEL-66 returned an existing model")
+            raise SystemExit(f"{label}: FR-204 returned an existing model")
         model_id = row.id
     status = await _run_job(
         database, blob_store, workspace_id, actor, JobKind.MODEL_FIT,
@@ -309,7 +309,7 @@ async def create_approved_rating_version(
     dataset_version_id: UUID,
     model_id: UUID,
 ) -> UUID:
-    """W7-3: create, submit and approve the demo rating version (FR-PLAT-67).
+    """W7-3: create, submit and approve the demo rating version (FR-440).
 
     The rating version pins the approved GLM as `model:{slug}@{version}`, so the exit
     demo's rating version is addressable and its approval is auditable. The service `decide`

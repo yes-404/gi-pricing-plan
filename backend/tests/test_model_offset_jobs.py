@@ -1,4 +1,4 @@
-"""FR-MODEL-24 end to end: a base GLM fit, then a residual fit offset against it — and
+"""FR-116 end to end: a base GLM fit, then a residual fit offset against it — and
 the named refusals. The Job is the gate: resolution happens at fit time, on the worker.
 
 The seeding helpers are `test_model_jobs.py`'s: a version reaches `validated` through
@@ -51,7 +51,7 @@ from model_schema import (
 register_data_handlers()
 register_model_handlers()
 
-#: `read_tabular` reads every column as a string (FR-DATA-4 — inference is the confirmed
+#: `read_tabular` reads every column as a string (FR-29 — inference is the confirmed
 #: schema's job, not the reader's), so the residual book's two new columns need their own
 #: casts: `resid_flag` must be a float for the IDENTITY factor to be continuous, and
 #: `claim_count2` must be a count for the Poisson response.
@@ -230,7 +230,7 @@ async def _refusal_code(
     return caught.value.code
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_residual_fit_offsets_against_the_referenced_model(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -299,7 +299,7 @@ def _base_spec(version_id, area, split: SplitRef) -> GlmSpec:
     return _spec(version_id, (area,), split_ref=split)
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_ref_naming_no_model_fails_the_job(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -324,7 +324,7 @@ async def test_a_ref_naming_no_model_fails_the_job(
     assert code == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_ref_naming_an_unfitted_model_fails_the_job(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -359,7 +359,7 @@ async def test_a_ref_naming_an_unfitted_model_fails_the_job(
     assert code == "MODEL_OFFSET_REF_INVALID"
 
 
-@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-116")
 async def test_a_link_mismatch_fails_the_job(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:

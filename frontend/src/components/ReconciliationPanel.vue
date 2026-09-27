@@ -1,20 +1,20 @@
 <script setup lang="ts">
 /**
- * FR-MODEL-60's verdict: the modelled burning cost reconciles to the observed one within a
+ * FR-190's verdict: the modelled burning cost reconciles to the observed one within a
  * declared tolerance, computed on the holdout.
  *
  * **No absolute amount and no currency symbol, deliberately.** The two burning-cost fields are
  * `MoneyMinor` integers, and formatting minor units needs a currency this view cannot reach:
- * `Reconciliation` carries a `dataset_version_id`, and OQ-OVR-14 records that a view holding a
+ * `Reconciliation` carries a `dataset_version_id`, and OQ-551 records that a view holding a
  * dataset *version* id has no route to one — `DatasetVersion` carries no currency and
  * `/datasets/{dataset_id}` is PATCH-only. This panel is that open question's fourth view.
  *
  * Nothing requirement-backed is lost by omitting them. `ratio`, `tolerance` and the derived
- * `status` are **dimensionless**, and they are exactly what FR-MODEL-60 makes the requirement.
- * FR-MODEL-74's per-peril breakdown is preserved as each peril's **share of the modelled
+ * `status` are **dimensionless**, and they are exactly what FR-190 makes the requirement.
+ * FR-128's per-peril breakdown is preserved as each peril's **share of the modelled
  * total**, also dimensionless. The precedents are W6b-5b, which omitted the incurred column
  * rather than guess, and W6b-9, which made `OneWayChart`'s currency prop required so a
- * hardcoded `"GBP"` could not propagate. The absolute figures return when OQ-OVR-14 is decided.
+ * hardcoded `"GBP"` could not propagate. The absolute figures return when OQ-551 is decided.
  *
  * **`ratio` and `status` are read, never recomputed.** Both are `computed_field`s on the wire —
  * derived server-side, and `Reconciliation`'s own validator discards them on the way in. A
@@ -35,7 +35,7 @@ const props = defineProps<{ reconciliation: Reconciliation }>();
 /**
  * Each peril's share of the modelled total, as a percentage.
  *
- * Dimensionless, so it carries FR-MODEL-74's breakdown without asserting a denomination. A
+ * Dimensionless, so it carries FR-128's breakdown without asserting a denomination. A
  * zero total yields `null` rather than a division by zero — a structure modelling nothing has
  * no shares, which is a different statement from "0%".
  */
@@ -62,7 +62,7 @@ const shares = computed(() => {
       <strong>{{ reconciliation.part }}</strong> part.
     </p>
 
-    <!-- FR-MODEL-74: the per-peril breakdown, as share of the modelled total. -->
+    <!-- FR-128: the per-peril breakdown, as share of the modelled total. -->
     <table class="mt-3 w-full text-left text-sm">
       <caption class="sr-only">
         Modelled burning cost by peril, as a share of the total
@@ -109,7 +109,7 @@ const shares = computed(() => {
     </table>
 
     <!--
-      Says why the absolute figures are absent **without naming a denomination**. OQ-OVR-12 is
+      Says why the absolute figures are absent **without naming a denomination**. OQ-538 is
       open on whether burning cost is money at all — its recommendation is that it is a
       statistic and the `_minor` suffix is the defect — so a label reading "minor units" would
       take a side the repository has not taken. `01`'s `validate.py` shipped exactly that

@@ -70,7 +70,7 @@ describe("the objective picker", () => {
   });
 
   it("withholds one whose applicability excludes the response", async () => {
-    // FR-MODEL-44: offering it would manufacture the refusal the requirement prevents.
+    // FR-153: offering it would manufacture the refusal the requirement prevents.
     listObjectives.mockResolvedValue({
       items: [
         control(),
@@ -172,7 +172,7 @@ describe("the objective picker", () => {
   });
 
   it("says so when the list was truncated", async () => {
-    // OQ-MODEL-35: a filtered list presented as complete is the defect. An empty picker
+    // OQ-605: a filtered list presented as complete is the defect. An empty picker
     // must be distinguishable from a picker that stopped looking.
     listObjectives.mockResolvedValue({ items: [objective()], truncated: true });
     picker();

@@ -21,7 +21,7 @@ afterEach(() => vi.clearAllMocks());
 
 describe("creating a factor", () => {
   it("offers only the intents the platform still honours", () => {
-    // `offset` and `diagnostic` are superseded (FR-MODEL-116, FR-MODEL-120) and keep their
+    // `offset` and `diagnostic` are superseded (FR-84, FR-86) and keep their
     // arm in the contract deliberately. Offering them would produce a factor that is
     // accepted, stored and audited, then refused at fit — `POST /factors` has no such
     // check, so this control is the guard.
@@ -49,7 +49,7 @@ describe("creating a factor", () => {
   });
 
   it("requires a rationale once a direction is chosen, before sending anything", async () => {
-    // FR-MODEL-4's rule is enforced by `Factor`'s own validator, so without this the answer
+    // FR-89's rule is enforced by `Factor`'s own validator, so without this the answer
     // is a 422 rather than a disabled button. The request must not be made at all.
     const user = userEvent.setup();
     form();

@@ -1,6 +1,6 @@
 """The permission vocabulary and the built-in roles (`06` §3.1, `00` §1.4).
 
-> **FR-GOV-2** — Permissions are checked in the backend on every request against
+> **FR-343** — Permissions are checked in the backend on every request against
 > `(principal, permission, resource, scope)`. The frontend hides what a user cannot do; it
 > never *enforces* it.
 
@@ -10,10 +10,10 @@ decide what to show. A permission string typed by hand in a Vue component is a p
 that exists nowhere else and silently grants nothing — or, worse, hides a control the user
 does hold.
 
-Roles are **platform objects** (FR-GOV-3): the platform ships the `00` §1.4 roles with
+Roles are **platform objects** (FR-344): the platform ships the `00` §1.4 roles with
 documented permission sets and supports custom roles composed from this same vocabulary.
 Where role *membership* comes from — an identity provider's groups or an in-platform
-assignment — is OQ-GOV-2 and is deliberately not settled here; FR-PLAT-4 already specifies
+assignment — is OQ-634 and is deliberately not settled here; FR-390 already specifies
 that mapping as configuration, and both answers need this model underneath.
 """
 
@@ -54,7 +54,7 @@ class Permission(enum.StrEnum):
     DEPLOYMENT_PROMOTE = "deployment:promote"
     AUDIT_READ = "audit:read"
 
-    # Scoring (`03`, `07`) — the only permissions a Service Account may hold (FR-GOV-6)
+    # Scoring (`03`, `07`) — the only permissions a Service Account may hold (FR-347)
     SCORE_EXECUTE = "score:execute"
     SCORE_BATCH = "score:batch"
 
@@ -71,7 +71,7 @@ class Permission(enum.StrEnum):
     ADMIN_BREAK_GLASS = "admin:break_glass"
 
 
-#: Permissions that only read. FR-GOV-5 makes the Auditor role exactly this set: "read
+#: Permissions that only read. FR-346 makes the Auditor role exactly this set: "read
 #: everything, write nothing, including the audit log, superseded artifacts and archived
 #: datasets. No role, including Admin, can hide an artifact from an Auditor." Deriving the
 #: role from this set rather than listing it means a new read permission is granted to
@@ -89,7 +89,7 @@ READ_PERMISSIONS: Final[frozenset[Permission]] = frozenset(
 
 
 class ScopeType(enum.StrEnum):
-    """What a role assignment applies to (FR-GOV-4).
+    """What a role assignment applies to (FR-345).
 
     "so a motor actuary cannot approve home pricing without an explicit assignment" — the
     reason scope exists at all, and the reason a workspace-wide assignment must be a
@@ -120,13 +120,13 @@ def _analyst() -> frozenset[Permission]:
     )
 
 
-#: The `00` §1.4 roles with their default permission sets (FR-GOV-3).
+#: The `00` §1.4 roles with their default permission sets (FR-344).
 #:
 #: **Admin does not hold `approval:decide` or `deployment:promote`.** The actor definition
 #: is "manages users, roles, environments, reference data, and system settings" — an
 #: administrator who could also approve would be a single principal able to grant itself an
-#: approval right and then use it, which is the separation FR-GOV-11 exists to enforce.
-#: Elevation for a genuine emergency is break-glass (FR-GOV-8), which is time-boxed and
+#: approval right and then use it, which is the separation FR-353 exists to enforce.
+#: Elevation for a genuine emergency is break-glass (FR-349), which is time-boxed and
 #: leaves a mark.
 BUILTIN_ROLES: Final[dict[str, frozenset[Permission]]] = {
     "analyst": _analyst(),

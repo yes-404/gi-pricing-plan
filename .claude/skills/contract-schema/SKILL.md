@@ -7,7 +7,7 @@ description: Add or modify a JSON Schema artifact contract or the OpenAPI stub i
 
 `docs/contracts/schemas/` holds JSON Schema (draft 2020-12) for every persisted artifact.
 These are **hand-drafted for Phase 0**; from Phase 1 they become generated output from
-`packages/model-schema` (ADR-0002). Where a schema and a module spec disagree, **the spec
+`packages/model-schema` (ADR-704). Where a schema and a module spec disagree, **the spec
 wins** — fix the schema.
 
 ## Conventions
@@ -16,7 +16,7 @@ wins** — fix the schema.
   relative (`common/money.schema.json#/$defs/MoneyMinor`).
 - Every artifact composes `common/artifact-envelope.schema.json`.
 - **Money is `MoneyMinor` (integer minor units) or `Decimal` (a string)** — never a JSON
-  number with a fractional part (FR-OVR-7). Same for exposure and relativities.
+  number with a fractional part (FR-10). Same for exposure and relativities.
 - Artifact cross-references use `common/artifact-ref.schema.json` — the
   `{type}:{slug}@{version}` string form. Adding a new artifact type means extending that
   file's `pattern`.
@@ -67,7 +67,7 @@ would have caught it on the day it was written never looked at that file.
 A schema may be excused only by a **pinned** divergence: a test asserting the disagreement is
 exactly the known path and nothing else, so a new divergence in the same schema still fails
 and the pin dies the day the question behind it is decided. `diagnostics` is the worked
-example (`OQ-MODEL-15`). An excused slug without that test is the exemption list this suite
+example (`OQ-587`). An excused slug without that test is the exemption list this suite
 refuses to grow.
 
 ## After
@@ -77,9 +77,9 @@ python3 scripts/audit-docs.py    # parses every schema, rejects duplicate keys, 
 ```
 
 Then update the coverage tables in `docs/contracts/README.md` and
-`docs/phase-0-status.md` §3 if you added a file.
+`docs/closures/CR-00709-phase-0-specification-status.md` §3 if you added a file.
 
-## Generation (from W2, FR-PLAT-48)
+## Generation (from WK-658, FR-451)
 
 `uv run python scripts/generate-contracts.py` writes the generated contracts;
 `--check` fails on drift and runs in CI. Both directions are covered — a changed model with
@@ -88,7 +88,7 @@ a stale contract, and a hand-edited contract — and both were proven by injecti
 **Generate validation-mode schemas, not serialization-mode.** Research F7's hazard is only
 visible in validation mode: a bare `Decimal` renders as `anyOf: [number, string]` there and
 as a plain string in serialization mode. A contract generated from the serialization schema
-looks compliant while the *request* side still accepts the lossy JSON number FR-OVR-7
+looks compliant while the *request* side still accepts the lossy JSON number FR-10
 forbids. The request side is where the hazard lives.
 
 **A Python-structured type may be a flat string on the wire.** `ArtifactRef` is three
@@ -126,7 +126,7 @@ advice found 43 real divergences under it. The lesson is the one `CLAUDE.md` §0
 counts and this skill restated about a grep — an assertion about how noisy a check *would* be
 is a prediction, and a prediction in a skill is read as a finding.
 
-2026-08-19 — W5's `OQ-OVR-8` slice, applying the decision that `DecimalStr` refuses a float.
+2026-08-19 — WK-661's `OQ-547` slice, applying the decision that `DecimalStr` refuses a float.
 The fourth trap above was found by widening the comparison from 6 slugs to 11 while looking
 for something else. Two lessons beyond the trap itself: an *input*-strictness change is what
 makes a wrong `"type": "number"` reachable, since a string-serialising field's contract can
@@ -134,17 +134,17 @@ be wrong for months while every round-trip still passes; and a count written int
 (`"26 DecimalStr fields across 7 modules"`) was a grep of mentions, not fields — there are
 11. Recompute a number before repeating it, which is `CLAUDE.md` §0's rule about counts.
 
-2026-08-19 — W5's profile-contract slice. The `prefixItems` trap above was paid for in
+2026-08-19 — WK-661's profile-contract slice. The `prefixItems` trap above was paid for in
 full. Also confirmed that comparing generated and hand-authored schemas on **field names**
 is a much weaker check than it reads as: five scalar-type divergences (`mean_severity`,
 `mean_burning_cost` and `severity_ci` declared integer against `float` in the model) sat
 under matching names across two contracts, through a rename that touched both sides.
 
-2026-08-15 — Confirmed while applying OQ-MODEL-5's decision to `grouping.schema.json`
+2026-08-15 — Confirmed while applying OQ-579's decision to `grouping.schema.json`
 (`credibility_model` default, `credibility_pk`, `credibility_components`). The reformat trap
 above cost a revert.
 
-2026-08-14 — W2. Generation wired up and the drift check proven in both directions.
+2026-08-14 — WK-658. Generation wired up and the drift check proven in both directions.
 The generated/authored comparison found three real divergences on its first run.
 
 2026-08-14 — Confirmed by authoring 31 schemas. The duplicate-key trap is not

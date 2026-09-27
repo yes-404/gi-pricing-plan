@@ -8,7 +8,7 @@ import {
 
 import type { OidcAuthConfig } from "./config";
 
-/** The UserManager settings FR-PLAT-55's clauses imply: code+PKCE, memory-only storage,
+/** The UserManager settings FR-393's clauses imply: code+PKCE, memory-only storage,
  *  silent renewal by prompt=none iframe (the realm plan is silent on refresh tokens — Finding 4). */
 export function buildManager(config: OidcAuthConfig): UserManager {
   Log.setLevel(Log.INFO);
@@ -20,7 +20,7 @@ export function buildManager(config: OidcAuthConfig): UserManager {
     response_type: "code",
     scope: "openid profile email",
     // oidc-client-ts 3.5.0: InMemoryWebStorage implements Storage, not StateStore; the
-    // adapter makes it the userStore while keeping FR-PLAT-2's memory-only rule.
+    // adapter makes it the userStore while keeping FR-388's memory-only rule.
     userStore: new WebStorageStateStore({ store: new InMemoryWebStorage() }),
     automaticSilentRenew: true,
     accessTokenExpiringNotificationTimeInSeconds: 60,

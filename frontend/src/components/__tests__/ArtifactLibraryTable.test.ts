@@ -60,8 +60,8 @@ describe("ArtifactLibraryTable", () => {
 });
 
 describe("the column set", () => {
-  // A Peril Structure has no `applicability` — FR-MODEL-44's objective/metric concept — and
-  // FR-MODEL-127 forbids it a usage count.
+  // A Peril Structure has no `applicability` — FR-153's objective/metric concept — and
+  // FR-167 forbids it a usage count.
   const PERIL_COLUMNS = ["slug", "version", "status"] as const;
   // **These rows deliberately CARRY `usageCount` and `applicability`.** With them absent, "no
   // usage column" is satisfied by the value being missing — exactly what a value-driven
@@ -94,7 +94,7 @@ describe("the column set", () => {
   it("omits the usage-count column entirely when it is not in the column set", () => {
     // **Asserted on the header, not on the cell.** A blank cell would pass a naive "no usage
     // count is shown" test while asserting that a count exists and is merely unknown — which
-    // is the opposite of what FR-MODEL-127 says. Absent, not empty.
+    // is the opposite of what FR-167 says. Absent, not empty.
     const { container } = perilTable();
     const headers = Array.from(container.querySelectorAll("th")).map((h) =>
       (h.textContent ?? "").toLowerCase(),
@@ -121,7 +121,7 @@ describe("the column set", () => {
 
   it("renders no usage value even when the row carries one", () => {
     // The behaviour half of the assertion above: not just a missing header, but the value
-    // itself nowhere on the page. FR-MODEL-127 gives a Peril Structure no usage count, so a
+    // itself nowhere on the page. FR-167 gives a Peril Structure no usage count, so a
     // row that somehow carries one must not surface it.
     const { container } = perilTable();
     expect(container.textContent ?? "").not.toContain("7");

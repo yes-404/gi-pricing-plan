@@ -91,7 +91,7 @@ function refusalCopy(error: ProblemError): string {
     case "MODEL_NOT_FITTED":
       return "This model has not been fitted, so there is nothing to score with.";
     case "MODEL_INTERVAL_UNAVAILABLE":
-      // FR-MODEL-78: crossing quantiles are detected and reported, never silently reordered.
+      // FR-199: crossing quantiles are detected and reported, never silently reordered.
       // This page therefore shows no interval at all here rather than an ordered one.
       return "The interval models cross on these rows, so no interval is reported for them.";
     case "MODEL_TYPE_UNSUPPORTED":

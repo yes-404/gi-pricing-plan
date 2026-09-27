@@ -1,6 +1,6 @@
 """The built-in rule catalogue, seeded and served.
 
-`01` §4.4 names 38 rules and calls their ids stable; until FR-DATA-53 the platform held
+`01` §4.4 names 38 rules and calls their ids stable; until FR-68 the platform held
 none of them. These tests are the outside view of that: the rules are rows in a workspace,
 they are approved without an in-workspace approver or a fabricated dry run, and there is a
 route that lists them.
@@ -123,7 +123,7 @@ def _all_rules(client: TestClient, headers: dict[str, str], **params: Any) -> li
     return items
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_seeding_puts_every_catalogue_rule_in_the_workspace(
     api_client: TestClient, analyst: dict[str, str]
 ) -> None:
@@ -131,7 +131,7 @@ def test_seeding_puts_every_catalogue_rule_in_the_workspace(
     assert set(BUILTIN_RULES) <= ids, sorted(set(BUILTIN_RULES) - ids)
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_seeding_twice_creates_no_duplicates(
     api_client: TestClient, analyst: dict[str, str], workspace_id: UUID, principal
 ) -> None:
@@ -146,7 +146,7 @@ def test_seeding_twice_creates_no_duplicates(
     assert sorted(i for i in ids if i is not None) == sorted(BUILTIN_RULES)
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_a_seeded_rule_is_approved_without_a_fabricated_dry_run(
     api_client: TestClient, analyst: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -166,7 +166,7 @@ def test_a_seeded_rule_is_approved_without_a_fabricated_dry_run(
         assert row.catalogue_id in BUILTIN_RULES, row.slug
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_the_collection_is_paginated_and_filterable_by_builtin(
     api_client: TestClient, analyst: dict[str, str]
 ) -> None:
@@ -189,7 +189,7 @@ def test_the_collection_is_paginated_and_filterable_by_builtin(
     assert not (first_ids & {item["id"] for item in second.json()["items"]})
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_reading_rules_without_the_permission_is_refused(
     api_client: TestClient, unprivileged: dict[str, str]
 ) -> None:
@@ -200,7 +200,7 @@ def test_reading_rules_without_the_permission_is_refused(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_rules_seeded_in_another_workspace_are_not_visible(
     api_client: TestClient, analyst: dict[str, str], workspace_id: UUID
 ) -> None:
@@ -236,7 +236,7 @@ def _a_rule(workspace_id: UUID, **overrides: Any) -> ValidationRuleRow:
     return ValidationRuleRow(**{**fields, **overrides})
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 async def test_a_builtin_row_must_name_a_catalogue_entry(database, workspace_id) -> None:
     """**Negative**, at the layer a direct `UPDATE` cannot walk past.
 
@@ -257,7 +257,7 @@ async def test_a_builtin_row_must_name_a_catalogue_entry(database, workspace_id)
         session.add(_a_rule(workspace_id, builtin=False, catalogue_id="VR-STR-1"))
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 async def test_the_approval_exemption_reaches_builtin_rows_only(
     database, workspace_id
 ) -> None:
@@ -277,11 +277,11 @@ async def test_the_approval_exemption_reaches_builtin_rows_only(
         )
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_a_workspace_rule_can_record_the_catalogue_entry_it_derives_from(
     api_client: TestClient, analyst: dict[str, str]
 ) -> None:
-    """FR-DATA-53's lineage: a workspace version of a built-in names its catalogue entry.
+    """FR-68's lineage: a workspace version of a built-in names its catalogue entry.
 
     Without this the derivation is unreachable through the API — the column exists, the
     read-back exists, and no caller can write it.
@@ -302,7 +302,7 @@ def test_a_workspace_rule_can_record_the_catalogue_entry_it_derives_from(
     assert response.json()["catalogue_id"] == "VR-DST-1"
 
 
-@pytest.mark.req("FR-DATA-53")
+@pytest.mark.req("FR-68")
 def test_a_catalogue_id_naming_no_catalogue_entry_is_refused(
     api_client: TestClient, analyst: dict[str, str]
 ) -> None:
@@ -326,11 +326,11 @@ def test_a_catalogue_id_naming_no_catalogue_entry_is_refused(
     assert response.status_code == 422, response.text
 
 
-@pytest.mark.req("FR-DATA-54")
+@pytest.mark.req("FR-56")
 def test_seeded_builtins_carry_their_catalogue_default_thresholds(
     api_client: TestClient, analyst: dict[str, str], workspace_id: UUID
 ) -> None:
-    """FR-DATA-54: every threshold in force is readable by a caller.
+    """FR-56: every threshold in force is readable by a caller.
 
     Both directions matter. A rule whose check reads a threshold must publish it, and a rule
     whose check reads none must publish nothing — an invented default would advertise

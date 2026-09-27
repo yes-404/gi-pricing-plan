@@ -39,7 +39,7 @@ describe("HistogramChart", () => {
     render(HistogramChart, { props: { histogram, column: "vehicle_age" } });
     const chart = option();
 
-    // FR-DATA-48's edges array is one longer than its counts: two edges bound one bin.
+    // FR-65's edges array is one longer than its counts: two edges bound one bin.
     expect(chart.xAxis.data).toEqual(["0–10", "10–20"]);
     expect(chart.series[0]?.data).toEqual([3, 7]);
     // Nothing to weight the bars by, so no second series and no second axis.
@@ -61,7 +61,7 @@ describe("HistogramChart", () => {
     expect(chart.yAxis.map((axis) => axis.name)).toEqual(["Rows", "Exposure"]);
   });
 
-  describe("the table beside it (NFR-OVR-10)", () => {
+  describe("the table beside it (NFR-463)", () => {
     it("names itself after the column, so a page of them is navigable", () => {
       // The Profile page renders one of these per column. `ChartFigure` labels its table
       // with the figure's title, so without the column name a screen-reader user gets a
@@ -89,7 +89,7 @@ describe("HistogramChart", () => {
     });
 
     it("keeps exposure as the exact decimal string the profile stored", () => {
-      // The chart widens it to a float because a coordinate is one either way (FR-OVR-7).
+      // The chart widens it to a float because a coordinate is one either way (FR-10).
       // The table has no such excuse, and a trailing zero lost here is a value the reader
       // cannot tell from a rounded one.
       const histogram: Histogram = { edges: [0, 10], counts: [3], exposure: ["9.250"] };

@@ -1,4 +1,4 @@
-"""Deterministic partitioning (`01` FR-DATA-33, FR-DATA-36).
+"""Deterministic partitioning (`01` FR-73, FR-76).
 
 The property under test is not "a split runs". It is that **two independent calls agree** —
 the `train` Job and the `test` Job never meet, and a holdout that overlaps its training set
@@ -23,7 +23,7 @@ def _book(n: int = 1000) -> pl.DataFrame:
     )
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_two_independent_calls_produce_the_same_partition() -> None:
     """The whole point. The parts are derived by separate Jobs, in separate processes,
     sharing only the seed — so the assignment must be a function of the seed and nothing
@@ -34,7 +34,7 @@ def test_two_independent_calls_produce_the_same_partition() -> None:
     assert first.to_list() == second.to_list()
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_a_different_seed_produces_a_different_partition() -> None:
     """Negative of the above: if the seed did not matter, determinism would be trivially
     satisfied by ignoring it, and every split would be the same split."""
@@ -44,7 +44,7 @@ def test_a_different_seed_produces_a_different_partition() -> None:
     assert a.to_list() != b.to_list()
 
 
-@pytest.mark.req("FR-DATA-36")
+@pytest.mark.req("FR-76")
 def test_the_parts_are_disjoint_and_cover_every_row() -> None:
     """A row in both parts inflates the holdout; a row in neither is silently discarded.
     Both are failures a row count alone would not reveal, so the identity is checked."""
@@ -56,7 +56,7 @@ def test_the_parts_are_disjoint_and_cover_every_row() -> None:
     assert train | test == set(range(frame.height))
 
 
-@pytest.mark.req("FR-DATA-36")
+@pytest.mark.req("FR-76")
 def test_a_grouped_split_keeps_a_policy_whole() -> None:
     """The leakage bug this method exists to prevent: a policy with twelve monthly rows
     split across train and holdout lets the model see the very risk it is scored on."""
@@ -73,7 +73,7 @@ def test_a_grouped_split_keeps_a_policy_whole() -> None:
     assert train.isdisjoint(test)
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_a_temporal_split_puts_the_later_rows_in_the_holdout() -> None:
     frame = _book()
     parts = partition(
@@ -83,7 +83,7 @@ def test_a_temporal_split_puts_the_later_rows_in_the_holdout() -> None:
     assert set(parts["test"]["inception"].to_list()) == {"2025-11-15"}
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_fractions_that_do_not_cover_the_data_are_refused() -> None:
     """Negative: 0.5/0.2 leaves 30 % of the book in no part at all — rows dropped with no
     error, which is the one thing a holdout cannot survive."""
@@ -91,7 +91,7 @@ def test_fractions_that_do_not_cover_the_data_are_refused() -> None:
         partition(_book(), method="random", seed=1, fractions={"train": 0.5, "test": 0.2})
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_a_temporal_split_without_a_cutoff_is_refused() -> None:
     """Negative: falling back to a random partition would record `method: temporal` on a
     split that is not temporal — a method recorded as one it is not."""
@@ -99,13 +99,13 @@ def test_a_temporal_split_without_a_cutoff_is_refused() -> None:
         partition(_book(), method="temporal", seed=1)
 
 
-@pytest.mark.req("FR-DATA-33")
+@pytest.mark.req("FR-73")
 def test_an_unknown_method_is_refused() -> None:
     with pytest.raises(SplitError, match="unknown split method"):
         partition(_book(), method="stratified_by_vibes", seed=1)
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_two_independent_calls_produce_the_same_fold_assignment() -> None:
     """The property `assign_parts` exists for, carried to folds: two Jobs computing CV for
     the same spec must agree on which rows are held out for fold `i`, and the only thing
@@ -116,7 +116,7 @@ def test_two_independent_calls_produce_the_same_fold_assignment() -> None:
     assert first.tolist() == second.tolist()
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_different_seed_produces_a_different_fold_assignment() -> None:
     frame = _book()
     a = assign_folds(frame, method="random", seed=1, folds=4)
@@ -124,7 +124,7 @@ def test_a_different_seed_produces_a_different_fold_assignment() -> None:
     assert a.tolist() != b.tolist()
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_every_row_gets_one_of_the_declared_folds() -> None:
     """Coverage, the fold equivalent of `test_the_parts_are_disjoint_and_cover_every_row`:
     a row with no fold is a row `_fit_cv_path` would silently never score or never train
@@ -137,7 +137,7 @@ def test_every_row_gets_one_of_the_declared_folds() -> None:
     assert folds.max() < 4
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_grouped_fold_assignment_keeps_a_policy_whole() -> None:
     """The same leakage bug `assign_parts`'s grouped method exists to prevent, at K folds:
     a policy's twelve monthly rows split across two folds lets a model trained on fold A
@@ -151,7 +151,7 @@ def test_a_grouped_fold_assignment_keeps_a_policy_whole() -> None:
     assert per_policy_fold_count["n"].max() == 1
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_grouped_fold_assignment_without_a_key_column_is_refused() -> None:
     """Negative: `grouped_by_key` with no key to group by would hash row indices — a
     random fold by another name, recorded as a method the data was not folded by."""
@@ -159,7 +159,7 @@ def test_a_grouped_fold_assignment_without_a_key_column_is_refused() -> None:
         assign_folds(_book(), method="grouped_by_key", seed=1, folds=4)
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_grouped_fold_assignment_naming_a_missing_column_is_refused() -> None:
     """Negative: a key column the frame does not carry is a typo, not a grouping — every
     row would hash to its own singleton key, again a random fold in disguise."""
@@ -167,9 +167,9 @@ def test_a_grouped_fold_assignment_naming_a_missing_column_is_refused() -> None:
         assign_folds(_book(), method="grouped_by_key", seed=1, folds=4, key_column="policy_no")
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_temporal_fold_assignment_orders_folds_by_time() -> None:
-    """The gap this plan documents and resolves: FR-DATA-33/FR-MODEL-53 define no K-fold
+    """The gap this plan documents and resolves: FR-73/FR-182 define no K-fold
     temporal semantics, so this fixes it as contiguous time-ordered blocks — the earliest
     rows land in fold 0, the latest in the last fold, and a block never straddles a fold
     boundary out of time order."""
@@ -186,20 +186,20 @@ def test_a_temporal_fold_assignment_orders_folds_by_time() -> None:
     assert tagged["fold"][-1] == 3
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_temporal_fold_assignment_without_a_time_column_is_refused() -> None:
     with pytest.raises(SplitError, match="time_column"):
         assign_folds(_book(), method="temporal", seed=1, folds=4)
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_temporal_fold_assignment_naming_a_missing_column_is_refused() -> None:
     """Negative: a time column the frame does not carry is a typo, not a fold order."""
     with pytest.raises(SplitError, match="which is not a column"):
         assign_folds(_book(), method="temporal", seed=1, folds=4, time_column="inception_date")
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_fewer_than_two_folds_is_refused() -> None:
     """Negative: one fold has no held-out rows for itself to be scored against, and
     `_fit_cv_path` would divide the book into a training set with nothing to validate on."""
@@ -207,7 +207,7 @@ def test_fewer_than_two_folds_is_refused() -> None:
         assign_folds(_book(), method="random", seed=1, folds=1)
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_an_unknown_fold_method_is_refused() -> None:
     with pytest.raises(SplitError, match="unknown split method"):
         assign_folds(_book(), method="stratified_by_vibes", seed=1, folds=3)

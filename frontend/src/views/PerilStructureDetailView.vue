@@ -4,11 +4,11 @@
  *
  * **Built from the contract's fields, not from the cell's three nouns.** The cell names
  * per-peril model pins, large-loss treatment and a reconciliation panel — six of the
- * contract's twenty-five fields. Under OQ-MODEL-15's decided rule the generated contract is
+ * contract's twenty-five fields. Under OQ-587's decided rule the generated contract is
  * the floor and the Contents cell binds nothing, so a field present in `PerilStructure` and
  * absent from the cell is in scope by the contract. Five of the unnamed fields are required by
- * numbered requirements independently of that: `excluded_perils` and `part` by FR-MODEL-60,
- * `status` by FR-MODEL-61, `method` by FR-MODEL-58, `restoration_loading` by FR-MODEL-74.
+ * numbered requirements independently of that: `excluded_perils` and `part` by FR-190,
+ * `status` by FR-191, `method` by FR-188, `restoration_loading` by FR-128.
  *
  * **Model refs are canonical strings, and are not destructured.** `ArtifactRef` overrides its
  * JSON schema to emit a string, so `frequency_model` arrives as `"model:ad-freq@4"`. That
@@ -18,7 +18,7 @@
  *
  * **All four large-loss kinds render by name.** `pricing_core` refuses `separate_model` and
  * `flat_loading` at compute time, but the contract has carried all four from the start and
- * FR-MODEL-87's staged-contract rule makes that intended. A `v-if` over the computable pair
+ * FR-207's staged-contract rule makes that intended. A `v-if` over the computable pair
  * would render a blank treatment for a structure that declares one, reading as "no large-loss
  * handling" when the structure says otherwise. The refusal surfaces on the reconcile path.
  *
@@ -79,7 +79,7 @@ onMounted(async () => {
         </p>
       </header>
 
-      <!-- FR-MODEL-58: each peril, the method that decides what its refs mean, and the refs
+      <!-- FR-188: each peril, the method that decides what its refs mean, and the refs
            themselves as canonical strings. -->
       <section class="mt-8">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -141,10 +141,10 @@ onMounted(async () => {
         </table>
       </section>
 
-      <!-- FR-MODEL-59's treatment and its parameters. The amounts are integer minor units with
+      <!-- FR-189's treatment and its parameters. The amounts are integer minor units with
            no symbol and no denomination label: a cap and an attachment point are unambiguously
            money, so omitting them would remove requirement content the way omitting the
-           burning costs does not — but this view cannot source a currency (OQ-OVR-14), so it
+           burning costs does not — but this view cannot source a currency (OQ-551), so it
            states the contract's own field values and asserts no denomination. -->
       <section class="mt-8">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -181,7 +181,7 @@ onMounted(async () => {
         </dl>
       </section>
 
-      <!-- FR-MODEL-60: every peril is either modelled or explicitly excluded with a reason.
+      <!-- FR-190: every peril is either modelled or explicitly excluded with a reason.
            Named by no noun in the cell, and required by the requirement. -->
       <section
         v-if="structure.excluded_perils?.length"
@@ -213,7 +213,7 @@ onMounted(async () => {
         v-else
         class="mt-6 text-sm text-slate-500"
       >
-        Not yet reconciled. FR-MODEL-60 makes the reconciliation the evidence an approver reads,
+        Not yet reconciled. FR-190 makes the reconciliation the evidence an approver reads,
         and a structure acquires one by being reconciled — a draft having none is an ordinary
         state, not a missing artifact.
       </p>

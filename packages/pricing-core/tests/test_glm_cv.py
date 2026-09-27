@@ -1,4 +1,4 @@
-"""FR-MODEL-20/FR-MODEL-53: the elastic-net penalty path reaching `glum`, end to end.
+"""FR-112/FR-182: the elastic-net penalty path reaching `glum`, end to end.
 
 Not a type-level test — a feature four sites agreeing on a shape can still not work
 (`.claude/skills/python-test`), and the site that matters here is the actual refit against
@@ -28,7 +28,7 @@ def _frequency_data(n: int = 400, seed: int = 20260821) -> pl.DataFrame:
     """A Poisson book with a real urban/rural signal — the same shape `test_glm.py` uses,
     large enough that 4 folds each carry a usable number of rows. The counts are Poisson
     draws, not the deterministic 2/1 pattern: a noiseless book fits perfectly on every
-    fold, and a dispersion assertion over identical 0.0 scores proves nothing (FR-MODEL-53
+    fold, and a dispersion assertion over identical 0.0 scores proves nothing (FR-182
     exists because real books have noise)."""
     rng = np.random.default_rng(seed)
     urban = np.arange(n) % 4 == 0
@@ -56,7 +56,7 @@ def _spec(**over: object) -> GlmSpec:
     return GlmSpec(**base)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("FR-MODEL-20")
+@pytest.mark.req("FR-112")
 def test_cv_selection_fits_and_persists_the_full_path() -> None:
     data = _frequency_data()
     factors = (_factor("area", "area"),)
@@ -76,7 +76,7 @@ def test_cv_selection_fits_and_persists_the_full_path() -> None:
     assert fit.result.coefficients
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_cv_selection_persists_per_fold_dispersion_at_the_selected_alpha() -> None:
     data = _frequency_data()
     factors = (_factor("area", "area"),)
@@ -89,11 +89,11 @@ def test_cv_selection_persists_per_fold_dispersion_at_the_selected_alpha() -> No
     assert fit.cv is not None
     assert {m.fold for m in fit.cv.fold_metrics} == {0, 1, 2, 3}
     assert sum(m.rows for m in fit.cv.fold_metrics) == data.height
-    # FR-MODEL-53: dispersion, not only the mean.
+    # FR-182: dispersion, not only the mean.
     assert len({round(m.score, 10) for m in fit.cv.fold_metrics}) > 1
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_grouped_cv_keeps_a_policy_whole_across_folds() -> None:
     data = _frequency_data()
     factors = (_factor("area", "area"),)
@@ -107,7 +107,7 @@ def test_a_grouped_cv_keeps_a_policy_whole_across_folds() -> None:
     assert fit.cv.method == "grouped_by_key"
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_a_temporal_cv_orders_folds_by_time() -> None:
     data = _frequency_data()
     factors = (_factor("area", "area"),)
@@ -121,7 +121,7 @@ def test_a_temporal_cv_orders_folds_by_time() -> None:
     assert fit.cv.method == "temporal"
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_two_fits_with_the_same_seed_select_the_same_alpha() -> None:
     """Round-trip / reproducibility: `_fit_cv_path`'s fold assignment is a pure function of
     the seed, so two fits of the identical spec over the identical data must agree — the
@@ -142,7 +142,7 @@ def test_two_fits_with_the_same_seed_select_the_same_alpha() -> None:
     assert [p.mean_score for p in first.cv.path] == [p.mean_score for p in second.cv.path]
 
 
-@pytest.mark.req("FR-MODEL-53")
+@pytest.mark.req("FR-182")
 def test_more_folds_than_rows_in_a_group_is_refused() -> None:
     """Negative: `GLM_CV_FOLD_EMPTY`. A grouped CV over few distinct keys with `folds` set
     higher than the key count leaves some fold with no held-out rows at all — a fold that
@@ -168,7 +168,7 @@ def test_more_folds_than_rows_in_a_group_is_refused() -> None:
     assert refused.value.code == "GLM_CV_FOLD_EMPTY"
 
 
-@pytest.mark.req("FR-MODEL-20")
+@pytest.mark.req("FR-112")
 def test_a_fixed_alpha_fit_still_carries_no_cv_diagnostics() -> None:
     """Negative, the other direction: `select_by='fixed'` (the default) must not
     accidentally run or report a CV path — `fit.cv` stays `None`."""

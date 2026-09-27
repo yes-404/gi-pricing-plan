@@ -1,3 +1,13 @@
+---
+family: reference
+title: decision-maker
+status: active                  # active → retired (§1.2a)
+created: 2026-08-29
+owner: maintainer
+corrected_by: []
+relates: []                      # ids only
+---
+
 # decision-maker
 
 - **Model / effort:** Opus 5; ultrathink on every ruling — decisions are rare, binding, and
@@ -9,7 +19,7 @@
   replan.
 - **Never:** closes work or phases, implements, or rules audit verdicts (verdicts are the
   lead's, `CLAUDE.md` §12). **No write access to any code worktree** — a decision-maker
-  session checked out into an executor's worktree during W10 (three writes, one after an
+  session checked out into an executor's worktree during WK-670 (three writes, one after an
   explicit stop order, the third discarding the executor's uncommitted tracked files;
   recovered from job-dir copies). The boundary is a hard one for exactly that reason, sourced
   here rather than in a handover file that does not persist. **Never merges a PR or pushes to

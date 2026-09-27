@@ -92,25 +92,25 @@ include this section.]
 
 `delivery-process.md` §5 step 4 / §6 step 1 gate every plan on whether "an acceptance
 standard was actually defined, not just implied." This is the *one* place that field's
-machine-checkable form lives (NT-0014 §2 impact-matrix row 15 — one source, not restated in
-`.claude/roles/planner.md` or anywhere else); `scripts/audit-docs.py` check 28 (NT-0014 §2
+machine-checkable form lives (RFC-895 §2 impact-matrix row 15 — one source, not restated in
+`.claude/roles/planner.md` or anywhere else); `scripts/audit-docs.py` check 28 (RFC-895 §2
 C1) reads exactly this shape:
 
 - **Name / position:** a `##`-level (or deeper) Markdown heading whose text contains the
   words "Acceptance Standard", case-insensitive — `## Acceptance Standard` for a fresh plan;
-  the pre-existing `## Acceptance standard for the slice as a whole` phrasing (the four W11
+  the pre-existing `## Acceptance standard for the slice as a whole` phrasing (the four WK-671
   slice plans that predate this convention) also matches. Anywhere in the document; the
   header-template position above is the recommended one.
 - **Format:** the heading must have at least one non-blank line under it before the next
   heading of any level — a bare heading with nothing following it is "implied," not
   "actually defined," and check 28 refuses it. A numbered list of concrete, command-checkable
-  conditions (the W11 slice plans' pattern) is what satisfies "testable"; the check itself
+  conditions (the WK-671 slice plans' pattern) is what satisfies "testable"; the check itself
   only verifies the heading is not empty, not that its content is good — that judgement
   stays the lead's (`delivery-process.md` §5 step 4).
 - **Scope:** required on every plan-kind file (the suffix-less kind this skill produces)
   filed under `docs/plans/` on or after check 28's cutoff date, written as a constant in the
   script. **Never required retroactively** — a plan filed before the cutoff is exempt by
-  design, per Ruling 46 (`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`), because a
+  design, per RL-906 (`docs/rulings/RL-00906-q3-never-retro-red-gate-adopted-warn-until-the-format-lands-red-thereafter-rejected-as-the-mechanism.md`), because a
   verdict must be a property of the plan, not of when the check happens to run. The
   `-ledger`, `-final-review`/`-verified` and `-handover` file kinds (`docs/plans/README.md`)
   are out of scope entirely — they declare no acceptance standard of their own.
