@@ -20,7 +20,7 @@ Executed task by task from `PL-1072` (`status: active`, frozen 2026-09-27), unde
 `823a75efb5da70d8c652c91fd6dc54e5ab966149` (#816, RL-1142 + PL-1072 activation). **One
 PR, one branch (`w37-9-root-governance`)**, per the plan's own Task 9 and the lead's
 09:02:53 BST addendum — so every task commit below is pre-squash by construction:
-**cited as "pre-squash branch commit of this PR, reachable via `refs/pull/<PR>/head`"**,
+**cited as "pre-squash branch commit of this PR, reachable via `refs/pull/817/head`"**,
 never as a squash SHA. This PR's own squash SHA on `main` is recorded once, in the
 closing record, the same convention `LG-1141` uses for its final PR.
 
@@ -35,7 +35,7 @@ amendment (F49's CI enforcement) kept verbatim. `python3 scripts/audit-docs.py` 
 `EXIT=0`.
 
 Landed in: this PR — pre-squash branch commit `bbd6c567`, reachable via
-`refs/pull/<PR>/head`.
+`refs/pull/817/head`.
 
 ### Task 2 — `CLAUDE.md` §5 and the §0 bullet, G2's permanence yield
 
@@ -47,7 +47,7 @@ line by delegation, D3), on RFC-937 D2" — since an amendment to what `CLAUDE.m
 requires is the maintainer's (§12), here by delegation.
 
 Landed in: this PR — pre-squash branch commits `bd5d367b` (both sites) and `67e2e8a3`
-(authority-wording correction), reachable via `refs/pull/<PR>/head`.
+(authority-wording correction), reachable via `refs/pull/817/head`.
 
 ### Task 3 — `CLAUDE.md` §9, §12 and §13–§15, the pointers
 
@@ -61,7 +61,7 @@ citation kept unchanged. §15's own mangled `WF-698…05` token (found while aud
 `document-ids.md`) `>= 1`.
 
 Landed in: this PR — pre-squash branch commit `3b284d8f`, reachable via
-`refs/pull/<PR>/head`.
+`refs/pull/817/head`.
 
 ### Task 4 — `README.md`, the tour and how things are named
 
@@ -72,7 +72,7 @@ not-yet-in-force clause; three new Explore bullets (`docs/plans/`, `docs/rulings
 `docs/closures/`).
 
 Landed in: this PR — pre-squash branch commit `e312373c`, reachable via
-`refs/pull/<PR>/head`.
+`refs/pull/817/head`.
 
 ### Task 5 — `CONTRIBUTING.md`, ids, and where the work lives
 
@@ -84,7 +84,7 @@ not-yet-in-force clause, with the triage-mint / maintenance-item / bot-exemption
 `README.md` points here for.
 
 Landed in: this PR — pre-squash branch commit `a7e0bd3f`, reachable via
-`refs/pull/<PR>/head`.
+`refs/pull/817/head`.
 
 ### Task 6 — `.github/PULL_REQUEST_TEMPLATE.md`, the required slice line
 
@@ -93,7 +93,7 @@ the triage mint, the standing `WK-` maintenance item, and the bot-author exempti
 four clauses present. `## Scope` and `## Evidence` unchanged.
 
 Landed in: this PR — pre-squash branch commit `f7f2552b`, reachable via
-`refs/pull/<PR>/head`.
+`refs/pull/817/head`.
 
 ### Task 7 — `.gitignore` and the issue templates
 
@@ -108,7 +108,7 @@ clean, `bug.yml` body ids `[None, 'version', 'reproduction', 'expected', 'observ
 'context', 'related']`, `question.yml` body ids `['category', 'body', 'related']`.
 
 Landed in: this PR — pre-squash branch commit `a318b280`, reachable via
-`refs/pull/<PR>/head`.
+`refs/pull/817/head`.
 
 ### Task 8 — the three `M` rows, verify only
 
@@ -132,7 +132,7 @@ byte-stable (`doc-index.py --check` → `EXIT=0`). The full two-half gate, run a
 PR's final head, is recorded below.
 
 Landed in: this PR — the ledger and gate-evidence commits, reachable via
-`refs/pull/<PR>/head`; the PR's own squash SHA on `main` is recorded once, in the
+`refs/pull/817/head`; the PR's own squash SHA on `main` is recorded once, in the
 closing record.
 
 ## PRs
@@ -143,5 +143,19 @@ closing record.
 
 ## Gate evidence
 
-*Filled in once the full two-half gate has run at this PR's final head — see the PR
-body for the per-command exit-code table, `HEAD.txt`, and `--collect-only` totals.*
+Full two-half gate, head `11e3cc2b73288a4617682e45caf3d737f2da3ea0`,
+`~/gi-pricing-plan.local/handover/gate-11e3cc2/`. `HEAD.txt` written before the run.
+`uv run pytest --collect-only -q` → 3462 tests collected (matches `main`).
+
+Python/docs half, 7/7 `exit=0`: ruff, mypy, import_linter, audit_docs, req_coverage,
+contracts, pytest (`3458 passed, 3 skipped, 1 xfailed`). `audit-docs.py` → `EXIT=0`,
+`All checks passed.`, `DISCLOSED (865, at or under the W37-11 residue ceiling)`.
+
+Frontend half, 6/6 `exit=0`: install, generate:api, lint, type-check, test (`97 files /
+602 tests passed`, `Type Errors: no errors`, exit code read directly), build.
+
+**An earlier run at head `e3542f83` genuinely failed** (`audit_docs`/`pytest`, 2 of 7) on
+two real defects this executor introduced in the first cut of this file — a padded id
+outside a link target (twice, `LG-1141`/`FD-894` written padded) and one dead example id
+that did not resolve, plus one literal retired-path spelling. Fixed in `11e3cc2b`;
+the corrected head is the one gated above. Full PR body has the per-`.rc` table.
