@@ -2206,9 +2206,9 @@ def test_w37_11_record_parses_a_path_governed_under_two_distinct_classes(
     draft rows -- one path, two rows, distinguished only by `cls`. The loader must keep
     both as distinct `ResidueEntry` rows (the pair `(path, cls)` is the key, per
     `ResidueEntry`'s own docstring), never collapse or overwrite one with the other."""
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
         "| scripts/doc-id.py | d9 | 6 | refused split-source citation, decision (A) |"
@@ -3457,13 +3457,13 @@ def test_residue_ceiling_with_no_record_flags_nothing(dv: Any) -> None:
 
 
 def test_load_w37_11_record_reads_the_governed_table(dv: Any, tmp_path: pathlib.Path) -> None:
-    """The loader reads `docs/audit/w37-11-record.md`'s table — markdown, not `.csv`,
+    """The loader reads the W37-11 record's table (`dv.W37_11_RECORD_PATH`) — markdown, not `.csv`,
     because a bare `.csv` trips `test_no_reference_rows_are_bundled_in_the_repository`
     (FR-DATA-32); the same repo-wide `| ... |` table convention `audit-docs.py` reads. No
     name from this record is ever written into the loader itself."""
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "# W37-11 residue record\n\n"
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
@@ -3483,9 +3483,9 @@ def test_load_w37_11_record_skips_a_malformed_row_rather_than_raising(
 ) -> None:
     """A record this module cannot parse degrades to "not yet governed" for that row
     rather than crashing the run that reads it."""
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
         "| docs/x.md | d1 | not-a-number | because | W37-11 |\n"
@@ -3508,7 +3508,7 @@ def test_a_real_d7_record_entry_round_trips_through_the_ceiling(dv: Any) -> None
     """Ruling (W37-6, 2026-09-06): the (d7) box-end entries this PR adds must do real
     mechanical work, not merely exist as documentation -- `check_residue_ceiling` is the
     SEPARATE mechanism (from `_d7_disclosed_or_fail`'s own verdict) that reads them. Proof
-    against the REAL, currently-committed `docs/audit/w37-11-record.md`, not a synthetic
+    against the REAL, currently-committed record (`_docid.W37_11_RECORD_PATH`), not a synthetic
     fixture: take one real `d7` entry, confirm it is silent at its own recorded ceiling,
     confirm lowering that ceiling by one produces a fatal REGRESSION, and confirm
     restoring it clears the regression again -- the round-trip, not just one direction."""
@@ -3545,7 +3545,7 @@ def test_the_d6_record_entry_round_trips_through_the_ceiling(dv: Any) -> None:
     """The (d6) twin of the (d7) round-trip test above (Ruling, lead, 2026-09-06,
     condition 6): the ONE `d6` entry this PR adds must do real mechanical work too, not
     merely exist as documentation. Proof against the REAL, currently-committed
-    `docs/audit/w37-11-record.md`, not a synthetic fixture."""
+    record (`_docid.W37_11_RECORD_PATH`), not a synthetic fixture."""
     record = dv.load_w37_11_record(pathlib.Path("."))
     d6_entries = [e for e in record if e.cls == "d6"]
     assert d6_entries, "the real record must carry at least one d6 entry"
@@ -3587,9 +3587,9 @@ def test_the_d6_record_entry_round_trips_through_the_ceiling(dv: Any) -> None:
 def test_load_w37_11_record_rejects_a_class_no_extractor_produces(
     dv: Any, tmp_path: pathlib.Path
 ) -> None:
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
         "| docs/x.md | comma-continuation-left-whole | 1 | because | W37-11 |\n",
@@ -3612,9 +3612,9 @@ def test_load_w37_11_record_accepts_every_real_extractor_class(
     is `D_ALTERNATIVES`'s last-numbered alternative as of this commit, and "h1-check999"
     is a check number nothing has assigned yet, deliberately, since the h1 predicate is a
     shape, not an enumerated set."""
-    docs_audit = tmp_path / "docs" / "audit"
-    docs_audit.mkdir(parents=True)
-    (docs_audit / "w37-11-record.md").write_text(
+    record_path = tmp_path / dv.W37_11_RECORD_PATH
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(
         "| path | cls | count | reason | owner |\n"
         "| --- | --- | --- | --- | --- |\n"
         f"| docs/x.md | {cls} | 1 | because | W37-11 |\n",
@@ -3738,7 +3738,7 @@ def test_verify_is_unaffected_by_every_live_checkout_perturbation_the_table_name
     Three perturbations, one per accident that found this class tonight:
 
     1. **Modify the governed record** (the fixed defect itself, #762/#764) — an
-       uncommitted edit to `docs/audit/w37-11-record.md`.
+       uncommitted edit to the record (`_docid.W37_11_RECORD_PATH`).
     2. **Add a stray untracked file** (the reused-directory hypothesis's own shape, ruled
        out for `--verify`'s *target* directory by `assert_workdir_disposable`, but never
        tested against `repo_root` itself — nothing stops a stray file appearing in the

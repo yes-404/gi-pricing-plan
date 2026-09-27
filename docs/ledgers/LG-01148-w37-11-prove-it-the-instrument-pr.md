@@ -29,8 +29,16 @@ bind this ledger. Q1: this ledger is created. Q2: the code PR edits the 22 instr
 test files and the two skills. The six `docs/process/` documents and `docs/roadmap.md` are
 left to their owners in the docs PR. Q3: the record's rows are written by the executor as
 the W37-11 lead's instrument (`RL-1145` DP-3 amendment 5), in their own commits, and the
-lead adopts or amends the row diff at review. Q4: C15 is **held** for the deputy's ruling.
-The population may be derived as evidence, and no g2 per-file row is filed. Q5: F19
+lead adopts or amends the row diff at review. Q4 — *Was: "C15 is **held** for the deputy's ruling.
+The population may be derived as evidence, and no g2 per-file row is filed."* **Updated
+2026-09-27 12:42:49 BST (the executor, on the lead's instruction):** the deputy ruled Q4 at
+2026-09-27 12:06:57 BST (the lead's local channel file `to-lead.md`, the entry headed
+"Q4 RULED: C15 = option (a) …"), and the lead released the hold. C15 is option (a):
+*"'Rebuilt' means **re-derived and quoted** … **No rows are filed in W37-11.**"* This
+ledger carries the per-file g2 population at the DP-2 read location, and a throwaway
+measurement of whether filing the rows would flip row (g). RL-1145 DP-4 (b) stands, so
+(g) stays the standing FAIL. The rows are *"deferred with you as owner, event: the
+create-read-retire audit's first slice"* (the owner is the lead). Q5: F19
 (`doc-id.py next` defaulting to `origin/main`) stays deferred with the lead.
 
 ## Tasks
@@ -173,6 +181,138 @@ printed `refused: the W37-11 record is missing at --record-ref …` and exited `
 once. No snapshot directory was created.
 
 Landed in: this PR — the pre-squash branch commit that carries Task 2.
+
+### Task 3 — the record move and the reference limb (RL-1145 DP-3 (a), amendments 1, 3, 4)
+
+**Step 1** is recorded under Task 1: `1` tracked file and `183` referencing files at
+`9fe726b2`. The classes were 150 + 9 + 22 + 1 + 1.
+
+**Step 2, the move.** `git mv` took the record from its legacy location to
+`_docid.W37_11_RECORD_PATH`, a `docs/process/` file named `residue-ceiling-record.md`. The
+name says what the file is: the residue-ceiling record. The file's content is unchanged
+(`git status` reads it as a pure rename, `R`).
+
+- **The constant.** `_docid.W37_11_RECORD_PATH` is the only code spelling of the new path
+  (DP-3 amendment 1). Every reader reaches it by symbol: `_docid.load_w37_11_record`,
+  `_docverify.load_w37_11_record_at_ref`, `audit-docs.py`'s `_id_scope_documents` and
+  `_partition_by_w37_11_record`, and `doc-id.py`'s `classify_docs_files`.
+- **The redirect row.** `docs/REDIRECTS.csv` gains one row in the shape of row 3 (empty
+  `old_id`/`new_id`, empty `citing_dir`/`part_ordinal`). It is inserted after the two
+  checklists rows, which are the same kind of move into `process/`. The file's CRLF line
+  endings are kept (`git diff --stat`: 1 insertion). The row's two paths were written from
+  the two constants by symbol.
+- **One addition the ruling did not name: `_docid.W37_11_RECORD_PRE_MOVE_PATH`.** The
+  constant served two roles. One is the record's home in a current tree. The other is its
+  location in the **pre-migration** tree that `migrate --verify` still migrates: the pinned
+  base, `core.json`'s `meta.verified_against_tree`, where the record sits at its legacy
+  location. The move changed the first role and broke the second. Measured before this
+  addition: with only `W37_11_RECORD_PATH` moved, `sweep_exclusion_reason(<the pre-move
+  path>)` returned `None`. So a verify of the pinned base would sweep the record, count its
+  quoted legacy forms as (d)/(e)/(g) residue, and bucket it as row (a)'s `none`. The new
+  constant holds the pre-move location, and two readers use it:
+  `GOVERNANCE_RECORD_EXCLUSIONS` gains a row for it, and `classify_docs_files` buckets
+  either location as `reference`. It is the only code spelling of the old location.
+  Tests name that location by this symbol. RL-1140's rule is kept: this ledger describes
+  the old location and does not spell it.
+- **`docs/INDEX.md` needed no change.** The record carries no RFC-937 header, so INDEX
+  listed it neither before nor after the move. `python3 scripts/doc-index.py` followed by
+  `--check` gave `OK (byte-stable)`, and `git status` shows no INDEX change. INDEX stays
+  in the "generated" class because its own text still spells the legacy directory for
+  other files.
+
+**Step 3, the readings on the move tree** (staged, before the commit):
+
+| Reading | Command, verbatim | Result |
+|---|---|---|
+| First command of acceptance item 7 | `git ls-files "$D" \| wc -l`, with `D` derived by symbol as in Task 1 | **`0`** |
+| Reference limb | `git grep --cached -l -F "$D" -- . ':!docs/REDIRECTS.csv' \| wc -l` | **`183`** |
+| The set against Task 1's | `diff` of the two file lists | one line out (the record's legacy location), one line in (`_docid.W37_11_RECORD_PATH`) |
+
+The limb stays at 183 because the record still quotes legacy paths in its rows as evidence.
+That is the reason `GOVERNANCE_RECORD_EXCLUSIONS` exists. So the five classes still sum:
+150 + 9 + 22 + 1 + 1 = **183**.
+
+- **Frozen, 150.** None was edited. Each is resolved by the redirect row.
+- **Living, 9.** None was edited in this PR, on the lead's Q2 ruling. The six
+  `docs/process/` documents and `docs/roadmap.md` are left to their owners in the docs PR.
+  The two skills were read hit by hit, and neither holds a path to the record:
+  - `.claude/skills/reproducing-ci-locally/SKILL.md:206` is a dated 2026-09-02 incident
+    about another file under the legacy directory.
+  - `.claude/skills/docs-audit/SKILL.md:142` and `:752` describe check 25's resolution
+    sources, which the code still reads. `:161` describes the check's scanning scope.
+    `:302` quotes `document-ids.md`'s own prose.
+  - Neither skill is wrong, so each is **read, and no edit is needed**. Editing a legacy
+    spelling that describes a legacy form would be the sweep that DP-3 amendment 4 forbids.
+- **Instruments and their tests, 22.** Each was read, never swept. A path to the record
+  moved with the constant, and a definition of the legacy form stayed.
+  - **Edited, 6:**
+    - `scripts/_docid.py`: the constant, the new pre-move constant, and the exclusion
+      row.
+    - `scripts/_docverify.py`: three rendered notes now print `{W37_11_RECORD_PATH}`, and
+      six comments or docstrings cite the record by symbol.
+    - `scripts/doc-id.py`: `classify_docs_files` accepts both locations.
+    - `tests/test_doc_id_verify.py`: five loader fixtures now write the record at
+      `dv.W37_11_RECORD_PATH` instead of a literal legacy join (these would have read
+      `()`), and four docstrings cite the record by symbol.
+    - `tests/test_doc_id.py`: the classify test now exercises **both** locations. With
+      the new location alone, the test passes without the carve-out, through `process/`'s
+      own bucket. The sweep-exclusion test and its negative control (`<path>.bak`) cover
+      both constants.
+    - `tests/test_findings_ids.py`: one docstring said the legacy directory "still holds"
+      the record, which is no longer true.
+  - **Stays, 16. Each was read, and each hit is a legacy-form definition, a frozen corpus,
+    or a path to another file:**
+    - `scripts/audit-docs.py`: the legacy register, phase and closure sources, and the
+      comments about them.
+    - `scripts/file-census.py`: the frozen-prefix table.
+    - `scripts/register-lint.py`: the legacy register path and its history.
+    - The five files under `tests/fixtures`: four in the `docs-migration` corpus and the
+      `w37-3-corpus` register. They are frozen fixture corpora.
+    - `tests/test_audit_docs_finding_citations.py`: the docstring about the legacy
+      work-item location.
+    - `tests/test_audit_docs_ids.py`: the census fixture rows at `:1103` and `:1111`,
+      which are data about a legacy location; the legacy-form lists; and the deliberately
+      nonexistent path at `:2363`, which is a sentinel and not the record.
+      `_docid.W37_11_RECORD_PATH` is read there by symbol.
+    - `tests/test_audit_docs_w37_11_ceiling.py`: synthetic control paths.
+    - `tests/test_doc_id_migrate.py`: the migration's legacy source fixtures.
+    - `tests/test_doc_index.py`: a synthetic redirect row.
+    - `tests/test_file_census.py`: the prefix cases.
+    - `backend/tests/test_lineage.py`: a comment on the dissolution.
+    - `backend/tests/test_lineage_census_carveout.py`: a census fixture row.
+    - One constant **stays byte-for-byte although it names the record**:
+      `_docid.CONTROL_PATH_UNRESOLVED`. It is a sentinel row key **inside the record's own
+      rows**, so changing it would un-key those rows.
+- **Generated, 1.** INDEX.md, unchanged (above).
+- **The record, 1.** Moved.
+
+**Docs gates on the move tree:** `audit-docs.py` rc `0`, `All checks passed.`,
+`DISCLOSED (865, at or under the W37-11 residue ceiling):`. The seven owner-edited living
+documents still spell the old location. `doc-id.py check` rc `0`. `doc-index.py --check`
+gave `OK (byte-stable)`.
+
+**Tests:**
+
+- `uv run pytest -q tests/` gave `1024 passed, 1 skipped`.
+- `backend/tests/test_lineage.py` and `test_lineage_census_carveout.py` gave `35 passed`.
+  A first run gave 23 errors, all `GIP_TEST_DATABASE_URL is not set, and the per-worktree
+  test database 'gipricing_code' does not exist yet`. That is environmental. The database
+  was created with `dev-commands`' block (`docker exec … createdb … gipricing_code`, then
+  `alembic upgrade head`), and the run was repeated.
+- `ruff check .` was clean. `mypy` gave `no issues found in 196 source files`.
+- No tracked `docs/process/` file was modified by a test run (face F9).
+
+**Broken-input proofs for the pre-move constant.** Each file was copied aside and
+restored by copy, with a hash check (`RESTORED-OK`):
+
+4. **`classify_docs_files` narrowed back to the current location only.** The classify
+   test failed with `AssertionError: <the pre-move path>`,
+   `assert {'none': 1} == {'reference': 1}`.
+5. **The pre-move exclusion row pointed at a nonexistent path.** The sweep-exclusion test
+   failed with `assert None is not None`, where
+   `None = sweep_exclusion_reason(<W37_11_RECORD_PRE_MOVE_PATH>)`.
+
+Landed in: this PR — the pre-squash branch commit that carries Task 3.
 
 ## PRs
 

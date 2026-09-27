@@ -1849,7 +1849,7 @@ def rows_d(
             verdict = DISCLOSE
             total = sum(residue_by_file.values())
             note = (note + "; " if note else "") + (
-                f"{total} hit(s) filed and ceilinged in docs/audit/w37-11-record.md — "
+                f"{total} hit(s) filed and ceilinged in {W37_11_RECORD_PATH} — "
                 "governed residue the general migration mechanism cannot resolve, "
                 "disclosed per file rather than special-cased in this module"
             )
@@ -2909,7 +2909,7 @@ def row_g(
         verdict = DISCLOSE
         total = sum(residue_by_file.values())
         note = (note + "; " if note else "") + (
-            f"{total} hit(s) filed and ceilinged in docs/audit/w37-11-record.md — "
+            f"{total} hit(s) filed and ceilinged in {W37_11_RECORD_PATH} — "
             "governed residue the general migration mechanism cannot resolve, "
             "disclosed per file rather than special-cased in this module"
         )
@@ -3252,7 +3252,7 @@ def rows_h(
     h1_verdict = _h1_verdict(h1_other, h1_residue, record)
     h1_governed_note = (
         f"{h1_other} failure(s) outside checks 29/30/35 are filed and ceilinged in "
-        "docs/audit/w37-11-record.md — governed residue audit-docs.py cannot itself "
+        f"{W37_11_RECORD_PATH} — governed residue audit-docs.py cannot itself "
         "resolve, disclosed per (file, check) rather than special-cased in this module "
         "(box-end ruling, 2026-09-05)"
         if h1_verdict == DISCLOSE
@@ -3649,7 +3649,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # PR's base, `git archive` of `origin/main`) and this PR's own
                          # HEAD (the pattern and corpus are untouched; only the record +
                          # `_residue_fully_governed` gate changed). Both files' 2 hits are
-                         # filed in `docs/audit/w37-11-record.md` under `cls="d4"` with a
+                         # filed in the W37-11 record (`_docid.W37_11_RECORD_PATH`;
+                         # at its pre-move location then) under `cls="d4"` with a
                          # ceiling of 1 each, so `_docverify.rows_d`'s new governance
                          # check (`_residue_fully_governed`) now returns DISCLOSE instead
                          # of FAIL for this row; a fatal count now excluded from the zero
@@ -3709,7 +3710,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # measured 0/0 exactly as this entry already said; head measures
                          # 1 line / 1 file, entirely this one new refusal. `_box_end_only_
                          # residue_or_none` (generalised from (d7)'s own third disclosed
-                         # class) discloses it; docs/audit/w37-11-record.md carries the one
+                         # class) discloses it; the W37-11 record
+                         # (`_docid.W37_11_RECORD_PATH`) carries the one
                          # entry this class needs, reconciled exact against measurement.
     "d7": DISCLOSE,     # (FR|NFR|OQ|DEP)-[A-Z]+-[0-9]+ — `FAIL` -> `DISCLOSE`, 2026-09-05,
                          # this same commit (the (d7)/(g) executor). The 39 "Next free"/
@@ -3818,7 +3820,8 @@ EXPECTED_VERDICTS: Final[Mapping[str, str]] = {
                          # (`_path_alternative_hits_by_file`'s `fatal_by_file`, this
                          # table's own row (d10) definition, unchanged by this PR) —
                          # measured 1 line / 1 file fatal on BOTH `f35cfe5` and this PR's
-                         # own HEAD. Filed in `docs/audit/w37-11-record.md` under
+                         # own HEAD. Filed in the W37-11 record
+                         # (`_docid.W37_11_RECORD_PATH`) under
                          # `cls="d10"` with a ceiling of 1, so `_residue_fully_governed`
                          # now returns DISCLOSE instead of FAIL for this row — a fatal
                          # count excluded from the zero requirement, owner W37-6.
@@ -3946,7 +3949,7 @@ def _row_sort_key(key: str) -> tuple[str, int]:
 # per row in this file — that repeats the table-hardcoding the forbidden move already
 # names, and an exact count makes every legitimate improvement a set change demanding a
 # table edit. Instead: a ceiling, keyed per (file, class), read from the governed W37-11
-# record (`docs/audit/w37-11-record.md`) the same way `_redirect_map` reads
+# record (`_docid.W37_11_RECORD_PATH`) the same way `_redirect_map` reads
 # `docs/REDIRECTS.csv` — this module carries the loader and the comparison, never a path
 # or a row key. Per (file, class) rather than per row because a single row-level ceiling
 # lets one file regress while another improves and the row total hides exactly that
@@ -3991,7 +3994,7 @@ def refused_fragment_rewrite_disclosure_counts(
     "refuse EVERY undetermined split-source citation in any non-markdown file... and
     DISCLOSE the refusals, never rewrite them." A refusal is disclosed through the SAME
     mechanism every other governed residue already uses -- `_residue_fully_governed`
-    against a `ResidueEntry` the caller writes into `docs/audit/w37-11-record.md` -- not
+    against a `ResidueEntry` the caller writes into `_docid.W37_11_RECORD_PATH` -- not
     a parallel disclosure path. What this function supplies is the `(path, cls, count)`
     a disclosure row must carry, derived FROM the refusal list by symbol, never pasted:
     a hand-typed count could silently drift from what `_rewrite_citations` actually
@@ -4021,7 +4024,7 @@ def _residue_fully_governed(
     residue: Mapping[tuple[str, str], int], record: Sequence[ResidueEntry],
 ) -> bool:
     """True iff every `(path, cls)` hit in `residue` (count > 0) is named in the governed
-    W37-11 record (`docs/audit/w37-11-record.md`) at or above its measured count.
+    W37-11 record (`_docid.W37_11_RECORD_PATH`) at or above its measured count.
 
     Used to convert a row's `FAIL` into `DISCLOSE` once, and only once, its entire fatal
     residue is filed and ceilinged — the box-end ruling's "closes by DISCLOSE, not by

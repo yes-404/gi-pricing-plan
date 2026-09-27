@@ -662,7 +662,7 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
         parts = Path(rel).parts  # ("docs", ...) always, since the pathspec was "docs"
         if len(parts) < 2:
             continue  # defensive: git ls-files -- "docs" cannot itself return "docs"
-        if rel == _docid.W37_11_RECORD_PATH:
+        if rel in (_docid.W37_11_RECORD_PATH, _docid.W37_11_RECORD_PRE_MOVE_PATH):
             # F102's own shape, caught before it repeated: an ordinary-named file added
             # under `docs/audit/` (not `_CLASSIFY_FAMILY_BY_DIR`'s "audit" -> anything,
             # since that subdir holds no document family of its own) falls to `"none"` by
@@ -674,7 +674,9 @@ def classify_docs_files(repo_root: Path) -> dict[str, int]:
             # same reading `process/`/`contracts/` and every `README.md`/`INDEX.md` already
             # get, declared by this one file's own path rather than by widening the
             # `"audit"` subdir wholesale (which would blind row (a) to a real stray file
-            # landing there next).
+            # landing there next). Both locations since W37-11's move: the current one,
+            # and the pre-move one a pre-migration tree still holds
+            # (`_docid.W37_11_RECORD_PRE_MOVE_PATH`'s own comment).
             family = "reference"
         elif parts[-1] in ("README.md", "INDEX.md"):
             family = "reference"
