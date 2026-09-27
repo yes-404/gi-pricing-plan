@@ -25,7 +25,10 @@ cannot afford to lose.
 Three rules survive every phase change:
 
 - **Requirement IDs and section numbers are permanent** (§5). Never renumber; append, mark
-  superseded, or leave a tombstone.
+  superseded, or leave a tombstone. **Amended 2026-09-27 by RFC-937 D2** — ids were
+  renumbered once, by the W37-6 migration run, onto the single global sequence §5 now
+  names; permanence holds from that sequence onward, and a product identifier (a `VR-`,
+  artifact id or job kind) is the spec's, not this sequence's, and was not touched.
 - **Counts and status that change are not written in this file.** `req-coverage.py` prints
   requirement counts; `docs/roadmap.md` holds workstream and component status. Four
   incidents of the copy here going stale:
@@ -111,9 +114,15 @@ requirements, data contracts, interfaces, workflows, cross-module dependencies, 
 dependencies, non-functional requirements, open questions. What each must contain is in
 `.claude/skills/spec-change`: **the procedure for touching `docs/`, read it first**.
 
-**Requirement IDs are permanent: never renumber, only append or mark superseded.** Section
-numbers here obey it too: §6 and §8 are tombstones, §2, §11, §13 and §14 keep their rules
-and point at the skill with the procedure, and no number is ever reused.
+**Requirement IDs are permanent: never renumber, only append or mark superseded.**
+**Amended 2026-09-27 by RFC-937 D2.** Requirement ids were renumbered once, by the W37-6
+migration run, onto the single global sequence [`document-ids.md`](docs/process/document-ids.md)
+defines; the permanence rule holds from that sequence onward — append or mark superseded,
+never renumber. **Document and row ids are `document-ids.md`'s; product identifiers stay
+the spec's** — a `VR-`, artifact id or job kind is governed by `docs/specs/` and was not
+touched (RFC-937 D5). Section numbers here obey it too: §6 and §8 are tombstones, §2, §11,
+§13 and §14 keep their rules and point at the skill with the procedure, and no number is
+ever reused.
 
 ## 6. Dataset Validation — *superseded by `01-data-management.md`*
 
