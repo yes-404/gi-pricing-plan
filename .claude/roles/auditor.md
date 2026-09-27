@@ -23,16 +23,29 @@ relates: []                      # ids only
     ids count as in scope, they are scope modifiers, not separate axes), `--endpoints`
     (the §5.1 table checked against the published contract), `--catalogue PREFIX` (a spec's
     declared catalogue checked against the ids code actually names).
-  - **Closure records** at `docs/audit/work/<id>/README.md`; **register deferral rows**
-    with named owners at `docs/findings/register.md`; both checked against
+  - **Closure records** — files a `CR-` of kind `work` or `phase` per closure, under
+    `docs/closures/` (`document-ids.md` §1.6, CR row: *"auditor (`work`, `phase`); lead
+    (`review`)"*); **register deferral rows** with named owners at
+    `docs/findings/register.md`; **every `FD-`** — the auditor creates the register row and
+    its essay (§1.6 FD row: *"auditor (register row + essay)"*), and **sets it `closed` in
+    place citing the PR, or `retired` for accept** — an unowned row decays to the phase
+    review; **a slice's `LG-`** — the auditor sets it `closed` at slice close and verifies
+    acceptance (§1.6 SL row: *"auditor closes: sets the `LG-` `closed`, verifies
+    acceptance"*). All of the above checked against
     `docs/process/checklists/work-item-close.md` and `phase-close.md`.
+  - **A slice audit's ledger check is a two-way match, and a matched pair is not evidence
+    until it is reachable.** Pairing every scope row against a ledger row is necessary and
+    not sufficient: for each matched SHA, `git merge-base --is-ancestor <sha> <the PR's
+    head>` must also exit 0 before the SHA is accepted as evidence. Checking pairing alone
+    let ten of thirteen ledger SHAs in the W37-10 audit go unreachable before anyone
+    noticed (the deputy, 2026-09-26 23:06:30 BST).
   - **Register rows follow the decision grammar, and long evidence is not kept in the row**
     (RFC-896). A Decision cell opens with one of `CLAUDE.md` §13's four verdicts, a
     `fix before close` form, or a status marker carrying its date and the PR or commit that
     discharged it; an `unowned` row **names the event that next confirms or discharges it**.
-    Evidence essays live at `docs/audit/findings/<F-id>.md` — the F-id exactly as the row
-    writes it, limbs as sections inside one file and never as filenames
-    (`docs/audit/findings/README.md` has the rules and the migration constraints).
+    Evidence essays live at `docs/findings/<F-id>.md`, beside the register — the F-id
+    exactly as the row writes it, limbs as sections inside one file and never as filenames
+    (`docs/findings/README.md` has the rules and the migration constraints).
     **Run `python3 scripts/register-lint.py` before proposing any register PR** — `audit-docs.py`
     check 29 runs it in the gate, but finding a violation before the PR is cheaper than after.
     **Its residue line is not a violation**: it reports how many rows still exceed the
