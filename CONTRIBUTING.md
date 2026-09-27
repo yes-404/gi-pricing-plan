@@ -25,11 +25,33 @@ own agents both use.
 ## Issues are intake, the register is truth
 
 A substantiated issue is triaged into the project's internal tracking (the findings
-register under `docs/audit/`, an open question, or a task) by the team. From that point,
-the issue is a pointer to the internal artifact that owns the work, not a second place
-where the same finding is tracked — so don't expect a running commentary on the issue
-itself; expect it to link to where the work actually lives, and to close or be updated
-when that does.
+register at [`docs/findings/register.md`](docs/findings/register.md), an open question, or
+a task) by the team. From that point, the issue is a pointer to the internal artifact that
+owns the work, not a second place where the same finding is tracked — so don't expect a
+running commentary on the issue itself; expect it to link to where the work actually lives,
+and to close or be updated when that does.
+
+A finding is filed as an `FD-` document under `docs/findings/`, with a row added to
+`register.md`. A proposal that would change a standing decision is filed as an `RFC-` under
+`docs/rfcs/`. A decision already made is recorded as an `RL-` ruling under `docs/rulings/`.
+
+## Ids, branches, and PR titles
+
+A new document gets its id from the next free integer in the project's single sequence:
+
+```bash
+python3 scripts/doc-id.py next
+```
+
+That integer is the document's id for life — it never gets renumbered, only marked
+superseded. The filename carries it padded to five digits, and the directory it lives in
+names its family (`docs/process/document-ids.md` has the full family table).
+
+Branches and PRs name the slice they deliver: `sl-<n>-<slug>` and `SL-<n>: <title>`. **Not
+yet in force as of 2026-09-27** — no `SL-` row has been minted; a PR today names its `WK-`/
+`W37-n` slice instead. A PR with no slice at all (a hotfix, an external contributor, a
+dependency bump) gets one minted by the lead at triage, under the phase's standing `WK-`
+maintenance item. Bot-authored PRs are exempt.
 
 ## Where to start reading
 
