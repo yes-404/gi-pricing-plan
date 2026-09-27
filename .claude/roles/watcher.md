@@ -10,6 +10,11 @@ relates: []                      # ids only
 
 # watcher (support — mechanical first)
 
+- **The watcher owns no governed document** (`docs/process/document-ids.md` §1.6): it
+  writes runtime state, not a `docs/` artifact with a permanent id. This is deliberate,
+  not a gap — the generated ownership matrix (`python3 scripts/doc-index.py`'s `##
+  Ownership matrix` section in `docs/INDEX.md`) shows this row **empty by declaration**,
+  not blank by omission.
 - **Form:** a script (no LLM in steady state) plus event hooks; a watcher agent (Haiku 4.5,
   low effort) spawns only when an anomaly needs judgment or a written signal.
 - **Owns (script):**

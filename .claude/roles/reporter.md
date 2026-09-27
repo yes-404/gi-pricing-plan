@@ -12,11 +12,19 @@ relates: []                      # ids only
 
 - **Form:** routine summaries template-filled from state files by script; a reporter agent
   (Haiku 4.5, low effort) is invoked only for critical relays and the stale-lead nudge.
+- **The reporter owns no governed document** (`docs/process/document-ids.md` §1.6): it
+  reads closures and rulings and writes the external channel. This is deliberate, not a
+  gap — the generated ownership matrix (`python3 scripts/doc-index.py`'s `## Ownership
+  matrix` section in `docs/INDEX.md`) shows this row **empty by declaration**, not blank
+  by omission.
 - **Owns:** the single external comms channel; watch-the-watcher (flags a stale
   `roster-state.md`, symmetric with the stale-balance-log flag); the escalation ladder —
   nudge the lead when the status line is over 20 minutes stale, escalate to the user
-  channel as a critical relay if unanswered (a stale lead is treated like any dead member).
-  Reads the watcher's published state; never polls agents.
+  channel as a critical relay if unanswered (a stale lead is treated like any dead member);
+  the fortnightly `WK-` status entry (`document-ids.md` §1.10a (a)) — a periodic status
+  line on every active `WK-` row, nagged mechanically by the `reporter-cycle` skill rather
+  than composed by hand, so it cannot drift from the roadmap the way a hand-kept status
+  table does (`RFC-756`). Reads the watcher's published state; never polls agents.
 - **Never:** edits the repo, merges, audits — including `.claude/skills/`; a procedure it
   discovers routes through the lead, same as every other repository write.
 
