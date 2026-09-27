@@ -233,7 +233,7 @@ writes the record.
 | F8 | Processes killed by pattern | LG-1141 `:350-353` (S-9, the ruling). The instances are recorded in the closure record | 10 |
 | F9 | A test that changed tracked `docs/process/` during the run | None found. The record is written in the closure record | 10 |
 | F10 | The ledger alias vocabulary | None found. The record is written in the closure record. The nearest mention is [LG-1143](../ledgers/LG-01143-w37-9-root-governance-claude-md-and-the-public-face.md) `:256-260` (the alias-class disclosed hits) | 10 |
-| F11 | The reporter clock | None found. The record is written in the closure record | 10 |
+| F11 | A stamp composed before the write: seven slips on 2026-09-27, four by the reporter and three by the lead, recorded as one face. It is a breach of a sufficient rule (`lead.md` item 1 already requires `date`'s pasted output), not a §15 finding against a role file. This is the deputy's ruling, relayed by the lead | No governed record. The lead's three slips are recorded in the lead's correction entry in the to-deputy channel file at 11:03:16 BST (local, not in the repo). The closure record writes the face | 10 |
 | F12 | A stale grep baseline | None found. The record is written in the closure record | 10 |
 | F13 | The dead example finding id (the Finding prefix with the number ninety-three, used as an illustration) | None found. The live sites are `docs/process/document-ids.md:204`, RFC-937 `:206`, and `PL-1072:703`. No finding with that number exists | 10 |
 | F14 | F-a and F-b (LG-1143's findings) | LG-1143 `:198`, `:210-211` | 10 |
