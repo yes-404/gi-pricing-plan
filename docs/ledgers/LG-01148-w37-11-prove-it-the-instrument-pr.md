@@ -312,7 +312,339 @@ restored by copy, with a hash check (`RESTORED-OK`):
    failed with `assert None is not None`, where
    `None = sweep_exclusion_reason(<W37_11_RECORD_PRE_MOVE_PATH>)`.
 
+**The lead's rulings on Task 3, written 2026-09-27 13:26:57 BST.** They are quoted from the lead's message
+that accepted Task 3 at `cdc35fa2`:
+
+- **`_docid.W37_11_RECORD_PRE_MOVE_PATH` was adopted by the lead**, as a mechanism under
+  RL-1145 DP-3. The lead's reasoning: amendment 1 governs how the new path is spelled, and
+  the pre-move constant is the only code spelling of the old location, which the
+  pinned-base verify still migrates. It is justified by the measurement above
+  (`sweep_exclusion_reason(<old>)` returned `None` with the constant alone) and proved by
+  broken-input proofs 4 and 5.
+- **The two skills were not edited, and the lead accepted this.** Neither holds a path to
+  the record, and an edit would be the sweep that amendment 4 forbids.
+
+**A side effect for the row-9 cleanup: the test database `gipricing_code`.** It was
+created in the shared postgres container on 2026-09-27 for this worktree's backend tests,
+with `docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing gipricing_code`
+and then
+`GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_code uv run alembic upgrade head`
+(`dev-commands`, the per-worktree test database block). Drop it when the worktree is
+released.
+
 Landed in: this PR — the pre-squash branch commit that carries Task 3.
+
+### Task 4 — the census-row shrink, and C15 (RL-1145 DP-2 amendment 4; the deputy's Q4 ruling)
+
+**Step 1, the census read before the shrink, with this PR's tool.** Scratch script
+`t4_verify.py` (local, in the job directory, not committed) called
+`_docverify.verify(docid, ref='0651c1e265648cbd3918adfc729ad965b83b1e0b',
+record_ref='cdc35fa292334d3337d5f172f26a3411ae22c6e9', keep=True, with_baseline=True)`, and
+read `VerifyResult.measured_residue` for the record's three census rows. It ran from
+12:45:39 to 13:23:00 BST in the verify slot `verify-1`, with the `dev-commands` thread
+caps, and exited `rc 0`. The tool was the code at `cdc35fa2`, and 523 record entries were
+read at the record ref.
+
+| Census row (`cls`) | Ceiling before | `measured_residue` |
+|---|---|---|
+| `h1-check36` | 17 | **0** |
+| `d9` | 14 | **0** |
+| `d10` | 2 | **0** |
+
+The key is the record's own control-path key for the census CSV (`CR-1063` §3). All three
+read 0, so the stop condition did not fire.
+
+**The same run is the end-to-end proof of Task 3's move.** It returned
+`set_changes = []` and `exit_code = 1`. Every verdict equals `EXPECTED_VERDICTS`, and the
+only FAIL is (g). g2 read `classified-by-none=207`. `residue_changes` held exactly three
+entries, the `PROGRESSED (W37-11 record can shrink)` lines for these three rows, and **no
+`REGRESSION`**. Its render opens with
+*"UNCHANGED VERDICT SET: 1 fatal row(s), matching the recorded set of 1 in
+`_docverify.EXPECTED_VERDICTS` — no row verdict moved, but the W37-11 residue ceiling did:
+progress only, so the record can shrink and the exit code is unaffected."*, followed by
+`W37-11 RESIDUE CEILING (3)`. This is C16's fix seen on the real corpus. Main's CI render
+printed no residue block at all.
+
+**Step 2, the shrink.** Commit `0a0effb9` touches only the record. Each of the three rows
+changes its count cell (17 → 0, 14 → 0, 2 → 0), and its reason cell gains one sentence:
+*"Shrunk <n> -> 0 in W37-11, written under the W37-11 lead's authority (RL-1145 DP-3
+amendment 5): measured_residue 0 at --ref 0651c1e… with --record-ref cdc35fa2…, the code
+PR's tool, per RL-1145 DP-2 amendment 4 (LG-1148 Task 4)."* The path, `cls` and owner
+cells are unchanged. After the commit, `audit-docs.py` gave rc `0`, `All checks passed.`,
+`DISCLOSED (865, at or under the W37-11 residue ceiling):`.
+
+**Adopted by the W37-11 lead: the three census-row shrinks of `0a0effb9` (RL-1145 DP-3
+amendment 5; deputy 12:06:57 Q3).** Written 2026-09-27 13:26:57 BST, on the lead's message adopting the
+diff unamended, after checking the word diff: 1 file, 3 lines, path, `cls` and owner
+unchanged.
+
+**Step 3, confirmation.** The step 1 run shows no `REGRESSION`, and its only
+`PROGRESSED` lines are the three rows shrunk here. On the lead's ruling there was no
+second 20-minute local run. The PR's `docs` CI job runs the verify with
+`--record-ref HEAD` at the final head, and that run is the post-shrink reading. It is
+quoted at the PR request.
+
+**Step 4, C15 — option (a): re-derived and quoted, no rows filed.** Under the deputy's
+ruling of 12:06:57 BST, no g2 row is filed in W37-11, (g) stays the standing FAIL
+(RL-1145 DP-4 (b)), and the rows are deferred with the lead as owner. The event is the
+first slice of the create-read-retire audit.
+
+- **Predicate, verbatim:** row (g)'s own `Row.residue`, filtered to `count > 0`, from
+  `_docverify.verify(..., ref='0651c1e265648cbd3918adfc729ad965b83b1e0b',
+  record_ref='cdc35fa292334d3337d5f172f26a3411ae22c6e9')`. The tree is `0651c1e` (the
+  pinned base, archived), and the tool is the code at `cdc35fa2`. Keys are
+  `(control path, cls)`, the record's own key space.
+- **Population: 207 keys, 207 hits** (each key 1). This equals g2's `classified-by-none=207`.
+- **Keys that lack a row in the record at `cdc35fa2`: 207 of 207.** Keys under their
+  ceiling: 0. **This corrects the "103" figure, by measurement.** The deputy's ruling read
+  "the number of keys lacking a row (103 as read)", and 103 is #757's figure. #757
+  measured it against that branch's own tip record, which carried a 123-row g2 addition,
+  and #757 then dropped that addition. `main`'s record carries no g2 row at all. So at the
+  DP-2 read location, all 207 keys lack a row.
+- **Would filing the rows flip (g)? Yes.** This was measured on a scratch augmented record
+  (the real record plus the 207 keys at their measured counts), held only in memory by the
+  scratch script. Nothing was written into the repository. Two differently built
+  instruments agree:
+  - `_docverify._residue_fully_governed(g2_residue, augmented)` returned `True`;
+  - `_docverify.row_g` itself, recomputed on the kept snapshot, returned **DISCLOSE** with
+    the augmented record and **FAIL** with the real record. g1 is clean (0 mangled, 0
+    provenance mismatches, 0 bare-comma violations), so nothing blocks the DISCLOSE path.
+  - A flip is a set change (`EXPECTED_VERDICTS` records (g) as FAIL), so the run would exit
+    `3`. This is why the deputy ruled that the rows are not filed here.
+- **Local evidence (not governed, not in the repository):** the raw TSV is
+  `~/gi-pricing-plan.local/handover/w37-11-c15-g2-population-0651c1e-tool-cdc35fa2.tsv`
+  (header `control_path, cls, count`, 207 rows). The scratch script's JSON output is kept
+  in the job directory beside it.
+
+**The keys, grouped by `cls`.** Legacy forms are described, not spelled (RL-1140). Four
+substitutions make the list regenerable:
+
+- `⟨audit⟩/` is the legacy audit directory, the `'legacy audit path'` entry of
+  `_docid.LEGACY_FORM_PATTERNS`;
+- `⟨notes⟩/` is the legacy notes directory (`'legacy notes path'`);
+- `⟨plans⟩/⟨2026⟩-` is the legacy dated-plan prefix (`'legacy dated-plan path'`);
+- `⟨F:nn⟩` is a two-digit bare finding id (`'finding id (bare form)'`).
+
+Every other character is verbatim, and the count follows each key.
+
+- **`g2-cause3-legacy-path-citation`: 103 key(s), 103 hit(s).**
+  - `.claude/skills/watcher-runtime-state/scripts/write_runtime_state.py` (1)
+  - `CLAUDE.md` (1)
+  - `backend/src/app/platform/rating_versions.py` (1)
+  - `backend/tests/test_contracts.py` (1)
+  - `docs/_templates/FD.md` (1)
+  - `docs/_templates/LG.md` (1)
+  - `⟨audit⟩/checklists/work-item-close.md` (1)
+  - `⟨audit⟩/findings/F102.md` (1)
+  - `⟨audit⟩/findings/⟨F:27⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:66⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:72⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:76⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:77⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:80⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:81⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:83⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:87⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:88⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:90⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:93⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:94⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:99⟩.md` (1)
+  - `⟨audit⟩/ruling-acceptance-item-sweep.md` (1)
+  - `⟨audit⟩/work/W37-5b/README.md` (1)
+  - `⟨audit⟩/work/W37-5c/README.md` (1)
+  - `⟨audit⟩/work/nt-0010-0011-adoption/README.md` (1)
+  - `⟨audit⟩/work/nt-0012-0013-0014-adoption/README.md` (1)
+  - `⟨audit⟩/work/pr-265/README.md` (1)
+  - `⟨notes⟩/0003-duplicated-status-goes-stale.md` (1)
+  - `⟨notes⟩/0010-layered-slice-based-workflow.md` (1)
+  - `⟨notes⟩/0011-per-agent-model-and-skill-settings.md` (1)
+  - `⟨notes⟩/0013-the-lead-is-the-highest-error-node.md` (1)
+  - `⟨notes⟩/0018-a-turn-that-ends-strands-what-it-started.md` (1)
+  - `⟨notes⟩/0019-one-id-per-document.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-22-w6b-contracts-and-drift-guard.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-24-w6b-1a-model-detail-non-glm-arms.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-26-w6b-slice-map-revised-3.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-27-closure-audit-standard.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-nt-0010-0011-adoption.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-nt-0010-0011-reconciliation-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-f30-ceiling-meter-addendum.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-nfr-rate-2-sampling-structural-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-ruling-vs-plan-scope.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-slice-parallelism-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-nt-0014-0017-reconciliation.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-nt-0014-q1-q3-q4-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-nt-0017-maintainer-decisions.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-w11-4-always-capture-correction.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-w11-reopen-direction.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-31-f62-timing-ms-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-31-nt-0016-investigation.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-01-nt-0016-landing-package.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-01-nt-0016-q1-q2-q3-q7-general-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-01-nt-0016-slice2-fr-data-32-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-01-ruling-61-notes-tombstone-stubs-watched.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-5b-slice-decision.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-5c-slice-decision.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-6-go-ahead-ask.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-6-leaf-plan-findings-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-6-migration-run-leaf-plan-v2.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-6-migration-run-leaf-plan.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-6-outstanding-obligations.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-6-twelve-non-close-records-derivation.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-commit-boundary-and-plan-reviews-shape-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-container-family-and-line-citations-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-field-set-and-rollup-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-gap-1-ruling-86-owner-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-guard-arithmetic-and-ledger-family-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-migration-preconditions-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-owner-field-derivation.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-pending-proposals-container-family-derivation.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-readme-owner-derivation.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-rfc-readme-row-and-stamp-set.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-roadmap-transform-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-ruling-88-acceptance-amendment.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-ruling-a-series-and-standalone-ruling-files.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-ruling-a-series-family-derivation.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-stage-boundary-authority-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-template-parser-conflicts-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-vendored-exemption-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-d1-d2-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-go-ahead-re-ask.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-maintainer-decisions.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-renewed-window-handover.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-ruling-100-split-source-citations.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-ruling-98-prose-migration.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-time-boxed-delegation.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-04-w37-6-ruling-107-check-32-36-shared-predicates.md` (1)
+  - `docs/process/delivery-process.md` (1)
+  - `docs/research/w11-task-2d-nfr-rate-1-full-path.md` (1)
+  - `packages/model-schema/tests/test_rating_algorithm.py` (1)
+  - `packages/pricing-core/src/pricing_core/rating/runtime.py` (1)
+  - `packages/pricing-core/tests/test_rating_compile_bundle.py` (1)
+  - `scripts/hooks/retry_cap_hook.py` (1)
+  - `scripts/register-lint.py` (1)
+  - `tests/test_audit_docs_w37_11_ceiling.py` (1)
+  - `tests/test_doc_index.py` (1)
+  - `tests/test_notes_move_citations.py` (1)
+  - `tests/test_register_lint.py` (1)
+  - `tests/test_retry_cap_hook.py` (1)
+  - `tests/test_ruling_acceptance_census.py` (1)
+- **`g2-slash-compound-citation (unassigned — reported, not investigated)`: 29 key(s), 29 hit(s).**
+  - `backend/src/app/worker/scoring_handlers.py` (1)
+  - `⟨audit⟩/file-taxonomy-draft.md` (1)
+  - `⟨audit⟩/phases/1b/README.md` (1)
+  - `⟨notes⟩/0006-two-rules-for-reading-an-artifact.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-5-partial-dependence-exposure-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-5-partial-dependence-exposure.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-26-w6b-slice-map-revised-2.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-1-evaluator-core.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-2-realtime-scoring-endpoint.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-3-batch-scoring.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-3-d6-batch-resumability-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-4-trace-sampling-persistence.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-decision-points-recovery.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-scoring.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-slice1-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-slices-3-4-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-nt-0015-q1-q5-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-w11-reopen-scope-and-batch-frame-contract-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-row-g-reading.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-ruling-103-ef-readings-and-index-placement.md` (1)
+  - `docs/research/w11-task-3d-nfr-rate-5.md` (1)
+  - `docs/research/w11-task-4d-nfr-rate-12.md` (1)
+  - `docs/specs/03-rating-engine.md` (1)
+  - `packages/pricing-core/src/pricing_core/rating/compile.py` (1)
+  - `packages/pricing-core/tests/test_rating_compile.py` (1)
+  - `scripts/audit-docs.py` (1)
+  - `scripts/bench-rating.py` (1)
+  - `scripts/bench-trace-size.py` (1)
+  - `scripts/register-owed.py` (1)
+- **`g2-unmapped-work-slice-key (named elsewhere, reported here by shape)`: 28 key(s), 28 hit(s).**
+  - `⟨audit⟩/findings/⟨F:91⟩.md` (1)
+  - `⟨audit⟩/findings/⟨F:92⟩.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-22-w6b-contracts-and-drift-guard-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-22-w6b-slice-map.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-10-untested-behaviour-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-2-validation-rule-catalogue-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-3-dataset-list-derived-fields-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-4-ebm-predict-arm-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-4-ebm-predict-arm.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-6-backtest-and-objective-endpoint-tests-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-7-workspace-identity-and-selection-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-8-artifact-library-list-routes-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-9-transparency-exposure-share-ledger.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-23-w32-closure-proposal.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-24-w32-11-certificate-floors-and-two-generated-sides.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-24-w6b-13b-catalogue-chain.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-24-w6b-1b-diagnostics-view.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-25-w6b-11-workspace-selector.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-25-w6b-13-rule-versioning-screen.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-25-w6b-3-dataset-list-contents.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-25-w6b-4a-model-spec-builder-builtin.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-25-w6b-4b-custom-objective-arm.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-25-w6b-5a-treeshap-holdout-pass.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-25-w6b-5b-suggestion-panel.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-26-w6b-12-dataset-lineage.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-26-w6b-15-minor-rename.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-migration-revert-proof.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-03-w37-6-window-handover.md` (1)
+- **`g2-cause2a-range-citation`: 15 key(s), 15 hit(s).**
+  - `⟨audit⟩/phases/1b/register.md` (1)
+  - `⟨audit⟩/register.md` (1)
+  - `⟨audit⟩/retrofit-impossible.md` (1)
+  - `⟨audit⟩/work/W11/README.md` (1)
+  - `⟨notes⟩/0005-deferred-items-with-no-durable-custody.md` (1)
+  - `docs/phase-0-status.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-1-2-rate-table-maturity-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-algorithm-pin-maturity.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-slice2-rulings.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-slices-2-4-planning-readiness.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-slices-2-4-rulings.md` (1)
+  - `docs/skills-map.md` (1)
+  - `docs/specs/06-governance.md` (1)
+  - `docs/specs/07-platform.md` (1)
+  - `scripts/doc-id.py` (1)
+- **`g2-other`: 12 key(s), 12 hit(s).**
+  - `.claude/skills/planning-with-files/scripts/check-complete.ps1` (1)
+  - `.claude/skills/planning-with-files/scripts/set-active-plan.ps1` (1)
+  - `backend/tests/test_wf01_journey.py` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-3-batch-readiness-and-d6.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-nt-0012-0013-0014-adoption.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-w11-2b-bundle-resolution-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-w11-4b-trace-environment-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-w11-nfr-rate-11-quote-input-stores-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-08-30-w11-service-account-permissions-ruling.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-01-maintainer-delegation-and-nt-0019-precedence.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-02-w37-vacuous-acceptance-item-ruling.md` (1)
+- **`g2-cause1-foreign-frontmatter`: 11 key(s), 11 hit(s).**
+  - `.claude/skills/close-workstream/SKILL.md` (1)
+  - `.claude/skills/dev-commands/SKILL.md` (1)
+  - `.claude/skills/docs-audit/SKILL.md` (1)
+  - `.claude/skills/git-hygiene/SKILL.md` (1)
+  - `.claude/skills/phase-review/SKILL.md` (1)
+  - `.claude/skills/repo-architecture/SKILL.md` (1)
+  - `.claude/skills/reporter-cycle/SKILL.md` (1)
+  - `.claude/skills/requesting-code-review/SKILL.md` (1)
+  - `.claude/skills/spec-change/SKILL.md` (1)
+  - `.claude/skills/watcher-runtime-state/SKILL.md` (1)
+  - `.claude/skills/writing-plans/SKILL.md` (1)
+- **`g2-cause4-compound-token-adjacent-uppercase`: 5 key(s), 5 hit(s).**
+  - `⟨audit⟩/closure-records.md` (1)
+  - `⟨audit⟩/plan-reviews.md` (1)
+  - `⟨plans⟩/⟨2026⟩-09-04-w37-6-migration-run-ledger.md` (1)
+  - `scripts/_docid.py` (1)
+  - `scripts/_docverify.py` (1)
+- **`g2-new-frontmatter-stamp-no-move (unassigned — reported, not investigated)`: 4 key(s), 4 hit(s).**
+  - `.claude/roles/watcher.md` (1)
+  - `.claude/skills/README.md` (1)
+  - `README.md` (1)
+  - `⟨audit⟩/findings/README.md` (1)
+
+Landed in: this PR — the record commit `0a0effb9` (step 2) and the ledger commit that
+carries this section, both pre-squash branch commits.
 
 ## PRs
 
