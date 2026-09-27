@@ -227,6 +227,7 @@ adds only `RL-1140` and its `docs/INDEX.md` row), with its command beside it.
 | **S-8** — a filed reproduction discharges a debugging skill's reproduce step | ruled by the deputy, 2026-09-27 02:29:40 BST | `.claude/roles/executor.md` | T9's commit | **T9**, folded in. A new charter obligation |
 | **S-9** — stop a process by pid, verified by `readlink /proc/<pid>/cwd`, never by pattern | ruled by the deputy, 2026-09-27 04:38:48 BST | `.claude/roles/executor.md` | T9's commit | **T9**, folded in. A new charter obligation |
 | **S-10** — an executor ends its turn after every report and every commit | ruled by the deputy, 2026-09-27 05:52:14 BST | `.claude/roles/executor.md` | T9's commit | **T9**, folded in. A new charter obligation |
+| **S-11** — the `_stamp_header` harness-only skip in `scripts/doc-id.py` and its tests in `tests/test_doc_id_migrate.py`, the fix for docs run 36281191974's `doc_id_verify` exit 3 | ruled by the deputy, 2026-09-27 03:21:39 BST | `scripts/doc-id.py`, `tests/test_doc_id_migrate.py` | `35c954c1` | **T2**, folded in; a dated correction per standing rule (i) |
 
 **S-7, measured.** The population is the check-36 output, not a line citation:
 
