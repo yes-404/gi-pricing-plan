@@ -142,6 +142,51 @@ top-level `---` block (not the unread commented foot); adds a three-case test in
 this tree (T3/T4 have not merged headers yet); `grep -n '"tools"\|"model"\|"description"'
 scripts/_docid.py` has no hit inside `_KNOWN_KEYS`.
 
+**Gate-table note (supersedes the 01:16:48 diagnosis below):** docs run 36281191974 at
+414a9335: `doc_id_verify` exited 3. The 01:16:48 BST diagnosis — that check 30's headerless
+`.claude/` lookup was the regression — was **withdrawn**: a direct comparison of
+`python3 scripts/audit-docs.py`'s output between `main` and 414a9335, run in this
+worktree, was byte-identical, and `_docverify`'s own snapshot metadata showed
+`doc_id_verify`'s (h1) row shells the `--ref` tree's *own* frozen copy of
+`scripts/audit-docs.py`, never this branch's — so no check-30 edit on this branch could
+ever have moved that row. That fix — a local commit on top of `414a9335` — was reset away
+(`git reset --hard 414a93353bd5252820fee1c3b4b2ae3b8fd1a5c1`) before pushing; its SHA is
+not an ancestor of this ledger's own tree and is not cited by number for that reason.
+
+**The re-diagnosed cause, ruled by the deputy (03:00:11, 03:01:09, 03:21:39 BST), proven
+by a control pair** (the branch as-is: 27 fatal residue changes; with only
+`docs/_templates/REFERENCE.md` reverted: 0): `scripts/doc-id.py`'s `_template_header_lines`
+(`:1123-1136`) reads the checkout's `docs/_templates/REFERENCE.md`, and `_stamp_header`
+(`:1139-1206`) passed every key that template declares straight through — including T1's
+four new placeholder lines (`name:`, `description:`, `tools:`, `model:`). `migrate()`
+therefore stamped those four *placeholder* keys into all 31 of the Reference family's real
+stamp targets, and the migrated snapshot's own `audit-docs.py` check 30 then rejected the
+placeholder values in 27 of those 31 files (`.claude/agents/*.md`, `.claude/skills/*/
+SKILL.md` under `_id_scope_documents()`'s scope roots) — 27 files × 4 keys = the migrated
+snapshot's h1 `check 30=108`; the same +4-line mismatch is (g)'s provenance mismatch and
+(d)'s +124.
+
+**Condition C3 — the 4 stamped-but-not-flagged Reference files (31 stamp targets, 27
+flagged):** `README.md`, `deploy/README.md`, `packages/README.md`,
+`examples/fremtpl2/README.md` — verified present at this tree, each `family: reference`.
+Not flagged because none is under `_id_scope_roots()`'s four post-migration roots
+(`scripts/audit-docs.py:1288-1294`: `ROOT` (=`docs/`), `.claude/roles`, `.claude/skills`,
+`.claude/agents`) — a repo-root or `deploy`/`packages`/`examples` README is outside every
+one, so check 30 never walks it, stamped placeholder keys and all.
+
+**The fix (commit below):** one module-level constant in `scripts/doc-id.py`,
+`_HARNESS_ONLY_TEMPLATE_KEYS`, naming the same four keys; `_stamp_header` skips them
+(next to the existing `slice`/`deliverable`/`lands_in`/`trigger` skip); the new test
+`test_reference_stamp_emits_none_of_the_four_harness_only_keys` in
+`tests/test_doc_id_migrate.py` asserts none of the four are ever emitted, read against the
+real `docs/_templates/REFERENCE.md`.
+
+**Broken-input proof:** removed only the new `elif key in _HARNESS_ONLY_TEMPLATE_KEYS:
+continue` skip clause (the constant declaration untouched) — the new test failed, all four
+keys present in the rendered stamp. Restored the clause — the new test, and the full
+`tests/test_doc_id_migrate.py` (303 tests) and `tests/test_audit_docs_ids.py -k check_30`
+(11 tests), all passed.
+
 ## PRs
 
 | # | Branch | Head | Tasks | State |

@@ -1136,6 +1136,25 @@ def _template_header_lines(prefix: str) -> list[str]:
     return lines[1:closing]
 
 
+#: The four Claude Code harness keys `docs/_templates/REFERENCE.md`'s top-level block
+#: declares (RL-1140 DP-8.1) so `.claude/agents/*.md` and `.claude/skills/*/SKILL.md`
+#: files' own front matter is *permitted*, never *required*, for the Reference family.
+#: `_stamp_header` below is a writer, not a reader of those files: migration has no data
+#: source for `name:`/`description:`/`tools:`/`model:` on any of the 31 Reference
+#: documents the template actually renders for (READMEs, generated indexes — never the
+#: harness files themselves, which the migration does not touch), so stamping them with
+#: the template's own literal placeholder text would write four unpopulated keys into
+#: every one of those files' headers. `check_header_fields` (`audit-docs.py` check 30)
+#: then rejects each because `_id_scope_documents()`'s real .claude/ files are the only
+#: ones the Reference-family widening ever meant to license them for — never a plain
+#: Reference README. One constant, read by both `_stamp_header`'s skip below and this
+#: module's own test, so the licensed set and the skipped set cannot diverge (W37-8 T2,
+#: 03:21:39 BST re-diagnosis).
+_HARNESS_ONLY_TEMPLATE_KEYS: Final[frozenset[str]] = frozenset(
+    {"name", "description", "tools", "model"}
+)
+
+
 def _stamp_header(
     prefix: str,
     number: int | None,
@@ -1196,6 +1215,8 @@ def _stamp_header(
             line = re.sub(r"work:\s*\S+", f"work: {work}", line)
         elif key in ("slice", "deliverable", "lands_in", "trigger"):
             continue  # not populated by this slice's migration — no data source for them
+        elif key in _HARNESS_ONLY_TEMPLATE_KEYS:
+            continue  # RL-1140 DP-8.1: permitted for Reference, never stamped by migration
         elif key in ("supersedes", "superseded_by", "corrected_by", "corrects", "relates"):
             pass  # keep the template's own empty default ([] / ~)
         rendered.append(line)

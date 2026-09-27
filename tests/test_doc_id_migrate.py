@@ -6070,6 +6070,28 @@ def _reference_census(module: types.ModuleType, root: pathlib.Path) -> list[Any]
     return list(targets)
 
 
+def test_reference_stamp_emits_none_of_the_four_harness_only_keys(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """W37-8 T2 re-diagnosis (03:21:39 BST): `docs/_templates/REFERENCE.md`'s top-level
+    block declares `name:`, `description:`, `tools:` and `model:` as *permitted*
+    (RL-1140 DP-8.1) so `.claude/agents/*.md` and `.claude/skills/*/SKILL.md` files'
+    own front matter is licensed under check 30 -- but migration has no data source for
+    any of the four on a real Reference document (a README, a generated index), so
+    `_stamp_header("REFERENCE", ...)` must never write them. Read against the real
+    template on this checkout, the same one `docs/_templates/REFERENCE.md`'s DP-8.1
+    widening landed in.
+    """
+    rendered = doc_id_cli._stamp_header(
+        "REFERENCE", None, kind=None, title="A Title", status="active",
+        created=date(2026, 9, 27), owner="maintainer", was=None,
+    )
+    emitted_keys = {
+        m.group(1) for m in re.finditer(r"^([A-Za-z_]+):", rendered, re.MULTILINE)
+    }
+    assert not (emitted_keys & doc_id_cli._HARNESS_ONLY_TEMPLATE_KEYS), rendered
+
+
 def test_reference_stamp_census_is_silent_on_the_real_corpus(
     doc_id_cli: types.ModuleType,
 ) -> None:
