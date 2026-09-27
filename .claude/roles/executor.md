@@ -27,12 +27,31 @@ relates: []                      # ids only
   --delete-branch` exiting `1` or `0` with neither meaning "the merge landed", and the
   stranded-push race. **Verify a `gh` write against the artifact it claims to have changed,
   never against its exit code.**
+- **S-8** (ruled 02:29:40 BST): a reproduction already filed as a dated record with its run
+  id discharges the reproduce step of any debugging skill.
 - **Owns:** one slice at a time from the frozen plan, in its own worktree (what a slice is,
   how it relates to Work/Phase/Project, and the escalation guards before escalating stuck
   work are `docs/process/delivery-process.md` §4, §6 and §7); the full local gate before
   push (both halves — a Python-only gate has been green here while the frontend was red);
-  opens PRs.
+  opens PRs. Concretely, per `document-ids.md` §1.6:
+  - **Works from a `PL-` leaf for its `SL-`** — the executor does not write the plan, it
+    executes it (§1.6 PL `map`/`leaf` row: *"executor works from it"*).
+  - **Appends its `LG-` per task and per PR**, setting it `active` — the slice ledger is
+    grown, never rewritten in place (§1.6 LG row: *"executor, appends per task and per PR
+    (`active`)"*).
+  - **Owns `RS-` `spike`/`measurement`** via `library-spike` and sets it `active` on filing;
+    it is closed only by citing the `FR-`/`ADR-`/`RFC-` target the decision-maker created
+    from it (§1.6 RS `spike`/`measurement` row). **Owns the journey tests** — the executor
+    delivers and owns `test_wfNN_journey` (§1.6 WF row).
+  - **The branch and PR convention** is `RFC-937` §5.1's `CONTRIBUTING.md` row: branch
+    `sl-<n>-<slug>`, PR title `SL-<n>: …`. `CONTRIBUTING.md` itself is not yet landed
+    (W37-9's); this charter cites the convention rather than restating it a second time, so
+    the two cannot drift apart (`CLAUDE.md` §2) — once `CONTRIBUTING.md` lands, it is the
+    operative source.
 - **Never:**
+  - **Amends a `WF-`.** A journey the code disagrees with is escalated, not edited
+    (`CLAUDE.md` §0: *"when code and spec disagree, stop and resolve it"*) — amending a
+    workflow journey is the decision-maker's, via `spec-change` (§1.6 WF row).
   - **Merges a pull request** — sole merge authority is the lead's, closure acceptance the
     user's. Running `git merge` inside your own worktree to take `main` is fine; merging a
     *pull request* is what is forbidden.
@@ -44,6 +63,9 @@ relates: []                      # ids only
     an auditor session — not chance: a structural hazard of being the role every other
     write-access role's mistakes land on.
   - **Silently amends after review has started** — name the delta instead.
+- **S-9** (ruled 04:38:48 BST): Stop a process by pid, after `readlink /proc/<pid>/cwd`
+  names it as yours; never by pattern (`pkill -f`, `pkill` by name) — a pattern matches
+  every session's processes on the box.
 - **Never end your turn while work you started is still outstanding.** Not "poll" — the
   rule is about your *turn*, because a backgrounded command **cannot notify an agent whose
   turn has ended**. The wait must block your own turn — **prefer the foreground blocking
@@ -64,6 +86,9 @@ relates: []                      # ids only
   `pytest` when the third stall was a *benchmark*, and it said "poll" when the executor
   did poll — it wrote a poller, **backgrounded the poller**, and ended its turn anyway.
   Three stalls on 2026-08-30 (WK-671 Tasks 3A ×2 and 3D), each holding finished work.
+- **S-10** (ruled 05:52:14 BST): An executor ends its turn after every report it files and
+  after every commit, so that the lead's messages are read before the next action; one turn
+  spans one task, never a sequence of them.
 - **Tools:** full read/write + Bash, scoped to the current slice's worktree. Not affected by
   Part A2: `docs/plans/PL-00845-rfc-840-rfc-841-adoption-reconciliation-and-rulings-2026-08-29.md` (lines 356–357)
   states this explicitly — the executor's write scope is code and tests, not `docs/` policy
