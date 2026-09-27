@@ -563,7 +563,7 @@ No item is left without evidence or a verdict.
 follow-up commit that is the only post-filing edit this record takes (`PL-1144` Task 13), once
 this record is on the branch. It is not written by the auditor.
 
-**The Work-close line (D7), as written by the deputy by delegation and quoted in full in §10 W1:** **2026-09-27 15:25:01 BST — WK-697 (W37, the doc-id migration Work) is CLOSED**, on the closure record `docs/closures/CR-01164-wk-697-work-close-the-closure-record.md` (`kind: work`) as read by me at `w37-11-docs` `d8b34fd0`, written by the auditor from the executor's tables under PL-1144, with the lead's dated adoption of every §13 verdict at 14:58:11 BST (verdicts), 15:00:36 (ids) and 15:02:47 BST (the 29 register rows, row by row). The close is accepted explicitly over every item §10's "taken over" list names.
+**The Work-close line (D7), written by the deputy by delegation; quoted here in part, with the full text of record in §10 W1:** **2026-09-27 15:25:01 BST — WK-697 (W37, the doc-id migration Work) is CLOSED**, on the closure record `docs/closures/CR-01164-wk-697-work-close-the-closure-record.md` (`kind: work`) as read by me at `w37-11-docs` `d8b34fd0`, written by the auditor from the executor's tables under PL-1144, with the lead's dated adoption of every §13 verdict at 14:58:11 BST (verdicts), 15:00:36 (ids) and 15:02:47 BST (the 29 register rows, row by row). The close is accepted **explicitly over** the items the record's §10 "taken over" list names, so that no reader takes it for a clean pass … *(abridged; see §10 W1)*
 
 ### 11. Readings at this record's commit
 
