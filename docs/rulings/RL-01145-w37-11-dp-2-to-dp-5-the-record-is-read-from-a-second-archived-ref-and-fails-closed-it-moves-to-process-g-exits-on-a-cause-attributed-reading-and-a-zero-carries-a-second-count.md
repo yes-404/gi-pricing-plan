@@ -20,7 +20,7 @@ relates: [PL-1144, PL-939, CR-1064, CR-1063, RL-1138, RL-1140, RFC-937, OQ-1146]
 ## Verified first, at 271088b0ef99c48156ad7e96e7043bb8a3f6b613
 
 This rules the decision points of `PL-1144` (the W37-11 leaf plan) whose resolver is the
-decision-maker: DP-2, DP-3, DP-4 and DP-5. DP-1 is not ruled here (§DP-1 below). The plan
+decision-maker: DP-2, DP-3, DP-4 and DP-5. DP-1 is the maintainer's by delegation, and the deputy's dated line is quoted in §DP-1 below. The plan
 was read as a draft on branch `w37-11-plan-draft` at
 `939a0f562907c89e9dee15db1e344ca1a0c7ecbf` (`status: draft`, `tree: 271088b0…`). It is not
 on `main`; its Decision points table is at `:266-275` there. This record was drafted in the
@@ -86,16 +86,43 @@ the lead for filing, and DP-2 amendment 3 makes the fix part of W37-11's instrum
 
 ## Ruled
 
-### DP-1 — (j), which families are discharged now: **not ruled here**
+### DP-1 — (j), which families are discharged now: **option (b) — Maintainer decision by delegation (deputy, 2026-09-27 11:16:34 BST)**
 
-The resolver is the maintainer, by delegation to the deputy, on the maintainer's instruction
-of 2026-09-26 17:02:52 BST. **This is to be decided by the deputy's dated line in this PR.**
-This ruling offers no view on the options, because the decision-maker's charter owns
-technical decisions and DP-1 is a scope point. Only the premise was verified, because a
-citation is checked before it goes into a ruling. The predicate is
+**This is not the decision-maker's ruling.** The resolver is the maintainer, by delegation
+to the deputy, on the maintainer's instruction of 2026-09-26 17:02:52 BST. The deputy's
+dated line is quoted verbatim from the lead's channel file (`to-lead.md`, a local handover
+file that is not in the repository), in the entry headed *"2026-09-27 11:16:34 BST · deputy
+· PL-1144: DP-1 RULED by delegation — option (b) …"*:
+
+> **2026-09-27 11:16:34 BST — DP-1: option (b) ADOPTED.** The five families with a real
+> item since the migration merge `71f5a22` — Closure, Finding, Plan, Ruling, Ledger — are
+> **discharged now**, each verified in the W37-11 closure record by id, creating commit,
+> creating skill and `doc-id.py check` rc at that commit. The eight without one are
+> **owed**, each against the named event the row gives: Work at the minting of the charter
+> investigation's `WK-` row; Slice at the first `SL-` row cut in that Work's map plan; Open
+> question at DP-2's `OQ-` row if raised through `spec-change` with a number from `next`
+> before the close, else at the audit's first slice; Requirement, Workflow, Decision,
+> Proposal and Research at the first slice of the create-read-retire audit.
+
+The same entry gives the ground (the row's predicate re-run at `271088b0`), and it states
+that each owed row's verdict at the Work close is *"deferred with an owner"*. The decision-
+maker verified the premise on its own, with the same predicate:
 `git log --diff-filter=A --name-only 71f5a22..origin/main -- docs .claude`, grouped by the
 family prefix. At `271088b0` it returns items in exactly five document families: CR (3),
-FD (6), LG (4), PL (4) and RL (7). The plan's statement of the five families reproduces.
+FD (6), LG (4), PL (4) and RL (7). This agrees with the deputy's reading.
+
+**One fact for the Open question event, recorded and not ruled.** The event names *"DP-2's
+`OQ-` row if raised through `spec-change` with a number from `next`"*. OQ-1146 is that row,
+raised through `spec-change`. Its number was **derived from** `next` and was not printed by
+it: `next` printed 1144 at `271088b0`, 1144 was held by the unmerged `PL-1144`, and 1145 by
+this ruling (§ Verified first). Whether that meets the event's wording is the deputy's
+reading, and the closure record states it.
+
+**Context, not ruled here.** In the same entry the deputy adopted the C1-C14 typing as the
+plan proposes it, with four conditions. Two of them bear on this ruling. Condition 1 files
+C9's register row and essay before the deferral. Condition 4 re-measures C3's g2 at the merge
+tree beside 207 at `29e7a9c`, which DP-4 below also requires. DP-4 amendment 2's carried
+item (the #757 rebuild) is not in C1-C14, so the deputy's typing does not cover it yet.
 
 ### DP-2 — where the standing verify reads the record (F109): **(c) adopted, with four amendments**
 
@@ -239,7 +266,7 @@ population each one counts. It does not choose one of them as "the" reading.
 ## What it obliges
 
 - **`PL-1144`** moves `draft → active` with DP-2 … DP-5's "Resolved by" cells naming
-  `RL-1145`, and DP-1's naming the deputy's dated line. The planner makes that edit in the
+  `RL-1145`, and DP-1's naming the deputy's dated line of 2026-09-27 11:16:34 BST (maintainer decision by delegation). The planner makes that edit in the
   activation PR. This ruling does not edit the plan (`document-ids.md` §1.6, PL row).
 - **The plan's text changes that this ruling requires:**
   1. **Acceptance item 5** names OQ-1146 as the open-questions row, and names the three new
