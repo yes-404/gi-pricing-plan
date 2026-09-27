@@ -140,3 +140,28 @@ C4 reads: **disproven; its harm is guarded in PL-1144's slice by #821 (squash
 `47065da5`); true idempotence is deferred with the lead.** The event is the
 create-read-retire audit's first slice. The deputy's condition 4 requires that the D7
 line name C4 among the items the Work closes over, with this owner and event.
+
+## Amended 2026-09-27 (the W37-11 slice close, `LG-1148`) — the starting figure `CR-1064:414` names
+
+This amendment adds a figure. It supersedes nothing above. The auditor makes it in place,
+dated, under `docs/findings/README.md` (*"An essay file is write-once, amended in place"*).
+It discharges pass (a) finding F-5 of #822, as the lead ruled at 2026-09-27 15:35:39 BST.
+
+`PL-1144` Acceptance Standard item 4 requires the C4 record to give the starting figure
+*"verbatim from `CR-1064:414`"*. Neither this essay nor `CR-1164` gives it. The starting
+figure in `CR-1064:414`'s Evidence cell reads, verbatim:
+
+> `REGRESSION (residue exceeds W37-11 ceiling): 'scripts/doc-id.py' (d10) — 41 hit(s) exceeds the W37-11 record's ceiling of 15 for 'd10'`
+
+The same cell names the local CI log it came from, by file and line. That citation is left
+at `CR-1064:414` and is not repeated here. The log's name carries a head SHA of the
+migration PR that its later force-push left reachable from no ref, and repeating it would
+add an unreachable token to this essay.
+
+**What the figure measures.** It is a residue count: 41 hits of class `d10` in
+`scripts/doc-id.py`, against the ceiling of 15 that the W37-11 record held. It was read from
+a CI docs log of the migration PR. The Finding above measures something else: the diff of a
+second `migrate` over a migrated snapshot, which touched 17 files with 57 insertions and 51
+deletions at `03f61d83`. The two figures are not the same quantity. So the starting figure
+is recorded here as the one `CR-1064` named, and it is not a baseline for the 17-file
+reading.

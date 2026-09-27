@@ -2,7 +2,7 @@
 id: LG-1148
 family: ledger
 title: W37-11 — prove it, the instrument PR
-status: active
+status: closed
 created: 2026-09-27
 owner: executor
 tree: 9fe726b221f01c2055f818ea30ed84324cd84ab4
@@ -992,7 +992,265 @@ of the check.
 
 | # | Branch | Squash SHA on `main` | Tasks | State |
 |---|---|---|---|---|
-| — | `w37-11-code` | — | 1–6 | in progress |
+| ~~—~~ | ~~`w37-11-code`~~ | ~~—~~ | ~~1–6~~ | ~~in progress~~ — **struck 2026-09-27 by the auditor at the slice close** (pass (a) F-8): a placeholder written before the PR number was known, and a stale cell once #821 merged. The #821 row below supersedes it. |
 | #821 | `w37-11-code` | `47065da50c34f0bf613f7dd972675c96d12f78ed` | 1–6 + the C4 guard | merged 2026-09-27 14:16:45 BST |
+| #822 | `w37-11-docs` | `cddf9a6e32e6a780ac93ba769767bb602b054919` | 7–13 | merged 2026-09-27 15:58:42 BST |
 
 Every Tasks 1–6 commit SHA above is a pre-squash commit of #821, reachable via `refs/pull/821/head`. The squash `47065da5`'s tree is `c3218465`'s tree (`f967495e`).
+
+The squash of #822, `cddf9a6e`, has the tree `9ba09071`, which is the tree of #822's head `ad63a80c`. Every pre-squash SHA of #821 and #822 cited in this ledger is marked per token under "Pass (b)" below.
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor on 2026-09-27** (`document-ids.md` §1.6, SL row:
+*"auditor closes: sets the `LG-` `closed`, verifies acceptance"*). The deputy ruled at
+2026-09-27 15:32:22 BST that W37-11 closes in one post-merge PR, combined with plan review
+14. This commit is that PR's first commit, written by the auditor from `origin/main` =
+`cddf9a6e`. The lead's plan review 14 and the regenerated `docs/INDEX.md` follow it in the
+same PR. W37-11 closes when that PR merges. A Slice closes on a clean audit and the lead's
+merge, with no maintainer line (`CLAUDE.md` §12, §13). The Work's close is a separate act:
+D7, quoted in `CR-1164` §10 W1.
+
+**The two PRs.** Both are in the PRs table above.
+- **#821**, the instrument PR (Tasks 1–6 and the C4 guard). It was squash-merged as
+  `47065da5` on 2026-09-27 at 14:16:45 BST. The deputy's MERGE ACK is 2026-09-27
+  14:16:29 BST, at `c3218465`.
+- **#822**, the docs PR (Tasks 7–13). It was squash-merged as `cddf9a6e` on 2026-09-27 at
+  15:58:42 BST. Its parent is `47065da5`, and its tree equals the tree of its head
+  `ad63a80c`. The deputy's MERGE ACK is 2026-09-27 15:58:26 BST, at `ad63a80c`.
+- Both ACKs are in `~/gi-pricing-plan.local/channel/to-lead.md` (local, not repo).
+
+**Pass (a), the audit of #822 before the merge.** The pass (a) auditor proposed NOT CLEAN at
+`f753a69a`, with 2 medium and 7 low findings. **The lead's verdict is CLEAN with
+dispositions** (2026-09-27 15:35:39 BST, in `~/gi-pricing-plan.local/channel/to-deputy.md`).
+The delta read of `f753a69a..4995f1fa` followed at 15:38:26 BST. F-10 was raised in that
+entry. The deputy accepted its fix at 2026-09-27 15:39:45 BST.
+
+**Findings, with owner and resolution:**
+
+| Finding | What | Owner | Resolution |
+|---|---|---|---|
+| F-1 | The roadmap's WK-697 row still read "pending" after D7 | executor, lead | **Fixed before the squash**, at `d7f9003b` and `633c8ea9` |
+| F-2 | Pre-squash SHAs in evidence cells had no pull ref | auditor | **Fixed here.** The squash body lists them by pull ref. The per-token marks are under "Pass (b)" below, because `CR-1164` is write-once |
+| F-3 | Four cited SHAs are reachable from no pull ref | lead | **Accepted** (the lead, 15:35:39 BST, under the deputy's rulings of 11:37:34 and 12:02:14 BST). They are recorded under "Pass (b)" with their keeping refs |
+| F-4 | `CR-1164` meets items 1, 2, 3, 5, 7 and 9 by reference to this ledger | lead | **Accepted** (15:35:39 BST) |
+| F-5 | `CR-1064:414`'s starting figure is missing from the C4 records | auditor | **Fixed here**, as a dated amendment to the `FD-1152` essay, in this commit |
+| F-6 | Item 17's letter, "on main before deferral" | lead | **Accepted** (15:35:39 BST) |
+| F-7 | `CR-1164` §8's "40 rows" | auditor | **Fixed here**, under "The owed rows" below |
+| F-8 | The stale placeholder row in the PRs table | auditor | **Fixed here.** The row is struck with a dated line, and the #822 row is added |
+| F-9 | `CR-1164` §2 reports "16 passed" but names 14 nodes | auditor | **Fixed here**, under "The sixteen nodes" below |
+| F-10 | The Verdict line of `CR-1164` presented a paraphrase as a quotation | lead | **Fixed before the squash** at `ad63a80c`, accepted by the deputy at 15:39:45 BST |
+
+### Pass (b), the reachability sweep, per token
+
+**Run by the auditor on 2026-09-27, 16:00–16:02 BST, at `origin/main` = `cddf9a6e`.**
+
+- **Predicate, verbatim:**
+  `git show cddf9a6e:<path> | grep -oE '\b[0-9a-f]{7,40}\b' | sort | uniq -c`.
+- **How each token is classed:**
+  - The first check is `git cat-file -t <token>`.
+  - A commit that passes `git merge-base --is-ancestor <token> origin/main` is **MAIN**.
+  - Otherwise, a commit is **BRANCH** if it is an ancestor of `refs/pull/N/head`, for N in
+    795, 806, 814, 817, 819, 820, 821 and 822. Each head was fetched read-only into
+    `FETCH_HEAD`, and no ref was created.
+  - A tree or a blob is **NOTCOMMIT**.
+  - Anything else is **NEITHER**.
+- **The pull heads:**
+  - 795 = `16e81628`, 806 = `1508cd25`, 814 = `33138af6`, 817 = `e46d3b18`;
+  - 819 = `0cbdbf4e`, 820 = `e9ba2d9b`, 821 = `c3218465`, 822 = `ad63a80c`.
+
+**Two tokens outside the four classes.** They are recorded under the lead's ruling of
+2026-09-27 16:02:04 BST (the time of receipt, by `date`), which adopted the auditor's
+proposed disposition.
+- **`66723b39`** (this ledger, Task 1): **not an object id, a path component** (the job
+  directory in a local worktree path). The predicate matches it by accident.
+- **`75779691`** (this ledger, Task 5, item 5): **a disposable snapshot commit, quoted as an
+  overwritten value, never pushed, and resolving nowhere. It is not evidence.** It has the
+  same shape as `8edc9a2b`. Its hex happens to be all digits, so a filter that drops decimal
+  CI run ids would have hidden it.
+
+**This ledger at `cddf9a6e`** (41 distinct tokens):
+
+| Class | Keeping ref | Tokens (spelling × count) |
+|---|---|---|
+| MAIN (20) | `origin/main` | `0651c1e`×5, `0651c1e265648cbd3918adfc729ad965b83b1e0b`×6, `1cd489c8`×1, `271088b0`×2, `29e7a9c`×2, `29e7a9ce`×2, `35c954c1`×1, `38033319`×2, `454ff41d`×1, `47065da5`×13, `47065da50c34f0bf613f7dd972675c96d12f78ed`×4, `4d9fe1d`×1, `4ed1f88e`×1, `71f5a22`×4, `724409bf`×1, `726ec98f`×2, `9fe726b2`×9, `9fe726b221f01c2055f818ea30ed84324cd84ab4`×3, `d63f7650`×1, `ea3704dd`×1 |
+| BRANCH (13 spellings, 9 commits) | `refs/pull/821/head` | `03f61d8`×1, `03f61d83`×2, `03f61d83437a9dd4138b7e7309b22c96148f3680`×1, `0a0effb9`×3, `1eb12bab`×1, `9422776b`×2, `c3218465`×1, `cdc35fa2`×6, `cdc35fa292334d3337d5f172f26a3411ae22c6e9`×2, `ed588f8`×2, `ed588f8d`×3, `edb720eb`×1, `f7baff08`×1 |
+| BRANCH (2) | `refs/pull/822/head` | `3749db65`×3, `734e12fe6d0e993eae76efe0270ae283bf804ea7`×1 |
+| BRANCH (1) | `refs/pull/795/head` | `cedbf713`×1 |
+| NOTCOMMIT (3) | — | blobs `6fc405017e50`×1 and `8053a06bb7b8`×1; tree `f967495e`×1 |
+| not an object id (1) | — | `66723b39`×1, a path component (the job directory) |
+| disposable snapshot commit (1) | none | `75779691`×1: quoted as an overwritten value, never pushed, resolves nowhere; not evidence |
+
+Total: 20 + 16 + 3 + 1 + 1 = 41. The BRANCH count of 9 commits for #821 agrees with the
+deputy's ledger sweep in the #821 ACK (BRANCH 9).
+
+#### `CR-1164` at `cddf9a6e` (60 distinct tokens)
+
+`CR-1164` is write-once (`document-ids.md` §1.2), so its tokens are marked here and not in
+the record.
+
+| Class | Keeping ref | Tokens (spelling × count) |
+|---|---|---|
+| MAIN (29) | `origin/main` | `0651c1e`×2, `29e7a9c`×3, `29e7a9ce`×3, `35c954c1`×4, `39ee30c0`×1, `3ede6495`×1, `47065da5`×25, `47eb2ba`×1, `47eb2bae`×3, `49c06ad7`×3, `4d9fe1d`×1, `4d9fe1d6`×1, `4ed1f88e`×9, `536d3cc3`×4, `5429c397`×1, `544b90c`×1, `6cad8e4d`×3, `71f5a22`×3, `71f5a220`×15, `724409bf`×4, `8b42fa78`×1, `954008f8`×1, `99355ab0`×1, `9fe726b2`×3, `a24c0a28`×1, `a8b3c39`×1, `d5501e99`×1, `e0b880e3`×1, `ff70de2f`×1 |
+| BRANCH (8) | `refs/pull/822/head` | `273e3e0f`×2, `2907549b`×6, `3749db65`×9, `5ab66cc1`×1, `5c1b31ba`×10, `5c1b31ba1e6140a9b4348e4d6c1d62e8cdc3a93a`×1, `734e12fe`×1, `d8b34fd0`×3 |
+| BRANCH (7) | `refs/pull/821/head` | `03f61d83`×2, `0a0effb9`×1, `9422776b`×1, `c3218465`×1, `cdc35fa2`×1, `ed588f8d`×2, `f7baff08`×1 |
+| BRANCH (2) | `refs/pull/817/head` | `11e3cc2b`×1, `e3542f83`×2 |
+| BRANCH (2) | `refs/pull/814/head` | `60914ee`×1, `60914ee8`×1 |
+| BRANCH (1) | `refs/pull/819/head` | `0cbdbf4e`×2 |
+| BRANCH (1) | `refs/pull/820/head` | `70e7d59b`×1 |
+| BRANCH (1) | `refs/pull/806/head` | `414a9335`×1 |
+| BRANCH (1) | `refs/pull/795/head` | `16e8162`×1 |
+| NOTCOMMIT (1) | — | blob `6fc40501`×1 |
+| NEITHER (4), F-3 | see below | `2307087`×2, `8edc9a2b`×1, `939a0f56`×1, `e30a082`×1 |
+| not an object id (3) | — | `36281191974`×1, `36311605268`×1, `108598494214`×1: CI run and job ids |
+
+Total: 29 + 23 + 1 + 4 + 3 = 60.
+
+**The four F-3 SHAs, with their keeping refs at 16:01 BST.** F-3 is accepted: none of them
+resolves after the row-9 cleanup.
+- `8edc9a2b`: **no ref**. It is a dangling commit object in the shared store, never pushed
+  and then reset (`CR-1164` face 5).
+- `939a0f56`: `w37-11-plan-draft`, local and on `origin`. Its cherry-pick `70e7d59b` is on
+  `refs/pull/820/head`.
+- `e30a082`: `w37-6-h1-check36`, local and on `origin`.
+- `2307087`: the local salvage ref `refs/salvage/2026-09-18/tool-2307087` only.
+
+The last three lose their refs at the row-9 cleanup.
+
+**Tokens this section adds.** They are swept with the same predicate, at this commit:
+- Every token copied from `CR-1164` keeps the class and ref given in the table above.
+- `cddf9a6e`, in both spellings, is MAIN.
+- `ad63a80c`, `f753a69a`, `4995f1fa`, `d7f9003b` and `633c8ea9` are BRANCH, via
+  `refs/pull/822/head`.
+- The pull heads `1508cd25`, `33138af6` and `e9ba2d9b` are BRANCH, via their own pull refs.
+  `16e81628`, `e46d3b18`, `0cbdbf4e` and `c3218465` are those heads too.
+- The tree `9ba09071` is NOTCOMMIT.
+- `36326607664` and `36326607691` (acceptance item 12) are not object ids. They are CI run ids.
+
+### The owed rows: `CR-1164` §8's "40", by predicate (pass (a) F-7)
+
+**Command.** `python3 scripts/register-owed.py <id>` was run once for each of `WK-697`, `W37`
+and `W37-1` to `W37-11`. It ran on a detached copy of `3749db65` (BRANCH, via
+`refs/pull/822/head`), on 2026-09-27 at about 16:03 BST, and every run exited `rc 0`. The
+union of the owed lists is **39 distinct rows**, and the union of the excluded lists is **3**.
+The excluded rows are headed by the tool *"Excluded as opening with a resolution marker —
+verify"*: F76, F104 and FD-1147. For the `W37` run, the tool's header reads *"34 owed row(s),
+3 matched but excluded as opening with a resolution marker"*.
+
+**The counts per id, owed / excluded:**
+- WK-697 6 / 0; W37 34 / 3;
+- W37-1 0 / 0; W37-2 1 / 0; W37-3 0 / 0; W37-4 1 / 0; W37-5 0 / 0; W37-6 22 / 2;
+- W37-7 4 / 0; W37-8 1 / 0; W37-9 0 / 0; W37-10 4 / 0; W37-11 10 / 1.
+
+**Reconciliation.** `CR-1164` §8's "40" is the 39 owed rows plus FD-1147, which §8's table
+lists. F76 and F104 are not in §8.
+
+**F76, verified to the clause.** Its Decision cell opens *"**Resolved 2026-09-02** (W37-5b,
+PRs `#593` and `#607`)"*.
+- **`_ROW_FIELDS` is derived from the templates.** `row_template_fields` exists at
+  `scripts/_docid.py:1271` (at `cddf9a6e`).
+- **The crash paths are guarded.** `check_index_stable` wraps `build_corpus` in
+  `try` / `except (_doc_index.HeaderError, ValueError)`.
+- **The broken-input tests pass.** Three `tests/test_audit_docs_ids.py` tests and the whole of
+  `tests/test_template_headers.py` gave **27 passed** at this tree. The three are
+  `::test_check_39_corpus_build_failure_is_a_clean_fail_not_a_crash`,
+  `::test_check_39_corpus_build_failure_on_a_malformed_row_date_is_also_a_clean_fail` and
+  `::test_check_ids_30_39_completes_when_check_39s_corpus_is_malformed`. The second file
+  includes `::test_kind_field_on_a_work_row_is_rejected`.
+- **Verified**, with one limit. The cell's own *"structural observation, not filed
+  separately"* still holds at `cddf9a6e`: `check_ids_30_39()` calls its ten checks with no
+  exception boundary of its own. The cell says that this is *"not sized or ruled here"*. It
+  is a residual observation, not an owed item, and it is recorded here so that it does not
+  pass silently.
+
+**F104, verified to the clause.** Its cell reads *"**fixed before close, this same PR (D2).**
+… **CLOSED 2026-09-17.**"*.
+- **The four pins exist.** They are the four `monkeypatch.setattr` lines of `_run_all_ten`,
+  on `ROOT`, `nt0019_stamp_set`, `UNSTAMPABLE_EXEMPTIONS` and `migrated_tree`. They are at
+  `tests/test_audit_docs_ids.py:132-135` at `cddf9a6e`, not at the `:130-133` that the cell
+  cites (the line numbers have drifted by 2).
+- **The named tests pass.** All 11 tests the cell names gave **11 passed**. They ran on a
+  tree that carries `docs/INDEX.md` and `docs/REDIRECTS.csv`, which is the migrated state
+  the defect needed.
+- **The whole file passes.** `tests/test_audit_docs_ids.py` gave **118 passed**.
+- **Verified.** No residual item was found.
+
+### The sixteen nodes of `CR-1164` §2 (pass (a) F-9)
+
+`CR-1164` §2's table names 14 nodes. The other two are the tests behind its two "also"
+fixtures: `check30-ledger-prs.md` in the check 30 row, and `check35-readme-allowlist/` in the
+check 35 row.
+- The #822 diff and the #821 diff leave `tests/` identical: `git diff --name-only 47065da5
+  cddf9a6e` names only `docs/` paths.
+- So the sixteen nodes were re-run at `cddf9a6e`, and they gave **`16 passed`**.
+- The command line that `CR-1164` §2 ran is not preserved. **This is a reconstruction:** these
+  sixteen reproduce the count, and they are the §2 table's tests plus its "also" fixtures.
+
+All in `tests/test_audit_docs_ids.py`:
+
+1. `::test_check_30_reds_alone_on_an_unknown_field`
+2. `::test_check_30_reds_alone_on_a_ledger_prs_field` (not named in §2)
+3. `::test_check_31_reds_alone_on_a_header_filename_mismatch`
+4. `::test_check_32_flags_a_citation_that_does_not_resolve`
+5. `::test_check_33_reds_alone_on_a_status_outside_the_vocabulary`
+6. `::test_check_33_reds_alone_on_asymmetric_supersedes`
+7. `::test_check_34_reds_alone_on_a_dangling_corrected_by_entry`
+8. `::test_check_34_refuses_a_body_change`
+9. `::test_check_35_reds_alone_on_an_unrecognised_owner`
+10. `::test_check_35_readme_allowlist_is_enforced_when_a_readme_declares_one` (not named in
+    §2)
+11. `::test_check_36_reds_alone_when_a_was_field_has_no_redirects_row`
+12. `::test_check_36_broken_input_proof_one_undisclosed_form_reds_one_alias_form_discloses`
+13. `::test_check_37_reds_alone_on_a_missing_required_section`
+14. `::test_check_38_never_fails_regardless_of_scope`
+15. `::test_check_39_reds_when_records_exist_but_index_is_missing`
+16. `::test_check_39_reds_on_a_stale_index`
+
+### F-5
+
+`FD-1152` carries a dated amendment, made in this commit. It quotes `CR-1064:414`'s starting
+figure verbatim and states what that figure measures.
+
+### Acceptance, verified by the auditor (`PL-1144` Acceptance Standard)
+
+| Item | Result | Where evidenced |
+|---|---|---|
+| 1 | Met. (k) is checked element by element, with second counts under DP-5 | this ledger, Task 8; `CR-1164` §4 |
+| 2 | Met. (j) has 13 rows: 6 discharged, and 7 owed with named events. Each owed row is **deferred per an adopted verdict** (C2) | this ledger, Task 9; `CR-1164` §4, §5 |
+| 3 | Met. (g) is re-measured, 207 at `47065da5` beside 207 at `29e7a9c`. The verdict is **deferred per an adopted verdict** (C3, DP-4 (b)), and the LIMIT is stated | this ledger, Task 7; `CR-1164` §4 |
+| 4 | **Not met; deferred per an adopted verdict.** C4 is *"disproven in W37-11, fix deferred"*. The harm is guarded by #821. The starting figure was missing from the record, and it is supplied by F-5's amendment to `FD-1152` in this commit | this ledger, Task 5; `CR-1164` §5 C4; `FD-1152` |
+| 5 | Met. F109 is resolved by `--record-ref`, with fail-closed exit 2 and proofs 1–3. OQ-1146 is decided | this ledger, Task 2; `CR-1164` §5 C6 |
+| 6 | Met. `measured_residue` read 0/0/0 before the shrink | this ledger, Task 4; `CR-1164` §5 C5 |
+| 7 | Met. The record has moved, and the reference limb is measured with DP-3's five classes | this ledger, Task 3; `CR-1164` §7 |
+| 8 | Met. F110's docstrings name one population, and a behaviour test asserts it | this ledger, Task 6; `CR-1164` §5 C8 |
+| 9 | Met, **with a limit**. `CR-1164` exists (`kind: work`). Items 1, 2, 3, 5, 7 and 9 are met by reference to this ledger (F-4, accepted). Its §2 count names 14 of 16 nodes (F-9, fixed above) | `CR-1164` |
+| 10 | Met. The WK-697 row reads `status: closed` and cites `CR-1164` (F-1, fixed before the squash) | `docs/roadmap.md` at `cddf9a6e` |
+| 11 | Met. The merge tree is `9ba09071`, the tree of both `cddf9a6e` and `ad63a80c`. On a detached copy of `cddf9a6e`, the auditor read at 16:04 BST: `audit-docs.py` rc 0, `All checks passed.`, `DISCLOSED (865, at or under the W37-11 residue ceiling)`; `doc-id.py check` rc 0; `doc-index.py --check` rc 0. The deputy's reading at `ad63a80c` agrees | `CR-1164` §11; the deputy's #822 ACK |
+| 12 | Met, **with a limit**. For #821, the full two-half gate ran at `ed588f8d` and was carried to `c3218465`. For #822, the local gate ran `tests/` only (1026 passed, 1 skipped). The other halves are path-inert on a docs-only diff. At `ad63a80c`, CI python run 36326607664 ran the full suite, and docs run 36326607691 passed | the deputy's #821 and #822 ACKs |
+| 13 | Met. The deputy's ACKs are 14:16:29 BST (#821) and 15:58:26 BST (#822). The slice's clean audit is this record | above |
+| 14 | Met. D7 accepts the Work close by delegation: the decision at 15:25:01 BST, and the text re-issued at 15:28:48 BST | `CR-1164` §10 W1 |
+| 15 | Met, as a reading; **deferred per an adopted verdict**. 207 of 207 are rowless at the DP-2 read location, and no rows are filed (the deputy's ruling of 12:06:57 BST) | this ledger, Task 4; `CR-1164` §5 C15 |
+| 16 | Met. C16 is fixed in W37-11 by #821 (`47065da5`). The render tests fail at blob `6fc40501` and pass at the head | this ledger, Task 2; `CR-1164` §5 C16 |
+| 17 | Met. Conditions 1–3 are met, and item 17's letter, "on main before deferral", is accepted under F-6 | `CR-1164` §5, the four conditions |
+
+**Check 36 movement against `main`** (at `cddf9a6e`; the deputy's rulings of 2026-09-27
+07:26:26 and 10:36:27 BST):
+- **Pool:** 497 fatal / 6374 disclosed → 497 fatal / 6408 disclosed at this closing
+  record's commit. This is measured on the committed tree, including this block's own tokens.
+  Fatal is unchanged.
+- **Arrived:** 34 disclosed hits, all in the alias class and all in this commit's two files. By class:
+  - **Finding id, bare form, ×5:** `F76`×5, in this file, in the F-7 section and in this block.
+  - **Workstream/slice id, ×29.** There are 25 in this file:
+    - `W37-11`×10, from the close's own sentences and from this block;
+    - `W37-1`×3, `W37-10`×2, `W37-2`×2 and `W37-9`×2, from the owed-rows command and counts,
+      and from this block;
+    - the six slice ids between those last two, ×1 each, from the owed-rows counts.
+  - The other 4 are `W37-11`×4 in `FD-1152`'s amendment: its heading, and the quoted
+    `REGRESSION` line with its gloss.
+- **Classification:** these are ledger vocabulary under RL-1043 §4 / RL-1046 §A, not a
+  charter defect, with no owner beyond W37-11's alias-class row.
+- **Last word:** this block is the last word on its own vocabulary. No later commit
+  records the recording.
+
+**Residue carried, not fixed here:** F76's unfiled structural observation, recorded above,
+is left with its row. There is nothing else.
