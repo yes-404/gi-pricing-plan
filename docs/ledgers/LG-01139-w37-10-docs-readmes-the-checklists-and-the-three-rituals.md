@@ -2,7 +2,7 @@
 id: LG-1139
 family: ledger
 title: W37-10 — docs/ READMEs, the checklists, and the three rituals
-status: active
+status: closed
 created: 2026-09-26
 owner: executor
 tree: 8dd070066d554ebf51fcb52ead6dfbec9d1559e5
@@ -246,5 +246,78 @@ push, per the executor charter and `dev-commands`' wrapped gate body.
 
 ## PRs
 
-To be filled once the PR is opened (`gh pr create`, `gh api -X PATCH` for the body,
-`gh run list --branch` for CI by SHA), per the executor charter.
+| # | Branch | Squash SHA on `main` | Tasks | State |
+|---|---|---|---|---|
+| #804 | `w37-10-docs` | `536d3cc3bda9d1e709bf12118999ce5b09dce399` | 1–12, S-7 | merged 2026-09-26 23:52:44 BST |
+
+*(Corrected 2026-09-27 by the auditor, at slice close, finding F-a below: this section first
+read "To be filled once the PR is opened (`gh pr create`, `gh api -X PATCH` for the body,
+`gh run list --branch` for CI by SHA), per the executor charter." It was stale from the
+moment #804 merged on 2026-09-26 at 23:52:44 BST.)*
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor on 2026-09-27** (`document-ids.md` §1.6, SL row:
+*"auditor closes: sets the `LG-` `closed`, verifies acceptance"*). The deputy ruled at
+2026-09-27 11:00:45 BST that the close lands in one post-merge, docs-only PR authored by
+the auditor, in `LG-1143`'s form, touching exactly three paths: this file, `LG-1137` and
+`docs/INDEX.md`.
+
+**The recording rule: a retroactive application, not a defect of this slice.** The
+closing-record convention (a two-pass audit, plus a closing PR that flips the ledger to
+`closed`) was minted by the deputy at 2026-09-27 06:55:24 BST. This slice closed before
+that, on 2026-09-26, on the rule then standing: a clean audit plus the lead's merge
+(`CLAUDE.md` §12, §13). The deputy recorded it closed on those terms at 2026-09-26
+23:54:10 BST. So this section applies the closing-record convention retroactively. It does
+not record a defect of this slice, and the W37-11 closure record carries it as one face.
+
+**The work PR, #804.** It was squash-merged onto `main` as the SHA in the PRs table above,
+on 2026-09-26 at 23:52:44 BST (`gh pr view 804 --json mergedAt` → `2026-09-26T22:52:44Z`).
+Its parent on `main` is `b82d0647`. Its PR head was `32b78e63`, a pre-squash branch commit
+of this PR, reachable via `refs/pull/804/head`. The squash's tree equals the head's tree,
+`e4016d7c`, so the slice's content is on `main` byte for byte. The deputy's MERGE ACK for
+#804 is 2026-09-26 23:52:18 BST, in `~/gi-pricing-plan.local/channel/to-lead.md` (local,
+not repo).
+
+**Pass (a), the audit of #804 before the merge: cited, not re-run.** This record does not
+re-audit the slice. The auditor wrote four entries, at 21:56:33, 22:26:38, 23:05:43 and
+23:49:43 BST on 2026-09-26. The lead's verdict at 2026-09-26 23:51:23 BST adopted the
+fourth: *"the W37-10 slice audit is CLEAN at `32b78e63`"*, with items 1–14 each PASS and item 15's audit clause discharged. All
+five entries are in `~/gi-pricing-plan.local/channel/to-deputy.md` (local, not repo).
+Acceptance is verified by that verdict.
+
+**Pass (b), the reachability sweep after the merge, run by the auditor, stamped
+2026-09-27 11:07:18 BST.**
+- **Predicate, verbatim:** `git show 271088b0:docs/ledgers/LG-01139-w37-10-docs-readmes-the-checklists-and-the-three-rituals.md | grep -oE '\b[0-9a-f]{7,40}\b' | sort -u`.
+  Each token is classified in order: `git cat-file -t <t>` not `commit` gives NOTCOMMIT;
+  `git merge-base --is-ancestor <t> 271088b0` exit 0 gives MAIN; the same check against
+  `refs/pull/804/head`, fetched read-only with `git fetch origin pull/804/head` and no ref
+  created, exit 0 gives BRANCH; otherwise NEITHER.
+- **MAIN ×8 tokens (6 commits):** `20d922dd` (spelled two ways), `4ed1f88` (spelled two
+  ways), `b34a37cf`, `b82d0647`, `0651c1e2` and `d63f765`.
+- **BRANCH ×12 tokens (11 commits):** `fccbbae2`, `3939764f`, `473044dc`, `38adb67e`,
+  `8dd07006` (spelled two ways, one of them the header's `tree:`), `81c54d2e`, `ce3aef90`,
+  `bda9bc48`, `d4c3093a`, `dd7a7074` and `87965eb6`. **Each is a pre-squash branch commit
+  of #804, reachable via `refs/pull/804/head`**, as `:40` predicted before the merge for the
+  ten in the correction table. This marking applies to every cell above that cites one of
+  them (finding F-c).
+- **NEITHER ×10:** the ten pre-rebase SHAs in the correction table's first column,
+  `:29`–`:38` (finding F-b).
+- **NOTCOMMIT ×1:** `36270534213`, a CI run id at `:244`.
+
+**Tokens this section adds, which the pass (b) predicate did not cover, are swept here** with
+the same classification: the squash SHA in the PRs table, `b82d0647`, `271088b0` and the
+short form `0651c1e2` are MAIN; `32b78e63` is BRANCH; the tree id `e4016d7c` is NOTCOMMIT.
+
+**Findings, with owner and resolution:**
+
+| Finding | Raised | What | Owner | Resolution |
+|---|---|---|---|---|
+| F-a | pass (b), at `271088b0` | The PRs section held only its placeholder, stale since #804 merged on 2026-09-26 at 23:52:44 BST. | auditor | **Fixed in this closing record.** The section now carries the PR table with the squash SHA and the merge time, with a dated correction line. |
+| F-b | pass (b), at `271088b0` | The ten pre-rebase SHAs at `:29`–`:38` are neither ancestors of `main` nor reachable from `refs/pull/804/head`, and no remote-tracking ref in this record's checkout contains any of them. | auditor | **Already disclosed by this ledger's own correction at `:25`–`:40`**, which labels each "pre-rebase, not on the branch" and pairs it with its on-branch successor. Each appears once in the ledger, in that table and nowhere else. The lead's verdict of 2026-09-26 23:51:23 BST read them the same way: *"the 10 pre-rebase SHAs appear only as labelled quotations in the correction table"*. No change proposed. |
+| F-c | pass (b), at `271088b0` | `87965eb6` at `:244` is a BRANCH commit in an evidence cell without the pre-squash marking. The other ten BRANCH commits are marked by `:40`. | auditor | **Marked in this closing record**, in pass (b) above. The cell is left as the executor wrote it. |
+
+**Check 36 movement against `main`:** recorded once, for both closing sections, in
+`LG-1137`'s closing record. This file's arrived hits are counted there.
+
+**Residue carried, not fixed here:** none.
