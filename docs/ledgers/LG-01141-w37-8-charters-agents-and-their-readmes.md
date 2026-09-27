@@ -186,6 +186,276 @@ keys present in the rendered stamp. Restored the clause — the new test, and th
 
 ## PRs
 
-| # | Branch | Head | Tasks | State |
+| # | Branch | Squash SHA on `main` | Tasks | State |
 |---|---|---|---|---|
-| 1 | `w37-8-t1-t2` | `c6964a2` | T1, T2 | draft, open |
+| #806 | `w37-8-t1-t2` | `35c954c1` | T1, T2 (check 30 fix + the harness-only-key stamp fix) | merged |
+| A (#807) | `w37-8-t3-t4` | `6cad8e4d` | T3, T4 | merged |
+| B (#808) | `w37-8-t5-agents-readme` | `ff70de2f` | T5 | merged |
+| C (#809) | `w37-8-t6-reporter-watcher` | `99355ab0` | T6 | merged |
+| D (#810) | `w37-8-t7-auditor` | `954008f8` | T7 | merged |
+| E (#811) | `w37-8-t8-decision-maker` | `3ede6495` | T8 | merged |
+| F (#812) | `w37-8-t9-executor` | `a24c0a28` | T9, S-8/S-9/S-10 | merged |
+| G (#813) | `w37-8-t10-lead` | `d5501e99` | T10, S-5/S-6 | merged |
+| H | `w37-8-h-planner-close` | *this PR* | T11, T12, T13 — the closing PR | draft, open |
+
+**Every SHA above passed the reachability sweep** at this ledger's own head:
+`git merge-base --is-ancestor <sha> HEAD; echo $?` → `0` for all eight
+(`35c954c1`, `6cad8e4d`, `ff70de2f`, `99355ab0`, `954008f8`, `3ede6495`, `a24c0a28`,
+`d5501e99`).
+
+### PR-A (#807) — squash `6cad8e4d` — Tasks 3, 4
+
+Closes CR-1065 §2.4's one W37-8-reassigned §7(i) row (`ci-watcher.md`) and RFC-937 §5.3's
+remaining agent rows. Files: `.claude/agents/ci-watcher.md` (T3 — merged header, harness
+keys first byte-identical, governed keys after, `owner: lead`; rewrote the dangling
+legacy-notes-directory example in the docs.yml trigger table), `.claude/agents/spec-reconciler.md`,
+`accessibility-tester.md`, `evidence-collector.md`, `gate-runner.md`,
+`performance-engineer.md`, `postgres-pro.md` (T4, DP-8.2 (a) — all seven agent files, not
+only the two §5.3 names).
+
+Verification: `grep -L "^family: reference" .claude/agents/*.md` → nothing; `check 30:
+.claude/agents/` count 7 → 0; `doc-id.py check` 0; `doc-index.py --check` 0 (byte-stable).
+Harness-load check (a fresh `ci-watcher` agent dispatch confirmed `tools:`/`description:`
+survive intact).
+
+DISCLOSED: 878 → 870 (−8: 7 from the agent-file class closing check 30, 1 from
+ci-watcher.md's legacy-notes-path fix clearing one check-36 legacy-path hit).
+
+Gate (both halves, head `d5ec4aad`): 7/7 Python stages pass, pytest 3458 passed / 3
+skipped / 1 xfailed (3462 collected, matches main's 3462). No residue introduced.
+
+### PR-B (#808) — squash `ff70de2f` — Task 5
+
+File: `.claude/agents/README.md` — cites the Reference family, the agents cell (§5.3's
+row: README names agents as Reference family owned by the lead).
+
+### PR-C (#809) — squash `99355ab0` — Task 6
+
+Files: `.claude/roles/reporter.md` (+10/−2 — states "owns no governed document"; adds the
+fortnightly `WK-` status-entry clause), `.claude/roles/watcher.md` (+5 — states "owns no
+governed document"). Verification: `grep -n "owns no governed document"
+.claude/roles/reporter.md .claude/roles/watcher.md; echo GREP_EXIT=$?` → two lines,
+`GREP_EXIT=0`.
+
+**This executor's fix, same PR, same head, before it merged:** #809's second commit
+(`d8d6db8f`) had drifted into editing `docs/ledgers/LG-01141-…` directly — breaking the
+ruled mechanics (no PR C–G edits the ledger). Reverted with `git revert --no-edit
+d8d6db8f` → `3d9758eb`, pushed as a fast-forward (no force). The reverted text (T6's
+ownership-matrix evidence) is saved at
+`~/gi-pricing-plan.local/handover/w37-8-ledger-notes/d8d6db8f-pr809-ledger.diff` and
+reproduced below in the T6 ownership-matrix section, since that evidence belongs in this
+ledger regardless of which PR wrote it.
+
+**T6 ownership-matrix evidence (recovered from the reverted commit, verified fresh at
+this ledger's head rather than trusted from the old diff):**
+
+```bash
+python3 scripts/doc-index.py   # regenerates docs/INDEX.md
+sed -n '/## Ownership matrix/,/^$/p' docs/INDEX.md
+```
+
+```text
+| role | owns |
+|---|---|
+| decision-maker | requirement (FR/NFR/DEP), open question (OQ), workflow (WF), decision (ADR), ruling (RL) |
+| maintainer | phase, work (WK), proposal (RFC), ruling (RL), reference: process/, reference: charters |
+| planner | plan (PL map/leaf), slice (SL) |
+| executor | plan (PL handover), ledger (LG), research (RS spike/measurement), reference: contracts/ |
+| auditor | plan (PL review), finding (FD), closure (CR kind: work/phase) |
+| lead | phase, proposal (RFC), closure (CR kind: review), reference: skills, reference: agents |
+| reporter | *(declared empty — "owns no governed document")* |
+| watcher | *(declared empty — "owns no governed document")* |
+```
+
+Acceptance Standard item 2 satisfied: the reporter and watcher rows are present and
+**declared** empty (not merely uninverted, as at T1's baseline); every other role row is
+non-empty.
+
+No residue introduced by T6 itself.
+
+### PR-D (#810) — squash `954008f8` — Task 7
+
+File: `.claude/roles/auditor.md` — four new-obligation clauses: **CR- filing** (files
+every closure record — `CR-` of kind `work` or `phase` — under `docs/closures/`);
+**FD- lifecycle** (creates the register row + essay for every `FD-`, sets its disposition
+`closed`/`retired`); **LG- close** (sets a slice's `LG-` to `closed` at slice close,
+verifies acceptance); **S-4** (rider b, the deputy's 2026-09-26 23:06:30 BST finding — a
+slice audit's ledger check is a two-way match **and** a reachability check,
+`git merge-base --is-ancestor <sha> <PR head>` per matched SHA). Riders **S-3** (rider a —
+the retired findings-README citation rewritten to `docs/findings/README.md`) and **S-7**
+(rider e — the pre-migration audit tree path citations rewritten to `docs/closures/`/`docs/findings/`) are
+path rewrites, not new obligations.
+
+DISCLOSED reconciled by line name: `origin/main` at PR-D's base = 870; PR-D's own head
+(isolated checkout, no other slice's drafts present) = 867. Three lines left, none
+arrived: `check 36: .claude/roles/auditor.md:26/:33/:35` (legacy pre-migration audit-tree path), each
+fixed by S-7's rewrite.
+
+**Residue D introduced** (the deputy's ruling 06:17:27 BST): `.claude/roles/auditor.md:40`,
+token `W37-10`, a check-36 alias-class disclosed hit.
+
+D11 evidence: `audit-docs.py` rc 0, `doc-id.py check` rc 0, `doc-index.py --check` rc 0,
+full `tests/` (28 files) + the reduced `backend/tests`/`packages/*/tests` subset
+(`grep -rlE '\.claude|REPO_ROOT|docs/'` predicate, 17 files) → 1367 passed, 3 skipped.
+
+### PR-E (#811) — squash `3ede6495` — Task 8
+
+File: `.claude/roles/decision-maker.md` — six new-obligation clauses: **RL-** (own file
+under `docs/rulings/`, id via `doc-id.py next` — never a shared document entry);
+**FR-/NFR-/DEP-** (created and amended via `spec-change`); **ADR-** (authored via
+`adr-write`, `draft` status); **WF-** (workflow journeys via `spec-change`; an executor
+delivers and owns `test_wfNN_journey`, never amends it); **OQ-** (recorded by anyone,
+closed by the decision-maker citing the resolver); **PL- map/leaf** (rules decision points
+as `RL-`, never edits the plan). No riders assigned to this file.
+
+DISCLOSED: 870, identical to its own base `origin/main` 870 at the time — no legacy
+citation touched. No residue introduced.
+
+D11 evidence: `audit-docs.py` rc 0, `doc-id.py check` rc 0, `doc-index.py --check` rc 0,
+same 17-file reduced test set → 1367 passed, 3 skipped.
+
+### PR-F (#812) — squash `a24c0a28` — Task 9
+
+Files: `.claude/roles/executor.md` and `docs/plans/PL-1071-…md` (§1.4 rider rows, same
+commit per standing rule (i)) — four new-obligation clauses: T9's own §1.6 clauses (works
+from a `PL-` leaf for its `SL-`; appends its `LG-` per task and per PR, `active`; owns
+`RS-` spike/measurement via `library-spike`; owns the `WF-` journey tests; new `Never`
+bullet against amending a `WF-`), **S-8** (ruled by the deputy 02:29:40 BST, verbatim: *"a
+reproduction already filed as a dated record with its run id discharges the reproduce
+step of any debugging skill"*), **S-9** (ruled by the deputy 04:38:48 BST, verbatim:
+*"Stop a process by pid, after `readlink /proc/<pid>/cwd` names it as yours; never by
+pattern (`pkill -f`, `pkill` by name) — a pattern matches every session's processes on
+the box"*), **S-10** (ruled by the deputy 05:52:14 BST, verbatim: *"An executor ends its
+turn after every report it files and after every commit, so that the lead's messages are
+read before the next action; one turn spans one task, never a sequence of them"*).
+**Scope rows S-8/S-9/S-10 landed in `a24c0a28`; evidence here.**
+
+One correction commit inside the same PR (`63bc0eda`, no amend): the S-8/S-9 rider rows
+in `PL-1071-…md` initially misattributed both rulings to the lead; corrected to the
+deputy, and re-verified (audit-docs/doc-id/doc-index all rc 0 unchanged) before the
+fast-forward push.
+
+**Residue F introduced**: `.claude/roles/executor.md:48`, token `W37-9`, a check-36
+alias-class disclosed hit (from the "(W37-9's)" note in the branch/PR-convention clause).
+
+D11 evidence: `audit-docs.py` rc 0 (DISCLOSED 870, unchanged from base), `doc-id.py check`
+rc 0, `doc-index.py --check` rc 0, same 17-file reduced test set → 1367 passed, 3 skipped.
+
+### PR-G (#813) — squash `d5501e99` — Task 10
+
+File: `.claude/roles/lead.md` — new-obligation clauses: dispatches every `SL-` (`active`);
+owns every `CR-` of kind `review`; owns the agent files under `.claude/agents/`; the
+hand-kept `Tools:` three-path list replaced with a pointer to `doc-index.py`'s generated
+`## Ownership matrix` section in `docs/INDEX.md`. **S-5** (rider c; the deputy,
+2026-09-19 15:31:23 and 15:33:03 BST — a governed status file is updated by copying it
+and writing the copy, never by a truncating overwrite). **S-6** (rider d; `RL-1140`
+DP-8.3(a), F97's register row) — remedy shape drafted: the
+**halt-protocol-for-the-shared-checkout** clause (the plan's other option, a
+successor-side precondition check, was not taken). `grep -n "F97" .claude/roles/lead.md;
+echo F97_GREP_EXIT=$?` → clause printed at `:88`, exit 0. Drafting the clause does not
+close F97; its register row's own condition governs the auditor setting it `closed`.
+
+**Residue G introduced**: `.claude/roles/lead.md:88`, token `F97`, bare finding id, a
+check-36 alias-class disclosed hit.
+
+D11 evidence: `audit-docs.py` rc 0, `doc-id.py check` rc 0, `doc-index.py --check` rc 0,
+same 17-file reduced test set → 1367 passed, 3 skipped.
+
+### PR-H (this PR) — Tasks 11, 12, 13 — the closing PR
+
+**Task 11 — `.claude/roles/planner.md`.** New-obligation clauses: owns the plan as a
+`PL-` file with an id from `doc-id.py next`, `draft` while a blocking decision point is
+open, `active` on freeze; a replan is a new `PL-` carrying `supersedes: [<old id>]`, never
+a new dated revision of the same file, with `superseded_by:` set on the old plan in
+return; cuts the `SL-` rows in the map plan (`draft` at minting) and re-cuts them on a
+replan. The `Tools:` bullet is rewritten: the `CLAUDE.md` §14 phase review is filed as its
+own `CR- kind: review` record under `docs/closures/`, not the pre-migration plan-reviews path
+(which does not exist post-migration). **S-7** (rider e, a path rewrite, not a new
+obligation): `planner.md:50` and `:53`'s pre-migration audit-tree legacy citations rewritten.
+
+DISCLOSED reconciled by line name at this file's own base (`d5501e99`, isolated
+worktree): 867 → 865. Exactly the two planner.md legacy-path hits left, none arrived.
+
+**Task 12 — no maintainer charter (verification only, no repository file changed for
+this task).**
+
+```
+$ ls .claude/roles/
+auditor.md  decision-maker.md  executor.md  lead.md  planner.md  reporter.md  watcher.md
+$ ls .claude/roles/maintainer.md
+ls: cannot access '.claude/roles/maintainer.md': No such file or directory
+```
+
+Seven files, no eighth. Both listings confirmed present: `document-ids.md` §1.6
+(`:140-162`) and `CLAUDE.md` §12 each state the maintainer's authorities once.
+
+**Step 3, the third-copy sweep — run twice, both in a clean detached worktree (never
+`exec-w37-8-t3`, which carries other slices' uncommitted drafts):**
+
+```
+$ git worktree add --detach <path> <ref>
+$ grep -rln "maintainer" .claude/roles/ .claude/agents/ docs/process/
+```
+
+First run at `origin/main` = `3ede6495` (before F and G merged): 16 files. Second run,
+**at this PR's own base** `d5501e99` (after F and G merged, per the lead's instruction to
+re-run rather than rely on recollection): identical 16 files, byte-for-byte the same set.
+Both runs, every hit classified by reading the actual line(s), not by the grep alone:
+
+- **`owner: maintainer`** / **`"decider": "maintainer"`** front-matter/JSON field (a
+  single value, not an enumeration): `.claude/roles/{decision-maker,executor,planner,
+  reporter,lead,watcher,auditor}.md`, `docs/process/{security-posture,
+  checklists/work-item-close,checklists/phase-close,retrofit-impossible}.md`,
+  `docs/process/delivery-process.core.json:394`.
+- **Prose mentions of one specific maintainer action or instruction**, not an
+  enumeration of the full authority set: `.claude/roles/executor.md` (principal/
+  attribution note), `.claude/roles/planner.md` (§14 acceptance line),
+  `.claude/roles/reporter.md` (a dated instruction, a channel-routing note),
+  `.claude/roles/lead.md` (merge authority, dispatch note — re-checked after F/G merged:
+  same class, only the line numbers shifted with the new content above them),
+  `.claude/roles/auditor.md` (close acceptance is the maintainer's, one line),
+  `.claude/agents/spec-reconciler.md` (one sentence: stays with the maintainer),
+  `.claude/agents/README.md` (§14 review proposals; skill-install approval — two narrow
+  mentions), `docs/process/delivery-process.md` (four narrow mentions).
+- **`docs/process/document-ids.md` §1.6 itself** (`:140-162`) — one of the two canonical
+  listings named in step 2, not a third copy. Expected, not a finding.
+
+**Result, both runs: no third copy found.** T12 is discharged as **no contradiction
+found**; nothing filed as an `FD-`.
+
+**Task 13 — gate, PR, the §7(i) table.**
+
+§7(i) table — one row per §1.2 file, with the commit that closed it:
+
+| # | File | Task | Closing commit (squash SHA on `main`) |
+|---|---|---|---|
+| 1 | `.claude/roles/auditor.md` | T7 | `954008f8` (PR-D, #810) |
+| 2 | `.claude/roles/decision-maker.md` | T8 | `3ede6495` (PR-E, #811) |
+| 3 | `.claude/roles/executor.md` | T9 | `a24c0a28` (PR-F, #812) |
+| 4 | `.claude/roles/lead.md` | T10 | `d5501e99` (PR-G, #813) |
+| 5 | `.claude/roles/planner.md` | T11 | this PR (H) |
+| 6 | `.claude/roles/reporter.md` | T6 | `99355ab0` (PR-C, #809) |
+| 7 | `.claude/roles/watcher.md` | T6 | `99355ab0` (PR-C, #809) |
+| 8 | `.claude/agents/README.md` | T5 | `ff70de2f` (PR-B, #808) |
+| 9 | `.claude/agents/ci-watcher.md` | T3 | `6cad8e4d` (PR-A, #807) |
+| 10 | `.claude/agents/spec-reconciler.md` | T4 | `6cad8e4d` (PR-A, #807) |
+| 11 | Maintainer authorities | T12 | verification recorded above; no file changed |
+
+Gate, DP-6 lines and the CI evidence for this PR are below, under "H's gate".
+
+## PL-1071 §5 Acceptance Standard item 8 — the FD-1066…FD-1069 re-read
+
+Verified by this executor at `origin/main` post-#811:
+
+```
+$ grep -n "W37-8" docs/findings/FD-01066*.md docs/findings/FD-01067*.md \
+    docs/findings/FD-01068*.md docs/findings/FD-01069*.md
+(no output)
+```
+
+**Result: no W37-8 routing found**, across all four (`FD-1066` idempotence, `FD-1067`
+check-35 two-sub-clause, `FD-1068` standing-CI-verify pinned base, `FD-1069` H1 residue
+population disagreement). All four are instrument- or corpus-level and none names
+`.claude/roles/` or `.claude/agents/` — the plan's own pre-filing risk assessment holds.
+Item 8 is satisfied by this negative result, quoted verbatim, not by a broader claim.
+
