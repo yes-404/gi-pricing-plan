@@ -184,82 +184,8 @@ keys present in the rendered stamp. Restored the clause — the new test, and th
 `tests/test_doc_id_migrate.py` (303 tests) and `tests/test_audit_docs_ids.py -k check_30`
 (11 tests), all passed.
 
-### Addendum to Task 1 — Acceptance Standard item 8, discharged
-
-**Not recorded when T1 first landed (#806) — discharged here, appended rather than
-inserted into Task 1's own entry above.** `PL-1071` §5 item 8 requires the four
-`FD-1066`…`FD-1069` disclosures to be re-read **in full** after `CR-1065` merged, and the
-ledger to record either "no W37-8 routing found" or the routing taken.
-
-```text
-$ ls docs/findings/ | grep -E '01066|01067|01068|01069'
-FD-01066-pl960-909-idempotence-second-migrate-run-zero-diff-not-proven.md
-FD-01067-check-35-two-sub-clauses-fire-on-one-non-markdown-file-after-f87s-widening.md
-FD-01068-standing-ci-verify-reads-the-w37-11-record-from-a-pinned-base-forever.md
-FD-01069-h1-residue-by-file-and-tracked-files-docstrings-disagree-on-population.md
-$ grep -n '\.claude/roles\|\.claude/agents' docs/findings/FD-01066*.md docs/findings/FD-01067*.md docs/findings/FD-01068*.md docs/findings/FD-01069*.md
-(no output)
-```
-
-All four read in full, not by title alone (`PL-1071` §4.1's own caution against exactly
-that). **No W37-8 routing found.** `FD-1066` is `PL-960:909`'s idempotence gap
-(a second `migrate` run's zero-diff not proven) — instrument-level, names no charter or
-agent file. `FD-1067` is check 35's two-sub-clause double-fire on one non-Markdown file
-after F87's widening — a check-scope defect, not a charter-content one. `FD-1068` is the
-standing CI `doc_id_verify` step reading `w37-11-record.md` from a pinned base tree
-forever — a CI-instrument gap, W37-11's ceiling record, not this slice's files. `FD-1069`
-is the H1 residue count disagreeing between a by-file breakdown and the tracked-files
-docstring's stated population — a reconciliation gap in the residue accounting itself,
-again naming no `.claude/roles/` or `.claude/agents/` file. Acceptance Standard item 8 is
-discharged.
-
 ## PRs
 
 | # | Branch | Head | Tasks | State |
 |---|---|---|---|---|
-| 1 | `w37-8-t1-t2` | `c6964a2` | T1, T2 | **merged as PR #806** — this row's "draft, open" was the state when the row was first written; corrected here rather than edited in place, per `gh api repos/yes-404/gi-pricing-plan/pulls/806` (`merged: true`) |
-| 2 | `w37-8-charters` | `d5ec4aad` | T3, T4 | draft, open, PR #807 — CI confirmed `CLEAN` (docs + history-policy both `success`; python/frontend correctly did not fire) |
-| 3 | `w37-8-t5-readme` | `f41ae954` | T5 | draft, open, PR #808 — both gate halves green (7/7 python, 6/6 frontend) |
-| 4 | `w37-8-t6-reporter-watcher` | `4ae3c499` | T6 | in progress |
-
-### Task 6 — the ownership-matrix invocation, re-run and recorded
-
-**The generated matrix is unaffected by charter prose, and that is by design, not a
-miss.** Read `scripts/doc-index.py:958-969` (`ownership_matrix()`): the function's own
-docstring states *"`reporter` and `watcher` are named in no cell (verified: neither
-string appears anywhere in `_OWNERSHIP_TABLE`'s second column), so both come out as `()`
-— the two deliberately empty rows, produced by derivation rather than special-cased."*
-The matrix is built from the `_OWNERSHIP_TABLE` constant (`document-ids.md` §1.6's table,
-transcribed into the script), never from a live read of `reporter.md`/`watcher.md`'s own
-text. So Acceptance Standard item 2's "declared empty, not blank" is a property this
-matrix has held **since before T6's edit** — T6's own acceptance criterion is item 6
-(the charters' own sentence), not a change in this table's shape.
-
-```text
-$ python3 scripts/doc-index.py; echo EXIT=$?
-EXIT=0
-$ /usr/bin/git status --porcelain docs/INDEX.md
-(empty — byte-stable)
-$ sed -n '/## Ownership matrix/,/^$/p' docs/INDEX.md
-## Ownership matrix
-
-| role | owns |
-|---|---|
-| decision-maker | requirement (FR/NFR/DEP), open question (OQ), workflow (WF), decision (ADR), ruling (RL) |
-| maintainer | phase, work (WK), proposal (RFC), ruling (RL), reference: process/, reference: charters |
-| planner | work (WK), slice (SL), plan (PL map/leaf) |
-| executor | plan (PL handover), ledger (LG), research (RS spike/measurement), reference: contracts/ |
-| auditor | plan (PL review), research (RS audit), closure (CR), finding (FD) |
-| lead | phase, proposal (RFC), closure (CR), reference: skills, reference: agents |
-| reporter |  |
-| watcher |  |
-```
-
-Acceptance item 6, the charter-side check that actually changed with this task's commit:
-
-```text
-$ grep -n "owns no governed document" .claude/roles/reporter.md .claude/roles/watcher.md; echo GREP_EXIT=$?
-.claude/roles/reporter.md:15:- **The reporter owns no governed document** ...
-.claude/roles/watcher.md:13:- **The watcher owns no governed document** ...
-GREP_EXIT=0
-```
+| 1 | `w37-8-t1-t2` | `c6964a2` | T1, T2 | draft, open |
