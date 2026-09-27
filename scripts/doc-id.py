@@ -10335,6 +10335,15 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     # behaviour every such caller expects.
     if getattr(args, "verify", _VERIFY_OFF) is not _VERIFY_OFF:
         return _cmd_migrate_verify(args)
+    if _docid.is_migrated_tree(Path(args.repo_root)):
+        print(
+            f"doc-id.py migrate: refused: {args.repo_root} is already migrated "
+            "(docs/INDEX.md and docs/REDIRECTS.csv are both present). A second migrate is "
+            "not idempotent: it rewrites legacy-form spec constants and corrupts PowerShell "
+            "'::' (F107 / C4, LG-1148 Task 5). Nothing was written.",
+            file=sys.stderr,
+        )
+        return 2
     result = migrate(args.repo_root)
     for path in result.files_written:
         print(f"wrote {path}")

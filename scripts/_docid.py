@@ -319,6 +319,17 @@ GOVERNANCE_RECORD_EXCLUSIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
 )
 
 
+def is_migrated_tree(root: Path) -> bool:
+    """True when `root` holds the two artifacts only the RFC-937 migration creates:
+    `docs/INDEX.md` and `docs/REDIRECTS.csv`. This is the same sentinel as
+    `audit-docs.py`'s `migrated_tree()` and `.github/workflows/docs.yml`'s verify step.
+    `doc-id.py migrate` refuses such a tree, because a second run is not idempotent
+    (F107 / C4, LG-1148 Task 5).
+    """
+    docs = root / "docs"
+    return (docs / "INDEX.md").is_file() and (docs / "REDIRECTS.csv").is_file()
+
+
 def governance_record_reason(rel_posix: str) -> str | None:
     """Why `rel_posix` sits in the governance-record class (`GOVERNANCE_RECORD_EXCLUSIONS`
     above) — a record that quotes legacy paths or tokens as evidence of the residue they

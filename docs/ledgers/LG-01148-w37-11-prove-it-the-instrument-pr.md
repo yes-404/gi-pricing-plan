@@ -766,7 +766,57 @@ Each now says the set is filtered by `sweep_exclusion_reason`, and names F110. A
 **Step 3.** `tests/test_doc_id_verify.py` gave `164 passed, 1 skipped`. `ruff check .` was
 clean. `mypy` gave `no issues found in 196 source files`.
 
+**Slip, recorded 2026-09-27 13:38:36 BST:** `f7baff08` was committed and pushed with `audit-docs.py` rc
+`1`. Check 25 failed on a bare parenthesised finding id in this section's heading. The next
+commit, `9422776b`, fixed it, and from then on every commit command is gated on audit rc
+`0`. The lead accepted this as disclosed.
+
 Landed in: this PR — the pre-squash branch commit that carries Task 6.
+
+### The migrate guard — C4's recommended fix, adopted by the lead (the deputy's condition 3)
+
+**Adopted by the W37-11 lead, recorded 2026-09-27 13:38:36 BST.** The lead adopted the executor's proposal as
+written, under the deputy's C4 condition 3 (one check, one test, the gate green). Before
+adopting, the lead checked that at `origin/main` the only non-verify `migrate` invocation
+anywhere in `.github`, `scripts` or `.claude/skills` is the `doc-id-migration-run` skill's
+one-time run over a pre-migration root. So the guard breaks nothing.
+
+- **Predicate.** The new `_docid.is_migrated_tree(root)` is true when `docs/INDEX.md` and
+  `docs/REDIRECTS.csv` are both present. This is the same sentinel as `audit-docs.py`'s
+  `migrated_tree()` and `docs.yml`'s verify step. `audit-docs.py` is not repointed in this
+  PR.
+  - Readings by `git cat-file -e`: TRUE at `9fe726b2` (main) and at `9422776b`; FALSE at
+    the pinned base `0651c1e`, where both are absent.
+- **Placement.** `doc-id.py`'s `_cmd_migrate`, in the non-verify branch, before
+  `migrate()`. It is not inside `migrate()`, because `tests/test_doc_id_migrate.py` calls
+  `migrate()` twice on the synthetic fixture by design. `--verify` cannot reach the check,
+  for two reasons: it returns before the check, and it calls `migrate()` directly on a
+  pinned-base snapshot, where the predicate is FALSE.
+- **Exit 2**, with the reason *"doc-id.py migrate: refused: <root> is already migrated
+  (docs/INDEX.md and docs/REDIRECTS.csv are both present). A second migrate is not
+  idempotent: it rewrites legacy-form spec constants and corrupts PowerShell '::' (F107 /
+  C4, LG-1148 Task 5). Nothing was written."*
+- **The test.** `tests/test_doc_id_migrate.py::test_cli_migrate_refuses_an_already_migrated_tree`
+  adds the two artifacts to the `pristine_a` fixture and commits them. It asserts rc `2`,
+  the reason text, both file names, and an empty `status --porcelain` afterwards.
+  - Before the guard it failed with `assert 0 == 2`.
+  - **Proof 7:** with the guard replaced by `if False`, it failed again with
+    `assert 0 == 2`. The file was restored with a hash check.
+  - The negative side is the existing CLI runs over `pristine_a` without the artifacts,
+    which still return rc `0`.
+- **On a real tree.** `python3 scripts/doc-id.py migrate --repo-root <the Task 5 snapshot>`
+  printed the refusal and exited `rc=2`. The snapshot's `status --porcelain` was
+  unchanged: 17 lines, as Task 5 left it.
+- **Suites.** `tests/test_doc_id_migrate.py`, `tests/test_doc_id.py` and
+  `tests/test_doc_id_verify.py` gave `608 passed, 1 skipped`. `ruff` and `mypy` were clean.
+- **The skill** (`CLAUDE.md` §12: a skill must match its tool). `doc-id-migration-run`
+  gains one line after its migrate example: since W37-11 the CLI refuses a migrated tree
+  (exit 2, the sentinel), because a second run is not idempotent. Its `Verified` date is
+  refreshed to 2026-09-27, with the tree named.
+- C4's verdict does not change: *deferred with an owner*. The guard prevents the harm; true
+  idempotence stays with the create-read-retire audit.
+
+Landed in: this PR — the pre-squash branch commit that carries the guard.
 
 ## PRs
 
