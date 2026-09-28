@@ -741,16 +741,17 @@ async def _create_authored(
 
 
 @pytest.mark.req("FR-353")
+@pytest.mark.parametrize("decision", ["approve", "reject", "request_changes"])
 @pytest.mark.parametrize("artifact_type", APPROVABLE)
-async def test_the_author_cannot_approve_a_version_someone_else_submitted(
+async def test_the_author_cannot_decide_on_a_version_someone_else_submitted(
     client: TestClient, database: Database, workspace_id, grant, submitter_headers,
-    artifact_type: str,
+    artifact_type: str, decision: str,
 ) -> None:
-    """FR-353 as amended: the approver may be neither the submitter nor the author.
+    """FR-353 as amended: neither the submitter nor the author may decide on a version.
 
     The author holds the approver role and is not the submitter, so neither the route's
     permission check nor R1's submitter check can be what refuses — only the author check
-    can. One case per approvable type, because the check must hold on every one of them.
+    can. Every approvable type, and every decision: a rejection is a decision too.
     """
     await _allow_the_type(client, workspace_id, grant, database, artifact_type)
     author = new_uuid7()
@@ -767,7 +768,7 @@ async def test_the_author_cannot_approve_a_version_someone_else_submitted(
 
     response = client.post(
         f"/api/v1/approval-requests/{created.json()['id']}/decide",
-        json={"decision": "approve"},
+        json={"decision": decision, "comment": "Reviewed."},
         headers=_headers(author, workspace_id),
     )
     assert response.status_code == 403, response.text
