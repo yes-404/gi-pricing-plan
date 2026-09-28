@@ -15,6 +15,7 @@ so the persisted-log assertion held before this change; it is kept so it keeps h
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -194,6 +195,7 @@ async def test_a_unique_violations_detail_does_not_reach_the_message_or_the_log(
             source=JobSource.API,
             submitted_by={"kind": "user", "id": str(principal.id)},
             idempotency_key=_SENTINEL,
+            finished_at=datetime.now(UTC),
         )
 
     async with database.unit_of_work() as session:

@@ -474,7 +474,7 @@ async def test_a_row_that_fails_validation_leaves_no_input_in_the_output_or_the_
     # The control: an operator still sees which field failed and why.
     assert "purpose" in messages[0]
     assert "literal_error" in messages[0] or "enum" in messages[0], messages[0]
-    assert sentinel not in output.write_csv()
+    assert sentinel not in json.dumps(output.to_dicts(), default=str)
 
 
 @pytest.mark.req("NFR-499")
@@ -508,5 +508,5 @@ async def test_a_malformed_effective_date_does_not_echo_its_value_into_the_error
     output = pl.read_parquet(
         io.BytesIO(await _output_bytes(database, blob_store, ref_result["output_blob_sha256"]))
     )
-    assert sentinel not in output.write_csv()
+    assert sentinel not in json.dumps(output.to_dicts(), default=str)
     assert "effective_date" in output.filter(pl.col("outcome") == "error")["error_message"][0]
