@@ -70,7 +70,7 @@ read at `df8e5811`.
 | PL-817 task | Evidence at main | Verdict |
 |---|---|---|
 | T1 — `zen-engine` installed and pinned | `packages/pricing-core/pyproject.toml:53` pins `"zen-engine==0.53.0"`, the S1 version; `uv.lock` carries it; `docs/research/w8-spike-resolution.md` §T1 records the wheel and the import | evidenced |
-| T2/T3 — S1 re-run, requirements confirmed | `docs/research/w8-spike-resolution.md:18`: *"21 checks, 0 failed"*, results beside FR-273 to FR-276. At main the four requirements also carry test markers: `@pytest.mark.req` for FR-273 to FR-276 in `packages/pricing-core/tests/test_rating_compile.py` and backend tests (predicate: `grep -rlE 'req\("(FR-27[3-6]\|NFR-50[12])"' backend packages --include=*.py`, 5 files) | evidenced |
+| T2/T3 — S1 re-run, requirements confirmed | `docs/research/w8-spike-resolution.md:18`: *"21 checks, 0 failed"*, results beside FR-273 to FR-276. At main the four requirements also carry test markers: `@pytest.mark.req` for FR-273 to FR-276 in `packages/pricing-core/tests/test_rating_compile.py` and backend tests (predicate: `grep -rlE 'req\("(FR-273\|FR-274\|FR-275\|FR-276\|NFR-501\|NFR-502)"' backend packages --include=*.py`, 5 files) | evidenced |
 | T4 — S2 latency re-run | `docs/research/w8-spike-resolution.md:83`: NFR-501 `nthread=1` p99 **1.626 ms**, 3.3 % of the 50 ms budget; `:93`: NFR-502's validation p99 **0.070 ms**. The `03` NFR-502 row carries *"Amended 2026-08-27, WK-668 — the premise's ~1 ms figure was not reproduced."* | evidenced |
 | T5 — ADR-706 confirmed | `docs/adrs/ADR-00706-gorules-zen-engine-executes-rating-dags.md:80`, *"Addendum — 2026-08-27: S1 and S2 confirmed at Phase 2 entry"*, which reads *"This addendum does not change the decision … **WK-669 proceeds** on this basis."* | evidenced |
 | T6 — the success decision recorded | The same addendum. WK-669 then proceeded and is `status: closed` in the roadmap (`CR-838`) | evidenced |
@@ -112,8 +112,8 @@ Mode: work item 'WK-668'. 1 owed row(s), 0 matched but excluded as opening with 
 - **NFR-502/501 (F-W9-1)** (work item: 'W9-3', phase: '2') — carry forward with an owner — the WK-671 scoring workstream; WK-668's measurements recorded (NFR-502 p99 0.070 ms, NFR-501 p99 1.626 ms)
 ```
 
-The one row is `docs/findings/register.md:59`, which `docs/REDIRECTS.csv` line 292 maps to
-`FD-1077`. It matches WK-668 only because its Decision cell quotes WK-668's measurements.
+The one row is `docs/findings/register.md:59`, the NFR-502/501 row. `docs/REDIRECTS.csv` line 292 maps its
+retired id to a new row id, which has no `docs/INDEX.md` entry of its own. It matches WK-668 only because its Decision cell quotes WK-668's measurements.
 Its work item is a WK-669 slice, and its owner is the WK-671 scoring workstream. It is
 therefore not WK-668's residue; its resolution is in the Findings table. Every id in the
 block appears in that table with a resolution, and the table adds nothing the block does
@@ -123,7 +123,7 @@ not carry except the three findings named there as having no register row.
 
 | Finding | Concerns | Decision | Status |
 |---|---|---|---|
-| The owed row (`FD-1077`, register line 59) | NFR-502 and NFR-501, carried out of WK-669 | **reassigned** (already) — WK-671 owns it, and `CR-927` §1 names it in WK-671's scope; `CR-927` verdicts NFR-501 *"delivered"* (*"Measured in WK-668: p99 1.626 ms"*) and NFR-502 *"owed, not delivered"*, carried forward. Not WK-668's to discharge | closed for WK-668 |
+| The owed row (register line 59, NFR-502/501) | NFR-502 and NFR-501, carried out of WK-669 | **reassigned** (already) — WK-671 owns it, and `CR-927` §1 names it in WK-671's scope; `CR-927` verdicts NFR-501 *"delivered"* (*"Measured in WK-668: p99 1.626 ms"*) and NFR-502 *"owed, not delivered"*, carried forward. Not WK-668's to discharge | closed for WK-668 |
 | Finding 1 — no register row | `CR-826`'s first finding row: the migration rewrote a workstream range into a string that is half new id and half retired form, so the sentence no longer resolves | **accept** — `CR-826` is write-once; this record states the reading: the range meant the Phase 2 build workstreams, WK-669 onward. No FD proposed | closed |
 | Finding 2 — no register row | `CR-826` says *"Closed 2026-08-27"* while the roadmap row says `status: active` and no maintainer line exists | **fix before close** — this record, and the maintainer's line below | closed-with-findings when the line lands |
 | Finding 3 — no register row | `docs/research/w8-spike-resolution.md` carries no RFC-937 header and has no `docs/INDEX.md` row; it is WK-668's only measurement evidence | **accept** for this close — the file resolves by path, and its content is re-read above. Whether an unheadered research file is in the create-read-retire audit's population is that Work's question, not this close's | closed |
@@ -160,7 +160,7 @@ ADR-706 is confirmed, and WK-669 proceeded.
 **The proposed roadmap change**, made only once the line exists, in the form of WK-697's
 closed row: `status: active` → `status: closed` in the `### WK-668` header block, and the
 row's sentence extended with *"**Closed <date> by the deputy's dated line, by delegation, on
-[`CR-1172`](closures/CR-01172-wk-668-work-close-the-auditor-s-restatement-of-cr-826-at-main.md).**"*
+`CR-1172`, linked as `closures/CR-01172-wk-668-work-close-the-auditor-s-restatement-of-cr-826-at-main.md` from the roadmap.**"*
 
 ## Sign-off
 
