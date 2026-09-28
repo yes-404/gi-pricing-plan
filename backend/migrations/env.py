@@ -22,7 +22,10 @@ from app.db.base import Base
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # `disable_existing_loggers=False`: alembic can run in-process (the test suite does), and
+    # the default would disable every logger that already exists, the application's
+    # included, for the rest of the process.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", load_settings().database_url.get_secret_value())
