@@ -239,6 +239,10 @@ alone.
 
 ### Permission names — the permission-catalogue rule (b), until the catalogue ruling merges
 
+**Status at this commit.** #856's DP-B and DP-D are decided (the deputy's 15:01:11 and
+15:03:38 BST entries), and the rows they govern say so; #856 has not minted, so it is cited
+by PR number. The rows marked "pending" still wait for the rest of the catalogue ruling.
+
 **Why this section exists.** The permission-catalogue finding filed in #855 (unmerged at
 this tree, so it is cited here by PR number, as #830 and #837 are) finds that `06`
 names 24 permissions and the code names 24, and **only 7 names are shared**. This is a
@@ -261,14 +265,14 @@ check no permission.**
 |---|---|---|---|---|
 | 2 | Deploy (`POST /api/v1/environments/{env}/deployments`) | `deployment:promote` (`permissions.py:54`) | No; `06:62` and `06:219` say `rating_version:deploy_prod` and `rating_version:deploy_*` | **Ruled, not picked.** DP-6 is ruled (b) in #848's RL (unmerged): the code's name is right, `06` is amended to it, and there is no environment-scoped grant. The catalogue RL must not re-open it; if the catalogue ruling maps it differently, the two RLs conflict and the lead is told |
 | 2 | Decide the `deployment` approval request | `approval:decide` (`permissions.py:53`) | Yes (2 hits) | One of the 7 shared names, so there is no disagreement to resolve |
-| 2 | Create or list Environments (`07`'s `/api/v1/environments`) | `admin:manage_environments` (`permissions.py:69`) | No (0 hits); `06` names no permission for this act | **Code-only, by #855's finding's terms.** `06` offers no alternative name. The slice uses the code name, and the catalogue ruling's verdict for it (add to `06` §4, or remove) is applied before Slice 2's leaf plan is written |
+| 2 | The Environment record's lifecycle: create, rename, retire (`07`'s `/api/v1/environments`) | `admin:manage_environments` (`permissions.py:69`) | No (0 hits); `06` names no permission for this act | **Decided, not picked: #856's DP-B** (the deputy, 15:01:11, standing at 15:03:38 BST). The name is kept and owned by Slice 2, which adds its first route check, with a negative test that a non-Admin is refused. Its scope is the record's lifecycle only; it guards **no** setting value (#856's DP-D) |
 | 2 | A Service Account never holds a deploy permission (FR-347, negative test) | `deployment:promote` | As in the first row | The negative test checks the permission #848's RL rules; it follows that ruling |
 | 3 | Mint, rotate and revoke per-environment keys (FR-430, register F54) | `admin:manage_service_accounts` (`permissions.py:70`) | No (0 hits) | Code-only; `06` names no permission for key management. The slice uses the code name and applies the catalogue ruling's verdict for it |
 | 3 | A Service Account scores (the scope a key carries) | `score:execute` (`permissions.py:58`) | No (0 hits); `07` §4.3's example names `score:execute` | Code-only in `06`, but `07` names it, so the name has a spec source. the catalogue ruling's verdict decides whether `06` §4 adds it |
-| 3 | Update environment configuration (FR-431, `PUT /api/v1/environments/{name}/settings`) | `admin:manage_environments` | No (0 hits) | The same code-only name as Slice 2's Environment row. The code also has `admin:manage_settings` (`permissions.py:68`) for the precedence chain's other layers; **which of the two guards an environment's settings is not decided here**, and Slice 3's leaf plan takes the catalogue ruling's verdict on both |
+| 3 | Update environment configuration (FR-431, `PUT /api/v1/environments/{name}/settings`) | `admin:manage_settings` (`permissions.py:68`) | No (0 hits) | **Decided, not picked: #856's DP-D (b).** Every per-environment setting value is guarded by `admin:manage_settings`, which already guards the settings route. Every settings change writes an Audit Event naming the environment, the key, the old value and the new value |
 | 5 | Roll back (FR-269, `…/deployments/rollback`) | `deployment:promote` | As in Slice 2's first row | Rollback is the same operation aimed at an earlier version (Task 5), so it checks the same permission |
-| 6 | Set date routing (FR-270) | `deployment:promote` | As in Slice 2's first row | A routing rule is made at deployment time (FR-270: overlaps are "rejected at deployment time"), so it is a deploy act |
-| 6 | Enable or configure shadow scoring (FR-271, `PUT /api/v1/environments/{env}/shadow`) | `admin:manage_environments` | No (0 hits) | DP-2's decision makes enabling shadow "an environment setting with its own audit event", so it is guarded like Slice 3's environment-configuration row, and the catalogue ruling's verdict on that name governs |
+| 6 | Deploy a version carrying a date range (FR-270) | `deployment:promote` | As in Slice 2's first row | **Confirmed by the deputy (15:05:53 BST): a deploy act.** A date range belongs to a deployment, and overlaps are "rejected at deployment time" (FR-270). It carries DP-7's approval floor for `prod`. **Turning date routing on or off for an environment is a setting**, in the next row |
+| 6 | Turn date routing or shadow scoring on or off, and configure shadow (FR-270, FR-271, `PUT /api/v1/environments/{env}/shadow`) | `admin:manage_settings` | No (0 hits) | **Decided, not picked: #856's DP-D (b)**, scoped by the deputy at 15:05:53 BST to the switches and the shadow configuration only. It writes the same Audit Event as Slice 3's settings row. **The rule: nothing guarded by `admin:manage_settings` may change which Rating Version prices a live quote.** So routing on selects only among versions deployed into that environment through `deployment:promote`. The shadow switch needs only the audit, because shadow results are recorded and never served |
 
 **What each leaf plan does with this table.** It re-reads the catalogue ruling (if merged) and #855's finding at
 its own tree, then quotes the row it relies on. If the catalogue ruling has merged, it states the ruling's
@@ -519,6 +523,8 @@ condition in `PL-1070` item 11's form:
     - a missing approval gives `DEPLOY_REQUIRES_APPROVAL`;
     - skipping `uat` gives whatever code DP-7 decides;
     - a non-Deployer is refused;
+    - a non-Admin creating, renaming or retiring an Environment is refused for lack of
+      `admin:manage_environments` (#856's DP-B);
     - a Service Account holding a deploy permission is refused (FR-347);
     - a policy entry that is absent fails as RL-886 describes, by its cause.
   - `generate-contracts.py --check` passes.
@@ -539,7 +545,9 @@ condition in `PL-1070` item 11's form:
     register F54).
   - A test in which a legitimately issued `dev` key is refused against `uat`. Today the
     refusal branch cannot be reached by a key the platform issued.
-  - Environment configuration as a Setting, audited on change (FR-431).
+  - Environment configuration as a Setting, audited on change (FR-431). It is guarded by
+    `admin:manage_settings` (#856's DP-D), and each change's Audit Event names the
+    environment, the key, the old value and the new value.
   - NFR-499's per-client limit as a **shared Redis counter, per tenant** (#830 item E6;
     register F48). It reads `rate_limit_rps` and raises `RATE_LIMITED`.
 - **Depends on:** Slice 2.
@@ -615,11 +623,24 @@ condition in `PL-1070` item 11's form:
     **after** the caller's response and never returned to the caller. Results are
     persisted, with premiums held exactly as in `ScoringResult`, where `05` FR-330 can
     read them.
-  - Routing and shadow-configuration changes emit Audit Events (FR-272).
+  - Routing and shadow-configuration changes emit Audit Events (FR-272). Turning routing
+    or shadow on or off, and the shadow configuration, are per-environment settings guarded
+    by `admin:manage_settings` (#856's DP-D). A deployment carrying a date range is guarded
+    by `deployment:promote` (the deputy, 15:05:53 BST).
+  - **The rule: nothing guarded by `admin:manage_settings` may change which Rating Version
+    prices a live quote** (the deputy, 15:05:53 BST). With routing on, selection is only among
+    versions promoted into that environment through `deployment:promote`. Turning routing
+    on never makes a version live that was not promoted there.
 - **Depends on:** Slice 5. It is blocked on DP-2.
 - **Gate outline.**
   - The overlap refusal tested by its cause.
   - A test showing a shadow result never appears in the caller's response.
+  - A negative test for the safeguard, stated by its cause (selection, not permission): with
+    routing on, a version present in the environment but not promoted into it is never
+    selected (the deputy, 15:05:53 BST).
+  - A negative test: a user without `admin:manage_settings` is refused enabling shadow on
+    `prod` (#856's DP-D). A companion test shows an allowed change writes the Audit Event
+    with the environment, the key, the old value and the new value.
   - A latency check showing shadow scoring adds no time to the caller's p99, measured on
     Slice 4's harness.
   - The full gate.
@@ -683,3 +704,14 @@ When the deputy accepts this plan by delegation, the activation commit:
    that its leaf plan waits for the catalogue ruling. The names
    were read at this tree from `permissions.py`, and each `06` count is a literal-string
    count (`git show origin/main:docs/specs/06-governance.md | grep -c -- '<name>'`).
+7. **Amendment, 2026-09-28 (#856's DP-B and DP-D, the deputy's 15:01:11 and 15:03:38 BST
+   entries).** The Slice 2, 3 and 6 permission rows now state decided names:
+   `admin:manage_environments` for the Environment record's lifecycle only, and
+   `admin:manage_settings` for every per-environment setting value, each with an Audit
+   Event naming the environment, the key, the old value and the new value. Slice 2 gains the
+   non-Admin negative test, and Slice 6 gains the `prod` shadow-enable negative test. The
+   deputy's 15:05:53 BST entry confirms Slice 6's split: the date-range deploy is
+   `deployment:promote`, and only the switches and the shadow configuration are
+   `admin:manage_settings`. It adds the rule that nothing under `admin:manage_settings`
+   changes which version prices a live quote, and the not-promoted-never-selected negative
+   test.
