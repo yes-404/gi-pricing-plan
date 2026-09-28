@@ -197,7 +197,7 @@ _CTX = QuoteContext.model_validate({
 
 def _holds(check: dict[str, Any], scorer: Any, contract: Any = ()) -> bool:
     prop = RegressionProperty.model_validate({"name": "prop", "check": check})
-    return case_holds(prop.check, _CTX, scorer, contract)
+    return case_holds(prop.check, _CTX, scorer, contract, seed=0)
 
 
 @pytest.mark.req("FR-261")
@@ -443,3 +443,150 @@ def test_a_decimal_input_with_no_two_place_value_between_its_bounds_is_refused()
         {"name": "x", "type": "decimal", "min": "0.004", "max": "0.006"})]
     with pytest.raises(ValueError, match="x"):
         generate_contexts(contract, 5, 1)
+
+
+# --- DP-S3-5/6/7: the monotone grid is uniform + sampled, and never passes vacuously -----------
+
+_BAND_RISK = "driver_age >= {lo} and driver_age < {hi} ? 1000 : 1500"
+
+
+class _VariantResolver(_FakeResolver):
+    """The unclamped fixture with the model replaced by an authored risk expression, so the
+    premium's shape in `driver_age` is exactly what a test writes down; and, optionally, a
+    constraint that declines every quote."""
+
+    def __init__(self, *, risk_expr: str, decline_all: bool = False) -> None:
+        super().__init__()
+        key = "rating_algorithm:score-fixture@1"
+        payload = dict(self._payloads[key])
+        steps = [s for s in payload["steps"] if s["step_id"] not in _UNCLAMPED]
+        steps = [
+            {"step_id": "s_risk", "type": "expression", "label": "Risk premium",
+             "expr": risk_expr, "result_type": "money_minor",
+             "consumes": ["driver_age"], "produces": "risk_premium_minor"}
+            if s["step_id"] == "s_risk" else s
+            for s in steps
+        ]
+        if decline_all:
+            steps.append({
+                "step_id": "s_decl_all", "type": "constraint", "label": "Decline everything",
+                "condition": "office_premium_minor < 0", "on_violation": "decline",
+                "reason_code": "ALWAYS", "consumes": ["office_premium_minor"],
+            })
+        payload["steps"] = steps
+        payload["input_contract"] = [
+            f for f in payload["input_contract"] if f["name"] not in _CLAMP_INPUTS
+        ]
+        self._payloads[key] = payload
+
+
+def _variant(**kw: Any) -> CompiledBundle:
+    return load_bundle(asyncio.run(compile_bundle(_version(), _VariantResolver(**kw))))
+
+
+_UP = _prop("age-up", kind="monotone", input="driver_age", direction="increasing")
+
+
+@pytest.mark.req("FR-261")
+def test_the_monotone_grid_is_uniform_plus_seeded_samples_inside_the_bounds(
+    bundle: CompiledBundle,
+) -> None:
+    from model_schema.regression import MonotoneInInput
+    from pricing_core.rating.properties import monotone_grid
+
+    field = next(f for f in bundle.algorithm.input_contract if f.name == "driver_age")
+    check = MonotoneInInput.model_validate(
+        {"kind": "monotone", "input": "driver_age", "direction": "increasing"})
+    grid = monotone_grid(field, check, seed=5)
+    assert grid == sorted(set(grid))
+    assert {17, 99} <= set(grid)  # the bounds
+    assert all(17 <= g <= 99 for g in grid)
+    assert len(grid) > 5  # the uniform five plus sampled points
+    assert monotone_grid(field, check, seed=5) == grid  # reproducible
+    assert monotone_grid(field, check, seed=6) != grid  # the suite's seed decides the samples
+
+
+@pytest.mark.req("FR-261")
+def test_a_wide_inverted_band_is_caught_where_a_sorted_random_check_misses_it() -> None:
+    """DP-S3-5 condition 3 (red first): the premium dips inside 40-79 and recovers, so it is
+    NOT non-decreasing in age. The grid sweeps one base context across the bounds and sees
+    the fall; the old reading (sort random contexts by the input and compare neighbours)
+    is shown here on a sample of ages that happens not to land in the band, and passes."""
+    from pricing_core.rating.testing import generate_contexts
+
+    bundle = _variant(risk_expr=_BAND_RISK.format(lo=40, hi=80))
+    run, _ = run_regression(bundle, _suite([_UP], seed=5), rating_version_ref=_REF, now=_now)
+    (up,) = run.property_results
+    assert up.status == "fail"
+    assert up.grid == "uniform+sampled"
+    assert up.counterexample_points is not None
+    assert len(up.counterexample_points) == 2
+    assert up.counterexample_points[0] < up.counterexample_points[1]
+
+    # the old reading: random contexts sorted by age, neighbours compared, on a sample that
+    # misses the band
+    from pricing_core.rating.properties import make_scorer, payable_minor
+
+    score = make_scorer(bundle, _REF, bundle.algorithm.input_contract)
+    sample = [c for c in generate_contexts(bundle.algorithm.input_contract, 40, 5)
+              if not 40 <= c.inputs["driver_age"] < 80][:6]  # type: ignore[operator]
+    ordered = sorted(sample, key=lambda c: c.inputs["driver_age"])  # type: ignore[arg-type,return-value]
+    premiums = []
+    for c in ordered:
+        scored = score(c)
+        assert scored is not None
+        premiums.append(payable_minor(scored))
+    channel_free = [
+        p for c, p in zip(ordered, premiums, strict=True) if c.inputs["channel"] == "direct"
+    ]
+    assert channel_free == sorted(channel_free)  # sorted-random sees nothing wrong
+
+
+@pytest.mark.req("FR-261")
+def test_known_limit_a_band_narrower_than_the_grid_spacing_may_not_be_detected() -> None:
+    """DP-S3-6: with no Banding pinned in the bundle there are no band edges to put in the
+    grid, so an inversion narrower than the spacing between grid and sampled points can pass.
+    This test PINS that weakness (OQ-9304 is the way out: pin Bandings with an input-to-band
+    link so `grid: banding-edges` becomes possible). It must be deleted, not weakened, when
+    that lands."""
+    bundle = _variant(risk_expr=_BAND_RISK.format(lo=45, hi=47))
+    run, _ = run_regression(bundle, _suite([_UP], seed=5), rating_version_ref=_REF, now=_now)
+    (up,) = run.property_results
+    assert up.status == "pass"
+    assert up.grid == "uniform+sampled"
+
+
+@pytest.mark.req("FR-261")
+def test_a_monotone_that_compares_nothing_does_not_pass() -> None:
+    """DP-S3-7: an algorithm that declines the whole declared range gives no comparable
+    quoted pair in any sweep, so the property FAILS with a distinct code, never a vacuous
+    pass."""
+    bundle = _variant(risk_expr=_BAND_RISK.format(lo=0, hi=0), decline_all=True)
+    run, log = run_regression(bundle, _suite([_UP], seed=5), rating_version_ref=_REF, now=_now)
+    (up,) = run.property_results
+    assert up.status == "fail"
+    assert up.error_code == "MONOTONE_NO_COMPARABLE_PAIRS"
+    assert up.counterexample is None
+    assert run.overall == "fail"
+    assert log.counterexamples == {}
+
+
+@pytest.mark.req("FR-261")
+def test_a_monotone_compares_quoted_neighbours_across_a_declined_gap(
+    unclamped: CompiledBundle,
+) -> None:
+    """DP-S3-7 (b): declined grid points are skipped, and the quoted points either side are
+    compared. A scorer that declines the middle of the grid but rises across it passes; one
+    that falls across the gap fails."""
+    def scorer(rising: bool) -> Any:
+        def score(ctx: QuoteContext) -> ScoringResult:
+            age = ctx.inputs["driver_age"]
+            if 40 <= age <= 60:  # type: ignore[operator]
+                return _result(None)
+            return _result((100 + age) if rising else (300 - age))  # type: ignore[operator]
+        return score
+
+    contract = unclamped.algorithm.input_contract
+    inc = {"kind": "monotone", "input": "driver_age", "direction": "increasing"}
+    assert _holds(inc, scorer(True), contract)
+    assert not _holds(inc, scorer(False), contract)

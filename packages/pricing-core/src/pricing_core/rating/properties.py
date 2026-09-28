@@ -14,10 +14,10 @@ that differ in every input would test nothing about one input's effect.
 
 from __future__ import annotations
 
+import random
 from collections.abc import Callable, Sequence
-from decimal import Decimal
-from itertools import pairwise
-from typing import Any
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
+from typing import Any, NamedTuple
 
 from model_schema.rating import InputContractField, RatingInputType
 from model_schema.refs import ArtifactRef, BlobRef
@@ -43,18 +43,26 @@ from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.score import _score_context_sync
 
 __all__ = [
+    "NO_COMPARABLE_PAIRS",
     "PROPERTY_FAILED",
     "Scorer",
     "build_run",
     "case_holds",
     "coerce_inputs",
+    "counterexample_points",
     "make_scorer",
     "monotone_field",
+    "monotone_grid",
+    "monotone_has_comparable_pair",
+    "monotone_sweep",
     "payable_minor",
 ]
 
 #: The code a failing property result carries (03 §4.9, `PROPERTY_ASSERTION_FAILED`).
 PROPERTY_FAILED = "PROPERTY_ASSERTION_FAILED"
+
+#: A `monotone` whose every sweep had fewer than two quoted points compared nothing (DP-S3-7).
+NO_COMPARABLE_PAIRS = "MONOTONE_NO_COMPARABLE_PAIRS"
 
 #: Points on a `monotone` grid, ends included.
 _GRID_POINTS = 5
@@ -138,34 +146,89 @@ def _bounds(field: InputContractField, check: MonotoneInInput) -> tuple[Decimal,
     return Decimal(low), Decimal(high)
 
 
-def _grid(field: InputContractField, check: MonotoneInInput) -> list[Any]:
+#: The sampled points added to the uniform grid, fixed here and recorded as the run's `grid`
+#: kind; the seed is the suite's, so a replay reproduces exactly the same points.
+_SAMPLED_POINTS = 5
+
+
+def monotone_grid(field: InputContractField, check: MonotoneInInput, seed: int) -> list[Any]:
+    """The values a `monotone` sweep visits: a uniform grid of `_GRID_POINTS` points, bounds
+    included, plus `_SAMPLED_POINTS` points drawn from `random.Random` seeded by the suite's
+    seed and the input's name (stable across processes), all inside the bounds, sorted.
+
+    **Weaker than band edges** (DP-S3-6): the bundle pins no Banding, so no edge is known
+    and an inversion narrower than the spacing between these points may not be detected.
+    """
     bounds = _bounds(field, check)
     assert bounds is not None  # `monotone_field` refused otherwise
     low, high = bounds
-    points = [low + (high - low) * i / (_GRID_POINTS - 1) for i in range(_GRID_POINTS)]
+    rng = random.Random(f"{seed}:{field.name}")
     if field.type is RatingInputType.INT:
-        return sorted({int(p) for p in points})
-    return sorted({p.quantize(Decimal("0.01")) for p in points})
+        lo, hi = int(low), int(high)
+        uniform = [lo + (hi - lo) * i // (_GRID_POINTS - 1) for i in range(_GRID_POINTS)]
+        sampled = [rng.randint(lo, hi) for _ in range(_SAMPLED_POINTS)]
+        return sorted(set(uniform) | set(sampled))
+    cent = Decimal("0.01")
+    lo_c = low.quantize(cent, rounding=ROUND_CEILING)
+    hi_c = high.quantize(cent, rounding=ROUND_FLOOR)
+    cents = int((hi_c - lo_c) / cent)
+    uniform_d = [lo_c + (cents * i // (_GRID_POINTS - 1)) * cent for i in range(_GRID_POINTS)]
+    sampled_d = [lo_c + rng.randint(0, cents) * cent for _ in range(_SAMPLED_POINTS)]
+    return sorted(set(uniform_d) | set(sampled_d))
 
 
-def _monotone_holds(
+class MonotoneSweep(NamedTuple):
+    """One base context swept over the grid: the first adjacent quoted pair that breaks the
+    property (`None` if none does), and how many quoted points were compared."""
+
+    broken_at: tuple[Any, Any] | None
+    quoted_points: int
+
+
+def monotone_sweep(
     check: MonotoneInInput,
     field: InputContractField,
     context: QuoteContext,
     score: Scorer,
-) -> bool:
-    premiums: list[int] = []
-    for value in _grid(field, check):
+    seed: int,
+) -> MonotoneSweep:
+    """Sweep `context` over the grid; compare each quoted point with the next quoted point,
+    across any declined gap (DP-S3-7 (b)), exactly in integer minor units (FR-273)."""
+    previous: tuple[Any, int] | None = None
+    quoted = 0
+    for value in monotone_grid(field, check, seed):
         scored = score(context.model_copy(update={"inputs": {**context.inputs, field.name: value}}))
         if scored is None:
-            return False
+            return MonotoneSweep((value, value), quoted)
         premium = payable_minor(scored)
-        if premium is not None:
-            premiums.append(premium)
-    pairs = list(pairwise(premiums))
-    if check.direction == "increasing":
-        return all(a < b if check.strict else a <= b for a, b in pairs)
-    return all(a > b if check.strict else a >= b for a, b in pairs)
+        if premium is None:
+            continue
+        quoted += 1
+        if previous is not None:
+            a, b = previous[1], premium
+            if check.direction == "increasing":
+                ok = a < b if check.strict else a <= b
+            else:
+                ok = a > b if check.strict else a >= b
+            if not ok:
+                return MonotoneSweep((previous[0], value), quoted)
+        previous = (value, premium)
+    return MonotoneSweep(None, quoted)
+
+
+def monotone_has_comparable_pair(
+    check: MonotoneInInput,
+    contract: Sequence[InputContractField],
+    contexts: Sequence[QuoteContext],
+    score: Scorer,
+    seed: int,
+) -> bool:
+    """Whether at least one base sweep compared two quoted points. When none did, the
+    property compared nothing and must not pass (DP-S3-7)."""
+    field = monotone_field(contract, check)
+    return any(
+        monotone_sweep(check, field, c, score, seed).quoted_points >= 2 for c in contexts
+    )
 
 
 def case_holds(
@@ -173,11 +236,14 @@ def case_holds(
     context: QuoteContext,
     score: Scorer,
     contract: Sequence[InputContractField],
+    *,
+    seed: int,
 ) -> bool:
     """Whether one Quote Context satisfies one property; a declined quote is vacuous where
-    the property speaks of a premium."""
+    the property speaks of a premium. `seed` is the suite's (it fixes a `monotone` grid)."""
     if isinstance(check, MonotoneInInput):
-        return _monotone_holds(check, monotone_field(contract, check), context, score)
+        field = monotone_field(contract, check)
+        return monotone_sweep(check, field, context, score, seed).broken_at is None
     scored = score(context)
     if scored is None:
         return False
@@ -199,6 +265,23 @@ def case_holds(
     return (check.lower_minor is None or premium >= check.lower_minor) and (
         check.upper_minor is None or premium <= check.upper_minor
     )
+
+
+def counterexample_points(
+    check: PropertyCheck,
+    contract: Sequence[InputContractField],
+    context: QuoteContext,
+    score: Scorer,
+    seed: int,
+) -> list[int | str] | None:
+    """For a `monotone`, the two adjacent grid values where `context`'s sweep breaks."""
+    if not isinstance(check, MonotoneInInput):
+        return None
+    field = monotone_field(contract, check)
+    broken = monotone_sweep(check, field, context, score, seed).broken_at
+    if broken is None:
+        return None
+    return [v if isinstance(v, int) else str(v) for v in broken]
 
 
 def build_run(

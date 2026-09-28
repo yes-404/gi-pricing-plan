@@ -18,7 +18,7 @@ import string
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
-from typing import Any
+from typing import Any, Literal
 
 import hypothesis
 from hypothesis import given, settings
@@ -39,12 +39,15 @@ from model_schema.regression import (
 from model_schema.scoring import QuoteContext
 from pricing_core.rating.golden import evaluate_golden_quotes
 from pricing_core.rating.properties import (
+    NO_COMPARABLE_PAIRS,
     PROPERTY_FAILED,
     Scorer,
     build_run,
     case_holds,
+    counterexample_points,
     make_scorer,
     monotone_field,
+    monotone_has_comparable_pair,
 )
 from pricing_core.rating.runtime import CompiledBundle
 
@@ -208,7 +211,7 @@ def _shrink(
     @given(st.fixed_dictionaries({f.name: _field_strategy(f) for f in contract}))
     def run(inputs: dict[str, Any]) -> None:
         context = _context(inputs)
-        if not case_holds(prop_check, context, score, contract):
+        if not case_holds(prop_check, context, score, contract, seed=seed):
             failing.append(context)
             raise _PropertyFailedError
 
@@ -254,19 +257,36 @@ def run_regression(
     results: list[PropertyResult] = []
     counterexamples: dict[str, QuoteContext] = {}
     for prop in suite.properties:
-        if all(case_holds(prop.check, c, score, contract) for c in cases):
-            results.append(PropertyResult(name=prop.name, status="pass", cases_run=len(cases)))
+        check = prop.check
+        grid: Literal["uniform+sampled"] | None = (
+            "uniform+sampled" if check.kind == "monotone" else None
+        )
+        if all(case_holds(check, c, score, contract, seed=seed) for c in cases):
+            if check.kind == "monotone" and not monotone_has_comparable_pair(
+                check, contract, cases, score, seed
+            ):
+                # DP-S3-7: every sweep declined all but at most one point — nothing was
+                # compared, so the property must not pass.
+                results.append(PropertyResult(
+                    name=prop.name, status="fail", cases_run=len(cases), shrink="completed",
+                    error_code=NO_COMPARABLE_PAIRS, grid=grid,
+                ))
+                continue
+            results.append(PropertyResult(
+                name=prop.name, status="pass", cases_run=len(cases), grid=grid
+            ))
             continue
-        found, stopped = _shrink(prop.check, contract, n, seed, score)
+        found, stopped = _shrink(check, contract, n, seed, score)
         if found is None:  # the generator did not re-find it: report the first failing case
-            found = next(c for c in cases if not case_holds(prop.check, c, score, contract))
+            found = next(c for c in cases if not case_holds(check, c, score, contract, seed=seed))
             stopped = True
         counterexamples[prop.name] = found
         results.append(PropertyResult(
             name=prop.name, status="fail", cases_run=len(cases),
             counterexample=dict(found.inputs), counterexample_minimal=not stopped,
             shrink="stopped_on_limit" if stopped else "completed",
-            error_code=PROPERTY_FAILED,
+            error_code=PROPERTY_FAILED, grid=grid,
+            counterexample_points=counterexample_points(check, contract, found, score, seed),
         ))
 
     log = CasesLog(cases=cases, counterexamples=counterexamples)

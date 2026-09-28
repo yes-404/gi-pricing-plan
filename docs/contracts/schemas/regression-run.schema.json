@@ -176,6 +176,26 @@
             "string",
             "null"
           ]
+        },
+        "grid": {
+          "enum": [
+            "uniform+sampled",
+            null
+          ],
+          "description": "How a monotone property's grid was built (DP-S3-6): the uniform grid plus seeded samples, the weaker form; an inversion narrower than the spacing may not be detected until Bandings are pinned."
+        },
+        "counterexample_points": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "description": "The two adjacent grid values, in order, at which a monotone counterexample's premium broke the property."
         }
       }
     }

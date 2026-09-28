@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime
+from typing import Literal
 
 from model_schema.refs import ArtifactRef
 from model_schema.regression import (
@@ -22,10 +23,13 @@ from model_schema.regression import (
 )
 from pricing_core.rating.golden import evaluate_golden_quotes
 from pricing_core.rating.properties import (
+    NO_COMPARABLE_PAIRS,
     PROPERTY_FAILED,
     build_run,
     case_holds,
+    counterexample_points,
     make_scorer,
+    monotone_has_comparable_pair,
 )
 from pricing_core.rating.runtime import CompiledBundle
 
@@ -68,34 +72,43 @@ def replay_cases(
     )
     prior = {p.name: p for p in recorded.property_results}
 
+    seed = suite.generation.seed
     results: list[PropertyResult] = []
     for prop in suite.properties:
+        check = prop.check
+        grid: Literal["uniform+sampled"] | None = (
+            "uniform+sampled" if check.kind == "monotone" else None
+        )
         persisted = cases.counterexamples.get(prop.name)
         failing = next(
-            (c for c in cases.cases if not case_holds(prop.check, c, score, contract)), None
+            (c for c in cases.cases if not case_holds(check, c, score, contract, seed=seed)), None
         )
         persisted_still_fails = persisted is not None and not case_holds(
-            prop.check, persisted, score, contract
+            check, persisted, score, contract, seed=seed
         )
-        if persisted_still_fails:
-            assert persisted is not None
+        if persisted_still_fails or failing is not None:
+            shown = persisted if persisted_still_fails else failing
+            assert shown is not None
             was = prior.get(prop.name)
+            kept = persisted_still_fails and was is not None
             results.append(PropertyResult(
                 name=prop.name, status="fail", cases_run=len(cases.cases),
-                counterexample=dict(persisted.inputs),
-                counterexample_minimal=bool(was and was.counterexample_minimal),
-                shrink=(was.shrink if was and was.shrink else "stopped_on_limit"),
-                error_code=PROPERTY_FAILED,
+                counterexample=dict(shown.inputs),
+                counterexample_minimal=bool(kept and was and was.counterexample_minimal),
+                shrink=(was.shrink if kept and was and was.shrink else "stopped_on_limit"),
+                error_code=PROPERTY_FAILED, grid=grid,
+                counterexample_points=counterexample_points(check, contract, shown, score, seed),
             ))
-        elif failing is not None:
+        elif check.kind == "monotone" and not monotone_has_comparable_pair(
+            check, contract, cases.cases, score, seed
+        ):
             results.append(PropertyResult(
-                name=prop.name, status="fail", cases_run=len(cases.cases),
-                counterexample=dict(failing.inputs), counterexample_minimal=False,
-                shrink="stopped_on_limit", error_code=PROPERTY_FAILED,
+                name=prop.name, status="fail", cases_run=len(cases.cases), shrink="completed",
+                error_code=NO_COMPARABLE_PAIRS, grid=grid,
             ))
         else:
             results.append(PropertyResult(
-                name=prop.name, status="pass", cases_run=len(cases.cases)
+                name=prop.name, status="pass", cases_run=len(cases.cases), grid=grid
             ))
 
     return build_run(

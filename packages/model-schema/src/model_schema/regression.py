@@ -294,6 +294,13 @@ class PropertyResult(BaseModel):
     counterexample_minimal: bool = False
     shrink: Literal["completed", "stopped_on_limit"] | None = None
     error_code: str | None = None
+    #: How a `monotone` property's grid was built (DP-S3-6): the uniform grid plus
+    #: seeded samples, the weaker form — an inversion narrower than the spacing may not be
+    #: detected until Bandings are pinned in the bundle. `None` for every other class.
+    grid: Literal["uniform+sampled"] | None = None
+    #: The two adjacent grid values, in order, at which a `monotone` counterexample's premium
+    #: broke the property (`counterexample` is the base context; DP-S3-5).
+    counterexample_points: list[int | str] | None = None
 
     @model_validator(mode="after")
     def _shrink_iff_failed(self) -> Self:

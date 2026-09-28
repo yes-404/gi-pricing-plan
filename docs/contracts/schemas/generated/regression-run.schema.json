@@ -138,6 +138,28 @@
           "title": "Counterexample Minimal",
           "type": "boolean"
         },
+        "counterexample_points": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Counterexample Points"
+        },
         "error_code": {
           "anyOf": [
             {
@@ -149,6 +171,19 @@
           ],
           "default": null,
           "title": "Error Code"
+        },
+        "grid": {
+          "anyOf": [
+            {
+              "const": "uniform+sampled",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grid"
         },
         "name": {
           "title": "Name",
