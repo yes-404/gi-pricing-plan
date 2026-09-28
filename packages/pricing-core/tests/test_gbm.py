@@ -2270,6 +2270,19 @@ def test_a_sparse_cross_is_measured_jointly_on_its_observed_cells(backend: str) 
     }
     assert sum(p.exposure_share for p in curve.points) == pytest.approx(1.0)
 
+    # Each label is tied to ITS OWN cell: the point's mean is the model's prediction on that
+    # cell's rows, with the operands held at that cell's values (the cross is the only
+    # feature, so the prediction is one number per cell).
+    book = _sparse_crossable_book()
+    factors = _crossed()
+    fit = fit_gbm(book, _spec(backend, factors=tuple(f.id for f in factors)), factors)
+    for point in curve.points:
+        area, fuel = point.value.split(" | ")
+        rows = book.filter((pl.col("area") == area) & (pl.col("fuel") == fuel))
+        assert rows.height > 0
+        mu = predict_gbm(fit.result, fit.booster_bytes, rows, factors)
+        assert point.mean_prediction == pytest.approx(float(mu.mean()), rel=1e-6)
+
 
 @pytest.mark.req("FR-177")
 @pytest.mark.parametrize("backend", BACKENDS)

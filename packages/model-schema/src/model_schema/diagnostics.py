@@ -53,6 +53,8 @@ __all__ = [
     "PermutationOmissionReason",
     "QuantileCrossing",
     "ResidualSummary",
+    "TypeIIIOmission",
+    "TypeIIIOmissionReason",
     "TypeIIITest",
     "UniversalDiagnostics",
     "Weighting",
@@ -214,6 +216,29 @@ class TypeIIITest(BaseModel):
     p_value: float = Field(ge=0.0, le=1.0)
 
 
+class TypeIIIOmissionReason(enum.StrEnum):
+    """Why a factor has no type-III test (FR-178)."""
+
+    #: The factor is an operand of an `interaction`. It contributes no design column of its
+    #: own (FR-92), so dropping it would leave the cross unresolvable and "keeping" it changes
+    #: nothing; the interaction itself is tested instead.
+    OPERAND_OF_INTERACTION = "operand_of_interaction"
+
+
+class TypeIIIOmission(BaseModel):
+    """A factor the type-III block did not test, and why (FR-178).
+
+    Until FR-178's type-III half this exclusion was stated in a code comment and recorded
+    nowhere, so a reviewer reading a GLM's diagnostics could not see that operands had been
+    left out.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    reason: TypeIIIOmissionReason
+
+
 class GlmDiagnostics(BaseModel):
     """GLM-specific evidence (FR-172)."""
 
@@ -230,6 +255,9 @@ class GlmDiagnostics(BaseModel):
     dispersion: float
     degrees_of_freedom: int = Field(ge=0)
     type_iii_tests: tuple[TypeIIITest, ...] = ()
+    #: FR-178. Factors the type-III block did not test, each with its reason. Empty on every
+    #: artifact written before this field existed.
+    type_iii_omitted: tuple[TypeIIIOmission, ...] = ()
     #: Terms dropped as collinear. Named rather than counted: "2 terms aliased" tells a
     #: reader something is wrong and not which factor to fix.
     aliasing: tuple[str, ...] = ()

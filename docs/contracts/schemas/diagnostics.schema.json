@@ -50,6 +50,18 @@
             }
           }
         },
+        "type_iii_omitted": {
+          "type": "array",
+          "description": "FR-178. Factors the type-III block did not test, each with its reason (an operand of an interaction contributes no design column; the interaction is tested instead). Empty on artifacts written before this field existed.",
+          "items": {
+            "type": "object",
+            "required": ["factor", "reason"],
+            "properties": {
+              "factor": {"type": "string"},
+              "reason": {"enum": ["operand_of_interaction"]}
+            }
+          }
+        },
         "aliasing": {"type": "array", "items": {"type": "string"}},
         "vif": {"type": "object", "additionalProperties": {"type": "number"}},
         "residual_blob": {"type": ["string", "null"]},

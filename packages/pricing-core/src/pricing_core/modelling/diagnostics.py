@@ -72,6 +72,8 @@ from model_schema import (
     PermutationOmission,
     PermutationOmissionReason,
     ResidualSummary,
+    TypeIIIOmission,
+    TypeIIIOmissionReason,
     TypeIIITest,
     UniversalDiagnostics,
     Weighting,
@@ -461,7 +463,7 @@ def _type_iii(
     model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
-) -> tuple[TypeIIITest, ...]:
+) -> tuple[tuple[TypeIIITest, ...], tuple[TypeIIIOmission, ...]]:
     """Drop each factor, refit, and report the deviance it was worth (FR-172).
 
     A likelihood-ratio test, so the p-value means what a reader assumes: `Δdeviance` on
@@ -478,7 +480,7 @@ def _type_iii(
         # Dropping the only factor leaves an intercept-only model, which is the null
         # deviance already reported. A "test" of it would restate that number as though it
         # were a comparison.
-        return ()
+        return (), ()
 
     y = data[spec.response_column].cast(pl.Float64).to_numpy()
 
@@ -488,8 +490,14 @@ def _type_iii(
     operand_ids = _operand_ids(factors)
 
     tests: list[TypeIIITest] = []
+    omitted: list[TypeIIIOmission] = []
     for factor in factors:
         if factor.id in operand_ids:
+            omitted.append(
+                TypeIIIOmission(
+                    factor=factor.slug, reason=TypeIIIOmissionReason.OPERAND_OF_INTERACTION
+                )
+            )
             continue
         remaining = [f for f in factors if f.id != factor.id]
         reduced_spec = spec.model_copy(update={"factors": tuple(f.id for f in remaining)})
@@ -519,7 +527,7 @@ def _type_iii(
         df = _term_count(factor, factors, data, bandings, groupings)
         p = float(stats.chi2.sf(max(delta, 0.0), df))
         tests.append(TypeIIITest(factor=factor.slug, deviance_delta=delta, df=df, p_value=p))
-    return tuple(tests)
+    return tuple(tests), tuple(omitted)
 
 
 def _operand_ids(factors: Sequence[Factor]) -> set[UUID]:
@@ -668,10 +676,11 @@ def compute_diagnostics(
     )
 
     tests: tuple[TypeIIITest, ...] = ()
+    tests_omitted: tuple[TypeIIIOmission, ...] = ()
     if type_iii:
         report.check_cancelled()
         report.update(0.70, "diagnostics: type-III tests")
-        tests = _type_iii(
+        tests, tests_omitted = _type_iii(
             train, spec, factors, full_deviance,
             power=power, model_offset=model_offset_train,
             bandings=bandings, groupings=groupings,
@@ -701,6 +710,7 @@ def compute_diagnostics(
             dispersion=dispersion,
             degrees_of_freedom=max(train.height - parameters, 0),
             type_iii_tests=tests,
+            type_iii_omitted=tests_omitted,
         ),
     )
 

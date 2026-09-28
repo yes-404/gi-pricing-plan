@@ -14,6 +14,7 @@ export type TypeIIITest = components["schemas"]["TypeIIITest"];
 export type GbmDiagnostics = components["schemas"]["GbmDiagnostics"];
 export type GbmEvalPoint = components["schemas"]["GbmEvalPoint"];
 export type FeatureImportance = components["schemas"]["FeatureImportance"];
+export type TypeIIIOmission = components["schemas"]["TypeIIIOmission"];
 export type PermutationImportance = components["schemas"]["PermutationImportance"];
 export type PermutationOmission = components["schemas"]["PermutationOmission"];
 export type PartialDependence = components["schemas"]["PartialDependence"];

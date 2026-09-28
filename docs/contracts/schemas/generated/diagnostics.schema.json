@@ -529,6 +529,14 @@
           "default": null,
           "title": "Residual Blob"
         },
+        "type_iii_omitted": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TypeIIIOmission"
+          },
+          "title": "Type Iii Omitted",
+          "type": "array"
+        },
         "type_iii_tests": {
           "default": [],
           "items": {
@@ -963,6 +971,33 @@
       ],
       "title": "ResidualSummary",
       "type": "object"
+    },
+    "TypeIIIOmission": {
+      "additionalProperties": false,
+      "description": "A factor the type-III block did not test, and why (FR-178).\n\nUntil FR-178's type-III half this exclusion was stated in a code comment and recorded\nnowhere, so a reviewer reading a GLM's diagnostics could not see that operands had been\nleft out.",
+      "properties": {
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/TypeIIIOmissionReason"
+        }
+      },
+      "required": [
+        "factor",
+        "reason"
+      ],
+      "title": "TypeIIIOmission",
+      "type": "object"
+    },
+    "TypeIIIOmissionReason": {
+      "description": "Why a factor has no type-III test (FR-178).",
+      "enum": [
+        "operand_of_interaction"
+      ],
+      "title": "TypeIIIOmissionReason",
+      "type": "string"
     },
     "TypeIIITest": {
       "additionalProperties": false,
