@@ -967,9 +967,38 @@ class NextResult:
     skipped: tuple[tuple[Path, str], ...]
 
 
+#: The id standard, whose examples must never name a live-sequence integer
+#: (`document-ids.md`'s 2026-09-28 amendment, WK-1178).
+ID_STANDARD_PATH: Final = Path("docs") / "process" / "document-ids.md"
+#: Any `<PREFIX>-<n>` token, padding stripped. Deliberately wider than the resolver's
+#: family list: an example with an unknown prefix still names an integer.
+_ANY_ID_TOKEN_RE: Final = re.compile(r"\b[A-Z][A-Z0-9]*-0*(\d+)\b")
+
+
+class ExampleIdCollisionError(RuntimeError):
+    """`next` would mint an integer that the id standard itself writes as an id."""
+
+
+def id_standard_integers(tree_root: Path) -> frozenset[int]:
+    """Every integer written as `<PREFIX>-<n>` in `tree_root`'s id standard (empty when the
+    file is absent). A real citation's integer is always below `next`'s answer, since it
+    names something already minted, so a member equal to that answer can only be an
+    example, which is the collision `compute_next_at_ref` refuses.
+    """
+    path = tree_root / ID_STANDARD_PATH
+    if not path.is_file():
+        return frozenset()
+    text = path.read_text(encoding="utf-8")
+    return frozenset(int(m.group(1)) for m in _ANY_ID_TOKEN_RE.finditer(text))
+
+
 def compute_next_at_ref(ref: str, *, repo_root: Path = REPO_ROOT) -> NextResult:
     """`compute_next`, but reading `ref`'s committed content rather than any local
     directory — the entry point `next`'s CLI uses.
+
+    Refuses (`ExampleIdCollisionError`) when the answer appears as an id in the id
+    standard **at the same ref**, never the working tree's copy: a stale or edited
+    checkout must not decide whether the merged standard's examples collide.
     """
     if not ref_exists(ref, repo_root):
         raise GitArchiveError(
@@ -980,6 +1009,12 @@ def compute_next_at_ref(ref: str, *, repo_root: Path = REPO_ROOT) -> NextResult:
         tree = Path(tmp)
         materialize_ref(ref, tree, repo_root=repo_root)
         number = compute_next(tree)
+        if number in id_standard_integers(tree):
+            raise ExampleIdCollisionError(
+                f"{number} appears as an id in {ID_STANDARD_PATH.as_posix()} at {ref!r}; "
+                f"an example there must be a placeholder (`<PREFIX>-<n>`), never a "
+                f"live-sequence integer. Rewrite the example, then mint."
+            )
         skipped = scan_governed_headers(tree).skipped
         return NextResult(number=number, skipped=skipped)
 
@@ -10294,7 +10329,7 @@ def _report_skipped(command: str, skipped: Sequence[tuple[Path, str]]) -> None:
 def _cmd_next(args: argparse.Namespace) -> int:
     try:
         result = compute_next_at_ref(args.ref, repo_root=args.repo_root)
-    except GitArchiveError as exc:
+    except (GitArchiveError, ExampleIdCollisionError) as exc:
         print(f"doc-id.py next: {exc}", file=sys.stderr)
         return 1
     _report_skipped("next", result.skipped)
