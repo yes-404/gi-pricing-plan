@@ -562,13 +562,13 @@ works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, W
 id: WK-668
 family: work
 title: **Spike S1/S2 resolution and ADR-706 confirmation**
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 373): **Spike S1/S2 resolution and ADR-706 confirmation** | Must complete before WK-669. If S1 fails, this phase is re-planned
+From “Workstreams” (line 373): **Spike S1/S2 resolution and ADR-706 confirmation** | Must complete before WK-669. If S1 fails, this phase is re-planned **Closed 2026-09-28 by the deputy's dated line, by delegation, on [`CR-1171`](closures/CR-01171-wk-668-work-close-the-auditor-s-restatement-of-cr-826-at-main.md).**
 
 
 ### WK-669 — Rating algorithm contract, validation, bundle compilation

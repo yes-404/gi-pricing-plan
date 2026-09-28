@@ -166,4 +166,8 @@ row's sentence extended with *"**Closed <date> by the deputy's dated line, by de
 
 Owner: the maintainer. The acceptance line is the deputy's by the maintainer's delegation of 2026-09-28, written in this record's one follow-up commit. Auditor: the restatement filed 2026-09-28.
 
-**Maintainer acceptance:** _pending — the maintainer's dated line_
+**Maintainer acceptance:** **2026-09-28 11:46:23 BST — WK-668 (Spike S1/S2 resolution and ADR-706 confirmation, the Phase 2 entry gate) is CLOSED**, written by the deputy by the maintainer's delegation of 2026-09-28. It rests on `CR-1171` (`kind: work`, auditor-a), as read by me at `p2-a1-wk668` `dd3991ea`, with the lead's adoption of its verdict table, unamended, at 11:45:25 BST.
+- **The scope is taken from `PL-817` T1–T7, `03` FR-273 to FR-276, NFR-501, NFR-502 and ADR-706**, and not from `CR-826`. The success criterion is met: ADR-706 was confirmed (Addendum 2026-08-27), and WK-669 proceeded and is closed (`CR-838`).
+- **NFR-502 is accepted as *reassigned*, not delivered.** Its isolated measurement is owed. `CR-927:104` (WK-671, closed) verdicts it *"owed, not delivered"*, and `CR-927:172` carries it forward *"with the same owner"* as NFR-489: *"an architectural ruling before WK-674 deployment"*. That is its live owner, an open Phase 2 event.
+- Findings 1 and 3 are accepted. Finding 2 is fixed by this line. `CR-826` stays as filed.
+- **The `CLAUDE.md` §14 question the record raises is answered by my ruling of 11:28 BST today:** plan review 15 is held after the four paperwork closes (WK-668, WK-694, WK-696, WK-695). This close is one of them.
