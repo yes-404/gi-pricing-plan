@@ -1,5 +1,5 @@
 ---
-id: CR-1176
+id: CR-1183
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-695 Work close — file taxonomy, reference coding and custody
@@ -13,7 +13,7 @@ corrected_by: []
 relates: []                     # ids only — every FD- this closure raised or discharged
 ---
 
-# CR-1176 — WK-695 Work close: file taxonomy, reference coding and custody
+# CR-1183 — WK-695 Work close: file taxonomy, reference coding and custody
 
 ## Scope
 
@@ -176,7 +176,7 @@ for them.
 
 **The proposed roadmap change** is made only once the line exists, in WK-697's closed-row form.
 In the `### WK-695` header block, `status: active` becomes `status: closed`. The row gets the
-appended text *"**Closed 2026-09-28 by the deputy's dated line, by delegation, on `CR-1176`**,
+appended text *"**Closed 2026-09-28 by the deputy's dated line, by delegation, on `CR-1183`**,
 with Stages 2 and 5 delivered by WK-697 (`CR-1164`) and Stages 3 and 4 taken over by WK-1169
 and WK-1170."*
 

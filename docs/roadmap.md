@@ -790,7 +790,7 @@ phase: P2
 
 Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegation 2026-09-27 16:18:24 BST), the first of the two downstream Works RFC-937's closing section names. **Subject:** the ownership table of `document-ids.md` section 1.6 made binding in each role charter, with a directory-level `owner:`. **Scope, by reference and not restated** (a restated list is the copy that goes stale, RFC-756): every item `CR-1164` (the WK-697 closure record) section 10 lists as taken over with the event "the charter investigation's first slice", and every register row `CR-1167` dispositions to that event. **Status `active`: listed, not started.** Its first slice is the event those rows wait on; no map plan exists yet.
 
-**2026-09-28:** also carries RFC-897 §5 (Stage 3, the ownership map), transferred at WK-695's close (`CR-1176`), 2026-09-28.
+**2026-09-28:** also carries RFC-897 §5 (Stage 3, the ownership map), transferred at WK-695's close (`CR-1183`), 2026-09-28.
 
 ### WK-1170 — The create-read-retire audit — RFC-937's transition steps
 
@@ -806,7 +806,7 @@ phase: P2
 
 Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegation 2026-09-27 16:18:24 BST), the second of the two downstream Works RFC-937's closing section names. **Subject:** the process step for each transition in the state machines of `document-ids.md` section 1.2, and the register, instrument and verify tooling those transitions depend on. **Scope, by reference and not restated** (a restated list is the copy that goes stale, RFC-756): every item `CR-1164` (the WK-697 closure record) section 10 lists as taken over with the event "the create-read-retire audit's first slice", and every register row `CR-1167` dispositions to that event. **Status `active`: listed, not started.** Its first slice is the event those rows wait on; no map plan exists yet.
 
-**2026-09-28:** also carries RFC-897 §6 (Stage 4, the create-read-retire verdicts, including the unreferenced-plans decomposition), transferred at WK-695's close (`CR-1176`), 2026-09-28.
+**2026-09-28:** also carries RFC-897 §6 (Stage 4, the create-read-retire verdicts, including the unreferenced-plans decomposition), transferred at WK-695's close (`CR-1183`), 2026-09-28.
 
 ### WK-1178 — P2 standing maintenance: hotfixes, dependency bumps and security findings
 
