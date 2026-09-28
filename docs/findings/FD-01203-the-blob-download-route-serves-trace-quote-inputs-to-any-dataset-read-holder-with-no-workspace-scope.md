@@ -12,7 +12,11 @@ relates: [WK-1178]
 
 # FD-1203 — The blob download route serves trace quote inputs to any dataset-read holder, with no workspace scope
 
-**Severity: high.** The auditor filed this finding on 2026-09-28, on the lead's instruction and
+**Severity: high, resting on exposures 2 and 3, not on exposure 1.** The per-exposure
+severities are in the section of that name below. The deputy re-grounded it this way in his entry
+in the lead's local channel file `to-lead.md` stamped 2026-09-28 18:33:19 BST (line 8891).
+
+The auditor filed this finding on 2026-09-28, on the lead's instruction and
 the deputy's ruling in his entry in the lead's local channel file `to-lead.md`, stamped
 2026-09-28 18:24:32 BST (line 8865), item 1.
 
@@ -73,8 +77,8 @@ searched at `e6a9ca71`:
 - The digest is therefore reachable through three channels: the `scoring_traces` table and
   anything that reads it (operators, logs, backups); a caller who can reproduce the exact stored
   bytes; and any future response that exposes it. A search is not a proof, and the deputy's
-  ruling requires the reachability to be evidenced rather than asserted, so the severity stays
-  high.
+  ruling requires the reachability to be evidenced rather than asserted. Exposure 1's
+  severity is therefore lower, and the finding's high severity rests on exposures 2 and 3.
 - **Digests of other blobs are exposed by design.** For example, `api/rate_tables.py:330` says a
   diff artifact's `result.ref` *"is its sha256, fetchable from `/blobs/{sha256}`"*. That is why
   the cross-workspace question for non-trace blobs is live.
@@ -114,6 +118,29 @@ Read at `e6a9ca71`:
 
 **Trace reachability is confirmed low.** executor-s1's independent sweep, relayed by the lead,
 agrees with the one above: no response exposes a trace's `blob_sha256`.
+
+## Do Dataset Version responses carry the table digests? Yes
+
+At `e6a9ca71`, `GET /api/v1/datasets/{slug}/versions/{version}` (`api/datasets.py:639`) and
+`GET /api/v1/dataset-versions/{version_id}` (`:654`) return a `DatasetVersion`. It is built by
+`_version_schema`, which passes `"tables": row.tables,` (`:727`). The response model
+`DatasetVersion` (`model_schema/datasets.py:332`) declares
+`tables: tuple[DatasetTable, ...] = ()` (`:363`), and `DatasetTable` declares
+`blob: BlobRef | None = None` (`:256`). `BlobRef` declares
+`sha256: str = Field(pattern=r"^[a-f0-9]{64}$")` (`model_schema/refs.py:141`). The generated
+contract carries the same chain (`generated.json:2727` `DatasetTable`, with a `blob` property;
+`:873` `BlobRef`). So any reader of a Dataset Version in its own workspace receives the digests,
+and through this route anyone holding `dataset:read` in another workspace could use them.
+
+## Severity per exposure
+
+| Exposure | What leaks | Where the digest is | Severity |
+|---|---|---|---|
+| 1. Trace bodies | Quote inputs (NFR-499) | Not in any API response (two independent sweeps). Only through DB, log or blob-store access, or by reproducing the exact bytes | **Lower**: reachability is low |
+| 2. Dataset parquet, across workspaces | Policy and claims data of another tenant | In every Dataset Version response, `tables[].blob.sha256` (above) | **High** |
+| 3. Compiled rating bundles, across workspaces | Another tenant's rating algorithm and tables | In every Rating Version response, `bundle.blob_sha256` (`model_schema/rating.py:113`) | **High** |
+
+The finding's severity is high **because of exposures 2 and 3**.
 
 **Past reads cannot be ruled out.** There is no download audit on this route, so this record
 does not claim "no evidence of access".
