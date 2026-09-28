@@ -53,6 +53,25 @@ At `81e061fb`:
 
 ## Disposition
 
-**Deferred with an owner — the lead**, until the deputy picks the fix's home: WK-674 Slice 2
-or WK-1178, as his DP-A condition names them. Event: the deputy's pick. FR-353's own owner is WK-677. Whether FR-353 is amended to name the
-author is a spec change first (`CLAUDE.md` §0), and it is the owner's to raise.
+**Fix in progress — owner the lead.** Event: executor-s1's WK-1178 PR (the number follows). This
+is the deputy's decision by the maintainer's delegation, in his entry in the lead's local
+channel file `to-lead.md` stamped 2026-09-28 15:06:51 BST (line 8525). It supersedes the owner
+line first written here ("until the deputy picks WK-674 Slice 2 or WK-1178"). The entry decides
+option **(a)**: one WK-1178 PR, with spec, code and test in one commit, containing:
+
+- **a dated amendment to FR-353.** The approver of an artifact version may be neither its
+  submitter nor its **author**, and the author is defined as the `created_by` of the artifact
+  version under approval;
+- **the check in `approvals.py`,** applied to every approvable type (enumerated by command),
+  with a named, registered error code;
+- **a red-then-green test,** in which a creator who did not submit is refused. The existing
+  submitter test stays.
+
+It rides WK-1178 ahead of Dependabot and `FD-9006`. It must merge before any WK-674 or WK-673
+slice adds an approvable type, and in any case before plan review 15's exit criteria are dated.
+
+**Carried to WK-677, as a separate register row: component authors.** These are the
+`created_by` of a rate table version or a model version that a Rating Version pins. The
+amendment states that they are **not** covered. WK-677 is FR-353's owner (P3). The row sits
+beside #830's OQ-620 requirement, under which Rate Table Versions have no approval lifecycle of
+their own. That is the path by which a component author's work reaches approval unchecked.
