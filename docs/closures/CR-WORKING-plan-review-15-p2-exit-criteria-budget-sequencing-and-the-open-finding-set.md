@@ -203,8 +203,7 @@ disagree, and both are listed for the register pass rather than edited here:
   once.
 - No severity is recorded in it.
 - **Stale cell, F34 (line 76):** "in flight on PR #416". At `9f6bfed1`,
-  `gh pr view 416` reads `MERGED 2026-08-30T01:43:51Z` ("W11 Task 1.5 latency harness +
-  Ruling 28 rating_algorithm maturity check"). This is listed for the register pass and not
+  `gh pr view 416` reads `MERGED 2026-08-30T01:43:51Z` (the W11 Task 1.5 latency-harness PR, which also added the rating-algorithm maturity check). This is listed for the register pass and not
   edited here.
 
 **Resolutions.** "Carried" means carried with the owner the register names. "Proposed" is a
