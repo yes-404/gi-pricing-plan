@@ -185,9 +185,10 @@ filled in before this record mints.
 
 ### The deputy's decisions, whole and verbatim
 
-Three entries follow, each fenced so that the ids it quotes are read as quotation
+Four entries follow, each fenced so that the ids it quotes are read as quotation
 (`audit-docs.py` check 32 skips fenced blocks). The first decides DP-A, DP-B and DP-C. The
-second decides DP-D. The third confirms DP-D's scope for Slice 6.
+second decides DP-D. The third confirms DP-D's scope for Slice 6. The fourth decides how
+DP-A's unmet condition is fixed.
 
 #### DP-A, DP-B and DP-C
 
@@ -235,6 +236,32 @@ My 15:03:38 "FR-270/271's per-environment on/off" meant **the switch only**. The
 dm-e's RL-9204 quotes this entry with the 15:01:11 and 15:03:38 entries. planner-674's S6 rows cite it.
 ```
 
+#### DP-A's condition: the fix, decided
+
+```text
+## 2026-09-28 15:06:51 BST · deputy · DP-A's condition NOT met (the approver ≠ author gap): (a) DECIDED, fixed now in WK-1178 as one spec+code PR, with "author" defined; the wider component-author case goes to WK-677
+
+Given by the maintainer's delegation. Your finding stands: `approvals.py:260` refuses only the **submitter**, nothing compares `created_by`, and `06` FR-353 says only "submitter". The code matches the spec, and **the spec is too weak for DP-A's coarse write rights**: with `rating:write` covering algorithms, rate tables and Rating Version creation, a person could author a version and, if someone else submits it, approve it. **DP-C met** (`test_approvals.py:346`) is noted.
+
+**(a), in WK-1178 now, as ONE PR (spec, code and test in one commit, CLAUDE.md §2):**
+1. **FR-353 gets a dated amendment:** the approver of an artifact version may be **neither its submitter nor its author**, where the **author is the `created_by` of the artifact version under approval**. The amendment cites DP-A (RL-9204) and this entry.
+2. **The check:** `approvals.py` refuses an approval decision whose actor equals the version's `created_by`, with a named error code (registered in the error catalogue). It is applied to **every approvable type**, enumerated by command, not by memory.
+3. **The test, red then green:** a user who created the version, and is not the submitter, is refused. The red is quoted against the current `approvals.py`. The existing submitter test stays.
+4. **Scope limit, stated in the amendment:** authors of the **components** a Rating Version pins (a rate table version's or a model version's `created_by`) are **not** covered here. That is the harder maker-checker question, and it goes to **WK-677 (FR-353's owner, P3)** as a named carry, with its register row. It is noted beside OQ-620's decision that Rate Table Versions have no approval lifecycle of their own ([#830's OQ-620 requirement]), because that is the path by which a component author's work reaches approval unchecked.
+
+**Class:** id-free except the amendment. It rides WK-1178 **ahead of Dependabot and FD-9006**, because it is a governance hole, not maintenance. **It must merge before any WK-674/WK-673 slice adds an approvable type**, and in any case before plan review 15's exit criteria are dated. auditor-b's FD in #855 records it as **fix-in-progress**, owner the lead, event this PR.
+```
+
+*The only deviation from the channel text is one marked substitution. Where the entry
+names #830's requirement by its working id, number 1183, it is shown here as "[#830's OQ-620
+requirement]". That number is #830's unminted working id. 1183 has since been minted to
+WK-695's closure record (#839), so the requirement's id moves at #830's mint, and the literal id would never resolve
+(`audit-docs.py` check 2 scans fenced blocks). The deputy accepted citing it this way, in a
+message to the lead, quoted with the same substitution: "my '[#830's OQ-620 requirement]'
+meant #830's OQ-620 requirement (a working id). Cite it that way until #830 mints". The proof
+is to reverse the substitution in the fence and diff it against the channel entry, which
+prints nothing.*
+
 ### The conditions, checked at `81e061fb`
 
 **DP-A's condition: where the approval step separates author from approver.**
@@ -259,8 +286,9 @@ dm-e's RL-9204 quotes this entry with the 15:01:11 and 15:03:38 entries. planner
 - **So the condition is met for the submitter and not met for the author.** The deputy's
   entry makes the missing check a new finding: **the author≠approver finding (filed in #855)**,
   filed by auditor-b. It states that approval separation is submitter-based, so the author of
-  a rating artifact version who is not its submitter may approve it. The deputy picks the
-  fix's home, WK-674 Slice 2 or WK-1178. This record names the finding and does not file it.
+  a rating artifact version who is not its submitter may approve it. **Decided (a)**, in the
+  fourth entry above: WK-1178 now, as one spec, code and test PR. This record names the
+  finding and does not file it.
 
 **DP-B's condition.** WK-674 Slice 2's acceptance includes a negative test: a principal
 without `admin:manage_environments` (a non-Admin) is refused the environment-management
@@ -287,8 +315,12 @@ refused. It is met; no code change is needed.**
 - **The conditions, as obligations:**
   - **DP-A:** the approval step must refuse the **author** of the artifact version, not only
     its submitter. At `81e061fb` it refuses the submitter only, for rating artifacts (see the
-    conditions above). This is the author≠approver finding (filed in #855). Its fix and negative
-    test land in the home the deputy picks, WK-674 Slice 2 or WK-1178.
+    conditions above). **Decided (a): WK-1178, in a fix PR by executor-s1.** The finding is #855's
+    approver ≠ author finding. That one PR amends FR-353 (dated): the approver is neither the
+    submitter nor the author, where the author is the `created_by` of the version under
+    approval. It adds the check for every approvable type, with a registered error code, and
+    a red-then-green test. Component authors (the versions a Rating Version pins) are carried
+    to WK-677. It merges before any WK-673 or WK-674 slice adds an approvable type.
   - **DP-C:** the refusal of an `approval:decide` holder outside `approver_roles` stays under
     test. `test_a_role_the_policy_does_not_name_cannot_approve` (`test_approvals.py:346`) is
     that test, and any change to `_check_approver_role` keeps it green.
