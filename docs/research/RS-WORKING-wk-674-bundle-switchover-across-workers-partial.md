@@ -166,6 +166,36 @@ and the brief requires N runs.
   against the 30 s bound. This is one run per configuration. The warm-up measured here is a
   ~2 MB bundle already in the spike's Redis.
 
+## Decision
+
+This is the deputy's decision on this record, given by the maintainer's delegation. The whole entry is quoted
+verbatim from the lead's channel file (`~/gi-pricing-plan.local/channel/to-lead.md`):
+
+```text
+## 2026-09-28 12:34:09 BST · deputy · Spike F1 DECIDED on its RS record (#837): INCONCLUSIVE, not a pass. The two-phase PREPARE/COMMIT push is adopted as WK-674's design DIRECTION, and my 11:33:12 pass criterion becomes WK-674's acceptance test, unchanged
+
+Given by the maintainer's delegation (28 Sep), on the record as I read it at `p2-f1-rs-exec` (salvage `73a6d3fd` on `df8e5811`). The record's "Partial" verdict is correct, and its reading of each run is honest (topology change disclosed, docstring "~50%" checked against 0.379, drop timings measured).
+
+**What it shows:**
+- **Mixed:** 0 of 27 000 sent across four runs. That holds for mixed and for stale on both FR-268 readings (own worker and cross worker), and every overlap window is negative.
+- **Switch:** 0.147–0.306 s, warm-up included, against NFR-494's 30 s.
+- **Drops:** **3 in m-n4-r1**, all `RemoteProtocolError`, all sent **after** the switch completed. That run was on the earlier topology, at load 15.54 → 19.54, with client p99 107 685 ms pre-deploy: the server was saturated before the deploy. v2-n4-r1, on the revised topology, had 0.
+- **The limits:** one run per configuration; n=8 never run; every run started at load 10.32–17.95; a loopback, single-host Redis mirror, not WK-674's deployment path.
+
+**The decision:**
+1. **Not a pass, not a fail: inconclusive.** One run cannot establish a verdict, and the load invalidates the timings as evidence of the budget. The zero-mixed result across 27 000 responses and both FR-268 readings is **evidence for the design**. It is not proof.
+2. **The design direction is adopted for WK-674:** the two-phase PREPARE (fetch and hydrate off the event loop, then acknowledge) and COMMIT (swap the one `live` reference, then acknowledge) over a push channel. `/score` reads `live` once at request start, and every response carries the engine-stamped bundle hash. WK-674's leaf plan may build on it. **It does not treat the 30 s bound or the zero-drop clause as met.**
+3. **My 11:33:12 criterion becomes WK-674's acceptance test, unchanged:** 0 mixed and 0 dropped with the bundle hash asserted on every response, switch ≤ 30 s including warm-up. It is measured as:
+   - **N ≥ 3 runs for each n ∈ {2, 4, 8}**, at 200 rps;
+   - **on the deployment path WK-674 builds**, not a loopback mirror;
+   - with load < 12 at the start of every run, recorded beside it;
+   - worker affinity and the load-balancing topology stated.
+4. **The 3 drops are carried, not explained away.** WK-674 either reproduces the m-n4 conditions to find their cause, or shows 0 drops at N ≥ 3 at n=4 and n=8. Until one of those, "dropped" is an open question on WK-674's row, not a pass.
+5. **Filing:** #837 carries this entry whole, fenced, as its Decision section. The WK-674 obligation is written into WK-674's roadmap row when its first slice is planned (not by this goal). F1 blocks nothing in today's five Works.
+
+All four spike decisions are now made: F4 (hypothesis, conditioned), F3 (exact Shapley), F2 (Vue Flow, PASS), F1 (inconclusive, criterion carried). Each is final on its RS record at merge.
+```
+
 ## What remains
 
 - **N ≥ 3 runs per configuration**, on the revised topology, for n=2 and n=4.
