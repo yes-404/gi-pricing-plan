@@ -125,6 +125,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-234** | Rate tables validate on save: complete coverage of the declared key domain (or an explicit default row), no null values, values within declared bounds, and no key duplication. |
 | **FR-235** | Rate tables can be exported to and imported from CSV/XLSX for offline work, with a strict round-trip check on import: keys, types, and completeness must match, and the import is presented as a diff for confirmation before it creates a version. |
 | **FR-236** | A rate table declares whether it is **rateable** (part of the price) or **diagnostic** (present for analysis). Only rateable tables can be referenced by a step feeding the premium ladder. |
+| **FR-1186** | **A Rate Table Version has no approval lifecycle and no status.** It is governed through the Rating Version that pins it (FR-237). That Rating Version's submission carries the rate table diffs (`06` §3.3), and its approval is the one approval of the change. FR-229's change note is still required on every version. `compile_bundle`'s maturity gate does not apply to a `rate_table` pin, so RL-856's exemption is the permanent rule, no longer a provisional one. **Revisit trigger:** a Rate Table Version pinned by more than one Rating Version in practice. That is OQ-620's deciding test, which cannot be measured in Phase 2. (OQ-620, decided 2026-09-28 by delegation, option (b); `RL-1184` E8.) |
 
 ### 3.4 Rating versions and bundles
 
@@ -578,6 +579,44 @@ id. The threshold policy that decides whether the *run* aborts, and the per-cate
 counting and sampling FR-255 also names, are Task 3B's, reading `error_code` off this
 column.
 
+### 4.9 `RegressionRun`
+
+*(Added 2026-09-28, WK-672 Slice 1, `PL-1177`. Mints no requirement id: it documents the
+execution record that FR-260's promotion check and FR-261's property run produce, matching
+`docs/contracts/schemas/regression-suite.schema.json`'s `RegressionRun` definition, which
+predates this text. That contract is the hand-authored Phase 0 draft; `RL-1172` item 3c
+makes `RegressionRun` a `model-schema` artifact in the slice that first builds it, WK-672
+Slice 3, and this subsection then describes the generated shape.)*
+
+```json
+{
+  "suite_slug": "motor-gb-core",
+  "rating_version_ref": "rating_version:motor-gb@27",
+  "bundle_hash": "sha256:86d0cef0fbc4111163c63591ad555b6afc8bae35ca532846d51e14a6f08a77fe",
+  "job_id": "ad48274d-de75-4385-b966-b9df9579b63e",
+  "started_at": "2026-09-28T09:00:00Z",
+  "finished_at": "2026-09-28T09:00:04Z",
+  "overall": "fail",
+  "golden_results": [
+    {"name": "young-driver-london", "status": "fail",
+     "expected_minor": 112480, "actual_minor": 112900, "difference_minor": 420}
+  ],
+  "property_results": [
+    {"name": "premium_positive", "status": "pass", "cases_run": 5000},
+    {"name": "monotone_in_age", "status": "pass", "cases_run": 5000, "counterexample": null}
+  ]
+}
+```
+
+`overall == "fail"` blocks promotion (FR-260). A `golden_results` entry's `status` is
+`"fail"` when `difference_minor` exceeds the golden quote's declared tolerance (default:
+exact — zero — for money, FR-260's own text). A `property_results` entry's
+`counterexample`, when present, is the failing case reduced to a minimal one an actuary can
+read, as the contract's own description states; how it is generated and reduced is
+`pricing-core`'s `rating/testing.py` (§5.2), built in Slice 3. A Rating Version's approval
+evidence reads the run whose `bundle_hash` equals the version's current bundle hash
+(`RL-1172` item 4).
+
 ---
 
 ## 5. Interfaces
@@ -588,7 +627,7 @@ column.
 |---|---|---|
 | `POST` | `/api/v1/rating-algorithms` | Create/version an algorithm (validated on save, FR-212) |
 | `GET` | `/api/v1/rating-algorithms/{slug}@{version}/diff?against=` | Structural diff (FR-219) |
-| `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version with change note |
+| `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version from manual cell edits, with a required change note (FR-229). This is the manual-editing path, and it follows the import route below: the request names the base version and carries the edited cells, and the response is a cell diff against that base for confirmation (FR-231). `confirm: true` re-computes the diff and creates the version. **Amended 2026-09-28** (`RL-1184` E5): this row named no request shape, and no route implements it (register F-W10-3). Owner: WK-675's editor slice. |
 | `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-230) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/bulk-operation` | Uplift / floor / cap / rebase on that version's cells → new version, operation + parameters recorded (FR-233) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-231); **202** with a Job where either version is `storage: parquet` (FR-232) |
@@ -701,13 +740,20 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle
 def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-706 translation layer
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str    # corrected 2026-08-27 (F-W9-3-2)
+def assert_integer_minor_round_trip() -> None          # FR-273's startup self-check; added 2026-09-28 (F60 (3), RL-1172)
 
 # pricing_core/rating/runtime.py                      # added 2026-08-29 (WK-671 Slice 1)
 def load_bundle(bundle: Bundle) -> CompiledBundle     # FR-243's hydration step
+def to_wire(graph: JdmGraph,                          # the ZEN engine's wire payload;
+            payloads: Mapping[str, Any] | None = None) -> dict[str, Any]  # added 2026-09-28 (F60 (1), RL-1172)
 
 # pricing_core/rating/score.py
 async def score_one(bundle: CompiledBundle, ctx: QuoteContext, *,
               trace: bool = False) -> ScoringResult
+def build_scoring_result(bundle: CompiledBundle, ctx: QuoteContext,  # FR-254's shared tail;
+                         rating_version_ref: ArtifactRef,            # added 2026-09-28
+                         result: Mapping[str, Any],                  # (F60 (4), RL-1172)
+                         engine_trace: Mapping[str, Any] | None) -> ScoringResult
 def score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, *,
                 chunk_rows: int = 100_000,
                 progress: ProgressCallback | None = None) -> pl.LazyFrame
@@ -720,7 +766,8 @@ def attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[A
 # pricing_core/rating/testing.py
 def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
                    *, seed: int) -> RegressionRun
-def generate_contexts(contract: InputContract, n: int, seed: int) -> list[QuoteContext]
+def generate_contexts(contract: Sequence[InputContractField],   # corrected 2026-09-28
+                      n: int, seed: int) -> list[QuoteContext]  # (RL-1172); was InputContract
 
 # pricing_core/money.py — the decimal discipline (R2); path and signatures
 # corrected 2026-08-29 (WK-671 Slice 1, RL-879) — there is no rating/money.py
@@ -729,7 +776,7 @@ def reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> b
 # to_minor is model-schema's, not pricing-core's: model_schema/money.py
 
 # pricing_core/rate_tables/operations.py
-KeyFilter = dict[str, list[str]]          # exact-value match over the table's declared keys
+from model_schema.rating import KeyFilter  # corrected 2026-09-28 (F59, RL-1172): model-schema's shape, imported, never redefined here
 def uplift_table(table: RateTableVersion, *, percentage: Decimal) -> RateTableVersion
 def uplift_by_filter(table: RateTableVersion, *, percentage: Decimal,
                      filter: KeyFilter) -> RateTableVersion
@@ -741,7 +788,38 @@ def export_to_xlsx(table: RateTableVersion) -> bytes
 def import_from_csv(version: RateTableVersion, content: bytes, *, filename: str) -> ImportPreview
 def import_from_xlsx(version: RateTableVersion, content: bytes, *, filename: str) -> ImportPreview
 def import_confirmed(version: RateTableVersion, content: bytes, *, filename: str) -> ImportResult
+# the six below added 2026-09-28 (F60 (2), RL-1172) — live behind published endpoints;
+# CellRow = dict[str, str] and Cells = Sequence[CellRow] are this module's aliases
+def check_model_approved(model: Model) -> None
+def extract_relativity_table(model: Model, *, value_name: str = "relativity") -> list[CellRow]
+def seed_from_model(model: Model, *, table_slug: str, change_note: str, seeded_at: datetime,
+                    rateable: bool = True, value_name: str = "relativity") -> SeedResult
+def validate_rate_table(cells: Cells, keys: Sequence[RateTableKey], value: RateTableValue, *,
+                        key_domains: Mapping[str, frozenset[str]],
+                        default_row: CellRow | None = None) -> list[ValidationIssue]
+def diff_vs_previous(previous_cells: Cells, current_cells: Cells,
+                     keys: Sequence[RateTableKey], value: RateTableValue, *,
+                     weights: Weights | None = None) -> RateTableDiff
+def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
+                 keys: Sequence[RateTableKey], value: RateTableValue, *,
+                 weights: Weights | None = None) -> RateTableDiff
 ```
+
+> *(Corrected 2026-09-28, RL-1172 — the decision-maker ruled the spec was wrong on F59 and
+> on all four limbs of F60, and the code right.)* The block above had omitted nine live
+> public functions: `to_wire`, the six rate-table functions that published endpoints reach,
+> `assert_integer_minor_round_trip` (the startup call FR-273 requires), and
+> `build_scoring_result`. It had also placed
+> `KeyFilter`'s definition in `operations.py`, which only imports it: the shape is
+> `model_schema.rating`'s (`CLAUDE.md` §2). In the `testing.py` block, `InputContract`
+> named a type that does not exist. The input contract is `RatingAlgorithm.input_contract`,
+> a `list[InputContractField]`. `run_regression` **stays plain `def`**. It runs inside the
+> 202 Job that `POST …/regression-runs` starts. It reaches the engine through the
+> synchronous `evaluate()` path `score_batch` uses (RL-868), and so through the same
+> `build_scoring_result` tail as `score_one` (RL-858). The generator is decided on spike
+> F4's record, not here. Both `testing.py` functions live in
+> `pricing-core` and hold no persistence. The backend owns the suite store, the Job and the
+> gates.
 
 > *(`import_confirmed` added 2026-08-28, DP6 — the confirmation half of FR-235.)*
 > `POST /import` with `confirm: true` re-parses the same upload through the same strict
@@ -928,4 +1006,5 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-617** | ~~How do mid-term adjustments and refunds work — a `purpose` on the same algorithm, or a genuinely separate calculation path?~~ **DECIDED 2026-08-18: the same algorithm for the risk price, with pro-rata/refund/charge logic in a separately-versioned sub-graph mounted on `purpose` — FR-218.** §2's `purpose` gained `cancellation` in the same edit, because the answer keys on a value that did not exist. |
 | ~~**OQ-618**~~ | ~~Do we support multi-product bundling (motor + home in one quote with a bundle discount) in Phase 2, or is each product a separate Rating Version with bundling left to the Consumer System?~~ **Deferred to Phase 4**: Phase 2 ships single-product Rating Versions and a Consumer System bundling two quotes is a supported pattern — the bundle discount is then unpriced and unmonitored, and cross-product pricing follows the optimisation work that needs the same joint demand modelling. **DECIDED 2026-08-26: deferral confirmed — Phase 4; Consumer System bundling is the supported pattern** |
 | **OQ-619** | ~~Should the platform own instalment/APR calculation, or is that a downstream billing concern?~~ **DECIDED 2026-08-18: price the annual premium, offer `instalment_loading` as a final ladder rung, and leave APR and schedules downstream — FR-252.** Enough for `04`'s demand model; not enough to make a rating release a consumer-credit release. |
-| **OQ-620** | Does a **Rate Table Version** have an approval lifecycle? `06` §2 lists it as a Governed Artifact — *"any artifact with an approval-bearing lifecycle"* — and `06` §3.3 gives it required evidence at submission; this section gives it no status at all and `rate_table_versions` has no status column, so `compile_bundle`'s FR-20 maturity gate has nothing to read for a `rate_table` pin. **Open.** *(Raised 2026-08-29 from WK-671 Task 1.2, which needed a maturity to report and found none; the pin is exempted from the gate meanwhile, declared and guarded so a status column turns the exemption red. Ruled in `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md` RL-856.)* |
+| **OQ-620** | ~~Does a **Rate Table Version** have an approval lifecycle? `06` §2 lists it as a Governed Artifact — *"any artifact with an approval-bearing lifecycle"* — and `06` §3.3 gives it required evidence at submission; this section gives it no status at all and `rate_table_versions` has no status column, so `compile_bundle`'s FR-20 maturity gate has nothing to read for a `rate_table` pin.~~ **DECIDED 2026-09-28 by delegation — option (b): a Rate Table Version is governed through the Rating Version that pins it, with no lifecycle and no status** (FR-1186; `RL-1184` E8). Status: **decided**. *(Raised 2026-08-29 from WK-671 Task 1.2, which needed a maturity to report and found none; the pin is exempted from the gate meanwhile, declared and guarded so a status column turns the exemption red. Ruled in `docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-exemption-is-declared-and-self-invalidating.md` RL-856.)* |
+| **OQ-1187** | ~~How does a Dislocation Run attribute a premium change to its causes when the changes interact (FR-266; WK-673)?~~ **DECIDED 2026-09-28 — option (b), exact Shapley with largest-remainder allocation (deputy, on spike F3's RS record)** (`RL-1184` F3). The options are isolated plus cumulative in a declared step order with an interaction-residual line; Shapley over steps; or cumulative only. The recommendation is the first. The pass criterion was ruled on 2026-09-28: exact Decimal reconciliation is a hard gate; the first option passes if order-sensitivity and residual are each at most 0.10 of the summed absolute isolated effects, on every set of K = 3 to 6 changes; otherwise exact Shapley at K ≤ 6. Raised 2026-09-28 from the deputy's item F3; decided on the F3 spike's research record. Isolated and declared-order cumulative figures stay as FR-266's views, beside the Shapley figures, with the interaction residual as its own line. Mirrored in `docs/open-questions.md`. Status: **decided**. |
