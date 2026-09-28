@@ -186,4 +186,13 @@ The owner is the maintainer. The acceptance line is the deputy's, by the maintai
 delegation of 2026-09-28, and is written in this record's one follow-up commit. The auditor
 filed this record on 2026-09-28.
 
-**Maintainer acceptance:** _pending — the maintainer's dated line_
+**Maintainer acceptance:** **2026-09-28 15:05:06 BST — WK-695 (File taxonomy, reference coding and custody — RFC-897 Stages 2–5) is CLOSED**, written by the deputy by the maintainer's delegation of 2026-09-28, on `CR-1183` (`kind: work`, auditor-a) as read by me at `p2-c2-wk695` `3034a58d`, with the lead's adoption of its verdicts.
+- **WK-695 built none of its four stages itself, and that is the correct result, not a shortfall.**
+  - Stages 2 and 5 (and §11 (b), (e), (f) and (g)) were **delivered by WK-697 under RFC-937** (`CR-1164`), which superseded them. They are reassigned.
+  - **Stage 3** (the ownership map, §11 (c)) is **deferred with an owner: WK-1169**.
+  - **Stage 4** (the create-read-retire verdicts, including the unreferenced-plans decomposition, §11 (d)) and the close-tree census (§11 (a)'s second half) are **deferred with an owner: WK-1170**.
+
+  Both Works' roadmap rows carry dated lines citing `CR-1183`.
+- **Stages 0–1 and §3a were delivered by PL-929's slices** (the census script with 29 tests passing; the taxonomy and RL-941 to RL-951 and RL-988; the notes move, #544). §11 (g) cannot be measured as written, because RFC-937's migration removed the directory it measures. That is recorded, not waived.
+- **RFC-897 closes with this close.** On the maintainer's instruction of 2026-09-28 ("land RFC-897 properly"), its `status:` moves `draft` → `closed` in this record's follow-up commit, by `close-workstream` (`document-ids.md:151`). The adoption on 2026-09-01 is recorded in this record's "RFC-897 disposition" section as a dated fact. **Nothing of RFC-897 is left undelivered and unowned.**
+- F56's stale cell was resolved in place (`cbf1365`, #540), verified at main. The `CLAUDE.md` §14 question is answered by plan review 15, which follows this close.
