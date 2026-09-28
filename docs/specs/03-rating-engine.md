@@ -578,6 +578,44 @@ id. The threshold policy that decides whether the *run* aborts, and the per-cate
 counting and sampling FR-255 also names, are Task 3B's, reading `error_code` off this
 column.
 
+### 4.9 `RegressionRun`
+
+*(Added 2026-09-28, WK-672 Slice 1, `PL-1177`. Mints no requirement id: it documents the
+execution record that FR-260's promotion check and FR-261's property run produce, matching
+`docs/contracts/schemas/regression-suite.schema.json`'s `RegressionRun` definition, which
+predates this text. That contract is the hand-authored Phase 0 draft; `RL-1172` item 3c
+makes `RegressionRun` a `model-schema` artifact in the slice that first builds it, WK-672
+Slice 3, and this subsection then describes the generated shape.)*
+
+```json
+{
+  "suite_slug": "motor-gb-core",
+  "rating_version_ref": {"…artifact-ref…"},
+  "bundle_hash": "sha256:…",
+  "job_id": "…uuid…",
+  "started_at": "2026-09-28T09:00:00Z",
+  "finished_at": "2026-09-28T09:00:04Z",
+  "overall": "fail",
+  "golden_results": [
+    {"name": "young-driver-london", "status": "fail",
+     "expected_minor": 112480, "actual_minor": 112900, "difference_minor": 420}
+  ],
+  "property_results": [
+    {"name": "premium_positive", "status": "pass", "cases_run": 5000},
+    {"name": "monotone_in_age", "status": "pass", "cases_run": 5000, "counterexample": null}
+  ]
+}
+```
+
+`overall == "fail"` blocks promotion (FR-260). A `golden_results` entry's `status` is
+`"fail"` when `difference_minor` exceeds the golden quote's declared tolerance (default:
+exact — zero — for money, FR-260's own text). A `property_results` entry's
+`counterexample`, when present, is the failing case reduced to a minimal one an actuary can
+read, as the contract's own description states; how it is generated and reduced is
+`pricing-core`'s `rating/testing.py` (§5.2), built in Slice 3. A Rating Version's approval
+evidence reads the run whose `bundle_hash` equals the version's current bundle hash
+(`RL-1172` item 4).
+
 ---
 
 ## 5. Interfaces
