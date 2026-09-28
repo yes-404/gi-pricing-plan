@@ -1,0 +1,97 @@
+{
+ "set": [
+  0,
+  1,
+  2,
+  3,
+  4
+ ],
+ "K": 5,
+ "changes": [
+  "model: freq_v1 -> freq_v2 (adds VehGas, VehAge)",
+  "rate_table: age relativity v1 -> v2",
+  "severity 1900 -> 1976 (+4%)",
+  "expense_load 0.25 -> 0.28",
+  "min_premium 150 -> 180"
+ ],
+ "baseline_total_eur": 174332383.69,
+ "total_change_pct": 11.0383,
+ "D_pct": 10.8271,
+ "residual_pct": 0.2113,
+ "S": 0.0627,
+ "R": 0.0195,
+ "a_passes_set": true,
+ "gate": {
+  "a_isolated_plus_residual_exact": true,
+  "a_cumulative_exact": true,
+  "b_shapley_exact_as_rational_xKfact": true,
+  "b_policies_where_cent_rounded_shapley_misses_total": 230673,
+  "b_largest_remainder_exact": true,
+  "b_lr_max_dev_cents": 0.8,
+  "policies": 678013
+ },
+ "per_policy": {
+  "n_Di_gt_0": 678013,
+  "R_i": {
+   "p50": 0.029,
+   "p95": 0.3425,
+   "max": 0.6706
+  },
+  "S_i": {
+   "p50": 0.0491,
+   "p95": 0.5189,
+   "max": 0.8891
+  }
+ },
+ "steps": [
+  {
+   "step": "model: freq_v1 -> freq_v2 (adds VehGas, VehAge)",
+   "isolated_pct": 1.4451,
+   "cum_declared_pct": 1.4451,
+   "cum_min_pct": 1.3439,
+   "cum_max_pct": 1.9885,
+   "shapley_pct": 1.6976
+  },
+  {
+   "step": "rate_table: age relativity v1 -> v2",
+   "isolated_pct": 1.3811,
+   "cum_declared_pct": 1.4197,
+   "cum_min_pct": 1.3811,
+   "cum_max_pct": 1.5773,
+   "shapley_pct": 1.4886
+  },
+  {
+   "step": "severity 1900 -> 1976 (+4%)",
+   "isolated_pct": 3.8276,
+   "cum_declared_pct": 3.8096,
+   "cum_min_pct": 3.4124,
+   "cum_max_pct": 3.997,
+   "shapley_pct": 3.6976
+  },
+  {
+   "step": "expense_load 0.25 -> 0.28",
+   "isolated_pct": 2.2903,
+   "cum_declared_pct": 2.4033,
+   "cum_min_pct": 2.0354,
+   "cum_max_pct": 2.4413,
+   "shapley_pct": 2.2366
+  },
+  {
+   "step": "min_premium 150 -> 180",
+   "isolated_pct": 1.8829,
+   "cum_declared_pct": 1.9606,
+   "cum_min_pct": 1.2818,
+   "cum_max_pct": 2.5411,
+   "shapley_pct": 1.918
+  }
+ ],
+ "ratings": 32,
+ "cpus": 16,
+ "load": [
+  11.62841796875,
+  12.05908203125,
+  6.54736328125
+ ],
+ "stamp": "2026-09-28 10:45:53 UTC",
+ "polars": "1.43.2"
+}

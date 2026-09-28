@@ -1,0 +1,77 @@
+{
+ "set": [
+  1,
+  2,
+  4
+ ],
+ "K": 3,
+ "changes": [
+  "rate_table: age relativity v1 -> v2",
+  "severity 1900 -> 1976 (+4%)",
+  "min_premium 150 -> 180"
+ ],
+ "baseline_total_eur": 174332383.69,
+ "total_change_pct": 6.8618,
+ "D_pct": 7.0916,
+ "residual_pct": -0.2299,
+ "S": 0.0618,
+ "R": 0.0324,
+ "a_passes_set": true,
+ "gate": {
+  "a_isolated_plus_residual_exact": true,
+  "a_cumulative_exact": true,
+  "b_shapley_exact_as_rational_xKfact": true,
+  "b_policies_where_cent_rounded_shapley_misses_total": 139026,
+  "b_largest_remainder_exact": true,
+  "b_lr_max_dev_cents": 0.6666666666666666,
+  "policies": 678013
+ },
+ "per_policy": {
+  "n_Di_gt_0": 678013,
+  "R_i": {
+   "p50": 0.0218,
+   "p95": 0.2422,
+   "max": 0.5
+  },
+  "S_i": {
+   "p50": 0.022,
+   "p95": 0.3948,
+   "max": 0.5549
+  }
+ },
+ "steps": [
+  {
+   "step": "rate_table: age relativity v1 -> v2",
+   "isolated_pct": 1.3811,
+   "cum_declared_pct": 1.3811,
+   "cum_min_pct": 1.3811,
+   "cum_max_pct": 1.5441,
+   "shapley_pct": 1.469
+  },
+  {
+   "step": "severity 1900 -> 1976 (+4%)",
+   "isolated_pct": 3.8276,
+   "cum_declared_pct": 3.8731,
+   "cum_min_pct": 3.4347,
+   "cum_max_pct": 3.8731,
+   "shapley_pct": 3.6412
+  },
+  {
+   "step": "min_premium 150 -> 180",
+   "isolated_pct": 1.8829,
+   "cum_declared_pct": 1.6076,
+   "cum_min_pct": 1.49,
+   "cum_max_pct": 2.0386,
+   "shapley_pct": 1.7516
+  }
+ ],
+ "ratings": 8,
+ "cpus": 16,
+ "load": [
+  13.37841796875,
+  12.40185546875,
+  6.59716796875
+ ],
+ "stamp": "2026-09-28 10:45:41 UTC",
+ "polars": "1.43.2"
+}

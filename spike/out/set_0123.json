@@ -1,0 +1,87 @@
+{
+ "set": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "K": 4,
+ "changes": [
+  "model: freq_v1 -> freq_v2 (adds VehGas, VehAge)",
+  "rate_table: age relativity v1 -> v2",
+  "severity 1900 -> 1976 (+4%)",
+  "expense_load 0.25 -> 0.28"
+ ],
+ "baseline_total_eur": 174332383.69,
+ "total_change_pct": 9.0777,
+ "D_pct": 8.9442,
+ "residual_pct": 0.1336,
+ "S": 0.021,
+ "R": 0.0149,
+ "a_passes_set": true,
+ "gate": {
+  "a_isolated_plus_residual_exact": true,
+  "a_cumulative_exact": true,
+  "b_shapley_exact_as_rational_xKfact": true,
+  "b_policies_where_cent_rounded_shapley_misses_total": 215721,
+  "b_largest_remainder_exact": true,
+  "b_lr_max_dev_cents": 0.75,
+  "policies": 678013
+ },
+ "per_policy": {
+  "n_Di_gt_0": 643850,
+  "R_i": {
+   "p50": 0.0252,
+   "p95": 0.3006,
+   "max": 975.0
+  },
+  "S_i": {
+   "p50": 0.0419,
+   "p95": 0.3654,
+   "max": 976.0
+  }
+ },
+ "steps": [
+  {
+   "step": "model: freq_v1 -> freq_v2 (adds VehGas, VehAge)",
+   "isolated_pct": 1.4451,
+   "cum_declared_pct": 1.4451,
+   "cum_min_pct": 1.3439,
+   "cum_max_pct": 1.4837,
+   "shapley_pct": 1.4136
+  },
+  {
+   "step": "rate_table: age relativity v1 -> v2",
+   "isolated_pct": 1.3811,
+   "cum_declared_pct": 1.4197,
+   "cum_min_pct": 1.3811,
+   "cum_max_pct": 1.4943,
+   "shapley_pct": 1.4374
+  },
+  {
+   "step": "severity 1900 -> 1976 (+4%)",
+   "isolated_pct": 3.8276,
+   "cum_declared_pct": 3.8096,
+   "cum_min_pct": 3.764,
+   "cum_max_pct": 3.997,
+   "shapley_pct": 3.8803
+  },
+  {
+   "step": "expense_load 0.25 -> 0.28",
+   "isolated_pct": 2.2903,
+   "cum_declared_pct": 2.4033,
+   "cum_min_pct": 2.2521,
+   "cum_max_pct": 2.4413,
+   "shapley_pct": 2.3464
+  }
+ ],
+ "ratings": 16,
+ "cpus": 16,
+ "load": [
+  13.37841796875,
+  12.40185546875,
+  6.59716796875
+ ],
+ "stamp": "2026-09-28 10:45:44 UTC",
+ "polars": "1.43.2"
+}

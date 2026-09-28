@@ -1,0 +1,107 @@
+{
+ "set": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "K": 6,
+ "changes": [
+  "model: freq_v1 -> freq_v2 (adds VehGas, VehAge)",
+  "rate_table: age relativity v1 -> v2",
+  "severity 1900 -> 1976 (+4%)",
+  "expense_load 0.25 -> 0.28",
+  "min_premium 150 -> 180",
+  "cap: increase capped at +25% of baseline"
+ ],
+ "baseline_total_eur": 174332383.69,
+ "total_change_pct": 7.921,
+ "D_pct": 10.8271,
+ "residual_pct": -2.9061,
+ "S": 0.2879,
+ "R": 0.2684,
+ "a_passes_set": false,
+ "gate": {
+  "a_isolated_plus_residual_exact": true,
+  "a_cumulative_exact": true,
+  "b_shapley_exact_as_rational_xKfact": true,
+  "b_policies_where_cent_rounded_shapley_misses_total": 240188,
+  "b_largest_remainder_exact": true,
+  "b_lr_max_dev_cents": 0.8,
+  "policies": 678013
+ },
+ "per_policy": {
+  "n_Di_gt_0": 678013,
+  "R_i": {
+   "p50": 0.0369,
+   "p95": 0.4668,
+   "max": 0.7527
+  },
+  "S_i": {
+   "p50": 0.0544,
+   "p95": 0.5825,
+   "max": 1.0345
+  }
+ },
+ "steps": [
+  {
+   "step": "model: freq_v1 -> freq_v2 (adds VehGas, VehAge)",
+   "isolated_pct": 1.4451,
+   "cum_declared_pct": 1.4451,
+   "cum_min_pct": -1.241,
+   "cum_max_pct": 1.9885,
+   "shapley_pct": 0.6472
+  },
+  {
+   "step": "rate_table: age relativity v1 -> v2",
+   "isolated_pct": 1.3811,
+   "cum_declared_pct": 1.4197,
+   "cum_min_pct": 0.5298,
+   "cum_max_pct": 1.5773,
+   "shapley_pct": 1.1455
+  },
+  {
+   "step": "severity 1900 -> 1976 (+4%)",
+   "isolated_pct": 3.8276,
+   "cum_declared_pct": 3.8096,
+   "cum_min_pct": 2.625,
+   "cum_max_pct": 3.997,
+   "shapley_pct": 3.406
+  },
+  {
+   "step": "expense_load 0.25 -> 0.28",
+   "isolated_pct": 2.2903,
+   "cum_declared_pct": 2.4033,
+   "cum_min_pct": 1.5809,
+   "cum_max_pct": 2.4413,
+   "shapley_pct": 2.0547
+  },
+  {
+   "step": "min_premium 150 -> 180",
+   "isolated_pct": 1.8829,
+   "cum_declared_pct": 1.9606,
+   "cum_min_pct": 1.2818,
+   "cum_max_pct": 2.5411,
+   "shapley_pct": 1.918
+  },
+  {
+   "step": "cap: increase capped at +25% of baseline",
+   "isolated_pct": 0.0,
+   "cum_declared_pct": -3.1173,
+   "cum_min_pct": -3.1173,
+   "cum_max_pct": 0.0,
+   "shapley_pct": -1.2503
+  }
+ ],
+ "ratings": 64,
+ "cpus": 16,
+ "load": [
+  10.32470703125,
+  11.74609375,
+  6.533203125
+ ],
+ "stamp": "2026-09-28 10:46:05 UTC",
+ "polars": "1.43.2"
+}
