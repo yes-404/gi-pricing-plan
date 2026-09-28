@@ -1,5 +1,5 @@
 ---
-id: LG-WORKING
+id: LG-1204
 family: ledger
 title: WK-672 Slice 2 — Golden Quotes and promotion re-scoring
 status: active
@@ -13,16 +13,18 @@ corrected_by: []
 relates: [RL-1172, PL-930, LG-1182]
 ---
 
-# LG-WORKING — WK-672 Slice 2 — Golden Quotes and promotion re-scoring
+# LG-1204 — WK-672 Slice 2 — Golden Quotes and promotion re-scoring
 
 Executed task by task from `PL-1189` (`status: active` on `main` since #862, squash
 `ffba67539ba5f0c5cd04aa72a0c4270a517c0562`), under `RL-1172` and the deputy's decisions
 DP-S2-1 to DP-S2-6 by delegation, quoted whole in the plan. Branch `p2-d-s2`, fast-forwarded
 to `origin/main` at `ffba6753` before Task 1 and merged with `origin/main` at
 `e6a9ca71a0bef3da41720d20f3f20db73f6a1d80` (#864) before Task 5 (`git merge`, never a rebase).
-Every commit below is a pre-squash branch commit of this slice's one PR. This ledger carries
-the working id `LG-WORKING` until its mint turn (the team's id rule), when one renumber
-commit gives it the next free id read from `origin/main`.
+Every commit below is a pre-squash branch commit of this slice's one PR. This ledger was
+drafted under a working id and renumbered to `LG-1204` at its mint turn, under the team's id
+rule: `python3 scripts/doc-id.py next --ref origin/main` printed `1204` after `origin/main` at
+`4fb07b6cb17cacb2f6f578f264a36a455143c45f` (#865) was merged into the branch (`c416f3b2`, a
+docs-only merge: five files, all under `docs/`).
 
 The test database is `gipricing_tree-s2` (the worktree's unique leaf), created from the
 `gipricing` template and migrated; `GIP_TEST_DATABASE_URL` pointed at it for every run. It is
@@ -40,6 +42,10 @@ The stamp column is the commit time, Europe/London.
 | 4 | `0dc12cbf` | `regression_suites` / `regression_suite_versions`, migration `fb705749c5d9` on `d3b955a63d6a` (upgrade, downgrade −1, upgrade: rc 0 each); the service, the two routes, `RegressionSuiteVersionCreate` (the POST body, declared in `model-schema`). `test_regression_suites.py` 8 passed; backend 1247 passed, 2 skipped. The race red is below. | 2026-09-28 17:32:02 BST |
 | — | `bcb1a97a` | Merge of `origin/main` `e6a9ca71` (#864, #855, #833). One conflict, `06`'s error-code list: #864's `APPROVAL_SUBJECT_NOT_IN_REVIEW` beside this slice's `APPROVAL_BY_EVIDENCE_AUTHOR`; both kept. The FR-353 row is byte-identical at `ffba6753` and `e6a9ca71`. One alembic head after the merge, `fb705749c5d9`. | 2026-09-28 18:01:17 BST |
 | 5 | `e9f51fa0` | Step 0, quoted: `git log --grep '(#861)' -1 origin/main` printed `3f7bddda fix(governance): the approver may be neither the submitter nor the author (FR-353) (#861)`; `git log --grep '(#864)' -1 origin/main` printed `e6a9ca71 fix(governance): only a version in its reviewable state can be put to a decision (FR-351) (#864)`. The submit gate, the pin, the delta and its author walk, `golden_quote_delta_authors`, `EvidenceAuthorResolver` and the 403 in `decide` after #861's author check, the route's `_fetch_bundle` loader. `test_rating_versions.py` 36 passed (22 golden); backend 1312 passed, 2 skipped. The reds are below. | 2026-09-28 18:21:27 BST |
+| 6 | `983c5144` | The ledger under its working id, and `docs/INDEX.md`. Gate run on this tree (below, "The first gate"). Pushed; draft PR #867. | 2026-09-28 18:24:25 BST |
+| G3 | `37debb3d` | Audit finding G3 (auditor-a's slice audit of #867): the NFR-499 no-logging test drives the POST route under `caplog` and `capfd` and requires a non-empty capture. Positive control below. | 2026-09-28 18:53:08 BST |
+| — | `c416f3b2` | Merge of `origin/main` `4fb07b6c` (#865): docs only. | 2026-09-28 18:56:31 BST |
+| mint | this commit | The renumber `LG-WORKING` → `LG-1204` (file, `id:`, in-text), `docs/INDEX.md`, and this ledger's G1/G2/G3 record. | 2026-09-28 |
 
 ### The reds
 
@@ -66,6 +72,43 @@ The stamp column is the commit time, Europe/London.
     The actual author `…f126…` is Y (created after X; the ids are time-ordered UUIDv7), at
     version 3, Y's note-only edit; the expected `…f120…` is X. Restored: 1 passed, no new
     commit (the restore was byte-identical).
+
+### The audit's reds (auditor-a on `983c5144`; items G2 and G3)
+
+auditor-a found the design and governance clean, and asked for these reds. Each was run on a
+backup-restored copy (or, for a constraint, on the test database), restored (`cmp`
+identical, or the constraint re-added), and green again after.
+
+- **G3 positive control.** A temporary line in `create_suite_version`,
+  `get_logger("app.regression_suites").info("created %s", content.model_dump_json())`, turns
+  the route-level test red: `assert 'ZZ9 9ZZ' not in 'INFO     ap...1 Created"\n'`, with
+  `'ZZ9 9ZZ' is contained here: ostcode":"ZZ9 9ZZ"}…`. Restored: `test_regression_suites.py`
+  8 passed. **A claim dropped before the commit:** a first draft re-attached caplog's handler
+  after `create_app`, on the claim that `configure_logging` detaches it; a second control (no
+  re-attachment, the log line present) was also red, so the claim was false, and the
+  re-attachment and its docstring were removed. What keeps the test from passing on an empty
+  capture is its `assert caplog.records`.
+- **N1**, the `TypeError` guard removed: `test_golden_evidence_author_decide_without_a_resolver_is_a_type_error` —
+  `E AssertionError` (the narrowing assert then fires; under `python -O` the call on `None`
+  raises a `TypeError` whose message fails the test's `match`).
+- **N3**, `uq_regression_suite_versions_version` dropped: `test_two_concurrent_versions_of_one_suite_collide_as_409_not_500` —
+  `assert ['int', 'int'] == ['PlatformError', 'int']` (both writers created version 2).
+- **The missing creation event**, a fallback author returned instead of the refusal:
+  `test_golden_a_suite_version_with_no_creation_event_refuses_submit` — `Failed: DID NOT RAISE PlatformError`.
+- **N2**, an absent `golden_quotes` raising instead of an empty set:
+  `test_golden_evidence_author_set_is_empty_without_golden_quotes` — `ValueError: no golden_quotes`.
+- **The write 403**, `rating:write` weakened to `rating:read` in both the route dependency and
+  the service check (either alone still refuses): `test_a_principal_without_rating_write_is_refused_creation` —
+  `assert 201 == 403`.
+- **The read 403**, the route's `rating:read` dependency and the service check both removed:
+  `test_a_principal_without_rating_read_is_refused_the_read` — `assert 200 == 403`.
+- **The reference 422**, a policy entry simulated for `regression_suite`:
+  `test_a_regression_suite_reference_cannot_be_put_through_approval` —
+  `assert 'ARTIFACT_TYPE_NOT_RESOLVABLE' == 'VALIDATION_FAILED'`. Still refused, by the
+  resolver fan-out: the second layer, shown.
+
+After the restores: `test_regression_suites.py` and `test_rating_versions.py` 44 passed, the
+reference test 1 passed, `git status --short` empty.
 
 ## Deviations from the plan's text
 
@@ -129,12 +172,71 @@ Each item of `PL-1189`'s Acceptance Standard, and where it is met.
 
 ## The gate
 
-Pending — recorded on the final tree.
+### The first gate, on `983c5144` (the working-id tree)
+
+The Python half is `dev-commands`' gate body and slot wrapper copied verbatim, with two
+additions: the `logs:` line is printed on a pass too, and `git rev-parse HEAD` is written to
+`HEAD.txt` in the log directory. `WT=$(basename "$PWD")` gives `tree-s2`, this worktree's
+unique leaf, which is the test database's name. The DB stack was checked first (`docker ps`:
+postgres, redis and minio "healthy"); load stayed near 1.1–1.3. The run started 18:24:47 BST
+and finished 18:41:20 BST in slot `/tmp/slots/gate-1`, first attempt; `HEAD.txt` read
+`983c5144c3684823e6ccbb86a8c9ba684010158d`. The process found by `pgrep -f '[b]ash .*gate.sh'`
+was the harness's outer shell (cwd the root checkout); the body ran under `env -C` this
+worktree, which `HEAD.txt` confirms.
+
+| Half | Command | Exit | Detail |
+|---|---|---|---|
+| Python | `uv run ruff check .` | 0 | |
+| Python | `uv run mypy` | 0 | |
+| Python | `uv run lint-imports` | 0 | 3 kept, 0 broken |
+| Python | `python3 scripts/audit-docs.py` | 1 | FAILED (1): check 31, `id: LG-WORKING` is not `<PREFIX>-<n>` shaped; DISCLOSED 851 |
+| Python | `uv run python scripts/req-coverage.py` | 0 | |
+| Python | `uv run python scripts/generate-contracts.py --check` | 0 | 29 generated contracts match |
+| Python | `uv run pytest -q` | 1 | 11 failed, 3597 passed, 3 skipped, 1 xfailed; the 11 are real-tree tests asserting audit-docs is clean (the check-31 cause) |
+| Frontend | `pnpm --dir frontend install --frozen-lockfile` | 0 | |
+| Frontend | `pnpm --dir frontend generate:api` | 0 | |
+| Frontend | `pnpm --dir frontend lint` | 0 | |
+| Frontend | `pnpm --dir frontend type-check` | 0 | |
+| Frontend | `pnpm --dir frontend test` | 0 | 97 files, 602 tests |
+| Frontend | `pnpm --dir frontend build` | 0 | |
+
+`uv run pytest --collect-only -q`: 3612 on `983c5144` (= 3597 + 11 + 3 + 1) against 3550 on
+`main` at `e6a9ca71`. `test_rating_score.py` five times on `983c5144`: rc 0, 0, 0, 0, 0 (24
+passed each, no `PyGILState` line). The lead accepted this gate, the working id being its
+only cause.
+
+### Item 9 on the minted tree
+
+After the mint, the tree differs from `983c5144` by `37debb3d` (one test file), the docs-only
+merge `c416f3b2`, and this commit (the renumber, `docs/INDEX.md`, this ledger). CI runs the
+full gate on the pushed head; locally, on the minted tree before this commit's own ledger
+lines (Europe/London, 2026-09-28, ending 19:03:31 BST):
+
+| Command | Exit | Detail |
+|---|---|---|
+| `python3 scripts/audit-docs.py` | 0 | "All checks passed."; DISCLOSED 851 |
+| the four test files this slice's approval and suite code touches: `test_regression_suites.py`, `test_rating_versions.py`, `test_api_approvals.py`, `test_approvals.py` | 0 | 160 passed |
+| the 11 real-tree tests the first gate failed on, by node id | 0 | 11 passed |
+| `uv run pytest tests/test_audit_docs_ids.py -q` | 0 | 118 passed |
+| `packages/pricing-core/tests/test_rating_score.py`, five times | 0, 0, 0, 0, 0 | 24 passed each, no `PyGILState` line |
+
+### Item 10: the docs checks
+
+On the working tree of this commit (the four checks are re-run on a detached copy of the
+committed tree before the push, and quoted in the report and the PR):
+`audit-docs.py` rc 0, "All checks passed.", DISCLOSED 851 (main's at `4fb07b6c` is 851);
+`doc-id.py check` rc 0; `doc-index.py --check` rc 0; `register-lint.py` rc 0.
+
+### Item 11: the change set
+
+`git diff --stat origin/main...HEAD` with this commit: **38 files changed, 5215 insertions(+), 165 deletions(-)**. The paths are the plan's
+Files blocks, this ledger and `docs/INDEX.md`, read with deviation 2.
 
 ## PRs
 
 | PR | Branch | Title | Squash SHA on `main` |
 |---|---|---|---|
+| #867 | `p2-d-s2` | feat(rating): WK-672 Slice 2 — Golden Quotes and promotion re-scoring, PL-1189, LG-1204 | (on merge) |
 
 ## Provenance notes
 
