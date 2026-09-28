@@ -538,7 +538,8 @@ async def start_ingestion(
         )
         # `blobs` has no workspace column, so a well-formed digest proves nothing about who
         # may read it: refuse one the caller's workspace does not own with the missing-blob
-        # 404, before a job exists (the worker re-checks, for a job enqueued another way).
+        # 404, before a job exists. The worker has no ownership check by design: this route is
+        # the only enqueuer, which `backend/tests/test_ingest_enqueuers.py` pins.
         if not await blob_readable_by(
             session, sha256=body.blob, workspace_id=caller.workspace_id
         ):
