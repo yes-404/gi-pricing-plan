@@ -321,15 +321,19 @@ line against `CLAUDE.md` §1 and `docs/roadmap.md`.
 
 **Verdict on the narrow predicate: not met at `df8e5811`; fixed before close by #827.** The
 lead ruled fix before close and made the fix himself, in a separate PR that mints no ids and
-merges before this record. PR #827 is on branch `p2-b-readme-fix`, with head `5f81e43c` at the
-time of writing. It makes two changes:
+merges before this record. PR #827 merged at 11:45:54 BST on 2026-09-28, as squash
+`12431a883bae48894d6b024dd654d5de14f1d8a9`. It makes two changes:
 
 - the README's introduction is rewritten rather than excerpted;
 - the dated clause becomes the condition *"Until the first `SL-` row is minted, a PR names its
   `WK-` work item instead"*. The change is made in `README.md`, `CONTRIBUTING.md` and the PR
   template, and it drops the `W37-n` form.
 
-The squash SHA is added when #827 merges.
+**Verified against the merged tree.** `git merge-base --is-ancestor 12431a88 origin/main`
+exits 0. `git grep -n "Not yet in force\|W37-n" origin/main -- README.md CONTRIBUTING.md
+.github/` returns nothing (exit 1). `README.md:13-14` at `origin/main` now opens *"GI Pricing
+Plan is an open-source pricing platform for general insurance in the UK and EU, built as an
+open alternative to commercial pricing suites."*, which no longer excerpts `CLAUDE.md` §1.
 
 ### (d) The wider outsider read
 
@@ -433,7 +437,7 @@ auditor.
 | (a) files and links | evidenced | — | — |
 | (b), row 6, settings | pending: the deputy's dated line by delegation | the deputy | this record's follow-up commit |
 | (c) test issues | **met by proxy**, accepted by the deputy's ruling. Filed, labelled, read back and closed, plus the schema leg: evidenced. Limit: "no web-UI submission; the rendering path is proved by schema validation", carried to plan review 15. | — | plan review 15 (the limit) |
-| (d) narrow predicate | **not met at `df8e5811`; fixed before close by #827.** Two sentences failed: `README.md:13-14`, an excerpt of `CLAUDE.md` §1, and `README.md:42-44`, a dated `SL-` status copy that recurs in two more files. | the lead | #827 merges before this record |
+| (d) narrow predicate | **not met at `df8e5811`; fixed before close by #827** (`12431a88`). Two sentences failed: `README.md:13-14`, an excerpt of `CLAUDE.md` §1, and `README.md:42-44`, a dated `SL-` status copy that recurs in two more files. | — | — |
 | (d) wider read | met; observations 1, 2, 4 and 5 noted; observation 3 **deferred with an owner** as `FD-1179` | the lead | WK-1170's first slice |
 | (e) checklist line | evidenced; no pointer edit is owed by this close | — | — |
 | Rows 7, 8, 9 | evidenced | — | — |
