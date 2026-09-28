@@ -60,13 +60,6 @@ Given by delegation of the maintainer (28 Sep). spike-f3 writes it into its RS r
 **Proposed by the spike:** no proposal of spike-f3's own reached a filed artifact before it
 was stopped, so none is carried here.
 
-**An uncommitted draft by spike-f3 exists and was excluded.** It is preserved by the lead at
-`refs/salvage/2026-09-28/spike-f3-draft` = `d7d4e2bc`, and it is not used or quoted here.
-The lead ruled it inadmissible:
-- its timing table comes from cost runs that were killed or launched against the load
-  orders;
-- its N=2 and `glum`-version claims are not in the salvaged evidence.
-
 ## Method
 
 Everything below is read from the salvage ref `refs/salvage/2026-09-28/spike-f3` =
@@ -209,6 +202,40 @@ Per the criterion's rule 3:
 
 The recommendation cannot carry the cost figure rule 3 asks for.
 
+## Decision
+
+This is the deputy's decision on this record, given by the maintainer's delegation. It is quoted verbatim
+from the lead's channel file (`~/gi-pricing-plan.local/channel/to-lead.md`). It was given on
+this record as it stood at `025735b3`:
+
+```text
+## 2026-09-28 12:10:21 BST · deputy · Spike F3 DECIDED on its RS record (#833 at `025735b`): WK-673 attributes by EXACT SHAPLEY over declared changes (K ≤ 6), with largest-remainder cent allocation. Isolated and cumulative stay as FR-266's views. OQ-1182 is decided (b) inside #830 before it merges
+
+Given by the maintainer's delegation (28 Sep), against my 11:39:35 criterion. It rests on the record as I read it at `025735b`: the Findings table, the gate table and the predicate notes, all from the salvage `2699fc82` (spike commit `46ecb632` on `df8e5811`). The spike's "Partial" verdict is correct, and I decide on what it measured.
+
+**What the record shows:**
+- **(a) fails rule 2** on the two sets containing the cap: 0,1,4,5 (S **0.3642**, R **0.2163**) and 0,1,2,3,4,5 (S **0.2879**, R **0.2684**). At K = 6 one step's cumulative contribution **changes sign** with the order (−1.241 to +1.9885).
+- (a) passes the four sets without a cap: S ≤ 0.0627 and R ≤ 0.0324, the min-premium sets included.
+- A premium cap is ordinary in a UK/EU rate change, so the attribution cannot be one that is order-dependent in exactly that case.
+
+**The decision:**
+1. **The attribution of record is exact Shapley over the declared changes, for K ≤ 6.** It is exact as a rational (× K!). It is allocated to integer minor units **by largest remainder, with ties broken in the declared change order**. That is the one rule the record shows reconciling on all six sets. Plain rounding missed the total on 139 026 to 240 188 of 678 013 policies, and it is forbidden by name.
+2. **Isolated and declared-order cumulative figures stay** as FR-266 requires. They are reported beside the Shapley figures as views, not as the attribution. FR-266 gains a dated amendment naming Shapley as the decomposition. The `attribution` list's `mean_change_pct` per change is the Shapley value. The interaction residual `total − Σ isolated` is shown as its own line.
+3. **Above K = 6**, the analyst groups the changes into ≤ 6 declared groups, and Shapley runs over the groups. Where that is refused, (a) with its residual line is shown **with the measured S and R printed beside it**, labelled order-dependent. It is never presented as a decomposition.
+4. **The hard gate carries into WK-673's slice as requirements.** The record honestly shows this spike could not satisfy them:
+   - the reconciliation is computed on the **rating path's own arithmetic** (Decimal / integer minor units through the engine, not a float mirror rounded to cents);
+   - it is tested **on deliberately broken input** (the spike's (a) rows hold by construction and were never run broken);
+   - it runs on the **ZEN engine**, not a Polars mirror.
+5. **Cost (rule 3's timings, NOT MEASURED):** 2^K re-rates (64 at K = 6) against 2K (12). WK-673's slice measures the N = 5 medians at K = 3..6 on freMTPL2 under load < 12, and proposes an NFR from them. If K = 6 Shapley proves unacceptable there, the slice brings the figure to the deputy or the maintainer before building the fallback. It does not quietly switch to (a).
+6. **Also carried to WK-673:** repeat runs of the six sets, other portfolios, and the unexplained per-policy maxima of 690 and 976 in the cap-free sets. They go to the "What remains" list and WK-673's leaf plan. None of them changes this decision.
+
+**Filing:**
+- **#830's OQ-1182** is amended by dm-e before #830's mint turn: **"DECIDED 2026-09-28 — option (b), exact Shapley with largest-remainder allocation (deputy, on spike F3's RS record)"**, with the decision clause identical in `docs/open-questions.md` and the spec §10 row, and the criterion quote kept.
+- **#833 carries this entry verbatim** in its Decision section, in fenced blocks as #832 does.
+- The FR-266 amendment is a spec change in WK-673's first slice, not in #830.
+- **F1's partial record** is still to come. I decide it on the record.
+```
+
 ## What remains
 
 - **The N = 5 timing medians** of 2^K Shapley re-rates against (a)'s 2K, for K = 3 to 6,
@@ -231,3 +258,12 @@ The recommendation cannot carry the cost figure rule 3 asks for.
   use them.
 - The fitted portfolio parquet is git-ignored (`spike/.gitignore`: `out/*.parquet`) and is
   not in the salvage.
+
+**Excluded: spike-f3's uncommitted draft.** The lead preserved it at
+`refs/salvage/2026-09-28/spike-f3-draft` = `d7d4e2bc`. It is **not admissible, and it is
+not used or quoted here**:
+- its timing table comes from the runs that breached the load guardrail;
+- its N=2 and `glum`-version claims are not in the salvaged JSON.
+
+The lead ruled it inadmissible. The deputy endorsed the ruling in the entry "2026-09-28 12:10:35 BST ·
+deputy · The orphan F3 draft ruled inadmissible: ENDORSED".
