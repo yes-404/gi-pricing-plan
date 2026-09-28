@@ -134,7 +134,7 @@ except the two findings this close files and the known defect `FD-1023`.
 | Finding | Concerns | Decision | Status |
 |---|---|---|---|
 | Register line 103 (`FD-935`) | `03` §4.4's `timing_ms` example against `score_one` | **Resolved 2026-08-31**, `RL-931` (PR #528): the example was corrected to the two keys the engine emits | closed |
-| Register line 105 | The WK-671 close's owed-list sweep | **deferred with an owner — the maintainer** (`CR-1167`). Reopening a Work close is the maintainer's alone. It does not block this close | carried |
+| Register line 105 | The WK-671 close's owed-list sweep | **deferred with an owner — the maintainer** (`CR-1167`). Reopening a Work close is the maintainer's alone. It does not block this close. Event: the maintainer's own dated ruling on F63 (`CR-1167:82`); not this close's acceptance line | carried |
 | Register line 106 | Check 29 read 48 of 59 rows while reporting OK | **accept** — fixed and regression-tested (`f99b55d`, #521) | closed |
 | `FD-1023` (register line 128) | The decay rule's check is a length proxy | **deferred with an owner — the lead** (`CR-1167`). Event: the create-read-retire audit's first slice | carried |
 | `FD-1174` (filed here) | P3's owner-existence and id-uniqueness rules, and the third broken input of (b), were never built | **not started; deferred with an owner — the lead**. Event: the first slice of WK-1170, the create-read-retire audit | carried |
@@ -170,7 +170,7 @@ that day.
 | Impact rows 1–12, 14 | evidenced | — | — |
 | Impact row 13 | accept | — | — |
 | Impact row 15 | accepted deviation (`CR-932` 11.5) | — | — |
-| The WK-671 owed-list row (line 105) | **deferred with an owner** | the maintainer | the maintainer's dated line |
+| The WK-671 owed-list row (line 105) | **deferred with an owner** | the maintainer | the maintainer's own dated ruling on F63 (`CR-1167:82`); not this close's acceptance line |
 | FD-1175 | **deferred with an owner** | the lead | WK-1170's first slice |
 
 No item is left without evidence or a verdict. WK-694's delivery is complete except for
@@ -187,4 +187,9 @@ The owner is the maintainer. The acceptance line is the deputy's, by the maintai
 delegation of 2026-09-28, and is written in this record's one follow-up commit. The auditor
 filed this record on 2026-09-28.
 
-**Maintainer acceptance:** _pending — the maintainer's dated line_
+**Maintainer acceptance:** **2026-09-28 12:33:02 BST — WK-694 (The register is a ledger, evidence is a file — RFC-896, P1–P5) is CLOSED**, written by the deputy by the maintainer's delegation of 2026-09-28, on `CR-1173` (`kind: work`, auditor-a) as read by me at `p2-a2-wk694` `8aa376c7`, with the lead's adoption of its verdicts.
+- The scope is taken from RFC-896 (§2 P1–P5, §8 (a)–(e), and §5's fifteen impact rows), not from the build log. P1, P2, P4 and P5 and acceptance items (c), (d) and (e) are evidenced. The two scripts' tests were run: 45 passed.
+- **The close is accepted over one acceptance item not met.** RFC-896 §8 (b) requires `register-lint.py` to be red on three named broken inputs. Two exist. **The third, a nonexistent owner, has no rule and no fixture.** P3's owner-existence and id-uniqueness rules were never built. I read this at `8a8cded3`: `scripts/register-lint.py` defines only `check_decision_grammar` (:352), `check_resolution_annotation` (:372) and `check_unowned_decay` (:399). It is accepted as **not started, deferred with an owner**: `FD-1174`, the lead, to be done in the first slice of WK-1170 (the create-read-retire audit, `status: active`). `FD-1175` (adopted RFCs still reading `draft`) and `FD-1023` (the decay check's length proxy) go to the same owner and event.
+- Impact row 13 (the questions were ruled directly, `RL-909` to `RL-913`) is accepted. Row 15 is the accepted deviation (`CR-932` 11.5).
+- **Register line 105 (F63, the WK-671 close's possible owed-list recurrence) is not disposed by this line.** It is a question of reopening a Work close, which is the maintainer's alone. It is carried as `CR-1167:82` states it: owner **the maintainer**, event **the maintainer's own dated ruling**. The maintainer kept it out of the delegation on 2026-09-27. It does not block this close.
+- The `CLAUDE.md` §14 question is answered by my ruling of 11:28 BST today: plan review 15 follows the four paperwork closes.
