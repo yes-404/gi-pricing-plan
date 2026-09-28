@@ -1,5 +1,5 @@
 ---
-id: FD-9003
+id: FD-1192
 family: finding
 title: Plan review 10's Proposal 3.5 was accepted and never landed
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [CR-926, RFC-928]
 ---
 
-# FD-9003 — Plan review 10's Proposal 3.5 was accepted and never landed
+# FD-1192 — Plan review 10's Proposal 3.5 was accepted and never landed
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the
 maintainer's instruction as relayed in the deputy's entry in the lead's local channel file `to-lead.md` stamped 2026-09-28 12:51:59 BST (part C.2).

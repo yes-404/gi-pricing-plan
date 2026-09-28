@@ -45,7 +45,7 @@ Work (WK-1170), whose subject is the step behind each lifecycle transition. This
 ruling of 2026-09-28. WK-694's close does **not** flip RFC-896's status: that is another
 record's lifecycle, and check 34's treatment of a status edit on it is untested.
 
-**Resolved 2026-09-28** in the register-and-records pass PR (branch `p2-b-records`), on the
+**Resolved 2026-09-28** in PR #855 (the register-and-records pass, branch `p2-b-records`), on the
 maintainer's instruction as relayed in the deputy's entry in the lead's local channel file
 `to-lead.md` stamped 2026-09-28 12:51:59 BST (part B). That instruction supersedes the
 deferral above.
@@ -56,7 +56,7 @@ deferral above.
 - **Set `status: closed` by this PR,** on the `status:` line only, because RFC is a frozen
   family:
   - RFC-840 and RFC-841, adopted 2026-08-29 (`CR-891:196–198`). Their migration cause is
-    `FD-9001`.
+    `FD-1190`.
   - RFC-896, after WK-694 closed (#836).
   - RFC-898, after WK-696 closed (#849, `37b2596e`).
 

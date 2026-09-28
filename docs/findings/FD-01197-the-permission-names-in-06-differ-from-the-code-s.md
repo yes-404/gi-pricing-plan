@@ -1,5 +1,5 @@
 ---
-id: FD-9008
+id: FD-1197
 family: finding
 title: The permission names in 06 differ from the code's
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: []
 ---
 
-# FD-9008 — The permission names in 06 differ from the code's
+# FD-1197 — The permission names in 06 differ from the code's
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass. It was routed
 from dm-e's WK-674 ruling, PR #848, not merged at this writing, which amends only the deploy permission

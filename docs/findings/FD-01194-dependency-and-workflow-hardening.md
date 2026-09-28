@@ -1,5 +1,5 @@
 ---
-id: FD-9005
+id: FD-1194
 family: finding
 title: Dependency and workflow hardening
 status: active
@@ -7,10 +7,10 @@ created: 2026-09-28
 owner: auditor
 tree: 37b2596e4318092178c9b0c9fedb83610ee9fd28
 corrected_by: []
-relates: [FD-9004, WK-1178]
+relates: [FD-1193, WK-1178]
 ---
 
-# FD-9005 — Dependency and workflow hardening
+# FD-1194 — Dependency and workflow hardening
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the
 maintainer's instruction as relayed in the deputy's entry in the lead's local channel file `to-lead.md` stamped 2026-09-28 13:10:06 BST (item 2, "FD-B").

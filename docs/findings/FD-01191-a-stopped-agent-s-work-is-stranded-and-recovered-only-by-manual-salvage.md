@@ -1,5 +1,5 @@
 ---
-id: FD-9002
+id: FD-1191
 family: finding
 title: A stopped agent's work is stranded and recovered only by manual salvage
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [RFC-928]
 ---
 
-# FD-9002 — A stopped agent's work is stranded and recovered only by manual salvage
+# FD-1191 — A stopped agent's work is stranded and recovered only by manual salvage
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the
 maintainer's instruction as relayed in the deputy's entry in the lead's local channel file `to-lead.md` stamped 2026-09-28 12:51:59 BST (part C.1).

@@ -1,5 +1,5 @@
 ---
-id: FD-9001
+id: FD-1190
 family: finding
 title: The W37-6 migration mapped a superseded note to draft and dropped its status line
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [FD-1175, RFC-840, RFC-841]
 ---
 
-# FD-9001 — The W37-6 migration mapped a superseded note to draft and dropped its status line
+# FD-1190 — The W37-6 migration mapped a superseded note to draft and dropped its status line
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the
 maintainer's instruction as relayed in the deputy's entry in the lead's local channel file `to-lead.md` stamped 2026-09-28 12:51:59 BST (part B).
@@ -41,7 +41,7 @@ status row, which carried the dated reason, did not survive into the record.
 
 ## Disposition
 
-**Accepted as fixed by this PR**, on the maintainer's instruction. Owner: the lead. This PR sets
+**Accepted as fixed by PR #855**, on the maintainer's instruction. Owner: the lead. PR #855 sets
 RFC-840 and RFC-841 to `status: closed`. `superseded` is not used, because
 `delivery-process.md` carries no governed id for `superseded_by:` to name, so `closed` means
 "landed" (`document-ids.md:59`), as the deputy set the form. The migration tool has already run,

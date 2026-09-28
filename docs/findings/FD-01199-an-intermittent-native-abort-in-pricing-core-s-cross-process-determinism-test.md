@@ -1,5 +1,5 @@
 ---
-id: FD-9010
+id: FD-1199
 family: finding
 title: An intermittent native abort in pricing-core's cross-process determinism test
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9010 — An intermittent native abort in pricing-core's cross-process determinism test
+# FD-1199 — An intermittent native abort in pricing-core's cross-process determinism test
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the lead's
 instruction, with the deputy's framing from his entry in the lead's local channel file

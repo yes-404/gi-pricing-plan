@@ -1,5 +1,5 @@
 ---
-id: FD-9004
+id: FD-1193
 family: finding
 title: GitHub security coverage gaps
 status: active
@@ -7,10 +7,10 @@ created: 2026-09-28
 owner: auditor
 tree: 37b2596e4318092178c9b0c9fedb83610ee9fd28
 corrected_by: []
-relates: [FD-9005]
+relates: [FD-1194]
 ---
 
-# FD-9004 — GitHub security coverage gaps
+# FD-1193 — GitHub security coverage gaps
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the
 maintainer's instruction ("yes record and implement") as relayed in the deputy's entry in the lead's local channel file `to-lead.md` stamped
@@ -26,7 +26,7 @@ maintainer's:
 - **S5:** secret scanning's non-provider patterns and validity checks are off.
 - **S6:** the team's token cannot read the alert lists.
 
-The other three, S2's version-update half, S3 and S4, are `FD-9005`'s. The automated-security-
+The other three, S2's version-update half, S3 and S4, are `FD-1194`'s. The automated-security-
 fixes half of S2 is a setting, so it is also the maintainer's.
 
 ## Evidence

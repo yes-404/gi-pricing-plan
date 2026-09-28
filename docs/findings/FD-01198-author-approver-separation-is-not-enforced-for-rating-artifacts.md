@@ -1,8 +1,8 @@
 ---
-id: FD-9009
+id: FD-1198
 family: finding
 title: Author-approver separation is not enforced for rating artifacts
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 81e061fbd6b38f307ae530f090badbd55fe759c4
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9009 — Author-approver separation is not enforced for rating artifacts
+# FD-1198 — Author-approver separation is not enforced for rating artifacts
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the lead's
 instruction. dm-e found it, the lead confirmed it at `origin/main` `81e061fb`, and the auditor
@@ -67,11 +67,20 @@ option **(a)**: one WK-1178 PR, with spec, code and test in one commit, containi
 - **a red-then-green test,** in which a creator who did not submit is refused. The existing
   submitter test stays.
 
-It rides WK-1178 ahead of Dependabot and `FD-9006`. It must merge before any WK-674 or WK-673
+It rides WK-1178 ahead of Dependabot and `FD-1195`. It must merge before any WK-674 or WK-673
 slice adds an approvable type, and in any case before plan review 15's exit criteria are dated.
 
 **Carried to WK-677, as a separate register row: component authors.** These are the
 `created_by` of a rate table version or a model version that a Rating Version pins. The
 amendment states that they are **not** covered. WK-677 is FR-353's owner (P3). The row sits
-beside #830's OQ-620 requirement, under which Rate Table Versions have no approval lifecycle of
+beside `03` FR-1186 (OQ-620's decision, merged by #830), under which Rate Table Versions have no approval lifecycle of
 their own. That is the path by which a component author's work reaches approval unchecked.
+
+**Resolved 2026-09-28 by #861**, merged as `3f7bddda`; re-read at `origin/main` `ffba6753`.
+- `backend/src/app/platform/approvals.py` refuses the author with `AUTHOR_CANNOT_APPROVE` (`:302`),
+  and refuses with `APPROVAL_AUTHOR_UNRESOLVED` (`:293`) when the author cannot be resolved.
+- `06` FR-353 (`06-governance.md:94`) carries the dated amendment: neither the submitter nor the
+  Author of an artifact version may decide on it.
+- The tests are in `backend/tests/test_approvals.py` and `backend/tests/test_api_approvals.py`.
+
+The component-author carry to WK-677 stays open in its own register row.

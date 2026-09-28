@@ -1,5 +1,5 @@
 ---
-id: FD-9011
+id: FD-1200
 family: finding
 title: A version not in review can be approved, and the audit records a false before-state
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9011 — A version not in review can be approved, and the audit records a false before-state
+# FD-1200 — A version not in review can be approved, and the audit records a false before-state
 
 **Severity: high.** It is on plan review 15's risk list until the fix merges. The auditor filed
 this finding on 2026-09-28 in the register-and-records pass, on the lead's instruction and the

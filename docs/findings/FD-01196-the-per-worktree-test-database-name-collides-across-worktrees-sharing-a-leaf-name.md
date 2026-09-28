@@ -1,5 +1,5 @@
 ---
-id: FD-9007
+id: FD-1196
 family: finding
 title: The per-worktree test database name collides across worktrees sharing a leaf name
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9007 — The per-worktree test database name collides across worktrees sharing a leaf name
+# FD-1196 — The per-worktree test database name collides across worktrees sharing a leaf name
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the
 deputy's ruling of about 14:12 BST, relayed by the lead. executor-s1 found it.

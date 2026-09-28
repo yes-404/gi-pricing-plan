@@ -1,5 +1,5 @@
 ---
-id: FD-9006
+id: FD-1195
 family: finding
 title: A GBM declaring a sparse cross cannot produce diagnostics
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9006 — A GBM declaring a sparse cross cannot produce diagnostics
+# FD-1195 — A GBM declaring a sparse cross cannot produce diagnostics
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass, on the
 deputy's ruling of WK-690's DP-1 in the deputy's entry in the lead's local channel file `to-lead.md` stamped 2026-09-28 14:06:12 BST (`to-lead.md:8289`),
