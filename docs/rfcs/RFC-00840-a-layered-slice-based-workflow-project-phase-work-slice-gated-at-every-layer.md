@@ -3,7 +3,7 @@ id: RFC-840
 family: proposal
 kind: process
 title: A layered slice-based workflow: Project → Phase → Work → Slice, gated at every layer
-status: draft                  # draft → active → closed | retired | superseded (§1.2a)
+status: closed                  # draft → active → closed | retired | superseded (§1.2a)
 created: 2026-08-29
 owner: maintainer
 supersedes: []

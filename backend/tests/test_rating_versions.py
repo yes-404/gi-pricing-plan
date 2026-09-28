@@ -14,8 +14,9 @@ from uuid import UUID
 import pytest
 from sqlalchemy import select
 
-from app.db.models import RoleAssignmentRow, RoleRow
+from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import approvals as approval_service
 from app.platform import rating_versions as rating_service
 from app.platform import rbac
@@ -92,14 +93,25 @@ async def test_create_submit_approve_a_rating_version(
         )
         assert RatingVersionStatus(row.status) is RatingVersionStatus.REVIEW
 
-    async with database.unit_of_work() as session:
-        request = await approval_service.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
-            approver=approver, decision=DecisionKind.APPROVE, comment="approved",
-        )
-        await rating_service.apply_approval_decision(
-            session, workspace_id=workspace_id, actor=approver, request=request
-        )
+    # Two approvers, because `06` §4.2's default policy asks two for a Rating Version. This
+    # test used to approve on one, and passed only because the hook approved on any
+    # decision (the approval status bypass, 2026-09-28).
+    second = await _principal(database, workspace_id, "approver")
+    for who, then in ((approver, RatingVersionStatus.REVIEW), (second, None)):
+        async with database.unit_of_work() as session:
+            request = await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=request_id,
+                approver=who, decision=DecisionKind.APPROVE, comment="approved",
+            )
+            await rating_service.apply_approval_decision(
+                session, workspace_id=workspace_id, actor=who, request=request
+            )
+        if then is not None:
+            async with database.session() as session:
+                row = await rating_service.load_rating_version(
+                    session, workspace_id=workspace_id, rating_version_id=rating_id
+                )
+                assert RatingVersionStatus(row.status) is then  # one approval of two
     async with database.session() as session:
         row = await rating_service.load_rating_version(
             session, workspace_id=workspace_id, rating_version_id=rating_id
@@ -112,10 +124,12 @@ async def test_create_submit_approve_a_rating_version(
 async def test_a_rating_version_reference_resolves_in_the_approvals_fanout(
     database: Database, workspace_id
 ) -> None:
-    """`_resolve_the_artifact` accepts a real rating_version reference (FR-386)."""
+    """`_resolve_the_artifact` accepts a real rating_version reference (FR-386) once it is
+    in review, and refuses it while it is a draft (`06` FR-351, since 2026-09-28)."""
     from app.api.approvals import _resolve_rating_version
 
     analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
     rating_id = await _draft(
         database, workspace_id, analyst,
         ArtifactRef(type="model", slug="fremtpl2-glm", version=1),
@@ -125,6 +139,16 @@ async def test_a_rating_version_reference_resolves_in_the_approvals_fanout(
             session, workspace_id=workspace_id, rating_version_id=rating_id
         )
         ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+        with pytest.raises(PlatformError) as refused:
+            await _resolve_rating_version(session, workspace_id=workspace_id, artifact_ref=ref)
+        assert refused.value.code == "APPROVAL_SUBJECT_NOT_IN_REVIEW"
+
+    async with database.unit_of_work() as session:
+        await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="into review",
+        )
+    async with database.session() as session:
         assert await _resolve_rating_version(
             session, workspace_id=workspace_id, artifact_ref=ref
         )
@@ -359,3 +383,194 @@ def test_the_submit_route_documents_the_422_it_returns(app) -> None:
     assert "422" in responses, sorted(responses)
     # Ours, not FastAPI's `HTTPValidationError` — the second shape is the actual defect.
     assert "application/problem+json" in responses["422"]["content"], responses["422"]
+
+
+# -- the decision hook reads the real states (`06` FR-351; the approval status bypass) --
+
+
+async def _two_approvers(database: Database, workspace_id: UUID) -> tuple[Principal, Principal]:
+    """The default policy asks two distinct approvers for a Rating Version (`06` §4.2)."""
+    return (
+        await _principal(database, workspace_id, "approver"),
+        await _principal(database, workspace_id, "approver"),
+    )
+
+
+async def _status_of(database: Database, workspace_id: UUID, rating_id: UUID) -> str:
+    async with database.session() as session:
+        row = await rating_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        return row.status
+
+
+@pytest.mark.req("FR-351")
+async def test_the_hook_refuses_a_rating_version_that_never_entered_review(
+    database: Database, workspace_id
+) -> None:
+    """Negative: a request that reaches the hook for a **draft** version moves nothing.
+
+    The request is made at service level, past the route's own refusal, because the hook is
+    the second guard and has to hold on its own (defence in depth).
+    """
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    first, second = await _two_approvers(database, workspace_id)
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug="m-one", version=1)
+    )
+    async with database.session() as session:
+        row = await rating_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    async with database.unit_of_work() as session:
+        request = await approval_service.submit(
+            session, workspace_id=workspace_id, submitter=actuary, artifact_ref=ref,
+            change_summary="never submitted through the module",
+        )
+        request_id = request.id
+    for approver in (first, second):
+        async with database.unit_of_work() as session:
+            request = await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=request_id,
+                approver=approver, decision=DecisionKind.APPROVE,
+            )
+
+    async with database.unit_of_work() as session:
+        request = await approval_service._load(session, workspace_id, request_id)
+        with pytest.raises(PlatformError) as refused:
+            await rating_service.apply_approval_decision(
+                session, workspace_id=workspace_id, actor=second, request=request
+            )
+    assert refused.value.code == "APPROVAL_SUBJECT_NOT_IN_REVIEW"
+    assert refused.value.status_code == 409
+    assert await _status_of(database, workspace_id, rating_id) == "draft"
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.req("FR-354")
+async def test_one_of_two_approvals_leaves_the_rating_version_in_review(
+    database: Database, workspace_id
+) -> None:
+    """The hook moves the version only when the **request** is decided, not on every
+    decision: one approval of two leaves the request, and so the version, in review."""
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    first, _ = await _two_approvers(database, workspace_id)
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug="m-two", version=1)
+    )
+    async with database.unit_of_work() as session:
+        _, request = await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="two approvals needed",
+        )
+        request_id = request.id
+    async with database.unit_of_work() as session:
+        request = await approval_service.decide(
+            session, workspace_id=workspace_id, request_id=request_id,
+            approver=first, decision=DecisionKind.APPROVE,
+        )
+        await rating_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=first, request=request
+        )
+    assert await _status_of(database, workspace_id, rating_id) == "review"
+
+
+@pytest.mark.req("FR-355")
+async def test_a_rejected_rating_version_returns_to_draft_with_a_true_audit_before(
+    database: Database, workspace_id
+) -> None:
+    """`06` FR-355: a rejection returns the artifact to draft. And the Audit Event's
+    `before` is the row's real state, read from it, never a literal."""
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    first, _ = await _two_approvers(database, workspace_id)
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug="m-three", version=1)
+    )
+    async with database.unit_of_work() as session:
+        row, request = await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="to be rejected",
+        )
+        request_id, ref = request.id, f"rating_version:{row.slug}@{row.version}"
+    async with database.unit_of_work() as session:
+        request = await approval_service.decide(
+            session, workspace_id=workspace_id, request_id=request_id,
+            approver=first, decision=DecisionKind.REJECT, comment="Not yet.",
+        )
+        await rating_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=first, request=request
+        )
+    assert await _status_of(database, workspace_id, rating_id) == "draft"
+    async with database.session() as session:
+        moves = (
+            await session.execute(
+                select(AuditEventRow.before, AuditEventRow.after).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.entity_ref == ref,
+                    AuditEventRow.action.like("rating_version.%"),
+                    AuditEventRow.action != "rating_version.created",
+                )
+            )
+        ).all()
+    assert [(b["status"], a["status"]) for b, a in moves] == [("review", "draft")]
+
+
+async def _stale_draft_request(database: Database, workspace_id: UUID, slug: str):
+    """A request opened on a version that never left `draft` — what the generic route could
+    make before the approval status bypass was fixed. Made at service level, past the route."""
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug=slug, version=1)
+    )
+    async with database.session() as session:
+        row = await rating_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    async with database.unit_of_work() as session:
+        request = await approval_service.submit(
+            session, workspace_id=workspace_id, submitter=actuary, artifact_ref=ref,
+            change_summary="opened before the fix",
+        )
+        return rating_id, request.id, actuary
+
+
+@pytest.mark.req("FR-355")
+@pytest.mark.parametrize("close", ["reject", "withdraw"])
+async def test_a_stale_request_on_a_draft_rating_version_can_still_be_closed(
+    database: Database, workspace_id, close: str
+) -> None:
+    """A pre-fix request on a version still in `draft` must stay closable: rejecting or
+    withdrawing it returns the version to where it already is, so the hook moves nothing
+    rather than refusing — and the version can then be submitted properly."""
+    rating_id, request_id, actuary = await _stale_draft_request(
+        database, workspace_id, f"m-stale-{close}"
+    )
+    approver = await _principal(database, workspace_id, "approver")
+    async with database.unit_of_work() as session:
+        if close == "reject":
+            request = await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=request_id,
+                approver=approver, decision=DecisionKind.REJECT, comment="Stale.",
+            )
+        else:
+            request = await approval_service.withdraw(
+                session, workspace_id=workspace_id, request_id=request_id,
+                actor=approver, reason="Stale.",
+            )
+        await rating_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=approver, request=request
+        )
+    assert await _status_of(database, workspace_id, rating_id) == "draft"
+
+    async with database.unit_of_work() as session:
+        row, _ = await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="submitted properly",
+        )
+    assert row.status == "review"

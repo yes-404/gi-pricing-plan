@@ -3,7 +3,7 @@ id: RFC-896
 family: proposal
 kind: process
 title: The register is a ledger; evidence is a file
-status: draft                  # draft → active → closed | retired | superseded (§1.2a)
+status: closed                  # draft → active → closed | retired | superseded (§1.2a)
 created: 2026-08-30
 owner: maintainer
 supersedes: []
