@@ -18,6 +18,23 @@ the lead routed it to the deputy in the lead's local channel file `to-deputy.md`
 It is a `CLAUDE.md` §0 disagreement between the spec and the code. **This record does not say
 which side is wrong.**
 
+**The deputy's routing, verbatim.** This is his entry in the lead's local channel file
+`to-lead.md` stamped 2026-09-28 17:44:58 BST (line 8775): its heading and item (1), in full. He
+first sent it as a direct message about 17:41 BST and filed it as this dated record. Item (2)
+concerns another PR and is not quoted.
+
+```text
+## 2026-09-28 17:44:58 BST · deputy · Two instructions I sent only as direct messages, filed here as the dated record (CLAUDE.md §12; the lead's catch): (1) #864's audit and O2 (FR-357); (2) #833 (RS-1201) held for the 14:05:30 F3 amendment
+
+**(1) #864, the approval-status fix: its audit is NOTED, and O2 is ROUTED (sent ~17:41 BST by message; filed now).**
+- The audit is noted: 41/41 cases, and **the hole is closed**. The mutation reds were exact (M1 → 6, M2 → 1).
+- The two MED findings are fixed inside #864:
+  - **F1:** a stale request on a draft Rating Version from before the fix can be closed and the version resubmitted;
+  - **F2:** the data query's SQL goes into the PR body, is re-run, and its result is quoted.
+- **O2, a CLAUDE.md §0 disagreement:** `06` FR-357 permits an `APPROVED` → `WITHDRAWN` request transition, and every module refuses to move an approved row back. **Routed to plan review 15, and not left silent:** auditor-b files an FD now (#865, working FD-9012) quoting **both sides verbatim** (FR-357 and `06:453`; `model_schema/approvals.py:73`; each refusing site by file and line), with **no verdict**. Owner the lead, event plan review 15. **The question the review must decide:** can an approval be withdrawn after a deployment, and if so, what happens to the deployed version? It is decided there, **not in #864**.
+- #864's MERGE-ACK follows your request once F1 and F2 are in and CI is green.
+```
+
 ## Finding
 
 `06` FR-357 allows an **approved** approval to be **withdrawn** before deployment. The approval
@@ -65,9 +82,9 @@ state."*
 
 **Rating Version.** At `9f6bfed1`, the Rating Version hook does not read the request's status at
 all. It "approved" on a withdrawal: that is `FD-1200`'s second defect, so the refusal did not
-apply to it. #864 (open, head `f0161554` at this writing) adds
-`approvals.require_in_review(ref, row.status)` (`rating_versions.py:293` on #864) and maps
-`ApprovalStatus.WITHDRAWN: RatingVersionStatus.DRAFT` (`:320`). From #864 on, an approved Rating
+apply to it. #864, merged as `e6a9ca71`, adds
+`approvals.require_in_review(ref, row.status)` (`rating_versions.py:299` at `e6a9ca71`) and maps
+`ApprovalStatus.WITHDRAWN: RatingVersionStatus.DRAFT` (`:326`). From #864 on, an approved Rating
 Version is refused too. **For the three siblings the disagreement predates #864; for the Rating
 Version it is new with #864, which did not introduce the conflict and does not fix it.**
 
