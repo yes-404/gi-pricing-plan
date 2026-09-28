@@ -18,7 +18,7 @@ import logging
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
 
@@ -123,7 +123,7 @@ async def test_a_named_refusal_chained_from_a_validation_error_leaks_nothing_int
 
 @pytest.mark.req("NFR-499")
 def test_safe_message_keeps_the_field_path_and_error_type_and_drops_the_value() -> None:
-    with pytest.raises(ValueError) as caught:
+    with pytest.raises(ValidationError) as caught:
         _validation_failure()
     exc = caught.value
     assert _SENTINEL in str(exc), "control: the raw text does carry the input"
