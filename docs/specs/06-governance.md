@@ -248,6 +248,43 @@ Notably absent from Pricing Actuary: every `*:approve` permission and
 > a permission every fitter holds by default would be the vocabulary-without-a-decision this
 > note was written about.
 
+> **Permission catalogue, amended 2026-09-28 (`RL-9204`).** The permission names this spec
+> uses and the names the code's closed `Permission` enum defines had drifted: 24 on each side,
+> 7 shared. The names below are ruled; names whose verdict changes scope wait on a
+> maintainer decision and are not listed here.
+>
+> **Built and now specified.** Each is checked by the route or service named in `RL-9204`, and
+> is part of the closed vocabulary §3.1 describes:
+>
+> | Permission | Governs |
+> |---|---|
+> | `dataset:validate` | Running validation on a Dataset Version |
+> | `rating:read` | Reading Rating Algorithms, Rate Tables, Rating Versions and scoring traces |
+> | `rating:compile` | Compiling a Rating Version to its Bundle |
+> | `audit:read` | Reading the audit log |
+> | `score:execute` | Real-time scoring (a Service Account may hold it, FR-347) |
+> | `score:batch` | Batch scoring (a Service Account may hold it, FR-347) |
+> | `job:read` | Reading Jobs |
+> | `job:cancel` | Cancelling a Job |
+> | `settings:read` | Reading workspace settings |
+> | `admin:manage_settings` | Changing workspace settings and reference data |
+> | `admin:manage_service_accounts` | Creating, rotating and revoking Service Accounts |
+> | `admin:break_glass` | Break-glass elevation (FR-349) |
+>
+> **Mapped: the same capability under two names; the code's name survives.**
+> `rating_version:submit` (the Pricing Actuary set above) is `rating:submit`.
+> `custom_objective:submit` was already superseded by `model:submit` (the note above, and
+> FR-367). The deploy permission is ruled separately, in the WK-674 ruling. The spec name is
+> kept in this note as the alias for one release: no code ever carried it, so there is no
+> code alias to keep.
+>
+> **Specified and not yet built, carried to the Work that builds it:**
+> - `custom_objective:author` → WK-690 (FR-367);
+> - `monitor:write` → WK-687;
+> - `alert:acknowledge` and `alert:resolve` → WK-688;
+> - `optimisation:run` → WK-684;
+> - `optimisation:materialise` → WK-686.
+
 ### 4.2 `ApprovalPolicy` (workspace defaults)
 
 ```json
