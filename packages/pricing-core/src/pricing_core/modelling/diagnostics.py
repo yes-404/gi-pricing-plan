@@ -69,6 +69,8 @@ from model_schema import (
     PartialDependencePoint,
     PartitionDiagnostics,
     PermutationImportance,
+    PermutationOmission,
+    PermutationOmissionReason,
     ResidualSummary,
     TypeIIITest,
     UniversalDiagnostics,
@@ -859,8 +861,11 @@ def _permutation_importances(
     seed: int,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
-) -> tuple[PermutationImportance, ...]:
-    """FR-174's permutation importance, on the **holdout**.
+) -> tuple[tuple[PermutationImportance, ...], tuple[PermutationOmission, ...]]:
+    """FR-174's permutation importance, on the **holdout**, and the factors it skipped.
+
+    Every skip is returned as a `PermutationOmission` (FR-178): the block used to `continue`
+    silently, so a reader could not tell an omitted factor from one never declared.
 
     Split importance says how the trees were built; this says what the model would lose if
     the variable were noise, which is the question an actuary is actually asking. They
@@ -880,6 +885,7 @@ def _permutation_importances(
 
     skipped_ids = _skipped_ids(factors)
     out: list[PermutationImportance] = []
+    omitted: list[PermutationOmission] = []
     for index, factor in enumerate(factors):
         # FR-176. An `interaction` names no source columns of its own — its
         # columns are its operands' — so indexing here raised `IndexError` for any GBM
@@ -897,6 +903,12 @@ def _permutation_importances(
         # `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` -- on a sparse cross, the only kind FR-92
         # expects, that made diagnostics impossible.
         if factor.id in skipped_ids:
+            omitted.append(
+                PermutationOmission(
+                    feature=factor.slug,
+                    reason=PermutationOmissionReason.OPERAND_OF_INTERACTION,
+                )
+            )
             continue
         # FR-177: a cross is permuted through every operand source column under ONE shared
         # order, which permutes the operand *pairs* -- exactly a permutation of the
@@ -906,6 +918,12 @@ def _permutation_importances(
         else:
             columns = tuple(factor.source_columns[:1])
         if not columns or any(c not in holdout.columns for c in columns):
+            omitted.append(
+                PermutationOmission(
+                    feature=factor.slug,
+                    reason=PermutationOmissionReason.NO_HOLDOUT_COLUMN,
+                )
+            )
             continue
         scores: list[float] = []
         for repeat in range(repeats):
@@ -927,7 +945,7 @@ def _permutation_importances(
                 shared_source_columns=_shared_source_columns(factor, columns, factors),
             )
         )
-    return tuple(out)
+    return tuple(out), tuple(omitted)
 
 
 def _share(weight: float, total_weight: float) -> float:
@@ -1281,7 +1299,7 @@ def compute_gbm_diagnostics(
 
     report.check_cancelled()
     report.update(0.60, "diagnostics: permutation importance")
-    permutation = _permutation_importances(
+    permutation, permutation_omitted = _permutation_importances(
         result, booster, spec, factors, holdout,
         repeats=permutation_repeats, seed=spec.seed,
         bandings=bandings, groupings=groupings,
@@ -1373,6 +1391,7 @@ def compute_gbm_diagnostics(
             eval_curve=tuple(eval_curve),
             importances=importances,
             permutation_importances=permutation,
+            permutation_omitted=permutation_omitted,
             partial_dependence=tuple(dependence),
             monotonicity=tuple(monotonicity),
             tree_count=tree_count,

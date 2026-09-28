@@ -70,6 +70,10 @@
           "type": "array", "items": {"$ref": "#/$defs/PermutationImportance"},
           "description": "Its own measurement, not a column on the importance row: a permutation score is only readable beside the baseline it degraded from, the repeat count and the seed."
         },
+        "permutation_omitted": {
+          "type": "array", "items": {"$ref": "#/$defs/PermutationOmission"},
+          "description": "FR-178. Factors the permutation block did not measure, each with its reason; the block used to skip them silently. Empty on artifacts written before this field existed."
+        },
         "partial_dependence": {
           "type": "array", "items": {"$ref": "#/$defs/PartialDependence"},
           "description": "Per declared factor, and structured — this was an opaque blob string until 2026-08-22, which no reader could plot without unpacking it first."
@@ -240,6 +244,15 @@
           "type": "array", "items": {"type": "string"},
           "description": "FR-177. Shuffled source columns that also source another factor, so the degradation is the joint effect of all of them. Empty when nothing is shared, and absent from artifacts written before FR-177."
         }
+      }
+    },
+    "PermutationOmission": {
+      "type": "object",
+      "required": ["feature", "reason"],
+      "description": "A factor with no permutation importance, and why (FR-178).",
+      "properties": {
+        "feature": {"type": "string"},
+        "reason": {"enum": ["operand_of_interaction", "no_holdout_column"]}
       }
     },
     "PartialDependence": {

@@ -15,6 +15,7 @@ export type GbmDiagnostics = components["schemas"]["GbmDiagnostics"];
 export type GbmEvalPoint = components["schemas"]["GbmEvalPoint"];
 export type FeatureImportance = components["schemas"]["FeatureImportance"];
 export type PermutationImportance = components["schemas"]["PermutationImportance"];
+export type PermutationOmission = components["schemas"]["PermutationOmission"];
 export type PartialDependence = components["schemas"]["PartialDependence"];
 export type PartialDependencePoint = components["schemas"]["PartialDependencePoint"];
 export type PartialDependenceOmission = components["schemas"]["PartialDependenceOmission"];

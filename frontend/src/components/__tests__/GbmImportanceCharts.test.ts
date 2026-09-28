@@ -123,4 +123,25 @@ describe("GbmImportanceCharts", () => {
     render(GbmImportanceCharts, { props: props() });
     expect(screen.queryByRole("list", { name: /shared source columns/i })).toBeNull();
   });
+
+  it("names each factor the permutation block did not measure, in words", () => {
+    render(GbmImportanceCharts, {
+      props: {
+        ...props(),
+        permutationOmitted: [
+          { feature: "area", reason: "operand_of_interaction" },
+          { feature: "driver_age", reason: "no_holdout_column" },
+        ],
+      },
+    });
+    const list = screen.getByRole("list", { name: /permutation omissions/i });
+    expect(list).toHaveTextContent(/area: not measured.*operand of an interaction/i);
+    expect(list).toHaveTextContent(/driver_age: not measured.*no column for it/i);
+    expect(screen.queryByText("operand_of_interaction")).not.toBeInTheDocument();
+  });
+
+  it("shows no omission note when nothing was omitted", () => {
+    render(GbmImportanceCharts, { props: props() });
+    expect(screen.queryByRole("list", { name: /permutation omissions/i })).toBeNull();
+  });
 });

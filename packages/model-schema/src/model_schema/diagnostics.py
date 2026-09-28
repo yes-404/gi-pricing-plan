@@ -49,6 +49,8 @@ __all__ = [
     "PartialDependencePoint",
     "PartitionDiagnostics",
     "PermutationImportance",
+    "PermutationOmission",
+    "PermutationOmissionReason",
     "QuantileCrossing",
     "ResidualSummary",
     "TypeIIITest",
@@ -327,6 +329,31 @@ class PermutationImportance(BaseModel):
     shared_source_columns: tuple[str, ...] = ()
 
 
+class PermutationOmissionReason(enum.StrEnum):
+    """Why a factor has no permutation importance (FR-178)."""
+
+    #: The factor is, or sources a column that is, an operand of an `interaction`: shuffling
+    #: it alone recombines the cross's operands into cells the fit never saw, which
+    #: `predict_gbm` refuses (FR-131). The cross is shuffled jointly instead (FR-177).
+    OPERAND_OF_INTERACTION = "operand_of_interaction"
+    #: The holdout frame has no column for the factor, so there is nothing to shuffle.
+    NO_HOLDOUT_COLUMN = "no_holdout_column"
+
+
+class PermutationOmission(BaseModel):
+    """A factor the permutation block did not measure, and why (FR-178).
+
+    Until FR-178's permutation limb this was silent: the block skipped a factor and
+    nothing in the output said so, which is the silence `PartialDependenceOmission` was
+    added to end on the other block.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    feature: str
+    reason: PermutationOmissionReason
+
+
 class PartialDependencePoint(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -445,6 +472,9 @@ class GbmDiagnostics(BaseModel):
     eval_curve: tuple[GbmEvalPoint, ...] = ()
     importances: tuple[FeatureImportance, ...] = ()
     permutation_importances: tuple[PermutationImportance, ...] = ()
+    #: FR-178. Factors the permutation block skipped, each with its reason. Empty on every
+    #: artifact written before this field existed.
+    permutation_omitted: tuple[PermutationOmission, ...] = ()
     partial_dependence: tuple[PartialDependence, ...] = ()
     monotonicity: tuple[MonotonicityCheck, ...] = ()
     tree_count: int = Field(ge=0)

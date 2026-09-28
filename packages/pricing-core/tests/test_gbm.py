@@ -2356,6 +2356,9 @@ def test_a_factor_on_an_operands_column_is_omitted_and_the_overlap_named(backend
     perm = {p.feature: p for p in diagnostics.gbm.permutation_importances}
     assert "area_again" not in perm
     assert perm["area_x_fuel"].shared_source_columns == ("area",)
+    # The permutation block records the omission too (FR-178: both blocks, skip recorded).
+    omitted = {o.feature: o.reason.value for o in diagnostics.gbm.permutation_omitted}
+    assert omitted["area_again"] == "operand_of_interaction"
     curve = _cross_curve(diagnostics, "area_again")
     assert curve.points == ()
     assert curve.omitted is not None
@@ -2369,3 +2372,42 @@ def test_a_cross_alone_on_its_columns_flags_no_shared_column(backend: str) -> No
     assert diagnostics.gbm is not None
     perm = {p.feature: p for p in diagnostics.gbm.permutation_importances}
     assert perm["area_x_fuel"].shared_source_columns == ()
+
+
+@pytest.mark.req("FR-178")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_an_operand_is_recorded_as_omitted_from_permutation_importance(backend: str) -> None:
+    """FR-178's permutation limb: an operand used to be skipped with no record at all."""
+    _, diagnostics = _diagnose(backend, _crossed(), data=_sparse_crossable_book())
+    assert diagnostics.gbm is not None
+    omitted = {o.feature: o.reason.value for o in diagnostics.gbm.permutation_omitted}
+    assert omitted == {"area": "operand_of_interaction", "fuel": "operand_of_interaction"}
+    assert {p.feature for p in diagnostics.gbm.permutation_importances} == {"area_x_fuel"}
+    for slug in ("area", "fuel"):
+        assert _cross_curve(diagnostics, slug).omitted.reason.value == (  # type: ignore[union-attr]
+            "operand_of_interaction"
+        )
+
+
+@pytest.mark.req("FR-178")
+def test_a_factor_whose_column_the_holdout_lacks_is_recorded_as_omitted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The third silent skip: a factor with no column in the holdout. `predict_gbm` needs
+    every source column, so no real diagnostics call reaches this branch; the block is
+    driven directly with the scoring call stubbed, which is the only way to exercise it."""
+    from pricing_core.modelling import diagnostics as d
+
+    factor = _factor("driv_age", "driv_age")
+    holdout = pl.DataFrame({"y": [1.0, 2.0], "exposure_years": [1.0, 1.0]})
+    monkeypatch.setattr(
+        "pricing_core.modelling.gbm.predict_gbm",
+        lambda *a, **k: pl.Series([1.0, 2.0]),
+    )
+    spec = _spec("xgboost", factors=(factor.id,)).model_copy(update={"response_column": "y"})
+    importances, omitted = d._permutation_importances(
+        None, b"", spec, [factor], holdout,  # type: ignore[arg-type]
+        repeats=1, seed=0, bandings=None, groupings=None,
+    )
+    assert importances == ()
+    assert [(o.feature, o.reason.value) for o in omitted] == [("driv_age", "no_holdout_column")]

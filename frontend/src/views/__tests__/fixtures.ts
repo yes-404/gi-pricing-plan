@@ -355,6 +355,7 @@ export const DIAGNOSTICS: Diagnostics = {
       { feature: "driver_age", baseline: 0.498, permuted: 0.521, degradation: 0.023,
         repeats: 5, seed: 20260824, shared_source_columns: [] },
     ],
+    permutation_omitted: [],
     partial_dependence: [
       {
         factor: "vehicle_age",

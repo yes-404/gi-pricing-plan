@@ -374,6 +374,14 @@
           "title": "Permutation Importances",
           "type": "array"
         },
+        "permutation_omitted": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PermutationOmission"
+          },
+          "title": "Permutation Omitted",
+          "type": "array"
+        },
         "quantile_crossing": {
           "anyOf": [
             {
@@ -853,6 +861,34 @@
       ],
       "title": "PermutationImportance",
       "type": "object"
+    },
+    "PermutationOmission": {
+      "additionalProperties": false,
+      "description": "A factor the permutation block did not measure, and why (FR-178).\n\nUntil FR-178's permutation limb this was silent: the block skipped a factor and\nnothing in the output said so, which is the silence `PartialDependenceOmission` was\nadded to end on the other block.",
+      "properties": {
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/PermutationOmissionReason"
+        }
+      },
+      "required": [
+        "feature",
+        "reason"
+      ],
+      "title": "PermutationOmission",
+      "type": "object"
+    },
+    "PermutationOmissionReason": {
+      "description": "Why a factor has no permutation importance (FR-178).",
+      "enum": [
+        "operand_of_interaction",
+        "no_holdout_column"
+      ],
+      "title": "PermutationOmissionReason",
+      "type": "string"
     },
     "QuantileCrossing": {
       "additionalProperties": false,
