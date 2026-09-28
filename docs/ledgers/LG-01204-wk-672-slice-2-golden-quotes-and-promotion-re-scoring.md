@@ -2,7 +2,7 @@
 id: LG-1204
 family: ledger
 title: WK-672 Slice 2 — Golden Quotes and promotion re-scoring
-status: active
+status: closed
 created: 2026-09-28
 owner: executor
 tree: ffba67539ba5f0c5cd04aa72a0c4270a517c0562
@@ -275,9 +275,176 @@ Files blocks, this ledger and `docs/INDEX.md`, read with deviation 2.
 
 | PR | Branch | Title | Squash SHA on `main` |
 |---|---|---|---|
-| #867 | `p2-d-s2` | feat(rating): WK-672 Slice 2 — Golden Quotes and promotion re-scoring, PL-1189, LG-1204 | (on merge) |
+| #867 | `p2-d-s2` | feat(rating): WK-672 Slice 2 — Golden Quotes and promotion re-scoring, PL-1189, LG-1204 | `109cd065987c399b9cdbecc2fcb6628843dfb79a`, squash, merged 2026-09-28 19:49:23 BST |
+
+*(Corrected 2026-09-28 by the auditor, at slice close: this cell read "(on merge)".)*
 
 ## Provenance notes
 
 - `ffba6753`'s subject says (draft); `PL-1189` was `status: active` at merge, per its Status
   block (Activated 2026-09-28 16:21:33 BST).
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor on 2026-09-28** (`document-ids.md` §1.6, SL row:
+*"auditor closes: sets the `LG-` `closed`, verifies acceptance"*), under the W37
+closing-record convention, a two-pass slice audit plus one post-merge, docs-only PR by the
+auditor, set by the deputy on 2026-09-27. This PR touches exactly two paths, this file and
+`docs/INDEX.md`, and takes no new id. A Slice closes on a clean audit and the lead's merge,
+with no maintainer line (`CLAUDE.md` §13).
+
+**The work PR, #867.** It was squash-merged onto `main` as `109cd065` (the PRs table), at
+2026-09-28 19:49:23 BST (`gh pr view 867 --json mergedAt` → `2026-09-28T18:49:23Z`). Its
+parent on `main` is `4fb07b6c`. Its PR head was `a33f6c2e`, reachable via
+`refs/pull/867/head`. The squash tree equals the head tree, `573c4a90`, so the slice's content
+is on `main` byte for byte. The deputy's MERGE-ACK for #867 at `a33f6c2e` is stamped
+2026-09-28 19:49:05 BST, in the lead's local channel file `to-lead.md` (local, not repo). The
+lead adopted the audit as CLEAN, and adopted the G1–G3 and G3-fix confirmations, before the
+merge.
+
+**Evidence is cited by the squash, `109cd065`.** The other commit SHAs in this file, and in
+the audit record below, are **pre-squash branch commits of #867**, reachable via
+`refs/pull/867/head` and not on `main`: `39fcc475`, `80d5ee86`, `e7abae94`, `0dc12cbf`,
+`bcb1a97a`, `e9f51fa0`, `983c5144`, `37debb3d`, `c416f3b2`, `c94c62e2`, `6cc5078c`, and the
+PR head `a33f6c2e`.
+
+**The audit record, verbatim.** These are auditor-a's passes (a) and (b) on `983c5144`, the
+G1–G3 confirmation on `c94c62e2`, and the G3-fix confirmation in full-suite order on
+`6cc5078c`. They are fenced because they are a quotation, and a quotation keeps the finding
+ids it was written with:
+
+```text
+WK-672 Slice 2 slice audit: #867 (executor-s2), by auditor-a, 2026-09-28.
+Range: origin/main...p2-d-s2, base e6a9ca71, head 983c5144. There are 7 commits, one of them a merge, touching 38 files (+5097/−165).
+Governing documents: PL-1189 at main, and the ledger LG-WORKING on the branch.
+Environment: my own detached copy (…/auditor-a/s2), run with env -C. The database was gipricing_auditor_a_s2, created from the template and brought to alembic head fb705749c5d9. It has been dropped; the count is 0.
+
+PROPOSED VERDICT: CLEAN on the design and the governance rules. Merge readiness depends on G1, and G2 should be closed before the ACK. G3 is low.
+
+PASS (a): each acceptance item, with where it is met
+1. Spec, 03 and 06: the ledger's Task 1 row. This includes FR-260's dated amendment, §4.3 checked and not_checked with the write-once invariant, the §4.7 union, §4.9 → regression-run.schema.json, §5.1 rows, §5.2, and 06 APPROVAL_BY_EVIDENCE_AUTHOR beside FR-353.
+2. Shapes and contracts: model_schema/regression.py. regression-suite is compared and regression-run is one-sided. test_contracts is inside my 327 passed.
+3. test_regression.py: 21 tests, inside my run.
+4. test_testing.py: evaluate_golden_quotes. The _score_context_sync move was checked with the same count before and after, plus 5× test_rating_score (Task 3, rc 0×5).
+5. test_regression_suites.py covers:
+   - 403 without rating:write and 403 without rating:read;
+   - exactly one creation event per version, with the creator as actor;
+   - 409 for a second suite for the same algorithm;
+   - 409 for an algorithm change;
+   - both races (201/409).
+   The registry is uq_regression_suites on (workspace_id, slug) and uq_regression_suites_algorithm on (workspace_id, algorithm_slug), both at db/models.py:2055-2057. Versions are unique on (suite_id, version) at :2088. An IntegrityError maps to 409 at regression_suites.py:120 and :147.
+6. The submit gate (rating_versions.py _golden_quote_gate):
+   - a mismatch returns 409 GOLDEN_QUOTE_MISMATCH;
+   - no bundle returns 409;
+   - load_compiled=None raises TypeError;
+   - the loaded bundle's content_hash must equal row.bundle's, else 409 BUNDLE_COMPILE_FAILED;
+   - the pin is bundle_hash=bundle.content_hash, the SCORED bundle;
+   - with no algorithm ref or no suite, it records not_checked with the reason.
+   The route passes `_fetch_bundle` and never `_compiled_for` (api/models.py). The F5 red is shown in the ledger.
+7. test_golden_a_later_suite_version_does_not_change_what_was_pinned.
+8. The delta (_golden_quote_delta):
+   - The baseline is the latest `rating_version.approved` event among the approved, live and retired RVs of the same algorithm, and it uses the suite version that baseline PINNED.
+   - Steps are computed version against previous version over (baseline, current], on expected, tolerance and context (by hash). Note-only edits produce no step.
+   - The author comes from the regression_suite.created event. A missing event gives 403 APPROVAL_AUTHOR_UNRESOLVED.
+   - The ledger shows F3's last-touch red, and the value and tolerance reds.
+8a.
+   - The generic-route bypass is refused through #864.
+   - `decide` raises TypeError when a rating_version request has no resolver. This happens straight after _load, before any write (N1).
+   - APPROVAL_BY_EVIDENCE_AUTHOR (403) comes after #861's author check and before the permission check.
+   - golden_quote_delta_authors returns an empty set when the evidence is absent or not_checked, and a load or parse error propagates (N2).
+9, 10, 11: see G1.
+12: after the PR.
+The deviations are disclosed in the ledger:
+- regression_suite is in ARTIFACT_TYPES as a reference only. Submitting it through approval returns 422, tested by test_a_regression_suite_reference_cannot_be_put_through_approval.
+- The extra paths include check 35's F83 rows in audit-docs.py and a count pin.
+- 21 direct decide calls gained the keyword.
+- The S-8 slips are disclosed.
+
+MY RUNS
+- The seven touched test files (test_regression_suites, test_rating_versions, test_approvals, test_api_approvals, test_regression, test_testing, test_contracts): 327 passed, 2 skipped.
+- M1: the scored-bundle hash check was disabled and the pin changed to row.bundle's hash. Result: 1 failed, test_golden_a_loaded_bundle_that_is_not_this_versions_is_refused ("'GOLDEN_QUOTE_MISMATCH' == 'BUNDLE…'"). The foreign bundle then failed its golden quotes instead of being refused as foreign.
+- M2: context was dropped from the delta's compared fields. Result: 1 failed, test_golden_delta_records_a_context_change_by_hash_only ("not enough values to unpack").
+- The code was restored after each mutation, and the status is clean.
+
+PASS (b): adversarial
+- Can a rating:write holder weaken a golden quote without it being seen?
+  - Every expected, tolerance or context change, and every add or remove, shows in the next submission's delta, with every step's author.
+  - A rename appears as a removal plus an addition.
+  - A suite edit after submission cannot change what was checked, because the content hash is pinned.
+  - The suite cannot be deleted, and its algorithm cannot change.
+  - The one residue is escaping to a new algorithm slug. That RV gets an explicit not_checked, which is visible, and DP-S3-1 closes it in S3.
+- Can they approve their own suite change? No:
+  - APPROVAL_BY_EVIDENCE_AUTHOR covers every step author;
+  - the TypeError guard stops a skipped resolver;
+  - decide has one caller, which passes the resolver.
+- Can a stale suite or bundle pass? A stale or foreign bundle is refused on the hash comparison. The suite checked is the current one, and its hash is pinned. An RV in review cannot be recompiled.
+- Can the delta mis-attribute a change? The authors come from creation events, per version, one step per version. A later cosmetic edit cannot mask an earlier change (F3 red). The baseline uses the pinned suite, not the suite at approval time.
+- Can evidence be overwritten? golden_quotes is written only by the gate, and only on a submit. A resubmission after the version returns to draft rewrites it as a new submission, which is its own gate run, not an edit. No other code path writes it.
+
+FINDINGS
+G1 (process, before the ACK): the ledger's "The gate" section reads "Pending — recorded on the final tree". Items 9 (the full two-half gate and the 5× determinism on the final tree), 10 (the four docs checks) and 11 (the change set) are therefore not yet evidenced. The 5× determinism run is recorded only at Task 3. All of this must be recorded on the minted final tree before the ACK.
+G2 (LOW-MED, the S-8 residue): the ledger demonstrates reds only for these: the algorithm race, the mismatch refusal, the delta, the evidence-author refusal, F5, and F3. These rules have tests but no demonstrated red:
+  - N1 (TypeError);
+  - N3 (the version race gives 409);
+  - the missing creation event (403 APPROVAL_AUTHOR_UNRESOLVED);
+  - the route 403s;
+  - the regression_suite reference 422;
+  - N2 (an empty set).
+  My M1 and M2 add reds for the foreign-bundle refusal and the context change. Ask executor-s2 to add a disable-and-run red to the ledger for at least N1, N3 and the missing-event 403.
+G3 (LOW): the NFR-499 log assertion (`_SECRET_POSTCODE not in caplog.text`) holds vacuously today. The suite service and the audit module emit no log line, and the test is service-level, so it never drives the POST route. It guards only against a future service-level log line. Add a positive control (log the context deliberately and see red), and drive the POST route under caplog.
+Observation: M1 turned red through GOLDEN_QUOTE_MISMATCH, not through a pin assertion. The scored bundle's hash and row.bundle's hash are equal by construction once the mismatch is refused, so no test could tell them apart. That is acceptable.
+
+---
+G1–G3 CONFIRMATION on the delta 983c5144..c94c62e2 (LG-1204). By auditor-a, 2026-09-28.
+The delta has three commits: 37debb3d (the G3 test), c416f3b2 (a merge of #865, docs only) and c94c62e2 (the mint and the ledger).
+- G1: evidenced in LG-1204, with one limit.
+  - Item 9. The first full gate ran on 983c5144. Its only failures came from the working id: check 31, and 11 real-tree tests. On the minted tree the targeted runs all pass:
+    - audit-docs rc 0;
+    - four test files, 160 passed;
+    - the 11 real-tree tests, 11 passed;
+    - test_audit_docs_ids, 118 passed;
+    - test_rating_score.py ×5, rc 0 each, 24 passed, no PyGILState line.
+  - The limit: the full two-half gate on the minted head rests on CI.
+  - Item 10. I re-ran the four docs checks myself on a detached copy at c94c62e2: audit-docs rc 0, "All checks passed.", DISCLOSED 851; doc-id check rc 0; doc-index --check rc 0; register-lint rc 0.
+  - Item 11. 38 files, the same set as before, read with deviation 2.
+- G2: closed. The ledger quotes a red for each of N1, N3, the missing creation event, N2, the write 403, the read 403 and the reference 422. Each was restored afterwards: 44 plus 1 passed, and the status is empty.
+  - My own re-run of N1, with the TypeError raise removed: 1 failed, test_golden_evidence_author_decide_without_a_resolver_is_a_type_error (AssertionError). Restored: green.
+  - My DB was gipricing_auditor_a_s2b, now dropped.
+- G3: closed. The test now drives POST /api/v1/regression-suites/{slug}/versions twice, under caplog and capfd. It asserts `caplog.records` is non-empty, and that the secret is in neither the log text nor stdout/stderr.
+  - Positive control, quoted in the ledger: a temporary log line carrying the content turns it red.
+  - The executor's earlier claim, that configure_logging detaches caplog, was tested, found false and dropped.
+  - Green in my run.
+VERDICT: CLEAN. It is merge-ready once CI's full gate on c94c62e2 is green.
+
+---
+G3 FIX CONFIRMATION at 6cc5078c (the head is now a33f6c2e, a ledger-only commit on it). Auditor-a, 2026-09-28. The run used my database, gipricing_auditor_a_g3, and the g3 copy, both now released.
+- The cause: backend/migrations/env.py's fileConfig (disable_existing_loggers=True) disables the app.* loggers when a test runs alembic in-process.
+- The fix: for this test only, re-enable the disabled loggers, then require a sentinel on app.request and the route's own request records to be captured before asserting anything.
+- Breaking order (test_migration_dataset_owner.py, then test_regression_suites.py):
+  - with the fix: 16 passed;
+  - with a deliberate leak in create_suite_version: RED, `assert 'ZZ9 9ZZ' not in …`, and the secret shows in the capture.
+- The full backend suite in natural order:
+  - with the leak: 1 failed (exactly this test), 1311 passed, 2 skipped, 8m36s;
+  - restored: 1312 passed, 2 skipped, 8m27s.
+VERDICT: G3 is CLOSED, unconditionally. The rest of CI's full gate is read by the lead.
+```
+
+**Pass (b) after the merge, the reachability sweep, run by the auditor on 2026-09-28.**
+- **Predicate, verbatim:** `git show 109cd065:docs/ledgers/LG-01204-wk-672-slice-2-golden-quotes-and-promotion-re-scoring.md | grep -oE '\b[0-9a-f]{7,40}\b' | sort -u`. That gives 25 tokens. Each token is classified in this order:
+  1. `git cat-file -t` is not `commit`: NOTCOMMIT.
+  2. `git merge-base --is-ancestor <t> 109cd065` exits 0: MAIN.
+  3. The same check against the #867 head `a33f6c2e`, fetched read-only with `git fetch origin pull/867/head`, exits 0: BRANCH.
+  4. Anything else: NEITHER.
+- **MAIN ×7:** `3f7bddda`, `4fb07b6c` (short and full), `e6a9ca71` (short and full) and `ffba6753` (short and full).
+- **BRANCH ×12 tokens (11 commits):** the pre-squash commits listed above (`983c5144` appears short and full).
+- **NOTCOMMIT ×6, none of them SHAs:**
+  - UUIDv7 fragments from a quoted F3 red: `01a0e909`, `59d167943369` and `ec91214054b1`;
+  - the CI run id `36462673125`;
+  - the alembic revision ids `d3b955a63d6a` and `fb705749c5d9`.
+- **NEITHER ×0.**
+
+**Acceptance, `PL-1189` items 1–12.**
+- Items 1–11 are verified by the audit record above.
+- The full two-half gate on the final head passed in CI on `a33f6c2e`. The auditor read the runs by head SHA with `gh run list --branch p2-d-s2`: python `36465812202`, frontend `36465811834`, docs `36465811898` and history-policy `36465811819`, each completed with a success conclusion.
+- Item 12, the deputy's merge acknowledgement, is the MERGE-ACK at 2026-09-28 19:49:05 BST.
+- Nothing is owed by this slice. The slice is closed.
