@@ -1,0 +1,35 @@
+numpy seed=0 distinct_logs=1 distinct_final=1 calls=144 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "146212.65"}
+numpy seed=1 distinct_logs=1 distinct_final=1 calls=39 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "86286.39"}
+numpy seed=42 distinct_logs=1 distinct_final=1 calls=22 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "138805.46"}
+numpy seed=20260928 distinct_logs=1 distinct_final=1 calls=13 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "89054.21"}
+numpy seed=987654321 distinct_logs=1 distinct_final=1 calls=95 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "133022.06"}
+hyp_seed seed=0 distinct_logs=1 distinct_final=1 calls=390 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_seed seed=1 distinct_logs=1 distinct_final=1 calls=413 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_seed seed=42 distinct_logs=1 distinct_final=1 calls=420 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_seed seed=20260928 distinct_logs=1 distinct_final=1 calls=379 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_seed seed=987654321 distinct_logs=1 distinct_final=1 calls=387 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_derand seed=0 distinct_logs=1 distinct_final=1 calls=385 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_derand seed=1 distinct_logs=1 distinct_final=1 calls=385 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_derand seed=42 distinct_logs=1 distinct_final=1 calls=385 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_derand seed=20260928 distinct_logs=1 distinct_final=1 calls=385 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_derand seed=987654321 distinct_logs=1 distinct_final=1 calls=385 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_derand_seed seed=0 distinct_logs=1 distinct_final=1 calls=390 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_derand_seed seed=1 distinct_logs=1 distinct_final=1 calls=413 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_derand_seed seed=42 distinct_logs=1 distinct_final=1 calls=420 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_derand_seed seed=20260928 distinct_logs=1 distinct_final=1 calls=379 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_derand_seed seed=987654321 distinct_logs=1 distinct_final=1 calls=387 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_defaults seed=0 distinct_logs=1 distinct_final=1 calls=439 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_defaults seed=1 distinct_logs=1 distinct_final=1 calls=473 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_defaults seed=42 distinct_logs=1 distinct_final=1 calls=494 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_defaults seed=20260928 distinct_logs=1 distinct_final=1 calls=399 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_defaults seed=987654321 distinct_logs=1 distinct_final=1 calls=420 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_pass seed=0 distinct_logs=1 distinct_final=1 calls=200 final="passed"
+hyp_pass seed=1 distinct_logs=1 distinct_final=1 calls=200 final="passed"
+hyp_pass seed=42 distinct_logs=1 distinct_final=1 calls=200 final="passed"
+hyp_pass seed=20260928 distinct_logs=1 distinct_final=1 calls=200 final="passed"
+hyp_pass seed=987654321 distinct_logs=1 distinct_final=1 calls=200 final="passed"
+hyp_db_shared seed=0 distinct_logs=1 distinct_final=1 calls=390 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_db_shared seed=1 distinct_logs=1 distinct_final=1 calls=413 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_db_shared seed=42 distinct_logs=1 distinct_final=1 calls=420 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
+hyp_db_shared seed=20260928 distinct_logs=1 distinct_final=1 calls=379 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "N", "vehicle_value": "68751.26"}
+hyp_db_shared seed=987654321 distinct_logs=1 distinct_final=1 calls=387 final={"driver_age": 17, "garaged": false, "inception": "2026-01-01", "ncd_years": null, "postcode": "A0 0AA", "region": "LDN", "vehicle_value": "16827.89"}
