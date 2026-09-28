@@ -13,6 +13,11 @@ an import alias (`JK.DATASET_INGEST`) are caught as readily as a direct call. A 
 attribute whose name is `DATASET_INGEST` (whatever it is read from), or the string
 `"dataset.ingest"` or `"DATASET_INGEST"` used as a value. Three sites are allowed, each named
 below with what it does: the route, the handler registration, and the kind-to-queue map.
+
+**Known limit.** The census counts references, so an enqueue that *reuses* an existing allowed
+reference adds no new entry and is not detected: for example one made inside
+`register_data_handlers`' loop, or by iterating the kind-to-queue map in `platform/jobs.py`.
+Only `backend/src` is scanned; `examples/` and the tests enqueue directly by design.
 """
 
 from __future__ import annotations
