@@ -130,7 +130,7 @@ started with `env -C <scratch>/frontend setsid taskset -c 8-15 pnpm exec vite �
 fps figure in this record comes from a production build. The bundle figures come from
 `vite build`.
 
-## Measurements
+## Findings
 
 ### Criterion 1 — pan/zoom ≥ 30 fps on the dev build
 
