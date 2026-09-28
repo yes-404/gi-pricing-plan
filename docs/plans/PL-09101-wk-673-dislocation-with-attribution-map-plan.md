@@ -119,6 +119,13 @@ process-cwd rule), against the range `origin/main...HEAD`, never a tip SHA alone
 - **Requirement ids are cited individually**, never as a numeric range
   (`.claude/roles/planner.md`).
 - **One slice at a time within the Work** (`delivery-process.md` §8).
+- **The permission catalogue is unresolved (#855's finding).** `06` and the code each name 24
+  permissions and share only 7. Until the decision-maker's permission-catalogue ruling
+  (the catalogue RL, not yet a PR) merges, a slice that adds or checks a permission states in its
+  leaf plan **which name it uses and why, and cites #855's finding by its minted id**. It never silently picks
+  either side. This is the deputy's rule, 2026-09-28 at 14:52:49 BST, item 4 (b). In
+  this Work only Slice 4 adds a permission check. Slices 5 and 6 go through the existing
+  `rating:submit` check in `submit_for_review` and add no new name.
 
 ## Inputs
 
@@ -271,7 +278,8 @@ Slice 1 (spec) → Slice 2 (run) → Slice 3 (attribution + cost) → Slice 4 (J
 ```
 
 One slice at a time. Slice 1 waits on #830's merge and on DP-1 and DP-2. Slice 5 waits
-on DP-3. Slice 6 waits on WK-672 Slice 3.
+on DP-3. Slice 4 depends on the permission-catalogue ruling (the catalogue RL, not yet a PR; #855's finding). Slice 6
+waits on WK-672 Slice 3.
 
 ### Slice 1 — Spec: FR-266's amendment, the hard gate as requirements, the contract and the types
 
@@ -351,7 +359,21 @@ hand-authored schema replaced, the slug moved from `ONE_SIDED_SLUGS` to `COMPARE
 (acceptance item 6), per `contract-guard`. The generated frontend client regenerates;
 nothing is hand-written there.
 
-Depends on: Slice 3. Gate: as Slice 3, plus `generate-contracts.py --check`.
+**The routes' permissions (#855's finding).** Neither side names a dislocation permission at
+`6c6f4532`:
+- `06` §4.1's catalogue example has none, and it spells rating permissions on
+  `rating_version:` and `rating_algorithm:`.
+- The code's closed `Permission` enum has none either. It spells them `rating:read`,
+  `rating:write` and `rating:submit` (`packages/model-schema/src/model_schema/permissions.py:47-49`),
+  and it has `score:batch` (`:59`) for the batch re-rate a Dislocation Run performs.
+
+Slice 4's leaf plan states the name each route checks and why, and cites #855's finding by its minted id. If
+the catalogue RL has merged by then, it follows that ruling instead. A permission that grants a
+new capability is a scope change for the deputy, not the slice's pick.
+
+Depends on: Slice 3, and **the permission-catalogue ruling (the catalogue RL) merged**,
+or else the statement above in its leaf plan. Gate: as Slice 3, plus
+`generate-contracts.py --check`.
 
 ### Slice 5 — The approval gate, part one: `structural_diff`, FR-257 limb (2), FR-224
 
