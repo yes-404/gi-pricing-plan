@@ -842,7 +842,8 @@ def attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[A
 
 # pricing_core/rating/testing.py
 def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
-                   *, seed: int) -> RegressionRun
+                   *, seed: int, rating_version_ref: ArtifactRef,     # amended 2026-09-28
+                   now: Callable[[], datetime]) -> tuple[RegressionRun, CasesLog]  # (PL-1205)
 def generate_contexts(contract: Sequence[InputContractField],   # corrected 2026-09-28
                       n: int, seed: int,                        # (RL-1172); was InputContract
                       *, expect_version: str | None = None) -> list[QuoteContext]  # PL-1205
@@ -851,8 +852,9 @@ def evaluate_golden_quotes(bundle: CompiledBundle, golden_quotes: Sequence[Golde
                            *, rating_version_ref: ArtifactRef) -> list[GoldenQuoteResult]  # (PL-1189)
 
 # pricing_core/rating/replay.py                       # added 2026-09-28 (WK-672 Slice 3, PL-1205)
-def replay_cases(bundle: CompiledBundle, cases: CasesLog,
-                 suite: RegressionSuite) -> RegressionRun
+def replay_cases(bundle: CompiledBundle, cases: CasesLog, suite: RegressionSuite,
+                 *, recorded: RegressionRun, rating_version_ref: ArtifactRef,
+                 now: Callable[[], datetime]) -> RegressionRun
 
 # pricing_core/money.py — the decimal discipline (R2); path and signatures
 # corrected 2026-08-29 (WK-671 Slice 1, RL-879) — there is no rating/money.py
@@ -917,6 +919,20 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
 > installed `hypothesis` version. `evaluate_golden_quotes` is implemented in the
 > hypothesis-free `pricing_core/rating/golden.py` and re-exported by `testing.py` under its
 > declared name.
+> *(Amended 2026-09-28, WK-672 Slice 3, `PL-1205` Task 4.)* `run_regression` and
+> `replay_cases` take the keyword-only `rating_version_ref` and `now`, because
+> `pricing-core` holds no clock (`CLAUDE.md` §2) and the run record carries both a
+> reference and start and finish times; `now` is read at the start and the end. Neither
+> sets `job_id`, and `cases_blob` is the case log's own content address, computed
+> purely. `run_regression` also returns the `CasesLog` the backend stores as that blob
+> (`FR-9301`). `replay_cases` takes the `recorded` run, the source of the generation
+> record and of each failing property's persisted `shrink` and `counterexample_minimal`:
+> a replay cannot shrink, so it reports what was recorded, and reports a property that now
+> fails on an unshrunk case as `stopped_on_limit`, unminimised. A `monotone` property is
+> evaluated with the case's other inputs held fixed while the named input is varied over a
+> five-point grid spanning the property's `lower` and `upper`, or the input contract's `min`
+> and `max`; it names an `int` or `decimal` input with a range, or it is refused before
+> generation.
 
 > *(`import_confirmed` added 2026-08-28, DP6 — the confirmation half of FR-235.)*
 > `POST /import` with `confirm: true` re-parses the same upload through the same strict

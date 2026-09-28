@@ -1,25 +1,21 @@
-"""Golden-quote re-scoring and property-case generation (03 §5.2, FR-260, FR-261, FR-273).
+"""Property-case generation and `run_regression` (03 §5.2, FR-260, FR-261; `PL-1205`).
 
-`generate_contexts` draws Quote Contexts from an input contract with `hypothesis`, under a
-persisted seed and fixed settings (RS-1176 conditions 1, 2, 3 and 6, `PL-1205`). It is the
-one module that imports `hypothesis`.
-
-`evaluate_golden_quotes` is the pure re-score the backend's submit gate calls, and the
-piece WK-672 Slice 3's `run_regression` composes (the deputy's DP-S2-3 (a), `PL-1189`). It
-holds no persistence, no clock and no I/O (`CLAUDE.md` §2; `.importlinter`'s
-`core-has-no-infrastructure`): the suite store, the audit events and the gate are the
-backend's (RL-1172 item 3c).
-
-It is plain `def`, on the same synchronous `evaluate()` path `score_batch` uses (RL-868),
-through `score._score_context_sync` and so through the same `build_scoring_result` tail as
-`score_one` (RL-858). The comparison is integer subtraction in minor units — never a float
-(FR-273).
+The one module that imports `hypothesis`. `generate_contexts` draws Quote Contexts from an
+input contract under a persisted seed and fixed settings (RS-1176 conditions 1, 2, 3 and
+6). `run_regression` composes `evaluate_golden_quotes` (`golden.py`, re-exported here under
+its declared name) with the five property classes (`properties.py`), shrinks each failing
+property through `hypothesis` to a counterexample, and records whether that shrink ended
+or was stopped on a limit (condition 5). It is plain `def`, on the synchronous
+`evaluate()` path (RL-868, RL-858), and holds no persistence: the case log and the
+`RegressionRun` are returned for the backend to store (FR-9301). Its replay twin,
+`replay.replay_cases`, re-scores them without ever reaching this module.
 """
 
 from __future__ import annotations
 
+import contextlib
 import string
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -28,85 +24,42 @@ import hypothesis
 from hypothesis import HealthCheck, given, settings
 from hypothesis import seed as hypothesis_seed
 from hypothesis import strategies as st
+from hypothesis.internal.conjecture.engine import ExitReason
+from hypothesis.statistics import collector
 
 from model_schema.rating import InputContractField, RatingInputType
 from model_schema.refs import ArtifactRef
-from model_schema.regression import GoldenQuote, GoldenQuoteResult
-from model_schema.scoring import QuoteContext, ScoringResult
+from model_schema.regression import (
+    CasesLog,
+    PropertyResult,
+    RegressionRun,
+    RegressionSuite,
+    RunGeneration,
+)
+from model_schema.scoring import QuoteContext
+from pricing_core.rating.golden import evaluate_golden_quotes
+from pricing_core.rating.properties import (
+    PROPERTY_FAILED,
+    Scorer,
+    build_run,
+    case_holds,
+    make_scorer,
+    monotone_field,
+)
 from pricing_core.rating.runtime import CompiledBundle
-from pricing_core.rating.score import _score_context_sync
 
 __all__ = [
     "GeneratorVersionMismatch",
-    "evaluate_golden_quotes",
+    "evaluate_golden_quotes",  # re-exported from `golden.py` under its declared name
     "generate_contexts",
     "generation_settings",
+    "run_regression",
 ]
 
 #: Fixed on every generated Quote Context, so a case log depends on the seed and the input
 #: contract alone — never on the clock (RS-1176 condition 6).
 _QUOTED_AT = datetime(2026, 1, 1, 12, 0, 0)
 _EFFECTIVE_DATE = date(2026, 1, 1)
-
-#: The ladder rung whose `value_minor` a golden quote's `payable_premium_minor` is.
-_PAYABLE_RUNG = "payable_premium"
-
-
-def _payable_minor(scored: ScoringResult) -> int | None:
-    """The `payable_premium` rung's `value_minor` for a quoted result, else `None`."""
-    if scored.outcome != "quoted":
-        return None
-    for rung in scored.premium_ladder:
-        if rung.rung == _PAYABLE_RUNG:
-            return rung.value_minor
-    return None
-
-
-def _evaluate_one(
-    bundle: CompiledBundle, quote: GoldenQuote, rating_version_ref: ArtifactRef
-) -> GoldenQuoteResult:
-    expected = quote.expected
-    try:
-        scored = _score_context_sync(bundle, quote.context, rating_version_ref)
-    except NotImplementedError:
-        # A genuinely undesigned engine case, not a per-quote data error — the same
-        # carve-out `score_batch` makes.
-        raise
-    except (ValueError, RuntimeError):
-        # An engine refusal (input contract, purpose mount, engine failure) is this
-        # quote's `fail`, never an abort of the rest.
-        return GoldenQuoteResult(
-            name=quote.name, status="fail",
-            expected_minor=expected.payable_premium_minor, actual_minor=None,
-            difference_minor=None,
-        )
-
-    actual = _payable_minor(scored)
-    wanted = expected.payable_premium_minor
-    difference = actual - wanted if actual is not None and wanted is not None else None
-    passed = scored.outcome == expected.outcome and (
-        expected.outcome != "quoted"
-        or (difference is not None and abs(difference) <= quote.tolerance.money_minor)
-    )
-    return GoldenQuoteResult(
-        name=quote.name, status="pass" if passed else "fail",
-        expected_minor=wanted, actual_minor=actual, difference_minor=difference,
-    )
-
-
-def evaluate_golden_quotes(
-    bundle: CompiledBundle,
-    golden_quotes: Sequence[GoldenQuote],
-    *,
-    rating_version_ref: ArtifactRef,
-) -> list[GoldenQuoteResult]:
-    """Re-score every golden quote against `bundle`; one result per quote, in input order.
-
-    A quote passes when its outcome equals the expected outcome and, when both are
-    `quoted`, `abs(actual - expected) <= tolerance.money_minor` in integer minor units.
-    `difference_minor` is `actual - expected` when both are integers, else `None`.
-    """
-    return [_evaluate_one(bundle, quote, rating_version_ref) for quote in golden_quotes]
 
 
 class GeneratorVersionMismatch(ValueError):  # noqa: N818 - declared name, 03 §5.2
@@ -167,6 +120,13 @@ def _field_strategy(field: InputContractField) -> st.SearchStrategy[Any]:
     return st.none() | base if field.nullable else base
 
 
+def _context(inputs: dict[str, Any]) -> QuoteContext:
+    return QuoteContext(
+        purpose="new_business", quoted_at=_QUOTED_AT, effective_date=_EFFECTIVE_DATE,
+        inputs=inputs,
+    )
+
+
 def _draw_contexts(
     contract: Sequence[InputContractField], n: int, seed: int | None
 ) -> list[QuoteContext]:
@@ -183,13 +143,7 @@ def _draw_contexts(
     if seed is not None:
         collect = hypothesis_seed(seed)(collect)
     collect()
-    return [
-        QuoteContext(
-            purpose="new_business", quoted_at=_QUOTED_AT, effective_date=_EFFECTIVE_DATE,
-            inputs=inputs,
-        )
-        for inputs in drawn[:n]
-    ]
+    return [_context(inputs) for inputs in drawn[:n]]
 
 
 def generate_contexts(
@@ -209,3 +163,104 @@ def generate_contexts(
     if expect_version is not None and expect_version != hypothesis.__version__:
         raise GeneratorVersionMismatch(expect_version, hypothesis.__version__)
     return _draw_contexts(contract, n, seed)
+
+
+class _PropertyFailedError(AssertionError):
+    """Raised inside a `hypothesis` test so the engine shrinks the failing context."""
+
+
+#: `stopped-because` texts meaning the shrink ended on a limit, not because it was done.
+_SHRINK_LIMITS = frozenset(
+    {ExitReason.very_slow_shrinking.value, ExitReason.max_shrinks.value}
+)
+
+
+def _shrink(
+    prop_check: Any,
+    contract: Sequence[InputContractField],
+    n: int,
+    seed: int,
+    score: Scorer,
+) -> tuple[QuoteContext | None, bool]:
+    """Shrink one failing property to a counterexample; `(context, stopped_on_limit)`.
+
+    Re-runs the generator under the same seed and settings, so the first failure it meets
+    is the one the case list already holds, then lets `hypothesis` minimise it. The stop
+    reason is read from `hypothesis.statistics.collector`, **internal API** that the exact
+    pin and the forced-limit test keep honest (RS-1176 condition 5). When no reason is
+    reported the shrink is treated as stopped: minimality is never claimed unproven.
+    """
+    stats: list[Any] = []
+    failing: list[QuoteContext] = []
+
+    @given(st.fixed_dictionaries({f.name: _field_strategy(f) for f in contract}))
+    def run(inputs: dict[str, Any]) -> None:
+        context = _context(inputs)
+        if not case_holds(prop_check, context, score, contract):
+            failing.append(context)
+            raise _PropertyFailedError
+
+    run = hypothesis_seed(seed)(generation_settings(n)(run))
+    with collector.with_value(stats.append), contextlib.suppress(_PropertyFailedError):  # type: ignore[arg-type]
+        run()
+    if not failing:
+        return None, True
+    reason = stats[-1].get("stopped-because") if stats else None
+    return failing[-1], reason is None or reason in _SHRINK_LIMITS
+
+
+def run_regression(
+    bundle: CompiledBundle,
+    suite: RegressionSuite,
+    *,
+    seed: int,
+    rating_version_ref: ArtifactRef,
+    now: Callable[[], datetime],
+) -> tuple[RegressionRun, CasesLog]:
+    """Run `suite` against `bundle`: golden quotes, then FR-261's properties over
+    `suite.generation.cases` contexts drawn under `seed`.
+
+    Returns the run (`job_id` unset, `cases_blob` the case log's content address) and the
+    `CasesLog` the backend persists as that blob (FR-9301). `now` is the caller's clock,
+    read at the start and the end. A `monotone` naming an input the contract lacks is
+    refused before anything is generated.
+    """
+    started_at = now()
+    contract = bundle.algorithm.input_contract
+    for prop in suite.properties:
+        if prop.check.kind == "monotone":
+            monotone_field(contract, prop.check)
+
+    score = make_scorer(bundle, rating_version_ref, contract)
+    golden = evaluate_golden_quotes(
+        bundle, suite.golden_quotes, rating_version_ref=rating_version_ref
+    )
+    n = suite.generation.cases
+    cases = generate_contexts(contract, n, seed)
+
+    results: list[PropertyResult] = []
+    counterexamples: dict[str, QuoteContext] = {}
+    for prop in suite.properties:
+        if all(case_holds(prop.check, c, score, contract) for c in cases):
+            results.append(PropertyResult(name=prop.name, status="pass", cases_run=len(cases)))
+            continue
+        found, stopped = _shrink(prop.check, contract, n, seed, score)
+        if found is None:  # the generator did not re-find it: report the first failing case
+            found = next(c for c in cases if not case_holds(prop.check, c, score, contract))
+            stopped = True
+        counterexamples[prop.name] = found
+        results.append(PropertyResult(
+            name=prop.name, status="fail", cases_run=len(cases),
+            counterexample=dict(found.inputs), counterexample_minimal=not stopped,
+            shrink="stopped_on_limit" if stopped else "completed",
+            error_code=PROPERTY_FAILED,
+        ))
+
+    log = CasesLog(cases=cases, counterexamples=counterexamples)
+    run = build_run(
+        suite=suite, bundle_hash=bundle.content_hash, rating_version_ref=rating_version_ref,
+        started_at=started_at, finished_at=now(),
+        generation=RunGeneration(seed=seed, cases=n, hypothesis_version=hypothesis.__version__),
+        cases=log, golden_results=golden, property_results=results,
+    )
+    return run, log
