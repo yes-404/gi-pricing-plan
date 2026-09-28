@@ -292,6 +292,13 @@ def test_a_coded_looking_error_that_is_not_ours_is_reduced_to_its_type() -> None
     foreign = ValueError(f"FOO: {_SENTINEL}")
     assert safe_error_text(foreign) == "ValueError"
     assert _batch_error_code(foreign) == ("ValueError", "ValueError")
+    spoof = ValueError(f"INPUT_CONTRACT_VIOLATION: {_SENTINEL}")  # a real code, not our class
+    assert safe_error_text(spoof) == "ValueError"
+    assert _batch_error_code(spoof) == ("ValueError", "ValueError")
+    genuine = CodedError("INPUT_CONTRACT_VIOLATION: input 'channel' is not in ['direct']")
+    assert _batch_error_code(genuine) == (
+        "INPUT_CONTRACT_VIOLATION", "input 'channel' is not in ['direct']"
+    )
     assert safe_error_text(RuntimeError(f"MODEL_CALL_FAILED: {_SENTINEL}")) == "RuntimeError"
     ours = CodedError("FOO: a fixed sentence")
     assert safe_error_text(ours) == "CodedError: FOO: a fixed sentence"
