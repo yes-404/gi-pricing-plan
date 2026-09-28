@@ -3,7 +3,7 @@ id: RFC-841
 family: proposal
 kind: process
 title: Per-agent model, thinking effort and skill bindings for the seven roles
-status: draft                  # draft → active → closed | retired | superseded (§1.2a)
+status: closed                  # draft → active → closed | retired | superseded (§1.2a)
 created: 2026-08-29
 owner: maintainer
 supersedes: []
