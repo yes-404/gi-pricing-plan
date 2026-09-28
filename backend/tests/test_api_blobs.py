@@ -247,6 +247,12 @@ async def test_a_compiled_bundle_blob_is_refused_even_in_the_callers_workspace(
     `BundleMetadata.blob_sha256`, and scoring reads it server-side, so this route refuses
     it even to the owning workspace (a bundle is not an allowed owner)."""
     sha256 = _digest()
+    await _bundle_blob(database, workspace_id, sha256)
+    _assert_indistinguishable_404(_get(client, reader_headers, sha256), sha256)
+
+
+async def _bundle_blob(database: Database, workspace_id, sha256: str) -> None:
+    """A Rating Version in `workspace_id` whose compiled bundle is `sha256`."""
     await _blob(database, sha256, "application/json")
     async with database.unit_of_work() as session:
         session.add(
@@ -261,4 +267,27 @@ async def test_a_compiled_bundle_blob_is_refused_even_in_the_callers_workspace(
                 bundle={"content_hash": "sha256:" + "1" * 64, "blob_sha256": sha256},
             )
         )
+
+
+@pytest.mark.req("FR-421")
+async def test_another_workspaces_compiled_bundle_blob_is_refused(
+    client: TestClient, database: Database, reader_headers
+) -> None:
+    """The cross-workspace half of the bundle case: B's bundle digest, asked for by A."""
+    sha256 = _digest()
+    await _bundle_blob(database, new_uuid7(), sha256)
+    _assert_indistinguishable_404(_get(client, reader_headers, sha256), sha256)
+
+
+@pytest.mark.req("NFR-499")
+async def test_another_workspaces_trace_digest_is_refused_even_when_the_caller_owns_it(
+    client: TestClient, database: Database, workspace_id, reader_headers
+) -> None:
+    """Content addressing: one digest can be a trace body in workspace B and a job result in
+    the caller's workspace A. The quote-input refusal is global — **any** trace, in any
+    workspace, that references the digest — so A's own owner does not re-admit B's quote
+    inputs. A refusal scoped to the caller's workspace would serve them."""
+    sha256 = _digest()
+    await _trace_blob(database, new_uuid7(), sha256)
+    await _job_blob_reference_only(database, workspace_id, sha256)
     _assert_indistinguishable_404(_get(client, reader_headers, sha256), sha256)
