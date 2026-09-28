@@ -93,7 +93,10 @@ relates: []                      # ids only
   test run, a benchmark — runs in the **foreground** and carries a `timeout` (for example
   `timeout 3600 …` inside the slot wrapper's `-c` body). This **completes S-9, it does not
   reverse it**: S-9's foreground blocking call stays the rule and a background run stays
-  forbidden, because a backgrounded command cannot notify an ended turn. The `timeout`
+  forbidden, because a backgrounded command cannot notify an ended turn. **The ruling
+  offered two limbs — background with a cancel file the executor checks, or foreground only
+  with a `timeout` — and this rule takes the second.** The first is not adopted: S-9 forbids
+  backgrounding. The `timeout`
   bounds how long the foreground call can hold the box. A lead stop can also arrive as a
   kill of that process **by PID**; when the call returns non-zero, or a message says it was
   killed, read the message before anything else.
@@ -108,10 +111,13 @@ relates: []                      # ids only
   lead's slot `flock` (`/tmp/slots/gate-*`, `.claude/skills/dev-commands`). A new head —
   any commit, merge or rebase after the grant — needs a new grant. The four docs checks and
   a named single test are not the full gate and need no grant.
-  - **Grounds for S-11 to S-13, 2026-09-28:** gate runs stopped by PID on #880 (once),
-    #883 (twice) and WK-672 Slice 3's T7 (three times), and one relaunch under `setsid`
-    after such a stop. Source: the deputy's entry of 2026-09-28 22:18:07 BST (local,
-    `to-lead.md`, not in the repository) on the process finding of 22:17:09 BST.
+  - **Grounds for S-11 to S-13, 2026-09-28:** **seven gate stops by PID** — #880 (once),
+    #883 (three times) and WK-672 Slice 3's T7 (three times) — **plus one wrong-process
+    kill** (an executor's permitted targeted test) and one relaunch under `setsid` after
+    such a stop. Sources, all local and not in the repository: the lead's correction entry
+    of 2026-09-28 22:21:21 BST (`to-deputy.md`) for the count; the deputy's entry of
+    22:18:07 BST (`to-lead.md`) for the ruling. **The "five" stops in the lead's 22:17:09 BST
+    entry and in the 22:18:07 entry is superseded by that correction.**
 - **Tools:** full read/write + Bash, scoped to the current slice's worktree. Not affected by
   Part A2: `docs/plans/PL-00845-rfc-840-rfc-841-adoption-reconciliation-and-rulings-2026-08-29.md` (lines 356–357)
   states this explicitly — the executor's write scope is code and tests, not `docs/` policy
