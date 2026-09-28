@@ -241,7 +241,7 @@ question). The maintainer delegated it to the deputy on 2026-09-28. The lead rel
 deputy's entry in the team channel. It is quoted here verbatim as **the deputy's maintainer
 decision by delegation**:
 
-> **Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), PL-930 DP1**, read at origin/main `df8e5811` against `docs/specs/03-rating-engine.md:178` (FR-262), `:603` (the §5.1 row `POST /api/v1/score/compare`, "Score one quote against two versions with a step-level diff (FR-262)"), and `docs/roadmap.md`'s WK-672 row (FR-260..262 in range) and WK-675 row ("quote sandbox + ladder waterfall"). […]
+> **Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), PL-930 DP1**, read at origin/main `df8e5811` against `docs/specs/03-rating-engine.md:178` (FR-262), `:603` (the §5.1 row `POST /api/v1/score/compare`, "Score one quote against two versions with a step-level diff (FR-262)"), and `docs/roadmap.md`'s WK-672 row (FR-260..262 in range) and WK-675 row ("quote sandbox + ladder waterfall"). Quote this into [this record, RL-1172] verbatim:
 > - **2026-09-28 11:28:03 BST: DP1 is decided as OPTION A.**
 >   - **WK-672 builds the backend limb:** `POST /api/v1/score/compare`, which scores one quote against two Rating Versions through the one shared evaluator (WK-671) and returns the step-level diff. It carries tests that pin the diff's shape and a broken-input proof (versions that differ in one step: exactly that step is reported).
 >   - **WK-675 builds the frontend limb:** the Quote Sandbox view on top of that endpoint.
@@ -250,11 +250,7 @@ decision by delegation**:
 >
 >   **Grounds.** The endpoint is evaluator code and belongs beside the regression runs, which use the same machinery. Option B would put backend evaluator work into a frontend Work and leave the comparison untested by the testing Work. Option C would drop a requirement id from a range with no destination, the silent case §13 forbids.
 
-The quote is verbatim except at one mark, `[…]`, at the end of its first line. There the
-source's closing sentence is elided: it tells the lead to quote the block into this ruling,
-naming the ruling by its working id. The working id was allocated to another record before
-this one merged, so this ruling was minted as **RL-1172**. Keeping that id would cite a
-record of another family.
+*Bracketed: the deputy wrote the working id this record carried before its mint turn; substituted on the deputy's ruling of 2026-09-28 11:49:55 BST.*
 
 **The reading of one phrase, CONFIRMED by the deputy.** *"The one shared evaluator
 (WK-671)"* means WK-671's real-time scoring path. The endpoint makes two `score_one` calls
