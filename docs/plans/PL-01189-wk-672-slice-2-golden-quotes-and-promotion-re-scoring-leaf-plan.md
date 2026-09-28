@@ -3,7 +3,7 @@ id: PL-1189
 family: plan
 kind: leaf
 title: WK-672 Slice 2 — Golden Quotes and promotion re-scoring: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-28
 owner: planner
 tree: ea6162b9b67b19d7bc315432c6a82e00bc1f9ee5
@@ -60,6 +60,26 @@ Also [`../specs/06-governance.md`](../specs/06-governance.md): FR-353 (approver 
 #861), FR-364 (the evidence floor) and FR-368 (audit events). And
 [`../workflows/WF-00699-approved-models-to-approved-rating-version.md`](../workflows/WF-00699-approved-models-to-approved-rating-version.md)
 steps D1–D3 and E2.
+
+## Status
+
+**Activated 2026-09-28 16:21:33 BST (planner, on the deputy's decisions by delegation and RL-1172).**
+This plan was drafted at `ea6162b9` and minted `PL-1189` against `3767b3b4` in `c22eec44` (#862). What changed:
+
+- **Every decision point has a resolver.** DP-S2-1, DP-S2-2 and DP-S2-3 are the deputy's
+  entry of 2026-09-28 15:48:14 BST. DP-S2-4 and the delta's tolerance and context rule are
+  the entry of 15:57:21 BST. DP-S2-5 and DP-S2-6 are the entry of 16:01:27 BST.
+  All three are maintainer decisions by delegation, quoted whole under "Decision points",
+  from the lead's channel file. The slice's placement, shapes and assertion language rest
+  on `RL-1172` (#829).
+- So this plan moves `draft → active` in this commit, the planner's transition on freeze,
+  under `document-ids.md` §1.6 (the PL map/leaf row) and §1.7. The deputy accepted this
+  one-step route. It carries no acceptance line, and none is required.
+  `created:` does not change.
+- **Frozen / dated: 2026-09-28.** It is active once this commit merges. Where this text and
+  a quoted decision or `RL-1172` disagree, the decision governs.
+- **Still to follow, and not a reopening:** the WK-1178 approval-status PR's number, which
+  Task 5 Step 0 checks for by squash on `origin/main`.
 
 ## Acceptance Standard
 
