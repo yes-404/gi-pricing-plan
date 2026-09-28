@@ -171,12 +171,13 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 
 | ID | Requirement |
 |---|---|
-| **FR-257** | A Rating Version cannot reach `approved` without: a passing Regression Suite, a Dislocation Run against the current live version over an agreed portfolio, a change summary (FR-242), and — where the insurer has enabled it — a passing GIPP check (`04-optimisation.md`) (R4). |
+| **FR-257** | A Rating Version cannot reach `approved` without: a passing Regression Suite, a Dislocation Run against the current live version over an agreed portfolio, a change summary (FR-242), and — where the insurer has enabled it — a passing GIPP check (`04-optimisation.md`) (R4). *(Clarified 2026-09-28, WK-672 Slice 3, the deputy's DP-S3-1 by delegation.)* A passing Regression Suite has at least one golden quote; a submission whose suite has none, or whose algorithm has no suite, is refused with `EVIDENCE_INCOMPLETE`. It applies forward, at submit. |
 | **FR-258** | **Trace**: on request, scoring returns every step's id, label, consumed values, produced value, matched table row key, and elapsed time, plus the bundle hash and rating version reference. Traces are the same structure in real-time and batch. |
 | **FR-259** | In production, traces are **sampled** (default 1 %, configurable, plus 100 % of declines and errors) and persisted for ≥ 13 months (NFR-459), feeding `05-monitoring.md`. *(Clarified 2026-08-29, WK-671 Slices 3 and 4 — the scope these two opening words already carry, written down because two separate planning documents read this requirement and FR-258 as silent about batch. **Batch scoring contributes nothing to the sampled stream**, so `score_batch` takes no sampling policy: the stream is the production real-time quoting path, which is what §5.1's route and `05` §7's dependency row both call "sampled production traces", and what NFR-500 sizes at 1 % of 50 M annual *quotes*. The division of labour is already decided elsewhere — `05` FR-317's 2026-08-26 amendment (OQ-627) puts full-coverage A/E on a batch re-score of the exposure dataset and, in its own words, *not from traces* — leaving sampling for quote-level metrics. A batch run may still produce traces on request under FR-258, and they are written with that Job's own output and never returned by the production traces route. Ruled in `docs/rulings/INDEX.md#2026-08-29-w11-slices-3-4-rulingsmd` RL-890.)* *(Clarified 2026-08-30, WK-671 Task 4B: what the environment recorded on a sampled trace means, written down because the first implementation derived it from the caller's granted scope. It is the environment the quote was served in — the same target environment FR-250 selects the live Rating Version from, and the one FR-430 (`07`) scopes the presented key to. It stands in for the ScoringTrace's Deployment parent (`00` §4.1) until Deployment exists in WK-674, which is the deferral RL-888 made, so its value must be reconcilable to the Deployment that actually served the quote. It is therefore not derived from the set of environments a Service Account is granted: FR-389 (`07`) grants an account named environments, plural, and FR-430's per-key check presupposes that it may, so the granted set is an authorisation scope while the served environment is a property of the call. A sampled real-time trace always records one; absence is reserved as the signal that a trace was produced on request for a batch run (FR-258, RL-890), so a real-time trace is never written without it. Ruled in `docs/rulings/RL-00916-the-field-is-the-environment-the-quote-was-served-in-the-spec-already-says-so-and-the-branch-does-not-merge-until-it-says-so-too.md` RL-916.)* |
 | **FR-260** | A **Golden Quote** stores a Quote Context and the expected outputs. Promotion re-scores every golden quote and refuses promotion on any mismatch beyond a declared tolerance (default: exact for money). *(Amended 2026-09-28, the deputy's DP-S2-1 and DP-S2-2 decisions by delegation, `PL-1189`. (1) The check runs at `POST /api/v1/rating-versions/{id}/submit`. (2) The submission's evidence pins the suite version it used, by content hash. (3) The evidence lists every golden quote added, removed, or whose expected output, tolerance or quote context changed since the suite pinned by the most recently approved Rating Version of the same algorithm. Each change names its author, who is the actor of the creation Audit Event of the suite version that introduced it (`06` FR-368). (4) Where the algorithm has no suite, the evidence says so explicitly (`regression_suite: "none"`, "no golden quotes were checked"), never an empty pass. Whether a suite is required is decided by WK-672 Slice 3.)* |
-| **FR-261** | A **Regression Suite** may also contain property assertions evaluated over generated quote contexts: premium is positive, premium is monotone in a declared input, no output is null, the ladder reconciles (FR-248), and premium is bounded by declared limits. Generation uses hypothesis-style sampling over the input contract with a persisted seed. |
+| **FR-261** | A **Regression Suite** may also contain property assertions evaluated over generated quote contexts: premium is positive, premium is monotone in a declared input, no output is null, the ladder reconciles (FR-248), and premium is bounded by declared limits. Generation uses hypothesis-style sampling over the input contract with a persisted seed. *(Amended 2026-09-28, WK-672 Slice 3, the deputy's F4 decision in `RS-1176`; mints no id.)* The generated cases and every counterexample are persisted with the run and are its reproduction record; replaying a run re-scores them. The seed, with the generator version persisted beside it, serves same-version regeneration only. The case store is `FR-9301`. |
 | **FR-262** | The **Quote Sandbox** lets an actuary score an arbitrary quote against any accessible Rating Version and see the full trace inline, alongside the same quote scored against a comparison version with a step-by-step difference. |
+| **FR-9301** | A Regression Run's generated cases and counterexamples are persisted as one content-addressed canonical JSON blob (`BlobRef`), referenced from the run. They are replayed by re-scoring and never regenerated (`RS-1176` condition 4). The blob carries the same access control as a sampled trace and a Golden Quote: read only with `rating:read` in its workspace, and never logged (NFR-499). *(Added 2026-09-28, WK-672 Slice 3, the deputy's DP-S3-4 (i) by delegation. Its id is a working id, owned by this branch's pull request, and is renumbered at that request's mint turn.)* |
 
 ### 3.9 Dislocation
 
@@ -652,23 +653,35 @@ hand-authored file.)*
 
 ```json
 {
-  "suite_slug": "motor-gb-core",
+  "suite_ref": "regression_suite:motor-gb-core@3",
+  "suite_content_hash": "sha256:5b1f3a0c7d2e94a86c01d4f7e3b9a2c5d8e6f0a1b3c4d5e6f708192a3b4c5d6e",
   "rating_version_ref": "rating_version:motor-gb@27",
   "bundle_hash": "sha256:86d0cef0fbc4111163c63591ad555b6afc8bae35ca532846d51e14a6f08a77fe",
   "job_id": "ad48274d-de75-4385-b966-b9df9579b63e",
   "started_at": "2026-09-28T09:00:00Z",
   "finished_at": "2026-09-28T09:00:04Z",
   "overall": "fail",
+  "generation": {"seed": 20260928, "cases": 5000, "hypothesis_version": "6.165.7"},
+  "cases_blob": {"sha256": "0c9e4d1b7a3f58e2d6b0a91c4f7e3d2a8b5c6d7e8f901a2b3c4d5e6f708192a3", "bytes": 1048576, "media_type": "application/json"},
   "golden_results": [
     {"name": "young-driver-london", "status": "fail",
      "expected_minor": 112480, "actual_minor": 112900, "difference_minor": 420}
   ],
   "property_results": [
     {"name": "premium_positive", "status": "pass", "cases_run": 5000},
-    {"name": "monotone_in_age", "status": "pass", "cases_run": 5000, "counterexample": null}
+    {"name": "monotone_in_age", "status": "fail", "cases_run": 5000,
+     "counterexample": {"age": 25}, "counterexample_minimal": false,
+     "shrink": "stopped_on_limit", "error_code": "PROPERTY_ASSERTION_FAILED"}
   ]
 }
 ```
+
+*(Amended 2026-09-28, WK-672 Slice 3, `PL-1205`: the example gains `suite_ref` in place of
+`suite_slug`, `suite_content_hash`, `generation`, `cases_blob`, and on `property_results[]`
+`shrink`, `counterexample_minimal` and, on a failing entry, `error_code`. `cases_blob` is a
+`BlobRef` to the run's case log (`FR-9301`). `shrink` is `completed` or `stopped_on_limit`;
+a counterexample whose shrink stopped on a limit is reported as **unminimised**
+(`counterexample_minimal: false`), never presented as minimal.)*
 
 `overall == "fail"` blocks promotion (FR-260). A `golden_results` entry's `status` is
 `"fail"` when `difference_minor` exceeds the golden quote's declared tolerance (default:
@@ -831,9 +844,15 @@ def attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[A
 def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
                    *, seed: int) -> RegressionRun
 def generate_contexts(contract: Sequence[InputContractField],   # corrected 2026-09-28
-                      n: int, seed: int) -> list[QuoteContext]  # (RL-1172); was InputContract
+                      n: int, seed: int,                        # (RL-1172); was InputContract
+                      *, expect_version: str | None = None) -> list[QuoteContext]  # PL-1205
+class GeneratorVersionMismatch(ValueError): ...                 # added 2026-09-28 (PL-1205)
 def evaluate_golden_quotes(bundle: CompiledBundle, golden_quotes: Sequence[GoldenQuote],   # added 2026-09-28
                            *, rating_version_ref: ArtifactRef) -> list[GoldenQuoteResult]  # (PL-1189)
+
+# pricing_core/rating/replay.py                       # added 2026-09-28 (WK-672 Slice 3, PL-1205)
+def replay_cases(bundle: CompiledBundle, cases: CasesLog,
+                 suite: RegressionSuite) -> RegressionRun
 
 # pricing_core/money.py — the decimal discipline (R2); path and signatures
 # corrected 2026-08-29 (WK-671 Slice 1, RL-879) — there is no rating/money.py
@@ -891,7 +910,13 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
 > in input order, comparing exactly in integer minor units (FR-273) within each quote's
 > declared tolerance; an engine refusal for one quote becomes that quote's `fail`, never an
 > abort of the rest. `run_regression` composes it; the submit gate (FR-260) calls it
-> directly.
+> directly. *(Added 2026-09-28, WK-672 Slice 3, `PL-1205`.)* `replay_cases` only re-scores
+> the persisted cases and counterexamples of a `CasesLog` (`FR-9301`); the module never
+> imports `hypothesis` or `testing`, so a replay cannot regenerate. `generate_contexts`
+> raises `GeneratorVersionMismatch` when `expect_version` is given and differs from the
+> installed `hypothesis` version. `evaluate_golden_quotes` is implemented in the
+> hypothesis-free `pricing_core/rating/golden.py` and re-exported by `testing.py` under its
+> declared name.
 
 > *(`import_confirmed` added 2026-08-28, DP6 — the confirmation half of FR-235.)*
 > `POST /import` with `confirm: true` re-parses the same upload through the same strict
@@ -1032,7 +1057,7 @@ OPT → RATE and DEP-1 is respected.
 | **Redis** | `Bundle` cache keyed by content hash; hot-path lookup | Cache warming before an atomic deployment switch (FR-268) |
 | **FastAPI** | The scoring endpoint on the latency path | Async request handling, response model overhead, avoiding Pydantic re-validation on the hot path |
 | **XGBoost / LightGBM** | `model_call` in `exact` mode | Booster load time, single-row prediction latency, thread pinning to avoid contention at 200 rps |
-| **hypothesis** | Property assertion generation (FR-261) | Strategies derived from an input contract; shrinking counterexamples an actuary can read |
+| **hypothesis** | Property assertion generation (FR-261) | Strategies derived from an input contract; shrinking counterexamples an actuary can read. **A `pricing-core` runtime dependency, pinned `==6.165.7`** *(2026-09-28, WK-672 Slice 3, `RS-1176` condition 1)*: an exact pin, because shrink-limit detection reads `hypothesis.statistics.collector`, which is internal API |
 | **Vue Flow (frontend)** | The DAG designer | Custom node types per step type, edge validation, layout, undo/redo, mapping canvas state to the `RatingAlgorithm` contract |
 | **openpyxl** | CSV/XLSX import/export with strict round-trip (FR-235) | XLSX read + write in one library; CSV is stdlib; round-trip keeps decimal strings — never float through the file |
 | **TanStack Table (frontend)** | Rate table editor | Virtualised editable grids, decimal-safe cell input, diff shading |
@@ -1059,7 +1084,7 @@ single-row GBM inference latency tuning; hypothesis strategies from a declarativ
 | **NFR-496** | Money exactness: no rounding is applied more than once; the ladder reconciles to the penny in 100 % of scored quotes (FR-248), asserted continuously in non-prod and sampled in prod. |
 | **NFR-497** | Availability: the scoring endpoint targets 99.95 % monthly, degrading to the last-known-good cached bundle if metadata storage is unavailable. |
 | **NFR-498** | Audit: algorithm edits, rate table versions, bulk operations, compilations, approvals, deployments, rollbacks, and routing changes all emit Audit Events with before/after state. |
-| **NFR-499** | Security: the scoring API authenticates per Consumer System with scoped credentials and per-client rate limits; quote inputs are never logged in full outside sampled traces, which are access-controlled. *(Clarified 2026-08-30, WK-671: what "logged" reaches, and the store this clause never carved. **The clause governs persistence, not only log output.** The carve-out names sampled traces, and a trace is not a log, so a rule reaching only log lines would have had no need of that exception — the domain is records of a quote input, of which a trace is one. Read that way it collided with FR-260, which has a Golden Quote **store a Quote Context** outside any trace, and the defect is here rather than there: this clause names a single instance where its own justification, *"which are access-controlled"*, states a class. **A full quote input may be held only in an access-controlled artifact this specification names for that purpose, and those are sampled traces (FR-259) and Golden Quotes (FR-260).** A Golden Quote's stored Quote Context carries the same access-control obligation a trace carries, because that property is what justifies the exception rather than the artifact's name. **Any further store requires its own requirement**, so the next one is a visible decision rather than a third silent collision. FR-261 persists a seed rather than quote data and FR-262's sandbox is inline, so neither needs a carve-out. Nothing is in breach: `GoldenQuote` exists in no module, so this is settled before WK-672 builds it. Ruled in `docs/rulings/RL-00917-the-clause-reaches-persistence-and-nfr-499-is-the-defective-one.md` RL-917.)* |
+| **NFR-499** | Security: the scoring API authenticates per Consumer System with scoped credentials and per-client rate limits; quote inputs are never logged in full outside sampled traces, which are access-controlled. *(Clarified 2026-08-30, WK-671: what "logged" reaches, and the store this clause never carved. **The clause governs persistence, not only log output.** The carve-out names sampled traces, and a trace is not a log, so a rule reaching only log lines would have had no need of that exception — the domain is records of a quote input, of which a trace is one. Read that way it collided with FR-260, which has a Golden Quote **store a Quote Context** outside any trace, and the defect is here rather than there: this clause names a single instance where its own justification, *"which are access-controlled"*, states a class. **A full quote input may be held only in an access-controlled artifact this specification names for that purpose, and those are sampled traces (FR-259) and Golden Quotes (FR-260).** A Golden Quote's stored Quote Context carries the same access-control obligation a trace carries, because that property is what justifies the exception rather than the artifact's name. **Any further store requires its own requirement**, so the next one is a visible decision rather than a third silent collision. FR-261 persists a seed rather than quote data and FR-262's sandbox is inline, so neither needs a carve-out. Nothing is in breach: `GoldenQuote` exists in no module, so this is settled before WK-672 builds it. Ruled in `docs/rulings/RL-00917-the-clause-reaches-persistence-and-nfr-499-is-the-defective-one.md` RL-917.)* *(Clarified 2026-09-28, WK-672 Slice 3, the deputy's DP-S3-4 (ii) by delegation.)* A Regression Run's case store (`FR-9301`) is the **third** named quote-input store, after sampled traces (FR-259) and Golden Quotes (FR-260), and carries the same access-control obligation. **This corrects the sentence above that FR-261 "persists a seed rather than quote data":** since `RS-1176` condition 4, a regression run persists the generated quote inputs and every counterexample, so FR-261 does hold quote data and needs the carve-out. The correction is written, not silent. |
 | **NFR-500** | Trace storage: 1 % sampling of 50 M annual quotes stays under 200 GB/year with the sampled-trace schema. |
 | **NFR-501** | GBM `model_call` steps execute with **`nthread=1` per request**. Measured (S2): single-threading beats all-cores at the tail — p99 1.09 ms vs 1.48 ms, worst case 4.5 ms vs 19.9 ms — because thread-pool spin-up dominates a single-row prediction. Parallelism belongs across concurrent requests, not inside one. *(Amended 2026-08-27, WK-668 — re-measured on the verification machine: p99 1.626 ms vs all-cores' 4.737 ms (max 6.143 ms vs 26.692 ms); `docs/research/w8-spike-resolution.md`. nthread=1 stays 0.34x of all-cores at the tail — the original S2 order holds, though the absolute figures are higher on this machine (slower `DMatrix` construction). p99 1.626 ms is still 3.3 % of the 50 ms budget: PASS. The design rule is unchanged: `nthread=1` per request.)* |
 | **NFR-502** | The scoring endpoint does **not** apply `response_model` validation to its response. Pydantic validation costs roughly 1 ms per request — 2 % of the 50 ms budget before any pricing work — and the response path otherwise runs three to five transformations. `ScoringResult` is constructed by `pricing-core` and is already trusted, so it is serialised directly with a C-speed encoder (`ORJSONResponse`). Inbound `QuoteContext` **is** validated: untrusted input must be checked, trusted output need not be. *(Amended 2026-08-27, WK-668 — the premise's ~1 ms figure was not reproduced. A realistic `ScoringResult` (premium, 20 rate steps, 60 factors, metadata) validates and serialises at p99 0.070 ms, 0.14 % of the 50 ms budget, on the verification machine; `docs/research/w8-spike-resolution.md`. The measured shape is the one the premise describes, so the figure was an over-estimate, not a different context. The design rule is unchanged: validate inbound, never outbound; encode with `ORJSONResponse`.)* *(Amended 2026-08-29, WK-671 Slice 2 — the rule now states the property and no longer names the class. **Validate inbound, never outbound; serialise the trusted result directly with a compiled encoder.** `ORJSONResponse` was named when it was the way to get one. It is deprecated in the pinned FastAPI (0.141.1), it asserts at **render** rather than at import when `orjson` is absent — so a lost dependency boots clean and fails on the first quote — and the replacement its own deprecation notice names, a return type or `response_model`, is outbound validation, which this requirement's first sentence forbids: measured on the verification machine, an annotated route returning a shape that violates its model answers 500, and one returning a valid model drops any extra key. Pydantic v2's own compiled serialiser satisfies the property with no new dependency — `model_dump_json` emits an unvalidated model's contents verbatim, and a raw `Response` carrying those bytes runs no outbound validation at all. Ruled in `docs/rulings/RL-00883-f1-nfr-502-is-amended-to-the-property-it-was-always-about-orjson-is-not-added.md` RL-883.)* |
