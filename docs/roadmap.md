@@ -558,7 +558,7 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170
+works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178
 
 ### WK-668 — **Spike S1/S2 resolution and ADR-706 confirmation**
 
@@ -634,6 +634,8 @@ phase: P2
 
 From “Workstreams” (line 377): Testing: golden quotes, property assertions, regression runs | FR-260, FR-261, FR-262
 
+**2026-09-28 — the charter, named against its own ids** (WK-672 Slice 1, `PL-1177`; `RL-1172` items 4 and 5, the latter quoting the deputy's DP1 decision by delegation, option A). **FR-260:** golden quotes, and the promotion re-scoring that refuses on a mismatch beyond the declared tolerance. **FR-261:** property assertions over generated quote contexts, and the regression runs that execute a suite (`POST /api/v1/rating-versions/{id}/regression-runs`, recorded as `03` §4.9 `RegressionRun`). **FR-262: the backend limb only** — `POST /api/v1/score/compare`, one quote scored against two Rating Versions with the step-level diff; the Quote Sandbox view over it is WK-675's, and FR-262 is delivered only when both limbs have landed. **FR-257 limb (1)** — the approval gate's passing-Regression-Suite check — is also this Work's (`RL-1172` item 4). Slices run 1 → 2 → 3 → 4, one at a time.
+
 
 ### WK-673 — Dislocation with attribution
 
@@ -678,6 +680,8 @@ phase: P2
 ```
 
 From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project
+
+**2026-09-28 — the Quote Sandbox's backend is WK-672's** (`RL-1172` item 5, the deputy's DP1 decision by delegation, option A). The quote sandbox view in this Work consumes `POST /api/v1/score/compare`, which WK-672 builds and tests; this Work builds the view only. FR-262 is delivered only when both limbs have landed.
 
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
@@ -748,13 +752,13 @@ From “Workstreams” (line 380): **File taxonomy, reference coding and custody
 id: WK-696
 family: work
 title: A public face for a public repository — RFC-898, the residue
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 381): A public face for a public repository — RFC-898, the residue | Adopted 2026-09-01 from RFC-898 by the reconciliation's dated acceptance line. The content landed 2026-08-30 under the note's §7 light path (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/` templates — the clause-2 exception's second instance); the exposure is discharged. **The residue: two impact rows.** Row 9 — this roadmap row existing — is discharged by this row itself. Row 6 — the two repository settings (private vulnerability reporting; issues with templates) — is **not verifiable from the tree**: it is evidenced by a dated maintainer line, which is the maintainer's to write and nobody else can supply it. **Acceptance:** the note's §8 (a) and (c)–(e) — the link check, a test issue filed through each form, and the auditor's outsider read of the `README`
+From “Workstreams” (line 381): A public face for a public repository — RFC-898, the residue | Adopted 2026-09-01 from RFC-898 by the reconciliation's dated acceptance line. The content landed 2026-08-30 under the note's §7 light path (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/` templates — the clause-2 exception's second instance); the exposure is discharged. **The residue: two impact rows.** Row 9 — this roadmap row existing — is discharged by this row itself. Row 6 — the two repository settings (private vulnerability reporting; issues with templates) — is **not verifiable from the tree**: it is evidenced by a dated maintainer line, which is the maintainer's to write and nobody else can supply it. **Acceptance:** the note's §8 (a) and (c)–(e) — the link check, a test issue filed through each form, and the auditor's outsider read of the `README` **Closed 2026-09-28 by the deputy's dated line, by delegation, on [`CR-1179`](closures/CR-01179-wk-696-work-close-the-closure-record.md).**
 
 
 ### WK-697 — **One id per governed thing — RFC-937, the whole standard**
@@ -803,6 +807,20 @@ phase: P2
 Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegation 2026-09-27 16:18:24 BST), the second of the two downstream Works RFC-937's closing section names. **Subject:** the process step for each transition in the state machines of `document-ids.md` section 1.2, and the register, instrument and verify tooling those transitions depend on. **Scope, by reference and not restated** (a restated list is the copy that goes stale, RFC-756): every item `CR-1164` (the WK-697 closure record) section 10 lists as taken over with the event "the create-read-retire audit's first slice", and every register row `CR-1167` dispositions to that event. **Status `active`: listed, not started.** Its first slice is the event those rows wait on; no map plan exists yet.
 
 **2026-09-28:** also carries RFC-897 §6 (Stage 4, the create-read-retire verdicts, including the unreferenced-plans decomposition), transferred at WK-695's close (`CR-1176`), 2026-09-28.
+
+### WK-1178 — P2 standing maintenance: hotfixes, dependency bumps and security findings
+
+```yaml
+id: WK-1178
+family: work
+title: 'P2 standing maintenance: hotfixes, dependency bumps and security findings'
+status: active
+created: 2026-09-28
+owner: maintainer
+phase: P2
+```
+
+Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and implement", answering the deputy's GitHub security review; the deputy's entry 13:10:06 BST in the channel, item 1). `process/document-ids.md` (section 1.9, the PR-title rule) routes a PR that arrives without an `SL-` — *"a hotfix, an external contributor, a dependency bump"* — to *"the phase's standing `WK- maintenance`"*, and Phase 2 had none. **Scope:** work that belongs to no other Work; each item names its `FD-` or its trigger. **First items:** the dependency and workflow hardening finding filed with the GitHub security review, discharged by that review's hardening PR. **Status `active`:** a standing item; it closes with its phase.
 
 **Goal:** DAG designer, rate tables, reference data, real-time + batch scoring, dislocation.
 
