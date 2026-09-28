@@ -29,7 +29,12 @@ in full below, because a reader cannot open the channel file.
 **Form.** This follows `CR-1167` (plan review 14): the five `phase-review` questions, then
 Output and Verdict. Its proposals lead, as the brief orders.
 
-## Scope and evidence
+## Scope
+
+The P2 phase as `docs/roadmap.md`'s `## P2` section defines it at `9f6bfed1`: its 17 Works, the
+specs their FRs cover, and every register row whose Phase column includes 2.
+
+## Evidence
 
 - **Tree.** Everything was read at `9f6bfed1`. The merged PRs of 2026-09-28 read there are:
   #853 and #858 (WK-672 Slice 1), #839 (WK-695), #849 (WK-696), #830, #855, #860, #861 and
