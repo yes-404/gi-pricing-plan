@@ -1347,18 +1347,9 @@ def compute_gbm_diagnostics(
                 )
             )
             continue
-        # A factor with no column that is not a cross has nothing to hold at a value. A
-        # cross is swept through its operands' columns (FR-177, below).
-        if not factor.source_columns and factor.type is not FactorType.INTERACTION:
-            dependence.append(
-                PartialDependence(
-                    factor=factor.slug,
-                    omitted=PartialDependenceOmission(
-                        reason=PartialDependenceOmissionReason.NO_SOURCE_COLUMN,
-                    ),
-                )
-            )
-            continue
+        # Every factor reaching `_sweep` sources a column of its own or is a cross, which is
+        # swept through its operands' columns (FR-177): `Factor._columns_match_the_type`
+        # refuses any other factor with no `source_columns`.
         labels, means, shares, omitted = _sweep(
             result, booster, spec, factors, holdout, factor,
             bandings=bandings, groupings=groupings,

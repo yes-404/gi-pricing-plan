@@ -398,11 +398,12 @@ class PartialDependenceOmissionReason(enum.StrEnum):
     #: has to be *scored*, and a synthetic level the model never saw is refused at encoding
     #: (FR-131). So they are named as missing rather than summarised.
     LEVEL_CAP = "level_cap"
-    #: **Reserved.** The factor sources no column of its own, so there is nothing to hold at
-    #: a value. Since FR-177 no `interaction` carries it -- a cross is held through its
-    #: operands' columns together, at one observed cell -- and no producer currently emits
-    #: it. It stays in the contract because diagnostics artifacts written before FR-177
-    #: carry it for every cross, and a persisted value must keep validating (DP-FR177-1).
+    #: **Reserved: no producer emits this.** It meant "the factor sources no column of its
+    #: own, so there is nothing to hold at a value". The only factor with no source column
+    #: is an `interaction` (`Factor._columns_match_the_type` refuses every other), and since
+    #: FR-177 a cross is swept through its operands' columns, so nothing reaches this reason.
+    #: It stays in the contract because diagnostics artifacts written before FR-177 carry it
+    #: for every cross, and a persisted value must keep validating (DP-FR177-1).
     NO_SOURCE_COLUMN = "no_source_column"
     #: The factor is an operand of an `interaction`, and is skipped (FR-178). It **does**
     #: have a column, which is why `no_source_column` would be false of it: the reason it

@@ -145,3 +145,52 @@ def test_a_prohibition_still_needs_its_reason() -> None:
 def test_a_monotonic_direction_still_needs_its_rationale() -> None:
     with pytest.raises(pydantic.ValidationError, match="rationale"):
         _factor(monotonic_direction=MonotonicDirection.DECREASING)
+
+
+# -- the premise behind NO_SOURCE_COLUMN's retirement (FR-177) -------------------------------
+
+
+@pytest.mark.req("FR-177")
+@pytest.mark.parametrize(
+    "factor_type", [t for t in FactorType if t is not FactorType.INTERACTION]
+)
+def test_only_an_interaction_may_source_no_columns(factor_type: FactorType) -> None:
+    """The diagnostics no longer handle a factor with no source column, because the model
+    refuses one: `Factor._columns_match_the_type`. If this stops raising, the GBM sweep
+    reaches `source_columns[0]` on an empty tuple again."""
+    with pytest.raises(pydantic.ValidationError, match="names no source_columns"):
+        _factor(type=factor_type, source_columns=())
+
+
+@pytest.mark.req("FR-177")
+def test_a_persisted_no_source_column_omission_still_validates() -> None:
+    """DP-FR177-1: the reason is reserved, not removed -- artifacts written before FR-177
+    carry it for every cross."""
+    from model_schema import PartialDependenceOmission
+
+    old = PartialDependenceOmission.model_validate({"reason": "no_source_column"})
+    assert old.reason.value == "no_source_column"
+
+
+@pytest.mark.req("FR-177")
+def test_nothing_builds_a_factor_around_the_validators() -> None:
+    """The premise above holds only while a Factor cannot be built without validation.
+    `model_construct(` skips every validator, so a producer using it could put an
+    empty-`source_columns` non-interaction into the diagnostics, which no longer handle one.
+    A new caller must either not use it or restore the handling in
+    `compute_gbm_diagnostics`."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    hits = [
+        str(path.relative_to(root))
+        for base in (root / "packages", root / "backend" / "src")
+        for path in base.rglob("*.py")
+        if "tests" not in path.parts
+        and ".venv" not in path.parts
+        and "model_construct(" in path.read_text(encoding="utf-8")
+    ]
+    assert hits == [], (
+        "model_construct( bypasses Factor._columns_match_the_type, which the diagnostics "
+        f"rely on to never see a non-interaction factor with no source_columns: {hits}"
+    )
