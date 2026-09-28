@@ -1187,7 +1187,9 @@ def compute_gbm_diagnostics(
     for factor in factors:
         # FR-178. An operand of a cross is emitted with no points and its reason, for the
         # same visibility FR-176 wants of the cross: swept alone it recombines the pair
-        # into cells the fit never saw, which `predict_gbm` refuses.
+        # into cells the fit never saw, which `predict_gbm` refuses. Its monotonicity check
+        # is skipped too: an operand is not a booster feature (the feature order is the
+        # cross), so a monotone constraint cannot bind on it.
         if factor.id in operand_ids:
             dependence.append(
                 PartialDependence(
