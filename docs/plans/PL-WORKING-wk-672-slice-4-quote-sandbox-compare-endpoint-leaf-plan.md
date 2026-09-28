@@ -95,7 +95,12 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
     - `uv run python scripts/req-coverage.py` shows an FR-262 row with the route tests attached, and the ledger types FR-262 as `RL-1172` §5 requires: *"backend limb delivered and tested (WK-672); UI limb reassigned to WK-675"*, not as delivered.
     - The four docs checks pass on a detached copy, with DISCLOSED no higher than main's.
     - `git diff --stat origin/main...HEAD` lists only the Files blocks' paths, the ledger and `docs/INDEX.md`.
-11. **The deputy's merge acknowledgement is recorded** on the PR before the lead merges, and the slice's clean audit is filed. Per `CLAUDE.md` §13 a Slice closes on a clean audit and the lead's merge; no maintainer acceptance line is required for this slice. The Work close is a separate record and the maintainer's.
+11. **The meaning of `own_change: false` is fixed in words** (the deputy's condition on F5).
+    - `grep -c 'no own change attributable from the traces' docs/specs/03-rating-engine.md packages/model-schema/src/model_schema/scoring.py` prints at least 1 for each file.
+    - `grep -n 'own_change' packages/model-schema/src/model_schema/scoring.py | grep -i unchanged` prints nothing, and the `own_change` field description in `scoring.py` does not contain the word "unchanged" (a test reads `StepChange.model_fields["own_change"].description` and asserts both).
+    - The open question of Task 1 Step 5 is present in both `docs/open-questions.md` and `03` §10.
+    - The ledger's hand-off note to WK-675 carries the "do not render as unchanged" sentence of "Hand-off" below.
+12. **The deputy's merge acknowledgement is recorded** on the PR before the lead merges, and the slice's clean audit is filed. Per `CLAUDE.md` §13 a Slice closes on a clean audit and the lead's merge; no maintainer acceptance line is required for this slice. The Work close is a separate record and the maintainer's.
 
 ## Global Constraints
 
@@ -152,6 +157,14 @@ The deputy's entry, quoted whole from `channel/to-lead.md` (2026-09-28 21:08:30 
 - FR-262's typing at WK-672's close stays as RL-1172 fixed it: backend limb delivered and tested; UI limb reassigned to WK-675.
 ```
 
+The deputy's second entry on the audit's F5 finding (a downstream step that is itself edited and whose input moved), quoted whole from the same file (2026-09-28 21:10:34 BST, "#872 audit F5 (masked chained edit)"), which qualifies DP-S4-2:
+
+```text
+- Accepted for S4: the limitation is stated in §4.10 and pinned by a known-limit test (two chained edits: the downstream step reads `own_change: false`). The RL-1172 proof and my 21:08:30 conditions are unaffected; they are single-edit.
+- Condition: §4.10, and the model-schema field description, define `own_change: false` as "no own change attributable from the traces", never "unchanged" or "not edited". WK-675's sandbox must not render it as "unchanged". Put that in the #872 hand-off note to WK-675.
+- Follow-up, owned: raise an OQ (working id at its PR's turn) proposing that `own_change` be derived from step-definition equality by `step_id`, including the step's pinned table and artifact refs, from the two compiled algorithms, instead of from `consumed` equality. That detects masked edits exactly. Owner: WK-675 (the sandbox consumer), to decide before its compare view ships. It is mirrored in `open-questions.md` and `03` §10. Not S4 scope.
+```
+
 Task 0 stops the executor if any of these entries is missing from the record the lead names.
 
 ## Tasks
@@ -164,18 +177,27 @@ Task 0 stops the executor if any of these entries is missing from the record the
 
 ### Task 1: Spec — `03` §4.10, §5.1, §5.2, FR-262
 
-**Files:** Modify `docs/specs/03-rating-engine.md`.
+**Files:** Modify `docs/specs/03-rating-engine.md` and `docs/open-questions.md`.
 
 - [ ] **Step 1, §4.10 `ScoreComparison`.** Add a section after §4.9 (S3's section) with:
   - the request, per DP-S4-3: `{"context": <QuoteContext without options.rating_version_ref>, "base": "rating_version:motor-gb@27", "comparison": "rating_version:motor-gb@28"}`;
   - the response, `{"base": <ScoringResult>, "comparison": <ScoringResult>, "diff": {"steps": [...], "unchanged": 11}}`, both results traced;
   - a worked `diff.steps` entry with `step_id`, `change` (`added` | `removed` | `changed`), `changed_fields` (a subset of `type`, `label`, `consumed`, `produced`, `matched`, `violation`), `own_change` and both `TraceStep`s (`null` on the missing side);
+  - the meaning of `own_change: false`, in these words: **"no own change attributable from the traces"**, never "unchanged" or "not edited" (the deputy's F5 condition);
   - the stated limitation of `own_change` (auditor-b F5): it is derived from `consumed`, so a downstream step that is itself edited *and* whose input moved reads `own_change: false`; the diff reports the change but cannot separate the two causes. `RL-1172`'s one-step acceptance still holds;
   - the prose rules of DP-S4-2: steps match by `step_id`; `elapsed_us` is recorded and never compared; values compare as canonical JSON, so `1` and `1.0` differ; `steps` lists base steps in base order, then added steps in comparison order.
 - [ ] **Step 2, §5.1.** Replace the row's text with the permission (DP-S4-3), the status codes (200; 401; 403; 404; 409 `BUNDLE_COMPILE_FAILED`; 422 with FR-255's per-quote codes or a context carrying its own ref) *"nothing is persisted or logged (NFR-499)"*, and the DP-S4-5 (a) behaviour verbatim in substance: *"a per-quote error on either side answers 422 with that code, and the problem names the failing side (`base` or `comparison`)"*, marked `**Amended 2026-09-28**`. The deputy's condition: this wording lands in the same commit as the route, so a later switch to a 200 with a partial result is visibly a breaking change. Task 1 is therefore committed with Tasks 4 and 5, not before them.
 - [ ] **Step 3, §5.2.** Add to the `pricing_core/rating/` blocks: `def diff_traces(base: Trace, comparison: Trace) -> TraceDiff` in `trace_diff.py`, dated.
 - [ ] **Step 4, FR-262.** Add a dated clarification, with no new id: *"(Clarified 2026-09-28, WK-672 Slice 4, `RL-1172` §5.) The endpoint `POST /api/v1/score/compare` delivers the backend limb: two `score_one` calls and a step-level trace diff, no new evaluator. The Quote Sandbox view is WK-675's."*
-- [ ] **Step 5.** Run `python3 scripts/audit-docs.py` (no new failure row). The commit is the slice's one code PR commit: spec, code, tests and the regenerated contracts land together (`CLAUDE.md` §2).
+- [ ] **Step 5, the open question (the deputy's F5 follow-up).** Copy this text into `docs/open-questions.md` and into `03` §10 as a mirrored row, owner WK-675. Its id is minted at the S4 code PR's turn (S3 holds 9301 to 9303).
+
+  ```text
+  Highest ids in use: OQ-656. Next free: `OQ-9401`
+  Should `StepChange.own_change` be derived from step-definition equality instead of `consumed` equality? Today (WK-672 Slice 4, `03` §4.10) `own_change` is derived from the two traces: it is true for an added or removed step, and for a changed step whose `consumed` is identical on both sides. A downstream step that is itself edited and whose input also moved reads `own_change: false`, which means "no own change attributable from the traces" and never "unchanged". Option (a): keep the trace-derived rule and the stated limit. Option (b): derive it from step-definition equality by `step_id`, including each step's pinned table and artifact refs, across the two compiled algorithms; that detects masked edits exactly, but the diff then needs both algorithms as well as both traces. Recommendation: (b), decided by WK-675 before its compare view ships. Owner: WK-675. Not Slice 4 scope; the route and `diff_traces` do not change for it.
+  ```
+
+  Add the mirrored `03` §10 row and the `open-questions.md` row in the format their neighbours use.
+- [ ] **Step 6.** Run `python3 scripts/audit-docs.py` (no new failure row). The commit is the slice's one code PR commit: spec, code, tests and the regenerated contracts land together (`CLAUDE.md` §2).
 
 ### Task 2: `model-schema` — the shapes and the contract
 
@@ -201,7 +223,14 @@ class StepChange(BaseModel):
     step_id: str
     change: StepChangeKind
     changed_fields: list[TraceStepField] = Field(default_factory=list)
-    own_change: bool
+    own_change: bool = Field(
+        description=(
+            "True for an added or removed step, and for a changed step whose consumed inputs are "
+            "identical on both sides. False means no own change attributable from the traces; "
+            "it does not mean the step is unchanged (a downstream step can be edited and also "
+            "consume a moved value)."
+        )
+    )
     base: TraceStep | None = None
     comparison: TraceStep | None = None
 
@@ -239,7 +268,7 @@ class ScoreComparison(BaseModel):
     diff: TraceDiff
 ```
 
-- [ ] **Step 1.** Write the failing tests in `test_scoring_compare.py`: a request carrying `options.rating_version_ref` is refused; `extra="forbid"` refuses an unknown key; a `StepChange` with `change="changed"` round-trips through `model_dump_json`/`model_validate_json`. Run: `uv run pytest packages/model-schema/tests/test_scoring_compare.py -q`. Expected: FAIL with an `ImportError` naming `ScoreCompareRequest`.
+- [ ] **Step 1.** Write the failing tests in `test_scoring_compare.py`: the `own_change` field description contains `no own change attributable from the traces` and does not contain `unchanged` (the deputy's F5 condition, acceptance item 11); a request carrying `options.rating_version_ref` is refused; `extra="forbid"` refuses an unknown key; a `StepChange` with `change="changed"` round-trips through `model_dump_json`/`model_validate_json`. Run: `uv run pytest packages/model-schema/tests/test_scoring_compare.py -q`. Expected: FAIL with an `ImportError` naming `ScoreCompareRequest`.
 - [ ] **Step 2.** Add the classes, export them in `__init__.py` and add `"score-comparison": "ScoreComparison"` to `GENERATED_SHAPES` with the dated comment its neighbours carry (*no hand-authored Phase-0 counterpart; `03` §4.10 is the shape's first written form*), the precedent being `model-comparison` and `dataset-lineage`. Run the tests: PASS.
 - [ ] **Step 3.** Run `uv run python scripts/generate-contracts.py`, then `--check` (rc 0) and `uv run pytest backend/tests/test_contracts.py -q`. Follow `contract-guard` if a walker asks for a scope line. The OpenAPI document gains the route only in Task 4; commit this step's generated schema now.
 - [ ] **Step 4.** Commit.
@@ -449,6 +478,14 @@ async def score_compare(
 ### Task 6: The gate and the ledger
 
 - [ ] Run acceptance items 9 and 10: `pnpm --dir frontend generate:api` and the rest of the two-half gate, the five-run repeat of `test_rating_score.py` with its stop rule (a native abort moves `FD-1199`'s triage ahead of the slice), `uv run python scripts/req-coverage.py` for FR-262, and the four docs checks on a detached copy. Record every rc and the `HEAD` in the slice's `LG-` ledger (its id comes from the lead), record `git diff --stat origin/main...HEAD`, then open the PR.
+
+## Hand-off
+
+The slice's ledger (`LG-`) carries this note to WK-675, the sandbox view's owner, and the PR description repeats it:
+
+> `StepChange.own_change == false` means **"no own change attributable from the traces"**. **Do not render it as "unchanged" or "not edited".** A downstream step that was itself edited and whose input also moved reads `false` (the known limit `03` §4.10 states and Task 3's known-limit test pins). Whether `own_change` should be derived from step-definition equality instead is the open question of Task 1 Step 5, owned by WK-675, to be decided before its compare view ships.
+
+The ledger also records FR-262's typing at the Work close: backend limb delivered and tested; UI limb reassigned to WK-675.
 
 ---
 
