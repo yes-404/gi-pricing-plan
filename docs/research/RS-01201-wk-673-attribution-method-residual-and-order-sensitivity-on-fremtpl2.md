@@ -1,9 +1,9 @@
 ---
-id: RS-WORKING
+id: RS-1201
 family: research
 kind: spike
 title: WK-673 attribution method — residual share and order sensitivity on freMTPL2 (spike F3, written from its salvage)
-status: draft
+status: active
 created: 2026-09-28
 owner: executor
 tree: df8e5811a151a99c7317690faf9278a6dc3400be
@@ -13,7 +13,7 @@ corrected_by: []
 relates: [FR-266, FR-263]
 ---
 
-# RS-WORKING — WK-673 attribution method: residual share and order sensitivity (spike F3)
+# RS-1201 — WK-673 attribution method: residual share and order sensitivity (spike F3)
 
 Spike F3 of Track F was run on 2026-09-28 by the executor `spike-f3`. **It was stopped
 after three load-guardrail breaches, 2026-09-28**, before it filed a record. **This record
@@ -234,6 +234,26 @@ Given by the maintainer's delegation (28 Sep), against my 11:39:35 criterion. It
 - **#833 carries this entry verbatim** in its Decision section, in fenced blocks as #832 does.
 - The FR-266 amendment is a spec change in WK-673's first slice, not in #830.
 - **F1's partial record** is still to come. I decide it on the record.
+```
+
+The deputy later corrected the hard gate, rule 1 of the criterion, by a dated line. The
+whole entry is quoted verbatim from the same channel file:
+
+```text
+## 2026-09-28 13:57:02 BST · deputy · (1) cwd rule (2) RESTATED in a keepable form; (2) F3's hard gate CORRECTED by a dated line to integer minor units (FR-273). The WK-673/674 map-plan adoptions are noted
+
+**(1) The working form of cwd rule (2)**, replacing "a spawned agent's session cwd is its worktree", which the harness defeats (isolation worktrees are auto-removed after a turn that changes nothing, and Bash is then refused):
+- A spawned agent's **session cwd may be the root**. It **never writes in the root**: no file edit, no git write, no build output.
+- **Every process it launches runs with `env -C <its job-dir tree>`** (or `git -C` / `--project` with an absolute path), and its first report quotes `readlink /proc/<pid>/cwd` for one launched process.
+- Around each git write it quotes root `git status --porcelain` before and after (0 lines both times).
+- A breach is handled agent-first (the 11:59 rule).
+- This form is in force now, and your respawn of planner-673/674/690 satisfies it. **Plan review 15** records the harness limit and this working form as a finding against the spawn brief (with the three root-cwd incidents of this morning). Its proposal is the place for any durable fix (a brief template, or a guard).
+
+**(2) F3, a dated correction. It supersedes the hard-gate wording of my 11:39:35 criterion (rule 1) and of my 12:10:21 decision (item 4, first bullet):**
+
+> *Corrected 2026-09-28 13:57:02 BST by the deputy.* "Exact reconciliation … in Decimal on the rating path" and "the rating path's own arithmetic (Decimal / integer minor units through the engine)" are replaced by: **exact reconciliation in integer minor units, as the rating path produces them.** The ZEN engine is float64 at its boundary. `03` FR-273 (`03:220` at `6c6f4532`): *"The binding accepts no decimal type and returns `float`"*, so money crosses only as integer minor units. Each output is rounded by `_round_minor` (`packages/pricing-core/src/pricing_core/rating/score.py:526`, `int(Decimal(repr(raw)).quantize(…))`). The gate is therefore: every attribution part, the interaction-residual line and the total are **integers in minor units taken from the engine's own `value_minor` outputs**, and the parts (plus the residual) sum to the total **exactly as integers**, per policy and at portfolio level. No float is summed after rounding. Shapley's rational × K! and the largest-remainder allocation run on those integers. **CLAUDE.md §7 permits this** ("integer pence/cents, or Decimal in the rating path"). The broken-input test and the "on ZEN, not a Polars mirror" requirement stand unchanged.
+
+WK-673's S1 FR-266 amendment cites this line. #833 (F3's RS record) appends it fenced after my 12:10:21 quote, before its mint. **The WK-673/674 map-plan proposals are adopted, as noted.** Their maintainer-resolver DPs come to me as they arise.
 ```
 
 ## What remains
