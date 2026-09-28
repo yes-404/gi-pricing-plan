@@ -16,6 +16,7 @@ from app.db.models import (
     DiagnosticsRow,
     ModelRow,
     PerilStructureRow,
+    RatingVersionRow,
     ValidationRuleRow,
 )
 from app.db.session import Database
@@ -35,6 +36,9 @@ from model_schema import (
 
 MODEL_SLUG = "motor-ad-frequency"
 MODEL = f"model:{MODEL_SLUG}@7"
+
+#: Who created the fixture model: nobody who submits or decides in these tests.
+MODEL_AUTHOR = new_uuid7()
 
 #: Every artifact type a module in this build can resolve a reference for (FR-386).
 #: `rating_version` is deliberately absent — it has a policy entry and no module, and
@@ -74,6 +78,24 @@ def client(api_settings: Settings) -> TestClient:
         yield c
 
 
+#: Every approvable type: `RESOLVABLE` plus `rating_version`, whose resolver
+#: (`api/approvals.py::_resolve_rating_version`) arrived after that tuple was written.
+APPROVABLE = (*RESOLVABLE, "rating_version")
+
+#: The action each type's creation path records, restated here from the create paths
+#: themselves (`modelling.reserve`'s `model.reserved`, and `<type>.created` for the rest)
+#: rather than imported from the check, so a wrong entry in the check's table fails a test.
+CREATION_ACTION = {
+    "model": "model.reserved",
+    "custom_objective": "custom_objective.created",
+    "custom_metric": "custom_metric.created",
+    "peril_structure": "peril_structure.created",
+    "validation_rule": "validation_rule.created",
+    "dataset_version": "dataset_version.created",
+    "rating_version": "rating_version.created",
+}
+
+
 def _headers(principal_id, workspace_id) -> dict[str, str]:
     """Headers for a caller granted in `workspace_id` (W6b-11).
 
@@ -104,6 +126,21 @@ async def approver_headers(workspace_id, grant) -> dict[str, str]:
 #: and `metrics.resolve_ref` both re-validate the row through the contract on the way out,
 #: so a stub `{}` here is refused by `Applicability` before the route can answer at all.
 _APPLICABILITY = TEMPLATE_APPLICABILITY[ObjectiveTemplate.POISSON].model_dump(mode="json")
+
+
+async def _record_creation(session, workspace_id, artifact_type: str, ref: str, author) -> None:
+    """Record `ref`'s creation Audit Event, as the owning module's create path does."""
+    from app.platform import audit
+    from model_schema import ActorKind, JobSource, Principal
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=Principal(kind=ActorKind.USER, id=author, display="author@insurer.example"),
+        source=JobSource.API,
+        action=CREATION_ACTION[artifact_type],
+        entity_ref=ref,
+    )
 
 
 async def _create_artifact(
@@ -199,6 +236,18 @@ async def _create_artifact(
                     slug=slug,
                     created_by=new_uuid7(),
                     currency="GBP",
+                )
+            )
+        elif artifact_type == "rating_version":
+            session.add(
+                RatingVersionRow(
+                    workspace_id=workspace_id,
+                    slug=slug,
+                    version=version,
+                    status="draft",
+                    dataset_version_id=new_uuid7(),
+                    model_ref=MODEL,
+                    created_by=new_uuid7(),
                 )
             )
         else:  # pragma: no cover - a new member of RESOLVABLE with no factory
@@ -308,6 +357,12 @@ async def the_model_every_test_here_pins(database: Database, workspace_id) -> No
             model.diagnostics_id = diagnostics.id
             model.status = ModelStatus.REVIEW.value
             await session.flush()
+            # The creation event `modelling.reserve` records: its actor is the version's
+            # author (`06` FR-353 as amended 2026-09-28), and without it every decision on
+            # this model fails closed as APPROVAL_AUTHOR_UNRESOLVED.
+            await _record_creation(
+                session, workspace_id, "model", f"model:{MODEL_SLUG}@{number}", MODEL_AUTHOR
+            )
 
 
 @pytest.mark.req("FR-351")
@@ -666,3 +721,91 @@ def test_the_missing_policy_is_answered_before_the_missing_artifact(
     )
     assert response.status_code == 422, response.text
     assert response.json()["title"] == "No approval policy for this artifact type"
+
+
+# -- the author may not approve (FR-353 as amended 2026-09-28) -------------------------
+
+async def _create_authored(
+    database: Database, workspace_id, artifact_type: str, slug: str, version: int, author
+) -> str:
+    """`_create_artifact`, plus the creation Audit Event a real create path records.
+
+    The event is what names the author (`06` FR-353 as amended): its actor is the person
+    the approval check compares against.
+    """
+    await _create_artifact(database, workspace_id, artifact_type, slug, version)
+    ref = f"{artifact_type}:{slug}@{version}"
+    async with database.unit_of_work() as session:
+        await _record_creation(session, workspace_id, artifact_type, ref, author)
+    return ref
+
+
+@pytest.mark.req("FR-353")
+@pytest.mark.parametrize("artifact_type", APPROVABLE)
+async def test_the_author_cannot_approve_a_version_someone_else_submitted(
+    client: TestClient, database: Database, workspace_id, grant, submitter_headers,
+    artifact_type: str,
+) -> None:
+    """FR-353 as amended: the approver may be neither the submitter nor the author.
+
+    The author holds the approver role and is not the submitter, so neither the route's
+    permission check nor R1's submitter check can be what refuses — only the author check
+    can. One case per approvable type, because the check must hold on every one of them.
+    """
+    await _allow_the_type(client, workspace_id, grant, database, artifact_type)
+    author = new_uuid7()
+    await grant("approver", principal_id=author)
+    slug = f"{artifact_type.replace('_', '-')}-authored"
+    ref = await _create_authored(database, workspace_id, artifact_type, slug, 1, author)
+
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": ref, "change_summary": "Authored elsewhere."},
+        headers=submitter_headers,
+    )
+    assert created.status_code == 201, created.text
+
+    response = client.post(
+        f"/api/v1/approval-requests/{created.json()['id']}/decide",
+        json={"decision": "approve"},
+        headers=_headers(author, workspace_id),
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["code"] == "AUTHOR_CANNOT_APPROVE"
+
+
+@pytest.mark.req("FR-353")
+@pytest.mark.parametrize("artifact_type", APPROVABLE)
+async def test_a_version_with_no_creation_event_cannot_be_approved(
+    client: TestClient, database: Database, workspace_id, grant, submitter_headers,
+    approver_headers, artifact_type: str,
+) -> None:
+    """Fail closed: with no creation Audit Event there is no author to compare against, and
+    an approval that cannot be checked is refused rather than allowed."""
+    await _allow_the_type(client, workspace_id, grant, database, artifact_type)
+    slug = f"{artifact_type.replace('_', '-')}-unevented"
+    await _create_artifact(database, workspace_id, artifact_type, slug, 1)
+
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": f"{artifact_type}:{slug}@1", "change_summary": "x"},
+        headers=submitter_headers,
+    )
+    assert created.status_code == 201, created.text
+
+    response = client.post(
+        f"/api/v1/approval-requests/{created.json()['id']}/decide",
+        json={"decision": "approve"},
+        headers=approver_headers,
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["code"] == "APPROVAL_AUTHOR_UNRESOLVED"
+
+
+@pytest.mark.req("FR-353")
+def test_the_check_knows_the_creation_action_of_every_approvable_type() -> None:
+    """The check's table and the create paths' actions are one mapping, over all seven."""
+    from app.platform import approvals
+
+    assert dict(approvals.CREATION_ACTIONS) == CREATION_ACTION
+    assert set(CREATION_ACTION) == set(APPROVABLE)
