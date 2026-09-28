@@ -42,7 +42,7 @@ At `origin/main` `633c6f34`:
   logged in full outside sampled traces"*, and its 2026-08-30 clarification (`RL-917`) is about persistence as well as
   log output. Dataset levels are not quote inputs, so the requirement does not reach this text.
 
-### Does GbmFitError level text reach a sink today? Traced by reading; the measurement is queued
+### Does GbmFitError level text reach a sink today? Traced by reading, then measured
 
 **The path, read at `origin/main`:** `fit_gbm` (`gbm.py:603`) encodes the **holdout** with the training encoding maps
 (`gbm.py:675`, `_encode(holdout_matrix, factors, maps=encodings, bandings=bandings)`). A holdout that carries a
@@ -55,11 +55,26 @@ that detail as `JobError.message` and logs the exception with its traceback to t
 the code: **the stored `JobError.message`, and the process log.** The persisted `job_logs` do not carry it, because
 `JobLogCapture.emit` keeps only `record.getMessage()` (`worker/logs.py:45`–`:47`).
 
-**Measured:** only that these lines exist and connect. **No run has yet shown a level in a stored Job error.** The
-measurement is: fit a GBM through `execute_job` whose holdout has one level absent from training, with a sentinel
-level name, and read `jobs.error`, the persisted `job_logs` and the process log. It needs a database and a test run,
-so it is queued for after the quiet window (`nice -n 10`, a per-tree database) and this record is updated with its
-result. The other `str(exc)` sites listed above were not each read for their exception classes.
+**Measured 2026-09-29 00:12 BST at `origin/main` `633c6f34`,** with a throw-away test through `execute_job` at `nice -n 10`, on a
+per-tree database recreated from the template and migrated to head (S-14). It ingests a 400-row book whose `area` column
+holds one row with the sentinel level `zz99sentinel9zz`, splits it through the real derive Jobs, and fits an XGBoost GBM
+through the real `MODEL_FIT` job. The first sentinel position that landed alone in the holdout was row 12; the fit
+failed:
+
+| Sink | Sentinel level present |
+|---|---|
+| stored `JobError.message` (code `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`) | **yes** |
+| any field of the stored `JobError` | yes |
+| persisted `job_logs` | no |
+| process log (the captured log records with tracebacks) | **yes** |
+
+The stored message read: `factor 'area' carries level(s) ['zz99sentinel9zz'] that the fitted model never saw, so they have no
+code in its persisted encoding map (FR-131).` So the answer to "is `GbmFitError` level text persisted today" is **yes, in
+`JobError.message` and in the process log, and not in the persisted job logs**, which confirms the trace above. The level
+belongs to the fitter's own dataset, so the person who ran the job already knows it, but the stored error is readable by
+anyone with `job:read` in the workspace. The throw-away test is kept outside the repository, as
+`trees/auditor-b-883.demo-fd9023.py`. The other `str(exc)` sites listed above were not each read for their exception
+classes, and were not run.
 
 ## Why it is still a question
 
@@ -71,4 +86,4 @@ error text. This finding does not decide whether one should.
 
 **Deferred with an owner — WK-1178**, confirmed by the deputy. The fix is the same sanitiser `FD-9021` adds in `pricing-core`,
 with the level given **by position, not by value** (for example "level 3 of factor `x`"). It is not in #889's scope.
-Event: that sanitiser applied to these paths, and the queued measurement recorded here.
+Event: that sanitiser applied to these paths.
