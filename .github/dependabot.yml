@@ -1,0 +1,54 @@
+# Dependabot version updates (the 2026-09-28 security review's S2, version-update half).
+#
+# Three ecosystems, one per lockfile the repository commits:
+#   - uv             the root workspace (`pyproject.toml` + `uv.lock`, CLAUDE.md §2)
+#   - npm            `/frontend` (`pnpm-lock.yaml`; Dependabot's npm ecosystem reads pnpm lockfiles)
+#   - github-actions every `uses:` in `.github/workflows/` (each pinned to a 40-hex SHA)
+#
+# Weekly, one grouped PR per ecosystem, at most three open at a time, so a bump arrives
+# as a reviewable batch rather than a stream.
+#
+# Commit messages: `chore(deps)` with the scope included, a Conventional Commits title
+# (CLAUDE.md §10). `history-policy.yml` checks commit messages, not files; a Dependabot
+# message carries no session link, so it passes that check (proved on the PR that added
+# this file). Bot PRs carry no `SL-`: `document-ids.md` exempts bot authors.
+#
+# Settings are not configured here: automated security fixes, code scanning and secret
+# scanning are repository settings and the maintainer's.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      python:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      frontend:
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      actions:
+        patterns: ["*"]
