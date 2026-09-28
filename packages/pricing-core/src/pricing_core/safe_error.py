@@ -128,7 +128,10 @@ def safe_error_detail(exc: BaseException) -> str:
 def safe_error_text(exc: BaseException) -> str:
     """`Type` or `Type: detail` for `exc`, with no input value in it."""
     detail = safe_error_detail(exc)
-    return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
+    # A `CodedError` is rendered as the `ValueError` it always was: the class is the allow-list's
+    # marker, not something a reader or a stored message should see.
+    name = "ValueError" if isinstance(exc, CodedError) else type(exc).__name__
+    return f"{name}: {detail}" if detail else name
 
 
 def safe_exc_info(

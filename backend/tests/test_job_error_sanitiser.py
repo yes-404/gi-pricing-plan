@@ -302,21 +302,26 @@ async def test_a_third_party_error_wearing_our_code_prefix_is_stored_type_only(
 
 
 @pytest.mark.req("NFR-499")
-async def test_a_genuine_coded_error_keeps_its_message_through_the_job_store(
+async def test_a_genuine_coded_error_is_stored_as_it_was_before_minus_its_value(
     database: Database, workspace_id, principal
 ) -> None:
-    """The positive control: our own `CodedError` is what the allow-list keeps."""
+    """The positive control, and the byte-identity check for the Job path. `CodedError` is only
+    the allow-list's marker; the stored form is what `origin/main` stored for the same
+    `ValueError`: `worker/tasks.py:229-230` builds `code="JOB_HANDLER_FAILED"` and
+    `message=f"{type(exc).__name__}: {exc}"`, i.e. `ValueError: <CODE: text>`, with no class name
+    of ours in it. The one difference is the value: `origin/main`'s text for this site was
+    `input 'driver_age'=987654321 is above the declared maximum 99`."""
     from pricing_core.safe_error import CodedError
 
+    text = "INPUT_CONTRACT_VIOLATION: input 'driver_age' is above the declared maximum 99"
+
     def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
-        raise CodedError(
-            "INPUT_CONTRACT_VIOLATION: input 'driver_age' is above the declared maximum 99"
-        )
+        raise CodedError(text)
 
     row = await _run(database, workspace_id, principal, handler)
 
     assert row.error is not None
-    assert row.error["message"] == (
-        "CodedError: INPUT_CONTRACT_VIOLATION: input 'driver_age' is above the declared maximum 99"
-    )
+    assert row.error["code"] == "JOB_HANDLER_FAILED"
+    assert row.error["message"] == f"ValueError: {text}"
+    assert "CodedError" not in row.error["message"]
 

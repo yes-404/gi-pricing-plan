@@ -23,7 +23,8 @@ from test_rating_score import _algorithm_payload, _ctx, _version
 from model_schema.refs import ArtifactRef
 from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
-from pricing_core.rating.score import score_batch, score_one
+from pricing_core.rating.score import _batch_error_code, score_batch, score_one
+from pricing_core.safe_error import CodedError
 
 _SENTINEL = "SENTINEL-quote-input-3c9d0a17"
 _BIG = 987654321
@@ -243,3 +244,23 @@ async def test_a_coded_input_error_names_the_field_and_constraint_and_never_the_
             assert fragment in str(caught.value), (site, str(caught.value))
         for value in forbidden:
             assert value not in str(caught.value), (site, str(caught.value))
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_batch_error_row_is_byte_identical_to_the_pre_change_form_minus_the_value() -> None:
+    """`origin/main`'s `_batch_error_code` (`score.py:887-891`) returned `(code, rest)` for a
+    `CODE: message` text, so an error row carried `error_code = "INPUT_CONTRACT_VIOLATION"` and
+    `error_message` = the message half. For the maximum site that message was `input
+    'driver_age'=987654321 is above the declared maximum 99`; the value is the only thing
+    removed. The code is still parsed out, and it is still the contract (FR-403)."""
+    bundle = await _bundle()
+    inputs = {**_VALID, "driver_age": _BIG}
+    out = score_batch(bundle, pl.DataFrame([_row(inputs, "2026-09-01")]).lazy()).collect()
+    row = out.to_dicts()[0]
+    assert row["error_code"] == "INPUT_CONTRACT_VIOLATION"
+    assert row["error_message"] == "input 'driver_age' is above the declared maximum 99"
+    assert _batch_error_code(CodedError("INPUT_CONTRACT_VIOLATION: a message")) == (
+        "INPUT_CONTRACT_VIOLATION",
+        "a message",
+    )
+

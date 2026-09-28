@@ -228,7 +228,7 @@ def test_a_list_index_and_a_declared_field_name_are_kept_and_bounds_are_shown() 
 @pytest.mark.req("NFR-499")
 def test_a_coded_error_keeps_its_text_and_anything_else_is_its_type_only() -> None:
     coded = CodedError("INPUT_CONTRACT_VIOLATION: input 'channel' is not in ['direct', 'broker']")
-    assert safe_error_text(coded) == f"CodedError: {coded}"
+    assert safe_error_text(coded) == f"ValueError: {coded}"
     assert _batch_error_code(coded) == (
         "INPUT_CONTRACT_VIOLATION",
         "input 'channel' is not in ['direct', 'broker']",
@@ -301,7 +301,7 @@ def test_a_coded_looking_error_that_is_not_ours_is_reduced_to_its_type() -> None
     )
     assert safe_error_text(RuntimeError(f"MODEL_CALL_FAILED: {_SENTINEL}")) == "RuntimeError"
     ours = CodedError("FOO: a fixed sentence")
-    assert safe_error_text(ours) == "CodedError: FOO: a fixed sentence"
+    assert safe_error_text(ours) == "ValueError: FOO: a fixed sentence"
     assert isinstance(ours, ValueError), "existing `except ValueError` handling is unchanged"
 
 
