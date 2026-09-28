@@ -304,7 +304,7 @@ The key value itself appears exactly once, in the creation response (FR-389).
 | `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` | Revoke |
 | `GET`/`PUT` | `/api/v1/settings` | Read effective settings with sources; update workspace settings |
 | `POST` | `/api/v1/blobs/upload-url` | Presigned multipart upload (FR-421) |
-| `GET` | `/api/v1/blobs/{sha256}` | Download (permission-checked, redirect to presigned URL) |
+| `GET` | `/api/v1/blobs/{sha256}` | Download (permission-checked, redirect to presigned URL). **Amended 2026-09-28 (WK-1178, the deputy's blob-route ruling of that day, #865's blob-route finding):** `dataset:read` alone was never enough, because `blobs` has no workspace column. A blob is served only if an owner in the caller's workspace references it — a Dataset Version's table, or a Job's `JobResult(kind="blob")` — and never if a quote-input store references it (a scoring trace now; WK-672 Slice 3's case store when it lands), whose bodies are read through their own workspace-scoped APIs. This is the obligation `03` NFR-499 carries as clarified by RL-917. Every refusal is the same `404` a missing blob gets, so the route does not confirm that a digest exists. |
 | `GET` | `/healthz` | Liveness — is the process alive? (FR-444) |
 | `GET` | `/readyz` | Readiness — database, Redis, blob store reachability (FR-444) |
 | `GET` | `/version` | Image tag, commit, schema version (FR-444) |
