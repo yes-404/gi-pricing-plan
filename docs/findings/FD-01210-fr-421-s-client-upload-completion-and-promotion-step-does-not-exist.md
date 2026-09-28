@@ -66,3 +66,11 @@ owner row is written, and then the code follows. This record proposes that the t
 above are corrected in the P1 fix PR or in the fix for this finding, so that they stop describing
 a promotion that does not exist. It also proposes that `CR-721`'s row is left as filed and this
 record is what corrects the reading of it.
+
+**The fix also carries the worker-side ingest check.** By the deputy's DP-P1-2 ruling (his entry of
+2026-09-28 21:51:10 BST), the P1 fix for `FD-1206` checks ownership at the ingest **route** only.
+Until the upload completion and its owner table exist, the route is the only enqueuer of
+`JobKind.DATASET_INGEST` in `backend/src` (`api/datasets.py:540`, verified by the deputy at
+`e1d050f7`), and an invariant test in the P1 PR pins that. When this finding's fix lands, the
+worker's `_ingest` re-checks ownership too, using the owner table, and the worker's comment that
+says the check is absent by design is removed in the same commit.

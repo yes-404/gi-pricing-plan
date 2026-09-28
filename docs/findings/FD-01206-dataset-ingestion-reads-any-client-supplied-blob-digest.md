@@ -67,11 +67,19 @@ false)"). That supersedes the 18:55:39 conditions this record first carried, **c
 2**: the owner row written at promotion, and the backfill. Their premise was false, because no
 code promotes a staging object (`FD-1210`). The decision is:
 
-1. Ingest, **route and worker**, accepts a digest only under the same rule as
-   `GET /blobs/{sha256}`: refused if a quote-input store references it, and otherwise allowed
-   only if an owner **in the caller's workspace** references it. #868's `_readable_by` moves to a
-   shared platform function, so there is one rule and never two copies. The refusal is the
-   uniform 404, and there is no schema change.
+1. Ingest accepts a digest only under the same rule as `GET /blobs/{sha256}`: refused if a
+   quote-input store references it, and otherwise allowed only if an owner **in the caller's
+   workspace** references it. #868's `_readable_by` moves to a shared platform function, so there
+   is one rule and never two copies. The refusal is the uniform 404, and there is no schema
+   change. **The check sits at the ingest route only, by DP-P1-2** (the deputy's entry of
+   2026-09-28 21:51:10 BST), which amends the "route and worker" of the 21:39:48 entry: the
+   worker half is withdrawn for now. The premise is that the route is the only enqueuer of
+   `JobKind.DATASET_INGEST` in `backend/src` (`api/datasets.py:540`, verified by the deputy at
+   `e1d050f7`; the one other caller, `examples/fremtpl2/seed.py:470`, is trusted local code). An
+   invariant test pins that premise: it fails if any other module under `backend/src` enqueues
+   that job kind, with a positive control that catches an injected second enqueuer. The worker's
+   ingest handler carries a comment saying the check is absent by design and where it arrives.
+   The worker-side check arrives with `FD-1210`'s owner table.
 2. **No owner table and no backfill.** Option (A), building the completion step now, is declined
    for tonight.
 3. Red-first tests through the route: a cross-workspace dataset digest, a trace digest, and a
