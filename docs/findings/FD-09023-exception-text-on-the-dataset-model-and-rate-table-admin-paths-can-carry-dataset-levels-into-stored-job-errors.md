@@ -42,8 +42,24 @@ At `origin/main` `633c6f34`:
   logged in full outside sampled traces"*, and its 2026-08-30 clarification (`RL-917`) is about persistence as well as
   log output. Dataset levels are not quote inputs, so the requirement does not reach this text.
 
-**Not established:** which of the listed `str(exc)` sites carry dataset values in practice. Only the `gbm.py:322`
-message was read to contain them. The others were not each read for their exception classes.
+### Does GbmFitError level text reach a sink today? Traced by reading; the measurement is queued
+
+**The path, read at `origin/main`:** `fit_gbm` (`gbm.py:603`) encodes the **holdout** with the training encoding maps
+(`gbm.py:675`, `_encode(holdout_matrix, factors, maps=encodings, bandings=bandings)`). A holdout that carries a
+category level the training frame lacked reaches the raise at `gbm.py:322`–`:326`, whose message is
+`factor 'x' carries level(s) [<the levels>] that the fitted model never saw …`, and which also keeps the levels in
+`GbmFitError.terms` (`gbm.py:154`). The model-fit handler catches it at `backend/src/app/worker/model_handlers.py:394`
+and raises `PlatformError(exc.code, "The … model could not be fitted", 409, str(exc))` from it (`:397`–`:399`), so the
+detail is the message with the levels. The worker's `PlatformError` clause (`backend/src/app/worker/tasks.py:182`) stores
+that detail as `JobError.message` and logs the exception with its traceback to the process log. Two sinks follow from
+the code: **the stored `JobError.message`, and the process log.** The persisted `job_logs` do not carry it, because
+`JobLogCapture.emit` keeps only `record.getMessage()` (`worker/logs.py:45`–`:47`).
+
+**Measured:** only that these lines exist and connect. **No run has yet shown a level in a stored Job error.** The
+measurement is: fit a GBM through `execute_job` whose holdout has one level absent from training, with a sentinel
+level name, and read `jobs.error`, the persisted `job_logs` and the process log. It needs a database and a test run,
+so it is queued for after the quiet window (`nice -n 10`, a per-tree database) and this record is updated with its
+result. The other `str(exc)` sites listed above were not each read for their exception classes.
 
 ## Why it is still a question
 
@@ -53,6 +69,6 @@ error text. This finding does not decide whether one should.
 
 ## Disposition
 
-**Deferred with an owner — WK-1178**, proposed. The deputy decides the owner and whether a rule is wanted. Event: a ruling on
-whether error text on the admin paths may carry dataset content, and, if not, the same sanitiser `FD-9021` adds in
-`pricing-core` is applied to these paths, or these paths name levels by count and not by value.
+**Deferred with an owner — WK-1178**, confirmed by the deputy. The fix is the same sanitiser `FD-9021` adds in `pricing-core`,
+with the level given **by position, not by value** (for example "level 3 of factor `x`"). It is not in #889's scope.
+Event: that sanitiser applied to these paths, and the queued measurement recorded here.
