@@ -79,14 +79,19 @@ predicate is the `status:` line in each `### WK-` section inside `## P2`.
   list is under "G4: the P2 NFRs, one by one" below.
 - **G5. The gate is green on the exit tree.** That means the two-half gate of `CLAUDE.md`
   §11, and the four docs checks with DISCLOSED no higher than main's baseline (851 at
-  `9f6bfed1`).
+  `9f6bfed1`). *(Restated at acceptance by symbol, not by the pasted number; see the line below.)*
 - **G6. A plan review 16 is filed** after G1–G5 and before the demo (`CLAUDE.md` §14).
 
 **Recommendation:** adopt G1–G6 and write them into the `## P2` header's `gates:` and
-`exit criteria:` fields. That edit is applied by the lead or decision-maker on acceptance,
+`exit criteria:` fields. *(Amended at acceptance: into `exit criteria:` only; see the line below.)* That edit is applied by the lead or decision-maker on acceptance,
 never by this review.
 
-**Maintainer acceptance (Proposal 1):** _pending — the maintainer's dated line_
+**Maintainer acceptance (Proposal 1): ACCEPTED by the maintainer, with two amendments** (the deputy's entry of 2026-09-28 19:05:44 BST, quoted whole under "Acceptance" at the foot):
+1. **G1–G6 go into `exit criteria:` only.** The milestone's `gates:` field holds the three **dated freeze gates**, plan, code and docs
+   (`document-ids.md` §1.3 and §1.10(b)), and `docs/process/checklists/phase-close.md:75-77` fails a phase whose freezes were not declared with dates.
+   **`gates:` and `target:` stay `~`** until the lead proposes three freeze dates and a target after WK-672 closes. They are declared before the first of them passes.
+2. **G5 reads by symbol:** on the exit tree, `audit-docs.py` exits 0 with "All checks passed.", its ceiling being the governed record at `_docid.W37_11_RECORD_PATH`
+   (`docs/process/residue-ceiling-record.md`), plus the other three docs checks at rc 0, plus the two-half gate of `CLAUDE.md` §11. The pasted "851" is not the criterion.
 
 ### G4: the P2 NFRs, one by one
 
@@ -144,7 +149,7 @@ from the FRs each P2 Work covers. The spec §9s are `03` (WK-669 to WK-675), `07
   12's FRs.
 - (e) **WK-690 owns NFR-476, NFR-480, NFR-483 and NFR-484's expression limbs.**
 
-**Maintainer acceptance (G4 dispositions):** _pending — the maintainer's dated line_
+**Acceptance (G4 dispositions): accepted by delegation** (the deputy's entry of 2026-09-28 19:05:44 BST, quoted whole under "Acceptance" at the foot). Under (b), NFR-489, NFR-490 and NFR-502 go to **WK-674**, not "accepted as failing".
 
 ### The open P2 finding set (G3 and item 10)
 
@@ -267,7 +272,7 @@ audit), the lead with WK-1169 (the charter), the lead alone, or the maintainer. 
 **Counts.** 28 + 10 + 53 = 91. Every row whose register owner is none, a trigger only, a
 phase boundary or a closed Work carries a **Proposed** resolution above.
 
-**Maintainer acceptance (the finding resolutions):** _pending — the maintainer's dated line_
+**Acceptance (the finding resolutions): accepted by delegation as proposed, 91 rows** (the deputy's entry of 2026-09-28 19:05:44 BST, quoted whole under "Acceptance" at the foot).
 
 ## Proposal 2 — the extended goal's sequencing under the budget
 
@@ -325,7 +330,7 @@ the maintainer can set §8 aside.
 merges, all up to the reset. After the reset: WK-674 → WK-673 → WK-675, with WK-690
 independent as the maintainer ordered, then WK-1170 → WK-1169, with WK-1178 standing.
 
-**Maintainer acceptance (Proposal 2):** _pending — the maintainer's dated line_
+**Maintainer acceptance (Proposal 2): ACCEPTED by the maintainer**: WK-674, then WK-673, then WK-675; WK-690 independent; then WK-1170, then WK-1169; `delivery-process.md` §8 stands. The deputy's entry of 2026-09-28 19:05:44 BST is quoted whole under "Acceptance" at the foot.
 
 ## Proposals 3–12 — the rest of the agenda
 
@@ -391,7 +396,7 @@ independent as the maintainer ordered, then WK-1170 → WK-1169, with WK-1178 st
   **Resolved at acceptance (the P12 line):**
   - All five are `07-platform.md` §3 deployment and packaging rows.
   - FR-434 and FR-435, with NFR-534 and NFR-531, go to **WK-674**.
-  - FR-432, FR-433 and FR-438 are **carried to P3**, subject to the maintainer's P1 ruling on G2.
+  - FR-432, FR-433 and FR-438 are **carried to P3**, subject to the maintainer's P1 ruling on G2. **Resolved by that ruling:** G2's `prod` is the platform's environment (FR-429), not production packaging, so they stay carried to P3 (the 19:05:44 entry).
   - The roadmap edit naming each row is the lead's, after acceptance.
   **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **13b. A register pass** (the auditor's, not this review's) for the four cells found above:
@@ -455,14 +460,44 @@ Four omissions:
   proposed one.
 - Every P2 NFR has an owner or a proposed one.
 
-**Proposals 3 to 13b are accepted by delegation, as amended (the foot). Proposal 1 (G1–G6,
-the G4 dispositions and the finding resolutions) and Proposal 2 stay with the maintainer:
-they do not bind until the maintainer's dated lines are quoted here.**
+**Every proposal now binds, as amended.** Proposals 1 and 2 are accepted by the maintainer, with P1's two amendments. The G4 dispositions, the finding resolutions and Proposals 3 to 13b are accepted by delegation (the foot).
 
 ## Acceptance
 
-**Proposals 1 and 2 (including the G4 dispositions and the finding resolutions):** _pending —
-the maintainer's dated line_
+**Proposals 1 and 2, the G4 dispositions and the finding resolutions:** the deputy's entry, with the maintainer's words verbatim, quoted whole with its heading time:
+
+```text
+## 2026-09-28 19:05:44 BST · deputy · PLAN REVIEW 15: MAINTAINER ACCEPTS P1 (G1–G6) and P2 (WK-674 first), with two standard-conformance amendments; G4 and finding resolutions accepted by delegation
+
+**The maintainer's words, verbatim** (given to the deputy in this session at the time in the heading): *"accept G1–G6 and WK-674 first, one small issue does the gate created satisfied the docs standard created."*
+
+**P1 is accepted by the maintainer. P2 is accepted by the maintainer:** WK-674, then WK-673, then WK-675; WK-690 independent; then WK-1170, then WK-1169. §8 stands.
+
+**The maintainer's question, answered by the deputy.** Read at origin/main 4fb07b6c, it becomes two amendments to P1, which go into the acceptance line (the CR text stays as filed):
+1. **G1–G6 are exit criteria, not gates.**
+   - `document-ids.md` §1.3 and §1.10(b) define the milestone's `gates:` field as the three **dated freeze gates**: plan, code and docs.
+   - `docs/process/checklists/phase-close.md:75–77` fails a phase whose freezes were not "declared with dates" and passed on time.
+   - P1's "write them into … `gates:` and `exit criteria:`" is therefore amended: **G1–G6 go into `exit criteria:` only**, citing this CR.
+   - **`gates:` and `target:` stay `~` until dated.** After WK-672 closes, the lead proposes three freeze dates and a target from the ETA. The deputy puts them to the maintainer; this is P2's exit, which the deputy promised to show before dating. They must be declared **before** the first of them passes.
+2. **G5 is restated without the pasted number.** "DISCLOSED no higher than … 851 at 9f6bfed1" pastes a value (CLAUDE.md §13: a constant is cited by symbol, never pasted). G5 now reads: **on the exit tree, `audit-docs.py` rc 0 with "All checks passed."**, where the ceiling is the governed record at `_docid.W37_11_RECORD_PATH` (`docs/process/residue-ceiling-record.md`), plus the other three docs checks rc 0, plus the two-half gate of §11.
+
+**Conforming as written:**
+- G3's predicate carries its tree, corpus, runnable code and three controls (CLAUDE.md §13).
+- G4's list carries its greps and tree.
+- G2's `07` FR-429 citation is verified at `07-platform.md:140`.
+
+**By delegation (deputy):**
+- **The G4 dispositions (a)–(e) are accepted.** Under (b), NFR-489, NFR-490 and NFR-502 go to **WK-674**, not "accepted as failing".
+- **The finding resolutions are accepted as proposed,** 91 rows.
+- **The P12 condition is resolved by G2 as accepted:** G2's `prod` is the platform's environment (FR-429), not production packaging. So FR-432, FR-433 and FR-438 **stay carried to P3**.
+
+**Follow-up commit on #863:**
+- the acceptance lines for P1 and P2 quote this entry whole;
+- P3–P13b quote the 18:13:19 entry, with the id note from the 18:13:57 ruling;
+- then re-mint at its turn and request a fresh ACK.
+
+The roadmap `## P2` edit (`exit criteria:` only) is the lead's, after the merge.
+```
 
 **Proposals 3–13b:** the deputy's entry, quoted whole with its heading time:
 
