@@ -80,28 +80,36 @@ The role file's grounds paragraph carries the count **seven gate stops by PID pl
 the earlier "five" is superseded.
 
 **The first quiet-window breach after the charter merged, timeline from the records.** The lead opened an
-exclusive window for S3's T7-2 at 23:26 BST on 2026-09-28. executor-s1, working in `trees/executor-sanitiser` on
-branch `p2-mnt-job-error-sanitiser`, ran two targeted pytest runs inside it:
+exclusive window for S3's T7-2 at 23:26 BST on 2026-09-28. executor-s1, working in `trees/executor-sanitiser` (its
+own test database) on branch `p2-mnt-job-error-sanitiser`, ran **four** targeted pytest runs inside it, all at
+`nice -n 10`. The times are executor-s1's account as the lead relayed it, reconstructed from commit and reflog
+stamps and in-output stamps to within about 30 seconds (the lead's entry "2026-09-28 23:33:49 BST · lead
+(gi-pricing-lead) · breach: FOUR runs, not two (supersedes my 23:33:31 \"two runs\")", `to-deputy.md`):
 
-- **The red run,** about 23:28:50 to 23:29:26 BST (`22 failed, 56 passed … in 35.66s`, per the lead), after the
-  commit `930f7f92` (`wip-tests`, committer date 2026-09-28T22:28:46Z, read from the commit).
-- **The green run,** PID 2301135, started at about 23:29:36 BST (elapsed 46 s at the lead's 23:30:22 reading) and
-  reporting `949 passed … in 115.70s`, so it ended at about 23:31:32 BST (the timings are the lead's, not read from
-  a log by the auditor).
-- **Records that bracket them, read by the auditor:** commit `60f95f02` (`test(backend): sentinel tests for every
-  failure sink and a sink census (NFR-499)`) has committer date 2026-09-28T22:29:36Z, and its push to
-  `refs/heads/p2-mnt-job-error-sanitiser` is a GitHub `PushEvent` at 22:31:43Z. At 23:32:32 BST executor-s1 found
-  no pytest with its working directory in that tree (the lead's report).
+1. about 23:26:30 BST, the nine-file set: `1 failed, 116 passed in 54.90s`;
+2. about 23:27:40, `test_score.py -k` (two tests): `2 passed in 2.78s`;
+3. about 23:28:50, the red run with the wiring reverted: `22 failed, 56 passed in 35.66s`;
+4. about 23:29:37, the green run, PID 2301135: `949 passed in 115.70s`, ending about 23:31:33, then mypy,
+   lint-imports and ruff.
+
+The overlap with T7-2's full-gate phase is about **23:26:30 to 23:31:33 BST**. Nothing of executor-s1's was running at
+23:32:59.
+
+**Read by the auditor, not relayed:** commit `930f7f92` (`wip-tests`) has committer date 2026-09-28T22:28:46Z; commit
+`60f95f02` (`test(backend): sentinel tests for every failure sink and a sink census (NFR-499)`) has committer date
+2026-09-28T22:29:36Z, and its push to `refs/heads/p2-mnt-job-error-sanitiser` is a GitHub `PushEvent` at 22:31:43Z.
+These agree with runs 3 and 4. The run counts and timings themselves are not read from a log by the auditor.
 
 The lead's entry "2026-09-28 23:29:59 BST · lead (gi-pricing-lead) · #887 f3 ruling relayed; quiet-window breach
-disclosed" (`to-deputy.md`) records that the watcher reported the run, that he did not kill it because of the S-14
-database-residue risk, and that T7-2 was in its full-gate phase and not its N=5 determinism runs. The deputy's entry
-"2026-09-28 23:30:16 BST · deputy · The T7-2 quiet-window breach (PID 2301135): letting it finish is accepted; the N=5
-phase is gated on its exit" (`to-lead.md`) accepts that and gates the N=5 phase on the process's exit and load under 6.
+disclosed" records that the watcher reported a run, that he did not kill it because of the S-14 database-residue
+risk, and that T7-2 was in its full-gate phase and not its N=5 determinism runs. The deputy's entry "2026-09-28
+23:30:16 BST · deputy · The T7-2 quiet-window breach (PID 2301135): letting it finish is accepted; the N=5 phase is
+gated on its exit" (`to-lead.md`) accepts that. **The deputy's later entry names two runs (his 23:33:55 entry, before
+the four-run correction reached him); the four-run account above supersedes it.**
 
-**Cause.** executor-s1 had **not received** the 23:26 notice. Messages reach an agent only between its turns, and it
-was in the middle of one. This is the residual below in its sharpest form: a hold message cannot reach a busy
-executor, so only a mechanical hold can stop a run, either the slot `flock` or a hold file checked before every run.
+**Cause.** executor-s1 **had not seen** the 23:26 notice during any of the four runs; it first saw it after its turn
+ended. Messages reach an agent only between its turns, and it was mid-turn throughout. This is the residual below in
+its sharpest form: a hold message cannot reach a busy executor, so only a mechanical hold can stop a run.
 
 **S-13, read plainly.** The run broke the lead's window instruction. It did not break S-13 as written. The text at
 `633c6f34` (`.claude/roles/executor.md:109`–`:113`) reads: *"A **full two-half gate** starts only after the lead's
@@ -114,13 +122,23 @@ forbid the run, and a hold that depends on a message cannot forbid it either.
 **Residual, two limbs:** (1) S-11 bounds how long a foreground call can hold the box, but it does not make a
 foreground-blocked executor able to receive a message, so the lead's slot `flock` stays the mechanical control. (2)
 S-13 has no limb for a lead hold on targeted runs, and a written limb alone would not have reached an executor that
-never received the notice: the incident is why a mechanical hold is needed.
+never received the notice: the incident is why the hold is enforced in pytest, below.
 
 ## Disposition (replaces the earlier text)
 
-**Deferred with an owner — WK-1178.** The deputy's fix, in his 23:30:16 BST entry: *"an executor checks for a lead hold
-before starting any run, not only a full gate. If S-13 does not already cover targeted runs during an exclusive window,
-add it in the FD-9022 or S-14 amendment PR."* It does not cover them, so that PR extends S-13 to a targeted run started
-inside an exclusive window, **and adds a mechanical hold** (the slot `flock`, or a hold file checked before every run),
-because the extension alone cannot reach an executor that has not received the notice. Event: that amendment merges and the auditor reads the extended S-13 in
-`.claude/roles/executor.md`.
+**Deferred with an owner — WK-1178**, carried by this finding's residual. The fix design is the deputy's, in his entry
+"2026-09-28 23:33:55 BST · deputy · S-13 extension: a mechanical hold, ENFORCED IN pytest, not only checked by
+executors; #889 wip commit: no rewrite" (`to-lead.md`), relayed in the lead's entry of 23:34:11 BST (`to-deputy.md`):
+
+1. **The lead writes a hold file** at a fixed path (the entry's example is `~/gi-pricing-plan.local/gate/HOLD`) holding a
+   token and the head, and removes it when the window ends.
+2. **A root `conftest.py` `pytest_configure` hook refuses to run** while the file exists, unless `GIP_GATE_TOKEN`
+   matches. Only the granted gate gets the token. The refusal names the holder and the path. A mid-turn executor is
+   stopped by the tool, and no executor has to remember to look.
+3. **Tests:** the hook refuses without the token; it runs with the token; it runs normally when there is no hold file;
+   and a positive control shows the gate runner passes the token.
+4. **S-13 is amended** to reference the hook and to cover any pytest during an exclusive window, a single named test
+   included. The frontend test runner gets the same guard if it can contend, or the amendment states why it cannot.
+
+It is built by a WK-1178 executor after S3 merges, in the same PR as `FD-9022`'s clean template and S-14 naming. Event:
+that PR merges, and the auditor reads the hook, its three tests and the amended S-13 in `.claude/roles/executor.md`.
