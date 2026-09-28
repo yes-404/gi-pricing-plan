@@ -94,7 +94,37 @@ Four places had the implementation written before its tests: Task 4, Task 5a, **
 
 ## The gate
 
-Pending: recorded after the lead grants the gate slot (both halves, the five `test_rating_score.py` runs, the four docs checks on a detached copy, `git diff --stat origin/main...HEAD`).
+Run alone on a quiet box on the lead's slot, at `HEAD` `9807d2ac9a26d5b2c19fdfc2c73af089a9d4067d` (docs only, two lines
+in `03` and `docs/INDEX.md`, above the granted `45c0dcd8`; `git diff --stat 45c0dcd8 9807d2ac`: 2 files, 2+/2−), 1-minute
+load 3.65 at the start (22:19:46 BST), `GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_executor-s3`.
+The dev-commands gate body, verbatim; the table:
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | **FAIL** | exit=1 (check 31 only: the `LG-WORKING` header shape and the 1205..9301 gap) |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | **FAIL** | exit=1: `15 failed, 3680 passed, 3 skipped, 1 xfailed` in 19 m 49 s |
+
+`GATE: FAIL — 2 of 7 stages failed: audit_docs pytest`. The 15 failures:
+
+- **13 are the working-id state**, each asserting the whole-tree audit exits 0 (`requirement numbering: 0 module-scoped id(s)…`, or `doc-id.py check: [noncontiguous] … a gap between 1205 and 9301`, or `the live allocation is not contiguous: [(1205, 9301)]`): `test_audit_docs_finding_citations` 1, `test_audit_docs_ids` 2, `test_audit_docs_process_core_digest` 2, `test_audit_docs_w37_11_ceiling` 1, `test_doc_index` 1, `test_register_lint` 3, `test_register_owed` 1, `test_repository_invariants::test_money_discipline_is_enforced_by_the_docs_audit` and `::test_journey_citations_are_audited_in_ci` 2. They go green at the mint.
+- **2 are this slice's own defect**: `tests/test_repository_invariants.py::test_the_architecture_contracts_are_configured_and_not_silently_empty` (`assert 4 == 3`) and `::test_pricing_core_is_callable_without_the_backend` (`assert 'Contracts: 3 kept, 0 broken.' in …`). The new `replay-never-generates` import contract makes four, and these two tests pin three. Not fixed in this ledger commit; reported to the lead.
+- Frontend half run at an earlier head (`d205815e`), all rc 0: `generate:api`, `lint`, `type-check`, `test`, `build`. **It was not re-run at this head** (the Python-half failed first and the lead's instruction was not to re-run).
+
+**Determinism, N=5** (`packages/pricing-core/tests/test_rating_score.py`, serial, load 1.5–1.7, no abort, no failure):
+`24 passed in 5.76s`, `24 passed in 5.67s`, `24 passed in 5.65s`, `24 passed in 5.61s`, `24 passed in 5.64s`, every `rc=0`.
+
+**The docs checks on a detached copy of `9807d2ac`** (`git worktree add --detach`): `python3 scripts/audit-docs.py` rc 1 (check 31 only; DISCLOSED 848, ≤ 851); `python3 scripts/doc-id.py check` rc 1 (`[noncontiguous] docs/INDEX.md has a gap between 1205 and 9301`); `python3 scripts/doc-index.py --check` rc 0 (`OK (byte-stable)`); `python3 scripts/register-lint.py` rc 0 (`OK (0 violations)`).
+
+**Collected totals** (`pytest --collect-only -q`, `nice -n 19`): `origin/main` `7f5b4ea7`: 3626; this head: 3699 (+73); 3680 + 15 + 3 + 1 = 3699.
+
+**Diff:** `git diff --stat origin/main...HEAD`: 44 files changed, 4882 insertions(+), 231 deletions(−).
+
+**Earlier attempts, for the record:** a full gate started at 21:44:38 (before the slot rule) and three more starts at ~21:54, ~22:14 and one detached copy were stopped by the lead's stop messages or by me on them; none produced a table and none is quoted here.
 
 ## PRs
 
