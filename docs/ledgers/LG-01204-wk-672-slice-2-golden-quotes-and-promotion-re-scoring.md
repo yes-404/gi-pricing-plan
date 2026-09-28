@@ -45,7 +45,9 @@ The stamp column is the commit time, Europe/London.
 | 6 | `983c5144` | The ledger under its working id, and `docs/INDEX.md`. Gate run on this tree (below, "The first gate"). Pushed; draft PR #867. | 2026-09-28 18:24:25 BST |
 | G3 | `37debb3d` | Audit finding G3 (auditor-a's slice audit of #867): the NFR-499 no-logging test drives the POST route under `caplog` and `capfd` and requires a non-empty capture. Positive control below. | 2026-09-28 18:53:08 BST |
 | — | `c416f3b2` | Merge of `origin/main` `4fb07b6c` (#865): docs only. | 2026-09-28 18:56:31 BST |
-| mint | this commit | The renumber `LG-WORKING` → `LG-1204` (file, `id:`, in-text), `docs/INDEX.md`, and this ledger's G1/G2/G3 record. | 2026-09-28 |
+| mint | `c94c62e2` | The renumber `LG-WORKING` → `LG-1204` (file, `id:`, in-text), `docs/INDEX.md`, and this ledger's G1/G2/G3 record. | 2026-09-28 19:04:24 BST |
+| CI fix | `6cc5078c` | The G3 test made order-independent after #867's CI failed it (below, "The CI failure on `c94c62e2`"). | 2026-09-28 19:29:53 BST |
+| — | this commit | This ledger's record of `6cc5078c`. Ledger only. | 2026-09-28 |
 
 ### The reds
 
@@ -109,6 +111,43 @@ identical, or the constraint re-added), and green again after.
 
 After the restores: `test_regression_suites.py` and `test_rating_versions.py` 44 passed, the
 reference test 1 passed, `git status --short` empty.
+
+### The CI failure on `c94c62e2`, and its fix
+
+#867's CI (run 36462673125) failed `test_every_version_has_one_creation_event_and_no_context_is_logged`
+with `AssertionError: nothing was captured, so the no-context check below proves nothing`
+(1 failed, 3607 passed); in isolation it passed.
+
+- **Reproduced:** `uv run pytest -p no:randomly backend/tests/test_migration_dataset_owner.py backend/tests/test_regression_suites.py`
+  gives the same assertion line.
+- **Cause, measured:** that module runs alembic in-process, which reaches
+  `backend/migrations/env.py:25`, `fileConfig(config.config_file_name)`. `fileConfig`'s
+  `disable_existing_loggers` defaults to true: a script importing the app's modules and then
+  calling `fileConfig('alembic.ini')` printed 0 of the `app.*` loggers disabled before and
+  22 of 22 after. A disabled logger drops its records before any handler sees them.
+  `configure_logging`, the claim dropped at G3, is not the cause either.
+- **Fix (`6cc5078c`, test only):** the test re-enables disabled loggers for itself
+  (`monkeypatch`), requires a sentinel logged on `app.request`
+  (`backend/src/app/observability/middleware.py:24`, the route's logger) to be captured, and
+  requires the route's own `app.request` records, before the no-context asserts.
+- **Proof:** after the breaking module, 16 passed; both migration modules and the file, 25
+  passed; the file alone, 8 passed; the full backend suite in default order, 1312 passed, 2
+  skipped (rc 0). The positive control (the temporary content log) run after the breaking
+  module is red: `assert 'ZZ9 9ZZ' not in 'INFO     ap...1 Created"\n'`; restored, `cmp`
+  identical. The four docs checks on a detached copy of `6cc5078c`: audit-docs rc 0, "All
+  checks passed.", DISCLOSED 851; `doc-id.py check`, `doc-index.py --check` and
+  `register-lint.py` rc 0.
+- **The production question, answered by grep at `6cc5078c`:** no non-test code runs alembic
+  in-process. `backend/src` has no alembic import, no `command.upgrade` and no `fileConfig`
+  (`grep -rn 'command\.upgrade\|alembic\.config\|alembic import\|fileConfig\|from alembic\|import alembic' backend/src`
+  prints nothing), and `fileConfig` appears only in `backend/migrations/env.py` and this
+  slice's test. Every other invocation is its own `alembic` CLI process: `.github/workflows/python.yml:294`
+  (`uv run alembic upgrade head`), `scripts/demo.py:217` (a subprocess), and the documented
+  commands in `scripts/bench-compiled-for.py:35` and `scripts/bench-score-batch.py:27`. The
+  logger disabling is therefore test-suite-only: after any in-process alembic test, every
+  `app.*` record is dropped for the rest of the session. The root fix,
+  `fileConfig(..., disable_existing_loggers=False)` in `env.py`, is outside this slice and was
+  reported to the lead.
 
 ## Deviations from the plan's text
 
