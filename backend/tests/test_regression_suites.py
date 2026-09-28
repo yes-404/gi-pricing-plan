@@ -370,7 +370,9 @@ async def test_an_invalid_monotone_bound_is_a_422_at_declaration_and_no_job_exis
 
 
 @pytest.mark.req("FR-261")
-@pytest.mark.parametrize("check", [{"lower": "5"}, {"upper": "5"}], ids=["lone-lower", "lone-upper"])
+@pytest.mark.parametrize(
+    "check", [{"lower": "5"}, {"upper": "5"}], ids=["lone-lower", "lone-upper"]
+)
 async def test_a_lone_monotone_bound_is_accepted_when_the_contract_has_the_other_end(
     client: TestClient, database: Database, workspace_id: UUID, analyst: Principal,
     check: dict[str, Any],
