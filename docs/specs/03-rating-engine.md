@@ -195,7 +195,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-269** | **Rollback** to any previously-deployed Rating Version in that environment is a single audited operation with the same guarantees, and does not require re-approval. |
 | **FR-270** | Optional **date-based routing** allows an environment to hold multiple deployed versions selected by the quote's effective date, for pre-loading a future rate change. Overlapping date ranges are rejected at deployment time. |
 | **FR-271** | Optional **shadow scoring**: a proportion of live traffic is additionally scored against a candidate version, with results recorded but never returned to the caller — the pre-deployment safety net feeding `05-monitoring.md`. |
-| **FR-272** | Every deployment, rollback, and routing change emits an Audit Event and a notification to a configured channel. |
+| **FR-272** | Every deployment, rollback, and routing change emits an Audit Event and a notification to a configured channel. **Amended 2026-09-28 (`RL-9203` DP-4): the two halves are split by phase.** WK-674 emits the Audit Event in the same transaction as the change. That event is the durable deployment event `05` consumes (§7). WK-674 builds no channel and no second event store. Delivering a notification to a configured channel, with the retry and failure-surfacing obligations of `05` FR-336, is `05`'s alert routing, owned by WK-688 (Phase 4). Until WK-688 delivers it, no channel is configured and none is claimed. |
 
 ### 3.11 Numeric precision at the engine boundary
 
