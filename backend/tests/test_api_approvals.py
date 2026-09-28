@@ -28,7 +28,6 @@ from model_schema import (
     MetricDirection,
     ModelStatus,
     ObjectiveTemplate,
-    PerilStructureStatus,
     Severity,
     ValidationLayer,
     new_uuid7,
@@ -144,19 +143,27 @@ async def _record_creation(session, workspace_id, artifact_type: str, ref: str, 
 
 
 async def _create_artifact(
-    database: Database, workspace_id, artifact_type: str, slug: str, version: int
+    database: Database,
+    workspace_id,
+    artifact_type: str,
+    slug: str,
+    version: int,
+    status: str = "review",
 ) -> None:
     """One row of `artifact_type` at `slug@version`, so a reference to it resolves.
 
     Written straight to the table rather than through each owning module's create path.
-    That is the point of the fixture: FR-386 asks only whether the version **exists**,
-    and every row here is left `draft` — status is the owning module's own submit path's
-    question, and `POST /approval-requests` is reached without it.
+    FR-386 asks whether the version exists; `06` FR-351, enforced on the generic route since
+    2026-09-28 (the approval status bypass), asks that it be **in review**. So a row is
+    written in its type's review state by default, with whatever a CHECK requires of a
+    status past `draft`; `status="draft"` is the negative case. `dataset_version` has no
+    review state: its reviewable state is `validated` (FR-351's 2026-09-28 clause), which
+    the default `status="review"` stands for here.
     """
     async with database.unit_of_work() as session:
         if artifact_type == "model":
             session.add(
-                ModelRow(
+                model := ModelRow(
                     workspace_id=workspace_id,
                     model_family_slug=slug,
                     version=version,
@@ -166,6 +173,17 @@ async def _create_artifact(
                     spec_hash=f"v2:sha256:{new_uuid7().hex}",
                 )
             )
+            if status != "draft":
+                # `record_fit`'s order, the only shape `models_fit_immutable` admits.
+                await session.flush()
+                diagnostics = DiagnosticsRow(
+                    workspace_id=workspace_id, model_id=model.id, payload={}
+                )
+                session.add(diagnostics)
+                await session.flush()
+                model.fit_result = {}
+                model.diagnostics_id = diagnostics.id
+                model.status = status
         elif artifact_type == "custom_objective":
             session.add(
                 CustomObjectiveRow(
@@ -176,6 +194,8 @@ async def _create_artifact(
                     template=ObjectiveTemplate.POISSON.value,
                     params={},
                     applicability=_APPLICABILITY,
+                    status=status,
+                    certificate_id=None if status == "draft" else new_uuid7(),
                 )
             )
         elif artifact_type == "custom_metric":
@@ -189,6 +209,8 @@ async def _create_artifact(
                     params={},
                     applicability=_APPLICABILITY,
                     direction=MetricDirection.LOWER_IS_BETTER.value,
+                    status=status,
+                    certificate_id=None if status == "draft" else new_uuid7(),
                 )
             )
         elif artifact_type == "peril_structure":
@@ -197,9 +219,10 @@ async def _create_artifact(
                     workspace_id=workspace_id,
                     slug=slug,
                     version=version,
-                    status=PerilStructureStatus.DRAFT.value,
+                    status=status,
                     perils=[],
                     excluded_perils=[],
+                    reconciliation=None if status == "draft" else {"status": "pass"},
                 )
             )
         elif artifact_type == "validation_rule":
@@ -213,6 +236,7 @@ async def _create_artifact(
                     severity=Severity.FAIL.value,
                     body={},
                     authored_by=new_uuid7(),
+                    status=status,
                 )
             )
         elif artifact_type == "dataset_version":
@@ -229,7 +253,8 @@ async def _create_artifact(
                     workspace_id=workspace_id,
                     dataset_id=dataset.id,
                     version=version,
-                    status=DatasetStatus.DRAFT.value,
+                    status="validated" if status == "review" else status,
+                    validation_report_id=new_uuid7() if status == "review" else None,
                     kind=DatasetKind.INGESTED.value,
                     # OQ-568 (c): a version names its own provenance (the row's
                     # envelope columns are non-null since 2057e7372a9a).
@@ -244,7 +269,7 @@ async def _create_artifact(
                     workspace_id=workspace_id,
                     slug=slug,
                     version=version,
-                    status="draft",
+                    status=status,
                     dataset_version_id=new_uuid7(),
                     model_ref=MODEL,
                     created_by=new_uuid7(),
@@ -810,3 +835,225 @@ def test_the_check_knows_the_creation_action_of_every_approvable_type() -> None:
 
     assert dict(approvals.CREATION_ACTIONS) == CREATION_ACTION
     assert set(CREATION_ACTION) == set(APPROVABLE)
+
+
+# -- only a version in review can be put to a decision (`06` FR-351) --------------------
+
+#: Each approvable type's reviewable state (`06` FR-351, clause of 2026-09-28): `review`,
+#: except `dataset_version`, whose lifecycle has none and is reviewable once `validated`.
+REVIEWABLE_STATE = {t: "validated" if t == "dataset_version" else "review" for t in APPROVABLE}
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize("artifact_type", APPROVABLE)
+async def test_a_version_not_in_review_cannot_be_put_to_a_decision(
+    client: TestClient, database: Database, workspace_id, grant, submitter_headers,
+    artifact_type: str,
+) -> None:
+    """Negative: the generic route refuses a **draft** version, naming its state.
+
+    Without this, a version that never passed its module's own submission — and so none of
+    the gates that submission enforces — could be approved through `POST /approval-requests`.
+    """
+    await _allow_the_type(client, workspace_id, grant, database, artifact_type)
+    slug = f"{artifact_type.replace('_', '-')}-draft"
+    await _create_artifact(database, workspace_id, artifact_type, slug, 1, status="draft")
+
+    response = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": f"{artifact_type}:{slug}@1", "change_summary": "x"},
+        headers=submitter_headers,
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "APPROVAL_SUBJECT_NOT_IN_REVIEW"
+    assert "'draft'" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    ("status", "accepted"), [("draft", False), ("failed", False), ("validated", True)]
+)
+async def test_a_dataset_version_is_reviewable_only_once_validated(
+    client: TestClient, database: Database, workspace_id, grant, submitter_headers,
+    status: str, accepted: bool,
+) -> None:
+    """`dataset_version` has no `review` state; its reviewable state is `validated`.
+
+    Approving one records a governance sign-off and moves nothing: there is no decision hook
+    for a dataset version, so its row keeps its status whatever is decided.
+    """
+    await _allow_the_type(client, workspace_id, grant, database, "dataset_version")
+    slug = f"ds-{status}"
+    await _create_artifact(
+        database, workspace_id, "dataset_version", slug, 1,
+        status="review" if status == "validated" else status,
+    )
+    response = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": f"dataset_version:{slug}@1", "change_summary": "x"},
+        headers=submitter_headers,
+    )
+    if accepted:
+        assert response.status_code == 201, response.text
+    else:
+        assert response.status_code == 409, response.text
+        assert response.json()["code"] == "APPROVAL_SUBJECT_NOT_IN_REVIEW"
+        assert f"'{status}'" in response.json()["detail"]
+
+
+# -- what a decision does to the version, per type (`06` FR-351, FR-355) ------------------
+
+#: The version's status after each outcome, from its reviewable state. A type with no
+#: decision hook does not move at all: that is asserted, not a transition invented for it.
+_OUTCOMES = ("approve", "first_of_two", "reject", "request_changes")
+
+
+def _moves(approved: str, open_: str, returned: str) -> dict[str, str]:
+    return dict(zip(_OUTCOMES, (approved, open_, returned, returned), strict=True))
+
+
+_AFTER = {
+    "model": _moves("approved", "review", "fitted"),
+    "custom_objective": _moves("approved", "review", "certified"),
+    "custom_metric": _moves("approved", "review", "certified"),
+    "rating_version": _moves("approved", "review", "draft"),
+    "peril_structure": dict.fromkeys(_OUTCOMES, "review"),
+    "validation_rule": dict.fromkeys(_OUTCOMES, "review"),
+    "dataset_version": dict.fromkeys(_OUTCOMES, "validated"),
+}
+
+#: The action each hooked type's decision records on the version.
+_MOVE_ACTION = {
+    "model": lambda to: f"model.{to}",
+    "custom_objective": lambda to: f"custom_objective.{to}",
+    "custom_metric": lambda to: f"custom_metric.{to}",
+    "rating_version": lambda to: (
+        "rating_version.approved" if to == "approved" else "rating_version.returned_to_draft"
+    ),
+}
+
+
+async def _require_two_approvals(
+    client: TestClient, workspace_id, grant, database, artifact_type: str
+) -> None:
+    """Make `artifact_type` need two approvers, so a first approval is distinguishable."""
+    await _allow_the_type(client, workspace_id, grant, database, artifact_type)
+    admin = new_uuid7()
+    await grant("admin", principal_id=admin)
+    policy = client.get("/api/v1/approval-policy", headers=_headers(admin, workspace_id)).json()
+    for entry in policy["policies"]:
+        if entry["artifact_type"] == artifact_type:
+            entry["approvers_required"] = 2
+    response = client.put(
+        "/api/v1/approval-policy", json=policy, headers=_headers(admin, workspace_id)
+    )
+    assert response.status_code == 200, response.text
+
+
+async def _version_status(
+    database: Database, workspace_id, artifact_type: str, slug: str, version: int
+) -> str:
+    from sqlalchemy import select
+
+    table = {
+        "model": (ModelRow, ModelRow.model_family_slug),
+        "custom_objective": (CustomObjectiveRow, CustomObjectiveRow.slug),
+        "custom_metric": (CustomMetricRow, CustomMetricRow.slug),
+        "peril_structure": (PerilStructureRow, PerilStructureRow.slug),
+        "validation_rule": (ValidationRuleRow, ValidationRuleRow.slug),
+        "rating_version": (RatingVersionRow, RatingVersionRow.slug),
+        "dataset_version": (DatasetVersionRow, DatasetVersionRow.slug),
+    }[artifact_type]
+    row, slug_column = table
+    async with database.session() as session:
+        return (
+            await session.execute(
+                select(row.status).where(
+                    row.workspace_id == workspace_id, slug_column == slug, row.version == version
+                )
+            )
+        ).scalar_one()
+
+
+async def _decision_moves(database: Database, workspace_id, artifact_type: str, ref: str) -> list:
+    """Every event on the version from its own module except its creation and submission."""
+    from sqlalchemy import select
+
+    from app.db.models import AuditEventRow
+
+    async with database.session() as session:
+        rows = (
+            await session.execute(
+                select(AuditEventRow.action, AuditEventRow.before, AuditEventRow.after)
+                .where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.entity_ref == ref,
+                    AuditEventRow.action.like(f"{artifact_type}.%"),
+                    AuditEventRow.action.not_in(
+                        (CREATION_ACTION[artifact_type], f"{artifact_type}.submitted")
+                    ),
+                )
+                .order_by(AuditEventRow.at)
+            )
+        ).all()
+    return [(a, (b or {}).get("status"), (af or {}).get("status")) for a, b, af in rows]
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.req("FR-355")
+@pytest.mark.parametrize("outcome", _OUTCOMES)
+@pytest.mark.parametrize("artifact_type", APPROVABLE)
+async def test_a_decision_moves_the_version_as_fr_355_says_and_records_it_truly(
+    client: TestClient, database: Database, workspace_id, grant, submitter_headers,
+    artifact_type: str, outcome: str,
+) -> None:
+    """Table-driven over every approvable type and every outcome of a two-approver policy.
+
+    The version's status follows FR-355's mapping for its type; a type with no decision hook
+    does not move. Where it moves, the one Audit Event its module writes names the move, and
+    its `before` is the state the version was really in.
+    """
+    await _require_two_approvals(client, workspace_id, grant, database, artifact_type)
+    if artifact_type == "model":
+        # The autouse model: `review`, on a validated dataset version with diagnostics, so an
+        # approval is not refused for the model's own reasons (FR-205, FR-202).
+        slug, version, ref = MODEL_SLUG, 7, MODEL
+    else:
+        slug, version = f"{artifact_type.replace('_', '-')}-table", 1
+        ref = await _create_authored(
+            database, workspace_id, artifact_type, slug, version, new_uuid7()
+        )
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": ref, "change_summary": "Table case."},
+        headers=submitter_headers,
+    )
+    assert created.status_code == 201, created.text
+    request_id = created.json()["id"]
+
+    first, second = new_uuid7(), new_uuid7()
+    for who in (first, second):
+        await grant("approver", principal_id=who)
+    decisions = {
+        "approve": [(first, "approve"), (second, "approve")],
+        "first_of_two": [(first, "approve")],
+        "reject": [(first, "reject")],
+        "request_changes": [(first, "request_changes")],
+    }[outcome]
+    for who, decision in decisions:
+        response = client.post(
+            f"/api/v1/approval-requests/{request_id}/decide",
+            json={"decision": decision, "comment": "Reviewed."},
+            headers=_headers(who, workspace_id),
+        )
+        assert response.status_code == 200, response.text
+
+    expected = _AFTER[artifact_type][outcome]
+    assert await _version_status(database, workspace_id, artifact_type, slug, version) == expected
+    moves = await _decision_moves(database, workspace_id, artifact_type, ref)
+    if expected == REVIEWABLE_STATE[artifact_type]:
+        assert moves == []
+    else:
+        assert moves == [
+            (_MOVE_ACTION[artifact_type](expected), REVIEWABLE_STATE[artifact_type], expected)
+        ]
