@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 from datetime import date
 from typing import Any
 from uuid import UUID, uuid4
@@ -431,3 +432,81 @@ async def test_chunk_parts_are_scratch_and_the_blob_store_holds_exactly_one_new_
     assert not [k for k in surviving if f"/{dataset_version_id}/" in k], (
         "scratch parts were not released when the run completed (RL-857 §4)"
     )
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_row_that_fails_validation_leaves_no_input_in_the_output_or_the_error_samples(
+    api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
+    workspace_id: UUID, principal: Principal, grant: Any,
+) -> None:
+    """A row whose `purpose` is not a known purpose fails `QuoteContext` validation, whose text
+    prints the rejected value. That text used to be written, whole, into the output parquet's
+    `error_message` and the Job result's `error_samples` (NFR-499, RL-917). The sentinel is the
+    rejected value; the control is that the field name and error type are still there."""
+    sentinel = "SENTINEL-quote-input-5d2e77b0"
+    await _compiled_version(
+        api_client, headers, database, blob_store, workspace_id, principal, grant
+    )
+    frame = _scoring_frame(4).with_columns(
+        pl.when(pl.int_range(pl.len()) == 1)
+        .then(pl.lit(sentinel))
+        .otherwise(pl.col("purpose"))
+        .alias("purpose")
+    )
+    dataset_version_id = await _dataset_version(
+        database, blob_store, workspace_id, principal, frame
+    )
+
+    result, _ = await _run_handler(
+        database, blob_store, workspace_id, principal, _parameters(dataset_version_id)
+    )
+    summary = await _summary(database, blob_store, result)
+
+    ref_result = summary["results"][0]
+    assert ref_result["outcome_counts"]["error"] == 1
+    assert sentinel not in json.dumps(ref_result["error_samples"]), ref_result["error_samples"]
+    output = pl.read_parquet(
+        io.BytesIO(await _output_bytes(database, blob_store, ref_result["output_blob_sha256"]))
+    )
+    messages = output.filter(pl.col("outcome") == "error")["error_message"].to_list()
+    assert len(messages) == 1
+    assert sentinel not in messages[0], messages[0]
+    # The control: an operator still sees which field failed and why.
+    assert "purpose" in messages[0]
+    assert "literal_error" in messages[0] or "enum" in messages[0], messages[0]
+    assert sentinel not in output.write_csv()
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_malformed_effective_date_does_not_echo_its_value_into_the_error_row(
+    api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
+    workspace_id: UUID, principal: Principal, grant: Any,
+) -> None:
+    """`date.fromisoformat`'s own message repeats the rejected string."""
+    sentinel = "SENTINEL-quote-input-9c41aa03"
+    await _compiled_version(
+        api_client, headers, database, blob_store, workspace_id, principal, grant
+    )
+    frame = _scoring_frame(4).with_columns(
+        pl.when(pl.int_range(pl.len()) == 2)
+        .then(pl.lit(sentinel))
+        .otherwise(pl.col("effective_date"))
+        .alias("effective_date")
+    )
+    dataset_version_id = await _dataset_version(
+        database, blob_store, workspace_id, principal, frame
+    )
+
+    result, _ = await _run_handler(
+        database, blob_store, workspace_id, principal, _parameters(dataset_version_id)
+    )
+    summary = await _summary(database, blob_store, result)
+
+    ref_result = summary["results"][0]
+    assert ref_result["outcome_counts"]["error"] == 1
+    assert sentinel not in json.dumps(ref_result["error_samples"])
+    output = pl.read_parquet(
+        io.BytesIO(await _output_bytes(database, blob_store, ref_result["output_blob_sha256"]))
+    )
+    assert sentinel not in output.write_csv()
+    assert "effective_date" in output.filter(pl.col("outcome") == "error")["error_message"][0]

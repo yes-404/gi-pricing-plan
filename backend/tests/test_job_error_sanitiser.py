@@ -26,11 +26,11 @@ from app.db.models import JobLogRow, JobRow, ScoringTraceRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs
-from app.platform.safe_exception import safe_exc_info, safe_message
 from app.worker import handlers
 from app.worker.tasks import execute_job
 from model_schema import JobKind, JobResult, JobStatus
 from pricing_core.progress import ProgressCallback
+from pricing_core.safe_error import safe_error_text, safe_exc_info
 
 _SENTINEL = "SENTINEL-quote-input-7f3a91c2"
 
@@ -122,12 +122,12 @@ async def test_a_named_refusal_chained_from_a_validation_error_leaks_nothing_int
 
 
 @pytest.mark.req("NFR-499")
-def test_safe_message_keeps_the_field_path_and_error_type_and_drops_the_value() -> None:
+def test_safe_error_text_keeps_the_field_path_and_error_type_and_drops_the_value() -> None:
     with pytest.raises(ValidationError) as caught:
         _validation_failure()
     exc = caught.value
     assert _SENTINEL in str(exc), "control: the raw text does carry the input"
-    message = safe_message(exc)
+    message = safe_error_text(exc)
     assert _SENTINEL not in message
     assert "driver_age" in message
     assert "int_parsing" in message
@@ -150,11 +150,11 @@ async def test_a_database_error_does_not_print_its_bound_parameters(database: Da
 
 
 @pytest.mark.req("NFR-499")
-async def test_safe_message_drops_a_value_the_database_itself_echoes(
+async def test_safe_error_text_drops_a_value_the_database_itself_echoes(
     database: Database, workspace_id
 ) -> None:
     """A check violation's `DETAIL: Failing row contains (...)` repeats the rejected value, and
-    it is in the driver's message, which `hide_parameters` does not touch. `safe_message` keeps
+    it is in the driver's message, which `hide_parameters` does not touch. `safe_error_text` keeps
     the driver exception's type, its SQLSTATE and the constraint, and nothing else."""
     with pytest.raises(DBAPIError) as caught:
         async with database.unit_of_work() as session:
@@ -168,7 +168,7 @@ async def test_safe_message_drops_a_value_the_database_itself_echoes(
                 )
             )
     assert _SENTINEL in str(caught.value.orig), "control: the driver's own text echoes the value"
-    message = safe_message(caught.value)
+    message = safe_error_text(caught.value)
     assert _SENTINEL not in message
     assert "23514" in message, message
     assert "blob_sha256_format" in message, message
