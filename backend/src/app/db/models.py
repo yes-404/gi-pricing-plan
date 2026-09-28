@@ -2206,4 +2206,8 @@ class ScoringTraceRow(Base):
             "rating_version_ref",
         ),
         Index("ix_scoring_traces_created_at", "created_at"),
+        # `GET /blobs/{sha256}` asks, on every download, whether any trace references the
+        # digest (the quote-input refusal, `07` §5.1 2026-09-28); unindexed, that is a
+        # sequential scan of every trace (#868, the deputy's ruling of 18:55:39 BST).
+        Index("ix_scoring_traces_blob_sha256", "blob_sha256"),
     )
