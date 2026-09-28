@@ -108,15 +108,15 @@ column holds the `06` line, the caller-predicate count and first route hit, or b
 | 23 | `dataset:write` | code | **pending DP-A** | 11 hits across datasets (`api/datasets.py:87`), versions (`api/dataset_versions.py:61`), blobs (`api/blobs.py:40`), validation rules (`api/validation.py:59`, `platform/validation_rules.py:203`) and ingestion (`data/ingestion.py:124`) |
 | 24 | `deployment:promote` | code | **map survivor** (rows 3–4) | **0 hits**. The deploy route is not built. WK-674 Slice 2 builds the check (the WK-674 ruling, PR #848) |
 | 25 | `audit:read` | code | **add to 06** | 1 hit: `backend/src/app/api/audit.py:52` |
-| 26 | `score:execute` | code | **add to 06** | 1 hit: `backend/src/app/api/score.py:110` |
+| 26 | `score:execute` | code | **add to 06** | 1 hit: `backend/src/app/api/score.py:110`. `07` §4.3 already names it, at line 261 of `07` |
 | 27 | `score:batch` | code | **add to 06** | 2 hits: `backend/src/app/api/score.py:111`, and a docstring at `:38` |
 | 28 | `job:read` | code | **add to 06** | 2 hits: `backend/src/app/api/jobs.py:62`, and a docstring at `authz.py:3` |
 | 29 | `job:cancel` | code | **add to 06** | 1 hit: `backend/src/app/api/jobs.py:63` |
 | 30 | `settings:read` | code | **add to 06** | 1 hit: `backend/src/app/api/settings.py:33` |
 | 31 | `admin:manage_settings` | code | **add to 06** | 7 hits, the first at `backend/src/app/api/reference_tables.py:51`. Also `platform/reference.py:75` and `platform/datasets.py:995` |
-| 32 | `admin:manage_service_accounts` | code | **add to 06** | 1 hit: `backend/src/app/api/service_accounts.py:40` |
+| 32 | `admin:manage_service_accounts` | code | **add to 06** | 1 hit: `backend/src/app/api/service_accounts.py:40`. It is already checked, so it is not a DP-B name. WK-674 Slice 3's per-environment key routes (#843's permission table) extend this router under the same name |
 | 33 | `admin:break_glass` | code | **add to 06** | 1 hit: `backend/src/app/platform/rbac.py:424` (FR-349's elevation) |
-| 34 | `admin:manage_environments` | code | **pending DP-B** | **0 hits.** Its only occurrences are its definition and the admin role set (`permissions.py:69`, `:146`) |
+| 34 | `admin:manage_environments` | code | **pending DP-B** (and DP-D for environment configuration) | **0 hits.** Its only occurrences are its definition and the admin role set (`permissions.py:69`, `:146`). #843's permission table (at `1b102201`) plans it for Slice 2 (create and list Environments), Slice 3 (environment configuration) and Slice 6 (shadow configuration) |
 
 **Verdict counts:**
 
@@ -165,28 +165,30 @@ The Work that builds the capability adds the check and its negative test.
 
 ## Decision points for the maintainer (by delegation, the deputy)
 
-These three change scope, so they are not ruled here. They follow the `document-ids.md` §1.7
+These four change scope, so they are not ruled here. They follow the `document-ids.md` §1.7
 form. Rows marked "pending DP-x" above take their verdict from the dated decision, which is
 filled in before this record mints.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-A | **Granularity.** `06` names per-artifact write rights (`rating_algorithm:write`, `rate_table:write`, `factor:write`, `banding:write`, `grouping:write`, `dataset:create_version`). The code checks one broader name per family: `rating:write` (algorithms, rate tables and Rating Version creation), `model:fit` (factors, bandings, groupings, and fitting), `dataset:write` (datasets, versions, blobs, validation rules, ingestion). Which is the catalogue? | **(a) The code's coarse names.** Map the six spec names onto `rating:write`, `model:fit` and `dataset:write`, and amend `06`. No code change. It loses the roles `06` could express, e.g. a rate-table maintainer who cannot edit algorithms. **(b) The spec's fine names.** Split the three code names, and the routes check the fine names. It keeps every `06` role expressible, but costs a migration of role grants and new route checks, and it grants per-artifact rights the code never had. **(c) The coarse names now, with the fine split carried to WK-676** (Phase 3, scoped roles), recorded in `06` as the target. | **(c).** The built surface and the tests use the coarse names. No Phase 2 requirement needs a per-artifact write right. The scoped-role Work is where finer grants belong. (a) silently drops what `06` meant to allow. (b) is Phase 3 work built ahead | decision point (scope) | yes: rows 11–16, 22 and 23; WK-673 Slice 4 and WK-674 Slice 2 if they add a write check | |
-| DP-B | **`admin:manage_environments`**: defined and granted to Admin, and checked nowhere (0 hits). Keep it, or remove it? | **(a) Keep it, specified in `06` as owned by WK-674**, whose Slice 2 builds the Environment record (`07` FR-428) and its management route. **(b) Remove it** as dead code until a route needs it. | **(a).** FR-428 makes an Environment a first-class, configurable object. Something must govern who manages it, and WK-674 Slice 2 is that route. Removing it and re-adding it in the same phase is churn | decision point (scope) | yes: row 34; WK-674 Slice 2 | |
+| DP-B | **`admin:manage_environments`**: defined and granted to Admin, and checked nowhere at `37b2596e` (0 hits). #843's plan (at `1b102201`) uses it in Slices 2, 3 and 6. Keep it, or remove it? (`deployment:promote`, also 0 hits, is ruled by #848's DP-6. `admin:manage_service_accounts` is checked today, row 32. Neither is a DP-B name.) | **(a) Keep it, with the owning Work named: WK-674.** It is added to `06` §4.1 as governing the Environment object (`07` FR-428): create, list and retire. Its first check lands in WK-674 Slice 2. Whether it also guards an Environment's configuration is DP-D. **(b) Remove it** as dead code until a route needs it, and re-add it in Slice 2. | **(a).** FR-428 makes an Environment a first-class, configurable object, and WK-674 Slice 2 builds its management route in this phase. Removing the name and re-adding it within the phase is churn, and would briefly leave that route with no name to check | decision point (scope) | yes: row 34; WK-674 Slice 2 | |
 | DP-C | **`model:approve` and "every `*:approve`"** (`06:62`, `:218`) against the code's single `approval:decide`, which covers every artifact type (`approvals.py:63`; `validation.py:65`; `platform/validation_rules.py:403`). | **(a) One `approval:decide`**, with per-type approval governed by the `ApprovalPolicy` entry's `approver_roles` (§4.2) and by scoped assignments. Amend `06:62` and `:218`. **(b) Per-type approve permissions** (`model:approve`, `rating_version:approve`, …), split in code. **(c) (a) now, and per-type approve rights considered with WK-676's scoping.** | **(a).** Who may approve which type is already expressed per artifact type by §4.2's `approver_roles`, and per artifact family by FR-345's scope. A per-type permission would be a third mechanism for one rule. `06` §5.1 (`:466`) already names `approval:decide` for the deciding routes | decision point (scope) | yes: row 17 | |
+| DP-D | **Which permission guards an Environment's configuration?** This covers FR-431's environment settings (rate limits, sampling rates, feature flags; `PUT /api/v1/environments/{name}/settings`) and FR-271's shadow configuration, which the deputy's WK-674 DP-2 makes "an environment setting with its own audit event". #843's permission table leaves this to this record. | **(a) `admin:manage_environments`:** one guard for the Environment and everything configured on it. A settings admin cannot loosen `prod`'s limits without environment rights. **(b) `admin:manage_settings`:** FR-431 says environment configuration "is a Setting resolved by the precedence in §3.8", and `admin:manage_settings` already guards the workspace layer (`platform/datasets.py:995`, `platform/reference.py:75`), so every Setting has one guard. `admin:manage_environments` then governs only the Environment object. **(c) Both required.** | **(b).** `07` FR-431 already classifies environment configuration as a Setting, and a Setting has one audited write path. (a) creates a second guard for the same mechanism, split by which layer is written. (c) adds a conjunction no requirement asks for. If the deputy prefers (a) for `prod` safety, the plan's rows for Slices 3 and 6 already use it | decision point (scope) | yes: WK-674 Slices 3 and 6 (not Slice 2) | |
 
 ## What it obliges
 
 - **This commit:** the `06` §4.1 dated amendment, which adds the twelve built names, the two
   map aliases and the spec-only carry list. The pending rows are **not** written into `06`
   until their DPs are decided.
-- **Before this record mints:** the deputy's dated decisions on DP-A, DP-B and DP-C are quoted
+- **Before this record mints:** the deputy's dated decisions on DP-A, DP-B, DP-C and DP-D are quoted
   in a follow-up commit. The pending rows take their verdicts, and any `06` amendment those
   decisions require lands in the same commit.
 - **Until then** (the deputy's item 4(b)): any slice that adds or checks a permission states in
   its leaf plan which name it uses and why, citing the permission-catalogue finding.
-- **WK-674 Slice 2:** `deployment:promote`'s check (rows 3, 4 and 24), and DP-B's route if (a)
-  is decided.
+- **WK-674:** Slice 2 builds `deployment:promote`'s check (rows 3, 4 and 24, #848's DP-6) and
+  DP-B's Environment route. Slices 3 and 6 guard environment configuration by DP-D's decision.
+  Slice 3's key routes use `admin:manage_service_accounts` (row 32).
 - **WK-690:** `custom_objective:author` (row 5). **WK-687, WK-688, WK-684, WK-686:** rows 6–10.
 - **Plan review 15:** the general question stays with it: whether `06` or the code is the
   source of record for the catalogue from now on. This record is the per-name working
