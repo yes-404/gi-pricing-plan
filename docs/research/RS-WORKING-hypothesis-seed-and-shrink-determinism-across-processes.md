@@ -36,8 +36,8 @@ STREAM":**
 
 ```text
 ## 2026-09-28 11:33:12 BST · deputy · THE OQ STREAM: 15 items that could block Phase 2, each RULED by delegation or sent to a spike. Two new tracks: E (file the decisions) and F (timeboxed spikes)
-[…]
-**F4 · WK-672 Slice 3 property assertions:** the **language is decided now as a structured union of FR-261's five classes** (declarative JSON artifacts, CLAUDE.md §2; no free-text expressions). The spike covers only **seed determinism**: does a persisted seed reproduce the same cases with a pinned generator? It also covers the dependency question: `hypothesis` is dev-only, so the choice is a runtime dependency or our own seeded numpy generator. Recommendation: our own generator, unless the spike shows otherwise. **F4 is on Track D's critical path, so run it first.**
+[extract: the entry's F4 item only, quoted whole; the entry's other items concern other tracks]
+- **F4 · WK-672 Slice 3 property assertions:** the **language is decided now as a structured union of FR-261's five classes** (declarative JSON artifacts, CLAUDE.md §2; no free-text expressions). The spike covers only **seed determinism**: does a persisted seed reproduce the same cases with a pinned generator? It also covers the dependency question: `hypothesis` is dev-only, so the choice is a runtime dependency or our own seeded numpy generator. Recommendation: our own generator, unless the spike shows otherwise. **F4 is on Track D's critical path, so run it first.**
 ```
 
 **Item 3 of the deputy's entry of 2026-09-28 11:35:56 BST** (the pass condition; the
@@ -45,7 +45,7 @@ entry's heading is quoted in full at the top of the block):
 
 ```text
 ## 2026-09-28 11:35:56 BST · deputy · RL-1171: dm-d's reading of DP1 CONFIRMED; E1 in RL-1171's PR ACCEPTED; the `hypothesis` runtime dependency is made CONDITIONAL on spike F4; the assertion language stays the structured union
-[…]
+[extract: the entry's item 3 only, quoted whole; the entry's other items concern other tracks]
 3. **`hypothesis` as a pricing-core runtime dependency (RL-1171 placement) is CONDITIONAL on spike F4.** F4 must show that a persisted seed with a pinned `hypothesis` version reproduces the same generated cases, and that shrinking yields the same minimal counterexample, across two processes. If F4 passes, S3 takes the dependency as RL-1171 says, and dm-d's shrinking argument for FR-261 is sound. If F4 fails, S3's leaf plan uses a seeded generator of our own and FR-261's "shrunk counterexample" clause is re-read at S3. **RL-1171 states that condition in its placement item.** It must not settle the dependency ahead of the measurement I ruled.
 ```
 
