@@ -517,3 +517,60 @@ async def test_a_rejected_rating_version_returns_to_draft_with_a_true_audit_befo
             )
         ).all()
     assert [(b["status"], a["status"]) for b, a in moves] == [("review", "draft")]
+
+
+async def _stale_draft_request(database: Database, workspace_id: UUID, slug: str):
+    """A request opened on a version that never left `draft` — what the generic route could
+    make before the approval status bypass was fixed. Made at service level, past the route."""
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug=slug, version=1)
+    )
+    async with database.session() as session:
+        row = await rating_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    async with database.unit_of_work() as session:
+        request = await approval_service.submit(
+            session, workspace_id=workspace_id, submitter=actuary, artifact_ref=ref,
+            change_summary="opened before the fix",
+        )
+        return rating_id, request.id, actuary
+
+
+@pytest.mark.req("FR-355")
+@pytest.mark.parametrize("close", ["reject", "withdraw"])
+async def test_a_stale_request_on_a_draft_rating_version_can_still_be_closed(
+    database: Database, workspace_id, close: str
+) -> None:
+    """A pre-fix request on a version still in `draft` must stay closable: rejecting or
+    withdrawing it returns the version to where it already is, so the hook moves nothing
+    rather than refusing — and the version can then be submitted properly."""
+    rating_id, request_id, actuary = await _stale_draft_request(
+        database, workspace_id, f"m-stale-{close}"
+    )
+    approver = await _principal(database, workspace_id, "approver")
+    async with database.unit_of_work() as session:
+        if close == "reject":
+            request = await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=request_id,
+                approver=approver, decision=DecisionKind.REJECT, comment="Stale.",
+            )
+        else:
+            request = await approval_service.withdraw(
+                session, workspace_id=workspace_id, request_id=request_id,
+                actor=approver, reason="Stale.",
+            )
+        await rating_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=approver, request=request
+        )
+    assert await _status_of(database, workspace_id, rating_id) == "draft"
+
+    async with database.unit_of_work() as session:
+        row, _ = await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="submitted properly",
+        )
+    assert row.status == "review"

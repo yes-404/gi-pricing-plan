@@ -288,6 +288,12 @@ async def apply_approval_decision(
     target = _target_status(ApprovalStatus(request.status))
     if target is None:
         return row  # still in review: one approval of two moves nothing
+    if target is RatingVersionStatus.DRAFT and row.status == RatingVersionStatus.DRAFT.value:
+        # A request opened on a version that never left `draft` (possible before this fix)
+        # must stay closable: returning the version to where it already is moves nothing,
+        # as the model's hook does when the row is already at its target. Refusing here
+        # would leave the request open for ever and block the version's resubmission.
+        return row
     # `06` FR-351: only a version in review moves, checked on the row this transaction
     # holds locked, so the route's refusal is not the only guard.
     approvals.require_in_review(ref, row.status)
