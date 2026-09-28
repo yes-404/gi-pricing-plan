@@ -32,7 +32,7 @@ jobs:
     name: specification audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # `fetch-depth: 0` is what `doc-id.py migrate --verify` needs, for two reasons
         # now. RFC-937 §7(f)'s first reading materialises `8f5d57d`, a commit a shallow
         # clone does not have — and a shallow clone would not error, §7(f) would silently
