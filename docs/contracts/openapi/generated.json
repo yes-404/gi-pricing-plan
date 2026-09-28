@@ -8486,7 +8486,8 @@
         "description": "Why a partial-dependence curve does not cover its factor (FR-175).",
         "enum": [
           "level_cap",
-          "no_source_column"
+          "no_source_column",
+          "operand_of_interaction"
         ],
         "title": "PartialDependenceOmissionReason",
         "type": "string"

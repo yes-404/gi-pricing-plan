@@ -342,10 +342,15 @@ class PartialDependenceOmissionReason(enum.StrEnum):
     #: an `interaction`, whose columns are its operands' (FR-176). **Interim, and
     #: now with a decided replacement rather than an open question**: FR-177 holds a
     #: cross's operands *together* at one observed cell, which is the only way to reach a
-    #: term `predict_gbm` re-derives from raw columns. Until WK-690 builds it, this reason is
-    #: also the marker for a gap that FR-178 shows is wider than a missing curve —
-    #: on a sparse cross the operands' own curves do not merely mislead, they raise.
+    #: term `predict_gbm` re-derives from raw columns. Until WK-1178 builds it (FR-177 moved
+    #: there from WK-690, FD-1195), the cross's own curve is omitted under this reason.
     NO_SOURCE_COLUMN = "no_source_column"
+    #: The factor is an operand of an `interaction`, and is skipped (FR-178). It **does**
+    #: have a column, which is why `no_source_column` would be false of it: the reason it
+    #: is not swept is that holding it alone recombines the operands into cells the fit
+    #: never saw, and on a sparse cross `predict_gbm` refuses the frame (FR-131). The
+    #: cross is what the model has a term for; an operand is not one (FR-92).
+    OPERAND_OF_INTERACTION = "operand_of_interaction"
 
 
 class PartialDependenceOmission(BaseModel):
