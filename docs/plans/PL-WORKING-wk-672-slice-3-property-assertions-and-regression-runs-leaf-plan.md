@@ -165,7 +165,7 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
 | DP-S3-1 | Is a suite with at least one golden quote **required** at submission, at least for Rating Versions headed to `prod`? FR-257 limb (1) already requires a passing run, so a suite, for every approval; the open part is golden quotes (`PL-1189` carry, the deputy's 15:57:21 item (i)) | (a) every submission needs at least one golden quote; (b) only a `prod` deployment needs one, enforced at WK-674's deploy gate; (c) neither, since a properties-only suite suffices | (a): every approved version can reach `prod`, and a properties-only suite checks no priced outcome | **scope** (the maintainer's, by delegation to the deputy) | yes (Tasks 1, 6, 6b) | **(a), every submit**, with a spec line: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
 | DP-S3-2 | Must the passing run's `suite_content_hash` equal the suite the submit gate pins? | yes; no | yes: otherwise a suite edited after the run is approved on a stale run | decision point | yes (Task 6) | **yes**: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
 | DP-S3-3 | Is the run a blocking gate by itself, and what raises `PROPERTY_ASSERTION_FAILED`? | (a) the run records `overall=fail`, and submission refuses through limb (1); the code is the failed Job's problem; (b) the run's route itself refuses | (a) | decision point | yes (Task 5) | **yes, blocking through FR-257 limb (1)**: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
-| DP-S3-4 | Where does the cases blob live? | (a) the existing blob store, as a `BlobRef` (`model_schema/refs.py:138`), read-gated on `rating:read`; (b) inline JSONB on the run row | (a): a run can hold 10 000 cases, and NFR-499 wants one access-controlled home | decision point | yes (Tasks 1, 5) | **(a), AMENDED**: the store needs its own requirement (RL-917). An appended `03` §3.8 FR, a dated NFR-499 clarification and an access-control test land in the same commit; the blob route's own access control is Task 0b (audit B1, pending the deputy); the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
+| DP-S3-4 | Where does the cases blob live? | (a) the existing blob store, as a `BlobRef` (`model_schema/refs.py:138`), read-gated on `rating:read`; (b) inline JSONB on the run row | (a): a run can hold 10 000 cases, and NFR-499 wants one access-controlled home | decision point | yes (Tasks 1, 5) | **(a), AMENDED**: the store needs its own requirement (RL-917). An appended `03` §3.8 FR, a dated NFR-499 clarification and an access-control test land in the same commit; the blob route's own access control is Task 0b (audit B1, **ruled (a)**: the WK-1178 blob-route PR, with the case store registered as a quote-input kind); the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
 
 The deputy's ruling, quoted whole:
 
@@ -192,6 +192,36 @@ Read at origin/main e6a9ca71: `03-rating-engine.md` :68–69 (glossary), :174 FR
 The plan carries these four as ruled; its DP table quotes this entry.
 ```
 
+The deputy's ruling on audit finding B1 (the blob route), which amends DP-S3-4's application, quoted whole:
+
+```text
+## 2026-09-28 18:24:32 BST · deputy · LIVE blob-route hole: CONFIRMED at e6a9ca71; option (a) a WK-1178 fix PR now + FD, severity HIGH; S3 code merge waits on it
+
+**Verified by me at origin/main e6a9ca71:**
+- `backend/src/app/api/blobs.py:104–122`: `download` takes `caller: ReadDatasets` and runs `select(BlobRow).where(BlobRow.sha256 == sha256)` with no other predicate.
+- `backend/src/app/db/models.py:274`: `BlobRow` is keyed by digest, with no workspace column.
+- `backend/src/app/platform/traces.py:122`: `blob_store.put(session, payload, …)` writes the sampled trace body, which is NFR-499's quote-input store, into that same table.
+
+The lead's reading holds.
+
+**Ruling: (a).** WK-1178 opens the fix PR now, ahead of the queued merges and alongside WK-672. It is governance/security class, priority 2 in budget mode. It is not a Slice of WK-672, so §8 is not engaged; this is the same footing as #861 and #864.
+1. **FD, severity HIGH,** minted at its turn. It states that exploitation needs the digest, and says where digests are exposed today (the trace views' `blob_sha256`, any other response carrying one). That reachability sets the severity, so evidence it. Do not assert "unreachable".
+2. **Minimum fix:** `/blobs/{sha256}` refuses any blob referenced by a quote-input store (a `ScoringTraceRow`, and every future such store, including S3's case store). Refuse with **404, not 403**, so the route does not confirm the blob exists. Trace bodies are read only through the traces API, which is workspace-scoped.
+3. **Workspace scoping for the remaining blobs** (dataset parquet, model and rate-table artifacts): the PR establishes in writing whether a `dataset:read` holder in workspace A can fetch workspace B's dataset blob today.
+   - If yes, scope the route by resolving the digest to an owning artifact in the caller's workspace, in the same PR if small.
+   - Otherwise, say so in the FD with an owner. Do not leave it silent.
+   - Content addressing means one blob can be owned in two workspaces. Allow the read if *any* owning artifact is in the caller's workspace.
+4. **Negative tests through the route itself,** red first against e6a9ca71:
+   - a trace blob with `dataset:read` gives 404;
+   - another workspace's blob gives 404 (if item 3 is fixed);
+   - the caller's own dataset blob still gives 307.
+5. **Spec:** `07` §5.1's row for the route says "permission-checked". State the refusal and scoping there in the same commit (CLAUDE.md §0), and cite NFR-499's RL-917 clarification as the obligation.
+6. **Mutation proof:** removing the refusal predicate turns the tests red. Record it.
+7. **Disclosure:** no download audit exists, so past reads cannot be ruled out. The FD says so plainly rather than "no evidence of access".
+
+**S3:** its plan may keep drafting. S3's case-store code does not merge before this fix, which it depends on (DP-S3-4 ruled at 18:17:32).
+```
+
 All four have resolvers. The plan applies them as ruled.
 
 ---
@@ -202,12 +232,12 @@ All four have resolvers. The plan applies them as ruled.
 
 - [ ] Confirm that Slice 2's code PR is on `origin/main`: `git log --grep 'PL-1189' -1 origin/main`, and `packages/pricing-core/src/pricing_core/rating/testing.py` exists. Confirm that DP-S3-1 to DP-S3-4 carry resolvers. **If either fails, stop and report.**
 
-### Task 0b: The blob route's access control (audit B1; pending the deputy)
+### Task 0b: The blob route's access control (audit B1; the deputy's decision (a))
 
-The generic `GET /api/v1/blobs/{sha256}` (`backend/src/app/api/blobs.py:97-135`) is gated on `dataset:read` (`:39`), and `BlobRow` is keyed on `sha256` alone, with no workspace column (`db/models.py:286-288`). So the case store's "`rating:read` in its workspace" (DP-S3-4 (i), acceptance item 5) would be false as built. The same exposure is live for traces today.
+The generic `GET /api/v1/blobs/{sha256}` (`backend/src/app/api/blobs.py:97-135`) is gated on `dataset:read` (`:39`), and `BlobRow` is keyed on `sha256` alone, with no workspace column (`db/models.py:286-288`). The same exposure is live for traces. **The deputy ruled B1 (a)** (the entry quoted under "Decision points"): WK-1178 fixes the blob route now, in a separate PR by executor-s1. The route refuses quote-input blobs with 404, and dataset-blob tenancy is established there.
 
-- [ ] **The blob-route fix, as the deputy decides it, is on `origin/main` before Task 5, or Slice 3 lands it.** This plan does not design that fix. Its shape is the deputy's decision, pending, and the plan is amended to cite it when it is given. Until then **Task 5 does not start**, and acceptance item 5's access-control test is written against the decided route.
-
+- [ ] **The WK-1178 blob-route PR (number to follow) is on `origin/main` before Task 5.** Check it by its squash on `origin/main`. If it is absent, **stop and report**: Slice 3 does not land that fix.
+- [ ] **Slice 3's case store is registered as a quote-input kind under that fix's mechanism**, so the generic route refuses it with 404. It is read only through the run's own `rating:read` path (Task 5). Acceptance item 5's access-control test asserts both: 404 on the generic route, and the `rating:read` gate on the run's path.
 ### Task 1: Spec — `03` §3.8, §4.9, §5.2, §8; `docs/skills-map.md`
 
 **Files:** Modify `docs/specs/03-rating-engine.md` and `docs/skills-map.md`.
