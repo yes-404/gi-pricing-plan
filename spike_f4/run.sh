@@ -21,6 +21,6 @@ for arm in $ARMS; do
     cases=$("$PY" -c "import json,sys;l=json.load(open(sys.argv[1]));print(len(l)-1)" "$OUT/$arm-$s-p1.json")
     cx=$("$PY" -c "import json,sys;l=json.load(open(sys.argv[1]));r=l[-1];print(json.dumps(r.get('ctx',r['RESULT']),sort_keys=True))" "$OUT/$arm-$s-p1.json")
     cxn=$(for f in "$OUT/$arm-$s"-p*.json; do "$PY" -c "import json,sys;print(json.dumps(json.load(open(sys.argv[1]))[-1],sort_keys=True))" "$f"; done | sort -u | wc -l)
-    echo "$arm seed=$s distinct_logs=$n distinct_final=$cxn calls=$cases final=$cx"
+    echo "[$(TZ=Europe/London date +%H:%M:%S) $(uptime | sed "s/.*load average: //")] $arm seed=$s distinct_logs=$n distinct_final=$cxn calls=$cases final=$cx"
   done
 done
