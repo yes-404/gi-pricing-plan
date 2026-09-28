@@ -20,10 +20,11 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import RegressionSuiteRow, RegressionSuiteVersionRow
+from app.db.models import RatingAlgorithmRow, RegressionSuiteRow, RegressionSuiteVersionRow
 from app.errors import PlatformError
 from app.platform import audit, rbac
 from model_schema import (
+    InputContractField,
     JobSource,
     Permission,
     Principal,
@@ -31,6 +32,7 @@ from model_schema import (
     RegressionSuiteContent,
     suite_content_hash,
 )
+from pricing_core.rating.properties import monotone_field
 
 __all__ = [
     "create_suite_version",
@@ -93,6 +95,39 @@ async def _next_version(session: AsyncSession, *, suite: RegressionSuiteRow) -> 
     return int(current) + 1
 
 
+async def _validate_properties(
+    session: AsyncSession, *, workspace_id: UUID, content: RegressionSuiteContent
+) -> None:
+    """Refuse, at declaration, a `monotone` property that cannot be swept (FR-261): 422
+    `REGRESSION_PROPERTY_INVALID` naming the property. Checked against the latest saved
+    version of the suite's algorithm; a suite declared before its algorithm exists cannot be
+    checked, and the Job handler refuses the same way when it runs."""
+    row = (
+        await session.execute(
+            select(RatingAlgorithmRow)
+            .where(
+                RatingAlgorithmRow.workspace_id == workspace_id,
+                RatingAlgorithmRow.slug == content.algorithm_slug,
+            )
+            .order_by(RatingAlgorithmRow.version.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        return
+    contract = [InputContractField.model_validate(f) for f in row.content["input_contract"]]
+    for prop in content.properties:
+        if prop.check.kind != "monotone":
+            continue
+        try:
+            monotone_field(contract, prop.check)
+        except ValueError as exc:
+            raise PlatformError(
+                "REGRESSION_PROPERTY_INVALID", "Regression property invalid", 422,
+                f"property {prop.name!r}: {exc}",
+            ) from exc
+
+
 async def create_suite_version(
     session: AsyncSession,
     *,
@@ -108,6 +143,7 @@ async def create_suite_version(
         session, workspace_id=workspace_id, principal=actor,
         permission=Permission.RATING_WRITE,
     )
+    await _validate_properties(session, workspace_id=workspace_id, content=content)
     suite = await _registry(session, workspace_id=workspace_id, slug=slug)
     if suite is None:
         suite = RegressionSuiteRow(

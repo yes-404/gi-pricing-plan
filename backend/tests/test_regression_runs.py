@@ -392,3 +392,25 @@ def test_a_failed_run_puts_no_quote_input_in_the_job_error(run_world) -> None:
     text = repr(job.error) + repr(job.parameters)
     assert str(_SECRET) not in text
     assert "premium_in" not in repr(job.error)
+
+
+@pytest.mark.req("FR-261")
+def test_an_unsweepable_monotone_that_slipped_past_declaration_is_a_named_job_failure(
+    run_world, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Declaration refuses it (test_regression_suites); if a suite still carries one (declared
+    before its algorithm existed), the Job ends failed with the registered code, not a raw
+    `JOB_HANDLER_FAILED`."""
+    from app.platform import regression_suites
+
+    async def no_check(*_a: Any, **_k: Any) -> None:
+        return None
+
+    monkeypatch.setattr(regression_suites, "_validate_properties", no_check)
+    w = run_world
+    w.make_suite(properties=[{"name": "mono-x", "check": {
+        "kind": "monotone", "input": "premium_in", "direction": "increasing",
+        "lower": "5"}}])  # a lone bound and the contract declares no range
+    job = w.run()
+    assert job.status is JobStatus.FAILED
+    assert job.error["code"] == "REGRESSION_PROPERTY_INVALID"

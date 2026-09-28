@@ -355,6 +355,12 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # Job handler, which finishes the Job `failed` with it when a property fails; the
         # run row still persists.
         "PROPERTY_ASSERTION_FAILED",
+        # Regression Suite declaration (WK-672 Slice 3, FR-261): a `monotone` property whose
+        # input or range cannot be swept (absent from the algorithm's input contract, not
+        # orderable, no range, empty after the contract's own bounds, or no two-place
+        # decimal value) is refused 422 at declaration, and again by the Job handler, so it
+        # never reaches a running Job as a raw exception.
+        "REGRESSION_PROPERTY_INVALID",
     }
 )
 

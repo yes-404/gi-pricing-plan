@@ -357,7 +357,8 @@ async def _load_compiled(
             session, workspace_id=workspace_id, rating_version_id=rating_id
         )
         blob_row = await session.get(BlobRow, (row.bundle or {})["blob_sha256"])
-        assert blob_row is not None, "the compile Job stored no bundle"
+        if blob_row is None:
+            raise RuntimeError("the compile Job stored no bundle")
         payload = await blob_store.read(to_ref(blob_row))
     return load_bundle(Bundle.model_validate_json(payload))
 
@@ -379,7 +380,8 @@ async def author_demo_rating_evidence(
     is written here. Returns the regression Job's run id.
     """
     register_rating_handlers()
-    assert analyst.id is not None
+    if analyst.id is None:
+        raise RuntimeError("the demo analyst has no id")
     try:
         await algorithm_service.create_algorithm(
             database, workspace_id, analyst.id, _demo_algorithm()
@@ -399,7 +401,8 @@ async def author_demo_rating_evidence(
         database, blob_store, workspace_id, analyst, JobKind.RATING_COMPILE,
         {"rating_version_id": str(rating_id)},
     )
-    assert compiled_status is JobStatus.SUCCEEDED, f"demo compile Job {compiled_status}"
+    if compiled_status is not JobStatus.SUCCEEDED:
+        raise RuntimeError(f"demo compile Job {compiled_status}")
     bundle = await _load_compiled(database, blob_store, workspace_id, rating_id)
 
     context = QuoteContext.model_validate({
@@ -408,7 +411,8 @@ async def author_demo_rating_evidence(
         "options": {"rating_version_ref": str(ref)},
     })
     expected = payable_minor(await score_one(bundle, context))
-    assert expected is not None
+    if expected is None:
+        raise RuntimeError("the demo golden quote was not quoted")
     suite = RegressionSuiteContent.model_validate({
         "algorithm_slug": DEMO_ALGORITHM_SLUG,
         "golden_quotes": [{
@@ -434,7 +438,8 @@ async def author_demo_rating_evidence(
         database, blob_store, workspace_id, analyst, JobKind.RATING_REGRESSION,
         {"rating_version_id": str(rating_id)},
     )
-    assert run_status is JobStatus.SUCCEEDED, f"demo regression Job {run_status}"
+    if run_status is not JobStatus.SUCCEEDED:
+        raise RuntimeError(f"demo regression Job {run_status}")
     async with database.session() as session:
         latest = (await session.execute(
             select(RegressionRunRow).where(RegressionRunRow.rating_version_id == rating_id)
@@ -503,7 +508,8 @@ async def create_approved_rating_version(
     """
     async with database.session() as session:
         model_row = await session.get(ModelRow, model_id)
-        assert model_row is not None
+        if model_row is None:
+            raise RuntimeError(f"the approved model {model_id} does not exist")
         model_ref = ArtifactRef(
             type="model", slug=model_row.model_family_slug, version=model_row.version
         )

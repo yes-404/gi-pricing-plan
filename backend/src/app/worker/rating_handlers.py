@@ -175,9 +175,14 @@ def _rating_regression(parameters: dict[str, Any], callback: ProgressCallback) -
 
     bundle, suite, ref = progress.run_on_loop(prepare())
     progress.update(0.2, "running")
-    run, log = run_regression(
-        bundle, suite, rating_version_ref=ref, now=lambda: datetime.now(UTC)
-    )
+    try:
+        run, log = run_regression(
+            bundle, suite, rating_version_ref=ref, now=lambda: datetime.now(UTC)
+        )
+    except ValueError as exc:  # a property that cannot be swept: a named refusal, not a bug
+        raise PlatformError(
+            "REGRESSION_PROPERTY_INVALID", "Regression property invalid", 422, str(exc)
+        ) from exc
     progress.update(0.9, "persisting")
 
     async def persist() -> Any:
