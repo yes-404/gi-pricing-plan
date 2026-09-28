@@ -414,3 +414,28 @@ def test_an_unsweepable_monotone_that_slipped_past_declaration_is_a_named_job_fa
     job = w.run()
     assert job.status is JobStatus.FAILED
     assert job.error["code"] == "REGRESSION_PROPERTY_INVALID"
+
+
+@pytest.mark.req("NFR-499")
+def test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_error(
+    run_world, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pydantic's `ValidationError` is a `ValueError` and its message carries `input_value`:
+    a generated or golden quote input. Only `UnsweepableProperty` is the named refusal; every
+    other exception ends the Job with a generic code and a message that carries no value."""
+    from app.worker import rating_handlers
+    from model_schema import QuoteContext
+
+    def leaking_run(*_a: Any, **_k: Any) -> Any:
+        QuoteContext.model_validate({
+            "purpose": "new_business", "quoted_at": "2026-01-01T00:00:00",
+            "effective_date": "2026-01-01", "inputs": {}, "leaked": _SECRET,
+        })
+
+    monkeypatch.setattr(rating_handlers, "run_regression", leaking_run)
+    w = run_world
+    w.make_suite(properties=[{"name": "no-null", "check": {"kind": "no_null_output"}}])
+    job = w.run()
+    assert job.status is JobStatus.FAILED
+    assert str(_SECRET) not in repr(job.error)
+    assert job.error["code"] != "REGRESSION_PROPERTY_INVALID"

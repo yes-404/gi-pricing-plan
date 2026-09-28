@@ -32,7 +32,7 @@ from model_schema import (
     RegressionSuiteContent,
     suite_content_hash,
 )
-from pricing_core.rating.properties import monotone_field
+from pricing_core.rating.properties import UnsweepableProperty, monotone_field
 
 __all__ = [
     "create_suite_version",
@@ -121,7 +121,7 @@ async def _validate_properties(
             continue
         try:
             monotone_field(contract, prop.check)
-        except ValueError as exc:
+        except UnsweepableProperty as exc:
             raise PlatformError(
                 "REGRESSION_PROPERTY_INVALID", "Regression property invalid", 422,
                 f"property {prop.name!r}: {exc}",

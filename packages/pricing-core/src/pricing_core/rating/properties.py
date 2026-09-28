@@ -46,6 +46,7 @@ __all__ = [
     "NO_COMPARABLE_PAIRS",
     "PROPERTY_FAILED",
     "Scorer",
+    "UnsweepableProperty",
     "build_run",
     "case_holds",
     "coerce_inputs",
@@ -57,6 +58,13 @@ __all__ = [
     "monotone_sweep",
     "payable_minor",
 ]
+
+class UnsweepableProperty(ValueError):  # noqa: N818 - named in 03 section 5.2
+    """A `monotone` property whose input or range cannot be swept: absent from the input
+    contract, not orderable, no range, empty after the contract's own bounds, or no two-place
+    decimal value. The one exception the platform maps to `REGRESSION_PROPERTY_INVALID`; it
+    names an input and a range, never a Quote Context (NFR-499)."""
+
 
 #: The code a failing property result carries (03 §4.9, `PROPERTY_ASSERTION_FAILED`).
 PROPERTY_FAILED = "PROPERTY_ASSERTION_FAILED"
@@ -127,11 +135,15 @@ def monotone_field(
     """The contract field a `monotone` names; `ValueError` naming it when it cannot be used."""
     field = next((f for f in contract if f.name == check.input), None)
     if field is None:
-        raise ValueError(f"monotone names input {check.input!r}, absent from the input contract")
+        raise UnsweepableProperty(
+            f"monotone names input {check.input!r}, absent from the input contract"
+        )
     if field.type not in (RatingInputType.INT, RatingInputType.DECIMAL):
-        raise ValueError(f"monotone input {check.input!r} is {field.type.value}, not orderable")
+        raise UnsweepableProperty(
+            f"monotone input {check.input!r} is {field.type.value}, not orderable"
+        )
     if _bounds(field, check) is None:
-        raise ValueError(
+        raise UnsweepableProperty(
             f"monotone input {check.input!r} has no range: declare `lower` and `upper`, or "
             "`min` and `max` on the input contract"
         )
@@ -161,13 +173,15 @@ def _swept_range(field: InputContractField, check: MonotoneInInput) -> tuple[Any
     if field.type is RatingInputType.INT:
         lo, hi = int(low.to_integral_value(ROUND_CEILING)), int(high.to_integral_value(ROUND_FLOOR))
         if lo > hi:
-            raise ValueError(f"monotone input {field.name!r}: the range {low}..{high} is empty")
+            raise UnsweepableProperty(
+                f"monotone input {field.name!r}: the range {low}..{high} is empty"
+            )
         return lo, hi
     cent = Decimal("0.01")
     lo_c = low.quantize(cent, rounding=ROUND_CEILING)
     hi_c = high.quantize(cent, rounding=ROUND_FLOOR)
     if lo_c > hi_c:
-        raise ValueError(
+        raise UnsweepableProperty(
             f"monotone input {field.name!r}: no two-place decimal value between {low} and {high}"
             " (the range is empty)"
         )

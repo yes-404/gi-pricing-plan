@@ -25,6 +25,7 @@ from app.worker.handlers import HANDLERS, register_handler
 from model_schema import ArtifactRef, JobKind, JobResult, JobSource, cases_log_bytes
 from pricing_core.progress import ProgressCallback
 from pricing_core.rating.compile import Bundle
+from pricing_core.rating.properties import UnsweepableProperty
 from pricing_core.rating.runtime import load_bundle
 from pricing_core.rating.testing import run_regression
 
@@ -179,10 +180,19 @@ def _rating_regression(parameters: dict[str, Any], callback: ProgressCallback) -
         run, log = run_regression(
             bundle, suite, rating_version_ref=ref, now=lambda: datetime.now(UTC)
         )
-    except ValueError as exc:  # a property that cannot be swept: a named refusal, not a bug
+    except UnsweepableProperty as exc:  # a named refusal; its message names no quote input
         raise PlatformError(
             "REGRESSION_PROPERTY_INVALID", "Regression property invalid", 422, str(exc)
         ) from exc
+    except Exception as exc:
+        # NFR-499: any other exception's message may carry a quote input (Pydantic's
+        # `ValidationError` is a `ValueError` and prints `input_value`), and the generic
+        # `JOB_HANDLER_FAILED` path stores `str(exc)` and logs the traceback. Re-raise with
+        # the exception's type alone, cutting the chain.
+        raise RuntimeError(
+            f"the regression run failed with {type(exc).__name__}; details are withheld "
+            "because they may contain a quote input (NFR-499)"
+        ) from None
     progress.update(0.9, "persisting")
 
     async def persist() -> Any:
