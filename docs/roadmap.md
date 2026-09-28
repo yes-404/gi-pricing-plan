@@ -558,7 +558,7 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170
+works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-9010
 
 ### WK-668 — **Spike S1/S2 resolution and ADR-706 confirmation**
 
@@ -799,6 +799,20 @@ phase: P2
 ```
 
 Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegation 2026-09-27 16:18:24 BST), the second of the two downstream Works RFC-937's closing section names. **Subject:** the process step for each transition in the state machines of `document-ids.md` section 1.2, and the register, instrument and verify tooling those transitions depend on. **Scope, by reference and not restated** (a restated list is the copy that goes stale, RFC-756): every item `CR-1164` (the WK-697 closure record) section 10 lists as taken over with the event "the create-read-retire audit's first slice", and every register row `CR-1167` dispositions to that event. **Status `active`: listed, not started.** Its first slice is the event those rows wait on; no map plan exists yet.
+
+### WK-9010 — P2 standing maintenance: hotfixes, dependency bumps and security findings
+
+```yaml
+id: WK-9010
+family: work
+title: 'P2 standing maintenance: hotfixes, dependency bumps and security findings'
+status: active
+created: 2026-09-28
+owner: maintainer
+phase: P2
+```
+
+Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and implement", answering the deputy's GitHub security review; the deputy's entry 13:10:06 BST in the channel, item 1). `process/document-ids.md` (section 1.9, the PR-title rule) routes a PR that arrives without an `SL-` — *"a hotfix, an external contributor, a dependency bump"* — to *"the phase's standing `WK- maintenance`"*, and Phase 2 had none. **Scope:** work that belongs to no other Work; each item names its `FD-` or its trigger. **First items:** the dependency and workflow hardening finding filed with the GitHub security review, discharged by that review's hardening PR. **Status `active`:** a standing item; it closes with its phase.
 
 **Goal:** DAG designer, rate tables, reference data, real-time + batch scoring, dislocation.
 
