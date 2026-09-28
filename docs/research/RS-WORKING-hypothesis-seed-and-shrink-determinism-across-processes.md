@@ -34,12 +34,20 @@ the question twice; both entries are quoted verbatim from the lead's channel fil
 **The F4 item of the deputy's entry "2026-09-28 11:33:12 BST · deputy · THE OQ
 STREAM":**
 
-> **F4 · WK-672 Slice 3 property assertions:** the **language is decided now as a structured union of FR-261's five classes** (declarative JSON artifacts, CLAUDE.md §2; no free-text expressions). The spike covers only **seed determinism**: does a persisted seed reproduce the same cases with a pinned generator? It also covers the dependency question: `hypothesis` is dev-only, so the choice is a runtime dependency or our own seeded numpy generator. Recommendation: our own generator, unless the spike shows otherwise. **F4 is on Track D's critical path, so run it first.**
+```text
+## 2026-09-28 11:33:12 BST · deputy · THE OQ STREAM: 15 items that could block Phase 2, each RULED by delegation or sent to a spike. Two new tracks: E (file the decisions) and F (timeboxed spikes)
+[…]
+**F4 · WK-672 Slice 3 property assertions:** the **language is decided now as a structured union of FR-261's five classes** (declarative JSON artifacts, CLAUDE.md §2; no free-text expressions). The spike covers only **seed determinism**: does a persisted seed reproduce the same cases with a pinned generator? It also covers the dependency question: `hypothesis` is dev-only, so the choice is a runtime dependency or our own seeded numpy generator. Recommendation: our own generator, unless the spike shows otherwise. **F4 is on Track D's critical path, so run it first.**
+```
 
-**Item 3 of the deputy's entry "2026-09-28 11:35:56 BST · deputy · RL-1171"** (the
-pass condition):
+**Item 3 of the deputy's entry of 2026-09-28 11:35:56 BST** (the pass condition; the
+entry's heading is quoted in full at the top of the block):
 
-> 3. **`hypothesis` as a pricing-core runtime dependency (RL-1171 placement) is CONDITIONAL on spike F4.** F4 must show that a persisted seed with a pinned `hypothesis` version reproduces the same generated cases, and that shrinking yields the same minimal counterexample, across two processes. If F4 passes, S3 takes the dependency as RL-1171 says, and dm-d's shrinking argument for FR-261 is sound. If F4 fails, S3's leaf plan uses a seeded generator of our own and FR-261's "shrunk counterexample" clause is re-read at S3. **RL-1171 states that condition in its placement item.** It must not settle the dependency ahead of the measurement I ruled.
+```text
+## 2026-09-28 11:35:56 BST · deputy · RL-1171: dm-d's reading of DP1 CONFIRMED; E1 in RL-1171's PR ACCEPTED; the `hypothesis` runtime dependency is made CONDITIONAL on spike F4; the assertion language stays the structured union
+[…]
+3. **`hypothesis` as a pricing-core runtime dependency (RL-1171 placement) is CONDITIONAL on spike F4.** F4 must show that a persisted seed with a pinned `hypothesis` version reproduces the same generated cases, and that shrinking yields the same minimal counterexample, across two processes. If F4 passes, S3 takes the dependency as RL-1171 says, and dm-d's shrinking argument for FR-261 is sound. If F4 fails, S3's leaf plan uses a seeded generator of our own and FR-261's "shrunk counterexample" clause is re-read at S3. **RL-1171 states that condition in its placement item.** It must not settle the dependency ahead of the measurement I ruled.
+```
 
 ## Method
 
@@ -198,31 +206,37 @@ Quoted verbatim, attributed: the deputy's entry in `~/gi-pricing-plan.local/chan
 headed "2026-09-28 11:54:48 BST · deputy · Spike F4 DECIDED", given by the maintainer's
 delegation.
 
-> ## 2026-09-28 11:54:48 BST · deputy · Spike F4 DECIDED: `hypothesis` becomes a `pricing-core` runtime dependency under six conditions; the generated cases are persisted, so an old run's replay never depends on the library version (answers your 11:54:10)
->
-> Given by the maintainer's delegation (28 Sep). It is final on the RS record once I read it there with these figures; the decision line goes into the record, quoted and attributed. **Slice 3's leaf plan builds on it from now.**
->
-> **Why hypothesis, and not the platform's own generator (this reverses my 11:33:12 recommendation, as that line allowed):**
-> - FR-261 requires a *shrunk* counterexample. numpy's `default_rng` is seed-stable but has no shrinker, and building one is a slice of its own with no track record.
-> - F4 showed seed **and** shrink determinism. There was 1 distinct call log and 1 counterexample per seed, over 5 seeds × 3 fresh interpreters × 6 settings arms, and the shrink sequences were byte-identical.
-> - The negative control produced 3 distinct logs, so the comparator can fail.
-> - Determinism held with load between 1.9 and 19.5, so contention does not break it at this scale.
->
-> **The conditions. Each is a Slice 3 requirement, and each is written into RL-1172's placement item by a dated line at S3's leaf plan:**
-> 1. **An exact `==` pin** in `packages/pricing-core/pyproject.toml` (currently `hypothesis>=6`, dev group only). `03` §8 and `docs/skills-map.md` are updated in the same PR (CLAUDE.md §10).
-> 2. **The settings are fixed in code, not left at the defaults:** `@seed(persisted)`, `database=None`, `deadline=None`, `report_multiple_bugs=False`, and a bounded `max_examples` declared on the `RegressionSuite` artifact. `derandomize` is not used, because it ignores the seed.
-> 3. **The hypothesis version is persisted beside `generation.seed`** on the run. **Regenerating** from a seed refuses a version mismatch, by name.
-> 4. **Every generated case and the shrunk counterexample are persisted on the `RegressionRun`**, as a content-addressed JSON blob of canonical cases, the same form the spike hashed. **Replaying a past run re-scores these persisted cases and never regenerates them.** The seed serves same-version regeneration and debugging. Audit reproducibility rests on the cases, so an upgrade of hypothesis cannot invalidate a Rating Version's regression history. If FR-261's wording names the seed as the reproduction mechanism, this is a dated amendment in S3's spec change.
-> 5. **Wall-clock cut-offs are detected, not assumed away.** The spike did not measure them (`engine.py` at 6.165.7: `MAX_SHRINKING_SECONDS`, and the multi-bug search that condition 2 disables). S3 records on the run whether shrinking completed or stopped on a limit. A stopped shrink reports its counterexample as **unminimised**, never as the minimal one. The S3 leaf plan names the mechanism, verified at the pin (read to the function body, not the constant).
-> 6. **The spike's matrix becomes S3's test:** two fresh processes, seeds from the persisted artifact, identical canonical case logs and counterexamples, plus the no-seed negative control. It is a CI test, so a hypothesis upgrade that breaks determinism fails the gate rather than the audit record.
->
-> `pricing-core` stays standalone: hypothesis pulls no FastAPI, SQLAlchemy or Redis. S3's PR shows the resolved dependency set, and `lint-imports` stays green. **F4 is off Track D's critical path.** Re-derive the ETA for S3 on this decision. Push the salvage ref `d0f432c5` with the others.
+```text
+## 2026-09-28 11:54:48 BST · deputy · Spike F4 DECIDED: `hypothesis` becomes a `pricing-core` runtime dependency under six conditions; the generated cases are persisted, so an old run's replay never depends on the library version (answers your 11:54:10)
+
+Given by the maintainer's delegation (28 Sep). It is final on the RS record once I read it there with these figures; the decision line goes into the record, quoted and attributed. **Slice 3's leaf plan builds on it from now.**
+
+**Why hypothesis, and not the platform's own generator (this reverses my 11:33:12 recommendation, as that line allowed):**
+- FR-261 requires a *shrunk* counterexample. numpy's `default_rng` is seed-stable but has no shrinker, and building one is a slice of its own with no track record.
+- F4 showed seed **and** shrink determinism. There was 1 distinct call log and 1 counterexample per seed, over 5 seeds × 3 fresh interpreters × 6 settings arms, and the shrink sequences were byte-identical.
+- The negative control produced 3 distinct logs, so the comparator can fail.
+- Determinism held with load between 1.9 and 19.5, so contention does not break it at this scale.
+
+**The conditions. Each is a Slice 3 requirement, and each is written into RL-1172's placement item by a dated line at S3's leaf plan:**
+1. **An exact `==` pin** in `packages/pricing-core/pyproject.toml` (currently `hypothesis>=6`, dev group only). `03` §8 and `docs/skills-map.md` are updated in the same PR (CLAUDE.md §10).
+2. **The settings are fixed in code, not left at the defaults:** `@seed(persisted)`, `database=None`, `deadline=None`, `report_multiple_bugs=False`, and a bounded `max_examples` declared on the `RegressionSuite` artifact. `derandomize` is not used, because it ignores the seed.
+3. **The hypothesis version is persisted beside `generation.seed`** on the run. **Regenerating** from a seed refuses a version mismatch, by name.
+4. **Every generated case and the shrunk counterexample are persisted on the `RegressionRun`**, as a content-addressed JSON blob of canonical cases, the same form the spike hashed. **Replaying a past run re-scores these persisted cases and never regenerates them.** The seed serves same-version regeneration and debugging. Audit reproducibility rests on the cases, so an upgrade of hypothesis cannot invalidate a Rating Version's regression history. If FR-261's wording names the seed as the reproduction mechanism, this is a dated amendment in S3's spec change.
+5. **Wall-clock cut-offs are detected, not assumed away.** The spike did not measure them (`engine.py` at 6.165.7: `MAX_SHRINKING_SECONDS`, and the multi-bug search that condition 2 disables). S3 records on the run whether shrinking completed or stopped on a limit. A stopped shrink reports its counterexample as **unminimised**, never as the minimal one. The S3 leaf plan names the mechanism, verified at the pin (read to the function body, not the constant).
+6. **The spike's matrix becomes S3's test:** two fresh processes, seeds from the persisted artifact, identical canonical case logs and counterexamples, plus the no-seed negative control. It is a CI test, so a hypothesis upgrade that breaks determinism fails the gate rather than the audit record.
+
+`pricing-core` stays standalone: hypothesis pulls no FastAPI, SQLAlchemy or Redis. S3's PR shows the resolved dependency set, and `lint-imports` stays green. **F4 is off Track D's critical path.** Re-derive the ETA for S3 on this decision. Push the salvage ref `d0f432c5` with the others.
+```
 
 Two notes on the quoted text, recorded and not resolved here:
-- It says "RL-1172's placement item", where the 11:35:56 entry quoted under Question
-  says "RL-1171 placement".
-- The pin it cites is in the root `pyproject.toml`'s `dev` group at this tree, not in
-  `packages/pricing-core/pyproject.toml`.
+- **The ruling's id.** The 11:35:56 entry names the WK-672 opening ruling by the id it
+  held before minting. The decision names it by the id it carries in the open PR #829
+  (branch `p2-d-rl`), filed there as the WK-672 opening rulings. It is one ruling, not
+  two.
+- **Where the pin is.** Condition 1 says the pin is in
+  `packages/pricing-core/pyproject.toml`. At this record's `tree:`, that file does not
+  name `hypothesis`. The `hypothesis>=6` pin is in the root `pyproject.toml`'s
+  `[dependency-groups] dev`.
 
 ## What remains
 
