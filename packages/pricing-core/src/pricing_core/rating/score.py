@@ -215,6 +215,7 @@ from model_schema.scoring import (
 from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder
 from pricing_core.progress import ProgressCallback
 from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, CompiledBundle
+from pricing_core.safe_error import safe_error_detail
 
 __all__ = ["build_scoring_result", "score_batch", "score_one"]
 
@@ -884,7 +885,10 @@ def _batch_error_code(exc: Exception) -> tuple[str, str]:
     and `runtime.py`'s `MODEL_CALL_FAILED` sentinel both already follow it. An exception
     that does not (should not occur for anything this catches, but a fallback is cheap and
     honest) is reported under its own class name rather than mis-parsed."""
-    message = str(exc)
+    # Never `str(exc)` as it stands: a Pydantic `ValidationError`'s text prints the failing
+    # input value, and this message is written into the output row and the Job result's
+    # `error_samples` (NFR-499, RL-917). `safe_error_detail` is `str(exc)` for everything else.
+    message = safe_error_detail(exc)
     code, sep, rest = message.partition(": ")
     if sep and code.replace("_", "").isalnum() and code == code.upper():
         return code, rest
@@ -898,7 +902,11 @@ def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
     RL-890 — so `_build_trace` is never reached); it is derived from `effective_date` at
     midnight only because `QuoteContext` requires *some* value, never because batch scoring
     means anything by it."""
-    effective_date = date.fromisoformat(row["effective_date"])
+    try:
+        effective_date = date.fromisoformat(row["effective_date"])
+    except ValueError:
+        # `fromisoformat`'s own message repeats the rejected value (NFR-499).
+        raise ValueError("effective_date is not an ISO-8601 date") from None
     inputs = {k: v for k, v in row.items() if k not in _BATCH_RESERVED_COLUMNS}
     rating_version_ref = ArtifactRef.model_validate(row["rating_version_ref"])
     return QuoteContext(
