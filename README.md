@@ -10,8 +10,8 @@ relates: []                      # ids only
 
 # GI Pricing Plan
 
-An open-source general insurance pricing platform for the UK/EU market — an open
-alternative to the established commercial pricing suites. It covers the full pricing
+GI Pricing Plan is an open-source pricing platform for general insurance in the UK and
+EU, built as an open alternative to commercial pricing suites. It covers the full pricing
 lifecycle: data preparation, risk
 modelling (GLM/ML), rating algorithm design, deployment/scoring, monitoring, and
 governance. It is built for pricing actuaries and analysts — technical users who work in
@@ -39,9 +39,8 @@ carries one integer from a single sequence, padded into its filename, per
 [`docs/process/document-ids.md`](docs/process/document-ids.md); the directory it lives in
 names its family, and [`docs/INDEX.md`](docs/INDEX.md) is the generated index of all of them.
 
-Branches and PRs name the slice they deliver: `sl-<n>-<slug>` and `SL-<n>: <title>`. **Not
-yet in force as of 2026-09-27** — no `SL-` row has been minted; a PR today names its `WK-`/
-`W37-n` slice instead, per `CONTRIBUTING.md`.
+Branches and PRs name the slice they deliver: `sl-<n>-<slug>` and `SL-<n>: <title>`. Until the
+first `SL-` row is minted, a PR names its `WK-` work item instead, per `CONTRIBUTING.md`.
 
 ## Explore the project
 
