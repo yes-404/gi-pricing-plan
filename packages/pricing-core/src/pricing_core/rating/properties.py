@@ -238,9 +238,13 @@ def case_holds(
     contract: Sequence[InputContractField],
     *,
     seed: int,
+    outputs: Sequence[str] = (),
 ) -> bool:
     """Whether one Quote Context satisfies one property; a declined quote is vacuous where
-    the property speaks of a premium. `seed` is the suite's (it fixes a `monotone` grid)."""
+    the property speaks of a premium. `seed` is the suite's (it fixes a `monotone` grid);
+    `outputs` names the algorithm's declared outputs, which `no_null_output` requires present
+    and non-null — a null output is *omitted* from `ScoringResult.outputs`, so a check over
+    the dict's values alone could never fail on a real result."""
     if isinstance(check, MonotoneInInput):
         field = monotone_field(contract, check)
         return monotone_sweep(check, field, context, score, seed).broken_at is None
@@ -251,7 +255,9 @@ def case_holds(
         premium = payable_minor(scored)
         return premium is None or premium > 0
     if isinstance(check, NoNullOutput):
-        return all(value is not None for value in scored.outputs.values())
+        return all(value is not None for value in scored.outputs.values()) and all(
+            scored.outputs.get(name) is not None for name in outputs
+        )
     if isinstance(check, LadderReconciles):
         steps: list[tuple[str, int]] = [
             (rung.rung, rung.value_minor) for rung in scored.premium_ladder

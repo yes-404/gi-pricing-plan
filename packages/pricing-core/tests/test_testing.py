@@ -211,6 +211,11 @@ def test_property_premium_positive() -> None:
 def test_property_no_null_output() -> None:
     assert _holds({"kind": "no_null_output"}, lambda c: _result(5, outputs={"a": 1}))
     assert not _holds({"kind": "no_null_output"}, lambda c: _result(5, outputs={"a": None}))
+    # a null output is OMITTED from `outputs`: a declared output that is missing is a null one
+    check = RegressionProperty.model_validate({"name": "prop", "check": {"kind": "no_null_output"}})
+    scorer = lambda c: _result(5, outputs={"a": 1})  # noqa: E731
+    assert case_holds(check.check, _CTX, scorer, (), seed=0, outputs=["a"])
+    assert not case_holds(check.check, _CTX, scorer, (), seed=0, outputs=["a", "b"])
 
 
 @pytest.mark.req("FR-261")
@@ -455,11 +460,14 @@ class _VariantResolver(_FakeResolver):
     premium's shape in `driver_age` is exactly what a test writes down; and, optionally, a
     constraint that declines every quote."""
 
-    def __init__(self, *, risk_expr: str, decline_all: bool = False) -> None:
+    def __init__(
+        self, *, risk_expr: str, decline_all: bool = False,
+        drop_steps: frozenset[str] = frozenset(), optional_output: str | None = None,
+    ) -> None:
         super().__init__()
         key = "rating_algorithm:score-fixture@1"
         payload = dict(self._payloads[key])
-        steps = [s for s in payload["steps"] if s["step_id"] not in _UNCLAMPED]
+        steps = [s for s in payload["steps"] if s["step_id"] not in _UNCLAMPED | drop_steps]
         steps = [
             {"step_id": "s_risk", "type": "expression", "label": "Risk premium",
              "expr": risk_expr, "result_type": "money_minor",
@@ -474,6 +482,23 @@ class _VariantResolver(_FakeResolver):
                 "reason_code": "ALWAYS", "consumes": ["office_premium_minor"],
             })
         payload["steps"] = steps
+        if optional_output is not None:
+            # an optional, nullable input echoed to an optional output: null in, null out
+            payload["outputs"] = [
+                *payload["outputs"], {"name": optional_output, "type": "money_minor",
+                                      "required": False},
+            ]
+            payload["input_contract"] = [
+                *payload["input_contract"], {"name": "promo", "type": "int", "nullable": True},
+            ]
+            payload["steps"] = [
+                *payload["steps"],
+                {"step_id": "s_in_promo", "type": "input", "label": "Promo",
+                 "input_name": "promo", "on_missing": "null", "produces": "promo"},
+                {"step_id": "s_out_promo", "type": "output", "label": "Promo out",
+                 "output_name": optional_output, "rounding": {"mode": "half_even", "dp": 0},
+                 "consumes": ["promo"]},
+            ]
         payload["input_contract"] = [
             f for f in payload["input_contract"] if f["name"] not in _CLAMP_INPUTS
         ]
@@ -590,3 +615,41 @@ def test_a_monotone_compares_quoted_neighbours_across_a_declined_gap(
     inc = {"kind": "monotone", "input": "driver_age", "direction": "increasing"}
     assert _holds(inc, scorer(True), contract)
     assert not _holds(inc, scorer(False), contract)
+
+
+# --- acceptance item 8 THROUGH THE RUN: each of the other three classes fails on a real bundle
+
+def _only_failure(bundle: CompiledBundle, prop: dict[str, Any]) -> Any:
+    run, log = run_regression(bundle, _suite([prop]), rating_version_ref=_REF, now=_now)
+    (result,) = run.property_results
+    return run, result, log
+
+
+@pytest.mark.req("FR-261")
+def test_run_premium_positive_fails_on_a_bundle_that_prices_below_zero() -> None:
+    prop = _prop("positive", kind="premium_positive")
+    bad = _variant(risk_expr="driver_age - 60")  # negative risk premium for a young driver
+    run, result, log = _only_failure(bad, prop)
+    assert (result.status, run.overall) == ("fail", "fail")
+    assert result.counterexample is not None
+    assert log.counterexamples["positive"].inputs["driver_age"] < 60  # type: ignore[operator]
+    assert _only_failure(_variant(risk_expr="driver_age + 60"), prop)[1].status == "pass"
+
+
+@pytest.mark.req("FR-261")
+def test_run_no_null_output_fails_on_a_declared_output_nothing_produces() -> None:
+    prop = _prop("nonull", kind="no_null_output")
+    bad = _variant(risk_expr="driver_age + 60", optional_output="extra_minor")
+    run, result, _ = _only_failure(bad, prop)
+    assert (result.status, run.overall) == ("fail", "fail")
+    assert _only_failure(_variant(risk_expr="driver_age + 60"), prop)[1].status == "pass"
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.req("FR-248")
+def test_run_ladder_reconciles_fails_when_the_ladder_has_no_risk_premium_rung() -> None:
+    prop = _prop("ladder", kind="ladder_reconciles")
+    bad = _variant(risk_expr="driver_age + 60", drop_steps=frozenset({"s_out_risk"}))
+    run, result, _ = _only_failure(bad, prop)
+    assert (result.status, run.overall) == ("fail", "fail")
+    assert _only_failure(_variant(risk_expr="driver_age + 60"), prop)[1].status == "pass"

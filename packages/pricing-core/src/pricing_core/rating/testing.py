@@ -196,6 +196,7 @@ def _shrink(
     n: int,
     seed: int,
     score: Scorer,
+    outputs: Sequence[str],
 ) -> tuple[QuoteContext | None, bool]:
     """Shrink one failing property to a counterexample; `(context, stopped_on_limit)`.
 
@@ -211,7 +212,7 @@ def _shrink(
     @given(st.fixed_dictionaries({f.name: _field_strategy(f) for f in contract}))
     def run(inputs: dict[str, Any]) -> None:
         context = _context(inputs)
-        if not case_holds(prop_check, context, score, contract, seed=seed):
+        if not case_holds(prop_check, context, score, contract, seed=seed, outputs=outputs):
             failing.append(context)
             raise _PropertyFailedError
 
@@ -246,6 +247,7 @@ def run_regression(
         if prop.check.kind == "monotone":
             monotone_field(contract, prop.check)
 
+    outputs = [o.name for o in bundle.algorithm.outputs]
     score = make_scorer(bundle, rating_version_ref, contract)
     golden = evaluate_golden_quotes(
         bundle, suite.golden_quotes, rating_version_ref=rating_version_ref
@@ -261,7 +263,7 @@ def run_regression(
         grid: Literal["uniform+sampled"] | None = (
             "uniform+sampled" if check.kind == "monotone" else None
         )
-        if all(case_holds(check, c, score, contract, seed=seed) for c in cases):
+        if all(case_holds(check, c, score, contract, seed=seed, outputs=outputs) for c in cases):
             if check.kind == "monotone" and not monotone_has_comparable_pair(
                 check, contract, cases, score, seed
             ):
@@ -276,9 +278,9 @@ def run_regression(
                 name=prop.name, status="pass", cases_run=len(cases), grid=grid
             ))
             continue
-        found, stopped = _shrink(check, contract, n, seed, score)
+        found, stopped = _shrink(check, contract, n, seed, score, outputs)
         if found is None:  # the generator did not re-find it: report the first failing case
-            found = next(c for c in cases if not case_holds(check, c, score, contract, seed=seed))
+            found = next(c for c in cases if not case_holds(check, c, score, contract, seed=seed, outputs=outputs))
             stopped = True
         counterexamples[prop.name] = found
         results.append(PropertyResult(

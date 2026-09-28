@@ -73,6 +73,7 @@ def replay_cases(
     prior = {p.name: p for p in recorded.property_results}
 
     seed = suite.generation.seed
+    outputs = [o.name for o in bundle.algorithm.outputs]
     results: list[PropertyResult] = []
     for prop in suite.properties:
         check = prop.check
@@ -81,10 +82,10 @@ def replay_cases(
         )
         persisted = cases.counterexamples.get(prop.name)
         failing = next(
-            (c for c in cases.cases if not case_holds(check, c, score, contract, seed=seed)), None
+            (c for c in cases.cases if not case_holds(check, c, score, contract, seed=seed, outputs=outputs)), None
         )
         persisted_still_fails = persisted is not None and not case_holds(
-            check, persisted, score, contract, seed=seed
+            check, persisted, score, contract, seed=seed, outputs=outputs
         )
         if persisted_still_fails or failing is not None:
             shown = persisted if persisted_still_fails else failing

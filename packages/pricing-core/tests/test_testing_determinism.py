@@ -105,21 +105,35 @@ _CHILD = textwrap.dedent(
         blob = json.dumps([c.model_dump(mode="json") for c in drawn], sort_keys=True)
         print(hashlib.sha256(blob.encode()).hexdigest())
         print("{}")
+        print("{}")
     else:
         suite = _suite(
-            [_prop("tight", kind="premium_bounded", upper_minor=1)], seed=int(sys.argv[1])
+            [_prop("tight", kind="premium_bounded", upper_minor=1),
+             _prop("age-up", kind="monotone", input="driver_age", direction="increasing")],
+            seed=int(sys.argv[1]),
         )
         run, log = testing.run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
+        from model_schema.regression import MonotoneInInput
+        from pricing_core.rating.properties import monotone_grid
+
+        field = next(f for f in bundle.algorithm.input_contract if f.name == "driver_age")
+        check = MonotoneInInput.model_validate(
+            {"kind": "monotone", "input": "driver_age", "direction": "increasing"})
         print(hashlib.sha256(cases_log_bytes(log)).hexdigest())
         print(json.dumps(
             {k: v.model_dump(mode="json") for k, v in log.counterexamples.items()},
             sort_keys=True, separators=(",", ":"),
         ))
+        # the SAMPLED grid and the verdicts of every property, from this interpreter
+        print(json.dumps({
+            "grid": monotone_grid(field, check, int(sys.argv[1])),
+            "verdicts": [(p.name, p.status, p.grid) for p in run.property_results],
+        }, sort_keys=True))
     """
 )
 
 
-def _child(seed: str, hashseed: str) -> tuple[str, str]:
+def _child(seed: str, hashseed: str) -> tuple[str, str, str]:
     """(case-log sha256, canonical counterexamples) from a fresh interpreter running the
     PUBLIC `run_regression` (or the unseeded generator, for the negative control)."""
     out = subprocess.run(
@@ -127,8 +141,8 @@ def _child(seed: str, hashseed: str) -> tuple[str, str]:
         check=True, capture_output=True, text=True,
         env={**os.environ, "PYTHONHASHSEED": hashseed},
     )
-    digest, counterexamples = out.stdout.strip().splitlines()[-2:]
-    return digest, counterexamples
+    digest, counterexamples, grid = out.stdout.strip().splitlines()[-3:]
+    return digest, counterexamples, grid
 
 
 @pytest.mark.req("FR-261")
@@ -139,6 +153,7 @@ def test_the_same_seed_gives_the_same_run_across_fresh_interpreters() -> None:
     two = _child("424242", "2")
     assert one == two
     assert one[1] != "{}"  # the counterexample is really there to compare
+    assert '"grid": [' in one[2]  # and so is the sampled grid, with its verdicts
 
 
 @pytest.mark.req("FR-261")
