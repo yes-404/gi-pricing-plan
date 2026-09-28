@@ -569,6 +569,29 @@ started` is real and has no row). Reconcile the two in one sentence: every id in
 generated block appears in the Findings section with a resolution, and the Findings section
 adds nothing the block does not carry except findings named as having no register row.
 
+## 5c. Every workflow step that cites this close's requirements still says what it cites
+
+**`00` FR-1184 makes this a step of every close** (OQ-554, decided 2026-09-28 by delegation,
+option (b); `RL-1180` E9). No script does it. `audit-docs.py` check 14 scores whether a
+journey *mentions* a requirement id, and check 21 scores whether a cited endpoint or function
+is *declared*. Neither reads the requirement's text. So a step that cites `FR-171` for double
+lift passes both checks on a tree where FR-171 struck double lift on 2026-08-17.
+
+1. From §0's scope table, take every requirement id in this close's scope.
+2. Find each step that cites one of them, over every journey:
+   `grep -n -E '\b(FR|NFR)-(<id>|<id>|…)\b' docs/workflows/WF-*.md`. The search is
+   a candidate list, not a reading: open each hit and find the step that owns it.
+3. For each step, read the cited requirement **to its end, with every dated amendment**.
+   An amendment can invert the clause before it. Then compare it with what the step
+   claims the requirement does.
+4. In the closure record, write one row per step: the journey, the step, the id, and
+   either *still says it* or the clause that disagrees. Name the tree you read at.
+5. File each disagreement as a finding (`FD-`, with a register row). It is not a verdict on
+   this close. Which of the step and the requirement is wrong is `CLAUDE.md` §0's question.
+
+If no journey cites a requirement in scope, say so in the record, and quote the command and
+the tree. A silent omission cannot be told apart from a step that was skipped.
+
 ## 6. Update the plan docs in the same commit
 
 - `docs/roadmap.md` — status table, closure evidence with dates, the §5 mapping
@@ -675,6 +698,11 @@ looking.
 ```
 
 ## Verified
+
+2026-09-28 — **§5c added: every workflow step that cites this close's requirements is read
+against the requirement's current text.** `00` FR-1184 (OQ-554, decided by delegation, option (b);
+`RL-1180` E9), written at `df8e5811`. The FR-171 example is OQ-554's own, from RFC-778 item (f).
+The step has not yet run at a real close, so its first use is the check that it works.
 
 2026-09-19 — **the bespoke-audit rule added, in full, as `RFC-937` §5.4 requires.** W37-7
 Task 9, `PL-1070`. The rule is verbatim from `PL-939:750-751`, expanded with the id forms —
