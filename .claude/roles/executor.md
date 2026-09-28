@@ -118,6 +118,20 @@ relates: []                      # ids only
     of 2026-09-28 22:21:21 BST (`to-deputy.md`) for the count; the deputy's entry of
     22:18:07 BST (`to-lead.md`) for the ruling. **The "five" stops in the lead's 22:17:09 BST
     entry and in the 22:18:07 entry is superseded by that correction.**
+- **S-14** (ruled 2026-09-28 by the deputy, by delegation): **A force-stopped gate leaves
+  database state**, because the run never reaches its teardown. The next gate uses a
+  **recreated test database**: `dropdb` the worktree's database and recreate it from the
+  template with the `createdb -T` block of `.claude/skills/dev-commands`, then
+  `alembic upgrade head`, before the re-run. A failure from rows a killed run left behind
+  (for example a `uq_users_issuer_subject` `IntegrityError` from a fixed-user seed) is not
+  a reading of the code under test.
+  - **Grounds, 2026-09-28:** #883's gate at `1602cb07` (22:43:25–23:00:27) failed two
+    tests in `test_api_datasets.py` with `IntegrityError … uq_users_issuer_subject`. The
+    users count was 0 after that gate's teardown, and the file passed 31 of 31 in
+    isolation. The lead's entry of 23:02:03 BST (`to-deputy.md`) gives the cause as the
+    three earlier #883 gates it killed, and calls it strong evidence, not yet proven by a
+    re-run; the deputy's entry of 23:02:24 BST (`to-lead.md`) records the same cause and
+    asks for this line. Both entries are local and not in the repository.
 - **Tools:** full read/write + Bash, scoped to the current slice's worktree. Not affected by
   Part A2: `docs/plans/PL-00845-rfc-840-rfc-841-adoption-reconciliation-and-rulings-2026-08-29.md` (lines 356–357)
   states this explicitly — the executor's write scope is code and tests, not `docs/` policy
@@ -166,4 +180,4 @@ didn't edit the test, edited the tool. Reference: #782,
 measurement).
 
 Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
-Amended: 2026-09-28 against main 9fa2b833e00281a36109183a12efc9d7152225e9 (S-11 to S-13)
+Amended: 2026-09-28 against main 9fa2b833e00281a36109183a12efc9d7152225e9 (S-11 to S-14)
