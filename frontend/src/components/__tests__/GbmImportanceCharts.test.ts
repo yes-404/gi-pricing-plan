@@ -98,29 +98,6 @@ describe("GbmImportanceCharts", () => {
     expect(cells[0]).not.toHaveTextContent(/violated/i);
   });
 
-  it("says a skipped monotonicity check is not applicable, never pass or fail", () => {
-    render(GbmImportanceCharts, {
-      props: {
-        ...props(),
-        monotonicity: [
-          {
-            factor: "area_x_fuel",
-            declared: "increasing",
-            holds: null,
-            worst_violation: 0,
-            skipped: "unordered_levels",
-          },
-        ],
-      },
-    });
-    const table = screen.getByRole("table", { name: /monotonicity/i });
-    const row = within(table).getByRole("row", { name: /area_x_fuel/ });
-    const cell = within(row).getAllByRole("cell")[0];
-    expect(cell).toHaveTextContent(/not applicable/i);
-    expect(cell).not.toHaveTextContent(/holds|violated/i);
-    expect(screen.queryByText("unordered_levels")).not.toBeInTheDocument();
-  });
-
   it("names the shared source column behind a joint importance", () => {
     render(GbmImportanceCharts, {
       props: {

@@ -7509,7 +7509,7 @@
       },
       "MonotonicityCheck": {
         "additionalProperties": false,
-        "description": "Whether the **fitted** response respects a declared constraint (FR-174).\n\nVerified rather than assumed. A constraint is a parameter passed to a library, and the\nthing that makes it true of this model is that someone swept the factor and looked —\nwhich is also what `TransparencyArtifact.monotonicity_verified` reports upward (R3).\n\n**Exactly one of `holds` and `skipped` is set.** A check that could not be made is not a\npass and not a failure, and a `bool` cannot say so; `skipped` names the reason instead\n(FR-177). Every check written before that carries `holds` and no `skipped`, and loads\nunchanged.",
+        "description": "Whether the **fitted** response respects a declared constraint (FR-174).\n\nVerified rather than assumed. A constraint is a parameter passed to a library, and the\nthing that makes it true of this model is that someone swept the factor and looked —\nwhich is also what `TransparencyArtifact.monotonicity_verified` reports upward (R3).",
         "properties": {
           "declared": {
             "title": "Declared",
@@ -7520,25 +7520,8 @@
             "type": "string"
           },
           "holds": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Holds"
-          },
-          "skipped": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MonotonicitySkip"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "title": "Holds",
+            "type": "boolean"
           },
           "worst_violation": {
             "default": 0.0,
@@ -7554,14 +7537,6 @@
         ],
         "title": "MonotonicityCheck",
         "type": "object"
-      },
-      "MonotonicitySkip": {
-        "description": "Why a declared monotonic direction was not checked (FR-177).",
-        "enum": [
-          "unordered_levels"
-        ],
-        "title": "MonotonicitySkip",
-        "type": "string"
       },
       "NoNullOutput": {
         "additionalProperties": false,

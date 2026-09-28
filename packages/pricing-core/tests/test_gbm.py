@@ -2325,28 +2325,28 @@ def test_a_cross_with_a_banded_operand_is_held_at_observed_cells(backend: str) -
     }
 
 
-@pytest.mark.req("FR-177")
+@pytest.mark.req("FR-122")
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_a_crosss_declared_direction_is_recorded_as_skipped_not_checked(backend: str) -> None:
-    """DP-FR177-2: a cross's cells are unordered, so a declared direction cannot be
-    checked. The skip is in the output as `skipped`, never as a pass or a failure."""
+def test_a_monotone_direction_on_a_cross_is_refused_at_fit(backend: str) -> None:
+    """The premise DP-FR177-S1's withdrawal rests on: a cross's cells are unordered, so
+    FR-122 refuses a declared direction and no fitted model has a cross monotonicity check.
+    If this stops raising, the diagnostics gain a case nothing handles -- a red test, not
+    a silent gap."""
     left, right, cross = _crossed()
     cross = cross.model_copy(update={"monotonic_direction": MonotonicDirection.INCREASING})
-    _, diagnostics = _diagnose(
-        backend, [left, right, cross], data=_sparse_crossable_book(),
-    )
-    assert diagnostics.gbm is not None
-    checks = {m.factor: m for m in diagnostics.gbm.monotonicity}
-    assert checks["area_x_fuel"].holds is None
-    assert checks["area_x_fuel"].skipped is not None
-    assert checks["area_x_fuel"].skipped.value == "unordered_levels"
+    factors = [left, right, cross]
+    spec = _spec(backend, factors=tuple(f.id for f in factors))
+    with pytest.raises(GbmFitError, match="unordered categorical"):
+        fit_gbm(_sparse_crossable_book(), spec, factors)
 
 
 @pytest.mark.req("FR-177")
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_a_joint_shuffle_names_a_column_another_factor_also_draws_on(backend: str) -> None:
-    """DP-FR177-3: a shuffle moves a column for every factor sourced from it. A separate
-    factor on `area` makes the cross's importance the joint effect, and the result says so."""
+def test_a_factor_on_an_operands_column_is_omitted_and_the_overlap_named(backend: str) -> None:
+    """DP-FR177-S3: a plain factor on `area` is varied through the operand's own column, so
+    it recombines the cross's operands into unseen cells. It is omitted from both blocks with
+    the operand reason, diagnostics are produced without a `GbmFitError`, and the cross's
+    importance names the column it shares."""
     left, right, cross = _crossed()
     extra = _factor("area_again", "area")
     _, diagnostics = _diagnose(
@@ -2354,8 +2354,12 @@ def test_a_joint_shuffle_names_a_column_another_factor_also_draws_on(backend: st
     )
     assert diagnostics.gbm is not None
     perm = {p.feature: p for p in diagnostics.gbm.permutation_importances}
+    assert "area_again" not in perm
     assert perm["area_x_fuel"].shared_source_columns == ("area",)
-    assert perm["area_again"].shared_source_columns == ("area",)
+    curve = _cross_curve(diagnostics, "area_again")
+    assert curve.points == ()
+    assert curve.omitted is not None
+    assert curve.omitted.reason.value == "operand_of_interaction"
 
 
 @pytest.mark.req("FR-177")

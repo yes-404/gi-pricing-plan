@@ -266,9 +266,8 @@
       "properties": {
         "factor": {"type": "string"},
         "declared": {"type": "string"},
-        "holds": {"type": ["boolean", "null"], "description": "Null exactly when `skipped` is set: a check that could not be made is neither a pass nor a failure (FR-177)."},
-        "worst_violation": {"type": "number", "minimum": 0},
-        "skipped": {"enum": ["unordered_levels", null], "description": "Why the declared direction was not checked (FR-177). Exactly one of `holds` and `skipped` is set."}
+        "holds": {"type": "boolean"},
+        "worst_violation": {"type": "number", "minimum": 0}
       }
     },
     "QuantileCrossing": {

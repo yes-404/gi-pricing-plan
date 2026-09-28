@@ -63,7 +63,6 @@ from model_schema import (
     ModelSpecCommon,
     MonotonicDirection,
     MonotonicityCheck,
-    MonotonicitySkip,
     PartialDependence,
     PartialDependenceOmission,
     PartialDependenceOmissionReason,
@@ -537,6 +536,24 @@ def _operand_ids(factors: Sequence[Factor]) -> set[UUID]:
     }
 
 
+def _skipped_ids(factors: Sequence[Factor]) -> set[UUID]:
+    """The factors neither per-factor GBM block measures on their own (FR-178).
+
+    An interaction's operands, **and any other factor that sources an operand's column**:
+    permuting or holding that column alone recombines the cross's operands into cells the
+    fit never saw, whichever factor asked for it, and `predict_gbm` refuses the frame
+    (FR-131). Reporting the result under the other factor's name would attribute the
+    group's effect to one member of it.
+    """
+    operands = _operand_ids(factors)
+    operand_columns = {c for f in factors if f.id in operands for c in f.source_columns}
+    return operands | {
+        f.id
+        for f in factors
+        if f.type is not FactorType.INTERACTION and operand_columns.intersection(f.source_columns)
+    }
+
+
 def _term_count(
     factor: Factor,
     factors: Sequence[Factor],
@@ -861,7 +878,7 @@ def _permutation_importances(
                               bandings=bandings, groupings=groupings)
     baseline = deviance(y, baseline_mu.to_numpy(), family=family, power=power, weights=weights)
 
-    operand_ids = _operand_ids(factors)
+    skipped_ids = _skipped_ids(factors)
     out: list[PermutationImportance] = []
     for index, factor in enumerate(factors):
         # FR-176. An `interaction` names no source columns of its own — its
@@ -879,7 +896,7 @@ def _permutation_importances(
         # cells the fit never saw, and `predict_gbm` refuses the frame with
         # `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` -- on a sparse cross, the only kind FR-92
         # expects, that made diagnostics impossible.
-        if factor.id in operand_ids:
+        if factor.id in skipped_ids:
             continue
         # FR-177: a cross is permuted through every operand source column under ONE shared
         # order, which permutes the operand *pairs* -- exactly a permutation of the
@@ -1274,14 +1291,14 @@ def compute_gbm_diagnostics(
     report.update(0.75, "diagnostics: partial dependence")
     dependence: list[PartialDependence] = []
     monotonicity: list[MonotonicityCheck] = []
-    operand_ids = _operand_ids(factors)
+    skipped_ids = _skipped_ids(factors)
     for factor in factors:
-        # FR-178. An operand of a cross is emitted with no points and its reason, for the
-        # same visibility FR-176 wants of the cross: swept alone it recombines the pair
-        # into cells the fit never saw, which `predict_gbm` refuses. Its monotonicity check
-        # is skipped too: an operand is not a booster feature (the feature order is the
-        # cross), so a monotone constraint cannot bind on it.
-        if factor.id in operand_ids:
+        # FR-178 (clarified for FR-177): an operand of a cross, or a factor sourcing an
+        # operand's column, is emitted with no points and its reason, so a reviewer sees every
+        # declared factor. Swept alone it recombines the pair into cells the fit never saw,
+        # which `predict_gbm` refuses. Its monotonicity check is skipped too: an operand is
+        # not a booster feature (the feature order is the cross), so no constraint binds on it.
+        if factor.id in skipped_ids:
             dependence.append(
                 PartialDependence(
                     factor=factor.slug,
@@ -1321,16 +1338,6 @@ def compute_gbm_diagnostics(
         )
         direction = factor.monotonic_direction
         if direction is MonotonicDirection.NONE:
-            continue
-        # A cross's cells are unordered, so there is no direction to check; the skip is
-        # recorded rather than left silent (FR-177, DP-FR177-2).
-        if factor.type is FactorType.INTERACTION:
-            monotonicity.append(
-                MonotonicityCheck(
-                    factor=factor.slug, declared=direction.value, holds=None,
-                    skipped=MonotonicitySkip.UNORDERED_LEVELS,
-                )
-            )
             continue
         steps = np.diff(np.asarray(means, dtype=np.float64))
         against = -steps if direction is MonotonicDirection.INCREASING else steps
