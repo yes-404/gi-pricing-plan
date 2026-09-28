@@ -2094,7 +2094,7 @@ class RegressionRunRow(Base):
 
     `run` is the validated `RegressionRun` as JSON — a failing property's `counterexample`
     is a quote-input fragment, which is why every read is permission-checked
-    (`rating:read`, NFR-499 as clarified for FR-9301). `bundle_hash`, `suite_content_hash`,
+    (`rating:read`, NFR-499 as clarified for FR-1214). `bundle_hash`, `suite_content_hash`,
     `overall` and `finished_at` are copies for querying, written from the same object in
     one operation by `app.platform.regression_runs.persist_run`, the single writer.
 

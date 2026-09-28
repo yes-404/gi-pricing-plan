@@ -1319,7 +1319,7 @@ async def get_regression_run(
     database: DatabaseDep,
 ) -> RegressionRun:
     """The run record. A failing property's `counterexample` is a quote-input fragment, so
-    the read is `rating:read` and workspace-scoped (NFR-499, FR-9301)."""
+    the read is `rating:read` and workspace-scoped (NFR-499, FR-1214)."""
     row = await _load_run(database, caller, rating_version_id, run_id)
     return RegressionRun.model_validate(row.run)
 
@@ -1337,7 +1337,7 @@ async def get_regression_run_cases(
     blob_store: score_api.BlobStoreDep,
 ) -> CasesLog:
     """The run's generated cases and counterexamples — the only route that reads this blob
-    (the generic blob route refuses it, FR-9301)."""
+    (the generic blob route refuses it, FR-1214)."""
     row = await _load_run(database, caller, rating_version_id, run_id)
     async with database.session() as session:
         blob_row = await session.get(BlobRow, row.cases_blob_sha256)

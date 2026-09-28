@@ -571,7 +571,7 @@ def test_a_wide_inverted_band_is_caught_where_a_sorted_random_check_misses_it() 
 def test_known_limit_a_band_narrower_than_the_grid_spacing_may_not_be_detected() -> None:
     """DP-S3-6: with no Banding pinned in the bundle there are no band edges to put in the
     grid, so an inversion narrower than the spacing between grid and sampled points can pass.
-    This test PINS that weakness (OQ-9304 is the way out: pin Bandings with an input-to-band
+    This test PINS that weakness (OQ-1217 is the way out: pin Bandings with an input-to-band
     link so `grid: banding-edges` becomes possible). It must be deleted, not weakened, when
     that lands. The sampled points depend on the suite's seed and the input's name only, so
     they are the SAME for every base context: the grid is one fixed ten-point set, and a band

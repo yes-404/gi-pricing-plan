@@ -1029,7 +1029,7 @@
       },
       "CasesLog": {
         "additionalProperties": false,
-        "description": "A run's reproduction record: every generated case and every counterexample (FR-261).\n\nPersisted as one content-addressed canonical JSON blob (FR-9301) and replayed by\nre-scoring, never regenerated. `counterexamples` is keyed by property name.",
+        "description": "A run's reproduction record: every generated case and every counterexample (FR-261).\n\nPersisted as one content-addressed canonical JSON blob (FR-1214) and replayed by\nre-scoring, never regenerated. `counterexamples` is keyed by property name.",
         "properties": {
           "cases": {
             "items": {
@@ -25837,7 +25837,7 @@
     },
     "/api/v1/rating-versions/{rating_version_id}/regression-runs/{run_id}": {
       "get": {
-        "description": "The run record. A failing property's `counterexample` is a quote-input fragment, so\nthe read is `rating:read` and workspace-scoped (NFR-499, FR-9301).",
+        "description": "The run record. A failing property's `counterexample` is a quote-input fragment, so\nthe read is `rating:read` and workspace-scoped (NFR-499, FR-1214).",
         "operationId": "get_regression_run_api_v1_rating_versions__rating_version_id__regression_runs__run_id__get",
         "parameters": [
           {
@@ -25959,7 +25959,7 @@
     },
     "/api/v1/rating-versions/{rating_version_id}/regression-runs/{run_id}/cases": {
       "get": {
-        "description": "The run's generated cases and counterexamples — the only route that reads this blob\n(the generic blob route refuses it, FR-9301).",
+        "description": "The run's generated cases and counterexamples — the only route that reads this blob\n(the generic blob route refuses it, FR-1214).",
         "operationId": "get_regression_run_cases_api_v1_rating_versions__rating_version_id__regression_runs__run_id__cases_get",
         "parameters": [
           {

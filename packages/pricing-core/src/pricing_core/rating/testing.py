@@ -7,7 +7,7 @@ its declared name) with the five property classes (`properties.py`), shrinks eac
 property through `hypothesis` to a counterexample, and records whether that shrink ended
 or was stopped on a limit (condition 5). It is plain `def`, on the synchronous
 `evaluate()` path (RL-868, RL-858), and holds no persistence: the case log and the
-`RegressionRun` are returned for the backend to store (FR-9301). Its replay twin,
+`RegressionRun` are returned for the backend to store (FR-1214). Its replay twin,
 `replay.replay_cases`, re-scores them without ever reaching this module.
 """
 
@@ -237,7 +237,7 @@ def run_regression(
     seed, with no override: a run cannot be made under one seed and recorded as another.
 
     Returns the run (`job_id` unset, `cases_blob` the case log's content address) and the
-    `CasesLog` the backend persists as that blob (FR-9301). `now` is the caller's clock,
+    `CasesLog` the backend persists as that blob (FR-1214). `now` is the caller's clock,
     read at the start and the end. A `monotone` naming an input the contract lacks is
     refused before anything is generated.
     """

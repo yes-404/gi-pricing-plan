@@ -130,7 +130,7 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
 
 def _rating_regression(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     """`rating.regression` — run the algorithm's Regression Suite against a compiled version
-    (`03` FR-260, FR-261, FR-9301, `PL-1205` Task 5).
+    (`03` FR-260, FR-261, FR-1214, `PL-1205` Task 5).
 
     Loads the compiled bundle and the algorithm's current suite, runs `run_regression` (plain
     `def`, on this worker thread — RL-868), writes the case log as one content-addressed blob

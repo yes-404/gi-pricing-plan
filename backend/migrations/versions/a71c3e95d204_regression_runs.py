@@ -1,6 +1,6 @@
 """regression runs: the persisted RegressionRun record (WK-672 Slice 3, PL-1205 Task 5)
 
-`03` §4.9, FR-260, FR-261, FR-9301. One row per Regression Run of a Rating Version: the
+`03` §4.9, FR-260, FR-261, FR-1214. One row per Regression Run of a Rating Version: the
 validated `RegressionRun` as JSONB, with `bundle_hash`, `suite_content_hash`, `overall` and
 `finished_at` copied out for the submit gate's lookup, and `cases_blob_sha256` — the
 case log's digest as an indexed scalar, so the generic blob route's deny (which matches a

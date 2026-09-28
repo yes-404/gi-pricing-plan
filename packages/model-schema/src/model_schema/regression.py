@@ -162,7 +162,7 @@ class RegressionProperty(BaseModel):
 class RegressionGeneration(BaseModel):
     model_config = _FROZEN
 
-    #: The bound (RS-1176 condition 2): a run persists every generated case (FR-9301).
+    #: The bound (RS-1176 condition 2): a run persists every generated case (FR-1214).
     cases: int = Field(ge=1, le=10_000)
     seed: int = Field(ge=0)
     strategy: Literal["input_contract_sampling"]
@@ -246,7 +246,7 @@ class GoldenQuoteResult(BaseModel):
 class CasesLog(BaseModel):
     """A run's reproduction record: every generated case and every counterexample (FR-261).
 
-    Persisted as one content-addressed canonical JSON blob (FR-9301) and replayed by
+    Persisted as one content-addressed canonical JSON blob (FR-1214) and replayed by
     re-scoring, never regenerated. `counterexamples` is keyed by property name.
     """
 

@@ -43,7 +43,7 @@ ReadDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_READ))]
 #: Every column through which a **quote-input store** references a blob (NFR-499, RL-917).
 #: A digest named here is never served by `GET /blobs/{sha256}`, whoever owns it otherwise:
 #: its body is read through that store's own workspace-scoped API. The regression case store
-#: (`regression_runs.cases_blob_sha256`, FR-9301) is the second entry.
+#: (`regression_runs.cases_blob_sha256`, FR-1214) is the second entry.
 QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (
     ScoringTraceRow.blob_sha256,
     RegressionRunRow.cases_blob_sha256,

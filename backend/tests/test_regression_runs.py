@@ -1,4 +1,4 @@
-"""The persisted Regression Run and its lookup (03 §4.9, FR-260, FR-261, FR-9301; PL-1205 T5).
+"""The persisted Regression Run and its lookup (03 §4.9, FR-260, FR-261, FR-1214; PL-1205 T5).
 
 `regression_runs` has one writer, `persist_run`; the scalar `cases_blob_sha256` the generic
 blob route's deny matches is written from the same object as the JSONB, and a test holds
@@ -141,7 +141,7 @@ async def test_the_lookup_is_scoped_to_the_workspace(
         ) is None
 
 
-# --- the route, the Job, the row and the blob (PL-1205 Task 5b; FR-260, FR-261, FR-9301) ------
+# --- the route, the Job, the row and the blob (PL-1205 Task 5b; FR-260, FR-261, FR-1214) ------
 
 import asyncio  # noqa: E402
 
