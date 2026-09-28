@@ -6,7 +6,7 @@ title: WK-674 — Deployment, environments, atomic switchover, rollback, shadow 
 status: draft                   # draft → active → superseded | retired (§1.2a)
 created: 2026-09-28
 owner: planner
-tree: 6c6f4532c7d0ec65646225108f8cf9f8f570c746
+tree: ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 phase: P2
 work: WK-674
 supersedes: []
@@ -53,7 +53,7 @@ in the same PR (`CLAUDE.md` §10).
 
 - [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md): §3.10 (FR-267 to FR-272,
   each listed below), §5.1 (the three deployment routes at `03:607-609`), §9 (NFR-489,
-  NFR-494, NFR-497, NFR-502).
+  NFR-494, NFR-497, NFR-498's deployment limb, NFR-502).
 - [`../specs/07-platform.md`](../specs/07-platform.md): §3.5 (FR-428 to FR-431), §3.6
   (FR-436, FR-437), and §3.2 (Jobs): FR-412 and FR-415 (the clauses at `07:101` and `07:104`).
 - [`../specs/00-overview.md`](../specs/00-overview.md): FR-18 (`00:221`), and the §2
@@ -104,13 +104,14 @@ alone.
    conditions and names their cause, or shows 0 drops at N ≥ 3 at n=4 and at n=8. Until
    one of those is true, "dropped" is an open question on WK-674's row, not a pass.
 6. **NFR-489 and NFR-502 each carry a measured verdict.** Both are measured on the
-   deployment path, on a dedicated host, in more than one pass (RL-922's table row for
-   NFR-489). Each result is recorded in WK-674's closure record with the shape measured and
+   deployment path, on a dedicated host, in more than one pass (RL-921 §4: "A re-run needs a
+   dedicated host, and one pass will not establish a verdict near a bound"). Each result is recorded in WK-674's closure record with the shape measured and
    the load at the start. If NFR-489 still fails, DP-3's resolution governs what the record
    says.
 7. **The register rows owed to WK-674 are resolved.** `python3 scripts/register-owed.py WK-674`
    prints no row without a resolution. At this tree it lists F41, F43 and F48. F54 is added
-   once #830's register pass lands, and must be resolved too.
+   once the register-and-records pass (auditor-b's PR) moves its owner to WK-674, and it must
+   be resolved too.
 8. **Every Decision point has its resolver before the slice it blocks starts.** Each
    blocking row in the Decision points table below has a resolver id in its `Resolved by`
    cell before that slice's leaf plan moves to `active`.
@@ -171,14 +172,15 @@ alone.
 | `03` §3.10 | FR-269 | Rollback to any previously deployed RV is one audited operation with the same guarantees, and needs no re-approval | 5 |
 | `03` §3.10 | FR-270 | Optional date-based routing by the quote's effective date; overlapping ranges are refused (`DEPLOY_DATE_RANGE_OVERLAP`) | 6 (DP-2) |
 | `03` §3.10 | FR-271 | Optional shadow scoring: a proportion of live traffic is also scored against a candidate; the results are recorded and never returned | 6 (DP-2) |
-| `03` §3.10 | FR-272 | Every deployment, rollback and routing change emits an Audit Event and a notification | 2 (audit), DP-4 (notification) |
+| `03` §3.10 | FR-272 | Every deployment, rollback and routing change emits an Audit Event and a notification | 2 (audit, with NFR-498), DP-4 (notification) |
 | `03` §9 | NFR-494 | Atomic switchover, no dropped or mixed requests, 30 s or less including warm-up | 5 (the F1 test) |
-| `03` §9 | NFR-489 | Scoring p99 < 50 ms at 200 rps per replica (< 15 ms without GBM); re-measured on a dedicated host, more than one pass (RL-922) | 5 (DP-3) |
-| `03` §9 | NFR-502 | No outbound validation on `/score`; owed a measurement since `CR-927` §6 | 5 |
-| `03` §9 | NFR-497 | 99.95 % monthly availability; the degraded read is delivered (register F41) | DP-5 |
+| `03` §9 | NFR-489 | Scoring p99 < 50 ms at 200 rps per replica (< 15 ms without GBM). A **failing measurement** carried to WK-674, not a ruling (premise l); re-measured on a dedicated host, more than one pass (RL-921 §4) | 5 (DP-3) |
+| `03` §9 | NFR-502 | No outbound validation on `/score`; owed a measurement since `CR-927:172` | 5 |
+| `03` §9 | NFR-497 | 99.95 % monthly availability; the degraded read is delivered (register F41). Slice 5 keeps it reachable against the `live` reference; the availability verdict is the lead's at the close (see **Verdicts the plan does not give**) | 5 (mechanism) |
+| `03` §9 | NFR-498 | Audit with before/after state — **this Work's limb only:** deployments, rollbacks and routing changes (the other limbs are other Works'). It rides with FR-272's audit limb | 2 (deploy, rollback), 6 (routing, shadow config) |
 | `07` §3.5 | FR-428 | Environment is a first-class object: name, description, promotion order, its own live deployments; `dev → uat → prod` shipped, more configurable | 2 |
 | `07` §3.5 | FR-429 | Promotion order enforced: no `prod` without a prior successful `uat`, unless policy permits a recorded skip | 2 (DP-7) |
-| `07` §3.5 | FR-430 | Independent SA scopes, rate limits and monitoring configuration per environment; a `uat` key never scores `prod`; one key per granted environment (amended by #830, item E7) | 3 |
+| `07` §3.5 | FR-430 | Independent SA scopes, rate limits and monitoring configuration per environment; a `uat` key never scores `prod`; one key per granted environment (amended by #830, item E7). `07` §4.3's contract still shows one `key` per account, so Slice 3 opens with its own spec change (premise m) | 3 |
 | `07` §3.5 | FR-431 | Environment configuration is a Setting, resolved by the §3.8 precedence and audited on change | 3 |
 | `07` §3.6 | FR-436 | One tenant per deployment; tenant marker in the database; refuse to start on a mismatch; the same for object storage and the broker | 1 |
 | `07` §3.6 | FR-437 | No IdP in the production stack; `deploy/` carries a **reference** Keycloak deployment (the local half is already evidenced) | 4 |
@@ -199,40 +201,72 @@ alone.
 - **RL-886.** `06` §4.2 is right, and the code is short one `deployment` policy entry.
   Without it, `approvals.submit` refuses with a 422 whose title is "No approval policy for
   this artifact type". That refusal fires **before** any evidence is read, so the plan
-  predicts the failure by its cause. The dated §4.2 note goes in with the entry. → Slice 2.
+  predicts the failure by its cause. The dated §4.2 note goes in with the entry. The code
+  moved after RL-886 cited `backend/…/approvals.py:107`. At this tree the floor is
+  `packages/model-schema/src/model_schema/approvals.py:107`
+  (`"deployment": ("rating_version_approval", "uat_deployment")`), and `DEFAULT_POLICY` at
+  `:202` of the same file holds entries for `validation_rule`, `custom_objective`,
+  `custom_metric`, `model`, `peril_structure` and `rating_version`, and **none for
+  `deployment`** (premise p). → Slice 2.
 - **RL-888 and RL-916.** A sampled trace carries the environment string as a stand-in for
   its Deployment parent. WK-674's migration reconciles that string to the Deployment that
   actually served the quote. → Slice 2.
-- **RL-921 and RL-922.** The architectural question behind NFR-489 is discharged. The
-  re-measurement of the requirement stays WK-674's. → Slice 5, and DP-3.
-- **`CR-927` §6.** NFR-502 is owed a measurement, with the same owner as NFR-489. → Slice 5.
-- **Register F48 (NFR-499 per-client rate limits).** The decision is #830 item E6, quoted
-  there as the deputy's words: "a shared Redis counter, per tenant". `rate_limit_rps` is
-  persisted today and read by nothing, and `RATE_LIMITED` is raised nowhere. → Slice 3.
+- **RL-921 and RL-922: NFR-489 is a failing measurement, not a ruling.** `CR-927:171`
+  carried NFR-489 to "an architectural ruling before WK-674 deployment". That ruling exists:
+  RL-921 §5 discharges the carry row. `CR-926:249` and the WK-671 roadmap row
+  (`docs/roadmap.md:620`, "NFR-489's verdict is unchanged — still measured and FAILING;
+  RL-921 discharged the architectural question, not the requirement") carry the **failing
+  measurement** to WK-674. So WK-674 owes a re-measurement, not a ruling. RL-921 §4 names
+  the trigger that DP-3 depends on: "If a re-measurement with the blob read removed still
+  fails the 15 ms limb, that is the trigger that puts NFR-489 itself in question". It also
+  names the conditions: a dedicated host, and more than one pass near a bound. → Slice 5,
+  and DP-3.
+- **`CR-927:172`.** "NFR-502 owed, not delivered | carry forward with the same owner —
+  isolating it needs the same instrumentation an NFR-489 remedy would add". The locator
+  reproduces at this tree. → Slice 5.
+- **Register F48 (NFR-499 per-client rate limits).** The decision is the deputy's E6
+  (to-lead channel, 2026-09-28, the OQ-stream entry): "a shared Redis counter, per tenant".
+  It is **not** a spec change in #830: #830's diff touches `07` only at FR-430 (E7). #830's
+  RL record routes E6 to the register pass, as the F48 row's decision (premise o). So the
+  leaf plan cites the F48 row as that pass leaves it, and re-reads it at its own tree.
+  `rate_limit_rps` is persisted today and read by nothing, and `RATE_LIMITED` is raised
+  nowhere. → Slice 3.
 - **Register F54.** Key issuance mints a key only for `environments[0]`
   (`backend/src/app/api/service_accounts.py:180` and `:246`). The shape of the fix is `07`
   FR-430's 2026-09-28 amendment (#830 item E7). → Slice 3.
-- **Register F41 (NFR-497).** The availability target is carried. → DP-5.
+- **Register F41 (NFR-497).** The availability target is carried. Its verdict is the lead's
+  at the close. → **Verdicts the plan does not give**.
 
 ### Cross-module dependencies — `06`, `05`, `00` (swept at this tree)
 
-**`06` — governance.** WK-674 must satisfy:
+**`06` — governance.** Two kinds of obligation, kept apart because only the first is
+WK-674's scope.
+
+*What WK-674 builds, in Slice 2:*
 
 - the §3.3 evidence row "Deployment to `prod`" (`06:121`);
 - FR-364's floor: `deployment` requires `rating_version_approval` and `uat_deployment`
   (`06:290-297`);
-- the §4.2 default `deployment` entry: `prod`, 1 approver, role `deployer`;
-- FR-368: the Audit Event is written in the same transaction;
-- FR-357: withdrawal is refused after the artifact is live, with
-  `WITHDRAW_AFTER_DEPLOY_FORBIDDEN`. This needs the deployment state to be queryable;
-- FR-382: what was live in each environment over a date range;
-- FR-384: blast radius, where the `deployments` field is empty today;
-- FR-347: a Service Account never holds a deploy permission (a negative test).
+- the §4.2 default `deployment` entry: `prod`, 1 approver, role `deployer`. It is missing
+  from the code (RL-886; premise p).
 
-These all attach to Slice 2. FR-382 constrains the Deployment table's shape: it keeps
-history rows and is never updated in place.
+*Other Works' requirements that read what WK-674 writes.* WK-674 builds none of these. Its
+Deployment record must not make any of them harder:
 
-**`05` — monitoring (WK-687, Phase 3).** WK-674 **feeds** these and builds none of them:
+- FR-368 (WK-679, Phase 3): the Audit Event is written in the same transaction. WK-674
+  emits its own events that way (FR-272, NFR-498);
+- FR-357 (WK-677, Phase 3): withdrawal is refused after the artifact is live. The refusal
+  already exists at `backend/src/app/platform/approvals.py:337-348`. It needs the
+  deployment state to be queryable, which Slice 2 provides;
+- FR-382 (WK-681, Phase 3): what was live in each environment over a date range. This
+  constrains the Deployment table's shape: it keeps history rows and is never updated in
+  place;
+- FR-384 (held by no roadmap row at this tree): blast radius, where the `deployments` field is empty today;
+- FR-347 (WK-676, Phase 3): a Service Account never holds a deploy permission. Slice 2
+  adds a negative test, because WK-674 is the first Work with a deploy permission to
+  withhold.
+
+**`05` — monitoring (WK-687, Phase 4).** WK-674 **feeds** these and builds none of them:
 
 - FR-310: the first `prod` deployment creates template Monitors;
 - FR-331: a deployment timeline;
@@ -255,9 +289,9 @@ be added.
 
 ### Premises re-derived at this tree
 
-| # | Premise | At `6c6f4532` | Status |
+| # | Premise | At `ed123cb0` | Status |
 |---|---|---|---|
-| a | The WK-674 roadmap row lists the whole scope | The `From "Workstreams"` line under `### WK-674` (`docs/roadmap.md:666`) lists FR-267, FR-268, FR-269, FR-270, FR-271, FR-272, FR-428, FR-429, FR-430, FR-431, FR-436, FR-18. It omits FR-437 (`07:153`, "Owned by WK-674"), and FR-412 and FR-415 (`07:104`, "Arming the memory half and shipping that worker service is WK-674's"; again at `07:491`) | **does not reproduce.** Scope follows the spec; the row is corrected at activation |
+| a | The WK-674 roadmap row lists the whole scope | The `From "Workstreams"` line under `### WK-674` (`docs/roadmap.md:665`) lists FR-267, FR-268, FR-269, FR-270, FR-271, FR-272, FR-428, FR-429, FR-430, FR-431, FR-436, FR-18. It omits FR-437 (`07:153`, "Owned by WK-674"), and FR-412 and FR-415 (`07:104`, "Arming the memory half and shipping that worker service is WK-674's"; again at `07:491`) | **does not reproduce.** Scope follows the spec; the row is corrected at activation |
 | b | Deployment and Environment exist in some form | `grep -rlE 'class Deployment' backend/src packages` prints nothing. `class Environment` exists only as the settings enum `backend/src/app/config.py:31` (`local`, `dev`, `uat`, `prod`), not as the FR-428 entity | greenfield |
 | c | A tenant marker and a build column exist | `grep -rlE 'tenant_id\|TENANT_ID\|tenant_marker\|platform_version\|build_version' backend/src packages` prints nothing | greenfield |
 | d | A deployment path exists for the F1 test | `deploy/docker-compose.yml` runs `postgres`, `redis`, `minio` and `keycloak` (profile-gated) — no `api`, `worker` or `scheduler` service | **does not reproduce**, which is why Slice 4 precedes Slice 5 |
@@ -267,34 +301,74 @@ be added.
 | h | `03` FR-241's date-routing cross-reference | `03:137` says "unless the deployment explicitly uses date-based routing (FR-247)". FR-247 (`03:153`) is the Premium Ladder, and date routing is FR-270 | stale reference; Slice 6's spec task corrects it, and the Slice 6 leaf plan re-verifies it first |
 | i | The F1 RS record and #830's E6/E7 are on main | PR #837 and PR #830 are open drafts (#830 head `3319b34f`) | cited by PR number and item, not by record id; a leaf plan re-reads them at its own tree (`docs/plans/README.md` rule 4) |
 | j | A sweep claim that `00` makes the environment set "exactly" `dev`, `uat`, `prod` | `00:166` lists the three and says nothing about exclusivity, so it does not conflict with FR-428's "additional environments are configurable" | not reproduced; no conflict |
-| k | Owed register rows | `python3 scripts/register-owed.py WK-674` lists 3: F41, F43, F48. F54's owner moves to WK-674 in #830's register pass | reproduces (3), F54 pending |
+| k | Owed register rows | `python3 scripts/register-owed.py WK-674` lists 3: F41, F43, F48. F54's owner moves to WK-674 in the register-and-records pass (auditor-b's PR, not #830). F54's row reads "not started … unowned" at this tree (`docs/findings/register.md:95`) | reproduces (3), F54 pending |
+| l | NFR-489 comes to WK-674 as "the architectural ruling before WK-674 deployment" (the brief's input) | `CR-927:171` says so. But RL-921 §5 discharges that carry row, and `CR-926:249` and `docs/roadmap.md:620` both record NFR-489 as still **measured and FAILING**, carried to WK-674 | **does not reproduce as stated.** WK-674 carries a failing measurement, not a ruling. RL-921 §4's 15 ms-limb trigger feeds DP-3 |
+| m | FR-430's amendment (#830 item E7) is the whole spec change for one key per environment | #830's diff changes `07` at FR-430 only. `07` §4.3 (`07:255-268`) still shows one `key` object per ServiceAccount | **does not reproduce.** Slice 3 opens with a `07` §4.3 spec change (the key set, per environment) |
+| n | `03` declares a `Deployment` contract | `03` §4 runs from §4.1 to §4.8 (`RatingAlgorithm` … `score_batch`'s frame contract), with no `Deployment`. The only deployment shape in the suite is `live_deployments` inside `07` §4.2's `Environment` (`07:239-253`) | **does not reproduce.** Slice 2 opens with a spec change that declares it |
+| o | #830 carries the F48 decision (E6) as a spec change | `07`'s only change in #830 is FR-430. The RL record in #830 routes E6 to the register pass, as the F48 row's decision | **does not reproduce.** The F48 row, as that pass leaves it, is the citation |
+| p | The approval policy for `deployment` exists | `EVIDENCE_FLOOR` has `deployment` (`packages/model-schema/src/model_schema/approvals.py:107`). `DEFAULT_POLICY` (`:202`) has six entries and no `deployment` entry | reproduces RL-886's finding, with the code moved from `backend/` to `model-schema` |
+| q | `CR-927:172` names NFR-502 as owed | The line reads "NFR-502 owed, not delivered · carry forward with the same owner" | reproduces |
 
 ### Noted, not WK-674's
 
-The following `07` §3.6 requirements are held by no roadmap row at this tree (`grep` of
-`docs/roadmap.md` for each prints nothing): FR-432 (the image set), FR-433 (Helm), FR-434
-and NFR-534 (scoring without the compute pool), FR-435 and NFR-531 (migrations and rolling
-deploys), FR-438 and NFR-533 (signed images and the SBOM). Slice 4 needs part of FR-432's
-compose set (`api`, `worker`) as its deployment path. Which of the rest are WK-674's is a
-scope question, and it is **DP-1**.
+**A premise, recorded and not planned here.** The following `07` §3.6 requirements are held
+by no roadmap row at this tree (`grep -n '<id>\b' docs/roadmap.md` prints nothing for each):
+
+- FR-432, the image set;
+- FR-433, Helm;
+- FR-434 and NFR-534, scoring without the compute pool;
+- FR-435 and NFR-531, migrations and rolling deploys;
+- FR-438 and NFR-533, signed images and the SBOM.
+
+`deploy/docker-compose.yml` ships only `postgres`, `redis`, `minio` and `keycloak`, and no
+application service (premise d). Assigning an owner to an id on no row is re-planning, so
+this plan proposes it to **plan review 15** and does not take it. There are two exceptions:
+
+- **FR-433 (Helm) is DP-1.** FR-437 says "Owned by WK-674, with the rest of `deploy/`
+  beyond compose", which puts a chart in WK-674's reach by the spec's own words.
+- **Slice 4 builds compose `api` and `worker` services.** This is **slice design**,
+  decided in the slice-design note below, because the F1 acceptance test needs a real
+  deployment path. Building them is not a claim on FR-432's or FR-434's verdict. The
+  closure record gives those ids no verdict unless plan review 15 assigns them here.
 
 ---
 
 ## Decision points
 
-These rows follow the form in `docs/process/document-ids.md` §1.7. Rows of kind *scope* are
-the maintainer's, resolved by the deputy under the maintainer's delegation. Rows of kind
-*decision point* are the decision-maker's. The planner rules none of them.
+These rows follow the form in `docs/process/document-ids.md` §1.7. **Three rows are the
+maintainer's**, resolved by the deputy under the maintainer's delegation: DP-1, DP-2 and
+DP-3, all of kind *scope*. **DP-4, DP-6 and DP-7 are the decision-maker's**, all of kind
+*decision point*. Each of those is a spec-versus-spec or spec-versus-code question
+(`delivery-process.md` §3). The planner rules none of them. Slice design is decided in this
+plan and is not in this table.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | Which `07` §3.6 packaging requirements are WK-674's? FR-437 says "with the rest of `deploy/` beyond compose", but no roadmap row holds FR-432, FR-433, FR-434, FR-435 or FR-438 | (a) All of §3.6 beyond compose, including the FR-433 Helm chart; (b) the compose `api` and `worker` services (FR-432's part), FR-434 with NFR-534, and FR-437's reference Keycloak in WK-674, with FR-433 Helm, FR-438 and NFR-533 moved to Phase 3; (c) the deployment path only, with every other §3.6 id reassigned | **(b).** The F1 test needs a real multi-replica `api` plus Redis path, and FR-434 is the property that path must have anyway. Helm and signing add no evidence for any Phase 2 requirement, and a chart nobody deploys is an artifact nothing tests | scope | yes — Slice 4 | |
+| DP-1 | Does WK-674 build FR-433's Helm chart / Kubernetes manifests? FR-437 says "Owned by WK-674, with the rest of `deploy/` beyond compose", yet FR-433 is on no roadmap row | (a) Build the chart in WK-674, as a seventh slice after Slice 5; (b) move FR-433 to Phase 3, with its owner named at plan review 15, and WK-674's `deploy/` work stops at compose plus FR-437's reference Keycloak; (c) leave it unowned, recorded as a premise only | **(b).** The F1 acceptance test is measured on the compose path Slice 4 builds, and no Phase 2 requirement is evidenced by a chart. A chart nobody deploys is an artifact nothing tests. (c) leaves the one id the spec itself routes towards WK-674 without an owner | scope | yes — Slice 4 (its `deploy/` scope) | |
 | DP-2 | FR-270 and FR-271 are marked "Optional". Are they built in WK-674 or deferred? | (a) Build both, as Slice 6; (b) build FR-271 (shadow feeds `05`) and defer FR-270 with an owner; (c) defer both, with WK-687 as owner | **(a).** Both are in the roadmap row's id list. "Optional" is a per-environment runtime option, not an optional deliverable. FR-271 is "the pre-deployment safety net feeding 05", and WK-687 cannot compare shadow results that were never recorded | scope | yes — Slice 6 | |
-| DP-3 | If NFR-489 still fails on the deployment path, what does the Work record? | (a) The measured verdict FAIL, with the Work closing on a reduced scope as WK-671 did; (b) the verdict plus a proposed NFR-489 amendment, filed as its own spec change with the measurement; (c) hold the close until it passes | **(b).** The requirement has failed at two closes (`CR-927` §4 and §10). A third failure with no proposal repeats a verdict and changes nothing. Never a silent pass | scope | no — resolved at Slice 5's close. Until then, the default is the measured verdict, recorded as is | |
-| DP-4 | FR-272's notification "to a configured channel": no `07` requirement specifies a channel (premise e) | (a) A spec change in `07` defining a minimal channel (a webhook through a secret reference), built in Slice 2; (b) WK-674 writes a durable deployment event through the outbox with the Audit Event, and delivery belongs to WK-688 (alerting and routing, Phase 3), with FR-272 amended to say so; (c) WK-674 builds delivery with no spec | **(b).** The retry and failure-surfacing obligations sit in `05` FR-336, which is WK-688's. A channel built now would be the "later phase built ahead" that `CLAUDE.md` §0 forbids. (c) is excluded by `CLAUDE.md` §0 | scope | yes — Slice 2's close (not its start) | |
-| DP-5 | NFR-497's 99.95 % monthly availability (register F41): what verdict can WK-674 give before any production month exists? | (a) "Deferred with an owner — WK-687 (operational monitoring)", with the degraded read already delivered; (b) measure a synthetic month on the compose path; (c) keep WK-674 as owner until production | **(a).** A monthly availability target can only be measured by the monitoring that WK-687 builds. A synthetic month measures the harness, not the target | scope | no — resolved at Slice 5's close. Until then the default is (a) | |
+| DP-3 | NFR-489's failure path. It is a failing measurement carried to WK-674 (premise l). If the Slice 5 re-measurement on the deployment path still fails, what does the Work do? | (a) Record the measured verdict FAIL and close on a reduced scope, as WK-671 did; (b) record the verdict, and if RL-921 §4's trigger fires (the 15 ms without-GBM limb still fails with the blob read removed) file a proposed NFR-489 amendment as its own spec change with the measurement; (c) hold the close until it passes | **(b).** The requirement has failed at two closes (`CR-927` §4 and §10). RL-921 §4 already names the condition under which NFR-489 "itself" is in question. A third failure with no proposal repeats a verdict and changes nothing. Never a silent pass | scope | no — resolved at Slice 5's close. Until then, the default is the measured verdict, recorded as is | |
+| DP-4 | FR-272's notification "to a configured channel": no `07` requirement specifies a channel (premise e) | (a) A spec change in `07` defining a minimal channel (a webhook through a secret reference), built in Slice 2; (b) WK-674 writes a durable deployment event through the outbox with the Audit Event, and delivery belongs to WK-688 (alerting lifecycle and routing, Phase 4), with FR-272 amended to say so; (c) WK-674 builds delivery with no spec | Decision-maker's call. Planner's input: (b). The retry and failure-surfacing obligations sit in `05` FR-336, which is WK-688's. A channel built now would be the "later phase built ahead" that `CLAUDE.md` §0 forbids. (c) is excluded by `CLAUDE.md` §0 | decision point | yes — Slice 2's close (not its start) | |
 | DP-6 | The deploy permission's name: `06:62` and `06:219` say `rating_version:deploy_prod` and `rating_version:deploy_*`, per environment; the code says `deployment:promote` | (a) The spec is right: rename to a per-environment family; (b) the code is right: amend `06` to `deployment:promote`, scoped by the environment of the grant; (c) keep both | Decision-maker's call. Planner's input: FR-430 already scopes credentials per environment, so (b) keeps one permission and one scoping mechanism | decision point | yes — Slice 2 | |
 | DP-7 | Promotion order: a route check (`PROMOTION_ORDER_VIOLATION`, FR-429) or an evidence floor (`uat_deployment`, FR-364, `EVIDENCE_INCOMPLETE`)? | (a) Both: the route refuses a `prod` deploy with no successful `uat`, and the approval submission's floor also requires it; (b) the floor only, with the code removed from the stub; (c) the route only, with the floor kind removed | Decision-maker's call. Planner's input: (a) is what the two specs say read together, since the floor gates submission and the route gates the act | decision point | yes — Slice 2 | |
+
+**DP-5 is withdrawn, and its number is not reused.** It asked what verdict NFR-497's monthly
+availability target gets. A verdict on an unevidenced requirement is the lead's, not a
+decision point (`CLAUDE.md` §12 and §13). The question moves to **Verdicts the plan does not
+give** below.
+
+### Verdicts the plan does not give
+
+The lead gives these verdicts at the close. The planner's input is stated here so that it
+is on the record before the close, not argued after it.
+
+- **NFR-497, the 99.95 % monthly target (register F41).** Planner's input: *deferred with
+  an owner — WK-687* (operational monitoring, Phase 4). The degraded read is delivered, and
+  Slice 5 keeps it working against the `live` reference. A monthly availability figure can
+  only be measured by the monitoring WK-687 builds. A synthetic month measures the harness,
+  not the target.
+- **FR-432 and FR-434, if plan review 15 assigns them to WK-674.** Slice 4's compose `api`
+  and `worker` services are then evidence for them. They are not evidence for any id plan
+  review 15 does not assign.
 
 **Slice design, decided here and not a DP.** Slice 4 (the deployment path) runs **before**
 Slice 5 (switchover). The deputy's F1 decision measures the acceptance test "on the
@@ -304,6 +378,10 @@ decision calls inconclusive for exactly that reason. Slice 3 (environment isolat
 before Slice 4. The deployment path is then measured with the per-environment keys and the
 shared rate-limit counter already in place. A path measured without them would change
 shape when they land, and the NFR-489 figure would describe a path that is never shipped.
+Slice 4 also builds compose `api` and `worker` services, as the path itself. There are no
+application services in `deploy/docker-compose.yml` at this tree, and the F1 test cannot
+run on n replicas without them. This is how the slice is built, not a scope claim on
+FR-432 or FR-434 (see **Noted, not WK-674's**).
 
 **Slice ids.** No `SL-` row exists in `docs/roadmap.md` (`grep -c 'id: SL-'
 docs/roadmap.md` prints 0), which follows the `PL-930` and `PL-1177` precedent. Slices are
@@ -370,14 +448,17 @@ condition in `PL-1070` item 11's form:
   - The full gate, both halves.
   - Item 11.
 
-### Task 2 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit, the carried rulings)
+### Task 2 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit, NFR-498, the carried rulings)
 
 - **Scope.**
-  - **The spec change comes first.** It declares the `Deployment` and `Environment` data
-    contracts in `03` §4. It adds a `GET` for deployment history, which FR-382 and the
+  - **The slice opens with a spec change, before any code.** `03` declares no `Deployment`
+    contract (premise n). The change appends one to `03` §4, after §4.8, and declares the
+    `Environment` data contract alongside it. It adds a `GET` for deployment history, which FR-382 and the
     view at `03:847` need and `03` §5.1 lacks. It adds the audit-action catalogue for
     deployment, rollback, routing change and shadow configuration change (FR-368, NFR-498).
-    It applies DP-6 and DP-7. It adds RL-886's `06` §4.2 policy entry with its dated note.
+    It applies DP-6 and DP-7. It adds RL-886's `06` §4.2 policy entry with its dated note, and
+    the matching `deployment` entry in `DEFAULT_POLICY`
+    (`packages/model-schema/src/model_schema/approvals.py:202`; premise p).
   - Then the `model-schema` shapes and the regenerated contracts.
   - Then Environment as an entity (FR-428), seeded `dev → uat → prod`, including
     promotion order (FR-429).
@@ -407,6 +488,10 @@ condition in `PL-1070` item 11's form:
 ### Task 3 — Slice 3: environment isolation (FR-430, FR-431, register F54, register F48)
 
 - **Scope.**
+  - **The slice opens with a spec change, before any code.** `07` §4.3's `ServiceAccount`
+    contract shows one `key` object (premise m). FR-430's amendment (#830 item E7) says
+    the account holds one key per granted environment. §4.3 is amended to the key set,
+    keyed by environment, with each key's rotation state, through `spec-change`.
   - One key per granted environment: creation mints one key per environment, and rotation
     and revocation act on one named environment's key (FR-430 as amended by #830 item E7;
     register F54).
@@ -423,19 +508,20 @@ condition in `PL-1070` item 11's form:
   - The full gate.
   - Item 11.
 
-### Task 4 — Slice 4: the deployment path (FR-437 reference, FR-412 memory half, FR-415 worker service, DP-1's packaging set)
+### Task 4 — Slice 4: the deployment path (FR-437 reference, FR-412 memory half, FR-415 worker service)
 
 - **Scope.**
   - The compose `api` service, runnable as n replicas behind a stated load-balancing
     topology.
   - A `worker` service, to which FR-412's **memory** budget is applied and enforced
     (FR-415's WK-674 clause).
-  - `api` serving with the compute pool absent (FR-434 and NFR-534, if DP-1 resolves (b)).
+  - `api` runs with no compute pool present. This is how the path is built (slice design),
+    not a verdict on FR-434 or NFR-534, which plan review 15 assigns or does not.
   - The reference Keycloak deployment under `deploy/`, with a README saying the deployer
     operates, patches and is accountable for it (FR-437).
   - A load harness that drives `/score` at 200 rps against n ∈ {2, 4, 8} replicas and
     records the load at the start of each run. Slice 5 reuses it.
-- **Depends on:** Slice 3. It is blocked on DP-1.
+- **Depends on:** Slice 3. Its `deploy/` scope beyond compose is blocked on DP-1 (Helm).
 - **Gate outline.**
   - A test that brings the stack up.
   - A Job over its memory budget terminates with a typed error naming the budget (FR-412),
@@ -459,7 +545,10 @@ condition in `PL-1070` item 11's form:
     - the F1 acceptance test, unchanged (Acceptance Standard item 5), filed as a research
       record;
     - NFR-489 and NFR-502 on the dedicated host, more than one pass (item 6);
-    - DP-3 and DP-5 are applied at the close.
+    - DP-3 is applied at the close;
+    - NFR-497's degraded read is re-tested against the `live` reference with metadata
+      storage stopped, and its availability verdict is left to the lead (**Verdicts the
+      plan does not give**).
 - **Depends on:** Slice 4's path and harness, and Slice 2's deploy transaction.
 - **Gate outline.**
   - The F1 test's 9 or more runs, with loads recorded.
@@ -521,8 +610,11 @@ When the deputy accepts this plan by delegation, the activation commit:
 1. **Spec coverage.** Every id in the roadmap row, and every id `07` assigns to WK-674, is
    in the coverage table with a slice or a DP: FR-267, FR-268, FR-269, FR-270, FR-271,
    FR-272, FR-428, FR-429, FR-430, FR-431, FR-436, FR-437, FR-412, FR-415, FR-18, NFR-489,
-   NFR-494, NFR-497, NFR-502. The 06 and 05 obligations from the sweep attach to Slice 2,
-   Slice 5 or Slice 6, or are named as fed and not built.
+   NFR-494, NFR-497, NFR-498 (its deployment, rollback and routing limb, added in the
+   2026-09-28 amendment), NFR-502. The 06 obligations are split into the three WK-674 builds
+   (Slice 2) and the other Works' requirements it feeds. The 05 obligations are named as fed
+   and not built. The `07` §3.6 ids on no roadmap row are a premise for plan review 15,
+   except FR-433, which is DP-1.
 2. **Placeholders.** None in the scope, the premises or the DPs. The empty `Resolved by`
    cells are the §1.7 form for open rows, not placeholders. Code steps are deliberately
    absent: this is a map plan.
@@ -534,3 +626,12 @@ When the deputy accepts this plan by delegation, the activation commit:
    filing (`docs/plans/README.md` rule 4). #830 (items E6 and E7) and #837 (F1) are the
    open PRs that rule on this plan's subject, and both are cited by PR and item because
    neither is merged.
+5. **Amendment, 2026-09-28 (the respawned planner, on the lead's adoption of `96af4958`).**
+   This file was first committed at `96af4958`, and this commit amends it at tree
+   `ed123cb0`. It adds premises l to q (NFR-489 as a failing measurement, `07` §4.3's single
+   key, `03`'s missing `Deployment` contract, E6's route through the register pass, the
+   missing `DEFAULT_POLICY` entry, `CR-927:172`). It adds NFR-498's limb. It narrows DP-1 to
+   Helm. It re-kinds DP-4 as the decision-maker's. It withdraws DP-5 as a verdict. It corrects
+   WK-687's and WK-688's phase from P3 to P4 (`docs/roadmap.md`'s `phase:` field under each).
+   It splits the `06` sweep into what WK-674 builds and what it feeds, and records the
+   `07` §3.6 ids on no row as a premise.
