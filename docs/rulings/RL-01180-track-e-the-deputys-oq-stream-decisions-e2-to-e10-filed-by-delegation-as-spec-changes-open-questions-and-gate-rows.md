@@ -78,13 +78,38 @@ grammar. The parser is to gain `where()` (SymPy `Piecewise`, evidenced), refuse 
 comparisons, `%` and ternaries outside `where`, and enforce the node-count and depth limits.
 File it as a new OQ with (a) spec right / (b) parser right, recommendation (a), decided (a).
 The fix is WK-690's first slice, not today's."*
-Disposition: a new OQ-1181 row in `docs/open-questions.md` (MODEL) and in `02` §10, marked
-decided. A dated note under `02` §4.6. A dated amendment on `02` FR-144 that names WK-690's
-first slice. The gate table's Before Phase 2 row gains OQ-1181, struck. **No new requirement:**
-§4.6 already states the grammar, so the obligation is an owner and a slice on the requirement
-that cites it (FR-144). **The named consequence is flagged to the deputy, not decided here:**
-the same parser serves FR-95 factors and `01` FR-36 recipes. The lead has asked the deputy
-whether the decision widens to them.
+**The scope was ruled by the deputy by delegation**, in the entry of 2026-09-28 headed "E2
+scope RULED", at 11:40:40 BST. That entry answers the consequence first flagged here: the same
+parser serves FR-95 factors, `01` FR-36 recipes and `01` §4.5 checks. The deputy's words:
+- *"One parser, one allow-list walk, one security review, with a named profile per context.
+  This is not a parser split."*
+- *"The `objective` and `factor` profiles are §4.6 as written. Comparisons appear only inside
+  `where(cond, a, b)`. Bare comparisons, `%`, ternaries and boolean operators are refused. The
+  function set is §4.6's ten."*
+- *"The `recipe` (`01` FR-36) and `check` (`01` §4.5) profiles keep the operators they accept
+  today."* They gain `where` and the other functions. `ceil coalesce floor round` *"stay
+  recipe/check-only"*.
+- *"The node-count ≤ 200 and depth ≤ 20 limits (configurable) apply to all four profiles"*.
+  *"The WK-690 slice first measures the repo's recipe and check corpus"* against them, and if
+  any real expression exceeds a limit, it *"reports to me before enforcing, rather than raising
+  the limit silently."*
+- The decision line: *"strict for objectives and factors; recipes and checks by profile
+  (deputy, 2026-09-28)"*.
+
+Disposition:
+- A new OQ-1181 row in `docs/open-questions.md` (MODEL) and in `02` §10, marked decided. Both
+  carry the decision line verbatim.
+- At the head of `02` §4.6, a dated amendment: *"One parser and one security review; the
+  grammar is per-context profiles of it"*. Below it, the profile table (context → bound
+  symbols, operators, functions). Nothing is struck.
+- A dated note under §4.6's 2026-08-22 note.
+- A dated amendment on `02` FR-144, naming the `objective` profile and WK-690's first slice.
+- `01` FR-36's "minus statistical functions" is pointed at the `recipe` profile, and `01`
+  §4.5's `expression` check at the `check` profile.
+- The gate table's Before Phase 2 row gains OQ-1181, struck.
+
+**No new requirement:** §4.6 already states the grammar. The obligation is a profile table and
+an owner on the requirements that cite it. All of this is spec text; the code is WK-690's.
 
 **E4 — `structural_diff`'s owner is WK-673.** The deputy's words: *"the owner is **WK-673**. At
 submission it persists FR-219's diff as a blob and registers the verifier, before WK-673 wires
@@ -145,6 +170,19 @@ changes the result. I decide on the record."* Disposition:
   a Phase 2 entry decision (lead, 2026-09-28, answer 4).
 - The options are the deputy's words. The trade-offs are the decision-maker's, labelled as
   such in the row.
+- **The pass criterion, ruled by the deputy by delegation**, is in the entry of 2026-09-28
+  headed "F3 pass criterion RULED", at 11:39:35 BST. It is quoted in the options cells of (a)
+  and (b) (lead, 2026-09-28):
+  - *"Hard gate for any method: exact reconciliation. The parts plus the residual line sum to
+    the total exactly, in Decimal on the rating path (CLAUDE.md §7), per policy and at
+    portfolio level."*
+  - *"(a) passes if S ≤ 0.10 and R ≤ 0.10 on every change set measured. There are at least
+    four sets: K = 3, 4, 5, 6. At least one must contain a non-linear step such as a minimum
+    premium or a cap"*.
+  - *"If (a) fails on any set, the record recommends (b) exact Shapley, capped at K ≤ 6."*
+  - *"(c) is not chosen in either case"*.
+  - Both S and R are taken over D = Σᵢ |isolatedᵢ|.
+  - The status stays **open**, with recommendation (a), decided on the F3 research record.
 
 **The gate table.** Every count was recounted by the `docs-audit` snippets, not incremented.
 Those snippets were rewritten in this PR, because their pre-migration pattern matched no id.
@@ -176,8 +214,9 @@ A dated note beneath the table records the five edits.
 - **WK-674** builds one key per environment (FR-430's amendment) and the F48 counter.
 - **WK-675** takes OQ-550 at its map plan and builds the manual-edit route (`03` §5.1).
 - **Every close** from now runs `close-workstream` §5c (FR-1184).
-- **Not decided here:** whether E2 widens to FR-95 and `01` FR-36 (the deputy's), and OQ-1182
-  (the deputy's, on the spike's record). `docs/process/checklists/work-item-close.md` is the
+- **WK-690's slice** first measures the recipe and check corpus against the limits. It
+  reports any real expression over a limit to the deputy before enforcing.
+- **Not decided here:** OQ-1182 (the deputy's, on the spike's record). `docs/process/checklists/work-item-close.md` is the
   process checklist, and it does not yet carry §5c's step. Whether it should is the lead's
   call: it is not a decision-maker file.
 
