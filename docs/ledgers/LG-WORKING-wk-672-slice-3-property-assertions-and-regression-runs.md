@@ -113,6 +113,24 @@ The dev-commands gate body, verbatim; the table:
 
 - **13 are the working-id state**, each asserting the whole-tree audit exits 0 (`requirement numbering: 0 module-scoped id(s)…`, or `doc-id.py check: [noncontiguous] … a gap between 1205 and 9301`, or `the live allocation is not contiguous: [(1205, 9301)]`): `test_audit_docs_finding_citations` 1, `test_audit_docs_ids` 2, `test_audit_docs_process_core_digest` 2, `test_audit_docs_w37_11_ceiling` 1, `test_doc_index` 1, `test_register_lint` 3, `test_register_owed` 1, `test_repository_invariants::test_money_discipline_is_enforced_by_the_docs_audit` and `::test_journey_citations_are_audited_in_ci` 2. They go green at the mint.
 - **2 are this slice's own defect**: `tests/test_repository_invariants.py::test_the_architecture_contracts_are_configured_and_not_silently_empty` (`assert 4 == 3`) and `::test_pricing_core_is_callable_without_the_backend` (`assert 'Contracts: 3 kept, 0 broken.' in …`). The new `replay-never-generates` import contract makes four, and these two tests pin three. Not fixed in this ledger commit; reported to the lead.
+The 13 working-id failures, by node id (post-mint CI must show each green):
+
+1. `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`
+2. `tests/test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`
+3. `tests/test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree`
+4. `tests/test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`
+5. `tests/test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec`
+6. `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`
+7. `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`
+8. `tests/test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`
+9. `tests/test_register_lint.py::test_check_29_note_carries_the_residue_line`
+10. `tests/test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count`
+11. `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`
+12. `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`
+13. `tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci`
+
+The two of this slice's own defect (`tests/test_repository_invariants.py::test_the_architecture_contracts_are_configured_and_not_silently_empty` and `::test_pricing_core_is_callable_without_the_backend`) are fixed in `b8043cc7` (the count is four: the `replay-never-generates` contract); with it `tests/test_repository_invariants.py` gives `2 failed, 9 passed`, the two being items 12 and 13 above.
+
 - Frontend half run at an earlier head (`d205815e`), all rc 0: `generate:api`, `lint`, `type-check`, `test`, `build`. **It was not re-run at this head** (the Python-half failed first and the lead's instruction was not to re-run).
 
 **Determinism, N=5** (`packages/pricing-core/tests/test_rating_score.py`, serial, load 1.5–1.7, no abort, no failure):
