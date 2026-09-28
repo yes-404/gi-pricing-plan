@@ -1,0 +1,2 @@
+196650 node /home/puzhenhao1989/.npm-global/bin/pnpm exec vite --port 5391 --strictPort cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/frontend cpus=8-15
+196738 node ./node_modules/.bin/../vite/bin/vite.js --port 5391 --strictPort cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/frontend cpus=8-15

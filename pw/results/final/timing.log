@@ -1,0 +1,48 @@
+START  11:19:29 up  1:22,  3 users,  load average: 0.93, 1.71, 4.24
+Testing types with tsc and vue-tsc is an experimental feature.
+Breaking changes might not follow SemVer, please pin Vitest's version when using it.
+
+ RUN  v4.1.10 /home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/frontend
+
+PROC 207713 node cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/frontend cpus=8-15
+F2-TIMING [{"n":40000,"p50":"0.0394","p99":"0.0799","max":"3.5417"},{"n":40000,"p50":"0.0391","p99":"0.0695","max":"0.6931"},{"n":40000,"p50":"0.0393","p99":"0.0744","max":"0.8278"},{"n":40000,"p50":"0.0391","p99":"0.0718","max":"0.6839"},{"n":40000,"p50":"0.0392","p99":"0.0766","max":"3.5579"}]
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+Type Errors  no errors
+   Start at  11:19:30
+   Duration  8.79s (transform 65ms, setup 206ms, import 52ms, tests 7.97s, environment 365ms)
+
+rc=0 END  11:19:39 up  1:22,  3 users,  load average: 1.02, 1.70, 4.21
+START  11:19:39 up  1:22,  3 users,  load average: 1.02, 1.70, 4.21
+Testing types with tsc and vue-tsc is an experimental feature.
+Breaking changes might not follow SemVer, please pin Vitest's version when using it.
+
+ RUN  v4.1.10 /home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/frontend
+
+PROC 208176 node cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/frontend cpus=8-15
+F2-TIMING [{"n":40000,"p50":"0.0400","p99":"0.0851","max":"3.5909"},{"n":40000,"p50":"0.0393","p99":"0.0701","max":"0.6660"},{"n":40000,"p50":"0.0394","p99":"0.0695","max":"0.6947"},{"n":40000,"p50":"0.0391","p99":"0.0686","max":"0.6572"},{"n":40000,"p50":"0.0393","p99":"0.0682","max":"3.3568"}]
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+Type Errors  no errors
+   Start at  11:19:40
+   Duration  8.81s (transform 66ms, setup 205ms, import 52ms, tests 7.95s, environment 396ms)
+
+rc=0 END  11:19:49 up  1:22,  3 users,  load average: 1.02, 1.68, 4.17
+START  11:19:49 up  1:22,  3 users,  load average: 1.02, 1.68, 4.17
+Testing types with tsc and vue-tsc is an experimental feature.
+Breaking changes might not follow SemVer, please pin Vitest's version when using it.
+
+ RUN  v4.1.10 /home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/frontend
+
+PROC 208732 node cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/frontend cpus=8-15
+F2-TIMING [{"n":40000,"p50":"0.0387","p99":"0.0818","max":"3.4559"},{"n":40000,"p50":"0.0386","p99":"0.0719","max":"0.7002"},{"n":40000,"p50":"0.0389","p99":"0.0738","max":"0.8146"},{"n":40000,"p50":"0.0385","p99":"0.0737","max":"3.7283"},{"n":40000,"p50":"0.0384","p99":"0.0707","max":"2.5088"}]
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+Type Errors  no errors
+   Start at  11:19:51
+   Duration  8.61s (transform 66ms, setup 207ms, import 51ms, tests 7.80s, environment 360ms)
+
+rc=0 END  11:19:59 up  1:23,  3 users,  load average: 1.17, 1.69, 4.15

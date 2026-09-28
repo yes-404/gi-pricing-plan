@@ -1,0 +1,40 @@
+START  11:13:45 up  1:16,  2 users,  load average: 0.99, 2.58, 5.52
+F2-PANPOINT [268,105]
+PROC 197260 chrome-headless cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+PROC 197186 node cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+F2-FPS {"name":"pan-drag","wall":13543,"distinctTransforms":401,"DrawFrame":800,"spanMs":13505,"drawFps":59.2,"gapP50":16.7,"gapP95":18.2,"gapMax":46.5,"DroppedFrame":9}
+F2-FPS {"name":"zoom-wheel","wall":8005,"distinctTransforms":31,"DrawFrame":240,"spanMs":7963,"drawFps":30,"gapP50":33.3,"gapP95":35.2,"gapMax":38.9,"DroppedFrame":0}
+F2-FPS {"name":"viewport-transition-3s","wall":3007,"distinctTransforms":181,"DrawFrame":178,"spanMs":2961,"drawFps":59.8,"gapP50":16.7,"gapP95":18.2,"gapMax":23.7,"DroppedFrame":1}
+rc=0 END  11:14:15 up  1:17,  2 users,  load average: 1.38, 2.53, 5.41
+START  11:14:15 up  1:17,  2 users,  load average: 1.38, 2.53, 5.41
+F2-PANPOINT [268,105]
+PROC 198796 chrome-headless cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+PROC 198671 node cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+F2-FPS {"name":"pan-drag","wall":13414,"distinctTransforms":401,"DrawFrame":800,"spanMs":13385,"drawFps":59.7,"gapP50":16.7,"gapP95":18.3,"gapMax":27.6,"DroppedFrame":4}
+F2-FPS {"name":"zoom-wheel","wall":7997,"distinctTransforms":31,"DrawFrame":240,"spanMs":7966,"drawFps":30,"gapP50":33.3,"gapP95":34.7,"gapMax":42.5,"DroppedFrame":0}
+F2-FPS {"name":"viewport-transition-3s","wall":3019,"distinctTransforms":181,"DrawFrame":178,"spanMs":2959,"drawFps":59.8,"gapP50":16.7,"gapP95":17.7,"gapMax":23.1,"DroppedFrame":1}
+rc=0 END  11:14:45 up  1:17,  2 users,  load average: 1.78, 2.51, 5.31
+START  11:14:45 up  1:17,  2 users,  load average: 1.78, 2.51, 5.31
+F2-PANPOINT [268,105]
+PROC 199597 chrome-headless cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+PROC 199544 node cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+F2-FPS {"name":"pan-drag","wall":13391,"distinctTransforms":401,"DrawFrame":800,"spanMs":13345,"drawFps":59.9,"gapP50":16.6,"gapP95":17.9,"gapMax":26.2,"DroppedFrame":0}
+F2-FPS {"name":"zoom-wheel","wall":8002,"distinctTransforms":31,"DrawFrame":240,"spanMs":7963,"drawFps":30,"gapP50":33.3,"gapP95":34.7,"gapMax":39,"DroppedFrame":1}
+F2-FPS {"name":"viewport-transition-3s","wall":3016,"distinctTransforms":181,"DrawFrame":178,"spanMs":2959,"drawFps":59.8,"gapP50":16.7,"gapP95":18.3,"gapMax":20.7,"DroppedFrame":1}
+rc=0 END  11:15:15 up  1:18,  2 users,  load average: 1.81, 2.46, 5.20
+START  11:15:15 up  1:18,  2 users,  load average: 1.81, 2.46, 5.20
+F2-PANPOINT [268,105]
+PROC 200879 chrome-headless cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+PROC 200799 node cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+F2-FPS {"name":"pan-drag","wall":13390,"distinctTransforms":401,"DrawFrame":800,"spanMs":13355,"drawFps":59.8,"gapP50":16.7,"gapP95":17.8,"gapMax":28.2,"DroppedFrame":1}
+F2-FPS {"name":"zoom-wheel","wall":8000,"distinctTransforms":31,"DrawFrame":240,"spanMs":7966,"drawFps":30,"gapP50":33.4,"gapP95":35.5,"gapMax":39.9,"DroppedFrame":1}
+F2-FPS {"name":"viewport-transition-3s","wall":3014,"distinctTransforms":180,"DrawFrame":178,"spanMs":2960,"drawFps":59.8,"gapP50":16.7,"gapP95":18.1,"gapMax":22.1,"DroppedFrame":1}
+rc=0 END  11:15:44 up  1:18,  2 users,  load average: 1.60, 2.35, 5.08
+START  11:15:44 up  1:18,  2 users,  load average: 1.60, 2.35, 5.08
+F2-PANPOINT [268,105]
+PROC 201972 chrome-headless cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+PROC 201958 node cwd=/home/puzhenhao1989/.claude/jobs/66723b39/tmp/p2/spike-f2/scratch/pw cpus=8-15
+F2-FPS {"name":"pan-drag","wall":13456,"distinctTransforms":401,"DrawFrame":800,"spanMs":13412,"drawFps":59.6,"gapP50":16.7,"gapP95":18.4,"gapMax":30.4,"DroppedFrame":3}
+F2-FPS {"name":"zoom-wheel","wall":8000,"distinctTransforms":31,"DrawFrame":240,"spanMs":7962,"drawFps":30,"gapP50":33.3,"gapP95":34.5,"gapMax":37.4,"DroppedFrame":0}
+F2-FPS {"name":"viewport-transition-3s","wall":3009,"distinctTransforms":181,"DrawFrame":178,"spanMs":2960,"drawFps":59.8,"gapP50":16.7,"gapP95":18.1,"gapMax":20.8,"DroppedFrame":1}
+rc=0 END  11:16:14 up  1:19,  3 users,  load average: 1.94, 2.36, 4.99
