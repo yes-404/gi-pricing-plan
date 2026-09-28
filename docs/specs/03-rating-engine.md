@@ -553,6 +553,11 @@ whitespace) of the content fields — `algorithm_slug`, `golden_quotes`, `proper
 (`POST /api/v1/regression-suites/{slug}/versions`, §5.1), bound to one Rating Algorithm by
 `algorithm_slug` (one suite per algorithm per workspace), not approvable, and every read
 is permission-checked because a golden quote's `context` is a full quote input (NFR-499).
+*(Added 2026-09-28, `PL-1189`, the lead's ruling on a plan gap.)* `regression_suite` is an
+artifact type (`00` ID-3) so that the evidence can pin `regression_suite:{slug}@{version}`
+by reference. It is a **reference only**: it has no approval policy entry and no creation
+action in the approval module, so an approval request naming one is refused, and the
+approval route never resolves one.
 
 ### 4.8 `score_batch`'s frame contract
 
