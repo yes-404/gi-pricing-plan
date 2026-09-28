@@ -2110,10 +2110,11 @@ def test_a_gbm_declaring_an_interaction_produces_diagnostics_instead_of_an_index
     # Recorded, not dropped: every declared factor appears, and the cross says why it has
     # no curve. A reviewer must be able to see that the term carrying the interaction is
     # the one no per-factor diagnostic describes.
+    # FR-177 supersedes FR-176's interim ("the cross says why it has no curve"): the cross
+    # is now measured jointly through its operands, so it has a curve.
     assert "area_x_fuel" in curves
-    assert curves["area_x_fuel"].points == ()
-    assert curves["area_x_fuel"].omitted is not None
-    assert curves["area_x_fuel"].omitted.reason.value == "no_source_column"
+    assert curves["area_x_fuel"].points
+    assert curves["area_x_fuel"].omitted is None
     # FR-178 supersedes the earlier "operands still get real curves": swept alone, an
     # operand recombines the pair into cells the fit never saw. It is skipped and recorded.
     assert curves["area"].points == ()
@@ -2230,3 +2231,95 @@ def test_a_gbm_with_a_sparse_interaction_can_produce_diagnostics() -> None:
         assert by_factor[slug].points == ()
         assert by_factor[slug].omitted is not None
         assert by_factor[slug].omitted.reason.value == "operand_of_interaction"
+
+
+def _crossed(left_col: str = "area", **left_over: object) -> list[Factor]:
+    """`[left, fuel, left x fuel]` -- the operands are always in the factor list
+    (`load_factors` returns `ordered + operands`)."""
+    left = _factor(left_col, left_col, **left_over)
+    right = _factor("fuel", "fuel")
+    cross = _factor(
+        f"{left_col}_x_fuel", left_col,
+        type=FactorType.INTERACTION, source_columns=(),
+        operand_factor_ids=(left.id, right.id),
+    )
+    return [left, right, cross]
+
+
+def _cross_curve(diagnostics, slug: str):  # type: ignore[no-untyped-def]
+    assert diagnostics.gbm is not None
+    return next(d for d in diagnostics.gbm.partial_dependence if d.factor == slug)
+
+
+@pytest.mark.req("FR-177")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_sparse_cross_is_measured_jointly_on_its_observed_cells(backend: str) -> None:
+    """FR-177: the cross reports a permutation importance and a partial-dependence curve
+    whose grid is its **observed** cells -- 3 of 9 here -- never the operands' product."""
+    _, diagnostics = _diagnose(
+        backend, _crossed(), data=_sparse_crossable_book(),
+    )
+    assert diagnostics.gbm is not None
+    perm = {p.feature: p for p in diagnostics.gbm.permutation_importances}
+    assert "area_x_fuel" in perm
+    assert perm["area_x_fuel"].degradation > 0, "a joint shuffle is a real degradation"
+    curve = _cross_curve(diagnostics, "area_x_fuel")
+    assert curve.omitted is None
+    assert {p.value for p in curve.points} == {
+        "rural | petrol", "urban | diesel", "coastal | hybrid",
+    }
+    assert sum(p.exposure_share for p in curve.points) == pytest.approx(1.0)
+
+
+@pytest.mark.req("FR-177")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_dense_cross_is_measured_on_all_its_cells(backend: str) -> None:
+    _, diagnostics = _diagnose(backend, _crossed(), data=_crossable_book())
+    curve = _cross_curve(diagnostics, "area_x_fuel")
+    assert curve.omitted is None
+    assert len(curve.points) == 6  # 2 areas x 3 fuels, all populated
+    assert any(
+        p.feature == "area_x_fuel" for p in diagnostics.gbm.permutation_importances  # type: ignore[union-attr]
+    )
+
+
+@pytest.mark.req("FR-177")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_cross_grid_is_capped_like_any_categorical_grid(backend: str) -> None:
+    """FR-175's cap applies unchanged: it bounds the most-exposed *observed* cells."""
+    _, diagnostics = _diagnose(
+        backend, _crossed(), data=_sparse_crossable_book(),
+        max_partial_dependence_levels=2,
+    )
+    curve = _cross_curve(diagnostics, "area_x_fuel")
+    assert len(curve.points) == 2
+    assert curve.omitted is not None
+    assert curve.omitted.reason.value == "level_cap"
+    assert curve.omitted.levels == 1
+
+
+@pytest.mark.req("FR-177")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_cross_with_a_banded_operand_is_held_at_observed_cells(backend: str) -> None:
+    """A banded operand is held at a raw value that resolves to the cell's band, so the
+    production resolution path is what is under test."""
+    banding = _age_banding()
+    n = 600
+    ages = [float(20 + (i % 40)) for i in range(n)]
+    # fuel tracks the age band, so the cross is sparse: 4 cells of 12.
+    fuels = [("petrol", "diesel", "hybrid", "lpg")[int((a - 20) // 10)] for a in ages]
+    frame = pl.DataFrame(
+        {
+            "driv_age": ages, "fuel": fuels, "exposure_years": [1.0] * n,
+            "claim_count": [1.0 if a < 40 else 0.0 for a in ages],
+        }
+    )
+    factors = _crossed("driv_age", type=FactorType.BANDING, banding_id=banding.id)
+    _, diagnostics = _diagnose(
+        backend, factors, data=frame, bandings={banding.id: banding},
+    )
+    curve = _cross_curve(diagnostics, "driv_age_x_fuel")
+    assert curve.omitted is None
+    assert {p.value for p in curve.points} == {
+        "20-29 | petrol", "30-39 | diesel", "40-49 | hybrid", "50-59 | lpg",
+    }

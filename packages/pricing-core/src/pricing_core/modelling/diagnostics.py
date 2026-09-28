@@ -880,17 +880,21 @@ def _permutation_importances(
         # expects, that made diagnostics impossible.
         if factor.id in operand_ids:
             continue
-        if not factor.source_columns:
-            continue
-        column = factor.source_columns[0]
-        if column not in holdout.columns:
+        # FR-177: a cross is permuted through every operand source column under ONE shared
+        # order, which permutes the operand *pairs* -- exactly a permutation of the
+        # resolved cross column, so no unseen pair is ever built.
+        if factor.type is FactorType.INTERACTION:
+            columns = _operand_columns(factor, factors)
+        else:
+            columns = tuple(factor.source_columns[:1])
+        if not columns or any(c not in holdout.columns for c in columns):
             continue
         scores: list[float] = []
         for repeat in range(repeats):
             rng = np.random.default_rng(seed + index * 1_000 + repeat)
             order = rng.permutation(holdout.height)
             shuffled = holdout.with_columns(
-                holdout[column].gather(order).alias(column)
+                [holdout[c].gather(order).alias(c) for c in columns]
             )
             mu = predict_gbm(result, booster, shuffled, factors,
                              bandings=bandings, groupings=groupings)
@@ -1026,6 +1030,54 @@ def _representatives(axis: pl.Series, source: pl.Series) -> dict[str, object]:
     }
 
 
+def _operand_columns(cross: Factor, factors: Sequence[Factor]) -> tuple[str, ...]:
+    """Every operand source column of `cross`, in operand order (FR-177): the columns
+    `predict_gbm` re-resolves the cross from, and so the only ones a joint operation can
+    move. A column two operands share is listed once.
+    """
+    by_id = {f.id: f for f in factors}
+    columns: dict[str, None] = {}
+    for operand_id in cross.operand_factor_ids:
+        for column in by_id[operand_id].source_columns:
+            columns[column] = None
+    return tuple(columns)
+
+
+def _cross_axis(
+    data: pl.DataFrame,
+    cross: Factor,
+    factors: Sequence[Factor],
+    *,
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> pl.Series:
+    """The cross's own levels on `data` -- its observed cells (FR-92), never the operands'
+    Cartesian product (FR-177)."""
+    by_id = {f.id: f for f in factors}
+    needed = [cross, *(by_id[o] for o in cross.operand_factor_ids)]
+    matrix = resolve_factors(data, needed, bandings=bandings, groupings=groupings)
+    return matrix.frame[matrix.terms[cross.slug]]
+
+
+def _cell_representatives(
+    axis: pl.Series, data: pl.DataFrame, columns: Sequence[str]
+) -> dict[str, tuple[object, ...]]:
+    """One real row's values of `columns` per level of `axis`.
+
+    Holding **all** operand columns at one row's values holds the operands together at one
+    observed cell, which `predict_gbm` can encode; holding them independently is what
+    FR-178 measured to be refused.
+    """
+    frame = data.select(columns).with_columns(axis.cast(pl.String).alias("__level"))
+    picked = frame.filter(pl.col("__level").is_not_null()).group_by(
+        "__level", maintain_order=True
+    ).agg([pl.col(c).first() for c in columns])
+    return {
+        str(row["__level"]): tuple(row[c] for c in columns)
+        for row in picked.iter_rows(named=True)
+    }
+
+
 def _sweep(
     result: GbmFitResult,
     booster: bytes,
@@ -1059,12 +1111,23 @@ def _sweep(
     """
     from pricing_core.modelling.gbm import predict_gbm
 
-    column = factor.source_columns[0]
-    source = data[column]
-    # The axis is the factor's, not the raw column's: a banded or grouped factor is swept
-    # over its own levels and labelled with them (FR-175). `None` means the two are
-    # the same column, which is every identity factor.
-    axis = _resolved_axis(data, factor, bandings=bandings, groupings=groupings)
+    is_cross = factor.type is FactorType.INTERACTION
+    if is_cross:
+        # FR-177: the cross has no column, so it is held through its operands' columns
+        # together, and its grid is its own observed cells.
+        columns = _operand_columns(factor, factors)
+        cross_axis = _cross_axis(
+            data, factor, factors, bandings=bandings, groupings=groupings
+        )
+        axis: pl.Series | None = cross_axis
+        source: pl.Series = cross_axis
+    else:
+        columns = (factor.source_columns[0],)
+        source = data[columns[0]]
+        # The axis is the factor's, not the raw column's: a banded or grouped factor is
+        # swept over its own levels and labelled with them (FR-175). `None` means the two
+        # are the same column, which is every identity factor.
+        axis = _resolved_axis(data, factor, bandings=bandings, groupings=groupings)
     series = source if axis is None else axis
     weights = _weights(spec, data)
     total_weight = float(weights.sum())
@@ -1097,7 +1160,11 @@ def _sweep(
                 exposure_share=min(1.0, _share(dropped_weight, total_weight)),
             )
 
-    if axis is not None:
+    held_values: list[tuple[object, ...]]
+    if is_cross:
+        cells = _cell_representatives(series, data, columns)
+        held_values = [cells[label] for label in labels]
+    elif axis is not None:
         representatives = _representatives(axis, source)
         missing = [label for label in labels if label not in representatives]
         if missing:
@@ -1106,11 +1173,18 @@ def _sweep(
                 "frame carries a source value for, so there is nothing to hold the column "
                 "at. A partial-dependence bar must be scored, not imputed (FR-175)."
             )
-        values = [representatives[label] for label in labels]
+        held_values = [(representatives[label],) for label in labels]
+    else:
+        held_values = [(value,) for value in values]
 
     means: list[float] = []
-    for value in values:
-        held = data.with_columns(pl.lit(value).cast(source.dtype).alias(column))
+    for cell in held_values:
+        held = data.with_columns(
+            [
+                pl.lit(value).cast(data[column].dtype).alias(column)
+                for column, value in zip(columns, cell, strict=True)
+            ]
+        )
         mu = predict_gbm(result, booster, held, factors, bandings=bandings, groupings=groupings)
         mean = mu.mean()
         means.append(float(mean) if isinstance(mean, int | float) else 0.0)
@@ -1200,11 +1274,9 @@ def compute_gbm_diagnostics(
                 )
             )
             continue
-        # FR-176. A cross sources no column of its own, so there is nothing to
-        # hold at a value; it used to reach `_sweep` and index off an empty tuple. It
-        # is emitted with no points and a stated reason rather than dropped, so a
-        # reviewer sees every declared factor and sees which ones no curve describes.
-        if not factor.source_columns:
+        # A factor with no column that is not a cross has nothing to hold at a value. A
+        # cross is swept through its operands' columns (FR-177, below).
+        if not factor.source_columns and factor.type is not FactorType.INTERACTION:
             dependence.append(
                 PartialDependence(
                     factor=factor.slug,
@@ -1231,7 +1303,9 @@ def compute_gbm_diagnostics(
             )
         )
         direction = factor.monotonic_direction
-        if direction is MonotonicDirection.NONE:
+        # A cross's cells are unordered, so there is no direction to check (DP-FR177-2);
+        # the recorded skip lands with its schema field.
+        if direction is MonotonicDirection.NONE or factor.type is FactorType.INTERACTION:
             continue
         steps = np.diff(np.asarray(means, dtype=np.float64))
         against = -steps if direction is MonotonicDirection.INCREASING else steps
