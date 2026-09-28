@@ -1,5 +1,5 @@
 ---
-id: CR-1172
+id: CR-1171
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-668 Work close — the auditor's restatement of CR-826 at main
@@ -13,7 +13,7 @@ corrected_by: []
 relates: []                     # ids only — every FD- this closure raised or discharged
 ---
 
-# CR-1172 — WK-668 Work close: the auditor's restatement of CR-826 at main
+# CR-1171 — WK-668 Work close: the auditor's restatement of CR-826 at main
 
 ## Scope
 
@@ -160,7 +160,7 @@ ADR-706 is confirmed, and WK-669 proceeded.
 **The proposed roadmap change**, made only once the line exists, in the form of WK-697's
 closed row: `status: active` → `status: closed` in the `### WK-668` header block, and the
 row's sentence extended with *"**Closed <date> by the deputy's dated line, by delegation, on
-`CR-1172`, linked as `closures/CR-01172-wk-668-work-close-the-auditor-s-restatement-of-cr-826-at-main.md` from the roadmap.**"*
+`CR-1171`, linked as `closures/CR-01171-wk-668-work-close-the-auditor-s-restatement-of-cr-826-at-main.md` from the roadmap.**"*
 
 ## Sign-off
 
