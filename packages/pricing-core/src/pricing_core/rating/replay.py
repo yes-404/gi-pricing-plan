@@ -29,7 +29,14 @@ from pricing_core.rating.properties import (
 )
 from pricing_core.rating.runtime import CompiledBundle
 
-__all__ = ["replay_cases"]
+__all__ = ["SuiteMismatchError", "replay_cases"]
+
+
+class SuiteMismatchError(ValueError):
+    """The suite passed to a replay is not the one the recorded run was made under.
+
+    The suite's content hash is FR-257's pin (DP-S3-2), so a replay under another version
+    would report a run of a suite nobody approved on."""
 
 
 def replay_cases(
@@ -48,6 +55,11 @@ def replay_cases(
     now fails on a case the recorded run did not shrink is reported unminimised
     (`stopped_on_limit`, `counterexample_minimal=False`), since a replay cannot shrink.
     """
+    if suite.content_hash != recorded.suite_content_hash:
+        raise SuiteMismatchError(
+            f"replay under suite {suite.content_hash}, but the recorded run is of suite "
+            f"{recorded.suite_content_hash}"
+        )
     started_at = now()
     contract = bundle.algorithm.input_contract
     score = make_scorer(bundle, rating_version_ref, contract)

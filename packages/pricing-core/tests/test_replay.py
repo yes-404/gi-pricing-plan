@@ -40,7 +40,7 @@ def test_a_replay_re_scores_the_persisted_cases_and_never_generates(
         _prop("tight", kind="premium_bounded", upper_minor=1),
         _prop("fine", kind="premium_positive"),
     ], golden=[_golden("known")])
-    run, log = run_regression(bundle, suite, seed=5, rating_version_ref=_REF, now=_now)
+    run, log = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
 
     from pricing_core.rating import testing
 
@@ -68,8 +68,8 @@ def test_a_replay_re_scores_the_persisted_cases_and_never_generates(
 
 @pytest.mark.req("FR-261")
 def test_a_replay_of_a_passing_run_passes(bundle: CompiledBundle) -> None:
-    suite = _suite([_prop("fine", kind="premium_positive")])
-    run, log = run_regression(bundle, suite, seed=3, rating_version_ref=_REF, now=_now)
+    suite = _suite([_prop("fine", kind="premium_positive")], seed=3)
+    run, log = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
     replayed = replay_cases(bundle, log, suite, recorded=run, rating_version_ref=_REF, now=_now)
     assert replayed.overall == "pass" == run.overall
 
@@ -78,17 +78,38 @@ def test_a_replay_of_a_passing_run_passes(bundle: CompiledBundle) -> None:
 def test_a_replay_does_not_claim_minimality_it_did_not_establish(
     bundle: CompiledBundle,
 ) -> None:
-    """A property that fails on a case no shrink produced is reported unminimised."""
-    suite = _suite([_prop("fine", kind="premium_positive")])
-    run, log = run_regression(bundle, suite, seed=3, rating_version_ref=_REF, now=_now)
-    stricter = _suite([_prop("fine", kind="premium_bounded", upper_minor=1)])
+    """A property that fails on a case no shrink produced is reported unminimised. The
+    recorded run is the one made under the same suite: only the case log's re-scoring
+    differs, so this does not depend on the suite-hash refusal."""
+    suite = _suite([_prop("tight", kind="premium_bounded", upper_minor=1)], seed=3)
+    run, log = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
+    log_without_counterexample = CasesLog(cases=log.cases, counterexamples={})
     replayed = replay_cases(
-        bundle, log, stricter, recorded=run, rating_version_ref=_REF, now=_now
+        bundle, log_without_counterexample, suite, recorded=run,
+        rating_version_ref=_REF, now=_now,
     )
     (result,) = replayed.property_results
     assert result.status == "fail"
     assert result.shrink == "stopped_on_limit"
     assert result.counterexample_minimal is False
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.req("FR-257")
+def test_a_replay_refuses_a_suite_that_is_not_the_recorded_one(
+    bundle: CompiledBundle,
+) -> None:
+    """DP-S3-2: the suite hash is FR-257's pin, so a replay under another suite version is
+    refused by name before anything is scored."""
+    from pricing_core.rating.replay import SuiteMismatchError
+
+    suite = _suite([_prop("fine", kind="premium_positive")], seed=3)
+    run, log = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
+    edited = _suite([_prop("fine", kind="premium_bounded", upper_minor=1)], seed=3)
+    with pytest.raises(SuiteMismatchError) as caught:
+        replay_cases(bundle, log, edited, recorded=run, rating_version_ref=_REF, now=_now)
+    assert edited.content_hash in str(caught.value)
+    assert suite.content_hash in str(caught.value)
 
 
 @pytest.mark.req("FR-261")

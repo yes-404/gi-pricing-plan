@@ -154,13 +154,13 @@ def _now() -> datetime:
     return datetime(2026, 9, 28, 9, 0, next(_CLOCK_TICKS) % 60, tzinfo=UTC)
 
 
-def _suite(properties: list[dict[str, Any]], *, cases: int = 30,
+def _suite(properties: list[dict[str, Any]], *, cases: int = 30, seed: int = 5,
            golden: list[GoldenQuote] | None = None) -> RegressionSuite:
     content = {
         "algorithm_slug": "score-fixture",
         "golden_quotes": [g.model_dump(mode="json") for g in golden or []],
         "properties": properties,
-        "generation": {"cases": cases, "seed": 5, "strategy": "input_contract_sampling"},
+        "generation": {"cases": cases, "seed": seed, "strategy": "input_contract_sampling"},
     }
     from model_schema.regression import RegressionSuiteContent
 
@@ -246,7 +246,7 @@ def _by_age(fn: Any) -> Any:
 
 
 @pytest.mark.req("FR-261")
-def test_a_monotone_naming_an_absent_input_is_refused_before_generation(
+def test_property_monotone_naming_an_absent_input_is_refused_before_generation(
     bundle: CompiledBundle, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from pricing_core.rating import testing
@@ -257,7 +257,7 @@ def test_a_monotone_naming_an_absent_input_is_refused_before_generation(
     monkeypatch.setattr(testing, "generate_contexts", boom)
     suite = _suite([_prop("mono", kind="monotone", input="no_such_input", direction="increasing")])
     with pytest.raises(ValueError, match="no_such_input"):
-        run_regression(bundle, suite, seed=1, rating_version_ref=_REF, now=_now)
+        run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
 
 
 @pytest.mark.req("FR-261")
@@ -269,7 +269,7 @@ def test_run_regression_records_a_pass_and_the_generation(bundle: CompiledBundle
         _prop("nonull", kind="no_null_output"),
         _prop("ladder", kind="ladder_reconciles"),
     ], golden=[_golden("known")])
-    run, log = run_regression(bundle, suite, seed=5, rating_version_ref=_REF, now=_now)
+    run, log = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
     assert run.overall == "pass", run.property_results
     assert [p.status for p in run.property_results] == ["pass"] * 5
     assert run.golden_results[0].status == "pass"
@@ -291,7 +291,7 @@ def test_a_failing_property_is_shrunk_and_recorded(bundle: CompiledBundle) -> No
         _prop("tight", kind="premium_bounded", upper_minor=1),
         _prop("fine", kind="premium_positive"),
     ])
-    run, log = run_regression(bundle, suite, seed=5, rating_version_ref=_REF, now=_now)
+    run, log = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
     assert run.overall == "fail"
     tight, fine = run.property_results
     assert (tight.status, fine.status) == ("fail", "pass")
@@ -311,7 +311,7 @@ def test_a_shrink_stopped_on_a_limit_is_reported_unminimised(
 
     monkeypatch.setattr(engine, "MAX_SHRINKS", 1)
     suite = _suite([_prop("tight", kind="premium_bounded", upper_minor=1)])
-    run, _ = run_regression(bundle, suite, seed=5, rating_version_ref=_REF, now=_now)
+    run, _ = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
     (tight,) = run.property_results
     assert tight.status == "fail"
     assert tight.shrink == "stopped_on_limit"
@@ -322,9 +322,9 @@ def test_a_shrink_stopped_on_a_limit_is_reported_unminimised(
 def test_the_same_seed_reproduces_the_run_and_the_counterexample(
     bundle: CompiledBundle,
 ) -> None:
-    suite = _suite([_prop("tight", kind="premium_bounded", upper_minor=1)])
-    one, log1 = run_regression(bundle, suite, seed=9, rating_version_ref=_REF, now=_now)
-    two, log2 = run_regression(bundle, suite, seed=9, rating_version_ref=_REF, now=_now)
+    suite = _suite([_prop("tight", kind="premium_bounded", upper_minor=1)], seed=9)
+    one, log1 = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
+    two, log2 = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
     assert log1 == log2
     assert one.property_results == two.property_results
     assert one.cases_blob == two.cases_blob
@@ -372,7 +372,7 @@ def test_run_regression_finds_a_monotone_failure_and_passes_the_fixed_variant(
         _prop("age-strict", kind="monotone", input="driver_age", direction="increasing",
               strict=True),
     ])
-    run, log = run_regression(unclamped, suite, seed=5, rating_version_ref=_REF, now=_now)
+    run, log = run_regression(unclamped, suite, rating_version_ref=_REF, now=_now)
     down, up, strict = run.property_results
     assert (down.status, up.status, strict.status) == ("fail", "pass", "fail")
     assert down.shrink == "completed"
@@ -383,6 +383,63 @@ def test_run_regression_finds_a_monotone_failure_and_passes_the_fixed_variant(
     fixed, _ = run_regression(
         unclamped, _suite([_prop("age-up", kind="monotone", input="driver_age",
                                  direction="increasing")]),
-        seed=5, rating_version_ref=_REF, now=_now,
+        rating_version_ref=_REF, now=_now,
     )
     assert fixed.overall == "pass"
+
+
+@pytest.mark.req("FR-261")
+def test_the_seed_is_the_suites_and_there_is_no_override(bundle: CompiledBundle) -> None:
+    """RS-1176 condition 2: the persisted seed is `suite.generation.seed`; `run_regression`
+    takes no seed of its own, so a run cannot be made under one seed and recorded as another."""
+    import inspect
+
+    assert "seed" not in inspect.signature(run_regression).parameters
+    runs = {}
+    for seed in (5, 77):
+        suite = _suite([_prop("fine", kind="premium_positive")], seed=seed)
+        runs[seed] = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
+        assert runs[seed][0].generation.seed == suite.generation.seed == seed
+    assert runs[5][1] != runs[77][1]
+    assert runs[5][0].cases_blob != runs[77][0].cases_blob
+
+
+@pytest.mark.req("FR-261")
+def test_an_int_input_with_no_bounds_is_sampled_over_negatives_too() -> None:
+    """Auditor-a's generator-range finding: a property that fails only for negative values
+    is reachable when the contract declares no `min`."""
+    from model_schema.rating import InputContractField
+    from pricing_core.rating.testing import generate_contexts
+
+    contract = [InputContractField.model_validate({"name": "x", "type": "int"})]
+    values = [c.inputs["x"] for c in generate_contexts(contract, 60, 1)]
+    assert any(v < 0 for v in values)  # type: ignore[operator]
+    assert any(v > 0 for v in values)  # type: ignore[operator]
+    assert all(-1_000_000 <= v <= 1_000_000 for v in values)  # type: ignore[operator]
+
+
+@pytest.mark.req("FR-261")
+def test_a_three_place_decimal_bound_is_quantised_inward() -> None:
+    """The bound's min is rounded UP and its max DOWN to 2 places before the strategy is
+    built, so a generated value never lies outside the declared bound."""
+    from decimal import Decimal
+
+    from model_schema.rating import InputContractField
+    from pricing_core.rating.testing import generate_contexts
+
+    contract = [InputContractField.model_validate(
+        {"name": "x", "type": "decimal", "min": "0.005", "max": "0.995"})]
+    values = [Decimal(c.inputs["x"]) for c in generate_contexts(contract, 40, 1)]  # type: ignore[arg-type]
+    assert values
+    assert all(Decimal("0.01") <= v <= Decimal("0.99") for v in values)
+
+
+@pytest.mark.req("FR-261")
+def test_a_decimal_input_with_no_two_place_value_between_its_bounds_is_refused() -> None:
+    from model_schema.rating import InputContractField
+    from pricing_core.rating.testing import generate_contexts
+
+    contract = [InputContractField.model_validate(
+        {"name": "x", "type": "decimal", "min": "0.004", "max": "0.006"})]
+    with pytest.raises(ValueError, match="x"):
+        generate_contexts(contract, 5, 1)

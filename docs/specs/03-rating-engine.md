@@ -842,7 +842,7 @@ def attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[A
 
 # pricing_core/rating/testing.py
 def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
-                   *, seed: int, rating_version_ref: ArtifactRef,     # amended 2026-09-28
+                   *, rating_version_ref: ArtifactRef,               # amended 2026-09-28 (seed: suite's)
                    now: Callable[[], datetime]) -> tuple[RegressionRun, CasesLog]  # (PL-1205)
 def generate_contexts(contract: Sequence[InputContractField],   # corrected 2026-09-28
                       n: int, seed: int,                        # (RL-1172); was InputContract
@@ -919,6 +919,16 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
 > installed `hypothesis` version. `evaluate_golden_quotes` is implemented in the
 > hypothesis-free `pricing_core/rating/golden.py` and re-exported by `testing.py` under its
 > declared name.
+> *(Amended 2026-09-28, WK-672 Slice 3, `PL-1205`, auditor findings.)* `run_regression`
+> takes no seed of its own: it draws under `suite.generation.seed`, the persisted seed, so a
+> run cannot be made under one seed and recorded as another. `replay_cases` raises
+> `SuiteMismatchError` before scoring anything when `suite.content_hash` differs from the
+> recorded run's `suite_content_hash`, because that hash is `FR-257`'s pin (DP-S3-2).
+> `generate_contexts` samples an `int` or `decimal` input with no declared `min` or `max`
+> over `-1 000 000..1 000 000`, symmetric about zero, so a property that fails only for
+> negative values is reachable; a `decimal` bound is quantised to two places, the minimum
+> rounded up and the maximum down, and an input with no two-place value between its bounds is
+> refused by name.
 > *(Amended 2026-09-28, WK-672 Slice 3, `PL-1205` Task 4.)* `run_regression` and
 > `replay_cases` take the keyword-only `rating_version_ref` and `now`, because
 > `pricing-core` holds no clock (`CLAUDE.md` §2) and the run record carries both a

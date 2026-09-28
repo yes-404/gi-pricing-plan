@@ -17,7 +17,7 @@ import contextlib
 import string
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from typing import Any
 
 import hypothesis
@@ -61,6 +61,10 @@ __all__ = [
 _QUOTED_AT = datetime(2026, 1, 1, 12, 0, 0)
 _EFFECTIVE_DATE = date(2026, 1, 1)
 
+#: An `int` or `decimal` input with no declared bound is sampled over `-1_000_000..1_000_000`,
+#: symmetric about zero, so a property that fails only for negatives is reachable.
+_DEFAULT_BOUND = 1_000_000
+
 
 class GeneratorVersionMismatch(ValueError):  # noqa: N818 - declared name, 03 §5.2
     """The installed `hypothesis` is not the version a run was generated under (condition 3)."""
@@ -95,12 +99,23 @@ def _field_strategy(field: InputContractField) -> st.SearchStrategy[Any]:
     if kind is RatingInputType.BOOL:
         base: st.SearchStrategy[Any] = st.booleans()
     elif kind is RatingInputType.INT:
-        low = int(field.min) if field.min is not None else 0
-        high = int(field.max) if field.max is not None else low + 1_000_000
+        low = int(field.min) if field.min is not None else -_DEFAULT_BOUND
+        high = int(field.max) if field.max is not None else max(_DEFAULT_BOUND, low)
         base = st.integers(min_value=low, max_value=high)
     elif kind is RatingInputType.DECIMAL:
-        low_d = Decimal(field.min) if field.min is not None else Decimal(0)
-        high_d = Decimal(field.max) if field.max is not None else low_d + 1_000_000
+        cent = Decimal("0.01")
+        low_d = (
+            Decimal(field.min).quantize(cent, rounding=ROUND_CEILING)
+            if field.min is not None else Decimal(-_DEFAULT_BOUND)
+        )
+        high_d = (
+            Decimal(field.max).quantize(cent, rounding=ROUND_FLOOR)
+            if field.max is not None else max(Decimal(_DEFAULT_BOUND), low_d)
+        )
+        if low_d > high_d:
+            raise ValueError(
+                f"decimal input {field.name!r} has no 2-place value between its bounds"
+            )
         base = st.decimals(min_value=low_d, max_value=high_d, places=2)
     elif kind is RatingInputType.ENUM:
         if not field.domain:
@@ -210,12 +225,12 @@ def run_regression(
     bundle: CompiledBundle,
     suite: RegressionSuite,
     *,
-    seed: int,
     rating_version_ref: ArtifactRef,
     now: Callable[[], datetime],
 ) -> tuple[RegressionRun, CasesLog]:
     """Run `suite` against `bundle`: golden quotes, then FR-261's properties over
-    `suite.generation.cases` contexts drawn under `seed`.
+    `suite.generation.cases` contexts drawn under `suite.generation.seed` — the persisted
+    seed, with no override: a run cannot be made under one seed and recorded as another.
 
     Returns the run (`job_id` unset, `cases_blob` the case log's content address) and the
     `CasesLog` the backend persists as that blob (FR-9301). `now` is the caller's clock,
@@ -233,6 +248,7 @@ def run_regression(
         bundle, suite.golden_quotes, rating_version_ref=rating_version_ref
     )
     n = suite.generation.cases
+    seed = suite.generation.seed
     cases = generate_contexts(contract, n, seed)
 
     results: list[PropertyResult] = []

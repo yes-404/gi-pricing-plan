@@ -10,10 +10,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import pathlib
 import subprocess
 import sys
 import textwrap
-from typing import Any
 
 import hypothesis
 import pytest
@@ -86,39 +86,62 @@ def test_a_version_mismatch_is_refused_naming_both_versions() -> None:
     assert len(generate_contexts(_CONTRACT, 5, 1, expect_version=hypothesis.__version__)) == 5
 
 
+_TESTS_DIR = str(pathlib.Path(__file__).parent)
+
 _CHILD = textwrap.dedent(
     """
-    import hashlib, json, sys
-    from model_schema.rating import InputContractField
+    import asyncio, hashlib, json, sys
+    sys.path.insert(0, sys.argv[2])
+    from test_rating_score import _compiled
+    from test_testing import _REF, _now, _prop, _suite
+
+    from model_schema.regression import cases_log_bytes
     from pricing_core.rating import testing
 
-    contract = [InputContractField.model_validate(f) for f in json.loads(sys.argv[2])]
-    seed = None if sys.argv[1] == "none" else int(sys.argv[1])
-    ctxs = testing._draw_contexts(contract, 30, seed)
-    payload = [c.model_dump(mode="json") for c in ctxs]
-    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
-    print(hashlib.sha256(blob).hexdigest())
+    bundle = asyncio.run(_compiled())
+    if sys.argv[1] == "none":
+        # the negative control: the same generator with no persisted seed
+        drawn = testing._draw_contexts(bundle.algorithm.input_contract, 30, None)
+        blob = json.dumps([c.model_dump(mode="json") for c in drawn], sort_keys=True)
+        print(hashlib.sha256(blob.encode()).hexdigest())
+        print("{}")
+    else:
+        suite = _suite(
+            [_prop("tight", kind="premium_bounded", upper_minor=1)], seed=int(sys.argv[1])
+        )
+        run, log = testing.run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
+        print(hashlib.sha256(cases_log_bytes(log)).hexdigest())
+        print(json.dumps(
+            {k: v.model_dump(mode="json") for k, v in log.counterexamples.items()},
+            sort_keys=True, separators=(",", ":"),
+        ))
     """
 )
 
 
-def _child(seed: str, hashseed: str) -> str:
-    fields: list[dict[str, Any]] = [f.model_dump(mode="json") for f in _CONTRACT]
+def _child(seed: str, hashseed: str) -> tuple[str, str]:
+    """(case-log sha256, canonical counterexamples) from a fresh interpreter running the
+    PUBLIC `run_regression` (or the unseeded generator, for the negative control)."""
     out = subprocess.run(
-        [sys.executable, "-c", _CHILD, seed, json.dumps(fields)],
+        [sys.executable, "-c", _CHILD, seed, _TESTS_DIR],
         check=True, capture_output=True, text=True,
         env={**os.environ, "PYTHONHASHSEED": hashseed},
     )
-    return out.stdout.strip()
+    digest, counterexamples = out.stdout.strip().splitlines()[-2:]
+    return digest, counterexamples
 
 
 @pytest.mark.req("FR-261")
-def test_the_same_seed_gives_the_same_cases_across_fresh_interpreters() -> None:
-    """RS-1176 condition 6, positive: different hash seeds, one persisted seed."""
-    assert _child("424242", "1") == _child("424242", "2")
+def test_the_same_seed_gives_the_same_run_across_fresh_interpreters() -> None:
+    """RS-1176 condition 6, positive: different hash seeds, one persisted seed — the case
+    log AND the shrunk counterexample are identical."""
+    one = _child("424242", "1")
+    two = _child("424242", "2")
+    assert one == two
+    assert one[1] != "{}"  # the counterexample is really there to compare
 
 
 @pytest.mark.req("FR-261")
 def test_the_comparator_can_fail_without_a_persisted_seed() -> None:
     """RS-1176 condition 6, negative control: no seed, and the logs differ."""
-    assert _child("none", "1") != _child("none", "1")
+    assert _child("none", "1")[0] != _child("none", "1")[0]
