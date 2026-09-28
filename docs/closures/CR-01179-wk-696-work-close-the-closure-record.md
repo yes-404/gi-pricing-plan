@@ -1,5 +1,5 @@
 ---
-id: CR-1174
+id: CR-1179
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-696 Work close — the closure record (RFC-898, a public face for a public repository)
@@ -10,10 +10,10 @@ tree: df8e5811a151a99c7317690faf9278a6dc3400be
 phase: P2
 work: WK-696
 corrected_by: []
-relates: [FD-1176, FD-1179]      # ids only
+relates: [FD-1180, FD-1181]      # ids only
 ---
 
-# CR-1174 — WK-696 Work close: the closure record
+# CR-1179 — WK-696 Work close: the closure record
 
 ## Scope
 
@@ -157,9 +157,11 @@ none of their targets existed. The run reported `internal_links=22 broken=19`. T
 that still resolved point at the copied files themselves (`CONTRIBUTING.md`, `SECURITY.md` and
 `README.md`).
 
-**Re-run at the close tree.** The final gate records the run on this record's own committed
-tree, in the PR body and in the lead's report. Nothing in the six files changes on this
-branch, so the result cannot differ from the result above.
+**Re-run at the close tree.** #827 (`12431a88`) changed three of the six files before this
+record merged, so the check was run again on this branch after `git merge origin/main` at
+`2d20ca4b` (2026-09-28). The output was identical: `files=6 internal_links=22 broken=0
+external=0`, `backticked_paths=32 missing=1` (the same `CONTRIBUTING.md` advisory), and the
+exit code was 0.
 
 ### (b) Impact row 6: the two repository settings
 
@@ -212,7 +214,7 @@ Each issue was then read back.
 The deputy ruled that nobody on the team retries #825 or #826 by any route, because the 403 is
 a permission boundary. The maintainer then granted the token issue-write scope, and the lead
 relayed the deputy's verification of the grant. The reproduction of the failure is in
-[`FD-1176`](../findings/FD-01176-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md).
+[`FD-1180`](../findings/FD-01180-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md).
 
 **Label, comment and close, after the grant.** These ran on 2026-09-28 between 11:34:54 and
 11:35:01 BST, with `R=yes-404/gi-pricing-plan`:
@@ -223,7 +225,7 @@ gh issue edit 826 --repo $R --add-label question
 gh issue close <n> --repo $R --comment "WK-696 acceptance (c) test issue; recorded in the WK-696 closure record."
 ```
 
-All four commands exited 0. gh's exit code is not proof of a write (`FD-1176`), so each issue
+All four commands exited 0. gh's exit code is not proof of a write (`FD-1180`), so each issue
 was read back with `gh issue view <n> --repo yes-404/gi-pricing-plan --json
 state,labels,comments`:
 
@@ -362,8 +364,14 @@ is, where it stands, how it is built, and how to engage.
 **What an outsider trips on.** None of these blocks the close. The lead ruled on each:
 
 - observation 3 is filed as
-  [`FD-1179`](../findings/FD-01179-contributing-and-the-pr-template-describe-a-standing-wk-maintenance-item-that-has-no-roadmap-row.md);
+  [`FD-1181`](../findings/FD-01181-contributing-and-the-pr-template-describe-a-standing-wk-maintenance-item-that-has-no-roadmap-row.md);
 - observations 1, 2, 4 and 5 are noted here, with no finding filed.
+
+**Observation 3's premise changed before this record merged.** #840 merged at 14:21:42 BST on
+2026-09-28 (`2d20ca4b`). It minted WK-1178, *"P2 standing maintenance: hotfixes, dependency
+bumps and security findings"*, `status: active`, `phase: P2`. That is the row `FD-1181`
+reports as missing. `FD-1181` keeps its finding as measured at `df8e5811`, with a dated note.
+Whether WK-1178 discharges it is the lead's verdict.
 
 Observation 2's `W37-n` instances are removed by #827.
 
@@ -393,7 +401,7 @@ Observation 2's `W37-n` instances are removed by #827.
    trigger and the copied fact go stale together. That is acceptable, and it is noted only
    because (d)'s spirit is "no copies".
 
-**Verdict, wider read: met, with observations 1–5 noted and observation 3 filed as `FD-1179`.**
+**Verdict, wider read: met, with observations 1–5 noted and observation 3 filed as `FD-1181`.**
 The files serve an outsider. Only the two (d) sentences above breached a stated acceptance
 predicate, and #827 fixes both.
 
@@ -438,16 +446,16 @@ auditor.
 | (b), row 6, settings | pending: the deputy's dated line by delegation | the deputy | this record's follow-up commit |
 | (c) test issues | **met by proxy**, accepted by the deputy's ruling. Filed, labelled, read back and closed, plus the schema leg: evidenced. Limit: "no web-UI submission; the rendering path is proved by schema validation", carried to plan review 15. | — | plan review 15 (the limit) |
 | (d) narrow predicate | **not met at `df8e5811`; fixed before close by #827** (`12431a88`). Two sentences failed: `README.md:13-14`, an excerpt of `CLAUDE.md` §1, and `README.md:42-44`, a dated `SL-` status copy that recurs in two more files. | — | — |
-| (d) wider read | met; observations 1, 2, 4 and 5 noted; observation 3 **deferred with an owner** as `FD-1179` | the lead | WK-1170's first slice |
+| (d) wider read | met; observations 1, 2, 4 and 5 noted; observation 3 **deferred with an owner** as `FD-1181` | the lead | WK-1170's first slice |
 | (e) checklist line | evidenced; no pointer edit is owed by this close | — | — |
 | Rows 7, 8, 9 | evidenced | — | — |
 
-**Raised by this close:** [`FD-1176`](../findings/FD-01176-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md),
+**Raised by this close:** [`FD-1180`](../findings/FD-01180-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md),
 `gh issue create --label` exits 0 while the label is silently dropped. The deputy accepted it,
 **deferred with an owner — the lead**. Event: the next `git-hygiene` skill edit. Its register
 row is filed in this PR.
 
-[`FD-1179`](../findings/FD-01179-contributing-and-the-pr-template-describe-a-standing-wk-maintenance-item-that-has-no-roadmap-row.md):
+[`FD-1181`](../findings/FD-01181-contributing-and-the-pr-template-describe-a-standing-wk-maintenance-item-that-has-no-roadmap-row.md):
 `CONTRIBUTING.md` and the PR template describe a standing `WK-` maintenance item that has no
 roadmap row. **Deferred with an owner — the lead**, by the lead's ruling. Event: WK-1170's first
 slice. Its register row is filed in this PR.

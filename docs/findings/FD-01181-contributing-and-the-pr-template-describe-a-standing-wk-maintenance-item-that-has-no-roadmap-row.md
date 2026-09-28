@@ -1,5 +1,5 @@
 ---
-id: FD-1179
+id: FD-1181
 family: finding
 title: CONTRIBUTING and the PR template describe a standing WK- maintenance item that has no roadmap row
 status: active
@@ -7,10 +7,10 @@ created: 2026-09-28
 owner: auditor
 tree: df8e5811a151a99c7317690faf9278a6dc3400be
 corrected_by: []
-relates: [CR-1174, WK-696]
+relates: [CR-1179, WK-696]
 ---
 
-# FD-1179 — CONTRIBUTING and the PR template describe a standing WK- maintenance item that has no roadmap row
+# FD-1181 — CONTRIBUTING and the PR template describe a standing WK- maintenance item that has no roadmap row
 
 The auditor filed this finding on 2026-09-28, in the WK-696 closure record's PR, on the lead's
 ruling. It is observation 3 of that record's outsider read.
@@ -54,3 +54,9 @@ The owner chooses between two fixes:
 
 - mint the standing maintenance item as a roadmap row, so that the sentences become true;
 - or reword both files as a condition, the same way #827 reworded the `SL-` clause.
+
+**Dated note, 2026-09-28, before this finding merged.** #840 (`2d20ca4b`, merged 14:21:42 BST)
+minted WK-1178, *"P2 standing maintenance: hotfixes, dependency bumps and security findings"*,
+`status: active`, `phase: P2`. With that row on `main`, the public sentences describe a Work
+that exists, which is the first of the two fixes above. The finding stands as measured at
+`df8e5811`. Whether WK-1178 discharges it is the lead's verdict.

@@ -1,5 +1,5 @@
 ---
-id: FD-1176
+id: FD-1180
 family: finding
 title: gh issue create --label exits 0 while the label is silently dropped
 status: active
@@ -7,13 +7,13 @@ created: 2026-09-28
 owner: auditor
 tree: df8e5811a151a99c7317690faf9278a6dc3400be
 corrected_by: []
-relates: [CR-1174, WK-696]
+relates: [CR-1179, WK-696]
 ---
 
-# FD-1176 — gh issue create --label exits 0 while the label is silently dropped
+# FD-1180 — gh issue create --label exits 0 while the label is silently dropped
 
 The auditor filed this finding on 2026-09-28 in the WK-696 closure record's PR, on the lead's
-instruction. It was found while filing the (c) test issues that `CR-1174` records. The deputy
+instruction. It was found while filing the (c) test issues that `CR-1179` records. The deputy
 accepted it the same day, as the lead relayed.
 
 ## Finding
@@ -32,7 +32,7 @@ a create that half-landed. The issue exists, and its label does not.
 ## Evidence
 
 **Reproduction.** These were run on 2026-09-28 with gh 2.46.0 and the `yes-404` token. The
-body files are the ones `CR-1174` §(c) describes.
+body files are the ones `CR-1179` §(c) describes.
 
 1. `gh issue create --repo yes-404/gi-pricing-plan --title "[test] WK-696 acceptance (c):
    bug.yml (Bug report)" --label bug --body-file issue-bug.md` printed the URL of issue #825
