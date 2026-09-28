@@ -24,6 +24,9 @@ ARTIFACT_TYPES: Final[frozenset[str]] = frozenset(
         "reference_table", "factor", "banding", "grouping", "model", "custom_objective",
         "custom_metric", "peril_structure", "rating_algorithm", "sub_graph", "rate_table",
         "rating_version", "optimisation_run", "gipp_check", "monitor", "dossier",
+        # Added 2026-09-28 (WK-672 Slice 2, PL-1189): a reference only — never approvable,
+        # never resolvable by the approval route (03 §4.7).
+        "regression_suite",
     }
 )
 

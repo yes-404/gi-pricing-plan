@@ -136,6 +136,10 @@ GENERATED_SHAPES: dict[str, str] = {
     # the shape's first written form, defined in the spec before any code, and the
     # generated file is the only place a consumer can see the wire form.
     "dataset-lineage": "DatasetLineage",
+    # Added 2026-09-28 (WK-672 Slice 2, PL-1189). The hand-authored Phase-0 contract bundled
+    # the suite with `RegressionRun`; the run moved to its own authored file
+    # (`regression-run.schema.json`, Slice 3's to generate) and the suite is compared here.
+    "regression-suite": "RegressionSuite",
 }
 
 
