@@ -237,6 +237,44 @@ alone.
 - **Register F41 (NFR-497).** The availability target is carried. Its verdict is the lead's
   at the close. → **Verdicts the plan does not give**.
 
+### Permission names — the permission-catalogue rule (b), until the catalogue RL merges
+
+**Why this section exists.** The permission-catalogue finding filed in #855 (unmerged at
+this tree, so it is cited here by PR number, as #830 and #837 are) finds that `06`
+names 24 permissions and the code names 24, and **only 7 names are shared**. This is a
+`CLAUDE.md` §0 disagreement at scale. The deputy's resolution (to-lead channel,
+2026-09-28 14:52:49 BST, item 4) is binding on this plan in two ways:
+
+1. **Slice 2's leaf plan is not written until dm-e's permission-catalogue RL merges.** That
+   RL is not yet a PR at this tree, and is cited here as "the catalogue RL". It gives each of the 34
+   unshared names a verdict: *map*, *spec-only* or *code-only*.
+2. **Until then, every slice that adds or checks a permission states which name it uses
+   and why, and cites #855's finding.** It never silently picks the `06` name or the code name.
+
+The table below is that statement for every slice. The code names are read from
+`packages/model-schema/src/model_schema/permissions.py` at this tree. The `06` column
+counts hits of the literal name in `docs/specs/06-governance.md`. **Slices 1 and 4 add and
+check no permission.**
+
+| Slice | Act | Name the slice uses | In `06`? | Why this name, pending the catalogue RL |
+|---|---|---|---|---|
+| 2 | Deploy (`POST /api/v1/environments/{env}/deployments`) | `deployment:promote` (`permissions.py:54`) | No; `06:62` and `06:219` say `rating_version:deploy_prod` and `rating_version:deploy_*` | **Ruled, not picked.** DP-6 is ruled (b) in #848's RL (unmerged): the code's name is right, `06` is amended to it, and there is no environment-scoped grant. The catalogue RL must not re-open it; if the catalogue RL maps it differently, the two RLs conflict and the lead is told |
+| 2 | Decide the `deployment` approval request | `approval:decide` (`permissions.py:53`) | Yes (2 hits) | One of the 7 shared names, so there is no disagreement to resolve |
+| 2 | Create or list Environments (`07`'s `/api/v1/environments`) | `admin:manage_environments` (`permissions.py:69`) | No (0 hits); `06` names no permission for this act | **Code-only, by #855's finding's terms.** `06` offers no alternative name. The slice uses the code name, and the catalogue RL's verdict for it (add to `06` §4, or remove) is applied before Slice 2's leaf plan is written |
+| 2 | A Service Account never holds a deploy permission (FR-347, negative test) | `deployment:promote` | As in the first row | The negative test checks the permission #848's RL rules; it follows that ruling |
+| 3 | Mint, rotate and revoke per-environment keys (FR-430, register F54) | `admin:manage_service_accounts` (`permissions.py:70`) | No (0 hits) | Code-only; `06` names no permission for key management. The slice uses the code name and applies the catalogue RL's verdict for it |
+| 3 | A Service Account scores (the scope a key carries) | `score:execute` (`permissions.py:58`) | No (0 hits); `07` §4.3's example names `score:execute` | Code-only in `06`, but `07` names it, so the name has a spec source. the catalogue RL's verdict decides whether `06` §4 adds it |
+| 3 | Update environment configuration (FR-431, `PUT /api/v1/environments/{name}/settings`) | `admin:manage_environments` | No (0 hits) | The same code-only name as Slice 2's Environment row. The code also has `admin:manage_settings` (`permissions.py:68`) for the precedence chain's other layers; **which of the two guards an environment's settings is not decided here**, and Slice 3's leaf plan takes the catalogue RL's verdict on both |
+| 5 | Roll back (FR-269, `…/deployments/rollback`) | `deployment:promote` | As in Slice 2's first row | Rollback is the same operation aimed at an earlier version (Task 5), so it checks the same permission |
+| 6 | Set date routing (FR-270) | `deployment:promote` | As in Slice 2's first row | A routing rule is made at deployment time (FR-270: overlaps are "rejected at deployment time"), so it is a deploy act |
+| 6 | Enable or configure shadow scoring (FR-271, `PUT /api/v1/environments/{env}/shadow`) | `admin:manage_environments` | No (0 hits) | DP-2's decision makes enabling shadow "an environment setting with its own audit event", so it is guarded like Slice 3's environment-configuration row, and the catalogue RL's verdict on that name governs |
+
+**What each leaf plan does with this table.** It re-reads the catalogue RL (if merged) and #855's finding at
+its own tree, then quotes the row it relies on. If the catalogue RL has merged, it states the RL's
+verdict for each name instead of the "pending" reason above. If the catalogue RL has not merged, it
+cites #855's finding (by its minted id, once merged) beside every permission it adds or checks. Slice 2's leaf plan cannot take the
+second path: it waits for the catalogue RL.
+
 ### Cross-module dependencies — `06`, `05`, `00` (swept at this tree)
 
 **`06` — governance.** Two kinds of obligation, kept apart because only the first is
@@ -472,6 +510,9 @@ condition in `PL-1070` item 11's form:
   - The switch itself is **not** in this slice. A deployment recorded here takes effect by
     the existing per-request resolution. Slice 5 replaces that resolution with the push.
 - **Depends on:** Slice 1. It is blocked on DP-6 and DP-7, and its close is blocked on DP-4.
+  **Its leaf plan is not written until dm-e's permission-catalogue RL
+  merges** (#855's finding; the deputy's 14:52:49 BST entry, item 4(a)). Until then, the names it
+  would use are those stated in **Permission names** above, each with #855's finding cited.
 - **Gate outline.**
   - Each refusal is tested by its cause:
     - a missing approval gives `DEPLOY_REQUIRES_APPROVAL`;
@@ -635,3 +676,9 @@ When the deputy accepts this plan by delegation, the activation commit:
    WK-687's and WK-688's phase from P3 to P4 (`docs/roadmap.md`'s `phase:` field under each).
    It splits the `06` sweep into what WK-674 builds and what it feeds, and records the
    `07` §3.6 ids on no row as a premise.
+6. **Amendment, 2026-09-28 (the permission-catalogue rule (b), on the deputy's 14:52:49 BST entry).** It adds
+   **Permission names**, a per-slice statement of every permission name a slice adds or
+   checks, with its `06` status and reason, and #855's finding cited. It also records in Slice 2
+   that its leaf plan waits for the permission-catalogue RL. The names
+   were read at this tree from `permissions.py`, and each `06` count is a literal-string
+   count (`git show origin/main:docs/specs/06-governance.md | grep -c -- '<name>'`).
