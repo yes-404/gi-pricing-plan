@@ -32,7 +32,7 @@ Plan-ledger SHA-citation convention, dated 2026-08-26 (WK-664 decision maker): t
 |---|---|
 | **Phase 0 (Specification)** | Closed 2026-08-14 — 8 specs, 5 workflows, 5 ADRs, 31 contracts; `scripts/audit-docs.py` prints the current requirement count, which changes whenever an implementation proves the spec wrong |
 | **Blocking Phase 1** | **Nothing.** All seven of Track C's decisions are taken — the last six (OQ-MODEL-1, 2, 4, 5, 6, 7) on 2026-08-15. What remains open gates Phase 2 or later (§10) |
-| **Code written** | Phase 1a complete, Phase 1b started — the closure records in [`docs/closures/INDEX.md#closure-recordsmd`](ledgers/LG-00730-wk-661-wf-698-driven-end-to-end.md) are the authority, not this row |
+| **Code written** | Each phase section's `status:` line is the authority (`## P1a`, `## P1b`, `## P2` below). This row does not restate it, because a restated status goes stale (RFC-756). *Pointer since 2026-09-28, item E11.* |
 
 The remaining Phase 0 work is a **decision backlog, not a writing backlog**. Every open
 question already carries options, trade-offs, and a recommendation.
@@ -186,12 +186,14 @@ A module never imports from a module to its right. Two consequences worth intern
 > decisions block 1a. Work can start once four questions are answered, not seven.
 
 ## P1a — Data Workbench
-status: active
+status: closed
 opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
 works: WK-657, WK-658, WK-659, WK-660, WK-663, WK-666, WK-667
+
+*Status set to `closed` 2026-09-28 (item E11 in the deputy's OQ-stream entry; Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), 2026-09-28 11:33:12 BST). The authority is the exit demo's acceptance on 2026-08-15, recorded in the Phase 1a status table below and in `CR-717` (`kind: phase`). The header had been left `active`.*
 
 ### WK-657 — Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-703), docker compose
 
@@ -384,12 +386,14 @@ exactly what §13 rule 2 is about — "exists" and "works" are different claims,
 The closure records, plan reviews and the retrofit-impossible list moved to `docs/audit/` on 2026-08-27 (RFC-813). This page is the forward-looking plan; the archive is at [`docs/findings/README.md`](findings/README.md).
 
 ## P1b — Modelling Workbench
-status: active
+status: closed
 opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
 works: WK-661, WK-662, WK-664, WK-665, WK-692
+
+*Status set to `closed` 2026-09-28 (item E11 in the deputy's OQ-stream entry; Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), 2026-09-28 11:33:12 BST). The authority is the phase's acceptance as closed on 2026-08-27, recorded in `CR-822`. The header had been left `active`.*
 
 ### WK-661 — Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates
 
@@ -554,7 +558,7 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697
+works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170
 
 ### WK-668 — **Spike S1/S2 resolution and ADR-706 confirmation**
 
@@ -562,13 +566,13 @@ works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, W
 id: WK-668
 family: work
 title: **Spike S1/S2 resolution and ADR-706 confirmation**
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 373): **Spike S1/S2 resolution and ADR-706 confirmation** | Must complete before WK-669. If S1 fails, this phase is re-planned
+From “Workstreams” (line 373): **Spike S1/S2 resolution and ADR-706 confirmation** | Must complete before WK-669. If S1 fails, this phase is re-planned **Closed 2026-09-28 by the deputy's dated line, by delegation, on [`CR-1171`](closures/CR-01171-wk-668-work-close-the-auditor-s-restatement-of-cr-826-at-main.md).**
 
 
 ### WK-669 — Rating algorithm contract, validation, bundle compilation
@@ -690,6 +694,8 @@ phase: P2
 
 From “Workstreams” (line 386): **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with** | Added 2026-08-15 by OQ-573's decision, which moved this work out of WK-661 rather than deleting it: `02` FR-144/145, FR-150, §4.6, and `WF-702` Route B. It depends on nothing in WK-669–WK-675 and could equally be pulled into 1b if WK-661 finishes early — but it must not start before the certification machinery it fronts (FR-151) has run for a phase, which is the whole point of the decision
 
+**2026-09-28 — the start gate is MET** (item E3 in the deputy's OQ-stream entry; Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), 2026-09-28 11:33:12 BST). The gate above says this work must not start before the certification machinery it fronts (FR-151) has run for a phase. That machinery shipped in WK-661 (`CR-754`, closed 2026-08-22). It has since run for a phase: P1b was accepted closed on 2026-08-27 (`CR-822`). **WK-690 must add `sympy`**: `grep -c -i sympy uv.lock` prints 0 at `12431a88`. It lands together with the `docs/skills-map.md` update that the dependency requires (`CLAUDE.md` §10). The first slice is the parser, brought to `02` §4.6's profiles (item E2, filed in the Track E spec PR).
+
 
 ### WK-693 — Machine-readable process core — RFC-895, adopted remainder (Slices E/F/G)
 
@@ -765,6 +771,34 @@ phase: P2
 
 From “Workstreams” (line 382): **One id per governed thing — RFC-937, the whole standard** | Adopted 2026-09-01 from [`RFC-937`](rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md) by the note's **own dated `accepted` status**, which the maintainer ruled that day is this row's acceptance line: RFC-937 arrived accepted rather than being moved to accepted by a reconciliation, so the *"reconciliation's dated acceptance line"* that WK-693, WK-694 and WK-696 cite has no referent here, and WK-695 already cites neither — the register admits more than one authority form. The ruling is recorded at `docs/rulings/RL-00940-the-maintainer-s-delegation-and-rfc-937-s-precedence-recorded-2026-09-01.md` §4, and the derivation rather than the conclusion is in the map plan's Authority section. **Scope:** the note's §1 standard in full — one global integer sequence across every row and document family, the five-word status vocabulary of §1.2a, the family-per-directory layout, the YAML header with its closed field set, roles per family, phase-as-milestone, and the generated index, ownership matrix and phase report; its §4 one-time scripted migration; its §5 impact map — root governance, all of `docs/`, seven role charters, two agents, every skill (twenty-six substantively, a header on all forty-six), fourteen scripts, twelve tests, two CI workflows, and every code and test file citing a document or requirement; and its §7 acceptance items (a)–(k). **Population, carried with its tree and its predicate because both matter:** the note's "767 files" at `8f5d57d` re-measures to **770** at `89dd2b1` and **771** at `bc7bc36`, but that figure uses a pattern including `VR-` product identifiers, which D5 places permanently out of scope — so the in-scope population at `bc7bc36` is **768**, with 3 files matching only via a `VR-` id. The corpus also grows with every new file citing a requirement, so a slice re-derives both numbers rather than quoting these. The auditor's pinned sweep at `89dd2b1` further corrects the note's own §5.6 evidence in two material places — `backend/src/app` and `backend/tests` each claim roughly the *combined* backend total (measured 88 + 93 + 28 = 209 against ~410 claimed), and `backend/migrations` is claimed at 3 against 28 measured — so W37-6's leaf plan is written from that sweep, never from §5's table. **Eleven slices** cut from §8's stages S1–S4 by `docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`: four building the instruments in parallel, one building the migration script against a fixture corpus, **one supervised run that moves the whole corpus and must land at a gap with no open branches** and is never fanned out, four applying the conventions, and one proving acceptance (j) and (k). **Supersedes WK-695 in part** — see that row. **Decision points — updated 2026-09-02.** The plan recorded eight, two disposed of in it. **DP-1, DP-2 and DP-3 are ruled** as Rulings 66, 67 and 68 (`docs/rulings/INDEX.md#2026-09-02-w37-migration-preconditions-rulingsmd`), together with **RL-990** on a fourth point raised during execution — §1.5's vendored-skill criterion names `graphify`, `systematic-debugging` and the `vue-*` skills as vendored while defining vendored as *"anything shipping its own `LICENSE`"*, which exactly two of twenty-eight do; the parenthesis is ruled a gloss, not a detector. **Two consequences this row must carry.** First, **DP-2 blocks W37-4, not only W37-6** — item (d) and check 36 read one shared constant, so the earlier slice carries the earlier date. Second, **RL-987 enlarges W37-6's commit** by folding the creating instruments into it, ruled as a criterion — every instrument whose output checks 30–39 test — with the note's seven as a floor and `git-hygiene` and the skills README named for explicit disposition; **the maintainer's go-ahead for W37-6 must disclose that enlargement**, which the existing precondition does not cover. Still open: **DP-6**, blocking W37-9, discharged by a dated maintainer line on that slice's PR (`CLAUDE.md` §12 reserves an amendment to what that file requires), and **DP-4**, non-blocking, applied at W37-11. **`CLAUDE.md` §5's never-renumber rule yields to this work**, at two sites, by the maintainer's dated precedence ruling of 2026-09-01; a rule that yields still yields visibly. **Acceptance:** the note's §7 (a)–(k) **Progress, 2026-09-02.** **S1 complete** — W37-1 the standard and thirteen templates, W37-2 `doc-id.py`, W37-3 `doc-index.py`, W37-4 `audit-docs.py` checks 30-39 with ten broken-input proofs. **W37-5 merged**: `migrate` built and proven on a fixture corpus, then hardened after four defects were found in already-merged code by running it against the real tree. **W37-5b and W37-5c closed 2026-09-02** (PRs #617 and #647), each on a clean audit and the lead's merge per `CLAUDE.md` §13 — not the maintainer's, a Slice's close is the lead's. Full narrative, every precondition found only by building the slice, and every finding's adopted verdict (F76-F82, F86-F92 raised, discovery defects, the `RS` family `KeyError` fix, the vendored-manifest fifth abort point cleared): [`docs/closures/CR-01004-work-item-record-w37-5b-the-group-a-preconditions-slice.md`](closures/CR-01004-work-item-record-w37-5b-the-group-a-preconditions-slice.md) and [`docs/closures/CR-01005-work-item-record-w37-5c-the-second-precondition-slice.md`](closures/CR-01005-work-item-record-w37-5c-the-second-precondition-slice.md) — not restated here at length, per this file's own restated-status-goes-stale lesson ([`RFC-756`](rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)). On a throwaway snapshot of the real corpus, `migrate()` ran to completion at that close. **W37-6 run 2 — the real migration — merged to `main` 2026-09-17**, across four PRs, in order: `#784` (`0651c1e265648cbd3918adfc729ad965b83b1e0b`, the sentinel h1-check36 row) → `#782` (`71f5a2208c7a92bad486ae128775a4a42c7ebc63`, the migration itself — squash of the tool's own run at `M=0651c1e`, commit 1's tree `6d058ba642481404815ab573e848a8cf34e671ee`, plus commit 2's restores, reflows, test dispositions, `docs.yml` verify-ref fix and sweep-enumeration fix) → `#785` (`1cd489c870f9f117c19f009f0a096dc8ac748929`, the closure/(g) record `CR-1063` and this ledger's UNFREEZE, `#757` recorded as the first W37-11 item) → `#783` (`4d9fe1d62328285ac0483b047c3959e39e0f5bd6`, skills — `doc-id-migration-run` added, five skill/role updates capturing what the run learned). **`4d9fe1d` is HEAD at this writing.** **Standing state at `4d9fe1d`, RFC-937 §7:** (a)-(f) and (h) evidenced (checkpoint 3's close record re-measures every delivered-but-untested item); (g) a standing, disclosed FAIL — `CR-1063` §6 breaks down `classified-by-none = 251` of 971 by cause — deferred to W37-11 with `#757` its first item; (i) — "every H row in §5 closed by a named commit" — walked in checkpoint 3's close record. `_docverify.EXPECTED_VERDICTS`: 8 PASS, 15 DISCLOSE, 1 FAIL (g), 24 rows. Register: F87 discharged (proven on `docs/contracts/openapi/gi-pricing.yaml`, a real non-markdown F83-exempt file, not a fixture); F90 no-change, already ruled at the right authority (`CR-1050`); F92 owner of record W37-11, count corrected 53→50; F107-F110 filed at checkpoint 3, each with an FD- essay: F107 the idempotence gap, F108 check-35's two-clause shape (its `W37-10` owner-tag literal corrected to `W37-7`), F109 the pinned-base CI-verify read (a design choice for W37-11's own leaf plan Decision points table, not a silent pick), F111 the vendored-sweep mechanism gap (fixed before close for the two corrupted scripts, PR #788; the sweep-reaches-vendored gap itself is W37-11's), F110 the `(d → W37-11)` docstring/`tracked_files` mismatch — all four owned W37-11 or lead→W37-11. **Checkpoint 3** (`.claude/skills/close-workstream`'s checklist, `docs/plans/PL-01058-w37-6-migration-run-ledger.md:37-38`, corrected 2026-09-18 per `CLAUDE.md:283`): this row's own rewrite, the register updates above and the checkpoint's close record, [`CR-01065`](closures/CR-01065-w37-6-checkpoint-3-close.md), are one PR — see that record for the full re-measure of every delivered-but-untested item and RFC-937 §7(i)'s row-by-row commit walk. **Next: Stage 3** — W37-7, W37-8, W37-9 and W37-10 (the four "applying the conventions" slices and the one proving acceptance (j) and (k), per the map plan's eleven-slice cut). **W37-11's first item was `#757`**, and it had already merged when this paragraph was written: `29e7a9c` (`29e7a9ce41459ff1f4b4b2658d177c6109d35a58`, 2026-09-18 01:45:22 BST), rebased onto `71f5a22` with its own gate and CI, per the deputy's ruling of 2026-09-17. It took row (g)'s g2 `classified-by-none` from 251 to 207, and (g) stayed the standing FAIL. *Corrected 2026-09-27 by W37-11 (`PL-1144` Task 11; the deputy's condition 4 of 11:16:34 BST). The clause said "(rebase onto `71f5a22`, …)", as work still to do.* The idempotence gap (F107), the census-row shrink, the check-35 shape (F108), the pinned-base read (F109), and the docstring mismatch (F110) are also W37-11's. **Progress, 2026-09-27.** W37-7 (#795, `4ed1f88e`; `LG-1137`), W37-8 (#806 to #814; `LG-1141`), W37-9 (#817, `49c06ad7`; `LG-1143`) and W37-10 (#804, `536d3cc3`; `LG-1139`) are closed, each on the auditor's closing record and the lead's merge (#815, #818, #819). **W37-11** runs under `PL-1144` and `RL-1145`. Its instrument PR merged as #821 (`47065da5`). Its evidence for rows (g), (k) and (j) is in `LG-1148`. At `47065da5`, (g) reads `classified-by-none=207`, the same as at `29e7a9c`, with every file assigned to a cause, and stays the standing FAIL, deferred with an owner under RL-1145 DP-4 (b). ~~**The Work close is pending.** It is recorded in the closure record [`CR-1164`](closures/CR-01164-wk-697-work-close-the-closure-record.md), and the row's `status:` stays `active` until the maintainer's dated line (D7, by delegation) accepts the close (`CLAUDE.md` §13).~~ **Closed 2026-09-27 15:25:01 BST by the maintainer's dated line (5), by delegation (D7), on [`CR-1164`](closures/CR-01164-wk-697-work-close-the-closure-record.md).** *Struck and closed 2026-09-27 on the D7 line; `status:` moved from `active` to `closed`.*
 
+
+### WK-1169 — The charter investigation — RFC-937's binding charters
+
+```yaml
+id: WK-1169
+family: work
+title: The charter investigation — RFC-937's binding charters
+status: active
+created: 2026-09-28
+owner: maintainer
+phase: P2
+```
+
+Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegation 2026-09-27 16:18:24 BST), the first of the two downstream Works RFC-937's closing section names. **Subject:** the ownership table of `document-ids.md` section 1.6 made binding in each role charter, with a directory-level `owner:`. **Scope, by reference and not restated** (a restated list is the copy that goes stale, RFC-756): every item `CR-1164` (the WK-697 closure record) section 10 lists as taken over with the event "the charter investigation's first slice", and every register row `CR-1167` dispositions to that event. **Status `active`: listed, not started.** Its first slice is the event those rows wait on; no map plan exists yet.
+
+### WK-1170 — The create-read-retire audit — RFC-937's transition steps
+
+```yaml
+id: WK-1170
+family: work
+title: The create-read-retire audit — RFC-937's transition steps
+status: active
+created: 2026-09-28
+owner: maintainer
+phase: P2
+```
+
+Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegation 2026-09-27 16:18:24 BST), the second of the two downstream Works RFC-937's closing section names. **Subject:** the process step for each transition in the state machines of `document-ids.md` section 1.2, and the register, instrument and verify tooling those transitions depend on. **Scope, by reference and not restated** (a restated list is the copy that goes stale, RFC-756): every item `CR-1164` (the WK-697 closure record) section 10 lists as taken over with the event "the create-read-retire audit's first slice", and every register row `CR-1167` dispositions to that event. **Status `active`: listed, not started.** Its first slice is the event those rows wait on; no map plan exists yet.
 
 **Goal:** DAG designer, rate tables, reference data, real-time + batch scoring, dislocation.
 
