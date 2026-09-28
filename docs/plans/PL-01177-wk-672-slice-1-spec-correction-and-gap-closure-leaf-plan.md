@@ -1,5 +1,5 @@
 ---
-id: PL-WORKING
+id: PL-1177
 family: plan
 kind: leaf
 title: WK-672 Slice 1 — Spec correction and gap closure: leaf plan
@@ -238,7 +238,7 @@ After WK-672's migrated line, leave one blank line and add this paragraph (one p
 contains no `|`):
 
 ```markdown
-**2026-09-28 — the charter, named against its own ids** (WK-672 Slice 1, `PL-WORKING`; `RL-1172` items 4 and 5, the latter quoting the deputy's DP1 decision by delegation, option A). **FR-260:** golden quotes, and the promotion re-scoring that refuses on a mismatch beyond the declared tolerance. **FR-261:** property assertions over generated quote contexts, and the regression runs that execute a suite (`POST /api/v1/rating-versions/{id}/regression-runs`, recorded as `03` §4.9 `RegressionRun`). **FR-262: the backend limb only** — `POST /api/v1/score/compare`, one quote scored against two Rating Versions with the step-level diff; the Quote Sandbox view over it is WK-675's, and FR-262 is delivered only when both limbs have landed. **FR-257 limb (1)** — the approval gate's passing-Regression-Suite check — is also this Work's (`RL-1172` item 4). Slices run 1 → 2 → 3 → 4, one at a time.
+**2026-09-28 — the charter, named against its own ids** (WK-672 Slice 1, `PL-1177`; `RL-1172` items 4 and 5, the latter quoting the deputy's DP1 decision by delegation, option A). **FR-260:** golden quotes, and the promotion re-scoring that refuses on a mismatch beyond the declared tolerance. **FR-261:** property assertions over generated quote contexts, and the regression runs that execute a suite (`POST /api/v1/rating-versions/{id}/regression-runs`, recorded as `03` §4.9 `RegressionRun`). **FR-262: the backend limb only** — `POST /api/v1/score/compare`, one quote scored against two Rating Versions with the step-level diff; the Quote Sandbox view over it is WK-675's, and FR-262 is delivered only when both limbs have landed. **FR-257 limb (1)** — the approval gate's passing-Regression-Suite check — is also this Work's (`RL-1172` item 4). Slices run 1 → 2 → 3 → 4, one at a time.
 ```
 
 - [ ] **Step 3: Append the WK-675 paragraph**
@@ -260,8 +260,7 @@ elsewhere, means a paragraph landed in the wrong section.
 
 Run: `python3 scripts/audit-docs.py`
 Expected: no new failure from `docs/roadmap.md` (no id is minted; FR-257, FR-260, FR-261 and
-FR-262 are all defined in `03`). While this plan's id is still `PL-WORKING`, check 31's
-working-id row is the known one; any other new row is a defect in this task's text.
+FR-262 are all defined in `03`); any new failure row is a defect in this task's text.
 
 - [ ] **Step 6: Commit**
 
@@ -295,7 +294,7 @@ above it. The new subsection goes after §4.8's last paragraph (ending "…readi
 ````markdown
 ### 4.9 `RegressionRun`
 
-*(Added 2026-09-28, WK-672 Slice 1, `PL-WORKING`. Mints no requirement id: it documents the
+*(Added 2026-09-28, WK-672 Slice 1, `PL-1177`. Mints no requirement id: it documents the
 execution record that FR-260's promotion check and FR-261's property run produce, matching
 `docs/contracts/schemas/regression-suite.schema.json`'s `RegressionRun` definition, which
 predates this text. That contract is the hand-authored Phase 0 draft; `RL-1172` item 3c
@@ -487,9 +486,9 @@ RL-1172's Slice 1 row ("the WK-672 and WK-675 roadmap text … `03` §4.9 … th
 Task 2's text (generator-neutral), its Step 3 check and acceptance item 2.
 
 **2. Placeholder scan.** Every step carries a literal path, the literal text to insert and a
-command with its expected result stated by cause. `PL-WORKING` in Tasks 1 and 2's inserted
-text is this plan's own working id, replaced with the minted id by the renumber commit before
-activation (the team's id rule), so the executor copies the minted id.
+command with its expected result stated by cause. `PL-1177` in Tasks 1 and 2's inserted
+text is this plan's own minted id (drafted as a working id and renumbered at its mint turn,
+the team's id rule), so the executor copies it as written.
 
 **3. Type and literal consistency.** Checked against the shipped source at the header's tree,
 not this plan's prose: `RATING_ERROR_CODES` exported at `errors.py:29`; the neighbour test's
