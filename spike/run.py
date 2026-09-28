@@ -145,12 +145,13 @@ def core(idx: list[int]) -> dict:
     }
 
 
-def cost(kmax: int, nruns: int) -> None:
+def cost(kmax: int, nruns: int, kmin: int = 3) -> None:
     df = pl.read_parquet(PQ)
-    for k in range(3, kmax + 1):
+    f3.Rater.totals_only = True
+    for k in range(kmin, kmax + 1):
         deltas = (f3.CORE + [f3.extra_delta(i) for i in range(len(f3._EXTRA_FACTORS))])[:k]
         times_s, times_a = [], []
-        for _ in range(nruns):
+        for _ in range(nruns if k <= 6 else 1):
             t = time.perf_counter()
             r = f3.Rater(df, deltas, BASE)
             f3.method_a(r, list(range(k)))
@@ -177,4 +178,4 @@ if __name__ == "__main__":
     elif cmd == "core":
         print(json.dumps(core([int(x) for x in sys.argv[2].split(",")]), indent=1, default=str))
     elif cmd == "cost":
-        cost(int(sys.argv[2]), int(sys.argv[3]))
+        cost(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]) if len(sys.argv) > 4 else 3)

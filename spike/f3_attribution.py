@@ -149,8 +149,18 @@ class Rater:
             self.ratings += 1
         return self.cache[subset]
 
+    totals_only = False  # cost mode: keep O(2**K) integers, not O(2**K) premium vectors
+
     def total(self, subset: frozenset[int]) -> int:
-        return int(self.premiums(subset).sum())
+        if not self.totals_only:
+            return int(self.premiums(subset).sum())
+        if not hasattr(self, "_tot"):
+            self._tot: dict[frozenset[int], int] = {}
+        if subset not in self._tot:
+            self._tot[subset] = int(self.premiums(subset).sum())
+            if subset:
+                del self.cache[subset]
+        return self._tot[subset]
 
 
 def method_a(r: Rater, order: list[int]) -> dict:
