@@ -520,7 +520,7 @@ The roadmap `## P2` edit (`exit criteria:` only) is the lead's, after the merge.
 Paste this entry verbatim into CR-1202's foot as the P3–P13b line, with its heading time. Quote the maintainer's P1 and P2 lines the same way once they are given.
 ```
 
-The quoted entry names this record by its first-minted id (the id the quote spells, released before merge); its real id is in the front matter.
+The quoted entry names this record by its first-minted number, 1202, released 2026-09-28 before merge and since minted as FD-1202; its id is the one in this file's front matter.
 
 ## Sources
 
