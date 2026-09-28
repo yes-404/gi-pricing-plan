@@ -26,11 +26,11 @@ from app.db.models import JobLogRow, JobRow, ScoringTraceRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs
+from app.platform.safe_exception import safe_job_error_text, safe_job_exc_info
 from app.worker import handlers
 from app.worker.tasks import execute_job
 from model_schema import JobKind, JobResult, JobStatus
 from pricing_core.progress import ProgressCallback
-from pricing_core.safe_error import safe_error_text, safe_exc_info
 
 _SENTINEL = "SENTINEL-quote-input-7f3a91c2"
 
@@ -122,16 +122,16 @@ async def test_a_named_refusal_chained_from_a_validation_error_leaks_nothing_int
 
 
 @pytest.mark.req("NFR-499")
-def test_safe_error_text_keeps_the_field_path_and_error_type_and_drops_the_value() -> None:
+def test_safe_job_error_text_keeps_the_field_path_and_error_type_and_drops_the_value() -> None:
     with pytest.raises(ValidationError) as caught:
         _validation_failure()
     exc = caught.value
     assert _SENTINEL in str(exc), "control: the raw text does carry the input"
-    message = safe_error_text(exc)
+    message = safe_job_error_text(exc)
     assert _SENTINEL not in message
     assert "driver_age" in message
     assert "int_parsing" in message
-    rendered = logging.Formatter().formatException(safe_exc_info(exc))
+    rendered = logging.Formatter().formatException(safe_job_exc_info(exc))
     assert _SENTINEL not in rendered
     assert "_validation_failure" in rendered, "the operator's traceback frames are kept"
 
@@ -150,12 +150,13 @@ async def test_a_database_error_does_not_print_its_bound_parameters(database: Da
 
 
 @pytest.mark.req("NFR-499")
-async def test_safe_error_text_drops_a_value_the_database_itself_echoes(
+async def test_safe_job_error_text_drops_a_value_the_database_itself_echoes(
     database: Database, workspace_id
 ) -> None:
     """A check violation's `DETAIL: Failing row contains (...)` repeats the rejected value, and
-    it is in the driver's message, which `hide_parameters` does not touch. `safe_error_text` keeps
-    the driver exception's type, its SQLSTATE and the constraint, and nothing else."""
+    it is in the driver's message, which `hide_parameters` does not touch.
+    `safe_job_error_text` keeps the driver exception's type, its SQLSTATE and the constraint,
+    and nothing else."""
     with pytest.raises(DBAPIError) as caught:
         async with database.unit_of_work() as session:
             session.add(
@@ -168,7 +169,55 @@ async def test_safe_error_text_drops_a_value_the_database_itself_echoes(
                 )
             )
     assert _SENTINEL in str(caught.value.orig), "control: the driver's own text echoes the value"
-    message = safe_error_text(caught.value)
+    message = safe_job_error_text(caught.value)
     assert _SENTINEL not in message
     assert "23514" in message, message
     assert "blob_sha256_format" in message, message
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_unique_violations_detail_does_not_reach_the_message_or_the_log(
+    database: Database, workspace_id, principal, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Postgres reports `DETAIL: Key (workspace_id, idempotency_key)=(..., SENTINEL) already
+    exists`, echoing the value in the driver's own message. Through a handler, so JobError and
+    the logged traceback are both covered."""
+    from app.db.models import JobRow as _JobRow
+    from model_schema import JobQueue, JobSource
+
+    def _insert() -> Any:
+        return _JobRow(
+            workspace_id=workspace_id,
+            kind=JobKind.RATE_TABLE_DIFF,
+            status=JobStatus.SUCCEEDED,
+            queue=JobQueue.DEFAULT,
+            source=JobSource.API,
+            submitted_by={"kind": "user", "id": str(principal.id)},
+            idempotency_key=_SENTINEL,
+        )
+
+    async with database.unit_of_work() as session:
+        session.add(_insert())
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        progress.run_on_loop(_second_insert())
+        raise AssertionError("unreachable")
+
+    async def _second_insert() -> None:
+        async with database.unit_of_work() as session:
+            session.add(_insert())
+
+    with caplog.at_level(logging.INFO):
+        row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert _SENTINEL not in row.error["message"], row.error["message"]
+    assert "23505" in row.error["message"], row.error["message"]
+    assert "job handler failed" in caplog.text
+    assert _SENTINEL not in caplog.text, "the driver's DETAIL reached the logged traceback"
+    assert _SENTINEL not in await _persisted_logs(database, row.id)
+
+    # The control: the driver's own text does echo the value, so the assertions above bite.
+    with pytest.raises(DBAPIError) as caught:
+        await _second_insert()
+    assert _SENTINEL in str(caught.value.orig)

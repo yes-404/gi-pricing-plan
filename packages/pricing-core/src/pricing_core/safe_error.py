@@ -1,30 +1,23 @@
 """Exception text that is safe to persist and log (NFR-499, RL-917, R3).
 
 A quote input is persisted only in the named, access-controlled stores. An exception's own text
-is not one of them, and it often carries the value that caused it:
+is not one of them, and a Pydantic `ValidationError`'s `str()` prints every failing
+`input_value`, which for a quote is a quote input.
 
-* a Pydantic `ValidationError`'s `str()` prints every failing `input_value`;
-* a SQLAlchemy `DBAPIError` prints `[parameters: ...]`, and the database's own message can echo
-  the failing row (`Failing row contains (...)`) or the rejected value.
+Every place that stores or logs an unexpected exception's text goes through this rule: the
+worker's failed-Job path and `score_batch`'s per-row error rows. For a validation error it keeps
+what an operator needs to act on, each failing field's path, message and error type, and never
+a value. Any other exception is kept as its own text: a handler that puts a value in its own
+exception message is a bug in that handler, and this module cannot know which words are values.
 
-Every place that stores or logs an unexpected exception's text goes through this one module:
-the worker's failed-Job path and `score_batch`'s per-row error rows. What it keeps is what an
-operator needs to act on: the type, and for a validation error each failing field's path,
-message and error type; for a database error the driver's exception type, its SQLSTATE and the
-constraint name. It never keeps a value.
-
-Any other exception is kept as its own text. A handler that puts a value in its own exception
-message is a bug in that handler, and this module cannot know which words are values.
-
-Standalone by design (ADR-703): this package imports no database or web library. A database
-error is recognised by shape (an `orig` driver exception beside a `statement`), which is what
-SQLAlchemy's `StatementError` family carries.
+Standalone by design (ADR-703): this package imports no database or web library. The database
+layer, which needs one, is the backend's `app.platform.safe_exception`, and it builds on this.
 """
 
 from __future__ import annotations
 
 import types
-from typing import Any
+from collections.abc import Callable
 
 from pydantic import ValidationError
 
@@ -44,19 +37,6 @@ def safe_error_detail(exc: BaseException) -> str:
             for error in exc.errors(include_url=False, include_context=False, include_input=False)
         )
         return f"{exc.error_count()} validation error(s) for {exc.title}: {problems}"
-    orig: Any = getattr(exc, "orig", None)
-    if orig is not None and hasattr(exc, "statement"):
-        # The driver's own text is not kept: it can echo the rejected value or the failing
-        # row. SQLAlchemy's asyncpg adapter wraps the driver's exception as `__cause__`.
-        holders = (orig, getattr(orig, "__cause__", None))
-        parts = [type(orig).__name__]
-        sqlstate = next((v for h in holders if (v := getattr(h, "sqlstate", None))), None)
-        if sqlstate:
-            parts.append(f"sqlstate {sqlstate}")
-        constraint = next((v for h in holders if (v := getattr(h, "constraint_name", None))), None)
-        if constraint:
-            parts.append(f"constraint {constraint}")
-        return ", ".join(parts)
     return str(exc)
 
 
@@ -66,11 +46,13 @@ def safe_error_text(exc: BaseException) -> str:
 
 
 def safe_exc_info(
-    exc: BaseException,
+    exc: BaseException, describe: Callable[[BaseException], str] = safe_error_text
 ) -> tuple[type[BaseException], BaseException, types.TracebackType | None]:
-    """An `exc_info` for a `logging` call whose formatted traceback ends in `safe_error_text`.
+    """An `exc_info` for a `logging` call whose formatted traceback ends in `describe(exc)`.
 
     The frames are the original's, so an operator still sees where it failed; the final line,
     and any chained `__cause__` or `__context__`, are not, because the stand-in has none.
+    `describe` lets a layer that knows more exception types (the backend's database errors)
+    supply its own text.
     """
-    return SanitisedError, SanitisedError(safe_error_text(exc)), exc.__traceback__
+    return SanitisedError, SanitisedError(describe(exc)), exc.__traceback__

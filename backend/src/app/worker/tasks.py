@@ -32,6 +32,7 @@ from app.observability.logging import get_logger
 from app.observability.trace import bind_trace_id, current_trace_id, reset_trace_id
 from app.platform import jobs, outbox
 from app.platform.blobs import BlobStore
+from app.platform.safe_exception import safe_job_error_text, safe_job_exc_info
 from app.worker.celery_app import TASK_RELAY_OUTBOX, TASK_RUN_JOB, build_celery
 from app.worker.handlers import handler_for
 from app.worker.logs import JobLogCapture
@@ -46,7 +47,6 @@ from model_schema import (
     Principal,
 )
 from pricing_core.progress import JobCancelled
-from pricing_core.safe_error import safe_error_text, safe_exc_info
 
 __all__ = ["CeleryPublisher", "create_worker", "execute_job"]
 
@@ -202,7 +202,7 @@ async def execute_job(
             # raised by a handler is still a deterministic refusal of *this* job.
             _log.error(
                 "job handler failed",
-                exc_info=safe_exc_info(exc),
+                exc_info=safe_job_exc_info(exc),
                 extra={"job_id": str(job_id), "code": exc.code},
             )
             await _fail(
@@ -221,19 +221,21 @@ async def execute_job(
             # a refusal the handler named. **Its text is not safe as it stands** (NFR-499,
             # RL-917): a Pydantic `ValidationError`'s `str()` prints the failing input value, a
             # quote input, and a database error can echo the row or the parameters. That text
-            # would reach `JobError.message` and the log's traceback. `safe_error_text` keeps the
-            # type and, for those two, the field paths and constraint an operator acts on, and
-            # never a value. `JobLogCapture` stores only the formatted message, so the
-            # persisted Job logs never carried the traceback.
+            # would reach `JobError.message` and the log's traceback. `safe_job_error_text`
+            # keeps the type and, for those two, the field paths and constraint an operator
+            # acts on, and never a value. `JobLogCapture` stores only the formatted message, so
+            # the persisted Job logs never carried the traceback.
             _log.error(
-                "job handler failed", exc_info=safe_exc_info(exc), extra={"job_id": str(job_id)}
+                "job handler failed",
+                exc_info=safe_job_exc_info(exc),
+                extra={"job_id": str(job_id)},
             )
             await _fail(
                 database,
                 job_id,
                 JobError(
                     code="JOB_HANDLER_FAILED",
-                    message=safe_error_text(exc),
+                    message=safe_job_error_text(exc),
                     retryable=False,
                     trace_id=current_trace_id(),
                 ),

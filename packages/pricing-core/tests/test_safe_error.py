@@ -1,9 +1,9 @@
 """`safe_error_text`: exception text with no input value in it (NFR-499, RL-917).
 
 A Pydantic `ValidationError`'s `str()` prints every failing `input_value`; this keeps the
-field path, the message and the error type. A database error is recognised by shape, an `orig`
-driver exception beside a `statement`, because this package imports no database library, and
-is reduced to the driver's type, SQLSTATE and constraint. Anything else is its own text.
+field path, the message and the error type. Anything else is its own text. The database layer
+is the backend's (`app.platform.safe_exception`), because this package imports no database
+library.
 """
 
 from __future__ import annotations
@@ -54,34 +54,6 @@ def test_the_batch_error_code_uses_the_safe_text_and_keeps_the_named_convention(
         "premium_in is null",
     )
     assert _batch_error_code(ValueError("plain")) == ("ValueError", "plain")
-
-
-class _DriverError(Exception):
-    sqlstate = "23514"
-    constraint_name = "ck_scoring_traces_blob_sha256_format"
-
-
-class _StatementError(Exception):
-    """The shape of SQLAlchemy's `StatementError` family: an `orig` beside a `statement`."""
-
-    def __init__(self, orig: Exception) -> None:
-        super().__init__(
-            f"({orig}) [parameters: ('{_SENTINEL}',)] Failing row contains ({_SENTINEL})"
-        )
-        self.orig = orig
-        self.statement = "INSERT INTO t VALUES ($1)"
-
-
-@pytest.mark.req("NFR-499")
-def test_a_database_errors_text_is_the_driver_type_sqlstate_and_constraint_only() -> None:
-    exc = _StatementError(_DriverError(f"Failing row contains ({_SENTINEL})"))
-    assert _SENTINEL in str(exc), "control: the raw text carries the value"
-    text = safe_error_text(exc)
-    assert _SENTINEL not in text
-    assert text == (
-        "_StatementError: _DriverError, sqlstate 23514, "
-        "constraint ck_scoring_traces_blob_sha256_format"
-    )
 
 
 @pytest.mark.req("NFR-499")
