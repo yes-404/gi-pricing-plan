@@ -855,7 +855,7 @@ required this since Phase 0, and the response was the only documented `01` respo
 | `PUT` | `/api/v1/datasets/{slug}/dictionary` | Update the Data Dictionary (audited) |
 | `PATCH` | `/api/v1/datasets/{dataset_id}` | Change the owner — Admin or the current owner, audited as `dataset.owner_changed` (FR-82) |
 | `GET` | `/api/v1/datasets/{slug}/versions` | Version timeline, newest first, cursor-paginated |
-| `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-27) |
+| `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-27). **Amended 2026-09-28 (WK-1178, the deputy's DP-P1 ruling of that day, #869's ingest finding):** the `blob` digest is accepted only if the caller's workspace can read it by the rule `07` §5.1 states for `GET /api/v1/blobs/{sha256}`: an owner in that workspace references it (a Dataset Version's table, or a Job's `JobResult(kind="blob")`), and no quote-input store does. Any other digest, including one that is not in the blob store at all, is refused with the same `404` a missing blob gets, before a Job exists. `blobs` has no workspace column, so a well-formed digest proves nothing about who may read it. |
 | `GET` | `/api/v1/datasets/{slug}/versions/{version}` | Dataset Version detail |
 | `PATCH` | `/api/v1/datasets/{slug}/versions/{version}/schema` | Correct the inferred schema while `draft` (FR-29) |
 | `GET` | `/api/v1/dataset-versions/{id}` | Dataset Version detail **by id** — the resource the nine routes below hang off |

@@ -64,6 +64,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets as service
 from app.platform import jobs as job_service
+from app.platform.blobs import blob_not_found, blob_readable_by
 from model_schema import (
     DataDictionaryEntry,
     Dataset,
@@ -535,6 +536,14 @@ async def start_ingestion(
         dataset = await service.load_dataset(
             session, workspace_id=caller.workspace_id, slug=slug
         )
+        # `blobs` has no workspace column, so a well-formed digest proves nothing about who
+        # may read it: refuse one the caller's workspace does not own with the missing-blob
+        # 404, before a job exists. The worker has no ownership check by design: this route is
+        # the only enqueuer, which `backend/tests/test_ingest_enqueuers.py` pins.
+        if not await blob_readable_by(
+            session, sha256=body.blob, workspace_id=caller.workspace_id
+        ):
+            raise blob_not_found(body.blob)
         job = await job_service.submit(
             session,
             JobKind.DATASET_INGEST,
