@@ -57,6 +57,7 @@ __all__ = [
     "ArtifactResolver",
     "decide",
     "policy_for",
+    "require_in_review",
     "set_policy",
     "submit",
     "to_dict",
@@ -78,6 +79,31 @@ CREATION_ACTIONS: Final[Mapping[str, str]] = {
     "dataset_version": "dataset_version.created",
     "rating_version": "rating_version.created",
 }
+
+
+def require_in_review(
+    artifact_ref: ArtifactRef | str, status: str, reviewable: str = "review"
+) -> None:
+    """Refuse an approval subject that is not in its type's reviewable state (`06` FR-351).
+
+    `review` for every approvable type but `dataset_version`, whose lifecycle has no
+    review state and whose reviewable state is `validated` (FR-351's 2026-09-28 clause).
+
+    `draft → review → approved`: a version reaches review only through its owning module's
+    own submission, which is where that module's gates run (a model's diagnostics, a peril
+    structure's reconciliation, a rating version's evidence). A decision on a version that
+    never got there would skip every one of them. Called by each type's resolver on the
+    generic route and by the decision hooks, so neither guard is the only one.
+    """
+    if status != reviewable:
+        raise PlatformError(
+            "APPROVAL_SUBJECT_NOT_IN_REVIEW",
+            "Only a version in review can be put to a decision",
+            409,
+            f"{artifact_ref} is {status!r}, not {reviewable!r}. `06` FR-351: a version reaches "
+            "its reviewable state through its owning module's own path, and only then can it "
+            "be decided on.",
+        )
 
 
 class ArtifactResolver(Protocol):

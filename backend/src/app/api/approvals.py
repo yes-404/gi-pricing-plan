@@ -329,12 +329,13 @@ async def _resolve_model(
     """
     if artifact_ref.type != "model":
         return False
-    await modelling_service.load_model(
+    row = await modelling_service.load_model(
         session,
         workspace_id=workspace_id,
         slug=artifact_ref.slug,
         version=artifact_ref.version,
     )
+    service.require_in_review(artifact_ref, row.status)
     return True
 
 
@@ -349,9 +350,10 @@ async def _resolve_custom_objective(
     """
     if artifact_ref.type != "custom_objective":
         return False
-    await objectives_service.resolve_ref(
+    objective = await objectives_service.resolve_ref(
         session, workspace_id=workspace_id, ref=str(artifact_ref)
     )
+    service.require_in_review(artifact_ref, objective.status.value)
     return True
 
 
@@ -376,7 +378,7 @@ async def _resolve_custom_metric(
     if artifact_ref.type != "custom_metric":
         return False
     try:
-        await metrics_service.resolve_ref(
+        metric = await metrics_service.resolve_ref(
             session, workspace_id=workspace_id, ref=str(artifact_ref)
         )
     except PlatformError as exc:
@@ -388,6 +390,7 @@ async def _resolve_custom_metric(
             404,
             f"{artifact_ref} resolves to no custom metric in this workspace.",
         ) from exc
+    service.require_in_review(artifact_ref, metric.status.value)
     return True
 
 
@@ -412,7 +415,10 @@ async def _resolve_rating_version(
             )
         )
     ).scalar_one_or_none()
-    return row is not None
+    if row is None:
+        return False
+    service.require_in_review(artifact_ref, row.status)
+    return True
 
 
 async def _resolve_the_artifact(
