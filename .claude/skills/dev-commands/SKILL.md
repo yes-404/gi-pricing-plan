@@ -438,6 +438,56 @@ hides a missing dependency.
 npm config set prefix ~/.npm-global && npm i -g pnpm    # then put that bin on PATH
 ```
 
+### `pnpm add` leaves an `allowBuilds` prompt that fails every later install
+
+pnpm 11 refuses to run a dependency's build script until someone decides whether to allow
+it. When `pnpm --dir frontend add <pkg>` pulls in a transitive dependency with a build
+script, it does three things:
+
+- it adds the dependency and updates the lockfile;
+- it writes `frontend/pnpm-workspace.yaml` with an **unanswered** placeholder;
+- it prints `ERR_PNPM_IGNORED_BUILDS` and **exits 1**, although the add succeeded.
+
+Here is the placeholder that `@vue-flow/core@1.48.2` produced through `vue-demi@0.14.10`:
+
+```yaml
+allowBuilds:
+  vue-demi: set this to true or false
+```
+
+**While the placeholder stays, every later install fails.**
+
+- `pnpm --dir frontend install --frozen-lockfile` exits 1. That is CI's first frontend step.
+- `pnpm --dir frontend generate:api` exits 1 too, before `openapi-typescript` runs. Its
+  deps-status pre-check runs `pnpm install` and prints:
+
+  ```text
+  [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: vue-demi@0.14.10
+  Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+  [ERROR] Command failed with exit code 1: pnpm install
+  ```
+
+Nothing was generated, so `src/api/generated/` does not exist. Every later `type-check`
+then reports **phantom type errors in views you did not touch**: 143 at `df8e5811`. It
+reads like a regression in the dependency you just added. It is not one.
+
+**The fix is to answer the placeholder** in `frontend/pnpm-workspace.yaml`, and to commit
+the file with the lockfile in the same PR:
+
+```yaml
+allowBuilds:
+  vue-demi: false
+```
+
+`false` is safe for `vue-demi` because its build script only picks which of its builds to
+use. `scripts/postinstall.js` calls `switchVersion(3)` for any Vue `3.x`. The `lib/`
+shipped in the tarball is already that build: `lib/index.mjs` opens with
+`var isVue3 = true`. Skipping the script leaves the Vue 3 build in place.
+
+**For any other package, read its build script before you answer.** `false` is right
+only when the script does nothing the package needs at runtime. When it compiles a native
+binary, the answer is `true`, and the PR says why.
+
 ### Read each command's own exit code
 
 `cmd | tail -1 && echo ok` reports **tail's** exit code, and has produced a false "clean"
@@ -886,6 +936,24 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-09-28, against main `8a8cded3b92bcbea2b4c7e221daecc3fbfb96981`. **The `pnpm add`
+`allowBuilds` trap was added.** Spike F2 hit it while adding `@vue-flow/core` for WK-675.
+It was then reproduced on a fresh detached worktree at `df8e5811`, with pnpm 11.21.0,
+before this entry was written.
+
+1. `pnpm install --frozen-lockfile` → rc 0.
+2. `pnpm add @vue-flow/core@1.48.2` → rc 1 with `ERR_PNPM_IGNORED_BUILDS`, and the
+   placeholder was written.
+3. `pnpm generate:api` → rc 1 with the three quoted lines.
+4. `pnpm install --frozen-lockfile` → rc 1.
+5. With `vue-demi: false`, both `generate:api` and `install --frozen-lockfile` → rc 0.
+
+The 143 phantom errors were counted with `vue-tsc --build --force 2>&1 | grep -c error` in
+the spike's scratch tree. The `vue-demi` claim was read from the installed package: the
+`postinstall` script and `lib/index.mjs`. The first time, in the spike's own scratch
+tree, `generate:api`'s pre-check passed once the placeholder was restored over an install
+that had already succeeded. That is why the fresh tree is the reproduction of record.
 
 2026-09-19 — **the RFC-937 id instruments section added**: `doc-id.py next/check/widen` and
 `doc-index.py`/`--check`/`--phase`/`--show`, each with its trap, plus the

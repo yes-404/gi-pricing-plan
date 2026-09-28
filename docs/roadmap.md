@@ -718,13 +718,13 @@ From “Workstreams” (line 378): Machine-readable process core — RFC-895, ad
 id: WK-694
 family: work
 title: The register is a ledger, evidence is a file — RFC-896, P1–P5
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 379): The register is a ledger, evidence is a file — RFC-896, P1–P5 | Adopted 2026-09-01 from RFC-896 by the reconciliation's dated acceptance line. **P1–P5 all merged 2026-08-31** (`fa87086`, `890b06e`, `f99b55d`, `cfed4f0`, `6b3459a`, `365ad18`, the `lead.md` enter step): the decision grammar held by check 29 via `scripts/register-lint.py`; `scripts/register-owed.py` generates the owed list a close compiled by hand; the ledger/evidence split is real at `docs/audit/findings/` with **F27** the worked exemplar; migration opportunistic-on-amendment with a falsifiable residue line (38 of 61 rows over the 1000-character threshold at landing). **Three findings filed from the work itself**: **F62**, **F63** (ten WK-671-attributed register rows in no closure record — disposition reserved to the maintainer, reopening a Work close is theirs alone), **F64**. **One deviation deliberately not back-dated**: no adoption plan was filed for work that landed ahead of this row — named here rather than closed over; the next §14 review disposes of it
+From “Workstreams” (line 379): The register is a ledger, evidence is a file — RFC-896, P1–P5 | Adopted 2026-09-01 from RFC-896 by the reconciliation's dated acceptance line. **P1–P5 all merged 2026-08-31** (`fa87086`, `890b06e`, `f99b55d`, `cfed4f0`, `6b3459a`, `365ad18`, the `lead.md` enter step): the decision grammar held by check 29 via `scripts/register-lint.py`; `scripts/register-owed.py` generates the owed list a close compiled by hand; the ledger/evidence split is real at `docs/audit/findings/` with **F27** the worked exemplar; migration opportunistic-on-amendment with a falsifiable residue line (38 of 61 rows over the 1000-character threshold at landing). **Three findings filed from the work itself**: **F62**, **F63** (ten WK-671-attributed register rows in no closure record — disposition reserved to the maintainer, reopening a Work close is theirs alone), **F64**. **One deviation deliberately not back-dated**: no adoption plan was filed for work that landed ahead of this row — named here rather than closed over; the next §14 review disposes of it. **Closed 2026-09-28 by the deputy's dated line, by delegation, on [`CR-1173`](closures/CR-01173-wk-694-work-close-the-register-is-a-ledger-evidence-is-a-file.md)**, with RFC-896 §8 (b) deferred to WK-1170 as FD-1174.
 
 
 ### WK-695 — **File taxonomy, reference coding and custody — RFC-897 Stages 2–5**
