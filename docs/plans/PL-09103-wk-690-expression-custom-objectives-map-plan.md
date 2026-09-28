@@ -12,7 +12,7 @@ work: WK-690
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [RL-1180, PL-930, PL-1070]
+relates: [RL-1184, PL-930, PL-1070]
 ---
 
 # PL-9103 — WK-690, `expression` custom objectives: Map Plan
@@ -46,9 +46,10 @@ Polars, XGBoost and LightGBM custom-objective callables, FastAPI + Pydantic v2
 and FR-367; [`../specs/07-platform.md`](../specs/07-platform.md) FR-448 and FR-449;
 [`../specs/01-data-management.md`](../specs/01-data-management.md) FR-36 and §4.5;
 [`../workflows/WF-00702-custom-objective-lifecycle.md`](../workflows/WF-00702-custom-objective-lifecycle.md)
-Route B. Every `02` §4.6 citation here means §4.6 **as amended by `RL-1180` E2** (the
-profile table and OQ-1181's decision). That text is on the branch of #830, which is
-unmerged when this draft is written. This plan is filed only after #830 merges.
+Route B. Every `02` §4.6 citation here means §4.6 **as amended by `RL-1184` E2** (the
+profile table and OQ-1185's decision). That text merged with #830 (merge commit
+`3767b3b4`). §4.6 at that merge matches the text this plan was drafted from, apart from the
+minted ids.
 
 ## Status
 
@@ -83,7 +84,7 @@ A fresh reviewer checks each item by the command or the named artifact.
    PR carries the measurement table (per expression: source file, node count, depth). The
    commit that enforces the limits is a descendant of the commit that records the table. If
    any expression exceeds a limit, the deputy's dated line is recorded before the enforcing
-   commit (`02` §4.6's profile note; `RL-1180` E2 item 4).
+   commit (`02` §4.6's profile note; `RL-1184` E2 item 4).
 5. **Every refusal was seen failing first.** For each refusal the Work adds, the slice's
    ledger quotes the test failing before the implementation and passing after. The
    refusals are: bare comparison, `%`, ternary and boolean operator in the `objective` and
@@ -128,7 +129,7 @@ A fresh reviewer checks each item by the command or the named artifact.
   into our own expression tree". `sympy.lambdify` is therefore out of bounds, because it
   generates and executes Python source.
 - One parser, one allow-list walk, one security review, with a named profile per context
-  (`02` §4.6 as amended by `RL-1180` E2). No slice adds a second parser.
+  (`02` §4.6 as amended by `RL-1184` E2). No slice adds a second parser.
 - No pandas in new code (`CLAUDE.md` §3).
 - Vue 3 Composition API with `<script setup lang="ts">` only (`CLAUDE.md` §3).
 - Requirement ids are permanent. Any spec change a slice proves necessary lands in the same
@@ -156,7 +157,7 @@ and then evidenced in code (`CLAUDE.md` §13). Every id is listed individually.
 | `02` §3.7 | FR-165 | Fixed-size arrays; per-round wall-clock budget; NaN/inf abort naming round and input | **Partly met for templates:** fixed-size arrays and the NaN/inf abort are built, with four markers in `packages/pricing-core/tests/test_objectives.py`. The per-round wall-clock budget is built for neither kind (`packages/pricing-core/tests/test_expression_nfrs.py` module docstring) | 2 |
 | `02` §3.1 | FR-95 | `expression` Factors over dataset columns, in the `factor` profile | None | 4 |
 | `02` §3.1 | FR-208 (expression arm) | `Factor` gains the field and its validator arm; `expression` resolves | Refused by name at resolution | 4 |
-| `02` §4.6 | profile table, OQ-1181 | Four profiles; `where()` everywhere; strict `objective` and `factor`; limits in all four | See FR-145 | 1 |
+| `02` §4.6 | profile table, OQ-1185 | Four profiles; `where()` everywhere; strict `objective` and `factor`; limits in all four | See FR-145 | 1 |
 | `02` §4.7 | expression half | `symbolic_vs_numeric_gradient` and `symbolic_vs_numeric_hessian`; `library_versions.sympy` | The `analytic_vs_numeric` pair only | 2 |
 | `02` §5.3 | Custom objective library (`/objectives`) | Editor with live parse errors, derived gradient and hessian display, loss-curve preview | List only (the 2026-08-27 note in that row) | 5 |
 | `02` §3.10 | FR-207 | The staged contract: `custom_objective_ref` on `GlmSpec` (absent) and on `Model` (declared and unbuilt) are WK-690's | Declared and unbuilt, owner WK-690 (FR-207's 2026-08-25 amendment) | 3 |
@@ -309,7 +310,7 @@ source. The sources are `examples/fremtpl2/seed.py`, `backend/tests/test_data_jo
 leaf plan re-derives this list with a sweep over the tree and reports the class and total,
 not a sample. Each string is measured with the node and depth counter Slice 1 itself adds,
 named in the leaf plan by function and file, and run before the limit check is wired in.
-If an expression exceeds a limit, the slice reports to the deputy and waits (`RL-1180` E2
+If an expression exceeds a limit, the slice reports to the deputy and waits (`RL-1184` E2
 item 4).
 
 **Spec edits in the slice.** DP-5's note in §4.6, and FR-145's function list aligned with
