@@ -138,6 +138,12 @@ plan defect, not the predicted one.
    - a suite version whose `regression_suite.created` event is missing makes submit refuse with `APPROVAL_AUTHOR_UNRESOLVED`, 403 (#861's code and status; Task 5 starts only after #861 has merged).
 
    The delta is visible in `GET /api/v1/rating-versions/{id}` to a principal holding `approval:decide`.
+8a. **The gate cannot be skipped, and the delta's author cannot approve** (DP-S2-5, DP-S2-6). `uv run pytest backend/tests/test_rating_versions.py -k 'golden and (bypass or evidence_author)' -v` passes. It covers:
+   - on the tree with the WK-1178 approval-status PR merged, a `draft` Rating Version whose algorithm has a mismatching suite, sent to `POST /api/v1/approval-requests` directly, is refused, and the version never reaches `approved` without `evidence.golden_quotes`;
+   - principal C authors suite v2's change; the Rating Version's delta lists C; C (holding `approval:decide`, and neither submitter nor RV author) is refused with 403 `APPROVAL_BY_EVIDENCE_AUTHOR`, and no decision row is written. Shown red first;
+   - a principal who authored no change in the delta is not refused by this rule.
+
+   All carry `req("FR-260")`, and the second also `req("FR-353")`.
 9. **The full two-half gate exits 0** on the committed tree, each exit code recorded in the ledger beside its `HEAD`. It is the six lines of `CLAUDE.md` §11, run as `dev-commands` gives them. `alembic upgrade head` and `downgrade -1` run clean on the per-worktree test database. **The determinism repeat also runs on the final tree:** `uv run pytest packages/pricing-core/tests/test_rating_score.py -q`, five times, all rc 0, each rc in the ledger. **If any of the five aborts, the slice does not pass its gate**, and the finding's triage moves ahead of this slice (the deputy's 15:57:21 entry; Global Constraints, "the scoring path's threading is unchanged").
 10. **The four docs checks pass on a detached copy of the committed tree:**
     - `python3 scripts/audit-docs.py`;
@@ -167,6 +173,8 @@ plan defect, not the predicted one.
   `regression_suite` entry goes into #861's `CREATION_ACTIONS`. Had (C) been decided, the
   slice would have added that entry and its fail-closed test. The deputy decided (A), so no
   such task exists.
+- **S2's FR-260 hook does not merge before the approval-status-bypass PR** (audit finding F1; the deputy's decision of 2026-09-28, quoted whole under "Decision points"). On main at `3a3df367`, a `draft` Rating Version can be approved through the generic `POST /api/v1/approval-requests` without `…/submit`, so a submit-time gate is skippable. That hole is fixed **outside this slice**, by the WK-1178 approval-status PR (its number follows; executor-s1, after #861). **This slice does not duplicate that fix.** Task 5 starts by checking that the WK-1178 approval-status PR's squash is on `origin/main`, and **stops and reports** if it is not. It keeps one negative test proving the golden-quote gate cannot be skipped through the generic route once that PR has landed.
+- **An approver who authored a suite change in the delta is refused** (audit finding F4; the deputy's decision (i), the same entry). If the deciding principal is the `author` of any `GoldenQuoteChangeStep` in the Rating Version's `evidence.golden_quotes.delta`, the decision is refused with **403 `APPROVAL_BY_EVIDENCE_AUTHOR`**, the sibling of #861's `APPROVAL_AUTHOR_UNRESOLVED`. The code is registered in `GOVERNANCE_ERROR_CODES` and in `06`'s error list by this slice. **This is not the general component-author case**, which stays carried to WK-677. It applies only to the delta the approver is shown.
 - **Task 5 depends on #861 MERGING.** Task 5 reads the author from the creation Audit Event,
   which is #861's definition, and refuses with #861's registered code
   `APPROVAL_AUTHOR_UNRESOLVED` at #861's status, **403**. A reused code keeps its status.
@@ -232,6 +240,8 @@ plan defect, not the predicted one.
     persisted beside `generation.seed`. Slice 3 amends §4.7's `generation` block for the
     second of these.
 - **Slice 3 must decide** whether a Regression Suite with at least one golden quote is **required** for submission, at least for Rating Versions headed to `prod`, as a DP if it is a scope question. The `not_checked` interim rule (DP-S2-4) is not carried past Slice 3 silently (the deputy's 15:57:21 item (i)).
+- **WK-677:** the general component-author case (an approver who authored a pinned component). Only the suite-delta case is refused here (DP-S2-6).
+- **WK-1178:** the approval-status bypass fix (DP-S2-5). This slice depends on it and does not duplicate it.
 - **Slice 4:** `POST /api/v1/score/compare` (RL-1172 item 5).
 - **WK-675:** rendering the golden-quote delta in the approval view. This slice makes it
   readable through the API, which is the approver's evidence.
@@ -278,12 +288,40 @@ The deputy's second entry, deciding DP-S2-4 and the tolerance question, quoted w
 **Your two notes to the planner are right.** The unresolved-author refusal is **403** (an authorisation outcome, consistent with #861's `APPROVAL_AUTHOR_UNRESOLVED` class), not 409. **N = 5 runs** of `test_rating_score.py` in S2's gate, because of the determinism abort, with every run's result recorded in the ledger. **If any of the 5 aborts, S2 does not pass its gate:** the FD's triage moves ahead of S2, since S2 builds on that scoring path.
 ```
 
+The deputy's third entry, deciding the approval-status bypass (audit finding F1) and audit finding F4, quoted whole:
+
+```text
+## 2026-09-28 16:01:27 BST · deputy · The approval status bypass: (a) DECIDED, fixed NOW as WK-1178's top priority. Plus S2-plan F4: (i) refuse the approver who authored a suite change
+
+**Confirmed by me at `3a3df367`:**
+- `backend/src/app/api/approvals.py:394` `_resolve_rating_version` returns only `row is not None`;
+- `backend/src/app/platform/rating_versions.py:283` sets `APPROVED` with no check of the current status;
+- `:293` writes `before={"status": RatingVersionStatus.REVIEW.value}` regardless of the real prior state.
+
+So **a draft Rating Version can be approved without `…/submit`**. Every gate submit enforces (FR-260's golden quotes, FR-364's evidence floor) is skippable, and **the audit trail records a false before-state**. That is a governance hole and an audit-integrity defect, live on main.
+
+**(a) DECIDED, and it outranks every other WK-1178 item.** One PR, spec and code in one commit, **after #861 merges** (both touch `approvals.py`; do not widen #861, which is under audit):
+1. **The route refuses** an approval request for an artifact version **not in its type's review state**, with a registered error code (409, a state conflict) naming the current state. This applies to **all 7 approvable types**, enumerated by command. The sweep covers every type's `_resolve_*` and every `apply_approval_decision`.
+2. **Each `apply_approval_decision` checks the current status in the same transaction** and refuses a transition not permitted from it: defence in depth, so the route is not the only guard.
+3. **The audit `before=` is the real prior state, read from the row**, never a literal. The sweep lists every hard-coded `before=` in the approval hooks. At `3a3df367`, `rating_versions.py:293` is one; `metrics.py:537` and `modelling.py:1173` need reading to decide whether theirs are genuine. Each is fixed or justified in the PR.
+4. **Negative tests, red then green:** a draft version's approval request is refused (per type, or parametrized), and the audit before-state equals the real state. The reds are quoted against current main.
+5. **`06` gains the rule where it is missing** (dated): an approval decision applies only to a version in review. If the spec already says so, cite it; the code then simply failed it (CLAUDE.md §0, the spec right, the code corrected).
+6. **The data question, answered in the PR:** does any existing Rating Version (or other type) in a fixture, seed or local DB reach `approved` without having passed through `review`? Checked by query against the Audit Events. There is no production deployment yet, so the blast radius is test and seed data, but it is stated, not assumed.
+7. **An FD** (auditor-b, in #855 or a follow-up) records the hole, the live window (since the route was added, per `git log -S`) and this fix, with severity high. **Plan review 15 lists it** among P2's open risks until merged.
+
+**WK-672 S2's plan** cites this PR and **does not merge its FR-260 hook until this fix is on main**. Otherwise S2 would add a check that the bypass can skip.
+
+**S2-plan F4, an approver who authored a SUITE change in the delta: (i) DECIDED, refuse.** If the approver authored any golden-quote change listed in the submission's delta (value, tolerance or context, by the creation-event author definition), the approval is refused with the same 403 class as `APPROVAL_AUTHOR_UNRESOLVED`'s sibling. The suite delta is the evidence the approver is judging, so its author cannot be its judge. **This is not the general component-author case**, which stays carried to WK-677. It applies only to the delta the approver is shown. S2 carries a negative test.
+```
+
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-S2-1 | How is a Regression Suite stored and bound to a Rating Version? `03` §5.1 declares no route that writes one | (A) its own versioned artifact behind `POST /api/v1/regression-suites/{slug}/versions`, referenced outside `pins` so the bundle hash stays pins-only; (B) embedded in the draft Rating Version; (C) as (A), but approvable | (A) | decision point | yes | **(A), with the pin-and-delta condition.** The deputy's decision by delegation, 2026-09-28, the entry above; applied in Tasks 2, 4 and 5 |
 | DP-S2-2 | Which transition is FR-260's "promotion"? | (a) `POST …/submit`; (b) the approval decision; (c) deployment (WK-674) | (a) | decision point | yes | **(a).** The deputy's decision by delegation, 2026-09-28, the entry above; applied in Task 5 |
 | DP-S2-3 | Which pure function does the gate re-score through? | (a) a new `evaluate_golden_quotes` in `rating/testing.py`, which Slice 3's `run_regression` builds on; (b) `run_regression` built early with properties skipped; (c) a backend loop over `score_one`, which breaks RL-1172 item 3c | (a) | decision point | yes | **(a), exact in integer minor units.** The deputy's decision by delegation, 2026-09-28, the entry above; applied in Task 3 |
 | DP-S2-4 | A Rating Version whose algorithm has no suite: does submit refuse? | (a) pass, and leave existence to FR-257 limb (1); (b) refuse at submit | (a): FR-260 re-scores "every golden quote", and zero is vacuous; the existence gate is FR-257's "passing Regression Suite", owned by Slice 3 | decision point | no | **(a) as the interim rule, with a visibility condition:** the evidence says `regression_suite: "none"`, shown as "no golden quotes were checked". The deputy's decision by delegation, 2026-09-28, the second entry above; applied in Tasks 2 and 5. Slice 3's leaf plan must decide whether a suite is required (carried) |
+| DP-S2-5 | Audit finding F1: the generic approval route approves a `draft` Rating Version without `…/submit`, so the FR-260 gate is skippable. Who fixes it? | (a) fixed now, outside S2, as WK-1178's top-priority PR; (b) inside S2's Task 5 | (a), the lead's recommendation | decision point | yes (Task 5 only) | **(a).** The deputy's decision by delegation, 2026-09-28, the third entry above. S2 cites "the WK-1178 approval-status PR" and does not merge its hook before it (Global Constraints; Task 5 Step 0) |
+| DP-S2-6 | Audit finding F4: may a principal who authored a suite change in the delta approve the Rating Version? | (i) refuse, 403 with a named code; (ii) allow, since the change is visible | none; the planner does not pick this | decision point | yes (Task 5 only) | **(i) refuse.** The deputy's decision by delegation, 2026-09-28, the third entry above; `APPROVAL_BY_EVIDENCE_AUTHOR`, 403; not the general component-author case (WK-677). Applied in Task 1 Step 8 and Task 5 |
 
 ### Sequencing
 
@@ -297,7 +335,7 @@ design every later task implements (`CLAUDE.md` §0). Task 2's shapes feed Tasks
 ### Task 1: Spec change — `03` §2, §3.8, §4.3, §4.7, §4.9, §5.1, §5.2
 
 **Files:**
-- Modify: `docs/specs/03-rating-engine.md`
+- Modify: `docs/specs/03-rating-engine.md`; `docs/specs/06-governance.md` (the error-code list at `06:491` and the FR-353 rows, Step 8 only)
 
 **Interfaces:**
 - Consumes: the deputy's decisions (above), RL-1172 item 3c and the F4 assertion-language ruling.
@@ -327,7 +365,8 @@ design every later task implements (`CLAUDE.md` §0). Task 2's shapes feed Tasks
                              *, rating_version_ref: ArtifactRef) -> list[GoldenQuoteResult]
   ```
   Add a dated sentence to the note below the block. It says the function is plain `def` on the same synchronous `evaluate()` path as `run_regression` (RL-868, RL-858), that it compares exactly in integer minor units, and that `run_regression` composes it (DP-S2-3).
-- [ ] **Step 8:** Run `python3 scripts/audit-docs.py`. It must add no failure row, and every cited FR and NFR is defined. Then commit: `docs(spec): 03 — Regression Suite store, submit-time golden-quote gate, pinned suite and delta (FR-260)`.
+- [ ] **Step 8: `06` (DP-S2-6).** Add `APPROVAL_BY_EVIDENCE_AUTHOR` to `06`'s error-code list (`06:491`), dated, and add one dated sentence beside FR-353 (as #861 amended it at your tree): *"(Added 2026-09-28, `PL-WORKING`, the deputy's decision on audit finding F4.) For a Rating Version, an approver who authored any golden-quote change listed in the submission's delta (`03` FR-260) is refused with `APPROVAL_BY_EVIDENCE_AUTHOR` (403). This is not the general component-author rule, which WK-677 owns."* Re-read FR-353 at your tree first: #861 amends it.
+- [ ] **Step 9:** Run `python3 scripts/audit-docs.py`. It must add no failure row, and every cited FR and NFR is defined. Then commit: `docs(spec): 03 — Regression Suite store, submit-time golden-quote gate, pinned suite and delta (FR-260)`.
 
 ### Task 2: `model-schema` shapes, the generated contract, and the authored-file split
 
@@ -450,7 +489,7 @@ The delta is **not** its own generated slug. It is embedded in `RatingVersionEvi
 ### Task 5: The submit gate, the pin, and the delta
 
 **Files:**
-- Modify: `backend/src/app/platform/rating_versions.py`, in `submit_for_review` (`:214-249`) and two new private helpers; `backend/src/app/api/models.py`, in the submit handler (`:1182-1190`)
+- Modify: `backend/src/app/platform/rating_versions.py`, in `submit_for_review` (`:214-249`), two new private helpers and a public `golden_quote_delta_authors`; `backend/src/app/api/models.py`, in the submit handler (`:1182-1190`); `backend/src/app/platform/approvals.py`, in `decide` (`:237`, as #861 left it); `backend/src/app/api/approvals.py`, in the decide handler; `backend/src/app/errors.py`, adding `APPROVAL_BY_EVIDENCE_AUTHOR` to `GOVERNANCE_ERROR_CODES` (`:248`)
 - Test: `backend/tests/test_rating_versions.py`
 
 **Interfaces.** `submit_for_review` gains a keyword `load_compiled: Callable[[ArtifactRef], Awaitable[CompiledBundle]]`.
@@ -476,7 +515,10 @@ The order inside `submit_for_review`, after the existing status check and **befo
 - **The authors of each change** are found by walking the suite's versions from `baseline_version + 1` to the current version, comparing each version with the one before it. **Every** version in that range that added or removed the quote, or changed its `expected`, `tolerance` or `context`, becomes one `GoldenQuoteChangeStep`, in ascending version order. A version that changed only fields the delta does not compare (`note`) is no step, so a later cosmetic edit cannot mask a substantive one (audit finding F3). Each step's `author` is the principal id in the `actor` of that version's `regression_suite.created` Audit Event, read from `AuditEventRow` (`db/models.py:164`), never from `created_by`. That is the deputy's one-source definition, the same one #861 uses.
 - **If that event is missing, raise `APPROVAL_AUTHOR_UNRESOLVED` with status 403.** That is #861's fail-closed code, and a reused code keeps the status #861 registers. **Before Step 1, confirm #861 has merged** (`git log --grep '(#861)' -1 origin/main` prints its squash). If it has not, stop and report: the code and the creation-event semantics are #861's. A test covers the missing-event case: a suite version whose `regression_suite.created` event is deleted in the fixture makes submit refuse with `APPROVAL_AUTHOR_UNRESOLVED`, 403.
 
-- [ ] **Step 1:** Write the acceptance item 6, 7 and 8 tests. Acceptance item 8's main test is written and run **before** Step 3, against a gate that pins but builds no delta, and must fail on the missing `changes` entry. Quote that red run in the ledger.
+**The evidence-author refusal (DP-S2-6).** `approvals.decide` gains a keyword `evidence_authors: EvidenceAuthorResolver | None`, a `Protocol` in the same form as `ArtifactResolver` (`approvals.py:64`), so `approvals` imports nothing from `rating_versions`. The decide route passes `rating_versions.golden_quote_delta_authors` for `artifact_type == "rating_version"`. It returns the set of `author`s over every step of every change in the version's `evidence.golden_quotes.delta`, empty when the evidence is `not_checked`. `decide` refuses with 403 `APPROVAL_BY_EVIDENCE_AUTHOR` when the approver's id is in that set, **before** any decision row is written. It is placed immediately after #861's author check; read `decide` at your tree for the exact place.
+
+- [ ] **Step 0: Preconditions.** Run `git log --grep '(#861)' -1 origin/main` and the same for the WK-1178 approval-status PR's number (the lead gives it). If either prints nothing, **stop and report**: Task 5 needs #861's author definition and code, and must not merge its hook while the generic route can skip it.
+- [ ] **Step 1:** Write the acceptance item 6, 7, 8 and 8a tests. Acceptance item 8's main test is written and run **before** Step 3, against a gate that pins but builds no delta, and must fail on the missing `changes` entry. Quote that red run in the ledger.
 - [ ] **Step 2:** Implement the gate and the pin (order steps 1–3 and 5), with the delta stubbed as an empty `GoldenQuoteDelta`. Acceptance items 6 and 7 go green, and item 8 stays red for the predicted cause.
 - [ ] **Step 3:** Implement `_golden_quote_delta` and the author walk. Everything goes green.
 - [ ] **Step 4:** Confirm the existing `test_create_submit_approve_a_rating_version` (`backend/tests/test_rating_versions.py:66`) still passes unchanged. It is the no-suite path. Then commit: `feat(rating): submit-time golden-quote gate, pinned suite hash and the approver's delta (FR-260)`.
