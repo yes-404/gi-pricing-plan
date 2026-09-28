@@ -32,6 +32,9 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    # RS-1176 F4 condition 1: hypothesis is an exact pin (==6.165.7); a newer version is unmeasured for seed/shrink determinism. Move it only as a governed change (spike + ruling).
+    ignore:
+      - dependency-name: "hypothesis"
     groups:
       python:
         patterns: ["*"]
