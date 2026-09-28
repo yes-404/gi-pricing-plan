@@ -3,7 +3,7 @@ id: PL-1213
 family: plan
 kind: leaf
 title: WK-672 Slice 4 — Quote Sandbox compare endpoint (FR-262 backend limb): leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-28
 owner: planner
 tree: f91af639b70126765062395f213e648ea9a48b15
@@ -42,7 +42,12 @@ Line numbers are at `origin/main` `f91af639` (#870). Re-read them at the executo
 
 ## Status
 
-**Draft 2026-09-28 21:04 BST (planner-s4); resolvers written 2026-09-28 (planner-s4, on the deputy's entry of 21:08:30 BST).** Filed at `f91af639`. DP-S4-1 to DP-S4-5 are all decided as recommended, with conditions, by the deputy's decision by delegation, quoted whole under "Decision points". The conditions are folded into Tasks 1, 3 and 5 and acceptance items 2, 5, 7. The plan stays `draft` and keeps the working id until the lead's freeze and mint turn.
+**Activated 2026-09-28 22:36:50 BST (planner, on the deputy's decisions by delegation and RL-1172).**
+This plan was drafted at `f91af639` and minted `PL-1213` against origin/main `7f5b4ea7`. What changed:
+
+- **Every decision point has a resolver.** DP-S4-1 to DP-S4-5 are the deputy's entry of 2026-09-28 21:08:30 BST ("WK-672 S4 DPs decided"), and its F5 amendment is the entry of 2026-09-28 21:10:34 BST ("#872 audit F5 (masked chained edit)"). Both are quoted whole under "Decision points". The placement, the no-new-evaluator reading and the FR-262 close typing rest on `RL-1172` §5.
+- So this plan moves `draft → active` in this commit, the planner's transition on freeze, under `document-ids.md` §1.6 (the PL map/leaf row) and §1.7, by the one-step route `PL-1205` took. It carries no acceptance line, and none is required. `created:` does not change.
+- **Frozen / dated: 2026-09-28.** It is active once this commit merges. Where this text and a quoted decision or `RL-1172` disagree, the decision governs.
 
 **Where this plan differs from the map plan and the first scope note.**
 - `PL-930:380` still carries the heading *"[BLOCKED on DP1]"* and cites `03` §5.1 at `:596`. Both are stale. DP1 is lifted (`RL-1172` §5, 2026-09-28 11:28:03 BST). The row is at `03:706` at `f91af639`, and `RL-1172`'s own correction of `:596`/`:597` to `:603` has itself drifted since.
