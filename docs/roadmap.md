@@ -554,7 +554,7 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697
+works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170
 
 ### WK-668 — **Spike S1/S2 resolution and ADR-706 confirmation**
 
@@ -778,7 +778,7 @@ owner: maintainer
 phase: P2
 ```
 
-Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegation 2026-09-27 16:18:24 BST), the second of the two downstream Works RFC-937's closing section names. **Subject:** the ownership table of `document-ids.md` section 1.6 made binding in each role charter, with a directory-level `owner:`. **Scope, by reference and not restated** (a restated list is the copy that goes stale, RFC-756): every item `CR-1164` (the WK-697 closure record) section 10 lists as taken over with the event "the charter investigation's first slice", and every register row `CR-1167` dispositions to that event. **Status `active`: listed, not started.** Its first slice is the event those rows wait on; no map plan exists yet.
+Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegation 2026-09-27 16:18:24 BST), the first of the two downstream Works RFC-937's closing section names. **Subject:** the ownership table of `document-ids.md` section 1.6 made binding in each role charter, with a directory-level `owner:`. **Scope, by reference and not restated** (a restated list is the copy that goes stale, RFC-756): every item `CR-1164` (the WK-697 closure record) section 10 lists as taken over with the event "the charter investigation's first slice", and every register row `CR-1167` dispositions to that event. **Status `active`: listed, not started.** Its first slice is the event those rows wait on; no map plan exists yet.
 
 ### WK-1170 — The create-read-retire audit — RFC-937's transition steps
 
