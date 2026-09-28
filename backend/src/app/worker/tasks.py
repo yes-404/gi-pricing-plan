@@ -219,12 +219,15 @@ async def execute_job(
         except Exception as exc:
             # Reached only by a genuinely unexpected exception now: a handler bug rather than
             # a refusal the handler named. **Its text is not safe as it stands** (NFR-499,
-            # RL-917): a Pydantic `ValidationError`'s `str()` prints the failing input value, a
-            # quote input, and a database error can echo the row or the parameters. That text
-            # would reach `JobError.message` and the log's traceback. `safe_job_error_text`
-            # keeps the type and, for those two, the field paths and constraint an operator
-            # acts on, and never a value. `JobLogCapture` stores only the formatted message, so
-            # the persisted Job logs never carried the traceback.
+            # RL-917): a Pydantic `ValidationError` prints the failing input value, a quote
+            # input; a database error echoes the row; a library error repeats the value that
+            # broke it. So the text is an ALLOW-list, not a deny-list: `safe_job_error_text`
+            # keeps only what is ours and input-free (a coded error, a validation error's field
+            # paths and types, a database error's SQLSTATE and constraint) and otherwise the
+            # exception's type name alone (`pricing_core.safe_error`). The same rule shapes the
+            # logged traceback, which keeps its frames, the Job id and the trace id.
+            # `JobLogCapture` stores only the formatted message, so the persisted Job logs never
+            # carried the traceback.
             _log.error(
                 "job handler failed",
                 exc_info=safe_job_exc_info(exc),

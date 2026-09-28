@@ -358,7 +358,7 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
             if field.pattern is not None and re.fullmatch(field.pattern, value) is None:
                 _raise_named(
                     "INPUT_CONTRACT_VIOLATION",
-                    f"input {field.name!r}={value!r} does not match {field.pattern!r}",
+                    f"input {field.name!r} does not match {field.pattern!r}",
                 )
         elif field.type == RatingInputType.DATE and not isinstance(value, str):
             _raise_named(
@@ -371,7 +371,7 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
         ):
             _raise_named(
                 "INPUT_CONTRACT_VIOLATION",
-                f"input {field.name!r}={value!r} is not in {field.domain!r}",
+                f"input {field.name!r} is not in {field.domain!r}",
             )
 
         if field.type in (RatingInputType.INT, RatingInputType.DECIMAL) and not isinstance(
@@ -380,12 +380,12 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
             if field.min is not None and _as_decimal(value) < _as_decimal(field.min):
                 _raise_named(
                     "INPUT_CONTRACT_VIOLATION",
-                    f"input {field.name!r}={value!r} is below the declared minimum {field.min!r}",
+                    f"input {field.name!r} is below the declared minimum {field.min!r}",
                 )
             if field.max is not None and _as_decimal(value) > _as_decimal(field.max):
                 _raise_named(
                     "INPUT_CONTRACT_VIOLATION",
-                    f"input {field.name!r}={value!r} is above the declared maximum {field.max!r}",
+                    f"input {field.name!r} is above the declared maximum {field.max!r}",
                 )
 
 
@@ -485,7 +485,7 @@ def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> No
             code,
             "the engine failed evaluating a downstream step, most likely because an "
             f"on_miss='error' step found no matching row and a later expression "
-            f"referenced its output (FR-255); original engine error: {exc}",
+            f"referenced its output (FR-255); the engine error was a {type(exc).__name__}",
         )
     raise exc
 
@@ -882,17 +882,16 @@ def _outputs_json(algorithm: RatingAlgorithm, outputs: Mapping[str, Any]) -> str
 def _batch_error_code(exc: Exception) -> tuple[str, str]:
     """Parse the `_raise_named` convention (`f"{code}: {message}"`) back into its parts, so
     an `"error"` output row carries the same typed code FR-255 names — `test_worker.py`
-    and `runtime.py`'s `MODEL_CALL_FAILED` sentinel both already follow it. An exception
-    that does not (should not occur for anything this catches, but a fallback is cheap and
-    honest) is reported under its own class name rather than mis-parsed."""
-    # Never `str(exc)` as it stands: a Pydantic `ValidationError`'s text prints the failing
-    # input value, and this message is written into the output row and the Job result's
-    # `error_samples` (NFR-499, RL-917). `safe_error_detail` is `str(exc)` for everything else.
-    message = safe_error_detail(exc)
-    code, sep, rest = message.partition(": ")
+    and `runtime.py`'s `MODEL_CALL_FAILED` sentinel both already follow it. Anything that is
+    not a coded error is reported under its own class name, with only what `safe_error_detail`
+    allows: never `str(exc)` as it stands, because this message is written into the output row
+    and the Job result's `error_samples` (NFR-499, RL-917), and a library error's text repeats
+    the value that caused it."""
+    detail = safe_error_detail(exc)
+    code, sep, rest = detail.partition(": ")
     if sep and code.replace("_", "").isalnum() and code == code.upper():
         return code, rest
-    return type(exc).__name__, message
+    return type(exc).__name__, detail or type(exc).__name__
 
 
 def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
@@ -905,8 +904,8 @@ def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
     try:
         effective_date = date.fromisoformat(row["effective_date"])
     except ValueError:
-        # `fromisoformat`'s own message repeats the rejected value (NFR-499).
-        raise ValueError("effective_date is not an ISO-8601 date") from None
+        # `fromisoformat`'s own message repeats the rejected value (NFR-499), so it is dropped.
+        _raise_named("INPUT_CONTRACT_VIOLATION", "effective_date is not an ISO-8601 date")
     inputs = {k: v for k, v in row.items() if k not in _BATCH_RESERVED_COLUMNS}
     rating_version_ref = ArtifactRef.model_validate(row["rating_version_ref"])
     return QuoteContext(

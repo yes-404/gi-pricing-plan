@@ -64,6 +64,7 @@ from app.platform import settings as settings_service
 from app.platform import traces as traces_service
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.bundle_slot import BundleSlot
+from app.platform.safe_exception import safe_job_exc_info
 from model_schema import ArtifactRef, Job, JobKind, Permission, QuoteContext, ScoringResult
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
@@ -362,9 +363,11 @@ async def _maybe_sample_trace(
                 caller.principal,
                 workspace_id=caller.workspace_id,
             )
-    except Exception:
-        _log.exception(
+    except Exception as exc:
+        # Sanitised: the failing insert carries the quote context (NFR-499, RL-917).
+        _log.error(
             "trace sampling failed; the quote was still served",
+            exc_info=safe_job_exc_info(exc),
             extra={"workspace_id": str(caller.workspace_id), "outcome": result.outcome},
         )
 
