@@ -131,7 +131,7 @@ The 13 working-id failures, by node id (post-mint CI must show each green):
 
 The two of this slice's own defect (`tests/test_repository_invariants.py::test_the_architecture_contracts_are_configured_and_not_silently_empty` and `::test_pricing_core_is_callable_without_the_backend`) are fixed in `b8043cc7` (the count is four: the `replay-never-generates` contract); with it `tests/test_repository_invariants.py` gives `2 failed, 9 passed`, the two being items 12 and 13 above.
 
-- Frontend half run at an earlier head (`d205815e`), all rc 0: `generate:api`, `lint`, `type-check`, `test`, `build`. **It was not re-run at this head** (the Python-half failed first and the lead's instruction was not to re-run).
+- **Frontend half, run locally at `nice -n 10` on `54955c9b`** (the deputy's ruling; CI's frontend workflow is also required): `pnpm --dir frontend install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` rc 0 (97 files, 602 tests passed), `build` rc 0. An earlier run at `d205815e` was also all rc 0.
 
 **Determinism, N=5** (`packages/pricing-core/tests/test_rating_score.py`, serial, load 1.5–1.7, no abort, no failure):
 `24 passed in 5.76s`, `24 passed in 5.67s`, `24 passed in 5.65s`, `24 passed in 5.61s`, `24 passed in 5.64s`, every `rc=0`.
