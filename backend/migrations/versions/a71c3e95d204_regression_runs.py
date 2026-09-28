@@ -7,7 +7,7 @@ case log's digest as an indexed scalar, so the generic blob route's deny (which 
 registered column by equality) can refuse it.
 
 Revision ID: a71c3e95d204
-Revises: fb705749c5d9
+Revises: 02d24f580752
 Create Date: 2026-09-28 21:30:00+00:00
 """
 
@@ -20,7 +20,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "a71c3e95d204"
-down_revision: str | None = "fb705749c5d9"
+down_revision: str | None = "02d24f580752"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
