@@ -127,6 +127,35 @@ reproduction (`cycle --work WK-695`), so it is not about this Work and is not ow
 status rather than on a name"*. The artifact it asks for is the two rows, and both exist
 (`### WK-1169`, `### WK-1170`). No other acceptance clause names WK-695's close.
 
+## RFC-897 disposition
+
+The maintainer instructed on 2026-09-28 that RFC-897 lands with this close. The deputy relayed
+the instruction and set its form. RFC-897's header moves to `closed` in this record's follow-up
+commit, and only its `status:` field changes, because the family is frozen. This section is the
+account of where each part of RFC-897 went. Every citation was read at `62d5fbae`.
+
+**Adoption, as a dated fact** (the deputy's wording, verbatim): adopted 2026-09-01: Stages 0–1 by the maintainer's acceptance of PL-929 (`f57d335`, #532); Stages 2–5 as one Work row by `PL-900` §8's acceptance block; the header was never moved `draft → active` (FD-1175).
+
+`f57d335` is PR #532, dated 2026-09-01. Its subject records the investigation plan (`PL-929`)
+"accepted as filed", and it is an ancestor of main. `PL-900`'s acceptance line is at `:347`, inside its section 8.
+
+| RFC-897 part | Where it landed | Status |
+|---|---|---|
+| Stage 0 — the census (§2) | `scripts/file-census.py` and its tests (29 passed at `62d5fbae`), built by `PL-929` Slice 2 (`4f95fb3`, #537). The committed census is `docs/research/file-census-5ef559d.csv`, and `docs/research/RS-00952-file-census-rfc-897-stage-0.md` describes it | delivered |
+| Stage 1 — the taxonomy (§3) | The draft is `PL-929` Slice 3 (`9e70469`, #545), `docs/research/RS-00953-file-taxonomy-draft-rfc-897-stage-1.md`. The rulings are `RL-941` to `RL-951` and `RL-988` | delivered |
+| §3a — the notes move | `PL-929` Slice 4 (`1ec453b`, #544). Its precondition was Slice 1's scan-root fix (`cbf1365`, #540) | delivered; later overtaken by RFC-937's note-family migration |
+| Stage 2 — the reference-coding standard (§4) | Delivered by WK-697 under RFC-937 (`CR-1164`) | reassigned |
+| Stage 3 — the ownership map (§5) | Transferred to WK-1169; its roadmap row carries it from this close | deferred with an owner |
+| Stage 4 — the workflow-loop audit (§6) | Transferred to WK-1170; its roadmap row carries it from this close | deferred with an owner |
+| Stage 5 — migration and enforcement (§7) | Delivered by WK-697 under RFC-937 (`CR-1164`) | reassigned |
+| §11 (a) — the census in the gate, its close-tree output committed | Script and tests evidenced; the close-tree census goes to WK-1170 | split: evidenced / reassigned |
+| §11 (b) — every file in exactly one category | WK-697: RFC-937's families, `doc-id.py check`, `docs/INDEX.md` | reassigned |
+| §11 (c) — no unfiled empty matrix row | WK-1169 | deferred with an owner |
+| §11 (d) — the unreferenced plans carry verdicts | WK-1170 | deferred with an owner |
+| §11 (e) — a linter red on three broken fixtures | WK-697: checks 30–39 and their broken-input proofs (`CR-1164` §2) | reassigned |
+| §11 (f) — one new file per high-traffic category, born through the skills | WK-697: `PL-1144`, `RL-1145`, `LG-1148` | reassigned |
+| §11 (g) — the notes move's own acceptance | The move landed (#544). The directory it measures was removed by RFC-937's migration | reassigned; cannot be measured as written |
+
 ## Verdict
 
 **Proposed by the auditor, and adopted by the lead** on 2026-09-28.
