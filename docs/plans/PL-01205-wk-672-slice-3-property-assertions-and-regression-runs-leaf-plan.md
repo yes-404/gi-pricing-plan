@@ -1,5 +1,5 @@
 ---
-id: PL-WORKING
+id: PL-1205
 family: plan
 kind: leaf
 title: WK-672 Slice 3 — Property assertions and regression runs: leaf plan
