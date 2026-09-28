@@ -2089,6 +2089,48 @@ class RegressionSuiteVersionRow(Base):
     )
 
 
+class RegressionRunRow(Base):
+    """One Regression Run of a Rating Version (03 §4.9, FR-260, FR-261; PL-1205 Task 5).
+
+    `run` is the validated `RegressionRun` as JSON — a failing property's `counterexample`
+    is a quote-input fragment, which is why every read is permission-checked
+    (`rating:read`, NFR-499 as clarified for FR-9301). `bundle_hash`, `suite_content_hash`,
+    `overall` and `finished_at` are copies for querying, written from the same object in
+    one operation by `app.platform.regression_runs.persist_run`, the single writer.
+
+    **`cases_blob_sha256` is the scalar digest of the run's case log**, duplicated out of
+    `run["cases_blob"]` because the generic blob route's deny matches each registered
+    column as a scalar (`select(column).where(column == sha256)`); a digest held only
+    inside the JSONB would leave the case log readable there. The same writer sets both.
+    """
+
+    __tablename__ = "regression_runs"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    rating_version_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("rating_versions.id"), nullable=False
+    )
+    run: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    suite_content_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    overall: Mapped[str] = mapped_column(String(8), nullable=False)
+    cases_blob_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        Index(
+            "ix_regression_runs_latest",
+            "rating_version_id", "bundle_hash", "suite_content_hash", "finished_at",
+        ),
+        Index("ix_regression_runs_cases_blob_sha256", "cases_blob_sha256"),
+    )
+
+
 class ScoringTraceRow(Base):
     """A sampled scoring trace: a thin queryable row beside its blob body.
 
