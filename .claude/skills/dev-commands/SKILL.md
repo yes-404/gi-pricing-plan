@@ -85,6 +85,59 @@ on this box are named with underscores rather than the hyphens `basename "$PWD"`
 (`gipricing_w37_6_gate_base` beside `gipricing_wt-d8-fix`), which is the residue of people
 working around this by hand and not agreeing on how.
 
+**The per-worktree name is the worktree's LEAF directory name, so it is unique only when
+the leaf is.** `backend/tests/conftest_db.py:55` derives the name as
+`gipricing_{Path(__file__).resolve().parents[2].name}`. Its docstring, at `:49`, says this
+is "the same name `dev-commands`'s gate block derives via `WT=$(basename "$PWD")`". Both
+forms take only the last path component. Two checkouts at `<job-dir>/<member-a>/tree` and
+`<job-dir>/<member-b>/tree` therefore both resolve to `gipricing_tree`. Two gates running
+at once then share one database, and `python-test`'s "that teardown makes two concurrent
+runs mutually destructive" case applies: each run's session teardown empties the database
+under the other. Nothing refuses this. `test_conftest_db.py` asserts only the derivation
+(`test_worktree_database_name_is_derived_from_this_checkouts_own_directory`), never that
+the name is unique. The code fix is owed separately, as an `FD-` under P2's standing maintenance Work.
+
+When two live checkouts share a leaf name, use **one of two remedies** before the first
+gate:
+
+1. **Name the database for the branch, and set `GIP_TEST_DATABASE_URL` explicitly.** An
+   explicit override bypasses the derivation (`test_database_url()` reads it first).
+   Create the database from the template, migrate it, and drop it when the worktree is
+   released:
+
+   ```bash
+   DB=gipricing_p2_d_s1        # named for the branch, not the leaf
+   docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing "$DB"
+   GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/$DB" \
+       uv run alembic upgrade head
+   export GIP_TEST_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/$DB"
+   # at release:
+   docker exec gi-pricing-postgres-1 dropdb -U gipricing "$DB"
+   ```
+
+   The gate body below builds `GIP_TEST_DATABASE_URL` as `gipricing_$WT`. When you copy
+   it, replace `WT=$(basename "$PWD")` with the database's suffix (`WT=p2_d_s1`), or the
+   gate exports the colliding name again.
+2. **Give the worktree a unique leaf name**, for example `<job-dir>/p2/<member>-tree`
+   rather than `<job-dir>/p2/<member>/tree`. The derivation and `basename "$PWD"` then
+   agree on a unique name, and the block above works unchanged.
+
+**Reproduction** (2026-09-28, main `ed123cb0`). Two throwaway worktrees were added at
+`<job-dir>/r1/tree` and `<job-dir>/r2/tree`. A probe script ran the fixture's own
+`_worktree_database_name` in each: it extracts the function's source from
+`backend/tests/conftest_db.py` with `ast` and sets `__file__` to that file's path. Each
+run was launched with `env -C <checkout> python3 dbname-probe.py`:
+
+```text
+…/hardener/r1/tree/backend/tests/conftest_db.py -> gipricing_tree
+…/hardener/r2/tree/backend/tests/conftest_db.py -> gipricing_tree
+…/hardener/tree/backend/tests/conftest_db.py -> gipricing_tree
+…/hardener/tree2/backend/tests/conftest_db.py -> gipricing_tree2
+```
+
+Three different checkouts gave one name. Only the checkout with a different leaf
+(`tree2`) got its own database. Both throwaway worktrees were removed afterwards.
+
 **THE GATE BODY. This block is the single definition** — `.claude/agents/gate-runner.md`
 points at it rather than restating it, because two copies of a gate body is how they
 diverge. Copy it verbatim.
@@ -437,6 +490,56 @@ hides a missing dependency.
 ```bash
 npm config set prefix ~/.npm-global && npm i -g pnpm    # then put that bin on PATH
 ```
+
+### `pnpm add` leaves an `allowBuilds` prompt that fails every later install
+
+pnpm 11 refuses to run a dependency's build script until someone decides whether to allow
+it. When `pnpm --dir frontend add <pkg>` pulls in a transitive dependency with a build
+script, it does three things:
+
+- it adds the dependency and updates the lockfile;
+- it writes `frontend/pnpm-workspace.yaml` with an **unanswered** placeholder;
+- it prints `ERR_PNPM_IGNORED_BUILDS` and **exits 1**, although the add succeeded.
+
+Here is the placeholder that `@vue-flow/core@1.48.2` produced through `vue-demi@0.14.10`:
+
+```yaml
+allowBuilds:
+  vue-demi: set this to true or false
+```
+
+**While the placeholder stays, every later install fails.**
+
+- `pnpm --dir frontend install --frozen-lockfile` exits 1. That is CI's first frontend step.
+- `pnpm --dir frontend generate:api` exits 1 too, before `openapi-typescript` runs. Its
+  deps-status pre-check runs `pnpm install` and prints:
+
+  ```text
+  [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: vue-demi@0.14.10
+  Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+  [ERROR] Command failed with exit code 1: pnpm install
+  ```
+
+Nothing was generated, so `src/api/generated/` does not exist. Every later `type-check`
+then reports **phantom type errors in views you did not touch**: 143 at `df8e5811`. It
+reads like a regression in the dependency you just added. It is not one.
+
+**The fix is to answer the placeholder** in `frontend/pnpm-workspace.yaml`, and to commit
+the file with the lockfile in the same PR:
+
+```yaml
+allowBuilds:
+  vue-demi: false
+```
+
+`false` is safe for `vue-demi` because its build script only picks which of its builds to
+use. `scripts/postinstall.js` calls `switchVersion(3)` for any Vue `3.x`. The `lib/`
+shipped in the tarball is already that build: `lib/index.mjs` opens with
+`var isVue3 = true`. Skipping the script leaves the Vue 3 build in place.
+
+**For any other package, read its build script before you answer.** `false` is right
+only when the script does nothing the package needs at runtime. When it compiles a native
+binary, the answer is `true`, and the PR says why.
 
 ### Read each command's own exit code
 
@@ -886,6 +989,34 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-09-28, against main `ed123cb0fcf91e44872963bf8a8bad32b87c99bc`. **The per-worktree
+database name's leaf-name collision was added**, with its two remedies, next to the
+per-worktree database block. executor-s1 found it: every job-dir checkout named
+`…/<member>/tree` derives `gipricing_tree`. The derivation was read from
+`backend/tests/conftest_db.py:48-55`, and the override order from `test_database_url()`
+(`:132-133`), at that tree. The collision was reproduced there by running the function's
+own source in two throwaway worktrees, `…/r1/tree` and `…/r2/tree`. Both printed
+`gipricing_tree`; the output is quoted in the section. `test_conftest_db.py:48-50` was
+read to confirm that the test asserts only the derivation.
+
+2026-09-28, against main `8a8cded3b92bcbea2b4c7e221daecc3fbfb96981`. **The `pnpm add`
+`allowBuilds` trap was added.** Spike F2 hit it while adding `@vue-flow/core` for WK-675.
+It was then reproduced on a fresh detached worktree at `df8e5811`, with pnpm 11.21.0,
+before this entry was written.
+
+1. `pnpm install --frozen-lockfile` → rc 0.
+2. `pnpm add @vue-flow/core@1.48.2` → rc 1 with `ERR_PNPM_IGNORED_BUILDS`, and the
+   placeholder was written.
+3. `pnpm generate:api` → rc 1 with the three quoted lines.
+4. `pnpm install --frozen-lockfile` → rc 1.
+5. With `vue-demi: false`, both `generate:api` and `install --frozen-lockfile` → rc 0.
+
+The 143 phantom errors were counted with `vue-tsc --build --force 2>&1 | grep -c error` in
+the spike's scratch tree. The `vue-demi` claim was read from the installed package: the
+`postinstall` script and `lib/index.mjs`. The first time, in the spike's own scratch
+tree, `generate:api`'s pre-check passed once the placeholder was restored over an install
+that had already succeeded. That is why the fresh tree is the reproduction of record.
 
 2026-09-19 — **the RFC-937 id instruments section added**: `doc-id.py next/check/widen` and
 `doc-index.py`/`--check`/`--phase`/`--show`, each with its trap, plus the

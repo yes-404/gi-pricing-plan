@@ -47,11 +47,10 @@ That integer is the document's id for life — it never gets renumbered, only ma
 superseded. The filename carries it padded to five digits, and the directory it lives in
 names its family (`docs/process/document-ids.md` has the full family table).
 
-Branches and PRs name the slice they deliver: `sl-<n>-<slug>` and `SL-<n>: <title>`. **Not
-yet in force as of 2026-09-27** — no `SL-` row has been minted; a PR today names its `WK-`/
-`W37-n` slice instead. A PR with no slice at all (a hotfix, an external contributor, a
-dependency bump) gets one minted by the lead at triage, under the phase's standing `WK-`
-maintenance item. Bot-authored PRs are exempt.
+Branches and PRs name the slice they deliver: `sl-<n>-<slug>` and `SL-<n>: <title>`. Until the
+first `SL-` row is minted, a PR names its `WK-` work item instead. A PR with no slice at all (a hotfix, an external contributor, a
+dependency bump) gets one minted by the lead at triage, under the current phase's standing maintenance Work
+(`docs/roadmap.md`, the `WK-` row titled "standing maintenance"). Bot-authored PRs are exempt.
 
 ## Where to start reading
 
