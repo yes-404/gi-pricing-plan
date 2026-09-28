@@ -65,7 +65,12 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
    - §5.2 declares `replay_cases`;
    - FR-261 carries a dated amendment: persisted cases are the reproduction mechanism, and the seed serves same-version regeneration.
 
-   `docs/skills-map.md` names the dependency. `python3 scripts/audit-docs.py` adds no failure row, and no id is minted.
+   Also:
+   - FR-257 carries the dated at-least-one-golden-quote clarification (DP-S3-1);
+   - one appended §3.8 FR names the case store, its id minted at the code PR's turn (DP-S3-4 (i));
+   - NFR-499 carries the dated clarification that adds it as the third store and corrects the "persists a seed" sentence (DP-S3-4 (ii)).
+
+   `docs/skills-map.md` names the dependency. `python3 scripts/audit-docs.py` adds no failure row.
 2. **Condition 1, the pin.** `grep -n 'hypothesis==6.165.7' packages/pricing-core/pyproject.toml pyproject.toml` prints two lines: pricing-core's `[project] dependencies` and the root dev group, aligned. `uv.lock` resolves one `hypothesis` version. `uv run lint-imports` exits 0, and the PR description lists `uv tree --package pricing-core` for `hypothesis`, showing no FastAPI, SQLAlchemy or Redis.
 3. **Condition 2, the settings.** A test asserts the settings `run_regression` applies:
    - `database is None`;
@@ -77,7 +82,7 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
 
    `RegressionGeneration.cases` refuses above 10 000 (the bound).
 4. **Condition 3, the version.** Every `RegressionRun` records `generation.hypothesis_version`. `generate_contexts(..., expect_version=v)` with `v != hypothesis.__version__` raises `GeneratorVersionMismatch`, naming both versions. The test is red first.
-5. **Condition 4, the persisted cases.** A run persists every generated case and every counterexample as one content-addressed canonical JSON blob, recorded in `cases_blob`. `replay_cases(bundle, cases, suite)` re-scores those cases and never calls the generator; a test patches the generator to raise and replay still passes. Reading the blob requires `rating:read` (NFR-499).
+5. **Condition 4, the persisted cases.** A run persists every generated case and every counterexample as one content-addressed canonical JSON blob, recorded in `cases_blob`. `replay_cases(bundle, cases, suite)` re-scores those cases and never calls the generator; a test patches the generator to raise and replay still passes. Reading the blob requires `rating:read`, **the same control as reading a Golden Quote's suite**. A test (DP-S3-4 (iii), `req("NFR-499")`) asserts that a principal refused a suite read is refused the blob read, that one allowed is allowed, and that no log line carries a case's inputs.
 6. **Condition 5, a stopped shrink.** Each failing property result records `shrink: "completed" | "stopped_on_limit"`, read through `hypothesis.statistics.collector` (Task 3). A test forces the limit by monkeypatching `hypothesis.internal.conjecture.engine.MAX_SHRINKS` to 1. It asserts `shrink == "stopped_on_limit"` and `counterexample_minimal is False`, and it is red first.
 7. **Condition 6, determinism across processes.** `uv run pytest packages/pricing-core/tests/test_testing_determinism.py -v` passes. It covers:
    - two fresh `subprocess` interpreters, given the same persisted seed, produce identical sha256 of the canonical case log and identical counterexamples;
@@ -95,6 +100,7 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
     - A passing run sets `evidence.regression_suite_run_id`.
     - A test asserts `evidence.golden_quotes` is byte-identical before and after that write.
 11. **DP-S3-1 applied** as the deputy decides. The default (a): a submission whose algorithm has no suite, or whose suite has zero golden quotes, is refused with `EVIDENCE_INCOMPLETE`. The test is red first.
+11b. **Every fixture and demo Rating Version that must reach `review` or `approved` has a golden quote** (DP-S3-1 applies forward; the deputy's note on WF-699 and gate G2). `grep -rlnE 'submit_for_review|rating-versions/[^"]*/submit' backend/tests backend/src scripts examples frontend` at the executor's tree lists the sites. Each goes through one shared fixture that authors a suite with at least one golden quote, and the list is quoted in the ledger with a pass for each.
 12. **The contract.**
     - `regression-run` is generated from `model-schema` and in `COMPARED_SLUGS`, and its `ONE_SIDED_SLUGS` entry is removed.
     - `uv run python scripts/generate-contracts.py --check` exits 0.
@@ -156,12 +162,37 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S3-1 | Is a suite with at least one golden quote **required** at submission, at least for Rating Versions headed to `prod`? FR-257 limb (1) already requires a passing run, so a suite, for every approval; the open part is golden quotes (`PL-1189` carry, the deputy's 15:57:21 item (i)) | (a) every submission needs at least one golden quote; (b) only a `prod` deployment needs one, enforced at WK-674's deploy gate; (c) neither, since a properties-only suite suffices | (a): every approved version can reach `prod`, and a properties-only suite checks no priced outcome | **scope** (the maintainer's, by delegation to the deputy) | yes (Task 6) | pending the deputy's decision |
-| DP-S3-2 | Must the passing run's `suite_content_hash` equal the suite the submit gate pins? | yes; no | yes: otherwise a suite edited after the run is approved on a stale run | decision point | yes (Task 6) | pending the deputy's decision |
-| DP-S3-3 | Is the run a blocking gate by itself, and what raises `PROPERTY_ASSERTION_FAILED`? | (a) the run records `overall=fail`, and submission refuses through limb (1); the code is the failed Job's problem; (b) the run's route itself refuses | (a) | decision point | yes (Task 5) | pending the deputy's decision |
-| DP-S3-4 | Where does the cases blob live? | (a) the existing blob store, as a `BlobRef` (`model_schema/refs.py:138`), read-gated on `rating:read`; (b) inline JSONB on the run row | (a): a run can hold 10 000 cases, and NFR-499 wants one access-controlled home | decision point | yes (Task 5) | pending the deputy's decision |
+| DP-S3-1 | Is a suite with at least one golden quote **required** at submission, at least for Rating Versions headed to `prod`? FR-257 limb (1) already requires a passing run, so a suite, for every approval; the open part is golden quotes (`PL-1189` carry, the deputy's 15:57:21 item (i)) | (a) every submission needs at least one golden quote; (b) only a `prod` deployment needs one, enforced at WK-674's deploy gate; (c) neither, since a properties-only suite suffices | (a): every approved version can reach `prod`, and a properties-only suite checks no priced outcome | **scope** (the maintainer's, by delegation to the deputy) | yes (Tasks 1, 6, 6b) | **(a), every submit**, with a spec line: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
+| DP-S3-2 | Must the passing run's `suite_content_hash` equal the suite the submit gate pins? | yes; no | yes: otherwise a suite edited after the run is approved on a stale run | decision point | yes (Task 6) | **yes**: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
+| DP-S3-3 | Is the run a blocking gate by itself, and what raises `PROPERTY_ASSERTION_FAILED`? | (a) the run records `overall=fail`, and submission refuses through limb (1); the code is the failed Job's problem; (b) the run's route itself refuses | (a) | decision point | yes (Task 5) | **yes, blocking through FR-257 limb (1)**: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
+| DP-S3-4 | Where does the cases blob live? | (a) the existing blob store, as a `BlobRef` (`model_schema/refs.py:138`), read-gated on `rating:read`; (b) inline JSONB on the run row | (a): a run can hold 10 000 cases, and NFR-499 wants one access-controlled home | decision point | yes (Tasks 1, 5) | **(a), AMENDED**: the store needs its own requirement (RL-917). An appended `03` §3.8 FR, a dated NFR-499 clarification and an access-control test land in the same commit; the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
 
-The plan stays `draft` until all four have resolvers. Each task below is written on the recommendation. A different decision changes only the step that names that DP.
+The deputy's ruling, quoted whole:
+
+```text
+## 2026-09-28 18:17:32 BST · deputy · WK-672 S3 DPs: DP-S3-1 (a) with a spec line; DP-S3-2 yes; DP-S3-3 yes; DP-S3-4 AMENDED — the case store needs its own requirement (RL-917)
+
+Read at origin/main e6a9ca71: `03-rating-engine.md` :68–69 (glossary), :174 FR-257, :177 FR-260, :178 FR-261, :990 NFR-499 including its 2026-08-30 clarification.
+
+- **DP-S3-1: (a), every submit, by delegation** (scope; on the maintainer's instruction of 2026-09-26 17:02:52 BST and the extension of 2026-09-28 ~13:50).
+  - **Grounds:** with zero golden quotes, FR-260's "re-scores every golden quote" is satisfied vacuously, and nothing checks a priced outcome.
+  - **Condition:** nothing in `03` states the minimum today. FR-257 and the glossary are silent on the count. S3 therefore lands it as a spec change in the same commit, per CLAUDE.md §0: a dated clarification on FR-257, or an appended FR in §3.8 (the planner picks, with the id minted at its turn), stating that a passing Regression Suite has at least one golden quote.
+  - **Note it applies forward only,** at submit. Any fixture or demo RV that must reach `approved` (WF-699, gate G2) needs an authored golden quote. Say so in the plan.
+- **DP-S3-2: yes.** The run's `suite_content_hash` must equal the suite pinned at submit, or submit refuses EVIDENCE_INCOMPLETE. This is the same class as my S2 condition.
+- **DP-S3-3: yes, blocking via FR-257 limb (1).** FR-261 names no refusal of its own, but its property assertions are part of the Regression Suite, and FR-257 needs a *passing* one. PROPERTY_ASSERTION_FAILED is per property in the Job result, and submit refuses EVIDENCE_INCOMPLETE.
+- **DP-S3-4: AMENDED, the blob store yes, but not "under NFR-499" alone.**
+  - NFR-499's clarification (RL-917) names exactly two quote-input stores, sampled traces (FR-259) and Golden Quotes (FR-260). It says **"Any further store requires its own requirement"**, and it states that FR-261 "persists a seed rather than quote data" so needs no carve-out.
+  - RS-1176's condition (a content-addressed case/counterexample blob, replayed by re-scoring and never regenerated) persists quote inputs. It is a third store, and it falsifies that sentence.
+  - **S3 therefore lands in the same commit:**
+    - (i) an appended `03` §3.8 requirement naming the regression case/counterexample store: BlobRef, content-addressed, and carrying the same access-control obligation as a trace;
+    - (ii) a dated clarification on NFR-499 adding it as the third named store, with FR-261's "persists a seed" sentence corrected there, not silently;
+    - (iii) a test that the store is under the same access control as golden quotes.
+  - **Alternative, if the planner prefers:** persist only the seed plus the settings and version, and replay by regeneration. That breaks RS-1176's replay condition, so it would need a dated amendment to my F4 decision. I do not recommend it.
+
+The plan carries these four as ruled; its DP table quotes this entry.
+```
+
+All four have resolvers. The plan applies them as ruled.
 
 ---
 
@@ -186,7 +217,10 @@ The plan stays `draft` until all four have resolvers. Each task below is written
   A stopped shrink's counterexample is reported as **unminimised** (condition 5).
 - [ ] **Step 3, §5.2.** Add `def replay_cases(bundle: CompiledBundle, cases: CasesLog, suite: RegressionSuite) -> RegressionRun` and `class GeneratorVersionMismatch(ValueError)`. `generate_contexts` gains `*, expect_version: str | None = None`.
 - [ ] **Step 4, §8.** Record `hypothesis` as a `pricing-core` runtime dependency, `==6.165.7`, per RS-1176 condition 1. Add the same entry to `docs/skills-map.md`.
-- [ ] **Step 5.** Run `python3 scripts/audit-docs.py` (no new failure row), then commit.
+- [ ] **Step 5, FR-257 (DP-S3-1).** Add a dated clarification, with no new id: *"(Clarified 2026-09-28, WK-672 Slice 3, the deputy's DP-S3-1 by delegation.) A passing Regression Suite has at least one golden quote; a submission whose suite has none, or whose algorithm has no suite, is refused with `EVIDENCE_INCOMPLETE`. It applies forward, at submit."* The clarification is chosen over an appended FR because it changes the meaning of an existing FR's own term, "a passing Regression Suite".
+- [ ] **Step 6, the case store's own requirement (DP-S3-4 (i)).** Append one FR to §3.8. **Its id is minted at the Slice 3 code PR's mint turn** (`doc-id.py next --ref origin/main`, the lead's call), and the text uses the `Next free:` marker line convention until then (`docs/plans/README.md` convention 2). It reads: *"A Regression Run's generated cases and counterexamples are persisted as one content-addressed canonical JSON blob (`BlobRef`), referenced from the run. They are replayed by re-scoring and never regenerated (RS-1176 condition 4). The blob carries the same access control as a sampled trace and a Golden Quote: read only with `rating:read` in its workspace, and never logged (NFR-499)."*
+- [ ] **Step 7, NFR-499 (DP-S3-4 (ii)).** Add a dated clarification after its 2026-08-30 clause that names the case store (by the new FR's id) as the **third** quote-input store, after sampled traces (FR-259) and Golden Quotes (FR-260). It also **corrects** the sentence that FR-261 "persists a seed rather than quote data": since RS-1176 condition 4, a regression run persists quote inputs, and the correction is written, not silent.
+- [ ] **Step 8.** Run `python3 scripts/audit-docs.py` (no new failure row), then commit.
 
 ### Task 2: `model-schema` — `RegressionRun`; the contract moves to compared
 
@@ -280,6 +314,12 @@ The plan stays `draft` until all four have resolvers. Each task below is written
 
 - [ ] **Step 1.** Write red tests for acceptance items 10 and 11. Each FR-257 test's docstring says "limb (1) only: a passing Regression Suite; limbs (2)–(4) are not tested here".
 - [ ] **Step 2.** Implement and make them green. Confirm the existing no-suite path test changes only as DP-S3-1 dictates, and quote its old and new expectations in the ledger. Commit.
+
+### Task 6b: Fixtures and the demo carry a golden quote (DP-S3-1)
+
+- [ ] **Step 1.** Run acceptance item 11b's grep and record the list.
+- [ ] **Step 2.** Add one shared test fixture, and one seed helper for the demo if the list includes a seed, that authors a suite for the algorithm with at least one golden quote and a passing run. Route every listed site through it. A site that must *not* have a suite, the refusal test itself, is named as the exception.
+- [ ] **Step 3.** Run the listed tests and commit.
 
 ### Task 7: The gate and the ledger
 
