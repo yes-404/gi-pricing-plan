@@ -21,14 +21,16 @@ relates: [RL-881, RL-885, RL-1172]
 
 **This record decides nothing.** It files decisions the deputy made by delegation from the
 maintainer (28 Sep, extended goal). They are in the deputy's entry of 2026-09-28 headed
-"WK-673 (PL-9101, #844): DP-1, DP-2 and DP-3 DECIDED", written at 14:05:30 BST and relayed
+"WK-673 (…, #844): DP-1, DP-2 and DP-3 DECIDED", written at 14:05:30 BST and relayed
 by the lead. Each ruling below quotes that entry and names the slice it obliges. The
 entry says: *"A decision-maker files these as `RL-` records quoting this entry, in S1's PR
 or before it, since DP-1 and DP-2 block S1."*
 
-**The plan these rule on** is WK-673's map plan, `PL-9101`, as a draft on PR #844 at
-`af3f0518` (`status: draft`, `tree: 6c6f4532…`). It is not on `main`. Its Decision points
-table is at `:228-239` there. It states that DP-1, DP-2 and DP-3 are the maintainer's,
+**The plan these rule on** is WK-673's map plan, a draft on PR #844 at
+`af3f0518` (`status: draft`, `tree: 6c6f4532…`). It is not on `main`, so this record names
+it by PR rather than by id: an id that does not resolve fails `audit-docs.py` check 32, and
+this record merges first. The plan's id is elided from the entry's header above for the same
+reason. Its Decision points table is at `:228-239` there. It states that DP-1, DP-2 and DP-3 are the maintainer's,
 resolved by the deputy, and that DP-4 is slice design, the planner's own and decided in the
 plan. **DP-4 is therefore not ruled here.** The plan cites this record once both are minted
 (the lead calls the turns; this record mints first).
@@ -133,7 +135,7 @@ rating_version'. S6's split (floor wiring after WK-672 S3) is sound slice design
 
 ## What it obliges
 
-The slice numbers are PL-9101's.
+The slice numbers are those of WK-673's map plan (PR #844).
 
 - **Slice 1 (spec, contract, types)**, blocked until this record merges:
   - DP-1's conditions become spec text. That covers the ephemeral, content-addressed
@@ -161,7 +163,7 @@ The slice numbers are PL-9101's.
 - **Slice 5 (the approval gate, part one)** cites DP-3. FR-224's threshold is a field on
   the `rating_version` `ApprovalPolicy` entry (`06` §4.2), with no environment-variable
   override, so FR-446's resolution order does not apply to it.
-- **PL-9101** cites this record by its minted id. The deputy accepts PL-9101 as WK-673's map
+- **WK-673's map plan (PR #844)** cites this record by its minted id. The deputy accepts it as WK-673's map
   plan once it does, and the acceptance line follows the lead's request.
 - **Not ruled here:** DP-4 (the planner's slice design, decided in the plan) and the F3
   decision itself. Item 5 is amended above, and the method of record stands.
