@@ -232,6 +232,40 @@ rule and not a one-off caution: it has been seen to fail its local branch-delete
 exiting `1` on one PR and `0` on another, same underlying message either way — so **no exit
 code means "the merge landed."** Only re-reading state does.
 
+**`gh issue create --label <name>` exits 0 while GitHub silently drops the label.** The
+create lands and the label does not. This happens when the token can create an issue but
+cannot label, comment on or close one. Each of those writes returns HTTP 403, *"Resource
+not accessible by personal access token"*, but `issue create` does not surface that 403 for
+the label. This was recorded on 2026-09-28 with gh 2.46.0, while filing the WK-696
+acceptance test issues #825 and #826. The WK-696 closure record and its finding hold the
+read-backs:
+- Both creates exited 0.
+- `gh api repos/<owner>/<repo>/issues/825 --jq '[.labels[].name]'` returned `[]`, and #826
+  was the same.
+- A direct `POST …/issues/825/labels` got the 403.
+- `gh issue close 825 --comment …` exited 1 on `addComment`.
+
+The issues were labelled and closed later, only after the maintainer granted the token
+issue-write scope.
+
+Two rules follow:
+
+- **Read back every `gh` write, labels included, from the artifact itself:**
+
+  ```bash
+  gh issue view <N> --repo <owner>/<repo> --json labels,state,comments
+  ```
+
+  Run read-only against #825 on 2026-09-28, after the scope grant, this returned
+  `{"labels":[{…,"name":"bug",…}],"state":"CLOSED"}`. It is the same command that would have
+  shown `"labels":[]` and `"state":"OPEN"` at creation.
+- **`.permissions` is the user's role, not the token's scope.** `gh api repos/<owner>/<repo>
+  --jq .permissions` returned `{"admin":true,"maintain":true,"pull":true,"push":true,
+  "triage":true}` while every label, comment and close was refused. It is no evidence that
+  a write will land. The only test of a token's scope is the write itself, read back.
+  **Do not probe it by creating throwaway issues:** the repository is public, and an issue
+  is outward-facing.
+
 **The rule generalises past `gh` too: a plain `git push` can report success and still
 strand the commit, if the PR it was going to was merged out from under it.** Merging a PR
 deletes its branch (`delete_branch_on_merge`); pushing to that branch name afterwards
@@ -903,6 +937,16 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+2026-09-28, against main `092582a4a011a62400f5ededb14a790f1267639b`. **The `gh issue
+create --label` silent drop was added**, beside the read-back rule, along with the
+`.permissions`-is-not-scope rule. The evidence was not re-created. The team's token has
+since gained issue-write scope, so the drop would not reproduce, and a probe issue on a
+public repository is outward-facing. It was read instead from the WK-696 finding and
+closure record, at branch `p2-b-wk696`: steps 1–5 and the #825/#826 read-back table. The
+verification command was run read-only against #825 and #826 on this date, with gh 2.46.0:
+`gh issue view 825 --json labels,state` returned `bug` and `CLOSED`, and #826 returned
+`question` and `CLOSED`.
 
 2026-09-19 — **the slice grammar added**: branch `sl-<n>-<slug>`, PR title
 `SL-<n>: <title>`. W37-7 Task 3, `PL-1070`; `RFC-937` §5.4's `git-hygiene` row (`:370`).

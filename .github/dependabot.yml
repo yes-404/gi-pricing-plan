@@ -8,6 +8,11 @@
 # Weekly, one grouped PR per ecosystem, at most three open at a time, so a bump arrives
 # as a reviewable batch rather than a stream.
 #
+# Each group takes only `minor` and `patch` updates (`update-types`, GitHub's documented
+# `groups` key). A MAJOR bump is left out of the group and arrives as its own PR, so a
+# breaking toolchain jump is reviewed on its own rather than bundled. Dependabot's first
+# grouped PR (#850) bundled four major action jumps together, which prompted this.
+#
 # Commit messages: prefix `chore` with `include: "scope"`, which Dependabot renders as
 # `chore(deps): …` or `chore(deps-dev): …`, a Conventional Commits title (CLAUDE.md §10).
 # A prefix of `chore(deps)` with the scope included would render `chore(deps)(deps): …`,
@@ -30,6 +35,7 @@ updates:
     groups:
       python:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -42,6 +48,7 @@ updates:
     groups:
       frontend:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -54,3 +61,4 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+        update-types: ["minor", "patch"]

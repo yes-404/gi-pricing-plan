@@ -634,6 +634,8 @@ phase: P2
 
 From “Workstreams” (line 377): Testing: golden quotes, property assertions, regression runs | FR-260, FR-261, FR-262
 
+**2026-09-28 — the charter, named against its own ids** (WK-672 Slice 1, `PL-1177`; `RL-1172` items 4 and 5, the latter quoting the deputy's DP1 decision by delegation, option A). **FR-260:** golden quotes, and the promotion re-scoring that refuses on a mismatch beyond the declared tolerance. **FR-261:** property assertions over generated quote contexts, and the regression runs that execute a suite (`POST /api/v1/rating-versions/{id}/regression-runs`, recorded as `03` §4.9 `RegressionRun`). **FR-262: the backend limb only** — `POST /api/v1/score/compare`, one quote scored against two Rating Versions with the step-level diff; the Quote Sandbox view over it is WK-675's, and FR-262 is delivered only when both limbs have landed. **FR-257 limb (1)** — the approval gate's passing-Regression-Suite check — is also this Work's (`RL-1172` item 4). Slices run 1 → 2 → 3 → 4, one at a time.
+
 
 ### WK-673 — Dislocation with attribution
 
@@ -678,6 +680,8 @@ phase: P2
 ```
 
 From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project
+
+**2026-09-28 — the Quote Sandbox's backend is WK-672's** (`RL-1172` item 5, the deputy's DP1 decision by delegation, option A). The quote sandbox view in this Work consumes `POST /api/v1/score/compare`, which WK-672 builds and tests; this Work builds the view only. FR-262 is delivered only when both limbs have landed.
 
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
