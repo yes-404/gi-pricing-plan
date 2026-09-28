@@ -1,5 +1,5 @@
 ---
-id: RS-WORKING
+id: RS-1176
 family: research
 kind: spike
 title: Does a persisted seed with a pinned hypothesis reproduce the same cases and the same shrunk counterexample across processes?
@@ -13,7 +13,7 @@ corrected_by: []
 relates: [FR-261]
 ---
 
-# RS-WORKING — hypothesis seed and shrink determinism across processes (spike F4)
+# RS-1176 — hypothesis seed and shrink determinism across processes (spike F4)
 
 Spike F4 of Track F, run 2026-09-28 by the executor `spike-f4`. The timebox started
 at 11:36:28 BST. The measurement closed at 12:01:57 BST. **The verdict below is a
