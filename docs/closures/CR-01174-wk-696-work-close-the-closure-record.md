@@ -10,7 +10,7 @@ tree: df8e5811a151a99c7317690faf9278a6dc3400be
 phase: P2
 work: WK-696
 corrected_by: []
-relates: []                     # ids only
+relates: [FD-1176]              # ids only
 ---
 
 # CR-1174 — WK-696 Work close: the closure record
@@ -209,8 +209,15 @@ Each issue was then read back.
   *"Resource not accessible by personal access token (addComment)"*, exit 1. When re-read, both
   issues were `OPEN`, with 0 comments.
 
-Labelling and closing #825 and #826 is therefore left to whoever holds a session with issue
-write access. They are reported to the lead as pending, not done.
+The deputy ruled that nobody on the team retries #825 or #826 by any route, because the 403 is
+a permission boundary. The label-and-close leg is **pending the maintainer**, who is granting
+the token issue-write scope. Once the grant is confirmed, the planned steps are: add `bug` to
+#825 and `question` to #826, post the comment above, close both, and read back each issue with
+`gh issue view <n> --repo yes-404/gi-pricing-plan --json state,labels,comments`. The read-back
+lands in this record's follow-up commit. gh's exit code is not proof of any of these steps
+([`FD-1176`](../findings/FD-01176-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md)).
+This record does not merge until both issues are labelled and closed (the deputy's ruling).
+The reproduction is in `FD-1176`.
 
 **Leg 2: the form structure GitHub's renderer needs.** No CLI can render an issue form, so
 each form's YAML was validated against the fields the renderer reads. The checker is
@@ -259,8 +266,16 @@ and that both labels exist on the repository. Leg 2 proves the forms carry what 
 needs. **The web form itself was never exercised.** The CLI does not run a YAML form and does
 not apply a form's `labels:`. So neither leg shows that submitting through
 `https://github.com/yes-404/gi-pricing-plan/issues/new/choose` renders these fields and applies
-the label. Whether this proxy satisfies (c) is the deputy's call, by delegation. The other
-option is a single submission through the web UI.
+the label.
+
+**The deputy's ruling, by delegation, as the lead relayed it on 2026-09-28:** (c) is
+**accepted as met by proxy**, on two legs. The first is the CLI issue in each form's field
+shape, labelled, read back and closed. The second is the YAML schema validation. The limit,
+in the ruling's own words:
+
+> no web-UI submission; the rendering path is proved by schema validation
+
+**This limit is carried to plan review 15.**
 
 ### (d) The README duplicates no roadmap or CLAUDE.md content
 
@@ -382,19 +397,21 @@ location. The README's pointers therefore stay correct, and no pointer edit is o
 |---|---|---|---|
 | (a) files and links | evidenced | — | — |
 | (b), row 6, settings | pending: the deputy's dated line by delegation | the deputy | this record's follow-up commit |
-| (c) test issues | **met by proxy, limit stated.** Legs 1 and 2 are evidenced, but the web form itself was not exercised. #825 and #826 are **not yet labelled or closed** (HTTP 403 on the token). | the deputy rules on the proxy; a holder of issue-write access labels and closes both issues | before this record's follow-up commit |
+| (c) test issues | **met by proxy**, accepted by the deputy's ruling. Limit: "no web-UI submission; the rendering path is proved by schema validation", carried to plan review 15. Filed and read back, plus the schema leg: evidenced. The label-and-close leg is **pending the maintainer**, because of HTTP 403 on the token (`FD-1176`). | the maintainer (token grant); then the auditor's read-back | before this record merges |
 | (d) narrow predicate | **not met, on two sentences**: `README.md:13-14`, an excerpt of `CLAUDE.md` §1; `README.md:42-44`, a dated `SL-` status copy that recurs in two more files. The proposal is **fix before close**, by one-line edits. | the lead | this Work's closing PR, or a verdict of accept |
 | (d) wider read | met; observations 1–5 go to the lead for a verdict | the lead | — |
 | (e) checklist line | evidenced; no pointer edit is owed by this close | — | — |
 | Rows 7, 8, 9 | evidenced | — | — |
 
-The lead's reply decides whether these observations become register findings (`FD-`, ids from
-the lead):
+**Raised by this close:** [`FD-1176`](../findings/FD-01176-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md),
+`gh issue create --label` exits 0 while the label is silently dropped. The deputy accepted it,
+**deferred with an owner — the lead**. Event: the next `git-hygiene` skill edit. Its register
+row is filed in this PR.
+
+The lead's verdict is still owed on whether two more observations become findings, with ids
+from the lead:
 
 - (d)'s two sentences, if the verdict is accept rather than fix;
-- observation 3, the promised maintenance item with no roadmap row;
-- the CLI's silent label drop under an issue-create-only token. `gh issue create --label`
-  exited 0 on a write that never landed. This is the auditor charter's trap: a `gh` write
-  verified by its exit code and not by its artifact.
+- observation 3, the promised maintenance item with no roadmap row.
 
 **Acceptance line:** _pending_
