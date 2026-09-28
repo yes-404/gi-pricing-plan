@@ -960,6 +960,20 @@ def test_next_reads_the_id_standard_at_the_ref_not_the_working_tree(
         doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo)
 
 
+def test_the_real_id_standard_names_no_integer_at_or_above_next(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    # The standard's own content, not a fixture: every `<PREFIX>-<n>` token in this
+    # checkout's `document-ids.md` must be a real citation, i.e. below the next integer.
+    # A future example written as a live-looking integer fails here, on its own PR,
+    # before the sequence reaches it and it blocks a real mint.
+    root = doc_id_cli.REPO_ROOT
+    integers = doc_id_cli.id_standard_integers(root)
+    assert integers, "the guard read no tokens: the path or the pattern is wrong"
+    next_number = doc_id_cli.compute_next(root)
+    assert {n for n in integers if n >= next_number} == set()
+
+
 def test_next_cli_exits_1_on_an_example_collision(
     doc_id_cli: types.ModuleType,
     tiny_repo: pathlib.Path,
