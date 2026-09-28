@@ -2,7 +2,7 @@
 id: FD-1200
 family: finding
 title: A version not in review can be approved, and the audit records a false before-state
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 3a3df367990317c39ae41d3490ef85ae6054128e
@@ -105,3 +105,28 @@ conditions:
    number of distinct approving decisions, or that follows a reject or changes-requested;
 4. the priority is unchanged, and WK-672 Slice 2's FR-260 hook and WK-674 Slice 2's floor wiring
    wait for it.
+
+**Resolved 2026-09-28 by #864**, merged as `e6a9ca71` (17:00:47Z). `git merge-base --is-ancestor
+e6a9ca71 origin/main` exits 0. Both defects were re-read at `e6a9ca71`:
+
+- **The status bypass is closed at the route and in the hook.** `platform/approvals.py:84`
+  `require_in_review` refuses an approval subject not in its type's reviewable state, with
+  `APPROVAL_SUBJECT_NOT_IN_REVIEW` (`errors.py:260`). It is called for every resolver in
+  `api/approvals.py` (`:338`, `:356`, `:393`, `:420`) and in the platform modules: `perils.py:465`,
+  `datasets.py:824` (reviewable state `validated`), `validation_rules.py:340`, and
+  `rating_versions.py:299`, where it runs inside the hook on the row that transaction holds
+  locked.
+- **Any decision no longer approves.** `rating_versions.apply_approval_decision` now reads the
+  request's status (`:288`, `target = _target_status(ApprovalStatus(request.status))`). The
+  mapping at `:319` sends APPROVED to `approved`, and CHANGES_REQUESTED, REJECTED and WITHDRAWN to
+  `draft`. A first approval of two maps to nothing and moves nothing.
+- **The audit `before` is the row's own prior state** (`:313`, `before={"status": before}`), with
+  the comment *"never a literal: this line once recorded `review` whatever the version had been"*.
+- `06` FR-351 carries the dated clause (`06-governance.md:92`): only a version in its type's
+  reviewable state can be put to a decision.
+- The tests are in `backend/tests/test_api_approvals.py` and `backend/tests/test_rating_versions.py`
+  (+265 and +235 lines in #864).
+
+The deputy recorded #864's audit as *"41/41 cases, and **the hole is closed**"*, with exact
+mutation reds (M1 → 6, M2 → 1), in his 17:44:58 BST entry quoted in `FD-1202`. The related
+FR-357 withdrawal disagreement stays open as `FD-1202`, and #864 does not decide it.
