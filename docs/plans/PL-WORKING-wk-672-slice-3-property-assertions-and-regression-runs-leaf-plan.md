@@ -238,8 +238,8 @@ All four have resolvers. The plan applies them as ruled.
 
 The generic `GET /api/v1/blobs/{sha256}` (`backend/src/app/api/blobs.py:97-135`) is gated on `dataset:read` (`:39`), and `BlobRow` is keyed on `sha256` alone, with no workspace column (`db/models.py:286-288`). The same exposure is live for traces. **The deputy ruled B1 (a)** (the entry quoted under "Decision points"): WK-1178 fixes the blob route now, in a separate PR by executor-s1. The route refuses quote-input blobs with 404, and dataset-blob tenancy is established there.
 
-- [ ] **The WK-1178 blob-route PR (number to follow) is on `origin/main` before Task 5.** Check it by its squash on `origin/main`. If it is absent, **stop and report**: Slice 3 does not land that fix.
-- [ ] **Slice 3's case store is registered as a quote-input kind under that fix's mechanism**, so the generic route refuses it with 404. It is read only through the run's own `rating:read` path (Task 5). Acceptance item 5's access-control test asserts both: 404 on the generic route, and the `rating:read` gate on the run's path.
+- [ ] **#868 (the WK-1178 blob-route PR) is on `origin/main` before Task 5.** Check it with `git log --grep '(#868)' -1 origin/main`. If it is absent, **stop and report**: Slice 3 does not land that fix.
+- [ ] **Slice 3's case store is registered as a quote-input kind under that fix's mechanism**, so the generic route refuses it with 404. Concretely, Task 5 appends the run row's cases-blob column (`RegressionRunRow`'s `cases_blob` sha256 column) to `QUOTE_INPUT_BLOB_COLUMNS` in `backend/src/app/api/blobs.py`, the tuple #868 adds (`QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (ScoringTraceRow.blob_sha256,)` at #868's head `46d33b98`). Re-read it at your tree. It is read only through the run's own `rating:read` path (Task 5). Acceptance item 5's access-control test asserts both: 404 on the generic route, and the `rating:read` gate on the run's path.
 ### Task 1: Spec — `03` §3.8, §4.9, §5.2, §8; `docs/skills-map.md`
 
 **Files:** Modify `docs/specs/03-rating-engine.md` and `docs/skills-map.md`.
@@ -328,7 +328,7 @@ The generic `GET /api/v1/blobs/{sha256}` (`backend/src/app/api/blobs.py:97-135`)
 ### Task 5: The route, the Job, the row and the blob — DP-S3-3 and DP-S3-4
 
 **Files:**
-- Modify: `model_schema/jobs.py` (`JobKind` gains `REGRESSION_RUN`), the rating-version API module that holds `/compile` (`backend/src/app/api/models.py:1215`, a 202 Job), and the worker's job dispatch (`backend/src/app/worker/tasks.py:265`, `TASK_RUN_JOB`); `backend/src/app/errors.py` (`PROPERTY_ASSERTION_FAILED` into `RATING_ERROR_CODES`, with its raiser, below); `backend/src/app/db/models.py`; and a migration (`regression_runs`: `id`, `workspace_id`, `rating_version_id`, the `RegressionRun` fields as JSONB plus indexed `bundle_hash`, `suite_content_hash` and `overall`, `created_at`, `created_by`).
+- Modify: `model_schema/jobs.py` (`JobKind` gains `REGRESSION_RUN`), the rating-version API module that holds `/compile` (`backend/src/app/api/models.py:1215`, a 202 Job), and the worker's job dispatch (`backend/src/app/worker/tasks.py:265`, `TASK_RUN_JOB`); `backend/src/app/errors.py` (`PROPERTY_ASSERTION_FAILED` into `RATING_ERROR_CODES`, with its raiser, below); `backend/src/app/api/blobs.py` (the cases-blob column appended to #868's `QUOTE_INPUT_BLOB_COLUMNS`, Task 0b); `backend/src/app/db/models.py`; and a migration (`regression_runs`: `id`, `workspace_id`, `rating_version_id`, the `RegressionRun` fields as JSONB plus indexed `bundle_hash`, `suite_content_hash` and `overall`, `created_at`, `created_by`).
 - Create: `backend/src/app/platform/regression_runs.py` and `backend/tests/test_regression_runs.py`.
 
 **Behaviour:**
