@@ -68,6 +68,14 @@ failed:
 | persisted `job_logs` | no |
 | process log (the captured log records with tracebacks) | **yes** |
 
+**Disclosure: the database was made from the dirty template.** The per-tree database was created `TEMPLATE gipricing`,
+the template `FD-9022` describes (28 non-empty tables left by an abandoned session of 2026-09-17, at revision
+`d3b955a63d6a`), then migrated with `alembic upgrade head`. The run does not depend on those inherited rows: the test
+used its own fresh workspace (the suite's `workspace_id` fixture), created its own dataset, rules, ingest, derive Jobs
+and model, and the sentinel `zz99sentinel9zz` was invented for this run and appears only in the book the test built.
+The message in the stored error was produced by that fit's own holdout, so the template's rows could not have supplied
+the sentinel. This is a reading of the test's construction; the template's blobs were not searched for the string.
+
 The stored message read: `factor 'area' carries level(s) ['zz99sentinel9zz'] that the fitted model never saw, so they have no
 code in its persisted encoding map (FR-131).` So the answer to "is `GbmFitError` level text persisted today" is **yes, in
 `JobError.message` and in the process log, and not in the persisted job logs**, which confirms the trace above. The level
