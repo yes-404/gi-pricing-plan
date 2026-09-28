@@ -573,7 +573,9 @@ def test_known_limit_a_band_narrower_than_the_grid_spacing_may_not_be_detected()
     grid, so an inversion narrower than the spacing between grid and sampled points can pass.
     This test PINS that weakness (OQ-9304 is the way out: pin Bandings with an input-to-band
     link so `grid: banding-edges` becomes possible). It must be deleted, not weakened, when
-    that lands."""
+    that lands. The sampled points depend on the suite's seed and the input's name only, so
+    they are the SAME for every base context: the grid is one fixed ten-point set, and a band
+    that falls between its points is missed for every base."""
     bundle = _variant(risk_expr=_BAND_RISK.format(lo=45, hi=47))
     run, _ = run_regression(bundle, _suite([_UP], seed=5), rating_version_ref=_REF, now=_now)
     (up,) = run.property_results
@@ -653,3 +655,41 @@ def test_run_ladder_reconciles_fails_when_the_ladder_has_no_risk_premium_rung() 
     run, result, _ = _only_failure(bad, prop)
     assert (result.status, run.overall) == ("fail", "fail")
     assert _only_failure(_variant(risk_expr="driver_age + 60"), prop)[1].status == "pass"
+
+
+@pytest.mark.req("FR-261")
+def test_property_monotone_with_an_empty_range_is_refused_by_name_before_generation(
+    bundle: CompiledBundle, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A lone `lower` above the contract's max leaves nothing to sweep: refused by input name
+    before generation, never a raw `randint` error inside the Job."""
+    from pricing_core.rating import testing
+
+    def boom(*a: Any, **k: Any) -> Any:
+        raise AssertionError("generation must not start")
+
+    monkeypatch.setattr(testing, "generate_contexts", boom)
+    suite = _suite([_prop("mono-range", kind="monotone", input="driver_age",
+                          direction="increasing", lower="200")])
+    with pytest.raises(ValueError, match=r"driver_age.*empty"):
+        run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.parametrize(("field_kw", "check_kw"), [
+    ({"type": "int", "min": 17, "max": 99}, {"upper": "10"}),          # lone upper below min
+    ({"type": "decimal", "min": "0.004", "max": "0.006"}, {}),          # no 2-place value
+    ({"type": "decimal", "min": 0, "max": 5}, {"lower": "5.004", "upper": "5.006"}),
+])
+def test_monotone_field_refuses_an_empty_or_unquantisable_range(
+    field_kw: dict[str, Any], check_kw: dict[str, Any]
+) -> None:
+    from model_schema.rating import InputContractField
+    from model_schema.regression import MonotoneInInput
+    from pricing_core.rating.properties import monotone_field
+
+    field = InputContractField.model_validate({"name": "x", **field_kw})
+    check = MonotoneInInput.model_validate(
+        {"kind": "monotone", "input": "x", "direction": "increasing", **check_kw})
+    with pytest.raises(ValueError, match=r"x.*(empty|two-place)"):
+        monotone_field([field], check)

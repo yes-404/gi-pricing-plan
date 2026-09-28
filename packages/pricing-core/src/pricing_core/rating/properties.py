@@ -135,15 +135,43 @@ def monotone_field(
             f"monotone input {check.input!r} has no range: declare `lower` and `upper`, or "
             "`min` and `max` on the input contract"
         )
+    _swept_range(field, check)  # refuses an empty or unquantisable range, by name
     return field
 
 
 def _bounds(field: InputContractField, check: MonotoneInInput) -> tuple[Decimal, Decimal] | None:
-    low = Decimal(check.lower) if check.lower is not None else field.min
-    high = Decimal(check.upper) if check.upper is not None else field.max
-    if low is None or high is None:
+    """The property's range intersected with the contract's own (`min`, `max`), or `None`
+    when neither the property nor the contract gives one end."""
+    lows = [b for b in (Decimal(check.lower) if check.lower is not None else None, field.min)
+            if b is not None]
+    highs = [b for b in (Decimal(check.upper) if check.upper is not None else None, field.max)
+             if b is not None]
+    if not lows or not highs:
         return None
-    return Decimal(low), Decimal(high)
+    return max(Decimal(b) for b in lows), min(Decimal(b) for b in highs)
+
+
+def _swept_range(field: InputContractField, check: MonotoneInInput) -> tuple[Any, Any]:
+    """The lowest and highest value a sweep can take, on the input's own lattice (integers,
+    or cents), refusing by name a range with none: empty after the intersection, or with no
+    two-place decimal value between its ends."""
+    bounds = _bounds(field, check)
+    assert bounds is not None  # `monotone_field` refused otherwise
+    low, high = bounds
+    if field.type is RatingInputType.INT:
+        lo, hi = int(low.to_integral_value(ROUND_CEILING)), int(high.to_integral_value(ROUND_FLOOR))
+        if lo > hi:
+            raise ValueError(f"monotone input {field.name!r}: the range {low}..{high} is empty")
+        return lo, hi
+    cent = Decimal("0.01")
+    lo_c = low.quantize(cent, rounding=ROUND_CEILING)
+    hi_c = high.quantize(cent, rounding=ROUND_FLOOR)
+    if lo_c > hi_c:
+        raise ValueError(
+            f"monotone input {field.name!r}: no two-place decimal value between {low} and {high}"
+            " (the range is empty)"
+        )
+    return lo_c, hi_c
 
 
 #: The sampled points added to the uniform grid, fixed here and recorded as the run's `grid`
@@ -159,21 +187,16 @@ def monotone_grid(field: InputContractField, check: MonotoneInInput, seed: int) 
     **Weaker than band edges** (DP-S3-6): the bundle pins no Banding, so no edge is known
     and an inversion narrower than the spacing between these points may not be detected.
     """
-    bounds = _bounds(field, check)
-    assert bounds is not None  # `monotone_field` refused otherwise
-    low, high = bounds
+    lo, hi = _swept_range(field, check)
     rng = random.Random(f"{seed}:{field.name}")
     if field.type is RatingInputType.INT:
-        lo, hi = int(low), int(high)
         uniform = [lo + (hi - lo) * i // (_GRID_POINTS - 1) for i in range(_GRID_POINTS)]
         sampled = [rng.randint(lo, hi) for _ in range(_SAMPLED_POINTS)]
         return sorted(set(uniform) | set(sampled))
     cent = Decimal("0.01")
-    lo_c = low.quantize(cent, rounding=ROUND_CEILING)
-    hi_c = high.quantize(cent, rounding=ROUND_FLOOR)
-    cents = int((hi_c - lo_c) / cent)
-    uniform_d = [lo_c + (cents * i // (_GRID_POINTS - 1)) * cent for i in range(_GRID_POINTS)]
-    sampled_d = [lo_c + rng.randint(0, cents) * cent for _ in range(_SAMPLED_POINTS)]
+    cents = int((hi - lo) / cent)
+    uniform_d = [lo + (cents * i // (_GRID_POINTS - 1)) * cent for i in range(_GRID_POINTS)]
+    sampled_d = [lo + rng.randint(0, cents) * cent for _ in range(_SAMPLED_POINTS)]
     return sorted(set(uniform_d) | set(sampled_d))
 
 
