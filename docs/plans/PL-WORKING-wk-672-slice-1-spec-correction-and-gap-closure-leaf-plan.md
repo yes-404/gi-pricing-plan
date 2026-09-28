@@ -19,7 +19,9 @@ relates: [PL-930, RL-1172, CR-932, CR-925]
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. The executor also binds `python-test` (requirement markers, negative tests) and `dev-commands` (the gate and its traps), and reads `docs/plans/README.md`'s five unchecked conventions before its first step.
 
-**Goal:** Open WK-672 by making its roadmap charter name what its three ids cover, declaring
+## Goal
+
+Open WK-672 by making its roadmap charter name what its three ids cover, declaring
 `RegressionRun` in `03` §4, registering `GOLDEN_QUOTE_MISMATCH`, and correcting one wrong
 scope-out label — the spec-change slice every later WK-672 slice builds against.
 
@@ -208,7 +210,9 @@ other and run in the order written, each with its own commit.
 
 ---
 
-## Task 1: Correct the WK-672 and WK-675 roadmap sections
+## Tasks
+
+### Task 1: Correct the WK-672 and WK-675 roadmap sections
 
 **Files:**
 - Modify: `docs/roadmap.md` (the `### WK-672` section, heading at `:623`; the `### WK-675`
@@ -266,7 +270,7 @@ git add docs/roadmap.md
 git commit -m "docs(roadmap): WK-672 charter named against FR-260, FR-261, FR-262; WK-675 consumes score/compare (RL-1172)"
 ```
 
-## Task 2: Declare `RegressionRun` in `03` §4.9
+### Task 2: Declare `RegressionRun` in `03` §4.9
 
 **Files:**
 - Modify: `docs/specs/03-rating-engine.md` (new `### 4.9`, after §4.8's last paragraph and
@@ -349,7 +353,7 @@ git add docs/specs/03-rating-engine.md
 git commit -m "docs(spec): declare RegressionRun in 03 section 4.9, matching its hand-authored contract"
 ```
 
-## Task 3: Register `GOLDEN_QUOTE_MISMATCH`, test-first
+### Task 3: Register `GOLDEN_QUOTE_MISMATCH`, test-first
 
 **Files:**
 - Modify: `backend/src/app/errors.py` (inside `RATING_ERROR_CODES`, `:275-341`; after
@@ -424,7 +428,7 @@ git add backend/src/app/errors.py backend/tests/test_errors.py
 git commit -m "feat(rating): register GOLDEN_QUOTE_MISMATCH ahead of its Slice 2 raiser (FR-260)"
 ```
 
-## Task 4: Correct the `regression-suite` scope-out label
+### Task 4: Correct the `regression-suite` scope-out label
 
 **Files:**
 - Modify: `backend/tests/test_contracts.py:89` (`ONE_SIDED_SLUGS`, opened at `:67`)
@@ -460,7 +464,7 @@ git add backend/tests/test_contracts.py
 git commit -m "test(contracts): correct the regression-suite scope-out label to 03 and WK-672 (RL-1172)"
 ```
 
-## Task 5: The slice gate and the ledger
+### Task 5: The slice gate and the ledger
 
 - [ ] **Step 1:** Run the full two-half gate per `dev-commands` (acceptance item 6), each
   process started with `env -C <worktree>`; record every exit code and the `HEAD` in the
