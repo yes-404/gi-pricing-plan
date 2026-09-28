@@ -196,8 +196,11 @@ used, because the load went over 12 during the run. The same harness was re-run 
 under the gate (below).
 
 **Verdict, criterion 1: PASS**, with a stated limit. The limit is headless SwiftShader,
-not a user's GPU. Pan is about 2× the criterion. Zoom through the renderer is about 2×.
-Wheel zoom reaches the harness ceiling of 30 fps, and every event is drawn.
+not a user's GPU. Pan is about 2× the criterion. The zoom limb is met by the
+programmatic zoom and pan transition at 59.8–59.9 fps, about 2× the criterion. Wheel zoom
+at 29.9–30.0 fps is input-rate-bound, with one frame per dispatched event (240 of 240). It
+is not counted as a ≥ 30 fps measurement in either direction. This follows the deputy's
+dated line of 12:25:21 BST, quoted under Decision.
 
 ### Criterion 2 — a connection check under 50 ms at 200 nodes
 
@@ -290,8 +293,10 @@ identical bytes, so the build is deterministic.
 ## Verdict — the executor's proposal
 
 **PASS on all four criteria.** The fps figures were measured on the Vite dev build under
-headless SwiftShader software rendering, which is a limit of this measurement. The wheel
-figure is the harness's input-dispatch ceiling, shown by the blank-page control.
+headless SwiftShader software rendering, which is a limit of this measurement. The zoom
+limb rests on the programmatic zoom and pan transition. The wheel figure is
+input-rate-bound, as the blank-page control shows, and it is not counted as an fps
+measurement.
 Recommendation: adopt Vue Flow for WK-675's designer. Before any designer code lands,
 the items under "What remains" apply.
 
@@ -326,6 +331,23 @@ Given by the maintainer's delegation (28 Sep), against my criterion of 11:33:12 
 Salvage `a3862e01` and a clean box (no F2, chrome or vite process; load 1.54) are noted.
 ```
 
+The deputy's dated line on this decision, restating its fps ground on the corrected
+figures, is quoted whole from the same file:
+
+```text
+## 2026-09-28 12:25:21 BST · deputy · F2 decision: a dated line restating its fps ground on spike-f2's corrected figures. The PASS stands (answers your 12:24:40)
+
+**The line, text of record. #834 appends it after my 12:13:47 quote, fenced:**
+
+> *Amended 2026-09-28 12:25:21 BST by the deputy, on spike-f2's three self-corrections.*
+> **(1) Figures:** the decision quoted the earlier N=5 set. **The final gated set (12:13–12:20 BST) governs:** pan-drag **59.2–59.9 fps**, browser `isValidConnection` **max 1.3 ms**. Both remain far inside the criterion.
+> **(2) The wheel-zoom ground is restated.** The decision said the blank-page control gives "the same" per-event time. **It does not:** 29.8–29.9 ms per event blank, against 33.3–33.4 ms on the designer, so the designer adds ~3.5 ms per wheel event. The zoom limb of the criterion is met by **programmatic zoom/pan at 59.8–59.9 fps**. Wheel zoom at 29.9–30.0 fps is **input-rate-bound** (one frame per dispatched event, 240 of 240), not render-bound, and the ~3.5 ms the designer adds fits well within a 33 ms frame. It is **not** counted as a ≥ 30 fps measurement in either direction.
+> **(3)** WK-675's designer slice re-measures wheel zoom with an input source faster than one event per ~30 ms, or states that the harness cannot, in its "what remains". This joins condition 5's dev-build re-measure only if a production build is ever the one measured.
+> **The PASS and conditions 1–5 are unchanged.**
+
+**The clock correction** (`uptime` prints UTC, and the re-run was 12:13–12:20 BST) is noted. Spike-f2's catching its own "the same" is exactly the kind of correction a record should carry.
+```
+
 **Condition 5 is answered in the Method section:** the fps were measured on the **Vite
 dev build**, so there is no deviation from the criterion.
 
@@ -357,6 +379,9 @@ These are WK-675 prerequisites and follow-ups. The deputy's conditions 1–4 tak
   deputy's condition 2).
 - **The tech dependency.** `docs/skills-map.md` and the relevant spec's §8 name Vue Flow,
   with its MIT licence, in the PR that adds it (the deputy's condition 4).
+- **Wheel zoom re-measure.** WK-675's designer slice re-measures wheel zoom with an input
+  source faster than one event per ~30 ms, or states in its "what remains" that the
+  harness cannot (the deputy's dated line of 12:25:21 BST, item 3).
 - **Not measured.** fps on a GPU-backed browser. Edge-routing and layout cost for an
   auto-layout, which the spike does not use. Undo and redo. Sub-graph mounting. The
   structural-diff overlay.
