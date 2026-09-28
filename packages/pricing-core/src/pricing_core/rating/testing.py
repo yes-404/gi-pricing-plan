@@ -280,7 +280,10 @@ def run_regression(
             continue
         found, stopped = _shrink(check, contract, n, seed, score, outputs)
         if found is None:  # the generator did not re-find it: report the first failing case
-            found = next(c for c in cases if not case_holds(check, c, score, contract, seed=seed, outputs=outputs))
+            found = next(
+                c for c in cases
+                if not case_holds(check, c, score, contract, seed=seed, outputs=outputs)
+            )
             stopped = True
         counterexamples[prop.name] = found
         results.append(PropertyResult(

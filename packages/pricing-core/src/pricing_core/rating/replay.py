@@ -82,7 +82,11 @@ def replay_cases(
         )
         persisted = cases.counterexamples.get(prop.name)
         failing = next(
-            (c for c in cases.cases if not case_holds(check, c, score, contract, seed=seed, outputs=outputs)), None
+            (
+                c for c in cases.cases
+                if not case_holds(check, c, score, contract, seed=seed, outputs=outputs)
+            ),
+            None,
         )
         persisted_still_fails = persisted is not None and not case_holds(
             check, persisted, score, contract, seed=seed, outputs=outputs
