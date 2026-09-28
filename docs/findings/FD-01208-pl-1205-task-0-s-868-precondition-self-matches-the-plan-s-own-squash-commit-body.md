@@ -1,7 +1,7 @@
 ---
 id: FD-1208
 family: finding
-title: PL-1205 Task 0's #868 precondition self-matches the plan's own squash commit body
+title: "PL-1205 Task 0's #868 precondition self-matches the plan's own squash commit body"
 status: active
 created: 2026-09-28
 owner: auditor
