@@ -60,6 +60,13 @@ Given by delegation of the maintainer (28 Sep). spike-f3 writes it into its RS r
 **Proposed by the spike:** no proposal of spike-f3's own reached a filed artifact before it
 was stopped, so none is carried here.
 
+**An uncommitted draft by spike-f3 exists and was excluded.** It is preserved by the lead at
+`refs/salvage/2026-09-28/spike-f3-draft` = `d7d4e2bc`, and it is not used or quoted here.
+The lead ruled it inadmissible:
+- its timing table comes from cost runs that were killed or launched against the load
+  orders;
+- its N=2 and `glum`-version claims are not in the salvaged evidence.
+
 ## Method
 
 Everything below is read from the salvage ref `refs/salvage/2026-09-28/spike-f3` =
