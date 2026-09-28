@@ -255,6 +255,9 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # refused rather than approved unchecked.
         "AUTHOR_CANNOT_APPROVE",
         "APPROVAL_AUTHOR_UNRESOLVED",
+        # `06` FR-351: only a version in its review state can be put to a decision. The
+        # generic route refuses any other, naming the state; a decision hook refuses too.
+        "APPROVAL_SUBJECT_NOT_IN_REVIEW",
         "DUPLICATE_APPROVER",
         "EVIDENCE_INCOMPLETE",
         "POLICY_BELOW_EVIDENCE_FLOOR",

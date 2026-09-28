@@ -25,6 +25,7 @@ from app.platform import reference as reference_service
 from app.platform.blobs import BlobStore
 from app.platform.modelling import to_model
 from model_schema import (
+    ApprovalStatus,
     ArtifactRef,
     BundleMetadata,
     GbmFitResult,
@@ -280,7 +281,18 @@ async def apply_approval_decision(
     if row is None:
         return None
 
-    row.status = RatingVersionStatus.APPROVED.value
+    # What the decided request means for the version, as the model's, objective's and
+    # metric's hooks read it. Until 2026-09-28 this hook set `approved` after **every**
+    # decision — a rejection, a request for changes, and the first of the policy's two
+    # approvals alike — and from any status (the approval status bypass).
+    target = _target_status(ApprovalStatus(request.status))
+    if target is None:
+        return row  # still in review: one approval of two moves nothing
+    # `06` FR-351: only a version in review moves, checked on the row this transaction
+    # holds locked, so the route's refusal is not the only guard.
+    approvals.require_in_review(ref, row.status)
+    before = row.status
+    row.status = target.value
     row.updated_at = func.now()
     await session.flush()
     await audit.record(
@@ -288,12 +300,31 @@ async def apply_approval_decision(
         workspace_id=workspace_id,
         actor=actor,
         source=JobSource.API,
-        action="rating_version.approved",
+        action=f"rating_version.{_ACTION[target]}",
         entity_ref=f"rating_version:{ref.slug}@{ref.version}",
-        before={"status": RatingVersionStatus.REVIEW.value},
-        after={"status": RatingVersionStatus.APPROVED.value},
+        # The row's own prior state, never a literal: this line once recorded `review`
+        # whatever the version had been.
+        before={"status": before},
+        after={"status": target.value},
     )
     return row
+
+
+def _target_status(request_status: ApprovalStatus) -> RatingVersionStatus | None:
+    """`approved` on an approved request; `draft` when the request comes back, as `06`
+    FR-355 says for every artifact without a reason to differ; nothing while it is open."""
+    return {
+        ApprovalStatus.APPROVED: RatingVersionStatus.APPROVED,
+        ApprovalStatus.CHANGES_REQUESTED: RatingVersionStatus.DRAFT,
+        ApprovalStatus.REJECTED: RatingVersionStatus.DRAFT,
+        ApprovalStatus.WITHDRAWN: RatingVersionStatus.DRAFT,
+    }.get(request_status)
+
+
+_ACTION = {
+    RatingVersionStatus.APPROVED: "approved",
+    RatingVersionStatus.DRAFT: "returned_to_draft",
+}
 
 
 async def compile_rating_version(
