@@ -24,8 +24,16 @@ scoring traces, which are NFR-499's quote-input store, are written into that sam
 caller holding `dataset:read`, in **any** workspace, who knows a trace blob's digest, can
 download a trace body. That body carries quote inputs, which the traces API itself serves only
 to `rating:read` holders in the trace's own workspace. The same missing scope applies to every
-other blob (dataset parquet, model and rate-table artifacts). Whether a `dataset:read` holder in
-workspace A can fetch workspace B's dataset blob today is being established by the fix PR.
+other blob.
+
+**There are two exposures.**
+
+1. **Trace bodies, which hold quote inputs,** reach any `dataset:read` holder who has the
+   trace's digest.
+2. **Dataset blobs leak across workspaces.** executor-s1 established this while building the
+   fix, and the lead relayed it. A `dataset:read` holder in workspace A who presents workspace
+   B's dataset digest gets a 307 redirect to B's parquet. That is cross-tenant data, and unlike
+   the trace case, the digest is handed out by the API itself (see below).
 
 ## Evidence
 
@@ -63,6 +71,24 @@ searched at `e6a9ca71`:
   diff artifact's `result.ref` *"is its sha256, fetchable from `/blobs/{sha256}`"*. That is why
   the cross-workspace question for non-trace blobs is live.
 
+## Reachability of a dataset blob digest: exposed by design
+
+Read at `e6a9ca71`:
+
+- **Dataset-version responses.** A Dataset Version carries `tables: tuple[DatasetTable, ...]`
+  (`model_schema/datasets.py:363`), and each `DatasetTable` has
+  `blob: BlobRef | None` (`:256`). `BlobRef.sha256` is the bare-hex content address
+  (`model_schema/refs.py:141`). Any reader of a Dataset Version sees its tables' digests, and
+  with this route, anyone holding `dataset:read` anywhere can use them.
+- **Job results.** `api/rate_tables.py:330` documents a diff Job's `result.ref` as *"its sha256,
+  fetchable from `/blobs/{sha256}`"*. Model and peril artifacts carry `BlobRef`s too
+  (`model_schema/modelling.py:772`, `:1605`, `:1668`; `perils.py:169`).
+- **Trace views.** They return `bundle_hash`. That is the Rating Version's `content_hash`, with a
+  `sha256:` prefix, which `model_schema/rating.py:82–87` distinguishes explicitly from the
+  bundle's blob digest. So it is not a blob address. The lead's relay listed trace views among
+  the exposures; at `e6a9ca71` the auditor finds no blob digest in them. That leaves the trace
+  case at the reachability stated above, and the dataset case exposed by design.
+
 **Past reads cannot be ruled out.** There is no download audit on this route, so this record
 does not claim "no evidence of access".
 
@@ -73,8 +99,9 @@ under the deputy's ruling (a). It is governance/security class, priority 2 in bu
 it is not a Slice of WK-672. It covers:
 
 - the route refusing any blob referenced by a quote-input store, with 404 rather than 403;
-- a written answer on cross-workspace dataset-blob reads, with workspace scoping if that
-  answer is yes;
+- **workspace scoping for every other blob**, since the cross-workspace answer is yes: the
+  digest resolves to an owning artifact in the caller's workspace (any owner suffices, because
+  content addressing can give one blob two owners);
 - negative tests through the route, red first against `e6a9ca71`;
 - the `07` §5.1 route row amended in the same commit;
 - a mutation proof.
