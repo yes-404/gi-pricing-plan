@@ -55,8 +55,10 @@ from model_schema import (
 __all__ = [
     "CREATION_ACTIONS",
     "ArtifactResolver",
+    "EvidenceAuthorResolver",
     "decide",
     "policy_for",
+    "require_in_review",
     "set_policy",
     "submit",
     "to_dict",
@@ -78,6 +80,31 @@ CREATION_ACTIONS: Final[Mapping[str, str]] = {
     "dataset_version": "dataset_version.created",
     "rating_version": "rating_version.created",
 }
+
+
+def require_in_review(
+    artifact_ref: ArtifactRef | str, status: str, reviewable: str = "review"
+) -> None:
+    """Refuse an approval subject that is not in its type's reviewable state (`06` FR-351).
+
+    `review` for every approvable type but `dataset_version`, whose lifecycle has no
+    review state and whose reviewable state is `validated` (FR-351's 2026-09-28 clause).
+
+    `draft → review → approved`: a version reaches review only through its owning module's
+    own submission, which is where that module's gates run (a model's diagnostics, a peril
+    structure's reconciliation, a rating version's evidence). A decision on a version that
+    never got there would skip every one of them. Called by each type's resolver on the
+    generic route and by the decision hooks, so neither guard is the only one.
+    """
+    if status != reviewable:
+        raise PlatformError(
+            "APPROVAL_SUBJECT_NOT_IN_REVIEW",
+            "Only a version in review can be put to a decision",
+            409,
+            f"{artifact_ref} is {status!r}, not {reviewable!r}. `06` FR-351: a version reaches "
+            "its reviewable state through its owning module's own path, and only then can it "
+            "be decided on.",
+        )
 
 
 class ArtifactResolver(Protocol):
@@ -253,6 +280,20 @@ async def submit(
     return row
 
 
+class EvidenceAuthorResolver(Protocol):
+    """Who authored the evidence an approver of this artifact version is shown (`06`
+    FR-353, `03` FR-260): for a Rating Version, every author in its golden-quote delta.
+
+    Supplied by the caller, as `ArtifactResolver` is, so governance imports nothing from
+    the rating module (DEP-1). It raises rather than returning an empty set on a load or
+    parse failure, so a decision is refused rather than made without the check.
+    """
+
+    async def __call__(
+        self, session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+    ) -> set[UUID]: ...
+
+
 async def decide(
     session: AsyncSession,
     *,
@@ -261,9 +302,17 @@ async def decide(
     approver: Principal,
     decision: DecisionKind,
     comment: str | None = None,
+    evidence_authors: EvidenceAuthorResolver | None = None,
 ) -> ApprovalRequestRow:
-    """Record a decision, enforcing separation of duties (FR-353, FR-355)."""
+    """Record a decision, enforcing separation of duties (FR-353, FR-355).
+
+    `evidence_authors` is required for a `rating_version` request: a missing resolver is a
+    programming error, raised as `TypeError` before any decision row (re-audit N1) — never
+    an `assert`, which `python -O` strips.
+    """
     row = await _load(session, workspace_id, request_id)
+    if row.artifact_type == "rating_version" and evidence_authors is None:
+        raise TypeError("decide on a rating_version requires evidence_authors")
 
     if row.status != ApprovalStatus.REVIEW.value:
         raise PlatformError(
@@ -305,6 +354,24 @@ async def decide(
             "`06` FR-353: the approver may be neither the submitter nor the author of the "
             "version under approval.",
         )
+
+    # FR-353, added 2026-09-28 (PL-1189; the deputy's decision on audit finding F4): the
+    # suite delta is the evidence the approver judges, so its author cannot judge it. Not
+    # the general component-author case, which WK-677 owns.
+    if row.artifact_type == "rating_version":
+        assert evidence_authors is not None  # narrowed above; refused before this line
+        authors = await evidence_authors(
+            session, workspace_id=workspace_id,
+            artifact_ref=ArtifactRef.model_validate(row.artifact_ref),
+        )
+        if approver.id in authors:
+            raise PlatformError(
+                "APPROVAL_BY_EVIDENCE_AUTHOR",
+                "An author of a golden-quote change cannot approve",
+                403,
+                f"{row.artifact_ref}'s golden-quote delta lists a change you authored. "
+                "`06` FR-353 and `03` FR-260: the author of the evidence cannot judge it.",
+            )
 
     await rbac.require_permission(
         session,

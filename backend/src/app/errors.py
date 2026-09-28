@@ -255,6 +255,12 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # refused rather than approved unchecked.
         "AUTHOR_CANNOT_APPROVE",
         "APPROVAL_AUTHOR_UNRESOLVED",
+        # `06` FR-353, added 2026-09-28 (PL-1189, the deputy's decision on audit finding F4):
+        # an approver who authored a golden-quote change in the Rating Version's delta.
+        "APPROVAL_BY_EVIDENCE_AUTHOR",
+        # `06` FR-351: only a version in its review state can be put to a decision. The
+        # generic route refuses any other, naming the state; a decision hook refuses too.
+        "APPROVAL_SUBJECT_NOT_IN_REVIEW",
         "DUPLICATE_APPROVER",
         "EVIDENCE_INCOMPLETE",
         "POLICY_BELOW_EVIDENCE_FLOOR",
