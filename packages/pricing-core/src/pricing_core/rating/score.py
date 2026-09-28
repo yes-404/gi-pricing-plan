@@ -956,7 +956,10 @@ def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str
     charged with the requirement id. `NotImplementedError` (a `RuntimeError` subclass) is
     deliberately let through: it marks a genuinely undesigned case `score_one` does not
     catch either, not a per-quote data error."""
-    quote_id = row.get("quote_id")
+    # Stringified: the output column is `String`, and a struct- or list-valued `quote_id` made
+    # the frame build raise a `ComputeError` that echoes the value (NFR-499).
+    raw_quote_id = row.get("quote_id")
+    quote_id = None if raw_quote_id is None else str(raw_quote_id)
     rating_version_ref_str = row.get("rating_version_ref")
     algorithm = bundle.algorithm
     try:

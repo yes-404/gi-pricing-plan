@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import logging
 
+import polars as pl
 import pytest
 from pydantic import BaseModel, ValidationError
+from test_rating_score import _compiled
+from test_rating_score_batch import _contexts, _ctx_to_row
 
-from pricing_core.rating.score import _batch_error_code
+from pricing_core.rating.score import _batch_error_code, score_batch
 from pricing_core.safe_error import safe_error_detail, safe_error_text, safe_exc_info
 
 _SENTINEL = "SENTINEL-quote-input-b81e4f27"
@@ -73,3 +76,20 @@ def test_the_logged_traceback_keeps_the_frames_and_ends_in_the_safe_text() -> No
     assert _SENTINEL not in rendered
     assert "test_the_logged_traceback_keeps_the_frames" in rendered
     assert "driver_age" in rendered
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_nested_quote_id_does_not_fail_the_frame_build_and_leaks_nothing() -> None:
+    """The error row copies the raw `quote_id`. A struct-valued one made `pl.DataFrame(rows,
+    schema=...)` raise `ComputeError: could not append value: {"..."} ...`, echoing the value
+    into an exception outside the per-row isolation. It is now stringified, so the frame
+    builds and the batch scores."""
+    compiled = await _compiled()
+    rows = [_ctx_to_row(c) for c in _contexts(2)]
+    for row in rows:
+        row["quote_id"] = {"id": row["quote_id"], "secret": _SENTINEL}
+    out = score_batch(compiled, pl.DataFrame(rows).lazy()).collect()
+    assert out.height == 2
+    assert out["quote_id"].dtype == pl.String
+    # `QuoteContext` rejects a nested id, per row, and that message carries no value either.
+    assert _SENTINEL not in "".join(m or "" for m in out["error_message"].to_list())
