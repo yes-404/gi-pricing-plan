@@ -14,6 +14,7 @@ import pathlib
 import subprocess
 import sys
 import textwrap
+from typing import Any
 
 import hypothesis
 import pytest
@@ -191,3 +192,33 @@ def test_the_generation_settings_do_not_inherit_the_ambient_profile(profile: str
     assert tuple(s.phases) == tuple(Phase)
     assert s.stateful_step_count == 50
     assert s.backend == "hypothesis"
+
+
+@pytest.mark.req("FR-261")
+def test_the_effective_settings_are_identical_under_ci_and_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The whole effective settings object, field by field, is the same when `CI` is exported
+    (Hypothesis then loads its `ci` profile) as when it is unset."""
+    from hypothesis import settings as hypothesis_settings
+
+    from pricing_core.rating.testing import generation_settings
+
+    fields = ("max_examples", "derandomize", "database", "verbosity", "phases",
+              "stateful_step_count", "report_multiple_bugs", "suppress_health_check",
+              "deadline", "print_blob", "backend")
+
+    def effective(profile: str) -> dict[str, Any]:
+        previous = hypothesis_settings.get_current_profile_name()
+        hypothesis_settings.load_profile(profile)
+        try:
+            s = generation_settings(77)
+        finally:
+            hypothesis_settings.load_profile(previous)
+        return {f: getattr(s, f) for f in fields}
+
+    monkeypatch.setenv("CI", "1")
+    under_ci = effective("ci")
+    monkeypatch.delenv("CI")
+    unset = effective("default")
+    assert under_ci == unset
