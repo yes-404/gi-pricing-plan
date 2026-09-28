@@ -158,8 +158,15 @@ def test_only_an_interaction_may_source_no_columns(factor_type: FactorType) -> N
     """The diagnostics no longer handle a factor with no source column, because the model
     refuses one: `Factor._columns_match_the_type`. If this stops raising, the GBM sweep
     reaches `source_columns[0]` on an empty tuple again."""
+    # The transformation ids are supplied so that the ONLY thing wrong is the empty
+    # `source_columns` -- otherwise the banding/grouping rule refuses first.
+    ids: dict[str, object] = {}
+    if factor_type is FactorType.BANDING:
+        ids["banding_id"] = uuid4()
+    if factor_type is FactorType.GROUPING:
+        ids["grouping_id"] = uuid4()
     with pytest.raises(pydantic.ValidationError, match="names no source_columns"):
-        _factor(type=factor_type, source_columns=())
+        _factor(type=factor_type, source_columns=(), **ids)
 
 
 @pytest.mark.req("FR-177")

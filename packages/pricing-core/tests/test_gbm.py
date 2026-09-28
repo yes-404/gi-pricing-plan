@@ -2270,18 +2270,21 @@ def test_a_sparse_cross_is_measured_jointly_on_its_observed_cells(backend: str) 
     }
     assert sum(p.exposure_share for p in curve.points) == pytest.approx(1.0)
 
-    # Each label is tied to ITS OWN cell: the point's mean is the model's prediction on that
-    # cell's rows, with the operands held at that cell's values (the cross is the only
-    # feature, so the prediction is one number per cell).
+    # Each label is tied to ITS OWN cell. The cross is the only feature, so a cell has one
+    # rate; the model carries an exposure offset, so the point's mean over the whole book is
+    # that cell's rate times the book's mean exposure. The rate is read off the cell's own
+    # rows, scored as they are, with nothing held.
     book = _sparse_crossable_book()
     factors = _crossed()
     fit = fit_gbm(book, _spec(backend, factors=tuple(f.id for f in factors)), factors)
+    book_exposure = float(book["exposure_years"].mean())  # type: ignore[arg-type]
     for point in curve.points:
         area, fuel = point.value.split(" | ")
         rows = book.filter((pl.col("area") == area) & (pl.col("fuel") == fuel))
         assert rows.height > 0
         mu = predict_gbm(fit.result, fit.booster_bytes, rows, factors)
-        assert point.mean_prediction == pytest.approx(float(mu.mean()), rel=1e-6)
+        rate = float((mu.to_numpy() / rows["exposure_years"].to_numpy()).mean())
+        assert point.mean_prediction == pytest.approx(rate * book_exposure, rel=1e-4)
 
 
 @pytest.mark.req("FR-177")
