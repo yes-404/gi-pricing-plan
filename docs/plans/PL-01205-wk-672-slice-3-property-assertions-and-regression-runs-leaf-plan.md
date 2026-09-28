@@ -3,7 +3,7 @@ id: PL-1205
 family: plan
 kind: leaf
 title: WK-672 Slice 3 — Property assertions and regression runs: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-28
 owner: planner
 tree: e6a9ca71a0bef3da41720d20f3f20db73f6a1d80
@@ -54,6 +54,26 @@ No `SL-` row exists, so there is no `slice:` field.
 - §8 (tech dependencies).
 
 Also [`../specs/06-governance.md`](../specs/06-governance.md) FR-364 (the `regression_run` evidence floor) and NFR-499 (`03` §9, RL-917).
+
+## Status
+
+**Activated 2026-09-28 19:50:17 BST (planner, on the deputy's decisions by delegation and RL-1172).**
+This plan was drafted at `e6a9ca71` and minted `PL-1205` against `109cd065` (#866). What changed:
+
+- **Every decision point has a resolver.** DP-S3-1 to DP-S3-4 are the deputy's entry of
+  2026-09-28 18:17:32 BST. Audit finding B1 (the blob route), which amends DP-S3-4's
+  application, is the deputy's entry of 18:24:32 BST.
+  Both are quoted whole under "Decision points". The placement, the synchronous `run_regression`
+  and FR-257 limb (1)'s home rest on `RL-1172` (#829).
+- So this plan moves `draft → active` in this commit, the planner's transition on freeze,
+  under `document-ids.md` §1.6 (the PL map/leaf row) and §1.7, by the one-step route
+  `PL-1189` took. It carries no acceptance line, and none is required.
+  `created:` does not change.
+- **Frozen / dated: 2026-09-28.** It is active once this commit merges. Where this text and a
+  quoted decision or `RL-1172` disagree, the decision governs.
+- **Task 0's first precondition is met at `109cd065`:** Slice 2's code is on main (#867).
+  `testing.py`, `model_schema.regression`, `evaluate_golden_quotes`, `_score_context_sync` and
+  the `regression_suites` registry exist. Task 0b's #868 is the remaining gate before Task 5.
 
 ## Acceptance Standard
 
