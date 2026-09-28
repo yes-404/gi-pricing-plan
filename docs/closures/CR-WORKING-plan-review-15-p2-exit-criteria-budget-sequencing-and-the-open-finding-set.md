@@ -147,36 +147,65 @@ from the FRs each P2 Work covers. The spec §9s are `03` (WK-669 to WK-675), `07
 
 ### The open P2 finding set (G3 and item 10)
 
-**Predicate, runnable at `9f6bfed1`.** The register's rows are
+**Predicate, runnable at `9f6bfed1` from the repository root.** The register's rows are
 `| Finding id | Concerns | Work item | Phase | Decision |`. There is no status, severity or
-owner column, so the owner is read from the Decision cell.
+owner column, so the owner is read from the Decision cell. **The resolved test reuses
+`scripts/register-lint.py`'s own vocabulary**, not a second regex. That is its
+`_opens_with_status` (the `STATUS_PREFIXES` "resolved" and "fixed" at the cell's opening)
+together with its `_STATUS_MARKER` (an emphasised `resolved` or `fixed` anywhere in the
+cell). An `accept` opening is also excluded.
 
 ```python
-import re
-rows = []
-for ln, line in enumerate(open("docs/findings/register.md", encoding="utf-8"), 1):
-    if not line.startswith("|"):
-        continue
-    c = [x.strip() for x in re.split(r"(?<!\\)\|", line.rstrip("\n"))[1:-1]]
-    if len(c) < 5 or c[0] == "Finding id" or set(c[0]) <= set("-: "):
-        continue
-    d = c[4].lstrip("*~ ").lower()
-    closed = d.startswith(("resolved", "accept", "fixed"))
-    p2 = bool(re.search(r"(^|[^0-9])2([^0-9]|$)", c[3]))
-    annotated = re.search(r"\bResolved\b", c[4]) is not None
-    if p2 and not closed and not annotated:
-        rows.append((ln, c[0]))
-print(len(rows))
+import importlib.util, pathlib, re
+spec = importlib.util.spec_from_file_location("rl", "scripts/register-lint.py")
+rl = importlib.util.module_from_spec(spec); spec.loader.exec_module(rl)
+rows, problems = rl.parse_register(pathlib.Path("docs/findings/register.md"))
+assert not problems
+def closed(d):
+    return (rl._opens_with_status(d) or bool(rl._STATUS_MARKER.search(d))
+            or rl._strip_emphasis(d).lower().startswith("accept"))
+p2 = lambda ph: bool(re.search(r"(^|[^0-9])2([^0-9]|$)", ph))
+open_rows = [r for r in rows if p2(r.fields[3]) and not closed(r.fields[4])]
+print(len(rows), len(open_rows))
 ```
 
-**Output: 92.**
-- The register has 155 data rows. Its Phase column reads `2` 134 times, `1b` 20 times and
-  `2/3/4` once.
-- By Decision lead, the rows are: deferred with an owner 55, resolved 38, carry forward 32,
-  accept 17, fix before close 7, fixed 3, split verdict 1, delivered but untested 1, not
-  started 1.
-- F50, F51 and F62 are annotated `Resolved` in place and are excluded. No severity is
-  recorded in the register.
+**Output: `155 91`.**
+
+**Controls, run with the same functions:**
+- **FD-1198** (register line 185, "**Resolved 2026-09-28** by #861") reads **resolved**.
+- **FD-1180** (line 175, "**Resolved 2026-09-28** by #851") reads **resolved**.
+- **FD-1200** (line 188, "**fix before close**") reads **open**.
+
+**The cross-check against each FD file's `status:`.** Every P2 row whose Finding-id cell
+ends in `(FD-n)` was compared with `docs/findings/FD-0nnnn-*.md`'s `status:` line. Two
+disagree, and both are listed for the register pass rather than edited here:
+- FD-1190 (line 177): the register says `accept` ("fixed by PR #855"), and the file says
+  `status: active`.
+- FD-1194 (line 181): the register says `Resolved 2026-09-28` by #841, and the file says
+  `status: active`.
+
+**What moved between the first draft and this predicate:**
+- **The count went from 92 to 91.** One row left the set, **F28** (line 70). It opens
+  "**deferred with an owner — the lead**, for the residuals only", and it carries an
+  emphasised `**Fixed** — P8 …` for its already-fixed items. `register-lint`'s
+  `_STATUS_MARKER` therefore reads the whole row as resolved. F28's residuals are
+  **carried to the lead** all the same (Proposal 13's register pass). The cell is listed
+  there as ambiguous, because one row carries both a live deferral and a fixed marker. No row
+  entered the set.
+- **FD-1198 was never in the set.** The first draft's row labelled "L186 FD-1198" was
+  mislabelled. Line 186 is the **carry row** "FR-353 component authors are not separated
+  from the approver — carried from FD-1198", which is deferred to WK-677 and has no FD id of
+  its own. FD-1198 itself (line 185) is resolved by #861, and the corrected table below says
+  so.
+
+**Other facts about the register:**
+- It has 155 data rows. Its Phase column reads `2` 134 times, `1b` 20 times and `2/3/4`
+  once.
+- No severity is recorded in it.
+- **Stale cell, F34 (line 76):** "in flight on PR #416". At `9f6bfed1`,
+  `gh pr view 416` reads `MERGED 2026-08-30T01:43:51Z` ("W11 Task 1.5 latency harness +
+  Ruling 28 rating_algorithm maturity check"). This is listed for the register pass and not
+  edited here.
 
 **Resolutions.** "Carried" means carried with the owner the register names. "Proposed" is a
 resolution this review asks the maintainer to date. Rows cite their register line at
@@ -197,7 +226,7 @@ resolution this review asks the maintainer to date. Rows cite their register lin
 | L62 | F-W10-1 | W10-3, half resolved | **Proposed:** WK-675 (the rate-table editor slice) |
 | L64 | F-W10-2 | portfolio-dataset integration | **Proposed:** WK-673 (it reads the portfolio) |
 | L67 | F-W10-3 | WK-675 | carried |
-| L76 | F34 | "PR #416" (stale) | **Proposed:** re-verify; carried to WK-1178 |
+| L76 | F34 | "PR #416", stale: merged 2026-08-30 | **Proposed:** the register pass checks whether #416 discharged it; until then carried to WK-1178 |
 | L77 | F35 | none | **Proposed:** WK-674 (G4 b) |
 | L79 | F37 | none | **Proposed:** WK-1178 (G4 c) |
 | L80 | F38 | WK-671 (closed) | **Proposed:** WK-674 (G4 b) |
@@ -211,7 +240,7 @@ resolution this review asks the maintainer to date. Rows cite their register lin
 | L96 | F55 | unowned | **Proposed:** WK-1178, weighed against NFR-499 |
 | L182 | FD-1195 | lead; WK-1178 | carried |
 | L184 | FD-1197 | lead; next permissions slice | carried; see Proposal 3 |
-| L186 | FD-1198 | WK-677 (P3) | carried; the rating-artifact limb is addressed by #861 (merged, and the register cell is not yet annotated), and the component-author limb stays WK-677's |
+| L186 | the FD-1198 carry row (FR-353 component authors; no FD id of its own) | WK-677 (P3) | carried. FD-1198 itself, line 185, is **resolved** by #861 |
 | L187 | FD-1199 | lead | carried; **G3 condition**: triage before exit |
 | L188 | FD-1200 | lead; WK-1178 | **fix before exit** (the WK-1178 approval-status PR); **critical** |
 
@@ -222,7 +251,7 @@ resolution this review asks the maintainer to date. Rows cite their register lin
   F46 and F47;
 - **Proposed** accepted, as the register itself says "fix not required": F40.
 
-**Process and tooling (54).** Each row names the lead with WK-1170 (the create-read-retire
+**Process and tooling (53).** Each row names the lead with WK-1170 (the create-read-retire
 audit), the lead with WK-1169 (the charter), the lead alone, or the maintainer. All are
 **carried** except the eight unowned ones:
 - Carried to WK-1170: F27, F29, F78, F86, F90, F94, F96, F100, F101, F103, F106, F108, F114,
@@ -230,12 +259,12 @@ audit), the lead with WK-1169 (the charter), the lead alone, or the maintainer. 
   FD-1168 and FD-1174.
 - Carried to WK-1169: F31, F73, F74, F75, F97, FD-1151, FD-1153, FD-1156, FD-1161, FD-1162,
   FD-1191 and FD-1192.
-- Carried to the lead: F28, F89, F107, F112, F113, FD-1152 and FD-1154.
+- Carried to the lead: F89, F107, F112, F113, FD-1152 and FD-1154. F28 left the set (see "What moved"), and its residuals stay the lead's.
 - Carried to the maintainer: F63, F93 and FD-1193.
 - **Proposed** WK-1178: F57, F65, F66, F68, F69, F72 and F79, the rows naming no owner or
   only a trigger.
 
-**Counts.** 28 + 10 + 54 = 92. Every row whose register owner is none, a trigger only, a
+**Counts.** 28 + 10 + 53 = 91. Every row whose register owner is none, a trigger only, a
 phase boundary or a closed Work carries a **Proposed** resolution above.
 
 **Maintainer acceptance (the finding resolutions):** _pending — the maintainer's dated line_
@@ -359,6 +388,12 @@ independent as the maintainer ordered, then WK-1170 → WK-1169, with WK-1178 st
   are deployment-platform FRs. Otherwise carry them to P3 by a dated line. Either way a row
   names each.
   **Maintainer acceptance:** _pending — the maintainer's dated line_
+- **13b. A register pass** (the auditor's, not this review's) for the four cells found above:
+  - F34's stale PR #416 (line 76);
+  - F28's mixed deferral and fixed marker (line 70);
+  - FD-1190's and FD-1194's `status: active` files against their closed register cells (lines 177 and 181).
+
+  **Maintainer acceptance:** _pending — the maintainer's dated line_
 - **13. Plan-status staleness.** A plan's `status:` and the INDEX execution column lag its
   real state (for example, `PL-930` stays `active` as the map while its leaf plans execute).
   **Recommendation:** WK-1170 owns an INDEX-derived check. No hand edit.
@@ -410,7 +445,7 @@ Four omissions:
 
 - Every agenda item of the deputy's 17:18:55 entry and of the lead's brief has a written
   proposal.
-- The open P2 finding set is stated by predicate: 92 rows, each with a resolution or a
+- The open P2 finding set is stated by predicate: 91 rows, each with a resolution or a
   proposed one.
 - Every P2 NFR has an owner or a proposed one.
 
