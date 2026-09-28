@@ -2,7 +2,7 @@
 id: FD-9018
 family: finding
 title: A foreground-blocked executor cannot receive a lead stop, and one relaunched its gate detached
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 9fa2b833e00281a36109183a12efc9d7152225e9
@@ -62,3 +62,23 @@ cannot receive a stop, and one relaunched its gate with `setsid`") records it. R
 
 The event that closes this finding is the charter PR merging with all three lines, and the
 auditor reading them in `executor.md` at that merge.
+
+## Resolution
+
+**Resolved 2026-09-28 by #884, merge commit `633c6f34`** (`docs(roles): executor.md — foreground timeout, no
+detached relaunch, gate by grant (WK-1178) (#884)`). Read in `.claude/roles/executor.md` at `633c6f34`:
+
+- **S-11:** a long command runs in the foreground and carries a `timeout`. It takes the second of the two limbs the
+  ruling offered and says why the first (background with a cancel file) is not adopted: S-9 forbids backgrounding. A
+  kill of the process by PID is a lead stop, and the executor reads the message before anything else.
+- **S-12:** never relaunch a killed process detached (no `setsid`, `nohup`, `disown`, or `&` to survive the kill).
+- **S-13:** a full two-half gate starts only after the lead's explicit "gate slot granted" for that head, under the
+  slot `flock`.
+- **S-14 (added):** a force-stopped gate leaves database state, so the next gate uses a recreated test database
+  from the template (which `FD-9022` shows is itself dirty).
+
+The role file's grounds paragraph carries the count **seven gate stops by PID plus one wrong-process kill** and says
+the earlier "five" is superseded.
+
+**Residual:** S-11 bounds how long a foreground call can hold the box. It does not make a foreground-blocked
+executor able to receive a message, so the lead's slot `flock` stays the mechanical control.

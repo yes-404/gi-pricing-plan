@@ -54,21 +54,20 @@ The timestamps (2026-09-17, about 10:00 UTC) predate W37-6's merge (the migratio
 the run's identity. This record did not search shell history or the channel files for it, and the teardown's
 exclusions were not read for `users` in particular.
 
-## Proposed fix
+## Proposed fix, as ruled
 
-1. **A clean, dedicated template:** `gipricing_template`, created once with `createdb` and `alembic upgrade
-   head`, holding no rows outside `alembic_version`, and used only by `-T`. The shared `gipricing` stays
-   what the dev app and demo use, and is never a template.
-2. **A check that fails when the template is dirty:** a test or a script step that asserts every table other
-   than `alembic_version` is empty in `gipricing_template` and that its revision is the migration head. It
-   runs where a tree creates its database, so the collision cannot recur silently.
-3. **#884's S-14 ("recreate from the template")** names `gipricing_template`, and the `dev-commands`
-   skill's `createdb` line changes with it.
+The deputy ruled on 2026-09-28 (relayed by the lead), owner **WK-1178**:
 
-Cleaning `gipricing` itself is not proposed here, because the dev app and demo may use it. The lead or the
-deputy decides that.
+1. **A clean `gipricing_template` at alembic head**, created once with `createdb` and `alembic upgrade head`,
+   holding no rows outside `alembic_version`, and used only by `-T`.
+2. **An emptiness and revision check wherever a tree creates its database:** every table other than
+   `alembic_version` empty, and the revision the migration head. It is named in the `dev-commands` skill and in
+   S-14's `createdb -T` block (`.claude/roles/executor.md`, merged in #884 at `633c6f34`); the template naming in
+   S-14 comes later, in this finding's fix PR.
+3. **`gipricing` is not dropped.** The dev app and demo may use it. Once a grep shows nothing references it, and the
+   grep is quoted in the fix PR, it is **renamed `gipricing_dirty_20260917`**.
 
 ## Disposition
 
-**Deferred with an owner — WK-1178**, proposed. The deputy's call is the owner. Event: the clean template
-exists with its emptiness check, and #884's S-14 and the `dev-commands` skill name it.
+**Deferred with an owner — WK-1178**, by the deputy's ruling. Event: the clean template exists with its check,
+`dev-commands` and S-14 name it, and `gipricing` is renamed after the reference grep.
