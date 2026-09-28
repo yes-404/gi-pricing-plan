@@ -228,15 +228,28 @@ Given by the maintainer's delegation (28 Sep). It is final on the RS record once
 `pricing-core` stays standalone: hypothesis pulls no FastAPI, SQLAlchemy or Redis. S3's PR shows the resolved dependency set, and `lint-imports` stays green. **F4 is off Track D's critical path.** Re-derive the ETA for S3 on this decision. Push the salvage ref `d0f432c5` with the others.
 ```
 
-Two notes on the quoted text, recorded and not resolved here:
+The deputy corrected condition 1 in a later entry in the same channel file. It is quoted verbatim
+below: the heading, then the dated correction line. […] marks omitted text.
+
+```text
+## 2026-09-28 12:06:58 BST · deputy · CORRECTION to my F4 decision (11:54:48), condition 1: I named the wrong file. Both of #832's form choices ACCEPTED (answers your 12:06:31)
+[…]
+**The correction, a dated line. It supersedes the parenthesis in condition 1 and nothing else:**
+
+*Corrected 2026-09-28 12:06:58 BST by the deputy.* Condition 1 said the pin was in `packages/pricing-core/pyproject.toml` ("currently `hypothesis>=6`, dev group only"). That was wrong. At `12431a88`, `git grep -n hypothesis origin/main -- pyproject.toml 'packages/*/pyproject.toml' backend/pyproject.toml` returns only the **root** `pyproject.toml:19` (`"hypothesis>=6",`, the dev group), and 0 hits in pricing-core's. **Condition 1 now reads:** the exact `==` pin is **added** to `packages/pricing-core/pyproject.toml`'s `[project] dependencies` (a new runtime entry). The root dev-group entry is **aligned to the same `==` version**, not removed, because the root test tooling imports it directly. `uv.lock` records the one resolved version. `03` §8 and `docs/skills-map.md` change in the same PR. Conditions 2–6 are unchanged.
+[…]
+```
+
+Two notes on the quoted text:
 - **The ruling's id.** The 11:35:56 entry names the WK-672 opening ruling by the id it
   held before minting. The decision names it by the id it carries in the open PR #829
   (branch `p2-d-rl`), filed there as the WK-672 opening rulings. It is one ruling, not
   two.
-- **Where the pin is.** Condition 1 says the pin is in
-  `packages/pricing-core/pyproject.toml`. At this record's `tree:`, that file does not
-  name `hypothesis`. The `hypothesis>=6` pin is in the root `pyproject.toml`'s
-  `[dependency-groups] dev`.
+- **Where the pin is: resolved by the 12:06:58 correction above.** Condition 1 had put
+  the pin in `packages/pricing-core/pyproject.toml`. At this record's `tree:`, that file
+  does not name `hypothesis`; the `hypothesis>=6` entry is in the root `pyproject.toml`'s
+  `[dependency-groups] dev`. The correction now makes condition 1 add the exact pin to
+  pricing-core's runtime dependencies and align the root dev entry to the same version.
 
 ## What remains
 
@@ -257,10 +270,10 @@ The spike code and its outputs are at `refs/salvage/2026-09-28/spike-f4`, three 
 in a line:
 - `d0f432c5bd3c6a406e998701c493a3c24cb6ad67` holds `spike_f4/harness.py` (all eight
   arms, including `hyp_random`), `spike_f4/run.sh` and run 1's table
-  (`spike_f4/run1.txt`, 35 cells). It was pushed to origin by the lead. **Run 1's
+  (`spike_f4/run1.txt`, 35 cells). **Run 1's
   two-seed negative-control output was read from the terminal and not saved**; run 2's
   five-seed control is saved.
 - `b370c2b3` adds the per-cell time and load stamp to `run.sh`, and run 2's table
   (`spike_f4/run2.txt`, 25 cells).
 - `8596edc61a1656a2e24979387666a13ce6b20734` adds result 4's six output logs
-  (`spike_f4/vers/`). The local ref points here, and it still needs to be pushed.
+  (`spike_f4/vers/`). The ref points here, and it is pushed to origin.
