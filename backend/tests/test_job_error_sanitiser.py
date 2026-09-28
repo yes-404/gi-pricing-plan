@@ -280,3 +280,43 @@ async def test_a_dataframe_library_error_is_stored_as_its_type_only(
     assert _SENTINEL not in caplog.text
     assert _SENTINEL not in await _persisted_logs(database, row.id)
 
+
+@pytest.mark.req("NFR-499")
+async def test_a_third_party_error_wearing_our_code_prefix_is_stored_type_only(
+    database: Database, workspace_id, principal, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Recognition is by class. A library's `ValueError("INPUT_CONTRACT_VIOLATION: <value>")`
+    carries OUR real code prefix and a sentinel; through the Job store it is `ValueError`
+    and nothing else, in `JobError.message`, the persisted logs and the captured log."""
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise ValueError(f"INPUT_CONTRACT_VIOLATION: {_SENTINEL}")
+
+    with caplog.at_level(logging.INFO):
+        row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["message"] == "ValueError"
+    assert _SENTINEL not in caplog.text
+    assert _SENTINEL not in await _persisted_logs(database, row.id)
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_genuine_coded_error_keeps_its_message_through_the_job_store(
+    database: Database, workspace_id, principal
+) -> None:
+    """The positive control: our own `CodedError` is what the allow-list keeps."""
+    from pricing_core.safe_error import CodedError
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise CodedError(
+            "INPUT_CONTRACT_VIOLATION: input 'driver_age' is above the declared maximum 99"
+        )
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["message"] == (
+        "CodedError: INPUT_CONTRACT_VIOLATION: input 'driver_age' is above the declared maximum 99"
+    )
+
