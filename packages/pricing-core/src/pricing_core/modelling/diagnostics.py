@@ -850,6 +850,19 @@ def _importances(result: GbmFitResult, booster: bytes) -> tuple[FeatureImportanc
 DEFAULT_PARTIAL_DEPENDENCE_LEVELS = 20
 
 
+def _shuffled_together(
+    frame: pl.DataFrame, columns: Sequence[str], order: np.ndarray
+) -> pl.DataFrame:
+    """`frame` with every one of `columns` reordered by the **same** `order` (FR-177).
+
+    One shared order permutes the operand *pairs*, which is exactly a permutation of the
+    resolved cross column: the observed cell set is unchanged and nothing the fit never saw
+    is built. Reordering the columns independently would pair each operand with the other's
+    untouched values and manufacture unseen cells (FR-178).
+    """
+    return frame.with_columns([frame[c].gather(order).alias(c) for c in columns])
+
+
 def _permutation_importances(
     result: GbmFitResult,
     booster: bytes,
@@ -929,9 +942,7 @@ def _permutation_importances(
         for repeat in range(repeats):
             rng = np.random.default_rng(seed + index * 1_000 + repeat)
             order = rng.permutation(holdout.height)
-            shuffled = holdout.with_columns(
-                [holdout[c].gather(order).alias(c) for c in columns]
-            )
+            shuffled = _shuffled_together(holdout, columns, order)
             mu = predict_gbm(result, booster, shuffled, factors,
                              bandings=bandings, groupings=groupings)
             scores.append(

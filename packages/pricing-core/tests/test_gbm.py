@@ -2411,3 +2411,49 @@ def test_a_factor_whose_column_the_holdout_lacks_is_recorded_as_omitted(
     )
     assert importances == ()
     assert [(o.feature, o.reason.value) for o in omitted] == [("driv_age", "no_holdout_column")]
+
+
+def _cross_cells(frame: pl.DataFrame, factors: list[Factor]) -> pl.Series:
+    """The cross's resolved column on `frame`, as `predict_gbm` re-derives it."""
+    from pricing_core.modelling.factors import resolve_factors
+
+    matrix = resolve_factors(frame, factors)
+    return matrix.frame[matrix.terms["area_x_fuel"]]
+
+
+@pytest.mark.req("FR-177")
+def test_a_joint_shuffle_is_the_resolved_cross_column_re_indexed() -> None:
+    """FR-177's measured claim: the encoded design a joint shuffle produces is element-wise
+    identical to the fitted one re-indexed by the same permutation, and it stays ONE column
+    wide -- so no operand main effect is re-introduced."""
+    from pricing_core.modelling.diagnostics import _shuffled_together
+    from pricing_core.modelling.factors import resolve_factors
+
+    factors = _crossed()
+    frame = _sparse_crossable_book(n=500)
+    order = np.random.default_rng(7).permutation(frame.height)
+    shuffled = _shuffled_together(frame, ("area", "fuel"), order)
+
+    assert _cross_cells(shuffled, factors).to_list() == (
+        _cross_cells(frame, factors).gather(order).to_list()
+    )
+    assert set(resolve_factors(shuffled, factors).terms) == {"area_x_fuel"}
+
+
+@pytest.mark.req("FR-177")
+def test_a_joint_shuffle_leaves_the_observed_cell_set_unchanged() -> None:
+    """3 observed cells before and after; shuffling ONE operand alone is the control that
+    shows the assertion can fail (it manufactures cells the fit never saw)."""
+    from pricing_core.modelling.diagnostics import _shuffled_together
+
+    factors = _crossed()
+    frame = _sparse_crossable_book(n=500)
+    order = np.random.default_rng(7).permutation(frame.height)
+    before = set(_cross_cells(frame, factors).to_list())
+    assert len(before) == 3
+
+    joint = _shuffled_together(frame, ("area", "fuel"), order)
+    assert set(_cross_cells(joint, factors).to_list()) == before
+
+    alone = _shuffled_together(frame, ("area",), order)
+    assert set(_cross_cells(alone, factors).to_list()) != before
