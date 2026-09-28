@@ -1,5 +1,5 @@
 ---
-id: FD-9014
+id: FD-1206
 family: finding
 title: Dataset ingestion reads any client-supplied blob digest
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [FD-1203, WK-1178]
 ---
 
-# FD-9014 — Dataset ingestion reads any client-supplied blob digest
+# FD-1206 — Dataset ingestion reads any client-supplied blob digest
 
 **Severity: medium-high.** The auditor filed this finding on 2026-09-28, on the lead's
 instruction and the deputy's decision on P1 in his entry in the lead's local channel file

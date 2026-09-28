@@ -1,5 +1,5 @@
 ---
-id: FD-9016
+id: FD-1208
 family: finding
 title: PL-1205 Task 0's #868 precondition self-matches the plan's own squash commit body
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [PL-1205, PL-1189, WK-1178]
 ---
 
-# FD-9016 — PL-1205 Task 0's #868 precondition self-matches the plan's own squash commit body
+# FD-1208 — PL-1205 Task 0's #868 precondition self-matches the plan's own squash commit body
 
 **Severity: low.** The auditor filed this finding on 2026-09-28, on the lead's instruction. The
 planner-side executor (executor-s2) reported it at about 20:24 BST during the hold. It is a

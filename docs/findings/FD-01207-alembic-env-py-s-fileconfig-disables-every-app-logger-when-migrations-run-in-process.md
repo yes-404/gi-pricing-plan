@@ -1,5 +1,5 @@
 ---
-id: FD-9015
+id: FD-1207
 family: finding
 title: Alembic env.py's fileConfig disables every app logger when migrations run in-process
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [LG-1204, WK-1178]
 ---
 
-# FD-9015 — Alembic env.py's fileConfig disables every app logger when migrations run in-process
+# FD-1207 — Alembic env.py's fileConfig disables every app logger when migrations run in-process
 
 **Severity: low.** The auditor filed this finding on 2026-09-28, on the lead's instruction and
 the deputy's MERGE-ACK of #867, which asks for *"the env.py logger fix as a WK-1178 item with an
