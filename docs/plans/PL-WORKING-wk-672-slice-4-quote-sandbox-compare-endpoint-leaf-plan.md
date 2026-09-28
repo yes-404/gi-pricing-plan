@@ -42,7 +42,7 @@ Line numbers are at `origin/main` `f91af639` (#870). Re-read them at the executo
 
 ## Status
 
-**Draft 2026-09-28 21:04 BST (planner-s4).** Filed at `f91af639`, with five open decision points. Every one has a recommendation and no resolver yet; the deputy decides. Nothing in Tasks 1–5 starts before DP-S4-1 to DP-S4-5 carry a dated resolver, except Task 0.
+**Draft 2026-09-28 21:04 BST (planner-s4); resolvers written 2026-09-28 (planner-s4, on the deputy's entry of 21:08:30 BST).** Filed at `f91af639`. DP-S4-1 to DP-S4-5 are all decided as recommended, with conditions, by the deputy's decision by delegation, quoted whole under "Decision points". The conditions are folded into Tasks 1, 3 and 5 and acceptance items 2, 5, 7. The plan stays `draft` and keeps the working id until the lead's freeze and mint turn.
 
 **Where this plan differs from the map plan and the first scope note.**
 - `PL-930:380` still carries the heading *"[BLOCKED on DP1]"* and cites `03` §5.1 at `:596`. Both are stale. DP1 is lifted (`RL-1172` §5, 2026-09-28 11:28:03 BST). The row is at `03:706` at `f91af639`, and `RL-1172`'s own correction of `:596`/`:597` to `:603` has itself drifted since.
@@ -63,7 +63,12 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
    - NFR-499's "FR-262's sandbox is inline" sentence is left unchanged and is now enforced by acceptance item 7.
 
    `python3 scripts/audit-docs.py` adds no failure row.
-2. **The one-step proof (`RL-1172` §5's acceptance).** `uv run pytest packages/pricing-core/tests/test_trace_diff.py -q` passes. For two traces that differ in exactly one step's own definition, exactly one entry of `TraceDiff.steps` has `own_change == True`, and it names that step. The test is red first, and is shown red once more against a deliberately broken `diff_traces` that ignores `produced` (the broken-input proof). DP-S4-2 fixes how downstream steps that consume the changed value are reported.
+2. **The one-step proof, on the deputy's reading (DP-S4-2: "reported as the change").** `uv run pytest packages/pricing-core/tests/test_trace_diff.py -q` passes, and asserts on two hand-built fixtures:
+   1. **Cascade fixture** (the edited step feeds a later step): exactly one entry has `own_change is True`, and it is the edited step.
+   2. In that fixture every other entry has `own_change is False` **and** its `consumed` differs between the two sides.
+   3. **No-downstream fixture** (the edited step feeds nothing that changes): `len(diff.steps) == 1`.
+   4. **Mutation.** With `own_change` forced to `True` for every changed step, assertion 1 goes red; the failing assert line is quoted in the ledger. With `"produced"` dropped from the compared fields, the one-step tests go red too. Neither mutation is committed.
+
 3. **The diff's shape is pinned.** The same file asserts, on hand-built traces:
    - identical traces give `steps == []` and `unchanged == len(steps)`;
    - `elapsed_us` never makes a step differ;
@@ -76,11 +81,11 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
    - a 403 for a principal without the DP-S4-3 permission (and a 401 without a credential);
    - a 404 when either ref names no version, and the problem names which side;
    - a 409 `BUNDLE_COMPILE_FAILED` when either version is not compiled;
-   - the DP-S4-5 outcome when one side raises a per-quote code;
+   - DP-S4-5 (a): when one side raises a per-quote code, a 422 carrying that code, whose problem names the failing side (`base` or `comparison`), asserted for each side;
    - a 422 when the context carries its own `options.rating_version_ref` (DP-S4-3);
    - two identical refs give an empty diff (the positive control).
 6. **The one-step proof at the HTTP layer.** Two compiled versions built from the same algorithm, differing only in one step's rate table row, return a diff whose single `own_change` entry names that step. The test is red first.
-7. **NFR-499: inline, nothing persisted, nothing logged.** With the trace sample rate set to `1.0`, a compare request leaves `scoring_traces` and `jobs` unchanged (row counts before and after are equal), and the route's logs carry no input value (a sentinel input value is absent from every `caplog` record). Both tests are red first against a route that calls `_maybe_sample_trace`, which is the natural copy-paste from `/score`.
+7. **NFR-499: inline, nothing persisted, nothing logged.** With the trace sample rate set to `1.0`, a compare request leaves `scoring_traces` and `jobs` unchanged (row counts before and after are equal), and the route's logs carry no input value (a sentinel input value is absent from every `caplog` record). Both tests drive the **route** through the HTTP client, never the service function (a service-level `caplog` check passes vacuously, S2's G3 lesson, as the deputy's entry states it). The `caplog` test also asserts the capture is non-empty for the request, so an empty capture is not read as silence. Both tests are red first against a route that calls `_maybe_sample_trace`, which is the natural copy-paste from `/score`.
 8. **No outbound validation** (NFR-502, `RL-883`). `grep -n 'response_model\|-> ScoreComparison' backend/src/app/api/score.py` prints nothing for the new route. The response is returned in a raw `Response`, as `/score` does.
 9. **The route publishes its contract.** `docs/contracts/openapi/generated.json` lists `/api/v1/score/compare` with `problems(401, 403, 404, 409, 422)`, and `pnpm --dir frontend generate:api` succeeds and lists the operation. The frontend generated client is VCS-ignored and is not committed.
 10. **The gate.**
@@ -125,13 +130,28 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S4-1 | Where does the diff live? | (a) `diff_traces` is a pure function in `pricing-core`, and its result types are `model-schema` artifacts; (b) the diff is computed in the backend route module, and its types are `model-schema` artifacts; (c) both in the backend | (a): a pure, deterministic function of two traces belongs beside `score_one`. The regression executor and WK-675 can reuse it, and it is testable with hand-built traces and no database, which is what the broken-input proof needs. (b) buries a domain rule in an HTTP module; (c) hand-writes a shape the seam forbids | decision point | yes (Tasks 2, 3) | open |
-| DP-S4-2 | How are steps matched, and what is "changed"? Sub-question: how does the diff treat a downstream step whose input moved because an upstream step changed? | Matching: (a) by `step_id`; (b) by position. Reporting, given (a): (i) every step whose `consumed`, `produced`, `matched`, `violation`, `type` or `label` differs, each marked `own_change`, true when it is added, removed, or changed with **identical** `consumed` (the step saw the same inputs and behaved differently), false when its `consumed` moved; (ii) only the `own_change` steps; (iii) every differing step, no marker | (a) with (i). `step_id` is the author-assigned id of the algorithm step (`score.py:668`, `step_meta` keyed on `step.step_id`), stable across versions of one algorithm; position breaks when a step is inserted. `elapsed_us` is recorded on each side but never compared. **(i) over (ii) and (iii):** a changed rate table changes every downstream step's `consumed`, so (iii) reports a cascade and cannot satisfy `RL-1172` §5's *"exactly that step is reported"* on its own, while (ii) hides how far the change reached. (i) reports the cascade and names the origin. **The deputy should confirm the reading of that acceptance sentence:** under (i), "exactly that step is reported" means exactly one entry has `own_change == True`. Acceptance items 2 and 6 assert that reading | decision point | yes (Tasks 2, 3) | open |
-| DP-S4-3 | The request shape and the permission | Request: (a) `{"context": QuoteContext, "base": ArtifactRef, "comparison": ArtifactRef}`, with a validator refusing a `context` that carries its own `options.rating_version_ref`; (b) two `QuoteContext`s; (c) `context` plus a list of refs. Permission: (i) `rating:read`; (ii) `score:execute`; (iii) a new `score:compare` permission | Request: (a). FR-262 compares *one quote* across versions, so one context and two refs cannot drift into two different quotes, and a context ref that the route would silently overwrite is refused at validation (a 422) rather than ignored. Permission: **(i) `rating:read`, pending the permission-catalogue ruling `FD-1197` is waiting on.** No builtin role holds `score:execute` (`model_schema/permissions.py:58` is in no role set: `READ_PERMISSIONS` at `:83` and the Analyst set at `:113` omit it; `test_score.py:76-92` builds its "may set up but may not score" user on this fact), so (ii) would make the sandbox unusable by any human actuary; Analyst and Auditor hold `rating:read` (`permissions.py:83,113`). The cost of (i): an Auditor can then submit an ad hoc quote. Nothing is stored or logged (Task 5 proves it), so the read-only property FR-346 gives the Auditor holds. (iii) adds a permission with no catalogue ruling to place it | decision point | yes (Tasks 1, 2, 4) | open |
-| DP-S4-4 | Which versions may be compared, and how does the call answer? | (a) any compiled version, `draft` included; an uncompiled one answers 409 `BUNDLE_COMPILE_FAILED`; **200 synchronous**; `trace=True` on both calls; nothing persisted; (b) `approved` only; (c) a 202 Job | (a). FR-262 says "any accessible Rating Version", FR-251 allows what-if on a `draft`, and `RL-880` clause 3 says WK-671 has no environments to restrict on. The route reuses `_compiled_for`, which already raises the two 409s. Two `score_one` calls on one quote are inside `/score`'s own budget class (NFR-454's p99 is per call), so a Job (c) adds a store and an async poll for nothing, and a persisted result would need the NFR-499 requirement the spec says the sandbox does not have | decision point | yes (Task 4) | open |
-| DP-S4-5 | When one side raises a per-quote error (`INPUT_CONTRACT_VIOLATION` and its siblings, FR-255) and the other does not, what does compare answer? | (a) the whole request answers 422 with the code, and the problem names the failing side; (b) 200, with an `error` entry in place of that side's result and no diff | (a). A step diff needs two traces, so (b) would need a partial response shape and a second wire form for the same field. The actuary who wants to see that version B rejects a quote version A accepts gets the code and the side from the problem. (b) is the better sandbox UX. It changes a 422 into a 200, so it is a breaking change if chosen later; the cost of (a) is that the choice is made now | decision point | no (Task 4 may proceed on (a); Task 1 records the answer) | open |
+| DP-S4-1 | Where does the diff live? | (a) `diff_traces` is a pure function in `pricing-core`, and its result types are `model-schema` artifacts; (b) the diff is computed in the backend route module, and its types are `model-schema` artifacts; (c) both in the backend | (a): a pure, deterministic function of two traces belongs beside `score_one`. The regression executor and WK-675 can reuse it, and it is testable with hand-built traces and no database, which is what the broken-input proof needs. (b) buries a domain rule in an HTTP module; (c) hand-writes a shape the seam forbids | decision point | yes (Tasks 2, 3) | **(a)**: the deputy's decision by delegation, 2026-09-28 21:08:30 BST, quoted below. Condition: the result types are `model-schema` artifacts with the contracts regenerated, pricing-core's dependencies unchanged, and the names distinct from FR-219's structural diff |
+| DP-S4-2 | How are steps matched, and what is "changed"? Sub-question: how does the diff treat a downstream step whose input moved because an upstream step changed? | Matching: (a) by `step_id`; (b) by position. Reporting, given (a): (i) every step whose `consumed`, `produced`, `matched`, `violation`, `type` or `label` differs, each marked `own_change`, true when it is added, removed, or changed with **identical** `consumed` (the step saw the same inputs and behaved differently), false when its `consumed` moved; (ii) only the `own_change` steps; (iii) every differing step, no marker | (a) with (i). `step_id` is the author-assigned id of the algorithm step (`score.py:668`, `step_meta` keyed on `step.step_id`), stable across versions of one algorithm; position breaks when a step is inserted. `elapsed_us` is recorded on each side but never compared. **(i) over (ii) and (iii):** a changed rate table changes every downstream step's `consumed`, so (iii) reports a cascade and cannot satisfy `RL-1172` §5's *"exactly that step is reported"* on its own, while (ii) hides how far the change reached. (i) reports the cascade and names the origin. **The deputy should confirm the reading of that acceptance sentence:** under (i), "exactly that step is reported" means exactly one entry has `own_change == True`. Acceptance items 2 and 6 assert that reading | decision point | yes (Tasks 2, 3) | **(a) with (i)**: the deputy's decision by delegation, 2026-09-28 21:08:30 BST, quoted below, with the reading of `RL-1172` "reported as the change" and four assertions (acceptance item 2) |
+| DP-S4-3 | The request shape and the permission | Request: (a) `{"context": QuoteContext, "base": ArtifactRef, "comparison": ArtifactRef}`, with a validator refusing a `context` that carries its own `options.rating_version_ref`; (b) two `QuoteContext`s; (c) `context` plus a list of refs. Permission: (i) `rating:read`; (ii) `score:execute`; (iii) a new `score:compare` permission | Request: (a). FR-262 compares *one quote* across versions, so one context and two refs cannot drift into two different quotes, and a context ref that the route would silently overwrite is refused at validation (a 422) rather than ignored. Permission: **(i) `rating:read`, pending the permission-catalogue ruling `FD-1197` is waiting on.** No builtin role holds `score:execute` (`model_schema/permissions.py:58` is in no role set: `READ_PERMISSIONS` at `:83` and the Analyst set at `:113` omit it; `test_score.py:76-92` builds its "may set up but may not score" user on this fact), so (ii) would make the sandbox unusable by any human actuary; Analyst and Auditor hold `rating:read` (`permissions.py:83,113`). The cost of (i): an Auditor can then submit an ad hoc quote. Nothing is stored or logged (Task 5 proves it), so the read-only property FR-346 gives the Auditor holds. (iii) adds a permission with no catalogue ruling to place it | decision point | yes (Tasks 1, 2, 4) | **request (a), permission (i) `rating:read`**: the deputy's decision by delegation, 2026-09-28 21:08:30 BST, quoted below. Condition: the context is never persisted and never logged, proven by a route-level test |
+| DP-S4-4 | Which versions may be compared, and how does the call answer? | (a) any compiled version, `draft` included; an uncompiled one answers 409 `BUNDLE_COMPILE_FAILED`; **200 synchronous**; `trace=True` on both calls; nothing persisted; (b) `approved` only; (c) a 202 Job | (a). FR-262 says "any accessible Rating Version", FR-251 allows what-if on a `draft`, and `RL-880` clause 3 says WK-671 has no environments to restrict on. The route reuses `_compiled_for`, which already raises the two 409s. Two `score_one` calls on one quote are inside `/score`'s own budget class (NFR-454's p99 is per call), so a Job (c) adds a store and an async poll for nothing, and a persisted result would need the NFR-499 requirement the spec says the sandbox does not have | decision point | yes (Task 4) | **(a)**: the deputy's decision by delegation, 2026-09-28 21:08:30 BST, quoted below |
+| DP-S4-5 | When one side raises a per-quote error (`INPUT_CONTRACT_VIOLATION` and its siblings, FR-255) and the other does not, what does compare answer? | (a) the whole request answers 422 with the code, and the problem names the failing side; (b) 200, with an `error` entry in place of that side's result and no diff | (a). A step diff needs two traces, so (b) would need a partial response shape and a second wire form for the same field. The actuary who wants to see that version B rejects a quote version A accepts gets the code and the side from the problem. (b) is the better sandbox UX. It changes a 422 into a 200, so it is a breaking change if chosen later; the cost of (a) is that the choice is made now | decision point | no (Task 4 may proceed on (a); Task 1 records the answer) | **(a)**: the deputy's decision by delegation, 2026-09-28 21:08:30 BST, quoted below. Condition: the `03` §5.1 compare row states the 422-with-side behaviour in the same commit |
 
-The deputy decides. Task 0 stops the executor if any of DP-S4-1 to DP-S4-4 has no dated resolver.
+The deputy's entry, quoted whole from `channel/to-lead.md` (2026-09-28 21:08:30 BST, "WK-672 S4 DPs decided (#872 PL-WORKING, be988cdd)"):
+
+```text
+- DP-S4-1: (a). `diff_traces` is pure pricing-core, and its result types are model-schema artifacts (CLAUDE.md §2), with contracts regenerated. pricing-core keeps zero FastAPI or SQLAlchemy deps (lint-imports green). It is not FR-219's structural diff, so keep the names distinct.
+- DP-S4-2: (a) with (i). The RL-1172 reading: "reported" means reported as the change. The broken-input proof asserts:
+  1. exactly one entry with `own_change: true`, and it is the edited step;
+  2. every other entry has `own_change: false`, and its `consumed` differs between the two sides (a downstream entry must be explained by a moved input, never listed without cause);
+  3. a second fixture, where the edited step feeds nothing that changes, yields exactly one entry in total;
+  4. a mutation that marks every differing step `own_change: true` turns (1) red.
+- DP-S4-3: request (a), permission (i) `rating:read`, consistent with my RL-9204 ruling (#856: the code's coarse names are P2's record; the fine split goes to WK-676). Condition: the request `context` is never persisted and never logged, with a test in the NFR-499 form that drives the route, not the service. S2's G3 lesson was that a service-level caplog check passes vacuously.
+- DP-S4-4: (a). Any compiled version, `draft` included; uncompiled answers the 409s; 200 sync; `trace=True`; nothing persisted.
+- DP-S4-5: (a). 422 with the code, and the problem names the failing side (`base` or `comparison`). Condition: `03` §5.1's `POST /api/v1/score/compare` row states the 422-with-side behaviour in the same commit, so a later switch to (b) is visibly a breaking change.
+- FR-262's typing at WK-672's close stays as RL-1172 fixed it: backend limb delivered and tested; UI limb reassigned to WK-675.
+```
+
+Task 0 stops the executor if any of these entries is missing from the record the lead names.
 
 ## Tasks
 
@@ -150,10 +170,10 @@ The deputy decides. Task 0 stops the executor if any of DP-S4-1 to DP-S4-4 has n
   - the response, `{"base": <ScoringResult>, "comparison": <ScoringResult>, "diff": {"steps": [...], "unchanged": 11}}`, both results traced;
   - a worked `diff.steps` entry with `step_id`, `change` (`added` | `removed` | `changed`), `changed_fields` (a subset of `type`, `label`, `consumed`, `produced`, `matched`, `violation`), `own_change` and both `TraceStep`s (`null` on the missing side);
   - the prose rules of DP-S4-2: steps match by `step_id`; `elapsed_us` is recorded and never compared; values compare as canonical JSON, so `1` and `1.0` differ; `steps` lists base steps in base order, then added steps in comparison order.
-- [ ] **Step 2, §5.1.** Replace the row's text with the permission (DP-S4-3), the status codes (200; 401; 403; 404; 409 `BUNDLE_COMPILE_FAILED`; 422 with FR-255's per-quote codes or a context carrying its own ref) and *"nothing is persisted or logged (NFR-499)"*, marked `**Amended 2026-09-28**`.
+- [ ] **Step 2, §5.1.** Replace the row's text with the permission (DP-S4-3), the status codes (200; 401; 403; 404; 409 `BUNDLE_COMPILE_FAILED`; 422 with FR-255's per-quote codes or a context carrying its own ref) *"nothing is persisted or logged (NFR-499)"*, and the DP-S4-5 (a) behaviour verbatim in substance: *"a per-quote error on either side answers 422 with that code, and the problem names the failing side (`base` or `comparison`)"*, marked `**Amended 2026-09-28**`. The deputy's condition: this wording lands in the same commit as the route, so a later switch to a 200 with a partial result is visibly a breaking change. Task 1 is therefore committed with Tasks 4 and 5, not before them.
 - [ ] **Step 3, §5.2.** Add to the `pricing_core/rating/` blocks: `def diff_traces(base: Trace, comparison: Trace) -> TraceDiff` in `trace_diff.py`, dated.
 - [ ] **Step 4, FR-262.** Add a dated clarification, with no new id: *"(Clarified 2026-09-28, WK-672 Slice 4, `RL-1172` §5.) The endpoint `POST /api/v1/score/compare` delivers the backend limb: two `score_one` calls and a step-level trace diff, no new evaluator. The Quote Sandbox view is WK-675's."*
-- [ ] **Step 5.** Run `python3 scripts/audit-docs.py` (no new failure row), then commit with Task 2 only if the ledger says so; otherwise commit alone.
+- [ ] **Step 5.** Run `python3 scripts/audit-docs.py` (no new failure row). The commit is the slice's one code PR commit: spec, code, tests and the regenerated contracts land together (`CLAUDE.md` §2).
 
 ### Task 2: `model-schema` — the shapes and the contract
 
@@ -162,7 +182,7 @@ The deputy decides. Task 0 stops the executor if any of DP-S4-1 to DP-S4-4 has n
 - Create: `packages/model-schema/tests/test_scoring_compare.py`; generated `docs/contracts/schemas/generated/score-comparison.schema.json` (by the script).
 
 **Interfaces:**
-- Produces: `ScoreCompareRequest(context: QuoteContext, base: ArtifactRef, comparison: ArtifactRef)`; `StepChange`; `TraceDiff(steps: list[StepChange], unchanged: int)`; `ScoreComparison(base: ScoringResult, comparison: ScoringResult, diff: TraceDiff)`. All `frozen=True, extra="forbid"`.
+- Produces: `ScoreCompareRequest(context: QuoteContext, base: ArtifactRef, comparison: ArtifactRef)`; `StepChange`; `TraceDiff(steps: list[StepChange], unchanged: int)`; `ScoreComparison(base: ScoringResult, comparison: ScoringResult, diff: TraceDiff)`. All `frozen=True, extra="forbid"`. The names stay distinct from FR-219's structural diff (`AlgorithmDiff`, `model_schema/rating.py:539`): `TraceDiff` and `StepChange` describe two executed traces, not two algorithm definitions. `uv run lint-imports` stays green and `packages/pricing-core/pyproject.toml` gains no dependency.
 
 ```python
 StepChangeKind = Literal["added", "removed", "changed"]
@@ -241,9 +261,23 @@ def test_a_change_to_one_steps_own_definition_is_the_one_own_change() -> None:
     other = _trace(_step("s_area"), _step("s_rate", produced={"r": 2}), _step("s_total", consumed={"r": 2}))
     diff = diff_traces(base, other)
     own = [c.step_id for c in diff.steps if c.own_change]
-    assert own == ["s_rate"]
+    assert own == ["s_rate"]  # assertion 1: exactly one own change, the edited step
     assert [c.step_id for c in diff.steps] == ["s_rate", "s_total"]
+    for change in diff.steps:  # assertion 2: every other entry is explained by a moved input
+        if not change.own_change:
+            assert "consumed" in change.changed_fields
+            assert change.base is not None and change.comparison is not None
+            assert change.base.consumed != change.comparison.consumed
     assert diff.unchanged == 1
+
+
+def test_an_edit_that_feeds_nothing_that_changes_is_the_only_entry() -> None:
+    # assertion 3: s_rate's produced value changes but s_total's consumed dict does not
+    # carry it, so nothing downstream differs.
+    base = _trace(_step("s_area"), _step("s_rate", produced={"r": 1}), _step("s_total", consumed={"q": 5}))
+    other = _trace(_step("s_area"), _step("s_rate", produced={"r": 2}), _step("s_total", consumed={"q": 5}))
+    diff = diff_traces(base, other)
+    assert [c.step_id for c in diff.steps] == ["s_rate"]
 
 
 def test_elapsed_time_never_makes_a_step_differ() -> None:
@@ -323,7 +357,10 @@ def diff_traces(base: Trace, comparison: Trace) -> TraceDiff:
 ```
 
   Add `__all__ = ["diff_traces"]`. Run: PASS.
-- [ ] **Step 3, the broken-input proof.** Temporarily drop `"produced"` from `_COMPARED`, run the file, and quote the failing assert lines (the one-step test and the one-and-one-point-zero test must both go red); restore, run green. Do not commit the broken form.
+- [ ] **Step 3, the broken-input proofs (acceptance item 2, assertion 4).** Two mutations, each run, quoted and reverted; neither is committed.
+  1. Force `own_change=True` on every `changed` `StepChange`. The cascade test's assertion 1 must go red (`assert own == ["s_rate"]` fails with both steps listed).
+  2. Drop `"produced"` from `_COMPARED`. The one-step tests and the one-and-one-point-zero test must go red.
+  Restore and run green.
 - [ ] **Step 4.** `uv run mypy` and `uv run lint-imports` (no forbidden import: the module imports `json`, `typing` and `model_schema`). Commit.
 
 ### Task 4: The route
@@ -391,8 +428,9 @@ async def score_compare(
   - no permission gives 403 and no credential 401; a ref naming no version gives 404 naming the side; an uncompiled version gives 409 `BUNDLE_COMPILE_FAILED`;
   - a context violating one version's input contract gives 422 with the per-quote code and the side (DP-S4-5 (a));
   - a context carrying `options.rating_version_ref` gives 422;
-  - with `_set_trace_sample_rate(..., 1.0)`, `scoring_traces` and `jobs` row counts are equal before and after the call;
-  - a sentinel input value (for example `"ZZ99 9ZZ"`) appears in no `caplog` record at `DEBUG` across the call.
+  - with `_set_trace_sample_rate(..., 1.0)`, `scoring_traces` and `jobs` row counts are equal before and after the call, driven through the HTTP client (the deputy's DP-S4-3 condition: the route, not the service);
+  - a sentinel input value (for example `"ZZ99 9ZZ"`) appears in no `caplog` record at `DEBUG` across the HTTP call, and the same capture is shown non-empty for that call (so silence is not vacuous, S2's G3 lesson, as the deputy's entry states it);
+  - the 422 tests assert the problem names `base` or `comparison` for each side.
 - [ ] **Step 3.** Run: `uv run pytest backend/tests/test_score_compare.py -q`. Show the two NFR-499 tests red once against a route that calls `_maybe_sample_trace`, quote the failing assert lines, then revert. Commit.
 
 ### Task 6: The gate and the ledger
