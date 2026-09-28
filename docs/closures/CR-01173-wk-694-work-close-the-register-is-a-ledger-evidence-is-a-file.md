@@ -10,7 +10,7 @@ tree: df8e5811a151a99c7317690faf9278a6dc3400be
 phase: P2
 work: WK-694
 corrected_by: []
-relates: [FD-1177, FD-1178]
+relates: [FD-1174, FD-1175]
 ---
 
 # CR-1173 — WK-694 Work close: the register is a ledger, evidence is a file
@@ -48,7 +48,7 @@ both as read at `df8e5811`.
 | Scope from the spec first | Above: P1–P5, (a) to (e), 15 impact rows |
 | Each deliverable exists and works | The Evidence tables below |
 | The full gate | The docs half only. This close adds no code, and the two scripts' own tests were run (below) |
-| New checks non-trivial | Check 29's red fixtures were read and run; one required broken input is missing (FD-1177) |
+| New checks non-trivial | Check 29's red fixtures were read and run; one required broken input is missing (FD-1174) |
 | NFRs measured | RFC-896 names none |
 | Owed list generated | Two blocks below, and the hand reconciliation they need |
 | Binding plan-review conditions | Plan review 11's acceptance binds row 15 (below) |
@@ -63,7 +63,7 @@ both as read at `df8e5811`.
 |---|---|---|
 | P1 — the grammar in the register header | `docs/findings/register.md`'s header states the decision vocabulary and the ownership shapes, and check 29 holds every row to them | evidenced |
 | P2 — the decay rule | The header says an unowned row that names no event *"decays to the next `CLAUDE.md` §14 plan review"* (`register.md:13`). The check behind it is a length proxy, a known defect: `FD-1023` (register line 128) | evidenced; the defect is deferred (FD-1023) |
-| P3 — `scripts/register-lint.py` in the gate | Three rules are built: grammar, resolution format and decay. Check 29 runs it inside `audit-docs.py`, and `test_check_29_is_wired_into_the_docs_gate` asserts the wiring. **The owner-existence and id-uniqueness rules were not built** | partly delivered; the rest is FD-1177 |
+| P3 — `scripts/register-lint.py` in the gate | Three rules are built: grammar, resolution format and decay. Check 29 runs it inside `audit-docs.py`, and `test_check_29_is_wired_into_the_docs_gate` asserts the wiring. **The owner-existence and id-uniqueness rules were not built** | partly delivered; the rest is FD-1174 |
 | P4 — ledger and evidence split | `docs/findings/README.md` holds the rules. Evidence essays sit beside the register, for example `FD-935`. Migration happens on amendment: `register-lint.py` prints *"94 of 139 row(s) exceed the 1000-character … threshold"* at `df8e5811` | evidenced |
 | P5 — `scripts/register-owed.py` | Built and cited by both close checklists and by the lead's charter (its enter step) | evidenced |
 
@@ -76,7 +76,7 @@ both as read at `df8e5811`.
 | Item | Evidence at `df8e5811` | Verdict |
 |---|---|---|
 | (a) The header states the grammar and decay; every open unowned row names its event | The header does (P1, P2). *"Every … names its event"* is checked only by the length proxy that `FD-1023` reports | evidenced; the check's defect is deferred (FD-1023) |
-| (b) The linter is red on three named broken inputs | Two red fixtures exist: `test_a_decision_outside_the_grammar_is_refused` and `test_a_resolution_marker_with_no_date_or_reference_is_refused`. **There is no fixture for the third input, a nonexistent owner, and no rule for it** | **not met**; deferred with an owner (FD-1177) |
+| (b) The linter is red on three named broken inputs | Two red fixtures exist: `test_a_decision_outside_the_grammar_is_refused` and `test_a_resolution_marker_with_no_date_or_reference_is_refused`. **There is no fixture for the third input, a nonexistent owner, and no rule for it** | **not met**; deferred with an owner (FD-1174) |
 | (c) It runs green on the live register in CI | `docs.yml` runs `python3 scripts/audit-docs.py`, and check 29 is inside it. On a detached copy at `df8e5811`, audit-docs gives rc 0 and *"All checks passed."*. `register-lint.py` reports *"OK (0 violations)"* | evidenced |
 | (d) One new finding landed split, through a real audit | The `timing_ms` finding raised by this Work's own P5 run: its register row (line 103) links `docs/findings/FD-00935-03-4-4-s-timing-ms-example-four-keys-score-one-emits-two.md` | evidenced |
 | (e) One real close's owed list is the script's output, cited with its tree, and reconciles | `CR-1005` §9, *"Verbatim output, command and revision named"*, with one disclosed link deviation. `CR-1065` carries two generated blocks, each naming its revision | evidenced |
@@ -87,7 +87,7 @@ both as read at `df8e5811`.
 |---|---|---|---|
 | 1, 2 | Register header; unowned rows name events | P1 and P2 above | evidenced |
 | 3 | The findings directory and its README | `docs/findings/README.md`, beside the register after the W37 migration | evidenced |
-| 4, 5 | The two scripts and their tests | Above, 45 passed | evidenced (P3 in part, FD-1177) |
+| 4, 5 | The two scripts and their tests | Above, 45 passed | evidenced (P3 in part, FD-1174) |
 | 6 | Gate wiring | Check 29 inside `audit-docs.py`, which `CLAUDE.md` §11's command list runs | evidenced |
 | 7, 8 | Work-item and phase close checklists | Both cite `register-owed.py`, in their Owed list steps | evidenced |
 | 9, 10 | Auditor and lead charters | `.claude/roles/auditor.md` (grammar, essays, run the linter first); `.claude/roles/lead.md` (the `register-owed.py` enter step) | evidenced |
@@ -137,12 +137,12 @@ except the two findings this close files and the known defect `FD-1023`.
 | Register line 105 | The WK-671 close's owed-list sweep | **deferred with an owner — the maintainer** (`CR-1167`). Reopening a Work close is the maintainer's alone. It does not block this close | carried |
 | Register line 106 | Check 29 read 48 of 59 rows while reporting OK | **accept** — fixed and regression-tested (`f99b55d`, #521) | closed |
 | `FD-1023` (register line 128) | The decay rule's check is a length proxy | **deferred with an owner — the lead** (`CR-1167`). Event: the create-read-retire audit's first slice | carried |
-| `FD-1177` (filed here) | P3's owner-existence and id-uniqueness rules, and the third broken input of (b), were never built | **not started; deferred with an owner — the lead**. Event: the first slice of WK-1170, the create-read-retire audit | carried |
-| `FD-1178` (filed here) | Adopted RFCs still read `status: draft`: 6 of 20, including RFC-896 | **deferred with an owner — the lead**. Event: WK-1170's first slice (lifecycle transitions). RFC-896's status is **not** changed by this close | carried |
+| `FD-1174` (filed here) | P3's owner-existence and id-uniqueness rules, and the third broken input of (b), were never built | **not started; deferred with an owner — the lead**. Event: the first slice of WK-1170, the create-read-retire audit | carried |
+| `FD-1175` (filed here) | Adopted RFCs still read `status: draft`: 6 of 20, including RFC-896 | **deferred with an owner — the lead**. Event: WK-1170's first slice (lifecycle transitions). RFC-896's status is **not** changed by this close | carried |
 | Impact row 13 | Open questions never appended | **accept** — ruled directly (`RL-909` to `RL-913`) | closed |
 
 **Taken over by WK-1170** (the create-read-retire audit, first slice): RFC-896 §8 (b), as
-FD-1177; the RFC lifecycle gap, as FD-1178; and the decay check, already routed there as
+FD-1174; the RFC lifecycle gap, as FD-1175; and the decay check, already routed there as
 FD-1023.
 
 **Binding plan-review conditions.** Plan review 11 (`CR-932`) proposal 11.5: *"Accept RFC-896
@@ -163,15 +163,15 @@ that day.
 | Item | §13 verdict | Owner | Event |
 |---|---|---|---|
 | P1, P2, P4, P5 | evidenced | — | — |
-| P3 | delivered in part; the rest **not started, deferred with an owner** (FD-1177) | the lead | WK-1170's first slice |
+| P3 | delivered in part; the rest **not started, deferred with an owner** (FD-1174) | the lead | WK-1170's first slice |
 | (a) | evidenced; its check's defect **deferred with an owner** (FD-1023) | the lead | WK-1170's first slice |
-| (b) | **not met; deferred with an owner** (FD-1177) | the lead | WK-1170's first slice |
+| (b) | **not met; deferred with an owner** (FD-1174) | the lead | WK-1170's first slice |
 | (c), (d), (e) | evidenced | — | — |
 | Impact rows 1–12, 14 | evidenced | — | — |
 | Impact row 13 | accept | — | — |
 | Impact row 15 | accepted deviation (`CR-932` 11.5) | — | — |
 | The WK-671 owed-list row (line 105) | **deferred with an owner** | the maintainer | the maintainer's dated line |
-| FD-1178 | **deferred with an owner** | the lead | WK-1170's first slice |
+| FD-1175 | **deferred with an owner** | the lead | WK-1170's first slice |
 
 No item is left without evidence or a verdict. WK-694's delivery is complete except for
 what the table defers, and each deferral names an owner and an event.
@@ -179,7 +179,7 @@ what the table defers, and each deferral names an owner and an event.
 **The proposed roadmap change** follows WK-697's closed row and is made only once the line
 exists. In the `### WK-694` header block, `status: active` becomes `status: closed`. The row's
 sentence is extended with *"**Closed <date> by the deputy's dated line, by delegation, on
-`CR-1173`**, with RFC-896 §8 (b) deferred to WK-1170 as FD-1177."*
+`CR-1173`**, with RFC-896 §8 (b) deferred to WK-1170 as FD-1174."*
 
 ## Sign-off
 

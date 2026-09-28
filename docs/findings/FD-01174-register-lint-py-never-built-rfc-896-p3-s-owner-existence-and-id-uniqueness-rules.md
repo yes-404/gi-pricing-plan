@@ -1,5 +1,5 @@
 ---
-id: FD-1177
+id: FD-1174
 family: finding
 title: register-lint.py never built RFC-896 P3's owner-existence and id-uniqueness rules
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [RFC-896, CR-1173]
 ---
 
-# FD-1177 — register-lint.py never built RFC-896 P3's owner-existence and id-uniqueness rules
+# FD-1174 — register-lint.py never built RFC-896 P3's owner-existence and id-uniqueness rules
 
 Filed by the auditor on 2026-09-28 in WK-694's closure record (`CR-1173`), on the lead's
 ruling of that day. Read at `df8e5811`.

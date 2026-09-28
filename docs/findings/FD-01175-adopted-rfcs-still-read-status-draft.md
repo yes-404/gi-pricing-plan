@@ -1,5 +1,5 @@
 ---
-id: FD-1178
+id: FD-1175
 family: finding
 title: Adopted RFCs still read status draft
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [RFC-896, RFC-897, RFC-898, PL-900, CR-1173]
 ---
 
-# FD-1178 — Adopted RFCs still read status draft
+# FD-1175 — Adopted RFCs still read status draft
 
 Filed by the auditor on 2026-09-28 in WK-694's closure record (`CR-1173`), on the lead's
 ruling of that day. Read at `df8e5811`.
