@@ -22,8 +22,9 @@ from app.platform import regression_suites as regression_suites_service
 from app.platform.blobs import to_ref
 from app.worker.data_handlers import _actor, _bridge, _workspace
 from app.worker.handlers import HANDLERS, register_handler
+from app.worker.progress import JobBudgetExceededError
 from model_schema import ArtifactRef, JobKind, JobResult, JobSource, cases_log_bytes
-from pricing_core.progress import ProgressCallback
+from pricing_core.progress import JobCancelled, ProgressCallback
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.properties import UnsweepableProperty
 from pricing_core.rating.runtime import load_bundle
@@ -184,6 +185,8 @@ def _rating_regression(parameters: dict[str, Any], callback: ProgressCallback) -
         raise PlatformError(
             "REGRESSION_PROPERTY_INVALID", "Regression property invalid", 422, str(exc)
         ) from exc
+    except (PlatformError, JobCancelled, JobBudgetExceededError):
+        raise  # the runner's own clauses handle these; never re-labelled or withheld
     except Exception as exc:
         # NFR-499: any other exception's message may carry a quote input (Pydantic's
         # `ValidationError` is a `ValueError` and prints `input_value`), and the generic

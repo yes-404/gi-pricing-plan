@@ -417,12 +417,16 @@ def test_an_unsweepable_monotone_that_slipped_past_declaration_is_a_named_job_fa
 
 
 @pytest.mark.req("NFR-499")
-def test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_error(
-    run_world, monkeypatch: pytest.MonkeyPatch
+def test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_error_or_the_logs(
+    run_world, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    capfd: pytest.CaptureFixture[str],
 ) -> None:
     """Pydantic's `ValidationError` is a `ValueError` and its message carries `input_value`:
     a generated or golden quote input. Only `UnsweepableProperty` is the named refusal; every
-    other exception ends the Job with a generic code and a message that carries no value."""
+    other exception ends the Job with a generic code and a message that carries no value —
+    in the Job's error AND in the log line and formatted traceback the worker writes."""
+    import logging
+
     from app.worker import rating_handlers
     from model_schema import QuoteContext
 
@@ -432,6 +436,12 @@ def test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_err
             "effective_date": "2026-01-01", "inputs": {}, "leaked": _SECRET,
         })
 
+    # an in-process alembic run earlier in the session disables existing loggers; re-enable
+    # them so the capture below can see the worker's record
+    for candidate in list(logging.root.manager.loggerDict.values()):
+        if isinstance(candidate, logging.Logger) and candidate.disabled:
+            monkeypatch.setattr(candidate, "disabled", False)
+    caplog.set_level(logging.DEBUG)
     monkeypatch.setattr(rating_handlers, "run_regression", leaking_run)
     w = run_world
     w.make_suite(properties=[{"name": "no-null", "check": {"kind": "no_null_output"}}])
@@ -439,3 +449,31 @@ def test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_err
     assert job.status is JobStatus.FAILED
     assert str(_SECRET) not in repr(job.error)
     assert job.error["code"] != "REGRESSION_PROPERTY_INVALID"
+
+    # the log leg: the capture worked (the withheld message IS there) and carries no value
+    captured = capfd.readouterr()
+    formatted = caplog.text + captured.out + captured.err + "".join(
+        logging.Formatter().formatException(r.exc_info) for r in caplog.records if r.exc_info
+    )
+    assert "details are withheld" in formatted
+    assert str(_SECRET) not in formatted
+
+
+@pytest.mark.req("FR-261")
+def test_a_cancelled_run_ends_the_job_cancelled_not_failed(
+    run_world, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`JobCancelled` (and `PlatformError`, `JobBudgetExceededError`) pass through the
+    handler's generic wrap unchanged, so the runner's own clauses handle them."""
+    from app.worker import rating_handlers
+    from pricing_core.progress import JobCancelled
+
+    def cancelled(*_a: Any, **_k: Any) -> Any:
+        raise JobCancelled("cancelled by the test")
+
+    monkeypatch.setattr(rating_handlers, "run_regression", cancelled)
+    w = run_world
+    w.make_suite(properties=[{"name": "no-null", "check": {"kind": "no_null_output"}}])
+    job = w.run()
+    assert job.status is JobStatus.CANCELLED
+    assert job.error is None
