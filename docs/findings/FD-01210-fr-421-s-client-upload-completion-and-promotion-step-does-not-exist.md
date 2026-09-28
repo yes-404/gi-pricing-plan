@@ -64,5 +64,5 @@ At `origin/main` `5ec47dc4`:
 amendment settles who completes the upload, how the digest is verified server-side, and where the
 owner row is written, and then the code follows. This record proposes that the two docstrings
 above are corrected in the P1 fix PR or in the fix for this finding, so that they stop describing
-a promotion that does not exist. It also proposes that `CR-00721`'s row is left as filed and this
+a promotion that does not exist. It also proposes that `CR-721`'s row is left as filed and this
 record is what corrects the reading of it.
