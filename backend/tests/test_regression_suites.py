@@ -367,3 +367,26 @@ async def test_an_invalid_monotone_bound_is_a_422_at_declaration_and_no_job_exis
             RegressionSuiteRow.workspace_id == workspace_id
         )
         assert not (await session.execute(suites)).scalars().all()
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.parametrize("check", [{"lower": "5"}, {"upper": "5"}], ids=["lone-lower", "lone-upper"])
+async def test_a_lone_monotone_bound_is_accepted_when_the_contract_has_the_other_end(
+    client: TestClient, database: Database, workspace_id: UUID, analyst: Principal,
+    check: dict[str, Any],
+) -> None:
+    from app.platform import rating_algorithms as algorithm_service
+
+    await algorithm_service.create_algorithm(
+        database, workspace_id, analyst.id, _algorithm({"type": "int", "min": 0, "max": 10})
+    )
+    body = _content(algorithm_slug="motor-gb") | {
+        "change_note": "x",
+        "properties": [{"name": "mono-x", "check": {
+            "kind": "monotone", "input": "x", "direction": "increasing", **check}}],
+    }
+    response = client.post(
+        "/api/v1/regression-suites/motor-gb-core/versions", json=body,
+        headers=_headers(analyst.id, workspace_id),
+    )
+    assert response.status_code == 201, response.text

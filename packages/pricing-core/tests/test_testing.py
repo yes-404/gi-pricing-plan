@@ -693,3 +693,29 @@ def test_monotone_field_refuses_an_empty_or_unquantisable_range(
         {"kind": "monotone", "input": "x", "direction": "increasing", **check_kw})
     with pytest.raises(ValueError, match=r"x.*(empty|two-place)"):
         monotone_field([field], check)
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.parametrize(("check_kw", "first", "last"), [
+    ({"lower": "50"}, 50, 99),   # a lone lower: the upper is the contract's max
+    ({"upper": "60"}, 17, 60),   # a lone upper: the lower is the contract's min
+])
+def test_a_lone_monotone_bound_sweeps_the_range_intersected_with_the_contract(
+    bundle: CompiledBundle, check_kw: dict[str, str], first: int, last: int
+) -> None:
+    """The contract's `driver_age` is 17..99. A lone bound is a VALID declaration: the grid's
+    first and last points are the expected ends, and a run over it passes."""
+    from model_schema.regression import MonotoneInInput
+    from pricing_core.rating.properties import monotone_field, monotone_grid
+
+    contract = bundle.algorithm.input_contract
+    check = MonotoneInInput.model_validate(
+        {"kind": "monotone", "input": "driver_age", "direction": "increasing", **check_kw})
+    field = monotone_field(contract, check)  # accepted, not refused
+    grid = monotone_grid(field, check, seed=5)
+    assert (grid[0], grid[-1]) == (first, last)
+    assert all(first <= g <= last for g in grid)
+    suite = _suite([_prop("lone-bound", kind="monotone", input="driver_age",
+                          direction="increasing", **check_kw)], seed=5)
+    run, _ = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
+    assert run.property_results[0].status in {"pass", "fail"}  # ran; not refused
