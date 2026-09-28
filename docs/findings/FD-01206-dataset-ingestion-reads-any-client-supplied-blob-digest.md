@@ -47,7 +47,8 @@ At `4fb07b6c`:
 - **The upload records none either.** `backend/src/app/api/blobs.py:78` `upload_url` issues a
   staging key. Its docstring reads *"The digest is not known until the bytes exist, so the object
   lands on a staging key"*, and the object is promoted to its address on completion (FR-421).
-  The workspace is not captured anywhere along that path.
+  The workspace is not captured anywhere along that path. **Correction, 2026-09-28:** no code
+  performs that promotion (`FD-1210`), so the docstring describes a step that does not exist.
 
 ## Reachability of the digest
 
@@ -59,13 +60,23 @@ was unscoped, the same digests could be used to download directly.
 
 ## Disposition
 
-**Fix in progress — owner the lead.** Event: a WK-1178 PR after #868 (the number follows). The
-deputy chose option (a), with two design conditions:
+**Fix before close — fix in progress, owner the lead.** Event: a WK-1178 PR after #868 (the number
+follows). The deputy decided **DP-P1 (C)** in his entry of 2026-09-28 21:39:48 BST ("DP-P1
+decided: (C); it supersedes my 18:55:39 P1 design conditions 1 and 2 (their premise was
+false)"). That supersedes the 18:55:39 conditions this record first carried, **conditions 1 and
+2**: the owner row written at promotion, and the backfill. Their premise was false, because no
+code promotes a staging object (`FD-1210`). The decision is:
 
-1. **The owner is recorded at the point the digest exists.** The workspace is captured with the
-   staging key when the upload URL is issued, and the (digest, workspace) owner row is written
-   at promotion. Ingest refuses a digest that the caller's workspace neither uploaded nor already
-   owns through a Dataset Version, using the same 404 body as a missing blob.
-2. **Backfill.** The migration backfills owner rows from every existing Dataset Version's
-   `tables` references, and from job results if the allow list uses the same table. The PR
-   shows the backfill count and a positive control: a re-ingest in the owning workspace succeeds.
+1. Ingest, **route and worker**, accepts a digest only under the same rule as
+   `GET /blobs/{sha256}`: refused if a quote-input store references it, and otherwise allowed
+   only if an owner **in the caller's workspace** references it. #868's `_readable_by` moves to a
+   shared platform function, so there is one rule and never two copies. The refusal is the
+   uniform 404, and there is no schema change.
+2. **No owner table and no backfill.** Option (A), building the completion step now, is declined
+   for tonight.
+3. Red-first tests through the route: a cross-workspace dataset digest, a trace digest, and a
+   job-result digest from another workspace. The positive control is a re-ingest in the owning
+   workspace, which succeeds.
+
+No legitimate path is lost, because a first ingest from a client upload cannot work today: nothing
+creates its `BlobRow` (`FD-1210`).
