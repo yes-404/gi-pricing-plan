@@ -65,7 +65,7 @@ Terms from `00-overview.md` §2.3 are used unchanged. Additional terms owned her
 | **Rate Table Version** | An immutable version of one rate table. Rate tables version independently of the algorithm so a pure rate change does not require touching structure. |
 | **Bundle** | The serialised, self-contained artifact a Rating Version compiles to: algorithm + tables + model artifacts + reference slices + input contract. What gets deployed and cached. |
 | **Compiled Bundle** | The bundle transformed into its execution form (a ZEN JDM graph plus loaded tables and boosters), held per worker process once pre-warmed (FR-243). Not itself cached in Redis or content-hash-keyed — only `Bundle` is (FR-239, FR-268). *(Clarified 2026-08-29, WK-671 Slice 2: that denial is of the **distribution** role. A `CompiledBundle` is never what Redis holds and is never addressed by content hash across processes. A per-worker in-process slot may still index the `CompiledBundle` it holds by the `content_hash` of the `Bundle` it was loaded from — which is what FR-243's exposure of that hash exists to make possible, and without which FR-268's "either the old or the new bundle, never a mix" is unverifiable at runtime. Ruled in `docs/rulings/RL-00882-d4-slice-2-builds-a-per-worker-in-process-slot-and-it-is-the-first-cache-of-its-kind-in-this-backend.md` RL-882.)* |
-| **Golden Quote** | A named quote context with an expected premium, stored with a Rating Version. Golden quotes must reproduce exactly before promotion. |
+| **Golden Quote** | A named quote context with an expected premium, stored with a Rating Version. Golden quotes must reproduce exactly before promotion. *(Amended 2026-09-28, `PL-1189`: stored in a versioned Regression Suite bound to a Rating Algorithm by `algorithm_slug`, not inside a Rating Version, which is immutable after `draft`; the Rating Version's evidence pins the suite version it was checked against.)* |
 | **Regression Suite** | A collection of golden quotes plus property assertions (monotonicity, no-negative-premium, bounded relativity) run against a candidate Rating Version. |
 | **Dislocation Run** | Batch re-rating of a fixed portfolio under two Rating Versions, producing the distribution of premium change. |
 | **Premium Ladder** | The ordered decomposition of the final premium: risk premium → loaded premium → office premium → payable premium, with each loading named. The ladder is a first-class output, not a UI presentation choice. |
@@ -174,7 +174,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-257** | A Rating Version cannot reach `approved` without: a passing Regression Suite, a Dislocation Run against the current live version over an agreed portfolio, a change summary (FR-242), and — where the insurer has enabled it — a passing GIPP check (`04-optimisation.md`) (R4). |
 | **FR-258** | **Trace**: on request, scoring returns every step's id, label, consumed values, produced value, matched table row key, and elapsed time, plus the bundle hash and rating version reference. Traces are the same structure in real-time and batch. |
 | **FR-259** | In production, traces are **sampled** (default 1 %, configurable, plus 100 % of declines and errors) and persisted for ≥ 13 months (NFR-459), feeding `05-monitoring.md`. *(Clarified 2026-08-29, WK-671 Slices 3 and 4 — the scope these two opening words already carry, written down because two separate planning documents read this requirement and FR-258 as silent about batch. **Batch scoring contributes nothing to the sampled stream**, so `score_batch` takes no sampling policy: the stream is the production real-time quoting path, which is what §5.1's route and `05` §7's dependency row both call "sampled production traces", and what NFR-500 sizes at 1 % of 50 M annual *quotes*. The division of labour is already decided elsewhere — `05` FR-317's 2026-08-26 amendment (OQ-627) puts full-coverage A/E on a batch re-score of the exposure dataset and, in its own words, *not from traces* — leaving sampling for quote-level metrics. A batch run may still produce traces on request under FR-258, and they are written with that Job's own output and never returned by the production traces route. Ruled in `docs/rulings/INDEX.md#2026-08-29-w11-slices-3-4-rulingsmd` RL-890.)* *(Clarified 2026-08-30, WK-671 Task 4B: what the environment recorded on a sampled trace means, written down because the first implementation derived it from the caller's granted scope. It is the environment the quote was served in — the same target environment FR-250 selects the live Rating Version from, and the one FR-430 (`07`) scopes the presented key to. It stands in for the ScoringTrace's Deployment parent (`00` §4.1) until Deployment exists in WK-674, which is the deferral RL-888 made, so its value must be reconcilable to the Deployment that actually served the quote. It is therefore not derived from the set of environments a Service Account is granted: FR-389 (`07`) grants an account named environments, plural, and FR-430's per-key check presupposes that it may, so the granted set is an authorisation scope while the served environment is a property of the call. A sampled real-time trace always records one; absence is reserved as the signal that a trace was produced on request for a batch run (FR-258, RL-890), so a real-time trace is never written without it. Ruled in `docs/rulings/RL-00916-the-field-is-the-environment-the-quote-was-served-in-the-spec-already-says-so-and-the-branch-does-not-merge-until-it-says-so-too.md` RL-916.)* |
-| **FR-260** | A **Golden Quote** stores a Quote Context and the expected outputs. Promotion re-scores every golden quote and refuses promotion on any mismatch beyond a declared tolerance (default: exact for money). |
+| **FR-260** | A **Golden Quote** stores a Quote Context and the expected outputs. Promotion re-scores every golden quote and refuses promotion on any mismatch beyond a declared tolerance (default: exact for money). *(Amended 2026-09-28, the deputy's DP-S2-1 and DP-S2-2 decisions by delegation, `PL-1189`. (1) The check runs at `POST /api/v1/rating-versions/{id}/submit`. (2) The submission's evidence pins the suite version it used, by content hash. (3) The evidence lists every golden quote added, removed, or whose expected output, tolerance or quote context changed since the suite pinned by the most recently approved Rating Version of the same algorithm. Each change names its author, who is the actor of the creation Audit Event of the suite version that introduced it (`06` FR-368). (4) Where the algorithm has no suite, the evidence says so explicitly (`regression_suite: "none"`, "no golden quotes were checked"), never an empty pass. Whether a suite is required is decided by WK-672 Slice 3.)* |
 | **FR-261** | A **Regression Suite** may also contain property assertions evaluated over generated quote contexts: premium is positive, premium is monotone in a declared input, no output is null, the ladder reconciles (FR-248), and premium is bounded by declared limits. Generation uses hypothesis-style sampling over the input contract with a persisted seed. |
 | **FR-262** | The **Quote Sandbox** lets an actuary score an arbitrary quote against any accessible Rating Version and see the full trace inline, alongside the same quote scored against a comparison version with a step-by-step difference. |
 
@@ -363,17 +363,44 @@ Values are stored as decimal strings, never JSON floats (R2).
     "regression_suite_run_id": "uuid",
     "dislocation_run_id": "uuid",
     "gipp_check_id": "uuid",
-    "structural_diff_blob": "blob:sha256:…"
+    "structural_diff_blob": "blob:sha256:…",
+    "golden_quotes": {
+      "status": "checked",
+      "suite_ref": "regression_suite:motor-gb-core@4",
+      "suite_content_hash": "sha256:…",
+      "bundle_hash": "sha256:…",
+      "results": ["…§4.9 golden_results items…"],
+      "delta": {
+        "baseline_rating_version_ref": "rating_version:motor-gb@26",
+        "baseline_suite_ref": "regression_suite:motor-gb-core@3",
+        "baseline_suite_content_hash": "sha256:…",
+        "changes": [
+          {"name": "young-driver-london", "change": "changed", "changed_fields": ["expected"],
+           "before": {"payable_premium_minor": 112480, "outcome": "quoted"},
+           "after": {"payable_premium_minor": 112900, "outcome": "quoted"},
+           "steps": [{"version": 4, "changed_fields": ["expected"], "author": "…principal uuid…"}]}
+        ]
+      }
+    }
   },
   "approval_request_id": "uuid"
 }
+```
+
+Where the algorithm has no Regression Suite, `evidence.golden_quotes` takes the explicit
+not-checked form instead, never an empty result list that reads as "0 mismatches"
+(FR-260, amended 2026-09-28):
+
+```json
+{"status": "not_checked", "regression_suite": "none", "message": "no golden quotes were checked", "reason": "no_suite_for_algorithm"}
 ```
 
 **Invariants** — `status ≥ approved` ⟹ every `evidence` field required by the workspace
 policy is present and passing (R4, FR-257); every pin resolves to an artifact whose
 status is `approved` or better (FR-20); `bundle.content_hash` is reproducible from the
 pins; every `model_call` step's `mode` equals `model_reference_mode`
-(FR-223).
+(FR-223). *(Added 2026-09-28, `PL-1189`.)* `evidence.golden_quotes` is written only by the
+submit gate (FR-260) and never edited after.
 
 > *(Scoped 2026-08-27, W7-3 — OD1.)* Phase 1b builds the **minimal subset** of this shape:
 > `slug`, `version`, `status` (`draft → review → approved`), `workspace_id`,
@@ -486,20 +513,46 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
 ```json
 {
   "slug": "motor-gb-core",
+  "version": 4,
+  "algorithm_slug": "motor-gb",
+  "change_note": "young-driver-london re-based to the 2026H2 relativities",
+  "content_hash": "sha256:…",
+  "created_at": "2026-09-28T09:00:00Z",
+  "created_by": "…principal uuid…",
   "golden_quotes": [
     {"name": "young-driver-london", "context": {"…QuoteContext…"},
      "expected": {"payable_premium_minor": 112_480, "outcome": "quoted"},
-     "tolerance": {"money_minor": 0}}
+     "tolerance": {"money_minor": 0},
+     "note": null}
   ],
   "properties": [
-    {"name": "premium_positive", "assertion": "payable_premium_minor > 0"},
-    {"name": "monotone_in_age", "assertion": "monotone_decreasing(payable_premium_minor, driver_age, 25, 70)"},
-    {"name": "ladder_reconciles", "assertion": "ladder_reconciled == true"},
-    {"name": "bounded_relativity", "assertion": "payable_premium_minor <= 20 * risk_premium_minor"}
+    {"name": "premium-positive", "check": {"kind": "premium_positive"}},
+    {"name": "monotone-in-age", "check": {"kind": "monotone", "input": "driver_age",
+      "direction": "decreasing", "strict": false, "lower": "25", "upper": "70"}},
+    {"name": "no-null-output", "check": {"kind": "no_null_output"}},
+    {"name": "ladder-reconciles", "check": {"kind": "ladder_reconciles"}},
+    {"name": "premium-bounded", "check": {"kind": "premium_bounded", "lower_minor": 28000, "upper_minor": 2500000}}
   ],
   "generation": {"cases": 5000, "seed": 20260814, "strategy": "input_contract_sampling"}
 }
 ```
+
+*(Corrected 2026-09-28, `RL-1172` item 3c; the deputy's F4 assertion-language ruling;
+`PL-1189`.)* The free-text `assertion` strings are replaced by a structured union of
+FR-261's five classes, discriminated on `check.kind`: `premium_positive`, `monotone`
+(`input`, `direction`, `strict`, optional `lower`/`upper` as decimal strings),
+`no_null_output`, `ladder_reconciles` (FR-248) and `premium_bounded` (`lower_minor`
+and/or `upper_minor`, at least one). This artifact stores them; WK-672 Slice 3 evaluates
+them. The earlier example's relative bound (`20 * risk_premium_minor`) is not one of the
+five classes and is dropped; a bound is absolute, in minor units. `expected` compares
+`payable_premium_minor` (the `payable_premium` ladder rung's `value_minor`) and `outcome`
+only, never `timing_ms` (RL-931). `payable_premium_minor` is null exactly when `outcome`
+is not `quoted`. `content_hash` is `sha256:` over the canonical JSON (sorted keys, no
+whitespace) of the content fields — `algorithm_slug`, `golden_quotes`, `properties`,
+`generation` — so any `expected` or `tolerance` edit changes it. A suite is versioned
+(`POST /api/v1/regression-suites/{slug}/versions`, §5.1), bound to one Rating Algorithm by
+`algorithm_slug` (one suite per algorithm per workspace), not approvable, and every read
+is permission-checked because a golden quote's `context` is a full quote input (NFR-499).
 
 ### 4.8 `score_batch`'s frame contract
 
@@ -583,10 +636,14 @@ column.
 
 *(Added 2026-09-28, WK-672 Slice 1, `PL-1177`. Mints no requirement id: it documents the
 execution record that FR-260's promotion check and FR-261's property run produce, matching
-`docs/contracts/schemas/regression-suite.schema.json`'s `RegressionRun` definition, which
+`docs/contracts/schemas/regression-run.schema.json`'s `RegressionRun` definition, which
 predates this text. That contract is the hand-authored Phase 0 draft; `RL-1172` item 3c
 makes `RegressionRun` a `model-schema` artifact in the slice that first builds it, WK-672
-Slice 3, and this subsection then describes the generated shape.)*
+Slice 3, and this subsection then describes the generated shape.)* *(Amended 2026-09-28,
+WK-672 Slice 2, `PL-1189`: the citation moved from `regression-suite.schema.json` to
+`regression-run.schema.json`, because Slice 2 split that file — the suite became a
+generated `model-schema` artifact and the run definition moved, unchanged, to its own
+hand-authored file.)*
 
 ```json
 {
@@ -636,7 +693,9 @@ evidence reads the run whose `bundle_hash` equals the version's current bundle h
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation; `confirm: true` re-computes the diff and creates the version (FR-235) |
 | `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins (FR-237) |
 | `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-240) |
-| `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-257) |
+| `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-257); golden quotes re-scored and the suite pinned (FR-260). **Amended 2026-09-28** (`PL-1189`) |
+| `POST` | `/api/v1/regression-suites/{slug}/versions` | Create a new Regression Suite version; `rating:write`; **201** (FR-260). **Added 2026-09-28** (`PL-1189`) |
+| `GET` | `/api/v1/regression-suites/{slug}@{version}` | Read a Regression Suite version; `rating:read`; access-controlled per NFR-499 (FR-260). **Added 2026-09-28** (`PL-1189`) |
 | `POST` | `/api/v1/score` | Real-time single quote (FR-250) |
 | `POST` | `/api/v1/score/batch` | **202** Batch re-rate → Job (FR-253) |
 | `POST` | `/api/v1/score/compare` | Score one quote against two versions with a step-level diff (FR-262) |
@@ -768,6 +827,8 @@ def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
                    *, seed: int) -> RegressionRun
 def generate_contexts(contract: Sequence[InputContractField],   # corrected 2026-09-28
                       n: int, seed: int) -> list[QuoteContext]  # (RL-1172); was InputContract
+def evaluate_golden_quotes(bundle: CompiledBundle, golden_quotes: Sequence[GoldenQuote],   # added 2026-09-28
+                           *, rating_version_ref: ArtifactRef) -> list[GoldenQuoteResult]  # (PL-1189)
 
 # pricing_core/money.py — the decimal discipline (R2); path and signatures
 # corrected 2026-08-29 (WK-671 Slice 1, RL-879) — there is no rating/money.py
@@ -819,7 +880,13 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
 > `build_scoring_result` tail as `score_one` (RL-858). The generator is decided on spike
 > F4's record, not here. Both `testing.py` functions live in
 > `pricing-core` and hold no persistence. The backend owns the suite store, the Job and the
-> gates.
+> gates. *(Added 2026-09-28, `PL-1189`, the deputy's DP-S2-3 decision by delegation.)*
+> `evaluate_golden_quotes` is plain `def` on the same synchronous `evaluate()` path as
+> `run_regression` (RL-868, RL-858). It returns one `GoldenQuoteResult` per golden quote,
+> in input order, comparing exactly in integer minor units (FR-273) within each quote's
+> declared tolerance; an engine refusal for one quote becomes that quote's `fail`, never an
+> abort of the rest. `run_regression` composes it; the submit gate (FR-260) calls it
+> directly.
 
 > *(`import_confirmed` added 2026-08-28, DP6 — the confirmation half of FR-235.)*
 > `POST /import` with `confirm: true` re-parses the same upload through the same strict
