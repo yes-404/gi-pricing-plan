@@ -205,6 +205,16 @@ class RegressionSuite(RegressionSuiteContent):
         )
 
 
+class RegressionSuiteVersionCreate(RegressionSuiteContent):
+    """The request body of `POST /api/v1/regression-suites/{slug}/versions` (03 §5.1).
+
+    The content plus the required change note; the slug comes from the path, and the
+    version, hash, author and time are the server's.
+    """
+
+    change_note: str = Field(min_length=1)
+
+
 def suite_content_hash(content: RegressionSuiteContent) -> str:
     """`sha256:` over the canonical JSON of the suite's content fields only."""
     payload = content.model_dump(mode="json", include=set(RegressionSuiteContent.model_fields))
@@ -337,6 +347,7 @@ __all__ = [
     "RegressionProperty",
     "RegressionSuite",
     "RegressionSuiteContent",
+    "RegressionSuiteVersionCreate",
     "Sha256Hash",
     "context_hash",
     "suite_content_hash",
