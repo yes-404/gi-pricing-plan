@@ -1,5 +1,5 @@
 ---
-id: PL-WORKING
+id: PL-1189
 family: plan
 kind: leaf
 title: WK-672 Slice 2 — Golden Quotes and promotion re-scoring: leaf plan
@@ -345,10 +345,10 @@ design every later task implements (`CLAUDE.md` §0). Task 2's shapes feed Tasks
 - Consumes: the deputy's decisions (above), RL-1172 item 3c and the F4 assertion-language ruling.
 - Produces: the declared shapes, routes and signature that Tasks 2–5 implement.
 
-- [ ] **Step 1: Glossary (`03:68`).** Append to the Golden Quote row: *"(Amended 2026-09-28, `PL-WORKING`: stored in a versioned Regression Suite bound to a Rating Algorithm by `algorithm_slug`, not inside a Rating Version, which is immutable after `draft`; the Rating Version's evidence pins the suite version it was checked against.)"*
+- [ ] **Step 1: Glossary (`03:68`).** Append to the Golden Quote row: *"(Amended 2026-09-28, `PL-1189`: stored in a versioned Regression Suite bound to a Rating Algorithm by `algorithm_slug`, not inside a Rating Version, which is immutable after `draft`; the Rating Version's evidence pins the suite version it was checked against.)"*
 - [ ] **Step 2: FR-260 (`03:176`).** Append this dated amendment. It mints no id:
 
-  > *(Amended 2026-09-28, the deputy's DP-S2-1 and DP-S2-2 decisions by delegation, `PL-WORKING`.)*
+  > *(Amended 2026-09-28, the deputy's DP-S2-1 and DP-S2-2 decisions by delegation, `PL-1189`.)*
   >
   > - The check runs at `POST /api/v1/rating-versions/{id}/submit`.
   > - The submission's evidence pins the suite version it used, by content hash.
@@ -369,7 +369,7 @@ design every later task implements (`CLAUDE.md` §0). Task 2's shapes feed Tasks
                              *, rating_version_ref: ArtifactRef) -> list[GoldenQuoteResult]
   ```
   Add a dated sentence to the note below the block. It says the function is plain `def` on the same synchronous `evaluate()` path as `run_regression` (RL-868, RL-858), that it compares exactly in integer minor units, and that `run_regression` composes it (DP-S2-3).
-- [ ] **Step 8: `06` (DP-S2-6).** Add `APPROVAL_BY_EVIDENCE_AUTHOR` to `06`'s error-code list (`06:491`), dated, and add one dated sentence beside FR-353 (as #861 amended it at your tree): *"(Added 2026-09-28, `PL-WORKING`, the deputy's decision on audit finding F4.) For a Rating Version, an approver who authored any golden-quote change listed in the submission's delta (`03` FR-260) is refused with `APPROVAL_BY_EVIDENCE_AUTHOR` (403). This is not the general component-author rule, which WK-677 owns."* Re-read FR-353 at your tree first: #861 amends it.
+- [ ] **Step 8: `06` (DP-S2-6).** Add `APPROVAL_BY_EVIDENCE_AUTHOR` to `06`'s error-code list (`06:491`), dated, and add one dated sentence beside FR-353 (as #861 amended it at your tree): *"(Added 2026-09-28, `PL-1189`, the deputy's decision on audit finding F4.) For a Rating Version, an approver who authored any golden-quote change listed in the submission's delta (`03` FR-260) is refused with `APPROVAL_BY_EVIDENCE_AUTHOR` (403). This is not the general component-author rule, which WK-677 owns."* Re-read FR-353 at your tree first: #861 amends it.
 - [ ] **Step 9:** Run `python3 scripts/audit-docs.py`. It must add no failure row, and every cited FR and NFR is defined. Then commit: `docs(spec): 03 — Regression Suite store, submit-time golden-quote gate, pinned suite and delta (FR-260)`.
 
 ### Task 2: `model-schema` shapes, the generated contract, and the authored-file split
@@ -557,7 +557,7 @@ Every ruling site was checked across narrative, Files, Steps and Acceptance (`do
 - the new migration's revision hash, which Alembic generates;
 - `<rev>` in its filename.
 
-Both are named as such. `PL-WORKING` in Task 1's inserted text is this plan's working id, replaced at the mint by the renumber commit.
+Both are named as such. `PL-1189` in Task 1's inserted text is this plan's own minted id (drafted as a working id and renumbered at its mint turn), so the executor copies it as written.
 
 **3. Literals, checked against the shipped source at `ea6162b9`.** None comes from memory:
 - `MoneyMinor` (`money.py:61`) and `DecimalStr` (exported, `__init__.py:183`);
