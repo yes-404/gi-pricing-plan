@@ -151,6 +151,36 @@ The two of this slice's own defect (`tests/test_repository_invariants.py::test_t
 
 **Earlier attempts, for the record:** a full gate started at 21:44:38 (before the slot rule) and three more starts at ~21:54, ~22:14 and one detached copy were stopped by the lead's stop messages or by me on them; none produced a table and none is quoted here.
 
+## The second gate (T7-2), on the final head
+
+The deputy ruled a full second T7 after the ambient-profile defect (above). Run **alone** on the lead's slot at `HEAD` `ecfbe0e916fba90c155b9991a8781090f47cdf7f`, tree clean, test database recreated from the template first, 1-minute load 2.52 at the start (23:26 BST), `GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_executor-s3`.
+
+**Full gate, `CI` unset** (the dev-commands body, verbatim):
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | pass | exit=0 |
+
+`GATE: pass — 7 of 7 stages passed`; pytest `3704 passed, 3 skipped, 45 warnings in 1208.51s (0:20:08)`. **The wrapper's trailing `GATE-RC=1` is an artefact, not a result:** the wrapper ended with `[ "$got" = "0" ] && flock …; echo "GATE-RC=$?"`, so once the first non-busy slot had run the gate (`got=1`) the `&&` short-circuited and `$?` was the failed test's status. The stage table and the "7 of 7" line are the result; the wrapper now records the gate's own status (`final=$rc`).
+
+**Full suite with `CI=1` exported** (no other change): `3704 passed, 3 skipped, 45 warnings in 1186.90s (0:19:46)`.
+
+**N=5 `packages/pricing-core/tests/test_rating_score.py`**, serial. Preconditions checked in one command at 23:47:07 BST: another member's targeted pytest (PID 2301135) gone, 1-minute load 1.45 (< 6). With `CI=1`: `24 passed in 5.82s`, `5.69s`, `5.70s`, `5.72s`, `5.64s`. With `CI` unset: `24 passed in 5.83s`, `5.76s`, `5.72s`, `5.71s`, `5.70s`. Every run rc 0, load 1.35–1.75, no abort.
+
+**Frontend half, local at `nice -n 10`:** `install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test` (97 files, 603 tests) and `build`: all rc 0.
+
+**The four docs checks on a detached copy of `ecfbe0e9`:** `audit-docs.py` rc 0 (DISCLOSED 848), `doc-id.py check` rc 0, `doc-index.py --check` rc 0 (byte-stable), `register-lint.py` rc 0.
+
+**Counts** (`pytest --collect-only -q`, `nice -n 19`): `origin/main` `633c6f34` 3633; this branch 3707 (+74; 3704 passed + 3 skipped). `git diff --stat origin/main...HEAD` at `ecfbe0e9`: 46 files changed, 5067 insertions(+), 234 deletions(−).
+
+**CI at `ecfbe0e9`:** python `36492342635`, docs `36492342658`, frontend `36492342675`, history-policy `36492342732`: all green.
+
 ## PRs
 
 | PR | Branch | Title | Squash SHA on `main` |
