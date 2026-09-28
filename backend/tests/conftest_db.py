@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import functools
+import hashlib
 import os
 import warnings
 from collections.abc import AsyncIterator, Iterator
@@ -46,13 +47,21 @@ DEFAULT_TEST_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipr
 
 
 def _worktree_database_name() -> str:
-    """`gipricing_<worktree>` -- the same name `dev-commands`'s gate block derives via
-    `WT=$(basename "$PWD")`, computed here from this file's own path
-    (`backend/tests/conftest_db.py`'s great-grandparent is the checkout root) rather than
-    `os.getcwd()`, which a test runner invoked from a different working directory would
-    get wrong silently.
+    """`gipricing_<leaf>_<hash>` -- the same name `dev-commands`'s gate block derives with
+    `WT=$(basename "$PWD" | cut -c1-44)_$(pwd -P | tr -d '\\n' | sha1sum | cut -c1-8)`,
+    computed here from this file's own path (`backend/tests/conftest_db.py`'s
+    great-grandparent is the checkout root) rather than `os.getcwd()`, which a test runner
+    invoked from a different working directory would get wrong silently.
+
+    **The leaf alone is not unique** (FD-1196): every job worktree named `<job>/<member>/tree`
+    derived `gipricing_tree`, so two gates wrote one database. The hash is of the full
+    resolved path, so two checkouts sharing a leaf get different databases. The leaf is cut
+    to 44 characters so the whole name stays within PostgreSQL's 63-byte identifier limit,
+    beyond which the server truncates silently -- and would cut the hash off.
     """
-    return f"gipricing_{Path(__file__).resolve().parents[2].name}"
+    root = Path(__file__).resolve().parents[2]
+    digest = hashlib.sha1(str(root).encode()).hexdigest()[:8]
+    return f"gipricing_{root.name[:44]}_{digest}"
 
 
 def _worktree_database_exists(name: str) -> bool:
