@@ -136,7 +136,7 @@ No code changes.
 - A synchronous engine path already exists: `score_batch` evaluates with `evaluate()`
   (RL-868). The ruling rests on this ground and the one above.
 - **Conditional, amended 2026-09-28 before merge (the deputy's F4):** *if* spike F4
-  chooses `hypothesis` as the generator, its shrink loop, which FR-261's shrunk
+  passes and Slice 3 takes `hypothesis` (item 3c), its shrink loop, which FR-261's shrunk
   counterexample needs, runs through a synchronous property function. That would be a
   third reason for `def`. The ruling does not depend on it.
 - The sync path does not weaken the golden-quote guarantee. It reaches the same
@@ -174,18 +174,26 @@ database, FastAPI or Redis. So it stays in `pricing-core`, and `CLAUDE.md` §2 h
 
 This placement has two consequences, stated so that the slices do not rediscover them:
 
-- **The generator is not ruled here** (amended 2026-09-28 before merge, on the deputy's
-  F4). The choice is `hypothesis` as a `pricing-core` runtime dependency, or the platform's
-  own seeded generator. It is decided on spike F4's RS record, by the deputy.
-  - The deputy recommends the platform's own generator unless the spike shows otherwise.
-  - F4 runs first, and Slice 3 follows its outcome.
-  - Whatever is chosen must reproduce its cases from the persisted `generation.seed`, and
-    must import none of FastAPI, SQLAlchemy or Redis (`CLAUDE.md` §2).
-  - If a runtime dependency results, `03` §8 and `docs/skills-map.md` change in the same
-    PR (`CLAUDE.md` §10).
-  - The deputy's F4 also decides the assertion language: a structured union of FR-261's
-    five classes, as declarative JSON artifacts. That is the deputy's decision, and it is
-    not repeated here as this role's.
+- **`hypothesis` as a `pricing-core` runtime dependency is CONDITIONAL on spike F4.**
+  This condition is the deputy's maintainer decision by delegation, stamped 2026-09-28
+  11:35:56 BST, item 3. This record does not settle the dependency ahead of that
+  measurement. F4 must show both of the following, with a pinned `hypothesis` version and
+  across two processes:
+  - a persisted seed reproduces the same generated cases;
+  - shrinking yields the same minimal counterexample.
+  - **If F4 passes,** Slice 3 takes `hypothesis` as a runtime dependency of `pricing-core`.
+    `03` §8 already names it. `docs/skills-map.md` is checked in the same PR
+    (`CLAUDE.md` §10). The shrinking ground in item 3a then holds.
+  - **If F4 fails,** Slice 3's leaf plan uses a seeded generator of the platform's own.
+    FR-261's "shrunk counterexample" clause is then re-read at Slice 3.
+  - Either way, the generator reproduces its cases from the persisted `generation.seed`
+    and imports none of FastAPI, SQLAlchemy or Redis (`CLAUDE.md` §2).
+- **The property-assertion language is ruled: a structured union of FR-261's five classes,**
+  as declarative JSON artifacts (`CLAUDE.md` §2), with no free-text expressions. This is the
+  deputy's F4 ruling, made by delegation, stamped 2026-09-28 11:33:12 BST. It is the shape
+  of `RegressionSuite.properties` when that artifact is built. `03` §4.7's example still
+  shows free-text assertions. Correcting it is a spec change owed with the shape, at
+  Slice 2 or Slice 3, whichever builds `RegressionSuite` in `model-schema`.
 - **`RegressionSuite`, `GoldenQuote` and `RegressionRun` become `model-schema` artifacts**
   in the slice that first builds each one (Slice 2 for the suite and the golden quote,
   Slice 3 for the run).
@@ -242,12 +250,13 @@ decision by delegation**:
 >
 >   **Grounds.** The endpoint is evaluator code and belongs beside the regression runs, which use the same machinery. Option B would put backend evaluator work into a frontend Work and leave the comparison untested by the testing Work. Option C would drop a requirement id from a range with no destination, the silent case §13 forbids.
 
-**How this role reads one phrase.** *"The one shared evaluator (WK-671)"* is taken to mean
-WK-671's real-time scoring path: `score_one` over a `CompiledBundle`, ending in the shared
-`build_scoring_result` tail. `03` §5.2 has said since RL-858 that no shared *step* evaluator
-exists. The endpoint is async and real-time, so it makes two `score_one` calls, and the
-step-level diff is built from the two traces (FR-258). The deputy's decision is not changed
-by this reading. If the deputy meant something else, the deputy corrects it.
+**The reading of one phrase, CONFIRMED by the deputy.** *"The one shared evaluator
+(WK-671)"* means WK-671's real-time scoring path. The endpoint makes two `score_one` calls
+on the same quote, one against each Rating Version. Each ends in the shared
+`build_scoring_result` tail (RL-858), and the two traces (FR-258) are diffed step by step.
+**No new step evaluator is built.** This role proposed the reading, and the deputy
+confirmed it as the meaning of the DP1 line, by delegation. The confirming line is stamped
+2026-09-28 11:35:56 BST, item 1.
 
 **What it obliges.**
 
@@ -274,8 +283,8 @@ within the existing cut as follows:
 - **Slice 2 is unchanged** except for one addition: its `GoldenQuote`/`RegressionSuite`
   shapes are `model-schema` artifacts (item 3c). NFR-499's access-controlled-artifact clause
   (RL-917) still binds its store.
-- **Slice 3 grows** by FR-257 limb (1) (item 4), and it follows spike F4's generator
-  decision (item 3c). It builds `run_regression` as a `def` in `pricing-core` (item 3a).
+- **Slice 3 grows** by FR-257 limb (1) (item 4), and its generator is `hypothesis` or its own,
+  on spike F4's outcome (item 3c). It builds `run_regression` as a `def` in `pricing-core` (item 3a).
 - **Slice 4 is unblocked** by DP1 = A, and its scope is the backend limb only.
 
 ## What it obliges
@@ -297,7 +306,7 @@ The spec keeps all ten sections, mints no requirement id, and raises no open que
 | Slice 1 | WK-672's roadmap section names `POST /api/v1/score/compare`; WK-675's states that the Quote Sandbox view consumes it | item 5 |
 | Slice 1 | `03` §4.9 `RegressionRun`; `GOLDEN_QUOTE_MISMATCH` registered; the `test_contracts.py:89` label corrected | `PL-930`, item 3c |
 | Slice 2 | `RegressionSuite` and `GoldenQuote` as `model-schema` artifacts; the store honours NFR-499 (RL-917) | item 3c |
-| Slice 3 | `run_regression` / `generate_contexts` in `pricing-core` `rating/testing.py`, `def`, sync engine path; the generator spike F4 decides, with `03` §8 and `skills-map.md` updated if it adds a runtime dependency; `RegressionRun` as a `model-schema` artifact | items 3a–3c |
+| Slice 3 | `run_regression` / `generate_contexts` in `pricing-core` `rating/testing.py`, `def`, sync engine path; `hypothesis` at runtime if spike F4 passes, else its own seeded generator, with `skills-map.md` checked if the dependency lands; assertions as the structured union of FR-261's five classes; `RegressionRun` as a `model-schema` artifact | items 3a–3c |
 | Slice 3 | FR-257 limb (1) on `submit_for_review`, with a limb-(1)-only marker | item 4 |
 | Slice 4 | `POST /api/v1/score/compare`, the diff-shape tests, the broken-input proof; no frontend | item 5 |
 | WK-672 closure record | FR-262 typed "backend limb delivered and tested (WK-672); UI limb reassigned to WK-675" | item 5 |
