@@ -67,7 +67,7 @@ compliance is checked externally (below), not self-reported.
 is why.** Once per worktree, before its first gate (its release drops the database):
 
 ```bash
-WT=$(basename "$PWD")
+WT="$(basename "$PWD" | cut -c1-44)_$(pwd -P | tr -d '\n' | sha1sum | cut -c1-8)"
 docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing "gipricing_${WT}"
 GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_${WT}" \
     uv run alembic upgrade head
@@ -85,44 +85,21 @@ on this box are named with underscores rather than the hyphens `basename "$PWD"`
 (`gipricing_w37_6_gate_base` beside `gipricing_wt-d8-fix`), which is the residue of people
 working around this by hand and not agreeing on how.
 
-**The per-worktree name is the worktree's LEAF directory name, so it is unique only when
-the leaf is.** `backend/tests/conftest_db.py:55` derives the name as
-`gipricing_{Path(__file__).resolve().parents[2].name}`. Its docstring, at `:49`, says this
-is "the same name `dev-commands`'s gate block derives via `WT=$(basename "$PWD")`". Both
-forms take only the last path component. Two checkouts at `<job-dir>/<member-a>/tree` and
-`<job-dir>/<member-b>/tree` therefore both resolve to `gipricing_tree`. Two gates running
-at once then share one database, and `python-test`'s "that teardown makes two concurrent
-runs mutually destructive" case applies: each run's session teardown empties the database
-under the other. Nothing refuses this. `test_conftest_db.py` asserts only the derivation
-(`test_worktree_database_name_is_derived_from_this_checkouts_own_directory`), never that
-the name is unique. The code fix is owed separately, as an `FD-` under P2's standing maintenance Work.
+**The per-worktree name is `gipricing_<leaf>_<hash>`: the leaf directory name plus the first
+8 hex characters of the SHA-1 of the full resolved checkout path.** `WT` above and
+`_worktree_database_name()` in `backend/tests/conftest_db.py` compute the same string, and
+`test_conftest_db.py` asserts two checkouts sharing a leaf get different names and that the
+name fits PostgreSQL's 63-byte identifier limit (the leaf is cut to 44 characters so the
+server never truncates the hash off). This closed FD-1196: until 2026-09-28 the name was
+the leaf alone, so every `<job-dir>/<member>/tree` checkout derived `gipricing_tree`, two
+gates shared one database, and `python-test`'s "mutually destructive" case applied. **Two
+consequences:** a database made under the old leaf-only name is no longer found (create the
+new one with the block above; `dropdb` the old), and moving or renaming a checkout changes
+its database name. An explicit `GIP_TEST_DATABASE_URL` still bypasses the derivation
+(`test_database_url()` reads it first), which remains the way to name a database for a
+branch.
 
-When two live checkouts share a leaf name, use **one of two remedies** before the first
-gate:
-
-1. **Name the database for the branch, and set `GIP_TEST_DATABASE_URL` explicitly.** An
-   explicit override bypasses the derivation (`test_database_url()` reads it first).
-   Create the database from the template, migrate it, and drop it when the worktree is
-   released:
-
-   ```bash
-   DB=gipricing_p2_d_s1        # named for the branch, not the leaf
-   docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing "$DB"
-   GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/$DB" \
-       uv run alembic upgrade head
-   export GIP_TEST_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/$DB"
-   # at release:
-   docker exec gi-pricing-postgres-1 dropdb -U gipricing "$DB"
-   ```
-
-   The gate body below builds `GIP_TEST_DATABASE_URL` as `gipricing_$WT`. When you copy
-   it, replace `WT=$(basename "$PWD")` with the database's suffix (`WT=p2_d_s1`), or the
-   gate exports the colliding name again.
-2. **Give the worktree a unique leaf name**, for example `<job-dir>/p2/<member>-tree`
-   rather than `<job-dir>/p2/<member>/tree`. The derivation and `basename "$PWD"` then
-   agree on a unique name, and the block above works unchanged.
-
-**Reproduction** (2026-09-28, main `ed123cb0`). Two throwaway worktrees were added at
+**Reproduction of the pre-fix collision** (2026-09-28, main `ed123cb0`, leaf-only naming). Two throwaway worktrees were added at
 `<job-dir>/r1/tree` and `<job-dir>/r2/tree`. A probe script ran the fixture's own
 `_worktree_database_name` in each: it extracts the function's source from
 `backend/tests/conftest_db.py` with `ast` and sets `__file__` to that file's path. Each
@@ -144,7 +121,7 @@ diverge. Copy it verbatim.
 
 ```bash
 mkdir -p /tmp/slots
-WT=$(basename "$PWD")
+WT="$(basename "$PWD" | cut -c1-44)_$(pwd -P | tr -d '\n' | sha1sum | cut -c1-8)"
 gate_body='
 set -u
 L=$(mktemp -d)
@@ -262,7 +239,7 @@ symptom table). Measured 2026-09-04: a capped, correctly-`flock`ed gate still ca
 suite was executing concurrently — confirmed via the decisive diff check
 (`git diff --stat origin/main...HEAD -- '*.py' … backend/ … scripts/`, empty) that the
 failing branch could not have caused it. **This is why the gate block above exports
-`GIP_TEST_DATABASE_URL` pointing at `gipricing_<worktree>`, not the shared `gipricing`
+`GIP_TEST_DATABASE_URL` pointing at `gipricing_<leaf>_<hash>`, not the shared `gipricing`
 DB** — the `gipricing` role is superuser with `rolcreatedb` (confirmed by direct query),
 so per-worktree databases cost nothing to create. **CI is unaffected**: GitHub-hosted
 runners get a fresh Postgres/Redis/MinIO per run
@@ -990,6 +967,12 @@ Verified: 2026-09-17
 
 ## Verified
 
+2026-09-28, against main `f91af639`. **The per-worktree database name is now
+`gipricing_<leaf>_<hash of the full path>`** (FD-1196, WK-1178), replacing the leaf-only name;
+the collision remedies were removed as no longer needed. Checked by running
+`_worktree_database_name()` in this checkout and computing the shell `WT` for the same
+`pwd -P`: both gave the same 8-hex suffix.
+
 2026-09-28, against main `ed123cb0fcf91e44872963bf8a8bad32b87c99bc`. **The per-worktree
 database name's leaf-name collision was added**, with its two remedies, next to the
 per-worktree database block. executor-s1 found it: every job-dir checkout named
@@ -1109,7 +1092,7 @@ per the deputy's ruling (relayed via `to-lead.md`), fixing the shared-DB truncat
 `python-test`'s "mutually destructive" section documents. Confirmed directly before
 writing it: `SELECT rolsuper, rolcreatedb FROM pg_roles WHERE rolname='gipricing'` via
 `asyncpg` returned `(True, True)` — the role is superuser with `rolcreatedb`, so
-`createdb -T gipricing gipricing_<worktree>` costs nothing; only the one shared `gipricing`
+`createdb -T gipricing gipricing_<leaf>_<hash>` costs nothing; only the one shared `gipricing`
 database existed before this change. The DB-exclusive-lock fallback (for a branch whose
 migrations cannot run against a fresh copy) is written but not exercised — no branch has
 needed it yet. Two-worktrees-in-parallel proof delegated to a one-shot agent (see its
