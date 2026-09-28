@@ -160,3 +160,34 @@ def test_the_same_seed_gives_the_same_run_across_fresh_interpreters() -> None:
 def test_the_comparator_can_fail_without_a_persisted_seed() -> None:
     """RS-1176 condition 6, negative control: no seed, and the logs differ."""
     assert _child("none", "1")[0] != _child("none", "1")[0]
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.parametrize("profile", ["default", "ci"])
+def test_the_generation_settings_do_not_inherit_the_ambient_profile(profile: str) -> None:
+    """RS-1176 condition 2, "fixed settings": Hypothesis auto-loads its built-in `ci` profile
+    when `CI` is set, and that profile sets `derandomize=True`, `print_blob=True` and
+    `suppress_health_check=[HealthCheck.too_slow]` among others. Every behaviour-affecting
+    field is set explicitly, so the settings are the same under either profile."""
+    from hypothesis import Phase, Verbosity
+    from hypothesis import settings as hypothesis_settings
+
+    from pricing_core.rating.testing import generation_settings
+
+    previous = hypothesis_settings.get_current_profile_name()
+    hypothesis_settings.load_profile(profile)
+    try:
+        s = generation_settings(123)
+    finally:
+        hypothesis_settings.load_profile(previous)
+    assert s.database is None
+    assert s.deadline is None
+    assert s.report_multiple_bugs is False
+    assert s.derandomize is False
+    assert s.max_examples == 123
+    assert s.suppress_health_check == ()
+    assert s.print_blob is False
+    assert s.verbosity == Verbosity.normal
+    assert tuple(s.phases) == tuple(Phase)
+    assert s.stateful_step_count == 50
+    assert s.backend == "hypothesis"

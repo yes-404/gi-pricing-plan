@@ -21,7 +21,7 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from typing import Any, Literal
 
 import hypothesis
-from hypothesis import given, settings
+from hypothesis import Phase, Verbosity, given, settings
 from hypothesis import seed as hypothesis_seed
 from hypothesis import strategies as st
 from hypothesis.internal.conjecture.engine import ExitReason
@@ -87,6 +87,14 @@ def generation_settings(cases: int) -> settings:
     RS-1176 condition 2: no example database (a run must not depend on state left by a
     previous one), no deadline (the engine call's speed is not a property), one reported
     failure, and no derandomisation (the persisted seed is the reproduction handle).
+
+    **Every behaviour-affecting field is set explicitly.** `hypothesis` auto-loads its
+    built-in `ci` profile when `CI` is set, and that profile sets `derandomize=True`,
+    `print_blob=True` and `suppress_health_check=[HealthCheck.too_slow]`; a field left to
+    inherit would make CI and a laptop generate under different settings. The values not
+    named by the condition are `hypothesis`'s own defaults, written out so no profile can
+    change them: no suppressed health check, no printed blob, the normal verbosity, all
+    phases, 50 stateful steps and the built-in backend.
     """
     return settings(
         database=None,
@@ -94,6 +102,12 @@ def generation_settings(cases: int) -> settings:
         report_multiple_bugs=False,
         derandomize=False,
         max_examples=cases,
+        suppress_health_check=(),
+        print_blob=False,
+        verbosity=Verbosity.normal,
+        phases=tuple(Phase),
+        stateful_step_count=50,
+        backend="hypothesis",
     )
 
 
