@@ -3,7 +3,7 @@ id: RS-1176
 family: research
 kind: spike
 title: Does a persisted seed with a pinned hypothesis reproduce the same cases and the same shrunk counterexample across processes?
-status: draft
+status: active
 created: 2026-09-28
 owner: executor
 tree: df8e5811a151a99c7317690faf9278a6dc3400be

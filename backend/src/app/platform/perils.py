@@ -439,15 +439,16 @@ async def resolve_artifact_ref(
 
     By slug and version rather than by id, unlike `load_structure`: a reference *is* a slug
     and a version (ID-3), and `uq_peril_structures_slug_version` makes the pair identify one
-    row. Status is deliberately not consulted — FR-386 asks whether the artifact exists,
-    and which statuses may be submitted is `submit_for_review`'s question, already answered
-    for anything that reached this module's own path.
+    row. **Status is consulted, since 2026-09-28** (`06` FR-351, the approval status
+    bypass). This read "which statuses may be submitted is `submit_for_review`'s question",
+    but the generic route never passes through `submit_for_review`, so a structure that was
+    never reconciled could be put to a decision; only one in `review` now resolves.
     """
     if artifact_ref.type != "peril_structure":
         return False
     row = (
         await session.execute(
-            select(PerilStructureRow.id).where(
+            select(PerilStructureRow.status).where(
                 PerilStructureRow.workspace_id == workspace_id,
                 PerilStructureRow.slug == artifact_ref.slug,
                 PerilStructureRow.version == artifact_ref.version,
@@ -461,6 +462,7 @@ async def resolve_artifact_ref(
             404,
             f"{artifact_ref} resolves to no peril structure in this workspace.",
         )
+    approvals.require_in_review(artifact_ref, row)
     return True
 
 

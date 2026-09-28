@@ -51,6 +51,7 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "objective-certificate",
     "peril-structure",
     "profile",
+    "regression-suite",
     "transparency-artifact",
     "validation-report",
     "validation-rule",
@@ -86,7 +87,9 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "rate-table": "shipped in model-schema, never compared — register F27",
     "rating-algorithm": "shipped in model-schema, never compared — register F27",
     "rating-version": "shipped in model-schema, never compared — register F27",
-    "regression-suite": "later-phase — 04 optimisation",
+    # Added 2026-09-28 (WK-672 Slice 2, PL-1189): split out of `regression-suite`, whose suite
+    # half Slice 2 moved into model-schema and COMPARED_SLUGS. Slice 3 builds the run.
+    "regression-run": "authored-only until WK-672 Slice 3 builds it — 03 §4.9",
     # Corrected 2026-08-29 (WK-671 Task 1.4): "later-phase" stopped being true the moment
     # this task defined QuoteContext/ScoringResult/LadderRung/Trace in model-schema —
     # RL-878's addendum
