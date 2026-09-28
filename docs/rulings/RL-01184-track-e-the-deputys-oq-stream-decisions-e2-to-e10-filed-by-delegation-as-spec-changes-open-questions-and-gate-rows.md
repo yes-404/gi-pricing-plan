@@ -1,5 +1,5 @@
 ---
-id: RL-1180
+id: RL-1184
 family: ruling
 title: Track E — the deputy's OQ-stream decisions E2 to E10, filed by delegation as spec changes, open questions and gate rows
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -11,10 +11,10 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [OQ-550, OQ-554, OQ-620, OQ-1181, OQ-1182, RL-856, RL-881, RL-885, WK-673, WK-674, WK-675, WK-690]
+relates: [OQ-550, OQ-554, OQ-620, OQ-1185, OQ-1187, RL-856, RL-881, RL-885, WK-673, WK-674, WK-675, WK-690]
 ---
 
-# RL-1180 — Track E: the deputy's OQ-stream decisions E2 to E10, filed by delegation as spec changes, open questions and gate rows
+# RL-1184 — Track E: the deputy's OQ-stream decisions E2 to E10, filed by delegation as spec changes, open questions and gate rows
 
 ## Verified first, at df8e5811a151a99c7317690faf9278a6dc3400be
 
@@ -73,7 +73,7 @@ BST, read by `TZ=Europe/London date`.
 
 Each item applies the deputy's decision as the deputy wrote it.
 
-**E2 — OQ-1181, new, decided (a).** The deputy's words: *"the spec is right for the objective
+**E2 — OQ-1185, new, decided (a).** The deputy's words: *"the spec is right for the objective
 grammar. The parser is to gain `where()` (SymPy `Piecewise`, evidenced), refuse bare
 comparisons, `%` and ternaries outside `where`, and enforce the node-count and depth limits.
 File it as a new OQ with (a) spec right / (b) parser right, recommendation (a), decided (a).
@@ -97,7 +97,7 @@ parser serves FR-95 factors, `01` FR-36 recipes and `01` §4.5 checks. The deput
   (deputy, 2026-09-28)"*.
 
 Disposition:
-- A new OQ-1181 row in `docs/open-questions.md` (MODEL) and in `02` §10, marked decided. Both
+- A new OQ-1185 row in `docs/open-questions.md` (MODEL) and in `02` §10, marked decided. Both
   carry the decision line verbatim.
 - At the head of `02` §4.6, a dated amendment: *"One parser and one security review; the
   grammar is per-context profiles of it"*. Below it, the profile table (context → bound
@@ -106,7 +106,7 @@ Disposition:
 - A dated amendment on `02` FR-144, naming the `objective` profile and WK-690's first slice.
 - `01` FR-36's "minus statistical functions" is pointed at the `recipe` profile, and `01`
   §4.5's `expression` check at the `check` profile.
-- The gate table's Before Phase 2 row gains OQ-1181, struck.
+- The gate table's Before Phase 2 row gains OQ-1185, struck.
 
 **No new requirement:** §4.6 already states the grammar. The obligation is a profile table and
 an owner on the requirements that cite it. All of this is spec text; the code is WK-690's.
@@ -135,7 +135,7 @@ Disposition: a 2026-09-28 amendment on `07` FR-430.
 **E8 — OQ-620 decided (b).** The deputy's words: *"decided, option (b) as recommended. Nothing
 contradicts it, and its deciding test cannot be measured in Phase 2. The decision is taken now
 so that WK-675's editor slice does not inherit it."* Disposition:
-- `03` gains **FR-1183**: a Rate Table Version has no lifecycle and no status, it is governed
+- `03` gains **FR-1186**: a Rate Table Version has no lifecycle and no status, it is governed
   through the pinning Rating Version, and RL-856's exemption is permanent. It carries a revisit
   trigger, which is OQ-620's unmeasured deciding test.
 - `06` §2 and `06` §3.3 strike Rate Table Version in place.
@@ -145,7 +145,7 @@ so that WK-675's editor slice does not inherit it."* Disposition:
 
 **E9 — OQ-554 decided (b).** The deputy's words: *"decided, option (b), a review step at each
 close. Put it on the gate table's 'Deferred / any time' row as decided."* Disposition:
-- `00` gains **FR-1184**: the per-close review of cited requirements.
+- `00` gains **FR-1188**: the per-close review of cited requirements.
 - `.claude/skills/close-workstream` gains §5c, the procedure, with its `Verified` entry
   (lead, 2026-09-28, answer 6).
 - OQ-554 is struck and decided in the register and in `00` §10.
@@ -160,12 +160,12 @@ WK-675's map plan, and fix the gate-table cell that shows it struck."* Dispositi
   the italics.
 - The Deferred row recounts to 35 (1 open).
 
-**F3's OQ — OQ-1182, decided (b) on the spike's record.** The deputy's words: *"file the OQ first, with options (a) isolated
+**F3's OQ — OQ-1187, decided (b) on the spike's record.** The deputy's words: *"file the OQ first, with options (a) isolated
 plus cumulative in a declared step order, with an explicit interaction-residual line so the
 parts reconcile to the total; (b) Shapley over steps; (c) cumulative only. Recommendation (a).
 The spike runs on freMTPL2 and measures the size of the residual and how much the order
 changes the result. I decide on the record."* Disposition:
-- OQ-1182 is added to the register (RATE) and to `03` §10, with status **open**.
+- OQ-1187 is added to the register (RATE) and to `03` §10, with status **open**.
 - It is placed on the Before Phase 2 row, unstruck. WK-673 is Phase 2 work, so the method is
   a Phase 2 entry decision (lead, 2026-09-28, answer 4).
 - The options are the deputy's words. The trade-offs are the decision-maker's, labelled as
@@ -203,11 +203,11 @@ changes the result. I decide on the record."* Disposition:
   - The decision clause, identical in the register and in the `03` mirror: *"DECIDED
     2026-09-28 — option (b), exact Shapley with largest-remainder allocation (deputy, on
     spike F3's RS record)"*.
-  - The gate row strikes OQ-1182 and recounts Before Phase 2 to 15 (0 open).
+  - The gate row strikes OQ-1187 and recounts Before Phase 2 to 15 (0 open).
 
 **The gate table.** Every count was recounted by the `docs-audit` snippets, not incremented.
 Those snippets were rewritten in this PR, because their pre-migration pattern matched no id.
-The counts are: Before Phase 2, 15 (0 open) once OQ-1182 was decided (15 (1 open) before that); Before Phase 3, 9 (0 open); Deferred, 35 (1 open).
+The counts are: Before Phase 2, 15 (0 open) once OQ-1187 was decided (15 (1 open) before that); Before Phase 3, 9 (0 open); Deferred, 35 (1 open).
 A dated note beneath the table records the five edits.
 
 ## What it obliges
@@ -224,20 +224,20 @@ A dated note beneath the table records the five edits.
 - **Owed in code, by the slice that next touches the file.** No code is written here: the
   decision-maker has no write access to code.
   - The comment at `packages/pricing-core/src/pricing_core/rating/compile.py:313` calls the
-    `rate_table` exemption "provisional" pending OQ-620. It is now permanent under FR-1183.
+    `rate_table` exemption "provisional" pending OQ-620. It is now permanent under FR-1186.
   - `test_rate_table_version_row_has_no_status_column` in
-    `backend/tests/test_rating_version_compile.py` is FR-1183's evidence and carries no marker
+    `backend/tests/test_rating_version_compile.py` is FR-1186's evidence and carries no marker
     for it.
   - Neither of these is a defect in behaviour: the tripwire stays correct.
 - **WK-690's first slice** brings the parser to §4.6 for objectives (FR-144's amendment).
-- **WK-673** owns `structural_diff` (FR-364's amendment). It also builds OQ-1182's decision.
+- **WK-673** owns `structural_diff` (FR-364's amendment). It also builds OQ-1187's decision.
   In its first slice, following the deputy's entry: FR-266's dated amendment naming
   Shapley as the decomposition; the hard gate as requirements (reconciliation on the rating
   path's own arithmetic, on the ZEN engine, tested on deliberately broken input); and the
   2^K cost measured and proposed as an NFR.
 - **WK-674** builds one key per environment (FR-430's amendment) and the F48 counter.
 - **WK-675** takes OQ-550 at its map plan and builds the manual-edit route (`03` §5.1).
-- **Every close** from now runs `close-workstream` §5c (FR-1184).
+- **Every close** from now runs `close-workstream` §5c (FR-1188).
 - **WK-690's slice** first measures the recipe and check corpus against the limits. It
   reports any real expression over a limit to the deputy before enforcing.
 - **Carried elsewhere:** `docs/process/checklists/work-item-close.md` is the process
@@ -253,8 +253,8 @@ three times on any tree.
 
 - *Violation: an OQ in `docs/open-questions.md` that no gate row names.* The rewritten coverage
   snippet lists it under `missing`. It was shown red on the tree before this PR, where it
-  listed OQ-554 beside the eight recorded ids. On deliberately broken input (OQ-1182 deleted from the Before Phase 2 cell of a scratch
-  copy of this PR's tree), it listed `OQ-1182` first under `missing`. This was run before filing.
+  listed OQ-554 beside the eight recorded ids. On deliberately broken input (OQ-1187 deleted from the Before Phase 2 cell of a scratch
+  copy of this PR's tree), it listed `OQ-1187` first under `missing`. This was run before filing.
 - *Violation: the id pattern stops matching the register.* The coverage snippet now asserts a
   non-empty id set, so a pattern that matches nothing fails loudly instead of printing `none`. This was run on a
   scratch copy with every id rewritten to the pre-migration form: exit 1, `AssertionError: no OQ
@@ -262,8 +262,8 @@ three times on any tree.
 - *Violation: a row's stated `N (M open)` differs from its ids.* The recount snippet prints the
   stated and actual counts side by side. It was shown red on the same scratch copy.
   The Deferred row, restored to `34 (0 open)`, printed `actual 35 (1 open)  stated 34 (0 open)`.
-  The Before Phase 2 row, minus OQ-1182, printed `actual 14 (0 open)  stated 15 (1 open)`
-  (at `b2c2e953`, before OQ-1182 was decided).
+  The Before Phase 2 row, minus OQ-1187, printed `actual 14 (0 open)  stated 15 (1 open)`
+  (at `b2c2e953`, before OQ-1187 was decided).
 
 The spec edits themselves are prose, and no check can hold them to the deputy's words. That is
 what the quotations above are for.

@@ -571,8 +571,8 @@ adds nothing the block does not carry except findings named as having no registe
 
 ## 5c. Every workflow step that cites this close's requirements still says what it cites
 
-**`00` FR-1184 makes this a step of every close** (OQ-554, decided 2026-09-28 by delegation,
-option (b); `RL-1180` E9). No script does it. `audit-docs.py` check 14 scores whether a
+**`00` FR-1188 makes this a step of every close** (OQ-554, decided 2026-09-28 by delegation,
+option (b); `RL-1184` E9). No script does it. `audit-docs.py` check 14 scores whether a
 journey *mentions* a requirement id, and check 21 scores whether a cited endpoint or function
 is *declared*. Neither reads the requirement's text. So a step that cites `FR-171` for double
 lift passes both checks on a tree where FR-171 struck double lift on 2026-08-17.
@@ -700,8 +700,8 @@ looking.
 ## Verified
 
 2026-09-28 — **§5c added: every workflow step that cites this close's requirements is read
-against the requirement's current text.** `00` FR-1184 (OQ-554, decided by delegation, option (b);
-`RL-1180` E9), written at `df8e5811`. The FR-171 example is OQ-554's own, from RFC-778 item (f).
+against the requirement's current text.** `00` FR-1188 (OQ-554, decided by delegation, option (b);
+`RL-1184` E9), written at `df8e5811`. The FR-171 example is OQ-554's own, from RFC-778 item (f).
 The step has not yet run at a real close, so its first use is the check that it works.
 
 2026-09-19 — **the bespoke-audit rule added, in full, as `RFC-937` §5.4 requires.** W37-7

@@ -555,7 +555,7 @@ the coverage snippet printed `none` three times on any tree: a silent pass. The 
 now asserts that it found ids, and both scan only the id cell. Their output was checked against
 each row's stated count on Track E's tree, which branches from `df8e5811`. All six rows agreed,
 and `missing` listed exactly the eight recorded ids. At `df8e5811` itself, `missing` also listed
-OQ-554, which Track E placed (`RL-1180`).
+OQ-554, which Track E placed (`RL-1184`).
 
 2026-09-19 (second entry, same day) — **checks 31 and 38 gained a describing clause, and
 the bespoke-audit rule gained a pointer.** W37-7 Tasks 1 (Step 3) and 9, `PL-1070`.
