@@ -50,6 +50,15 @@ to `open-questions.md:131` (a working-range open-question id that does not resol
 `FAILED (21)`, so the respelling removed exactly those two rows. Commit `98424cc5`'s own message
 reads *"Editing docs/open-questions.md ([its three working-range open-question rows]) made check 32 read line 47's two [padded plan-id] specimen spellings as violations."* Bracketed: the commit names three working ids and one padded id form; they resolve to nothing, so this record does not repeat them, and the brackets mark the substitution.
 
+**A second instance, found while filing this record.** A draft of this batch's `FD-9019` wrote the retired
+scoped open-question form in its text and in `docs/findings/register.md`. With that one new check-36
+violation in the register, the audit reported `DISCLOSED (839…)` and 17 previously disclosed check-36 rows of
+`register.md` (its own legacy notes paths and scoped ids) as **FAILED**, none of them touched by the edit.
+Rewording the new row so it wrote the form as a description removed them. So the behaviour is not specific to
+check 32 or to `open-questions.md`: **a new violation of a check in a file appears to turn that file's
+disclosed rows of the same check into failures.** That is an inference from two cases and a count, not a
+traced mechanism.
+
 **Not explained:** why the specimen rows leave DISCLOSED when another unresolved id appears. The
 `_docverify` docstrings say a token that resolves to nothing is *"a specimen of the form, not a
 citation"* (`scripts/_docverify.py:1944`), and the `row_e` guard refuses to excuse every token when

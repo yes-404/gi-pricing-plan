@@ -20,12 +20,12 @@ the gate reads it.
 ## Finding
 
 `docs/open-questions.md:10-11` reads *"**Allocation, 2026-09-03.** Highest ids in use: OQ-555,
-OQ-570, OQ-613, OQ-656. Next free: `OQ-OVR-19`."* Both halves are stale under the single global
+OQ-570, OQ-613, OQ-656. Next free: `[an id of the retired OQ-OVR form, number 19]`."* Bracketed: the retired form is a legacy spelling that check 36 flags wherever it appears, so this record substitutes a description for it. Both halves are stale under the single global
 id sequence (`CLAUDE.md` §5, `docs/process/document-ids.md`):
 
-- **"Next free: `OQ-OVR-19`" names an id form the migration retired.** `docs/REDIRECTS.csv` maps
-  `OQ-OVR-1` to `OQ-OVR-18` onto `OQ-540` to `OQ-555` (for example `:1720`, `OQ-OVR-15` to
-  `OQ-552`). No redirect exists for `OQ-OVR-19`, so it was never allocated and now never can be.
+- **"Next free" names an id of a form the migration retired.** `docs/REDIRECTS.csv` maps
+  the OQ-OVR ids numbered 1 to 18 onto `OQ-540` to `OQ-555` (for example `:1720`, number 15 to
+  `OQ-552`). No redirect exists for number 19, so it was never allocated and now never can be.
 - **"Highest ids in use: … OQ-656" is not the highest.** At `origin/main` `9fa2b833`, the highest
   `OQ-` id named in `docs/open-questions.md` is `OQ-1187`, and
   `python3 scripts/doc-id.py next --ref origin/main` prints `1212`.
@@ -38,7 +38,7 @@ At `origin/main` `9fa2b833`:
 - `grep -o "OQ-[0-9]\+" docs/open-questions.md | sed 's/OQ-//' | sort -n -u | tail -3` prints
   `1146`, `1185` and `1187`.
 - `docs/REDIRECTS.csv:1720`–`:1724` and the neighbouring rows carry the `OQ-OVR-N` mappings;
-  `grep -n "OQ-OVR-19" docs/REDIRECTS.csv` finds nothing.
+  `grep -n "OVR-19" docs/REDIRECTS.csv` finds nothing.
 - The `Next free:` marker is a plans convention (`docs/plans/README.md:64`–`:72`, and
   `audit-docs.py`'s `UNALLOCATED`, which applies to plans only). In `open-questions.md` it is an
   allocation note that no check reads and no procedure follows: ids come from `doc-id.py next`.
