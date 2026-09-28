@@ -10,7 +10,7 @@ tree: df8e5811a151a99c7317690faf9278a6dc3400be
 phase: P2
 work: WK-696
 corrected_by: []
-relates: [FD-1176]              # ids only
+relates: [FD-1176, FD-1179]      # ids only
 ---
 
 # CR-1174 — WK-696 Work close: the closure record
@@ -198,26 +198,46 @@ Each issue was then read back.
   - #825: *Version / tree, Steps to reproduce, Expected behaviour, Observed behaviour,
     Additional context, Related id (optional)*.
   - #826: *Category, Details, Related id (optional)*.
-- **Labels: not applied.** `gh issue create --label` exited 0 on both issues, yet REST and
+- **Labels: not applied at filing.** `gh issue create --label` exited 0 on both issues, yet REST and
   GraphQL both read `labels: []`, and the issue events list is empty. The labels were then
   added by hand with `gh api -X POST repos/yes-404/gi-pricing-plan/issues/<n>/labels`, which
   returned **HTTP 403** *"Resource not accessible by personal access token"*. The token can
   create issues, but it cannot label them, comment on them or close them. The repository's
   `permissions` field reads `admin: true`, but that is the user's role, not the token's scope.
-- **Close: not done.** The planned close was `gh issue close <n> --comment "WK-696 acceptance
+- **Close: refused at first.** The planned close was `gh issue close <n> --comment "WK-696 acceptance
   (c) test issue; recorded in the WK-696 closure record."`. It failed on both issues with
   *"Resource not accessible by personal access token (addComment)"*, exit 1. When re-read, both
   issues were `OPEN`, with 0 comments.
 
 The deputy ruled that nobody on the team retries #825 or #826 by any route, because the 403 is
-a permission boundary. The label-and-close leg is **pending the maintainer**, who is granting
-the token issue-write scope. Once the grant is confirmed, the planned steps are: add `bug` to
-#825 and `question` to #826, post the comment above, close both, and read back each issue with
-`gh issue view <n> --repo yes-404/gi-pricing-plan --json state,labels,comments`. The read-back
-lands in this record's follow-up commit. gh's exit code is not proof of any of these steps
-([`FD-1176`](../findings/FD-01176-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md)).
-This record does not merge until both issues are labelled and closed (the deputy's ruling).
-The reproduction is in `FD-1176`.
+a permission boundary. The maintainer then granted the token issue-write scope, and the lead
+relayed the deputy's verification of the grant. The reproduction of the failure is in
+[`FD-1176`](../findings/FD-01176-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md).
+
+**Label, comment and close, after the grant.** These ran on 2026-09-28 between 11:34:54 and
+11:35:01 BST, with `R=yes-404/gi-pricing-plan`:
+
+```text
+gh issue edit 825 --repo $R --add-label bug
+gh issue edit 826 --repo $R --add-label question
+gh issue close <n> --repo $R --comment "WK-696 acceptance (c) test issue; recorded in the WK-696 closure record."
+```
+
+All four commands exited 0. gh's exit code is not proof of a write (`FD-1176`), so each issue
+was read back with `gh issue view <n> --repo yes-404/gi-pricing-plan --json
+state,labels,comments`:
+
+```text
+#825  CLOSED labels=["bug"]      comments=[{"author":"yes-404","body":"WK-696 acceptance (c) test issue; recorded in the WK-696 closure record.","createdAt":"2026-09-28T10:34:58Z"}]
+#826  CLOSED labels=["question"] comments=[{"author":"yes-404","body":"WK-696 acceptance (c) test issue; recorded in the WK-696 closure record.","createdAt":"2026-09-28T10:35:00Z"}]
+```
+
+A second read, `gh api repos/yes-404/gi-pricing-plan/issues/<n>`, agrees on both issues:
+
+- #825: `state_reason` `completed`, `closed_at` `2026-09-28T10:34:59Z`;
+- #826: `state_reason` `completed`, `closed_at` `2026-09-28T10:35:00Z`.
+
+**Each form's label is now on its issue, and both issues are closed with the comment.**
 
 **Leg 2: the form structure GitHub's renderer needs.** No CLI can render an issue form, so
 each form's YAML was validated against the fields the renderer reads. The checker is
@@ -299,11 +319,17 @@ line against `CLAUDE.md` §1 and `docs/roadmap.md`.
   in `CONTRIBUTING.md:50-52` and in `.github/PULL_REQUEST_TEMPLATE.md:14-15`, so one fact has
   three copies.
 
-**Proposed verdict on the narrow predicate: not met, on two sentences.** Both fixes are
-one-line edits with no design question:
+**Verdict on the narrow predicate: not met at `df8e5811`; fixed before close by #827.** The
+lead ruled fix before close and made the fix himself, in a separate PR that mints no ids and
+merges before this record. PR #827 is on branch `p2-b-readme-fix`, with head `5f81e43c` at the
+time of writing. It makes two changes:
 
-- rewrite `README.md:13-14` rather than excerpt it;
-- replace the dated `SL-` clause with a pointer.
+- the README's introduction is rewritten rather than excerpted;
+- the dated clause becomes the condition *"Until the first `SL-` row is minted, a PR names its
+  `WK-` work item instead"*. The change is made in `README.md`, `CONTRIBUTING.md` and the PR
+  template, and it drops the `W37-n` form.
+
+The squash SHA is added when #827 merges.
 
 ### (d) The wider outsider read
 
@@ -329,8 +355,13 @@ is, where it stands, how it is built, and how to engage.
   not as gatekeeping. Its "issues are intake, the register is truth" paragraph is clear.
 - Both forms are short, and their required fields are the minimum a triager needs.
 
-**What an outsider trips on.** None of these blocks the close. Each is proposed to the lead
-for a verdict.
+**What an outsider trips on.** None of these blocks the close. The lead ruled on each:
+
+- observation 3 is filed as
+  [`FD-1179`](../findings/FD-01179-contributing-and-the-pr-template-describe-a-standing-wk-maintenance-item-that-has-no-roadmap-row.md);
+- observations 1, 2, 4 and 5 are noted here, with no finding filed.
+
+Observation 2's `W37-n` instances are removed by #827.
 
 1. **The README opens with the repository's metadata block.** GitHub renders a README's YAML
    front matter (`family: reference`, `status: active`, `owner: lead`, `relates: []`) as a
@@ -358,8 +389,9 @@ for a verdict.
    trigger and the copied fact go stale together. That is acceptable, and it is noted only
    because (d)'s spirit is "no copies".
 
-**Proposed verdict, wider read: met, with observations 1–5 for the lead.** The files would
-serve an outsider. Only the two (d) sentences above breach a stated acceptance predicate.
+**Verdict, wider read: met, with observations 1–5 noted and observation 3 filed as `FD-1179`.**
+The files serve an outsider. Only the two (d) sentences above breached a stated acceptance
+predicate, and #827 fixes both.
 
 ### (e) The close checklist carries the pointer-freshness line
 
@@ -391,15 +423,18 @@ location. The README's pointers therefore stay correct, and no pointer edit is o
 
 ## Verdict
 
-**Proposed by the auditor. The lead adopts, amends or rejects each row.**
+**Proposed by the auditor and adopted by the lead** on 2026-09-28. The lead's rulings are on
+(d), where he ruled fix before close and made the fix himself, and on the findings. The deputy
+ruled (c) and confirmed (e), by delegation. The lead relayed all of these rulings to the
+auditor.
 
-| Item | Proposed verdict | Owner | Event |
+| Item | Verdict | Owner | Event |
 |---|---|---|---|
 | (a) files and links | evidenced | — | — |
 | (b), row 6, settings | pending: the deputy's dated line by delegation | the deputy | this record's follow-up commit |
-| (c) test issues | **met by proxy**, accepted by the deputy's ruling. Limit: "no web-UI submission; the rendering path is proved by schema validation", carried to plan review 15. Filed and read back, plus the schema leg: evidenced. The label-and-close leg is **pending the maintainer**, because of HTTP 403 on the token (`FD-1176`). | the maintainer (token grant); then the auditor's read-back | before this record merges |
-| (d) narrow predicate | **not met, on two sentences**: `README.md:13-14`, an excerpt of `CLAUDE.md` §1; `README.md:42-44`, a dated `SL-` status copy that recurs in two more files. The proposal is **fix before close**, by one-line edits. | the lead | this Work's closing PR, or a verdict of accept |
-| (d) wider read | met; observations 1–5 go to the lead for a verdict | the lead | — |
+| (c) test issues | **met by proxy**, accepted by the deputy's ruling. Filed, labelled, read back and closed, plus the schema leg: evidenced. Limit: "no web-UI submission; the rendering path is proved by schema validation", carried to plan review 15. | — | plan review 15 (the limit) |
+| (d) narrow predicate | **not met at `df8e5811`; fixed before close by #827.** Two sentences failed: `README.md:13-14`, an excerpt of `CLAUDE.md` §1, and `README.md:42-44`, a dated `SL-` status copy that recurs in two more files. | the lead | #827 merges before this record |
+| (d) wider read | met; observations 1, 2, 4 and 5 noted; observation 3 **deferred with an owner** as `FD-1179` | the lead | WK-1170's first slice |
 | (e) checklist line | evidenced; no pointer edit is owed by this close | — | — |
 | Rows 7, 8, 9 | evidenced | — | — |
 
@@ -408,10 +443,9 @@ location. The README's pointers therefore stay correct, and no pointer edit is o
 **deferred with an owner — the lead**. Event: the next `git-hygiene` skill edit. Its register
 row is filed in this PR.
 
-The lead's verdict is still owed on whether two more observations become findings, with ids
-from the lead:
-
-- (d)'s two sentences, if the verdict is accept rather than fix;
-- observation 3, the promised maintenance item with no roadmap row.
+[`FD-1179`](../findings/FD-01179-contributing-and-the-pr-template-describe-a-standing-wk-maintenance-item-that-has-no-roadmap-row.md):
+`CONTRIBUTING.md` and the PR template describe a standing `WK-` maintenance item that has no
+roadmap row. **Deferred with an owner — the lead**, by the lead's ruling. Event: WK-1170's first
+slice. Its register row is filed in this PR.
 
 **Acceptance line:** _pending_
