@@ -701,19 +701,19 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle
 def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-706 translation layer
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str    # corrected 2026-08-27 (F-W9-3-2)
-def assert_integer_minor_round_trip() -> None          # FR-273's startup self-check; added 2026-09-28 (F60 (3), RL-1171)
+def assert_integer_minor_round_trip() -> None          # FR-273's startup self-check; added 2026-09-28 (F60 (3), RL-1172)
 
 # pricing_core/rating/runtime.py                      # added 2026-08-29 (WK-671 Slice 1)
 def load_bundle(bundle: Bundle) -> CompiledBundle     # FR-243's hydration step
 def to_wire(graph: JdmGraph,                          # the ZEN engine's wire payload;
-            payloads: Mapping[str, Any] | None = None) -> dict[str, Any]  # added 2026-09-28 (F60 (1), RL-1171)
+            payloads: Mapping[str, Any] | None = None) -> dict[str, Any]  # added 2026-09-28 (F60 (1), RL-1172)
 
 # pricing_core/rating/score.py
 async def score_one(bundle: CompiledBundle, ctx: QuoteContext, *,
               trace: bool = False) -> ScoringResult
 def build_scoring_result(bundle: CompiledBundle, ctx: QuoteContext,  # FR-254's shared tail;
                          rating_version_ref: ArtifactRef,            # added 2026-09-28
-                         result: Mapping[str, Any],                  # (F60 (4), RL-1171)
+                         result: Mapping[str, Any],                  # (F60 (4), RL-1172)
                          engine_trace: Mapping[str, Any] | None) -> ScoringResult
 def score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, *,
                 chunk_rows: int = 100_000,
@@ -728,7 +728,7 @@ def attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[A
 def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
                    *, seed: int) -> RegressionRun
 def generate_contexts(contract: Sequence[InputContractField],   # corrected 2026-09-28
-                      n: int, seed: int) -> list[QuoteContext]  # (RL-1171); was InputContract
+                      n: int, seed: int) -> list[QuoteContext]  # (RL-1172); was InputContract
 
 # pricing_core/money.py — the decimal discipline (R2); path and signatures
 # corrected 2026-08-29 (WK-671 Slice 1, RL-879) — there is no rating/money.py
@@ -737,7 +737,7 @@ def reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> b
 # to_minor is model-schema's, not pricing-core's: model_schema/money.py
 
 # pricing_core/rate_tables/operations.py
-from model_schema.rating import KeyFilter  # corrected 2026-09-28 (F59, RL-1171): model-schema's shape, imported, never redefined here
+from model_schema.rating import KeyFilter  # corrected 2026-09-28 (F59, RL-1172): model-schema's shape, imported, never redefined here
 def uplift_table(table: RateTableVersion, *, percentage: Decimal) -> RateTableVersion
 def uplift_by_filter(table: RateTableVersion, *, percentage: Decimal,
                      filter: KeyFilter) -> RateTableVersion
@@ -749,7 +749,7 @@ def export_to_xlsx(table: RateTableVersion) -> bytes
 def import_from_csv(version: RateTableVersion, content: bytes, *, filename: str) -> ImportPreview
 def import_from_xlsx(version: RateTableVersion, content: bytes, *, filename: str) -> ImportPreview
 def import_confirmed(version: RateTableVersion, content: bytes, *, filename: str) -> ImportResult
-# the six below added 2026-09-28 (F60 (2), RL-1171) — live behind published endpoints;
+# the six below added 2026-09-28 (F60 (2), RL-1172) — live behind published endpoints;
 # CellRow = dict[str, str] and Cells = Sequence[CellRow] are this module's aliases
 def check_model_approved(model: Model) -> None
 def extract_relativity_table(model: Model, *, value_name: str = "relativity") -> list[CellRow]
@@ -766,7 +766,7 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
                  weights: Weights | None = None) -> RateTableDiff
 ```
 
-> *(Corrected 2026-09-28, RL-1171 — the decision-maker ruled the spec was wrong on F59 and
+> *(Corrected 2026-09-28, RL-1172 — the decision-maker ruled the spec was wrong on F59 and
 > on all four limbs of F60, and the code right.)* The block above had omitted nine live
 > public functions: `to_wire`, the six rate-table functions that published endpoints reach,
 > `assert_integer_minor_round_trip` (the startup call FR-273 requires), and
