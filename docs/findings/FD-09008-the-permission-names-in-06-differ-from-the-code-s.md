@@ -7,13 +7,13 @@ created: 2026-09-28
 owner: auditor
 tree: 37b2596e4318092178c9b0c9fedb83610ee9fd28
 corrected_by: []
-relates: [RL-9203]
+relates: []
 ---
 
 # FD-9008 — The permission names in 06 differ from the code's
 
 The auditor filed this finding on 2026-09-28 in the register-and-records pass. It was routed
-from dm-e's WK-674 ruling (#848, working id RL-9203), which amends only the deploy permission
+from dm-e's WK-674 ruling, PR #848, not merged at this writing, which amends only the deploy permission
 (its DP-6) and leaves the rest *"for an auditor to file as a finding"*.
 
 ## Finding

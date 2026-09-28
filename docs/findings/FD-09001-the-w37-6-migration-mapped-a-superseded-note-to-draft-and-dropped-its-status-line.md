@@ -26,7 +26,7 @@ status row, which carried the dated reason, did not survive into the record.
 ## Evidence
 
 - **Before the migration.** At `71f5a220^`, the proposal notes that became RFC-840 and RFC-841
-  (their pre-migration location is in `docs/REDIRECTS.csv`, rows `NT-0010` and `NT-0011`) had
+  (their pre-migration locations are the two rows of `docs/REDIRECTS.csv` that map to these ids) had
   this status row at line 6: *"`superseded` 2026-08-29 — by the adopted specification,
   `docs/process/delivery-process.md`, which is authoritative from this date"*. RFC-841's note
   read the same, naming `.claude/roles/*.md` and `docs/process/agent-settings.md` as well.
