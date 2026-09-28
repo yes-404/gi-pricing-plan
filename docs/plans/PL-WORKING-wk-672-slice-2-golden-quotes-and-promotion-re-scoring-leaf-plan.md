@@ -129,9 +129,10 @@ plan defect, not the predicted one.
    - with no previous approved version, every quote listed as `added`;
    - of two approved versions of X, the later-approved one used as baseline;
    - an approved version of a different algorithm ignored.
+   - a suite version whose `regression_suite.created` event is missing makes submit refuse with `APPROVAL_AUTHOR_UNRESOLVED`, 403 (#861's code and status; Task 5 starts only after #861 has merged).
 
    The delta is visible in `GET /api/v1/rating-versions/{id}` to a principal holding `approval:decide`.
-9. **The full two-half gate exits 0** on the committed tree, each exit code recorded in the ledger beside its `HEAD`. It is the six lines of `CLAUDE.md` §11, run as `dev-commands` gives them. `alembic upgrade head` and `downgrade -1` run clean on the per-worktree test database.
+9. **The full two-half gate exits 0** on the committed tree, each exit code recorded in the ledger beside its `HEAD`. It is the six lines of `CLAUDE.md` §11, run as `dev-commands` gives them. `alembic upgrade head` and `downgrade -1` run clean on the per-worktree test database. **The determinism repeat also runs on the final tree:** `uv run pytest packages/pricing-core/tests/test_rating_score.py -q`, five times, all rc 0, each rc in the ledger. One native abort stops the slice for triage (Global Constraints, "the scoring path's threading is unchanged").
 10. **The four docs checks pass on a detached copy of the committed tree:**
     - `python3 scripts/audit-docs.py`;
     - `python3 scripts/doc-id.py check`;
@@ -156,10 +157,21 @@ plan defect, not the predicted one.
 - **A full quote input is held only in an access-controlled artifact, and never logged**
   (NFR-499 as clarified, RL-917). A golden quote's `context` lives in the suite row. Every
   read is permission-checked, and no audit payload or log line carries it.
-- **No approvable type is added.** Under DP-S2-1 (A) the suite is not approvable, so this
-  slice does not depend on #861's `CREATION_ACTIONS`. Had (C) been decided, the slice would
-  have waited for #861 and added a `regression_suite` entry and its fail-closed test. The
-  deputy decided (A), so no such task exists.
+- **No approvable type is added.** Under DP-S2-1 (A) the suite is not approvable, so no
+  `regression_suite` entry goes into #861's `CREATION_ACTIONS`. Had (C) been decided, the
+  slice would have added that entry and its fail-closed test. The deputy decided (A), so no
+  such task exists.
+- **Task 5 depends on #861 MERGING.** Task 5 reads the author from the creation Audit Event,
+  which is #861's definition, and refuses with #861's registered code
+  `APPROVAL_AUTHOR_UNRESOLVED` at #861's status, **403**. A reused code keeps its status.
+  **If #861 has not merged when Task 5 starts, the executor stops and reports.** Tasks 1–4
+  do not depend on it.
+- **The scoring path's threading is unchanged.** The `_score_context_sync` extraction (Task
+  3) moves code only. It adds no thread, no executor, no lock and no change to how or where
+  `bundle.decision.evaluate` is called. The pricing-core determinism test
+  `test_scoring_is_deterministic_across_a_subprocess` (`packages/pricing-core/tests/test_rating_score.py`)
+  aborted natively in CI on #830 (a GIL-state abort, 1 in ≥ 40 runs). That is being filed as
+  a finding owned by the lead, and this slice sits beside it.
 - **Permissions: `rating:write` to create a suite version, `rating:read` to read one.** Both
   already exist (`packages/model-schema/src/model_schema/permissions.py`, `RATING_WRITE` and
   `RATING_READ`), and none is added. The grounds are #856's catalogue ruling, DP-A (c),
@@ -372,7 +384,7 @@ The delta is **not** its own generated slug. It is embedded in `RatingVersionEvi
 - **A `PlatformError`-free engine refusal** (input contract, purpose mount) for one quote becomes that quote's `fail`, with `actual_minor=None`. It never aborts the rest.
 
 - [ ] **Step 1:** Write the acceptance item 4 tests against a small compiled bundle. Mirror the fixture `packages/pricing-core/tests` already uses for `score_batch`; do not invent a new one. Run them. Expected: an `ImportError` on `pricing_core.rating.testing`.
-- [ ] **Step 2:** Do the `_score_context_sync` extraction first. Run `uv run pytest packages/pricing-core -q` and confirm the same passed count as the base, so `score_batch` is unchanged.
+- [ ] **Step 2:** Do the `_score_context_sync` extraction first, as a pure move. It must not change threading: no new thread, executor or lock, and `bundle.decision.evaluate` is called exactly as before. Run `uv run pytest packages/pricing-core -q` and confirm the same passed count as the base, so `score_batch` is unchanged. Then run `uv run pytest packages/pricing-core/tests/test_rating_score.py -q` **five times** and record each rc. **One native abort (a negative rc, or a `PyGILState` message) STOPS the slice for triage.** It is reported to the lead with the run's output, not re-run until green.
 - [ ] **Step 3:** Implement `testing.py`. Re-run the new tests, then run `uv run lint-imports`.
 - [ ] **Step 4:** Commit: `feat(pricing-core): evaluate_golden_quotes — exact integer re-score on the synchronous engine path (FR-260)`.
 
@@ -423,7 +435,7 @@ The order inside `submit_for_review`, after the existing status check and **befo
   - `removed`: in baseline, not in current;
   - `expected_changed`: in both, with `expected` or `tolerance` unequal. **A tolerance change is listed**, because widening a tolerance weakens an expectation exactly as editing it does.
 - **The author of each change** is found by walking the suite's versions from `baseline_version + 1` to the current version. `introduced_in_version` is the last version in that range whose content changed that quote's entry. `author` is the principal id in the `actor` of that version's `regression_suite.created` Audit Event, read from `AuditEventRow` (`db/models.py:164`), never from `created_by`. That is the deputy's one-source definition, the same one #861 uses.
-- **If that event is missing, raise 409 `APPROVAL_AUTHOR_UNRESOLVED`.** That is #861's fail-closed code. If #861 has not merged when this task runs, stop and report: the code is #861's to register.
+- **If that event is missing, raise `APPROVAL_AUTHOR_UNRESOLVED` with status 403.** That is #861's fail-closed code, and a reused code keeps the status #861 registers. **Before Step 1, confirm #861 has merged** (`git log --grep '(#861)' -1 origin/main` prints its squash). If it has not, stop and report: the code and the creation-event semantics are #861's. A test covers the missing-event case: a suite version whose `regression_suite.created` event is deleted in the fixture makes submit refuse with `APPROVAL_AUTHOR_UNRESOLVED`, 403.
 
 - [ ] **Step 1:** Write the acceptance item 6, 7 and 8 tests. Acceptance item 8's main test is written and run **before** Step 3, against a gate that pins but builds no delta, and must fail on the missing `changes` entry. Quote that red run in the ledger.
 - [ ] **Step 2:** Implement the gate and the pin (order steps 1–3 and 5), with the delta stubbed as an empty `GoldenQuoteDelta`. Acceptance items 6 and 7 go green, and item 8 stays red for the predicted cause.
@@ -432,7 +444,7 @@ The order inside `submit_for_review`, after the existing status check and **befo
 
 ### Task 6: The slice gate and the ledger
 
-- [ ] **Step 1:** Run the full two-half gate (acceptance item 9), each process started with `env -C <worktree>`, and record every exit code and the `HEAD` in the slice's `LG-` ledger (id from the lead).
+- [ ] **Step 1:** Run the full two-half gate and the five-run determinism repeat (acceptance item 9), each process started with `env -C <worktree>`, and record every exit code and the `HEAD` in the slice's `LG-` ledger (id from the lead).
 - [ ] **Step 2:** Run the four docs checks on a detached copy (acceptance item 10).
 - [ ] **Step 3:** Record `git diff --stat origin/main...HEAD` (acceptance item 11) in the ledger.
 - [ ] **Step 4:** Open the PR. The auditor's pass and the deputy's acknowledgement follow (acceptance item 12).
@@ -470,7 +482,7 @@ Both are named as such. `PL-WORKING` in Task 1's inserted text is this plan's wo
 - the DB fixtures (`conftest_db.py`); `Permission.RATING_WRITE` and `RATING_READ`.
 
 **4. Rulings between the sweep and the PR.** These were read before the push:
-- #861, open: the author definition and `APPROVAL_AUTHOR_UNRESOLVED` are consumed and not redefined;
+- #861, open: the author definition and `APPROVAL_AUTHOR_UNRESOLVED` (registered at 403) are consumed and not redefined, and Task 5 waits for its merge;
 - #855 and #856, open: cited by PR number;
 - #860, open: the mint waits for it.
 
