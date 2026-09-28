@@ -65,6 +65,24 @@ seven lower than they are now: `KeyFilter` is at `03:732` (the row says `:725`),
 - The worker already runs async work from a sync task with `asyncio.run` per task
   (`backend/src/app/worker/tasks.py:286`).
 
+### A correction to `PL-930`, recorded here because the plan is frozen
+
+**Dated 2026-09-28, on the deputy's E11.** The deputy asked for `PL-930:109`'s stale
+citation of `03:597` to be read as `03:603`. At `df8e5811` the citation is on `PL-930:112`,
+inside the DP1 paragraph that opens at `:108-109`. It reads
+`docs/specs/03-rating-engine.md:597` for `POST /api/v1/score/compare`. That route is at
+`03:603`, the §5.1 row *"Score one quote against two versions with a step-level diff
+(FR-262)"*. **Read `:603` for `:597` there.**
+
+The same drift appears twice more in `PL-930`, and the same correction is recorded for
+both:
+
+- `:375` cites `§5.1:597` for `regression-runs`. Read `03:604`.
+- `:383` cites `§5.1:596` for `score/compare`. Read `03:603`.
+
+`PL-930` itself is not edited (`document-ids.md` §1.7). The leaf plans re-derive every `03`
+locator at their own tree.
+
 ## Ruled
 
 ### 1. F60 — `03` §5.2 omits four live exports
@@ -115,10 +133,12 @@ No code changes.
 - `spec-change`'s rule is that a signature is `async def` exactly when it directly awaits a
   native async binding from an async caller. `run_regression` has no async caller:
   `POST …/regression-runs` is a **202**, so the suite runs inside a Job in the worker.
-- FR-261 requires counterexamples *"shrunk to a minimal case an actuary can read"*
-  (`regression-suite.schema.json`, `RegressionRun.property_results[].counterexample`).
-  Hypothesis runs its shrink loop through a synchronous property function. An async
-  `run_regression` would need an event loop inside that loop.
+- A synchronous engine path already exists: `score_batch` evaluates with `evaluate()`
+  (RL-868). The ruling rests on this ground and the one above.
+- **Conditional, amended 2026-09-28 before merge (the deputy's F4):** *if* spike F4
+  chooses `hypothesis` as the generator, its shrink loop, which FR-261's shrunk
+  counterexample needs, runs through a synchronous property function. That would be a
+  third reason for `def`. The ruling does not depend on it.
 - The sync path does not weaken the golden-quote guarantee. It reaches the same
   `build_scoring_result` tail as `score_one` (RL-858), over the same compiled graph.
 
@@ -154,12 +174,18 @@ database, FastAPI or Redis. So it stays in `pricing-core`, and `CLAUDE.md` §2 h
 
 This placement has two consequences, stated so that the slices do not rediscover them:
 
-- **`hypothesis` becomes a runtime dependency of `pricing-core`,** added in Slice 3's PR.
-  `03` §8 already names it, and `docs/skills-map.md` has a row that cites FR-261. That PR
-  checks the row still says what the code does (`CLAUDE.md` §10).
-  - `hypothesis` is pure Python and pulls in none of FastAPI, SQLAlchemy or Redis.
-  - The generator may not use `.example()`. It must reproduce from the persisted
-    `generation.seed`.
+- **The generator is not ruled here** (amended 2026-09-28 before merge, on the deputy's
+  F4). The choice is `hypothesis` as a `pricing-core` runtime dependency, or the platform's
+  own seeded generator. It is decided on spike F4's RS record, by the deputy.
+  - The deputy recommends the platform's own generator unless the spike shows otherwise.
+  - F4 runs first, and Slice 3 follows its outcome.
+  - Whatever is chosen must reproduce its cases from the persisted `generation.seed`, and
+    must import none of FastAPI, SQLAlchemy or Redis (`CLAUDE.md` §2).
+  - If a runtime dependency results, `03` §8 and `docs/skills-map.md` change in the same
+    PR (`CLAUDE.md` §10).
+  - The deputy's F4 also decides the assertion language: a structured union of FR-261's
+    five classes, as declarative JSON artifacts. That is the deputy's decision, and it is
+    not repeated here as this role's.
 - **`RegressionSuite`, `GoldenQuote` and `RegressionRun` become `model-schema` artifacts**
   in the slice that first builds each one (Slice 2 for the suite and the golden quote,
   Slice 3 for the run).
@@ -248,8 +274,8 @@ within the existing cut as follows:
 - **Slice 2 is unchanged** except for one addition: its `GoldenQuote`/`RegressionSuite`
   shapes are `model-schema` artifacts (item 3c). NFR-499's access-controlled-artifact clause
   (RL-917) still binds its store.
-- **Slice 3 grows** by FR-257 limb (1) (item 4) and by the `hypothesis` runtime dependency
-  (item 3c). It builds `run_regression` as a `def` in `pricing-core` (item 3a).
+- **Slice 3 grows** by FR-257 limb (1) (item 4), and it follows spike F4's generator
+  decision (item 3c). It builds `run_regression` as a `def` in `pricing-core` (item 3a).
 - **Slice 4 is unblocked** by DP1 = A, and its scope is the backend limb only.
 
 ## What it obliges
@@ -271,7 +297,7 @@ The spec keeps all ten sections, mints no requirement id, and raises no open que
 | Slice 1 | WK-672's roadmap section names `POST /api/v1/score/compare`; WK-675's states that the Quote Sandbox view consumes it | item 5 |
 | Slice 1 | `03` §4.9 `RegressionRun`; `GOLDEN_QUOTE_MISMATCH` registered; the `test_contracts.py:89` label corrected | `PL-930`, item 3c |
 | Slice 2 | `RegressionSuite` and `GoldenQuote` as `model-schema` artifacts; the store honours NFR-499 (RL-917) | item 3c |
-| Slice 3 | `run_regression` / `generate_contexts` in `pricing-core` `rating/testing.py`, `def`, sync engine path; `hypothesis` as a runtime dependency, with the `skills-map.md` row checked; `RegressionRun` as a `model-schema` artifact | items 3a–3c |
+| Slice 3 | `run_regression` / `generate_contexts` in `pricing-core` `rating/testing.py`, `def`, sync engine path; the generator spike F4 decides, with `03` §8 and `skills-map.md` updated if it adds a runtime dependency; `RegressionRun` as a `model-schema` artifact | items 3a–3c |
 | Slice 3 | FR-257 limb (1) on `submit_for_review`, with a limb-(1)-only marker | item 4 |
 | Slice 4 | `POST /api/v1/score/compare`, the diff-shape tests, the broken-input proof; no frontend | item 5 |
 | WK-672 closure record | FR-262 typed "backend limb delivered and tested (WK-672); UI limb reassigned to WK-675" | item 5 |
@@ -283,10 +309,9 @@ The spec keeps all ten sections, mints no requirement id, and raises no open que
   misstates. Detected by the next two-direction §5.2 pass (the `spec-reconciler`), which
   must report no disagreement for `compile.py`, `runtime.py`, `score.py` or
   `operations.py` at the merge tree of this record.
-- **Item 3a:** an `async def run_regression`, or a `run_regression` that returns
-  counterexamples that were never shrunk. Detected by Slice 3's tests: one calls
-  `run_regression` from a plain synchronous context, and one asserts that a deliberately
-  failing property reports a counterexample smaller than the first failing case generated.
+- **Item 3a:** an `async def run_regression`. Detected by a Slice 3 test that calls
+  `run_regression` from a plain synchronous context. The seed-reproducibility test follows
+  spike F4.
 - **Item 3c:** `pricing-core` gaining a FastAPI, SQLAlchemy or Redis import. Detected by
   `lint-imports`, which must stay green on Slice 3's tree.
 - **Item 4:** a Rating Version reaching `approved` with no passing `RegressionRun` for its

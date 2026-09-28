@@ -777,8 +777,8 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
 > a `list[InputContractField]`. `run_regression` **stays plain `def`**. It runs inside the
 > 202 Job that `POST …/regression-runs` starts. It reaches the engine through the
 > synchronous `evaluate()` path `score_batch` uses (RL-868), and so through the same
-> `build_scoring_result` tail as `score_one` (RL-858). This path is used because property
-> shrinking (FR-261) runs a synchronous loop. Both `testing.py` functions live in
+> `build_scoring_result` tail as `score_one` (RL-858). The generator is decided on spike
+> F4's record, not here. Both `testing.py` functions live in
 > `pricing-core` and hold no persistence. The backend owns the suite store, the Job and the
 > gates.
 
