@@ -2,7 +2,7 @@
 id: LG-1182
 family: ledger
 title: WK-672 Slice 1 — spec correction and gap closure
-status: active
+status: closed
 created: 2026-09-28
 owner: executor
 tree: ed123cb0fcf91e44872963bf8a8bad32b87c99bc
@@ -160,4 +160,127 @@ added by the final commit, which touches `docs/` only.
 
 | PR | Branch | Title | Squash SHA on `main` |
 |---|---|---|---|
-| #853 (draft) | `p2-d-s1` | WK-672 Slice 1: spec correction and gap closure (PL-1177) | (on merge) |
+| #853 | `p2-d-s1` | feat(rating): WK-672 Slice 1 — spec correction and gap closure, LG-1182 | `50e5271ca1dd21064a31bdc230f0672b5b3d1d27`, squash, merged 2026-09-28 15:01:35 BST |
+
+*(Corrected 2026-09-28 by the auditor, at slice close: this row read "#853 (draft)", the PR's working title, and "(on merge)". The PR was retitled to Conventional Commits form before the merge, and the squash SHA is now known.)*
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor on 2026-09-28** (`document-ids.md` §1.6, SL row:
+*"auditor closes: sets the `LG-` `closed`, verifies acceptance"*). This is the W37
+closing-record convention, a two-pass audit plus one post-merge, docs-only PR authored by the
+auditor, set by the deputy on 2026-09-27 at 06:55:24 BST. This PR touches exactly two paths:
+this file and `docs/INDEX.md`. It takes no new id. A Slice closes on a clean audit and the
+lead's merge, with no maintainer line (`CLAUDE.md` §13).
+
+**The work PR, #853.** It was squash-merged onto `main` as `50e5271c` (the PRs table) at
+2026-09-28 15:01:35 BST (`gh pr view 853 --json mergedAt` → `2026-09-28T14:01:35Z`). Its
+parent on `main` is `37b2596e`. Its PR head was `b289f519`, reachable via
+`refs/pull/853/head`. The squash's tree equals the head's tree, `beaeb42c`, so the slice's
+content is on `main` byte for byte. The deputy's MERGE-ACK for #853 at `b289f519` is stamped
+2026-09-28 15:00:48 BST, in the lead's local channel file `to-lead.md` (local, not repo). The
+lead adopted the audit as **CLEAN, passes (a) and (b)** on 2026-09-28, before the merge.
+
+**Evidence is cited by the squash, `50e5271c`.** Every other SHA in this file, and in the
+audit record quoted below (`b84e0990`, `cd296f6b`, `dfc30fa3`, `675e8532`, `b954ca2d`, and
+the PR head `b289f519`), is a **pre-squash branch commit of #853**, reachable via
+`refs/pull/853/head`, not on `main`.
+
+**The audit record, passes (a) and (b), verbatim** as the auditor wrote it before the merge
+(the notes and the dated correction under them included). It is fenced because it is a
+quotation, and a quotation keeps the finding ids it was written with:
+
+```text
+WK-672 Slice 1, PR #853. Audit by auditor-a, 2026-09-28. The range is origin/main...p2-d-s1, from merge base ed123cb0 to head b954ca2d. The lead adopted the verdict CLEAN on 2026-09-28.
+
+PASS (a), item by item:
+- Item 5, change set. `git diff --stat` shows exactly 7 files, +193/−3: errors.py, test_contracts.py, test_errors.py, INDEX.md, LG-09301…, roadmap.md and 03-rating-engine.md. There is nothing else. There are 5 commits, one per task, and the last commit touches docs/ only.
+- Item 1, roadmap. The `score/compare` hits are at :637, inside WK-672 (lines 623–640), and at :684, inside WK-675 (lines 670–687). Both paragraphs are byte-identical to PL-1177's text. The migrated lines are untouched: the diff has 4 added lines and 0 removed.
+- Item 2, §4.9.
+  - `### 4.9` is at :581, between §4.8 (:503) and §5 Interfaces (:621).
+  - Its text is identical to the plan's block, except for one trailing blank line.
+  - Independent field check: I parsed the schema's `RegressionRun` definition as JSON and compared it with the keys in the §4.9 block. Doc and schema each have 16 names, and the diff is empty in both directions.
+  - "hypothesis" does not appear in §4.9.
+- Item 3, Task 3 test-first, reproduced by me. The plan's Step 6 commits the test and the code together (dfc30fa3), so there is no separate red commit. I ran the new test against the base errors.py (from ed123cb0).
+  - With the base file: `FAILED … E AssertionError: assert 'GOLDEN_QUOTE_MISMATCH' in frozenset({...})` at test_errors.py:162, which is the membership line. This is identical to the ledger's quote.
+  - At the head: `PASSED`.
+  - The errors.py diff adds exactly one quoted code, "GOLDEN_QUOTE_MISMATCH". PROPERTY_ASSERTION_FAILED appears only in the comment the plan prescribes.
+- Item 4, test_contracts.
+  - :91 now reads "authored-only until WK-672 builds it — 03 §4.7 and §4.9", and the key is kept.
+  - The result is "136 passed, 2 skipped" on both the branch file and the base file, so the count is unchanged.
+- Item 6, gate. I did not re-run the full gate. Spot check:
+  - `pytest --collect-only` gives 3469 at b954ca2d and 3468 at ed123cb0, so one new test. This matches the ledger's 3465 + 3 + 1 = 3469.
+  - The ledger records all 13 commands at rc 0 on 675e8532. The final commit b954ca2d is docs-only, so that gate tree stands for the code.
+  - The ledger discloses the `WT=p2_d_s1` deviation, and the lead approved it.
+- Item 7, docs checks at b954ca2d:
+  - audit-docs: rc 1, FAILED (1), "check 31: gap in the full allocation between 1177 and 9301" (the working id). DISCLOSED (865, at or under the W37-11 residue ceiling).
+  - doc-id check: the same gap.
+  - doc-index --check: rc 0.
+  - register-lint: OK.
+- Ledger.
+  - All 4 task SHAs and the gate HEAD 675e8532… are ancestors of b954ca2d.
+  - The stamps match the commit times, Europe/London: 14:03:59, 14:05:11, 14:07:15 and 14:08:17.
+  - The base is ed123cb0, which is correct.
+- Test database. The two pytest runs used gipricing_auditor_a_s1, created from the template. It was dropped afterwards: dropdb rc 0, and the count is 0.
+
+PASS (b), against RL-1172. §6 limits Slice 1 to four items: the roadmap text with DP1's two sentences, §4.9, the registration, and the :89 label. The slice delivers exactly those four. Nothing from Slices 2–4 leaked in: there is no raiser, no HTTP status choice, no model-schema shape and no generator. §4.9 names the model-schema move in Slice 3 (item 3c) and the bundle_hash approval read (item 4).
+
+NOTES, none blocking:
+1. A merge onto main at 092582a4 conflicts only in docs/INDEX.md. The mint turn resolves it.
+2. §4.9's example is not valid JSON at `"rating_version_ref": {"…artifact-ref…"}`. This is the plan's own text, copied exactly. Carried to Slice 3 (the lead's ruling).
+3. RL-1172's auditor obligation (F60 and F59 set Resolved, F44 limb (1) re-pointed to Slice 3) was not yet done at main. Routed to auditor-b's register pass.
+
+CORRECTION (the lead, relaying the deputy's ruling of 2026-09-28): note 2 is NOT carried to Slice 3. executor-s1 fixes §4.9's JSON example in the LG mint's renumber commit, re-parsed rc 0. The closing record records it as "found by the audit, fixed before merge", citing that commit's SHA. It is not a carried item.
+```
+
+**The §4.9 example: found by the audit (pass a, note 2); fixed before merge in `b289f519`.**
+The deputy ruled that it is fixed in this slice, not carried to Slice 3. The fix is part of
+`50e5271c`. It was verified by three hands, each with a broken-input control:
+
+- **The executor:** three checks, named in this file's *Deviations* section. They are a
+  parse, a per-field check, and `jsonschema` 4.26.0 in an isolated environment. The
+  controls fail as predicted.
+- **The lead:** a re-parse at `b289f519`, rc 0, with a control at rc 1 (the lead's message to
+  the auditor, 2026-09-28).
+- **The auditor, independently:**
+  - At `b289f519`, a per-field check: all 7 required keys; `rating_version_ref` against
+    `common/artifact-ref`'s pattern; `bundle_hash` against `^sha256:[a-f0-9]{64}$`;
+    `job_id` a UUID; `overall` in its enum; `started_at` RFC 3339.
+  - At the merge tree `50e5271c`, a re-run of `jsonschema` 4.26.0. The block was extracted
+    from `docs/specs/03-rating-engine.md` and is byte-identical to `b289f519`'s (`cmp`).
+    `json.load` gives rc 0. The schemas came from `git archive 50e5271c docs/contracts/schemas`
+    into the auditor's job directory. The run used
+    `uv run --no-project --with jsonschema --with referencing --with rfc3339-validator`,
+    with every `$id` registered and the format checker on. It printed
+    "0 error(s) against RegressionRun", rc 0.
+  - The control, with `bundle_hash` set to `'sha256:xyz'` and `job_id` to `'not-a-uuid'`,
+    gives rc 1 with exactly those two errors.
+  - No file in the repository or in `uv.lock` was touched.
+
+**Pass (b) after the merge, the reachability sweep, run by the auditor at 2026-09-28 15:05 BST.**
+- **Predicate, verbatim:** `git show 81e061fb:docs/ledgers/LG-01182-wk-672-slice-1-spec-correction-and-gap-closure.md | grep -oE '\b[0-9a-f]{7,40}\b' | sort -u`.
+  Each token is classified in order:
+  1. `git cat-file -t <t>` not `commit` gives NOTCOMMIT;
+  2. `git merge-base --is-ancestor <t> 81e061fb` exit 0 gives MAIN;
+  3. the same check against the #853 head, fetched read-only with
+     `git fetch origin pull/853/head`, exit 0 gives BRANCH;
+  4. otherwise NEITHER.
+- **MAIN ×2:** `ed123cb0…` (the slice's base and its `tree:` field) and `37b2596e…` (the
+  squash's parent).
+- **BRANCH ×6 tokens (5 commits):** `b84e0990`, `cd296f6b`, `dfc30fa3`, `675e8532` (twice:
+  short and full), `b954ca2d`.
+- **NEITHER ×0. NOTCOMMIT ×0.**
+- The SHAs this section adds are the squash `50e5271c` and its parent `37b2596e`, both on
+  `main`, and `b289f519`, the PR head, a branch commit. The squash's tree is `beaeb42c`.
+
+**Items routed elsewhere, not owed by this slice:**
+- RL-1172's own obligation on the auditor is routed to the second auditor's register pass
+  (the lead's ruling). It covers three register rows: the two spec-defect rows set
+  Resolved, and the approval-evidence row's limb (1) re-pointed to Slice 3.
+- The merge-tree `INDEX.md` conflict (pass a, note 1) was resolved at the mint turn and
+  needs nothing further.
+
+**Acceptance, `PL-1177` items 1–8:**
+- Items 1 to 7 are verified by pass (a) above.
+- Item 8, the deputy's merge acknowledgement, is the MERGE-ACK at 2026-09-28 15:00:48 BST.
+- Nothing is owed. The slice is closed.
