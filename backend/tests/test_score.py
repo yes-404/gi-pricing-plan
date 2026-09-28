@@ -19,6 +19,7 @@ for the reason these tests are about.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -1078,3 +1079,56 @@ def test_a_pinned_bundle_that_no_longer_resolves_is_refused_not_silently_rescore
     assert job_status is JobStatus.SUCCEEDED
     assert completed.status == "mismatch"
     assert completed.blob_sha256 is None
+
+
+@pytest.mark.req("NFR-499")
+def test_a_422_for_a_bad_input_names_the_field_and_carries_no_value(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The single-quote path's problem detail is the coded message with the value dropped
+    (NFR-499, RL-917): the field and the constraint are there, the sentinel is not, in the
+    response or in any log."""
+    sentinel = "SENTINEL-quote-input-6a1f93c4"
+    body = _quote({"rating_version_ref": SCORED_REF})
+    body["inputs"] = {"premium_in": sentinel}
+
+    with caplog.at_level(logging.DEBUG):
+        response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+
+    assert response.status_code == 422, response.text
+    assert sentinel not in response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "premium_in" in response.json()["detail"]
+    assert sentinel not in caplog.text
+
+
+@pytest.mark.req("NFR-499")
+def test_a_trace_sampling_failure_logs_no_quote_input(
+    scoring_headers: dict[str, str], database: Any, workspace_id: Any, principal: Any,
+    api_settings: Settings, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The failing write carries the quote context; the log line keeps the frames and the type,
+    never the exception's own text."""
+    sentinel = "SENTINEL-quote-input-b4d70e25"
+    caller = Caller(
+        principal=principal, workspace_id=workspace_id, environments=frozenset({"uat"}),
+        environment="uat", permissions=frozenset({"score:execute"}),
+    )
+    ctx = QuoteContext.model_validate(_quote({"rating_version_ref": SCORED_REF}))
+
+    async def _boom(*_args: Any, **_kwargs: Any) -> Any:
+        raise ValueError(f"cannot write {sentinel}")
+
+    monkeypatch.setattr(score_module.traces_service, "write_pending_trace", _boom)
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+
+    with caplog.at_level(logging.DEBUG):
+        _run(score_module._maybe_sample_trace(
+            database, api_settings, caller, ctx, _scored(outcome="quoted")
+        ))
+
+    assert "trace sampling failed" in caplog.text
+    assert "ValueError" in caplog.text
+    assert sentinel not in caplog.text
+

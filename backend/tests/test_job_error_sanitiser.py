@@ -223,3 +223,60 @@ async def test_a_unique_violations_detail_does_not_reach_the_message_or_the_log(
     with pytest.raises(DBAPIError) as caught:
         await _second_insert()
     assert _SENTINEL in str(caught.value.orig)
+
+
+@pytest.mark.req("NFR-499")
+async def test_an_unexpected_exception_is_stored_as_its_type_only_and_keeps_the_ids_in_the_log(
+    database: Database, workspace_id, principal, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The allow-list: an exception that is not ours is its type name and nothing else, however
+    it is worded. The operator keeps the type, the Job id and the trace id (on the log record)
+    and the frames of the traceback."""
+    from app.observability.logging import JsonFormatter
+    from app.observability.trace import bind_trace_id, reset_trace_id
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise RuntimeError(f"the quote {_SENTINEL} could not be priced")
+
+    trace_id = "ab" * 16
+    token = bind_trace_id(trace_id)
+    try:
+        with caplog.at_level(logging.INFO):
+            row = await _run(database, workspace_id, principal, handler)
+        record = next(r for r in caplog.records if r.getMessage() == "job handler failed")
+        rendered = JsonFormatter().format(record)
+    finally:
+        reset_trace_id(token)
+
+    assert row.error is not None
+    assert row.error["message"] == "RuntimeError"
+    assert _SENTINEL not in caplog.text
+    assert _SENTINEL not in await _persisted_logs(database, row.id)
+    assert record.job_id == str(row.id)  # type: ignore[attr-defined]
+    assert f'"trace_id":"{trace_id}"' in rendered
+    assert f'"job_id":"{row.id}"' in rendered
+    assert "RuntimeError" in rendered
+    assert "handler" in rendered, "the traceback frames are kept"
+    assert _SENTINEL not in rendered
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_dataframe_library_error_is_stored_as_its_type_only(
+    database: Database, workspace_id, principal, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A polars `ComputeError` repeats the value it could not append; the next library will do
+    the same, which is why the rule is an allow-list rather than a list of known offenders."""
+    import polars as pl
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        pl.DataFrame([{"q": {"secret": _SENTINEL}}, {"q": _SENTINEL}])
+        raise AssertionError("unreachable")
+
+    with caplog.at_level(logging.INFO):
+        row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["message"] == "ComputeError"
+    assert _SENTINEL not in caplog.text
+    assert _SENTINEL not in await _persisted_logs(database, row.id)
+
