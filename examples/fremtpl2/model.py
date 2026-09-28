@@ -14,16 +14,20 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.db.models import DatasetVersionRow, ModelRow
+from app.db.models import BlobRow, DatasetVersionRow, ModelRow, RegressionRunRow
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import approvals as approval_service
 from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
+from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_versions_service
-from app.platform.blobs import BlobStore
+from app.platform import regression_suites as suite_service
+from app.platform.blobs import BlobStore, to_ref
 from app.worker.model_handlers import register_model_handlers
+from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
 from model_schema import (
     ArtifactRef,
@@ -40,9 +44,15 @@ from model_schema import (
     MonotonicDirection,
     OffsetSpec,
     Principal,
+    QuoteContext,
+    RegressionSuiteContent,
     SplitRef,
     new_uuid7,
 )
+from pricing_core.rating.compile import Bundle
+from pricing_core.rating.properties import payable_minor
+from pricing_core.rating.runtime import CompiledBundle, load_bundle
+from pricing_core.rating.score import score_one
 
 #: The demo factor set (OD4's "reduced factor set"): three continuous, four categorical.
 #: Each names a column the WK-666 dictionary declares. The continuous columns carry the
@@ -300,21 +310,196 @@ async def compare_and_approve(
     return glm_id
 
 
+#: The label every demo-fixture artifact carries (DP-S3-8): the algorithm's slug and step
+#: labels, the suite's slug, the golden quote's name and the change note. It is not priced
+#: from the approved GLM — the real freMTPL2 algorithm is G2's, owned by the lead.
+DEMO_FIXTURE: Final = "demo-fixture"
+DEMO_ALGORITHM_SLUG: Final = f"{DEMO_FIXTURE}-motor"
+DEMO_SUITE_SLUG: Final = f"{DEMO_FIXTURE}-suite"
+DEMO_QUOTE_NAME: Final = f"{DEMO_FIXTURE}-quote"
+DEMO_PREMIUM_IN: Final = 100
+
+_EMPTY_PINS: Final[dict[str, list[str]]] = {
+    "rate_tables": [], "models": [], "reference_tables": [], "custom_objectives": [],
+}
+
+
+def _demo_algorithm() -> dict[str, Any]:
+    """The demo fixture's algorithm: `payable = premium_in * 2`. **Not priced from the GLM**
+    (DP-S3-8): it exists so the demo's rating version can carry executed regression evidence
+    (FR-257 limb (1)); the real algorithm around the approved freMTPL2 models is G2's."""
+    return {
+        "slug": DEMO_ALGORITHM_SLUG,
+        "version": 1,
+        "input_contract": [{"name": "premium_in", "type": "int", "nullable": False,
+                            "min": 0, "max": 1_000_000}],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "Demo fixture input",
+             "input_name": "premium_in", "on_missing": "error", "produces": "premium_in"},
+            {"step_id": "s_expr", "type": "expression", "label": "Demo fixture: doubles the input",
+             "expr": "premium_in * 2", "result_type": "money_minor",
+             "consumes": ["premium_in"], "produces": "payable"},
+            {"step_id": "s_out", "type": "output", "label": "Demo fixture payable premium",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["payable"]},
+        ],
+        "sub_graphs": [],
+    }
+
+
+async def _load_compiled(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, rating_id: UUID
+) -> CompiledBundle:
+    """The compiled bundle the compile Job stored, as the submit gate's loader reads it."""
+    async with database.session() as session:
+        row = await rating_versions_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        blob_row = await session.get(BlobRow, (row.bundle or {})["blob_sha256"])
+        assert blob_row is not None, "the compile Job stored no bundle"
+        payload = await blob_store.read(to_ref(blob_row))
+    return load_bundle(Bundle.model_validate_json(payload))
+
+
+async def author_demo_rating_evidence(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    analyst: Principal,
+    rating_id: UUID,
+) -> UUID:
+    """Give a draft rating version its executed FR-257 limb (1) evidence (DP-S3-8, T6b).
+
+    **Every piece is produced by the real path, none inserted**: the demo-fixture algorithm
+    is saved through the service; the version is compiled by the `rating.compile` Job; the
+    golden quote's expected premium is computed by `score_one` on that compiled bundle at
+    seed time; and the regression runs through the `rating.regression` Job, whose handler
+    calls `run_regression` and persists the run. No `RegressionRun` row and no pass verdict
+    is written here. Returns the regression Job's run id.
+    """
+    register_rating_handlers()
+    assert analyst.id is not None
+    try:
+        await algorithm_service.create_algorithm(
+            database, workspace_id, analyst.id, _demo_algorithm()
+        )
+    except PlatformError as exc:  # a re-seed: the algorithm is already saved
+        if exc.status_code != 409:
+            raise
+    async with database.unit_of_work() as session:
+        row = await rating_versions_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        row.algorithm_ref = f"rating_algorithm:{DEMO_ALGORITHM_SLUG}@1"
+        row.pins = dict(_EMPTY_PINS)
+        ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+
+    compiled_status = await _run_job(
+        database, blob_store, workspace_id, analyst, JobKind.RATING_COMPILE,
+        {"rating_version_id": str(rating_id)},
+    )
+    assert compiled_status is JobStatus.SUCCEEDED, f"demo compile Job {compiled_status}"
+    bundle = await _load_compiled(database, blob_store, workspace_id, rating_id)
+
+    context = QuoteContext.model_validate({
+        "purpose": "new_business", "quoted_at": "2026-09-28T09:00:00",
+        "effective_date": "2026-10-01", "inputs": {"premium_in": DEMO_PREMIUM_IN},
+        "options": {"rating_version_ref": str(ref)},
+    })
+    expected = payable_minor(await score_one(bundle, context))
+    assert expected is not None
+    suite = RegressionSuiteContent.model_validate({
+        "algorithm_slug": DEMO_ALGORITHM_SLUG,
+        "golden_quotes": [{
+            "name": DEMO_QUOTE_NAME,
+            "context": context.model_dump(mode="json", exclude={"options"}),
+            "expected": {"payable_premium_minor": expected, "outcome": "quoted"},
+            "tolerance": {"money_minor": 0},
+            "note": "demo fixture: not priced from the GLM",
+        }],
+        "properties": [
+            {"name": "no-null-output", "check": {"kind": "no_null_output"}},
+            {"name": "premium-bounded", "check": {"kind": "premium_bounded", "lower_minor": 0}},
+        ],
+        "generation": {"cases": 25, "seed": SPLIT_SEED, "strategy": "input_contract_sampling"},
+    })
+    async with database.unit_of_work() as session:
+        await suite_service.create_suite_version(
+            session, workspace_id=workspace_id, actor=analyst, slug=DEMO_SUITE_SLUG,
+            content=suite, change_note="demo fixture: not priced from the GLM",
+        )
+
+    run_status = await _run_job(
+        database, blob_store, workspace_id, analyst, JobKind.RATING_REGRESSION,
+        {"rating_version_id": str(rating_id)},
+    )
+    assert run_status is JobStatus.SUCCEEDED, f"demo regression Job {run_status}"
+    async with database.session() as session:
+        latest = (await session.execute(
+            select(RegressionRunRow).where(RegressionRunRow.rating_version_id == rating_id)
+            .order_by(RegressionRunRow.finished_at.desc()).limit(1)
+        )).scalar_one()
+    return latest.id
+
+
+async def submit_and_approve_demo(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    actuary: Principal,
+    approver: Principal,
+    second_approver: Principal,
+    rating_id: UUID,
+) -> None:
+    """Submit the demo rating version through the real gate and approve it with two approvers.
+
+    The gate re-scores the golden quote, pins the suite and reads the executed run
+    (FR-257 limb (1)); `06` §4.2's default policy asks two approvers for a rating version.
+    """
+    async def load_compiled(_ref: ArtifactRef) -> CompiledBundle:
+        return await _load_compiled(database, blob_store, workspace_id, rating_id)
+
+    async with database.unit_of_work() as session:
+        _, request = await rating_versions_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id,
+            change_summary="Phase 1b demo rating version pinning the approved GLM",
+            load_compiled=load_compiled,
+        )
+        request_id = request.id
+
+    for who in (approver, second_approver):
+        async with database.unit_of_work() as session:
+            request = await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=request_id,
+                approver=who, decision=DecisionKind.APPROVE,
+                comment="Demo rating version approved for the Phase 1b exit",
+                evidence_authors=rating_versions_service.golden_quote_delta_authors,
+            )
+            await rating_versions_service.apply_approval_decision(
+                session, workspace_id=workspace_id, actor=who, request=request
+            )
+
+
 async def create_approved_rating_version(
     database: Database,
+    blob_store: BlobStore,
     workspace_id: UUID,
     analyst: Principal,
     actuary: Principal,
     approver: Principal,
+    second_approver: Principal,
     dataset_version_id: UUID,
     model_id: UUID,
 ) -> UUID:
     """W7-3: create, submit and approve the demo rating version (FR-440).
 
     The rating version pins the approved GLM as `model:{slug}@{version}`, so the exit
-    demo's rating version is addressable and its approval is auditable. The service `decide`
-    moves the request; `apply_approval_decision` carries to the artifact, exactly as the
-    model approval does.
+    demo's rating version is addressable and its approval is auditable. Since WK-672 Slice 3
+    it also carries **executed** regression evidence (`author_demo_rating_evidence`): a
+    submission needs a passing Regression Suite with a golden quote (FR-257 limb (1)), and
+    two approvers decide it (`06` §4.2's default policy).
     """
     async with database.session() as session:
         model_row = await session.get(ModelRow, model_id)
@@ -330,22 +515,12 @@ async def create_approved_rating_version(
         )
         rating_id = row.id
 
-    async with database.unit_of_work() as session:
-        _, request = await rating_versions_service.submit_for_review(
-            session, workspace_id=workspace_id, actor=actuary,
-            rating_version_id=rating_id,
-            change_summary="Phase 1b demo rating version pinning the approved GLM",
-        )
-        request_id = request.id
+    run_id = await author_demo_rating_evidence(
+        database, blob_store, workspace_id, analyst, rating_id
+    )
 
-    async with database.unit_of_work() as session:
-        request = await approval_service.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
-            approver=approver, decision=DecisionKind.APPROVE,
-            comment="Demo rating version approved for the Phase 1b exit",
-        )
-        await rating_versions_service.apply_approval_decision(
-            session, workspace_id=workspace_id, actor=approver, request=request
-        )
-    print(f"  rating version approved: {rating_id}")
+    await submit_and_approve_demo(
+        database, blob_store, workspace_id, actuary, approver, second_approver, rating_id
+    )
+    print(f"  rating version approved: {rating_id} (regression run {run_id}, demo fixture)")
     return rating_id
