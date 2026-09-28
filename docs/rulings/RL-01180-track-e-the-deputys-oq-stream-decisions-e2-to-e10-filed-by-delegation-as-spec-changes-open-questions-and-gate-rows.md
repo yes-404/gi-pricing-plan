@@ -160,7 +160,7 @@ WK-675's map plan, and fix the gate-table cell that shows it struck."* Dispositi
   the italics.
 - The Deferred row recounts to 35 (1 open).
 
-**F3's OQ — OQ-1182, open.** The deputy's words: *"file the OQ first, with options (a) isolated
+**F3's OQ — OQ-1182, decided (b) on the spike's record.** The deputy's words: *"file the OQ first, with options (a) isolated
 plus cumulative in a declared step order, with an explicit interaction-residual line so the
 parts reconcile to the total; (b) Shapley over steps; (c) cumulative only. Recommendation (a).
 The spike runs on freMTPL2 and measures the size of the residual and how much the order
@@ -182,11 +182,32 @@ changes the result. I decide on the record."* Disposition:
   - *"If (a) fails on any set, the record recommends (b) exact Shapley, capped at K ≤ 6."*
   - *"(c) is not chosen in either case"*.
   - Both S and R are taken over D = Σᵢ |isolatedᵢ|.
-  - The status stays **open**, with recommendation (a), decided on the F3 research record.
+  - The row was filed **open**, with recommendation (a), to be decided on the F3 research
+    record.
+- **Decided (b) on that record**, by the deputy by delegation, in the entry of 2026-09-28
+  headed "Spike F3 DECIDED on its RS record", at 12:10:21 BST. The record is PR #833.
+  The deputy's words:
+  - *"(a) fails rule 2 on the two sets containing the cap: 0,1,4,5 (S 0.3642, R 0.2163)
+    and 0,1,2,3,4,5 (S 0.2879, R 0.2684). At K = 6 one step's cumulative contribution
+    changes sign with the order (−1.241 to +1.9885)."*
+  - *"The attribution of record is exact Shapley over the declared changes, for K ≤ 6.
+    It is exact as a rational (× K!). It is allocated to integer minor units by largest
+    remainder, with ties broken in the declared change order."* Plain rounding *"is
+    forbidden by name"*.
+  - *"Isolated and declared-order cumulative figures stay as FR-266 requires. They are
+    reported beside the Shapley figures as views, not as the attribution."*
+  - *"Above K = 6, the analyst groups the changes into ≤ 6 declared groups, and Shapley
+    runs over the groups. Where that is refused, (a) with its residual line is shown with
+    the measured S and R printed beside it, labelled order-dependent. It is never
+    presented as a decomposition."*
+  - The decision clause, identical in the register and in the `03` mirror: *"DECIDED
+    2026-09-28 — option (b), exact Shapley with largest-remainder allocation (deputy, on
+    spike F3's RS record)"*.
+  - The gate row strikes OQ-1182 and recounts Before Phase 2 to 15 (0 open).
 
 **The gate table.** Every count was recounted by the `docs-audit` snippets, not incremented.
 Those snippets were rewritten in this PR, because their pre-migration pattern matched no id.
-The counts are: Before Phase 2, 15 (1 open); Before Phase 3, 9 (0 open); Deferred, 35 (1 open).
+The counts are: Before Phase 2, 15 (0 open) once OQ-1182 was decided (15 (1 open) before that); Before Phase 3, 9 (0 open); Deferred, 35 (1 open).
 A dated note beneath the table records the five edits.
 
 ## What it obliges
@@ -209,16 +230,18 @@ A dated note beneath the table records the five edits.
     for it.
   - Neither of these is a defect in behaviour: the tripwire stays correct.
 - **WK-690's first slice** brings the parser to §4.6 for objectives (FR-144's amendment).
-- **WK-673** owns `structural_diff` (FR-364's amendment). It also takes OQ-1182's decision
-  from the F3 spike's research record.
+- **WK-673** owns `structural_diff` (FR-364's amendment). It also builds OQ-1182's decision.
+  In its first slice, following the deputy's entry: FR-266's dated amendment naming
+  Shapley as the decomposition; the hard gate as requirements (reconciliation on the rating
+  path's own arithmetic, on the ZEN engine, tested on deliberately broken input); and the
+  2^K cost measured and proposed as an NFR.
 - **WK-674** builds one key per environment (FR-430's amendment) and the F48 counter.
 - **WK-675** takes OQ-550 at its map plan and builds the manual-edit route (`03` §5.1).
 - **Every close** from now runs `close-workstream` §5c (FR-1184).
 - **WK-690's slice** first measures the recipe and check corpus against the limits. It
   reports any real expression over a limit to the deputy before enforcing.
-- **Not decided here:** OQ-1182 (the deputy's, on the spike's record). `docs/process/checklists/work-item-close.md` is the
-  process checklist, and it does not yet carry §5c's step. Whether it should is the lead's
-  call: it is not a decision-maker file.
+- **Carried elsewhere:** `docs/process/checklists/work-item-close.md` is the process
+  checklist, and it does not yet carry §5c's step. The lead carries that to plan review 15.
 
 ## Acceptance — the violation that must become detectable
 
@@ -239,7 +262,8 @@ three times on any tree.
 - *Violation: a row's stated `N (M open)` differs from its ids.* The recount snippet prints the
   stated and actual counts side by side. It was shown red on the same scratch copy.
   The Deferred row, restored to `34 (0 open)`, printed `actual 35 (1 open)  stated 34 (0 open)`.
-  The Before Phase 2 row, minus OQ-1182, printed `actual 14 (0 open)  stated 15 (1 open)`.
+  The Before Phase 2 row, minus OQ-1182, printed `actual 14 (0 open)  stated 15 (1 open)`
+  (at `b2c2e953`, before OQ-1182 was decided).
 
 The spec edits themselves are prose, and no check can hold them to the deputy's words. That is
 what the quotations above are for.
