@@ -96,7 +96,7 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
    - A failing run ends the Job `failed`, with problem `PROPERTY_ASSERTION_FAILED` (or `GOLDEN_QUOTE_MISMATCH` when a golden quote failed), and the row still persists.
    - The route is refused 403 without `rating:compile`.
 10. **FR-257 limb (1).**
-    - `submit_for_review` refuses with `EVIDENCE_INCOMPLETE` when there is no run, a failing run, a run on a stale `bundle_hash`, or (DP-S3-2, pending) a run whose `suite_content_hash` differs from the suite the submit gate pins. Each test is red first and carries `req("FR-257")` with a docstring naming limb (1) only.
+    - `submit_for_review` refuses with `EVIDENCE_INCOMPLETE` when there is no run, a failing run, a run on a stale `bundle_hash`, or (DP-S3-2) a run whose `suite_content_hash` differs from the suite the submit gate pins. **The latest run for that (`bundle_hash`, `suite_content_hash`) pair must itself be a pass** (audit A1). A test runs a pass, then a later fail on the same pair, and submit is refused. Each test is red first and carries `req("FR-257")` with a docstring naming limb (1) only.
     - A passing run sets `evidence.regression_suite_run_id`.
     - A test asserts `evidence.golden_quotes` is byte-identical before and after that write.
 11. **DP-S3-1 applied** as the deputy decides. The default (a): a submission whose algorithm has no suite, or whose suite has zero golden quotes, is refused with `EVIDENCE_INCOMPLETE`. The test is red first.
@@ -165,7 +165,7 @@ Every command runs in the executor's worktree (`env -C <worktree> …`), over `o
 | DP-S3-1 | Is a suite with at least one golden quote **required** at submission, at least for Rating Versions headed to `prod`? FR-257 limb (1) already requires a passing run, so a suite, for every approval; the open part is golden quotes (`PL-1189` carry, the deputy's 15:57:21 item (i)) | (a) every submission needs at least one golden quote; (b) only a `prod` deployment needs one, enforced at WK-674's deploy gate; (c) neither, since a properties-only suite suffices | (a): every approved version can reach `prod`, and a properties-only suite checks no priced outcome | **scope** (the maintainer's, by delegation to the deputy) | yes (Tasks 1, 6, 6b) | **(a), every submit**, with a spec line: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
 | DP-S3-2 | Must the passing run's `suite_content_hash` equal the suite the submit gate pins? | yes; no | yes: otherwise a suite edited after the run is approved on a stale run | decision point | yes (Task 6) | **yes**: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
 | DP-S3-3 | Is the run a blocking gate by itself, and what raises `PROPERTY_ASSERTION_FAILED`? | (a) the run records `overall=fail`, and submission refuses through limb (1); the code is the failed Job's problem; (b) the run's route itself refuses | (a) | decision point | yes (Task 5) | **yes, blocking through FR-257 limb (1)**: the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
-| DP-S3-4 | Where does the cases blob live? | (a) the existing blob store, as a `BlobRef` (`model_schema/refs.py:138`), read-gated on `rating:read`; (b) inline JSONB on the run row | (a): a run can hold 10 000 cases, and NFR-499 wants one access-controlled home | decision point | yes (Tasks 1, 5) | **(a), AMENDED**: the store needs its own requirement (RL-917). An appended `03` §3.8 FR, a dated NFR-499 clarification and an access-control test land in the same commit; the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
+| DP-S3-4 | Where does the cases blob live? | (a) the existing blob store, as a `BlobRef` (`model_schema/refs.py:138`), read-gated on `rating:read`; (b) inline JSONB on the run row | (a): a run can hold 10 000 cases, and NFR-499 wants one access-controlled home | decision point | yes (Tasks 1, 5) | **(a), AMENDED**: the store needs its own requirement (RL-917). An appended `03` §3.8 FR, a dated NFR-499 clarification and an access-control test land in the same commit; the blob route's own access control is Task 0b (audit B1, pending the deputy); the deputy's decision by delegation, 2026-09-28 18:17:32 BST, quoted above |
 
 The deputy's ruling, quoted whole:
 
@@ -201,6 +201,12 @@ All four have resolvers. The plan applies them as ruled.
 ### Task 0: Preconditions
 
 - [ ] Confirm that Slice 2's code PR is on `origin/main`: `git log --grep 'PL-1189' -1 origin/main`, and `packages/pricing-core/src/pricing_core/rating/testing.py` exists. Confirm that DP-S3-1 to DP-S3-4 carry resolvers. **If either fails, stop and report.**
+
+### Task 0b: The blob route's access control (audit B1; pending the deputy)
+
+The generic `GET /api/v1/blobs/{sha256}` (`backend/src/app/api/blobs.py:97-135`) is gated on `dataset:read` (`:39`), and `BlobRow` is keyed on `sha256` alone, with no workspace column (`db/models.py:286-288`). So the case store's "`rating:read` in its workspace" (DP-S3-4 (i), acceptance item 5) would be false as built. The same exposure is live for traces today.
+
+- [ ] **The blob-route fix, as the deputy decides it, is on `origin/main` before Task 5, or Slice 3 lands it.** This plan does not design that fix. Its shape is the deputy's decision, pending, and the plan is amended to cite it when it is given. Until then **Task 5 does not start**, and acceptance item 5's access-control test is written against the decided route.
 
 ### Task 1: Spec — `03` §3.8, §4.9, §5.2, §8; `docs/skills-map.md`
 
@@ -280,7 +286,7 @@ All four have resolvers. The plan applies them as ruled.
   - `premium_bounded`: within `lower_minor`/`upper_minor`;
 - shrinks a failing property through `hypothesis` to a counterexample, and records `shrink` and `counterexample_minimal`.
 
-`replay_cases` re-scores a persisted `CasesLog` and **never calls `generate_contexts`**.
+`replay_cases` **only re-scores** the persisted cases and counterexamples in a `CasesLog`. It **never shrinks, never calls `generate_contexts` and never imports or calls `hypothesis`** (audit R1). Its result reports each counterexample's `shrink` and `counterexample_minimal` exactly as persisted. A test patches `hypothesis` out of `sys.modules` for the call, and replay still passes.
 
 - [ ] **Step 1.** Write red tests for acceptance items 5 and 8.
 - [ ] **Step 2.** Implement, make them green, and commit.
@@ -309,7 +315,7 @@ All four have resolvers. The plan applies them as ruled.
 
 **Behaviour:**
 1. **DP-S3-1 (a).** If `evidence.golden_quotes` is `not_checked`, or its suite has zero golden quotes, raise `EVIDENCE_INCOMPLETE` ("a Regression Suite with at least one golden quote is required"), using the status `06` registers.
-2. Find the latest `regression_runs` row for this Rating Version with `bundle_hash == row.bundle["content_hash"]`, `suite_content_hash ==` the pinned `evidence.golden_quotes.suite_content_hash` (DP-S3-2) and `overall == "pass"`. If there is none, raise `EVIDENCE_INCOMPLETE`, naming which of the three is missing.
+2. Find the **latest** `regression_runs` row for this Rating Version with `bundle_hash == row.bundle["content_hash"]` and `suite_content_hash ==` the pinned `evidence.golden_quotes.suite_content_hash` (DP-S3-2), ordered by `finished_at` then `id`. **That row must itself have `overall == "pass"`.** An earlier pass does not count once a later run on the same pair has failed (audit A1). If there is no such row, or the latest one failed, raise `EVIDENCE_INCOMPLETE`, naming which condition failed.
 3. Set `evidence["regression_suite_run_id"]` to that run's id. **No other key of `evidence` is written.**
 
 - [ ] **Step 1.** Write red tests for acceptance items 10 and 11. Each FR-257 test's docstring says "limb (1) only: a passing Regression Suite; limbs (2)–(4) are not tested here".
