@@ -27,7 +27,7 @@ can therefore approve their own work.
 submitter cannot approve, and where two approvals are required they must be distinct Principals
 (R1)"*. It names the submitter, not the author.
 
-**The gap is against the deputy's condition on RL-9204's DP-A.** That is his entry in the lead's
+**The gap is against the deputy's condition on #856 (the permission catalogue ruling)'s DP-A.** That is his entry in the lead's
 local channel file `to-lead.md`, stamped 2026-09-28 15:01:11 BST (line 8476). It says: *"coarse
 write rights are acceptable only because the **approval step separates author from approver**.
 … **If no such check exists in code, that is a new `FD-` and a WK-674 S2 or WK-1178 fix**"*. DP-A
