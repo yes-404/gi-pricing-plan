@@ -1,0 +1,104 @@
+{
+ "summary": {
+  "workers": 4,
+  "rps": 200,
+  "sent": 8000,
+  "ok": 7997,
+  "drops": 3,
+  "drop_samples": [
+   "RemoteProtocolError: Server disconnected without sending a response.",
+   "RemoteProtocolError: Server disconnected without sending a response.",
+   "RemoteProtocolError: Server disconnected without sending a response."
+  ],
+  "mixed": 0,
+  "a": 1635,
+  "b": 6362,
+  "pids_seen": 4,
+  "stale_own_worker": 0,
+  "stale_cross_worker": 0,
+  "overlap_window_ms": -21.6,
+  "deploy_abort": null,
+  "switch_s": 0.22,
+  "prepare_s": 0.215,
+  "warm_s": [
+   0.172,
+   0.173,
+   0.186,
+   0.19
+  ],
+  "commit_spread_ms": 1.93,
+  "lat_ms": {
+   "pre": {
+    "n": 2037,
+    "p50": 421.76,
+    "p99": 107685.22,
+    "max": 118131.59
+   },
+   "warm": {
+    "n": 41,
+    "p50": 6688.21,
+    "p99": 116537.72,
+    "max": 116537.72
+   },
+   "post": {
+    "n": 5919,
+    "p50": 62080.62,
+    "p99": 109839.06,
+    "max": 116055.92
+   }
+  },
+  "load1": 19.54443359375,
+  "load1_before": 15.53662109375,
+  "tag": "m-n4-r1"
+ },
+ "deploy": {
+  "id": "b8bef5de",
+  "target": "sha256:25111a2ae5a17e03b11719c0369252654848a30fd28890cb17ff8f1617ea7f39",
+  "t_cmd": 1790592556.8407154,
+  "subscribers": 4,
+  "t_prepared": 1790592557.055917,
+  "prepares": [
+   {
+    "pid": 127610,
+    "warm_s": 0.1724402904510498,
+    "t": 1790592557.033442
+   },
+   {
+    "pid": 127608,
+    "warm_s": 0.1734931468963623,
+    "t": 1790592557.0344439
+   },
+   {
+    "pid": 127609,
+    "warm_s": 0.185699462890625,
+    "t": 1790592557.047227
+   },
+   {
+    "pid": 127607,
+    "warm_s": 0.19021272659301758,
+    "t": 1790592557.0541744
+   }
+  ],
+  "t_commit_pub": 1790592557.0569644,
+  "t_all_committed": 1790592557.060908,
+  "commits": [
+   {
+    "pid": 127608,
+    "t": 1790592557.058458
+   },
+   {
+    "pid": 127610,
+    "t": 1790592557.0589342
+   },
+   {
+    "pid": 127609,
+    "t": 1790592557.0590303
+   },
+   {
+    "pid": 127607,
+    "t": 1790592557.0603924
+   }
+  ],
+  "switch_s": 0.22019267082214355
+ }
+}

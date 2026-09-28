@@ -1,0 +1,14 @@
+{
+ "A": {
+  "hash": "sha256:a853f8d45ecc70fa83c0e6fa954cb6f95bee9a32bb66b46c90e55d86bc44b2ff",
+  "sig": "64dc380d608c17f9",
+  "bytes": "2039114",
+  "last_rung": "[{\"rung\": \"payable_premium\", \"value_minor\": 17538, \"operation\": null, \"components\": null}]"
+ },
+ "B": {
+  "hash": "sha256:25111a2ae5a17e03b11719c0369252654848a30fd28890cb17ff8f1617ea7f39",
+  "sig": "4e746f974e266d8a",
+  "bytes": "2038808",
+  "last_rung": "[{\"rung\": \"payable_premium\", \"value_minor\": 17350, \"operation\": null, \"components\": null}]"
+ }
+}
