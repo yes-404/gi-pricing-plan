@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/regression-run.schema.json",
+  "title": "RegressionRun",
+  "description": "The execution record of a Regression Suite run against a Rating Version (03 FR-260, FR-261, §4.9).",
+  "$comment": "Split out of regression-suite.schema.json 2026-09-28 (WK-672 Slice 2, PL-1189), unchanged: the suite became a generated model-schema artifact and is compared; this run definition stays hand-authored until WK-672 Slice 3 builds it (RL-1172 item 3c).",
+  "$defs": {
+    "RegressionRun": {
+      "type": "object",
+      "required": [
+        "suite_slug",
+        "rating_version_ref",
+        "bundle_hash",
+        "started_at",
+        "overall",
+        "golden_results",
+        "property_results"
+      ],
+      "properties": {
+        "suite_slug": {
+          "type": "string"
+        },
+        "rating_version_ref": {
+          "$ref": "common/artifact-ref.schema.json"
+        },
+        "bundle_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "job_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "overall": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "golden_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail"
+                ]
+              },
+              "expected_minor": {
+                "$ref": "common/money.schema.json#/$defs/MoneyMinor"
+              },
+              "actual_minor": {
+                "$ref": "common/money.schema.json#/$defs/MoneyMinor"
+              },
+              "difference_minor": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "property_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "status",
+              "cases_run"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail"
+                ]
+              },
+              "cases_run": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "counterexample": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Shrunk to a minimal case an actuary can read (FR-261)."
+              }
+            }
+          }
+        }
+      },
+      "invariants": [
+        "overall == 'fail' blocks promotion (FR-260)"
+      ]
+    }
+  }
+}

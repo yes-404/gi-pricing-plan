@@ -33,6 +33,7 @@ from app.api import (
     rate_tables,
     rating_algorithms,
     reference_tables,
+    regression_suites,
     score,
     service_accounts,
     traces,
@@ -132,6 +133,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(models.router, prefix=API_PREFIX)
     app.include_router(rating_algorithms.router, prefix=API_PREFIX)
     app.include_router(rate_tables.router, prefix=API_PREFIX)
+    app.include_router(regression_suites.router, prefix=API_PREFIX)
     app.include_router(peril_structures.router, prefix=API_PREFIX)
     app.include_router(custom_objectives.router, prefix=API_PREFIX)
     app.include_router(custom_metrics.router, prefix=API_PREFIX)

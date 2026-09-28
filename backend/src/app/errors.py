@@ -250,6 +250,17 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "PERMISSION_DENIED",
         "SCOPE_DENIED",
         "SUBMITTER_CANNOT_APPROVE",
+        # `06` FR-353 as amended 2026-09-28: the approver may not be the version's author,
+        # the actor of its creation Audit Event; and a version with no such event is
+        # refused rather than approved unchecked.
+        "AUTHOR_CANNOT_APPROVE",
+        "APPROVAL_AUTHOR_UNRESOLVED",
+        # `06` FR-353, added 2026-09-28 (PL-1189, the deputy's decision on audit finding F4):
+        # an approver who authored a golden-quote change in the Rating Version's delta.
+        "APPROVAL_BY_EVIDENCE_AUTHOR",
+        # `06` FR-351: only a version in its review state can be put to a decision. The
+        # generic route refuses any other, naming the state; a decision hook refuses too.
+        "APPROVAL_SUBJECT_NOT_IN_REVIEW",
         "DUPLICATE_APPROVER",
         "EVIDENCE_INCOMPLETE",
         "POLICY_BELOW_EVIDENCE_FLOOR",
@@ -337,6 +348,10 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # only raiser is that function; a re-delivered off-path Job finds the row already
         # `complete`/`mismatch` and this is how it stops rather than doubling the work.
         "TRACE_NOT_PENDING",
+        # Golden quotes (WK-672 Slice 1, FR-260). Registered ahead of its raiser: Slice 2
+        # builds the promotion-refusal path that raises it. PROPERTY_ASSERTION_FAILED,
+        # FR-261's code, is registered by Slice 3 together with its raiser.
+        "GOLDEN_QUOTE_MISMATCH",
     }
 )
 
