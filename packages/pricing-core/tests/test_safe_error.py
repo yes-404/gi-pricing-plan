@@ -22,7 +22,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    Json,
     ValidationError,
     field_validator,
 )
@@ -32,6 +31,7 @@ from test_rating_score_batch import _contexts, _ctx_to_row
 from pricing_core.rating.score import _batch_error_code, score_batch
 from pricing_core.safe_error import (
     _FIXED_TEXT_TYPES,
+    CodedError,
     safe_error_detail,
     safe_error_text,
     safe_exc_info,
@@ -105,7 +105,6 @@ def _cases() -> dict[str, tuple[type[BaseModel], dict[str, Any]]]:
             model(a=(Annotated[list[str], Field(max_length=1)], ...)),
             {"a": [_SENTINEL, _SENTINEL]},
         ),
-        "json_invalid": (model(a=(Json[int], ...)), {"a": _SENTINEL}),
         "list_type": (model(a=(list[int], ...)), {"a": _SENTINEL}),
         "dict_type": (model(a=(dict[str, int], ...)), {"a": _SENTINEL}),
         "model_type": (model(a=(_Inner, ...)), {"a": _SENTINEL}),
@@ -228,8 +227,8 @@ def test_a_list_index_and_a_declared_field_name_are_kept_and_bounds_are_shown() 
 
 @pytest.mark.req("NFR-499")
 def test_a_coded_error_keeps_its_text_and_anything_else_is_its_type_only() -> None:
-    coded = ValueError("INPUT_CONTRACT_VIOLATION: input 'channel' is not in ['direct', 'broker']")
-    assert safe_error_text(coded) == f"ValueError: {coded}"
+    coded = CodedError("INPUT_CONTRACT_VIOLATION: input 'channel' is not in ['direct', 'broker']")
+    assert safe_error_text(coded) == f"CodedError: {coded}"
     assert _batch_error_code(coded) == (
         "INPUT_CONTRACT_VIOLATION",
         "input 'channel' is not in ['direct', 'broker']",
@@ -284,3 +283,47 @@ async def test_a_nested_quote_id_does_not_fail_the_frame_build_and_leaks_nothing
     assert out["quote_id"].dtype == pl.String
     # `QuoteContext` rejects a nested id, per row, and that message carries no value either.
     assert _SENTINEL not in "".join(m or "" for m in out["error_message"].to_list())
+
+
+@pytest.mark.req("NFR-499")
+def test_a_coded_looking_error_that_is_not_ours_is_reduced_to_its_type() -> None:
+    """Recognition is by class, not by the shape of the text: a library's `ValueError("FOO:
+    secret")` looks coded and is not."""
+    foreign = ValueError(f"FOO: {_SENTINEL}")
+    assert safe_error_text(foreign) == "ValueError"
+    assert _batch_error_code(foreign) == ("ValueError", "ValueError")
+    assert safe_error_text(RuntimeError(f"MODEL_CALL_FAILED: {_SENTINEL}")) == "RuntimeError"
+    ours = CodedError("FOO: a fixed sentence")
+    assert safe_error_text(ours) == "CodedError: FOO: a fixed sentence"
+    assert isinstance(ours, ValueError), "existing `except ValueError` handling is unchanged"
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_coded_error_does_not_carry_the_exception_it_replaced() -> None:
+    """`_raise_named` raises `from None`: the exception being handled (`fromisoformat`'s, whose
+    text repeats the value; the engine's) is not the coded error's context."""
+    compiled = await _compiled()
+    rows = [_ctx_to_row(c) for c in _contexts(1)]
+    rows[0]["effective_date"] = _SENTINEL
+    from pricing_core.rating.score import _row_to_ctx
+
+    with pytest.raises(CodedError) as caught:
+        _row_to_ctx(rows[0])
+    assert caught.value.__suppress_context__ is True
+    assert _SENTINEL not in str(caught.value)
+    assert compiled is not None
+
+    from pricing_core.rating.score import _reraise_engine_failure
+
+    algorithm = compiled.algorithm
+    def _handled() -> None:
+        try:
+            raise RuntimeError(f"engine says {_SENTINEL}")
+        except RuntimeError as engine:
+            _reraise_engine_failure(algorithm, engine)
+
+    with pytest.raises(CodedError) as engine_caught:
+        _handled()
+    assert engine_caught.value.__suppress_context__ is True
+    assert _SENTINEL not in str(engine_caught.value)
+

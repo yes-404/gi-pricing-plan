@@ -215,7 +215,7 @@ from model_schema.scoring import (
 from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder
 from pricing_core.progress import ProgressCallback
 from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, CompiledBundle
-from pricing_core.safe_error import safe_error_detail
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 __all__ = ["build_scoring_result", "score_batch", "score_one"]
 
@@ -308,10 +308,11 @@ _SCORING_RESULT_BATCH_EXCLUDED_FIELDS = frozenset({"trace", "timing_ms"})
 
 def _raise_named(code: str, message: str) -> NoReturn:
     """`pricing-core`'s established convention (`compile.py`'s `_raise_named`): a
-    code-named bare `ValueError`, never `PlatformError` — `pricing-core` cannot import
+    code-named `CodedError` (a `ValueError`), never `PlatformError` — `pricing-core` cannot import
     `app` (`.importlinter`'s `core-has-no-infrastructure`). RL-877: the mapping to a
     `PlatformError` at the backend boundary is Slice 2's."""
-    raise ValueError(f"{code}: {message}")
+    # `from None`: the exception being handled, if any, is not carried as this one's context.
+    raise CodedError(f"{code}: {message}") from None
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -432,7 +433,7 @@ def _check_model_call_sentinel(result: Mapping[str, Any]) -> None:
     """The other half of `runtime._model_call_failure`'s design: raise the *real* captured
     message, never the engine's own generic wrapper."""
     if MODEL_CALL_ERROR_KEY in result:
-        raise ValueError(str(result[MODEL_CALL_ERROR_KEY]))
+        raise CodedError(str(result[MODEL_CALL_ERROR_KEY]))
 
 
 def _check_lookup_misses(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> None:

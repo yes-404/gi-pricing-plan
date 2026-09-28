@@ -10,10 +10,11 @@ ours and known to be input-free; everything else is its type name and nothing mo
 
 What is kept, and why each is input-free:
 
-* **Our coded errors**: a `ValueError` or `RuntimeError` whose text is `CODE: message`
-  (`pricing_core.rating.score._raise_named`), where `CODE` is upper-case. Every raise site that
-  can concern a quote input names the field, the constraint and the bounds, never the value; a
-  test enumerates those sites by AST and fails when one is added without a case.
+* **Our coded errors**: an instance of `CodedError`, the class `_raise_named` (and the model-call
+  sentinel) raise, whose text is `CODE: message`. It is recognised by class, not by the shape of
+  its text, so a library's `ValueError("FOO: secret")` is not one. Every raise site that can
+  concern a quote input names the field, the constraint and the bounds, never the value; a test
+  enumerates those sites by AST and fails when one is added without a case.
 * **A `ValidationError`**, rebuilt from its parts and never from its text: each failing location
   kept only for the parts that are field names a model declares (a dict key or an extra key
   becomes `<key>`; a list index is kept), the error `type`, the declared constraint bounds in its
@@ -30,16 +31,18 @@ Standalone by design (ADR-703): this package imports no database or web library.
 
 from __future__ import annotations
 
-import re
 import types
 from collections.abc import Callable
 
 from pydantic import BaseModel, ValidationError
 
-__all__ = ["SanitisedError", "safe_error_detail", "safe_error_text", "safe_exc_info"]
-
-#: `CODE: message`, the `_raise_named` convention.
-_CODED = re.compile(r"^[A-Z][A-Z0-9_]*: ")
+__all__ = [
+    "CodedError",
+    "SanitisedError",
+    "safe_error_detail",
+    "safe_error_text",
+    "safe_exc_info",
+]
 
 #: Pydantic error types whose `msg` is fixed text or names only the declared constraint. Each has
 #: a sentinel test in `packages/pricing-core/tests/test_safe_error.py`; a type not listed here is
@@ -51,11 +54,20 @@ _FIXED_TEXT_TYPES = frozenset({
     "datetime_from_date_parsing",
     "literal_error", "enum", "string_pattern_mismatch", "string_too_long", "string_too_short",
     "greater_than", "greater_than_equal", "less_than", "less_than_equal", "too_short",
-    "too_long", "json_invalid", "list_type", "dict_type", "model_type",
+    "too_long", "list_type", "dict_type", "model_type",
 })
 
 #: Constraint bounds a validation error's `ctx` may carry: what the model declares, not the input.
 _CONSTRAINT_KEYS = ("ge", "gt", "le", "lt", "min_length", "max_length", "pattern")
+
+
+class CodedError(ValueError):
+    """A code-named error of ours: its text is `CODE: message`, and the message is input-free.
+
+    Raised by `pricing_core.rating`'s `_raise_named` and by the model-call sentinel. A
+    `ValueError` subclass so existing `except ValueError` handling and the `f"{code}: {message}"`
+    text the API parses are unchanged; the allow-list keeps its text by `isinstance`.
+    """
 
 
 class SanitisedError(Exception):
@@ -108,7 +120,7 @@ def safe_error_detail(exc: BaseException) -> str:
     """The text of `exc` that is safe to keep, without the type name; `""` when none is."""
     if isinstance(exc, ValidationError):
         return _validation_detail(exc)
-    if isinstance(exc, ValueError | RuntimeError) and _CODED.match(str(exc)):
+    if isinstance(exc, CodedError):
         return str(exc)
     return ""
 

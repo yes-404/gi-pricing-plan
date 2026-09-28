@@ -140,7 +140,9 @@ def test_the_census_sees_an_injected_sink() -> None:
         "def leak_text(exc):\n    return f'failed: {exc}'\n\n\n"
         "def leak_str(exc):\n    return str(exc)\n\n\n"
         "def leak_column(row, exc):\n    row.last_error = 'x'\n\n\n"
-        "def leak_row():\n    return {'error_message': 'x'}\n"
+        "def leak_row():\n    return {'error_message': 'x'}\n\n\n"
+        "def leak_info(exc):\n    _log.error('x', exc_info=exc)\n\n\n"
+        "def leak_job(exc):\n    return JobError(code='X', message='y')\n"
     )
     assert dict(_sinks(source, "injected.py")) == {
         ("injected.py", "leak_log", "exception"): 1,
@@ -148,6 +150,8 @@ def test_the_census_sees_an_injected_sink() -> None:
         ("injected.py", "leak_str", "str(exc)"): 1,
         ("injected.py", "leak_column", "last_error"): 1,
         ("injected.py", "leak_row", "error_message key"): 1,
+        ("injected.py", "leak_info", "exc_info"): 1,
+        ("injected.py", "leak_job", "JobError"): 1,
     }
 
 

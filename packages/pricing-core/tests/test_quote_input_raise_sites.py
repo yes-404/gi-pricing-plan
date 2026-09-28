@@ -51,22 +51,32 @@ _CASES: dict[str, tuple[dict[str, Any], tuple[str, ...], tuple[str, ...]]] = {
     ),
 }
 
-#: Every other `_raise_named` site under `pricing_core/rating`, with why it is input-free.
+#: Every other raise site under `pricing_core/rating` (a `_raise_named` call, a `CodedError(`
+#: construction, or a `_model_call_failure(` call), with why it is input-free.
 _INPUT_FREE = {
     ("score.py", "_check_purpose_mount"): 1,  # `purpose` is a closed set of literals
     ("score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
     ("score.py", "_check_lookup_misses"): 2,  # step ids only
     ("score.py", "_reraise_engine_failure"): 1,  # the engine error is reduced to its type name
     ("score.py", "score_one"): 1,  # a fixed sentence about a missing rating_version_ref
+    ("score.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
+    # The model-call sentinel re-raised as a coded error: its text is `MODEL_CALL_FAILED: ` plus a
+    # static sentence built in `runtime.py`, never a model's or the engine's own error text.
+    ("score.py", "_check_model_call_sentinel"): 1,
+    ("runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
     ("compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote is involved
+    ("compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
 }
 #: The functions holding the quote-input sites, whose count must equal the cases.
 _INPUT_SITES = {("score.py", "_validate_inputs"), ("score.py", "_row_to_ctx")}
 
 
+_SITE_NAMES = ("_raise_named", "CodedError", "_model_call_failure")
+
+
 def _raise_sites() -> dict[tuple[str, str], int]:
     counts: dict[tuple[str, str], int] = {}
-    for name in ("score.py", "compile.py"):
+    for name in ("score.py", "compile.py", "runtime.py"):
         tree = ast.parse((_SRC / name).read_text(encoding="utf-8"))
 
         def visit(node: ast.AST, function: str, name: str = name) -> None:
@@ -75,7 +85,7 @@ def _raise_sites() -> dict[tuple[str, str], int]:
             if (
                 isinstance(node, ast.Call)
                 and isinstance(node.func, ast.Name)
-                and node.func.id == "_raise_named"
+                and node.func.id in _SITE_NAMES
             ):
                 counts[(name, function)] = counts.get((name, function), 0) + 1
             for child in ast.iter_child_nodes(node):
@@ -100,19 +110,54 @@ def test_every_quote_input_raise_site_has_a_sentinel_case() -> None:
     )
 
 
+def _guard_against(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, replace: tuple[str, str]
+) -> None:
+    """Run the guard against a copy of `score.py` with `replace[0]` swapped for `replace[1]`."""
+    source = (_SRC / "score.py").read_text(encoding="utf-8")
+    assert replace[0] in source
+    (tmp_path / "score.py").write_text(source.replace(*replace, 1), encoding="utf-8")
+    for other in ("compile.py", "runtime.py"):
+        (tmp_path / other).write_text((_SRC / other).read_text(encoding="utf-8"))
+    monkeypatch.setattr(f"{__name__}._SRC", tmp_path)
+
+
 @pytest.mark.req("NFR-499")
-def test_the_guard_counts_an_injected_raise_site(tmp_path: Path, monkeypatch) -> None:
-    """Positive control: a new `_raise_named` in a listed function makes the guard fail."""
-    source = (_SRC / "score.py").read_text(encoding="utf-8").replace(
+def test_the_guard_counts_an_injected_raise_site_outside_the_input_functions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Positive control: a new `_raise_named` in a listed input-free function fails the guard."""
+    _guard_against(monkeypatch, tmp_path, (
         "def _check_billing_surface(ctx: QuoteContext) -> None:\n",
         "def _check_billing_surface(ctx: QuoteContext) -> None:\n"
         '    _raise_named("INPUT_CONTRACT_VIOLATION", f"leaks {ctx.inputs!r}")\n',
-        1,
-    )
-    (tmp_path / "score.py").write_text(source, encoding="utf-8")
-    (tmp_path / "compile.py").write_text((_SRC / "compile.py").read_text(encoding="utf-8"))
-    monkeypatch.setattr(f"{__name__}._SRC", tmp_path)
+    ))
     with pytest.raises(AssertionError, match="not accounted for"):
+        test_every_quote_input_raise_site_has_a_sentinel_case()
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize(
+    ("function_head", "label"),
+    [
+        ("def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:\n", "_row_to_ctx"),
+        (
+            "def _validate_inputs(algorithm: RatingAlgorithm, "
+            "inputs: Mapping[str, Any]) -> None:\n",
+            "_validate_inputs",
+        ),
+    ],
+)
+def test_the_guard_counts_an_injected_raise_site_inside_an_input_function(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, function_head: str, label: str
+) -> None:
+    """Positive control on the functions that hold the quote-input sites: one more site there,
+    with no case added, fails the guard on the count of sites against cases."""
+    _guard_against(monkeypatch, tmp_path, (
+        function_head,
+        function_head + '    _raise_named("INPUT_CONTRACT_VIOLATION", "a new site")\n',
+    ))
+    with pytest.raises(AssertionError, match="quote-input raise sites"):
         test_every_quote_input_raise_site_has_a_sentinel_case()
 
 
