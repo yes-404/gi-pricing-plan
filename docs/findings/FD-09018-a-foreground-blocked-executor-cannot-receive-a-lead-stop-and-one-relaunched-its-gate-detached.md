@@ -79,30 +79,48 @@ auditor reading them in `executor.md` at that merge.
 The role file's grounds paragraph carries the count **seven gate stops by PID plus one wrong-process kill** and says
 the earlier "five" is superseded.
 
-**The first S-13 incident, after the charter merged.** At about 23:29 BST on 2026-09-28, executor-s1 started a
-targeted pytest (PID 2301135, under `backend/tests/`, in `trees/executor-sanitiser`) inside the exclusive quiet window
-the lead opened at 23:26 for S3's T7-2. The lead's entry "2026-09-28 23:29:59 BST · lead (gi-pricing-lead) · #887 f3
-ruling relayed; quiet-window breach disclosed" (`to-deputy.md`) records that the watcher reported it, that he did not
-kill it because of the S-14 database-residue risk, and that T7-2 was in its full-gate phase and not its N=5
-determinism runs. The deputy's entry "2026-09-28 23:30:16 BST · deputy · The T7-2 quiet-window breach (PID 2301135):
-letting it finish is accepted; the N=5 phase is gated on its exit" (`to-lead.md`) accepts that and gates the N=5 phase
-on the process's exit and load under 6.
+**The first quiet-window breach after the charter merged, timeline from the records.** The lead opened an
+exclusive window for S3's T7-2 at 23:26 BST on 2026-09-28. executor-s1, working in `trees/executor-sanitiser` on
+branch `p2-mnt-job-error-sanitiser`, ran two targeted pytest runs inside it:
 
-**S-13 does not cover it.** The text at `633c6f34` (`.claude/roles/executor.md:109`–`:113`) reads: *"A **full
-two-half gate** starts only after the lead's explicit 'gate slot granted' for **that head** … The four docs checks and
-a named single test are not the full gate and need no grant."* So a targeted test, by S-13's own words, needs no grant,
-and no line in the file says it must wait for a lead hold. A search of the file for "targeted", "exclusive", "quiet" and
-"named single test" finds only that sentence and the grounds paragraph's mention of one permitted targeted test. The
-incident was inside the rule as written.
+- **The red run,** about 23:28:50 to 23:29:26 BST (`22 failed, 56 passed … in 35.66s`, per the lead), after the
+  commit `930f7f92` (`wip-tests`, committer date 2026-09-28T22:28:46Z, read from the commit).
+- **The green run,** PID 2301135, started at about 23:29:36 BST (elapsed 46 s at the lead's 23:30:22 reading) and
+  reporting `949 passed … in 115.70s`, so it ended at about 23:31:32 BST (the timings are the lead's, not read from
+  a log by the auditor).
+- **Records that bracket them, read by the auditor:** commit `60f95f02` (`test(backend): sentinel tests for every
+  failure sink and a sink census (NFR-499)`) has committer date 2026-09-28T22:29:36Z, and its push to
+  `refs/heads/p2-mnt-job-error-sanitiser` is a GitHub `PushEvent` at 22:31:43Z. At 23:32:32 BST executor-s1 found
+  no pytest with its working directory in that tree (the lead's report).
+
+The lead's entry "2026-09-28 23:29:59 BST · lead (gi-pricing-lead) · #887 f3 ruling relayed; quiet-window breach
+disclosed" (`to-deputy.md`) records that the watcher reported the run, that he did not kill it because of the S-14
+database-residue risk, and that T7-2 was in its full-gate phase and not its N=5 determinism runs. The deputy's entry
+"2026-09-28 23:30:16 BST · deputy · The T7-2 quiet-window breach (PID 2301135): letting it finish is accepted; the N=5
+phase is gated on its exit" (`to-lead.md`) accepts that and gates the N=5 phase on the process's exit and load under 6.
+
+**Cause.** executor-s1 had **not received** the 23:26 notice. Messages reach an agent only between its turns, and it
+was in the middle of one. This is the residual below in its sharpest form: a hold message cannot reach a busy
+executor, so only a mechanical hold can stop a run, either the slot `flock` or a hold file checked before every run.
+
+**S-13, read plainly.** The run broke the lead's window instruction. It did not break S-13 as written. The text at
+`633c6f34` (`.claude/roles/executor.md:109`–`:113`) reads: *"A **full two-half gate** starts only after the lead's
+explicit 'gate slot granted' for **that head** … The four docs checks and a named single test are not the full gate
+and need no grant."* By its own words a targeted test needs no grant, and no line in the file makes a targeted run
+wait for a lead hold. A search of the file for "targeted", "exclusive", "quiet" and "named single test" finds only
+that sentence and the grounds paragraph's mention of one permitted targeted test. So the rule as written did not
+forbid the run, and a hold that depends on a message cannot forbid it either.
 
 **Residual, two limbs:** (1) S-11 bounds how long a foreground call can hold the box, but it does not make a
 foreground-blocked executor able to receive a message, so the lead's slot `flock` stays the mechanical control. (2)
-S-13 has no limb for a lead hold on targeted runs.
+S-13 has no limb for a lead hold on targeted runs, and a written limb alone would not have reached an executor that
+never received the notice: the incident is why a mechanical hold is needed.
 
 ## Disposition (replaces the earlier text)
 
 **Deferred with an owner — WK-1178.** The deputy's fix, in his 23:30:16 BST entry: *"an executor checks for a lead hold
 before starting any run, not only a full gate. If S-13 does not already cover targeted runs during an exclusive window,
 add it in the FD-9022 or S-14 amendment PR."* It does not cover them, so that PR extends S-13 to a targeted run started
-inside an exclusive window. Event: that amendment merges and the auditor reads the extended S-13 in
+inside an exclusive window, **and adds a mechanical hold** (the slot `flock`, or a hold file checked before every run),
+because the extension alone cannot reach an executor that has not received the notice. Event: that amendment merges and the auditor reads the extended S-13 in
 `.claude/roles/executor.md`.
