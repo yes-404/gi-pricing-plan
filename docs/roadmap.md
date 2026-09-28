@@ -32,7 +32,7 @@ Plan-ledger SHA-citation convention, dated 2026-08-26 (WK-664 decision maker): t
 |---|---|
 | **Phase 0 (Specification)** | Closed 2026-08-14 — 8 specs, 5 workflows, 5 ADRs, 31 contracts; `scripts/audit-docs.py` prints the current requirement count, which changes whenever an implementation proves the spec wrong |
 | **Blocking Phase 1** | **Nothing.** All seven of Track C's decisions are taken — the last six (OQ-MODEL-1, 2, 4, 5, 6, 7) on 2026-08-15. What remains open gates Phase 2 or later (§10) |
-| **Code written** | Phase 1a complete, Phase 1b started — the closure records in [`docs/closures/INDEX.md#closure-recordsmd`](ledgers/LG-00730-wk-661-wf-698-driven-end-to-end.md) are the authority, not this row |
+| **Code written** | Each phase section's `status:` line is the authority (`## P1a`, `## P1b`, `## P2` below). This row does not restate it, because a restated status goes stale (RFC-756). *Pointer since 2026-09-28, item E11.* |
 
 The remaining Phase 0 work is a **decision backlog, not a writing backlog**. Every open
 question already carries options, trade-offs, and a recommendation.
@@ -186,12 +186,14 @@ A module never imports from a module to its right. Two consequences worth intern
 > decisions block 1a. Work can start once four questions are answered, not seven.
 
 ## P1a — Data Workbench
-status: active
+status: closed
 opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
 works: WK-657, WK-658, WK-659, WK-660, WK-663, WK-666, WK-667
+
+*Status set to `closed` 2026-09-28 (item E11 in the deputy's OQ-stream entry; Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), 2026-09-28 11:33:12 BST). The authority is the exit demo's acceptance on 2026-08-15, recorded in the Phase 1a status table below and in `CR-717` (`kind: phase`). The header had been left `active`.*
 
 ### WK-657 — Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-703), docker compose
 
@@ -384,12 +386,14 @@ exactly what §13 rule 2 is about — "exists" and "works" are different claims,
 The closure records, plan reviews and the retrofit-impossible list moved to `docs/audit/` on 2026-08-27 (RFC-813). This page is the forward-looking plan; the archive is at [`docs/findings/README.md`](findings/README.md).
 
 ## P1b — Modelling Workbench
-status: active
+status: closed
 opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
 works: WK-661, WK-662, WK-664, WK-665, WK-692
+
+*Status set to `closed` 2026-09-28 (item E11 in the deputy's OQ-stream entry; Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), 2026-09-28 11:33:12 BST). The authority is the phase's acceptance as closed on 2026-08-27, recorded in `CR-822`. The header had been left `active`.*
 
 ### WK-661 — Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates
 
@@ -689,6 +693,8 @@ phase: P2
 ```
 
 From “Workstreams” (line 386): **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with** | Added 2026-08-15 by OQ-573's decision, which moved this work out of WK-661 rather than deleting it: `02` FR-144/145, FR-150, §4.6, and `WF-702` Route B. It depends on nothing in WK-669–WK-675 and could equally be pulled into 1b if WK-661 finishes early — but it must not start before the certification machinery it fronts (FR-151) has run for a phase, which is the whole point of the decision
+
+**2026-09-28 — the start gate is MET** (item E3 in the deputy's OQ-stream entry; Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), 2026-09-28 11:33:12 BST). The gate above says this work must not start before the certification machinery it fronts (FR-151) has run for a phase. That machinery shipped in WK-661 (`CR-754`, closed 2026-08-22). It has since run for a phase: P1b was accepted closed on 2026-08-27 (`CR-822`). **WK-690 must add `sympy`**: `grep -c -i sympy uv.lock` prints 0 at `12431a88`. It lands together with the `docs/skills-map.md` update that the dependency requires (`CLAUDE.md` §10). The first slice is the parser, brought to `02` §4.6's profiles (item E2, filed in the Track E spec PR).
 
 
 ### WK-693 — Machine-readable process core — RFC-895, adopted remainder (Slices E/F/G)
