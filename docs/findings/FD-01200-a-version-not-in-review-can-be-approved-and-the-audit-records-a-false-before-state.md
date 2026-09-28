@@ -128,5 +128,5 @@ e6a9ca71 origin/main` exits 0. Both defects were re-read at `e6a9ca71`:
   (+265 and +235 lines in #864).
 
 The deputy recorded #864's audit as *"41/41 cases, and **the hole is closed**"*, with exact
-mutation reds (M1 → 6, M2 → 1), in his 17:44:58 BST entry quoted in `FD-9012`. The related
-FR-357 withdrawal disagreement stays open as `FD-9012`, and #864 does not decide it.
+mutation reds (M1 → 6, M2 → 1), in his 17:44:58 BST entry quoted in `FD-1202`. The related
+FR-357 withdrawal disagreement stays open as `FD-1202`, and #864 does not decide it.

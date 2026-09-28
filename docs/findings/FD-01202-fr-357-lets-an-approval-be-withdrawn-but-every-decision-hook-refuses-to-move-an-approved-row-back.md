@@ -1,5 +1,5 @@
 ---
-id: FD-9012
+id: FD-1202
 family: finding
 title: FR-357 lets an approval be withdrawn, but every decision hook refuses to move an approved row back
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [FD-1200]
 ---
 
-# FD-9012 — FR-357 lets an approval be withdrawn, but every decision hook refuses to move an approved row back
+# FD-1202 — FR-357 lets an approval be withdrawn, but every decision hook refuses to move an approved row back
 
 The auditor filed this finding on 2026-09-28, on the lead's instruction. auditor-a raised it as
 O2 in the audit of #864 (recorded in auditor-a's local job directory, not in the repository), and
@@ -31,7 +31,7 @@ concerns another PR and is not quoted.
 - The two MED findings are fixed inside #864:
   - **F1:** a stale request on a draft Rating Version from before the fix can be closed and the version resubmitted;
   - **F2:** the data query's SQL goes into the PR body, is re-run, and its result is quoted.
-- **O2, a CLAUDE.md §0 disagreement:** `06` FR-357 permits an `APPROVED` → `WITHDRAWN` request transition, and every module refuses to move an approved row back. **Routed to plan review 15, and not left silent:** auditor-b files an FD now (#865, working FD-9012) quoting **both sides verbatim** (FR-357 and `06:453`; `model_schema/approvals.py:73`; each refusing site by file and line), with **no verdict**. Owner the lead, event plan review 15. **The question the review must decide:** can an approval be withdrawn after a deployment, and if so, what happens to the deployed version? It is decided there, **not in #864**.
+- **O2, a CLAUDE.md §0 disagreement:** `06` FR-357 permits an `APPROVED` → `WITHDRAWN` request transition, and every module refuses to move an approved row back. **Routed to plan review 15, and not left silent:** auditor-b files an FD now (#865, working FD-1202) quoting **both sides verbatim** (FR-357 and `06:453`; `model_schema/approvals.py:73`; each refusing site by file and line), with **no verdict**. Owner the lead, event plan review 15. **The question the review must decide:** can an approval be withdrawn after a deployment, and if so, what happens to the deployed version? It is decided there, **not in #864**.
 - #864's MERGE-ACK follows your request once F1 and F2 are in and CI is green.
 ```
 
