@@ -1,5 +1,5 @@
 ---
-id: CR-1202
+id: CR-WORKING
 family: closure
 kind: review
 title: Plan review 15 — P2's exit criteria, the extended goal's sequencing under the budget, and the open-finding set
@@ -70,7 +70,8 @@ predicate is the `status:` line in each `### WK-` section inside `## P2`.
 - **G3. Every open P2 finding has a resolution:** fixed, carried with a named owner, or
   accepted by a dated line (`CLAUDE.md` §14: "Nothing starts in the next phase while an open
   finding from the current phase lacks a resolution"). There are two named conditions:
-  - FD-1200 (critical) is fixed on main, by the WK-1178 approval-status PR;
+  - FD-1200 (critical) is fixed on main. **Amended at acceptance:** it is fixed by #864
+    (squash `e6a9ca71`, FR-351), so this limb is met once #865's register row closes it;
   - FD-1199 is triaged, with a root cause or a dated acceptance.
 
   The set is under "The open P2 finding set" below.
@@ -241,7 +242,7 @@ resolution this review asks the maintainer to date. Rows cite their register lin
 | L184 | FD-1197 | lead; next permissions slice | carried; see Proposal 3 |
 | L186 | the FD-1198 carry row (FR-353 component authors; no FD id of its own) | WK-677 (P3) | carried. FD-1198 itself, line 185, is **resolved** by #861 |
 | L187 | FD-1199 | lead | carried; **G3 condition**: triage before exit |
-| L188 | FD-1200 | lead; WK-1178 | **fix before exit** (the WK-1178 approval-status PR); **critical** |
+| L188 | FD-1200 | lead; WK-1178 | **fixed** by #864 (`e6a9ca71`), after this review's tree; met once #865's register row closes it (the P10 amendment) |
 
 **Test and infrastructure (10):**
 - carried to the named owner: F39 (the frontend Work, WK-675), F33 (lead) and FD-1196 (lead;
@@ -332,12 +333,12 @@ independent as the maintainer ordered, then WK-1170 → WK-1169, with WK-1178 st
   **Recommendation:** the code's coarse names are P2's record (the deputy's DP-A (c) on #856),
   with `06` amended to follow, and the fine split carried to WK-676 (P3). Plan review 16
   decides the general source-of-record question going forward.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **4. The environment-scoping spec gap** (#848, open).
   A human deploy grant is not scoped by environment.
   **Recommendation:** a `06`/`07` spec change that scopes `deployment:promote` to named
   environments, owned by WK-674 and landed with its environment record.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **5. Approval hooks never tested against their state machine, and tests that passed for the
   wrong reason.** #861's fixtures submitted drafts, and
   `test_create_submit_approve_a_rating_version` passed only because of FD-1200's second
@@ -346,7 +347,7 @@ independent as the maintainer ordered, then WK-1170 → WK-1169, with WK-1178 st
   approvable types. It covers real create paths for the four types with no author column
   (#861 audit observation 2) and the three types whose approval hook moves nothing (FR-351's
   new clause). Each test is red first against the pre-fix tree.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **6. Harness and working-directory findings.**
   - The isolation worktree is auto-removed after a plan-only first turn.
   - The team's PROCESS CWD rule: every process is started with `env -C <own worktree>`.
@@ -355,48 +356,54 @@ independent as the maintainer ordered, then WK-1170 → WK-1169, with WK-1178 st
 
   **Recommendation:** fold the first, second and fourth into `dev-commands` and
   `git-hygiene` as skill rules (`CLAUDE.md` §12). FD-1196 stays WK-1178's.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **7. The spike-brief guardrail** (the F1 and F3 load breaches).
   **Recommendation:** a spike brief states resource caps on the command line, and a stop
   kills the agent's own process first, then its children, by PID. Killing only the children
   let the agent relaunch them. Write it into the executor charter and the spike brief
   template.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **8. The status-at-filing check gap** (FD-1190).
   **Recommendation:** add an audit-docs check that a governed record's `status:` is valid for
   its family at filing, owned by WK-1170.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **9. The example-id incident.** An id-standard example integer collided with the live
   sequence on #830's mint. It was fixed by #860, whose guard makes `doc-id next` refuse an
   example integer. **Recommendation:** record it as closed, with no further action.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **10. FD-1200 (critical) and FD-1199 as open P2 risks with owners.**
-  - FD-1200: the lead owns it, fixed by the WK-1178 approval-status PR. It is a G3 exit
-    condition and blocks WK-672 Slice 2's hook from merging (PL-1189 DP-S2-5).
+  - FD-1200: **fixed** by #864 (squash `e6a9ca71`, FR-351), the WK-1178 approval-status PR,
+    after this review's tree. G3's FD-1200 limb is met once #865's register row closes it
+    (amended at acceptance, the P10 line).
   - FD-1199: the lead owns it. Its triage goes ahead of any slice on the scoring path if an
     abort recurs (PL-1189 acceptance item 9). It is a G3 exit condition.
 
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **11. audit-docs check 2 scans fenced quotations.** A quoted channel entry inside a
   `text` code fence is parsed as live text. **Recommendation:** WK-1170 decides whether
   check 2 skips fenced blocks, with a broken-input proof.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **12. FR-432, FR-433, FR-434, FR-435 and FR-438 are on no roadmap row.**
   `grep -c 'FR-43[2-5]\|FR-438' docs/roadmap.md` prints 0 at `9f6bfed1`.
   **Recommendation:** assign FR-434 and FR-435, with NFR-534 and NFR-531, to WK-674 if they
   are deployment-platform FRs. Otherwise carry them to P3 by a dated line. Either way a row
   names each.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Resolved at acceptance (the P12 line):**
+  - All five are `07-platform.md` §3 deployment and packaging rows.
+  - FR-434 and FR-435, with NFR-534 and NFR-531, go to **WK-674**.
+  - FR-432, FR-433 and FR-438 are **carried to P3**, subject to the maintainer's P1 ruling on G2.
+  - The roadmap edit naming each row is the lead's, after acceptance.
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **13b. A register pass** (the auditor's, not this review's) for the four cells found above:
   - F34's stale PR #416 (line 76);
   - F28's mixed deferral and fixed marker (line 70);
   - FD-1190's and FD-1194's `status: active` files against their closed register cells (lines 177 and 181).
 
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 - **13. Plan-status staleness.** A plan's `status:` and the INDEX execution column lag its
   real state (for example, `PL-930` stays `active` as the map while its leaf plans execute).
   **Recommendation:** WK-1170 owns an INDEX-derived check. No hand edit.
-  **Maintainer acceptance:** _pending — the maintainer's dated line_
+  **Acceptance:** accepted by delegation — the deputy's entry of 2026-09-28 18:13:19 BST, quoted whole under "Acceptance" at the foot
 
 ## 1. Completion — derived, never recalled
 
@@ -448,7 +455,37 @@ Four omissions:
   proposed one.
 - Every P2 NFR has an owner or a proposed one.
 
-**Nothing here binds until the acceptance lines above carry a date.**
+**Proposals 3 to 13b are accepted by delegation, as amended (the foot). Proposal 1 (G1–G6,
+the G4 dispositions and the finding resolutions) and Proposal 2 stay with the maintainer:
+they do not bind until the maintainer's dated lines are quoted here.**
+
+## Acceptance
+
+**Proposals 1 and 2 (including the G4 dispositions and the finding resolutions):** _pending —
+the maintainer's dated line_
+
+**Proposals 3–13b:** the deputy's entry, quoted whole with its heading time:
+
+```text
+## 2026-09-28 18:13:19 BST · deputy · #863 / CR-1202: HOLD the merge until every acceptance line exists; P3–P13b ruled below for the follow-up commit
+
+**Hold.** A closure record is frozen when it files. `document-ids.md:134` lets only `status:`, `superseded_by:` and `corrected_by:` be edited after that, so a CR merged with blank lines can never carry them. The precedent is review 14: CR-1167 went in as one squash (df8e5811, #823) with its line in the body (`:199`). Do the same here. Add one follow-up commit on #863 with all the lines, then request a fresh ACK at that head.
+
+**P1 and P2** are the maintainer's. They have been put to the maintainer and are not yet answered; do not write anything in their place.
+
+**P3–P13b: accepted by delegation** (the deputy, on the maintainer's instruction of 2026-09-26 17:02:52 BST, and the extension of 2026-09-28 ~13:50) with these amendments:
+- **P3, P4, P5, P6, P7, P8, P9, P11, P13, P13b**: accepted as written.
+- **P10**: accepted, amended. FD-1200 is **fixed** by #864, squash e6a9ca71 (FR-351). G3's FD-1200 limb is therefore met once #865's register row closes it. The CR must say so, citing e6a9ca71, and must not read as open. FD-1199 stays as written.
+- **P12**: accepted, with its condition resolved. All seven FRs are `07-platform.md` §3 deployment/packaging rows (origin/main e6a9ca71, `:148–154`).
+  - FR-434 and FR-435, with NFR-534 and NFR-531, go to **WK-674**.
+  - FR-432, FR-433 and FR-438 (images, Helm, signed images and SBOM) are **carried to P3**, subject to the maintainer's P1 ruling: if G2 (the exit demo "to prod") needs any of them, that ruling moves it back into P2.
+  - FR-436 and FR-437 are not in P12's list and not ruled here.
+  - The roadmap edit naming each row is the lead's, made after acceptance, not in this CR.
+
+Paste this entry verbatim into CR-1202's foot as the P3–P13b line, with its heading time. Quote the maintainer's P1 and P2 lines the same way once they are given.
+```
+
+The quoted entry names this record by its first-minted id (the id the quote spells, released before merge); its real id is in the front matter.
 
 ## Sources
 
