@@ -256,6 +256,47 @@ whole entry is quoted verbatim from the same channel file:
 WK-673's S1 FR-266 amendment cites this line. #833 (F3's RS record) appends it fenced after my 12:10:21 quote, before its mint. **The WK-673/674 map-plan proposals are adopted, as noted.** Their maintainer-resolver DPs come to me as they arise.
 ```
 
+The deputy's 14:05:30 entry amends item 5 of the F3 decision. It is filed in #845's WK-673
+ruling, and the whole entry is quoted verbatim from the same channel file:
+
+```text
+## 2026-09-28 14:05:30 BST · deputy · WK-673 ([#844's WK-673 map plan], #844): DP-1, DP-2 and DP-3 DECIDED; the §3.11-vs-code disagreement RESOLVED (the spec is right; the code docstring is corrected); the Shapley cost gets a feasibility rule
+
+Given by the maintainer's delegation (28 Sep, extended goal). A decision-maker files these as `RL-` records quoting this entry, in S1's PR or before it, since DP-1 and DP-2 block S1. Read at `ed123cb0`.
+
+**DP-1 (how the 2^K subset bundles are built): (a) ACCEPTED, with conditions.** Synthetic bundles are compiled through `compile_bundle` at step granularity, and they are:
+- **ephemeral and content-addressed, and never persisted as Rating Versions:** no `VR-` identifier, never approvable, never deployable, never visible in any version list;
+- cached per run by content hash, and discarded with the run's scratch;
+- surfaced by name if one fails to compile (a subset that cannot compile fails the run with the subset named; it is never silently skipped);
+- stated in the run artifact, which records that K + … subset bundles were compiled, with their hashes.
+
+**DP-2 (where a "declared change" comes from): (c) ACCEPTED.** Changes are derived from the structural diff between baseline and candidate. The analyst may regroup them into ≤ 6 groups, and the **server verifies that the groups partition the diff exactly** (no change missing, none duplicated) and refuses otherwise, by name. The derived and regrouped lists are both on the artifact.
+
+**DP-3 (where FR-224's threshold lives): (b) ACCEPTED.** It is the `rating_version` ApprovalPolicy entry: versioned, its every change audited (`06`'s governance path), with **no environment-variable override** (FR-446's mechanism is not applied to it). S5 cites this.
+
+**The disagreement (CLAUDE.md §0), RESOLVED: the spec is right, and the code's docstring is corrected.**
+- `03` §3.11 (`03:206–211` at `ed123cb0`) records spike S1's measurement: *"Inside the engine, arithmetic is exact. `0.1 + 0.2 == 0.3` evaluates `true`"* (impossible in float64), and *"At the Python binding … every value returned is a Python `float`"*.
+- `_round_minor`'s docstring (`score.py:527–531`) says *"the engine's float64 arithmetic"*. The float64 is the **binding's** return type, not the engine's arithmetic. The rounding function itself is right, and only its sentence is wrong.
+- **S1 corrects that docstring sentence** (spec and code in one commit, CLAUDE.md §2) to *"the binding's float64 return values (the engine's own arithmetic is exact, `03` §3.11)"*. No behaviour changes.
+- My 13:57:02 F3 correction already reads "float64 **at its boundary**", which is consistent. It stands.
+
+**The Shapley cost: a feasibility rule, amending my F3 decision's item 5 (dated):**
+1. **S3 measures first.** The real `score_batch` rate on freMTPL2, N = 5, load < 12. The 43.4M-rating / ~43 worker-hour figure uses NFR-493's **floor** (≥ 1M risks/hour/worker, `03:945`), not a measurement.
+2. **S3 evaluates ladder replay as the primary route.** `03` FR-248 requires each ladder rung to record its value and operation so that *"the ladder reconciles exactly"*. Where the declared changes are **step-aligned** (each change replaces steps' inputs, and the step graph is shared), v(S) for each subset is computed by replaying the ladder with each rung taken from baseline or candidate according to S. That is **2 ratings per policy plus integer arithmetic**, not 2^K.
+   - **Exactness is proven, not assumed:** replay must equal a true re-rate for every policy on the full portfolio at K ≤ 3, and on a declared verification sample at K = 4–6. Any mismatch falls the run back to re-rates, recorded on the artifact.
+   - Structural changes (steps added or removed) are not step-aligned and use re-rates.
+3. **Where re-rates are needed:** the run computes and **shows its estimated rating count (2^K × policies) before launch**, and runs as a background Job. **A sampled portfolio is never presented as exact Shapley.** If sampling is ever offered, it is a separately named estimate with its interval, and that is a spec change, not a default.
+4. **S3 proposes the dislocation-attribution NFR from the measurement.** If neither replay nor re-rates at K = 4 fit it, S3 brings the figure to me before building any fallback, as item 5 already requires.
+5. Exact Shapley over declared changes (K ≤ 6) and largest-remainder allocation **stand** as the method of record.
+
+**The other premises are noted for S1**, which amends them: the contract's `job_id` / `by_ladder_rung` / `errors` missing from §4.6; `attribute`'s §5.2 signature having no baseline; RL-881's stale "06 §4.2 omits rating_version". S6's split (floor wiring after WK-672 S3) is sound slice design. **I accept [#844's WK-673 map plan] as WK-673's map plan** once the RL records these DPs and the plan cites it. The acceptance line follows your request.
+```
+
+*The only deviation from the channel text is one marked substitution. Where the entry names
+#844's WK-673 map plan by its working id (twice), it is shown here as "[#844's WK-673 map plan]". That id
+is unminted, so the literal would never resolve. The proof is to reverse the substitution in
+the fence and diff it against the channel entry, which prints nothing.*
+
 ## What remains
 
 - **The N = 5 timing medians** of 2^K Shapley re-rates against (a)'s 2K, for K = 3 to 6,
