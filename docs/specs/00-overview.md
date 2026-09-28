@@ -186,6 +186,7 @@ term must be added here before it is used in any other document.**
 |---|---|
 | **Approval Request** | The submission of one Governed Artifact (Model, Custom Objective, Rating Version, Validation Rule, …) for review, carrying its evidence bundle, a required checklist, and a change summary. |
 | **Audit Event** | An immutable, append-only record: `actor, at, action, entity_ref, before, after, justification, trace_id, source`. |
+| **Author** | Of an Artifact version under approval: the actor of that version's creation Audit Event. One definition for every approvable type; a `created_by` or `authored_by` column, where a row carries one, is a copy of it (`06` FR-353, amended 2026-09-28). |
 | **Model Documentation** | A generated, human-readable dossier for a Model, Peril Structure, or Rating Version, assembled from persisted artifacts — never hand-maintained. |
 | **Artifact** | Any versioned, immutable, JSON-serialisable object the platform produces: Dataset Version, Validation Report, Model, Custom Objective, Rate Table, Rating Version, Optimisation Run. |
 

@@ -250,6 +250,11 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "PERMISSION_DENIED",
         "SCOPE_DENIED",
         "SUBMITTER_CANNOT_APPROVE",
+        # `06` FR-353 as amended 2026-09-28: the approver may not be the version's author,
+        # the actor of its creation Audit Event; and a version with no such event is
+        # refused rather than approved unchecked.
+        "AUTHOR_CANNOT_APPROVE",
+        "APPROVAL_AUTHOR_UNRESOLVED",
         "DUPLICATE_APPROVER",
         "EVIDENCE_INCOMPLETE",
         "POLICY_BELOW_EVIDENCE_FLOOR",

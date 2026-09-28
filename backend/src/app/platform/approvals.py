@@ -21,8 +21,9 @@ service could forget:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any, Protocol
+from typing import Any, Final, Protocol
 from uuid import UUID
 
 from sqlalchemy import select
@@ -33,6 +34,7 @@ from app.db.models import (
     ApprovalDecisionRow,
     ApprovalPolicyRow,
     ApprovalRequestRow,
+    AuditEventRow,
     RoleAssignmentRow,
     RoleRow,
 )
@@ -51,6 +53,7 @@ from model_schema import (
 )
 
 __all__ = [
+    "CREATION_ACTIONS",
     "ArtifactResolver",
     "decide",
     "policy_for",
@@ -59,6 +62,22 @@ __all__ = [
     "to_dict",
     "withdraw",
 ]
+
+
+#: The Audit Event each approvable type's creation path records — whose actor is, by
+#: `06` FR-353 as amended 2026-09-28, the version's **author**. One definition for every
+#: type: `created_by` and `authored_by`, where a row carries one, are copies of the same
+#: fact rather than second sources, and a test holds each equal to this event's actor.
+#: A type absent here has no author the check can find, and fails closed.
+CREATION_ACTIONS: Final[Mapping[str, str]] = {
+    "model": "model.reserved",
+    "custom_objective": "custom_objective.created",
+    "custom_metric": "custom_metric.created",
+    "peril_structure": "peril_structure.created",
+    "validation_rule": "validation_rule.created",
+    "dataset_version": "dataset_version.created",
+    "rating_version": "rating_version.created",
+}
 
 
 class ArtifactResolver(Protocol):
@@ -266,6 +285,27 @@ async def decide(
             "configured away.",
         )
 
+    # FR-353 as amended 2026-09-28: nor the author. After R1, which is the more specific
+    # answer for someone who is both, and before the permission for R1's own reason.
+    author = await _author_of(session, workspace_id, row)
+    if author is None:
+        raise PlatformError(
+            "APPROVAL_AUTHOR_UNRESOLVED",
+            "The author of this version cannot be established",
+            403,
+            f"{row.artifact_ref} has no creation Audit Event, so whether the approver is "
+            "its author cannot be checked. `06` FR-353: an approval that cannot be checked "
+            "is refused, never allowed.",
+        )
+    if author == approver.id:
+        raise PlatformError(
+            "AUTHOR_CANNOT_APPROVE",
+            "The author cannot approve",
+            403,
+            "`06` FR-353: the approver may be neither the submitter nor the author of the "
+            "version under approval.",
+        )
+
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
@@ -396,6 +436,33 @@ async def _load(
             "NOT_FOUND", "Approval request not found", 404, f"No request {request_id}."
         )
     return row
+
+
+async def _author_of(
+    session: AsyncSession, workspace_id: UUID, row: ApprovalRequestRow
+) -> UUID | None:
+    """The actor of the version's creation Audit Event, or `None` when there is none.
+
+    Read from the audit chain rather than from a row, because four of the seven approvable
+    types carry no author column and the chain is the one record every type shares. The
+    earliest matching event wins: a version is created once.
+    """
+    action = CREATION_ACTIONS.get(row.artifact_type)
+    if action is None:
+        return None
+    actor = (
+        await session.execute(
+            select(AuditEventRow.actor)
+            .where(
+                AuditEventRow.workspace_id == workspace_id,
+                AuditEventRow.entity_ref == row.artifact_ref,
+                AuditEventRow.action == action,
+            )
+            .order_by(AuditEventRow.at)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return None if actor is None else UUID(actor["id"])
 
 
 async def _count_approvals(session: AsyncSession, request_id: UUID) -> int:
