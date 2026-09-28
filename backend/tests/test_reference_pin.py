@@ -13,6 +13,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
+from backend.tests.blob_fixtures import job_result_owner
 from sqlalchemy import select
 
 from app.db.models import DatasetVersionRow, RoleAssignmentRow, RoleRow, ValidationRuleRow
@@ -103,6 +104,8 @@ async def _ingest(
             actor,
             workspace_id=workspace_id,
         )
+    # A blob a test puts has no owner row; the worker refuses one the workspace does not own.
+    await job_result_owner(database, workspace_id, ref.sha256)
     assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
     async with database.session() as session:
         row = (

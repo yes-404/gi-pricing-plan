@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
-from backend.tests.test_api_blobs import _dataset_blob, _digest, _job_blob, _trace_blob
+from backend.tests.blob_fixtures import dataset_blob, digest, job_blob, trace_blob
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
@@ -56,8 +56,8 @@ def _assert_indistinguishable_404(response, sha256: str) -> None:
 async def test_the_callers_own_dataset_blob_still_starts_an_ingestion(
     api_client: TestClient, database: Database, workspace_id, writer_headers
 ) -> None:
-    sha256 = _digest()
-    await _dataset_blob(database, workspace_id, sha256)
+    sha256 = digest()
+    await dataset_blob(database, workspace_id, sha256)
     assert _ingest(api_client, writer_headers, sha256).status_code == 202
 
 
@@ -65,8 +65,8 @@ async def test_the_callers_own_dataset_blob_still_starts_an_ingestion(
 async def test_the_callers_own_job_result_blob_still_starts_an_ingestion(
     api_client: TestClient, database: Database, workspace_id, writer_headers
 ) -> None:
-    sha256 = _digest()
-    await _job_blob(database, workspace_id, sha256)
+    sha256 = digest()
+    await job_blob(database, workspace_id, sha256)
     assert _ingest(api_client, writer_headers, sha256).status_code == 202
 
 
@@ -77,8 +77,8 @@ async def test_the_callers_own_job_result_blob_still_starts_an_ingestion(
 async def test_another_workspaces_dataset_blob_cannot_be_ingested(
     api_client: TestClient, database: Database, workspace_id, writer_headers
 ) -> None:
-    sha256 = _digest()
-    await _dataset_blob(database, new_uuid7(), sha256)
+    sha256 = digest()
+    await dataset_blob(database, new_uuid7(), sha256)
     _assert_indistinguishable_404(_ingest(api_client, writer_headers, sha256), sha256)
 
 
@@ -86,8 +86,8 @@ async def test_another_workspaces_dataset_blob_cannot_be_ingested(
 async def test_a_trace_digest_cannot_be_ingested_even_in_the_callers_workspace(
     api_client: TestClient, database: Database, workspace_id, writer_headers
 ) -> None:
-    sha256 = _digest()
-    await _trace_blob(database, workspace_id, sha256)
+    sha256 = digest()
+    await trace_blob(database, workspace_id, sha256)
     _assert_indistinguishable_404(_ingest(api_client, writer_headers, sha256), sha256)
 
 
@@ -96,5 +96,5 @@ async def test_a_digest_nothing_references_cannot_be_ingested(
     api_client: TestClient, writer_headers
 ) -> None:
     """Fail closed, and identical to a digest that is not in the store at all."""
-    sha256 = _digest()
+    sha256 = digest()
     _assert_indistinguishable_404(_ingest(api_client, writer_headers, sha256), sha256)

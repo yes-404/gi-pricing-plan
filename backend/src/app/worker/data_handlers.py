@@ -29,7 +29,7 @@ from app.platform import datasets as dataset_service
 from app.platform import profiles as profile_service
 from app.platform import validation as validation_service
 from app.platform import validation_rules as rule_service
-from app.platform.blobs import BlobStore, to_ref
+from app.platform.blobs import BlobStore, blob_not_found, blob_readable_by, to_ref
 from app.worker.handlers import register_handler
 from app.worker.progress import JobProgress
 from model_schema import ActorKind, JobKind, JobResult, Principal
@@ -120,14 +120,12 @@ def _ingest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult
     async def work() -> UUID:
         async with progress.database.session() as session:
             row = await session.get(BlobRow, parameters["blob"])
-            if row is None:
-                raise PlatformError(
-                    "NOT_FOUND",
-                    "The uploaded file is not in the blob store",
-                    404,
-                    f"No blob {parameters['blob']}. Upload it before starting an "
-                    "ingestion run.",
-                )
+            # The route checks this before it enqueues; a job enqueued another way must not
+            # read a digest the workspace does not own either.
+            if row is None or not await blob_readable_by(
+                session, sha256=parameters["blob"], workspace_id=workspace_id
+            ):
+                raise blob_not_found(parameters["blob"])
             payload = await blob_store.read(to_ref(row))
 
         async with progress.database.unit_of_work() as session:

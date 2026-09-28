@@ -27,6 +27,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.blob_fixtures import job_result_owner
 from backend.tests.test_contracts import OPENAPI, _load
 from backend.tests.test_data_jobs import _ingest, _validate
 from backend.tests.test_model_jobs import (
@@ -396,6 +397,8 @@ async def _later_residual_period(
             actor,
             workspace_id=workspace_id,
         )
+    # A blob a test puts has no owner row; the worker refuses one the workspace does not own.
+    await job_result_owner(database, workspace_id, ref.sha256)
     assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
 
     async with database.session() as session:
