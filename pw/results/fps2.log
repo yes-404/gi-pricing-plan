@@ -1,0 +1,30 @@
+START  11:05:06 up  1:08,  2 users,  load average: 1.76, 5.43, 8.04
+F2-PANPOINT [268,105]
+F2-FPS {"name":"pan-drag","wall":13461,"distinctTransforms":401,"DrawFrame":800,"spanMs":13421,"drawFps":59.5,"gapP50":16.7,"gapP95":17.7,"gapMax":38,"DroppedFrame":7}
+F2-FPS {"name":"zoom-wheel","wall":8013,"distinctTransforms":31,"DrawFrame":240,"spanMs":7984,"drawFps":29.9,"gapP50":33.3,"gapP95":34.9,"gapMax":47.3,"DroppedFrame":0}
+F2-FPS {"name":"viewport-transition-3s","wall":3007,"distinctTransforms":181,"DrawFrame":178,"spanMs":2961,"drawFps":59.8,"gapP50":16.7,"gapP95":18.3,"gapMax":22.6,"DroppedFrame":1}
+END  11:05:36 up  1:08,  2 users,  load average: 1.85, 5.10, 7.84
+START  11:05:36 up  1:08,  2 users,  load average: 1.85, 5.10, 7.84
+F2-PANPOINT [268,105]
+F2-FPS {"name":"pan-drag","wall":13479,"distinctTransforms":401,"DrawFrame":800,"spanMs":13430,"drawFps":59.5,"gapP50":16.7,"gapP95":18.8,"gapMax":29.8,"DroppedFrame":5}
+F2-FPS {"name":"zoom-wheel","wall":8003,"distinctTransforms":31,"DrawFrame":240,"spanMs":7967,"drawFps":30,"gapP50":33.4,"gapP95":35.5,"gapMax":41.8,"DroppedFrame":5}
+F2-FPS {"name":"viewport-transition-3s","wall":3018,"distinctTransforms":181,"DrawFrame":178,"spanMs":2956,"drawFps":59.9,"gapP50":16.7,"gapP95":18.2,"gapMax":21.1,"DroppedFrame":1}
+END  11:06:06 up  1:09,  2 users,  load average: 2.37, 4.94, 7.70
+START  11:06:06 up  1:09,  2 users,  load average: 2.37, 4.94, 7.70
+F2-PANPOINT [268,105]
+F2-FPS {"name":"pan-drag","wall":13442,"distinctTransforms":401,"DrawFrame":800,"spanMs":13405,"drawFps":59.6,"gapP50":16.7,"gapP95":18.2,"gapMax":31.9,"DroppedFrame":5}
+F2-FPS {"name":"zoom-wheel","wall":8002,"distinctTransforms":31,"DrawFrame":240,"spanMs":7962,"drawFps":30,"gapP50":33.3,"gapP95":35.2,"gapMax":39.7,"DroppedFrame":2}
+F2-FPS {"name":"viewport-transition-3s","wall":3019,"distinctTransforms":181,"DrawFrame":178,"spanMs":2960,"drawFps":59.8,"gapP50":16.7,"gapP95":18.3,"gapMax":21,"DroppedFrame":1}
+END  11:06:36 up  1:09,  2 users,  load average: 1.97, 4.60, 7.50
+START  11:06:36 up  1:09,  2 users,  load average: 1.97, 4.60, 7.50
+F2-PANPOINT [268,105]
+F2-FPS {"name":"pan-drag","wall":13646,"distinctTransforms":401,"DrawFrame":800,"spanMs":13605,"drawFps":58.7,"gapP50":16.7,"gapP95":19.4,"gapMax":33.9,"DroppedFrame":15}
+F2-FPS {"name":"zoom-wheel","wall":7994,"distinctTransforms":31,"DrawFrame":240,"spanMs":7962,"drawFps":30,"gapP50":33.4,"gapP95":35.2,"gapMax":36.9,"DroppedFrame":0}
+F2-FPS {"name":"viewport-transition-3s","wall":3011,"distinctTransforms":180,"DrawFrame":178,"spanMs":2960,"drawFps":59.8,"gapP50":16.7,"gapP95":18.2,"gapMax":21.7,"DroppedFrame":1}
+END  11:07:06 up  1:10,  2 users,  load average: 2.66, 4.53, 7.39
+START  11:07:06 up  1:10,  2 users,  load average: 2.66, 4.53, 7.39
+F2-PANPOINT [268,105]
+F2-FPS {"name":"pan-drag","wall":13557,"distinctTransforms":401,"DrawFrame":800,"spanMs":13521,"drawFps":59.1,"gapP50":16.7,"gapP95":17.7,"gapMax":34.5,"DroppedFrame":10}
+F2-FPS {"name":"zoom-wheel","wall":7994,"distinctTransforms":31,"DrawFrame":240,"spanMs":7963,"drawFps":30,"gapP50":33.3,"gapP95":34.7,"gapMax":38.4,"DroppedFrame":0}
+F2-FPS {"name":"viewport-transition-3s","wall":3014,"distinctTransforms":180,"DrawFrame":178,"spanMs":2959,"drawFps":59.8,"gapP50":16.7,"gapP95":18.2,"gapMax":23.6,"DroppedFrame":1}
+END  11:07:36 up  1:10,  2 users,  load average: 2.33, 4.27, 7.21

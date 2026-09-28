@@ -1,0 +1,15 @@
+START  10:56:38 up 59 min,  2 users,  load average: 10.86, 13.27, 10.25
+F2-VERIFY {"name":"pan","wall":6017,"moved":false,"before":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","after":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","DrawFrame":0,"drawFps":null,"drawGapP95":null,"drawGapMax":null,"DroppedFrame":0,"BeginMainThreadFrame":121,"Paint":0}
+F2-VERIFY {"name":"zoom","wall":3015,"moved":true,"before":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","after":"matrix(0.05, 0, 0, 0.05, 509.25, 268.352)","DrawFrame":38,"drawFps":14.2,"drawGapP95":58.4,"drawGapMax":801,"DroppedFrame":4,"BeginMainThreadFrame":181,"Paint":0}
+F2-VERIFY {"name":"zoom-in-only","wall":1509,"moved":true,"before":"matrix(0.05, 0, 0, 0.05, 509.25, 268.352)","after":"matrix(2, 0, 0, 2, -1158, -3500.91)","DrawFrame":23,"drawFps":19.9,"drawGapP95":54.9,"drawGapMax":55.4,"DroppedFrame":7,"BeginMainThreadFrame":91,"Paint":0}
+END  10:56:52 up 59 min,  2 users,  load average: 9.58, 12.87, 10.17
+START  10:56:52 up 59 min,  2 users,  load average: 9.58, 12.87, 10.17
+F2-VERIFY {"name":"pan","wall":6112,"moved":false,"before":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","after":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","DrawFrame":1,"drawFps":null,"drawGapP95":null,"drawGapMax":null,"DroppedFrame":0,"BeginMainThreadFrame":122,"Paint":0}
+F2-VERIFY {"name":"zoom","wall":3013,"moved":true,"before":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","after":"matrix(0.05, 0, 0, 0.05, 509.25, 268.352)","DrawFrame":38,"drawFps":14.3,"drawGapP95":58.6,"drawGapMax":793.1,"DroppedFrame":25,"BeginMainThreadFrame":181,"Paint":0}
+F2-VERIFY {"name":"zoom-in-only","wall":1516,"moved":true,"before":"matrix(0.05, 0, 0, 0.05, 509.25, 268.352)","after":"matrix(2, 0, 0, 2, -1158, -3500.91)","DrawFrame":23,"drawFps":20,"drawGapP95":59.1,"drawGapMax":61.2,"DroppedFrame":14,"BeginMainThreadFrame":91,"Paint":0}
+END  10:57:07 up  1:00,  2 users,  load average: 10.82, 13.00, 10.26
+START  10:57:07 up  1:00,  2 users,  load average: 10.82, 13.00, 10.26
+F2-VERIFY {"name":"pan","wall":6092,"moved":false,"before":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","after":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","DrawFrame":1,"drawFps":null,"drawGapP95":null,"drawGapMax":null,"DroppedFrame":0,"BeginMainThreadFrame":122,"Paint":0}
+F2-VERIFY {"name":"zoom","wall":3012,"moved":true,"before":"matrix(0.168136, 0, 0, 0.168136, 408.244, 40)","after":"matrix(0.05, 0, 0, 0.05, 509.25, 268.352)","DrawFrame":38,"drawFps":14.3,"drawGapP95":57.6,"drawGapMax":800.7,"DroppedFrame":33,"BeginMainThreadFrame":181,"Paint":0}
+F2-VERIFY {"name":"zoom-in-only","wall":1513,"moved":true,"before":"matrix(0.05, 0, 0, 0.05, 509.25, 268.352)","after":"matrix(2, 0, 0, 2, -1158, -3500.91)","DrawFrame":23,"drawFps":20,"drawGapP95":56.4,"drawGapMax":58.3,"DroppedFrame":21,"BeginMainThreadFrame":91,"Paint":0}
+END  10:57:22 up  1:00,  2 users,  load average: 11.69, 13.07, 10.32

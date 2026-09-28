@@ -1,0 +1,790 @@
+
+  [32m[1mVITE[22m v8.2.1[39m  [2mready in [0m[1m663[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5391[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m10:52:05 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:52:05 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts:10:1
+[2m10:52:05 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:52:05 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:52:05 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:52:48 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:52:48 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts:10:1
+[2m10:52:48 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:52:48 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:52:48 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:53:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:53:33 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts:10:1
+[2m10:53:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:53:33 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:53:33 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:54:19 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:54:19 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts:10:1
+[2m10:54:19 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:54:19 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:54:19 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:55:04 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:55:04 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts:10:1
+[2m10:55:04 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:55:04 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:55:04 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:56:39 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:56:39 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts:10:1
+[2m10:56:39 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:56:39 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:56:39 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:56:53 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:56:53 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts:10:1
+[2m10:56:53 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:56:53 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:56:53 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:57:08 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:57:08 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts:10:1
+[2m10:57:09 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:57:09 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:57:09 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:57:52 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/dag/DagDesigner.vue, /src/assets/main.css[22m
+[2m10:59:34 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:34 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m10:59:34 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:34 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:59:34 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:59:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:37 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m10:59:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:37 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:59:37 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:59:39 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:39 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m10:59:40 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:40 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:59:40 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:59:42 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:42 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m10:59:42 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:42 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:59:42 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:59:45 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:45 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m10:59:45 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:45 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:59:45 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m10:59:53 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:53 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m10:59:53 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m10:59:53 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m10:59:53 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:00:04 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:00:04 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:00:04 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:00:04 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:00:04 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:00:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:00:33 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:00:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:00:33 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:00:33 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:01:03 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:01:03 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:01:03 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:01:03 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:01:03 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:01:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:01:33 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:01:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:01:33 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:01:33 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:02:03 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:02:03 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:02:03 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:02:03 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:02:03 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:05:07 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:05:07 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:05:07 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:05:07 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:05:07 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:05:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:05:37 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:05:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:05:37 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:05:37 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:06:07 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:06:07 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:06:07 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:06:07 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:06:07 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:06:36 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:06:37 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:06:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:06:37 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:06:37 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:07:07 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:07:07 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:07:07 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:07:07 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:07:07 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:07:58 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:07:58 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:07:58 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:07:58 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:07:58 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:08:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:08:37 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:08:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:08:37 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:08:37 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:09:15 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:09:15 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:09:16 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:09:16 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:09:16 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:09:54 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:09:54 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:09:54 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:09:54 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:09:54 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:10:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/auth/config[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:10:33 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mauth bootstrap failed; continuing without a session ProblemError: The response to http://localhost:5391/api/v1/auth/config was not a problem document.
+    at request (http://localhost:5391/src/api/client.ts:47:26)
+    at async loadAuthConfig (http://localhost:5391/src/auth/config.ts:6:13)
+    at async initSession (http://localhost:5391/src/auth/session.ts:24:25)
+    at async bootstrap (http://localhost:5391/src/auth/bootstrap.ts:7:3)
+    at async http://localhost:5391/src/main.ts?t=1790593072940:10:1
+[2m11:10:33 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/v1/me/workspaces[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1135:18)
+    at afterConnectMultiple (node:net:1716:7)
+[2m11:10:33 AM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m[Vue warn]: Unhandled error during execution of mounted hook 
+  at <WorkspaceSelector> 
+  at <App>
+[2m11:10:33 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled rejection] [1mProblemError[22m: The response to http://localhost:5391/api/v1/me/workspaces was not a problem document.
+[39m > request src/api/client.ts:71:26
+    69 |    });
+    70 |  
+    71 |    if (!response.ok) throw new ProblemError(await readProblem(response));
+       |                            ^
+    72 |    if (response.status === 204) return undefined as T;
+    73 |    return (await response.json()) as T;
+ > Proxy.load src/stores/workspace.ts:22:24
+
+[2m11:11:41 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m

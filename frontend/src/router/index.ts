@@ -230,6 +230,12 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // SPIKE F2 (scratch only): the WK-675 DAG designer probe. Unguarded for measurement.
+    path: "/spike/designer",
+    name: "spike-designer",
+    component: () => import("@/views/SpikeDesignerView.vue"),
+  },
+  {
     // The Phase 1b rating version the demo seeds (FR-440, W7-5). Routed by id because
     // the read route is by id; the full `03` surface stays Phase 2.
     path: "/rating-versions/:id",
