@@ -328,3 +328,61 @@ def test_the_same_seed_reproduces_the_run_and_the_counterexample(
     assert log1 == log2
     assert one.property_results == two.property_results
     assert one.cases_blob == two.cases_blob
+
+
+# --- a purpose-built minimal bundle: premium depends on driver_age only, nothing clamps it ----
+
+from test_rating_score import _FakeResolver, _version  # noqa: E402
+
+from pricing_core.rating.compile import compile_bundle  # noqa: E402
+from pricing_core.rating.runtime import load_bundle  # noqa: E402
+
+_UNCLAMPED = {"s_clamp", "s_decl_cap", "s_decl_floor"}
+_CLAMP_INPUTS = {"min_premium_minor", "sanity_cap_minor", "sanity_floor_minor"}
+
+
+class _UnclampedResolver(_FakeResolver):
+    """`test_rating_score`'s fixture without its clamp and decline constraints, so the payable
+    premium is a function of `driver_age` (and `channel`'s expense factor) alone: 1 507 up to
+    age 30-ish, 1 958 from 58 on — non-decreasing in age, never clamped by a random input."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        key = "rating_algorithm:score-fixture@1"
+        payload = dict(self._payloads[key])
+        payload["steps"] = [s for s in payload["steps"] if s["step_id"] not in _UNCLAMPED]
+        payload["input_contract"] = [
+            f for f in payload["input_contract"] if f["name"] not in _CLAMP_INPUTS
+        ]
+        self._payloads[key] = payload
+
+
+@pytest.fixture(scope="module")
+def unclamped() -> CompiledBundle:
+    return load_bundle(asyncio.run(compile_bundle(_version(), _UnclampedResolver())))
+
+
+@pytest.mark.req("FR-261")
+def test_run_regression_finds_a_monotone_failure_and_passes_the_fixed_variant(
+    unclamped: CompiledBundle,
+) -> None:
+    suite = _suite([
+        _prop("age-down", kind="monotone", input="driver_age", direction="decreasing"),
+        _prop("age-up", kind="monotone", input="driver_age", direction="increasing"),
+        _prop("age-strict", kind="monotone", input="driver_age", direction="increasing",
+              strict=True),
+    ])
+    run, log = run_regression(unclamped, suite, seed=5, rating_version_ref=_REF, now=_now)
+    down, up, strict = run.property_results
+    assert (down.status, up.status, strict.status) == ("fail", "pass", "fail")
+    assert down.shrink == "completed"
+    assert down.counterexample_minimal is True
+    assert set(log.counterexamples) == {"age-down", "age-strict"}
+    assert run.overall == "fail"
+    # the fixed variant: the increasing direction alone is a passing run
+    fixed, _ = run_regression(
+        unclamped, _suite([_prop("age-up", kind="monotone", input="driver_age",
+                                 direction="increasing")]),
+        seed=5, rating_version_ref=_REF, now=_now,
+    )
+    assert fixed.overall == "pass"

@@ -73,6 +73,7 @@ def test_the_generation_settings_are_the_declared_ones() -> None:
     assert s.report_multiple_bugs is False
     assert s.derandomize is False
     assert s.max_examples == 123
+    assert s.suppress_health_check == ()  # PL-1205:311's list, nothing added
 
 
 @pytest.mark.req("FR-261")

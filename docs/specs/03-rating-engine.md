@@ -928,11 +928,11 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
 > (`FR-9301`). `replay_cases` takes the `recorded` run, the source of the generation
 > record and of each failing property's persisted `shrink` and `counterexample_minimal`:
 > a replay cannot shrink, so it reports what was recorded, and reports a property that now
-> fails on an unshrunk case as `stopped_on_limit`, unminimised. A `monotone` property is
-> evaluated with the case's other inputs held fixed while the named input is varied over a
-> five-point grid spanning the property's `lower` and `upper`, or the input contract's `min`
-> and `max`; it names an `int` or `decimal` input with a range, or it is refused before
-> generation.
+> fails on an unshrunk case as `stopped_on_limit`, unminimised. *(Provisional, pending the
+> deputy's ruling on how `monotone` compares premiums: the implementation holds a case's
+> other inputs fixed and varies the named input over a five-point grid spanning the
+> property's `lower` and `upper`, or the input contract's `min` and `max`, for an `int` or
+> `decimal` input with a range, and refuses any other before generation.)*
 
 > *(`import_confirmed` added 2026-08-28, DP6 — the confirmation half of FR-235.)*
 > `POST /import` with `confirm: true` re-parses the same upload through the same strict

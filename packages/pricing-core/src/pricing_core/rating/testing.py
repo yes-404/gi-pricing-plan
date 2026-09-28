@@ -21,7 +21,7 @@ from decimal import Decimal
 from typing import Any
 
 import hypothesis
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given, settings
 from hypothesis import seed as hypothesis_seed
 from hypothesis import strategies as st
 from hypothesis.internal.conjecture.engine import ExitReason
@@ -80,8 +80,6 @@ def generation_settings(cases: int) -> settings:
     RS-1176 condition 2: no example database (a run must not depend on state left by a
     previous one), no deadline (the engine call's speed is not a property), one reported
     failure, and no derandomisation (the persisted seed is the reproduction handle).
-    Health checks are suppressed: a contract with a small domain legitimately exhausts
-    the strategy before `cases` distinct examples exist.
     """
     return settings(
         database=None,
@@ -89,7 +87,6 @@ def generation_settings(cases: int) -> settings:
         report_multiple_bugs=False,
         derandomize=False,
         max_examples=cases,
-        suppress_health_check=list(HealthCheck),
     )
 
 
