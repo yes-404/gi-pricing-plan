@@ -25,6 +25,7 @@ from app.db.models import (
     DatasetRow,
     DatasetVersionRow,
     JobRow,
+    RatingVersionRow,
     ScoringTraceRow,
 )
 from app.db.session import Database
@@ -235,4 +236,29 @@ async def test_a_blob_no_owner_references_is_refused(
     """Fail closed: a blob nothing in the caller's workspace owns is not served."""
     sha256 = _digest()
     await _blob(database, sha256, "application/octet-stream")
+    _assert_indistinguishable_404(_get(client, reader_headers, sha256), sha256)
+
+
+@pytest.mark.req("FR-421")
+async def test_a_compiled_bundle_blob_is_refused_even_in_the_callers_workspace(
+    client: TestClient, database: Database, workspace_id, reader_headers
+) -> None:
+    """A Rating Version's compiled bundle is not a download: its digest is exposed in
+    `BundleMetadata.blob_sha256`, and scoring reads it server-side, so this route refuses
+    it even to the owning workspace (a bundle is not an allowed owner)."""
+    sha256 = _digest()
+    await _blob(database, sha256, "application/json")
+    async with database.unit_of_work() as session:
+        session.add(
+            RatingVersionRow(
+                workspace_id=workspace_id,
+                slug=f"rv-{sha256[:8]}",
+                version=1,
+                status="approved",
+                dataset_version_id=new_uuid7(),
+                model_ref="model:m@1",
+                created_by=new_uuid7(),
+                bundle={"content_hash": "sha256:" + "1" * 64, "blob_sha256": sha256},
+            )
+        )
     _assert_indistinguishable_404(_get(client, reader_headers, sha256), sha256)
