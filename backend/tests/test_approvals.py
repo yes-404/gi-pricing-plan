@@ -2,21 +2,26 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from sqlalchemy import select
 
 from app.db.models import ApprovalDecisionRow, AuditEventRow, RoleAssignmentRow, RoleRow
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import approvals, rbac
+from app.platform import approvals, audit, rbac
 from model_schema import (
     DEFAULT_POLICY,
     ActorKind,
     ApprovalStatus,
     ArtifactRef,
     DecisionKind,
+    JobSource,
     Principal,
     ScopeType,
+    Severity,
+    ValidationLayer,
     new_uuid7,
 )
 
@@ -49,8 +54,24 @@ async def _with_role(database: Database, workspace_id, principal: Principal, rol
         )
 
 
+#: Who created the versions these tests submit: nobody who submits or decides here.
+AUTHOR = Principal(kind=ActorKind.USER, id=new_uuid7(), display="author@insurer.example")
+
+
 async def _submit(database: Database, workspace_id, submitter: Principal, ref=MODEL):
     async with database.unit_of_work() as session:
+        # The version's creation Audit Event, as its owning module records it: its actor is
+        # the author `06` FR-353 (amended 2026-09-28) keeps out of the approval, and a
+        # version without one fails closed. These tests pin versions no module created, so
+        # the event is the only trace of an author there is.
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=AUTHOR,
+            source=JobSource.API,
+            action=approvals.CREATION_ACTIONS[ref.type],
+            entity_ref=str(ref),
+        )
         row = await approvals.submit(
             session,
             workspace_id=workspace_id,
@@ -585,3 +606,82 @@ async def test_a_policy_dropping_the_metric_certificate_is_refused(
     #: And nothing was stored, on the same reasoning as the model case above.
     async with database.unit_of_work() as session:
         assert await approvals.policy_for(session, workspace_id) == DEFAULT_POLICY
+
+
+# -- the author columns agree with the creation event (FR-353 as amended 2026-09-28) ----
+
+
+async def _creation_actor(database: Database, workspace_id, artifact_type: str, ref: str):
+    """The actor id of `ref`'s creation Audit Event — what the approval check reads."""
+    async with database.session() as session:
+        actors = (
+            await session.execute(
+                select(AuditEventRow.actor).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.entity_ref == ref,
+                    AuditEventRow.action == approvals.CREATION_ACTIONS[artifact_type],
+                )
+            )
+        ).scalars().all()
+    assert len(actors) == 1, actors
+    return UUID(actors[0]["id"])
+
+
+@pytest.mark.req("FR-353")
+async def test_a_rating_versions_created_by_is_its_creation_events_actor(
+    database: Database, workspace_id
+) -> None:
+    """`created_by` is a copy of the author, not a second source: the check reads the event,
+    and this holds the copy to it on a version made by the real create path."""
+    from app.platform import rating_versions
+
+    analyst = _user("analyst")
+    await _with_role(database, workspace_id, analyst, "analyst")
+    async with database.unit_of_work() as session:
+        row = await rating_versions.create_rating_version(
+            session, workspace_id=workspace_id, actor=analyst, slug="authored-rv",
+            dataset_version_id=new_uuid7(), model_ref=MODEL,
+        )
+        ref, created_by = f"rating_version:{row.slug}@{row.version}", row.created_by
+    assert created_by == analyst.id
+    assert await _creation_actor(database, workspace_id, "rating_version", ref) == created_by
+
+
+@pytest.mark.req("FR-353")
+async def test_a_dataset_versions_created_by_is_its_creation_events_actor(
+    database: Database, workspace_id
+) -> None:
+    """As above, for `dataset_version`, whose reference carries the dataset's slug."""
+    from app.platform import datasets
+
+    analyst = _user("analyst")
+    await _with_role(database, workspace_id, analyst, "analyst")
+    async with database.unit_of_work() as session:
+        dataset = await datasets.create_dataset(
+            session, workspace_id=workspace_id, actor=analyst, slug="authored-ds"
+        )
+        row = await datasets.new_version(
+            session, workspace_id=workspace_id, actor=analyst, dataset_id=dataset.id
+        )
+        ref, created_by = f"dataset_version:{dataset.slug}@{row.version}", row.created_by
+    assert created_by == analyst.id
+    assert await _creation_actor(database, workspace_id, "dataset_version", ref) == created_by
+
+
+@pytest.mark.req("FR-353")
+async def test_a_validation_rules_authored_by_is_its_creation_events_actor(
+    database: Database, workspace_id
+) -> None:
+    """As above, for `validation_rule`, whose column is named `authored_by`."""
+    from app.platform import validation_rules
+
+    analyst = _user("analyst")
+    await _with_role(database, workspace_id, analyst, "analyst")
+    async with database.unit_of_work() as session:
+        row = await validation_rules.create_rule(
+            session, workspace_id=workspace_id, actor=analyst, slug="authored-rule",
+            layer=ValidationLayer.STRUCTURAL, check="range", severity=Severity.FAIL,
+        )
+        ref, authored_by = f"validation_rule:{row.slug}@{row.version}", row.authored_by
+    assert authored_by == analyst.id
+    assert await _creation_actor(database, workspace_id, "validation_rule", ref) == authored_by
