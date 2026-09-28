@@ -41,7 +41,11 @@
         "dislocation_run_id": {"type": ["string", "null"], "format": "uuid"},
         "gipp_check_id": {"type": ["string", "null"], "format": "uuid"},
         "optimisation_run_id": {"type": ["string", "null"], "format": "uuid"},
-        "structural_diff_blob": {"type": ["string", "null"]}
+        "structural_diff_blob": {"type": ["string", "null"]},
+        "golden_quotes": {
+          "type": ["object", "null"],
+          "description": "Added 2026-09-28 (WK-672 Slice 2, PL-1189): written once by the submit gate and never edited after (03 FR-260, §4.3). Either {status: checked, suite_ref, suite_content_hash, bundle_hash, results, delta} or {status: not_checked, regression_suite: none, message: 'no golden quotes were checked', reason}. The generated OpenAPI carries the full shape (GoldenQuoteCheck | GoldenQuoteNotChecked)."
+        }
       }
     },
     "approval_request_id": {"type": ["string", "null"], "format": "uuid"}

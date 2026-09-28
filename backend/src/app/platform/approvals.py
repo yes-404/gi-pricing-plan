@@ -55,6 +55,7 @@ from model_schema import (
 __all__ = [
     "CREATION_ACTIONS",
     "ArtifactResolver",
+    "EvidenceAuthorResolver",
     "decide",
     "policy_for",
     "require_in_review",
@@ -279,6 +280,20 @@ async def submit(
     return row
 
 
+class EvidenceAuthorResolver(Protocol):
+    """Who authored the evidence an approver of this artifact version is shown (`06`
+    FR-353, `03` FR-260): for a Rating Version, every author in its golden-quote delta.
+
+    Supplied by the caller, as `ArtifactResolver` is, so governance imports nothing from
+    the rating module (DEP-1). It raises rather than returning an empty set on a load or
+    parse failure, so a decision is refused rather than made without the check.
+    """
+
+    async def __call__(
+        self, session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+    ) -> set[UUID]: ...
+
+
 async def decide(
     session: AsyncSession,
     *,
@@ -287,9 +302,17 @@ async def decide(
     approver: Principal,
     decision: DecisionKind,
     comment: str | None = None,
+    evidence_authors: EvidenceAuthorResolver | None = None,
 ) -> ApprovalRequestRow:
-    """Record a decision, enforcing separation of duties (FR-353, FR-355)."""
+    """Record a decision, enforcing separation of duties (FR-353, FR-355).
+
+    `evidence_authors` is required for a `rating_version` request: a missing resolver is a
+    programming error, raised as `TypeError` before any decision row (re-audit N1) — never
+    an `assert`, which `python -O` strips.
+    """
     row = await _load(session, workspace_id, request_id)
+    if row.artifact_type == "rating_version" and evidence_authors is None:
+        raise TypeError("decide on a rating_version requires evidence_authors")
 
     if row.status != ApprovalStatus.REVIEW.value:
         raise PlatformError(
@@ -331,6 +354,24 @@ async def decide(
             "`06` FR-353: the approver may be neither the submitter nor the author of the "
             "version under approval.",
         )
+
+    # FR-353, added 2026-09-28 (PL-1189; the deputy's decision on audit finding F4): the
+    # suite delta is the evidence the approver judges, so its author cannot judge it. Not
+    # the general component-author case, which WK-677 owns.
+    if row.artifact_type == "rating_version":
+        assert evidence_authors is not None  # narrowed above; refused before this line
+        authors = await evidence_authors(
+            session, workspace_id=workspace_id,
+            artifact_ref=ArtifactRef.model_validate(row.artifact_ref),
+        )
+        if approver.id in authors:
+            raise PlatformError(
+                "APPROVAL_BY_EVIDENCE_AUTHOR",
+                "An author of a golden-quote change cannot approve",
+                403,
+                f"{row.artifact_ref}'s golden-quote delta lists a change you authored. "
+                "`06` FR-353 and `03` FR-260: the author of the evidence cannot judge it.",
+            )
 
     await rbac.require_permission(
         session,

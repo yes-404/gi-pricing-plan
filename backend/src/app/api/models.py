@@ -46,6 +46,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, select
 
+from app.api import score as score_api
 from app.api.authz import requires
 from app.api.concurrency import IF_MATCH_DESCRIPTION, etag_for, require_if_match
 from app.api.deps import Caller, SettingsDep, job_identity
@@ -99,6 +100,7 @@ from model_schema import (
     TransparencyArtifact,
 )
 from model_schema import Permission as Perm
+from pricing_core.rating.runtime import CompiledBundle
 
 __all__ = ["router"]
 
@@ -1194,12 +1196,22 @@ async def submit_rating_version(
     body: RatingVersionSubmit,
     caller: Annotated[Caller, Depends(requires(Perm.RATING_SUBMIT))],
     database: DatabaseDep,
+    blob_store: score_api.BlobStoreDep,
+    slot: score_api.BundleSlotDep,
 ) -> RatingVersion:
     """Move a rating version from draft to review, creating an approval request.
 
     The version must be in draft status. The change summary describes the
     modifications in this version.
     """
+    async def load_compiled(ref: ArtifactRef) -> CompiledBundle:
+        # `_fetch_bundle`, never `_compiled_for`: the latter degrades to the slot's
+        # last-known-good bundle when metadata storage is down, and a governance gate
+        # refuses rather than degrades (FR-260; audit finding F5).
+        return await score_api._fetch_bundle(
+            database, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
+        )
+
     async with database.unit_of_work() as session:
         row, _ = await rating_versions_service.submit_for_review(
             session,
@@ -1207,6 +1219,7 @@ async def submit_rating_version(
             actor=caller.principal,
             rating_version_id=rating_version_id,
             change_summary=body.change_summary,
+            load_compiled=load_compiled,
         )
         await session.refresh(row)
         return rating_versions_service.to_schema(row)

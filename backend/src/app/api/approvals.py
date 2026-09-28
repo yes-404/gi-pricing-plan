@@ -255,6 +255,7 @@ async def decide_request(
             approver=caller.principal,
             decision=body.decision,
             comment=body.comment,
+            evidence_authors=rating_versions_service.golden_quote_delta_authors,
         )
         await _carry_to_the_artifact(session, caller=caller, request=row)
         decisions = list(

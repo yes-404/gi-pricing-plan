@@ -727,6 +727,36 @@ def test_an_artifact_type_no_module_can_resolve_fails_closed(
     assert body["code"] == "ARTIFACT_TYPE_NOT_RESOLVABLE"
 
 
+@pytest.mark.req("FR-260")
+def test_a_regression_suite_reference_cannot_be_put_through_approval(
+    client: TestClient, submitter_headers
+) -> None:
+    """Negative (WK-672 Slice 2, PL-1189; the lead's ruling on the `regression_suite`
+    artifact type). `regression_suite` joined `ARTIFACT_TYPES` so a Rating Version's
+    evidence can pin a suite version by reference (`03` §4.3). It is a reference only: the
+    suite is not approvable (DP-S2-1 (A)), so a request naming one is refused and nothing
+    is created.
+
+    The refusal is the earliest one the route has: no workspace approval policy names the
+    type, so it never reaches artifact resolution (and so never
+    `ARTIFACT_TYPE_NOT_RESOLVABLE`, which is the refusal for a type that *has* a policy
+    entry and no module). And the type has no creation action, so #861's author check
+    could not resolve an Author for it either.
+    """
+    from app.platform import approvals
+
+    assert "regression_suite" not in approvals.CREATION_ACTIONS
+    response = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": "regression_suite:motor-gb-core@1", "change_summary": "x"},
+        headers=submitter_headers,
+    )
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert body["title"] == "No approval policy for this artifact type"
+
+
 @pytest.mark.req("FR-386")
 def test_the_missing_policy_is_answered_before_the_missing_artifact(
     client: TestClient, submitter_headers

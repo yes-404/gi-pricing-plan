@@ -911,6 +911,34 @@ def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
     )
 
 
+def _score_context_sync(
+    bundle: CompiledBundle, ctx: QuoteContext, rating_version_ref: ArtifactRef
+) -> ScoringResult:
+    """Score one context on the synchronous `evaluate()` path (RL-868): `score_one`'s own
+    pre-checks, one engine call, and the shared `build_scoring_result` tail (RL-858).
+
+    Extracted unchanged from `_score_batch_row` (WK-672 Slice 2, PL-1189 Task 3) so that
+    `rating/testing.py`'s `evaluate_golden_quotes` reuses the exact path batch scoring
+    takes. A pure move: no thread, executor or lock is added, and `bundle.decision.evaluate`
+    is called exactly as before. Raises what that path raises — the `_raise_named`
+    `ValueError`s and the engine's `RuntimeError` — for the caller to isolate per quote.
+    """
+    algorithm = bundle.algorithm
+    _validate_inputs(algorithm, ctx.inputs)
+    _check_purpose_mount(algorithm, ctx)
+    _check_billing_surface(ctx)
+
+    context = {
+        "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
+    }
+    try:
+        out = bundle.decision.evaluate(context)
+    except RuntimeError as exc:
+        _reraise_engine_failure(algorithm, exc)
+
+    return build_scoring_result(bundle, ctx, rating_version_ref, out["result"], None)
+
+
 def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str, Any]:
     """Score one row, reusing `score_one`'s own pre-checks and `build_scoring_result`
     unmodified (the module docstring's "What `score_batch` is"). Never lets a `ValueError`
@@ -925,23 +953,9 @@ def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str
     algorithm = bundle.algorithm
     try:
         ctx = _row_to_ctx(row)
-        _validate_inputs(algorithm, ctx.inputs)
-        _check_purpose_mount(algorithm, ctx)
-        _check_billing_surface(ctx)
-
-        context = {
-            "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
-        }
-        try:
-            out = bundle.decision.evaluate(context)
-        except RuntimeError as exc:
-            _reraise_engine_failure(algorithm, exc)
-
         assert ctx.options is not None
         assert ctx.options.rating_version_ref is not None
-        scored = build_scoring_result(
-            bundle, ctx, ctx.options.rating_version_ref, out["result"], None,
-        )
+        scored = _score_context_sync(bundle, ctx, ctx.options.rating_version_ref)
     except NotImplementedError:
         raise
     except (ValueError, RuntimeError) as exc:
