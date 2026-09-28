@@ -12,7 +12,9 @@ relates: [WK-1178]
 
 # FD-1200 — A version not in review can be approved, and the audit records a false before-state
 
-**Severity: high.** It is on plan review 15's risk list until the fix merges. The auditor filed
+**Severity: critical.** The deputy raised it from high on 2026-09-28, in his entry in the lead's
+local channel file `to-lead.md` stamped 16:59:19 BST, when the second defect below was confirmed.
+It is on plan review 15's risk list until the fix merges. The auditor filed
 this finding on 2026-09-28 in the register-and-records pass, on the lead's instruction and the
 deputy's decision in his entry in the lead's local channel file `to-lead.md` stamped
 2026-09-28 16:01:27 BST (line 8645), item 7.
@@ -51,6 +53,27 @@ At `3a3df367`, each citation re-read by the auditor:
   been open since then. There is no production deployment yet, so the blast radius is test and
   seed data. The fix PR answers that by a query against the Audit Events rather than assuming it.
 
+## The second defect: any decision approves
+
+Found by executor-s1's red tests and confirmed by the deputy at `ffba6753` (the 16:59:19 BST
+entry). `backend/src/app/platform/rating_versions.py` `apply_approval_decision` (from `:252`)
+**never reads the request's status**. It sets `row.status = APPROVED` and records
+`rating_version.approved` after **every** decision, so a rejection, a changes-requested, or the
+first of two required approvals all approve a Rating Version. The auditor re-read the function
+at `ffba6753`: in `:252–300`, `grep -c "request.status"` is 0, and the only fields of `request`
+read are `artifact_type` and `artifact_ref`.
+
+The reds, as executor-s1 quoted them against `main`:
+
+- the first of two approvals gives `assert 'approved' == 'review'`;
+- a rejection gives `assert 'approved' == 'draft'`;
+- a draft approved through the service gives `DID NOT RAISE`.
+
+`test_create_submit_approve_a_rating_version` passed only because of this defect. It is a test
+that proved nothing. The defect has been live since the same `4493f804` (#268, 2026-08-27).
+Together with the status bypass above, the only thing between a draft pricing change and
+"approved" was that nobody had tried.
+
 ## Disposition
 
 **Fix in progress — owner the lead.** Event: executor-s1's WK-1178 PR after #861 (the number
@@ -68,3 +91,17 @@ code in one commit, does the following:
   through `review`.
 
 WK-672 Slice 2 does not merge its FR-260 hook until this fix is on `main`.
+
+**The same PR fixes the second defect** (the deputy accepted folding it in, 16:59:19 BST), on four
+conditions:
+
+1. a table-driven test across all 7 approvable types and every decision outcome, asserting
+   FR-355's mapping and a true audit `action`, `before` and `after`, with the reds quoted
+   against `main`;
+2. `test_create_submit_approve_a_rating_version` is corrected, not deleted: two distinct
+   approvers, `review` after the first and `approved` after the second, and the PR states why it
+   passed before;
+3. the data query also reports every Rating Version whose `approved` status lacks the required
+   number of distinct approving decisions, or that follows a reject or changes-requested;
+4. the priority is unchanged, and WK-672 Slice 2's FR-260 hook and WK-674 Slice 2's floor wiring
+   wait for it.
