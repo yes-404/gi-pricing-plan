@@ -748,13 +748,13 @@ From “Workstreams” (line 380): **File taxonomy, reference coding and custody
 id: WK-696
 family: work
 title: A public face for a public repository — RFC-898, the residue
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 381): A public face for a public repository — RFC-898, the residue | Adopted 2026-09-01 from RFC-898 by the reconciliation's dated acceptance line. The content landed 2026-08-30 under the note's §7 light path (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/` templates — the clause-2 exception's second instance); the exposure is discharged. **The residue: two impact rows.** Row 9 — this roadmap row existing — is discharged by this row itself. Row 6 — the two repository settings (private vulnerability reporting; issues with templates) — is **not verifiable from the tree**: it is evidenced by a dated maintainer line, which is the maintainer's to write and nobody else can supply it. **Acceptance:** the note's §8 (a) and (c)–(e) — the link check, a test issue filed through each form, and the auditor's outsider read of the `README`
+From “Workstreams” (line 381): A public face for a public repository — RFC-898, the residue | Adopted 2026-09-01 from RFC-898 by the reconciliation's dated acceptance line. The content landed 2026-08-30 under the note's §7 light path (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/` templates — the clause-2 exception's second instance); the exposure is discharged. **The residue: two impact rows.** Row 9 — this roadmap row existing — is discharged by this row itself. Row 6 — the two repository settings (private vulnerability reporting; issues with templates) — is **not verifiable from the tree**: it is evidenced by a dated maintainer line, which is the maintainer's to write and nobody else can supply it. **Acceptance:** the note's §8 (a) and (c)–(e) — the link check, a test issue filed through each form, and the auditor's outsider read of the `README` **Closed 2026-09-28 by the deputy's dated line, by delegation, on [`CR-1179`](closures/CR-01179-wk-696-work-close-the-closure-record.md).**
 
 
 ### WK-697 — **One id per governed thing — RFC-937, the whole standard**

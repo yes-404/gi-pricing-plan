@@ -2,7 +2,7 @@
 id: FD-1181
 family: finding
 title: CONTRIBUTING and the PR template describe a standing WK- maintenance item that has no roadmap row
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: df8e5811a151a99c7317690faf9278a6dc3400be
@@ -59,4 +59,5 @@ The owner chooses between two fixes:
 minted WK-1178, *"P2 standing maintenance: hotfixes, dependency bumps and security findings"*,
 `status: active`, `phase: P2`. With that row on `main`, the public sentences describe a Work
 that exists, which is the first of the two fixes above. The finding stands as measured at
-`df8e5811`. Whether WK-1178 discharges it is the lead's verdict.
+`df8e5811`. **Resolved 2026-09-28** by WK-1178 (#840, `2d20ca4b`, merged 14:21:42 BST): the lead's
+verdict, with which the deputy agreed.

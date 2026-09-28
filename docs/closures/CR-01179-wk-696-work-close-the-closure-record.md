@@ -166,7 +166,13 @@ exit code was 0.
 ### (b) Impact row 6: the two repository settings
 
 This item is settings-side. RFC-898 says it is evidenced by a dated line, and that line is now
-the deputy's by delegation. **The line is pending: the deputy's dated line by delegation.**
+the deputy's by delegation. **The line, verbatim.** It is the deputy's entry in the lead's local channel file `to-lead.md`,
+headed with the stamp 2026-09-28 14:25:12 BST (line 8367):
+
+> **Row-6 settings line:** **2026-09-28 14:25:12 BST — RFC-898 impact row 6 (the two repository settings) is MET**, dated by the deputy by the maintainer's delegation of 2026-09-28, read live by me at 14:24 BST with the `gh` CLI:
+> - (1) private vulnerability reporting **on**: `gh api repos/yes-404/gi-pricing-plan/private-vulnerability-reporting` → `{"enabled":true}`;
+> - (2) Issues **on**: `gh repo view … --json hasIssuesEnabled,visibility` → `{"hasIssuesEnabled":true,"visibility":"PUBLIC"}`. The two templates `.github/ISSUE_TEMPLATE/bug.yml` and `question.yml` are at main, with **no `config.yml`**, so blank issues stay allowed, as RFC-898 §2 "Settings" item 2 asks.
+
 
 Evidence the line may quote was read with the `gh` CLI (`yes-404` token) on 2026-09-28:
 
@@ -371,7 +377,8 @@ is, where it stands, how it is built, and how to engage.
 2026-09-28 (`2d20ca4b`). It minted WK-1178, *"P2 standing maintenance: hotfixes, dependency
 bumps and security findings"*, `status: active`, `phase: P2`. That is the row `FD-1181`
 reports as missing. `FD-1181` keeps its finding as measured at `df8e5811`, with a dated note.
-Whether WK-1178 discharges it is the lead's verdict.
+The lead ruled that WK-1178 resolves it, and the deputy agreed. `FD-1181` is resolved in this
+record's follow-up commit.
 
 Observation 2's `W37-n` instances are removed by #827.
 
@@ -443,21 +450,30 @@ auditor.
 | Item | Verdict | Owner | Event |
 |---|---|---|---|
 | (a) files and links | evidenced | — | — |
-| (b), row 6, settings | pending: the deputy's dated line by delegation | the deputy | this record's follow-up commit |
+| (b), row 6, settings | **met**, by the deputy's row-6 settings line of 2026-09-28, quoted verbatim in (b) | — | — |
 | (c) test issues | **met by proxy**, accepted by the deputy's ruling. Filed, labelled, read back and closed, plus the schema leg: evidenced. Limit: "no web-UI submission; the rendering path is proved by schema validation", carried to plan review 15. | — | plan review 15 (the limit) |
 | (d) narrow predicate | **not met at `df8e5811`; fixed before close by #827** (`12431a88`). Two sentences failed: `README.md:13-14`, an excerpt of `CLAUDE.md` §1, and `README.md:42-44`, a dated `SL-` status copy that recurs in two more files. | — | — |
-| (d) wider read | met; observations 1, 2, 4 and 5 noted; observation 3 **deferred with an owner** as `FD-1181` | the lead | WK-1170's first slice |
+| (d) wider read | met; observations 1, 2, 4 and 5 noted; observation 3 filed as `FD-1181`, **resolved 2026-09-28** by WK-1178 (#840, `2d20ca4b`) | — | — |
 | (e) checklist line | evidenced; no pointer edit is owed by this close | — | — |
 | Rows 7, 8, 9 | evidenced | — | — |
 
 **Raised by this close:** [`FD-1180`](../findings/FD-01180-gh-issue-create-label-exits-0-while-the-label-is-silently-dropped.md),
-`gh issue create --label` exits 0 while the label is silently dropped. The deputy accepted it,
-**deferred with an owner — the lead**. Event: the next `git-hygiene` skill edit. Its register
-row is filed in this PR.
+`gh issue create --label` exits 0 while the label is silently dropped. The deputy first accepted
+it as deferred to the next `git-hygiene` skill edit. He then ruled it **a same-day `git-hygiene`
+skill fix under WK-1178**, which is **in progress: PR #851**. Its register row is filed in this
+PR.
 
 [`FD-1181`](../findings/FD-01181-contributing-and-the-pr-template-describe-a-standing-wk-maintenance-item-that-has-no-roadmap-row.md):
 `CONTRIBUTING.md` and the PR template describe a standing `WK-` maintenance item that has no
-roadmap row. **Deferred with an owner — the lead**, by the lead's ruling. Event: WK-1170's first
-slice. Its register row is filed in this PR.
+roadmap row. It was first ruled **deferred with an owner — the lead**, with the event WK-1170's
+first slice. It was then **resolved 2026-09-28** by WK-1178 (#840, `2d20ca4b`), the lead's
+verdict with the deputy's agreement. Its register row is filed in this PR.
 
-**Acceptance line:** _pending_
+**Acceptance line**, verbatim. It is the deputy's by the maintainer's delegation, from the same
+`to-lead.md` entry as the settings line (line 8367):
+
+> **Maintainer acceptance:** **2026-09-28 14:25:12 BST — WK-696 (A public face for a public repository — RFC-898, the residue) is CLOSED**, written by the deputy by the maintainer's delegation of 2026-09-28, on `CR-1179` (`kind: work`, auditor-b) as read by me at `p2-b-wk696` `f0a28f05`, with the lead's adoption of its verdicts.
+> - (a) files and links, (e) the checklist line, and impact rows 7–9 are **evidenced**. Row 6 is **met** by the settings line above.
+> - **(c) is met by proxy**, on my ruling: both test issues were filed, read back, labelled and closed. I re-read them at 14:24: #825 CLOSED, label `bug`; #826 CLOSED, label `question`. The schema leg is evidenced. **Its limit** ("no web-UI submission; the rendering path is proved by schema validation") is carried to plan review 15.
+> - **(d)'s narrow predicate was not met at `df8e5811`**, and it was **fixed before close by #827** (`12431a88`). The wider read is met. Observation 3 is `FD-1181`, now **resolved**: WK-1178 was minted by #840 (`2d20ca4b`), and CONTRIBUTING points at the current phase's maintenance row.
+> - `FD-1180` (`gh issue create --label` exits 0 while the label is silently dropped) goes to **a same-day `git-hygiene` skill fix under WK-1178**. It is not a deferral: CLAUDE.md §12's same-session rule applies to it as it did to the test-DB trap.

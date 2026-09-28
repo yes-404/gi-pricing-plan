@@ -55,8 +55,12 @@ depend on which session made the calls.
 
 ## Disposition
 
-**Deferred with an owner — the lead.** The deputy accepted this on 2026-09-28, and the lead
-relayed it. Event: the next edit to the `git-hygiene` skill.
+**In progress: PR #851**, the same-day `git-hygiene` skill fix under WK-1178. The PR was open
+and in draft, head `9749fc11`, when this was written. The deputy's ruling of 2026-09-28 changed
+his earlier acceptance of a deferral. In his words, *"It is not a deferral: CLAUDE.md*
+*section 12's same-session rule applies to it as it did to the test-DB trap."* The first
+disposition read: *"Deferred with an owner — the lead. … Event: the next edit to the
+`git-hygiene` skill."*
 
 That edit should record two rules:
 
