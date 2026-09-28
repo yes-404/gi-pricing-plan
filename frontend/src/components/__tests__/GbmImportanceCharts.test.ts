@@ -97,4 +97,53 @@ describe("GbmImportanceCharts", () => {
     expect(cells[0]).toHaveTextContent(/decreasing — holds/i);
     expect(cells[0]).not.toHaveTextContent(/violated/i);
   });
+
+  it("says a skipped monotonicity check is not applicable, never pass or fail", () => {
+    render(GbmImportanceCharts, {
+      props: {
+        ...props(),
+        monotonicity: [
+          {
+            factor: "area_x_fuel",
+            declared: "increasing",
+            holds: null,
+            worst_violation: 0,
+            skipped: "unordered_levels",
+          },
+        ],
+      },
+    });
+    const table = screen.getByRole("table", { name: /monotonicity/i });
+    const row = within(table).getByRole("row", { name: /area_x_fuel/ });
+    const cell = within(row).getAllByRole("cell")[0];
+    expect(cell).toHaveTextContent(/not applicable/i);
+    expect(cell).not.toHaveTextContent(/holds|violated/i);
+    expect(screen.queryByText("unordered_levels")).not.toBeInTheDocument();
+  });
+
+  it("names the shared source column behind a joint importance", () => {
+    render(GbmImportanceCharts, {
+      props: {
+        ...props(),
+        permutationImportances: [
+          {
+            feature: "area_x_fuel",
+            baseline: 1,
+            permuted: 1.2,
+            degradation: 0.2,
+            repeats: 1,
+            seed: 0,
+            shared_source_columns: ["area"],
+          },
+        ],
+      },
+    });
+    const list = screen.getByRole("list", { name: /shared source columns/i });
+    expect(list).toHaveTextContent(/area_x_fuel.*area.*joint effect/i);
+  });
+
+  it("shows no shared-column note when nothing is shared", () => {
+    render(GbmImportanceCharts, { props: props() });
+    expect(screen.queryByRole("list", { name: /shared source columns/i })).toBeNull();
+  });
 });

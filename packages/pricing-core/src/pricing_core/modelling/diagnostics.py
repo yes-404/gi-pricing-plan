@@ -63,6 +63,7 @@ from model_schema import (
     ModelSpecCommon,
     MonotonicDirection,
     MonotonicityCheck,
+    MonotonicitySkip,
     PartialDependence,
     PartialDependenceOmission,
     PartialDependenceOmissionReason,
@@ -906,6 +907,7 @@ def _permutation_importances(
             PermutationImportance(
                 feature=factor.slug, baseline=baseline, permuted=permuted,
                 degradation=permuted - baseline, repeats=repeats, seed=seed,
+                shared_source_columns=_shared_source_columns(factor, columns, factors),
             )
         )
     return tuple(out)
@@ -1028,6 +1030,21 @@ def _representatives(axis: pl.Series, source: pl.Series) -> dict[str, object]:
         )
         if level is not None
     }
+
+
+def _shared_source_columns(
+    factor: Factor, columns: Sequence[str], factors: Sequence[Factor]
+) -> tuple[str, ...]:
+    """The shuffled `columns` that also source another factor (FR-177).
+
+    A shuffle moves a column for every factor drawing on it, so the degradation it produces
+    is the joint effect of all of them. Named, not refused: the common case is a factor on a
+    column of its own and nothing here fires. A cross's own operands are not "another
+    factor" -- moving them is the measurement.
+    """
+    own = {factor.id, *factor.operand_factor_ids}
+    other = {c for f in factors if f.id not in own for c in f.source_columns}
+    return tuple(c for c in columns if c in other)
 
 
 def _operand_columns(cross: Factor, factors: Sequence[Factor]) -> tuple[str, ...]:
@@ -1303,9 +1320,17 @@ def compute_gbm_diagnostics(
             )
         )
         direction = factor.monotonic_direction
-        # A cross's cells are unordered, so there is no direction to check (DP-FR177-2);
-        # the recorded skip lands with its schema field.
-        if direction is MonotonicDirection.NONE or factor.type is FactorType.INTERACTION:
+        if direction is MonotonicDirection.NONE:
+            continue
+        # A cross's cells are unordered, so there is no direction to check; the skip is
+        # recorded rather than left silent (FR-177, DP-FR177-2).
+        if factor.type is FactorType.INTERACTION:
+            monotonicity.append(
+                MonotonicityCheck(
+                    factor=factor.slug, declared=direction.value, holds=None,
+                    skipped=MonotonicitySkip.UNORDERED_LEVELS,
+                )
+            )
             continue
         steps = np.diff(np.asarray(means, dtype=np.float64))
         against = -steps if direction is MonotonicDirection.INCREASING else steps

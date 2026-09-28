@@ -95,6 +95,27 @@ const permutationRows = computed(() =>
     importance.degradation,
   ]),
 );
+
+/**
+ * Why a monotonicity check was not made, in words (FR-177). A skipped check is neither a pass
+ * nor a failure, so the row never says "holds" or "violated" for it; an unrecognised reason is
+ * shown under its own name rather than a default.
+ */
+function skipReason(reason: string): string {
+  if (reason === "unordered_levels") {
+    return "the factor's levels are unordered (an interaction), so there is no direction to check";
+  }
+  return reason;
+}
+
+const sharedColumnNotes = computed(() =>
+  props.permutationImportances
+    .filter((importance) => (importance.shared_source_columns ?? []).length > 0)
+    .map(
+      (importance) =>
+        `${importance.feature}: shuffling also moved ${(importance.shared_source_columns ?? []).join(", ")}, which another factor draws on, so its degradation is the joint effect.`,
+    ),
+);
 </script>
 
 <template>
@@ -124,6 +145,19 @@ const permutationRows = computed(() =>
         autoresize
       />
     </ChartFigure>
+
+    <ul
+      v-if="sharedColumnNotes.length"
+      aria-label="Shared source columns"
+      class="mt-2 text-sm text-slate-600"
+    >
+      <li
+        v-for="note in sharedColumnNotes"
+        :key="note"
+      >
+        {{ note }}
+      </li>
+    </ul>
 
     <!-- FR-174: monotonicity verification is that the fitted response actually respects
          the declared constraint, so "declared" and "holds" are read together — a factor with
@@ -169,7 +203,13 @@ const permutationRows = computed(() =>
             {{ check.factor }}
           </th>
           <td class="py-1">
-            {{ check.declared }} — {{ check.holds ? "holds" : "violated" }}
+            {{ check.declared }} —
+            <template v-if="check.skipped">
+              not applicable: {{ skipReason(check.skipped) }}
+            </template>
+            <template v-else>
+              {{ check.holds ? "holds" : "violated" }}
+            </template>
           </td>
           <td class="py-1 tabular-nums">
             {{ check.worst_violation }}

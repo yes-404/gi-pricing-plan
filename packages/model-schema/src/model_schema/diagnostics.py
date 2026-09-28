@@ -43,6 +43,7 @@ __all__ = [
     "GlmDiagnostics",
     "LiftBin",
     "MonotonicityCheck",
+    "MonotonicitySkip",
     "PartialDependence",
     "PartialDependenceOmission",
     "PartialDependenceOmissionReason",
@@ -320,6 +321,11 @@ class PermutationImportance(BaseModel):
     degradation: float
     repeats: int = Field(ge=1)
     seed: int
+    #: FR-177. The shuffled source columns that **also** source some other factor, so the
+    #: shuffle moved that factor's input too and the degradation is not this feature's alone.
+    #: Empty is the ordinary case, and the only one before FR-177, so an artifact written
+    #: earlier loads unchanged.
+    shared_source_columns: tuple[str, ...] = ()
 
 
 class PartialDependencePoint(BaseModel):
@@ -403,23 +409,46 @@ class PartialDependence(BaseModel):
     omitted: PartialDependenceOmission | None = None
 
 
+class MonotonicitySkip(enum.StrEnum):
+    """Why a declared monotonic direction was not checked (FR-177)."""
+
+    #: The factor is an `interaction`: its levels are observed cells with no order, so there
+    #: is no direction for a sweep to move against and a constraint cannot bind on it.
+    UNORDERED_LEVELS = "unordered_levels"
+
+
 class MonotonicityCheck(BaseModel):
     """Whether the **fitted** response respects a declared constraint (FR-174).
 
     Verified rather than assumed. A constraint is a parameter passed to a library, and the
     thing that makes it true of this model is that someone swept the factor and looked —
     which is also what `TransparencyArtifact.monotonicity_verified` reports upward (R3).
+
+    **Exactly one of `holds` and `skipped` is set.** A check that could not be made is not a
+    pass and not a failure, and a `bool` cannot say so; `skipped` names the reason instead
+    (FR-177). Every check written before that carries `holds` and no `skipped`, and loads
+    unchanged.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     factor: str
     declared: str
-    holds: bool
+    holds: bool | None
     #: The largest move against the declared direction, on the mean scale. `0.0` when the
     #: constraint holds; present when it does not, because "violated" without a magnitude
-    #: cannot be told from floating-point noise.
+    #: cannot be told from floating-point noise. `0.0` and meaningless when `skipped`.
     worst_violation: float = Field(ge=0.0, default=0.0)
+    skipped: MonotonicitySkip | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one_of_holds_and_skipped(self) -> MonotonicityCheck:
+        if (self.holds is None) == (self.skipped is None):
+            raise ValueError(
+                f"monotonicity check for {self.factor!r} must set exactly one of `holds` "
+                f"and `skipped`; got holds={self.holds!r}, skipped={self.skipped!r}."
+            )
+        return self
 
 
 class GbmDiagnostics(BaseModel):
