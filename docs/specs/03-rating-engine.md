@@ -718,6 +718,8 @@ evidence reads the run whose `bundle_hash` equals the version's current bundle h
 | `POST` | `/api/v1/score/batch` | **202** Batch re-rate → Job (FR-253) |
 | `POST` | `/api/v1/score/compare` | Score one quote against two versions with a step-level diff (FR-262) |
 | `POST` | `/api/v1/rating-versions/{id}/regression-runs` | **202** Run the regression suite (FR-260/261) |
+| `GET` | `/api/v1/rating-versions/{id}/regression-runs/{run_id}` | Read a Regression Run; `rating:read`; a failing property's counterexample is a quote-input fragment, so access-controlled per NFR-499 (FR-261). **Added 2026-09-28** (`PL-1205`) |
+| `GET` | `/api/v1/rating-versions/{id}/regression-runs/{run_id}/cases` | Read the run's case log (its generated cases and counterexamples); `rating:read`; the only route that reads this blob, which `GET /api/v1/blobs/{sha256}` refuses (`FR-9301`, NFR-499). **Added 2026-09-28** (`PL-1205`) |
 | `POST` | `/api/v1/dislocation-runs` | **202** Baseline vs candidate over a portfolio (FR-263) |
 | `GET` | `/api/v1/dislocation-runs/{id}` | Dislocation artifact |
 | `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version (FR-267) |
