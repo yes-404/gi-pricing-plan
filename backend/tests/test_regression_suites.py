@@ -146,12 +146,26 @@ async def test_a_principal_without_rating_read_is_refused_the_read(
 @pytest.mark.req("FR-368")
 @pytest.mark.req("NFR-499")
 async def test_every_version_has_one_creation_event_and_no_context_is_logged(
-    database: Database, workspace_id: UUID, analyst: Principal,
-    caplog: pytest.LogCaptureFixture,
+    client: TestClient, database: Database, workspace_id: UUID, analyst: Principal,
+    caplog: pytest.LogCaptureFixture, capfd: pytest.CaptureFixture[str],
 ) -> None:
+    """Both versions are created through the route, so the request middleware, the service
+    and the audit write all run while logging is captured (audit finding G3: the earlier
+    service-level form passed because nothing logged at all). `caplog.records` must be
+    non-empty, so the no-context assert cannot pass on an empty capture, and the JSON
+    handler's stdout is read through `capfd` as well. Proved non-vacuous by a positive
+    control recorded in the slice ledger: a temporary log line carrying the content turns
+    this test red.
+    """
     caplog.set_level(logging.DEBUG)
-    await _create(database, workspace_id, analyst, "motor-gb-core")
-    await _create(database, workspace_id, analyst, "motor-gb-core", premium=112_900)
+    for premium in (112_480, 112_900):
+        response = client.post(
+            "/api/v1/regression-suites/motor-gb-core/versions",
+            json=_content(premium=premium) | {"change_note": "golden quotes"},
+            headers=_headers(analyst.id, workspace_id),
+        )
+        assert response.status_code == 201, response.text
+    captured = capfd.readouterr()
 
     async with database.session() as session:
         events = (
@@ -171,7 +185,9 @@ async def test_every_version_has_one_creation_event_and_no_context_is_logged(
         assert event.after["golden_quote_names"] == ["young-driver-london"]
         assert _SECRET_POSTCODE not in repr(event.before) + repr(event.after)
         assert "context" not in event.after
+    assert caplog.records, "nothing was captured, so the no-context check below proves nothing"
     assert _SECRET_POSTCODE not in caplog.text
+    assert _SECRET_POSTCODE not in captured.out + captured.err
 
 
 # --- one suite per algorithm, by the database -----------------------------------------
