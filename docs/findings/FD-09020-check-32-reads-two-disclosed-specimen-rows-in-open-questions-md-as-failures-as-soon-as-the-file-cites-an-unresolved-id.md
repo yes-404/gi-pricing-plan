@@ -21,8 +21,8 @@ reader, because the DISCLOSED count moves for a reason that has nothing to do wi
 ## Finding
 
 At `origin/main`, two rows of `python3 scripts/audit-docs.py` sit in the DISCLOSED set. They are
-check 32's readings of `docs/open-questions.md:47`, OQ-555's own text, which spells the padding
-form `PL-00<n>` as a specimen. When the same file gains any other reference to an id that does
+check 32's readings of `docs/open-questions.md:47`, OQ-555's own text, which spells a padded plan id
+as a specimen. When the same file gains any other reference to an id that does
 not resolve in `docs/INDEX.md` (for example an open question that cites a working id), those two
 rows become **FAILED** and the DISCLOSED count falls by two. So an unrelated edit to the file
 turns two standing, disclosed rows into two failures the author did not cause.
@@ -39,17 +39,16 @@ locally and never pushed. The command was `python3 scripts/audit-docs.py` in eve
 | an HTML comment appended | 0 | 851 | none |
 | a comment inserted above line 47 (the rows move to line 48) | 0 | 851 | none |
 | OQ-555's row text edited, `docs/INDEX.md` regenerated | 0 | 851 | none |
-| **a row citing `OQ-9999`, an id `docs/INDEX.md` does not carry** | **1** | **849** | check 4 (the OQ is raised in no spec), check 32 at `:188` (`OQ-9999 does not resolve`), check 39 (INDEX stale), and **two** check-32 rows at `:47` ("short-padded id `PL-00` outside a link target") |
+| **a row citing an open-question id in the working range, which `docs/INDEX.md` does not carry** | **1** | **849** | check 4 (the OQ is raised in no spec), check 32 at `:188` (the id "does not resolve in docs/INDEX.md"), check 39 (INDEX stale), and **two** check-32 rows at `:47` ("short-padded id … outside a link target") |
 
 The two `:47` rows are the two that fall out of DISCLOSED. The check 4, check 32 (`:188`) and
 check 39 rows are the expected ones for an unresolved id.
 
 **The same happened in S3's tree.** At `98424cc5^` (the parent of S3's respelling commit) the same
 audit prints `DISCLOSED (849…)`, `FAILED (23)`, and lists the two `open-questions.md:47` rows next
-to `open-questions.md:131` (`OQ-9302 does not resolve`). At `98424cc5` (the respelling) it prints
+to `open-questions.md:131` (a working-range open-question id that does not resolve). At `98424cc5` (the respelling) it prints
 `FAILED (21)`, so the respelling removed exactly those two rows. Commit `98424cc5`'s own message
-reads *"Editing docs/open-questions.md (the OQ-9302/9303/9304 rows) made check 32 read line 47's two
-PL-00 specimen spellings as violations."*
+reads *"Editing docs/open-questions.md ([its three working-range open-question rows]) made check 32 read line 47's two [padded plan-id] specimen spellings as violations."* Bracketed: the commit names three working ids and one padded id form; they resolve to nothing, so this record does not repeat them, and the brackets mark the substitution.
 
 **Not explained:** why the specimen rows leave DISCLOSED when another unresolved id appears. The
 `_docverify` docstrings say a token that resolves to nothing is *"a specimen of the form, not a
