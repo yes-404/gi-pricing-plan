@@ -82,6 +82,13 @@ async def _submit(database: Database, workspace_id, submitter: Principal, ref=MO
         return row.id
 
 
+async def _no_evidence_authors(
+    session: object, *, workspace_id: object, artifact_ref: object
+) -> set[UUID]:
+    """The golden-quote delta author resolver `decide` requires for a `rating_version`
+    request (PL-1189). These requests pin no golden-quote evidence, so no author."""
+    return set()
+
 # -- separation of duties (R1, FR-353) ------------------------------------------------
 
 
@@ -99,6 +106,8 @@ async def test_the_submitter_cannot_approve_their_own_work(
         with pytest.raises(PlatformError) as exc:
             await approvals.decide(
                 session,
+                evidence_authors=_no_evidence_authors,
+                
                 workspace_id=workspace_id,
                 request_id=request_id,
                 approver=submitter,
@@ -121,6 +130,8 @@ async def test_two_approvals_must_come_from_distinct_principals(
     async with database.unit_of_work() as session:
         await approvals.decide(
             session,
+            evidence_authors=_no_evidence_authors,
+            
             workspace_id=workspace_id,
             request_id=request_id,
             approver=approver,
@@ -130,6 +141,8 @@ async def test_two_approvals_must_come_from_distinct_principals(
         with pytest.raises(PlatformError) as exc:
             await approvals.decide(
                 session,
+                evidence_authors=_no_evidence_authors,
+                
                 workspace_id=workspace_id,
                 request_id=request_id,
                 approver=approver,
@@ -159,6 +172,8 @@ async def test_one_approval_approves_a_model(database: Database, workspace_id) -
     async with database.unit_of_work() as session:
         row = await approvals.decide(
             session,
+            evidence_authors=_no_evidence_authors,
+            
             workspace_id=workspace_id,
             request_id=request_id,
             approver=approver,
@@ -181,14 +196,18 @@ async def test_a_rating_version_needs_two_approvals(
 
     async with database.unit_of_work() as session:
         row = await approvals.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
             approver=first, decision=DecisionKind.APPROVE,
         )
     assert row.status == ApprovalStatus.REVIEW  # still open after one
 
     async with database.unit_of_work() as session:
         row = await approvals.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
             approver=second, decision=DecisionKind.APPROVE,
         )
     assert row.status == ApprovalStatus.APPROVED
@@ -205,14 +224,18 @@ async def test_requesting_changes_needs_a_comment_and_returns_to_draft(
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:
             await approvals.decide(
-                session, workspace_id=workspace_id, request_id=request_id,
+                session,
+                evidence_authors=_no_evidence_authors,
+                workspace_id=workspace_id, request_id=request_id,
                 approver=approver, decision=DecisionKind.REQUEST_CHANGES,
             )
     assert exc.value.title == "Requesting changes requires a comment"
 
     async with database.unit_of_work() as session:
         row = await approvals.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
             approver=approver, decision=DecisionKind.REQUEST_CHANGES,
             comment="Young-driver relativities need the GIPP evidence attached.",
         )
@@ -231,13 +254,17 @@ async def test_a_decided_request_cannot_be_decided_again(
 
     async with database.unit_of_work() as session:
         await approvals.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
             approver=first, decision=DecisionKind.APPROVE,
         )
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:
             await approvals.decide(
-                session, workspace_id=workspace_id, request_id=request_id,
+                session,
+                evidence_authors=_no_evidence_authors,
+                workspace_id=workspace_id, request_id=request_id,
                 approver=second, decision=DecisionKind.REJECT,
             )
     assert exc.value.code == "APPROVAL_ALREADY_DECIDED"
@@ -262,7 +289,9 @@ async def test_an_approval_does_not_carry_over_to_a_new_version(
 
     async with database.unit_of_work() as session:
         await approvals.decide(
-            session, workspace_id=workspace_id, request_id=first,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=first,
             approver=approver, decision=DecisionKind.APPROVE,
         )
 
@@ -311,7 +340,9 @@ async def test_an_approval_can_be_withdrawn_before_deployment(
 
     async with database.unit_of_work() as session:
         await approvals.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
             approver=approver, decision=DecisionKind.APPROVE,
         )
     async with database.unit_of_work() as session:
@@ -334,7 +365,9 @@ async def test_an_approval_cannot_be_withdrawn_once_the_artifact_is_live(
 
     async with database.unit_of_work() as session:
         await approvals.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
             approver=approver, decision=DecisionKind.APPROVE,
         )
     async with database.unit_of_work() as session:
@@ -398,7 +431,9 @@ async def test_a_role_the_policy_does_not_name_cannot_approve(
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:
             await approvals.decide(
-                session, workspace_id=workspace_id, request_id=request_id,
+                session,
+                evidence_authors=_no_evidence_authors,
+                workspace_id=workspace_id, request_id=request_id,
                 approver=deployer, decision=DecisionKind.APPROVE,
             )
     assert exc.value.code == "PERMISSION_DENIED"
@@ -436,7 +471,9 @@ async def test_every_step_is_audited_and_the_chain_verifies(
     request_id = await _submit(database, workspace_id, submitter)
     async with database.unit_of_work() as session:
         await approvals.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
             approver=approver, decision=DecisionKind.APPROVE, comment="clean",
         )
     async with database.unit_of_work() as session:
@@ -473,7 +510,9 @@ async def test_a_decision_is_recorded_against_its_approver(
     request_id = await _submit(database, workspace_id, submitter)
     async with database.unit_of_work() as session:
         await approvals.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
             approver=approver, decision=DecisionKind.APPROVE, comment="ok",
         )
     async with database.session() as session:

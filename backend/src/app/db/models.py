@@ -2030,6 +2030,65 @@ class RateTableCellRow(Base):
     )
 
 
+class RegressionSuiteRow(Base):
+    """The registry row of one Regression Suite (03 §4.7, FR-260; PL-1189 Task 4).
+
+    One suite per Rating Algorithm per workspace, **enforced by the database**: unique on
+    `(workspace_id, algorithm_slug)` as well as on `(workspace_id, slug)`, so two writers
+    racing to create a suite for one algorithm cannot both succeed — there is no
+    check-then-insert to race (audit finding F6). The versions live in
+    `RegressionSuiteVersionRow`.
+    """
+
+    __tablename__ = "regression_suites"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    algorithm_slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", name="uq_regression_suites_slug"),
+        UniqueConstraint(
+            "workspace_id", "algorithm_slug", name="uq_regression_suites_algorithm"
+        ),
+    )
+
+
+class RegressionSuiteVersionRow(Base):
+    """One immutable version of a Regression Suite (03 §4.7, FR-260).
+
+    `content` is the validated `RegressionSuiteContent` as JSON — golden-quote contexts
+    included, which is why every read is permission-checked (NFR-499). `content_hash` is
+    `suite_content_hash(content)`, the pin a Rating Version's evidence carries.
+    `created_by` is a copy; the author the approval delta reads is the actor of this
+    version's `regression_suite.created` Audit Event (`06` FR-368).
+    """
+
+    __tablename__ = "regression_suite_versions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    suite_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("regression_suites.id"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    change_note: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("suite_id", "version", name="uq_regression_suite_versions_version"),
+    )
+
+
 class ScoringTraceRow(Base):
     """A sampled scoring trace: a thin queryable row beside its blob body.
 

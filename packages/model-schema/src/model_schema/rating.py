@@ -25,6 +25,7 @@ from pydantic import (
 )
 
 from model_schema.refs import ArtifactRef, BlobRef, Slug
+from model_schema.regression import GoldenQuoteEvidence
 
 
 class RatingVersionStatus(StrEnum):
@@ -122,6 +123,9 @@ class RatingVersionEvidence(BaseModel):
     dislocation_run_id: UUID | None = None
     gipp_check_id: UUID | None = None
     structural_diff_blob: str | None = None
+    #: Written once by the submit gate (FR-260, amended 2026-09-28) and never edited after.
+    #: `None` means not yet submitted; a submitted version carries one of the two variants.
+    golden_quotes: GoldenQuoteEvidence | None = None
 
 
 #: The model reference mode (FR-223): the version declares it, and every `model_call`
