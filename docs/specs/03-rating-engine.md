@@ -590,9 +590,9 @@ Slice 3, and this subsection then describes the generated shape.)*
 ```json
 {
   "suite_slug": "motor-gb-core",
-  "rating_version_ref": {"…artifact-ref…"},
-  "bundle_hash": "sha256:…",
-  "job_id": "…uuid…",
+  "rating_version_ref": "rating_version:motor-gb@27",
+  "bundle_hash": "sha256:86d0cef0fbc4111163c63591ad555b6afc8bae35ca532846d51e14a6f08a77fe",
+  "job_id": "ad48274d-de75-4385-b966-b9df9579b63e",
   "started_at": "2026-09-28T09:00:00Z",
   "finished_at": "2026-09-28T09:00:04Z",
   "overall": "fail",
