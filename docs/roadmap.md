@@ -557,8 +557,17 @@ status: active
 opened: 2026-08-14
 target: ~
 gates: ~
-exit criteria: ~
+exit criteria: G1–G6 of [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md), as accepted by the maintainer 2026-09-28, listed below
 works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178
+
+**P2's exit criteria** — [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md) Proposal 1, **accepted by the maintainer 2026-09-28** (the deputy's entry of 19:05:44 BST, quoted whole in that record's "Acceptance"), with its two amendments: G1–G6 are **exit criteria only** — `gates:` holds the three dated freeze gates (`process/document-ids.md` §1.3, §1.10(b)) and, with `target:`, stays `~` until the lead proposes dates after WK-672 closes and the deputy puts them to the maintainer, who accepts them before the first freeze passes (the deputy's entry of 2026-09-28 19:05:44 BST; that clause is that entry's, not CR-1212's text); and G5 is stated by symbol, with no pasted number. The criteria's full predicates, greps and per-id lists are in that record, which is the authority; this list is a pointer to them.
+
+- **G1.** Every P2 Work is resolved: closed by a `CR- kind: work` carrying the maintainer's dated acceptance line, or moved out of P2 by a dated maintainer line. WK-1178, the standing maintenance Work, is exempt and is dispositioned under G3. Check: every `### WK-` section in `## P2` reads `status: closed`, or is WK-1178, or is named in a dated move line.
+- **G2.** The exit demo is `WF-699` end to end on the freMTPL2 seed, with its deploy step: through approved models, a Rating Version compiled with pins, golden quotes, a regression run, a dislocation run with attribution, submission, and approval by a principal who is neither submitter nor author (#861, FR-353), then deployment to `uat` and then `prod` (`07-platform.md` FR-429), from one command to a served page, in Phase 1b's form. It is recorded in a `CR- kind: phase` with the maintainer's acceptance. By CR-1212's accepted P12 resolution, `prod` here is the platform's environment (FR-429), not production packaging.
+- **G3.** Every open P2 finding is fixed, carried with a named owner, or accepted by a dated line (`CLAUDE.md` §14). FD-1200 is fixed on main (`e6a9ca71`, FR-351) and FD-1199 is triaged with a root cause or a dated acceptance.
+- **G4.** Every P2 NFR is measured on the exit tree or carried with an owner, per the per-id list in the record.
+- **G5.** On the exit tree, `audit-docs.py` exits 0 with "All checks passed." (its ceiling is the governed record at `_docid.W37_11_RECORD_PATH`), the other three docs checks exit 0, and the two-half gate of `CLAUDE.md` §11 passes.
+- **G6.** A plan review 16 is filed after G1–G5 and before the demo (`CLAUDE.md` §14).
 
 ### WK-668 — **Spike S1/S2 resolution and ADR-706 confirmation**
 
@@ -821,6 +830,8 @@ phase: P2
 ```
 
 Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and implement", answering the deputy's GitHub security review; the deputy's entry 13:10:06 BST in the channel, item 1). `process/document-ids.md` (section 1.9, the PR-title rule) routes a PR that arrives without an `SL-` — *"a hotfix, an external contributor, a dependency bump"* — to *"the phase's standing `WK- maintenance`"*, and Phase 2 had none. **Scope:** work that belongs to no other Work; each item names its `FD-` or its trigger. **First items:** the dependency and workflow hardening finding filed with the GitHub security review, discharged by that review's hardening PR. **Status `active`:** a standing item; it closes with its phase.
+
+**FR-177 is WK-1178 scope** (`specs/02-modelling.md`: the joint measurement of an `interaction` Factor, permutation importance and partial dependence through its operands' source columns). FR-176, FR-177 and FR-178 moved here from WK-690, which is `expression` custom objectives, by FD-1195. **Dated 2026-09-28:** the deputy's ruling DP-FD1195-2 (entry of 21:41:20 BST) delivers FR-178 only in the FD-1195 PR and makes FR-177 **its own WK-1178 PR**; FR-177 carries a dated amendment naming the owner as WK-1178, and it is not built at that date. **FR-178 is delivered in two parts:** partial dependence in #880 (`9fa2b833`); the permutation-block omission record in #887 (open) — the deputy's correction of 2026-09-28 22:52:41 BST, which withdraws its earlier reading that #880 delivered FR-178.
 
 **Goal:** DAG designer, rate tables, reference data, real-time + batch scoring, dislocation.
 

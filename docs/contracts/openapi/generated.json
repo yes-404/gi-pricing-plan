@@ -15091,7 +15091,7 @@
     },
     "/api/v1/blobs/upload-url": {
       "post": {
-        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key and\nis promoted to its content address on completion. Asking the client for the digest up\nfront would let it choose one, which is the difference between content addressing and\nclient-supplied naming.",
+        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key, not\nat its content address. Asking the client for the digest up front would let it choose\none, which is the difference between content addressing and client-supplied naming.\nNothing yet moves a staging object to its content address or creates its `blobs` row\n(the completion step FR-421 implies is not built), so an upload made through this URL\ncannot be ingested or downloaded as a blob today.",
         "operationId": "upload_url_api_v1_blobs_upload_url_post",
         "parameters": [
           {
