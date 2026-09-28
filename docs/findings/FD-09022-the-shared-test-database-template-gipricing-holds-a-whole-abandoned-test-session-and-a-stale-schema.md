@@ -71,3 +71,6 @@ The deputy ruled on 2026-09-28 (relayed by the lead), owner **WK-1178**:
 
 **Deferred with an owner — WK-1178**, by the deputy's ruling. Event: the clean template exists with its check,
 `dev-commands` and S-14 name it, and `gipricing` is renamed after the reference grep.
+
+The amendment PR that names the template in S-14 also carries `FD-9018`'s S-13 extension (a targeted run inside an exclusive
+window), per the deputy's entry of 23:30:16 BST. That extension is tracked in `FD-9018`, not here.
