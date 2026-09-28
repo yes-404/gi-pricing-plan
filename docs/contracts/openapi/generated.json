@@ -10200,6 +10200,7 @@
         "additionalProperties": false,
         "properties": {
           "cases": {
+            "maximum": 10000.0,
             "minimum": 1.0,
             "title": "Cases",
             "type": "integer"
