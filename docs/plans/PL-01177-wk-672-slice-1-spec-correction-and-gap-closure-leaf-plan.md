@@ -3,7 +3,7 @@ id: PL-1177
 family: plan
 kind: leaf
 title: WK-672 Slice 1 — Spec correction and gap closure: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-28
 owner: planner
 tree: 62d5fbae554be573ff4801d1bce45c575161c90d
@@ -42,6 +42,19 @@ FR-261, FR-262 at `03:176-178`), §4.7 (`RegressionSuite`/`GoldenQuote`, `03:483
 (`03:503`), §5.1 (the route table: `score/compare` at `03:603`, `regression-runs` at
 `03:604`; the error-code list at `03:612-622`). Executors read this plan, `RL-1172` and the
 spec sections their task cites.
+
+## Status
+
+**Activated 2026-09-28 13:39:55 BST (planner, on RL-1172 and the deputy's decisions by delegation).**
+This plan was drafted at `62d5fbae` and merged `draft` by #838 (`6c6f4532`). What changed:
+
+- **Every decision point has a resolver.** This plan opened no decision point of its own;
+  the questions Slice 1 depends on are ruled in `RL-1172`, merged by #829 (`62d5fbae`), which
+  also quotes the deputy's DP1 decision by delegation, option A. So this plan moves
+  `draft → active` in this commit, under `document-ids.md` §1.7. `created:` does not change.
+  **Frozen / dated: 2026-09-28.** Where this text and `RL-1172` disagree, the ruling governs.
+- **The F4 research record has merged** as `RS-1176` (#832); the carried Slice 3 item now
+  names it.
 
 ## Acceptance Standard
 
@@ -189,7 +202,7 @@ cluster `CR-932` ruled out of this Work. This plan records them and does nothing
   six conditions — the deputy's spike F4 decision by delegation, dated 2026-09-28 and
   corrected the same day on its first condition (the exact pin is *added* to
   `packages/pricing-core/pyproject.toml` and the root dev-group entry aligned to it), filed in
-  the F4 research record (#832). Slice 3's leaf plan applies all six conditions and updates
+  the F4 research record, RS-1176 (#832). Slice 3's leaf plan applies all six conditions and updates
   `03` §8 and `docs/skills-map.md` in the same PR (`CLAUDE.md` §10).
 - **Slice 4:** `POST /api/v1/score/compare`, two `score_one` calls on the shared
   `build_scoring_result` tail (RL-858) with the traces diffed step by step, the diff-shape
