@@ -2,7 +2,7 @@
 id: FD-1203
 family: finding
 title: The blob download route serves trace quote inputs to any dataset-read holder, with no workspace scope
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: e6a9ca71a0bef3da41720d20f3f20db73f6a1d80
@@ -160,3 +160,16 @@ it is not a Slice of WK-672. It covers:
 - a mutation proof.
 
 WK-672 Slice 3's case-store code does not merge before this fix.
+
+## Resolution
+
+**Resolved 2026-09-28 by #868, merge commit `5ec47dc4`** (`fix(security): the blob route serves only an owner's workspace, never a quote input (#868)`, merged 2026-09-28 21:21:24 BST). Read at `5ec47dc4`:
+
+- `backend/src/app/api/blobs.py:47` declares `QUOTE_INPUT_BLOB_COLUMNS = (ScoringTraceRow.blob_sha256,)`. `_readable_by` (`:50`) refuses a digest first if any of those columns references it.
+- Otherwise it allows only an owner **in the caller's workspace**: a `DatasetVersionRow.tables` reference, or a `JobRow.result` of kind blob (`:60`–`:76`). A blob nothing references is refused, so the owner list is an allow-list. A compiled bundle's digest, which no allowed owner references, is therefore refused too.
+- `download` (`:141`) answers `NOT_FOUND` 404 for a missing blob, a quote input and a blob in another workspace alike, so the route never confirms that a digest exists.
+- The `07` §5.1 route row carries the dated amendment. `backend/tests/test_api_blobs.py` is new (293 lines, 10 test functions), and the migration `02d24f580752` adds the `scoring_traces.blob_sha256` index.
+- The deputy's MERGE-ACK of #868 (21:21:10 BST) records the trial merge, CI by SHA, and his read of the code. The mutation evidence is in the PR body, and the auditor did not re-run it.
+
+Past reads are still not ruled out: the fix adds no download audit for reads before it.
+

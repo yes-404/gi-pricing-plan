@@ -148,7 +148,6 @@ async def test_a_principal_without_rating_read_is_refused_the_read(
 async def test_every_version_has_one_creation_event_and_no_context_is_logged(
     client: TestClient, database: Database, workspace_id: UUID, analyst: Principal,
     caplog: pytest.LogCaptureFixture, capfd: pytest.CaptureFixture[str],
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Both versions are created through the route, so the request middleware, the service
     and the audit write all run while logging is captured (audit finding G3: the earlier
@@ -159,15 +158,9 @@ async def test_every_version_has_one_creation_event_and_no_context_is_logged(
     control recorded in the slice ledger: a temporary log line carrying the content turns
     this test red.
     """
-    # An in-process alembic run earlier in the session (`backend/migrations/env.py`'s
-    # `fileConfig`, whose `disable_existing_loggers` defaults to true) disables every logger
-    # that already exists, and a disabled logger drops its records before any handler sees
-    # them — so in full-suite order this test captured nothing (#867's CI). Re-enable them
-    # for this test only, then prove the capture works on the route's own logger before
-    # asserting anything about what was logged.
-    for candidate in list(logging.root.manager.loggerDict.values()):
-        if isinstance(candidate, logging.Logger) and candidate.disabled:
-            monkeypatch.setattr(candidate, "disabled", False)
+    # Prove the capture works on the route's own logger before asserting anything about
+    # what was logged (`test_migration_env_logging.py` holds the guarantee that an in-process
+    # migration run leaves the app's loggers enabled).
     caplog.set_level(logging.DEBUG)
     sentinel = f"nfr-499-capture-sentinel-{new_uuid7()}"
     logging.getLogger("app.request").info(sentinel)

@@ -483,12 +483,7 @@ def _type_iii(
     # A factor that exists only to be crossed contributes no design column (FR-92),
     # so there is no term to test: dropping it would leave the interaction unresolvable,
     # and "keeping" it changes nothing. The interaction itself is tested instead.
-    operand_ids = {
-        operand
-        for factor in factors
-        if factor.type is FactorType.INTERACTION
-        for operand in factor.operand_factor_ids
-    }
+    operand_ids = _operand_ids(factors)
 
     tests: list[TypeIIITest] = []
     for factor in factors:
@@ -523,6 +518,22 @@ def _type_iii(
         p = float(stats.chi2.sf(max(delta, 0.0), df))
         tests.append(TypeIIITest(factor=factor.slug, deviance_delta=delta, df=df, p_value=p))
     return tuple(tests)
+
+
+def _operand_ids(factors: Sequence[Factor]) -> set[UUID]:
+    """The ids of every factor some `interaction` in `factors` crosses (FR-92).
+
+    An operand has no term of its own -- the cross spans every cell it could have -- so the
+    type-III block does not test it (FR-172) and neither GBM per-factor block sweeps or
+    permutes it (FR-178): holding one operand alone recombines the pair into cells the fit
+    never saw.
+    """
+    return {
+        operand
+        for factor in factors
+        if factor.type is FactorType.INTERACTION
+        for operand in factor.operand_factor_ids
+    }
 
 
 def _term_count(
@@ -849,6 +860,7 @@ def _permutation_importances(
                               bandings=bandings, groupings=groupings)
     baseline = deviance(y, baseline_mu.to_numpy(), family=family, power=power, weights=weights)
 
+    operand_ids = _operand_ids(factors)
     out: list[PermutationImportance] = []
     for index, factor in enumerate(factors):
         # FR-176. An `interaction` names no source columns of its own — its
@@ -856,16 +868,18 @@ def _permutation_importances(
         # declaring one, which no test covered because none fitted a GBM whose factor
         # *list* held a cross.
         #
-        # FR-177 settles what to permute: every operand source column under **one
-        # shared order**, which permutes the operand *pairs* and so is exactly a
-        # permutation of the resolved cross column. Not built here — WK-690 owns the slice.
+        # FR-177 (WK-1178, not yet built) settles what to permute for the cross: every
+        # operand source column under **one shared order**, which permutes the operand
+        # *pairs* and so is exactly a permutation of the resolved cross column.
         #
-        # FR-178 is the reason skipping the cross was never enough. The operands
-        # stay in this loop and are permuted **alone**, which recombines them into cells
-        # the fit never saw, and `predict_gbm` then refuses the frame outright with
-        # `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`. On a dense cross every recombination happens
-        # to be a level the model knows, which is why the suite is green and why a sparse
-        # cross — the only kind FR-92 expects — cannot produce diagnostics at all.
+        # FR-178: the operands are skipped, and the omission is recorded by the
+        # partial-dependence block below (this block omits, as it does for a factor whose
+        # column the holdout lacks). Permuting one operand alone recombines the pair into
+        # cells the fit never saw, and `predict_gbm` refuses the frame with
+        # `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` -- on a sparse cross, the only kind FR-92
+        # expects, that made diagnostics impossible.
+        if factor.id in operand_ids:
+            continue
         if not factor.source_columns:
             continue
         column = factor.source_columns[0]
@@ -1169,7 +1183,23 @@ def compute_gbm_diagnostics(
     report.update(0.75, "diagnostics: partial dependence")
     dependence: list[PartialDependence] = []
     monotonicity: list[MonotonicityCheck] = []
+    operand_ids = _operand_ids(factors)
     for factor in factors:
+        # FR-178. An operand of a cross is emitted with no points and its reason, for the
+        # same visibility FR-176 wants of the cross: swept alone it recombines the pair
+        # into cells the fit never saw, which `predict_gbm` refuses. Its monotonicity check
+        # is skipped too: an operand is not a booster feature (the feature order is the
+        # cross), so a monotone constraint cannot bind on it.
+        if factor.id in operand_ids:
+            dependence.append(
+                PartialDependence(
+                    factor=factor.slug,
+                    omitted=PartialDependenceOmission(
+                        reason=PartialDependenceOmissionReason.OPERAND_OF_INTERACTION,
+                    ),
+                )
+            )
+            continue
         # FR-176. A cross sources no column of its own, so there is nothing to
         # hold at a value; it used to reach `_sweep` and index off an empty tuple. It
         # is emitted with no points and a stated reason rather than dropped, so a
