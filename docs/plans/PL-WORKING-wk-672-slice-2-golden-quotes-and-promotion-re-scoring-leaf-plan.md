@@ -52,8 +52,8 @@ plan uses, at `ea6162b9`:
 - §4.3 `RatingVersion` and its `evidence` block (`03:343`);
 - §4.7 `RegressionSuite` and `GoldenQuote` (`03:483`);
 - §4.9 `RegressionRun` (`03:581`);
-- §5.1, the route table (`03:620`) and the error codes (`03:650`);
-- §5.2, the `testing.py` block (`03:764-768`);
+- §5.1, the section at `03:623` with its route table at `03:625`, and the error codes (`03:650`);
+- §5.2, the `testing.py` block (`03:765-768`);
 - §9, NFR-499 as clarified (`03:989`, RL-917).
 
 Also [`../specs/06-governance.md`](../specs/06-governance.md): FR-353 (approver ≠ author,
@@ -107,11 +107,14 @@ plan defect, not the predicted one.
    - a principal without `rating:read` refused the read (403);
    - every created version having exactly one `regression_suite.created` Audit Event whose actor is the creator (`req("FR-368")`);
    - neither that event's `before`/`after` nor any captured log line containing a golden quote's context input values (`req("NFR-499")`);
-   - a second suite slug for an algorithm that already has one refused (409);
-   - changing `algorithm_slug` across versions refused (409).
+   - a second suite slug for an algorithm that already has one refused (409), **by the database**: the `regression_suites` registry is unique on `(workspace_id, algorithm_slug)` and on `(workspace_id, slug)`, and the service maps the `IntegrityError` to 409;
+   - **a concurrency test:** two `create_suite_version` calls for one algorithm under two different slugs, in two separate sessions run with `asyncio.gather`, give exactly one 201 and one 409, and leave one registry row. It is shown red first against a check-then-insert implementation with no constraint;
+   - changing `algorithm_slug` across versions of one slug refused (409).
 6. **The submit gate refuses a mismatch.** `uv run pytest backend/tests/test_rating_versions.py -k golden -v` passes. It covers:
    - a submission whose suite has a mismatching golden quote refused with `GOLDEN_QUOTE_MISMATCH` (409), the Rating Version still `draft` and no approval request created, shown red first;
-   - a matching suite moving the version to `review`, with `evidence.golden_quotes` holding the suite ref, its content hash and the bundle hash;
+   - a matching suite moving the version to `review`, with `evidence.golden_quotes` holding the suite ref, its content hash, and the `content_hash` of the `CompiledBundle` actually scored;
+   - a loaded bundle whose `content_hash` differs from `row.bundle["content_hash"]` refused with `BUNDLE_COMPILE_FAILED` (409), nothing written;
+   - with metadata storage failing, submit refuses rather than scoring the slot's last-known-good bundle: the gate uses `_fetch_bundle`, never `_compiled_for`;
    - a suite present but no compiled bundle refused with `BUNDLE_COMPILE_FAILED` (409);
    - no suite for the algorithm: the submission proceeds, and `evidence.golden_quotes` is the explicit `GoldenQuoteNotChecked` record — `regression_suite: "none"` and `message: "no golden quotes were checked"` — never null and never an empty result list that reads as "0 mismatches" (DP-S2-4 as the deputy accepted it).
 
@@ -121,15 +124,17 @@ plan defect, not the predicted one.
    - Principal A creates suite v1. Rating Version 1 of algorithm X is submitted and approved.
    - Principal B creates suite v2, changing one golden quote's `expected.payable_premium_minor`.
    - Rating Version 2 of X is submitted.
-   - Its `evidence.golden_quotes.delta.changes` lists that quote as `changed` with `changed_fields == ["expected"]`, `before`, `after` and `author == B`'s principal id, read from v2's `regression_suite.created` event.
-   - **A second red-first test does the same with a tolerance-only widening:** principal B raises one quote's `tolerance.money_minor` in suite v2, and RV2's delta lists it as `changed` with `changed_fields == ["tolerance"]`, `before_tolerance`, `after_tolerance` and `author == B` (the deputy's 15:57:21 item (ii)).
+   - Its `evidence.golden_quotes.delta.changes` lists that quote as `changed` with `changed_fields == ["expected"]`, `before`, `after` and a `steps` list whose one entry is `{version: 2, changed_fields: ["expected"], author: B's principal id}`, the author read from v2's `regression_suite.created` event.
+   - **A second red-first test does the same with a tolerance-only widening:** principal B raises one quote's `tolerance.money_minor` in suite v2, and RV2's delta lists it as `changed` with `changed_fields == ["tolerance"]`, `before_tolerance`, `after_tolerance` and one step authored by B (the deputy's 15:57:21 item (ii)).
 
    Companion tests:
    - an added quote and a removed quote each listed;
    - a context-only change listed as `changed` with `changed_fields == ["context"]` and differing `before_context_hash`/`after_context_hash`, the context itself not copied into the evidence (NFR-499);
    - with no previous approved version, every quote listed as `added`;
    - of two approved versions of X, the later-approved one used as baseline;
-   - an approved version of a different algorithm ignored.
+   - an approved version of a different algorithm ignored;
+   - **a later cosmetic edit does not mask a substantive one** (audit finding F3): X widens a tolerance in v2, Y edits only that quote's `note` in v3, and the delta lists the quote with one step, `{version: 2, changed_fields: ["tolerance"], author: X}`. Y appears nowhere, because a note is not a compared field. Shown red first against a last-touch attribution;
+   - two substantive edits by different principals (X widens the tolerance in v2, Y changes the expected value in v3) give two steps, each with its own author;
    - a suite version whose `regression_suite.created` event is missing makes submit refuse with `APPROVAL_AUTHOR_UNRESOLVED`, 403 (#861's code and status; Task 5 starts only after #861 has merged).
 
    The delta is visible in `GET /api/v1/rating-versions/{id}` to a principal holding `approval:decide`.
@@ -308,7 +313,7 @@ design every later task implements (`CLAUDE.md` §0). Task 2's shapes feed Tasks
   > - The evidence lists every golden quote added, removed, or whose expected output, tolerance or quote context changed since the suite pinned by the most recently approved Rating Version of the same algorithm. Each change names its author, who is the actor of the creation Audit Event of the suite version that introduced it (`06` FR-368).
   > - Where the algorithm has no suite, the evidence says so explicitly (`regression_suite: "none"`, "no golden quotes were checked"), never an empty pass. Whether a suite is required is decided by WK-672 Slice 3.
 
-- [ ] **Step 3: §4.3 evidence.** Add `"golden_quotes": {"suite_ref": "regression_suite:motor-gb-core@4", "suite_content_hash": "sha256:…", "bundle_hash": "sha256:…", "results": ["…§4.9 golden_results items…"], "delta": {"baseline_rating_version_ref": "rating_version:motor-gb@26", "baseline_suite_ref": "regression_suite:motor-gb-core@3", "baseline_suite_content_hash": "sha256:…", "changes": [{"name": "young-driver-london", "change": "changed", "changed_fields": ["expected"], "before": {"payable_premium_minor": 112480, "outcome": "quoted"}, "after": {"payable_premium_minor": 112900, "outcome": "quoted"}, "introduced_in_version": 4, "author": "…principal uuid…"}]}}` to the `evidence` example, with `"status": "checked"`. Show the no-suite form beside it: `{"status": "not_checked", "regression_suite": "none", "message": "no golden quotes were checked", "reason": "no_suite_for_algorithm"}`. Add one invariant sentence: `evidence.golden_quotes` is written only by the submit gate and never edited after.
+- [ ] **Step 3: §4.3 evidence.** Add `"golden_quotes": {"suite_ref": "regression_suite:motor-gb-core@4", "suite_content_hash": "sha256:…", "bundle_hash": "sha256:…", "results": ["…§4.9 golden_results items…"], "delta": {"baseline_rating_version_ref": "rating_version:motor-gb@26", "baseline_suite_ref": "regression_suite:motor-gb-core@3", "baseline_suite_content_hash": "sha256:…", "changes": [{"name": "young-driver-london", "change": "changed", "changed_fields": ["expected"], "before": {"payable_premium_minor": 112480, "outcome": "quoted"}, "after": {"payable_premium_minor": 112900, "outcome": "quoted"}, "steps": [{"version": 4, "changed_fields": ["expected"], "author": "…principal uuid…"}]}]}}` to the `evidence` example, with `"status": "checked"`. Show the no-suite form beside it: `{"status": "not_checked", "regression_suite": "none", "message": "no golden quotes were checked", "reason": "no_suite_for_algorithm"}`. Add one invariant sentence: `evidence.golden_quotes` is written only by the submit gate and never edited after.
 - [ ] **Step 4: §4.7.** Replace the example with the Task 2 shape. It carries `slug`, `version`, `algorithm_slug`, `change_note`, `content_hash`, `golden_quotes` (each with `name`, `context`, `expected`, `tolerance`, `note`), `properties` (each `{"name", "check": {"kind": …}}`, one of the five kinds with the fields in Task 2) and `generation`. Add a dated note: *"Corrected 2026-09-28 (`RL-1172` item 3c; the deputy's F4 assertion-language ruling): the free-text `assertion` strings are replaced by a structured union of FR-261's five classes. This artifact stores them; WK-672 Slice 3 evaluates them. The earlier example's relative bound (`20 * risk_premium_minor`) is not one of the five classes and is dropped; a bound is absolute, in minor units."* `expected` compares `payable_premium_minor` (the `payable_premium` ladder rung's `value_minor`) and `outcome` only, never `timing_ms` (RL-931).
 - [ ] **Step 5: §4.9.** Change the contract citation from `regression-suite.schema.json` to `regression-run.schema.json`, with a dated clause saying Task 2 split the file.
 - [ ] **Step 6: §5.1.** Add two rows after the `rating-versions/{id}/submit` row:
@@ -369,7 +374,11 @@ GoldenQuoteChange:    name: str; change: Literal["added", "removed", "changed"]
                       before_tolerance: GoldenQuoteTolerance | None; after_tolerance: GoldenQuoteTolerance | None
                       before_context_hash: str | None; after_context_hash: str | None
                       # sha256 of the canonical context JSON; the context itself is never copied here (NFR-499)
-                      introduced_in_version: int; author: UUID
+                      steps: list[GoldenQuoteChangeStep]   # non-empty; ascending version
+GoldenQuoteChangeStep: version: int; changed_fields: list[Literal["added", "removed", "expected", "tolerance", "context"]]
+                      author: UUID
+                      # one per suite version in (baseline, current] that changed this quote's expected,
+                      # tolerance or context, or added or removed it; a version changing only `note` is no step
 GoldenQuoteDelta:     baseline_rating_version_ref: ArtifactRef | None; baseline_suite_ref: ArtifactRef | None
                       baseline_suite_content_hash: str | None; changes: list[GoldenQuoteChange]
 GoldenQuoteCheck:     status: Literal["checked"]; suite_ref: ArtifactRef; suite_content_hash: str
@@ -411,7 +420,7 @@ The delta is **not** its own generated slug. It is embedded in `RatingVersionEvi
 - **A `PlatformError`-free engine refusal** (input contract, purpose mount) for one quote becomes that quote's `fail`, with `actual_minor=None`. It never aborts the rest.
 
 - [ ] **Step 1:** Write the acceptance item 4 tests against a small compiled bundle. Mirror the fixture `packages/pricing-core/tests` already uses for `score_batch`; do not invent a new one. Run them. Expected: an `ImportError` on `pricing_core.rating.testing`.
-- [ ] **Step 2:** Do the `_score_context_sync` extraction first, as a pure move. It must not change threading: no new thread, executor or lock, and `bundle.decision.evaluate` is called exactly as before. Run `uv run pytest packages/pricing-core -q` and confirm the same passed count as the base, so `score_batch` is unchanged. Then run `uv run pytest packages/pricing-core/tests/test_rating_score.py -q` **five times** and record each rc. **If any of the five aborts natively (a negative rc, or a `PyGILState` message), the slice does not pass its gate:** it stops, the run's output goes to the lead, and the finding's triage moves ahead of this slice. It is never re-run until green.
+- [ ] **Step 2:** Do the `_score_context_sync` extraction first, as a pure move. **Its authority** is DP-S2-3 (a), the deputy's decision quoted above, which puts the re-score in `pricing-core` on the synchronous engine path, together with RL-1172 item 3a, which rules that path the regression executor's. That departs from `PL-930`'s Slice 2 text, "Reuses `score_one` and `CompiledBundle` unchanged": the public `score_one`, `score_batch` and `CompiledBundle` stay unchanged, and only a private helper is extracted (audit finding F10). It must not change threading: no new thread, executor or lock, and `bundle.decision.evaluate` is called exactly as before. Run `uv run pytest packages/pricing-core -q` and confirm the same passed count as the base, so `score_batch` is unchanged. Then run `uv run pytest packages/pricing-core/tests/test_rating_score.py -q` **five times** and record each rc. **If any of the five aborts natively (a negative rc, or a `PyGILState` message), the slice does not pass its gate:** it stops, the run's output goes to the lead, and the finding's triage moves ahead of this slice. It is never re-run until green.
 - [ ] **Step 3:** Implement `testing.py`. Re-run the new tests, then run `uv run lint-imports`.
 - [ ] **Step 4:** Commit: `feat(pricing-core): evaluate_golden_quotes — exact integer re-score on the synchronous engine path (FR-260)`.
 
@@ -419,7 +428,9 @@ The delta is **not** its own generated slug. It is embedded in `RatingVersionEvi
 
 **Files:**
 - Create: `backend/migrations/versions/<rev>_regression_suite_versions.py`, with `down_revision = "d3b955a63d6a"`, the head at `ea6162b9`. Re-read the head at your tree. `backend/src/app/platform/regression_suites.py`; `backend/src/app/api/regression_suites.py`; `backend/tests/test_regression_suites.py`
-- Modify: `backend/src/app/db/models.py`, adding `RegressionSuiteVersionRow` after `RateTableCellRow` (`:2013`). Its table is `regression_suite_versions`, with `id`, `workspace_id`, `slug`, `version`, `algorithm_slug`, `content` JSONB, `content_hash`, `change_note`, `created_at` and `created_by`; it is unique on `(workspace_id, slug, version)`. Also modify `backend/src/app/main.py:122-143` to register the router with `prefix=API_PREFIX`.
+- Modify: `backend/src/app/db/models.py`, adding two rows after `RateTableCellRow` (`:2013`):
+  - `RegressionSuiteRow`, table `regression_suites`: `id`, `workspace_id`, `slug`, `algorithm_slug`, `created_at` and `created_by`. It is unique on `(workspace_id, slug)` **and** on `(workspace_id, algorithm_slug)`. This is the one-suite-per-algorithm rule, enforced by the database, not by check-then-insert (audit finding F6).
+  - `RegressionSuiteVersionRow`, table `regression_suite_versions`: `id`, `suite_id` (FK to `regression_suites.id`), `version`, `content` JSONB, `content_hash`, `change_note`, `created_at` and `created_by`. It is unique on `(suite_id, version)`. Also modify `backend/src/app/main.py:122-143` to register the router with `prefix=API_PREFIX`.
 
 **Interfaces:**
 - `async def create_suite_version(session, *, workspace_id: UUID, actor: Principal, slug: str, content: RegressionSuiteContent, change_note: str) -> RegressionSuiteVersionRow`. It mirrors `rating_versions.create_rating_version` (`rating_versions.py:166`):
@@ -427,8 +438,9 @@ The delta is **not** its own generated slug. It is embedded in `RatingVersionEvi
   - next version `1 + coalesce(max(version), 0)`;
   - `content_hash = suite_content_hash(content)`;
   - `audit.record(session, workspace_id=…, actor=actor, source=JobSource.API, action="regression_suite.created", entity_ref=f"regression_suite:{slug}@{version}", before={}, after={"content_hash": …, "change_note": …, "algorithm_slug": …, "golden_quote_names": [...]})`. **`after` carries no `context`** (NFR-499).
-  - Refusals: 409 `VALIDATION_FAILED` when another slug in the workspace already holds this `algorithm_slug` (one suite per algorithm), or when `algorithm_slug` differs from the slug's earlier versions.
-- `async def load_suite_version(session, *, workspace_id, actor, slug, version) -> RegressionSuiteVersionRow`, which requires `RATING_READ`. Also `async def current_suite_for_algorithm(session, *, workspace_id, algorithm_slug) -> RegressionSuiteVersionRow | None`, which returns the highest version.
+  - The first version of a slug inserts its `regression_suites` row in the same transaction. An `IntegrityError` on either unique constraint is mapped to 409 `VALIDATION_FAILED` ("this algorithm already has a Regression Suite"). There is no pre-check to race.
+  - A later version whose `content.algorithm_slug` differs from its registry row's is refused with 409 `VALIDATION_FAILED`.
+- `async def load_suite_version(session, *, workspace_id, actor, slug, version) -> RegressionSuiteVersionRow`, which requires `RATING_READ`. Also `async def current_suite_for_algorithm(session, *, workspace_id, algorithm_slug) -> RegressionSuiteVersionRow | None`, which returns the highest version of the one suite the registry holds for that algorithm (unambiguous by the constraint).
 - Routes: `POST /regression-suites/{slug}/versions` (201, `requires(Perm.RATING_WRITE)`) and `GET /regression-suites/{slug}@{version}` (`requires(Perm.RATING_READ)`). Both return `RegressionSuite`. Their `responses=problems(...)` follow the `/rating-versions` routes (`api/models.py:1154-1190`).
 
 - [ ] **Step 1:** Write the acceptance item 5 tests using the DB fixtures `database`, `workspace_id`, `principal`, `grant` and `membership` (`backend/tests/conftest_db.py`). Check the DB stack is up first; never assume it. Run them. Expected: an import failure on `app.platform.regression_suites`.
@@ -442,14 +454,14 @@ The delta is **not** its own generated slug. It is embedded in `RatingVersionEvi
 - Test: `backend/tests/test_rating_versions.py`
 
 **Interfaces.** `submit_for_review` gains a keyword `load_compiled: Callable[[ArtifactRef], Awaitable[CompiledBundle]]`.
-- The route supplies it by wrapping `api/score.py`'s `_compiled_for` (`:206`). That keeps bundle fetching and caching in the API layer where it lives, and lets the service be tested with a real or a stubbed loader.
+- The route supplies it by wrapping `api/score.py`'s `_fetch_bundle` (`:139`). **Never `_compiled_for` (`:206`)**, which degrades to the slot's last-known-good bundle when metadata storage is down. A governance gate refuses rather than degrade (audit finding F5). Bundle fetching stays in the API layer, and the service can be tested with a real or a stubbed loader.
 
 The order inside `submit_for_review`, after the existing status check and **before** `approvals.submit`, so it fails fast:
 1. **Find the suite.** If `row.algorithm_ref` is set, `suite = current_suite_for_algorithm(algorithm_slug=ArtifactRef.parse(row.algorithm_ref).slug)`. If there is no algorithm ref or no suite, write `evidence.golden_quotes = GoldenQuoteNotChecked(status="not_checked", regression_suite="none", message="no golden quotes were checked", reason=…)` and continue to `approvals.submit` (DP-S2-4, the deputy's interim rule with its visibility condition).
-2. **Load the bundle.** If `row.bundle` is null, raise 409 `BUNDLE_COMPILE_FAILED` ("compile before submitting: a suite exists for this algorithm"). Otherwise `bundle = await load_compiled(ref)`.
+2. **Load the bundle.** If `row.bundle` is null, raise 409 `BUNDLE_COMPILE_FAILED` ("compile before submitting: a suite exists for this algorithm"). Otherwise `bundle = await load_compiled(ref)`. **If `bundle.content_hash` (`rating/runtime.py:559`) differs from `row.bundle["content_hash"]`, raise 409 `BUNDLE_COMPILE_FAILED`** ("the loaded bundle is not this version's bundle") and write nothing.
 3. **Re-score.** `results = evaluate_golden_quotes(bundle, suite.golden_quotes, rating_version_ref=ref)`. If any is `fail`, raise `PlatformError("GOLDEN_QUOTE_MISMATCH", "Golden quote mismatch", 409, detail=<the failing names>)`. Nothing is written, and the version stays `draft`.
 4. **Build the delta.** `delta = await _golden_quote_delta(session, workspace_id, algorithm_slug, suite, exclude_id=row.id)`, as specified below.
-5. **Pin the evidence.** Write `row.evidence["golden_quotes"] = GoldenQuoteCheck(status="checked", suite_ref=regression_suite:{slug}@{version}, suite_content_hash=suite.content_hash, bundle_hash=row.bundle["content_hash"], results=results, delta=delta).model_dump(mode="json")`. Then call `approvals.submit` as today.
+5. **Pin the evidence.** Write `row.evidence["golden_quotes"] = GoldenQuoteCheck(status="checked", suite_ref=regression_suite:{slug}@{version}, suite_content_hash=suite.content_hash, bundle_hash=bundle.content_hash, results=results, delta=delta).model_dump(mode="json")`. Then call `approvals.submit` as today.
 
 **`_golden_quote_delta`: where the baseline comes from, and the author of each change.**
 - **The baseline Rating Version** is the most recently approved version of the same algorithm, excluding this one.
@@ -461,7 +473,7 @@ The order inside `submit_for_review`, after the existing status check and **befo
   - `added`: in current, not in baseline;
   - `removed`: in baseline, not in current;
   - `changed`: in both, with `expected`, `tolerance` or `context` unequal. `changed_fields` names which, in that order. **Tolerance and context changes are required, not optional** (the deputy's 15:57:21 item (ii)): widening a tolerance or swapping the quote under test weakens the check exactly as editing the expected value does. A context change is recorded by `before_context_hash`/`after_context_hash`, never by copying the context (NFR-499).
-- **The author of each change** is found by walking the suite's versions from `baseline_version + 1` to the current version. `introduced_in_version` is the last version in that range whose content changed that quote's entry. `author` is the principal id in the `actor` of that version's `regression_suite.created` Audit Event, read from `AuditEventRow` (`db/models.py:164`), never from `created_by`. That is the deputy's one-source definition, the same one #861 uses.
+- **The authors of each change** are found by walking the suite's versions from `baseline_version + 1` to the current version, comparing each version with the one before it. **Every** version in that range that added or removed the quote, or changed its `expected`, `tolerance` or `context`, becomes one `GoldenQuoteChangeStep`, in ascending version order. A version that changed only fields the delta does not compare (`note`) is no step, so a later cosmetic edit cannot mask a substantive one (audit finding F3). Each step's `author` is the principal id in the `actor` of that version's `regression_suite.created` Audit Event, read from `AuditEventRow` (`db/models.py:164`), never from `created_by`. That is the deputy's one-source definition, the same one #861 uses.
 - **If that event is missing, raise `APPROVAL_AUTHOR_UNRESOLVED` with status 403.** That is #861's fail-closed code, and a reused code keeps the status #861 registers. **Before Step 1, confirm #861 has merged** (`git log --grep '(#861)' -1 origin/main` prints its squash). If it has not, stop and report: the code and the creation-event semantics are #861's. A test covers the missing-event case: a suite version whose `regression_suite.created` event is deleted in the fixture makes submit refuse with `APPROVAL_AUTHOR_UNRESOLVED`, 403.
 
 - [ ] **Step 1:** Write the acceptance item 6, 7 and 8 tests. Acceptance item 8's main test is written and run **before** Step 3, against a gate that pins but builds no delta, and must fail on the missing `changes` entry. Quote that red run in the ledger.
@@ -500,12 +512,12 @@ Both are named as such. `PL-WORKING` in Task 1's inserted text is this plan's wo
 
 **3. Literals, checked against the shipped source at `ea6162b9`.** None comes from memory:
 - `MoneyMinor` (`money.py:61`) and `DecimalStr` (exported, `__init__.py:183`);
-- `ScoringOutcome` and `LadderRung` (`scoring.py:70`, `:130`); the payable premium is a ladder rung, not a field;
+- `ScoringOutcome` and `LadderRung` (`scoring.py:70`, `:127`); the payable premium is a ladder rung, not a field;
 - `RatingVersionEvidence` (`rating.py:116`); `RatingVersionRow.evidence` is JSONB;
 - `GENERATED_SHAPES` (`generate-contracts.py:38`); `COMPARED_SLUGS` and `ONE_SIDED_SLUGS` (`test_contracts.py:38`, `:67`);
 - `audit.record` (`audit.py:52`); `rbac.require_permission` (`rbac.py:274`);
 - `create_rating_version` (`rating_versions.py:166`); `submit_for_review` (`:214`); `rating_version.approved` (`:291`);
-- `_compiled_for` (`api/score.py:206`); the head migration `d3b955a63d6a`;
+- `_fetch_bundle` (`api/score.py:139`), used, and `_compiled_for` (`:206`), refused; `CompiledBundle.content_hash` (`rating/runtime.py:559`); the head migration `d3b955a63d6a`;
 - the DB fixtures (`conftest_db.py`); `Permission.RATING_WRITE` and `RATING_READ`.
 
 **4. Rulings between the sweep and the PR.** These were read before the push:
