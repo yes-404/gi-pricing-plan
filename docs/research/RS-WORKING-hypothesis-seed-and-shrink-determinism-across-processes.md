@@ -228,16 +228,23 @@ Given by the maintainer's delegation (28 Sep). It is final on the RS record once
 `pricing-core` stays standalone: hypothesis pulls no FastAPI, SQLAlchemy or Redis. S3's PR shows the resolved dependency set, and `lint-imports` stays green. **F4 is off Track D's critical path.** Re-derive the ETA for S3 on this decision. Push the salvage ref `d0f432c5` with the others.
 ```
 
-The deputy corrected condition 1 in a later entry in the same channel file. It is quoted verbatim
-below: the heading, then the dated correction line. […] marks omitted text.
+The deputy corrected condition 1 in a later entry in the same channel file. The whole
+entry is quoted verbatim below:
 
 ```text
 ## 2026-09-28 12:06:58 BST · deputy · CORRECTION to my F4 decision (11:54:48), condition 1: I named the wrong file. Both of #832's form choices ACCEPTED (answers your 12:06:31)
-[…]
+
 **The correction, a dated line. It supersedes the parenthesis in condition 1 and nothing else:**
 
-*Corrected 2026-09-28 12:06:58 BST by the deputy.* Condition 1 said the pin was in `packages/pricing-core/pyproject.toml` ("currently `hypothesis>=6`, dev group only"). That was wrong. At `12431a88`, `git grep -n hypothesis origin/main -- pyproject.toml 'packages/*/pyproject.toml' backend/pyproject.toml` returns only the **root** `pyproject.toml:19` (`"hypothesis>=6",`, the dev group), and 0 hits in pricing-core's. **Condition 1 now reads:** the exact `==` pin is **added** to `packages/pricing-core/pyproject.toml`'s `[project] dependencies` (a new runtime entry). The root dev-group entry is **aligned to the same `==` version**, not removed, because the root test tooling imports it directly. `uv.lock` records the one resolved version. `03` §8 and `docs/skills-map.md` change in the same PR. Conditions 2–6 are unchanged.
-[…]
+> *Corrected 2026-09-28 12:06:58 BST by the deputy.* Condition 1 said the pin was in `packages/pricing-core/pyproject.toml` ("currently `hypothesis>=6`, dev group only"). That was wrong. At `12431a88`, `git grep -n hypothesis origin/main -- pyproject.toml 'packages/*/pyproject.toml' backend/pyproject.toml` returns only the **root** `pyproject.toml:19` (`"hypothesis>=6",`, the dev group), and 0 hits in pricing-core's. **Condition 1 now reads:** the exact `==` pin is **added** to `packages/pricing-core/pyproject.toml`'s `[project] dependencies` (a new runtime entry). The root dev-group entry is **aligned to the same `==` version**, not removed, because the root test tooling imports it directly. `uv.lock` records the one resolved version. `03` §8 and `docs/skills-map.md` change in the same PR. Conditions 2–6 are unchanged.
+
+The lead is right to have stopped S3's plan inheriting the wrong file. This is the premise-drift my own instruction rules warn against: I cited a file I had not re-read. #832's Decision section carries this line directly after my 11:54:48 text. dm-d's dated line in RL-1172 at S3's leaf plan cites the corrected form.
+
+**Form choice 1 (fenced `text` blocks for my quoted entries):** accepted. It keeps my words exact, including the working id "RL-1171", and the note beside it states that "RL-1171" in the quotes is the pre-mint working id of RL-1172 (#829). This is the verbatim alternative to the bracketed substitution used in RL-1172. Both are disclosed where they are made.
+
+**Form choice 2 (INDEX regenerated now and again at the mint):** accepted.
+
+#832's merge still waits on its mint turn and on my final read of the record. The salvage move to `8596edc6` (each step a fast-forward) is noted.
 ```
 
 Two notes on the quoted text:
