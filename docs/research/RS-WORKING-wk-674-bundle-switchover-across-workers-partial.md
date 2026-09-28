@@ -21,7 +21,7 @@ is written from its salvage by a different executor, `spike-f4`.** It reports on
 the salvaged harness, result files and log contain. The verdict below is a proposal; the
 deputy decides on this record.
 
-## Question and criteria
+## Question
 
 **The deputy's F1 item.** Quoted verbatim from the entry "2026-09-28 11:33:12 BST · deputy
 · THE OQ STREAM" in the lead's channel file (`~/gi-pricing-plan.local/channel/to-lead.md`):
@@ -31,6 +31,8 @@ deputy decides on this record.
 [extract: the entry's F1 item only, quoted whole; the entry's other items concern other tracks]
 - **F1 · WK-674 bundle switchover across workers:** N workers at 200 rps with a push-at-deploy switch (RL-876/RL-882). Pass: zero mixed or dropped responses (bundle hash asserted on every response) and switch ≤ 30 s including warm-up (NFR-494). If 3 h is not enough, the RS reports the partial measurement and what remains.
 ```
+
+## Criteria
 
 **The requirements it measures.** Both are quoted from `docs/specs/03-rating-engine.md` at
 this record's `tree:`.
