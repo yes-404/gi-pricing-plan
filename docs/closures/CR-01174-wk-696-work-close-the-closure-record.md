@@ -67,7 +67,7 @@ a reader holding none of this record's context can run it:
 """WK-696 acceptance (a): every internal link in RFC-898's five public-face files resolves.
 
 Usage: python3 linkcheck.py <tree>
-Predicate: every markdown link `[text](target)` whose target is not http(s)/mailto is
+Predicate: every markdown link (bracketed text, then a parenthesised target) not http(s)/mailto is
 resolved relative to the linking file's directory; the path must exist in the tree, and
 a `#fragment` on a .md target must match a GitHub-style heading slug in that file.
 Backticked repo paths (`docs/...`, `.github/...`, `*.md`) are also checked for existence
@@ -369,7 +369,7 @@ location. The README's pointers therefore stay correct, and no pointer edit is o
 - **Gate.** This is a docs-only record. The docs checks (audit-docs, `doc-id.py check`,
   `doc-index.py --check`, `register-lint.py`) run on a detached copy of the committed tree. The
   rc and summary lines are in the PR body.
-- **Register.** `grep -n "WK-696\|RFC-898\|RFC-00898" docs/findings/register.md` at `df8e5811`
+- **Register.** `grep -nE "WK-696|RFC-898|RFC-0+898" docs/findings/register.md` at `df8e5811`
   returns nothing, so no open register row is filed against this Work.
 - **Retry counters.** Read with `python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py
   show`, the counters have no WK-696 entry: none recorded.
