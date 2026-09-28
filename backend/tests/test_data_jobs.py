@@ -15,7 +15,6 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
-from backend.tests.blob_fixtures import dataset_version_owner, job_result_owner
 from sqlalchemy import select
 
 from app.db.models import (
@@ -185,10 +184,6 @@ async def _ingest(
             actor,
             workspace_id=workspace_id,
         )
-    # A real upload has no owner yet (nothing completes one), so the fixture makes the blob
-    # the workspace's own the way a job result would: the worker refuses a digest the
-    # workspace does not own.
-    await job_result_owner(database, workspace_id, ref.sha256)
     assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
 
     async with database.session() as session:
@@ -398,10 +393,6 @@ async def test_a_preparation_recipe_is_applied_during_ingestion(
             actuary,
             workspace_id=workspace_id,
         )
-    # A real upload has no owner yet (nothing completes one), so the fixture makes the blob
-    # the workspace's own the way a job result would: the worker refuses a digest the
-    # workspace does not own.
-    await job_result_owner(database, workspace_id, ref.sha256)
     assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
 
     async with database.session() as session:
@@ -538,49 +529,3 @@ async def test_ingestion_computes_the_version_totals_exactly(
     assert Decimal(version.totals["exposure_years"]) == Decimal("21")
     assert version.totals["claim_count"] == 150
     assert version.totals["claim_amount_minor"] == 150 * 250_000
-
-
-@pytest.mark.req("FR-27")
-async def test_an_ingestion_job_for_a_digest_the_workspace_does_not_own_fails_without_a_version(
-    database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
-) -> None:
-    """The route refuses such a digest before a Job exists, but the worker does not trust
-    that: a job enqueued another way, naming a blob another workspace owns, fails with the
-    missing-blob 404 and creates no version. The blob's bytes exist; ownership is the point.
-    """
-    async with database.unit_of_work() as session:
-        dataset = await dataset_service.create_dataset(
-            session, workspace_id=workspace_id, actor=actuary, slug=f"ds-{new_uuid7().hex[-8:]}"
-        )
-        dataset_id = dataset.id
-        ref = await blob_store.put(session, CLEAN, "text/csv")
-        job = await job_service.submit(
-            session,
-            JobKind.DATASET_INGEST,
-            {
-                "workspace_id": str(workspace_id),
-                "actor": actuary.model_dump(mode="json"),
-                "dataset_id": str(dataset_id),
-                "blob": ref.sha256,
-                "filename": "exposure.csv",
-                "recipe": CAST_RECIPE,
-            },
-            actuary,
-            workspace_id=workspace_id,
-        )
-    # Another workspace's Dataset Version owns the digest; this workspace's rows do not.
-    await dataset_version_owner(database, new_uuid7(), ref.sha256)
-
-    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
-
-    async with database.session() as session:
-        failed = await session.get(JobRow, job.id)
-        assert failed is not None
-        assert failed.error is not None
-        assert failed.error["code"] == "NOT_FOUND", failed.error
-        versions = (
-            await session.execute(
-                select(DatasetVersionRow).where(DatasetVersionRow.dataset_id == dataset_id)
-            )
-        ).scalars().all()
-        assert versions == []

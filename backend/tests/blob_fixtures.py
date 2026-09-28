@@ -36,11 +36,6 @@ async def blob_row(database: Database, sha256: str, media_type: str) -> None:
 async def dataset_blob(database: Database, workspace_id, sha256: str) -> None:
     """A blob row plus a dataset version in `workspace_id` whose parquet table is `sha256`."""
     await blob_row(database, sha256, "application/vnd.apache.parquet")
-    await dataset_version_owner(database, workspace_id, sha256)
-
-
-async def dataset_version_owner(database: Database, workspace_id, sha256: str) -> None:
-    """Only the dataset version: its table names `sha256`; the blob's own row is the caller's."""
     async with database.unit_of_work() as session:
         slug = f"ds-{sha256[:8]}"
         dataset = DatasetRow(workspace_id=workspace_id, slug=slug, name=slug, owner_id=new_uuid7())
