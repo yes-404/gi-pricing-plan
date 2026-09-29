@@ -136,6 +136,17 @@ GENERATED_SHAPES: dict[str, str] = {
     # the shape's first written form, defined in the spec before any code, and the
     # generated file is the only place a consumer can see the wire form.
     "dataset-lineage": "DatasetLineage",
+    # Added 2026-09-28 (WK-672 Slice 2, PL-1189). The hand-authored Phase-0 contract bundled
+    # the suite with `RegressionRun`; the run moved to its own authored file
+    # (`regression-run.schema.json`) and the suite is compared here.
+    "regression-suite": "RegressionSuite",
+    # Added 2026-09-28 (WK-672 Slice 3, PL-1205 Task 2): the run, built at last; its authored
+    # contract is brought to the model and compared (`RL-1172` item 3c).
+    "regression-run": "RegressionRun",
+    # Added 2026-09-29 (WK-672 Slice 4, PL-1213 Task 2). **No hand-authored Phase-0
+    # counterpart** — `03` §4.10 is the shape's first written form (the `model-comparison`
+    # and `dataset-lineage` precedent).
+    "score-comparison": "ScoreComparison",
 }
 
 

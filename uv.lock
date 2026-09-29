@@ -655,7 +655,7 @@ dev = [
     { name = "boto3-stubs", extras = ["s3"], specifier = ">=1.35" },
     { name = "celery-types", specifier = ">=0.22" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "hypothesis", specifier = ">=6" },
+    { name = "hypothesis", specifier = "==6.165.7" },
     { name = "import-linter", specifier = ">=2.1" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
@@ -1638,6 +1638,7 @@ source = { editable = "packages/pricing-core" }
 dependencies = [
     { name = "duckdb" },
     { name = "glum" },
+    { name = "hypothesis" },
     { name = "interpret-core" },
     { name = "lightgbm" },
     { name = "model-schema" },
@@ -1654,6 +1655,7 @@ dependencies = [
 requires-dist = [
     { name = "duckdb", specifier = ">=1.1" },
     { name = "glum", specifier = ">=3.0" },
+    { name = "hypothesis", specifier = "==6.165.7" },
     { name = "interpret-core", specifier = "==0.7.8" },
     { name = "lightgbm", specifier = ">=4.5,<5" },
     { name = "model-schema", editable = "packages/model-schema" },

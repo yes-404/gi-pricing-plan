@@ -336,10 +336,14 @@ async def run(rows: int | None) -> int:
                 )
 
     approver = Principal(kind=ActorKind.USER, id=new_uuid7(), display="approver@example.fr")
+    second_approver = Principal(
+        kind=ActorKind.USER, id=new_uuid7(), display="second-approver@example.fr"
+    )
 
     await grant(analyst, "analyst")
     await grant(actuary, "pricing_actuary")
     await grant(approver, "approver")
+    await grant(second_approver, "approver")
 
     # A real login through the local provider (FR-398) resolves to `analyst`, so it
     # inherits the role assignments granted just above rather than needing its own. The
@@ -610,7 +614,8 @@ async def run(rows: int | None) -> int:
     )
     print(f"  approved model: {approved}")
     await create_approved_rating_version(
-        database, workspace_id, analyst, actuary, approver, second, approved
+        database, blob_store, workspace_id, analyst, actuary, approver, second_approver,
+        second, approved,
     )
     print()
     await database.dispose()

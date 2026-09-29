@@ -10,6 +10,7 @@ import type {
   FeatureImportance,
   MonotonicityCheck,
   PermutationImportance,
+  PermutationOmission,
 } from "@/api/diagnostics";
 import ChartFigure from "@/components/ChartFigure.vue";
 
@@ -18,6 +19,7 @@ use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]
 const props = defineProps<{
   importances: readonly FeatureImportance[];
   permutationImportances: readonly PermutationImportance[];
+  permutationOmitted?: readonly PermutationOmission[];
   monotonicity: readonly MonotonicityCheck[];
 }>();
 
@@ -95,6 +97,35 @@ const permutationRows = computed(() =>
     importance.degradation,
   ]),
 );
+
+/**
+ * Why a factor has no permutation importance, in words (FR-178). An unrecognised reason is
+ * shown under its own name, not a default.
+ */
+function omissionReason(reason: string): string {
+  if (reason === "operand_of_interaction") {
+    return "it is, or shares a column with, an operand of an interaction, so it cannot be shuffled alone (the interaction is shuffled jointly)";
+  }
+  if (reason === "no_holdout_column") {
+    return "the holdout has no column for it";
+  }
+  return reason;
+}
+
+const omissionNotes = computed(() =>
+  (props.permutationOmitted ?? []).map(
+    (omission) => `${omission.feature}: not measured — ${omissionReason(omission.reason)}.`,
+  ),
+);
+
+const sharedColumnNotes = computed(() =>
+  props.permutationImportances
+    .filter((importance) => (importance.shared_source_columns ?? []).length > 0)
+    .map(
+      (importance) =>
+        `${importance.feature}: shuffling also moved ${(importance.shared_source_columns ?? []).join(", ")}, which another factor draws on, so its degradation is the joint effect.`,
+    ),
+);
 </script>
 
 <template>
@@ -124,6 +155,32 @@ const permutationRows = computed(() =>
         autoresize
       />
     </ChartFigure>
+
+    <ul
+      v-if="omissionNotes.length"
+      aria-label="Permutation omissions"
+      class="mt-2 text-sm text-slate-600"
+    >
+      <li
+        v-for="note in omissionNotes"
+        :key="note"
+      >
+        {{ note }}
+      </li>
+    </ul>
+
+    <ul
+      v-if="sharedColumnNotes.length"
+      aria-label="Shared source columns"
+      class="mt-2 text-sm text-slate-600"
+    >
+      <li
+        v-for="note in sharedColumnNotes"
+        :key="note"
+      >
+        {{ note }}
+      </li>
+    </ul>
 
     <!-- FR-174: monotonicity verification is that the fitted response actually respects
          the declared constraint, so "declared" and "holds" are read together — a factor with

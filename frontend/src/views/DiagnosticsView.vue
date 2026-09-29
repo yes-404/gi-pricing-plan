@@ -249,6 +249,7 @@ onMounted(async () => {
         <GbmImportanceCharts
           :importances="diagnostics.gbm.importances"
           :permutation-importances="diagnostics.gbm.permutation_importances"
+          :permutation-omitted="diagnostics.gbm.permutation_omitted"
           :monotonicity="diagnostics.gbm.monotonicity"
         />
 
