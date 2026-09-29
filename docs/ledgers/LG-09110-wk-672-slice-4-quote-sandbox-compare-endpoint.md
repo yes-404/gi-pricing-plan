@@ -85,3 +85,38 @@ the PR's queue turn.
 - Plan item 4's grep (`class .*Comparison|class TraceDiff|class StepChange`) prints two unrelated classes
   (`ModelComparisonRow`, `ComparisonCandidate`); none is a compare shape. The predicate is too loose.
 - Docs checks: `audit-docs.py` FAILED (2): check 31 gaps 1225→9110 and 9110→9401, the working-id gap only.
+
+### Plan deviations, dated 2026-09-29 (accepted by the lead; the maintainer's item-7 ruling in `to-lead.md`)
+
+1. **NFR-499 (plan item 7).** `rating:read` cannot be a Service Account scope (FR-389:
+   *"['rating:read'] is not in ['score:batch', 'score:execute']. FR-389 scopes service accounts to the
+   scoring permission set."*, the 422 from `POST /api/v1/service-accounts`), so the caller is a user, which
+   has no `caller.environment`; a copied sampler raises inside its own `try`, is logged, and writes nothing.
+   Mutation (uncommitted): in `score_compare`, after each `score_one`,
+   `+ await _maybe_sample_trace(database, settings, caller, ctx, results[-1])` (and a `settings: SettingsDep`
+   parameter).
+   - Row-count check and caplog test under it: **both stayed green** — the row-count test is
+     **vacuous under the copied-sampler mutation**.
+   - Spy added (`monkeypatch` of `score_module._maybe_sample_trace`, asserted never called): red,
+     `AssertionError: the sandbox route reached FR-259's trace sampling`; restored, 13 passed.
+   - Plan item 7's "both red" is therefore met for **persistence only** (via the spy).
+   - **caplog test's own red proof** (maintainer's ruling), on deliberately broken input. Mutation
+     (uncommitted), first line of `score_compare`:
+     `+    _log.info("compare requested", extra={"inputs": body.context.inputs})`.
+     Result: `FAILED test_compare_logs_no_input_value - assert 'ZZ99 9ZZ' not in '{'name': ...1 200 OK"'}'`.
+     Restored: `1 passed`. So the test does guard a route that logs a quote input field; it cannot go red under
+     the copied-sampler mutation because that path logs no input, and it does not claim to.
+2. **Fixture step and helper.** The engine traces expression steps only and `consumed` is the whole
+   environment, so the minimal algorithm has one traced step. The fixtures add a downstream expression
+   step `s_adj` (`payable + 100`); `_insert_version` gained keyword-only `slug`/`version` (defaults
+   unchanged). The one-step proof is unchanged: the `own_change` entries are exactly `["s_expr"]`, and
+   `s_adj` is listed with `own_change: false` and `consumed` among its `changed_fields`.
+3. **Item 4 predicate.** The plan's command
+   `grep -rn 'class .*Comparison\|class TraceDiff\|class StepChange' backend/src packages/pricing-core/src`
+   prints two pre-existing hits, neither a compare shape:
+   `backend/src/app/db/models.py:1413:class ModelComparisonRow(Base):` and
+   `packages/pricing-core/src/pricing_core/modelling/comparison.py:74:class ComparisonCandidate:`.
+   Tighter predicate used: `grep -rnE 'class (ScoreCompareRequest|ScoreComparison|TraceDiff|StepChange)\b'`
+   over `backend/src packages/pricing-core/src` prints nothing (rc 1: no shape defined outside
+   `model-schema`), and over `packages/model-schema/src` prints the four definitions in `scoring.py`
+   (scoring.py:196 StepChange, :219 TraceDiff, :229 ScoreCompareRequest, :249 ScoreComparison).
