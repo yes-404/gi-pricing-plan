@@ -242,6 +242,7 @@ def _the_run(database: Database, rv: UUID) -> RegressionRunRow:
 
 @pytest.mark.req("FR-261")
 @pytest.mark.req("FR-260")
+@pytest.mark.req("FR-1221")
 def test_a_regression_run_is_a_202_job_that_persists_the_run_and_its_case_blob(
     run_world,
 ) -> None:
@@ -316,6 +317,7 @@ def test_starting_a_run_needs_rating_compile(
 
 @pytest.mark.req("NFR-499")
 @pytest.mark.req("FR-261")
+@pytest.mark.req("FR-1221")
 def test_the_case_blob_and_the_run_row_are_refused_without_rating_read_or_across_workspaces(
     run_world, api_client, workspace_id, grant, database
 ) -> None:
@@ -383,6 +385,43 @@ def test_the_case_blob_and_the_run_row_are_refused_without_rating_read_or_across
     other_headers = {DEV_PRINCIPAL_HEADER: str(nobody), "Workspace-Id": str(other)}
     assert api_client.get(run_url, headers=other_headers).status_code in (403, 404)
 
+    # 5. the workspace limb of FR-1221, on its own: a principal holding `rating:read` in BOTH
+    #    workspaces. Step 4's caller is refused before the workspace filter is ever reached
+    #    (no membership there), so it cannot tell a dropped `workspace_id` filter from a
+    #    working one. Here the permission check passes in the other workspace, so a 404
+    #    can only come from `fetch_run` filtering by the run's own workspace.
+    both = outsider  # holds `approver` (rating:read) in this workspace, from step 3
+    second = new_uuid7()
+
+    async def seat_in_second_workspace() -> None:
+        from sqlalchemy import select
+
+        from app.db.models import RoleAssignmentRow, RoleRow
+        from app.platform import rbac, workspaces
+        from model_schema import ScopeType
+
+        async with database.unit_of_work() as session:
+            await workspaces.ensure_workspace(session, workspace_id=second)
+            await rbac.seed_builtin_roles(session, second)
+            role = (await session.execute(
+                select(RoleRow).where(RoleRow.workspace_id == second, RoleRow.slug == "approver")
+            )).scalar_one()
+            session.add(RoleAssignmentRow(
+                workspace_id=second, principal_kind="user", principal_id=both,
+                role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
+            ))
+            session.add(WorkspaceMemberRow(user_id=both, workspace_id=second))
+
+    asyncio.get_event_loop().run_until_complete(seat_in_second_workspace())
+    home = {DEV_PRINCIPAL_HEADER: str(both), "Workspace-Id": str(workspace_id)}
+    away = {DEV_PRINCIPAL_HEADER: str(both), "Workspace-Id": str(second)}
+    # the control: the same principal reads the run where it lives, so `rating:read` is held
+    assert api_client.get(run_url, headers=home).status_code == 200
+    assert api_client.get(run_url + "/cases", headers=home).status_code == 200
+    # from the other workspace, where it also holds `rating:read`: exactly 404, never 200
+    assert api_client.get(run_url, headers=away).status_code == 404
+    assert api_client.get(run_url + "/cases", headers=away).status_code == 404
+
 
 @pytest.mark.req("NFR-499")
 def test_a_failed_run_puts_no_quote_input_in_the_job_error(run_world) -> None:
@@ -417,6 +456,7 @@ def test_an_unsweepable_monotone_that_slipped_past_declaration_is_a_named_job_fa
 
 
 @pytest.mark.req("NFR-499")
+@pytest.mark.req("FR-1221")
 def test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_error_or_the_logs(
     run_world, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
     capfd: pytest.CaptureFixture[str],
